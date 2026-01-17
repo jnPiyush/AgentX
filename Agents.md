@@ -325,6 +325,8 @@ status:review    → Needs review
 status:done      → Completed
 ```
 
+> **⚠️ CRITICAL**: Always update status label to `status:done` BEFORE closing an issue. `gh issue close` does NOT automatically update labels. Closed issues with `status:in-progress` indicate workflow violation.
+
 ### GitHub CLI Commands (Essential)
 
 ```bash
@@ -348,7 +350,8 @@ gh issue view 123
 # Update issue status
 gh issue edit 123 --add-label "status:in-progress" --remove-label "status:ready"
 
-# Close issue with comment
+# Close issue with comment (MUST update status label first)
+gh issue edit 123 --add-label "status:done" --remove-label "status:in-progress"
 gh issue close 123 --comment "Completed in PR #456"
 
 # Add comment (progress update)
@@ -385,7 +388,8 @@ gh issue comment 123 --body "$(cat <<EOF
 EOF
 )"
 
-# Complete work
+# Complete work (ALWAYS update status label before closing)
+gh issue edit 123 --add-label "status:done" --remove-label "status:in-progress"
 gh issue close 123 --comment "Completed. PR #456 merged."
 
 # === PR INTEGRATION ===
@@ -476,7 +480,8 @@ git commit -m "feat: Add validation logic (#123)"
 # 1. Update all touched issues
 gh issue comment <ID> --body "Session end: [summary of progress]"
 
-# 2. If complete, close
+# 2. If complete, update status label AND close
+gh issue edit <ID> --add-label "status:done" --remove-label "status:in-progress"
 gh issue close <ID> --comment "Completed in commit abc123 / PR #456"
 
 # 3. If incomplete, ensure status is accurate
