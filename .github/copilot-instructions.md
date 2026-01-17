@@ -47,8 +47,6 @@ description: 'Global instructions for GitHub Copilot across the entire repositor
 
 This repository contains AI agent guidelines and production code skills for building high-quality software.
 
-**Repository**: [github.com/jnPiyush/AgentX](https://github.com/jnPiyush/AgentX)
-
 ## Key Files
 
 - **Agents.md**: Agent behavior, workflows, YOLO mode, security architecture, memory management, GitHub Issues task management

@@ -1,6 +1,5 @@
 # AgentX - Dynamic Multi-agent Workflow and AI Agent Guidelines 
 
-[![GitHub](https://img.shields.io/badge/GitHub-jnPiyush%2FAgentX-blue?logo=github)](https://github.com/jnPiyush/AgentX)
 [![Standard](https://img.shields.io/badge/Standard-awesome--copilot-green)](https://github.com/github/awesome-copilot)
 [![Skills Spec](https://img.shields.io/badge/Skills-agentskills.io-orange)](https://agentskills.io/specification)
 [![Status](https://img.shields.io/badge/Status-Implemented%20%26%20Verified-brightgreen)]()
@@ -406,8 +405,6 @@ This project is open source. See individual files for specific licensing.
 
 ## 🔗 Links
 
-- **Repository**: [github.com/jnPiyush/AgentX](https://github.com/jnPiyush/AgentX)
-- **Issues**: [github.com/jnPiyush/AgentX/issues](https://github.com/jnPiyush/AgentX/issues)
 - **awesome-copilot**: [github.com/github/awesome-copilot](https://github.com/github/awesome-copilot)
 - **agentskills.io**: [agentskills.io](https://agentskills.io)
 

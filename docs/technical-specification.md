@@ -4,7 +4,6 @@
 > **Date**: January 17, 2026  
 > **Status**: Implemented & Verified  
 > **Standard**: [github/awesome-copilot](https://github.com/github/awesome-copilot) • [agentskills.io](https://agentskills.io/specification)  
-> **Repository**: [github.com/jnPiyush/AgentX](https://github.com/jnPiyush/AgentX)  
 > **E2E Tests**: ✅ All Passed (January 17, 2026)
 
 ---
@@ -1410,7 +1409,6 @@ The following labels have been created in the repository:
 
 ```
 Test Session: January 17, 2026
-Repository: https://github.com/jnPiyush/AgentX
 Branch: master
 Commits: 3 (ae7191e → c548eb3 → 23e879d)
 
