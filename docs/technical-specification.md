@@ -3,7 +3,8 @@
 > **Version**: 1.0  
 > **Date**: January 16, 2026  
 > **Status**: Approved  
-> **Standard**: [github/awesome-copilot](https://github.com/github/awesome-copilot) • [agentskills.io](https://agentskills.io/specification)
+> **Standard**: [github/awesome-copilot](https://github.com/github/awesome-copilot) • [agentskills.io](https://agentskills.io/specification)  
+> **Repository**: [github.com/jnPiyush/AgentX](https://github.com/jnPiyush/AgentX)
 
 ---
 

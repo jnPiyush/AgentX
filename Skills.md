@@ -6,7 +6,8 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 > **Purpose**: Production-ready guidelines for agents to build secure, scalable, maintainable systems.  
 > **Usage**: Index for detailed skill documents. Read relevant skills before implementation.  
-> **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) skills specification from [agentskills.io](https://agentskills.io/specification).
+> **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) skills specification from [agentskills.io](https://agentskills.io/specification).  
+> **Repository**: [github.com/jnPiyush/AgentX](https://github.com/jnPiyush/AgentX)
 
 ---
 

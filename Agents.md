@@ -21,7 +21,8 @@ model: claude-sonnet-4-20250514
 
 > **Purpose**: Defines how AI agents should behave when writing production-ready code.  
 > **Scope**: Behavior principles, workflow, quality standards, and delivery practices.  
-> **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) recommended patterns.
+> **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) recommended patterns.  
+> **Repository**: [github.com/jnPiyush/AgentX](https://github.com/jnPiyush/AgentX)
 
 ---
 
