@@ -25,6 +25,37 @@ model: claude-sonnet-4-20250514
 
 ---
 
+## 🛑 STOP! READ THIS BEFORE DOING ANYTHING 🛑
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║   🚨 MANDATORY PRE-FLIGHT CHECKLIST - EXECUTE BEFORE ANY WORK 🚨             ║
+║                                                                               ║
+║   Before writing ANY code, creating ANY file, or making ANY modification:     ║
+║                                                                               ║
+║   □ Step 1: Does a GitHub Issue exist for this task?                          ║
+║             → NO:  STOP! Create one first with: gh issue create ...           ║
+║             → YES: Proceed to Step 2                                          ║
+║                                                                               ║
+║   □ Step 2: Is the issue marked "status:in-progress" and assigned to you?     ║
+║             → NO:  STOP! Claim it first with: gh issue edit <ID> ...          ║
+║             → YES: Proceed with implementation                                ║
+║                                                                               ║
+║   ⚠️  VIOLATION = Working without completing BOTH steps above                 ║
+║   ⚠️  RETROACTIVE ISSUES = Workflow failure (defeats audit trail purpose)     ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+```
+
+### Why This Matters
+- **Audit Trail**: Only meaningful if created BEFORE work begins
+- **Coordination**: Other agents cannot coordinate without visible task tracking  
+- **Session Handoffs**: Require issue context to be established first
+- **Accountability**: Every change must be traceable to a decision
+
+---
+
 ## Prerequisites
 
 Before using these agent guidelines, ensure you have:

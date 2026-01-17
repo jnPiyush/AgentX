@@ -119,18 +119,16 @@ function Download-File($src, $dest) {
     
     if ((Test-Path $destPath) -and -not $Force) {
         Write-Warn "Skipped (exists): $dest"
-        return $false
+        return
     }
     
     try {
         $url = "$REPO_URL/$src"
         Invoke-WebRequest -Uri $url -OutFile $destPath -UseBasicParsing
         Write-Success "Downloaded: $dest"
-        return $true
     }
     catch {
         Write-Err "Failed to download: $dest"
-        return $false
     }
 }
 

@@ -4,6 +4,39 @@ description: 'Global instructions for GitHub Copilot across the entire repositor
 
 # Global Copilot Instructions
 
+---
+
+## 🛑 STOP! READ THIS BEFORE DOING ANYTHING 🛑
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║   🚨 MANDATORY PRE-FLIGHT CHECKLIST - EXECUTE BEFORE ANY WORK 🚨             ║
+║                                                                               ║
+║   Before writing ANY code, creating ANY file, or making ANY modification:     ║
+║                                                                               ║
+║   □ Step 1: Does a GitHub Issue exist for this task?                          ║
+║             → NO:  STOP! Create one first with: gh issue create ...           ║
+║             → YES: Proceed to Step 2                                          ║
+║                                                                               ║
+║   □ Step 2: Is the issue marked "status:in-progress" and assigned to you?     ║
+║             → NO:  STOP! Claim it first with: gh issue edit <ID> ...          ║
+║             → YES: Proceed with implementation                                ║
+║                                                                               ║
+║   ⚠️  VIOLATION = Working without completing BOTH steps above                 ║
+║   ⚠️  RETROACTIVE ISSUES = Workflow failure (defeats audit trail purpose)     ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+```
+
+### Why This Matters
+- **Audit Trail**: Only meaningful if created BEFORE work begins
+- **Coordination**: Other agents cannot coordinate without visible task tracking  
+- **Session Handoffs**: Require issue context to be established first
+- **Accountability**: Every change must be traceable to a decision
+
+---
+
 ## ⚠️ MANDATORY: Issue-First Workflow (Read Before ANY Work)
 
 > **CRITICAL**: You MUST follow this workflow for EVERY task that modifies code, documentation, or configuration. NO EXCEPTIONS.
@@ -38,6 +71,11 @@ description: 'Global instructions for GitHub Copilot across the entire repositor
 - Creating issues retroactively after work is done
 - Committing without issue reference in message
 - Closing issues without updating status label to `status:done`
+
+### ✅ SELF-CHECK: Ask Yourself Before Every Action
+1. "Do I have an issue number for this work?" → If NO, create one NOW
+2. "Is my issue marked in-progress?" → If NO, claim it NOW
+3. "Will my commit message include (#ID)?" → If NO, fix it NOW
 
 > **Full Workflow Details**: See [Agents.md](../Agents.md) - Section "Issue-First Workflow (Mandatory)"
 
