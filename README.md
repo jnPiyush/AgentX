@@ -1,4 +1,4 @@
-# AgentX - Dynamic multi-agent workflow, AI Agent Guidelines for delivering enterprise-grade, production-ready code with precision and speed.
+# AgentX - Dynamic Multi-agent Workflow and AI Agent Guidelines 
 
 [![GitHub](https://img.shields.io/badge/GitHub-jnPiyush%2FAgentX-blue?logo=github)](https://github.com/jnPiyush/AgentX)
 [![Standard](https://img.shields.io/badge/Standard-awesome--copilot-green)](https://github.com/github/awesome-copilot)
