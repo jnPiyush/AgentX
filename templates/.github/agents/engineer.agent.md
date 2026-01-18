@@ -14,7 +14,7 @@ tools:
   - manage_todo_list
   - get_terminal_output
   - test_failure
-model: claude-sonnet-4-20250514
+model: Claude Sonnet 4.5 (copilot)
 ---
 
 # Engineer Agent

@@ -1,6 +1,7 @@
 # Run Reviewer Agent
 # Triggered by orchestrator to perform code review tasks
 # Part of AgentX Phase 1 MVP
+# Updated: 2026-01-18 - Force refresh
 
 name: Run Reviewer Agent
 
@@ -402,3 +403,4 @@ This issue has completed the full AgentX orchestration workflow:
               console.log('Could not enable auto-merge:', e.message);
               console.log('This is expected if auto-merge is not enabled for the repository');
             }
+

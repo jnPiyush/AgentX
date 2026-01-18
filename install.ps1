@@ -67,7 +67,15 @@ $coreFiles = @(
     @{ Src = "Skills.md"; Dest = "Skills.md" },
     @{ Src = "templates/.github/copilot-instructions.md"; Dest = ".github/copilot-instructions.md" },
     @{ Src = "templates/.github/autonomous-mode.yml"; Dest = ".github/autonomous-mode.yml" },
+    @{ Src = "templates/.github/orchestration-config.yml"; Dest = ".github/orchestration-config.yml" },
     @{ Src = "templates/.github/workflows/enforce-issue-workflow.yml"; Dest = ".github/workflows/enforce-issue-workflow.yml" },
+    @{ Src = "templates/.github/workflows/orchestrate.yml"; Dest = ".github/workflows/orchestrate.yml" },
+    @{ Src = "templates/.github/workflows/process-ready-issues.yml"; Dest = ".github/workflows/process-ready-issues.yml" },
+    @{ Src = "templates/.github/workflows/run-product-manager.yml"; Dest = ".github/workflows/run-product-manager.yml" },
+    @{ Src = "templates/.github/workflows/architect.yml"; Dest = ".github/workflows/architect.yml" },
+    @{ Src = "templates/.github/workflows/engineer.yml"; Dest = ".github/workflows/engineer.yml" },
+    @{ Src = "templates/.github/workflows/reviewer.yml"; Dest = ".github/workflows/reviewer.yml" },
+    @{ Src = "templates/.github/workflows/ux-designer.yml"; Dest = ".github/workflows/ux-designer.yml" },
     @{ Src = "templates/.vscode/settings.json"; Dest = ".vscode/settings.json" }
 )
 
@@ -95,6 +103,7 @@ $skillsFiles = @(
 
 # Optional files for --Full
 $optionalFiles = @(
+    @{ Src = "templates/.github/agents/product-manager.agent.md"; Dest = ".github/agents/product-manager.agent.md" },
     @{ Src = "templates/.github/agents/architect.agent.md"; Dest = ".github/agents/architect.agent.md" },
     @{ Src = "templates/.github/agents/engineer.agent.md"; Dest = ".github/agents/engineer.agent.md" },
     @{ Src = "templates/.github/agents/reviewer.agent.md"; Dest = ".github/agents/reviewer.agent.md" },
@@ -247,12 +256,23 @@ Write-Host '   gh label create "status:in-progress" --description "Currently wor
 Write-Host '   gh label create "status:done" --description "Completed" --color "0E8A16"' -ForegroundColor Yellow
 Write-Host '   gh label create "priority:p1" --description "High - do next" --color "D93F0B"' -ForegroundColor Yellow
 Write-Host ""
+Write-Host "   # Orchestration labels (required for multi-agent workflows):"
+Write-Host '   gh label create "type:epic" --description "Large initiative (multiple features)" --color "5319E7"' -ForegroundColor Yellow
+Write-Host '   gh label create "needs:ux" --description "Requires UX design work" --color "C5DEF5"' -ForegroundColor Yellow
+Write-Host '   gh label create "orch:pm-done" --description "Product Manager work complete" --color "BFD4F2"' -ForegroundColor Yellow
+Write-Host '   gh label create "orch:architect-done" --description "Architect work complete" --color "BFD4F2"' -ForegroundColor Yellow
+Write-Host '   gh label create "orch:ux-done" --description "UX Designer work complete" --color "BFD4F2"' -ForegroundColor Yellow
+Write-Host '   gh label create "orch:engineer-done" --description "Engineer work complete" --color "BFD4F2"' -ForegroundColor Yellow
+Write-Host ""
 Write-Host "4. Read " -NoNewline
 Write-Host "AGENTS.md" -ForegroundColor Cyan -NoNewline
 Write-Host " for workflow guidelines"
 Write-Host "5. Check " -NoNewline
 Write-Host "Skills.md" -ForegroundColor Cyan -NoNewline
 Write-Host " for production standards"
+Write-Host "6. Review " -NoNewline
+Write-Host ".github/orchestration-config.yml" -ForegroundColor Cyan -NoNewline
+Write-Host " for multi-agent orchestration settings"
 Write-Host ""
 Write-Success "AgentX installed successfully! 🚀"
 Write-Host ""

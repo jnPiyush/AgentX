@@ -10,7 +10,7 @@ tools:
   - run_in_terminal
   - get_changed_files
   - manage_todo_list
-model: claude-sonnet-4-20250514
+model: Gemini 3 Pro (Preview) (copilot)
 ---
 
 # UX Designer Agent

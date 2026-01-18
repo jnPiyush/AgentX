@@ -12,7 +12,7 @@ tools:
   - get_terminal_output
   - test_failure
   - manage_todo_list
-model: claude-sonnet-4-20250514
+model: GPT-5.2-Codex (copilot)
 ---
 
 # Reviewer Agent

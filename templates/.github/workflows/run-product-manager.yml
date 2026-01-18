@@ -10,7 +10,7 @@ on:
       issue_number:
         description: 'Issue number to process'
         required: true
-        type: number
+        type: string
       issue_title:
         description: 'Issue title'
         required: true
@@ -26,7 +26,7 @@ on:
       issue_number:
         description: 'Issue number to process'
         required: true
-        type: number
+        type: string
       issue_title:
         description: 'Issue title'
         required: true
@@ -270,11 +270,17 @@ jobs:
           EPICEOF
           )
           
-          EPIC_ID=$(gh issue create \
-            --title "[Epic] ${{ env.ISSUE_TITLE }}" \
+          # Strip [Epic] prefix if already present in title to avoid duplication
+          TITLE="${{ env.ISSUE_TITLE }}"
+          TITLE="${TITLE#\[Epic\] }"
+          
+          EPIC_RESULT=$(gh issue create \
+            --title "[Epic] $TITLE" \
             --body "$EPIC_BODY" \
-            --label "type:epic,priority:p1,status:ready" \
-            --json number --jq '.number')
+            --label "type:epic,priority:p1,status:ready" 2>&1)
+          
+          # Extract issue number from URL
+          EPIC_ID=$(echo "$EPIC_RESULT" | grep -oE '[0-9]+$')
           
           echo "epic_id=$EPIC_ID" >> $GITHUB_OUTPUT
           echo "Created Epic #$EPIC_ID"
@@ -312,11 +318,16 @@ jobs:
           FEATUREOF
           )
           
-          FEATURE_ID=$(gh issue create \
-            --title "[Feature] Core Functionality - ${{ env.ISSUE_TITLE }}" \
+          # Strip [Epic] prefix if present in title
+          TITLE="${{ env.ISSUE_TITLE }}"
+          TITLE="${TITLE#\[Epic\] }"
+          
+          FEATURE_RESULT=$(gh issue create \
+            --title "[Feature] Core Functionality - $TITLE" \
             --body "$FEATURE_BODY" \
-            --label "type:feature,priority:p1,status:ready" \
-            --json number --jq '.number')
+            --label "type:feature,priority:p1,status:ready" 2>&1)
+          
+          FEATURE_ID=$(echo "$FEATURE_RESULT" | grep -oE '[0-9]+$')
           
           echo "feature1_id=$FEATURE_ID" >> $GITHUB_OUTPUT
           echo "Created Feature #$FEATURE_ID"
@@ -355,11 +366,12 @@ jobs:
           STORYEOF
           )
           
-          STORY_ID=$(gh issue create \
+          STORY_RESULT=$(gh issue create \
             --title "[Story] Primary User Capability" \
             --body "$STORY_BODY" \
-            --label "type:story,priority:p1,status:ready,needs:ux" \
-            --json number --jq '.number')
+            --label "type:story,priority:p1,status:ready,needs:ux" 2>&1)
+          
+          STORY_ID=$(echo "$STORY_RESULT" | grep -oE '[0-9]+$')
           
           echo "story1_id=$STORY_ID" >> $GITHUB_OUTPUT
           echo "Created Story #$STORY_ID"
@@ -396,11 +408,12 @@ jobs:
           STORYEOF
           )
           
-          STORY_ID=$(gh issue create \
+          STORY_RESULT=$(gh issue create \
             --title "[Story] Secondary Capability" \
             --body "$STORY_BODY" \
-            --label "type:story,priority:p2,status:ready" \
-            --json number --jq '.number')
+            --label "type:story,priority:p2,status:ready" 2>&1)
+          
+          STORY_ID=$(echo "$STORY_RESULT" | grep -oE '[0-9]+$')
           
           echo "story2_id=$STORY_ID" >> $GITHUB_OUTPUT
           echo "Created Story #$STORY_ID"

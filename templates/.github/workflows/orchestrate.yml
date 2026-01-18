@@ -9,6 +9,13 @@ on:
     types: [opened, labeled]
   issue_comment:
     types: [created]
+  # Manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: true
+        type: number
 
 # Prevent concurrent orchestration on same issue
 concurrency:
@@ -42,13 +49,36 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issue = context.payload.issue;
-            const comment = context.payload.comment;
-            const labels = issue.labels.map(l => l.name);
+            // Handle manual dispatch - fetch issue data
+            let issue, comment, labels;
+            
+            if (context.eventName === 'workflow_dispatch') {
+              const issueNum = ${{ inputs.issue_number || 0 }};
+              if (issueNum === 0) {
+                console.log('No issue number provided for manual dispatch');
+                core.setOutput('should_run', 'false');
+                return;
+              }
+              const response = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNum
+              });
+              issue = response.data;
+              labels = issue.labels.map(l => l.name);
+              comment = null;
+              console.log(`Manual dispatch for issue #${issueNum}`);
+            } else {
+              issue = context.payload.issue;
+              comment = context.payload.comment;
+              labels = issue.labels.map(l => l.name);
+            }
             
             console.log(`Processing issue #${issue.number}: ${issue.title}`);
             console.log(`Labels: ${labels.join(', ')}`);
             
+            // Store issue number for downstream jobs
+            core.setOutput('issue_number', issue.number);            
             // Check if orchestration is paused
             if (labels.includes('orchestration:paused')) {
               console.log('Orchestration is paused for this issue');
@@ -233,7 +263,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'run-architect.yml',
+              workflow_id: 'architect.yml',
               ref: context.payload.repository.default_branch,
               inputs: {
                 issue_number: String(context.payload.issue.number),
@@ -251,7 +281,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'run-engineer.yml',
+              workflow_id: 'engineer.yml',
               ref: context.payload.repository.default_branch,
               inputs: {
                 issue_number: String(context.payload.issue.number),
@@ -269,7 +299,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'run-reviewer.yml',
+              workflow_id: 'reviewer.yml',
               ref: context.payload.repository.default_branch,
               inputs: {
                 issue_number: String(context.payload.issue.number),
@@ -287,7 +317,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'run-ux-designer.yml',
+              workflow_id: 'ux-designer.yml',
               ref: context.payload.repository.default_branch,
               inputs: {
                 issue_number: String(context.payload.issue.number),
@@ -347,3 +377,4 @@ The ${agent} agent has been triggered and will process this issue.
               issue_number: context.payload.issue.number,
               body: comment
             });
+
