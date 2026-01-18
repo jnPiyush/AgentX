@@ -67,7 +67,7 @@ jobs:
               {
                 name: 'Feature with needs:ux → UX Designer',
                 match: (labels) => labels.includes('type:feature') && labels.includes('needs:ux') && !labels.some(l => l.startsWith('stage:')),
-                workflow: 'run-ux-designer.yml',
+                workflow: 'ux-designer.yml',
                 getInputs: (issue) => ({
                   issue_number: String(issue.number),
                   workflow_type: 'ux-first',
@@ -77,7 +77,7 @@ jobs:
               {
                 name: 'Feature → Architect',
                 match: (labels) => labels.includes('type:feature') && !labels.includes('needs:ux') && !labels.some(l => l.startsWith('stage:')),
-                workflow: 'run-architect.yml',
+                workflow: 'architect.yml',
                 getInputs: (issue) => ({
                   issue_number: String(issue.number),
                   workflow_type: 'feature',
@@ -87,7 +87,7 @@ jobs:
               {
                 name: 'Story with needs:ux → UX Designer',
                 match: (labels) => labels.includes('type:story') && labels.includes('needs:ux') && !labels.some(l => l.startsWith('stage:')),
-                workflow: 'run-ux-designer.yml',
+                workflow: 'ux-designer.yml',
                 getInputs: (issue) => ({
                   issue_number: String(issue.number),
                   workflow_type: 'ux-first',
@@ -97,7 +97,7 @@ jobs:
               {
                 name: 'Story → Architect',
                 match: (labels) => labels.includes('type:story') && !labels.includes('needs:ux') && !labels.some(l => l.startsWith('stage:')),
-                workflow: 'run-architect.yml',
+                workflow: 'architect.yml',
                 getInputs: (issue) => ({
                   issue_number: String(issue.number),
                   workflow_type: 'story',
@@ -107,7 +107,7 @@ jobs:
               {
                 name: 'Bug → Engineer',
                 match: (labels) => labels.includes('type:bug') && !labels.some(l => l.startsWith('stage:')),
-                workflow: 'run-engineer.yml',
+                workflow: 'engineer.yml',
                 getInputs: (issue) => ({
                   issue_number: String(issue.number),
                   workflow_type: 'bug',
@@ -117,7 +117,7 @@ jobs:
               {
                 name: 'Spike → Architect',
                 match: (labels) => labels.includes('type:spike') && !labels.some(l => l.startsWith('stage:')),
-                workflow: 'run-architect.yml',
+                workflow: 'architect.yml',
                 getInputs: (issue) => ({
                   issue_number: String(issue.number),
                   workflow_type: 'spike',
@@ -146,10 +146,10 @@ jobs:
                   
                   const nextStage = stageOrder[currentIndex + 1];
                   const workflowMap = {
-                    'stage:ux-designer': 'run-ux-designer.yml',
-                    'stage:architect': 'run-architect.yml',
-                    'stage:engineer': 'run-engineer.yml',
-                    'stage:reviewer': 'run-reviewer.yml'
+                    'stage:ux-designer': 'ux-designer.yml',
+                    'stage:architect': 'architect.yml',
+                    'stage:engineer': 'engineer.yml',
+                    'stage:reviewer': 'reviewer.yml'
                   };
                   
                   return {
@@ -292,3 +292,4 @@ jobs:
             processed.forEach(p => console.log(`   - #${p.number} → ${p.workflow} (${p.rule})`));
             console.log(`⏭️ Skipped: ${skipped.length}`);
             skipped.forEach(s => console.log(`   - #${s.number}: ${s.reason}`));
+

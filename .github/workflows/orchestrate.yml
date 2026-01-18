@@ -263,7 +263,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'run-architect.yml',
+              workflow_id: 'architect.yml',
               ref: context.payload.repository.default_branch,
               inputs: {
                 issue_number: String(context.payload.issue.number),
@@ -281,7 +281,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'run-engineer.yml',
+              workflow_id: 'engineer.yml',
               ref: context.payload.repository.default_branch,
               inputs: {
                 issue_number: String(context.payload.issue.number),
@@ -299,7 +299,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'run-reviewer.yml',
+              workflow_id: 'reviewer.yml',
               ref: context.payload.repository.default_branch,
               inputs: {
                 issue_number: String(context.payload.issue.number),
@@ -317,7 +317,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'run-ux-designer.yml',
+              workflow_id: 'ux-designer.yml',
               ref: context.payload.repository.default_branch,
               inputs: {
                 issue_number: String(context.payload.issue.number),
@@ -377,3 +377,4 @@ The ${agent} agent has been triggered and will process this issue.
               issue_number: context.payload.issue.number,
               body: comment
             });
+
