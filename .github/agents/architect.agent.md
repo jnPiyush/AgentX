@@ -9,7 +9,7 @@ tools:
   - create_file
   - run_in_terminal
   - get_errors
-model: claude-sonnet-4-20250514
+model: Claude Sonnet 4.5 (copilot)
 ---
 
 # Architect Agent

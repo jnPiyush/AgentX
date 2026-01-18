@@ -7,7 +7,7 @@ tools:
   - file_search
   - create_file
   - list_dir
-model: claude-sonnet-4-20250514
+model: GPT-5.2 (copilot)
 ---
 
 # UX Designer Agent

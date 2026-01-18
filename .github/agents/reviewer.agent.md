@@ -9,7 +9,7 @@ tools:
   - get_errors
   - get_changed_files
   - manage_todo_list
-model: claude-sonnet-4-20250514
+model: GPT-5.2-Codex (copilot)
 ---
 
 # Reviewer Agent
