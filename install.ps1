@@ -5,10 +5,8 @@
 
 .DESCRIPTION
     Downloads and installs AgentX - AI Agent Guidelines for Production Code
-    into your current project directory.
-
-.PARAMETER Full
-    Install all optional files (agents, instructions, prompts)
+    into your current project directory. Installs all files including agents,
+    instructions, prompts, and VS Code extension.
 
 .PARAMETER Force
     Overwrite existing files
@@ -17,14 +15,13 @@
     .\install.ps1
     
 .EXAMPLE
-    .\install.ps1 -Full
+    .\install.ps1 -Force
     
 .EXAMPLE
     irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 #>
 
 param(
-    [switch]$Full,
     [switch]$Force
 )
 
@@ -152,12 +149,10 @@ foreach ($skill in $skillsFiles) {
     Download-File "skills/$skill" "skills/$skill"
 }
 
-# Download optional files if --Full
-if ($Full) {
-    Write-Info "Downloading optional files (--Full mode)..."
-    foreach ($file in $optionalFiles) {
-        Download-File $file.Src $file.Dest
-    }
+# Download additional files (agents, instructions, prompts)
+Write-Info "Downloading agents, instructions, and prompts..."
+foreach ($file in $optionalFiles) {
+    Download-File $file.Src $file.Dest
 }
 
 # VS Code Extension Installation

@@ -2,14 +2,14 @@
 #
 # Install AgentX in your project (Bash version)
 #
+# Installs all files including agents, instructions, prompts, and VS Code extension.
+#
 # Usage:
-#   ./install.sh           Install core files
-#   ./install.sh --full    Install all optional files
+#   ./install.sh           Install all files
 #   ./install.sh --force   Overwrite existing files
 #
 # One-liner installation:
 #   curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash -s -- --full
 
 set -e
 
@@ -32,14 +32,10 @@ REPO_URL="https://raw.githubusercontent.com/jnPiyush/AgentX/master"
 TARGET_DIR="$(pwd)"
 
 # Parse arguments
-FULL=false
 FORCE=false
 
 for arg in "$@"; do
     case $arg in
-        --full)
-            FULL=true
-            ;;
         --force)
             FORCE=true
             ;;
@@ -126,27 +122,25 @@ for skill in "${SKILLS[@]}"; do
     download_file "skills/${skill}" "skills/${skill}"
 done
 
-# Optional files for --full
-if [ "$FULL" = true ]; then
-    info "Downloading optional files (--full mode)..."
-    
-    # Agents
-    download_file "templates/.github/agents/architect.agent.md" ".github/agents/architect.agent.md"
-    download_file "templates/.github/agents/engineer.agent.md" ".github/agents/engineer.agent.md"
-    download_file "templates/.github/agents/reviewer.agent.md" ".github/agents/reviewer.agent.md"
-    download_file "templates/.github/agents/ux-designer.agent.md" ".github/agents/ux-designer.agent.md"
-    
-    # Instructions
-    download_file "templates/.github/instructions/csharp.instructions.md" ".github/instructions/csharp.instructions.md"
-    download_file "templates/.github/instructions/python.instructions.md" ".github/instructions/python.instructions.md"
-    download_file "templates/.github/instructions/react.instructions.md" ".github/instructions/react.instructions.md"
-    download_file "templates/.github/instructions/api.instructions.md" ".github/instructions/api.instructions.md"
-    
-    # Prompts
-    download_file "templates/.github/prompts/code-review.prompt.md" ".github/prompts/code-review.prompt.md"
-    download_file "templates/.github/prompts/refactor.prompt.md" ".github/prompts/refactor.prompt.md"
-    download_file "templates/.github/prompts/test-gen.prompt.md" ".github/prompts/test-gen.prompt.md"
-fi
+# Download additional files (agents, instructions, prompts)
+info "Downloading agents, instructions, and prompts..."
+
+# Agents
+download_file "templates/.github/agents/architect.agent.md" ".github/agents/architect.agent.md"
+download_file "templates/.github/agents/engineer.agent.md" ".github/agents/engineer.agent.md"
+download_file "templates/.github/agents/reviewer.agent.md" ".github/agents/reviewer.agent.md"
+download_file "templates/.github/agents/ux-designer.agent.md" ".github/agents/ux-designer.agent.md"
+
+# Instructions
+download_file "templates/.github/instructions/csharp.instructions.md" ".github/instructions/csharp.instructions.md"
+download_file "templates/.github/instructions/python.instructions.md" ".github/instructions/python.instructions.md"
+download_file "templates/.github/instructions/react.instructions.md" ".github/instructions/react.instructions.md"
+download_file "templates/.github/instructions/api.instructions.md" ".github/instructions/api.instructions.md"
+
+# Prompts
+download_file "templates/.github/prompts/code-review.prompt.md" ".github/prompts/code-review.prompt.md"
+download_file "templates/.github/prompts/refactor.prompt.md" ".github/prompts/refactor.prompt.md"
+download_file "templates/.github/prompts/test-gen.prompt.md" ".github/prompts/test-gen.prompt.md"
 
 # VS Code Extension Installation
 echo ""
