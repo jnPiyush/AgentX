@@ -345,7 +345,7 @@ gh issue close <ID> --comment "Completed in commit <SHA>"
 
 **Orchestration Labels (Multi-Agent Workflow):**
 | Label | Purpose |
-|-------|---------||
+|-------|---------|
 | `type:epic` | Large initiative - triggers Product Manager |
 | `needs:ux` | Requires UX design - triggers UX Designer first |
 | `orch:pm-done` | Product Manager work complete |
