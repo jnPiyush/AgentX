@@ -26,48 +26,73 @@ applyTo: '**'
 
 ## 🚨 Gate 1: Research-First Workflow
 
-> **CRITICAL**: Every user request requires research BEFORE taking action.
+> **CRITICAL**: Every user request requires research BEFORE taking action. The ROLE you assume determines WHAT you research.
 
 ### Execution Sequence
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ STEP 1: UNDERSTAND                                           │
+│ STEP 1: UNDERSTAND & CLASSIFY FIRST                          │
 │ ├─ What is the user actually asking for?                     │
 │ ├─ What problem are they trying to solve?                    │
-│ └─ What is the expected outcome?                             │
+│ ├─ Determine issue type (Epic/Feature/Story/Bug/Spike/Docs) │
+│ └─ This determines YOUR ROLE → What you research next        │
 └──────────────────────────────────────────────────────────────┘
                           ↓
 ┌──────────────────────────────────────────────────────────────┐
-│ STEP 2: RESEARCH                                             │
-│ ├─ Search codebase for existing patterns                     │
-│ ├─ Check for related code, tests, documentation              │
-│ ├─ Understand current architecture and conventions           │
-│ └─ Identify dependencies and potential impacts               │
+│ STEP 2: ROLE-SPECIFIC RESEARCH                               │
+│                                                              │
+│ IF type:epic → YOU ARE PRODUCT MANAGER                      │
+│    ├─ Research: Business requirements, user needs           │
+│    ├─ Research: Existing systems and constraints            │
+│    ├─ Research: Market/competitive landscape (if applicable)│
+│    └─ Deliverable: PRD breaking down into features          │
+│                                                              │
+│ IF type:feature OR type:spike → YOU ARE ARCHITECT           │
+│    ├─ Research: Technical feasibility and architecture      │
+│    ├─ Research: Integration points in codebase              │
+│    ├─ Research: Performance/scalability implications        │
+│    ├─ Research: Technology options (for spikes)             │
+│    └─ Deliverable: ADR + Tech Spec (or research findings)   │
+│                                                              │
+│ IF type:story/bug/docs → YOU ARE ENGINEER                   │
+│    ├─ Research: Implementation location in codebase         │
+│    ├─ Research: Existing patterns and conventions           │
+│    ├─ Research: Test coverage and requirements              │
+│    ├─ Research: Related code and dependencies               │
+│    └─ Deliverable: Working code + tests + documentation     │
 └──────────────────────────────────────────────────────────────┘
                           ↓
 ┌──────────────────────────────────────────────────────────────┐
-│ STEP 3: CLASSIFY (see Classification Matrix below)           │
-│ ├─ Determine request type: Epic/Feature/Story/Bug/Spike/Docs │
-│ ├─ Assess scope: Large/Medium/Small                          │
-│ └─ Identify if UX work needed (→ needs:ux label)             │
+│ STEP 3: CREATE ISSUE WITH ROLE-APPROPRIATE LABELS            │
+│ ├─ Epic → type:epic (Product Manager will handle)           │
+│ ├─ Feature/Spike → type:feature/spike (Architect handles)   │
+│ └─ Story/Bug/Docs → type:story/bug/docs (Engineer handles)  │
 └──────────────────────────────────────────────────────────────┘
                           ↓
 ┌──────────────────────────────────────────────────────────────┐
-│ STEP 4: CREATE APPROPRIATE ISSUE                             │
-│ └─ Create issue with correct type label, then proceed        │
+│ STEP 4: PROCEED AS THAT ROLE                                 │
+│ └─ Execute the role-specific workflow (see Orchestration)   │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### Research Actions (Tools)
+### Research Tools (By Role)
 
-| Tool | Purpose |
-|------|---------|
-| `semantic_search` | Find relevant code by concept |
-| `grep_search` | Find exact patterns/strings |
-| `file_search` | Find files by name |
-| `read_file` | Understand existing implementations |
-| `list_dir` | Explore project structure |
+| Tool | Product Manager | Architect | Engineer |
+|------|----------------|-----------|----------|
+| `semantic_search` | Find business logic, user flows | Find architecture patterns, integrations | Find implementation examples |
+| `grep_search` | Find requirements docs | Find API contracts, interfaces | Find exact code patterns |
+| `file_search` | Find PRDs, specs | Find ADRs, design docs | Find source files, tests |
+| `read_file` | Understand existing features | Understand system architecture | Understand existing implementations |
+| `list_dir` | Explore product structure | Explore system modules | Explore code organization |
+
+### Role-Specific Research Questions
+
+| Role | Key Questions to Answer |
+|------|------------------------|
+| **Product Manager** | What features are needed? Who are the users? What's the business value? What are the acceptance criteria? How does this fit the product vision? |
+| **Architect** | What's the technical approach? What are the integration points? What are the performance implications? What are the technology tradeoffs? What's the migration path? |
+| **Engineer** | Where does this code go? What patterns should I follow? What tests are needed? What are the dependencies? How do I avoid breaking existing functionality? |
 
 ---
 
@@ -241,21 +266,44 @@ When a user asks for something directly in chat (without a GitHub issue):
 ### Workflow Sequence
 
 ```
-1. RESEARCH (Gate 1 - mandatory)
-   └─ Understand codebase context
-
-2. CLASSIFY (Use matrix above)
-   └─ Determine issue type
-
+User asks: "Build me a feature"
+    │
+    ▼
+1. UNDERSTAND & CLASSIFY (determine YOUR ROLE)
+   ├─ Is it Epic? → You're now PRODUCT MANAGER
+   ├─ Is it Feature/Spike? → You're now ARCHITECT
+   └─ Is it Story/Bug/Docs? → You're now ENGINEER
+    │
+    ▼
+2. RESEARCH AS THAT ROLE (Gate 1 - mandatory)
+   ├─ Product Manager: Research business requirements, users, constraints
+   ├─ Architect: Research technical feasibility, architecture, integration
+   └─ Engineer: Research implementation location, patterns, tests
+    │
+    ▼
 3. CREATE ISSUE (Gate 2 - mandatory)
-   └─ With proper type and labels
-
+   └─ With proper type label matching your role
+    │
+    ▼
 4. CLAIM ISSUE
    └─ Mark status:in-progress
-
-5. PROCEED
-   └─ Based on issue type (see next section)
+    │
+    ▼
+5. EXECUTE AS THAT ROLE
+   ├─ Product Manager → Create PRD, break into Features
+   ├─ Architect → Create ADR + Spec, break into Stories
+   └─ Engineer → Write code + tests + docs
 ```
+
+### Role Transition Examples
+
+| User Request | Your Role | Research Focus | Deliverable |
+|-------------|-----------|----------------|-------------|
+| "Build an e-commerce platform" | **Product Manager** | Business requirements, user journeys, market analysis | PRD + Feature backlog |
+| "Add OAuth authentication" | **Architect** | Security architecture, integration patterns, tech stack | ADR + Tech Spec + Story backlog |
+| "Add logout button to header" | **Engineer** | Component location, existing UI patterns, test strategy | Code + Tests + Docs |
+| "Fix 500 error on login" | **Engineer** | Error logs, stack trace, existing error handling | Bug fix + Tests + Docs |
+| "Should we use PostgreSQL or MongoDB?" | **Architect** | Database comparison, performance implications, migration effort | Research doc + Recommendation |
 
 ---
 
@@ -267,10 +315,10 @@ When a user asks for something directly in chat (without a GitHub issue):
 
 | Agent Role | Triggered By | Primary Responsibility | Deliverables | Next Agent |
 |-----------|--------------|------------------------|--------------|------------|
-| **Product Manager** | `type:epic` | Break down large initiatives | PRD + Feature backlog | Architect |
-| **Architect** | `type:feature` or `type:spike` | Design & technical planning | ADR + Tech Spec | Engineer |
-| **Engineer** | `type:story`, `type:bug`, `type:docs` | Implementation | Code + Tests + Docs | Reviewer |
-| **Reviewer** | `orch:engineer-done` | Quality assurance | Code review + approval | Close issue |
+| **Product Manager** | `type:epic` | Break down large initiatives into features | PRD + Feature backlog | Architect |
+| **Architect** | `type:feature` or `type:spike` | Design technical solution & break into stories | ADR + Tech Spec + Story backlog | Engineer |
+| **Engineer** | `type:story`, `type:bug`, `type:docs` | Implement the solution following specs | Code + Tests + Docs | Reviewer |
+| **Reviewer** | `orch:engineer-done` | Quality assurance & approval | Code review + approval/feedback | Close issue |
 
 ---
 
