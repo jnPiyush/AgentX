@@ -268,9 +268,114 @@ Both add their completion labels to the Epic. Engineer only starts when **BOTH**
 
 ---
 
-## 4. Orchestration Model
+## 4. Core Concepts
 
-### 4.1 Label-Based Routing
+### 4.1 Issue-First Workflow
+
+**ALL work MUST start with a GitHub Issue created BEFORE writing any code.**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    Issue-First Workflow                       │
+├──────────────────────────────────────────────────────────────┤
+│                                                               │
+│  1. RESEARCH → Understand requirements, search codebase      │
+│  2. CLASSIFY → Determine issue type (Epic/Feature/Story)     │
+│  3. CREATE ISSUE → GitHub Issue with proper labels           │
+│  4. CLAIM → Move to "In Progress" in Projects board          │
+│  5. EXECUTE → Write code, tests, docs                        │
+│  6. COMMIT → Reference issue number in commit message        │
+│  7. HANDOFF → Add orch:*-done label, trigger next agent      │
+│  8. CLOSE → Reviewer closes issue when complete              │
+│                                                               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Why Issue-First?**
+- ✅ **Audit Trail**: Every change traceable to a decision
+- ✅ **Coordination**: Other agents see what's being worked on
+- ✅ **Context Preservation**: Work persists across sessions
+- ✅ **No Duplicate Effort**: Agents don't work on same task
+
+### 4.2 Agent Specialization
+
+Each agent has a specific role determined by the issue type:
+
+| Request Pattern | Classification | Agent | Why This Agent? |
+|----------------|----------------|-------|-----------------|
+| "Build an e-commerce platform" | `type:epic` | Product Manager | Large, multi-feature initiative |
+| "Add OAuth authentication" | `type:feature` | Architect | Single capability, needs design |
+| "Add logout button to header" | `type:story` | Engineer | Small, specific implementation |
+| "Login page returns 500 error" | `type:bug` | Engineer | Something broken, needs fix |
+| "Should we use PostgreSQL or MongoDB?" | `type:spike` | Architect | Research and evaluation needed |
+| "Update README with setup steps" | `type:docs` | Engineer | Documentation only |
+
+### 4.3 Label-Based Orchestration
+
+**Orchestration labels** (`orch:*-done`) signal work completion and trigger the next agent:
+
+```
+PM completes Epic → adds orch:pm-done
+    ↓
+Workflow detects label change
+    ↓
+Triggers Architect + UX Designer (parallel)
+    ↓
+Both complete → add orch:architect-done + orch:ux-done
+    ↓
+Workflow detects BOTH labels present
+    ↓
+Triggers Engineer
+    ↓
+Engineer completes → adds orch:engineer-done
+    ↓
+Triggers Reviewer
+    ↓
+Reviewer approves → closes issue
+```
+
+**Key Principle**: Labels are **signals**, not commands. Agents check for label presence to determine when prerequisites are met.
+
+### 4.4 GitHub Projects Status Field
+
+AgentX uses GitHub's native **Projects Status field** instead of custom status labels:
+
+| Status | Meaning | Set By |
+|--------|---------|--------|
+| **Backlog** | Not started yet | System (automatic) |
+| **In Progress** | Agent is working | Agent (when starting) |
+| **In Review** | Code review phase | Engineer (when done) |
+| **Done** | Completed | System (when issue closed) |
+
+**Benefits:**
+- Clean visual board (no label clutter)
+- Mutually exclusive (only one status at a time)
+- Standard GitHub feature (no custom setup)
+
+### 4.5 Parallel Execution
+
+When a Product Manager completes an Epic, **two agents work in parallel**:
+
+- **Architect**: Creates ADR + Tech Specs for all Features/Stories
+- **UX Designer**: Creates wireframes + prototypes for all user-facing items
+
+Both agents work on the **same Epic issue** but focus on different aspects. Engineer only starts when **BOTH** have completed their work.
+
+---
+
+## 5. Agent Roles & Responsibilities
+
+### 5.1 Agent Matrix
+
+| Agent | Trigger | Input | Output | Handoff |
+|-------|---------|-------|--------|---------|
+| **📋 Product Manager** | `type:epic` | User requirements | PRD + Feature/Story backlog | `orch:pm-done` |
+| **🏗️ Architect** | `orch:pm-done` | PRD, technical requirements | ADR + Tech Specs | `orch:architect-done` |
+| **🎨 UX Designer** | `orch:pm-done` (parallel) | PRD, user flows | Wireframes + Prototypes | `orch:ux-done` |
+| **🔧 Engineer** | Both architect + UX done | Tech Spec + UX design | Code + Tests + Docs | `orch:engineer-done` |
+| **✅ Reviewer** | `orch:engineer-done` | Code changes | Review doc + Approval | Close issue |
+
+### 5.2 Agent Execution Pattern
 
 ```
 Epic Issue Created (#48)
