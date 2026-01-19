@@ -197,7 +197,7 @@ Use AgentX as a template when creating a new repository:
 | **VS Code** | Editor | [code.visualstudio.com](https://code.visualstudio.com) |
 | **GitHub Copilot** | AI coding assistant | [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) |
 | **GitHub CLI** | Task management (recommended) | `winget install GitHub.cli` |
-| **Docker** | MCP Server (optional) | [docker.com](https://docker.com) |
+| **Go** | MCP Server (recommended) | [go.dev](https://go.dev) |
 
 ### Setup
 

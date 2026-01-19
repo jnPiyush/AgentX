@@ -15,15 +15,43 @@ The GitHub MCP Server provides direct API access to GitHub, bypassing browser/CD
 
 ### Prerequisites
 
-1. **Docker** installed and running
-2. **GitHub Personal Access Token** with scopes:
-   - `repo` (full repository access)
-   - `workflow` (workflow management)
-   - `read:org` (if working with org repos)
+Choose one of:
+- **Go** (for native binary) - `go install github.com/github/github-mcp-server@latest`
+- **Docker** (alternative) - [docker.com](https://docker.com)
+
+Plus:
+- **GitHub Personal Access Token** with scopes:
+  - `repo` (full repository access)
+  - `workflow` (workflow management)
+  - `read:org` (if working with org repos)
 
 ### MCP Server Setup
 
 Configuration file: `.vscode/mcp.json`
+
+#### Option 1: Native Binary (Recommended)
+
+```bash
+# Install the MCP server
+go install github.com/github/github-mcp-server@latest
+```
+
+```json
+{
+  "servers": {
+    "github": {
+      "command": "github-mcp-server",
+      "args": ["stdio"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_token}",
+        "GITHUB_TOOLSETS": "actions,issues,pull_requests,repos,users,context"
+      }
+    }
+  }
+}
+```
+
+#### Option 2: Docker
 
 ```json
 {
@@ -43,6 +71,15 @@ Configuration file: `.vscode/mcp.json`
   }
 }
 ```
+
+### Which to Choose?
+
+| Aspect | Native Binary | Docker |
+|--------|---------------|--------|
+| **Setup** | `go install` once | Docker must be running |
+| **Startup** | Instant | Container startup delay |
+| **Dependencies** | Go toolchain | Docker Desktop |
+| **Isolation** | Runs locally | Containerized |
 
 ## Available Toolsets
 

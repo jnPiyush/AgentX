@@ -274,9 +274,8 @@ Write-Host " for production standards"
 Write-Host "6. Review " -NoNewline
 Write-Host ".github/orchestration-config.yml" -ForegroundColor Cyan -NoNewline
 Write-Host " for multi-agent orchestration settings"
-Write-Host "7. Configure " -NoNewline
-Write-Host ".vscode/mcp.json" -ForegroundColor Cyan -NoNewline
-Write-Host " with your GitHub PAT for MCP Server (requires Docker)"
+Write-Host "7. Install GitHub MCP Server: " -NoNewline
+Write-Host "go install github.com/github/github-mcp-server@latest" -ForegroundColor Yellow
 Write-Host ""
 Write-Success "AgentX installed successfully! 🚀"
 Write-Host ""

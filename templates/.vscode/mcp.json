@@ -2,20 +2,17 @@
   "$schema": "https://json.schemastore.org/mcp.json",
   "servers": {
     "github": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "-e",
-        "GITHUB_TOOLSETS=actions,issues,pull_requests,repos,users,context",
-        "ghcr.io/github/github-mcp-server"
-      ],
+      // Native binary (recommended) - install: go install github.com/github/github-mcp-server@latest
+      "command": "github-mcp-server",
+      "args": ["stdio"],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_token}"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_token}",
+        "GITHUB_TOOLSETS": "actions,issues,pull_requests,repos,users,context"
       }
+      // Docker alternative (uncomment below, comment above):
+      // "command": "docker",
+      // "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS=actions,issues,pull_requests,repos,users,context", "ghcr.io/github/github-mcp-server"],
+      // "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_token}" }
     }
   },
   "inputs": [
