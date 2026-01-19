@@ -152,64 +152,6 @@ download_file "templates/.github/prompts/code-review.prompt.md" ".github/prompts
 download_file "templates/.github/prompts/refactor.prompt.md" ".github/prompts/refactor.prompt.md"
 download_file "templates/.github/prompts/test-gen.prompt.md" ".github/prompts/test-gen.prompt.md"
 
-# VS Code Extension Installation
-echo ""
-if command -v code &> /dev/null; then
-    info "VS Code detected! Installing AgentX Workflow Enforcer extension..."
-    
-    # Download extension files
-    download_file "vscode-extension/package.json" "vscode-extension/package.json"
-    download_file "vscode-extension/tsconfig.json" "vscode-extension/tsconfig.json"
-    download_file "vscode-extension/src/extension.ts" "vscode-extension/src/extension.ts"
-    download_file "vscode-extension/README.md" "vscode-extension/README.md"
-    
-    # Check if Node.js is available
-    if command -v node &> /dev/null && command -v npm &> /dev/null; then
-        info "Node.js detected. Building extension..."
-        
-        pushd "${TARGET_DIR}/vscode-extension" > /dev/null
-        
-        # Install dependencies
-        info "Installing dependencies..."
-        npm install --silent 2>/dev/null
-        
-        # Compile TypeScript
-        info "Compiling extension..."
-        npm run compile 2>/dev/null
-        
-        # Check if vsce is available, install if not
-        if ! command -v vsce &> /dev/null; then
-            info "Installing vsce..."
-            npm install -g @vscode/vsce --silent 2>/dev/null
-        fi
-        
-        # Package the extension
-        info "Packaging extension..."
-        vsce package --allow-missing-repository 2>/dev/null
-        
-        # Find and install the vsix file
-        VSIX_FILE=$(ls *.vsix 2>/dev/null | head -1)
-        
-        if [ -n "$VSIX_FILE" ]; then
-            info "Installing extension in VS Code..."
-            code --install-extension "$VSIX_FILE" 2>/dev/null
-            success "VS Code extension installed!"
-        else
-            warn "Could not package extension. Install manually from vscode-extension/"
-        fi
-        
-        popd > /dev/null
-    else
-        warn "Node.js not found. To install the extension manually:"
-        echo -e "${YELLOW}   cd vscode-extension${NC}"
-        echo -e "${YELLOW}   npm install && npm run compile && npx vsce package${NC}"
-        echo -e "${YELLOW}   code --install-extension agentx-workflow-enforcer-1.0.0.vsix${NC}"
-    fi
-else
-    info "VS Code not detected. Extension files available in vscode-extension/"
-    info "To install later: cd vscode-extension && npm install && npm run compile && npx vsce package"
-fi
-
 echo ""
 echo -e "${CYAN}${BOLD}Next Steps${NC}"
 echo ""
