@@ -14,15 +14,18 @@ on:
     inputs:
       issue_number:
         description: 'Issue number to process'
-        required: true
+        required: false
+        default: ''
         type: string
       workflow_type:
         description: 'Type of workflow (feature, spike, etc.)'
-        required: true
+        required: false
+        default: ''
         type: string
       stage:
         description: 'Current stage number'
-        required: true
+        required: false
+        default: '1'
         type: string
 
 jobs:
