@@ -248,7 +248,7 @@ Re-run only failed jobs (more efficient).
     "repo": "AgentX",
     "title": "[Feature] New capability",
     "body": "## Description\n...",
-    "labels": ["type:feature", "priority:p1", "status:ready"]
+    "labels": ["type:feature", "priority:p1"]
   }
 }
 ```
@@ -261,7 +261,7 @@ Re-run only failed jobs (more efficient).
     "owner": "jnPiyush",
     "repo": "AgentX",
     "issue_number": 50,
-    "labels": ["status:in-progress"]
+    "labels": ["type:story", "orch:engineer-done"]
   }
 }
 ```
