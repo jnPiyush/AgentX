@@ -51,10 +51,10 @@ gh auth login
 # 1. CREATE issue (choose the right template)
 gh issue create --web
 # OR use CLI:
-gh issue create --title "[Type] Description" --label "type:story,status:ready"
+gh issue create --title "[Type] Description" --label "type:story"
 
-# 2. CLAIM the issue
-gh issue edit <ISSUE#> --add-label "status:in-progress" --remove-label "status:ready"
+# 2. CLAIM the issue (move to 'In Progress' in Projects board)
+# Use GitHub Projects UI to drag issue to 'In Progress' column
 
 # 3. Create a branch
 git checkout -b issue-<ISSUE#>-description
@@ -97,13 +97,13 @@ This opens GitHub in your browser with structured templates.
 **Via CLI** (Faster):
 ```powershell
 # Story
-gh issue create --title "[Story] Add logout button" --label "type:story,status:ready"
+gh issue create --title "[Story] Add logout button" --label "type:story"
 
 # Bug
-gh issue create --title "[Bug] Login returns 500" --label "type:bug,priority:p0,status:ready"
+gh issue create --title "[Bug] Login returns 500" --label "type:bug,priority:p0"
 
 # Feature (has UI work)
-gh issue create --title "[Feature] Add OAuth login" --label "type:feature,needs:ux,status:ready"
+gh issue create --title "[Feature] Add OAuth login" --label "type:feature,needs:ux"
 ```
 
 ---

@@ -239,10 +239,10 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │ 1️⃣ PRODUCT MANAGER AGENT                                    │
 │ Trigger: type:epic label detected                           │
 │                                                              │
-│ Status: status:ready → status:planning                      │
+│ GitHub Status: Backlog → In Progress → Ready                 │
 │                                                              │
 │ Phase 1: Research & Planning                                 │
-│ 1. Claim issue: Update to status:planning                   │
+│ 1. Claim issue: Set Status to 'In Progress' in Projects     │
 │ 2. Read epic description, understand business requirements  │
 │ 3. Research user needs, market requirements                 │
 │ 4. Research existing systems and technical constraints      │
@@ -250,16 +250,16 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │                                                              │
 │ Phase 2: Create Complete Backlog                            │
 │ 6. Break Epic into Features (create ALL Feature issues):    │
-│    - #<FEAT_1>: OAuth Integration (status:ready)            │
-│    - #<FEAT_2>: User Profile Management (status:ready)      │
-│    - #<FEAT_3>: Password Reset Flow (status:ready)          │
+│    - #<FEAT_1>: OAuth Integration (Status: Backlog)         │
+│    - #<FEAT_2>: User Profile Management (Status: Backlog)   │
+│    - #<FEAT_3>: Password Reset Flow (Status: Backlog)       │
 │                                                              │
 │ 7. Break EACH Feature into User Stories (create ALL):       │
 │    Feature #<FEAT_1> → Stories #<S1>, #<S2>, #<S3>          │
 │    Feature #<FEAT_2> → Stories #<S4>, #<S5>, #<S6>          │
 │    Feature #<FEAT_3> → Stories #<S7>, #<S8>, #<S9>          │
 │                                                              │
-│ 8. Update Epic status: status:planning → status:designing   │
+│ 8. Update Epic: Set Status to 'Ready' in Projects board     │
 │ 9. Add orch:pm-done label to Epic #<EPIC_ID>                │
 │ 10. Comment with backlog summary + links                    │
 │                                                              │
@@ -286,7 +286,7 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │ 2️⃣ UX DESIGNER AGENT (Parallel Track)                       │
 │ Trigger: orch:pm-done label on Epic                         │
 │                                                              │
-│ Status: Epic already in status:designing (set by PM)        │
+│ GitHub Status: Epic stays in 'Ready' (set by PM)            │
 │                                                              │
 │ Execution Steps:                                             │
 │ 1. Read entire backlog (all Features & Stories)             │
@@ -302,7 +302,7 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │ 6. Add orch:ux-done label to Epic #<EPIC_ID>                │
 │ 7. Comment on Epic with UX deliverables summary             │
 │                                                              │
-│ Note: Epic stays in status:designing until BOTH UX + Arch   │
+│ Note: Epic stays in 'Ready' until BOTH UX + Architect       │
 │       complete. Reviews full backlog, creates all UX designs │
 └─────────────────────────────────────────────────────────────┘
 
@@ -310,7 +310,7 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │ 3️⃣ ARCHITECT AGENT (Parallel Track)                         │
 │ Trigger: orch:pm-done label on Epic                         │
 │                                                              │
-│ Status: Epic already in status:designing (set by PM)        │
+│ GitHub Status: Epic stays in 'Ready' (set by PM)            │
 │                                                              │
 │ Execution Steps:                                             │
 │ 1. Read entire backlog (Epic, all Features & Stories)       │
@@ -323,7 +323,7 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │ 6. Add orch:architect-done label to Epic #<EPIC_ID>         │
 │ 7. Comment on Epic with technical deliverables summary      │
 │                                                              │
-│ Note: Epic stays in status:designing until BOTH UX + Arch   │
+│ Note: Epic stays in 'Ready' until BOTH UX + Architect       │
 │       complete. Reviews full backlog, creates all tech specs│
 └─────────────────────────────────────────────────────────────┘
     │
@@ -332,14 +332,14 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │ 4️⃣ ENGINEER AGENT                                           │
 │ Trigger: type:story, type:bug, or type:docs detected        │
 │                                                              │
-│ Status: status:ready → status:implementing → status:reviewing│
+│ GitHub Status: Backlog → In Progress → In Review            │
 │                                                              │
 │ Execution Steps:                                             │
 │ 1. Check prerequisites on parent Epic (BOTH must exist):    │
 │    ✅ orch:architect-done label                              │
 │    ✅ orch:ux-done label (if needed)                         │
 │                                                              │
-│ 2. Claim issue: Update to status:implementing               │
+│ 2. Claim issue: Set Status to 'In Progress' in Projects     │
 │ 3. Read story/bug description, Tech Spec, UX design         │
 │ 4. Research codebase for implementation location            │
 │ 5. Implement the change following Skills.md standards       │
@@ -347,9 +347,8 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │ 7. Update/create documentation (XML docs, README, etc.)     │
 │ 8. Run tests and verify ≥80% coverage                       │
 │ 9. Commit with message: "type: description (#<STORY_ID>)"   │
-│ 10. Update status: status:implementing → status:reviewing   │
-│ 11. Add orch:engineer-done label                            │
-│ 12. Comment with summary + commit SHA                       │
+│ 10. Set Status to 'In Review' + add orch:engineer-done      │
+│ 11. Comment with summary + commit SHA                       │
 │                                                              │
 │ Handoff: Triggers Reviewer (<30s SLA)                       │
 └─────────────────────────────────────────────────────────────┘
@@ -359,7 +358,7 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │ 5️⃣ REVIEWER AGENT                                           │
 │ Trigger: orch:engineer-done label detected                  │
 │                                                              │
-│ Status: Already in status:reviewing (set by Engineer)       │
+│ GitHub Status: Already in 'In Review' (set by Engineer)     │
 │                                                              │
 │ Execution Steps:                                             │
 │ 1. Read commit diff and code changes                        │
@@ -368,16 +367,15 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 │ 4. Verify security (no secrets, SQL injection prevention)   │
 │ 5. Create review document at docs/reviews/REVIEW-{id}.md   │
 │ 6. If approved:                                              │
-│    - Update status: status:reviewing → status:done          │
-│    - Close issue (state: closed)                            │
+│    - Close issue (auto-moves to 'Done')                     │
 │    - Comment "✅ Approved - meets quality standards"        │
 │ 7. If changes needed:                                        │
-│    - Update status: status:reviewing → status:implementing  │
+│    - Set Status to 'In Progress' in Projects board          │
 │    - Add needs:changes label                                │
 │    - Comment with specific feedback                         │
 │    - Remove orch:engineer-done, reassign to Engineer        │
 │                                                              │
-│ Outcome: Issue closed (status:done) or returned to Engineer │
+│ Outcome: Issue closed (Done) or returned to Engineer        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -398,27 +396,27 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 - Commit with proper message format: `type: description (#issue)`
 - Reference parent issues in commit body if hierarchical
 
-#### Step 2: Update Issue State (Status Transition + Orchestration Label)
+#### Step 2: Update Issue State (Orchestration Label Only)
 ```json
 // PRODUCT MANAGER completes planning phase:
-// Transition: status:planning → status:designing
-{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:epic", "status:designing", "orch:pm-done"] } }
+// Set Status to 'Ready' in Projects board, add orchestration label
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:epic", "orch:pm-done"] } }
 
 // ARCHITECT completes design work:
-// Epic stays in status:designing, adds completion signal
-{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:feature", "status:designing", "orch:architect-done"] } }
+// Epic stays in 'Ready', adds completion signal
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:feature", "orch:architect-done"] } }
 
 // UX DESIGNER completes design work:
-// Epic stays in status:designing, adds completion signal
-{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:epic", "status:designing", "orch:ux-done"] } }
+// Epic stays in 'Ready', adds completion signal
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:epic", "orch:ux-done"] } }
 
 // ENGINEER completes implementation:
-// Transition: status:implementing → status:reviewing
-{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:story", "status:reviewing", "orch:engineer-done"] } }
+// Set Status to 'In Review' in Projects board
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:story", "orch:engineer-done"] } }
 
 // REVIEWER approves and closes:
-// Transition: status:reviewing → status:done (+ close issue)
-{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "state": "closed", "labels": ["type:story", "status:done"] } }
+// Issue closes, auto-moves to 'Done' in Projects
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "state": "closed" } }
 ```
 
 #### Step 3: Post Summary Comment
@@ -429,7 +427,7 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 #### Step 4: Trigger Next Agent
 ```json
 // Method A: Create child issues for next agent
-{ "tool": "issue_write", "args": { "method": "create", "title": "[Type] Description", "body": "Parent: #<ID>\n\n## Description\n[Details]", "labels": ["type:story", "status:ready"] } }
+{ "tool": "issue_write", "args": { "method": "create", "title": "[Type] Description", "body": "Parent: #<ID>\n\n## Description\n[Details]", "labels": ["type:story"] } }
 
 // Method B: Trigger workflow directly via MCP
 { "tool": "run_workflow", "args": { "owner": "<OWNER>", "repo": "<REPO>", "workflow_id": "run-engineer.yml", "ref": "master", "inputs": { "issue_number": "<STORY_ID>" } } }
@@ -458,7 +456,7 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 
 ```bash
 # Workflow triggers automatically on label changes:
-# - type:epic + status:ready → Product Manager
+# - type:epic (no orch:pm-done) → Product Manager
 # - orch:pm-done → Architect + UX Designer (parallel)
 # - orch:architect-done + orch:ux-done → Engineer
 # - orch:engineer-done → Reviewer
@@ -755,10 +753,10 @@ curl <url> | bash        # Arbitrary code execution
 ### Create & Claim Issue (MCP)
 ```json
 // Create issue
-{ "tool": "issue_write", "args": { "owner": "<OWNER>", "repo": "<REPO>", "method": "create", "title": "[Story] Description", "labels": ["type:story", "status:ready"] } }
+{ "tool": "issue_write", "args": { "owner": "<OWNER>", "repo": "<REPO>", "method": "create", "title": "[Story] Description", "labels": ["type:story"] } }
 
-// Claim issue (Engineer)
-{ "tool": "update_issue", "args": { "issue_number": <ID>, "labels": ["type:story", "status:implementing"] } }
+// Claim issue (Set Status to 'In Progress' in Projects board)
+// No label changes needed - use Projects board UI or GraphQL
 ```
 
 ### Trigger Next Agent (MCP)

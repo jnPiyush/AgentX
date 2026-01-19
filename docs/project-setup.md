@@ -1,6 +1,6 @@
 # GitHub Project Setup Guide
 
-> **Hybrid Status Tracking**: This project uses GitHub Projects v2 Status field as the primary source of truth, with automatic label synchronization for agent/CLI access.
+> **Simplified Status Tracking**: This project uses GitHub Projects v2 Status field directly. No label synchronization needed.
 
 ---
 
@@ -17,87 +17,76 @@ gh project create --owner jnPiyush --title "AgentX Development"
 
 ### 2. Add Status Field
 
-In your project settings, create a **Status** field with these values:
+In your project settings, create a **Status** field with these standard values:
 
-| Status Value | Icon | Description |
-|--------------|------|-------------|
-| **📝 Backlog** | 📝 | Issue created, not yet claimed |
-| **📋 Planning** | 📋 | Product Manager creating PRD |
-| **🏗️ Designing** | 🏗️ | Architect/UX creating specs |
-| **💻 Implementing** | 💻 | Engineer writing code |
-| **🔍 Reviewing** | 🔍 | Reviewer checking quality |
-| **✅ Done** | ✅ | Completed and closed |
+| Status Value | Description |
+|--------------|-------------|
+| **📝 Backlog** | Issue created, waiting to be claimed |
+| **🚀 In Progress** | Active work (PM/Architect/UX/Engineer) |
+| **👀 In Review** | Code review phase |
+| **✅ Done** | Completed and closed |
+
+**Optional (for granularity):**
+| **🏗️ Ready** | Design complete, ready for engineering |
 
 **Configuration:**
 - Field Type: **Single Select**
-- Field Name: **Status** (exact name required for automation)
+- Field Name: **Status** (exact name recommended)
 - Default: **📝 Backlog**
 
 ### 3. Link Repository
 
 1. Go to Project Settings → Manage Access
 2. Add repository: `jnPiyush/AgentX`
-3. Enable workflow: `.github/workflows/sync-status-to-labels.yml`
+3. Issues automatically sync to project board
 
 ---
 
-## 🔄 How Hybrid Tracking Works
+## 🔄 How Status Tracking Works
 
-### Primary: Status Field (Manual or Board)
+### Status Field (Primary and Only)
 
-**Users/Agents update status in project board:**
+**Users manually update status:**
 ```
-Drag issue from "📋 Planning" → "🏗️ Designing"
-```
-
-**Automation immediately:**
-1. Detects status change
-2. Removes old `status:*` label
-3. Adds new `status:*` label matching the field
-
-### Secondary: Labels (Auto-Synced)
-
-**Agents/CLI can query labels:**
-```bash
-# Find all issues in implementation
-gh issue list --label "status:implementing"
-
-# MCP Server reads labels
-{ "tool": "list_issues", "args": { "labels": ["status:implementing"] } }
+Drag issue from "In Progress" → "In Review" in project board
 ```
 
-Labels are **read-only for agents** - they reflect the Status field.
+**Agents coordinate via `orch:*` labels only:**
+- `orch:pm-done` - Product Manager completed
+- `orch:architect-done` - Architect completed
+- `orch:ux-done` - UX Designer completed  
+- `orch:engineer-done` - Engineer completed
 
 ---
 
-## 🤖 Agent Workflow with Hybrid Tracking
+## 🤖 Agent Workflow
 
 ### For Agents Using MCP Server
 
-**Read current status:**
+**Check coordination status:**
 ```json
 { "tool": "issue_read", "args": { "issue_number": 60 } }
-// Returns: labels: ["type:story", "status:implementing"]
+// Returns: labels: ["type:story", "orch:architect-done", "orch:ux-done"]
 ```
 
-**Update status (via label):**
+**Signal completion:**
 ```json
-// Agent transitions Engineer → Reviewer
+// Agent completes work and adds orchestration label
 { "tool": "update_issue", "args": { 
   "issue_number": 60, 
-  "labels": ["type:story", "status:reviewing", "orch:engineer-done"] 
+  "labels": ["type:story", "orch:engineer-done"] 
 } }
 ```
 
-**What happens:**
-1. Agent updates label
-2. Label triggers Status field update (optional reverse sync)
-3. Both stay in sync
+**Status managed manually:**
+- Users drag issues in Projects board
+- Agents comment when starting: "🔧 Engineer starting implementation..."
+- Status updates happen in Projects UI
 
 ### For Users in Project Board
 
-**Drag & drop:**
-- Move issue from "💻 Implementing" → "🔍 Reviewing"
+**Drag & drop between columns:**
+- Move issue from "In Progress" → "In Review"
 - Automation syncs label immediately
 - Agent sees updated label
 
@@ -108,24 +97,26 @@ Labels are **read-only for agents** - they reflect the Status field.
 ### GitHub CLI
 
 ```bash
-# All issues in design phase
-gh issue list --label "status:designing"
+**Status filters:**
+```bash
+# Find issues by type
+gh issue list --label "type:story"
 
-# All issues being implemented
-gh issue list --label "status:implementing" --json number,title
+# Find issues ready for engineer (both arch + ux done)
+gh issue list --label "orch:architect-done" --label "orch:ux-done"
 
-# Count by status
-gh issue list --label "status:reviewing" --jq 'length'
+# Find all Epic child issues
+gh issue list --search "parent:#<EPIC_ID>"
 ```
 
 ### MCP Server
 
 ```json
-// List all issues in review
+// List all stories with completed design
 { "tool": "list_issues", "args": { 
   "owner": "jnPiyush",
   "repo": "AgentX",
-  "labels": ["status:reviewing"],
+  "labels": ["type:story", "orch:architect-done", "orch:ux-done"],
   "state": "open"
 } }
 ```
@@ -134,7 +125,7 @@ gh issue list --label "status:reviewing" --jq 'length'
 
 ```bash
 curl -H "Authorization: token $TOKEN" \
-  "https://api.github.com/repos/jnPiyush/AgentX/issues?labels=status:implementing"
+  "https://api.github.com/repos/jnPiyush/AgentX/issues?labels=type:story,orch:engineer-done"
 ```
 
 ---
@@ -143,18 +134,11 @@ curl -H "Authorization: token $TOKEN" \
 
 ### Modify Status Values
 
-Edit `.github/workflows/sync-status-to-labels.yml`:
+Edit your GitHub Project Status field to add custom values like:
+- **🚧 Blocked** - Work paused due to dependencies
+- **🔄 Rework** - Changes requested by reviewer
 
-```yaml
-case "$STATUS" in
-  "Your Custom Status")
-    echo "label=status:custom" >> $GITHUB_OUTPUT
-    ;;
-```
-
-### Add Reverse Sync (Label → Status)
-
-Create `.github/workflows/sync-labels-to-status.yml` to update Status field when labels change manually.
+Status is managed in Projects UI, not via code.
 
 ---
 
@@ -164,11 +148,12 @@ Create `.github/workflows/sync-labels-to-status.yml` to update Status field when
 
 **Columns:**
 1. 📝 Backlog (`Status = Backlog`)
-2. 📋 Planning (`Status = Planning`)
-3. 🏗️ Designing (`Status = Designing`)
-4. 💻 Implementing (`Status = Implementing`)
-5. 🔍 Reviewing (`Status = Reviewing`)
-6. ✅ Done (`Status = Done`)
+2. 🚀 In Progress (`Status = In Progress`)
+3. 👀 In Review (`Status = In Review`)
+4. ✅ Done (`Status = Done`)
+
+**Optional:**
+5. 🏗️ Ready (`Status = Ready`) - Between design and implementation
 
 **Filters:**
 - Group by: `Status`
@@ -178,8 +163,8 @@ Create `.github/workflows/sync-labels-to-status.yml` to update Status field when
 
 **Columns to show:**
 - Issue
-- Status (primary)
-- Labels (secondary, for orch:* tracking)
+- Status (managed in Projects board)
+- Labels (for type:* and orch:* tracking)
 - Type
 - Priority
 - Assignees
@@ -189,35 +174,37 @@ Create `.github/workflows/sync-labels-to-status.yml` to update Status field when
 
 ## 🚨 Troubleshooting
 
-### Labels not syncing
+### Status not visible in project
 
 **Check:**
-1. Workflow has `issues: write` permission
-2. Status field is named exactly "Status"
-3. Workflow file is in `.github/workflows/`
+1. Issue is added to project (drag from repo to project)
+2. Status field exists in project settings
+3. View columns are configured to show Status field
 
-**Manual trigger:**
+**Manual add:**
 ```bash
-gh workflow run sync-status-to-labels.yml
+gh project item-add <PROJECT_ID> --owner jnPiyush --url <ISSUE_URL>
 ```
 
-### Status not updating from label
+### Agent coordination not working
 
-This is expected - labels sync FROM status, not TO status. To enable bidirectional:
-1. Create reverse sync workflow
-2. Or always update via project board
-
-### Multiple status labels
-
-Automation should remove old labels, but if stuck:
+**Check `orch:*` labels:**
 ```bash
-# Remove all status labels
-gh issue edit <ID> --remove-label "status:ready"
-gh issue edit <ID> --remove-label "status:planning"
-# etc.
+# Verify labels exist
+gh issue view <ID> --json labels
 
-# Then set correct one via project board
+# Expected for Engineer to start:
+# - type:story
+# - orch:architect-done
+# - orch:ux-done (if needed)
 ```
+
+### Status field missing
+
+Create Status field in Project Settings:
+1. Go to project → Settings → Fields
+2. Add new field → Single Select → Name: "Status"
+3. Add options: Backlog, In Progress, In Review, Done
 
 ---
 

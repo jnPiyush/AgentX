@@ -1,207 +1,124 @@
-# Workflow Simplification Summary
+# Workflows
 
-## Changes Made
+This directory contains the **unified agent orchestrator** that manages all 5 agents in a single workflow file.
 
-### Before (10 workflows)
-- ❌ `orchestrate.yml` - Complex routing logic
-- ❌ `run-product-manager.yml` - 594 lines
-- ❌ `architect.yml` - 790 lines
-- ❌ `engineer.yml` - Separate file
-- ❌ `ux-designer.yml` - Separate file
-- ❌ `reviewer.yml` - Separate file
-- ❌ `process-ready-issues.yml` - Polling every 5 min
-- ❌ `enforce-issue-workflow.yml` - Extra validation
-- ✅ `sync-status-to-labels.yml` - Keep (updated)
-- ✅ `test-e2e.yml` - Keep (testing)
+## Core Workflows
 
-**Problems:**
-- Too many files to maintain
-- Duplicate logic across workflows
-- Using old labels (`status:in-progress`, `stage:*`)
-- Inefficient polling approach
-- Complex orchestration logic
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| **agent-orchestrator.yml** | Issue labeled, workflow_dispatch | Routes to appropriate agent(s) based on `type:*` and `orch:*` labels |
+| **test-e2e.yml** | workflow_dispatch | End-to-end workflow testing |
+| ~~sync-status-to-labels.yml~~ | ~~Deprecated~~ | ~~No longer needed - Status managed in Projects UI directly~~ |
 
----
-
-### After (2 core workflows)
-
-#### 1. **agent-orchestrator.yml** (All-in-One) ⭐
-**Single unified workflow with all 5 agents:**
-- 📋 Product Manager
-- 🏗️ Architect
-- 🎨 UX Designer
-- 🔧 Engineer
-- ✅ Reviewer
-
-**Features:**
-- ✅ Event-driven (no polling)
-- ✅ Uses new status labels (ready, planning, designing, implementing, reviewing, done)
-- ✅ Uses orchestration labels (orch:pm-done, orch:architect-done, etc.)
-- ✅ All agents in one file (easier to maintain)
-- ✅ Clear routing logic at top
-- ✅ Parallel execution (Architect + UX run simultaneously)
-
-**Triggers:**
-- `issues.labeled` - When labels change
-- `workflow_dispatch` - Manual trigger for testing
-
-#### 2. **sync-status-to-labels.yml** (Hybrid Tracking) ⭐
-**Syncs GitHub Projects Status field to labels:**
-- ✅ Updated to use `project_v2_item` event
-- ✅ Maps 6 status values to labels
-- ✅ Removes old status labels automatically
-- ✅ Enables both board UI and API access
-
-**Triggers:**
-- `issues.opened/reopened` - New issues
-- `project_v2_item.edited` - Board movements
-
----
-
-## How It Works
-
-### Workflow Routing Logic
+## Orchestration Flow
 
 ```
-Issue Created (type:epic, status:ready)
+Issue Created (type:epic)
     │
     ▼
-Agent Orchestrator detects labels
+Agent Orchestrator
     │
-    ├─→ type:epic + status:ready → Product Manager
+    ├─→ type:epic (no orch:pm-done) → Product Manager
+    │       ↓
+    │   Creates PRD + Backlog
+    │       ↓
+    │   Adds orch:pm-done
     │
-    ├─→ orch:pm-done (no orch:architect-done) → Architect
-    │
-    ├─→ orch:pm-done (no orch:ux-done) → UX Designer
+    ├─→ orch:pm-done → Architect + UX Designer (parallel)
+    │       ↓
+    │   Both create specs/designs
+    │       ↓
+    │   Add orch:architect-done + orch:ux-done
     │
     ├─→ orch:architect-done + orch:ux-done → Engineer
+    │       ↓
+    │   Implements + Tests
+    │       ↓
+    │   Adds orch:engineer-done
     │
-    ├─→ orch:engineer-done + status:reviewing → Reviewer
-    │
-    └─→ Reviewer closes issue (status:done)
+    └─→ orch:engineer-done → Reviewer
+            ↓
+        Reviews + Closes issue
 ```
 
-### Status Sync Flow
+## Agent-Orchestrator Workflow
 
-```
-User drags issue in Project Board
-    │
-    ▼
-GitHub fires project_v2_item.edited event
-    │
-    ▼
-Sync workflow reads Status field via GraphQL
-    │
-    ▼
-Maps Status → Label (e.g., "Implementing" → "status:implementing")
-    │
-    ▼
-Updates issue labels (removes old, adds new)
-    │
-    ▼
-Agent Orchestrator can now read status via labels
-```
+**File**: `agent-orchestrator.yml`
 
----
+**Single workflow with 5 agent jobs:**
+1. **Route** - Determines which agent(s) should run
+2. **Product Manager** - Creates PRD and backlog
+3. **Architect** - Creates ADR and tech specs (parallel with UX)
+4. **UX Designer** - Creates wireframes and prototypes (parallel with Architect)
+5. **Engineer** - Implements code and tests
+6. **Reviewer** - Reviews code and closes issue
 
-## Migration Steps
+**Routing Logic:**
+- Checks `type:*` labels to identify issue type
+- Checks `orch:*` labels to determine completion state
+- Outputs boolean flags for each agent (run_pm, run_architect, etc.)
+- Supports parallel execution (Architect + UX can run simultaneously)
 
-### 1. Delete Old Workflows ❌
-```powershell
-Remove-Item .github/workflows/orchestrate.yml
-Remove-Item .github/workflows/run-product-manager.yml
-Remove-Item .github/workflows/architect.yml
-Remove-Item .github/workflows/engineer.yml
-Remove-Item .github/workflows/ux-designer.yml
-Remove-Item .github/workflows/reviewer.yml
-Remove-Item .github/workflows/process-ready-issues.yml
-Remove-Item .github/workflows/enforce-issue-workflow.yml
-```
+**Status Tracking:**
+- Agents use `orch:*` labels for coordination only
+- Status managed via GitHub Projects Status field (Backlog, In Progress, In Review, Done)
+- No custom `status:*` labels needed
+- Agents post comments when starting work
 
-### 2. Keep These Workflows ✅
-- `agent-orchestrator.yml` (NEW - all agents unified)
-- `sync-status-to-labels.yml` (UPDATED - hybrid tracking)
-- `test-e2e.yml` (UNCHANGED - testing)
+## Labels Used
 
-### 3. Update Labels
-Remove old labels:
-- `status:in-progress` (replace with phase-specific labels)
-- `stage:*` labels (replaced by `orch:*` labels)
+### Type Labels (Determines Agent Role)
+- `type:epic` - Product Manager
+- `type:feature` - Architect
+- `type:story` - Engineer
+- `type:bug` - Engineer
+- `type:spike` - Architect
+- `type:docs` - Engineer
 
-Add new labels (if not already present):
-- `status:ready`, `status:planning`, `status:designing`, `status:implementing`, `status:reviewing`, `status:done`
-- `orch:pm-done`, `orch:architect-done`, `orch:ux-done`, `orch:engineer-done`
+### Orchestration Labels (Agent Coordination)
+- `orch:pm-done` - PM completed, triggers Architect + UX
+- `orch:architect-done` - Architect completed
+- `orch:ux-done` - UX completed
+- `orch:engineer-done` - Engineer completed, triggers Reviewer
 
-### 4. Test the New Workflow
-```powershell
-# Create a test epic
-gh issue create --title "[Epic] Test Workflow" --label "type:epic,status:ready"
+### Priority Labels
+- `priority:p0`, `priority:p1`, `priority:p2`, `priority:p3`
 
-# Watch the orchestrator work
-gh workflow view agent-orchestrator.yml --web
+### Workflow Labels
+- `needs:ux` - Requires UX design
+- `needs:help` - Blocked
+- `needs:changes` - Review requested changes
+
+## Testing
+
+```bash
+# Manually trigger orchestrator for an issue
+gh workflow run agent-orchestrator.yml -f issue_number=123
+
+# Run E2E tests
+gh workflow run test-e2e.yml
 ```
 
----
+## Simplification Summary
 
-## Benefits
+### Before (10 workflows, 2,500+ lines)
+- ❌ Separate file for each agent
+- ❌ Complex orchestration workflow
+- ❌ Polling every 5 minutes (process-ready-issues.yml)
+- ❌ Custom status:* label management
+- ❌ Status sync workflow
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **Workflow Files** | 10 | 2 | 80% reduction |
-| **Lines of Code** | ~3000 | ~400 | 87% reduction |
-| **Polling** | Every 5 min | Event-driven | Instant response |
-| **Maintenance** | 10 files to update | 1 file to update | 10x easier |
-| **Label System** | Mixed (status + stage) | Unified (status + orch) | Consistent |
+### After (2 workflows, 400 lines) ⭐
+- ✅ Unified agent-orchestrator.yml (all 5 agents)
+- ✅ Event-driven (no polling)
+- ✅ GitHub standard Status field
+- ✅ Simpler coordination via orch:* labels only
+- ✅ 87% code reduction
 
----
+**Benefits:**
+- Easier maintenance (one file vs 10)
+- Faster handoffs (event-driven)
+- Cleaner labels (no status:*)
+- Native GitHub UX (Projects Status field)
+- Agents comment on progress
 
-## Configuration
-
-### Environment Variables (Optional)
-```yaml
-# If you need custom behavior, add to workflow:
-env:
-  MIN_COVERAGE: 80
-  AUTO_MERGE: false
-  NOTIFY_SLACK: true
-```
-
-### Manual Triggers
-```powershell
-# Trigger specific issue
-gh workflow run agent-orchestrator.yml -f issue_number=50
-
-# Check workflow runs
-gh run list --workflow=agent-orchestrator.yml
-```
-
----
-
-## Troubleshooting
-
-### Workflow Not Triggering
-**Problem:** Agent orchestrator doesn't run when labels change  
-**Solution:** Check that issue has correct type + status labels
-
-### Status Not Syncing
-**Problem:** Board movements don't update labels  
-**Solution:** Ensure GitHub Project uses "Status" field name exactly
-
-### Agent Runs Multiple Times
-**Problem:** Same agent triggered repeatedly  
-**Solution:** Check that orchestration labels are being added correctly
-
----
-
-## Next Steps
-
-1. ✅ Review this README
-2. ⏳ Test `agent-orchestrator.yml` with a sample epic
-3. ⏳ Delete old workflow files after validation
-4. ⏳ Update AGENTS.md to reference new workflow
-5. ⏳ Train team on new system
-
----
-
-**Last Updated**: January 19, 2026  
-**Maintained By**: AgentX Team
