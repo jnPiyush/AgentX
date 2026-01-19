@@ -36,6 +36,7 @@ jobs:
 
   architect:
     name: 🏗️ Solution Architect Agent
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     
     steps:
