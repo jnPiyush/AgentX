@@ -21,6 +21,12 @@ on:
         required: true
         type: string
 
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+  actions: write
+
 jobs:
   engineer:
     name: 💻 Engineer Agent

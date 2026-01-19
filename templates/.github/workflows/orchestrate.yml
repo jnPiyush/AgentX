@@ -17,6 +17,11 @@ on:
         required: true
         type: number
 
+permissions:
+  issues: write
+  contents: read
+  actions: write
+
 # Prevent concurrent orchestration on same issue
 concurrency:
   group: orchestrate-${{ github.event.issue.number }}
