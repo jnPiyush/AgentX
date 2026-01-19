@@ -314,6 +314,40 @@ If classified as `type:story`, `type:bug`, or `type:docs`:
 
 ---
 
+## 🔧 GitHub MCP Server (Preferred for GitHub Operations)
+
+> **Use MCP Server tools instead of CLI when available** - Provides direct API access, structured responses, and bypasses caching issues.
+
+### Configuration
+- **Config file**: `.vscode/mcp.json`
+- **Full documentation**: [docs/mcp-integration.md](../docs/mcp-integration.md)
+
+### Key Tools
+
+| Tool | Purpose |
+|------|---------|
+| `run_workflow` | Trigger workflow_dispatch events |
+| `list_workflow_runs` | Check workflow status |
+| `get_workflow_run` | Get run details |
+| `create_issue` | Create GitHub issues |
+| `update_issue` | Update issue labels/state |
+| `add_issue_comment` | Add comments to issues |
+
+### Quick Examples
+
+```json
+// Trigger a workflow
+{ "tool": "run_workflow", "args": { "owner": "jnPiyush", "repo": "AgentX", "workflow_id": "run-pm.yml", "ref": "master", "inputs": { "issue_number": "48" } } }
+
+// Update issue labels
+{ "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": 48, "labels": ["status:in-progress"] } }
+```
+
+### When MCP Unavailable
+Fall back to GitHub CLI (`gh`) commands as documented in the Issue-First Workflow section.
+
+---
+
 ## Agent Behavior Reference
 
 > **IMPORTANT**: All agent behavior, workflows, security protocols, and task management guidelines are defined in [AGENTS.md](../AGENTS.md). This includes:
@@ -321,6 +355,7 @@ If classified as `type:story`, `type:bug`, or `type:docs`:
 > - 4-Layer Security Architecture
 > - Memory & State Management
 > - GitHub Issues Task Management
+> - GitHub MCP Server Integration
 > - Multi-Agent Orchestration
 > - Agent Handoff Protocol
 > - Development Workflow

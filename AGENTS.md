@@ -124,7 +124,82 @@ Has UI? → add needs:ux
 
 ---
 
-## GitHub CLI Commands
+## GitHub MCP Server (Preferred)
+
+Use the GitHub MCP Server for all GitHub operations. Configuration: `.vscode/mcp.json`
+
+### Why MCP Server?
+- **Direct API calls** - Bypasses workflow_dispatch caching issues
+- **Structured responses** - JSON data instead of CLI output
+- **Unified tooling** - Issues, PRs, Actions in one interface
+- **Agent-native** - Designed for AI agent workflows
+
+### Available Tools (actions toolset)
+
+| Tool | Description | Use Case |
+|------|-------------|----------|
+| `run_workflow` | Trigger workflow_dispatch | Start agent workflows |
+| `list_workflows` | List repo workflows | Discover available workflows |
+| `list_workflow_runs` | List workflow runs | Check execution status |
+| `get_workflow_run` | Get run details | Monitor specific run |
+| `cancel_workflow_run` | Cancel running workflow | Stop errant executions |
+| `rerun_workflow_run` | Re-run entire workflow | Retry failed runs |
+| `rerun_failed_jobs` | Re-run only failed jobs | Efficient retries |
+
+### Workflow Trigger Examples
+
+```json
+// Trigger Product Manager workflow
+{
+  "tool": "run_workflow",
+  "args": {
+    "owner": "jnPiyush",
+    "repo": "AgentX",
+    "workflow_id": "run-product-manager.yml",
+    "ref": "master",
+    "inputs": { "issue_number": "48" }
+  }
+}
+
+// Trigger Architect workflow
+{
+  "tool": "run_workflow",
+  "args": {
+    "owner": "jnPiyush",
+    "repo": "AgentX",
+    "workflow_id": "run-architect.yml",
+    "ref": "master",
+    "inputs": { "issue_number": "50" }
+  }
+}
+
+// Check workflow run status
+{
+  "tool": "list_workflow_runs",
+  "args": {
+    "owner": "jnPiyush",
+    "repo": "AgentX",
+    "workflow_id": "run-product-manager.yml",
+    "status": "in_progress"
+  }
+}
+```
+
+### Issue Management Tools
+
+| Tool | Description |
+|------|-------------|
+| `create_issue` | Create new issue |
+| `get_issue` | Get issue details |
+| `update_issue` | Update issue fields |
+| `add_issue_comment` | Add comment to issue |
+| `list_issues` | List/search issues |
+
+---
+
+## GitHub CLI Commands (Fallback)
+
+Use CLI when MCP Server is unavailable or for quick terminal operations.
 
 ```bash
 # Create issue
@@ -282,6 +357,7 @@ Never give up without exhausting available tools.
 
 | Need | Location |
 |------|----------|
+| **MCP Server config** | `.vscode/mcp.json` |
 | Security config | `.github/autonomous-mode.yml` |
 | Technical standards | `Skills.md` |
 | Agent definitions | `.github/agents/*.agent.md` |
