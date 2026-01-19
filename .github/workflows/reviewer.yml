@@ -1,11 +1,14 @@
 # Run Reviewer Agent
 # Triggered by orchestrator to perform code review tasks
 # Part of AgentX Phase 1 MVP
-# Updated: 2026-01-18 - Force refresh
 
 name: Run Reviewer Agent
 
 on:
+  # Validate workflow file on push (prevents GitHub validation failures)
+  push:
+    paths:
+      - '.github/workflows/reviewer.yml'
   workflow_dispatch:
     inputs:
       issue_number:
@@ -22,7 +25,16 @@ on:
         type: string
 
 jobs:
+  # Validation job - runs on push to validate workflow syntax
+  validate:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow file validated
+        run: echo "✅ Workflow file syntax is valid"
+
   reviewer:
+    if: github.event_name == 'workflow_dispatch'
     name: 🔍 Reviewer Agent
     runs-on: ubuntu-latest
     

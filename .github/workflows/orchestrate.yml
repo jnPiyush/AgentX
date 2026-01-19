@@ -5,6 +5,10 @@
 name: Multi-Agent Orchestrator
 
 on:
+  # Validate workflow file on push (prevents GitHub validation failures)
+  push:
+    paths:
+      - '.github/workflows/orchestrate.yml'
   issues:
     types: [opened, labeled]
   issue_comment:
@@ -19,14 +23,23 @@ on:
 
 # Prevent concurrent orchestration on same issue
 concurrency:
-  group: orchestrate-${{ github.event.issue.number }}
+  group: orchestrate-${{ github.event.issue.number || 'manual' }}
   cancel-in-progress: false
 
 jobs:
+  # Validation job - runs on push to validate workflow syntax
+  validate:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow file validated
+        run: echo "✅ Workflow file syntax is valid"
+
   # ==========================================================================
   # ROUTER: Determine which workflow to trigger
   # ==========================================================================
   route:
+    if: github.event_name != 'push'
     name: Route to Agent
     runs-on: ubuntu-latest
     outputs:

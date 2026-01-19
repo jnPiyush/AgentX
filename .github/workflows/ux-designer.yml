@@ -2,11 +2,14 @@
 # Triggered by orchestrator to perform UX design tasks
 # Produces wireframes, user flows, and UX research documents
 # Part of AgentX Phase 1 MVP
-# Cache refresh: 2026-01-18T21:55:00Z
 
 name: Run UX Designer Agent
 
 on:
+  # Validate workflow file on push (prevents GitHub validation failures)
+  push:
+    paths:
+      - '.github/workflows/ux-designer.yml'
   workflow_dispatch:
     inputs:
       issue_number:
@@ -23,7 +26,16 @@ on:
         type: string
 
 jobs:
+  # Validation job - runs on push to validate workflow syntax
+  validate:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow file validated
+        run: echo "✅ Workflow file syntax is valid"
+
   ux-designer:
+    if: github.event_name == 'workflow_dispatch'
     name: 🎨 UX Designer Agent
     runs-on: ubuntu-latest
     

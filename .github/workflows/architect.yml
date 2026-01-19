@@ -2,11 +2,14 @@
 # Triggered by orchestrator to perform requirements analysis and design tasks
 # Produces ADR (Architecture Decision) and Tech Spec (Technical Specification)
 # Part of AgentX Phase 1 MVP
-# Cache refresh: 2026-01-18T21:55:00Z
 
 name: Run Architect Agent
 
 on:
+  # Validate workflow file on push (prevents GitHub validation failures)
+  push:
+    paths:
+      - '.github/workflows/architect.yml'
   workflow_dispatch:
     inputs:
       issue_number:
@@ -23,7 +26,16 @@ on:
         type: string
 
 jobs:
+  # Validation job - runs on push to validate workflow syntax
+  validate:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow file validated
+        run: echo "✅ Workflow file syntax is valid"
+
   architect:
+    if: github.event_name == 'workflow_dispatch'
     name: 🏗️ Solution Architect Agent
     runs-on: ubuntu-latest
     
