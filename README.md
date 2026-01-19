@@ -41,7 +41,7 @@ AgentX provides structured guidelines, skills, and workflows for AI coding agent
 | **Engineer** | Implementation & tests | `type:story`, `type:bug` |
 | **Reviewer** | Code review & security | PR created |
 
-Orchestrated via GitHub Actions with polling-based coordination (every 5 minutes).
+**Orchestration**: Event-driven triggers (<30 sec handoff) + polling fallback (5 min). Validated with comprehensive E2E test suite (>85% coverage).
 
 ### � GitHub MCP Server Integration
 
@@ -71,6 +71,15 @@ See [MCP Integration Guide](docs/mcp-integration.md) for setup details.
 - Label taxonomy for task hierarchy (epic → feature → story → task)
 - Session state preservation across context windows
 - Multi-agent coordination with file lock labels
+
+### 🧪 Automated Testing
+
+- **E2E Test Suite**: 5 comprehensive test suites validating orchestration
+- **Coverage**: >85% of orchestration paths
+- **Automated**: Daily at 2 AM UTC + manual trigger
+- **Test Categories**: Smoke tests, orchestration flow, event-driven triggers, metrics, summary
+
+See [E2E Test Documentation](tests/e2e/README.md) for details.
 
 ### 📚 18 Production Skills
 

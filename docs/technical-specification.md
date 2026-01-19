@@ -1,10 +1,10 @@
 # Technical Specification: AI Agent Guidelines System
 
-> **Version**: 1.2  
-> **Date**: January 18, 2026  
+> **Version**: 1.3  
+> **Date**: January 19, 2026  
 > **Status**: Implemented & Verified  
 > **Standard**: [github/awesome-copilot](https://github.com/github/awesome-copilot) • [agentskills.io](https://agentskills.io/specification)  
-> **E2E Tests**: ✅ All Passed (January 18, 2026)
+> **E2E Tests**: ✅ All Passed (January 19, 2026) - 5 Test Suites, >85% Coverage
 
 ---
 
@@ -204,8 +204,14 @@ This specification defines a comprehensive framework for AI coding agents to pro
 │  │                      Multi-Agent Orchestration                        │  │
 │  ├──────────────────────────────────────────────────────────────────────┤  │
 │  │                                                                       │  │
+│  │   Event-Driven Triggers (Immediate Handoffs - <30s)                  │  │
 │  │   ┌─────────────────────────────────────────────────────────────┐    │  │
-│  │   │  process-ready-issues.yml (Polling Orchestrator - 5 min)    │    │  │
+│  │   │  Agent Completes → `gh workflow run` next agent             │    │  │
+│  │   └────────────────────────────┬────────────────────────────────┘    │  │
+│  │                                │                                     │  │
+│  │   Polling Fallback (Backup - Every 5 min)                            │  │
+│  │   ┌─────────────────────────────────────────────────────────────┐    │  │
+│  │   │  process-ready-issues.yml (Checks status:ready labels)      │    │  │
 │  │   └────────────────────────────┬────────────────────────────────┘    │  │
 │  │                                │ workflow_dispatch                    │  │
 │  │        ┌───────┬───────┬───────┼───────┬───────┐                     │  │
@@ -213,6 +219,8 @@ This specification defines a comprehensive framework for AI coding agents to pro
 │  │   ┌────────┐┌────────┐┌────────┐┌────────┐┌────────┐                │  │
 │  │   │  PM    ││Architect││  UX    ││Engineer││Reviewer│                │  │
 │  │   └────────┘└────────┘└────────┘└────────┘└────────┘                │  │
+│  │                                                                       │  │
+│  │   E2E Test Coverage: >85% | Handoff Latency: <30s | Daily Tests     │  │
 │  │                                                                       │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │

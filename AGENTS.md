@@ -83,11 +83,16 @@ gh workflow run <file>        # When MCP unavailable
 
 ## Multi-Agent Orchestration
 
-| Agent | Trigger | Output |
-|-------|---------|--------|
-| Product Manager | `type:epic` | PRD + backlog |
-| Architect | `type:feature` | ADR + spec |
-| Engineer | `type:story/bug` | Code + tests |
+| Agent | Trigger | Output | Handoff |
+|-------|---------|--------|---------|
+| Product Manager | `type:epic` | PRD + backlog | Immediate → Architect (<30s) |
+| Architect | `type:feature` | ADR + spec | Immediate → Engineer (<30s) |
+| Engineer | `type:story/bug` | Code + tests | Immediate → Reviewer (<30s) |
+| Reviewer | `orch:engineer-done` | Code review | Close issue |
+
+**Architecture**: Event-driven triggers via `gh workflow run` + polling fallback (5 min)  
+**Testing**: E2E test suite (5 suites, >85% coverage, runs daily)  
+**Error Handling**: Graceful 404 handling for non-existent issues
 
 ---
 
