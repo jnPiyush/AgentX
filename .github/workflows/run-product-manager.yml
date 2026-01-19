@@ -37,15 +37,10 @@ on:
         type: string
 
 permissions:
-  issues: write
   contents: write
+  issues: write
   pull-requests: write
   actions: write
-
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
 
 env:
   ISSUE_NUMBER: ${{ inputs.issue_number }}
