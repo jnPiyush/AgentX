@@ -724,6 +724,13 @@ jobs:
               body: completionComment
             });
 
+      - name: Record workflow metrics
+        id: metrics
+        run: |
+          echo "workflow_duration=$((SECONDS))" >> $GITHUB_OUTPUT
+          echo "workflow_status=success" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
       - name: Mark stage complete
         uses: actions/github-script@v7
         with:
@@ -736,16 +743,35 @@ jobs:
               labels: ['orchestration:stage-complete']
             });
             
+            // Log metrics
+            const metrics = {
+              workflow: 'architect',
+              duration_seconds: '${{ steps.metrics.outputs.workflow_duration }}',
+              status: 'success',
+              timestamp: '${{ steps.metrics.outputs.timestamp }}',
+              issue_number: '${{ inputs.issue_number }}'
+            };
+            console.log('📊 Workflow Metrics:', JSON.stringify(metrics, null, 2));
             console.log('Marked architect stage as complete');
+
+      - name: Trigger Engineer (Event-Driven)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering Engineer workflow immediately (no polling delay)"
+          gh workflow run engineer.yml \
+            -f issue_number="${{ inputs.issue_number }}" \
+            -f workflow_type="feature" \
+            -f stage="2" || echo "⚠️ Engineer trigger failed, will be picked up by polling orchestrator"
 
       - name: Trigger next stage
         uses: actions/github-script@v7
         with:
           script: |
-            // Create a comment to trigger the orchestrator
+            // Fallback: Create a comment to trigger the orchestrator
             // The orchestrator watches for the stage-complete label
             
-            // Alternatively, directly trigger the orchestrator
+            // Log the trigger attempt
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,

@@ -1,0 +1,57 @@
+# Code Owners - Protected Paths Requiring Human Review
+# Reference: .github/autonomous-mode.yml (Layer 2: Protected Paths)
+# Any PR modifying these paths MUST be reviewed by designated owners
+
+# =============================================================================
+# CI/CD & WORKFLOW FILES - CRITICAL INFRASTRUCTURE
+# =============================================================================
+/.github/workflows/**                @jnPiyush
+/.github/actions/**                  @jnPiyush
+/.github/autonomous-mode.yml         @jnPiyush
+/.github/orchestration-config.yml    @jnPiyush
+
+# =============================================================================
+# SECRETS & CONFIGURATION - SECURITY CRITICAL
+# =============================================================================
+**/*secrets.*                        @jnPiyush
+**/*.env                             @jnPiyush
+**/*.env.*                           @jnPiyush
+**/appsettings.*.json                @jnPiyush
+**/appsettings.Production.json      @jnPiyush
+
+# =============================================================================
+# PACKAGE MANAGEMENT - SUPPLY CHAIN SECURITY
+# =============================================================================
+package.json                         @jnPiyush
+package-lock.json                    @jnPiyush
+yarn.lock                            @jnPiyush
+pnpm-lock.yaml                       @jnPiyush
+**/*.csproj                          @jnPiyush
+**/*.sln                             @jnPiyush
+requirements.txt                     @jnPiyush
+Pipfile.lock                         @jnPiyush
+poetry.lock                          @jnPiyush
+
+# =============================================================================
+# INFRASTRUCTURE AS CODE
+# =============================================================================
+**/terraform/**                      @jnPiyush
+**/bicep/**                          @jnPiyush
+**/cloudformation/**                 @jnPiyush
+Dockerfile*                          @jnPiyush
+docker-compose*.yml                  @jnPiyush
+
+# =============================================================================
+# CORE AGENT GUIDELINES - SYSTEM BEHAVIOR
+# =============================================================================
+/AGENTS.md                           @jnPiyush
+/Skills.md                           @jnPiyush
+/.github/copilot-instructions.md     @jnPiyush
+/.github/agents/**                   @jnPiyush
+
+# =============================================================================
+# DOCUMENTATION - HIGH IMPACT
+# =============================================================================
+/README.md                           @jnPiyush
+/docs/technical-specification.md     @jnPiyush
+/docs/mcp-integration.md             @jnPiyush
