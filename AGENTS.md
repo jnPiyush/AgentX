@@ -7,12 +7,23 @@ applyTo: '**'
 
 ## ⛔ Issue-First Workflow (Mandatory)
 
+### Using MCP Tools (Primary)
+```json
+// Step 1: Create issue
+{ "tool": "issue_write", "args": { "owner": "jnPiyush", "repo": "AgentX", "method": "create", "title": "[Type] Description", "body": "Description", "labels": ["type:task", "status:ready"] } }
+
+// Step 2: Claim issue
+{ "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "labels": ["type:task", "status:in-progress"] } }
+
+// Step 3: Close issue
+{ "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "state": "closed", "labels": ["type:task", "status:done"] } }
+{ "tool": "add_issue_comment", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "body": "Done in <SHA>" } }
+```
+
+### Using CLI (Fallback)
 ```bash
-# Before ANY file change:
 gh issue create --title "[Type] Description" --body "Description" --label "type:task,status:ready"
 gh issue edit <ID> --add-label "status:in-progress" --remove-label "status:ready"
-
-# After completion:
 git commit -m "type: description (#ID)"
 gh issue close <ID> --comment "Done in <SHA>"
 ```
@@ -31,19 +42,26 @@ gh issue close <ID> --comment "Done in <SHA>"
 
 ## GitHub Tools
 
-### MCP Server (Preferred)
-Config: `.vscode/mcp.json` → Uses `https://api.githubcopilot.com/mcp/`
+### MCP Server (Primary) ✅
+Config: `.vscode/mcp.json` → `https://api.githubcopilot.com/mcp/`
 
 | Tool | Purpose |
 |------|---------|
+| `issue_write` | Create/update issues |
+| `update_issue` | Update labels/state |
+| `add_issue_comment` | Add comments |
 | `run_workflow` | Trigger workflows |
-| `create_issue` / `update_issue` | Manage issues |
-| `list_workflow_runs` | Check status |
+| `list_workflow_runs` | Check workflow status |
+| `get_workflow_run` | Get run details |
+| `pull_request_read` | Get PR details |
+| `create_pull_request` | Create PRs |
+| `get_file_contents` | Read repo files |
+| `search_code` | Search codebase |
 
-### CLI (Fallback)
+### CLI (Fallback Only)
 ```bash
-gh issue create/edit/close    # Issue management
-gh workflow run <file>        # Trigger workflows
+gh issue create/edit/close    # When MCP unavailable
+gh workflow run <file>        # When MCP unavailable
 ```
 
 ---

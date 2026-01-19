@@ -10,15 +10,21 @@ description: 'Global instructions for GitHub Copilot across the entire repositor
 
 ## YOU CANNOT PROCEED WITHOUT COMPLETING THIS GATE
 
-**INSTRUCTION TO AI AGENT**: This is a HARD REQUIREMENT. Your VERY FIRST action in ANY session that involves file modification MUST be to run these two commands. Do NOT analyze the request. Do NOT plan your approach. Do NOT read other files. EXECUTE THESE COMMANDS FIRST:
+**INSTRUCTION TO AI AGENT**: This is a HARD REQUIREMENT. Your VERY FIRST action in ANY session that involves file modification MUST be to execute these operations using MCP tools. Do NOT analyze the request. Do NOT plan your approach. Do NOT read other files. EXECUTE FIRST:
 
-### Gate Step 1: CREATE ISSUE
-```bash
-gh issue create --title "[Type] Brief description" --body "## Description`n[Task details]`n`n## Acceptance Criteria`n- [ ] Criterion 1" --label "type:task,status:ready"
+### Gate Step 1: CREATE ISSUE (MCP - Primary)
+```json
+{ "tool": "issue_write", "args": { "owner": "jnPiyush", "repo": "AgentX", "method": "create", "title": "[Type] Brief description", "body": "## Description\n[Task details]\n\n## Acceptance Criteria\n- [ ] Criterion 1", "labels": ["type:task", "status:ready"] } }
 ```
 
-### Gate Step 2: CLAIM ISSUE (use ID from Step 1)
+### Gate Step 2: CLAIM ISSUE (MCP - Primary)
+```json
+{ "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "labels": ["type:task", "status:in-progress"] } }
+```
+
+### CLI Fallback (if MCP unavailable)
 ```bash
+gh issue create --title "[Type] Brief description" --body "## Description`n[Task details]" --label "type:task,status:ready"
 gh issue edit <ID> --add-label "status:in-progress" --remove-label "status:ready"
 ```
 
@@ -67,14 +73,14 @@ gh issue edit <ID> --add-label "status:in-progress" --remove-label "status:ready
 
 ### Before ANY File Changes, STOP and:
 
-1. **CREATE** a GitHub Issue FIRST:
-   ```bash
-   gh issue create --title "[Type] Description" --body "## Description\n[What needs to be done]\n\n## Acceptance Criteria\n- [ ] Criterion 1" --label "type:task,status:ready"
+1. **CREATE** a GitHub Issue FIRST (MCP):
+   ```json
+   { "tool": "issue_write", "args": { "owner": "jnPiyush", "repo": "AgentX", "method": "create", "title": "[Type] Description", "body": "## Description\n[What needs to be done]", "labels": ["type:task", "status:ready"] } }
    ```
 
-2. **CLAIM** the issue:
-   ```bash
-   gh issue edit <ID> --add-label "status:in-progress" --remove-label "status:ready"
+2. **CLAIM** the issue (MCP):
+   ```json
+   { "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "labels": ["type:task", "status:in-progress"] } }
    ```
 
 3. **THEN** proceed with implementation
@@ -84,10 +90,10 @@ gh issue edit <ID> --add-label "status:in-progress" --remove-label "status:ready
    git commit -m "type: description (#ID)"
    ```
 
-5. **CLOSE** the issue when complete:
-   ```bash
-   gh issue edit <ID> --add-label "status:done" --remove-label "status:in-progress"
-   gh issue close <ID> --comment "Completed in commit <SHA>"
+5. **CLOSE** the issue when complete (MCP):
+   ```json
+   { "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "state": "closed", "labels": ["type:task", "status:done"] } }
+   { "tool": "add_issue_comment", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "body": "Completed in commit <SHA>" } }
    ```
 
 ### ❌ VIOLATIONS (Never Do These)
@@ -266,14 +272,12 @@ User asks in chat: "Build me a login feature"
     └── Login feature = type:feature with needs:ux
     │
     ▼
-3. CREATE the appropriate issue
-    gh issue create --title "[Feature] User authentication with login" \
-      --body "## Description\n[Details from user + research]" \
-      --label "type:feature,needs:ux,priority:p1,status:ready"
+3. CREATE the appropriate issue (MCP)
+    { "tool": "issue_write", "args": { "method": "create", "title": "[Feature] User authentication with login", "body": "## Description\n[Details from user + research]", "labels": ["type:feature", "needs:ux", "priority:p1", "status:ready"] } }
     │
     ▼
-4. CLAIM the issue
-    gh issue edit <ID> --add-label "status:in-progress" --remove-label "status:ready"
+4. CLAIM the issue (MCP)
+    { "tool": "update_issue", "args": { "issue_number": <ID>, "labels": ["type:feature", "needs:ux", "priority:p1", "status:in-progress"] } }
     │
     ▼
 5. PROCEED based on issue type
@@ -314,37 +318,76 @@ If classified as `type:story`, `type:bug`, or `type:docs`:
 
 ---
 
-## 🔧 GitHub MCP Server (Preferred for GitHub Operations)
+## 🔧 GitHub MCP Server (Primary for ALL GitHub Operations)
 
-> **Use MCP Server tools instead of CLI when available** - Provides direct API access, structured responses, and bypasses caching issues.
+> **ALWAYS use MCP Server tools first** - Direct API access, structured responses, no caching issues.
 
 ### Configuration
 - **Config file**: `.vscode/mcp.json`
 - **Full documentation**: [docs/mcp-integration.md](../docs/mcp-integration.md)
 
-### Key Tools
+### Issue Management Tools
+
+| Tool | Purpose |
+|------|---------|
+| `issue_write` | Create/update issues (method: create/update) |
+| `update_issue` | Update labels, state, assignees |
+| `add_issue_comment` | Add comments to issues |
+| `issue_read` | Get issue details, comments, labels |
+| `list_issues` | List repository issues |
+| `search_issues` | Search issues across repos |
+
+### Workflow Tools
 
 | Tool | Purpose |
 |------|---------|
 | `run_workflow` | Trigger workflow_dispatch events |
 | `list_workflow_runs` | Check workflow status |
 | `get_workflow_run` | Get run details |
-| `create_issue` | Create GitHub issues |
-| `update_issue` | Update issue labels/state |
-| `add_issue_comment` | Add comments to issues |
+| `get_job_logs` | Get job logs |
+| `rerun_failed_jobs` | Rerun only failed jobs |
+| `cancel_workflow_run` | Cancel a running workflow |
+
+### Repository Tools
+
+| Tool | Purpose |
+|------|---------|
+| `get_file_contents` | Read file/directory contents |
+| `create_or_update_file` | Create or update files |
+| `search_code` | Search code in repos |
+| `list_commits` | List commits |
+| `create_branch` | Create new branch |
+
+### PR Tools
+
+| Tool | Purpose |
+|------|---------|
+| `create_pull_request` | Create new PR |
+| `pull_request_read` | Get PR details, diff, status |
+| `merge_pull_request` | Merge PR |
+| `request_copilot_review` | Request Copilot review |
 
 ### Quick Examples
 
 ```json
-// Trigger a workflow
-{ "tool": "run_workflow", "args": { "owner": "jnPiyush", "repo": "AgentX", "workflow_id": "run-pm.yml", "ref": "master", "inputs": { "issue_number": "48" } } }
+// Create issue
+{ "tool": "issue_write", "args": { "owner": "jnPiyush", "repo": "AgentX", "method": "create", "title": "[Feature] New capability", "labels": ["type:feature", "status:ready"] } }
 
-// Update issue labels
+// Update issue status
 { "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": 48, "labels": ["status:in-progress"] } }
+
+// Close issue
+{ "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": 48, "state": "closed", "labels": ["status:done"] } }
+
+// Trigger workflow
+{ "tool": "run_workflow", "args": { "owner": "jnPiyush", "repo": "AgentX", "workflow_id": "run-pm.yml", "ref": "master", "inputs": { "issue_number": "48" } } }
 ```
 
-### When MCP Unavailable
-Fall back to GitHub CLI (`gh`) commands as documented in the Issue-First Workflow section.
+### CLI Fallback (Only when MCP unavailable)
+```bash
+gh issue create/edit/close    # Issue management
+gh workflow run <file>        # Trigger workflows
+```
 
 ---
 
