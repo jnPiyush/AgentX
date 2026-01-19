@@ -116,12 +116,6 @@ AgentX/
 │   ├── technical-specification.md # Complete system specification
 │   └── mcp-integration.md         # GitHub MCP Server documentation
 │
-├── templates/                     # Template files for new projects
-│   ├── .github/                   # GitHub configuration templates
-│   └── .vscode/                   # VS Code configuration templates
-│       ├── settings.json          # Copilot settings
-│       └── mcp.json               # GitHub MCP Server config
-│
 └── .github/
     ├── copilot-instructions.md    # Global Copilot configuration
     ├── autonomous-mode.yml        # Security configuration
@@ -194,8 +188,8 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh |
 2. Copy files to your project:
    ```bash
    cp -r AgentX/AGENTS.md AgentX/Skills.md AgentX/skills your-project/
-   cp -r AgentX/templates/.github your-project/
-   cp -r AgentX/templates/.vscode your-project/  # Optional: VS Code settings
+   cp -r AgentX/.github your-project/
+   cp -r AgentX/.vscode your-project/  # Optional: VS Code settings
    ```
 
 ### Option 3: GitHub Template

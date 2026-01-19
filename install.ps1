@@ -97,19 +97,14 @@ Write-Host ""
 $coreFiles = @(
     @{ Src = "AGENTS.md"; Dest = "AGENTS.md" },
     @{ Src = "Skills.md"; Dest = "Skills.md" },
-    @{ Src = "templates/.github/copilot-instructions.md"; Dest = ".github/copilot-instructions.md" },
-    @{ Src = "templates/.github/autonomous-mode.yml"; Dest = ".github/autonomous-mode.yml" },
-    @{ Src = "templates/.github/orchestration-config.yml"; Dest = ".github/orchestration-config.yml" },
-    @{ Src = "templates/.github/workflows/enforce-issue-workflow.yml"; Dest = ".github/workflows/enforce-issue-workflow.yml" },
-    @{ Src = "templates/.github/workflows/orchestrate.yml"; Dest = ".github/workflows/orchestrate.yml" },
-    @{ Src = "templates/.github/workflows/process-ready-issues.yml"; Dest = ".github/workflows/process-ready-issues.yml" },
-    @{ Src = "templates/.github/workflows/run-product-manager.yml"; Dest = ".github/workflows/run-product-manager.yml" },
-    @{ Src = "templates/.github/workflows/architect.yml"; Dest = ".github/workflows/architect.yml" },
-    @{ Src = "templates/.github/workflows/engineer.yml"; Dest = ".github/workflows/engineer.yml" },
-    @{ Src = "templates/.github/workflows/reviewer.yml"; Dest = ".github/workflows/reviewer.yml" },
-    @{ Src = "templates/.github/workflows/ux-designer.yml"; Dest = ".github/workflows/ux-designer.yml" },
-    @{ Src = "templates/.vscode/settings.json"; Dest = ".vscode/settings.json" },
-    @{ Src = "templates/.vscode/mcp.json"; Dest = ".vscode/mcp.json" }
+    @{ Src = ".github/copilot-instructions.md"; Dest = ".github/copilot-instructions.md" },
+    @{ Src = ".github/autonomous-mode.yml"; Dest = ".github/autonomous-mode.yml" },
+    @{ Src = ".github/orchestration-config.yml"; Dest = ".github/orchestration-config.yml" },
+    @{ Src = ".github/workflows/agent-orchestrator.yml"; Dest = ".github/workflows/agent-orchestrator.yml" },
+    @{ Src = ".github/workflows/sync-status-to-labels.yml"; Dest = ".github/workflows/sync-status-to-labels.yml" },
+    @{ Src = ".github/workflows/test-e2e.yml"; Dest = ".github/workflows/test-e2e.yml" },
+    @{ Src = ".vscode/settings.json"; Dest = ".vscode/settings.json" },
+    @{ Src = ".vscode/mcp.json"; Dest = ".vscode/mcp.json" }
 )
 
 # Skills files
@@ -136,18 +131,18 @@ $skillsFiles = @(
 
 # Optional files for --Full
 $optionalFiles = @(
-    @{ Src = "templates/.github/agents/product-manager.agent.md"; Dest = ".github/agents/product-manager.agent.md" },
-    @{ Src = "templates/.github/agents/architect.agent.md"; Dest = ".github/agents/architect.agent.md" },
-    @{ Src = "templates/.github/agents/engineer.agent.md"; Dest = ".github/agents/engineer.agent.md" },
-    @{ Src = "templates/.github/agents/reviewer.agent.md"; Dest = ".github/agents/reviewer.agent.md" },
-    @{ Src = "templates/.github/agents/ux-designer.agent.md"; Dest = ".github/agents/ux-designer.agent.md" },
-    @{ Src = "templates/.github/instructions/csharp.instructions.md"; Dest = ".github/instructions/csharp.instructions.md" },
-    @{ Src = "templates/.github/instructions/python.instructions.md"; Dest = ".github/instructions/python.instructions.md" },
-    @{ Src = "templates/.github/instructions/react.instructions.md"; Dest = ".github/instructions/react.instructions.md" },
-    @{ Src = "templates/.github/instructions/api.instructions.md"; Dest = ".github/instructions/api.instructions.md" },
-    @{ Src = "templates/.github/prompts/code-review.prompt.md"; Dest = ".github/prompts/code-review.prompt.md" },
-    @{ Src = "templates/.github/prompts/refactor.prompt.md"; Dest = ".github/prompts/refactor.prompt.md" },
-    @{ Src = "templates/.github/prompts/test-gen.prompt.md"; Dest = ".github/prompts/test-gen.prompt.md" }
+    @{ Src = ".github/agents/product-manager.agent.md"; Dest = ".github/agents/product-manager.agent.md" },
+    @{ Src = ".github/agents/architect.agent.md"; Dest = ".github/agents/architect.agent.md" },
+    @{ Src = ".github/agents/engineer.agent.md"; Dest = ".github/agents/engineer.agent.md" },
+    @{ Src = ".github/agents/reviewer.agent.md"; Dest = ".github/agents/reviewer.agent.md" },
+    @{ Src = ".github/agents/ux-designer.agent.md"; Dest = ".github/agents/ux-designer.agent.md" },
+    @{ Src = ".github/instructions/csharp.instructions.md"; Dest = ".github/instructions/csharp.instructions.md" },
+    @{ Src = ".github/instructions/python.instructions.md"; Dest = ".github/instructions/python.instructions.md" },
+    @{ Src = ".github/instructions/react.instructions.md"; Dest = ".github/instructions/react.instructions.md" },
+    @{ Src = ".github/instructions/api.instructions.md"; Dest = ".github/instructions/api.instructions.md" },
+    @{ Src = ".github/prompts/code-review.prompt.md"; Dest = ".github/prompts/code-review.prompt.md" },
+    @{ Src = ".github/prompts/refactor.prompt.md"; Dest = ".github/prompts/refactor.prompt.md" },
+    @{ Src = ".github/prompts/test-gen.prompt.md"; Dest = ".github/prompts/test-gen.prompt.md" }
 )
 
 function Download-File($src, $dest) {
