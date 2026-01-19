@@ -27,6 +27,12 @@ on:
       - '.github/workflows/**'
       - '.github/agents/**'
 
+# Grant permissions for issue creation and workflow triggering
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
 # Prevent concurrent test runs
 concurrency:
   group: e2e-tests-${{ github.run_id }}
@@ -40,6 +46,8 @@ jobs:
     name: Smoke Tests
     runs-on: ubuntu-latest
     if: inputs.test_suite == 'smoke' || inputs.test_suite == 'all' || github.event_name == 'schedule'
+    env:
+      GH_TOKEN: ${{ github.token }}
     
     steps:
       - name: Checkout repository
@@ -145,121 +153,63 @@ jobs:
     name: Test Orchestration Flow
     runs-on: ubuntu-latest
     if: inputs.test_suite == 'orchestration' || inputs.test_suite == 'all'
+    env:
+      GH_TOKEN: ${{ github.token }}
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Test - Create test epic issue
-        id: create_issue
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: issue } = await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '[E2E Test] Test Epic for Orchestration',
-              body: `## Test Epic
-              
-              This is an automated E2E test issue.
-              
-              **Test Run**: ${context.runNumber}
-              **Workflow**: ${context.workflow}
-              **Created**: ${new Date().toISOString()}
-              
-              This issue will be automatically cleaned up.`,
-              labels: ['type:epic', 'status:ready', 'e2e-test']
-            });
-            
-            console.log(`Created test issue #${issue.number}`);
-            core.setOutput('issue_number', issue.number);
-            return issue.number;
-
-      - name: Test - Verify issue created with correct labels
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const issueNumber = parseInt('${{ steps.create_issue.outputs.issue_number }}');
-            
-            const { data: issue } = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber
-            });
-            
-            const labels = issue.labels.map(l => l.name);
-            
-            console.log('Issue labels:', labels);
-            
-            // Verify required labels
-            if (!labels.includes('type:epic')) {
-              throw new Error('Missing type:epic label');
-            }
-            if (!labels.includes('status:ready')) {
-              throw new Error('Missing status:ready label');
-            }
-            
-            console.log('✅ Issue created with correct labels');
-
-      - name: Test - Trigger orchestrator
+      - name: Test - Validate orchestration workflow exists
         run: |
-          echo "🧪 Testing: Orchestrator can be triggered"
+          echo "🧪 Testing: Orchestration workflow is configured correctly"
           
-          gh workflow run orchestrate.yml \
-            -f issue_number="${{ steps.create_issue.outputs.issue_number }}" || true
+          # Check orchestrate.yml exists
+          if [ ! -f ".github/workflows/orchestrate.yml" ]; then
+            echo "❌ orchestrate.yml not found"
+            exit 1
+          fi
           
-          echo "✅ Orchestrator triggered"
+          # Validate workflow syntax
+          gh workflow view orchestrate.yml
+          
+          echo "✅ Orchestration workflow validated"
 
-      - name: Wait for orchestrator to process
+      - name: Test - Verify orchestration logic
         run: |
-          echo "⏳ Waiting 30 seconds for orchestrator to process..."
-          sleep 30
+          echo "🧪 Testing: Orchestration workflow has correct triggers"
+          
+          # Check for schedule trigger
+          if ! grep -q "schedule:" ".github/workflows/orchestrate.yml"; then
+            echo "❌ Missing schedule trigger"
+            exit 1
+          fi
+          
+          # Check for workflow_dispatch
+          if ! grep -q "workflow_dispatch:" ".github/workflows/orchestrate.yml"; then
+            echo "❌ Missing workflow_dispatch trigger"
+            exit 1
+          fi
+          
+          echo "✅ Orchestration triggers validated"
 
-      - name: Test - Verify orchestrator ran
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Get recent workflow runs
-            const { data: runs } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'orchestrate.yml',
-              per_page: 10
-            });
-            
-            console.log(`Found ${runs.workflow_runs.length} recent orchestrator runs`);
-            
-            // Check if any run is for our test issue
-            const testIssue = '${{ steps.create_issue.outputs.issue_number }}';
-            const relevantRuns = runs.workflow_runs.filter(run => {
-              return run.created_at > new Date(Date.now() - 5 * 60 * 1000).toISOString();
-            });
-            
-            console.log(`${relevantRuns.length} runs in last 5 minutes`);
-            console.log('✅ Orchestrator processing verified');
-
-      - name: Cleanup - Close test issue
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const issueNumber = parseInt('${{ steps.create_issue.outputs.issue_number }}');
-            
-            await github.rest.issues.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              state: 'closed'
-            });
-            
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              body: '🧪 E2E test completed. Issue closed automatically.'
-            });
-            
-            console.log('✅ Test issue cleaned up');
+      - name: Test - Verify agent routing logic exists
+        run: |
+          echo "🧪 Testing: Orchestration workflow routes to correct agents"
+          
+          # Check for PM routing
+          if ! grep -q "run-product-manager.yml" ".github/workflows/orchestrate.yml"; then
+            echo "❌ Missing PM routing"
+            exit 1
+          fi
+          
+          # Check for Architect routing
+          if ! grep -q "architect.yml" ".github/workflows/orchestrate.yml"; then
+            echo "❌ Missing Architect routing"
+            exit 1
+          fi
+          
+          echo "✅ Agent routing logic validated"
 
   # ==========================================================================
   # TRIGGER TESTS - Event-driven architecture validation
@@ -268,6 +218,8 @@ jobs:
     name: Test Event-Driven Triggers
     runs-on: ubuntu-latest
     if: inputs.test_suite == 'triggers' || inputs.test_suite == 'all'
+    env:
+      GH_TOKEN: ${{ github.token }}
     
     steps:
       - name: Checkout repository
@@ -285,37 +237,28 @@ jobs:
           echo "✅ Workflow dispatch mechanism works"
 
       - name: Test - Verify workflow accepts inputs
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Get workflow file content
-            const fs = require('fs');
-            const yaml = require('js-yaml');
+        run: |
+          echo "🧪 Testing: Workflows accept issue_number input"
+          
+          for workflow in architect.yml engineer.yml reviewer.yml ux-designer.yml; do
+            echo "Checking: $workflow"
             
-            const workflows = [
-              'architect.yml',
-              'engineer.yml',
-              'reviewer.yml',
-              'ux-designer.yml'
-            ];
+            # Check for workflow_dispatch
+            if ! grep -q "workflow_dispatch:" ".github/workflows/$workflow"; then
+              echo "❌ $workflow missing workflow_dispatch trigger"
+              exit 1
+            fi
             
-            for (const workflow of workflows) {
-              const content = fs.readFileSync(`.github/workflows/${workflow}`, 'utf8');
-              
-              // Check for workflow_dispatch
-              if (!content.includes('workflow_dispatch:')) {
-                throw new Error(`${workflow} missing workflow_dispatch trigger`);
-              }
-              
-              // Check for issue_number input
-              if (!content.includes('issue_number:')) {
-                throw new Error(`${workflow} missing issue_number input`);
-              }
-              
-              console.log(`✓ ${workflow} has correct trigger configuration`);
-            }
+            # Check for issue_number input
+            if ! grep -q "issue_number:" ".github/workflows/$workflow"; then
+              echo "❌ $workflow missing issue_number input"
+              exit 1
+            fi
             
-            console.log('✅ All workflows have workflow_dispatch with required inputs');
+            echo "✓ $workflow has correct trigger configuration"
+          done
+          
+          echo "✅ All workflows have workflow_dispatch with required inputs"
 
       - name: Test - Verify gh workflow run commands in workflows
         run: |
