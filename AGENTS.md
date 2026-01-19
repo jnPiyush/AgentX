@@ -164,7 +164,7 @@ User asks: "Build me a feature"
     │
     ▼
 4. CLAIM ISSUE
-   └─ Mark status:in-progress
+   └─ Set Status to 'In Progress' in Projects board
     │
     ▼
 5. EXECUTE AS THAT ROLE
@@ -444,7 +444,7 @@ Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
 | **Architect → (Updates Epic)** | All Tech Specs complete (ADR + Specs for all items) | `orch:architect-done` on Epic | Commit all technical docs, add label to Epic, comment with deliverables |
 | **UX + Architect → Engineer** | BOTH complete (all designs + specs ready) | `orch:ux-done` + `orch:architect-done` on Epic | Engineer checks Epic labels before starting any Story |
 | **Engineer → Reviewer** | Implementation complete, tests passing, code committed | `orch:engineer-done` on Story | Commit code, comment on Story with commit SHA |
-| **Reviewer → Close** | Code review passed quality gates | Review approved in `docs/reviews/REVIEW-{issue}.md` | Close Story with `status:done` label |
+| **Reviewer → Close** | Code review passed quality gates | Review approved in `docs/reviews/REVIEW-{issue}.md` | Close Story (auto-moves to Done in Projects) |
 
 ---
 
@@ -550,7 +550,7 @@ See [docs/orchestration-testing-guide.md](docs/orchestration-testing-guide.md) f
 | Tool | Purpose | Example |
 |------|---------|---------|
 | `issue_write` | Create/update issues | `{ "tool": "issue_write", "args": { "method": "create", "title": "[Story] Add login", "labels": ["type:story"] } }` |
-| `update_issue` | Update labels/state/assignees | `{ "tool": "update_issue", "args": { "issue_number": 48, "labels": ["status:in-progress"] } }` |
+| `update_issue` | Update labels/state/assignees | `{ "tool": "update_issue", "args": { "issue_number": 48, "labels": ["type:story", "orch:engineer-done"] } }` |
 | `add_issue_comment` | Add comments to issues | `{ "tool": "add_issue_comment", "args": { "issue_number": 48, "body": "Completed PRD" } }` |
 | `issue_read` | Get issue details | `{ "tool": "issue_read", "args": { "issue_number": 48 } }` |
 | `list_issues` | List repository issues | `{ "tool": "list_issues", "args": { "state": "open" } }` |
@@ -592,8 +592,8 @@ See [docs/orchestration-testing-guide.md](docs/orchestration-testing-guide.md) f
 
 ```bash
 # Issue management
-gh issue create --title "[Type] Description" --label "type:story,status:ready"
-gh issue edit <ID> --add-label "status:in-progress"
+gh issue create --title "[Type] Description" --label "type:story"
+# Claim by moving to 'In Progress' in Projects board
 gh issue close <ID> --comment "Completed in <SHA>"
 
 # Workflow management

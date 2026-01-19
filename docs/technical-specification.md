@@ -1,8 +1,19 @@
 # Technical Specification: AI Agent Guidelines System
 
-> **Version**: 1.3  
+> **⚠️ DEPRECATION NOTICE**: This document was written before major workflow simplifications (January 19, 2026). Many implementation details are outdated. **For current implementation, see:**
+> - **[AGENTS.md](../AGENTS.md)** - Authoritative source for all workflows
+> - **[docs/project-setup.md](project-setup.md)** - Current GitHub Projects setup
+> - **[docs/mcp-integration.md](mcp-integration.md)** - MCP Server integration
+> 
+> **Key Changes Since This Was Written:**
+> - ❌ Custom `status:*` labels removed → ✅ Use GitHub Projects **Status field** (Backlog, In Progress, In Review, Done)
+> - ❌ 10 separate workflow files → ✅ **1 unified workflow** ([agent-orchestrator.yml](../.github/workflows/agent-orchestrator.yml))
+> - ❌ `sync-status-to-labels.yml` → ✅ **Deprecated** (no longer needed)
+> - ❌ `process-ready-issues.yml` polling → ✅ **Event-driven** orchestration via `orch:*` labels
+
+> **Version**: 1.3 (Legacy)  
 > **Date**: January 19, 2026  
-> **Status**: Implemented & Verified  
+> **Status**: Deprecated - Kept for Historical Reference  
 > **Standard**: [github/awesome-copilot](https://github.com/github/awesome-copilot) • [agentskills.io](https://agentskills.io/specification)  
 > **E2E Tests**: ✅ All Passed (January 19, 2026) - 5 Test Suites, >85% Coverage
 
