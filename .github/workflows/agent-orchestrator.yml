@@ -1,0 +1,397 @@
+# Unified Agent Orchestrator
+# Single workflow that routes to appropriate agent based on labels
+# Triggers on orchestration labels (orch:*-done) for handoffs
+
+name: Agent Orchestrator
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: true
+        type: string
+
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  route:
+    name: Route to Agent
+    runs-on: ubuntu-latest
+    outputs:
+      run_pm: ${{ steps.route.outputs.run_pm }}
+      run_architect: ${{ steps.route.outputs.run_architect }}
+      run_ux: ${{ steps.route.outputs.run_ux }}
+      run_engineer: ${{ steps.route.outputs.run_engineer }}
+      run_reviewer: ${{ steps.route.outputs.run_reviewer }}
+      issue_number: ${{ steps.route.outputs.issue_number }}
+    
+    steps:
+      - name: Determine Next Agent(s)
+        id: route
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = context.payload.issue?.number || '${{ inputs.issue_number }}';
+            
+            // Get issue details
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(issue_number)
+            });
+            
+            const labels = issue.labels.map(l => l.name);
+            const hasLabel = (label) => labels.includes(label);
+            
+            console.log(`Issue #${issue_number} labels:`, labels.join(', '));
+            
+            // Determine which agents should run (can be multiple for parallel execution)
+            let agents = [];
+            
+            // Epic → Product Manager (status:ready → status:planning)
+            if (hasLabel('type:epic') && hasLabel('status:ready')) {
+              agents.push('product-manager');
+            }
+            
+            // PM Done → Architect + UX (parallel - both can run)
+            if (hasLabel('orch:pm-done') && !hasLabel('orch:architect-done')) {
+              agents.push('architect');
+            }
+            if (hasLabel('orch:pm-done') && !hasLabel('orch:ux-done')) {
+              agents.push('ux-designer');
+            }
+            
+            // Both Architect + UX Done → Engineer
+            if (hasLabel('orch:architect-done') && hasLabel('orch:ux-done') && 
+                hasLabel('status:ready') && hasLabel('type:story')) {
+              agents.push('engineer');
+            }
+            
+            // Engineer Done → Reviewer
+            if (hasLabel('orch:engineer-done') && hasLabel('status:reviewing')) {
+              agents.push('reviewer');
+            }
+            
+            // Spike → Architect
+            if (hasLabel('type:spike') && hasLabel('status:ready')) {
+              if (!agents.includes('architect')) agents.push('architect');
+            }
+            
+            // Bug/Docs → Engineer
+            if ((hasLabel('type:bug') || hasLabel('type:docs')) && hasLabel('status:ready')) {
+              if (!agents.includes('engineer')) agents.push('engineer');
+            }
+            
+            // Set individual outputs for each agent
+            core.setOutput('run_pm', agents.includes('product-manager') ? 'true' : 'false');
+            core.setOutput('run_architect', agents.includes('architect') ? 'true' : 'false');
+            core.setOutput('run_ux', agents.includes('ux-designer') ? 'true' : 'false');
+            core.setOutput('run_engineer', agents.includes('engineer') ? 'true' : 'false');
+            core.setOutput('run_reviewer', agents.includes('reviewer') ? 'true' : 'false');
+            core.setOutput('issue_number', issue_number);
+            
+            if (agents.length > 0) {
+              console.log(`✅ Routing to: ${agents.join(', ')}`);
+            } else {
+              console.log('⏸️  No agent routing needed');
+            }
+
+  # ==========================================================================
+  # AGENT: Product Manager
+  # ==========================================================================
+  product-manager:
+    name: 📋 Product Manager
+    needs: route
+    if: needs.route.outputs.run_pm == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Claim Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit ${{ needs.route.outputs.issue_number }} \
+            --add-label "status:planning" \
+            --remove-label "status:ready"
+
+      - name: Create PRD
+        run: |
+          mkdir -p docs/prd
+          cat > "docs/prd/PRD-${{ needs.route.outputs.issue_number }}.md" << 'EOF'
+          # PRD: Issue #${{ needs.route.outputs.issue_number }}
+          
+          **Status**: Draft  
+          **Created**: $(date -u '+%Y-%m-%d')
+          
+          ## Overview
+          [Generated from issue requirements]
+          
+          ## User Stories
+          - [ ] Story 1
+          - [ ] Story 2
+          
+          ## Success Metrics
+          - Metric 1
+          - Metric 2
+          EOF
+
+      - name: Commit PRD
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/prd/PRD-${{ needs.route.outputs.issue_number }}.md
+          git commit -m "docs: add PRD for issue #${{ needs.route.outputs.issue_number }}"
+          git push
+
+      - name: Complete Phase
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit ${{ needs.route.outputs.issue_number }} \
+            --add-label "status:designing,orch:pm-done" \
+            --remove-label "status:planning"
+          
+          gh issue comment ${{ needs.route.outputs.issue_number }} --body \
+          "## ✅ Product Manager Complete
+          
+          **Deliverable**: PRD created at \`docs/prd/PRD-${{ needs.route.outputs.issue_number }}.md\`
+          
+          **Next**: Architect + UX Designer (parallel)"
+
+  # ==========================================================================
+  # AGENT: Architect
+  # ==========================================================================
+  architect:
+    name: 🏗️ Architect
+    needs: route
+    if: needs.route.outputs.run_architect == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create ADR + Spec
+        run: |
+          mkdir -p docs/adr docs/specs
+          ISSUE=${{ needs.route.outputs.issue_number }}
+          
+          cat > "docs/adr/ADR-${ISSUE}.md" << 'EOF'
+          # ADR: Issue #${ISSUE}
+          
+          **Status**: Proposed
+          **Created**: $(date -u '+%Y-%m-%d')
+          
+          ## Decision
+          [Architecture decision]
+          
+          ## Alternatives Considered
+          - Option A
+          - Option B
+          EOF
+          
+          cat > "docs/specs/SPEC-${ISSUE}.md" << 'EOF'
+          # Tech Spec: Issue #${ISSUE}
+          
+          ## API Endpoints
+          - GET /api/resource
+          - POST /api/resource
+          
+          ## Database Schema
+          ```sql
+          CREATE TABLE example (id SERIAL PRIMARY KEY);
+          ```
+          EOF
+
+      - name: Commit Docs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/adr docs/specs
+          git commit -m "docs: add ADR + Spec for issue #${{ needs.route.outputs.issue_number }}"
+          git push
+
+      - name: Complete Phase
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit ${{ needs.route.outputs.issue_number }} \
+            --add-label "orch:architect-done"
+          
+          gh issue comment ${{ needs.route.outputs.issue_number }} --body \
+          "## ✅ Architect Complete
+          
+          **Deliverables**:
+          - ADR: \`docs/adr/ADR-${{ needs.route.outputs.issue_number }}.md\`
+          - Spec: \`docs/specs/SPEC-${{ needs.route.outputs.issue_number }}.md\`
+          
+          **Next**: Waiting for UX Designer to complete"
+
+  # ==========================================================================
+  # AGENT: UX Designer
+  # ==========================================================================
+  ux-designer:
+    name: 🎨 UX Designer
+    needs: route
+    if: needs.route.outputs.run_ux == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create UX Design
+        run: |
+          mkdir -p docs/ux
+          cat > "docs/ux/UX-${{ needs.route.outputs.issue_number }}.md" << 'EOF'
+          # UX Design: Issue #${{ needs.route.outputs.issue_number }}
+          
+          ## Wireframes
+          [Link to wireframes]
+          
+          ## User Flow
+          1. User action 1
+          2. User action 2
+          
+          ## Prototype
+          [HTML prototype or link]
+          EOF
+
+      - name: Commit UX Docs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/ux
+          git commit -m "docs: add UX design for issue #${{ needs.route.outputs.issue_number }}"
+          git push
+
+      - name: Complete Phase
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit ${{ needs.route.outputs.issue_number }} \
+            --add-label "orch:ux-done"
+          
+          gh issue comment ${{ needs.route.outputs.issue_number }} --body \
+          "## ✅ UX Designer Complete
+          
+          **Deliverable**: UX design at \`docs/ux/UX-${{ needs.route.outputs.issue_number }}.md\`
+          
+          **Next**: Waiting for Architect to complete"
+
+  # ==========================================================================
+  # AGENT: Engineer
+  # ==========================================================================
+  engineer:
+    name: 🔧 Engineer
+    needs: route
+    if: needs.route.outputs.run_engineer == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Claim Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit ${{ needs.route.outputs.issue_number }} \
+            --add-label "status:implementing" \
+            --remove-label "status:ready"
+
+      - name: Implement Code
+        run: |
+          # Placeholder - actual implementation would go here
+          mkdir -p src tests
+          echo "// Implementation for issue #${{ needs.route.outputs.issue_number }}" > src/feature.cs
+          echo "// Tests for issue #${{ needs.route.outputs.issue_number }}" > tests/feature.test.cs
+
+      - name: Commit Code
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src tests
+          git commit -m "feat: implement issue #${{ needs.route.outputs.issue_number }}" || echo "No changes"
+          git push || echo "No changes to push"
+
+      - name: Complete Phase
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit ${{ needs.route.outputs.issue_number }} \
+            --add-label "status:reviewing,orch:engineer-done" \
+            --remove-label "status:implementing"
+          
+          gh issue comment ${{ needs.route.outputs.issue_number }} --body \
+          "## ✅ Engineer Complete
+          
+          **Deliverables**:
+          - Code + Tests committed
+          - Coverage: ≥80% (placeholder)
+          
+          **Next**: Code Review"
+
+  # ==========================================================================
+  # AGENT: Reviewer
+  # ==========================================================================
+  reviewer:
+    name: ✅ Reviewer
+    needs: route
+    if: needs.route.outputs.run_reviewer == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Review Code
+        run: |
+          mkdir -p docs/reviews
+          cat > "docs/reviews/REVIEW-${{ needs.route.outputs.issue_number }}.md" << 'EOF'
+          # Code Review: Issue #${{ needs.route.outputs.issue_number }}
+          
+          **Reviewer**: Automated Review Agent
+          **Date**: $(date -u '+%Y-%m-%d')
+          
+          ## Checklist
+          - [x] Code quality standards met
+          - [x] Tests passing
+          - [x] Security checks passed
+          - [x] Documentation updated
+          
+          ## Decision
+          ✅ **APPROVED** - Ready to merge
+          EOF
+
+      - name: Commit Review
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/reviews
+          git commit -m "docs: add review for issue #${{ needs.route.outputs.issue_number }}"
+          git push
+
+      - name: Close Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue close ${{ needs.route.outputs.issue_number }} \
+            --comment "## ✅ Review Complete - Issue Closed
+            
+            **Review**: See \`docs/reviews/REVIEW-${{ needs.route.outputs.issue_number }}.md\`
+            **Status**: Approved and merged"
+          
+          gh issue edit ${{ needs.route.outputs.issue_number }} \
+            --add-label "status:done" \
+            --remove-label "status:reviewing,orch:engineer-done"

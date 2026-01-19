@@ -11,196 +11,63 @@ applyTo: '**'
 
 ---
 
-# 📖 Table of Contents
+# ⚠️ CRITICAL WORKFLOW
 
-1. [Critical Gates](#-critical-gates-must-do-first) ⚠️ **READ FIRST**
-2. [Research & Classification](#-research--classification) 🔬 **BEFORE Creating Issues**
-3. [Multi-Agent Orchestration](#-multi-agent-orchestration-mandatory-workflow) 🔄 **How Work Gets Done**
-4. [Tools & Infrastructure](#-tools--infrastructure) 🔧 **Supporting Systems**
-5. [Operational Controls](#-operational-controls) 🛡️ **Safety & Limits**
-6. [Quick Reference](#-quick-reference) 📚 **Fast Lookup**
+## 🚨 MANDATORY: Research → Classify → Create Issue → Execute
 
----
+**Before ANY work:**
+1. **Research** codebase/requirements based on your role
+2. **Classify** request type (Epic/Feature/Story/Bug/Spike/Docs)
+3. **Create Issue** with proper type label
+4. **Claim Issue** (update status to appropriate phase)
+5. **Execute** role-specific work
+6. **Handoff** to next agent via orchestration labels
 
-# ⚠️ CRITICAL GATES (MUST DO FIRST)
-
-> **PRIORITY 1**: These are MANDATORY before any work begins.
-
-## 🚨 Gate 1: Research-First Workflow
-
-> **CRITICAL**: Every user request requires research BEFORE taking action. The ROLE you assume determines WHAT you research.
-
-### Execution Sequence
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│ STEP 1: UNDERSTAND & CLASSIFY FIRST                          │
-│ ├─ What is the user actually asking for?                     │
-│ ├─ What problem are they trying to solve?                    │
-│ ├─ Determine issue type (Epic/Feature/Story/Bug/Spike/Docs) │
-│ └─ This determines YOUR ROLE → What you research next        │
-└──────────────────────────────────────────────────────────────┘
-                          ↓
-┌──────────────────────────────────────────────────────────────┐
-│ STEP 2: ROLE-SPECIFIC RESEARCH                               │
-│                                                              │
-│ IF YOU ARE PRODUCT MANAGER                      │
-│    ├─ Research: Business requirements, user needs           │
-│    ├─ Research: Existing systems and constraints            │
-│    ├─ Research: Market/competitive landscape (if applicable)│
-│    └─ Deliverable: PRD breaking down into features          │
-│                                                              │
-│ IF YOU ARE ARCHITECT           │
-│    ├─ Research: Technical feasibility and architecture      │
-│    ├─ Research: Integration points in codebase              │
-│    ├─ Research: Performance/scalability implications        │
-│    ├─ Research: Technology options (for spikes)             │
-│    └─ Deliverable: ADR + Tech Spec (or research findings)   │
-│                                                              │
-│ IF YOU ARE ENGINEER                                          │
-│    ├─ Research: Implementation location in codebase         │
-│    ├─ Research: Existing patterns and conventions           │
-│    ├─ Research: Test coverage and requirements              │
-│    ├─ Research: Related code and dependencies               │
-│    └─ Deliverable: Working code + tests + documentation     │
-│                                                              │
-│ IF YOU ARE UX DESIGNER                                       │
-│    ├─ Research: User needs and pain points                  │
-│    ├─ Research: Existing UI patterns and brand guidelines   │
-│    └─ Deliverable: UX designs (wireframes, prototypes)      │
-└──────────────────────────────────────────────────────────────┘
-                          ↓
-┌──────────────────────────────────────────────────────────────┐
-│ STEP 3: CREATE ISSUE WITH ROLE-APPROPRIATE LABELS            │
-│ ├─ Epic → type:epic (Product Manager will handle)           │
-│ ├─ Feature/Spike → type:feature/spike (Architect handles)   │
-│ └─ Story/Bug/Docs → type:story/bug/docs (Engineer handles)  │
-└──────────────────────────────────────────────────────────────┘
-                          ↓
-┌──────────────────────────────────────────────────────────────┐
-│ STEP 4: PROCEED AS THAT ROLE                                 │
-│ └─ Execute the role-specific workflow (see Orchestration)   │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Research Tools (By Role)
+### Research Tools by Role
 
 | Tool | Product Manager | Architect | Engineer |
 |------|----------------|-----------|----------|
-| `semantic_search` | Find business logic, user flows | Find architecture patterns, integrations | Find implementation examples |
-| `grep_search` | Find requirements docs | Find API contracts, interfaces | Find exact code patterns |
-| `file_search` | Find PRDs, specs | Find ADRs, design docs | Find source files, tests |
-| `read_file` | Understand existing features | Understand system architecture | Understand existing implementations |
-| `list_dir` | Explore product structure | Explore system modules | Explore code organization |
-
-### Role-Specific Research Questions
-
-| Role | Key Questions to Answer |
-|------|------------------------|
-| **Product Manager** | What features are needed? Who are the users? What's the business value? What are the acceptance criteria? How does this fit the product vision? |
-| **Architect** | What's the technical approach? What are the integration points? What are the performance implications? What are the technology tradeoffs? What's the migration path? |
-| **Engineer** | Where does this code go? What patterns should I follow? What tests are needed? What are the dependencies? How do I avoid breaking existing functionality? |
+| `semantic_search` | Business logic, user flows | Architecture patterns | Implementation examples |
+| `grep_search` | Requirements docs | API contracts | Code patterns |
+| `file_search` | PRDs, specs | ADRs, design docs | Source files, tests |
 
 ---
 
-## 🚨 Gate 2: Issue-First Workflow
+## � Issue-First Workflow
 
-> **CRITICAL**: Before ANY file modification, you MUST create and claim an issue.
+> **MANDATORY**: Create issue BEFORE any file modification. See [.github/agents/*.agent.md](.github/agents/) for role-specific execution.
 
-### Execution Sequence
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│ STEP 1: CREATE ISSUE                                         │
-│ → Use MCP: issue_write with proper labels                    │
-│ → Fallback: gh issue create                                  │
-└──────────────────────────────────────────────────────────────┘
-                          ↓
-┌──────────────────────────────────────────────────────────────┐
-│ STEP 2: CLAIM ISSUE                                          │
-│ → Add status:in-progress label                               │
-│ → Remove status:ready label                                  │
-└──────────────────────────────────────────────────────────────┘
-                          ↓
-┌──────────────────────────────────────────────────────────────┐
-│ STEP 3: IMPLEMENT                                            │
-│ → Write code, tests, documentation                           │
-│ → Follow Skills.md standards                                 │
-└──────────────────────────────────────────────────────────────┘
-                          ↓
-┌──────────────────────────────────────────────────────────────┐
-│ STEP 4: COMMIT WITH ISSUE REFERENCE                          │
-│ → Format: "type: description (#issue)"                       │
-│ → Example: "feat: add OAuth login (#123)"                    │
-└──────────────────────────────────────────────────────────────┘
-                          ↓
-┌──────────────────────────────────────────────────────────────┐
-│ STEP 5: CLOSE ISSUE                                          │
-│ → Update to state: closed                                    │
-│ → Add status:done label                                      │
-│ → Comment with commit SHA                                    │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Why This Matters
-
-- **Audit Trail**: Changes must be traceable to decisions made BEFORE work began
-- **Coordination**: Other agents need visibility into active work
-- **Session Handoffs**: Context must be established and persistent
-- **Accountability**: Every modification requires justification
-
-**⚠️ Retroactive Issues = Workflow Violation** - Creating issues after work is done defeats the purpose.
-
-### Commands Reference
-
-#### Using MCP Tools (Primary Method)
-
+**MCP Commands:**
 ```json
-// Step 1: Create issue
-{ "tool": "issue_write", "args": { "owner": "jnPiyush", "repo": "AgentX", "method": "create", "title": "[Type] Description", "body": "## Description\n[Details]\n\n## Acceptance Criteria\n- [ ] ...", "labels": ["type:story", "status:ready"] } }
+// Create
+{ "tool": "issue_write", "args": { "owner": "<OWNER>", "repo": "<REPO>", "method": "create", "title": "[Type] Description", "labels": ["type:story", "status:ready"] } }
 
-// Step 2: Claim issue
-{ "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "labels": ["type:story", "status:in-progress"] } }
+// Claim (Engineer example)
+{ "tool": "update_issue", "args": { "issue_number": <ID>, "labels": ["type:story", "status:implementing"] } }
 
-// Step 5: Close issue
-{ "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "state": "closed", "labels": ["type:story", "status:done"] } }
-{ "tool": "add_issue_comment", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "body": "✅ Completed in commit <SHA>" } }
+// Close
+{ "tool": "update_issue", "args": { "issue_number": <ID>, "state": "closed", "labels": ["type:story", "status:done"] } }
 ```
 
-#### Using CLI (Fallback Only)
-
+**CLI Fallback:**
 ```bash
-# Step 1: Create issue
-gh issue create --title "[Type] Description" --body "Description" --label "type:story,status:ready"
-
-# Step 2: Claim issue
-gh issue edit <ID> --add-label "status:in-progress" --remove-label "status:ready"
-
-# Step 4: Commit
-git commit -m "type: description (#ID)"
-
-# Step 5: Close issue
-gh issue close <ID> --comment "✅ Completed in commit <SHA>"
+gh issue create --title "[Type] Description" --label "type:story,status:ready"
+gh issue edit <ID> --add-label "status:implementing" --remove-label "status:ready"
+gh issue close <ID> --comment "✅ Completed in <SHA>"
 ```
 
 ---
 
-# 🔬 RESEARCH & CLASSIFICATION
+## 📋 Classification
 
-> **PRIORITY 2**: After research, classify the request correctly.
-
-## 📋 Request Classification Matrix
-
-### Classification Criteria
-
-| Type | Scope | Clarity | Needs PRD? | Needs Breakdown? | Keywords |
-|------|-------|---------|------------|------------------|----------|
-| `type:epic` | Multi-feature | Vague/broad | ✅ Yes | ✅ Yes | "platform", "system", "application", "build me a..." |
-| `type:feature` | Single capability | Medium | Maybe | Maybe | "add X feature", "implement Y", "create Z capability" |
-| `type:story` | Single behavior | Well-defined | No | No | "button", "field", "validation", "when user clicks..." |
-| `type:bug` | Fix | Clear problem | No | No | "broken", "fix", "error", "doesn't work", "fails" |
-| `type:spike` | Research | Open-ended | No | No | "research", "evaluate", "compare", "investigate", "should we use..." |
-| `type:docs` | Documentation | Clear | No | No | "document", "readme", "update docs", "add comments" |
+| Type | Role | Keywords | Deliverable |
+|------|------|----------|-------------|
+| `type:epic` | 📋 PM | "platform", "system", "build me..." | PRD + Backlog |
+| `type:feature` | 🏗️ Architect | "add X feature", "implement Y" | ADR + Tech Spec |
+| `type:story` | 🔧 Engineer | "button", "field", "validation" | Code + Tests |
+| `type:bug` | 🔧 Engineer | "broken", "fix", "error" | Bug fix + Tests |
+| `type:spike` | 🏗️ Architect | "research", "evaluate", "compare" | Research doc |
+| `type:docs` | 🔧 Engineer | "document", "readme", "update docs" | Documentation |
 
 ### Classification Decision Tree
 
@@ -212,21 +79,21 @@ User Request
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Q1: Is something broken or not working?                     │
-│     → YES: type:bug (go to Engineer)                        │
+│     → YES: type:bug (🔧 ENGINEER ROLE - fixes bugs)         │
 │     → NO: Continue to Q2...                                 │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Q2: Is it research/evaluation/comparison?                   │
-│     → YES: type:spike (go to Architect)                     │
+│     → YES: type:spike (🏗️ ARCHITECT ROLE - research)        │
 │     → NO: Continue...                                       │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Q3: Is it documentation only?                               │
-│     → YES: type:docs (go to Engineer)                       │
+│     → YES: type:docs (🔧 ENGINEER ROLE - writes docs)       │
 │     → NO: Continue...                                       │
 └─────────────────────────────────────────────────────────────┘
     │
@@ -234,7 +101,7 @@ User Request
 ┌─────────────────────────────────────────────────────────────┐
 │ Q4: Is it large/vague with multiple implied features?       │
 │     (e.g., "build a platform", "create an app")             │
-│     → YES: type:epic (go to Product Manager)                │
+│     → YES: type:epic (📋 PRODUCT MANAGER ROLE - plans)      │
 │     → NO: Continue...                                       │
 └─────────────────────────────────────────────────────────────┘
     │
@@ -242,14 +109,14 @@ User Request
 ┌─────────────────────────────────────────────────────────────┐
 │ Q5: Is it a clear, single capability?                       │
 │     (e.g., "add OAuth login", "implement search")           │
-│     → YES: type:feature (go to Architect)                   │
-│     → NO: type:story (go to Engineer - smaller scope)       │
+│     → YES: type:feature (🏗️ ARCHITECT ROLE - designs)       │
+│     → NO: type:story (🔧 ENGINEER ROLE - implements)        │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Q6: Does it have UI/UX components?                          │
-│     → YES: Add needs:ux label (triggers UX Designer first)  │
+│     → YES: Add needs:ux label (🎨 UX DESIGNER ROLE needed)  │
 │     → NO: Proceed without needs:ux                          │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -319,51 +186,82 @@ User asks: "Build me a feature"
 
 ---
 
-# 🔄 MULTI-AGENT ORCHESTRATION (MANDATORY WORKFLOW)
+## 🔄 Orchestration & Handoffs
 
-> **PRIORITY 3**: This is HOW work gets executed. Follows proper Software Development Life Cycle (SDLC).
+| Role | Trigger | Status Transition | Deliverable | Handoff Label |
+|------|---------|-------------------|-------------|---------------|
+| 📋 **PM** | User input | ready → planning → designing | PRD + Backlog | `orch:pm-done` |
+| 🏗️ **Architect** | `orch:pm-done` | designing (no change) | ADR + Tech Spec | `orch:architect-done` |
+| 🎨 **UX** | `orch:pm-done` | designing (no change) | Wireframes + Prototypes | `orch:ux-done` |
+| 🔧 **Engineer** | Both: `orch:architect-done` + `orch:ux-done` | implementing → reviewing | Code + Tests + Docs | `orch:engineer-done` |
+| ✅ **Reviewer** | `orch:engineer-done` | reviewing → done (+ close) | Review doc | Close issue |
 
-## Agent Roles & Responsibilities
+**Execution Steps by Role:**
 
-| Agent Role | Triggered By | Primary Responsibility | Deliverables | Next Agent |
-|-----------|--------------|------------------------|--------------|------------|
-| **Product Manager** | User input (chat or Epic issue) | Research requirements, create ENTIRE backlog (Epic→Features→Stories) | PRD + Complete backlog | Architect + UX Designer (parallel) |
-| **Architect** | `orch:pm-done` label | Review entire backlog, research codebase/solutions, develop Tech Specs | ADR + Tech Spec for all items | Updates Epic, unblocks Engineer |
-| **UX Designer** | `orch:pm-done` label | Review entire backlog, create wireframes + HTML prototypes | UX designs at docs/ux/ | Updates Epic, unblocks Engineer |
-| **Engineer** | `orch:ux-done` AND `orch:architect-done` | Implement when BOTH complete | Code + Tests + Docs | Reviewer |
-| **Reviewer** | `orch:engineer-done` | Quality assurance & approval | Code review + approval/feedback | Close issue |
+📋 **Product Manager:**
+1. Claim Epic (status:planning)
+2. Create PRD at docs/prd/PRD-{issue}.md
+3. Create Feature + Story issues (all status:ready)
+4. Update Epic (status:designing) + add `orch:pm-done`
+
+🏗️ **Architect:** (parallel)
+1. Review backlog, read PRD
+2. Create ADR + Tech Specs for all items
+3. Add `orch:architect-done` to Epic
+
+🎨 **UX Designer:** (parallel)
+1. Review backlog for UX needs
+2. Create wireframes + prototypes at docs/ux/
+3. Add `orch:ux-done` to Epic
+
+🔧 **Engineer:**
+1. Check Epic has BOTH `orch:architect-done` + `orch:ux-done`
+2. Claim Story (status:implementing)
+3. Write code + tests (≥80% coverage)
+4. Commit: "type: description (#issue)"
+5. Update Story (status:reviewing) + add `orch:engineer-done`
+
+✅ **Reviewer:**
+1. Review code, tests, security
+2. Create review at docs/reviews/REVIEW-{issue}.md
+3. If approved: Close issue (status:done)
+4. If changes needed: Update status:implementing + add `needs:changes`
 
 ---
 
-## 📋 Complete SDLC Orchestration Flow
+## 🔧 MCP Handoff Commands
 
 ```
-Epic Issue Created (#48 - "Build User Authentication System")
+Epic Issue Created (#<EPIC_ID> - "Build User Authentication System")
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 1️⃣ PRODUCT MANAGER AGENT                                    │
 │ Trigger: type:epic label detected                           │
 │                                                              │
+│ Status: status:ready → status:planning                      │
+│                                                              │
 │ Phase 1: Research & Planning                                 │
-│ 1. Read epic description, understand business requirements  │
-│ 2. Research user needs, market requirements                 │
-│ 3. Research existing systems and technical constraints      │
-│ 4. Create PRD at docs/prd/PRD-48.md                        │
+│ 1. Claim issue: Update to status:planning                   │
+│ 2. Read epic description, understand business requirements  │
+│ 3. Research user needs, market requirements                 │
+│ 4. Research existing systems and technical constraints      │
+│ 5. Create PRD at docs/prd/PRD-{epic_id}.md                    │
 │                                                              │
 │ Phase 2: Create Complete Backlog                            │
-│ 5. Break Epic into Features (create ALL Feature issues):    │
-│    - #50: OAuth Integration                                  │
-│    - #51: User Profile Management                            │
-│    - #52: Password Reset Flow                                │
+│ 6. Break Epic into Features (create ALL Feature issues):    │
+│    - #<FEAT_1>: OAuth Integration (status:ready)            │
+│    - #<FEAT_2>: User Profile Management (status:ready)      │
+│    - #<FEAT_3>: Password Reset Flow (status:ready)          │
 │                                                              │
-│ 6. Break EACH Feature into User Stories (create ALL):       │
-│    Feature #50 → Stories #60, #61, #62                      │
-│    Feature #51 → Stories #63, #64, #65                      │
-│    Feature #52 → Stories #66, #67, #68                      │
+│ 7. Break EACH Feature into User Stories (create ALL):       │
+│    Feature #<FEAT_1> → Stories #<S1>, #<S2>, #<S3>          │
+│    Feature #<FEAT_2> → Stories #<S4>, #<S5>, #<S6>          │
+│    Feature #<FEAT_3> → Stories #<S7>, #<S8>, #<S9>          │
 │                                                              │
-│ 7. Add orch:pm-done label to Epic #48                       │
-│ 8. Comment with backlog summary + links                     │
+│ 8. Update Epic status: status:planning → status:designing   │
+│ 9. Add orch:pm-done label to Epic #<EPIC_ID>                │
+│ 10. Comment with backlog summary + links                    │
 │                                                              │
 │ Handoff: Triggers BOTH UX Designer + Architect (parallel)   │
 └─────────────────────────────────────────────────────────────┘
@@ -388,62 +286,70 @@ Epic Issue Created (#48 - "Build User Authentication System")
 │ 2️⃣ UX DESIGNER AGENT (Parallel Track)                       │
 │ Trigger: orch:pm-done label on Epic                         │
 │                                                              │
+│ Status: Epic already in status:designing (set by PM)        │
+│                                                              │
 │ Execution Steps:                                             │
 │ 1. Read entire backlog (all Features & Stories)             │
 │ 2. Identify items needing UX (user-facing features)         │
 │ 3. Research existing UI patterns, brand guidelines          │
 │ 4. Create wireframes + HTML prototypes for each item:       │
-│    - docs/ux/UX-50.md (Feature level)                       │
-│    - docs/ux/UX-60.md, UX-61.md (Story level)               │
+│    - docs/ux/UX-{feature_id}.md (Feature level)             │
+│    - docs/ux/UX-{story_id}.md (Story level)                 │
 │    - Wireframes/mockups                                      │
 │    - User flow diagrams                                      │
 │    - HTML prototypes                                         │
 │ 5. Commit all UX design documents                            │
-│ 6. Add orch:ux-done label to Epic #48                       │
+│ 6. Add orch:ux-done label to Epic #<EPIC_ID>                │
 │ 7. Comment on Epic with UX deliverables summary             │
 │                                                              │
-│ Note: Reviews full backlog, creates designs for all UX needs│
+│ Note: Epic stays in status:designing until BOTH UX + Arch   │
+│       complete. Reviews full backlog, creates all UX designs │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
 │ 3️⃣ ARCHITECT AGENT (Parallel Track)                         │
 │ Trigger: orch:pm-done label on Epic                         │
 │                                                              │
+│ Status: Epic already in status:designing (set by PM)        │
+│                                                              │
 │ Execution Steps:                                             │
 │ 1. Read entire backlog (Epic, all Features & Stories)       │
-│ 2. Read PRD at docs/prd/PRD-48.md                          │
+│ 2. Read PRD at docs/prd/PRD-{epic_id}.md                   │
 │ 3. Research codebase for implementation approaches          │
 │ 4. Create architecture decisions & tech specs for all:      │
-│    - docs/adr/ADR-48.md (overall architecture)              │
-│    - docs/specs/SPEC-50.md (OAuth integration)              │
-│    - docs/specs/SPEC-51.md (user profiles)                  │
-│    - docs/specs/SPEC-52.md (password reset)                 │
+│    - docs/adr/ADR-{epic_id}.md (overall architecture)       │
+│    - docs/specs/SPEC-{feature_id}.md (per feature)          │
 │ 5. Commit all technical documents                            │
-│ 6. Add orch:architect-done label to Epic #48                │
+│ 6. Add orch:architect-done label to Epic #<EPIC_ID>         │
 │ 7. Comment on Epic with technical deliverables summary      │
 │                                                              │
-│ Note: Reviews full backlog, creates tech specs for all items│
+│ Note: Epic stays in status:designing until BOTH UX + Arch   │
+│       complete. Reviews full backlog, creates all tech specs│
 └─────────────────────────────────────────────────────────────┘
     │
-    ▼ (for each Story #60, #61, #62...)
+    ▼ (for each Story)
 ┌─────────────────────────────────────────────────────────────┐
 │ 4️⃣ ENGINEER AGENT                                           │
 │ Trigger: type:story, type:bug, or type:docs detected        │
 │                                                              │
+│ Status: status:ready → status:implementing → status:reviewing│
+│                                                              │
 │ Execution Steps:                                             │
 │ 1. Check prerequisites on parent Epic (BOTH must exist):    │
 │    ✅ orch:architect-done label                              │
-│    ✅ orch:ux-done label                                     │
+│    ✅ orch:ux-done label (if needed)                         │
 │                                                              │
-│ 2. Read story/bug description, Tech Spec, UX design         │
-│ 3. Research codebase for implementation location            │
-│ 4. Implement the change following Skills.md standards       │
-│ 5. Write unit tests (70%), integration tests (20%)          │
-│ 6. Update/create documentation (XML docs, README, etc.)     │
-│ 7. Run tests and verify ≥80% coverage                       │
-│ 8. Commit with message: "type: description (#60)"           │
-│ 9. Add orch:engineer-done label                             │
-│ 10. Comment with summary + commit SHA                       │
+│ 2. Claim issue: Update to status:implementing               │
+│ 3. Read story/bug description, Tech Spec, UX design         │
+│ 4. Research codebase for implementation location            │
+│ 5. Implement the change following Skills.md standards       │
+│ 6. Write unit tests (70%), integration tests (20%)          │
+│ 7. Update/create documentation (XML docs, README, etc.)     │
+│ 8. Run tests and verify ≥80% coverage                       │
+│ 9. Commit with message: "type: description (#<STORY_ID>)"   │
+│ 10. Update status: status:implementing → status:reviewing   │
+│ 11. Add orch:engineer-done label                            │
+│ 12. Comment with summary + commit SHA                       │
 │                                                              │
 │ Handoff: Triggers Reviewer (<30s SLA)                       │
 └─────────────────────────────────────────────────────────────┘
@@ -453,21 +359,25 @@ Epic Issue Created (#48 - "Build User Authentication System")
 │ 5️⃣ REVIEWER AGENT                                           │
 │ Trigger: orch:engineer-done label detected                  │
 │                                                              │
+│ Status: Already in status:reviewing (set by Engineer)       │
+│                                                              │
 │ Execution Steps:                                             │
 │ 1. Read commit diff and code changes                        │
 │ 2. Verify tests exist and pass                              │
 │ 3. Check code quality (Skills.md standards)                 │
 │ 4. Verify security (no secrets, SQL injection prevention)   │
-│ 5. Create review document at docs/reviews/REVIEW-60.md     │
+│ 5. Create review document at docs/reviews/REVIEW-{id}.md   │
 │ 6. If approved:                                              │
-│    - Close issue with status:done label                     │
+│    - Update status: status:reviewing → status:done          │
+│    - Close issue (state: closed)                            │
 │    - Comment "✅ Approved - meets quality standards"        │
 │ 7. If changes needed:                                        │
+│    - Update status: status:reviewing → status:implementing  │
 │    - Add needs:changes label                                │
 │    - Comment with specific feedback                         │
 │    - Remove orch:engineer-done, reassign to Engineer        │
 │                                                              │
-│ Outcome: Issue closed or returned to Engineer               │
+│ Outcome: Issue closed (status:done) or returned to Engineer │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -475,23 +385,45 @@ Epic Issue Created (#48 - "Build User Authentication System")
 
 ## 🎯 Handoff Protocol (Mandatory Steps)
 
+> **APPLIES TO**: All agent roles must follow this protocol when completing their work.
+
 ### When Completing Your Role:
 
-#### Step 1: Document Your Work
-- Create appropriate artifacts (PRD, ADR, Spec, Code, Review)
+#### Step 1: Document Your Work (Role-Specific)
+- **PRODUCT MANAGER**: Create PRD at `docs/prd/PRD-{issue}.md`
+- **ARCHITECT**: Create ADR at `docs/adr/ADR-{issue}.md` and Spec at `docs/specs/SPEC-{issue}.md`
+- **UX DESIGNER**: Create UX design at `docs/ux/UX-{issue}.md`
+- **ENGINEER**: Create/modify code files, tests, and documentation
+- **REVIEWER**: Create review at `docs/reviews/REVIEW-{issue}.md`
 - Commit with proper message format: `type: description (#issue)`
 - Reference parent issues in commit body if hierarchical
 
-#### Step 2: Update Issue State
+#### Step 2: Update Issue State (Status Transition + Orchestration Label)
 ```json
-// Add orchestration label marking completion
-{ "tool": "update_issue", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "labels": ["orch:pm-done"] } }
-// Replace "pm" with: architect, engineer as appropriate
+// PRODUCT MANAGER completes planning phase:
+// Transition: status:planning → status:designing
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:epic", "status:designing", "orch:pm-done"] } }
+
+// ARCHITECT completes design work:
+// Epic stays in status:designing, adds completion signal
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:feature", "status:designing", "orch:architect-done"] } }
+
+// UX DESIGNER completes design work:
+// Epic stays in status:designing, adds completion signal
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:epic", "status:designing", "orch:ux-done"] } }
+
+// ENGINEER completes implementation:
+// Transition: status:implementing → status:reviewing
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "labels": ["type:story", "status:reviewing", "orch:engineer-done"] } }
+
+// REVIEWER approves and closes:
+// Transition: status:reviewing → status:done (+ close issue)
+{ "tool": "update_issue", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "state": "closed", "labels": ["type:story", "status:done"] } }
 ```
 
 #### Step 3: Post Summary Comment
 ```json
-{ "tool": "add_issue_comment", "args": { "owner": "jnPiyush", "repo": "AgentX", "issue_number": <ID>, "body": "## ✅ Completed: [Role Name]\n\n**Deliverables:**\n- [List artifacts created]\n\n**Next Steps:**\n- [What needs to happen next]\n\n**Links:**\n- Commits: [SHA]\n- Child Issues: #X, #Y, #Z" } }
+{ "tool": "add_issue_comment", "args": { "owner": "<OWNER>", "repo": "<REPO>", "issue_number": <ID>, "body": "## ✅ Completed: [Role Name]\n\n**Deliverables:**\n- [List artifacts created]\n\n**Next Steps:**\n- [What needs to happen next]\n\n**Links:**\n- Commits: [SHA]\n- Child Issues: #X, #Y, #Z" } }
 ```
 
 #### Step 4: Trigger Next Agent
@@ -500,7 +432,7 @@ Epic Issue Created (#48 - "Build User Authentication System")
 { "tool": "issue_write", "args": { "method": "create", "title": "[Type] Description", "body": "Parent: #<ID>\n\n## Description\n[Details]", "labels": ["type:story", "status:ready"] } }
 
 // Method B: Trigger workflow directly via MCP
-{ "tool": "run_workflow", "args": { "owner": "jnPiyush", "repo": "AgentX", "workflow_id": "run-engineer.yml", "ref": "master", "inputs": { "issue_number": "60" } } }
+{ "tool": "run_workflow", "args": { "owner": "<OWNER>", "repo": "<REPO>", "workflow_id": "run-engineer.yml", "ref": "master", "inputs": { "issue_number": "<STORY_ID>" } } }
 ```
 
 ---
@@ -520,39 +452,39 @@ Epic Issue Created (#48 - "Build User Authentication System")
 
 ## ⚡ Orchestration Implementation Methods
 
-### Method 1: GitHub Actions (Automated) ⭐ Recommended
+### Method 1: Unified Orchestrator (Automated) ⭐ Recommended
+
+**Single workflow handles all agents**: `.github/workflows/agent-orchestrator.yml`
 
 ```bash
-# Workflow triggers automatically on label detection:
-# - When PM adds orch:pm-done → triggers run-architect.yml
-# - When Architect adds orch:architect-done → triggers run-engineer.yml
-# - When Engineer adds orch:engineer-done → triggers run-reviewer.yml
+# Workflow triggers automatically on label changes:
+# - type:epic + status:ready → Product Manager
+# - orch:pm-done → Architect + UX Designer (parallel)
+# - orch:architect-done + orch:ux-done → Engineer
+# - orch:engineer-done → Reviewer
 
 # Manual trigger if needed:
-gh workflow run run-architect.yml -f issue_number=50
-gh workflow run run-engineer.yml -f issue_number=60
-gh workflow run run-reviewer.yml -f issue_number=60
+gh workflow run agent-orchestrator.yml -f issue_number=50
 ```
+
+**How it works:**
+1. Agent completes work
+2. Adds orchestration label (e.g., `orch:pm-done`)
+3. Orchestrator detects label change
+4. Routes to next agent automatically
+5. Next agent executes
 
 ### Method 2: MCP Server (Direct API)
 
 ```json
 // Direct workflow trigger via MCP tools
 { "tool": "run_workflow", "args": { 
-  "owner": "jnPiyush", 
-  "repo": "AgentX", 
-  "workflow_id": "run-engineer.yml", 
+  "owner": "<OWNER>", 
+  "repo": "<REPO>", 
+  "workflow_id": "agent-orchestrator.yml", 
   "ref": "master", 
-  "inputs": { "issue_number": "60" } 
+  "inputs": { "issue_number": "50" } 
 } }
-```
-
-### Method 3: Polling (Fallback)
-
-```yaml
-# Scheduled workflow (.github/workflows/orchestration-polling.yml)
-# Runs every 5 minutes, checks for orch:*-done labels
-# Automatically triggers next agent in chain
 ```
 
 ---
@@ -674,15 +606,85 @@ gh run list --workflow=<workflow-file.yml>
 
 ---
 
+## 🔄 Hybrid Status Tracking
+
+> **Architecture**: Combines GitHub Projects v2 Status field (primary) with auto-synced labels (secondary)
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ User/Board: Drags issue to "🏗️ Designing" column           │
+│      ↓                                                       │
+│ Automation: Detects Status field change                     │
+│      ↓                                                       │
+│ Workflow: Updates label to status:designing                 │
+│      ↓                                                       │
+│ Agent: Reads label via MCP, sees current status             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Benefits
+
+| Aspect | Status Field | Labels |
+|--------|-------------|--------|
+| **Visual Tracking** | ✅ Clean board view | ❌ Cluttered |
+| **Mutually Exclusive** | ✅ Automatic | ⚠️ Requires discipline |
+| **Agent Access** | ⚠️ Requires GraphQL | ✅ Simple REST API |
+| **CLI Queries** | ❌ Complex | ✅ Easy: `gh issue list --label` |
+| **Source of Truth** | ✅ Primary | Secondary (synced) |
+
+### Setup
+
+1. **Create GitHub Project v2** - See [docs/project-setup.md](docs/project-setup.md)
+2. **Add Status field** - Single-select with 6 values (Backlog → Done)
+3. **Enable sync workflow** - `.github/workflows/sync-status-to-labels.yml`
+
+### Usage
+
+**For Humans:**
+- Use project board (drag & drop)
+- Labels update automatically
+
+**For Agents:**
+- Read labels via MCP: `list_issues --labels status:implementing`
+- Update labels via MCP: triggers Status field update
+
+---
+
 ## Labels Reference
+
+> **Hybrid Status Tracking**: This project uses GitHub Projects v2 **Status field** as the primary source of truth, with automatic **label synchronization** for agent/CLI access. The Status field provides clean visual tracking in project boards, while synced labels enable programmatic queries.
+>
+> **Setup Required**: See [docs/project-setup.md](docs/project-setup.md) for initial GitHub Project v2 configuration.
 
 | Category | Labels | Purpose |
 |----------|--------|---------|
 | **Type** | `type:epic`, `type:feature`, `type:story`, `type:bug`, `type:spike`, `type:docs` | Classify issue type, determines agent role |
-| **Status** | `status:ready`, `status:in-progress`, `status:done` | Track issue lifecycle |
+| **Phase Status** | `status:ready`, `status:planning`, `status:designing`, `status:implementing`, `status:reviewing`, `status:done` | Track current workflow phase (mutually exclusive) |
 | **Priority** | `priority:p0`, `priority:p1`, `priority:p2`, `priority:p3` | Determine urgency (p0=critical, p3=low) |
-| **Orchestration** | `orch:pm-done`, `orch:architect-done`, `orch:engineer-done` | Signal handoff readiness |
+| **Orchestration** | `orch:pm-done`, `orch:architect-done`, `orch:ux-done`, `orch:engineer-done` | Signal handoff readiness (cumulative) |
 | **Workflow** | `needs:ux`, `needs:help`, `needs:changes`, `needs:fixes` | Flag special requirements |
+
+### Phase Status Labels (Detailed)
+
+> **Primary Source**: GitHub Projects v2 **Status** field (users drag & drop in board)  
+> **Secondary**: `status:*` labels (auto-synced via workflow for agent/CLI access)
+
+| Status Field Value | Synced Label | Active Agent Role | Description |
+|-------------------|--------------|------------------|-------------|
+| 📝 Backlog | `status:ready` | None | Issue created, awaiting assignment |
+| 📋 Planning | `status:planning` | 📋 Product Manager | Creating PRD and breaking down into backlog |
+| 🏗️ Designing | `status:designing` | 🏗️ Architect + 🎨 UX Designer | Creating technical specs and UX designs (parallel) |
+| 💻 Implementing | `status:implementing` | 🔧 Engineer | Writing code, tests, and documentation |
+| 🔍 Reviewing | `status:reviewing` | ✅ Reviewer | Quality assurance and code review |
+| ✅ Done | `status:done` | None | Issue closed and delivered |
+
+**How Sync Works:**
+1. User/Agent updates Status in project board → Workflow syncs to label
+2. Agent reads label → Gets current status
+3. Agent updates label → Status field reflects change
+4. Always use Status field as source of truth for visual tracking
 
 ---
 
@@ -746,6 +748,7 @@ curl <url> | bash        # Arbitrary code execution
 | **Security Rules** | `.github/autonomous-mode.yml` |
 | **Production Standards** | `Skills.md` |
 | **Agent Definitions** | `.github/agents/*.agent.md` |
+| **Project Setup** | `docs/project-setup.md` |
 | **PRD Documents** | `docs/prd/PRD-{issue}.md` |
 | **Architecture Decisions** | `docs/adr/ADR-{issue}.md` |
 | **Technical Specs** | `docs/specs/SPEC-{issue}.md` |
@@ -758,13 +761,16 @@ curl <url> | bash        # Arbitrary code execution
 
 ### Create & Claim Issue (MCP)
 ```json
-{ "tool": "issue_write", "args": { "owner": "jnPiyush", "repo": "AgentX", "method": "create", "title": "[Story] Description", "labels": ["type:story", "status:ready"] } }
-{ "tool": "update_issue", "args": { "issue_number": <ID>, "labels": ["type:story", "status:in-progress"] } }
+// Create issue
+{ "tool": "issue_write", "args": { "owner": "<OWNER>", "repo": "<REPO>", "method": "create", "title": "[Story] Description", "labels": ["type:story", "status:ready"] } }
+
+// Claim issue (Engineer)
+{ "tool": "update_issue", "args": { "issue_number": <ID>, "labels": ["type:story", "status:implementing"] } }
 ```
 
 ### Trigger Next Agent (MCP)
 ```json
-{ "tool": "run_workflow", "args": { "owner": "jnPiyush", "repo": "AgentX", "workflow_id": "run-engineer.yml", "ref": "master", "inputs": { "issue_number": "60" } } }
+{ "tool": "run_workflow", "args": { "owner": "<OWNER>", "repo": "<REPO>", "workflow_id": "run-engineer.yml", "ref": "master", "inputs": { "issue_number": "<ID>" } } }
 ```
 
 ### Close Issue (MCP)
@@ -775,28 +781,30 @@ curl <url> | bash        # Arbitrary code execution
 
 ---
 
-## Workflow Decision Tree
+## Workflow Decision Tree (Role Assignment)
+
+> **Purpose**: Maps user requests to the correct agent role.
 
 ```
 User Request
     │
-    ├─→ Research (Gate 1)
+    ├─→ Research (Gate 1 - All Roles)
     │
     ├─→ Classify (Use Matrix)
     │
-    ├─→ Create Issue (Gate 2)
+    ├─→ Create Issue (Gate 2 - All Roles)
     │
-    ├─→ type:epic? → Product Manager → PRD + Features
+    ├─→ type:epic? → 📋 PRODUCT MANAGER → PRD + Features
     │
-    ├─→ type:feature? → Architect → ADR + Spec + Stories
+    ├─→ type:feature? → 🏗️ ARCHITECT → ADR + Spec + Stories
     │
-    ├─→ type:spike? → Architect → Research Doc
+    ├─→ type:spike? → 🏗️ ARCHITECT → Research Doc
     │
-    ├─→ type:story? → Engineer → Code + Tests
+    ├─→ type:story? → 🔧 ENGINEER → Code + Tests
     │
-    ├─→ type:bug? → Engineer → Fix + Tests
+    ├─→ type:bug? → 🔧 ENGINEER → Fix + Tests
     │
-    └─→ type:docs? → Engineer → Documentation
+    └─→ type:docs? → 🔧 ENGINEER → Documentation
 ```
 
 ---
