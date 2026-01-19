@@ -179,9 +179,9 @@ jobs:
         run: |
           echo "🧪 Testing: Orchestration workflow has correct triggers"
           
-          # Check for schedule trigger
-          if ! grep -q "schedule:" ".github/workflows/orchestrate.yml"; then
-            echo "❌ Missing schedule trigger"
+          # Check for issues trigger
+          if ! grep -q "issues:" ".github/workflows/orchestrate.yml"; then
+            echo "❌ Missing issues trigger"
             exit 1
           fi
           
