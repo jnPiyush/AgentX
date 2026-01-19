@@ -46,7 +46,7 @@ AgentX provides structured guidelines, skills, and workflows for AI coding agent
 
 **Orchestration**: Event-driven triggers (<30 sec handoff) + polling fallback (5 min). Validated with comprehensive E2E test suite (>85% coverage).
 
-### � GitHub MCP Server Integration
+### 🔗 GitHub MCP Server Integration
 
 Direct GitHub API access for agent workflows, bypassing `workflow_dispatch` caching issues:
 
@@ -61,7 +61,7 @@ Direct GitHub API access for agent workflows, bypassing `workflow_dispatch` cach
 
 See [MCP Integration Guide](docs/mcp-integration.md) for setup details.
 
-### �🔒 4-Layer Security Architecture
+### 🔒 4-Layer Security Architecture
 
 1. **Actor Allowlist** - Who can perform autonomous operations
 2. **Protected Paths** - Files requiring human review
@@ -129,13 +129,8 @@ AgentX/
     │   └── reviewer.agent.md          # Code review
     │
     ├── workflows/                 # GitHub Actions orchestration
-    │   ├── process-ready-issues.yml   # Polling orchestrator (5 min)
-    │   ├── orchestrate.yml            # Event-based orchestrator
-    │   ├── run-product-manager.yml    # PM workflow
-    │   ├── architect.yml              # Architect workflow
-    │   ├── ux-designer.yml            # UX Designer workflow
-    │   ├── engineer.yml               # Engineer workflow
-    │   └── reviewer.yml               # Reviewer workflow
+    │   ├── agent-orchestrator.yml     # Unified workflow for all 5 agents
+    │   └── test-e2e.yml               # E2E testing workflow
     │
     ├── instructions/              # Language-specific rules
     │   ├── csharp.instructions.md
@@ -209,6 +204,7 @@ Use AgentX as a template when creating a new repository:
 |------|---------|-----------|--------------|
 | **Git** | Version control | ✅ Yes | [git-scm.com](https://git-scm.com) |
 | **GitHub CLI** | Issue/PR management | ✅ Yes | `winget install GitHub.cli` |
+| **GitHub Projects** | Status tracking | ✅ Yes | Create via GitHub UI with Status field |
 | **VS Code** | Editor | Recommended | [code.visualstudio.com](https://code.visualstudio.com) |
 | **GitHub Copilot** | AI coding assistant | Optional | [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) |
 
@@ -244,8 +240,8 @@ gh auth login
 # 1. Create issue (choose template)
 gh issue create --web
 
-# 2. Claim issue
-gh issue edit 123 --add-label "status:in-progress"
+# 2. Claim issue (move to 'In Progress' in Projects board)
+gh issue comment 123 --body "Starting work on this"
 
 # 3. Work on code
 # (Pre-commit hooks validate security/format)
@@ -303,7 +299,7 @@ chmod +x .git/hooks/pre-commit .git/hooks/commit-msg
 ### 4. GitHub Actions
 Runs on every push/PR:
 - [enforce-issue-workflow.yml](.github/workflows/enforce-issue-workflow.yml) - Validates commit messages
-- [orchestrate.yml](.github/workflows/orchestrate.yml) - Multi-agent coordination
+- [agent-orchestrator.yml](.github/workflows/agent-orchestrator.yml) - Multi-agent coordination
 
 ### 5. Validation Script
 Check compliance at any time:
@@ -350,14 +346,33 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh |
 4. **Create labels** in your GitHub repository:
 
 ```bash
-# Essential labels
-gh label create "type:task" --description "Atomic unit of work" --color "0E8A16"
-gh label create "type:feature" --description "User-facing capability" --color "A2EEEF"
-gh label create "status:ready" --description "No blockers, can start" --color "C2E0C6"
-gh label create "status:in-progress" --description "Currently working" --color "FBCA04"
-gh label create "status:done" --description "Completed" --color "0E8A16"
+# Issue type labels
+gh label create "type:epic" --description "Large initiative" --color "8B4789"
+gh label create "type:feature" --description "User-facing capability" --color "0366D6"
+gh label create "type:story" --description "User story" --color "1D76DB"
+gh label create "type:bug" --description "Defect to fix" --color "D73A4A"
+gh label create "type:spike" --description "Research/investigation" --color "8B4789"
+gh label create "type:docs" --description "Documentation only" --color "0075CA"
+
+# Priority labels
+gh label create "priority:p0" --description "Critical" --color "B60205"
 gh label create "priority:p1" --description "High priority" --color "D93F0B"
+gh label create "priority:p2" --description "Medium priority" --color "FBCA04"
+gh label create "priority:p3" --description "Low priority" --color "FEF2C0"
+
+# Orchestration labels
+gh label create "orch:pm-done" --description "PM work complete" --color "0E8A16"
+gh label create "orch:architect-done" --description "Architect work complete" --color "0E8A16"
+gh label create "orch:ux-done" --description "UX work complete" --color "0E8A16"
+gh label create "orch:engineer-done" --description "Engineer work complete" --color "0E8A16"
+
+# Workflow labels
+gh label create "needs:ux" --description "Requires UX design" --color "D876E3"
+gh label create "needs:help" --description "Blocked - needs assistance" --color "FF6B6B"
+gh label create "needs:changes" --description "Changes requested" --color "FFA500"
 ```
+
+**Status Tracking**: Use **GitHub Projects Status field** (Backlog, In Progress, In Review, Done), not custom labels.
 
 ---
 
@@ -409,10 +424,10 @@ applyTo: '**.ext'  # Glob pattern for file matching
 ```bash
 # Session Start
 git pull --rebase
-gh issue list --label "status:ready,priority:p0"
+gh issue list --label "type:story,priority:p0"
 
-# Claim Work
-gh issue edit <ID> --add-label "status:in-progress" --remove-label "status:ready"
+# Claim Work (move to 'In Progress' in Projects board UI)
+gh issue comment <ID> --body "Starting work on this issue"
 
 # Progress Update
 gh issue comment <ID> --body "Progress: [description]"
@@ -422,21 +437,23 @@ git commit -m "feat: Description (#ID)"
 gh issue close <ID> --comment "Completed in commit <SHA>"
 ```
 
+**Status Tracking**: Use GitHub Projects board to drag issues between status columns (Backlog → In Progress → In Review → Done)
+
 ### Label Hierarchy
 
-**Issue Type & Status Labels:**
+**Issue Type & Priority Labels:**
 | Label | Purpose |
-|-------|---------|
+|-------|---------||
 | `type:epic` | Large initiative (multiple features) |
 | `type:feature` | User-facing capability |
 | `type:story` | User story within a feature |
-| `type:task` | Atomic unit of work |
 | `type:bug` | Defect to fix |
+| `type:spike` | Research/investigation |
+| `type:docs` | Documentation only |
 | `priority:p0` | Critical - do immediately |
 | `priority:p1` | High - do next |
-| `status:ready` | Can start now |
-| `status:in-progress` | Currently working |
-| `status:done` | Completed |
+| `priority:p2` | Medium |
+| `priority:p3` | Low |
 
 **Orchestration Labels (Multi-Agent Workflow):**
 | Label | Purpose |
@@ -511,7 +528,7 @@ This system has been E2E tested and verified:
 | State Management | ✅ Verified |
 | GitHub Issues Task Management | ✅ Verified |
 | Multi-Agent Workflow | ✅ Verified |
-| Label System | ✅ 8 custom labels created |
+| Label System | ✅ 15+ custom labels (type:*, priority:*, orch:*, needs:*) |
 
 See [Technical Specification - Section 11](docs/technical-specification.md#11-implementation-verification) for full test results.
 
@@ -542,5 +559,3 @@ This project is open source. See individual files for specific licensing.
 
 **Last Updated**: January 18, 2026
 
-
-# Test push
