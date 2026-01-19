@@ -55,8 +55,8 @@ jobs:
             // Determine which agents should run (can be multiple for parallel execution)
             let agents = [];
             
-            // Epic → Product Manager (status:ready → status:planning)
-            if (hasLabel('type:epic') && hasLabel('status:ready')) {
+            // Epic without PM completion → Product Manager
+            if (hasLabel('type:epic') && !hasLabel('orch:pm-done')) {
               agents.push('product-manager');
             }
             
@@ -68,24 +68,24 @@ jobs:
               agents.push('ux-designer');
             }
             
-            // Both Architect + UX Done → Engineer
-            if (hasLabel('orch:architect-done') && hasLabel('orch:ux-done') && 
-                hasLabel('status:ready') && hasLabel('type:story')) {
+            // Both Architect + UX Done → Engineer (for stories only)
+            if (hasLabel('type:story') && hasLabel('orch:architect-done') && 
+                hasLabel('orch:ux-done') && !hasLabel('orch:engineer-done')) {
               agents.push('engineer');
             }
             
             // Engineer Done → Reviewer
-            if (hasLabel('orch:engineer-done') && hasLabel('status:reviewing')) {
+            if (hasLabel('orch:engineer-done') && !issue.closed_at) {
               agents.push('reviewer');
             }
             
-            // Spike → Architect
-            if (hasLabel('type:spike') && hasLabel('status:ready')) {
+            // Spike without completion → Architect
+            if (hasLabel('type:spike') && !hasLabel('orch:architect-done')) {
               if (!agents.includes('architect')) agents.push('architect');
             }
             
-            // Bug/Docs → Engineer
-            if ((hasLabel('type:bug') || hasLabel('type:docs')) && hasLabel('status:ready')) {
+            // Bug/Docs without completion → Engineer
+            if ((hasLabel('type:bug') || hasLabel('type:docs')) && !hasLabel('orch:engineer-done')) {
               if (!agents.includes('engineer')) agents.push('engineer');
             }
             
@@ -120,9 +120,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue edit ${{ needs.route.outputs.issue_number }} \
-            --add-label "status:planning" \
-            --remove-label "status:ready"
+          gh issue comment ${{ needs.route.outputs.issue_number }} --body "📋 Product Manager starting..."
+          # Status managed via GitHub Projects board - set to 'In Progress'
 
       - name: Create PRD
         run: |
@@ -158,15 +157,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue edit ${{ needs.route.outputs.issue_number }} \
-            --add-label "status:designing,orch:pm-done" \
-            --remove-label "status:planning"
+            --add-label "orch:pm-done"
           
           gh issue comment ${{ needs.route.outputs.issue_number }} --body \
           "## ✅ Product Manager Complete
           
           **Deliverable**: PRD created at \`docs/prd/PRD-${{ needs.route.outputs.issue_number }}.md\`
           
-          **Next**: Architect + UX Designer (parallel)"
+          **Next**: Move to 'Ready' in Projects board, then Architect + UX Designer will start (parallel)"
 
   # ==========================================================================
   # AGENT: Architect
@@ -308,9 +306,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue edit ${{ needs.route.outputs.issue_number }} \
-            --add-label "status:implementing" \
-            --remove-label "status:ready"
+          gh issue comment ${{ needs.route.outputs.issue_number }} --body "🔧 Engineer starting implementation..."
+          # Status managed via GitHub Projects board - set to 'In Progress'
 
       - name: Implement Code
         run: |
@@ -333,8 +330,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue edit ${{ needs.route.outputs.issue_number }} \
-            --add-label "status:reviewing,orch:engineer-done" \
-            --remove-label "status:implementing"
+            --add-label "orch:engineer-done"
           
           gh issue comment ${{ needs.route.outputs.issue_number }} --body \
           "## ✅ Engineer Complete
@@ -343,7 +339,7 @@ jobs:
           - Code + Tests committed
           - Coverage: ≥80% (placeholder)
           
-          **Next**: Code Review"
+          **Next**: Move to 'In Review' in Projects board"
 
   # ==========================================================================
   # AGENT: Reviewer
@@ -393,8 +389,4 @@ jobs:
             --comment "## ✅ Review Complete - Issue Closed
             
             **Review**: See \`docs/reviews/REVIEW-${{ needs.route.outputs.issue_number }}.md\`
-            **Status**: Approved and merged"
-          
-          gh issue edit ${{ needs.route.outputs.issue_number }} \
-            --add-label "status:done" \
-            --remove-label "status:reviewing,orch:engineer-done"
+            **Status**: Approved and merged - moved to 'Done'"

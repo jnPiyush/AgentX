@@ -40,19 +40,19 @@ applyTo: '**'
 **MCP Commands:**
 ```json
 // Create
-{ "tool": "issue_write", "args": { "owner": "<OWNER>", "repo": "<REPO>", "method": "create", "title": "[Type] Description", "labels": ["type:story", "status:ready"] } }
+{ "tool": "issue_write", "args": { "owner": "<OWNER>", "repo": "<REPO>", "method": "create", "title": "[Type] Description", "labels": ["type:story"] } }
 
-// Claim (Engineer example)
-{ "tool": "update_issue", "args": { "issue_number": <ID>, "labels": ["type:story", "status:implementing"] } }
+// Claim (add orch label when starting work)
+{ "tool": "update_issue", "args": { "issue_number": <ID>, "labels": ["type:story"] } }
 
-// Close
-{ "tool": "update_issue", "args": { "issue_number": <ID>, "state": "closed", "labels": ["type:story", "status:done"] } }
+// Close (set Status to Done in Projects board)
+{ "tool": "update_issue", "args": { "issue_number": <ID>, "state": "closed" } }
 ```
 
 **CLI Fallback:**
 ```bash
-gh issue create --title "[Type] Description" --label "type:story,status:ready"
-gh issue edit <ID> --add-label "status:implementing" --remove-label "status:ready"
+gh issue create --title "[Type] Description" --label "type:story"
+# Claim by moving to 'In Progress' in Projects board
 gh issue close <ID> --comment "✅ Completed in <SHA>"
 ```
 
@@ -188,21 +188,21 @@ User asks: "Build me a feature"
 
 ## 🔄 Orchestration & Handoffs
 
-| Role | Trigger | Status Transition | Deliverable | Handoff Label |
-|------|---------|-------------------|-------------|---------------|
-| 📋 **PM** | User input | ready → planning → designing | PRD + Backlog | `orch:pm-done` |
-| 🏗️ **Architect** | `orch:pm-done` | designing (no change) | ADR + Tech Spec | `orch:architect-done` |
-| 🎨 **UX** | `orch:pm-done` | designing (no change) | Wireframes + Prototypes | `orch:ux-done` |
-| 🔧 **Engineer** | Both: `orch:architect-done` + `orch:ux-done` | implementing → reviewing | Code + Tests + Docs | `orch:engineer-done` |
-| ✅ **Reviewer** | `orch:engineer-done` | reviewing → done (+ close) | Review doc | Close issue |
+| Role | Trigger | GitHub Status | Deliverable | Handoff Label |
+|------|---------|---------------|-------------|---------------|
+| 📋 **PM** | User input | Backlog → In Progress → Ready | PRD + Backlog | `orch:pm-done` |
+| 🏭️ **Architect** | `orch:pm-done` | Ready (no change) | ADR + Tech Spec | `orch:architect-done` |
+| 🎨 **UX** | `orch:pm-done` | Ready (no change) | Wireframes + Prototypes | `orch:ux-done` |
+| 🔧 **Engineer** | Both: `orch:architect-done` + `orch:ux-done` | Ready → In Progress → In Review | Code + Tests + Docs | `orch:engineer-done` |
+| ✅ **Reviewer** | `orch:engineer-done` | In Review → Done (+ close) | Review doc | Close issue |
 
 **Execution Steps by Role:**
 
 📋 **Product Manager:**
-1. Claim Epic (status:planning)
+1. Claim Epic (set Status to "In Progress" in Projects board)
 2. Create PRD at docs/prd/PRD-{issue}.md
-3. Create Feature + Story issues (all status:ready)
-4. Update Epic (status:designing) + add `orch:pm-done`
+3. Create Feature + Story issues (all Status: "Backlog")
+4. Update Epic Status to "Ready" + add `orch:pm-done`
 
 🏗️ **Architect:** (parallel)
 1. Review backlog, read PRD
@@ -216,16 +216,16 @@ User asks: "Build me a feature"
 
 🔧 **Engineer:**
 1. Check Epic has BOTH `orch:architect-done` + `orch:ux-done`
-2. Claim Story (status:implementing)
+2. Claim Story (set Status to "In Progress" in Projects board)
 3. Write code + tests (≥80% coverage)
 4. Commit: "type: description (#issue)"
-5. Update Story (status:reviewing) + add `orch:engineer-done`
+5. Update Story Status to "In Review" + add `orch:engineer-done`
 
 ✅ **Reviewer:**
 1. Review code, tests, security
 2. Create review at docs/reviews/REVIEW-{issue}.md
-3. If approved: Close issue (status:done)
-4. If changes needed: Update status:implementing + add `needs:changes`
+3. If approved: Close issue (Status: "Done" in Projects board)
+4. If changes needed: Update Status to "In Progress" + add `needs:changes`
 
 ---
 
@@ -608,83 +608,76 @@ gh run list --workflow=<workflow-file.yml>
 
 ## 🔄 Hybrid Status Tracking
 
-> **Architecture**: Combines GitHub Projects v2 Status field (primary) with auto-synced labels (secondary)
+> **Architecture**: Uses GitHub Projects v2 Status field (native UI) for visual tracking
 
 ### How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ User/Board: Drags issue to "🏗️ Designing" column           │
+│ User/Board: Drags issue to "In Progress" column            │
 │      ↓                                                       │
-│ Automation: Detects Status field change                     │
+│ Status Field: Automatically updated in Projects v2          │
 │      ↓                                                       │
-│ Workflow: Updates label to status:designing                 │
-│      ↓                                                       │
-│ Agent: Reads label via MCP, sees current status             │
+│ Agent: Uses orch:* labels for coordination only             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Benefits
 
-| Aspect | Status Field | Labels |
-|--------|-------------|--------|
-| **Visual Tracking** | ✅ Clean board view | ❌ Cluttered |
-| **Mutually Exclusive** | ✅ Automatic | ⚠️ Requires discipline |
-| **Agent Access** | ⚠️ Requires GraphQL | ✅ Simple REST API |
-| **CLI Queries** | ❌ Complex | ✅ Easy: `gh issue list --label` |
-| **Source of Truth** | ✅ Primary | Secondary (synced) |
+| Aspect | GitHub Status Field |
+|--------|---------------------|
+| **Visual Tracking** | ✅ Clean board view with standard values |
+| **Mutually Exclusive** | ✅ Automatic - only one status at a time |
+| **Agent Coordination** | ✅ Uses orch:* labels (orch:pm-done, orch:architect-done, etc.) |
+| **CLI Queries** | ✅ Easy: `gh issue list --label type:story` |
+| **Source of Truth** | ✅ Single source - Projects Status field |
+
+### Standard Status Values
+
+| Status | When Used | Description |
+|--------|-----------|-------------|
+| **📝 Backlog** | Issue created | Waiting to be claimed |
+| **🚀 In Progress** | PM/Architect/UX/Engineer working | Active development |
+| **👀 In Review** | Code review phase | Quality assurance |
+| **✅ Done** | Completed | Closed and delivered |
+
+**Optional (for granularity):**
+| **🏗️ Ready** | Design complete | Architect + UX done, awaiting Engineer |
 
 ### Setup
 
 1. **Create GitHub Project v2** - See [docs/project-setup.md](docs/project-setup.md)
-2. **Add Status field** - Single-select with 6 values (Backlog → Done)
-3. **Enable sync workflow** - `.github/workflows/sync-status-to-labels.yml`
+2. **Add Status field** - Single-select with values: Backlog, In Progress, In Review, Done, Ready (optional)
 
 ### Usage
 
 **For Humans:**
-- Use project board (drag & drop)
-- Labels update automatically
+- Use project board (drag & drop between status columns)
+- Status updates automatically
 
 **For Agents:**
-- Read labels via MCP: `list_issues --labels status:implementing`
-- Update labels via MCP: triggers Status field update
+- Check prerequisites: orch:* labels (orch:pm-done, orch:architect-done, etc.)
+- Update status by moving issue in Projects board
+- Add completion labels when done
 
 ---
 
 ## Labels Reference
 
-> **Hybrid Status Tracking**: This project uses GitHub Projects v2 **Status field** as the primary source of truth, with automatic **label synchronization** for agent/CLI access. The Status field provides clean visual tracking in project boards, while synced labels enable programmatic queries.
->
-> **Setup Required**: See [docs/project-setup.md](docs/project-setup.md) for initial GitHub Project v2 configuration.
+> **Simplified Labels**: GitHub Projects v2 **Status field** provides visual tracking. Labels are used only for issue type and agent coordination.
 
 | Category | Labels | Purpose |
 |----------|--------|---------|
 | **Type** | `type:epic`, `type:feature`, `type:story`, `type:bug`, `type:spike`, `type:docs` | Classify issue type, determines agent role |
-| **Phase Status** | `status:ready`, `status:planning`, `status:designing`, `status:implementing`, `status:reviewing`, `status:done` | Track current workflow phase (mutually exclusive) |
 | **Priority** | `priority:p0`, `priority:p1`, `priority:p2`, `priority:p3` | Determine urgency (p0=critical, p3=low) |
 | **Orchestration** | `orch:pm-done`, `orch:architect-done`, `orch:ux-done`, `orch:engineer-done` | Signal handoff readiness (cumulative) |
 | **Workflow** | `needs:ux`, `needs:help`, `needs:changes`, `needs:fixes` | Flag special requirements |
 
-### Phase Status Labels (Detailed)
+### ⚠️ Removed: Custom Status Labels
 
-> **Primary Source**: GitHub Projects v2 **Status** field (users drag & drop in board)  
-> **Secondary**: `status:*` labels (auto-synced via workflow for agent/CLI access)
+Previously used `status:ready`, `status:planning`, `status:designing`, `status:implementing`, `status:reviewing`, `status:done`.
 
-| Status Field Value | Synced Label | Active Agent Role | Description |
-|-------------------|--------------|------------------|-------------|
-| 📝 Backlog | `status:ready` | None | Issue created, awaiting assignment |
-| 📋 Planning | `status:planning` | 📋 Product Manager | Creating PRD and breaking down into backlog |
-| 🏗️ Designing | `status:designing` | 🏗️ Architect + 🎨 UX Designer | Creating technical specs and UX designs (parallel) |
-| 💻 Implementing | `status:implementing` | 🔧 Engineer | Writing code, tests, and documentation |
-| 🔍 Reviewing | `status:reviewing` | ✅ Reviewer | Quality assurance and code review |
-| ✅ Done | `status:done` | None | Issue closed and delivered |
-
-**How Sync Works:**
-1. User/Agent updates Status in project board → Workflow syncs to label
-2. Agent reads label → Gets current status
-3. Agent updates label → Status field reflects change
-4. Always use Status field as source of truth for visual tracking
+**Now**: Use GitHub Projects Status field with standard values (Backlog, In Progress, In Review, Done) instead.
 
 ---
 
@@ -775,7 +768,7 @@ curl <url> | bash        # Arbitrary code execution
 
 ### Close Issue (MCP)
 ```json
-{ "tool": "update_issue", "args": { "issue_number": <ID>, "state": "closed", "labels": ["type:story", "status:done"] } }
+{ "tool": "update_issue", "args": { "issue_number": <ID>, "state": "closed" } }
 { "tool": "add_issue_comment", "args": { "issue_number": <ID>, "body": "✅ Completed in commit <SHA>" } }
 ```
 

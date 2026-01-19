@@ -1,17 +1,22 @@
-name: Sync Project Status to Labels
+name: Sync Project Status (Removed - Status managed via Projects board)
+
+# This workflow is deprecated - GitHub Projects Status field is now used directly
+# No need to sync to custom status:* labels
+# Orchestration uses orch:* labels only for agent coordination
 
 on:
-  issues:
-    types: [opened, reopened]
-  project_v2_item:
-    types: [edited]
+  workflow_dispatch:  # Manual only - workflow disabled
 
 jobs:
-  sync-status:
+  deprecated:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      contents: read
+    steps:
+      - name: Deprecated Notice
+        run: |
+          echo "⚠️  This workflow is deprecated"
+          echo "Status is now managed directly via GitHub Projects Status field"
+          echo "Use standard values: Backlog, In Progress, In Review, Done"
+          echo "Agents use orch:* labels for coordination only"
     
     steps:
       - name: Sync Status Field to Label
