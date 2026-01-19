@@ -1,5 +1,0 @@
-{
-    "chat.useAgentsMdFile": true,
-    "chat.useAgentSkills": true,
-    "github.copilot.chat.codeGeneration.useInstructionFiles": true
-}
