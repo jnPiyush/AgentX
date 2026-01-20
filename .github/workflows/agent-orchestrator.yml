@@ -11,6 +11,7 @@ on:
       issue_number:
         description: 'Issue number'
         required: true
+        type: string
 
 permissions:
   issues: write
