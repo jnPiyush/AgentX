@@ -22,7 +22,6 @@ jobs:
   route:
     name: Route to Agent
     runs-on: ubuntu-latest
-    if: github.event_name != 'push'
     outputs:
       run_pm: ${{ steps.route.outputs.run_pm }}
       run_architect: ${{ steps.route.outputs.run_architect }}
