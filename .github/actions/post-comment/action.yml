@@ -1,0 +1,107 @@
+name: Post Comment via GraphQL
+description: Fast comment posting using GraphQL mutation (1-2 seconds)
+author: AgentX Team
+
+inputs:
+  issue_number:
+    description: Issue number to comment on
+    required: true
+  body:
+    description: Comment body (markdown supported)
+    required: true
+  github_token:
+    description: GitHub token with write permissions
+    required: true
+    default: ${{ github.token }}
+
+outputs:
+  comment_id:
+    description: ID of created comment
+    value: ${{ steps.comment.outputs.comment_id }}
+  comment_url:
+    description: URL of created comment
+    value: ${{ steps.comment.outputs.comment_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Post Comment using GraphQL
+      id: comment
+      uses: actions/github-script@v7
+      env:
+        ISSUE_NUMBER: ${{ inputs.issue_number }}
+        COMMENT_BODY: ${{ inputs.body }}
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const issueNumber = parseInt(process.env.ISSUE_NUMBER);
+          const body = process.env.COMMENT_BODY;
+          
+          console.log(`💬 Posting comment to issue #${issueNumber}...`);
+          
+          try {
+            // Get issue node ID
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Post comment using GraphQL
+            const commentMutation = `
+              mutation($subjectId: ID!, $body: String!) {
+                addComment(input: {
+                  subjectId: $subjectId,
+                  body: $body
+                }) {
+                  commentEdge {
+                    node {
+                      id
+                      url
+                      createdAt
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const result = await github.graphql(commentMutation, {
+              subjectId: issue.node_id,
+              body: body
+            });
+            
+            const comment = result.addComment.commentEdge.node;
+            
+            console.log(`✅ Comment posted: ${comment.url}`);
+            
+            core.setOutput('comment_id', comment.id);
+            core.setOutput('comment_url', comment.url);
+            
+            return {
+              id: comment.id,
+              url: comment.url,
+              created_at: comment.createdAt
+            };
+            
+          } catch (error) {
+            console.error(`❌ Comment posting failed: ${error.message}`);
+            
+            // Fallback to REST API
+            console.log(`🔄 Falling back to REST API...`);
+            try {
+              const { data: comment } = await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: body
+              });
+              
+              console.log(`✅ REST API fallback successful: ${comment.html_url}`);
+              core.setOutput('comment_id', comment.node_id);
+              core.setOutput('comment_url', comment.html_url);
+              
+            } catch (fallbackError) {
+              console.error(`❌ REST API fallback failed: ${fallbackError.message}`);
+              throw error;
+            }
+          }

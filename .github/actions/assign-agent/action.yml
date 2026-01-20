@@ -1,0 +1,147 @@
+name: Assign Agent via GraphQL
+description: Fast agent assignment using GraphQL mutation (2-3 seconds)
+author: AgentX Team
+
+inputs:
+  issue_number:
+    description: Issue number to assign agent to
+    required: true
+  agent_login:
+    description: GitHub login of the agent to assign (e.g., copilot-swe-agent)
+    required: true
+  github_token:
+    description: GitHub token with write permissions
+    required: true
+    default: ${{ github.token }}
+
+outputs:
+  assigned:
+    description: Whether assignment was successful
+    value: ${{ steps.assign.outputs.assigned }}
+  agent_id:
+    description: GraphQL node ID of assigned agent
+    value: ${{ steps.assign.outputs.agent_id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Assign Agent using GraphQL
+      id: assign
+      uses: actions/github-script@v7
+      env:
+        AGENT_LOGIN: ${{ inputs.agent_login }}
+        ISSUE_NUMBER: ${{ inputs.issue_number }}
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const agentLogin = process.env.AGENT_LOGIN;
+          const issueNumber = parseInt(process.env.ISSUE_NUMBER);
+          
+          console.log(`🔍 Assigning ${agentLogin} to issue #${issueNumber}...`);
+          
+          try {
+            // Step 1: Get issue node ID
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            console.log(`✅ Issue node ID: ${issue.node_id}`);
+            
+            // Step 2: Find agent in repository collaborators
+            const agentQuery = `
+              query($owner: String!, $repo: String!, $login: String!) {
+                repository(owner: $owner, name: $repo) {
+                  collaborators(first: 100) {
+                    nodes {
+                      id
+                      login
+                      name
+                    }
+                  }
+                }
+                user(login: $login) {
+                  id
+                  login
+                  name
+                }
+              }
+            `;
+            
+            const queryResult = await github.graphql(agentQuery, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              login: agentLogin
+            });
+            
+            // Try to find agent in collaborators first, fallback to user query
+            let agent = queryResult.repository.collaborators.nodes.find(
+              a => a.login === agentLogin
+            );
+            
+            if (!agent && queryResult.user) {
+              agent = queryResult.user;
+              console.log(`⚠️ Agent not in collaborators, using user ID`);
+            }
+            
+            if (!agent) {
+              throw new Error(`Agent ${agentLogin} not found in repository or GitHub`);
+            }
+            
+            console.log(`✅ Found agent: ${agent.login} (${agent.name}) - ID: ${agent.id}`);
+            
+            // Step 3: Assign using GraphQL mutation
+            const assignMutation = `
+              mutation($assignableId: ID!, $actorIds: [ID!]!) {
+                replaceActorsForAssignable(input: {
+                  assignableId: $assignableId,
+                  actorIds: $actorIds
+                }) {
+                  assignable {
+                    ... on Issue {
+                      number
+                      title
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const mutationResult = await github.graphql(assignMutation, {
+              assignableId: issue.node_id,
+              actorIds: [agent.id]
+            });
+            
+            console.log(`✅ Successfully assigned ${agent.login} to issue #${issueNumber}`);
+            
+            core.setOutput('assigned', 'true');
+            core.setOutput('agent_id', agent.id);
+            
+            return {
+              success: true,
+              agent: agent.login,
+              issue: issueNumber
+            };
+            
+          } catch (error) {
+            console.error(`❌ Assignment failed: ${error.message}`);
+            core.setOutput('assigned', 'false');
+            core.setOutput('agent_id', '');
+            
+            // Fallback to REST API assignment
+            console.log(`🔄 Falling back to REST API assignment...`);
+            try {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                assignees: [agentLogin]
+              });
+              console.log(`✅ REST API fallback successful`);
+              core.setOutput('assigned', 'true');
+            } catch (fallbackError) {
+              console.error(`❌ REST API fallback failed: ${fallbackError.message}`);
+              throw error;
+            }
+          }

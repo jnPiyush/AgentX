@@ -9,6 +9,8 @@ applyTo: '**'
 
 > **WORKFLOW ENFORCEMENT**: Primary enforcement is through this AGENTS.md file. The Copilot instructions file ([.github/copilot-instructions.md](.github/copilot-instructions.md)) is just a gate that enforces reading this document first. All agents MUST follow the workflows defined here.
 
+> **HYBRID ORCHESTRATION**: AgentX uses a 3-layer hybrid model combining GraphQL (fast), Workflows (execution), and MCP (coordination). See [architecture decision doc](docs/architecture-decision-hybrid-orchestration.md) for details.
+
 ---
 
 # ⚠️ CRITICAL WORKFLOW
