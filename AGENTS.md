@@ -190,6 +190,7 @@ User asks: "Build me a feature"
 
 | Role | Trigger | GitHub Status | Deliverable | Handoff Label |
 |------|---------|---------------|-------------|---------------|
+| 🤖 **Orchestrator** | Label changes (`orch:*`) | (Monitors all) | Routing decisions + Comments | (Coordinates flow) |
 | 📋 **PM** | User input | Backlog → In Progress → Ready | PRD + Backlog | `orch:pm-done` |
 | 🏭️ **Architect** | `orch:pm-done` | Ready (no change) | ADR + Tech Spec | `orch:architect-done` |
 | 🎨 **UX** | `orch:pm-done` | Ready (no change) | Wireframes + Prototypes | `orch:ux-done` |
@@ -197,6 +198,14 @@ User asks: "Build me a feature"
 | ✅ **Reviewer** | `orch:engineer-done` | In Review → Done (+ close) | Review doc | Close issue |
 
 **Execution Steps by Role:**
+
+🤖 **Orchestrator:**
+1. Monitor label changes (automatic via GitHub Actions)
+2. Read issue state + verify prerequisites
+3. Determine next agent(s) based on routing rules
+4. Trigger agent workflows (parallel when applicable)
+5. Document handoff with comments
+6. Handle errors/blocks with recovery actions
 
 📋 **Product Manager:**
 1. Claim Epic (set Status to "In Progress" in Projects board)
@@ -534,6 +543,122 @@ See [docs/orchestration-testing-guide.md](docs/orchestration-testing-guide.md) f
 - **Validation Scripts** - Automated checks for each handoff
 - **Cleanup Scripts** - Remove test data after validation
 - **Coverage Goals** - Maintain >85% test coverage across all agents
+
+---
+
+## 🤖 The Orchestrator Agent
+
+> **Purpose**: Central coordinator managing handoffs, routing, and workflow state transitions between all agents.
+
+### Role & Responsibilities
+
+The Orchestrator is a **meta-agent** that doesn't write code or create artifacts—instead, it **manages the workflow** itself:
+
+- **Monitors** orchestration labels (`orch:*`) for state changes
+- **Routes** issues to appropriate agents based on type and completion state
+- **Validates** prerequisites before allowing handoffs (Epic has ADR, UX designs, etc.)
+- **Coordinates** parallel work (Architect + UX Designer run simultaneously)
+- **Blocks** issues when prerequisites aren't met (clear error messages)
+- **Recovers** from errors (timeouts, missing artifacts, circular dependencies)
+- **Tracks** metrics (handoff latency, stage duration, SLA compliance)
+
+### When to Invoke
+
+The Orchestrator runs in two modes:
+
+#### 1. Automatic Mode (Recommended)
+Via `.github/workflows/agent-orchestrator.yml` triggered by `issues: labeled` events:
+```bash
+# Happens automatically when:
+# - Issue gets type:* label (new issue)
+# - Agent adds orch:*-done label (handoff signal)
+# - User adds orchestration:* label (manual control)
+```
+
+#### 2. Manual Mode (Debugging/Override)
+Via `.github/workflows/run-orchestrator.yml` for explicit control:
+```bash
+# Route to next agent
+gh workflow run run-orchestrator.yml -f issue_number=71 -f command=route
+
+# Pause workflow
+gh workflow run run-orchestrator.yml -f issue_number=71 -f command=pause
+
+# Resume workflow
+gh workflow run run-orchestrator.yml -f issue_number=71 -f command=resume
+
+# Skip an agent stage
+gh workflow run run-orchestrator.yml -f issue_number=71 -f command=skip -f target_agent=architect
+
+# Retry current stage
+gh workflow run run-orchestrator.yml -f issue_number=71 -f command=retry
+```
+
+### Orchestrator State Machine
+
+```
+Epic (type:epic)
+  ├─ No orch:pm-done → Route to Product Manager
+  ├─ orch:pm-done, no orch:architect-done → Route to Architect
+  ├─ orch:pm-done, no orch:ux-done → Route to UX Designer (parallel)
+  └─ Both orch:architect-done + orch:ux-done → Unblock child Stories
+
+Story/Feature (type:story, type:feature)
+  ├─ Check parent Epic prerequisites
+  ├─ No orch:engineer-done → Route to Engineer (if prerequisites met)
+  └─ orch:engineer-done → Route to Reviewer
+
+Bug/Docs (type:bug, type:docs)
+  ├─ No orch:engineer-done → Route to Engineer
+  └─ orch:engineer-done → Route to Reviewer
+
+Spike (type:spike)
+  ├─ No orch:architect-done → Route to Architect
+  └─ orch:architect-done → Close with findings
+```
+
+### Workflow Commands (Manual Control)
+
+Users can control orchestration via slash commands in issue comments:
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `/orchestrate` | Start orchestration for this issue | `gh workflow run run-orchestrator.yml -f issue_number=71` |
+| `/pause` | Pause workflow (adds `orchestration:paused`) | Manual intervention needed |
+| `/resume` | Resume paused workflow | Re-evaluates state, triggers next agent |
+| `/skip <agent>` | Skip an agent stage | `/skip architect` (not recommended) |
+| `/retry` | Retry current stage | Re-runs same agent with same inputs |
+| `/route <agent>` | Manually route to specific agent | Override automatic routing |
+
+### Error Handling
+
+The Orchestrator detects and recovers from common issues:
+
+| Error | Detection | Recovery |
+|-------|-----------|----------|
+| **Agent timeout** | No `orch:*-done` after 15 min | Add `needs:help` label, comment with error |
+| **Missing artifacts** | `orch:*-done` but no files committed | Remove completion label, re-run agent |
+| **Blocked issue** | Prerequisites not met | Add blocking comment, pause routing |
+| **Circular dependency** | Issue references itself as parent | Add `needs:resolution`, notify user |
+| **Test failures** | CI pipeline fails after commit | Add `needs:fixes`, reassign to Engineer |
+
+### Metrics & Monitoring
+
+The Orchestrator tracks workflow health:
+
+- **Handoff Latency**: Time between `orch:*-done` and next agent start (SLA: <30s)
+- **Stage Duration**: How long each agent takes to complete
+- **Workflow Throughput**: Issues completed per day
+- **Blocking Frequency**: How often issues get blocked
+- **SLA Compliance**: % of handoffs meeting <30s target
+
+### Integration Points
+
+- **Agent Definition**: [.github/agents/orchestrator.agent.md](.github/agents/orchestrator.agent.md)
+- **Automatic Workflow**: [.github/workflows/agent-orchestrator.yml](.github/workflows/agent-orchestrator.yml)
+- **Manual Workflow**: [.github/workflows/run-orchestrator.yml](.github/workflows/run-orchestrator.yml)
+- **Configuration**: [.github/orchestration-config.yml](.github/orchestration-config.yml)
+- **Testing Guide**: [docs/orchestration-testing-guide.md](docs/orchestration-testing-guide.md)
 
 ---
 
