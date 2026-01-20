@@ -63,7 +63,7 @@ runs:
             const labelIds = [];
             if (addLabels.length > 0) {
               const labelQuery = `
-                query($owner: String!, $repo: String!, $labels: [String!]!) {
+                query($owner: String!, $repo: String!) {
                   repository(owner: $owner, name: $repo) {
                     labels(first: 100, query: "") {
                       nodes {
@@ -77,8 +77,7 @@ runs:
               
               const { repository } = await github.graphql(labelQuery, {
                 owner: context.repo.owner,
-                repo: context.repo.repo,
-                labels: addLabels
+                repo: context.repo.repo
               });
               
               for (const labelName of addLabels) {
