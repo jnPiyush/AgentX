@@ -63,7 +63,7 @@ See [MCP Integration Guide](docs/mcp-integration.md) for setup details.
 
 ### 🔒 4-Layer Security Architecture
 
-Inspired by MayorWest's "Policy over Approval" philosophy - configure once, trust the guardrails.
+Built on "Policy over Approval" philosophy - configure once, trust the guardrails.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

@@ -182,7 +182,7 @@ WHY HYBRID? (Best of Both Worlds)
 ┌──────────────────────────┬─────────────────┬────────────────────────────┐
 │ Approach                 │ Strength        │ Weakness                   │
 ├──────────────────────────┼─────────────────┼────────────────────────────┤
-│ GraphQL Only (MayorWest) │ ⚡ Fast (1-2s)  │ ❌ Can't run code/tests   │
+│ GraphQL Only             │ ⚡ Fast (1-2s)  │ ❌ Can't run code/tests   │
 │                          │ ✅ Simple       │ ❌ No git operations       │
 │                          │                 │ ❌ No document generation  │
 ├──────────────────────────┼─────────────────┼────────────────────────────┤

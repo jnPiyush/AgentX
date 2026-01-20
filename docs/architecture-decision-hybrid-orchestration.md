@@ -8,7 +8,7 @@
 
 ## Context
 
-AgentX currently uses MCP Server + workflow_dispatch for agent orchestration. MayorWest uses GraphQL for direct actor assignment. We need to determine the optimal approach.
+AgentX currently uses MCP Server + workflow_dispatch for agent orchestration. We need to determine the optimal approach for combining GraphQL direct operations with workflow-based execution.
 
 ## Analysis
 
