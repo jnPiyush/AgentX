@@ -9,7 +9,7 @@ tools:
   - add_issue_comment
   - run_workflow
   - list_workflow_runs
-  -read_file
+  - read_file
   - semantic_search
   - grep_search
   - file_search
