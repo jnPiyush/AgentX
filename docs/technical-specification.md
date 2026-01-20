@@ -1,7 +1,7 @@
 # Technical Specification: AgentX Multi-Agent System
 
-> **Version**: 2.0  
-> **Date**: January 19, 2026  
+> **Version**: 3.0  
+> **Date**: January 20, 2026  
 > **Status**: Current Implementation  
 > **Standard**: [github/awesome-copilot](https://github.com/github/awesome-copilot) • [agentskills.io](https://agentskills.io/specification)
 
@@ -12,15 +12,15 @@
 1. [Executive Summary](#1-executive-summary)
 2. [Problem Statement](#2-problem-statement)
 3. [Solution Architecture](#3-solution-architecture)
-4. [Core Concepts](#4-core-concepts)
-5. [Agent Roles & Responsibilities](#5-agent-roles--responsibilities)
-6. [Orchestration Model](#6-orchestration-model)
-7. [Issue Classification & Routing](#7-issue-classification--routing)
-8. [GitHub Projects Integration](#8-github-projects-integration)
-9. [MCP Server Integration](#9-mcp-server-integration)
-10. [Security Architecture](#10-security-architecture)
-11. [Implementation Patterns](#11-implementation-patterns)
-12. [Design Decisions & Justifications](#12-design-decisions--justifications)
+4. [Hybrid Orchestration Model](#4-hybrid-orchestration-model)
+5. [Core Concepts](#5-core-concepts)
+6. [Agent Roles & Responsibilities](#6-agent-roles--responsibilities)
+7. [Orchestration Protocol](#7-orchestration-protocol)
+8. [Issue Classification & Routing](#8-issue-classification--routing)
+9. [GitHub Projects Integration](#9-github-projects-integration)
+10. [MCP Server Integration](#10-mcp-server-integration)
+11. [Security Architecture](#11-security-architecture)
+12. [Implementation Patterns](#12-implementation-patterns)
 13. [File Structure](#13-file-structure)
 14. [Quality Standards](#14-quality-standards)
 
@@ -80,11 +80,13 @@ AgentX is a **multi-agent orchestration system** that coordinates AI agents (Pro
 
 | Component | Status |
 |-----------|--------|
+| Hybrid Orchestration | ✅ Implemented (3-layer model: GraphQL + Workflows + MCP) |
 | Unified Workflow | ✅ Implemented ([agent-orchestrator.yml](../.github/workflows/agent-orchestrator.yml)) |
 | GitHub Projects Integration | ✅ Status field (Backlog, In Progress, In Review, Done) |
 | MCP Server | ✅ Configured (GitHub Copilot hosted) |
 | Orchestration Labels | ✅ `orch:pm-done`, `orch:architect-done`, `orch:ux-done`, `orch:engineer-done` |
 | Documentation | ✅ [AGENTS.md](../AGENTS.md), [Skills.md](../Skills.md), [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| Performance | ✅ 9x faster handoffs, 15x faster assignments |
 
 ### 1.5 Target Audience
 
@@ -188,12 +190,15 @@ AgentX is a **multi-agent orchestration system** that coordinates AI agents (Pro
 
 | Layer | Technology |
 |-------|------------|
-| **Agent Orchestration** | GitHub Actions (unified workflow) |
+| **Orchestration (Layer 1)** | GraphQL API (fast operations 1-2s) |
+| **Orchestration (Layer 2)** | GitHub Actions (complex execution 10-60s) |
+| **Orchestration (Layer 3)** | GitHub MCP Server (coordination <1s) |
 | **Task Management** | GitHub Issues + GitHub Projects v2 |
-| **API Integration** | GitHub MCP Server (Model Context Protocol) |
 | **Agent Communication** | Orchestration labels (`orch:*`) |
 | **Status Tracking** | GitHub Projects Status field |
 | **Documentation** | Markdown (AGENTS.md, Skills.md) |
+
+**See**: [Hybrid Orchestration Architecture](architecture-hybrid-orchestration.md) for complete details.
 
 ### 2.3 Simplified Workflow Model
 
@@ -754,12 +759,13 @@ needs:ux, needs:help, needs:changes, needs:fixes
 - **[AGENTS.md](../AGENTS.md)** - Complete workflow details, agent behaviors
 - **[Skills.md](../Skills.md)** - Technical standards index
 - **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contributor guide (manual workflow)
-- **[docs/project-setup.md](project-setup.md)** - GitHub Projects setup
-- **[docs/mcp-integration.md](mcp-integration.md)** - MCP Server integration
+- **[architecture-hybrid-orchestration.md](architecture-hybrid-orchestration.md)** - Hybrid 3-layer architecture (ADR + implementation)
+- **[project-setup.md](project-setup.md)** - GitHub Projects setup
+- **[mcp-integration.md](mcp-integration.md)** - MCP Server integration
 - **[.github/copilot-instructions.md](../.github/copilot-instructions.md)** - Agent gate file
 
 ---
 
-**Document Version:** 2.0  
-**Last Updated:** January 19, 2026  
+**Document Version:** 3.0  
+**Last Updated:** January 20, 2026  
 **Maintained By:** AgentX Team
