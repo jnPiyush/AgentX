@@ -157,7 +157,7 @@ Before handoff:
 
 ## References
 
-- **Workflow**: [AGENTS.md §Product Manager](../../AGENTS.md#-orchestration--handoffs)
+- **Workflow**: [AGENTS.md](../../AGENTS.md)
 - **Standards**: [Skills.md](../../Skills.md)
 - **Example PRD**: [PRD-48.md](../../docs/prd/PRD-48.md)
 
