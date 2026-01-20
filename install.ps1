@@ -100,11 +100,21 @@ $coreFiles = @(
     @{ Src = ".github/copilot-instructions.md"; Dest = ".github/copilot-instructions.md" },
     @{ Src = ".github/autonomous-mode.yml"; Dest = ".github/autonomous-mode.yml" },
     @{ Src = ".github/orchestration-config.yml"; Dest = ".github/orchestration-config.yml" },
+    @{ Src = ".github/agentx-security.yml"; Dest = ".github/agentx-security.yml" },
+    @{ Src = ".github/CODEOWNERS"; Dest = ".github/CODEOWNERS" },
     @{ Src = ".github/workflows/agent-orchestrator.yml"; Dest = ".github/workflows/agent-orchestrator.yml" },
     @{ Src = ".github/workflows/sync-status-to-labels.yml"; Dest = ".github/workflows/sync-status-to-labels.yml" },
     @{ Src = ".github/workflows/test-e2e.yml"; Dest = ".github/workflows/test-e2e.yml" },
+    @{ Src = ".github/actions/assign-agent/action.yml"; Dest = ".github/actions/assign-agent/action.yml" },
+    @{ Src = ".github/actions/update-labels/action.yml"; Dest = ".github/actions/update-labels/action.yml" },
+    @{ Src = ".github/actions/post-comment/action.yml"; Dest = ".github/actions/post-comment/action.yml" },
     @{ Src = ".vscode/settings.json"; Dest = ".vscode/settings.json" },
-    @{ Src = ".vscode/mcp.json"; Dest = ".vscode/mcp.json" }
+    @{ Src = ".vscode/mcp.json"; Dest = ".vscode/mcp.json" },
+    @{ Src = "docs/mcp-integration.md"; Dest = "docs/mcp-integration.md" },
+    @{ Src = "docs/project-setup.md"; Dest = "docs/project-setup.md" },
+    @{ Src = "docs/architecture-decision-hybrid-orchestration.md"; Dest = "docs/architecture-decision-hybrid-orchestration.md" },
+    @{ Src = "docs/hybrid-implementation-summary.md"; Dest = "docs/hybrid-implementation-summary.md" },
+    @{ Src = "docs/hybrid-architecture-visual.md"; Dest = "docs/hybrid-architecture-visual.md" }
 )
 
 # Skills files
@@ -229,16 +239,20 @@ Write-Host ""
 Write-Host "4. Set up GitHub Project v2 with Status field (see docs/project-setup.md)"
 Write-Host "   Status values: Backlog, In Progress, In Review, Done"
 Write-Host ""
-Write-Host "4. Read " -NoNewline
+Write-Host "5. Read " -NoNewline
 Write-Host "AGENTS.md" -ForegroundColor Cyan -NoNewline
 Write-Host " for workflow guidelines"
-Write-Host "5. Check " -NoNewline
+Write-Host "6. Check " -NoNewline
 Write-Host "Skills.md" -ForegroundColor Cyan -NoNewline
 Write-Host " for production standards"
-Write-Host "6. Review " -NoNewline
+Write-Host "7. Review " -NoNewline
 Write-Host ".github/orchestration-config.yml" -ForegroundColor Cyan -NoNewline
 Write-Host " for multi-agent orchestration settings"
-Write-Host "7. MCP Server is pre-configured (requires VS Code 1.101+ and GitHub Copilot)"
+Write-Host "8. Review " -NoNewline
+Write-Host "docs/architecture-decision-hybrid-orchestration.md" -ForegroundColor Cyan -NoNewline
+Write-Host " for hybrid architecture details"
+Write-Host "9. MCP Server is pre-configured (requires VS Code 1.101+ and GitHub Copilot)"
+Write-Host "10. GraphQL actions provide 9x faster handoffs (2s vs 45s)"
 Write-Host ""
 Write-Success "AgentX installed successfully! 🚀"
 Write-Host ""
