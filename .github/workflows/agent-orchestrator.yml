@@ -1,27 +1,63 @@
 # Agent Orchestrator - Routes work to specialized agents
-# Triggers: Issue labeled (orch:*-done) or manual dispatch
+# Triggers: Issue labeled, PR events, periodic checks, manual dispatch
 
 name: Agent Orchestrator
 
 on:
   issues:
-    types: [labeled]
+    types: [labeled, opened]
+  pull_request_target:
+    types: [opened, synchronize, closed]
   workflow_dispatch:
     inputs:
       issue_number:
         description: 'Issue number'
         required: true
         type: string
+  # Periodic check to catch stuck/pending issues
+  schedule:
+    - cron: '*/10 * * * *'  # Every 10 minutes
 
 permissions:
   issues: write
   contents: write
   actions: write
+  pull-requests: write
 
 jobs:
+  check-active-workflows:
+    name: Check Active Agent Workflows
+    runs-on: ubuntu-latest
+    outputs:
+      has_active: ${{ steps.check.outputs.has_active }}
+    steps:
+      - name: Check for Active Workflows
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Check if any agent workflows are currently running
+            const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              status: 'in_progress',
+              per_page: 50
+            });
+            
+            const agentRuns = runs.workflow_runs.filter(run => {
+              const name = (run.name || '').toLowerCase();
+              return name.includes('agent') || name.includes('orchestrator');
+            });
+            
+            const hasActive = agentRuns.length > 0;
+            console.log(hasActive ? `⏳ ${agentRuns.length} agent workflow(s) running` : '✅ No active agent workflows');
+            core.setOutput('has_active', hasActive);
+
   route:
     name: Route to Agent
     runs-on: ubuntu-latest
+    needs: check-active-workflows
+    if: needs.check-active-workflows.outputs.has_active == 'false' || github.event_name == 'workflow_dispatch'
     outputs:
       run_pm: ${{ steps.route.outputs.run_pm }}
       run_architect: ${{ steps.route.outputs.run_architect }}
@@ -36,7 +72,58 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issue_number = context.payload.issue?.number || '${{ inputs.issue_number }}';
+            // Handle different event types
+            let issue_number;
+            
+            if (context.eventName === 'issues') {
+              issue_number = context.payload.issue.number;
+            } else if (context.eventName === 'pull_request_target') {
+              // Extract issue number from PR body or branch name
+              const pr = context.payload.pull_request;
+              const match = pr.body?.match(/#(\d+)/) || pr.head.ref?.match(/issue[_-]?(\d+)/i);
+              issue_number = match ? parseInt(match[1]) : null;
+              if (!issue_number) {
+                console.log('No issue reference found in PR');
+                return;
+              }
+            } else if (context.eventName === 'schedule') {
+              // Find oldest pending issue with orch:* labels but no completion
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'type:epic,type:feature,type:story',
+                sort: 'created',
+                direction: 'asc',
+                per_page: 10
+              });
+              
+              if (issues.length === 0) {
+                console.log('No pending issues found');
+                return;
+              }
+              
+              // Find first issue that needs routing
+              for (const issue of issues) {
+                const labels = issue.labels.map(l => l.name);
+                const hasType = labels.some(l => l.startsWith('type:'));
+                const hasOrch = labels.some(l => l.startsWith('orch:'));
+                
+                if (hasType && !issue.closed_at) {
+                  issue_number = issue.number;
+                  console.log(`Found pending issue #${issue_number}`);
+                  break;
+                }
+              }
+              
+              if (!issue_number) {
+                console.log('No issues need routing');
+                return;
+              }
+            } else {
+              issue_number = '${{ inputs.issue_number }}';
+            }
+            
             const { data: issue } = await github.rest.issues.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -293,3 +380,99 @@ jobs:
         run: gh issue close ${{ needs.route.outputs.issue_number }} --comment "✅ **Review Complete** | Review: \`docs/reviews/REVIEW-${{ needs.route.outputs.issue_number }}.md\` | Status: Done"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  auto-merge-agent-prs:
+    name: Auto-merge Agent PRs
+    runs-on: ubuntu-latest
+    needs: [route]
+    if: always() && github.event_name == 'pull_request_target'
+    steps:
+      - name: Check and Merge Agent PRs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Only process PRs from github-actions bot
+            const isAgentPR = pr.user.login === 'github-actions[bot]' || 
+                              pr.user.type === 'Bot';
+            
+            if (!isAgentPR) {
+              console.log(`Not an agent PR (author: ${pr.user.login})`);
+              return;
+            }
+            
+            console.log(`Processing agent PR #${pr.number}: ${pr.title}`);
+            
+            // Skip WIP PRs
+            if (pr.title.includes('[WIP]') || pr.draft) {
+              console.log('Skipping: PR is WIP or draft');
+              return;
+            }
+            
+            // Check if PR is closed (merged or rejected)
+            if (pr.state === 'closed') {
+              console.log('PR already closed');
+              return;
+            }
+            
+            // Get PR details to check mergeable state
+            const { data: prDetails } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            // Check merge conflicts
+            if (prDetails.mergeable_state === 'dirty') {
+              console.log('Cannot merge: PR has conflicts');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: '⚠️ **Cannot auto-merge**: This PR has merge conflicts. Please resolve them.'
+              });
+              return;
+            }
+            
+            // Check if blocked by checks
+            if (prDetails.mergeable_state === 'blocked') {
+              console.log('Cannot merge: PR is blocked by status checks');
+              return;
+            }
+            
+            // Approve the PR
+            try {
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                event: 'APPROVE',
+                body: '✅ Auto-approved by Agent Orchestrator'
+              });
+              console.log('PR approved');
+            } catch (error) {
+              console.log(`Could not approve: ${error.message}`);
+            }
+            
+            // Merge the PR
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'squash',
+                commit_title: pr.title,
+                commit_message: `Auto-merged by Agent Orchestrator\n\n${pr.body || ''}`
+              });
+              console.log(`✅ Successfully merged PR #${pr.number}`);
+            } catch (error) {
+              console.log(`❌ Could not merge: ${error.message}`);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `⚠️ **Auto-merge failed**: ${error.message}\n\nPlease merge manually.`
+              });
+            }
