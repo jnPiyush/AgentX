@@ -12,9 +12,6 @@ on:
         description: 'Issue number'
         required: true
         type: string
-  push:
-    paths:
-      - '.github/workflows/agent-orchestrator.yml'
 
 permissions:
   issues: write
@@ -22,17 +19,9 @@ permissions:
   actions: write
 
 jobs:
-  validate:
-    name: Validate Workflow File
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    steps:
-      - run: echo "✓ Workflow file syntax valid"
-  
   route:
     name: Route to Agent
     runs-on: ubuntu-latest
-    if: github.event_name != 'push'
     outputs:
       run_pm: ${{ steps.route.outputs.run_pm }}
       run_architect: ${{ steps.route.outputs.run_architect }}
