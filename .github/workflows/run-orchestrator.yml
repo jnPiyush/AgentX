@@ -1,5 +1,4 @@
-# Manual Orchestrator Invocation
-# Allows manual triggering of the Orchestrator agent for debugging, overrides, or recovery
+# Manual Orchestrator - Debug, override, or recovery
 
 name: Run Orchestrator
 
@@ -7,30 +6,17 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: 'Issue number to orchestrate'
+        description: 'Issue number'
         required: true
-        type: string
       command:
-        description: 'Optional command: route, pause, resume, skip, retry'
-        required: false
+        description: 'Command (route, pause, resume, skip, retry)'
         type: choice
-        options:
-          - route
-          - pause
-          - resume
-          - skip
-          - retry
-        default: 'route'
+        options: [route, pause, resume, skip, retry]
+        default: route
       target_agent:
-        description: 'Target agent (for skip/route commands)'
-        required: false
+        description: 'Target (for skip/route)'
         type: choice
-        options:
-          - product-manager
-          - architect
-          - ux-designer
-          - engineer
-          - reviewer
+        options: ['', product-manager, architect, ux-designer, engineer, reviewer]
         default: ''
 
 permissions:
@@ -87,177 +73,83 @@ jobs:
           echo "✅ Issue details captured"
       
       - name: Execute Command
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: inputs.command != 'route'
         run: |
-          command="${{ inputs.command }}"
-          issue_number="${{ inputs.issue_number }}"
-          
-          case "$command" in
-            route)
-              echo "🔀 Executing: Route to next agent"
-              ;;
+          case "${{ inputs.command }}" in
             pause)
-              echo "⏸️ Executing: Pause workflow"
-              gh issue edit $issue_number --add-label "orchestration:paused"
-              gh issue comment $issue_number --body "⏸️ **Orchestrator**: Workflow paused by manual command. Use \`/resume\` to continue."
+              gh issue edit ${{ inputs.issue_number }} --add-label "orchestration:paused"
+              gh issue comment ${{ inputs.issue_number }} --body "⏸️ **Paused**. Use \`/resume\` to continue."
               exit 0
               ;;
             resume)
-              echo "▶️ Executing: Resume workflow"
-              gh issue edit $issue_number --remove-label "orchestration:paused"
-              gh issue comment $issue_number --body "▶️ **Orchestrator**: Workflow resumed. Determining next agent..."
+              gh issue edit ${{ inputs.issue_number }} --remove-label "orchestration:paused"
+              gh issue comment ${{ inputs.issue_number }} --body "▶️ **Resumed**. Routing..."
               ;;
             skip)
-              echo "⏭️ Executing: Skip stage"
-              target="${{ inputs.target_agent }}"
-              if [ -z "$target" ]; then
-                echo "❌ Error: target_agent required for skip command"
-                exit 1
-              fi
-              gh issue comment $issue_number --body "⏭️ **Orchestrator**: Skipped $target stage by manual command."
+              [ -z "${{ inputs.target_agent }}" ] && echo "Error: target_agent required" && exit 1
+              gh issue comment ${{ inputs.issue_number }} --body "⏭️ **Skipped** ${{ inputs.target_agent }}"
               ;;
             retry)
-              echo "🔄 Executing: Retry current stage"
-              gh issue comment $issue_number --body "🔄 **Orchestrator**: Retrying current stage..."
+              gh issue comment ${{ inputs.issue_number }} --body "🔄 **Retrying** current stage..."
               ;;
           esac
-      
-      - name: Determine Next Agent(s)
-        id: route
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Route
+        id: route
         run: |
           type="${{ steps.issue.outputs.type }}"
-          labels="${{ steps.issue.outputs.labels }}"
-          issue_number="${{ inputs.issue_number }}"
+          pm="${{ steps.issue.outputs.has_pm_done }}"
+          arch="${{ steps.issue.outputs.has_architect_done }}"
+          ux="${{ steps.issue.outputs.has_ux_done }}"
+          eng="${{ steps.issue.outputs.has_engineer_done }}"
           
-          # Initialize agent flags
-          run_pm="false"
-          run_architect="false"
-          run_ux="false"
-          run_engineer="false"
-          run_reviewer="false"
+          run_pm=false; run_architect=false; run_ux=false; run_engineer=false; run_reviewer=false
           
-          echo "📊 Current state:"
-          echo "  Type: $type"
-          echo "  PM Done: ${{ steps.issue.outputs.has_pm_done }}"
-          echo "  Architect Done: ${{ steps.issue.outputs.has_architect_done }}"
-          echo "  UX Done: ${{ steps.issue.outputs.has_ux_done }}"
-          echo "  Engineer Done: ${{ steps.issue.outputs.has_engineer_done }}"
-          
-          # Routing logic based on state machine
           case "$type" in
             type:epic)
-              if [ "${{ steps.issue.outputs.has_pm_done }}" == "false" ]; then
-                run_pm="true"
-                echo "→ Route to: Product Manager (PRD creation)"
-              fi
-              if [ "${{ steps.issue.outputs.has_pm_done }}" == "true" ] && [ "${{ steps.issue.outputs.has_architect_done }}" == "false" ]; then
-                run_architect="true"
-                echo "→ Route to: Architect (ADR + Specs)"
-              fi
-              if [ "${{ steps.issue.outputs.has_pm_done }}" == "true" ] && [ "${{ steps.issue.outputs.has_ux_done }}" == "false" ]; then
-                run_ux="true"
-                echo "→ Route to: UX Designer (Wireframes)"
-              fi
+              [ "$pm" = "false" ] && run_pm=true
+              [ "$pm" = "true" ] && [ "$arch" = "false" ] && run_architect=true
+              [ "$pm" = "true" ] && [ "$ux" = "false" ] && run_ux=true
               ;;
-            
             type:feature|type:story)
-              if [ "${{ steps.issue.outputs.has_engineer_done }}" == "false" ]; then
-                # Check prerequisites (parent Epic completion)
-                # For simplicity, assuming prerequisites are met
-                run_engineer="true"
-                echo "→ Route to: Engineer (Implementation)"
-              elif [ "${{ steps.issue.outputs.has_engineer_done }}" == "true" ]; then
-                run_reviewer="true"
-                echo "→ Route to: Reviewer (Code Review)"
-              fi
+              [ "$eng" = "false" ] && run_engineer=true || run_reviewer=true
               ;;
-            
             type:bug|type:docs)
-              if [ "${{ steps.issue.outputs.has_engineer_done }}" == "false" ]; then
-                run_engineer="true"
-                echo "→ Route to: Engineer (Fix/Document)"
-              elif [ "${{ steps.issue.outputs.has_engineer_done }}" == "true" ]; then
-                run_reviewer="true"
-                echo "→ Route to: Reviewer (Verification)"
-              fi
+              [ "$eng" = "false" ] && run_engineer=true || run_reviewer=true
               ;;
-            
             type:spike)
-              if [ "${{ steps.issue.outputs.has_architect_done }}" == "false" ]; then
-                run_architect="true"
-                echo "→ Route to: Architect (Research)"
-              else
-                echo "→ Spike complete, no routing needed"
-              fi
-              ;;
-            
-            *)
-              echo "⚠️ Unknown issue type: $type"
+              [ "$arch" = "false" ] && run_architect=true
               ;;
           esac
           
-          # Set outputs
           echo "run_pm=$run_pm" >> $GITHUB_OUTPUT
           echo "run_architect=$run_architect" >> $GITHUB_OUTPUT
           echo "run_ux=$run_ux" >> $GITHUB_OUTPUT
           echo "run_engineer=$run_engineer" >> $GITHUB_OUTPUT
           echo "run_reviewer=$run_reviewer" >> $GITHUB_OUTPUT
       
-      - name: Trigger Agent Workflows
+      - name: Trigger Workflows
+        run: |
+          issue="${{ inputs.issue_number }}"
+          agents=()
+          
+          [ "${{ steps.route.outputs.run_pm }}" = "true" ] && gh workflow run run-product-manager.yml -f issue_number=$issue && agents+=("PM")
+          [ "${{ steps.route.outputs.run_architect }}" = "true" ] && gh workflow run run-architect.yml -f issue_number=$issue && agents+=("Architect")
+          [ "${{ steps.route.outputs.run_ux }}" = "true" ] && gh workflow run run-ux-designer.yml -f issue_number=$issue && agents+=("UX")
+          [ "${{ steps.route.outputs.run_engineer }}" = "true" ] && gh workflow run run-engineer.yml -f issue_number=$issue && agents+=("Engineer")
+          [ "${{ steps.route.outputs.run_reviewer }}" = "true" ] && gh workflow run run-reviewer.yml -f issue_number=$issue && agents+=("Reviewer")
+          
+          if [ ${#agents[@]} -eq 0 ]; then
+            comment="🤖 **Orchestrator**: No routing needed"
+          else
+            comment="🤖 **Orchestrator**: Routed to ${agents[*]} | Command: \`${{ inputs.command }}\`"
+          fi
+          
+          gh issue comment $issue --body "$comment"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          issue_number="${{ inputs.issue_number }}"
-          agents_triggered=()
-          
-          if [ "${{ steps.route.outputs.run_pm }}" == "true" ]; then
-            echo "🚀 Triggering: Product Manager"
-            gh workflow run run-product-manager.yml -f issue_number=$issue_number
-            agents_triggered+=("Product Manager")
-          fi
-          
-          if [ "${{ steps.route.outputs.run_architect }}" == "true" ]; then
-            echo "🚀 Triggering: Architect"
-            gh workflow run run-architect.yml -f issue_number=$issue_number
-            agents_triggered+=("Architect")
-          fi
-          
-          if [ "${{ steps.route.outputs.run_ux }}" == "true" ]; then
-            echo "🚀 Triggering: UX Designer"
-            gh workflow run run-ux-designer.yml -f issue_number=$issue_number
-            agents_triggered+=("UX Designer")
-          fi
-          
-          if [ "${{ steps.route.outputs.run_engineer }}" == "true" ]; then
-            echo "🚀 Triggering: Engineer"
-            gh workflow run run-engineer.yml -f issue_number=$issue_number
-            agents_triggered+=("Engineer")
-          fi
-          
-          if [ "${{ steps.route.outputs.run_reviewer }}" == "true" ]; then
-            echo "🚀 Triggering: Reviewer"
-            gh workflow run run-reviewer.yml -f issue_number=$issue_number
-            agents_triggered+=("Reviewer")
-          fi
-          
-          if [ ${#agents_triggered[@]} -eq 0 ]; then
-            echo "ℹ️ No agent workflows to trigger"
-            comment="🤖 **Orchestrator**: No routing needed at this time.\n\nIssue state appears complete or blocked."
-          else
-            agents_list=$(IFS=', '; echo "${agents_triggered[*]}")
-            comment="🤖 **Orchestrator**: Routing Complete\n\n"
-            comment+="**Agents Triggered**: $agents_list\n"
-            comment+="**Command**: \`${{ inputs.command }}\`\n\n"
-            comment+="Workflows have been dispatched. Check Actions tab for progress."
-          fi
-          
-          # Post comment
-          gh issue comment $issue_number --body "$comment"
-          
-          echo "✅ Orchestration complete"
       
       - name: Report Summary
         run: |
