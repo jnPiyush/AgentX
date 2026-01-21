@@ -60,7 +60,7 @@ Prerequisites Check → Read Specs → Implement → Test → Document → Commi
    - Read existing controllers, services, models
    - Identify where code should live
 
-4. **Auto-Load Guidelines** (MANDATORY - see [Skills.md Quick Reference](../../Skills.md#-quick-reference-by-task-type)):
+4. **Auto-Load Guidelines** (MANDATORY - see [skills-registry.json](../../skills-registry.json)):
    
    **Classify your task, then load ONLY relevant skills**:
    
@@ -72,6 +72,14 @@ Prerequisites Check → Read Specs → Implement → Test → Document → Commi
    | **Bug Fix** | #03, #02, #15 | ~10K tokens |
    | **Performance Optimization** | #05, #06, #02, #15 | ~15K tokens |
    | **Documentation** | #11 | ~5K tokens |
+   
+   **Quick Lookup**:
+   ```json
+   // Read registry once at session start
+   { "tool": "read_file", "args": { "filePath": "skills-registry.json" } }
+   
+   // Then programmatically: registry.taskMappings["api"].skills → ["09", "04", "02", "11"]
+   ```
    
    **Pre-Code Checklist**:
    ```
@@ -172,34 +180,58 @@ Prerequisites Check → Read Specs → Implement → Test → Document → Commi
 
 ---
 
+## Self-Reflection (Before Reporting)
+
+**Pause and review with fresh eyes:**
+
+### Completeness
+- Did I implement EVERYTHING in the Tech Spec?
+- Did I skip any requirements?
+- Are edge cases handled?
+- Did I implement ONLY what was requested (no scope creep)?
+
+### Quality
+- Is this my best work?
+- Are names clear (match WHAT not HOW)?
+- Did I follow existing code patterns?
+- Is error handling comprehensive?
+
+### Testing
+- Do tests verify actual behavior (not just mocks)?
+- Did I follow TDD (RED-GREEN-REFACTOR)?
+- Are edge cases covered?
+- If tests fail, what's the ROOT CAUSE?
+
+### Standards
+- Did I follow Skills.md guidelines?
+- Are security checks in place?
+- Is performance acceptable?
+- XML docs complete?
+
+### Anti-Patterns Avoided
+- No overbuilding (YAGNI)?
+- No premature optimization?
+- No hardcoded values?
+- No SQL concatenation?
+
+**If issues found during reflection, fix them NOW before handoff.**
+
+---
+
 ## Completion Checklist
 
 Before handoff:
-- [ ] **Guidelines Loaded**: Confirmed relevant skills loaded per task type
-- [ ] **Inline Compliance**: Added `✅ COMPLIANCE` comments for key standards
-- [ ] **Code Standards**: Follows Skills.md (SOLID, error handling, validation)
-- [ ] **Tests Passing**: All unit + integration + e2e tests pass
-- [ ] **Coverage Target**: ≥80% (verified with `dotnet test /p:CollectCoverage=true`)
-- [ ] **No Warnings**: Compiler warnings = 0, linter errors = 0
-- [ ] **XML Documentation**: All public APIs documented
-- [ ] **Security Scan**: No secrets, SQL parameterized, inputs validated
-- [ ] **Compliance Verified**: Auto-check passed (step 8 above)
-- [ ] **Commit Format**: Proper message format `type: description (#issue-id)`
-- [ ] **Status Updated**: Story moved to "In Review" in Projects board
-- [ ] **Label Added**: `orch:engineer-done` label applied
-- [ ] **Summary Posted**: Handoff comment with commit SHA and coverage
-
-Before handoff:
-- [ ] Code follows Skills.md standards
-- [ ] All tests passing (unit + integration + e2e)
-- [ ] Code coverage ≥80%
-- [ ] No compiler warnings or linter errors
-- [ ] XML docs on all public APIs
-- [ ] Security checklist passed (no secrets, SQL parameterized, inputs validated)
-- [ ] Changes committed with proper message format
-- [ ] Story Status updated to "In Review" in Projects board
-- [ ] Orchestration label added: `orch:engineer-done`
-- [ ] Summary comment posted
+- [ ] Self-reflection complete (issues fixed)
+- [ ] Guidelines loaded per task type
+- [ ] Inline `✅ COMPLIANCE` comments added
+- [ ] All tests passing (≥80% coverage)
+- [ ] No warnings/errors
+- [ ] XML docs complete
+- [ ] Security scan passed
+- [ ] Committed with proper format
+- [ ] Status: "In Review"
+- [ ] Label: `orch:engineer-done`
+- [ ] Summary posted
 
 ---
 

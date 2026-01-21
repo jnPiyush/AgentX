@@ -133,6 +133,31 @@ Before handoff:
 
 ---
 
+## Self-Reflection (Before Reporting)
+
+**Pause and review with fresh eyes:**
+
+### Completeness
+- Did I fully understand the user's problem?
+- Are all functional requirements captured?
+- Did I miss any user stories or edge cases?
+- Are acceptance criteria specific and testable?
+
+### Quality
+- Is the PRD clear enough for someone unfamiliar with the project?
+- Are user stories sized appropriately (2-5 days each)?
+- Did I avoid overbuilding (YAGNI)?
+- Are dependencies and risks identified?
+
+### Clarity
+- Would an engineer understand exactly what to build?
+- Are technical terms defined?
+- Are priorities clear?
+
+**If issues found during reflection, fix them NOW before handoff.**
+
+---
+
 ## Handoff Steps
 
 1. **Update Epic Issue**:

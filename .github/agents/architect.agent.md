@@ -163,6 +163,36 @@ Before handoff:
 
 ---
 
+## Self-Reflection (Before Reporting)
+
+**Pause and review with fresh eyes:**
+
+### Completeness
+- Did I design for ALL requirements in the PRD?
+- Are data models normalized and scalable?
+- Did I miss any integration points?
+- Are error handling strategies defined?
+
+### Quality
+- Is the architecture sound and maintainable?
+- Did I follow existing patterns in the codebase?
+- Are API contracts RESTful and versioned?
+- Did I over-engineer (keep it simple)?
+
+### Clarity
+- Would an engineer know exactly how to implement this?
+- Are diagrams clear and accurate?
+- Are migration steps safe (no data loss)?
+
+### Security & Performance
+- Did I consider authentication/authorization?
+- Are there performance bottlenecks?
+- Is data properly validated?
+
+**If issues found during reflection, fix them NOW before handoff.**
+
+---
+
 ## Handoff Steps
 
 1. **Update Epic Issue**:

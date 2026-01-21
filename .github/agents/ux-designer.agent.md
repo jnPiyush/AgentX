@@ -147,6 +147,37 @@ Before handoff:
 
 ---
 
+## Self-Reflection (Before Reporting)
+
+**Pause and review with fresh eyes:**
+
+### Completeness
+- Did I design for ALL user stories with `needs:ux`?
+- Are all user flows complete (happy path + error states)?
+- Did I miss any edge cases or error states?
+- Are mobile/tablet/desktop variants specified?
+
+### Usability
+- Is the design intuitive for target users?
+- Are interactions consistent with patterns?
+- Did I follow existing brand guidelines?
+- Are CTAs (calls-to-action) clear?
+
+### Accessibility
+- WCAG 2.1 AA compliance?
+- Keyboard navigation supported?
+- Screen reader friendly?
+- Color contrast sufficient?
+
+### Clarity
+- Would an engineer know exactly what to build?
+- Are component states clearly defined?
+- Are spacing/sizing specs precise?
+
+**If issues found during reflection, fix them NOW before handoff.**
+
+---
+
 ## Handoff Steps
 
 1. **Update Epic Issue**:

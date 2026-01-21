@@ -169,6 +169,37 @@ orch:engineer-done → Read Code → Review → Create Review Doc → Approve/Re
 
 ---
 
+## Self-Reflection (Before Final Decision)
+
+**Pause and review your review:**
+
+### Thoroughness
+- Did I actually READ the code (not just trust the report)?
+- Did I check ALL files that were modified?
+- Did I verify tests actually run and pass?
+- Did I look for security vulnerabilities?
+
+### Fairness
+- Am I being too lenient or too harsh?
+- Did I acknowledge what was done well?
+- Are my change requests reasonable?
+- Is the code production-ready?
+
+### Clarity
+- Are my feedback comments specific (file:line)?
+- Did I explain WHY something is an issue?
+- Did I provide examples of fixes?
+- Is severity categorization correct?
+
+### Correctness
+- Did I verify the code actually meets the spec?
+- Did I check for over-building (scope creep)?
+- Are my concerns valid technical issues?
+
+**If you're unsure, review the code again. Don't approve if you have doubts.**
+
+---
+
 ## Completion Steps
 
 ### If APPROVED:
