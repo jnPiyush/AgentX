@@ -94,6 +94,13 @@ download_file "AGENTS.md" "AGENTS.md"
 download_file "Skills.md" "Skills.md"
 download_file "CONTRIBUTING.md" "CONTRIBUTING.md"
 download_file ".github/copilot-instructions.md" ".github/copilot-instructions.md"
+
+# Security configuration (4-layer architecture)
+info "Downloading security configuration..."
+download_file ".github/CODEOWNERS" ".github/CODEOWNERS"
+download_file ".github/agentx-security.yml" ".github/agentx-security.yml"
+
+# Orchestration and workflows
 download_file ".github/orchestration-config.yml" ".github/orchestration-config.yml"
 download_file ".github/workflows/agent-orchestrator.yml" ".github/workflows/agent-orchestrator.yml"
 download_file ".github/workflows/test-e2e.yml" ".github/workflows/test-e2e.yml"

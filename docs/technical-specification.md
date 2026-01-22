@@ -601,7 +601,8 @@ See [docs/mcp-integration.md](mcp-integration.md) for complete tool reference.
 │ Layer 1: Actor Allowlist                                    │
 ├─────────────────────────────────────────────────────────────┤
 │ Who can trigger autonomous workflows?                       │
-│ Config: .github/autonomous-mode.yml                         │
+│ Config: .github/CODEOWNERS                                  │
+│ Config: .github/agentx-security.yml                         │
 │ Example: allowed_actors: [jnPiyush, github-actions[bot]]   │
 └─────────────────────────────────────────────────────────────┘
 
@@ -609,6 +610,7 @@ See [docs/mcp-integration.md](mcp-integration.md) for complete tool reference.
 │ Layer 2: Protected Paths                                    │
 ├─────────────────────────────────────────────────────────────┤
 │ What files require human review?                           │
+│ Config: .github/agentx-security.yml                         │
 │ Example: .github/*, package.json, *.csproj                 │
 └─────────────────────────────────────────────────────────────┘
 
@@ -616,6 +618,7 @@ See [docs/mcp-integration.md](mcp-integration.md) for complete tool reference.
 │ Layer 3: Kill Switch                                        │
 ├─────────────────────────────────────────────────────────────┤
 │ Emergency stop for all autonomous operations               │
+│ Config: .github/agentx-security.yml                         │
 │ Method: Set autonomous_mode_enabled: false                 │
 └─────────────────────────────────────────────────────────────┘
 

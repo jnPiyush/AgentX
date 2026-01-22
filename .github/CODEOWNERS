@@ -1,0 +1,26 @@
+# CODEOWNERS - Layer 1: Actor Allowlist
+#
+# Defines who can approve autonomous agent changes.
+# Part of AgentX 4-layer security architecture.
+#
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @jnPiyush
+
+# Agents can auto-merge to these safe paths
+docs/** @jnPiyush @github-actions[bot]
+samples/** @jnPiyush @github-actions[bot]
+tests/** @jnPiyush @github-actions[bot]
+
+# Critical paths require human review
+.github/workflows/** @jnPiyush
+.github/agents/** @jnPiyush
+.github/hooks/** @jnPiyush
+package.json @jnPiyush
+*.csproj @jnPiyush
+*.sln @jnPiyush
+
+# Security-sensitive files
+.github/CODEOWNERS @jnPiyush
+.github/agentx-security.yml @jnPiyush

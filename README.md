@@ -376,7 +376,7 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh |
 
 **Setup Steps:**
 1. **Install** using one of the methods above
-2. **Customize** `.github/autonomous-mode.yml` for your security needs
+2. **Customize** `.github/agentx-security.yml` for your security needs
 3. **Update** instruction files for your tech stack
 4. **Create labels** in your GitHub repository:
 
@@ -415,11 +415,10 @@ gh label create "needs:changes" --description "Changes requested" --color "FFA50
 
 ### Security Configuration
 
-Edit `.github/autonomous-mode.yml`:
+Edit `.github/agentx-security.yml`:
 
 ```yaml
-autonomous:
-  enabled: true  # Kill switch - set to false to halt all autonomy
+autonomous_mode_enabled: true  # Kill switch - set to false to halt all autonomy
 
 protected_paths:
   - ".github/workflows/**"  # CI/CD pipelines
@@ -427,7 +426,8 @@ protected_paths:
   - "**/*.env*"             # Environment config
 
 allowed_actors:
-  - "copilot[bot]"
+  - "github-actions[bot]"
+  - "your-github-username"
   - "your-username"
 
 iteration_limits:

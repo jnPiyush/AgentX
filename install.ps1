@@ -101,6 +101,8 @@ $coreFiles = @(
     @{ Src = "Skills.md"; Dest = "Skills.md" },
     @{ Src = "CONTRIBUTING.md"; Dest = "CONTRIBUTING.md" },
     @{ Src = ".github/copilot-instructions.md"; Dest = ".github/copilot-instructions.md" },
+    @{ Src = ".github/CODEOWNERS"; Dest = ".github/CODEOWNERS" },
+    @{ Src = ".github/agentx-security.yml"; Dest = ".github/agentx-security.yml" },
     @{ Src = ".github/orchestration-config.yml"; Dest = ".github/orchestration-config.yml" },
     @{ Src = ".github/workflows/agent-orchestrator.yml"; Dest = ".github/workflows/agent-orchestrator.yml" },
     @{ Src = ".github/workflows/test-e2e.yml"; Dest = ".github/workflows/test-e2e.yml" },
