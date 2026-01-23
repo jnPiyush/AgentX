@@ -20,6 +20,9 @@
 # Create issue
 gh issue create --title "[Type] Description" --label "type:story"
 
+# Update status (via GitHub Projects UI or API)
+# Backlog → In Progress → In Review → Done
+
 # Close issue
 gh issue close <ID>
 ```
@@ -52,27 +55,28 @@ gh issue close <ID>
 ### Product Manager
 - **Trigger**: `type:epic`
 - **Output**: PRD at `docs/prd/PRD-{issue}.md`
-- **Handoff**: Add `orch:pm-done` label
+- **Handoff**: Add `orch:pm-done` label, Status → `Ready`
 
 ### Solution Architect
 - **Trigger**: `type:feature`, `type:spike`, or after `orch:pm-done`
 - **Output**: ADR at `docs/adr/ADR-{issue}.md`, Spec at `docs/specs/`
-- **Handoff**: Add `orch:architect-done` label
+- **Handoff**: Add `orch:architect-done` label, Status → `Ready`
 
 ### UX Designer
 - **Trigger**: `needs:ux` label
 - **Output**: Design at `docs/ux/UX-{issue}.md`
-- **Handoff**: Add `orch:ux-done` label
+- **Handoff**: Add `orch:ux-done` label, Status → `Ready`
 
 ### Software Engineer
 - **Trigger**: `type:story`, `type:bug`, or after `orch:architect-done`
+- **Status**: Set to `In Progress` when starting
 - **Output**: Code + Tests (≥80% coverage)
-- **Handoff**: Add `orch:engineer-done` label
+- **Handoff**: Add `orch:engineer-done` label, Status → `In Review`
 
 ### Code Reviewer
 - **Trigger**: `orch:engineer-done`
 - **Output**: Review at `docs/reviews/REVIEW-{issue}.md`
-- **Handoff**: Close issue if approved
+- **Handoff**: Close issue, Status → `Done`
 
 ---
 
@@ -84,12 +88,23 @@ PM → UX → Architect → Engineer → Reviewer → Done
    (optional) (optional for small tasks)
 ```
 
-| Signal | Meaning |
-|--------|---------|
-| `orch:pm-done` | PRD complete, ready for design/architecture |
-| `orch:ux-done` | UX designs complete |
-| `orch:architect-done` | Tech spec complete, ready for implementation |
-| `orch:engineer-done` | Code complete, ready for review |
+| Signal | Meaning | Status |
+|--------|---------|--------|
+| `orch:pm-done` | PRD complete, ready for design/architecture | → Ready |
+| `orch:ux-done` | UX designs complete | → Ready |
+| `orch:architect-done` | Tech spec complete, ready for implementation | → Ready |
+| `orch:engineer-done` | Code complete, ready for review | → In Review |
+| Issue closed | Review approved | → Done |
+
+### Status Values
+
+| Status | Meaning |
+|--------|--------|
+| `Backlog` | Issue created, not started |
+| `In Progress` | Active work by Engineer |
+| `In Review` | Code review phase |
+| `Ready` | Design/spec done, awaiting next phase |
+| `Done` | Completed and closed |
 
 ---
 
