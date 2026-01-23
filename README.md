@@ -25,13 +25,44 @@ AgentX provides structured guidelines, skills, and workflows for AI coding agent
 
 ### 1. Install in Your Project
 
-```bash
-# Clone or copy AgentX files to your project
-git clone https://github.com/jnPiyush/AgentX.git
-cd AgentX && ./install.ps1  # Windows
-# OR
-./install.sh                 # Linux/Mac
+**Option A: One-liner install (Recommended)**
+
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 ```
+
+```bash
+# Linux/Mac (Bash)
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
+```
+
+**Option B: Clone and install**
+
+```bash
+# Clone the repository
+git clone https://github.com/jnPiyush/AgentX.git
+cd AgentX
+```
+
+```powershell
+# Windows (PowerShell)
+.\install.ps1
+
+# To overwrite existing files, use -Force flag
+.\install.ps1 -Force
+```
+
+```bash
+# Linux/Mac (Bash)
+chmod +x install.sh
+./install.sh
+
+# To overwrite existing files
+FORCE=true ./install.sh
+```
+
+> **Note**: The install script downloads all AgentX files including agents, skills, templates, workflows, and documentation to your current project directory. Run it from your project's root folder.
 
 ### 2. Set Up GitHub
 
