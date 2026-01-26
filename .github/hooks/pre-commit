@@ -24,6 +24,10 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Extract issue number from commit message
+COMMIT_MSG=""
+ISSUE_NUMBER=""
+
+# Check if COMMIT_EDITMSG exists (when using git commit without -m or during interactive commit)
 COMMIT_MSG_FILE=".git/COMMIT_EDITMSG"
 if [ -f "$COMMIT_MSG_FILE" ]; then
   COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")

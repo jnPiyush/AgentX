@@ -36,6 +36,54 @@ if ! echo "$COMMIT_MSG" | grep -qE '#[0-9]+|((closes|fixes|resolves|refs?)\s+#[0
   exit 1
 fi
 
+# Extract issue number
+ISSUE_NUMBER=$(echo "$COMMIT_MSG" | grep -oP '#\K\d+' | head -1)
+
+# Validate workflow documents exist (if GitHub CLI is available)
+if command -v gh &> /dev/null && [ -n "$ISSUE_NUMBER" ]; then
+  # Get issue labels
+  ISSUE_LABELS=$(gh issue view $ISSUE_NUMBER --json labels -q '.labels[].name' 2>/dev/null || echo "")
+  
+  if [ -n "$ISSUE_LABELS" ]; then
+    # Extract type label
+    ISSUE_TYPE=$(echo "$ISSUE_LABELS" | grep "type:" | head -1)
+    
+    # Validate workflow documents based on issue type
+    case $ISSUE_TYPE in
+      "type:epic")
+        if [ ! -f "docs/prd/PRD-${ISSUE_NUMBER}.md" ]; then
+          echo "❌ COMMIT REJECTED: Epic requires PRD before code"
+          echo ""
+          echo "  Issue: #${ISSUE_NUMBER} (type:epic)"
+          echo "  Missing: docs/prd/PRD-${ISSUE_NUMBER}.md"
+          echo ""
+          echo "📋 Epic workflow: Product Manager → PRD → then code"
+          echo ""
+          echo "  Fix: Create PRD before committing code"
+          echo "       See .github/templates/PRD-TEMPLATE.md"
+          echo ""
+          exit 1
+        fi
+        ;;
+      "type:feature")
+        if [ ! -f "docs/specs/SPEC-${ISSUE_NUMBER}.md" ]; then
+          echo "❌ COMMIT REJECTED: Feature requires Tech Spec before code"
+          echo ""
+          echo "  Issue: #${ISSUE_NUMBER} (type:feature)"
+          echo "  Missing: docs/specs/SPEC-${ISSUE_NUMBER}.md"
+          echo ""
+          echo "📐 Feature workflow: Architect → Spec → then code"
+          echo ""
+          echo "  Fix: Create Tech Spec before committing code"
+          echo "       See .github/templates/SPEC-TEMPLATE.md"
+          echo ""
+          exit 1
+        fi
+        ;;
+    esac
+  fi
+fi
+
 # Check commit message format (type: description)
 if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|test|refactor|perf|chore|style):'; then
   echo "⚠️  WARNING: Commit message should follow format: 'type: description (#issue)'"
