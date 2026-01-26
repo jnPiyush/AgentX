@@ -527,97 +527,15 @@ X-Request-ID: {uuid}
 
 ### 4.2 Domain Model: {EntityName}
 
-**C# Model:**
-```csharp
-public class EntityName
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public EntityStatus Status { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
 
-public enum EntityStatus
-{
-    Draft = 0,
-    Active = 1,
-    Completed = 2,
-    Archived = 3
-}
-```
-
-**DTOs:**
-```csharp
-public record CreateEntityDto(
-    string Name,
-    string Description
-);
-
-public record UpdateEntityDto(
-    string? Name,
-    string? Description,
-    EntityStatus? Status
-);
-
-public record EntityResponseDto(
-    Guid Id,
-    string Name,
-    string Description,
-    EntityStatus Status,
-    DateTime CreatedAt,
-    DateTime? UpdatedAt
-);
-```
 
 ### 4.2 Database Schema
 
 **Table: `entity_names`**
-```sql
-CREATE TABLE entity_names (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    status VARCHAR(50) DEFAULT 'Draft' CHECK (status IN ('Draft', 'Active', 'Completed', 'Archived')),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP,
-    CONSTRAINT name_length CHECK (LENGTH(name) > 0)
-);
-
--- Indexes for query optimization
-CREATE INDEX idx_entity_names_status ON entity_names(status);
-CREATE INDEX idx_entity_names_created_at ON entity_names(created_at DESC);
-CREATE INDEX idx_entity_names_name ON entity_names(name);
-
--- Update trigger for updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_entity_names_updated_at
-BEFORE UPDATE ON entity_names
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-```
+| Column Name  | Data Type    | Constraints                     | Description                      |
 
 **Migration:**
-```csharp
-// Migrations/{Date}_CreateEntityNames.cs
-public class CreateEntityNames : Migration
-{
-    protected override void Up(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.CreateTable(
-            name: "entity_names",
-            columns: table => new
-            {
-                id = table.Column<Guid>(nullable: false),
-                nam Diagrams
+
 
 ### 5.1 Service Architecture
 
@@ -881,72 +799,15 @@ public class CreateEntityNames : Migration
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.3 Interface Definitiontatus = table.Column<string>(maxLength: 50, nullable: false, defaultValue: "Draft"),
-                created_at = table.Column<DateTime>(nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                updated_at = table.Column<DateTime>(nullable: true)
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("PK_entity_names", x => x.id);
-            });
 
-        migrationBuilder.CreateIndex(
-            name: "idx_entity_names_status",
-            table: "entity_names",
-            column: "status");
-    }
-
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.DropTable(name: "entity_names");
-    }
-}
-```
-
----
 
 ## 5. Service Layer
 
 ### 5.1 Interface
 
-```csharp
-public interface IEntityService
-{
-    Task<IEnumerable<EntityResponseDto>> GetAllAsync(int page = 1, int pageSize = 20);
-    Task<EntityResponseDto?> GetByIdAsync(Guid id);
-    Task<EntityResponseDto> CreateAsync(CreateEntityDto dto);
-    Task<EntityResponseDto?> UpdateAsync(Guid id, UpdateEntityDto dto);
-    Task<bool> DeleteAsync(Guid id);
-}
-```
 
-### 5.2 Implementation
 
-```csharp
-public class EntityService : IEntityService
-{
-    private readonly ApplicationDbContext _context;
-    private readonly ILogger<EntityService> _logger;
-    private readonly IDistributedCache _cache;
 
-    public EntityService(
-        ApplicationDbContext context,
-        ILogger<EntityService> logger,
-        IDistributedCache cache)
-    {
-        _context = context;
-        _logger = logger;
-        _cache = cache;
-    }
-
-    public async Task<IEnumerable<EntityResponseDto>> GetAllAsync(int page = 1, int pageSize = 20)
-    {
-        // Implementation with caching, pagination, error handling
-    }
-
-    // Other methods...
-}
-```
 
 ---
 
@@ -978,15 +839,7 @@ public class EntityService : IEntityService
 - **Never**: Hardcoded secrets in code or config
 
 ### 6.6 Security Headers
-```csharp
-app.UseSecurityHeaders(options =>
-{
-    options.AddContentSecurityPolicy("default-src 'self'");
-    options.AddXFrameOptions("DENY");
-    options.AddXContentTypeOptions();
-    options.AddStrictTransportSecurity(maxAge: 31536000);
-});
-```
+
 
 ---
 
@@ -1034,27 +887,7 @@ app.UseSecurityHeaders(options =>
 **Mocking**: Moq  
 **Assertions**: FluentAssertions
 
-```csharp
-public class EntityServiceTests
-{
-    [Fact]
-    public async Task CreateAsync_ValidDto_ReturnsEntity()
-    {
-        // Arrange
-        var dto = new CreateEntityDto("Test", "Description");
-        var service = CreateService();
 
-        // Act
-        var result = await service.CreateAsync(dto);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Name.Should().Be("Test");
-    }
-
-    // More tests...
-}
-```
 
 ### 8.3 Integration Tests
 
@@ -1062,24 +895,7 @@ public class EntityServiceTests
 **Test server**: WebApplicationFactory  
 **Database**: In-memory or TestContainers
 
-```csharp
-public class EntityApiTests : IClassFixture<WebApplicationFactory<Program>>
-{
-    [Fact]
-    public async Task POST_Entity_Returns201Created()
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-        var dto = new { name = "Test", description = "Description" };
 
-        // Act
-        var response = await client.PostAsJsonAsync("/api/v1/entities", dto);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-    }
-}
-```
 
 ### 8.4 E2E Tests
 

@@ -139,7 +139,7 @@ See [SPEC-{issue}.md](../specs/SPEC-{issue}.md) for technical details.
 
 ### 5. Create Tech Spec
 
-Create `docs/specs/SPEC-{feature-id}.md` following the [Technical Specification template](../templates/SPEC-TEMPLATE.md):
+Create `docs/specs/SPEC-{feature-id}.md` following the [Technical Specification template](../templates/SPEC-TEMPLATE.md) and NO Code examples in the spec.:
 
 **Template location**: `.github/templates/SPEC-TEMPLATE.md`
 
@@ -151,12 +151,11 @@ Create `docs/specs/SPEC-{feature-id}.md` following the [Technical Specification 
 4. Data Models Diagrams(DTOs, SQL schema, migrations)
 5. Service Layer Diagrams(interfaces, implementation)
 6. Security diagrams (auth, authz, validation, secrets)
-7. Performance (caching, DB optimization, async, rate limiting)
+7. Performance Strategy(caching, DB optimization, async, rate limiting)
 8. Testing Strategy (unit/integration/e2e with examples)
 9. Implementation Notes (files, dependencies, config, workflow)
-10. Rollout Plan (phases with stories)
-11. Risks & Mitigations (table with impact/probability)
-12. Monitoring & Observability (metrics, alerts, logs)
+10. Risks & Mitigations (table with impact/probability)
+11. Monitoring & Observability (metrics, alerts, logs)
 
 
 **Quick start:**
@@ -244,21 +243,20 @@ Before marking `orch:architect-done`, verify ALL items:
   - [ ] References to PRD and UX included
 - [ ] Tech Specs created for ALL Features at `docs/specs/SPEC-{feature-id}.md`
   - [ ] Table of Contents complete
-  - [ ] Architecture diagrams included (high-level, interactions, data flow, sequence, class)
+  - [ ] Architecture diagrams included (high-level, interactions, data flow, sequence, class) and NO Code examples in the spec.
   - [ ] Technology stack fully documented with versions
 - [ ] Architecture document created at `docs/architecture/ARCH-{epic-id}.md` (if Epic-level)
 
 **Technical Specifications:**
+- No Code Examples in the spec.
 - [ ] API contracts fully specified for all endpoints
   - [ ] Request/response schemas defined
   - [ ] Error responses documented (400, 401, 404, 429, 500)
   - [ ] Rate limiting specified
   - [ ] Authentication/authorization requirements
 - [ ] Data models completely defined
-  - [ ] C# classes with properties and types
+  - [ ] classes with properties and types
   - [ ] DTOs for create/update/response
-  - [ ] SQL schema with CREATE TABLE statements
-  - [ ] Database indexes specified
   - [ ] Migrations planned
   - [ ] ERD diagram included
 - [ ] Service layer architecture documented
@@ -291,18 +289,7 @@ Before marking `orch:architect-done`, verify ALL items:
   - [ ] Test examples provided
 
 **Implementation Guidance:**
-- [ ] Dependencies and configuration listed
-  - [ ] NuGet packages with versions
-  - [ ] appsettings.json structure
-  - [ ] Environment variables defined
-- [ ] Implementation notes for Engineer provided
-  - [ ] Exact files to create with paths
-  - [ ] Component reuse identified
-  - [ ] Development workflow outlined
-- [ ] Rollout plan documented
-  - [ ] Phases with timelines
-  - [ ] Stories mapped to phases
-  - [ ] Launch criteria defined
+
 - [ ] Risks identified with mitigations
   - [ ] Impact and probability assessed
   - [ ] Mitigation plans specific and actionable
@@ -373,6 +360,7 @@ await runSubagent({
 - Writing ADRs (your primary responsibility)
 - Creating tech specs (use main workflow)
 - Major architectural decisions (needs full ADR)
+- Code Examples (should not be in tech specs)
 
 ---
 
