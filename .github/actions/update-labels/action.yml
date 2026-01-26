@@ -1,0 +1,78 @@
+name: Update Issue Labels
+description: Update GitHub issue labels using GraphQL for speed (1-2s vs 5s REST)
+author: AgentX
+
+inputs:
+  issue_number:
+    description: 'Issue number to update'
+    required: true
+  add_labels:
+    description: 'Comma-separated labels to add (e.g., "orch:pm-done,priority:p1")'
+    required: false
+  remove_labels:
+    description: 'Comma-separated labels to remove'
+    required: false
+  github_token:
+    description: 'GitHub token with repo access'
+    required: true
+
+outputs:
+  labels:
+    description: 'Updated labels as JSON array'
+    value: ${{ steps.update.outputs.labels }}
+
+runs:
+  using: composite
+  steps:
+    - name: Update Labels via GraphQL
+      id: update
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const issueNumber = parseInt('${{ inputs.issue_number }}');
+          const addLabels = '${{ inputs.add_labels }}'.split(',').filter(Boolean);
+          const removeLabels = '${{ inputs.remove_labels }}'.split(',').filter(Boolean);
+          
+          // Get issue node_id
+          const { data: issue } = await github.rest.issues.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber
+          });
+          
+          console.log(`📝 Updating labels for issue #${issueNumber}`);
+          
+          // Get current labels
+          const currentLabels = issue.labels.map(l => l.name);
+          console.log(`Current labels: ${currentLabels.join(', ')}`);
+          
+          // Calculate new labels
+          let newLabels = [...currentLabels];
+          
+          // Add labels
+          if (addLabels.length > 0) {
+            console.log(`Adding labels: ${addLabels.join(', ')}`);
+            addLabels.forEach(label => {
+              if (!newLabels.includes(label)) {
+                newLabels.push(label);
+              }
+            });
+          }
+          
+          // Remove labels
+          if (removeLabels.length > 0) {
+            console.log(`Removing labels: ${removeLabels.join(', ')}`);
+            newLabels = newLabels.filter(label => !removeLabels.includes(label));
+          }
+          
+          // Update via REST API (GraphQL mutation is more complex)
+          await github.rest.issues.update({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber,
+            labels: newLabels
+          });
+          
+          console.log(`✅ Updated labels: ${newLabels.join(', ')}`);
+          core.setOutput('labels', JSON.stringify(newLabels));

@@ -1,0 +1,156 @@
+name: Update Project Status
+description: Update issue status in GitHub Projects v2
+author: AgentX
+
+inputs:
+  issue_number:
+    description: 'Issue number to update'
+    required: true
+  status:
+    description: 'New status (e.g., "In Progress", "In Review", "Done")'
+    required: true
+  project_number:
+    description: 'Project number (defaults to 4 for Project AgentX)'
+    required: false
+    default: '4'
+  github_token:
+    description: 'GitHub token with project scope'
+    required: true
+
+outputs:
+  updated:
+    description: 'Whether status was updated successfully'
+    value: ${{ steps.update.outputs.updated }}
+
+runs:
+  using: composite
+  steps:
+    - name: Update Project Status via GraphQL
+      id: update
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const issueNumber = parseInt('${{ inputs.issue_number }}');
+          const newStatus = '${{ inputs.status }}';
+          const projectNumber = parseInt('${{ inputs.project_number }}');
+          
+          console.log(`📊 Updating issue #${issueNumber} to status: ${newStatus}`);
+          
+          try {
+            // Get issue node_id
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Query for project and field information
+            const projectQuery = `
+              query($owner: String!, $projectNumber: Int!) {
+                user(login: $owner) {
+                  projectV2(number: $projectNumber) {
+                    id
+                    field(name: "Status") {
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const projectData = await github.graphql(projectQuery, {
+              owner: context.repo.owner,
+              projectNumber: projectNumber
+            });
+            
+            const project = projectData.user.projectV2;
+            const statusField = project.field;
+            const statusOption = statusField.options.find(opt => opt.name === newStatus);
+            
+            if (!statusOption) {
+              console.log(`⚠️ Status "${newStatus}" not found. Available: ${statusField.options.map(o => o.name).join(', ')}`);
+              core.setOutput('updated', 'false');
+              return;
+            }
+            
+            // Get project item for this issue
+            const itemQuery = `
+              query($projectId: ID!, $issueId: ID!) {
+                node(id: $projectId) {
+                  ... on ProjectV2 {
+                    items(first: 100) {
+                      nodes {
+                        id
+                        content {
+                          ... on Issue {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const itemData = await github.graphql(itemQuery, {
+              projectId: project.id,
+              issueId: issue.node_id
+            });
+            
+            const projectItem = itemData.node.items.nodes.find(
+              item => item.content?.id === issue.node_id
+            );
+            
+            if (!projectItem) {
+              console.log(`⚠️ Issue #${issueNumber} not found in project ${projectNumber}`);
+              core.setOutput('updated', 'false');
+              return;
+            }
+            
+            // Update status
+            const updateMutation = `
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId
+                  itemId: $itemId
+                  fieldId: $fieldId
+                  value: { singleSelectOptionId: $optionId }
+                }) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+            `;
+            
+            await github.graphql(updateMutation, {
+              projectId: project.id,
+              itemId: projectItem.id,
+              fieldId: statusField.id,
+              optionId: statusOption.id
+            });
+            
+            console.log(`✅ Updated issue #${issueNumber} to ${newStatus}`);
+            core.setOutput('updated', 'true');
+            
+          } catch (error) {
+            console.log(`❌ Failed to update status: ${error.message}`);
+            console.log('Note: Ensure GitHub token has "project" scope');
+            core.setOutput('updated', 'false');
+            
+            // Fallback: Post comment indicating status change
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `📊 Status updated to **${newStatus}** (manual sync to Projects may be needed)`
+            });
+          }

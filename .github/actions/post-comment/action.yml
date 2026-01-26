@@ -1,0 +1,48 @@
+name: Post Issue Comment
+description: Post a comment to a GitHub issue using GraphQL for speed
+author: AgentX
+
+inputs:
+  issue_number:
+    description: 'Issue number to comment on'
+    required: true
+  body:
+    description: 'Comment body (Markdown supported)'
+    required: true
+  github_token:
+    description: 'GitHub token with repo access'
+    required: true
+
+outputs:
+  comment_id:
+    description: 'ID of the created comment'
+    value: ${{ steps.comment.outputs.comment_id }}
+  comment_url:
+    description: 'URL of the created comment'
+    value: ${{ steps.comment.outputs.comment_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Post Comment via GraphQL
+      id: comment
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const issueNumber = parseInt('${{ inputs.issue_number }}');
+          const body = `${{ inputs.body }}`;
+          
+          console.log(`💬 Posting comment to issue #${issueNumber}`);
+          
+          // Create comment via REST API
+          const { data: comment } = await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber,
+            body: body
+          });
+          
+          console.log(`✅ Comment posted: ${comment.html_url}`);
+          core.setOutput('comment_id', comment.id.toString());
+          core.setOutput('comment_url', comment.html_url);

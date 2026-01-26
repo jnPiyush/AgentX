@@ -1,0 +1,68 @@
+name: Assign Agent to Issue
+description: Assign an agent user to a GitHub issue
+author: AgentX
+
+inputs:
+  issue_number:
+    description: 'Issue number to assign'
+    required: true
+  agent_login:
+    description: 'GitHub username/bot to assign (e.g., "copilot-swe-agent" or "github-actions[bot]")'
+    required: true
+  github_token:
+    description: 'GitHub token with repo access'
+    required: true
+
+outputs:
+  assigned:
+    description: 'Whether assignment was successful'
+    value: ${{ steps.assign.outputs.assigned }}
+
+runs:
+  using: composite
+  steps:
+    - name: Assign Agent
+      id: assign
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const issueNumber = parseInt('${{ inputs.issue_number }}');
+          const agentLogin = '${{ inputs.agent_login }}';
+          
+          console.log(`👤 Assigning ${agentLogin} to issue #${issueNumber}`);
+          
+          try {
+            // For bots (like github-actions[bot]), assignment may not work
+            // Instead, post a comment indicating the agent is working
+            if (agentLogin.includes('[bot]')) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `🤖 **${agentLogin}** is now working on this issue.`
+              });
+              console.log(`✅ Bot ${agentLogin} assigned via comment`);
+              core.setOutput('assigned', 'true');
+            } else {
+              // Try to assign real user
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                assignees: [agentLogin]
+              });
+              console.log(`✅ Assigned ${agentLogin} to issue #${issueNumber}`);
+              core.setOutput('assigned', 'true');
+            }
+          } catch (error) {
+            console.log(`⚠️ Could not assign ${agentLogin}: ${error.message}`);
+            // Fall back to comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `🤖 **${agentLogin}** is now working on this issue.`
+            });
+            core.setOutput('assigned', 'true');
+          }

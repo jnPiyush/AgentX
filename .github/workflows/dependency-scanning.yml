@@ -1,0 +1,221 @@
+name: Dependency Scanning
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  dotnet-scan:
+    name: Scan .NET Dependencies
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('**/*.csproj', '**/*.sln') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore
+      
+      - name: Check for vulnerable packages
+        id: check
+        run: |
+          echo "Scanning for vulnerable .NET packages..."
+          dotnet list package --vulnerable --include-transitive > vulnerabilities.txt 2>&1 || true
+          
+          if grep -q "has the following vulnerable packages" vulnerabilities.txt; then
+            echo "HAS_VULNERABILITIES=true" >> $GITHUB_OUTPUT
+            cat vulnerabilities.txt
+            exit 1
+          else
+            echo "HAS_VULNERABILITIES=false" >> $GITHUB_OUTPUT
+            echo "✅ No vulnerable packages found"
+          fi
+      
+      - name: Upload vulnerability report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-vulnerabilities
+          path: vulnerabilities.txt
+
+  python-scan:
+    name: Scan Python Dependencies
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('**/requirements.txt', '**/Pipfile', '**/pyproject.toml') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install pip-audit
+        run: pip install pip-audit
+      
+      - name: Scan Python dependencies
+        id: scan
+        run: |
+          echo "Scanning for vulnerable Python packages..."
+          if [ -f requirements.txt ]; then
+            pip-audit -r requirements.txt --format json > python-vulnerabilities.json || true
+          elif [ -f Pipfile ]; then
+            pip-audit --requirement <(pipenv requirements) --format json > python-vulnerabilities.json || true
+          fi
+          
+          if [ -s python-vulnerabilities.json ]; then
+            echo "HAS_VULNERABILITIES=true" >> $GITHUB_OUTPUT
+            cat python-vulnerabilities.json
+            exit 1
+          else
+            echo "HAS_VULNERABILITIES=false" >> $GITHUB_OUTPUT
+            echo "✅ No vulnerable packages found"
+          fi
+      
+      - name: Upload vulnerability report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-vulnerabilities
+          path: python-vulnerabilities.json
+
+  node-scan:
+    name: Scan Node.js Dependencies
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('**/package.json', '**/package-lock.json') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run npm audit
+        id: audit
+        run: |
+          echo "Scanning for vulnerable Node.js packages..."
+          npm audit --json > npm-vulnerabilities.json || true
+          
+          HIGH_VULNS=$(jq '.metadata.vulnerabilities.high // 0' npm-vulnerabilities.json)
+          CRITICAL_VULNS=$(jq '.metadata.vulnerabilities.critical // 0' npm-vulnerabilities.json)
+          
+          echo "High: $HIGH_VULNS, Critical: $CRITICAL_VULNS"
+          
+          if [ "$HIGH_VULNS" -gt 0 ] || [ "$CRITICAL_VULNS" -gt 0 ]; then
+            echo "HAS_VULNERABILITIES=true" >> $GITHUB_OUTPUT
+            cat npm-vulnerabilities.json
+            exit 1
+          else
+            echo "HAS_VULNERABILITIES=false" >> $GITHUB_OUTPUT
+            echo "✅ No high/critical vulnerabilities found"
+          fi
+      
+      - name: Upload vulnerability report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-vulnerabilities
+          path: npm-vulnerabilities.json
+
+  summary:
+    name: Dependency Scan Summary
+    runs-on: ubuntu-latest
+    needs: [dotnet-scan, python-scan, node-scan]
+    if: always()
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# Dependency Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          DOTNET_STATUS="${{ needs.dotnet-scan.result }}"
+          PYTHON_STATUS="${{ needs.python-scan.result }}"
+          NODE_STATUS="${{ needs.node-scan.result }}"
+          
+          echo "| Ecosystem | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$DOTNET_STATUS" == "success" ]; then
+            echo "| .NET | ✅ No vulnerabilities |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$DOTNET_STATUS" == "failure" ]; then
+            echo "| .NET | ❌ Vulnerabilities found |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$DOTNET_STATUS" == "skipped" ]; then
+            echo "| .NET | ⏭️ Skipped (no .NET files) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "$PYTHON_STATUS" == "success" ]; then
+            echo "| Python | ✅ No vulnerabilities |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$PYTHON_STATUS" == "failure" ]; then
+            echo "| Python | ❌ Vulnerabilities found |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$PYTHON_STATUS" == "skipped" ]; then
+            echo "| Python | ⏭️ Skipped (no Python files) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "$NODE_STATUS" == "success" ]; then
+            echo "| Node.js | ✅ No vulnerabilities |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$NODE_STATUS" == "failure" ]; then
+            echo "| Node.js | ❌ Vulnerabilities found |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$NODE_STATUS" == "skipped" ]; then
+            echo "| Node.js | ⏭️ Skipped (no Node.js files) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Scanned on: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const dotnetStatus = '${{ needs.dotnet-scan.result }}';
+            const pythonStatus = '${{ needs.python-scan.result }}';
+            const nodeStatus = '${{ needs.node-scan.result }}';
+            
+            let status = '✅ All dependency scans passed';
+            let hasFailures = false;
+            
+            if (dotnetStatus === 'failure' || pythonStatus === 'failure' || nodeStatus === 'failure') {
+              status = '❌ Vulnerabilities detected';
+              hasFailures = true;
+            }
+            
+            const body = `## 🔒 Dependency Scan Results
+            
+            ${status}
+            
+            | Ecosystem | Status |
+            |-----------|--------|
+            | .NET | ${dotnetStatus === 'success' ? '✅' : dotnetStatus === 'failure' ? '❌' : '⏭️'} ${dotnetStatus === 'skipped' ? 'Skipped' : dotnetStatus === 'success' ? 'No vulnerabilities' : 'Vulnerabilities found'} |
+            | Python | ${pythonStatus === 'success' ? '✅' : pythonStatus === 'failure' ? '❌' : '⏭️'} ${pythonStatus === 'skipped' ? 'Skipped' : pythonStatus === 'success' ? 'No vulnerabilities' : 'Vulnerabilities found'} |
+            | Node.js | ${nodeStatus === 'success' ? '✅' : nodeStatus === 'failure' ? '❌' : '⏭️'} ${nodeStatus === 'skipped' ? 'Skipped' : nodeStatus === 'success' ? 'No vulnerabilities' : 'Vulnerabilities found'} |
+            
+            ${hasFailures ? '⚠️ **Action Required**: Review vulnerability reports in workflow artifacts.' : ''}
+            
+            ---
+            *Dependency scanning by AgentX*`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
