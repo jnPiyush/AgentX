@@ -207,7 +207,8 @@ if (Test-Path ".git") {
     Write-Host "  Git hooks enforce AgentX workflow compliance:" -ForegroundColor Yellow
     Write-Host "  • Issue number required in commit messages"
     Write-Host "  • PRD required before Epic implementation"
-    Write-Host "  • Tech Spec required before Feature implementation"
+    Write-Host "  • ADR + Tech Spec required before Feature implementation"
+    Write-Host "  • UX design required when needs:ux label present"
     Write-Host "  • No secrets in code"
     Write-Host "  • Code formatting"
 } else {

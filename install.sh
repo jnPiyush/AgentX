@@ -190,7 +190,8 @@ if [ -d ".git" ]; then
     echo -e "${YELLOW}  Git hooks enforce AgentX workflow compliance:${NC}"
     echo "  • Issue number required in commit messages"
     echo "  • PRD required before Epic implementation"
-    echo "  • Tech Spec required before Feature implementation"
+    echo "  • ADR + Tech Spec required before Feature implementation"
+    echo "  • UX design required when needs:ux label present"
     echo "  • No secrets in code"
     echo "  • Code formatting"
 else
