@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     if: hashFiles('**/*.csproj', '**/*.sln') != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     if: hashFiles('**/requirements.txt', '**/Pipfile', '**/pyproject.toml') != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     if: hashFiles('**/package.json', '**/package-lock.json') != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Setup Node.js
         uses: actions/setup-node@v4

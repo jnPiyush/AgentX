@@ -78,7 +78,7 @@ jobs:
     if: needs.route.outputs.agent == 'pm'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Create PRD Scaffold
         run: |
@@ -110,7 +110,7 @@ jobs:
     if: needs.route.outputs.agent == 'ux'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Create UX Scaffold
         run: |
@@ -142,7 +142,7 @@ jobs:
     if: needs.route.outputs.agent == 'architect'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Create ADR + Spec Scaffold
         run: |
