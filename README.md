@@ -1,34 +1,95 @@
-# AgentX - AI Agent Guidelines for Production Code
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jnPiyush/AgentX/master/docs/assets/agentx-logo.svg" alt="AgentX Logo" width="200"/>
+</p>
 
-[![Standard](https://img.shields.io/badge/Standard-awesome--copilot-green)](https://github.com/github/awesome-copilot)
-[![Skills Spec](https://img.shields.io/badge/Skills-agentskills.io-orange)](https://agentskills.io/specification)
+<h1 align="center">AgentX</h1>
 
-> **Framework for AI coding agents to produce production-ready code with consistent quality, security, and operational standards.**
+<p align="center">
+  <strong>🤖 Multi-Agent Framework for Production-Ready AI Development</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/github/awesome-copilot"><img src="https://img.shields.io/badge/Standard-awesome--copilot-7C3AED?style=for-the-badge&logo=github" alt="Awesome Copilot"></a>
+  <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Skills-agentskills.io-F97316?style=for-the-badge" alt="Skills Spec"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge" alt="MIT License"></a>
+</p>
+
+<p align="center">
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-features">Features</a> •
+  <a href="#-agent-roles">Agents</a> •
+  <a href="#-workflow">Workflow</a> •
+  <a href="AGENTS.md">Documentation</a>
+</p>
 
 ---
 
-## Overview
+## 🎯 What is AgentX?
 
-AgentX provides structured guidelines, skills, and workflows for AI coding agents (GitHub Copilot, Claude, etc.) to write high-quality, secure, and maintainable code.
+AgentX is a **multi-agent orchestration framework** that enables AI coding assistants (GitHub Copilot, Claude, etc.) to work together like a real software team. Each agent has a specific role, produces standardized deliverables, and hands off to the next agent in the workflow.
 
-### Key Features
+```
+📋 PM → 🎨 UX → 🏗️ Architect → 🔧 Engineer → 🔍 Reviewer
+```
 
-- **5 Agent Roles**: PM, Architect, UX Designer, Engineer, Reviewer
-- **18 Production Skills**: Testing, Security, API Design, Performance, etc.
-- **Issue-First Workflow**: All work tracked via GitHub Issues
-- **Orchestration**: Sequential handoffs with label-based coordination
-- **Templates**: Standardized PRD, ADR, Spec, UX, and Review documents
-- **Custom GitHub Actions**: 4 reusable actions for issue/project management
-- **Demo Project**: Todo API showcasing complete agent workflow
-- **Dependency Scanning**: Automated security checks for .NET, Python, Node.js
+**The Problem**: AI assistants often skip planning, write code without specs, and ignore documentation.
+
+**The Solution**: AgentX enforces a structured workflow with pre-commit hooks, templates, and orchestration.
 
 ---
 
-## Quick Start
+## ✨ Features
 
-### 1. Install in Your Project
+<table>
+<tr>
+<td width="50%">
 
-**Option A: One-liner install (Recommended)**
+### 🤖 5 Specialized Agents
+- **Product Manager** - PRDs & backlog
+- **UX Designer** - Wireframes & flows
+- **Solution Architect** - ADRs & specs
+- **Software Engineer** - Code & tests
+- **Code Reviewer** - Quality gates
+
+</td>
+<td width="50%">
+
+### 📚 18 Production Skills
+- Testing (80%+ coverage)
+- Security (OWASP Top 10)
+- API Design (REST patterns)
+- Performance optimization
+- [Full index →](Skills.md)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🔄 Automated Workflow
+- Issue-first development
+- Pre-commit validation
+- Template scaffolding
+- GitHub Projects V2 integration
+
+</td>
+<td width="50%">
+
+### 🛡️ Quality Enforcement
+- Secrets detection
+- SQL injection checks
+- Document prerequisites
+- Code review gates
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🚀 Quick Start
+
+### One-Line Install
 
 ```powershell
 # Windows (PowerShell)
@@ -36,130 +97,155 @@ irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 ```
 
 ```bash
-# Linux/Mac (Bash)
+# Linux/Mac
 curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
 ```
 
-**Option B: Clone and install**
+### Manual Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/jnPiyush/AgentX.git
 cd AgentX
+./install.sh  # or .\install.ps1 on Windows
 ```
 
-```powershell
-# Windows (PowerShell)
-.\install.ps1
-
-# To overwrite existing files, use -Force flag
-.\install.ps1 -Force
-```
+### Create Labels
 
 ```bash
-# Linux/Mac (Bash)
-chmod +x install.sh
-./install.sh
-
-# To overwrite existing files
-FORCE=true ./install.sh
+gh label create "type:epic" --color "7C3AED"
+gh label create "type:feature" --color "3B82F6"
+gh label create "type:story" --color "22C55E"
+gh label create "type:bug" --color "EF4444"
+gh label create "needs:ux" --color "EC4899"
 ```
 
-> **Note**: The install script downloads all AgentX files including agents, skills, templates, workflows, and documentation to your current project directory. Run it from your project's root folder.
+---
 
-### 2. Set Up GitHub
+## 👥 Agent Roles
+
+| Agent | Trigger | Deliverable | Status Flow |
+|-------|---------|-------------|-------------|
+| 📋 **Product Manager** | `type:epic` | PRD + Backlog | → Ready |
+| 🎨 **UX Designer** | `needs:ux` | Wireframes + Flows | → Ready |
+| 🏗️ **Architect** | `type:feature` | ADR + Tech Spec | → Ready |
+| 🔧 **Engineer** | `type:story` | Code + Tests | → In Review |
+| 🔍 **Reviewer** | Status = In Review | Review Report | → Done |
+
+---
+
+## 🔄 Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         AgentX Workflow                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   📝 Create Issue          🏷️ Add Labels        📊 Track Status │
+│        │                        │                     │         │
+│        ▼                        ▼                     ▼         │
+│   ┌─────────┐            ┌───────────┐         ┌──────────┐    │
+│   │  User   │───────────▶│ type:epic │────────▶│ Backlog  │    │
+│   │ Request │            │ type:story│         │    ↓     │    │
+│   └─────────┘            └───────────┘         │ Progress │    │
+│                                                │    ↓     │    │
+│   ┌─────────────────────────────────────────┐  │ Review   │    │
+│   │                                         │  │    ↓     │    │
+│   │  📋 PM → 🎨 UX → 🏗️ Arch → 🔧 Eng → 🔍 │  │  Done    │    │
+│   │                                         │  └──────────┘    │
+│   └─────────────────────────────────────────┘                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Status Flow (GitHub Projects V2)
+
+```
+Backlog → In Progress → In Review → Ready → Done
+```
+
+---
+
+## 📁 Project Structure
+
+```
+AgentX/
+├── 📄 AGENTS.md              # Workflow & orchestration rules
+├── 📄 Skills.md              # 18 production skills index
+├── 📄 CONTRIBUTING.md        # Contributor guide
+│
+├── 📁 .github/
+│   ├── 📁 agents/            # 5 agent definitions
+│   ├── 📁 hooks/             # Pre-commit validation
+│   ├── 📁 templates/         # PRD, ADR, Spec, UX templates
+│   ├── 📁 workflows/         # GitHub Actions
+│   ├── 📁 skills/            # 18 skill documents
+│   └── 📁 instructions/      # Language-specific guides
+│
+└── 📁 docs/
+    ├── 📁 adr/               # Architecture Decision Records
+    ├── 📁 prd/               # Product Requirements Docs
+    └── 📁 specs/             # Technical Specifications
+```
+
+---
+
+## 📖 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
+| [Skills.md](Skills.md) | 18 production skills with guidelines |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
+| [MCP Integration](docs/mcp-integration.md) | GitHub MCP Server setup |
+
+---
+
+## 🛠️ Tech Stack Support
+
+<p align="center">
+  <img src="https://img.shields.io/badge/.NET-512BD4?style=flat-square&logo=dotnet&logoColor=white" alt=".NET">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white" alt="GitHub Actions">
+</p>
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-# Create required labels
-gh label create "type:epic" --color "5319E7"
-gh label create "type:feature" --color "A2EEEF"
-gh label create "type:story" --color "0E8A16"
-gh label create "type:bug" --color "D73A4A"
+# Fork & clone
+git clone https://github.com/YOUR_USERNAME/AgentX.git
 
-# Create workflow labels
-gh label create "needs:ux" --color "BFD4F2"
-gh label create "needs:changes" --color "FBCA04"
-gh label create "needs:help" --color "D93F0B"
-```
+# Create feature branch
+git checkout -b feature/amazing-feature
 
-### 3. Use the Workflow
+# Make changes & commit (hooks will validate)
+git commit -m "feat: add amazing feature (#123)"
 
-1. **Create Issue** with type label (`type:story`, `type:feature`, etc.)
-2. **Agent works** based on role (PM creates PRD, Engineer writes code)
-3. **Handoff** via GitHub Projects V2 Status field (`In Progress` → `Ready`)
-4. **Review & Close** when Status = `Done`
-
----
-
-## Documentation
-
-| Document | Purpose |
-|----------|---------|
-| [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, orchestration |
-| [Skills.md](Skills.md) | 18 production skills index |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
-
-### Key Directories
-
-```
-.github/
-├── agents/       # Agent role definitions
-├── skills/       # 18 production skill docs
-├── templates/    # PRD, ADR, Spec, UX, Review templates
-├── workflows/    # GitHub Actions for orchestration
-└── instructions/ # Language-specific coding guidelines
+# Push & create PR
+git push origin feature/amazing-feature
 ```
 
 ---
 
-## Agent Roles
+## 📜 License
 
-| Role | Trigger | Deliverable |
-|------|---------|-------------|
-| **Product Manager** | `type:epic` | PRD + Feature/Story issues |
-| **Solution Architect** | `type:feature`, `type:spike` | ADR + Technical Spec |
-| **UX Designer** | `needs:ux` label | Wireframes + User flows |
-| **Software Engineer** | `type:story`, `type:bug` | Code + Tests (80%+ coverage) |
-| **Code Reviewer** | Status = `In Review` | Review report |
+MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
-## Skills
+<p align="center">
+  <strong>Built with ❤️ for the AI-assisted development community</strong>
+</p>
 
-18 production skills covering:
-
-- **Foundation**: Core Principles, Testing, Error Handling, Security
-- **Architecture**: Performance, Database, Scalability, Code Organization, API Design
-- **Development**: Configuration, Documentation, Version Control, Type Safety, Dependencies, Logging
-- **Operations**: Remote Git Ops, Code Review & Audit
-- **AI**: AI Agent Development
-
-See [Skills.md](Skills.md) for full index.
-
----
-
-## Workflow
-
-```
-User Request
-    │
-    ├─ Research codebase
-    ├─ Classify request type
-    ├─ Create GitHub Issue
-    │
-    ├─ type:epic → PM → PRD + Features
-    ├─ type:feature → Architect → ADR + Spec
-    ├─ type:story → Engineer → Code + Tests
-    └─ Review → Close
-```
-
----
-
-## License
-
-MIT License - See [LICENSE](LICENSE)
-
----
-
-**See Also**: [AGENTS.md](AGENTS.md) for complete workflow details
+<p align="center">
+  <a href="https://github.com/jnPiyush/AgentX/stargazers">⭐ Star us on GitHub</a> •
+  <a href="https://github.com/jnPiyush/AgentX/issues">🐛 Report Bug</a> •
+  <a href="https://github.com/jnPiyush/AgentX/discussions">💬 Discussions</a>
+</p>
 
