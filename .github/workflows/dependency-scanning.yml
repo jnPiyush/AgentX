@@ -47,7 +47,7 @@ jobs:
       
       - name: Upload vulnerability report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dotnet-vulnerabilities
           path: vulnerabilities.txt
@@ -88,7 +88,7 @@ jobs:
       
       - name: Upload vulnerability report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: python-vulnerabilities
           path: python-vulnerabilities.json
@@ -130,7 +130,7 @@ jobs:
       
       - name: Upload vulnerability report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: npm-vulnerabilities
           path: npm-vulnerabilities.json
