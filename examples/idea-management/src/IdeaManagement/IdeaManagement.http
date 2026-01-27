@@ -1,6 +1,0 @@
-@IdeaManagement_HostAddress = http://localhost:5162
-
-GET {{IdeaManagement_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

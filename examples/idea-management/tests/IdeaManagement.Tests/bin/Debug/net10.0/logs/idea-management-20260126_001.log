@@ -1,2 +1,0 @@
-[2026-01-26 14:00:37.811 -06:00] [INF] Starting Idea Management API {}
-[2026-01-26 14:00:37.842 -06:00] [INF] Saved 0 entities to in-memory store. {"EventId":{"Id":30100,"Name":"Microsoft.EntityFrameworkCore.Update.ChangesSaved"},"SourceContext":"Microsoft.EntityFrameworkCore.Update"}
