@@ -234,7 +234,7 @@ git push
 
 ### 8. Completion Checklist
 
-Before marking `orch:architect-done`, verify ALL items:
+Before updating Status to `Ready`, verify ALL items:
 
 **Documentation:**
 - [ ] ADR created at `docs/adr/ADR-{epic-id}.md`
@@ -379,18 +379,11 @@ Run context capture script:
 ./.github/scripts/capture-context.ps1 -Role architect -IssueNumber <EPIC_ID>
 ```
 
-### Step 2: Add Orchestration Label
+### Step 2: Update Status to Ready
 
 ```json
-{
-  "tool": "update_issue",
-  "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
-    "issue_number": <EPIC_ID>,
-    "labels": ["type:epic", "orch:pm-done", "orch:ux-done", "orch:architect-done"]
-  }
-}
+// Update Status to "Ready" via GitHub Projects V2
+// Status: In Progress → Ready
 ```
 
 ### Step 3: Trigger Next Agent (Automatic)
@@ -431,12 +424,12 @@ Orchestrator allows Engineer to start on Stories (Stories can now proceed in par
 
 ### Before Starting Work
 
-1. ✅ **Verify prerequisite**: `orch:ux-done` label present on Epic
+1. ✅ **Verify prerequisite**: UX designs exist (if `needs:ux` label was present)
 2. ✅ **Validate PRD exists**: Check `docs/prd/PRD-{epic-id}.md`
 3. ✅ **Validate UX exists**: Check `docs/ux/UX-*.md`
 4. ✅ **Read backlog**: Review all Feature/Story issues
 
-### Before Adding `orch:architect-done` Label
+### Before Updating Status to Ready
 
 1. ✅ **Run validation script**:
    ```bash
@@ -461,7 +454,7 @@ Orchestrator allows Engineer to start on Stories (Stories can now proceed in par
 
 ### Workflow Will Automatically
 
-- ✅ Block if `orch:ux-done` not present (UX must complete first)
+- ✅ Block if UX designs not present (UX must complete first, if required)
 - ✅ Validate architectural artifacts exist before routing to Engineer
 - ✅ Post context summary to issue
 - ✅ Unblock Stories for Engineer (parallel execution)

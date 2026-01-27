@@ -218,18 +218,11 @@ Run context capture script:
 ./.github/scripts/capture-context.ps1 -Role ux -IssueNumber <EPIC_ID>
 ```
 
-### Step 2: Add Orchestration Label
+### Step 2: Update Status to Ready
 
 ```json
-{
-  "tool": "update_issue",
-  "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
-    "issue_number": <EPIC_ID>,
-    "labels": ["type:epic", "orch:pm-done", "orch:ux-done"]
-  }
-}
+// Update Status to "Ready" via GitHub Projects V2
+// Status: In Progress → Ready
 ```
 
 ### Step 3: Trigger Next Agent (Automatic)
@@ -270,12 +263,12 @@ Orchestrator automatically triggers Architect workflow within 30 seconds.
 
 ### Before Starting Work
 
-1. ✅ **Verify prerequisite**: `orch:pm-done` label present on Epic
+1. ✅ **Verify prerequisite**: Status = `Ready` (PM complete) in Projects board
 2. ✅ **Validate PRD exists**: Check `docs/prd/PRD-{epic-id}.md`
 3. ✅ **Read backlog**: Review all Feature/Story issues created by PM
 4. ✅ **Identify UX needs**: Check which Features/Stories have `needs:ux` label
 
-### Before Adding `orch:ux-done` Label
+### Before Updating Status to Ready
 
 1. ✅ **Run validation script**:
    ```bash
@@ -299,10 +292,10 @@ Orchestrator automatically triggers Architect workflow within 30 seconds.
 
 ### Workflow Will Automatically
 
-- ✅ Block if `orch:pm-done` not present (PM must complete first)
+- ✅ Block if PM not complete (Status not Ready)
 - ✅ Validate UX artifacts exist before routing to Architect
 - ✅ Post context summary to issue
-- ✅ Trigger Architect workflow (sequential, <30s SLA)
+- ✅ Update Status to Ready when complete
 
 ### Recovery from Errors
 
@@ -365,7 +358,6 @@ If validation fails:
 
 ### Process & Handoff
 - [ ] Epic Status updated to "Ready" in Projects board
-- [ ] `orch:ux-done` label added to Epic issue
 - [ ] Handoff summary comment posted to Epic
 - [ ] Open questions documented (if any)
 - [ ] Next agent triggered (Architect)

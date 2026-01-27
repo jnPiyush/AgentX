@@ -226,7 +226,7 @@ git push
   }
 }
 ```
-(This removes `orch:engineer-done` and adds `needs:changes`)
+(Adds `needs:changes` label, Status moves to `In Progress`)
 
 **4. Post feedback comment:**
 ```json
@@ -373,7 +373,7 @@ Issue automatically moves to "Done" in Projects board.
 
 ### Before Starting Review
 
-1. ✅ **Verify Engineer completion**: `orch:engineer-done` label present
+1. ✅ **Verify Engineer completion**: Status = `In Review` in Projects board
 2. ✅ **Check commit exists**: Engineer pushed code
 3. ✅ **Read context**: Story, Tech Spec, Engineer's changes
 
@@ -405,7 +405,7 @@ If issues found:
 1. Document in review (severity, location, recommendation)
 2. Add `needs:changes` label
 3. Return to Engineer with clear feedback
-4. Engineer fixes → removes `needs:changes` → adds `orch:engineer-done` → re-triggers Reviewer
+4. Engineer fixes → removes `needs:changes` → Status → In Review → re-triggers Reviewer
 
 ---
 

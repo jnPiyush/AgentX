@@ -232,11 +232,13 @@ Write-Host '     gh label create "type:epic" --color "5319E7"'
 Write-Host '     gh label create "type:feature" --color "A2EEEF"'
 Write-Host '     gh label create "type:story" --color "0E8A16"'
 Write-Host '     gh label create "type:bug" --color "D73A4A"'
+Write-Host '     gh label create "type:spike" --color "FBCA04"'
+Write-Host '     gh label create "type:docs" --color "0075CA"'
 Write-Host ""
-Write-Host '     # Orchestration labels' -ForegroundColor Yellow
-Write-Host '     gh label create "orch:pm-done" --color "BFD4F2"'
-Write-Host '     gh label create "orch:architect-done" --color "BFD4F2"'
-Write-Host '     gh label create "orch:engineer-done" --color "BFD4F2"'
+Write-Host '     # Workflow labels' -ForegroundColor Yellow
+Write-Host '     gh label create "needs:ux" --color "D4C5F9"'
+Write-Host '     gh label create "needs:changes" --color "FBCA04"'
+Write-Host '     gh label create "needs:help" --color "D73A4A"'
 Write-Host ""
 Write-Host "  4. Set up GitHub Project with Status field (see docs/project-setup.md)"
 Write-Host ""

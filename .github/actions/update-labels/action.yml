@@ -2,12 +2,16 @@ name: Update Issue Labels
 description: Update GitHub issue labels using GraphQL for speed (1-2s vs 5s REST)
 author: AgentX
 
+# NOTE: Status tracking uses GitHub Projects V2 Status field, NOT labels.
+# This action is for type labels (type:story, type:feature, etc.) and workflow labels (needs:ux, needs:changes).
+# Do NOT use this for orchestration - use update-project-status action instead.
+
 inputs:
   issue_number:
     description: 'Issue number to update'
     required: true
   add_labels:
-    description: 'Comma-separated labels to add (e.g., "orch:pm-done,priority:p1")'
+    description: 'Comma-separated labels to add (e.g., "type:story,needs:ux")'
     required: false
   remove_labels:
     description: 'Comma-separated labels to remove'

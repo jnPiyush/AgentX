@@ -354,32 +354,32 @@ switch ($Role) {
 
 switch ($Role) {
     'pm' {
-        "- UX Designer will be triggered automatically (sequential)" | Out-File -FilePath $contextFile -Append -Encoding utf8
-        "- UX Designer will review backlog and PRD" | Out-File -FilePath $contextFile -Append -Encoding utf8
-        "- UX Designer will create wireframes, prototypes, and personas" | Out-File -FilePath $contextFile -Append -Encoding utf8
+        "- Status updated to **Ready** in Projects board" | Out-File -FilePath $contextFile -Append -Encoding utf8
+        "- UX Designer (if needs:ux) or Architect picks up next" | Out-File -FilePath $contextFile -Append -Encoding utf8
+        "- Next agent will review backlog and PRD" | Out-File -FilePath $contextFile -Append -Encoding utf8
     }
 
     'ux' {
-        "- Architect will be triggered automatically (sequential)" | Out-File -FilePath $contextFile -Append -Encoding utf8
+        "- Status updated to **Ready** in Projects board" | Out-File -FilePath $contextFile -Append -Encoding utf8
         "- Architect will review UX designs and PRD" | Out-File -FilePath $contextFile -Append -Encoding utf8
         "- Architect will create ADR, Tech Specs, and Architecture docs" | Out-File -FilePath $contextFile -Append -Encoding utf8
     }
 
     'architect' {
+        "- Status updated to **Ready** in Projects board" | Out-File -FilePath $contextFile -Append -Encoding utf8
         "- Engineer can now start implementing User Stories" | Out-File -FilePath $contextFile -Append -Encoding utf8
         "- Engineer will read ADR, Tech Specs, and UX designs" | Out-File -FilePath $contextFile -Append -Encoding utf8
-        "- Engineer will create low-level design, code, and tests" | Out-File -FilePath $contextFile -Append -Encoding utf8
     }
 
     'engineer' {
-        "- Reviewer will be triggered automatically (<30s SLA)" | Out-File -FilePath $contextFile -Append -Encoding utf8
+        "- Status updated to **In Review** in Projects board" | Out-File -FilePath $contextFile -Append -Encoding utf8
         "- Reviewer will check code quality, tests, security, docs" | Out-File -FilePath $contextFile -Append -Encoding utf8
-        "- If approved: Issue closed, moves to Done" | Out-File -FilePath $contextFile -Append -Encoding utf8
-        "- If changes needed: Returns to In Progress" | Out-File -FilePath $contextFile -Append -Encoding utf8
+        "- If approved: Issue closed, Status → Done" | Out-File -FilePath $contextFile -Append -Encoding utf8
+        "- If changes needed: Status → In Progress" | Out-File -FilePath $contextFile -Append -Encoding utf8
     }
 
     'reviewer' {
-        "- If approved: Issue will be closed automatically" | Out-File -FilePath $contextFile -Append -Encoding utf8
+        "- If approved: Issue closed, Status → Done" | Out-File -FilePath $contextFile -Append -Encoding utf8
         "- If changes needed: Engineer will address feedback" | Out-File -FilePath $contextFile -Append -Encoding utf8
         "- Review cycle continues until approval" | Out-File -FilePath $contextFile -Append -Encoding utf8
     }

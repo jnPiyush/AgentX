@@ -1,5 +1,7 @@
 # Root Cause Analysis: Workflow Violation in Issue #88
 
+> **⚠️ Historical Document**: This RCA references the deprecated `orch:*-done` orchestration labels. The workflow has since been updated to use **GitHub Projects V2 Status field** instead of labels. See [AGENTS.md](../../AGENTS.md) for current workflow. This document is preserved for historical reference and lessons learned.
+
 **Date**: January 26, 2026  
 **Incident**: Agent skipped AgentX multi-agent workflow (PM → Architect → UX → Engineer → Reviewer)  
 **Impact**: Demo implementation completed without required documents (PRD, ADR, Spec, UX, Review)  

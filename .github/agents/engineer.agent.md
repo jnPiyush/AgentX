@@ -439,15 +439,8 @@ Run context capture script:
 ### Step 2: Add Orchestration Label
 
 ```json
-{
-  "tool": "update_issue",
-  "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
-    "issue_number": <STORY_ID>,
-    "labels": ["type:story", "orch:engineer-done"]
-  }
-}
+// Update Status to "In Review" via GitHub Projects V2
+// Status: In Progress → In Review
 ```
 
 ### Step 3: Trigger Next Agent (Automatic)
@@ -488,12 +481,12 @@ Orchestrator automatically triggers Reviewer workflow within 30 seconds.
 
 ### Before Starting Work
 
-1. ✅ **Verify prerequisite**: `orch:architect-done` label present on parent Epic
+1. ✅ **Verify prerequisite**: Parent Epic has Tech Spec (Status = Ready after Architect)
 2. ✅ **Validate Tech Spec exists**: Check `docs/specs/SPEC-{feature-id}.md`
 3. ✅ **Validate UX exists** (if `needs:ux` label): Check `docs/ux/UX-{feature-id}.md`
 4. ✅ **Read story**: Understand acceptance criteria
 
-### Before Adding `orch:engineer-done` Label
+### Before Updating Status to In Review
 
 1. ✅ **Run validation script**:
    ```bash
@@ -519,7 +512,7 @@ Orchestrator automatically triggers Reviewer workflow within 30 seconds.
 
 ### Workflow Will Automatically
 
-- ✅ Block if `orch:architect-done` not present (Architect must complete first)
+- ✅ Block if Tech Spec not present (Architect must complete first)
 - ✅ Validate artifacts exist (code, tests, docs) before routing to Reviewer
 - ✅ Post context summary to issue
 - ✅ Trigger Reviewer workflow (<30s SLA)

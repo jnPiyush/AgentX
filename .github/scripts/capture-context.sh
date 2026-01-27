@@ -53,8 +53,8 @@ case $AGENT_ROLE in
     fi
     
     echo "" >> "$CONTEXT_FILE"
-    echo "**Next Agent**: UX Designer (sequential)" >> "$CONTEXT_FILE"
-    echo "**Trigger**: \`orch:pm-done\` label added" >> "$CONTEXT_FILE"
+    echo "**Next Agent**: UX Designer (if needs:ux) or Architect" >> "$CONTEXT_FILE"
+    echo "**Status**: → Ready (in Projects board)" >> "$CONTEXT_FILE"
     ;;
     
   "ux")
@@ -71,8 +71,8 @@ case $AGENT_ROLE in
     echo "- HTML prototypes (if applicable)" >> "$CONTEXT_FILE"
     
     echo "" >> "$CONTEXT_FILE"
-    echo "**Next Agent**: Architect (sequential)" >> "$CONTEXT_FILE"
-    echo "**Trigger**: \`orch:ux-done\` label added" >> "$CONTEXT_FILE"
+    echo "**Next Agent**: Architect" >> "$CONTEXT_FILE"
+    echo "**Status**: → Ready (in Projects board)" >> "$CONTEXT_FILE"
     ;;
     
   "architect")
@@ -88,8 +88,8 @@ case $AGENT_ROLE in
     grep "## Decision" "docs/adr/ADR-${ISSUE_NUMBER}.md" -A 5 2>/dev/null | sed 's/^/> /' >> "$CONTEXT_FILE" || echo "> (See ADR for details)" >> "$CONTEXT_FILE"
     
     echo "" >> "$CONTEXT_FILE"
-    echo "**Next Agent**: Engineer (sequential)" >> "$CONTEXT_FILE"
-    echo "**Trigger**: \`orch:architect-done\` label added" >> "$CONTEXT_FILE"
+    echo "**Next Agent**: Engineer" >> "$CONTEXT_FILE"
+    echo "**Status**: → Ready (in Projects board)" >> "$CONTEXT_FILE"
     ;;
     
   "engineer")
@@ -109,7 +109,7 @@ case $AGENT_ROLE in
     
     echo "" >> "$CONTEXT_FILE"
     echo "**Next Agent**: Reviewer" >> "$CONTEXT_FILE"
-    echo "**Trigger**: \`orch:engineer-done\` label added, Status: In Review" >> "$CONTEXT_FILE"
+    echo "**Status**: → In Review (in Projects board)" >> "$CONTEXT_FILE"
     ;;
     
   "reviewer")

@@ -76,18 +76,18 @@ gh label create "type:feature" --color "A2EEEF"
 gh label create "type:story" --color "0E8A16"
 gh label create "type:bug" --color "D73A4A"
 
-# Create orchestration labels
-gh label create "orch:pm-done" --color "BFD4F2"
-gh label create "orch:architect-done" --color "BFD4F2"
-gh label create "orch:engineer-done" --color "BFD4F2"
+# Create workflow labels
+gh label create "needs:ux" --color "BFD4F2"
+gh label create "needs:changes" --color "FBCA04"
+gh label create "needs:help" --color "D93F0B"
 ```
 
 ### 3. Use the Workflow
 
 1. **Create Issue** with type label (`type:story`, `type:feature`, etc.)
 2. **Agent works** based on role (PM creates PRD, Engineer writes code)
-3. **Handoff** via orchestration labels (`orch:pm-done`, etc.)
-4. **Review & Close** when complete
+3. **Handoff** via GitHub Projects V2 Status field (`In Progress` → `Ready`)
+4. **Review & Close** when Status = `Done`
 
 ---
 
@@ -120,7 +120,7 @@ gh label create "orch:engineer-done" --color "BFD4F2"
 | **Solution Architect** | `type:feature`, `type:spike` | ADR + Technical Spec |
 | **UX Designer** | `needs:ux` label | Wireframes + User flows |
 | **Software Engineer** | `type:story`, `type:bug` | Code + Tests (80%+ coverage) |
-| **Code Reviewer** | `orch:engineer-done` | Review report |
+| **Code Reviewer** | Status = `In Review` | Review report |
 
 ---
 

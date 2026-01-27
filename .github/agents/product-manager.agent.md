@@ -225,18 +225,13 @@ Run context capture script:
 
 This creates `.agent-context/issue-<ID>-pm.md` and posts summary to GitHub issue.
 
-### Step 2: Add Orchestration Label
+### Step 2: Update Status to Ready
+
+Move the issue to `Ready` status in GitHub Projects V2:
 
 ```json
-{
-  "tool": "update_issue",
-  "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
-    "issue_number": <EPIC_ID>,
-    "labels": ["type:epic", "orch:pm-done"]
-  }
-}
+// Use GitHub Projects V2 UI or GraphQL to update Status field
+// Status: In Progress → Ready
 ```
 
 ### Step 3: Trigger Next Agent (Automatic)
@@ -278,10 +273,10 @@ Orchestrator automatically triggers UX Designer workflow within 30 seconds.
 ### Before Starting Work
 
 1. ✅ **Verify Epic label**: `type:epic` present on issue
-2. ✅ **Check no duplicate work**: No `orch:pm-done` label exists
+2. ✅ **Check no duplicate work**: Status is not `Ready` or `Done`
 3. ✅ **Read issue description**: Understand requirements and context
 
-### Before Adding `orch:pm-done` Label
+### Before Updating Status to Ready
 
 1. ✅ **Run validation script**:
    ```bash
@@ -315,8 +310,8 @@ Orchestrator automatically triggers UX Designer workflow within 30 seconds.
 
 - ✅ Block if validation fails (PRD missing, sections incomplete)
 - ✅ Post context summary to issue
-- ✅ Add `orch:pm-done` label only after validation passes
-- ✅ Trigger UX Designer workflow (sequential, <30s SLA)
+- ✅ Update Status to Ready when complete
+- ✅ Next agent picks up when Status = Ready
 
 ### Recovery from Errors
 
@@ -325,7 +320,7 @@ If validation fails:
 2. Re-run validation script
 3. Try handoff again (workflow will re-validate)
 
-**Important**: Cannot manually add `orch:pm-done` label to bypass validation. Orchestrator checks for artifacts before routing to next agent.
+> ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
 
 ---
 

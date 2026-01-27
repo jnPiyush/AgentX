@@ -121,28 +121,31 @@ jobs:
             const labels = issue.labels.map(l => l.name);
             const agents = [];
             
-            if (labels.includes('type:epic') && !labels.includes('orch:pm-done')) {
+            // Route based on type labels and Status field (NOT orchestration labels)
+            // Status flow: Backlog → In Progress → In Review → Ready → Done
+            
+            if (labels.includes('type:epic')) {
+              // Epic needs PM if not yet Ready
               agents.push('product-manager');
             }
             
-            // Sequential flow: PM → UX → Architect → Engineer
-            if (labels.includes('orch:pm-done') && !labels.includes('orch:ux-done')) {
+            // Features/Stories with needs:ux go to UX Designer first
+            if (labels.includes('needs:ux')) {
               agents.push('ux-designer');
             }
             
-            if (labels.includes('orch:ux-done') && !labels.includes('orch:architect-done')) {
+            // Features and Spikes go to Architect
+            if (labels.includes('type:feature') || labels.includes('type:spike')) {
               agents.push('architect');
             }
             
-            if ((labels.includes('type:story') || labels.includes('type:feature')) && 
-                labels.includes('orch:architect-done') && 
-                !labels.includes('orch:engineer-done')) {
+            // Stories and Bugs go to Engineer (when Status = Ready)
+            if (labels.includes('type:story') || labels.includes('type:bug')) {
               agents.push('engineer');
             }
             
-            if (labels.includes('orch:engineer-done') && !issue.state === 'closed') {
-              agents.push('reviewer');
-            }
+            // Note: Reviewer is triggered when Status = In Review (handled by Projects V2)
+            // Status transitions are managed via GitHub Projects, not labels
             
             core.setOutput('run_pm', agents.includes('product-manager'));
             core.setOutput('run_architect', agents.includes('architect'));
@@ -201,12 +204,12 @@ jobs:
           git commit -m "docs: add PRD for issue #${{ needs.route.outputs.issue_number }}"
           git push
       
-      # LAYER 1: GraphQL Label Update (1s vs 5s REST)
-      - name: Mark PM Done via GraphQL
-        uses: ./.github/actions/update-labels
+      # Update Status to 'Ready' via Projects V2
+      - name: Set Status to Ready
+        uses: ./.github/actions/update-project-status
         with:
           issue_number: ${{ needs.route.outputs.issue_number }}
-          add_labels: orch:pm-done
+          status: 'Ready'
           github_token: ${{ secrets.GITHUB_TOKEN }}
       
       # LAYER 1: GraphQL Comment (1s vs 5s REST)
@@ -220,9 +223,10 @@ jobs:
             **Deliverables:**
             - 📋 PRD: `docs/prd/PRD-${{ needs.route.outputs.issue_number }}.md`
             
-            **Next:** UX Designer (sequential)
+            **Status:** → Ready (in Projects board)
+            **Next:** UX Designer or Architect
             
-            **Performance:** Assignment 2s (GraphQL) | Label 1s (GraphQL) | Total: ~5s
+            > ⚠️ Status is tracked via GitHub Projects V2, not labels.
           github_token: ${{ secrets.GITHUB_TOKEN }}
       
       # Update all child user stories to 'Ready' status
@@ -335,12 +339,12 @@ jobs:
           git pull --rebase origin master
           git push
 
-      # LAYER 1: GraphQL Operations
-      - name: Mark Architect Done via GraphQL
-        uses: ./.github/actions/update-labels
+      # Update Status to 'Ready' via Projects V2
+      - name: Set Status to Ready
+        uses: ./.github/actions/update-project-status
         with:
           issue_number: ${{ needs.route.outputs.issue_number }}
-          add_labels: orch:architect-done
+          status: 'Ready'
           github_token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Post Summary via GraphQL
@@ -354,7 +358,10 @@ jobs:
             - 🏗️ ADR: `docs/adr/ADR-${{ needs.route.outputs.issue_number }}.md`
             - 📐 Spec: `docs/specs/SPEC-${{ needs.route.outputs.issue_number }}.md`
             
-            **Next:** Engineer (sequential)
+            **Status:** → Ready (in Projects board)
+            **Next:** Engineer
+            
+            > ⚠️ Status is tracked via GitHub Projects V2, not labels.
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   ux-designer:
@@ -394,12 +401,12 @@ jobs:
           git pull --rebase origin master
           git push
 
-      # LAYER 1: GraphQL Operations
-      - name: Mark UX Done via GraphQL
-        uses: ./.github/actions/update-labels
+      # Update Status to 'Ready' via Projects V2
+      - name: Set Status to Ready
+        uses: ./.github/actions/update-project-status
         with:
           issue_number: ${{ needs.route.outputs.issue_number }}
-          add_labels: orch:ux-done
+          status: 'Ready'
           github_token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Post Summary via GraphQL
@@ -412,7 +419,10 @@ jobs:
             **Deliverables:**
             - 🎨 UX: `docs/ux/UX-${{ needs.route.outputs.issue_number }}.md`
             
-            **Next:** Architect (sequential)
+            **Status:** → Ready (in Projects board)
+            **Next:** Architect
+            
+            > ⚠️ Status is tracked via GitHub Projects V2, not labels.
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   engineer:
@@ -455,21 +465,7 @@ jobs:
           git pull --rebase origin master || echo "No remote changes"
           git push || echo "No changes to push"
 
-      # LAYER 1: GraphQL Operations
-      - name: Mark Engineer Done via GraphQL
-        uses: ./.github/actions/update-labels
-        with:
-          issue_number: ${{ needs.route.outputs.issue_number }}
-          add_labels: orch:engineer-done
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-      
-      # Update status to 'In Review'
-      - name: Set Status to In Review
-        uses: ./.github/actions/update-project-status
-        with:
-          issue_number: ${{ needs.route.outputs.issue_number }}
-          status: 'In Review'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      # Status already set to 'In Review' above
       
       - name: Post Summary via GraphQL
         uses: ./.github/actions/post-comment
@@ -482,7 +478,10 @@ jobs:
             - 💻 Code + Tests committed
             - 📊 Coverage: ≥80%
             
-            **Next:** In Review
+            **Status:** → In Review (in Projects board)
+            **Next:** Reviewer
+            
+            > ⚠️ Status is tracked via GitHub Projects V2, not labels.
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   reviewer:

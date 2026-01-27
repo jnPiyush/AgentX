@@ -165,7 +165,7 @@ cp .github/templates/REVIEW-TEMPLATE.md docs/reviews/REVIEW-50.md
 4. Break down into Features and User Stories (P0/P1/P2)
 5. Document flows, dependencies, risks, timeline
 6. Self-review for completeness
-7. Commit and add `orch:pm-done` label
+7. Commit and update Status to `Ready` in Projects V2
 
 ### For UX Designer Agent
 
@@ -177,7 +177,7 @@ cp .github/templates/REVIEW-TEMPLATE.md docs/reviews/REVIEW-50.md
 5. Document design system (colors, typography, spacing)
 6. Ensure WCAG 2.1 AA accessibility compliance
 7. Complete handoff checklist (see ux-designer.agent.md for 50+ items)
-8. Commit and add `orch:ux-done` label
+8. Commit and update Status to `Ready` in Projects V2
 
 ### For Architect Agent
 
@@ -189,7 +189,7 @@ cp .github/templates/REVIEW-TEMPLATE.md docs/reviews/REVIEW-50.md
 5. Fill in ALL sections (no placeholders)
 6. Complete handoff checklist (see architect.agent.md for 60+ items)
 6. Self-review for completeness and clarity
-7. Commit and add `orch:architect-done` label
+7. Commit and update Status to `Ready` in Projects V2
 
 **Tech Spec Creation**:
 1. Copy SPEC template to `docs/specs/SPEC-{feature-id}.md`
@@ -199,7 +199,7 @@ cp .github/templates/REVIEW-TEMPLATE.md docs/reviews/REVIEW-50.md
 5. Specify exact files Engineer should create
 6. List all dependencies and configuration
 7. Self-review for implementation clarity
-8. Commit and add `orch:architect-done` label
+8. Commit and update Status to `Ready` in Projects V2
 
 ### For Reviewer Agent
 
