@@ -1,27 +1,21 @@
 # Technical Specification: {Feature Name}
 
-**Issue**: #{feature-id}  
-**Epic**: #{epic-id}  
-**Status**: Draft | Review | Approved  
-**Author**: {Agent/Person}  
-**Date**: {YYYY-MM-DD}  
-**Related ADR**: [ADR-{epic-id}.md](../adr/ADR-{epic-id}.md)  
+**Issue**: #{feature-id}
+**Epic**: #{epic-id}
+**Status**: Draft | Review | Approved
+**Author**: {Agent/Person}
+**Date**: {YYYY-MM-DD}
+**Related ADR**: [ADR-{epic-id}.md](../adr/ADR-{epic-id}.md)
 **Related UX**: [UX-{feature-id}.md](../ux/UX-{feature-id}.md)
 
 ---
 
-## 0. Table of Contents
+## Table of Contents
 
 1. [Overview](#1-overview)
-2. [Architecture Diagram](#2-architecture-diagram)
-   - [High-Level Components](#21-high-level-components)
-   - [Component Interactions](#22-component-interactions)
-   - [Data Flow](#23-data-flow)
-   - [Technology Stack](#24-technology-stack)
-   - [Sequence Diagrams](#25-sequence-diagrams)
-   - [Class Diagrams](#26-class-diagrams)
+2. [Architecture Diagrams](#2-architecture-diagrams)
 3. [API Design](#3-api-design)
-4. [Data Models Diagrams](#4-data-models-diagrams)
+4. [Data Model Diagrams](#4-data-model-diagrams)
 5. [Service Layer Diagrams](#5-service-layer-diagrams)
 6. [Security Diagrams](#6-security-diagrams)
 7. [Performance](#7-performance)
@@ -30,7 +24,6 @@
 10. [Rollout Plan](#10-rollout-plan)
 11. [Risks & Mitigations](#11-risks--mitigations)
 12. [Monitoring & Observability](#12-monitoring--observability)
-
 ---
 
 ## 1. Overview
@@ -41,359 +34,349 @@
 - In scope: {What this spec covers}
 - Out of scope: {What this spec doesn't cover}
 
-**Success criteria:**
+**Success Criteria:**
 - {Measurable success criterion 1}
 - {Measurable success criterion 2}
 
 ---
 
-## 2. Architecture Diagram
+## 2. Architecture Diagrams
 
-### 2.1 High-Level Components
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          System Architecture                         │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌──────────────┐                                                   │
-│  │   Client     │                                                   │
-│  │   Layer      │                                                   │
-│  └──────┬───────┘                                                   │
-│         │                                                            │
-│         ▼                                                            │
-│  ┌──────────────────────────────────────────────────────────┐      │
-│  │              API Gateway / Load Balancer                  │      │
-│  │              (ASP.NET Core + Kestrel)                     │      │
-│  └──────┬───────────────────────────────────────────────────┘      │
-│         │                                                            │
-│         ▼                                                            │
-│  ┌──────────────────────────────────────────────────────────┐      │
-│  │                   Application Layer                       │      │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │      │
-│  │  │ Controller  │  │ Controller  │  │ Controller  │     │      │
-│  │  │   Layer     │  │   Layer     │  │   Layer     │     │      │
-│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │      │
-│  │         │                │                │              │      │
-│  │         ▼                ▼                ▼              │      │
-│  │  ┌──────────────────────────────────────────────┐       │      │
-│  │  │          Business Logic Layer                │       │      │
-│  │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  │       │      │
-│  │  │  │ Service  │  │ Service  │  │ Service  │  │       │      │
-│  │  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  │       │      │
-│  │  └───────┼─────────────┼─────────────┼─────────┘       │      │
-│  └──────────┼─────────────┼─────────────┼─────────────────┘      │
-│             │             │             │                          │
-│             ▼             ▼             ▼                          │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │                 Data Access Layer                         │    │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │    │
-│  │  │ Repository  │  │ Repository  │  │ Repository  │     │    │
-│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │    │
-│  └─────────┼─────────────────┼─────────────────┼────────────┘    │
-│            │                 │                 │                  │
-│  ┌─────────┴─────────────────┴─────────────────┴──────────┐     │
-│  │                                                          │     │
-│  ▼                          ▼                              ▼     │
-│ ┌──────────┐         ┌──────────┐                  ┌──────────┐ │
-│ │ Database │         │  Cache   │                  │ External │ │
-│ │PostgreSQL│         │  Redis   │                  │   APIs   │ │
-│ └──────────┘         └──────────┘                  └──────────┘ │
-│                                                                   │
-└───────────────────────────────────────────────────────────────────┘
-```
-
-**Component responsibilities:**
-- **Client Layer**: User interface (React, Angular, mobile apps)
-- **API Gateway**: Request routing, rate limiting, authentication, CORS
-- **Controller Layer**: HTTP request handling, input validation, response formatting
-- **Business Logic Layer**: Core business rules, domain logic, orchestration
-- **Data Access Layer**: Database operations, query optimization, transaction management
-- **Database (PostgreSQL)**: Persistent data storage, ACID transactions
-- **Cache (Redis)**: Session storage, frequent data caching, rate limiting
-- **External APIs**: Third-party integrations, payment gateways, notification services
-
-### 2.2 Component Interactions
+### 2.1 High-Level System Architecture
 
 ```
-Client Request Flow:
-─────────────────────
-
-1. Client → API Gateway
-   - HTTPS request with JWT token
-   - Request validation and rate limit check
-
-2. API Gateway → Controller
-   - Route to appropriate controller
-   - Extract and validate JWT claims
-
-3. Controller → Service
-   - Map DTO to domain model
-   - Invoke business logic
-
-4. Service → Repository
-   - Execute business rules
-   - Call data access methods
-
-5. Repository → Database/Cache
-   - Check cache first (if applicable)
-   - Query database if cache miss
-   - Update cache with fresh data
-
-6. Response Flow (reverse)
-   - Repository → Service (domain models)
-   - Service → Controller (business results)
-   - Controller → API Gateway (DTOs)
-   - API Gateway → Client (JSON response)
++==============================================================================+
+|                              SYSTEM ARCHITECTURE                              |
++==============================================================================+
+|                                                                               |
+|  +-------------------------------------------------------------------------+ |
+|  |                           CLIENT LAYER                                   | |
+|  |  +-----------+   +-----------+   +-----------+   +-----------+         | |
+|  |  | Web App   |   |Mobile App |   |Desktop App|   |Third-Party|         | |
+|  |  | (Browser) |   |(iOS/Andr.)|   | (Electron)|   |  Clients  |         | |
+|  |  +-----+-----+   +-----+-----+   +-----+-----+   +-----+-----+         | |
+|  +---------|-----------------|-----------------|-----------------+---------+ |
+|            |                 |                 |                 |           |
+|            +--------+--------+---------+-------+---------+-------+           |
+|                     |                                                        |
+|                     v  HTTPS                                                 |
+|  +-------------------------------------------------------------------------+ |
+|  |                         API GATEWAY LAYER                                | |
+|  |  +-------------------------------------------------------------------+  | |
+|  |  | * Load Balancing    * Rate Limiting    * Authentication           |  | |
+|  |  | * SSL Termination   * Request Routing  * API Versioning           |  | |
+|  |  +-------------------------------------------------------------------+  | |
+|  +----------------------------------+--------------------------------------+ |
+|                                     |                                        |
+|                                     v                                        |
+|  +-------------------------------------------------------------------------+ |
+|  |                        APPLICATION LAYER                                 | |
+|  |   +--------------+    +--------------+    +--------------+              | |
+|  |   |  Controller  |    |  Controller  |    |  Controller  |              | |
+|  |   |    (REST)    |    |  (GraphQL)   |    |  (WebSocket) |              | |
+|  |   +------+-------+    +------+-------+    +------+-------+              | |
+|  |          +-------------------+-------------------+                       | |
+|  |                              v                                           | |
+|  |   +--------------------------------------------------------------+      | |
+|  |   |                    SERVICE LAYER                              |      | |
+|  |   |  +----------+  +----------+  +----------+  +-----------+     |      | |
+|  |   |  |Service A |  |Service B |  |Service C |  | Service D |     |      | |
+|  |   |  |(Business)|  | (Domain) |  |(Workflow)|  |(Integratn)|     |      | |
+|  |   |  +----+-----+  +----+-----+  +----+-----+  +-----+-----+     |      | |
+|  |   +-------+-------------+-------------+---------------+----------+      | |
+|  +-----------|-------------|-------------|---------------|----------------+ |
+|              v             v             v               v                   |
+|  +-------------------------------------------------------------------------+ |
+|  |                         DATA ACCESS LAYER                                | |
+|  |  +----------+  +----------+  +----------+  +-------------------+        | |
+|  |  |Repository|  |Repository|  |Repository|  | External Client   |        | |
+|  |  |  (ORM)   |  | (Cache)  |  | (Search) |  |   (HTTP/gRPC)     |        | |
+|  |  +----+-----+  +----+-----+  +----+-----+  +---------+---------+        | |
+|  +-------|-------------|-------------|-------------------|----------------+ |
+|          v             v             v                   v                  |
+|  +-------------------------------------------------------------------------+ |
+|  |                        INFRASTRUCTURE LAYER                              | |
+|  |  +--------+  +--------+  +--------+  +--------+  +--------+             | |
+|  |  |Database|  | Cache  |  | Search |  | Queue  |  |External|             | |
+|  |  |(SQL/   |  |(Redis/ |  |(Elastic|  |(Rabbit/|  | APIs   |             | |
+|  |  | NoSQL) |  |Memcache|  | /Solr) |  | Kafka) |  |        |             | |
+|  |  +--------+  +--------+  +--------+  +--------+  +--------+             | |
+|  +-------------------------------------------------------------------------+ |
++===============================================================================+
 ```
 
-**Cross-Cutting Concerns:**
-```
-┌────────────────────────────────────────┐
-│       Logging & Monitoring             │  ← All layers emit structured logs
-├────────────────────────────────────────┤
-│       Exception Handling               │  ← Global error handler
-├────────────────────────────────────────┤
-│       Authentication/Authorization     │  ← JWT middleware
-├────────────────────────────────────────┤
-│       Validation                       │  ← FluentValidation on DTOs
-└────────────────────────────────────────┘
-```
+**Component Responsibilities:**
+| Layer | Responsibility | Technology Examples |
+|-------|---------------|---------------------|
+| **Client Layer** | User interface, user experience | Web (React, Vue), Mobile (Swift, Kotlin) |
+| **API Gateway** | Routing, auth, rate limiting, SSL | Kong, AWS API Gateway, NGINX |
+| **Application Layer** | Request handling, orchestration | Any web framework |
+| **Service Layer** | Business logic, domain rules | Language-agnostic services |
+| **Data Access Layer** | Data persistence, caching | ORM, Repository pattern |
+| **Infrastructure** | Storage, messaging, external APIs | Database, Cache, Queue |
 
-### 2.3 Data Flow
+---
 
-#### Create Entity Flow
-```
-┌──────┐   POST    ┌────────┐  Validate  ┌─────────┐  Create   ┌────────┐
-│Client│─────────▶│Controller│──────────▶│ Service │─────────▶│  Repo  │
-└──────┘   DTO     └────────┘   DTO      └─────────┘  Entity   └───┬────┘
-                                                                     │
-    ▲                                                                │ INSERT
-    │                                                                ▼
-    │                                                          ┌──────────┐
-    │                    JSON                                 │ Database │
-    │              ◀──────────────────────────────────────────│          │
-    │              Response DTO                               └──────────┘
-    │                                                                │
-    └────────────────────────────────────────────────────────────────┘
-                           201 Created
-```
-
-#### Read with Caching Flow
-```
-                    GET /api/entities/123
-┌──────┐              │              ┌────────┐
-│Client│─────────────▶│─────────────▶│Controller│
-└──────┘              │              └─────┬────┘
-                      │                    │
-    ▲                 │                    ▼
-    │                 │              ┌─────────┐     ┌───────┐
-    │                 │              │ Service │────▶│ Cache │
-    │                 │              └─────────┘     └───┬───┘
-    │                 │                    │             │
-    │                 │                    │       Cache Miss
-    │                 │                    ▼             │
-    │                 │              ┌──────────┐       │
-    │                 │              │   Repo   │◀──────┘
-    │                 │              └─────┬────┘
-    │                 │                    │ SELECT
-    │                 │                    ▼
-    │                 │              ┌──────────┐
-    │                 │              │ Database │
-    │                 │              └─────┬────┘
-    │                 │                    │
-    │                 │              Update Cache
-    │                 │                    │
-    └─────────────────┴────────────────────┘
-                200 OK + JSON
-```
-
-### 2.4 Technology Stack
-
-| Layer | Technology | Version | Purpose |
-|-------|------------|---------|---------|
-| **Frontend** | React | 18+ | UI components |
-| | TypeScript | 5+ | Type safety |
-| | Redux Toolkit | 2+ | State management |
-| **Backend** | ASP.NET Core | 8.0+ | Web API framework |
-| | C# | 12+ | Programming language |
-| | Kestrel | 8.0+ | Web server |
-| **Data** | PostgreSQL | 16+ | Primary database |
-| | Entity Framework Core | 8.0+ | ORM |
-| | Npgsql | 8.0+ | PostgreSQL driver |
-| **Caching** | Redis | 7+ | Distributed cache |
-| | StackExchange.Redis | 2.7+ | Redis client |
-| **Testing** | xUnit | 2.6+ | Test framework |
-| | Moq | 4.20+ | Mocking framework |
-| | FluentAssertions | 6.12+ | Assertion library |
-| **Security** | JWT | - | Authentication |
-| | Azure Key Vault | - | Secrets management |
-| | FluentValidation | 11+ | Input validation |
-| **Observability** | Serilog | 8+ | Structured logging |
-| | OpenTelemetry | 1.7+ | Distributed tracing |
-| | Prometheus | - | Metrics collection |
-| **DevOps** | Docker | 24+ | Containerization |
-| | GitHub Actions | - | CI/CD |
-| | Azure Container Apps | - | Hosting |
-
-### 2.5 Sequence Diagrams
-
-#### Sequence 1: User Registration Flow
+### 2.2 Sequence Diagram: User Authentication
 
 ```
-Actor: User
-Client: React App
-API: API Gateway
-Auth: AuthService
-Email: EmailService
-DB: Database
-
-User          Client        API         Auth        Email         DB
-  │              │            │           │            │           │
-  │─Create Acc──▶│            │           │            │           │
-  │              │            │           │            │           │
-  │              │─POST /auth/register──▶│            │           │
-  │              │   {email,pwd}         │            │           │
-  │              │            │           │            │           │
-  │              │            │──Validate──▶           │           │
-  │              │            │           │            │           │
-  │              │            │           │──Check Email──────────▶│
-  │              │            │           │            │           │
-  │              │            │           │◀─No Duplicate──────────│
-  │              │            │           │            │           │
-  │              │            │           │──Hash Password         │
-  │              │            │           │            │           │
-  │              │            │           │──Create User──────────▶│
-  │              │            │           │            │           │
-  │              │            │           │◀─User Created──────────│
-  │              │            │           │            │           │
-  │              │            │           │──Send Welcome Email───▶│
-  │              │            │           │            │           │
-  │              │            │◀─User DTO─│            │           │
-  │              │            │           │            │           │
-  │              │◀─201 Created, JWT Token─           │           │
-  │              │            │           │            │           │
-  │◀─Success────│            │           │            │           │
-  │  Redirect    │            │           │            │           │
-  │              │            │           │            │           │
++-----------------------------------------------------------------------------+
+|                        AUTHENTICATION SEQUENCE                               |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  User        Client       Gateway      AuthService    UserStore    TokenStore|
+|   |            |            |              |             |            |      |
+|   |--Login---->|            |              |             |            |      |
+|   |  (creds)   |            |              |             |            |      |
+|   |            |            |              |             |            |      |
+|   |            |--POST /auth/login-------->|             |            |      |
+|   |            |   {email, password}       |             |            |      |
+|   |            |            |              |             |            |      |
+|   |            |            |--------------|-Validate--->|            |      |
+|   |            |            |              |  Creds      |            |      |
+|   |            |            |              |             |            |      |
+|   |            |            |              |<--User------|            |      |
+|   |            |            |              |   Data      |            |      |
+|   |            |            |              |             |            |      |
+|   |            |            |              |--Generate---------------->|      |
+|   |            |            |              |  Tokens                  |      |
+|   |            |            |              |                          |      |
+|   |            |            |              |<--Access + Refresh-------|      |
+|   |            |            |              |   Tokens                 |      |
+|   |            |            |              |             |            |      |
+|   |            |<-200 OK + Tokens----------|             |            |      |
+|   |            |   {accessToken,          |             |            |      |
+|   |            |    refreshToken,         |             |            |      |
+|   |            |    expiresIn}            |             |            |      |
+|   |            |            |              |             |            |      |
+|   |<-Success---|            |              |             |            |      |
+|   |  (redirect)|            |              |             |            |      |
+|                                                                              |
++------------------------------------------------------------------------------+
 ```
 
-#### Sequence 2: Authenticated API Request with Caching
+---
+
+### 2.3 Sequence Diagram: CRUD Operations
 
 ```
-Client        Gateway      Controller   Service      Cache       Repo        DB
-  │              │              │           │           │          │          │
-  │─GET /api/entities/123───────────────────────────────────────────────────▶│
-  │  + JWT       │              │           │           │          │          │
-  │              │              │           │           │          │          │
-  │              │─Validate JWT─│           │           │          │          │
-  │              │              │           │           │          │          │
-  │              │──────────────│─GetById──▶│           │          │          │
-  │              │              │           │           │          │          │
-  │              │              │           │──Check Cache───────▶│          │
-  │              │              │           │           │          │          │
-  │              │              │           │◀─Cache Miss─────────│          │
-  │              │              │           │           │          │          │
-  │              │              │           │────────────────────▶│─SELECT──▶│
-  │              │              │           │           │          │          │
-  │              │              │           │           │          │◀─Entity─│
-  │              │              │           │           │          │          │
-  │              │              │           │◀─Entity─────────────│          │
-  │              │              │           │           │          │          │
-  │              │              │           │──Update Cache──────▶│          │
-  │              │              │           │           │          │          │
-  │              │              │◀─Entity DTO           │          │          │
-  │              │              │           │           │          │          │
-  │◀─200 OK, JSON───────────────────────────────────────────────────────────│
-  │              │              │           │           │          │          │
++-----------------------------------------------------------------------------+
+|                          CRUD OPERATIONS SEQUENCE                            |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  Client      Controller     Service      Repository     Cache     Database   |
+|    |             |            |              |            |          |       |
+|    |============ CREATE =====================================================|
+|    |             |            |              |            |          |       |
+|    |--POST------>|            |              |            |          |       |
+|    |   {data}    |            |              |            |          |       |
+|    |             |--Create--->|              |            |          |       |
+|    |             |            |--Validate--->|            |          |       |
+|    |             |            |              |--INSERT-------------->|       |
+|    |             |            |              |<-Entity---------------|       |
+|    |             |            |              |--Invalidate->         |       |
+|    |             |            |<-Entity------|            |          |       |
+|    |             |<-201-------|              |            |          |       |
+|    |<-Created----|            |              |            |          |       |
+|    |             |            |              |            |          |       |
+|    |============ READ =======================================================|
+|    |             |            |              |            |          |       |
+|    |--GET------->|            |              |            |          |       |
+|    |   /{id}     |            |              |            |          |       |
+|    |             |--GetById-->|              |            |          |       |
+|    |             |            |--Get-------->|            |          |       |
+|    |             |            |              |--Check---->|          |       |
+|    |             |            |              |<-Hit/Miss--|          |       |
+|    |             |            |              |--(if miss)----------->|       |
+|    |             |            |              |<-Data-----------------|       |
+|    |             |            |              |--Update--->|          |       |
+|    |             |            |<-Entity------|            |          |       |
+|    |             |<-200-------|              |            |          |       |
+|    |<-Entity-----|            |              |            |          |       |
+|    |             |            |              |            |          |       |
+|    |============ UPDATE =====================================================|
+|    |             |            |              |            |          |       |
+|    |--PUT------->|            |              |            |          |       |
+|    |   {data}    |            |              |            |          |       |
+|    |             |--Update--->|              |            |          |       |
+|    |             |            |--Validate--->|            |          |       |
+|    |             |            |              |--UPDATE-------------->|       |
+|    |             |            |              |<-Entity---------------|       |
+|    |             |            |              |--Invalidate->         |       |
+|    |             |            |<-Entity------|            |          |       |
+|    |             |<-200-------|              |            |          |       |
+|    |<-Updated----|            |              |            |          |       |
+|    |             |            |              |            |          |       |
+|    |============ DELETE =====================================================|
+|    |             |            |              |            |          |       |
+|    |--DELETE---->|            |              |            |          |       |
+|    |   /{id}     |            |              |            |          |       |
+|    |             |--Delete--->|              |            |          |       |
+|    |             |            |--Remove----->|            |          |       |
+|    |             |            |              |--DELETE-------------->|       |
+|    |             |            |              |<-Success--------------|       |
+|    |             |            |              |--Invalidate->         |       |
+|    |             |            |<-Success-----|            |          |       |
+|    |             |<-204-------|              |            |          |       |
+|    |<-NoContent--|            |              |            |          |       |
+|                                                                              |
++------------------------------------------------------------------------------+
 ```
 
-### 2.6 Class Diagrams
+---
 
-#### Domain Model Class Diagram
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Domain Model                            │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────────────┐           ┌─────────────────────┐│
-│  │      Entity          │           │    RelatedEntity    ││
-│  ├──────────────────────┤           ├─────────────────────┤│
-│  │ - Id: Guid           │◀──────────│ - Id: Guid          ││
-│  │ - Name: string       │ 1      * │ - EntityId: Guid    ││
-│  │ - Description: string│           │ - Value: string     ││
-│  │ - Status: EntityStatus           │ - CreatedAt: DateTime││
-│  │ - CreatedAt: DateTime│           └─────────────────────┘│
-│  │ - UpdatedAt: DateTime│                                  │
-│  │ - Related: List<RelatedEntity>                          │
-│  ├──────────────────────┤                                  │
-│  │ + Validate()         │                                  │
-│  │ + Activate()         │                                  │
-│  │ + Archive()          │                                  │
-│  └──────────────────────┘                                  │
-│           △                                                 │
-│           │ inherits                                        │
-│           │                                                 │
-│  ┌──────────────────────┐                                  │
-│  │   BaseEntity         │                                  │
-│  ├──────────────────────┤                                  │
-│  │ - Id: Guid           │                                  │
-│  │ - CreatedAt: DateTime│                                  │
-│  │ - UpdatedAt: DateTime│                                  │
-│  │ - IsDeleted: bool    │                                  │
-│  └──────────────────────┘                                  │
-│                                                              │
-│  ┌──────────────────────┐                                  │
-│  │   EntityStatus       │                                  │
-│  │   (Enum)             │                                  │
-│  ├──────────────────────┤                                  │
-│  │ Draft = 0            │                                  │
-│  │ Active = 1           │                                  │
-│  │ Completed = 2        │                                  │
-│  │ Archived = 3         │                                  │
-│  └──────────────────────┘                                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-#### Service Layer Class Diagram
+### 2.4 Class/Interface Diagram: Domain Model
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                       Service Layer                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌───────────────────────────┐                                  │
-│  │   <<interface>>           │                                  │
-│  │   IEntityService          │                                  │
-│  ├───────────────────────────┤                                  │
-│  │ + GetAllAsync(): Task<IEnumerable<EntityDto>>               │
-│  │ + GetByIdAsync(id): Task<EntityDto>                         │
-│  │ + CreateAsync(dto): Task<EntityDto>                         │
-│  │ + UpdateAsync(id, dto): Task<EntityDto>                     │
-│  │ + DeleteAsync(id): Task<bool>                               │
-│  └───────────────┬───────────┘                                  │
-│                  △                                               │
-│                  │ implements                                    │
-│                  │                                               │
-│  ┌───────────────┴───────────┐         ┌────────────────────┐  │
-│  │   EntityService           │────────▶│ <<interface>>      │  │
-│  ├───────────────────────────┤  uses   │ IEntityRepository  │  │
-│  │ - _repository             │         └────────────────────┘  │
-│  │ - _logger                 │                                  │
-│  │ - _cache                  │         ┌────────────────────┐  │
-│  │ - _validator              │────────▶│ <<interface>>      │  │
-│  ├───────────────────────────┤  uses   │ IValidator         │  │
-│  │ + GetAllAsync()           │         └────────────────────┘  │
-│  │ + GetByIdAsync(id)        │                                  │
-│  │ + CreateAsync(dto)        │         ┌────────────────────┐  │
-│  │ + UpdateAsync(id, dto)    │────────▶│ IDistributedCache  │  │
-│  │ + DeleteAsync(id)         │  uses   │ (Redis)            │  │
-│  │ - ValidateAsync(dto)      │         └────────────────────┘  │
-│  │ - InvalidateCacheAsync()  │                                  │
-│  └───────────────────────────┘                                  │
-└─────────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------------------+
+|                              DOMAIN MODEL                                    |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|   +-------------------------+                                                |
+|   |    <<abstract>>         |                                                |
+|   |      BaseEntity         |                                                |
+|   +-------------------------+                                                |
+|   | - id: UUID              |                                                |
+|   | - createdAt: DateTime   |                                                |
+|   | - updatedAt: DateTime   |                                                |
+|   | - version: Integer      |                                                |
+|   +-------------------------+                                                |
+|   | + getId(): UUID         |                                                |
+|   | + getCreatedAt()        |                                                |
+|   | + getUpdatedAt()        |                                                |
+|   +-----------+-------------+                                                |
+|               |                                                              |
+|               | extends                                                      |
+|               v                                                              |
+|   +-----------+-------------+         +-------------------------+            |
+|   |        Entity           |         |     RelatedEntity       |            |
+|   +-------------------------+         +-------------------------+            |
+|   | - name: String          |<------->| - entityId: UUID        |            |
+|   | - description: String   | 1    *  | - type: String          |            |
+|   | - status: Status        |         | - value: Any            |            |
+|   | - metadata: Map         |         | - order: Integer        |            |
+|   +-------------------------+         +-------------------------+            |
+|   | + validate(): Boolean   |         | + getEntity(): Entity   |            |
+|   | + activate(): void      |         | + getValue(): Any       |            |
+|   | + deactivate(): void    |         +-------------------------+            |
+|   | + addRelated(r): void   |                                                |
+|   | + removeRelated(r): void|                                                |
+|   +-------------------------+                                                |
+|                                                                              |
+|   +-------------------------+                                                |
+|   |     <<enumeration>>     |                                                |
+|   |        Status           |                                                |
+|   +-------------------------+                                                |
+|   | DRAFT                   |                                                |
+|   | ACTIVE                  |                                                |
+|   | INACTIVE                |                                                |
+|   | ARCHIVED                |                                                |
+|   +-------------------------+                                                |
+|                                                                              |
++------------------------------------------------------------------------------+
 ```
+
+---
+
+### 2.5 Class/Interface Diagram: Service Layer
+
+```
++-----------------------------------------------------------------------------+
+|                           SERVICE LAYER                                      |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|   +-------------------------------+                                          |
+|   |       <<interface>>           |                                          |
+|   |       IEntityService          |                                          |
+|   +-------------------------------+                                          |
+|   | + getAll(filter): List<Entity>|                                          |
+|   | + getById(id): Entity         |                                          |
+|   | + create(dto): Entity         |                                          |
+|   | + update(id, dto): Entity     |                                          |
+|   | + delete(id): Boolean         |                                          |
+|   | + search(query): List<Entity> |                                          |
+|   +---------------+---------------+                                          |
+|                   |                                                          |
+|                   | implements                                               |
+|                   v                                                          |
+|   +---------------+---------------+       +-------------------------+        |
+|   |       EntityService           |       |    <<interface>>        |        |
+|   +-------------------------------+       |    IEntityRepository    |        |
+|   | - repository: IEntityRepository       +-------------------------+        |
+|   | - cache: ICacheService        |------>| + findAll(): List      |        |
+|   | - validator: IValidator       |       | + findById(id): Entity |        |
+|   | - logger: ILogger             |       | + save(entity): Entity |        |
+|   +-------------------------------+       | + update(entity): Entity|       |
+|   | + getAll(filter): List<Entity>|       | + delete(id): Boolean  |        |
+|   | + getById(id): Entity         |       +-------------------------+        |
+|   | + create(dto): Entity         |                                          |
+|   | + update(id, dto): Entity     |       +-------------------------+        |
+|   | + delete(id): Boolean         |       |    <<interface>>        |        |
+|   | + search(query): List<Entity> |       |    ICacheService        |        |
+|   | - validateEntity(dto): void   |------>+-------------------------+        |
+|   | - invalidateCache(id): void   |       | + get(key): Any        |        |
+|   +-------------------------------+       | + set(key, value, ttl) |        |
+|                                           | + delete(key): Boolean |        |
+|                                           | + invalidate(pattern)  |        |
+|                                           +-------------------------+        |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
+
+---
+
+### 2.6 Dependency Injection Diagram
+
+```
++-----------------------------------------------------------------------------+
+|                      DEPENDENCY INJECTION CONTAINER                          |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  +-----------------------------------------------------------------------+  |
+|  |                        SCOPED (Per Request)                           |  |
+|  |  +----------------------------------------------------------------+   |  |
+|  |  |                                                                 |   |  |
+|  |  |   Controller -----> IEntityService -----> IEntityRepository    |   |  |
+|  |  |        |                    |                       |           |   |  |
+|  |  |        v                    v                       v           |   |  |
+|  |  |   EntityController    EntityService         EntityRepository   |   |  |
+|  |  |                                                     |           |   |  |
+|  |  |                                                     v           |   |  |
+|  |  |                                              DbContext          |   |  |
+|  |  |                                                                 |   |  |
+|  |  +----------------------------------------------------------------+   |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                              |
+|  +-----------------------------------------------------------------------+  |
+|  |                     SINGLETON (Application Lifetime)                  |  |
+|  |  +----------------------------------------------------------------+   |  |
+|  |  |                                                                 |   |  |
+|  |  |   ICacheService -----> RedisCacheService                       |   |  |
+|  |  |                              |                                  |   |  |
+|  |  |                              v                                  |   |  |
+|  |  |                       RedisConnection                          |   |  |
+|  |  |                                                                 |   |  |
+|  |  |   ILogger<T> --------> Logger (Structured Logging)             |   |  |
+|  |  |                                                                 |   |  |
+|  |  |   IConfiguration ----> ConfigurationRoot                       |   |  |
+|  |  |                                                                 |   |  |
+|  |  +----------------------------------------------------------------+   |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                              |
+|  +-----------------------------------------------------------------------+  |
+|  |                      TRANSIENT (New Instance Each Time)               |  |
+|  |  +----------------------------------------------------------------+   |  |
+|  |  |                                                                 |   |  |
+|  |  |   IValidator<T> -----> EntityValidator                         |   |  |
+|  |  |                                                                 |   |  |
+|  |  |   IHttpClientFactory -> HttpClient (per external service)      |   |  |
+|  |  |                                                                 |   |  |
+|  |  +----------------------------------------------------------------+   |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
+
 
 ---
 
@@ -401,22 +384,21 @@ Client        Gateway      Controller   Service      Cache       Repo        DB
 
 ### 3.1 Endpoints
 
-| Method | Endpoint | Description | Auth Required | Rate Limit |
-|--------|----------|-------------|---------------|------------|
-| GET | `/api/v1/{resource}` | List all {resources} | Yes | 100/min |
-| GET | `/api/v1/{resource}/{id}` | Get single {resource} | Yes | 200/min |
-| POST | `/api/v1/{resource}` | Create {resource} | Yes | 50/min |
-| PUT | `/api/v1/{resource}/{id}` | Update {resource} | Yes | 50/min |
-| DELETE | `/api/v1/{resource}/{id}` | Delete {resource} | Yes | 20/min |
+| Method | Endpoint | Description | Auth | Rate Limit |
+|--------|----------|-------------|------|------------|
+| GET | `/api/v1/{resource}` | List all resources | Yes | 100/min |
+| GET | `/api/v1/{resource}/{id}` | Get single resource | Yes | 200/min |
+| POST | `/api/v1/{resource}` | Create resource | Yes | 50/min |
+| PUT | `/api/v1/{resource}/{id}` | Update resource | Yes | 50/min |
+| PATCH | `/api/v1/{resource}/{id}` | Partial update | Yes | 50/min |
+| DELETE | `/api/v1/{resource}/{id}` | Delete resource | Yes | 20/min |
 
-### 3.2 API Contracts
+### 3.2 Request/Response Contracts
 
-#### Endpoint: POST /api/v1/{resource}
-
-**Description**: {What this endpoint does}
+#### POST /api/v1/{resource}
 
 **Request Headers:**
-```http
+```
 Content-Type: application/json
 Authorization: Bearer {jwt-token}
 X-Request-ID: {uuid}
@@ -425,420 +407,324 @@ X-Request-ID: {uuid}
 **Request Body:**
 ```json
 {
-  "field1": "string",
-  "field2": 123,
-  "field3": {
-    "nestedField": "value"
+  "name": "string (required, max 255)",
+  "description": "string (optional)",
+  "status": "DRAFT | ACTIVE | INACTIVE",
+  "metadata": {
+    "key": "value"
   }
 }
 ```
-
-**Request Validation:**
-- `field1`: Required, max 255 characters
-- `field2`: Required, range 0-1000
-- `field3.nestedField`: Optional
 
 **Response (201 Created):**
 ```json
 {
   "id": "uuid",
-  "field1": "string",
-  "field2": 123,
-  "field3": {
-    "nestedField": "value"
-  },
-  "createdAt": "2026-01-22T12:00:00Z",
-  "updatedAt": "2026-01-22T12:00:00Z"
+  "name": "string",
+  "description": "string",
+  "status": "DRAFT",
+  "createdAt": "2026-01-27T12:00:00Z",
+  "updatedAt": "2026-01-27T12:00:00Z"
 }
 ```
 
-**Error Responses:**
+### 3.3 Error Responses
 
-**400 Bad Request:**
-```json
-{
-  "error": "ValidationError",
-  "message": "field1 is required",
-  "details": {
-    "field": "field1",
-    "constraint": "required"
-  },
-  "requestId": "uuid"
-}
 ```
-
-**401 Unauthorized:**
-```json
-{
-  "error": "Unauthorized",
-  "message": "Invalid or expired token",
-  "requestId": "uuid"
-}
-```
-
-**429 Too Many Requests:**
-```json
-{
-  "error": "RateLimitExceeded",
-  "message": "Rate limit exceeded. Retry after 60 seconds",
-  "retryAfter": 60,
-  "requestId": "uuid"
-}
-```
-
-**500 Internal Server Error:**
-```json
-{
-  "error": "InternalError",
-  "message": "An unexpected error occurred",
-  "requestId": "uuid"
-}
++-----------------------------------------------------------------------------+
+|                           ERROR RESPONSE FORMAT                              |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  400 Bad Request              |  401 Unauthorized                           |
+|  +-------------------------+  |  +-------------------------+                |
+|  | {                       |  |  | {                       |                |
+|  |   "error": "Validation",|  |  |   "error": "Unauthorized|                |
+|  |   "message": "...",     |  |  |   "message": "Invalid   |                |
+|  |   "details": {          |  |  |     token",             |                |
+|  |     "field": "name",    |  |  |   "requestId": "uuid"   |                |
+|  |     "reason": "required"|  |  | }                       |                |
+|  |   },                    |  |  +-------------------------+                |
+|  |   "requestId": "uuid"   |  |                                             |
+|  | }                       |  |  403 Forbidden                              |
+|  +-------------------------+  |  +-------------------------+                |
+|                               |  | {                       |                |
+|  404 Not Found                |  |   "error": "Forbidden", |                |
+|  +-------------------------+  |  |   "message": "Access    |                |
+|  | {                       |  |  |     denied",            |                |
+|  |   "error": "NotFound",  |  |  |   "requestId": "uuid"   |                |
+|  |   "message": "Resource  |  |  | }                       |                |
+|  |     not found",         |  |  +-------------------------+                |
+|  |   "requestId": "uuid"   |  |                                             |
+|  | }                       |  |  500 Internal Server Error                  |
+|  +-------------------------+  |  +-------------------------+                |
+|                               |  | {                       |                |
+|  429 Too Many Requests        |  |   "error": "Internal",  |                |
+|  +-------------------------+  |  |   "message": "An error  |                |
+|  | {                       |  |  |     occurred",          |                |
+|  |   "error": "RateLimit", |  |  |   "requestId": "uuid"   |                |
+|  |   "message": "Too many  |  |  | }                       |                |
+|  |     requests",          |  |  +-------------------------+                |
+|  |   "retryAfter": 60,     |  |                                             |
+|  |   "requestId": "uuid"   |  |                                             |
+|  | }                       |  |                                             |
+|  +-------------------------+  |                                             |
+|                                                                              |
++------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 4. Data Models Diagrams
+## 4. Data Model Diagrams
 
 ### 4.1 Entity Relationship Diagram (ERD)
 
 ```
-┌────────────────────────────────────────────────────────────────────┐
-│                    Database Schema (ERD)                           │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────────────────┐          ┌──────────────────────────┐│
-│  │     entity_names         │          │   related_entities       ││
-│  ├─────────────────────────┤          ├──────────────────────────┤│
-│  │ PK  id (UUID)           │◀─────────│ FK  entity_id (UUID)     ││
-│  │     name (VARCHAR)      │  1    * │ PK  id (UUID)            ││
-│  │     description (TEXT)  │          │     value (VARCHAR)      ││
-│  │     status (VARCHAR)    │          │     created_at (TIMESTAMP)││
-│  │     created_at (TIMESTAMP)         │                          ││
-│  │     updated_at (TIMESTAMP)         └──────────────────────────┘│
-│  └─────────────────────────┘                                      │
-│                                                                     │
-│  Indexes:                                                          │
-│  - idx_entity_names_status ON entity_names(status)                │
-│  - idx_entity_names_created_at ON entity_names(created_at DESC)   │
-│  - idx_related_entities_entity_id ON related_entities(entity_id)  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------------------+
+|                          DATABASE SCHEMA (ERD)                               |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  +-------------------------+          +---------------------------+          |
+|  |      entities           |          |    related_entities       |          |
+|  +-------------------------+          +---------------------------+          |
+|  | PK  id (UUID)           |<-------->| FK  entity_id (UUID)      |          |
+|  |     name (VARCHAR 255)  | 1      * | PK  id (UUID)             |          |
+|  |     description (TEXT)  |          |     type (VARCHAR 50)     |          |
+|  |     status (VARCHAR 20) |          |     value (JSONB)         |          |
+|  |     metadata (JSONB)    |          |     sort_order (INTEGER)  |          |
+|  |     created_at (TIMESTAMP)         |     created_at (TIMESTAMP)|          |
+|  |     updated_at (TIMESTAMP)         +---------------------------+          |
+|  |     version (INTEGER)   |                                                 |
+|  +-------------------------+                                                 |
+|                                                                              |
+|  INDEXES:                                                                    |
+|  - idx_entities_status ON entities(status)                                   |
+|  - idx_entities_created_at ON entities(created_at DESC)                      |
+|  - idx_entities_name ON entities(name) [for search]                          |
+|  - idx_related_entity_id ON related_entities(entity_id)                      |
+|                                                                              |
+|  CONSTRAINTS:                                                                |
+|  - fk_related_entity FOREIGN KEY (entity_id) REFERENCES entities(id)        |
+|  - chk_status CHECK (status IN ('DRAFT','ACTIVE','INACTIVE','ARCHIVED'))    |
+|                                                                              |
++------------------------------------------------------------------------------+
 ```
 
-### 4.2 Domain Model: {EntityName}
+### 4.2 Database Schema Table
 
-
-
-### 4.2 Database Schema
-
-**Table: `entity_names`**
-| Column Name  | Data Type    | Constraints                     | Description                      |
-
-**Migration:**
-
-
-### 5.1 Service Architecture
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                      Service Layer Architecture                    │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  Controller Layer                                                  │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │  EntityController                                            │  │
-│  │  - Handles HTTP requests                                     │  │
-│  │  - Maps DTOs                                                 │  │
-│  │  - Returns HTTP responses                                    │  │
-│  └──4───────────────────┬──────────────────────────────────────┘  │
-│                         │                                          │
-│                         │ calls                                    │
-│                         ▼                                          │
-│  Service Layer                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │  IEntityService (Interface)                                  │  │
-│  │  ├─ GetAllAsync()                                            │  │
-│  │  ├─ GetByIdAsync(id)                                         │  │
-│  │  ├─ CreateAsync(dto)                                         │  │
-│  │  ├─ UpdateAsync(id, dto)                                     │  │
-│  │  └─ DeleteAsync(id)                                          │  │
-│  │                                                               │  │
-│  │  EntityService (Implementation)                              │  │
-│  │  - Business logic                                            │  │
-│  │  - Validation                                                │  │
-│  │  - Caching                                                   │  │
-│  │  - Error handling                                            │  │
-│  └──────────────────────┬──────────────────────────────────────┘  │
-│                         │                                          │
-│                         │ calls                                    │
-│                         ▼                                          │
-│  Repository Layer                                                  │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │  IEntityRepository (Interface)                               │  │
-│  │  ├─ GetAllAsync()                                            │  │
-│  │  ├─ GetByIdAsync(id)                                         │  │
-│  │  ├─ AddAsync(entity)                                         │  │
-│  │  ├─ UpdateAsync(entity)                                      │  │
-│  │  └─ DeleteAsync(id)                                          │  │
-│  │           Diagrams
-
-### 6.1 Authentication Flow
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                    JWT Authentication Flow                          │
-├─────5 Secrets Management
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                    Secrets Management Flow                         │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  Development Environment:                                          │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │  User Secrets (dotnet user-secrets)                          │  │
-│  │  7 SQL Injection Prevention
-- **Method**: Parameterized queries via Entity Framework Core
-- **Never**: String concatenation in queries
-- **Validation**: All IDs validated before queries
-
-### 6.8  • Database connection strings                        │   │  │
-│  │  │  • JWT signing keys                                   │   │  │
-│  │  │  • API keys (third-party)                            │   │  │
-│  │  │  • Redis connection string                            │   │  │
-│  │  └──────────────────────────────────────────────────────┘   │  │
-│  │                         │                                     │  │
-│  │                         │ Retrieved at runtime               │  │
-│  │                         ▼                                     │  │
-│  │  ┌──────────────────────────────────────────────────────┐   │  │
-│  │  │  Application (ASP.NET Core)                           │   │  │
-│  │  │  • Managed identity authentication                    │   │  │
-│  │  │  • No secrets in code/config                          │   │  │
-│  │  └──────────────────────────────────────────────────────┘   │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 6.6─────┘   {email, password}   └──────┬──────┘                 │
-│                                           │                         │
-│                                           │ Validate credentials    │
-│                                           ▼                         │
-│                                    ┌─────────────┐                 │
-│                                    │  Database   │                 │
-│                                    └──────┬──────┘                 │
-│                                           │                         │
-│                                           │ User found              │
-│                                           ▼                         │
-│  ┌────────┐   200 OK + JWT Token  ┌─────────────┐                │
-│  │ Client │◀──────────────────────│ AuthService │                 │
-│  └────────┘                        └─────────────┘                 │
-│                                                                     │
-│  Step 2: Authenticated Request                                     │
-│  ┌────────┐   GET /api/resource   ┌────────────────┐             │
-│  │ Client │──────────────────────▶│ JWT Middleware │              │
-│  └────────┘   Header: Authorization└────────┬───────┘             │
-│                Bearer {token}               │                      │
-│                                             │ Validate token       │
-│                                             │ Extract claims       │
-│                                             ▼                      │
-│                                      ┌──────────────┐              │
-│                                      │  Controller  │              │
-│                                      │  (Authorized)│              │
-│                                      └──────────────┘              │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 6.2 Authorization Model
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                Role-Based Access Control (RBAC)                    │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │                       User                                   │  │
-│  │                         │                                    │  │
-│  │                         │ has role                           │  │
-│  │                         ▼                                    │  │
-│  │               ┌─────────────────┐                           │  │
-│  │               │      Role       │                           │  │
-│  │               ├─────────────────┤                           │  │
-│  │               │ • Admin         │ ──▶ Full access           │  │
-│  │               │ • User          │ ──▶ Read/Write own data   │  │
-│  │               │ • Guest         │ ──▶ Read only             │  │
-│  │               └─────────────────┘                           │  │
-│  │                         │                                    │  │
-│  │                         │ has permissions                    │  │
-│  │                         ▼                                    │  │
-│  │         ┌──────────────────────────────────┐               │  │
-│  │         │        Permissions               │               │  │
-│  │         ├──────────────────────────────────┤               │  │
-│  │         │ Admin:                           │               │  │
-│  │         │  • entities:read                 │               │  │
-│  │         │  • entities:write                │               │  │
-│  │         │  • entities:delete               │               │  │
-│  │         │  • users:manage                  │               │  │
-│  │         │                                  │               │  │
-│  │         │ User:                            │               │  │
-│  │         │  • entities:read (own)           │               │  │
-│  │         │  • entities:write (own)          │               │  │
-│  │         │                                  │               │  │
-│  │         │ Guest:                           │               │  │
-│  │         │  • entities:read                 │               │  │
-│  │         └──────────────────────────────────┘               │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-**Authentication Details:**
-- **Method**: JWT Bearer tokens
-- **Token expiry**: 1 hour (access), 7 days (refresh)
-- **Token storage**: HttpOnly cookies (refresh), memory (access)
-
-### 6.3 Security Layers
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                    Defense in Depth Strategy                       │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  Layer 1: Network Security                                         │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ • HTTPS only (TLS 1.3)                                       │  │
-│  │ • Firewall rules                                             │  │
-│  │ • DDoS protection                                            │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                          ▼                                          │
-│  Layer 2: Application Gateway                                      │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ • Rate limiting                                              │  │
-│  │ • CORS policy                                                │  │
-│  │ • Security headers                                           │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                          ▼                                          │
-│  Layer 3: Authentication                                           │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ • JWT validation                                             │  │
-│  │ • Token expiration                                           │  │
-│  │ • Multi-factor authentication (optional)                     │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                          ▼                                          │
-│  Layer 4: Authorization                                            │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ • Role-based access control                                  │  │
-│  │ • Resource ownership checks                                  │  │
-│  │ • Permission validation                                      │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                          ▼                                          │
-│  Layer 5: Input Validation                                         │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ • FluentValidation rules                                     │  │
-│  │ • Data sanitization                                          │  │
-│  │ • Type checking                                              │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                          ▼                                          │
-│  Layer 6: Data Access                                              │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ • Parameterized queries                                      │  │
-│  │ • ORM (Entity Framework)                                     │  │
-│  │ • SQL injection prevention                                   │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                          ▼                                          │
-│  Layer 7: Data Storage                                             │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ • Encryption at rest                                         │  │
-│  │ • Access controls                                            │  │
-│  │ • Backup encryption                                          │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 6.4 Input Validss                                               │  │
-│  │  - Query execution                                           │  │
-│  │  - Transaction management                                    │  │
-│  └──────────────────────┬──────────────────────────────────────┘  │
-│                         │                                          │
-│                         │ queries                                  │
-│                         ▼                                          │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │                    Database (PostgreSQL)                     │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.2 Dependency Injection Graph
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Dependency Injection Container                   │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  Scoped (per request):                                              │
-│  ┌────────────────────────────────────────────────────────────┐    │
-│  │  EntityController                                           │    │
-│  │    ↓ injects                                                │    │
-│  │  IEntityService → EntityService                             │    │
-│  │    ↓ injects                                                │    │
-│  │  IEntityRepository → EntityRepository                       │    │
-│  │    ↓ injects                                                │    │
-│  │  ApplicationDbContext                                       │    │
-│  └────────────────────────────────────────────────────────────┘    │
-│                                                                      │
-│  Singleton (app lifetime):                                          │
-│  ┌────────────────────────────────────────────────────────────┐    │
-│  │  IDistributedCache → RedisCache                             │    │
-│  │  ILogger<T> → SerilogLogger                                 │    │
-│  │  IValidator<T> → FluentValidator                            │    │
-│  └────────────────────────────────────────────────────────────┘    │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-
-
-## 5. Service Layer
-
-### 5.1 Interface
-
-
-
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK, NOT NULL | Unique identifier |
+| name | VARCHAR(255) | NOT NULL | Entity name |
+| description | TEXT | NULLABLE | Optional description |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'DRAFT' | Status enum |
+| metadata | JSONB | NULLABLE | Flexible metadata |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Creation timestamp |
+| updated_at | TIMESTAMP | NOT NULL | Last update timestamp |
+| version | INTEGER | NOT NULL, DEFAULT 1 | Optimistic lock version |
 
 
 ---
 
-## 6. Security
+## 5. Service Layer Diagrams
 
-### 6.1 Authentication
-- **Method**: JWT Bearer tokens
-- **Token expiry**: 1 hour (access), 7 days (refresh)
-- **Token storage**: HttpOnly cookies (refresh), memory (access)
+### 5.1 Service Architecture
 
-### 6.2 Authorization
-- **Model**: Role-Based Access Control (RBAC)
-- **Roles**: Admin, User, Guest
-- **Permissions**: Defined per endpoint (see API table)
+```
++-----------------------------------------------------------------------------+
+|                         SERVICE LAYER ARCHITECTURE                           |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  +-----------------------------------------------------------------------+  |
+|  |                         CONTROLLER LAYER                              |  |
+|  |  +-------------------+                                                |  |
+|  |  | EntityController  |                                                |  |
+|  |  | - Handles HTTP    |                                                |  |
+|  |  | - Maps DTOs       |                                                |  |
+|  |  | - Returns responses                                                |  |
+|  |  +--------+----------+                                                |  |
+|  +-----------|-----------------------------------------------------------+  |
+|              | calls                                                        |
+|              v                                                              |
+|  +-----------------------------------------------------------------------+  |
+|  |                         SERVICE LAYER                                 |  |
+|  |  +-------------------+                                                |  |
+|  |  | IEntityService    | <<interface>>                                  |  |
+|  |  | - getAll()        |                                                |  |
+|  |  | - getById(id)     |                                                |  |
+|  |  | - create(dto)     |                                                |  |
+|  |  | - update(id, dto) |                                                |  |
+|  |  | - delete(id)      |                                                |  |
+|  |  +--------+----------+                                                |  |
+|  |           |                                                           |  |
+|  |           | implements                                                |  |
+|  |           v                                                           |  |
+|  |  +-------------------+                                                |  |
+|  |  | EntityService     |                                                |  |
+|  |  | - Business logic  |                                                |  |
+|  |  | - Validation      |                                                |  |
+|  |  | - Caching         |                                                |  |
+|  |  | - Error handling  |                                                |  |
+|  |  +--------+----------+                                                |  |
+|  +-----------|-----------------------------------------------------------+  |
+|              | calls                                                        |
+|              v                                                              |
+|  +-----------------------------------------------------------------------+  |
+|  |                        REPOSITORY LAYER                               |  |
+|  |  +-------------------+                                                |  |
+|  |  | IEntityRepository | <<interface>>                                  |  |
+|  |  | - findAll()       |                                                |  |
+|  |  | - findById(id)    |                                                |  |
+|  |  | - save(entity)    |                                                |  |
+|  |  | - update(entity)  |                                                |  |
+|  |  | - delete(id)      |                                                |  |
+|  |  +--------+----------+                                                |  |
+|  +-----------|-----------------------------------------------------------+  |
+|              | queries                                                      |
+|              v                                                              |
+|  +-----------------------------------------------------------------------+  |
+|  |                           DATABASE                                    |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
 
-### 6.3 Input Validation
-- **Library**: FluentValidation
-- **Rules**: Defined in validators (see code)
-- **Sanitization**: All string inputs trimmed, HTML encoded
+---
 
-### 6.4 SQL Injection Prevention
-- **Method**: Parameterized queries via Entity Framework Core
-- **Never**: String concatenation in queries
-- **Validation**: All IDs validated before queries
+## 6. Security Diagrams
 
-### 6.5 Secrets Management
-- **Development**: User Secrets (dotnet user-secrets)
-- **Production**: Azure Key Vault
-- **Never**: Hardcoded secrets in code or config
+### 6.1 Authentication Flow
 
-### 6.6 Security Headers
+```
++-----------------------------------------------------------------------------+
+|                          JWT AUTHENTICATION FLOW                             |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  STEP 1: Login Request                                                       |
+|  +------+  POST /auth/login   +------------+                                |
+|  |Client|-------------------->|Auth Service|                                |
+|  +------+  {email, password}  +-----+------+                                |
+|                                     |                                        |
+|                                     | Validate credentials                   |
+|                                     v                                        |
+|                               +----------+                                  |
+|                               | Database |                                  |
+|                               +-----+----+                                  |
+|                                     |                                        |
+|                                     | User found                             |
+|                                     v                                        |
+|  +------+  200 OK + JWT Token +------------+                                |
+|  |Client|<--------------------|Auth Service|                                |
+|  +------+                      +------------+                                |
+|                                                                              |
+|  STEP 2: Authenticated Request                                               |
+|  +------+  GET /api/resource  +---------------+                             |
+|  |Client|------------------->| JWT Middleware |                             |
+|  +------+  Authorization:     +-------+-------+                             |
+|            Bearer {token}             |                                      |
+|                                       | Validate token                       |
+|                                       | Extract claims                       |
+|                                       v                                      |
+|                                +--------------+                              |
+|                                |  Controller  |                              |
+|                                |  (Authorized)|                              |
+|                                +--------------+                              |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
+
+### 6.2 Authorization Model (RBAC)
+
+```
++-----------------------------------------------------------------------------+
+|                    ROLE-BASED ACCESS CONTROL (RBAC)                          |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|                         +----------+                                         |
+|                         |   User   |                                         |
+|                         +----+-----+                                         |
+|                              |                                               |
+|                              | has role                                      |
+|                              v                                               |
+|                    +--------------------+                                    |
+|                    |       Role         |                                    |
+|                    +--------------------+                                    |
+|                    | * Admin ---> Full access                               |
+|                    | * User  ---> Read/Write own data                       |
+|                    | * Guest ---> Read only                                 |
+|                    +----+---------------+                                    |
+|                         |                                                    |
+|                         | has permissions                                    |
+|                         v                                                    |
+|              +-------------------------+                                     |
+|              |      Permissions        |                                     |
+|              +-------------------------+                                     |
+|              | Admin:                  |                                     |
+|              |  * entities:read        |                                     |
+|              |  * entities:write       |                                     |
+|              |  * entities:delete      |                                     |
+|              |  * users:manage         |                                     |
+|              |                         |                                     |
+|              | User:                   |                                     |
+|              |  * entities:read (own)  |                                     |
+|              |  * entities:write (own) |                                     |
+|              |                         |                                     |
+|              | Guest:                  |                                     |
+|              |  * entities:read        |                                     |
+|              +-------------------------+                                     |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
+
+### 6.3 Defense in Depth
+
+```
++-----------------------------------------------------------------------------+
+|                        DEFENSE IN DEPTH STRATEGY                             |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  Layer 1: Network Security                                                   |
+|  +-----------------------------------------------------------------------+  |
+|  | * HTTPS only (TLS 1.3)    * Firewall rules    * DDoS protection      |  |
+|  +-----------------------------------------------------------------------+  |
+|                                   |                                          |
+|                                   v                                          |
+|  Layer 2: Application Gateway                                                |
+|  +-----------------------------------------------------------------------+  |
+|  | * Rate limiting    * CORS policy    * Security headers               |  |
+|  +-----------------------------------------------------------------------+  |
+|                                   |                                          |
+|                                   v                                          |
+|  Layer 3: Authentication                                                     |
+|  +-----------------------------------------------------------------------+  |
+|  | * JWT validation    * Token expiration    * MFA (optional)           |  |
+|  +-----------------------------------------------------------------------+  |
+|                                   |                                          |
+|                                   v                                          |
+|  Layer 4: Authorization                                                      |
+|  +-----------------------------------------------------------------------+  |
+|  | * Role-based access    * Resource ownership    * Permission checks   |  |
+|  +-----------------------------------------------------------------------+  |
+|                                   |                                          |
+|                                   v                                          |
+|  Layer 5: Input Validation                                                   |
+|  +-----------------------------------------------------------------------+  |
+|  | * Schema validation    * Data sanitization    * Type checking        |  |
+|  +-----------------------------------------------------------------------+  |
+|                                   |                                          |
+|                                   v                                          |
+|  Layer 6: Data Access                                                        |
+|  +-----------------------------------------------------------------------+  |
+|  | * Parameterized queries    * ORM    * SQL injection prevention       |  |
+|  +-----------------------------------------------------------------------+  |
+|                                   |                                          |
+|                                   v                                          |
+|  Layer 7: Data Storage                                                       |
+|  +-----------------------------------------------------------------------+  |
+|  | * Encryption at rest    * Access controls    * Backup encryption     |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
 
 
 ---
@@ -846,28 +732,50 @@ X-Request-ID: {uuid}
 ## 7. Performance
 
 ### 7.1 Caching Strategy
-- **Layer**: Redis distributed cache
-- **Cache keys**: `{resource}:{id}` or `{resource}:list:{page}:{pageSize}`
-- **TTL**: 
-  - Single entities: 1 hour
-  - Lists: 5 minutes
-- **Invalidation**: On create/update/delete operations
 
-### 7.2 Database Optimization
-- **Indexes**: See database schema (status, created_at, name)
-- **Query patterns**: Use `.AsNoTracking()` for read-only queries
-- **Connection pooling**: Max 100 connections
-- **Pagination**: Always paginate list endpoints (max 100 items)
+```
++-----------------------------------------------------------------------------+
+|                            CACHING STRATEGY                                  |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  Cache Layer: Distributed Cache (Redis/Memcached)                            |
+|                                                                              |
+|  +------------------+     +------------------+     +------------------+      |
+|  |   Single Entity  |     |   List/Query     |     |   Session/Auth   |      |
+|  +------------------+     +------------------+     +------------------+      |
+|  | Key: {type}:{id} |     | Key: {type}:list:|     | Key: session:{id}|      |
+|  | TTL: 1 hour      |     |      {hash}      |     | TTL: 24 hours    |      |
+|  | Invalidate: on   |     | TTL: 5 minutes   |     | Invalidate: on   |      |
+|  |   update/delete  |     | Invalidate: on   |     |   logout         |      |
+|  +------------------+     |   any write      |     +------------------+      |
+|                           +------------------+                               |
+|                                                                              |
+|  Cache Invalidation Patterns:                                                |
+|  * Write-through: Update cache on every write                               |
+|  * Write-behind: Async cache update (eventual consistency)                  |
+|  * Cache-aside: App manages cache (check cache -> miss -> load -> store)   |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
 
-### 7.3 Async Operations
-- **Pattern**: async/await for all I/O operations
-- **Database**: All EF Core queries use async methods
-- **HTTP calls**: Use HttpClient with async methods
+### 7.2 Performance Requirements
 
-### 7.4 Rate Limiting
-- **Library**: AspNetCoreRateLimit
-- **Strategy**: Token bucket per user/IP
-- **Limits**: See API table (per endpoint)
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| API Response Time (p50) | < 100ms | Average response time |
+| API Response Time (p95) | < 500ms | 95th percentile |
+| API Response Time (p99) | < 1000ms | 99th percentile |
+| Cache Hit Rate | > 80% | Cache hits / total requests |
+| Database Query Time | < 50ms | Average query execution |
+| Concurrent Users | 1000+ | Simultaneous connections |
+| Requests per Second | 500+ | Throughput capacity |
+
+### 7.3 Optimization Strategies
+
+- **Database**: Indexes, query optimization, connection pooling, read replicas
+- **Caching**: Distributed cache, cache headers, CDN for static assets
+- **Async**: Async I/O operations, background jobs, message queues
+- **Pagination**: Cursor-based pagination, limit results (max 100 items)
 
 ---
 
@@ -875,90 +783,79 @@ X-Request-ID: {uuid}
 
 ### 8.1 Test Pyramid
 
-| Test Type | Coverage Target | Quantity | Scope |
-|-----------|-----------------|----------|-------|
-| **Unit Tests** | 80%+ | 70% of tests | Services, Controllers, Validators |
-| **Integration Tests** | Key flows | 20% of tests | API endpoints, Database operations |
-| **E2E Tests** | Happy paths | 10% of tests | Full user flows |
+```
++-----------------------------------------------------------------------------+
+|                              TEST PYRAMID                                    |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|                              /\                                              |
+|                             /  \                                             |
+|                            /    \                                            |
+|                           / E2E  \    10% - Full user flows                 |
+|                          /  Tests \   (Playwright/Selenium)                 |
+|                         /----------\                                         |
+|                        /            \                                        |
+|                       / Integration  \  20% - API endpoints, DB             |
+|                      /    Tests       \ (WebApplicationFactory)             |
+|                     /------------------\                                     |
+|                    /                    \                                    |
+|                   /     Unit Tests       \ 70% - Services, Controllers      |
+|                  /                        \ (xUnit/Jest/pytest)             |
+|                 /--------------------------\                                 |
+|                                                                              |
+|  Coverage Target: >= 80%                                                    |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
 
-### 8.2 Unit Tests
+### 8.2 Test Types
 
-**Test framework**: xUnit  
-**Mocking**: Moq  
-**Assertions**: FluentAssertions
-
-
-
-### 8.3 Integration Tests
-
-**Test framework**: xUnit  
-**Test server**: WebApplicationFactory  
-**Database**: In-memory or TestContainers
-
-
-
-### 8.4 E2E Tests
-
-**Framework**: Playwright or Selenium  
-**Scope**: Critical user flows only
+| Test Type | Coverage | Framework | Scope |
+|-----------|----------|-----------|-------|
+| **Unit Tests** | 80%+ | Any unit test framework | Services, Controllers, Validators |
+| **Integration Tests** | Key flows | Test framework + test server | API endpoints, Database |
+| **E2E Tests** | Happy paths | Playwright/Selenium/Cypress | Full user journeys |
+| **Performance Tests** | Critical paths | k6/JMeter/Locust | Load, stress, spike tests |
 
 ---
 
 ## 9. Implementation Notes
 
-### 9.1 For Engineer
+### 9.1 Directory Structure (Language Agnostic)
 
-**Files to create:**
 ```
 src/
-  Controllers/
-    EntityController.cs          # API endpoints
-  Services/
-    EntityService.cs             # Business logic
-    IEntityService.cs            # Interface
-  Models/
-    Entity.cs                    # Entity model
-    EntityDto.cs                 # DTOs
-  Validators/
-    CreateEntityValidator.cs     # FluentValidation
-    UpdateEntityValidator.cs
-  Data/
-    Migrations/
-      {Date}_CreateEntityTable.cs
+  controllers/           # HTTP request handlers
+    entity_controller    # API endpoints
+  services/              # Business logic
+    entity_service       # Service implementation
+    interfaces/          # Service interfaces
+  models/                # Domain models
+    entity               # Entity model
+    dtos/                # Data transfer objects
+  repositories/          # Data access
+    entity_repository    # Repository implementation
+    interfaces/          # Repository interfaces
+  validators/            # Input validation
+    entity_validator     # Validation rules
+  middleware/            # Cross-cutting concerns
+    auth_middleware      # Authentication
+    error_handler        # Global error handling
+  config/                # Configuration
+    database             # DB connection config
+    cache                # Cache config
 
 tests/
-  EntityServiceTests.cs          # Unit tests
-  EntityControllerTests.cs       # Unit tests
-  EntityApiTests.cs              # Integration tests
+  unit/                  # Unit tests
+    services/
+    controllers/
+  integration/           # Integration tests
+    api/
+  e2e/                   # End-to-end tests
 ```
 
-**Dependencies (NuGet):**
-```xml
-<PackageReference Include="FluentValidation.AspNetCore" Version="11.x" />
-<PackageReference Include="StackExchange.Redis" Version="2.x" />
-<PackageReference Include="AspNetCoreRateLimit" Version="5.x" />
-<PackageReference Include="Serilog.AspNetCore" Version="8.x" />
-```
+### 9.2 Development Workflow
 
-**Configuration (appsettings.json):**
-```json
-{
-  "Redis": {
-    "ConnectionString": "localhost:6379"
-  },
-  "RateLimit": {
-    "GeneralRules": [
-      {
-        "Endpoint": "*",
-        "Period": "1m",
-        "Limit": 100
-      }
-    ]
-  }
-}
-```
-
-**Development workflow:**
 1. Create database migration
 2. Implement service (TDD - write tests first)
 3. Implement controller
@@ -972,28 +869,30 @@ tests/
 
 ## 10. Rollout Plan
 
-### Phase 1: Backend API (Week 1)
+### Phase 1: Development (Week 1-2)
 **Stories**: #{story-1}, #{story-2}
 - Database migration
 - Service implementation
 - API endpoints
 - Unit + integration tests
 
-**Deliverable**: Working API (not exposed to users)
+**Deliverable**: Working API (dev environment)
 
-### Phase 2: Frontend Integration (Week 2)
+### Phase 2: Testing (Week 3)
 **Stories**: #{story-3}
-- React components
-- API client integration
 - E2E tests
+- Performance testing
+- Security review
+- Bug fixes
 
-**Deliverable**: Feature available to users
+**Deliverable**: Tested, stable API
 
-### Phase 3: Optimization (Week 3)
+### Phase 3: Deployment (Week 4)
 **Stories**: #{story-4}
-- Performance tuning
-- Cache implementation
-- Load testing
+- Staging deployment
+- Production deployment
+- Monitoring setup
+- Documentation
 
 **Deliverable**: Production-ready feature
 
@@ -1003,33 +902,97 @@ tests/
 
 | Risk | Impact | Probability | Mitigation |
 |------|--------|-------------|------------|
-| Database migration fails in production | High | Low | Test migration on staging with production data copy |
+| Database migration fails | High | Low | Test on staging with production data copy |
 | Cache invalidation bugs | Medium | Medium | Implement cache versioning, monitor hit rates |
-| Rate limiting too restrictive | Low | Medium | Start conservative, monitor metrics, adjust based on data |
-| Third-party API downtime | High | Low | Implement circuit breaker, fallback mechanism |
+| Rate limiting too restrictive | Low | Medium | Start conservative, adjust based on metrics |
+| Third-party API downtime | High | Low | Circuit breaker, fallback mechanism |
+| Performance degradation | High | Medium | Load testing, performance monitoring |
 
 ---
 
 ## 12. Monitoring & Observability
 
-### 12.1 Metrics to Track
-- Request latency (p50, p95, p99)
-- Error rate (4xx, 5xx)
-- Cache hit rate
-- Database query time
-- Rate limit violations
+### 12.1 Metrics Dashboard
+
+```
++-----------------------------------------------------------------------------+
+|                         MONITORING DASHBOARD                                 |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  +-------------------+  +-------------------+  +-------------------+         |
+|  |  Request Rate     |  |  Error Rate       |  |  Response Time    |         |
+|  |  [=========>    ] |  |  [=>            ] |  |  [======>       ] |         |
+|  |  450 req/sec      |  |  0.5%             |  |  p95: 230ms      |         |
+|  +-------------------+  +-------------------+  +-------------------+         |
+|                                                                              |
+|  +-------------------+  +-------------------+  +-------------------+         |
+|  |  Cache Hit Rate   |  |  DB Query Time    |  |  Active Users     |         |
+|  |  [============> ] |  |  [===>          ] |  |  [========>     ] |         |
+|  |  92%              |  |  avg: 15ms       |  |  1,250            |         |
+|  +-------------------+  +-------------------+  +-------------------+         |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
 
 ### 12.2 Alerts
-- Error rate > 5% for 5 minutes
-- p95 latency > 1000ms for 5 minutes
-- Cache hit rate < 80%
 
-### 12.3 Logs
-- Structured logging with Serilog
+| Alert | Condition | Severity | Action |
+|-------|-----------|----------|--------|
+| High Error Rate | > 5% for 5 min | Critical | Page on-call |
+| High Latency | p95 > 1000ms for 5 min | High | Investigate |
+| Cache Miss Spike | Hit rate < 70% | Medium | Check cache health |
+| DB Connection Pool | > 80% utilization | Medium | Scale or optimize |
+
+### 12.3 Logging
+
+- Structured logging (JSON format)
 - Correlation IDs for request tracing
-- Log levels: Debug (dev), Information (prod)
+- Log levels: DEBUG (dev), INFO (prod)
+- Sensitive data masking
+- Log aggregation (ELK/Datadog/CloudWatch)
 
 ---
 
-**Generated by AgentX Architect Agent**  
+## Cross-Cutting Concerns Diagram
+
+```
++-----------------------------------------------------------------------------+
+|                        CROSS-CUTTING CONCERNS                                |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|   +--------------------------------------------------------------------+    |
+|   |                       MIDDLEWARE PIPELINE                          |    |
+|   +--------------------------------------------------------------------+    |
+|   |                                                                     |    |
+|   |   Request --> [Logging] --> [Auth] --> [RateLimit] --> [Controller]|    |
+|   |                                                                     |    |
+|   |   Response <-- [Formatting] <-- [ErrorHandler] <-- [Controller]    |    |
+|   |                                                                     |    |
+|   +--------------------------------------------------------------------+    |
+|                                                                              |
+|   +------------------+  +------------------+  +------------------+           |
+|   |    LOGGING       |  |   MONITORING     |  |    TRACING       |           |
+|   +------------------+  +------------------+  +------------------+           |
+|   | * Structured logs|  | * Health checks  |  | * Correlation IDs|           |
+|   | * Log levels     |  | * Metrics        |  | * Distributed    |           |
+|   | * Context data   |  | * Dashboards     |  |   tracing        |           |
+|   | * Sensitive mask |  | * Alerting       |  | * Request timing |           |
+|   +------------------+  +------------------+  +------------------+           |
+|                                                                              |
+|   +------------------+  +------------------+  +------------------+           |
+|   |   VALIDATION     |  | ERROR HANDLING   |  |    CACHING       |           |
+|   +------------------+  +------------------+  +------------------+           |
+|   | * Input validation| * Global handler  |  | * Response cache |           |
+|   | * Schema check   |  | * Error responses|  | * Distributed    |           |
+|   | * Business rules |  | * Retry policies |  | * Invalidation   |           |
+|   | * Sanitization   |  | * Circuit breaker|  | * TTL management |           |
+|   +------------------+  +------------------+  +------------------+           |
+|                                                                              |
++------------------------------------------------------------------------------+
+```
+
+---
+
+**Generated by AgentX Architect Agent**
 **Last Updated**: {YYYY-MM-DD}
+**Version**: 1.0

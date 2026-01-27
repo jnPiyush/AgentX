@@ -34,17 +34,24 @@ cp .github/templates/ADR-TEMPLATE.md docs/adr/ADR-71.md
 
 **12 sections**:
 1. Overview (scope, success criteria)
-2. Architecture Diagrams (high-level components, interactions, data flow, tech stack, sequence diagrams, class diagrams)
-3. API Design (endpoints, contracts, errors)
-4. Data Models Diagrams (ERD, C# classes, DTOs, SQL schema, migrations)
-5. Service Layer Diagrams (interfaces, DI graph, implementation patterns)
-6. Security Diagrams (auth flow, RBAC, defense in depth, secrets management)
-7. Performance (caching, DB optimization, async, rate limiting)
-8. Testing Strategy (unit/integration/e2e with code examples)
-9. Implementation Notes (files to create, dependencies, config, workflow)
+2. Architecture Diagrams (system architecture, request/response flow, data flow, sequence diagrams, class diagrams, DI container)
+3. API Design (endpoints, contracts, error responses)
+4. Data Model Diagrams (ERD, schema tables)
+5. Service Layer Diagrams (service architecture, interfaces)
+6. Security Diagrams (authentication flow, RBAC, defense in depth)
+7. Performance (caching strategy diagram, requirements table, optimizations)
+8. Testing Strategy (test pyramid diagram, unit/integration/e2e)
+9. Implementation Notes (directory structure, workflow)
 10. Rollout Plan (phases with stories and timelines)
 11. Risks & Mitigations (impact, probability, mitigation plans)
-12. Monitoring & Observability (metrics, alerts, logs)
+12. Monitoring & Observability (dashboard diagram, metrics, alerts, logs)
+
+**Key Features**:
+- Language-agnostic (no specific tech stack assumed)
+- 25+ visual ASCII diagrams for architecture, flows, and security
+- Sequence diagrams for authentication and CRUD operations
+- Class/interface diagrams for domain and service layers
+- Defense-in-depth security visualization
 
 **Note**: Handoff checklist is in architect.agent.md (60+ items organized in 6 categories).
 
