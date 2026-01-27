@@ -1,137 +1,245 @@
 ---
 name: documentation
-description: 'Write clear documentation including XML docs, README files, API documentation with OpenAPI/Swagger, and inline code comments.'
+description: 'Language-agnostic documentation patterns including inline docs, README structure, API documentation, and code comments best practices.'
 ---
 
 # Documentation
 
-> **Purpose**: Write clear, maintainable documentation for code and APIs.
+> **Purpose**: Write clear, maintainable documentation for code and APIs.  
+> **Goal**: Self-documenting code, useful comments, comprehensive READMEs.  
+> **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
 
-## XML Documentation Comments
+## Documentation Hierarchy
 
-### C# XML Documentation
+```
+Documentation Pyramid:
 
-```csharp
-/// <summary>
-/// Calculate discounted price.
-/// </summary>
-/// <param name="price">Original price in dollars.</param>
-/// <param name="discountPercent">Discount as decimal (0.1 for 10%).</param>
-/// <returns>The discounted price.</returns>
-/// <exception cref="ArgumentException">Thrown when price is negative.</exception>
-/// <example>
-/// <code>
-/// decimal result = CalculateDiscount(100m, 0.1m);
-/// // result = 90.0m
-/// </code>
-/// </example>
-public decimal CalculateDiscount(decimal price, decimal discountPercent)
-{
-    if (price < 0)
-    {
-        throw new ArgumentException("Price cannot be negative", nameof(price));
-    }
-    return price * (1 - discountPercent);
-}
+        /\
+       /API\        External API docs (OpenAPI/Swagger)
+      /------\
+     / README \     Project documentation
+    /----------\
+   / Inline Docs\   Function/class documentation
+  /--------------\
+ /  Code Quality  \ Self-documenting code (naming, structure)
+/------------------\
+
+Best Code = Minimal comments needed
 ```
 
-### Class and Interface Documentation
+---
 
-```csharp
-/// <summary>
-/// Provides functionality for processing customer orders.
-/// </summary>
-/// <remarks>
-/// This service handles order validation, processing, and notification.
-/// All operations are thread-safe and support async execution.
-/// </remarks>
-public class OrderService : IOrderService
-{
-    /// <summary>
-    /// Gets the order repository.
-    /// </summary>
-    private readonly IOrderRepository _orderRepository;
+## Self-Documenting Code
+
+### Code Should Explain WHAT
+
+```
+❌ Bad: Needs comment to understand
+  # Check if user can access
+  if u.r == 1 or u.r == 2:
+    return True
+
+✅ Good: Self-explanatory
+  if user.role == Role.ADMIN or user.role == Role.MODERATOR:
+    return True
+
+✅ Better: Extract to function
+  if user.hasModeratorPermissions():
+    return True
+```
+
+### Names Should Be Descriptive
+
+```
+Variables:
+  ❌ d, tmp, data, x
+  ✅ daysSinceLastLogin, userCount, orderTotal
+
+Functions:
+  ❌ process(), handle(), do()
+  ✅ calculateShippingCost(), validateEmailFormat(), sendWelcomeEmail()
+
+Classes:
+  ❌ Manager, Handler, Processor, Helper
+  ✅ OrderRepository, EmailValidator, PaymentGateway
+```
+
+---
+
+## Inline Documentation
+
+### When to Document
+
+```
+✅ DOCUMENT:
+  - Public APIs (functions, classes exposed to others)
+  - Complex algorithms (why this approach)
+  - Non-obvious behavior (edge cases, gotchas)
+  - Business rules (why this validation)
+  - Workarounds (link to issue/bug)
+
+❌ DON'T DOCUMENT:
+  - Obvious code (// increment counter)
+  - Implementation details that might change
+  - What the code does (code shows that)
+```
+
+### Documentation Template
+
+```
+Function Documentation Structure:
+
+  Brief one-line description.
+
+  Longer description if needed. Explain the purpose,
+  not the implementation.
+
+  Parameters:
+    paramName: Description of parameter
     
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OrderService"/> class.
-    /// </summary>
-    /// <param name="orderRepository">The order repository.</param>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="orderRepository"/> is null.
-    /// </exception>
-    public OrderService(IOrderRepository orderRepository)
-    {
-        _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
-    }
-}
+  Returns:
+    Description of return value
+    
+  Raises/Throws:
+    ExceptionType: When this exception is thrown
+    
+  Example:
+    code example showing usage
 ```
 
-### Enable XML Documentation Generation
+### Examples
 
-Add to your `.csproj` file:
+```
+Good Documentation:
 
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);1591</NoWarn>
-  </PropertyGroup>
-</Project>
+  """
+  Calculate shipping cost based on weight and destination.
+  
+  Uses zone-based pricing with a base rate plus per-kg charge.
+  International shipments have additional customs handling fee.
+  
+  Args:
+    weight_kg: Package weight in kilograms (must be positive)
+    destination: ISO 3166-1 country code (e.g., "US", "GB")
+    
+  Returns:
+    Shipping cost in USD
+    
+  Raises:
+    ValueError: If weight is negative or zero
+    InvalidDestinationError: If country code is not supported
+    
+  Example:
+    >>> calculate_shipping(2.5, "US")
+    15.99
+  """
+```
+
+---
+
+## Comments
+
+### When to Use Comments
+
+```
+Use Comments For:
+
+1. WHY, not WHAT
+   # Using binary search because list is sorted and frequently queried
+   index = binarySearch(sortedList, target)
+
+2. Complex business logic
+   # Discount applies only to first-time customers who
+   # ordered within 30 days of account creation (PROMO-2024-Q1)
+   if isEligibleForNewUserDiscount(user):
+
+3. Warnings and gotchas
+   # WARNING: This API has a rate limit of 100 req/min
+   # See: https://api.example.com/docs/rate-limits
+   
+4. TODO with context
+   # TODO(ticket-123): Refactor when payment v2 API is available
+   
+5. References
+   # Algorithm from: https://en.wikipedia.org/wiki/Example
+```
+
+### Comment Anti-Patterns
+
+```
+❌ Redundant Comments:
+  i = i + 1  # Increment i by 1
+
+❌ Outdated Comments:
+  # Returns the user's email
+  function getUserName():  # Actually returns name now
+
+❌ Commented-Out Code:
+  # old_method()
+  # another_old_method()
+  new_method()
+
+❌ Noise Comments:
+  ###################################
+  # BEGIN USER PROCESSING SECTION   #
+  ###################################
 ```
 
 ---
 
 ## README Structure
 
+### Essential Sections
+
 ```markdown
 # Project Name
 
-Brief description of the project
+One-paragraph description of what this project does.
 
 ## Features
-- Feature 1
-- Feature 2
 
-## Prerequisites
+- Feature 1: Brief description
+- Feature 2: Brief description
 
-- .NET 8.0 SDK or later
-- SQL Server 2019+
+## Quick Start
+
+Minimal steps to get running:
+
+```bash
+git clone <repo>
+cd project
+./setup.sh
+./run.sh
+```
 
 ## Installation
 
-\`\`\`bash
-dotnet restore
-dotnet build
-\`\`\`
+### Prerequisites
+
+- Requirement 1 (version)
+- Requirement 2 (version)
+
+### Steps
+
+1. Install dependencies
+2. Configure environment
+3. Run migrations
 
 ## Configuration
 
-Create an \`appsettings.json\` file:
-
-\`\`\`json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=mydb"
-  }
-}
-\`\`\`
+| Variable | Description | Default |
+|----------|-------------|---------|
+| DATABASE_URL | Database connection | localhost |
 
 ## Usage
 
-\`\`\`csharp
-using MyProject;
+Show common use cases with code examples.
 
-var service = new MyService();
-await service.ProcessAsync();
-\`\`\`
+## API Reference
 
-## Running Tests
-
-\`\`\`bash
-dotnet test
-\`\`\`
+Link to API documentation or brief overview.
 
 ## Contributing
 
@@ -139,117 +247,163 @@ See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE)
+```
+
+### README Best Practices
+
+```
+✅ DO:
+  - Start with what the project does
+  - Show working code examples
+  - Keep installation steps minimal
+  - Include troubleshooting for common issues
+  - Update when features change
+
+❌ DON'T:
+  - Start with badges and shields
+  - Assume knowledge of your stack
+  - Skip the "why" of the project
+  - Include outdated examples
 ```
 
 ---
 
 ## API Documentation
 
-### Swagger/OpenAPI for ASP.NET Core
+### OpenAPI/Swagger
 
-```csharp
-using Microsoft.OpenApi.Models;
+```
+API Documentation Should Include:
 
-var builder = WebApplication.CreateBuilder(args);
+Endpoint Information:
+  - HTTP method and path
+  - Description of what it does
+  - Authentication requirements
 
-// Add Swagger services
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "My API",
-        Version = "v1",
-        Description = "API for managing resources",
-        Contact = new OpenApiContact
-        {
-            Name = "Support Team",
-            Email = "support@example.com"
-        }
-    });
-    
-    // Include XML comments
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    options.IncludeXmlComments(xmlPath);
-});
+Request:
+  - Path parameters
+  - Query parameters
+  - Request body schema
+  - Example request
 
-var app = builder.Build();
+Response:
+  - Status codes and meanings
+  - Response body schema
+  - Example responses
 
-// Enable Swagger middleware
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-        options.RoutePrefix = string.Empty; // Serve at root
-    });
-}
-
-app.Run();
+Errors:
+  - Error codes
+  - Error messages
+  - How to handle
 ```
 
-### Documented API Controller
+### API Documentation Example
 
-```csharp
-/// <summary>
-/// Manages product operations.
-/// </summary>
-[ApiController]
-[Route("api/[controller]")]
-[Produces("application/json")]
-public class ProductsController : ControllerBase
-{
-    /// <summary>
-    /// Retrieves a product by ID.
-    /// </summary>
-    /// <param name="id">The product ID.</param>
-    /// <returns>The product details.</returns>
-    /// <response code="200">Returns the product.</response>
-    /// <response code="404">Product not found.</response>
-    [HttpGet("{id}")]
-    [ProducesResponseType(typeof(Product), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Product>> GetProduct(int id)
-    {
-        var product = await _productService.GetByIdAsync(id);
-        if (product == null)
-        {
-            return NotFound();
-        }
-        return Ok(product);
-    }
-}
+```yaml
+/users/{userId}:
+  get:
+    summary: Get user by ID
+    description: |
+      Retrieves detailed information about a specific user.
+      Requires authentication. Users can only access their own data
+      unless they have admin role.
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Unique user identifier
+    responses:
+      200:
+        description: User found
+        content:
+          application/json:
+            example:
+              id: 123
+              email: user@example.com
+              name: John Doe
+      404:
+        description: User not found
+      403:
+        description: Access denied
+```
+
+---
+
+## Architecture Documentation
+
+### Architecture Decision Records (ADRs)
+
+```
+ADR Template:
+
+# ADR-001: Use PostgreSQL for Primary Database
+
+## Status
+Accepted
+
+## Context
+We need a database that supports complex queries, transactions,
+and can handle our expected load of 10K requests/second.
+
+## Decision
+We will use PostgreSQL 16 as our primary database.
+
+## Consequences
+### Positive
+- ACID compliance
+- Rich query capabilities
+- Strong community support
+
+### Negative
+- Requires more operational expertise than managed NoSQL
+- Vertical scaling limitations
+
+## Alternatives Considered
+- MongoDB: Rejected due to transaction requirements
+- MySQL: PostgreSQL has better JSON support
+```
+
+### When to Write ADRs
+
+```
+Write ADR For:
+  - Technology choices (database, framework, cloud provider)
+  - Architecture patterns (microservices vs monolith)
+  - Security decisions (auth strategy, encryption)
+  - Integration approaches (sync vs async)
+  - Breaking changes to existing patterns
 ```
 
 ---
 
 ## Documentation Tools
 
-- **DocFX**: Generate documentation websites from XML comments and Markdown
-- **Sandcastle**: Legacy documentation generator for .NET
-- **Swagger/OpenAPI**: Interactive API documentation
-- **NSwag**: Generate TypeScript/C# clients from OpenAPI specs
-- **Postman**: API testing and documentation
-
-### DocFX Setup
-
-```bash
-# Install DocFX
-dotnet tool install -g docfx
-
-# Initialize DocFX project
-docfx init -q
-
-# Build documentation
-docfx docfx.json --serve
-```
+| Type | Tools |
+|------|-------|
+| **API Docs** | OpenAPI/Swagger, Postman, Redoc |
+| **Code Docs** | DocFX, Sphinx, JSDoc, Typedoc |
+| **Architecture** | C4 Model, Mermaid, PlantUML |
+| **Wiki/Guides** | Notion, Confluence, GitBook, MkDocs |
+| **Diagrams** | Draw.io, Lucidchart, Excalidraw |
 
 ---
 
-**Related Skills**:
-- [Code Organization](08-code-organization.md)
-- [API Design](09-api-design.md)
+## Best Practices Summary
 
+| Practice | Description |
+|----------|-------------|
+| **Code first** | Write self-documenting code before adding comments |
+| **Document why** | Explain intent, not mechanics |
+| **Keep updated** | Wrong docs are worse than no docs |
+| **Examples** | Show, don't just tell |
+| **Audience** | Write for the reader, not yourself |
+| **Minimal** | Document what's needed, no more |
+| **Accessible** | Store docs near the code |
+| **Versioned** | Docs in repo, not external wikis |
+
+---
+
+**See Also**: [API Design](.github/skills/architecture/api-design/SKILL.md) • [C# Development](../csharp/SKILL.md) • [Python Development](../python/SKILL.md)

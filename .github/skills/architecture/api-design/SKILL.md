@@ -1,11 +1,13 @@
 ---
 name: api-design
-description: 'Design robust REST APIs with proper versioning, pagination, error handling, rate limiting, and OpenAPI documentation.'
+description: 'Language-agnostic REST API design with proper versioning, pagination, error handling, rate limiting, and documentation best practices.'
 ---
 
 # API Design
 
-> **Purpose**: Design robust, maintainable, and user-friendly APIs.
+> **Purpose**: Design robust, maintainable, and user-friendly REST APIs.  
+> **Focus**: Resource naming, HTTP methods, status codes, versioning, documentation.  
+> **Note**: Language-agnostic patterns applicable to any tech stack.
 
 ---
 
@@ -29,30 +31,103 @@ POST   /api/v1/users/{id}/orders  # Create order for user
 GET    /api/v1/get_users
 POST   /api/v1/create_user
 GET    /api/v1/user_detail?id=123
+POST   /api/v1/users/delete/{id}  # Use DELETE method instead
+```
+
+### Resource Naming Rules
+
+- Use nouns, not verbs (users, not getUsers)
+- Use plural form (users, not user)
+- Use kebab-case for multi-word resources (order-items)
+- Keep URLs lowercase
+- Use nesting for relationships (users/{id}/orders)
+- Limit nesting to 2 levels maximum
+
+---
+
+## HTTP Methods
+
+### Standard Methods
+
+| Method | Purpose | Idempotent | Safe |
+|--------|---------|------------|------|
+| **GET** | Retrieve resource(s) | Yes | Yes |
+| **POST** | Create new resource | No | No |
+| **PUT** | Replace entire resource | Yes | No |
+| **PATCH** | Partial update | No | No |
+| **DELETE** | Remove resource | Yes | No |
+| **HEAD** | Get metadata only | Yes | Yes |
+| **OPTIONS** | Get allowed methods | Yes | Yes |
+
+**Idempotent**: Multiple identical requests have same effect as single request  
+**Safe**: Read-only, doesn't modify server state
+
+### Method Usage Examples
+
+```
+# GET - Retrieve
+GET /api/v1/users/123
+Response: 200 OK
+{
+  "id": 123,
+  "email": "user@example.com",
+  "name": "John Doe"
+}
+
+# POST - Create
+POST /api/v1/users
+Body: {"email": "new@example.com", "name": "New User"}
+Response: 201 Created
+Location: /api/v1/users/124
+
+# PUT - Full replacement
+PUT /api/v1/users/123
+Body: {"email": "updated@example.com", "name": "Updated Name"}
+Response: 200 OK
+
+# PATCH - Partial update
+PATCH /api/v1/users/123
+Body: {"name": "New Name"}  # Only updates name
+Response: 200 OK
+
+# DELETE - Remove
+DELETE /api/v1/users/123
+Response: 204 No Content
 ```
 
 ---
 
 ## HTTP Status Codes
 
-```csharp
-// Success
-200 OK                  // Successful GET, PUT, PATCH, DELETE
-201 Created             // Successful POST
-204 No Content          // Successful DELETE (no response body)
+### Success Codes (2xx)
 
-// Client Errors
-400 Bad Request         // Invalid request syntax
-401 Unauthorized        // Authentication required
-403 Forbidden           // Authenticated but insufficient permissions
-404 Not Found           // Resource doesn't exist
-409 Conflict            // Resource conflict (e.g., duplicate email)
-422 Unprocessable       // Validation error
-429 Too Many Requests   // Rate limit exceeded
+```
+200 OK                  # Successful GET, PUT, PATCH
+201 Created             # Successful POST (resource created)
+202 Accepted            # Request accepted, processing async
+204 No Content          # Successful DELETE (no response body)
+```
 
-// Server Errors
-500 Internal Server Error
-503 Service Unavailable
+### Client Error Codes (4xx)
+
+```
+400 Bad Request         # Invalid request syntax, validation error
+401 Unauthorized        # Authentication required or failed
+403 Forbidden           # Authenticated but insufficient permissions
+404 Not Found           # Resource doesn't exist
+405 Method Not Allowed  # HTTP method not supported
+409 Conflict            # Resource conflict (e.g., duplicate email)
+422 Unprocessable       # Validation error (semantic issue)
+429 Too Many Requests   # Rate limit exceeded
+```
+
+### Server Error Codes (5xx)
+
+```
+500 Internal Server Error  # Unhandled server error
+502 Bad Gateway           # Invalid response from upstream server
+503 Service Unavailable   # Server temporarily unavailable
+504 Gateway Timeout       # Upstream server timeout
 ```
 
 ---
@@ -70,7 +145,7 @@ GET    /api/v1/user_detail?id=123
     "name": "John Doe"
   },
   "metadata": {
-    "timestamp": "2026-01-06T12:00:00Z",
+    "timestamp": "2026-01-27T12:00:00Z",
     "version": "1.0.0"
   }
 }
@@ -87,518 +162,445 @@ GET    /api/v1/user_detail?id=123
     "details": [
       {
         "field": "email",
-        "message": "Invalid email format"
+        "message": "Email is required"
+      },
+      {
+        "field": "age",
+        "message": "Must be between 18 and 120"
       }
     ]
   },
   "metadata": {
-    "timestamp": "2026-01-06T12:00:00Z",
-    "request_id": "abc-123"
+    "requestId": "abc-123-xyz",
+    "timestamp": "2026-01-27T12:00:00Z"
   }
 }
 ```
 
-### Response Models
+### Collection Response
 
-```csharp
-// Standard response wrapper
-public class ApiResponse<T>
+```json
 {
-    public string Status { get; set; } = "success";
-    public T? Data { get; set; }
-    public ResponseMetadata Metadata { get; set; } = new();
+  "status": "success",
+  "data": [
+    {"id": 1, "name": "User 1"},
+    {"id": 2, "name": "User 2"}
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalPages": 5,
+    "totalItems": 100,
+    "hasNext": true,
+    "hasPrevious": false
+  }
 }
+```
 
-public class ApiErrorResponse
-{
-    public string Status { get; set; } = "error";
-    public ErrorDetails Error { get; set; } = new();
-    public ResponseMetadata Metadata { get; set; } = new();
-}
+---
 
-public class ResponseMetadata
-{
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-    public string Version { get; set; } = "1.0.0";
-    public string? RequestId { get; set; }
-}
+## API Versioning
 
-public class ErrorDetails
-{
-    public string Code { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-    public List<ValidationError>? Details { get; set; }
-}
+### URL Versioning (Recommended)
 
-public class ValidationError
-{
-    public string Field { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-}
+```
+GET /api/v1/users
+GET /api/v2/users  # New version
+```
+
+**Pros:**
+- Clear and explicit
+- Easy to route
+- Browser-friendly
+- Cacheable
+
+### Header Versioning
+
+```
+GET /api/users
+Accept: application/vnd.myapi.v1+json
+```
+
+**Pros:**
+- Clean URLs
+- More RESTful
+- Supports multiple versions
+
+### Versioning Strategy
+
+```
+Version Lifecycle:
+  v1 (Stable)     → Fully supported
+  v2 (Current)    → Recommended, default
+  v3 (Preview)    → Beta, may change
+  
+Deprecation:
+  1. Announce deprecation (6-12 months notice)
+  2. Add deprecation warning header
+  3. Document migration guide
+  4. Sunset old version
 ```
 
 ---
 
 ## Pagination
 
-```csharp
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+### Offset-Based Pagination
 
-// Pagination request model
-public class PaginationRequest
-{
-    public int Page { get; set; } = 1;
-    
-    private int _perPage = 20;
-    public int PerPage
-    {
-        get => _perPage;
-        set => _perPage = Math.Min(value, 100); // Max 100 items per page
-    }
-}
+```
+GET /api/v1/users?page=2&pageSize=20
 
-// Pagination response model
-public class PaginatedResponse<T>
+Response:
 {
-    public List<T> Data { get; set; } = new();
-    public PaginationMetadata Pagination { get; set; } = new();
+  "data": [...],
+  "pagination": {
+    "page": 2,
+    "pageSize": 20,
+    "totalPages": 5,
+    "totalItems": 100
+  }
 }
+```
 
-public class PaginationMetadata
-{
-    public int Page { get; set; }
-    public int PerPage { get; set; }
-    public int Total { get; set; }
-    public int Pages { get; set; }
-    public bool HasNext { get; set; }
-    public bool HasPrev { get; set; }
-}
+**Pros**: Simple, intuitive  
+**Cons**: Slow for large offsets, inconsistent results if data changes
 
-// Controller implementation
-[ApiController]
-[Route("api/v1/[controller]")]
-public class UsersController : ControllerBase
+### Cursor-Based Pagination
+
+```
+GET /api/v1/users?limit=20&cursor=abc123
+
+Response:
 {
-    private readonly ApplicationDbContext _context;
-    
-    public UsersController(ApplicationDbContext context)
-    {
-        _context = context;
-    }
-    
-    /// <summary>
-    /// List users with pagination
-    /// </summary>
-    [HttpGet]
-    [ProducesResponseType(typeof(PaginatedResponse<UserDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ListUsers([FromQuery] PaginationRequest request)
-    {
-        var query = _context.Users.AsQueryable();
-        
-        var total = await query.CountAsync();
-        var pages = (int)Math.Ceiling(total / (double)request.PerPage);
-        
-        var users = await query
-            .Skip((request.Page - 1) * request.PerPage)
-            .Take(request.PerPage)
-            .Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email,
-                Name = u.Name
-            })
-            .ToListAsync();
-        
-        var response = new PaginatedResponse<UserDto>
-        {
-            Data = users,
-            Pagination = new PaginationMetadata
-            {
-                Page = request.Page,
-                PerPage = request.PerPage,
-                Total = total,
-                Pages = pages,
-                HasNext = request.Page < pages,
-                HasPrev = request.Page > 1
-            }
-        };
-        
-        return Ok(response);
-    }
+  "data": [...],
+  "pagination": {
+    "nextCursor": "xyz789",
+    "hasMore": true
+  }
 }
+```
+
+**Pros**: Fast for large datasets, consistent results  
+**Cons**: Can't jump to specific page
+
+---
+
+## Filtering, Sorting, Searching
+
+### Filtering
+
+```
+GET /api/v1/users?status=active&role=admin
+GET /api/v1/products?minPrice=10&maxPrice=100
+GET /api/v1/orders?createdAfter=2024-01-01
+```
+
+### Sorting
+
+```
+GET /api/v1/users?sort=createdAt:desc
+GET /api/v1/products?sort=price:asc,name:asc  # Multi-column
+```
+
+### Searching
+
+```
+GET /api/v1/users?q=john
+GET /api/v1/products?search=laptop&category=electronics
+```
+
+### Field Selection (Sparse Fieldsets)
+
+```
+GET /api/v1/users?fields=id,email,name
+# Only returns specified fields
 ```
 
 ---
 
 ## Rate Limiting
 
-```csharp
-using AspNetCoreRateLimit;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
+### Rate Limit Headers
 
-// Configure in Program.cs or Startup.cs
-public class Program
-{
-    public static void Main(string[] args)
-    {
-        var builder = WebApplication.CreateBuilder(args);
-        
-        // Add memory cache for rate limiting
-        builder.Services.AddMemoryCache();
-        
-        // Configure rate limiting
-        builder.Services.Configure<IpRateLimitOptions>(options =>
-        {
-            options.GeneralRules = new List<RateLimitRule>
-            {
-                new RateLimitRule
-                {
-                    Endpoint = "*",
-                    Period = "1m",
-                    Limit = 60
-                },
-                new RateLimitRule
-                {
-                    Endpoint = "*/api/search",
-                    Period = "1m",
-                    Limit = 10
-                }
-            };
-        });
-        
-        builder.Services.AddInMemoryRateLimiting();
-        builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
-        
-        var app = builder.Build();
-        
-        // Use rate limiting middleware
-        app.UseIpRateLimiting();
-        
-        app.MapControllers();
-        app.Run();
-    }
-}
+```
+HTTP Response Headers:
+  X-RateLimit-Limit: 1000       # Total requests allowed
+  X-RateLimit-Remaining: 500    # Requests remaining
+  X-RateLimit-Reset: 1642531200 # Unix timestamp when limit resets
+  Retry-After: 3600             # Seconds until retry allowed (on 429)
+```
 
-// Alternative: Custom rate limiting with .NET 7+ built-in support
-builder.Services.AddRateLimiter(options =>
-{
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.User.Identity?.Name ?? context.Request.Headers.Host.ToString(),
-            factory: partition => new FixedWindowRateLimiterOptions
-            {
-                AutoReplenishment = true,
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(1)
-            }));
-});
+### Rate Limit Strategy
 
-// Apply to specific endpoint
-[ApiController]
-[Route("api/v1/[controller]")]
-public class SearchController : ControllerBase
-{
-    [HttpGet]
-    [EnableRateLimiting("fixed")]
-    public async Task<IActionResult> Search([FromQuery] string query)
-    {
-        // Search implementation
-        return Ok(results);
-    }
-}
+```
+Rate Limiting Tiers:
+  Anonymous:    100 requests/hour
+  Authenticated: 1000 requests/hour
+  Premium:      10000 requests/hour
 ```
 
 ---
 
-## Versioning
+## CORS Configuration
 
-```csharp
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Versioning;
+### CORS Headers
 
-// Configure versioning in Program.cs
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-    
-    // URL versioning
-    options.ApiVersionReader = new UrlSegmentApiVersionReader();
-    
-    // Or header versioning
-    // options.ApiVersionReader = new HeaderApiVersionReader("X-API-Version");
-    
-    // Or query string versioning
-    // options.ApiVersionReader = new QueryStringApiVersionReader("version");
-});
+```
+Access-Control-Allow-Origin: https://example.com
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Max-Age: 86400  # Cache preflight for 24 hours
+```
 
-// URL versioning - Version 1
-[ApiController]
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/[controller]")]
-public class UsersV1Controller : ControllerBase
-{
-    [HttpGet]
-    public IActionResult GetUsers()
-    {
-        return Ok(new { version = "1.0", users = new[] { "user1", "user2" } });
-    }
-}
+### Preflight Request Handling
 
-// URL versioning - Version 2
-[ApiController]
-[ApiVersion("2.0")]
-[Route("api/v{version:apiVersion}/[controller]")]
-public class UsersV2Controller : ControllerBase
-{
-    [HttpGet]
-    public IActionResult GetUsers()
-    {
-        return Ok(new
-        {
-            version = "2.0",
-            users = new[]
-            {
-                new { id = 1, name = "user1" },
-                new { id = 2, name = "user2" }
-            }
-        });
-    }
-}
-
-// Header versioning example
-[ApiController]
-[ApiVersion("1.0")]
-[Route("api/[controller]")]
-public class ProductsController : ControllerBase
-{
-    [HttpGet]
-    [MapToApiVersion("1.0")]
-    public IActionResult GetV1()
-    {
-        return Ok(new { version = "1.0" });
-    }
-    
-    [HttpGet]
-    [MapToApiVersion("2.0")]
-    public IActionResult GetV2()
-    {
-        return Ok(new { version = "2.0" });
-    }
-}
+```
+OPTIONS /api/v1/users
+Response: 204 No Content
+Access-Control-Allow-Origin: https://example.com
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE
 ```
 
 ---
 
-## Request Validation
+## Authentication & Authorization
 
-```csharp
-using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Mvc;
+### Bearer Token Authentication
 
-// DTO with validation attributes
-public class CreateUserRequest
-{
-    [Required(ErrorMessage = "Email is required")]
-    [EmailAddress(ErrorMessage = "Invalid email format")]
-    public string Email { get; set; } = string.Empty;
+```
+Request:
+POST /api/v1/users
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+### API Key Authentication
+
+```
+Request:
+GET /api/v1/users
+X-API-Key: abc123xyz789
+```
+
+### Authorization Patterns
+
+```
+# Check permissions in request
+if not user.hasPermission("users:write"):
+    return 403 Forbidden
     
-    [Required(ErrorMessage = "Name is required")]
-    [StringLength(100, MinimumLength = 2, ErrorMessage = "Name must be between 2 and 100 characters")]
-    public string Name { get; set; } = string.Empty;
-    
-    [Required(ErrorMessage = "Password is required")]
-    [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters")]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]",
-        ErrorMessage = "Password must contain uppercase, lowercase, number, and special character")]
-    public string Password { get; set; } = string.Empty;
-    
-    [Range(18, 120, ErrorMessage = "Age must be between 18 and 120")]
-    public int Age { get; set; }
-}
-
-// Controller with automatic validation
-[ApiController]
-[Route("api/v1/[controller]")]
-public class UsersController : ControllerBase
-{
-    /// <summary>
-    /// Create a new user
-    /// </summary>
-    [HttpPost]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
-    {
-        // ModelState is automatically validated by ASP.NET Core
-        if (!ModelState.IsValid)
-        {
-            var errors = ModelState
-                .Where(x => x.Value?.Errors.Count > 0)
-                .SelectMany(x => x.Value!.Errors.Select(e => new ValidationError
-                {
-                    Field = x.Key,
-                    Message = e.ErrorMessage
-                }))
-                .ToList();
-            
-            return UnprocessableEntity(new ApiErrorResponse
-            {
-                Error = new ErrorDetails
-                {
-                    Code = "VALIDATION_ERROR",
-                    Message = "Invalid input data",
-                    Details = errors
-                }
-            });
-        }
-        
-        // Process valid request
-        var user = await _userService.CreateUserAsync(request);
-        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
-    }
-}
-
-// Custom validation filter
-public class ValidateModelAttribute : ActionFilterAttribute
-{
-    public override void OnActionExecuting(ActionExecutingContext context)
-    {
-        if (!context.ModelState.IsValid)
-        {
-            var errors = context.ModelState
-                .Where(x => x.Value?.Errors.Count > 0)
-                .SelectMany(x => x.Value!.Errors.Select(e => new ValidationError
-                {
-                    Field = x.Key,
-                    Message = e.ErrorMessage
-                }))
-                .ToList();
-            
-            context.Result = new UnprocessableEntityObjectResult(new ApiErrorResponse
-            {
-                Error = new ErrorDetails
-                {
-                    Code = "VALIDATION_ERROR",
-                    Message = "Invalid input data",
-                    Details = errors
-                }
-            });
-        }
-    }
-}
-
-// Apply globally in Program.cs
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add<ValidateModelAttribute>();
-});
+# Resource ownership check
+if resource.ownerId != currentUser.id and not currentUser.isAdmin():
+    return 403 Forbidden
 ```
 
 ---
 
-## API Documentation with Swagger
+## Idempotency
 
-```csharp
-using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.Annotations;
+### Idempotency Keys
 
-// Configure Swagger in Program.cs
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "My API",
-        Version = "v1",
-        Description = "API for managing users and products",
-        Contact = new OpenApiContact
-        {
-            Name = "Support Team",
-            Email = "support@example.com"
-        }
-    });
-    
-    // Include XML comments
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    options.IncludeXmlComments(xmlPath);
-    
-    // Add JWT authentication
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-    
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
+```
+POST /api/v1/payments
+Idempotency-Key: unique-key-123
+Body: {"amount": 100, "currency": "USD"}
 
-var app = builder.Build();
+# If same key sent again, returns original response
+# Prevents duplicate charges
+```
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-        options.RoutePrefix = string.Empty; // Serve at root
-    });
-}
+### Safe Retry Pattern
 
-// Controller with XML documentation
-[ApiController]
-[Route("api/v1/[controller]")]
-public class UsersController : ControllerBase
-{
-    /// <summary>
-    /// Get a user by ID
-    /// </summary>
-    /// <param name="id">The user ID</param>
-    /// <returns>The user details</returns>
-    /// <response code="200">Returns the user</response>
-    /// <response code="404">User not found</response>
-    [HttpGet("{id}")]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetUser(int id)
-    {
-        var user = await _userService.GetUserAsync(id);
-        if (user == null)
-            return NotFound();
-        
-        return Ok(user);
-    }
-}
+```
+Client retries on network failure:
+  1. Include Idempotency-Key in request
+  2. Server stores key + response
+  3. If key seen again, return stored response
+  4. Prevents duplicate operations
 ```
 
 ---
 
-**Related Skills**:
-- [Code Organization](08-code-organization.md)
-- [Security](04-security.md)
+## API Documentation
 
+### OpenAPI/Swagger Specification
+
+```yaml
+openapi: 3.0.0
+info:
+  title: User API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      summary: List all users
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+```
+
+### Documentation Best Practices
+
+- ✅ Document all endpoints
+- ✅ Include request/response examples
+- ✅ Document error responses
+- ✅ Provide authentication details
+- ✅ Include rate limiting info
+- ✅ Link to SDK/client libraries
+- ✅ Keep docs up-to-date
+
+---
+
+## Content Negotiation
+
+### Request Format
+
+```
+POST /api/v1/users
+Content-Type: application/json
+Body: {"email": "user@example.com"}
+```
+
+### Response Format
+
+```
+GET /api/v1/users
+Accept: application/json
+
+Response:
+Content-Type: application/json
+Body: [{"id": 1, "email": "..."}]
+```
+
+### Multiple Formats
+
+```
+Accept: application/json       → JSON response
+Accept: application/xml        → XML response
+Accept: text/csv              → CSV response
+```
+
+---
+
+## Webhooks
+
+### Webhook Pattern
+
+```
+1. Client registers webhook URL
+   POST /api/v1/webhooks
+   Body: {"url": "https://client.com/webhook", "events": ["user.created"]}
+
+2. Event occurs (user created)
+
+3. Server sends HTTP POST to webhook URL
+   POST https://client.com/webhook
+   Body: {
+     "event": "user.created",
+     "data": {"id": 123, "email": "..."},
+     "timestamp": "2026-01-27T12:00:00Z"
+   }
+
+4. Client responds with 200 OK
+```
+
+### Webhook Security
+
+```
+# Include signature in header
+X-Webhook-Signature: sha256=abc123...
+
+# Client verifies signature
+signature = HMAC-SHA256(secret, requestBody)
+if signature != headerSignature:
+    return 401 Unauthorized
+```
+
+---
+
+## API Best Practices
+
+### Security
+
+- ✅ Use HTTPS everywhere
+- ✅ Implement authentication
+- ✅ Validate all inputs
+- ✅ Rate limit requests
+- ✅ Use API keys for server-to-server
+- ✅ Implement CORS properly
+- ✅ Log security events
+
+### Performance
+
+- ✅ Implement caching (ETags, Cache-Control)
+- ✅ Use compression (gzip, brotli)
+- ✅ Paginate large collections
+- ✅ Support field filtering
+- ✅ Use CDN for static content
+- ✅ Monitor API performance
+
+### Developer Experience
+
+- ✅ Provide clear error messages
+- ✅ Use consistent naming
+- ✅ Version your API
+- ✅ Maintain comprehensive docs
+- ✅ Provide SDK/client libraries
+- ✅ Include examples
+- ✅ Offer sandbox environment
+
+---
+
+## Common API Pitfalls
+
+| Pitfall | Problem | Solution |
+|---------|---------|----------|
+| **Overfetching** | Returning too much data | Support field selection |
+| **Underfetching** | Requiring multiple requests | Support eager loading |
+| **No versioning** | Breaking changes affect clients | Version from day one |
+| **Inconsistent naming** | Hard to use | Follow naming conventions |
+| **No pagination** | Performance issues | Always paginate collections |
+| **Poor error messages** | Hard to debug | Return detailed errors |
+| **No rate limiting** | API abuse | Implement rate limits |
+
+---
+
+## Resources
+
+**API Standards:**
+- [REST API Design Rulebook](https://www.oreilly.com/library/view/rest-api-design/9781449317904/)
+- [JSON:API Specification](https://jsonapi.org)
+- [Google API Design Guide](https://cloud.google.com/apis/design)
+- [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines)
+
+**Tools:**
+- **Documentation**: Swagger/OpenAPI, Postman, Insomnia
+- **Testing**: Postman, REST Client, curl
+- **Mocking**: Prism, MockServer, WireMock
+
+---
+
+**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+
+**Last Updated**: January 27, 2026

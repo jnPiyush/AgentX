@@ -1,486 +1,372 @@
 ---
 name: logging-monitoring
-description: 'Implement production observability with Serilog structured logging, OpenTelemetry tracing, Prometheus metrics, and alerting strategies.'
+description: 'Language-agnostic observability patterns including structured logging, log levels, correlation IDs, metrics, and distributed tracing.'
 ---
 
 # Logging & Monitoring
 
-> **Purpose**: Implement comprehensive logging and monitoring for production systems.
+> **Purpose**: Implement observability for production systems.  
+> **Goal**: Structured logs, correlation across requests, actionable metrics.  
+> **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
 
-## Structured Logging with Serilog
+## Structured Logging
 
-```csharp
-using Serilog;
-using Serilog.Formatting.Json;
-using System;
+### Concept
 
-// Configure Serilog with JSON formatting
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .Enrich.FromLogContext()
-    .Enrich.WithMachineName()
-    .Enrich.WithThreadId()
-    .WriteTo.Console(new JsonFormatter())
-    .WriteTo.File(
-        new JsonFormatter(),
-        "logs/app-.log",
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 30)
-    .CreateLogger();
+Log structured data (key-value pairs) instead of plain text for better searchability and analysis.
 
-// Usage with structured properties
-Log.Information("User {UserId} logged in from {IpAddress}", userId, ipAddress);
-Log.Warning("High memory usage: {MemoryUsageMB} MB", memoryUsage);
-Log.Error(exception, "Failed to process order {OrderId}", orderId);
+```
+❌ Unstructured (hard to parse):
+  "User john@example.com logged in from 192.168.1.1 at 2024-01-15 10:30:00"
 
-// Always flush and close on app shutdown
-Log.CloseAndFlush();
+✅ Structured (machine-readable):
+  {
+    "event": "user_login",
+    "user_email": "john@example.com",
+    "ip_address": "192.168.1.1",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "level": "INFO"
+  }
 ```
 
----
+### Benefits
 
-## Microsoft.Extensions.Logging
-
-```csharp
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
-
-// Configure in Program.cs or Startup.cs
-public class Program
-{
-    public static void Main(string[] args)
-    {
-        var builder = WebApplication.CreateBuilder(args);
-        
-        // Configure logging
-        builder.Logging.ClearProviders();
-        builder.Logging.AddConsole();
-        builder.Logging.AddDebug();
-        builder.Logging.AddEventSourceLogger();
-        
-        // Add Serilog
-        builder.Host.UseSerilog((context, configuration) =>
-            configuration.ReadFrom.Configuration(context.Configuration));
-        
-        var app = builder.Build();
-        app.Run();
-    }
-}
-
-// Usage in classes via dependency injection
-public class OrderService
-{
-    private readonly ILogger<OrderService> _logger;
-    
-    public OrderService(ILogger<OrderService> logger)
-    {
-        _logger = logger;
-    }
-    
-    public async Task<Order> ProcessOrderAsync(int orderId)
-    {
-        _logger.LogInformation("Processing order {OrderId}", orderId);
-        
-        try
-        {
-            var order = await GetOrderAsync(orderId);
-            _logger.LogDebug("Order details: {@Order}", order);
-            return order;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to process order {OrderId}", orderId);
-            throw;
-        }
-    }
-}
-```
+- **Searchable**: Query by any field
+- **Filterable**: Show only errors, specific users, etc.
+- **Aggregatable**: Count events, calculate averages
+- **Parseable**: Tools can process automatically
 
 ---
 
 ## Log Levels
 
-```csharp
-// Trace: Very detailed, typically only for debugging
-_logger.LogTrace("Entering method ProcessOrder with {OrderId}", orderId);
+### Standard Levels
 
-// Debug: Detailed information for debugging
-_logger.LogDebug("Order validation passed for {OrderId}", orderId);
+| Level | When to Use | Example |
+|-------|-------------|---------|
+| **TRACE** | Very detailed debugging | "Entering function with params: {x: 1, y: 2}" |
+| **DEBUG** | Debugging information | "Cache hit for key: user_123" |
+| **INFO** | Normal operations | "User logged in", "Order created" |
+| **WARN** | Unexpected but recoverable | "Retry attempt 2 of 3", "Rate limit approaching" |
+| **ERROR** | Failures requiring attention | "Payment failed", "Database connection lost" |
+| **FATAL** | Application cannot continue | "Out of memory", "Configuration invalid" |
 
-// Information: General informational messages
-_logger.LogInformation("Order {OrderId} processed successfully", orderId);
+### Level Configuration by Environment
 
-// Warning: Something unexpected but not an error
-_logger.LogWarning("Order {OrderId} processing took longer than expected: {Duration}ms", orderId, duration);
+```
+Development: DEBUG or TRACE
+  - See detailed information for debugging
 
-// Error: Error occurred, operation failed
-_logger.LogError(exception, "Failed to process order {OrderId}", orderId);
+Staging: INFO
+  - Normal operations plus warnings/errors
 
-// Critical: Serious error, application may crash
-_logger.LogCritical(exception, "Database connection lost");
+Production: INFO (or WARN)
+  - Reduce noise, focus on significant events
+  - Keep ERROR/FATAL always enabled
 ```
 
 ---
 
-## Configuration (appsettings.json)
+## Log Message Guidelines
 
-```json
-{
-  "Serilog": {
-    "Using": ["Serilog.Sinks.Console", "Serilog.Sinks.File"],
-    "MinimumLevel": {
-      "Default": "Information",
-      "Override": {
-        "Microsoft": "Warning",
-        "System": "Warning",
-        "Microsoft.EntityFrameworkCore": "Information"
-      }
-    },
-    "WriteTo": [
-      {
-        "Name": "Console",
-        "Args": {
-          "formatter": "Serilog.Formatting.Json.JsonFormatter, Serilog"
-        }
-      },
-      {
-        "Name": "File",
-        "Args": {
-          "path": "logs/app-.log",
-          "rollingInterval": "Day",
-          "retainedFileCountLimit": 30,
-          "formatter": "Serilog.Formatting.Json.JsonFormatter, Serilog"
-        }
-      }
-    ],
-    "Enrich": ["FromLogContext", "WithMachineName", "WithThreadId"]
-  }
-}
+### What to Log
+
+```
+✅ DO Log:
+  - Request start/end with duration
+  - Business events (user actions, state changes)
+  - Errors with context (what failed, why, input data)
+  - External service calls (API calls, DB queries)
+  - Security events (login, logout, permission denied)
+  - Performance metrics (slow queries, cache misses)
+
+❌ DON'T Log:
+  - Passwords, API keys, tokens
+  - Credit card numbers, SSN
+  - Personal health information
+  - Raw request/response bodies with sensitive data
+  - High-frequency events that create noise
+```
+
+### Message Format
+
+```
+Good Log Message Pattern:
+  {action} {subject} {outcome} {context}
+
+Examples:
+  ✅ "Processing order 12345 for user 67890"
+  ✅ "Payment failed for order 12345: insufficient funds"
+  ✅ "Database query completed in 150ms: SELECT * FROM users"
+
+  ❌ "Error occurred"
+  ❌ "Something went wrong"
+  ❌ "null"
 ```
 
 ---
 
-## Metrics with prometheus-net
+## Correlation IDs
 
-```csharp
-using Prometheus;
-using Microsoft.AspNetCore.Builder;
+### Concept
 
-// Define metrics
-public class Metrics
-{
-    public static readonly Counter RequestCount = Prometheus.Metrics
-        .CreateCounter(
-            "http_requests_total",
-            "Total HTTP requests",
-            new CounterConfiguration
-            {
-                LabelNames = new[] { "method", "endpoint", "status" }
-            });
-    
-    public static readonly Histogram RequestDuration = Prometheus.Metrics
-        .CreateHistogram(
-            "http_request_duration_seconds",
-            "HTTP request duration in seconds",
-            new HistogramConfiguration
-            {
-                LabelNames = new[] { "method", "endpoint" },
-                Buckets = Histogram.ExponentialBuckets(0.001, 2, 10)
-            });
-    
-    public static readonly Gauge ActiveUsers = Prometheus.Metrics
-        .CreateGauge(
-            "active_users",
-            "Number of active users");
-}
+Track requests across multiple services/layers using a unique ID.
 
-// Configure in Program.cs
-var app = builder.Build();
+```
+Request Flow:
+  
+  Client Request
+       ↓ (X-Correlation-ID: abc-123)
+  API Gateway
+       ↓ (CorrelationId: abc-123)
+  User Service
+       ↓ (CorrelationId: abc-123)
+  Database
+       ↓ (CorrelationId: abc-123)
+  Payment Service
+       ↓ (CorrelationId: abc-123)
+  Response
 
-// Enable metrics endpoint
-app.UseMetricServer();  // Exposes /metrics endpoint
-app.UseHttpMetrics();   // Automatic HTTP metrics
+All logs include CorrelationId: abc-123
+→ Easy to trace entire request path
+```
 
-// Usage in middleware
-public class MetricsMiddleware
-{
-    private readonly RequestDelegate _next;
-    
-    public MetricsMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-    
-    public async Task InvokeAsync(HttpContext context)
-    {
-        var method = context.Request.Method;
-        var endpoint = context.Request.Path;
-        
-        using (Metrics.RequestDuration
-            .WithLabels(method, endpoint)
-            .NewTimer())
-        {
-            await _next(context);
-            
-            var status = context.Response.StatusCode.ToString();
-            Metrics.RequestCount
-                .WithLabels(method, endpoint, status)
-                .Inc();
-        }
-    }
-}
+### Implementation Pattern
 
-// Manual metric tracking
-public class UserService
-{
-    public async Task LoginAsync(User user)
-    {
-        await PerformLoginAsync(user);
-        Metrics.ActiveUsers.Inc();
-    }
-    
-    public async Task LogoutAsync(User user)
-    {
-        await PerformLogoutAsync(user);
-        Metrics.ActiveUsers.Dec();
-    }
-}
+```
+Middleware Pattern:
+
+function correlationMiddleware(request, response, next):
+  # Get from header or generate new
+  correlationId = request.headers["X-Correlation-ID"] 
+                  or generateUUID()
+  
+  # Add to request context
+  request.context.correlationId = correlationId
+  
+  # Add to response header
+  response.headers["X-Correlation-ID"] = correlationId
+  
+  # Add to log context (all logs include it automatically)
+  logger.setContext({ correlationId: correlationId })
+  
+  next()
 ```
 
 ---
 
-## Distributed Tracing with OpenTelemetry
+## Metrics
 
-```csharp
-using OpenTelemetry;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using System.Diagnostics;
+### Types of Metrics
 
-// Configure in Program.cs
-var builder = WebApplication.CreateBuilder(args);
+| Type | Description | Example |
+|------|-------------|---------|
+| **Counter** | Cumulative count | `http_requests_total`, `errors_total` |
+| **Gauge** | Current value | `active_connections`, `queue_size` |
+| **Histogram** | Distribution of values | `request_duration_seconds` |
+| **Summary** | Similar to histogram with quantiles | `request_latency_p99` |
 
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracerProviderBuilder =>
-    {
-        tracerProviderBuilder
-            .AddSource("MyCompany.MyService")
-            .SetResourceBuilder(
-                ResourceBuilder.CreateDefault()
-                    .AddService("MyService", serviceVersion: "1.0.0"))
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddEntityFrameworkCoreInstrumentation()
-            .AddConsoleExporter()
-            .AddJaegerExporter(options =>
-            {
-                options.AgentHost = "localhost";
-                options.AgentPort = 6831;
-            });
-    });
+### Key Metrics to Track
 
-// Usage in services
-public class OrderService
-{
-    private static readonly ActivitySource ActivitySource = 
-        new ActivitySource("MyCompany.MyService");
-    
-    public async Task ProcessOrderAsync(int orderId)
-    {
-        using var activity = ActivitySource.StartActivity("ProcessOrder");
-        activity?.SetTag("order.id", orderId);
-        
-        try
-        {
-            // Process order with nested spans
-            await ValidatePaymentAsync(orderId);
-            await UpdateInventoryAsync(orderId);
-            
-            activity?.SetStatus(ActivityStatusCode.Ok);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.RecordException(ex);
-            throw;
-        }
-    }
-    
-    private async Task ValidatePaymentAsync(int orderId)
-    {
-        using var activity = ActivitySource.StartActivity("ValidatePayment");
-        activity?.SetTag("order.id", orderId);
-        
-        // Validation logic
-        await Task.Delay(100);
-    }
-    
-    private async Task UpdateInventoryAsync(int orderId)
-    {
-        using var activity = ActivitySource.StartActivity("UpdateInventory");
-        activity?.SetTag("order.id", orderId);
-        
-        // Update logic
-        await Task.Delay(50);
-    }
-}
+```
+Application Metrics:
+  - Request rate (requests/second)
+  - Error rate (errors/second, error %)
+  - Latency (p50, p95, p99 response times)
+  - Active users/connections
+
+Infrastructure Metrics:
+  - CPU usage
+  - Memory usage
+  - Disk I/O
+  - Network throughput
+
+Business Metrics:
+  - Orders per hour
+  - Revenue per day
+  - User signups
+  - Conversion rate
+```
+
+### RED Method (Request-Driven)
+
+```
+Rate    - Requests per second
+Errors  - Failed requests per second
+Duration - Time per request (latency)
+
+Dashboard should show:
+  - Rate: Are we getting traffic?
+  - Errors: Is something broken?
+  - Duration: Is it slow?
+```
+
+### USE Method (Resource-Driven)
+
+```
+Utilization - % of resource used
+Saturation  - Queue depth, waiting work
+Errors      - Error events
+
+Apply to: CPU, Memory, Disk, Network
+```
+
+---
+
+## Distributed Tracing
+
+### Concept
+
+Track a request as it flows through multiple services.
+
+```
+Trace Structure:
+
+Trace (entire request journey)
+  └── Span: API Gateway (50ms)
+        └── Span: Auth Service (10ms)
+        └── Span: User Service (30ms)
+              └── Span: Database Query (15ms)
+              └── Span: Cache Lookup (2ms)
+        └── Span: Notification Service (5ms)
+```
+
+### Trace Components
+
+| Component | Description |
+|-----------|-------------|
+| **Trace** | End-to-end request journey |
+| **Span** | Single operation within trace |
+| **Trace ID** | Unique ID for entire trace |
+| **Span ID** | Unique ID for single span |
+| **Parent Span ID** | Links child spans to parent |
+
+### What to Trace
+
+```
+✅ Trace:
+  - HTTP requests (incoming and outgoing)
+  - Database queries
+  - Cache operations
+  - Message queue publish/consume
+  - External API calls
+
+Context to Include:
+  - Service name
+  - Operation name
+  - Duration
+  - Status (success/error)
+  - Error message (if failed)
+  - Custom attributes (user_id, order_id, etc.)
 ```
 
 ---
 
 ## Health Checks
 
-```csharp
-using Microsoft.Extensions.Diagnostics.HealthChecks;
+### Types
 
-// Configure in Program.cs
-builder.Services.AddHealthChecks()
-    .AddCheck("self", () => HealthCheckResult.Healthy())
-    .AddNpgSql(
-        connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
-        name: "database",
-        tags: new[] { "db", "postgres" })
-    .AddRedis(
-        redisConnectionString: builder.Configuration.GetConnectionString("Redis"),
-        name: "redis-cache",
-        tags: new[] { "cache", "redis" })
-    .AddUrlGroup(
-        new Uri("https://api.external.com/health"),
-        name: "external-api",
-        tags: new[] { "external" });
+```
+Liveness Check (/health/live):
+  "Is the application running?"
+  - Returns 200 if process is alive
+  - Used by orchestrators to restart crashed containers
 
-var app = builder.Build();
+Readiness Check (/health/ready):
+  "Is the application ready to serve traffic?"
+  - Checks database connectivity
+  - Checks cache availability
+  - Checks external service health
+  - Used by load balancers to route traffic
+```
 
-// Map health check endpoints
-app.MapHealthChecks("/health");
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
+### Health Check Response
+
+```
+Response Format:
+
 {
-    Predicate = check => check.Tags.Contains("db") || check.Tags.Contains("cache")
-});
-app.MapHealthChecks("/health/live", new HealthCheckOptions
-{
-    Predicate = _ => false  // Just checks if app is running
-});
-
-// Custom health check
-public class CustomHealthCheck : IHealthCheck
-{
-    public async Task<HealthCheckResult> CheckHealthAsync(
-        HealthCheckContext context,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            // Perform health check logic
-            var isHealthy = await PerformCheckAsync(cancellationToken);
-            
-            return isHealthy
-                ? HealthCheckResult.Healthy("Service is healthy")
-                : HealthCheckResult.Unhealthy("Service is unhealthy");
-        }
-        catch (Exception ex)
-        {
-            return HealthCheckResult.Unhealthy(
-                "An error occurred during health check",
-                ex);
-        }
-    }
-    
-    private async Task<bool> PerformCheckAsync(CancellationToken cancellationToken)
-    {
-        // Implement check
-        await Task.Delay(10, cancellationToken);
-        return true;
-    }
+  "status": "healthy",  // or "unhealthy", "degraded"
+  "checks": {
+    "database": { "status": "healthy", "latency_ms": 5 },
+    "cache": { "status": "healthy", "latency_ms": 1 },
+    "external_api": { "status": "degraded", "error": "slow response" }
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
 }
 ```
 
 ---
 
-## Application Performance Monitoring (APM)
+## Alerting
 
-### Supported Tools:
-- **Application Insights** (Azure)
-- **Datadog**
-- **New Relic**
-- **Elastic APM**
-- **Dynatrace**
-- **Prometheus + Grafana**
+### Alert Categories
 
-### Application Insights Configuration
+```
+Critical (Page immediately):
+  - Application down
+  - Error rate > 10%
+  - Database unreachable
+  - Security breach detected
 
-```csharp
-// Install: Microsoft.ApplicationInsights.AspNetCore
+Warning (Notify during business hours):
+  - Error rate > 1%
+  - Latency p99 > 5s
+  - Disk usage > 80%
+  - Certificate expiring in 7 days
 
-// Configure in Program.cs
-builder.Services.AddApplicationInsightsTelemetry(options =>
-{
-    options.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
-});
+Info (Review in dashboard):
+  - Deployment completed
+  - Backup succeeded
+  - Usage approaching quota
+```
 
-// appsettings.json
-{
-  "ApplicationInsights": {
-    "ConnectionString": "InstrumentationKey=your-key;IngestionEndpoint=https://..."
-  }
-}
+### Alert Best Practices
+
+```
+✅ DO:
+  - Alert on symptoms, not causes
+  - Include runbook links in alerts
+  - Set appropriate thresholds (avoid alert fatigue)
+  - Group related alerts
+  - Include context in alert message
+
+❌ DON'T:
+  - Alert on every error
+  - Use the same severity for all alerts
+  - Alert without actionable next steps
+  - Create alerts that are always ignored
 ```
 
 ---
 
-## Best Practices
+## Best Practices Summary
 
-- **Log at appropriate levels**: Trace/Debug for development, Info+ for production
-- **Include context**: Always log user_id, request_id, correlation_id
-- **Use structured logging**: JSON format with typed properties
-- **Monitor key metrics**: Request rate, duration, error rate, resource usage
-- **Set up alerting**: Define thresholds and notification channels
-- **Implement distributed tracing**: Track requests across microservices
-- **Create dashboards**: Visualize metrics in Grafana/Application Insights
-- **Implement health checks**: For Kubernetes liveness/readiness probes
-- **Log correlation IDs**: Track requests across services
-- **Redact sensitive data**: Never log passwords, tokens, PII
-- **Use async logging**: Don't block application threads
-- **Set retention policies**: Balance storage costs with compliance needs
+| Practice | Description |
+|----------|-------------|
+| **Structured logging** | JSON format with key-value pairs |
+| **Correlation IDs** | Trace requests across services |
+| **Appropriate levels** | DEBUG in dev, INFO+ in prod |
+| **No sensitive data** | Never log passwords, tokens, PII |
+| **Context in errors** | Include what, why, and how to fix |
+| **Meaningful metrics** | Track rate, errors, duration |
+| **Health checks** | Liveness + readiness endpoints |
+| **Actionable alerts** | Include runbooks, reduce noise |
 
 ---
 
-## Required NuGet Packages
+## Observability Tools
 
-```bash
-# Serilog
-dotnet add package Serilog.AspNetCore
-dotnet add package Serilog.Sinks.Console
-dotnet add package Serilog.Sinks.File
-dotnet add package Serilog.Formatting.Json
-
-# Prometheus
-dotnet add package prometheus-net
-dotnet add package prometheus-net.AspNetCore
-
-# OpenTelemetry
-dotnet add package OpenTelemetry
-dotnet add package OpenTelemetry.Extensions.Hosting
-dotnet add package OpenTelemetry.Instrumentation.AspNetCore
-dotnet add package OpenTelemetry.Instrumentation.Http
-dotnet add package OpenTelemetry.Exporter.Console
-dotnet add package OpenTelemetry.Exporter.Jaeger
-
-# Health Checks
-dotnet add package Microsoft.Extensions.Diagnostics.HealthChecks
-dotnet add package AspNetCore.HealthChecks.NpgSql
-dotnet add package AspNetCore.HealthChecks.Redis
-
-# Application Insights
-dotnet add package Microsoft.ApplicationInsights.AspNetCore
-```
+| Category | Tools |
+|----------|-------|
+| **Logging** | ELK Stack, Splunk, Datadog Logs, CloudWatch Logs |
+| **Metrics** | Prometheus + Grafana, Datadog, New Relic, CloudWatch |
+| **Tracing** | Jaeger, Zipkin, Datadog APM, Application Insights |
+| **All-in-One** | Datadog, New Relic, Dynatrace, Elastic Observability |
 
 ---
 
-**Related Skills**:
-- [Error Handling](03-error-handling.md)
-- [Performance](05-performance.md)
-- [Scalability](07-scalability.md)
+**See Also**: [Error Handling](../error-handling/SKILL.md) • [C# Development](../csharp/SKILL.md) • [Python Development](../python/SKILL.md)
 

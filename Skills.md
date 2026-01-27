@@ -1,5 +1,5 @@
 ---
-description: 'Production-ready guidelines for AI agents to build secure, scalable, maintainable systems. Covers 18 skills: coding principles, testing, security, architecture, configuration, and AI agent development.'
+description: 'Production-ready guidelines for AI agents to build secure, scalable, maintainable systems. Covers 25 skills: coding principles, testing, security, architecture, configuration, full-stack development, and AI agent development.'
 ---
 
 # Production Code Skills & Technical Guidelines
@@ -137,19 +137,12 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 ## Skills Index
 
-### Foundation
-
-| # | Skill | Core Focus |
-|---|-------|------------|
-| 01 | [Core Principles](.github/skills/foundation/core-principles/SKILL.md) | SOLID, DRY, KISS, Design Patterns |
-| 02 | [Testing](.github/skills/foundation/testing/SKILL.md) | Unit (70%), Integration (20%), E2E (10%), 80%+ coverage |
-| 03 | [Error Handling](.github/skills/foundation/error-handling/SKILL.md) | Exceptions, Retry Logic, Circuit Breakers |
-| 04 | [Security](.github/skills/foundation/security/SKILL.md) | Input Validation, SQL Prevention, Auth/Authz, Secrets |
-
 ### Architecture
 
 | # | Skill | Core Focus |
 |---|-------|------------|
+| 01 | [Core Principles](.github/skills/architecture/core-principles/SKILL.md) | SOLID, DRY, KISS, Design Patterns |
+| 04 | [Security](.github/skills/architecture/security/SKILL.md) | Input Validation, SQL Prevention, Auth/Authz, Secrets |
 | 05 | [Performance](.github/skills/architecture/performance/SKILL.md) | Async, Caching, Profiling, DB Optimization |
 | 06 | [Database](.github/skills/architecture/database/SKILL.md) | Migrations, Indexing, Transactions, Pooling |
 | 07 | [Scalability](.github/skills/architecture/scalability/SKILL.md) | Load Balancing, Message Queues, Stateless Design |
@@ -160,19 +153,28 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 | # | Skill | Core Focus |
 |---|-------|------------|
+| 02 | [Testing](.github/skills/development/testing/SKILL.md) | Unit (70%), Integration (20%), E2E (10%), 80%+ coverage |
+| 03 | [Error Handling](.github/skills/development/error-handling/SKILL.md) | Exceptions, Retry Logic, Circuit Breakers |
 | 10 | [Configuration](.github/skills/development/configuration/SKILL.md) | Environment Variables, Feature Flags, Secrets Management |
 | 11 | [Documentation](.github/skills/development/documentation/SKILL.md) | XML Docs, README, API Docs, Inline Comments |
 | 12 | [Version Control](.github/skills/development/version-control/SKILL.md) | Git Workflow, Commit Messages, Branching Strategy |
 | 13 | [Type Safety](.github/skills/development/type-safety/SKILL.md) | Nullable Types, Analyzers, Static Analysis |
 | 14 | [Dependencies](.github/skills/development/dependency-management/SKILL.md) | Lock Files, Security Audits, Version Management |
 | 15 | [Logging & Monitoring](.github/skills/development/logging-monitoring/SKILL.md) | Structured Logging, Metrics, Distributed Tracing |
+| 18 | [Code Review & Audit](.github/skills/development/code-review-and-audit/SKILL.md) | Automated Checks, Review Checklists, Security Audits, Compliance |
+| 19 | [C# Development](.github/skills/development/csharp/SKILL.md) | Modern C# 14, .NET 10, Async/Await, EF Core, DI, Testing, Security |
+| 20 | [Python Development](.github/skills/development/python/SKILL.md) | Python 3.11+, Type Hints, Async, pytest, Dataclasses, Logging |
+| 21 | [Frontend/UI Development](.github/skills/development/frontend-ui/SKILL.md) | HTML5, CSS3, Tailwind CSS, Responsive Design, Accessibility, BEM |
+| 22 | [React Framework](.github/skills/development/react/SKILL.md) | React 19+, Hooks, TypeScript, Server Components, Testing, A11y |
+| 23 | [Blazor Framework](.github/skills/development/blazor/SKILL.md) | Blazor Server/WASM, Razor Components, Lifecycle, Data Binding, DI |
+| 24 | [PostgreSQL Database](.github/skills/development/postgresql/SKILL.md) | JSONB, Arrays, GIN Indexes, Full-Text Search, Window Functions |
+| 25 | [SQL Server Database](.github/skills/development/sql-server/SKILL.md) | T-SQL, Stored Procedures, Indexing, Query Optimization, Performance |
 
 ### Operations
 
 | # | Skill | Core Focus |
 |---|-------|------------|
 | 16 | [Remote Git Ops](.github/skills/operations/remote-git-operations/SKILL.md) | PRs, CI/CD, GitHub Actions, Azure Pipelines |
-| 18 | [Code Review & Audit](.github/skills/operations/code-review-and-audit/SKILL.md) | Automated Checks, Review Checklists, Security Audits, Compliance |
 
 ### AI Systems
 
@@ -185,15 +187,15 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 ## Critical Production Rules
 
 ### Security (Always Enforce)
-- ✅ Validate/sanitize ALL inputs → [#04](.github/skills/foundation/security/SKILL.md)
-- ✅ Parameterize SQL queries (NEVER concatenate) → [#04](.github/skills/foundation/security/SKILL.md)
+- ✅ Validate/sanitize ALL inputs → [#04](.github/skills/architecture/security/SKILL.md)
+- ✅ Parameterize SQL queries (NEVER concatenate) → [#04](.github/skills/architecture/security/SKILL.md)
 - ✅ Store secrets in env vars/Key Vault (NEVER hardcode) → [#10](.github/skills/development/configuration/SKILL.md)
-- ✅ Implement authentication & authorization → [#04](.github/skills/foundation/security/SKILL.md)
+- ✅ Implement authentication & authorization → [#04](.github/skills/architecture/security/SKILL.md)
 - ✅ Use HTTPS everywhere in production
 
 ### Quality (Non-Negotiable)
-- ✅ 80%+ code coverage with tests → [#02](.github/skills/foundation/testing/SKILL.md)
-- ✅ Test pyramid: 70% unit, 20% integration, 10% e2e → [#02](.github/skills/foundation/testing/SKILL.md)
+- ✅ 80%+ code coverage with tests → [#02](.github/skills/development/testing/SKILL.md)
+- ✅ Test pyramid: 70% unit, 20% integration, 10% e2e → [#02](.github/skills/development/testing/SKILL.md)
 - ✅ XML docs for all public APIs → [#11](.github/skills/development/documentation/SKILL.md)
 - ✅ No compiler warnings or linter errors
 - ✅ Code reviews before merge

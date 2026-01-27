@@ -1,224 +1,350 @@
 ---
 name: dependency-management
-description: 'Manage project dependencies securely with lock files, version pinning, security audits, and update strategies for NuGet, npm, and pip.'
+description: 'Language-agnostic dependency management patterns including version pinning, lock files, vulnerability scanning, and update strategies.'
 ---
 
 # Dependency Management
 
-> **Purpose**: Manage project dependencies securely and reliably.
+> **Purpose**: Manage third-party dependencies securely and reliably.  
+> **Goal**: Reproducible builds, no vulnerable packages, controlled updates.  
+> **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
 
-## C# / .NET
+## Core Concepts
 
-### .csproj (SDK-style)
+### Dependency Types
 
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
+```
+Direct Dependencies:
+  - Packages your code imports directly
+  - Listed in your package manifest
 
-  <ItemGroup>
-    <!-- Core dependencies with versions -->
-    <PackageReference Include="Microsoft.AspNetCore.App" Version="8.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+Transitive Dependencies:
+  - Dependencies of your dependencies
+  - Automatically pulled in
+  - Often source of vulnerabilities
+
+Development Dependencies:
+  - Testing frameworks
+  - Build tools
+  - Linters
+  - NOT shipped to production
+```
+
+### Dependency Files
+
+```
+Manifest File (what you want):
+  - Lists packages and version constraints
+  - Human-editable
+  - Committed to version control
+
+Lock File (what you get):
+  - Lists exact versions resolved
+  - Includes transitive dependencies
+  - Machine-generated
+  - Committed to version control
+
+Examples by Language:
+  Language    | Manifest           | Lock File
+  ------------|--------------------|-----------------
+  .NET        | *.csproj           | packages.lock.json
+  Python      | pyproject.toml     | poetry.lock
+  Node.js     | package.json       | package-lock.json
+  Go          | go.mod             | go.sum
+  Rust        | Cargo.toml         | Cargo.lock
+```
+
+---
+
+## Version Pinning
+
+### Version Constraint Syntax
+
+```
+Common Patterns:
+
+Exact Version:
+  package == 1.2.3        # Only this version
+
+Minimum Version:
+  package >= 1.2.0        # 1.2.0 or higher
+
+Compatible Version (SemVer):
+  package ^1.2.3          # >=1.2.3 <2.0.0 (same major)
+  package ~1.2.3          # >=1.2.3 <1.3.0 (same minor)
+
+Version Range:
+  package >=1.2.0,<2.0.0  # Between versions
+
+Wildcard:
+  package 1.2.*           # Any patch version
+  package *               # Any version (dangerous!)
+```
+
+### Pinning Strategy by Environment
+
+```
+Development:
+  - Use ranges for flexibility
+  - Allows testing with newer versions
+  - Example: ^1.2.0
+
+Production:
+  - Pin exact versions
+  - Reproducible builds
+  - Example: ==1.2.3 or lock file
+
+Critical Dependencies:
+  - Always pin exact version
+  - Security-sensitive packages
+  - Packages with breaking changes history
+```
+
+---
+
+## Lock Files
+
+### Why Lock Files Matter
+
+```
+Without Lock File:
+  Developer A: installs package@1.2.3
+  Developer B: installs package@1.2.5
+  CI Server:   installs package@1.2.6
+  → Different behavior, "works on my machine"
+
+With Lock File:
+  Developer A: installs package@1.2.3
+  Developer B: installs package@1.2.3 (from lock)
+  CI Server:   installs package@1.2.3 (from lock)
+  → Identical environments
+```
+
+### Lock File Best Practices
+
+```
+✅ DO:
+  - Commit lock files to version control
+  - Use lock file in CI/CD (--frozen, --locked flags)
+  - Regenerate lock file when updating dependencies
+  - Review lock file changes in PRs
+
+❌ DON'T:
+  - Delete lock files to "fix" issues
+  - Ignore lock file in .gitignore
+  - Manually edit lock files
+  - Skip lock file in production deployments
+```
+
+---
+
+## Vulnerability Scanning
+
+### Scanning Process
+
+```
+Scan Pipeline:
+
+  1. Parse dependencies (manifest + lock file)
+  2. Query vulnerability databases
+  3. Match against known CVEs
+  4. Report severity and fix versions
+  5. Fail build if critical vulnerabilities found
+
+Vulnerability Databases:
+  - National Vulnerability Database (NVD)
+  - GitHub Advisory Database
+  - Snyk Vulnerability Database
+  - OSV (Open Source Vulnerabilities)
+```
+
+### Severity Levels
+
+| Level | CVSS Score | Action |
+|-------|------------|--------|
+| **Critical** | 9.0 - 10.0 | Fix immediately, block deployment |
+| **High** | 7.0 - 8.9 | Fix within 7 days |
+| **Medium** | 4.0 - 6.9 | Fix within 30 days |
+| **Low** | 0.1 - 3.9 | Fix when convenient |
+
+### Automated Scanning
+
+```
+CI/CD Integration:
+
+  workflow:
+    steps:
+      - install_dependencies
+      - run_vulnerability_scan
+      - fail_if_critical_vulnerabilities
+      - continue_if_only_low_medium
+
+Scheduled Scanning:
+  - Run daily scans on main branch
+  - Alert on new vulnerabilities
+  - Even if no code changes
+```
+
+---
+
+## Update Strategies
+
+### Types of Updates
+
+```
+Patch Updates (1.2.x):
+  - Bug fixes
+  - Security patches
+  - Low risk
+  - Update frequently
+
+Minor Updates (1.x.0):
+  - New features
+  - Backward compatible
+  - Medium risk
+  - Update with testing
+
+Major Updates (x.0.0):
+  - Breaking changes
+  - API changes
+  - High risk
+  - Update with careful planning
+```
+
+### Update Workflow
+
+```
+1. Check for Updates
+   - List outdated packages
+   - Review changelogs
+
+2. Update in Development
+   - Update one package at a time
+   - Run tests
+   - Check for deprecation warnings
+
+3. Review and Test
+   - Code review the dependency changes
+   - Run full test suite
+   - Manual testing for critical paths
+
+4. Deploy Gradually
+   - Deploy to staging first
+   - Monitor for issues
+   - Deploy to production
+```
+
+### Automated Updates
+
+```
+Dependabot / Renovate Configuration:
+
+  - Auto-create PRs for updates
+  - Separate PRs per package (easier review)
+  - Group related packages (monorepo deps)
+  - Schedule updates (weekly, not per-commit)
+  - Auto-merge patch updates (if tests pass)
+  - Require manual merge for major updates
+```
+
+---
+
+## Dependency Selection
+
+### Evaluation Criteria
+
+```
+Before Adding a Dependency:
+
+✅ Check:
+  - Maintenance status (recent commits, active maintainers)
+  - Security history (past vulnerabilities, response time)
+  - License compatibility (MIT, Apache OK; GPL may not be)
+  - Download/usage statistics (popular = battle-tested)
+  - API stability (frequent breaking changes?)
+  - Bundle size (for frontend packages)
+  - Transitive dependencies (brings in how many others?)
+
+❌ Red Flags:
+  - No updates in 2+ years
+  - Many open security issues
+  - Single maintainer, no bus factor
+  - Excessive transitive dependencies
+  - Unclear or restrictive license
+```
+
+### Minimize Dependencies
+
+```
+Questions Before Adding:
+  1. Can I implement this myself in < 100 lines?
+  2. Does the standard library provide this?
+  3. Do I need the whole package or just one function?
+  4. Is this a core feature or rarely used?
+
+Alternatives:
+  - Copy small utility functions (with attribution)
+  - Use standard library alternatives
+  - Write custom implementation for simple needs
+```
+
+---
+
+## Monorepo Dependencies
+
+### Shared Dependencies
+
+```
+Central Package Management:
+
+  /project-root
+    /packages.props  (or package.json workspace)
+      - Define versions once
+      - All projects use same versions
     
-    <!-- Use exact versions for production stability -->
-    <PackageReference Include="Serilog" Version="[3.1.1]" />
+    /service-a
+      - References packages (no version)
     
-    <!-- Use version ranges for flexibility -->
-    <PackageReference Include="AutoMapper" Version="12.*" />
-  </ItemGroup>
+    /service-b
+      - References packages (no version)
 
-  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-    <!-- Dev/Test dependencies -->
-    <PackageReference Include="xunit" Version="2.6.6" />
-    <PackageReference Include="Moq" Version="4.20.70" />
-    <PackageReference Include="coverlet.collector" Version="6.0.0" />
-  </ItemGroup>
-</Project>
-```
-
-### Central Package Management (Directory.Packages.props)
-
-```xml
-<Project>
-  <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-  </PropertyGroup>
-  
-  <ItemGroup>
-    <!-- Define versions centrally for multi-project solutions -->
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
-    <PackageVersion Include="Serilog" Version="3.1.1" />
-    <PackageVersion Include="AutoMapper" Version="12.0.1" />
-    <PackageVersion Include="xunit" Version="2.6.6" />
-    <PackageVersion Include="Moq" Version="4.20.70" />
-  </ItemGroup>
-</Project>
-```
-
-### Package Reference in .csproj with Central Management
-
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <!-- Versions managed in Directory.Packages.props -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Serilog" />
-    <PackageReference Include="AutoMapper" />
-  </ItemGroup>
-</Project>
+Benefits:
+  - Consistent versions across all services
+  - Single place to update
+  - Easier security patching
 ```
 
 ---
 
-## NuGet Package Management
+## Best Practices Summary
 
-```bash
-
-dotnet restore
-```
-
----
-
-## Version Specifications
-
-```xml
-<!-- Exact version -->
-<PackageReference Include="Serilog" Version="[3.1.1]" />
-
-<!-- Minimum version -->
-<PackageReference Include="Serilog" Version="3.1.1" />
-
-<!-- Version range -->
-<PackageReference Include="Serilog" Version="[3.1.1, 4.0.0)" />
-
-<!-- Wildcard (patch updates) -->
-<PackageReference Include="Serilog" Version="3.1.*" />
-
-<!-- Float to latest minor/patch -->
-<PackageReference Include="Serilog" Version="3.*" />
-```
+| Practice | Description |
+|----------|-------------|
+| **Use lock files** | Commit and respect lock files |
+| **Pin production deps** | Exact versions for reproducibility |
+| **Scan regularly** | Automated vulnerability scanning |
+| **Update strategically** | Patch often, minor carefully, major planned |
+| **Minimize dependencies** | Every dep is a liability |
+| **Review licenses** | Ensure compatibility |
+| **Separate dev deps** | Don't ship test frameworks |
+| **Audit new deps** | Evaluate before adding |
 
 ---
 
-## Security Audits
+## Dependency Management Tools
 
-```bash
-# .NET Security Audit
-dotnet list package --vulnerable
-
-# Include transitive dependencies
-dotnet list package --vulnerable --include-transitive
-
-# Update vulnerable packages
-dotnet add package <PackageName> --version <SafeVersion>
-
-# Use GitHub Dependabot (for repos on GitHub)
-# Create .github/dependabot.yml
-```
-
-### Dependabot Configuration (.github/dependabot.yml)
-
-```yaml
-version: 2
-updates:
-  - package-ecosystem: "nuget"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
-    target-branch: "main"
-```
+| Language | Package Manager | Vulnerability Scanner |
+|----------|-----------------|----------------------|
+| **.NET** | NuGet, dotnet | `dotnet list package --vulnerable` |
+| **Python** | pip, poetry | pip-audit, safety |
+| **Node.js** | npm, yarn, pnpm | `npm audit`, Snyk |
+| **Java** | Maven, Gradle | OWASP Dependency-Check |
+| **Go** | go mod | govulncheck |
+| **Rust** | Cargo | cargo-audit |
 
 ---
 
-## Package Lock Files
-
-```bash
-# NuGet uses packages.lock.json for deterministic restores
-# Enable in .csproj:
-```
-
-```xml
-<PropertyGroup>
-  <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-  <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
-</PropertyGroup>
-```
-
-```bash
-# Restore and generate lock file
-dotnet restore --locked-mode
-```
-
----
-
-## Global Tools
-
-```bash
-# Install global tool
-dotnet tool install -g dotnet-ef
-
-# Update global tool
-dotnet tool update -g dotnet-ef
-
-# List installed tools
-dotnet tool list -g
-
-# Uninstall tool
-dotnet tool uninstall -g dotnet-ef
-```
-
----
-
-## Best Practices
-
-- Use exact versions `[x.y.z]` in production for stability
-- Enable Central Package Management for multi-project solutions
-- Use `packages.lock.json` for deterministic builds
-- Regularly check for vulnerable packages with `dotnet list package --vulnerable`
-- Separate test dependencies using Conditions
-- Use Dependabot or Renovate for automated updates
-- Keep .NET SDK and runtime versions aligned
-- Document package purposes in comments
-- Review package licenses before adoption
-- Prefer official Microsoft packages when available
-
----
-
-## NuGet.config for Private Feeds
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <clear />
-    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-    <add key="MyCompanyFeed" value="https://pkgs.dev.azure.com/mycompany/_packaging/myfeed/nuget/v3/index.json" />
-  </packageSources>
-  
-  <packageSourceCredentials>
-    <MyCompanyFeed>
-      <add key="Username" value="%AZURE_DEVOPS_USERNAME%" />
-      <add key="ClearTextPassword" value="%AZURE_DEVOPS_PAT%" />
-    </MyCompanyFeed>
-  </packageSourceCredentials>
-</configuration>
-```
-
----
-
-**Related Skills**:
-- [Security](04-security.md)
-- [Version Control](12-version-control.md)
+**See Also**: [Security](.github/skills/architecture/security/SKILL.md) • [C# Development](../csharp/SKILL.md) • [Python Development](../python/SKILL.md)
 

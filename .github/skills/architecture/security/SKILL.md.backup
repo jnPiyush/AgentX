@@ -1,0 +1,865 @@
+---
+name: security
+description: 'Language-agnostic production security practices covering OWASP Top 10, input validation, SQL injection prevention, authentication/authorization, and secrets management.'
+---
+
+# Security
+
+> **Purpose**: Language-agnostic security practices to protect against common vulnerabilities.  
+> **Focus**: Input validation, SQL injection prevention, authentication, secrets management.  
+> **Note**: See language-specific skills (C#, Python, etc.) for implementation examples.
+
+---
+
+## OWASP Top 10 (2025)
+
+1. **Broken Access Control** - Authorization failures
+2. **Cryptographic Failures** - Weak encryption, exposed secrets
+3. **Injection** - SQL, NoSQL, command injection
+4. **Insecure Design** - Missing security controls
+5. **Security Misconfiguration** - Default configs, unnecessary features
+6. **Vulnerable Components** - Outdated dependencies
+7. **Authentication Failures** - Weak passwords, session management
+8. **Software/Data Integrity** - Unsigned updates, insecure CI/CD
+9. **Logging/Monitoring Failures** - Missing audit logs
+10. **Server-Side Request Forgery (SSRF)** - Unvalidated URLs
+
+---
+
+## Input Validation
+
+### Always Validate & Sanitize
+
+**Validation Rules Pattern:**
+```pseudocode
+function validateUserInput(input):
+    validationRules = {
+        email: {
+            required: true,
+            format: EMAIL_REGEX,
+            maxLength: 255
+        },
+        username: {
+            required: true,
+            minLength: 3,
+            maxLength: 20,
+            pattern: "^[a-zA-Z0-9_]+$",
+            message: "Only letters, numbers, and underscores allowed"
+        },
+        age: {
+            required: true,
+            minimum: 13,
+            maximum: 120
+        }
+    }
+    
+    errors = []
+    for field, rules in validationRules:
+        if not validate(input[field], rules):
+            errors.append(createError(field, rules.message))
+    
+    return errors
+end
+
+// In HTTP handler
+function handleCreateUser(request):
+    input = parseRequestBody(request)
+    errors = validateUserInput(input)
+    
+    if errors.isNotEmpty():
+        return httpResponse(400, errors)
+    
+    user = createUser(input)
+    return httpResponse(200, user)
+end
+```
+
+**Implementation Approach:**
+- Use validation libraries/frameworks (e.g., FluentValidation for .NET, Joi for Node.js, Pydantic for Python)
+- Validate at API boundary before business logic
+- Return clear error messages for client debugging
+- Reject invalid data immediately
+
+### Sanitize HTML
+
+**HTML Sanitization Pattern:**
+```pseudocode
+class HtmlSanitizer:
+    allowedTags = ["p", "br", "strong", "em", "a"]
+    allowedAttributes = {
+        "a": ["href", "title"]
+    }
+    
+    function sanitize(htmlString):
+        // Parse HTML into DOM tree
+        dom = parseHtml(htmlString)
+        
+        // Remove disallowed tags and attributes
+        for element in dom.getAllElements():
+            if element.tag not in allowedTags:
+                element.remove()
+            else:
+                for attr in element.attributes:
+                    if attr not in allowedAttributes[element.tag]:
+                        element.removeAttribute(attr)
+        
+        // Encode special characters in text content
+        return dom.toSafeHtmlString()
+    end
+end
+
+// Usage
+sanitizer = new HtmlSanitizer()
+safeHtml = sanitizer.sanitize(userProvidedHtml)
+```
+
+**Implementation Libraries:**
+- .NET: HtmlSanitizer (Ganss.Xss)
+- Python: bleach, html5lib
+- Node.js: DOMPurify, sanitize-html
+- Java: OWASP Java HTML Sanitizer
+
+---
+
+## SQL Injection Prevention
+
+### Use Parameterized Queries
+
+**❌ NEVER concatenate SQL:**
+```pseudocode
+// VULNERABLE - DO NOT USE
+function getUser(email):
+    query = "SELECT * FROM Users WHERE Email = '" + email + "'"
+    // Attacker can inject: ' OR '1'='1
+    return database.execute(query)
+end
+```
+
+**✅ Always use parameterized queries:**
+```pseudocode
+// SAFE - Parameterized query
+function getUser(email):
+    query = "SELECT * FROM Users WHERE Email = @email"
+    parameters = { email: email }
+    return database.executeParameterized(query, parameters)
+end
+
+// SAFE - ORM/Query Builder
+function getUser(email):
+    return ORM.Users
+        .where("email", "=", email)  // ORM handles escaping
+        .first()
+end
+```
+
+**Parameterization Patterns by Language:**
+- **SQL (Generic)**: Use `?` or `@param` placeholders
+- **Prepared Statements**: Compile query once, execute with parameters
+- **ORM Methods**: Use query builder methods (WHERE clauses, etc.)
+- **Stored Procedures**: Accept parameters, never concatenate
+
+**Why This Works:**
+- Parameters are sent separately from SQL query
+- Database treats parameters as data, not executable code
+- No string interpolation = no injection opportunity
+
+---
+
+## Authentication & Authorization
+
+### JWT Authentication Pattern
+
+**Token Validation Configuration:**
+```pseudocode
+jwtConfiguration = {
+    issuer: CONFIG["JWT_ISSUER"],           // Who issued the token
+    audience: CONFIG["JWT_AUDIENCE"],       // Who token is intended for
+    secretKey: CONFIG["JWT_SECRET"],        // Signing key (NEVER hardcode)
+    algorithm: "HS256" or "RS256",          // Signing algorithm
+    expirationTime: 3600,                   // Token lifetime (seconds)
+    validateIssuer: true,
+    validateAudience: true,
+    validateLifetime: true,
+    validateSignature: true
+}
+
+// Generate token
+function generateToken(user):
+    claims = {
+        userId: user.id,
+        username: user.username,
+        roles: user.roles,
+        expiresAt: currentTime() + jwtConfiguration.expirationTime
+    }
+    
+    return JWT.encode(claims, jwtConfiguration.secretKey, jwtConfiguration.algorithm)
+end
+
+// Validate token
+function validateToken(tokenString):
+    try:
+        decoded = JWT.decode(tokenString, jwtConfiguration.secretKey)
+        
+        if not validateIssuer(decoded.issuer):
+            throw InvalidTokenError("Invalid issuer")
+        if not validateAudience(decoded.audience):
+            throw InvalidTokenError("Invalid audience")
+        if decoded.expiresAt < currentTime():
+            throw ExpiredTokenError("Token expired")
+        
+        return decoded.claims
+    catch error:
+        return null  // Invalid token
+    end
+end
+```
+
+### Authorization Policies
+
+**Role-Based Access Control (RBAC):**
+```pseudocode
+// Define authorization policies
+policies = {
+    "AdminOnly": {
+        requiredRoles: ["Admin"]
+    },
+    "CanEditUser": {
+        requiredPermissions: ["EditUser"]
+    },
+    "ResourceOwner": {
+        customCheck: function(user, resource):
+            return resource.ownerId == user.id
+        end
+    }
+}
+
+// Apply authorization
+function handleDeleteUser(request, userId):
+    currentUser = authenticate(request)
+    
+    if not authorize(currentUser, "AdminOnly"):
+        return httpResponse(403, "Forbidden")
+    
+    deleteUser(userId)
+    return httpResponse(204)
+end
+
+// Authorization helper
+function authorize(user, policyName):
+    policy = policies[policyName]
+    
+    if policy.requiredRoles:
+        return user.roles.containsAny(policy.requiredRoles)
+    
+    if policy.requiredPermissions:
+        return user.permissions.containsAny(policy.requiredPermissions)
+    
+    if policy.customCheck:
+        return policy.customCheck(user)
+    
+    return false
+end
+```
+
+### Password Hashing
+
+**Secure Password Storage Pattern:**
+```pseudocode
+// ❌ NEVER store plain text passwords
+function createUser(username, password):
+    user = {
+        username: username,
+        password: password  // VULNERABLE - DO NOT DO THIS
+    }
+    return database.save(user)
+end
+
+// ✅ Always hash passwords
+function createUser(username, password):
+    passwordHash = hashPassword(password)
+    user = {
+        username: username,
+        passwordHash: passwordHash  // Safe
+    }
+    return database.save(user)
+end
+
+// Password hashing with salt and work factor
+function hashPassword(plainPassword):
+    // Use adaptive hashing algorithm (bcrypt, Argon2, scrypt)
+    workFactor = 12  // Cost parameter (higher = slower = more secure)
+    salt = generateRandomSalt()  // Unique per password
+    
+    hash = BCRYPT.hash(plainPassword, salt, workFactor)
+    return hash  // Contains: algorithm + workFactor + salt + hash
+end
+
+// Password verification
+function verifyPassword(plainPassword, storedHash):
+    return BCRYPT.verify(plainPassword, storedHash)
+end
+
+// Login handler
+function handleLogin(username, password):
+    user = database.getUserByUsername(username)
+    
+    if user is null:
+        return httpResponse(401, "Invalid credentials")
+    
+    if not verifyPassword(password, user.passwordHash):
+        return httpResponse(401, "Invalid credentials")
+    
+    token = generateToken(user)
+    return httpResponse(200, { token: token })
+end
+```
+
+**Password Hashing Algorithms (Recommended):**
+- **Argon2** (Best) - Winner of Password Hashing Competition
+- **bcrypt** (Good) - Industry standard, widely supported
+- **scrypt** (Good) - Memory-hard function
+- ❌ **SHA-256/MD5** (BAD) - Too fast, vulnerable to rainbow tables
+
+---
+
+## Secrets Management
+
+### Use Environment Variables
+
+**❌ Never hardcode secrets:**
+```pseudocode
+// config.json - DO NOT DO THIS
+{
+    "database": {
+        "host": "db.example.com",
+        "username": "admin",
+        "password": "SuperSecret123!"  // VULNERABLE
+    },
+    "apiKeys": {
+        "stripe": "sk_live_abcd1234"  // VULNERABLE
+    }
+}
+```
+
+**✅ Use environment variables:**
+```pseudocode
+// Configuration pattern
+function loadConfiguration():
+    config = {
+        database: {
+            host: ENV["DB_HOST"],
+            username: ENV["DB_USERNAME"],
+            password: ENV["DB_PASSWORD"]  // From environment
+        },
+        apiKeys: {
+            stripe: ENV["STRIPE_API_KEY"]  // From environment
+        }
+    }
+    return config
+end
+
+// Validate required secrets on startup
+function validateConfiguration(config):
+    requiredEnvVars = [
+        "DB_PASSWORD",
+        "STRIPE_API_KEY",
+        "JWT_SECRET"
+    ]
+    
+    for varName in requiredEnvVars:
+        if ENV[varName] is null or ENV[varName].isEmpty():
+            throw ConfigurationError("Missing required environment variable: " + varName)
+    end
+end
+```
+
+### Secrets Management Services
+
+**Cloud-Based Secrets Management Pattern:**
+```pseudocode
+// Initialize secrets client
+secretsClient = new SecretsManagerClient({
+    provider: "AWS Secrets Manager" | "Azure Key Vault" | "GCP Secret Manager",
+    region: "us-east-1",
+    credentials: defaultCredentialProvider()  // IAM role, managed identity
+})
+
+// Retrieve secret at runtime
+function getSecret(secretName):
+    try:
+        secret = secretsClient.getSecret(secretName)
+        return secret.value
+    catch error:
+        logError("Failed to retrieve secret: " + secretName)
+        throw error
+    end
+end
+
+// Usage
+dbPassword = getSecret("production/database/password")
+apiKey = getSecret("production/stripe/api-key")
+```
+
+**Secrets Management Best Practices:**
+- Store secrets in dedicated services (AWS Secrets Manager, Azure Key Vault, HashiCorp Vault)
+- Use environment variables for local development
+- Rotate secrets regularly (automated rotation)
+- Use IAM roles/managed identities for authentication (no API keys needed)
+- Separate secrets by environment (dev/staging/production)
+- Audit secret access (who accessed what, when)
+
+### Development Secrets (Local Only)
+
+**Local Development Pattern:**
+```pseudocode
+// .env file (add to .gitignore)
+DB_PASSWORD=local_dev_password
+STRIPE_API_KEY=sk_test_abcd1234
+
+// Load from .env in development
+if ENVIRONMENT == "development":
+    loadEnvironmentFile(".env")
+end
+
+// Access secrets
+dbPassword = ENV["DB_PASSWORD"]
+```
+
+**⚠️ NEVER commit .env files to version control:**
+```gitignore
+# .gitignore
+.env
+.env.local
+.env.*.local
+secrets.json
+```
+
+---
+
+## HTTPS & TLS
+
+**HTTPS Enforcement Pattern:**
+```pseudocode
+// Force HTTPS redirect
+function httpsMiddleware(request, response, next):
+    if ENVIRONMENT == "production" and request.protocol != "https":
+        httpsUrl = "https://" + request.host + request.path
+        return redirect(response, httpsUrl, 301)
+    end
+    next()
+end
+
+// HTTP Strict Transport Security (HSTS)
+function hstsMiddleware(request, response, next):
+    if ENVIRONMENT == "production":
+        response.setHeader("Strict-Transport-Security", 
+            "max-age=31536000; includeSubDomains; preload")
+    end
+    next()
+end
+
+// TLS Configuration
+tlsConfig = {
+    minVersion: "TLS 1.2",           // Disable older protocols
+    preferredCiphers: [
+        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+    ],
+    certificatePath: ENV["TLS_CERT_PATH"],
+    privateKeyPath: ENV["TLS_KEY_PATH"]
+}
+```
+
+**HTTPS Best Practices:**
+- Always use HTTPS in production (no exceptions)
+- Enable HSTS with long max-age (1 year minimum)
+- Use TLS 1.2 or higher (disable TLS 1.0/1.1)
+- Use strong cipher suites
+- Renew certificates before expiration (automate with Let's Encrypt)
+
+---
+
+## CORS
+
+**CORS Configuration Pattern:**
+```pseudocode
+corsConfig = {
+    allowedOrigins: [
+        "https://app.example.com",
+        "https://admin.example.com"
+    ],
+    allowedMethods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    allowCredentials: true,
+    maxAge: 3600  // Preflight cache duration
+}
+
+// CORS middleware
+function corsMiddleware(request, response, next):
+    origin = request.getHeader("Origin")
+    
+    // Check if origin is allowed
+    if origin not in corsConfig.allowedOrigins:
+        return httpResponse(403, "CORS policy violation")
+    end
+    
+    // Set CORS headers
+    response.setHeader("Access-Control-Allow-Origin", origin)
+    response.setHeader("Access-Control-Allow-Methods", 
+        join(corsConfig.allowedMethods, ", "))
+    response.setHeader("Access-Control-Allow-Headers", 
+        join(corsConfig.allowedHeaders, ", "))
+    
+    if corsConfig.allowCredentials:
+        response.setHeader("Access-Control-Allow-Credentials", "true")
+    end
+    
+    // Handle preflight requests
+    if request.method == "OPTIONS":
+        response.setHeader("Access-Control-Max-Age", corsConfig.maxAge)
+        return httpResponse(204)
+    end
+    
+    next()
+end
+```
+
+**❌ NEVER use wildcard in production:**
+```pseudocode
+// DANGEROUS - DO NOT USE IN PRODUCTION
+corsConfig = {
+    allowedOrigins: "*"  // Allows ANY website to access your API
+}
+```
+
+**CORS Best Practices:**
+- Whitelist specific origins (never use `*` in production)
+- Limit allowed methods to what's actually needed
+- Don't expose sensitive headers
+- Use short preflight cache durations for frequently changing APIs
+
+---
+
+## Rate Limiting
+
+**Rate Limiting Pattern:**
+```pseudocode
+// Rate limit configuration
+rateLimits = {
+    global: {
+        windowSize: 60,      // 1 minute window
+        maxRequests: 100     // 100 requests per minute
+    },
+    endpoints: {
+        "/api/login": {
+            windowSize: 60,
+            maxRequests: 5   // Stricter for auth endpoints
+        },
+        "/api/search": {
+            windowSize: 60,
+            maxRequests: 20  // Stricter for expensive operations
+        }
+    }
+}
+
+// Rate limiter using sliding window
+class RateLimiter:
+    store = new InMemoryCache()  // Or Redis for distributed systems
+    
+    function checkRateLimit(identifier, endpoint):
+        limit = getLimitForEndpoint(endpoint)
+        key = "ratelimit:" + identifier + ":" + endpoint
+        
+        // Get request timestamps in current window
+        window = getCurrentWindow(limit.windowSize)
+        requests = store.getList(key, window.start, window.end)
+        
+        if requests.count() >= limit.maxRequests:
+            return {
+                allowed: false,
+                retryAfter: window.end - currentTime()
+            }
+        end
+        
+        // Record this request
+        store.addToList(key, currentTime())
+        
+        return {
+            allowed: true,
+            remaining: limit.maxRequests - requests.count() - 1
+        }
+    end
+end
+
+// Rate limiting middleware
+function rateLimitMiddleware(request, response, next):
+    identifier = getClientIdentifier(request)  // IP or user ID
+    result = rateLimiter.checkRateLimit(identifier, request.path)
+    
+    response.setHeader("X-RateLimit-Limit", limit.maxRequests)
+    response.setHeader("X-RateLimit-Remaining", result.remaining)
+    
+    if not result.allowed:
+        response.setHeader("Retry-After", result.retryAfter)
+        return httpResponse(429, "Too Many Requests")
+    end
+    
+    next()
+end
+```
+
+**Rate Limiting Strategies:**
+- **Fixed Window**: Simple but can have burst at window boundaries
+- **Sliding Window**: More accurate, smoother rate limiting
+- **Token Bucket**: Allows short bursts, good for bursty traffic
+- **Leaky Bucket**: Constant outflow rate, good for smoothing traffic
+
+**Identifier Options:**
+- IP Address (for anonymous users)
+- User ID (for authenticated users)
+- API Key (for API clients)
+- Combination (IP + User ID for better accuracy)
+
+---
+
+## Security Headers
+
+**Security Headers Pattern:**
+```pseudocode
+securityHeaders = {
+    // Prevent MIME type sniffing
+    "X-Content-Type-Options": "nosniff",
+    
+    // Prevent clickjacking
+    "X-Frame-Options": "DENY",
+    
+    // Enable XSS protection (older browsers)
+    "X-XSS-Protection": "1; mode=block",
+    
+    // Control referrer information
+    "Referrer-Policy": "no-referrer",
+    
+    // Content Security Policy
+    "Content-Security-Policy": 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https:; " +
+        "font-src 'self'; " +
+        "connect-src 'self'; " +
+        "frame-ancestors 'none'",
+    
+    // Permissions Policy (formerly Feature Policy)
+    "Permissions-Policy": 
+        "geolocation=(), " +
+        "microphone=(), " +
+        "camera=()"
+}
+
+// Security headers middleware
+function securityHeadersMiddleware(request, response, next):
+    for headerName, headerValue in securityHeaders:
+        response.setHeader(headerName, headerValue)
+    end
+    next()
+end
+```
+
+**Key Security Headers Explained:**
+
+| Header | Purpose | Recommended Value |
+|--------|---------|-------------------|
+| `X-Content-Type-Options` | Prevent MIME sniffing | `nosniff` |
+| `X-Frame-Options` | Prevent clickjacking | `DENY` or `SAMEORIGIN` |
+| `X-XSS-Protection` | Legacy XSS protection | `1; mode=block` |
+| `Referrer-Policy` | Control referrer info | `no-referrer` or `strict-origin-when-cross-origin` |
+| `Content-Security-Policy` | Restrict resource loading | Tailored to your app |
+| `Permissions-Policy` | Control browser features | Disable unused features |
+| `Strict-Transport-Security` | Enforce HTTPS | `max-age=31536000; includeSubDomains` |
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+- **Validate all inputs** - Never trust user data
+- **Parameterize SQL** - Use ORM or prepared statements
+- **Hash passwords** - BCrypt/Argon2 with work factor ≥12
+- **Use HTTPS** - Always in production, enforce with HSTS
+- **Store secrets securely** - Secrets manager, env vars, never in code
+- **Implement RBAC** - Role-based access control with least privilege
+- **Enable rate limiting** - Prevent abuse and DoS attacks
+- **Add security headers** - CSP, X-Content-Type-Options, X-Frame-Options
+- **Log security events** - Failed logins, access violations, anomalies
+- **Update dependencies** - Patch vulnerabilities regularly, automate scanning
+- **Use least privilege** - Minimal necessary permissions for users and services
+- **Encrypt sensitive data** - At rest and in transit
+- **Implement MFA** - Multi-factor authentication for sensitive operations
+- **Regular security audits** - Penetration testing, code reviews
+
+### ❌ DON'T
+
+- **Trust user input** - Always validate/sanitize before use
+- **Concatenate SQL** - Always use parameterized queries
+- **Store plain passwords** - Always hash with strong algorithms
+- **Hardcode secrets** - Use secure storage (Key Vault, Secrets Manager)
+- **Allow any CORS origin** - Whitelist specific domains only
+- **Ignore security warnings** - Fix vulnerabilities immediately
+- **Use default credentials** - Change all defaults before deployment
+- **Skip authentication** - Protect all sensitive endpoints
+- **Expose error details** - Return generic errors to users, log detailed errors server-side
+- **Disable SSL validation** - Never in production (not even for testing)
+- **Roll your own crypto** - Use established libraries and algorithms
+- **Store tokens in local storage** - Use httpOnly cookies when possible
+
+---
+
+## Security Checklist
+
+**Input & Data Validation:**
+- [ ] All inputs validated and sanitized at entry points
+- [ ] File uploads restricted by type, size, and content
+- [ ] URL parameters validated before use
+- [ ] JSON/XML parsing protected against injection attacks
+
+**Authentication & Authorization:**
+- [ ] Authentication implemented (JWT, OAuth, SAML)
+- [ ] Authorization policies defined and enforced
+- [ ] Passwords hashed with BCrypt/Argon2 (work factor ≥12)
+- [ ] Session management secure (timeout, rotation)
+- [ ] Multi-factor authentication available for sensitive operations
+
+**Data Protection:**
+- [ ] SQL queries parameterized (no string concatenation)
+- [ ] Secrets in secure storage (Key Vault, Secrets Manager, env vars)
+- [ ] HTTPS enforced in production with HSTS
+- [ ] Sensitive data encrypted at rest
+- [ ] Database connections use TLS
+
+**API Security:**
+- [ ] CORS properly configured (no wildcard origins)
+- [ ] Rate limiting enabled per endpoint
+- [ ] Security headers added (CSP, X-Frame-Options, etc.)
+- [ ] API versioning implemented
+- [ ] Request size limits enforced
+
+**Monitoring & Logging:**
+- [ ] Security events logged (failed logins, access violations)
+- [ ] Error handling doesn't expose internals to users
+- [ ] Audit trails for sensitive operations
+- [ ] Anomaly detection configured
+
+**Dependencies & Configuration:**
+- [ ] Dependencies updated and audited regularly
+- [ ] Security scan passed (OWASP ZAP, Snyk, SonarQube)
+- [ ] Default credentials changed
+- [ ] Unnecessary services disabled
+- [ ] Security configurations reviewed
+
+**Testing:**
+- [ ] Penetration testing completed
+- [ ] Security unit tests written
+- [ ] OWASP Top 10 vulnerabilities tested
+- [ ] Input fuzzing performed
+
+---
+
+## Common Vulnerability Patterns
+
+### Injection Attacks
+**Vulnerability:** User input executed as code
+**Prevention:** Parameterized queries, input validation, ORM usage
+**Example:** SQL injection via concatenated query strings
+
+### Broken Authentication
+**Vulnerability:** Weak password policies, session fixation, credential stuffing
+**Prevention:** Strong password hashing, MFA, session rotation, rate limiting
+**Example:** User enumeration via timing attacks on login
+
+### Sensitive Data Exposure
+**Vulnerability:** Unencrypted data transmission, weak encryption
+**Prevention:** HTTPS, TLS, strong encryption algorithms, proper key management
+**Example:** API tokens in URL parameters or logs
+
+### XML External Entities (XXE)
+**Vulnerability:** XML parser processes external entity references
+**Prevention:** Disable external entity processing in XML parsers
+**Example:** File disclosure via XXE in XML uploads
+
+### Broken Access Control
+**Vulnerability:** Users access resources without proper authorization
+**Prevention:** Enforce authorization checks, default deny, least privilege
+**Example:** Direct object reference without ownership check
+
+### Security Misconfiguration
+**Vulnerability:** Default configs, unnecessary features enabled
+**Prevention:** Secure defaults, minimal installation, regular audits
+**Example:** Debug mode enabled in production
+
+### Cross-Site Scripting (XSS)
+**Vulnerability:** Untrusted data rendered in web page
+**Prevention:** HTML sanitization, CSP headers, output encoding
+**Example:** Stored XSS in user profile fields
+
+### Insecure Deserialization
+**Vulnerability:** Untrusted data deserialized into objects
+**Prevention:** Validate deserialized objects, use safe formats (JSON over binary)
+**Example:** Remote code execution via crafted serialized payload
+
+### Server-Side Request Forgery (SSRF)
+**Vulnerability:** Application fetches remote resource without validation
+**Prevention:** Whitelist allowed URLs/IPs, disable URL redirects
+**Example:** Internal network scanning via user-supplied URL
+
+---
+
+## Resources
+
+**Standards & Guidelines:**
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/) - Most critical web application security risks
+- [OWASP Cheat Sheets](https://cheatsheetseries.owasp.org) - Quick reference for security best practices
+- [CWE Top 25](https://cwe.mitre.org/top25/) - Most dangerous software weaknesses
+- [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework) - Security standards and guidelines
+
+**Security Testing Tools:**
+- [OWASP ZAP](https://www.zaproxy.org) - Web application security scanner
+- [Burp Suite](https://portswigger.net/burp) - Web vulnerability scanner
+- [Snyk](https://snyk.io) - Dependency vulnerability scanning
+- [SonarQube](https://www.sonarqube.org) - Code quality and security analysis
+- [Trivy](https://trivy.dev) - Container security scanner
+
+**Language-Specific Security:**
+- **.NET**: [Microsoft Security Docs](https://learn.microsoft.com/aspnet/core/security/)
+- **Python**: [Python Security Best Practices](https://python.readthedocs.io/en/stable/library/security_warnings.html)
+- **Node.js**: [Node.js Security Best Practices](https://nodejs.org/en/docs/guides/security/)
+- **Java**: [OWASP Java Security](https://owasp.org/www-project-java-html-sanitizer/)
+- **PHP**: [PHP Security Guide](https://www.php.net/manual/en/security.php)
+
+**Validation & Sanitization Libraries:**
+- **.NET**: FluentValidation, HtmlSanitizer (Ganss.Xss)
+- **Python**: Pydantic, bleach, validators
+- **Node.js**: Joi, validator, DOMPurify, express-validator
+- **Java**: Hibernate Validator, OWASP Java HTML Sanitizer
+- **PHP**: Respect\Validation, HTML Purifier
+
+**Password Hashing Libraries:**
+- **.NET**: BCrypt.Net, Konscious.Security.Cryptography (Argon2)
+- **Python**: bcrypt, argon2-cffi, passlib
+- **Node.js**: bcrypt, argon2
+- **Java**: Spring Security Crypto, Bouncy Castle
+- **PHP**: password_hash() (built-in), Sodium extension
+
+**JWT Libraries:**
+- **.NET**: System.IdentityModel.Tokens.Jwt, Microsoft.AspNetCore.Authentication.JwtBearer
+- **Python**: PyJWT, python-jose
+- **Node.js**: jsonwebtoken, jose
+- **Java**: java-jwt, jjwt
+- **PHP**: firebase/php-jwt, lcobucci/jwt
+
+---
+
+**See Also**: [configuration.md](../development/configuration/SKILL.md) • [error-handling.md](../development/error-handling/SKILL.md) • [logging-monitoring.md](../development/logging-monitoring/SKILL.md)
+
+**Last Updated**: January 27, 2026
+
