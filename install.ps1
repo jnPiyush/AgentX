@@ -10,17 +10,34 @@
 .PARAMETER Force
     Overwrite existing files
 
+.PARAMETER NoGit
+    Skip Git initialization and continue without Git (non-interactive)
+
+.PARAMETER Repo
+    GitHub repository (owner/repo or full URL) to configure as origin (non-interactive)
+
 .EXAMPLE
     .\install.ps1
+    
+.EXAMPLE
+    .\install.ps1 -NoGit
+    
+.EXAMPLE
+    .\install.ps1 -Repo "owner/repo"
     
 .EXAMPLE
     irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 #>
 
-param([switch]$Force)
+param(
+    [switch]$Force,
+    [switch]$NoGit,
+    [string]$Repo
+)
 
 $ErrorActionPreference = "Stop"
 $REPO_URL = "https://raw.githubusercontent.com/jnPiyush/AgentX/master"
+$skipGitChecks = $false
 
 function Write-Info($msg) { Write-Host "  $msg" -ForegroundColor Cyan }
 function Write-Success($msg) { Write-Host "✓ $msg" -ForegroundColor Green }
@@ -58,51 +75,123 @@ Write-Host ""
 
 # Check 1: Git repository
 if (-not (Test-Path ".git")) {
-    Write-Host "❌ Not a git repository" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "AgentX requires a Git repository to work." -ForegroundColor Yellow
-    Write-Host "Initialize one with: git init" -ForegroundColor Cyan
-    Write-Host ""
-    exit 1
-}
-Write-Success "Git repository detected"
-
-# Check 2: GitHub remote
-try {
-    $remotes = git remote -v 2>&1
-    if ($LASTEXITCODE -ne 0 -or -not ($remotes -match "github\.com")) {
-        Write-Host "⚠️  No GitHub remote configured" -ForegroundColor Yellow
+    if ($NoGit) {
+        $skipGitChecks = $true
+        Write-Warn "Proceeding without Git (non-interactive mode)"
+    } else {
+        Write-Host "❌ Not a git repository" -ForegroundColor Red
         Write-Host ""
-        Write-Host "AgentX requires GitHub for Issues, Projects, and Workflows." -ForegroundColor Gray
-        Write-Host ""
+        Write-Host "AgentX works best in a Git repository for hooks and workflows." -ForegroundColor Yellow
         Write-Host "Options:" -ForegroundColor Yellow
-        Write-Host "  [1] Set up GitHub remote now" -ForegroundColor Cyan
-        Write-Host "  [2] Continue and set up later" -ForegroundColor Cyan
+        Write-Host "  [1] Initialize Git repository now" -ForegroundColor Cyan
+        Write-Host "  [2] Continue without Git (limited features)" -ForegroundColor Cyan
         Write-Host "  [3] Cancel installation" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "Choose (1/2/3): " -NoNewline -ForegroundColor Yellow
-        $response = Read-Host
-        
-        if ($response -eq "1") {
-            Write-Host "Enter GitHub repository URL (e.g., https://github.com/user/repo.git): " -NoNewline
-            $repoUrl = Read-Host
-            if ($repoUrl) {
-                try {
-                    git remote add origin $repoUrl 2>&1 | Out-Null
-                    Write-Success "GitHub remote configured: $repoUrl"
-                } catch {
-                    Write-Warn "Failed to add remote. You can do it manually later."
+        $resp = Read-Host
+
+        if ($resp -eq "1") {
+        try {
+            git init 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0 -and (Test-Path ".git")) {
+                Write-Success "Initialized Git repository"
+
+                $repoInput = $Repo
+                if (-not $repoInput) {
+                    Write-Host "Enter GitHub repository (URL or owner/repo). Press Enter to skip: " -NoNewline
+                    $repoInput = Read-Host
                 }
+                if ($repoInput) {
+                    $repoUrl = $null
+                    if ($repoInput -match "^(https?://|git@)") {
+                        $repoUrl = $repoInput
+                    } elseif ($repoInput -match "^[^/]+/[^/]+$") {
+                        $repoUrl = "https://github.com/$repoInput.git"
+                    }
+
+                    if ($repoUrl) {
+                        try {
+                            git remote add origin $repoUrl 2>&1 | Out-Null
+                            Write-Success "GitHub remote configured: $repoUrl"
+                        } catch {
+                            Write-Warn "Failed to add remote. You can set it manually later (git remote add origin <url>)."
+                        }
+                    } else {
+                        Write-Warn "Unrecognized repository format. Skipping remote setup."
+                    }
+                }
+            } else {
+                throw "git init failed"
             }
-        } elseif ($response -ne "2") {
+        } catch {
+            Write-Warn "Could not initialize a Git repository. Continuing without Git."
+            $skipGitChecks = $true
+        }
+        } elseif ($resp -eq "2") {
+            $skipGitChecks = $true
+            Write-Warn "Proceeding without Git; some features will be skipped."
+        } else {
             Write-Host "Installation cancelled." -ForegroundColor Yellow
             exit 1
         }
-    } else {
-        Write-Success "GitHub remote configured"
     }
-} catch {
-    Write-Warn "Could not check Git remotes"
+} else {
+    Write-Success "Git repository detected"
+}
+
+# Check 2: GitHub remote
+if (-not $skipGitChecks -and (Test-Path ".git")) {
+    try {
+        $remotes = git remote -v 2>&1
+        if ($LASTEXITCODE -ne 0 -or -not ($remotes -match "github\.com")) {
+            Write-Host "⚠️  No GitHub remote configured" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "AgentX requires GitHub for Issues, Projects, and Workflows." -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "Options:" -ForegroundColor Yellow
+            Write-Host "  [1] Set up GitHub remote now" -ForegroundColor Cyan
+            Write-Host "  [2] Continue and set up later" -ForegroundColor Cyan
+            Write-Host "  [3] Cancel installation" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "Choose (1/2/3): " -NoNewline -ForegroundColor Yellow
+            $response = Read-Host
+            
+            if ($response -eq "1") {
+                $repoInput2 = $Repo
+                if (-not $repoInput2) {
+                    Write-Host "Enter GitHub repository (URL or owner/repo): " -NoNewline
+                    $repoInput2 = Read-Host
+                }
+                if ($repoInput2) {
+                    $repoUrl2 = $null
+                    if ($repoInput2 -match "^(https?://|git@)") {
+                        $repoUrl2 = $repoInput2
+                    } elseif ($repoInput2 -match "^[^/]+/[^/]+$") {
+                        $repoUrl2 = "https://github.com/$repoInput2.git"
+                    }
+                    if ($repoUrl2) {
+                        try {
+                            git remote add origin $repoUrl2 2>&1 | Out-Null
+                            Write-Success "GitHub remote configured: $repoUrl2"
+                        } catch {
+                            Write-Warn "Failed to add remote. You can do it manually later."
+                        }
+                    } else {
+                        Write-Warn "Unrecognized repository format. Skipping remote setup."
+                    }
+                }
+            } elseif ($response -ne "2") {
+                Write-Host "Installation cancelled." -ForegroundColor Yellow
+                exit 1
+            }
+        } else {
+            Write-Success "GitHub remote configured"
+        }
+    } catch {
+        Write-Warn "Could not check Git remotes"
+    }
+} elseif ($skipGitChecks) {
+    Write-Warn "Skipping GitHub remote setup because Git was not initialized."
 }
 
 # Check 3: GitHub CLI (recommended)
