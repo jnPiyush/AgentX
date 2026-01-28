@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v2.0.0"><img src="https://img.shields.io/badge/Version-2.0.0-0EA5E9?style=for-the-badge" alt="Version 2.0.0"></a>
   <a href="https://github.com/github/awesome-copilot"><img src="https://img.shields.io/badge/Standard-awesome--copilot-7C3AED?style=for-the-badge&logo=github" alt="Awesome Copilot"></a>
   <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Skills-agentskills.io-F97316?style=for-the-badge" alt="Skills Spec"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge" alt="MIT License"></a>
@@ -19,6 +20,7 @@
   <a href="#-features">Features</a> •
   <a href="#-agent-roles">Agents</a> •
   <a href="#-workflow">Workflow</a> •
+  <a href="CHANGELOG.md">Changelog</a> •
   <a href="AGENTS.md">Documentation</a>
 </p>
 
