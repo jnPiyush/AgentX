@@ -169,8 +169,9 @@ if ($response -eq "1") {
                 
                 # Create project
                 $projectName = "AgentX Workflow"
-                $createCmd = "gh api graphql -f query='mutation { createProjectV2(input: {ownerId: `\`"" + $(gh api /repos/$repo | ConvertFrom-Json).owner.node_id + "\"`", title: `\`"$projectName`\`"}) { projectV2 { id number } } }'"
-                $result = Invoke-Expression $createCmd 2>&1 | ConvertFrom-Json
+                $ownerNodeId = (gh api /repos/$repo | ConvertFrom-Json).owner.node_id
+                $query = "mutation { createProjectV2(input: {ownerId: `"$ownerNodeId`", title: `"$projectName`"}) { projectV2 { id number } } }"
+                $result = gh api graphql -f query=$query | ConvertFrom-Json
                 
                 if ($result.data.createProjectV2.projectV2.number) {
                     $projectNumber = $result.data.createProjectV2.projectV2.number
@@ -295,20 +296,9 @@ foreach ($dir in $dirs) {
     }
 }
 
-# Install git hooks
-Write-Host ""
-Write-Info "Installing git hooks..."
-if (Test-Path ".github/hooks") {
-    $hooks = @("pre-commit", "commit-msg")
-    foreach ($hook in $hooks) {
-        $src = ".github/hooks/$hook"
-        $dest = ".git/hooks/$hook"
-        if (Test-Path $src) {
-            Copy-Item $src $dest -Force
-            Write-Success "Installed: $hook hook"
-        }
-    }
-}
+# Validation scripts
+Write-Info "Validation scripts..."
+Get-FileDownload ".github/scripts/validate-handoff.sh" ".github/scripts/validate-handoff.sh"
 
 # Install Git hooks
 Write-Host ""

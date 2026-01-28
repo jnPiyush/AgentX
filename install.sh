@@ -248,6 +248,10 @@ echo -e "${CYAN}  Coding instructions...${NC}"
 download_file ".github/instructions/api.instructions.md" ".github/instructions/api.instructions.md"
 download_file ".github/instructions/csharp.instructions.md" ".github/instructions/csharp.instructions.md"
 download_file ".github/instructions/python.instructions.md" ".github/instructions/python.instructions.md"
+
+# Validation scripts
+echo -e "${CYAN}  Validation scripts...${NC}"
+download_file ".github/scripts/validate-handoff.sh" ".github/scripts/validate-handoff.sh"
 download_file ".github/instructions/react.instructions.md" ".github/instructions/react.instructions.md"
 
 # Prompts
@@ -293,19 +297,6 @@ for dir in docs/prd docs/adr docs/specs docs/ux docs/reviews; do
         echo -e "${GREEN}✓ Created: $dir/${NC}"
     fi
 done
-
-# Install git hooks
-echo ""
-echo -e "${CYAN}  Installing git hooks...${NC}"
-if [ -d ".github/hooks" ]; then
-    for hook in pre-commit commit-msg; do
-        if [ -f ".github/hooks/$hook" ]; then
-            cp ".github/hooks/$hook" ".git/hooks/$hook"
-            chmod +x ".git/hooks/$hook"
-            echo -e "${GREEN}✓ Installed: $hook hook${NC}"
-        fi
-    done
-fi
 
 # Install Git hooks
 echo ""
