@@ -6,7 +6,7 @@ description: 'Test generation prompt for creating comprehensive test suites.'
 
 Generate comprehensive tests for the provided code.
 
-> **Full Guidelines**: See [02-testing.md](../../skills/02-testing.md) for detailed testing patterns and examples.
+> **Full Guidelines**: See [testing/SKILL.md](../skills/development/testing/SKILL.md) for detailed testing patterns and examples.
 
 ## Testing Principles
 

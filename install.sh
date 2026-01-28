@@ -42,11 +42,152 @@ echo -e "${CYAN}║  AgentX - AI Agent Guidelines for Production Code ║${NC}"
 echo -e "${CYAN}╚═══════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Check for git
+# Pre-installation validation
+echo -e "${YELLOW}Running pre-installation checks...${NC}"
+echo ""
+
+# Check 1: Git repository
 if [ ! -d ".git" ]; then
-    echo -e "${YELLOW}⚠ Not a git repository. Run 'git init' first.${NC}"
+    echo -e "${YELLOW}❌ Not a git repository${NC}"
+    echo ""
+    echo -e "${YELLOW}AgentX requires a Git repository to work.${NC}"
+    echo -e "${CYAN}Initialize one with: git init${NC}"
+    echo ""
     exit 1
 fi
+echo -e "${GREEN}✓ Git repository detected${NC}"
+
+# Check 2: GitHub remote (optional - can setup later)
+if git remote -v 2>/dev/null | grep -q "github\.com"; then
+    echo -e "${GREEN}✓ GitHub remote configured${NC}"
+else
+    echo -e "${YELLOW}⚠️  No GitHub remote configured${NC}"
+    echo ""
+    echo -e "\033[90mAgentX requires GitHub for Issues, Projects, and Workflows.${NC}"
+    echo ""
+    echo -e "${YELLOW}Options:${NC}"
+    echo -e "${CYAN}  [1] Set up GitHub remote now${NC}"
+    echo -e "${CYAN}  [2] Continue and set up later${NC}"
+    echo -e "${CYAN}  [3] Cancel installation${NC}"
+    echo ""
+    read -p "Choose (1/2/3): " -n 1 -r
+    echo ""
+    
+    if [[ $REPLY == "1" ]]; then
+        read -p "Enter GitHub repository URL (e.g., https://github.com/user/repo.git): " repoUrl
+        if [[ -n $repoUrl ]]; then
+            if git remote add origin "$repoUrl" 2>/dev/null; then
+                echo -e "${GREEN}✓ GitHub remote configured: $repoUrl${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Failed to add remote. You can do it manually later.${NC}"
+            fi
+        fi
+    elif [[ ! $REPLY =~ ^[2]$ ]]; then
+        echo -e "${YELLOW}Installation cancelled.${NC}"
+        exit 1
+    fi
+fi
+
+# Check 3: GitHub CLI (optional - can install later)
+if command -v gh &> /dev/null; then
+    echo -e "${GREEN}✓ GitHub CLI (gh) detected${NC}"
+else
+    echo -e "${YELLOW}⚠️  GitHub CLI (gh) not found${NC}"
+    echo ""
+    echo -e "\033[90mGitHub CLI is recommended for the Issue-First Workflow.${NC}"
+    echo ""
+    echo -e "${YELLOW}Options:${NC}"
+    echo -e "${CYAN}  [1] Install GitHub CLI now (auto-detect package manager)${NC}"
+    echo -e "${CYAN}  [2] Continue and install later${NC}"
+    echo -e "${CYAN}  [3] Cancel installation${NC}"
+    echo ""
+    read -p "Choose (1/2/3): " -n 1 -r
+    echo ""
+    
+    if [[ $REPLY == "1" ]]; then
+        echo -e "${YELLOW}Installing GitHub CLI...${NC}"
+        
+        # Detect package manager and install
+        if command -v brew &> /dev/null; then
+            echo -e "${YELLOW}Using Homebrew...${NC}"
+            brew install gh
+        elif command -v apt-get &> /dev/null; then
+            echo -e "${YELLOW}Using apt...${NC}"
+            (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+            && sudo mkdir -p -m 755 /etc/apt/keyrings \
+            && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+            && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && sudo apt update \
+            && sudo apt install gh -y
+        elif command -v yum &> /dev/null; then
+            echo -e "${YELLOW}Using yum...${NC}"
+            sudo yum install -y gh
+        else
+            echo -e "${YELLOW}⚠️  No supported package manager found. Install manually from: https://cli.github.com/${NC}"
+        fi
+        
+        if command -v gh &> /dev/null; then
+            echo -e "${GREEN}✓ GitHub CLI installed! Restart your terminal after installation completes.${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Installation failed. Install manually from: https://cli.github.com/${NC}"
+        fi
+    elif [[ ! $REPLY =~ ^[2]$ ]]; then
+        echo -e "${YELLOW}Installation cancelled.${NC}"
+        exit 1
+    fi
+fi
+
+# Check 4: GitHub Projects V2 (setup after installation)
+echo ""
+echo -e "${CYAN}ℹ️  GitHub Projects V2 - Setup Required${NC}"
+echo ""
+echo -e "\033[90mAgentX requires a GitHub Project (V2) with Status field values:${NC}"
+echo -e "${CYAN}  • Backlog, In Progress, In Review, Ready, Done${NC}"
+echo ""
+echo -e "${YELLOW}Options:${NC}"
+echo -e "${CYAN}  [1] Create GitHub Project V2 now (requires gh CLI + auth)${NC}"
+echo -e "${CYAN}  [2] Set up manually later${NC}"
+echo ""
+read -p "Choose (1/2): " -n 1 -r
+echo ""
+
+if [[ $REPLY == "1" ]]; then
+    if command -v gh &> /dev/null; then
+        read -p "Enter repository (format: owner/repo): " repo
+        if [[ -n $repo ]]; then
+            echo -e "${YELLOW}Creating GitHub Project V2...${NC}"
+            
+            # Get owner node_id
+            ownerId=$(gh api /repos/$repo --jq '.owner.node_id' 2>/dev/null)
+            
+            if [[ -n $ownerId ]]; then
+                # Create project
+                projectName="AgentX Workflow"
+                result=$(gh api graphql -f query="mutation { createProjectV2(input: {ownerId: \"$ownerId\", title: \"$projectName\"}) { projectV2 { id number } } }" 2>&1)
+                
+                projectNumber=$(echo "$result" | grep -oP '"number":\K[0-9]+')
+                
+                if [[ -n $projectNumber ]]; then
+                    echo -e "${GREEN}✓ Project created! Number: #$projectNumber${NC}"
+                    echo -e "${CYAN}Visit: https://github.com/$repo/projects/$projectNumber${NC}"
+                    echo ""
+                    echo -e "${YELLOW}⚠️  Manual step required: Add Status field with these values:${NC}"
+                    echo -e "${CYAN}     Backlog, In Progress, In Review, Ready, Done${NC}"
+                else
+                    echo -e "${YELLOW}⚠️  Auto-creation failed. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+                fi
+            else
+                echo -e "${YELLOW}⚠️  Could not access repository. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+            fi
+        fi
+    else
+        echo -e "${YELLOW}⚠️  GitHub CLI not available. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+    fi
+else
+    echo -e "\033[90mGuide: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+fi
+echo ""
 
 echo -e "${YELLOW}Installing AgentX files...${NC}"
 echo ""
@@ -66,7 +207,7 @@ download_file ".github/PULL_REQUEST_TEMPLATE.md" ".github/PULL_REQUEST_TEMPLATE.
 
 # Workflows
 echo -e "${CYAN}  GitHub Actions workflows...${NC}"
-download_file ".github/workflows/agent-orchestrator.yml" ".github/workflows/agent-orchestrator.yml"
+download_file ".github/workflows/agent-x.yml" ".github/workflows/agent-x.yml"
 download_file ".github/workflows/quality-gates.yml" ".github/workflows/quality-gates.yml"
 
 # Git hooks
@@ -92,7 +233,7 @@ download_file ".github/agents/architect.agent.md" ".github/agents/architect.agen
 download_file ".github/agents/ux-designer.agent.md" ".github/agents/ux-designer.agent.md"
 download_file ".github/agents/engineer.agent.md" ".github/agents/engineer.agent.md"
 download_file ".github/agents/reviewer.agent.md" ".github/agents/reviewer.agent.md"
-download_file ".github/agents/orchestrator.agent.md" ".github/agents/orchestrator.agent.md"
+download_file ".github/agents/agent-x.agent.md" ".github/agents/agent-x.agent.md"
 
 # Document templates
 echo -e "${CYAN}  Document templates...${NC}"

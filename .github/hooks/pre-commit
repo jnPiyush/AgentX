@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Pre-commit hook: Security and quality checks ONLY
-# Workflow validation is handled by commit-msg hook
+# Workflow validation is handled by pre-handoff validation (.github/scripts/validate-handoff.sh)
+# Issue reference validation is handled by commit-msg hook
 
 echo "🔍 Running pre-commit checks..."
 

@@ -99,6 +99,28 @@ jobs:
           
           echo "✅ File structure validation complete"
       
+      - name: Agent Deliverable Validation
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          echo "🔍 Validating agent deliverables..."
+          
+          # Extract issue number from PR title or branch
+          ISSUE_NUM=$(echo "${{ github.event.pull_request.title }}" | grep -oP '#\K\d+' | head -1)
+          
+          if [ -z "$ISSUE_NUM" ]; then
+            echo "ℹ️ No issue number found in PR title, skipping agent validation"
+            exit 0
+          fi
+          
+          # Detect agent role from PR labels or files changed
+          if [ -f ".github/scripts/validate-handoff.sh" ]; then
+            echo "ℹ️ Found validation script, checking deliverables for issue #${ISSUE_NUM}"
+            # Note: Would need to detect role from PR context
+            # For now, just check if validation script exists
+            echo "✅ Validation script available"
+          fi
+      
       - name: Post Quality Report
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7

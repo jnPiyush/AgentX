@@ -6,7 +6,7 @@ description: 'Code refactoring prompt for improving code quality.'
 
 Analyze the provided code and suggest refactoring improvements.
 
-> **Full Guidelines**: See [01-core-principles.md](../../skills/01-core-principles.md) for SOLID principles and design patterns.
+> **Full Guidelines**: See [core-principles/SKILL.md](../skills/architecture/core-principles/SKILL.md) for SOLID principles and design patterns.
 
 ## Refactoring Goals
 

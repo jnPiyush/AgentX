@@ -1,5 +1,6 @@
 # Pre-commit hook: Security and quality checks ONLY
-# Workflow validation is handled by commit-msg hook
+# Workflow validation is handled by pre-handoff validation (.github/scripts/validate-handoff.sh)
+# Issue reference validation is handled by commit-msg hook
 # PowerShell version for Windows
 
 Write-Host "🔍 Running pre-commit checks..." -ForegroundColor Cyan
@@ -76,7 +77,7 @@ if (Get-Command dotnet -ErrorAction SilentlyContinue) {
     $csFiles = $stagedFiles | Where-Object { $_ -match '\.cs$' }
     if ($csFiles) {
         Write-Host "Checking C# formatting... " -NoNewline
-        $formatResult = dotnet format --verify-no-changes --include ($csFiles -join ' ') 2>&1
+        dotnet format --verify-no-changes --include ($csFiles -join ' ') 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Host "✅ PASSED" -ForegroundColor Green
         } else {

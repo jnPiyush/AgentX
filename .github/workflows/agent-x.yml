@@ -1,8 +1,8 @@
-# Agent Orchestrator - Simplified
+# Agent X (YOLO) - Simplified
 # Routes issues to agents based on type labels
 # Status tracked via GitHub Projects V2 (not labels)
 
-name: Agent Orchestrator
+name: Agent X (YOLO)
 
 on:
   issues:
@@ -51,26 +51,36 @@ jobs:
             const labels = issue.labels.map(l => l.name);
             console.log(`Issue #${issueNumber}: ${labels.join(', ')}`);
             
-            // Route based on AGENTS.md workflow:
-            // type:epic → PM
-            // type:feature/spike → Architect
-            // type:story/bug → Engineer
-            // needs:ux → UX Designer (before others)
+            // Route based on AGENTS.md Phase 2 workflow:
+            // Epic + Backlog → PM
+            // Ready + needs:ux → UX
+            // Ready + (no architecture) → Architect
+            // Ready + (has architecture) → Engineer
+            // In Review → Reviewer
+            // Bug + Backlog → Engineer (skip PM/Architect)
+            
+            // Note: Status tracking requires GitHub Projects V2 API (GraphQL)
+            // For now, using simplified label-based routing
+            // TODO: Implement full Status + prerequisite checking
+            
             let agent = null;
             
             if (labels.includes('type:epic')) {
               agent = 'pm';
+            } else if (labels.includes('type:bug')) {
+              agent = 'engineer';  // Bugs skip PM/Architect
             } else if (labels.includes('needs:ux')) {
               agent = 'ux';
             } else if (labels.includes('type:feature') || labels.includes('type:spike')) {
               agent = 'architect';
-            } else if (labels.includes('type:story') || labels.includes('type:bug') || labels.includes('type:docs')) {
+            } else if (labels.includes('type:story') || labels.includes('type:docs')) {
               agent = 'engineer';
             }
             
             core.setOutput('agent', agent || '');
             core.setOutput('issue_number', issueNumber);
             console.log(agent ? `✅ Routing to: ${agent}` : '⏸️ No routing needed');
+            console.log('ℹ️ Note: Full Status-based routing requires Projects V2 API integration');
 
   pm:
     name: 📋 Product Manager
@@ -90,6 +100,15 @@ jobs:
             echo "✅ Created PRD scaffold"
           else
             echo "⏭️ PRD already exists"
+          fi
+      
+      - name: Validate Handoff (Optional)
+        continue-on-error: true
+        run: |
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          if [ -f ".github/scripts/validate-handoff.sh" ]; then
+            echo "ℹ️ Running pre-handoff validation..."
+            bash .github/scripts/validate-handoff.sh "${ISSUE}" pm || echo "⚠️ Validation incomplete (scaffold stage)"
           fi
       
       - name: Commit & Comment

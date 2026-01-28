@@ -44,7 +44,8 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <tr>
 <td width="50%">
 
-### 🤖 5 Specialized Agents
+### 🤖 6 Specialized Agents
+- **Agent X** - Coordinator & router (hub)
 - **Product Manager** - PRDs & backlog
 - **UX Designer** - Wireframes & flows
 - **Solution Architect** - ADRs & specs
@@ -54,10 +55,13 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 </td>
 <td width="50%">
 
-### 📚 18 Production Skills
+### 📚 25 Production Skills
 - Testing (80%+ coverage)
 - Security (OWASP Top 10)
 - API Design (REST patterns)
+- Performance optimization
+- Database design (PostgreSQL/SQL Server)
+- [Full index →](Skills.md)
 - Performance optimization
 - [Full index →](Skills.md)
 
@@ -66,8 +70,9 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <tr>
 <td width="50%">
 
-### 🔄 Automated Workflow
+##Hub-and-spoke architecture
 - Issue-first development
+- Pre-handofft development
 - Pre-commit validation
 - Template scaffolding
 - GitHub Projects V2 integration
@@ -121,15 +126,46 @@ gh label create "needs:ux" --color "EC4899"
 
 ---
 
+## 🏗️ Architecture
+
+### Hub-and-Spoke Pattern
+
+AgentX uses a **centralized hub** (Agent X) that routes work to **5 specialized agents**:
+
+```
+                Agent X (Hub)
+                     │
+      ┌──────────────┼──────────────┐
+      │              │              │
+   PM Agent   Architect Agent  UX Agent
+      │              │              │
+      └──────────────┼──────────────┘
+                     │
+               Engineer Agent
+                     │
+               Reviewer Agent
+```
+
+**Key Principles**:
+1. **Centralized Coordination** - Agent X validates prerequisites and routes work
+2. **Strict Role Separation** - Each agent has one deliverable type (PRD, ADR, Code, etc.)
+3. **Universal Tool Access** - All agents can use all tools (maximum flexibility)
+4. **Status-Driven** - GitHub Projects V2 Status field controls workflow
+5. **Pre-Handoff Validation** - Quality gates before transitions
+
+---
+
 ## 👥 Agent Roles
 
-| Agent | Trigger | Deliverable | Status Flow |
-|-------|---------|-------------|-------------|
-| 📋 **Product Manager** | `type:epic` | PRD + Backlog | → Ready |
-| 🎨 **UX Designer** | `needs:ux` | Wireframes + Flows | → Ready |
-| 🏗️ **Architect** | `type:feature` | ADR + Tech Spec | → Ready |
-| 🔧 **Engineer** | `type:story` | Code + Tests | → In Review |
-| 🔍 **Reviewer** | Status = In Review | Review Report | → Done |
+| Agent | Trigger | Deliverable | Validation | Status Flow |
+|-------|---------|-------------|------------|-------------|
+| 📋 **Product Manager** | `type:epic` | PRD + Feature/Story issues | `.github/scripts/validate-handoff.sh {issue} pm` | → Ready |
+| 🎨 **UX Designer** | `needs:ux` + Status=Ready | Wireframes + User flows + Prototypes | `.github/scripts/validate-handoff.sh {issue} ux` | → Ready |
+| 🏗️ **Architect** | `type:feature` or Status=Ready | ADR + Tech Spec (diagrams, NO CODE) | `.github/scripts/validate-handoff.sh {issue} architect` | → Ready |
+| 🔧 **Engineer** | `type:story` or Status=Ready | Code + Tests (≥80%) + Docs | `.github/scripts/validate-handoff.sh {issue} engineer` | → In Review |
+| 🔍 **Reviewer** | Status = In Review | Review Report + Approval/Rejection | `.github/scripts/validate-handoff.sh {issue} reviewer` | → Done |
+
+**All agents have access to all tools** for maximum flexibility.
 
 ---
 

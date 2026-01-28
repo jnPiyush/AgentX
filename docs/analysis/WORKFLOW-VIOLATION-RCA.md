@@ -314,7 +314,7 @@ Step 5: Execute (Code generation starts)
 
 | Workflow | Purpose | Enforcement | Gap |
 |----------|---------|-------------|-----|
-| `agent-orchestrator.yml` | Triggers agent workflows | ❌ Advisory | Doesn't block non-compliance |
+| `agent-x.yml` | Triggers agent workflows | ❌ Advisory | Doesn't block non-compliance |
 | `quality-gates.yml` | Runs quality checks | ⚠️ Partial | Checks secrets, not workflow docs |
 | `dependency-scanning.yml` | Scans dependencies | ✅ Enforced | Works well (not related to workflow) |
 

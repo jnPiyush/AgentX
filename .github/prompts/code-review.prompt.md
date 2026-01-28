@@ -6,7 +6,8 @@ description: 'Structured code review prompt for thorough PR reviews.'
 
 Review the following code changes and provide structured feedback.
 
-> **Full Checklist**: See [18-code-review-and-audit.md](../../skills/18-code-review-and-audit.md) for detailed review guidelines.
+> **Full Checklist**: See [code-review-and-audit/SKILL.md](../skills/development/code-review-and-audit/SKILL.md) for detailed review guidelines.
+> **Template**: See [REVIEW-TEMPLATE.md](../templates/REVIEW-TEMPLATE.md) for complete review structure.
 
 ## Quick Review Focus
 

@@ -26,7 +26,7 @@ function Write-Info($msg) { Write-Host "  $msg" -ForegroundColor Cyan }
 function Write-Success($msg) { Write-Host "✓ $msg" -ForegroundColor Green }
 function Write-Warn($msg) { Write-Host "⚠ $msg" -ForegroundColor Yellow }
 
-function Download-File($src, $dest) {
+function Get-FileDownload($src, $dest) {
     $destDir = Split-Path $dest -Parent
     if ($destDir -and -not (Test-Path $destDir)) {
         New-Item -ItemType Directory -Path $destDir -Force | Out-Null
@@ -52,78 +52,214 @@ Write-Host "║  AgentX - AI Agent Guidelines for Production Code ║" -Foregrou
 Write-Host "╚═══════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
-# Check for git
+# Pre-installation validation
+Write-Host "Running pre-installation checks..." -ForegroundColor Yellow
+Write-Host ""
+
+# Check 1: Git repository
 if (-not (Test-Path ".git")) {
-    Write-Warn "Not a git repository. Run 'git init' first."
+    Write-Host "❌ Not a git repository" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "AgentX requires a Git repository to work." -ForegroundColor Yellow
+    Write-Host "Initialize one with: git init" -ForegroundColor Cyan
+    Write-Host ""
     exit 1
 }
+Write-Success "Git repository detected"
+
+# Check 2: GitHub remote
+try {
+    $remotes = git remote -v 2>&1
+    if ($LASTEXITCODE -ne 0 -or -not ($remotes -match "github\.com")) {
+        Write-Host "⚠️  No GitHub remote configured" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "AgentX requires GitHub for Issues, Projects, and Workflows." -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "Options:" -ForegroundColor Yellow
+        Write-Host "  [1] Set up GitHub remote now" -ForegroundColor Cyan
+        Write-Host "  [2] Continue and set up later" -ForegroundColor Cyan
+        Write-Host "  [3] Cancel installation" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "Choose (1/2/3): " -NoNewline -ForegroundColor Yellow
+        $response = Read-Host
+        
+        if ($response -eq "1") {
+            Write-Host "Enter GitHub repository URL (e.g., https://github.com/user/repo.git): " -NoNewline
+            $repoUrl = Read-Host
+            if ($repoUrl) {
+                try {
+                    git remote add origin $repoUrl 2>&1 | Out-Null
+                    Write-Success "GitHub remote configured: $repoUrl"
+                } catch {
+                    Write-Warn "Failed to add remote. You can do it manually later."
+                }
+            }
+        } elseif ($response -ne "2") {
+            Write-Host "Installation cancelled." -ForegroundColor Yellow
+            exit 1
+        }
+    } else {
+        Write-Success "GitHub remote configured"
+    }
+} catch {
+    Write-Warn "Could not check Git remotes"
+}
+
+# Check 3: GitHub CLI (recommended)
+try {
+    $ghVersion = gh --version 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "GitHub CLI (gh) detected"
+    } else {
+        throw
+    }
+} catch {
+    Write-Host "⚠️  GitHub CLI (gh) not found" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "GitHub CLI is recommended for the Issue-First Workflow." -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Options:" -ForegroundColor Yellow
+    Write-Host "  [1] Install GitHub CLI now (requires winget)" -ForegroundColor Cyan
+    Write-Host "  [2] Continue and install later" -ForegroundColor Cyan
+    Write-Host "  [3] Cancel installation" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Choose (1/2/3): " -NoNewline -ForegroundColor Yellow
+    $response = Read-Host
+    
+    if ($response -eq "1") {
+        Write-Host "Installing GitHub CLI via winget..." -ForegroundColor Yellow
+        try {
+            if (Get-Command winget -ErrorAction SilentlyContinue) {
+                winget install --id GitHub.cli --silent --accept-package-agreements --accept-source-agreements
+                Write-Success "GitHub CLI installed! Restart your terminal after installation completes."
+            } else {
+                Write-Warn "winget not found. Install GitHub CLI manually from: https://cli.github.com/"
+            }
+        } catch {
+            Write-Warn "Installation failed. Install manually from: https://cli.github.com/"
+        }
+    } elseif ($response -ne "2") {
+        Write-Host "Installation cancelled." -ForegroundColor Yellow
+        exit 1
+    }
+}
+
+# Check 4: GitHub Projects V2 (informational only)
+Write-Host ""
+Write-Host "ℹ️  GitHub Projects V2 - Setup Required" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "AgentX requires a GitHub Project (V2) with Status field values:" -ForegroundColor Gray
+Write-Host "  • Backlog, In Progress, In Review, Ready, Done" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Options:" -ForegroundColor Yellow
+Write-Host "  [1] Create GitHub Project V2 now (requires gh CLI + auth)" -ForegroundColor Cyan
+Write-Host "  [2] Set up manually later" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Choose (1/2): " -NoNewline -ForegroundColor Yellow
+$response = Read-Host
+
+if ($response -eq "1") {
+    try {
+        $ghCheck = gh --version 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Enter repository (format: owner/repo): " -NoNewline
+            $repo = Read-Host
+            if ($repo) {
+                Write-Host "Creating GitHub Project V2..." -ForegroundColor Yellow
+                
+                # Create project
+                $projectName = "AgentX Workflow"
+                $createCmd = "gh api graphql -f query='mutation { createProjectV2(input: {ownerId: `\`"" + $(gh api /repos/$repo | ConvertFrom-Json).owner.node_id + "\"`", title: `\`"$projectName`\`"}) { projectV2 { id number } } }'"
+                $result = Invoke-Expression $createCmd 2>&1 | ConvertFrom-Json
+                
+                if ($result.data.createProjectV2.projectV2.number) {
+                    $projectNumber = $result.data.createProjectV2.projectV2.number
+                    Write-Success "Project created! Number: #$projectNumber"
+                    Write-Host "Visit: https://github.com/$repo/projects/$projectNumber" -ForegroundColor Cyan
+                    Write-Host ""
+                    Write-Host "⚠️  Manual step required: Add Status field with these values:" -ForegroundColor Yellow
+                    Write-Host "     Backlog, In Progress, In Review, Ready, Done" -ForegroundColor Cyan
+                } else {
+                    throw "Failed to create project"
+                }
+            }
+        } else {
+            Write-Warn "GitHub CLI not available. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects"
+        }
+    } catch {
+        Write-Warn "Auto-creation failed. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects"
+    }
+} else {
+    Write-Host "Guide: https://docs.github.com/en/issues/planning-and-tracking-with-projects" -ForegroundColor DarkGray
+}
+Write-Host ""
 
 Write-Host "Installing AgentX files..." -ForegroundColor Yellow
 Write-Host ""
 
 # Core documentation
 Write-Info "Core documentation..."
-Download-File "AGENTS.md" "AGENTS.md"
-Download-File "Skills.md" "Skills.md"
-Download-File "CONTRIBUTING.md" "CONTRIBUTING.md"
+Get-FileDownload "AGENTS.md" "AGENTS.md"
+Get-FileDownload "Skills.md" "Skills.md"
+Get-FileDownload "CONTRIBUTING.md" "CONTRIBUTING.md"
 
 # GitHub configuration
 Write-Info "GitHub configuration..."
-Download-File ".github/copilot-instructions.md" ".github/copilot-instructions.md"
-Download-File ".github/CODEOWNERS" ".github/CODEOWNERS"
-Download-File ".github/agentx-security.yml" ".github/agentx-security.yml"
-Download-File ".github/PULL_REQUEST_TEMPLATE.md" ".github/PULL_REQUEST_TEMPLATE.md"
+Get-FileDownload ".github/copilot-instructions.md" ".github/copilot-instructions.md"
+Get-FileDownload ".github/CODEOWNERS" ".github/CODEOWNERS"
+Get-FileDownload ".github/agentx-security.yml" ".github/agentx-security.yml"
+Get-FileDownload ".github/PULL_REQUEST_TEMPLATE.md" ".github/PULL_REQUEST_TEMPLATE.md"
 
 # Workflows
 Write-Info "GitHub Actions workflows..."
-Download-File ".github/workflows/agent-orchestrator.yml" ".github/workflows/agent-orchestrator.yml"
-Download-File ".github/workflows/quality-gates.yml" ".github/workflows/quality-gates.yml"
+Get-FileDownload ".github/workflows/agent-x.yml" ".github/workflows/agent-x.yml"
+Get-FileDownload ".github/workflows/quality-gates.yml" ".github/workflows/quality-gates.yml"
 
 # Git hooks
 Write-Info "Git hooks..."
-Download-File ".github/hooks/pre-commit" ".github/hooks/pre-commit"
-Download-File ".github/hooks/pre-commit.ps1" ".github/hooks/pre-commit.ps1"
-Download-File ".github/hooks/commit-msg" ".github/hooks/commit-msg"
+Get-FileDownload ".github/hooks/pre-commit" ".github/hooks/pre-commit"
+Get-FileDownload ".github/hooks/pre-commit.ps1" ".github/hooks/pre-commit.ps1"
+Get-FileDownload ".github/hooks/commit-msg" ".github/hooks/commit-msg"
 
 # Issue templates
 Write-Info "Issue templates..."
-Download-File ".github/ISSUE_TEMPLATE/config.yml" ".github/ISSUE_TEMPLATE/config.yml"
-Download-File ".github/ISSUE_TEMPLATE/epic.yml" ".github/ISSUE_TEMPLATE/epic.yml"
-Download-File ".github/ISSUE_TEMPLATE/feature.yml" ".github/ISSUE_TEMPLATE/feature.yml"
-Download-File ".github/ISSUE_TEMPLATE/story.yml" ".github/ISSUE_TEMPLATE/story.yml"
-Download-File ".github/ISSUE_TEMPLATE/bug.yml" ".github/ISSUE_TEMPLATE/bug.yml"
-Download-File ".github/ISSUE_TEMPLATE/spike.yml" ".github/ISSUE_TEMPLATE/spike.yml"
-Download-File ".github/ISSUE_TEMPLATE/docs.yml" ".github/ISSUE_TEMPLATE/docs.yml"
+Get-FileDownload ".github/ISSUE_TEMPLATE/config.yml" ".github/ISSUE_TEMPLATE/config.yml"
+Get-FileDownload ".github/ISSUE_TEMPLATE/epic.yml" ".github/ISSUE_TEMPLATE/epic.yml"
+Get-FileDownload ".github/ISSUE_TEMPLATE/feature.yml" ".github/ISSUE_TEMPLATE/feature.yml"
+Get-FileDownload ".github/ISSUE_TEMPLATE/story.yml" ".github/ISSUE_TEMPLATE/story.yml"
+Get-FileDownload ".github/ISSUE_TEMPLATE/bug.yml" ".github/ISSUE_TEMPLATE/bug.yml"
+Get-FileDownload ".github/ISSUE_TEMPLATE/spike.yml" ".github/ISSUE_TEMPLATE/spike.yml"
+Get-FileDownload ".github/ISSUE_TEMPLATE/docs.yml" ".github/ISSUE_TEMPLATE/docs.yml"
 
 # Agent definitions
 Write-Info "Agent definitions..."
-Download-File ".github/agents/product-manager.agent.md" ".github/agents/product-manager.agent.md"
-Download-File ".github/agents/architect.agent.md" ".github/agents/architect.agent.md"
-Download-File ".github/agents/ux-designer.agent.md" ".github/agents/ux-designer.agent.md"
-Download-File ".github/agents/engineer.agent.md" ".github/agents/engineer.agent.md"
-Download-File ".github/agents/reviewer.agent.md" ".github/agents/reviewer.agent.md"
-Download-File ".github/agents/orchestrator.agent.md" ".github/agents/orchestrator.agent.md"
+Get-FileDownload ".github/agents/product-manager.agent.md" ".github/agents/product-manager.agent.md"
+Get-FileDownload ".github/agents/architect.agent.md" ".github/agents/architect.agent.md"
+Get-FileDownload ".github/agents/ux-designer.agent.md" ".github/agents/ux-designer.agent.md"
+Get-FileDownload ".github/agents/engineer.agent.md" ".github/agents/engineer.agent.md"
+Get-FileDownload ".github/agents/reviewer.agent.md" ".github/agents/reviewer.agent.md"
+Get-FileDownload ".github/agents/agent-x.agent.md" ".github/agents/agent-x.agent.md"
 
 # Document templates
 Write-Info "Document templates..."
-Download-File ".github/templates/PRD-TEMPLATE.md" ".github/templates/PRD-TEMPLATE.md"
-Download-File ".github/templates/ADR-TEMPLATE.md" ".github/templates/ADR-TEMPLATE.md"
-Download-File ".github/templates/SPEC-TEMPLATE.md" ".github/templates/SPEC-TEMPLATE.md"
-Download-File ".github/templates/UX-TEMPLATE.md" ".github/templates/UX-TEMPLATE.md"
-Download-File ".github/templates/REVIEW-TEMPLATE.md" ".github/templates/REVIEW-TEMPLATE.md"
+Get-FileDownload ".github/templates/PRD-TEMPLATE.md" ".github/templates/PRD-TEMPLATE.md"
+Get-FileDownload ".github/templates/ADR-TEMPLATE.md" ".github/templates/ADR-TEMPLATE.md"
+Get-FileDownload ".github/templates/SPEC-TEMPLATE.md" ".github/templates/SPEC-TEMPLATE.md"
+Get-FileDownload ".github/templates/UX-TEMPLATE.md" ".github/templates/UX-TEMPLATE.md"
+Get-FileDownload ".github/templates/REVIEW-TEMPLATE.md" ".github/templates/REVIEW-TEMPLATE.md"
 
 # Instructions
 Write-Info "Coding instructions..."
-Download-File ".github/instructions/api.instructions.md" ".github/instructions/api.instructions.md"
-Download-File ".github/instructions/csharp.instructions.md" ".github/instructions/csharp.instructions.md"
-Download-File ".github/instructions/python.instructions.md" ".github/instructions/python.instructions.md"
-Download-File ".github/instructions/react.instructions.md" ".github/instructions/react.instructions.md"
+Get-FileDownload ".github/instructions/api.instructions.md" ".github/instructions/api.instructions.md"
+Get-FileDownload ".github/instructions/csharp.instructions.md" ".github/instructions/csharp.instructions.md"
+Get-FileDownload ".github/instructions/python.instructions.md" ".github/instructions/python.instructions.md"
+Get-FileDownload ".github/instructions/react.instructions.md" ".github/instructions/react.instructions.md"
 
 # Prompts
 Write-Info "Prompt templates..."
-Download-File ".github/prompts/code-review.prompt.md" ".github/prompts/code-review.prompt.md"
-Download-File ".github/prompts/refactor.prompt.md" ".github/prompts/refactor.prompt.md"
-Download-File ".github/prompts/test-gen.prompt.md" ".github/prompts/test-gen.prompt.md"
+Get-FileDownload ".github/prompts/code-review.prompt.md" ".github/prompts/code-review.prompt.md"
+Get-FileDownload ".github/prompts/refactor.prompt.md" ".github/prompts/refactor.prompt.md"
+Get-FileDownload ".github/prompts/test-gen.prompt.md" ".github/prompts/test-gen.prompt.md"
 
 # Skills (25 production skills organized by category)
 Write-Info "Production skills (25 skills)..."
@@ -135,19 +271,19 @@ $skills = @{
 }
 foreach ($category in $skills.Keys) {
     foreach ($skill in $skills[$category]) {
-        Download-File ".github/skills/$category/$skill/SKILL.md" ".github/skills/$category/$skill/SKILL.md"
+        Get-FileDownload ".github/skills/$category/$skill/SKILL.md" ".github/skills/$category/$skill/SKILL.md"
     }
 }
 
 # VS Code configuration
 Write-Info "VS Code configuration..."
-Download-File ".vscode/mcp.json" ".vscode/mcp.json"
-Download-File ".vscode/settings.json" ".vscode/settings.json"
+Get-FileDownload ".vscode/mcp.json" ".vscode/mcp.json"
+Get-FileDownload ".vscode/settings.json" ".vscode/settings.json"
 
 # Documentation
 Write-Info "Documentation..."
-Download-File "docs/mcp-integration.md" "docs/mcp-integration.md"
-Download-File "docs/project-setup.md" "docs/project-setup.md"
+Get-FileDownload "docs/mcp-integration.md" "docs/mcp-integration.md"
+Get-FileDownload "docs/project-setup.md" "docs/project-setup.md"
 
 # Create output directories
 Write-Info "Creating output directories..."

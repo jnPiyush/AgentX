@@ -1,22 +1,30 @@
 ---
+name: Reviewer
 description: 'Reviewer: Review code quality, tests, security, and approve/reject. Trigger: Status = In Review. Status → Done when approved.'
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 tools:
   - issue_read
   - list_issues
+  - issue_write
   - update_issue
   - add_issue_comment
   - run_workflow
+  - list_workflow_runs
   - read_file
   - semantic_search
   - grep_search
   - file_search
+  - list_dir
   - create_file
+  - replace_string_in_file
+  - multi_replace_string_in_file
   - run_in_terminal
   - get_changed_files
   - get_errors
+  - test_failure
   - manage_todo_list
+  - runSubagent
 ---
 
 # Reviewer Agent
@@ -127,28 +135,17 @@ Create `docs/reviews/REVIEW-{story-id}.md` following the [Code Review template](
 **Template location**: `.github/templates/REVIEW-TEMPLATE.md`
 
 **15 comprehensive sections**:
-1. Executive Summary (overview, verdict, confidence)
-2. Code Quality (strengths, issues by severity with fixes)
-3. Architecture & Design (patterns, SOLID, organization)
-4. Testing (coverage metrics, test quality, examples)
-5. Security Review (checklist, vulnerabilities, headers)
-6. Performance Review (async, N+1 queries, caching)
-7. Documentation Review (XML docs, README, comments)
-8. Acceptance Criteria Verification (from Story)
-9. Technical Debt (new debt introduced, debt addressed)
-10. Compliance & Standards (coding standards, Skills.md)
-11. Recommendations (must fix, should fix, nice to have)
-12. Decision (approved/changes/rejected with rationale)
-13. Next Steps (for Engineer, Reviewer, PM)
-14. Related Issues & PRs (dependencies, blockers)
-15. Appendix (files reviewed, coverage report, CI results)
+- Executive Summary, Code Quality, Architecture & Design
+- Testing (coverage, quality), Security Review, Performance Review
+- Documentation Review, Acceptance Criteria Verification
+- Technical Debt, Compliance & Standards
+- Recommendations, Decision, Next Steps
+- Related Issues & PRs, Appendix
 
 **Quick start**:
 ```bash
 cp .github/templates/REVIEW-TEMPLATE.md docs/reviews/REVIEW-{story-id}.md
-```
-
-Then fill in all sections with detailed code review findings.
+# Then fill in all sections with detailed review findings
 ```
 
 ### 6. Make Decision
@@ -157,102 +154,57 @@ Then fill in all sections with detailed code review findings.
 
 If all checks pass:
 
-**1. Commit review doc:**
+1. Commit review doc and close issue:
 ```bash
 git add docs/reviews/REVIEW-{story-id}.md
 git commit -m "review: approve Story #{story-id}"
 git push
 ```
 
-**2. Close issue:**
-```json
-{
-  "tool": "update_issue",
-  "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
-    "issue_number": <STORY_ID>,
-    "state": "closed"
-  }
-}
-```
-
-**3. Post approval comment:**
+2. Post approval and close:
 ```json
 {
   "tool": "add_issue_comment",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
     "issue_number": <STORY_ID>,
-    "body": "## ✅ Code Review APPROVED\n\n**Review**: [REVIEW-{id}.md](docs/reviews/REVIEW-{id}.md)\n\n**Summary**: Code meets quality standards. All tests passing with {X}% coverage. Security verified.\n\n**Status**: Done ✅"
+    "body": "✅ **APPROVED** - [REVIEW-{id}.md](docs/reviews/REVIEW-{id}.md)\n\nCoverage: {X}%. All tests passing. Security verified."
   }
 }
+```
+
+```json
+{ "tool": "update_issue", "args": { "issue_number": <STORY_ID>, "state": "closed" } }
 ```
 
 #### Path B: Request Changes
 
 If issues found:
 
-**1. Commit review doc:**
+1. Commit review doc:
 ```bash
 git add docs/reviews/REVIEW-{story-id}.md
 git commit -m "review: request changes for Story #{story-id}"
 git push
 ```
 
-**2. Update issue status:**
+2. Add `needs:changes` label and post feedback:
 ```json
-{
-  "tool": "update_issue",
-  "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
-    "issue_number": <STORY_ID>,
-    "labels": ["type:story", "needs:changes"]
-  }
-}
+{ "tool": "update_issue", "args": { "issue_number": <STORY_ID>, "labels": ["type:story", "needs:changes"] } }
 ```
 
-**3. Remove engineer-done label:**
-```json
-{
-  "tool": "update_issue",
-  "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
-    "issue_number": <STORY_ID>,
-    "labels": ["type:story", "needs:changes"]
-  }
-}
-```
-(Adds `needs:changes` label, Status moves to `In Progress`)
-
-**4. Post feedback comment:**
 ```json
 {
   "tool": "add_issue_comment",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
     "issue_number": <STORY_ID>,
-    "body": "## ⚠️ Changes Requested\n\n**Review**: [REVIEW-{id}.md](docs/reviews/REVIEW-{id}.md)\n\n**Issues Found**:\n1. {Issue 1} - See review for details\n2. {Issue 2}\n\n**Next Steps**: Please address issues and re-submit.\n\n**Status**: Returned to Engineer"
+    "body": "⚠️ **Changes Requested** - [REVIEW-{id}.md](docs/reviews/REVIEW-{id}.md)\n\n**Issues**: See review for details\n\n**Status**: Returned to Engineer"
   }
 }
 ```
 
-**5. Reassign to Engineer:**
+3. Reassign to Engineer:
 ```json
-{
-  "tool": "run_workflow",
-  "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
-    "workflow_id": "agent-orchestrator.yml",
-    "ref": "master",
-    "inputs": { "issue_number": "<STORY_ID>" }
-  }
-}
+{ "tool": "run_workflow", "args": { "workflow_id": "agent-x.yml", "inputs": { "issue_number": "<STORY_ID>" } } }
 ```
 
 ---
@@ -261,54 +213,12 @@ git push
 
 ### Review Tools
 
-**Primary Tools:**
 - `get_changed_files` - Get commit diff
 - `read_file` - Read code files
 - `run_in_terminal` - Run tests, linting, security scans
 - `get_errors` - Check compilation errors
 - `semantic_search` - Find similar patterns for comparison
-
-### Quick Reviews with runSubagent
-
-Use `runSubagent` for focused quality checks:
-
-```javascript
-// Security audit
-await runSubagent({
-  prompt: "Audit [file] for security vulnerabilities (SQL injection, XSS, secrets, auth bypass).",
-  description: "Security audit"
-});
-
-// Standards validation
-await runSubagent({
-  prompt: "Check if [file] follows Skills.md standards. Identify violations.",
-  description: "Standards check"
-});
-
-// Performance analysis
-await runSubagent({
-  prompt: "Analyze [file] for performance issues (N+1 queries, missing async, inefficient loops).",
-  description: "Performance review"
-});
-
-// Test quality check
-await runSubagent({
-  prompt: "Review test file [file]. Check if tests are meaningful, follow AAA, cover edge cases.",
-  description: "Test quality review"
-});
-```
-
-**When to use runSubagent:**
-- Quick security audits
-- Standards validation
-- Performance analysis
-- Test quality checks
-- Pattern verification
-
-**When NOT to use:**
-- Full code review (your primary responsibility)
-- Creating review document (use main workflow)
-- Approval decisions (requires human judgment)
+- `runSubagent` - Security audits, standards validation, performance analysis
 
 ---
 
@@ -354,7 +264,7 @@ Issue automatically moves to "Done" in Projects board.
 **Step 3: Reassign to Engineer**
 ```json
 { "tool": "run_workflow", "args": { 
-  "workflow_id": "agent-orchestrator.yml", 
+  "workflow_id": "agent-x.yml", 
   "inputs": { "issue_number": "<STORY_ID>" }
 } }
 ```

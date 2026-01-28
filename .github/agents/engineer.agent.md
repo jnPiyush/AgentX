@@ -1,17 +1,21 @@
 ---
+name: Engineer
 description: 'Engineer: Implement code, tests, and documentation. Trigger: Status = Ready (spec complete). Status → In Progress → In Review.'
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 tools:
   - issue_read
   - list_issues
+  - issue_write
   - update_issue
   - add_issue_comment
   - run_workflow
+  - list_workflow_runs
   - read_file
   - semantic_search
   - grep_search
   - file_search
+  - list_dir
   - create_file
   - replace_string_in_file
   - multi_replace_string_in_file
@@ -20,6 +24,7 @@ tools:
   - get_errors
   - test_failure
   - manage_todo_list
+  - runSubagent
 ---
 
 # Engineer Agent
@@ -131,150 +136,36 @@ Client → Controller → Service → Repository → Database
 
 Follow [Skills.md](../../Skills.md) standards:
 
-**Example Controller:**
-```csharp
-[ApiController]
-[Route("api/v1/[controller]")]
-public class ResourcesController : ControllerBase
-{
-    private readonly IResourceService _service;
-    private readonly ILogger<ResourcesController> _logger;
-
-    public ResourcesController(IResourceService service, ILogger<ResourcesController> logger)
-    {
-        _service = service ?? throw new ArgumentNullException(nameof(service));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
-
-    /// <summary>
-    /// Retrieves a resource by ID.
-    /// </summary>
-    /// <param name="id">The resource identifier.</param>
-    /// <returns>The resource if found, otherwise NotFound.</returns>
-    [HttpGet("{id}")]
-    [ProducesResponseType(typeof(ResourceDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ResourceDto>> GetAsync(Guid id)
-    {
-        var resource = await _service.GetByIdAsync(id);
-        if (resource == null)
-        {
-            _logger.LogWarning("Resource {ResourceId} not found", id);
-            return NotFound();
-        }
-        return Ok(resource);
-    }
-}
-```
-
-**Key patterns:**
-- **Dependency injection**: Constructor injection
-- **Null checks**: `?? throw new ArgumentNullException`
+**Key patterns** (see Skills #19 C# Development, #04 Security, #05 Performance):
+- **Dependency injection**: Constructor injection with null checks
 - **Async/await**: All I/O operations
 - **XML docs**: All public methods
 - **Logging**: Structured logging with correlation IDs
 - **Error handling**: Try-catch in controllers, throw in services
+- **Validation**: Input validation before processing
+- **Security**: No secrets, parameterized SQL, input sanitization
+
+> Reference [Skills.md](../../Skills.md) for detailed examples and patterns
 
 ### 6. Write Tests
 
-**Test Pyramid (Skills #02):**
+**Test Pyramid** ([Skills #02](../../Skills.md)):
+- **Unit Tests (70%)**: Test business logic in isolation with mocks
+- **Integration Tests (20%)**: Test API endpoints with real dependencies
+- **E2E Tests (10%)**: Test complete user workflows
 
-**Unit Tests (70%):**
-```csharp
-public class ResourceServiceTests
-{
-    [Fact]
-    public async Task GetByIdAsync_WithValidId_ReturnsResource()
-    {
-        // Arrange
-        var mockRepo = new Mock<IResourceRepository>();
-        mockRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync(new Resource { Id = Guid.NewGuid() });
-        var service = new ResourceService(mockRepo.Object);
+**Coverage target**: ≥80%
 
-        // Act
-        var result = await service.GetByIdAsync(Guid.NewGuid());
-
-        // Assert
-        result.Should().NotBeNull();
-    }
-}
-```
-
-**Integration Tests (20%):**
-```csharp
-public class ResourcesControllerTests : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    [Fact]
-    public async Task GetAsync_WithValidId_Returns200()
-    {
-        var response = await _client.GetAsync("/api/v1/resources/{id}");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-}
-```
-
-**E2E Tests (10%):**
-```csharp
-public class ResourceWorkflowTests
-{
-    [Fact]
-    public async Task CreateUpdateDelete_FullFlow_Succeeds()
-    {
-        // Create → Update → Verify → Delete → Verify deleted
-    }
-}
-```
+> See [Skills #02 Testing](../../Skills.md) for detailed testing patterns and examples
 
 ### 7. Document Code
 
-**XML Docs (Skills #11):**
-```csharp
-/// <summary>
-/// Service for managing resources.
-/// </summary>
-/// <remarks>
-/// Implements business logic for resource operations including validation,
-/// authorization, and persistence.
-/// </remarks>
-public class ResourceService : IResourceService
-```
+**Required documentation** ([Skills #11](../../Skills.md)):
+- **XML docs**: All public APIs (classes, methods, properties)
+- **Inline comments**: Complex algorithms and business logic
+- **README updates**: New modules or features
 
-**Inline Comments** (for complex logic):
-```csharp
-// Calculate discount based on user tier (Bronze/Silver/Gold)
-// Gold users get 20%, Silver 10%, Bronze 5%
-var discount = userTier switch
-{
-    Tier.Gold => 0.20m,
-    Tier.Silver => 0.10m,
-    _ => 0.05m
-};
-```
-
-**README Updates** (if new module/feature):
-```markdown
-## Features Module
-
-### Setup
-```bash
-dotnet restore
-dotnet build
-```
-
-### Usage
-```csharp
-var service = new FeatureService(repository);
-var result = await service.ProcessAsync(data);
-```
-
-### Tests
-```bash
-dotnet test
-```
-```
+> See [Skills #11 Documentation](../../Skills.md) for standards and examples
 
 ### 8. Self-Review
 
@@ -361,65 +252,23 @@ Before handoff, verify:
 
 ### Research Tools
 
-**Primary Tools:**
 - `semantic_search` - Find code patterns, similar implementations
 - `grep_search` - Search for specific functions, classes
 - `file_search` - Locate source files, tests
 - `read_file` - Read existing code, tests, configs
+- `runSubagent` - Code pattern research, library comparisons, bug investigations
 
 ### Code Editing Tools
 
 - `create_file` - Create new files
 - `replace_string_in_file` - Edit existing code
-- `multi_replace_string_in_file` - Batch edits (multiple files)
+- `multi_replace_string_in_file` - Batch edits (efficient for multiple files)
 
 ### Testing Tools
 
 - `run_in_terminal` - Run tests, build, linting
 - `get_errors` - Check compilation errors
 - `test_failure` - Get test failure details
-
-### Quick Research with runSubagent
-
-Use `runSubagent` for focused code investigations:
-
-```javascript
-// Find code patterns
-await runSubagent({
-  prompt: "Search codebase for existing [pattern] implementations. Show code examples.",
-  description: "Find code pattern"
-});
-
-// Library evaluation
-await runSubagent({
-  prompt: "Compare [Library A] vs [Library B] for [use case]. Include performance, ease of use.",
-  description: "Library comparison"
-});
-
-// Bug investigation
-await runSubagent({
-  prompt: "Analyze error '[error message]'. Search codebase for similar issues and solutions.",
-  description: "Bug investigation"
-});
-
-// Test gap analysis
-await runSubagent({
-  prompt: "Analyze test coverage for [module]. Identify untested edge cases.",
-  description: "Test gap analysis"
-});
-```
-
-**When to use runSubagent:**
-- Finding code patterns in large codebase
-- Quick library comparisons
-- Bug investigations
-- Test gap analysis
-- Refactoring research
-
-**When NOT to use:**
-- Writing production code (your primary responsibility)
-- Major architectural changes (needs ADR)
-- Creating tests (use main workflow)
 
 ---
 
@@ -445,7 +294,7 @@ Run context capture script:
 
 ### Step 3: Trigger Next Agent (Automatic)
 
-Orchestrator automatically triggers Reviewer workflow within 30 seconds.
+Agent X (YOLO) automatically triggers Reviewer workflow within 30 seconds.
 
 **Manual trigger (if needed):**
 ```json
