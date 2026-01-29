@@ -9,12 +9,23 @@ set -e
 
 REPO_URL="https://raw.githubusercontent.com/jnPiyush/AgentX/master"
 FORCE=${FORCE:-false}
+DETECTED_REPO=""  # Store detected repo to avoid asking twice
 
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
+
+# Function to detect GitHub repo from existing remote
+detect_github_repo() {
+    if [ -d ".git" ]; then
+        local remoteUrl=$(git remote get-url origin 2>/dev/null)
+        if [[ $remoteUrl =~ github\.com[:/]([^/]+)/([^/\.]+) ]]; then
+            echo "${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+        fi
+    fi
+}
 
 download_file() {
     local src=$1
@@ -46,6 +57,12 @@ echo ""
 echo -e "${YELLOW}Running pre-installation checks...${NC}"
 echo ""
 
+# Auto-detect repository
+DETECTED_REPO=$(detect_github_repo)
+if [ -n "$DETECTED_REPO" ]; then
+    echo -e "${GREEN}✓ Detected GitHub repository: $DETECTED_REPO${NC}"
+fi
+
 # Check 1: Git repository
 if [ ! -d ".git" ]; then
     echo -e "${YELLOW}❌ Not a git repository${NC}"
@@ -74,11 +91,30 @@ else
     echo ""
     
     if [[ $REPLY == "1" ]]; then
-        read -p "Enter GitHub repository URL (e.g., https://github.com/user/repo.git): " repoUrl
-        if [[ -n $repoUrl ]]; then
-            if git remote add origin "$repoUrl" 2>/dev/null; then
-                echo -e "${GREEN}✓ GitHub remote configured: $repoUrl${NC}"
+        # Only ask if not already detected
+        if [ -z "$DETECTED_REPO" ]; then
+            read -p "Enter GitHub repository (URL or owner/repo): " repoInput
+            if [[ -n $repoInput ]]; then
+                DETECTED_REPO="$repoInput"
+            fi
+        else
+            echo -e "${CYAN}Using detected repository: $DETECTED_REPO${NC}"
+        fi
+
+        if [[ -n $DETECTED_REPO ]]; then
+            # Handle both URL and owner/repo formats
+            if [[ $DETECTED_REPO =~ ^(https?://|git@) ]]; then
+                repoUrl="$DETECTED_REPO"
+            elif [[ $DETECTED_REPO =~ ^[^/]+/[^/]+$ ]]; then
+                repoUrl="https://github.com/$DETECTED_REPO.git"
             else
+                echo -e "${YELLOW}⚠️  Unrecognized format. Skipping remote setup.${NC}"
+                repoUrl=""
+            fi
+
+            if [[ -n $repoUrl ]] && git remote add origin "$repoUrl" 2>/dev/null; then
+                echo -e "${GREEN}✓ GitHub remote configured: $repoUrl${NC}"
+            elif [[ -n $repoUrl ]]; then
                 echo -e "${YELLOW}⚠️  Failed to add remote. You can do it manually later.${NC}"
             fi
         fi
@@ -154,7 +190,14 @@ echo ""
 
 if [[ $REPLY == "1" ]]; then
     if command -v gh &> /dev/null; then
-        read -p "Enter repository (format: owner/repo): " repo
+        # Use detected repo or ask
+        repo="$DETECTED_REPO"
+        if [ -z "$repo" ]; then
+            read -p "Enter repository (format: owner/repo): " repo
+        else
+            echo -e "${CYAN}Using repository: $repo${NC}"
+        fi
+
         if [[ -n $repo ]]; then
             echo -e "${YELLOW}Creating GitHub Project V2...${NC}"
             

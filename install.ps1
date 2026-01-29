@@ -38,10 +38,29 @@ param(
 $ErrorActionPreference = "Stop"
 $REPO_URL = "https://raw.githubusercontent.com/jnPiyush/AgentX/master"
 $skipGitChecks = $false
+$detectedRepo = $null  # Store detected/provided repo to avoid asking twice
 
 function Write-Info($msg) { Write-Host "  $msg" -ForegroundColor Cyan }
 function Write-Success($msg) { Write-Host "✓ $msg" -ForegroundColor Green }
 function Write-Warn($msg) { Write-Host "⚠ $msg" -ForegroundColor Yellow }
+
+function Get-GitHubRepo {
+    # Try to detect from existing git remote
+    if (Test-Path ".git") {
+        try {
+            $remoteUrl = git remote get-url origin 2>&1
+            if ($LASTEXITCODE -eq 0 -and $remoteUrl) {
+                # Extract owner/repo from various URL formats
+                if ($remoteUrl -match "github\.com[:/]([^/]+)/([^/\.]+)") {
+                    return "$($matches[1])/$($matches[2])"
+                }
+            }
+        } catch {
+            # Ignore errors, will prompt user
+        }
+    }
+    return $null
+}
 
 function Get-FileDownload($src, $dest) {
     $destDir = Split-Path $dest -Parent
@@ -73,6 +92,17 @@ Write-Host ""
 Write-Host "Running pre-installation checks..." -ForegroundColor Yellow
 Write-Host ""
 
+# Auto-detect or get repository once
+if ($Repo) {
+    $detectedRepo = $Repo
+    Write-Success "Using provided repository: $detectedRepo"
+} else {
+    $detectedRepo = Get-GitHubRepo
+    if ($detectedRepo) {
+        Write-Success "Detected GitHub repository: $detectedRepo"
+    }
+}
+
 # Check 1: Git repository
 if (-not (Test-Path ".git")) {
     if ($NoGit) {
@@ -96,17 +126,21 @@ if (-not (Test-Path ".git")) {
             if ($LASTEXITCODE -eq 0 -and (Test-Path ".git")) {
                 Write-Success "Initialized Git repository"
 
-                $repoInput = $Repo
-                if (-not $repoInput) {
+                # Ask for repo only if not already detected/provided
+                if (-not $detectedRepo) {
                     Write-Host "Enter GitHub repository (URL or owner/repo). Press Enter to skip: " -NoNewline
                     $repoInput = Read-Host
+                    if ($repoInput) {
+                        $detectedRepo = $repoInput
+                    }
                 }
-                if ($repoInput) {
+
+                if ($detectedRepo) {
                     $repoUrl = $null
-                    if ($repoInput -match "^(https?://|git@)") {
-                        $repoUrl = $repoInput
-                    } elseif ($repoInput -match "^[^/]+/[^/]+$") {
-                        $repoUrl = "https://github.com/$repoInput.git"
+                    if ($detectedRepo -match "^(https?://|git@)") {
+                        $repoUrl = $detectedRepo
+                    } elseif ($detectedRepo -match "^[^/]+/[^/]+$") {
+                        $repoUrl = "https://github.com/$detectedRepo.git"
                     }
 
                     if ($repoUrl) {
@@ -157,17 +191,21 @@ if (-not $skipGitChecks -and (Test-Path ".git")) {
             $response = Read-Host
             
             if ($response -eq "1") {
-                $repoInput2 = $Repo
-                if (-not $repoInput2) {
+                # Ask for repo only if not already detected/provided
+                if (-not $detectedRepo) {
                     Write-Host "Enter GitHub repository (URL or owner/repo): " -NoNewline
                     $repoInput2 = Read-Host
+                    if ($repoInput2) {
+                        $detectedRepo = $repoInput2
+                    }
                 }
-                if ($repoInput2) {
+
+                if ($detectedRepo) {
                     $repoUrl2 = $null
-                    if ($repoInput2 -match "^(https?://|git@)") {
-                        $repoUrl2 = $repoInput2
-                    } elseif ($repoInput2 -match "^[^/]+/[^/]+$") {
-                        $repoUrl2 = "https://github.com/$repoInput2.git"
+                    if ($detectedRepo -match "^(https?://|git@)") {
+                        $repoUrl2 = $detectedRepo
+                    } elseif ($detectedRepo -match "^[^/]+/[^/]+$") {
+                        $repoUrl2 = "https://github.com/$detectedRepo.git"
                     }
                     if ($repoUrl2) {
                         try {
@@ -251,8 +289,15 @@ if ($response -eq "1") {
     try {
         $ghCheck = gh --version 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "Enter repository (format: owner/repo): " -NoNewline
-            $repo = Read-Host
+            # Use detected repo or ask
+            $repo = $detectedRepo
+            if (-not $repo) {
+                Write-Host "Enter repository (format: owner/repo): " -NoNewline
+                $repo = Read-Host
+            } else {
+                Write-Host "Using repository: $repo" -ForegroundColor Cyan
+            }
+
             if ($repo) {
                 Write-Host "Creating GitHub Project V2..." -ForegroundColor Yellow
                 
