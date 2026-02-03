@@ -11,6 +11,11 @@ constraints:
   - "MUST NOT skip security checks (secrets, SQL injection, validation)"
   - "MUST follow Skills.md standards for language/framework"
   - "MUST NOT merge to main without reviewer approval"
+  - "MUST run verification tests before starting new work (prevent regressions)"
+  - "MUST NOT proceed if existing tests are failing"
+  - "MUST create progress log at docs/progress/ISSUE-{id}-log.md for each session"
+  - "MUST update progress log before ending session or requesting handoff"
+  - "MUST commit frequently (atomic commits with issue references)"
 boundaries:
   can_modify:
     - "src/** (source code)"
@@ -88,7 +93,59 @@ Verify spec is complete (Status = `Ready` in Projects board):
 
 > ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
 
-### 2. Read Context
+### 2. Run Verification Tests (CRITICAL!)
+
+**Before implementing anything new**, verify existing features still work:
+
+```bash
+# Run all existing tests to verify baseline
+dotnet test              # .NET
+pytest                   # Python  
+npm test                 # JavaScript
+
+# Check for any failing tests
+dotnet test --logger "console;verbosity=detailed"
+```
+
+**If any tests fail**:
+1. ❌ **STOP** - Do not proceed with new work
+2. 🔍 Investigate the failure
+3. 🛠️ Fix the regression FIRST
+4. ✅ Verify tests pass before continuing
+
+**Why this matters**:
+- Prevents cascading failures
+- Maintains system stability
+- Catches integration issues early
+- Establishes clean baseline for new work
+
+> 🎯 **Best Practice**: Test at least 3 previously working features manually in addition to automated tests.
+
+### 3. Create/Load Progress Log
+
+Check if progress log exists for this issue:
+
+```bash
+# Check for existing progress log
+ls docs/progress/ISSUE-${issue_number}-log.md
+
+# If exists: Read it to understand previous session work
+# If not exists: Create from template
+```
+
+**For new sessions**:
+```bash
+cp .github/templates/PROGRESS-TEMPLATE.md docs/progress/ISSUE-${issue_number}-log.md
+# Fill in issue_number, issue_title, agent_role
+```
+
+**For continuation sessions**:
+- Read the progress log
+- Review what was accomplished in previous sessions
+- Check "Next Steps" section
+- Verify you're not repeating completed work
+
+### 4. Read Context
 
 - **Tech Spec**: `docs/specs/SPEC-{feature-id}.md` (implementation details)
 - **UX Design**: `docs/ux/UX-{feature-id}.md` (if `needs:ux` label)

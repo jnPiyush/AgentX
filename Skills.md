@@ -192,6 +192,29 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - ✅ Store secrets in env vars/Key Vault (NEVER hardcode) → [#10](.github/skills/development/configuration/SKILL.md)
 - ✅ Implement authentication & authorization → [#04](.github/skills/architecture/security/SKILL.md)
 - ✅ Use HTTPS everywhere in production
+- ✅ Follow command allowlist (see `.github/security/allowed-commands.json`)
+
+#### Defense-in-Depth Security Model
+
+AgentX implements a **4-layer security architecture** inspired by enterprise security practices:
+
+| Layer | Purpose | Enforcement | Status |
+|-------|---------|-------------|--------|
+| **Level 1: Sandbox** | OS-level isolation | Container or VM boundary | Recommended |
+| **Level 2: Filesystem** | Path restrictions | Operations limited to project directory | Active |
+| **Level 3: Allowlist** | Command validation | Pre-execution hook checks against allowlist | Active |
+| **Level 4: Audit** | Command logging | All commands logged with timestamps | Active |
+
+**Command Allowlist**: See `.github/security/allowed-commands.json` for allowed operations by category (git, dotnet, npm, database, etc.).
+
+**Blocked Commands**: `rm -rf`, `git reset --hard`, `git push --force`, `DROP DATABASE`, `DROP TABLE`, `TRUNCATE`, `format`, `del /s`
+
+**Enforcement Points**:
+1. **Pre-commit hook** - `.github/hooks/pre-commit` checks for blocked commands in staged files
+2. **Runtime validation** - Agents validate commands before execution with `run_in_terminal`
+3. **Audit logging** - All terminal commands logged to `.github/security/audit.log`
+
+For complete details, see [docs/session-persistence.md](docs/session-persistence.md#security-model).
 
 ### Quality (Non-Negotiable)
 - ✅ 80%+ code coverage with tests → [#02](.github/skills/development/testing/SKILL.md)

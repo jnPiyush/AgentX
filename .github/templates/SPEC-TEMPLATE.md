@@ -20,6 +20,11 @@ inputs:
     description: "Specification date (YYYY-MM-DD)"
     required: false
     default: "${current_date}"
+  acceptance_criteria:
+    description: "List of testable acceptance criteria (one per line)"
+    required: true
+    type: "array"
+    default: []
 ---
 
 # Technical Specification: ${feature_name}
@@ -31,6 +36,30 @@ inputs:
 **Date**: ${date}
 **Related ADR**: [ADR-${epic_id}.md](../adr/ADR-${epic_id}.md)
 **Related UX**: [UX-${issue_number}.md](../ux/UX-${issue_number}.md)
+
+---
+
+---
+
+## Acceptance Criteria
+
+> **Purpose**: Engineer uses this checklist to track implementation progress. Mark items complete as verified.
+
+- [ ] **AC1**: ${acceptance_criteria[0] || "Describe first acceptance criterion with specific, testable behavior"}
+- [ ] **AC2**: ${acceptance_criteria[1] || "Describe second acceptance criterion"}
+- [ ] **AC3**: ${acceptance_criteria[2] || "Describe third acceptance criterion"}
+- [ ] **AC4**: ${acceptance_criteria[3] || "Add more criteria as needed"}
+
+**Instructions for Architect**:
+- Each criterion must be testable (can verify pass/fail)
+- Include both functional and non-functional requirements
+- Specify success metrics where applicable
+- Minimum 3-10 criteria per feature
+
+**Instructions for Engineer**:
+- Check off criteria as you verify them (manual or automated tests)
+- Update progress log with test results
+- Do not mark complete without verification
 
 ---
 

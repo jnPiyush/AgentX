@@ -86,6 +86,26 @@ else
   echo -e "${GREEN}✅ PASSED${NC}"
 fi
 
+# Check 7: Command allowlist validation
+echo -n "Checking for blocked commands... "
+BLOCKED_COMMANDS=("rm -rf" "git reset --hard" "git push --force" "DROP DATABASE" "DROP TABLE" "TRUNCATE" "format" "del /s" "rmdir /s")
+BLOCKED_FOUND=0
+
+for cmd in "${BLOCKED_COMMANDS[@]}"; do
+  if git diff --cached | grep -F "$cmd" &>/dev/null; then
+    echo -e "${RED}❌ BLOCKED COMMAND: $cmd${NC}"
+    BLOCKED_FOUND=1
+  fi
+done
+
+if [ $BLOCKED_FOUND -eq 0 ]; then
+  echo -e "${GREEN}✅ PASSED${NC}"
+else
+  echo -e "${RED}❌ Blocked destructive command found${NC}"
+  echo "  Review .github/security/allowed-commands.json for allowed operations"
+  FAILED=1
+fi
+
 # Summary
 echo ""
 if [ $FAILED -eq 1 ]; then

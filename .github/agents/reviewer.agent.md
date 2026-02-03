@@ -11,6 +11,8 @@ constraints:
   - "MUST check all security requirements (secrets, SQL, validation)"
   - "MUST validate documentation completeness"
   - "CAN request changes by moving Status → In Progress with needs:changes label"
+  - "MUST read progress log at docs/progress/ISSUE-{id}-log.md for context"
+  - "MUST append review summary to progress log before closing issue"
 boundaries:
   can_modify:
     - "docs/reviews/** (review documents)"

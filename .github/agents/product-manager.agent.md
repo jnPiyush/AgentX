@@ -11,6 +11,8 @@ constraints:
   - "MUST create PRD before creating child issues"
   - "MUST link all child issues to parent Epic"
   - "CAN research codebase to understand current capabilities"
+  - "MUST create progress log at docs/progress/ISSUE-{id}-log.md"
+  - "MUST document user needs and business value in PRD"
 boundaries:
   can_modify:
     - "docs/prd/** (PRD documents)"

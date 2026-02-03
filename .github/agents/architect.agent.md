@@ -11,6 +11,8 @@ constraints:
   - "MUST NOT create PRD or UX designs"
   - "MUST evaluate at least 3 options in ADR before deciding"
   - "CAN research codebase patterns and existing architecture"
+  - "MUST create progress log at docs/progress/ISSUE-{id}-log.md"
+  - "MUST define acceptance criteria in SPEC (minimum 3-10 testable criteria)"
 boundaries:
   can_modify:
     - "docs/adr/** (Architecture Decision Records)"

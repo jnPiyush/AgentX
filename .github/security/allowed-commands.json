@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentX Allowed Commands Configuration",
+  "description": "Defense-in-depth security: Allowlist for terminal commands that agents can execute",
+  "version": "1.0.0",
+  "allowlist": {
+    "git": {
+      "description": "Version control operations",
+      "commands": ["add", "commit", "push", "pull", "status", "log", "diff", "branch", "checkout", "merge", "fetch", "clone", "remote"],
+      "blocked": ["reset --hard", "clean -fd", "push --force", "rebase", "filter-branch"],
+      "rationale": "Allow standard workflow, block destructive operations"
+    },
+    "dotnet": {
+      "description": ".NET development commands",
+      "commands": ["build", "test", "run", "publish", "restore", "clean", "add", "list", "pack"],
+      "blocked": [],
+      "rationale": "Standard .NET CLI operations"
+    },
+    "npm": {
+      "description": "Node.js package management",
+      "commands": ["install", "test", "run", "audit", "update", "ci", "start", "build"],
+      "blocked": ["install -g", "uninstall -g"],
+      "rationale": "Local package operations only, no global installs"
+    },
+    "gh": {
+      "description": "GitHub CLI operations",
+      "commands": ["issue", "pr", "workflow", "repo", "release", "auth", "status"],
+      "blocked": ["repo delete", "repo archive"],
+      "rationale": "Standard GitHub operations, block destructive repo actions"
+    },
+    "python": {
+      "description": "Python execution",
+      "commands": ["python", "python3", "pip", "pytest", "pip-audit"],
+      "blocked": [],
+      "rationale": "Python development and testing"
+    },
+    "filesystem": {
+      "description": "File system operations",
+      "commands": ["ls", "dir", "cat", "head", "tail", "wc", "grep", "find", "mkdir", "touch", "cp", "mv"],
+      "blocked": ["rm -rf", "rm -r", "rmdir /s", "del /s", "format"],
+      "rationale": "Read and safe write operations only"
+    },
+    "process": {
+      "description": "Process management",
+      "commands": ["ps", "lsof", "sleep", "pkill", "tasklist"],
+      "blocked": ["killall", "taskkill /f"],
+      "rationale": "Process inspection, limited termination (dev processes only)"
+    },
+    "database": {
+      "description": "Database operations",
+      "commands": ["psql", "pg_dump", "pg_restore", "sqlcmd"],
+      "blocked": ["DROP DATABASE", "DROP TABLE", "TRUNCATE"],
+      "rationale": "Query and backup only, no destructive schema changes"
+    }
+  },
+  "security_levels": {
+    "level1_sandbox": {
+      "description": "OS-level isolation",
+      "enforcement": "Container or VM boundary",
+      "status": "recommended"
+    },
+    "level2_filesystem": {
+      "description": "Path restrictions",
+      "enforcement": "Operations restricted to project directory",
+      "status": "active"
+    },
+    "level3_allowlist": {
+      "description": "Command validation",
+      "enforcement": "Pre-execution hook checks against this file",
+      "status": "active"
+    },
+    "level4_audit": {
+      "description": "Command logging",
+      "enforcement": "All commands logged with timestamps",
+      "status": "active"
+    }
+  },
+  "enforcement": {
+    "pre_commit_hook": {
+      "enabled": true,
+      "script": ".github/hooks/pre-commit",
+      "checks": ["secrets", "file_size", "sql_injection", "command_validation"]
+    },
+    "runtime_validation": {
+      "enabled": true,
+      "pattern": "Validate before run_in_terminal tool execution",
+      "action_on_violation": "Block and log"
+    }
+  },
+  "audit_log": {
+    "enabled": true,
+    "location": ".github/security/audit.log",
+    "retention_days": 90,
+    "fields": ["timestamp", "agent", "command", "status", "output_hash"]
+  }
+}

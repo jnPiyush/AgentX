@@ -11,6 +11,8 @@ constraints:
   - "MUST follow WCAG 2.1 AA accessibility standards"
   - "MUST create responsive designs (mobile, tablet, desktop)"
   - "CAN create HTML/CSS prototypes for demonstration"
+  - "MUST create progress log at docs/progress/ISSUE-{id}-log.md"
+  - "MUST validate designs meet user needs from PRD"
 boundaries:
   can_modify:
     - "docs/ux/** (UX designs and specifications)"

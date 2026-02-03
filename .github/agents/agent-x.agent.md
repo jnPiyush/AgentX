@@ -23,23 +23,7 @@ boundaries:
     - "src/** (Engineer deliverables)"
     - "docs/reviews/** (Reviewer deliverables)"
 tools:
-  - issue_read
-  - list_issues
-  - update_issue
-  - add_issue_comment
-  - run_workflow
-  - list_workflow_runs
-  - read_file
-  - semantic_search
-  - grep_search
-  - file_search
-  - list_dir
-  - create_file
-  - run_in_terminal
-  - get_errors
-  - get_changed_files
-  - manage_todo_list
-  - runSubagent
+  ['execute', 'read', 'edit', 'search', 'web', 'agent', 'github/*', 'ms-azuretools.vscode-azure-github-copilot/azure_recommend_custom_modes', 'ms-azuretools.vscode-azure-github-copilot/azure_query_azure_resource_graph', 'ms-azuretools.vscode-azure-github-copilot/azure_get_auth_context', 'ms-azuretools.vscode-azure-github-copilot/azure_set_auth_context', 'ms-azuretools.vscode-azure-github-copilot/azure_get_dotnet_template_tags', 'ms-azuretools.vscode-azure-github-copilot/azure_get_dotnet_templates_for_tag', 'ms-windows-ai-studio.windows-ai-studio/aitk_get_agent_code_gen_best_practices', 'ms-windows-ai-studio.windows-ai-studio/aitk_get_ai_model_guidance', 'ms-windows-ai-studio.windows-ai-studio/aitk_get_agent_model_code_sample', 'ms-windows-ai-studio.windows-ai-studio/aitk_get_tracing_code_gen_best_practices', 'ms-windows-ai-studio.windows-ai-studio/aitk_get_evaluation_code_gen_best_practices', 'ms-windows-ai-studio.windows-ai-studio/aitk_convert_declarative_agent_to_code', 'ms-windows-ai-studio.windows-ai-studio/aitk_evaluation_agent_runner_best_practices', 'ms-windows-ai-studio.windows-ai-studio/aitk_evaluation_planner', 'todo']
 handoffs:
   - label: "📋 Product Roadmap"
     agent: product-manager

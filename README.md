@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v2.1.0"><img src="https://img.shields.io/badge/Version-2.1.0-0EA5E9?style=for-the-badge" alt="Version 2.1.0"></a>
+  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v2.2.0"><img src="https://img.shields.io/badge/Version-2.2.0-0EA5E9?style=for-the-badge" alt="Version 2.2.0"></a>
   <a href="https://github.com/github/awesome-copilot"><img src="https://img.shields.io/badge/Standard-awesome--copilot-7C3AED?style=for-the-badge&logo=github" alt="Awesome Copilot"></a>
   <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Skills-agentskills.io-F97316?style=for-the-badge" alt="Skills Spec"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge" alt="MIT License"></a>
@@ -40,7 +40,56 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ---
 
-## ✨ Features
+## 🆕 What's New in v2.2
+
+<table>
+<tr>
+<td width="50%">
+
+### 📝 Session Persistence
+- **Progress logs** for long-running tasks
+- **Auto-resume** across context windows
+- **Three-tier persistence** (Issues, Logs, Git)
+- Continuity for >200K token workflows
+
+</td>
+<td width="50%">
+
+### 🔒 Defense-in-Depth Security
+- **4-layer security model** (Sandbox → Filesystem → Allowlist → Audit)
+- **Command allowlist** (`.github/security/allowed-commands.json`)
+- **Blocked commands** (`rm -rf`, `DROP TABLE`, etc.)
+- **Pre-commit validation** for destructive operations
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### ✅ Feature Checklists
+- **Acceptance criteria** in SPEC templates
+- **Checkbox tracking** for implementation progress
+- **Spec-to-test mapping** for verification
+- Engineer updates as features complete
+
+</td>
+<td width="50%">
+
+### 🧪 Verification Tests
+- **Regression testing** before new work
+- **Baseline verification** (existing tests must pass)
+- **Prevents cascading failures**
+- Engineer constraints enforce testing
+
+</td>
+</tr>
+</table>
+
+[View full changelog →](CHANGELOG.md)
+
+---
+
+## ✨ Core Features
 
 <table>
 <tr>
@@ -64,18 +113,16 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 - Performance optimization
 - Database design (PostgreSQL/SQL Server)
 - [Full index →](Skills.md)
-- Performance optimization
-- [Full index →](Skills.md)
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-##Hub-and-spoke architecture
+### 🔄 Structured Workflow
+- Hub-and-spoke architecture
 - Issue-first development
-- Pre-handofft development
-- Pre-commit validation
+- Pre-handoff validation
 - Template scaffolding
 - GitHub Projects V2 integration
 
@@ -87,6 +134,11 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 - SQL injection checks
 - Document prerequisites
 - Code review gates
+- Command allowlist validation
+
+</td>
+</tr>
+</table>
 
 </td>
 </tr>

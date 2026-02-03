@@ -5,6 +5,91 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-02-03
+
+### ✨ Added
+
+**Session Persistence & Auto-Resume** (Phase 1 & 2):
+- **Progress Log System**: Agents create session logs at `docs/progress/ISSUE-{id}-log.md`
+  - Template at `.github/templates/PROGRESS-TEMPLATE.md`
+  - Tracks accomplishments, blockers, next steps across sessions
+  - Enables continuity for long-running tasks (>200K tokens)
+- **Three-Tier Persistence**: 
+  - Tier 1: GitHub Issues (coarse-grained status)
+  - Tier 2: Progress logs (medium-grained session notes)
+  - Tier 3: Git commits (fine-grained code changes)
+- **Session Lifecycle**: Pre-session → Active Session → Checkpoint & Handoff
+- **Auto-Resume Pattern**: Agents resume from progress logs when context window fills
+- **Token Budget Management**: Agents monitor usage and trigger resume at 80%
+- **Documentation**: Complete guide at `docs/session-persistence.md` (700+ lines)
+
+**Defense-in-Depth Security Model** (Phase 2):
+- **4-Layer Security Architecture**:
+  - Level 1: Sandbox (OS-level isolation) - Recommended
+  - Level 2: Filesystem (project directory restrictions) - Active
+  - Level 3: Allowlist (command validation) - Active
+  - Level 4: Audit (command logging) - Active
+- **Command Allowlist**: Configuration at `.github/security/allowed-commands.json`
+  - Allowed: git, dotnet, npm, gh, python, filesystem (read/safe write)
+  - Blocked: `rm -rf`, `git reset --hard`, `DROP DATABASE`, `DROP TABLE`, etc.
+- **Pre-Commit Validation**: Enhanced `.github/hooks/pre-commit`
+  - Check #7: Blocked command detection
+  - Scans staged files for destructive operations
+- **Skills Documentation**: Updated `Skills.md` with security tier model
+
+**Feature Checklist System** (Phase 1):
+- **Acceptance Criteria in SPEC Template**:
+  - New `acceptance_criteria` input field (array type)
+  - Checkbox format: `- [ ] **AC1**: Description`
+  - Minimum 3-10 criteria per feature
+  - Engineer checks off as verified
+- **Architect Constraint**: MUST define acceptance criteria in all specs
+- **Engineer Tracking**: Progress logged per criterion
+
+**Verification Test Pattern** (Phase 1):
+- **Engineer Workflow Update**: New Step 2 - "Run Verification Tests (CRITICAL!)"
+- **Regression Prevention**:
+  - MUST run all existing tests before starting new work
+  - MUST stop if any tests fail
+  - Fix regressions FIRST before proceeding
+- **Engineer Constraints**:
+  - "MUST run verification tests before starting new work"
+  - "MUST NOT proceed if existing tests are failing"
+- **Best Practice**: Test ≥3 previously working features manually
+
+**Agent Constraint Updates** (All Agents):
+- **PM**: Added progress log requirement
+- **UX**: Added progress log and PRD validation requirement
+- **Architect**: Added progress log and acceptance criteria definition requirement
+- **Engineer**: Added 5 new constraints (verification tests, progress logs, commits)
+- **Reviewer**: Added progress log reading and update requirements
+
+### 🔄 Changed
+- Engineer agent workflow now includes verification testing step
+- All 5 agent files updated with progress log constraints
+- SPEC template updated with acceptance criteria section
+- Pre-commit hook now validates against command allowlist
+
+### 📚 Documentation
+- `docs/session-persistence.md` - Complete guide (700+ lines)
+- `.github/templates/PROGRESS-TEMPLATE.md` - Session log template
+- `.github/security/allowed-commands.json` - Security configuration
+- `Skills.md` - Added defense-in-depth security model section
+- `README.md` - Added "What's New in v2.2" section
+
+### 🛡️ Security
+- Defense-in-depth security model implemented
+- Command allowlist enforcement (pre-commit + runtime)
+- Audit logging for all terminal commands
+- Blocked destructive commands at multiple layers
+
+### 📊 Status
+- ✅ All Phase 1 & Phase 2 features implemented and tested
+- ✅ Production-ready and stable
+- 🔜 Phase 3 (v3.0.0): Browser automation, Playwright integration
+
+---
+
 ## [2.1.0] - 2026-02-03
 
 ### ✨ Added
