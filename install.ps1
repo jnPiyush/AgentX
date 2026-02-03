@@ -1,11 +1,14 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Install AgentX in your project
+    Install AgentX v2.1.0 in your project
 
 .DESCRIPTION
     Downloads and installs all AgentX files including agents, skills,
     templates, workflows, and documentation.
+    
+    New in v2.1: Maturity levels, constraint-based design, handoff buttons,
+    input variables, context clearing, and autonomous mode.
 
 .PARAMETER Force
     Overwrite existing files
@@ -84,7 +87,10 @@ function Get-FileDownload($src, $dest) {
 # Banner
 Write-Host ""
 Write-Host "╔═══════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║  AgentX - AI Agent Guidelines for Production Code ║" -ForegroundColor Cyan
+Write-Host "║  AgentX v2.1.0 - Multi-Agent Orchestration       ║" -ForegroundColor Cyan
+Write-Host "╚═══════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "✨ New: Autonomous mode, input variables, constraints" -ForegroundColor Green
+Write-Host ""
 Write-Host "╚═══════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 

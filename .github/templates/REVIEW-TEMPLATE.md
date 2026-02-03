@@ -1,12 +1,48 @@
-# Code Review: {Story Title}
+---
+inputs:
+  story_title:
+    description: "Title of the story being reviewed"
+    required: true
+    default: ""
+  issue_number:
+    description: "GitHub issue number for this story"
+    required: true
+    default: ""
+  feature_id:
+    description: "Parent Feature issue number"
+    required: false
+    default: ""
+  epic_id:
+    description: "Parent Epic issue number"
+    required: false
+    default: ""
+  engineer:
+    description: "Engineer GitHub username"
+    required: true
+    default: ""
+  reviewer:
+    description: "Reviewer name (agent or person)"
+    required: false
+    default: "Code Reviewer Agent"
+  commit_sha:
+    description: "Full commit SHA being reviewed"
+    required: true
+    default: ""
+  date:
+    description: "Review date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
+---
 
-**Story**: #{story-id}  
-**Feature**: #{feature-id} (if applicable)  
-**Epic**: #{epic-id} (if applicable)  
-**Engineer**: {GitHub username}  
-**Reviewer**: {Your GitHub username}  
-**Commit SHA**: {full SHA}  
-**Review Date**: {YYYY-MM-DD}  
+# Code Review: ${story_title}
+
+**Story**: #${issue_number}  
+**Feature**: #${feature_id} (if applicable)  
+**Epic**: #${epic_id} (if applicable)  
+**Engineer**: ${engineer}  
+**Reviewer**: ${reviewer}  
+**Commit SHA**: ${commit_sha}  
+**Review Date**: ${date}  
 **Review Duration**: {time spent}
 
 ---

@@ -1,8 +1,33 @@
 ---
 name: Engineer
 description: 'Engineer: Implement code, tests, and documentation. Trigger: Status = Ready (spec complete). Status → In Progress → In Review.'
+maturity: stable
+mode: agent
 model: Claude Sonnet 4.5 (copilot)
 infer: true
+constraints:
+  - "MUST NOT modify PRD, ADR, or UX documents"
+  - "MUST achieve ≥80% test coverage (70% unit, 20% integration, 10% e2e)"
+  - "MUST NOT skip security checks (secrets, SQL injection, validation)"
+  - "MUST follow Skills.md standards for language/framework"
+  - "MUST NOT merge to main without reviewer approval"
+boundaries:
+  can_modify:
+    - "src/** (source code)"
+    - "tests/** (test code)"
+    - "docs/README.md (documentation)"
+    - "GitHub Projects Status (In Progress → In Review)"
+  cannot_modify:
+    - "docs/prd/** (PRD documents)"
+    - "docs/adr/** (architecture docs)"
+    - "docs/ux/** (UX designs)"
+    - ".github/workflows/** (CI/CD pipelines)"
+handoffs:
+  - label: "🔍 Hand off to Reviewer"
+    agent: reviewer
+    prompt: "Review code quality, security, and standards for issue #${issue_number}"
+    send: false
+    context: "After implementation and tests complete"
 tools:
   - issue_read
   - list_issues

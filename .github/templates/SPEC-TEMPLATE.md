@@ -1,12 +1,36 @@
-# Technical Specification: {Feature Name}
+---
+inputs:
+  feature_name:
+    description: "Name of the feature being specified"
+    required: true
+    default: ""
+  issue_number:
+    description: "GitHub issue number for this feature"
+    required: true
+    default: ""
+  epic_id:
+    description: "Parent Epic issue number"
+    required: false
+    default: ""
+  author:
+    description: "Spec author (agent or person)"
+    required: false
+    default: "Solution Architect Agent"
+  date:
+    description: "Specification date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
+---
 
-**Issue**: #{feature-id}
-**Epic**: #{epic-id}
+# Technical Specification: ${feature_name}
+
+**Issue**: #${issue_number}
+**Epic**: #${epic_id}
 **Status**: Draft | Review | Approved
-**Author**: {Agent/Person}
-**Date**: {YYYY-MM-DD}
-**Related ADR**: [ADR-{epic-id}.md](../adr/ADR-{epic-id}.md)
-**Related UX**: [UX-{feature-id}.md](../ux/UX-{feature-id}.md)
+**Author**: ${author}
+**Date**: ${date}
+**Related ADR**: [ADR-${epic_id}.md](../adr/ADR-${epic_id}.md)
+**Related UX**: [UX-${issue_number}.md](../ux/UX-${issue_number}.md)
 
 ---
 

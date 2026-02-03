@@ -1,8 +1,32 @@
 ---
 name: Reviewer
 description: 'Reviewer: Review code quality, tests, security, and approve/reject. Trigger: Status = In Review. Status → Done when approved.'
+maturity: stable
+mode: agent
 model: Claude Sonnet 4.5 (copilot)
 infer: true
+constraints:
+  - "MUST NOT modify source code directly"
+  - "MUST verify ≥80% test coverage before approval"
+  - "MUST check all security requirements (secrets, SQL, validation)"
+  - "MUST validate documentation completeness"
+  - "CAN request changes by moving Status → In Progress with needs:changes label"
+boundaries:
+  can_modify:
+    - "docs/reviews/** (review documents)"
+    - "GitHub Issues (comments, labels)"
+    - "GitHub Projects Status (In Review → Done or In Progress)"
+  cannot_modify:
+    - "src/** (source code - must request changes)"
+    - "tests/** (test code - must request changes)"
+    - "docs/prd/** (PRD documents)"
+    - "docs/adr/** (architecture docs)"
+handoffs:
+  - label: "🔄 Request Changes"
+    agent: engineer
+    prompt: "Address review feedback and resolve issues for #${issue_number}"
+    send: false
+    context: "If changes needed, hand back to Engineer"
 tools:
   - issue_read
   - list_issues

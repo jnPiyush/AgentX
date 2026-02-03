@@ -1,10 +1,39 @@
-# ADR-{ID}: {Decision Title}
+---
+inputs:
+  decision_id:
+    description: "ADR sequential ID number"
+    required: true
+    default: ""
+  decision_title:
+    description: "Short title of the architectural decision"
+    required: true
+    default: ""
+  issue_number:
+    description: "GitHub issue number for this decision"
+    required: true
+    default: ""
+  epic_id:
+    description: "Parent Epic issue number"
+    required: false
+    default: ""
+  date:
+    description: "Decision date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
+  status:
+    description: "Decision status"
+    required: false
+    default: "Accepted"
+---
 
-**Status**: Accepted | Rejected | Superseded  
-**Date**: {YYYY-MM-DD}  
-**Epic**: #{epic-id}  
-**PRD**: [PRD-{epic-id}.md](../prd/PRD-{epic-id}.md)  
-**UX**: [UX-{feature-id}.md](../ux/UX-{feature-id}.md)
+# ADR-${decision_id}: ${decision_title}
+
+**Status**: ${status}
+**Date**: ${date}  
+**Epic**: #${epic_id}  
+**Issue**: #${issue_number}  
+**PRD**: [PRD-${epic_id}.md](../prd/PRD-${epic_id}.md)  
+**UX**: [UX-${issue_number}.md](../ux/UX-${issue_number}.md)
 
 ---
 

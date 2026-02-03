@@ -1,5 +1,8 @@
 #!/bin/bash
-# Install AgentX in your project
+# Install AgentX v2.1.0 in your project
+#
+# New in v2.1: Maturity levels, constraint-based design, handoff buttons,
+# input variables, context clearing, and autonomous mode.
 #
 # Usage:
 #   ./install.sh
@@ -49,8 +52,9 @@ download_file() {
 # Banner
 echo ""
 echo -e "${CYAN}╔═══════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║  AgentX - AI Agent Guidelines for Production Code ║${NC}"
+echo -e "${CYAN}║  AgentX v2.1.0 - Multi-Agent Orchestration       ║${NC}"
 echo -e "${CYAN}╚═══════════════════════════════════════════════════╝${NC}"
+echo -e "${GREEN}✨ New: Autonomous mode, input variables, constraints${NC}"
 echo ""
 
 # Pre-installation validation

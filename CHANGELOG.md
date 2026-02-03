@@ -5,6 +5,52 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-02-03
+
+### ✨ Added
+
+**Agent Enhancements:**
+- **Maturity Lifecycle**: All agents now declare maturity level (`stable`/`preview`/`experimental`/`deprecated`)
+- **Constraint-Based Design**: Agents explicitly declare boundaries with `CAN`/`CANNOT` and `can_modify`/`cannot_modify`
+- **Enhanced Handoff Buttons**: 
+  - Added icons (📋 PM, 🎨 UX, 🏗️ Architect, 🔧 Engineer, 🔍 Reviewer)
+  - Input variables in prompts (`${issue_number}`)
+  - Context notes explaining when to use each handoff
+- **Agent X Autonomous Mode**: New agent for auto-routing simple tasks (bugs, docs, ≤3 files)
+  - Bypasses PM/Architect for simple work
+  - Decision matrix based on complexity
+  - Automatic escalation to full workflow when needed
+
+**Template System:**
+- **Input Variables**: Dynamic content with `${variable_name}` syntax
+- **YAML Frontmatter**: All templates now have `inputs:` declarations
+- **Special Tokens**: `${current_date}`, `${current_year}`, `${user}`
+- Updated all 5 templates: PRD, ADR, UX, Spec, Review
+- Required/optional field enforcement
+- Default values for common fields
+
+**Workflow Improvements:**
+- **Context Clearing Guidance**: Clear decision matrix for when to clear context between phases
+- Prevents assumption contamination (Architect → Engineer transition)
+- Forces reliance on documented artifacts
+- Updated AGENTS.md with context management section
+
+**Documentation:**
+- Template Input Variables Guide (428 lines) - Complete guide for dynamic templates
+- New Features Summary v2.1 (387 lines) - Migration guide and feature overview
+- Agent X Autonomous specification (368 lines) - Autonomous mode documentation
+- Updated AGENTS.md with constraint-based design principles
+
+### 🔄 Changed
+- All 6 agent definitions now include `maturity`, `constraints`, and `boundaries` fields
+- Handoff buttons enhanced with better UX and context
+- AGENTS.md updated with new features reference section
+
+### 📊 Status
+- ✅ All features are **stable** and production-ready
+- ✅ No breaking changes - all features are additive
+- ✅ Backward compatible with existing templates and workflows
+
 ## [2.0.0] - 2026-01-28
 
 ### 🎉 Major Release: Hub-and-Spoke Architecture

@@ -1,11 +1,35 @@
-# UX Design: {Feature Name}
+---
+inputs:
+  feature_name:
+    description: "Name of the feature being designed"
+    required: true
+    default: ""
+  issue_number:
+    description: "GitHub issue number for this feature"
+    required: true
+    default: ""
+  epic_id:
+    description: "Parent Epic issue number"
+    required: false
+    default: ""
+  designer:
+    description: "Designer name (agent or person)"
+    required: false
+    default: "UX Designer Agent"
+  date:
+    description: "Design date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
+---
 
-**Feature**: #{feature-id}  
-**Epic**: #{epic-id}  
+# UX Design: ${feature_name}
+
+**Feature**: #${issue_number}  
+**Epic**: #${epic_id}  
 **Status**: Draft | Review | Approved  
-**Designer**: {Agent/Person}  
-**Date**: {YYYY-MM-DD}  
-**Related PRD**: [PRD-{epic-id}.md](../prd/PRD-{epic-id}.md)
+**Designer**: ${designer}  
+**Date**: ${date}  
+**Related PRD**: [PRD-${epic_id}.md](../prd/PRD-${epic_id}.md)
 
 ---
 

@@ -1,10 +1,35 @@
-# PRD: {Epic Title}
+---
+inputs:
+  epic_title:
+    description: "Title of the Epic"
+    required: true
+    default: ""
+  issue_number:
+    description: "GitHub issue number for this Epic"
+    required: true
+    default: ""
+  priority:
+    description: "Priority level"
+    required: false
+    default: "p2"
+  author:
+    description: "Document author (agent or person name)"
+    required: false
+    default: "Product Manager Agent"
+  date:
+    description: "Creation date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
+---
 
-**Epic**: #{epic-id}  
+# PRD: ${epic_title}
+
+**Epic**: #${issue_number}  
 **Status**: Draft | Review | Approved  
-**Author**: {Agent/Person}  
-**Date**: {YYYY-MM-DD}  
+**Author**: ${author}  
+**Date**: ${date}  
 **Stakeholders**: {Names/Roles}
+**Priority**: ${priority}
 
 ---
 
