@@ -12,10 +12,11 @@
 2. **Classify** request (Epic/Feature/Story/Bug/Spike/Docs)
 3. **Create Issue** with type label
 4. **Execute** role-specific work
-5. **Update Status** in GitHub Projects V2
+5. **Update Status** in GitHub Projects V2 (or local file in Local Mode)
 
 ### Issue Commands
 
+**GitHub Mode:**
 ```bash
 # Create issue (auto-added to Project board)
 gh issue create --title "[Type] Description" --label "type:story"
@@ -27,7 +28,21 @@ gh issue create --title "[Type] Description" --label "type:story"
 gh issue close <ID>
 ```
 
-> ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
+**Local Mode** (without GitHub):
+```powershell
+# Create issue
+.\.agentx\local-issue-manager.ps1 -Action create -Title "[Type] Description" -Labels "type:story"
+
+# Update status
+.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber <ID> -Status "In Progress"
+
+# Close issue
+.\.agentx\local-issue-manager.ps1 -Action close -IssueNumber <ID>
+```
+
+> ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field (GitHub mode) or local JSON status (Local mode).
+> 
+> 📖 **Local Mode**: See [docs/local-mode.md](docs/local-mode.md) for filesystem-based issue tracking without GitHub.
 
 ---
 

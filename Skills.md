@@ -125,10 +125,10 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 | Component | Technology | Version |
 |-----------|------------|---------|
-| **Language** | C# / .NET | 8.0+ |
+| **Language** | C# / .NET | Latest |
 | **Language** | Python | 3.11+ |
-| **Backend** | ASP.NET Core | 8.0+ |
-| **Database** | PostgreSQL + Npgsql | 16+ |
+| **Backend** | ASP.NET Core | Latest |
+| **Database** | SQLlite | Latest |
 | **Frontend** | React | 18+ |
 | **AI** | Microsoft Agent Framework | Latest |
 | **AI** | Microsoft Foundry | Latest |

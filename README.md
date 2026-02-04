@@ -124,7 +124,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 - Issue-first development
 - Pre-handoff validation
 - Template scaffolding
-- GitHub Projects V2 integration
+- GitHub Projects V2 or **Local Mode**
 
 </td>
 <td width="50%">
@@ -169,6 +169,17 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ## 🚀 Quick Start
 
+### Choose Your Mode
+
+AgentX supports **two modes**:
+
+| Mode | Best For | Features |
+|------|----------|----------|
+| **GitHub Mode** | Team projects | Full features: Actions, PRs, Projects |
+| **Local Mode** | Solo/offline work | Filesystem-based issue tracking |
+
+> 📖 **Local Mode Guide**: [docs/local-mode.md](docs/local-mode.md)
+
 ### One-Line Install
 
 ```powershell
@@ -181,6 +192,10 @@ irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
 ```
 
+During installation, choose:
+- **[1]** Set up GitHub remote (GitHub Mode)
+- **[2]** Use Local Mode (no GitHub required)
+
 ### Manual Setup
 
 ```bash
@@ -189,7 +204,7 @@ cd AgentX
 ./install.sh  # or .\install.ps1 on Windows
 ```
 
-### Create Labels
+### Create Labels (GitHub Mode Only)
 
 ```bash
 gh label create "type:epic" --color "7C3AED"
