@@ -1,5 +1,5 @@
 ---
-agent: "agent"
+agent: "Agent X (YOLO)"
 description: Convert Markdown documents to Word (.docx) or PDF using Office Word MCP Server
 ---
 
