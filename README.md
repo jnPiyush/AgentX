@@ -83,6 +83,26 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+### 📄 Document Conversion (NEW)
+- **Word MCP Server** integration
+- **Markdown → DOCX/PDF** conversion
+- Convert PRDs, ADRs, Specs to Word
+- Professional formatting preserved
+
+</td>
+<td width="50%">
+
+### ⚙️ DevOps Agent (NEW)
+- **CI/CD pipeline** generation
+- **GitHub Actions** workflow automation
+- **Release management** support
+- Infrastructure as Code patterns
+
+</td>
+</tr>
 </table>
 
 [View full changelog →](CHANGELOG.md)
@@ -95,18 +115,20 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <tr>
 <td width="50%">
 
-### 🤖 6 Specialized Agents
+### 🤖 8 Specialized Agents
 - **Agent X** - Coordinator & router (hub)
+- **Agent X Auto** - Autonomous mode for simple tasks
 - **Product Manager** - PRDs & backlog
 - **UX Designer** - Wireframes & flows
 - **Solution Architect** - ADRs & specs
 - **Software Engineer** - Code & tests
 - **Code Reviewer** - Quality gates
+- **DevOps Engineer** - CI/CD & deployments
 
 </td>
 <td width="50%">
 
-### 📚 25 Production Skills
+### 📚 32 Production Skills
 - Testing (80%+ coverage)
 - Security (OWASP Top 10)
 - API Design (REST patterns)
@@ -220,7 +242,7 @@ gh label create "needs:ux" --color "EC4899"
 
 ### Hub-and-Spoke Pattern
 
-AgentX uses a **centralized hub** (Agent X) that routes work to **5 specialized agents**:
+AgentX uses a **centralized hub** (Agent X) that routes work to **7 specialized agents**:
 
 ```
                 Agent X (Hub)
@@ -231,9 +253,11 @@ AgentX uses a **centralized hub** (Agent X) that routes work to **5 specialized 
       │              │              │
       └──────────────┼──────────────┘
                      │
-               Engineer Agent
-                     │
-               Reviewer Agent
+          ┌──────────┴──────────┐
+          │                     │
+    Engineer Agent        DevOps Agent
+          │
+    Reviewer Agent
 ```
 
 **Key Principles**:
@@ -254,6 +278,7 @@ AgentX uses a **centralized hub** (Agent X) that routes work to **5 specialized 
 | 🏗️ **Architect** | `type:feature` or Status=Ready | ADR + Tech Spec (diagrams, NO CODE) | `.github/scripts/validate-handoff.sh {issue} architect` | → Ready |
 | 🔧 **Engineer** | `type:story` or Status=Ready | Code + Tests (≥80%) + Docs | `.github/scripts/validate-handoff.sh {issue} engineer` | → In Review |
 | 🔍 **Reviewer** | Status = In Review | Review Report + Approval/Rejection | `.github/scripts/validate-handoff.sh {issue} reviewer` | → Done |
+| ⚙️ **DevOps** | `type:devops` | CI/CD pipelines + Deployment configs | `.github/scripts/validate-handoff.sh {issue} devops` | → Done |
 
 **All agents have access to all tools** for maximum flexibility.
 
@@ -296,21 +321,28 @@ Backlog → In Progress → In Review → Ready → Done
 ```
 AgentX/
 ├── 📄 AGENTS.md              # Workflow & orchestration rules
-├── 📄 Skills.md              # 18 production skills index
+├── 📄 Skills.md              # 32 production skills index
 ├── 📄 CONTRIBUTING.md        # Contributor guide
 │
 ├── 📁 .github/
-│   ├── 📁 agents/            # 5 agent definitions
+│   ├── 📁 agents/            # 8 agent definitions
 │   ├── 📁 hooks/             # Pre-commit validation
-│   ├── 📁 templates/         # PRD, ADR, Spec, UX templates
+│   ├── 📁 templates/         # PRD, ADR, Spec, UX, Progress templates
+│   ├── 📁 prompts/           # 10 reusable prompts
 │   ├── 📁 workflows/         # GitHub Actions
-│   ├── 📁 skills/            # 18 skill documents
+│   ├── 📁 skills/            # 32 skill documents
 │   └── 📁 instructions/      # Language-specific guides
+│
+├── 📁 .vscode/
+│   └── 📄 mcp.json           # MCP Server config (GitHub + Word)
 │
 └── 📁 docs/
     ├── 📁 adr/               # Architecture Decision Records
     ├── 📁 prd/               # Product Requirements Docs
-    └── 📁 specs/             # Technical Specifications
+    ├── 📁 specs/             # Technical Specifications
+    ├── 📁 ux/                # UX Design Documents
+    ├── 📁 reviews/           # Code Review Documents
+    └── 📁 progress/          # Session progress logs
 ```
 
 ---
@@ -320,9 +352,11 @@ AgentX/
 | Document | Description |
 |----------|-------------|
 | [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
-| [Skills.md](Skills.md) | 18 production skills with guidelines |
+| [Skills.md](Skills.md) | 32 production skills with guidelines |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
-| [MCP Integration](docs/mcp-integration.md) | GitHub MCP Server setup |
+| [MCP Integration](docs/mcp-integration.md) | GitHub + Word MCP Server setup |
+| [Project Setup](docs/project-setup.md) | GitHub Projects V2 configuration |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
 
 ---
 

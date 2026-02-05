@@ -11,12 +11,12 @@
 
 ### Background
 
-AgentX is a multi-agent orchestration framework enabling AI coding assistants to work as a structured software team. The current implementation (Phase 1 MVP) has:
-- 5 agent definitions with overlapping content
-- Template duplication within agent files
-- Unclear tool access patterns (role-specific vs. universal)
-- Mixed validation strategies (pre-commit vs. pre-handoff)
-- Inconsistent agent coordination mechanisms
+AgentX is a multi-agent orchestration framework enabling AI coding assistants to work as a structured software team. The current implementation (v2.2) has:
+- 8 agent definitions (Agent X, Agent X Auto, PM, UX, Architect, Engineer, Reviewer, DevOps)
+- Template-driven deliverables with clear separation
+- Universal tool access for maximum flexibility
+- Pre-handoff validation strategy
+- Hub-and-spoke coordination via Agent X
 
 ### Problem
 
@@ -29,9 +29,9 @@ Phase 2 requires architectural clarity to:
 
 ### Requirements (from PRD)
 
-**FR-1**: 5 specialized agents (PM, Architect, UX, Engineer, Reviewer)  
-**FR-3**: Workflow enforcement (issue-first, status tracking, prerequisites)  
-**FR-6**: Agent handoffs (automatic triggering, context preservation)  
+**FR-1**: 7 specialized agents (PM, Architect, UX, Engineer, Reviewer, DevOps) + Agent X Auto
+**FR-3**: Workflow enforcement (issue-first, status tracking, prerequisites)
+**FR-6**: Agent handoffs (automatic triggering, context preservation)
 **NFR-3**: Usability (self-documenting, clear error messages)
 
 ### Constraints
@@ -48,11 +48,12 @@ Phase 2 requires architectural clarity to:
 We will implement a **Hub-and-Spoke Architecture** with:
 
 1. **Agent X (Hub)** - Central coordinator routing all work
-2. **5 Specialized Agents (Spokes)** - PM, Architect, UX, Engineer, Reviewer
-3. **Universal Tool Access** - All agents can use all tools
-4. **Template-Driven Deliverables** - Agents reference templates, don't duplicate
-5. **Pre-Handoff Validation** - Validation occurs before status transitions
-6. **Status-Based Workflow** - GitHub Projects V2 Status field drives orchestration
+2. **Agent X Auto** - Autonomous mode for simple tasks (bugs, docs)
+3. **7 Specialized Agents (Spokes)** - PM, Architect, UX, Engineer, Reviewer, DevOps
+4. **Universal Tool Access** - All agents can use all tools
+5. **Template-Driven Deliverables** - Agents reference templates, don't duplicate
+6. **Pre-Handoff Validation** - Validation occurs before status transitions
+7. **Status-Based Workflow** - GitHub Projects V2 Status field drives orchestration
 
 ### Architecture Diagram
 
@@ -77,10 +78,14 @@ We will implement a **Hub-and-Spoke Architecture** with:
                     │   Agent         │
                     └────────┬────────┘
                              │
-                    ┌────────▼────────┐
-                    │   Reviewer      │
-                    │   Agent         │
-                    └─────────────────┘
+              ┌──────────────┼──────────────┐
+              │                             │
+     ┌────────▼────────┐          ┌────────▼────────┐
+     │   Reviewer      │          │    DevOps       │
+     │   Agent         │          │    Agent        │
+     └─────────────────┘          └─────────────────┘
+
+Agent X Auto: Autonomous mode for bugs/docs (bypasses full workflow)
 
 GitHub Projects V2 Status Flow:
 Backlog → In Progress → In Review → Ready → Done
@@ -168,6 +173,7 @@ We chose **Option 2 (Hub-and-Spoke)** because:
 - Architect → ADR + Tech Specs
 - Engineer → Code + Tests
 - Reviewer → Review + Quality Gates
+- DevOps → CI/CD + Deployment configs
 
 **Principle 2: Universal Tool Access**
 - All agents have access to all tools for maximum flexibility
