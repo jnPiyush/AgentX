@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: "Reviewer"
 description: Perform comprehensive security review of code changes
 ---
 
@@ -110,6 +110,6 @@ Check for:
 ```
 
 ## References
-- Skill #04: Security
-- OWASP Top 10
-- CWE Database
+- [Security](../skills/architecture/security/SKILL.md)
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [CWE Database](https://cwe.mitre.org/)

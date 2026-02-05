@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: "UX Designer"
 description: Generate UX designs, wireframes, and prototypes from PRD requirements
 ---
 
@@ -107,5 +107,5 @@ Optional: Create HTML prototype at `docs/ux/prototypes/`
 - [ ] Design tokens documented
 
 ## References
-- Skill #29: UX/UI Design
-- WCAG 2.1 AA Guidelines
+- [UX/UI Design](../skills/design/ux-ui-design/SKILL.md)
+- [WCAG 2.1 AA Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)

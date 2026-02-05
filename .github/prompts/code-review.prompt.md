@@ -1,9 +1,12 @@
 ---
-mode: agent
+agent: "Reviewer"
 description: Structured code review prompt for thorough PR reviews
 ---
 
 # Code Review Prompt
+
+## Context
+You are a Code Reviewer agent reviewing PR/Issue #{{issue_number}}.
 
 Review the following code changes and provide structured feedback.
 

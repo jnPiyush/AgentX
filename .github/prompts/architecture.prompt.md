@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: "Architect"
 description: Generate Architecture Decision Record and Technical Specification
 ---
 

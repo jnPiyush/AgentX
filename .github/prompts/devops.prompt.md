@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: "DevOps Engineer"
 description: Generate CI/CD pipeline and deployment automation
 ---
 
@@ -105,6 +105,6 @@ Include:
 - [ ] Monitoring configured
 
 ## References
-- Skill #26: GitHub Actions
-- Skill #27: YAML Pipelines
-- Skill #28: Release Management
+- [GitHub Actions Workflows](../skills/operations/github-actions-workflows/SKILL.md)
+- [YAML Pipelines](../skills/operations/yaml-pipelines/SKILL.md)
+- [Release Management](../skills/operations/release-management/SKILL.md)

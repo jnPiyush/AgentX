@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: "Product Manager"
 description: Generate comprehensive Product Requirements Document from epic description
 ---
 

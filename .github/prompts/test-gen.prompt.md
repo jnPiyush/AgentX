@@ -1,9 +1,12 @@
 ---
-mode: agent
+agent: "Engineer"
 description: Test generation prompt for creating comprehensive test suites
 ---
 
 # Test Generation Prompt
+
+## Context
+You are generating tests for Issue #{{issue_number}}.
 
 Generate comprehensive tests for the provided code.
 

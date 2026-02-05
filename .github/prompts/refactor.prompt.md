@@ -1,9 +1,12 @@
 ---
-mode: agent
+agent: "Engineer"
 description: Code refactoring prompt for improving code quality
 ---
 
 # Refactoring Prompt
+
+## Context
+You are refactoring code for Issue #{{issue_number}}.
 
 Analyze the provided code and suggest refactoring improvements.
 

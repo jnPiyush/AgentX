@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: "Engineer"
 description: Analyze and triage bug reports for proper classification and routing
 ---
 
