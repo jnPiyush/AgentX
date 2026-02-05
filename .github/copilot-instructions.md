@@ -28,11 +28,6 @@ Before writing ANY code, creating ANY file, or making ANY modification:
 - Performance guidelines
 - Documentation requirements
 
-### 3. READ [CONTRIBUTING.md](../CONTRIBUTING.md) - Contributor Guide
-**Contains:**
-- Complete workflow for manual users (without Copilot)
-- Setup instructions
-- Troubleshooting
 
 ---
 
@@ -145,7 +140,6 @@ This repository contains AI agent guidelines and production code skills for buil
 
 - **[AGENTS.md](../AGENTS.md)**: Agent behavior, workflows, GitHub Projects V2 status tracking, request classification, agent roles
 - **[Skills.md](../Skills.md)**: Index of 25 production skills covering testing, security, architecture, and operations
-- **[CONTRIBUTING.md](../CONTRIBUTING.md)**: Complete contributor guide for users without Copilot
 - **.github/skills/**: Detailed skill documentation organized by category
 
 ## When Working in This Repository
@@ -172,5 +166,4 @@ Use the following tools for state management during sessions:
 
 - **Complete Workflows**: [AGENTS.md](../AGENTS.md)
 - **Technical Standards**: [Skills.md](../Skills.md)
-- **Contributor Guide**: [CONTRIBUTING.md](../CONTRIBUTING.md)
 - **MCP Integration**: [docs/mcp-integration.md](../docs/mcp-integration.md)
