@@ -85,12 +85,13 @@ Agent X routes issues based on:
 **Routing rules:**
 ```
 Epic + Backlog → Product Manager
-Ready + needs:ux → UX Designer  
+Ready + needs:ux → UX Designer
 Ready + (no architecture) → Architect
 Ready + (has architecture) → Engineer
 In Review → Reviewer
 Bug + Backlog → Engineer (skip PM/Architect)
 Spike + Backlog → Architect
+type:devops + Backlog → DevOps Engineer (skip PM/Architect for infrastructure work)
 ```
 
 **Autonomous Mode**: For simple tasks (bugs, docs, stories ≤3 files), Agent X can automatically route to Engineer, skipping manual coordination. See [Agent X Autonomous](.github/agents/agent-x-auto.agent.md).
@@ -126,11 +127,13 @@ Spike + Backlog → Architect
 | `type:bug` | Engineer | Bug fix + Tests |
 | `type:spike` | Architect | Research doc |
 | `type:docs` | Engineer | Documentation |
+| `type:devops` | DevOps Engineer | CI/CD Pipelines + Deployment Docs |
 
 **Decision Tree:**
 - Broken? → `type:bug`
 - Research? → `type:spike`
 - Docs only? → `type:docs`
+- Pipeline/deployment/release? → `type:devops`
 - Large/vague? → `type:epic`
 - Single capability? → `type:feature`
 - Else → `type:story`
@@ -221,6 +224,20 @@ All AgentX core agents are currently **stable** (production-ready).
 - **Boundaries**:
   - Can modify: `docs/reviews/**`, GitHub Issues (comments, labels, status)
   - Cannot modify: `src/**`, `tests/**`, `docs/prd/**`, `docs/adr/**`
+
+### DevOps Engineer
+- **Maturity**: Stable
+- **Trigger**: `type:devops`, or Status = `Ready` (for pipeline/deployment work)
+- **Output**: Workflows at `.github/workflows/**`, Deployment docs at `docs/deployment/**`
+- **Status**: Move to `Ready` when pipelines complete → `In Review` for review
+- **Tools**: All tools available (create_file, semantic_search, run_in_terminal, etc.)
+- **Validation**: `.github/scripts/validate-handoff.sh {issue} devops`
+- **Constraints**:
+  - ✅ CAN create CI/CD pipelines, GitHub Actions workflows, deployment automation, release pipelines
+  - ❌ CANNOT modify application source code, PRD, ADR, or UX documents
+- **Boundaries**:
+  - Can modify: `.github/workflows/**`, `scripts/deploy/**`, `scripts/ci/**`, `docs/deployment/**`
+  - Cannot modify: `src/**`, `tests/**`, `docs/prd/**`, `docs/adr/**`, `docs/ux/**`
 
 ### Agent X (Hub Coordinator)
 - **Maturity**: Stable

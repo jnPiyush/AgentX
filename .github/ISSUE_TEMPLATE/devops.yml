@@ -1,0 +1,121 @@
+name: 🚀 DevOps
+description: CI/CD pipelines, GitHub Actions workflows, deployment automation, release management
+title: "[DevOps] "
+labels: ["type:devops"]
+projects: ["jnPiyush/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🚀 DevOps
+
+        Use this for pipeline, deployment, and release automation work.
+
+        **Workflow:**
+        1. Fill out this template → Status: **Backlog**
+        2. DevOps Engineer claims → Status: **In Progress**
+        3. Submit PR → Status: **In Review**
+        4. Merged → Status: **Done**
+
+        > ⚠️ Status is tracked via **GitHub Projects**, not labels.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What DevOps work needs to be done?
+      placeholder: "Create GitHub Actions workflow for CI/CD pipeline with build, test, and deploy stages"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: devops-type
+    attributes:
+      label: DevOps Type
+      description: What kind of DevOps work is this?
+      options:
+        - "CI/CD Pipeline - Build and test automation"
+        - "Deployment - Release and deployment automation"
+        - "GitHub Actions - Workflow creation/update"
+        - "Release Management - Versioning and release process"
+        - "Infrastructure - Configuration and provisioning"
+        - "Monitoring - Alerts and observability"
+        - "Security - Secrets management and scanning"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: What are the specific requirements?
+      placeholder: |
+        - Trigger on push to main and develop branches
+        - Build .NET application
+        - Run unit and integration tests
+        - Deploy to Azure staging environment
+        - Require manual approval for production
+        - Send Slack notifications on success/failure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform is this for?
+      options:
+        - "GitHub Actions"
+        - "Azure Pipelines"
+        - "GitLab CI"
+        - "Jenkins"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environments
+    attributes:
+      label: Environments
+      description: Which environments are affected?
+      placeholder: |
+        - Development (automatic deployment)
+        - Staging (automatic deployment)
+        - Production (manual approval required)
+
+  - type: textarea
+    id: secrets
+    attributes:
+      label: Required Secrets
+      description: What secrets or credentials are needed?
+      placeholder: |
+        - AZURE_CREDENTIALS (Azure service principal)
+        - DEPLOY_TOKEN (deployment authentication)
+        - SLACK_WEBHOOK_URL (notifications)
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How will we know this is complete?
+      placeholder: |
+        - [ ] Pipeline runs successfully on test branch
+        - [ ] All stages (build, test, deploy) working
+        - [ ] Secrets configured in repository settings
+        - [ ] Deployment documentation created
+        - [ ] Rollback procedure tested and documented
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "P0 - Critical: Blocking releases"
+        - "P1 - High: Needed for upcoming release"
+        - "P2 - Medium: Should be done soon"
+        - "P3 - Low: When time permits"
+    validations:
+      required: true

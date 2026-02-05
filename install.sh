@@ -272,6 +272,7 @@ download_file ".github/ISSUE_TEMPLATE/story.yml" ".github/ISSUE_TEMPLATE/story.y
 download_file ".github/ISSUE_TEMPLATE/bug.yml" ".github/ISSUE_TEMPLATE/bug.yml"
 download_file ".github/ISSUE_TEMPLATE/spike.yml" ".github/ISSUE_TEMPLATE/spike.yml"
 download_file ".github/ISSUE_TEMPLATE/docs.yml" ".github/ISSUE_TEMPLATE/docs.yml"
+download_file ".github/ISSUE_TEMPLATE/devops.yml" ".github/ISSUE_TEMPLATE/devops.yml"
 
 # Agent definitions
 echo -e "${CYAN}  Agent definitions...${NC}"
@@ -280,6 +281,7 @@ download_file ".github/agents/architect.agent.md" ".github/agents/architect.agen
 download_file ".github/agents/ux-designer.agent.md" ".github/agents/ux-designer.agent.md"
 download_file ".github/agents/engineer.agent.md" ".github/agents/engineer.agent.md"
 download_file ".github/agents/reviewer.agent.md" ".github/agents/reviewer.agent.md"
+download_file ".github/agents/devops.agent.md" ".github/agents/devops.agent.md"
 download_file ".github/agents/agent-x.agent.md" ".github/agents/agent-x.agent.md"
 
 # Document templates
@@ -307,8 +309,8 @@ download_file ".github/prompts/code-review.prompt.md" ".github/prompts/code-revi
 download_file ".github/prompts/refactor.prompt.md" ".github/prompts/refactor.prompt.md"
 download_file ".github/prompts/test-gen.prompt.md" ".github/prompts/test-gen.prompt.md"
 
-# Skills (25 production skills organized by category)
-echo -e "${CYAN}  Production skills (25 skills)...${NC}"
+# Skills (29 production skills organized by category)
+echo -e "${CYAN}  Production skills (29 skills)...${NC}"
 
 # Architecture skills
 for skill in core-principles security performance database scalability code-organization api-design; do
@@ -322,9 +324,15 @@ done
 
 # Operations skills
 download_file ".github/skills/operations/remote-git-operations/SKILL.md" ".github/skills/operations/remote-git-operations/SKILL.md"
+download_file ".github/skills/operations/github-actions-workflows/SKILL.md" ".github/skills/operations/github-actions-workflows/SKILL.md"
+download_file ".github/skills/operations/yaml-pipelines/SKILL.md" ".github/skills/operations/yaml-pipelines/SKILL.md"
+download_file ".github/skills/operations/release-management/SKILL.md" ".github/skills/operations/release-management/SKILL.md"
 
 # AI Systems skills
 download_file ".github/skills/ai-systems/ai-agent-development/SKILL.md" ".github/skills/ai-systems/ai-agent-development/SKILL.md"
+
+# Design skills
+download_file ".github/skills/design/ux-ui-design/SKILL.md" ".github/skills/design/ux-ui-design/SKILL.md"
 
 # VS Code configuration
 echo -e "${CYAN}  VS Code configuration...${NC}"
@@ -396,6 +404,7 @@ echo '     gh label create "type:story" --color "0E8A16"'
 echo '     gh label create "type:bug" --color "D73A4A"'
 echo '     gh label create "type:spike" --color "FBCA04"'
 echo '     gh label create "type:docs" --color "0075CA"'
+echo '     gh label create "type:devops" --color "8B4789"'
 echo ""
 echo -e "${YELLOW}     # Workflow labels${NC}"
 echo '     gh label create "needs:ux" --color "D4C5F9"'

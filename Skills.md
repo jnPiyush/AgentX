@@ -95,6 +95,20 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 ---
 
+### DevOps and Deployment
+
+**When**: Creating CI/CD pipelines, GitHub Actions workflows, release automation, deployment strategies
+
+**Load These Skills** (Total: ~20K tokens):
+- [#26 GitHub Actions & Workflows](.github/skills/operations/github-actions-workflows/SKILL.md) - Workflow syntax, matrix builds, reusable workflows (8K)
+- [#27 YAML Pipelines](.github/skills/operations/yaml-pipelines/SKILL.md) - Azure Pipelines, GitLab CI, templates (7K)
+- [#28 Release Management](.github/skills/operations/release-management/SKILL.md) - Versioning, deployment strategies, rollback (8K)
+- [#04 Security](.github/skills/architecture/security/SKILL.md) - Secrets management, security scanning (6K)
+
+**Context Routing**: Pipeline/deployment work → Load Skills #26, #27, #28, #04
+
+---
+
 ### Code Review
 
 **When**: Reviewing pull requests, auditing code quality
@@ -118,6 +132,19 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#04 Security](.github/skills/architecture/security/SKILL.md) - Prompt injection prevention, secrets (4K)
 
 **Context Routing**: AI agent work → Load Skills #17, #04
+
+---
+
+### UX/UI Design
+
+**When**: Creating wireframes, prototypes, user flows, interface designs
+
+**Load These Skills** (Total: ~15K tokens):
+- [#29 UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md) - Wireframing, HTML prototypes, accessibility, responsive design (10K)
+- [#21 Frontend/UI Development](.github/skills/development/frontend-ui/SKILL.md) - HTML5, CSS3, responsive patterns (3K)
+- [#22 React Framework](.github/skills/development/react/SKILL.md) - Component patterns (2K)
+
+**Context Routing**: UX/design work → Load Skills #29, #21, #22
 
 ---
 
@@ -175,12 +202,21 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 | # | Skill | Core Focus |
 |---|-------|------------|
 | 16 | [Remote Git Ops](.github/skills/operations/remote-git-operations/SKILL.md) | PRs, CI/CD, GitHub Actions, Azure Pipelines |
+| 26 | [GitHub Actions & Workflows](.github/skills/operations/github-actions-workflows/SKILL.md) | Workflow syntax, reusable workflows, custom actions, matrix builds |
+| 27 | [YAML Pipelines](.github/skills/operations/yaml-pipelines/SKILL.md) | Azure Pipelines, GitLab CI, multi-stage pipelines, templates |
+| 28 | [Release Management](.github/skills/operations/release-management/SKILL.md) | Versioning, deployment strategies, rollback, release automation |
 
 ### AI Systems
 
 | # | Skill | Core Focus |
 |---|-------|------------|
 | 17 | [AI Agent Development](.github/skills/ai-systems/ai-agent-development/SKILL.md) | Microsoft Foundry, Agent Framework, Orchestration, Tracing, Evaluation |
+
+### Design
+
+| # | Skill | Core Focus |
+|---|-------|------------|
+| 29 | [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md) | Wireframing, User Flows, HTML/CSS Prototypes, Accessibility, Responsive Design |
 
 ---
 

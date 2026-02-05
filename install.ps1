@@ -385,6 +385,7 @@ Get-FileDownload ".github/ISSUE_TEMPLATE/story.yml" ".github/ISSUE_TEMPLATE/stor
 Get-FileDownload ".github/ISSUE_TEMPLATE/bug.yml" ".github/ISSUE_TEMPLATE/bug.yml"
 Get-FileDownload ".github/ISSUE_TEMPLATE/spike.yml" ".github/ISSUE_TEMPLATE/spike.yml"
 Get-FileDownload ".github/ISSUE_TEMPLATE/docs.yml" ".github/ISSUE_TEMPLATE/docs.yml"
+Get-FileDownload ".github/ISSUE_TEMPLATE/devops.yml" ".github/ISSUE_TEMPLATE/devops.yml"
 
 # Agent definitions
 Write-Info "Agent definitions..."
@@ -393,6 +394,7 @@ Get-FileDownload ".github/agents/architect.agent.md" ".github/agents/architect.a
 Get-FileDownload ".github/agents/ux-designer.agent.md" ".github/agents/ux-designer.agent.md"
 Get-FileDownload ".github/agents/engineer.agent.md" ".github/agents/engineer.agent.md"
 Get-FileDownload ".github/agents/reviewer.agent.md" ".github/agents/reviewer.agent.md"
+Get-FileDownload ".github/agents/devops.agent.md" ".github/agents/devops.agent.md"
 Get-FileDownload ".github/agents/agent-x.agent.md" ".github/agents/agent-x.agent.md"
 
 # Document templates
@@ -416,13 +418,14 @@ Get-FileDownload ".github/prompts/code-review.prompt.md" ".github/prompts/code-r
 Get-FileDownload ".github/prompts/refactor.prompt.md" ".github/prompts/refactor.prompt.md"
 Get-FileDownload ".github/prompts/test-gen.prompt.md" ".github/prompts/test-gen.prompt.md"
 
-# Skills (25 production skills organized by category)
-Write-Info "Production skills (25 skills)..."
+# Skills (29 production skills organized by category)
+Write-Info "Production skills (29 skills)..."
 $skills = @{
     "architecture" = @("core-principles", "security", "performance", "database", "scalability", "code-organization", "api-design")
     "development" = @("testing", "error-handling", "configuration", "documentation", "version-control", "type-safety", "dependency-management", "logging-monitoring", "code-review-and-audit", "csharp", "python", "frontend-ui", "react", "blazor", "postgresql", "sql-server")
-    "operations" = @("remote-git-operations")
+    "operations" = @("remote-git-operations", "github-actions-workflows", "yaml-pipelines", "release-management")
     "ai-systems" = @("ai-agent-development")
+    "design" = @("ux-ui-design")
 }
 foreach ($category in $skills.Keys) {
     foreach ($skill in $skills[$category]) {
@@ -563,6 +566,7 @@ if ($useLocalMode) {
     Write-Host '     gh label create "type:bug" --color "D73A4A"'
     Write-Host '     gh label create "type:spike" --color "FBCA04"'
     Write-Host '     gh label create "type:docs" --color "0075CA"'
+    Write-Host '     gh label create "type:devops" --color "8B4789"'
     Write-Host ""
     Write-Host '     # Workflow labels' -ForegroundColor Yellow
     Write-Host '     gh label create "needs:ux" --color "D4C5F9"'

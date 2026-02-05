@@ -62,10 +62,10 @@ Design user interfaces, create wireframes, and define user flows for exceptional
 Transform product requirements into user-centered designs:
 - **Wait for PM completion** (Status = `Ready`)
 - **Read PRD** to understand user needs and flows
-- **Create wireframes** for UI components and layouts
+- **Create wireframes** (low-fi and mid-fi) for UI components and layouts
 - **Design user flows** showing navigation and interactions
 - **Create user personas** (target users, goals, pain points, behaviors)
-- **Create HTML prototypes** for interactive demos
+- **Create HTML/CSS prototypes** - production-ready, interactive demos
 - **Create UX spec** at `docs/ux/UX-{issue}.md` (design guide for engineers)
 - **Self-Review** design completeness, accessibility (WCAG 2.1 AA), responsive layouts
 - **Hand off** to Architect by moving Status → `Ready` in Projects board
@@ -73,6 +73,7 @@ Transform product requirements into user-centered designs:
 **Runs after** Product Manager completes PRD (Status = `Ready`), before Architect designs technical implementation.
 
 > ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
+> 📖 **Skills Reference**: Follow [Skill #29: UX/UI Design](../../Skills.md#ux-ui-design) for wireframing, prototyping, and HTML/CSS best practices.
 
 ## Workflow
 
@@ -102,6 +103,11 @@ Use research tools:
 - `read_file` - Read brand guidelines, style guides
 - `runSubagent` - Quick accessibility audits, pattern research
 
+**Skills to reference:**
+- **[Skill #29: UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md)** - Wireframing techniques, HTML/CSS prototypes, design systems
+- **[Skill #21: Frontend/UI](.github/skills/development/frontend-ui/SKILL.md)** - HTML5, CSS3, responsive design patterns
+- **[Skill #22: React](.github/skills/development/react/SKILL.md)** - Component patterns (if React is used)
+
 **Example research:**
 ```javascript
 await runSubagent({
@@ -118,13 +124,13 @@ Create `docs/ux/UX-{feature-id}.md` following the [UX Design template](../templa
 
 **13 comprehensive sections**:
 - Overview, User Research, User Flows
-- Wireframes (ASCII art layouts)
+- **Wireframes** (lo-fi and mid-fi ASCII art layouts) - See [Skill #29: Wireframing](.github/skills/design/ux-ui-design/SKILL.md#wireframing)
 - Component Specifications (states, variants, CSS)
 - Design System (grid, typography, colors, spacing)
 - Interactions & Animations
-- Accessibility (WCAG 2.1 AA compliance)
-- Responsive Design (mobile/tablet/desktop)
-- Interactive Prototypes
+- Accessibility (WCAG 2.1 AA compliance) - See [Skill #29: Accessibility](.github/skills/design/ux-ui-design/SKILL.md#accessibility-a11y)
+- Responsive Design (mobile/tablet/desktop) - See [Skill #29: Responsive Design](.github/skills/design/ux-ui-design/SKILL.md#responsive-design)
+- **Interactive Prototypes** (production-ready HTML/CSS) - See [Skill #29: HTML/CSS Prototypes](.github/skills/design/ux-ui-design/SKILL.md#htmlcss-prototypes)
 - Implementation Notes
 - Open Questions, References
 
@@ -133,6 +139,15 @@ Create `docs/ux/UX-{feature-id}.md` following the [UX Design template](../templa
 cp .github/templates/UX-TEMPLATE.md docs/ux/UX-{feature-id}.md
 # Then fill in all sections with wireframes, specs, accessibility requirements
 ```
+
+**Production-Ready HTML Prototypes**:
+Create interactive prototypes in `docs/ux/prototypes/` with:
+- Semantic HTML5 markup
+- Clean, modular CSS (BEM naming or similar)
+- Interactive JavaScript (modals, forms, validation)
+- WCAG 2.1 AA compliant
+- Responsive (mobile, tablet, desktop)
+- See [Skill #29: HTML/CSS Prototypes](.github/skills/design/ux-ui-design/SKILL.md#htmlcss-prototypes) for complete template and examples
 
 ### 5. Self-Review
 
@@ -302,7 +317,11 @@ If validation fails:
 ## References
 
 - **Workflow**: [AGENTS.md §UX Designer](../../AGENTS.md#-orchestration--handoffs)
-- **Standards**: [Skills.md](../../Skills.md) → Accessibility, Performance
+- **Standards**: [Skills.md](../../Skills.md) → See Skill #29 (UX/UI Design), #21 (Frontend/UI), #22 (React)
+- **Skills**:
+  - **[Skill #29: UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md)** - Wireframing, HTML prototypes, accessibility, responsive design
+  - **[Skill #21: Frontend/UI](.github/skills/development/frontend-ui/SKILL.md)** - HTML5, CSS3, BEM, responsive patterns
+  - **[Skill #22: React](.github/skills/development/react/SKILL.md)** - Component patterns (if applicable)
 - **UX Template**: [UX-TEMPLATE.md](../templates/UX-TEMPLATE.md)
 - **Validation Script**: [validate-handoff.sh](../scripts/validate-handoff.sh)
 
