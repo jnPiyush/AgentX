@@ -102,23 +102,80 @@ jobs:
       - name: Agent Deliverable Validation
         if: github.event_name == 'pull_request'
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "🔍 Validating agent deliverables..."
-          
+
           # Extract issue number from PR title or branch
           ISSUE_NUM=$(echo "${{ github.event.pull_request.title }}" | grep -oP '#\K\d+' | head -1)
-          
+
           if [ -z "$ISSUE_NUM" ]; then
-            echo "ℹ️ No issue number found in PR title, skipping agent validation"
+            # Try to get from branch name (e.g., feature/123-description)
+            ISSUE_NUM=$(echo "${{ github.head_ref }}" | grep -oP '^\w+/\K\d+' | head -1)
+          fi
+
+          if [ -z "$ISSUE_NUM" ]; then
+            echo "ℹ️ No issue number found in PR title or branch, skipping agent validation"
             exit 0
           fi
-          
-          # Detect agent role from PR labels or files changed
+
+          echo "Found issue #${ISSUE_NUM}"
+
+          # Detect agent role from PR labels
+          LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels -q '.labels[].name' 2>/dev/null || echo "")
+
+          ROLE=""
+          if echo "$LABELS" | grep -q "type:epic"; then
+            ROLE="pm"
+          elif echo "$LABELS" | grep -q "type:feature"; then
+            ROLE="architect"
+          elif echo "$LABELS" | grep -q "type:story"; then
+            ROLE="engineer"
+          elif echo "$LABELS" | grep -q "type:bug"; then
+            ROLE="engineer"
+          elif echo "$LABELS" | grep -q "type:devops"; then
+            ROLE="devops"
+          elif echo "$LABELS" | grep -q "needs:ux"; then
+            ROLE="ux"
+          fi
+
+          # If no role from labels, try to detect from files changed
+          if [ -z "$ROLE" ]; then
+            FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}..HEAD)
+
+            if echo "$FILES_CHANGED" | grep -q "docs/prd/"; then
+              ROLE="pm"
+            elif echo "$FILES_CHANGED" | grep -q "docs/adr/\|docs/specs/"; then
+              ROLE="architect"
+            elif echo "$FILES_CHANGED" | grep -q "docs/ux/"; then
+              ROLE="ux"
+            elif echo "$FILES_CHANGED" | grep -q "docs/reviews/"; then
+              ROLE="reviewer"
+            elif echo "$FILES_CHANGED" | grep -qE "\.(cs|py|ts|js|go|rs)$"; then
+              ROLE="engineer"
+            elif echo "$FILES_CHANGED" | grep -q ".github/workflows/"; then
+              ROLE="devops"
+            fi
+          fi
+
+          if [ -z "$ROLE" ]; then
+            echo "ℹ️ Could not determine agent role from labels or files"
+            exit 0
+          fi
+
+          echo "Detected role: $ROLE"
+
+          # Run validation script if it exists
           if [ -f ".github/scripts/validate-handoff.sh" ]; then
-            echo "ℹ️ Found validation script, checking deliverables for issue #${ISSUE_NUM}"
-            # Note: Would need to detect role from PR context
-            # For now, just check if validation script exists
-            echo "✅ Validation script available"
+            chmod +x .github/scripts/validate-handoff.sh
+            echo "Running validation for issue #${ISSUE_NUM} as ${ROLE}..."
+            ./.github/scripts/validate-handoff.sh "$ISSUE_NUM" "$ROLE" || {
+              echo "⚠️ Validation warnings detected (see above)"
+              # Don't fail the job, just report
+            }
+          else
+            echo "⚠️ validate-handoff.sh not found"
           fi
       
       - name: Post Quality Report

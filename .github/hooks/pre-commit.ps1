@@ -88,12 +88,61 @@ if (Get-Command dotnet -ErrorAction SilentlyContinue) {
     }
 }
 
-# Check 5: SQL injection patterns
+# Check 5: Python formatting (if black available)
+if (Get-Command black -ErrorAction SilentlyContinue) {
+    $pyFiles = $stagedFiles | Where-Object { $_ -match '\.py$' }
+    if ($pyFiles) {
+        Write-Host "Checking Python formatting... " -NoNewline
+        $checkResult = & black --check ($pyFiles -join ' ') 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ PASSED" -ForegroundColor Green
+        } else {
+            Write-Host "⚠️  Auto-formatting" -ForegroundColor Yellow
+            & black ($pyFiles -join ' ')
+            $pyFiles | ForEach-Object { git add $_ }
+        }
+    }
+}
+
+# Check 6: SQL injection patterns
 Write-Host "Checking for SQL injection risks... " -NoNewline
-$sqlRisk = git diff --cached | Select-String -Pattern '\+.*\b(ExecuteRaw|FromSqlRaw|SqlQuery)' | 
+$sqlRisk = git diff --cached | Select-String -Pattern '\+.*\b(ExecuteRaw|FromSqlRaw|SqlQuery)' |
            Where-Object { $_ -notmatch 'parameterized|@' }
 if ($sqlRisk) {
     Write-Host "⚠️  WARNING: Potential SQL injection" -ForegroundColor Yellow
+} else {
+    Write-Host "✅ PASSED" -ForegroundColor Green
+}
+
+# Check 7: Blocked commands validation
+Write-Host "Checking for blocked commands... " -NoNewline
+$blockedCommands = @(
+    "rm -rf",
+    "git reset --hard",
+    "git push --force",
+    "DROP DATABASE",
+    "DROP TABLE",
+    "TRUNCATE",
+    "format c:",
+    "del /s /q",
+    "rmdir /s /q",
+    "Remove-Item -Recurse -Force"
+)
+
+$diffContent = git diff --cached
+$blockedFound = $false
+
+foreach ($cmd in $blockedCommands) {
+    if ($diffContent -match [regex]::Escape($cmd)) {
+        Write-Host "❌ BLOCKED COMMAND: $cmd" -ForegroundColor Red
+        $blockedFound = $true
+    }
+}
+
+if ($blockedFound) {
+    Write-Host "❌ Blocked destructive command found" -ForegroundColor Red
+    Write-Host "  Review .github/security/allowed-commands.json for allowed operations"
+    $script:Failed = $true
 } else {
     Write-Host "✅ PASSED" -ForegroundColor Green
 }

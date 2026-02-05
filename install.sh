@@ -305,6 +305,8 @@ echo -e "${CYAN}  Validation scripts...${NC}"
 download_file ".github/scripts/validate-handoff.sh" ".github/scripts/validate-handoff.sh"
 download_file ".github/scripts/capture-context.sh" ".github/scripts/capture-context.sh"
 download_file ".github/scripts/capture-context.ps1" ".github/scripts/capture-context.ps1"
+download_file ".github/scripts/setup-hooks.sh" ".github/scripts/setup-hooks.sh"
+download_file ".github/scripts/setup-hooks.ps1" ".github/scripts/setup-hooks.ps1"
 
 # Additional instructions
 download_file ".github/instructions/react.instructions.md" ".github/instructions/react.instructions.md"

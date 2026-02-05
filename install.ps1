@@ -498,6 +498,8 @@ Write-Info "Validation scripts..."
 Get-FileDownload ".github/scripts/validate-handoff.sh" ".github/scripts/validate-handoff.sh"
 Get-FileDownload ".github/scripts/capture-context.sh" ".github/scripts/capture-context.sh"
 Get-FileDownload ".github/scripts/capture-context.ps1" ".github/scripts/capture-context.ps1"
+Get-FileDownload ".github/scripts/setup-hooks.sh" ".github/scripts/setup-hooks.sh"
+Get-FileDownload ".github/scripts/setup-hooks.ps1" ".github/scripts/setup-hooks.ps1"
 
 # Install Git hooks
 Write-Host ""
