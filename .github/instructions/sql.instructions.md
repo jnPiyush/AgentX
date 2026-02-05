@@ -1,4 +1,5 @@
 ---
+description: 'SQL development instructions for PostgreSQL and SQL Server database work.'
 applyTo: "**/*.sql,**/migrations/**,**/Migrations/**"
 ---
 

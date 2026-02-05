@@ -1,4 +1,5 @@
 ---
+description: 'Blazor and WebAssembly specific instructions for building interactive web UIs with C#.'
 applyTo: "**/*.razor,**/*.razor.cs,**/Blazor*"
 ---
 

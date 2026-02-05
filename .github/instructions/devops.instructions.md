@@ -1,4 +1,5 @@
 ---
+description: 'DevOps instructions for CI/CD pipelines, GitHub Actions, and deployment automation.'
 applyTo: "**/*.yml,**/*.yaml,**/workflows/**,.github/workflows/**"
 ---
 
