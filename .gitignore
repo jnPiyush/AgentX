@@ -1,0 +1,49 @@
+# Temporary files
+*.tmp
+*.log
+*.bak
+*~
+.DS_Store
+
+# Claude temporary files
+tmpclaude-*
+
+# Editor directories and files
+.vscode/*
+!.vscode/settings.json
+!.vscode/mcp.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Node modules (if any)
+node_modules/
+npm-debug.log*
+
+# Python cache (if any)
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Build artifacts (if any)
+dist/
+build/
+*.egg-info/
+
+# Local configuration
+.env
+.env.local
+*.local
+
+# Cache directories
+.cache/
+.pytest_cache/
+.mypy_cache/
