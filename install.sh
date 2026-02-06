@@ -308,6 +308,11 @@ download_file ".github/scripts/capture-context.ps1" ".github/scripts/capture-con
 download_file ".github/scripts/setup-hooks.sh" ".github/scripts/setup-hooks.sh"
 download_file ".github/scripts/setup-hooks.ps1" ".github/scripts/setup-hooks.ps1"
 
+# Utility scripts
+echo -e "${CYAN}  Utility scripts...${NC}"
+download_file "scripts/convert-docs.ps1" "scripts/convert-docs.ps1"
+download_file "scripts/convert-docs.sh" "scripts/convert-docs.sh"
+
 # Additional instructions
 download_file ".github/instructions/react.instructions.md" ".github/instructions/react.instructions.md"
 download_file ".github/instructions/blazor.instructions.md" ".github/instructions/blazor.instructions.md"
@@ -325,7 +330,6 @@ download_file ".github/prompts/architecture.prompt.md" ".github/prompts/architec
 download_file ".github/prompts/devops.prompt.md" ".github/prompts/devops.prompt.md"
 download_file ".github/prompts/security-review.prompt.md" ".github/prompts/security-review.prompt.md"
 download_file ".github/prompts/bug-triage.prompt.md" ".github/prompts/bug-triage.prompt.md"
-download_file ".github/prompts/doc-convert.prompt.md" ".github/prompts/doc-convert.prompt.md"
 
 # Skills (32 production skills organized by category)
 echo -e "${CYAN}  Production skills (32 skills)...${NC}"
@@ -360,6 +364,7 @@ echo -e "${CYAN}  Documentation...${NC}"
 download_file "docs/mcp-integration.md" "docs/mcp-integration.md"
 download_file "docs/troubleshooting.md" "docs/troubleshooting.md"
 download_file "docs/project-setup.md" "docs/project-setup.md"
+download_file "docs/markdown-to-doc-conversion.md" "docs/markdown-to-doc-conversion.md"
 
 # VS Code configuration
 echo -e "${CYAN}  VS Code configuration...${NC}"

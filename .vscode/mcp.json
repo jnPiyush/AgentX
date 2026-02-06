@@ -4,10 +4,6 @@
     "github": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/"
-    },
-    "word": {
-      "command": "uvx",
-      "args": ["--from", "office-word-mcp-server", "word_mcp_server"]
     }
   },
   "inputs": [

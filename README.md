@@ -86,11 +86,11 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <tr>
 <td width="50%">
 
-### 📄 Document Conversion (NEW)
-- **Word MCP Server** integration
+### 📄 Document Conversion
+- **Pandoc integration** (industry standard)
 - **Markdown → DOCX/PDF** conversion
-- Convert PRDs, ADRs, Specs to Word
-- Professional formatting preserved
+- Batch conversion scripts included
+- Works offline, no external services
 
 </td>
 <td width="50%">
@@ -334,7 +334,7 @@ AgentX/
 │   └── 📁 instructions/      # Language-specific guides
 │
 ├── 📁 .vscode/
-│   └── 📄 mcp.json           # MCP Server config (GitHub + Word)
+│   └── 📄 mcp.json           # MCP Server config (GitHub)
 │
 └── 📁 docs/
     ├── 📁 adr/               # Architecture Decision Records
@@ -354,7 +354,8 @@ AgentX/
 | [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
 | [Skills.md](Skills.md) | 32 production skills with guidelines |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
-| [MCP Integration](docs/mcp-integration.md) | GitHub + Word MCP Server setup |
+| [MCP Integration](docs/mcp-integration.md) | GitHub MCP Server integration |
+| [Markdown Conversion](docs/markdown-to-doc-conversion.md) | Convert MD to DOCX using Pandoc |
 | [Project Setup](docs/project-setup.md) | GitHub Projects V2 configuration |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
 

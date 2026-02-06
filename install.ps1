@@ -428,7 +428,6 @@ Get-FileDownload ".github/prompts/architecture.prompt.md" ".github/prompts/archi
 Get-FileDownload ".github/prompts/devops.prompt.md" ".github/prompts/devops.prompt.md"
 Get-FileDownload ".github/prompts/security-review.prompt.md" ".github/prompts/security-review.prompt.md"
 Get-FileDownload ".github/prompts/bug-triage.prompt.md" ".github/prompts/bug-triage.prompt.md"
-Get-FileDownload ".github/prompts/doc-convert.prompt.md" ".github/prompts/doc-convert.prompt.md"
 
 # Skills (32 production skills organized by category)
 Write-Info "Production skills (32 skills)..."
@@ -456,6 +455,7 @@ Write-Info "Documentation..."
 Get-FileDownload "docs/mcp-integration.md" "docs/mcp-integration.md"
 Get-FileDownload "docs/project-setup.md" "docs/project-setup.md"
 Get-FileDownload "docs/troubleshooting.md" "docs/troubleshooting.md"
+Get-FileDownload "docs/markdown-to-doc-conversion.md" "docs/markdown-to-doc-conversion.md"
 
 # Create output directories
 Write-Info "Creating output directories..."
@@ -500,6 +500,11 @@ Get-FileDownload ".github/scripts/capture-context.sh" ".github/scripts/capture-c
 Get-FileDownload ".github/scripts/capture-context.ps1" ".github/scripts/capture-context.ps1"
 Get-FileDownload ".github/scripts/setup-hooks.sh" ".github/scripts/setup-hooks.sh"
 Get-FileDownload ".github/scripts/setup-hooks.ps1" ".github/scripts/setup-hooks.ps1"
+
+# Utility scripts
+Write-Info "Utility scripts..."
+Get-FileDownload "scripts/convert-docs.ps1" "scripts/convert-docs.ps1"
+Get-FileDownload "scripts/convert-docs.sh" "scripts/convert-docs.sh"
 
 # Install Git hooks
 Write-Host ""
