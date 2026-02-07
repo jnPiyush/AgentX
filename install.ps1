@@ -249,7 +249,7 @@ if (-not $skipGitChecks -and (Test-Path ".git")) {
 # Check 3: GitHub CLI (recommended) - Skip in Local Mode
 if (-not $useLocalMode) {
     try {
-        $ghVersion = gh --version 2>&1
+        $null = gh --version 2>&1
         if ($LASTEXITCODE -eq 0) {
             Write-Success "GitHub CLI (gh) detected"
         } else {
@@ -306,7 +306,7 @@ if (-not $useLocalMode) {
 
     if ($response -eq "1") {
         try {
-            $ghCheck = gh --version 2>&1
+            $null = gh --version 2>&1
             if ($LASTEXITCODE -eq 0) {
                 # Use detected repo or ask
                 $repo = $detectedRepo

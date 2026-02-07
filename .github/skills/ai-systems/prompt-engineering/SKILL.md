@@ -410,11 +410,11 @@ Rate your prompt before using it:
 - [OpenAI Prompt Engineering Guide](https://platform.openai.com/docs/guides/prompt-engineering)
 - [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering)
 - [Google Prompt Engineering](https://ai.google.dev/docs/prompt_best_practices)
-- [AgentX Agent Definitions](.github/agents/)
-- [AgentX Instruction Files](.github/instructions/)
+- [AgentX Agent Definitions](../../../../.github/agents/)
+- [AgentX Instruction Files](../../../../.github/instructions/)
 
 ---
 
-**Related**: [AI Agent Development](../ai-agent-development/SKILL.md) for building agents • [Skills.md](../../../Skills.md) for all skills
+**Related**: [AI Agent Development](../ai-agent-development/SKILL.md) for building agents • [Skills.md](../../../../Skills.md) for all skills
 
 **Last Updated**: February 7, 2026
