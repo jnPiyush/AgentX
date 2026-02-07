@@ -3,7 +3,7 @@ name: Agent X (Auto)
 description: 'Agent X - Adaptive coordinator for multi-agent workflow. Auto-detects issue complexity and routes intelligently: simple tasks go direct to Engineer, complex work flows through PM → UX → Architect → Engineer → Reviewer.'
 maturity: stable
 mode: adaptive
-model: Claude Sonnet 4.6 (copilot)
+model: Claude Opus 4.6 (copilot)
 infer: true
 autonomous_triggers:
   - "type:bug AND clear_scope AND files <= 3"
