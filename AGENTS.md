@@ -239,6 +239,20 @@ All AgentX core agents are currently **stable** (production-ready).
   - Can modify: `.github/workflows/**`, `scripts/deploy/**`, `scripts/ci/**`, `docs/deployment/**`
   - Cannot modify: `src/**`, `tests/**`, `docs/prd/**`, `docs/adr/**`, `docs/ux/**`
 
+### Auto-Fix Reviewer (Preview)
+- **Maturity**: Preview
+- **Trigger**: Status = `In Review` (when auto-fix is preferred)
+- **Output**: Review + auto-applied safe fixes at `docs/reviews/REVIEW-{issue}.md`
+- **Status**: Move to `Done` (or `In Progress` for complex changes)
+- **Constraints**:
+  - ✅ CAN auto-fix: formatting, imports, naming, null checks, docs
+  - ✅ CAN suggest: refactoring, logic changes (needs human approval)
+  - ❌ CANNOT merge without human approval
+  - ❌ CANNOT modify business logic without explicit approval
+- **Boundaries**:
+  - Can modify: `src/**` (safe fixes only), `tests/**`, `docs/reviews/**`
+  - Cannot modify: `docs/prd/**`, `docs/adr/**`, `.github/workflows/**`
+
 ### Agent X (Hub Coordinator)
 - **Maturity**: Stable
 - **Mode**: Coordinator (default) | Autonomous (for simple tasks)
@@ -403,6 +417,18 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | **Input Variables** | [Template Input Variables](docs/template-input-variables.md) | ✅ Stable |
 | **Context Clearing** | [Context Management](#context-management) | ✅ Stable |
 | **Autonomous Mode** | [Agent X Autonomous](.github/agents/agent-x-auto.agent.md) | ✅ Stable |
+
+### New Features (v3.0 Roadmap)
+
+| Feature | Documentation | Status |
+|---------|---------------|--------|
+| **Agent Analytics** | [docs/analytics/METRICS.md](docs/analytics/METRICS.md) | ✅ Implemented |
+| **Auto-Fix Reviewer** | [.github/agents/reviewer-auto.agent.md](.github/agents/reviewer-auto.agent.md) | 🔄 Preview |
+| **Prompt Engineering** | [.github/skills/ai-systems/prompt-engineering/SKILL.md](.github/skills/ai-systems/prompt-engineering/SKILL.md) | ✅ Implemented |
+| **Cross-Repo** | [docs/multi-repo.md](docs/multi-repo.md) | ✅ Implemented |
+| **CLI Specification** | [docs/cli-specification.md](docs/cli-specification.md) | ✅ Implemented |
+| **Agent Memory** | [docs/agent-memory.md](docs/agent-memory.md) | ✅ Implemented |
+| **Visualization** | [docs/visualization.md](docs/visualization.md) | ✅ Implemented |
 
 ### Labels
 

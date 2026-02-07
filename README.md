@@ -109,6 +109,22 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ---
 
+## 🗺️ Roadmap (v3.0)
+
+> **Epic**: [#118](https://github.com/jnPiyush/AgentX/issues/118) | **PRD**: [docs/prd/PRD-118.md](docs/prd/PRD-118.md)
+
+| Priority | Feature | Description |
+|----------|---------|-------------|
+| **P0** | [Analytics Dashboard](https://github.com/jnPiyush/AgentX/issues/119) | Track agent performance, handoff times, rework rates |
+| **P0** | [Auto-Fix Reviewer](https://github.com/jnPiyush/AgentX/issues/120) | Apply review fixes automatically (with approval) |
+| **P0** | [Prompt Engineering](https://github.com/jnPiyush/AgentX/issues/121) | Best practices for AI prompts and guardrails |
+| **P1** | [Cross-Repo](https://github.com/jnPiyush/AgentX/issues/122) | Monorepo and multi-repo orchestration |
+| **P1** | [CLI & Web](https://github.com/jnPiyush/AgentX/issues/123) | Headless CLI and web dashboard |
+| **P1** | [Agent Memory](https://github.com/jnPiyush/AgentX/issues/124) | Long-term learning and personalization |
+| **P1** | [Visualization](https://github.com/jnPiyush/AgentX/issues/125) | Workflow diagrams and debug mode |
+
+---
+
 ## ✨ Core Features
 
 <table>

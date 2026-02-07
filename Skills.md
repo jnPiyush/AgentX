@@ -211,6 +211,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 | # | Skill | Core Focus |
 |---|-------|------------|
 | 17 | [AI Agent Development](.github/skills/ai-systems/ai-agent-development/SKILL.md) | Microsoft Foundry, Agent Framework, Orchestration, Tracing, Evaluation |
+| 30 | [Prompt Engineering](.github/skills/ai-systems/prompt-engineering/SKILL.md) | System Prompts, Chain-of-Thought, Few-Shot, Guardrails, Tool Use, Agentic Patterns |
 
 ### Design
 

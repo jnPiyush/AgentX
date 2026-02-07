@@ -5,6 +5,25 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - v3.0.0 Roadmap
+
+> **Epic**: [#118](https://github.com/jnPiyush/AgentX/issues/118) | **PRD**: [docs/prd/PRD-118.md](docs/prd/PRD-118.md)
+
+### 🎯 Planned Features
+
+**High Priority (P0)**:
+- **Agent Analytics Dashboard** ([#119](https://github.com/jnPiyush/AgentX/issues/119)) - Track handoff times, throughput, rework rates, token consumption
+- **Auto-Fix Reviewer** ([#120](https://github.com/jnPiyush/AgentX/issues/120)) - Reviewer agent that applies safe fixes (with human approval)
+- **Prompt Engineering Skill** ([#121](https://github.com/jnPiyush/AgentX/issues/121)) - Guide for system prompts, CoT, few-shot, guardrails
+
+**Medium Priority (P1)**:
+- **Cross-Repo Orchestration** ([#122](https://github.com/jnPiyush/AgentX/issues/122)) - Monorepo and multi-repo workflow support
+- **CLI & Web Interface** ([#123](https://github.com/jnPiyush/AgentX/issues/123)) - Headless `agentx` CLI and web dashboard
+- **Agent Memory System** ([#124](https://github.com/jnPiyush/AgentX/issues/124)) - Long-term memory for patterns and preferences
+- **Workflow Visualization** ([#125](https://github.com/jnPiyush/AgentX/issues/125)) - Mermaid diagrams and debug mode
+
+---
+
 ## [2.2.0] - 2026-02-03
 
 ### ✨ Added
