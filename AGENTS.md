@@ -94,7 +94,7 @@ Spike + Backlog → Architect
 type:devops + Backlog → DevOps Engineer (skip PM/Architect for infrastructure work)
 ```
 
-**Autonomous Mode**: For simple tasks (bugs, docs, stories ≤3 files), Agent X can automatically route to Engineer, skipping manual coordination. See [Agent X Autonomous](.github/agents/agent-x-auto.agent.md).
+**Autonomous Mode**: For simple tasks (bugs, docs, stories ≤3 files), Agent X can automatically route to Engineer, skipping manual coordination. See [Agent X](.github/agents/agent-x.agent.md) (mode: adaptive).
 
 ### Validation
 

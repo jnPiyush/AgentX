@@ -377,6 +377,10 @@ download_file "docs/multi-repo.md" "docs/multi-repo.md"
 download_file "docs/cli-specification.md" "docs/cli-specification.md"
 download_file "docs/agent-memory.md" "docs/agent-memory.md"
 download_file "docs/visualization.md" "docs/visualization.md"
+download_file "docs/local-mode.md" "docs/local-mode.md"
+download_file "docs/template-input-variables.md" "docs/template-input-variables.md"
+download_file "docs/session-persistence.md" "docs/session-persistence.md"
+download_file "LICENSE" "LICENSE"
 
 # VS Code configuration
 echo -e "${CYAN}  VS Code configuration...${NC}"
@@ -391,6 +395,24 @@ for dir in docs/prd docs/adr docs/specs docs/ux docs/reviews docs/progress; do
         echo -e "${GREEN}✓ Created: $dir/${NC}"
     fi
 done
+
+# Local Mode support (when no git or user preference)
+if [ ! -d ".git" ]; then
+    echo ""
+    echo -e "${CYAN}Initializing Local Mode...${NC}"
+    mkdir -p ".agentx/issues"
+    download_file ".agentx/local-issue-manager.ps1" ".agentx/local-issue-manager.ps1"
+    download_file ".agentx/local-issue-manager.sh" ".agentx/local-issue-manager.sh"
+    chmod +x ".agentx/local-issue-manager.sh" 2>/dev/null
+    cat > ".agentx/config.json" <<EOF
+{
+    "mode": "local",
+    "nextIssueNumber": 1,
+    "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+    echo -e "${GREEN}✓ Local Mode configured${NC}"
+fi
 
 # Install Git hooks
 echo ""

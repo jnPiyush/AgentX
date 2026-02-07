@@ -466,6 +466,10 @@ Get-FileDownload "docs/multi-repo.md" "docs/multi-repo.md"
 Get-FileDownload "docs/cli-specification.md" "docs/cli-specification.md"
 Get-FileDownload "docs/agent-memory.md" "docs/agent-memory.md"
 Get-FileDownload "docs/visualization.md" "docs/visualization.md"
+Get-FileDownload "docs/local-mode.md" "docs/local-mode.md"
+Get-FileDownload "docs/template-input-variables.md" "docs/template-input-variables.md"
+Get-FileDownload "docs/session-persistence.md" "docs/session-persistence.md"
+Get-FileDownload "LICENSE" "LICENSE"
 
 # Create output directories
 Write-Info "Creating output directories..."
@@ -497,10 +501,10 @@ if ($useLocalMode) {
     $config | ConvertTo-Json -Depth 10 | Set-Content $configFile
     Write-Success "Local Mode configured"
     
-    # Copy issue manager scripts
-    if (Test-Path ".agentx\local-issue-manager.ps1") {
-        Write-Success "Local issue manager ready: .agentx\local-issue-manager.ps1"
-    }
+    # Download issue manager scripts
+    Get-FileDownload ".agentx/local-issue-manager.ps1" ".agentx/local-issue-manager.ps1"
+    Get-FileDownload ".agentx/local-issue-manager.sh" ".agentx/local-issue-manager.sh"
+    Write-Success "Local issue manager ready"
 }
 
 # Validation scripts

@@ -418,4 +418,4 @@ The Engineer will resume after ${next_agent} completes.
 **Version**: 3.0 (Adaptive)  
 **Last Updated**: February 7, 2026  
 **Replaces**: Agent X (YOLO) + Agent X (Autonomous) — merged into single adaptive agent  
-**See Also**: [AGENTS.md](../../AGENTS.md) • [agent-x-config.yml](../agent-x-config.yml)
+**See Also**: [AGENTS.md](../../AGENTS.md) • [Skills.md](../../Skills.md)
