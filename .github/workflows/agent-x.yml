@@ -252,23 +252,27 @@ jobs:
           mkdir -p docs/deployment
           ISSUE="${{ needs.route.outputs.issue_number }}"
           if [ ! -f "docs/deployment/DEPLOY-${ISSUE}.md" ]; then
-            cat > "docs/deployment/DEPLOY-${ISSUE}.md" <<DEPLOY_EOF
-# Deployment Plan - Issue #${ISSUE}
+            cat > "docs/deployment/DEPLOY-${ISSUE}.md" <<'DEPLOY_EOF'
+          # Deployment Plan
 
-## Pipeline Configuration
-<!-- Describe CI/CD pipeline changes -->
+          ## Pipeline Configuration
+          <!-- Describe CI/CD pipeline changes -->
 
-## Environment Changes
-<!-- Describe environment/infrastructure changes -->
+          ## Environment Changes
+          <!-- Describe environment/infrastructure changes -->
 
-## Rollback Plan
-<!-- Describe rollback procedure -->
+          ## Rollback Plan
+          <!-- Describe rollback procedure -->
 
-## Security Checklist
-- [ ] No hardcoded secrets
-- [ ] Secrets use GitHub Secrets
-- [ ] Minimal permissions applied
-DEPLOY_EOF
+          ## Security Checklist
+          - [ ] No hardcoded secrets
+          - [ ] Secrets use GitHub Secrets
+          - [ ] Minimal permissions applied
+          DEPLOY_EOF
+            # Fix indentation in generated file
+            sed -i 's/^          //' "docs/deployment/DEPLOY-${ISSUE}.md"
+            # Add issue number to title
+            sed -i "s/# Deployment Plan/# Deployment Plan - Issue #${ISSUE}/" "docs/deployment/DEPLOY-${ISSUE}.md"
             echo "✅ Created deployment scaffold"
           else
             echo "⏭️ Deployment doc already exists"
