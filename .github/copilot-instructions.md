@@ -166,4 +166,4 @@ Use the following tools for state management during sessions:
 
 - **Complete Workflows**: [AGENTS.md](../AGENTS.md)
 - **Technical Standards**: [Skills.md](../Skills.md)
-- **MCP Integration**: [docs/mcp-integration.md](../docs/mcp-integration.md)
+- **MCP Integration**: [docs/SETUP.md](../docs/SETUP.md#github-mcp-server-integration)

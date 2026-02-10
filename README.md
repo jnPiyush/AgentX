@@ -212,7 +212,7 @@ AgentX supports **two modes**:
 | **GitHub Mode** | Team projects | Full features: Actions, PRs, Projects |
 | **Local Mode** | Solo/offline work | Filesystem-based issue tracking |
 
-> 📖 **Local Mode Guide**: [docs/local-mode.md](docs/local-mode.md)
+> 📖 **Local Mode Guide**: [docs/SETUP.md](docs/SETUP.md#local-mode-no-github)
 
 ### One-Line Install
 
@@ -373,18 +373,9 @@ AgentX/
 | [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
 | [Skills.md](Skills.md) | 36 production skills with guidelines |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
-| [Local Mode](docs/local-mode.md) | Filesystem-based issue tracking without GitHub |
-| [Agent Memory](docs/agent-memory.md) | Long-term learning & session persistence |
-| [Analytics](docs/analytics/METRICS.md) | Agent performance metrics & dashboards |
-| [CLI Specification](docs/cli-specification.md) | Headless CLI for automation |
-| [Multi-Repo](docs/multi-repo.md) | Cross-repository orchestration |
-| [Visualization](docs/visualization.md) | Workflow diagrams & debug mode |
-| [Session Persistence](docs/session-persistence.md) | Progress logs for long-running tasks |
-| [MCP Integration](docs/mcp-integration.md) | GitHub MCP Server integration |
-| [Markdown Conversion](docs/markdown-to-doc-conversion.md) | Convert MD to DOCX using Pandoc |
-| [Project Setup](docs/project-setup.md) | GitHub Projects V2 configuration |
-| [Template Variables](docs/template-input-variables.md) | Dynamic template input variables |
-| [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
+| [Features](docs/FEATURES.md) | Memory, CLI, cross-repo, session persistence, templates, visualization, analytics |
+| [Setup Guide](docs/SETUP.md) | GitHub Projects V2, Local Mode, MCP Server integration |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues and solutions |
 
 ---
 

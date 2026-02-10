@@ -42,7 +42,7 @@ gh issue close <ID>
 
 > ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field (GitHub mode) or local JSON status (Local mode).
 > 
-> 📖 **Local Mode**: See [docs/local-mode.md](docs/local-mode.md) for filesystem-based issue tracking without GitHub.
+> 📖 **Local Mode**: See [docs/SETUP.md](docs/SETUP.md#local-mode-no-github) for filesystem-based issue tracking without GitHub.
 
 ---
 
@@ -373,7 +373,7 @@ gh issue list --label "needs:ux" --json number,title,labels \
 - **Default Values**: Pre-fill common values
 - **Special Tokens**: `${current_date}`, `${user}`, etc.
 
-See [Template Input Variables Guide](docs/template-input-variables.md) for complete documentation.
+See [Template Input Variables Guide](docs/FEATURES.md#template-input-variables) for complete documentation.
 
 ---
 
@@ -417,7 +417,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | **Maturity Levels** | See [Agent Roles](#agent-roles) | ✅ Stable |
 | **Constraint-Based Design** | All agent `.agent.md` files | ✅ Stable |
 | **Handoff Buttons** | Agent frontmatter `handoffs:` field | ✅ Stable |
-| **Input Variables** | [Template Input Variables](docs/template-input-variables.md) | ✅ Stable |
+| **Input Variables** | [Template Input Variables](docs/FEATURES.md#template-input-variables) | ✅ Stable |
 | **Context Clearing** | [Context Management](#context-management) | ✅ Stable |
 | **Agent X Adaptive Mode** | [.github/agents/agent-x.agent.md](.github/agents/agent-x.agent.md) | ✅ Stable |
 
@@ -425,13 +425,13 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 | Feature | Documentation | Status |
 |---------|---------------|--------|
-| **Agent Analytics** | [docs/analytics/METRICS.md](docs/analytics/METRICS.md) | ✅ Implemented |
+| **Agent Analytics** | [docs/FEATURES.md](docs/FEATURES.md#agent-analytics) | ✅ Implemented |
 | **Auto-Fix Reviewer** | [.github/agents/reviewer-auto.agent.md](.github/agents/reviewer-auto.agent.md) | 🔄 Preview |
 | **Prompt Engineering** | [.github/skills/ai-systems/prompt-engineering/SKILL.md](.github/skills/ai-systems/prompt-engineering/SKILL.md) | ✅ Implemented |
-| **Cross-Repo** | [docs/multi-repo.md](docs/multi-repo.md) | ✅ Implemented |
-| **CLI Specification** | [docs/cli-specification.md](docs/cli-specification.md) | ✅ Implemented |
-| **Agent Memory** | [docs/agent-memory.md](docs/agent-memory.md) | ✅ Implemented |
-| **Visualization** | [docs/visualization.md](docs/visualization.md) | ✅ Implemented |
+| **Cross-Repo** | [docs/FEATURES.md](docs/FEATURES.md#cross-repository-orchestration) | ✅ Implemented |
+| **CLI Specification** | [docs/FEATURES.md](docs/FEATURES.md#cli-specification) | ✅ Implemented |
+| **Agent Memory** | [docs/FEATURES.md](docs/FEATURES.md#agent-memory-system) | ✅ Implemented |
+| **Visualization** | [docs/FEATURES.md](docs/FEATURES.md#visualization--debugging) | ✅ Implemented |
 
 ### Labels
 
