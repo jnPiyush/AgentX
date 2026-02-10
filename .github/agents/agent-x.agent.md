@@ -98,6 +98,19 @@ Agent X analyzes every issue and chooses the optimal path:
 
 **Flow**: Issue → PM → UX (optional) → Architect → **Engineer** → Reviewer → Done
 
+### Intent Preservation (All Modes)
+**Before routing any issue**, check the user's request for domain-specific intent:
+
+| Keywords Detected | Action | Label Added |
+|-------------------|--------|-------------|
+| AI, LLM, ML, GPT, model, inference, NLP, agent framework, foundry, neural, deep learning | Flag as AI/ML project | `needs:ai` |
+| real-time, WebSocket, streaming, live | Flag as real-time project | `needs:realtime` |
+| mobile, iOS, Android, React Native, Flutter | Flag as mobile project | `needs:mobile` |
+
+**Why**: Ensures downstream agents (PM, Architect, Engineer) activate domain-specific skills, templates, and tools. Without this, a request to "build an AI agent" gets treated identically to "build a CRUD app."
+
+**Validation**: After PM creates PRD, verify the PRD does not contain constraints that contradict the user's stated technology intent (e.g., "rule-based only" when user said "AI agent").
+
 ## Decision Matrix
 
 | Issue Characteristic | Autonomous ⚡ | Full Workflow 🏗️ |

@@ -143,6 +143,12 @@ await runSubagent({
 - [ ] All Story acceptance criteria met
 - [ ] No regression (existing features still work)
 
+**Intent Preservation:**
+- [ ] Implementation aligns with the user's original request (not just the spec)
+- [ ] If user requested "AI agent" or "ML", code includes actual LLM/model integration
+- [ ] No user intent keywords (AI, ML, LLM, real-time) were lost in the PM → Architect → Engineer pipeline
+- [ ] PRD constraints don't contradict user's stated technology intent
+
 ### 5. Create Review Document
 
 Create `docs/reviews/REVIEW-{story-id}.md` following the [Code Review template](../templates/REVIEW-TEMPLATE.md):

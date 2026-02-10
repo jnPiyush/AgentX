@@ -157,6 +157,12 @@ cp .github/templates/PRD-TEMPLATE.md docs/prd/PRD-{epic-id}.md
 - Are technical terms defined?
 - Are priorities clear?
 
+**Intent Preservation:**
+- Did I preserve the user's stated technology intent (AI/ML/LLM, real-time, mobile, etc.)?
+- If user said "AI agent" or "ML", does the PRD include explicit AI/ML Requirements?
+- Are there any constraints that contradict the user's core technology intent?
+- Did I avoid adding "rule-based" or "no external API" constraints when the user explicitly requested AI/ML capabilities?
+
 **If issues found during reflection, fix them NOW before handoff.**
 
 ### 5. Commit Changes

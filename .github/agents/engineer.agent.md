@@ -271,6 +271,12 @@ Follow [Skills.md](../../Skills.md) standards:
 - Are complex algorithms commented?
 - Is README updated?
 
+**Intent Preservation:**
+- Does the implementation align with the user's original request (not just the spec)?
+- If user requested "AI agent" or "ML", does the code include LLM/model integration?
+- If `needs:ai` label is present, did I consult `.github/skills/ai-systems/ai-agent-development/SKILL.md`?
+- Were any user intent keywords (AI, ML, LLM, real-time, etc.) lost between spec and implementation?
+
 **If issues found during reflection, fix them NOW before handoff.**
 
 ### 11. Run Tests

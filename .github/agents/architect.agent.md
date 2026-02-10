@@ -174,6 +174,13 @@ cp .github/templates/SPEC-TEMPLATE.md docs/specs/SPEC-{feature-id}.md
 - Is effort realistic (time/resources)?
 - Are dependencies available and stable?
 
+**Intent Preservation:**
+- Does my architecture honor the user's original technology request?
+- If user requested "AI agent" or "ML", does my architecture include AI/ML components (LLM integration, model selection, inference pipeline)?
+- Did I flag any PRD contradictions (e.g., "AI-powered" in requirements vs "rule-based" in constraints)?
+- If `needs:ai` label is present, did I consult `.github/skills/ai-systems/ai-agent-development/SKILL.md`?
+- Did I avoid rejecting AI/ML approaches without explicit user confirmation?
+
 **If issues found during reflection, fix them NOW before handoff.**
 
 ### 7. Commit Changes
