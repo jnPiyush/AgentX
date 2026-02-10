@@ -1,6 +1,12 @@
 ---
-name: error-handling
-description: 'Language-agnostic error handling practices with exceptions, retry logic, circuit breakers, and graceful degradation patterns for system resilience.'
+name: "error-handling"
+description: "Language-agnostic error handling practices with exceptions, retry logic, circuit breakers, and graceful degradation patterns for system resilience."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file get_errors"
 ---
 
 # Error Handling
@@ -10,6 +16,27 @@ description: 'Language-agnostic error handling practices with exceptions, retry 
 > **Note**: For language-specific implementations, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
+
+## Decision Tree
+
+```
+Handling an error?
+├─ Expected failure (validation, not-found)?
+│   └─ Return error result/status code, don't throw
+├─ Unexpected failure (network, I/O, timeout)?
+│   ├─ Transient? → Retry with exponential backoff
+│   │   └─ Still failing after retries? → Circuit breaker
+│   └─ Permanent? → Log + return error response
+├─ What to catch?
+│   ├─ Specific exception → catch specific, handle specifically
+│   ├─ Base exception → only at top-level boundaries
+│   └─ NEVER catch and swallow silently
+├─ Error response format?
+│   ├─ API? → RFC 7807 Problem Details
+│   └─ UI? → User-friendly message + log technical details
+└─ Logging?
+    └─ Always include: correlation ID, exception type, stack trace, context
+```
 
 ## Exception Handling
 

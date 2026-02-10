@@ -1,6 +1,12 @@
 ---
-name: api-design
-description: 'Language-agnostic REST API design with proper versioning, pagination, error handling, rate limiting, and documentation best practices.'
+name: "api-design"
+description: "Language-agnostic REST API design with proper versioning, pagination, error handling, rate limiting, and documentation best practices."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search create_file replace_string_in_file run_in_terminal get_errors"
 ---
 
 # API Design
@@ -10,6 +16,28 @@ description: 'Language-agnostic REST API design with proper versioning, paginati
 > **Note**: Language-agnostic patterns applicable to any tech stack.
 
 ---
+
+## Decision Tree
+
+```
+Designing an API endpoint?
+├─ What operation?
+│   ├─ Read data → GET (idempotent, cacheable)
+│   ├─ Create resource → POST (returns 201 + Location header)
+│   ├─ Full update → PUT (idempotent, replaces entire resource)
+│   ├─ Partial update → PATCH (only changed fields)
+│   └─ Remove → DELETE (idempotent, returns 204)
+├─ Returns collection?
+│   └─ Add pagination (cursor or offset) + filtering + sorting
+├─ Versioning needed?
+│   ├─ URL path versioning → /api/v1/resources (recommended)
+│   └─ Header versioning → Accept: application/vnd.api.v1+json
+├─ Error handling?
+│   └─ RFC 7807 Problem Details with proper HTTP status codes
+└─ Security?
+    ├─ Public? → Rate limiting + API key
+    └─ Private? → OAuth2/JWT + scopes
+```
 
 ## RESTful Conventions
 

@@ -1,6 +1,12 @@
 ---
-name: type-safety
-description: 'Language-agnostic type safety patterns including nullable types, validation, static analysis, and strong typing strategies.'
+name: "type-safety"
+description: "Language-agnostic type safety patterns including nullable types, validation, static analysis, and strong typing strategies."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file get_errors"
 ---
 
 # Type Safety

@@ -1,6 +1,14 @@
 ---
-name: remote-git-operations
-description: 'Best practices for remote Git operations including GitHub, Azure DevOps, pull requests, CI/CD integration, and branch protection rules.'
+name: "remote-git-operations"
+description: "Best practices for remote Git operations including GitHub, Azure DevOps, pull requests, CI/CD integration, and branch protection rules."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  platforms: ["github", "azure-devops"]
+allowed-tools: "read_file semantic_search grep_search file_search run_in_terminal get_changed_files"
 ---
 
 # Remote Git Repository Operations

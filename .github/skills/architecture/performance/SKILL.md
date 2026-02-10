@@ -1,6 +1,12 @@
 ---
-name: performance
-description: 'Language-agnostic performance optimization through async patterns, caching strategies, profiling, and resource management.'
+name: "performance"
+description: "Language-agnostic performance optimization through async patterns, caching strategies, profiling, and resource management."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search run_in_terminal get_errors"
 ---
 
 # Performance
@@ -10,6 +16,27 @@ description: 'Language-agnostic performance optimization through async patterns,
 > **Note**: For language-specific implementations, see [C# Development](../../development/csharp/SKILL.md) or [Python Development](../../development/python/SKILL.md).
 
 ---
+
+## Decision Tree
+
+```
+Performance concern?
+├─ Not yet measured? → Profile FIRST (don't guess)
+│   ├─ .NET → dotnet-trace / BenchmarkDotNet
+│   ├─ Python → cProfile / py-spy
+│   └─ Node.js → clinic.js / --prof
+├─ Slow API response?
+│   ├─ Database query? → EXPLAIN ANALYZE → add index
+│   ├─ External service? → Add caching + async calls
+│   └─ Computation? → Optimize algorithm or add memoization
+├─ High memory usage?
+│   ├─ Large collections? → Stream/paginate instead of loading all
+│   └─ Memory leaks? → Profile allocations, check dispose patterns
+├─ Concurrency bottleneck?
+│   ├─ I/O bound? → async/await (don't block threads)
+│   └─ CPU bound? → Parallel processing / background workers
+└─ Quick wins? → See Quick Wins table below
+```
 
 ## Quick Wins
 

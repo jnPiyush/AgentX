@@ -1,6 +1,15 @@
 ---
-name: azure
-description: 'Microsoft Azure cloud services best practices for building scalable, secure, and reliable cloud applications.'
+name: "azure"
+description: "Microsoft Azure cloud services best practices for building scalable, secure, and reliable cloud applications."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  providers: ["azure"]
+  platforms: ["windows", "linux"]
+allowed-tools: "read_file semantic_search grep_search file_search create_file replace_string_in_file run_in_terminal get_errors"
 ---
 
 # Azure Cloud Development

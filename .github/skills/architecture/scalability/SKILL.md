@@ -1,6 +1,12 @@
 ---
-name: scalability
-description: 'Design scalable systems with horizontal scaling, load balancing, caching, message queues, and stateless service architecture.'
+name: "scalability"
+description: "Design scalable systems with horizontal scaling, load balancing, caching, message queues, and stateless service architecture."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search"
 ---
 
 # Scalability
@@ -9,6 +15,25 @@ description: 'Design scalable systems with horizontal scaling, load balancing, c
 > **Approaches**: Horizontal scaling, load balancing, caching, async processing, stateless services.
 
 ---
+
+## Decision Tree
+
+```
+Scaling concern?
+├─ Current bottleneck?
+│   ├─ Single server at capacity? → Horizontal scaling (add instances)
+│   ├─ Database overloaded? → Read replicas + connection pooling
+│   ├─ Too many synchronous calls? → Message queue (async processing)
+│   └─ Repeated expensive queries? → Caching layer (Redis/CDN)
+├─ Architecture decision?
+│   ├─ Stateful servers? → Make stateless (externalize session/state)
+│   ├─ Monolith too large? → Extract bounded contexts to services
+│   └─ Need global reach? → CDN + multi-region deployment
+└─ Data scaling?
+    ├─ Read-heavy? → Read replicas + cache
+    ├─ Write-heavy? → Sharding or partitioning
+    └─ Both? → CQRS pattern (separate read/write models)
+```
 
 ## Horizontal vs Vertical Scaling
 

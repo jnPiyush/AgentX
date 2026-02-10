@@ -1,6 +1,15 @@
 ---
-name: rust
-description: 'Rust programming language best practices for building safe, concurrent, and performant systems.'
+name: "rust"
+description: "Rust programming language best practices for building safe, concurrent, and performant systems."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  languages: ["rust"]
+  platforms: ["windows", "linux", "macos"]
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file run_in_terminal get_errors"
 ---
 
 # Rust Development

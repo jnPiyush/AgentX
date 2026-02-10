@@ -1,5 +1,16 @@
 ---
-description: 'React framework development with modern hooks, TypeScript, and performance best practices'
+name: "react"
+description: "React framework development with modern hooks, TypeScript, and performance best practices."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  languages: ["typescript", "javascript"]
+  frameworks: ["react", "nextjs", "vite"]
+  platforms: ["windows", "linux", "macos"]
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file run_in_terminal get_errors"
 ---
 
 # React Framework Development

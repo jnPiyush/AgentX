@@ -1,5 +1,15 @@
 ---
-description: 'PostgreSQL database development with JSONB, arrays, full-text search, and performance optimization'
+name: "postgresql"
+description: "PostgreSQL database development with JSONB, arrays, full-text search, and performance optimization."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  languages: ["sql", "plpgsql"]
+  platforms: ["windows", "linux", "macos"]
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file run_in_terminal get_errors"
 ---
 
 # PostgreSQL Database Development

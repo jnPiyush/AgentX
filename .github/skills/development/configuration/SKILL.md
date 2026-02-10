@@ -1,6 +1,12 @@
 ---
-name: configuration
-description: 'Language-agnostic configuration management patterns including environment variables, secrets, feature flags, and validation strategies.'
+name: "configuration"
+description: "Language-agnostic configuration management patterns including environment variables, secrets, feature flags, and validation strategies."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search create_file replace_string_in_file"
 ---
 
 # Configuration Management
@@ -10,6 +16,24 @@ description: 'Language-agnostic configuration management patterns including envi
 > **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
+
+## Decision Tree
+
+```
+Configuration concern?
+├─ Where to store?
+│   ├─ Secrets (passwords, API keys) → Vault / secrets manager
+│   ├─ Environment-specific → Environment variables
+│   ├─ App defaults → Config file (appsettings.json, .env.example)
+│   └─ Feature flags → Remote config service
+├─ How to validate?
+│   ├─ Required values? → Fail fast at startup (not at first use)
+│   ├─ Typed values? → Parse + validate on load
+│   └─ Schema validation? → Use config class / Pydantic model
+└─ Multiple environments?
+    ├─ Use layered config: base + environment override
+    └─ NEVER commit .env files (use .env.example as template)
+```
 
 ## Configuration Hierarchy
 

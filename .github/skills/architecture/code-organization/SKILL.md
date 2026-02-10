@@ -1,6 +1,12 @@
 ---
-name: code-organization
-description: 'Structure projects for maintainability and scalability with clean architecture, separation of concerns, and consistent project layouts.'
+name: "code-organization"
+description: "Structure projects for maintainability and scalability with clean architecture, separation of concerns, and consistent project layouts."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search create_file replace_string_in_file"
 ---
 
 # Code Organization
@@ -8,6 +14,25 @@ description: 'Structure projects for maintainability and scalability with clean 
 > **Purpose**: Structure projects for maintainability, scalability, and team collaboration.
 
 ---
+
+## Decision Tree
+
+```
+Structuring a project?
+├─ New project?
+│   ├─ Single app? → Standard layered structure (API/Domain/Infra)
+│   ├─ Multiple services? → Monorepo or separate repos
+│   └─ Library/package? → src/ + tests/ + docs/ + examples/
+├─ Existing project, adding feature?
+│   ├─ Follow existing patterns (consistency > perfection)
+│   └─ Feature cuts across layers? → Consider vertical slices
+├─ File getting too large (> 300 lines)?
+│   └─ Split by responsibility (SRP)
+├─ Folder getting too deep (> 4 levels)?
+│   └─ Flatten or reorganize by feature
+└─ Shared code between projects?
+    └─ Extract to shared library / internal package
+```
 
 ## Project Structure
 

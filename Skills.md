@@ -1,12 +1,13 @@
 ---
-description: 'Production-ready guidelines for AI agents to build secure, scalable, maintainable systems. Covers 25 skills: coding principles, testing, security, architecture, configuration, full-stack development, and AI agent development.'
+description: 'Production-ready guidelines for AI agents to build secure, scalable, maintainable systems. Covers 36 skills across architecture, development, operations, cloud, AI systems, and design with progressive disclosure, executable scripts, and decision trees.'
 ---
 
 # Production Code Skills & Technical Guidelines
 
 > **Purpose**: Production-ready guidelines for agents to build secure, scalable, maintainable systems.  
 > **Usage**: Index for detailed skill documents. Read relevant skills before implementation.  
-> **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) skills specification from [agentskills.io](https://agentskills.io/specification).
+> **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) skills specification from [agentskills.io](https://agentskills.io/specification).  
+> **Structure**: Each skill uses progressive disclosure — metadata (~100 tokens) → SKILL.md body (<5K) → references/ (on demand).
 
 ---
 
@@ -135,6 +136,45 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 ---
 
+### MCP Server Development
+
+**When**: Building Model Context Protocol servers, exposing tools/resources to AI agents
+
+**Load These Skills** (Total: ~15K tokens):
+- [#32 MCP Server Development](.github/skills/development/mcp-server-development/SKILL.md) - MCP protocol, tools, resources, prompts (5K)
+- [#04 Security](.github/skills/architecture/security/SKILL.md) - Input validation, secrets management (6K)
+- [#02 Testing](.github/skills/development/testing/SKILL.md) - Tool testing, integration tests (4K)
+
+**Context Routing**: MCP server work → Load Skills #32, #04, #02
+
+---
+
+### Containerization & Deployment
+
+**When**: Dockerizing applications, writing Docker Compose, Kubernetes deployments
+
+**Load These Skills** (Total: ~18K tokens):
+- [#33 Containerization](.github/skills/cloud/containerization/SKILL.md) - Docker, Compose, Kubernetes (6K)
+- [#04 Security](.github/skills/architecture/security/SKILL.md) - Non-root users, secrets, image scanning (6K)
+- [#28 Release Management](.github/skills/operations/release-management/SKILL.md) - Deployment strategies, rollback (6K)
+
+**Context Routing**: Docker/K8s work → Load Skills #33, #04, #28
+
+---
+
+### Data Analysis
+
+**When**: Exploring, transforming, validating, or visualizing data
+
+**Load These Skills** (Total: ~12K tokens):
+- [#34 Data Analysis](.github/skills/development/data-analysis/SKILL.md) - Pandas, DuckDB, Polars, visualization (5K)
+- [#06 Database](.github/skills/architecture/database/SKILL.md) - SQL queries, optimization (5K)
+- [#02 Testing](.github/skills/development/testing/SKILL.md) - Data validation tests (2K)
+
+**Context Routing**: Data work → Load Skills #34, #06, #02
+
+---
+
 ### UX/UI Design
 
 **When**: Creating wireframes, prototypes, user flows, interface designs
@@ -196,6 +236,10 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 | 23 | [Blazor Framework](.github/skills/development/blazor/SKILL.md) | Blazor Server/WASM, Razor Components, Lifecycle, Data Binding, DI |
 | 24 | [PostgreSQL Database](.github/skills/development/postgresql/SKILL.md) | JSONB, Arrays, GIN Indexes, Full-Text Search, Window Functions |
 | 25 | [SQL Server Database](.github/skills/development/sql-server/SKILL.md) | T-SQL, Stored Procedures, Indexing, Query Optimization, Performance |
+| 32 | [MCP Server Development](.github/skills/development/mcp-server-development/SKILL.md) | MCP Protocol, Tools, Resources, Prompts, stdio/SSE Transport |
+| 34 | [Data Analysis](.github/skills/development/data-analysis/SKILL.md) | Pandas, DuckDB, Polars, Visualization, ETL, Data Quality |
+| 35 | [Go Development](.github/skills/development/go/SKILL.md) | Go Modules, Goroutines, Channels, Error Handling, Testing |
+| 36 | [Rust Development](.github/skills/development/rust/SKILL.md) | Ownership, Lifetimes, Traits, Async, Cargo, Unsafe |
 
 ### Operations
 
@@ -206,18 +250,61 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 | 27 | [YAML Pipelines](.github/skills/operations/yaml-pipelines/SKILL.md) | Azure Pipelines, GitLab CI, multi-stage pipelines, templates |
 | 28 | [Release Management](.github/skills/operations/release-management/SKILL.md) | Versioning, deployment strategies, rollback, release automation |
 
+### Cloud
+
+| # | Skill | Core Focus |
+|---|-------|------------|
+| 31 | [Azure](.github/skills/cloud/azure/SKILL.md) | Azure Services, ARM, App Service, Functions, Key Vault |
+| 33 | [Containerization](.github/skills/cloud/containerization/SKILL.md) | Docker, Docker Compose, Kubernetes, Multi-stage Builds, Security |
+
 ### AI Systems
 
 | # | Skill | Core Focus |
 |---|-------|------------|
 | 17 | [AI Agent Development](.github/skills/ai-systems/ai-agent-development/SKILL.md) | Microsoft Foundry, Agent Framework, Orchestration, Tracing, Evaluation |
 | 30 | [Prompt Engineering](.github/skills/ai-systems/prompt-engineering/SKILL.md) | System Prompts, Chain-of-Thought, Few-Shot, Guardrails, Tool Use, Agentic Patterns |
+| 37 | [Skill Creator](.github/skills/ai-systems/skill-creator/SKILL.md) | Create, Validate, Maintain Skills (meta-skill) |
 
 ### Design
 
 | # | Skill | Core Focus |
 |---|-------|------------|
 | 29 | [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md) | Wireframing, User Flows, HTML/CSS Prototypes, Accessibility, Responsive Design |
+
+---
+
+## Skill Structure & Progressive Disclosure
+
+Each skill follows the [agentskills.io](https://agentskills.io/specification) specification with progressive loading:
+
+```
+.github/skills/{category}/{skill-name}/
+├── SKILL.md               # Main document (< 500 lines, loaded on activation)
+├── scripts/               # Executable automation (optional)
+│   └── *.ps1              # PowerShell scripts for scanning, scaffolding, etc.
+├── references/            # Extended content (optional, loaded on demand)
+│   └── *.md               # Detailed examples, templates, patterns
+└── assets/                # Static resources (optional)
+```
+
+**Token Budget**:
+| Level | Loads When | Token Budget |
+|-------|-----------|--------------|
+| Frontmatter | Always (discovery) | ~100 tokens |
+| SKILL.md body | On skill activation | < 5,000 tokens |
+| references/ | On-demand via `read_file` | Variable |
+
+**Available Scripts**:
+| Script | Skill | Purpose |
+|--------|-------|---------|
+| `check-coverage.ps1` | Testing | Auto-detect project type, run coverage, check 80% threshold |
+| `check-test-pyramid.ps1` | Testing | Validate test file ratios against 70/20/10 pyramid |
+| `scan-security.ps1` | Security | Scan for SQL injection, hardcoded secrets, insecure patterns |
+| `scan-secrets.ps1` | Security | Detect private keys, tokens, high-entropy strings |
+| `version-bump.ps1` | Release Management | SemVer version bump for Node/.NET/Python projects |
+| `init-skill.ps1` | Skill Creator | Scaffold new skill with proper frontmatter and structure |
+
+**Creating New Skills**: Use `init-skill.ps1` or see [#37 Skill Creator](.github/skills/ai-systems/skill-creator/SKILL.md).
 
 ---
 
@@ -350,5 +437,7 @@ builder.Host.ConfigureHostOptions(opts => opts.ShutdownTimeout = TimeSpan.FromSe
 
 **Skills Specification**: [agentskills.io/specification](https://agentskills.io/specification)
 
-**Last Updated**: January 18, 2026
+**Total Skills**: 36 (Architecture: 7, Development: 19, Operations: 4, Cloud: 2, AI Systems: 3, Design: 1)
+
+**Last Updated**: January 15, 2025
 

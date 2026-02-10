@@ -1,5 +1,16 @@
 ---
-description: 'Blazor framework development with Razor components, lifecycle, and C# web patterns'
+name: "blazor"
+description: "Blazor framework development with Razor components, lifecycle, and C# web patterns."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  languages: ["csharp"]
+  frameworks: ["blazor", "dotnet", "aspnet-core"]
+  platforms: ["windows", "linux", "macos"]
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file run_in_terminal get_errors"
 ---
 
 # Blazor Framework Development

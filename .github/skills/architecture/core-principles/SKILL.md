@@ -1,6 +1,14 @@
 ---
-name: core-principles
-description: 'Fundamental coding principles for production development including SOLID, DRY, KISS, and common design patterns with C# examples.'
+name: "core-principles"
+description: "Fundamental coding principles for production development including SOLID, DRY, KISS, and common design patterns with C# examples."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  languages: ["csharp"]
+allowed-tools: "read_file semantic_search grep_search file_search"
 ---
 
 # Core Principles

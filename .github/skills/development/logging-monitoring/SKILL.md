@@ -1,6 +1,12 @@
 ---
-name: logging-monitoring
-description: 'Language-agnostic observability patterns including structured logging, log levels, correlation IDs, metrics, and distributed tracing.'
+name: "logging-monitoring"
+description: "Language-agnostic observability patterns including structured logging, log levels, correlation IDs, metrics, and distributed tracing."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file"
 ---
 
 # Logging & Monitoring
@@ -10,6 +16,27 @@ description: 'Language-agnostic observability patterns including structured logg
 > **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
+
+## Decision Tree
+
+```
+Observability concern?
+├─ What to log?
+│   ├─ Request start/end → INFO with correlation ID
+│   ├─ Expected errors → WARN (validation, not-found)
+│   ├─ Unexpected errors → ERROR with stack trace
+│   └─ Debug details → DEBUG (disabled in production)
+├─ What NOT to log?
+│   └─ PII, passwords, tokens, credit cards → NEVER
+├─ Metrics needed?
+│   ├─ RED metrics: Rate, Errors, Duration (for services)
+│   └─ USE metrics: Utilization, Saturation, Errors (for resources)
+├─ Distributed tracing?
+│   └─ OpenTelemetry for cross-service correlation
+└─ Alerting?
+    ├─ SLO-based: alert on error budget burn rate
+    └─ Avoid alert fatigue: page only for actionable issues
+```
 
 ## Structured Logging
 

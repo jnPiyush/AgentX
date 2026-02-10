@@ -1,6 +1,12 @@
 ---
-name: version-control
-description: 'Effective Git workflows including commit conventions, branching strategies, pull request best practices, and merge conflict resolution.'
+name: "version-control"
+description: "Effective Git workflows including commit conventions, branching strategies, pull request best practices, and merge conflict resolution."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search run_in_terminal get_changed_files"
 ---
 
 # Version Control
@@ -8,6 +14,27 @@ description: 'Effective Git workflows including commit conventions, branching st
 > **Purpose**: Effective use of Git for collaboration and code management.
 
 ---
+
+## Decision Tree
+
+```
+Git operation?
+├─ Starting new work?
+│   ├─ Feature → branch from main: feature/issue-123-description
+│   ├─ Bug fix → branch from main: fix/issue-456-description
+│   └─ Hotfix → branch from release: hotfix/critical-issue
+├─ Committing?
+│   ├─ Small, atomic changes (one logical change per commit)
+│   └─ Format: type(scope): description (#issue)
+├─ Merging?
+│   ├─ Feature branch → squash merge to main
+│   ├─ Release branch → merge commit (preserve history)
+│   └─ Conflict? → Rebase feature on main, resolve, re-push
+└─ Undoing?
+    ├─ Uncommitted changes? → git stash or git checkout
+    ├─ Last commit (not pushed)? → git reset --soft HEAD~1
+    └─ Pushed commit? → git revert (never force-push shared branches)
+```
 
 ## Commit Messages
 

@@ -1,6 +1,12 @@
 ---
-name: security
-description: 'Language-agnostic production security practices covering OWASP Top 10, input validation, injection prevention, authentication/authorization, and secrets management.'
+name: "security"
+description: "Language-agnostic production security practices covering OWASP Top 10, input validation, injection prevention, authentication/authorization, and secrets management."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search run_in_terminal get_errors"
 ---
 
 # Security
@@ -10,6 +16,27 @@ description: 'Language-agnostic production security practices covering OWASP Top
 > **Note**: For language-specific implementations, see [C# Development](../../development/csharp/SKILL.md) or [Python Development](../../development/python/SKILL.md).
 
 ---
+
+## Decision Tree
+
+```
+Security concern?
+├─ User input? → VALIDATE + SANITIZE (see Input Validation)
+│   ├─ Goes into SQL? → Parameterized queries ONLY
+│   ├─ Goes into HTML? → Encode output (XSS prevention)
+│   └─ Goes into shell? → Avoid; use SDK/API instead
+├─ Authentication?
+│   ├─ New system? → Use established provider (OAuth2/OIDC)
+│   └─ Existing? → Verify token validation, session management
+├─ Secrets/credentials?
+│   ├─ In code? → REMOVE → use env vars or vault
+│   └─ In config? → Move to secrets manager
+│       └─ Run: scripts/scan-secrets.ps1 to verify
+├─ Dependencies?
+│   └─ Run: scripts/scan-security.ps1 → update vulnerable packages
+└─ Deployment?
+    └─ HTTPS only, security headers, CORS configured
+```
 
 ## OWASP Top 10 (2025)
 

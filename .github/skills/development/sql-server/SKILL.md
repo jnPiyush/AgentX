@@ -1,5 +1,15 @@
 ---
-description: 'SQL Server database development with T-SQL, stored procedures, indexing, and performance optimization'
+name: "sql-server"
+description: "SQL Server database development with T-SQL, stored procedures, indexing, and performance optimization."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  languages: ["sql", "tsql"]
+  platforms: ["windows", "linux"]
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file run_in_terminal get_errors"
 ---
 
 # SQL Server Database Development

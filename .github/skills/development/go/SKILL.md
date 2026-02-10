@@ -1,6 +1,15 @@
 ---
-name: go
-description: 'Go programming language best practices, patterns, and standards for building reliable, efficient software.'
+name: "go"
+description: "Go programming language best practices, patterns, and standards for building reliable, efficient software."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  languages: ["go"]
+  platforms: ["windows", "linux", "macos"]
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file run_in_terminal get_errors"
 ---
 
 # Go Development

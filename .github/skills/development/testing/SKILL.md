@@ -1,6 +1,12 @@
 ---
-name: testing
-description: 'Language-agnostic testing strategies including test pyramid (70% unit, 20% integration, 10% e2e), testing patterns, and 80%+ coverage requirements.'
+name: "testing"
+description: "Language-agnostic testing strategies including test pyramid (70% unit, 20% integration, 10% e2e), testing patterns, and 80%+ coverage requirements."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file run_in_terminal get_errors"
 ---
 
 # Testing
@@ -10,6 +16,25 @@ description: 'Language-agnostic testing strategies including test pyramid (70% u
 > **Note**: For language-specific examples, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
+
+## Decision Tree
+
+```
+Writing or reviewing tests?
+├─ New feature/story?
+│   ├─ Has acceptance criteria? → Write e2e test first, then unit tests
+│   └─ No criteria? → Write unit tests for public API surface
+├─ Bug fix?
+│   └─ Write regression test FIRST (red), then fix (green)
+├─ Refactoring?
+│   └─ Ensure existing tests pass → refactor → verify green
+├─ What type of test?
+│   ├─ Pure logic, no I/O? → Unit test (70% of total)
+│   ├─ Database/API/file I/O? → Integration test (20%)
+│   └─ Full user workflow? → E2E test (10%)
+└─ Coverage below 80%?
+    └─ Run: scripts/check-coverage.ps1 → add tests for uncovered paths
+```
 
 ## Test Pyramid
 

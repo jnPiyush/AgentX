@@ -1,6 +1,14 @@
 ---
-name: prompt-engineering
-description: 'Write effective prompts for AI coding agents. Covers system prompts, chain-of-thought, few-shot examples, guardrails, tool use, and agentic patterns.'
+name: "prompt-engineering"
+description: "Write effective prompts for AI coding agents. Covers system prompts, chain-of-thought, few-shot examples, guardrails, tool use, and agentic patterns."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  frameworks: ["agentx", "copilot", "openai", "anthropic"]
+allowed-tools: "read_file semantic_search grep_search file_search create_file replace_string_in_file"
 ---
 
 # Prompt Engineering
@@ -9,6 +17,28 @@ description: 'Write effective prompts for AI coding agents. Covers system prompt
 > **Scope**: System prompts, reasoning patterns, guardrails, tool use, agentic workflows.
 
 ---
+
+## Decision Tree
+
+```
+Writing a prompt?
+├─ Simple, well-known task?
+│   └─ Zero-shot (just instructions)
+├─ Need specific output format?
+│   └─ Few-shot (2-3 examples of input → output)
+├─ Complex reasoning required?
+│   ├─ Step-by-step? → Chain-of-thought ("think step by step")
+│   └─ Multi-perspective? → Self-consistency (sample multiple paths)
+├─ Agent / tool-use scenario?
+│   ├─ Define tool schemas clearly
+│   ├─ Add guardrails (what NOT to do)
+│   └─ Include error recovery instructions
+├─ System prompt for coding agent?
+│   ├─ Role + constraints + format + examples
+│   └─ Keep under 4K tokens for efficiency
+└─ Prompt too long?
+    └─ Progressive disclosure: load details on demand
+```
 
 ## Quick Reference
 

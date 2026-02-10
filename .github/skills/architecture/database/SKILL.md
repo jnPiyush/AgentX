@@ -1,6 +1,12 @@
 ---
-name: database
-description: 'Language-agnostic database operations including migrations, indexing strategies, transactions, connection pooling, and ORM best practices.'
+name: "database"
+description: "Language-agnostic database operations including migrations, indexing strategies, transactions, connection pooling, and ORM best practices."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file run_in_terminal"
 ---
 
 # Database
@@ -10,6 +16,25 @@ description: 'Language-agnostic database operations including migrations, indexi
 > **Note**: For database-specific details, see [PostgreSQL](../../architecture/postgresql/SKILL.md) or [SQL Server](../../architecture/sql-server/SKILL.md).
 
 ---
+
+## Decision Tree
+
+```
+Database operation?
+├─ Schema change?
+│   ├─ New table/column? → Migration (up + down)
+│   ├─ Rename/drop? → Migration + verify no dependents
+│   └─ Index needed? → CREATE INDEX CONCURRENTLY (avoid locks)
+├─ Query performance?
+│   ├─ Slow query? → EXPLAIN ANALYZE → add index or rewrite
+│   ├─ N+1 problem? → Use eager loading / JOIN
+│   └─ Large result set? → Pagination (cursor-based preferred)
+├─ Data integrity?
+│   ├─ Multiple writes? → Use transaction
+│   └─ Concurrent access? → Optimistic concurrency (version column)
+└─ Connection management?
+    └─ Always use connection pooling, never open/close per query
+```
 
 ## Database Migrations
 

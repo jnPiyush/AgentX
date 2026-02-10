@@ -1,6 +1,12 @@
 ---
-name: dependency-management
-description: 'Language-agnostic dependency management patterns including version pinning, lock files, vulnerability scanning, and update strategies.'
+name: "dependency-management"
+description: "Language-agnostic dependency management patterns including version pinning, lock files, vulnerability scanning, and update strategies."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search run_in_terminal"
 ---
 
 # Dependency Management
@@ -10,6 +16,26 @@ description: 'Language-agnostic dependency management patterns including version
 > **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
+
+## Decision Tree
+
+```
+Dependency concern?
+├─ Adding new dependency?
+│   ├─ Actively maintained? (commits in last 6 months) → Proceed
+│   ├─ License compatible? (MIT/Apache → OK, GPL → careful)
+│   ├─ Too many transitive deps? → Consider lighter alternative
+│   └─ Can you build it in < 1 hour? → Maybe don't add dependency
+├─ Updating dependencies?
+│   ├─ Patch update (0.0.x) → Usually safe, auto-update
+│   ├─ Minor update (0.x.0) → Review changelog, test
+│   └─ Major update (x.0.0) → Review breaking changes, plan migration
+├─ Vulnerability found?
+│   ├─ Direct dependency? → Update immediately
+│   └─ Transitive? → Override version or update parent
+└─ Lock file conflict?
+    └─ Delete lock file → reinstall → commit new lock file
+```
 
 ## Core Concepts
 

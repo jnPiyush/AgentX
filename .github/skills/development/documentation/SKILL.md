@@ -1,6 +1,12 @@
 ---
-name: documentation
-description: 'Language-agnostic documentation patterns including inline docs, README structure, API documentation, and code comments best practices.'
+name: "documentation"
+description: "Language-agnostic documentation patterns including inline docs, README structure, API documentation, and code comments best practices."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+allowed-tools: "read_file semantic_search grep_search file_search create_file replace_string_in_file"
 ---
 
 # Documentation
@@ -10,6 +16,25 @@ description: 'Language-agnostic documentation patterns including inline docs, RE
 > **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
+
+## Decision Tree
+
+```
+Documenting something?
+├─ New project/repo? → README.md (setup, usage, contributing)
+├─ Public API?
+│   ├─ REST API → OpenAPI/Swagger spec
+│   └─ Library → XML docs / docstrings on all public members
+├─ Architecture decision? → ADR (docs/adr/ADR-NNN.md)
+├─ Complex logic?
+│   ├─ WHY it works this way → Code comment
+│   └─ HOW to use it → Doc comment / docstring
+├─ Code self-explanatory?
+│   └─ Yes → No comment needed (good naming > comments)
+└─ Inline comment?
+    ├─ Explains WHY (business rule, workaround) → Keep it
+    └─ Explains WHAT (obvious from code) → Remove it
+```
 
 ## Documentation Hierarchy
 

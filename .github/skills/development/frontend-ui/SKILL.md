@@ -1,5 +1,16 @@
 ---
-description: 'Frontend UI development with HTML5, CSS3, and Tailwind CSS best practices'
+name: "frontend-ui"
+description: "Frontend UI development with HTML5, CSS3, and Tailwind CSS best practices."
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  languages: ["html", "css", "javascript"]
+  frameworks: ["tailwind", "bootstrap"]
+  platforms: ["windows", "linux", "macos"]
+allowed-tools: "read_file semantic_search grep_search file_search replace_string_in_file create_file run_in_terminal get_errors"
 ---
 
 # Frontend/UI Development

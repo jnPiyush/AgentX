@@ -1,1072 +1,269 @@
 ---
-name: github-actions-workflows
-description: 'Best practices for creating GitHub Actions workflows, reusable workflows, custom actions, and workflow automation.'
+name: "github-actions-workflows"
+description: "Best practices for creating GitHub Actions workflows, reusable workflows, custom actions, and workflow automation."
+metadata:
+  author: "AgentX"
+  version: "2.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  platforms: ["github"]
+allowed-tools: "create_file replace_string_in_file read_file run_in_terminal grep_search file_search semantic_search get_errors"
 ---
 
 # GitHub Actions & Workflows
 
-> **Purpose**: Comprehensive guide for building, testing, and deploying with GitHub Actions workflows.
+> **Purpose**: Concise guide for building, testing, and deploying with GitHub Actions.
+> Detailed YAML examples live in `references/` — this file covers decisions, patterns, and guardrails.
 
 ---
 
 ## Table of Contents
 
-1. [Workflow Basics](#workflow-basics)
-2. [Workflow Syntax](#workflow-syntax)
-3. [Events and Triggers](#events-and-triggers)
-4. [Jobs and Steps](#jobs-and-steps)
-5. [Actions Marketplace](#actions-marketplace)
-6. [Secrets and Variables](#secrets-and-variables)
-7. [Matrix Builds](#matrix-builds)
-8. [Caching Dependencies](#caching-dependencies)
-9. [Environments and Deployments](#environments-and-deployments)
-10. [Reusable Workflows](#reusable-workflows)
-11. [Custom Actions](#custom-actions)
-12. [Security Best Practices](#security-best-practices)
-13. [Troubleshooting](#troubleshooting)
+1. [Trigger Decision Tree](#trigger-decision-tree)
+2. [Directory Structure](#directory-structure)
+3. [Minimal Workflow Example](#minimal-workflow-example)
+4. [Common Actions Quick-Reference](#common-actions-quick-reference)
+5. [Core Concepts (with Progressive Disclosure)](#core-concepts)
+6. [Security Best Practices](#security-best-practices) ← **read in full**
+7. [Troubleshooting](#troubleshooting)
+8. [Best Practices Summary](#best-practices-summary)
 
 ---
 
-## Workflow Basics
+## Trigger Decision Tree
 
-### Directory Structure
+Use this to choose the right event trigger for your workflow:
+
+```
+Is this a code change?
+├─ YES ─ Push to branch? ──────────────── on: push (branches, paths)
+│        PR validation? ────────────────── on: pull_request
+│        PR from fork? ─────────────────── on: pull_request (NOT pull_request_target!)
+│        Tag/release? ──────────────────── on: push (tags: 'v*')
+│
+├─ NO ── Manual/on-demand? ─────────────── on: workflow_dispatch (with inputs)
+│        Recurring schedule? ───────────── on: schedule (cron)
+│        Called by another workflow? ────── on: workflow_call (reusable)
+│        React to issue/comment/label? ─── on: issues / issue_comment / label
+│
+└─ MULTI-TRIGGER ─ CI + manual deploy? ── combine push + workflow_dispatch
+```
+
+> **Deep dive**: [references/workflow-syntax-reference.md](references/workflow-syntax-reference.md) — full event syntax, path filters, branch patterns, cron examples.
+
+---
+
+## Directory Structure
 
 ```
 .github/
-└── workflows/
-    ├── ci.yml              # Continuous Integration
-    ├── cd.yml              # Continuous Deployment
-    ├── release.yml         # Release automation
-    ├── pr-checks.yml       # Pull request validation
-    └── scheduled-tasks.yml # Scheduled jobs
-```
-
-### Basic Workflow File
-
-```yaml
-# .github/workflows/ci.yml
-name: CI Pipeline
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Run build
-      run: echo "Building application..."
-
-    - name: Run tests
-      run: echo "Running tests..."
+├── workflows/
+│   ├── ci.yml              # Continuous Integration
+│   ├── cd.yml              # Continuous Deployment
+│   ├── release.yml         # Release automation
+│   ├── pr-checks.yml       # Pull request validation
+│   └── scheduled-tasks.yml # Scheduled jobs
+└── actions/
+    └── my-action/          # Custom composite/JS actions
+        └── action.yml
 ```
 
 ---
 
-## Workflow Syntax
-
-### Complete Workflow Structure
+## Minimal Workflow Example
 
 ```yaml
-name: Complete Workflow Example
-
-# Triggers
+name: CI Pipeline
 on:
   push:
-    branches: [ main, develop ]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-    tags:
-      - 'v*'
+    branches: [main, develop]
+    paths: ['src/**', 'tests/**']
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:  # Manual trigger
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
-  schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM UTC
-
-# Global environment variables
-env:
-  NODE_VERSION: '20.x'
-  DOTNET_VERSION: '8.0.x'
-  DEPLOY_ENV: 'production'
-
-# Permissions (explicit is better)
+    branches: [main]
 permissions:
   contents: read
-  pull-requests: write
-
-# Concurrency control
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   build:
-    name: Build and Test
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
-    # Job-level environment variables
-    env:
-      BUILD_CONFIG: Release
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Build
-      run: npm run build
-
-    - name: Test
-      run: npm test
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-output
-        path: dist/
-        retention-days: 7
-
-  deploy:
-    name: Deploy
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://app.example.com
-
-    steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-output
-
-    - name: Deploy
-      run: echo "Deploying to production..."
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20.x', cache: 'npm' }
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - uses: actions/upload-artifact@v4
+        with: { name: build-output, path: dist/, retention-days: 7 }
 ```
+
+**Demonstrates**: path-filtered triggers, explicit permissions, concurrency, timeout, built-in caching, artifact upload.
 
 ---
 
-## Events and Triggers
+## Common Actions Quick-Reference
 
-### Push Events
+| Action | Version | Purpose |
+|--------|---------|---------|
+| `actions/checkout` | `v4` | Clone repository |
+| `actions/setup-node` | `v4` | Node.js + npm/yarn/pnpm cache |
+| `actions/setup-dotnet` | `v4` | .NET SDK |
+| `actions/setup-python` | `v5` | Python + pip cache |
+| `actions/setup-java` | `v4` | Java (temurin, zulu, etc.) |
+| `actions/setup-go` | `v5` | Go + module cache |
+| `actions/cache` | `v4` | Generic dependency caching |
+| `actions/upload-artifact` | `v4` | Persist build outputs between jobs |
+| `actions/download-artifact` | `v4` | Retrieve artifacts in downstream jobs |
+| `docker/build-push-action` | `v5` | Build & push Docker images |
+| `docker/login-action` | `v3` | Docker registry authentication |
+| `codecov/codecov-action` | `v4` | Upload code coverage reports |
 
-```yaml
-on:
-  push:
-    # Specific branches
-    branches:
-      - main
-      - develop
-      - 'release/**'
-
-    # Branch patterns (exclude)
-    branches-ignore:
-      - 'experimental/**'
-
-    # Specific paths
-    paths:
-      - 'src/**'
-      - 'package.json'
-
-    # Path patterns (exclude)
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-
-    # Tags
-    tags:
-      - 'v*.*.*'
-```
-
-### Pull Request Events
-
-```yaml
-on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - ready_for_review
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'tests/**'
-
-  pull_request_target:  # For PRs from forks (use carefully!)
-    types:
-      - opened
-```
-
-### Manual Triggers
-
-```yaml
-on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Target environment'
-        required: true
-        type: choice
-        options:
-          - development
-          - staging
-          - production
-      version:
-        description: 'Version to deploy'
-        required: false
-        type: string
-        default: 'latest'
-      debug:
-        description: 'Enable debug mode'
-        required: false
-        type: boolean
-        default: false
-```
-
-### Scheduled Events
-
-```yaml
-on:
-  schedule:
-    # Daily at 2 AM UTC
-    - cron: '0 2 * * *'
-
-    # Every 15 minutes
-    - cron: '*/15 * * * *'
-
-    # Weekdays at 9 AM UTC
-    - cron: '0 9 * * 1-5'
-
-    # First day of month
-    - cron: '0 0 1 * *'
-```
-
-### Workflow Call (Reusable)
-
-```yaml
-on:
-  workflow_call:
-    inputs:
-      config-path:
-        required: true
-        type: string
-      environment:
-        required: false
-        type: string
-        default: 'dev'
-    secrets:
-      token:
-        required: true
-```
+> **Full examples**: [references/actions-marketplace-examples.md](references/actions-marketplace-examples.md) — setup snippets, caching patterns, Docker multi-stage, code coverage.
 
 ---
 
-## Jobs and Steps
+## Core Concepts
 
-### Job Dependencies
+Each concept is summarized below. Detailed YAML lives in the linked reference file.
 
-```yaml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Building..."
+### Workflow Syntax & Events
 
-  test:
-    needs: build  # Wait for build
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Testing..."
+**Key elements**: `name`, `on` (triggers), `env` (global vars), `permissions`, `concurrency`, `jobs`.
+Path filters (`paths` / `paths-ignore`) prevent unnecessary runs. Use `concurrency.cancel-in-progress: true` to avoid queue buildup.
 
-  deploy-staging:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Deploying to staging..."
+> 📖 [references/workflow-syntax-reference.md](references/workflow-syntax-reference.md)
 
-  deploy-prod:
-    needs: [test, deploy-staging]  # Multiple dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Deploying to production..."
-```
+### Jobs, Steps & Runners
 
-### Conditional Jobs
+- **Job dependencies**: `needs: [job-a, job-b]` for DAG ordering.
+- **Conditionals**: `if: github.ref == 'refs/heads/main'` on jobs or steps.
+- **Status functions**: `success()`, `failure()`, `always()`, `cancelled()`.
+- **Runners**: `ubuntu-latest` (default), `windows-latest`, `macos-latest`, or `[self-hosted, label]`.
+- **Timeouts**: Always set `timeout-minutes` to prevent runaway jobs.
 
-```yaml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Always runs"
+> 📖 [references/jobs-and-steps-patterns.md](references/jobs-and-steps-patterns.md)
 
-  deploy-dev:
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Deploy to dev"
+### Secrets, Variables & Matrix Builds
 
-  deploy-prod:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Deploy to prod"
+- **Secrets**: Use `${{ secrets.NAME }}` — never hardcode. Scoped to repo, environment, or org.
+- **Variables**: `${{ vars.NAME }}` for non-sensitive config (environment URLs, feature flags).
+- **Environment scoping**: `environment: production` restricts secret/variable access + enables approval gates.
+- **Matrix strategy**: Cross-product of OS × language version. Use `exclude` / `include` to customize. Set `fail-fast: false` for full coverage.
 
-  manual-step:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Manual trigger"
-```
+> 📖 [references/secrets-variables-matrix.md](references/secrets-variables-matrix.md)
 
-### Conditional Steps
+### Reusable Workflows & Custom Actions
 
-```yaml
-steps:
-  - name: Checkout
-    uses: actions/checkout@v4
+- **Reusable workflows** (`on: workflow_call`): DRY pattern for shared CI/CD pipelines. Accept `inputs` and `secrets`, emit `outputs`.
+- **Composite actions**: Bundle multi-step logic into a single `uses:` step. Must set `shell:` on every `run:`.
+- **JavaScript actions**: Full programmability via `@actions/core` and `@actions/github`.
+- **When to use which**: Reusable workflow = multi-job orchestration. Composite action = reusable step sequence. JS action = complex logic with API calls.
 
-  - name: Run on main branch only
-    if: github.ref == 'refs/heads/main'
-    run: echo "Main branch"
+> 📖 [references/reusable-workflows-and-actions.md](references/reusable-workflows-and-actions.md)
 
-  - name: Run on PR only
-    if: github.event_name == 'pull_request'
-    run: echo "Pull request"
+### Caching & Artifacts
 
-  - name: Run on success
-    if: success()
-    run: echo "Previous steps succeeded"
+- **Built-in caching**: Most `setup-*` actions have a `cache` input — prefer this over manual `actions/cache`.
+- **Manual caching**: Use `actions/cache@v4` with content-hash keys (`hashFiles('**/lockfile')`).
+- **Artifacts**: `upload-artifact` / `download-artifact` for passing build outputs between jobs. Set `retention-days`.
+- **Docker layer caching**: Use `cache-from: type=gha` with `docker/build-push-action`.
 
-  - name: Run on failure
-    if: failure()
-    run: echo "Previous steps failed"
-
-  - name: Always run
-    if: always()
-    run: echo "Runs regardless of status"
-
-  - name: Run on cancelled
-    if: cancelled()
-    run: echo "Workflow was cancelled"
-```
-
-### Runner Selection
-
-```yaml
-jobs:
-  linux:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Linux"
-
-  windows:
-    runs-on: windows-latest
-    steps:
-      - run: echo "Windows"
-
-  macos:
-    runs-on: macos-latest
-    steps:
-      - run: echo "macOS"
-
-  self-hosted:
-    runs-on: [self-hosted, linux, x64, gpu]
-    steps:
-      - run: echo "Self-hosted runner"
-
-  specific-version:
-    runs-on: ubuntu-22.04  # Specific version
-    steps:
-      - run: echo "Ubuntu 22.04"
-```
-
----
-
-## Actions Marketplace
-
-### Essential Actions
-
-#### Checkout Code
-
-```yaml
-- name: Checkout code
-  uses: actions/checkout@v4
-  with:
-    fetch-depth: 0  # Full history
-    submodules: true  # Include submodules
-    token: ${{ secrets.GITHUB_TOKEN }}
-```
-
-#### Setup Language Runtimes
-
-```yaml
-# Node.js
-- name: Setup Node.js
-  uses: actions/setup-node@v4
-  with:
-    node-version: '20.x'
-    cache: 'npm'
-
-# .NET
-- name: Setup .NET
-  uses: actions/setup-dotnet@v4
-  with:
-    dotnet-version: '8.0.x'
-
-# Python
-- name: Setup Python
-  uses: actions/setup-python@v5
-  with:
-    python-version: '3.11'
-    cache: 'pip'
-
-# Java
-- name: Setup Java
-  uses: actions/setup-java@v4
-  with:
-    java-version: '17'
-    distribution: 'temurin'
-    cache: 'maven'
-
-# Go
-- name: Setup Go
-  uses: actions/setup-go@v5
-  with:
-    go-version: '1.21'
-    cache: true
-```
-
-#### Caching
-
-```yaml
-- name: Cache dependencies
-  uses: actions/cache@v4
-  with:
-    path: ~/.npm
-    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-    restore-keys: |
-      ${{ runner.os }}-node-
-
-- name: Cache NuGet packages
-  uses: actions/cache@v4
-  with:
-    path: ~/.nuget/packages
-    key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-```
-
-#### Upload/Download Artifacts
-
-```yaml
-- name: Upload artifacts
-  uses: actions/upload-artifact@v4
-  with:
-    name: build-output
-    path: |
-      dist/
-      build/
-    retention-days: 7
-
-- name: Download artifacts
-  uses: actions/download-artifact@v4
-  with:
-    name: build-output
-    path: ./artifacts
-```
-
-#### Code Coverage
-
-```yaml
-- name: Upload coverage to Codecov
-  uses: codecov/codecov-action@v4
-  with:
-    token: ${{ secrets.CODECOV_TOKEN }}
-    files: ./coverage/coverage.xml
-    flags: unittests
-    name: codecov-umbrella
-    fail_ci_if_error: true
-```
-
-#### Docker
-
-```yaml
-- name: Login to Docker Hub
-  uses: docker/login-action@v3
-  with:
-    username: ${{ secrets.DOCKER_USERNAME }}
-    password: ${{ secrets.DOCKER_PASSWORD }}
-
-- name: Build and push
-  uses: docker/build-push-action@v5
-  with:
-    context: .
-    push: true
-    tags: user/app:latest
-    cache-from: type=registry,ref=user/app:buildcache
-    cache-to: type=registry,ref=user/app:buildcache,mode=max
-```
-
----
-
-## Secrets and Variables
-
-### Using Secrets
-
-```yaml
-steps:
-  - name: Use secret
-    run: echo "Secret value is hidden"
-    env:
-      API_KEY: ${{ secrets.API_KEY }}
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-  - name: Use in action
-    uses: azure/login@v1
-    with:
-      creds: ${{ secrets.AZURE_CREDENTIALS }}
-```
-
-### Environment Variables
-
-```yaml
-# Global
-env:
-  GLOBAL_VAR: 'global value'
-
-jobs:
-  build:
-    # Job-level
-    env:
-      JOB_VAR: 'job value'
-
-    steps:
-      # Step-level
-      - name: Use variables
-        env:
-          STEP_VAR: 'step value'
-        run: |
-          echo "Global: $GLOBAL_VAR"
-          echo "Job: $JOB_VAR"
-          echo "Step: $STEP_VAR"
-
-      # GitHub context variables
-      - name: GitHub variables
-        run: |
-          echo "Repository: ${{ github.repository }}"
-          echo "Ref: ${{ github.ref }}"
-          echo "SHA: ${{ github.sha }}"
-          echo "Actor: ${{ github.actor }}"
-          echo "Event: ${{ github.event_name }}"
-```
-
-### Configuration Variables
-
-```yaml
-# Repository/Organization/Environment variables
-steps:
-  - name: Use config variables
-    run: |
-      echo "Config: ${{ vars.ENVIRONMENT_NAME }}"
-      echo "URL: ${{ vars.API_URL }}"
-```
-
----
-
-## Matrix Builds
-
-### Basic Matrix
-
-```yaml
-jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [18, 20, 22]
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-    - run: npm test
-```
-
-### Matrix with Exclusions
-
-```yaml
-strategy:
-  matrix:
-    os: [ubuntu-latest, windows-latest]
-    node-version: [18, 20, 22]
-    exclude:
-      - os: windows-latest
-        node-version: 18
-
-    include:
-      - os: ubuntu-latest
-        node-version: 22
-        extra-flag: '--experimental'
-```
-
-### Fail-Fast and Max-Parallel
-
-```yaml
-strategy:
-  fail-fast: false  # Continue other jobs if one fails
-  max-parallel: 3   # Run max 3 jobs concurrently
-  matrix:
-    os: [ubuntu-latest, windows-latest, macos-latest]
-    node-version: [18, 20, 22]
-```
-
----
-
-## Caching Dependencies
-
-### Node.js (npm)
-
-```yaml
-- name: Cache node modules
-  uses: actions/cache@v4
-  with:
-    path: ~/.npm
-    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-    restore-keys: |
-      ${{ runner.os }}-node-
-
-- name: Install dependencies
-  run: npm ci
-```
-
-### .NET (NuGet)
-
-```yaml
-- name: Cache NuGet packages
-  uses: actions/cache@v4
-  with:
-    path: ~/.nuget/packages
-    key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-    restore-keys: |
-      ${{ runner.os }}-nuget-
-
-- name: Restore dependencies
-  run: dotnet restore
-```
-
-### Python (pip)
-
-```yaml
-- name: Cache pip packages
-  uses: actions/cache@v4
-  with:
-    path: ~/.cache/pip
-    key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-    restore-keys: |
-      ${{ runner.os }}-pip-
-
-- name: Install dependencies
-  run: pip install -r requirements.txt
-```
-
-### Docker Layers
-
-```yaml
-- name: Setup Docker Buildx
-  uses: docker/setup-buildx-action@v3
-
-- name: Build with cache
-  uses: docker/build-push-action@v5
-  with:
-    context: .
-    push: false
-    cache-from: type=gha
-    cache-to: type=gha,mode=max
-```
-
----
-
-## Environments and Deployments
-
-### Environment Configuration
-
-```yaml
-jobs:
-  deploy-staging:
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: https://staging.app.example.com
-
-    steps:
-    - name: Deploy to staging
-      run: echo "Deploying..."
-      env:
-        API_KEY: ${{ secrets.STAGING_API_KEY }}
-
-  deploy-prod:
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://app.example.com
-
-    steps:
-    - name: Deploy to production
-      run: echo "Deploying..."
-      env:
-        API_KEY: ${{ secrets.PROD_API_KEY }}
-```
-
-### Deployment with Approval
-
-```yaml
-# Configure required reviewers in repository settings:
-# Settings → Environments → production → Required reviewers
-
-jobs:
-  deploy-prod:
-    runs-on: ubuntu-latest
-    environment:
-      name: production  # Requires manual approval
-
-    steps:
-    - name: Deploy
-      run: echo "Deploying after approval..."
-```
-
----
-
-## Reusable Workflows
-
-### Define Reusable Workflow
-
-```yaml
-# .github/workflows/reusable-build.yml
-name: Reusable Build Workflow
-
-on:
-  workflow_call:
-    inputs:
-      node-version:
-        required: false
-        type: string
-        default: '20.x'
-      environment:
-        required: true
-        type: string
-    secrets:
-      deploy-token:
-        required: true
-    outputs:
-      build-status:
-        description: "Build completion status"
-        value: ${{ jobs.build.outputs.status }}
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    outputs:
-      status: ${{ steps.build.outputs.status }}
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ inputs.node-version }}
-
-    - name: Build
-      id: build
-      run: |
-        npm ci
-        npm run build
-        echo "status=success" >> $GITHUB_OUTPUT
-
-    - name: Deploy
-      run: echo "Deploying to ${{ inputs.environment }}"
-      env:
-        TOKEN: ${{ secrets.deploy-token }}
-```
-
-### Call Reusable Workflow
-
-```yaml
-# .github/workflows/main.yml
-name: Main Workflow
-
-on: [push]
-
-jobs:
-  build-dev:
-    uses: ./.github/workflows/reusable-build.yml
-    with:
-      node-version: '20.x'
-      environment: 'development'
-    secrets:
-      deploy-token: ${{ secrets.DEV_DEPLOY_TOKEN }}
-
-  build-prod:
-    uses: ./.github/workflows/reusable-build.yml
-    with:
-      node-version: '20.x'
-      environment: 'production'
-    secrets:
-      deploy-token: ${{ secrets.PROD_DEPLOY_TOKEN }}
-```
-
----
-
-## Custom Actions
-
-### JavaScript Action
-
-```yaml
-# action.yml
-name: 'Custom JavaScript Action'
-description: 'Example custom action'
-inputs:
-  name:
-    description: 'Name to greet'
-    required: true
-    default: 'World'
-outputs:
-  message:
-    description: 'Greeting message'
-runs:
-  using: 'node20'
-  main: 'index.js'
-```
-
-```javascript
-// index.js
-const core = require('@actions/core');
-
-try {
-  const name = core.getInput('name');
-  const message = `Hello ${name}!`;
-  core.setOutput('message', message);
-  console.log(message);
-} catch (error) {
-  core.setFailed(error.message);
-}
-```
-
-### Composite Action
-
-```yaml
-# action.yml
-name: 'Setup Project'
-description: 'Setup Node.js and install dependencies'
-inputs:
-  node-version:
-    description: 'Node.js version'
-    required: false
-    default: '20.x'
-runs:
-  using: 'composite'
-  steps:
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ inputs.node-version }}
-        cache: 'npm'
-      shell: bash
-
-    - name: Install dependencies
-      run: npm ci
-      shell: bash
-
-    - name: Run build
-      run: npm run build
-      shell: bash
-```
-
-### Use Custom Action
-
-```yaml
-steps:
-  - name: Checkout
-    uses: actions/checkout@v4
-
-  - name: Use custom action
-    uses: ./.github/actions/my-action
-    with:
-      name: 'GitHub Actions'
-
-  - name: Use composite action
-    uses: ./.github/actions/setup-project
-    with:
-      node-version: '20.x'
-```
+> 📖 [references/actions-marketplace-examples.md](references/actions-marketplace-examples.md)
 
 ---
 
 ## Security Best Practices
 
-### Secret Management
+> ⚠️ **This section is NOT compressed. Read every item.**
+
+### 1. Secret Management
 
 ```yaml
-# ✅ GOOD: Use secrets
-steps:
-  - name: Deploy
-    run: ./deploy.sh
-    env:
-      API_KEY: ${{ secrets.API_KEY }}
+# ✅ GOOD: Reference secrets through env vars
+- run: ./deploy.sh
+  env: { API_KEY: ${{ secrets.API_KEY }} }
 
-# ❌ BAD: Hardcoded secrets
-steps:
-  - name: Deploy
-    run: ./deploy.sh
-    env:
-      API_KEY: 'sk_live_abc123'  # Never do this!
+# ❌ BAD: Hardcoded credentials
+- run: ./deploy.sh
+  env: { API_KEY: 'sk_live_abc123' }  # NEVER
 ```
 
-### Pinning Action Versions
+### 2. Pin Action Versions
 
 ```yaml
-# ✅ GOOD: Pin to commit SHA
-- uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
-
-# ⚠️ OK: Pin to major version
-- uses: actions/checkout@v4
-
-# ❌ BAD: Using latest
-- uses: actions/checkout@main
+- uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # ✅ SHA pin (v4.1.1)
+- uses: actions/checkout@v4                                         # ⚠️ Major tag (OK)
+- uses: actions/checkout@main                                       # ❌ Mutable branch
 ```
 
-### Minimal Permissions
+### 3. Minimal Permissions
 
 ```yaml
-# ✅ GOOD: Explicit permissions
-permissions:
+permissions:          # ✅ Least-privilege
   contents: read
   pull-requests: write
-  issues: write
-
-# ❌ BAD: Overly permissive
-permissions: write-all
+# permissions: write-all  ← ❌ NEVER
 ```
 
-### Pull Request Security
+### 4. Pull Request Security
+
+Use `on: pull_request` (read-only token, safe for forks).
+`pull_request_target` grants write token + secrets — **only** use with label gating + SHA checkout:
 
 ```yaml
-# ✅ GOOD: Use pull_request for forks (read-only)
-on:
-  pull_request:
-
-# ⚠️ DANGEROUS: Use pull_request_target carefully (write access)
 on:
   pull_request_target:
     types: [labeled]
-
 jobs:
   safe-job:
     if: contains(github.event.pull_request.labels.*.name, 'safe-to-run')
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+        with: { ref: ${{ github.event.pull_request.head.sha }} }
 ```
 
-### Script Injection Prevention
+### 5. Script Injection Prevention
 
 ```yaml
-# ✅ GOOD: Use environment variable
-- name: Print title
-  env:
+# ✅ GOOD: Untrusted input via env var    │  # ❌ BAD: Direct interpolation
+- env:                                     │  - run: echo "${{ github.event.pull_request.title }}"
     TITLE: ${{ github.event.pull_request.title }}
   run: echo "$TITLE"
-
-# ❌ BAD: Direct interpolation (vulnerable to injection)
-- name: Print title
-  run: echo "${{ github.event.pull_request.title }}"
 ```
+
+### 6. Security Checklist
+
+- [ ] All secrets stored in GitHub Secrets (repo/org/environment), never in code
+- [ ] Actions pinned to SHA or major version tag
+- [ ] `permissions` block is explicit and minimal on every workflow
+- [ ] `pull_request_target` is avoided or gated by label + SHA checkout
+- [ ] All `${{ }}` expressions from user input go through env vars, not inline shell
+- [ ] Dependency review / `npm audit` / `dotnet list package --vulnerable` in CI
+- [ ] CODEOWNERS protects `.github/workflows/**`
+- [ ] Environment protection rules (approvals) on production deployments
 
 ---
 
 ## Troubleshooting
 
-### Debug Logging
+Set **repository secrets** `ACTIONS_RUNNER_DEBUG=true` and `ACTIONS_STEP_DEBUG=true` for verbose logs.
 
-```yaml
-# Enable debug logging by setting repository secret:
-# ACTIONS_RUNNER_DEBUG = true
-# ACTIONS_STEP_DEBUG = true
-
-steps:
-  - name: Debug information
-    run: |
-      echo "Runner OS: ${{ runner.os }}"
-      echo "Runner temp: ${{ runner.temp }}"
-      echo "Workspace: ${{ github.workspace }}"
-      echo "Event name: ${{ github.event_name }}"
-```
-
-### Common Issues
-
-#### Cache Not Working
-
-```yaml
-# Ensure cache key is unique and path is correct
-- name: Cache dependencies
-  uses: actions/cache@v4
-  with:
-    path: ~/.npm  # Verify this path
-    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-```
-
-#### Workflow Not Triggering
-
-```yaml
-# Check branch names, paths, and event types
-on:
-  push:
-    branches: [ main ]  # Case-sensitive
-    paths:
-      - 'src/**'  # Must match actual changes
-```
-
-#### Syntax Errors
+| Symptom | Fix |
+|---------|-----|
+| Push doesn't trigger | Branch name is **case-sensitive** — verify exact match |
+| Path filter blocks run | Ensure changed files match `paths:` glob |
+| Scheduled workflow missed | Cron runs on default branch only; disabled after 60 days inactivity |
+| Reusable workflow fails | Use `secrets: inherit` or pass each secret explicitly |
+| Cache miss | Verify `path` matches cache location; commit lock file |
+| Artifact not found | `download-artifact` job must `needs:` the uploading job |
+| Permission denied | Add specific permission to `permissions:` block |
 
 ```bash
-# Validate workflow syntax locally
-# Install actionlint: https://github.com/rhysd/actionlint
-actionlint .github/workflows/*.yml
+actionlint .github/workflows/*.yml   # local syntax validation
 ```
 
 ---
@@ -1075,27 +272,39 @@ actionlint .github/workflows/*.yml
 
 ### ✅ DO
 
-- Pin actions to specific versions (preferably commit SHAs)
-- Use minimal permissions
-- Cache dependencies for faster builds
-- Use matrix builds for multiple targets
-- Implement proper error handling
-- Use reusable workflows for common patterns
-- Document workflows and custom actions
-- Test workflows in feature branches
-- Use environment-specific secrets
-- Enable branch protection rules
+- Pin actions to commit SHAs (or at minimum major version tags)
+- Declare explicit `permissions` on every workflow
+- Set `timeout-minutes` on every job
+- Use `concurrency` with `cancel-in-progress` to avoid queued duplication
+- Cache dependencies (prefer built-in `cache` option on setup actions)
+- Use matrix builds for cross-platform / multi-version testing
+- Extract shared logic into reusable workflows or composite actions
+- Protect `.github/workflows/` via CODEOWNERS
+- Test workflow changes in feature branches before merging to main
+- Use environment-scoped secrets with approval gates for production
 
 ### ❌ DON'T
 
-- Hardcode secrets or credentials
-- Use `pull_request_target` without careful validation
-- Grant excessive permissions
-- Skip security scanning
-- Ignore workflow failures
-- Mix application logic with workflow logic
-- Use unstable action versions
-- Commit workflow artifacts to repository
+- Hardcode secrets or credentials anywhere in workflow files
+- Use `pull_request_target` without label gating and SHA checkout
+- Grant `write-all` permissions
+- Skip security scanning (`npm audit`, `trivy`, `CodeQL`)
+- Ignore workflow failures — treat CI red as a blocking defect
+- Use mutable branch refs (`@main`) for third-party actions
+- Commit build artifacts to the repository
+- Mix application logic with workflow orchestration logic
+
+---
+
+## Reference Files
+
+| Reference | Content |
+|-----------|---------|
+| [workflow-syntax-reference.md](references/workflow-syntax-reference.md) | Complete workflow structure, all event triggers, path/branch filters |
+| [jobs-and-steps-patterns.md](references/jobs-and-steps-patterns.md) | Job dependencies, conditionals, runner selection, status functions |
+| [actions-marketplace-examples.md](references/actions-marketplace-examples.md) | Setup actions, caching, artifacts, Docker, code coverage |
+| [secrets-variables-matrix.md](references/secrets-variables-matrix.md) | Secrets, env vars, config variables, matrix strategies |
+| [reusable-workflows-and-actions.md](references/reusable-workflows-and-actions.md) | Reusable workflows, composite actions, JS actions, caching |
 
 ---
 
@@ -1103,7 +312,6 @@ actionlint .github/workflows/*.yml
 - [CI/CD Pipelines](../ci-cd-pipelines/SKILL.md)
 - [Release Management](../release-management/SKILL.md)
 - [Security](../../architecture/security/SKILL.md)
-- [Remote Git Operations](16-remote-git-operations.md)
 
 **Resources**:
 - [GitHub Actions Documentation](https://docs.github.com/actions)
@@ -1112,5 +320,6 @@ actionlint .github/workflows/*.yml
 
 ---
 
-**Version**: 1.0
-**Last Updated**: February 5, 2026
+**Version**: 2.0.0
+**Author**: AgentX
+**Last Updated**: February 10, 2026

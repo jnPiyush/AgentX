@@ -1,946 +1,240 @@
 ---
-name: yaml-pipelines
-description: 'Comprehensive guide for creating YAML-based CI/CD pipelines across platforms including Azure Pipelines, GitLab CI, and platform-agnostic patterns.'
+name: "yaml-pipelines"
+description: "Concise guide for YAML-based CI/CD pipelines across Azure Pipelines and GitLab CI, with progressive disclosure to reference files."
+metadata:
+  author: "AgentX"
+  version: "2.0.0"
+  created: "2025-01-15"
+  updated: "2025-01-15"
+compatibility:
+  platforms: ["azure-devops", "gitlab"]
+allowed-tools: "semantic_search grep_search file_search read_file create_file replace_string_in_file run_in_terminal get_errors"
 ---
 
 # YAML Pipelines & CI/CD Configuration
 
-> **Purpose**: Best practices for creating YAML-based CI/CD pipelines across multiple platforms.
+> **Purpose**: Quick-reference guide for YAML-based CI/CD pipelines. Start here for platform selection, core patterns, and best practices. Dive into reference files for full examples.
 
 ---
 
-## Table of Contents
+## Platform Comparison — Start Here
 
-1. [Azure Pipelines](#azure-pipelines)
-2. [GitLab CI/CD](#gitlab-cicd)
-3. [Pipeline Design Patterns](#pipeline-design-patterns)
-4. [Multi-Stage Pipelines](#multi-stage-pipelines)
-5. [Templates and Reusability](#templates-and-reusability)
-6. [Variables and Parameters](#variables-and-parameters)
-7. [Conditions and Expressions](#conditions-and-expressions)
-8. [Caching and Optimization](#caching-and-optimization)
-9. [Security and Secrets](#security-and-secrets)
-10. [Best Practices](#best-practices)
+| Feature | Azure Pipelines | GitLab CI | GitHub Actions |
+|---------|----------------|-----------|----------------|
+| **Config File** | `azure-pipelines.yml` | `.gitlab-ci.yml` | `.github/workflows/*.yml` |
+| **Stages** | ✅ Native | ✅ Native | ⚠️ Jobs only |
+| **Templates** | ✅ Full support | ✅ Includes/Extends | ✅ Reusable workflows |
+| **Caching** | ✅ Cache task | ✅ Built-in | ✅ actions/cache |
+| **Environments** | ✅ Native | ✅ Native | ✅ Native |
+| **Approvals** | ✅ Environment gates | ✅ Manual `when` | ✅ Environment rules |
+| **Matrix** | ✅ `strategy.matrix` | ✅ `parallel.matrix` | ✅ `strategy.matrix` |
+| **Secrets** | ✅ Variable groups | ✅ CI/CD Variables | ✅ Secrets |
+| **Self-hosted** | ✅ Agent pools | ✅ Runners | ✅ Self-hosted runners |
+| **Best for** | Azure-heavy orgs | All-in-one DevOps | Open source / GitHub |
 
 ---
 
-## Azure Pipelines
+## Decision Tree — Choosing a Platform
 
-### Basic Pipeline Structure
+```
+Is your code hosted on GitHub?
+├─ YES → Use GitHub Actions (see ../github-actions-workflows/SKILL.md)
+├─ NO
+│   ├─ Using Azure DevOps for work items & repos?
+│   │   └─ YES → Use Azure Pipelines
+│   ├─ Using GitLab for repos & issue tracking?
+│   │   └─ YES → Use GitLab CI/CD
+│   └─ Need multi-platform or hybrid?
+│       └─ Use Azure Pipelines (broadest agent/pool support)
+```
+
+**Key considerations**:
+- **Azure Pipelines**: Best native integration with Azure services, variable groups, service connections, and approval gates.
+- **GitLab CI**: Tightest integration when you already use GitLab for SCM + issues + registry.
+- **GitHub Actions**: Ideal for open-source and GitHub-native workflows (covered in its own skill).
+
+---
+
+## Core Concepts
+
+### Pipeline Anatomy
+
+Every YAML pipeline shares these building blocks:
+
+| Concept | Azure Pipelines | GitLab CI |
+|---------|----------------|-----------|
+| **Trigger** | `trigger:` / `pr:` | `rules:` / `only:` / `except:` |
+| **Stage** | `stages: [{stage: ...}]` | `stages: [build, test, deploy]` |
+| **Job** | `jobs: [{job: ...}]` | Job name at root level |
+| **Step** | `steps: [{script: ...}]` | `script:` array |
+| **Template** | `template:` keyword | `include:` + `extends:` |
+| **Variable** | `variables:` / `parameters:` | `variables:` |
+| **Artifact** | `PublishPipelineArtifact` | `artifacts:` |
+| **Cache** | `Cache@2` task | `cache:` keyword |
+| **Environment** | `environment:` on deployment | `environment:` on job |
+
+---
+
+## Minimal Examples
+
+### Azure Pipelines — Build + Deploy
 
 ```yaml
 # azure-pipelines.yml
-trigger:
-  branches:
-    include:
-      - main
-      - develop
-  paths:
-    include:
-      - src/*
-    exclude:
-      - docs/*
-
-pr:
-  branches:
-    include:
-      - main
-  paths:
-    exclude:
-      - '*.md'
+trigger: [main]
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  buildConfiguration: 'Release'
-  dotnetVersion: '8.0.x'
-
-steps:
-- task: UseDotNet@2
-  displayName: 'Install .NET SDK'
-  inputs:
-    version: $(dotnetVersion)
-
-- script: dotnet restore
-  displayName: 'Restore dependencies'
-
-- script: dotnet build --configuration $(buildConfiguration)
-  displayName: 'Build project'
-
-- script: dotnet test --configuration $(buildConfiguration) --no-build
-  displayName: 'Run tests'
-
-- task: PublishTestResults@2
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/*.trx'
-```
-
-### Multi-Stage Azure Pipeline
-
-```yaml
-# azure-pipelines.yml
-trigger:
-  - main
-
-variables:
-  buildConfiguration: 'Release'
-
-stages:
-- stage: Build
-  displayName: 'Build and Test'
-  jobs:
-  - job: Build
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - task: UseDotNet@2
-      inputs:
-        version: '8.0.x'
-
-    - script: |
-        dotnet restore
-        dotnet build --configuration $(buildConfiguration)
-        dotnet test --configuration $(buildConfiguration) --collect:"XPlat Code Coverage"
-      displayName: 'Build and Test'
-
-    - task: PublishCodeCoverageResults@1
-      inputs:
-        codeCoverageTool: 'Cobertura'
-        summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
-
-    - task: PublishPipelineArtifact@1
-      inputs:
-        targetPath: '$(Build.ArtifactStagingDirectory)'
-        artifactName: 'drop'
-
-- stage: DeployDev
-  displayName: 'Deploy to Development'
-  dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
-  jobs:
-  - deployment: DeployDev
-    environment: 'development'
-    pool:
-      vmImage: 'ubuntu-latest'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - download: current
-            artifact: drop
-
-          - task: AzureWebApp@1
-            inputs:
-              azureSubscription: 'Azure-Dev'
-              appName: 'myapp-dev'
-              package: '$(Pipeline.Workspace)/drop/**/*.zip'
-
-- stage: DeployProd
-  displayName: 'Deploy to Production'
-  dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-  jobs:
-  - deployment: DeployProd
-    environment: 'production'
-    pool:
-      vmImage: 'ubuntu-latest'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - download: current
-            artifact: drop
-
-          - task: AzureWebApp@1
-            inputs:
-              azureSubscription: 'Azure-Prod'
-              appName: 'myapp-prod'
-              package: '$(Pipeline.Workspace)/drop/**/*.zip'
-```
-
-### Azure Pipeline Templates
-
-#### Template Definition
-
-```yaml
-# templates/build-template.yml
-parameters:
-  - name: buildConfiguration
-    type: string
-    default: 'Release'
-  - name: dotnetVersion
-    type: string
-    default: '8.0.x'
-  - name: runTests
-    type: boolean
-    default: true
-
-steps:
-- task: UseDotNet@2
-  displayName: 'Install .NET ${{ parameters.dotnetVersion }}'
-  inputs:
-    version: ${{ parameters.dotnetVersion }}
-
-- script: dotnet restore
-  displayName: 'Restore dependencies'
-
-- script: dotnet build --configuration ${{ parameters.buildConfiguration }}
-  displayName: 'Build'
-
-- ${{ if eq(parameters.runTests, true) }}:
-  - script: dotnet test --configuration ${{ parameters.buildConfiguration }} --no-build
-    displayName: 'Run tests'
-```
-
-#### Template Usage
-
-```yaml
-# azure-pipelines.yml
-trigger:
-  - main
+  buildConfig: 'Release'
 
 stages:
 - stage: Build
   jobs:
   - job: BuildJob
-    pool:
-      vmImage: 'ubuntu-latest'
     steps:
-    - template: templates/build-template.yml
-      parameters:
-        buildConfiguration: 'Release'
-        dotnetVersion: '8.0.x'
-        runTests: true
+    - script: dotnet build --configuration $(buildConfig)
+    - script: dotnet test --no-build
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: drop
+
+- stage: Deploy
+  dependsOn: Build
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+  jobs:
+  - deployment: Production
+    environment: production
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - script: echo "Deploying..."
 ```
 
-### Azure Pipeline with Matrix
+> **Full examples**: [references/azure-pipelines-examples.md](references/azure-pipelines-examples.md)
 
-```yaml
-strategy:
-  matrix:
-    Linux:
-      imageName: 'ubuntu-latest'
-    Windows:
-      imageName: 'windows-latest'
-    macOS:
-      imageName: 'macOS-latest'
-  maxParallel: 3
-
-pool:
-  vmImage: $(imageName)
-
-steps:
-- script: echo "Running on $(imageName)"
-```
-
----
-
-## GitLab CI/CD
-
-### Basic GitLab Pipeline
+### GitLab CI — Build + Deploy
 
 ```yaml
 # .gitlab-ci.yml
 image: node:20
-
-stages:
-  - build
-  - test
-  - deploy
-
-variables:
-  NODE_ENV: "production"
+stages: [build, test, deploy]
 
 cache:
-  paths:
-    - node_modules/
-
-before_script:
-  - npm ci
+  paths: [node_modules/]
 
 build:
   stage: build
-  script:
-    - npm run build
+  script: [npm ci, npm run build]
   artifacts:
-    paths:
-      - dist/
-    expire_in: 1 week
-
-test:unit:
-  stage: test
-  script:
-    - npm run test:unit
-  coverage: '/Coverage: \d+\.\d+%/'
-  artifacts:
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage/cobertura-coverage.xml
-
-test:integration:
-  stage: test
-  script:
-    - npm run test:integration
-
-deploy:staging:
-  stage: deploy
-  script:
-    - npm run deploy:staging
-  environment:
-    name: staging
-    url: https://staging.example.com
-  only:
-    - develop
-
-deploy:production:
-  stage: deploy
-  script:
-    - npm run deploy:production
-  environment:
-    name: production
-    url: https://example.com
-  only:
-    - main
-  when: manual
-```
-
-### GitLab with Docker
-
-```yaml
-# .gitlab-ci.yml
-image: docker:latest
-
-services:
-  - docker:dind
-
-variables:
-  DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: "/certs"
-  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
-
-stages:
-  - build
-  - test
-  - deploy
-
-before_script:
-  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-
-build:
-  stage: build
-  script:
-    - docker build -t $IMAGE_TAG .
-    - docker push $IMAGE_TAG
+    paths: [dist/]
 
 test:
   stage: test
-  script:
-    - docker pull $IMAGE_TAG
-    - docker run $IMAGE_TAG npm test
-
-deploy:
-  stage: deploy
-  script:
-    - docker pull $IMAGE_TAG
-    - docker tag $IMAGE_TAG $CI_REGISTRY_IMAGE:latest
-    - docker push $CI_REGISTRY_IMAGE:latest
-  only:
-    - main
-```
-
-### GitLab Templates and Includes
-
-```yaml
-# .gitlab-ci.yml
-include:
-  - local: 'templates/build.yml'
-  - local: 'templates/test.yml'
-  - template: Security/SAST.gitlab-ci.yml
-  - project: 'my-group/my-project'
-    file: '/templates/deploy.yml'
-
-variables:
-  APP_NAME: "my-app"
-
-stages:
-  - build
-  - test
-  - security
-  - deploy
-```
-
-```yaml
-# templates/build.yml
-.build_template:
-  stage: build
-  script:
-    - npm ci
-    - npm run build
-  artifacts:
-    paths:
-      - dist/
-
-build:development:
-  extends: .build_template
-  variables:
-    NODE_ENV: "development"
-
-build:production:
-  extends: .build_template
-  variables:
-    NODE_ENV: "production"
-```
-
----
-
-## Pipeline Design Patterns
-
-### Sequential Stages Pattern
-
-```yaml
-# Azure Pipelines
-stages:
-- stage: Build
-  jobs:
-  - job: BuildJob
-    steps:
-    - script: echo "Building..."
-
-- stage: Test
-  dependsOn: Build
-  jobs:
-  - job: TestJob
-    steps:
-    - script: echo "Testing..."
-
-- stage: Deploy
-  dependsOn: Test
-  jobs:
-  - job: DeployJob
-    steps:
-    - script: echo "Deploying..."
-```
-
-### Parallel Jobs Pattern
-
-```yaml
-# GitLab CI
-stages:
-  - test
-
-test:unit:
-  stage: test
-  script:
-    - npm run test:unit
-
-test:integration:
-  stage: test
-  script:
-    - npm run test:integration
-
-test:e2e:
-  stage: test
-  script:
-    - npm run test:e2e
-```
-
-### Fan-out/Fan-in Pattern
-
-```yaml
-# Azure Pipelines
-stages:
-- stage: Build
-  jobs:
-  - job: Build
-    steps:
-    - script: echo "Building..."
-
-- stage: ParallelTests
-  dependsOn: Build
-  jobs:
-  - job: UnitTests
-    steps:
-    - script: echo "Unit tests..."
-
-  - job: IntegrationTests
-    steps:
-    - script: echo "Integration tests..."
-
-  - job: E2ETests
-    steps:
-    - script: echo "E2E tests..."
-
-- stage: Deploy
-  dependsOn: ParallelTests  # Waits for all parallel jobs
-  jobs:
-  - job: Deploy
-    steps:
-    - script: echo "Deploying..."
-```
-
-### Canary Deployment Pattern
-
-```yaml
-# GitLab CI
-deploy:canary:
-  stage: deploy
-  script:
-    - kubectl apply -f k8s/canary/
-  environment:
-    name: production/canary
-    url: https://canary.example.com
-  only:
-    - main
-  when: manual
+  script: [npm test]
 
 deploy:production:
   stage: deploy
-  script:
-    - kubectl apply -f k8s/production/
-  environment:
-    name: production
-    url: https://example.com
-  only:
-    - main
-  when: manual
-  needs:
-    - deploy:canary
-```
-
----
-
-## Multi-Stage Pipelines
-
-### Azure Multi-Stage with Approvals
-
-```yaml
-stages:
-- stage: Build
-  jobs:
-  - job: Build
-    steps:
-    - script: echo "Building..."
-
-- stage: DeployDev
-  dependsOn: Build
-  jobs:
-  - deployment: DeployDev
-    environment: development  # No approval
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - script: echo "Deploy to dev"
-
-- stage: DeployQA
-  dependsOn: DeployDev
-  jobs:
-  - deployment: DeployQA
-    environment: qa  # Configure approval in environment settings
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - script: echo "Deploy to QA"
-
-- stage: DeployProd
-  dependsOn: DeployQA
-  jobs:
-  - deployment: DeployProd
-    environment: production  # Requires approval
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - script: echo "Deploy to production"
-```
-
-### GitLab Multi-Environment
-
-```yaml
-stages:
-  - build
-  - test
-  - deploy:dev
-  - deploy:staging
-  - deploy:prod
-
-build:
-  stage: build
-  script:
-    - npm run build
-
-test:
-  stage: test
-  script:
-    - npm test
-
-deploy:dev:
-  stage: deploy:dev
-  script:
-    - npm run deploy:dev
-  environment:
-    name: development
-  only:
-    - develop
-
-deploy:staging:
-  stage: deploy:staging
-  script:
-    - npm run deploy:staging
-  environment:
-    name: staging
-  only:
-    - main
-
-deploy:production:
-  stage: deploy:prod
-  script:
-    - npm run deploy:production
-  environment:
-    name: production
-  only:
-    - main
-  when: manual
-```
-
----
-
-## Templates and Reusability
-
-### Azure Pipeline Template with Jobs
-
-```yaml
-# templates/jobs-template.yml
-parameters:
-  - name: environments
-    type: object
-    default: []
-
-jobs:
-- ${{ each env in parameters.environments }}:
-  - deployment: Deploy_${{ env.name }}
-    environment: ${{ env.name }}
-    pool:
-      vmImage: 'ubuntu-latest'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - script: echo "Deploying to ${{ env.name }}"
-          - script: echo "URL: ${{ env.url }}"
-```
-
-```yaml
-# azure-pipelines.yml
-stages:
-- stage: Deploy
-  jobs:
-  - template: templates/jobs-template.yml
-    parameters:
-      environments:
-        - name: development
-          url: https://dev.example.com
-        - name: staging
-          url: https://staging.example.com
-        - name: production
-          url: https://example.com
-```
-
-### GitLab Extends and Includes
-
-```yaml
-# templates/.gitlab-ci-template.yml
-.deploy:
-  script:
-    - echo "Deploying to $ENVIRONMENT"
-    - ./deploy.sh $ENVIRONMENT
-  only:
-    - main
-```
-
-```yaml
-# .gitlab-ci.yml
-include:
-  - local: 'templates/.gitlab-ci-template.yml'
-
-deploy:dev:
-  extends: .deploy
-  variables:
-    ENVIRONMENT: "development"
-  environment:
-    name: development
-
-deploy:prod:
-  extends: .deploy
-  variables:
-    ENVIRONMENT: "production"
-  environment:
-    name: production
-  when: manual
-```
-
----
-
-## Variables and Parameters
-
-### Azure Pipeline Variables
-
-```yaml
-# Variable groups (defined in Azure DevOps)
-variables:
-- group: 'production-vars'
-- group: 'shared-vars'
-
-# Pipeline variables
-- name: buildConfiguration
-  value: 'Release'
-- name: vmImage
-  value: 'ubuntu-latest'
-
-# Runtime variables
-- name: timestamp
-  value: $[format('{0:yyyyMMddHHmmss}', pipeline.startTime)]
-
-# Template parameters
-parameters:
-- name: environment
-  type: string
-  default: 'dev'
-  values:
-    - dev
-    - staging
-    - prod
-
-steps:
-- script: |
-    echo "Configuration: $(buildConfiguration)"
-    echo "Environment: ${{ parameters.environment }}"
-    echo "Timestamp: $(timestamp)"
-```
-
-### GitLab Variables
-
-```yaml
-variables:
-  # Global variables
-  GLOBAL_VAR: "global value"
-
-  # Reference other variables
-  BUILD_PATH: "$CI_PROJECT_DIR/build"
-
-  # Protected variables (set in GitLab UI)
-  # DEPLOY_TOKEN: defined in Settings → CI/CD → Variables
-
-job1:
-  variables:
-    # Job-specific variables
-    LOCAL_VAR: "local value"
-  script:
-    - echo $GLOBAL_VAR
-    - echo $LOCAL_VAR
-    - echo $CI_COMMIT_SHA
-```
-
----
-
-## Conditions and Expressions
-
-### Azure Conditions
-
-```yaml
-stages:
-- stage: Deploy
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-  jobs:
-  - job: DeployJob
-    steps:
-    - script: echo "Deploying..."
-
-- stage: Notify
-  condition: or(failed(), canceled())
-  jobs:
-  - job: NotifyJob
-    steps:
-    - script: echo "Build failed or canceled"
-
-- stage: Release
-  condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
-  jobs:
-  - job: ReleaseJob
-    steps:
-    - script: echo "Creating release"
-```
-
-### GitLab Rules
-
-```yaml
-deploy:production:
-  script:
-    - ./deploy.sh
+  script: [npm run deploy:production]
+  environment: { name: production }
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
-    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
-      when: on_success
-    - when: never
-
-test:
-  script:
-    - npm test
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    - changes:
-        - src/**/*
-        - tests/**/*
 ```
+
+> **Full examples**: [references/gitlab-ci-examples.md](references/gitlab-ci-examples.md)
 
 ---
 
-## Caching and Optimization
+## Pipeline Design Patterns (Summary)
 
-### Azure Pipeline Caching
+| Pattern | When to use | Key idea |
+|---------|------------|----------|
+| **Sequential** | Simple build → test → deploy | Each stage `dependsOn` the prior |
+| **Parallel jobs** | Independent test suites | Multiple jobs in one stage |
+| **Fan-out / Fan-in** | Build once, test many, deploy once | Parallel stage converges to single deploy |
+| **Canary** | Progressive production rollout | Deploy to canary → validate → full rollout |
+| **Matrix** | Cross-platform / multi-version | `strategy.matrix` with OS or runtime combos |
+| **Environment promotion** | Dev → QA → Staging → Prod | `dependsOn` chain with approval gates |
 
-```yaml
-variables:
-  npm_config_cache: $(Pipeline.Workspace)/.npm
-
-steps:
-- task: Cache@2
-  inputs:
-    key: 'npm | "$(Agent.OS)" | package-lock.json'
-    restoreKeys: |
-      npm | "$(Agent.OS)"
-    path: $(npm_config_cache)
-  displayName: 'Cache npm packages'
-
-- script: npm ci
-  displayName: 'Install dependencies'
-
-- task: Cache@2
-  inputs:
-    key: 'nuget | "$(Agent.OS)" | **/*.csproj'
-    restoreKeys: |
-      nuget | "$(Agent.OS)"
-    path: $(UserProfile)/.nuget/packages
-  displayName: 'Cache NuGet packages'
-
-- script: dotnet restore
-  displayName: 'Restore .NET dependencies'
-```
-
-### GitLab Caching
-
-```yaml
-cache:
-  # Global cache
-  key: ${CI_COMMIT_REF_SLUG}
-  paths:
-    - node_modules/
-    - .npm/
-
-build:
-  script:
-    - npm ci --cache .npm
-    - npm run build
-  cache:
-    # Job-specific cache
-    key: ${CI_COMMIT_REF_SLUG}-build
-    paths:
-      - node_modules/
-      - dist/
-
-test:
-  script:
-    - npm test
-  cache:
-    # Cache policy
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - node_modules/
-    policy: pull  # Only download, don't upload
-```
+> **Full pattern YAML**: [references/pipeline-design-patterns.md](references/pipeline-design-patterns.md)
 
 ---
 
-## Security and Secrets
+## Multi-Stage Pipelines (Summary)
 
-### Azure Pipeline Secrets
+Multi-stage pipelines split CI and CD into discrete, gated stages.
 
-```yaml
-variables:
-- group: 'production-secrets'  # Variable group with secrets
+**Azure**: Use `stages:` with `deployment` jobs, `environment:` for gate approvals, and `condition:` for branch filtering.
 
-steps:
-- task: AzureKeyVault@2
-  inputs:
-    azureSubscription: 'Azure-Prod'
-    KeyVaultName: 'my-keyvault'
-    SecretsFilter: '*'
-    RunAsPreJob: true
+**GitLab**: Use named stages with `environment:`, `when: manual` for approval gates, and `rules:` for branch filtering.
 
-- script: |
-    echo "Using secret..."
-    # Secrets are automatically masked in logs
-  env:
-    API_KEY: $(apiKey)
-    DATABASE_PASSWORD: $(dbPassword)
-```
+| Capability | Azure | GitLab |
+|-----------|-------|--------|
+| Approval gates | Environment checks & approvals | `when: manual` |
+| Branch filters | `condition:` expressions | `rules:` / `only:` |
+| Artifact passing | `download: current` | `dependencies:` / `needs:` |
+| Rollback | Re-run previous deployment | Re-trigger prior stage |
 
-### GitLab Secrets
+> **Full multi-stage YAML**: [references/multi-stage-pipelines.md](references/multi-stage-pipelines.md)
 
-```yaml
-# Define secrets in Settings → CI/CD → Variables
+---
 
-deploy:
-  script:
-    - echo "Deploying with token..."
-    - ./deploy.sh
-  environment:
-    name: production
-  variables:
-    # Use protected variables for sensitive data
-    DATABASE_URL: $PROD_DATABASE_URL
-    API_TOKEN: $PROD_API_TOKEN
-  only:
-    - main
-```
+## Templates, Variables, Caching (Summary)
 
-### Security Scanning
+### Templates & Reusability
 
-```yaml
-# Azure Pipelines
-- task: SonarCloudPrepare@1
-  inputs:
-    SonarCloud: 'SonarCloud'
-    organization: 'my-org'
-    scannerMode: 'CLI'
+- **Azure**: `template:` keyword with `parameters:`. Supports step, job, and stage templates.
+- **GitLab**: `include:` (local/remote/project) + `extends:` for inheritance.
 
-- script: dotnet build
+### Variables & Parameters
 
-- task: SonarCloudAnalyze@1
+- **Azure**: `variables:` (compile/runtime), `parameters:` (typed inputs), variable groups.
+- **GitLab**: `variables:` (global/job), CI/CD UI variables, `dotenv` artifacts.
 
-- task: SonarCloudPublish@1
-  inputs:
-    pollingTimeoutSec: '300'
-```
+### Caching
 
-```yaml
-# GitLab CI
-include:
-  - template: Security/SAST.gitlab-ci.yml
-  - template: Security/Dependency-Scanning.gitlab-ci.yml
-  - template: Security/Secret-Detection.gitlab-ci.yml
+- **Azure**: `Cache@2` task with composite key (`OS | lockfile`).
+- **GitLab**: `cache:` with `key:`, `paths:`, `policy:` (pull/push/pull-push).
 
-sast:
-  stage: test
-  variables:
-    SAST_EXCLUDED_PATHS: "spec, test, tests, tmp"
-```
+### Conditions
+
+- **Azure**: `condition:` with expressions — `eq()`, `and()`, `startsWith()`.
+- **GitLab**: `rules:` with `if:`, `changes:`, `exists:`, `when:`.
+
+> **Full reference**: [references/templates-variables-caching.md](references/templates-variables-caching.md)
+
+---
+
+## Security & Secrets
+
+### Principles
+
+1. **Never hardcode secrets** — use platform secret stores
+2. **Least privilege** — scope service connections and tokens narrowly
+3. **Mask secrets** — both platforms auto-mask; verify with `echo` tests
+4. **Rotate regularly** — automate rotation where possible
+5. **Scan continuously** — integrate SAST, dependency scanning, secret detection
+
+### Platform Secret Stores
+
+| Platform | Store | Access pattern |
+|----------|-------|----------------|
+| Azure Pipelines | Variable groups + Key Vault | `AzureKeyVault@2` task, `$(secret)` |
+| GitLab CI | Settings → CI/CD → Variables | `$SECRET_NAME`, protected/masked flags |
+
+### Security Scanning Checklist
+
+- [ ] SAST (static analysis) in test stage
+- [ ] Dependency scanning for known CVEs
+- [ ] Secret detection in pre-commit and CI
+- [ ] Container image scanning (if applicable)
+- [ ] License compliance checks
+
+> **Full security examples**: [references/templates-variables-caching.md](references/templates-variables-caching.md) (security section)
 
 ---
 
@@ -955,80 +249,80 @@ sast:
 - Use templates for reusable logic
 
 **Performance:**
-- Cache dependencies aggressively
+- Cache dependencies aggressively (lockfile-keyed)
 - Use matrix builds for parallel testing
 - Minimize artifact size and retention
 - Parallelize independent jobs
 
 **Security:**
-- Store secrets in secure variable stores
+- Store secrets in platform-native secret stores
 - Use protected variables for production
 - Scan for vulnerabilities automatically
-- Implement least privilege access
-- Never log sensitive information
+- Implement least-privilege service connections
+- Never log or echo sensitive values
 
 **Testing:**
-- Run tests in CI pipeline
-- Publish test results and coverage
+- Run tests in CI — fail the build on failure
+- Publish test results and coverage reports
 - Fail fast on critical errors
-- Test deployment process in lower environments
+- Test deployment process in lower environments first
 
 **Deployment:**
 - Use environment-specific configurations
 - Implement approval gates for production
 - Test rollback procedures
-- Monitor deployment health
+- Monitor deployment health post-release
 
 ### ❌ DON'T
 
 **Anti-Patterns:**
-- Hardcode secrets or credentials
-- Skip testing stages
-- Deploy directly to production from feature branches
-- Ignore pipeline failures
-- Create overly complex pipelines
+- Hardcode secrets or credentials in YAML
+- Skip testing stages for "quick" deploys
+- Deploy to production from feature branches
+- Ignore pipeline failures ("it'll fix itself")
+- Build monolithic single-job pipelines
 
-**Performance:**
+**Performance Anti-Patterns:**
 - Run all jobs sequentially when they can be parallel
-- Skip caching frequently accessed dependencies
-- Keep all artifacts indefinitely
-- Run unnecessary steps in every job
+- Skip caching for dependencies restored every run
+- Retain all artifacts indefinitely (set `expire_in`)
+- Run unnecessary steps on every trigger
 
-**Security:**
-- Expose secrets in logs or artifacts
-- Use overly permissive service connections
-- Skip security scanning
+**Security Anti-Patterns:**
+- Echo secrets in scripts or expose in artifacts
+- Use org-wide service connections for single projects
+- Skip security scanning to "save time"
 - Share production credentials across environments
 
 ---
 
-## Platform Comparison
+## Reference Files
 
-| Feature | Azure Pipelines | GitLab CI | GitHub Actions |
-|---------|----------------|-----------|----------------|
-| **Config File** | `azure-pipelines.yml` | `.gitlab-ci.yml` | `.github/workflows/*.yml` |
-| **Stages** | ✅ Native | ✅ Native | ⚠️ Jobs only |
-| **Templates** | ✅ Full support | ✅ Includes/Extends | ✅ Reusable workflows |
-| **Caching** | ✅ Cache task | ✅ Built-in | ✅ actions/cache |
-| **Environments** | ✅ Native | ✅ Native | ✅ Native |
-| **Approvals** | ✅ Environment gates | ✅ Manual when | ✅ Environment rules |
-| **Matrix** | ✅ strategy.matrix | ✅ parallel.matrix | ✅ strategy.matrix |
-| **Secrets** | ✅ Variable groups | ✅ CI/CD Variables | ✅ Secrets |
+| Topic | File |
+|-------|------|
+| Azure Pipelines full examples | [references/azure-pipelines-examples.md](references/azure-pipelines-examples.md) |
+| GitLab CI/CD full examples | [references/gitlab-ci-examples.md](references/gitlab-ci-examples.md) |
+| Pipeline design patterns (YAML) | [references/pipeline-design-patterns.md](references/pipeline-design-patterns.md) |
+| Multi-stage pipelines (Azure + GitLab) | [references/multi-stage-pipelines.md](references/multi-stage-pipelines.md) |
+| Templates, variables, caching, security | [references/templates-variables-caching.md](references/templates-variables-caching.md) |
 
 ---
 
-**Related Skills**:
-- [GitHub Actions & Workflows](../github-actions-workflows/SKILL.md)
-- [Release Management](../release-management/SKILL.md)
-- [Security](../../architecture/security/SKILL.md)
-- [Remote Git Operations](../remote-git-operations/SKILL.md)
+## Related Skills
 
-**Resources**:
+- [GitHub Actions & Workflows](../github-actions-workflows/SKILL.md) — GitHub-native CI/CD
+- [Release Management](../release-management/SKILL.md) — Versioning, changelogs, release flows
+- [Security](../../architecture/security/SKILL.md) — Application security practices
+- [Remote Git Operations](../remote-git-operations/SKILL.md) — Branch strategies and git workflows
+
+## Resources
+
 - [Azure Pipelines Documentation](https://learn.microsoft.com/azure/devops/pipelines/)
 - [GitLab CI/CD Documentation](https://docs.gitlab.com/ee/ci/)
 - [YAML Specification](https://yaml.org/spec/)
 
 ---
 
-**Version**: 1.0
-**Last Updated**: February 5, 2026
+**Version**: 2.0.0
+**Author**: AgentX
+**Last Updated**: February 10, 2026
