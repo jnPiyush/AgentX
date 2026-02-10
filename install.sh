@@ -246,6 +246,9 @@ echo -e "${CYAN}  Core documentation...${NC}"
 download_file "AGENTS.md" "AGENTS.md"
 download_file "Skills.md" "Skills.md"
 download_file "CONTRIBUTING.md" "CONTRIBUTING.md"
+download_file "CHANGELOG.md" "CHANGELOG.md"
+download_file "README.md" "README.md"
+download_file ".gitignore" ".gitignore"
 
 # GitHub configuration
 echo -e "${CYAN}  GitHub configuration...${NC}"
@@ -253,11 +256,13 @@ download_file ".github/copilot-instructions.md" ".github/copilot-instructions.md
 download_file ".github/CODEOWNERS" ".github/CODEOWNERS"
 download_file ".github/agentx-security.yml" ".github/agentx-security.yml"
 download_file ".github/PULL_REQUEST_TEMPLATE.md" ".github/PULL_REQUEST_TEMPLATE.md"
+download_file ".github/security/allowed-commands.json" ".github/security/allowed-commands.json"
 
 # Workflows
 echo -e "${CYAN}  GitHub Actions workflows...${NC}"
 download_file ".github/workflows/agent-x.yml" ".github/workflows/agent-x.yml"
 download_file ".github/workflows/quality-gates.yml" ".github/workflows/quality-gates.yml"
+download_file ".github/workflows/dependency-scanning.yml" ".github/workflows/dependency-scanning.yml"
 
 # Git hooks
 echo -e "${CYAN}  Git hooks...${NC}"
@@ -275,6 +280,7 @@ download_file ".github/ISSUE_TEMPLATE/bug.yml" ".github/ISSUE_TEMPLATE/bug.yml"
 download_file ".github/ISSUE_TEMPLATE/spike.yml" ".github/ISSUE_TEMPLATE/spike.yml"
 download_file ".github/ISSUE_TEMPLATE/docs.yml" ".github/ISSUE_TEMPLATE/docs.yml"
 download_file ".github/ISSUE_TEMPLATE/devops.yml" ".github/ISSUE_TEMPLATE/devops.yml"
+download_file ".github/ISSUE_TEMPLATE/feature-local-mode.md" ".github/ISSUE_TEMPLATE/feature-local-mode.md"
 
 # Agent definitions
 echo -e "${CYAN}  Agent definitions...${NC}"
@@ -295,6 +301,7 @@ download_file ".github/templates/SPEC-TEMPLATE.md" ".github/templates/SPEC-TEMPL
 download_file ".github/templates/UX-TEMPLATE.md" ".github/templates/UX-TEMPLATE.md"
 download_file ".github/templates/REVIEW-TEMPLATE.md" ".github/templates/REVIEW-TEMPLATE.md"
 download_file ".github/templates/PROGRESS-TEMPLATE.md" ".github/templates/PROGRESS-TEMPLATE.md"
+download_file ".github/templates/README.md" ".github/templates/README.md"
 
 # Instructions
 echo -e "${CYAN}  Coding instructions...${NC}"
@@ -334,8 +341,8 @@ download_file ".github/prompts/devops.prompt.md" ".github/prompts/devops.prompt.
 download_file ".github/prompts/security-review.prompt.md" ".github/prompts/security-review.prompt.md"
 download_file ".github/prompts/bug-triage.prompt.md" ".github/prompts/bug-triage.prompt.md"
 
-# Skills (33 production skills organized by category)
-echo -e "${CYAN}  Production skills (33 skills)...${NC}"
+# Skills (36 production skills organized by category)
+echo -e "${CYAN}  Production skills (36 skills)...${NC}"
 
 # Architecture skills
 for skill in core-principles security performance database scalability code-organization api-design; do
@@ -343,7 +350,7 @@ for skill in core-principles security performance database scalability code-orga
 done
 
 # Development skills
-for skill in testing error-handling configuration documentation version-control type-safety dependency-management logging-monitoring code-review-and-audit csharp python frontend-ui react blazor postgresql sql-server go rust; do
+for skill in testing error-handling configuration documentation version-control type-safety dependency-management logging-monitoring code-review-and-audit csharp python frontend-ui react blazor postgresql sql-server go rust mcp-server-development data-analysis; do
     download_file ".github/skills/development/$skill/SKILL.md" ".github/skills/development/$skill/SKILL.md"
 done
 
@@ -355,13 +362,55 @@ download_file ".github/skills/operations/release-management/SKILL.md" ".github/s
 
 # Cloud skills
 download_file ".github/skills/cloud/azure/SKILL.md" ".github/skills/cloud/azure/SKILL.md"
+download_file ".github/skills/cloud/containerization/SKILL.md" ".github/skills/cloud/containerization/SKILL.md"
 
 # AI Systems skills
 download_file ".github/skills/ai-systems/ai-agent-development/SKILL.md" ".github/skills/ai-systems/ai-agent-development/SKILL.md"
 download_file ".github/skills/ai-systems/prompt-engineering/SKILL.md" ".github/skills/ai-systems/prompt-engineering/SKILL.md"
+download_file ".github/skills/ai-systems/skill-creator/SKILL.md" ".github/skills/ai-systems/skill-creator/SKILL.md"
 
 # Design skills
 download_file ".github/skills/design/ux-ui-design/SKILL.md" ".github/skills/design/ux-ui-design/SKILL.md"
+
+# Skill reference files (progressive disclosure)
+echo -e "${CYAN}  Skill references and scripts...${NC}"
+
+# ai-agent-development references
+download_file ".github/skills/ai-systems/ai-agent-development/LICENSE.txt" ".github/skills/ai-systems/ai-agent-development/LICENSE.txt"
+download_file ".github/skills/ai-systems/ai-agent-development/references/evaluation-guide.md" ".github/skills/ai-systems/ai-agent-development/references/evaluation-guide.md"
+download_file ".github/skills/ai-systems/ai-agent-development/references/orchestration-patterns.md" ".github/skills/ai-systems/ai-agent-development/references/orchestration-patterns.md"
+
+# skill-creator scripts
+download_file ".github/skills/ai-systems/skill-creator/scripts/init-skill.ps1" ".github/skills/ai-systems/skill-creator/scripts/init-skill.ps1"
+
+# security scripts
+download_file ".github/skills/architecture/security/scripts/scan-security.ps1" ".github/skills/architecture/security/scripts/scan-security.ps1"
+download_file ".github/skills/architecture/security/scripts/scan-secrets.ps1" ".github/skills/architecture/security/scripts/scan-secrets.ps1"
+
+# ux-ui-design references
+for ref in accessibility-patterns html-prototype-code research-templates responsive-patterns usability-testing-template; do
+    download_file ".github/skills/design/ux-ui-design/references/$ref.md" ".github/skills/design/ux-ui-design/references/$ref.md"
+done
+
+# testing scripts
+download_file ".github/skills/development/testing/scripts/check-coverage.ps1" ".github/skills/development/testing/scripts/check-coverage.ps1"
+download_file ".github/skills/development/testing/scripts/check-test-pyramid.ps1" ".github/skills/development/testing/scripts/check-test-pyramid.ps1"
+
+# github-actions-workflows references
+for ref in workflow-syntax-reference jobs-and-steps-patterns actions-marketplace-examples secrets-variables-matrix reusable-workflows-and-actions; do
+    download_file ".github/skills/operations/github-actions-workflows/references/$ref.md" ".github/skills/operations/github-actions-workflows/references/$ref.md"
+done
+
+# release-management references and scripts
+for ref in release-pipeline-examples deployment-strategy-examples rollback-scripts release-automation-workflows release-runbook-template; do
+    download_file ".github/skills/operations/release-management/references/$ref.md" ".github/skills/operations/release-management/references/$ref.md"
+done
+download_file ".github/skills/operations/release-management/scripts/version-bump.ps1" ".github/skills/operations/release-management/scripts/version-bump.ps1"
+
+# yaml-pipelines references
+for ref in azure-pipelines-examples gitlab-ci-examples pipeline-design-patterns multi-stage-pipelines templates-variables-caching; do
+    download_file ".github/skills/operations/yaml-pipelines/references/$ref.md" ".github/skills/operations/yaml-pipelines/references/$ref.md"
+done
 
 # Documentation
 echo -e "${CYAN}  Documentation...${NC}"
@@ -369,6 +418,8 @@ download_file "docs/mcp-integration.md" "docs/mcp-integration.md"
 download_file "docs/troubleshooting.md" "docs/troubleshooting.md"
 download_file "docs/project-setup.md" "docs/project-setup.md"
 download_file "docs/markdown-to-doc-conversion.md" "docs/markdown-to-doc-conversion.md"
+download_file "docs/NEW-FEATURES-v2.1.md" "docs/NEW-FEATURES-v2.1.md"
+download_file "docs/assets/agentx-logo.svg" "docs/assets/agentx-logo.svg"
 
 # v3.0 Documentation
 echo -e "${CYAN}  v3.0 feature documentation...${NC}"
@@ -395,6 +446,14 @@ for dir in docs/prd docs/adr docs/specs docs/ux docs/reviews docs/progress; do
         echo -e "${GREEN}✓ Created: $dir/${NC}"
     fi
 done
+
+# Example documents (help users understand output formats)
+echo -e "${CYAN}  Example documents...${NC}"
+download_file "docs/prd/PRD-EXAMPLE.md" "docs/prd/PRD-EXAMPLE.md"
+download_file "docs/adr/ADR-EXAMPLE.md" "docs/adr/ADR-EXAMPLE.md"
+download_file "docs/specs/SPEC-EXAMPLE.md" "docs/specs/SPEC-EXAMPLE.md"
+download_file "docs/reviews/REVIEW-EXAMPLE.md" "docs/reviews/REVIEW-EXAMPLE.md"
+download_file "docs/ux/UX-EXAMPLE.md" "docs/ux/UX-EXAMPLE.md"
 
 # Local Mode support (when no git or user preference)
 if [ ! -d ".git" ]; then

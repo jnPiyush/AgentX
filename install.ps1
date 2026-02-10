@@ -359,6 +359,9 @@ Write-Info "Core documentation..."
 Get-FileDownload "AGENTS.md" "AGENTS.md"
 Get-FileDownload "Skills.md" "Skills.md"
 Get-FileDownload "CONTRIBUTING.md" "CONTRIBUTING.md"
+Get-FileDownload "CHANGELOG.md" "CHANGELOG.md"
+Get-FileDownload "README.md" "README.md"
+Get-FileDownload ".gitignore" ".gitignore"
 
 # GitHub configuration
 Write-Info "GitHub configuration..."
@@ -366,11 +369,13 @@ Get-FileDownload ".github/copilot-instructions.md" ".github/copilot-instructions
 Get-FileDownload ".github/CODEOWNERS" ".github/CODEOWNERS"
 Get-FileDownload ".github/agentx-security.yml" ".github/agentx-security.yml"
 Get-FileDownload ".github/PULL_REQUEST_TEMPLATE.md" ".github/PULL_REQUEST_TEMPLATE.md"
+Get-FileDownload ".github/security/allowed-commands.json" ".github/security/allowed-commands.json"
 
 # Workflows
 Write-Info "GitHub Actions workflows..."
 Get-FileDownload ".github/workflows/agent-x.yml" ".github/workflows/agent-x.yml"
 Get-FileDownload ".github/workflows/quality-gates.yml" ".github/workflows/quality-gates.yml"
+Get-FileDownload ".github/workflows/dependency-scanning.yml" ".github/workflows/dependency-scanning.yml"
 
 # Git hooks
 Write-Info "Git hooks..."
@@ -388,6 +393,7 @@ Get-FileDownload ".github/ISSUE_TEMPLATE/bug.yml" ".github/ISSUE_TEMPLATE/bug.ym
 Get-FileDownload ".github/ISSUE_TEMPLATE/spike.yml" ".github/ISSUE_TEMPLATE/spike.yml"
 Get-FileDownload ".github/ISSUE_TEMPLATE/docs.yml" ".github/ISSUE_TEMPLATE/docs.yml"
 Get-FileDownload ".github/ISSUE_TEMPLATE/devops.yml" ".github/ISSUE_TEMPLATE/devops.yml"
+Get-FileDownload ".github/ISSUE_TEMPLATE/feature-local-mode.md" ".github/ISSUE_TEMPLATE/feature-local-mode.md"
 
 # Agent definitions
 Write-Info "Agent definitions..."
@@ -408,6 +414,7 @@ Get-FileDownload ".github/templates/SPEC-TEMPLATE.md" ".github/templates/SPEC-TE
 Get-FileDownload ".github/templates/UX-TEMPLATE.md" ".github/templates/UX-TEMPLATE.md"
 Get-FileDownload ".github/templates/REVIEW-TEMPLATE.md" ".github/templates/REVIEW-TEMPLATE.md"
 Get-FileDownload ".github/templates/PROGRESS-TEMPLATE.md" ".github/templates/PROGRESS-TEMPLATE.md"
+Get-FileDownload ".github/templates/README.md" ".github/templates/README.md"
 
 # Instructions
 Write-Info "Coding instructions..."
@@ -431,20 +438,64 @@ Get-FileDownload ".github/prompts/devops.prompt.md" ".github/prompts/devops.prom
 Get-FileDownload ".github/prompts/security-review.prompt.md" ".github/prompts/security-review.prompt.md"
 Get-FileDownload ".github/prompts/bug-triage.prompt.md" ".github/prompts/bug-triage.prompt.md"
 
-# Skills (33 production skills organized by category)
-Write-Info "Production skills (33 skills)..."
+# Skills (36 production skills organized by category)
+Write-Info "Production skills (36 skills)..."
 $skills = @{
     "architecture" = @("core-principles", "security", "performance", "database", "scalability", "code-organization", "api-design")
-    "development" = @("testing", "error-handling", "configuration", "documentation", "version-control", "type-safety", "dependency-management", "logging-monitoring", "code-review-and-audit", "csharp", "python", "frontend-ui", "react", "blazor", "postgresql", "sql-server", "go", "rust")
+    "development" = @("testing", "error-handling", "configuration", "documentation", "version-control", "type-safety", "dependency-management", "logging-monitoring", "code-review-and-audit", "csharp", "python", "frontend-ui", "react", "blazor", "postgresql", "sql-server", "go", "rust", "mcp-server-development", "data-analysis")
     "operations" = @("remote-git-operations", "github-actions-workflows", "yaml-pipelines", "release-management")
-    "cloud" = @("azure")
-    "ai-systems" = @("ai-agent-development", "prompt-engineering")
+    "cloud" = @("azure", "containerization")
+    "ai-systems" = @("ai-agent-development", "prompt-engineering", "skill-creator")
     "design" = @("ux-ui-design")
 }
 foreach ($category in $skills.Keys) {
     foreach ($skill in $skills[$category]) {
         Get-FileDownload ".github/skills/$category/$skill/SKILL.md" ".github/skills/$category/$skill/SKILL.md"
     }
+}
+
+# Skill reference files (progressive disclosure)
+Write-Info "Skill references and scripts..."
+
+# ai-agent-development references
+Get-FileDownload ".github/skills/ai-systems/ai-agent-development/LICENSE.txt" ".github/skills/ai-systems/ai-agent-development/LICENSE.txt"
+Get-FileDownload ".github/skills/ai-systems/ai-agent-development/references/evaluation-guide.md" ".github/skills/ai-systems/ai-agent-development/references/evaluation-guide.md"
+Get-FileDownload ".github/skills/ai-systems/ai-agent-development/references/orchestration-patterns.md" ".github/skills/ai-systems/ai-agent-development/references/orchestration-patterns.md"
+
+# skill-creator scripts
+Get-FileDownload ".github/skills/ai-systems/skill-creator/scripts/init-skill.ps1" ".github/skills/ai-systems/skill-creator/scripts/init-skill.ps1"
+
+# security scripts
+Get-FileDownload ".github/skills/architecture/security/scripts/scan-security.ps1" ".github/skills/architecture/security/scripts/scan-security.ps1"
+Get-FileDownload ".github/skills/architecture/security/scripts/scan-secrets.ps1" ".github/skills/architecture/security/scripts/scan-secrets.ps1"
+
+# ux-ui-design references
+$uxRefs = @("accessibility-patterns", "html-prototype-code", "research-templates", "responsive-patterns", "usability-testing-template")
+foreach ($ref in $uxRefs) {
+    Get-FileDownload ".github/skills/design/ux-ui-design/references/$ref.md" ".github/skills/design/ux-ui-design/references/$ref.md"
+}
+
+# testing scripts
+Get-FileDownload ".github/skills/development/testing/scripts/check-coverage.ps1" ".github/skills/development/testing/scripts/check-coverage.ps1"
+Get-FileDownload ".github/skills/development/testing/scripts/check-test-pyramid.ps1" ".github/skills/development/testing/scripts/check-test-pyramid.ps1"
+
+# github-actions-workflows references
+$gaRefs = @("workflow-syntax-reference", "jobs-and-steps-patterns", "actions-marketplace-examples", "secrets-variables-matrix", "reusable-workflows-and-actions")
+foreach ($ref in $gaRefs) {
+    Get-FileDownload ".github/skills/operations/github-actions-workflows/references/$ref.md" ".github/skills/operations/github-actions-workflows/references/$ref.md"
+}
+
+# release-management references and scripts
+$rmRefs = @("release-pipeline-examples", "deployment-strategy-examples", "rollback-scripts", "release-automation-workflows", "release-runbook-template")
+foreach ($ref in $rmRefs) {
+    Get-FileDownload ".github/skills/operations/release-management/references/$ref.md" ".github/skills/operations/release-management/references/$ref.md"
+}
+Get-FileDownload ".github/skills/operations/release-management/scripts/version-bump.ps1" ".github/skills/operations/release-management/scripts/version-bump.ps1"
+
+# yaml-pipelines references
+$ypRefs = @("azure-pipelines-examples", "gitlab-ci-examples", "pipeline-design-patterns", "multi-stage-pipelines", "templates-variables-caching")
+foreach ($ref in $ypRefs) {
+    Get-FileDownload ".github/skills/operations/yaml-pipelines/references/$ref.md" ".github/skills/operations/yaml-pipelines/references/$ref.md"
 }
 
 # VS Code configuration
@@ -458,6 +509,8 @@ Get-FileDownload "docs/mcp-integration.md" "docs/mcp-integration.md"
 Get-FileDownload "docs/project-setup.md" "docs/project-setup.md"
 Get-FileDownload "docs/troubleshooting.md" "docs/troubleshooting.md"
 Get-FileDownload "docs/markdown-to-doc-conversion.md" "docs/markdown-to-doc-conversion.md"
+Get-FileDownload "docs/NEW-FEATURES-v2.1.md" "docs/NEW-FEATURES-v2.1.md"
+Get-FileDownload "docs/assets/agentx-logo.svg" "docs/assets/agentx-logo.svg"
 
 # v3.0 Documentation
 Write-Info "v3.0 feature documentation..."
@@ -480,6 +533,14 @@ foreach ($dir in $dirs) {
         Write-Success "Created: $dir/"
     }
 }
+
+# Example documents (help users understand output formats)
+Write-Info "Example documents..."
+Get-FileDownload "docs/prd/PRD-EXAMPLE.md" "docs/prd/PRD-EXAMPLE.md"
+Get-FileDownload "docs/adr/ADR-EXAMPLE.md" "docs/adr/ADR-EXAMPLE.md"
+Get-FileDownload "docs/specs/SPEC-EXAMPLE.md" "docs/specs/SPEC-EXAMPLE.md"
+Get-FileDownload "docs/reviews/REVIEW-EXAMPLE.md" "docs/reviews/REVIEW-EXAMPLE.md"
+Get-FileDownload "docs/ux/UX-EXAMPLE.md" "docs/ux/UX-EXAMPLE.md"
 
 # Initialize Local Mode if enabled
 if ($useLocalMode) {
