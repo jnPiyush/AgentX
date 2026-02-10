@@ -24,12 +24,17 @@ inputs:
     description: "Decision status"
     required: false
     default: "Accepted"
+  author:
+    description: "Author of this architectural decision"
+    required: false
+    default: ""
 ---
 
 # ADR-${decision_id}: ${decision_title}
 
 **Status**: ${status}
 **Date**: ${date}  
+**Author**: ${author}  
 **Epic**: #${epic_id}  
 **Issue**: #${issue_number}  
 **PRD**: [PRD-${epic_id}.md](../prd/PRD-${epic_id}.md)  

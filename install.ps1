@@ -93,8 +93,6 @@ Write-Host "║  AgentX v3.0.0 - Multi-Agent Orchestration       ║" -Foregroun
 Write-Host "╚═══════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host "New: Analytics, auto-fix reviewer, prompt engineering, adaptive mode" -ForegroundColor Green
 Write-Host ""
-Write-Host "╚═══════════════════════════════════════════════════╝" -ForegroundColor Cyan
-Write-Host ""
 
 # Pre-installation validation
 Write-Host "Running pre-installation checks..." -ForegroundColor Yellow
@@ -571,11 +569,17 @@ if ($useLocalMode) {
 # Validation scripts
 Write-Info "Validation scripts..."
 Get-FileDownload ".github/scripts/validate-handoff.sh" ".github/scripts/validate-handoff.sh"
+Get-FileDownload ".github/scripts/validate-handoff.ps1" ".github/scripts/validate-handoff.ps1"
 Get-FileDownload ".github/scripts/capture-context.sh" ".github/scripts/capture-context.sh"
 Get-FileDownload ".github/scripts/capture-context.ps1" ".github/scripts/capture-context.ps1"
 Get-FileDownload ".github/scripts/setup-hooks.sh" ".github/scripts/setup-hooks.sh"
 Get-FileDownload ".github/scripts/setup-hooks.ps1" ".github/scripts/setup-hooks.ps1"
 Get-FileDownload ".github/scripts/collect-metrics.ps1" ".github/scripts/collect-metrics.ps1"
+Get-FileDownload ".github/scripts/collect-metrics.sh" ".github/scripts/collect-metrics.sh"
+
+# Git hooks (include PowerShell versions)
+Write-Info "Git hooks..."
+Get-FileDownload ".github/hooks/commit-msg.ps1" ".github/hooks/commit-msg.ps1"
 
 # Utility scripts
 Write-Info "Utility scripts..."
@@ -617,6 +621,39 @@ if (Test-Path ".git") {
 } else {
     Write-Warn "Not a Git repository - skipping hook installation"
     Write-Host "  Run 'git init' first to enable workflow enforcement"
+}
+
+# Replace GitHub username placeholder
+Write-Host ""
+Write-Host "Configuring GitHub username..." -ForegroundColor Cyan
+$githubUsername = ""
+if (-not $SkipGit -and (Get-Command gh -ErrorAction SilentlyContinue)) {
+    try {
+        $githubUsername = (gh api user --jq '.login' 2>$null)
+    } catch { }
+}
+if (-not $githubUsername -and (Get-Command git -ErrorAction SilentlyContinue)) {
+    try {
+        $githubUsername = (git config user.name 2>$null)
+    } catch { }
+}
+
+if (-not $githubUsername) {
+    $githubUsername = Read-Host "  Enter your GitHub username (for CODEOWNERS & security config)"
+}
+
+if ($githubUsername) {
+    $filesToUpdate = @(".github/CODEOWNERS", ".github/agentx-security.yml")
+    foreach ($f in $filesToUpdate) {
+        if (Test-Path $f) {
+            (Get-Content $f -Raw) -replace '<YOUR_GITHUB_USERNAME>', $githubUsername | Set-Content $f -NoNewline
+        }
+    }
+    Write-Success "Configured CODEOWNERS and security for: $githubUsername"
+} else {
+    Write-Warn "No username provided. Replace <YOUR_GITHUB_USERNAME> manually in:"
+    Write-Host "  - .github/CODEOWNERS"
+    Write-Host "  - .github/agentx-security.yml"
 }
 
 # Done

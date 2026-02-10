@@ -1,8 +1,8 @@
-# Agent X (YOLO) - Simplified
-# Routes issues to agents based on type labels
+# Agent X (Auto) - Adaptive Issue Router
+# Routes issues to agents based on type labels and status
 # Status tracked via GitHub Projects V2 (not labels)
 
-name: Agent X (YOLO)
+name: Agent X (Auto)
 
 on:
   issues:
@@ -71,16 +71,20 @@ jobs:
               agent = 'engineer';  // Bugs skip PM/Architect
             } else if (labels.includes('needs:ux')) {
               agent = 'ux';
+            } else if (labels.includes('type:devops')) {
+              agent = 'devops';
             } else if (labels.includes('type:feature') || labels.includes('type:spike')) {
               agent = 'architect';
             } else if (labels.includes('type:story') || labels.includes('type:docs')) {
               agent = 'engineer';
+            } else if (labels.includes('needs:review')) {
+              agent = 'reviewer';
             }
             
             core.setOutput('agent', agent || '');
             core.setOutput('issue_number', issueNumber);
             console.log(agent ? `✅ Routing to: ${agent}` : '⏸️ No routing needed');
-            console.log('ℹ️ Note: Full Status-based routing requires Projects V2 API integration');
+            console.log('ℹ️ Status-based routing via Projects V2 GraphQL available for advanced workflows');
 
   pm:
     name: 📋 Product Manager
@@ -202,3 +206,82 @@ jobs:
         run: |
           ISSUE="${{ needs.route.outputs.issue_number }}"
           gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "🔧 **Engineer Agent**: Ready for implementation. Move status to In Progress, implement with tests (80%+ coverage), then move to In Review when done."
+
+  reviewer:
+    name: 🔍 Reviewer
+    needs: route
+    if: needs.route.outputs.agent == 'reviewer'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Create Review Scaffold
+        run: |
+          mkdir -p docs/reviews
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          if [ ! -f "docs/reviews/REVIEW-${ISSUE}.md" ]; then
+            cp .github/templates/REVIEW-TEMPLATE.md "docs/reviews/REVIEW-${ISSUE}.md"
+            sed -i "s/{issue-id}/${ISSUE}/g" "docs/reviews/REVIEW-${ISSUE}.md"
+            echo "✅ Created Review scaffold"
+          else
+            echo "⏭️ Review document already exists"
+          fi
+      
+      - name: Commit & Comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/reviews/
+          git diff --cached --quiet || git commit -m "docs: scaffold review for #${ISSUE}"
+          git push || true
+          gh issue comment ${ISSUE} --body "🔍 **Reviewer Agent**: Review scaffold created at docs/reviews/REVIEW-${ISSUE}.md - Complete review and move status to Done when approved."
+
+  devops:
+    name: ⚙️ DevOps Engineer
+    needs: route
+    if: needs.route.outputs.agent == 'devops'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Create Deployment Scaffold
+        run: |
+          mkdir -p docs/deployment
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          if [ ! -f "docs/deployment/DEPLOY-${ISSUE}.md" ]; then
+            cat > "docs/deployment/DEPLOY-${ISSUE}.md" <<DEPLOY_EOF
+# Deployment Plan - Issue #${ISSUE}
+
+## Pipeline Configuration
+<!-- Describe CI/CD pipeline changes -->
+
+## Environment Changes
+<!-- Describe environment/infrastructure changes -->
+
+## Rollback Plan
+<!-- Describe rollback procedure -->
+
+## Security Checklist
+- [ ] No hardcoded secrets
+- [ ] Secrets use GitHub Secrets
+- [ ] Minimal permissions applied
+DEPLOY_EOF
+            echo "✅ Created deployment scaffold"
+          else
+            echo "⏭️ Deployment doc already exists"
+          fi
+      
+      - name: Commit & Comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/deployment/
+          git diff --cached --quiet || git commit -m "docs: scaffold deployment plan for #${ISSUE}"
+          git push || true
+          gh issue comment ${ISSUE} --body "⚙️ **DevOps Agent**: Deployment scaffold created at docs/deployment/DEPLOY-${ISSUE}.md - Implement pipeline and move to In Review when ready."

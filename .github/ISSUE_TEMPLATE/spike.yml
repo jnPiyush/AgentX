@@ -92,6 +92,19 @@ body:
     validations:
       required: true
   
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: Research priority
+      options:
+        - "P0 - Critical: Blocker"
+        - "P1 - High: Blocking decisions"
+        - "P2 - Medium: Important but flexible"
+        - "P3 - Low: When time permits"
+    validations:
+      required: true
+
   - type: input
     id: related-issue
     attributes:

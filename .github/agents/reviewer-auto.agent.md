@@ -102,6 +102,15 @@ Status = In Review
 
 ### Step 1: Review (Same as Standard Reviewer)
 
+> **📋 Local Mode**: If not using GitHub, use the local issue manager instead:
+> ```bash
+> # Bash:
+> .agentx/local-issue-manager.sh <action> [options]
+> # PowerShell:
+> .agentx/local-issue-manager.ps1 -Action <action> [options]
+> ```
+> See [Local Mode docs](../../docs/local-mode.md) for details.
+
 Follow the standard review checklist:
 - Code quality (SOLID, DRY, naming)
 - Tests (≥80% coverage, meaningful assertions)
@@ -216,11 +225,27 @@ Use **Standard Reviewer** when:
 
 ---
 
+## 🔄 Handoff Protocol
+
+### Approved Path (with auto-fixes applied)
+1. **Capture context**: `.github/scripts/capture-context.sh {issue_number} reviewer`
+2. **Validate handoff**: `.github/scripts/validate-handoff.sh {issue_number} reviewer`
+3. **Update status**: Move to `Done` in GitHub Projects
+4. **Close issue**: `gh issue close {issue_number}`
+
+### Changes Requested Path (complex changes beyond auto-fix)
+1. **Document findings**: Update `docs/reviews/REVIEW-{issue_number}.md` with required changes
+2. **Add `needs:changes` label**: Signal Engineer rework needed
+3. **Move status**: Back to `In Progress`
+4. **Post comment**: Summarize what was auto-fixed and what needs manual attention
+
+---
+
 ## References
 
 - **Standard Reviewer**: [reviewer.agent.md](reviewer.agent.md)
 - **Review Template**: [REVIEW-TEMPLATE.md](../templates/REVIEW-TEMPLATE.md)
-- **Skills**: [Code Review & Audit](.github/skills/development/code-review-and-audit/SKILL.md)
+- **Skills**: [Code Review & Audit](../skills/development/code-review-and-audit/SKILL.md)
 - **Workflow**: [AGENTS.md](../../AGENTS.md)
 
 ---

@@ -64,6 +64,7 @@ body:
       label: Priority
       description: Business priority
       options:
+        - "P0 - Critical: Blocker"
         - "P1 - High: Critical for release"
         - "P2 - Medium: Important but not blocking"
         - "P3 - Low: Nice to have"

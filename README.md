@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v2.2.0"><img src="https://img.shields.io/badge/Version-2.2.0-0EA5E9?style=for-the-badge" alt="Version 2.2.0"></a>
+  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v3.0.0"><img src="https://img.shields.io/badge/Version-3.0.0-0EA5E9?style=for-the-badge" alt="Version 3.0.0"></a>
   <a href="https://github.com/github/awesome-copilot"><img src="https://img.shields.io/badge/Standard-awesome--copilot-7C3AED?style=for-the-badge&logo=github" alt="Awesome Copilot"></a>
   <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Skills-agentskills.io-F97316?style=for-the-badge" alt="Skills Spec"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge" alt="MIT License"></a>
@@ -143,7 +143,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 </td>
 <td width="50%">
 
-### 📚 32 Production Skills
+### 📚 36 Production Skills
 - Testing (80%+ coverage)
 - Security (OWASP Top 10)
 - API Design (REST patterns)
@@ -338,7 +338,7 @@ Backlog → In Progress → In Review → Ready → Done
 ```
 AgentX/
 ├── 📄 AGENTS.md              # Workflow & orchestration rules
-├── 📄 Skills.md              # 32 production skills index
+├── 📄 Skills.md              # 36 production skills index
 ├── 📄 CONTRIBUTING.md        # Contributor guide
 │
 ├── 📁 .github/
@@ -347,7 +347,7 @@ AgentX/
 │   ├── 📁 templates/         # PRD, ADR, Spec, UX, Progress templates
 │   ├── 📁 prompts/           # 10 reusable prompts
 │   ├── 📁 workflows/         # GitHub Actions
-│   ├── 📁 skills/            # 32 skill documents
+│   ├── 📁 skills/            # 36 skill documents
 │   └── 📁 instructions/      # Language-specific guides
 │
 ├── 📁 .vscode/
@@ -369,7 +369,7 @@ AgentX/
 | Document | Description |
 |----------|-------------|
 | [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
-| [Skills.md](Skills.md) | 32 production skills with guidelines |
+| [Skills.md](Skills.md) | 36 production skills with guidelines |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
 | [MCP Integration](docs/mcp-integration.md) | GitHub MCP Server integration |
 | [Markdown Conversion](docs/markdown-to-doc-conversion.md) | Convert MD to DOCX using Pandoc |

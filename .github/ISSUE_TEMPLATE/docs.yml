@@ -83,6 +83,7 @@ body:
     attributes:
       label: Priority
       options:
+        - "P0 - Critical: Blocker"
         - "P1 - High: Blocking users"
         - "P2 - Medium: Should be done soon"
         - "P3 - Low: When time permits"

@@ -14,6 +14,7 @@ constraints:
   - "MUST use environment-specific configurations (dev, staging, prod)"
   - "MUST implement proper error handling and notifications"
   - "MUST follow Skills.md standards for DevOps practices"
+  - "MUST create progress log at docs/progress/ISSUE-{id}-log.md"
 boundaries:
   can_modify:
     - ".github/workflows/** (GitHub Actions workflows)"
@@ -72,6 +73,15 @@ Verify prerequisites are complete (Status = `Ready` in Projects board):
 ```
 
 > ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
+
+> **📋 Local Mode**: If not using GitHub, use the local issue manager instead:
+> ```bash
+> # Bash:
+> .agentx/local-issue-manager.sh <action> [options]
+> # PowerShell:
+> .agentx/local-issue-manager.ps1 -Action <action> [options]
+> ```
+> See [Local Mode docs](../../docs/local-mode.md) for details.
 
 ### 2. Read Context
 
@@ -569,14 +579,21 @@ Before handoff, verify:
 
 ## 🔄 Handoff Protocol
 
-### Step 1: Update Status to In Review
+### Step 1: Capture Context
+
+Run context capture script:
+```bash
+./.github/scripts/capture-context.sh {issue_number} devops
+```
+
+### Step 2: Update Status to In Review
 
 ```json
 // Update Status to "In Review" via GitHub Projects V2
 // Status: In Progress → In Review
 ```
 
-### Step 2: Post Handoff Comment
+### Step 3: Post Handoff Comment
 
 ```json
 {
@@ -606,6 +623,13 @@ Before handoff, verify:
 2. ✅ **Security check**: No secrets in code, proper secrets management
 3. ✅ **Documentation complete**: Deployment guide and runbook
 4. ✅ **Rollback tested**: Verify rollback procedure works
+
+### Pre-Handoff Validation
+
+Run validation before handoff:
+```bash
+./.github/scripts/validate-handoff.sh {issue_number} devops
+```
 
 ### Best Practices
 

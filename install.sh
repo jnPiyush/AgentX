@@ -15,6 +15,8 @@ set -e
 REPO_URL="https://raw.githubusercontent.com/jnPiyush/AgentX/master"
 FORCE=${FORCE:-false}
 DETECTED_REPO=""  # Store detected repo to avoid asking twice
+SKIP_GIT_CHECKS=false
+USE_LOCAL_MODE=false
 
 # Colors
 GREEN='\033[0;32m'
@@ -55,7 +57,7 @@ download_file() {
 echo ""
 echo -e "${CYAN}╔═══════════════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║  AgentX v3.0.0 - Multi-Agent Orchestration       ║${NC}"
-echo -e "${CYAN}╚═══════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}╚═══════════════════════════════════════════════════╝${NC}"
 echo -e "${GREEN}New: Analytics, auto-fix reviewer, prompt engineering, adaptive mode${NC}"
 echo ""
 
@@ -73,168 +75,231 @@ fi
 if [ ! -d ".git" ]; then
     echo -e "${YELLOW}[ERROR] Not a git repository${NC}"
     echo ""
-    echo -e "${YELLOW}AgentX requires a Git repository to work.${NC}"
-    echo -e "${CYAN}Initialize one with: git init${NC}"
-    echo ""
-    exit 1
-fi
-echo -e "${GREEN}[OK] Git repository detected${NC}"
-
-# Check 2: GitHub remote (optional - can setup later)
-if git remote -v 2>/dev/null | grep -q "github\.com"; then
-    echo -e "${GREEN}[OK] GitHub remote configured${NC}"
-else
-    echo -e "${YELLOW}[WARN] No GitHub remote configured${NC}"
-    echo ""
-    echo -e "\033[90mAgentX requires GitHub for Issues, Projects, and Workflows.${NC}"
-    echo ""
+    echo -e "${YELLOW}AgentX works best in a Git repository for hooks and workflows.${NC}"
     echo -e "${YELLOW}Options:${NC}"
-    echo -e "${CYAN}  [1] Set up GitHub remote now${NC}"
-    echo -e "${CYAN}  [2] Continue and set up later${NC}"
+    echo -e "${CYAN}  [1] Initialize Git repository now${NC}"
+    echo -e "${CYAN}  [2] Continue without Git (limited features)${NC}"
     echo -e "${CYAN}  [3] Cancel installation${NC}"
     echo ""
     read -p "Choose (1/2/3): " -n 1 -r
     echo ""
-    
+
     if [[ $REPLY == "1" ]]; then
-        # Only ask if not already detected
-        if [ -z "$DETECTED_REPO" ]; then
-            read -p "Enter GitHub repository (URL or owner/repo): " repoInput
-            if [[ -n $repoInput ]]; then
-                DETECTED_REPO="$repoInput"
-            fi
-        else
-            echo -e "${CYAN}Using detected repository: $DETECTED_REPO${NC}"
-        fi
+        if git init 2>/dev/null; then
+            echo -e "${GREEN}[OK] Initialized Git repository${NC}"
 
-        if [[ -n $DETECTED_REPO ]]; then
-            # Handle both URL and owner/repo formats
-            if [[ $DETECTED_REPO =~ ^(https?://|git@) ]]; then
-                repoUrl="$DETECTED_REPO"
-            elif [[ $DETECTED_REPO =~ ^[^/]+/[^/]+$ ]]; then
-                repoUrl="https://github.com/$DETECTED_REPO.git"
-            else
-                echo -e "${YELLOW}[WARN] Unrecognized format. Skipping remote setup.${NC}"
-                repoUrl=""
+            # Ask for repo only if not already detected
+            if [ -z "$DETECTED_REPO" ]; then
+                read -p "Enter GitHub repository (URL or owner/repo). Press Enter to skip: " repoInput
+                if [[ -n $repoInput ]]; then
+                    DETECTED_REPO="$repoInput"
+                fi
             fi
 
-            if [[ -n $repoUrl ]] && git remote add origin "$repoUrl" 2>/dev/null; then
-                echo -e "${GREEN}✓ GitHub remote configured: $repoUrl${NC}"
-            elif [[ -n $repoUrl ]]; then
-                echo -e "${YELLOW}⚠️  Failed to add remote. You can do it manually later.${NC}"
-            fi
-        fi
-    elif [[ ! $REPLY =~ ^[2]$ ]]; then
-        echo -e "${YELLOW}Installation cancelled.${NC}"
-        exit 1
-    fi
-fi
-
-# Check 3: GitHub CLI (optional - can install later)
-if command -v gh &> /dev/null; then
-    echo -e "${GREEN}[OK] GitHub CLI (gh) detected${NC}"
-else
-    echo -e "${YELLOW}[WARN] GitHub CLI (gh) not found${NC}"
-    echo ""
-    echo -e "\033[90mGitHub CLI is recommended for the Issue-First Workflow.${NC}"
-    echo ""
-    echo -e "${YELLOW}Options:${NC}"
-    echo -e "${CYAN}  [1] Install GitHub CLI now (auto-detect package manager)${NC}"
-    echo -e "${CYAN}  [2] Continue and install later${NC}"
-    echo -e "${CYAN}  [3] Cancel installation${NC}"
-    echo ""
-    read -p "Choose (1/2/3): " -n 1 -r
-    echo ""
-    
-    if [[ $REPLY == "1" ]]; then
-        echo -e "${YELLOW}Installing GitHub CLI...${NC}"
-        
-        # Detect package manager and install
-        if command -v brew &> /dev/null; then
-            echo -e "${YELLOW}Using Homebrew...${NC}"
-            brew install gh
-        elif command -v apt-get &> /dev/null; then
-            echo -e "${YELLOW}Using apt...${NC}"
-            (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
-            && sudo mkdir -p -m 755 /etc/apt/keyrings \
-            && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-            && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-            && sudo apt update \
-            && sudo apt install gh -y
-        elif command -v yum &> /dev/null; then
-            echo -e "${YELLOW}Using yum...${NC}"
-            sudo yum install -y gh
-        else
-            echo -e "${YELLOW}[WARN] No supported package manager found. Install manually from: https://cli.github.com/${NC}"
-        fi
-        
-        if command -v gh &> /dev/null; then
-            echo -e "${GREEN}[OK] GitHub CLI installed! Restart your terminal after installation completes.${NC}"
-        else
-            echo -e "${YELLOW}[WARN] Installation failed. Install manually from: https://cli.github.com/${NC}"
-        fi
-    elif [[ ! $REPLY =~ ^[2]$ ]]; then
-        echo -e "${YELLOW}Installation cancelled.${NC}"
-        exit 1
-    fi
-fi
-
-# Check 4: GitHub Projects V2 (setup after installation)
-echo ""
-echo -e "${CYAN}ℹ️  GitHub Projects V2 - Setup Required${NC}"
-echo ""
-echo -e "\033[90mAgentX requires a GitHub Project (V2) with Status field values:${NC}"
-echo -e "${CYAN}  • Backlog, In Progress, In Review, Ready, Done${NC}"
-echo ""
-echo -e "${YELLOW}Options:${NC}"
-echo -e "${CYAN}  [1] Create GitHub Project V2 now (requires gh CLI + auth)${NC}"
-echo -e "${CYAN}  [2] Set up manually later${NC}"
-echo ""
-read -p "Choose (1/2): " -n 1 -r
-echo ""
-
-if [[ $REPLY == "1" ]]; then
-    if command -v gh &> /dev/null; then
-        # Use detected repo or ask
-        repo="$DETECTED_REPO"
-        if [ -z "$repo" ]; then
-            read -p "Enter repository (format: owner/repo): " repo
-        else
-            echo -e "${CYAN}Using repository: $repo${NC}"
-        fi
-
-        if [[ -n $repo ]]; then
-            echo -e "${YELLOW}Creating GitHub Project V2...${NC}"
-            
-            # Get owner node_id
-            ownerId=$(gh api /repos/$repo --jq '.owner.node_id' 2>/dev/null)
-            
-            if [[ -n $ownerId ]]; then
-                # Create project
-                projectName="AgentX Workflow"
-                result=$(gh api graphql -f query="mutation { createProjectV2(input: {ownerId: \"$ownerId\", title: \"$projectName\"}) { projectV2 { id number } } }" 2>&1)
-                
-                projectNumber=$(echo "$result" | grep -oP '"number":\K[0-9]+')
-                
-                if [[ -n $projectNumber ]]; then
-                    echo -e "${GREEN}[OK] Project created! Number: #$projectNumber${NC}"
-                    echo -e "${CYAN}Visit: https://github.com/$repo/projects/$projectNumber${NC}"
-                    echo ""
-                    echo -e "${YELLOW}[INFO] Manual step required: Add Status field with these values:${NC}"
-                    echo -e "${CYAN}     Backlog, In Progress, In Review, Ready, Done${NC}"
+            if [[ -n $DETECTED_REPO ]]; then
+                if [[ $DETECTED_REPO =~ ^(https?://|git@) ]]; then
+                    repoUrl="$DETECTED_REPO"
+                elif [[ $DETECTED_REPO =~ ^[^/]+/[^/]+$ ]]; then
+                    repoUrl="https://github.com/$DETECTED_REPO.git"
                 else
-                    echo -e "${YELLOW}[WARN] Auto-creation failed. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+                    repoUrl=""
+                fi
+
+                if [[ -n $repoUrl ]] && git remote add origin "$repoUrl" 2>/dev/null; then
+                    echo -e "${GREEN}✓ GitHub remote configured: $repoUrl${NC}"
+                elif [[ -n $repoUrl ]]; then
+                    echo -e "${YELLOW}⚠️  Failed to add remote. You can set it manually later.${NC}"
+                else
+                    echo -e "${YELLOW}[WARN] Unrecognized repository format. Skipping remote setup.${NC}"
+                fi
+            fi
+        else
+            echo -e "${YELLOW}[WARN] Could not initialize a Git repository. Continuing without Git.${NC}"
+            SKIP_GIT_CHECKS=true
+        fi
+    elif [[ $REPLY == "2" ]]; then
+        SKIP_GIT_CHECKS=true
+        echo -e "${YELLOW}[WARN] Proceeding without Git; some features will be skipped.${NC}"
+    else
+        echo -e "${YELLOW}Installation cancelled.${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}[OK] Git repository detected${NC}"
+fi
+
+# Check 2: GitHub remote (optional - can use Local Mode)
+if [ "$SKIP_GIT_CHECKS" != "true" ] && [ -d ".git" ]; then
+    if git remote -v 2>/dev/null | grep -q "github\.com"; then
+        echo -e "${GREEN}[OK] GitHub remote configured${NC}"
+    else
+        echo -e "${YELLOW}[WARN] No GitHub remote configured${NC}"
+        echo ""
+        echo -e "\033[90mAgentX can work in two modes:${NC}"
+        echo ""
+        echo -e "${YELLOW}Options:${NC}"
+        echo -e "${CYAN}  [1] Set up GitHub remote (GitHub Mode - full features)${NC}"
+        echo -e "${CYAN}  [2] Use Local Mode (filesystem-based issue tracking)${NC}"
+        echo -e "${CYAN}  [3] Cancel installation${NC}"
+        echo ""
+        read -p "Choose (1/2/3): " -n 1 -r
+        echo ""
+
+        if [[ $REPLY == "1" ]]; then
+            # Only ask if not already detected
+            if [ -z "$DETECTED_REPO" ]; then
+                read -p "Enter GitHub repository (URL or owner/repo): " repoInput
+                if [[ -n $repoInput ]]; then
+                    DETECTED_REPO="$repoInput"
                 fi
             else
-                echo -e "${YELLOW}[WARN] Could not access repository. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+                echo -e "${CYAN}Using detected repository: $DETECTED_REPO${NC}"
             fi
+
+            if [[ -n $DETECTED_REPO ]]; then
+                # Handle both URL and owner/repo formats
+                if [[ $DETECTED_REPO =~ ^(https?://|git@) ]]; then
+                    repoUrl="$DETECTED_REPO"
+                elif [[ $DETECTED_REPO =~ ^[^/]+/[^/]+$ ]]; then
+                    repoUrl="https://github.com/$DETECTED_REPO.git"
+                else
+                    echo -e "${YELLOW}[WARN] Unrecognized format. Skipping remote setup.${NC}"
+                    repoUrl=""
+                fi
+
+                if [[ -n $repoUrl ]] && git remote add origin "$repoUrl" 2>/dev/null; then
+                    echo -e "${GREEN}✓ GitHub remote configured: $repoUrl${NC}"
+                elif [[ -n $repoUrl ]]; then
+                    echo -e "${YELLOW}⚠️  Failed to add remote. You can do it manually later.${NC}"
+                fi
+            fi
+        elif [[ $REPLY == "2" ]]; then
+            USE_LOCAL_MODE=true
+            echo -e "${GREEN}[OK] Local Mode enabled - using filesystem-based issue tracking${NC}"
+        else
+            echo -e "${YELLOW}Installation cancelled.${NC}"
+            exit 1
         fi
+    fi
+elif [ "$SKIP_GIT_CHECKS" = "true" ]; then
+    echo -e "${YELLOW}[WARN] Skipping GitHub remote setup because Git was not initialized.${NC}"
+    USE_LOCAL_MODE=true
+    echo -e "${GREEN}[OK] Local Mode enabled - using filesystem-based issue tracking${NC}"
+fi
+
+# Check 3: GitHub CLI (optional - can install later) - Skip in Local Mode
+if [ "$USE_LOCAL_MODE" != "true" ]; then
+    if command -v gh &> /dev/null; then
+        echo -e "${GREEN}[OK] GitHub CLI (gh) detected${NC}"
     else
-        echo -e "${YELLOW}⚠️  GitHub CLI not available. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+        echo -e "${YELLOW}[WARN] GitHub CLI (gh) not found${NC}"
+        echo ""
+        echo -e "\033[90mGitHub CLI is recommended for the Issue-First Workflow.${NC}"
+        echo ""
+        echo -e "${YELLOW}Options:${NC}"
+        echo -e "${CYAN}  [1] Install GitHub CLI now (auto-detect package manager)${NC}"
+        echo -e "${CYAN}  [2] Continue and install later${NC}"
+        echo -e "${CYAN}  [3] Cancel installation${NC}"
+        echo ""
+        read -p "Choose (1/2/3): " -n 1 -r
+        echo ""
+
+        if [[ $REPLY == "1" ]]; then
+            echo -e "${YELLOW}Installing GitHub CLI...${NC}"
+
+            # Detect package manager and install
+            if command -v brew &> /dev/null; then
+                echo -e "${YELLOW}Using Homebrew...${NC}"
+                brew install gh
+            elif command -v apt-get &> /dev/null; then
+                echo -e "${YELLOW}Using apt...${NC}"
+                (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+                && sudo mkdir -p -m 755 /etc/apt/keyrings \
+                && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+                && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+                && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+                && sudo apt update \
+                && sudo apt install gh -y
+            elif command -v yum &> /dev/null; then
+                echo -e "${YELLOW}Using yum...${NC}"
+                sudo yum install -y gh
+            else
+                echo -e "${YELLOW}[WARN] No supported package manager found. Install manually from: https://cli.github.com/${NC}"
+            fi
+
+            if command -v gh &> /dev/null; then
+                echo -e "${GREEN}[OK] GitHub CLI installed! Restart your terminal after installation completes.${NC}"
+            else
+                echo -e "${YELLOW}[WARN] Installation failed. Install manually from: https://cli.github.com/${NC}"
+            fi
+        elif [[ ! $REPLY =~ ^[2]$ ]]; then
+            echo -e "${YELLOW}Installation cancelled.${NC}"
+            exit 1
+        fi
     fi
 else
-    echo -e "\033[90mGuide: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+    echo -e "${GREEN}[OK] Local Mode - GitHub CLI not required${NC}"
+fi
+
+# Check 4: GitHub Projects V2 (setup after installation) - Skip in Local Mode
+if [ "$USE_LOCAL_MODE" != "true" ]; then
+    echo ""
+    echo -e "${CYAN}ℹ️  GitHub Projects V2 - Setup Required${NC}"
+    echo ""
+    echo -e "\033[90mAgentX requires a GitHub Project (V2) with Status field values:${NC}"
+    echo -e "${CYAN}  • Backlog, In Progress, In Review, Ready, Done${NC}"
+    echo ""
+    echo -e "${YELLOW}Options:${NC}"
+    echo -e "${CYAN}  [1] Create GitHub Project V2 now (requires gh CLI + auth)${NC}"
+    echo -e "${CYAN}  [2] Set up manually later${NC}"
+    echo ""
+    read -p "Choose (1/2): " -n 1 -r
+    echo ""
+
+    if [[ $REPLY == "1" ]]; then
+        if command -v gh &> /dev/null; then
+            # Use detected repo or ask
+            repo="$DETECTED_REPO"
+            if [ -z "$repo" ]; then
+                read -p "Enter repository (format: owner/repo): " repo
+            else
+                echo -e "${CYAN}Using repository: $repo${NC}"
+            fi
+
+            if [[ -n $repo ]]; then
+                echo -e "${YELLOW}Creating GitHub Project V2...${NC}"
+
+                # Get owner node_id
+                ownerId=$(gh api /repos/$repo --jq '.owner.node_id' 2>/dev/null)
+
+                if [[ -n $ownerId ]]; then
+                    # Create project
+                    projectName="AgentX Workflow"
+                    result=$(gh api graphql -f query="mutation { createProjectV2(input: {ownerId: \"$ownerId\", title: \"$projectName\"}) { projectV2 { id number } } }" 2>&1)
+
+                    projectNumber=$(echo "$result" | grep -oP '"number":\K[0-9]+')
+
+                    if [[ -n $projectNumber ]]; then
+                        echo -e "${GREEN}[OK] Project created! Number: #$projectNumber${NC}"
+                        echo -e "${CYAN}Visit: https://github.com/$repo/projects/$projectNumber${NC}"
+                        echo ""
+                        echo -e "${YELLOW}[INFO] Manual step required: Add Status field with these values:${NC}"
+                        echo -e "${CYAN}     Backlog, In Progress, In Review, Ready, Done${NC}"
+                    else
+                        echo -e "${YELLOW}[WARN] Auto-creation failed. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+                    fi
+                else
+                    echo -e "${YELLOW}[WARN] Could not access repository. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+                fi
+            fi
+        else
+            echo -e "${YELLOW}⚠️  GitHub CLI not available. Set up manually: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+        fi
+    else
+        echo -e "\033[90mGuide: https://docs.github.com/en/issues/planning-and-tracking-with-projects${NC}"
+    fi
+else
+    echo -e "${GREEN}[OK] Local Mode - Status tracking via filesystem${NC}"
 fi
 echo ""
 
@@ -312,11 +377,17 @@ download_file ".github/instructions/python.instructions.md" ".github/instruction
 # Validation scripts
 echo -e "${CYAN}  Validation scripts...${NC}"
 download_file ".github/scripts/validate-handoff.sh" ".github/scripts/validate-handoff.sh"
+download_file ".github/scripts/validate-handoff.ps1" ".github/scripts/validate-handoff.ps1"
 download_file ".github/scripts/capture-context.sh" ".github/scripts/capture-context.sh"
 download_file ".github/scripts/capture-context.ps1" ".github/scripts/capture-context.ps1"
 download_file ".github/scripts/setup-hooks.sh" ".github/scripts/setup-hooks.sh"
 download_file ".github/scripts/setup-hooks.ps1" ".github/scripts/setup-hooks.ps1"
 download_file ".github/scripts/collect-metrics.ps1" ".github/scripts/collect-metrics.ps1"
+download_file ".github/scripts/collect-metrics.sh" ".github/scripts/collect-metrics.sh"
+
+# Git hooks (include PowerShell versions)
+echo -e "${CYAN}  Git hooks (cross-platform)...${NC}"
+download_file ".github/hooks/commit-msg.ps1" ".github/hooks/commit-msg.ps1"
 
 # Utility scripts
 echo -e "${CYAN}  Utility scripts...${NC}"
@@ -455,8 +526,8 @@ download_file "docs/specs/SPEC-EXAMPLE.md" "docs/specs/SPEC-EXAMPLE.md"
 download_file "docs/reviews/REVIEW-EXAMPLE.md" "docs/reviews/REVIEW-EXAMPLE.md"
 download_file "docs/ux/UX-EXAMPLE.md" "docs/ux/UX-EXAMPLE.md"
 
-# Local Mode support (when no git or user preference)
-if [ ! -d ".git" ]; then
+# Local Mode support (when user chose Local Mode)
+if [ "$USE_LOCAL_MODE" = "true" ]; then
     echo ""
     echo -e "${CYAN}Initializing Local Mode...${NC}"
     mkdir -p ".agentx/issues"
@@ -471,6 +542,7 @@ if [ ! -d ".git" ]; then
 }
 EOF
     echo -e "${GREEN}✓ Local Mode configured${NC}"
+    echo -e "${GREEN}✓ Local issue manager ready${NC}"
 fi
 
 # Install Git hooks
@@ -506,33 +578,92 @@ else
     echo "  Run 'git init' first to enable workflow enforcement"
 fi
 
+# Replace GitHub username placeholder
+echo ""
+echo -e "${CYAN}Configuring GitHub username...${NC}"
+GITHUB_USERNAME=""
+if command -v gh &> /dev/null; then
+    GITHUB_USERNAME=$(gh api user --jq '.login' 2>/dev/null || true)
+fi
+if [ -z "$GITHUB_USERNAME" ] && command -v git &> /dev/null; then
+    GITHUB_USERNAME=$(git config user.name 2>/dev/null || true)
+fi
+
+if [ -z "$GITHUB_USERNAME" ]; then
+    echo -n "  Enter your GitHub username (for CODEOWNERS & security config): "
+    read -r GITHUB_USERNAME
+fi
+
+if [ -n "$GITHUB_USERNAME" ]; then
+    for f in .github/CODEOWNERS .github/agentx-security.yml; do
+        if [ -f "$f" ]; then
+            sed -i "s/<YOUR_GITHUB_USERNAME>/$GITHUB_USERNAME/g" "$f" 2>/dev/null || \
+            sed -i '' "s/<YOUR_GITHUB_USERNAME>/$GITHUB_USERNAME/g" "$f" 2>/dev/null || true
+        fi
+    done
+    echo -e "${GREEN}✓ Configured CODEOWNERS and security for: $GITHUB_USERNAME${NC}"
+else
+    echo -e "${YELLOW}⚠ No username provided. Replace <YOUR_GITHUB_USERNAME> manually in:${NC}"
+    echo "  - .github/CODEOWNERS"
+    echo "  - .github/agentx-security.yml"
+fi
+
 # Done
 echo ""
 echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  AgentX installed successfully!${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "${CYAN}Next steps:${NC}"
-echo "  1. Read AGENTS.md for workflow guidelines"
-echo "  2. Read Skills.md for production code standards"
-echo "  3. Create GitHub labels:"
-echo ""
-echo -e "${YELLOW}     # Type labels${NC}"
-echo '     gh label create "type:epic" --color "5319E7"'
-echo '     gh label create "type:feature" --color "A2EEEF"'
-echo '     gh label create "type:story" --color "0E8A16"'
-echo '     gh label create "type:bug" --color "D73A4A"'
-echo '     gh label create "type:spike" --color "FBCA04"'
-echo '     gh label create "type:docs" --color "0075CA"'
-echo '     gh label create "type:devops" --color "8B4789"'
-echo ""
-echo -e "${YELLOW}     # Workflow labels${NC}"
-echo '     gh label create "needs:ux" --color "D4C5F9"'
-echo '     gh label create "needs:changes" --color "FBCA04"'
-echo '     gh label create "needs:help" --color "D73A4A"'
-echo ""
-echo "  4. Set up GitHub Project with Status field (see docs/project-setup.md)"
-echo ""
-echo -e "${YELLOW}  ⚠️  IMPORTANT: Git hooks are now active!${NC}"
-echo "  Your commits will be validated for workflow compliance."
-echo ""
+
+if [ "$USE_LOCAL_MODE" = "true" ]; then
+    echo -e "${CYAN}🔧 LOCAL MODE ENABLED${NC}"
+    echo ""
+    echo -e "${YELLOW}AgentX is configured to work without GitHub.${NC}"
+    echo ""
+    echo -e "${CYAN}Issue Management Commands:${NC}"
+    echo "  Create issue:  ./.agentx/local-issue-manager.sh create \"[Type] Description\" \"\" \"type:story\""
+    echo "  List issues:   ./.agentx/local-issue-manager.sh list"
+    echo "  Update status: ./.agentx/local-issue-manager.sh update <N> \"\" \"In Progress\""
+    echo "  Close issue:   ./.agentx/local-issue-manager.sh close <N>"
+    echo ""
+    echo -e "${CYAN}Aliases (add to your shell profile):${NC}"
+    echo '  alias issue="./.agentx/local-issue-manager.sh"'
+    echo ""
+    echo -e "${CYAN}Next steps:${NC}"
+    echo "  1. Read AGENTS.md for workflow guidelines"
+    echo "  2. Read Skills.md for production code standards"
+    echo "  3. Create your first issue:"
+    echo '     ./.agentx/local-issue-manager.sh create "[Story] My first task" "" "type:story"'
+    echo ""
+    echo -e "${YELLOW}  ⚠️  Local Mode Limitations:${NC}"
+    echo "  • No GitHub Actions workflows"
+    echo "  • No pull request reviews"
+    echo "  • Manual agent coordination"
+    echo "  • To enable GitHub features, run: git remote add origin <repo-url>"
+    echo ""
+else
+    echo -e "${CYAN}Next steps:${NC}"
+    echo "  1. Read AGENTS.md for workflow guidelines"
+    echo "  2. Read Skills.md for production code standards"
+    echo "  3. Create GitHub labels:"
+    echo ""
+    echo -e "${YELLOW}     # Type labels${NC}"
+    echo '     gh label create "type:epic" --color "5319E7"'
+    echo '     gh label create "type:feature" --color "A2EEEF"'
+    echo '     gh label create "type:story" --color "0E8A16"'
+    echo '     gh label create "type:bug" --color "D73A4A"'
+    echo '     gh label create "type:spike" --color "FBCA04"'
+    echo '     gh label create "type:docs" --color "0075CA"'
+    echo '     gh label create "type:devops" --color "8B4789"'
+    echo ""
+    echo -e "${YELLOW}     # Workflow labels${NC}"
+    echo '     gh label create "needs:ux" --color "D4C5F9"'
+    echo '     gh label create "needs:changes" --color "FBCA04"'
+    echo '     gh label create "needs:help" --color "D73A4A"'
+    echo ""
+    echo "  4. Set up GitHub Project with Status field (see docs/project-setup.md)"
+    echo ""
+    echo -e "${YELLOW}  ⚠️  IMPORTANT: Git hooks are now active!${NC}"
+    echo "  Your commits will be validated for workflow compliance."
+    echo ""
+fi

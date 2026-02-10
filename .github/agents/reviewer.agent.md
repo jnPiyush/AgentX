@@ -50,6 +50,15 @@ Review engineer's work and approve or request changes:
 
 > ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
 
+> **📋 Local Mode**: If not using GitHub, use the local issue manager instead:
+> ```bash
+> # Bash:
+> .agentx/local-issue-manager.sh <action> [options]
+> # PowerShell:
+> .agentx/local-issue-manager.ps1 -Action <action> [options]
+> ```
+> See [Local Mode docs](../../docs/local-mode.md) for details.
+
 ## Workflow
 
 ```
@@ -109,7 +118,7 @@ await runSubagent({
 - [ ] Error paths tested
 - [ ] Tests are meaningful (not just coverage)
 
-**Security ([Skills #04](../../skills/04-security.md)):**
+**Security ([Skills #04](../skills/architecture/security/SKILL.md)):**
 - [ ] No hardcoded secrets, passwords, API keys
 - [ ] SQL queries use parameterization (no concatenation)
 - [ ] Input validation on all user inputs
@@ -117,14 +126,14 @@ await runSubagent({
 - [ ] OWASP Top 10 considered
 - [ ] Dependencies scanned for vulnerabilities
 
-**Performance ([Skills #05](../../skills/05-performance.md)):**
+**Performance ([Skills #05](../skills/architecture/performance/SKILL.md)):**
 - [ ] Async operations for I/O
 - [ ] N+1 query problems avoided
 - [ ] Appropriate indexes added
 - [ ] Caching used where appropriate
 - [ ] No memory leaks
 
-**Documentation ([Skills #11](../../skills/11-documentation.md)):**
+**Documentation ([Skills #11](../skills/development/documentation/SKILL.md)):**
 - [ ] XML docs on all public APIs
 - [ ] Inline comments for complex logic
 - [ ] README updated (if new feature)
@@ -327,10 +336,10 @@ If issues found:
 
 ## References
 
-- **Workflow**: [AGENTS.md §Reviewer](../../AGENTS.md#-orchestration--handoffs)
-- **Standards**: [Skills.md](../../Skills.md) → All 18 skills
-- **Review Checklist**: [code-review-and-audit/SKILL.md](../../skills/18-code-review-and-audit.md)
-- **Example Review**: [REVIEW-50.md](../../docs/reviews/REVIEW-50.md)
+- **Workflow**: [AGENTS.md §Reviewer](../../AGENTS.md#handoff-flow)
+- **Standards**: [Skills.md](../../Skills.md) → All 36 skills
+- **Review Checklist**: [code-review-and-audit/SKILL.md](../skills/development/code-review-and-audit/SKILL.md)
+- **Example Review**: [REVIEW-EXAMPLE.md](../../docs/reviews/REVIEW-EXAMPLE.md)
 - **Validation Script**: [validate-handoff.sh](../scripts/validate-handoff.sh)
 - **Context Capture**: [capture-context.sh](../scripts/capture-context.sh)
 

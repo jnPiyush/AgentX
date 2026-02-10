@@ -127,6 +127,15 @@ cp .github/templates/PRD-TEMPLATE.md docs/prd/PRD-{epic-id}.md
 } }
 ```
 
+> **📋 Local Mode**: If not using GitHub, use the local issue manager instead:
+> ```bash
+> # Bash:
+> .agentx/local-issue-manager.sh <action> [options]
+> # PowerShell:
+> .agentx/local-issue-manager.ps1 -Action <action> [options]
+> ```
+> See [Local Mode docs](../../docs/local-mode.md) for details.
+
 ### 4. Self-Review
 
 **Pause and review with fresh eyes:**
@@ -212,15 +221,15 @@ Move the issue to `Ready` status in GitHub Projects V2:
 
 ### Step 3: Trigger Next Agent (Automatic)
 
-Agent X (YOLO) automatically triggers UX Designer workflow within 30 seconds.
+Agent X (Auto) automatically triggers UX Designer workflow within 30 seconds.
 
 **Manual trigger (if needed):**
 ```json
 {
   "tool": "run_workflow",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
     "workflow_id": "run-ux-designer.yml",
     "ref": "master",
     "inputs": { "issue_number": "<EPIC_ID>" }
@@ -234,8 +243,8 @@ Agent X (YOLO) automatically triggers UX Designer workflow within 30 seconds.
 {
   "tool": "add_issue_comment",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
     "issue_number": <EPIC_ID>,
     "body": "## ✅ Product Manager Complete\n\n**Deliverables:**\n- PRD: [docs/prd/PRD-<ID>.md](docs/prd/PRD-<ID>.md)\n- Features: #X, #Y, #Z\n- User Stories: #A, #B, #C\n\n**Next:** UX Designer triggered (sequential)"
   }

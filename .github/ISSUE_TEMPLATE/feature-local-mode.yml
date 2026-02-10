@@ -1,0 +1,82 @@
+name: 🏠 Local Mode Feature
+description: Feature request for Local Mode (filesystem-based issue tracking without GitHub)
+title: "[Feature][Local Mode] "
+labels: ["type:feature"]
+projects: ["jnPiyush/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🏠 Local Mode Feature Request
+        
+        Use this template for features related to **Local Mode** — filesystem-based
+        issue tracking and agent coordination without a GitHub repository.
+        
+        **Workflow:**
+        1. Fill out this template → Status: **Backlog**
+        2. Architect creates ADR & Spec → Status: **Ready**
+        3. Engineer implements → Status: **In Progress**
+        4. Code review → Status: **In Review**
+        5. Merged & closed → Status: **Done**
+        
+        > ⚠️ Status is tracked via **GitHub Projects**, not labels.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What Local Mode capability are you requesting?
+      placeholder: "Add support for local status transitions using .agentx/ directory"
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Why is this needed? Who benefits and how?
+      placeholder: |
+        As a developer without a GitHub repository, I want to track issue
+        status locally so that I can use AgentX workflows offline.
+    validations:
+      required: true
+
+  - type: textarea
+    id: local-mode-impact
+    attributes:
+      label: Local Mode Impact
+      description: How does this feature interact with or differ from GitHub Mode?
+      placeholder: |
+        - In GitHub Mode: status is tracked via GitHub Projects
+        - In Local Mode: status is tracked via .agentx/issues.json
+        - Both modes should share the same agent workflows
+        - Switching between modes should preserve issue state
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: Business priority
+      options:
+        - "P0 - Critical: Blocker"
+        - "P1 - High: Critical for release"
+        - "P2 - Medium: Important but not blocking"
+        - "P3 - Low: Nice to have"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Specific, testable criteria for completion
+      placeholder: |
+        - [ ] Feature works in Local Mode without GitHub
+        - [ ] Feature works in GitHub Mode (no regressions)
+        - [ ] .agentx/ directory structure is maintained
+        - [ ] Agent coordination functions correctly
+        - [ ] Tests cover both modes (80%+ coverage)
+    validations:
+      required: true

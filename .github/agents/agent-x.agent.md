@@ -203,6 +203,15 @@ async function analyzeComplexity(issue) {
 
 > ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
 
+> **📋 Local Mode**: If not using GitHub, use the local issue manager instead:
+> ```bash
+> # Bash:
+> .agentx/local-issue-manager.sh <action> [options]
+> # PowerShell:
+> .agentx/local-issue-manager.ps1 -Action <action> [options]
+> ```
+> See [Local Mode docs](../../docs/local-mode.md) for details.
+
 ## Routing Logic
 
 ```javascript

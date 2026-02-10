@@ -6,7 +6,7 @@ mode: agent
 model: Gemini 3 Pro (copilot)
 infer: true
 constraints:
-  - "MUST NOT write code or implement features"
+  - "MUST NOT write application or business logic code"
   - "MUST NOT create technical architecture or ADRs"
   - "MUST follow WCAG 2.1 AA accessibility standards"
   - "MUST create responsive designs (mobile, tablet, desktop)"
@@ -55,6 +55,15 @@ Transform product requirements into user-centered designs:
 > ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
 > 📖 **Skills Reference**: Follow [Skill #29: UX/UI Design](../../Skills.md#ux-ui-design) for wireframing, prototyping, and HTML/CSS best practices.
 
+> **📋 Local Mode**: If not using GitHub, use the local issue manager instead:
+> ```bash
+> # Bash:
+> .agentx/local-issue-manager.sh <action> [options]
+> # PowerShell:
+> .agentx/local-issue-manager.ps1 -Action <action> [options]
+> ```
+> See [Local Mode docs](../../docs/local-mode.md) for details.
+
 ## Workflow
 
 ```
@@ -84,9 +93,9 @@ Use research tools:
 - `runSubagent` - Quick accessibility audits, pattern research
 
 **Skills to reference:**
-- **[Skill #29: UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md)** - Wireframing techniques, HTML/CSS prototypes, design systems
-- **[Skill #21: Frontend/UI](.github/skills/development/frontend-ui/SKILL.md)** - HTML5, CSS3, responsive design patterns
-- **[Skill #22: React](.github/skills/development/react/SKILL.md)** - Component patterns (if React is used)
+- **[Skill #29: UX/UI Design](../skills/design/ux-ui-design/SKILL.md)** - Wireframing techniques, HTML/CSS prototypes, design systems
+- **[Skill #21: Frontend/UI](../skills/development/frontend-ui/SKILL.md)** - HTML5, CSS3, responsive design patterns
+- **[Skill #22: React](../skills/development/react/SKILL.md)** - Component patterns (if React is used)
 
 **Example research:**
 ```javascript
@@ -104,13 +113,13 @@ Create `docs/ux/UX-{feature-id}.md` following the [UX Design template](../templa
 
 **13 comprehensive sections**:
 - Overview, User Research, User Flows
-- **Wireframes** (lo-fi and mid-fi ASCII art layouts) - See [Skill #29: Wireframing](.github/skills/design/ux-ui-design/SKILL.md#wireframing)
+- **Wireframes** (lo-fi and mid-fi ASCII art layouts) - See [Skill #29: Wireframing](../skills/design/ux-ui-design/SKILL.md#wireframing)
 - Component Specifications (states, variants, CSS)
 - Design System (grid, typography, colors, spacing)
 - Interactions & Animations
-- Accessibility (WCAG 2.1 AA compliance) - See [Skill #29: Accessibility](.github/skills/design/ux-ui-design/SKILL.md#accessibility-a11y)
-- Responsive Design (mobile/tablet/desktop) - See [Skill #29: Responsive Design](.github/skills/design/ux-ui-design/SKILL.md#responsive-design)
-- **Interactive Prototypes** (production-ready HTML/CSS) - See [Skill #29: HTML/CSS Prototypes](.github/skills/design/ux-ui-design/SKILL.md#htmlcss-prototypes)
+- Accessibility (WCAG 2.1 AA compliance) - See [Skill #29: Accessibility](../skills/design/ux-ui-design/SKILL.md#accessibility-a11y)
+- Responsive Design (mobile/tablet/desktop) - See [Skill #29: Responsive Design](../skills/design/ux-ui-design/SKILL.md#responsive-design)
+- **Interactive Prototypes** (production-ready HTML/CSS) - See [Skill #29: HTML/CSS Prototypes](../skills/design/ux-ui-design/SKILL.md#htmlcss-prototypes)
 - Implementation Notes
 - Open Questions, References
 
@@ -127,7 +136,7 @@ Create interactive prototypes in `docs/ux/prototypes/` with:
 - Interactive JavaScript (modals, forms, validation)
 - WCAG 2.1 AA compliant
 - Responsive (mobile, tablet, desktop)
-- See [Skill #29: HTML/CSS Prototypes](.github/skills/design/ux-ui-design/SKILL.md#htmlcss-prototypes) for complete template and examples
+- See [Skill #29: HTML/CSS Prototypes](../skills/design/ux-ui-design/SKILL.md#htmlcss-prototypes) for complete template and examples
 
 ### 5. Self-Review
 
@@ -216,15 +225,15 @@ Run context capture script:
 
 ### Step 3: Trigger Next Agent (Automatic)
 
-Agent X (YOLO) automatically triggers Architect workflow within 30 seconds.
+Agent X (Auto) automatically triggers Architect workflow within 30 seconds.
 
 **Manual trigger (if needed):**
 ```json
 {
   "tool": "run_workflow",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
     "workflow_id": "run-architect.yml",
     "ref": "master",
     "inputs": { "issue_number": "<EPIC_ID>" }
@@ -238,8 +247,8 @@ Agent X (YOLO) automatically triggers Architect workflow within 30 seconds.
 {
   "tool": "add_issue_comment",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
     "issue_number": <EPIC_ID>,
     "body": "## ✅ UX Designer Complete\n\n**Deliverables:**\n- UX Designs: [docs/ux/](docs/ux/)\n- Wireframes: X files\n- Prototypes: Y files\n- Personas: Z docs\n\n**Next:** Architect triggered (sequential)"
   }
@@ -298,12 +307,12 @@ If validation fails:
 
 ## References
 
-- **Workflow**: [AGENTS.md §UX Designer](../../AGENTS.md#-orchestration--handoffs)
+- **Workflow**: [AGENTS.md §UX Designer](../../AGENTS.md#handoff-flow)
 - **Standards**: [Skills.md](../../Skills.md) → See Skill #29 (UX/UI Design), #21 (Frontend/UI), #22 (React)
 - **Skills**:
-  - **[Skill #29: UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md)** - Wireframing, HTML prototypes, accessibility, responsive design
-  - **[Skill #21: Frontend/UI](.github/skills/development/frontend-ui/SKILL.md)** - HTML5, CSS3, BEM, responsive patterns
-  - **[Skill #22: React](.github/skills/development/react/SKILL.md)** - Component patterns (if applicable)
+  - **[Skill #29: UX/UI Design](../skills/design/ux-ui-design/SKILL.md)** - Wireframing, HTML prototypes, accessibility, responsive design
+  - **[Skill #21: Frontend/UI](../skills/development/frontend-ui/SKILL.md)** - HTML5, CSS3, BEM, responsive patterns
+  - **[Skill #22: React](../skills/development/react/SKILL.md)** - Component patterns (if applicable)
 - **UX Template**: [UX-TEMPLATE.md](../templates/UX-TEMPLATE.md)
 - **Validation Script**: [validate-handoff.sh](../scripts/validate-handoff.sh)
 

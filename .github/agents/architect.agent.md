@@ -53,6 +53,15 @@ Transform product requirements and UX designs into technical architecture:
 
 > ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
 
+> **📋 Local Mode**: If not using GitHub, use the local issue manager instead:
+> ```bash
+> # Bash:
+> .agentx/local-issue-manager.sh <action> [options]
+> # PowerShell:
+> .agentx/local-issue-manager.ps1 -Action <action> [options]
+> ```
+> See [Local Mode docs](../../docs/local-mode.md) for details.
+
 ## Workflow
 
 ```
@@ -235,15 +244,15 @@ Run context capture script:
 
 ### Step 3: Trigger Next Agent (Automatic)
 
-Agent X (YOLO) allows Engineer to start on Stories (Stories can now proceed in parallel).
+Agent X (Auto) allows Engineer to start on Stories (Stories can now proceed in parallel).
 
 **Manual trigger (if needed):**
 ```json
 {
   "tool": "run_workflow",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
     "workflow_id": "agent-x.yml",
     "ref": "master",
     "inputs": { "issue_number": "<STORY_ID>" }
@@ -257,8 +266,8 @@ Agent X (YOLO) allows Engineer to start on Stories (Stories can now proceed in p
 {
   "tool": "add_issue_comment",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
     "issue_number": <EPIC_ID>,
     "body": "## ✅ Architect Complete\n\n**Deliverables:**\n- ADR: [docs/adr/ADR-<ID>.md](docs/adr/ADR-<ID>.md)\n- Tech Specs: [docs/specs/](docs/specs/)\n- Architecture: [docs/architecture/ARCH-<ID>.md](docs/architecture/ARCH-<ID>.md)\n\n**Next:** Engineer can start Stories (parallel execution)"
   }
@@ -271,10 +280,9 @@ Agent X (YOLO) allows Engineer to start on Stories (Stories can now proceed in p
 
 ### Before Starting Work
 
-1. ✅ **Verify prerequisite**: UX designs exist (if `needs:ux` label was present)
-2. ✅ **Validate PRD exists**: Check `docs/prd/PRD-{epic-id}.md`
-3. ✅ **Validate UX exists**: Check `docs/ux/UX-*.md`
-4. ✅ **Read backlog**: Review all Feature/Story issues
+1. ✅ **Validate PRD exists**: Check `docs/prd/PRD-{epic-id}.md`
+2. ✅ **Check UX status**: If `needs:ux` label present, note UX is in parallel (do NOT block on it)
+3. ✅ **Read backlog**: Review all Feature/Story issues
 
 ### Before Updating Status to Ready
 

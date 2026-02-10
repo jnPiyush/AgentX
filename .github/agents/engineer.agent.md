@@ -73,6 +73,15 @@ Verify spec is complete (Status = `Ready` in Projects board):
 
 > ⚠️ **Status Tracking**: Use GitHub Projects V2 **Status** field, NOT labels.
 
+> **📋 Local Mode**: If not using GitHub, use the local issue manager instead:
+> ```bash
+> # Bash:
+> .agentx/local-issue-manager.sh <action> [options]
+> # PowerShell:
+> .agentx/local-issue-manager.ps1 -Action <action> [options]
+> ```
+> See [Local Mode docs](../../docs/local-mode.md) for details.
+
 ### 2. Run Verification Tests (CRITICAL!)
 
 **Before implementing anything new**, verify existing features still work:
@@ -132,7 +141,7 @@ cp .github/templates/PROGRESS-TEMPLATE.md docs/progress/ISSUE-${issue_number}-lo
 - **ADR**: `docs/adr/ADR-{epic-id}.md` (architectural decisions)
 - **Story**: Read acceptance criteria
 
-### 3. Research Implementation
+### 5. Research Implementation
 
 Use research tools:
 - `semantic_search` - Find similar implementations, code patterns
@@ -148,7 +157,7 @@ await runSubagent({
 });
 ```
 
-### 4. Create Low-Level Design (if complex)
+### 6. Create Low-Level Design (if complex)
 
 For complex stories, create design doc before coding:
 
@@ -194,7 +203,7 @@ Client → Controller → Service → Repository → Database
 - {Case 2}: {Handling}
 ```
 
-### 5. Implement Code
+### 7. Implement Code
 
 Follow [Skills.md](../../Skills.md) standards:
 
@@ -209,7 +218,7 @@ Follow [Skills.md](../../Skills.md) standards:
 
 > Reference [Skills.md](../../Skills.md) for detailed examples and patterns
 
-### 6. Write Tests
+### 8. Write Tests
 
 **Test Pyramid** ([Skills #02](../../Skills.md)):
 - **Unit Tests (70%)**: Test business logic in isolation with mocks
@@ -220,7 +229,7 @@ Follow [Skills.md](../../Skills.md) standards:
 
 > See [Skills #02 Testing](../../Skills.md) for detailed testing patterns and examples
 
-### 7. Document Code
+### 9. Document Code
 
 **Required documentation** ([Skills #11](../../Skills.md)):
 - **XML docs**: All public APIs (classes, methods, properties)
@@ -229,7 +238,7 @@ Follow [Skills.md](../../Skills.md) standards:
 
 > See [Skills #11 Documentation](../../Skills.md) for standards and examples
 
-### 8. Self-Review
+### 10. Self-Review
 
 **Pause and review with fresh eyes:**
 
@@ -264,7 +273,7 @@ Follow [Skills.md](../../Skills.md) standards:
 
 **If issues found during reflection, fix them NOW before handoff.**
 
-### 9. Run Tests
+### 11. Run Tests
 
 ```bash
 # Run all tests
@@ -276,7 +285,7 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 # Verify ≥80%
 ```
 
-### 10. Commit Changes
+### 12. Commit Changes
 
 ```bash
 git add .
@@ -290,7 +299,7 @@ git commit -m "feat: implement {feature} (#<STORY_ID>)
 git push
 ```
 
-### 11. Completion Checklist
+### 13. Completion Checklist
 
 Before handoff, verify:
 - [ ] Code implemented following [Skills.md](../../Skills.md)
@@ -356,15 +365,15 @@ Run context capture script:
 
 ### Step 3: Trigger Next Agent (Automatic)
 
-Agent X (YOLO) automatically triggers Reviewer workflow within 30 seconds.
+Agent X (Auto) automatically triggers Reviewer workflow within 30 seconds.
 
 **Manual trigger (if needed):**
 ```json
 {
   "tool": "run_workflow",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
     "workflow_id": "run-reviewer.yml",
     "ref": "master",
     "inputs": { "issue_number": "<STORY_ID>" }
@@ -378,8 +387,8 @@ Agent X (YOLO) automatically triggers Reviewer workflow within 30 seconds.
 {
   "tool": "add_issue_comment",
   "args": {
-    "owner": "jnPiyush",
-    "repo": "AgentX",
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
     "issue_number": <STORY_ID>,
     "body": "## ✅ Engineer Complete\n\n**Deliverables:**\n- Code: Commit <SHA>\n- Tests: X unit, Y integration, Z e2e\n- Coverage: {percentage}%\n- Documentation: README updated\n\n**Next:** Reviewer triggered"
   }
@@ -440,7 +449,7 @@ If validation fails:
 ## References
 
 - **Workflow**: [AGENTS.md](../../AGENTS.md) § Agent Roles
-- **Standards**: [Skills.md](../../Skills.md) → All 18 skills
+- **Standards**: [Skills.md](../../Skills.md) → All 36 skills
 
 ---
 

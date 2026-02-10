@@ -54,6 +54,7 @@ body:
       label: Priority
       description: Task priority
       options:
+        - "P0 - Critical: Blocker"
         - "P1 - High: Needed for current sprint"
         - "P2 - Medium: Important but flexible"
         - "P3 - Low: Can wait"
