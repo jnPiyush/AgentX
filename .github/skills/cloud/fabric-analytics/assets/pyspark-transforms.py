@@ -3,9 +3,9 @@
 # Common patterns for medallion architecture (Bronze → Silver → Gold)
 # =============================================================================
 
-from pyspark.sql import functions as F
-from pyspark.sql.window import Window
-from delta.tables import DeltaTable
+from pyspark.sql import functions as F  # type: ignore[import-untyped]  # noqa: E501  # pylint: disable=import-error
+from pyspark.sql.window import Window  # type: ignore[import-untyped]  # pylint: disable=import-error
+from delta.tables import DeltaTable  # type: ignore[import-untyped]  # pylint: disable=import-error
 
 # =====================
 # BRONZE INGESTION
