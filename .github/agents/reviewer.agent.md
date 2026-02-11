@@ -57,7 +57,7 @@ Review engineer's work and approve or request changes:
 > # PowerShell:
 > .agentx/local-issue-manager.ps1 -Action <action> [options]
 > ```
-> See [Local Mode docs](../../docs/local-mode.md) for details.
+> See [Local Mode docs](../../docs/SETUP.md#local-mode-no-github) for details.
 
 ## Workflow
 
@@ -345,7 +345,6 @@ If issues found:
 - **Workflow**: [AGENTS.md §Reviewer](../../AGENTS.md#handoff-flow)
 - **Standards**: [Skills.md](../../Skills.md) → All 36 skills
 - **Review Checklist**: [code-review-and-audit/SKILL.md](../skills/development/code-review-and-audit/SKILL.md)
-- **Example Review**: [REVIEW-EXAMPLE.md](../../docs/reviews/REVIEW-EXAMPLE.md)
 - **Validation Script**: [validate-handoff.sh](../scripts/validate-handoff.sh)
 - **Context Capture**: [capture-context.sh](../scripts/capture-context.sh)
 

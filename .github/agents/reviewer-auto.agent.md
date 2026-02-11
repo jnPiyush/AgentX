@@ -109,7 +109,7 @@ Status = In Review
 > # PowerShell:
 > .agentx/local-issue-manager.ps1 -Action <action> [options]
 > ```
-> See [Local Mode docs](../../docs/local-mode.md) for details.
+> See [Local Mode docs](../../docs/SETUP.md#local-mode-no-github) for details.
 
 Follow the standard review checklist:
 - Code quality (SOLID, DRY, naming)

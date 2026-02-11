@@ -338,7 +338,7 @@ AgentX implements a **4-layer security architecture** inspired by enterprise sec
 2. **Runtime validation** - Agents validate commands before execution with `run_in_terminal`
 3. **Audit logging** - All terminal commands logged to `.github/security/audit.log`
 
-For complete details, see [docs/session-persistence.md](docs/session-persistence.md#security-model).
+For complete details, see [docs/FEATURES.md](docs/FEATURES.md#session-persistence--auto-resume).
 
 ### Quality (Non-Negotiable)
 - ✅ 80%+ code coverage with tests → [#02](.github/skills/development/testing/SKILL.md)

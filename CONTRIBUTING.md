@@ -285,7 +285,8 @@ If you have **GitHub Copilot**, it will automatically:
 
 - [AGENTS.md](AGENTS.md) - Agent behavior and workflows
 - [Skills.md](Skills.md) - Technical standards index
-- [docs/mcp-integration.md](docs/mcp-integration.md) - GitHub MCP Server guide
+- [docs/SETUP.md](docs/SETUP.md) - Project setup, local mode, MCP integration
+- [docs/FEATURES.md](docs/FEATURES.md) - All feature documentation
 - [.github/copilot-instructions.md](.github/copilot-instructions.md) - Copilot guidelines
 
 ---

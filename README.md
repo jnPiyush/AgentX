@@ -133,7 +133,7 @@ Also includes all v2.x features: session persistence, defense-in-depth security,
 
 ## ✅ v3.0 Shipped Features
 
-> **Epic**: [#118](https://github.com/jnPiyush/AgentX/issues/118) | **PRD**: [docs/prd/PRD-118.md](docs/prd/PRD-118.md)
+> **Epic**: [#118](https://github.com/jnPiyush/AgentX/issues/118)
 
 | Status | Feature | Description |
 |--------|---------|-------------|
