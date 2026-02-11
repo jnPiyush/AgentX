@@ -1,0 +1,121 @@
+// =============================================================================
+// DAX Measure Templates for Microsoft Fabric Semantic Models
+// Standard patterns for DirectLake models
+// =============================================================================
+
+// =====================
+// BASIC AGGREGATIONS
+// =====================
+
+Total Sales = SUM(fact_sales[amount])
+
+Order Count = COUNTROWS(fact_sales)
+
+Avg Order Value = DIVIDE([Total Sales], [Order Count], 0)
+
+Distinct Customers = DISTINCTCOUNT(fact_sales[customer_key])
+
+Total Quantity = SUM(fact_sales[quantity])
+
+
+// =====================
+// TIME INTELLIGENCE
+// (Requires continuous date dimension table)
+// =====================
+
+Sales YTD = TOTALYTD([Total Sales], 'dim_date'[date])
+
+Sales MTD = TOTALMTD([Total Sales], 'dim_date'[date])
+
+Sales QTD = TOTALQTD([Total Sales], 'dim_date'[date])
+
+Sales Previous Year =
+    CALCULATE([Total Sales], SAMEPERIODLASTYEAR('dim_date'[date]))
+
+Sales Previous Month =
+    CALCULATE([Total Sales], DATEADD('dim_date'[date], -1, MONTH))
+
+YoY Growth % =
+    VAR Current = [Total Sales]
+    VAR Prior = [Sales Previous Year]
+    RETURN DIVIDE(Current - Prior, Prior, 0)
+
+MoM Growth % =
+    VAR Current = [Total Sales]
+    VAR Prior = [Sales Previous Month]
+    RETURN DIVIDE(Current - Prior, Prior, 0)
+
+3-Month Moving Average =
+    AVERAGEX(
+        DATESINPERIOD('dim_date'[date], MAX('dim_date'[date]), -3, MONTH),
+        [Total Sales]
+    )
+
+Sales Last 30 Days =
+    CALCULATE(
+        [Total Sales],
+        DATESINPERIOD('dim_date'[date], MAX('dim_date'[date]), -30, DAY)
+    )
+
+
+// =====================
+// RANKING & TOP N
+// =====================
+
+Product Sales Rank =
+    RANKX(ALL(dim_product), [Total Sales], , DESC, Dense)
+
+Top 10 Products Sales =
+    CALCULATE(
+        [Total Sales],
+        TOPN(10, ALL(dim_product), [Total Sales], DESC)
+    )
+
+Top 5 Customers Sales =
+    CALCULATE(
+        [Total Sales],
+        TOPN(5, ALL(dim_customer), [Total Sales], DESC)
+    )
+
+
+// =====================
+// CONDITIONAL & FILTERED
+// =====================
+
+High Value Sales =
+    CALCULATE([Total Sales], fact_sales[amount] > 1000)
+
+Active Customer Count =
+    CALCULATE(
+        [Distinct Customers],
+        fact_sales[amount] > 0
+    )
+
+New Customers This Month =
+    VAR CurrentMonth = MAX('dim_date'[date])
+    RETURN
+        CALCULATE(
+            [Distinct Customers],
+            FILTER(
+                ALL(fact_sales),
+                fact_sales[sale_date] >= DATE(YEAR(CurrentMonth), MONTH(CurrentMonth), 1)
+            )
+        )
+
+
+// =====================
+// RATIOS & PERCENTAGES
+// =====================
+
+Sales % of Total =
+    DIVIDE([Total Sales], CALCULATE([Total Sales], ALL(fact_sales)), 0)
+
+Category Sales % =
+    DIVIDE(
+        [Total Sales],
+        CALCULATE([Total Sales], ALL(dim_product[category])),
+        0
+    )
+
+Margin % =
+    DIVIDE(SUM(fact_sales[profit]), [Total Sales], 0)

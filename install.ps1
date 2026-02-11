@@ -440,12 +440,12 @@ Get-FileDownload ".github/prompts/security-review.prompt.md" ".github/prompts/se
 Get-FileDownload ".github/prompts/bug-triage.prompt.md" ".github/prompts/bug-triage.prompt.md"
 
 # Skills (36 production skills organized by category)
-Write-Info "Production skills (36 skills)..."
+Write-Info "Production skills (39 skills)..."
 $skills = @{
     "architecture" = @("core-principles", "security", "performance", "database", "scalability", "code-organization", "api-design")
     "development" = @("testing", "error-handling", "configuration", "documentation", "version-control", "type-safety", "dependency-management", "logging-monitoring", "code-review-and-audit", "csharp", "python", "frontend-ui", "react", "blazor", "postgresql", "sql-server", "go", "rust", "mcp-server-development", "data-analysis")
     "operations" = @("remote-git-operations", "github-actions-workflows", "yaml-pipelines", "release-management")
-    "cloud" = @("azure", "containerization")
+    "cloud" = @("azure", "containerization", "fabric-analytics", "fabric-data-agent", "fabric-forecasting")
     "ai-systems" = @("ai-agent-development", "prompt-engineering", "skill-creator")
     "design" = @("ux-ui-design")
 }
@@ -497,6 +497,36 @@ Get-FileDownload ".github/skills/operations/release-management/scripts/version-b
 $ypRefs = @("azure-pipelines-examples", "gitlab-ci-examples", "pipeline-design-patterns", "multi-stage-pipelines", "templates-variables-caching")
 foreach ($ref in $ypRefs) {
     Get-FileDownload ".github/skills/operations/yaml-pipelines/references/$ref.md" ".github/skills/operations/yaml-pipelines/references/$ref.md"
+}
+
+# fabric-analytics references and assets
+$faRefs = @("spark-patterns", "pipeline-patterns", "semantic-model-guide")
+foreach ($ref in $faRefs) {
+    Get-FileDownload ".github/skills/cloud/fabric-analytics/references/$ref.md" ".github/skills/cloud/fabric-analytics/references/$ref.md"
+}
+$faAssets = @("sql-query-patterns.sql", "pyspark-transforms.py", "dax-measures.dax")
+foreach ($asset in $faAssets) {
+    Get-FileDownload ".github/skills/cloud/fabric-analytics/assets/$asset" ".github/skills/cloud/fabric-analytics/assets/$asset"
+}
+
+# fabric-data-agent references and assets
+$fdaRefs = @("agent-sdk-patterns", "instruction-templates")
+foreach ($ref in $fdaRefs) {
+    Get-FileDownload ".github/skills/cloud/fabric-data-agent/references/$ref.md" ".github/skills/cloud/fabric-data-agent/references/$ref.md"
+}
+$fdaAssets = @("completion-report-template.md", "sample-few-shot-queries.sql")
+foreach ($asset in $fdaAssets) {
+    Get-FileDownload ".github/skills/cloud/fabric-data-agent/assets/$asset" ".github/skills/cloud/fabric-data-agent/assets/$asset"
+}
+
+# fabric-forecasting references and assets
+$ffRefs = @("model-selection-guide", "feature-engineering-catalog")
+foreach ($ref in $ffRefs) {
+    Get-FileDownload ".github/skills/cloud/fabric-forecasting/references/$ref.md" ".github/skills/cloud/fabric-forecasting/references/$ref.md"
+}
+$ffAssets = @("completion-report-template.md", "notebook-config-template.py")
+foreach ($asset in $ffAssets) {
+    Get-FileDownload ".github/skills/cloud/fabric-forecasting/assets/$asset" ".github/skills/cloud/fabric-forecasting/assets/$asset"
 }
 
 # VS Code configuration

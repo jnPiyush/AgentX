@@ -266,6 +266,58 @@
 
 ---
 
+## Fabric / Data Engineering Scenarios
+
+### Fabric Lakehouse ETL Pipeline
+
+**When**: Building a medallion architecture ETL pipeline on Microsoft Fabric  
+**Agent Flow**: Architect → Engineer → Reviewer
+
+| Step | Skill | Purpose | Output |
+|------|-------|---------|--------|
+| 1 | `fabric-analytics` | Lakehouse/Warehouse design, medallion architecture | Data architecture plan |
+| 2 | `fabric-analytics` | Spark notebooks for Bronze → Silver → Gold transforms | PySpark notebooks |
+| 3 | `fabric-analytics` | Pipeline orchestration with Copy + Notebook activities | Pipeline configuration |
+| 4 | `fabric-analytics` | Semantic model with DirectLake + DAX measures | Semantic model |
+| 5 | `database` | Schema validation, indexing strategy | Schema review |
+| 6 | `testing` | Data quality checks, pipeline validation | Quality check scripts |
+| 7 | `code-review-and-audit` | Review ETL logic, data quality, performance | Review document |
+
+---
+
+### Fabric Data Agent Setup
+
+**When**: Building a conversational data agent over Lakehouse data  
+**Agent Flow**: Architect → Engineer → Reviewer
+
+| Step | Skill | Purpose | Output |
+|------|-------|---------|--------|
+| 1 | `fabric-analytics` | Understand Lakehouse schema and data model | Data inventory |
+| 2 | `fabric-data-agent` | Phase 1: Plan — discover schema, define metrics | Implementation plan |
+| 3 | `fabric-data-agent` | Phase 2: Create — configure and publish agent | Published agent + notebook |
+| 4 | `fabric-data-agent` | Phase 3: Validate — test accuracy against metrics | Validation report + notebook |
+| 5 | `prompt-engineering` | Optimize agent instructions and few-shot examples | Refined prompts |
+| 6 | `code-review-and-audit` | Review agent accuracy and configuration | Review document |
+
+---
+
+### Time-Series Forecasting Pipeline
+
+**When**: Building demand forecasting or time-series prediction on Fabric  
+**Agent Flow**: Architect → Engineer → Reviewer
+
+| Step | Skill | Purpose | Output |
+|------|-------|---------|--------|
+| 1 | `fabric-analytics` | Ingest historical data, set up Lakehouse | Data in Lakehouse |
+| 2 | `fabric-forecasting` | Phase 1-2: Intake, discovery, scenario interpretation | Data profile + parameters |
+| 3 | `fabric-forecasting` | Phase 3: Customization planning | Customization plan |
+| 4 | `fabric-forecasting` | Phase 4: Generate 5 notebooks (Prep → Profile → Cluster → Feature → Train) | 5 notebooks |
+| 5 | `fabric-forecasting` | Phase 5: Finalize, deploy, validate | Deployed pipeline + report |
+| 6 | `testing` | Forecast accuracy evaluation, backtesting | Evaluation results |
+| 7 | `code-review-and-audit` | Review model approach, data quality, accuracy | Review document |
+
+---
+
 ## Scenario Selection Guide
 
 ```
@@ -287,6 +339,10 @@ What are you building?
 ├─ MCP server? → "MCP Server Development"
 ├─ New AgentX skill? → "New AgentX Skill"
 ├─ Security audit? → "Security Hardening"
+├─ Microsoft Fabric?
+│   ├─ ETL / data pipeline? → "Fabric Lakehouse ETL Pipeline"
+│   ├─ Chat-based data Q&A? → "Fabric Data Agent Setup"
+│   └─ Forecasting / ML? → "Time-Series Forecasting Pipeline"
 └─ Writing docs? → "Technical Documentation"
 ```
 

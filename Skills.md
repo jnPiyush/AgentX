@@ -1,5 +1,5 @@
 ---
-description: 'Production-ready guidelines for AI agents to build secure, scalable, maintainable systems. Covers 36 skills across architecture, development, operations, cloud, AI systems, and design with progressive disclosure, executable scripts, and decision trees.'
+description: 'Production-ready guidelines for AI agents to build secure, scalable, maintainable systems. Covers 39 skills across architecture, development, operations, cloud, AI systems, and design with progressive disclosure, executable scripts, and decision trees.'
 ---
 
 # Production Code Skills & Technical Guidelines
@@ -136,6 +136,21 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 ---
 
+### Fabric Analytics & Data Engineering
+
+**When**: Building Lakehouses, Warehouses, Spark notebooks, data pipelines, semantic models, or forecasting on Microsoft Fabric
+
+**Load These Skills** (Total: ~15-25K tokens depending on scope):
+- [#38 Fabric Analytics](.github/skills/cloud/fabric-analytics/SKILL.md) - Lakehouse, Warehouse, Pipelines, Semantic Models (5K)
+- [#39 Fabric Data Agent](.github/skills/cloud/fabric-data-agent/SKILL.md) - Conversational Data Agents (5K)
+- [#40 Fabric Forecasting](.github/skills/cloud/fabric-forecasting/SKILL.md) - Time-Series Forecasting Pipelines (5K)
+- [#06 Database](.github/skills/architecture/database/SKILL.md) - Schema design, migrations (5K)
+- [#04 Security](.github/skills/architecture/security/SKILL.md) - Secrets management, access control (5K)
+
+**Context Routing**: Fabric data work → Load Skills #38 (always) + #39 or #40 (by scope) + #06, #04 (as needed)
+
+---
+
 ### MCP Server Development
 
 **When**: Building Model Context Protocol servers, exposing tools/resources to AI agents
@@ -256,6 +271,9 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 |---|-------|------------|
 | 31 | [Azure](.github/skills/cloud/azure/SKILL.md) | Azure Services, ARM, App Service, Functions, Key Vault |
 | 33 | [Containerization](.github/skills/cloud/containerization/SKILL.md) | Docker, Docker Compose, Kubernetes, Multi-stage Builds, Security |
+| 38 | [Fabric Analytics](.github/skills/cloud/fabric-analytics/SKILL.md) | Lakehouse, Warehouse, Spark Notebooks, Pipelines, Semantic Models, OneLake |
+| 39 | [Fabric Data Agent](.github/skills/cloud/fabric-data-agent/SKILL.md) | Conversational Data Agents, Fabric Data Agent SDK, NL-to-SQL |
+| 40 | [Fabric Forecasting](.github/skills/cloud/fabric-forecasting/SKILL.md) | Time-Series Forecasting, LightGBM, Prophet, Feature Engineering, Clustering |
 
 ### AI Systems
 
@@ -437,7 +455,7 @@ builder.Host.ConfigureHostOptions(opts => opts.ShutdownTimeout = TimeSpan.FromSe
 
 **Skills Specification**: [agentskills.io/specification](https://agentskills.io/specification)
 
-**Total Skills**: 36 (Architecture: 7, Development: 19, Operations: 4, Cloud: 2, AI Systems: 3, Design: 1)
+**Total Skills**: 39 (Architecture: 7, Development: 19, Operations: 4, Cloud: 5, AI Systems: 3, Design: 1)
 
 **Last Updated**: January 15, 2025
 

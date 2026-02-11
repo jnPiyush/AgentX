@@ -437,6 +437,9 @@ download_file ".github/skills/operations/release-management/SKILL.md" ".github/s
 # Cloud skills
 download_file ".github/skills/cloud/azure/SKILL.md" ".github/skills/cloud/azure/SKILL.md"
 download_file ".github/skills/cloud/containerization/SKILL.md" ".github/skills/cloud/containerization/SKILL.md"
+download_file ".github/skills/cloud/fabric-analytics/SKILL.md" ".github/skills/cloud/fabric-analytics/SKILL.md"
+download_file ".github/skills/cloud/fabric-data-agent/SKILL.md" ".github/skills/cloud/fabric-data-agent/SKILL.md"
+download_file ".github/skills/cloud/fabric-forecasting/SKILL.md" ".github/skills/cloud/fabric-forecasting/SKILL.md"
 
 # AI Systems skills
 download_file ".github/skills/ai-systems/ai-agent-development/SKILL.md" ".github/skills/ai-systems/ai-agent-development/SKILL.md"
@@ -484,6 +487,30 @@ download_file ".github/skills/operations/release-management/scripts/version-bump
 # yaml-pipelines references
 for ref in azure-pipelines-examples gitlab-ci-examples pipeline-design-patterns multi-stage-pipelines templates-variables-caching; do
     download_file ".github/skills/operations/yaml-pipelines/references/$ref.md" ".github/skills/operations/yaml-pipelines/references/$ref.md"
+done
+
+# fabric-analytics references and assets
+for ref in spark-patterns pipeline-patterns semantic-model-guide; do
+    download_file ".github/skills/cloud/fabric-analytics/references/$ref.md" ".github/skills/cloud/fabric-analytics/references/$ref.md"
+done
+for asset in sql-query-patterns.sql pyspark-transforms.py dax-measures.dax; do
+    download_file ".github/skills/cloud/fabric-analytics/assets/$asset" ".github/skills/cloud/fabric-analytics/assets/$asset"
+done
+
+# fabric-data-agent references and assets
+for ref in agent-sdk-patterns instruction-templates; do
+    download_file ".github/skills/cloud/fabric-data-agent/references/$ref.md" ".github/skills/cloud/fabric-data-agent/references/$ref.md"
+done
+for asset in completion-report-template.md sample-few-shot-queries.sql; do
+    download_file ".github/skills/cloud/fabric-data-agent/assets/$asset" ".github/skills/cloud/fabric-data-agent/assets/$asset"
+done
+
+# fabric-forecasting references and assets
+for ref in model-selection-guide feature-engineering-catalog; do
+    download_file ".github/skills/cloud/fabric-forecasting/references/$ref.md" ".github/skills/cloud/fabric-forecasting/references/$ref.md"
+done
+for asset in completion-report-template.md notebook-config-template.py; do
+    download_file ".github/skills/cloud/fabric-forecasting/assets/$asset" ".github/skills/cloud/fabric-forecasting/assets/$asset"
 done
 
 # Documentation
