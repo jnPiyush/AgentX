@@ -51,11 +51,13 @@ These load automatically when editing matching files — no manual action needed
 | `python.instructions.md` | `*.py`, `*.pyx` |
 | `csharp.instructions.md` | `*.cs`, `*.csx` |
 | `typescript.instructions.md` | `*.ts` (backend/server TypeScript) |
-| `java.instructions.md` | `*.java` (Spring Boot backend) |
+| `terraform.instructions.md` | `*.tf`, `*.tfvars` (Infrastructure as Code) |
+| `bicep.instructions.md` | `*.bicep`, `*.bicepparam` (Azure IaC) |
 | `react.instructions.md` | `*.tsx`, `*.jsx`, `components/`, `hooks/` |
 | `blazor.instructions.md` | `*.razor`, `*.razor.cs` |
 | `api.instructions.md` | `Controllers/`, `api/`, `endpoints/` |
 | `sql.instructions.md` | `*.sql`, `migrations/` |
+| `yaml.instructions.md` | `*.yml`, `*.yaml` (config, K8s, compose) |
 | `devops.instructions.md` | `*.yml`, `*.yaml`, `workflows/` |
 
 ---
@@ -73,3 +75,11 @@ These load automatically when editing matching files — no manual action needed
 - **Workflows & Agent Roles**: [AGENTS.md](../AGENTS.md) (load when needed)
 - **Skills Index**: [Skills.md](../Skills.md) (use Quick Reference to pick skills)
 - **Setup**: [docs/SETUP.md](../docs/SETUP.md)
+- **Frontmatter Validation**: `pwsh scripts/validate-frontmatter.ps1`
+
+## Directive Language (RFC 2119)
+
+All instruction files use RFC 2119 keywords:
+- **MUST** / **MUST NOT** — Absolute requirement or prohibition
+- **SHOULD** / **SHOULD NOT** — Strong recommendation (exceptions need justification)
+- **MAY** — Truly optional, at developer discretion

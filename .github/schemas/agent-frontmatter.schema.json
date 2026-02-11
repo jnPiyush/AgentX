@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentX Agent File Frontmatter",
+  "description": "Schema for .agent.md frontmatter validation",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 100,
+      "description": "Display name for the agent"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "Agent purpose and trigger conditions"
+    },
+    "maturity": {
+      "type": "string",
+      "enum": ["stable", "preview", "experimental", "deprecated"],
+      "description": "Agent readiness level"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["agent", "adaptive"],
+      "description": "Agent interaction mode"
+    },
+    "model": {
+      "type": "string",
+      "description": "Preferred LLM model"
+    },
+    "tools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Available tools for this agent"
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Behavioral constraints"
+    },
+    "boundaries": {
+      "type": "object",
+      "properties": {
+        "can_modify": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "cannot_modify": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "description": "File/directory access boundaries"
+    },
+    "handoffs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "agent"],
+        "properties": {
+          "label": { "type": "string" },
+          "agent": { "type": "string" },
+          "prompt": { "type": "string" },
+          "send": { "type": "boolean" },
+          "context": { "type": "string" }
+        }
+      },
+      "description": "Agent-to-agent handoff declarations"
+    }
+  },
+  "additionalProperties": true
+}

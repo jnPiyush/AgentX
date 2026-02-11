@@ -12,6 +12,7 @@
   <a href="https://github.com/jnPiyush/AgentX/releases/tag/v5.1.0"><img src="https://img.shields.io/badge/Version-5.1.0-0EA5E9?style=for-the-badge" alt="Version 5.1.0"></a>
   <a href="https://github.com/github/awesome-copilot"><img src="https://img.shields.io/badge/Standard-awesome--copilot-7C3AED?style=for-the-badge&logo=github" alt="Awesome Copilot"></a>
   <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Skills-agentskills.io-F97316?style=for-the-badge" alt="Skills Spec"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/badge/OpenSSF-Scorecard-4DC71F?style=for-the-badge" alt="OpenSSF Scorecard"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge" alt="MIT License"></a>
 </p>
 
@@ -100,7 +101,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 - **41 skills** across 6 categories
 - **30 executable scripts** across 17 skills
 - **8 agent definitions** (7 stable + 1 preview)
-- **10 instruction files**, **11 prompts**, **8 templates**
+- **12 instruction files**, **11 prompts**, **8 templates**
 - **7 TOML workflow** templates
 
 </td>

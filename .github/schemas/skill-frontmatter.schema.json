@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentX Skill File Frontmatter",
+  "description": "Schema for SKILL.md frontmatter validation",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 100,
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Skill name in kebab-case"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 50,
+      "maxLength": 1024,
+      "description": "WHAT + WHEN + KEYWORDS format description"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "author": { "type": "string" },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "created": { "type": "string" },
+        "updated": { "type": "string" }
+      },
+      "description": "Skill metadata"
+    },
+    "compatibility": {
+      "type": "object",
+      "description": "Compatibility markers (languages, frameworks, platforms)"
+    }
+  },
+  "additionalProperties": true
+}

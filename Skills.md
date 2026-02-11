@@ -20,7 +20,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 | Layer | Size | When Loaded | Mechanism |
 |-------|------|-------------|-----------|
 | `copilot-instructions.md` | ~2K | Always (thin router) | VS Code auto-attach |
-| Instruction files (10) | 2-7K each | **Auto by `applyTo` glob** | Only matching files load |
+| Instruction files (12) | 2-7K each | **Auto by `applyTo` glob** | Only matching files load |
 | `Skills.md` (this file) | ~23K | Referenced, not auto-loaded | Read when doing implementation |
 | Skill SKILL.md files (40) | 3-10K each | **On-demand only** | Use Quick Reference below to pick |
 | Agent definitions (8) | 10-22K each | **Only active agent** | Agent system loads 1 at a time |

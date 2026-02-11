@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentX Instruction File Frontmatter",
+  "description": "Schema for .instructions.md frontmatter validation",
+  "type": "object",
+  "required": ["description", "applyTo"],
+  "properties": {
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "Concise explanation of instruction scope and target"
+    },
+    "applyTo": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Glob pattern(s) defining when these instructions activate"
+    }
+  },
+  "additionalProperties": false
+}

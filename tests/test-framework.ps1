@@ -114,7 +114,16 @@ Assert-FileContains "Skills.md" "Covers $skillCount skills" "Skills.md descripti
 Assert-FileExists ".github/skills/ai-systems/cognitive-architecture/SKILL.md" "Cognitive Architecture skill"
 Assert-FileExists ".github/skills/ai-systems/cognitive-architecture/scripts/scaffold-cognitive.py" "Cognitive scaffold script"
 Assert-FileExists ".github/instructions/typescript.instructions.md" "TypeScript instruction file"
-Assert-FileExists ".github/instructions/java.instructions.md" "Java instruction file"
+Assert-FileExists ".github/instructions/terraform.instructions.md" "Terraform instruction file"
+Assert-FileExists ".github/instructions/bicep.instructions.md" "Bicep instruction file"
+Assert-FileExists ".github/instructions/yaml.instructions.md" "YAML instruction file"
+
+# Verify enterprise validation
+Assert-FileExists "scripts/validate-frontmatter.ps1" "Frontmatter validation script"
+Assert-FileExists ".github/schemas/instruction-frontmatter.schema.json" "Instruction schema"
+Assert-FileExists ".github/schemas/agent-frontmatter.schema.json" "Agent schema"
+Assert-FileExists ".github/schemas/skill-frontmatter.schema.json" "Skill schema"
+Assert-FileExists ".github/workflows/scorecard.yml" "OpenSSF Scorecard workflow"
 
 # ─── 7. AI-First Intent Preservation ────────────────────────────────
 Write-Host ""
@@ -165,6 +174,8 @@ Assert-FileContains "README.md" "$skillCount production skills" "README skill co
 Assert-FileExists "docs/QUICKSTART.md" "5-minute Quickstart guide"
 Assert-FileExists ".github/templates/SPEC-TEMPLATE-LITE.md" "Spec Template Lite variant"
 Assert-FileContains "AGENTS.md" "QUICKSTART" "AGENTS.md links to Quickstart"
+Assert-FileContains ".github/copilot-instructions.md" "RFC 2119" "Router has RFC 2119 directive language"
+Assert-FileContains "README.md" "OpenSSF" "README has OpenSSF Scorecard badge"
 
 # ─── Results ────────────────────────────────────────────────────────
 Write-Host ""
