@@ -18,19 +18,31 @@ jobs:
   dotnet-scan:
     name: Scan .NET Dependencies
     runs-on: ubuntu-latest
-    if: hashFiles('**/*.csproj', '**/*.sln') != ''
     steps:
       - uses: actions/checkout@v6
       
+      - name: Check for .NET projects
+        id: detect
+        run: |
+          if find . -name '*.csproj' -o -name '*.sln' | grep -q .; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "No .NET projects found — skipping scan"
+          fi
+      
       - name: Setup .NET
+        if: steps.detect.outputs.found == 'true'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
       
       - name: Restore dependencies
+        if: steps.detect.outputs.found == 'true'
         run: dotnet restore
       
       - name: Check for vulnerable packages
+        if: steps.detect.outputs.found == 'true'
         id: check
         run: |
           echo "Scanning for vulnerable .NET packages..."
@@ -46,7 +58,7 @@ jobs:
           fi
       
       - name: Upload vulnerability report
-        if: failure()
+        if: failure() && steps.detect.outputs.found == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: dotnet-vulnerabilities
@@ -55,19 +67,31 @@ jobs:
   python-scan:
     name: Scan Python Dependencies
     runs-on: ubuntu-latest
-    if: hashFiles('**/requirements.txt', '**/Pipfile', '**/pyproject.toml') != ''
     steps:
       - uses: actions/checkout@v6
       
+      - name: Check for Python projects
+        id: detect
+        run: |
+          if find . -name 'requirements.txt' -o -name 'Pipfile' -o -name 'pyproject.toml' | grep -q .; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "No Python dependency files found — skipping scan"
+          fi
+      
       - name: Setup Python
+        if: steps.detect.outputs.found == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       
       - name: Install pip-audit
+        if: steps.detect.outputs.found == 'true'
         run: pip install pip-audit
       
       - name: Scan Python dependencies
+        if: steps.detect.outputs.found == 'true'
         id: scan
         run: |
           echo "Scanning for vulnerable Python packages..."
@@ -87,7 +111,7 @@ jobs:
           fi
       
       - name: Upload vulnerability report
-        if: failure()
+        if: failure() && steps.detect.outputs.found == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: python-vulnerabilities
@@ -96,19 +120,31 @@ jobs:
   node-scan:
     name: Scan Node.js Dependencies
     runs-on: ubuntu-latest
-    if: hashFiles('**/package.json', '**/package-lock.json') != ''
     steps:
       - uses: actions/checkout@v6
       
+      - name: Check for Node.js projects
+        id: detect
+        run: |
+          if find . -name 'package.json' -not -path '*/node_modules/*' | grep -q .; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "No Node.js projects found — skipping scan"
+          fi
+      
       - name: Setup Node.js
+        if: steps.detect.outputs.found == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
       
       - name: Install dependencies
+        if: steps.detect.outputs.found == 'true'
         run: npm ci
       
       - name: Run npm audit
+        if: steps.detect.outputs.found == 'true'
         id: audit
         run: |
           echo "Scanning for vulnerable Node.js packages..."
@@ -129,7 +165,7 @@ jobs:
           fi
       
       - name: Upload vulnerability report
-        if: failure()
+        if: failure() && steps.detect.outputs.found == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: npm-vulnerabilities
