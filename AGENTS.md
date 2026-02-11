@@ -394,8 +394,10 @@ gh issue list --label "needs:ux" --json number,title,labels \
 | PRD | `.github/templates/PRD-TEMPLATE.md` |
 | ADR | `.github/templates/ADR-TEMPLATE.md` |
 | Spec | `.github/templates/SPEC-TEMPLATE.md` |
+| Spec Lite | `.github/templates/SPEC-TEMPLATE-LITE.md` |
 | UX | `.github/templates/UX-TEMPLATE.md` |
 | Review | `.github/templates/REVIEW-TEMPLATE.md` |
+| Security Plan | `.github/templates/SECURITY-PLAN-TEMPLATE.md` |
 
 **Template Features**:
 - **Input Variables**: Dynamic content with `${variable_name}` syntax
