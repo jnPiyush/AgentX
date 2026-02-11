@@ -28,7 +28,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 **Loading order**: Router → instruction (auto) → this index → pick 3-4 skills → read them.
 
-**Anti-pattern**: Never load all 40 skills (~470K tokens). Use the Quick Reference below to pick only what's relevant.
+**Anti-pattern**: Never load all 41 skills (~470K tokens). Use the Quick Reference below to pick only what's relevant.
 
 ---
 

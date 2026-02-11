@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Install AgentX v5.0.0 — Clone, prune by profile, copy, configure.
+    Install AgentX v5.1.0 — Clone, prune by profile, copy, configure.
 
 .PARAMETER Profile
     full     — Everything (default)
@@ -55,7 +55,7 @@ function Write-Skip($m)  { Write-Host "[--] $m" -ForegroundColor DarkGray }
 # ── Banner ──────────────────────────────────────────────
 Write-Host ""
 Write-Host "╔═══════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║  AgentX v5.0.0 — AI Agent Orchestration          ║" -ForegroundColor Cyan
+Write-Host "║  AgentX v5.1.0 — AI Agent Orchestration          ║" -ForegroundColor Cyan
 Write-Host "╚═══════════════════════════════════════════════════╝" -ForegroundColor Cyan
 $mode = if ($Local) { "Local" } else { "GitHub" }
 Write-Host "  Profile: $Profile | Mode: $mode" -ForegroundColor Green
@@ -153,13 +153,13 @@ Write-Host "④ Configuring runtime..." -ForegroundColor Cyan
 # Version tracking
 $versionFile = ".agentx/version.json"
 @{
-    version = "5.0.0"
+    version = "5.1.0"
     profile = $Profile
     mode = $(if ($Local) { "local" } else { "github" })
     installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
     updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 5.0.0 recorded"
+Write-OK "Version 5.1.0 recorded"
 
 # Agent status
 $statusFile = ".agentx/state/agent-status.json"
@@ -245,7 +245,7 @@ Remove-Item $TMP -Recurse -Force -ErrorAction SilentlyContinue
 # ── Done ────────────────────────────────────────────────
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Green
-Write-Host "  AgentX v5.0.0 installed!  [$Profile | $mode]" -ForegroundColor Green
+Write-Host "  AgentX v5.1.0 installed!  [$Profile | $mode]" -ForegroundColor Green
 Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
 Write-Host "  CLI:   .\.agentx\agentx.ps1 help" -ForegroundColor White

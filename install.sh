@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentX v5.0.0 Installer — Clone, prune by profile, copy, configure.
+# AgentX v5.1.0 Installer — Clone, prune by profile, copy, configure.
 #
 # Profiles: full (default), minimal, python, dotnet, react
 #
@@ -41,7 +41,7 @@ skip() { echo -e "${D}[--] $1${N}"; }
 # ── Banner ──────────────────────────────────────────────
 echo ""
 echo -e "${C}╔═══════════════════════════════════════════════════╗${N}"
-echo -e "${C}║  AgentX v5.0.0 — AI Agent Orchestration          ║${N}"
+echo -e "${C}║  AgentX v5.1.0 — AI Agent Orchestration          ║${N}"
 echo -e "${C}╚═══════════════════════════════════════════════════╝${N}"
 MODE="GitHub"; [ "$LOCAL" = "true" ] && MODE="Local"
 echo -e "${G}  Profile: $PROFILE | Mode: $MODE${N}"
@@ -105,8 +105,8 @@ mkdir -p .agentx/state .agentx/digests docs/{prd,adr,specs,ux,reviews,progress}
 
 # Version tracking
 VERSION_FILE=".agentx/version.json"
-echo "{ \"version\": \"5.0.0\", \"profile\": \"$PROFILE\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 5.0.0 recorded"
+echo "{ \"version\": \"5.1.0\", \"profile\": \"$PROFILE\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 5.1.0 recorded"
 
 # Agent status
 STATUS=".agentx/state/agent-status.json"
@@ -178,7 +178,7 @@ rm -rf "$TMP"
 # ── Done ────────────────────────────────────────────────
 echo ""
 echo -e "${G}═══════════════════════════════════════════════════${N}"
-echo -e "${G}  AgentX v5.0.0 installed!  [$PROFILE | $MODE]${N}"
+echo -e "${G}  AgentX v5.1.0 installed!  [$PROFILE | $MODE]${N}"
 echo -e "${G}═══════════════════════════════════════════════════${N}"
 echo ""
 echo "  CLI:   ./.agentx/agentx.sh help"

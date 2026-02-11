@@ -47,7 +47,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <td width="50%">
 
 ### ✅ 100% agentskills.io Compliance
-- **All 40 skills** validated against [agentskills.io](https://agentskills.io/specification)
+- **All 41 skills** validated against [agentskills.io](https://agentskills.io/specification)
 - Single-quoted **WHAT + WHEN + KEYWORDS** description format
 - Every description **234–314 chars** (well under 1024 limit)
 - Zero compliance violations across the entire skill library
@@ -56,7 +56,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <td width="50%">
 
 ### 📦 Progressive Disclosure Architecture
-- **112 reference files** across 40 skills for 3-tier loading
+- **112 reference files** across 41 skills for 3-tier loading
 - **Tier 1**: SKILL.md core (<500 lines each, range 95–383)
 - **Tier 2**: Inline details loaded on demand
 - **Tier 3**: Reference files for deep-dive content
@@ -97,11 +97,10 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <td width="50%">
 
 ### 📊 Framework Totals
-- **40 skills** across 6 categories
-- **112 reference files** for progressive disclosure
-- **27 executable scripts** across 16 skills
+- **41 skills** across 6 categories
+- **30 executable scripts** across 17 skills
 - **8 agent definitions** (7 stable + 1 preview)
-- **8 instruction files**, **11 prompts**, **7 templates**
+- **10 instruction files**, **11 prompts**, **8 templates**
 - **7 TOML workflow** templates
 
 </td>
@@ -248,7 +247,7 @@ PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/mast
 
 | Profile | What's Included |
 |---------|----------------|
-| `full` | Everything — all 40 skills, instructions, prompts (default) |
+| `full` | Everything — all 41 skills, instructions, prompts (default) |
 | `minimal` | Core only — agents, templates, CLI, docs |
 | `python` | Core + Python, testing, data, API skills |
 | `dotnet` | Core + C#, Blazor, Azure, SQL skills |

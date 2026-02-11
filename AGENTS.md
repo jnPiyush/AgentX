@@ -449,7 +449,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 | Feature | Documentation | Status |
 |---------|---------------|--------|
-| **Executable Scripts** | 27 scripts across 16 skills (Anthropic pattern) | ✅ Stable |
+| **Executable Scripts** | 30 scripts across 17 skills (Anthropic pattern) | ✅ Stable |
 | **Playwright E2E Scaffold** | `scaffold-playwright.py` in testing skill | ✅ Stable |
 | **Cognitive Architecture** | RAG pipeline + Memory system patterns + scaffold script | ✅ Stable |
 | **TypeScript Instructions** | `typescript.instructions.md` for Node.js/TS backend | ✅ Stable |
@@ -463,7 +463,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 **v5.0**:
 | Feature | Documentation | Status |
 |---------|---------------|--------|
-| **100% agentskills.io Compliance** | All 40 skill SKILL.md files | ✅ Stable |
+| **100% agentskills.io Compliance** | All 41 skill SKILL.md files | ✅ Stable |
 | **Progressive Disclosure** | 112 reference files across skills | ✅ Stable |
 | **Standardized Descriptions** | WHAT + WHEN + KEYWORDS format (234–314 chars) | ✅ Stable |
 | **Anthropic Guide Compliance** | Validated against Claude skills guide | ✅ Stable |
