@@ -119,7 +119,7 @@ foreach ($file in $workflowFiles) {
     # Check 5: Secrets in plain text
     if ($content -match "password:\s*[A-Za-z0-9]" -or $content -match "token:\s*[A-Za-z0-9]") {
         if ($content -notmatch "\$\{\{\s*secrets\.") {
-            Write-Fail "Potential hardcoded secret — use \${{ secrets.NAME }}"
+            Write-Fail 'Potential hardcoded secret — use ${{ secrets.NAME }}'
             $issues++
         }
     }

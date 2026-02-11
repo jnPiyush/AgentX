@@ -618,7 +618,7 @@ def main():
     else:
         scaffold_dotnet_agent(root, args.name, args.pattern, args.with_eval)
 
-    print(f"\n✅ Agent project scaffolded at: {root}")
+    print(f"\n[OK] Agent project scaffolded at: {root}")
     print(f"\nNext steps:")
     if args.runtime == "python":
         print(f"  cd {args.name}")

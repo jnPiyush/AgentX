@@ -434,7 +434,7 @@ def print_summary(report: dict) -> None:
         print(f"         Avg Tokens:        {m['avg_tokens']:.0f}")
         if m["failures"]:
             for fail in m["failures"]:
-                print(f"         ⚠ {fail}")
+                print(f"         [!] {fail}")
 
     if report.get("alerts"):
         print(f"\n  ALERTS ({len(report['alerts'])})")
@@ -443,9 +443,9 @@ def print_summary(report: dict) -> None:
 
     print("\n" + "=" * 60)
     if report["all_passed"]:
-        print("  ✅ All models meet minimum thresholds")
+        print("  [PASS] All models meet minimum thresholds")
     else:
-        print("  ❌ Some models failed threshold checks")
+        print("  [FAIL] Some models failed threshold checks")
     print("=" * 60 + "\n")
 
 

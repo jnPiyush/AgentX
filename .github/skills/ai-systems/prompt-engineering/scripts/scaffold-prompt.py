@@ -252,7 +252,7 @@ def main():
 
     output_path.write_text(content, encoding="utf-8")
 
-    print(f"\n✅ Prompt template created: {output_path}")
+    print(f"\n[OK] Prompt template created: {output_path}")
     print(f"   Pattern: {args.pattern} ({PATTERNS[args.pattern]['description']})")
     if num_examples > 0:
         print(f"   Examples: {num_examples} placeholders included")
