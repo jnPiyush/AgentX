@@ -368,12 +368,13 @@ AgentX/
 │   ├── 📁 templates/         # PRD, ADR, Spec, UX, Progress templates
 │   ├── 📁 prompts/           # 11 reusable prompts
 │   ├── 📁 workflows/         # GitHub Actions (CI/CD, scanning)
-│   └── 📁 skills/            # 40 skill documents
-│   └── 📁 instructions/      # Language-specific guides
+│   └── 📁 skills/            # 41 skill documents
+│   └── 📁 instructions/      # 12 language/IaC-specific guides
+│   └── 📁 schemas/           # JSON schema validation
 │
 ├── 📁 .agentx/               # CLI, workflows, state, local issues
-│   ├── 📄 agentx.ps1         # PowerShell CLI (10 subcommands)
-│   ├── 📄 agentx.sh          # Bash CLI (9 subcommands)
+│   ├── 📄 agentx.ps1         # PowerShell CLI (11 subcommands)
+│   ├── 📄 agentx.sh          # Bash CLI (11 subcommands)
 │   ├── 📁 workflows/         # 7 TOML workflow templates
 │   ├── 📁 state/             # Agent status tracking
 │   ├── 📁 digests/           # Weekly issue digests
