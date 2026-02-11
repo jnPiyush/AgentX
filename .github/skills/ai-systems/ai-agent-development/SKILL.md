@@ -221,6 +221,7 @@ result = await workflow.run(query="Write about AI agents")
 |--------|---------|-------|
 | [`scaffold-agent.py`](scripts/scaffold-agent.py) | Scaffold AI agent project (Python/.NET) with tracing & eval | `python scripts/scaffold-agent.py --name my-agent [--pattern multi-agent] [--with-eval]` |
 | [`validate-agent-checklist.ps1`](scripts/validate-agent-checklist.ps1) | Validate agent project against production checklist | `./scripts/validate-agent-checklist.ps1 [-Path ./my-agent] [-Strict]` |
+| [`check-model-drift.ps1`](scripts/check-model-drift.ps1) | Validate model pinning, data drift signals, and judge LLM readiness | `./scripts/check-model-drift.ps1 [-Path ./my-agent] [-Strict]` |
 
 ## Troubleshooting
 
@@ -234,3 +235,4 @@ result = await workflow.run(query="Write about AI agents")
 
 - [Tracing And Evaluation](references/tracing-and-evaluation.md)
 - [Multi Model Patterns](references/multi-model-patterns.md)
+- [Model Drift And Judge Patterns](references/model-drift-judge-patterns.md)

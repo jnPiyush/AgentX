@@ -449,7 +449,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 | Feature | Documentation | Status |
 |---------|---------------|--------|
-| **Executable Scripts** | 25 scripts across 16 skills (Anthropic pattern) | ✅ Stable |
+| **Executable Scripts** | 26 scripts across 16 skills (Anthropic pattern) | ✅ Stable |
 | **Playwright E2E Scaffold** | `scaffold-playwright.py` in testing skill | ✅ Stable |
 
 ### Shipped Features (v2.1–v5.0)

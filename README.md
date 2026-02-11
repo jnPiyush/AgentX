@@ -99,7 +99,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 ### 📊 Framework Totals
 - **40 skills** across 6 categories
 - **112 reference files** for progressive disclosure
-- **25 executable scripts** across 16 skills
+- **26 executable scripts** across 16 skills
 - **8 agent definitions** (7 stable + 1 preview)
 - **8 instruction files**, **11 prompts**, **7 templates**
 - **7 TOML workflow** templates
