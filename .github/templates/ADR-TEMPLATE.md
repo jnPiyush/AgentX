@@ -192,6 +192,56 @@ We chose **Option X** because:
 
 ---
 
+## AI/ML Architecture (if applicable)
+
+> **Trigger**: Include this section when the issue has `needs:ai` label or the PRD includes AI/ML Requirements. If the product does NOT involve AI/ML, skip this section entirely.
+
+### Model Selection Decision
+
+| Model | Provider | Context Window | Cost (per 1M tokens) | Latency | Selected? |
+|-------|----------|---------------|----------------------|---------|-----------|
+| {Model 1} | {Provider} | {window} | {cost} | {latency} | ✅ / ❌ |
+| {Model 2} | {Provider} | {window} | {cost} | {latency} | ✅ / ❌ |
+| {Model 3} | {Provider} | {window} | {cost} | {latency} | ✅ / ❌ |
+
+### Agent Architecture Pattern
+
+- [ ] **Single Agent** — simple tool use, one model call chain
+- [ ] **Multi-Agent Orchestration** — sequential, parallel, or hierarchical agent coordination
+- [ ] **Human-in-the-Loop** — agent proposes, human approves
+- [ ] **Reflection / Self-Correction** — agent evaluates and refines its own output
+- [ ] **RAG Pipeline** — retrieval-augmented generation with knowledge base
+- [ ] **Hybrid** — rule-based preprocessing + AI/ML core + deterministic post-processing
+
+### Inference Pipeline
+
+```
+Request → [Preprocessing] → [Context/RAG] → [Model Invocation] → [Output Parsing] → [Validation] → Response
+```
+
+{Describe each stage with specific implementation decisions}
+
+### Evaluation Strategy
+
+| Metric | Evaluator | Threshold | How Measured |
+|--------|-----------|-----------|--------------|
+| {Quality metric} | {Built-in / Custom} | {≥ X} | {Method} |
+| {Latency} | {Timer} | {< Xms} | {P50/P95/P99} |
+| {Cost} | {Token counter} | {< $X/req} | {Aggregated} |
+
+### AI-Specific Risks
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Model hallucination | High | Grounding, RAG, structured output, validation |
+| API rate limits | Medium | Retry with backoff, fallback model, caching |
+| Cost overrun | Medium | Token budgets, model tiering, caching |
+| Latency spikes | Medium | Streaming, async, timeout with fallback |
+
+> **Reference**: Read `.github/skills/ai-systems/ai-agent-development/SKILL.md` for architecture patterns and model guidance.
+
+---
+
 ## References
 
 ### Internal

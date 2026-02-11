@@ -103,6 +103,11 @@ ok "$copied files installed ($skipped existing skipped)"
 echo -e "${C}④ Configuring runtime...${N}"
 mkdir -p .agentx/state .agentx/digests docs/{prd,adr,specs,ux,reviews,progress}
 
+# Version tracking
+VERSION_FILE=".agentx/version.json"
+echo "{ \"version\": \"4.0.0\", \"profile\": \"$PROFILE\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 4.0.0 recorded"
+
 # Agent status
 STATUS=".agentx/state/agent-status.json"
 if [ ! -f "$STATUS" ] || [ "$FORCE" = "true" ]; then

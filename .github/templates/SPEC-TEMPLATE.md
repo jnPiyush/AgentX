@@ -75,6 +75,7 @@ inputs:
 10. [Rollout Plan](#10-rollout-plan)
 11. [Risks & Mitigations](#11-risks--mitigations)
 12. [Monitoring & Observability](#12-monitoring--observability)
+13. [AI/ML Specification](#13-aiml-specification-if-applicable) *(if applicable)*
 ---
 
 ## 1. Overview
@@ -1001,6 +1002,85 @@ tests/
 - Log levels: DEBUG (dev), INFO (prod)
 - Sensitive data masking
 - Log aggregation (ELK/Datadog/CloudWatch)
+
+---
+
+## 13. AI/ML Specification (if applicable)
+
+> **Trigger**: Include this section when the issue has `needs:ai` label or the ADR includes an AI/ML Architecture section. If the product does NOT involve AI/ML, skip this section entirely.
+
+### 13.1 Model Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Model** | {e.g., gpt-4o, claude-sonnet-4, o3} |
+| **Provider** | {Microsoft Foundry / OpenAI / Anthropic / Google / Local} |
+| **Endpoint** | {URL or environment variable name} |
+| **Authentication** | {API key env var / Managed Identity / OAuth} |
+| **System Prompt** | {Summary — full prompt in separate file if >200 tokens} |
+| **Temperature** | {0.0 - 2.0} |
+| **Top-P** | {0.0 - 1.0} |
+| **Max Tokens** | {output token limit} |
+| **Structured Output** | {JSON schema reference, if applicable} |
+| **Timeout** | {seconds} |
+| **Retry Policy** | {max retries, backoff strategy} |
+
+### 13.2 Agent Tools / Functions
+
+| Tool Name | Purpose | Input Schema | Output Schema | Side Effects |
+|-----------|---------|-------------|---------------|--------------|
+| {tool_1} | {what it does} | {params} | {return type} | {DB write / API call / none} |
+| {tool_2} | {what it does} | {params} | {return type} | {side effects} |
+
+### 13.3 Inference Pipeline
+
+```
++----------+     +-------------+     +----------------+     +------------+     +----------+
+|  Request |---->| Preprocess  |---->| Model / Agent  |---->| Postprocess|---->| Response |
+|          |     | - Validate  |     | - System prompt|     | - Parse    |     |          |
+|          |     | - Sanitize  |     | - Tools/RAG    |     | - Validate |     |          |
+|          |     | - Context   |     | - Inference    |     | - Format   |     |          |
++----------+     +-------------+     +----------------+     +------------+     +----------+
+```
+
+**Stage Details:**
+1. **Preprocessing**: {Input validation, context assembly, RAG retrieval}
+2. **Model Invocation**: {Single call / multi-turn / agent loop}
+3. **Postprocessing**: {Output parsing, structured output validation, safety filtering}
+4. **Error Handling**: {Fallback model, cached response, graceful degradation}
+
+### 13.4 Context / RAG Design (if applicable)
+
+| Parameter | Value |
+|-----------|-------|
+| **Knowledge Source** | {Documents / Database / API / Vector Store} |
+| **Embedding Model** | {model name} |
+| **Vector Store** | {Azure AI Search / Chroma / Pinecone / FAISS} |
+| **Chunk Strategy** | {size, overlap, method} |
+| **Top-K Results** | {number of chunks retrieved} |
+| **Relevance Threshold** | {minimum similarity score} |
+
+### 13.5 Evaluation Strategy
+
+| Metric | Evaluator | Threshold | Test Dataset |
+|--------|-----------|-----------|--------------|
+| **Relevance** | {Built-in / LLM-as-judge} | ≥ {score} | {dataset location} |
+| **Groundedness** | {Built-in / Custom} | ≥ {score} | {dataset location} |
+| **Coherence** | {Built-in / Custom} | ≥ {score} | {dataset location} |
+| **Latency** | {Timer} | < {ms} P95 | {N requests} |
+| **Cost** | {Token counter} | < ${amount}/req | {N requests} |
+| {Custom metric} | {Custom evaluator} | {threshold} | {dataset} |
+
+**Evaluation Dataset**: {Location, format, number of test cases, how generated}
+
+### 13.6 Observability
+
+- **Tracing**: {OpenTelemetry / Azure Monitor / Custom} — trace all model calls with input/output
+- **Token Tracking**: Log prompt tokens, completion tokens, total cost per request
+- **Quality Monitoring**: Log evaluation scores in production, alert on degradation
+- **Dashboard**: {Link to monitoring dashboard}
+
+> **Reference**: Read `.github/skills/ai-systems/ai-agent-development/SKILL.md` for implementation patterns, model guidance, and production checklist.
 
 ---
 

@@ -54,6 +54,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Label normalization in local-issue-manager.ps1 for comma-separated labels
 - DateTime/Substring bounds checking in state display
 
+### ✨ Added (v4.0.1 Enhancements)
+
+**Version Tracking & Smart Upgrade**:
+- **Version tracking** via `.agentx/version.json` (version, profile, mode, timestamps)
+- **`agentx version`** command to display installed version info (PS1 + Bash)
+- **`agentx upgrade`** command with MD5-based smart upgrade (only updates changed framework files, preserves user content)
+
+**AI-First Intent Pipeline**:
+- **AI intent classification** in all 6 agent `.agent.md` files (PM, UX, Architect, Engineer, Reviewer, DevOps)
+- Updated PRD, UX, and Spec templates with AI-specific sections (Model Strategy, AI UX Patterns, AI Architecture)
+- GitHub Actions `validate-ai-intent.yml` workflow for PR-level AI intent validation
+- Handoff validation scripts updated with AI intent checks
+
+**CLI Expansion (7 → 10 commands)**:
+- Added `version`, `upgrade`, and `run` commands to PowerShell CLI
+- Bash CLI expanded with `version` and `upgrade` commands
+
+**Framework Self-Tests**:
+- 64-assertion test framework in `tests/agentx-framework-tests.ps1`
+- Validates: file existence, YAML frontmatter, TOML syntax, workflow completeness, agent definitions, template structure
+- Zero-dependency (pure PowerShell), runs in <2 seconds
+
+**New Instruction & Prompt Files**:
+- `ai.instructions.md` — AI/ML coding standards (credentials, structured outputs, tracing, evaluation, security)
+- `ai-agent.prompt.md` — Guided prompt for scaffolding AI agents with Agent Framework
+- `evaluation.prompt.md` — Guided prompt for setting up AI evaluation with Azure AI Evaluation SDK
+
+**Multi-Model Patterns**:
+- Added multi-model routing, fallback chains, and `.env.example` pattern to AI Agent Development skill
+
+### 🔧 Fixed (v4.0.1)
+
+- `agentx ready` command now correctly filters by Status=Ready (was showing all open issues)
+- Skill count corrected: 39 → 40 across SETUP.md, Skills.md, and README.md
+- SETUP.md instruction count updated: 7 → 8 (added ai.instructions.md)
+- Domain classification added to all agent definitions for AI-first routing
+
+**Smart Context Loading**:
+- `copilot-instructions.md` rewritten as thin router (~2K chars, down from ~6K) — conditional loading rules instead of mandatory gate
+- Added Context Budget section to `Skills.md` with loading order, layer sizes, and 3-4 skill per task limit
+- AGENTS.md loading made conditional: only for workflow/coordination tasks, skipped for simple code edits
+
 ---
 
 ## [Unreleased] - v3.0.0 Roadmap

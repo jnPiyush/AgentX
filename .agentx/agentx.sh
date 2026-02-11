@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # AgentX CLI — Lightweight task orchestration utilities
-# Subcommands: ready, state, deps, digest, workflow
+# Subcommands: ready, state, deps, digest, workflow, hook, version, upgrade
 #
 # Usage:
 #   ./.agentx/agentx.sh ready                          # Show unblocked work
@@ -9,6 +9,8 @@
 #   ./.agentx/agentx.sh deps 42                        # Check dependencies
 #   ./.agentx/agentx.sh digest                         # Generate weekly digest
 #   ./.agentx/agentx.sh workflow feature               # Show workflow steps
+#   ./.agentx/agentx.sh version                        # Show version info
+#   ./.agentx/agentx.sh upgrade                        # Smart upgrade
 
 set -euo pipefail
 
@@ -583,6 +585,166 @@ cmd_hook() {
     esac
 }
 
+# ─── VERSION ──────────────────────────────────────────────────────────
+
+cmd_version() {
+    local version_file="$AGENTX_DIR/version.json"
+    if [[ -f "$version_file" ]]; then
+        check_jq
+        local ver profile mode installed updated
+        ver=$(jq -r '.version // "unknown"' "$version_file")
+        profile=$(jq -r '.profile // "full"' "$version_file")
+        mode=$(jq -r '.mode // "local"' "$version_file")
+        installed=$(jq -r '.installedAt // "unknown"' "$version_file")
+        updated=$(jq -r '.updatedAt // "unknown"' "$version_file")
+
+        echo ""
+        echo -e "  ${CYAN}AgentX Version Information:${NC}"
+        echo -e "  ${GRAY}─────────────────────────────────────────────${NC}"
+        echo -e "  Version:     ${WHITE}${ver}${NC}"
+        echo -e "  Profile:     ${WHITE}${profile}${NC}"
+        echo -e "  Mode:        ${WHITE}${mode}${NC}"
+        echo -e "  Installed:   ${GRAY}${installed}${NC}"
+        echo -e "  Updated:     ${GRAY}${updated}${NC}"
+        echo ""
+    else
+        echo -e "  ${YELLOW}AgentX version unknown (no version.json — installed before v4.0)${NC}"
+        echo -e "  ${GRAY}Re-run the installer to generate version tracking.${NC}"
+    fi
+}
+
+# ─── UPGRADE ──────────────────────────────────────────────────────────
+
+cmd_upgrade() {
+    local REPO="https://github.com/jnPiyush/AgentX.git"
+    local TMP=".agentx-upgrade-tmp"
+    local version_file="$AGENTX_DIR/version.json"
+    local current_version="unknown"
+
+    echo ""
+    echo -e "  ${CYAN}AgentX Upgrade${NC}"
+    echo -e "  ${GRAY}─────────────────────────────────────────────${NC}"
+
+    # Show current version
+    if [[ -f "$version_file" ]] && command -v jq &>/dev/null; then
+        current_version=$(jq -r '.version // "unknown"' "$version_file")
+        echo -e "  Current version: ${WHITE}${current_version}${NC}"
+    fi
+
+    # Clone latest
+    echo -e "  ${GRAY}Fetching latest AgentX...${NC}"
+    rm -rf "$TMP"
+    if ! git clone --depth 1 --quiet "$REPO" "$TMP" 2>/dev/null; then
+        echo -e "  ${RED}✗ Clone failed. Check network connection.${NC}"
+        return 1
+    fi
+    if [[ ! -f "$TMP/AGENTS.md" ]]; then
+        echo -e "  ${RED}✗ Clone incomplete. Try again.${NC}"
+        rm -rf "$TMP"
+        return 1
+    fi
+    rm -rf "$TMP/.git"
+    rm -f "$TMP/install.ps1" "$TMP/install.sh"
+
+    # Framework paths to upgrade (never touch user content)
+    local framework_paths=(
+        ".github/agents" ".github/templates" ".github/hooks" ".github/scripts"
+        ".github/workflows" ".github/instructions" ".github/prompts"
+        ".github/copilot-instructions.md" ".github/SCENARIOS.md"
+        ".agentx/agentx.ps1" ".agentx/agentx.sh"
+        ".agentx/local-issue-manager.ps1" ".agentx/local-issue-manager.sh"
+        ".agentx/workflows"
+        "AGENTS.md" "Skills.md" "CONTRIBUTING.md" "README.md" "CHANGELOG.md"
+    )
+
+    local updated=0 added=0 skipped=0
+
+    for fw_path in "${framework_paths[@]}"; do
+        local src_path="$TMP/$fw_path"
+        [[ ! -e "$src_path" ]] && continue
+
+        if [[ -d "$src_path" ]]; then
+            while IFS= read -r -d '' src_file; do
+                local rel="${src_file#$TMP/}"
+                local dest="./$rel"
+                local dest_dir
+                dest_dir=$(dirname "$dest")
+                mkdir -p "$dest_dir" 2>/dev/null
+
+                if [[ -f "$dest" ]]; then
+                    local src_hash dest_hash
+                    src_hash=$(md5sum "$src_file" | awk '{print $1}')
+                    dest_hash=$(md5sum "$dest" | awk '{print $1}')
+                    if [[ "$src_hash" != "$dest_hash" ]]; then
+                        cp "$src_file" "$dest"
+                        ((updated++))
+                    else
+                        ((skipped++))
+                    fi
+                else
+                    cp "$src_file" "$dest"
+                    ((added++))
+                fi
+            done < <(find "$src_path" -type f -print0)
+        else
+            local dest="./$fw_path"
+            if [[ -f "$dest" ]]; then
+                local src_hash dest_hash
+                src_hash=$(md5sum "$src_path" | awk '{print $1}')
+                dest_hash=$(md5sum "$dest" | awk '{print $1}')
+                if [[ "$src_hash" != "$dest_hash" ]]; then
+                    cp "$src_path" "$dest"
+                    ((updated++))
+                else
+                    ((skipped++))
+                fi
+            else
+                cp "$src_path" "$dest"
+                ((added++))
+            fi
+        fi
+    done
+
+    # Update version file
+    local new_ver="4.0.0"
+    local new_version_file="$TMP/.agentx/version.json"
+    if [[ -f "$new_version_file" ]] && command -v jq &>/dev/null; then
+        new_ver=$(jq -r '.version // "4.0.0"' "$new_version_file")
+    fi
+
+    local profile="full"
+    local inst_date
+    inst_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    if [[ -f "$version_file" ]] && command -v jq &>/dev/null; then
+        profile=$(jq -r '.profile // "full"' "$version_file")
+        local old_inst
+        old_inst=$(jq -r '.installedAt // ""' "$version_file")
+        [[ -n "$old_inst" ]] && inst_date="$old_inst"
+    fi
+
+    cat > "$version_file" <<EOF
+{
+  "version": "$new_ver",
+  "profile": "$profile",
+  "mode": "$MODE",
+  "installedAt": "$inst_date",
+  "updatedAt": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
+
+    # Cleanup
+    rm -rf "$TMP"
+
+    echo ""
+    echo -e "  ${GREEN}✓ Upgrade complete: ${current_version} → ${new_ver}${NC}"
+    echo -e "    Updated: ${WHITE}${updated}${NC} files"
+    echo -e "    Added:   ${WHITE}${added}${NC} new files"
+    echo -e "    Skipped: ${GRAY}${skipped}${NC} unchanged files"
+    echo ""
+    echo -e "  ${GRAY}User content preserved: docs/prd/, docs/adr/, src/, .agentx/issues/${NC}"
+    echo ""
+}
+
 # ─── HELP ─────────────────────────────────────────────────────────────
 
 cmd_help() {
@@ -600,6 +762,8 @@ cmd_help() {
     echo "    workflow <name>                Show steps for a specific workflow"
     echo "    hook start <agent> [issue]     Auto-run deps + state on agent start"
     echo "    hook finish <agent> [issue]    Auto-run state done on agent finish"
+    echo "    version                        Show installed version info"
+    echo "    upgrade                        Smart upgrade (preserves user content)"
     echo ""
     echo -e "  ${WHITE}Examples:${NC}"
     echo "    ./agentx.sh ready"
@@ -624,5 +788,7 @@ case "$COMMAND" in
     digest)   cmd_digest ;;
     workflow) cmd_workflow "$@" ;;
     hook)     cmd_hook "$@" ;;
+    version)  cmd_version ;;
+    upgrade)  cmd_upgrade ;;
     help|*)   cmd_help ;;
 esac

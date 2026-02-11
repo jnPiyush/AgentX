@@ -101,6 +101,22 @@ await runSubagent({
 });
 ```
 
+### 3b. AI-Aware Research (if `needs:ai` label present)
+
+When the issue has `needs:ai` label or the PRD includes AI/ML Requirements:
+
+1. **MUST READ** `.github/skills/ai-systems/ai-agent-development/SKILL.md` — contains model selection tables, agent patterns, evaluation strategies, production checklists
+2. **MUST INVOKE** AITK tools for architecture guidance:
+   - `aitk_get_ai_model_guidance` — model selection, cost/latency/quality tradeoffs
+   - `aitk_get_agent_code_gen_best_practices` — agent architecture patterns (single, multi-agent, workflows)
+3. **MUST INCLUDE** the "AI/ML Architecture" section in the ADR (model selection, agent pattern, inference pipeline, evaluation strategy)
+4. **MUST INCLUDE** the "AI/ML Specification" section (Section 13) in the Tech Spec
+5. **MUST CONSIDER** Agent Framework patterns: Single Agent, Multi-Agent Orchestration, Human-in-the-Loop, RAG
+6. **MUST NOT** reject AI/ML approaches without explicit user confirmation — if the user said "AI agent," the architecture MUST include AI/ML components
+7. **MUST FLAG** any PRD contradictions (e.g., "AI-powered" in requirements vs "rule-based" in constraints) and resolve with PM before proceeding
+
+> ⚠️ **Anti-Pattern**: The most common failure is an Architect defaulting to familiar patterns (rule-based engines, scoring algorithms) when the user explicitly requested AI capabilities. Always check the PRD's AI/ML Requirements section and honor the user's stated technology intent.
+
 ### 4. Create ADR
 
 Create `docs/adr/ADR-{epic-id}.md` following the [ADR template](../templates/ADR-TEMPLATE.md):

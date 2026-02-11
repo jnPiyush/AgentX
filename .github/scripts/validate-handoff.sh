@@ -184,6 +184,32 @@ case $ROLE in
     else
       echo -e "${GREEN}✓${NC} Tech Spec follows NO CODE EXAMPLES policy"
     fi
+
+    # AI Intent Preservation check
+    if command -v gh &> /dev/null; then
+      LABELS=$(gh issue view ${ISSUE} --json labels --jq '.labels[].name' 2>/dev/null || true)
+      if echo "$LABELS" | grep -q "needs:ai"; then
+        if [ -f "docs/adr/ADR-${ISSUE}.md" ]; then
+          if grep -q "AI/ML Architecture" "docs/adr/ADR-${ISSUE}.md"; then
+            echo -e "${GREEN}✓${NC} ADR includes AI/ML Architecture section (needs:ai label)"
+          else
+            echo -e "${RED}✗${NC} ADR missing AI/ML Architecture section (issue has needs:ai label)"
+            VALIDATION_PASSED=false
+          fi
+        fi
+        # Check SPEC has AI section
+        for spec in docs/specs/SPEC-*.md; do
+          if [ -f "$spec" ]; then
+            if grep -q "AI/ML Specification" "$spec"; then
+              echo -e "${GREEN}✓${NC} Tech Spec includes AI/ML Specification section"
+            else
+              echo -e "${RED}✗${NC} Tech Spec missing AI/ML Specification section (issue has needs:ai label)"
+              VALIDATION_PASSED=false
+            fi
+          fi
+        done
+      fi
+    fi
     ;;
   
   engineer)

@@ -59,10 +59,22 @@ jobs:
             // In Review → Reviewer
             // Bug + Backlog → Engineer (skip PM/Architect)
             
-            // Note: Status tracking requires GitHub Projects V2 API (GraphQL)
-            // For now, using simplified label-based routing
-            // TODO: Implement full Status + prerequisite checking
+            // ─── Domain Classification (AI-First Intent Preservation) ───
+            const aiKeywords = /\b(AI|LLM|ML|machine learning|deep learning|GPT|model inference|NLP|neural|agent framework|foundry|openai|anthropic|gemini|intelligent|smart analysis|automated reasoning|natural language|embedding|rag|fine.?tun|prompt engineering)\b/i;
+            const textToScan = `${issue.title} ${issue.body || ''}`;
             
+            if (aiKeywords.test(textToScan) && !labels.includes('needs:ai')) {
+              console.log('🤖 AI/ML domain detected — adding needs:ai label');
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                labels: ['needs:ai']
+              });
+              labels.push('needs:ai');
+            }
+            
+            // ─── Routing ───
             let agent = null;
             
             if (labels.includes('type:epic')) {

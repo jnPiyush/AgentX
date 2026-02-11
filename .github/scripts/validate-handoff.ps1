@@ -193,6 +193,34 @@ switch ($Role) {
         } else {
             Write-Host "✓ Tech Spec follows NO CODE EXAMPLES policy" -ForegroundColor Green
         }
+
+        # AI Intent Preservation check
+        $ghAvailable = Get-Command gh -ErrorAction SilentlyContinue
+        if ($ghAvailable) {
+            $labels = gh issue view $Issue --json labels --jq ".labels[].name" 2>$null
+            if ($labels -and ($labels -contains "needs:ai")) {
+                if (Test-Path "docs/adr/ADR-$Issue.md") {
+                    $adrContent = Get-Content "docs/adr/ADR-$Issue.md" -Raw
+                    if ($adrContent -match "AI/ML Architecture") {
+                        Write-Host "✓ ADR includes AI/ML Architecture section (needs:ai label)" -ForegroundColor Green
+                    } else {
+                        Write-Host "✗ ADR missing AI/ML Architecture section (issue has needs:ai label)" -ForegroundColor Red
+                        $ValidationPassed = $false
+                    }
+                }
+                # Check SPEC has AI section too
+                $specFiles = Get-ChildItem "docs/specs/SPEC-*.md" -ErrorAction SilentlyContinue
+                foreach ($f in $specFiles) {
+                    $specContent = Get-Content $f.FullName -Raw
+                    if ($specContent -match "AI/ML Specification") {
+                        Write-Host "✓ Tech Spec includes AI/ML Specification section" -ForegroundColor Green
+                    } else {
+                        Write-Host "✗ Tech Spec missing AI/ML Specification section (issue has needs:ai label)" -ForegroundColor Red
+                        $ValidationPassed = $false
+                    }
+                }
+            }
+        }
     }
 
     "engineer" {

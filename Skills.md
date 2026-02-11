@@ -1,5 +1,5 @@
 ---
-description: 'Production-ready guidelines for AI agents to build secure, scalable, maintainable systems. Covers 39 skills across architecture, development, operations, cloud, AI systems, and design with progressive disclosure, executable scripts, and decision trees.'
+description: 'Production-ready guidelines for AI agents to build secure, scalable, maintainable systems. Covers 40 skills across architecture, development, operations, cloud, AI systems, and design with progressive disclosure, executable scripts, and decision trees.'
 ---
 
 # Production Code Skills & Technical Guidelines
@@ -8,6 +8,27 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 > **Usage**: Index for detailed skill documents. Read relevant skills before implementation.  
 > **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) skills specification from [agentskills.io](https://agentskills.io/specification).  
 > **Structure**: Each skill uses progressive disclosure — metadata (~100 tokens) → SKILL.md body (<5K) → references/ (on demand) → assets/ (templates, starter code).
+
+---
+
+## Context Budget
+
+> **Rule**: Load **max 3-4 skills** per task (~20K tokens). More skills = more noise, less focus.
+
+**How context loading works in AgentX:**
+
+| Layer | Size | When Loaded | Mechanism |
+|-------|------|-------------|-----------|
+| `copilot-instructions.md` | ~2K | Always (thin router) | VS Code auto-attach |
+| Instruction files (8) | 2-7K each | **Auto by `applyTo` glob** | Only matching files load |
+| `Skills.md` (this file) | ~23K | Referenced, not auto-loaded | Read when doing implementation |
+| Skill SKILL.md files (40) | 3-10K each | **On-demand only** | Use Quick Reference below to pick |
+| Agent definitions (8) | 10-22K each | **Only active agent** | Agent system loads 1 at a time |
+| Prompt files (11) | 2-5K each | **User-triggered** | One at a time |
+
+**Loading order**: Router → instruction (auto) → this index → pick 3-4 skills → read them.
+
+**Anti-pattern**: Never load all 40 skills (~470K tokens). Use the Quick Reference below to pick only what's relevant.
 
 ---
 
@@ -210,7 +231,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 | **Language** | C# / .NET | Latest |
 | **Language** | Python | 3.11+ |
 | **Backend** | ASP.NET Core | Latest |
-| **Database** | SQLlite | Latest |
+| **Database** | SQLite | Latest |
 | **Frontend** | React | 18+ |
 | **AI** | Microsoft Agent Framework | Latest |
 | **AI** | Microsoft Foundry | Latest |

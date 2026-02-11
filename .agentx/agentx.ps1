@@ -11,7 +11,7 @@
 
 param(
     [Parameter(Position=0)]
-    [ValidateSet('ready', 'state', 'deps', 'digest', 'workflow', 'hook', 'help')]
+    [ValidateSet('ready', 'state', 'deps', 'digest', 'workflow', 'hook', 'version', 'upgrade', 'run', 'help')]
     [string]$Command = 'help',
 
     # state subcommand params
@@ -166,8 +166,35 @@ function Get-IssueType {
 function Show-Ready {
     $issues = Get-Issues
     if ($script:Mode -eq "github") {
-        # GitHub mode: open issues are candidates (status tracked in Projects V2, not locally)
-        $openIssues = $issues | Where-Object { $_.state -eq "open" }
+        # GitHub mode: try to get Projects V2 status, fall back to label-based filtering
+        $openIssues = @()
+        try {
+            # Attempt to read status from GitHub Projects V2 via gh CLI
+            $projectItems = gh project item-list --owner "@me" --format json --limit 200 2>$null
+            if ($LASTEXITCODE -eq 0 -and $projectItems) {
+                $items = $projectItems | ConvertFrom-Json
+                $readyNumbers = @()
+                foreach ($item in $items.items) {
+                    if ($item.status -eq "Ready" -or $item.status -eq "Backlog") {
+                        if ($item.content -and $item.content.number) {
+                            $readyNumbers += $item.content.number
+                        }
+                    }
+                }
+                if ($readyNumbers.Count -gt 0) {
+                    $openIssues = $issues | Where-Object { $readyNumbers -contains $_.number }
+                }
+            }
+        } catch { }
+
+        # Fallback: filter open issues that don't have 'In Review' or 'Done' indicators
+        if ($openIssues.Count -eq 0) {
+            $openIssues = $issues | Where-Object {
+                $_.state -eq "open" -and
+                -not ($_.labels -contains "needs:review") -and
+                -not ($_.labels -contains "needs:changes")
+            }
+        }
     } else {
         $openIssues = $issues | Where-Object { $_.state -eq "open" -and $_.status -eq "Ready" }
     }
@@ -550,6 +577,284 @@ function Update-AgentState($agentName, $status, $issueNum) {
     } -Force
     $state | ConvertTo-Json -Depth 5 | Set-Content $StateFile -Encoding UTF8
 }
+# ─── VERSION: Show installed version ──────────────────────────────────
+
+function Show-Version {
+    $versionFile = Join-Path $AgentXDir "version.json"
+    if (Test-Path $versionFile) {
+        $ver = Get-Content $versionFile -Raw | ConvertFrom-Json
+        if ($Json) {
+            $ver | ConvertTo-Json -Depth 3
+            return
+        }
+        Write-Host "`n  AgentX Version Information:" -ForegroundColor Cyan
+        Write-Host "  ─────────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host "  Version:     $($ver.version)" -ForegroundColor White
+        Write-Host "  Profile:     $($ver.profile)" -ForegroundColor White
+        Write-Host "  Mode:        $($ver.mode)" -ForegroundColor White
+        Write-Host "  Installed:   $($ver.installedAt)" -ForegroundColor DarkGray
+        Write-Host "  Updated:     $($ver.updatedAt)" -ForegroundColor DarkGray
+        Write-Host ""
+    } else {
+        Write-Host "  AgentX version unknown (no version.json — installed before v4.0)" -ForegroundColor Yellow
+        Write-Host "  Re-run the installer to generate version tracking." -ForegroundColor DarkGray
+    }
+}
+
+# ─── UPGRADE: Smart upgrade preserving customizations ─────────────────
+
+function Run-Upgrade {
+    $REPO = "https://github.com/jnPiyush/AgentX.git"
+    $TMP = ".agentx-upgrade-tmp"
+
+    Write-Host "`n  AgentX Upgrade" -ForegroundColor Cyan
+    Write-Host "  ─────────────────────────────────────────────" -ForegroundColor DarkGray
+
+    # Show current version
+    $versionFile = Join-Path $AgentXDir "version.json"
+    $currentVersion = "unknown"
+    if (Test-Path $versionFile) {
+        $ver = Get-Content $versionFile -Raw | ConvertFrom-Json
+        $currentVersion = $ver.version
+        Write-Host "  Current version: $currentVersion" -ForegroundColor White
+    }
+
+    # Clone latest
+    Write-Host "  Fetching latest AgentX..." -ForegroundColor DarkGray
+    if (Test-Path $TMP) { Remove-Item $TMP -Recurse -Force }
+    git clone --depth 1 --quiet $REPO $TMP 2>&1 | Out-Null
+    if (-not (Test-Path "$TMP/AGENTS.md")) {
+        Write-Error "Clone failed. Check network connection."
+        return
+    }
+    Remove-Item "$TMP/.git" -Recurse -Force
+    Remove-Item "$TMP/install.ps1", "$TMP/install.sh" -Force -ErrorAction SilentlyContinue
+
+    # Compare and upgrade framework files (never touch user content like docs/prd/, src/, etc.)
+    $frameworkPaths = @(
+        ".github/agents", ".github/templates", ".github/hooks", ".github/scripts",
+        ".github/workflows", ".github/instructions", ".github/prompts",
+        ".github/copilot-instructions.md", ".github/SCENARIOS.md",
+        ".agentx/agentx.ps1", ".agentx/agentx.sh",
+        ".agentx/local-issue-manager.ps1", ".agentx/local-issue-manager.sh",
+        ".agentx/workflows",
+        "AGENTS.md", "Skills.md", "CONTRIBUTING.md", "README.md", "CHANGELOG.md"
+    )
+
+    $updated = 0; $added = 0; $skipped = 0
+
+    foreach ($fwPath in $frameworkPaths) {
+        $srcPath = Join-Path $TMP $fwPath
+        if (-not (Test-Path $srcPath)) { continue }
+
+        if (Test-Path $srcPath -PathType Container) {
+            Get-ChildItem $srcPath -Recurse -File | ForEach-Object {
+                $rel = $_.FullName.Substring((Resolve-Path $TMP).Path.Length + 1)
+                $dest = Join-Path "." $rel
+                $dir = Split-Path $dest -Parent
+                if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+
+                if (Test-Path $dest) {
+                    $srcHash = (Get-FileHash $_.FullName -Algorithm MD5).Hash
+                    $destHash = (Get-FileHash $dest -Algorithm MD5).Hash
+                    if ($srcHash -ne $destHash) {
+                        Copy-Item $_.FullName $dest -Force
+                        $updated++
+                    } else { $skipped++ }
+                } else {
+                    Copy-Item $_.FullName $dest -Force
+                    $added++
+                }
+            }
+        } else {
+            $dest = Join-Path "." $fwPath
+            if (Test-Path $dest) {
+                $srcHash = (Get-FileHash $srcPath -Algorithm MD5).Hash
+                $destHash = (Get-FileHash $dest -Algorithm MD5).Hash
+                if ($srcHash -ne $destHash) {
+                    Copy-Item $srcPath $dest -Force
+                    $updated++
+                } else { $skipped++ }
+            } else {
+                Copy-Item $srcPath $dest -Force
+                $added++
+            }
+        }
+    }
+
+    # Update version file
+    $newVersionFile = Join-Path $TMP ".agentx/version.json"
+    $newVer = "4.0.0"
+    if (Test-Path $newVersionFile) {
+        $newVerData = Get-Content $newVersionFile -Raw | ConvertFrom-Json
+        $newVer = $newVerData.version
+    }
+
+    $profile = "full"
+    $mode = $script:Mode
+    if (Test-Path $versionFile) {
+        $oldVer = Get-Content $versionFile -Raw | ConvertFrom-Json
+        $profile = if ($oldVer.profile) { $oldVer.profile } else { "full" }
+    }
+
+    @{
+        version = $newVer
+        profile = $profile
+        mode = $mode
+        installedAt = if ((Test-Path $versionFile) -and $oldVer.installedAt) { $oldVer.installedAt } else { (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ") }
+        updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+    } | ConvertTo-Json | Set-Content $versionFile
+
+    # Cleanup
+    Remove-Item $TMP -Recurse -Force -ErrorAction SilentlyContinue
+
+    Write-Host ""
+    Write-Host "  ✓ Upgrade complete: $currentVersion → $newVer" -ForegroundColor Green
+    Write-Host "    Updated: $updated files" -ForegroundColor White
+    Write-Host "    Added:   $added new files" -ForegroundColor White
+    Write-Host "    Skipped: $skipped unchanged files" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "  User content preserved: docs/prd/, docs/adr/, src/, .agentx/issues/" -ForegroundColor DarkGray
+    Write-Host ""
+}
+
+# ─── RUN WORKFLOW ─────────────────────────────────────────────────────
+
+function Run-Workflow-Steps {
+    if (-not $Type) {
+        Write-Host "  ✗ -Type required (feature|epic|story|bug|spike|devops|docs)" -ForegroundColor Red
+        return
+    }
+    if (-not $IssueNumber) {
+        Write-Host "  ✗ -IssueNumber required" -ForegroundColor Red
+        return
+    }
+
+    $wfFile = Join-Path $PSScriptRoot "workflows/$Type.toml"
+    if (-not (Test-Path $wfFile)) {
+        Write-Host "  ✗ Workflow not found: $wfFile" -ForegroundColor Red
+        return
+    }
+
+    # Parse TOML (lightweight — only handles the step structure we use)
+    $content = Get-Content $wfFile -Raw
+    $steps = @()
+    $currentStep = $null
+
+    foreach ($line in (Get-Content $wfFile)) {
+        $line = $line.Trim()
+        if ($line -eq '[[steps]]') {
+            if ($currentStep) { $steps += [PSCustomObject]$currentStep }
+            $currentStep = @{ needs = @(); optional = $false; condition = "" }
+        }
+        elseif ($currentStep -and $line -match '^(\w+)\s*=\s*(.+)$') {
+            $key = $Matches[1]
+            $val = $Matches[2].Trim('"', "'", ' ')
+            if ($key -eq 'needs') {
+                $val = $val.Trim('[', ']') -split ',' | ForEach-Object { $_.Trim().Trim('"', "'") } | Where-Object { $_ }
+                $currentStep[$key] = $val
+            }
+            elseif ($key -eq 'optional') {
+                $currentStep[$key] = $val -eq 'true'
+            }
+            else {
+                $currentStep[$key] = $val
+            }
+        }
+    }
+    if ($currentStep) { $steps += [PSCustomObject]$currentStep }
+
+    # Interpolate variables
+    $vars = @{ issue_number = $IssueNumber; feature_name = "Issue-$IssueNumber" }
+
+    Write-Host ""
+    Write-Host "  ⚡ Workflow: $Type (Issue #$IssueNumber)" -ForegroundColor Cyan
+    Write-Host "  ─────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host ""
+
+    $completedSteps = @()
+    foreach ($step in $steps) {
+        $stepId = $step.id
+        $title = $step.title -replace '{{(\w+)}}', { $vars[$_.Groups[1].Value] }
+        $agent = $step.agent
+
+        # Check dependencies
+        $blocked = $false
+        foreach ($dep in $step.needs) {
+            if ($dep -and $completedSteps -notcontains $dep) {
+                $blocked = $true
+                break
+            }
+        }
+
+        # Check condition (e.g., "has_label:needs:ux")
+        $conditionMet = $true
+        if ($step.condition -and $step.condition -match '^has_label:(.+)$') {
+            $requiredLabel = $Matches[1]
+            if ($script:Mode -eq "github") {
+                $labelCheck = gh issue view $IssueNumber --json labels --jq ".labels[].name" 2>$null
+                $conditionMet = $labelCheck -contains $requiredLabel
+            }
+            else {
+                $issueFile = Join-Path $PSScriptRoot "issues/ISSUE-$IssueNumber.json"
+                if (Test-Path $issueFile) {
+                    $issueData = Get-Content $issueFile -Raw | ConvertFrom-Json
+                    $conditionMet = $issueData.labels -contains $requiredLabel
+                } else { $conditionMet = $false }
+            }
+        }
+
+        if ($step.optional -and -not $conditionMet) {
+            Write-Host "    ○ $stepId: $title [$agent] — skipped (optional, condition not met)" -ForegroundColor DarkGray
+            $completedSteps += $stepId
+            continue
+        }
+
+        if ($blocked) {
+            Write-Host "    ⏳ $stepId: $title [$agent] — blocked (needs: $($step.needs -join ', '))" -ForegroundColor Yellow
+            continue
+        }
+
+        # Update status
+        if ($step.status_on_start) {
+            if ($script:Mode -eq "local") {
+                $issueFile = Join-Path $PSScriptRoot "issues/ISSUE-$IssueNumber.json"
+                if (Test-Path $issueFile) {
+                    $issueData = Get-Content $issueFile -Raw | ConvertFrom-Json
+                    $issueData.status = $step.status_on_start
+                    $issueData | ConvertTo-Json -Depth 5 | Set-Content $issueFile
+                }
+            }
+        }
+
+        # Copy template if output and template defined
+        if ($step.output -and $step.template) {
+            $outputPath = $step.output -replace '{{(\w+)}}', { $vars[$_.Groups[1].Value] }
+            $templatePath = $step.template
+            if (-not (Test-Path $outputPath)) {
+                $outputDir = Split-Path $outputPath -Parent
+                if ($outputDir -and -not (Test-Path $outputDir)) {
+                    New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+                }
+                if (Test-Path $templatePath) {
+                    Copy-Item $templatePath $outputPath
+                    Write-Host "    📄 Created: $outputPath (from template)" -ForegroundColor DarkGray
+                }
+            }
+        }
+
+        Write-Host "    ▶ $stepId: $title" -ForegroundColor White
+        Write-Host "      Agent: @$agent | Status: $($step.status_on_start) → $($step.status_on_complete)" -ForegroundColor DarkGray
+
+        $completedSteps += $stepId
+    }
+
+    Write-Host ""
+    Write-Host "  Steps prepared: $($completedSteps.Count)/$($steps.Count)" -ForegroundColor Green
+    Write-Host "  Next: Invoke each agent with '@agent-name' in Copilot Chat" -ForegroundColor DarkGray
+    Write-Host ""
+}
+
 # ─── HELP ─────────────────────────────────────────────────────────────
 
 function Show-Help {
@@ -567,6 +872,9 @@ function Show-Help {
     Write-Host "    workflow -Type <name>          Show steps for a specific workflow"
     Write-Host "    hook -Phase start -Agent <a>   Auto-run deps + state on agent start"
     Write-Host "    hook -Phase finish -Agent <a>  Auto-run state done on agent finish"
+    Write-Host "    run -Type <t> -IssueNumber <n>  Execute workflow steps for an issue"
+    Write-Host "    version                        Show installed AgentX version"
+    Write-Host "    upgrade                        Smart upgrade (preserves user content)"
     Write-Host ""
     Write-Host "  Examples:" -ForegroundColor White
     Write-Host "    .\.agentx\agentx.ps1 ready"
@@ -590,5 +898,8 @@ switch ($Command) {
     'digest'   { Generate-Digest }
     'workflow' { Show-Workflow }
     'hook'     { Run-Hook }
+    'run'      { Run-Workflow-Steps }
+    'version'  { Show-Version }
+    'upgrade'  { Run-Upgrade }
     'help'     { Show-Help }
 }

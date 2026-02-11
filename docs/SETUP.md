@@ -36,7 +36,7 @@ Control what gets installed with the `-Profile` flag:
 
 | Profile | Skills | Instructions | Prompts | Hooks | VS Code |
 |---------|--------|-------------|---------|-------|---------|
-| **full** (default) | All 39 | All 7 | ✅ | ✅ | ✅ |
+| **full** (default) | All 40 | All 8 | ✅ | ✅ | ✅ |
 | **minimal** | None | None | ❌ | ❌ | ❌ |
 | **python** | Python, testing, data, architecture | python, api | ✅ | ✅ | ✅ |
 | **dotnet** | C#, Blazor, Azure, SQL, architecture | csharp, blazor, api | ✅ | ✅ | ✅ |
@@ -237,8 +237,8 @@ function issue { .\.agentx\local-issue-manager.ps1 @args }
 ```
 .agentx/
 ├── config.json                    # Mode configuration (local or github)
-├── agentx.ps1                     # PowerShell CLI (7 subcommands)
-├── agentx.sh                      # Bash CLI (7 subcommands)
+├── agentx.ps1                     # PowerShell CLI (10 subcommands)
+├── agentx.sh                      # Bash CLI (9 subcommands)
 ├── issues/
 │   ├── 1.json                    # Issue #1 data
 │   └── 2.json                    # Issue #2 data

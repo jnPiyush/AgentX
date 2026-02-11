@@ -78,6 +78,24 @@ await runSubagent({
 });
 ```
 
+### 1b. Domain Classification (AI-First)
+
+Analyze the user's request for technology domain signals:
+
+**AI/ML Detection Keywords**: AI, LLM, ML, machine learning, deep learning, GPT, model, inference, NLP, neural, agent framework, foundry, openai, anthropic, gemini, intelligent, smart analysis, automated reasoning, natural language
+
+**If AI/ML keywords detected**:
+1. Add `needs:ai` label to the issue
+2. **MUST READ** `.github/skills/ai-systems/ai-agent-development/SKILL.md` before writing PRD
+3. **MUST USE** Section "4.2 AI/ML Requirements" in the PRD template
+4. **MUST INVOKE** `aitk_get_ai_model_guidance` for model selection guidance
+5. **MUST NOT** add constraints that contradict AI intent (e.g., "no external API" when user asked for AI agent)
+6. **MUST NOT** downgrade to "rule-based" without explicit user confirmation
+
+**If domain is unclear**, ask the user: "Your request mentions [keyword]. Should this use AI/ML capabilities (LLM, model inference) or traditional rule-based logic?"
+
+> ⚠️ **Anti-Pattern**: The most common failure is a PM writing "AI-powered" in the description but "rule-based, no external API" in constraints. The AI/ML Requirements section prevents this by forcing explicit classification.
+
 ### 2. Create PRD
 
 Create `docs/prd/PRD-{epic-id}.md` following the [PRD template](../templates/PRD-TEMPLATE.md):

@@ -150,6 +150,17 @@ Write-Host "④ Configuring runtime..." -ForegroundColor Cyan
     if (-not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
 }
 
+# Version tracking
+$versionFile = ".agentx/version.json"
+@{
+    version = "4.0.0"
+    profile = $Profile
+    mode = $(if ($Local) { "local" } else { "github" })
+    installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+    updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+} | ConvertTo-Json | Set-Content $versionFile
+Write-OK "Version 4.0.0 recorded"
+
 # Agent status
 $statusFile = ".agentx/state/agent-status.json"
 if (-not (Test-Path $statusFile) -or $Force) {

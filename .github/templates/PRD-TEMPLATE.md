@@ -131,7 +131,51 @@ inputs:
 - {Feature explicitly excluded}
 - {Feature deferred to later}
 
-### 4.2 Non-Functional Requirements
+### 4.2 AI/ML Requirements
+
+> **Trigger**: Include this section when the user request involves AI, ML, LLM, intelligent automation, or agent capabilities. If the product does NOT involve AI/ML, mark "Technology Classification" as rule-based and skip the rest.
+
+#### Technology Classification
+- [ ] **AI/ML powered** — requires model inference (LLM, vision, embeddings, etc.)
+- [ ] **Rule-based / statistical** — no model needed (deterministic logic only)
+- [ ] **Hybrid** — rule-based foundation with AI/ML enhancement
+
+> ⚠️ **Intent Preservation**: If the user explicitly requested AI/ML capabilities (e.g., "build an AI agent"), do NOT classify as rule-based without explicit user confirmation. Do NOT add constraints like "no external API required" that contradict AI intent.
+
+#### Model Requirements (if AI/ML powered)
+| Requirement | Specification |
+|-------------|---------------|
+| **Model Type** | LLM / Vision / Embedding / Speech / Custom |
+| **Provider** | Microsoft Foundry / OpenAI / Anthropic / Google / Local / Any |
+| **Latency** | Real-time (<2s) / Near-real-time (<10s) / Batch (minutes+) |
+| **Quality Threshold** | Accuracy ≥ {X}% / Coherence ≥ {Y} / {custom metric} |
+| **Cost Budget** | ${amount} per 1M tokens / per request / per month |
+| **Data Sensitivity** | PII / Confidential / Internal / Public |
+
+#### Inference Pattern
+- [ ] Real-time API (user-facing, low latency)
+- [ ] Batch processing (offline, high throughput)
+- [ ] RAG (retrieval-augmented generation)
+- [ ] Fine-tuned model
+- [ ] Agent with tools (function calling / tool use)
+- [ ] Multi-agent orchestration (sequential / parallel / hierarchical)
+
+#### Data Requirements
+- **Training / Evaluation data**: {source, format, volume}
+- **Grounding data**: {knowledge base, documents, APIs}
+- **Data sensitivity**: {PII / Confidential / Public}
+- **Volume**: {requests per hour/day/month}
+
+#### AI-Specific Acceptance Criteria
+- [ ] Model produces responses meeting quality threshold
+- [ ] Inference latency meets requirements
+- [ ] Cost per request within budget
+- [ ] Evaluation dataset created with ≥{N} test cases
+- [ ] Graceful fallback when model is unavailable
+
+> **Reference**: Read `.github/skills/ai-systems/ai-agent-development/SKILL.md` for implementation patterns and model guidance.
+
+### 4.3 Non-Functional Requirements
 
 #### Performance
 - **Response Time**: {e.g., Page load < 2 seconds}

@@ -136,16 +136,47 @@ async function routeIssue(issue_number) {
   const labels = issue.labels.map(l => l.name);
   const status = await getProjectStatus(issue_number);
   
-  // 2. Analyze complexity
+  // 2. Domain classification (AI-First intent preservation)
+  await classifyDomain(issue, labels);
+  
+  // 3. Analyze complexity
   const analysis = await analyzeComplexity(issue);
   
-  // 3. Route based on analysis
+  // 4. Route based on analysis
   if (analysis.isSimple) {
     // AUTONOMOUS MODE - Direct to Engineer
     return routeToEngineer(issue_number);
   } else {
     // FULL WORKFLOW MODE - Proper pipeline
     return routeToFullWorkflow(issue_number, analysis);
+  }
+}
+
+async function classifyDomain(issue, labels) {
+  const text = (issue.title + ' ' + (issue.body || '')).toLowerCase();
+  
+  // AI/ML domain detection
+  const aiKeywords = /\b(ai|llm|ml|machine learning|deep learning|gpt|model inference|nlp|neural|agent framework|foundry|openai|anthropic|gemini|intelligent|smart analysis|automated reasoning|natural language|embedding|rag|fine.?tun|prompt engineering)\b/i;
+  if (aiKeywords.test(text) && !labels.includes('needs:ai')) {
+    await issue_write({ method: 'update', issue_number: issue.number, 
+      labels: [...labels, 'needs:ai'] });
+    // Post notification so downstream agents are aware
+    await add_issue_comment({ issue_number: issue.number,
+      body: '🤖 **Domain detected: AI/ML** — `needs:ai` label added. PM will use AI/ML Requirements section in PRD, Architect will design AI architecture.' });
+  }
+  
+  // Real-time domain detection
+  const realtimeKeywords = /\b(real.?time|websocket|streaming|live|server.?sent|sse|push notification|socket\.io)\b/i;
+  if (realtimeKeywords.test(text) && !labels.includes('needs:realtime')) {
+    await issue_write({ method: 'update', issue_number: issue.number,
+      labels: [...labels, 'needs:realtime'] });
+  }
+  
+  // Mobile domain detection
+  const mobileKeywords = /\b(mobile|ios|android|react native|flutter|swift|kotlin|xamarin|maui)\b/i;
+  if (mobileKeywords.test(text) && !labels.includes('needs:mobile')) {
+    await issue_write({ method: 'update', issue_number: issue.number,
+      labels: [...labels, 'needs:mobile'] });
   }
 }
 
@@ -188,6 +219,43 @@ async function analyzeComplexity(issue) {
       'Simple task - direct to Engineer' : 
       'Complex task - requires full workflow'
   };
+}
+
+// PRD Contradiction Validation (runs after PM completes PRD)
+async function validatePRDIntent(issue_number) {
+  const issue = await issue_read({ issue_number });
+  const labels = issue.labels.map(l => l.name);
+  
+  // Only validate if needs:ai label is present
+  if (!labels.includes('needs:ai')) return { valid: true };
+  
+  // Read PRD file
+  const prdPath = `docs/prd/PRD-${issue_number}.md`;
+  const prd = await read_file({ path: prdPath });
+  if (!prd) return { valid: true, warning: 'PRD not found' };
+  
+  const prdText = prd.toLowerCase();
+  
+  // Check for contradictory constraints
+  const contradictions = [];
+  const aiContradict = /no (external )?api|rule.?based only|no (ai|ml|llm)|deterministic only|no model/i;
+  if (aiContradict.test(prdText)) {
+    contradictions.push('PRD contains constraints that contradict AI intent (e.g., "no external API", "rule-based only")');
+  }
+  
+  // Check AI/ML Requirements section exists
+  const hasAISection = prdText.includes('ai/ml requirements') || prdText.includes('technology classification');
+  if (!hasAISection) {
+    contradictions.push('PRD missing AI/ML Requirements section (Section 4.2) despite needs:ai label');
+  }
+  
+  if (contradictions.length > 0) {
+    await add_issue_comment({ issue_number,
+      body: `⚠️ **Intent Preservation Warning**\n\nThis issue has \`needs:ai\` label but the PRD has potential contradictions:\n${contradictions.map(c => '- ' + c).join('\n')}\n\n**Action Required**: PM should review and resolve these contradictions before Architect proceeds.`
+    });
+    return { valid: false, contradictions };
+  }
+  return { valid: true };
 }
 ```
 

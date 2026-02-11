@@ -98,7 +98,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 ### ⚙️ Dual-Mode CLI
 - **PowerShell + Bash** CLI scripts
 - **Auto-detects** mode from `.agentx/config.json`
-- **7 subcommands**: ready, state, deps, digest, workflow, hook, help
+- **10 subcommands**: ready, state, deps, digest, workflow, hook, version, upgrade, run, help
 - Works seamlessly in both Local and GitHub modes
 
 </td>
@@ -234,7 +234,7 @@ Also includes all v2.x features: session persistence, defense-in-depth security,
 </td>
 <td width="50%">
 
-### 📚 39 Production Skills
+### 📚 40 Production Skills
 - Testing (80%+ coverage)
 - Security (OWASP Top 10)
 - API Design (REST patterns)
@@ -305,7 +305,7 @@ PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/mast
 
 | Profile | What's Included |
 |---------|----------------|
-| `full` | Everything — all 39 skills, instructions, prompts (default) |
+| `full` | Everything — all 40 skills, instructions, prompts (default) |
 | `minimal` | Core only — agents, templates, CLI, docs |
 | `python` | Core + Python, testing, data, API skills |
 | `dotnet` | Core + C#, Blazor, Azure, SQL skills |
@@ -414,7 +414,7 @@ Backlog → In Progress → In Review → Ready → Done
 ```
 AgentX/
 ├── 📄 AGENTS.md              # Workflow & orchestration rules
-├── 📄 Skills.md              # 36 production skills index
+├── 📄 Skills.md              # 40 production skills index
 ├── 📄 CONTRIBUTING.md        # Contributor guide
 │
 ├── 📁 .github/
@@ -423,14 +423,14 @@ AgentX/
 │   ├── 📁 scripts/           # Validation & metrics scripts
 │   ├── 📁 security/          # Command allowlist
 │   ├── 📁 templates/         # PRD, ADR, Spec, UX, Progress templates
-│   ├── 📁 prompts/           # 10 reusable prompts
+│   ├── 📁 prompts/           # 11 reusable prompts
 │   ├── 📁 workflows/         # GitHub Actions (CI/CD, scanning)
-│   ├── 📁 skills/            # 36 skill documents
+│   └── 📁 skills/            # 40 skill documents
 │   └── 📁 instructions/      # Language-specific guides
 │
 ├── 📁 .agentx/               # CLI, workflows, state, local issues
-│   ├── 📄 agentx.ps1         # PowerShell CLI (7 subcommands)
-│   ├── 📄 agentx.sh          # Bash CLI (7 subcommands)
+│   ├── 📄 agentx.ps1         # PowerShell CLI (10 subcommands)
+│   ├── 📄 agentx.sh          # Bash CLI (9 subcommands)
 │   ├── 📁 workflows/         # 7 TOML workflow templates
 │   ├── 📁 state/             # Agent status tracking
 │   ├── 📁 digests/           # Weekly issue digests
@@ -458,7 +458,7 @@ AgentX/
 | Document | Description |
 |----------|-------------|
 | [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
-| [Skills.md](Skills.md) | 36 production skills with guidelines |
+| [Skills.md](Skills.md) | 40 production skills with guidelines |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
 | [Features](docs/FEATURES.md) | Memory, CLI, cross-repo, session persistence, templates, visualization, analytics |
 | [Setup Guide](docs/SETUP.md) | GitHub Projects V2, Local Mode, MCP Server integration |

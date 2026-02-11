@@ -147,9 +147,11 @@ await runSubagent({
 
 **Intent Preservation:**
 - [ ] Implementation aligns with the user's original request (not just the spec)
-- [ ] If user requested "AI agent" or "ML", code includes actual LLM/model integration
+- [ ] If user requested "AI agent" or "ML", code includes actual LLM/model integration (not rule-based substitution)
 - [ ] No user intent keywords (AI, ML, LLM, real-time) were lost in the PM → Architect → Engineer pipeline
 - [ ] PRD constraints don't contradict user's stated technology intent
+- [ ] If `needs:ai` label is present, verify: model calls exist, AI skill was consulted, evaluation is set up
+- [ ] If AI was specified but implementation is rule-based, **REJECT with clear feedback** citing intent preservation violation
 
 ### 5. Create Review Document
 

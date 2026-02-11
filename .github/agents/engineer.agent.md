@@ -159,6 +159,22 @@ await runSubagent({
 });
 ```
 
+### 5b. AI Implementation Setup (if `needs:ai` label present)
+
+When implementing AI-powered features (issue has `needs:ai` label or Tech Spec has Section 13):
+
+1. **MUST READ** `.github/skills/ai-systems/ai-agent-development/SKILL.md` — contains installation guides, model setup, agent patterns, evaluation, production checklist
+2. **MUST INVOKE** AITK tools for implementation:
+   - `aitk_get_agent_model_code_sample` — scaffold agent code (Python, Node.js, .NET, Java)
+   - `aitk_get_tracing_code_gen_best_practices` — set up observability for model calls
+   - `aitk_get_evaluation_code_gen_best_practices` — create evaluation harness if specified in spec
+3. **Follow the Production Checklist** from the AI skill (error handling, retry policies, token limits, cost tracking)
+4. **Include evaluation setup** if SPEC Section 13.5 specifies evaluation metrics
+5. **Configure model credentials** via environment variables (NEVER hardcode API keys)
+6. **Implement graceful fallbacks** when model API is unavailable (cached responses, degraded mode, user notification)
+
+> ⚠️ **Anti-Pattern**: Implementing hardcoded rules or scoring formulas when the spec calls for model inference. If the Tech Spec's Section 13 specifies a model, implement actual model integration — not a rule-based approximation.
+
 ### 6. Create Low-Level Design (if complex)
 
 For complex stories, create design doc before coding:
