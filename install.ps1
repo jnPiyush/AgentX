@@ -154,14 +154,14 @@ Write-Host "④ Configuring runtime..." -ForegroundColor Cyan
 $statusFile = ".agentx/state/agent-status.json"
 if (-not (Test-Path $statusFile) -or $Force) {
     $ts = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
-    @{ agents = @{
-        product_manager = @{ status="idle"; current_issue=$null; updated=$ts }
-        ux_designer     = @{ status="idle"; current_issue=$null; updated=$ts }
-        architect       = @{ status="idle"; current_issue=$null; updated=$ts }
-        engineer        = @{ status="idle"; current_issue=$null; updated=$ts }
-        reviewer        = @{ status="idle"; current_issue=$null; updated=$ts }
-        devops          = @{ status="idle"; current_issue=$null; updated=$ts }
-    }} | ConvertTo-Json -Depth 10 | Set-Content $statusFile
+    [ordered]@{
+        "product-manager" = @{ status="idle"; issue=$null; lastActivity=$null }
+        "ux-designer"     = @{ status="idle"; issue=$null; lastActivity=$null }
+        "architect"       = @{ status="idle"; issue=$null; lastActivity=$null }
+        "engineer"        = @{ status="idle"; issue=$null; lastActivity=$null }
+        "reviewer"        = @{ status="idle"; issue=$null; lastActivity=$null }
+        "devops-engineer" = @{ status="idle"; issue=$null; lastActivity=$null }
+    } | ConvertTo-Json -Depth 10 | Set-Content $statusFile
     Write-OK "Agent status initialized"
 }
 

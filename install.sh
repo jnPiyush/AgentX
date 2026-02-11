@@ -106,17 +106,14 @@ mkdir -p .agentx/state .agentx/digests docs/{prd,adr,specs,ux,reviews,progress}
 # Agent status
 STATUS=".agentx/state/agent-status.json"
 if [ ! -f "$STATUS" ] || [ "$FORCE" = "true" ]; then
-    ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     cat > "$STATUS" <<EOF
 {
-    "agents": {
-        "product_manager": { "status": "idle", "current_issue": null, "updated": "$ts" },
-        "ux_designer":     { "status": "idle", "current_issue": null, "updated": "$ts" },
-        "architect":       { "status": "idle", "current_issue": null, "updated": "$ts" },
-        "engineer":        { "status": "idle", "current_issue": null, "updated": "$ts" },
-        "reviewer":        { "status": "idle", "current_issue": null, "updated": "$ts" },
-        "devops":          { "status": "idle", "current_issue": null, "updated": "$ts" }
-    }
+    "product-manager": { "status": "idle", "issue": null, "lastActivity": null },
+    "ux-designer":     { "status": "idle", "issue": null, "lastActivity": null },
+    "architect":       { "status": "idle", "issue": null, "lastActivity": null },
+    "engineer":        { "status": "idle", "issue": null, "lastActivity": null },
+    "reviewer":        { "status": "idle", "issue": null, "lastActivity": null },
+    "devops-engineer": { "status": "idle", "issue": null, "lastActivity": null }
 }
 EOF
     ok "Agent status initialized"
