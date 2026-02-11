@@ -1,0 +1,56 @@
+# Feature Workflow — Full pipeline for new capabilities
+# Usage: Agent X reads this to determine routing and prerequisites
+
+[workflow]
+name = "feature"
+description = "Standard feature development with full agent pipeline"
+type = "feature"
+
+[[steps]]
+id = "prd"
+title = "Create PRD for {{feature_name}}"
+agent = "product-manager"
+status_on_start = "Backlog"
+status_on_complete = "Ready"
+output = "docs/prd/PRD-{{issue_number}}.md"
+template = ".github/templates/PRD-TEMPLATE.md"
+
+[[steps]]
+id = "ux"
+title = "Design UX for {{feature_name}}"
+agent = "ux-designer"
+needs = ["prd"]
+optional = true
+condition = "has_label:needs:ux"
+status_on_start = "Ready"
+status_on_complete = "Ready"
+output = "docs/ux/UX-{{issue_number}}.md"
+template = ".github/templates/UX-TEMPLATE.md"
+
+[[steps]]
+id = "architecture"
+title = "Create ADR and Tech Spec"
+agent = "architect"
+needs = ["prd"]
+status_on_start = "Ready"
+status_on_complete = "Ready"
+output = "docs/adr/ADR-{{issue_number}}.md"
+template = ".github/templates/ADR-TEMPLATE.md"
+
+[[steps]]
+id = "implement"
+title = "Implement code and tests"
+agent = "engineer"
+needs = ["architecture"]
+status_on_start = "In Progress"
+status_on_complete = "In Review"
+
+[[steps]]
+id = "review"
+title = "Code review"
+agent = "reviewer"
+needs = ["implement"]
+status_on_start = "In Review"
+status_on_complete = "Done"
+output = "docs/reviews/REVIEW-{{issue_number}}.md"
+template = ".github/templates/REVIEW-TEMPLATE.md"

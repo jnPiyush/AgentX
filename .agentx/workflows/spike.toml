@@ -1,0 +1,16 @@
+# Spike Workflow — Research and investigation
+# Architect produces research document, no code
+
+[workflow]
+name = "spike"
+description = "Research spike — architect investigates and documents findings"
+type = "spike"
+
+[[steps]]
+id = "research"
+title = "Research: {{spike_title}}"
+agent = "architect"
+status_on_start = "In Progress"
+status_on_complete = "Ready"
+output = "docs/adr/ADR-{{issue_number}}.md"
+template = ".github/templates/ADR-TEMPLATE.md"

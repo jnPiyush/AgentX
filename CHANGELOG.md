@@ -5,6 +5,57 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-02-15
+
+### ✨ Added
+
+**Declarative Workflows**:
+- **TOML-based workflow templates** at `.agentx/workflows/` (7 types: feature, epic, story, bug, spike, devops, docs)
+- Machine-readable step definitions with agent assignments, required artifacts, and validation rules
+- `agentx workflow -Type <type>` command to display workflow steps
+
+**Smart Ready Queue**:
+- **Priority-sorted work queue** via `agentx ready` command
+- Dual-mode support: queries local JSON issues or GitHub via `gh` CLI
+- Filters by status (Ready, open) and sorts by priority labels (P0 > P1 > P2 > P3)
+
+**Agent State Tracking**:
+- **Real-time agent status** tracked in `.agentx/state/agent-status.json`
+- 6 agent roles: product_manager, ux_designer, architect, engineer, reviewer, devops
+- States: idle, working, blocked
+- `agentx state` command to display all agent states
+
+**Dependency Management**:
+- **Issue dependency checking** via `agentx deps -IssueNumber <N>`
+- Convention: `Blocked-by: #N` and `Blocks: #N` in issue body `## Dependencies` section
+- Validates all blockers are resolved before allowing work to start
+
+**Issue Digests**:
+- **Weekly digest generation** via `agentx digest`
+- Summarizes open, closed, and blocked issues with priority breakdown
+- Agent state overview included
+- Markdown reports saved to `.agentx/digests/`
+
+**Dual-Mode CLI**:
+- **AgentX CLI** in PowerShell (`.agentx/agentx.ps1`) and Bash (`.agentx/agentx.sh`)
+- Auto-detects mode (local vs GitHub) from `.agentx/config.json`
+- 7 subcommands: `ready`, `state`, `deps`, `digest`, `workflow`, `hook`, `help`
+- `hook start/finish` lifecycle commands with automatic agent state updates
+- GitHub mode queries live issues via `gh` CLI
+
+**Agent Lifecycle Hooks**:
+- All 7 agent definitions updated with MUST constraints for auto-calling hooks
+- `agentx hook -Phase start -Agent <role> -Issue <N>` before starting work
+- `agentx hook -Phase finish -Agent <role> -Issue <N>` after completing work
+- Dependency validation on hook start, state cleanup on hook finish
+
+### 🔧 Fixed
+- Parse-Dependencies regex now handles both bulleted and bare-line formats
+- Label normalization in local-issue-manager.ps1 for comma-separated labels
+- DateTime/Substring bounds checking in state display
+
+---
+
 ## [Unreleased] - v3.0.0 Roadmap
 
 > **Epic**: [#118](https://github.com/jnPiyush/AgentX/issues/118) | **PRD**: [docs/prd/PRD-118.md](docs/prd/PRD-118.md)

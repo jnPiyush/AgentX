@@ -1,0 +1,24 @@
+# Story Workflow — Small, well-defined work items
+# Skips PM/Architect if scope is clear (<=3 files)
+
+[workflow]
+name = "story"
+description = "Small well-defined work — direct to engineer"
+type = "story"
+
+[[steps]]
+id = "implement"
+title = "Implement {{story_title}}"
+agent = "engineer"
+status_on_start = "In Progress"
+status_on_complete = "In Review"
+
+[[steps]]
+id = "review"
+title = "Code review"
+agent = "reviewer"
+needs = ["implement"]
+status_on_start = "In Review"
+status_on_complete = "Done"
+output = "docs/reviews/REVIEW-{{issue_number}}.md"
+template = ".github/templates/REVIEW-TEMPLATE.md"

@@ -1,0 +1,14 @@
+# Documentation Workflow — Docs-only changes
+# Engineer writes, no formal review needed for pure docs
+
+[workflow]
+name = "docs"
+description = "Documentation-only changes — direct to engineer"
+type = "docs"
+
+[[steps]]
+id = "write"
+title = "Write documentation: {{doc_title}}"
+agent = "engineer"
+status_on_start = "In Progress"
+status_on_complete = "Done"

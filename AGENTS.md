@@ -44,6 +44,36 @@ gh issue close <ID>
 > 
 > 📖 **Local Mode**: See [docs/SETUP.md](docs/SETUP.md#local-mode-no-github) for filesystem-based issue tracking without GitHub.
 
+### AgentX CLI Utilities
+
+The AgentX CLI provides lightweight orchestration commands that work in both Local and GitHub modes. The CLI reads `.agentx/config.json` to detect the mode and fetches issue data from the appropriate source (`gh` CLI for GitHub mode, local JSON files for Local mode).
+
+```powershell
+# PowerShell
+.\.agentx\agentx.ps1 ready                          # Show unblocked work sorted by priority
+.\.agentx\agentx.ps1 state                          # Show all agent states
+.\.agentx\agentx.ps1 state -Agent engineer -Set working -Issue 42
+.\.agentx\agentx.ps1 deps -IssueNumber 42           # Check issue dependencies
+.\.agentx\agentx.ps1 digest                         # Generate weekly digest
+.\.agentx\agentx.ps1 workflow -Type feature          # Show workflow steps
+.\.agentx\agentx.ps1 hook -Phase start -Agent engineer -Issue 42  # Lifecycle hook
+```
+
+```bash
+# Bash
+./.agentx/agentx.sh ready
+./.agentx/agentx.sh state engineer working 42
+./.agentx/agentx.sh deps 42
+./.agentx/agentx.sh hook start engineer 42
+```
+
+**Dependency Convention**: Add a `## Dependencies` section in issue bodies:
+```markdown
+## Dependencies
+Blocked-by: #10, #12
+Blocks: #15
+```
+
 ---
 
 ## Architecture
@@ -410,6 +440,10 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Skills | `.github/skills/` |
 | Instructions | `.github/instructions/` |
 | Workflow Scenarios | `.github/SCENARIOS.md` |
+| Workflow Templates | `.agentx/workflows/` |
+| Agent State | `.agentx/state/` |
+| Issue Digests | `.agentx/digests/` |
+| CLI Utilities | `.agentx/agentx.ps1`, `.agentx/agentx.sh` |
 
 ### New Features (v2.1)
 
@@ -433,6 +467,16 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | **CLI Specification** | [docs/FEATURES.md](docs/FEATURES.md#cli-specification) | ✅ Implemented |
 | **Agent Memory** | [docs/FEATURES.md](docs/FEATURES.md#agent-memory-system) | ✅ Implemented |
 | **Visualization** | [docs/FEATURES.md](docs/FEATURES.md#visualization--debugging) | ✅ Implemented |
+
+### New Features (v4.0)
+
+| Feature | Documentation | Status |
+|---------|---------------|--------|
+| **Declarative Workflows** | [docs/FEATURES.md](docs/FEATURES.md#declarative-workflows) | ✅ Implemented |
+| **Smart Ready Queue** | [docs/FEATURES.md](docs/FEATURES.md#smart-ready-queue) | ✅ Implemented |
+| **Agent State Tracking** | [docs/FEATURES.md](docs/FEATURES.md#agent-state-tracking) | ✅ Implemented |
+| **Dependency Management** | [docs/FEATURES.md](docs/FEATURES.md#dependency-management) | ✅ Implemented |
+| **Issue Digests** | [docs/FEATURES.md](docs/FEATURES.md#issue-digests) | ✅ Implemented |
 
 ### Labels
 

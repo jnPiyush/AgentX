@@ -6,6 +6,8 @@ mode: agent
 model: Gemini 3 Pro (copilot)
 infer: true
 constraints:
+  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent ux-designer -Issue <n>` before starting work"
+  - "MUST run `.agentx/agentx.ps1 hook -Phase finish -Agent ux-designer -Issue <n>` after completing work"
   - "MUST NOT write application or business logic code"
   - "MUST NOT create technical architecture or ADRs"
   - "MUST follow WCAG 2.1 AA accessibility standards"
@@ -305,9 +307,18 @@ If validation fails:
 
 ---
 
-## References
+## Automatic CLI Hooks
 
-- **Workflow**: [AGENTS.md §UX Designer](../../AGENTS.md#handoff-flow)
+These commands run automatically at workflow boundaries — **no manual invocation needed**:
+
+| When | Command | Purpose |
+|------|---------|---------|
+| **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent ux-designer -Issue <n>` | Mark agent working |
+| **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent ux-designer -Issue <n>` | Mark agent done |
+
+---
+
+## References
 - **Standards**: [Skills.md](../../Skills.md) → See Skill #29 (UX/UI Design), #21 (Frontend/UI), #22 (React)
 - **Skills**:
   - **[Skill #29: UX/UI Design](../skills/design/ux-ui-design/SKILL.md)** - Wireframing, HTML prototypes, accessibility, responsive design
@@ -318,5 +329,5 @@ If validation fails:
 
 ---
 
-**Version**: 2.3 (Streamlined)  
+**Version**: 4.0 (CLI Hooks)  
 **Last Updated**: January 28, 2026

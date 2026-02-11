@@ -76,11 +76,16 @@ function Create-Issue {
     )
     
     $number = Get-NextIssueNumber
+    # Normalize labels: split any comma-separated values into individual items
+    $normalizedLabels = @()
+    foreach ($l in $Labels) {
+        $normalizedLabels += ($l -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+    }
     $issue = @{
         number = $number
         title = $Title
         body = $Body
-        labels = $Labels
+        labels = $normalizedLabels
         status = "Backlog"
         state = "open"
         created = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")

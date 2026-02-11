@@ -16,6 +16,9 @@ complexity_escalation:
   - "files > 3 → Full workflow"
   - "unclear_scope → PM required"
 constraints:
+  - "MUST run `.agentx/agentx.ps1 ready` to find unblocked work before routing"
+  - "MUST run `.agentx/agentx.ps1 workflow <type>` to determine pipeline steps for an issue type"
+  - "MUST run `.agentx/agentx.ps1 deps <issue>` to validate dependencies before assigning work"
   - "MUST analyze issue complexity before routing"
   - "MUST NOT create or modify deliverables (PRD, ADR, UX, Code)"
   - "MUST enforce issue-first workflow (no retroactive issues)"
@@ -203,6 +206,20 @@ async function analyzeComplexity(issue) {
 - ❌ Allow retroactive issue creation (defeats audit trail)
 - ❌ Approve work without validation
 - ❌ Change agent roles or responsibilities
+
+## Automatic CLI Hooks
+
+Agent X automatically executes these CLI commands at key workflow points — **no manual invocation needed**:
+
+| When | Command | Purpose |
+|------|---------|---------|
+| **Before routing** | `.agentx/agentx.ps1 ready` | Find unblocked work sorted by priority |
+| **Before routing** | `.agentx/agentx.ps1 deps <issue>` | Verify no open blockers before assigning |
+| **On route** | `.agentx/agentx.ps1 state <agent> working <issue>` | Mark target agent as working |
+| **On route** | `.agentx/agentx.ps1 workflow <type>` | Look up workflow steps for the issue type |
+| **On completion** | `.agentx/agentx.ps1 state <agent> done <issue>` | Mark agent as finished |
+
+**How it works**: When Agent X receives a request or picks up backlog work, it runs `ready` to identify the highest-priority unblocked issue, validates dependencies with `deps`, updates agent state with `state`, and consults workflow templates with `workflow` to determine the correct agent pipeline.
 
 ## Team & Handoffs
 
@@ -437,7 +454,7 @@ The Engineer will resume after ${next_agent} completes.
 
 ---
 
-**Version**: 3.0 (Adaptive)  
+**Version**: 4.0 (Adaptive)  
 **Last Updated**: February 7, 2026  
 **Replaces**: Agent X (YOLO) + Agent X (Autonomous) — merged into single adaptive agent  
 **See Also**: [AGENTS.md](../../AGENTS.md) • [Skills.md](../../Skills.md)

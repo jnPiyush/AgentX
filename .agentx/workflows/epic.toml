@@ -1,0 +1,19 @@
+# Epic Workflow — Large initiatives broken into features/stories
+# PM creates PRD and child issues, then each follows its own workflow
+
+[workflow]
+name = "epic"
+description = "Large initiative — PM breaks into features and stories"
+type = "epic"
+
+[[steps]]
+id = "prd"
+title = "Create PRD and break down Epic"
+agent = "product-manager"
+status_on_start = "Backlog"
+status_on_complete = "Ready"
+output = "docs/prd/PRD-{{issue_number}}.md"
+template = ".github/templates/PRD-TEMPLATE.md"
+
+# After PRD, PM creates child feature/story issues.
+# Each child follows its own workflow (feature.toml, story.toml, etc.)

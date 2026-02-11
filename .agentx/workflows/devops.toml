@@ -1,0 +1,24 @@
+# DevOps Workflow — CI/CD pipelines and deployment automation
+# DevOps Engineer creates, Reviewer validates
+
+[workflow]
+name = "devops"
+description = "CI/CD and deployment — DevOps engineer builds pipelines"
+type = "devops"
+
+[[steps]]
+id = "implement"
+title = "Build pipeline: {{task_title}}"
+agent = "devops-engineer"
+status_on_start = "In Progress"
+status_on_complete = "In Review"
+
+[[steps]]
+id = "review"
+title = "Review pipeline"
+agent = "reviewer"
+needs = ["implement"]
+status_on_start = "In Review"
+status_on_complete = "Done"
+output = "docs/reviews/REVIEW-{{issue_number}}.md"
+template = ".github/templates/REVIEW-TEMPLATE.md"

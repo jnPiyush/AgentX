@@ -6,6 +6,8 @@ mode: agent
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 constraints:
+  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent engineer -Issue <n>` before starting work"
+  - "MUST run `.agentx/agentx.ps1 hook -Phase finish -Agent engineer -Issue <n>` after completing work"
   - "MUST NOT modify PRD, ADR, or UX documents"
   - "MUST achieve ≥80% test coverage (70% unit, 20% integration, 10% e2e)"
   - "MUST NOT skip security checks (secrets, SQL injection, validation)"
@@ -452,12 +454,22 @@ If validation fails:
 
 ---
 
-## References
+## Automatic CLI Hooks
 
-- **Workflow**: [AGENTS.md](../../AGENTS.md) § Agent Roles
-- **Standards**: [Skills.md](../../Skills.md) → All 36 skills
+These commands run automatically at workflow boundaries — **no manual invocation needed**:
+
+| When | Command | Purpose |
+|------|---------|---------|
+| **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent engineer -Issue <n>` | Check deps + mark agent working |
+| **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent engineer -Issue <n>` | Mark agent done |
+
+The `hook start` command automatically validates dependencies and blocks if open blockers exist. If blocked, **stop and report** — do not begin implementation.
 
 ---
 
-**Version**: 2.2 (Restructured)  
+## References
+
+---
+
+**Version**: 4.0 (CLI Hooks)  
 **Last Updated**: January 21, 2026

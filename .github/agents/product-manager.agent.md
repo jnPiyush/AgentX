@@ -6,6 +6,8 @@ mode: agent
 model: Claude Opus 4.5 (copilot)
 infer: true
 constraints:
+  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent product-manager -Issue <n>` before starting work"
+  - "MUST run `.agentx/agentx.ps1 hook -Phase finish -Agent product-manager -Issue <n>` after completing work"
   - "MUST NOT write code or technical specifications"
   - "MUST NOT create UX designs or wireframes"
   - "MUST create PRD before creating child issues"
@@ -315,14 +317,22 @@ If validation fails:
 
 ---
 
-## References
+## Automatic CLI Hooks
 
-- **Workflow**: [AGENTS.md](../../AGENTS.md)
-- **Standards**: [Skills.md](../../Skills.md)
+These commands run automatically at workflow boundaries — **no manual invocation needed**:
+
+| When | Command | Purpose |
+|------|---------|---------|
+| **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent product-manager -Issue <n>` | Mark agent working |
+| **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent product-manager -Issue <n>` | Mark agent done |
+
+---
+
+## References
 - **Example PRD**: [PRD-48.md](../../docs/prd/PRD-48.md)
 
 
 ---
 
-**Version**: 2.2 (Restructured)  
+**Version**: 4.0 (CLI Hooks)  
 **Last Updated**: January 21, 2026

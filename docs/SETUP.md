@@ -7,9 +7,67 @@
 
 ## Table of Contents
 
+- [Installation](#installation)
 - [GitHub Project Setup](#github-project-setup)
 - [Local Mode (No GitHub)](#local-mode-no-github)
 - [GitHub MCP Server Integration](#github-mcp-server-integration)
+
+---
+
+## Installation
+
+### Quick Install
+
+```powershell
+# PowerShell (Windows)
+.\install.ps1
+
+# Bash (Linux/Mac)
+./install.sh
+
+# One-liner (downloads and runs)
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex    # PowerShell
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash  # Bash
+```
+
+### Install Profiles
+
+Control what gets installed with the `-Profile` flag:
+
+| Profile | Skills | Instructions | Prompts | Hooks | VS Code |
+|---------|--------|-------------|---------|-------|---------|
+| **full** (default) | All 39 | All 7 | ✅ | ✅ | ✅ |
+| **minimal** | None | None | ❌ | ❌ | ❌ |
+| **python** | Python, testing, data, architecture | python, api | ✅ | ✅ | ✅ |
+| **dotnet** | C#, Blazor, Azure, SQL, architecture | csharp, blazor, api | ✅ | ✅ | ✅ |
+| **react** | React, TypeScript, UI, design, architecture | react, api | ✅ | ✅ | ✅ |
+
+**All profiles always include**: agents, templates, CLI, TOML workflows, issue templates, documentation.
+
+```powershell
+# PowerShell examples
+.\install.ps1 -Profile python          # Python stack
+.\install.ps1 -Profile minimal -Local  # Core only, local mode
+.\install.ps1 -Force                   # Reinstall (overwrite existing)
+.\install.ps1 -NoSetup                 # Skip interactive prompts (CI/scripts)
+
+# Bash examples
+./install.sh --profile python
+./install.sh --profile minimal --local
+./install.sh --force
+./install.sh --no-setup
+
+# One-liner with profile (env vars)
+PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
+```
+
+### What the Installer Does
+
+1. **Clone** — Shallow-clones the AgentX repo to a temp directory
+2. **Prune** — Removes files not needed by the selected profile
+3. **Copy** — Merges remaining files into your project (skips existing files unless `-Force`)
+4. **Configure** — Generates `agent-status.json`, `config.json`, output directories
+5. **Setup** — Interactive: git init, hooks install, username config (skip with `-NoSetup`)
 
 ---
 
@@ -108,11 +166,19 @@ Use AgentX without GitHub — filesystem-based issue tracking and agent coordina
 
 **During initial setup:**
 ```powershell
-.\install.ps1
-# Choose option [2] Use Local Mode when prompted
+# PowerShell
+.\install.ps1 -Local
+
+# Bash
+./install.sh --local
 ```
 
-**Enable later:**
+**With a specific profile:**
+```powershell
+.\install.ps1 -Profile python -Local
+```
+
+**Enable later (if already installed in GitHub mode):**
 ```powershell
 New-Item -ItemType Directory -Path ".agentx/issues" -Force
 
@@ -170,12 +236,48 @@ function issue { .\.agentx\local-issue-manager.ps1 @args }
 
 ```
 .agentx/
-├── config.json                    # Mode configuration
+├── config.json                    # Mode configuration (local or github)
+├── agentx.ps1                     # PowerShell CLI (7 subcommands)
+├── agentx.sh                      # Bash CLI (7 subcommands)
 ├── issues/
 │   ├── 1.json                    # Issue #1 data
 │   └── 2.json                    # Issue #2 data
-├── local-issue-manager.ps1       # PowerShell CLI
-└── local-issue-manager.sh        # Bash CLI
+├── workflows/
+│   ├── feature.toml              # Declarative workflow templates
+│   ├── epic.toml
+│   ├── story.toml
+│   ├── bug.toml
+│   ├── spike.toml
+│   ├── devops.toml
+│   └── docs.toml
+├── state/
+│   └── agent-status.json         # Agent state tracking
+├── digests/                       # Weekly issue digests
+├── local-issue-manager.ps1       # PowerShell issue manager
+└── local-issue-manager.sh        # Bash issue manager
+```
+
+### AgentX CLI Commands
+
+The CLI works in both Local and GitHub modes (auto-detects from `config.json`):
+
+```powershell
+# PowerShell
+.\.agentx\agentx.ps1 ready                          # Show priority-sorted work queue
+.\.agentx\agentx.ps1 state                          # Show all agent states
+.\.agentx\agentx.ps1 state -Agent engineer -Set working -Issue 42
+.\.agentx\agentx.ps1 deps -IssueNumber 42           # Check issue dependencies
+.\.agentx\agentx.ps1 digest                         # Generate weekly digest
+.\.agentx\agentx.ps1 workflow -Type feature          # Show workflow steps
+.\.agentx\agentx.ps1 hook -Phase start -Agent engineer -Issue 42
+```
+
+```bash
+# Bash
+./.agentx/agentx.sh ready
+./.agentx/agentx.sh state engineer working 42
+./.agentx/agentx.sh deps 42
+./.agentx/agentx.sh hook start engineer 42
 ```
 
 ### Issue JSON Format

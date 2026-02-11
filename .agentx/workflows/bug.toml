@@ -1,0 +1,24 @@
+# Bug Workflow — Fast track: Engineer fixes, Reviewer validates
+# Skips PM and Architect for rapid response
+
+[workflow]
+name = "bug"
+description = "Bug fix — direct to engineer, skip planning"
+type = "bug"
+
+[[steps]]
+id = "fix"
+title = "Fix bug: {{bug_title}}"
+agent = "engineer"
+status_on_start = "In Progress"
+status_on_complete = "In Review"
+
+[[steps]]
+id = "review"
+title = "Review bug fix"
+agent = "reviewer"
+needs = ["fix"]
+status_on_start = "In Review"
+status_on_complete = "Done"
+output = "docs/reviews/REVIEW-{{issue_number}}.md"
+template = ".github/templates/REVIEW-TEMPLATE.md"

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v3.0.0"><img src="https://img.shields.io/badge/Version-3.0.0-0EA5E9?style=for-the-badge" alt="Version 3.0.0"></a>
+  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v4.0.0"><img src="https://img.shields.io/badge/Version-4.0.0-0EA5E9?style=for-the-badge" alt="Version 4.0.0"></a>
   <a href="https://github.com/github/awesome-copilot"><img src="https://img.shields.io/badge/Standard-awesome--copilot-7C3AED?style=for-the-badge&logo=github" alt="Awesome Copilot"></a>
   <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Skills-agentskills.io-F97316?style=for-the-badge" alt="Skills Spec"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge" alt="MIT License"></a>
@@ -40,7 +40,78 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ---
 
-## 🆕 What's New in v3.0
+## 🆕 What's New in v4.0
+
+<table>
+<tr>
+<td width="50%">
+
+### 📄 Declarative Workflows
+- **TOML-based** workflow templates
+- **7 workflow types** (feature, epic, story, bug, spike, devops, docs)
+- **Step definitions** with agent assignments
+- Machine-readable orchestration rules
+
+</td>
+<td width="50%">
+
+### 📊 Smart Ready Queue
+- **Priority-sorted** work queue (`agentx ready`)
+- **Dual-mode** support (local + GitHub)
+- Automatic issue filtering by status and labels
+- Role-based work discovery for each agent
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🔄 Agent State Tracking
+- **Real-time** agent status in `agent-status.json`
+- **6 agent roles** tracked (PM, UX, Architect, Engineer, Reviewer, DevOps)
+- Lifecycle hooks for start/finish transitions
+- Status: idle, working, blocked
+
+</td>
+<td width="50%">
+
+### 🔗 Dependency Management
+- **Issue dependency** checking (`agentx deps`)
+- **Blocked-by / Blocks** conventions in issue bodies
+- Automatic dependency validation before work starts
+- Smart blocker detection
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 📝 Issue Digests
+- **Weekly digest** generation (`agentx digest`)
+- Summary of open, closed, and blocked issues
+- Priority breakdown and agent state overview
+- Markdown reports in `.agentx/digests/`
+
+</td>
+<td width="50%">
+
+### ⚙️ Dual-Mode CLI
+- **PowerShell + Bash** CLI scripts
+- **Auto-detects** mode from `.agentx/config.json`
+- **7 subcommands**: ready, state, deps, digest, workflow, hook, help
+- Works seamlessly in both Local and GitHub modes
+
+</td>
+</tr>
+</table>
+
+Also includes all v3.0 features: analytics, auto-fix reviewer, prompt engineering, cross-repo, agent memory, visualization.
+
+[View full changelog →](CHANGELOG.md)
+
+---
+
+## 🆙 v3.0 Features
 
 <table>
 <tr>
@@ -127,8 +198,6 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 Also includes all v2.x features: session persistence, defense-in-depth security, feature checklists, verification tests, document conversion, constraint-based design, adaptive routing, and input variables.
 
-[View full changelog →](CHANGELOG.md)
-
 ---
 
 ## ✅ v3.0 Shipped Features
@@ -165,7 +234,7 @@ Also includes all v2.x features: session persistence, defense-in-depth security,
 </td>
 <td width="50%">
 
-### 📚 36 Production Skills
+### 📚 39 Production Skills
 - Testing (80%+ coverage)
 - Security (OWASP Top 10)
 - API Design (REST patterns)
@@ -217,25 +286,37 @@ AgentX supports **two modes**:
 ### One-Line Install
 
 ```powershell
-# Windows (PowerShell)
+# Windows (PowerShell) — full install
 irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
+
+# With profile
+$env:AGENTX_PROFILE="python"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 ```
 
 ```bash
-# Linux/Mac
+# Linux/Mac — full install
 curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
+
+# With profile
+PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
 ```
 
-During installation, choose:
-- **[1]** Set up GitHub remote (GitHub Mode)
-- **[2]** Use Local Mode (no GitHub required)
+### Install Profiles
 
-### Manual Setup
+| Profile | What's Included |
+|---------|----------------|
+| `full` | Everything — all 39 skills, instructions, prompts (default) |
+| `minimal` | Core only — agents, templates, CLI, docs |
+| `python` | Core + Python, testing, data, API skills |
+| `dotnet` | Core + C#, Blazor, Azure, SQL skills |
+| `react` | Core + React, TypeScript, UI, design skills |
 
-```bash
-git clone https://github.com/jnPiyush/AgentX.git
-cd AgentX
-./install.sh  # or .\install.ps1 on Windows
+```powershell
+# Examples
+.\install.ps1                          # Full install, GitHub mode
+.\install.ps1 -Profile python          # Python profile
+.\install.ps1 -Profile minimal -Local  # Minimal, local mode
+.\install.ps1 -Force                   # Reinstall (overwrite existing)
 ```
 
 ### Create Labels (GitHub Mode Only)
@@ -347,7 +428,13 @@ AgentX/
 │   ├── 📁 skills/            # 36 skill documents
 │   └── 📁 instructions/      # Language-specific guides
 │
-├── 📁 .agentx/               # Local Mode (filesystem issue tracking)
+├── 📁 .agentx/               # CLI, workflows, state, local issues
+│   ├── 📄 agentx.ps1         # PowerShell CLI (7 subcommands)
+│   ├── 📄 agentx.sh          # Bash CLI (7 subcommands)
+│   ├── 📁 workflows/         # 7 TOML workflow templates
+│   ├── 📁 state/             # Agent status tracking
+│   ├── 📁 digests/           # Weekly issue digests
+│   └── 📁 issues/            # Local mode issue storage
 │
 ├── 📁 .vscode/
 │   └── 📄 mcp.json           # MCP Server config (GitHub)

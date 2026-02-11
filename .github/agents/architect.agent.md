@@ -6,6 +6,8 @@ mode: agent
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 constraints:
+  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent architect -Issue <n>` before starting work"
+  - "MUST run `.agentx/agentx.ps1 hook -Phase finish -Agent architect -Issue <n>` after completing work"
   - "MUST NOT write implementation code"
   - "MUST NOT include code examples in Tech Specs (use diagrams only)"
   - "MUST NOT create PRD or UX designs"
@@ -329,14 +331,24 @@ If validation fails:
 
 ---
 
-## References
+## Automatic CLI Hooks
 
-- **Workflow**: [AGENTS.md](../../AGENTS.md) § Agent Roles
-- **Standards**: [Skills.md](../../Skills.md) → Core Principles, Security, Architecture
+These commands run automatically at workflow boundaries — **no manual invocation needed**:
+
+| When | Command | Purpose |
+|------|---------|---------|
+| **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent architect -Issue <n>` | Check deps + mark agent working |
+| **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent architect -Issue <n>` | Mark agent done |
+
+The `hook start` command automatically validates dependencies and blocks if open blockers exist. If blocked, **stop and report** — do not begin architecture.
+
+---
+
+## References
 - **ADR Template**: [ADR-TEMPLATE.md](../templates/ADR-TEMPLATE.md)
 - **Spec Template**: [SPEC-TEMPLATE.md](../templates/SPEC-TEMPLATE.md)
 
 ---
 
-**Version**: 2.2 (Restructured)  
+**Version**: 4.0 (CLI Hooks)  
 **Last Updated**: January 21, 2026

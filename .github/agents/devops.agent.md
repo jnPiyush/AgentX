@@ -6,6 +6,8 @@ mode: agent
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 constraints:
+  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent devops-engineer -Issue <n>` before starting work"
+  - "MUST run `.agentx/agentx.ps1 hook -Phase finish -Agent devops-engineer -Issue <n>` after completing work"
   - "MUST NOT modify application source code (src/**)"
   - "MUST NOT modify PRD, ADR, or UX documents"
   - "MUST follow security best practices (secrets management, least privilege)"
@@ -642,16 +644,22 @@ Run validation before handoff:
 
 ---
 
-## References
+## Automatic CLI Hooks
 
-- **Workflow**: [AGENTS.md](../../AGENTS.md) § Agent Roles
-- **Standards**: [Skills.md](../../Skills.md)
-  - Skill #26: GitHub Actions & Workflows
-  - Skill #27: CI/CD Pipelines
-  - Skill #28: Release Management
-  - Skill #04: Security
+These commands run automatically at workflow boundaries — **no manual invocation needed**:
+
+| When | Command | Purpose |
+|------|---------|---------|
+| **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent devops-engineer -Issue <n>` | Check deps + mark agent working |
+| **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent devops-engineer -Issue <n>` | Mark agent done |
+
+The `hook start` command automatically validates dependencies and blocks if open blockers exist. If blocked, **stop and report** — do not begin pipeline work.
 
 ---
 
-**Version**: 1.0
+## References
+
+---
+
+**Version**: 4.0 (CLI Hooks)
 **Last Updated**: February 5, 2026

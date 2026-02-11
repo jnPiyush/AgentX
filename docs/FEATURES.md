@@ -687,6 +687,179 @@ xychart-beta
 
 ---
 
+## Declarative Workflows
+
+Workflow templates define the step-by-step sequence each issue type follows. Stored as TOML files in `.agentx/workflows/`, they replace hard-coded routing rules with simple, editable declarations.
+
+### Format
+
+```toml
+[workflow]
+name = "feature"
+description = "Feature workflow: PM → UX → Architect → Engineer → Reviewer"
+
+[[steps]]
+id = "prd"
+title = "Create PRD"
+agent = "product-manager"
+status_on_start = "In Progress"
+status_on_complete = "Ready"
+template = ".github/templates/PRD-TEMPLATE.md"
+
+[[steps]]
+id = "architecture"
+title = "Create ADR and Tech Spec"
+agent = "architect"
+needs = ["prd"]
+```
+
+### Available Workflows
+
+| File | Type | Steps |
+|------|------|-------|
+| `feature.toml` | Feature | PRD → UX → Architecture → Implement → Review |
+| `epic.toml` | Epic | PRD (children follow their own workflows) |
+| `story.toml` | Story | Implement → Review |
+| `bug.toml` | Bug | Fix → Review |
+| `spike.toml` | Spike | Research |
+| `devops.toml` | DevOps | Implement → Review |
+| `docs.toml` | Docs | Write |
+
+### CLI
+
+```bash
+./.agentx/agentx.sh workflow            # List all workflows
+./.agentx/agentx.sh workflow feature     # Show steps for a workflow
+```
+
+---
+
+## Smart Ready Queue
+
+The `ready` command scans issues, filters out any that have unresolved blockers (via the dependency convention), and sorts by priority label. It works in both Local and GitHub modes automatically.
+
+### Mode Behavior
+
+| Mode | Data Source | Filter |
+|------|-------------|--------|
+| **Local** | `.agentx/issues/*.json` | `state=open` + `status=Ready` |
+| **GitHub** | `gh issue list` (live API) | `state=open` |
+
+The CLI reads `.agentx/config.json` to detect the mode. In GitHub mode, it calls `gh issue list --json` and gracefully falls back to local files if the `gh` CLI is unavailable.
+
+### Usage
+
+```powershell
+.\.agentx\agentx.ps1 ready
+```
+
+```bash
+./.agentx/agentx.sh ready
+```
+
+### Output
+
+```
+  Ready Work (unblocked, sorted by priority):
+  ─────────────────────────────────────────────
+  [P0] #5 (bug) Fix login timeout
+  [P1] #8 (feature) Add export to CSV
+  [P2] #12 (story) Update onboarding flow
+```
+
+Issues with open blockers are silently excluded. If no unblocked work exists, the command reports "No ready work found."
+
+---
+
+## Agent State Tracking
+
+Real-time tracking of which agent is doing what. State is stored in `.agentx/state/agent-status.json`.
+
+### States
+
+| State | Meaning |
+|-------|---------|
+| `idle` | Agent has no active work |
+| `working` | Agent is implementing |
+| `reviewing` | Agent is reviewing |
+| `stuck` | Agent is blocked |
+| `done` | Agent completed current task |
+
+### Usage
+
+```powershell
+# View all agent states
+.\.agentx\agentx.ps1 state
+
+# Update an agent's state
+.\.agentx\agentx.ps1 state engineer working 42
+```
+
+### Data Format
+
+```json
+{
+  "engineer": {
+    "status": "working",
+    "issue": 42,
+    "lastActivity": "2026-02-15T10:30:00Z"
+  }
+}
+```
+
+---
+
+## Dependency Management
+
+Issues can declare dependencies using a `## Dependencies` section in the issue body. The CLI validates these before surfacing work in the ready queue. Works in both Local and GitHub modes — in GitHub mode, dependencies are checked via `gh issue view`.
+
+### Convention
+
+```markdown
+## Dependencies
+Blocked-by: #10, #12
+Blocks: #15
+```
+
+### Validation
+
+```powershell
+.\.agentx\agentx.ps1 deps 42
+```
+
+```
+  Dependency Check: #42 — Add user export
+  ─────────────────────────────────────────────
+  Blocked by:
+    ✓ #10 — Database migration [closed]
+    ✗ #12 — API endpoint design [open]
+
+  ⚠ BLOCKED — resolve open blockers first.
+```
+
+The `ready` command automatically excludes issues with open blockers.
+
+---
+
+## Issue Digests
+
+Weekly summaries of completed work, generated into `.agentx/digests/`. In GitHub mode, pulls closed issues directly from the repository via `gh issue list --state closed`.
+
+### Usage
+
+```powershell
+.\.agentx\agentx.ps1 digest
+```
+
+### Output
+
+Generates `DIGEST-YYYY-WNN.md` containing:
+- Table of all closed issues with type, title, and close date
+- Key decisions section (for manual annotation)
+- Summary statistics
+
+---
+
 **Related**: [AGENTS.md](../AGENTS.md) | [Skills.md](../Skills.md) | [SETUP.md](SETUP.md) | [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 **Last Updated**: February 2026

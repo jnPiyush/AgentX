@@ -6,6 +6,8 @@ mode: agent
 model: Claude Opus 4.5 (copilot)
 infer: true
 constraints:
+  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>` before starting review"
+  - "MUST run `.agentx/agentx.ps1 hook -Phase finish -Agent reviewer -Issue <n>` after completing review"
   - "MUST NOT modify source code directly"
   - "MUST verify ≥80% test coverage before approval"
   - "MUST check all security requirements (secrets, SQL, validation)"
@@ -340,15 +342,25 @@ If issues found:
 
 ---
 
-## References
+## Automatic CLI Hooks
 
-- **Workflow**: [AGENTS.md §Reviewer](../../AGENTS.md#handoff-flow)
-- **Standards**: [Skills.md](../../Skills.md) → All 36 skills
+These commands run automatically at workflow boundaries — **no manual invocation needed**:
+
+| When | Command | Purpose |
+|------|---------|---------|
+| **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>` | Mark agent reviewing |
+| **On approve** | `.agentx/agentx.ps1 hook -Phase finish -Agent reviewer -Issue <n>` | Mark agent done |
+| **On approve** | `.agentx/agentx.ps1 state -Agent engineer -Set idle` | Reset engineer state |
+| **Weekly** | `.agentx/agentx.ps1 digest` | Generate digest after closing issues |
+
+---
+
+## References
 - **Review Checklist**: [code-review-and-audit/SKILL.md](../skills/development/code-review-and-audit/SKILL.md)
 - **Validation Script**: [validate-handoff.sh](../scripts/validate-handoff.sh)
 - **Context Capture**: [capture-context.sh](../scripts/capture-context.sh)
 
 ---
 
-**Version**: 2.2 (Restructured)  
+**Version**: 4.0 (CLI Hooks)  
 **Last Updated**: January 21, 2026

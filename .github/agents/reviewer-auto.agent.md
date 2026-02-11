@@ -6,6 +6,8 @@ mode: agent
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 constraints:
+  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>` before starting review"
+  - "MUST run `.agentx/agentx.ps1 hook -Phase finish -Agent reviewer -Issue <n>` after completing review"
   - "MUST get human approval before any changes are merged"
   - "MUST run all tests after applying fixes to verify no regressions"
   - "MUST categorize fixes as safe (auto) or risky (manual approval)"
@@ -241,6 +243,17 @@ Use **Standard Reviewer** when:
 
 ---
 
+## Automatic CLI Hooks
+
+| Trigger | Command | Purpose |
+|---------|---------|---------|
+| **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>` | Mark agent reviewing |
+| **On approve** | `.agentx/agentx.ps1 hook -Phase finish -Agent reviewer -Issue <n>` | Mark agent done |
+
+> Hooks are called by the reviewer-auto agent at the start and end of each review. They update `.agentx/state/agent-status.json` and validate dependencies.
+
+---
+
 ## References
 
 - **Standard Reviewer**: [reviewer.agent.md](reviewer.agent.md)
@@ -250,5 +263,5 @@ Use **Standard Reviewer** when:
 
 ---
 
-**Version**: 1.0 (Preview)  
+**Version**: 4.0 (Preview, CLI Hooks)  
 **Last Updated**: February 7, 2026
