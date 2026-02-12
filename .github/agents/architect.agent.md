@@ -3,7 +3,7 @@ name: Architect
 description: 'Architect: Design system architecture, create ADRs, and technical specifications. Trigger: Status = Ready (after PM, parallel with UX). Status → Ready when complete.'
 maturity: stable
 mode: agent
-model: Claude Sonnet 4.5 (copilot)
+model: Claude Opus 4.6 (copilot)
 infer: true
 constraints:
   - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent architect -Issue <n>` before starting work"

@@ -3,7 +3,7 @@ name: Product Manager
 description: 'Product Manager: Define product vision, create PRD, break Epic into Features and Stories. Trigger: type:epic label. Status → Ready when complete.'
 maturity: stable
 mode: agent
-model: Claude Opus 4.5 (copilot)
+model: Claude Sonnet 4.5 (copilot)
 infer: true
 constraints:
   - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent product-manager -Issue <n>` before starting work"

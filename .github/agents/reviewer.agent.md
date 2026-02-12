@@ -3,7 +3,7 @@ name: Reviewer
 description: 'Reviewer: Review code quality, tests, security, and approve/reject. Trigger: Status = In Review. Status → Done when approved.'
 maturity: stable
 mode: agent
-model: Claude Opus 4.5 (copilot)
+model: Claude Opus 4.6 (copilot)
 infer: true
 constraints:
   - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>` before starting review"
