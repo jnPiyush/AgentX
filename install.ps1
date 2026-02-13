@@ -4,9 +4,9 @@
     Install AgentX v5.1.0 — Download, copy, configure.
 
 .PARAMETER Mode
-    github   — Full features: GitHub Actions, PRs, Projects
-    local    — Filesystem-based issue tracking, no GitHub required
-    (omit to choose interactively)
+    github   — Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
+    local    — Filesystem-based issue tracking, no GitHub required (DEFAULT)
+    Defaults to 'local' for zero-prompt install. Use -Mode github to enable GitHub setup.
 
 .PARAMETER Force
     Overwrite existing files (default: merge, keeping existing)
@@ -15,16 +15,15 @@
     Skip interactive setup (git init, hooks, username)
 
 .EXAMPLE
-    .\install.ps1                          # Interactive — asks for mode
-    .\install.ps1 -Mode github             # Non-interactive, GitHub mode
-    .\install.ps1 -Mode local              # Non-interactive, Local mode
+    .\install.ps1                          # Local mode — no prompts
+    .\install.ps1 -Mode github             # GitHub mode — asks for repo/project
     .\install.ps1 -Force                   # Full reinstall (overwrite)
 
-    # One-liner install (interactive)
+    # One-liner install (local mode, no prompts)
     irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 
-    # One-liner with overrides (non-interactive)
-    $env:AGENTX_MODE="local"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
+    # One-liner for GitHub mode
+    $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 #>
 
 param(
@@ -57,16 +56,9 @@ Write-Host "║  AgentX v5.1.0 — AI Agent Orchestration          ║" -Foregro
 Write-Host "╚═══════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
-# ── Interactive selection ───────────────────────────────
+# ── Mode selection (defaults to local — no prompt) ──────
 if (-not $Mode) {
-    Write-Host "  Select a mode:" -ForegroundColor Cyan
-    Write-Host "  [1] GitHub — Full features: GitHub Actions, PRs, Projects" -ForegroundColor White
-    Write-Host "  [2] Local  — Filesystem-based issue tracking, no GitHub required" -ForegroundColor White
-    $modeChoice = Read-Host "  Choose [1-2, default=1]"
-    $Mode = switch ($modeChoice) {
-        "2" { "local" }
-        default { "github" }
-    }
+    $Mode = "local"
 }
 
 $Local = $Mode -eq "local"
@@ -204,28 +196,27 @@ if (-not $NoSetup) {
         Write-Skip "Git not found — skipping git init and hooks"
     }
 
-    # Username
-    $username = $null
-    if (Get-Command gh -ErrorAction SilentlyContinue) {
-        try { $username = gh api user --jq '.login' 2>$null } catch {}
-    }
-    if (-not $username -and (Get-Command git -ErrorAction SilentlyContinue)) {
-        try { $username = git config user.name 2>$null } catch {}
-    }
-    if (-not $username) {
-        $username = Read-Host "  GitHub username (for CODEOWNERS)"
-    }
-    if ($username) {
-        foreach ($f in @(".github/CODEOWNERS",".github/agentx-security.yml")) {
-            if (Test-Path $f) {
-                (Get-Content $f -Raw) -replace '<YOUR_GITHUB_USERNAME>', $username | Set-Content $f -NoNewline
-            }
-        }
-        Write-OK "Username: $username"
-    }
-
-    # GitHub repo & project (GitHub mode only)
+    # GitHub setup (username, repo, project) — skipped entirely in local mode
     if (-not $Local) {
+        # Username for CODEOWNERS
+        $username = $null
+        if (Get-Command gh -ErrorAction SilentlyContinue) {
+            try { $username = gh api user --jq '.login' 2>$null } catch {}
+        }
+        if (-not $username -and (Get-Command git -ErrorAction SilentlyContinue)) {
+            try { $username = git config user.name 2>$null } catch {}
+        }
+        if (-not $username) {
+            $username = Read-Host "  GitHub username (for CODEOWNERS)"
+        }
+        if ($username) {
+            foreach ($f in @(".github/CODEOWNERS",".github/agentx-security.yml")) {
+                if (Test-Path $f) {
+                    (Get-Content $f -Raw) -replace '<YOUR_GITHUB_USERNAME>', $username | Set-Content $f -NoNewline
+                }
+            }
+            Write-OK "Username: $username"
+        }
         Write-Host ""
         Write-Host "  GitHub Repository & Project" -ForegroundColor Cyan
 

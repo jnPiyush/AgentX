@@ -215,51 +215,57 @@ Also includes all v4.0 features: declarative workflows, smart ready queue, agent
 
 ## 🚀 Quick Start
 
-### Choose Your Mode
+### Zero-Prompt Install
 
-AgentX supports **two modes**:
-
-| Mode | Best For | Features |
-|------|----------|----------|
-| **GitHub Mode** | Team projects | Full features: Actions, PRs, Projects |
-| **Local Mode** | Solo/offline work | Filesystem-based issue tracking |
-
-> 📖 **Local Mode Guide**: [docs/SETUP.md](docs/SETUP.md#local-mode-no-github)
-
-### One-Line Install
+AgentX installs in **Local mode by default** — no prompts, no GitHub required. Just run:
 
 ```powershell
-# Windows (PowerShell) — full install
+# Windows (PowerShell) — installs in local mode, zero prompts
 irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
-
-# With profile
-$env:AGENTX_PROFILE="python"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 ```
 
 ```bash
-# Linux/Mac — full install
+# Linux/Mac — installs in local mode, zero prompts
 curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
-
-# With profile
-PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
 ```
 
-### Install Profiles
+### Choose Your Mode
 
-| Profile | What's Included |
-|---------|----------------|
-| `full` | Everything — all 41 skills, instructions, prompts (default) |
-| `minimal` | Core only — agents, templates, CLI, docs |
-| `python` | Core + Python, testing, data, API skills |
-| `dotnet` | Core + C#, Blazor, Azure, SQL skills |
-| `react` | Core + React, TypeScript, UI, design skills |
+| Mode | Default? | Best For | Features |
+|------|----------|----------|----------|
+| **Local Mode** | ✅ Yes | Solo/offline work | Filesystem-based issue tracking, zero prompts |
+| **GitHub Mode** | — | Team projects | Full features: Actions, PRs, Projects (asks for repo/project) |
+
+> 📖 **Local Mode Guide**: [docs/SETUP.md](docs/SETUP.md#local-mode-no-github)
+
+### Install Examples
 
 ```powershell
-# Examples
-.\install.ps1                          # Full install, GitHub mode
-.\install.ps1 -Profile python          # Python profile
-.\install.ps1 -Profile minimal -Local  # Minimal, local mode
-.\install.ps1 -Force                   # Reinstall (overwrite existing)
+# Windows (PowerShell)
+.\install.ps1                          # Local mode (default) — no prompts
+.\install.ps1 -Mode github             # GitHub mode — asks for repo/project
+.\install.ps1 -Force                   # Reinstall (overwrite existing files)
+.\install.ps1 -NoSetup                 # Skip git init and hooks setup
+```
+
+```bash
+# Linux/Mac
+./install.sh                           # Local mode (default) — no prompts
+./install.sh --mode github             # GitHub mode — asks for repo/project
+./install.sh --force                   # Reinstall (overwrite existing files)
+./install.sh --no-setup                # Skip git init and hooks setup
+```
+
+### One-Liner for GitHub Mode
+
+```powershell
+# Windows — GitHub mode (will ask for repo/project)
+$env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
+```
+
+```bash
+# Linux/Mac — GitHub mode (will ask for repo/project)
+MODE=github curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
 ```
 
 ### Create Labels (GitHub Mode Only)

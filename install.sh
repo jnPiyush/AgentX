@@ -1,19 +1,18 @@
 #!/bin/bash
 # AgentX v5.1.0 Installer — Download, copy, configure.
 #
-# Modes: github (default), local
+# Modes: local (default), github
 #
 # Usage:
-#   ./install.sh                                       # Interactive — asks for mode
-#   ./install.sh --mode github                         # Non-interactive, GitHub mode
-#   ./install.sh --mode local                          # Non-interactive, Local mode
+#   ./install.sh                                       # Local mode — no prompts
+#   ./install.sh --mode github                         # GitHub mode — asks for repo/project
 #   ./install.sh --force                               # Full reinstall (overwrite)
 #
-#   # One-liner install (interactive)
+#   # One-liner install (local mode, no prompts)
 #   curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
 #
-#   # One-liner with overrides (non-interactive)
-#   MODE=local curl -fsSL ... | bash
+#   # One-liner for GitHub mode
+#   MODE=github curl -fsSL ... | bash
 
 set -e
 
@@ -48,16 +47,9 @@ echo -e "${C}║  AgentX v5.1.0 — AI Agent Orchestration          ║${N}"
 echo -e "${C}╚═══════════════════════════════════════════════════╝${N}"
 echo ""
 
-# ── Interactive selection ───────────────────────────────
+# ── Mode selection (defaults to local — no prompt) ──────
 if [ -z "$MODE" ]; then
-    echo -e "${C}  Select a mode:${N}"
-    echo "  [1] GitHub — Full features: GitHub Actions, PRs, Projects"
-    echo "  [2] Local  — Filesystem-based issue tracking, no GitHub required"
-    read -rp "  Choose [1-2, default=1]: " mc
-    case "$mc" in
-        2) MODE="local" ;;
-        *) MODE="github" ;;
-    esac
+    MODE="local"
 fi
 
 LOCAL="false"; [ "$MODE" = "local" ] && LOCAL="true"
@@ -178,20 +170,22 @@ if [ "$NO_SETUP" != "true" ]; then
         skip "Git not found — skipping git init and hooks"
     fi
 
-    USERNAME=""
-    command -v gh &>/dev/null && USERNAME=$(gh api user --jq '.login' 2>/dev/null || true)
-    [ -z "$USERNAME" ] && command -v git &>/dev/null && USERNAME=$(git config user.name 2>/dev/null || true)
-    [ -z "$USERNAME" ] && { read -rp "  GitHub username (for CODEOWNERS): " USERNAME; }
-    if [ -n "$USERNAME" ]; then
-        for f in .github/CODEOWNERS .github/agentx-security.yml; do
-            [ -f "$f" ] && (sed -i "s/<YOUR_GITHUB_USERNAME>/$USERNAME/g" "$f" 2>/dev/null || \
-                            sed -i '' "s/<YOUR_GITHUB_USERNAME>/$USERNAME/g" "$f" 2>/dev/null || true)
-        done
-        ok "Username: $USERNAME"
-    fi
-
-    # GitHub repo & project (GitHub mode only)
+    # GitHub setup (username, repo, project) — skipped entirely in local mode
     if [ "$LOCAL" != "true" ]; then
+        # Username for CODEOWNERS
+        USERNAME=""
+        command -v gh &>/dev/null && USERNAME=$(gh api user --jq '.login' 2>/dev/null || true)
+        [ -z "$USERNAME" ] && command -v git &>/dev/null && USERNAME=$(git config user.name 2>/dev/null || true)
+        if [ -z "$USERNAME" ]; then
+            read -rp "  GitHub username (for CODEOWNERS): " USERNAME
+        fi
+        if [ -n "$USERNAME" ]; then
+            for f in .github/CODEOWNERS .github/agentx-security.yml; do
+                [ -f "$f" ] && (sed -i "s/<YOUR_GITHUB_USERNAME>/$USERNAME/g" "$f" 2>/dev/null || \
+                                sed -i '' "s/<YOUR_GITHUB_USERNAME>/$USERNAME/g" "$f" 2>/dev/null || true)
+            done
+            ok "Username: $USERNAME"
+        fi
         echo ""
         echo -e "${C}  GitHub Repository & Project${N}"
 
