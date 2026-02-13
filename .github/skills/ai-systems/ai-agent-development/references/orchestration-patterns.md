@@ -2,6 +2,8 @@
 
 Guide to multi-agent orchestration patterns using Microsoft Agent Framework.
 
+> **⚠️ Prompt Management Rule**: In all patterns below, `instructions` are shown inline for brevity. In production, **ALWAYS** load prompts from separate files: `Path("prompts/{agent}.md").read_text()`. See [SKILL.md](../SKILL.md#prompt--template-file-management).
+
 ## Pattern Overview
 
 | Pattern | Use Case | Complexity |
@@ -18,22 +20,23 @@ Guide to multi-agent orchestration patterns using Microsoft Agent Framework.
 Agents execute in order, passing results to the next.
 
 ```python
+from pathlib import Path
 from agent_framework.workflows import SequentialWorkflow
 
-# Define agents
+# Load prompts from files — NEVER embed as inline strings in production
 researcher = {
     "name": "Researcher",
-    "instructions": "Research the topic and provide key findings."
+    "instructions": Path("prompts/researcher.md").read_text(encoding="utf-8")
 }
 
 writer = {
     "name": "Writer",
-    "instructions": "Write a report based on the research findings."
+    "instructions": Path("prompts/writer.md").read_text(encoding="utf-8")
 }
 
 editor = {
     "name": "Editor",
-    "instructions": "Edit the report for clarity and grammar."
+    "instructions": Path("prompts/editor.md").read_text(encoding="utf-8")
 }
 
 # Create workflow
@@ -302,6 +305,7 @@ result = await workflow.run(
 3. **Set iteration limits** - Prevent infinite loops
 4. **Use appropriate models** - Simpler agents can use faster/cheaper models
 5. **Cache intermediate results** - Avoid redundant processing
+6. **Store prompts in files** - Load from `prompts/` directory, never inline
 
 ### Error Handling
 

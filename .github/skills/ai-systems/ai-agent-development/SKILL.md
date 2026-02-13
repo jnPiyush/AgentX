@@ -60,7 +60,11 @@ dotnet add package Microsoft.Agents.AI.Workflows --prerelease
 ### Single Agent
 
 ```python
+from pathlib import Path
 from agent_framework.openai import OpenAIChatClient
+
+# Load prompt from file — NEVER embed prompts as inline strings
+prompt = Path("prompts/assistant.md").read_text(encoding="utf-8")
 
 client = OpenAIChatClient(
     model="gpt-5.1",
@@ -70,7 +74,7 @@ client = OpenAIChatClient(
 
 agent = {
     "name": "Assistant",
-    "instructions": "You are a helpful assistant.",
+    "instructions": prompt,  # Loaded from prompts/assistant.md
     "tools": []  # Add tools as needed
 }
 
@@ -83,10 +87,18 @@ response = await client.chat(
 ### Multi-Agent Orchestration
 
 ```python
+from pathlib import Path
 from agent_framework.workflows import SequentialWorkflow
 
-researcher = {"name": "Researcher", "instructions": "Gather information."}
-writer = {"name": "Writer", "instructions": "Write based on research."}
+# Each agent loads its prompt from a dedicated file
+researcher = {
+    "name": "Researcher",
+    "instructions": Path("prompts/researcher.md").read_text(encoding="utf-8")
+}
+writer = {
+    "name": "Writer",
+    "instructions": Path("prompts/writer.md").read_text(encoding="utf-8")
+}
 
 workflow = SequentialWorkflow(
     agents=[researcher, writer],
@@ -105,6 +117,54 @@ result = await workflow.run(query="Write about AI agents")
 
 ## Best Practices
 
+### Prompt & Template File Management
+
+> **RULE**: NEVER embed prompts or output templates as inline strings in code. Always store them as separate files.
+
+**Why**: Prompts are content, not code. Separating them enables:
+- Version control diffs that show exactly what changed in a prompt
+- Non-developer editing (PMs, prompt engineers) without touching code
+- A/B testing different prompts without code changes
+- Reuse across agents, languages, and test harnesses
+- Clear separation of concerns (logic vs. content)
+
+**Directory Convention**:
+```
+project/
+  prompts/                    # All system/agent prompts
+    assistant.md              # One file per agent role
+    researcher.md
+    writer.md
+    reviewer.md
+  templates/                  # Output templates used by agents
+    report-template.md        # Structured output templates
+    email-template.md
+    summary-template.md
+  config/
+    models.yaml               # Model configuration
+```
+
+**Loading Pattern**:
+```python
+from pathlib import Path
+
+# Load prompt
+prompt = Path("prompts/assistant.md").read_text(encoding="utf-8")
+
+# Load output template and inject into prompt
+template = Path("templates/report-template.md").read_text(encoding="utf-8")
+prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
+```
+
+**Rules**:
+- MUST store all system prompts in `prompts/` directory as `.md` or `.txt` files
+- MUST store output format templates in `templates/` directory
+- MUST NOT embed prompt text longer than one sentence directly in code
+- SHOULD use Markdown format for prompts (readable, supports structure)
+- SHOULD name files after the agent role: `prompts/{agent-name}.md`
+- SHOULD include a brief comment header in each prompt file (purpose, version, model target)
+- MAY use template variables (`{variable}`) for dynamic content injected at runtime
+
 ### Development
 
 ✅ **DO**:
@@ -115,9 +175,12 @@ result = await workflow.run(query="Write about AI agents")
 - Use structured outputs for reliable agent responses
 - Implement error handling and retry logic
 - Version your agents and track changes
+- **Store all prompts as separate files in `prompts/` directory**
+- **Store output templates as separate files in `templates/` directory**
 
 ❌ **DON'T**:
 - Hardcode API keys or endpoints
+- Embed prompts or output templates as multi-line strings in code
 - Skip tracing setup (critical for debugging)
 - Deploy without evaluation
 - Use GitHub models in production (free tier has limits)
@@ -161,6 +224,8 @@ result = await workflow.run(query="Write about AI agents")
 - [ ] Error handling with retries
 - [ ] Structured outputs configured
 - [ ] No hardcoded secrets
+- [ ] All prompts stored as separate files in `prompts/` (not inline in code)
+- [ ] All output templates stored in `templates/` (not inline in code)
 
 **Model Change Management (MANDATORY)**
 - [ ] Model version pinned explicitly (e.g., `gpt-5.1-2026-01-15`)

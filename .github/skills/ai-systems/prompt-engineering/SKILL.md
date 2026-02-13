@@ -108,6 +108,88 @@ CONSTRAINTS:
 | "Be careful" | "NEVER execute DELETE queries" |
 | Long paragraphs | Bullet points and numbered lists |
 | Vague instructions | Specific output format with examples |
+| Inline prompt strings in code | Load from `prompts/{agent}.md` file |
+| Inline output templates in code | Load from `templates/{name}.md` file |
+
+---
+
+## File-Based Prompt Management
+
+> **RULE**: ALWAYS store prompts in separate files. NEVER embed multi-line prompts or output templates as string literals in code.
+
+### Directory Convention
+
+```
+project/
+  prompts/                    # System & agent prompts
+    assistant.md              # One file per agent/role
+    code-reviewer.md
+    researcher.md
+  templates/                  # Output format templates
+    review-report.md          # Structured output templates
+    analysis-summary.md
+  config/
+    models.yaml               # Model configuration
+```
+
+### Prompt File Format
+
+```markdown
+<!-- prompts/code-reviewer.md -->
+<!-- Purpose: System prompt for code review agent -->
+<!-- Model: gpt-5.1 | Max tokens: ~1500 -->
+
+You are a senior Python engineer reviewing pull requests.
+
+## Context
+- Project uses FastAPI + SQLAlchemy + pytest
+- Code follows PEP 8 and uses type hints
+- Test coverage target: 80%+
+
+## Task
+Review the code changes and provide:
+1. Security issues (critical)
+2. Bug risks (high)
+3. Style improvements (low)
+
+## Constraints
+- Do NOT rewrite code, only point out issues
+- Do NOT suggest changes outside the diff
+- Rate each issue: critical / high / medium / low
+```
+
+### Loading Pattern
+
+```python
+from pathlib import Path
+
+# Load prompt from file
+prompt = Path("prompts/code-reviewer.md").read_text(encoding="utf-8")
+
+# Load output template and combine
+template = Path("templates/review-report.md").read_text(encoding="utf-8")
+full_prompt = f"{prompt}\n\n## Output Format\n{template}"
+```
+
+### Rules
+
+- **MUST** store all prompts ≥2 lines in `prompts/` as `.md` files
+- **MUST** store output format templates in `templates/` as `.md` files
+- **MUST NOT** embed prompt text as multi-line strings in Python/C#/TS code
+- **SHOULD** use Markdown format (readable, supports headers/lists)
+- **SHOULD** name files after the agent role: `prompts/{role}.md`
+- **SHOULD** include a comment header: purpose, target model, token estimate
+- **MAY** use `{variable}` placeholders for runtime injection
+
+### Why Separate Files?
+
+| Benefit | Explanation |
+|---------|-------------|
+| **Version control** | Git diffs show exactly what changed in a prompt |
+| **Non-dev editing** | PMs and prompt engineers edit without touching code |
+| **A/B testing** | Swap prompt files without code changes |
+| **Reuse** | Share prompts across agents, languages, and tests |
+| **Separation of concerns** | Logic (code) vs. content (prompts) stay independent |
 
 ---
 
@@ -145,6 +227,8 @@ Rate your prompt before using it:
 - [ ] **Examples**: Are few-shot examples provided where needed?
 - [ ] **Reasoning**: Is chain-of-thought requested for complex tasks?
 - [ ] **Verification**: Does the prompt include self-check steps?
+- [ ] **Stored externally**: Is the prompt in `prompts/` (not inline in code)?
+- [ ] **Template separated**: Is the output template in `templates/` (not inline)?
 
 ---
 
