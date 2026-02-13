@@ -37,13 +37,13 @@ export function registerInitializeCommand(
             if (overwrite !== 'Reinstall') { return; }
         }
 
-        // Pick mode
+        // Pick mode (local is default)
         const mode = await vscode.window.showQuickPick(
             [
+                { label: 'local', description: 'Filesystem-based issue tracking, no GitHub required (default)' },
                 { label: 'github', description: 'Full features: GitHub Actions, PRs, Projects' },
-                { label: 'local', description: 'Filesystem-based issue tracking, no GitHub required' },
             ],
-            { placeHolder: 'Select operating mode', title: 'AgentX Mode' }
+            { placeHolder: 'Select operating mode (default: local)', title: 'AgentX Mode' }
         );
         if (!mode) { return; }
 

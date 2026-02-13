@@ -8,15 +8,12 @@
 ## Features
 
 ### 🚀 One-Click Initialization
-Initialize AgentX in any workspace with a single command. Choose from 5 install profiles:
+Initialize AgentX in any workspace with a single command. Defaults to **Local mode** — zero prompts, no GitHub required. Switch to GitHub mode when you need full team features.
 
-| Profile | Description |
-|---------|-------------|
-| **full** | Everything — all 41 skills, instructions, prompts |
-| **minimal** | Core only — agents, templates, CLI |
-| **python** | Core + Python, testing, data, API skills |
-| **dotnet** | Core + C#, Blazor, Azure, SQL skills |
-| **react** | Core + React, TypeScript, UI, design skills |
+| Mode | Default? | Description |
+|------|----------|-------------|
+| **Local** | ✅ Yes | Filesystem-based issue tracking, zero prompts |
+| **GitHub** | — | Full features: GitHub Actions, PRs, Projects (asks for repo/project) |
 
 ### 🤖 8 Specialized Agents
 | Agent | Role | Model |
@@ -39,7 +36,6 @@ Initialize AgentX in any workspace with a single command. Choose from 5 install 
 | Command | Description |
 |---------|-------------|
 | `AgentX: Initialize Project` | Scaffold AgentX into your workspace |
-| `AgentX: Select Install Profile` | Change install profile |
 | `AgentX: Show Agent Status` | View all agents and their state |
 | `AgentX: Show Ready Queue` | View priority-sorted work |
 | `AgentX: Run Workflow` | Execute a workflow pipeline |
@@ -47,8 +43,8 @@ Initialize AgentX in any workspace with a single command. Choose from 5 install 
 | `AgentX: Generate Weekly Digest` | Create a summary digest |
 
 ### 🔄 Two Operating Modes
-- **GitHub Mode** — Full features: Actions, PRs, Projects V2
-- **Local Mode** — Filesystem-based issue tracking, no GitHub required
+- **Local Mode** (default) — Filesystem-based issue tracking, no GitHub required, zero prompts
+- **GitHub Mode** (opt-in) — Full features: Actions, PRs, Projects V2 (asks for repo/project info)
 
 ## Requirements
 
@@ -62,7 +58,7 @@ Initialize AgentX in any workspace with a single command. Choose from 5 install 
 1. Install the extension from the VS Code Marketplace
 2. Open a workspace folder
 3. Run `AgentX: Initialize Project` from the Command Palette (`Ctrl+Shift+P`)
-4. Select your profile and mode
+4. Select your mode (defaults to Local — no GitHub needed)
 5. Start using agents via GitHub Copilot Chat!
 
 ### Quick Example
@@ -82,8 +78,7 @@ AgentX will:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `agentx.profile` | `full` | Install profile |
-| `agentx.mode` | `github` | Operating mode (github / local) |
+| `agentx.mode` | `local` | Operating mode (local / github). Defaults to local (zero prompts). |
 | `agentx.autoRefresh` | `true` | Auto-refresh sidebar views |
 | `agentx.shell` | `auto` | Shell for CLI commands (auto / pwsh / bash) |
 

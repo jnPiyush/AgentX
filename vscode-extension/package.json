@@ -169,16 +169,16 @@
       "properties": {
         "agentx.mode": {
           "type": "string",
-          "default": "github",
+          "default": "local",
           "enum": [
-            "github",
-            "local"
+            "local",
+            "github"
           ],
           "enumDescriptions": [
-            "Full features: GitHub Actions, PRs, Projects",
-            "Filesystem-based issue tracking, no GitHub required"
+            "Filesystem-based issue tracking, no GitHub required (default)",
+            "Full features: GitHub Actions, PRs, Projects"
           ],
-          "description": "Operating mode for AgentX."
+          "description": "Operating mode for AgentX. Defaults to local (zero prompts). Use github for full GitHub integration."
         },
         "agentx.autoRefresh": {
           "type": "boolean",
