@@ -1,14 +1,19 @@
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
-import { execShell } from '../utils/shell';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as https from 'https';
 
-const REPO_URL = 'https://github.com/jnPiyush/AgentX.git';
+const BRANCH = 'master';
+const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
+
+/** Essential directories and files to extract (everything else is skipped). */
+const ESSENTIAL_DIRS = ['.agentx', '.github', '.vscode', 'scripts'];
+const ESSENTIAL_FILES = ['AGENTS.md', 'Skills.md', '.gitignore'];
 
 /**
  * Register the AgentX: Initialize Project command.
- * Clones the AgentX repo, applies profile pruning, and copies framework files.
+ * Downloads a zip archive, extracts only essential files, and copies framework files.
  */
 export function registerInitializeCommand(
     context: vscode.ExtensionContext,
@@ -32,19 +37,6 @@ export function registerInitializeCommand(
             if (overwrite !== 'Reinstall') { return; }
         }
 
-        // Pick profile
-        const profile = await vscode.window.showQuickPick(
-            [
-                { label: 'full', description: 'Everything — all 41 skills, instructions, prompts (default)' },
-                { label: 'minimal', description: 'Core only — agents, templates, CLI, docs' },
-                { label: 'python', description: 'Core + Python, testing, data, API skills' },
-                { label: 'dotnet', description: 'Core + C#, Blazor, Azure, SQL skills' },
-                { label: 'react', description: 'Core + React, TypeScript, UI, design skills' },
-            ],
-            { placeHolder: 'Select an install profile', title: 'AgentX Profile' }
-        );
-        if (!profile) { return; }
-
         // Pick mode
         const mode = await vscode.window.showQuickPick(
             [
@@ -57,7 +49,6 @@ export function registerInitializeCommand(
 
         // Save to settings
         const config = vscode.workspace.getConfiguration('agentx');
-        await config.update('profile', profile.label, vscode.ConfigurationTarget.Workspace);
         await config.update('mode', mode.label, vscode.ConfigurationTarget.Workspace);
 
         // Run installation with progress
@@ -68,70 +59,51 @@ export function registerInitializeCommand(
                 cancellable: false,
             },
             async (progress) => {
+                const tmpDir = path.join(root, '.agentx-install-tmp');
+                const rawDir = path.join(root, '.agentx-install-raw');
+                const zipFile = path.join(root, '.agentx-install.zip');
+
                 try {
-                    progress.report({ message: 'Cloning repository...' });
-                    const tmpDir = path.join(root, '.agentx-install-tmp');
+                    progress.report({ message: 'Downloading AgentX...' });
 
-                    // Clone
-                    await execShell(
-                        `git clone --depth 1 --quiet "${REPO_URL}" "${tmpDir}"`,
-                        root,
-                        process.platform === 'win32' ? 'pwsh' : 'bash'
-                    );
+                    // Clean previous attempts
+                    for (const p of [tmpDir, rawDir]) {
+                        if (fs.existsSync(p)) { fs.rmSync(p, { recursive: true, force: true }); }
+                    }
+                    if (fs.existsSync(zipFile)) { fs.unlinkSync(zipFile); }
 
-                    progress.report({ message: `Applying profile: ${profile.label}...`, increment: 30 });
+                    // Download zip archive (no git required)
+                    await downloadFile(ARCHIVE_URL, zipFile);
 
-                    // Remove .git and install scripts from clone
-                    const rmTargets = [
-                        path.join(tmpDir, '.git'),
-                        path.join(tmpDir, 'install.ps1'),
-                        path.join(tmpDir, 'install.sh'),
-                        path.join(tmpDir, 'vscode-extension'),
-                    ];
-                    for (const target of rmTargets) {
-                        if (fs.existsSync(target)) {
-                            fs.rmSync(target, { recursive: true, force: true });
+                    progress.report({ message: 'Extracting essential files...', increment: 20 });
+
+                    // Extract full archive to raw dir, then selectively copy
+                    await extractZip(zipFile, rawDir);
+
+                    // Find the extracted root (e.g. AgentX-master/)
+                    const entries = fs.readdirSync(rawDir, { withFileTypes: true });
+                    const archiveRoot = entries.find(e => e.isDirectory());
+                    if (!archiveRoot) { throw new Error('Archive extraction failed — no root directory found.'); }
+                    const extractedRoot = path.join(rawDir, archiveRoot.name);
+
+                    // Copy only essential paths
+                    fs.mkdirSync(tmpDir, { recursive: true });
+                    for (const dir of ESSENTIAL_DIRS) {
+                        const src = path.join(extractedRoot, dir);
+                        if (fs.existsSync(src)) {
+                            copyDirRecursive(src, path.join(tmpDir, dir));
+                        }
+                    }
+                    for (const file of ESSENTIAL_FILES) {
+                        const src = path.join(extractedRoot, file);
+                        if (fs.existsSync(src)) {
+                            fs.copyFileSync(src, path.join(tmpDir, file));
                         }
                     }
 
-                    // Apply profile pruning
-                    const pruneMap: Record<string, string[]> = {
-                        full: [],
-                        minimal: [
-                            '.github/skills', '.github/instructions', '.github/prompts',
-                            '.github/workflows', '.github/hooks', '.vscode', 'scripts',
-                        ],
-                        python: [
-                            '.github/skills/cloud', '.github/skills/design',
-                            '.github/skills/development/csharp', '.github/skills/development/blazor',
-                            '.github/skills/development/react', '.github/skills/development/frontend-ui',
-                            '.github/instructions/csharp.instructions.md',
-                            '.github/instructions/blazor.instructions.md',
-                            '.github/instructions/react.instructions.md',
-                        ],
-                        dotnet: [
-                            '.github/skills/design',
-                            '.github/skills/development/python', '.github/skills/development/react',
-                            '.github/skills/development/frontend-ui',
-                            '.github/instructions/python.instructions.md',
-                            '.github/instructions/react.instructions.md',
-                        ],
-                        react: [
-                            '.github/skills/cloud', '.github/skills/development/csharp',
-                            '.github/skills/development/blazor', '.github/skills/development/python',
-                            '.github/instructions/csharp.instructions.md',
-                            '.github/instructions/blazor.instructions.md',
-                            '.github/instructions/python.instructions.md',
-                        ],
-                    };
-
-                    const toPrune = pruneMap[profile.label] || [];
-                    for (const rel of toPrune) {
-                        const target = path.join(tmpDir, rel);
-                        if (fs.existsSync(target)) {
-                            fs.rmSync(target, { recursive: true, force: true });
-                        }
-                    }
+                    // Clean up raw download
+                    fs.rmSync(rawDir, { recursive: true, force: true });
+                    fs.unlinkSync(zipFile);
 
                     progress.report({ message: 'Copying files...', increment: 30 });
 
@@ -148,7 +120,6 @@ export function registerInitializeCommand(
                         const configData = {
                             mode: 'local',
                             version: '5.1.0',
-                            profile: profile.label,
                             installedAt: new Date().toISOString(),
                         };
                         fs.writeFileSync(configFile, JSON.stringify(configData, null, 2));
@@ -160,13 +131,19 @@ export function registerInitializeCommand(
                     vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
 
                     vscode.window.showInformationMessage(
-                        `AgentX initialized! Profile: ${profile.label}, Mode: ${mode.label}`
+                        `AgentX initialized! Mode: ${mode.label}`
                     );
 
                     // Refresh tree views
                     vscode.commands.executeCommand('agentx.refresh');
 
                 } catch (err: unknown) {
+                    // Clean up on failure
+                    for (const p of [tmpDir, rawDir]) {
+                        if (fs.existsSync(p)) { fs.rmSync(p, { recursive: true, force: true }); }
+                    }
+                    if (fs.existsSync(zipFile)) { fs.unlinkSync(zipFile); }
+
                     const message = err instanceof Error ? err.message : String(err);
                     vscode.window.showErrorMessage(`AgentX initialization failed: ${message}`);
                 }
@@ -174,26 +151,7 @@ export function registerInitializeCommand(
         );
     });
 
-    // Profile selection command
-    const profileCmd = vscode.commands.registerCommand('agentx.selectProfile', async () => {
-        const profile = await vscode.window.showQuickPick(
-            [
-                { label: 'full', description: 'Everything — all 41 skills, instructions, prompts' },
-                { label: 'minimal', description: 'Core only — agents, templates, CLI, docs' },
-                { label: 'python', description: 'Core + Python, testing, data, API skills' },
-                { label: 'dotnet', description: 'Core + C#, Blazor, Azure, SQL skills' },
-                { label: 'react', description: 'Core + React, TypeScript, UI, design skills' },
-            ],
-            { placeHolder: 'Select an install profile' }
-        );
-        if (profile) {
-            await vscode.workspace.getConfiguration('agentx')
-                .update('profile', profile.label, vscode.ConfigurationTarget.Workspace);
-            vscode.window.showInformationMessage(`AgentX profile set to: ${profile.label}`);
-        }
-    });
-
-    context.subscriptions.push(cmd, profileCmd);
+    context.subscriptions.push(cmd);
 }
 
 /** Recursively copy directory contents, merging into destination. */
@@ -213,5 +171,59 @@ function copyDirRecursive(src: string, dest: string): void {
                 fs.copyFileSync(srcPath, destPath);
             }
         }
+    }
+}
+
+/** Download a file via HTTPS, following redirects (GitHub returns 302). */
+function downloadFile(url: string, dest: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(dest);
+        const request = (reqUrl: string, redirectCount = 0) => {
+            if (redirectCount > 5) {
+                reject(new Error('Too many redirects'));
+                return;
+            }
+            const mod = reqUrl.startsWith('https') ? https : require('http');
+            mod.get(reqUrl, (res: { statusCode?: number; headers: { location?: string }; pipe: (s: fs.WriteStream) => void; resume: () => void }) => {
+                if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    res.resume();
+                    request(res.headers.location, redirectCount + 1);
+                    return;
+                }
+                if (res.statusCode && res.statusCode !== 200) {
+                    reject(new Error(`Download failed with status ${res.statusCode}`));
+                    return;
+                }
+                res.pipe(file);
+                file.on('finish', () => { file.close(); resolve(); });
+            }).on('error', (err: Error) => {
+                fs.unlink(dest, () => {}); // clean up partial file
+                reject(err);
+            });
+        };
+        request(url);
+    });
+}
+
+/** Extract a zip file using VS Code's built-in utilities or shell fallback. */
+async function extractZip(zipPath: string, destDir: string): Promise<void> {
+    fs.mkdirSync(destDir, { recursive: true });
+
+    if (process.platform === 'win32') {
+        // PowerShell Expand-Archive is available on all supported Windows versions
+        const { execShell: exec } = await import('../utils/shell');
+        await exec(
+            `Expand-Archive -Path "${zipPath}" -DestinationPath "${destDir}" -Force`,
+            path.dirname(zipPath),
+            'pwsh'
+        );
+    } else {
+        // unzip is available on macOS and most Linux distros
+        const { execShell: exec } = await import('../utils/shell');
+        await exec(
+            `unzip -qo "${zipPath}" -d "${destDir}"`,
+            path.dirname(zipPath),
+            'bash'
+        );
     }
 }

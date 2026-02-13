@@ -1,53 +1,51 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Install AgentX v5.1.0 — Clone, prune by profile, copy, configure.
+    Install AgentX v5.1.0 — Download, copy, configure.
 
-.PARAMETER Profile
-    full     — Everything (default)
-    minimal  — Core orchestration only (agents, templates, CLI)
-    python   — Core + Python/data skills & instructions
-    dotnet   — Core + C#/.NET/Blazor skills & instructions
-    react    — Core + React/TypeScript/UI skills & instructions
+.PARAMETER Mode
+    github   — Full features: GitHub Actions, PRs, Projects
+    local    — Filesystem-based issue tracking, no GitHub required
+    (omit to choose interactively)
 
 .PARAMETER Force
     Overwrite existing files (default: merge, keeping existing)
-
-.PARAMETER Local
-    Use Local Mode (filesystem-based issue tracking, no GitHub required)
 
 .PARAMETER NoSetup
     Skip interactive setup (git init, hooks, username)
 
 .EXAMPLE
-    .\install.ps1                          # Full install, GitHub mode
-    .\install.ps1 -Profile python          # Python profile
-    .\install.ps1 -Profile minimal -Local  # Minimal, local mode
+    .\install.ps1                          # Interactive — asks for mode
+    .\install.ps1 -Mode github             # Non-interactive, GitHub mode
+    .\install.ps1 -Mode local              # Non-interactive, Local mode
     .\install.ps1 -Force                   # Full reinstall (overwrite)
 
-    # One-liner install
+    # One-liner install (interactive)
     irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 
-    # One-liner with profile (set env vars first)
-    $env:AGENTX_PROFILE="python"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
+    # One-liner with overrides (non-interactive)
+    $env:AGENTX_MODE="local"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 #>
 
 param(
-    [ValidateSet("full","minimal","python","dotnet","react")]
-    [string]$Profile = "full",
+    [ValidateSet("github","local")]
+    [string]$Mode,
     [switch]$Force,
-    [switch]$Local,
     [switch]$NoSetup
 )
 
 # Environment variable overrides (for irm | iex one-liner usage)
-if (-not $PSBoundParameters.ContainsKey('Profile') -and $env:AGENTX_PROFILE) { $Profile = $env:AGENTX_PROFILE }
-if (-not $PSBoundParameters.ContainsKey('Local')   -and $env:AGENTX_LOCAL -eq "true") { $Local = [switch]$true }
+if (-not $Mode -and $env:AGENTX_MODE) { $Mode = $env:AGENTX_MODE }
+# Legacy: support AGENTX_LOCAL=true → Mode=local
+if (-not $Mode -and $env:AGENTX_LOCAL -eq "true") { $Mode = "local" }
 if (-not $PSBoundParameters.ContainsKey('NoSetup') -and $env:AGENTX_NOSETUP -eq "true") { $NoSetup = [switch]$true }
 
 $ErrorActionPreference = "Stop"
-$REPO = "https://github.com/jnPiyush/AgentX.git"
-$TMP  = ".agentx-install-tmp"
+$BRANCH  = "master"
+$TMP     = ".agentx-install-tmp"
+$TMPRAW  = ".agentx-install-raw"
+$ZIPFILE = ".agentx-install.zip"
+$ARCHIVE = "https://github.com/jnPiyush/AgentX/archive/refs/heads/$BRANCH.zip"
 
 function Write-OK($m)   { Write-Host "[OK] $m" -ForegroundColor Green }
 function Write-Skip($m)  { Write-Host "[--] $m" -ForegroundColor DarkGray }
@@ -57,76 +55,65 @@ Write-Host ""
 Write-Host "╔═══════════════════════════════════════════════════╗" -ForegroundColor Cyan
 Write-Host "║  AgentX v5.1.0 — AI Agent Orchestration          ║" -ForegroundColor Cyan
 Write-Host "╚═══════════════════════════════════════════════════╝" -ForegroundColor Cyan
-$mode = if ($Local) { "Local" } else { "GitHub" }
-Write-Host "  Profile: $Profile | Mode: $mode" -ForegroundColor Green
+Write-Host ""
+
+# ── Interactive selection ───────────────────────────────
+if (-not $Mode) {
+    Write-Host "  Select a mode:" -ForegroundColor Cyan
+    Write-Host "  [1] GitHub — Full features: GitHub Actions, PRs, Projects" -ForegroundColor White
+    Write-Host "  [2] Local  — Filesystem-based issue tracking, no GitHub required" -ForegroundColor White
+    $modeChoice = Read-Host "  Choose [1-2, default=1]"
+    $Mode = switch ($modeChoice) {
+        "2" { "local" }
+        default { "github" }
+    }
+}
+
+$Local = $Mode -eq "local"
+$displayMode = if ($Local) { "Local" } else { "GitHub" }
+Write-Host ""
+Write-Host "  Mode: $displayMode" -ForegroundColor Green
 Write-Host ""
 
 # ── Prerequisites ───────────────────────────────────────
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Write-Error "Git is required. Install from https://git-scm.com"
+# Git is optional — only needed for git init and hooks in Step 5
+
+# ── Step 1: Download ────────────────────────────────────
+Write-Host "① Downloading AgentX..." -ForegroundColor Cyan
+if (Test-Path $TMP)     { Remove-Item $TMP -Recurse -Force }
+if (Test-Path $TMPRAW)  { Remove-Item $TMPRAW -Recurse -Force }
+if (Test-Path $ZIPFILE) { Remove-Item $ZIPFILE -Force }
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+try {
+    Invoke-WebRequest -Uri $ARCHIVE -OutFile $ZIPFILE -UseBasicParsing
+} catch {
+    Write-Error "Download failed. Check network connection."
 }
 
-# ── Step 1: Clone ───────────────────────────────────────
-Write-Host "① Cloning repository..." -ForegroundColor Cyan
-if (Test-Path $TMP) { Remove-Item $TMP -Recurse -Force }
-git clone --depth 1 --quiet $REPO $TMP 2>&1 | Out-Null
-if (-not (Test-Path "$TMP/AGENTS.md")) { Write-Error "Clone failed. Check network connection." }
-Remove-Item "$TMP/.git" -Recurse -Force
-Remove-Item "$TMP/install.ps1", "$TMP/install.sh" -Force -ErrorAction SilentlyContinue
-Write-OK "Repository cloned"
+Expand-Archive -Path $ZIPFILE -DestinationPath $TMPRAW -Force
+$root = (Get-ChildItem $TMPRAW -Directory | Select-Object -First 1).FullName
 
-# ── Step 2: Prune by profile ───────────────────────────
-Write-Host "② Applying profile: $Profile" -ForegroundColor Cyan
-
-$prune = @{
-    full    = @()
-    minimal = @(
-        ".github/skills", ".github/instructions", ".github/prompts",
-        ".github/workflows", ".github/hooks", ".vscode", "scripts"
-    )
-    python  = @(
-        ".github/skills/cloud", ".github/skills/design",
-        ".github/skills/development/csharp", ".github/skills/development/blazor",
-        ".github/skills/development/react", ".github/skills/development/frontend-ui",
-        ".github/skills/development/go", ".github/skills/development/rust",
-        ".github/skills/development/mcp-server-development",
-        ".github/instructions/csharp.instructions.md",
-        ".github/instructions/blazor.instructions.md",
-        ".github/instructions/react.instructions.md"
-    )
-    dotnet  = @(
-        ".github/skills/design",
-        ".github/skills/development/python", ".github/skills/development/react",
-        ".github/skills/development/frontend-ui", ".github/skills/development/go",
-        ".github/skills/development/rust", ".github/skills/development/data-analysis",
-        ".github/skills/development/mcp-server-development",
-        ".github/skills/cloud/fabric-analytics", ".github/skills/cloud/fabric-data-agent",
-        ".github/skills/cloud/fabric-forecasting",
-        ".github/instructions/python.instructions.md",
-        ".github/instructions/react.instructions.md"
-    )
-    react   = @(
-        ".github/skills/cloud",
-        ".github/skills/development/csharp", ".github/skills/development/blazor",
-        ".github/skills/development/python", ".github/skills/development/go",
-        ".github/skills/development/rust", ".github/skills/development/postgresql",
-        ".github/skills/development/sql-server", ".github/skills/development/data-analysis",
-        ".github/skills/development/mcp-server-development",
-        ".github/instructions/csharp.instructions.md",
-        ".github/instructions/blazor.instructions.md",
-        ".github/instructions/python.instructions.md",
-        ".github/instructions/sql.instructions.md"
-    )
+# Copy only essential paths (skip vscode-extension, tests, CHANGELOG, CONTRIBUTING, etc.)
+New-Item -ItemType Directory -Path $TMP -Force | Out-Null
+$neededDirs  = @(".agentx", ".github", ".vscode", "scripts")
+$neededFiles = @("AGENTS.md", "Skills.md", ".gitignore")
+foreach ($d in $neededDirs) {
+    $src = Join-Path $root $d
+    if (Test-Path $src) { Copy-Item $src (Join-Path $TMP $d) -Recurse -Force }
+}
+foreach ($f in $neededFiles) {
+    $src = Join-Path $root $f
+    if (Test-Path $src) { Copy-Item $src (Join-Path $TMP $f) -Force }
 }
 
-foreach ($p in $prune[$Profile]) {
-    $target = Join-Path $TMP $p
-    if (Test-Path $target) { Remove-Item $target -Recurse -Force }
-}
-Write-OK "Profile applied"
+Remove-Item $TMPRAW -Recurse -Force
+Remove-Item $ZIPFILE -Force
+if (-not (Test-Path "$TMP/AGENTS.md")) { Write-Error "Download failed. Check network connection." }
+Write-OK "AgentX downloaded (essential files only)"
 
-# ── Step 3: Copy files ──────────────────────────────────
-Write-Host "③ Installing files..." -ForegroundColor Cyan
+# ── Step 2: Copy files ──────────────────────────────────
+Write-Host "② Installing files..." -ForegroundColor Cyan
 
 $tmpFull = (Resolve-Path $TMP).Path.TrimEnd('\', '/')
 $copied = 0; $skipped = 0
@@ -143,8 +130,8 @@ Get-ChildItem $TMP -Recurse -File -Force | ForEach-Object {
 }
 Write-OK "$copied files installed ($skipped existing skipped)"
 
-# ── Step 4: Generate runtime files ──────────────────────
-Write-Host "④ Configuring runtime..." -ForegroundColor Cyan
+# ── Step 3: Generate runtime files ──────────────────────
+Write-Host "③ Configuring runtime..." -ForegroundColor Cyan
 
 @(".agentx/state",".agentx/digests","docs/prd","docs/adr","docs/specs","docs/ux","docs/reviews","docs/progress") | ForEach-Object {
     if (-not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
@@ -154,8 +141,7 @@ Write-Host "④ Configuring runtime..." -ForegroundColor Cyan
 $versionFile = ".agentx/version.json"
 @{
     version = "5.1.0"
-    profile = $Profile
-    mode = $(if ($Local) { "local" } else { "github" })
+    mode = $Mode
     installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
     updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
@@ -190,29 +176,32 @@ if (-not (Test-Path $configFile) -or $Force) {
     }
 }
 
-# ── Step 5: Interactive setup ───────────────────────────
+# ── Step 4: Interactive setup ─────────────────────────
 if (-not $NoSetup) {
-    Write-Host "⑤ Setup..." -ForegroundColor Cyan
+    Write-Host "④ Setup..." -ForegroundColor Cyan
 
-    # Git init
-    if (-not (Test-Path ".git")) {
-        Write-Host "  Not a Git repository." -ForegroundColor Yellow
-        Write-Host "  [1] Initialize Git  [2] Skip" -ForegroundColor Cyan
-        $r = Read-Host "  Choose"
-        if ($r -eq "1") { git init --quiet; Write-OK "Git initialized" }
-    }
+    # Git init + hooks
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        if (-not (Test-Path ".git")) {
+            Write-Host "  Not a Git repository." -ForegroundColor Yellow
+            Write-Host "  [1] Initialize Git  [2] Skip" -ForegroundColor Cyan
+            $r = Read-Host "  Choose"
+            if ($r -eq "1") { git init --quiet; Write-OK "Git initialized" }
+        }
 
-    # Git hooks
-    if (Test-Path ".git") {
-        $hooksDir = ".git/hooks"
-        foreach ($h in @("pre-commit","commit-msg")) {
-            $src = ".github/hooks/$h"
-            if (Test-Path $src) { Copy-Item $src "$hooksDir/$h" -Force }
+        if (Test-Path ".git") {
+            $hooksDir = ".git/hooks"
+            foreach ($h in @("pre-commit","commit-msg")) {
+                $src = ".github/hooks/$h"
+                if (Test-Path $src) { Copy-Item $src "$hooksDir/$h" -Force }
+            }
+            if (Test-Path ".github/hooks/pre-commit.ps1") {
+                Copy-Item ".github/hooks/pre-commit.ps1" "$hooksDir/pre-commit.ps1" -Force
+            }
+            Write-OK "Git hooks installed"
         }
-        if (Test-Path ".github/hooks/pre-commit.ps1") {
-            Copy-Item ".github/hooks/pre-commit.ps1" "$hooksDir/pre-commit.ps1" -Force
-        }
-        Write-OK "Git hooks installed"
+    } else {
+        Write-Skip "Git not found — skipping git init and hooks"
     }
 
     # Username
@@ -240,11 +229,13 @@ if (-not $NoSetup) {
 
 # ── Cleanup ─────────────────────────────────────────────
 Remove-Item $TMP -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item $TMPRAW -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue
 
 # ── Done ────────────────────────────────────────────────
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Green
-Write-Host "  AgentX v5.1.0 installed!  [$Profile | $mode]" -ForegroundColor Green
+Write-Host "  AgentX v5.1.0 installed!  [$displayMode]" -ForegroundColor Green
 Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
 Write-Host "  CLI:   .\.agentx\agentx.ps1 help" -ForegroundColor White

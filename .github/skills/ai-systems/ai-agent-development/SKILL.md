@@ -162,6 +162,27 @@ result = await workflow.run(query="Write about AI agents")
 - [ ] Structured outputs configured
 - [ ] No hardcoded secrets
 
+**Model Change Management (MANDATORY)**
+- [ ] Model version pinned explicitly (e.g., `gpt-5.1-2026-01-15`)
+- [ ] Model version configurable via environment variable
+- [ ] Evaluation baseline saved for current model
+- [ ] A/B evaluation run before any model switch
+- [ ] Structured output schema verified after model change
+- [ ] Tool/function-calling accuracy verified after model change
+- [ ] Model change documented in changelog with eval results
+- [ ] Weekly evaluation monitoring configured for drift detection
+- [ ] Alert threshold set for score drops > 10% from baseline
+
+**Model Change Test Automation (MANDATORY)**
+- [ ] Agent designed as model-agnostic (model injected via config)
+- [ ] `config/models.yaml` defines model test matrix with thresholds
+- [ ] Tested against ≥2 models (primary + fallback from different provider)
+- [ ] Multi-model comparison pipeline in CI/CD (weekly + on model config change)
+- [ ] Deployment gated on threshold checks (CI fails on regression)
+- [ ] Validated fallback model designated and documented
+- [ ] Comparison report generated per run (JSON + human-readable)
+- [ ] Cost and latency evaluators included alongside quality metrics
+
 **Observability**
 - [ ] OpenTelemetry tracing enabled
 - [ ] Trace viewer tested

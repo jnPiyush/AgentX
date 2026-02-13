@@ -95,6 +95,84 @@ with tracer.start_as_current_span("model_call") as span:
 - Always define clear tool schemas with descriptions
 - Implement graceful degradation when tools fail
 
+## Model Change Management (MANDATORY)
+
+> **Every AI agent project MUST implement model change management.** Skipping this leads to silent degradation in production when models are updated or swapped.
+
+### Requirements
+
+- **MUST** pin model versions explicitly (e.g., `gpt-5.1-2026-01-15`, not `gpt-5.1`)
+- **MUST** store evaluation baselines before deploying any model change
+- **MUST** run A/B evaluation (old model vs new model) before switching
+- **MUST** verify structured output schema compliance after model change
+- **MUST** verify tool/function-calling accuracy after model change
+- **MUST** document model changes in changelog with evaluation results
+- **SHOULD** configure model version via environment variable for easy rollback
+- **SHOULD** monitor evaluation scores on a weekly cadence to detect provider silent updates
+- **SHOULD** alert on score drops > 10% from baseline
+
+### Model Configuration Pattern
+
+```python
+# ✅ MANDATORY: Pinned version, configurable, with evaluation tracking
+MODEL_CONFIG = {
+    "model": os.getenv("AGENT_MODEL", "gpt-5.1-2026-01-15"),
+    "temperature": 0.7,
+    "max_tokens": 4096,
+    "model_version_pinned": True,
+    "last_evaluated": "2026-02-01",
+    "baseline_scores": "evaluation/baseline-gpt51.json",
+}
+```
+
+```csharp
+// ✅ MANDATORY: Pinned version in .NET
+var modelId = configuration["Agent:ModelVersion"] ?? "gpt-5.1-2026-01-15";
+```
+
+### Model Migration Workflow
+
+1. **BASELINE** — Run eval suite on current model, save scores
+2. **CANDIDATE** — Deploy new model in shadow mode
+3. **COMPARE** — Run same eval suite, compare against baseline
+4. **THRESHOLD** — All metrics within ±5%?
+5. **CANARY** — Route 5-10% traffic to new model
+6. **PROMOTE** — Switch fully if canary succeeds for 48+ hours
+7. **DOCUMENT** — Update config, baseline, and changelog
+
+> **Reference**: See [Model Drift & Judge Patterns](../skills/ai-systems/ai-agent-development/references/model-drift-judge-patterns.md) for full decision trees, data drift monitoring, and judge LLM patterns.
+
+### Model Change Test Automation (MANDATORY)
+
+> **Every AI agent MUST be tested against at least 2 models before production.** If your agent only works on one model, you have a dependency, not a product.
+
+- **MUST** design agents as model-agnostic (model injected via config, not hardcoded)
+- **MUST** test against minimum 2 models (primary + one alternative from a different provider)
+- **MUST** maintain a `config/models.yaml` defining the model test matrix with thresholds
+- **MUST** run multi-model comparison in CI/CD (on model config changes + weekly schedule)
+- **MUST** gate deployments on threshold checks (fail CI if any model drops below minimums)
+- **MUST** designate a validated fallback model from a different provider
+- **SHOULD** run comparison on 4+ models: primary, challenger, fallback, budget
+- **SHOULD** include cost and latency evaluators alongside quality metrics
+- **SHOULD** post comparison reports as PR comments when model config changes
+
+### Minimum Test Matrix
+
+```yaml
+# config/models.yaml — MANDATORY for all AI agent projects
+models:
+  primary:    { name: "gpt-5.1-2026-01-15", role: primary }
+  fallback:   { name: "claude-opus-4-5", role: fallback }     # MUST: different provider
+
+thresholds:
+  task_completion: 0.85
+  format_compliance: 0.95
+  tool_accuracy: 0.90
+  max_regression_pct: 10
+```
+
+> **Reference**: See [Model Change Test Automation](../skills/ai-systems/ai-agent-development/references/model-change-test-automation.md) for CI/CD pipeline templates, implementation patterns, and comparison report formats.
+
 ## Evaluation
 
 - Create evaluation datasets before shipping AI features

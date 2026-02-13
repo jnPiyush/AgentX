@@ -55,12 +55,6 @@
         "icon": "$(rocket)"
       },
       {
-        "command": "agentx.selectProfile",
-        "title": "Select Install Profile",
-        "category": "AgentX",
-        "icon": "$(list-selection)"
-      },
-      {
         "command": "agentx.showStatus",
         "title": "Show Agent Status",
         "category": "AgentX",
@@ -173,25 +167,6 @@
     "configuration": {
       "title": "AgentX",
       "properties": {
-        "agentx.profile": {
-          "type": "string",
-          "default": "full",
-          "enum": [
-            "full",
-            "minimal",
-            "python",
-            "dotnet",
-            "react"
-          ],
-          "enumDescriptions": [
-            "Everything — all 41 skills, instructions, prompts",
-            "Core only — agents, templates, CLI, docs",
-            "Core + Python, testing, data, API skills",
-            "Core + C#, Blazor, Azure, SQL skills",
-            "Core + React, TypeScript, UI, design skills"
-          ],
-          "description": "Install profile for AgentX initialization."
-        },
         "agentx.mode": {
           "type": "string",
           "default": "github",
