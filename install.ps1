@@ -19,7 +19,7 @@
     .\install.ps1 -Mode github             # GitHub mode — asks for repo/project
     .\install.ps1 -Force                   # Full reinstall (overwrite)
 
-    # One-liner install (local mode, no prompts)
+    # One-liner install (local mode, no prompts — auto-detects piped execution)
     irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
 
     # One-liner for GitHub mode
@@ -27,7 +27,6 @@
 #>
 
 param(
-    [ValidateSet("github","local")]
     [string]$Mode,
     [switch]$Force,
     [switch]$NoSetup
@@ -38,6 +37,15 @@ if (-not $Mode -and $env:AGENTX_MODE) { $Mode = $env:AGENTX_MODE }
 # Legacy: support AGENTX_LOCAL=true → Mode=local
 if (-not $Mode -and $env:AGENTX_LOCAL -eq "true") { $Mode = "local" }
 if (-not $PSBoundParameters.ContainsKey('NoSetup') -and $env:AGENTX_NOSETUP -eq "true") { $NoSetup = [switch]$true }
+
+# Manual validation (replaces [ValidateSet] for irm | iex compatibility)
+if ($Mode -and $Mode -notin @("github", "local")) {
+    Write-Error "Invalid Mode '$Mode'. Valid values: github, local"
+    return
+}
+
+# Auto-detect piped execution (irm | iex) — used to skip interactive prompts
+$isPiped = -not $MyInvocation.MyCommand.Path
 
 $ErrorActionPreference = "Stop"
 $BRANCH  = "master"
@@ -72,9 +80,17 @@ Write-Host ""
 
 # ── Step 1: Download ────────────────────────────────────
 Write-Host "① Downloading AgentX..." -ForegroundColor Cyan
-if (Test-Path $TMP)     { Remove-Item $TMP -Recurse -Force }
-if (Test-Path $TMPRAW)  { Remove-Item $TMPRAW -Recurse -Force }
-if (Test-Path $ZIPFILE) { Remove-Item $ZIPFILE -Force }
+# Robust pre-cleanup — handle locked files from previous failed runs
+foreach ($p in @($TMP, $TMPRAW)) {
+    if (Test-Path $p) {
+        Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path $p) {
+            Start-Sleep -Milliseconds 500
+            Remove-Item $p -Recurse -Force -ErrorAction Stop
+        }
+    }
+}
+if (Test-Path $ZIPFILE) { Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue }
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 try {
@@ -168,17 +184,15 @@ if (-not (Test-Path $configFile) -or $Force) {
     }
 }
 
-# ── Step 4: Interactive setup ─────────────────────────
+# ── Step 4: Setup ─────────────────────────────────────
 if (-not $NoSetup) {
     Write-Host "④ Setup..." -ForegroundColor Cyan
 
-    # Git init + hooks
+    # Git init + hooks — always auto-init (non-destructive, both modes)
     if (Get-Command git -ErrorAction SilentlyContinue) {
         if (-not (Test-Path ".git")) {
-            Write-Host "  Not a Git repository." -ForegroundColor Yellow
-            Write-Host "  [1] Initialize Git  [2] Skip" -ForegroundColor Cyan
-            $r = Read-Host "  Choose"
-            if ($r -eq "1") { git init --quiet; Write-OK "Git initialized" }
+            git init --quiet
+            Write-OK "Git initialized"
         }
 
         if (Test-Path ".git") {
@@ -196,8 +210,8 @@ if (-not $NoSetup) {
         Write-Skip "Git not found — skipping git init and hooks"
     }
 
-    # GitHub setup (username, repo, project) — skipped entirely in local mode
-    if (-not $Local) {
+    # GitHub setup (username, repo, project) — skipped in local mode or when piped
+    if (-not $Local -and -not $isPiped) {
         # Username for CODEOWNERS
         $username = $null
         if (Get-Command gh -ErrorAction SilentlyContinue) {
@@ -284,6 +298,9 @@ if (-not $NoSetup) {
         }
         if ($repoSlug) { Write-OK "Repo: $repoSlug" }
         if ($projectNum) { Write-OK "Project: #$projectNum" }
+    } elseif (-not $Local -and $isPiped) {
+        Write-Skip "GitHub interactive setup skipped (piped execution)"
+        Write-Host "  Run .\install.ps1 -Mode github to configure repo & project" -ForegroundColor DarkGray
     }
 } else {
     Write-Skip "Setup skipped (-NoSetup)"
