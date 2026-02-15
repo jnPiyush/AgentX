@@ -252,6 +252,7 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh |
 # Linux/Mac
 ./install.sh                           # Local mode (default) — no prompts
 ./install.sh --mode github             # GitHub mode — asks for repo/project
+./install.sh --local                   # Explicit local mode shorthand
 ./install.sh --force                   # Reinstall (overwrite existing files)
 ./install.sh --no-setup                # Skip git init and hooks setup
 ```
@@ -268,7 +269,12 @@ $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX
 MODE=github curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
 ```
 
+> **Note:** GitHub mode one-liners skip interactive setup (repo/project configuration) since prompts cannot work in piped execution. Run the installer locally afterward to complete GitHub configuration:
+> `.\install.ps1 -Mode github` (Windows) or `./install.sh --mode github` (Linux/Mac).
+
 ### Create Labels (GitHub Mode Only)
+
+These labels are **not** created by the installer. Run these commands manually after install:
 
 ```bash
 gh label create "type:epic" --color "7C3AED"

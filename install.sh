@@ -36,6 +36,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Auto-detect piped execution (curl | bash) — used to skip interactive prompts
+IS_PIPED=false
+[ ! -t 0 ] && IS_PIPED=true
+
 G='\033[0;32m' Y='\033[1;33m' C='\033[0;36m' D='\033[0;90m' N='\033[0m'
 ok()   { echo -e "${G}[OK] $1${N}"; }
 skip() { echo -e "${D}[--] $1${N}"; }
@@ -154,10 +158,15 @@ if [ "$NO_SETUP" != "true" ]; then
 
     if command -v git &>/dev/null; then
         if [ ! -d ".git" ]; then
-            echo -e "${Y}  Not a Git repository.${N}"
-            echo -e "${C}  [1] Initialize Git  [2] Skip${N}"
-            read -rp "  Choose: " r
-            [[ "$r" == "1" ]] && { git init -q; ok "Git initialized"; }
+            if [ "$IS_PIPED" = "true" ]; then
+                git init -q
+                ok "Git initialized"
+            else
+                echo -e "${Y}  Not a Git repository.${N}"
+                echo -e "${C}  [1] Initialize Git  [2] Skip${N}"
+                read -rp "  Choose: " r
+                [[ "$r" == "1" ]] && { git init -q; ok "Git initialized"; }
+            fi
         fi
 
         if [ -d ".git" ]; then
@@ -170,8 +179,8 @@ if [ "$NO_SETUP" != "true" ]; then
         skip "Git not found — skipping git init and hooks"
     fi
 
-    # GitHub setup (username, repo, project) — skipped entirely in local mode
-    if [ "$LOCAL" != "true" ]; then
+    # GitHub setup (username, repo, project) — skipped in local mode or when piped
+    if [ "$LOCAL" != "true" ] && [ "$IS_PIPED" != "true" ]; then
         # Username for CODEOWNERS
         USERNAME=""
         command -v gh &>/dev/null && USERNAME=$(gh api user --jq '.login' 2>/dev/null || true)
@@ -256,6 +265,9 @@ with open('$CONFIG', 'w') as f: json.dump(cfg, f, indent=2)
         fi
         [ -n "$REPO_SLUG" ] && ok "Repo: $REPO_SLUG"
         [ -n "$PROJECT_NUM" ] && ok "Project: #$PROJECT_NUM"
+    elif [ "$LOCAL" != "true" ] && [ "$IS_PIPED" = "true" ]; then
+        skip "GitHub interactive setup skipped (piped execution)"
+        echo -e "${D}  Run ./install.sh --mode github to configure repo & project${N}"
     fi
 else
     skip "Setup skipped (--no-setup)"
