@@ -21,7 +21,12 @@ FORCE="${FORCE:-false}"
 NO_SETUP="${NO_SETUP:-false}"
 BRANCH="master"
 TMP=".agentx-install-tmp"
+TMPARCHIVE="$TMP.tar.gz"
 ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/heads/$BRANCH.tar.gz"
+
+# ── Guaranteed cleanup (runs on success, error, or Ctrl+C) ──
+cleanup() { rm -rf "$TMP" "$TMPARCHIVE"; }
+trap cleanup EXIT
 PREFIX="AgentX-$BRANCH"
 # Legacy: support LOCAL=true → MODE=local
 [ -z "$MODE" ] && [ "${LOCAL:-false}" = "true" ] && MODE="local"
@@ -77,7 +82,6 @@ command -v tar &>/dev/null || { echo "tar is required for extraction."; exit 1; 
 echo -e "${C}① Downloading AgentX...${N}"
 rm -rf "$TMP"
 mkdir -p "$TMP"
-TMPARCHIVE="$TMP.tar.gz"
 $FETCH "$ARCHIVE_URL" > "$TMPARCHIVE"
 [ -s "$TMPARCHIVE" ] || { echo "Download failed. Check network."; exit 1; }
 
@@ -91,7 +95,6 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
     "$PREFIX/Skills.md" \
     "$PREFIX/.gitignore" 2>/dev/null || true
 
-rm -f "$TMPARCHIVE"
 [ -f "$TMP/AGENTS.md" ] || { echo "Download failed. Check network."; exit 1; }
 ok "AgentX downloaded (essential files only)"
 
@@ -272,9 +275,6 @@ with open('$CONFIG', 'w') as f: json.dump(cfg, f, indent=2)
 else
     skip "Setup skipped (--no-setup)"
 fi
-
-# ── Cleanup ─────────────────────────────────────────────
-rm -rf "$TMP" "$TMP.tar.gz"
 
 # ── Done ────────────────────────────────────────────────
 echo ""
