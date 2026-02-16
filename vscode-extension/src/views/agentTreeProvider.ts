@@ -35,20 +35,8 @@ export class AgentTreeProvider implements vscode.TreeDataProvider<AgentTreeItem>
  }
 
  private createAgentItem(agent: AgentDefinition): AgentTreeItem {
- const icons: Record<string, string> = {
- 'Agent X (Auto)': '',
- 'Product Manager': '',
- 'UX Designer': '',
- 'Architect': '',
- 'Engineer': '',
- 'Reviewer': '',
- 'Reviewer (Auto-Fix)': '',
- 'DevOps Engineer': '',
- };
- const icon = icons[agent.name] || '';
-
  const item = new AgentTreeItem(
- `${icon} ${agent.name}`,
+ agent.name,
  vscode.TreeItemCollapsibleState.Collapsed,
  agent
  );

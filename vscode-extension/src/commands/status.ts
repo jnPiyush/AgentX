@@ -59,31 +59,19 @@ function buildStatusHtml(cliOutput: string): string {
  </style>
 </head>
 <body>
- <h1> AgentX - Agent Status</h1>
+ <h1>AgentX - Agent Status</h1>
  <pre>${lines}</pre>
 </body>
 </html>`;
 }
 
 function buildAgentListHtml(agents: { name: string; model: string; maturity: string; mode: string }[]): string {
- const icons: Record<string, string> = {
- 'Agent X (Auto)': '',
- 'Product Manager': '',
- 'UX Designer': '',
- 'Architect': '',
- 'Engineer': '',
- 'Reviewer': '',
- 'Reviewer (Auto-Fix)': '',
- 'DevOps Engineer': '',
- };
-
  const rows = agents.map(a => {
- const icon = icons[a.name] || '';
  const badge = a.maturity === 'stable'
  ? '<span style="color:#22c55e;">(*) stable</span>'
  : '<span style="color:#f59e0b;">(*) preview</span>';
  return `<tr>
- <td>${icon} <strong>${escapeHtml(a.name)}</strong></td>
+ <td><strong>${escapeHtml(a.name)}</strong></td>
  <td>${escapeHtml(a.model)}</td>
  <td>${badge}</td>
  <td>${escapeHtml(a.mode)}</td>
@@ -103,7 +91,7 @@ function buildAgentListHtml(agents: { name: string; model: string; maturity: str
  </style>
 </head>
 <body>
- <h1> AgentX - Agents (${agents.length})</h1>
+ <h1>AgentX - Agents (${agents.length})</h1>
  <table>
  <thead><tr><th>Agent</th><th>Model</th><th>Maturity</th><th>Mode</th></tr></thead>
  <tbody>${rows}</tbody>
