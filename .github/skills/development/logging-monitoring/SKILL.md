@@ -2,16 +2,16 @@
 name: "logging-monitoring"
 description: 'Implement observability patterns including structured logging, log levels, correlation IDs, metrics, and distributed tracing. Use when adding structured logging, implementing correlation IDs for request tracing, configuring metrics collection, setting up distributed tracing, or designing alerting rules.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Logging & Monitoring
 
-> **Purpose**: Implement observability for production systems.  
-> **Goal**: Structured logs, correlation across requests, actionable metrics.  
+> **Purpose**: Implement observability for production systems. 
+> **Goal**: Structured logs, correlation across requests, actionable metrics. 
 > **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
@@ -33,21 +33,21 @@ metadata:
 
 ```
 Observability concern?
-├─ What to log?
-│   ├─ Request start/end → INFO with correlation ID
-│   ├─ Expected errors → WARN (validation, not-found)
-│   ├─ Unexpected errors → ERROR with stack trace
-│   └─ Debug details → DEBUG (disabled in production)
-├─ What NOT to log?
-│   └─ PII, passwords, tokens, credit cards → NEVER
-├─ Metrics needed?
-│   ├─ RED metrics: Rate, Errors, Duration (for services)
-│   └─ USE metrics: Utilization, Saturation, Errors (for resources)
-├─ Distributed tracing?
-│   └─ OpenTelemetry for cross-service correlation
-└─ Alerting?
-    ├─ SLO-based: alert on error budget burn rate
-    └─ Avoid alert fatigue: page only for actionable issues
++- What to log?
+| +- Request start/end -> INFO with correlation ID
+| +- Expected errors -> WARN (validation, not-found)
+| +- Unexpected errors -> ERROR with stack trace
+| - Debug details -> DEBUG (disabled in production)
++- What NOT to log?
+| - PII, passwords, tokens, credit cards -> NEVER
++- Metrics needed?
+| +- RED metrics: Rate, Errors, Duration (for services)
+| - USE metrics: Utilization, Saturation, Errors (for resources)
++- Distributed tracing?
+| - OpenTelemetry for cross-service correlation
+- Alerting?
+ +- SLO-based: alert on error budget burn rate
+ - Avoid alert fatigue: page only for actionable issues
 ```
 
 ## Structured Logging
@@ -57,17 +57,17 @@ Observability concern?
 Log structured data (key-value pairs) instead of plain text for better searchability and analysis.
 
 ```
-❌ Unstructured (hard to parse):
-  "User john@example.com logged in from 192.168.1.1 at 2024-01-15 10:30:00"
+[FAIL] Unstructured (hard to parse):
+ "User john@example.com logged in from 192.168.1.1 at 2024-01-15 10:30:00"
 
-✅ Structured (machine-readable):
-  {
-    "event": "user_login",
-    "user_email": "john@example.com",
-    "ip_address": "192.168.1.1",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "level": "INFO"
-  }
+[PASS] Structured (machine-readable):
+ {
+ "event": "user_login",
+ "user_email": "john@example.com",
+ "ip_address": "192.168.1.1",
+ "timestamp": "2024-01-15T10:30:00Z",
+ "level": "INFO"
+ }
 ```
 
 ### Benefits
@@ -96,14 +96,14 @@ Log structured data (key-value pairs) instead of plain text for better searchabi
 
 ```
 Development: DEBUG or TRACE
-  - See detailed information for debugging
+ - See detailed information for debugging
 
 Staging: INFO
-  - Normal operations plus warnings/errors
+ - Normal operations plus warnings/errors
 
 Production: INFO (or WARN)
-  - Reduce noise, focus on significant events
-  - Keep ERROR/FATAL always enabled
+ - Reduce noise, focus on significant events
+ - Keep ERROR/FATAL always enabled
 ```
 
 ---
@@ -134,8 +134,7 @@ Production: INFO (or WARN)
 
 ---
 
-**See Also**: [Error Handling](../error-handling/SKILL.md) • [C# Development](../csharp/SKILL.md) • [Python Development](../python/SKILL.md)
-
+**See Also**: [Error Handling](../error-handling/SKILL.md) - [C# Development](../csharp/SKILL.md) - [Python Development](../python/SKILL.md)
 
 ## Troubleshooting
 

@@ -1,105 +1,105 @@
-name: 🎯 Epic
+name: Epic
 description: Large initiative spanning multiple features (requires PRD)
 title: "[Epic] "
 labels: ["type:epic"]
 projects: ["jnPiyush/1"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ## 🎯 Epic
-        
-        Epics are large initiatives that span multiple features and require a PRD.
-        
-        **Workflow:**
-        1. Fill out this template → Status: **Backlog**
-        2. PM creates PRD → Status: **Ready**
-        3. Breakdown into Features/Stories
-        4. Track child issues separately
-        5. Epic closed when all children done → Status: **Done**
-        
-        > ⚠️ Status is tracked via **GitHub Projects**, not labels.
-        
-        **Deliverables:**
-        - Product Requirements Document (PRD)
-        - Feature breakdown with priorities
-        - Success metrics defined
-  
-  - type: textarea
-    id: description
-    attributes:
-      label: Description
-      description: High-level description of the initiative
-      placeholder: "Build a comprehensive user authentication system with multiple login methods, session management, and security features"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: problem-statement
-    attributes:
-      label: Problem Statement
-      description: What problem does this epic solve?
-      placeholder: "Users currently cannot securely access the application, resulting in..."
-    validations:
-      required: true
-  
-  - type: textarea
-    id: business-value
-    attributes:
-      label: Business Value
-      description: Why is this epic important? What's the expected impact?
-      placeholder: |
-        - Increase user retention by 20%
-        - Reduce support tickets related to login issues
-        - Enable enterprise customers to use SSO
-    validations:
-      required: true
-  
-  - type: textarea
-    id: scope
-    attributes:
-      label: Scope
-      description: What's in scope and out of scope?
-      placeholder: |
-        **In Scope:**
-        - Email/password authentication
-        - OAuth (Google, GitHub)
-        - Session management
-        - Password reset flow
-        
-        **Out of Scope:**
-        - Biometric authentication
-        - Hardware security keys
-        - Mobile app authentication
-    validations:
-      required: true
-  
-  - type: dropdown
-    id: priority
-    attributes:
-      label: Priority
-      description: Business priority of this epic
-      options:
-        - "P0 - Critical: Must have for launch"
-        - "P1 - High: Major business impact"
-        - "P2 - Medium: Important but not urgent"
-        - "P3 - Low: Nice to have"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: success-metrics
-    attributes:
-      label: Success Metrics
-      description: How will we measure success?
-      placeholder: |
-        - Login success rate > 99%
-        - Average login time < 3 seconds
-        - Zero security incidents related to auth
-  
-  - type: input
-    id: target-date
-    attributes:
-      label: Target Completion Date
-      description: When should this epic be completed?
-      placeholder: "Q2 2026"
+ - type: markdown
+ attributes:
+ value: |
+ ## Epic
+
+ Epics are large initiatives that span multiple features and require a PRD.
+
+ **Workflow:**
+ 1. Fill out this template -> Status: **Backlog**
+ 2. PM creates PRD -> Status: **Ready**
+ 3. Breakdown into Features/Stories
+ 4. Track child issues separately
+ 5. Epic closed when all children done -> Status: **Done**
+
+ > [WARN] Status is tracked via **GitHub Projects**, not labels.
+
+ **Deliverables:**
+ - Product Requirements Document (PRD)
+ - Feature breakdown with priorities
+ - Success metrics defined
+
+ - type: textarea
+ id: description
+ attributes:
+ label: Description
+ description: High-level description of the initiative
+ placeholder: "Build a comprehensive user authentication system with multiple login methods, session management, and security features"
+ validations:
+ required: true
+
+ - type: textarea
+ id: problem-statement
+ attributes:
+ label: Problem Statement
+ description: What problem does this epic solve?
+ placeholder: "Users currently cannot securely access the application, resulting in..."
+ validations:
+ required: true
+
+ - type: textarea
+ id: business-value
+ attributes:
+ label: Business Value
+ description: Why is this epic important? What's the expected impact?
+ placeholder: |
+ - Increase user retention by 20%
+ - Reduce support tickets related to login issues
+ - Enable enterprise customers to use SSO
+ validations:
+ required: true
+
+ - type: textarea
+ id: scope
+ attributes:
+ label: Scope
+ description: What's in scope and out of scope?
+ placeholder: |
+ **In Scope:**
+ - Email/password authentication
+ - OAuth (Google, GitHub)
+ - Session management
+ - Password reset flow
+
+ **Out of Scope:**
+ - Biometric authentication
+ - Hardware security keys
+ - Mobile app authentication
+ validations:
+ required: true
+
+ - type: dropdown
+ id: priority
+ attributes:
+ label: Priority
+ description: Business priority of this epic
+ options:
+ - "P0 - Critical: Must have for launch"
+ - "P1 - High: Major business impact"
+ - "P2 - Medium: Important but not urgent"
+ - "P3 - Low: Nice to have"
+ validations:
+ required: true
+
+ - type: textarea
+ id: success-metrics
+ attributes:
+ label: Success Metrics
+ description: How will we measure success?
+ placeholder: |
+ - Login success rate > 99%
+ - Average login time < 3 seconds
+ - Zero security incidents related to auth
+
+ - type: input
+ id: target-date
+ attributes:
+ label: Target Completion Date
+ description: When should this epic be completed?
+ placeholder: "Q2 2026"

@@ -2,19 +2,19 @@
 name: "sql-server"
 description: 'Develop SQL Server databases with T-SQL, stored procedures, indexing, and performance optimization. Use when writing T-SQL queries, creating stored procedures/functions, designing index strategies, optimizing query execution plans, or troubleshooting SQL Server performance.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["sql", "tsql"]
-  platforms: ["windows", "linux"]
+ languages: ["sql", "tsql"]
+ platforms: ["windows", "linux"]
 ---
 
 # SQL Server Database Development
 
-> **Purpose**: Production-ready SQL Server development for enterprise applications.  
-> **Audience**: Backend engineers and database administrators working with Microsoft SQL Server.  
+> **Purpose**: Production-ready SQL Server development for enterprise applications. 
+> **Audience**: Backend engineers and database administrators working with Microsoft SQL Server. 
 > **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) SQL Server patterns.
 
 ---
@@ -47,7 +47,7 @@ compatibility:
 
 ## SQL Server Version
 
-**Current**: SQL Server 2022  
+**Current**: SQL Server 2022 
 **Minimum**: SQL Server 2019
 
 ---
@@ -75,10 +75,9 @@ compatibility:
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md) • [Database Skill](../../architecture/database/SKILL.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md) - [Database Skill](../../architecture/database/SKILL.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Troubleshooting
 

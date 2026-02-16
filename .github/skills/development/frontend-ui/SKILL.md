@@ -2,20 +2,20 @@
 name: "frontend-ui"
 description: 'Build frontend UIs with HTML5, CSS3, and Tailwind CSS following accessibility and performance best practices. Use when creating responsive layouts, styling with Tailwind CSS, implementing accessible forms, optimizing frontend performance, or building common UI patterns.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["html", "css", "javascript"]
-  frameworks: ["tailwind", "bootstrap"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["html", "css", "javascript"]
+ frameworks: ["tailwind", "bootstrap"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # Frontend/UI Development
 
-> **Purpose**: Production-ready frontend development standards for HTML, CSS, Tailwind CSS, and responsive design.  
-> **Audience**: Frontend engineers building web interfaces with modern HTML/CSS and utility-first frameworks.  
+> **Purpose**: Production-ready frontend development standards for HTML, CSS, Tailwind CSS, and responsive design. 
+> **Audience**: Frontend engineers building web interfaces with modern HTML/CSS and utility-first frameworks. 
 > **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) frontend development patterns.
 
 ---
@@ -49,48 +49,48 @@ compatibility:
 ## HTML5 Semantic Elements
 
 ```html
-<!-- ✅ GOOD: Semantic HTML structure -->
+<!-- [PASS] GOOD: Semantic HTML structure -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page Title</title>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Page Title</title>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="bg-white shadow-md">
-        <ul class="flex space-x-4">
-            <li><a href="#home">Home</a></li>
-            <li><a href="#about">About</a></li>
-        </ul>
-    </nav>
+ <!-- Navigation -->
+ <nav class="bg-white shadow-md">
+ <ul class="flex space-x-4">
+ <li><a href="#home">Home</a></li>
+ <li><a href="#about">About</a></li>
+ </ul>
+ </nav>
 
-    <!-- Main content -->
-    <main class="container mx-auto px-4 py-8">
-        <article class="prose lg:prose-xl">
-            <h1>Article Title</h1>
-            <p>Content goes here...</p>
-        </article>
-        
-        <aside class="mt-8">
-            <h2>Related Content</h2>
-        </aside>
-    </main>
+ <!-- Main content -->
+ <main class="container mx-auto px-4 py-8">
+ <article class="prose lg:prose-xl">
+ <h1>Article Title</h1>
+ <p>Content goes here...</p>
+ </article>
+ 
+ <aside class="mt-8">
+ <h2>Related Content</h2>
+ </aside>
+ </main>
 
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white p-6">
-        <p>&copy; 2026 Company Name</p>
-    </footer>
+ <!-- Footer -->
+ <footer class="bg-gray-800 text-white p-6">
+ <p>&copy; 2026 Company Name</p>
+ </footer>
 </body>
 </html>
 
-<!-- ❌ BAD: Non-semantic divs -->
+<!-- [FAIL] BAD: Non-semantic divs -->
 <div class="nav">
-    <div class="nav-item">Home</div>
+ <div class="nav-item">Home</div>
 </div>
 <div class="content">
-    <div class="post">...</div>
+ <div class="post">...</div>
 </div>
 ```
 
@@ -119,10 +119,9 @@ compatibility:
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Troubleshooting
 

@@ -1,27 +1,27 @@
 ---
 inputs:
-  issue_number:
-    description: "GitHub issue number"
-    type: "number"
-    required: true
-  issue_title:
-    description: "Issue title"
-    type: "string"
-    required: true
-  agent_role:
-    description: "Agent role (PM, UX, Architect, Engineer, Reviewer)"
-    type: "string"
-    required: true
-  session_date:
-    description: "Session date"
-    type: "string"
-    default: "${current_date}"
+ issue_number:
+ description: "GitHub issue number"
+ type: "number"
+ required: true
+ issue_title:
+ description: "Issue title"
+ type: "string"
+ required: true
+ agent_role:
+ description: "Agent role (PM, UX, Architect, Engineer, Reviewer)"
+ type: "string"
+ required: true
+ session_date:
+ description: "Session date"
+ type: "string"
+ default: "${current_date}"
 ---
 
 # Progress Log: #${issue_number} - ${issue_title}
 
-> **Purpose**: Track agent sessions, decisions, and continuity across context windows.  
-> **Pattern**: Each agent appends session notes before handoff or context refresh.  
+> **Purpose**: Track agent sessions, decisions, and continuity across context windows. 
+> **Pattern**: Each agent appends session notes before handoff or context refresh. 
 > **See Also**: [Checkpoint Protocol](../SCENARIOS.md#checkpoint-protocol)
 
 ---
@@ -41,7 +41,7 @@ inputs:
 
 - [ ] Research & planning
 - [ ] Implementation
-- [ ] Testing (≥80% coverage)
+- [ ] Testing (80% coverage)
 - [ ] Documentation
 - [ ] Review ready
 
@@ -50,13 +50,13 @@ inputs:
 ## Checkpoint Log
 
 <!-- Record each checkpoint stop as a structured entry.
-     See SCENARIOS.md § Checkpoint Protocol for when to use checkpoints. -->
+ See SCENARIOS.md Checkpoint Protocol for when to use checkpoints. -->
 
 ### CP-001
 
 | Field | Value |
 |-------|-------|
-| Status | ⏳ Pending <!-- ⏳ Pending / ✅ Completed --> |
+| Status | Pending <!-- Pending / [PASS] Completed --> |
 | Phase | <!-- e.g., Implementation --> |
 | Skill | <!-- e.g., react, testing --> |
 | Files Changed | <!-- count --> |
@@ -123,15 +123,14 @@ inputs:
 
 ### Context for Next Agent
 
-
 ---
 
 ## Completion Summary
 
-**Final Status**: [In Progress / Ready for Review / Completed]  
-**Total Sessions**: [Number]  
-**Total Checkpoints**: [Number]  
-**Overall Coverage**: [Percentage]  
+**Final Status**: [In Progress / Ready for Review / Completed] 
+**Total Sessions**: [Number] 
+**Total Checkpoints**: [Number] 
+**Overall Coverage**: [Percentage] 
 **Ready for Handoff**: [Yes/No]
 
 ### Key Achievements

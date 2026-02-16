@@ -2,19 +2,19 @@
 name: "fabric-data-agent"
 description: 'Build, configure, and validate conversational data agents on Microsoft Fabric Lakehouses using the Data Agent SDK. Use when creating Fabric data agents, configuring few-shot examples, managing Livy sessions, or validating agent responses against Lakehouse data.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-07-13"
-  updated: "2025-07-13"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-07-13"
+ updated: "2025-07-13"
 compatibility:
-  languages: ["python", "sql", "pyspark"]
-  frameworks: ["microsoft-fabric", "fabric-data-agent-sdk"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["python", "sql", "pyspark"]
+ frameworks: ["microsoft-fabric", "fabric-data-agent-sdk"]
+ platforms: ["windows", "linux", "macos"]
 prerequisites:
-  - "Microsoft Fabric workspace with active capacity"
-  - "Fabric MCP Server (ms-fabric-mcp-server)"
-  - "fabric-data-agent-sdk (pre-installed in Fabric environment)"
-  - "Lakehouse with populated Delta tables"
+ - "Microsoft Fabric workspace with active capacity"
+ - "Fabric MCP Server (ms-fabric-mcp-server)"
+ - "fabric-data-agent-sdk (pre-installed in Fabric environment)"
+ - "Lakehouse with populated Delta tables"
 ---
 
 # Fabric Data Agent
@@ -33,19 +33,19 @@ prerequisites:
 
 ```
 Building a Fabric Data Agent?
-├─ First time with this Lakehouse?
-│   └─ Start at Phase 1 (Plan) — discover schema and relationships
-├─ Have an implementation plan already?
-│   └─ Start at Phase 2 (Create) — build and publish the agent
-├─ Agent exists but needs validation?
-│   └─ Start at Phase 3 (Validate) — test against expected metrics
-├─ Need to modify an existing agent?
-│   ├─ Schema changes → Re-run Phase 1 (new plan)
-│   └─ Config tweaks → Phase 2 only (update agent)
-└─ Not sure if Data Agent is right tool?
-    ├─ Users need ad-hoc SQL → Use Warehouse + SQL endpoint instead
-    ├─ Users need dashboards → Use Semantic Model + Power BI
-    └─ Users need chat-based Q&A → Data Agent ✅
++- First time with this Lakehouse?
+| - Start at Phase 1 (Plan) - discover schema and relationships
++- Have an implementation plan already?
+| - Start at Phase 2 (Create) - build and publish the agent
++- Agent exists but needs validation?
+| - Start at Phase 3 (Validate) - test against expected metrics
++- Need to modify an existing agent?
+| +- Schema changes -> Re-run Phase 1 (new plan)
+| - Config tweaks -> Phase 2 only (update agent)
+- Not sure if Data Agent is right tool?
+ +- Users need ad-hoc SQL -> Use Warehouse + SQL endpoint instead
+ +- Users need dashboards -> Use Semantic Model + Power BI
+ - Users need chat-based Q&A -> Data Agent [PASS]
 ```
 
 ## Workflow Overview
@@ -53,7 +53,7 @@ Building a Fabric Data Agent?
 Data Agent development follows a **3-phase workflow** with checkpoint stops between phases:
 
 ```
-Phase 1: Plan ──checkpoint──→ Phase 2: Create ──checkpoint──→ Phase 3: Validate
+Phase 1: Plan --checkpoint---> Phase 2: Create --checkpoint---> Phase 3: Validate
 ```
 
 **Critical Rule**: Execute ONE phase per conversation turn to prevent context rot. Use the completion report as a handover document between phases.
@@ -108,13 +108,13 @@ Phase 1: Plan ──checkpoint──→ Phase 2: Create ──checkpoint──�
 
 ```
 User Question (natural language)
-        ↓
+ (down)
 Data Agent (instructions + knowledge)
-        ↓
+ (down)
 SQL Generation (against Lakehouse SQL endpoint)
-        ↓ 
+ (down) 
 Query Execution
-        ↓
+ (down)
 Natural Language Answer
 ```
 
@@ -124,7 +124,7 @@ Natural Language Answer
 |-----------|---------|---------|
 | **Instructions** | System prompt guiding agent behavior | "You are a sales analytics assistant..." |
 | **Datasources** | Lakehouse bindings with table selection | Bronze_LH: [fact_sales, dim_product, ...] |
-| **Few-shot examples** | Query-answer pairs for accuracy | Q: "Total sales?" → SQL: `SELECT SUM(amount)...` |
+| **Few-shot examples** | Query-answer pairs for accuracy | Q: "Total sales?" -> SQL: `SELECT SUM(amount)...` |
 | **Knowledge** | Additional context documents | Business rules, glossary, KPIs |
 
 ### Table Selection Strategy
@@ -166,7 +166,7 @@ When using Livy for SDK operations (Phase 2 & 3):
 
 ```
 1. Always check for existing sessions FIRST
-2. Reuse idle sessions (state: idle → reuse)
+2. Reuse idle sessions (state: idle -> reuse)
 3. Create only if none exist (cold start: 3-6+ minutes)
 4. Never close sessions unless explicitly requested
 5. Use timestamped session names: data-agent-{lakehouse}-{timestamp}
@@ -178,12 +178,12 @@ When using Livy for SDK operations (Phase 2 & 3):
 ### Retry Protocol
 
 ```
-Attempt 1 → Execute operation
-  ↓ (on failure)
-Attempt 2 → Diagnose error, apply fix, retry
-  ↓ (on failure)
-Attempt 3 → Try alternative approach
-  ↓ (on failure)
+Attempt 1 -> Execute operation
+ (down) (on failure)
+Attempt 2 -> Diagnose error, apply fix, retry
+ (down) (on failure)
+Attempt 3 -> Try alternative approach
+ (down) (on failure)
 Escalate to user with error details + options
 ```
 
@@ -203,21 +203,21 @@ All output goes to timestamped folders:
 
 ```
 run/{timestamp}_{lakehouse}/
-├── implementation_plan.md       # Phase 1 output
-├── agent_creation.ipynb          # Phase 2 reproducible notebook
-├── agent_validation.ipynb        # Phase 3 reproducible notebook
-├── validation_report.md          # Phase 3 accuracy results
-└── completion_report.md          # Cross-phase handover document
++-- implementation_plan.md # Phase 1 output
++-- agent_creation.ipynb # Phase 2 reproducible notebook
++-- agent_validation.ipynb # Phase 3 reproducible notebook
++-- validation_report.md # Phase 3 accuracy results
+-- completion_report.md # Cross-phase handover document
 ```
 
 ## Anti-Patterns
 
-- **Skip planning phase**: Creating agents without understanding schema → poor accuracy
-- **Use Bronze tables**: Raw data with duplicates/nulls → unreliable answers
-- **Spark SQL in few-shots**: Agent generates invalid SQL → query failures
-- **No validation**: Deploying without testing → users lose trust quickly
-- **Monolithic instructions**: Long, unfocused system prompts → agent confusion
-- **Too many tables**: Adding all tables → slow queries, irrelevant joins
+- **Skip planning phase**: Creating agents without understanding schema -> poor accuracy
+- **Use Bronze tables**: Raw data with duplicates/nulls -> unreliable answers
+- **Spark SQL in few-shots**: Agent generates invalid SQL -> query failures
+- **No validation**: Deploying without testing -> users lose trust quickly
+- **Monolithic instructions**: Long, unfocused system prompts -> agent confusion
+- **Too many tables**: Adding all tables -> slow queries, irrelevant joins
 
 ## Boundaries
 

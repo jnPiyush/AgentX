@@ -2,13 +2,13 @@
 name: "go"
 description: 'Write reliable, efficient Go code following idiomatic patterns and best practices. Use when building Go applications, implementing error handling with error wrapping, writing concurrent code with goroutines, designing Go interfaces, or structuring Go project layouts.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["go"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["go"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # Go Development
@@ -50,35 +50,35 @@ compatibility:
 
 ```
 project/
-├── cmd/
-│   └── myapp/
-│       └── main.go          # Application entry point
-├── internal/
-│   ├── config/              # Configuration handling
-│   ├── handlers/            # HTTP handlers
-│   ├── models/              # Domain models
-│   ├── repository/          # Data access
-│   └── service/             # Business logic
-├── pkg/
-│   └── utils/               # Reusable packages
-├── api/
-│   └── openapi.yaml         # API specification
-├── configs/
-│   └── config.yaml          # Configuration files
-├── scripts/
-│   └── setup.sh             # Build/deploy scripts
-├── go.mod
-├── go.sum
-└── README.md
++-- cmd/
+| -- myapp/
+| -- main.go # Application entry point
++-- internal/
+| +-- config/ # Configuration handling
+| +-- handlers/ # HTTP handlers
+| +-- models/ # Domain models
+| +-- repository/ # Data access
+| -- service/ # Business logic
++-- pkg/
+| -- utils/ # Reusable packages
++-- api/
+| -- openapi.yaml # API specification
++-- configs/
+| -- config.yaml # Configuration files
++-- scripts/
+| -- setup.sh # Build/deploy scripts
++-- go.mod
++-- go.sum
+-- README.md
 ```
 
 ### Package Naming
 
 ```go
 // Package names should be lowercase, short, and descriptive
-package user       // Good
+package user // Good
 package userService // Bad - no camelCase
-package user_svc    // Bad - no underscores
+package user_svc // Bad - no underscores
 
 // Import path should match directory structure
 import "myapp/internal/service"
@@ -100,12 +100,12 @@ type userRepository struct {}
 func validateEmail(email string) bool {}
 
 // Use MixedCaps, not underscores
-var maxRetryCount = 3    // Good
-var max_retry_count = 3  // Bad
+var maxRetryCount = 3 // Good
+var max_retry_count = 3 // Bad
 
 // Acronyms should be all caps or all lowercase
-var userID string   // Good
-var userId string   // Bad
+var userID string // Good
+var userId string // Bad
 type HTTPClient struct {} // Good
 type HttpClient struct {} // Bad
 ```
@@ -118,15 +118,15 @@ type HttpClient struct {} // Bad
 
 // Group imports: std lib, external, internal
 import (
-    "context"
-    "fmt"
-    "net/http"
+ "context"
+ "fmt"
+ "net/http"
 
-    "github.com/gorilla/mux"
-    "go.uber.org/zap"
+ "github.com/gorilla/mux"
+ "go.uber.org/zap"
 
-    "myapp/internal/config"
-    "myapp/internal/service"
+ "myapp/internal/config"
+ "myapp/internal/service"
 )
 ```
 
@@ -141,7 +141,7 @@ package user
 // GetByID retrieves a user by their unique identifier.
 // It returns ErrNotFound if the user doesn't exist.
 func GetByID(ctx context.Context, id string) (*User, error) {
-    // Implementation
+ // Implementation
 }
 
 // Don't comment obvious code
@@ -152,7 +152,7 @@ x++ // increment x - BAD
 
 ## Best Practices
 
-### ✅ DO
+### [PASS] DO
 
 - Use `gofmt` and `golint`
 - Handle all errors
@@ -162,7 +162,7 @@ x++ // increment x - BAD
 - Document exported functions
 - Use meaningful variable names
 
-### ❌ DON'T
+### [FAIL] DON'T
 
 - Ignore errors
 - Use global variables for state
@@ -184,7 +184,6 @@ x++ // increment x - BAD
 
 **Version**: 1.0
 **Last Updated**: February 5, 2026
-
 
 ## Troubleshooting
 

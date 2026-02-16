@@ -2,16 +2,16 @@
 name: "performance"
 description: 'Optimize application performance through async patterns, caching strategies, profiling, and resource management. Use when diagnosing slow endpoints, implementing caching layers, profiling CPU/memory bottlenecks, optimizing database queries, or setting up performance monitoring.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Performance
 
-> **Purpose**: Optimize application speed, throughput, and resource usage for production loads.  
-> **Strategy**: Profile first, optimize bottlenecks, measure impact.  
+> **Purpose**: Optimize application speed, throughput, and resource usage for production loads. 
+> **Strategy**: Profile first, optimize bottlenecks, measure impact. 
 > **Note**: For language-specific implementations, see [C# Development](../../development/csharp/SKILL.md) or [Python Development](../../development/python/SKILL.md).
 
 ---
@@ -33,21 +33,21 @@ metadata:
 
 ```
 Performance concern?
-├─ Not yet measured? → Profile FIRST (don't guess)
-│   ├─ .NET → dotnet-trace / BenchmarkDotNet
-│   ├─ Python → cProfile / py-spy
-│   └─ Node.js → clinic.js / --prof
-├─ Slow API response?
-│   ├─ Database query? → EXPLAIN ANALYZE → add index
-│   ├─ External service? → Add caching + async calls
-│   └─ Computation? → Optimize algorithm or add memoization
-├─ High memory usage?
-│   ├─ Large collections? → Stream/paginate instead of loading all
-│   └─ Memory leaks? → Profile allocations, check dispose patterns
-├─ Concurrency bottleneck?
-│   ├─ I/O bound? → async/await (don't block threads)
-│   └─ CPU bound? → Parallel processing / background workers
-└─ Quick wins? → See Quick Wins table below
++- Not yet measured? -> Profile FIRST (don't guess)
+| +- .NET -> dotnet-trace / BenchmarkDotNet
+| +- Python -> cProfile / py-spy
+| - Node.js -> clinic.js / --prof
++- Slow API response?
+| +- Database query? -> EXPLAIN ANALYZE -> add index
+| +- External service? -> Add caching + async calls
+| - Computation? -> Optimize algorithm or add memoization
++- High memory usage?
+| +- Large collections? -> Stream/paginate instead of loading all
+| - Memory leaks? -> Profile allocations, check dispose patterns
++- Concurrency bottleneck?
+| +- I/O bound? -> async/await (don't block threads)
+| - CPU bound? -> Parallel processing / background workers
+- Quick wins? -> See Quick Wins table below
 ```
 
 ## Quick Wins
@@ -112,10 +112,9 @@ Performance concern?
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Scripts
 

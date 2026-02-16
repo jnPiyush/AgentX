@@ -1,33 +1,33 @@
 ---
 inputs:
-  epic_title:
-    description: "Title of the Epic"
-    required: true
-    default: ""
-  issue_number:
-    description: "GitHub issue number for this Epic"
-    required: true
-    default: ""
-  priority:
-    description: "Priority level"
-    required: false
-    default: "p2"
-  author:
-    description: "Document author (agent or person name)"
-    required: false
-    default: "Product Manager Agent"
-  date:
-    description: "Creation date (YYYY-MM-DD)"
-    required: false
-    default: "${current_date}"
+ epic_title:
+ description: "Title of the Epic"
+ required: true
+ default: ""
+ issue_number:
+ description: "GitHub issue number for this Epic"
+ required: true
+ default: ""
+ priority:
+ description: "Priority level"
+ required: false
+ default: "p2"
+ author:
+ description: "Document author (agent or person name)"
+ required: false
+ default: "Product Manager Agent"
+ date:
+ description: "Creation date (YYYY-MM-DD)"
+ required: false
+ default: "${current_date}"
 ---
 
 # PRD: ${epic_title}
 
-**Epic**: #${issue_number}  
-**Status**: Draft | Review | Approved  
-**Author**: ${author}  
-**Date**: ${date}  
+**Epic**: #${issue_number} 
+**Status**: Draft | Review | Approved 
+**Author**: ${author} 
+**Date**: ${date} 
 **Stakeholders**: {Names/Roles}
 **Priority**: ${priority}
 
@@ -109,23 +109,23 @@ inputs:
 
 #### Must Have (P0)
 1. **{Requirement}**: {Description}
-   - **User Story**: As a {role}, I want {capability} so that {benefit}
-   - **Acceptance Criteria**: 
-     - [ ] {Criterion 1}
-     - [ ] {Criterion 2}
+ - **User Story**: As a {role}, I want {capability} so that {benefit}
+ - **Acceptance Criteria**: 
+ - [ ] {Criterion 1}
+ - [ ] {Criterion 2}
 
 2. **{Requirement}**: {Description}
-   - **User Story**: As a {role}, I want {capability} so that {benefit}
-   - **Acceptance Criteria**: 
-     - [ ] {Criterion 1}
+ - **User Story**: As a {role}, I want {capability} so that {benefit}
+ - **Acceptance Criteria**: 
+ - [ ] {Criterion 1}
 
 #### Should Have (P1)
 1. **{Requirement}**: {Description}
-   - **User Story**: As a {role}, I want {capability} so that {benefit}
+ - **User Story**: As a {role}, I want {capability} so that {benefit}
 
 #### Could Have (P2)
 1. **{Requirement}**: {Description}
-   - **User Story**: As a {role}, I want {capability} so that {benefit}
+ - **User Story**: As a {role}, I want {capability} so that {benefit}
 
 #### Won't Have (Out of Scope)
 - {Feature explicitly excluded}
@@ -136,11 +136,11 @@ inputs:
 > **Trigger**: Include this section when the user request involves AI, ML, LLM, intelligent automation, or agent capabilities. If the product does NOT involve AI/ML, mark "Technology Classification" as rule-based and skip the rest.
 
 #### Technology Classification
-- [ ] **AI/ML powered** — requires model inference (LLM, vision, embeddings, etc.)
-- [ ] **Rule-based / statistical** — no model needed (deterministic logic only)
-- [ ] **Hybrid** — rule-based foundation with AI/ML enhancement
+- [ ] **AI/ML powered** - requires model inference (LLM, vision, embeddings, etc.)
+- [ ] **Rule-based / statistical** - no model needed (deterministic logic only)
+- [ ] **Hybrid** - rule-based foundation with AI/ML enhancement
 
-> ⚠️ **Intent Preservation**: If the user explicitly requested AI/ML capabilities (e.g., "build an AI agent"), do NOT classify as rule-based without explicit user confirmation. Do NOT add constraints like "no external API required" that contradict AI intent.
+> [WARN] **Intent Preservation**: If the user explicitly requested AI/ML capabilities (e.g., "build an AI agent"), do NOT classify as rule-based without explicit user confirmation. Do NOT add constraints like "no external API required" that contradict AI intent.
 
 #### Model Requirements (if AI/ML powered)
 | Requirement | Specification |
@@ -148,7 +148,7 @@ inputs:
 | **Model Type** | LLM / Vision / Embedding / Speech / Custom |
 | **Provider** | Microsoft Foundry / OpenAI / Anthropic / Google / Local / Any |
 | **Latency** | Real-time (<2s) / Near-real-time (<10s) / Batch (minutes+) |
-| **Quality Threshold** | Accuracy ≥ {X}% / Coherence ≥ {Y} / {custom metric} |
+| **Quality Threshold** | Accuracy {X}% / Coherence {Y} / {custom metric} |
 | **Cost Budget** | ${amount} per 1M tokens / per request / per month |
 | **Data Sensitivity** | PII / Confidential / Internal / Public |
 
@@ -170,7 +170,7 @@ inputs:
 - [ ] Model produces responses meeting quality threshold
 - [ ] Inference latency meets requirements
 - [ ] Cost per request within budget
-- [ ] Evaluation dataset created with ≥{N} test cases
+- [ ] Evaluation dataset created with {N} test cases
 - [ ] Graceful fallback when model is unavailable
 
 > **Reference**: Read `.github/skills/ai-systems/ai-agent-development/SKILL.md` for implementation patterns and model guidance.
@@ -209,37 +209,37 @@ inputs:
 ## 5. User Stories & Features
 
 ### Feature 1: {Feature Name}
-**Description**: {Brief description of feature}  
-**Priority**: P0 | P1 | P2  
+**Description**: {Brief description of feature} 
+**Priority**: P0 | P1 | P2 
 **Epic**: #{epic-id}
 
 | Story ID | As a... | I want... | So that... | Acceptance Criteria | Priority | Estimate |
 |----------|---------|-----------|------------|---------------------|----------|----------|
-| US-1.1 | {role} | {capability} | {benefit} | • [ ] {criterion 1}<br>• [ ] {criterion 2} | P0 | 3 days |
-| US-1.2 | {role} | {capability} | {benefit} | • [ ] {criterion 1} | P0 | 2 days |
+| US-1.1 | {role} | {capability} | {benefit} | - [ ] {criterion 1}<br>- [ ] {criterion 2} | P0 | 3 days |
+| US-1.2 | {role} | {capability} | {benefit} | - [ ] {criterion 1} | P0 | 2 days |
 
 ### Feature 2: {Feature Name}
-**Description**: {Brief description}  
+**Description**: {Brief description} 
 **Priority**: P0 | P1 | P2
 
 | Story ID | As a... | I want... | So that... | Acceptance Criteria | Priority | Estimate |
 |----------|---------|-----------|------------|---------------------|----------|----------|
-| US-2.1 | {role} | {capability} | {benefit} | • [ ] {criterion 1} | P1 | 2 days |
+| US-2.1 | {role} | {capability} | {benefit} | - [ ] {criterion 1} | P1 | 2 days |
 
 ### Feature 3: {Feature Name}
-**Description**: {Brief description}  
+**Description**: {Brief description} 
 **Priority**: P0 | P1 | P2
 
 | Story ID | As a... | I want... | So that... | Acceptance Criteria | Priority | Estimate |
 |----------|---------|-----------|------------|---------------------|----------|----------|
-| US-3.1 | {role} | {capability} | {benefit} | • [ ] {criterion 1} | P2 | 1 day |
+| US-3.1 | {role} | {capability} | {benefit} | - [ ] {criterion 1} | P2 | 1 day |
 
 ---
 
 ## 6. User Flows
 
 ### Primary Flow: {Flow Name}
-**Trigger**: {What initiates this flow}  
+**Trigger**: {What initiates this flow} 
 **Preconditions**: {Required state before flow starts}
 
 **Steps**:
@@ -297,7 +297,7 @@ inputs:
 ## 9. Timeline & Milestones
 
 ### Phase 1: Foundation (Weeks 1-2)
-**Goal**: Backend API and database ready  
+**Goal**: Backend API and database ready 
 **Deliverables**:
 - Database schema and migrations
 - API endpoints (CRUD operations)
@@ -306,7 +306,7 @@ inputs:
 **Stories**: #{story-1}, #{story-2}, #{story-3}
 
 ### Phase 2: Integration (Week 3)
-**Goal**: Frontend components connected  
+**Goal**: Frontend components connected 
 **Deliverables**:
 - React components
 - API client integration
@@ -315,7 +315,7 @@ inputs:
 **Stories**: #{story-4}, #{story-5}
 
 ### Phase 3: Optimization (Week 4)
-**Goal**: Production-ready with performance tuning  
+**Goal**: Production-ready with performance tuning 
 **Deliverables**:
 - Caching implementation
 - Load testing results
@@ -324,7 +324,7 @@ inputs:
 **Stories**: #{story-6}
 
 ### Launch Date
-**Target**: {YYYY-MM-DD}  
+**Target**: {YYYY-MM-DD} 
 **Launch Criteria**:
 - [ ] All P0 stories completed
 - [ ] Security audit passed
@@ -385,6 +385,6 @@ inputs:
 
 ---
 
-**Generated by AgentX Product Manager Agent**  
-**Last Updated**: {YYYY-MM-DD}  
+**Generated by AgentX Product Manager Agent** 
+**Last Updated**: {YYYY-MM-DD} 
 **Version**: 1.0

@@ -4,36 +4,36 @@
 
 ### Password Storage
 
-**❌ NEVER store plain text passwords:**
+**[FAIL] NEVER store plain text passwords:**
 ```
 users:
-  - username: john
-    password: "MyPassword123"  # VULNERABLE
+ - username: john
+ password: "MyPassword123" # VULNERABLE
 ```
 
-**✅ ALWAYS hash passwords with salt:**
+**[PASS] ALWAYS hash passwords with salt:**
 ```
 users:
-  - username: john
-    password_hash: "$2b$12$xyz..."  # bcrypt hash with salt
+ - username: john
+ password_hash: "$2b$12$xyz..." # bcrypt hash with salt
 ```
 
 **Password Hashing Algorithm Recommendations:**
 1. **Argon2** (Best) - Winner of Password Hashing Competition
 2. **bcrypt** (Good) - Industry standard, widely supported
 3. **scrypt** (Good) - Memory-hard function
-4. ❌ **SHA-256/MD5/SHA-1** (BAD) - Too fast, vulnerable to rainbow tables
+4. [FAIL] **SHA-256/MD5/SHA-1** (BAD) - Too fast, vulnerable to rainbow tables
 
 **Password Hashing Pattern:**
 ```
 function hashPassword(plainPassword):
-    workFactor = 12  # Cost parameter (higher = slower = more secure)
-    salt = generateRandomSalt()  # Unique per password
-    hash = BCRYPT.hash(plainPassword, salt, workFactor)
-    return hash  # Format: $algorithm$workFactor$salt$hash
+ workFactor = 12 # Cost parameter (higher = slower = more secure)
+ salt = generateRandomSalt() # Unique per password
+ hash = BCRYPT.hash(plainPassword, salt, workFactor)
+ return hash # Format: $algorithm$workFactor$salt$hash
 
 function verifyPassword(plainPassword, storedHash):
-    return BCRYPT.verify(plainPassword, storedHash)
+ return BCRYPT.verify(plainPassword, storedHash)
 ```
 
 **Password Requirements:**
@@ -47,18 +47,18 @@ function verifyPassword(plainPassword, storedHash):
 **Token Structure:**
 ```json
 {
-  "header": {
-    "alg": "HS256",
-    "typ": "JWT"
-  },
-  "payload": {
-    "sub": "user_id",
-    "username": "john",
-    "roles": ["user", "admin"],
-    "iat": 1642531200,
-    "exp": 1642534800
-  },
-  "signature": "..."
+ "header": {
+ "alg": "HS256",
+ "typ": "JWT"
+ },
+ "payload": {
+ "sub": "user_id",
+ "username": "john",
+ "roles": ["user", "admin"],
+ "iat": 1642531200,
+ "exp": 1642534800
+ },
+ "signature": "..."
 }
 ```
 
@@ -71,11 +71,11 @@ function verifyPassword(plainPassword, storedHash):
 - Invalidate tokens on logout (token blacklist)
 
 **JWT Validation Checklist:**
-- ✅ Verify signature
-- ✅ Check expiration time
-- ✅ Validate issuer and audience
-- ✅ Ensure algorithm matches expected
-- ✅ Check token format and structure
+- [PASS] Verify signature
+- [PASS] Check expiration time
+- [PASS] Validate issuer and audience
+- [PASS] Ensure algorithm matches expected
+- [PASS] Check token format and structure
 
 ---
 
@@ -86,36 +86,36 @@ function verifyPassword(plainPassword, storedHash):
 **Authorization Pattern:**
 ```
 Roles:
-  - Admin: Full access to all resources
-  - Editor: Can create/edit content
-  - Viewer: Read-only access
+ - Admin: Full access to all resources
+ - Editor: Can create/edit content
+ - Viewer: Read-only access
 
 Permissions:
-  - users:create
-  - users:read
-  - users:update
-  - users:delete
+ - users:create
+ - users:read
+ - users:update
+ - users:delete
 
 Role-Permission Mapping:
-  Admin: [users:*, posts:*, settings:*]
-  Editor: [posts:create, posts:update, posts:read]
-  Viewer: [posts:read]
+ Admin: [users:*, posts:*, settings:*]
+ Editor: [posts:create, posts:update, posts:read]
+ Viewer: [posts:read]
 ```
 
 **Authorization Check Pattern:**
 ```
 function authorize(user, requiredPermission):
-    userPermissions = getAllPermissions(user.roles)
-    return userPermissions.contains(requiredPermission)
+ userPermissions = getAllPermissions(user.roles)
+ return userPermissions.contains(requiredPermission)
 
 function handleDeleteUser(request, userId):
-    currentUser = authenticate(request)
-    
-    if not authorize(currentUser, "users:delete"):
-        return 403 Forbidden
-    
-    deleteUser(userId)
-    return 204 No Content
+ currentUser = authenticate(request)
+ 
+ if not authorize(currentUser, "users:delete"):
+ return 403 Forbidden
+ 
+ deleteUser(userId)
+ return 204 No Content
 ```
 
 ### Attribute-Based Access Control (ABAC)
@@ -123,10 +123,10 @@ function handleDeleteUser(request, userId):
 **Resource Ownership Pattern:**
 ```
 function canEdit(user, post):
-    # User can edit if they are:
-    # 1. The post owner, OR
-    # 2. An admin
-    return post.authorId == user.id OR user.roles.contains("Admin")
+ # User can edit if they are:
+ # 1. The post owner, OR
+ # 2. An admin
+ return post.authorId == user.id OR user.roles.contains("Admin")
 ```
 
 ---

@@ -68,20 +68,20 @@ What is the proposed solution?
 **Mermaid Diagram Examples:**
 ```mermaid
 graph TB
-    A[Client] --> B[API Gateway]
-    B --> C[Service A]
-    B --> D[Service B]
-    C --> E[(Database)]
+ A[Client] --> B[API Gateway]
+ B --> C[Service A]
+ B --> D[Service B]
+ C --> E[(Database)]
 ```
 
 ```mermaid
 sequenceDiagram
-    Client->>API: POST /orders
-    API->>Service: CreateOrder()
-    Service->>DB: INSERT
-    DB-->>Service: OK
-    Service-->>API: OrderCreated
-    API-->>Client: 201 Created
+ Client->>API: POST /orders
+ API->>Service: CreateOrder()
+ Service->>DB: INSERT
+ DB-->>Service: OK
+ Service-->>API: OrderCreated
+ API-->>Client: 201 Created
 ```
 
 ### 4. Define Interfaces
@@ -96,10 +96,10 @@ sequenceDiagram
 **Data Models:**
 ```
 User {
-    id: UUID
-    email: string (unique)
-    name: string
-    created_at: timestamp
+ id: UUID
+ email: string (unique)
+ name: string
+ created_at: timestamp
 }
 ```
 

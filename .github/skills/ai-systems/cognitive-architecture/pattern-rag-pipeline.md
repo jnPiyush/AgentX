@@ -8,14 +8,14 @@
 
 ```mermaid
 flowchart LR
-    Docs[Documents] --> Chunk[Chunking]
-    Chunk --> Embed[Embedding Model]
-    Embed --> VectorDB[(Vector Store)]
-    Query[User Query] --> EmbedQ[Embedding Model]
-    EmbedQ --> Search[Vector Search]
-    VectorDB --> Search
-    Search --> Rerank[Reranker]
-    Rerank --> Context[LLM Context]
+ Docs[Documents] --> Chunk[Chunking]
+ Chunk --> Embed[Embedding Model]
+ Embed --> VectorDB[(Vector Store)]
+ Query[User Query] --> EmbedQ[Embedding Model]
+ EmbedQ --> Search[Vector Search]
+ VectorDB --> Search
+ Search --> Rerank[Reranker]
+ Rerank --> Context[LLM Context]
 ```
 
 ## 2. Ingestion Strategy
@@ -38,16 +38,16 @@ Combine **Keyword Search** (BM25) with **Vector Search** (Cosine Similarity).
 ```python
 # Pseudo-code for Hybrid Retrieval
 def search(query):
-    # 1. Vector Search
-    vector_results = vector_store.similarity_search(query, k=10)
-    
-    # 2. Keyword Search
-    keyword_results = keyword_store.search(query, k=10)
-    
-    # 3. Reciprocal Rank Fusion (RRF)
-    combined = rrf_merge(vector_results, keyword_results)
-    
-    return combined[:5]
+ # 1. Vector Search
+ vector_results = vector_store.similarity_search(query, k=10)
+ 
+ # 2. Keyword Search
+ keyword_results = keyword_store.search(query, k=10)
+ 
+ # 3. Reciprocal Rank Fusion (RRF)
+ combined = rrf_merge(vector_results, keyword_results)
+ 
+ return combined[:5]
 ```
 
 ### Reranking
@@ -59,14 +59,14 @@ Always use a reranker step for high-precision agents.
 **Document Payload (Vector Store)**:
 ```json
 {
-  "id": "uuid",
-  "content": "Text chunk...",
-  "embedding": [0.12, -0.05, ...],
-  "metadata": {
-    "source": "manual.pdf",
-    "page": 12,
-    "last_updated": "2024-01-01",
-    "access_level": "public"
-  }
+ "id": "uuid",
+ "content": "Text chunk...",
+ "embedding": [0.12, -0.05, ...],
+ "metadata": {
+ "source": "manual.pdf",
+ "page": 12,
+ "last_updated": "2024-01-01",
+ "access_level": "public"
+ }
 }
 ```

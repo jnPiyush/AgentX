@@ -13,7 +13,7 @@ applyTo: '**/*agent*, **/*llm*, **/*model*, **/*workflow*, **/agents/**, **/*ai*
 - Use Key Vault or managed identity in production
 
 ```python
-# ✅ Environment-based configuration
+# [PASS] Environment-based configuration
 import os
 
 endpoint = os.environ["FOUNDRY_ENDPOINT"]
@@ -22,7 +22,7 @@ model = os.environ.get("MODEL_DEPLOYMENT_NAME", "gpt-4o")
 ```
 
 ```csharp
-// ✅ Configuration-based in .NET
+// [PASS] Configuration-based in .NET
 var endpoint = configuration["Foundry:Endpoint"];
 var credential = new DefaultAzureCredential();
 ```
@@ -34,13 +34,13 @@ var credential = new DefaultAzureCredential();
 - Validate outputs before using downstream
 
 ```python
-# ✅ Typed LLM outputs
+# [PASS] Typed LLM outputs
 from pydantic import BaseModel
 
 class AnalysisResult(BaseModel):
-    summary: str
-    confidence: float
-    categories: list[str]
+ summary: str
+ confidence: float
+ categories: list[str]
 ```
 
 ## Error Handling & Resilience
@@ -51,14 +51,14 @@ class AnalysisResult(BaseModel):
 - Provide meaningful fallbacks when model calls fail
 
 ```python
-# ✅ Resilient model calls
+# [PASS] Resilient model calls
 import asyncio
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=30))
 async def call_model(prompt: str) -> str:
-    """Call model with automatic retry on transient failures."""
-    ...
+ """Call model with automatic retry on transient failures."""
+ ...
 ```
 
 ## Tracing & Observability
@@ -69,15 +69,15 @@ async def call_model(prompt: str) -> str:
 - Use structured logging with correlation IDs
 
 ```python
-# ✅ Tracing setup
+# [PASS] Tracing setup
 from opentelemetry import trace
 
 tracer = trace.get_tracer("agent.service")
 
 with tracer.start_as_current_span("model_call") as span:
-    span.set_attribute("model.name", model_name)
-    span.set_attribute("prompt.tokens", token_count)
-    result = await client.complete(prompt)
+ span.set_attribute("model.name", model_name)
+ span.set_attribute("prompt.tokens", token_count)
+ result = await client.complete(prompt)
 ```
 
 ## Prompt Engineering
@@ -114,31 +114,31 @@ with tracer.start_as_current_span("model_call") as span:
 ### Model Configuration Pattern
 
 ```python
-# ✅ MANDATORY: Pinned version, configurable, with evaluation tracking
+# [PASS] MANDATORY: Pinned version, configurable, with evaluation tracking
 MODEL_CONFIG = {
-    "model": os.getenv("AGENT_MODEL", "gpt-5.1-2026-01-15"),
-    "temperature": 0.7,
-    "max_tokens": 4096,
-    "model_version_pinned": True,
-    "last_evaluated": "2026-02-01",
-    "baseline_scores": "evaluation/baseline-gpt51.json",
+ "model": os.getenv("AGENT_MODEL", "gpt-5.1-2026-01-15"),
+ "temperature": 0.7,
+ "max_tokens": 4096,
+ "model_version_pinned": True,
+ "last_evaluated": "2026-02-01",
+ "baseline_scores": "evaluation/baseline-gpt51.json",
 }
 ```
 
 ```csharp
-// ✅ MANDATORY: Pinned version in .NET
+// [PASS] MANDATORY: Pinned version in .NET
 var modelId = configuration["Agent:ModelVersion"] ?? "gpt-5.1-2026-01-15";
 ```
 
 ### Model Migration Workflow
 
-1. **BASELINE** — Run eval suite on current model, save scores
-2. **CANDIDATE** — Deploy new model in shadow mode
-3. **COMPARE** — Run same eval suite, compare against baseline
-4. **THRESHOLD** — All metrics within ±5%?
-5. **CANARY** — Route 5-10% traffic to new model
-6. **PROMOTE** — Switch fully if canary succeeds for 48+ hours
-7. **DOCUMENT** — Update config, baseline, and changelog
+1. **BASELINE** - Run eval suite on current model, save scores
+2. **CANDIDATE** - Deploy new model in shadow mode
+3. **COMPARE** - Run same eval suite, compare against baseline
+4. **THRESHOLD** - All metrics within 5%?
+5. **CANARY** - Route 5-10% traffic to new model
+6. **PROMOTE** - Switch fully if canary succeeds for 48+ hours
+7. **DOCUMENT** - Update config, baseline, and changelog
 
 > **Reference**: See [Model Drift & Judge Patterns](../skills/ai-systems/ai-agent-development/references/model-drift-judge-patterns.md) for full decision trees, data drift monitoring, and judge LLM patterns.
 
@@ -159,16 +159,16 @@ var modelId = configuration["Agent:ModelVersion"] ?? "gpt-5.1-2026-01-15";
 ### Minimum Test Matrix
 
 ```yaml
-# config/models.yaml — MANDATORY for all AI agent projects
+# config/models.yaml - MANDATORY for all AI agent projects
 models:
-  primary:    { name: "gpt-5.1-2026-01-15", role: primary }
-  fallback:   { name: "claude-opus-4-5", role: fallback }     # MUST: different provider
+ primary: { name: "gpt-5.1-2026-01-15", role: primary }
+ fallback: { name: "claude-opus-4-5", role: fallback } # MUST: different provider
 
 thresholds:
-  task_completion: 0.85
-  format_compliance: 0.95
-  tool_accuracy: 0.90
-  max_regression_pct: 10
+ task_completion: 0.85
+ format_compliance: 0.95
+ tool_accuracy: 0.90
+ max_regression_pct: 10
 ```
 
 > **Reference**: See [Model Change Test Automation](../skills/ai-systems/ai-agent-development/references/model-change-test-automation.md) for CI/CD pipeline templates, implementation patterns, and comparison report formats.
@@ -197,15 +197,15 @@ thresholds:
 - Integration tests should use test model deployments
 
 ```python
-# ✅ Mocking model calls
+# [PASS] Mocking model calls
 from unittest.mock import AsyncMock
 
 async def test_agent_handles_empty_response():
-    mock_client = AsyncMock()
-    mock_client.complete.return_value = ""
-    agent = MyAgent(client=mock_client)
-    
-    result = await agent.process("test query")
-    
-    assert result.fallback_used is True
+ mock_client = AsyncMock()
+ mock_client.complete.return_value = ""
+ agent = MyAgent(client=mock_client)
+ 
+ result = await agent.process("test query")
+ 
+ assert result.fallback_used is True
 ```

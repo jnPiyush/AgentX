@@ -108,16 +108,16 @@ echo "Running dotnet format..."
 dotnet format --verify-no-changes
 
 if [ $? -ne 0 ]; then
-  echo "Code formatting issues detected. Run 'dotnet format' to fix."
-  exit 1
+ echo "Code formatting issues detected. Run 'dotnet format' to fix."
+ exit 1
 fi
 
 echo "Running tests..."
 dotnet test --no-build --verbosity quiet
 
 if [ $? -ne 0 ]; then
-  echo "Tests failed. Commit aborted."
-  exit 1
+ echo "Tests failed. Commit aborted."
+ exit 1
 fi
 
 exit 0
@@ -138,10 +138,10 @@ commit_msg=$(cat "$commit_msg_file")
 pattern="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build)(\(.+\))?: .{1,50}"
 
 if ! echo "$commit_msg" | grep -qE "$pattern"; then
-  echo "ERROR: Commit message does not follow conventional commits format"
-  echo "Expected: type(scope): description"
-  echo "Example: feat(auth): Add login endpoint"
-  exit 1
+ echo "ERROR: Commit message does not follow conventional commits format"
+ echo "Expected: type(scope): description"
+ echo "Example: feat(auth): Add login endpoint"
+ exit 1
 fi
 
 exit 0

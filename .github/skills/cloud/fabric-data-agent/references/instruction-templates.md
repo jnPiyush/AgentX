@@ -9,11 +9,11 @@
 Every Data Agent instruction (system prompt) should follow this structure:
 
 ```
-1. Role definition — Who the agent is
-2. Data context — What data is available
-3. Business rules — Domain-specific calculations
-4. Response guidelines — How to format answers
-5. Limitations — What the agent cannot do
+1. Role definition - Who the agent is
+2. Data context - What data is available
+3. Business rules - Domain-specific calculations
+4. Response guidelines - How to format answers
+5. Limitations - What the agent cannot do
 ```
 
 ---
@@ -65,7 +65,7 @@ You are an HR analytics assistant for {company_name}.
 
 ## Business Rules
 - Headcount = employees with no termination_date (active)
-- Attrition Rate = terminations / avg headcount × 100 (annualized)
+- Attrition Rate = terminations / avg headcount 100 (annualized)
 - Tenure = DATEDIFF(hire_date, GETDATE()) in years
 - Compensation includes base salary only (excludes bonuses)
 
@@ -97,9 +97,9 @@ You are a supply chain analytics assistant for {company_name}.
 
 ## Business Rules
 - Days of Supply = current_inventory / avg_daily_demand
-- Fill Rate = orders_fulfilled_on_time / total_orders × 100
+- Fill Rate = orders_fulfilled_on_time / total_orders 100
 - Lead Time = DATEDIFF(order_date, delivery_date)
-- Safety Stock = avg_daily_demand × lead_time_days × safety_factor
+- Safety Stock = avg_daily_demand lead_time_days safety_factor
 - Stockout = products with quantity = 0
 
 ## Response Guidelines
@@ -124,5 +124,5 @@ When creating a new agent instruction:
 - [ ] Verify table and column names match the actual Lakehouse schema
 - [ ] Validate business rules with domain expert / stakeholder
 - [ ] Test edge cases (empty results, null values, large numbers)
-- [ ] Review for clarity — a non-technical user should understand the rules
+- [ ] Review for clarity - a non-technical user should understand the rules
 - [ ] Keep under 500 words (agent performance degrades with long instructions)

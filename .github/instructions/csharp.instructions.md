@@ -35,28 +35,28 @@ applyTo: '**.cs, **.csx'
 ## Error Handling
 
 ```csharp
-// ✅ Catch specific exceptions
+// [PASS] Catch specific exceptions
 try
 {
-    await ProcessAsync();
+ await ProcessAsync();
 }
 catch (InvalidOperationException ex) when (ex.Message.Contains("specific"))
 {
-    _logger.LogWarning(ex, "Expected condition occurred");
-    // Handle gracefully
+ _logger.LogWarning(ex, "Expected condition occurred");
+ // Handle gracefully
 }
 catch (Exception ex)
 {
-    _logger.LogError(ex, "Unexpected error in ProcessAsync");
-    throw; // Re-throw, don't swallow
+ _logger.LogError(ex, "Unexpected error in ProcessAsync");
+ throw; // Re-throw, don't swallow
 }
 ```
 
 ## Dependency Injection
 
 ```csharp
-// ✅ Register services with appropriate lifetimes
-services.AddScoped<IUserService, UserService>();     // Per-request
+// [PASS] Register services with appropriate lifetimes
+services.AddScoped<IUserService, UserService>(); // Per-request
 services.AddSingleton<ICacheService, CacheService>(); // Application lifetime
 services.AddTransient<IEmailService, EmailService>(); // New instance each time
 ```

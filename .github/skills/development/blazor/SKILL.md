@@ -2,20 +2,20 @@
 name: "blazor"
 description: 'Build Blazor applications with Razor components, lifecycle management, and C# web patterns. Use when creating Blazor Server or WebAssembly apps, building Razor components, implementing state management, adding JavaScript interop, or optimizing Blazor performance.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["csharp"]
-  frameworks: ["blazor", "dotnet", "aspnet-core"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["csharp"]
+ frameworks: ["blazor", "dotnet", "aspnet-core"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # Blazor Framework Development
 
-> **Purpose**: Production-ready Blazor development for building interactive web applications with C#.  
-> **Audience**: .NET engineers building Blazor Server or WebAssembly applications.  
+> **Purpose**: Production-ready Blazor development for building interactive web applications with C#. 
+> **Audience**: .NET engineers building Blazor Server or WebAssembly applications. 
 > **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) Blazor patterns.
 
 ---
@@ -66,7 +66,7 @@ compatibility:
 - Progressive enhancement
 - Optimal performance
 
-**Choose Server for**: Line-of-business apps, intranet, backend-heavy applications  
+**Choose Server for**: Line-of-business apps, intranet, backend-heavy applications 
 **Choose WebAssembly for**: Public-facing apps, offline support, minimal server load
 
 ---
@@ -82,16 +82,16 @@ compatibility:
 <p>Current count: @currentCount</p>
 
 <button class="btn btn-primary" @onclick="IncrementCount">
-    Click me
+ Click me
 </button>
 
 @code {
-    private int currentCount = 0;
+ private int currentCount = 0;
 
-    private void IncrementCount()
-    {
-        currentCount++;
-    }
+ private void IncrementCount()
+ {
+ currentCount++;
+ }
 }
 ```
 
@@ -120,10 +120,9 @@ compatibility:
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Troubleshooting
 

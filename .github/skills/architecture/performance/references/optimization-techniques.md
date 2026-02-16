@@ -7,22 +7,22 @@
 **Pattern:**
 ```
 function processOrders(orderIds):
-    # Sequential (slow)
-    results = []
-    for orderId in orderIds:
-        result = externalAPI.process(orderId)  # Blocks
-        results.append(result)
-    return results
+ # Sequential (slow)
+ results = []
+ for orderId in orderIds:
+ result = externalAPI.process(orderId) # Blocks
+ results.append(result)
+ return results
 
 # Async (fast)
 function processOrdersAsync(orderIds):
-    tasks = []
-    for orderId in orderIds:
-        task = externalAPI.processAsync(orderId)  # Non-blocking
-        tasks.append(task)
-    
-    # Wait for all to complete
-    return awaitAll(tasks)
+ tasks = []
+ for orderId in orderIds:
+ task = externalAPI.processAsync(orderId) # Non-blocking
+ tasks.append(task)
+ 
+ # Wait for all to complete
+ return awaitAll(tasks)
 ```
 
 **Benefits:**
@@ -34,15 +34,15 @@ function processOrdersAsync(orderIds):
 
 ```
 function processBatch(items):
-    # Split into chunks
-    chunks = splitIntoChunks(items, chunkSize: 100)
-    
-    # Process chunks in parallel
-    results = parallelMap(chunks, (chunk) => {
-        return processChunk(chunk)
-    })
-    
-    return flattenResults(results)
+ # Split into chunks
+ chunks = splitIntoChunks(items, chunkSize: 100)
+ 
+ # Process chunks in parallel
+ results = parallelMap(chunks, (chunk) => {
+ return processChunk(chunk)
+ })
+ 
+ return flattenResults(results)
 ```
 
 ---
@@ -55,21 +55,21 @@ function processBatch(items):
 
 ```
 HTTP Response Headers:
-  Content-Encoding: gzip
-  Vary: Accept-Encoding
+ Content-Encoding: gzip
+ Vary: Accept-Encoding
 ```
 
 **Configure Compression:**
 ```
 Compression Settings:
-  algorithms: [gzip, deflate, brotli]
-  minSize: 1024  # Don't compress < 1KB
-  mimeTypes: [
-    "text/html",
-    "text/css",
-    "application/javascript",
-    "application/json"
-  ]
+ algorithms: [gzip, deflate, brotli]
+ minSize: 1024 # Don't compress < 1KB
+ mimeTypes: [
+ "text/html",
+ "text/css",
+ "application/javascript",
+ "application/json"
+ ]
 ```
 
 ---
@@ -80,20 +80,20 @@ Compression Settings:
 
 ```
 function renderPage():
-    # Load essential data immediately
-    user = getCurrentUser()
-    
-    # Load non-critical data lazily
-    recommendations = null  # Don't load yet
-    
-    return {
-        user: user,
-        loadRecommendations: () => {
-            if recommendations is null:
-                recommendations = fetchRecommendations(user.id)
-            return recommendations
-        }
-    }
+ # Load essential data immediately
+ user = getCurrentUser()
+ 
+ # Load non-critical data lazily
+ recommendations = null # Don't load yet
+ 
+ return {
+ user: user,
+ loadRecommendations: () => {
+ if recommendations is null:
+ recommendations = fetchRecommendations(user.id)
+ return recommendations
+ }
+ }
 ```
 
 ### Image Lazy Loading
@@ -101,9 +101,9 @@ function renderPage():
 ```html
 <!-- Load images when they enter viewport -->
 <img 
-  src="placeholder.jpg" 
-  data-src="actual-image.jpg" 
-  loading="lazy"
+ src="placeholder.jpg" 
+ data-src="actual-image.jpg" 
+ loading="lazy"
 />
 ```
 
@@ -115,23 +115,23 @@ function renderPage():
 
 ```
 class ObjectPool:
-    function acquire():
-        if pool.isEmpty():
-            return createNewObject()
-        else:
-            return pool.remove()
-    
-    function release(object):
-        object.reset()
-        pool.add(object)
+ function acquire():
+ if pool.isEmpty():
+ return createNewObject()
+ else:
+ return pool.remove()
+ 
+ function release(object):
+ object.reset()
+ pool.add(object)
 
 # Usage
 buffer = bufferPool.acquire()
 try:
-    # Use buffer
-    writeData(buffer)
+ # Use buffer
+ writeData(buffer)
 finally:
-    bufferPool.release(buffer)  # Return to pool
+ bufferPool.release(buffer) # Return to pool
 ```
 
 **Use Pooling For:**
@@ -147,26 +147,26 @@ finally:
 
 ### Batch Database Operations
 
-**❌ Individual Inserts:**
+**[FAIL] Individual Inserts:**
 ```
 for user in users:
-    database.insert("INSERT INTO users VALUES (?)", user)  # 100 queries
+ database.insert("INSERT INTO users VALUES (?)", user) # 100 queries
 ```
 
-**✅ Batch Insert:**
+**[PASS] Batch Insert:**
 ```
-database.batchInsert("INSERT INTO users VALUES (?)", users)  # 1 query
+database.batchInsert("INSERT INTO users VALUES (?)", users) # 1 query
 ```
 
 ### Batch API Calls
 
 ```
 function fetchUserData(userIds):
-    # Instead of 100 API calls
-    # for each userId: api.getUser(userId)
-    
-    # Make 1 batch API call
-    return api.batchGetUsers(userIds)
+ # Instead of 100 API calls
+ # for each userId: api.getUser(userId)
+ 
+ # Make 1 batch API call
+ return api.batchGetUsers(userIds)
 ```
 
 ---
@@ -176,33 +176,33 @@ function fetchUserData(userIds):
 ### CDN for Static Assets
 
 ```
-Static Assets → CDN:
-  - Images
-  - CSS files
-  - JavaScript bundles
-  - Fonts
-  - Videos
+Static Assets -> CDN:
+ - Images
+ - CSS files
+ - JavaScript bundles
+ - Fonts
+ - Videos
 
 Benefits:
-  - Served from edge locations (closer to users)
-  - Reduced origin server load
-  - Better cache hit rates
+ - Served from edge locations (closer to users)
+ - Reduced origin server load
+ - Better cache hit rates
 ```
 
 ### Asset Optimization
 
 ```
 Image Optimization:
-  - Use appropriate formats (WebP for web, AVIF for modern browsers)
-  - Compress images (70-80% quality)
-  - Generate responsive sizes
-  - Use lazy loading
+ - Use appropriate formats (WebP for web, AVIF for modern browsers)
+ - Compress images (70-80% quality)
+ - Generate responsive sizes
+ - Use lazy loading
 
 JavaScript/CSS:
-  - Minify code
-  - Tree-shake unused code
-  - Code splitting
-  - Bundle optimization
+ - Minify code
+ - Tree-shake unused code
+ - Code splitting
+ - Bundle optimization
 ```
 
 ---
@@ -218,7 +218,7 @@ SELECT * FROM posts ORDER BY id LIMIT 20 OFFSET 10000;
 
 # Cursor pagination (fast)
 SELECT * FROM posts 
-WHERE id > 1000  # Last seen ID
+WHERE id > 1000 # Last seen ID
 ORDER BY id 
 LIMIT 20;
 ```
@@ -229,11 +229,11 @@ GET /api/posts?limit=20&cursor=abc123
 
 Response:
 {
-  data: [...],
-  pagination: {
-    nextCursor: "xyz789",
-    hasMore: true
-  }
+ data: [...],
+ pagination: {
+ nextCursor: "xyz789",
+ hasMore: true
+ }
 }
 ```
 
@@ -245,24 +245,24 @@ Response:
 
 ```
 Application Metrics:
-  - Response time (p50, p95, p99)
-  - Throughput (requests/second)
-  - Error rate
-  - CPU usage
-  - Memory usage
-  - Database query time
-  - Cache hit rate
+ - Response time (p50, p95, p99)
+ - Throughput (requests/second)
+ - Error rate
+ - CPU usage
+ - Memory usage
+ - Database query time
+ - Cache hit rate
 ```
 
 ### Set Performance Budgets
 
 ```
 Performance Budgets:
-  - API response time: < 200ms (p95)
-  - Page load time: < 2 seconds
-  - Time to Interactive: < 3 seconds
-  - Database queries: < 50ms (p95)
-  - Cache hit rate: > 90%
+ - API response time: < 200ms (p95)
+ - Page load time: < 2 seconds
+ - Time to Interactive: < 3 seconds
+ - Database queries: < 50ms (p95)
+ - Cache hit rate: > 90%
 ```
 
 ---
@@ -273,28 +273,28 @@ Performance Budgets:
 
 ```
 Load Testing Tools:
-  - Apache JMeter
-  - k6
-  - Gatling
-  - Locust
-  - Artillery
+ - Apache JMeter
+ - k6
+ - Gatling
+ - Locust
+ - Artillery
 
 Test Scenarios:
-  1. Baseline (normal load)
-  2. Peak load (2-3x normal)
-  3. Stress test (find breaking point)
-  4. Soak test (sustained load)
+ 1. Baseline (normal load)
+ 2. Peak load (2-3x normal)
+ 3. Stress test (find breaking point)
+ 4. Soak test (sustained load)
 ```
 
 ### Performance Test Metrics
 
 ```
 Measure:
-  - Response time percentiles (p50, p95, p99)
-  - Throughput (requests/second)
-  - Error rate
-  - Resource utilization (CPU, memory)
-  - Database connection pool usage
+ - Response time percentiles (p50, p95, p99)
+ - Throughput (requests/second)
+ - Error rate
+ - Resource utilization (CPU, memory)
+ - Database connection pool usage
 ```
 
 ---

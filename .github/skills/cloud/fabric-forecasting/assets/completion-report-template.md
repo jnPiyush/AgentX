@@ -34,7 +34,7 @@
 
 ## Phase 1: Intake & Data Discovery
 
-**Status**: ☐ Not Started / ☐ In Progress / ☐ Complete
+**Status**: Not Started / In Progress / Complete
 
 ### Data Summary
 
@@ -59,16 +59,16 @@
 
 ## Phase 2: Scenario Interpretation
 
-**Status**: ☐ Not Started / ☐ In Progress / ☐ Complete
+**Status**: Not Started / In Progress / Complete
 
 ### Seasonality Analysis
 
 | Pattern | Detected | Period |
 |---------|----------|--------|
-| Weekly | ☐ Yes / ☐ No | 7 |
-| Monthly | ☐ Yes / ☐ No | 30 |
-| Yearly | ☐ Yes / ☐ No | 365 |
-| Other | ☐ Yes / ☐ No | |
+| Weekly | Yes / No | 7 |
+| Monthly | Yes / No | 30 |
+| Yearly | Yes / No | 365 |
+| Other | Yes / No | |
 
 ### Series Classification
 
@@ -83,36 +83,36 @@
 
 ## Phase 3: Customization Planning
 
-**Status**: ☐ Not Started / ☐ In Progress / ☐ Complete
+**Status**: Not Started / In Progress / Complete
 
 ### Customizations Applied
 
 | # | Customization | Risk | Approved |
 |---|--------------|------|----------|
-| 1 | | Low/Med/High | ☐ |
-| 2 | | | ☐ |
+| 1 | | Low/Med/High | |
+| 2 | | | |
 
 ---
 
 ## Phase 4: Notebook Generation
 
-**Status**: ☐ Not Started / ☐ In Progress / ☐ Complete
+**Status**: Not Started / In Progress / Complete
 
 ### Notebook Progress
 
 | NB | Name | Status | Output Table | Rows |
 |----|------|--------|-------------|------|
-| 01 | Data Preparation | ☐ | `{scenario}_prepared` | |
-| 02 | Profiling | ☐ | `{scenario}_profiled` | |
-| 03 | Clustering | ☐ | `{scenario}_clustered` | |
-| 04 | Feature Engineering | ☐ | `{scenario}_features` | |
-| 05 | Train & Tune | ☐ | `{scenario}_forecasts` | |
+| 01 | Data Preparation | | `{scenario}_prepared` | |
+| 02 | Profiling | | `{scenario}_profiled` | |
+| 03 | Clustering | | `{scenario}_clustered` | |
+| 04 | Feature Engineering | | `{scenario}_features` | |
+| 05 | Train & Tune | | `{scenario}_forecasts` | |
 
 ---
 
 ## Phase 5: Finalization
 
-**Status**: ☐ Not Started / ☐ In Progress / ☐ Complete
+**Status**: Not Started / In Progress / Complete
 
 ### Model Performance
 
@@ -128,10 +128,10 @@
 
 | Step | Status |
 |------|--------|
-| Notebooks uploaded to Fabric | ☐ |
-| Lakehouse attached | ☐ |
-| End-to-end execution validated | ☐ |
-| Completion report finalized | ☐ |
+| Notebooks uploaded to Fabric | |
+| Lakehouse attached | |
+| End-to-end execution validated | |
+| Completion report finalized | |
 
 ---
 
@@ -147,10 +147,10 @@
 
 | File | Status |
 |------|--------|
-| `Fabric 01 DataPreparation.ipynb` | ☐ Generated |
-| `Fabric 02 ProfilingIntermittent.ipynb` | ☐ Generated |
-| `Fabric 03 Clustering.ipynb` | ☐ Generated |
-| `Fabric 04 FeatureEngineering.ipynb` | ☐ Generated |
-| `Fabric 05 TrainTestSelectTune.ipynb` | ☐ Generated |
-| `completion_report.md` | ☐ Generated |
-| `requirements.txt` | ☐ Generated |
+| `Fabric 01 DataPreparation.ipynb` | Generated |
+| `Fabric 02 ProfilingIntermittent.ipynb` | Generated |
+| `Fabric 03 Clustering.ipynb` | Generated |
+| `Fabric 04 FeatureEngineering.ipynb` | Generated |
+| `Fabric 05 TrainTestSelectTune.ipynb` | Generated |
+| `completion_report.md` | Generated |
+| `requirements.txt` | Generated |

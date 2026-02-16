@@ -4,8 +4,8 @@
 # Output: docs/analytics/report-YYYY-MM-DD.md
 #
 # Usage:
-#   .github/scripts/collect-metrics.sh
-#   .github/scripts/collect-metrics.sh --since 2026-02-01
+# .github/scripts/collect-metrics.sh
+# .github/scripts/collect-metrics.sh --since 2026-02-01
 
 set -e
 
@@ -15,9 +15,9 @@ TODAY=$(date +%Y-%m-%d)
 
 # Parse --since flag first, then fall back to positional arg or default
 if [ "$1" = "--since" ] && [ -n "$2" ]; then
-    SINCE="$2"
+ SINCE="$2"
 else
-    SINCE="${1:-$(date -d '7 days ago' +%Y-%m-%d 2>/dev/null || date -v-7d +%Y-%m-%d)}"
+ SINCE="${1:-$(date -d '7 days ago' +%Y-%m-%d 2>/dev/null || date -v-7d +%Y-%m-%d)}"
 fi
 
 # Colors
@@ -27,7 +27,7 @@ GREEN='\033[0;32m'
 NC='\033[0m'
 
 echo -e "${CYAN}=========================================${NC}"
-echo -e "${CYAN}  AgentX Metrics Collection${NC}"
+echo -e "${CYAN} AgentX Metrics Collection${NC}"
 echo -e "${CYAN}=========================================${NC}"
 echo "Period: $SINCE to $TODAY"
 echo ""
@@ -46,7 +46,7 @@ COMMIT_COUNT=$(echo "$COMMITS" | grep -c . 2>/dev/null || echo 0)
 # Issues referenced in commits
 ISSUE_REFS=""
 if [ -n "$COMMITS" ]; then
-    ISSUE_REFS=$(echo "$COMMITS" | grep -oP '#\K\d+' | sort -u || true)
+ ISSUE_REFS=$(echo "$COMMITS" | grep -oP '#\K\d+' | sort -u || true)
 fi
 ISSUE_REF_COUNT=$(echo "$ISSUE_REFS" | grep -c . 2>/dev/null || echo 0)
 [ -z "$ISSUE_REFS" ] && ISSUE_REF_COUNT=0
@@ -54,11 +54,11 @@ ISSUE_REF_COUNT=$(echo "$ISSUE_REFS" | grep -c . 2>/dev/null || echo 0)
 # Commits per type
 FEAT_COUNT=0; FIX_COUNT=0; DOCS_COUNT=0; TEST_COUNT=0; REVIEW_COUNT=0
 if [ -n "$COMMITS" ]; then
-    FEAT_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ feat:' || echo 0)
-    FIX_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ fix:' || echo 0)
-    DOCS_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ docs:' || echo 0)
-    TEST_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ test:' || echo 0)
-    REVIEW_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ review:' || echo 0)
+ FEAT_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ feat:' || echo 0)
+ FIX_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ fix:' || echo 0)
+ DOCS_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ docs:' || echo 0)
+ TEST_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ test:' || echo 0)
+ REVIEW_COUNT=$(echo "$COMMITS" | grep -cP '^[a-f0-9]+ review:' || echo 0)
 fi
 OTHER_COUNT=$((COMMIT_COUNT - FEAT_COUNT - FIX_COUNT - DOCS_COUNT - TEST_COUNT - REVIEW_COUNT))
 [ "$OTHER_COUNT" -lt 0 ] && OTHER_COUNT=0
@@ -71,16 +71,16 @@ ISSUES_WITH_LOGS=0
 TOTAL_SESSIONS=0
 
 for log in docs/progress/ISSUE-*-log.md; do
-    [ -f "$log" ] || continue
-    ISSUES_WITH_LOGS=$((ISSUES_WITH_LOGS + 1))
-    sessions=$(grep -c '## Session' "$log" 2>/dev/null || echo 0)
-    TOTAL_SESSIONS=$((TOTAL_SESSIONS + sessions))
+ [ -f "$log" ] || continue
+ ISSUES_WITH_LOGS=$((ISSUES_WITH_LOGS + 1))
+ sessions=$(grep -c '## Session' "$log" 2>/dev/null || echo 0)
+ TOTAL_SESSIONS=$((TOTAL_SESSIONS + sessions))
 done
 
 if [ "$ISSUES_WITH_LOGS" -gt 0 ]; then
-    AVG_SESSIONS=$(echo "scale=1; $TOTAL_SESSIONS / $ISSUES_WITH_LOGS" | bc 2>/dev/null || echo "0")
+ AVG_SESSIONS=$(echo "scale=1; $TOTAL_SESSIONS / $ISSUES_WITH_LOGS" | bc 2>/dev/null || echo "0")
 else
-    AVG_SESSIONS="0"
+ AVG_SESSIONS="0"
 fi
 
 # --- GitHub Metrics (if gh CLI available) ---
@@ -90,26 +90,26 @@ OPEN_ISSUES=0
 REWORK_ISSUES=0
 
 if command -v gh &> /dev/null; then
-    echo -e "${YELLOW}Collecting GitHub metrics...${NC}"
+ echo -e "${YELLOW}Collecting GitHub metrics...${NC}"
 
-    CLOSED_ISSUES=$(gh issue list --state closed --json number --jq 'length' 2>/dev/null || echo 0)
-    OPEN_ISSUES=$(gh issue list --state open --json number --jq 'length' 2>/dev/null || echo 0)
-    REWORK_ISSUES=$(gh issue list --label "needs:changes" --state all --json number --jq 'length' 2>/dev/null || echo 0)
+ CLOSED_ISSUES=$(gh issue list --state closed --json number --jq 'length' 2>/dev/null || echo 0)
+ OPEN_ISSUES=$(gh issue list --state open --json number --jq 'length' 2>/dev/null || echo 0)
+ REWORK_ISSUES=$(gh issue list --label "needs:changes" --state all --json number --jq 'length' 2>/dev/null || echo 0)
 fi
 
 if [ "$CLOSED_ISSUES" -gt 0 ]; then
-    REWORK_RATE=$(echo "scale=1; ($REWORK_ISSUES * 100) / $CLOSED_ISSUES" | bc 2>/dev/null || echo "0")
+ REWORK_RATE=$(echo "scale=1; ($REWORK_ISSUES * 100) / $CLOSED_ISSUES" | bc 2>/dev/null || echo "0")
 else
-    REWORK_RATE="0"
+ REWORK_RATE="0"
 fi
 
 # --- Format issue list ---
 
 ISSUE_LIST=""
 if [ -n "$ISSUE_REFS" ]; then
-    ISSUE_LIST=$(echo "$ISSUE_REFS" | sed 's/^/- #/')
+ ISSUE_LIST=$(echo "$ISSUE_REFS" | sed 's/^/- #/')
 else
-    ISSUE_LIST="No issues referenced in commits this period."
+ ISSUE_LIST="No issues referenced in commits this period."
 fi
 
 # --- Generate Report ---
@@ -154,12 +154,12 @@ cat > "$REPORT_PATH" <<REPORT_EOF
 
 \`\`\`mermaid
 pie title Commits by Type
-    "feat" : $FEAT_COUNT
-    "fix" : $FIX_COUNT
-    "docs" : $DOCS_COUNT
-    "test" : $TEST_COUNT
-    "review" : $REVIEW_COUNT
-    "other" : $OTHER_COUNT
+ "feat" : $FEAT_COUNT
+ "fix" : $FIX_COUNT
+ "docs" : $DOCS_COUNT
+ "test" : $TEST_COUNT
+ "review" : $REVIEW_COUNT
+ "other" : $OTHER_COUNT
 \`\`\`
 
 ---
@@ -203,5 +203,5 @@ REPORT_EOF
 
 echo ""
 echo -e "${GREEN}=========================================${NC}"
-echo -e "${GREEN}  Report saved: $REPORT_PATH${NC}"
+echo -e "${GREEN} Report saved: $REPORT_PATH${NC}"
 echo -e "${GREEN}=========================================${NC}"

@@ -51,17 +51,17 @@
 
 <!-- Live Regions -->
 <div role="alert" aria-live="polite">
-    Your changes have been saved
+ Your changes have been saved
 </div>
 
 <!-- Button Labels -->
 <button aria-label="Close modal">
-    <svg aria-hidden="true"><!-- X icon --></svg>
+ <svg aria-hidden="true"><!-- X icon --></svg>
 </button>
 
 <!-- Status Updates -->
 <div aria-live="polite" aria-atomic="true" class="sr-only">
-    Loading complete. 5 results found.
+ Loading complete. 5 results found.
 </div>
 ```
 
@@ -72,23 +72,23 @@
 ```javascript
 // Trap focus in modal
 function trapFocus(element) {
-    const focusableElements = element.querySelectorAll(
-        'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])'
-    );
+ const focusableElements = element.querySelectorAll(
+ 'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])'
+ );
 
-    const firstFocusable = focusableElements[0];
-    const lastFocusable = focusableElements[focusableElements.length - 1];
+ const firstFocusable = focusableElements[0];
+ const lastFocusable = focusableElements[focusableElements.length - 1];
 
-    element.addEventListener('keydown', (e) => {
-        if (e.key === 'Tab') {
-            if (e.shiftKey && document.activeElement === firstFocusable) {
-                e.preventDefault();
-                lastFocusable.focus();
-            } else if (!e.shiftKey && document.activeElement === lastFocusable) {
-                e.preventDefault();
-                firstFocusable.focus();
-            }
-        }
-    });
+ element.addEventListener('keydown', (e) => {
+ if (e.key === 'Tab') {
+ if (e.shiftKey && document.activeElement === firstFocusable) {
+ e.preventDefault();
+ lastFocusable.focus();
+ } else if (!e.shiftKey && document.activeElement === lastFocusable) {
+ e.preventDefault();
+ firstFocusable.focus();
+ }
+ }
+ });
 }
 ```

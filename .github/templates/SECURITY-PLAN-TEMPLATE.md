@@ -1,21 +1,21 @@
 ---
 inputs:
-  project_name:
-    description: "Name of the project or system"
-    required: true
-    default: ""
-  issue_number:
-    description: "GitHub issue number"
-    required: true
-    default: ""
-  author:
-    description: "Document author"
-    required: false
-    default: "Security Architect"
-  date:
-    description: "Creation date (YYYY-MM-DD)"
-    required: false
-    default: "${current_date}"
+ project_name:
+ description: "Name of the project or system"
+ required: true
+ default: ""
+ issue_number:
+ description: "GitHub issue number"
+ required: true
+ default: ""
+ author:
+ description: "Document author"
+ required: false
+ default: "Security Architect"
+ date:
+ description: "Creation date (YYYY-MM-DD)"
+ required: false
+ default: "${current_date}"
 ---
 
 # Security Plan: ${project_name}
@@ -46,7 +46,7 @@ inputs:
 
 ### System Description
 
-{Brief description of what is being secured — 2-3 sentences.}
+{Brief description of what is being secured - 2-3 sentences.}
 
 ### Security Objectives
 
@@ -60,29 +60,29 @@ inputs:
 
 ```mermaid
 graph TD
-    subgraph Public["🌐 Internet / Public"]
-        direction LR
-        GW["API Gateway"]
-        CDN["CDN / WAF"]
-    end
+ subgraph Public[" Internet / Public"]
+ direction LR
+ GW["API Gateway"]
+ CDN["CDN / WAF"]
+ end
 
-    subgraph Internal["🔒 Internal Network"]
-        direction LR
-        APP["Application Tier"]
-        BG["Background Services"]
-    end
+ subgraph Internal[" Internal Network"]
+ direction LR
+ APP["Application Tier"]
+ BG["Background Services"]
+ end
 
-    subgraph Data["🗄️ Data Tier"]
-        direction LR
-        DB["Database Tier"]
-        CACHE["Cache Tier"]
-    end
+ subgraph Data[" Data Tier"]
+ direction LR
+ DB["Database Tier"]
+ CACHE["Cache Tier"]
+ end
 
-    Public --> Internal --> Data
+ Public --> Internal --> Data
 
-    style Public fill:#FFEBEE,stroke:#C62828
-    style Internal fill:#FFF3E0,stroke:#E65100
-    style Data fill:#E8F5E9,stroke:#2E7D32
+ style Public fill:#FFEBEE,stroke:#C62828
+ style Internal fill:#FFF3E0,stroke:#E65100
+ style Data fill:#E8F5E9,stroke:#2E7D32
 ```
 
 ---
@@ -225,7 +225,7 @@ graph TD
 - [ ] OWASP Top 10 (2021) reviewed
 - [ ] OWASP AI Top 10 reviewed (if AI/ML components)
 - [ ] Azure Well-Architected Framework Security Pillar
-- [ ] {GDPR / HIPAA / SOC 2 / PCI-DSS — as applicable}
+- [ ] {GDPR / HIPAA / SOC 2 / PCI-DSS - as applicable}
 
 ### Compliance Checklist
 

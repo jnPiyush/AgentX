@@ -16,17 +16,17 @@ applyTo: '**/*.tf, **/*.tfvars'
 
 ```
 infra/
-├── main.tf              # Provider config, data sources
-├── variables.tf         # Input variable declarations
-├── outputs.tf           # Output value declarations
-├── terraform.tfvars     # Variable values (gitignored in prod)
-├── locals.tf            # Local values and computed expressions
-├── versions.tf          # Required providers and versions
-└── modules/
-    └── networking/      # Reusable module
-        ├── main.tf
-        ├── variables.tf
-        └── outputs.tf
++-- main.tf # Provider config, data sources
++-- variables.tf # Input variable declarations
++-- outputs.tf # Output value declarations
++-- terraform.tfvars # Variable values (gitignored in prod)
++-- locals.tf # Local values and computed expressions
++-- versions.tf # Required providers and versions
+-- modules/
+ -- networking/ # Reusable module
+ +-- main.tf
+ +-- variables.tf
+ -- outputs.tf
 ```
 
 ## Naming Conventions
@@ -44,22 +44,22 @@ infra/
 ```hcl
 # MUST: Use descriptive resource names (not generic "this" or "main")
 resource "azurerm_resource_group" "app_rg" {
-  name     = "${var.project_name}-${var.environment}-rg"
-  location = var.location
+ name = "${var.project_name}-${var.environment}-rg"
+ location = var.location
 
-  tags = local.common_tags
+ tags = local.common_tags
 }
 
 # MUST: Pin provider versions
 terraform {
-  required_version = ">= 1.5.0"
+ required_version = ">= 1.5.0"
 
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.0"
-    }
-  }
+ required_providers {
+ azurerm = {
+ source = "hashicorp/azurerm"
+ version = "~> 4.0"
+ }
+ }
 }
 ```
 
@@ -68,43 +68,43 @@ terraform {
 ```hcl
 # MUST: Add description, type, and validation to all variables
 variable "environment" {
-  description = "Deployment environment (dev, staging, prod)"
-  type        = string
+ description = "Deployment environment (dev, staging, prod)"
+ type = string
 
-  validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "Environment must be dev, staging, or prod."
-  }
+ validation {
+ condition = contains(["dev", "staging", "prod"], var.environment)
+ error_message = "Environment must be dev, staging, or prod."
+ }
 }
 
 # MUST: Use sensitive = true for secrets
 variable "db_password" {
-  description = "Database administrator password"
-  type        = string
-  sensitive   = true
+ description = "Database administrator password"
+ type = string
+ sensitive = true
 }
 
 # SHOULD: Provide defaults where safe
 variable "location" {
-  description = "Azure region for resources"
-  type        = string
-  default     = "eastus2"
+ description = "Azure region for resources"
+ type = string
+ default = "eastus2"
 }
 ```
 
 ## State Management
 
-- MUST use remote state backend (Azure Storage, S3, GCS) — never local state in production
+- MUST use remote state backend (Azure Storage, S3, GCS) - never local state in production
 - MUST enable state locking
 - MUST NOT commit `.tfstate` files or `.tfvars` with secrets
 
 ```hcl
 # Remote state backend (Azure)
 backend "azurerm" {
-  resource_group_name  = "rg-terraform-state"
-  storage_account_name = "stterraformstate"
-  container_name       = "tfstate"
-  key                  = "prod.terraform.tfstate"
+ resource_group_name = "rg-terraform-state"
+ storage_account_name = "stterraformstate"
+ container_name = "tfstate"
+ key = "prod.terraform.tfstate"
 }
 ```
 
@@ -116,14 +116,14 @@ backend "azurerm" {
 
 ```hcl
 module "app_service" {
-  source = "./modules/app-service"
+ source = "./modules/app-service"
 
-  name                = "${var.project_name}-${var.environment}"
-  resource_group_name = azurerm_resource_group.app_rg.name
-  location            = var.location
-  sku_name            = var.environment == "prod" ? "P1v3" : "B1"
+ name = "${var.project_name}-${var.environment}"
+ resource_group_name = azurerm_resource_group.app_rg.name
+ location = var.location
+ sku_name = var.environment == "prod" ? "P1v3" : "B1"
 
-  tags = local.common_tags
+ tags = local.common_tags
 }
 ```
 

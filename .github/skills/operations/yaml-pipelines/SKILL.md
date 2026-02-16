@@ -2,12 +2,12 @@
 name: "yaml-pipelines"
 description: 'Build YAML-based CI/CD pipelines across Azure Pipelines and GitLab CI with progressive disclosure. Use when creating Azure DevOps YAML pipelines, configuring GitLab CI/CD, designing multi-stage pipelines, implementing pipeline templates, or managing pipeline secrets and variables.'
 metadata:
-  author: "AgentX"
-  version: "2.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "2.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  platforms: ["azure-devops", "gitlab"]
+ platforms: ["azure-devops", "gitlab"]
 ---
 
 # YAML Pipelines & CI/CD Configuration
@@ -30,35 +30,35 @@ compatibility:
 - YAML syntax knowledge
 - CI/CD concepts understanding
 
-## Platform Comparison — Start Here
+## Platform Comparison - Start Here
 
 | Feature | Azure Pipelines | GitLab CI | GitHub Actions |
 |---------|----------------|-----------|----------------|
 | **Config File** | `azure-pipelines.yml` | `.gitlab-ci.yml` | `.github/workflows/*.yml` |
-| **Stages** | ✅ Native | ✅ Native | ⚠️ Jobs only |
-| **Templates** | ✅ Full support | ✅ Includes/Extends | ✅ Reusable workflows |
-| **Caching** | ✅ Cache task | ✅ Built-in | ✅ actions/cache |
-| **Environments** | ✅ Native | ✅ Native | ✅ Native |
-| **Approvals** | ✅ Environment gates | ✅ Manual `when` | ✅ Environment rules |
-| **Matrix** | ✅ `strategy.matrix` | ✅ `parallel.matrix` | ✅ `strategy.matrix` |
-| **Secrets** | ✅ Variable groups | ✅ CI/CD Variables | ✅ Secrets |
-| **Self-hosted** | ✅ Agent pools | ✅ Runners | ✅ Self-hosted runners |
+| **Stages** | [PASS] Native | [PASS] Native | [WARN] Jobs only |
+| **Templates** | [PASS] Full support | [PASS] Includes/Extends | [PASS] Reusable workflows |
+| **Caching** | [PASS] Cache task | [PASS] Built-in | [PASS] actions/cache |
+| **Environments** | [PASS] Native | [PASS] Native | [PASS] Native |
+| **Approvals** | [PASS] Environment gates | [PASS] Manual `when` | [PASS] Environment rules |
+| **Matrix** | [PASS] `strategy.matrix` | [PASS] `parallel.matrix` | [PASS] `strategy.matrix` |
+| **Secrets** | [PASS] Variable groups | [PASS] CI/CD Variables | [PASS] Secrets |
+| **Self-hosted** | [PASS] Agent pools | [PASS] Runners | [PASS] Self-hosted runners |
 | **Best for** | Azure-heavy orgs | All-in-one DevOps | Open source / GitHub |
 
 ---
 
-## Decision Tree — Choosing a Platform
+## Decision Tree - Choosing a Platform
 
 ```
 Is your code hosted on GitHub?
-├─ YES → Use GitHub Actions (see ../github-actions-workflows/SKILL.md)
-├─ NO
-│   ├─ Using Azure DevOps for work items & repos?
-│   │   └─ YES → Use Azure Pipelines
-│   ├─ Using GitLab for repos & issue tracking?
-│   │   └─ YES → Use GitLab CI/CD
-│   └─ Need multi-platform or hybrid?
-│       └─ Use Azure Pipelines (broadest agent/pool support)
++- YES -> Use GitHub Actions (see ../github-actions-workflows/SKILL.md)
++- NO
+| +- Using Azure DevOps for work items & repos?
+| | - YES -> Use Azure Pipelines
+| +- Using GitLab for repos & issue tracking?
+| | - YES -> Use GitLab CI/CD
+| - Need multi-platform or hybrid?
+| - Use Azure Pipelines (broadest agent/pool support)
 ```
 
 **Key considerations**:
@@ -90,46 +90,46 @@ Every YAML pipeline shares these building blocks:
 
 ## Minimal Examples
 
-### Azure Pipelines — Build + Deploy
+### Azure Pipelines - Build + Deploy
 
 ```yaml
 # azure-pipelines.yml
 trigger: [main]
 
 pool:
-  vmImage: 'ubuntu-latest'
+ vmImage: 'ubuntu-latest'
 
 variables:
-  buildConfig: 'Release'
+ buildConfig: 'Release'
 
 stages:
 - stage: Build
-  jobs:
-  - job: BuildJob
-    steps:
-    - script: dotnet build --configuration $(buildConfig)
-    - script: dotnet test --no-build
-    - publish: $(Build.ArtifactStagingDirectory)
-      artifact: drop
+ jobs:
+ - job: BuildJob
+ steps:
+ - script: dotnet build --configuration $(buildConfig)
+ - script: dotnet test --no-build
+ - publish: $(Build.ArtifactStagingDirectory)
+ artifact: drop
 
 - stage: Deploy
-  dependsOn: Build
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
-  jobs:
-  - deployment: Production
-    environment: production
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - download: current
-            artifact: drop
-          - script: echo "Deploying..."
+ dependsOn: Build
+ condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+ jobs:
+ - deployment: Production
+ environment: production
+ strategy:
+ runOnce:
+ deploy:
+ steps:
+ - download: current
+ artifact: drop
+ - script: echo "Deploying..."
 ```
 
 > **Full examples**: [references/azure-pipelines-examples.md](references/azure-pipelines-examples.md)
 
-### GitLab CI — Build + Deploy
+### GitLab CI - Build + Deploy
 
 ```yaml
 # .gitlab-ci.yml
@@ -137,25 +137,25 @@ image: node:20
 stages: [build, test, deploy]
 
 cache:
-  paths: [node_modules/]
+ paths: [node_modules/]
 
 build:
-  stage: build
-  script: [npm ci, npm run build]
-  artifacts:
-    paths: [dist/]
+ stage: build
+ script: [npm ci, npm run build]
+ artifacts:
+ paths: [dist/]
 
 test:
-  stage: test
-  script: [npm test]
+ stage: test
+ script: [npm test]
 
 deploy:production:
-  stage: deploy
-  script: [npm run deploy:production]
-  environment: { name: production }
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      when: manual
+ stage: deploy
+ script: [npm run deploy:production]
+ environment: { name: production }
+ rules:
+ - if: '$CI_COMMIT_BRANCH == "main"'
+ when: manual
 ```
 
 > **Full examples**: [references/gitlab-ci-examples.md](references/gitlab-ci-examples.md)
@@ -166,12 +166,12 @@ deploy:production:
 
 | Pattern | When to use | Key idea |
 |---------|------------|----------|
-| **Sequential** | Simple build → test → deploy | Each stage `dependsOn` the prior |
+| **Sequential** | Simple build -> test -> deploy | Each stage `dependsOn` the prior |
 | **Parallel jobs** | Independent test suites | Multiple jobs in one stage |
 | **Fan-out / Fan-in** | Build once, test many, deploy once | Parallel stage converges to single deploy |
-| **Canary** | Progressive production rollout | Deploy to canary → validate → full rollout |
+| **Canary** | Progressive production rollout | Deploy to canary -> validate -> full rollout |
 | **Matrix** | Cross-platform / multi-version | `strategy.matrix` with OS or runtime combos |
-| **Environment promotion** | Dev → QA → Staging → Prod | `dependsOn` chain with approval gates |
+| **Environment promotion** | Dev -> QA -> Staging -> Prod | `dependsOn` chain with approval gates |
 
 > **Full pattern YAML**: [references/pipeline-design-patterns.md](references/pipeline-design-patterns.md)
 
@@ -215,7 +215,7 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 
 ### Conditions
 
-- **Azure**: `condition:` with expressions — `eq()`, `and()`, `startsWith()`.
+- **Azure**: `condition:` with expressions - `eq()`, `and()`, `startsWith()`.
 - **GitLab**: `rules:` with `if:`, `changes:`, `exists:`, `when:`.
 
 > **Full reference**: [references/templates-variables-caching.md](references/templates-variables-caching.md)
@@ -226,18 +226,18 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 
 ### Principles
 
-1. **Never hardcode secrets** — use platform secret stores
-2. **Least privilege** — scope service connections and tokens narrowly
-3. **Mask secrets** — both platforms auto-mask; verify with `echo` tests
-4. **Rotate regularly** — automate rotation where possible
-5. **Scan continuously** — integrate SAST, dependency scanning, secret detection
+1. **Never hardcode secrets** - use platform secret stores
+2. **Least privilege** - scope service connections and tokens narrowly
+3. **Mask secrets** - both platforms auto-mask; verify with `echo` tests
+4. **Rotate regularly** - automate rotation where possible
+5. **Scan continuously** - integrate SAST, dependency scanning, secret detection
 
 ### Platform Secret Stores
 
 | Platform | Store | Access pattern |
 |----------|-------|----------------|
 | Azure Pipelines | Variable groups + Key Vault | `AzureKeyVault@2` task, `$(secret)` |
-| GitLab CI | Settings → CI/CD → Variables | `$SECRET_NAME`, protected/masked flags |
+| GitLab CI | Settings -> CI/CD -> Variables | `$SECRET_NAME`, protected/masked flags |
 
 ### Security Scanning Checklist
 
@@ -253,7 +253,7 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 
 ## Best Practices
 
-### ✅ DO
+### [PASS] DO
 
 **Pipeline Structure:**
 - Use multi-stage pipelines for complex workflows
@@ -275,7 +275,7 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 - Never log or echo sensitive values
 
 **Testing:**
-- Run tests in CI — fail the build on failure
+- Run tests in CI - fail the build on failure
 - Publish test results and coverage reports
 - Fail fast on critical errors
 - Test deployment process in lower environments first
@@ -286,7 +286,7 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 - Test rollback procedures
 - Monitor deployment health post-release
 
-### ❌ DON'T
+### [FAIL] DON'T
 
 **Anti-Patterns:**
 - Hardcode secrets or credentials in YAML
@@ -323,10 +323,10 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 
 ## Related Skills
 
-- [GitHub Actions & Workflows](../github-actions-workflows/SKILL.md) — GitHub-native CI/CD
-- [Release Management](../release-management/SKILL.md) — Versioning, changelogs, release flows
-- [Security](../../architecture/security/SKILL.md) — Application security practices
-- [Remote Git Operations](../remote-git-operations/SKILL.md) — Branch strategies and git workflows
+- [GitHub Actions & Workflows](../github-actions-workflows/SKILL.md) - GitHub-native CI/CD
+- [Release Management](../release-management/SKILL.md) - Versioning, changelogs, release flows
+- [Security](../../architecture/security/SKILL.md) - Application security practices
+- [Remote Git Operations](../remote-git-operations/SKILL.md) - Branch strategies and git workflows
 
 ## Resources
 
@@ -339,7 +339,6 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 **Version**: 2.0.0
 **Author**: AgentX
 **Last Updated**: February 10, 2026
-
 
 ## Troubleshooting
 

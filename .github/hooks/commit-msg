@@ -13,21 +13,21 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo ""
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}-------------------------------------------------------${NC}"
 echo -e "${BLUE}AgentX Workflow Validation${NC}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}-------------------------------------------------------${NC}"
 echo ""
 
 # Skip for merge commits, reverts, and initial commits
 if echo "$COMMIT_MSG" | grep -qE '^(Merge|Revert|Initial commit)'; then
-  echo -e "${GREEN}✅ Merge/Revert commit - skipping validation${NC}"
-  exit 0
+ echo -e "${GREEN}[PASS] Merge/Revert commit - skipping validation${NC}"
+ exit 0
 fi
 
 # Skip if [skip-issue] in commit message (emergency only)
 if echo "$COMMIT_MSG" | grep -qE '\[skip-issue\]'; then
-  echo -e "${YELLOW}⚠️  WARNING: Skipping issue validation (emergency mode)${NC}"
-  exit 0
+ echo -e "${YELLOW}[WARN] WARNING: Skipping issue validation (emergency mode)${NC}"
+ exit 0
 fi
 
 # ===================================================================
@@ -35,22 +35,22 @@ fi
 # ===================================================================
 echo -n "Checking for issue reference... "
 if ! echo "$COMMIT_MSG" | grep -qE '#[0-9]+|((closes|fixes|resolves|refs?)\s+#[0-9]+)'; then
-  echo -e "${RED}❌ FAILED${NC}"
-  echo ""
-  echo "Your commit message must reference a GitHub Issue."
-  echo ""
-  echo -e "  ${GREEN}Format:${NC} type: description (#123)"
-  echo -e "  ${GREEN}Example:${NC} feat: add user login (#42)"
-  echo ""
-  echo "To create an issue: gh issue create --web"
-  echo ""
-  echo "Emergency bypass: Add [skip-issue] to commit message"
-  echo ""
-  exit 1
+ echo -e "${RED}[FAIL] FAILED${NC}"
+ echo ""
+ echo "Your commit message must reference a GitHub Issue."
+ echo ""
+ echo -e " ${GREEN}Format:${NC} type: description (#123)"
+ echo -e " ${GREEN}Example:${NC} feat: add user login (#42)"
+ echo ""
+ echo "To create an issue: gh issue create --web"
+ echo ""
+ echo "Emergency bypass: Add [skip-issue] to commit message"
+ echo ""
+ exit 1
 fi
 
 ISSUE_NUMBER=$(echo "$COMMIT_MSG" | grep -oP '#\K\d+' | head -1)
-echo -e "${GREEN}✅ Found #${ISSUE_NUMBER}${NC}"
+echo -e "${GREEN}[PASS] Found #${ISSUE_NUMBER}${NC}"
 
 # ===================================================================
 # STEP 2: Validate commit message format (warning only)
@@ -58,9 +58,9 @@ echo -e "${GREEN}✅ Found #${ISSUE_NUMBER}${NC}"
 # Note: Workflow document validation moved to pre-handoff validation
 # See: .github/scripts/validate-handoff.sh
 if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|test|refactor|perf|chore|style|build|ci):'; then
-  echo -e "${YELLOW}⚠️  Commit format should be: type: description (#issue)${NC}"
+ echo -e "${YELLOW}[WARN] Commit format should be: type: description (#issue)${NC}"
 fi
 
 echo ""
-echo -e "${GREEN}✅ Workflow validation passed${NC}"
+echo -e "${GREEN}[PASS] Workflow validation passed${NC}"
 exit 0

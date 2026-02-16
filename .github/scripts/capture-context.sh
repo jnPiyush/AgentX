@@ -17,10 +17,10 @@ NC='\033[0m' # No Color
 
 # Validate inputs
 if [ -z "$ROLE" ] || [ -z "$ISSUE" ]; then
-    echo -e "${RED}Error: Missing required arguments${NC}"
-    echo "Usage: ./capture-context.sh <role> <issue_number>"
-    echo "Roles: pm, ux, architect, engineer, reviewer, devops"
-    exit 1
+ echo -e "${RED}Error: Missing required arguments${NC}"
+ echo "Usage: ./capture-context.sh <role> <issue_number>"
+ echo "Roles: pm, ux, architect, engineer, reviewer, devops"
+ exit 1
 fi
 
 # Output file
@@ -28,7 +28,7 @@ CONTEXT_FILE="docs/progress/ISSUE-${ISSUE}-context.md"
 PROGRESS_FILE="docs/progress/ISSUE-${ISSUE}-log.md"
 
 echo -e "${CYAN}=========================================${NC}"
-echo -e "${CYAN}  AgentX Context Capture${NC}"
+echo -e "${CYAN} AgentX Context Capture${NC}"
 echo -e "${CYAN}=========================================${NC}"
 echo -e "Role: ${GREEN}${ROLE}${NC}"
 echo -e "Issue: ${GREEN}#${ISSUE}${NC}"
@@ -44,53 +44,53 @@ CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null | head -20 || echo "none
 
 # Capture role-specific artifacts
 case $ROLE in
-    pm)
-        ARTIFACTS="docs/prd/PRD-${ISSUE}.md"
-        ARTIFACT_TYPE="PRD"
-        NEXT_AGENT="UX Designer or Architect"
-        ;;
-    ux)
-        ARTIFACTS="docs/ux/UX-${ISSUE}.md"
-        ARTIFACT_TYPE="UX Design"
-        NEXT_AGENT="Architect"
-        ;;
-    architect)
-        ARTIFACTS="docs/adr/ADR-${ISSUE}.md docs/specs/SPEC-${ISSUE}.md"
-        ARTIFACT_TYPE="ADR + Technical Spec"
-        NEXT_AGENT="Engineer"
-        ;;
-    engineer)
-        ARTIFACTS="src/** tests/**"
-        ARTIFACT_TYPE="Implementation + Tests"
-        NEXT_AGENT="Reviewer"
-        ;;
-    reviewer)
-        ARTIFACTS="docs/reviews/REVIEW-${ISSUE}.md"
-        ARTIFACT_TYPE="Code Review"
-        NEXT_AGENT="Done or Engineer (if changes needed)"
-        ;;
-    devops)
-        ARTIFACTS=".github/workflows/** docs/deployment/**"
-        ARTIFACT_TYPE="Pipeline + Deployment Docs"
-        NEXT_AGENT="Reviewer"
-        ;;
-    *)
-        echo -e "${RED}Unknown role: ${ROLE}${NC}"
-        echo "Valid roles: pm, ux, architect, engineer, reviewer, devops"
-        exit 1
-        ;;
+ pm)
+ ARTIFACTS="docs/prd/PRD-${ISSUE}.md"
+ ARTIFACT_TYPE="PRD"
+ NEXT_AGENT="UX Designer or Architect"
+ ;;
+ ux)
+ ARTIFACTS="docs/ux/UX-${ISSUE}.md"
+ ARTIFACT_TYPE="UX Design"
+ NEXT_AGENT="Architect"
+ ;;
+ architect)
+ ARTIFACTS="docs/adr/ADR-${ISSUE}.md docs/specs/SPEC-${ISSUE}.md"
+ ARTIFACT_TYPE="ADR + Technical Spec"
+ NEXT_AGENT="Engineer"
+ ;;
+ engineer)
+ ARTIFACTS="src/** tests/**"
+ ARTIFACT_TYPE="Implementation + Tests"
+ NEXT_AGENT="Reviewer"
+ ;;
+ reviewer)
+ ARTIFACTS="docs/reviews/REVIEW-${ISSUE}.md"
+ ARTIFACT_TYPE="Code Review"
+ NEXT_AGENT="Done or Engineer (if changes needed)"
+ ;;
+ devops)
+ ARTIFACTS=".github/workflows/** docs/deployment/**"
+ ARTIFACT_TYPE="Pipeline + Deployment Docs"
+ NEXT_AGENT="Reviewer"
+ ;;
+ *)
+ echo -e "${RED}Unknown role: ${ROLE}${NC}"
+ echo "Valid roles: pm, ux, architect, engineer, reviewer, devops"
+ exit 1
+ ;;
 esac
 
 # Check if artifacts exist
 echo -e "${YELLOW}Checking artifacts...${NC}"
 ARTIFACTS_FOUND=""
 for artifact in $ARTIFACTS; do
-    if compgen -G "$artifact" > /dev/null 2>&1; then
-        ARTIFACTS_FOUND="${ARTIFACTS_FOUND}\n- ${artifact}"
-        echo -e "${GREEN}  Found: ${artifact}${NC}"
-    else
-        echo -e "${YELLOW}  Missing: ${artifact}${NC}"
-    fi
+ if compgen -G "$artifact" > /dev/null 2>&1; then
+ ARTIFACTS_FOUND="${ARTIFACTS_FOUND}\n- ${artifact}"
+ echo -e "${GREEN} Found: ${artifact}${NC}"
+ else
+ echo -e "${YELLOW} Missing: ${artifact}${NC}"
+ fi
 done
 
 # Generate context summary
@@ -142,21 +142,21 @@ echo -e "${GREEN}Context captured to: ${CONTEXT_FILE}${NC}"
 
 # Update progress log if it exists
 if [ -f "$PROGRESS_FILE" ]; then
-    echo "" >> "$PROGRESS_FILE"
-    echo "## Handoff Captured - $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> "$PROGRESS_FILE"
-    echo "" >> "$PROGRESS_FILE"
-    echo "- **Role**: ${ROLE}" >> "$PROGRESS_FILE"
-    echo "- **Next**: ${NEXT_AGENT}" >> "$PROGRESS_FILE"
-    echo "- **Context**: See \`${CONTEXT_FILE}\`" >> "$PROGRESS_FILE"
-    echo -e "${GREEN}Progress log updated: ${PROGRESS_FILE}${NC}"
+ echo "" >> "$PROGRESS_FILE"
+ echo "## Handoff Captured - $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> "$PROGRESS_FILE"
+ echo "" >> "$PROGRESS_FILE"
+ echo "- **Role**: ${ROLE}" >> "$PROGRESS_FILE"
+ echo "- **Next**: ${NEXT_AGENT}" >> "$PROGRESS_FILE"
+ echo "- **Context**: See \`${CONTEXT_FILE}\`" >> "$PROGRESS_FILE"
+ echo -e "${GREEN}Progress log updated: ${PROGRESS_FILE}${NC}"
 fi
 
 # Post to GitHub issue comment if gh CLI available
 if command -v gh &> /dev/null; then
-    echo ""
-    echo -e "${YELLOW}Posting context to GitHub issue...${NC}"
+ echo ""
+ echo -e "${YELLOW}Posting context to GitHub issue...${NC}"
 
-    COMMENT_BODY="## Context Captured - ${ROLE^} Agent
+ COMMENT_BODY="## Context Captured - ${ROLE^} Agent
 
 **Timestamp**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 **Branch**: \`${BRANCH}\`
@@ -170,22 +170,22 @@ $(echo -e "$ARTIFACTS_FOUND")
 ---
 *Run \`./validate-handoff.sh ${ISSUE} ${ROLE}\` to validate before status change.*"
 
-    if gh issue comment "$ISSUE" --body "$COMMENT_BODY" 2>/dev/null; then
-        echo -e "${GREEN}Posted to GitHub issue #${ISSUE}${NC}"
-    else
-        echo -e "${YELLOW}Could not post to GitHub (check authentication)${NC}"
-    fi
+ if gh issue comment "$ISSUE" --body "$COMMENT_BODY" 2>/dev/null; then
+ echo -e "${GREEN}Posted to GitHub issue #${ISSUE}${NC}"
+ else
+ echo -e "${YELLOW}Could not post to GitHub (check authentication)${NC}"
+ fi
 else
-    echo -e "${YELLOW}GitHub CLI not available - skipping issue comment${NC}"
+ echo -e "${YELLOW}GitHub CLI not available - skipping issue comment${NC}"
 fi
 
 echo ""
 echo -e "${GREEN}=========================================${NC}"
-echo -e "${GREEN}  Context capture complete!${NC}"
+echo -e "${GREEN} Context capture complete!${NC}"
 echo -e "${GREEN}=========================================${NC}"
 echo ""
 echo "Next steps:"
-echo "  1. Run: ./validate-handoff.sh ${ISSUE} ${ROLE}"
-echo "  2. Update Status to 'Ready' in GitHub Projects"
-echo "  3. Next agent (${NEXT_AGENT}) will continue"
+echo " 1. Run: ./validate-handoff.sh ${ISSUE} ${ROLE}"
+echo " 2. Update Status to 'Ready' in GitHub Projects"
+echo " 3. Next agent (${NEXT_AGENT}) will continue"
 echo ""

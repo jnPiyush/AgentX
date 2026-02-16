@@ -2,17 +2,17 @@
 name: "core-principles"
 description: 'Apply fundamental coding principles including SOLID, DRY, KISS, and common design patterns. Use when refactoring code for maintainability, reviewing design pattern usage, teaching SOLID principles, or evaluating code quality against engineering standards.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["csharp"]
+ languages: ["csharp"]
 ---
 
 # Core Principles
 
-> **Purpose**: Fundamental principles guiding production code development.  
+> **Purpose**: Fundamental principles guiding production code development. 
 > **Focus**: SOLID, DRY, KISS, design patterns.
 
 ---
@@ -34,26 +34,26 @@ compatibility:
 Each class has one reason to change.
 
 ```csharp
-// ❌ Multiple responsibilities
+// [FAIL] Multiple responsibilities
 public class User
 {
-    public string Name { get; set; }
-    public void SaveToDatabase() { } // Persistence
-    public void SendEmail() { } // Communication
+ public string Name { get; set; }
+ public void SaveToDatabase() { } // Persistence
+ public void SendEmail() { } // Communication
 }
 
-// ✅ Single responsibility
+// [PASS] Single responsibility
 public class User
 {
-    public string Name { get; set; }
+ public string Name { get; set; }
 }
 public class UserRepository
 {
-    public void Save(User user) { }
+ public void Save(User user) { }
 }
 public class EmailService
 {
-    public void SendEmail(User user) { }
+ public void SendEmail(User user) { }
 }
 ```
 
@@ -61,10 +61,10 @@ public class EmailService
 Open for extension, closed for modification.
 
 ```csharp
-// ✅ Extend via abstraction
+// [PASS] Extend via abstraction
 public interface IPaymentProcessor
 {
-    Task<PaymentResult> ProcessAsync(decimal amount);
+ Task<PaymentResult> ProcessAsync(decimal amount);
 }
 
 public class CreditCardProcessor : IPaymentProcessor { }
@@ -72,10 +72,10 @@ public class PayPalProcessor : IPaymentProcessor { }
 
 public class PaymentService
 {
-    public async Task ProcessPaymentAsync(IPaymentProcessor processor, decimal amount)
-    {
-        return await processor.ProcessAsync(amount);
-    }
+ public async Task ProcessPaymentAsync(IPaymentProcessor processor, decimal amount)
+ {
+ return await processor.ProcessAsync(amount);
+ }
 }
 ```
 
@@ -83,20 +83,20 @@ public class PaymentService
 Subtypes must be substitutable for base types.
 
 ```csharp
-// ✅ Derived classes extend, don't break behavior
+// [PASS] Derived classes extend, don't break behavior
 public abstract class Bird
 {
-    public abstract void Move();
+ public abstract void Move();
 }
 
 public class Sparrow : Bird
 {
-    public override void Move() => Fly();
+ public override void Move() => Fly();
 }
 
 public class Penguin : Bird
 {
-    public override void Move() => Walk(); // Different but valid
+ public override void Move() => Walk(); // Different but valid
 }
 ```
 
@@ -104,15 +104,15 @@ public class Penguin : Bird
 Many specific interfaces > one general interface.
 
 ```csharp
-// ❌ Fat interface
+// [FAIL] Fat interface
 public interface IWorker
 {
-    void Work();
-    void Eat();
-    void Sleep();
+ void Work();
+ void Eat();
+ void Sleep();
 }
 
-// ✅ Segregated interfaces
+// [PASS] Segregated interfaces
 public interface IWorkable { void Work(); }
 public interface IFeedable { void Eat(); }
 public interface IRestable { void Sleep(); }
@@ -122,15 +122,15 @@ public interface IRestable { void Sleep(); }
 Depend on abstractions, not concretions.
 
 ```csharp
-// ✅ Depend on interface
+// [PASS] Depend on interface
 public class OrderService
 {
-    private readonly IOrderRepository _repository;
-    
-    public OrderService(IOrderRepository repository)
-    {
-        _repository = repository;
-    }
+ private readonly IOrderRepository _repository;
+ 
+ public OrderService(IOrderRepository repository)
+ {
+ _repository = repository;
+ }
 }
 ```
 
@@ -139,33 +139,33 @@ public class OrderService
 ## DRY (Don't Repeat Yourself)
 
 ```csharp
-// ❌ Duplication
+// [FAIL] Duplication
 public class UserService
 {
-    public User GetUser(int id)
-    {
-        var conn = new SqlConnection(connectionString);
-        conn.Open();
-        // ... query logic
-    }
-    
-    public Order GetOrder(int id)
-    {
-        var conn = new SqlConnection(connectionString);
-        conn.Open();
-        // ... query logic
-    }
+ public User GetUser(int id)
+ {
+ var conn = new SqlConnection(connectionString);
+ conn.Open();
+ // ... query logic
+ }
+ 
+ public Order GetOrder(int id)
+ {
+ var conn = new SqlConnection(connectionString);
+ conn.Open();
+ // ... query logic
+ }
 }
 
-// ✅ Extract common logic
+// [PASS] Extract common logic
 public abstract class BaseRepository
 {
-    protected SqlConnection GetConnection()
-    {
-        var conn = new SqlConnection(connectionString);
-        conn.Open();
-        return conn;
-    }
+ protected SqlConnection GetConnection()
+ {
+ var conn = new SqlConnection(connectionString);
+ conn.Open();
+ return conn;
+ }
 }
 ```
 
@@ -174,28 +174,28 @@ public abstract class BaseRepository
 ## KISS (Keep It Simple, Stupid)
 
 ```csharp
-// ❌ Overengineered
+// [FAIL] Overengineered
 public class UserValidator
 {
-    public bool Validate(User user)
-    {
-        var strategy = ValidatorStrategyFactory
-            .CreateStrategy(user.UserType)
-            .GetValidationChain()
-            .Execute(new ValidationContext(user));
-        return strategy.IsValid;
-    }
+ public bool Validate(User user)
+ {
+ var strategy = ValidatorStrategyFactory
+ .CreateStrategy(user.UserType)
+ .GetValidationChain()
+ .Execute(new ValidationContext(user));
+ return strategy.IsValid;
+ }
 }
 
-// ✅ Simple
+// [PASS] Simple
 public class UserValidator
 {
-    public bool Validate(User user)
-    {
-        return !string.IsNullOrEmpty(user.Email) &&
-               user.Email.Contains("@") &&
-               user.Age >= 13;
-    }
+ public bool Validate(User user)
+ {
+ return !string.IsNullOrEmpty(user.Email) &&
+ user.Email.Contains("@") &&
+ user.Age >= 13;
+ }
 }
 ```
 
@@ -209,7 +209,7 @@ Don't build features "just in case". Build what's needed now.
 
 ## Best Practices
 
-### ✅ DO
+### [PASS] DO
 
 - **Follow SOLID** - Especially SRP and DIP
 - **Keep functions small** - One thing, well
@@ -219,7 +219,7 @@ Don't build features "just in case". Build what's needed now.
 - **Refactor regularly** - Improve as you go
 - **Document complex logic** - Why, not what
 
-### ❌ DON'T
+### [FAIL] DON'T
 
 - **Violate SOLID** - Leads to rigid, fragile code
 - **Duplicate code** - Extract to methods/classes
@@ -230,10 +230,9 @@ Don't build features "just in case". Build what's needed now.
 
 ---
 
-**See Also**: [Code Organization](../code-organization/SKILL.md) • [Testing](../../development/testing/SKILL.md)
+**See Also**: [Code Organization](../code-organization/SKILL.md) - [Testing](../../development/testing/SKILL.md)
 
 **Last Updated**: January 13, 2026
-
 
 ## Troubleshooting
 

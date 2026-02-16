@@ -2,16 +2,16 @@
 name: "dependency-management"
 description: 'Manage dependencies with version pinning, lock files, vulnerability scanning, and update strategies. Use when adding new packages, pinning dependency versions, scanning for vulnerabilities, updating outdated dependencies, or managing monorepo dependency graphs.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Dependency Management
 
-> **Purpose**: Manage third-party dependencies securely and reliably.  
-> **Goal**: Reproducible builds, no vulnerable packages, controlled updates.  
+> **Purpose**: Manage third-party dependencies securely and reliably. 
+> **Goal**: Reproducible builds, no vulnerable packages, controlled updates. 
 > **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
@@ -32,20 +32,20 @@ metadata:
 
 ```
 Dependency concern?
-├─ Adding new dependency?
-│   ├─ Actively maintained? (commits in last 6 months) → Proceed
-│   ├─ License compatible? (MIT/Apache → OK, GPL → careful)
-│   ├─ Too many transitive deps? → Consider lighter alternative
-│   └─ Can you build it in < 1 hour? → Maybe don't add dependency
-├─ Updating dependencies?
-│   ├─ Patch update (0.0.x) → Usually safe, auto-update
-│   ├─ Minor update (0.x.0) → Review changelog, test
-│   └─ Major update (x.0.0) → Review breaking changes, plan migration
-├─ Vulnerability found?
-│   ├─ Direct dependency? → Update immediately
-│   └─ Transitive? → Override version or update parent
-└─ Lock file conflict?
-    └─ Delete lock file → reinstall → commit new lock file
++- Adding new dependency?
+| +- Actively maintained? (commits in last 6 months) -> Proceed
+| +- License compatible? (MIT/Apache -> OK, GPL -> careful)
+| +- Too many transitive deps? -> Consider lighter alternative
+| - Can you build it in < 1 hour? -> Maybe don't add dependency
++- Updating dependencies?
+| +- Patch update (0.0.x) -> Usually safe, auto-update
+| +- Minor update (0.x.0) -> Review changelog, test
+| - Major update (x.0.0) -> Review breaking changes, plan migration
++- Vulnerability found?
+| +- Direct dependency? -> Update immediately
+| - Transitive? -> Override version or update parent
+- Lock file conflict?
+ - Delete lock file -> reinstall -> commit new lock file
 ```
 
 ## Core Concepts
@@ -54,43 +54,43 @@ Dependency concern?
 
 ```
 Direct Dependencies:
-  - Packages your code imports directly
-  - Listed in your package manifest
+ - Packages your code imports directly
+ - Listed in your package manifest
 
 Transitive Dependencies:
-  - Dependencies of your dependencies
-  - Automatically pulled in
-  - Often source of vulnerabilities
+ - Dependencies of your dependencies
+ - Automatically pulled in
+ - Often source of vulnerabilities
 
 Development Dependencies:
-  - Testing frameworks
-  - Build tools
-  - Linters
-  - NOT shipped to production
+ - Testing frameworks
+ - Build tools
+ - Linters
+ - NOT shipped to production
 ```
 
 ### Dependency Files
 
 ```
 Manifest File (what you want):
-  - Lists packages and version constraints
-  - Human-editable
-  - Committed to version control
+ - Lists packages and version constraints
+ - Human-editable
+ - Committed to version control
 
 Lock File (what you get):
-  - Lists exact versions resolved
-  - Includes transitive dependencies
-  - Machine-generated
-  - Committed to version control
+ - Lists exact versions resolved
+ - Includes transitive dependencies
+ - Machine-generated
+ - Committed to version control
 
 Examples by Language:
-  Language    | Manifest           | Lock File
-  ------------|--------------------|-----------------
-  .NET        | *.csproj           | packages.lock.json
-  Python      | pyproject.toml     | poetry.lock
-  Node.js     | package.json       | package-lock.json
-  Go          | go.mod             | go.sum
-  Rust        | Cargo.toml         | Cargo.lock
+ Language | Manifest | Lock File
+ ------------|--------------------|-----------------
+ .NET | *.csproj | packages.lock.json
+ Python | pyproject.toml | poetry.lock
+ Node.js | package.json | package-lock.json
+ Go | go.mod | go.sum
+ Rust | Cargo.toml | Cargo.lock
 ```
 
 ---
@@ -123,8 +123,7 @@ Examples by Language:
 
 ---
 
-**See Also**: [Security](../../architecture/security/SKILL.md) • [C# Development](../csharp/SKILL.md) • [Python Development](../python/SKILL.md)
-
+**See Also**: [Security](../../architecture/security/SKILL.md) - [C# Development](../csharp/SKILL.md) - [Python Development](../python/SKILL.md)
 
 ## Scripts
 

@@ -17,11 +17,11 @@
 
 ```
 Performance Metrics:
-  - CPU time (which functions are slow?)
-  - Memory allocation (memory leaks?)
-  - I/O wait time (database, network, disk)
-  - Lock contention (threading issues)
-  - Garbage collection pauses
+ - CPU time (which functions are slow?)
+ - Memory allocation (memory leaks?)
+ - I/O wait time (database, network, disk)
+ - Lock contention (threading issues)
+ - Garbage collection pauses
 ```
 
 **Profiling Workflow:**
@@ -42,58 +42,58 @@ Performance Metrics:
 
 ```
 function getUserProfile(userId):
-    cacheKey = "user:profile:" + userId
-    
-    # Check cache first
-    cached = cache.get(cacheKey)
-    if cached exists:
-        return cached
-    
-    # Cache miss - fetch from database
-    profile = database.getUserProfile(userId)
-    
-    # Store in cache
-    cache.set(cacheKey, profile, ttl: 300)  # 5 minutes
-    
-    return profile
+ cacheKey = "user:profile:" + userId
+ 
+ # Check cache first
+ cached = cache.get(cacheKey)
+ if cached exists:
+ return cached
+ 
+ # Cache miss - fetch from database
+ profile = database.getUserProfile(userId)
+ 
+ # Store in cache
+ cache.set(cacheKey, profile, ttl: 300) # 5 minutes
+ 
+ return profile
 ```
 
 ### Cache Invalidation Strategies
 
 **Time-Based (TTL):**
 ```
-cache.set(key, value, ttl: 3600)  # Expire after 1 hour
+cache.set(key, value, ttl: 3600) # Expire after 1 hour
 ```
 
 **Event-Based:**
 ```
 function updateUser(userId, data):
-    user = database.updateUser(userId, data)
-    
-    # Invalidate cache on update
-    cache.delete("user:profile:" + userId)
-    
-    return user
+ user = database.updateUser(userId, data)
+ 
+ # Invalidate cache on update
+ cache.delete("user:profile:" + userId)
+ 
+ return user
 ```
 
 **Write-Through:**
 ```
 function saveUser(user):
-    # Write to database and cache simultaneously
-    database.save(user)
-    cache.set("user:" + user.id, user, ttl: 3600)
+ # Write to database and cache simultaneously
+ database.save(user)
+ cache.set("user:" + user.id, user, ttl: 3600)
 ```
 
 ### Cache Layers
 
 ```
 Multi-Level Caching:
-  1. In-Memory Cache (L1) - Fastest, per-instance
-  2. Distributed Cache (L2) - Shared across instances
-  3. CDN Cache (L3) - Edge caching for static assets
+ 1. In-Memory Cache (L1) - Fastest, per-instance
+ 2. Distributed Cache (L2) - Shared across instances
+ 3. CDN Cache (L3) - Edge caching for static assets
 
 Example:
-  Request → L1 Cache → L2 Cache → Database
+ Request -> L1 Cache -> L2 Cache -> Database
 ```
 
 **Caching Technologies:**
@@ -107,21 +107,21 @@ Example:
 
 ### Fix N+1 Queries
 
-**❌ N+1 Problem:**
+**[FAIL] N+1 Problem:**
 ```
-users = database.query("SELECT * FROM users")  # 1 query
+users = database.query("SELECT * FROM users") # 1 query
 
 for user in users:
-    posts = database.query("SELECT * FROM posts WHERE user_id = ?", user.id)  # N queries
+ posts = database.query("SELECT * FROM posts WHERE user_id = ?", user.id) # N queries
 ```
 
-**✅ Solution - JOIN or Eager Loading:**
+**[PASS] Solution - JOIN or Eager Loading:**
 ```
 # Single query with JOIN
 results = database.query("""
-    SELECT users.*, posts.*
-    FROM users
-    LEFT JOIN posts ON posts.user_id = users.id
+ SELECT users.*, posts.*
+ FROM users
+ LEFT JOIN posts ON posts.user_id = users.id
 """)
 
 # Or use ORM eager loading
@@ -143,24 +143,24 @@ CREATE INDEX idx_orders_user_date ON orders(user_id, created_at);
 
 ### Use Projections
 
-**❌ Load everything:**
+**[FAIL] Load everything:**
 ```sql
-SELECT * FROM users;  -- Loads all columns
+SELECT * FROM users; -- Loads all columns
 ```
 
-**✅ Select only needed columns:**
+**[PASS] Select only needed columns:**
 ```sql
-SELECT id, email, name FROM users;  -- Only what you need
+SELECT id, email, name FROM users; -- Only what you need
 ```
 
 ### Connection Pooling
 
 ```
 ConnectionPool Configuration:
-  minConnections: 5      # Minimum active connections
-  maxConnections: 20     # Maximum pool size
-  connectionTimeout: 30s # Wait time for available connection
-  idleTimeout: 600s      # Close idle connections
+ minConnections: 5 # Minimum active connections
+ maxConnections: 20 # Maximum pool size
+ connectionTimeout: 30s # Wait time for available connection
+ idleTimeout: 600s # Close idle connections
 ```
 
 ---

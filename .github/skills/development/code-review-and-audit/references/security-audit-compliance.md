@@ -29,10 +29,10 @@ docker run -t owasp/zap2docker-stable zap-baseline.py -t https://api.myapp.com
 ```bash
 # Search for security anti-patterns
 grep -r "AllowAnyOrigin" . --include=*.cs
-grep -r "SELECT.*\+.*WHERE" . --include=*.cs  # SQL concatenation
-grep -r "password.*=.*\"" . --include=*.cs     # Hardcoded passwords
-grep -r "api[_-]?key.*=.*\"" . --include=*.cs  # Hardcoded API keys
-grep -r "\.Wait()" . --include=*.cs            # Blocking async calls
+grep -r "SELECT.*\+.*WHERE" . --include=*.cs # SQL concatenation
+grep -r "password.*=.*\"" . --include=*.cs # Hardcoded passwords
+grep -r "api[_-]?key.*=.*\"" . --include=*.cs # Hardcoded API keys
+grep -r "\.Wait()" . --include=*.cs # Blocking async calls
 ```
 
 **PowerShell Security Scan**:
@@ -42,15 +42,15 @@ grep -r "\.Wait()" . --include=*.cs            # Blocking async calls
 Write-Host "Scanning for security anti-patterns..." -ForegroundColor Yellow
 
 $patterns = @{
-    "Hardcoded Secrets" = 'password|apikey|secret|connectionstring.*=.*"[^"]+"'
-    "SQL Injection Risk" = 'SELECT.*\+|ExecuteSqlRaw.*\+'
-    "CORS Issues" = 'AllowAnyOrigin|AllowAnyHeader|AllowAnyMethod'
-    "Blocking Async" = '\.Wait\(\)|\.Result[^a-zA-Z]'
+ "Hardcoded Secrets" = 'password|apikey|secret|connectionstring.*=.*"[^"]+"'
+ "SQL Injection Risk" = 'SELECT.*\+|ExecuteSqlRaw.*\+'
+ "CORS Issues" = 'AllowAnyOrigin|AllowAnyHeader|AllowAnyMethod'
+ "Blocking Async" = '\.Wait\(\)|\.Result[^a-zA-Z]'
 }
 
 foreach ($pattern in $patterns.GetEnumerator()) {
-    Write-Host "`nChecking: $($pattern.Key)" -ForegroundColor Cyan
-    Get-ChildItem -Recurse -Include *.cs | Select-String -Pattern $pattern.Value
+ Write-Host "`nChecking: $($pattern.Key)" -ForegroundColor Cyan
+ Get-ChildItem -Recurse -Include *.cs | Select-String -Pattern $pattern.Value
 }
 ```
 

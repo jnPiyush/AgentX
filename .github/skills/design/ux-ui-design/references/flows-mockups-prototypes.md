@@ -14,10 +14,10 @@ Document every decision path a user can take. Use flowcharts (Mermaid recommende
 ### Flow Diagram Notation
 
 ```
-[Decision?]     → diamond
-(Action)        → rectangle
-{System Event}  → rounded
-Start/End       → pill shape
+[Decision?] -> diamond
+(Action) -> rectangle
+{System Event} -> rounded
+Start/End -> pill shape
 ```
 
 ---
@@ -33,7 +33,7 @@ Start/End       → pill shape
 - [ ] Icons use consistent style/weight
 - [ ] Images are high quality with correct aspect ratio
 
-**Component States — design ALL of these:**
+**Component States - design ALL of these:**
 - [ ] Default
 - [ ] Hover / Focus
 - [ ] Active / Selected
@@ -59,10 +59,10 @@ Start/End       → pill shape
 
 For every interactive element, document:
 
-1. **Trigger** → what the user does (click, hover, keypress)
-2. **State transitions** → Default → Loading → Success / Error
-3. **Timing** → duration of animations, auto-dismiss delays
-4. **Feedback** → visual change, toast, redirect
+1. **Trigger** -> what the user does (click, hover, keypress)
+2. **State transitions** -> Default -> Loading -> Success / Error
+3. **Timing** -> duration of animations, auto-dismiss delays
+4. **Feedback** -> visual change, toast, redirect
 
 ---
 
@@ -74,16 +74,16 @@ For every interactive element, document:
 
 ```
 prototype/
-├── index.html          # Semantic HTML5, ARIA landmarks
-├── css/
-│   ├── variables.css   # Design tokens (colors, spacing, type)
-│   ├── reset.css       # Normalize browser defaults
-│   ├── components.css  # Buttons, cards, forms, modals
-│   └── main.css        # Page-specific layout
-├── js/
-│   └── main.js         # Modal, form validation, toasts
-├── images/
-└── README.md           # Setup & usage instructions
++-- index.html # Semantic HTML5, ARIA landmarks
++-- css/
+| +-- variables.css # Design tokens (colors, spacing, type)
+| +-- reset.css # Normalize browser defaults
+| +-- components.css # Buttons, cards, forms, modals
+| -- main.css # Page-specific layout
++-- js/
+| -- main.js # Modal, form validation, toasts
++-- images/
+-- README.md # Setup & usage instructions
 ```
 
 ### Design Tokens (Key Variables)
@@ -104,12 +104,12 @@ Use CSS custom properties for all values. Key token categories:
 
 Every prototype must include these reusable components:
 
-- **Buttons** — primary, secondary, ghost, disabled, loading states
-- **Forms** — inputs, selects, textareas with validation + error display
-- **Cards** — image, content, footer layout with hover elevation
-- **Modals** — backdrop, focus trap, ESC-to-close, ARIA dialog role
-- **Toast notifications** — auto-dismiss, type variants (info/success/error)
+- **Buttons** - primary, secondary, ghost, disabled, loading states
+- **Forms** - inputs, selects, textareas with validation + error display
+- **Cards** - image, content, footer layout with hover elevation
+- **Modals** - backdrop, focus trap, ESC-to-close, ARIA dialog role
+- **Toast notifications** - auto-dismiss, type variants (info/success/error)
 
-> **📄 Full HTML/CSS/JS code** → [references/html-prototype-code.md](references/html-prototype-code.md)
+> ** Full HTML/CSS/JS code** -> [references/html-prototype-code.md](references/html-prototype-code.md)
 
 ---

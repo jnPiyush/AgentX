@@ -9,36 +9,36 @@
 name: CI
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+ push:
+ branches: [ main, develop ]
+ pull_request:
+ branches: [ main ]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0  # Full history for versioning
-    
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 8.0.x
-    
-    - name: Restore dependencies
-      run: dotnet restore
-    
-    - name: Build
-      run: dotnet build --no-restore
-    
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
-    
-    - name: Publish
-      run: dotnet publish -c Release -o ./publish
+ build:
+ runs-on: ubuntu-latest
+ 
+ steps:
+ - uses: actions/checkout@v3
+ with:
+ fetch-depth: 0 # Full history for versioning
+ 
+ - name: Setup .NET
+ uses: actions/setup-dotnet@v3
+ with:
+ dotnet-version: 8.0.x
+ 
+ - name: Restore dependencies
+ run: dotnet restore
+ 
+ - name: Build
+ run: dotnet build --no-restore
+ 
+ - name: Test
+ run: dotnet test --no-build --verbosity normal
+ 
+ - name: Publish
+ run: dotnet publish -c Release -o ./publish
 ```
 
 ### Azure Pipelines Example
@@ -50,37 +50,37 @@ trigger:
 - develop
 
 pool:
-  vmImage: 'ubuntu-latest'
+ vmImage: 'ubuntu-latest'
 
 variables:
-  buildConfiguration: 'Release'
+ buildConfiguration: 'Release'
 
 steps:
 - task: UseDotNet@2
-  inputs:
-    version: '8.0.x'
+ inputs:
+ version: '8.0.x'
 
 - task: DotNetCoreCLI@2
-  displayName: 'Restore'
-  inputs:
-    command: 'restore'
+ displayName: 'Restore'
+ inputs:
+ command: 'restore'
 
 - task: DotNetCoreCLI@2
-  displayName: 'Build'
-  inputs:
-    command: 'build'
-    arguments: '--configuration $(buildConfiguration)'
+ displayName: 'Build'
+ inputs:
+ command: 'build'
+ arguments: '--configuration $(buildConfiguration)'
 
 - task: DotNetCoreCLI@2
-  displayName: 'Test'
-  inputs:
-    command: 'test'
-    arguments: '--configuration $(buildConfiguration) --collect:"XPlat Code Coverage"'
+ displayName: 'Test'
+ inputs:
+ command: 'test'
+ arguments: '--configuration $(buildConfiguration) --collect:"XPlat Code Coverage"'
 
 - task: PublishCodeCoverageResults@1
-  inputs:
-    codeCoverageTool: 'Cobertura'
-    summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+ inputs:
+ codeCoverageTool: 'Cobertura'
+ summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
 ```
 
 ---
@@ -115,10 +115,10 @@ git count-objects -vH
 
 # Find large files
 git rev-list --objects --all |
-  git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' |
-  sed -n 's/^blob //p' |
-  sort --numeric-sort --key=2 |
-  tail -n 10
+ git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' |
+ sed -n 's/^blob //p' |
+ sort --numeric-sort --key=2 |
+ tail -n 10
 
 # Show commit activity
 git shortlog -s -n --all
@@ -147,8 +147,8 @@ appsettings.Local.json
 
 # Remove accidentally committed secrets
 git filter-branch --force --index-filter \
-  "git rm --cached --ignore-unmatch secrets.json" \
-  --prune-empty --tag-name-filter cat -- --all
+ "git rm --cached --ignore-unmatch secrets.json" \
+ --prune-empty --tag-name-filter cat -- --all
 
 # Or use BFG Repo-Cleaner (faster)
 bfg --delete-files secrets.json
@@ -178,7 +178,7 @@ git log --show-signature
 
 # Add GPG key to GitHub/GitLab
 gpg --armor --export YOUR_KEY_ID
-# Paste in Settings → SSH and GPG keys
+# Paste in Settings -> SSH and GPG keys
 ```
 
 ---
@@ -203,7 +203,7 @@ git push backup main
 # Configure push to multiple remotes automatically
 git remote set-url --add --push origin git@github.com:yourfork/repo.git
 git remote set-url --add --push origin git@gitlab.com:user/repo.git
-git push origin main  # Pushes to both
+git push origin main # Pushes to both
 ```
 
 ---
@@ -239,7 +239,7 @@ git clone https://dev.azure.com/organization/project/_git/repo
 git clone git@ssh.dev.azure.com:v3/organization/project/repo
 
 # Work with work items
-git commit -m "feat: Add login #123"  # Links to work item 123
+git commit -m "feat: Add login #123" # Links to work item 123
 ```
 
 ### GitLab
@@ -250,8 +250,8 @@ git clone https://oauth2:YOUR_TOKEN@gitlab.com/user/repo.git
 
 # Push options for merge requests
 git push -o merge_request.create \
-        -o merge_request.target=main \
-        -o merge_request.title="Add feature"
+ -o merge_request.target=main \
+ -o merge_request.title="Add feature"
 ```
 
 ---

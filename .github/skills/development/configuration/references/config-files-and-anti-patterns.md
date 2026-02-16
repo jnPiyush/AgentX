@@ -6,18 +6,18 @@
 
 ```
 Config File Hierarchy:
-  config/
-    default.json      # Base configuration (all environments)
-    development.json  # Dev overrides
-    staging.json      # Staging overrides
-    production.json   # Production overrides
-    local.json        # Local overrides (not committed)
+ config/
+ default.json # Base configuration (all environments)
+ development.json # Dev overrides
+ staging.json # Staging overrides
+ production.json # Production overrides
+ local.json # Local overrides (not committed)
 
 Loading Order:
-  1. Load default.json
-  2. Merge environment-specific file
-  3. Merge local.json (if exists)
-  4. Override with environment variables
+ 1. Load default.json
+ 2. Merge environment-specific file
+ 3. Merge local.json (if exists)
+ 4. Override with environment variables
 ```
 
 ### File Format Comparison
@@ -37,43 +37,43 @@ Loading Order:
 
 ```
 Environments:
-  - development  (local machine)
-  - testing      (CI/CD)
-  - staging      (pre-production)
-  - production   (live)
+ - development (local machine)
+ - testing (CI/CD)
+ - staging (pre-production)
+ - production (live)
 
 Environment Detection:
-  environment = getEnv("ENVIRONMENT") or "development"
-  
-  config = loadBaseConfig()
-  config.merge(loadEnvConfig(environment))
-  
-  if environment == "production":
-    validateProductionConfig(config)
+ environment = getEnv("ENVIRONMENT") or "development"
+ 
+ config = loadBaseConfig()
+ config.merge(loadEnvConfig(environment))
+ 
+ if environment == "production":
+ validateProductionConfig(config)
 ```
 
 ### What Changes Per Environment
 
 ```
-✅ Should Change:
-  - Database connection strings
-  - API endpoints (dev vs prod URLs)
-  - Logging levels (DEBUG in dev, INFO in prod)
-  - Feature flags
-  - Secret keys
+[PASS] Should Change:
+ - Database connection strings
+ - API endpoints (dev vs prod URLs)
+ - Logging levels (DEBUG in dev, INFO in prod)
+ - Feature flags
+ - Secret keys
 
-❌ Should NOT Change:
-  - Business logic
-  - Validation rules
-  - Data models
-  - Application behavior
+[FAIL] Should NOT Change:
+ - Business logic
+ - Validation rules
+ - Data models
+ - Application behavior
 ```
 
 ---
 
 ## Configuration Anti-Patterns
 
-### ❌ Hardcoded Secrets
+### [FAIL] Hardcoded Secrets
 
 ```
 # NEVER DO THIS
@@ -85,32 +85,32 @@ API_KEY = getEnv("API_KEY")
 DATABASE_PASSWORD = getSecretManager("db-password")
 ```
 
-### ❌ Configuration in Code
+### [FAIL] Configuration in Code
 
 ```
 # NEVER DO THIS
 if isProduction:
-  DATABASE_URL = "postgres://prod-server/db"
+ DATABASE_URL = "postgres://prod-server/db"
 else:
-  DATABASE_URL = "postgres://localhost/db"
+ DATABASE_URL = "postgres://localhost/db"
 
 # ALWAYS DO THIS
 DATABASE_URL = getEnv("DATABASE_URL")
 ```
 
-### ❌ Late Validation
+### [FAIL] Late Validation
 
 ```
 # NEVER DO THIS
 function processOrder():
-  apiKey = getEnv("PAYMENT_API_KEY")  # Fails here, too late!
-  chargeCustomer(apiKey)
+ apiKey = getEnv("PAYMENT_API_KEY") # Fails here, too late!
+ chargeCustomer(apiKey)
 
 # ALWAYS DO THIS
 # Validate at startup
 function main():
-  validateRequiredConfig(["PAYMENT_API_KEY", "DATABASE_URL"])
-  startServer()
+ validateRequiredConfig(["PAYMENT_API_KEY", "DATABASE_URL"])
+ startServer()
 ```
 
 ---

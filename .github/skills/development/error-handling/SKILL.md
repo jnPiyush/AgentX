@@ -2,16 +2,16 @@
 name: "error-handling"
 description: 'Implement robust error handling with exceptions, retry logic, circuit breakers, and graceful degradation. Use when designing error handling strategies, implementing retry policies, adding circuit breakers, configuring timeouts, or building health check endpoints.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Error Handling
 
-> **Purpose**: Handle failures gracefully with logging, retries, and circuit breakers.  
-> **Goal**: No silent failures, clear error messages, system resilience.  
+> **Purpose**: Handle failures gracefully with logging, retries, and circuit breakers. 
+> **Goal**: No silent failures, clear error messages, system resilience. 
 > **Note**: For language-specific implementations, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
@@ -33,21 +33,21 @@ metadata:
 
 ```
 Handling an error?
-├─ Expected failure (validation, not-found)?
-│   └─ Return error result/status code, don't throw
-├─ Unexpected failure (network, I/O, timeout)?
-│   ├─ Transient? → Retry with exponential backoff
-│   │   └─ Still failing after retries? → Circuit breaker
-│   └─ Permanent? → Log + return error response
-├─ What to catch?
-│   ├─ Specific exception → catch specific, handle specifically
-│   ├─ Base exception → only at top-level boundaries
-│   └─ NEVER catch and swallow silently
-├─ Error response format?
-│   ├─ API? → RFC 7807 Problem Details
-│   └─ UI? → User-friendly message + log technical details
-└─ Logging?
-    └─ Always include: correlation ID, exception type, stack trace, context
++- Expected failure (validation, not-found)?
+| - Return error result/status code, don't throw
++- Unexpected failure (network, I/O, timeout)?
+| +- Transient? -> Retry with exponential backoff
+| | - Still failing after retries? -> Circuit breaker
+| - Permanent? -> Log + return error response
++- What to catch?
+| +- Specific exception -> catch specific, handle specifically
+| +- Base exception -> only at top-level boundaries
+| - NEVER catch and swallow silently
++- Error response format?
+| +- API? -> RFC 7807 Problem Details
+| - UI? -> User-friendly message + log technical details
+- Logging?
+ - Always include: correlation ID, exception type, stack trace, context
 ```
 
 ## Exception Handling
@@ -57,12 +57,12 @@ Handling an error?
 **Define Specific Exceptions:**
 ```
 Exception Hierarchy:
-  AppException (base)
-    ├─ ValidationException
-    ├─ NotFoundException  
-    ├─ UnauthorizedException
-    ├─ ForbiddenException
-    └─ ExternalServiceException
+ AppException (base)
+ +- ValidationException
+ +- NotFoundException 
+ +- UnauthorizedException
+ +- ForbiddenException
+ - ExternalServiceException
 ```
 
 **Benefits:**
@@ -75,29 +75,29 @@ Exception Hierarchy:
 
 ```
 function processPayment(amount, paymentMethod):
-    try:
-        # Attempt operation
-        validatePaymentMethod(paymentMethod)
-        chargeResult = paymentGateway.charge(amount, paymentMethod)
-        
-        # Log success
-        logger.info("Payment processed", {amount, paymentMethod})
-        
-        return chargeResult
-        
-    catch ValidationException as error:
-        # Handle validation errors
-        logger.warn("Invalid payment method", {error, paymentMethod})
-        throw error
-        
-    catch NetworkException as error:
-        # Handle network errors with retry
-        logger.error("Payment gateway unavailable", {error})
-        throw ExternalServiceException("Payment service temporarily unavailable")
-        
-    finally:
-        # Always execute (cleanup resources)
-        releasePaymentLock(paymentMethod)
+ try:
+ # Attempt operation
+ validatePaymentMethod(paymentMethod)
+ chargeResult = paymentGateway.charge(amount, paymentMethod)
+ 
+ # Log success
+ logger.info("Payment processed", {amount, paymentMethod})
+ 
+ return chargeResult
+ 
+ catch ValidationException as error:
+ # Handle validation errors
+ logger.warn("Invalid payment method", {error, paymentMethod})
+ throw error
+ 
+ catch NetworkException as error:
+ # Handle network errors with retry
+ logger.error("Payment gateway unavailable", {error})
+ throw ExternalServiceException("Payment service temporarily unavailable")
+ 
+ finally:
+ # Always execute (cleanup resources)
+ releasePaymentLock(paymentMethod)
 ```
 
 ### Global Error Handler
@@ -106,32 +106,32 @@ function processPayment(amount, paymentMethod):
 ```
 # HTTP API Error Handler
 function handleHttpError(error, request, response):
-    # Log error with context
-    logger.error("Request failed", {
-        error: error.message,
-        stack: error.stack,
-        requestId: request.id,
-        path: request.path,
-        method: request.method
-    })
-    
-    # Map exception to HTTP status
-    statusCode = mapExceptionToStatusCode(error)
-    
-    # Return user-friendly response
-    return response.status(statusCode).json({
-        error: error.userMessage,
-        requestId: request.id,
-        timestamp: currentTime()
-    })
+ # Log error with context
+ logger.error("Request failed", {
+ error: error.message,
+ stack: error.stack,
+ requestId: request.id,
+ path: request.path,
+ method: request.method
+ })
+ 
+ # Map exception to HTTP status
+ statusCode = mapExceptionToStatusCode(error)
+ 
+ # Return user-friendly response
+ return response.status(statusCode).json({
+ error: error.userMessage,
+ requestId: request.id,
+ timestamp: currentTime()
+ })
 
 function mapExceptionToStatusCode(error):
-    if error is NotFoundException: return 404
-    if error is ValidationException: return 400
-    if error is UnauthorizedException: return 401
-    if error is ForbiddenException: return 403
-    if error is ExternalServiceException: return 503
-    return 500  # Internal Server Error
+ if error is NotFoundException: return 404
+ if error is ValidationException: return 400
+ if error is UnauthorizedException: return 401
+ if error is ForbiddenException: return 403
+ if error is ExternalServiceException: return 503
+ return 500 # Internal Server Error
 ```
 
 ---
@@ -151,41 +151,41 @@ function mapExceptionToStatusCode(error):
 
 ## Error Handling Anti-Patterns
 
-**❌ Swallow Exceptions:**
+**[FAIL] Swallow Exceptions:**
 ```
 try:
-    riskyOperation()
+ riskyOperation()
 catch:
-    # Do nothing - ERROR! No one knows it failed
+ # Do nothing - ERROR! No one knows it failed
 ```
 
-**❌ Generic Catch-All:**
+**[FAIL] Generic Catch-All:**
 ```
 try:
-    operation()
+ operation()
 catch Exception:
-    return null  # Hides what went wrong
+ return null # Hides what went wrong
 ```
 
-**❌ Exception for Flow Control:**
+**[FAIL] Exception for Flow Control:**
 ```
 try:
-    user = database.findUser(id)
+ user = database.findUser(id)
 catch NotFoundException:
-    # Using exceptions for normal flow - BAD
-    user = createNewUser(id)
+ # Using exceptions for normal flow - BAD
+ user = createNewUser(id)
 ```
 
-**✅ Proper Error Handling:**
+**[PASS] Proper Error Handling:**
 ```
 try:
-    user = database.findUser(id)
+ user = database.findUser(id)
 catch NotFoundException as error:
-    logger.warn("User not found", {id})
-    throw error  # Re-throw, don't hide
+ logger.warn("User not found", {id})
+ throw error # Re-throw, don't hide
 catch DatabaseException as error:
-    logger.error("Database error", {error, id})
-    throw ServiceUnavailableException("User service temporarily unavailable")
+ logger.error("Database error", {error, id})
+ throw ServiceUnavailableException("User service temporarily unavailable")
 ```
 
 ---
@@ -195,25 +195,25 @@ catch DatabaseException as error:
 ```
 Resilience Stack (Apply Multiple Patterns):
 
-  ┌─────────────────────────────────────┐
-  │ Rate Limiting (Protect your service)│
-  └─────────────────────────────────────┘
-                  ↓
-  ┌─────────────────────────────────────┐
-  │ Timeout (Prevent hanging)           │
-  └─────────────────────────────────────┘
-                  ↓
-  ┌─────────────────────────────────────┐
-  │ Circuit Breaker (Fail fast)         │
-  └─────────────────────────────────────┘
-                  ↓
-  ┌─────────────────────────────────────┐
-  │ Retry (Handle transient failures)   │
-  └─────────────────────────────────────┘
-                  ↓
-  ┌─────────────────────────────────────┐
-  │ Fallback (Provide alternative)      │
-  └─────────────────────────────────────┘
+ -------------------------------------
+ | Rate Limiting (Protect your service)|
+ -------------------------------------
+ (down)
+ -------------------------------------
+ | Timeout (Prevent hanging) |
+ -------------------------------------
+ (down)
+ -------------------------------------
+ | Circuit Breaker (Fail fast) |
+ -------------------------------------
+ (down)
+ -------------------------------------
+ | Retry (Handle transient failures) |
+ -------------------------------------
+ (down)
+ -------------------------------------
+ | Fallback (Provide alternative) |
+ -------------------------------------
 ```
 
 ---
@@ -234,10 +234,9 @@ Resilience Stack (Apply Multiple Patterns):
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Troubleshooting
 

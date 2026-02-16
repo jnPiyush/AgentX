@@ -2,16 +2,16 @@
 name: "testing"
 description: 'Apply testing strategies including test pyramid, unit/integration/e2e testing, and coverage requirements. Use when writing unit tests, designing integration test suites, implementing end-to-end tests, measuring test coverage, or setting up continuous testing pipelines.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Testing
 
-> **Purpose**: Language-agnostic testing strategies ensuring code quality and reliability.  
-> **Goal**: 80%+ coverage with 70% unit, 20% integration, 10% e2e tests.  
+> **Purpose**: Language-agnostic testing strategies ensuring code quality and reliability. 
+> **Goal**: 80%+ coverage with 70% unit, 20% integration, 10% e2e tests. 
 > **Note**: For language-specific examples, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
@@ -33,31 +33,31 @@ metadata:
 
 ```
 Writing or reviewing tests?
-├─ New feature/story?
-│   ├─ Has acceptance criteria? → Write e2e test first, then unit tests
-│   └─ No criteria? → Write unit tests for public API surface
-├─ Bug fix?
-│   └─ Write regression test FIRST (red), then fix (green)
-├─ Refactoring?
-│   └─ Ensure existing tests pass → refactor → verify green
-├─ What type of test?
-│   ├─ Pure logic, no I/O? → Unit test (70% of total)
-│   ├─ Database/API/file I/O? → Integration test (20%)
-│   └─ Full user workflow? → E2E test (10%)
-└─ Coverage below 80%?
-    └─ Run: scripts/check-coverage.ps1 → add tests for uncovered paths
++- New feature/story?
+| +- Has acceptance criteria? -> Write e2e test first, then unit tests
+| - No criteria? -> Write unit tests for public API surface
++- Bug fix?
+| - Write regression test FIRST (red), then fix (green)
++- Refactoring?
+| - Ensure existing tests pass -> refactor -> verify green
++- What type of test?
+| +- Pure logic, no I/O? -> Unit test (70% of total)
+| +- Database/API/file I/O? -> Integration test (20%)
+| - Full user workflow? -> E2E test (10%)
+- Coverage below 80%?
+ - Run: scripts/check-coverage.ps1 -> add tests for uncovered paths
 ```
 
 ## Test Pyramid
 
 ```
-        /\
-       /E2E\      10% - Few (expensive, slow, brittle)
-      /------\
-     / Intg   \   20% - More (moderate cost/speed)
-    /----------\
-   /   Unit     \ 70% - Many (cheap, fast, reliable)
-  /--------------\
+ /\
+ /E2E\ 10% - Few (expensive, slow, brittle)
+ /------\
+ / Intg \ 20% - More (moderate cost/speed)
+ /----------\
+ / Unit \ 70% - Many (cheap, fast, reliable)
+ /--------------\
 ```
 
 **Why**: Unit tests catch bugs early, run fast, provide precise feedback. E2E tests validate workflows but are slow and flaky.
@@ -70,10 +70,10 @@ Writing or reviewing tests?
 
 ```
 Coverage Types:
-  - Line Coverage: % of code lines executed
-  - Branch Coverage: % of if/else branches taken
-  - Function Coverage: % of functions called
-  - Statement Coverage: % of statements executed
+ - Line Coverage: % of code lines executed
+ - Branch Coverage: % of if/else branches taken
+ - Function Coverage: % of functions called
+ - Statement Coverage: % of statements executed
 
 Target: 80%+ overall coverage
 ```
@@ -87,7 +87,7 @@ Target: 80%+ overall coverage
 
 ### What to Test
 
-**✅ Always Test:**
+**[PASS] Always Test:**
 - Business logic and algorithms
 - Data transformations
 - Validation rules
@@ -95,7 +95,7 @@ Target: 80%+ overall coverage
 - Edge cases and boundary conditions
 - Security-critical code
 
-**❌ Don't Test:**
+**[FAIL] Don't Test:**
 - Third-party library internals
 - Framework code
 - Simple getters/setters (unless logic involved)
@@ -110,18 +110,18 @@ Target: 80%+ overall coverage
 
 **Testable Code Characteristics:**
 ```
-✅ Single Responsibility Principle
-✅ Dependency Injection
-✅ Pure Functions (no side effects)
-✅ Small, focused methods
-✅ Minimal global state
-✅ Clear interfaces
+[PASS] Single Responsibility Principle
+[PASS] Dependency Injection
+[PASS] Pure Functions (no side effects)
+[PASS] Small, focused methods
+[PASS] Minimal global state
+[PASS] Clear interfaces
 
-❌ Tightly coupled code
-❌ Hidden dependencies
-❌ God classes
-❌ Hard-coded dependencies
-❌ Static methods everywhere
+[FAIL] Tightly coupled code
+[FAIL] Hidden dependencies
+[FAIL] God classes
+[FAIL] Hard-coded dependencies
+[FAIL] Static methods everywhere
 ```
 
 ### Test Fixtures
@@ -129,27 +129,27 @@ Target: 80%+ overall coverage
 **Setup and Teardown:**
 ```
 class UserServiceTests:
-  # Run once before all tests
-  beforeAll():
-    testDatabase.connect()
-  
-  # Run before each test
-  beforeEach():
-    testDatabase.clear()
-    seedTestData()
-  
-  # Run after each test
-  afterEach():
-    testDatabase.clear()
-  
-  # Run once after all tests
-  afterAll():
-    testDatabase.disconnect()
-  
-  test "getUser returns correct user":
-    # Test uses clean database state
-    user = service.getUser(1)
-    assert user.name == "Test User"
+ # Run once before all tests
+ beforeAll():
+ testDatabase.connect()
+ 
+ # Run before each test
+ beforeEach():
+ testDatabase.clear()
+ seedTestData()
+ 
+ # Run after each test
+ afterEach():
+ testDatabase.clear()
+ 
+ # Run once after all tests
+ afterAll():
+ testDatabase.disconnect()
+ 
+ test "getUser returns correct user":
+ # Test uses clean database state
+ user = service.getUser(1)
+ assert user.name == "Test User"
 ```
 
 ### Parameterized Tests
@@ -157,16 +157,16 @@ class UserServiceTests:
 **Data-Driven Testing:**
 ```
 testCases = [
-  {input: 0, expected: 0},
-  {input: 1, expected: 1},
-  {input: -1, expected: -1},
-  {input: 100, expected: 100}
+ {input: 0, expected: 0},
+ {input: 1, expected: 1},
+ {input: -1, expected: -1},
+ {input: 100, expected: 100}
 ]
 
 for each testCase in testCases:
-  test "abs({testCase.input}) returns {testCase.expected}":
-    result = abs(testCase.input)
-    assert result == testCase.expected
+ test "abs({testCase.input}) returns {testCase.expected}":
+ result = abs(testCase.input)
+ assert result == testCase.expected
 ```
 
 ---
@@ -204,10 +204,9 @@ for each testCase in testCases:
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Scripts
 

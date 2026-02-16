@@ -64,18 +64,18 @@ MIT License - see [LICENSE](../../../../LICENSE)
 ### README Best Practices
 
 ```
-✅ DO:
-  - Start with what the project does
-  - Show working code examples
-  - Keep installation steps minimal
-  - Include troubleshooting for common issues
-  - Update when features change
+[PASS] DO:
+ - Start with what the project does
+ - Show working code examples
+ - Keep installation steps minimal
+ - Include troubleshooting for common issues
+ - Update when features change
 
-❌ DON'T:
-  - Start with badges and shields
-  - Assume knowledge of your stack
-  - Skip the "why" of the project
-  - Include outdated examples
+[FAIL] DON'T:
+ - Start with badges and shields
+ - Assume knowledge of your stack
+ - Skip the "why" of the project
+ - Include outdated examples
 ```
 
 ---

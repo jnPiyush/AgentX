@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 📖 Read Documentation First
-    url: https://github.com/jnPiyush/AgentX/blob/master/README.md
-    about: Check the documentation before creating an issue
-  - name: 💬 Discussions
-    url: https://github.com/jnPiyush/AgentX/discussions
-    about: Ask questions or discuss ideas before creating an issue
-  - name: 📋 Project Board
-    url: https://github.com/users/jnPiyush/projects/1
-    about: View project status and track progress
+ - name: Read Documentation First
+ url: https://github.com/jnPiyush/AgentX/blob/master/README.md
+ about: Check the documentation before creating an issue
+ - name: Discussions
+ url: https://github.com/jnPiyush/AgentX/discussions
+ about: Ask questions or discuss ideas before creating an issue
+ - name: Project Board
+ url: https://github.com/users/jnPiyush/projects/1
+ about: View project status and track progress

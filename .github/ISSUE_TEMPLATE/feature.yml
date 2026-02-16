@@ -1,99 +1,99 @@
-name: ✨ Feature Request
+name: Feature Request
 description: New capability or significant enhancement (requires ADR + Tech Spec)
 title: "[Feature] "
 labels: ["type:feature"]
 projects: ["jnPiyush/1"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ## ✨ Feature Request
-        
-        Features are significant capabilities requiring architecture review.
-        
-        **Workflow:**
-        1. Fill out this template → Status: **Backlog**
-        2. Architect creates ADR & Spec → Status: **Ready**
-        3. Engineer implements → Status: **In Progress**
-        4. Code review → Status: **In Review**
-        5. Merged & closed → Status: **Done**
-        
-        **Deliverables:**
-        - Architecture Decision Record (ADR)
-        - Technical Specification
-        - Implementation with tests (80%+ coverage)
-        
-        > ⚠️ Status is tracked via **GitHub Projects**, not labels.
-  
-  - type: textarea
-    id: description
-    attributes:
-      label: Description
-      description: What capability are you requesting?
-      placeholder: "Add OAuth 2.0 authentication to the API"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: user-story
-    attributes:
-      label: User Story
-      description: Frame as "As a [user], I want [goal] so that [benefit]"
-      placeholder: "As a user, I want to log in using my Google account so that I don't need to remember another password"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: acceptance-criteria
-    attributes:
-      label: Acceptance Criteria
-      description: Specific, testable criteria for completion
-      placeholder: |
-        - [ ] Users can click "Sign in with Google"
-        - [ ] OAuth flow completes successfully
-        - [ ] User session is created
-        - [ ] Existing users are linked to OAuth provider
-        - [ ] New users are created automatically
-        - [ ] Tests cover happy path and error cases
-    validations:
-      required: true
-  
-  - type: dropdown
-    id: priority
-    attributes:
-      label: Priority
-      description: Business priority
-      options:
-        - "P0 - Critical: Blocker"
-        - "P1 - High: Critical for release"
-        - "P2 - Medium: Important but not blocking"
-        - "P3 - Low: Nice to have"
-    validations:
-      required: true
-  
-  - type: checkboxes
-    id: has-ui
-    attributes:
-      label: UI/UX Required
-      description: Does this feature have user interface components?
-      options:
-        - label: This feature includes UI/UX work (requires UX review)
-  
-  - type: textarea
-    id: technical-notes
-    attributes:
-      label: Technical Notes
-      description: Any technical constraints, dependencies, or considerations?
-      placeholder: |
-        - Must integrate with existing PostgreSQL user table
-        - Consider rate limiting for OAuth endpoints
-        - Need to store OAuth tokens securely
-  
-  - type: textarea
-    id: out-of-scope
-    attributes:
-      label: Out of Scope
-      description: What is explicitly NOT part of this feature?
-      placeholder: |
-        - Apple Sign-In (future feature)
-        - Social login buttons on mobile app
+ - type: markdown
+ attributes:
+ value: |
+ ## Feature Request
+
+ Features are significant capabilities requiring architecture review.
+
+ **Workflow:**
+ 1. Fill out this template -> Status: **Backlog**
+ 2. Architect creates ADR & Spec -> Status: **Ready**
+ 3. Engineer implements -> Status: **In Progress**
+ 4. Code review -> Status: **In Review**
+ 5. Merged & closed -> Status: **Done**
+
+ **Deliverables:**
+ - Architecture Decision Record (ADR)
+ - Technical Specification
+ - Implementation with tests (80%+ coverage)
+
+ > [WARN] Status is tracked via **GitHub Projects**, not labels.
+
+ - type: textarea
+ id: description
+ attributes:
+ label: Description
+ description: What capability are you requesting?
+ placeholder: "Add OAuth 2.0 authentication to the API"
+ validations:
+ required: true
+
+ - type: textarea
+ id: user-story
+ attributes:
+ label: User Story
+ description: Frame as "As a [user], I want [goal] so that [benefit]"
+ placeholder: "As a user, I want to log in using my Google account so that I don't need to remember another password"
+ validations:
+ required: true
+
+ - type: textarea
+ id: acceptance-criteria
+ attributes:
+ label: Acceptance Criteria
+ description: Specific, testable criteria for completion
+ placeholder: |
+ - [ ] Users can click "Sign in with Google"
+ - [ ] OAuth flow completes successfully
+ - [ ] User session is created
+ - [ ] Existing users are linked to OAuth provider
+ - [ ] New users are created automatically
+ - [ ] Tests cover happy path and error cases
+ validations:
+ required: true
+
+ - type: dropdown
+ id: priority
+ attributes:
+ label: Priority
+ description: Business priority
+ options:
+ - "P0 - Critical: Blocker"
+ - "P1 - High: Critical for release"
+ - "P2 - Medium: Important but not blocking"
+ - "P3 - Low: Nice to have"
+ validations:
+ required: true
+
+ - type: checkboxes
+ id: has-ui
+ attributes:
+ label: UI/UX Required
+ description: Does this feature have user interface components?
+ options:
+ - label: This feature includes UI/UX work (requires UX review)
+
+ - type: textarea
+ id: technical-notes
+ attributes:
+ label: Technical Notes
+ description: Any technical constraints, dependencies, or considerations?
+ placeholder: |
+ - Must integrate with existing PostgreSQL user table
+ - Consider rate limiting for OAuth endpoints
+ - Need to store OAuth tokens securely
+
+ - type: textarea
+ id: out-of-scope
+ attributes:
+ label: Out of Scope
+ description: What is explicitly NOT part of this feature?
+ placeholder: |
+ - Apple Sign-In (future feature)
+ - Social login buttons on mobile app

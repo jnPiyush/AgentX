@@ -244,6 +244,7 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh |
 # Windows (PowerShell)
 .\install.ps1                          # Local mode (default) — no prompts
 .\install.ps1 -Mode github             # GitHub mode — asks for repo/project
+.\install.ps1 -Local                   # Explicit local mode shorthand
 .\install.ps1 -Force                   # Reinstall (overwrite existing files)
 .\install.ps1 -NoSetup                 # Skip git init and hooks setup
 ```

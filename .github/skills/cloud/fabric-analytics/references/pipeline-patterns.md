@@ -6,7 +6,7 @@
 
 ## Copy Activity Patterns
 
-### Database → Lakehouse
+### Database -> Lakehouse
 
 ```
 Source: Azure SQL / PostgreSQL / MySQL
@@ -26,12 +26,12 @@ Mode: Overwrite (full) or Append (incremental)
 
 ```
 Pipeline: Incremental_Orders
-├── Lookup Activity: Get last watermark from control table
-├── Copy Activity: Copy rows WHERE modified_date > watermark
-└── Stored Procedure: Update watermark in control table
++-- Lookup Activity: Get last watermark from control table
++-- Copy Activity: Copy rows WHERE modified_date > watermark
+-- Stored Procedure: Update watermark in control table
 ```
 
-### File → Lakehouse
+### File -> Lakehouse
 
 ```
 Source: ADLS Gen2 / S3 (via shortcut) / Azure Blob
@@ -47,29 +47,29 @@ Formats: CSV, Parquet, JSON, Avro, ORC
 ### Sequential Chain
 
 ```
-Copy Activity (Source → Bronze)
-    └── depends_on → Notebook (Bronze → Silver)
-                        └── depends_on → Notebook (Silver → Gold)
-                                            └── depends_on → Dataflow (Refresh Semantic Model)
+Copy Activity (Source -> Bronze)
+ -- depends_on -> Notebook (Bronze -> Silver)
+ -- depends_on -> Notebook (Silver -> Gold)
+ -- depends_on -> Dataflow (Refresh Semantic Model)
 ```
 
 ### Parallel + Merge
 
 ```
-┌── Copy Activity (Orders)     ──┐
-│                                 │
-├── Copy Activity (Products)   ──┼── depends_on → Notebook (Join & Transform)
-│                                 │
-└── Copy Activity (Customers)  ──┘
+-- Copy Activity (Orders) --
+| |
++-- Copy Activity (Products) --+-- depends_on -> Notebook (Join & Transform)
+| |
+-- Copy Activity (Customers) --
 ```
 
 ### Conditional Branching
 
 ```
 Notebook (Validate Data)
-├── On Success → Notebook (Transform to Gold)
-├── On Failure → Web Activity (Send alert email)
-└── On Completion → Stored Procedure (Log run status)
++-- On Success -> Notebook (Transform to Gold)
++-- On Failure -> Web Activity (Send alert email)
+-- On Completion -> Stored Procedure (Log run status)
 ```
 
 ---
@@ -78,7 +78,7 @@ Notebook (Validate Data)
 
 | Practice | Details |
 |----------|---------|
-| **Idempotent activities** | Use Overwrite or MERGE — safe to retry on failure |
+| **Idempotent activities** | Use Overwrite or MERGE - safe to retry on failure |
 | **Parameterize** | Use pipeline parameters for environment (dev/test/prod) |
 | **Error handling** | Add On Failure paths with alerting (email, Teams, logging) |
 | **Monitoring** | Check pipeline run history in Fabric Monitor hub |

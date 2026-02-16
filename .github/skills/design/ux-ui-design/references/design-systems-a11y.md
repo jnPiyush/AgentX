@@ -5,19 +5,19 @@
 ### Component Library Structure
 
 ```
-Foundations          Components          Patterns
-├── Colors           ├── Buttons          ├── Navigation
-├── Typography       ├── Forms            ├── Form Patterns
-├── Spacing          ├── Cards            ├── Data Display
-├── Icons            ├── Modals           └── Empty States
-└── Grid             ├── Navigation
-                     ├── Tables
-                     └── Alerts
+Foundations Components Patterns
++-- Colors +-- Buttons +-- Navigation
++-- Typography +-- Forms +-- Form Patterns
++-- Spacing +-- Cards +-- Data Display
++-- Icons +-- Modals -- Empty States
+-- Grid +-- Navigation
+ +-- Tables
+ -- Alerts
 ```
 
 ### Design Token Rules
 
-| ✅ DO | ❌ DON'T |
+| [PASS] DO | [FAIL] DON'T |
 |-------|---------|
 | Use primary for main CTAs | Use primary for large backgrounds |
 | Use primary-light for card hovers | Mix primary + secondary in same component |
@@ -31,7 +31,7 @@ Foundations          Components          Patterns
 ### WCAG 2.1 AA Checklist
 
 **Perceivable:**
-- [ ] Text contrast ≥ 4.5:1 (body) / ≥ 3:1 (large text)
+- [ ] Text contrast 4.5:1 (body) / 3:1 (large text)
 - [ ] All images have meaningful `alt` text
 - [ ] Color is never the **sole** indicator of meaning
 - [ ] Text resizes to 200% without content loss
@@ -66,7 +66,7 @@ Foundations          Components          Patterns
 | Icon buttons | `aria-label` on button, `aria-hidden` on SVG |
 | Focus trap | Cycle Tab between first/last focusable in modal |
 
-> **📄 Full accessibility markup & JS** → [references/accessibility-patterns.md](references/accessibility-patterns.md)
+> ** Full accessibility markup & JS** -> [references/accessibility-patterns.md](references/accessibility-patterns.md)
 
 ---
 
@@ -91,13 +91,13 @@ Foundations          Components          Patterns
 ### Responsive Checklist
 
 - [ ] Navigation collapses to hamburger on mobile
-- [ ] Touch targets ≥ 44×44px
+- [ ] Touch targets 4444px
 - [ ] No horizontal scrolling at any breakpoint
 - [ ] Images use `loading="lazy"` and responsive `srcset`
 - [ ] Font sizes scale appropriately (clamp or media queries)
 - [ ] Modals are full-screen on mobile
 
-> **📄 Full breakpoint CSS & grid code** → [references/responsive-patterns.md](references/responsive-patterns.md)
+> ** Full breakpoint CSS & grid code** -> [references/responsive-patterns.md](references/responsive-patterns.md)
 
 ---
 
@@ -108,15 +108,15 @@ Foundations          Components          Patterns
 | Element | Details |
 |---------|---------|
 | **Objective** | Validate users can complete [primary task] |
-| **Participants** | 5–8 users, mix of new + existing |
-| **Tasks** | 3–5 realistic scenarios |
-| **Metrics** | Completion rate, time, error count, satisfaction (1–5) |
+| **Participants** | 5-8 users, mix of new + existing |
+| **Tasks** | 3-5 realistic scenarios |
+| **Metrics** | Completion rate, time, error count, satisfaction (1-5) |
 
 ### Test Script Essentials
 
 - **Intro**: "We're testing the feature, not you. Think aloud. No wrong answers."
 - **During**: Observe silently; note confusion points; ask follow-ups only after task attempt
-- **Debrief**: "What was hardest?", "What would you change?", "Rate 1–5"
+- **Debrief**: "What was hardest?", "What would you change?", "Rate 1-5"
 
 ### Results Table
 
@@ -125,6 +125,6 @@ Foundations          Components          Patterns
 | Task 1 | 5/5 (100%) | 1m 23s | 0.4 | 4.6/5 |
 | Task 2 | 4/5 (80%) | 2m 45s | 1.2 | 3.8/5 |
 
-> **📄 Full test plan template** → [references/usability-testing-template.md](references/usability-testing-template.md)
+> ** Full test plan template** -> [references/usability-testing-template.md](references/usability-testing-template.md)
 
 ---

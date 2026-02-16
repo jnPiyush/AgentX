@@ -2,13 +2,13 @@
 name: "skill-creator"
 description: 'Create, validate, and maintain AgentX skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  frameworks: ["agentx"]
-  platforms: ["windows", "linux", "macos"]
+ frameworks: ["agentx"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # Skill Creator
@@ -26,21 +26,21 @@ compatibility:
 
 ```
 Need to work on a skill?
-├─ Creating new skill?
-│   ├─ Run: scripts/init-skill.ps1
-│   └─ Fill in SKILL.md template
-├─ Auditing existing skill?
-│   ├─ Check frontmatter against spec (see Frontmatter Rules)
-│   ├─ Check line count (target < 500, ideal < 350)
-│   └─ Verify progressive disclosure structure
-├─ Skill too large (> 500 lines)?
-│   ├─ Extract detailed examples → references/
-│   ├─ Extract executable logic → scripts/
-│   └─ Keep SKILL.md as slim router
-└─ Adding capability to existing skill?
-    ├─ Executable automation → scripts/
-    ├─ Extended docs/examples → references/
-    └─ Templates, starter code, sample data → assets/
++- Creating new skill?
+| +- Run: scripts/init-skill.ps1
+| - Fill in SKILL.md template
++- Auditing existing skill?
+| +- Check frontmatter against spec (see Frontmatter Rules)
+| +- Check line count (target < 500, ideal < 350)
+| - Verify progressive disclosure structure
++- Skill too large (> 500 lines)?
+| +- Extract detailed examples -> references/
+| +- Extract executable logic -> scripts/
+| - Keep SKILL.md as slim router
+- Adding capability to existing skill?
+ +- Executable automation -> scripts/
+ +- Extended docs/examples -> references/
+ - Templates, starter code, sample data -> assets/
 ```
 
 ## Quick Start: Create a New Skill
@@ -48,22 +48,22 @@ Need to work on a skill?
 ```powershell
 # Scaffold a new skill with all directories
 ./.github/skills/ai-systems/skill-creator/scripts/init-skill.ps1 `
-  -Name "my-new-skill" `
-  -Category "development" `
-  -Description "Brief description of the skill" `
-  -WithScripts -WithReferences
+ -Name "my-new-skill" `
+ -Category "development" `
+ -Description "Brief description of the skill" `
+ -WithScripts -WithReferences
 ```
 
 This creates:
 ```
 .github/skills/development/my-new-skill/
-├── SKILL.md              # Main skill document
-├── scripts/
-│   └── example.ps1       # Starter script
-├── references/
-│   └── reference-guide.md # Extended content
-└── assets/               # (with -WithAssets)
-    └── .gitkeep           # Templates, starter code, sample data
++-- SKILL.md # Main skill document
++-- scripts/
+| -- example.ps1 # Starter script
++-- references/
+| -- reference-guide.md # Extended content
+-- assets/ # (with -WithAssets)
+ -- .gitkeep # Templates, starter code, sample data
 ```
 
 ## Core Rules (Frontmatter)
@@ -96,14 +96,14 @@ This creates:
 name: "skill-name"
 description: 'Create, validate, and maintain AgentX skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "YYYY-MM-DD"
-  updated: "YYYY-MM-DD"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "YYYY-MM-DD"
+ updated: "YYYY-MM-DD"
 compatibility:
-  languages: ["lang1", "lang2"]
-  frameworks: ["framework1"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["lang1", "lang2"]
+ frameworks: ["framework1"]
+ platforms: ["windows", "linux", "macos"]
 prerequisites: ["tool or runtime required"]
 allowed-tools: "tool1 tool2 tool3"
 ---
@@ -153,11 +153,11 @@ Skills load in 3 tiers to manage context window tokens:
 
 ## Anti-Patterns
 
-- **Monolith skills**: > 500 lines with no references/ → split them
-- **Missing frontmatter**: No `name` or `description` → spec violation
-- **Code-dump skills**: Walls of example code → move to references/
-- **Undiscoverable skills**: Not listed in Skills.md → invisible to routing
-- **Stale metadata**: `version` never bumped after changes → unreliable
+- **Monolith skills**: > 500 lines with no references/ -> split them
+- **Missing frontmatter**: No `name` or `description` -> spec violation
+- **Code-dump skills**: Walls of example code -> move to references/
+- **Undiscoverable skills**: Not listed in Skills.md -> invisible to routing
+- **Stale metadata**: `version` never bumped after changes -> unreliable
 
 ## Scripts
 

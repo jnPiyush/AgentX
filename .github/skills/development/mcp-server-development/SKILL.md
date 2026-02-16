@@ -2,14 +2,14 @@
 name: "mcp-server-development"
 description: 'Build Model Context Protocol (MCP) servers that expose tools, resources, and prompts to AI agents. Use when creating MCP servers in TypeScript or Python, defining MCP tools, implementing resource providers, or integrating MCP servers with AI agent workflows.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["typescript", "python", "csharp"]
-  frameworks: ["mcp-sdk"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["typescript", "python", "csharp"]
+ frameworks: ["mcp-sdk"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # MCP Server Development
@@ -27,28 +27,28 @@ compatibility:
 
 ```
 Need to expose capabilities to AI agents?
-├─ Read-only data access?
-│   └─ Use MCP Resources (URI-based, typed)
-├─ Execute actions / side effects?
-│   └─ Use MCP Tools (JSON Schema input, structured output)
-├─ Reusable prompt templates?
-│   └─ Use MCP Prompts (parameterized, multi-turn)
-└─ Combine multiple?
-    └─ Single MCP server with mixed capabilities
++- Read-only data access?
+| - Use MCP Resources (URI-based, typed)
++- Execute actions / side effects?
+| - Use MCP Tools (JSON Schema input, structured output)
++- Reusable prompt templates?
+| - Use MCP Prompts (parameterized, multi-turn)
+- Combine multiple?
+ - Single MCP server with mixed capabilities
 ```
 
 ## Architecture Overview
 
 ```
-┌──────────────┐    stdio/SSE    ┌──────────────┐
-│   AI Agent   │ ◄─────────────► │  MCP Server  │
-│  (Copilot)   │   JSON-RPC 2.0  │  (your code) │
-└──────────────┘                  └──────┬───────┘
-                                         │
-                           ┌─────────────┼─────────────┐
-                           │             │             │
-                       Tools        Resources       Prompts
-                    (actions)     (read data)    (templates)
+-------------- stdio/SSE --------------
+| AI Agent | ------------- | MCP Server |
+| (Copilot) | JSON-RPC 2.0 | (your code) |
+-------------- ------+-------
+ |
+ -------------+-------------
+ | | |
+ Tools Resources Prompts
+ (actions) (read data) (templates)
 ```
 
 ## Quick Start: TypeScript
@@ -64,18 +64,18 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 const server = new McpServer({
-  name: "my-server",
-  version: "1.0.0",
+ name: "my-server",
+ version: "1.0.0",
 });
 
 // Tool: execute actions
 server.tool("greet", { name: z.string() }, async ({ name }) => ({
-  content: [{ type: "text", text: `Hello, ${name}!` }],
+ content: [{ type: "text", text: `Hello, ${name}!` }],
 }));
 
 // Resource: read-only data
 server.resource("config", "config://app", async () => ({
-  contents: [{ uri: "config://app", text: JSON.stringify({ env: "prod" }) }],
+ contents: [{ uri: "config://app", text: JSON.stringify({ env: "prod" }) }],
 }));
 
 // Start server
@@ -96,13 +96,13 @@ mcp = FastMCP("my-server")
 
 @mcp.tool()
 def greet(name: str) -> str:
-    """Greet a user by name."""
-    return f"Hello, {name}!"
+ """Greet a user by name."""
+ return f"Hello, {name}!"
 
 @mcp.resource("config://app")
 def get_config() -> str:
-    """Read application configuration."""
-    return '{"env": "prod"}'
+ """Read application configuration."""
+ return '{"env": "prod"}'
 
 # Run: python server.py
 ```
@@ -146,13 +146,13 @@ Add to `.vscode/mcp.json` (or user settings):
 
 ```json
 {
-  "servers": {
-    "my-server": {
-      "command": "node",
-      "args": ["./dist/server.js"],
-      "env": { "API_KEY": "${input:apiKey}" }
-    }
-  }
+ "servers": {
+ "my-server": {
+ "command": "node",
+ "args": ["./dist/server.js"],
+ "env": { "API_KEY": "${input:apiKey}" }
+ }
+ }
 }
 ```
 
@@ -162,8 +162,8 @@ Add to `.vscode/mcp.json` (or user settings):
 - **Untyped inputs**: Using `any` or `object` for tool parameters
 - **Swallowed errors**: Catching exceptions without returning `isError: true`
 - **Stateful servers**: Storing session state in memory (use external stores)
-- **Missing descriptions**: Tools without clear descriptions → agents can't use them effectively
-- **Hardcoded secrets**: API keys in server code → use environment variables
+- **Missing descriptions**: Tools without clear descriptions -> agents can't use them effectively
+- **Hardcoded secrets**: API keys in server code -> use environment variables
 
 ## Testing
 
@@ -181,18 +181,18 @@ const client = new Client({ name: "test", version: "1.0.0" });
 
 ```
 my-mcp-server/
-├── src/
-│   ├── server.ts          # Server setup + transport
-│   ├── tools/             # Tool implementations
-│   │   ├── search.ts
-│   │   └── create.ts
-│   ├── resources/         # Resource handlers
-│   │   └── config.ts
-│   └── prompts/           # Prompt templates
-│       └── review.ts
-├── package.json
-├── tsconfig.json
-└── .vscode/mcp.json       # Local server config
++-- src/
+| +-- server.ts # Server setup + transport
+| +-- tools/ # Tool implementations
+| | +-- search.ts
+| | -- create.ts
+| +-- resources/ # Resource handlers
+| | -- config.ts
+| -- prompts/ # Prompt templates
+| -- review.ts
++-- package.json
++-- tsconfig.json
+-- .vscode/mcp.json # Local server config
 ```
 
 ## Further Reading

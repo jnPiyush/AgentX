@@ -4,10 +4,10 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 # Production Code Skills & Technical Guidelines
 
-> **Purpose**: Production-ready guidelines for agents to build secure, scalable, maintainable systems.  
-> **Usage**: Index for detailed skill documents. Read relevant skills before implementation.  
-> **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) skills specification from [agentskills.io](https://agentskills.io/specification).  
-> **Structure**: Each skill uses progressive disclosure — metadata (~100 tokens) → SKILL.md body (<5K) → references/ (on demand) → assets/ (templates, starter code).
+> **Purpose**: Production-ready guidelines for agents to build secure, scalable, maintainable systems. 
+> **Usage**: Index for detailed skill documents. Read relevant skills before implementation. 
+> **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) skills specification from [agentskills.io](https://agentskills.io/specification). 
+> **Structure**: Each skill uses progressive disclosure - metadata (~100 tokens) -> SKILL.md body (<5K) -> references/ (on demand) -> assets/ (templates, starter code).
 
 ---
 
@@ -26,15 +26,15 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 | Agent definitions (8) | 10-22K each | **Only active agent** | Agent system loads 1 at a time |
 | Prompt files (11) | 2-5K each | **User-triggered** | One at a time |
 
-**Loading order**: Router → instruction (auto) → this index → pick 3-4 skills → read them.
+**Loading order**: Router -> instruction (auto) -> this index -> pick 3-4 skills -> read them.
 
 **Anti-pattern**: Never load all 41 skills (~470K tokens). Use the Quick Reference below to pick only what's relevant.
 
 ---
 
-## 🎯 Quick Reference by Task Type
+## Quick Reference by Task Type
 
-> **Purpose**: Find relevant skills fast based on what you're building.  
+> **Purpose**: Find relevant skills fast based on what you're building. 
 > **Usage**: Match your task below, load only the recommended skills to stay within token budget.
 
 ### API Implementation
@@ -47,7 +47,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#02 Testing](.github/skills/development/testing/SKILL.md) - Controller tests, integration tests (4K)
 - [#11 Documentation](.github/skills/development/documentation/SKILL.md) - XML docs, OpenAPI/Swagger (3K)
 
-**Context Routing**: Controller implementation → Load Skills #09, #04, #02, #11
+**Context Routing**: Controller implementation -> Load Skills #09, #04, #02, #11
 
 ---
 
@@ -60,7 +60,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#04 Security](.github/skills/architecture/security/SKILL.md) - SQL injection prevention, parameterization (6K)
 - [#02 Testing](.github/skills/development/testing/SKILL.md) - Repository tests, integration tests (4K)
 
-**Context Routing**: Database/Repository files → Load Skills #06, #04, #02
+**Context Routing**: Database/Repository files -> Load Skills #06, #04, #02
 
 ---
 
@@ -75,7 +75,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#13 Type Safety](.github/skills/development/type-safety/SKILL.md) - Nullable reference types, analyzers (3K)
 - [#15 Logging](.github/skills/development/logging-monitoring/SKILL.md) - Security event logging, audit trails (2K)
 
-**Context Routing**: Security-related files → Load Skills #04, #10, #02, #13, #15
+**Context Routing**: Security-related files -> Load Skills #04, #10, #02, #13, #15
 
 ---
 
@@ -88,7 +88,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#02 Testing](.github/skills/development/testing/SKILL.md) - Regression tests, debugging patterns (4K)
 - [#15 Logging](.github/skills/development/logging-monitoring/SKILL.md) - Log analysis, correlation IDs (2K)
 
-**Context Routing**: Bug fix → Load Skills #03, #02, #15
+**Context Routing**: Bug fix -> Load Skills #03, #02, #15
 
 ---
 
@@ -102,7 +102,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#02 Testing](.github/skills/development/testing/SKILL.md) - Performance tests, benchmarks (3K)
 - [#15 Logging](.github/skills/development/logging-monitoring/SKILL.md) - Performance metrics, APM (2K)
 
-**Context Routing**: Performance work → Load Skills #05, #06, #02, #15
+**Context Routing**: Performance work -> Load Skills #05, #06, #02, #15
 
 ---
 
@@ -113,7 +113,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 **Load These Skills** (Total: ~5K tokens):
 - [#11 Documentation](.github/skills/development/documentation/SKILL.md) - XML docs, README patterns, inline comments (5K)
 
-**Context Routing**: Documentation only → Load Skill #11
+**Context Routing**: Documentation only -> Load Skill #11
 
 ---
 
@@ -127,7 +127,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#28 Release Management](.github/skills/operations/release-management/SKILL.md) - Versioning, deployment strategies, rollback (8K)
 - [#04 Security](.github/skills/architecture/security/SKILL.md) - Secrets management, security scanning (6K)
 
-**Context Routing**: Pipeline/deployment work → Load Skills #26, #27, #28, #04
+**Context Routing**: Pipeline/deployment work -> Load Skills #26, #27, #28, #04
 
 ---
 
@@ -141,7 +141,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#02 Testing](.github/skills/development/testing/SKILL.md) - Test quality review (4K)
 - [#01 Core Principles](.github/skills/architecture/core-principles/SKILL.md) - SOLID, design patterns review (3K)
 
-**Context Routing**: Code review → Load Skills #18, #04, #02, #01
+**Context Routing**: Code review -> Load Skills #18, #04, #02, #01
 
 ---
 
@@ -155,7 +155,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#04 Security](.github/skills/architecture/security/SKILL.md) - Prompt injection prevention, secrets (4K)
 - [#30 Prompt Engineering](.github/skills/ai-systems/prompt-engineering/SKILL.md) - System prompts, guardrails (2K)
 
-**Context Routing**: AI agent work → Load Skills #17, #41, #04, #30
+**Context Routing**: AI agent work -> Load Skills #17, #41, #04, #30
 
 ---
 
@@ -170,7 +170,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#06 Database](.github/skills/architecture/database/SKILL.md) - Schema design, migrations (5K)
 - [#04 Security](.github/skills/architecture/security/SKILL.md) - Secrets management, access control (5K)
 
-**Context Routing**: Fabric data work → Load Skills #38 (always) + #39 or #40 (by scope) + #06, #04 (as needed)
+**Context Routing**: Fabric data work -> Load Skills #38 (always) + #39 or #40 (by scope) + #06, #04 (as needed)
 
 ---
 
@@ -183,7 +183,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#04 Security](.github/skills/architecture/security/SKILL.md) - Input validation, secrets management (6K)
 - [#02 Testing](.github/skills/development/testing/SKILL.md) - Tool testing, integration tests (4K)
 
-**Context Routing**: MCP server work → Load Skills #32, #04, #02
+**Context Routing**: MCP server work -> Load Skills #32, #04, #02
 
 ---
 
@@ -196,7 +196,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#04 Security](.github/skills/architecture/security/SKILL.md) - Non-root users, secrets, image scanning (6K)
 - [#28 Release Management](.github/skills/operations/release-management/SKILL.md) - Deployment strategies, rollback (6K)
 
-**Context Routing**: Docker/K8s work → Load Skills #33, #04, #28
+**Context Routing**: Docker/K8s work -> Load Skills #33, #04, #28
 
 ---
 
@@ -209,7 +209,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#06 Database](.github/skills/architecture/database/SKILL.md) - SQL queries, optimization (5K)
 - [#02 Testing](.github/skills/development/testing/SKILL.md) - Data validation tests (2K)
 
-**Context Routing**: Data work → Load Skills #34, #06, #02
+**Context Routing**: Data work -> Load Skills #34, #06, #02
 
 ---
 
@@ -222,7 +222,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 - [#21 Frontend/UI Development](.github/skills/development/frontend-ui/SKILL.md) - HTML5, CSS3, responsive patterns (3K)
 - [#22 React Framework](.github/skills/development/react/SKILL.md) - Component patterns (2K)
 
-**Context Routing**: UX/design work → Load Skills #29, #21, #22
+**Context Routing**: UX/design work -> Load Skills #29, #21, #22
 
 ---
 
@@ -321,12 +321,12 @@ Each skill follows the [agentskills.io](https://agentskills.io/specification) sp
 
 ```
 .github/skills/{category}/{skill-name}/
-├── SKILL.md               # Main document (< 500 lines, loaded on activation)
-├── scripts/               # Executable automation (optional)
-│   └── *.ps1              # PowerShell scripts for scanning, scaffolding, etc.
-├── references/            # Extended content (optional, loaded on demand)
-│   └── *.md               # Detailed examples, templates, patterns
-└── assets/                # Static resources (optional)
++-- SKILL.md # Main document (< 500 lines, loaded on activation)
++-- scripts/ # Executable automation (optional)
+| -- *.ps1 # PowerShell scripts for scanning, scaffolding, etc.
++-- references/ # Extended content (optional, loaded on demand)
+| -- *.md # Detailed examples, templates, patterns
+-- assets/ # Static resources (optional)
 ```
 
 **Token Budget**:
@@ -354,12 +354,12 @@ Each skill follows the [agentskills.io](https://agentskills.io/specification) sp
 ## Critical Production Rules
 
 ### Security (Always Enforce)
-- ✅ Validate/sanitize ALL inputs → [#04](.github/skills/architecture/security/SKILL.md)
-- ✅ Parameterize SQL queries (NEVER concatenate) → [#04](.github/skills/architecture/security/SKILL.md)
-- ✅ Store secrets in env vars/Key Vault (NEVER hardcode) → [#10](.github/skills/development/configuration/SKILL.md)
-- ✅ Implement authentication & authorization → [#04](.github/skills/architecture/security/SKILL.md)
-- ✅ Use HTTPS everywhere in production
-- ✅ Follow command allowlist (see `.github/security/allowed-commands.json`)
+- [PASS] Validate/sanitize ALL inputs -> [#04](.github/skills/architecture/security/SKILL.md)
+- [PASS] Parameterize SQL queries (NEVER concatenate) -> [#04](.github/skills/architecture/security/SKILL.md)
+- [PASS] Store secrets in env vars/Key Vault (NEVER hardcode) -> [#10](.github/skills/development/configuration/SKILL.md)
+- [PASS] Implement authentication & authorization -> [#04](.github/skills/architecture/security/SKILL.md)
+- [PASS] Use HTTPS everywhere in production
+- [PASS] Follow command allowlist (see `.github/security/allowed-commands.json`)
 
 #### Defense-in-Depth Security Model
 
@@ -384,24 +384,24 @@ AgentX implements a **4-layer security architecture** inspired by enterprise sec
 For complete details, see [docs/FEATURES.md](docs/FEATURES.md#session-persistence--auto-resume).
 
 ### Quality (Non-Negotiable)
-- ✅ 80%+ code coverage with tests → [#02](.github/skills/development/testing/SKILL.md)
-- ✅ Test pyramid: 70% unit, 20% integration, 10% e2e → [#02](.github/skills/development/testing/SKILL.md)
-- ✅ XML docs for all public APIs → [#11](.github/skills/development/documentation/SKILL.md)
-- ✅ No compiler warnings or linter errors
-- ✅ Code reviews before merge
+- [PASS] 80%+ code coverage with tests -> [#02](.github/skills/development/testing/SKILL.md)
+- [PASS] Test pyramid: 70% unit, 20% integration, 10% e2e -> [#02](.github/skills/development/testing/SKILL.md)
+- [PASS] XML docs for all public APIs -> [#11](.github/skills/development/documentation/SKILL.md)
+- [PASS] No compiler warnings or linter errors
+- [PASS] Code reviews before merge
 
 ### Operations (Production-Ready)
-- ✅ Structured logging with correlation IDs → [#15](.github/skills/development/logging-monitoring/SKILL.md)
-- ✅ Health checks (liveness + readiness) → [↓](#health-checks)
-- ✅ Graceful shutdown handling → [↓](#graceful-shutdown)
-- ✅ CI/CD pipeline with automated tests → [#16](.github/skills/operations/remote-git-operations/SKILL.md)
-- ✅ Rollback strategy documented
+- [PASS] Structured logging with correlation IDs -> [#15](.github/skills/development/logging-monitoring/SKILL.md)
+- [PASS] Health checks (liveness + readiness) -> [(down)](#health-checks)
+- [PASS] Graceful shutdown handling -> [(down)](#graceful-shutdown)
+- [PASS] CI/CD pipeline with automated tests -> [#16](.github/skills/operations/remote-git-operations/SKILL.md)
+- [PASS] Rollback strategy documented
 
 ### AI Agents (When Building AI Systems)
-- ✅ Use Microsoft Foundry for production → [#17](.github/skills/ai-systems/ai-agent-development/SKILL.md)
-- ✅ Enable OpenTelemetry tracing → [#17](.github/skills/ai-systems/ai-agent-development/SKILL.md)
-- ✅ Evaluate with test datasets before deployment → [#17](.github/skills/ai-systems/ai-agent-development/SKILL.md)
-- ✅ Monitor token usage and costs
+- [PASS] Use Microsoft Foundry for production -> [#17](.github/skills/ai-systems/ai-agent-development/SKILL.md)
+- [PASS] Enable OpenTelemetry tracing -> [#17](.github/skills/ai-systems/ai-agent-development/SKILL.md)
+- [PASS] Evaluate with test datasets before deployment -> [#17](.github/skills/ai-systems/ai-agent-development/SKILL.md)
+- [PASS] Monitor token usage and costs
 
 ---
 
@@ -410,8 +410,8 @@ For complete details, see [docs/FEATURES.md](docs/FEATURES.md#session-persistenc
 ```csharp
 // ASP.NET Core - Minimal Implementation
 builder.Services.AddHealthChecks()
-    .AddNpgSql(connectionString, name: "database")
-    .AddRedis(redisConnection, name: "cache");
+ .AddNpgSql(connectionString, name: "database")
+ .AddRedis(redisConnection, name: "cache");
 
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new() { Predicate = c => c.Tags.Contains("ready") });
@@ -434,7 +434,7 @@ builder.Host.ConfigureHostOptions(opts => opts.ShutdownTimeout = TimeSpan.FromSe
 |----------|-------------|
 | **Rolling** | Zero-downtime updates, gradual rollout |
 | **Blue-Green** | Instant rollback needed, identical environments |
-| **Canary** | Risk mitigation, gradual traffic shift (5% → 100%) |
+| **Canary** | Risk mitigation, gradual traffic shift (5% -> 100%) |
 
 ---
 
@@ -442,7 +442,7 @@ builder.Host.ConfigureHostOptions(opts => opts.ShutdownTimeout = TimeSpan.FromSe
 
 **Code Quality**
 - [ ] All tests passing (unit, integration, e2e)
-- [ ] Code coverage ≥ 80%
+- [ ] Code coverage 80%
 - [ ] No compiler warnings or linter errors
 - [ ] Security scan passed
 - [ ] Dependencies updated and audited
@@ -469,14 +469,14 @@ builder.Host.ConfigureHostOptions(opts => opts.ShutdownTimeout = TimeSpan.FromSe
 
 ## Resources
 
-**Docs**: [.NET](https://learn.microsoft.com/dotnet) • [ASP.NET Core](https://learn.microsoft.com/aspnet/core) • [PostgreSQL](https://www.postgresql.org/docs/)  
-**Security**: [OWASP Top 10](https://owasp.org/www-project-top-ten/) • [OWASP Cheat Sheets](https://cheatsheetseries.owasp.org)  
-**Testing**: [xUnit](https://xunit.net) • [NUnit](https://nunit.org) • [Moq](https://github.com/moq)  
-**AI**: [Agent Framework](https://github.com/microsoft/agent-framework) • [Microsoft Foundry](https://ai.azure.com)
+**Docs**: [.NET](https://learn.microsoft.com/dotnet) - [ASP.NET Core](https://learn.microsoft.com/aspnet/core) - [PostgreSQL](https://www.postgresql.org/docs/) 
+**Security**: [OWASP Top 10](https://owasp.org/www-project-top-ten/) - [OWASP Cheat Sheets](https://cheatsheetseries.owasp.org) 
+**Testing**: [xUnit](https://xunit.net) - [NUnit](https://nunit.org) - [Moq](https://github.com/moq) 
+**AI**: [Agent Framework](https://github.com/microsoft/agent-framework) - [Microsoft Foundry](https://ai.azure.com)
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) • [github/awesome-copilot](https://github.com/github/awesome-copilot)
+**See Also**: [AGENTS.md](AGENTS.md) - [github/awesome-copilot](https://github.com/github/awesome-copilot)
 
 **Skills Specification**: [agentskills.io/specification](https://agentskills.io/specification)
 

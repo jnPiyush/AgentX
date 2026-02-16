@@ -2,13 +2,13 @@
 name: "azure"
 description: 'Build scalable, secure, and reliable applications on Microsoft Azure cloud services. Use when deploying to Azure, configuring Azure compute/storage/database services, setting up Azure networking, implementing Azure security, or managing Azure costs and monitoring.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2026-02-11"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2026-02-11"
 compatibility:
-  providers: ["azure"]
-  platforms: ["windows", "linux"]
+ providers: ["azure"]
+ platforms: ["windows", "linux"]
 ---
 
 # Azure Cloud Development
@@ -53,9 +53,9 @@ compatibility:
 
 ```
 Management Group
-└── Subscription
-    └── Resource Group
-        └── Resources (VMs, Storage, etc.)
+-- Subscription
+ -- Resource Group
+ -- Resources (VMs, Storage, etc.)
 ```
 
 ### Naming Conventions
@@ -92,11 +92,11 @@ az group create --name rg-myapp-prod --location eastus --tags Environment=Produc
 ```bash
 # Create OpenAI Resource
 az cognitiveservices account create \
-  --name "ai-agentx-dev" \
-  --resource-group "rg-agentx-dev-eastus-001" \
-  --location "eastus2" \
-  --kind "OpenAI" \
-  --sku "S0"
+ --name "ai-agentx-dev" \
+ --resource-group "rg-agentx-dev-eastus-001" \
+ --location "eastus2" \
+ --kind "OpenAI" \
+ --sku "S0"
 ```
 
 ### Azure AI Search
@@ -113,7 +113,7 @@ az cognitiveservices account create \
 
 ## Best Practices
 
-### ✅ DO
+### [PASS] DO
 
 - Use Managed Identity instead of connection strings
 - Enable Azure Defender for security
@@ -124,7 +124,7 @@ az cognitiveservices account create \
 - Use Private Endpoints for PaaS services
 - Implement proper backup and DR strategy
 
-### ❌ DON'T
+### [FAIL] DON'T
 
 - Store secrets in code or config files
 - Use overly permissive network rules
@@ -146,7 +146,6 @@ az cognitiveservices account create \
 
 **Version**: 1.1
 **Last Updated**: February 11, 2026
-
 
 ## Troubleshooting
 

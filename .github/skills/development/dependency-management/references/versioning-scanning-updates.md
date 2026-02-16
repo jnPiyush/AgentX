@@ -8,40 +8,40 @@
 Common Patterns:
 
 Exact Version:
-  package == 1.2.3        # Only this version
+ package == 1.2.3 # Only this version
 
 Minimum Version:
-  package >= 1.2.0        # 1.2.0 or higher
+ package >= 1.2.0 # 1.2.0 or higher
 
 Compatible Version (SemVer):
-  package ^1.2.3          # >=1.2.3 <2.0.0 (same major)
-  package ~1.2.3          # >=1.2.3 <1.3.0 (same minor)
+ package ^1.2.3 # >=1.2.3 <2.0.0 (same major)
+ package ~1.2.3 # >=1.2.3 <1.3.0 (same minor)
 
 Version Range:
-  package >=1.2.0,<2.0.0  # Between versions
+ package >=1.2.0,<2.0.0 # Between versions
 
 Wildcard:
-  package 1.2.*           # Any patch version
-  package *               # Any version (dangerous!)
+ package 1.2.* # Any patch version
+ package * # Any version (dangerous!)
 ```
 
 ### Pinning Strategy by Environment
 
 ```
 Development:
-  - Use ranges for flexibility
-  - Allows testing with newer versions
-  - Example: ^1.2.0
+ - Use ranges for flexibility
+ - Allows testing with newer versions
+ - Example: ^1.2.0
 
 Production:
-  - Pin exact versions
-  - Reproducible builds
-  - Example: ==1.2.3 or lock file
+ - Pin exact versions
+ - Reproducible builds
+ - Example: ==1.2.3 or lock file
 
 Critical Dependencies:
-  - Always pin exact version
-  - Security-sensitive packages
-  - Packages with breaking changes history
+ - Always pin exact version
+ - Security-sensitive packages
+ - Packages with breaking changes history
 ```
 
 ---
@@ -52,32 +52,32 @@ Critical Dependencies:
 
 ```
 Without Lock File:
-  Developer A: installs package@1.2.3
-  Developer B: installs package@1.2.5
-  CI Server:   installs package@1.2.6
-  → Different behavior, "works on my machine"
+ Developer A: installs package@1.2.3
+ Developer B: installs package@1.2.5
+ CI Server: installs package@1.2.6
+ -> Different behavior, "works on my machine"
 
 With Lock File:
-  Developer A: installs package@1.2.3
-  Developer B: installs package@1.2.3 (from lock)
-  CI Server:   installs package@1.2.3 (from lock)
-  → Identical environments
+ Developer A: installs package@1.2.3
+ Developer B: installs package@1.2.3 (from lock)
+ CI Server: installs package@1.2.3 (from lock)
+ -> Identical environments
 ```
 
 ### Lock File Best Practices
 
 ```
-✅ DO:
-  - Commit lock files to version control
-  - Use lock file in CI/CD (--frozen, --locked flags)
-  - Regenerate lock file when updating dependencies
-  - Review lock file changes in PRs
+[PASS] DO:
+ - Commit lock files to version control
+ - Use lock file in CI/CD (--frozen, --locked flags)
+ - Regenerate lock file when updating dependencies
+ - Review lock file changes in PRs
 
-❌ DON'T:
-  - Delete lock files to "fix" issues
-  - Ignore lock file in .gitignore
-  - Manually edit lock files
-  - Skip lock file in production deployments
+[FAIL] DON'T:
+ - Delete lock files to "fix" issues
+ - Ignore lock file in .gitignore
+ - Manually edit lock files
+ - Skip lock file in production deployments
 ```
 
 ---
@@ -89,17 +89,17 @@ With Lock File:
 ```
 Scan Pipeline:
 
-  1. Parse dependencies (manifest + lock file)
-  2. Query vulnerability databases
-  3. Match against known CVEs
-  4. Report severity and fix versions
-  5. Fail build if critical vulnerabilities found
+ 1. Parse dependencies (manifest + lock file)
+ 2. Query vulnerability databases
+ 3. Match against known CVEs
+ 4. Report severity and fix versions
+ 5. Fail build if critical vulnerabilities found
 
 Vulnerability Databases:
-  - National Vulnerability Database (NVD)
-  - GitHub Advisory Database
-  - Snyk Vulnerability Database
-  - OSV (Open Source Vulnerabilities)
+ - National Vulnerability Database (NVD)
+ - GitHub Advisory Database
+ - Snyk Vulnerability Database
+ - OSV (Open Source Vulnerabilities)
 ```
 
 ### Severity Levels
@@ -116,17 +116,17 @@ Vulnerability Databases:
 ```
 CI/CD Integration:
 
-  workflow:
-    steps:
-      - install_dependencies
-      - run_vulnerability_scan
-      - fail_if_critical_vulnerabilities
-      - continue_if_only_low_medium
+ workflow:
+ steps:
+ - install_dependencies
+ - run_vulnerability_scan
+ - fail_if_critical_vulnerabilities
+ - continue_if_only_low_medium
 
 Scheduled Scanning:
-  - Run daily scans on main branch
-  - Alert on new vulnerabilities
-  - Even if no code changes
+ - Run daily scans on main branch
+ - Alert on new vulnerabilities
+ - Even if no code changes
 ```
 
 ---
@@ -137,45 +137,45 @@ Scheduled Scanning:
 
 ```
 Patch Updates (1.2.x):
-  - Bug fixes
-  - Security patches
-  - Low risk
-  - Update frequently
+ - Bug fixes
+ - Security patches
+ - Low risk
+ - Update frequently
 
 Minor Updates (1.x.0):
-  - New features
-  - Backward compatible
-  - Medium risk
-  - Update with testing
+ - New features
+ - Backward compatible
+ - Medium risk
+ - Update with testing
 
 Major Updates (x.0.0):
-  - Breaking changes
-  - API changes
-  - High risk
-  - Update with careful planning
+ - Breaking changes
+ - API changes
+ - High risk
+ - Update with careful planning
 ```
 
 ### Update Workflow
 
 ```
 1. Check for Updates
-   - List outdated packages
-   - Review changelogs
+ - List outdated packages
+ - Review changelogs
 
 2. Update in Development
-   - Update one package at a time
-   - Run tests
-   - Check for deprecation warnings
+ - Update one package at a time
+ - Run tests
+ - Check for deprecation warnings
 
 3. Review and Test
-   - Code review the dependency changes
-   - Run full test suite
-   - Manual testing for critical paths
+ - Code review the dependency changes
+ - Run full test suite
+ - Manual testing for critical paths
 
 4. Deploy Gradually
-   - Deploy to staging first
-   - Monitor for issues
-   - Deploy to production
+ - Deploy to staging first
+ - Monitor for issues
+ - Deploy to production
 ```
 
 ### Automated Updates
@@ -183,12 +183,12 @@ Major Updates (x.0.0):
 ```
 Dependabot / Renovate Configuration:
 
-  - Auto-create PRs for updates
-  - Separate PRs per package (easier review)
-  - Group related packages (monorepo deps)
-  - Schedule updates (weekly, not per-commit)
-  - Auto-merge patch updates (if tests pass)
-  - Require manual merge for major updates
+ - Auto-create PRs for updates
+ - Separate PRs per package (easier review)
+ - Group related packages (monorepo deps)
+ - Schedule updates (weekly, not per-commit)
+ - Auto-merge patch updates (if tests pass)
+ - Require manual merge for major updates
 ```
 
 ---

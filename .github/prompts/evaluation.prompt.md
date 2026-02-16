@@ -35,7 +35,7 @@ Choose from built-in evaluators based on your scenario:
 |-----------|----------|
 | `RelevanceEvaluator` | Checking if response addresses the query |
 | `CoherenceEvaluator` | Checking response readability and flow |
-| `GroundednessEvaluator` | RAG — checking if response is grounded in context |
+| `GroundednessEvaluator` | RAG - checking if response is grounded in context |
 | `SimilarityEvaluator` | Comparing response to ground truth |
 | `FluencyEvaluator` | Checking language quality |
 
@@ -49,25 +49,25 @@ import asyncio
 from azure.ai.evaluation import evaluate, RelevanceEvaluator, CoherenceEvaluator
 
 results = evaluate(
-    data="tests/eval/dataset.jsonl",
-    evaluators={
-        "relevance": RelevanceEvaluator(model_config),
-        "coherence": CoherenceEvaluator(model_config),
-    },
-    evaluator_config={
-        "default": {
-            "query": "${data.query}",
-            "response": "${target.response}",
-        }
-    },
+ data="tests/eval/dataset.jsonl",
+ evaluators={
+ "relevance": RelevanceEvaluator(model_config),
+ "coherence": CoherenceEvaluator(model_config),
+ },
+ evaluator_config={
+ "default": {
+ "query": "${data.query}",
+ "response": "${target.response}",
+ }
+ },
 )
 ```
 
 ### 4. Define Pass Criteria
 
 Set minimum thresholds:
-- Relevance ≥ 4.0 / 5.0
-- Coherence ≥ 4.0 / 5.0
+- Relevance 4.0 / 5.0
+- Coherence 4.0 / 5.0
 - Custom metrics: define per project
 
 ### 5. Integrate with CI (Optional)
@@ -81,16 +81,16 @@ Add evaluation to the test pipeline so regressions are caught automatically.
 
 **Dataset**: [N] queries at `tests/eval/dataset.jsonl`
 **Evaluators**: [list]
-**Pass thresholds**: [metric ≥ value, ...]
+**Pass thresholds**: [metric value, ...]
 
 ### Files Created
-- `tests/eval/dataset.jsonl` — Test dataset
-- `tests/eval/run_eval.py` — Evaluation runner
-- `tests/eval/evaluators/` — Custom evaluators (if any)
+- `tests/eval/dataset.jsonl` - Test dataset
+- `tests/eval/run_eval.py` - Evaluation runner
+- `tests/eval/evaluators/` - Custom evaluators (if any)
 
 ### Baseline Results
 | Metric | Score | Threshold | Status |
 |--------|-------|-----------|--------|
-| Relevance | X.X | ≥ 4.0 | ✅/❌ |
-| Coherence | X.X | ≥ 4.0 | ✅/❌ |
+| Relevance | X.X | 4.0 | [PASS]/[FAIL] |
+| Coherence | X.X | 4.0 | [PASS]/[FAIL] |
 ```

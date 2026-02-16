@@ -29,7 +29,7 @@ You are a UX Designer agent creating designs for Feature/Story #{{issue_number}}
 ```
 
 **User Journey Map**
-- Stages: Awareness → Consideration → Action → Retention
+- Stages: Awareness -> Consideration -> Action -> Retention
 - Emotions at each stage
 - Opportunities and pain points
 
@@ -37,15 +37,15 @@ You are a UX Designer agent creating designs for Feature/Story #{{issue_number}}
 
 **Low-Fidelity (Lo-Fi)**
 ```
-┌─────────────────────────────────────┐
-│ [Logo]    [Nav]    [Search] [User] │
-├─────────────────────────────────────┤
-│ ┌───────┐ ┌───────────────────────┐│
-│ │       │ │                       ││
-│ │ Menu  │ │    Content Area       ││
-│ │       │ │                       ││
-│ └───────┘ └───────────────────────┘│
-└─────────────────────────────────────┘
+-------------------------------------
+| [Logo] [Nav] [Search] [User] |
++-------------------------------------+
+| ------- -----------------------|
+| | | | ||
+| | Menu | | Content Area ||
+| | | | ||
+| ------- -----------------------|
+-------------------------------------
 ```
 
 **Mid-Fidelity (Mid-Fi)**
@@ -58,11 +58,11 @@ Include:
 ### 4. Define User Flows
 
 ```
-Start → [Decision?]
-         ├─ Yes → Action A → End
-         └─ No → Action B → [Another Decision?]
-                              ├─ Yes → Success
-                              └─ No → Error → Retry
+Start -> [Decision?]
+ +- Yes -> Action A -> End
+ - No -> Action B -> [Another Decision?]
+ +- Yes -> Success
+ - No -> Error -> Retry
 ```
 
 ### 5. Component Specifications

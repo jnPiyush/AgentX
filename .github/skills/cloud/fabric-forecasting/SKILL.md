@@ -1,25 +1,25 @@
 ---
 name: "fabric-forecasting"
-description: 'Build time-series forecasting pipelines on Microsoft Fabric — data preparation, profiling, clustering, feature engineering, and model training. Use when implementing demand forecasting, training LightGBM/Prophet models, engineering time-series features, or deploying prediction pipelines on Fabric.'
+description: 'Build time-series forecasting pipelines on Microsoft Fabric - data preparation, profiling, clustering, feature engineering, and model training. Use when implementing demand forecasting, training LightGBM/Prophet models, engineering time-series features, or deploying prediction pipelines on Fabric.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-07-13"
-  updated: "2025-07-13"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-07-13"
+ updated: "2025-07-13"
 compatibility:
-  languages: ["python", "pyspark", "sql"]
-  frameworks: ["microsoft-fabric", "apache-spark", "lightgbm", "prophet", "optuna"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["python", "pyspark", "sql"]
+ frameworks: ["microsoft-fabric", "apache-spark", "lightgbm", "prophet", "optuna"]
+ platforms: ["windows", "linux", "macos"]
 prerequisites:
-  - "Microsoft Fabric workspace with active capacity"
-  - "Fabric MCP Server (ms-fabric-mcp-server)"
-  - "Lakehouse with historical time-series data (12+ months recommended)"
-  - "Python libraries: lightgbm, prophet, optuna, scikit-learn, plotly"
+ - "Microsoft Fabric workspace with active capacity"
+ - "Fabric MCP Server (ms-fabric-mcp-server)"
+ - "Lakehouse with historical time-series data (12+ months recommended)"
+ - "Python libraries: lightgbm, prophet, optuna, scikit-learn, plotly"
 ---
 
 # Fabric Forecasting
 
-> Time-series forecasting pipelines on Fabric — from raw data to trained models with profiling, clustering, and feature engineering.
+> Time-series forecasting pipelines on Fabric - from raw data to trained models with profiling, clustering, and feature engineering.
 
 ## When to Use
 
@@ -33,22 +33,22 @@ prerequisites:
 
 ```
 Need time-series forecasting on Fabric?
-├─ Have historical data in Lakehouse?
-│   ├─ Yes → Start at Phase 1 (Intake & Discovery)
-│   └─ No → Use fabric-analytics skill to ingest data first
-├─ Know the forecasting scenario?
-│   ├─ Clear requirements → Start at Phase 2 (Scenario Interpretation)
-│   └─ Need discovery → Start at Phase 1
-├─ Have a customization plan?
-│   └─ Yes → Start at Phase 4 (Notebook Generation)
-├─ Which model?
-│   ├─ Many series + external features → LightGBM ✅
-│   ├─ Few series + strong seasonality → Prophet ✅
-│   ├─ Intermittent demand → Specialized methods (Croston, SBA)
-│   └─ Unsure → Profile data first (Phase 1-2), then decide
-└─ Not forecasting?
-    ├─ Ad-hoc analytics → Use fabric-analytics skill
-    └─ Chat-based Q&A → Use fabric-data-agent skill
++- Have historical data in Lakehouse?
+| +- Yes -> Start at Phase 1 (Intake & Discovery)
+| - No -> Use fabric-analytics skill to ingest data first
++- Know the forecasting scenario?
+| +- Clear requirements -> Start at Phase 2 (Scenario Interpretation)
+| - Need discovery -> Start at Phase 1
++- Have a customization plan?
+| - Yes -> Start at Phase 4 (Notebook Generation)
++- Which model?
+| +- Many series + external features -> LightGBM [PASS]
+| +- Few series + strong seasonality -> Prophet [PASS]
+| +- Intermittent demand -> Specialized methods (Croston, SBA)
+| - Unsure -> Profile data first (Phase 1-2), then decide
+- Not forecasting?
+ +- Ad-hoc analytics -> Use fabric-analytics skill
+ - Chat-based Q&A -> Use fabric-data-agent skill
 ```
 
 ## Pipeline Overview
@@ -56,11 +56,11 @@ Need time-series forecasting on Fabric?
 The forecasting pipeline follows a **5-phase workflow** organized as a notebook pipeline:
 
 ```
-Phase 1: Intake ─→ Phase 2: Interpret ─→ Phase 3: Plan ─→ Phase 4: Notebooks ─→ Phase 5: Finalize
-                                                              │
-                                                    ┌────────┼────────┐────────┐────────┐
-                                                   NB01    NB02    NB03    NB04    NB05
-                                                   Prep   Profile Cluster Feature  Train
+Phase 1: Intake --> Phase 2: Interpret --> Phase 3: Plan --> Phase 4: Notebooks --> Phase 5: Finalize
+ |
+ --------+------------------------
+ NB01 NB02 NB03 NB04 NB05
+ Prep Profile Cluster Feature Train
 ```
 
 ### Phase 1: Intake & Data Discovery
@@ -138,26 +138,26 @@ Five notebooks form the pipeline, each building on the previous output:
 
 Profiling classifies each series to guide model selection:
 
-| Type | CV² | ADI | Characteristics | Model Approach |
+| Type | CV | ADI | Characteristics | Model Approach |
 |------|-----|-----|-----------------|----------------|
 | **Regular** | Low | Low | Smooth demand, consistent | LightGBM, Prophet |
 | **Erratic** | High | Low | Volatile but frequent | LightGBM with more features |
 | **Lumpy** | High | High | Sporadic and variable | Croston, SBA |
 | **Intermittent** | Low | High | Infrequent but stable | Croston, TSB |
 
-- **CV²** = Coefficient of Variation squared (demand variability)
+- **CV** = Coefficient of Variation squared (demand variability)
 - **ADI** = Average Demand Interval (frequency of non-zero demand)
 
 ### Feature Engineering Patterns
 
 | Feature Type | Examples | When to Use |
 |-------------|---------|-------------|
-| **Lags** | `lag_7`, `lag_14`, `lag_28` | Always — capture autocorrelation |
-| **Rolling stats** | `rolling_mean_7`, `rolling_std_14` | Always — smooth noise |
+| **Lags** | `lag_7`, `lag_14`, `lag_28` | Always - capture autocorrelation |
+| **Rolling stats** | `rolling_mean_7`, `rolling_std_14` | Always - smooth noise |
 | **Calendar** | `day_of_week`, `month`, `is_weekend` | When weekly/monthly seasonality |
 | **Holiday** | `is_holiday`, `days_to_holiday` | Retail, service industries |
 | **External** | `temperature`, `promo_flag` | When external data available |
-| **Interaction** | `product_category × month` | When patterns differ by group |
+| **Interaction** | `product_category month` | When patterns differ by group |
 
 ### Model Selection Guide
 
@@ -202,10 +202,10 @@ row_count = output_df.count()
 null_count = output_df.filter(F.col(target_col).isNull()).count()
 date_range = output_df.agg(F.min(date_col), F.max(date_col)).collect()[0]
 
-print(f"✅ Output table: {scenario}_prepared")
-print(f"   Rows: {row_count:,}")
-print(f"   Nulls in target: {null_count}")
-print(f"   Date range: {date_range[0]} to {date_range[1]}")
+print(f"[PASS] Output table: {scenario}_prepared")
+print(f" Rows: {row_count:,}")
+print(f" Nulls in target: {null_count}")
+print(f" Date range: {date_range[0]} to {date_range[1]}")
 ```
 
 ## Livy Session Management
@@ -225,16 +225,16 @@ Same rules as `fabric-analytics` and `fabric-data-agent`:
 ### Retry Protocol
 
 ```
-Attempt 1 → Execute via Livy
-  ↓ (on failure)
-Attempt 2 → Diagnose error, apply fix, retry
-  ↓ (on failure)
-Attempt 3 → Try alternative approach
-  ↓ (on failure)
+Attempt 1 -> Execute via Livy
+ (down) (on failure)
+Attempt 2 -> Diagnose error, apply fix, retry
+ (down) (on failure)
+Attempt 3 -> Try alternative approach
+ (down) (on failure)
 Escalate to user with error details + options:
-  A) Suggested fix
-  B) Skip this cell and continue
-  C) User provides guidance
+ A) Suggested fix
+ B) Skip this cell and continue
+ C) User provides guidance
 ```
 
 ### Common Errors
@@ -243,7 +243,7 @@ Escalate to user with error details + options:
 |-------|-------|---------|
 | Not enough data | < 2 full seasons of history | Reduce forecast horizon or aggregate to coarser grain |
 | Too many nulls | Missing dates in time series | Fill gaps in NB01 (forward fill or interpolation) |
-| Memory error | Too many series × features | Reduce feature set or process in batches |
+| Memory error | Too many series features | Reduce feature set or process in batches |
 | Optuna timeout | Hyperparameter search too long | Reduce `n_trials` or use early stopping |
 | Cluster imbalance | One cluster gets 90% of series | Adjust `n_clusters` or try different algorithm |
 
@@ -251,23 +251,23 @@ Escalate to user with error details + options:
 
 ```
 run/{scenario_name}_{YYYYMMDD}/
-├── Fabric 01 DataPreparation.ipynb
-├── Fabric 02 ProfilingIntermittent.ipynb
-├── Fabric 03 Clustering.ipynb
-├── Fabric 04 FeatureEngineering.ipynb
-├── Fabric 05 TrainTestSelectTune.ipynb
-├── completion_report.md
-└── requirements.txt (if new dependencies)
++-- Fabric 01 DataPreparation.ipynb
++-- Fabric 02 ProfilingIntermittent.ipynb
++-- Fabric 03 Clustering.ipynb
++-- Fabric 04 FeatureEngineering.ipynb
++-- Fabric 05 TrainTestSelectTune.ipynb
++-- completion_report.md
+-- requirements.txt (if new dependencies)
 ```
 
 ## Anti-Patterns
 
-- **Skip profiling**: Treating all series identically → wrong model for intermittent data
-- **Too many lags**: 100+ lag features → overfitting, slow training
-- **No train/test split**: Evaluating on training data → inflated accuracy
-- **Ignore data quality**: Missing dates, duplicates → biased forecasts
-- **Fixed parameters**: Using defaults without tuning → suboptimal accuracy
-- **No validation checkpoints**: Running all notebooks blindly → catching errors too late
+- **Skip profiling**: Treating all series identically -> wrong model for intermittent data
+- **Too many lags**: 100+ lag features -> overfitting, slow training
+- **No train/test split**: Evaluating on training data -> inflated accuracy
+- **Ignore data quality**: Missing dates, duplicates -> biased forecasts
+- **Fixed parameters**: Using defaults without tuning -> suboptimal accuracy
+- **No validation checkpoints**: Running all notebooks blindly -> catching errors too late
 
 ## Boundaries
 

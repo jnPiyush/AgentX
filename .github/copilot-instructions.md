@@ -4,7 +4,7 @@ description: 'Global instructions for GitHub Copilot across the entire repositor
 
 # Global Copilot Instructions
 
-This file is the **thin router** — it tells you what to load and when. It loads every conversation, so it stays small.
+This file is the **thin router** - it tells you what to load and when. It loads every conversation, so it stays small.
 
 ---
 
@@ -17,7 +17,7 @@ This file is the **thin router** — it tells you what to load and when. It load
 | Writing/editing code in existing files | [AGENTS.md](../AGENTS.md) + Language instruction (auto via `applyTo`) + relevant skills | Skills not matching task |
 | Creating new files, features, issues | [AGENTS.md](../AGENTS.md) (workflow + classification) | Skills not matching task |
 | Multi-agent coordination, handoffs | [AGENTS.md](../AGENTS.md) (full) | Unrelated skills |
-| Answering questions, research | Nothing extra — use tools | AGENTS.md, Skills.md |
+| Answering questions, research | Nothing extra - use tools | AGENTS.md, Skills.md |
 | Debugging | Language instruction + error handling skill | AGENTS.md |
 
 **Token budget**: Load max **3-4 skills** per task (~20K tokens). Use [Skills.md Quick Reference](../Skills.md#-quick-reference-by-task-type) to pick the right ones.
@@ -26,7 +26,7 @@ This file is the **thin router** — it tells you what to load and when. It load
 
 ## When to Read AGENTS.md
 
-Read [AGENTS.md](../AGENTS.md) for **any coding or workflow task** — it contains classification, commit format, agent roles, and security checklist.
+Read [AGENTS.md](../AGENTS.md) for **any coding or workflow task** - it contains classification, commit format, agent roles, and security checklist.
 
 > **Skip AGENTS.md** for: answering questions, research, and debugging only.
 
@@ -36,14 +36,14 @@ Read [AGENTS.md](../AGENTS.md) for **any coding or workflow task** — it contai
 
 When AGENTS.md applies (see above), follow the issue-first workflow:
 1. Create issue **before** starting work (no retroactive issues)
-2. Update status: `Backlog → In Progress → In Review → Done`
+2. Update status: `Backlog -> In Progress -> In Review -> Done`
 3. Reference issue in commits: `type: description (#ID)`
 
 ---
 
 ## Instruction Files (Auto-Loaded)
 
-These load automatically when editing matching files — no manual action needed:
+These load automatically when editing matching files - no manual action needed:
 
 | Instruction | Triggers on |
 |-------------|-------------|
@@ -64,9 +64,9 @@ These load automatically when editing matching files — no manual action needed
 
 ## Session State
 
-- `manage_todo_list` — Track tasks within current session
-- `get_changed_files` — Review uncommitted work before commits
-- `get_errors` — Check compilation state after changes
+- `manage_todo_list` - Track tasks within current session
+- `get_changed_files` - Review uncommitted work before commits
+- `get_errors` - Check compilation state after changes
 
 ---
 
@@ -77,9 +77,22 @@ These load automatically when editing matching files — no manual action needed
 - **Setup**: [docs/SETUP.md](../docs/SETUP.md)
 - **Frontmatter Validation**: `pwsh scripts/validate-frontmatter.ps1`
 
+## ASCII-Only Rule
+
+All source code, scripts, configuration files, and documentation in this repository **MUST** use ASCII characters only (U+0000-U+007F). This applies to all `.ps1`, `.sh`, `.py`, `.ts`, `.js`, `.yml`, `.yaml`, `.json`, and `.md` files.
+
+- **MUST NOT** use emoji, Unicode symbols, box-drawing characters, or any non-ASCII characters
+- **MUST** use ASCII equivalents: `[PASS]` not check marks, `[FAIL]` not cross marks, `[WARN]` not warning symbols, `->` not arrows, `+=-|` not box-drawing, `"` not smart quotes
+- **MUST** use plain ASCII dashes (`-`) instead of em-dashes or en-dashes
+- **MUST** use `[1]`, `[2]`, `[3]` instead of circled numbers
+
+This ensures cross-platform compatibility and prevents encoding issues in terminals, CI/CD pipelines, and editors.
+
+---
+
 ## Directive Language (RFC 2119)
 
 All instruction files use RFC 2119 keywords:
-- **MUST** / **MUST NOT** — Absolute requirement or prohibition
-- **SHOULD** / **SHOULD NOT** — Strong recommendation (exceptions need justification)
-- **MAY** — Truly optional, at developer discretion
+- **MUST** / **MUST NOT** - Absolute requirement or prohibition
+- **SHOULD** / **SHOULD NOT** - Strong recommendation (exceptions need justification)
+- **MAY** - Truly optional, at developer discretion

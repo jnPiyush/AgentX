@@ -6,19 +6,19 @@
 
 ```
 HTTP Response Headers:
-  X-RateLimit-Limit: 1000       # Total requests allowed
-  X-RateLimit-Remaining: 500    # Requests remaining
-  X-RateLimit-Reset: 1642531200 # Unix timestamp when limit resets
-  Retry-After: 3600             # Seconds until retry allowed (on 429)
+ X-RateLimit-Limit: 1000 # Total requests allowed
+ X-RateLimit-Remaining: 500 # Requests remaining
+ X-RateLimit-Reset: 1642531200 # Unix timestamp when limit resets
+ Retry-After: 3600 # Seconds until retry allowed (on 429)
 ```
 
 ### Rate Limit Strategy
 
 ```
 Rate Limiting Tiers:
-  Anonymous:    100 requests/hour
-  Authenticated: 1000 requests/hour
-  Premium:      10000 requests/hour
+ Anonymous: 100 requests/hour
+ Authenticated: 1000 requests/hour
+ Premium: 10000 requests/hour
 ```
 
 ---
@@ -31,7 +31,7 @@ Rate Limiting Tiers:
 Access-Control-Allow-Origin: https://example.com
 Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
 Access-Control-Allow-Headers: Content-Type, Authorization
-Access-Control-Max-Age: 86400  # Cache preflight for 24 hours
+Access-Control-Max-Age: 86400 # Cache preflight for 24 hours
 ```
 
 ### Preflight Request Handling
@@ -68,11 +68,11 @@ X-API-Key: abc123xyz789
 ```
 # Check permissions in request
 if not user.hasPermission("users:write"):
-    return 403 Forbidden
-    
+ return 403 Forbidden
+ 
 # Resource ownership check
 if resource.ownerId != currentUser.id and not currentUser.isAdmin():
-    return 403 Forbidden
+ return 403 Forbidden
 ```
 
 ---
@@ -94,10 +94,10 @@ Body: {"amount": 100, "currency": "USD"}
 
 ```
 Client retries on network failure:
-  1. Include Idempotency-Key in request
-  2. Server stores key + response
-  3. If key seen again, return stored response
-  4. Prevents duplicate operations
+ 1. Include Idempotency-Key in request
+ 2. Server stores key + response
+ 3. If key seen again, return stored response
+ 4. Prevents duplicate operations
 ```
 
 ---

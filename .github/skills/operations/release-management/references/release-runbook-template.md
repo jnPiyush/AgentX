@@ -81,7 +81,7 @@ curl https://staging.example.com/version
 
 ### 2. Notify Team
 - Post in #deployments: "Starting production deployment of v1.2.3"
-- Set Slack status: "🚀 Deploying"
+- Set Slack status: " Deploying"
 
 ## Deployment Steps
 
@@ -130,7 +130,7 @@ npm run test:smoke -- --env=production
 - Review user feedback
 
 ### 9. Update Status
-- Post in #deployments: "✅ Production deployment complete"
+- Post in #deployments: "[PASS] Production deployment complete"
 - Update status page
 - Clear Slack status
 
@@ -157,8 +157,8 @@ curl https://app.example.com/health
 
 ### Rollback Notification
 ```
-❌ Rollback Initiated
-Version: v1.2.3 → v1.2.2
+[FAIL] Rollback Initiated
+Version: v1.2.3 -> v1.2.2
 Reason: [High error rate | Performance issue | Critical bug]
 Status: [In Progress | Complete]
 ```

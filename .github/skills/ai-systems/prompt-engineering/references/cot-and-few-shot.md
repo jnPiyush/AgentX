@@ -79,6 +79,6 @@ Requirement: "{user_requirement}"
 | Output formatting | 2 examples |
 | Classification | 3+ examples (one per class) |
 | Code generation | 1-2 (show style) |
-| Data transformation | 2 examples (show input→output) |
+| Data transformation | 2 examples (show input->output) |
 
 ---

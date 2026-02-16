@@ -1,208 +1,208 @@
 name: Quality Gates
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  workflow_dispatch:
-    inputs:
-      issue_number:
-        description: 'Issue number to validate'
-        required: true
-        type: string
+ pull_request:
+ types: [opened, synchronize, reopened]
+ workflow_dispatch:
+ inputs:
+ issue_number:
+ description: 'Issue number to validate'
+ required: true
+ type: string
 
 permissions:
-  issues: write
-  contents: read
-  pull-requests: write
+ issues: write
+ contents: read
+ pull-requests: write
 
 jobs:
-  quality-checks:
-    name: Enforce Quality Gates
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      
-      - name: Setup Environment
-        run: |
-          echo "ISSUE_NUMBER=${{ github.event.pull_request.number || github.event.inputs.issue_number }}" >> $GITHUB_ENV
-      
-      - name: Check Secrets in Code
-        run: |
-          echo "🔍 Scanning for hardcoded secrets..."
-          if git diff HEAD~1..HEAD | grep -iE '(password|api[_-]?key|secret|token|private[_-]?key)\s*=\s*["\047]'; then
-            echo "❌ BLOCKED: Potential secrets detected in commit"
-            echo "Detected patterns:"
-            git diff HEAD~1..HEAD | grep -iE '(password|api[_-]?key|secret|token|private[_-]?key)\s*=\s*["\047]' || true
-            exit 1
-          fi
-          echo "✅ No secrets detected"
-      
-      - name: Validate Commit Messages
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "🔍 Validating commit messages..."
-          COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --pretty=format:"%s")
-          
-          # Check for issue reference
-          if ! echo "$COMMITS" | grep -qE '#[0-9]+'; then
-            echo "❌ BLOCKED: No issue reference (#123) found in commit messages"
-            echo "Commits must reference an issue number"
-            exit 1
-          fi
-          
-          # Check for conventional commit format
-          if ! echo "$COMMITS" | grep -qE '^(feat|fix|docs|test|refactor|perf|chore):'; then
-            echo "⚠️ WARNING: Commits should follow conventional commit format (feat:, fix:, etc.)"
-          fi
-          
-          echo "✅ Commit message validation passed"
-      
-      - name: Check Documentation
-        run: |
-          echo "🔍 Checking documentation..."
-          
-          # Check for C# XML docs
-          if find . -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" | head -1 | grep -q "."; then
-            UNDOCUMENTED=$(find . -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" -exec grep -l "public " {} \; | \
-                          xargs grep -L "///" | wc -l)
-            if [ "$UNDOCUMENTED" -gt 0 ]; then
-              echo "⚠️ WARNING: $UNDOCUMENTED C# files with public APIs missing XML docs"
-              echo "All public APIs should have XML documentation"
-            fi
-          fi
-          
-          # Check for README updates (if new feature)
-          if [ "${{ github.event.pull_request.title }}" ]; then
-            if echo "${{ github.event.pull_request.title }}" | grep -qi "feat:"; then
-              if ! git diff origin/${{ github.base_ref }}..HEAD --name-only | grep -q "README.md"; then
-                echo "ℹ️ INFO: New feature added. Consider updating README.md"
-              fi
-            fi
-          fi
-          
-          echo "✅ Documentation check complete"
-      
-      - name: Validate File Structure
-        run: |
-          echo "🔍 Validating file structure..."
-          
-          # Check for proper docs structure
-          if [ -d "docs" ]; then
-            for dir in prd adr specs reviews ux; do
-              if [ ! -d "docs/$dir" ]; then
-                echo "⚠️ WARNING: docs/$dir/ directory not found"
-              fi
-            done
-          fi
-          
-          echo "✅ File structure validation complete"
-      
-      - name: Agent Deliverable Validation
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "🔍 Validating agent deliverables..."
+ quality-checks:
+ name: Enforce Quality Gates
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v6
+ with:
+ fetch-depth: 0
+ 
+ - name: Setup Environment
+ run: |
+ echo "ISSUE_NUMBER=${{ github.event.pull_request.number || github.event.inputs.issue_number }}" >> $GITHUB_ENV
+ 
+ - name: Check Secrets in Code
+ run: |
+ echo " Scanning for hardcoded secrets..."
+ if git diff HEAD~1..HEAD | grep -iE '(password|api[_-]?key|secret|token|private[_-]?key)\s*=\s*["\047]'; then
+ echo "[FAIL] BLOCKED: Potential secrets detected in commit"
+ echo "Detected patterns:"
+ git diff HEAD~1..HEAD | grep -iE '(password|api[_-]?key|secret|token|private[_-]?key)\s*=\s*["\047]' || true
+ exit 1
+ fi
+ echo "[PASS] No secrets detected"
+ 
+ - name: Validate Commit Messages
+ if: github.event_name == 'pull_request'
+ run: |
+ echo " Validating commit messages..."
+ COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --pretty=format:"%s")
+ 
+ # Check for issue reference
+ if ! echo "$COMMITS" | grep -qE '#[0-9]+'; then
+ echo "[FAIL] BLOCKED: No issue reference (#123) found in commit messages"
+ echo "Commits must reference an issue number"
+ exit 1
+ fi
+ 
+ # Check for conventional commit format
+ if ! echo "$COMMITS" | grep -qE '^(feat|fix|docs|test|refactor|perf|chore):'; then
+ echo "[WARN] WARNING: Commits should follow conventional commit format (feat:, fix:, etc.)"
+ fi
+ 
+ echo "[PASS] Commit message validation passed"
+ 
+ - name: Check Documentation
+ run: |
+ echo " Checking documentation..."
+ 
+ # Check for C# XML docs
+ if find . -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" | head -1 | grep -q "."; then
+ UNDOCUMENTED=$(find . -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" -exec grep -l "public " {} \; | \
+ xargs grep -L "///" | wc -l)
+ if [ "$UNDOCUMENTED" -gt 0 ]; then
+ echo "[WARN] WARNING: $UNDOCUMENTED C# files with public APIs missing XML docs"
+ echo "All public APIs should have XML documentation"
+ fi
+ fi
+ 
+ # Check for README updates (if new feature)
+ if [ "${{ github.event.pull_request.title }}" ]; then
+ if echo "${{ github.event.pull_request.title }}" | grep -qi "feat:"; then
+ if ! git diff origin/${{ github.base_ref }}..HEAD --name-only | grep -q "README.md"; then
+ echo "[INFO] INFO: New feature added. Consider updating README.md"
+ fi
+ fi
+ fi
+ 
+ echo "[PASS] Documentation check complete"
+ 
+ - name: Validate File Structure
+ run: |
+ echo " Validating file structure..."
+ 
+ # Check for proper docs structure
+ if [ -d "docs" ]; then
+ for dir in prd adr specs reviews ux; do
+ if [ ! -d "docs/$dir" ]; then
+ echo "[WARN] WARNING: docs/$dir/ directory not found"
+ fi
+ done
+ fi
+ 
+ echo "[PASS] File structure validation complete"
+ 
+ - name: Agent Deliverable Validation
+ if: github.event_name == 'pull_request'
+ continue-on-error: true
+ env:
+ GH_TOKEN: ${{ github.token }}
+ run: |
+ echo " Validating agent deliverables..."
 
-          # Extract issue number from PR title or branch
-          ISSUE_NUM=$(echo "${{ github.event.pull_request.title }}" | grep -oP '#\K\d+' | head -1)
+ # Extract issue number from PR title or branch
+ ISSUE_NUM=$(echo "${{ github.event.pull_request.title }}" | grep -oP '#\K\d+' | head -1)
 
-          if [ -z "$ISSUE_NUM" ]; then
-            # Try to get from branch name (e.g., feature/123-description)
-            ISSUE_NUM=$(echo "${{ github.head_ref }}" | grep -oP '^\w+/\K\d+' | head -1)
-          fi
+ if [ -z "$ISSUE_NUM" ]; then
+ # Try to get from branch name (e.g., feature/123-description)
+ ISSUE_NUM=$(echo "${{ github.head_ref }}" | grep -oP '^\w+/\K\d+' | head -1)
+ fi
 
-          if [ -z "$ISSUE_NUM" ]; then
-            echo "ℹ️ No issue number found in PR title or branch, skipping agent validation"
-            exit 0
-          fi
+ if [ -z "$ISSUE_NUM" ]; then
+ echo "[INFO] No issue number found in PR title or branch, skipping agent validation"
+ exit 0
+ fi
 
-          echo "Found issue #${ISSUE_NUM}"
+ echo "Found issue #${ISSUE_NUM}"
 
-          # Detect agent role from PR labels
-          LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels -q '.labels[].name' 2>/dev/null || echo "")
+ # Detect agent role from PR labels
+ LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels -q '.labels[].name' 2>/dev/null || echo "")
 
-          ROLE=""
-          if echo "$LABELS" | grep -q "type:epic"; then
-            ROLE="pm"
-          elif echo "$LABELS" | grep -q "type:feature"; then
-            ROLE="architect"
-          elif echo "$LABELS" | grep -q "type:story"; then
-            ROLE="engineer"
-          elif echo "$LABELS" | grep -q "type:bug"; then
-            ROLE="engineer"
-          elif echo "$LABELS" | grep -q "type:devops"; then
-            ROLE="devops"
-          elif echo "$LABELS" | grep -q "needs:ux"; then
-            ROLE="ux"
-          fi
+ ROLE=""
+ if echo "$LABELS" | grep -q "type:epic"; then
+ ROLE="pm"
+ elif echo "$LABELS" | grep -q "type:feature"; then
+ ROLE="architect"
+ elif echo "$LABELS" | grep -q "type:story"; then
+ ROLE="engineer"
+ elif echo "$LABELS" | grep -q "type:bug"; then
+ ROLE="engineer"
+ elif echo "$LABELS" | grep -q "type:devops"; then
+ ROLE="devops"
+ elif echo "$LABELS" | grep -q "needs:ux"; then
+ ROLE="ux"
+ fi
 
-          # If no role from labels, try to detect from files changed
-          if [ -z "$ROLE" ]; then
-            FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}..HEAD)
+ # If no role from labels, try to detect from files changed
+ if [ -z "$ROLE" ]; then
+ FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}..HEAD)
 
-            if echo "$FILES_CHANGED" | grep -q "docs/prd/"; then
-              ROLE="pm"
-            elif echo "$FILES_CHANGED" | grep -q "docs/adr/\|docs/specs/"; then
-              ROLE="architect"
-            elif echo "$FILES_CHANGED" | grep -q "docs/ux/"; then
-              ROLE="ux"
-            elif echo "$FILES_CHANGED" | grep -q "docs/reviews/"; then
-              ROLE="reviewer"
-            elif echo "$FILES_CHANGED" | grep -qE "\.(cs|py|ts|js|go|rs)$"; then
-              ROLE="engineer"
-            elif echo "$FILES_CHANGED" | grep -q ".github/workflows/"; then
-              ROLE="devops"
-            fi
-          fi
+ if echo "$FILES_CHANGED" | grep -q "docs/prd/"; then
+ ROLE="pm"
+ elif echo "$FILES_CHANGED" | grep -q "docs/adr/\|docs/specs/"; then
+ ROLE="architect"
+ elif echo "$FILES_CHANGED" | grep -q "docs/ux/"; then
+ ROLE="ux"
+ elif echo "$FILES_CHANGED" | grep -q "docs/reviews/"; then
+ ROLE="reviewer"
+ elif echo "$FILES_CHANGED" | grep -qE "\.(cs|py|ts|js|go|rs)$"; then
+ ROLE="engineer"
+ elif echo "$FILES_CHANGED" | grep -q ".github/workflows/"; then
+ ROLE="devops"
+ fi
+ fi
 
-          if [ -z "$ROLE" ]; then
-            echo "ℹ️ Could not determine agent role from labels or files"
-            exit 0
-          fi
+ if [ -z "$ROLE" ]; then
+ echo "[INFO] Could not determine agent role from labels or files"
+ exit 0
+ fi
 
-          echo "Detected role: $ROLE"
+ echo "Detected role: $ROLE"
 
-          # Run validation script if it exists
-          if [ -f ".github/scripts/validate-handoff.sh" ]; then
-            chmod +x .github/scripts/validate-handoff.sh
-            echo "Running validation for issue #${ISSUE_NUM} as ${ROLE}..."
-            ./.github/scripts/validate-handoff.sh "$ISSUE_NUM" "$ROLE" || {
-              echo "⚠️ Validation warnings detected (see above)"
-              # Don't fail the job, just report
-            }
-          else
-            echo "⚠️ validate-handoff.sh not found"
-          fi
-      
-      - name: Post Quality Report
-        if: always() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
-            const report = `
-            ## 🔍 Quality Gate Report
-            
-            | Check | Status |
-            |-------|--------|
-            | Secret Detection | ${status} |
-            | Commit Message Format | ${status} |
-            | Documentation | ${status} |
-            | File Structure | ${status} |
-            
-            ${status === '✅' ? '✅ All quality gates passed!' : '❌ Quality gates failed. Please fix the issues above.'}
-            
-            ---
-            *AgentX Quality Gates* | [View Workflow](../../.github/workflows/quality-gates.yml)
-            `;
-            
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: report
-            });
+ # Run validation script if it exists
+ if [ -f ".github/scripts/validate-handoff.sh" ]; then
+ chmod +x .github/scripts/validate-handoff.sh
+ echo "Running validation for issue #${ISSUE_NUM} as ${ROLE}..."
+ ./.github/scripts/validate-handoff.sh "$ISSUE_NUM" "$ROLE" || {
+ echo "[WARN] Validation warnings detected (see above)"
+ # Don't fail the job, just report
+ }
+ else
+ echo "[WARN] validate-handoff.sh not found"
+ fi
+ 
+ - name: Post Quality Report
+ if: always() && github.event_name == 'pull_request'
+ uses: actions/github-script@v7
+ with:
+ script: |
+ const status = '${{ job.status }}' === 'success' ? '[PASS]' : '[FAIL]';
+ const report = `
+ ## Quality Gate Report
+ 
+ | Check | Status |
+ |-------|--------|
+ | Secret Detection | ${status} |
+ | Commit Message Format | ${status} |
+ | Documentation | ${status} |
+ | File Structure | ${status} |
+ 
+ ${status === '[PASS]' ? '[PASS] All quality gates passed!' : '[FAIL] Quality gates failed. Please fix the issues above.'}
+ 
+ ---
+ *AgentX Quality Gates* | [View Workflow](../../.github/workflows/quality-gates.yml)
+ `;
+ 
+ await github.rest.issues.createComment({
+ owner: context.repo.owner,
+ repo: context.repo.repo,
+ issue_number: context.issue.number,
+ body: report
+ });

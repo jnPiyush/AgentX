@@ -7,7 +7,7 @@
 Use a `.env` file for local development (always add to `.gitignore`):
 
 ```env
-# .env.example — Copy to .env and fill in values
+# .env.example - Copy to .env and fill in values
 # Required
 FOUNDRY_ENDPOINT=https://your-resource.services.ai.azure.com
 FOUNDRY_API_KEY=your-api-key-here
@@ -30,22 +30,22 @@ Route requests to different models based on task complexity:
 import os
 
 MODELS = {
-    "fast": os.environ.get("MODEL_FAST", "gpt-4o-mini"),       # Simple tasks, low latency
-    "standard": os.environ.get("MODEL_DEPLOYMENT_NAME", "gpt-4o"),  # General purpose
-    "reasoning": os.environ.get("MODEL_REASONING", "o3"),       # Complex analysis
+ "fast": os.environ.get("MODEL_FAST", "gpt-4o-mini"), # Simple tasks, low latency
+ "standard": os.environ.get("MODEL_DEPLOYMENT_NAME", "gpt-4o"), # General purpose
+ "reasoning": os.environ.get("MODEL_REASONING", "o3"), # Complex analysis
 }
 
 def select_model(task_type: str) -> str:
-    """Select model based on task complexity."""
-    routing = {
-        "classification": "fast",
-        "summarization": "fast",
-        "code_generation": "standard",
-        "architecture_review": "reasoning",
-        "complex_analysis": "reasoning",
-    }
-    tier = routing.get(task_type, "standard")
-    return MODELS[tier]
+ """Select model based on task complexity."""
+ routing = {
+ "classification": "fast",
+ "summarization": "fast",
+ "code_generation": "standard",
+ "architecture_review": "reasoning",
+ "complex_analysis": "reasoning",
+ }
+ tier = routing.get(task_type, "standard")
+ return MODELS[tier]
 ```
 
 ### Fallback Chains
@@ -54,13 +54,13 @@ Implement fallback when a model is unavailable or rate-limited:
 
 ```python
 async def call_with_fallback(prompt: str, models: list[str]) -> str:
-    """Try models in order, falling back on failure."""
-    for model in models:
-        try:
-            return await client.complete(model=model, prompt=prompt)
-        except (RateLimitError, ServiceUnavailableError):
-            continue
-    raise AllModelsUnavailableError("All models in fallback chain failed")
+ """Try models in order, falling back on failure."""
+ for model in models:
+ try:
+ return await client.complete(model=model, prompt=prompt)
+ except (RateLimitError, ServiceUnavailableError):
+ continue
+ raise AllModelsUnavailableError("All models in fallback chain failed")
 
 # Usage: prefer fast, fall back to standard
 result = await call_with_fallback(prompt, ["gpt-4o-mini", "gpt-4o"])

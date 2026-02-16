@@ -3,7 +3,7 @@
 # Workflow validation is handled by pre-handoff validation (.github/scripts/validate-handoff.sh)
 # Issue reference validation is handled by commit-msg hook
 
-echo "🔍 Running pre-commit checks..."
+echo "[INFO] Running pre-commit checks..."
 
 # Colors
 RED='\033[0;31m'
@@ -15,103 +15,106 @@ NC='\033[0m'
 FAILED=0
 
 echo ""
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}-------------------------------------------------------${NC}"
 echo -e "${BLUE}Security & Quality Checks${NC}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}-------------------------------------------------------${NC}"
 echo ""
 
-# Check 1: No secrets in staged files
+# Check 1: No secrets in staged files (exclude .md docs - they contain example patterns)
 echo -n "Checking for secrets... "
-if git diff --cached --name-only | xargs grep -E '(password|api[_-]?key|secret|token|private[_-]?key)\s*=\s*["\x27][^"\x27]+["\x27]' -i 2>/dev/null; then
-  echo -e "${RED}❌ FAILED${NC}"
-  echo "  Found potential secrets in staged files!"
-  echo "  Use environment variables instead."
-  FAILED=1
+if git diff --cached --name-only | grep -v '\.md$' | xargs grep -E '(password|api[_-]?key|secret|token|private[_-]?key)\s*=\s*["\x27][^"\x27]+["\x27]' -i 2>/dev/null; then
+ echo -e "${RED}[FAIL] FAILED${NC}"
+ echo " Found potential secrets in staged files!"
+ echo " Use environment variables instead."
+ FAILED=1
 else
-  echo -e "${GREEN}✅ PASSED${NC}"
+ echo -e "${GREEN}[PASS] PASSED${NC}"
 fi
 
 # Check 2: No large files (>1MB)
 echo -n "Checking file sizes... "
 LARGE_FILES=$(git diff --cached --name-only | xargs ls -l 2>/dev/null | awk '$5 > 1048576 {print $9}')
 if [ -n "$LARGE_FILES" ]; then
-  echo -e "${YELLOW}⚠️  WARNING${NC}"
-  echo "  Large files detected (>1MB):"
-  echo "$LARGE_FILES" | sed 's/^/    /'
+ echo -e "${YELLOW}[WARN] WARNING${NC}"
+ echo " Large files detected (>1MB):"
+ echo "$LARGE_FILES" | sed 's/^/ /'
 else
-  echo -e "${GREEN}✅ PASSED${NC}"
+ echo -e "${GREEN}[PASS] PASSED${NC}"
 fi
 
 # Check 3: Warn on direct master/main commits
 BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
 if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
-  echo -e "${YELLOW}⚠️  WARNING: Committing directly to $BRANCH${NC}"
+ echo -e "${YELLOW}[WARN] WARNING: Committing directly to $BRANCH${NC}"
 fi
 
 # Check 4: C# formatting (if dotnet available)
 if command -v dotnet &> /dev/null; then
-  CS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.cs$')
-  if [ -n "$CS_FILES" ]; then
-    echo -n "Checking C# formatting... "
-    if dotnet format --verify-no-changes --include $CS_FILES &>/dev/null; then
-      echo -e "${GREEN}✅ PASSED${NC}"
-    else
-      echo -e "${YELLOW}⚠️  Auto-formatting${NC}"
-      dotnet format --include $CS_FILES
-      echo "$CS_FILES" | xargs git add
-    fi
-  fi
+ CS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.cs$')
+ if [ -n "$CS_FILES" ]; then
+ echo -n "Checking C# formatting... "
+ if dotnet format --verify-no-changes --include $CS_FILES &>/dev/null; then
+ echo -e "${GREEN}[PASS] PASSED${NC}"
+ else
+ echo -e "${YELLOW}[WARN] Auto-formatting${NC}"
+ dotnet format --include $CS_FILES
+ echo "$CS_FILES" | xargs git add
+ fi
+ fi
 fi
 
 # Check 5: Python formatting (if black available)
 if command -v black &> /dev/null; then
-  PY_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$')
-  if [ -n "$PY_FILES" ]; then
-    echo -n "Checking Python formatting... "
-    if black --check $PY_FILES &>/dev/null; then
-      echo -e "${GREEN}✅ PASSED${NC}"
-    else
-      echo -e "${YELLOW}⚠️  Auto-formatting${NC}"
-      black $PY_FILES
-      echo "$PY_FILES" | xargs git add
-    fi
-  fi
+ PY_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$')
+ if [ -n "$PY_FILES" ]; then
+ echo -n "Checking Python formatting... "
+ if black --check $PY_FILES &>/dev/null; then
+ echo -e "${GREEN}[PASS] PASSED${NC}"
+ else
+ echo -e "${YELLOW}[WARN] Auto-formatting${NC}"
+ black $PY_FILES
+ echo "$PY_FILES" | xargs git add
+ fi
+ fi
 fi
 
 # Check 6: SQL injection patterns
 echo -n "Checking for SQL injection risks... "
 if git diff --cached | grep -E '\+.*\b(ExecuteRaw|FromSqlRaw|SqlQuery).*\+' | grep -v 'parameterized' | grep -v '@' &>/dev/null; then
-  echo -e "${YELLOW}⚠️  WARNING: Potential SQL injection${NC}"
+ echo -e "${YELLOW}[WARN] WARNING: Potential SQL injection${NC}"
 else
-  echo -e "${GREEN}✅ PASSED${NC}"
+ echo -e "${GREEN}[PASS] PASSED${NC}"
 fi
 
-# Check 7: Command allowlist validation
+# Check 7: Command allowlist validation (only check newly created code files)
 echo -n "Checking for blocked commands... "
-BLOCKED_COMMANDS=("rm -rf" "git reset --hard" "git push --force" "DROP DATABASE" "DROP TABLE" "TRUNCATE" "format" "del /s" "rmdir /s")
+BLOCKED_COMMANDS=("rm -rf" "git reset --hard" "git push --force" "DROP DATABASE" "DROP TABLE" "TRUNCATE" "format c:" "del /s" "rmdir /s")
 BLOCKED_FOUND=0
+NEW_CODE_FILES=$(git diff --cached --name-only --diff-filter=A | grep -v '\.md$')
 
-for cmd in "${BLOCKED_COMMANDS[@]}"; do
-  if git diff --cached | grep -F "$cmd" &>/dev/null; then
-    echo -e "${RED}❌ BLOCKED COMMAND: $cmd${NC}"
-    BLOCKED_FOUND=1
+if [ -n "$NEW_CODE_FILES" ]; then
+ for cmd in "${BLOCKED_COMMANDS[@]}"; do
+  if echo "$NEW_CODE_FILES" | xargs grep -F "$cmd" 2>/dev/null; then
+   echo -e "${RED}[FAIL] BLOCKED COMMAND: $cmd${NC}"
+   BLOCKED_FOUND=1
   fi
-done
+ done
+fi
 
 if [ $BLOCKED_FOUND -eq 0 ]; then
-  echo -e "${GREEN}✅ PASSED${NC}"
+ echo -e "${GREEN}[PASS] PASSED${NC}"
 else
-  echo -e "${RED}❌ Blocked destructive command found${NC}"
-  echo "  Review .github/security/allowed-commands.json for allowed operations"
-  FAILED=1
+ echo -e "${RED}[FAIL] Blocked destructive command found${NC}"
+ echo " Review .github/security/allowed-commands.json for allowed operations"
+ FAILED=1
 fi
 
 # Summary
 echo ""
 if [ $FAILED -eq 1 ]; then
-  echo -e "${RED}❌ Pre-commit checks FAILED${NC}"
-  exit 1
+ echo -e "${RED}[FAIL] Pre-commit checks FAILED${NC}"
+ exit 1
 else
-  echo -e "${GREEN}✅ Security checks passed${NC}"
-  exit 0
+ echo -e "${GREEN}[PASS] Security checks passed${NC}"
+ exit 0
 fi

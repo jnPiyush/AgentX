@@ -5,7 +5,7 @@
 ### Basic JSONB Queries
 
 ```sql
--- ✅ GOOD: JSONB containment queries
+-- [PASS] GOOD: JSONB containment queries
 -- Find users with active status
 SELECT * FROM users
 WHERE profile @> '{"status": "active"}'::jsonb;
@@ -52,7 +52,7 @@ SELECT profile #>> '{address,city}' AS city FROM users;
 ### JSONB Modification
 
 ```sql
--- ✅ GOOD: Update JSONB fields
+-- [PASS] GOOD: Update JSONB fields
 -- Set a value
 UPDATE users
 SET profile = jsonb_set(profile, '{status}', '"inactive"');
@@ -72,16 +72,16 @@ SET profile = profile || '{"verified": true}'::jsonb;
 -- Build JSONB object
 INSERT INTO events (data)
 VALUES (jsonb_build_object(
-    'event_type', 'login',
-    'user_id', 123,
-    'timestamp', NOW()
+ 'event_type', 'login',
+ 'user_id', 123,
+ 'timestamp', NOW()
 ));
 ```
 
 ### JSONB Indexes
 
 ```sql
--- ✅ GOOD: GIN index for JSONB
+-- [PASS] GOOD: GIN index for JSONB
 -- General JSONB index
 CREATE INDEX idx_users_profile ON users USING gin(profile);
 
@@ -101,7 +101,7 @@ ON events USING gin(data jsonb_path_ops);
 ### Basic Array Queries
 
 ```sql
--- ✅ GOOD: Array queries
+-- [PASS] GOOD: Array queries
 -- Check if value is in array
 SELECT * FROM posts
 WHERE 'postgresql' = ANY(tags);
@@ -122,12 +122,12 @@ FROM posts;
 ### Array Aggregation
 
 ```sql
--- ✅ GOOD: Array aggregation
+-- [PASS] GOOD: Array aggregation
 -- Aggregate into array
 SELECT 
-    user_id,
-    array_agg(DISTINCT category) AS categories,
-    array_agg(product_name ORDER BY created_at DESC) AS recent_products
+ user_id,
+ array_agg(DISTINCT category) AS categories,
+ array_agg(product_name ORDER BY created_at DESC) AS recent_products
 FROM orders
 GROUP BY user_id;
 
@@ -169,7 +169,7 @@ WHERE id = 1;
 ## Full-Text Search
 
 ```sql
--- ✅ GOOD: Full-text search setup
+-- [PASS] GOOD: Full-text search setup
 -- Add tsvector column
 ALTER TABLE posts
 ADD COLUMN search_vector tsvector;
@@ -177,8 +177,8 @@ ADD COLUMN search_vector tsvector;
 -- Update search vector
 UPDATE posts
 SET search_vector = 
-    setweight(to_tsvector('english', COALESCE(title, '')), 'A') ||
-    setweight(to_tsvector('english', COALESCE(content, '')), 'B');
+ setweight(to_tsvector('english', COALESCE(title, '')), 'A') ||
+ setweight(to_tsvector('english', COALESCE(content, '')), 'B');
 
 -- Create GIN index
 CREATE INDEX idx_posts_search 
@@ -187,10 +187,10 @@ ON posts USING gin(search_vector);
 -- Create trigger to auto-update
 CREATE FUNCTION posts_search_update() RETURNS trigger AS $$
 BEGIN
-    NEW.search_vector :=
-        setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
-        setweight(to_tsvector('english', COALESCE(NEW.content, '')), 'B');
-    RETURN NEW;
+ NEW.search_vector :=
+ setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
+ setweight(to_tsvector('english', COALESCE(NEW.content, '')), 'B');
+ RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -198,15 +198,15 @@ CREATE TRIGGER posts_search_trigger
 BEFORE INSERT OR UPDATE ON posts
 FOR EACH ROW EXECUTE FUNCTION posts_search_update();
 
--- ✅ GOOD: Full-text search queries
+-- [PASS] GOOD: Full-text search queries
 -- Basic search
 SELECT * FROM posts
 WHERE search_vector @@ to_tsquery('english', 'postgresql & performance');
 
 -- Search with ranking
 SELECT 
-    *,
-    ts_rank(search_vector, query) AS rank
+ *,
+ ts_rank(search_vector, query) AS rank
 FROM posts, to_tsquery('english', 'postgresql | database') AS query
 WHERE search_vector @@ query
 ORDER BY rank DESC;

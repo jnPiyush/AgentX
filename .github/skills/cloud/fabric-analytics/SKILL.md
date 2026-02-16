@@ -1,28 +1,28 @@
 ---
 name: "fabric-analytics"
-description: 'Build data engineering and analytics solutions on Microsoft Fabric — Lakehouse, Warehouse, Spark notebooks, data pipelines, and semantic models. Use when creating Fabric Lakehouses, writing PySpark notebooks, building data pipelines, designing semantic models, or querying OneLake storage.'
+description: 'Build data engineering and analytics solutions on Microsoft Fabric - Lakehouse, Warehouse, Spark notebooks, data pipelines, and semantic models. Use when creating Fabric Lakehouses, writing PySpark notebooks, building data pipelines, designing semantic models, or querying OneLake storage.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-07-13"
-  updated: "2025-07-13"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-07-13"
+ updated: "2025-07-13"
 compatibility:
-  languages: ["python", "sql", "pyspark", "dax"]
-  frameworks: ["microsoft-fabric", "apache-spark", "delta-lake"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["python", "sql", "pyspark", "dax"]
+ frameworks: ["microsoft-fabric", "apache-spark", "delta-lake"]
+ platforms: ["windows", "linux", "macos"]
 prerequisites:
-  - "Microsoft Fabric workspace with active capacity"
-  - "Fabric MCP Server (ms-fabric-mcp-server) for tool-based workflows"
-  - "PySpark / Python 3.11+ for notebook development"
+ - "Microsoft Fabric workspace with active capacity"
+ - "Fabric MCP Server (ms-fabric-mcp-server) for tool-based workflows"
+ - "PySpark / Python 3.11+ for notebook development"
 ---
 
 # Fabric Analytics
 
-> Unified analytics platform on OneLake — data engineering, warehousing, notebooks, pipelines, and semantic models.
+> Unified analytics platform on OneLake - data engineering, warehousing, notebooks, pipelines, and semantic models.
 
 ## When to Use
 
-- Building data lakehouses with medallion architecture (Bronze → Silver → Gold)
+- Building data lakehouses with medallion architecture (Bronze -> Silver -> Gold)
 - Creating or querying Fabric Warehouses with T-SQL
 - Developing PySpark notebooks for data transformation
 - Orchestrating ETL/ELT with data pipelines
@@ -33,31 +33,31 @@ prerequisites:
 
 ```
 Working with Microsoft Fabric?
-├─ Need storage layer?
-│   ├─ Semi-structured / schema evolution → Lakehouse
-│   ├─ Full T-SQL / stored procs / DML → Warehouse
-│   └─ Unsure → Start with Lakehouse (more flexible)
-├─ Need data transformation?
-│   ├─ Simple data copy → Pipeline Copy Activity
-│   ├─ Light transforms (300+ built-in) → Dataflow Gen2
-│   └─ Complex logic / ML / custom code → Spark Notebook
-├─ Need orchestration?
-│   └─ Pipeline with activities + dependencies
-├─ Need reporting layer?
-│   └─ Semantic Model with DirectLake mode
-└─ Need conversational analytics?
-    └─ See: fabric-data-agent skill
++- Need storage layer?
+| +- Semi-structured / schema evolution -> Lakehouse
+| +- Full T-SQL / stored procs / DML -> Warehouse
+| - Unsure -> Start with Lakehouse (more flexible)
++- Need data transformation?
+| +- Simple data copy -> Pipeline Copy Activity
+| +- Light transforms (300+ built-in) -> Dataflow Gen2
+| - Complex logic / ML / custom code -> Spark Notebook
++- Need orchestration?
+| - Pipeline with activities + dependencies
++- Need reporting layer?
+| - Semantic Model with DirectLake mode
+- Need conversational analytics?
+ - See: fabric-data-agent skill
 ```
 
 ## Core Concepts
 
 ### OneLake & Delta Format
 
-All Fabric workloads share **OneLake** — a single logical data lake built on Delta format:
+All Fabric workloads share **OneLake** - a single logical data lake built on Delta format:
 
 | Principle | Details |
 |-----------|---------|
-| **Single copy** | No data silos — all items reference the same storage |
+| **Single copy** | No data silos - all items reference the same storage |
 | **Delta format** | ACID transactions, time travel, schema evolution |
 | **Open format** | Parquet-based, readable by any Spark engine |
 | **Shortcuts** | Reference external storage (ADLS, S3) without copying |
@@ -70,15 +70,15 @@ All Fabric workloads share **OneLake** — a single logical data lake built on D
 | **Silver** | Cleaned, deduplicated, typed | `clean_orders`, `clean_customers` | Delta (merge/upsert) |
 | **Gold** | Business-ready aggregates | `fact_sales`, `dim_product` | Delta (star schema) |
 
-**Anti-pattern**: Skipping Silver layer — leads to unreliable Gold data.
+**Anti-pattern**: Skipping Silver layer - leads to unreliable Gold data.
 
 ### Workspaces
 
 Workspaces are logical containers for governance and collaboration:
 
 - **Dev/Test/Prod** separation via deployment pipelines
-- **Capacity binding** — workspaces run on assigned Fabric capacity
-- **Security** — role-based access at workspace level
+- **Capacity binding** - workspaces run on assigned Fabric capacity
+- **Security** - role-based access at workspace level
 
 ## Lakehouse
 
@@ -88,9 +88,9 @@ Combines data lake flexibility with warehouse-like structure using Delta tables.
 
 ```
 Lakehouse/
-├── Tables/          # Managed Delta tables (structured, queryable)
-├── Files/           # Unmanaged files (raw CSV, Parquet, JSON staging)
-└── SQL endpoint     # Auto-generated read-only T-SQL access to Tables/
++-- Tables/ # Managed Delta tables (structured, queryable)
++-- Files/ # Unmanaged files (raw CSV, Parquet, JSON staging)
+-- SQL endpoint # Auto-generated read-only T-SQL access to Tables/
 ```
 
 ### When Lakehouse vs Warehouse
@@ -109,7 +109,7 @@ Lakehouse/
 Every Lakehouse auto-exposes a **read-only SQL endpoint** for T-SQL access:
 
 ```sql
--- Query via SQL endpoint (read-only — SELECT, SHOW, DESCRIBE)
+-- Query via SQL endpoint (read-only - SELECT, SHOW, DESCRIBE)
 SELECT COUNT(*) AS total_events
 FROM raw_events
 WHERE event_date >= '2025-01-01';
@@ -132,7 +132,7 @@ df.write.format("delta").mode("overwrite").saveAsTable("bronze.raw_events")
 from delta.tables import DeltaTable
 target = DeltaTable.forName(spark, "silver.customers")
 target.alias("t").merge(
-    source_df.alias("s"), "t.customer_id = s.customer_id"
+ source_df.alias("s"), "t.customer_id = s.customer_id"
 ).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
 
 # Time travel
@@ -146,23 +146,23 @@ Full T-SQL warehouse with stored procedures, views, and multi-table transactions
 ```sql
 -- Create fact table
 CREATE TABLE fact_sales (
-    sale_id BIGINT IDENTITY(1,1),
-    product_key INT NOT NULL,
-    customer_key INT NOT NULL,
-    sale_date DATE NOT NULL,
-    amount DECIMAL(18,2) NOT NULL
+ sale_id BIGINT IDENTITY(1,1),
+ product_key INT NOT NULL,
+ customer_key INT NOT NULL,
+ sale_date DATE NOT NULL,
+ amount DECIMAL(18,2) NOT NULL
 );
 
 -- Stored procedure for incremental load
 CREATE PROCEDURE usp_load_daily_sales @run_date DATE
 AS
 BEGIN
-    INSERT INTO fact_sales (product_key, customer_key, sale_date, amount)
-    SELECT p.product_key, c.customer_key, s.sale_date, s.amount
-    FROM staging.raw_sales s
-    JOIN dim_product p ON s.product_id = p.product_id
-    JOIN dim_customer c ON s.customer_id = c.customer_id
-    WHERE s.sale_date = @run_date;
+ INSERT INTO fact_sales (product_key, customer_key, sale_date, amount)
+ SELECT p.product_key, c.customer_key, s.sale_date, s.amount
+ FROM staging.raw_sales s
+ JOIN dim_product p ON s.product_id = p.product_id
+ JOIN dim_customer c ON s.customer_id = c.customer_id
+ WHERE s.sale_date = @run_date;
 END;
 ```
 
@@ -189,7 +189,7 @@ END;
 ```
 1. Check for existing sessions FIRST (reuse idle sessions)
 2. Create only if none exist (cold start: 3-6+ minutes)
-3. State machine: not_started → starting → idle (ready) → busy → dead
+3. State machine: not_started -> starting -> idle (ready) -> busy -> dead
 4. Never close sessions unless explicitly requested (reuse saves time)
 5. Use timestamped session names for traceability
 ```
@@ -202,7 +202,7 @@ Pipelines orchestrate data movement and transformation with dependency chains.
 
 | Need | Activity | Latency | Complexity |
 |------|----------|---------|------------|
-| Data copy (source → destination) | Copy Activity | Fast | Low |
+| Data copy (source -> destination) | Copy Activity | Fast | Low |
 | Light transforms (built-in 300+) | Dataflow Gen2 | Medium | Low |
 | Complex logic, ML, custom code | Notebook Activity | Slow | High |
 | Wait / conditional / loop | Control Activities | N/A | Low |
@@ -210,18 +210,18 @@ Pipelines orchestrate data movement and transformation with dependency chains.
 ### Pipeline Pattern: Medallion ETL
 
 ```
-┌─────────────┐     ┌───────────────┐     ┌──────────────┐
-│ Copy (ADLS   │────→│ Notebook      │────→│ Notebook     │
-│ → Bronze LH) │     │ (Bronze→Silver)│     │ (Silver→Gold)│
-└─────────────┘     └───────────────┘     └──────────────┘
-                         depends_on            depends_on
+------------- --------------- --------------
+| Copy (ADLS |----->| Notebook |----->| Notebook |
+| -> Bronze LH) | | (Bronze->Silver)| | (Silver->Gold)|
+------------- --------------- --------------
+ depends_on depends_on
 ```
 
 ## Semantic Models
 
 ### DirectLake Mode
 
-Queries Delta tables directly — no data import, always fresh:
+Queries Delta tables directly - no data import, always fresh:
 
 | Benefit | Limitation |
 |---------|-----------|
@@ -277,10 +277,10 @@ Running Total = CALCULATE([Total Sales], FILTER(ALL('Date'), 'Date'[Date] <= MAX
 
 ## Anti-Patterns
 
-- **Skip Silver layer**: Raw data straight to Gold — unreliable analytics
-- **Overuse interactive sessions**: Expensive for production — use batch jobs
-- **Ignore Delta maintenance**: No VACUUM/OPTIMIZE — storage bloat, slow queries
-- **Wide tables in semantic models**: Denormalized tables — poor DirectLake performance
+- **Skip Silver layer**: Raw data straight to Gold - unreliable analytics
+- **Overuse interactive sessions**: Expensive for production - use batch jobs
+- **Ignore Delta maintenance**: No VACUUM/OPTIMIZE - storage bloat, slow queries
+- **Wide tables in semantic models**: Denormalized tables - poor DirectLake performance
 - **Hardcoded workspace/lakehouse names**: Use parameters for environment portability
 
 ## Reference Index

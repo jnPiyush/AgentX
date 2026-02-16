@@ -2,10 +2,10 @@
 name: "version-control"
 description: 'Apply effective Git workflows including commit conventions, branching strategies, and pull request best practices. Use when writing commit messages, choosing branching strategies, configuring git hooks, resolving merge conflicts, or implementing semantic versioning.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Version Control
@@ -31,21 +31,21 @@ metadata:
 
 ```
 Git operation?
-├─ Starting new work?
-│   ├─ Feature → branch from main: feature/issue-123-description
-│   ├─ Bug fix → branch from main: fix/issue-456-description
-│   └─ Hotfix → branch from release: hotfix/critical-issue
-├─ Committing?
-│   ├─ Small, atomic changes (one logical change per commit)
-│   └─ Format: type(scope): description (#issue)
-├─ Merging?
-│   ├─ Feature branch → squash merge to main
-│   ├─ Release branch → merge commit (preserve history)
-│   └─ Conflict? → Rebase feature on main, resolve, re-push
-└─ Undoing?
-    ├─ Uncommitted changes? → git stash or git checkout
-    ├─ Last commit (not pushed)? → git reset --soft HEAD~1
-    └─ Pushed commit? → git revert (never force-push shared branches)
++- Starting new work?
+| +- Feature -> branch from main: feature/issue-123-description
+| +- Bug fix -> branch from main: fix/issue-456-description
+| - Hotfix -> branch from release: hotfix/critical-issue
++- Committing?
+| +- Small, atomic changes (one logical change per commit)
+| - Format: type(scope): description (#issue)
++- Merging?
+| +- Feature branch -> squash merge to main
+| +- Release branch -> merge commit (preserve history)
+| - Conflict? -> Rebase feature on main, resolve, re-push
+- Undoing?
+ +- Uncommitted changes? -> git stash or git checkout
+ +- Last commit (not pushed)? -> git reset --soft HEAD~1
+ - Pushed commit? -> git revert (never force-push shared branches)
 ```
 
 ## Commit Messages
@@ -150,7 +150,6 @@ git push origin main --tags
 ```
 
 ---
-
 
 ## Scripts
 

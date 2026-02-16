@@ -5,7 +5,7 @@ description: 'Conduct systematic code reviews and audits including automated che
 
 # Code Review & Audit
 
-> **Purpose**: Systematic validation of implementations against production guardrails.  
+> **Purpose**: Systematic validation of implementations against production guardrails. 
 > **Focus**: Self-review automation, manual review checklists, security audits, compliance verification.
 
 ---
@@ -27,7 +27,7 @@ description: 'Conduct systematic code reviews and audits including automated che
 
 ### Architecture & Design (AGENTS.md Alignment)
 
-- [ ] **Research → Design → Implement** workflow followed
+- [ ] **Research -> Design -> Implement** workflow followed
 - [ ] Architecture documented (ADRs for significant decisions)
 - [ ] SOLID principles adhered to (especially SRP, DIP)
 - [ ] Design patterns used appropriately (not over-engineered)
@@ -75,7 +75,7 @@ description: 'Conduct systematic code reviews and audits including automated che
 - [ ] **CORS configured** correctly (not AllowAnyOrigin)
 - [ ] **Rate limiting** enabled on public APIs
 - [ ] **Security headers** added (CSP, X-Frame-Options, etc.)
-- [ ] **Passwords hashed** with BCrypt/Argon2 (work factor ≥12)
+- [ ] **Passwords hashed** with BCrypt/Argon2 (work factor 12)
 - [ ] **Dependencies audited** - No known vulnerabilities
 
 ### Testing (80%+ Coverage)
@@ -89,7 +89,7 @@ description: 'Conduct systematic code reviews and audits including automated che
 - [ ] **Mocks used properly** - Isolate unit tests
 - [ ] **Tests are fast** (< 1s per unit test)
 - [ ] **Tests are deterministic** - No flaky tests
-- [ ] **Code coverage ≥ 80%** - Verified
+- [ ] **Code coverage 80%** - Verified
 
 ### Performance
 
@@ -135,7 +135,7 @@ description: 'Conduct systematic code reviews and audits including automated che
 
 ## Best Practices
 
-### ✅ DO
+### [PASS] DO
 
 - **Automate checks** - Pre-commit hooks, CI/CD
 - **Review incrementally** - Small, focused PRs
@@ -145,7 +145,7 @@ description: 'Conduct systematic code reviews and audits including automated che
 - **Test audit scripts** - Verify they catch issues
 - **Update checklists** - As standards evolve
 
-### ❌ DON'T
+### [FAIL] DON'T
 
 - **Skip automated checks** - Always run before PR
 - **Large PRs** - > 400 lines hard to review
@@ -180,10 +180,9 @@ reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"coverage"
 
 ---
 
-**See Also**: [AGENTS.md](../../../../AGENTS.md) • [Testing](../testing/SKILL.md) • [Security](../../architecture/security/SKILL.md) • [Remote Git Ops](../../operations/remote-git-operations/SKILL.md)
+**See Also**: [AGENTS.md](../../../../AGENTS.md) - [Testing](../testing/SKILL.md) - [Security](../../architecture/security/SKILL.md) - [Remote Git Ops](../../operations/remote-git-operations/SKILL.md)
 
 **Last Updated**: January 13, 2026
-
 
 ## Scripts
 

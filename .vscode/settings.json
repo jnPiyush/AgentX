@@ -1,39 +1,39 @@
 {
-  "markdownlint.config": {
-    "MD041": false
-  },
-  "markdown.validate.enabled": true,
-  "markdown.validate.ignoredLinks": [
-    "**/agents/*.agent.md",
-    "../specs/SPEC-*.md",
-    "ADR-*.md",
-    "docs/adr/ADR-*.md",
-    "docs/specs/**",
-    "docs/architecture/**",
-    "../../docs/specs/SPEC-*.md"
-  ],
-  "files.associations": {
-    "*.agent.md": "markdown"
-  },
-  "markdown.validate.fileLinks.enabled": "warning",
-  "[markdown]": {
-    "editor.wordWrap": "on"
-  },
-  "github-actions.workflows.pinned.refresh.enabled": false,
-  "github-actions.expression-validation.enabled": false,
-  "yaml.validate": true,
-  "yaml.schemas": {
-    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml"
-  },
-  "chat.mcp.assisted.nuget.enabled": true,
-  "chat.mcp.discovery.enabled": {
-    "claude-desktop": true
-  },
-  "chat.mcp.gallery.enabled": true,
-  "chat.tools.terminal.autoReplyToPrompts": true,
-  "chat.unifiedAgentsBar.enabled": true,
-  "chat.useNestedAgentsMdFiles": true,
-  "chat.viewProgressBadge.enabled": true,
-  "inlineChat.enableV2": true,
-  "inlineChat.notebookAgent": true
+ "markdownlint.config": {
+ "MD041": false
+ },
+ "markdown.validate.enabled": true,
+ "markdown.validate.ignoredLinks": [
+ "**/agents/*.agent.md",
+ "../specs/SPEC-*.md",
+ "ADR-*.md",
+ "docs/adr/ADR-*.md",
+ "docs/specs/**",
+ "docs/architecture/**",
+ "../../docs/specs/SPEC-*.md"
+ ],
+ "files.associations": {
+ "*.agent.md": "markdown"
+ },
+ "markdown.validate.fileLinks.enabled": "warning",
+ "[markdown]": {
+ "editor.wordWrap": "on"
+ },
+ "github-actions.workflows.pinned.refresh.enabled": false,
+ "github-actions.expression-validation.enabled": false,
+ "yaml.validate": true,
+ "yaml.schemas": {
+ "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml"
+ },
+ "chat.mcp.assisted.nuget.enabled": true,
+ "chat.mcp.discovery.enabled": {
+ "claude-desktop": true
+ },
+ "chat.mcp.gallery.enabled": true,
+ "chat.tools.terminal.autoReplyToPrompts": true,
+ "chat.unifiedAgentsBar.enabled": true,
+ "chat.useNestedAgentsMdFiles": true,
+ "chat.viewProgressBadge.enabled": true,
+ "inlineChat.enableV2": true,
+ "inlineChat.notebookAgent": true
 }

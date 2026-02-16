@@ -2,16 +2,16 @@
 name: "database"
 description: 'Design database operations including migrations, indexing strategies, transactions, connection pooling, and ORM best practices. Use when creating database schemas, writing migrations, optimizing slow queries, configuring connection pools, or choosing between ORM frameworks.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Database
 
-> **Purpose**: Efficient, reliable database operations with migrations, indexes, and transactions.  
-> **Focus**: ORM patterns, query optimization, data integrity.  
+> **Purpose**: Efficient, reliable database operations with migrations, indexes, and transactions. 
+> **Focus**: ORM patterns, query optimization, data integrity. 
 > **Note**: For database-specific details, see [PostgreSQL](../../development/postgresql/SKILL.md) or [SQL Server](../../development/sql-server/SKILL.md).
 
 ---
@@ -33,19 +33,19 @@ metadata:
 
 ```
 Database operation?
-├─ Schema change?
-│   ├─ New table/column? → Migration (up + down)
-│   ├─ Rename/drop? → Migration + verify no dependents
-│   └─ Index needed? → CREATE INDEX CONCURRENTLY (avoid locks)
-├─ Query performance?
-│   ├─ Slow query? → EXPLAIN ANALYZE → add index or rewrite
-│   ├─ N+1 problem? → Use eager loading / JOIN
-│   └─ Large result set? → Pagination (cursor-based preferred)
-├─ Data integrity?
-│   ├─ Multiple writes? → Use transaction
-│   └─ Concurrent access? → Optimistic concurrency (version column)
-└─ Connection management?
-    └─ Always use connection pooling, never open/close per query
++- Schema change?
+| +- New table/column? -> Migration (up + down)
+| +- Rename/drop? -> Migration + verify no dependents
+| - Index needed? -> CREATE INDEX CONCURRENTLY (avoid locks)
++- Query performance?
+| +- Slow query? -> EXPLAIN ANALYZE -> add index or rewrite
+| +- N+1 problem? -> Use eager loading / JOIN
+| - Large result set? -> Pagination (cursor-based preferred)
++- Data integrity?
+| +- Multiple writes? -> Use transaction
+| - Concurrent access? -> Optimistic concurrency (version column)
+- Connection management?
+ - Always use connection pooling, never open/close per query
 ```
 
 ## Performance Best Practices
@@ -124,10 +124,9 @@ SELECT * FROM users WHERE email = 'test@example.com';
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md) • [PostgreSQL](../../development/postgresql/SKILL.md) • [SQL Server](../../development/sql-server/SKILL.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md) - [PostgreSQL](../../development/postgresql/SKILL.md) - [SQL Server](../../development/sql-server/SKILL.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Scripts
 

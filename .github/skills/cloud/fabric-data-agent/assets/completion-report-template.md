@@ -18,7 +18,7 @@
 
 ## Phase 1: Plan
 
-**Status**: ☐ Not Started / ☐ In Progress / ☐ Complete
+**Status**: Not Started / In Progress / Complete
 
 ### Schema Discovery
 
@@ -49,7 +49,7 @@
 
 ## Phase 2: Create
 
-**Status**: ☐ Not Started / ☐ In Progress / ☐ Complete
+**Status**: Not Started / In Progress / Complete
 
 ### Agent Configuration
 
@@ -58,14 +58,14 @@
 | Instructions | {summary} |
 | Datasources | {lakehouse}: {table_count} tables |
 | Few-shot examples | {example_count} queries |
-| Published | ☐ Yes / ☐ No |
+| Published | Yes / No |
 
 ### Few-Shot Examples Added
 
 | # | Question | Validated |
 |---|----------|-----------|
-| 1 | | ☐ |
-| 2 | | ☐ |
+| 1 | | |
+| 2 | | |
 
 ### Creation Decisions
 
@@ -79,7 +79,7 @@
 
 ## Phase 3: Validate
 
-**Status**: ☐ Not Started / ☐ In Progress / ☐ Complete
+**Status**: Not Started / In Progress / Complete
 
 ### Test Results
 
@@ -99,7 +99,7 @@
 
 ### Validation Decisions
 
-- [ ] Accuracy meets threshold (≥80%)
+- [ ] Accuracy meets threshold (80%)
 - [ ] Edge cases tested
 - [ ] Validation report generated
 - [ ] Agent ready for production use
@@ -118,7 +118,7 @@
 
 | File | Status |
 |------|--------|
-| `implementation_plan.md` | ☐ Generated |
-| `agent_creation.ipynb` | ☐ Generated |
-| `agent_validation.ipynb` | ☐ Generated |
-| `validation_report.md` | ☐ Generated |
+| `implementation_plan.md` | Generated |
+| `agent_creation.ipynb` | Generated |
+| `agent_validation.ipynb` | Generated |
+| `validation_report.md` | Generated |

@@ -1,17 +1,17 @@
 {
-  "$schema": "https://json.schemastore.org/mcp.json",
-  "servers": {
-    "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
-    }
-  },
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "github_token",
-      "description": "GitHub Personal Access Token (only needed if using PAT auth)",
-      "password": true
-    }
-  ]
+ "$schema": "https://json.schemastore.org/mcp.json",
+ "servers": {
+ "github": {
+ "type": "http",
+ "url": "https://api.githubcopilot.com/mcp/"
+ }
+ },
+ "inputs": [
+ {
+ "type": "promptString",
+ "id": "github_token",
+ "description": "GitHub Personal Access Token (only needed if using PAT auth)",
+ "password": true
+ }
+ ]
 }

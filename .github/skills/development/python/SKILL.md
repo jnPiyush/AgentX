@@ -2,20 +2,20 @@
 name: "python"
 description: 'Write production-ready Python code following modern best practices. Use when building Python applications, adding type hints, writing async code, implementing error handling, testing with pytest, or structuring Python project layouts.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["python"]
-  frameworks: ["flask", "django", "fastapi"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["python"]
+ frameworks: ["flask", "django", "fastapi"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # Python Development
 
-> **Purpose**: Production-ready Python development standards for building secure, performant, maintainable applications.  
-> **Audience**: Engineers building Python applications, APIs, data pipelines, or AI/ML systems.  
+> **Purpose**: Production-ready Python development standards for building secure, performant, maintainable applications. 
+> **Audience**: Engineers building Python applications, APIs, data pipelines, or AI/ML systems. 
 > **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) Python development patterns.
 
 ---
@@ -43,13 +43,13 @@ compatibility:
 | **Error handling** | Specific exceptions | `try-except ValueError` |
 | **Testing** | pytest | `def test_user_creation():` |
 | **Logging** | Standard library | `logger.info("User %s created", user_id)` |
-| **Docstrings** | Google style | `"""Gets user by ID.\n\nArgs:\n    id: User identifier` |
+| **Docstrings** | Google style | `"""Gets user by ID.\n\nArgs:\n id: User identifier` |
 
 ---
 
 ## Python Version
 
-**Current**: Python 3.11+  
+**Current**: Python 3.11+ 
 **Minimum**: Python 3.9+
 
 ### Modern Python Features (Use These)
@@ -60,16 +60,16 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 
 def get_user(user_id: int) -> Optional[dict[str, Any]]:
-    """Get user by ID."""
-    return users.get(user_id)
+ """Get user by ID."""
+ return users.get(user_id)
 
 # Dataclasses for data structures
 @dataclass
 class User:
-    id: int
-    name: str
-    email: str
-    is_active: bool = True
+ id: int
+ name: str
+ email: str
+ is_active: bool = True
 
 # f-strings for formatting
 name = "Alice"
@@ -78,19 +78,19 @@ message = f"User {name} is {age} years old"
 
 # Walrus operator (:=) in Python 3.8+
 if (user := get_user(123)) is not None:
-    print(f"Found user: {user['name']}")
+ print(f"Found user: {user['name']}")
 
 # Pattern matching (Python 3.10+)
 def process_response(status: int) -> str:
-    match status:
-        case 200:
-            return "Success"
-        case 404:
-            return "Not found"
-        case 500:
-            return "Server error"
-        case _:
-            return "Unknown status"
+ match status:
+ case 200:
+ return "Success"
+ case 404:
+ return "Not found"
+ case 500:
+ return "Server error"
+ case _:
+ return "Unknown status"
 ```
 
 ---
@@ -104,39 +104,39 @@ from typing import Optional, List, Dict, Any, Union, TypeVar, Generic
 
 # Basic types
 def calculate_total(price: float, quantity: int) -> float:
-    return price * quantity
+ return price * quantity
 
 # Optional types
 def find_user(user_id: int) -> Optional[User]:
-    """Returns None if user not found."""
-    return db.query(User).filter_by(id=user_id).first()
+ """Returns None if user not found."""
+ return db.query(User).filter_by(id=user_id).first()
 
 # Collections
 def get_active_users() -> List[User]:
-    return [u for u in users if u.is_active]
+ return [u for u in users if u.is_active]
 
 def get_user_map() -> Dict[int, User]:
-    return {u.id: u for u in users}
+ return {u.id: u for u in users}
 
 # Union types
 def process_data(data: Union[str, bytes]) -> str:
-    if isinstance(data, bytes):
-        return data.decode('utf-8')
-    return data
+ if isinstance(data, bytes):
+ return data.decode('utf-8')
+ return data
 
 # Generic types
 T = TypeVar('T')
 
 def first_or_none(items: List[T]) -> Optional[T]:
-    """Get first item or None if list is empty."""
-    return items[0] if items else None
+ """Get first item or None if list is empty."""
+ return items[0] if items else None
 
 # Type aliases for complex types
 UserId = int
 UserData = Dict[str, Any]
 
 def create_user(user_id: UserId, data: UserData) -> User:
-    return User(id=user_id, **data)
+ return User(id=user_id, **data)
 ```
 
 ---
@@ -146,53 +146,53 @@ def create_user(user_id: UserId, data: UserData) -> User:
 ### Code Style (PEP 8)
 
 ```python
-# ✅ GOOD: Follow PEP 8
+# [PASS] GOOD: Follow PEP 8
 def calculate_total(items: List[Item]) -> float:
-    """Calculate total price of items."""
-    return sum(item.price * item.quantity for item in items)
+ """Calculate total price of items."""
+ return sum(item.price * item.quantity for item in items)
 
 # Variable naming
-user_count = 10  # snake_case for variables
-MAX_RETRIES = 3  # UPPER_CASE for constants
-UserService    # PascalCase for classes
+user_count = 10 # snake_case for variables
+MAX_RETRIES = 3 # UPPER_CASE for constants
+UserService # PascalCase for classes
 
-# ✅ GOOD: List comprehensions
+# [PASS] GOOD: List comprehensions
 active_users = [u for u in users if u.is_active]
 
-# ❌ BAD: Mutable default arguments
-def add_item(item, items=[]):  # Don't do this!
-    items.append(item)
-    return items
+# [FAIL] BAD: Mutable default arguments
+def add_item(item, items=[]): # Don't do this!
+ items.append(item)
+ return items
 
-# ✅ GOOD: Use None as default
+# [PASS] GOOD: Use None as default
 def add_item(item, items=None):
-    if items is None:
-        items = []
-    items.append(item)
-    return items
+ if items is None:
+ items = []
+ items.append(item)
+ return items
 ```
 
 ### Performance
 
 ```python
-# ✅ GOOD: Use generators for large datasets
+# [PASS] GOOD: Use generators for large datasets
 def process_large_file(filename: str):
-    """Process large file line by line."""
-    with open(filename) as f:
-        for line in f:  # Generator - memory efficient
-            yield process_line(line)
+ """Process large file line by line."""
+ with open(filename) as f:
+ for line in f: # Generator - memory efficient
+ yield process_line(line)
 
-# ✅ GOOD: Use collections.defaultdict
+# [PASS] GOOD: Use collections.defaultdict
 from collections import defaultdict
 
 user_groups = defaultdict(list)
 for user in users:
-    user_groups[user.group].append(user)
+ user_groups[user.group].append(user)
 
-# ✅ GOOD: Use set for membership testing
+# [PASS] GOOD: Use set for membership testing
 valid_ids = {1, 2, 3, 4, 5}
-if user_id in valid_ids:  # O(1) lookup
-    process_user(user_id)
+if user_id in valid_ids: # O(1) lookup
+ process_user(user_id)
 ```
 
 ---
@@ -214,30 +214,30 @@ if user_id in valid_ids:  # O(1) lookup
 
 ```
 my_project/
-├── src/
-│   ├── my_project/
-│   │   ├── __init__.py
-│   │   ├── models/
-│   │   │   ├── __init__.py
-│   │   │   └── user.py
-│   │   ├── services/
-│   │   │   ├── __init__.py
-│   │   │   └── user_service.py
-│   │   ├── repositories/
-│   │   │   ├── __init__.py
-│   │   │   └── user_repository.py
-│   │   └── utils/
-│   │       ├── __init__.py
-│   │       └── helpers.py
-├── tests/
-│   ├── __init__.py
-│   ├── test_models.py
-│   ├── test_services.py
-│   └── test_repositories.py
-├── requirements.txt
-├── pyproject.toml
-├── README.md
-└── .gitignore
++-- src/
+| +-- my_project/
+| | +-- __init__.py
+| | +-- models/
+| | | +-- __init__.py
+| | | -- user.py
+| | +-- services/
+| | | +-- __init__.py
+| | | -- user_service.py
+| | +-- repositories/
+| | | +-- __init__.py
+| | | -- user_repository.py
+| | -- utils/
+| | +-- __init__.py
+| | -- helpers.py
++-- tests/
+| +-- __init__.py
+| +-- test_models.py
+| +-- test_services.py
+| -- test_repositories.py
++-- requirements.txt
++-- pyproject.toml
++-- README.md
+-- .gitignore
 ```
 
 ---
@@ -253,10 +253,9 @@ my_project/
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Scripts
 

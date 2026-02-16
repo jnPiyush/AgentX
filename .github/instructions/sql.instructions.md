@@ -58,9 +58,9 @@ CREATE INDEX idx_active_users ON users(email) WHERE status = 'active';
 ```sql
 -- Store JSON data
 CREATE TABLE products (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    attributes JSONB DEFAULT '{}'::jsonb
+ id SERIAL PRIMARY KEY,
+ name TEXT NOT NULL,
+ attributes JSONB DEFAULT '{}'::jsonb
 );
 
 -- Query JSONB
@@ -75,9 +75,9 @@ CREATE INDEX idx_products_attrs ON products USING GIN (attributes);
 ```sql
 -- Array column
 CREATE TABLE articles (
-    id SERIAL PRIMARY KEY,
-    title TEXT NOT NULL,
-    tags TEXT[] DEFAULT '{}'
+ id SERIAL PRIMARY KEY,
+ title TEXT NOT NULL,
+ tags TEXT[] DEFAULT '{}'
 );
 
 -- Query arrays
@@ -96,8 +96,8 @@ CREATE INDEX idx_articles_search ON articles USING GIN(search_vector);
 
 -- Update search vector
 UPDATE articles SET search_vector =
-    setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-    setweight(to_tsvector('english', coalesce(body, '')), 'B');
+ setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+ setweight(to_tsvector('english', coalesce(body, '')), 'B');
 
 -- Search
 SELECT * FROM articles
@@ -109,9 +109,9 @@ WHERE search_vector @@ plainto_tsquery('english', 'search terms');
 ### Common Table Expressions (CTE)
 ```sql
 WITH OrderTotals AS (
-    SELECT user_id, SUM(amount) as total
-    FROM orders
-    GROUP BY user_id
+ SELECT user_id, SUM(amount) as total
+ FROM orders
+ GROUP BY user_id
 )
 SELECT u.name, ot.total
 FROM users u
@@ -122,23 +122,23 @@ WHERE ot.total > 1000;
 ### Window Functions
 ```sql
 SELECT
-    name,
-    department,
-    salary,
-    ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank,
-    AVG(salary) OVER (PARTITION BY department) as dept_avg
+ name,
+ department,
+ salary,
+ ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank,
+ AVG(salary) OVER (PARTITION BY department) as dept_avg
 FROM employees;
 ```
 
 ### Temporal Tables
 ```sql
 CREATE TABLE employees (
-    id INT PRIMARY KEY,
-    name NVARCHAR(100),
-    salary DECIMAL(10,2),
-    ValidFrom DATETIME2 GENERATED ALWAYS AS ROW START,
-    ValidTo DATETIME2 GENERATED ALWAYS AS ROW END,
-    PERIOD FOR SYSTEM_TIME (ValidFrom, ValidTo)
+ id INT PRIMARY KEY,
+ name NVARCHAR(100),
+ salary DECIMAL(10,2),
+ ValidFrom DATETIME2 GENERATED ALWAYS AS ROW START,
+ ValidTo DATETIME2 GENERATED ALWAYS AS ROW END,
+ PERIOD FOR SYSTEM_TIME (ValidFrom, ValidTo)
 ) WITH (SYSTEM_VERSIONING = ON);
 
 -- Query historical data
@@ -168,14 +168,14 @@ COMMIT;
 BEGIN TRANSACTION;
 
 BEGIN TRY
-    UPDATE accounts SET balance = balance - 100 WHERE id = 1;
-    UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+ UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+ UPDATE accounts SET balance = balance + 100 WHERE id = 2;
 
-    COMMIT TRANSACTION;
+ COMMIT TRANSACTION;
 END TRY
 BEGIN CATCH
-    ROLLBACK TRANSACTION;
-    THROW;
+ ROLLBACK TRANSACTION;
+ THROW;
 END CATCH
 ```
 
@@ -195,12 +195,12 @@ YYYYMMDDHHMMSS_descriptive_name.sql
 
 -- UP
 CREATE TABLE orders (
-    id SERIAL PRIMARY KEY,  -- PostgreSQL
-    -- id INT IDENTITY(1,1) PRIMARY KEY,  -- SQL Server
-    user_id INT NOT NULL REFERENCES users(id),
-    total DECIMAL(10,2) NOT NULL,
-    status VARCHAR(50) DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ id SERIAL PRIMARY KEY, -- PostgreSQL
+ -- id INT IDENTITY(1,1) PRIMARY KEY, -- SQL Server
+ user_id INT NOT NULL REFERENCES users(id),
+ total DECIMAL(10,2) NOT NULL,
+ status VARCHAR(50) DEFAULT 'pending',
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_orders_user_id ON orders(user_id);

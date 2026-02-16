@@ -58,11 +58,11 @@ WORKFLOW:
 
 ```text
 TOOL SELECTION:
-- To find a file by name → file_search
-- To find code by content → grep_search
-- To understand code meaning → semantic_search
-- To check errors → get_errors
-- To run commands → run_in_terminal
+- To find a file by name -> file_search
+- To find code by content -> grep_search
+- To understand code meaning -> semantic_search
+- To check errors -> get_errors
+- To run commands -> run_in_terminal
 
 PREFER grep_search over reading entire files.
 PREFER semantic_search when you don't know exact terms.

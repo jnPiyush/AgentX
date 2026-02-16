@@ -29,16 +29,16 @@ Choose the simplest pattern that solves the problem:
 ### 2. Scaffold the Agent
 
 For each agent, define:
-- **System prompt** — stored in a separate `.md` or `.txt` file
-- **Tools/plugins** — typed function definitions with clear descriptions
-- **Model configuration** — deployment name, temperature, max tokens
-- **Error handling** — retries, timeouts, fallback behavior
+- **System prompt** - stored in a separate `.md` or `.txt` file
+- **Tools/plugins** - typed function definitions with clear descriptions
+- **Model configuration** - deployment name, temperature, max tokens
+- **Error handling** - retries, timeouts, fallback behavior
 
 ### 3. Set Up Tracing
 
 Enable observability from day one:
 - Configure OpenTelemetry tracing
-- Use AI Toolkit Trace Viewer for local debugging (`Ctrl+Shift+P` → `AI Toolkit: Open Trace Viewer`)
+- Use AI Toolkit Trace Viewer for local debugging (`Ctrl+Shift+P` -> `AI Toolkit: Open Trace Viewer`)
 - Log token usage and latency per call
 
 ### 4. Add Evaluation
@@ -65,10 +65,10 @@ Before marking the agent as complete:
 **Tools**: [list of tools implemented]
 
 ### Files Created
-- `src/agents/[name].py` — Agent implementation
-- `src/prompts/[name]-system.md` — System prompt
-- `src/tools/[name].py` — Tool definitions
-- `tests/test_[name].py` — Unit tests
+- `src/agents/[name].py` - Agent implementation
+- `src/prompts/[name]-system.md` - System prompt
+- `src/tools/[name].py` - Tool definitions
+- `tests/test_[name].py` - Unit tests
 
 ### Evaluation Results
 - Dataset: [N] queries

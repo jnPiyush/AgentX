@@ -6,7 +6,7 @@
 
 Define **primary** and **secondary** personas covering: demographics, goals, pain points, behaviors, and a representative quote. Keep personas to one page each.
 
-> **📄 Full template** → [references/research-templates.md](references/research-templates.md)
+> ** Full template** -> [references/research-templates.md](references/research-templates.md)
 
 ### User Journey Mapping
 
@@ -22,7 +22,7 @@ Map the end-to-end experience across these stages:
 
 **Key output**: A list of **recommendations** with specific, actionable changes (e.g., "Reduce required fields to 3").
 
-> **📄 Full journey template** → [references/research-templates.md](references/research-templates.md)
+> ** Full journey template** -> [references/research-templates.md](references/research-templates.md)
 
 ---
 
@@ -30,10 +30,10 @@ Map the end-to-end experience across these stages:
 
 ### Site Map
 
-Organize content into a clear hierarchy. Every page needs: priority (P0–P3), content type, and status.
+Organize content into a clear hierarchy. Every page needs: priority (P0-P3), content type, and status.
 
 **Rules:**
-- Max 7 ± 2 top-level items (Miller's Law)
+- Max 7 2 top-level items (Miller's Law)
 - 3 clicks max to any content
 - Group by user mental model, not org structure
 - Authenticated vs. public areas clearly separated
@@ -42,10 +42,10 @@ Organize content into a clear hierarchy. Every page needs: priority (P0–P3), c
 
 | Page | Priority | Content Type | Status |
 |------|----------|--------------|--------|
-| Home | P0 | Marketing | ✅ Done |
-| Dashboard | P0 | Application | 🚧 In Progress |
-| Settings | P1 | Application | ⏳ Pending |
-| Docs | P1 | Content | ✅ Done |
+| Home | P0 | Marketing | [PASS] Done |
+| Dashboard | P0 | Application | In Progress |
+| Settings | P1 | Application | Pending |
+| Docs | P1 | Content | [PASS] Done |
 
 ---
 

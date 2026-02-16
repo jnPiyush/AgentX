@@ -1,4 +1,4 @@
-## ⚠️ PR Checklist - Required Before Merge
+## [WARN] PR Checklist - Required Before Merge
 
 ### Issue Reference
 - [ ] This PR closes #_____ (must reference a GitHub Issue)
@@ -7,7 +7,7 @@
 
 ### Code Quality
 - [ ] All tests pass locally
-- [ ] Code coverage ≥ 80%
+- [ ] Code coverage 80%
 - [ ] No compiler warnings or linter errors
 - [ ] XML docs added for all public APIs
 - [ ] Code follows repository style guidelines

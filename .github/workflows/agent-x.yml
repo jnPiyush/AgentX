@@ -5,299 +5,299 @@
 name: Agent X (Auto)
 
 on:
-  issues:
-    types: [labeled, opened]
-  workflow_dispatch:
-    inputs:
-      issue_number:
-        description: 'Issue number to process'
-        required: true
-        type: string
+ issues:
+ types: [labeled, opened]
+ workflow_dispatch:
+ inputs:
+ issue_number:
+ description: 'Issue number to process'
+ required: true
+ type: string
 
 permissions:
-  issues: write
-  contents: write
+ issues: write
+ contents: write
 
 jobs:
-  route:
-    name: Route Issue to Agent
-    runs-on: ubuntu-latest
-    outputs:
-      agent: ${{ steps.route.outputs.agent }}
-      issue_number: ${{ steps.route.outputs.issue_number }}
-    steps:
-      - name: Determine Agent
-        id: route
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Get issue number
-            const issueNumber = context.eventName === 'workflow_dispatch'
-              ? parseInt(context.payload.inputs.issue_number)
-              : context.payload.issue?.number;
-            
-            if (!issueNumber) {
-              console.log('❌ No issue to process');
-              return;
-            }
-            
-            // Get issue details
-            const { data: issue } = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber
-            });
-            
-            const labels = issue.labels.map(l => l.name);
-            console.log(`Issue #${issueNumber}: ${labels.join(', ')}`);
-            
-            // Route based on AGENTS.md Phase 2 workflow:
-            // Epic + Backlog → PM
-            // Ready + needs:ux → UX
-            // Ready + (no architecture) → Architect
-            // Ready + (has architecture) → Engineer
-            // In Review → Reviewer
-            // Bug + Backlog → Engineer (skip PM/Architect)
-            
-            // ─── Domain Classification (AI-First Intent Preservation) ───
-            const aiKeywords = /\b(AI|LLM|ML|machine learning|deep learning|GPT|model inference|NLP|neural|agent framework|foundry|openai|anthropic|gemini|intelligent|smart analysis|automated reasoning|natural language|embedding|rag|fine.?tun|prompt engineering)\b/i;
-            const textToScan = `${issue.title} ${issue.body || ''}`;
-            
-            if (aiKeywords.test(textToScan) && !labels.includes('needs:ai')) {
-              console.log('🤖 AI/ML domain detected — adding needs:ai label');
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                labels: ['needs:ai']
-              });
-              labels.push('needs:ai');
-            }
-            
-            // ─── Routing ───
-            let agent = null;
-            
-            if (labels.includes('type:epic')) {
-              agent = 'pm';
-            } else if (labels.includes('type:bug')) {
-              agent = 'engineer';  // Bugs skip PM/Architect
-            } else if (labels.includes('needs:ux')) {
-              agent = 'ux';
-            } else if (labels.includes('type:devops')) {
-              agent = 'devops';
-            } else if (labels.includes('type:feature') || labels.includes('type:spike')) {
-              agent = 'architect';
-            } else if (labels.includes('type:story') || labels.includes('type:docs')) {
-              agent = 'engineer';
-            } else if (labels.includes('needs:review')) {
-              agent = 'reviewer';
-            }
-            
-            core.setOutput('agent', agent || '');
-            core.setOutput('issue_number', issueNumber);
-            console.log(agent ? `✅ Routing to: ${agent}` : '⏸️ No routing needed');
-            console.log('ℹ️ Status-based routing via Projects V2 GraphQL available for advanced workflows');
+ route:
+ name: Route Issue to Agent
+ runs-on: ubuntu-latest
+ outputs:
+ agent: ${{ steps.route.outputs.agent }}
+ issue_number: ${{ steps.route.outputs.issue_number }}
+ steps:
+ - name: Determine Agent
+ id: route
+ uses: actions/github-script@v7
+ with:
+ script: |
+ // Get issue number
+ const issueNumber = context.eventName === 'workflow_dispatch'
+ ? parseInt(context.payload.inputs.issue_number)
+ : context.payload.issue?.number;
+ 
+ if (!issueNumber) {
+ console.log('[FAIL] No issue to process');
+ return;
+ }
+ 
+ // Get issue details
+ const { data: issue } = await github.rest.issues.get({
+ owner: context.repo.owner,
+ repo: context.repo.repo,
+ issue_number: issueNumber
+ });
+ 
+ const labels = issue.labels.map(l => l.name);
+ console.log(`Issue #${issueNumber}: ${labels.join(', ')}`);
+ 
+ // Route based on AGENTS.md Phase 2 workflow:
+ // Epic + Backlog -> PM
+ // Ready + needs:ux -> UX
+ // Ready + (no architecture) -> Architect
+ // Ready + (has architecture) -> Engineer
+ // In Review -> Reviewer
+ // Bug + Backlog -> Engineer (skip PM/Architect)
+ 
+ // --- Domain Classification (AI-First Intent Preservation) ---
+ const aiKeywords = /\b(AI|LLM|ML|machine learning|deep learning|GPT|model inference|NLP|neural|agent framework|foundry|openai|anthropic|gemini|intelligent|smart analysis|automated reasoning|natural language|embedding|rag|fine.?tun|prompt engineering)\b/i;
+ const textToScan = `${issue.title} ${issue.body || ''}`;
+ 
+ if (aiKeywords.test(textToScan) && !labels.includes('needs:ai')) {
+ console.log(' AI/ML domain detected - adding needs:ai label');
+ await github.rest.issues.addLabels({
+ owner: context.repo.owner,
+ repo: context.repo.repo,
+ issue_number: issueNumber,
+ labels: ['needs:ai']
+ });
+ labels.push('needs:ai');
+ }
+ 
+ // --- Routing ---
+ let agent = null;
+ 
+ if (labels.includes('type:epic')) {
+ agent = 'pm';
+ } else if (labels.includes('type:bug')) {
+ agent = 'engineer'; // Bugs skip PM/Architect
+ } else if (labels.includes('needs:ux')) {
+ agent = 'ux';
+ } else if (labels.includes('type:devops')) {
+ agent = 'devops';
+ } else if (labels.includes('type:feature') || labels.includes('type:spike')) {
+ agent = 'architect';
+ } else if (labels.includes('type:story') || labels.includes('type:docs')) {
+ agent = 'engineer';
+ } else if (labels.includes('needs:review')) {
+ agent = 'reviewer';
+ }
+ 
+ core.setOutput('agent', agent || '');
+ core.setOutput('issue_number', issueNumber);
+ console.log(agent ? `[PASS] Routing to: ${agent}` : '[PAUSE] No routing needed');
+ console.log('[INFO] Status-based routing via Projects V2 GraphQL available for advanced workflows');
 
-  pm:
-    name: 📋 Product Manager
-    needs: route
-    if: needs.route.outputs.agent == 'pm'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      
-      - name: Create PRD Scaffold
-        run: |
-          mkdir -p docs/prd
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          if [ ! -f "docs/prd/PRD-${ISSUE}.md" ]; then
-            cp .github/templates/PRD-TEMPLATE.md "docs/prd/PRD-${ISSUE}.md"
-            sed -i "s/{epic-id}/${ISSUE}/g" "docs/prd/PRD-${ISSUE}.md"
-            echo "✅ Created PRD scaffold"
-          else
-            echo "⏭️ PRD already exists"
-          fi
-      
-      - name: Validate Handoff (Optional)
-        continue-on-error: true
-        run: |
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          if [ -f ".github/scripts/validate-handoff.sh" ]; then
-            echo "ℹ️ Running pre-handoff validation..."
-            bash .github/scripts/validate-handoff.sh "${ISSUE}" pm || echo "⚠️ Validation incomplete (scaffold stage)"
-          fi
-      
-      - name: Commit & Comment
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/prd/
-          git diff --cached --quiet || git commit -m "docs: scaffold PRD for Epic #${ISSUE}"
-          git push || true
-          gh issue comment ${ISSUE} --body "📋 **PM Agent**: PRD scaffold created at docs/prd/PRD-${ISSUE}.md - Update status to Ready in Projects board when complete."
+ pm:
+ name: Product Manager
+ needs: route
+ if: needs.route.outputs.agent == 'pm'
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v6
+ 
+ - name: Create PRD Scaffold
+ run: |
+ mkdir -p docs/prd
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ if [ ! -f "docs/prd/PRD-${ISSUE}.md" ]; then
+ cp .github/templates/PRD-TEMPLATE.md "docs/prd/PRD-${ISSUE}.md"
+ sed -i "s/{epic-id}/${ISSUE}/g" "docs/prd/PRD-${ISSUE}.md"
+ echo "[PASS] Created PRD scaffold"
+ else
+ echo "[SKIP] PRD already exists"
+ fi
+ 
+ - name: Validate Handoff (Optional)
+ continue-on-error: true
+ run: |
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ if [ -f ".github/scripts/validate-handoff.sh" ]; then
+ echo "[INFO] Running pre-handoff validation..."
+ bash .github/scripts/validate-handoff.sh "${ISSUE}" pm || echo "[WARN] Validation incomplete (scaffold stage)"
+ fi
+ 
+ - name: Commit & Comment
+ env:
+ GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ run: |
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ git config user.name "github-actions[bot]"
+ git config user.email "github-actions[bot]@users.noreply.github.com"
+ git add docs/prd/
+ git diff --cached --quiet || git commit -m "docs: scaffold PRD for Epic #${ISSUE}"
+ git push || true
+ gh issue comment ${ISSUE} --body " **PM Agent**: PRD scaffold created at docs/prd/PRD-${ISSUE}.md - Update status to Ready in Projects board when complete."
 
-  ux:
-    name: 🎨 UX Designer
-    needs: route
-    if: needs.route.outputs.agent == 'ux'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      
-      - name: Create UX Scaffold
-        run: |
-          mkdir -p docs/ux
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          if [ ! -f "docs/ux/UX-${ISSUE}.md" ]; then
-            cp .github/templates/UX-TEMPLATE.md "docs/ux/UX-${ISSUE}.md"
-            sed -i "s/{feature-id}/${ISSUE}/g" "docs/ux/UX-${ISSUE}.md"
-            echo "✅ Created UX scaffold"
-          else
-            echo "⏭️ UX design already exists"
-          fi
-      
-      - name: Commit & Comment
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/ux/
-          git diff --cached --quiet || git commit -m "docs: scaffold UX design for #${ISSUE}"
-          git push || true
-          gh issue comment ${ISSUE} --body "🎨 **UX Agent**: Design scaffold created at docs/ux/UX-${ISSUE}.md - Update status to Ready in Projects board when complete."
+ ux:
+ name: UX Designer
+ needs: route
+ if: needs.route.outputs.agent == 'ux'
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v6
+ 
+ - name: Create UX Scaffold
+ run: |
+ mkdir -p docs/ux
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ if [ ! -f "docs/ux/UX-${ISSUE}.md" ]; then
+ cp .github/templates/UX-TEMPLATE.md "docs/ux/UX-${ISSUE}.md"
+ sed -i "s/{feature-id}/${ISSUE}/g" "docs/ux/UX-${ISSUE}.md"
+ echo "[PASS] Created UX scaffold"
+ else
+ echo "[SKIP] UX design already exists"
+ fi
+ 
+ - name: Commit & Comment
+ env:
+ GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ run: |
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ git config user.name "github-actions[bot]"
+ git config user.email "github-actions[bot]@users.noreply.github.com"
+ git add docs/ux/
+ git diff --cached --quiet || git commit -m "docs: scaffold UX design for #${ISSUE}"
+ git push || true
+ gh issue comment ${ISSUE} --body " **UX Agent**: Design scaffold created at docs/ux/UX-${ISSUE}.md - Update status to Ready in Projects board when complete."
 
-  architect:
-    name: 🏗️ Architect
-    needs: route
-    if: needs.route.outputs.agent == 'architect'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      
-      - name: Create ADR + Spec Scaffold
-        run: |
-          mkdir -p docs/adr docs/specs
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          
-          if [ ! -f "docs/adr/ADR-${ISSUE}.md" ]; then
-            cp .github/templates/ADR-TEMPLATE.md "docs/adr/ADR-${ISSUE}.md"
-            sed -i "s/{epic-id}/${ISSUE}/g" "docs/adr/ADR-${ISSUE}.md"
-          fi
-          
-          if [ ! -f "docs/specs/SPEC-${ISSUE}.md" ]; then
-            cp .github/templates/SPEC-TEMPLATE.md "docs/specs/SPEC-${ISSUE}.md"
-            sed -i "s/{feature-id}/${ISSUE}/g" "docs/specs/SPEC-${ISSUE}.md"
-          fi
-      
-      - name: Commit & Comment
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/adr/ docs/specs/
-          git diff --cached --quiet || git commit -m "docs: scaffold ADR + Spec for #${ISSUE}"
-          git push || true
-          gh issue comment ${ISSUE} --body "🏗️ **Architect Agent**: Scaffolds created (ADR: docs/adr/ADR-${ISSUE}.md, Spec: docs/specs/SPEC-${ISSUE}.md) - Update status to Ready in Projects board when complete."
+ architect:
+ name: Architect
+ needs: route
+ if: needs.route.outputs.agent == 'architect'
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v6
+ 
+ - name: Create ADR + Spec Scaffold
+ run: |
+ mkdir -p docs/adr docs/specs
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ 
+ if [ ! -f "docs/adr/ADR-${ISSUE}.md" ]; then
+ cp .github/templates/ADR-TEMPLATE.md "docs/adr/ADR-${ISSUE}.md"
+ sed -i "s/{epic-id}/${ISSUE}/g" "docs/adr/ADR-${ISSUE}.md"
+ fi
+ 
+ if [ ! -f "docs/specs/SPEC-${ISSUE}.md" ]; then
+ cp .github/templates/SPEC-TEMPLATE.md "docs/specs/SPEC-${ISSUE}.md"
+ sed -i "s/{feature-id}/${ISSUE}/g" "docs/specs/SPEC-${ISSUE}.md"
+ fi
+ 
+ - name: Commit & Comment
+ env:
+ GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ run: |
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ git config user.name "github-actions[bot]"
+ git config user.email "github-actions[bot]@users.noreply.github.com"
+ git add docs/adr/ docs/specs/
+ git diff --cached --quiet || git commit -m "docs: scaffold ADR + Spec for #${ISSUE}"
+ git push || true
+ gh issue comment ${ISSUE} --body " **Architect Agent**: Scaffolds created (ADR: docs/adr/ADR-${ISSUE}.md, Spec: docs/specs/SPEC-${ISSUE}.md) - Update status to Ready in Projects board when complete."
 
-  engineer:
-    name: 🔧 Engineer
-    needs: route
-    if: needs.route.outputs.agent == 'engineer'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Acknowledge Assignment
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "🔧 **Engineer Agent**: Ready for implementation. Move status to In Progress, implement with tests (80%+ coverage), then move to In Review when done."
+ engineer:
+ name: Engineer
+ needs: route
+ if: needs.route.outputs.agent == 'engineer'
+ runs-on: ubuntu-latest
+ steps:
+ - name: Acknowledge Assignment
+ env:
+ GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ run: |
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ gh issue comment ${ISSUE} --repo ${{ github.repository }} --body " **Engineer Agent**: Ready for implementation. Move status to In Progress, implement with tests (80%+ coverage), then move to In Review when done."
 
-  reviewer:
-    name: 🔍 Reviewer
-    needs: route
-    if: needs.route.outputs.agent == 'reviewer'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      
-      - name: Create Review Scaffold
-        run: |
-          mkdir -p docs/reviews
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          if [ ! -f "docs/reviews/REVIEW-${ISSUE}.md" ]; then
-            cp .github/templates/REVIEW-TEMPLATE.md "docs/reviews/REVIEW-${ISSUE}.md"
-            sed -i "s/{issue-id}/${ISSUE}/g" "docs/reviews/REVIEW-${ISSUE}.md"
-            echo "✅ Created Review scaffold"
-          else
-            echo "⏭️ Review document already exists"
-          fi
-      
-      - name: Commit & Comment
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/reviews/
-          git diff --cached --quiet || git commit -m "docs: scaffold review for #${ISSUE}"
-          git push || true
-          gh issue comment ${ISSUE} --body "🔍 **Reviewer Agent**: Review scaffold created at docs/reviews/REVIEW-${ISSUE}.md - Complete review and move status to Done when approved."
+ reviewer:
+ name: Reviewer
+ needs: route
+ if: needs.route.outputs.agent == 'reviewer'
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v6
+ 
+ - name: Create Review Scaffold
+ run: |
+ mkdir -p docs/reviews
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ if [ ! -f "docs/reviews/REVIEW-${ISSUE}.md" ]; then
+ cp .github/templates/REVIEW-TEMPLATE.md "docs/reviews/REVIEW-${ISSUE}.md"
+ sed -i "s/{issue-id}/${ISSUE}/g" "docs/reviews/REVIEW-${ISSUE}.md"
+ echo "[PASS] Created Review scaffold"
+ else
+ echo "[SKIP] Review document already exists"
+ fi
+ 
+ - name: Commit & Comment
+ env:
+ GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ run: |
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ git config user.name "github-actions[bot]"
+ git config user.email "github-actions[bot]@users.noreply.github.com"
+ git add docs/reviews/
+ git diff --cached --quiet || git commit -m "docs: scaffold review for #${ISSUE}"
+ git push || true
+ gh issue comment ${ISSUE} --body " **Reviewer Agent**: Review scaffold created at docs/reviews/REVIEW-${ISSUE}.md - Complete review and move status to Done when approved."
 
-  devops:
-    name: ⚙️ DevOps Engineer
-    needs: route
-    if: needs.route.outputs.agent == 'devops'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      
-      - name: Create Deployment Scaffold
-        run: |
-          mkdir -p docs/deployment
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          if [ ! -f "docs/deployment/DEPLOY-${ISSUE}.md" ]; then
-            cat > "docs/deployment/DEPLOY-${ISSUE}.md" <<'DEPLOY_EOF'
-          # Deployment Plan
+ devops:
+ name: DevOps Engineer
+ needs: route
+ if: needs.route.outputs.agent == 'devops'
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v6
+ 
+ - name: Create Deployment Scaffold
+ run: |
+ mkdir -p docs/deployment
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ if [ ! -f "docs/deployment/DEPLOY-${ISSUE}.md" ]; then
+ cat > "docs/deployment/DEPLOY-${ISSUE}.md" <<'DEPLOY_EOF'
+ # Deployment Plan
 
-          ## Pipeline Configuration
-          <!-- Describe CI/CD pipeline changes -->
+ ## Pipeline Configuration
+ <!-- Describe CI/CD pipeline changes -->
 
-          ## Environment Changes
-          <!-- Describe environment/infrastructure changes -->
+ ## Environment Changes
+ <!-- Describe environment/infrastructure changes -->
 
-          ## Rollback Plan
-          <!-- Describe rollback procedure -->
+ ## Rollback Plan
+ <!-- Describe rollback procedure -->
 
-          ## Security Checklist
-          - [ ] No hardcoded secrets
-          - [ ] Secrets use GitHub Secrets
-          - [ ] Minimal permissions applied
-          DEPLOY_EOF
-            # Fix indentation in generated file
-            sed -i 's/^          //' "docs/deployment/DEPLOY-${ISSUE}.md"
-            # Add issue number to title
-            sed -i "s/# Deployment Plan/# Deployment Plan - Issue #${ISSUE}/" "docs/deployment/DEPLOY-${ISSUE}.md"
-            echo "✅ Created deployment scaffold"
-          else
-            echo "⏭️ Deployment doc already exists"
-          fi
-      
-      - name: Commit & Comment
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE="${{ needs.route.outputs.issue_number }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/deployment/
-          git diff --cached --quiet || git commit -m "docs: scaffold deployment plan for #${ISSUE}"
-          git push || true
-          gh issue comment ${ISSUE} --body "⚙️ **DevOps Agent**: Deployment scaffold created at docs/deployment/DEPLOY-${ISSUE}.md - Implement pipeline and move to In Review when ready."
+ ## Security Checklist
+ - [ ] No hardcoded secrets
+ - [ ] Secrets use GitHub Secrets
+ - [ ] Minimal permissions applied
+ DEPLOY_EOF
+ # Fix indentation in generated file
+ sed -i 's/^ //' "docs/deployment/DEPLOY-${ISSUE}.md"
+ # Add issue number to title
+ sed -i "s/# Deployment Plan/# Deployment Plan - Issue #${ISSUE}/" "docs/deployment/DEPLOY-${ISSUE}.md"
+ echo "[PASS] Created deployment scaffold"
+ else
+ echo "[SKIP] Deployment doc already exists"
+ fi
+ 
+ - name: Commit & Comment
+ env:
+ GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ run: |
+ ISSUE="${{ needs.route.outputs.issue_number }}"
+ git config user.name "github-actions[bot]"
+ git config user.email "github-actions[bot]@users.noreply.github.com"
+ git add docs/deployment/
+ git diff --cached --quiet || git commit -m "docs: scaffold deployment plan for #${ISSUE}"
+ git push || true
+ gh issue comment ${ISSUE} --body " **DevOps Agent**: Deployment scaffold created at docs/deployment/DEPLOY-${ISSUE}.md - Implement pipeline and move to In Review when ready."

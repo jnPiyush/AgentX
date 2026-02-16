@@ -1,6 +1,6 @@
 # =============================================================================
 # Standard Configuration Cell for Forecasting Notebooks
-# Place at the top of every notebook — all scenario-specific parameters here
+# Place at the top of every notebook - all scenario-specific parameters here
 # =============================================================================
 
 # --- Scenario Configuration ---
@@ -52,9 +52,9 @@ from datetime import datetime
 GENERATED_AT = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 print(f"=== Forecasting: {SCENARIO_NAME} ===")
-print(f"  Workspace: {WORKSPACE_NAME}")
-print(f"  Lakehouse: {LAKEHOUSE_NAME}")
-print(f"  Target: {TARGET_COL}, ID: {ID_COL}, Time: {TIME_COL}")
-print(f"  Horizon: {FORECAST_HORIZON} {TIME_GRANULARITY} periods")
-print(f"  Model: {MODEL_TYPE}")
-print(f"  Generated: {GENERATED_AT}")
+print(f" Workspace: {WORKSPACE_NAME}")
+print(f" Lakehouse: {LAKEHOUSE_NAME}")
+print(f" Target: {TARGET_COL}, ID: {ID_COL}, Time: {TIME_COL}")
+print(f" Horizon: {FORECAST_HORIZON} {TIME_GRANULARITY} periods")
+print(f" Model: {MODEL_TYPE}")
+print(f" Generated: {GENERATED_AT}")

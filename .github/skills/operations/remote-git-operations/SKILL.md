@@ -2,12 +2,12 @@
 name: "remote-git-operations"
 description: 'Manage remote Git operations including GitHub, Azure DevOps, pull requests, CI/CD integration, and branch protection. Use when configuring remote repositories, setting up authentication, managing pull request workflows, integrating with CI/CD pipelines, or troubleshooting Git remote issues.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  platforms: ["github", "azure-devops"]
+ platforms: ["github", "azure-devops"]
 ---
 
 # Remote Git Repository Operations
@@ -84,8 +84,8 @@ git clone git@github.com:username/repo.git
 
 ```bash
 # View differences
-git log origin/main..HEAD  # Commits you have but remote doesn't
-git log HEAD..origin/main  # Commits remote has but you don't
+git log origin/main..HEAD # Commits you have but remote doesn't
+git log HEAD..origin/main # Commits remote has but you don't
 
 # Sync with remote
 git pull --rebase origin main
@@ -115,7 +115,7 @@ git push --force-with-lease origin main
 ```bash
 # Update credentials
 git credential reject
-git pull  # Will prompt for new credentials
+git pull # Will prompt for new credentials
 
 # Use SSH instead of HTTPS
 git remote set-url origin git@github.com:username/repo.git
@@ -128,7 +128,7 @@ git config --global credential.helper
 
 ```bash
 # Increase buffer size
-git config --global http.postBuffer 524288000  # 500MB
+git config --global http.postBuffer 524288000 # 500MB
 
 # Use SSH instead of HTTPS (more reliable)
 git remote set-url origin git@github.com:username/repo.git
@@ -143,7 +143,7 @@ git push origin main
 
 ## Best Practices Summary
 
-### ✅ DO
+### [PASS] DO
 - Use SSH authentication for security
 - Fetch before pushing
 - Use `--force-with-lease` instead of `--force`
@@ -155,7 +155,7 @@ git push origin main
 - Use Git LFS for large binary files
 - Run tests before pushing
 
-### ❌ DON'T
+### [FAIL] DON'T
 - Commit sensitive data (keys, passwords)
 - Force push to shared branches
 - Push untested code
@@ -172,7 +172,6 @@ git push origin main
 - [Version Control](../../development/version-control/SKILL.md)
 - [Security](../../architecture/security/SKILL.md)
 - [Code Organization](../../architecture/code-organization/SKILL.md)
-
 
 ## References
 

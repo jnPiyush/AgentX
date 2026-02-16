@@ -65,14 +65,14 @@ When writing `.agent.md` files:
 
 ```yaml
 constraints:
-  - "MUST [positive action]"     # What the agent must do
-  - "MUST NOT [negative action]" # Hard boundaries  
-  - "CAN [optional action]"     # Permitted but not required
+ - "MUST [positive action]" # What the agent must do
+ - "MUST NOT [negative action]" # Hard boundaries 
+ - "CAN [optional action]" # Permitted but not required
 boundaries:
-  can_modify:
-    - "path/to/allowed/**"
-  cannot_modify:
-    - "path/to/blocked/**"
+ can_modify:
+ - "path/to/allowed/**"
+ cannot_modify:
+ - "path/to/blocked/**"
 ```
 
 ### Handoff Prompts

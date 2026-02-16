@@ -1,36 +1,36 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
+ if (k2 === undefined) k2 = k;
+ var desc = Object.getOwnPropertyDescriptor(m, k);
+ if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+ desc = { enumerable: true, get: function() { return m[k]; } };
+ }
+ Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
+ if (k2 === undefined) k2 = k;
+ o[k2] = m[k];
 }));
 var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
+ Object.defineProperty(o, "default", { enumerable: true, value: v });
 }) : function(o, v) {
-    o["default"] = v;
+ o["default"] = v;
 });
 var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
+ var ownKeys = function(o) {
+ ownKeys = Object.getOwnPropertyNames || function (o) {
+ var ar = [];
+ for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+ return ar;
+ };
+ return ownKeys(o);
+ };
+ return function (mod) {
+ if (mod && mod.__esModule) return mod;
+ var result = {};
+ if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+ __setModuleDefault(result, mod);
+ return result;
+ };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerStatusCommand = registerStatusCommand;
@@ -40,93 +40,93 @@ const vscode = __importStar(require("vscode"));
  * Displays a summary of all agents, their models, and current state.
  */
 function registerStatusCommand(context, agentx) {
-    const cmd = vscode.commands.registerCommand('agentx.showStatus', async () => {
-        if (!await agentx.checkInitialized()) {
-            vscode.window.showWarningMessage('AgentX is not initialized. Run "AgentX: Initialize Project" first.');
-            return;
-        }
-        try {
-            // Try CLI state command first
-            const output = await agentx.runCli('state');
-            const panel = vscode.window.createWebviewPanel('agentxStatus', 'AgentX — Agent Status', vscode.ViewColumn.One, { enableScripts: false });
-            panel.webview.html = buildStatusHtml(output);
-        }
-        catch {
-            // Fallback: list agents from definitions
-            const agents = await agentx.listAgents();
-            if (agents.length === 0) {
-                vscode.window.showInformationMessage('No agents found.');
-                return;
-            }
-            const panel = vscode.window.createWebviewPanel('agentxStatus', 'AgentX — Agent Status', vscode.ViewColumn.One, { enableScripts: false });
-            panel.webview.html = buildAgentListHtml(agents);
-        }
-    });
-    context.subscriptions.push(cmd);
+ const cmd = vscode.commands.registerCommand('agentx.showStatus', async () => {
+ if (!await agentx.checkInitialized()) {
+ vscode.window.showWarningMessage('AgentX is not initialized. Run "AgentX: Initialize Project" first.');
+ return;
+ }
+ try {
+ // Try CLI state command first
+ const output = await agentx.runCli('state');
+ const panel = vscode.window.createWebviewPanel('agentxStatus', 'AgentX - Agent Status', vscode.ViewColumn.One, { enableScripts: false });
+ panel.webview.html = buildStatusHtml(output);
+ }
+ catch {
+ // Fallback: list agents from definitions
+ const agents = await agentx.listAgents();
+ if (agents.length === 0) {
+ vscode.window.showInformationMessage('No agents found.');
+ return;
+ }
+ const panel = vscode.window.createWebviewPanel('agentxStatus', 'AgentX - Agent Status', vscode.ViewColumn.One, { enableScripts: false });
+ panel.webview.html = buildAgentListHtml(agents);
+ }
+ });
+ context.subscriptions.push(cmd);
 }
 function buildStatusHtml(cliOutput) {
-    const lines = cliOutput.split('\n').map(l => escapeHtml(l)).join('<br/>');
-    return `<!DOCTYPE html>
+ const lines = cliOutput.split('\n').map(l => escapeHtml(l)).join('<br/>');
+ return `<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: var(--vscode-font-family, 'Segoe UI', sans-serif); padding: 16px; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); }
-        h1 { font-size: 1.4em; margin-bottom: 16px; }
-        pre { font-family: var(--vscode-editor-font-family, monospace); font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
-    </style>
+ <meta charset="UTF-8">
+ <style>
+ body { font-family: var(--vscode-font-family, 'Segoe UI', sans-serif); padding: 16px; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); }
+ h1 { font-size: 1.4em; margin-bottom: 16px; }
+ pre { font-family: var(--vscode-editor-font-family, monospace); font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+ </style>
 </head>
 <body>
-    <h1>🤖 AgentX — Agent Status</h1>
-    <pre>${lines}</pre>
+ <h1> AgentX - Agent Status</h1>
+ <pre>${lines}</pre>
 </body>
 </html>`;
 }
 function buildAgentListHtml(agents) {
-    const icons = {
-        'Agent X (Auto)': '🎯',
-        'Product Manager': '📋',
-        'UX Designer': '🎨',
-        'Architect': '🏗️',
-        'Engineer': '🔧',
-        'Reviewer': '🔍',
-        'Reviewer (Auto-Fix)': '🔧🔍',
-        'DevOps Engineer': '⚙️',
-    };
-    const rows = agents.map(a => {
-        const icon = icons[a.name] || '🤖';
-        const badge = a.maturity === 'stable'
-            ? '<span style="color:#22c55e;">● stable</span>'
-            : '<span style="color:#f59e0b;">● preview</span>';
-        return `<tr>
-            <td>${icon} <strong>${escapeHtml(a.name)}</strong></td>
-            <td>${escapeHtml(a.model)}</td>
-            <td>${badge}</td>
-            <td>${escapeHtml(a.mode)}</td>
-        </tr>`;
-    }).join('\n');
-    return `<!DOCTYPE html>
+ const icons = {
+ 'Agent X (Auto)': '',
+ 'Product Manager': '',
+ 'UX Designer': '',
+ 'Architect': '',
+ 'Engineer': '',
+ 'Reviewer': '',
+ 'Reviewer (Auto-Fix)': '',
+ 'DevOps Engineer': '',
+ };
+ const rows = agents.map(a => {
+ const icon = icons[a.name] || '';
+ const badge = a.maturity === 'stable'
+ ? '<span style="color:#22c55e;">(*) stable</span>'
+ : '<span style="color:#f59e0b;">(*) preview</span>';
+ return `<tr>
+ <td>${icon} <strong>${escapeHtml(a.name)}</strong></td>
+ <td>${escapeHtml(a.model)}</td>
+ <td>${badge}</td>
+ <td>${escapeHtml(a.mode)}</td>
+ </tr>`;
+ }).join('\n');
+ return `<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: var(--vscode-font-family, 'Segoe UI', sans-serif); padding: 16px; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); }
-        h1 { font-size: 1.4em; margin-bottom: 16px; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--vscode-panel-border, #333); }
-        th { opacity: 0.7; font-size: 0.85em; text-transform: uppercase; }
-    </style>
+ <meta charset="UTF-8">
+ <style>
+ body { font-family: var(--vscode-font-family, 'Segoe UI', sans-serif); padding: 16px; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); }
+ h1 { font-size: 1.4em; margin-bottom: 16px; }
+ table { border-collapse: collapse; width: 100%; }
+ th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--vscode-panel-border, #333); }
+ th { opacity: 0.7; font-size: 0.85em; text-transform: uppercase; }
+ </style>
 </head>
 <body>
-    <h1>🤖 AgentX — Agents (${agents.length})</h1>
-    <table>
-        <thead><tr><th>Agent</th><th>Model</th><th>Maturity</th><th>Mode</th></tr></thead>
-        <tbody>${rows}</tbody>
-    </table>
+ <h1> AgentX - Agents (${agents.length})</h1>
+ <table>
+ <thead><tr><th>Agent</th><th>Model</th><th>Maturity</th><th>Mode</th></tr></thead>
+ <tbody>${rows}</tbody>
+ </table>
 </body>
 </html>`;
 }
 function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+ return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 //# sourceMappingURL=status.js.map

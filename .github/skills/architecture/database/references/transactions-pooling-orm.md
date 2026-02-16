@@ -15,28 +15,28 @@
 transaction = database.beginTransaction()
 
 try:
-    # Multiple operations in single transaction
-    database.execute("UPDATE accounts SET balance = balance - 100 WHERE id = 1")
-    database.execute("UPDATE accounts SET balance = balance + 100 WHERE id = 2")
-    
-    # All succeed or all fail together
-    transaction.commit()
+ # Multiple operations in single transaction
+ database.execute("UPDATE accounts SET balance = balance - 100 WHERE id = 1")
+ database.execute("UPDATE accounts SET balance = balance + 100 WHERE id = 2")
+ 
+ # All succeed or all fail together
+ transaction.commit()
 catch error:
-    # Rollback on any error
-    transaction.rollback()
-    throw error
+ # Rollback on any error
+ transaction.rollback()
+ throw error
 finally:
-    transaction.close()
+ transaction.close()
 ```
 
 ### Isolation Levels
 
 **Isolation Level Trade-offs:**
 ```
-READ UNCOMMITTED  # Dirty reads possible, highest performance
-READ COMMITTED    # Default, good balance
-REPEATABLE READ   # Prevents non-repeatable reads
-SERIALIZABLE      # Full isolation, lowest performance
+READ UNCOMMITTED # Dirty reads possible, highest performance
+READ COMMITTED # Default, good balance
+REPEATABLE READ # Prevents non-repeatable reads
+SERIALIZABLE # Full isolation, lowest performance
 ```
 
 **Choose isolation level based on needs:**
@@ -68,31 +68,31 @@ transaction = database.begin(isolationLevel: "READ COMMITTED")
 
 ```
 Pool Configuration:
-  minConnections: 5        # Always maintain this many
-  maxConnections: 20       # Never exceed this limit
-  connectionTimeout: 30s   # Wait time for available connection
-  idleTimeout: 600s        # Close idle connections after 10 min
-  maxLifetime: 1800s       # Recycle connections after 30 min
+ minConnections: 5 # Always maintain this many
+ maxConnections: 20 # Never exceed this limit
+ connectionTimeout: 30s # Wait time for available connection
+ idleTimeout: 600s # Close idle connections after 10 min
+ maxLifetime: 1800s # Recycle connections after 30 min
 ```
 
 **Connection Pool Pattern:**
 ```
 # Application startup
 connectionPool = createConnectionPool({
-    host: "db.example.com",
-    database: "myapp",
-    minConnections: 5,
-    maxConnections: 20
+ host: "db.example.com",
+ database: "myapp",
+ minConnections: 5,
+ maxConnections: 20
 })
 
 # In request handler
 function handleGetUser(userId):
-    connection = connectionPool.acquire()
-    try:
-        user = connection.query("SELECT * FROM users WHERE id = ?", userId)
-        return user
-    finally:
-        connectionPool.release(connection)  # Return to pool
+ connection = connectionPool.acquire()
+ try:
+ user = connection.query("SELECT * FROM users WHERE id = ?", userId)
+ return user
+ finally:
+ connectionPool.release(connection) # Return to pool
 ```
 
 ---
@@ -121,7 +121,7 @@ function handleGetUser(userId):
 user = ORM.users().find(1)
 
 # Triggers additional query when accessed
-posts = user.posts  # N+1 problem
+posts = user.posts # N+1 problem
 ```
 
 **Eager Loading (Load Upfront):**
@@ -130,7 +130,7 @@ posts = user.posts  # N+1 problem
 user = ORM.users().with('posts').find(1)
 
 # No additional query
-posts = user.posts  # Already loaded
+posts = user.posts # Already loaded
 ```
 
 ---
@@ -141,9 +141,9 @@ posts = user.posts  # Already loaded
 
 ```sql
 CREATE TABLE orders (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+ id SERIAL PRIMARY KEY,
+ user_id INTEGER NOT NULL,
+ FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 ```
 
@@ -157,11 +157,11 @@ CREATE TABLE orders (
 
 ```sql
 CREATE TABLE products (
-  id SERIAL PRIMARY KEY,
-  price DECIMAL(10,2),
-  stock INTEGER,
-  CHECK (price > 0),
-  CHECK (stock >= 0)
+ id SERIAL PRIMARY KEY,
+ price DECIMAL(10,2),
+ stock INTEGER,
+ CHECK (price > 0),
+ CHECK (stock >= 0)
 );
 ```
 

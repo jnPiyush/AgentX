@@ -1,110 +1,110 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Generate a docker-compose.yml scaffold for common development stacks.
+ Generate a docker-compose.yml scaffold for common development stacks.
 
 .DESCRIPTION
-    Creates a docker-compose.yml with the application plus common services
-    (database, cache, message queue). Follows compose best practices.
+ Creates a docker-compose.yml with the application plus common services
+ (database, cache, message queue). Follows compose best practices.
 
 .PARAMETER Stack
-    Predefined stack: 'web', 'api', 'fullstack'. Default: api
+ Predefined stack: 'web', 'api', 'fullstack'. Default: api
 
 .PARAMETER Services
-    Additional services: postgres, redis, rabbitmq, mongo, elasticsearch
+ Additional services: postgres, redis, rabbitmq, mongo, elasticsearch
 
 .PARAMETER Output
-    Output path. Default: ./docker-compose.yml
+ Output path. Default: ./docker-compose.yml
 
 .EXAMPLE
-    .\generate-compose.ps1 -Stack api -Services postgres,redis
+ .\generate-compose.ps1 -Stack api -Services postgres,redis
 #>
 param(
-    [ValidateSet("web", "api", "fullstack")]
-    [string]$Stack = "api",
-    [string[]]$Services = @("postgres"),
-    [string]$Output = "./docker-compose.yml"
+ [ValidateSet("web", "api", "fullstack")]
+ [string]$Stack = "api",
+ [string[]]$Services = @("postgres"),
+ [string]$Output = "./docker-compose.yml"
 )
 
 $ServiceTemplates = @{
-    "postgres" = @"
+ "postgres" = @"
 
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: `${DB_NAME:-appdb}
-      POSTGRES_USER: `${DB_USER:-appuser}
-      POSTGRES_PASSWORD: `${DB_PASSWORD:-changeme}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U `${DB_USER:-appuser}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+ postgres:
+ image: postgres:16-alpine
+ restart: unless-stopped
+ environment:
+ POSTGRES_DB: `${DB_NAME:-appdb}
+ POSTGRES_USER: `${DB_USER:-appuser}
+ POSTGRES_PASSWORD: `${DB_PASSWORD:-changeme}
+ ports:
+ - "5432:5432"
+ volumes:
+ - postgres_data:/var/lib/postgresql/data
+ healthcheck:
+ test: ["CMD-SHELL", "pg_isready -U `${DB_USER:-appuser}"]
+ interval: 10s
+ timeout: 5s
+ retries: 5
 "@
 
-    "redis" = @"
+ "redis" = @"
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+ redis:
+ image: redis:7-alpine
+ restart: unless-stopped
+ ports:
+ - "6379:6379"
+ volumes:
+ - redis_data:/data
+ healthcheck:
+ test: ["CMD", "redis-cli", "ping"]
+ interval: 10s
+ timeout: 5s
+ retries: 5
 "@
 
-    "rabbitmq" = @"
+ "rabbitmq" = @"
 
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: `${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: `${RABBITMQ_PASS:-guest}
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+ rabbitmq:
+ image: rabbitmq:3-management-alpine
+ restart: unless-stopped
+ ports:
+ - "5672:5672"
+ - "15672:15672"
+ environment:
+ RABBITMQ_DEFAULT_USER: `${RABBITMQ_USER:-guest}
+ RABBITMQ_DEFAULT_PASS: `${RABBITMQ_PASS:-guest}
+ volumes:
+ - rabbitmq_data:/var/lib/rabbitmq
 "@
 
-    "mongo" = @"
+ "mongo" = @"
 
-  mongo:
-    image: mongo:7
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: `${MONGO_USER:-root}
-      MONGO_INITDB_ROOT_PASSWORD: `${MONGO_PASS:-changeme}
-    volumes:
-      - mongo_data:/data/db
+ mongo:
+ image: mongo:7
+ restart: unless-stopped
+ ports:
+ - "27017:27017"
+ environment:
+ MONGO_INITDB_ROOT_USERNAME: `${MONGO_USER:-root}
+ MONGO_INITDB_ROOT_PASSWORD: `${MONGO_PASS:-changeme}
+ volumes:
+ - mongo_data:/data/db
 "@
 
-    "elasticsearch" = @"
+ "elasticsearch" = @"
 
-  elasticsearch:
-    image: elasticsearch:8.12.0
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
-    volumes:
-      - es_data:/usr/share/elasticsearch/data
+ elasticsearch:
+ image: elasticsearch:8.12.0
+ restart: unless-stopped
+ environment:
+ - discovery.type=single-node
+ - xpack.security.enabled=false
+ - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+ ports:
+ - "9200:9200"
+ volumes:
+ - es_data:/usr/share/elasticsearch/data
 "@
 }
 
@@ -114,42 +114,42 @@ $compose = @"
 # Usage: docker compose up -d
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - "`${APP_PORT:-8080}:8080"
-    env_file:
-      - .env
-    depends_on:
+ app:
+ build:
+ context: .
+ dockerfile: Dockerfile
+ restart: unless-stopped
+ ports:
+ - "`${APP_PORT:-8080}:8080"
+ env_file:
+ - .env
+ depends_on:
 "@
 
 # Add depends_on entries
 foreach ($svc in $Services) {
-    $compose += "`n      $($svc):`n        condition: service_healthy"
+ $compose += "`n $($svc):`n condition: service_healthy"
 }
 
 # Add service definitions
 foreach ($svc in $Services) {
-    if ($ServiceTemplates.ContainsKey($svc)) {
-        $compose += $ServiceTemplates[$svc]
-    }
+ if ($ServiceTemplates.ContainsKey($svc)) {
+ $compose += $ServiceTemplates[$svc]
+ }
 }
 
 # Add volumes
 $compose += "`n`nvolumes:"
 foreach ($svc in $Services) {
-    $compose += "`n  ${svc}_data:"
+ $compose += "`n ${svc}_data:"
 }
 
 $compose | Set-Content -Path $Output -Encoding UTF8
 
 Write-Host "=== Docker Compose Generator ===" -ForegroundColor Cyan
-Write-Host "  Stack:    $Stack"
-Write-Host "  Services: $($Services -join ', ')"
-Write-Host "  Created:  $Output" -ForegroundColor Green
-Write-Host "`n  Start: docker compose up -d" -ForegroundColor Cyan
-Write-Host "  Logs:  docker compose logs -f" -ForegroundColor Cyan
-Write-Host "  Stop:  docker compose down" -ForegroundColor Cyan
+Write-Host " Stack: $Stack"
+Write-Host " Services: $($Services -join ', ')"
+Write-Host " Created: $Output" -ForegroundColor Green
+Write-Host "`n Start: docker compose up -d" -ForegroundColor Cyan
+Write-Host " Logs: docker compose logs -f" -ForegroundColor Cyan
+Write-Host " Stop: docker compose down" -ForegroundColor Cyan

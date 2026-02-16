@@ -15,10 +15,10 @@ git config --global credential.helper 'cache --timeout=3600'
 git config --global credential.helper store
 
 # Using Personal Access Token (GitHub)
-# 1. Generate PAT: GitHub → Settings → Developer settings → Personal access tokens
+# 1. Generate PAT: GitHub -> Settings -> Developer settings -> Personal access tokens
 # 2. Use as password when prompted:
-#    Username: your-github-username
-#    Password: ghp_xxxxxxxxxxxxxxxxxxxx
+# Username: your-github-username
+# Password: ghp_xxxxxxxxxxxxxxxxxxxx
 ```
 
 ### SSH Authentication (Recommended)
@@ -37,7 +37,7 @@ ssh-add ~/.ssh/id_ed25519
 clip < ~/.ssh/id_ed25519.pub
 
 # Add to GitHub/Azure DevOps/GitLab
-# GitHub: Settings → SSH and GPG keys → New SSH key
+# GitHub: Settings -> SSH and GPG keys -> New SSH key
 
 # Test connection
 ssh -T git@github.com
@@ -51,7 +51,7 @@ git remote set-url origin git@github.com:username/repo.git
 
 ```bash
 # Using Personal Access Token (PAT)
-# 1. Azure DevOps → User Settings → Personal Access Tokens
+# 1. Azure DevOps -> User Settings -> Personal Access Tokens
 # 2. Create token with Code (Read & Write) scope
 # 3. Use as password when prompted
 
@@ -61,7 +61,7 @@ git config --global credential.helper "!az account get-access-token --query acce
 
 # Using SSH (recommended)
 # 1. Generate key: ssh-keygen -t rsa -b 4096
-# 2. Add to Azure DevOps: User Settings → SSH Public Keys
+# 2. Add to Azure DevOps: User Settings -> SSH Public Keys
 ```
 
 ---
@@ -129,7 +129,7 @@ git push origin v1.0.0
 
 # Delete remote branch
 git push origin --delete feature-branch
-git push origin :feature-branch  # Alternative syntax
+git push origin :feature-branch # Alternative syntax
 
 # Force push (use with extreme caution!)
 git push --force origin main
@@ -175,11 +175,11 @@ git push -u origin feature/new-feature
 
 # Track remote branch
 git checkout --track origin/feature-branch
-git checkout feature-branch  # Simplified
+git checkout feature-branch # Simplified
 
 # List remote branches
 git branch -r
-git branch -a  # All branches (local + remote)
+git branch -a # All branches (local + remote)
 
 # Delete remote branch
 git push origin --delete old-feature

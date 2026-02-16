@@ -7,24 +7,24 @@
 ```bash
 # Create App Service Plan
 az appservice plan create \
-  --name asp-myapp-prod \
-  --resource-group rg-myapp-prod \
-  --sku P1V2 \
-  --is-linux
+ --name asp-myapp-prod \
+ --resource-group rg-myapp-prod \
+ --sku P1V2 \
+ --is-linux
 
 # Create Web App
 az webapp create \
-  --name app-myapp-prod \
-  --resource-group rg-myapp-prod \
-  --plan asp-myapp-prod \
-  --runtime "DOTNET|8.0"
+ --name app-myapp-prod \
+ --resource-group rg-myapp-prod \
+ --plan asp-myapp-prod \
+ --runtime "DOTNET|8.0"
 
 # Deploy from GitHub
 az webapp deployment source config \
-  --name app-myapp-prod \
-  --resource-group rg-myapp-prod \
-  --repo-url https://github.com/org/repo \
-  --branch main
+ --name app-myapp-prod \
+ --resource-group rg-myapp-prod \
+ --repo-url https://github.com/org/repo \
+ --branch main
 ```
 
 ### Azure Container Apps
@@ -32,20 +32,20 @@ az webapp deployment source config \
 ```bash
 # Create Container Apps Environment
 az containerapp env create \
-  --name cae-myapp-prod \
-  --resource-group rg-myapp-prod \
-  --location eastus
+ --name cae-myapp-prod \
+ --resource-group rg-myapp-prod \
+ --location eastus
 
 # Deploy container
 az containerapp create \
-  --name ca-api-prod \
-  --resource-group rg-myapp-prod \
-  --environment cae-myapp-prod \
-  --image myregistry.azurecr.io/api:latest \
-  --target-port 8080 \
-  --ingress external \
-  --min-replicas 2 \
-  --max-replicas 10
+ --name ca-api-prod \
+ --resource-group rg-myapp-prod \
+ --environment cae-myapp-prod \
+ --image myregistry.azurecr.io/api:latest \
+ --target-port 8080 \
+ --ingress external \
+ --min-replicas 2 \
+ --max-replicas 10
 ```
 
 ### Azure Functions
@@ -54,27 +54,27 @@ az containerapp create \
 // HTTP Trigger Function
 [Function("HttpTrigger")]
 public IActionResult Run(
-    [HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req,
-    FunctionContext context)
+ [HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req,
+ FunctionContext context)
 {
-    var logger = context.GetLogger("HttpTrigger");
-    logger.LogInformation("Processing request");
+ var logger = context.GetLogger("HttpTrigger");
+ logger.LogInformation("Processing request");
 
-    return new OkObjectResult("Hello, Azure Functions!");
+ return new OkObjectResult("Hello, Azure Functions!");
 }
 
 // Timer Trigger (CRON)
 [Function("TimerTrigger")]
 public void Run([TimerTrigger("0 */5 * * * *")] TimerInfo timer)
 {
-    // Runs every 5 minutes
+ // Runs every 5 minutes
 }
 
 // Queue Trigger
 [Function("QueueTrigger")]
 public void Run([QueueTrigger("myqueue")] string message)
 {
-    // Process queue message
+ // Process queue message
 }
 ```
 
@@ -101,9 +101,9 @@ var content = response.Value.Content.ToString();
 // Generate SAS token
 var sasBuilder = new BlobSasBuilder
 {
-    BlobContainerName = "mycontainer",
-    BlobName = "myfile.txt",
-    ExpiresOn = DateTimeOffset.UtcNow.AddHours(1)
+ BlobContainerName = "mycontainer",
+ BlobName = "myfile.txt",
+ ExpiresOn = DateTimeOffset.UtcNow.AddHours(1)
 };
 sasBuilder.SetPermissions(BlobSasPermissions.Read);
 var sasToken = blobClient.GenerateSasUri(sasBuilder);

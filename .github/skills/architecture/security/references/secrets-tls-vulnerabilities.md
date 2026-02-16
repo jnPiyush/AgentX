@@ -4,25 +4,25 @@
 
 ### Environment Variables
 
-**❌ NEVER hardcode secrets:**
+**[FAIL] NEVER hardcode secrets:**
 ```json
 {
-  "database": {
-    "password": "SuperSecret123"  // VULNERABLE - in source control
-  },
-  "apiKeys": {
-    "stripe": "sk_live_abcd1234"  // VULNERABLE - exposed
-  }
+ "database": {
+ "password": "SuperSecret123" // VULNERABLE - in source control
+ },
+ "apiKeys": {
+ "stripe": "sk_live_abcd1234" // VULNERABLE - exposed
+ }
 }
 ```
 
-**✅ Use environment variables:**
+**[PASS] Use environment variables:**
 ```
 Configuration:
-  database:
-    password: ${DB_PASSWORD}  # From environment
-  apiKeys:
-    stripe: ${STRIPE_API_KEY}  # From environment
+ database:
+ password: ${DB_PASSWORD} # From environment
+ apiKeys:
+ stripe: ${STRIPE_API_KEY} # From environment
 ```
 
 **Environment Variable Best Practices:**

@@ -20,9 +20,9 @@ You are a DevOps Engineer agent creating pipelines for Issue #{{issue_number}}.
 
 **Pipeline Stages:**
 ```
-┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│  Build   │ →  │   Test   │ →  │ Package  │ →  │  Deploy  │
-└──────────┘    └──────────┘    └──────────┘    └──────────┘
+---------- ---------- ---------- ----------
+| Build | -> | Test | -> | Package | -> | Deploy |
+---------- ---------- ---------- ----------
 ```
 
 **Environment Strategy:**

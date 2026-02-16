@@ -2,16 +2,16 @@
 name: "type-safety"
 description: 'Apply type safety patterns including nullable types, validation, static analysis, and strong typing. Use when adding type annotations, implementing nullable reference types, validating inputs with value objects, configuring static analysis tools, or designing type-safe APIs.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Type Safety
 
-> **Purpose**: Use type systems to catch errors at compile/analysis time rather than runtime.  
-> **Goal**: Prevent null errors, type mismatches, and invalid states.  
+> **Purpose**: Use type systems to catch errors at compile/analysis time rather than runtime. 
+> **Goal**: Prevent null errors, type mismatches, and invalid states. 
 > **Note**: For implementation, see [C# Development](../csharp/SKILL.md) or [Python Development](../python/SKILL.md).
 
 ---
@@ -32,19 +32,19 @@ metadata:
 
 ```
 Runtime Error (Bad):
-  function getUser(id):
-    return database.find(id)  # What type? Nullable?
-  
-  user = getUser(123)
-  print(user.email)  # 💥 NullReferenceException at runtime
+ function getUser(id):
+ return database.find(id) # What type? Nullable?
+ 
+ user = getUser(123)
+ print(user.email) # NullReferenceException at runtime
 
 Type-Safe (Good):
-  function getUser(id: int) -> User | null:
-    return database.find(id)
-  
-  user = getUser(123)
-  if user != null:
-    print(user.email)  # ✅ Compiler ensures null check
+ function getUser(id: int) -> User | null:
+ return database.find(id)
+ 
+ user = getUser(123)
+ if user != null:
+ print(user.email) # [PASS] Compiler ensures null check
 ```
 
 ---
@@ -57,41 +57,41 @@ Explicitly declare whether a value can be null/None.
 
 ```
 Type Declarations:
-  
-  User       - Never null (must have value)
-  User?      - Nullable (might be null)
-  
+ 
+ User - Never null (must have value)
+ User? - Nullable (might be null)
+ 
 Benefits:
-  - Compiler/analyzer warns about potential null access
-  - Forces explicit null handling
-  - Self-documenting code
+ - Compiler/analyzer warns about potential null access
+ - Forces explicit null handling
+ - Self-documenting code
 ```
 
 ### Null Handling Patterns
 
 ```
 Pattern 1: Null Check
-  user = findUser(id)
-  if user != null:
-    return user.email
-  else:
-    throw NotFoundException()
+ user = findUser(id)
+ if user != null:
+ return user.email
+ else:
+ throw NotFoundException()
 
 Pattern 2: Default Value
-  user = findUser(id)
-  return user?.email ?? "unknown@example.com"
+ user = findUser(id)
+ return user?.email ?? "unknown@example.com"
 
 Pattern 3: Early Return
-  user = findUser(id)
-  if user == null:
-    return NotFound()
-  
-  # user is non-null from here
-  return Ok(user)
+ user = findUser(id)
+ if user == null:
+ return NotFound()
+ 
+ # user is non-null from here
+ return Ok(user)
 
 Pattern 4: Required (Fail Fast)
-  user = findUser(id) ?? throw NotFoundException(id)
-  return user.email  # Guaranteed non-null
+ user = findUser(id) ?? throw NotFoundException(id)
+ return user.email # Guaranteed non-null
 ```
 
 ---
@@ -103,36 +103,36 @@ Pattern 4: Required (Fail Fast)
 ```
 Fully Typed Function:
 
-  function calculateTotal(
-    items: List<OrderItem>,   # Input type
-    discountPercent: decimal, # Primitive type
-    taxRate: decimal?         # Nullable parameter
-  ) -> decimal:               # Return type
-    ...
+ function calculateTotal(
+ items: List<OrderItem>, # Input type
+ discountPercent: decimal, # Primitive type
+ taxRate: decimal? # Nullable parameter
+ ) -> decimal: # Return type
+ ...
 
 Benefits:
-  - Clear contract
-  - IDE autocomplete
-  - Compile-time validation
-  - Documentation
+ - Clear contract
+ - IDE autocomplete
+ - Compile-time validation
+ - Documentation
 ```
 
 ### Data Types
 
 ```
 Primitive Types:
-  int, float, decimal, string, bool, datetime
+ int, float, decimal, string, bool, datetime
 
 Collection Types:
-  List<T>           # Ordered, duplicates allowed
-  Set<T>            # Unique values
-  Map<K, V>         # Key-value pairs
-  Array<T>          # Fixed size
+ List<T> # Ordered, duplicates allowed
+ Set<T> # Unique values
+ Map<K, V> # Key-value pairs
+ Array<T> # Fixed size
 
 Custom Types:
-  User              # Class/struct
-  OrderStatus       # Enum
-  Result<T, E>      # Union/discriminated type
+ User # Class/struct
+ OrderStatus # Enum
+ Result<T, E> # Union/discriminated type
 ```
 
 ---
@@ -164,8 +164,7 @@ Custom Types:
 
 ---
 
-**See Also**: [Testing](../testing/SKILL.md) • [C# Development](../csharp/SKILL.md) • [Python Development](../python/SKILL.md)
-
+**See Also**: [Testing](../testing/SKILL.md) - [C# Development](../csharp/SKILL.md) - [Python Development](../python/SKILL.md)
 
 ## Troubleshooting
 

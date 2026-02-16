@@ -17,23 +17,23 @@ applyTo: '**.ts'
 ## Type Safety
 
 ```typescript
-// ✅ Strict typing — no `any`
+// [PASS] Strict typing - no `any`
 interface CreateUserRequest {
-  readonly email: string;
-  readonly name: string;
-  readonly role: "admin" | "user" | "viewer";
+ readonly email: string;
+ readonly name: string;
+ readonly role: "admin" | "user" | "viewer";
 }
 
-// ✅ Use branded types for domain IDs
+// [PASS] Use branded types for domain IDs
 type UserId = string & { readonly __brand: "UserId" };
 type OrderId = string & { readonly __brand: "OrderId" };
 
-// ✅ Use discriminated unions for state machines
+// [PASS] Use discriminated unions for state machines
 type RequestState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "success"; data: Response }
-  | { status: "error"; error: Error };
+ | { status: "idle" }
+ | { status: "loading" }
+ | { status: "success"; data: Response }
+ | { status: "error"; error: Error };
 ```
 
 ## Naming Conventions
@@ -51,61 +51,61 @@ type RequestState =
 ## Error Handling
 
 ```typescript
-// ✅ Use custom error classes
+// [PASS] Use custom error classes
 class AppError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number,
-    public readonly code: string,
-  ) {
-    super(message);
-    this.name = "AppError";
-  }
+ constructor(
+ message: string,
+ public readonly statusCode: number,
+ public readonly code: string,
+ ) {
+ super(message);
+ this.name = "AppError";
+ }
 }
 
 class NotFoundError extends AppError {
-  constructor(resource: string, id: string) {
-    super(`${resource} with id ${id} not found`, 404, "NOT_FOUND");
-  }
+ constructor(resource: string, id: string) {
+ super(`${resource} with id ${id} not found`, 404, "NOT_FOUND");
+ }
 }
 
-// ✅ Catch specific errors, log and re-throw
+// [PASS] Catch specific errors, log and re-throw
 try {
-  const user = await userService.getById(id);
+ const user = await userService.getById(id);
 } catch (error) {
-  if (error instanceof NotFoundError) {
-    logger.warn({ error, id }, "User not found");
-    return res.status(404).json({ error: error.message });
-  }
-  logger.error({ error }, "Unexpected error fetching user");
-  throw error; // Don't swallow unknown errors
+ if (error instanceof NotFoundError) {
+ logger.warn({ error, id }, "User not found");
+ return res.status(404).json({ error: error.message });
+ }
+ logger.error({ error }, "Unexpected error fetching user");
+ throw error; // Don't swallow unknown errors
 }
 ```
 
 ## Async/Await
 
 ```typescript
-// ✅ Always use async/await over raw Promises
+// [PASS] Always use async/await over raw Promises
 async function fetchUsers(ids: string[]): Promise<User[]> {
-  const results = await Promise.allSettled(
-    ids.map((id) => userRepository.findById(id)),
-  );
+ const results = await Promise.allSettled(
+ ids.map((id) => userRepository.findById(id)),
+ );
 
-  return results
-    .filter((r): r is PromiseFulfilledResult<User> => r.status === "fulfilled")
-    .map((r) => r.value);
+ return results
+ .filter((r): r is PromiseFulfilledResult<User> => r.status === "fulfilled")
+ .map((r) => r.value);
 }
 
-// ✅ Use AbortController for timeouts
+// [PASS] Use AbortController for timeouts
 async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+ const controller = new AbortController();
+ const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-    return await fetch(url, { signal: controller.signal });
-  } finally {
-    clearTimeout(timeout);
-  }
+ try {
+ return await fetch(url, { signal: controller.signal });
+ } finally {
+ clearTimeout(timeout);
+ }
 }
 ```
 
@@ -113,51 +113,51 @@ async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response
 
 ```
 src/
-├── routes/           # Route definitions (Express/Fastify/Hono)
-├── controllers/      # Request handling (thin — delegates to services)
-├── services/         # Business logic
-├── repositories/     # Data access layer
-├── middleware/        # Auth, logging, error handling
-├── types/            # Shared TypeScript types/interfaces
-├── utils/            # Pure utility functions
-├── config/           # Environment and app configuration
-└── index.ts          # Application entry point
++-- routes/ # Route definitions (Express/Fastify/Hono)
++-- controllers/ # Request handling (thin - delegates to services)
++-- services/ # Business logic
++-- repositories/ # Data access layer
++-- middleware/ # Auth, logging, error handling
++-- types/ # Shared TypeScript types/interfaces
++-- utils/ # Pure utility functions
++-- config/ # Environment and app configuration
+-- index.ts # Application entry point
 ```
 
 ## Dependency Injection
 
 ```typescript
-// ✅ Constructor injection with interfaces
+// [PASS] Constructor injection with interfaces
 interface UserRepository {
-  findById(id: string): Promise<User | null>;
-  create(data: CreateUserRequest): Promise<User>;
+ findById(id: string): Promise<User | null>;
+ create(data: CreateUserRequest): Promise<User>;
 }
 
 class UserService {
-  constructor(
-    private readonly userRepo: UserRepository,
-    private readonly logger: Logger,
-  ) {}
+ constructor(
+ private readonly userRepo: UserRepository,
+ private readonly logger: Logger,
+ ) {}
 
-  async getById(id: string): Promise<User> {
-    const user = await this.userRepo.findById(id);
-    if (!user) throw new NotFoundError("User", id);
-    return user;
-  }
+ async getById(id: string): Promise<User> {
+ const user = await this.userRepo.findById(id);
+ if (!user) throw new NotFoundError("User", id);
+ return user;
+ }
 }
 ```
 
 ## Environment Configuration
 
 ```typescript
-// ✅ Validate env at startup, fail fast
+// [PASS] Validate env at startup, fail fast
 import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]),
-  PORT: z.coerce.number().default(3000),
-  DATABASE_URL: z.string().url(),
-  API_KEY: z.string().min(1),
+ NODE_ENV: z.enum(["development", "production", "test"]),
+ PORT: z.coerce.number().default(3000),
+ DATABASE_URL: z.string().url(),
+ API_KEY: z.string().min(1),
 });
 
 export const env = envSchema.parse(process.env);
@@ -167,36 +167,36 @@ export const env = envSchema.parse(process.env);
 
 - Use **Vitest** (preferred) or Jest for unit/integration tests
 - Use **Supertest** for HTTP endpoint testing
-- Name tests: `describe("UserService")` → `it("should return user by id")`
+- Name tests: `describe("UserService")` -> `it("should return user by id")`
 - Mock external dependencies, never call live APIs in tests
 
 ```typescript
 import { describe, it, expect, vi } from "vitest";
 
 describe("UserService", () => {
-  it("should return user by id", async () => {
-    const mockRepo: UserRepository = {
-      findById: vi.fn().mockResolvedValue({ id: "1", name: "Test" }),
-      create: vi.fn(),
-    };
+ it("should return user by id", async () => {
+ const mockRepo: UserRepository = {
+ findById: vi.fn().mockResolvedValue({ id: "1", name: "Test" }),
+ create: vi.fn(),
+ };
 
-    const service = new UserService(mockRepo, mockLogger);
-    const user = await service.getById("1");
+ const service = new UserService(mockRepo, mockLogger);
+ const user = await service.getById("1");
 
-    expect(user.name).toBe("Test");
-    expect(mockRepo.findById).toHaveBeenCalledWith("1");
-  });
+ expect(user.name).toBe("Test");
+ expect(mockRepo.findById).toHaveBeenCalledWith("1");
+ });
 
-  it("should throw NotFoundError when user missing", async () => {
-    const mockRepo: UserRepository = {
-      findById: vi.fn().mockResolvedValue(null),
-      create: vi.fn(),
-    };
+ it("should throw NotFoundError when user missing", async () => {
+ const mockRepo: UserRepository = {
+ findById: vi.fn().mockResolvedValue(null),
+ create: vi.fn(),
+ };
 
-    const service = new UserService(mockRepo, mockLogger);
+ const service = new UserService(mockRepo, mockLogger);
 
-    await expect(service.getById("999")).rejects.toThrow(NotFoundError);
-  });
+ await expect(service.getById("999")).rejects.toThrow(NotFoundError);
+ });
 });
 ```
 

@@ -22,13 +22,13 @@ dotnet tool install -g dotnet-reportgenerator-globaltool
 
 # Generate HTML report
 reportgenerator \
-  -reports:"**/coverage.cobertura.xml" \
-  -targetdir:"coveragereport" \
-  -reporttypes:Html
+ -reports:"**/coverage.cobertura.xml" \
+ -targetdir:"coveragereport" \
+ -reporttypes:Html
 
 # Open report
-start coveragereport/index.html  # Windows
-open coveragereport/index.html   # macOS
+start coveragereport/index.html # Windows
+open coveragereport/index.html # macOS
 ```
 
 ### CI/CD Integration
@@ -41,33 +41,33 @@ name: Code Review Checks
 on: [pull_request]
 
 jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '8.0.x'
-      
-      - name: Restore dependencies
-        run: dotnet restore
-      
-      - name: Format check
-        run: dotnet format --verify-no-changes
-      
-      - name: Build
-        run: dotnet build --no-restore
-      
-      - name: Test with coverage
-        run: dotnet test --no-build --collect:"XPlat Code Coverage"
-      
-      - name: Security scan
-        run: dotnet list package --vulnerable --include-transitive
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
+ review:
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v3
+ 
+ - name: Setup .NET
+ uses: actions/setup-dotnet@v3
+ with:
+ dotnet-version: '8.0.x'
+ 
+ - name: Restore dependencies
+ run: dotnet restore
+ 
+ - name: Format check
+ run: dotnet format --verify-no-changes
+ 
+ - name: Build
+ run: dotnet build --no-restore
+ 
+ - name: Test with coverage
+ run: dotnet test --no-build --collect:"XPlat Code Coverage"
+ 
+ - name: Security scan
+ run: dotnet list package --vulnerable --include-transitive
+ 
+ - name: Upload coverage
+ uses: codecov/codecov-action@v3
 ```
 
 ---
@@ -95,7 +95,7 @@ git log main..HEAD --oneline
 ```bash
 # Create PR with template
 gh pr create --title "feat(auth): Add OAuth integration" \
-  --body "$(cat .github/PULL_REQUEST_TEMPLATE.md)"
+ --body "$(cat .github/PULL_REQUEST_TEMPLATE.md)"
 ```
 
 ### 3. Address Feedback

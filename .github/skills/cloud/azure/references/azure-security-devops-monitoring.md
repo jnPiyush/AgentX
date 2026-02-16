@@ -7,8 +7,8 @@
 ```csharp
 // Access secrets with Managed Identity
 var client = new SecretClient(
-    new Uri("https://kv-myapp-prod.vault.azure.net/"),
-    new DefaultAzureCredential()
+ new Uri("https://kv-myapp-prod.vault.azure.net/"),
+ new DefaultAzureCredential()
 );
 
 // Get secret
@@ -24,11 +24,11 @@ await client.SetSecretAsync("ApiKey", "new-secret-value");
 ```json
 // Azure AD authentication in appsettings.json
 {
-  "AzureAd": {
-    "Instance": "https://login.microsoftonline.com/",
-    "TenantId": "your-tenant-id",
-    "ClientId": "your-client-id"
-  }
+ "AzureAd": {
+ "Instance": "https://login.microsoftonline.com/",
+ "TenantId": "your-tenant-id",
+ "ClientId": "your-client-id"
+ }
 }
 ```
 
@@ -38,8 +38,8 @@ var credential = new DefaultAzureCredential();
 
 // Works with: Managed Identity, Azure CLI, VS Code, etc.
 var blobClient = new BlobServiceClient(
-    new Uri("https://mystorageaccount.blob.core.windows.net"),
-    credential
+ new Uri("https://mystorageaccount.blob.core.windows.net"),
+ credential
 );
 ```
 
@@ -48,18 +48,18 @@ var blobClient = new BlobServiceClient(
 ```bash
 # Create NSG
 az network nsg create \
-  --name nsg-web \
-  --resource-group rg-myapp-prod
+ --name nsg-web \
+ --resource-group rg-myapp-prod
 
 # Add rule to allow HTTPS
 az network nsg rule create \
-  --nsg-name nsg-web \
-  --resource-group rg-myapp-prod \
-  --name AllowHTTPS \
-  --priority 100 \
-  --destination-port-ranges 443 \
-  --access Allow \
-  --protocol Tcp
+ --nsg-name nsg-web \
+ --resource-group rg-myapp-prod \
+ --name AllowHTTPS \
+ --priority 100 \
+ --destination-port-ranges 443 \
+ --access Allow \
+ --protocol Tcp
 ```
 
 ---
@@ -71,57 +71,57 @@ az network nsg rule create \
 ```yaml
 # azure-pipelines.yml
 trigger:
-  - main
+ - main
 
 pool:
-  vmImage: 'ubuntu-latest'
+ vmImage: 'ubuntu-latest'
 
 variables:
-  buildConfiguration: 'Release'
+ buildConfiguration: 'Release'
 
 stages:
-  - stage: Build
-    jobs:
-      - job: BuildJob
-        steps:
-          - task: UseDotNet@2
-            inputs:
-              version: '8.0.x'
+ - stage: Build
+ jobs:
+ - job: BuildJob
+ steps:
+ - task: UseDotNet@2
+ inputs:
+ version: '8.0.x'
 
-          - task: DotNetCoreCLI@2
-            inputs:
-              command: 'build'
-              projects: '**/*.csproj'
-              arguments: '--configuration $(buildConfiguration)'
+ - task: DotNetCoreCLI@2
+ inputs:
+ command: 'build'
+ projects: '**/*.csproj'
+ arguments: '--configuration $(buildConfiguration)'
 
-          - task: DotNetCoreCLI@2
-            inputs:
-              command: 'test'
-              projects: '**/*Tests.csproj'
+ - task: DotNetCoreCLI@2
+ inputs:
+ command: 'test'
+ projects: '**/*Tests.csproj'
 
-          - task: DotNetCoreCLI@2
-            inputs:
-              command: 'publish'
-              publishWebProjects: true
-              arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+ - task: DotNetCoreCLI@2
+ inputs:
+ command: 'publish'
+ publishWebProjects: true
+ arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
 
-          - publish: $(Build.ArtifactStagingDirectory)
-            artifact: drop
+ - publish: $(Build.ArtifactStagingDirectory)
+ artifact: drop
 
-  - stage: Deploy
-    dependsOn: Build
-    jobs:
-      - deployment: DeployWeb
-        environment: 'production'
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - task: AzureWebApp@1
-                  inputs:
-                    azureSubscription: 'MyAzureSubscription'
-                    appName: 'app-myapp-prod'
-                    package: '$(Pipeline.Workspace)/drop/**/*.zip'
+ - stage: Deploy
+ dependsOn: Build
+ jobs:
+ - deployment: DeployWeb
+ environment: 'production'
+ strategy:
+ runOnce:
+ deploy:
+ steps:
+ - task: AzureWebApp@1
+ inputs:
+ azureSubscription: 'MyAzureSubscription'
+ appName: 'app-myapp-prod'
+ package: '$(Pipeline.Workspace)/drop/**/*.zip'
 ```
 
 ### GitHub Actions for Azure
@@ -130,37 +130,37 @@ stages:
 name: Deploy to Azure
 
 on:
-  push:
-    branches: [main]
+ push:
+ branches: [main]
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+ build-and-deploy:
+ runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+ steps:
+ - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+ - name: Setup .NET
+ uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: '8.0.x'
 
-      - name: Build
-        run: dotnet build --configuration Release
+ - name: Build
+ run: dotnet build --configuration Release
 
-      - name: Publish
-        run: dotnet publish -c Release -o ./publish
+ - name: Publish
+ run: dotnet publish -c Release -o ./publish
 
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+ - name: Login to Azure
+ uses: azure/login@v1
+ with:
+ creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: 'app-myapp-prod'
-          package: ./publish
+ - name: Deploy to Azure Web App
+ uses: azure/webapps-deploy@v2
+ with:
+ app-name: 'app-myapp-prod'
+ package: ./publish
 ```
 
 ---
@@ -179,8 +179,8 @@ var telemetryClient = app.Services.GetRequiredService<TelemetryClient>();
 // Track event
 telemetryClient.TrackEvent("OrderCreated", new Dictionary<string, string>
 {
-    ["OrderId"] = orderId,
-    ["CustomerId"] = customerId
+ ["OrderId"] = orderId,
+ ["CustomerId"] = customerId
 });
 
 // Track metric
@@ -189,12 +189,12 @@ telemetryClient.TrackMetric("OrderValue", orderTotal);
 // Track exception
 try
 {
-    // Operation
+ // Operation
 }
 catch (Exception ex)
 {
-    telemetryClient.TrackException(ex);
-    throw;
+ telemetryClient.TrackException(ex);
+ throw;
 }
 ```
 
@@ -203,13 +203,13 @@ catch (Exception ex)
 ```bash
 # Create metric alert
 az monitor metrics alert create \
-  --name "High CPU Alert" \
-  --resource-group rg-myapp-prod \
-  --scopes $WEBAPP_RESOURCE_ID \
-  --condition "avg CpuPercentage > 80" \
-  --window-size 5m \
-  --evaluation-frequency 1m \
-  --action $ACTION_GROUP_ID
+ --name "High CPU Alert" \
+ --resource-group rg-myapp-prod \
+ --scopes $WEBAPP_RESOURCE_ID \
+ --condition "avg CpuPercentage > 80" \
+ --window-size 5m \
+ --evaluation-frequency 1m \
+ --action $ACTION_GROUP_ID
 ```
 
 ---
@@ -229,12 +229,12 @@ az monitor metrics alert create \
 ```bash
 # Create budget
 az consumption budget create \
-  --budget-name "Monthly-Production" \
-  --amount 5000 \
-  --time-grain Monthly \
-  --start-date 2024-01-01 \
-  --end-date 2024-12-31 \
-  --resource-group rg-myapp-prod
+ --budget-name "Monthly-Production" \
+ --amount 5000 \
+ --time-grain Monthly \
+ --start-date 2024-01-01 \
+ --end-date 2024-12-31 \
+ --resource-group rg-myapp-prod
 ```
 
 ---

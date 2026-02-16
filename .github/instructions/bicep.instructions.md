@@ -16,14 +16,14 @@ applyTo: '**/*.bicep, **/*.bicepparam'
 
 ```
 infra/
-├── main.bicep           # Entry point, orchestrates modules
-├── main.bicepparam      # Parameter values
-├── modules/
-│   ├── networking.bicep # Network resources
-│   ├── compute.bicep    # Compute resources
-│   └── storage.bicep    # Storage resources
-└── types/
-    └── config.bicep     # User-defined types
++-- main.bicep # Entry point, orchestrates modules
++-- main.bicepparam # Parameter values
++-- modules/
+| +-- networking.bicep # Network resources
+| +-- compute.bicep # Compute resources
+| -- storage.bicep # Storage resources
+-- types/
+ -- config.bicep # User-defined types
 ```
 
 ## Naming Conventions
@@ -43,18 +43,18 @@ infra/
 ```bicep
 // MUST: Use resource symbolic names, not string references
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: storageAccountName
-  location: location
-  kind: 'StorageV2'
-  sku: {
-    name: skuName
-  }
-  properties: {
-    supportsHttpsTrafficOnly: true
-    minimumTlsVersion: 'TLS1_2'
-    allowBlobPublicAccess: false
-  }
-  tags: commonTags
+ name: storageAccountName
+ location: location
+ kind: 'StorageV2'
+ sku: {
+ name: skuName
+ }
+ properties: {
+ supportsHttpsTrafficOnly: true
+ minimumTlsVersion: 'TLS1_2'
+ allowBlobPublicAccess: false
+ }
+ tags: commonTags
 }
 ```
 
@@ -88,9 +88,9 @@ param projectName string
 // SHOULD: Use variables for computed values
 var resourcePrefix = '${projectName}-${environment}'
 var commonTags = {
-  Environment: environment
-  Project: projectName
-  ManagedBy: 'Bicep'
+ Environment: environment
+ Project: projectName
+ ManagedBy: 'Bicep'
 }
 
 // SHOULD: Use ternary for environment-specific values
@@ -102,19 +102,19 @@ var skuName = environment == 'prod' ? 'Standard_GRS' : 'Standard_LRS'
 ```bicep
 // MUST: Use modules for reusable components
 module networking './modules/networking.bicep' = {
-  name: 'networking-${uniqueString(resourceGroup().id)}'
-  params: {
-    location: location
-    vnetName: '${resourcePrefix}-vnet'
-    tags: commonTags
-  }
+ name: 'networking-${uniqueString(resourceGroup().id)}'
+ params: {
+ location: location
+ vnetName: '${resourcePrefix}-vnet'
+ tags: commonTags
+ }
 }
 
 // MUST: Reference module outputs, not hardcoded values
 resource appService 'Microsoft.Web/sites@2023-12-01' = {
-  properties: {
-    virtualNetworkSubnetId: networking.outputs.appSubnetId
-  }
+ properties: {
+ virtualNetworkSubnetId: networking.outputs.appSubnetId
+ }
 }
 ```
 
@@ -123,16 +123,16 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
 ```bicep
 // SHOULD: Use types for complex parameter shapes
 type appConfig = {
-  @description('Application display name')
-  name: string
+ @description('Application display name')
+ name: string
 
-  @description('SKU tier')
-  tier: 'Basic' | 'Standard' | 'Premium'
+ @description('SKU tier')
+ tier: 'Basic' | 'Standard' | 'Premium'
 
-  @description('Replica count')
-  @minValue(1)
-  @maxValue(10)
-  replicas: int
+ @description('Replica count')
+ @minValue(1)
+ @maxValue(10)
+ replicas: int
 }
 
 param config appConfig
@@ -145,7 +145,7 @@ param config appConfig
 - MUST set `minimumTlsVersion: 'TLS1_2'`
 - MUST disable public blob access (`allowBlobPublicAccess: false`)
 - SHOULD use managed identity (`identity: { type: 'SystemAssigned' }`)
-- MUST NOT output secrets — use Key Vault references instead
+- MUST NOT output secrets - use Key Vault references instead
 
 ## Testing
 
@@ -160,7 +160,7 @@ az bicep build --file main.bicep
 
 # What-if (dry run)
 az deployment group what-if \
-  --resource-group rg-myapp-dev \
-  --template-file main.bicep \
-  --parameters main.bicepparam
+ --resource-group rg-myapp-dev \
+ --template-file main.bicep \
+ --parameters main.bicepparam
 ```

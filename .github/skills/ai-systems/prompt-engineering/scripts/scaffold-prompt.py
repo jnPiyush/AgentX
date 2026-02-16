@@ -5,9 +5,9 @@ Generates a prompt file with the ROLE/CONTEXT/TASK/CONSTRAINTS structure
 from the prompt-engineering SKILL.md, including an evaluation checklist.
 
 Usage:
-    python scaffold-prompt.py --name code-reviewer
-    python scaffold-prompt.py --name data-analyst --pattern react --output prompts/
-    python scaffold-prompt.py --name qa-agent --pattern cot --with-examples 3
+ python scaffold-prompt.py --name code-reviewer
+ python scaffold-prompt.py --name data-analyst --pattern react --output prompts/
+ python scaffold-prompt.py --name qa-agent --pattern cot --with-examples 3
 """
 
 import argparse
@@ -15,51 +15,49 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-
 PATTERNS = {
-    "zero-shot": {
-        "description": "Simple direct instruction, no examples needed",
-        "token_cost": "Low",
-        "reasoning_block": "",
-    },
-    "few-shot": {
-        "description": "Includes input/output examples for consistent format",
-        "token_cost": "Medium",
-        "reasoning_block": "",
-    },
-    "cot": {
-        "description": "Chain-of-thought: step-by-step reasoning",
-        "token_cost": "Medium",
-        "reasoning_block": "\nREASONING APPROACH:\nThink through this step by step:\n1. Understand the input\n2. Break down the problem\n3. Consider edge cases\n4. Formulate your answer\n5. Verify your reasoning\n",
-    },
-    "react": {
-        "description": "ReAct: Reason + Act pattern for tool-using agents",
-        "token_cost": "High",
-        "reasoning_block": "\nREASONING APPROACH (ReAct):\nFor each step, follow this cycle:\n1. THOUGHT: Analyze what you know and what you need to find out\n2. ACTION: Choose a tool/action to gather information\n3. OBSERVATION: Process the result\n4. Repeat until you have enough information to answer\n5. FINAL ANSWER: Provide your complete response\n",
-    },
-    "reflection": {
-        "description": "Self-correction: generate, critique, improve",
-        "token_cost": "High",
-        "reasoning_block": "\nREASONING APPROACH (Reflection):\n1. Generate your initial response\n2. Critically review your response for:\n   - Factual accuracy\n   - Completeness\n   - Clarity\n   - Potential issues\n3. Revise based on your critique\n4. Present only the final improved version\n",
-    },
+ "zero-shot": {
+ "description": "Simple direct instruction, no examples needed",
+ "token_cost": "Low",
+ "reasoning_block": "",
+ },
+ "few-shot": {
+ "description": "Includes input/output examples for consistent format",
+ "token_cost": "Medium",
+ "reasoning_block": "",
+ },
+ "cot": {
+ "description": "Chain-of-thought: step-by-step reasoning",
+ "token_cost": "Medium",
+ "reasoning_block": "\nREASONING APPROACH:\nThink through this step by step:\n1. Understand the input\n2. Break down the problem\n3. Consider edge cases\n4. Formulate your answer\n5. Verify your reasoning\n",
+ },
+ "react": {
+ "description": "ReAct: Reason + Act pattern for tool-using agents",
+ "token_cost": "High",
+ "reasoning_block": "\nREASONING APPROACH (ReAct):\nFor each step, follow this cycle:\n1. THOUGHT: Analyze what you know and what you need to find out\n2. ACTION: Choose a tool/action to gather information\n3. OBSERVATION: Process the result\n4. Repeat until you have enough information to answer\n5. FINAL ANSWER: Provide your complete response\n",
+ },
+ "reflection": {
+ "description": "Self-correction: generate, critique, improve",
+ "token_cost": "High",
+ "reasoning_block": "\nREASONING APPROACH (Reflection):\n1. Generate your initial response\n2. Critically review your response for:\n - Factual accuracy\n - Completeness\n - Clarity\n - Potential issues\n3. Revise based on your critique\n4. Present only the final improved version\n",
+ },
 }
 
-
 def generate_prompt_template(
-    name: str,
-    pattern: str,
-    num_examples: int,
-    description: str | None,
+ name: str,
+ pattern: str,
+ num_examples: int,
+ description: str | None,
 ) -> str:
-    """Generate a structured prompt template."""
-    pattern_info = PATTERNS.get(pattern, PATTERNS["zero-shot"])
-    display_name = name.replace("-", " ").title()
-    date = datetime.now().strftime("%Y-%m-%d")
+ """Generate a structured prompt template."""
+ pattern_info = PATTERNS.get(pattern, PATTERNS["zero-shot"])
+ display_name = name.replace("-", " ").title()
+ date = datetime.now().strftime("%Y-%m-%d")
 
-    sections = []
+ sections = []
 
-    # Header
-    sections.append(f"""# {display_name} — System Prompt
+ # Header
+ sections.append(f"""# {display_name} - System Prompt
 
 > **Pattern**: {pattern} ({pattern_info['description']})
 > **Token Cost**: {pattern_info['token_cost']}
@@ -69,8 +67,8 @@ def generate_prompt_template(
 ---
 """)
 
-    # System prompt
-    sections.append(f"""## System Prompt
+ # System prompt
+ sections.append(f"""## System Prompt
 
 ```text
 ROLE:
@@ -102,11 +100,11 @@ OUTPUT FORMAT:
 ```
 """)
 
-    # Few-shot examples
-    if pattern == "few-shot" or num_examples > 0:
-        sections.append("## Examples\n")
-        for i in range(1, num_examples + 1):
-            sections.append(f"""### Example {i}
+ # Few-shot examples
+ if pattern == "few-shot" or num_examples > 0:
+ sections.append("## Examples\n")
+ for i in range(1, num_examples + 1):
+ sections.append(f"""### Example {i}
 
 **Input**:
 ```
@@ -115,25 +113,25 @@ OUTPUT FORMAT:
 
 **Expected Output**:
 ```
-[Example output {i} — showing the exact format you want]
+[Example output {i} - showing the exact format you want]
 ```
 """)
 
-    # Tool definitions (for ReAct pattern)
-    if pattern == "react":
-        sections.append("""## Tool Definitions
+ # Tool definitions (for ReAct pattern)
+ if pattern == "react":
+ sections.append("""## Tool Definitions
 
 ```text
 AVAILABLE TOOLS:
 
 1. search(query: str) -> str
-   Search for information. Returns relevant results.
+ Search for information. Returns relevant results.
 
 2. calculate(expression: str) -> float
-   Evaluate a mathematical expression.
+ Evaluate a mathematical expression.
 
 3. lookup(key: str) -> str
-   Look up a specific value by key.
+ Look up a specific value by key.
 
 ERROR HANDLING:
 - If a tool returns an error, try an alternative approach
@@ -142,8 +140,8 @@ ERROR HANDLING:
 ```
 """)
 
-    # Guardrails
-    sections.append("""## Guardrails
+ # Guardrails
+ sections.append("""## Guardrails
 
 ```text
 SAFETY RULES:
@@ -160,8 +158,8 @@ BOUNDARY RULES:
 ```
 """)
 
-    # Evaluation checklist
-    sections.append("""## Evaluation Checklist
+ # Evaluation checklist
+ sections.append("""## Evaluation Checklist
 
 Before deploying this prompt, verify:
 
@@ -185,83 +183,81 @@ Before deploying this prompt, verify:
 - [ ] No mixing of multiple tasks in one prompt
 """)
 
-    # Version history
-    sections.append(f"""## Version History
+ # Version history
+ sections.append(f"""## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | {date} | Initial prompt template |
 """)
 
-    return "\n".join(sections)
-
+ return "\n".join(sections)
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Scaffold a structured prompt template"
-    )
-    parser.add_argument("--name", required=True, help="Prompt name (kebab-case, e.g., code-reviewer)")
-    parser.add_argument(
-        "--pattern",
-        choices=list(PATTERNS.keys()),
-        default="zero-shot",
-        help="Prompting pattern (default: zero-shot)",
-    )
-    parser.add_argument(
-        "--with-examples",
-        type=int,
-        default=0,
-        help="Number of few-shot examples to include (default: 0, auto 3 for few-shot pattern)",
-    )
-    parser.add_argument(
-        "--description",
-        type=str,
-        default=None,
-        help="Brief role description for the AI agent",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default=".",
-        help="Output directory (default: current directory)",
-    )
+ parser = argparse.ArgumentParser(
+ description="Scaffold a structured prompt template"
+ )
+ parser.add_argument("--name", required=True, help="Prompt name (kebab-case, e.g., code-reviewer)")
+ parser.add_argument(
+ "--pattern",
+ choices=list(PATTERNS.keys()),
+ default="zero-shot",
+ help="Prompting pattern (default: zero-shot)",
+ )
+ parser.add_argument(
+ "--with-examples",
+ type=int,
+ default=0,
+ help="Number of few-shot examples to include (default: 0, auto 3 for few-shot pattern)",
+ )
+ parser.add_argument(
+ "--description",
+ type=str,
+ default=None,
+ help="Brief role description for the AI agent",
+ )
+ parser.add_argument(
+ "--output",
+ type=str,
+ default=".",
+ help="Output directory (default: current directory)",
+ )
 
-    args = parser.parse_args()
+ args = parser.parse_args()
 
-    # Auto-set examples for few-shot pattern
-    num_examples = args.with_examples
-    if args.pattern == "few-shot" and num_examples == 0:
-        num_examples = 3
+ # Auto-set examples for few-shot pattern
+ num_examples = args.with_examples
+ if args.pattern == "few-shot" and num_examples == 0:
+ num_examples = 3
 
-    output_dir = Path(args.output).resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
+ output_dir = Path(args.output).resolve()
+ output_dir.mkdir(parents=True, exist_ok=True)
 
-    filename = f"prompt-{args.name}.md"
-    output_path = output_dir / filename
+ filename = f"prompt-{args.name}.md"
+ output_path = output_dir / filename
 
-    if output_path.exists():
-        print(f"Error: '{output_path}' already exists.")
-        sys.exit(1)
+ if output_path.exists():
+ print(f"Error: '{output_path}' already exists.")
+ sys.exit(1)
 
-    content = generate_prompt_template(
-        name=args.name,
-        pattern=args.pattern,
-        num_examples=num_examples,
-        description=args.description,
-    )
+ content = generate_prompt_template(
+ name=args.name,
+ pattern=args.pattern,
+ num_examples=num_examples,
+ description=args.description,
+ )
 
-    output_path.write_text(content, encoding="utf-8")
+ output_path.write_text(content, encoding="utf-8")
 
-    print(f"\n[OK] Prompt template created: {output_path}")
-    print(f"   Pattern: {args.pattern} ({PATTERNS[args.pattern]['description']})")
-    if num_examples > 0:
-        print(f"   Examples: {num_examples} placeholders included")
-    print(f"\nNext steps:")
-    print(f"  1. Fill in the [placeholder] sections in the template")
-    print(f"  2. Run through the Evaluation Checklist")
-    print(f"  3. Test with 5+ diverse inputs")
-    print(f"  4. Iterate based on outputs")
-
+ print(f"\n[OK] Prompt template created: {output_path}")
+ print(f" Pattern: {args.pattern} ({PATTERNS[args.pattern]['description']})")
+ if num_examples > 0:
+ print(f" Examples: {num_examples} placeholders included")
+ print(f"\nNext steps:")
+ print(f" 1. Fill in the [placeholder] sections in the template")
+ print(f" 2. Run through the Evaluation Checklist")
+ print(f" 3. Test with 5+ diverse inputs")
+ print(f" 4. Iterate based on outputs")
 
 if __name__ == "__main__":
-    main()
+ main()

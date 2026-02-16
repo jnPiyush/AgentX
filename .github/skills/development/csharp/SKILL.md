@@ -2,20 +2,20 @@
 name: "csharp"
 description: 'Write production-ready C# and .NET code following modern best practices. Use when building .NET applications, writing async/await code, using Entity Framework Core, implementing dependency injection, configuring nullable reference types, or optimizing C# performance.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["csharp"]
-  frameworks: ["dotnet", "aspnet-core"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["csharp"]
+ frameworks: ["dotnet", "aspnet-core"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # C# / .NET Development
 
-> **Purpose**: Production-ready C# and .NET development standards for building secure, performant, maintainable applications.  
-> **Audience**: Engineers building .NET applications with C#, ASP.NET Core, Entity Framework Core.  
+> **Purpose**: Production-ready C# and .NET development standards for building secure, performant, maintainable applications. 
+> **Audience**: Engineers building .NET applications with C#, ASP.NET Core, Entity Framework Core. 
 > **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) .NET development patterns.
 
 ---
@@ -49,7 +49,7 @@ compatibility:
 
 ## C# Language Version
 
-**Current**: C# 14 (.NET 10+)  
+**Current**: C# 14 (.NET 10+) 
 **Minimum**: C# 8 (.NET Core 3.1+)
 
 ### Modern C# Features (Use These)
@@ -61,32 +61,32 @@ namespace MyApp.Services;
 // Primary constructors (C# 12+)
 public class UserService(ILogger<UserService> logger, IUserRepository repo)
 {
-    public async Task<User> GetUserAsync(int id) => 
-        await repo.GetByIdAsync(id);
+ public async Task<User> GetUserAsync(int id) => 
+ await repo.GetByIdAsync(id);
 }
 
 // Required properties (C# 11+)
 public class User
 {
-    public required int Id { get; init; }
-    public required string Name { get; init; }
+ public required int Id { get; init; }
+ public required string Name { get; init; }
 }
 
 // Raw string literals (C# 11+)
 string json = """
-    {
-        "name": "John",
-        "age": 30
-    }
-    """;
+ {
+ "name": "John",
+ "age": 30
+ }
+ """;
 
 // Pattern matching
 string GetStatus(Order order) => order switch
 {
-    { Status: "pending", TotalAmount: > 1000 } => "High value pending",
-    { Status: "shipped" } => "In transit",
-    { Status: "delivered" } => "Completed",
-    _ => "Unknown"
+ { Status: "pending", TotalAmount: > 1000 } => "High value pending",
+ { Status: "shipped" } => "In transit",
+ { Status: "delivered" } => "Completed",
+ _ => "Unknown"
 };
 ```
 
@@ -116,10 +116,9 @@ string GetStatus(Order order) => order switch
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Scripts
 

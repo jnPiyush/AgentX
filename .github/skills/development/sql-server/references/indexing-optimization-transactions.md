@@ -5,29 +5,29 @@
 ### Index Types
 
 ```sql
--- ✅ GOOD: Clustered index (one per table, defines physical order)
+-- [PASS] GOOD: Clustered index (one per table, defines physical order)
 CREATE CLUSTERED INDEX IX_Orders_OrderDate 
 ON Orders(OrderDate);
 
--- ✅ GOOD: Non-clustered index (up to 999 per table)
+-- [PASS] GOOD: Non-clustered index (up to 999 per table)
 CREATE NONCLUSTERED INDEX IX_Users_Email 
 ON Users(Email);
 
--- ✅ GOOD: Covering index (includes additional columns)
+-- [PASS] GOOD: Covering index (includes additional columns)
 CREATE NONCLUSTERED INDEX IX_Orders_UserId_Covering
 ON Orders(UserId)
 INCLUDE (OrderDate, TotalAmount);
 
--- ✅ GOOD: Filtered index (smaller, faster for specific queries)
+-- [PASS] GOOD: Filtered index (smaller, faster for specific queries)
 CREATE NONCLUSTERED INDEX IX_Users_Active_Email
 ON Users(Email)
 WHERE IsActive = 1;
 
--- ✅ GOOD: Unique index
+-- [PASS] GOOD: Unique index
 CREATE UNIQUE NONCLUSTERED INDEX IX_Users_Email_Unique
 ON Users(Email);
 
--- ✅ GOOD: Composite index (order matters!)
+-- [PASS] GOOD: Composite index (order matters!)
 CREATE NONCLUSTERED INDEX IX_Orders_UserId_OrderDate
 ON Orders(UserId, OrderDate DESC);
 ```
@@ -37,17 +37,17 @@ ON Orders(UserId, OrderDate DESC);
 ```sql
 -- Check index fragmentation
 SELECT 
-    OBJECT_NAME(ips.object_id) AS TableName,
-    i.name AS IndexName,
-    ips.avg_fragmentation_in_percent,
-    ips.page_count
+ OBJECT_NAME(ips.object_id) AS TableName,
+ i.name AS IndexName,
+ ips.avg_fragmentation_in_percent,
+ ips.page_count
 FROM sys.dm_db_index_physical_stats(
-    DB_ID(), NULL, NULL, NULL, 'LIMITED'
+ DB_ID(), NULL, NULL, NULL, 'LIMITED'
 ) ips
 INNER JOIN sys.indexes i ON ips.object_id = i.object_id 
-    AND ips.index_id = i.index_id
+ AND ips.index_id = i.index_id
 WHERE ips.avg_fragmentation_in_percent > 10
-    AND ips.page_count > 1000;
+ AND ips.page_count > 1000;
 
 -- Rebuild index
 ALTER INDEX IX_Orders_UserId ON Orders REBUILD;
@@ -66,13 +66,13 @@ UPDATE STATISTICS Orders;
 ### Execution Plans
 
 ```sql
--- ✅ GOOD: Analyze execution plan
+-- [PASS] GOOD: Analyze execution plan
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
 
 SELECT 
-    u.Name,
-    COUNT(o.Id) AS OrderCount
+ u.Name,
+ COUNT(o.Id) AS OrderCount
 FROM Users u
 LEFT JOIN Orders o ON u.Id = o.UserId
 WHERE u.IsActive = 1
@@ -91,31 +91,31 @@ SET STATISTICS TIME OFF;
 ### Common Optimization Patterns
 
 ```sql
--- ✅ GOOD: Use EXISTS instead of IN for large datasets
+-- [PASS] GOOD: Use EXISTS instead of IN for large datasets
 SELECT * FROM Users u
 WHERE EXISTS (
-    SELECT 1 FROM Orders o 
-    WHERE o.UserId = u.Id
+ SELECT 1 FROM Orders o 
+ WHERE o.UserId = u.Id
 );
 
--- ❌ BAD: IN with subquery (slower for large datasets)
+-- [FAIL] BAD: IN with subquery (slower for large datasets)
 SELECT * FROM Users
 WHERE Id IN (SELECT UserId FROM Orders);
 
--- ✅ GOOD: Avoid functions on indexed columns
+-- [PASS] GOOD: Avoid functions on indexed columns
 SELECT * FROM Users
 WHERE CreatedAt >= '2024-01-01'
-    AND CreatedAt < '2024-02-01';
+ AND CreatedAt < '2024-02-01';
 
--- ❌ BAD: Function prevents index usage
+-- [FAIL] BAD: Function prevents index usage
 SELECT * FROM Users
 WHERE YEAR(CreatedAt) = 2024 AND MONTH(CreatedAt) = 1;
 
--- ✅ GOOD: Parameterized query (plan reuse)
+-- [PASS] GOOD: Parameterized query (plan reuse)
 DECLARE @Status NVARCHAR(20) = 'Active';
 SELECT * FROM Users WHERE Status = @Status;
 
--- ✅ GOOD: Use NOLOCK for read-only queries (dirty reads OK)
+-- [PASS] GOOD: Use NOLOCK for read-only queries (dirty reads OK)
 SELECT * FROM Users WITH (NOLOCK)
 WHERE IsActive = 1;
 ```
@@ -125,26 +125,26 @@ WHERE IsActive = 1;
 ## Transactions and Locking
 
 ```sql
--- ✅ GOOD: Explicit transaction with error handling
+-- [PASS] GOOD: Explicit transaction with error handling
 BEGIN TRANSACTION;
 
 BEGIN TRY
-    UPDATE Accounts
-    SET Balance = Balance - 100
-    WHERE Id = 1;
-    
-    UPDATE Accounts
-    SET Balance = Balance + 100
-    WHERE Id = 2;
-    
-    COMMIT TRANSACTION;
+ UPDATE Accounts
+ SET Balance = Balance - 100
+ WHERE Id = 1;
+ 
+ UPDATE Accounts
+ SET Balance = Balance + 100
+ WHERE Id = 2;
+ 
+ COMMIT TRANSACTION;
 END TRY
 BEGIN CATCH
-    ROLLBACK TRANSACTION;
-    THROW;
+ ROLLBACK TRANSACTION;
+ THROW;
 END CATCH;
 
--- ✅ GOOD: Locking hints
+-- [PASS] GOOD: Locking hints
 -- UPDLOCK: Acquire update lock to prevent deadlocks
 SELECT * FROM Accounts WITH (UPDLOCK, HOLDLOCK)
 WHERE Id = 123;
@@ -154,7 +154,7 @@ UPDATE Users WITH (ROWLOCK)
 SET LastLogin = SYSDATETIME()
 WHERE Id = 123;
 
--- ✅ GOOD: Isolation levels
+-- [PASS] GOOD: Isolation levels
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 -- READ UNCOMMITTED (dirty reads)
 -- READ COMMITTED (default)

@@ -2,19 +2,19 @@
 name: "postgresql"
 description: 'Develop PostgreSQL databases with JSONB, arrays, full-text search, and performance optimization. Use when writing PostgreSQL queries, using JSONB operations, implementing full-text search, optimizing query performance with indexes, or configuring row-level security.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["sql", "plpgsql"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["sql", "plpgsql"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # PostgreSQL Database Development
 
-> **Purpose**: Production-ready PostgreSQL development for high-performance, scalable applications.  
-> **Audience**: Backend engineers and database administrators working with PostgreSQL.  
+> **Purpose**: Production-ready PostgreSQL development for high-performance, scalable applications. 
+> **Audience**: Backend engineers and database administrators working with PostgreSQL. 
 > **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) PostgreSQL patterns.
 
 ---
@@ -47,7 +47,7 @@ compatibility:
 
 ## PostgreSQL Version
 
-**Current**: PostgreSQL 16+  
+**Current**: PostgreSQL 16+ 
 **Minimum**: PostgreSQL 14+
 
 ---
@@ -75,10 +75,9 @@ compatibility:
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md) • [Database Skill](../../architecture/database/SKILL.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md) - [Database Skill](../../architecture/database/SKILL.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Troubleshooting
 

@@ -2,10 +2,10 @@
 name: "code-organization"
 description: 'Structure projects for maintainability and scalability with clean architecture and separation of concerns. Use when setting up a new project structure, refactoring monolithic codebases, implementing dependency injection, or organizing modules for team collaboration.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Code Organization
@@ -31,19 +31,19 @@ metadata:
 
 ```
 Structuring a project?
-├─ New project?
-│   ├─ Single app? → Standard layered structure (API/Domain/Infra)
-│   ├─ Multiple services? → Monorepo or separate repos
-│   └─ Library/package? → src/ + tests/ + docs/ + examples/
-├─ Existing project, adding feature?
-│   ├─ Follow existing patterns (consistency > perfection)
-│   └─ Feature cuts across layers? → Consider vertical slices
-├─ File getting too large (> 300 lines)?
-│   └─ Split by responsibility (SRP)
-├─ Folder getting too deep (> 4 levels)?
-│   └─ Flatten or reorganize by feature
-└─ Shared code between projects?
-    └─ Extract to shared library / internal package
++- New project?
+| +- Single app? -> Standard layered structure (API/Domain/Infra)
+| +- Multiple services? -> Monorepo or separate repos
+| - Library/package? -> src/ + tests/ + docs/ + examples/
++- Existing project, adding feature?
+| +- Follow existing patterns (consistency > perfection)
+| - Feature cuts across layers? -> Consider vertical slices
++- File getting too large (> 300 lines)?
+| - Split by responsibility (SRP)
++- Folder getting too deep (> 4 levels)?
+| - Flatten or reorganize by feature
+- Shared code between projects?
+ - Extract to shared library / internal package
 ```
 
 ## Project Structure
@@ -52,68 +52,68 @@ Structuring a project?
 
 ```
 Solution/
-├── src/
-│   ├── MyProject.Api/                      # Web API project
-│   │   ├── Controllers/
-│   │   │   ├── UsersController.cs
-│   │   │   ├── ProductsController.cs
-│   │   │   └── OrdersController.cs
-│   │   ├── Middleware/
-│   │   │   ├── AuthenticationMiddleware.cs
-│   │   │   ├── LoggingMiddleware.cs
-│   │   │   └── RateLimitingMiddleware.cs
-│   │   ├── Filters/
-│   │   │   ├── ValidationFilter.cs
-│   │   │   └── ExceptionFilter.cs
-│   │   ├── Program.cs
-│   │   ├── Startup.cs                      # or configure in Program.cs
-│   │   ├── appsettings.json
-│   │   └── appsettings.Development.json
-│   ├── MyProject.Core/                     # Domain/Business logic
-│   │   ├── Entities/
-│   │   │   ├── User.cs
-│   │   │   ├── Product.cs
-│   │   │   └── Order.cs
-│   │   ├── Interfaces/
-│   │   │   ├── IUserRepository.cs
-│   │   │   ├── IEmailService.cs
-│   │   │   └── IPaymentService.cs
-│   │   ├── Services/
-│   │   │   ├── UserService.cs
-│   │   │   ├── PaymentService.cs
-│   │   │   └── EmailService.cs
-│   │   ├── DTOs/
-│   │   │   ├── UserDto.cs
-│   │   │   └── ProductDto.cs
-│   │   └── Exceptions/
-│   │       ├── UserNotFoundException.cs
-│   │       └── DuplicateEmailException.cs
-│   ├── MyProject.Infrastructure/           # Data access & external services
-│   │   ├── Data/
-│   │   │   ├── ApplicationDbContext.cs
-│   │   │   └── Migrations/
-│   │   ├── Repositories/
-│   │   │   ├── UserRepository.cs
-│   │   │   └── OrderRepository.cs
-│   │   └── Services/
-│   │       ├── EmailService.cs
-│   │       └── BlobStorageService.cs
-│   └── MyProject.Shared/                   # Shared utilities
-│       ├── Constants/
-│       │   └── AppConstants.cs
-│       ├── Helpers/
-│       │   └── StringHelper.cs
-│       └── Validators/
-│           └── EmailValidator.cs
-├── tests/
-│   ├── MyProject.UnitTests/
-│   ├── MyProject.IntegrationTests/
-│   └── MyProject.E2ETests/
-├── docs/
-├── scripts/
-├── .gitignore
-├── MyProject.sln
-└── README.md
++-- src/
+| +-- MyProject.Api/ # Web API project
+| | +-- Controllers/
+| | | +-- UsersController.cs
+| | | +-- ProductsController.cs
+| | | -- OrdersController.cs
+| | +-- Middleware/
+| | | +-- AuthenticationMiddleware.cs
+| | | +-- LoggingMiddleware.cs
+| | | -- RateLimitingMiddleware.cs
+| | +-- Filters/
+| | | +-- ValidationFilter.cs
+| | | -- ExceptionFilter.cs
+| | +-- Program.cs
+| | +-- Startup.cs # or configure in Program.cs
+| | +-- appsettings.json
+| | -- appsettings.Development.json
+| +-- MyProject.Core/ # Domain/Business logic
+| | +-- Entities/
+| | | +-- User.cs
+| | | +-- Product.cs
+| | | -- Order.cs
+| | +-- Interfaces/
+| | | +-- IUserRepository.cs
+| | | +-- IEmailService.cs
+| | | -- IPaymentService.cs
+| | +-- Services/
+| | | +-- UserService.cs
+| | | +-- PaymentService.cs
+| | | -- EmailService.cs
+| | +-- DTOs/
+| | | +-- UserDto.cs
+| | | -- ProductDto.cs
+| | -- Exceptions/
+| | +-- UserNotFoundException.cs
+| | -- DuplicateEmailException.cs
+| +-- MyProject.Infrastructure/ # Data access & external services
+| | +-- Data/
+| | | +-- ApplicationDbContext.cs
+| | | -- Migrations/
+| | +-- Repositories/
+| | | +-- UserRepository.cs
+| | | -- OrderRepository.cs
+| | -- Services/
+| | +-- EmailService.cs
+| | -- BlobStorageService.cs
+| -- MyProject.Shared/ # Shared utilities
+| +-- Constants/
+| | -- AppConstants.cs
+| +-- Helpers/
+| | -- StringHelper.cs
+| -- Validators/
+| -- EmailValidator.cs
++-- tests/
+| +-- MyProject.UnitTests/
+| +-- MyProject.IntegrationTests/
+| -- MyProject.E2ETests/
++-- docs/
++-- scripts/
++-- .gitignore
++-- MyProject.sln
+-- README.md
 ```
 
 ---
@@ -123,36 +123,36 @@ Solution/
 ### 1. Single Responsibility Principle
 
 ```csharp
-// ❌ Bad: Class does too much
+// [FAIL] Bad: Class does too much
 public class User
 {
-    public void SaveToDatabase() { }
-    public void SendEmail() { }
-    public void GenerateReport() { }
+ public void SaveToDatabase() { }
+ public void SendEmail() { }
+ public void GenerateReport() { }
 }
 
-// ✅ Good: Separate concerns
+// [PASS] Good: Separate concerns
 public class User
 {
-    // Just data and behavior
-    public int Id { get; set; }
-    public string Email { get; set; }
-    public string Name { get; set; }
+ // Just data and behavior
+ public int Id { get; set; }
+ public string Email { get; set; }
+ public string Name { get; set; }
 }
 
 public class UserRepository
 {
-    public async Task SaveAsync(User user) { }
+ public async Task SaveAsync(User user) { }
 }
 
 public class EmailService
 {
-    public async Task SendToUserAsync(User user, string message) { }
+ public async Task SendToUserAsync(User user, string message) { }
 }
 
 public class ReportGenerator
 {
-    public async Task GenerateUserReportAsync(User user) { }
+ public async Task GenerateUserReportAsync(User user) { }
 }
 ```
 
@@ -165,7 +165,7 @@ public class ReportGenerator
 ### 3. Clear Naming
 
 ```csharp
-// ✅ Good naming conventions
+// [PASS] Good naming conventions
 // Files: PascalCase.cs
 // Classes: PascalCase
 // Interfaces: IPascalCase
@@ -176,12 +176,12 @@ public class ReportGenerator
 // UserService.cs
 public class UserService
 {
-    private const int MaxLoginAttempts = 3;
-    
-    public async Task<bool> AuthenticateUserAsync(string email, string password)
-    {
-        // Implementation
-    }
+ private const int MaxLoginAttempts = 3;
+ 
+ public async Task<bool> AuthenticateUserAsync(string email, string password)
+ {
+ // Implementation
+ }
 }
 ```
 
@@ -191,22 +191,22 @@ public class UserService
 // Organize by feature or layer
 namespace MyProject.Core.Services
 {
-    public class UserService { }
+ public class UserService { }
 }
 
 namespace MyProject.Core.Entities
 {
-    public class User { }
+ public class User { }
 }
 
 namespace MyProject.Infrastructure.Repositories
 {
-    public class UserRepository { }
+ public class UserRepository { }
 }
 
 namespace MyProject.Api.Controllers
 {
-    public class UsersController { }
+ public class UsersController { }
 }
 ```
 
@@ -215,7 +215,6 @@ namespace MyProject.Api.Controllers
 **Related Skills**:
 - [Core Principles](../core-principles/SKILL.md)
 - [Scalability](../scalability/SKILL.md)
-
 
 ## Troubleshooting
 

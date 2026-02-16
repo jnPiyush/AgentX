@@ -21,49 +21,49 @@
 **Fixed Delay:**
 ```
 function retryWithFixedDelay(operation, maxAttempts, delayMs):
-    for attempt in 1 to maxAttempts:
-        try:
-            return operation()
-        catch RetryableException as error:
-            if attempt == maxAttempts:
-                throw error
-            sleep(delayMs)
+ for attempt in 1 to maxAttempts:
+ try:
+ return operation()
+ catch RetryableException as error:
+ if attempt == maxAttempts:
+ throw error
+ sleep(delayMs)
 ```
 
 **Exponential Backoff:**
 ```
 function retryWithExponentialBackoff(operation, maxAttempts, baseDelayMs):
-    for attempt in 1 to maxAttempts:
-        try:
-            return operation()
-        catch RetryableException as error:
-            if attempt == maxAttempts:
-                throw error
-            
-            # Exponential delay: 100ms, 200ms, 400ms, 800ms...
-            delayMs = baseDelayMs * (2 ^ (attempt - 1))
-            
-            # Add jitter to prevent thundering herd
-            jitterMs = random(0, delayMs * 0.1)
-            sleep(delayMs + jitterMs)
+ for attempt in 1 to maxAttempts:
+ try:
+ return operation()
+ catch RetryableException as error:
+ if attempt == maxAttempts:
+ throw error
+ 
+ # Exponential delay: 100ms, 200ms, 400ms, 800ms...
+ delayMs = baseDelayMs * (2 ^ (attempt - 1))
+ 
+ # Add jitter to prevent thundering herd
+ jitterMs = random(0, delayMs * 0.1)
+ sleep(delayMs + jitterMs)
 ```
 
 **Retry with Timeout:**
 ```
 function retryWithTimeout(operation, maxAttempts, timeoutMs):
-    startTime = currentTime()
-    
-    for attempt in 1 to maxAttempts:
-        # Check if total time exceeded
-        if (currentTime() - startTime) > timeoutMs:
-            throw TimeoutException("Operation timed out after " + timeoutMs + "ms")
-        
-        try:
-            return operation()
-        catch RetryableException as error:
-            if attempt == maxAttempts:
-                throw error
-            sleep(calculateDelay(attempt))
+ startTime = currentTime()
+ 
+ for attempt in 1 to maxAttempts:
+ # Check if total time exceeded
+ if (currentTime() - startTime) > timeoutMs:
+ throw TimeoutException("Operation timed out after " + timeoutMs + "ms")
+ 
+ try:
+ return operation()
+ catch RetryableException as error:
+ if attempt == maxAttempts:
+ throw error
+ sleep(calculateDelay(attempt))
 ```
 
 **Retry Libraries:**
@@ -81,69 +81,69 @@ function retryWithTimeout(operation, maxAttempts, timeoutMs):
 
 ```
 States:
-  CLOSED     - Normal operation, requests pass through
-  OPEN       - Too many failures, requests fail immediately
-  HALF_OPEN  - Testing if service recovered
-  
+ CLOSED - Normal operation, requests pass through
+ OPEN - Too many failures, requests fail immediately
+ HALF_OPEN - Testing if service recovered
+ 
 State Transitions:
-  CLOSED → OPEN: After failure threshold reached
-  OPEN → HALF_OPEN: After timeout period
-  HALF_OPEN → CLOSED: If test request succeeds
-  HALF_OPEN → OPEN: If test request fails
+ CLOSED -> OPEN: After failure threshold reached
+ OPEN -> HALF_OPEN: After timeout period
+ HALF_OPEN -> CLOSED: If test request succeeds
+ HALF_OPEN -> OPEN: If test request fails
 ```
 
 ### Circuit Breaker Implementation
 
 ```
 class CircuitBreaker:
-    state = CLOSED
-    failureCount = 0
-    lastFailureTime = null
-    
-    # Configuration
-    failureThreshold = 5       # Open after 5 failures
-    openTimeout = 60000        # Try again after 60 seconds
-    halfOpenMaxRequests = 3    # Allow 3 test requests
-    
-    function execute(operation):
-        if state == OPEN:
-            if (currentTime() - lastFailureTime) > openTimeout:
-                state = HALF_OPEN
-            else:
-                throw CircuitBreakerOpenException("Circuit breaker is OPEN")
-        
-        try:
-            result = operation()
-            onSuccess()
-            return result
-        catch error:
-            onFailure()
-            throw error
-    
-    function onSuccess():
-        failureCount = 0
-        if state == HALF_OPEN:
-            state = CLOSED
-    
-    function onFailure():
-        failureCount++
-        lastFailureTime = currentTime()
-        
-        if failureCount >= failureThreshold:
-            state = OPEN
+ state = CLOSED
+ failureCount = 0
+ lastFailureTime = null
+ 
+ # Configuration
+ failureThreshold = 5 # Open after 5 failures
+ openTimeout = 60000 # Try again after 60 seconds
+ halfOpenMaxRequests = 3 # Allow 3 test requests
+ 
+ function execute(operation):
+ if state == OPEN:
+ if (currentTime() - lastFailureTime) > openTimeout:
+ state = HALF_OPEN
+ else:
+ throw CircuitBreakerOpenException("Circuit breaker is OPEN")
+ 
+ try:
+ result = operation()
+ onSuccess()
+ return result
+ catch error:
+ onFailure()
+ throw error
+ 
+ function onSuccess():
+ failureCount = 0
+ if state == HALF_OPEN:
+ state = CLOSED
+ 
+ function onFailure():
+ failureCount++
+ lastFailureTime = currentTime()
+ 
+ if failureCount >= failureThreshold:
+ state = OPEN
 ```
 
 **Circuit Breaker Usage:**
 ```
 paymentCircuitBreaker = new CircuitBreaker({
-    failureThreshold: 5,
-    openTimeout: 60000
+ failureThreshold: 5,
+ openTimeout: 60000
 })
 
 function processPayment(amount):
-    return paymentCircuitBreaker.execute(() => {
-        return paymentGateway.charge(amount)
-    })
+ return paymentCircuitBreaker.execute(() => {
+ return paymentGateway.charge(amount)
+ })
 ```
 
 ---

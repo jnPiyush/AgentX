@@ -1,91 +1,91 @@
-name: 📚 Documentation
+name: Documentation
 description: Documentation updates, additions, or fixes
 title: "[Docs] "
 labels: ["type:docs"]
 projects: ["jnPiyush/1"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ## 📚 Documentation
-        
-        Use this for any documentation work.
-        
-        **Workflow:**
-        1. Fill out this template → Status: **Backlog**
-        2. Claim the issue → Status: **In Progress**
-        3. Submit PR → Status: **In Review**
-        4. Merged → Status: **Done**
-        
-        > ⚠️ Status is tracked via **GitHub Projects**, not labels.
-  
-  - type: textarea
-    id: description
-    attributes:
-      label: Description
-      description: What documentation needs to be created or updated?
-      placeholder: "Update README with new Docker installation instructions"
-    validations:
-      required: true
-  
-  - type: dropdown
-    id: doc-type
-    attributes:
-      label: Documentation Type
-      description: What kind of documentation is this?
-      options:
-        - "README - Project overview and setup"
-        - "API Documentation - Endpoint reference"
-        - "User Guide - End-user instructions"
-        - "Developer Guide - Contributing/development"
-        - "Architecture Docs - ADRs, system design"
-        - "Code Comments - Inline documentation"
-        - "Changelog - Version history"
-        - "Other"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: rationale
-    attributes:
-      label: Rationale
-      description: Why is this documentation needed?
-      placeholder: "Docker support was added in v1.5 but the README still only shows manual installation"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: content-outline
-    attributes:
-      label: Content Outline
-      description: What should the documentation cover?
-      placeholder: |
-        - Prerequisites (Docker, docker-compose)
-        - Quick start with docker-compose
-        - Configuration via environment variables
-        - Persistent data with volumes
-        - Troubleshooting common Docker issues
-    validations:
-      required: true
-  
-  - type: textarea
-    id: affected-files
-    attributes:
-      label: Affected Files
-      description: Which files need to be created or modified?
-      placeholder: |
-        - README.md (add Docker section)
-        - docs/docker-setup.md (new file)
-        - docker-compose.yml (add comments)
-  
-  - type: dropdown
-    id: priority
-    attributes:
-      label: Priority
-      options:
-        - "P0 - Critical: Blocker"
-        - "P1 - High: Blocking users"
-        - "P2 - Medium: Should be done soon"
-        - "P3 - Low: When time permits"
-    validations:
-      required: true
+ - type: markdown
+ attributes:
+ value: |
+ ## Documentation
+
+ Use this for any documentation work.
+
+ **Workflow:**
+ 1. Fill out this template -> Status: **Backlog**
+ 2. Claim the issue -> Status: **In Progress**
+ 3. Submit PR -> Status: **In Review**
+ 4. Merged -> Status: **Done**
+
+ > [WARN] Status is tracked via **GitHub Projects**, not labels.
+
+ - type: textarea
+ id: description
+ attributes:
+ label: Description
+ description: What documentation needs to be created or updated?
+ placeholder: "Update README with new Docker installation instructions"
+ validations:
+ required: true
+
+ - type: dropdown
+ id: doc-type
+ attributes:
+ label: Documentation Type
+ description: What kind of documentation is this?
+ options:
+ - "README - Project overview and setup"
+ - "API Documentation - Endpoint reference"
+ - "User Guide - End-user instructions"
+ - "Developer Guide - Contributing/development"
+ - "Architecture Docs - ADRs, system design"
+ - "Code Comments - Inline documentation"
+ - "Changelog - Version history"
+ - "Other"
+ validations:
+ required: true
+
+ - type: textarea
+ id: rationale
+ attributes:
+ label: Rationale
+ description: Why is this documentation needed?
+ placeholder: "Docker support was added in v1.5 but the README still only shows manual installation"
+ validations:
+ required: true
+
+ - type: textarea
+ id: content-outline
+ attributes:
+ label: Content Outline
+ description: What should the documentation cover?
+ placeholder: |
+ - Prerequisites (Docker, docker-compose)
+ - Quick start with docker-compose
+ - Configuration via environment variables
+ - Persistent data with volumes
+ - Troubleshooting common Docker issues
+ validations:
+ required: true
+
+ - type: textarea
+ id: affected-files
+ attributes:
+ label: Affected Files
+ description: Which files need to be created or modified?
+ placeholder: |
+ - README.md (add Docker section)
+ - docs/docker-setup.md (new file)
+ - docker-compose.yml (add comments)
+
+ - type: dropdown
+ id: priority
+ attributes:
+ label: Priority
+ options:
+ - "P0 - Critical: Blocker"
+ - "P1 - High: Blocking users"
+ - "P2 - Medium: Should be done soon"
+ - "P3 - Low: When time permits"
+ validations:
+ required: true

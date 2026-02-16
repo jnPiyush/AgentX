@@ -8,57 +8,57 @@
 API Documentation Should Include:
 
 Endpoint Information:
-  - HTTP method and path
-  - Description of what it does
-  - Authentication requirements
+ - HTTP method and path
+ - Description of what it does
+ - Authentication requirements
 
 Request:
-  - Path parameters
-  - Query parameters
-  - Request body schema
-  - Example request
+ - Path parameters
+ - Query parameters
+ - Request body schema
+ - Example request
 
 Response:
-  - Status codes and meanings
-  - Response body schema
-  - Example responses
+ - Status codes and meanings
+ - Response body schema
+ - Example responses
 
 Errors:
-  - Error codes
-  - Error messages
-  - How to handle
+ - Error codes
+ - Error messages
+ - How to handle
 ```
 
 ### API Documentation Example
 
 ```yaml
 /users/{userId}:
-  get:
-    summary: Get user by ID
-    description: |
-      Retrieves detailed information about a specific user.
-      Requires authentication. Users can only access their own data
-      unless they have admin role.
-    parameters:
-      - name: userId
-        in: path
-        required: true
-        schema:
-          type: integer
-        description: Unique user identifier
-    responses:
-      200:
-        description: User found
-        content:
-          application/json:
-            example:
-              id: 123
-              email: user@example.com
-              name: John Doe
-      404:
-        description: User not found
-      403:
-        description: Access denied
+ get:
+ summary: Get user by ID
+ description: |
+ Retrieves detailed information about a specific user.
+ Requires authentication. Users can only access their own data
+ unless they have admin role.
+ parameters:
+ - name: userId
+ in: path
+ required: true
+ schema:
+ type: integer
+ description: Unique user identifier
+ responses:
+ 200:
+ description: User found
+ content:
+ application/json:
+ example:
+ id: 123
+ email: user@example.com
+ name: John Doe
+ 404:
+ description: User not found
+ 403:
+ description: Access denied
 ```
 
 ---
@@ -101,11 +101,11 @@ We will use PostgreSQL 16 as our primary database.
 
 ```
 Write ADR For:
-  - Technology choices (database, framework, cloud provider)
-  - Architecture patterns (microservices vs monolith)
-  - Security decisions (auth strategy, encryption)
-  - Integration approaches (sync vs async)
-  - Breaking changes to existing patterns
+ - Technology choices (database, framework, cloud provider)
+ - Architecture patterns (microservices vs monolith)
+ - Security decisions (auth strategy, encryption)
+ - Integration approaches (sync vs async)
+ - Breaking changes to existing patterns
 ```
 
 ---

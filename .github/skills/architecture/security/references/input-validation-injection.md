@@ -15,25 +15,25 @@
 **Example Validation Rules:**
 ```yaml
 email:
-  required: true
-  format: email
-  max_length: 255
+ required: true
+ format: email
+ max_length: 255
 
 username:
-  required: true
-  min_length: 3
-  max_length: 20
-  pattern: "^[a-zA-Z0-9_]+$"
-  message: "Only letters, numbers, and underscores"
+ required: true
+ min_length: 3
+ max_length: 20
+ pattern: "^[a-zA-Z0-9_]+$"
+ message: "Only letters, numbers, and underscores"
 
 age:
-  required: true
-  minimum: 13
-  maximum: 120
+ required: true
+ minimum: 13
+ maximum: 120
 
 url:
-  format: url
-  allowed_protocols: ["https"]
+ format: url
+ allowed_protocols: ["https"]
 ```
 
 **Validation Libraries by Language:**
@@ -73,14 +73,14 @@ url:
 
 ### SQL Injection
 
-**❌ NEVER concatenate SQL queries:**
+**[FAIL] NEVER concatenate SQL queries:**
 ```sql
 -- VULNERABLE - Attacker can inject SQL
 query = "SELECT * FROM users WHERE email = '" + userInput + "'"
 -- Injection: ' OR '1'='1' --
 ```
 
-**✅ ALWAYS use parameterized queries:**
+**[PASS] ALWAYS use parameterized queries:**
 ```sql
 -- SAFE - Parameters separated from query
 query = "SELECT * FROM users WHERE email = ?"
@@ -115,21 +115,21 @@ db.users.find({username: userInput, password: userInput})
 ```javascript
 // SAFE - Validate types and sanitize
 db.users.find({
-  username: {$eq: String(userInput)},  // Force string type
-  password: {$eq: String(userInput)}
+ username: {$eq: String(userInput)}, // Force string type
+ password: {$eq: String(userInput)}
 })
 ```
 
 ### Command Injection
 
-**❌ NEVER pass user input to shell:**
+**[FAIL] NEVER pass user input to shell:**
 ```bash
 # VULNERABLE
 system("ping -c 1 " + userInput)
 # Injection: 127.0.0.1; rm -rf /
 ```
 
-**✅ Use safe APIs:**
+**[PASS] Use safe APIs:**
 - Use language-specific safe APIs (subprocess with array args)
 - Validate input against strict allowlist
 - Avoid shell execution entirely when possible

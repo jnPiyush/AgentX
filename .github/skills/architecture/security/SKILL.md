@@ -2,16 +2,16 @@
 name: "security"
 description: 'Implement production security practices covering OWASP Top 10, input validation, injection prevention, and secrets management. Use when hardening applications against vulnerabilities, implementing authentication/authorization, managing secrets, configuring HTTPS/TLS, or conducting security audits.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 ---
 
 # Security
 
-> **Purpose**: Language-agnostic security practices to protect against common vulnerabilities.  
-> **Focus**: Input validation, injection prevention, authentication, secrets management.  
+> **Purpose**: Language-agnostic security practices to protect against common vulnerabilities. 
+> **Focus**: Input validation, injection prevention, authentication, secrets management. 
 > **Note**: For language-specific implementations, see [C# Development](../../development/csharp/SKILL.md) or [Python Development](../../development/python/SKILL.md).
 
 ---
@@ -33,21 +33,21 @@ metadata:
 
 ```
 Security concern?
-├─ User input? → VALIDATE + SANITIZE (see Input Validation)
-│   ├─ Goes into SQL? → Parameterized queries ONLY
-│   ├─ Goes into HTML? → Encode output (XSS prevention)
-│   └─ Goes into shell? → Avoid; use SDK/API instead
-├─ Authentication?
-│   ├─ New system? → Use established provider (OAuth2/OIDC)
-│   └─ Existing? → Verify token validation, session management
-├─ Secrets/credentials?
-│   ├─ In code? → REMOVE → use env vars or vault
-│   └─ In config? → Move to secrets manager
-│       └─ Run: scripts/scan-secrets.ps1 to verify
-├─ Dependencies?
-│   └─ Run: scripts/scan-security.ps1 → update vulnerable packages
-└─ Deployment?
-    └─ HTTPS only, security headers, CORS configured
++- User input? -> VALIDATE + SANITIZE (see Input Validation)
+| +- Goes into SQL? -> Parameterized queries ONLY
+| +- Goes into HTML? -> Encode output (XSS prevention)
+| - Goes into shell? -> Avoid; use SDK/API instead
++- Authentication?
+| +- New system? -> Use established provider (OAuth2/OIDC)
+| - Existing? -> Verify token validation, session management
++- Secrets/credentials?
+| +- In code? -> REMOVE -> use env vars or vault
+| - In config? -> Move to secrets manager
+| - Run: scripts/scan-secrets.ps1 to verify
++- Dependencies?
+| - Run: scripts/scan-security.ps1 -> update vulnerable packages
+- Deployment?
+ - HTTPS only, security headers, CORS configured
 ```
 
 ## OWASP Top 10 (2025)
@@ -101,10 +101,9 @@ Security concern?
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Scripts
 

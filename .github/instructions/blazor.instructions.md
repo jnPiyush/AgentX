@@ -21,12 +21,12 @@ applyTo: "**/*.razor,**/*.razor.cs,**/Blazor*"
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
 @code {
-    private int currentCount = 0;
+ private int currentCount = 0;
 
-    private void IncrementCount()
-    {
-        currentCount++;
-    }
+ private void IncrementCount()
+ {
+ currentCount++;
+ }
 }
 ```
 
@@ -48,8 +48,8 @@ private List<Item> items = new();
 
 private async Task LoadItems()
 {
-    items = await ItemService.GetItemsAsync();
-    StateHasChanged(); // Only needed if called from non-UI thread
+ items = await ItemService.GetItemsAsync();
+ StateHasChanged(); // Only needed if called from non-UI thread
 }
 ```
 
@@ -57,13 +57,13 @@ private async Task LoadItems()
 ```razor
 <!-- Parent -->
 <CascadingValue Value="@theme">
-    <ChildComponent />
+ <ChildComponent />
 </CascadingValue>
 
 <!-- Child -->
 @code {
-    [CascadingParameter]
-    public Theme Theme { get; set; } = default!;
+ [CascadingParameter]
+ public Theme Theme { get; set; } = default!;
 }
 ```
 
@@ -71,20 +71,20 @@ private async Task LoadItems()
 ```csharp
 public class AppState
 {
-    public event Action? OnChange;
+ public event Action? OnChange;
 
-    private string _username = "";
-    public string Username
-    {
-        get => _username;
-        set
-        {
-            _username = value;
-            NotifyStateChanged();
-        }
-    }
+ private string _username = "";
+ public string Username
+ {
+ get => _username;
+ set
+ {
+ _username = value;
+ NotifyStateChanged();
+ }
+ }
 
-    private void NotifyStateChanged() => OnChange?.Invoke();
+ private void NotifyStateChanged() => OnChange?.Invoke();
 }
 
 // Register in Program.cs
@@ -96,25 +96,25 @@ builder.Services.AddScoped<AppState>();
 ### EditForm with DataAnnotations
 ```razor
 <EditForm Model="@user" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+ <DataAnnotationsValidator />
+ <ValidationSummary />
 
-    <div class="form-group">
-        <label for="name">Name</label>
-        <InputText id="name" @bind-Value="user.Name" class="form-control" />
-        <ValidationMessage For="@(() => user.Name)" />
-    </div>
+ <div class="form-group">
+ <label for="name">Name</label>
+ <InputText id="name" @bind-Value="user.Name" class="form-control" />
+ <ValidationMessage For="@(() => user.Name)" />
+ </div>
 
-    <button type="submit" class="btn btn-primary">Submit</button>
+ <button type="submit" class="btn btn-primary">Submit</button>
 </EditForm>
 
 @code {
-    private User user = new();
+ private User user = new();
 
-    private async Task HandleValidSubmit()
-    {
-        await UserService.SaveAsync(user);
-    }
+ private async Task HandleValidSubmit()
+ {
+ await UserService.SaveAsync(user);
+ }
 }
 ```
 
@@ -122,15 +122,15 @@ builder.Services.AddScoped<AppState>();
 ```csharp
 public class UniqueEmailAttribute : ValidationAttribute
 {
-    protected override ValidationResult? IsValid(object? value, ValidationContext context)
-    {
-        var service = context.GetRequiredService<IUserService>();
-        if (service.EmailExists((string)value!))
-        {
-            return new ValidationResult("Email already exists");
-        }
-        return ValidationResult.Success;
-    }
+ protected override ValidationResult? IsValid(object? value, ValidationContext context)
+ {
+ var service = context.GetRequiredService<IUserService>();
+ if (service.EmailExists((string)value!))
+ {
+ return new ValidationResult("Email already exists");
+ }
+ return ValidationResult.Success;
+ }
 }
 ```
 
@@ -143,11 +143,11 @@ public class UniqueEmailAttribute : ValidationAttribute
 
 <!-- Child -->
 @code {
-    [Parameter]
-    public string Title { get; set; } = "";
+ [Parameter]
+ public string Title { get; set; } = "";
 
-    [Parameter]
-    public EventCallback OnClick { get; set; }
+ [Parameter]
+ public EventCallback OnClick { get; set; }
 }
 ```
 
@@ -157,13 +157,13 @@ public class UniqueEmailAttribute : ValidationAttribute
 <button @onclick="NotifyParent">Click</button>
 
 @code {
-    [Parameter]
-    public EventCallback<string> OnNotify { get; set; }
+ [Parameter]
+ public EventCallback<string> OnNotify { get; set; }
 
-    private async Task NotifyParent()
-    {
-        await OnNotify.InvokeAsync("Hello from child");
-    }
+ private async Task NotifyParent()
+ {
+ await OnNotify.InvokeAsync("Hello from child");
+ }
 }
 ```
 
@@ -175,12 +175,12 @@ public class UniqueEmailAttribute : ValidationAttribute
 
 private async Task ShowAlert()
 {
-    await JS.InvokeVoidAsync("alert", "Hello!");
+ await JS.InvokeVoidAsync("alert", "Hello!");
 }
 
 private async Task<string> GetValue()
 {
-    return await JS.InvokeAsync<string>("localStorage.getItem", "key");
+ return await JS.InvokeAsync<string>("localStorage.getItem", "key");
 }
 ```
 
@@ -191,13 +191,13 @@ private DotNetObjectReference<MyComponent>? objRef;
 
 protected override void OnInitialized()
 {
-    objRef = DotNetObjectReference.Create(this);
+ objRef = DotNetObjectReference.Create(this);
 }
 
 [JSInvokable]
 public void ReceiveData(string data)
 {
-    // Handle data from JS
+ // Handle data from JS
 }
 
 public void Dispose() => objRef?.Dispose();
@@ -207,29 +207,29 @@ public void Dispose() => objRef?.Dispose();
 
 ```csharp
 @code {
-    // Called first, sync only
-    protected override void OnInitialized() { }
+ // Called first, sync only
+ protected override void OnInitialized() { }
 
-    // Called first, async
-    protected override async Task OnInitializedAsync() { }
+ // Called first, async
+ protected override async Task OnInitializedAsync() { }
 
-    // Called when parameters change
-    protected override void OnParametersSet() { }
-    protected override async Task OnParametersSetAsync() { }
+ // Called when parameters change
+ protected override void OnParametersSet() { }
+ protected override async Task OnParametersSetAsync() { }
 
-    // Called after render
-    protected override void OnAfterRender(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // First render only - JS interop safe here
-        }
-    }
-    protected override async Task OnAfterRenderAsync(bool firstRender) { }
+ // Called after render
+ protected override void OnAfterRender(bool firstRender)
+ {
+ if (firstRender)
+ {
+ // First render only - JS interop safe here
+ }
+ }
+ protected override async Task OnAfterRenderAsync(bool firstRender) { }
 
-    // Cleanup
-    public void Dispose() { }
-    public async ValueTask DisposeAsync() { }
+ // Cleanup
+ public void Dispose() { }
+ public async ValueTask DisposeAsync() { }
 }
 ```
 
@@ -238,12 +238,12 @@ public void Dispose() => objRef?.Dispose();
 ### Virtualization for Large Lists
 ```razor
 <Virtualize Items="@items" Context="item">
-    <ItemContent>
-        <div>@item.Name</div>
-    </ItemContent>
-    <Placeholder>
-        <div>Loading...</div>
-    </Placeholder>
+ <ItemContent>
+ <div>@item.Name</div>
+ </ItemContent>
+ <Placeholder>
+ <div>Loading...</div>
+ </Placeholder>
 </Virtualize>
 ```
 
@@ -252,13 +252,13 @@ public void Dispose() => objRef?.Dispose();
 // Implement ShouldRender
 protected override bool ShouldRender()
 {
-    return hasDataChanged;
+ return hasDataChanged;
 }
 
 // Use @key for list rendering
 @foreach (var item in items)
 {
-    <ItemComponent @key="item.Id" Item="item" />
+ <ItemComponent @key="item.Id" Item="item" />
 }
 ```
 
@@ -267,23 +267,23 @@ protected override bool ShouldRender()
 ### Error Boundaries
 ```razor
 <ErrorBoundary @ref="errorBoundary">
-    <ChildContent>
-        <RiskyComponent />
-    </ChildContent>
-    <ErrorContent Context="ex">
-        <div class="alert alert-danger">
-            An error occurred: @ex.Message
-        </div>
-    </ErrorContent>
+ <ChildContent>
+ <RiskyComponent />
+ </ChildContent>
+ <ErrorContent Context="ex">
+ <div class="alert alert-danger">
+ An error occurred: @ex.Message
+ </div>
+ </ErrorContent>
 </ErrorBoundary>
 
 @code {
-    private ErrorBoundary? errorBoundary;
+ private ErrorBoundary? errorBoundary;
 
-    private void Recover()
-    {
-        errorBoundary?.Recover();
-    }
+ private void Recover()
+ {
+ errorBoundary?.Recover();
+ }
 }
 ```
 

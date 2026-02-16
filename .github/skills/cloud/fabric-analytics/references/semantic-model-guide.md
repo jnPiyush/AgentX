@@ -10,9 +10,9 @@ DirectLake is Fabric's high-performance mode that queries Delta tables directly 
 
 ```
 Gold Lakehouse (Delta tables)
-        ↓ DirectLake
+ (down) DirectLake
 Semantic Model (measures, relationships)
-        ↓
+ (down)
 Power BI Reports (sub-second queries)
 ```
 
@@ -42,11 +42,11 @@ Power BI Reports (sub-second queries)
 ### Structure
 
 ```
-           dim_date
-              │
-dim_product ──┼── fact_sales ──── dim_customer
-              │
-           dim_store
+ dim_date
+ |
+dim_product --+-- fact_sales ---- dim_customer
+ |
+ dim_store
 ```
 
 ### Design Rules
@@ -67,16 +67,16 @@ dim_product ──┼── fact_sales ──── dim_customer
 
 | Cardinality | When to Use | Example |
 |-------------|-------------|---------|
-| **Many-to-One** | Fact → Dimension | `fact_sales.product_key → dim_product.product_key` |
-| **One-to-One** | Dimension → Dimension | `dim_customer.geo_key → dim_geography.geo_key` |
-| **Many-to-Many** | Bridge tables | `fact_sales → bridge_promo → dim_promotion` |
+| **Many-to-One** | Fact -> Dimension | `fact_sales.product_key -> dim_product.product_key` |
+| **One-to-One** | Dimension -> Dimension | `dim_customer.geo_key -> dim_geography.geo_key` |
+| **Many-to-Many** | Bridge tables | `fact_sales -> bridge_promo -> dim_promotion` |
 
 ### Cross-Filter Direction
 
 | Direction | Use Case |
 |-----------|----------|
-| **Single** (default) | Standard fact → dimension filtering |
-| **Both** | Bidirectional (use sparingly — performance impact) |
+| **Single** (default) | Standard fact -> dimension filtering |
+| **Both** | Bidirectional (use sparingly - performance impact) |
 
 ---
 
@@ -108,8 +108,8 @@ RETURN DIVIDE(Current - Prior, Prior, 0)
 
 3-Month Moving Average =
 AVERAGEX(
-    DATESINPERIOD('dim_date'[date], MAX('dim_date'[date]), -3, MONTH),
-    [Total Sales]
+ DATESINPERIOD('dim_date'[date], MAX('dim_date'[date]), -3, MONTH),
+ [Total Sales]
 )
 ```
 
@@ -120,8 +120,8 @@ Product Rank = RANKX(ALL(dim_product), [Total Sales], , DESC, Dense)
 
 Top 10 Products =
 CALCULATE(
-    [Total Sales],
-    TOPN(10, ALL(dim_product), [Total Sales], DESC)
+ [Total Sales],
+ TOPN(10, ALL(dim_product), [Total Sales], DESC)
 )
 ```
 

@@ -48,7 +48,7 @@ from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from openai.types.eval_create_params import DataSourceConfigCustom
 from openai.types.evals.create_eval_jsonl_run_data_source_param import (
-    CreateEvalJSONLRunDataSourceParam, SourceFileID
+ CreateEvalJSONLRunDataSourceParam, SourceFileID
 )
 import os
 import time
@@ -57,79 +57,79 @@ endpoint = os.getenv("FOUNDRY_PROJECT_ENDPOINT")
 model_deployment = os.getenv("MODEL_DEPLOYMENT_NAME")
 
 with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(endpoint=endpoint, credential=credential) as project_client,
-    project_client.get_openai_client() as openai_client,
+ DefaultAzureCredential() as credential,
+ AIProjectClient(endpoint=endpoint, credential=credential) as project_client,
+ project_client.get_openai_client() as openai_client,
 ):
-    # 1. Upload Dataset
-    dataset = project_client.datasets.upload_file(
-        name="eval-data",
-        version="1",
-        file_path="data.jsonl"
-    )
+ # 1. Upload Dataset
+ dataset = project_client.datasets.upload_file(
+ name="eval-data",
+ version="1",
+ file_path="data.jsonl"
+ )
 
-    # 2. Define Data Schema
-    data_source_config = DataSourceConfigCustom({
-        "type": "custom",
-        "item_schema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string"},
-                "response": {"type": "string"}
-            },
-            "required": ["query", "response"]
-        },
-        "include_sample_schema": True
-    })
+ # 2. Define Data Schema
+ data_source_config = DataSourceConfigCustom({
+ "type": "custom",
+ "item_schema": {
+ "type": "object",
+ "properties": {
+ "query": {"type": "string"},
+ "response": {"type": "string"}
+ },
+ "required": ["query", "response"]
+ },
+ "include_sample_schema": True
+ })
 
-    # 3. Define Evaluators
-    testing_criteria = [
-        {
-            "type": "azure_ai_evaluator",
-            "name": "coherence",
-            "evaluator_name": "builtin.coherence",
-            "data_mapping": {
-                "query": "{{item.query}}", 
-                "response": "{{item.response}}"
-            },
-            "initialization_parameters": {"deployment_name": model_deployment}
-        },
-        {
-            "type": "azure_ai_evaluator",
-            "name": "relevance",
-            "evaluator_name": "builtin.relevance",
-            "data_mapping": {
-                "query": "{{item.query}}", 
-                "response": "{{item.response}}"
-            },
-            "initialization_parameters": {"deployment_name": model_deployment}
-        }
-    ]
+ # 3. Define Evaluators
+ testing_criteria = [
+ {
+ "type": "azure_ai_evaluator",
+ "name": "coherence",
+ "evaluator_name": "builtin.coherence",
+ "data_mapping": {
+ "query": "{{item.query}}", 
+ "response": "{{item.response}}"
+ },
+ "initialization_parameters": {"deployment_name": model_deployment}
+ },
+ {
+ "type": "azure_ai_evaluator",
+ "name": "relevance",
+ "evaluator_name": "builtin.relevance",
+ "data_mapping": {
+ "query": "{{item.query}}", 
+ "response": "{{item.response}}"
+ },
+ "initialization_parameters": {"deployment_name": model_deployment}
+ }
+ ]
 
-    # 4. Create Evaluation
-    evaluation = openai_client.evals.create(
-        name="agent-eval",
-        data_source_config=data_source_config,
-        testing_criteria=testing_criteria
-    )
+ # 4. Create Evaluation
+ evaluation = openai_client.evals.create(
+ name="agent-eval",
+ data_source_config=data_source_config,
+ testing_criteria=testing_criteria
+ )
 
-    # 5. Run Evaluation
-    run = openai_client.evals.runs.create(
-        eval_id=evaluation.id,
-        name="eval-run",
-        data_source=CreateEvalJSONLRunDataSourceParam(
-            type="jsonl", 
-            source=SourceFileID(type="file_id", id=dataset.id)
-        )
-    )
+ # 5. Run Evaluation
+ run = openai_client.evals.runs.create(
+ eval_id=evaluation.id,
+ name="eval-run",
+ data_source=CreateEvalJSONLRunDataSourceParam(
+ type="jsonl", 
+ source=SourceFileID(type="file_id", id=dataset.id)
+ )
+ )
 
-    # 6. Wait for Completion
-    while run.status not in ["completed", "failed"]:
-        run = openai_client.evals.runs.retrieve(run_id=run.id, eval_id=evaluation.id)
-        time.sleep(3)
+ # 6. Wait for Completion
+ while run.status not in ["completed", "failed"]:
+ run = openai_client.evals.runs.retrieve(run_id=run.id, eval_id=evaluation.id)
+ time.sleep(3)
 
-    print(f"Status: {run.status}")
-    print(f"Report: {run.report_url}")
+ print(f"Status: {run.status}")
+ print(f"Report: {run.report_url}")
 ```
 
 ## Custom Evaluators
@@ -138,33 +138,33 @@ with (
 
 ```python
 code_evaluator = project_client.evaluators.create_version(
-    name="response_length_check",
-    evaluator_version={
-        "name": "response_length_check",
-        "definition": {
-            "type": "CODE",
-            "code_text": """
+ name="response_length_check",
+ evaluator_version={
+ "name": "response_length_check",
+ "definition": {
+ "type": "CODE",
+ "code_text": """
 def grade(sample, item):
-    length = len(item.get("response", ""))
-    if 100 <= length <= 500:
-        return 1.0
-    elif length < 100:
-        return 0.5
-    else:
-        return 0.7
+ length = len(item.get("response", ""))
+ if 100 <= length <= 500:
+ return 1.0
+ elif length < 100:
+ return 0.5
+ else:
+ return 0.7
 """,
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "response": {"type": "string"}
-                },
-                "required": ["response"]
-            },
-            "output_schema": {
-                "type": "number"
-            }
-        }
-    }
+ "input_schema": {
+ "type": "object",
+ "properties": {
+ "response": {"type": "string"}
+ },
+ "required": ["response"]
+ },
+ "output_schema": {
+ "type": "number"
+ }
+ }
+ }
 )
 ```
 
@@ -172,12 +172,12 @@ def grade(sample, item):
 
 ```python
 prompt_evaluator = project_client.evaluators.create_version(
-    name="friendliness_check",
-    evaluator_version={
-        "name": "friendliness_check",
-        "definition": {
-            "type": "PROMPT",
-            "prompt_text": """
+ name="friendliness_check",
+ evaluator_version={
+ "name": "friendliness_check",
+ "definition": {
+ "type": "PROMPT",
+ "prompt_text": """
 Rate the friendliness of this response on a scale of 1-5:
 
 Query: {{query}}
@@ -190,23 +190,23 @@ Consider:
 
 Output JSON only: {"result": <int 1-5>, "reason": "<brief explanation>"}
 """,
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "response": {"type": "string"}
-                },
-                "required": ["query", "response"]
-            },
-            "output_schema": {
-                "type": "object",
-                "properties": {
-                    "result": {"type": "integer"},
-                    "reason": {"type": "string"}
-                }
-            }
-        }
-    }
+ "input_schema": {
+ "type": "object",
+ "properties": {
+ "query": {"type": "string"},
+ "response": {"type": "string"}
+ },
+ "required": ["query", "response"]
+ },
+ "output_schema": {
+ "type": "object",
+ "properties": {
+ "result": {"type": "integer"},
+ "reason": {"type": "string"}
+ }
+ }
+ }
+ }
 )
 ```
 

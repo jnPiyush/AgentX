@@ -2,12 +2,12 @@
 name: "containerization"
 description: 'Apply container and orchestration best practices with Docker, Docker Compose, and Kubernetes. Use when writing Dockerfiles, creating docker-compose configurations, deploying to Kubernetes, optimizing container images, or troubleshooting container networking.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  platforms: ["windows", "linux", "macos"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # Containerization & Orchestration
@@ -26,17 +26,17 @@ compatibility:
 
 ```
 Containerizing an application?
-├─ Single service, local dev?
-│   └─ Dockerfile only
-├─ Multi-service, local dev?
-│   └─ Docker Compose
-├─ Production deployment?
-│   ├─ Simple (1-3 services)?
-│   │   └─ Docker Compose + managed hosting (Azure Container Apps, ECS)
-│   └─ Complex (many services, scaling)?
-│       └─ Kubernetes (AKS, EKS, GKE)
-└─ CI/CD pipeline?
-    └─ Multi-stage Dockerfile + registry push
++- Single service, local dev?
+| - Dockerfile only
++- Multi-service, local dev?
+| - Docker Compose
++- Production deployment?
+| +- Simple (1-3 services)?
+| | - Docker Compose + managed hosting (Azure Container Apps, ECS)
+| - Complex (many services, scaling)?
+| - Kubernetes (AKS, EKS, GKE)
+- CI/CD pipeline?
+ - Multi-stage Dockerfile + registry push
 ```
 
 ## Quick Start
@@ -124,7 +124,7 @@ CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000
 
 ### 1. Image Security
 
-- **Non-root user**: Always `USER appuser` — never run as root
+- **Non-root user**: Always `USER appuser` - never run as root
 - **Minimal base**: Use `-alpine` or `-slim` variants
 - **No secrets in images**: Use build args for build-time, env vars for runtime
 - **Pin versions**: `FROM node:20.11-alpine`, not `FROM node:latest`
@@ -132,7 +132,7 @@ CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000
 
 ### 2. Layer Optimization
 
-- **Copy dependency files first**: `COPY package*.json ./` → `RUN npm ci` → `COPY . .`
+- **Copy dependency files first**: `COPY package*.json ./` -> `RUN npm ci` -> `COPY . .`
 - **Combine RUN commands**: Reduce layers with `&&`
 - **Use .dockerignore**: Exclude `node_modules`, `.git`, `dist`, test files
 - **Multi-stage builds**: Build stage with dev deps, production stage with runtime only
@@ -142,38 +142,38 @@ CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000
 ```yaml
 # docker-compose.yml
 services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: production
-    ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=postgres://user:pass@db:5432/app
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
-      interval: 10s
-      retries: 3
+ api:
+ build:
+ context: .
+ dockerfile: Dockerfile
+ target: production
+ ports:
+ - "3000:3000"
+ environment:
+ - DATABASE_URL=postgres://user:pass@db:5432/app
+ depends_on:
+ db:
+ condition: service_healthy
+ healthcheck:
+ test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+ interval: 10s
+ retries: 3
 
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
-      POSTGRES_DB: app
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user"]
-      interval: 5s
-      retries: 5
+ db:
+ image: postgres:16-alpine
+ environment:
+ POSTGRES_USER: user
+ POSTGRES_PASSWORD: pass
+ POSTGRES_DB: app
+ volumes:
+ - pgdata:/var/lib/postgresql/data
+ healthcheck:
+ test: ["CMD-SHELL", "pg_isready -U user"]
+ interval: 5s
+ retries: 5
 
 volumes:
-  pgdata:
+ pgdata:
 ```
 
 ### 4. Kubernetes Essentials
@@ -183,41 +183,41 @@ volumes:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-app
+ name: my-app
 spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: my-app
-  template:
-    metadata:
-      labels:
-        app: my-app
-    spec:
-      containers:
-        - name: my-app
-          image: myregistry.azurecr.io/my-app:1.0.0
-          ports:
-            - containerPort: 3000
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 15
-            periodSeconds: 20
+ replicas: 3
+ selector:
+ matchLabels:
+ app: my-app
+ template:
+ metadata:
+ labels:
+ app: my-app
+ spec:
+ containers:
+ - name: my-app
+ image: myregistry.azurecr.io/my-app:1.0.0
+ ports:
+ - containerPort: 3000
+ resources:
+ requests:
+ cpu: "100m"
+ memory: "128Mi"
+ limits:
+ cpu: "500m"
+ memory: "512Mi"
+ readinessProbe:
+ httpGet:
+ path: /health
+ port: 3000
+ initialDelaySeconds: 5
+ periodSeconds: 10
+ livenessProbe:
+ httpGet:
+ path: /health
+ port: 3000
+ initialDelaySeconds: 15
+ periodSeconds: 20
 ```
 
 ### 5. .dockerignore
@@ -238,10 +238,10 @@ obj/
 
 ## Anti-Patterns
 
-- **Running as root**: Security risk — always add and switch to non-root user
-- **`latest` tags**: Non-reproducible builds — pin specific versions
+- **Running as root**: Security risk - always add and switch to non-root user
+- **`latest` tags**: Non-reproducible builds - pin specific versions
 - **Secrets in ENV/ARG**: Use Docker secrets or mounted files for sensitive data
-- **Single-stage builds**: Bloated images with build tools — use multi-stage
+- **Single-stage builds**: Bloated images with build tools - use multi-stage
 - **No healthchecks**: Orchestrators can't determine container health
 - **bind-mounting in production**: Use volumes or copy files into the image
 - **Ignoring .dockerignore**: Huge build contexts slow down builds

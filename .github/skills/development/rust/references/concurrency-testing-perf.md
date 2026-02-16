@@ -9,23 +9,23 @@ use std::thread;
 use std::sync::{Arc, Mutex};
 
 fn main() {
-    let counter = Arc::new(Mutex::new(0));
-    let mut handles = vec![];
+ let counter = Arc::new(Mutex::new(0));
+ let mut handles = vec![];
 
-    for _ in 0..10 {
-        let counter = Arc::clone(&counter);
-        let handle = thread::spawn(move || {
-            let mut num = counter.lock().unwrap();
-            *num += 1;
-        });
-        handles.push(handle);
-    }
+ for _ in 0..10 {
+ let counter = Arc::clone(&counter);
+ let handle = thread::spawn(move || {
+ let mut num = counter.lock().unwrap();
+ *num += 1;
+ });
+ handles.push(handle);
+ }
 
-    for handle in handles {
-        handle.join().unwrap();
-    }
+ for handle in handles {
+ handle.join().unwrap();
+ }
 
-    println!("Result: {}", *counter.lock().unwrap());
+ println!("Result: {}", *counter.lock().unwrap());
 }
 ```
 
@@ -36,22 +36,22 @@ use tokio;
 
 #[tokio::main]
 async fn main() {
-    let result = fetch_data().await;
-    println!("{:?}", result);
+ let result = fetch_data().await;
+ println!("{:?}", result);
 }
 
 async fn fetch_data() -> Result<String, Error> {
-    let response = reqwest::get("https://api.example.com/data")
-        .await?
-        .text()
-        .await?;
-    Ok(response)
+ let response = reqwest::get("https://api.example.com/data")
+ .await?
+ .text()
+ .await?;
+ Ok(response)
 }
 
 // Concurrent execution
 async fn fetch_all() -> Vec<Data> {
-    let futures = urls.iter().map(|url| fetch(url));
-    futures::future::join_all(futures).await
+ let futures = urls.iter().map(|url| fetch(url));
+ futures::future::join_all(futures).await
 }
 ```
 
@@ -62,17 +62,17 @@ use std::sync::mpsc;
 use std::thread;
 
 fn main() {
-    let (tx, rx) = mpsc::channel();
+ let (tx, rx) = mpsc::channel();
 
-    thread::spawn(move || {
-        for i in 0..10 {
-            tx.send(i).unwrap();
-        }
-    });
+ thread::spawn(move || {
+ for i in 0..10 {
+ tx.send(i).unwrap();
+ }
+ });
 
-    for received in rx {
-        println!("Got: {}", received);
-    }
+ for received in rx {
+ println!("Got: {}", received);
+ }
 }
 ```
 
@@ -85,24 +85,24 @@ fn main() {
 ```rust
 #[cfg(test)]
 mod tests {
-    use super::*;
+ use super::*;
 
-    #[test]
-    fn test_add() {
-        assert_eq!(add(2, 2), 4);
-    }
+ #[test]
+ fn test_add() {
+ assert_eq!(add(2, 2), 4);
+ }
 
-    #[test]
-    fn test_validation() {
-        let result = validate("");
-        assert!(result.is_err());
-    }
+ #[test]
+ fn test_validation() {
+ let result = validate("");
+ assert!(result.is_err());
+ }
 
-    #[test]
-    #[should_panic(expected = "empty input")]
-    fn test_panic() {
-        process("");
-    }
+ #[test]
+ #[should_panic(expected = "empty input")]
+ fn test_panic() {
+ process("");
+ }
 }
 ```
 
@@ -111,13 +111,13 @@ mod tests {
 ```rust
 #[cfg(test)]
 mod tests {
-    use super::*;
+ use super::*;
 
-    #[tokio::test]
-    async fn test_async_function() {
-        let result = fetch_data().await;
-        assert!(result.is_ok());
-    }
+ #[tokio::test]
+ async fn test_async_function() {
+ let result = fetch_data().await;
+ assert!(result.is_ok());
+ }
 }
 ```
 
@@ -129,9 +129,9 @@ use myapp::App;
 
 #[test]
 fn test_full_workflow() {
-    let app = App::new();
-    let result = app.process("input");
-    assert_eq!(result, "expected output");
+ let app = App::new();
+ let result = app.process("input");
+ assert_eq!(result, "expected output");
 }
 ```
 
@@ -147,19 +147,19 @@ let sum: i32 = numbers.iter().map(|x| x * 2).sum();
 
 // Avoid unnecessary allocations
 fn process(data: &[u8]) -> &[u8] {
-    // Return slice instead of Vec
-    &data[..10]
+ // Return slice instead of Vec
+ &data[..10]
 }
 
 // Use Cow for flexible ownership
 use std::borrow::Cow;
 
 fn process(input: &str) -> Cow<str> {
-    if input.contains("special") {
-        Cow::Owned(input.replace("special", "normal"))
-    } else {
-        Cow::Borrowed(input)
-    }
+ if input.contains("special") {
+ Cow::Owned(input.replace("special", "normal"))
+ } else {
+ Cow::Borrowed(input)
+ }
 }
 ```
 
@@ -168,14 +168,14 @@ fn process(input: &str) -> Cow<str> {
 ```rust
 // Iterators compile to efficient loops
 let result: Vec<_> = data
-    .iter()
-    .filter(|x| x.is_valid())
-    .map(|x| x.transform())
-    .collect();
+ .iter()
+ .filter(|x| x.is_valid())
+ .map(|x| x.transform())
+ .collect();
 
 // Generic functions are monomorphized
 fn process<T: Process>(item: T) {
-    // No runtime overhead
+ // No runtime overhead
 }
 ```
 
@@ -187,16 +187,16 @@ fn process<T: Process>(item: T) {
 
 ```rust
 fn validate_input(input: &str) -> Result<&str, ValidationError> {
-    if input.is_empty() {
-        return Err(ValidationError::Empty);
-    }
-    if input.len() > 1000 {
-        return Err(ValidationError::TooLong);
-    }
-    if !input.chars().all(|c| c.is_alphanumeric()) {
-        return Err(ValidationError::InvalidChars);
-    }
-    Ok(input)
+ if input.is_empty() {
+ return Err(ValidationError::Empty);
+ }
+ if input.len() > 1000 {
+ return Err(ValidationError::TooLong);
+ }
+ if !input.chars().all(|c| c.is_alphanumeric()) {
+ return Err(ValidationError::InvalidChars);
+ }
+ Ok(input)
 }
 ```
 
@@ -223,9 +223,9 @@ client.auth(api_key.expose_secret());
 ```rust
 // Compile-time checked queries
 let user = sqlx::query_as!(
-    User,
-    "SELECT * FROM users WHERE id = $1",
-    user_id
+ User,
+ "SELECT * FROM users WHERE id = $1",
+ user_id
 )
 .fetch_one(&pool)
 .await?;

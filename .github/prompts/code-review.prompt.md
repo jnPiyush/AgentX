@@ -27,16 +27,16 @@ Review the following code changes and provide structured feedback.
 ## Summary
 [One paragraph overall assessment]
 
-## 🔴 Critical Issues
+## Critical Issues
 [Must fix before merge]
 
-## 🟡 Suggestions
+## Suggestions
 [Should fix, but not blocking]
 
-## 🟢 Nitpicks
+## Nitpicks
 [Optional improvements]
 
-## ✅ Positives
+## [PASS] Positives
 [What was done well]
 ```
 

@@ -1,113 +1,113 @@
-name: 🔬 Spike
+name: Spike
 description: Research, investigation, or proof-of-concept (time-boxed)
 title: "[Spike] "
 labels: ["type:spike"]
 projects: ["jnPiyush/1"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ## 🔬 Spike
-        
-        Spikes are **time-boxed** research tasks that produce findings and recommendations.
-        
-        **Workflow:**
-        1. Fill out this template → Status: **Backlog**
-        2. Claim and start research → Status: **In Progress**
-        3. Document findings → Status: **In Review**
-        4. Create follow-up issues → Status: **Done**
-        
-        > ⚠️ Status is tracked via **GitHub Projects**, not labels.
-        
-        **Deliverables:**
-        - Findings document (in docs/spikes/)
-        - Recommendation with justification
-        - Follow-up tasks (if applicable)
-  
-  - type: textarea
-    id: question
-    attributes:
-      label: Research Question
-      description: What specific question needs to be answered?
-      placeholder: "Should we use PostgreSQL or MongoDB for storing user analytics data?"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: context
-    attributes:
-      label: Context
-      description: Why is this research needed? What decision depends on it?
-      placeholder: |
-        We need to decide on a database for our new analytics feature. The decision
-        will affect our data model, query patterns, and operational costs.
-    validations:
-      required: true
-  
-  - type: textarea
-    id: success-criteria
-    attributes:
-      label: Success Criteria
-      description: What makes this spike complete?
-      placeholder: |
-        - [ ] Evaluated PostgreSQL vs MongoDB for our use case
-        - [ ] Benchmarked query performance with sample data
-        - [ ] Documented pros/cons for each option
-        - [ ] Made recommendation with justification
-        - [ ] Identified risks and mitigation strategies
-        - [ ] Created follow-up tasks
-    validations:
-      required: true
-  
-  - type: input
-    id: timebox
-    attributes:
-      label: Time Box
-      description: Maximum time to spend (stick to this!)
-      placeholder: "4 hours"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: approach
-    attributes:
-      label: Research Approach
-      description: How will you investigate this?
-      placeholder: |
-        1. Review documentation for both databases
-        2. Create sample data set (10K, 100K, 1M rows)
-        3. Benchmark common query patterns
-        4. Evaluate operational complexity
-        5. Consult with team members who have experience
-  
-  - type: textarea
-    id: deliverables
-    attributes:
-      label: Expected Deliverables
-      description: What artifacts will be produced?
-      placeholder: |
-        - docs/spikes/SPIKE-{issue#}-database-comparison.md
-        - Benchmark code in /experiments/db-comparison/
-        - Summary in issue comments
-    validations:
-      required: true
-  
-  - type: dropdown
-    id: priority
-    attributes:
-      label: Priority
-      description: Research priority
-      options:
-        - "P0 - Critical: Blocker"
-        - "P1 - High: Blocking decisions"
-        - "P2 - Medium: Important but flexible"
-        - "P3 - Low: When time permits"
-    validations:
-      required: true
+ - type: markdown
+ attributes:
+ value: |
+ ## Spike
 
-  - type: input
-    id: related-issue
-    attributes:
-      label: Related Issue
-      description: Which Feature/Epic depends on this spike?
-      placeholder: "#456"
+ Spikes are **time-boxed** research tasks that produce findings and recommendations.
+
+ **Workflow:**
+ 1. Fill out this template -> Status: **Backlog**
+ 2. Claim and start research -> Status: **In Progress**
+ 3. Document findings -> Status: **In Review**
+ 4. Create follow-up issues -> Status: **Done**
+
+ > [WARN] Status is tracked via **GitHub Projects**, not labels.
+
+ **Deliverables:**
+ - Findings document (in docs/spikes/)
+ - Recommendation with justification
+ - Follow-up tasks (if applicable)
+
+ - type: textarea
+ id: question
+ attributes:
+ label: Research Question
+ description: What specific question needs to be answered?
+ placeholder: "Should we use PostgreSQL or MongoDB for storing user analytics data?"
+ validations:
+ required: true
+
+ - type: textarea
+ id: context
+ attributes:
+ label: Context
+ description: Why is this research needed? What decision depends on it?
+ placeholder: |
+ We need to decide on a database for our new analytics feature. The decision
+ will affect our data model, query patterns, and operational costs.
+ validations:
+ required: true
+
+ - type: textarea
+ id: success-criteria
+ attributes:
+ label: Success Criteria
+ description: What makes this spike complete?
+ placeholder: |
+ - [ ] Evaluated PostgreSQL vs MongoDB for our use case
+ - [ ] Benchmarked query performance with sample data
+ - [ ] Documented pros/cons for each option
+ - [ ] Made recommendation with justification
+ - [ ] Identified risks and mitigation strategies
+ - [ ] Created follow-up tasks
+ validations:
+ required: true
+
+ - type: input
+ id: timebox
+ attributes:
+ label: Time Box
+ description: Maximum time to spend (stick to this!)
+ placeholder: "4 hours"
+ validations:
+ required: true
+
+ - type: textarea
+ id: approach
+ attributes:
+ label: Research Approach
+ description: How will you investigate this?
+ placeholder: |
+ 1. Review documentation for both databases
+ 2. Create sample data set (10K, 100K, 1M rows)
+ 3. Benchmark common query patterns
+ 4. Evaluate operational complexity
+ 5. Consult with team members who have experience
+
+ - type: textarea
+ id: deliverables
+ attributes:
+ label: Expected Deliverables
+ description: What artifacts will be produced?
+ placeholder: |
+ - docs/spikes/SPIKE-{issue#}-database-comparison.md
+ - Benchmark code in /experiments/db-comparison/
+ - Summary in issue comments
+ validations:
+ required: true
+
+ - type: dropdown
+ id: priority
+ attributes:
+ label: Priority
+ description: Research priority
+ options:
+ - "P0 - Critical: Blocker"
+ - "P1 - High: Blocking decisions"
+ - "P2 - Medium: Important but flexible"
+ - "P3 - Low: When time permits"
+ validations:
+ required: true
+
+ - type: input
+ id: related-issue
+ attributes:
+ label: Related Issue
+ description: Which Feature/Epic depends on this spike?
+ placeholder: "#456"

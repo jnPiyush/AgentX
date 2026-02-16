@@ -6,7 +6,7 @@
 #
 # This file is consumed by GitHub Actions workflows to enforce security policies.
 #
-# ⚠️  IMPORTANT: Replace <YOUR_GITHUB_USERNAME> with your actual GitHub username!
+# [WARN] IMPORTANT: Replace <YOUR_GITHUB_USERNAME> with your actual GitHub username!
 
 # Layer 3: Kill Switch
 # Set to false to immediately disable all autonomous agent operations
@@ -15,101 +15,101 @@ autonomous_mode_enabled: true
 # Layer 1: Actor Allowlist
 # GitHub users/bots authorized to trigger autonomous workflows
 allowed_actors:
-  - <YOUR_GITHUB_USERNAME>
-  - github-actions[bot]
+ - <YOUR_GITHUB_USERNAME>
+ - github-actions[bot]
 
 # Layer 2: Protected Paths
 # Files matching these patterns require human review (no auto-merge)
 protected_paths:
-  # Workflow definitions (security-critical)
-  - .github/workflows/**
-  - .github/actions/**
-  
-  # Agent definitions (behavior-critical)
-  - .github/agents/**
-  
-  # Security configurations
-  - .github/CODEOWNERS
-  - .github/agentx-security.yml
-  - .github/hooks/**
-  
-  # Dependency manifests (supply chain risk)
-  - package.json
-  - package-lock.json
-  - yarn.lock
-  - pnpm-lock.yaml
-  - requirements.txt
-  - Pipfile.lock
-  - "*.csproj"
-  - "*.sln"
-  - "*.fsproj"
-  
-  # Infrastructure as code
-  - terraform/**
-  - ansible/**
-  - k8s/**
-  - docker-compose.yml
-  - Dockerfile
+ # Workflow definitions (security-critical)
+ - .github/workflows/**
+ - .github/actions/**
+
+ # Agent definitions (behavior-critical)
+ - .github/agents/**
+
+ # Security configurations
+ - .github/CODEOWNERS
+ - .github/agentx-security.yml
+ - .github/hooks/**
+
+ # Dependency manifests (supply chain risk)
+ - package.json
+ - package-lock.json
+ - yarn.lock
+ - pnpm-lock.yaml
+ - requirements.txt
+ - Pipfile.lock
+ - "*.csproj"
+ - "*.sln"
+ - "*.fsproj"
+
+ # Infrastructure as code
+ - terraform/**
+ - ansible/**
+ - k8s/**
+ - docker-compose.yml
+ - Dockerfile
 
 # Safe paths (agents can auto-merge after CI passes)
 safe_paths:
-  - docs/**
-  - samples/**
-  - tests/**
-  - "*.md"
-  - .github/templates/**
-  - .github/instructions/**
-  - .github/prompts/**
+ - docs/**
+ - samples/**
+ - tests/**
+ - "*.md"
+ - .github/templates/**
+ - .github/instructions/**
+ - .github/prompts/**
 
 # Security rules
 security:
-  # Require PR approval count
-  min_approvals: 1
-  
-  # Require status checks to pass
-  require_ci_pass: true
-  
-  # Block these commands in agent execution
-  blocked_commands:
-    - "rm -rf /"
-    - "git reset --hard"
-    - "drop database"
-    - "curl * | bash"
-    - "wget * | sh"
-    - "eval $(curl *)"
-    
-  # Iteration limits to prevent infinite loops
-  iteration_limits:
-    general_tasks: 15
-    bug_fixes: 5
-    test_retries: 3
-    api_retries: 3
+ # Require PR approval count
+ min_approvals: 1
+
+ # Require status checks to pass
+ require_ci_pass: true
+
+ # Block these commands in agent execution
+ blocked_commands:
+ - "rm -rf /"
+ - "git reset --hard"
+ - "drop database"
+ - "curl * | bash"
+ - "wget * | sh"
+ - "eval $(curl *)"
+
+ # Iteration limits to prevent infinite loops
+ iteration_limits:
+ general_tasks: 15
+ bug_fixes: 5
+ test_retries: 3
+ api_retries: 3
 
 # Audit settings
 audit:
-  # Log all autonomous operations
-  log_enabled: true
-  
-  # Post summary comments to issues
-  issue_comments_enabled: true
-  
-  # Require issue reference in commits
-  require_issue_reference: true
+ # Log all autonomous operations
+ log_enabled: true
+
+ # Post summary comments to issues
+ issue_comments_enabled: true
+
+ # Require issue reference in commits
+ require_issue_reference: true
 
 # Notification settings
 notifications:
-  # Notify on autonomous operations
-  slack_webhook: ""  # Optional: Add Slack webhook URL
-  
-  # Email notifications
-  email_on_error: true
-  email_recipients:
-    - ""  # Add email addresses
+ # Notify on autonomous operations
+ slack_webhook: "" # Optional: Add Slack webhook URL
+
+ # Email notifications
+ email_on_error: true
+ email_recipients:
+ - "" # Add email addresses
 
 # Rate limiting
 rate_limits:
-  # Max autonomous PRs per hour
-  max_prs_per_hour: 10
-  
-  # Max workflow runs per hour
-  max_workflow_runs_per_hour: 20
+ # Max autonomous PRs per hour
+ max_prs_per_hour: 10
+
+ # Max workflow runs per hour
+ max_workflow_runs_per_hour: 20

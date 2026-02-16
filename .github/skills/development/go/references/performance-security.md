@@ -10,15 +10,15 @@ users := make([]User, 0, expectedCount)
 
 // Use sync.Pool for frequent allocations
 var bufferPool = sync.Pool{
-    New: func() interface{} {
-        return make([]byte, 1024)
-    },
+ New: func() interface{} {
+ return make([]byte, 1024)
+ },
 }
 
 func process() {
-    buf := bufferPool.Get().([]byte)
-    defer bufferPool.Put(buf)
-    // Use buffer
+ buf := bufferPool.Get().([]byte)
+ defer bufferPool.Put(buf)
+ // Use buffer
 }
 ```
 
@@ -28,7 +28,7 @@ func process() {
 // Use strings.Builder for concatenation
 var builder strings.Builder
 for _, s := range items {
-    builder.WriteString(s)
+ builder.WriteString(s)
 }
 result := builder.String()
 
@@ -44,16 +44,16 @@ data := []byte(s) // Do once outside loop
 
 ```go
 func CreateUser(input UserInput) error {
-    // Validate all input
-    if len(input.Name) == 0 || len(input.Name) > 100 {
-        return &ValidationError{Field: "name"}
-    }
+ // Validate all input
+ if len(input.Name) == 0 || len(input.Name) > 100 {
+ return &ValidationError{Field: "name"}
+ }
 
-    if !emailRegex.MatchString(input.Email) {
-        return &ValidationError{Field: "email"}
-    }
+ if !emailRegex.MatchString(input.Email) {
+ return &ValidationError{Field: "email"}
+ }
 
-    return nil
+ return nil
 }
 ```
 
@@ -75,9 +75,9 @@ apiKey := os.Getenv("API_KEY")
 
 // Clear sensitive data after use
 defer func() {
-    for i := range password {
-        password[i] = 0
-    }
+ for i := range password {
+ password[i] = 0
+ }
 }()
 ```
 

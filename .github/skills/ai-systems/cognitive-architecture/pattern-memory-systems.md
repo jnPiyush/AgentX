@@ -17,13 +17,13 @@
 **Schema**:
 ```json
 {
-  "session_id": "sess_123",
-  "messages": [
-    { "role": "user", "content": "My name is Piyush." },
-    { "role": "assistant", "content": "Hello Piyush!" }
-  ],
-  "window_strategy": "sliding_window_summary",
-  "max_tokens": 4000
+ "session_id": "sess_123",
+ "messages": [
+ { "role": "user", "content": "My name is Piyush." },
+ { "role": "assistant", "content": "Hello Piyush!" }
+ ],
+ "window_strategy": "sliding_window_summary",
+ "max_tokens": 4000
 }
 ```
 
@@ -37,25 +37,25 @@ When history > `threshold` tokens:
 **Schema (CosmosDB NoSQL)**:
 ```json
 {
-  "user_id": "user_456",
-  "facts": [
-    {
-      "key": "programming_language",
-      "value": "python",
-      "confidence": 0.9,
-      "source_message_id": "msg_88"
-    },
-    {
-      "key": "cloud_provider",
-      "value": "azure",
-      "confidence": 1.0,
-      "source_message_id": "msg_92"
-    }
-  ],
-  "preferences": {
-    "tone": "concise",
-    "theme": "dark"
-  }
+ "user_id": "user_456",
+ "facts": [
+ {
+ "key": "programming_language",
+ "value": "python",
+ "confidence": 0.9,
+ "source_message_id": "msg_88"
+ },
+ {
+ "key": "cloud_provider",
+ "value": "azure",
+ "confidence": 1.0,
+ "source_message_id": "msg_92"
+ }
+ ],
+ "preferences": {
+ "tone": "concise",
+ "theme": "dark"
+ }
 }
 ```
 
@@ -63,22 +63,22 @@ When history > `threshold` tokens:
 
 ```python
 class MemoryManager:
-    def __init__(self, session_id):
-        self.history = RedisHistory(session_id)
-        self.profile = CosmosDBProfile(user_id)
+ def __init__(self, session_id):
+ self.history = RedisHistory(session_id)
+ self.profile = CosmosDBProfile(user_id)
 
-    async def add_interaction(self, user_msg, ai_msg):
-        # 1. Update Short-term
-        await self.history.add_pair(user_msg, ai_msg)
-        
-        # 2. Extract Facts (Background Task)
-        facts = await extract_entities(user_msg)
-        if facts:
-            await self.profile.upsert_facts(facts)
+ async def add_interaction(self, user_msg, ai_msg):
+ # 1. Update Short-term
+ await self.history.add_pair(user_msg, ai_msg)
+ 
+ # 2. Extract Facts (Background Task)
+ facts = await extract_entities(user_msg)
+ if facts:
+ await self.profile.upsert_facts(facts)
 
-    async def get_context(self):
-        # Merge history + relevant profile facts
-        history = await self.history.get_recent(k=10)
-        profile = await self.profile.get_all()
-        return build_prompt(history, profile)
+ async def get_context(self):
+ # Merge history + relevant profile facts
+ history = await self.history.get_recent(k=10)
+ profile = await self.profile.get_all()
+ return build_prompt(history, profile)
 ```

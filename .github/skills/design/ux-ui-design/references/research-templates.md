@@ -48,29 +48,29 @@ New user signs up and creates their first project
 ## Stages
 
 1. **Awareness** (External)
-   - User finds product via search/referral
-   - Reads landing page
-   - Emotions: 😐 Curious, cautious
+ - User finds product via search/referral
+ - Reads landing page
+ - Emotions: Curious, cautious
 
 2. **Consideration** (Landing Page)
-   - Reviews features and pricing
-   - Watches demo video
-   - Emotions: 🙂 Interested, hopeful
+ - Reviews features and pricing
+ - Watches demo video
+ - Emotions: Interested, hopeful
 
 3. **Sign Up** (Registration)
-   - ✅ Opportunity: Simple form, social login
-   - ⚠️ Pain Point: Too many required fields
-   - Emotions: 😊 Excited but slightly frustrated
+ - [PASS] Opportunity: Simple form, social login
+ - [WARN] Pain Point: Too many required fields
+ - Emotions: Excited but slightly frustrated
 
 4. **Onboarding** (First Use)
-   - ✅ Opportunity: Step-by-step wizard
-   - ❌ Problem: No skip option, too slow
-   - Emotions: 😐 Impatient
+ - [PASS] Opportunity: Step-by-step wizard
+ - [FAIL] Problem: No skip option, too slow
+ - Emotions: Impatient
 
 5. **First Value** (Project Created)
-   - User successfully creates project
-   - ✅ Success: Clear success feedback
-   - Emotions: 😄 Accomplished
+ - User successfully creates project
+ - [PASS] Success: Clear success feedback
+ - Emotions: Accomplished
 
 ## Recommendations
 - Reduce required fields to 3 (email, password, name)

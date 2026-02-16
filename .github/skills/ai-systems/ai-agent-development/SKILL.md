@@ -5,7 +5,7 @@ description: 'Build production-ready AI agents with Microsoft Foundry and Agent 
 
 # AI Agent Development
 
-> **Purpose**: Build production-ready AI agents with Microsoft Foundry and Agent Framework.  
+> **Purpose**: Build production-ready AI agents with Microsoft Foundry and Agent Framework. 
 > **Scope**: Agent architecture, model selection, orchestration, observability, evaluation.
 
 ---
@@ -30,7 +30,7 @@ description: 'Build production-ready AI agents with Microsoft Foundry and Agent 
 
 **Python** (Recommended):
 ```bash
-pip install agent-framework-azure-ai --pre  # --pre required during preview
+pip install agent-framework-azure-ai --pre # --pre required during preview
 ```
 
 **.NET**:
@@ -51,7 +51,7 @@ dotnet add package Microsoft.Agents.AI.Workflows --prerelease
 | **gpt-5.1** | Multi-step reasoning | 200K/100K | $3.44 |
 | **o3** | Advanced reasoning | 200K/100K | $3.5 |
 
-**Deploy Model**: `Ctrl+Shift+P` → `AI Toolkit: Deploy Model`
+**Deploy Model**: `Ctrl+Shift+P` -> `AI Toolkit: Deploy Model`
 
 ---
 
@@ -63,24 +63,24 @@ dotnet add package Microsoft.Agents.AI.Workflows --prerelease
 from pathlib import Path
 from agent_framework.openai import OpenAIChatClient
 
-# Load prompt from file — NEVER embed prompts as inline strings
+# Load prompt from file - NEVER embed prompts as inline strings
 prompt = Path("prompts/assistant.md").read_text(encoding="utf-8")
 
 client = OpenAIChatClient(
-    model="gpt-5.1",
-    api_key=os.getenv("FOUNDRY_API_KEY"),
-    endpoint=os.getenv("FOUNDRY_ENDPOINT")
+ model="gpt-5.1",
+ api_key=os.getenv("FOUNDRY_API_KEY"),
+ endpoint=os.getenv("FOUNDRY_ENDPOINT")
 )
 
 agent = {
-    "name": "Assistant",
-    "instructions": prompt,  # Loaded from prompts/assistant.md
-    "tools": []  # Add tools as needed
+ "name": "Assistant",
+ "instructions": prompt, # Loaded from prompts/assistant.md
+ "tools": [] # Add tools as needed
 }
 
 response = await client.chat(
-    messages=[{"role": "user", "content": "Hello"}],
-    agent=agent
+ messages=[{"role": "user", "content": "Hello"}],
+ agent=agent
 )
 ```
 
@@ -92,17 +92,17 @@ from agent_framework.workflows import SequentialWorkflow
 
 # Each agent loads its prompt from a dedicated file
 researcher = {
-    "name": "Researcher",
-    "instructions": Path("prompts/researcher.md").read_text(encoding="utf-8")
+ "name": "Researcher",
+ "instructions": Path("prompts/researcher.md").read_text(encoding="utf-8")
 }
 writer = {
-    "name": "Writer",
-    "instructions": Path("prompts/writer.md").read_text(encoding="utf-8")
+ "name": "Writer",
+ "instructions": Path("prompts/writer.md").read_text(encoding="utf-8")
 }
 
 workflow = SequentialWorkflow(
-    agents=[researcher, writer],
-    handoff_strategy="on_completion"
+ agents=[researcher, writer],
+ handoff_strategy="on_completion"
 )
 
 result = await workflow.run(query="Write about AI agents")
@@ -131,17 +131,17 @@ result = await workflow.run(query="Write about AI agents")
 **Directory Convention**:
 ```
 project/
-  prompts/                    # All system/agent prompts
-    assistant.md              # One file per agent role
-    researcher.md
-    writer.md
-    reviewer.md
-  templates/                  # Output templates used by agents
-    report-template.md        # Structured output templates
-    email-template.md
-    summary-template.md
-  config/
-    models.yaml               # Model configuration
+ prompts/ # All system/agent prompts
+ assistant.md # One file per agent role
+ researcher.md
+ writer.md
+ reviewer.md
+ templates/ # Output templates used by agents
+ report-template.md # Structured output templates
+ email-template.md
+ summary-template.md
+ config/
+ models.yaml # Model configuration
 ```
 
 **Loading Pattern**:
@@ -167,8 +167,8 @@ prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
 
 ### Development
 
-✅ **DO**:
-- Plan agent architecture before coding (Research → Design → Implement)
+[PASS] **DO**:
+- Plan agent architecture before coding (Research -> Design -> Implement)
 - Use Microsoft Foundry models for production
 - Implement tracing from day one
 - Test with evaluation datasets before deployment
@@ -178,7 +178,7 @@ prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
 - **Store all prompts as separate files in `prompts/` directory**
 - **Store output templates as separate files in `templates/` directory**
 
-❌ **DON'T**:
+[FAIL] **DON'T**:
 - Hardcode API keys or endpoints
 - Embed prompts or output templates as multi-line strings in code
 - Skip tracing setup (critical for debugging)
@@ -241,7 +241,7 @@ prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
 **Model Change Test Automation (MANDATORY)**
 - [ ] Agent designed as model-agnostic (model injected via config)
 - [ ] `config/models.yaml` defines model test matrix with thresholds
-- [ ] Tested against ≥2 models (primary + fallback from different provider)
+- [ ] Tested against 2 models (primary + fallback from different provider)
 - [ ] Multi-model comparison pipeline in CI/CD (weekly + on model config change)
 - [ ] Deployment gated on threshold checks (CI fails on regression)
 - [ ] Validated fallback model designated and documented
@@ -289,9 +289,9 @@ prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
 - OpenTelemetry: [opentelemetry.io](https://opentelemetry.io)
 
 **AI Toolkit**:
-- Model Catalog: `Ctrl+Shift+P` → `AI Toolkit: Model Catalog`
-- Trace Viewer: `Ctrl+Shift+P` → `AI Toolkit: Open Trace Viewer`
-- Playground: `Ctrl+Shift+P` → `AI Toolkit: Model Playground`
+- Model Catalog: `Ctrl+Shift+P` -> `AI Toolkit: Model Catalog`
+- Trace Viewer: `Ctrl+Shift+P` -> `AI Toolkit: Open Trace Viewer`
+- Playground: `Ctrl+Shift+P` -> `AI Toolkit: Model Playground`
 
 **Security**:
 - OWASP AI Security: [owasp.org/AI-Security-and-Privacy-Guide](https://owasp.org/www-project-ai-security-and-privacy-guide/)
@@ -299,10 +299,9 @@ prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
 
 ---
 
-**Related**: [AGENTS.md](../../../../AGENTS.md) for agent behavior guidelines • [Skills.md](../../../../Skills.md) for general production practices
+**Related**: [AGENTS.md](../../../../AGENTS.md) for agent behavior guidelines - [Skills.md](../../../../Skills.md) for general production practices
 
 **Last Updated**: January 17, 2026
-
 
 ## Scripts
 

@@ -2,14 +2,14 @@
 name: "ux-ui-design"
 description: 'Design user experiences with wireframing, prototyping, user flows, accessibility, and production-ready HTML prototypes. Use when creating wireframes, building interactive prototypes, designing user flows, implementing accessibility standards, or producing HTML/CSS design deliverables.'
 metadata:
-  author: "AgentX"
-  version: "2.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "2.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  agents: ["ux-designer", "agent-x"]
-  frameworks: ["html-css", "figma", "tailwind", "bootstrap"]
-  output-formats: ["html", "css", "markdown", "mermaid"]
+ agents: ["ux-designer", "agent-x"]
+ frameworks: ["html-css", "figma", "tailwind", "bootstrap"]
+ output-formats: ["html", "css", "markdown", "mermaid"]
 ---
 
 # UX/UI Design & Prototyping
@@ -37,22 +37,22 @@ Use this to pick the right UX approach for your task:
 
 ```
 Start: What is the deliverable?
-│
-├─ New feature / epic?
-│  └─ 1. User Research → 2. IA → 3. Wireframes → 4. User Flows
-│     → 5. Hi-Fi Mockups → 6. HTML Prototype → 7. Usability Test
-│
-├─ Bug fix / small change?
-│  └─ Skip to step 5 (Hi-Fi) or 6 (HTML Prototype)
-│
-├─ Design system update?
-│  └─ Jump to § Design Systems — update tokens + components
-│
-├─ Accessibility audit?
-│  └─ Jump to § Accessibility — run checklist + fix
-│
-└─ Responsive issue?
-   └─ Jump to § Responsive Design — breakpoint check + fix
+|
++- New feature / epic?
+| - 1. User Research -> 2. IA -> 3. Wireframes -> 4. User Flows
+| -> 5. Hi-Fi Mockups -> 6. HTML Prototype -> 7. Usability Test
+|
++- Bug fix / small change?
+| - Skip to step 5 (Hi-Fi) or 6 (HTML Prototype)
+|
++- Design system update?
+| - Jump to Design Systems - update tokens + components
+|
++- Accessibility audit?
+| - Jump to Accessibility - run checklist + fix
+|
+- Responsive issue?
+ - Jump to Responsive Design - breakpoint check + fix
 ```
 
 ---
@@ -77,7 +77,7 @@ Start: What is the deliverable?
 
 ## Best Practices
 
-### ✅ DO
+### [PASS] DO
 
 **Research & Wireframing:**
 - Start with lo-fi sketches; iterate on paper first
@@ -99,7 +99,7 @@ Start: What is the deliverable?
 - Version-control design files
 - Hand off with detailed specifications
 
-### ❌ DON'T
+### [FAIL] DON'T
 
 - Skip user research or design in isolation
 - Leave placeholder content in final deliverables
@@ -144,7 +144,7 @@ Start: What is the deliverable?
 
 ### Inspiration
 
-[Dribbble](https://dribbble.com) · [Behance](https://behance.net) · [awwwards](https://awwwards.com)
+[Dribbble](https://dribbble.com) - [Behance](https://behance.net) - [awwwards](https://awwwards.com)
 
 ---
 
@@ -169,8 +169,7 @@ Detailed code blocks and templates are extracted into dedicated reference files:
 
 ---
 
-**Version**: 2.0.0 · **Last Updated**: February 10, 2026
-
+**Version**: 2.0.0 - **Last Updated**: February 10, 2026
 
 ## Troubleshooting
 

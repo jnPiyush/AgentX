@@ -1,103 +1,103 @@
-name: 🐛 Bug Report
+name: Bug Report
 description: Something isn't working correctly
 title: "[Bug] "
 labels: ["type:bug"]
 projects: ["jnPiyush/1"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ## 🐛 Bug Report
-        
-        **Workflow:**
-        1. Fill out this template
-        2. Issue auto-added to Project board (Status: Backlog)
-        3. When claimed → Move to **In Progress** in Projects
-        4. When fixed → Move to **In Review** in Projects
-        5. When merged → Move to **Done** in Projects
-        
-        > ⚠️ Status is tracked via **GitHub Projects**, not labels.
-  
-  - type: textarea
-    id: description
-    attributes:
-      label: Bug Description
-      description: Clear, concise description of the bug
-      placeholder: "Login page returns 500 error when clicking submit"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: steps-to-reproduce
-    attributes:
-      label: Steps to Reproduce
-      description: Minimal steps to reproduce the issue
-      placeholder: |
-        1. Go to /login
-        2. Enter valid credentials
-        3. Click 'Submit'
-        4. See error
-    validations:
-      required: true
-  
-  - type: textarea
-    id: expected-behavior
-    attributes:
-      label: Expected Behavior
-      description: What should happen?
-      placeholder: "Should redirect to dashboard"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: actual-behavior
-    attributes:
-      label: Actual Behavior
-      description: What actually happens?
-      placeholder: "500 Internal Server Error"
-    validations:
-      required: true
-  
-  - type: dropdown
-    id: severity
-    attributes:
-      label: Severity
-      description: Impact of this bug
-      options:
-        - "P0 - Critical: System down, data loss"
-        - "P1 - High: Major functionality broken"
-        - "P2 - Medium: Partial functionality affected"
-        - "P3 - Low: Minor issue, workaround exists"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: environment
-    attributes:
-      label: Environment
-      description: Where did this occur?
-      placeholder: |
-        - OS: Windows 11 / macOS 14 / Ubuntu 22.04
-        - Browser: Chrome 120 / Firefox 121 / Safari 17
-        - Environment: Production / Staging / Local
-        - Version/Commit: v1.2.3 or abc123
-  
-  - type: textarea
-    id: logs
-    attributes:
-      label: Logs / Stack Trace
-      description: Relevant error messages (wrap in code block)
-      placeholder: |
-        ```
-        Error: Connection refused
-            at Database.connect (db.js:42)
-            at Server.start (server.js:15)
-        ```
-      render: shell
-  
-  - type: textarea
-    id: screenshots
-    attributes:
-      label: Screenshots
-      description: If applicable, add screenshots (drag & drop)
-      placeholder: "Drag and drop images here"
+ - type: markdown
+ attributes:
+ value: |
+ ## Bug Report
+
+ **Workflow:**
+ 1. Fill out this template
+ 2. Issue auto-added to Project board (Status: Backlog)
+ 3. When claimed -> Move to **In Progress** in Projects
+ 4. When fixed -> Move to **In Review** in Projects
+ 5. When merged -> Move to **Done** in Projects
+
+ > [WARN] Status is tracked via **GitHub Projects**, not labels.
+
+ - type: textarea
+ id: description
+ attributes:
+ label: Bug Description
+ description: Clear, concise description of the bug
+ placeholder: "Login page returns 500 error when clicking submit"
+ validations:
+ required: true
+
+ - type: textarea
+ id: steps-to-reproduce
+ attributes:
+ label: Steps to Reproduce
+ description: Minimal steps to reproduce the issue
+ placeholder: |
+ 1. Go to /login
+ 2. Enter valid credentials
+ 3. Click 'Submit'
+ 4. See error
+ validations:
+ required: true
+
+ - type: textarea
+ id: expected-behavior
+ attributes:
+ label: Expected Behavior
+ description: What should happen?
+ placeholder: "Should redirect to dashboard"
+ validations:
+ required: true
+
+ - type: textarea
+ id: actual-behavior
+ attributes:
+ label: Actual Behavior
+ description: What actually happens?
+ placeholder: "500 Internal Server Error"
+ validations:
+ required: true
+
+ - type: dropdown
+ id: severity
+ attributes:
+ label: Severity
+ description: Impact of this bug
+ options:
+ - "P0 - Critical: System down, data loss"
+ - "P1 - High: Major functionality broken"
+ - "P2 - Medium: Partial functionality affected"
+ - "P3 - Low: Minor issue, workaround exists"
+ validations:
+ required: true
+
+ - type: textarea
+ id: environment
+ attributes:
+ label: Environment
+ description: Where did this occur?
+ placeholder: |
+ - OS: Windows 11 / macOS 14 / Ubuntu 22.04
+ - Browser: Chrome 120 / Firefox 121 / Safari 17
+ - Environment: Production / Staging / Local
+ - Version/Commit: v1.2.3 or abc123
+
+ - type: textarea
+ id: logs
+ attributes:
+ label: Logs / Stack Trace
+ description: Relevant error messages (wrap in code block)
+ placeholder: |
+ ```
+ Error: Connection refused
+ at Database.connect (db.js:42)
+ at Server.start (server.js:15)
+ ```
+ render: shell
+
+ - type: textarea
+ id: screenshots
+ attributes:
+ label: Screenshots
+ description: If applicable, add screenshots (drag & drop)
+ placeholder: "Drag and drop images here"

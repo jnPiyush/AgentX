@@ -2,20 +2,20 @@
 name: "react"
 description: 'Build React applications with modern hooks, TypeScript, and performance best practices. Use when creating React components, implementing custom hooks, optimizing React rendering performance, managing application state, or testing React components.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["typescript", "javascript"]
-  frameworks: ["react", "nextjs", "vite"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["typescript", "javascript"]
+ frameworks: ["react", "nextjs", "vite"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # React Framework Development
 
-> **Purpose**: Production-ready React development for building modern, performant web applications.  
-> **Audience**: Frontend engineers building React applications with TypeScript and modern tooling.  
+> **Purpose**: Production-ready React development for building modern, performant web applications. 
+> **Audience**: Frontend engineers building React applications with TypeScript and modern tooling. 
 > **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) React patterns.
 
 ---
@@ -49,7 +49,7 @@ compatibility:
 
 ## React Version
 
-**Current**: React 19+  
+**Current**: React 19+ 
 **Minimum**: React 18+
 
 ### Modern React Features
@@ -60,27 +60,27 @@ import { useState, useEffect } from 'react';
 
 // Functional components (always use these)
 export function UserProfile({ userId }: { userId: number }) {
-    const [user, setUser] = useState<User | null>(null);
-    
-    return <div>{user?.name}</div>;
+ const [user, setUser] = useState<User | null>(null);
+ 
+ return <div>{user?.name}</div>;
 }
 
 // React 19 - use() hook for promises
 import { use } from 'react';
 
 function UserData({ userPromise }: { userPromise: Promise<User> }) {
-    const user = use(userPromise); // Suspends until resolved
-    return <div>{user.name}</div>;
+ const user = use(userPromise); // Suspends until resolved
+ return <div>{user.name}</div>;
 }
 
 // React 19 - Actions for forms
 function ContactForm() {
-    async function handleSubmit(formData: FormData) {
-        'use server'; // Server action
-        await saveContact(formData);
-    }
-    
-    return <form action={handleSubmit}>...</form>;
+ async function handleSubmit(formData: FormData) {
+ 'use server'; // Server action
+ await saveContact(formData);
+ }
+ 
+ return <form action={handleSubmit}>...</form>;
 }
 ```
 
@@ -91,43 +91,43 @@ function ContactForm() {
 ### Functional Components with TypeScript
 
 ```typescript
-// ✅ GOOD: Typed functional component
+// [PASS] GOOD: Typed functional component
 interface UserCardProps {
-    user: User;
-    onSelect?: (user: User) => void;
-    className?: string;
+ user: User;
+ onSelect?: (user: User) => void;
+ className?: string;
 }
 
 export function UserCard({ user, onSelect, className }: UserCardProps) {
-    return (
-        <div 
-            className={`p-4 border rounded ${className}`}
-            onClick={() => onSelect?.(user)}
-        >
-            <h3>{user.name}</h3>
-            <p>{user.email}</p>
-        </div>
-    );
+ return (
+ <div 
+ className={`p-4 border rounded ${className}`}
+ onClick={() => onSelect?.(user)}
+ >
+ <h3>{user.name}</h3>
+ <p>{user.email}</p>
+ </div>
+ );
 }
 
-// ✅ GOOD: Component with children
+// [PASS] GOOD: Component with children
 interface ContainerProps {
-    children: React.ReactNode;
-    title?: string;
+ children: React.ReactNode;
+ title?: string;
 }
 
 export function Container({ children, title }: ContainerProps) {
-    return (
-        <div>
-            {title && <h2>{title}</h2>}
-            {children}
-        </div>
-    );
+ return (
+ <div>
+ {title && <h2>{title}</h2>}
+ {children}
+ </div>
+ );
 }
 
-// ❌ BAD: Class components (legacy)
+// [FAIL] BAD: Class components (legacy)
 class UserCard extends React.Component {
-    // Don't use class components anymore
+ // Don't use class components anymore
 }
 ```
 
@@ -156,10 +156,9 @@ class UserCard extends React.Component {
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) • [AGENTS.md](../../../../AGENTS.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
 
 ## Troubleshooting
 

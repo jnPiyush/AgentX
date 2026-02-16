@@ -1,84 +1,84 @@
-name: 📝 Story
+name: Story
 description: Small, well-defined task ready for implementation
 title: "[Story] "
 labels: ["type:story"]
 projects: ["jnPiyush/1"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ## 📝 Story
-        
-        Stories are small, specific tasks that can be completed in **< 1 day**.
-        
-        **Workflow:**
-        1. Fill out this template → Status: **Backlog**
-        2. Claim the issue → Status: **In Progress**
-        3. Complete implementation → Status: **In Review**
-        4. Merged & closed → Status: **Done**
-        
-        > ⚠️ Status is tracked via **GitHub Projects**, not labels.
-        
-        **Requirements:**
-        - Clear acceptance criteria
-        - Tests with 80%+ coverage
-        - No architecture decisions needed
-  
-  - type: textarea
-    id: description
-    attributes:
-      label: Description
-      description: What needs to be done?
-      placeholder: "Add a logout button to the navigation header"
-    validations:
-      required: true
-  
-  - type: textarea
-    id: acceptance-criteria
-    attributes:
-      label: Acceptance Criteria
-      description: Specific, testable criteria for completion
-      placeholder: |
-        - [ ] Button appears in header for authenticated users
-        - [ ] Button hidden for anonymous users
-        - [ ] Clicking button logs user out
-        - [ ] Redirects to login page after logout
-        - [ ] Session/cookies are cleared
-        - [ ] Unit tests added (80%+ coverage)
-    validations:
-      required: true
-  
-  - type: dropdown
-    id: priority
-    attributes:
-      label: Priority
-      description: Task priority
-      options:
-        - "P0 - Critical: Blocker"
-        - "P1 - High: Needed for current sprint"
-        - "P2 - Medium: Important but flexible"
-        - "P3 - Low: Can wait"
-    validations:
-      required: true
-  
-  - type: checkboxes
-    id: has-ui
-    attributes:
-      label: UI/UX Required
-      description: Does this story have user interface components?
-      options:
-        - label: This story includes UI/UX work (requires UX review)
-  
-  - type: input
-    id: parent-issue
-    attributes:
-      label: Parent Issue
-      description: If part of a larger Feature/Epic, link it
-      placeholder: "#123"
-  
-  - type: input
-    id: estimate
-    attributes:
-      label: Estimate
-      description: Estimated time to complete
-      placeholder: "2-4 hours"
+ - type: markdown
+ attributes:
+ value: |
+ ## Story
+
+ Stories are small, specific tasks that can be completed in **< 1 day**.
+
+ **Workflow:**
+ 1. Fill out this template -> Status: **Backlog**
+ 2. Claim the issue -> Status: **In Progress**
+ 3. Complete implementation -> Status: **In Review**
+ 4. Merged & closed -> Status: **Done**
+
+ > [WARN] Status is tracked via **GitHub Projects**, not labels.
+
+ **Requirements:**
+ - Clear acceptance criteria
+ - Tests with 80%+ coverage
+ - No architecture decisions needed
+
+ - type: textarea
+ id: description
+ attributes:
+ label: Description
+ description: What needs to be done?
+ placeholder: "Add a logout button to the navigation header"
+ validations:
+ required: true
+
+ - type: textarea
+ id: acceptance-criteria
+ attributes:
+ label: Acceptance Criteria
+ description: Specific, testable criteria for completion
+ placeholder: |
+ - [ ] Button appears in header for authenticated users
+ - [ ] Button hidden for anonymous users
+ - [ ] Clicking button logs user out
+ - [ ] Redirects to login page after logout
+ - [ ] Session/cookies are cleared
+ - [ ] Unit tests added (80%+ coverage)
+ validations:
+ required: true
+
+ - type: dropdown
+ id: priority
+ attributes:
+ label: Priority
+ description: Task priority
+ options:
+ - "P0 - Critical: Blocker"
+ - "P1 - High: Needed for current sprint"
+ - "P2 - Medium: Important but flexible"
+ - "P3 - Low: Can wait"
+ validations:
+ required: true
+
+ - type: checkboxes
+ id: has-ui
+ attributes:
+ label: UI/UX Required
+ description: Does this story have user interface components?
+ options:
+ - label: This story includes UI/UX work (requires UX review)
+
+ - type: input
+ id: parent-issue
+ attributes:
+ label: Parent Issue
+ description: If part of a larger Feature/Epic, link it
+ placeholder: "#123"
+
+ - type: input
+ id: estimate
+ attributes:
+ label: Estimate
+ description: Estimated time to complete
+ placeholder: "2-4 hours"

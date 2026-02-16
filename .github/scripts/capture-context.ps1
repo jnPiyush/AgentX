@@ -1,28 +1,28 @@
 <#
 .SYNOPSIS
-    AgentX Context Capture Script (PowerShell)
+ AgentX Context Capture Script (PowerShell)
 
 .DESCRIPTION
-    Captures session context for handoffs between agents.
-    Creates context summary file and optionally posts to GitHub issue.
+ Captures session context for handoffs between agents.
+ Creates context summary file and optionally posts to GitHub issue.
 
 .PARAMETER Role
-    The agent role: pm, ux, architect, engineer, reviewer, devops
+ The agent role: pm, ux, architect, engineer, reviewer, devops
 
 .PARAMETER IssueNumber
-    The GitHub issue number
+ The GitHub issue number
 
 .EXAMPLE
-    .\capture-context.ps1 -Role pm -IssueNumber 123
+ .\capture-context.ps1 -Role pm -IssueNumber 123
 #>
 
 param(
-    [Parameter(Mandatory=$true)]
-    [ValidateSet("pm", "ux", "architect", "engineer", "reviewer", "devops")]
-    [string]$Role,
+ [Parameter(Mandatory=$true)]
+ [ValidateSet("pm", "ux", "architect", "engineer", "reviewer", "devops")]
+ [string]$Role,
 
-    [Parameter(Mandatory=$true)]
-    [int]$IssueNumber
+ [Parameter(Mandatory=$true)]
+ [int]$IssueNumber
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,7 +33,7 @@ $ProgressFile = "docs/progress/ISSUE-$IssueNumber-log.md"
 
 Write-Host ""
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "  AgentX Context Capture" -ForegroundColor Cyan
+Write-Host " AgentX Context Capture" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "Role: $Role" -ForegroundColor Green
 Write-Host "Issue: #$IssueNumber" -ForegroundColor Green
@@ -41,57 +41,57 @@ Write-Host ""
 
 # Ensure progress directory exists
 if (-not (Test-Path "docs/progress")) {
-    New-Item -ItemType Directory -Path "docs/progress" -Force | Out-Null
+ New-Item -ItemType Directory -Path "docs/progress" -Force | Out-Null
 }
 
 # Capture git information
 try {
-    $Branch = git branch --show-current 2>$null
-    if (-not $Branch) { $Branch = "unknown" }
+ $Branch = git branch --show-current 2>$null
+ if (-not $Branch) { $Branch = "unknown" }
 } catch { $Branch = "unknown" }
 
 try {
-    $LastCommit = git log -1 --pretty=format:"%h - %s (%cr)" 2>$null
-    if (-not $LastCommit) { $LastCommit = "none" }
+ $LastCommit = git log -1 --pretty=format:"%h - %s (%cr)" 2>$null
+ if (-not $LastCommit) { $LastCommit = "none" }
 } catch { $LastCommit = "none" }
 
 try {
-    $ChangedFiles = git diff --name-only HEAD~1 2>$null | Select-Object -First 20
-    if (-not $ChangedFiles) { $ChangedFiles = @("none") }
+ $ChangedFiles = git diff --name-only HEAD~1 2>$null | Select-Object -First 20
+ if (-not $ChangedFiles) { $ChangedFiles = @("none") }
 } catch { $ChangedFiles = @("none") }
 
 # Role-specific artifact mapping
 $ArtifactMap = @{
-    "pm" = @{
-        Artifacts = @("docs/prd/PRD-$IssueNumber.md")
-        Type = "PRD"
-        NextAgent = "UX Designer or Architect"
-    }
-    "ux" = @{
-        Artifacts = @("docs/ux/UX-$IssueNumber.md")
-        Type = "UX Design"
-        NextAgent = "Architect"
-    }
-    "architect" = @{
-        Artifacts = @("docs/adr/ADR-$IssueNumber.md", "docs/specs/SPEC-$IssueNumber.md")
-        Type = "ADR + Technical Spec"
-        NextAgent = "Engineer"
-    }
-    "engineer" = @{
-        Artifacts = @("src/**", "tests/**")
-        Type = "Implementation + Tests"
-        NextAgent = "Reviewer"
-    }
-    "reviewer" = @{
-        Artifacts = @("docs/reviews/REVIEW-$IssueNumber.md")
-        Type = "Code Review"
-        NextAgent = "Done or Engineer (if changes needed)"
-    }
-    "devops" = @{
-        Artifacts = @(".github/workflows/**", "docs/deployment/**")
-        Type = "Pipeline + Deployment Docs"
-        NextAgent = "Reviewer"
-    }
+ "pm" = @{
+ Artifacts = @("docs/prd/PRD-$IssueNumber.md")
+ Type = "PRD"
+ NextAgent = "UX Designer or Architect"
+ }
+ "ux" = @{
+ Artifacts = @("docs/ux/UX-$IssueNumber.md")
+ Type = "UX Design"
+ NextAgent = "Architect"
+ }
+ "architect" = @{
+ Artifacts = @("docs/adr/ADR-$IssueNumber.md", "docs/specs/SPEC-$IssueNumber.md")
+ Type = "ADR + Technical Spec"
+ NextAgent = "Engineer"
+ }
+ "engineer" = @{
+ Artifacts = @("src/**", "tests/**")
+ Type = "Implementation + Tests"
+ NextAgent = "Reviewer"
+ }
+ "reviewer" = @{
+ Artifacts = @("docs/reviews/REVIEW-$IssueNumber.md")
+ Type = "Code Review"
+ NextAgent = "Done or Engineer (if changes needed)"
+ }
+ "devops" = @{
+ Artifacts = @(".github/workflows/**", "docs/deployment/**")
+ Type = "Pipeline + Deployment Docs"
+ NextAgent = "Reviewer"
+ }
 }
 
 $RoleConfig = $ArtifactMap[$Role]
@@ -100,23 +100,23 @@ $RoleConfig = $ArtifactMap[$Role]
 Write-Host "Checking artifacts..." -ForegroundColor Yellow
 $ArtifactsFound = @()
 foreach ($artifact in $RoleConfig.Artifacts) {
-    if ($artifact -like "*`*`*") {
-        # Wildcard pattern
-        $matches = Get-ChildItem -Path $artifact -ErrorAction SilentlyContinue
-        if ($matches) {
-            $ArtifactsFound += "- $artifact ($(($matches | Measure-Object).Count) files)"
-            Write-Host "  Found: $artifact" -ForegroundColor Green
-        } else {
-            Write-Host "  Missing: $artifact" -ForegroundColor Yellow
-        }
-    } else {
-        if (Test-Path $artifact) {
-            $ArtifactsFound += "- $artifact"
-            Write-Host "  Found: $artifact" -ForegroundColor Green
-        } else {
-            Write-Host "  Missing: $artifact" -ForegroundColor Yellow
-        }
-    }
+ if ($artifact -like "*`*`*") {
+ # Wildcard pattern
+ $matches = Get-ChildItem -Path $artifact -ErrorAction SilentlyContinue
+ if ($matches) {
+ $ArtifactsFound += "- $artifact ($(($matches | Measure-Object).Count) files)"
+ Write-Host " Found: $artifact" -ForegroundColor Green
+ } else {
+ Write-Host " Missing: $artifact" -ForegroundColor Yellow
+ }
+ } else {
+ if (Test-Path $artifact) {
+ $ArtifactsFound += "- $artifact"
+ Write-Host " Found: $artifact" -ForegroundColor Green
+ } else {
+ Write-Host " Missing: $artifact" -ForegroundColor Yellow
+ }
+ }
 }
 
 # Generate context summary
@@ -172,7 +172,7 @@ Write-Host "Context captured to: $ContextFile" -ForegroundColor Green
 
 # Update progress log if it exists
 if (Test-Path $ProgressFile) {
-    $ProgressUpdate = @"
+ $ProgressUpdate = @"
 
 ## Handoff Captured - $Timestamp
 
@@ -180,16 +180,16 @@ if (Test-Path $ProgressFile) {
 - **Next**: $($RoleConfig.NextAgent)
 - **Context**: See ``$ContextFile``
 "@
-    Add-Content -Path $ProgressFile -Value $ProgressUpdate
-    Write-Host "Progress log updated: $ProgressFile" -ForegroundColor Green
+ Add-Content -Path $ProgressFile -Value $ProgressUpdate
+ Write-Host "Progress log updated: $ProgressFile" -ForegroundColor Green
 }
 
 # Post to GitHub issue if gh CLI available
 if (Get-Command gh -ErrorAction SilentlyContinue) {
-    Write-Host ""
-    Write-Host "Posting context to GitHub issue..." -ForegroundColor Yellow
+ Write-Host ""
+ Write-Host "Posting context to GitHub issue..." -ForegroundColor Yellow
 
-    $CommentBody = @"
+ $CommentBody = @"
 ## Context Captured - $RoleTitle Agent
 
 **Timestamp**: $Timestamp
@@ -205,23 +205,23 @@ $($ArtifactsFound -join "`n")
 *Run ``./validate-handoff.sh $IssueNumber $Role`` to validate before status change.*
 "@
 
-    try {
-        gh issue comment $IssueNumber --body $CommentBody 2>$null
-        Write-Host "Posted to GitHub issue #$IssueNumber" -ForegroundColor Green
-    } catch {
-        Write-Host "Could not post to GitHub (check authentication)" -ForegroundColor Yellow
-    }
+ try {
+ gh issue comment $IssueNumber --body $CommentBody 2>$null
+ Write-Host "Posted to GitHub issue #$IssueNumber" -ForegroundColor Green
+ } catch {
+ Write-Host "Could not post to GitHub (check authentication)" -ForegroundColor Yellow
+ }
 } else {
-    Write-Host "GitHub CLI not available - skipping issue comment" -ForegroundColor Yellow
+ Write-Host "GitHub CLI not available - skipping issue comment" -ForegroundColor Yellow
 }
 
 Write-Host ""
 Write-Host "=========================================" -ForegroundColor Green
-Write-Host "  Context capture complete!" -ForegroundColor Green
+Write-Host " Context capture complete!" -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:"
-Write-Host "  1. Run: ./validate-handoff.sh $IssueNumber $Role"
-Write-Host "  2. Update Status to 'Ready' in GitHub Projects"
-Write-Host "  3. Next agent ($($RoleConfig.NextAgent)) will continue"
+Write-Host " 1. Run: ./validate-handoff.sh $IssueNumber $Role"
+Write-Host " 2. Update Status to 'Ready' in GitHub Projects"
+Write-Host " 3. Next agent ($($RoleConfig.NextAgent)) will continue"
 Write-Host ""

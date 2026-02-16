@@ -2,13 +2,13 @@
 name: "rust"
 description: 'Build safe, concurrent, and performant systems with Rust. Use when writing Rust applications, implementing ownership and borrowing patterns, building concurrent code with threads/async, designing trait-based abstractions, or optimizing Rust performance.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  languages: ["rust"]
-  platforms: ["windows", "linux", "macos"]
+ languages: ["rust"]
+ platforms: ["windows", "linux", "macos"]
 ---
 
 # Rust Development
@@ -50,26 +50,26 @@ compatibility:
 
 ```
 project/
-├── src/
-│   ├── main.rs              # Binary entry point
-│   ├── lib.rs               # Library root
-│   ├── config.rs            # Configuration
-│   ├── error.rs             # Error types
-│   ├── models/
-│   │   ├── mod.rs
-│   │   └── user.rs
-│   └── services/
-│       ├── mod.rs
-│       └── user_service.rs
-├── tests/
-│   └── integration_tests.rs
-├── benches/
-│   └── benchmarks.rs
-├── examples/
-│   └── basic_usage.rs
-├── Cargo.toml
-├── Cargo.lock
-└── README.md
++-- src/
+| +-- main.rs # Binary entry point
+| +-- lib.rs # Library root
+| +-- config.rs # Configuration
+| +-- error.rs # Error types
+| +-- models/
+| | +-- mod.rs
+| | -- user.rs
+| -- services/
+| +-- mod.rs
+| -- user_service.rs
++-- tests/
+| -- integration_tests.rs
++-- benches/
+| -- benchmarks.rs
++-- examples/
+| -- basic_usage.rs
++-- Cargo.toml
++-- Cargo.lock
+-- README.md
 ```
 
 ### Cargo.toml
@@ -100,7 +100,7 @@ opt-level = 3
 
 ## Best Practices
 
-### ✅ DO
+### [PASS] DO
 
 - Use `clippy` for linting: `cargo clippy`
 - Format with `rustfmt`: `cargo fmt`
@@ -110,7 +110,7 @@ opt-level = 3
 - Use `Result` for recoverable errors
 - Leverage the type system for safety
 
-### ❌ DON'T
+### [FAIL] DON'T
 
 - Use `unwrap()` in production code
 - Ignore compiler warnings
@@ -132,7 +132,6 @@ opt-level = 3
 
 **Version**: 1.0
 **Last Updated**: February 5, 2026
-
 
 ## Troubleshooting
 

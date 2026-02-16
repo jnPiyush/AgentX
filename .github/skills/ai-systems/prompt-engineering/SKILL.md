@@ -2,17 +2,17 @@
 name: "prompt-engineering"
 description: 'Write effective prompts for AI coding agents. Use when crafting system prompts, implementing chain-of-thought reasoning, building few-shot examples, adding guardrails, configuring tool use, or designing agentic prompt patterns. Covers CoT, few-shot, guardrails, and function calling.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2025-01-15"
-  updated: "2025-01-15"
+ author: "AgentX"
+ version: "1.0.0"
+ created: "2025-01-15"
+ updated: "2025-01-15"
 compatibility:
-  frameworks: ["agentx", "copilot", "openai", "anthropic"]
+ frameworks: ["agentx", "copilot", "openai", "anthropic"]
 ---
 
 # Prompt Engineering
 
-> **Purpose**: Write effective prompts for AI coding agents and workflows.  
+> **Purpose**: Write effective prompts for AI coding agents and workflows. 
 > **Scope**: System prompts, reasoning patterns, guardrails, tool use, agentic workflows.
 
 ---
@@ -34,22 +34,22 @@ compatibility:
 
 ```
 Writing a prompt?
-├─ Simple, well-known task?
-│   └─ Zero-shot (just instructions)
-├─ Need specific output format?
-│   └─ Few-shot (2-3 examples of input → output)
-├─ Complex reasoning required?
-│   ├─ Step-by-step? → Chain-of-thought ("think step by step")
-│   └─ Multi-perspective? → Self-consistency (sample multiple paths)
-├─ Agent / tool-use scenario?
-│   ├─ Define tool schemas clearly
-│   ├─ Add guardrails (what NOT to do)
-│   └─ Include error recovery instructions
-├─ System prompt for coding agent?
-│   ├─ Role + constraints + format + examples
-│   └─ Keep under 4K tokens for efficiency
-└─ Prompt too long?
-    └─ Progressive disclosure: load details on demand
++- Simple, well-known task?
+| - Zero-shot (just instructions)
++- Need specific output format?
+| - Few-shot (2-3 examples of input -> output)
++- Complex reasoning required?
+| +- Step-by-step? -> Chain-of-thought ("think step by step")
+| - Multi-perspective? -> Self-consistency (sample multiple paths)
++- Agent / tool-use scenario?
+| +- Define tool schemas clearly
+| +- Add guardrails (what NOT to do)
+| - Include error recovery instructions
++- System prompt for coding agent?
+| +- Role + constraints + format + examples
+| - Keep under 4K tokens for efficiency
+- Prompt too long?
+ - Progressive disclosure: load details on demand
 ```
 
 ## Quick Reference
@@ -71,10 +71,10 @@ Writing a prompt?
 Every system prompt should have four parts:
 
 ```
-1. ROLE       → Who the AI is
-2. CONTEXT    → What it knows about the situation
-3. TASK       → What it should do
-4. CONSTRAINTS → What it must NOT do
+1. ROLE -> Who the AI is
+2. CONTEXT -> What it knows about the situation
+3. TASK -> What it should do
+4. CONSTRAINTS -> What it must NOT do
 ```
 
 ### Good Example
@@ -121,15 +121,15 @@ CONSTRAINTS:
 
 ```
 project/
-  prompts/                    # System & agent prompts
-    assistant.md              # One file per agent/role
-    code-reviewer.md
-    researcher.md
-  templates/                  # Output format templates
-    review-report.md          # Structured output templates
-    analysis-summary.md
-  config/
-    models.yaml               # Model configuration
+ prompts/ # System & agent prompts
+ assistant.md # One file per agent/role
+ code-reviewer.md
+ researcher.md
+ templates/ # Output format templates
+ review-report.md # Structured output templates
+ analysis-summary.md
+ config/
+ models.yaml # Model configuration
 ```
 
 ### Prompt File Format
@@ -173,7 +173,7 @@ full_prompt = f"{prompt}\n\n## Output Format\n{template}"
 
 ### Rules
 
-- **MUST** store all prompts ≥2 lines in `prompts/` as `.md` files
+- **MUST** store all prompts 2 lines in `prompts/` as `.md` files
 - **MUST** store output format templates in `templates/` as `.md` files
 - **MUST NOT** embed prompt text as multi-line strings in Python/C#/TS code
 - **SHOULD** use Markdown format (readable, supports headers/lists)
@@ -242,10 +242,9 @@ Rate your prompt before using it:
 
 ---
 
-**Related**: [AI Agent Development](../ai-agent-development/SKILL.md) for building agents • [Skills.md](../../../../Skills.md) for all skills
+**Related**: [AI Agent Development](../ai-agent-development/SKILL.md) for building agents - [Skills.md](../../../../Skills.md) for all skills
 
 **Last Updated**: February 7, 2026
-
 
 ## Scripts
 

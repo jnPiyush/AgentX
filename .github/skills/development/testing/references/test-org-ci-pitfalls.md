@@ -6,42 +6,42 @@
 
 ```
 Project Structure:
-  src/
-    services/
-      UserService
-      PaymentService
-    repositories/
-      UserRepository
-  
-  tests/
-    unit/
-      services/
-        UserService.test
-        PaymentService.test
-      repositories/
-        UserRepository.test
-    integration/
-      api/
-        UserEndpoints.test
-        PaymentEndpoints.test
-    e2e/
-      checkout/
-        CheckoutFlow.test
+ src/
+ services/
+ UserService
+ PaymentService
+ repositories/
+ UserRepository
+ 
+ tests/
+ unit/
+ services/
+ UserService.test
+ PaymentService.test
+ repositories/
+ UserRepository.test
+ integration/
+ api/
+ UserEndpoints.test
+ PaymentEndpoints.test
+ e2e/
+ checkout/
+ CheckoutFlow.test
 ```
 
 ### Test Naming
 
 **Descriptive Test Names:**
 ```
-✅ Good:
-  - test_getUser_withValidId_returnsUser
-  - test_processPayment_whenInsufficientFunds_throwsError
-  - test_calculateDiscount_forNewUser_applies10PercentOff
+[PASS] Good:
+ - test_getUser_withValidId_returnsUser
+ - test_processPayment_whenInsufficientFunds_throwsError
+ - test_calculateDiscount_forNewUser_applies10PercentOff
 
-❌ Bad:
-  - test1
-  - testGetUser
-  - testPayment
+[FAIL] Bad:
+ - test1
+ - testGetUser
+ - testPayment
 ```
 
 ---
@@ -53,14 +53,14 @@ Project Structure:
 **CI Pipeline:**
 ```yaml
 steps:
-  1. Checkout code
-  2. Install dependencies
-  3. Run linter
-  4. Run unit tests
-  5. Run integration tests
-  6. Generate coverage report
-  7. Fail if coverage < 80%
-  8. Run E2E tests (optional, can be separate pipeline)
+ 1. Checkout code
+ 2. Install dependencies
+ 3. Run linter
+ 4. Run unit tests
+ 5. Run integration tests
+ 6. Generate coverage report
+ 7. Fail if coverage < 80%
+ 8. Run E2E tests (optional, can be separate pipeline)
 ```
 
 ### Test Automation

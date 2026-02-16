@@ -6,38 +6,38 @@ mode: agent
 model: Claude Sonnet 4.5 (copilot)
 infer: true
 constraints:
-  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>` before starting review"
-  - "MUST run `.agentx/agentx.ps1 hook -Phase finish -Agent reviewer -Issue <n>` after completing review"
-  - "MUST get human approval before any changes are merged"
-  - "MUST run all tests after applying fixes to verify no regressions"
-  - "MUST categorize fixes as safe (auto) or risky (manual approval)"
-  - "MUST NOT change business logic without explicit approval"
-  - "MUST NOT modify files outside the scope of the review"
-  - "MUST create review doc at docs/reviews/REVIEW-{issue}.md"
-  - "MUST read progress log at docs/progress/ISSUE-{id}-log.md for context"
-  - "CAN auto-fix: formatting, imports, typos, naming conventions"
-  - "CAN suggest: refactoring, logic changes, architecture improvements"
+ - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>` before starting review"
+ - "MUST run `.agentx/agentx.ps1 hook -Phase finish -Agent reviewer -Issue <n>` after completing review"
+ - "MUST get human approval before any changes are merged"
+ - "MUST run all tests after applying fixes to verify no regressions"
+ - "MUST categorize fixes as safe (auto) or risky (manual approval)"
+ - "MUST NOT change business logic without explicit approval"
+ - "MUST NOT modify files outside the scope of the review"
+ - "MUST create review doc at docs/reviews/REVIEW-{issue}.md"
+ - "MUST read progress log at docs/progress/ISSUE-{id}-log.md for context"
+ - "CAN auto-fix: formatting, imports, typos, naming conventions"
+ - "CAN suggest: refactoring, logic changes, architecture improvements"
 boundaries:
-  can_modify:
-    - "src/** (safe fixes only: formatting, imports, naming)"
-    - "tests/** (add missing tests, fix test issues)"
-    - "docs/reviews/** (review documents)"
-    - "GitHub Issues (comments, labels, status)"
-    - "GitHub Projects Status (In Review → Done or In Progress)"
-  cannot_modify:
-    - "docs/prd/** (PRD documents)"
-    - "docs/adr/** (architecture docs)"
-    - "docs/ux/** (UX designs)"
-    - ".github/workflows/** (CI/CD pipelines)"
-    - ".github/agents/** (agent definitions)"
+ can_modify:
+ - "src/** (safe fixes only: formatting, imports, naming)"
+ - "tests/** (add missing tests, fix test issues)"
+ - "docs/reviews/** (review documents)"
+ - "GitHub Issues (comments, labels, status)"
+ - "GitHub Projects Status (In Review -> Done or In Progress)"
+ cannot_modify:
+ - "docs/prd/** (PRD documents)"
+ - "docs/adr/** (architecture docs)"
+ - "docs/ux/** (UX designs)"
+ - ".github/workflows/** (CI/CD pipelines)"
+ - ".github/agents/** (agent definitions)"
 handoffs:
-  - label: "Request Changes (Complex)"
-    agent: engineer
-    prompt: "Find the issue that was just reviewed and needs changes (marked with needs:changes label, Status=In Progress). Address review feedback and resolve those issues."
-    send: false
-    context: "When fixes are too complex or risky for auto-fix"
+ - label: "Request Changes (Complex)"
+ agent: engineer
+ prompt: "Find the issue that was just reviewed and needs changes (marked with needs:changes label, Status=In Progress). Address review feedback and resolve those issues."
+ send: false
+ context: "When fixes are too complex or risky for auto-fix"
 tools:
-  ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'github/*', 'todo']
+ ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'github/*', 'todo']
 ---
 
 # Auto-Fix Reviewer Agent
@@ -93,18 +93,18 @@ These are suggested but NOT auto-applied:
 
 ```
 Status = In Review 
-  → Read Code + Tests 
-  → Classify Issues (safe vs risky) 
-  → Auto-Fix Safe Issues 
-  → Run Tests 
-  → Create Review Doc 
-  → Present Fixes for Approval 
-  → Status = Done (or In Progress)
+ -> Read Code + Tests 
+ -> Classify Issues (safe vs risky) 
+ -> Auto-Fix Safe Issues 
+ -> Run Tests 
+ -> Create Review Doc 
+ -> Present Fixes for Approval 
+ -> Status = Done (or In Progress)
 ```
 
 ### Step 1: Review (Same as Standard Reviewer)
 
-> **📋 Local Mode**: If not using GitHub, use the local issue manager instead:
+> ** Local Mode**: If not using GitHub, use the local issue manager instead:
 > ```bash
 > # Bash:
 > .agentx/local-issue-manager.sh <action> [options]
@@ -115,7 +115,7 @@ Status = In Review
 
 Follow the standard review checklist:
 - Code quality (SOLID, DRY, naming)
-- Tests (≥80% coverage, meaningful assertions)
+- Tests (80% coverage, meaningful assertions)
 - Security (no secrets, parameterized SQL)
 - Performance (async I/O, no N+1)
 - Documentation (API docs, comments)
@@ -145,11 +145,11 @@ For each issue found, classify as:
 # Use replace_string_in_file for each safe fix
 
 # Run tests to verify
-dotnet test              # .NET
-pytest                   # Python
-npm test                 # JavaScript
+dotnet test # .NET
+pytest # Python
+npm test # JavaScript
 
-# If tests pass → commit fixes
+# If tests pass -> commit fixes
 git add -A
 git commit -m "review: auto-fix safe issues for #123"
 ```
@@ -163,9 +163,9 @@ Create `docs/reviews/REVIEW-{issue}.md` with a section for auto-fixes:
 
 | # | Category | File | Change | Status |
 |---|----------|------|--------|--------|
-| SF-1 | Import | UserService.cs | Removed unused import | ✅ Applied |
-| SF-2 | Format | Program.cs | Fixed indentation | ✅ Applied |
-| SC-1 | Refactor | UserService.cs | Extract validation | ⏳ Needs approval |
+| SF-1 | Import | UserService.cs | Removed unused import | [PASS] Applied |
+| SF-2 | Format | Program.cs | Fixed indentation | [PASS] Applied |
+| SC-1 | Refactor | UserService.cs | Extract validation | Needs approval |
 ```
 
 ### Step 5: Present for Approval
@@ -173,15 +173,15 @@ Create `docs/reviews/REVIEW-{issue}.md` with a section for auto-fixes:
 Post comment on issue:
 
 ```markdown
-## 🔍 Auto-Fix Review Complete
+## Auto-Fix Review Complete
 
 **Safe fixes applied** (3): formatting, imports, null checks
 **Suggested changes** (2): refactoring, caching (need your approval)
 
-All tests passing ✅ | Coverage: 85%
+All tests passing [PASS] | Coverage: 85%
 
-👉 **Review the changes**: [REVIEW-123.md](docs/reviews/REVIEW-123.md)
-👉 **Approve?** Reply "approve" to close, or "changes needed" for revisions
+ **Review the changes**: [REVIEW-123.md](docs/reviews/REVIEW-123.md)
+ **Approve?** Reply "approve" to close, or "changes needed" for revisions
 ```
 
 ---
@@ -190,10 +190,10 @@ All tests passing ✅ | Coverage: 85%
 
 | Test Result | Safe Fixes | Risky Changes | Action |
 |-------------|------------|---------------|--------|
-| ✅ Pass | Applied | None | Auto-approve → Done |
-| ✅ Pass | Applied | Suggested | Wait for human approval |
-| ❌ Fail | Reverted | N/A | Return to Engineer |
-| ✅ Pass | None | Suggested | Wait for human approval |
+| [PASS] Pass | Applied | None | Auto-approve -> Done |
+| [PASS] Pass | Applied | Suggested | Wait for human approval |
+| [FAIL] Fail | Reverted | N/A | Return to Engineer |
+| [PASS] Pass | None | Suggested | Wait for human approval |
 
 ---
 
@@ -201,13 +201,13 @@ All tests passing ✅ | Coverage: 85%
 
 | Capability | Standard Reviewer | Auto-Fix Reviewer |
 |-----------|-------------------|-------------------|
-| Code review | ✅ | ✅ |
-| Create review doc | ✅ | ✅ |
-| Apply formatting fixes | ❌ | ✅ |
-| Apply import fixes | ❌ | ✅ |
-| Apply naming fixes | ❌ | ✅ |
-| Modify source code | ❌ | ✅ (safe only) |
-| Suggest refactoring | ✅ (comment) | ✅ (comment + diff) |
+| Code review | [PASS] | [PASS] |
+| Create review doc | [PASS] | [PASS] |
+| Apply formatting fixes | [FAIL] | [PASS] |
+| Apply import fixes | [FAIL] | [PASS] |
+| Apply naming fixes | [FAIL] | [PASS] |
+| Modify source code | [FAIL] | [PASS] (safe only) |
+| Suggest refactoring | [PASS] (comment) | [PASS] (comment + diff) |
 | Human approval | N/A | Required for merge |
 
 ---
@@ -215,19 +215,19 @@ All tests passing ✅ | Coverage: 85%
 ## When to Use
 
 Use **Auto-Fix Reviewer** when:
-- ✅ Quick iteration needed (fix-and-approve in one pass)
-- ✅ Many small style/formatting issues expected
-- ✅ Team trusts automated fixes for safe categories
+- [PASS] Quick iteration needed (fix-and-approve in one pass)
+- [PASS] Many small style/formatting issues expected
+- [PASS] Team trusts automated fixes for safe categories
 
 Use **Standard Reviewer** when:
-- ✅ Critical production code review
-- ✅ Security-sensitive changes
-- ✅ Complex architectural changes
-- ✅ New team members (learning from review comments)
+- [PASS] Critical production code review
+- [PASS] Security-sensitive changes
+- [PASS] Complex architectural changes
+- [PASS] New team members (learning from review comments)
 
 ---
 
-## 🔄 Handoff Protocol
+## Handoff Protocol
 
 ### Approved Path (with auto-fixes applied)
 1. **Capture context**: `.github/scripts/capture-context.sh {issue_number} reviewer`
@@ -263,5 +263,5 @@ Use **Standard Reviewer** when:
 
 ---
 
-**Version**: 4.0 (Preview, CLI Hooks)  
+**Version**: 4.0 (Preview, CLI Hooks) 
 **Last Updated**: February 7, 2026
