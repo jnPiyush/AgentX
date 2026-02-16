@@ -46,6 +46,8 @@ const agentTreeProvider_1 = require("./views/agentTreeProvider");
 const readyQueueTreeProvider_1 = require("./views/readyQueueTreeProvider");
 const workflowTreeProvider_1 = require("./views/workflowTreeProvider");
 const agentxContext_1 = require("./agentxContext");
+const chatParticipant_1 = require("./chat/chatParticipant");
+const agentContextLoader_1 = require("./chat/agentContextLoader");
 let agentxContext;
 function activate(context) {
     console.log('AgentX extension activating...');
@@ -64,11 +66,16 @@ function activate(context) {
     (0, workflow_1.registerWorkflowCommand)(context, agentxContext);
     (0, deps_1.registerDepsCommand)(context, agentxContext);
     (0, digest_1.registerDigestCommand)(context, agentxContext);
+    // Register chat participant (Copilot Chat integration)
+    if (typeof vscode.chat?.createChatParticipant === 'function') {
+        (0, chatParticipant_1.registerChatParticipant)(context, agentxContext);
+    }
     // Refresh command
     context.subscriptions.push(vscode.commands.registerCommand('agentx.refresh', () => {
         agentTreeProvider.refresh();
         readyQueueProvider.refresh();
         workflowProvider.refresh();
+        (0, agentContextLoader_1.clearInstructionCache)();
         vscode.window.showInformationMessage('AgentX: Refreshed all views.');
     }));
     // Set initialized context for menu visibility

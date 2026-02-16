@@ -43,7 +43,8 @@
  ],
  "activationEvents": [
  "workspaceContains:AGENTS.md",
- "workspaceContains:.agentx/agentx.ps1"
+ "workspaceContains:.agentx/agentx.ps1",
+ "onChatParticipant:agentx.chat"
  ],
  "main": "./out/extension.js",
  "contributes": {
@@ -164,6 +165,37 @@
  }
  ]
  },
+ "chatParticipants": [
+ {
+ "id": "agentx.chat",
+ "name": "agentx",
+ "fullName": "AgentX Orchestrator",
+ "description": "Multi-agent orchestration for software development workflows",
+ "isSticky": true,
+ "commands": [
+ {
+ "name": "ready",
+ "description": "Show unblocked work sorted by priority"
+ },
+ {
+ "name": "workflow",
+ "description": "Run a workflow (feature/epic/story/bug/spike/devops/docs)"
+ },
+ {
+ "name": "status",
+ "description": "Show all agent states"
+ },
+ {
+ "name": "deps",
+ "description": "Check issue dependencies (e.g. /deps 42)"
+ },
+ {
+ "name": "digest",
+ "description": "Generate weekly progress digest"
+ }
+ ]
+ }
+ ],
  "configuration": {
  "title": "AgentX",
  "properties": {

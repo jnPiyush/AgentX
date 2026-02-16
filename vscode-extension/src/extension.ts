@@ -9,6 +9,8 @@ import { AgentTreeProvider } from './views/agentTreeProvider';
 import { ReadyQueueTreeProvider } from './views/readyQueueTreeProvider';
 import { WorkflowTreeProvider } from './views/workflowTreeProvider';
 import { AgentXContext } from './agentxContext';
+import { registerChatParticipant } from './chat/chatParticipant';
+import { clearInstructionCache } from './chat/agentContextLoader';
 
 let agentxContext: AgentXContext;
 
@@ -34,12 +36,18 @@ export function activate(context: vscode.ExtensionContext) {
  registerDepsCommand(context, agentxContext);
  registerDigestCommand(context, agentxContext);
 
+ // Register chat participant (Copilot Chat integration)
+ if (typeof vscode.chat?.createChatParticipant === 'function') {
+ registerChatParticipant(context, agentxContext);
+ }
+
  // Refresh command
  context.subscriptions.push(
  vscode.commands.registerCommand('agentx.refresh', () => {
  agentTreeProvider.refresh();
  readyQueueProvider.refresh();
  workflowProvider.refresh();
+ clearInstructionCache();
  vscode.window.showInformationMessage('AgentX: Refreshed all views.');
  })
  );
