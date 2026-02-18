@@ -140,9 +140,52 @@ gh issue list --label "needs:ux"
 { "tool": "list_issues", "args": { "owner": "<OWNER>", "repo": "AgentX", "labels": ["type:story"], "state": "open" } }
 ```
 
+### Ideal Issue-First Workflow (GitHub Mode)
+
+Every piece of work starts with an issue. This gives agents a coordination point for routing, status tracking, and handoff validation.
+
+```bash
+# Step 1: Create issue BEFORE starting work
+gh issue create --title "[Story] Add /health endpoint" \
+  --label "type:story" --label "priority:p1" \
+  --body "## Acceptance Criteria
+- GET /health returns 200 with JSON body
+- Response includes uptime and version
+- Unit tests cover happy path and error cases
+
+## Dependencies
+None"
+
+# Step 2: Check the ready queue for prioritized work
+.\.agentx\agentx.ps1 ready
+
+# Step 3: Update status as work progresses
+# (Agents do this automatically when using @Engineer, @Reviewer, etc.)
+# Backlog -> In Progress -> In Review -> Done
+
+# Step 4: Commit with issue reference
+git commit -m "feat: add health endpoint (#42)"
+
+# Step 5: After review, close the issue
+gh issue close 42 --reason completed
+```
+
+**What agents get from the issue:**
+- **Engineer**: Acceptance criteria, dependencies, priority
+- **Reviewer**: Validation checklist, scope of changes
+- **PM/Architect**: Context for PRD/ADR creation on complex issues
+- **Agent X**: Classification data for routing decisions
+
+**Emergency bypass**: Add `[skip-issue]` to the commit message for hotfixes. Create a retroactive issue afterward:
+```bash
+gh issue create --title "[Bug] Fix login timeout" --label "type:bug" \
+  --body "Fixed in commit abc1234. Retroactive issue for traceability."
+gh issue close <ID> --reason completed
+```
+
 ### Recommended Board View
 
-**Columns:** Backlog → Ready → In Progress → In Review → Done  
+**Columns:** Backlog -> Ready -> In Progress -> In Review -> Done  
 **Filters:** Group by Status, Sort by Priority (descending)
 
 ### Troubleshooting
@@ -296,21 +339,74 @@ The CLI works in both Local and GitHub modes (auto-detects from `config.json`):
 }
 ```
 
+### Ideal Issue-First Workflow (Local Mode)
+
+The same issue-first principle applies in Local Mode -- every piece of work starts with an issue, tracked via JSON files instead of GitHub.
+
+```powershell
+# Step 1: Create issue BEFORE starting work
+.\.agentx\local-issue-manager.ps1 -Action create `
+    -Title "[Bug] Fix login timeout" `
+    -Body "## Problem
+Login times out after 30s on slow connections.
+
+## Acceptance Criteria
+- Increase timeout to 60s
+- Add retry logic with exponential backoff
+- Unit tests for retry behavior" `
+    -Labels "type:bug"
+# -> Creates .agentx/issues/1.json
+
+# Step 2: Check the ready queue for prioritized work
+.\.agentx\agentx.ps1 ready
+
+# Step 3: Update status as you work
+.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
+.\.agentx\local-issue-manager.ps1 -Action comment -IssueNumber 1 `
+    -Comment "Started implementation - increasing timeout and adding retry"
+
+# Step 4: Commit with issue reference
+git commit -m "fix: resolve login timeout with retry logic (#1)"
+
+# Step 5: Move to review, then close
+.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Review"
+# After self-review or peer review:
+.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "Done"
+.\.agentx\local-issue-manager.ps1 -Action close -IssueNumber 1
+```
+
+```bash
+# Bash equivalent
+./.agentx/local-issue-manager.sh create "[Bug] Fix login timeout" "Fix timeout issue" "type:bug"
+./.agentx/agentx.sh ready
+git commit -m "fix: resolve login timeout (#1)"
+./.agentx/local-issue-manager.sh close 1
+```
+
+**Emergency bypass**: Add `[skip-issue]` to the commit message. Create a retroactive issue afterward:
+```powershell
+.\.agentx\local-issue-manager.ps1 -Action create `
+    -Title "[Bug] Fix login timeout" `
+    -Body "Fixed in commit abc1234. Retroactive issue for traceability." `
+    -Labels "type:bug"
+.\.agentx\local-issue-manager.ps1 -Action close -IssueNumber <ID>
+```
+
 ### Agent Handoffs (Manual)
 
 In Local Mode, coordination is manual:
 
 ```powershell
-# PM → Architect
+# PM -> Architect
 issue -Action update -IssueNumber 1 -Status "Ready"
 issue -Action comment -IssueNumber 1 -Comment "PRD complete at docs/prd/PRD-1.md"
 
-# Architect → Engineer
+# Architect -> Engineer
 issue -Action update -IssueNumber 1 -Status "In Progress"
 # (Write code)
 issue -Action update -IssueNumber 1 -Status "In Review"
 
-# Reviewer → Done
+# Reviewer -> Done
 issue -Action update -IssueNumber 1 -Status "Done"
 issue -Action close -IssueNumber 1
 ```

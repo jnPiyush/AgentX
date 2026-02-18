@@ -14,6 +14,57 @@
 4. **Execute** role-specific work
 5. **Update Status** in GitHub Projects V2 (or local file in Local Mode)
 
+### Issue-First Flow (Ideal)
+
+Every piece of work -- bug fix, feature, docs update -- **MUST** start with an issue. The issue is the central coordination point that agents use for context, status tracking, and handoffs.
+
+**Why issue-first?**
+- Agents (PM, Architect, Engineer, Reviewer) rely on issue data to discover work
+- The ready queue (`agentx.ps1 ready`) sorts unblocked issues by priority
+- Commit messages reference issues for traceability (`feat: add login (#42)`)
+- Reviews validate against acceptance criteria in the issue body
+- Without an issue, agents have nothing to route, track, or review against
+
+**GitHub Mode -- Step by Step:**
+
+```
+1. gh issue create --title "[Story] Add /health endpoint" --label "type:story"
+   -> Creates issue #42 on the project board (status: Backlog)
+
+2. Agent picks up issue from ready queue
+   -> ./.agentx/agentx.ps1 ready
+
+3. Agent works on issue, updates status
+   -> Backlog -> In Progress -> In Review -> Done
+
+4. Commit references issue
+   -> git commit -m "feat: add health endpoint (#42)"
+
+5. Reviewer validates against issue, closes it
+   -> gh issue close 42 --reason completed
+```
+
+**Local Mode -- Step by Step:**
+
+```
+1. .\.agentx\local-issue-manager.ps1 -Action create -Title "[Bug] Fix login timeout" -Labels "type:bug"
+   -> Creates issue #1 in .agentx/issues/1.json (status: Backlog)
+
+2. Agent picks up issue from ready queue
+   -> .\.agentx\agentx.ps1 ready
+
+3. Agent works on issue, updates status
+   -> .\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
+
+4. Commit references issue
+   -> git commit -m "fix: resolve login timeout (#1)"
+
+5. Review and close
+   -> .\.agentx\local-issue-manager.ps1 -Action close -IssueNumber 1
+```
+
+**Emergency bypass**: If you must commit without an issue (hotfix, typo), add `[skip-issue]` to the commit message. Create a retroactive issue afterward to maintain traceability.
+
 ### Issue Commands
 
 **GitHub Mode:**
