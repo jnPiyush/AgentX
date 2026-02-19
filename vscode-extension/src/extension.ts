@@ -11,6 +11,12 @@ import { WorkflowTreeProvider } from './views/workflowTreeProvider';
 import { AgentXContext } from './agentxContext';
 import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
+import {
+ runSetupWizard,
+ runStartupCheck,
+ checkCopilotChatConfig,
+ applyCopilotConfigFixes,
+} from './commands/setupWizard';
 
 let agentxContext: AgentXContext;
 
@@ -57,10 +63,41 @@ export function activate(context: vscode.ExtensionContext) {
  })
  );
 
+ // Environment health check command
+ context.subscriptions.push(
+ vscode.commands.registerCommand('agentx.checkEnvironment', () => {
+ const mode = agentxContext.getMode();
+ runSetupWizard(mode);
+ })
+ );
+
  // Set initialized context for menu visibility
  agentxContext.checkInitialized().then((initialized: boolean) => {
  vscode.commands.executeCommand('setContext', 'agentx.initialized', initialized);
  });
+
+ // Non-blocking startup health check - runs after activation
+ // Respects the agentx.skipStartupCheck setting
+ const skipStartupCheck = vscode.workspace
+ .getConfiguration('agentx')
+ .get<boolean>('skipStartupCheck', false);
+ if (!skipStartupCheck) {
+ // Delay the check slightly so it does not block extension activation
+ setTimeout(async () => {
+ try {
+ const mode = agentxContext.getMode();
+ await runStartupCheck(mode);
+ // Also check Copilot Chat configuration
+ const suggestions = await checkCopilotChatConfig();
+ if (suggestions.length > 0) {
+  await applyCopilotConfigFixes(suggestions);
+ }
+ } catch (err) {
+ // Startup check should never crash the extension
+ console.warn('AgentX: Startup environment check failed:', err);
+ }
+ }, 3000);
+ }
 
  // Watch for AGENTS.md appearing/disappearing in subfolders so the
  // extension auto-discovers AgentX when initialized in a nested path.

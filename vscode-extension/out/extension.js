@@ -48,6 +48,7 @@ const workflowTreeProvider_1 = require("./views/workflowTreeProvider");
 const agentxContext_1 = require("./agentxContext");
 const chatParticipant_1 = require("./chat/chatParticipant");
 const agentContextLoader_1 = require("./chat/agentContextLoader");
+const setupWizard_1 = require("./commands/setupWizard");
 let agentxContext;
 function activate(context) {
     console.log('AgentX extension activating...');
@@ -83,10 +84,38 @@ function activate(context) {
         });
         vscode.window.showInformationMessage('AgentX: Refreshed all views.');
     }));
+    // Environment health check command
+    context.subscriptions.push(vscode.commands.registerCommand('agentx.checkEnvironment', () => {
+        const mode = agentxContext.getMode();
+        (0, setupWizard_1.runSetupWizard)(mode);
+    }));
     // Set initialized context for menu visibility
     agentxContext.checkInitialized().then((initialized) => {
         vscode.commands.executeCommand('setContext', 'agentx.initialized', initialized);
     });
+    // Non-blocking startup health check - runs after activation
+    // Respects the agentx.skipStartupCheck setting
+    const skipStartupCheck = vscode.workspace
+        .getConfiguration('agentx')
+        .get('skipStartupCheck', false);
+    if (!skipStartupCheck) {
+        // Delay the check slightly so it does not block extension activation
+        setTimeout(async () => {
+            try {
+                const mode = agentxContext.getMode();
+                await (0, setupWizard_1.runStartupCheck)(mode);
+                // Also check Copilot Chat configuration
+                const suggestions = await (0, setupWizard_1.checkCopilotChatConfig)();
+                if (suggestions.length > 0) {
+                    await (0, setupWizard_1.applyCopilotConfigFixes)(suggestions);
+                }
+            }
+            catch (err) {
+                // Startup check should never crash the extension
+                console.warn('AgentX: Startup environment check failed:', err);
+            }
+        }, 3000);
+    }
     // Watch for AGENTS.md appearing/disappearing in subfolders so the
     // extension auto-discovers AgentX when initialized in a nested path.
     const agentsWatcher = vscode.workspace.createFileSystemWatcher('**/AGENTS.md');

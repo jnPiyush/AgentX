@@ -219,7 +219,7 @@ function registerInitializeCommand(context, agentx) {
                 // Version tracking
                 const versionFile = path.join(root, '.agentx', 'version.json');
                 fs.writeFileSync(versionFile, JSON.stringify({
-                    version: '5.2.0',
+                    version: '5.2.1',
                     mode: mode.label,
                     installedAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),

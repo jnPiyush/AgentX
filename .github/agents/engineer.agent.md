@@ -3,7 +3,8 @@ name: Engineer
 description: 'Engineer: Implement code, tests, and documentation. Trigger: Status = Ready (spec complete). Status -> In Progress -> In Review.'
 maturity: stable
 mode: agent
-model: Claude Sonnet 4.5 (copilot)
+model: Claude Sonnet 4.6 (copilot)
+modelFallback: Claude Sonnet 4.5 (copilot), GPT 5.3 Codex (copilot)
 infer: true
 constraints:
  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent engineer -Issue <n>` before starting work"

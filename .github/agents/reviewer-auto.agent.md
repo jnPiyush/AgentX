@@ -3,7 +3,8 @@ name: Reviewer (Auto-Fix)
 description: 'Auto-Fix Reviewer: Reviews code AND applies safe fixes automatically. Human approval required before merge. Extends Reviewer agent with fix capabilities.'
 maturity: preview
 mode: agent
-model: Claude Sonnet 4.5 (copilot)
+model: GPT 5.3 Codex (copilot)
+modelFallback: GPT 5.2 Codex (copilot)
 infer: true
 constraints:
  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>` before starting review"

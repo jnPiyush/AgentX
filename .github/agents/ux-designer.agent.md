@@ -4,6 +4,7 @@ description: 'UX Designer: Create user research, wireframes, HTML/CSS prototypes
 maturity: stable
 mode: agent
 model: Gemini 3 Pro (copilot)
+modelFallback: Gemini 3 Flash (copilot)
 infer: true
 constraints:
  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent ux-designer -Issue <n>` before starting work"

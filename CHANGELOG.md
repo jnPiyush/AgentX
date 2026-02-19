@@ -5,6 +5,14 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.1] - 2026-02-18
+
+### Fixed
+
+- **Cross-platform CLI args**: `runCli()` now accepts `Record<string, string>` named args, formatted as `-Key value` for PowerShell and positional args for bash
+- **Bash workflow command**: Fixed `@agentx /workflow` and `/deps` failing on macOS/Linux due to PowerShell-style parameters being passed to bash
+- **Bash `run` subcommand**: Added missing `cmd_run()` to `agentx.sh` for feature parity with `agentx.ps1`
+
 ## [5.2.0] - 2026-02-18
 
 ### Added

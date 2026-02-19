@@ -2,7 +2,7 @@
  "name": "agentx",
  "displayName": "AgentX - Multi-Agent Orchestration",
  "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Engineer, and Reviewer agents in a structured software development workflow.",
- "version": "5.2.0",
+ "version": "5.2.1",
  "publisher": "jnPiyush",
  "author": {
  "name": "Piyush Jain"
@@ -92,6 +92,12 @@
  "title": "Refresh",
  "category": "AgentX",
  "icon": "$(refresh)"
+ },
+ {
+ "command": "agentx.checkEnvironment",
+ "title": "Check Environment",
+ "category": "AgentX",
+ "icon": "$(beaker)"
  }
  ],
  "viewsContainers": {
@@ -240,6 +246,11 @@
  "minimum": 0,
  "maximum": 5,
  "description": "How many subfolder levels to search when auto-detecting the AgentX root. Set to 0 to only check workspace folder roots."
+ },
+ "agentx.skipStartupCheck": {
+ "type": "boolean",
+ "default": false,
+ "description": "Skip the automatic environment health check on extension activation. You can always run it manually via AgentX: Check Environment."
  }
  }
  }

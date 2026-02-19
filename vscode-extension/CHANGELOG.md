@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.2.1 - 2026-02-18
+
+- **Fix**: Cross-platform CLI argument formatting -- bash receives positional args, PowerShell receives named params
+- **Fix**: `/workflow` and `/deps` slash commands now work on macOS/Linux (bash)
+- **Add**: `run` subcommand in `agentx.sh` for feature parity with `agentx.ps1`
+
 ## 5.2.0 - 2026-02-18
 
 - **Nested folder support**: auto-detect AgentX root up to 2 levels deep in subfolders
