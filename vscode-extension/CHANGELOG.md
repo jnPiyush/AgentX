@@ -1,5 +1,17 @@
 # Changelog
 
+## 5.3.0 - 2026-02-21
+
+### Added
+
+- Customer Coach agent for consulting research
+- UX Methodology instructions for structured design phases
+- Auto-release workflow with semantic versioning
+- Copilot Coding Agent setup workflow
+- Shared PowerShell modules (CIHelpers, SecurityHelpers)
+- Agent Delegation protocol
+- Pack Bundle System for modular artifact distribution
+
 ## 5.2.6 - 2026-02-19
 
 ## 5.2.5 - 2026-02-18
