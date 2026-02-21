@@ -126,8 +126,11 @@ jobs:
       - name: Check for Node.js projects
         id: detect
         run: |
-          if find . -name 'package.json' -not -path '*/node_modules/*' | grep -q .; then
+          PKG_DIR=$(find . -name 'package.json' -not -path '*/node_modules/*' -printf '%h\n' | head -1)
+          if [ -n "$PKG_DIR" ]; then
             echo "found=true" >> $GITHUB_OUTPUT
+            echo "pkg_dir=$PKG_DIR" >> $GITHUB_OUTPUT
+            echo "Found Node.js project in $PKG_DIR"
           else
             echo "found=false" >> $GITHUB_OUTPUT
             echo "No Node.js projects found - skipping scan"
@@ -141,11 +144,13 @@ jobs:
 
       - name: Install dependencies
         if: steps.detect.outputs.found == 'true'
+        working-directory: ${{ steps.detect.outputs.pkg_dir }}
         run: npm ci
 
       - name: Run npm audit
         if: steps.detect.outputs.found == 'true'
         id: audit
+        working-directory: ${{ steps.detect.outputs.pkg_dir }}
         run: |
           echo "Scanning for vulnerable Node.js packages..."
           npm audit --json > npm-vulnerabilities.json || true
@@ -169,7 +174,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: npm-vulnerabilities
-          path: npm-vulnerabilities.json
+          path: ${{ steps.detect.outputs.pkg_dir }}/npm-vulnerabilities.json
 
   summary:
     name: Dependency Scan Summary
