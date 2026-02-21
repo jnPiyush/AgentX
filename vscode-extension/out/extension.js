@@ -136,7 +136,7 @@ function activate(context) {
     context.subscriptions.push(agentsWatcher);
     // Status bar item
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
-    statusBar.text = '$(organization) AgentX';
+    statusBar.text = '$(hubot) AgentX';
     statusBar.tooltip = 'AgentX - Multi-Agent Orchestration';
     statusBar.command = 'agentx.showStatus';
     statusBar.show();
