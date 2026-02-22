@@ -19,6 +19,10 @@
 
 ## Agent Memory System
 
+> **Status: Planned** -- This feature is designed but not yet implemented.
+> The directory structure, JSON schemas, and agent integration points below
+> describe the intended behavior for a future release.
+
 Long-term memory for personalized agent responses. Memory stays local (never sent to external APIs).
 
 ### Structure

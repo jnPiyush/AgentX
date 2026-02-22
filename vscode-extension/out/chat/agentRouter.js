@@ -41,7 +41,7 @@ const agentContextLoader_1 = require("./agentContextLoader");
 const ROUTE_RULES = [
     {
         agentFile: 'architect',
-        keywords: /\b(architect|architecture|adr|system design|tech spec|spike|technical decision|scalability|design pattern|microservic)\b/i,
+        keywords: /\b(architect|architecture|adr|system design|tech spec|spike|technical decision|scalability|design pattern|microservices?)\b/i,
         description: 'Routing to Architect -- system design/technical decisions',
     },
     {

@@ -5,274 +5,279 @@
  "version": "5.3.1",
  "publisher": "jnPiyush",
  "author": {
- "name": "Piyush Jain"
+  "name": "Piyush Jain"
  },
  "icon": "resources/icon.png",
  "license": "MIT",
  "galleryBanner": {
- "color": "#1e1e2e",
- "theme": "dark"
+  "color": "#1e1e2e",
+  "theme": "dark"
  },
  "repository": {
- "type": "git",
- "url": "https://github.com/jnPiyush/AgentX"
+  "type": "git",
+  "url": "https://github.com/jnPiyush/AgentX"
  },
  "bugs": {
- "url": "https://github.com/jnPiyush/AgentX/issues"
+  "url": "https://github.com/jnPiyush/AgentX/issues"
  },
  "homepage": "https://github.com/jnPiyush/AgentX#readme",
  "engines": {
- "vscode": "^1.85.0"
+  "vscode": "^1.85.0"
  },
  "categories": [
- "AI",
- "Other",
- "SCM Providers"
+  "AI",
+  "Other",
+  "SCM Providers"
  ],
  "keywords": [
- "copilot",
- "ai-agents",
- "multi-agent",
- "orchestration",
- "workflow",
- "product-manager",
- "architect",
- "engineer",
- "code-review",
- "agentx"
+  "copilot",
+  "ai-agents",
+  "multi-agent",
+  "orchestration",
+  "workflow",
+  "product-manager",
+  "architect",
+  "engineer",
+  "code-review",
+  "agentx"
  ],
  "activationEvents": [
- "workspaceContains:AGENTS.md",
- "workspaceContains:**/AGENTS.md",
- "workspaceContains:.agentx/agentx.ps1",
- "workspaceContains:**/.agentx/agentx.ps1",
- "onChatParticipant:agentx.chat"
+  "workspaceContains:AGENTS.md",
+  "workspaceContains:**/AGENTS.md",
+  "workspaceContains:.agentx/agentx.ps1",
+  "workspaceContains:**/.agentx/agentx.ps1",
+  "onChatParticipant:agentx.chat"
  ],
  "main": "./out/extension.js",
  "contributes": {
- "commands": [
- {
- "command": "agentx.initialize",
- "title": "Initialize Project",
- "category": "AgentX",
- "icon": "$(rocket)"
- },
- {
- "command": "agentx.showStatus",
- "title": "Show Agent Status",
- "category": "AgentX",
- "icon": "$(info)"
- },
- {
- "command": "agentx.readyQueue",
- "title": "Show Ready Queue",
- "category": "AgentX",
- "icon": "$(checklist)"
- },
- {
- "command": "agentx.runWorkflow",
- "title": "Run Workflow",
- "category": "AgentX",
- "icon": "$(play)"
- },
- {
- "command": "agentx.checkDeps",
- "title": "Check Dependencies",
- "category": "AgentX",
- "icon": "$(git-merge)"
- },
- {
- "command": "agentx.generateDigest",
- "title": "Generate Weekly Digest",
- "category": "AgentX",
- "icon": "$(notebook)"
- },
- {
- "command": "agentx.refresh",
- "title": "Refresh",
- "category": "AgentX",
- "icon": "$(refresh)"
- },
- {
- "command": "agentx.checkEnvironment",
- "title": "Check Environment",
- "category": "AgentX",
- "icon": "$(beaker)"
- }
- ],
- "viewsContainers": {
- "activitybar": [
- {
- "id": "agentx-sidebar",
- "title": "AgentX",
- "icon": "resources/agentx-icon.svg"
- }
- ]
- },
- "views": {
- "agentx-sidebar": [
- {
- "id": "agentx-agents",
- "name": "Agents",
- "icon": "$(organization)",
- "contextualTitle": "AgentX Agents"
- },
- {
- "id": "agentx-ready",
- "name": "Ready Queue",
- "icon": "$(checklist)",
- "contextualTitle": "AgentX Ready Queue"
- },
- {
- "id": "agentx-workflows",
- "name": "Workflows",
- "icon": "$(git-merge)",
- "contextualTitle": "AgentX Workflows"
- }
- ]
- },
- "viewsWelcome": [
- {
- "view": "agentx-agents",
- "contents": "AgentX is not initialized in this workspace.\n[Initialize AgentX](command:agentx.initialize)\nLearn more at [GitHub](https://github.com/jnPiyush/AgentX).",
- "when": "!agentx.initialized"
- }
- ],
- "menus": {
- "view/title": [
- {
- "command": "agentx.refresh",
- "when": "view == agentx-agents || view == agentx-ready",
- "group": "navigation"
- }
- ],
- "commandPalette": [
- {
- "command": "agentx.refresh",
- "when": "agentx.initialized"
- },
- {
- "command": "agentx.showStatus",
- "when": "agentx.initialized"
- },
- {
- "command": "agentx.readyQueue",
- "when": "agentx.initialized"
- },
- {
- "command": "agentx.runWorkflow",
- "when": "agentx.initialized"
- },
- {
- "command": "agentx.checkDeps",
- "when": "agentx.initialized"
- },
- {
- "command": "agentx.generateDigest",
- "when": "agentx.initialized"
- }
- ]
- },
- "chatParticipants": [
- {
- "id": "agentx.chat",
- "name": "agentx",
- "fullName": "AgentX Orchestrator",
- "description": "Multi-agent orchestration for software development workflows",
- "isSticky": true,
- "commands": [
- {
- "name": "ready",
- "description": "Show unblocked work sorted by priority"
- },
- {
- "name": "workflow",
- "description": "Run a workflow (feature/epic/story/bug/spike/devops/docs)"
- },
- {
- "name": "status",
- "description": "Show all agent states"
- },
- {
- "name": "deps",
- "description": "Check issue dependencies (e.g. /deps 42)"
- },
- {
- "name": "digest",
- "description": "Generate weekly progress digest"
- }
- ]
- }
- ],
- "configuration": {
- "title": "AgentX",
- "properties": {
- "agentx.mode": {
- "type": "string",
- "default": "local",
- "enum": [
- "local",
- "github"
- ],
- "enumDescriptions": [
- "Filesystem-based issue tracking, no GitHub required (default)",
- "Full features: GitHub Actions, PRs, Projects"
- ],
- "description": "Operating mode for AgentX. Defaults to local (zero prompts). Use github for full GitHub integration."
- },
- "agentx.autoRefresh": {
- "type": "boolean",
- "default": true,
- "description": "Automatically refresh agent status and ready queue."
- },
- "agentx.shell": {
- "type": "string",
- "default": "auto",
- "enum": [
- "auto",
- "pwsh",
- "bash"
- ],
- "description": "Shell to use for AgentX CLI commands."
- },
- "agentx.rootPath": {
- "type": "string",
- "default": "",
- "description": "Explicit path to the AgentX project root (folder containing AGENTS.md and .agentx/). Leave empty for auto-detection. Useful when AgentX is initialized in a subfolder or non-first workspace folder."
- },
- "agentx.searchDepth": {
- "type": "number",
- "default": 2,
- "minimum": 0,
- "maximum": 5,
- "description": "How many subfolder levels to search when auto-detecting the AgentX root. Set to 0 to only check workspace folder roots."
- },
- "agentx.skipStartupCheck": {
- "type": "boolean",
- "default": false,
- "description": "Skip the automatic environment health check on extension activation. You can always run it manually via AgentX: Check Environment."
- }
- }
- }
+  "commands": [
+   {
+    "command": "agentx.initialize",
+    "title": "Initialize Project",
+    "category": "AgentX",
+    "icon": "$(rocket)"
+   },
+   {
+    "command": "agentx.showStatus",
+    "title": "Show Agent Status",
+    "category": "AgentX",
+    "icon": "$(info)"
+   },
+   {
+    "command": "agentx.readyQueue",
+    "title": "Show Ready Queue",
+    "category": "AgentX",
+    "icon": "$(checklist)"
+   },
+   {
+    "command": "agentx.runWorkflow",
+    "title": "Run Workflow",
+    "category": "AgentX",
+    "icon": "$(play)"
+   },
+   {
+    "command": "agentx.checkDeps",
+    "title": "Check Dependencies",
+    "category": "AgentX",
+    "icon": "$(git-merge)"
+   },
+   {
+    "command": "agentx.generateDigest",
+    "title": "Generate Weekly Digest",
+    "category": "AgentX",
+    "icon": "$(notebook)"
+   },
+   {
+    "command": "agentx.refresh",
+    "title": "Refresh",
+    "category": "AgentX",
+    "icon": "$(refresh)"
+   },
+   {
+    "command": "agentx.checkEnvironment",
+    "title": "Check Environment",
+    "category": "AgentX",
+    "icon": "$(beaker)"
+   }
+  ],
+  "viewsContainers": {
+   "activitybar": [
+    {
+     "id": "agentx-sidebar",
+     "title": "AgentX",
+     "icon": "resources/agentx-icon.svg"
+    }
+   ]
+  },
+  "views": {
+   "agentx-sidebar": [
+    {
+     "id": "agentx-agents",
+     "name": "Agents",
+     "icon": "$(organization)",
+     "contextualTitle": "AgentX Agents"
+    },
+    {
+     "id": "agentx-ready",
+     "name": "Ready Queue",
+     "icon": "$(checklist)",
+     "contextualTitle": "AgentX Ready Queue"
+    },
+    {
+     "id": "agentx-workflows",
+     "name": "Workflows",
+     "icon": "$(git-merge)",
+     "contextualTitle": "AgentX Workflows"
+    }
+   ]
+  },
+  "viewsWelcome": [
+   {
+    "view": "agentx-agents",
+    "contents": "AgentX is not initialized in this workspace.\n[Initialize AgentX](command:agentx.initialize)\nLearn more at [GitHub](https://github.com/jnPiyush/AgentX).",
+    "when": "!agentx.initialized"
+   }
+  ],
+  "menus": {
+   "view/title": [
+    {
+     "command": "agentx.refresh",
+     "when": "view == agentx-agents || view == agentx-ready",
+     "group": "navigation"
+    }
+   ],
+   "commandPalette": [
+    {
+     "command": "agentx.refresh",
+     "when": "agentx.initialized"
+    },
+    {
+     "command": "agentx.showStatus",
+     "when": "agentx.initialized"
+    },
+    {
+     "command": "agentx.readyQueue",
+     "when": "agentx.initialized"
+    },
+    {
+     "command": "agentx.runWorkflow",
+     "when": "agentx.initialized"
+    },
+    {
+     "command": "agentx.checkDeps",
+     "when": "agentx.initialized"
+    },
+    {
+     "command": "agentx.generateDigest",
+     "when": "agentx.initialized"
+    }
+   ]
+  },
+  "chatParticipants": [
+   {
+    "id": "agentx.chat",
+    "name": "agentx",
+    "fullName": "AgentX Orchestrator",
+    "description": "Multi-agent orchestration for software development workflows",
+    "isSticky": true,
+    "commands": [
+     {
+      "name": "ready",
+      "description": "Show unblocked work sorted by priority"
+     },
+     {
+      "name": "workflow",
+      "description": "Run a workflow (feature/epic/story/bug/spike/devops/docs)"
+     },
+     {
+      "name": "status",
+      "description": "Show all agent states"
+     },
+     {
+      "name": "deps",
+      "description": "Check issue dependencies (e.g. /deps 42)"
+     },
+     {
+      "name": "digest",
+      "description": "Generate weekly progress digest"
+     }
+    ]
+   }
+  ],
+  "configuration": {
+   "title": "AgentX",
+   "properties": {
+    "agentx.mode": {
+     "type": "string",
+     "default": "local",
+     "enum": [
+      "local",
+      "github"
+     ],
+     "enumDescriptions": [
+      "Filesystem-based issue tracking, no GitHub required (default)",
+      "Full features: GitHub Actions, PRs, Projects"
+     ],
+     "description": "Operating mode for AgentX. Defaults to local (zero prompts). Use github for full GitHub integration."
+    },
+    "agentx.autoRefresh": {
+     "type": "boolean",
+     "default": true,
+     "description": "Automatically refresh agent status and ready queue."
+    },
+    "agentx.shell": {
+     "type": "string",
+     "default": "auto",
+     "enum": [
+      "auto",
+      "pwsh",
+      "bash"
+     ],
+     "description": "Shell to use for AgentX CLI commands."
+    },
+    "agentx.rootPath": {
+     "type": "string",
+     "default": "",
+     "description": "Explicit path to the AgentX project root (folder containing AGENTS.md and .agentx/). Leave empty for auto-detection. Useful when AgentX is initialized in a subfolder or non-first workspace folder."
+    },
+    "agentx.searchDepth": {
+     "type": "number",
+     "default": 2,
+     "minimum": 0,
+     "maximum": 5,
+     "description": "How many subfolder levels to search when auto-detecting the AgentX root. Set to 0 to only check workspace folder roots."
+    },
+    "agentx.skipStartupCheck": {
+     "type": "boolean",
+     "default": false,
+     "description": "Skip the automatic environment health check on extension activation. You can always run it manually via AgentX: Check Environment."
+    }
+   }
+  }
  },
  "scripts": {
- "vscode:prepublish": "npm run compile",
- "compile": "tsc -p ./",
- "watch": "tsc -watch -p ./",
- "lint": "eslint src --ext ts",
- "package": "vsce package",
- "publish": "vsce publish"
+  "vscode:prepublish": "npm run compile",
+  "compile": "tsc -p ./",
+  "watch": "tsc -watch -p ./",
+  "lint": "eslint src --ext ts",
+  "test": "npm run compile && mocha",
+  "package": "vsce package",
+  "publish": "vsce publish"
  },
  "devDependencies": {
- "@types/node": "^20.11.0",
- "@types/vscode": "^1.85.0",
- "@typescript-eslint/eslint-plugin": "^8.0.0",
- "@typescript-eslint/parser": "^8.0.0",
- "@vscode/vsce": "^3.0.0",
- "eslint": "^8.56.0",
- "typescript": "^5.3.0"
+  "@types/mocha": "^10.0.10",
+  "@types/node": "^20.11.0",
+  "@types/sinon": "^21.0.0",
+  "@types/vscode": "^1.85.0",
+  "@typescript-eslint/eslint-plugin": "^8.0.0",
+  "@typescript-eslint/parser": "^8.0.0",
+  "@vscode/vsce": "^3.0.0",
+  "eslint": "^8.56.0",
+  "mocha": "^11.7.5",
+  "sinon": "^21.0.1",
+  "typescript": "^5.3.0"
  },
  "dependencies": {
- "pureimage": "^0.4.18"
+  "pureimage": "^0.4.18"
  }
 }

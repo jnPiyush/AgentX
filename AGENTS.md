@@ -576,7 +576,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | **Prompt Engineering** | [.github/skills/ai-systems/prompt-engineering/SKILL.md](.github/skills/ai-systems/prompt-engineering/SKILL.md) | [PASS] Implemented |
 | **Cross-Repo** | [docs/FEATURES.md](docs/FEATURES.md#cross-repository-orchestration) | [PASS] Implemented |
 | **CLI Specification** | [docs/FEATURES.md](docs/FEATURES.md#cli-specification) | [PASS] Implemented |
-| **Agent Memory** | [docs/FEATURES.md](docs/FEATURES.md#agent-memory-system) | [PASS] Implemented |
+| **Agent Memory** | [docs/FEATURES.md](docs/FEATURES.md#agent-memory-system) | Planned |
 | **Visualization** | [docs/FEATURES.md](docs/FEATURES.md#visualization--debugging) | [PASS] Implemented |
 
 **v2.1**:

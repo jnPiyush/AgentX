@@ -1,0 +1,4 @@
+spec: out/test/**/*.test.js
+timeout: 10000
+recursive: true
+require: out/test/register.js

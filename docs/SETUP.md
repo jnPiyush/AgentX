@@ -63,11 +63,11 @@ PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/mast
 
 ### What the Installer Does
 
-1. **Clone** — Shallow-clones the AgentX repo to a temp directory
-2. **Prune** — Removes files not needed by the selected profile
-3. **Copy** — Merges remaining files into your project (skips existing files unless `-Force`)
-4. **Configure** — Generates `agent-status.json`, `config.json`, output directories
-5. **Setup** — Interactive: git init, hooks install, username config (skip with `-NoSetup`)
+1. **Download** -- Downloads the AgentX repo archive to a temp directory
+2. **Extract** -- Unpacks the archive and identifies essential directories
+3. **Copy** -- Merges files into your project (skips existing files unless `-Force`)
+4. **Configure** -- Generates `agent-status.json`, `config.json`, output directories
+5. **Setup** -- Interactive: git init, hooks install, username config (skip with `-NoSetup`)
 
 ---
 
@@ -216,9 +216,9 @@ Use AgentX without GitHub — filesystem-based issue tracking and agent coordina
 ./install.sh --local
 ```
 
-**With a specific profile:**
+**With mode flag:**
 ```powershell
-.\install.ps1 -Profile python -Local
+.\install.ps1 -Local
 ```
 
 **Enable later (if already installed in GitHub mode):**
