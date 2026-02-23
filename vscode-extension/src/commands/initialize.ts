@@ -5,6 +5,8 @@ import * as fs from 'fs';
 import * as https from 'https';
 import * as http from 'http';
 import { InitWizardPanel } from '../views/initWizardPanel';
+import { resolveWindowsShell } from '../utils/shell';
+import { runCriticalPreCheck } from './setupWizard';
 
 const BRANCH = 'master';
 const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
@@ -56,6 +58,14 @@ export function registerInitializeCommand(
  return;
  }
 
+ // Pre-flight: check all required dependencies and auto-install if missing
+ const modeConfig = vscode.workspace.getConfiguration('agentx').get<string>('mode', 'local');
+ const preCheck = await runCriticalPreCheck(modeConfig, /* blocking */ true);
+ if (!preCheck.passed) {
+ // User chose not to install or install is pending reload
+ return;
+ }
+
  // Check if already initialized
  const initialized = await agentx.checkInitialized();
  if (initialized) {
@@ -86,7 +96,7 @@ export function registerInitializeCommand(
  let detectedRepo: string | undefined;
  try {
  const { execShell: exec } = await import('../utils/shell');
- const shell = process.platform === 'win32' ? 'pwsh' : 'bash';
+ const shell = process.platform === 'win32' ? 'pwsh' as const : 'bash' as const;
  const remoteUrl = await exec('git remote get-url origin', root, shell);
  const match = remoteUrl.trim().match(/github\.com[:/]([^/]+\/[^/.]+)/);
  if (match) {
@@ -215,7 +225,7 @@ export function registerInitializeCommand(
  // Version tracking
  const versionFile = path.join(root, '.agentx', 'version.json');
  fs.writeFileSync(versionFile, JSON.stringify({
- version: '5.3.1',
+ version: '5.5.0',
  mode: mode.label,
  installedAt: new Date().toISOString(),
  updatedAt: new Date().toISOString(),
@@ -254,7 +264,7 @@ export function registerInitializeCommand(
  // Auto-init git + hooks (non-destructive, both modes)
  try {
  const { execShell: exec } = await import('../utils/shell');
- const shell = process.platform === 'win32' ? 'pwsh' : 'bash';
+ const shell = process.platform === 'win32' ? 'pwsh' as const : 'bash' as const;
  if (!fs.existsSync(path.join(root, '.git'))) {
  await exec('git init --quiet', root, shell);
  }
@@ -366,7 +376,15 @@ async function extractZip(zipPath: string, destDir: string): Promise<void> {
  fs.mkdirSync(destDir, { recursive: true });
 
  if (process.platform === 'win32') {
- // PowerShell Expand-Archive is available on all supported Windows versions
+ // Use the best available PowerShell (pwsh > powershell.exe)
+ const resolved = resolveWindowsShell();
+ if (!resolved) {
+ throw new Error(
+ 'PowerShell is not installed. Install PowerShell 7+ (pwsh) from '
+ + 'https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell '
+ + 'or ensure Windows PowerShell (powershell.exe) is available.'
+ );
+ }
  const { execShell: exec } = await import('../utils/shell');
  await exec(
  `Expand-Archive -Path "${zipPath}" -DestinationPath "${destDir}" -Force`,

@@ -1,4 +1,5 @@
 import { exec } from 'child_process';
+import * as vscode from 'vscode';
 
 /**
  * Severity level for dependency check results.
@@ -203,6 +204,14 @@ async function checkGitHubCli(): Promise<DependencyResult> {
 
 /**
  * Check if a VS Code extension is installed by its ID.
+ *
+ * Uses the VS Code extensions API (`vscode.extensions.getExtension`) as the
+ * primary detection method. This is reliable because it queries the running
+ * host directly -- unlike `code --list-extensions` which spawns an external
+ * process and fails when the `code` CLI is not in PATH.
+ *
+ * Falls back to the CLI approach only when the API is unavailable (e.g.
+ * running outside VS Code in a pure Node test harness).
  */
 async function checkVSCodeExtension(
   id: string,
@@ -210,15 +219,40 @@ async function checkVSCodeExtension(
   severity: DependencySeverity,
   reason: string
 ): Promise<DependencyResult> {
-  // VS Code extensions can be checked by listing them via CLI
-  const raw = await tryExec(`code --list-extensions 2>&1`);
-  const extensions = raw.toLowerCase().split(/\r?\n/);
-  const found = extensions.includes(id.toLowerCase());
+  let found = false;
+  let version = '';
+
+  // Primary: use VS Code extensions API (always available inside VS Code)
+  try {
+    const ext = vscode.extensions.getExtension(id);
+    if (ext) {
+      found = true;
+      version = ext.packageJSON?.version ?? 'installed';
+    }
+  } catch {
+    // API not available (e.g. running in a non-VS-Code environment)
+  }
+
+  // Fallback: try the CLI if the API did not detect the extension.
+  // This covers edge cases like running the checker from a standalone
+  // script outside the extension host.
+  if (!found) {
+    try {
+      const raw = await tryExec('code --list-extensions 2>&1');
+      if (raw.length > 0) {
+        const extensions = raw.toLowerCase().split(/\r?\n/);
+        found = extensions.includes(id.toLowerCase());
+        if (found) { version = 'installed'; }
+      }
+    } catch {
+      // CLI not in PATH or timed out -- already handled by tryExec
+    }
+  }
 
   return {
     name: displayName,
     found,
-    version: found ? 'installed' : '',
+    version,
     severity,
     message: found
       ? `${displayName} is installed.`

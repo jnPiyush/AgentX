@@ -105,7 +105,7 @@ try {
  # JSON content
  $r += Assert-JsonField ".agentx/config.json" "mode" "local" "config.mode=local"
  $r += Assert-JsonField ".agentx/config.json" "nextIssueNumber" "1" "config.nextIssueNumber=1"
- $r += Assert-JsonField ".agentx/version.json" "version" "5.3.1" "version=5.3.1"
+ $r += Assert-JsonField ".agentx/version.json" "version" "5.4.0" "version=5.4.0"
  $r += Assert-JsonField ".agentx/version.json" "mode" "local" "version.mode=local"
  # Agent status check
  try {
@@ -141,7 +141,7 @@ try {
  foreach ($f in $RUNTIME_FILES) { $r += Assert-PathExists $f "runtime: $f" }
  foreach ($g in $GIT_ARTIFACTS) { $r += Assert-PathExists $g "git: $g" }
  $r += Assert-JsonField ".agentx/config.json" "mode" "local" "config.mode=local"
- $r += Assert-JsonField ".agentx/version.json" "version" "5.3.1" "version=5.3.1"
+ $r += Assert-JsonField ".agentx/version.json" "version" "5.4.0" "version=5.4.0"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
 
  Write-TestReport "Local mode via direct file" $r
@@ -240,7 +240,7 @@ try {
 
  $r = @()
  $r += Assert-JsonField ".agentx/config.json" "mode" "local" "force: config.mode restored to local"
- $r += Assert-JsonField ".agentx/version.json" "version" "5.3.1" "force: version restored"
+ $r += Assert-JsonField ".agentx/version.json" "version" "5.4.0" "force: version restored"
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "no-temp: $t" }
 
  Write-TestReport "Force reinstall" $r

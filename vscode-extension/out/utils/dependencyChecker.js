@@ -1,7 +1,41 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkAllDependencies = checkAllDependencies;
 const child_process_1 = require("child_process");
+const vscode = __importStar(require("vscode"));
 /**
  * Execute a command and return stdout, or empty string on failure.
  */
@@ -165,16 +199,51 @@ async function checkGitHubCli() {
 }
 /**
  * Check if a VS Code extension is installed by its ID.
+ *
+ * Uses the VS Code extensions API (`vscode.extensions.getExtension`) as the
+ * primary detection method. This is reliable because it queries the running
+ * host directly -- unlike `code --list-extensions` which spawns an external
+ * process and fails when the `code` CLI is not in PATH.
+ *
+ * Falls back to the CLI approach only when the API is unavailable (e.g.
+ * running outside VS Code in a pure Node test harness).
  */
 async function checkVSCodeExtension(id, displayName, severity, reason) {
-    // VS Code extensions can be checked by listing them via CLI
-    const raw = await tryExec(`code --list-extensions 2>&1`);
-    const extensions = raw.toLowerCase().split(/\r?\n/);
-    const found = extensions.includes(id.toLowerCase());
+    let found = false;
+    let version = '';
+    // Primary: use VS Code extensions API (always available inside VS Code)
+    try {
+        const ext = vscode.extensions.getExtension(id);
+        if (ext) {
+            found = true;
+            version = ext.packageJSON?.version ?? 'installed';
+        }
+    }
+    catch {
+        // API not available (e.g. running in a non-VS-Code environment)
+    }
+    // Fallback: try the CLI if the API did not detect the extension.
+    // This covers edge cases like running the checker from a standalone
+    // script outside the extension host.
+    if (!found) {
+        try {
+            const raw = await tryExec('code --list-extensions 2>&1');
+            if (raw.length > 0) {
+                const extensions = raw.toLowerCase().split(/\r?\n/);
+                found = extensions.includes(id.toLowerCase());
+                if (found) {
+                    version = 'installed';
+                }
+            }
+        }
+        catch {
+            // CLI not in PATH or timed out -- already handled by tryExec
+        }
+    }
     return {
         name: displayName,
         found,
-        version: found ? 'installed' : '',
+        version,
         severity,
         message: found
             ? `${displayName} is installed.`

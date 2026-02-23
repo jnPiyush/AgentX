@@ -1,5 +1,34 @@
 # Changelog
 
+## 5.5.0 - 2026-02-23
+
+### Fixed
+
+- Reliable VS Code extension detection using `vscode.extensions.getExtension()` API instead of unreliable `code --list-extensions` CLI
+- Dependency install polling -- terminal-based installs now wait for tools to become available before proceeding
+
+### Changed
+
+- Extension checker falls back to CLI only when API is unavailable
+- External tool install flow shows cancellable progress notification while polling
+
+## 5.4.0 - 2026-02-22
+
+### Added
+
+- Critical pre-check with auto-install for missing required dependencies
+- PowerShell shell fallback (`pwsh` -> `powershell.exe`) for Windows compatibility
+- Pre-flight Copilot extension check before initialization
+- Modal blocking dialog for dependency install during initialization
+- Re-check flow after dependency installation
+- 12 new unit tests for pre-check scenarios
+- Expanded VS Code mock with `withProgress`, `createTerminal`, `extensions` stubs
+
+### Changed
+
+- Startup check auto-offers install instead of dismissable warning
+- `execShell()` uses auto-detected shell instead of hardcoded `pwsh`
+
 ## 5.3.0 - 2026-02-21
 
 ### Added

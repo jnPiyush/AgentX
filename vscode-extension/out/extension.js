@@ -103,7 +103,8 @@ function activate(context) {
         setTimeout(async () => {
             try {
                 const mode = agentxContext.getMode();
-                await (0, setupWizard_1.runStartupCheck)(mode);
+                // Run critical pre-check - auto-installs missing required deps
+                await (0, setupWizard_1.runCriticalPreCheck)(mode, /* blocking */ false);
                 // Also check Copilot Chat configuration
                 const suggestions = await (0, setupWizard_1.checkCopilotChatConfig)();
                 if (suggestions.length > 0) {

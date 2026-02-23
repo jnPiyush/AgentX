@@ -30,7 +30,7 @@ Each pack has a `manifest.json` validated against `.github/schemas/pack-manifest
 ```json
 {
   "name": "agentx-core",
-  "version": "5.3.1",
+  "version": "5.4.0",
   "description": "Core SDLC agents and workflow engine.",
   "maturity": "stable",
   "tags": ["sdlc", "orchestration"],

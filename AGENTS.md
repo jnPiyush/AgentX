@@ -516,6 +516,15 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Packs | `packs/` |
 | Agent Delegation | `.github/agents/agent-delegation.md` |
 
+### New Features (v5.4)
+
+| Feature | Documentation | Status |
+|---------|---------------|--------|
+| **Critical Pre-Check Auto-Install** | `src/commands/setupWizard.ts` | [PASS] Stable |
+| **PowerShell Shell Fallback** | `src/utils/shell.ts` | [PASS] Stable |
+| **Copilot Extension Awareness** | `src/commands/initialize.ts` | [PASS] Stable |
+| **Expanded VS Code Test Mocks** | `src/test/mocks/vscode.ts` | [PASS] Stable |
+
 ### New Features (v5.3)
 
 | Feature | Documentation | Status |

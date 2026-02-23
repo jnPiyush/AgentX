@@ -38,6 +38,7 @@ const vscode = __importStar(require("vscode"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const shell_1 = require("../utils/shell");
+const setupWizard_1 = require("../commands/setupWizard");
 // -----------------------------------------------------------------------
 // Constants
 // -----------------------------------------------------------------------
@@ -141,6 +142,18 @@ class InitWizardPanel {
             });
             return;
         }
+        // Pre-flight: check all required dependencies and auto-install if missing
+        this._postMessage({ type: 'progress', step: 'Checking dependencies...', percent: 2 });
+        const preCheck = await (0, setupWizard_1.runCriticalPreCheck)(msg.mode, /* blocking */ true);
+        if (!preCheck.passed) {
+            this._postMessage({
+                type: 'complete',
+                success: false,
+                message: 'Required dependencies are missing. Install them and try again.',
+                mode: msg.mode,
+            });
+            return;
+        }
         const tmpDir = path.join(root, '.agentx-install-tmp');
         const rawDir = path.join(root, '.agentx-install-raw');
         const zipFile = path.join(root, '.agentx-install.zip');
@@ -206,7 +219,7 @@ class InitWizardPanel {
             // Version tracking
             const versionFile = path.join(root, '.agentx', 'version.json');
             fs.writeFileSync(versionFile, JSON.stringify({
-                version: '5.3.1',
+                version: '5.5.0',
                 mode: msg.mode,
                 installedAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),

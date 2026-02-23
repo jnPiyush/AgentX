@@ -7,10 +7,12 @@
  * than depending on the real VS Code runtime.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.chat = exports.commands = exports.window = exports.workspace = exports.ThemeIcon = exports.TreeItem = exports.TreeItemCollapsibleState = exports.EventEmitter = exports.Uri = void 0;
+exports.chat = exports.commands = exports.env = exports.extensions = exports.ConfigurationTarget = exports.QuickPickItemKind = exports.ProgressLocation = exports.window = exports.workspace = exports.ThemeIcon = exports.TreeItem = exports.TreeItemCollapsibleState = exports.EventEmitter = exports.Uri = void 0;
 exports.__setConfig = __setConfig;
 exports.__clearConfig = __clearConfig;
 exports.__setWorkspaceFolders = __setWorkspaceFolders;
+exports.__setExtension = __setExtension;
+exports.__clearExtensions = __clearExtensions;
 exports.createMockResponseStream = createMockResponseStream;
 // --- Uri -----------------------------------------------------------------
 class Uri {
@@ -29,6 +31,10 @@ class Uri {
     }
     static parse(value) {
         return new Uri('file', '', value);
+    }
+    static joinPath(base, ...pathSegments) {
+        const joined = [base.path, ...pathSegments].join('/');
+        return new Uri(base.scheme, base.authority, joined);
     }
 }
 exports.Uri = Uri;
@@ -93,6 +99,13 @@ exports.workspace = {
     }),
     onDidChangeConfiguration: (_listener) => ({ dispose: () => { } }),
     onDidChangeWorkspaceFolders: (_listener) => ({ dispose: () => { } }),
+    openTextDocument: async (_uri) => ({ getText: () => '' }),
+    createFileSystemWatcher: (_pattern) => ({
+        onDidCreate: () => ({ dispose: () => { } }),
+        onDidChange: () => ({ dispose: () => { } }),
+        onDidDelete: () => ({ dispose: () => { } }),
+        dispose: () => { },
+    }),
 };
 /** Test helper: set a mock config value. */
 function __setConfig(key, value) {
@@ -128,6 +141,62 @@ exports.window = {
         show: () => { },
         dispose: () => { },
     }),
+    withProgress: async (_options, task) => {
+        const token = { isCancellationRequested: false, onCancellationRequested: () => ({ dispose: () => { } }) };
+        return task({ report: () => { } }, token);
+    },
+    createTerminal: (_options) => ({
+        show: () => { },
+        sendText: (_text) => { },
+        dispose: () => { },
+    }),
+    createStatusBarItem: (_alignment, _priority) => ({
+        text: '',
+        tooltip: '',
+        command: '',
+        show: () => { },
+        dispose: () => { },
+    }),
+    showTextDocument: async (_doc) => undefined,
+};
+// --- ProgressLocation enum -----------------------------------------------
+var ProgressLocation;
+(function (ProgressLocation) {
+    ProgressLocation[ProgressLocation["SourceControl"] = 1] = "SourceControl";
+    ProgressLocation[ProgressLocation["Window"] = 10] = "Window";
+    ProgressLocation[ProgressLocation["Notification"] = 15] = "Notification";
+})(ProgressLocation || (exports.ProgressLocation = ProgressLocation = {}));
+// --- QuickPickItemKind enum ----------------------------------------------
+var QuickPickItemKind;
+(function (QuickPickItemKind) {
+    QuickPickItemKind[QuickPickItemKind["Separator"] = -1] = "Separator";
+    QuickPickItemKind[QuickPickItemKind["Default"] = 0] = "Default";
+})(QuickPickItemKind || (exports.QuickPickItemKind = QuickPickItemKind = {}));
+// --- ConfigurationTarget enum --------------------------------------------
+var ConfigurationTarget;
+(function (ConfigurationTarget) {
+    ConfigurationTarget[ConfigurationTarget["Global"] = 1] = "Global";
+    ConfigurationTarget[ConfigurationTarget["Workspace"] = 2] = "Workspace";
+    ConfigurationTarget[ConfigurationTarget["WorkspaceFolder"] = 3] = "WorkspaceFolder";
+})(ConfigurationTarget || (exports.ConfigurationTarget = ConfigurationTarget = {}));
+// --- Extensions stubs ----------------------------------------------------
+const _extensionMap = {};
+exports.extensions = {
+    getExtension: (id) => _extensionMap[id] ?? undefined,
+};
+/** Test helper: register a mock extension. */
+function __setExtension(id, ext) {
+    _extensionMap[id] = ext;
+}
+/** Test helper: clear all mock extensions. */
+function __clearExtensions() {
+    for (const k of Object.keys(_extensionMap)) {
+        delete _extensionMap[k];
+    }
+}
+// --- Env stubs -----------------------------------------------------------
+exports.env = {
+    openExternal: async (_uri) => true,
 };
 // --- Commands stubs ------------------------------------------------------
 exports.commands = {

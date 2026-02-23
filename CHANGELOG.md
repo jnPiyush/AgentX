@@ -5,6 +5,35 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.0] - 2026-02-22
+
+### Added
+
+**Critical Pre-Check with Auto-Install**:
+- New `runCriticalPreCheck()` checks all required dependencies on startup and before initialization
+- Auto-installs missing VS Code extensions (Copilot, Copilot Chat) via Extensions API
+- Auto-installs missing CLI tools (Git, PowerShell, Node.js) via terminal commands
+- Modal (blocking) dialog for initialization, non-modal for background startup
+- Re-check flow after install to verify all dependencies are present
+- 12 new unit tests covering all pre-check scenarios
+
+**PowerShell Shell Fallback**:
+- `resolveWindowsShell()` auto-detects `pwsh` (7+) or `powershell.exe` (5.1) on Windows
+- `execShell()` uses resolved shell instead of hardcoded `pwsh`
+- Prevents install failures on systems with only Windows PowerShell 5.1
+- PowerShell version check in `install.ps1` (requires 5.1+, recommends 7+)
+- Bash check in `install.sh`
+
+**Copilot Extension Awareness**:
+- Pre-flight Copilot/Copilot Chat check in both legacy and WebView initialization paths
+- Copilot install reminder at end of CLI installers (`install.ps1`, `install.sh`)
+
+### Changed
+
+- Startup check now uses `runCriticalPreCheck` (auto-install) instead of dismissable warning
+- `dependencyChecker.ts` `tryExec()` uses `powershell.exe` fallback on Windows
+- VS Code mock expanded with `withProgress`, `createTerminal`, `ProgressLocation`, `extensions` stubs
+
 ## [5.3.0] - 2026-02-21
 
 ### Added

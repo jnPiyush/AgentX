@@ -1,6 +1,6 @@
 # AgentX — Multi-Agent Orchestration for VS Code
 
-[![Version](https://img.shields.io/badge/Version-5.3.1-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-5.4.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
 
 **AgentX** brings structured multi-agent orchestration to your VS Code workspace. Coordinate AI coding assistants (GitHub Copilot, Claude, etc.) as a real software team — PM, UX Designer, Architect, Engineer, and Reviewer — each with specific roles, templates, and quality gates.
