@@ -6,6 +6,15 @@ import {
   DependencySeverity,
 } from '../utils/dependencyChecker';
 
+/**
+ * Result of the critical pre-check.
+ * `passed` is true only when all required dependencies are present.
+ */
+export interface PreCheckResult {
+  passed: boolean;
+  report: EnvironmentReport;
+}
+
 // -----------------------------------------------------------------------
 // Icons used in the quick-pick and webview - ASCII-safe
 // -----------------------------------------------------------------------
@@ -63,29 +72,194 @@ export async function runSetupWizard(mode: string): Promise<void> {
 /**
  * Lightweight startup check - runs silently after activation and only
  * surfaces a notification when critical problems are detected.
+ * When missing required dependencies are found it offers to auto-install them.
  */
 export async function runStartupCheck(mode: string): Promise<void> {
-  const report = await checkAllDependencies(mode);
-
-  if (report.healthy) {
-    // Healthy - nothing to do. Log for debugging.
-    console.log('AgentX: Environment check passed.');
-    return;
+  const result = await runCriticalPreCheck(mode, /* silent */ false);
+  if (!result.passed) {
+    console.warn('AgentX: Environment pre-check did not pass.');
   }
+}
 
-  // Build a short summary of critical issues
-  const critical = report.results.filter(r => r.severity === 'required' && !r.found);
-  const names = critical.map(r => r.name).join(', ');
+// -----------------------------------------------------------------------
+//  Critical Pre-Check - auto-installs missing required dependencies
+// -----------------------------------------------------------------------
 
-  const action = await vscode.window.showWarningMessage(
-    `AgentX: Missing required dependencies: ${names}`,
-    'Run Setup Wizard',
-    'Dismiss',
+/**
+ * Check every required dependency and, if any are missing, prompt the user
+ * to install them automatically. VS Code extensions are installed via the
+ * Extensions API; external CLI tools are installed via a terminal.
+ *
+ * @param mode  - The AgentX operating mode ('local' or 'github').
+ * @param blocking - When true (default), shows a modal dialog that demands
+ *   action before the user can continue. When false, uses a
+ *   non-modal warning (suitable for background startup checks).
+ * @returns PreCheckResult - `passed` is true when all required deps
+ *   are satisfied (either already present or successfully installed).
+ */
+export async function runCriticalPreCheck(
+  mode: string,
+  blocking = true,
+): Promise<PreCheckResult> {
+  // -- 1. Run all checks --------------------------------------------------
+  const report = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: 'AgentX: Checking dependencies...',
+      cancellable: false,
+    },
+    async () => checkAllDependencies(mode),
   );
 
-  if (action === 'Run Setup Wizard') {
-    await showEnvironmentReport(report);
+  if (report.healthy) {
+    console.log('AgentX: All required dependencies found.');
+    return { passed: true, report };
   }
+
+  // -- 2. Separate missing into VS Code extensions vs external tools -------
+  const missing = report.results.filter(
+    r => r.severity === 'required' && !r.found,
+  );
+  const missingNames = missing.map(r => r.name).join(', ');
+
+  const vsExtensions = missing.filter(
+    r => r.fixCommand?.startsWith('code --install-extension'),
+  );
+  const externalTools = missing.filter(
+    r => r.fixCommand && !r.fixCommand.startsWith('code --install-extension'),
+  );
+
+  // -- 3. Build the prompt -------------------------------------------------
+  const extLabel = vsExtensions.length
+    ? `${vsExtensions.length} VS Code extension(s)`
+    : '';
+  const toolLabel = externalTools.length
+    ? `${externalTools.length} CLI tool(s)`
+    : '';
+  const parts = [extLabel, toolLabel].filter(Boolean).join(' and ');
+  const promptMsg =
+    `AgentX is missing ${missing.length} required dependencies: ${missingNames}.\n`
+    + `Install ${parts} now?`;
+
+  // Modal gives "Install All" + "Open Setup Docs" + "Skip" (cancel)
+  const action = blocking
+    ? await vscode.window.showWarningMessage(
+        promptMsg,
+        { modal: true, detail: missing.map(r => `- ${r.name}: ${r.message}`).join('\n') },
+        'Install All',
+        'Open Setup Docs',
+      )
+    : await vscode.window.showWarningMessage(
+        `AgentX: Missing required dependencies: ${missingNames}`,
+        'Install All',
+        'Open Setup Docs',
+        'Dismiss',
+      );
+
+  // -- 4. Handle user choice -----------------------------------------------
+  if (action === 'Install All') {
+    let needsReload = false;
+
+    // 4a. VS Code extensions - install via API
+    for (const ext of vsExtensions) {
+      const extId = ext.fixCommand!.replace('code --install-extension ', '').trim();
+      try {
+        await vscode.commands.executeCommand(
+          'workbench.extensions.installExtension',
+          extId,
+        );
+        vscode.window.showInformationMessage(`Installed ${ext.name}.`);
+        needsReload = true;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`Failed to install ${ext.name}: ${msg}`);
+      }
+    }
+
+    // 4b. External tools - install via a terminal
+    if (externalTools.length > 0) {
+      const terminal = vscode.window.createTerminal({
+        name: 'AgentX: Install Dependencies',
+        shellPath: process.platform === 'win32' ? 'powershell.exe' : undefined,
+      });
+      terminal.show();
+
+      for (const tool of externalTools) {
+        if (tool.fixCommand) {
+          terminal.sendText(
+            `Write-Host '--- Installing ${tool.name} ---'; ${tool.fixCommand}`,
+          );
+        }
+      }
+      terminal.sendText(
+        'Write-Host "--- All installations complete. Please close this terminal and re-check. ---"',
+      );
+
+      vscode.window.showInformationMessage(
+        'Installing external dependencies in the terminal. Check terminal for progress.',
+      );
+    }
+
+    // 4c. Prompt for reload / re-check
+    if (needsReload) {
+      const reload = await vscode.window.showInformationMessage(
+        'VS Code extensions were installed. Reload window to activate them?',
+        'Reload Window',
+        'Later',
+      );
+      if (reload === 'Reload Window') {
+        vscode.commands.executeCommand('workbench.action.reloadWindow');
+        return { passed: false, report }; // reload in progress
+      }
+    }
+
+    // 4d. Offer a re-check
+    const recheck = await vscode.window.showInformationMessage(
+      'Run the dependency check again to verify everything is installed?',
+      'Re-check Now',
+      'Skip',
+    );
+    if (recheck === 'Re-check Now') {
+      const freshReport = await checkAllDependencies(mode);
+      if (freshReport.healthy) {
+        vscode.window.showInformationMessage(
+          'AgentX: All required dependencies are now present.',
+        );
+        return { passed: true, report: freshReport };
+      }
+      // Still not healthy
+      const stillMissing = freshReport.results
+        .filter(r => r.severity === 'required' && !r.found)
+        .map(r => r.name)
+        .join(', ');
+      vscode.window.showWarningMessage(
+        `AgentX: Still missing: ${stillMissing}. Open Setup Docs for manual instructions.`,
+      );
+      return { passed: false, report: freshReport };
+    }
+
+    // User chose "Skip" - optimistically assume they will handle it
+    return { passed: false, report };
+  }
+
+  if (action === 'Open Setup Docs') {
+    const docUri = vscode.Uri.joinPath(
+      vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file('.'),
+      'docs', 'SETUP.md',
+    );
+    try {
+      const doc = await vscode.workspace.openTextDocument(docUri);
+      await vscode.window.showTextDocument(doc);
+    } catch {
+      vscode.env.openExternal(
+        vscode.Uri.parse('https://github.com/jnPiyush/AgentX/blob/master/docs/SETUP.md'),
+      );
+    }
+    return { passed: false, report };
+  }
+
+  // Dismissed / cancelled
+  return { passed: false, report };
 }
 
 // -----------------------------------------------------------------------

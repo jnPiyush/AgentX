@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentX v5.3.1 Installer - Download, copy, configure.
+# AgentX v5.4.0 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -16,6 +16,12 @@
 # MODE=github curl -fsSL ... | bash
 
 set -e
+
+# -- Bash version check --
+if [ -z "$BASH_VERSION" ]; then
+ echo "[X] This installer requires Bash. Please run with: bash install.sh"
+ exit 1
+fi
 
 MODE="${MODE:-}"
 FORCE="${FORCE:-false}"
@@ -73,7 +79,7 @@ skip() { echo -e "${D}[--] $1${N}"; }
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| AgentX v5.3.1 - AI Agent Orchestration |${N}"
+echo -e "${C}| AgentX v5.4.0 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -142,8 +148,8 @@ mkdir -p .agentx/state .agentx/digests docs/{prd,adr,specs,ux,reviews,progress}
 
 # Version tracking
 VERSION_FILE=".agentx/version.json"
-echo "{ \"version\": \"5.3.1\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 5.3.1 recorded"
+echo "{ \"version\": \"5.4.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 5.4.0 recorded"
 
 # Agent status
 STATUS=".agentx/state/agent-status.json"
@@ -294,7 +300,7 @@ fi
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} AgentX v5.3.1 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} AgentX v5.4.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.agentx/agentx.sh help"
@@ -306,4 +312,16 @@ if [ -n "$INSTALL_PATH" ]; then
  echo -e "${D}  Set 'agentx.rootPath' in .vscode/settings.json to '$(pwd)'${N}"
  echo -e "${D}  or the extension will auto-detect up to 2 levels deep.${N}"
 fi
+
+# Copilot prerequisite reminder
+HAS_COPILOT=false
+if command -v code &>/dev/null; then
+ EXTS=$(code --list-extensions 2>/dev/null || true)
+ echo "$EXTS" | grep -qi "github.copilot" && HAS_COPILOT=true
+fi
+if [ "$HAS_COPILOT" = "false" ]; then
+ echo -e "${Y} [NOTE] GitHub Copilot + Copilot Chat extensions are required for agent interactions.${N}"
+ echo -e "${D}  Install: code --install-extension github.copilot && code --install-extension github.copilot-chat${N}"
+fi
+
 echo ""

@@ -28,6 +28,11 @@ export class Uri {
   static parse(value: string): Uri {
     return new Uri('file', '', value);
   }
+
+  static joinPath(base: Uri, ...pathSegments: string[]): Uri {
+    const joined = [base.path, ...pathSegments].join('/');
+    return new Uri(base.scheme, base.authority, joined);
+  }
 }
 
 // --- EventEmitter --------------------------------------------------------
@@ -99,6 +104,15 @@ export const workspace = {
 
   onDidChangeConfiguration: (_listener: unknown) => ({ dispose: () => { /* noop */ } }),
   onDidChangeWorkspaceFolders: (_listener: unknown) => ({ dispose: () => { /* noop */ } }),
+
+  openTextDocument: async (_uri: unknown) => ({ getText: () => '' }),
+
+  createFileSystemWatcher: (_pattern: string) => ({
+    onDidCreate: () => ({ dispose: () => { /* noop */ } }),
+    onDidChange: () => ({ dispose: () => { /* noop */ } }),
+    onDidDelete: () => ({ dispose: () => { /* noop */ } }),
+    dispose: () => { /* noop */ },
+  }),
 };
 
 /** Test helper: set a mock config value. */
@@ -141,6 +155,71 @@ export const window = {
     show: () => { /* noop */ },
     dispose: () => { /* noop */ },
   }),
+  withProgress: async (_options: unknown, task: (progress: unknown) => Promise<unknown>) => {
+    return task({ report: () => { /* noop */ } });
+  },
+  createTerminal: (_options?: unknown) => ({
+    show: () => { /* noop */ },
+    sendText: (_text: string) => { /* noop */ },
+    dispose: () => { /* noop */ },
+  }),
+  createStatusBarItem: (_alignment?: unknown, _priority?: number) => ({
+    text: '',
+    tooltip: '',
+    command: '',
+    show: () => { /* noop */ },
+    dispose: () => { /* noop */ },
+  }),
+  showTextDocument: async (_doc: unknown) => undefined,
+};
+
+// --- ProgressLocation enum -----------------------------------------------
+
+export enum ProgressLocation {
+  SourceControl = 1,
+  Window = 10,
+  Notification = 15,
+}
+
+// --- QuickPickItemKind enum ----------------------------------------------
+
+export enum QuickPickItemKind {
+  Separator = -1,
+  Default = 0,
+}
+
+// --- ConfigurationTarget enum --------------------------------------------
+
+export enum ConfigurationTarget {
+  Global = 1,
+  Workspace = 2,
+  WorkspaceFolder = 3,
+}
+
+// --- Extensions stubs ----------------------------------------------------
+
+const _extensionMap: Record<string, unknown> = {};
+
+export const extensions = {
+  getExtension: (id: string) => _extensionMap[id] ?? undefined,
+};
+
+/** Test helper: register a mock extension. */
+export function __setExtension(id: string, ext: unknown): void {
+  _extensionMap[id] = ext;
+}
+
+/** Test helper: clear all mock extensions. */
+export function __clearExtensions(): void {
+  for (const k of Object.keys(_extensionMap)) {
+    delete _extensionMap[k];
+  }
+}
+
+// --- Env stubs -----------------------------------------------------------
+
+export const env = {
+  openExternal: async (_uri: unknown) => true,
 };
 
 // --- Commands stubs ------------------------------------------------------

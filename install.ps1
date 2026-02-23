@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX v5.3.1 - Download, copy, configure.
+ Install AgentX v5.4.0 - Download, copy, configure.
 
 .PARAMETER Mode
  github - Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
@@ -65,6 +65,18 @@ if ($Mode -and $Mode -notin @("github", "local")) {
  return
 }
 
+# -- PowerShell version check --
+# Minimum: PowerShell 5.1 (Windows built-in). Recommended: PowerShell 7+.
+if ($PSVersionTable.PSVersion.Major -lt 5) {
+ Write-Host "[X] PowerShell 5.1+ is required. Current version: $($PSVersionTable.PSVersion)" -ForegroundColor Red
+ Write-Host " Install PowerShell 7+: https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell" -ForegroundColor Yellow
+ return
+}
+if ($PSVersionTable.PSVersion.Major -eq 5) {
+ Write-Host "[--] Windows PowerShell $($PSVersionTable.PSVersion) detected. PowerShell 7+ recommended." -ForegroundColor Yellow
+ Write-Host "  Install: winget install Microsoft.PowerShell" -ForegroundColor DarkGray
+}
+
 # Auto-detect piped execution (irm | iex) - used to skip interactive prompts
 $isPiped = -not $MyInvocation.MyCommand.Path
 
@@ -91,7 +103,7 @@ try {
 # -- Banner ----------------------------------------------
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Cyan
-Write-Host "| AgentX v5.3.1 - AI Agent Orchestration |" -ForegroundColor Cyan
+Write-Host "| AgentX v5.4.0 - AI Agent Orchestration |" -ForegroundColor Cyan
 Write-Host "+===================================================+" -ForegroundColor Cyan
 Write-Host ""
 
@@ -179,12 +191,12 @@ Write-Host "[3] Configuring runtime..." -ForegroundColor Cyan
 # Version tracking
 $versionFile = ".agentx/version.json"
 @{
- version = "5.3.1"
+ version = "5.4.0"
  mode = $Mode
  installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 5.3.1 recorded"
+Write-OK "Version 5.4.0 recorded"
 
 # Agent status
 $statusFile = ".agentx/state/agent-status.json"
@@ -340,7 +352,7 @@ if (-not $NoSetup) {
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
-Write-Host " AgentX v5.3.1 installed! [$displayMode]" -ForegroundColor Green
+Write-Host " AgentX v5.4.0 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White
@@ -354,6 +366,18 @@ if ($Path) {
  Write-Host "  Set 'agentx.rootPath' in .vscode/settings.json to '$((Resolve-Path .).Path)'" -ForegroundColor DarkGray
  Write-Host "  or the extension will auto-detect up to 2 levels deep." -ForegroundColor DarkGray
 }
+
+# Copilot prerequisite reminder
+$hasCopilot = $false
+try {
+ $extensions = code --list-extensions 2>$null
+ if ($extensions -match 'github\.copilot') { $hasCopilot = $true }
+} catch {}
+if (-not $hasCopilot) {
+ Write-Host " [NOTE] GitHub Copilot + Copilot Chat extensions are required for agent interactions." -ForegroundColor Yellow
+ Write-Host "  Install: code --install-extension github.copilot && code --install-extension github.copilot-chat" -ForegroundColor DarkGray
+}
+
 Write-Host ""
 
 } catch {

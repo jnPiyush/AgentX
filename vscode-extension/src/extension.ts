@@ -14,6 +14,7 @@ import { clearInstructionCache } from './chat/agentContextLoader';
 import {
  runSetupWizard,
  runStartupCheck,
+ runCriticalPreCheck,
  checkCopilotChatConfig,
  applyCopilotConfigFixes,
 } from './commands/setupWizard';
@@ -86,7 +87,8 @@ export function activate(context: vscode.ExtensionContext) {
  setTimeout(async () => {
  try {
  const mode = agentxContext.getMode();
- await runStartupCheck(mode);
+ // Run critical pre-check - auto-installs missing required deps
+ await runCriticalPreCheck(mode, /* blocking */ false);
  // Also check Copilot Chat configuration
  const suggestions = await checkCopilotChatConfig();
  if (suggestions.length > 0) {

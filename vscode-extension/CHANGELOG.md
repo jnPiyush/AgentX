@@ -1,5 +1,22 @@
 # Changelog
 
+## 5.4.0 - 2026-02-22
+
+### Added
+
+- Critical pre-check with auto-install for missing required dependencies
+- PowerShell shell fallback (`pwsh` -> `powershell.exe`) for Windows compatibility
+- Pre-flight Copilot extension check before initialization
+- Modal blocking dialog for dependency install during initialization
+- Re-check flow after dependency installation
+- 12 new unit tests for pre-check scenarios
+- Expanded VS Code mock with `withProgress`, `createTerminal`, `extensions` stubs
+
+### Changed
+
+- Startup check auto-offers install instead of dismissable warning
+- `execShell()` uses auto-detected shell instead of hardcoded `pwsh`
+
 ## 5.3.0 - 2026-02-21
 
 ### Added

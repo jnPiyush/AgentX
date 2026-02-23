@@ -40,6 +40,8 @@ const fs = __importStar(require("fs"));
 const https = __importStar(require("https"));
 const http = __importStar(require("http"));
 const initWizardPanel_1 = require("../views/initWizardPanel");
+const shell_1 = require("../utils/shell");
+const setupWizard_1 = require("./setupWizard");
 const BRANCH = 'master';
 const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
 /** Essential directories and files to extract (everything else is skipped). */
@@ -81,6 +83,13 @@ function registerInitializeCommand(context, agentx) {
         }
         if (!root) {
             vscode.window.showErrorMessage('AgentX: Open a workspace folder first.');
+            return;
+        }
+        // Pre-flight: check all required dependencies and auto-install if missing
+        const modeConfig = vscode.workspace.getConfiguration('agentx').get('mode', 'local');
+        const preCheck = await (0, setupWizard_1.runCriticalPreCheck)(modeConfig, /* blocking */ true);
+        if (!preCheck.passed) {
+            // User chose not to install or install is pending reload
             return;
         }
         // Check if already initialized
@@ -230,7 +239,7 @@ function registerInitializeCommand(context, agentx) {
                 // Version tracking
                 const versionFile = path.join(root, '.agentx', 'version.json');
                 fs.writeFileSync(versionFile, JSON.stringify({
-                    version: '5.3.1',
+                    version: '5.4.0',
                     mode: mode.label,
                     installedAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
@@ -380,7 +389,13 @@ function downloadFile(url, dest) {
 async function extractZip(zipPath, destDir) {
     fs.mkdirSync(destDir, { recursive: true });
     if (process.platform === 'win32') {
-        // PowerShell Expand-Archive is available on all supported Windows versions
+        // Use the best available PowerShell (pwsh > powershell.exe)
+        const resolved = (0, shell_1.resolveWindowsShell)();
+        if (!resolved) {
+            throw new Error('PowerShell is not installed. Install PowerShell 7+ (pwsh) from '
+                + 'https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell '
+                + 'or ensure Windows PowerShell (powershell.exe) is available.');
+        }
         const { execShell: exec } = await Promise.resolve().then(() => __importStar(require('../utils/shell')));
         await exec(`Expand-Archive -Path "${zipPath}" -DestinationPath "${destDir}" -Force`, path.dirname(zipPath), 'pwsh');
     }

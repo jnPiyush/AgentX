@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { AgentXContext } from '../agentxContext';
 import { execShell } from '../utils/shell';
+import { runCriticalPreCheck } from '../commands/setupWizard';
 
 // -----------------------------------------------------------------------
 // Types for WebView <-> Extension messaging
@@ -196,6 +197,19 @@ export class InitWizardPanel {
       return;
     }
 
+    // Pre-flight: check all required dependencies and auto-install if missing
+    this._postMessage({ type: 'progress', step: 'Checking dependencies...', percent: 2 });
+    const preCheck = await runCriticalPreCheck(msg.mode, /* blocking */ true);
+    if (!preCheck.passed) {
+      this._postMessage({
+        type: 'complete',
+        success: false,
+        message: 'Required dependencies are missing. Install them and try again.',
+        mode: msg.mode,
+      });
+      return;
+    }
+
     const tmpDir = path.join(root, '.agentx-install-tmp');
     const rawDir = path.join(root, '.agentx-install-raw');
     const zipFile = path.join(root, '.agentx-install.zip');
@@ -248,7 +262,7 @@ export class InitWizardPanel {
       // Version tracking
       const versionFile = path.join(root, '.agentx', 'version.json');
       fs.writeFileSync(versionFile, JSON.stringify({
-        version: '5.3.1',
+        version: '5.4.0',
         mode: msg.mode,
         installedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
