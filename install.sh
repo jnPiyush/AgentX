@@ -313,15 +313,4 @@ if [ -n "$INSTALL_PATH" ]; then
  echo -e "${D}  or the extension will auto-detect up to 2 levels deep.${N}"
 fi
 
-# Copilot prerequisite reminder
-HAS_COPILOT=false
-if command -v code &>/dev/null; then
- EXTS=$(code --list-extensions 2>/dev/null || true)
- echo "$EXTS" | grep -qi "github.copilot" && HAS_COPILOT=true
-fi
-if [ "$HAS_COPILOT" = "false" ]; then
- echo -e "${Y} [NOTE] GitHub Copilot + Copilot Chat extensions are required for agent interactions.${N}"
- echo -e "${D}  Install: code --install-extension github.copilot && code --install-extension github.copilot-chat${N}"
-fi
-
 echo ""

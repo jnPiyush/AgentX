@@ -52,8 +52,6 @@ function makeHealthyReport() {
             { name: 'Git', found: true, version: '2.43.0', severity: 'required', message: 'Git 2.43.0 detected.' },
             { name: 'PowerShell', found: true, version: '7.4.1', severity: 'required', message: 'PowerShell 7.4.1 detected.' },
             { name: 'Node.js', found: true, version: '20.11.0', severity: 'required', message: 'Node.js 20.11.0 detected.' },
-            { name: 'GitHub Copilot', found: true, version: 'installed', severity: 'required', message: 'GitHub Copilot is installed.' },
-            { name: 'GitHub Copilot Chat', found: true, version: 'installed', severity: 'required', message: 'GitHub Copilot Chat is installed.' },
             { name: 'GitHub CLI (gh)', found: false, version: '', severity: 'optional', message: 'GitHub CLI not installed.' },
         ],
         healthy: true,
@@ -68,8 +66,6 @@ function makeUnhealthyReport(missingNames) {
         { name: 'Git', found: true, version: '2.43.0', severity: 'required', message: 'Git 2.43.0 detected.', fixCommand: 'winget install Git.Git', fixUrl: 'https://git-scm.com/downloads' },
         { name: 'PowerShell', found: true, version: '7.4.1', severity: 'required', message: 'PowerShell 7.4.1 detected.', fixCommand: 'winget install Microsoft.PowerShell', fixUrl: 'https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell' },
         { name: 'Node.js', found: true, version: '20.11.0', severity: 'required', message: 'Node.js 20.11.0 detected.', fixCommand: 'winget install OpenJS.NodeJS.LTS', fixUrl: 'https://nodejs.org/' },
-        { name: 'GitHub Copilot', found: true, version: 'installed', severity: 'required', message: 'GitHub Copilot is installed.', fixCommand: 'code --install-extension github.copilot' },
-        { name: 'GitHub Copilot Chat', found: true, version: 'installed', severity: 'required', message: 'GitHub Copilot Chat is installed.', fixCommand: 'code --install-extension github.copilot-chat' },
         { name: 'GitHub CLI (gh)', found: true, version: '2.40.0', severity: 'optional', message: 'GitHub CLI 2.40.0 detected.', fixCommand: 'winget install GitHub.cli' },
     ];
     // Mark the requested deps as missing
@@ -121,33 +117,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
         sinon.assert.notCalled(showWarningStub);
     });
     // ---------------------------------------------------------------
-    // Scenario 2: Missing VS Code extensions -> user picks Install All
-    //   -> installs via commands API -> offers reload
-    // ---------------------------------------------------------------
-    it('should install missing VS Code extensions when user picks Install All', async () => {
-        const report = makeUnhealthyReport(['GitHub Copilot', 'GitHub Copilot Chat']);
-        checkAllStub.resolves(report);
-        // User picks "Install All" on the modal
-        showWarningStub.resolves('Install All');
-        // Install commands succeed
-        execCommandStub.resolves(undefined);
-        // User picks "Later" on the reload prompt, then "Skip" on re-check
-        showInfoStub
-            .onFirstCall().resolves(undefined) // "Installed X" info
-            .onSecondCall().resolves(undefined) // "Installed Y" info
-            .onThirdCall().resolves('Later') // reload prompt
-            .onCall(3).resolves('Skip'); // re-check prompt
-        const result = await (0, setupWizard_1.runCriticalPreCheck)('local', true);
-        // Should have called executeCommand to install both extensions
-        const installCalls = execCommandStub.getCalls().filter(c => c.args[0] === 'workbench.extensions.installExtension');
-        assert_1.strict.strictEqual(installCalls.length, 2);
-        assert_1.strict.ok(installCalls.some(c => c.args[1] === 'github.copilot'));
-        assert_1.strict.ok(installCalls.some(c => c.args[1] === 'github.copilot-chat'));
-        // Result is passed=false because user didn't re-check
-        assert_1.strict.strictEqual(result.passed, false);
-    });
-    // ---------------------------------------------------------------
-    // Scenario 3: Missing CLI tool -> user picks Install All
+    // Scenario 2: Missing CLI tool -> user picks Install All
     //   -> opens terminal, polls until tool available -> passed=true
     // ---------------------------------------------------------------
     it('should open a terminal for missing external CLI tools and poll for install', async () => {
@@ -186,30 +156,32 @@ describe('setupWizard - runCriticalPreCheck', () => {
         }
     });
     // ---------------------------------------------------------------
-    // Scenario 4: Missing deps -> user picks Install All -> re-check
+    // Scenario 3: Missing deps -> user picks Install All -> re-check
     //   passes -> returned passed=true
     // ---------------------------------------------------------------
     it('should return passed=true after successful re-check', async () => {
-        const unhealthy = makeUnhealthyReport(['GitHub Copilot']);
+        const unhealthy = makeUnhealthyReport(['Node.js']);
         const healthy = makeHealthyReport();
-        // First call: unhealthy. Second call (re-check): healthy.
+        // First call: unhealthy. Second call (poll): healthy.
         checkAllStub.onFirstCall().resolves(unhealthy);
         checkAllStub.onSecondCall().resolves(healthy);
+        checkAllStub.resolves(healthy);
         // User picks "Install All"
         showWarningStub.resolves('Install All');
-        execCommandStub.resolves(undefined);
-        // Info messages: "Installed...", reload "Later", re-check "Re-check Now"
-        showInfoStub
-            .onFirstCall().resolves(undefined) // installed info
-            .onSecondCall().resolves('Later') // reload prompt
-            .onCall(2).resolves('Re-check Now') // offer re-check
-            .onCall(3).resolves(undefined); // "all present" info
+        // Mock terminal
+        const terminalSendTextSpy = sinon.spy();
+        createTerminalStub.returns({
+            show: sinon.spy(),
+            sendText: terminalSendTextSpy,
+            dispose: sinon.spy(),
+        });
+        showInfoStub.resolves(undefined);
         const result = await (0, setupWizard_1.runCriticalPreCheck)('local', true);
         assert_1.strict.strictEqual(result.passed, true);
         assert_1.strict.strictEqual(result.report.healthy, true);
     });
     // ---------------------------------------------------------------
-    // Scenario 5: Missing deps -> user picks "Open Setup Docs"
+    // Scenario 4: Missing deps -> user picks "Open Setup Docs"
     //   -> returns passed=false
     // ---------------------------------------------------------------
     it('should return passed=false when user picks Open Setup Docs', async () => {
@@ -220,11 +192,11 @@ describe('setupWizard - runCriticalPreCheck', () => {
         assert_1.strict.strictEqual(result.passed, false);
     });
     // ---------------------------------------------------------------
-    // Scenario 6: Missing deps -> user dismisses the dialog
+    // Scenario 5: Missing deps -> user dismisses the dialog
     //   -> returns passed=false
     // ---------------------------------------------------------------
     it('should return passed=false when user dismisses the dialog', async () => {
-        const report = makeUnhealthyReport(['Git', 'GitHub Copilot']);
+        const report = makeUnhealthyReport(['Git']);
         checkAllStub.resolves(report);
         // User dismisses (undefined return)
         showWarningStub.resolves(undefined);
@@ -232,7 +204,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
         assert_1.strict.strictEqual(result.passed, false);
     });
     // ---------------------------------------------------------------
-    // Scenario 7: Non-blocking mode uses non-modal warning
+    // Scenario 6: Non-blocking mode uses non-modal warning
     // ---------------------------------------------------------------
     it('should use non-modal warning in non-blocking mode', async () => {
         const report = makeUnhealthyReport(['Git']);
@@ -246,7 +218,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
         assert_1.strict.ok(typeof call.args[1] === 'string', 'non-blocking mode should not pass modal options object');
     });
     // ---------------------------------------------------------------
-    // Scenario 8: Blocking mode uses modal dialog with detail
+    // Scenario 7: Blocking mode uses modal dialog with detail
     // ---------------------------------------------------------------
     it('should use modal dialog in blocking mode', async () => {
         const report = makeUnhealthyReport(['Git']);
@@ -258,47 +230,42 @@ describe('setupWizard - runCriticalPreCheck', () => {
         assert_1.strict.ok(typeof call.args[1] === 'object' && call.args[1].modal === true, 'blocking mode should pass { modal: true } options');
     });
     // ---------------------------------------------------------------
-    // Scenario 9: Mixed missing (extensions + CLI) -> installs both
-    //  Extensions via API, CLI via terminal + polling
+    // Scenario 8: Mixed missing CLI tools -> installs via terminal + polling
     // ---------------------------------------------------------------
-    it('should handle mixed missing deps (extensions + CLI tools)', async () => {
+    it('should handle mixed missing CLI tools', async () => {
         const clock = sinon.useFakeTimers({ toFake: ['setTimeout'] });
         try {
-            const unhealthyReport = makeUnhealthyReport(['Git', 'GitHub Copilot']);
-            // After polling, external tools are found but extension still needs reload
-            const extMissingReport = makeUnhealthyReport(['GitHub Copilot']);
+            const unhealthyReport = makeUnhealthyReport(['Git', 'Node.js']);
+            const healthyReport = makeHealthyReport();
             checkAllStub.onFirstCall().resolves(unhealthyReport);
-            // Polling check: Git now found but Copilot still needs reload
-            checkAllStub.onSecondCall().resolves(extMissingReport);
-            checkAllStub.resolves(extMissingReport);
+            // Polling check: all tools now found
+            checkAllStub.onSecondCall().resolves(healthyReport);
+            checkAllStub.resolves(healthyReport);
             showWarningStub.resolves('Install All');
-            execCommandStub.resolves(undefined);
             const terminalSendTextSpy = sinon.spy();
             createTerminalStub.returns({
                 show: sinon.spy(),
                 sendText: terminalSendTextSpy,
                 dispose: sinon.spy(),
             });
-            // Info messages: "Installed Copilot", reload "Later", re-check "Skip"
-            showInfoStub.resolves('Skip');
+            showInfoStub.resolves(undefined);
             const resultPromise = (0, setupWizard_1.runCriticalPreCheck)('local', true);
             // Advance timer for the polling interval
             await clock.tickAsync(5_000);
             const result = await resultPromise;
-            // VS Code extension installed via API
-            const installCalls = execCommandStub.getCalls().filter(c => c.args[0] === 'workbench.extensions.installExtension');
-            assert_1.strict.strictEqual(installCalls.length, 1);
-            assert_1.strict.strictEqual(installCalls[0].args[1], 'github.copilot');
-            // CLI tool installed via terminal
+            // CLI tools installed via terminal
             sinon.assert.calledOnce(createTerminalStub);
             assert_1.strict.ok(terminalSendTextSpy.getCalls().some((c) => String(c.args[0]).includes('Installing Git')));
+            assert_1.strict.ok(terminalSendTextSpy.getCalls().some((c) => String(c.args[0]).includes('Installing Node.js')));
+            // Polling detected tools are now available -> passed
+            assert_1.strict.strictEqual(result.passed, true);
         }
         finally {
             clock.restore();
         }
     });
     // ---------------------------------------------------------------
-    // Scenario 9b: GitHub mode - missing gh CLI -> polls successfully
+    // Scenario 8b: GitHub mode - missing gh CLI -> polls successfully
     // ---------------------------------------------------------------
     it('should poll for gh CLI in github mode and return passed=true', async () => {
         const clock = sinon.useFakeTimers({ toFake: ['setTimeout'] });
@@ -340,7 +307,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
         }
     });
     // ---------------------------------------------------------------
-    // Scenario 9c: Polling times out -> returns passed=false
+    // Scenario 8c: Polling times out -> returns passed=false
     // ---------------------------------------------------------------
     it('should return passed=false when polling times out', async () => {
         const clock = sinon.useFakeTimers({ toFake: ['setTimeout'] });
@@ -375,22 +342,6 @@ describe('setupWizard - runCriticalPreCheck', () => {
         finally {
             clock.restore();
         }
-    });
-    // ---------------------------------------------------------------
-    // Scenario 10: Extension install failure shows error
-    // ---------------------------------------------------------------
-    it('should show error when extension install fails', async () => {
-        const report = makeUnhealthyReport(['GitHub Copilot']);
-        checkAllStub.resolves(report);
-        showWarningStub.resolves('Install All');
-        execCommandStub.rejects(new Error('Marketplace timeout'));
-        // re-check "Skip"
-        showInfoStub.resolves('Skip');
-        await (0, setupWizard_1.runCriticalPreCheck)('local', true);
-        // Should have shown an error message about the failure
-        sinon.assert.called(showErrorStub);
-        const errorCall = showErrorStub.getCall(0);
-        assert_1.strict.ok(String(errorCall.args[0]).includes('Failed to install'), 'error message should mention install failure');
     });
 });
 // -----------------------------------------------------------------

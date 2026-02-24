@@ -31,13 +31,4 @@ export declare function runStartupCheck(mode: string): Promise<void>;
  *   are satisfied (either already present or successfully installed).
  */
 export declare function runCriticalPreCheck(mode: string, blocking?: boolean): Promise<PreCheckResult>;
-/**
- * Verify that key Copilot Chat settings are configured for AgentX.
- * Returns a list of suggested setting changes.
- */
-export declare function checkCopilotChatConfig(): Promise<string[]>;
-/**
- * Apply suggested Copilot Chat configuration fixes.
- */
-export declare function applyCopilotConfigFixes(suggestions: string[]): Promise<void>;
 //# sourceMappingURL=setupWizard.d.ts.map

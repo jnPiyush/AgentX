@@ -15,8 +15,6 @@ import {
  runSetupWizard,
  runStartupCheck,
  runCriticalPreCheck,
- checkCopilotChatConfig,
- applyCopilotConfigFixes,
 } from './commands/setupWizard';
 
 let agentxContext: AgentXContext;
@@ -89,11 +87,6 @@ export function activate(context: vscode.ExtensionContext) {
  const mode = agentxContext.getMode();
  // Run critical pre-check - auto-installs missing required deps
  await runCriticalPreCheck(mode, /* blocking */ false);
- // Also check Copilot Chat configuration
- const suggestions = await checkCopilotChatConfig();
- if (suggestions.length > 0) {
-  await applyCopilotConfigFixes(suggestions);
- }
  } catch (err) {
  // Startup check should never crash the extension
  console.warn('AgentX: Startup environment check failed:', err);

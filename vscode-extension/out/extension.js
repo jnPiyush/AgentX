@@ -105,11 +105,6 @@ function activate(context) {
                 const mode = agentxContext.getMode();
                 // Run critical pre-check - auto-installs missing required deps
                 await (0, setupWizard_1.runCriticalPreCheck)(mode, /* blocking */ false);
-                // Also check Copilot Chat configuration
-                const suggestions = await (0, setupWizard_1.checkCopilotChatConfig)();
-                if (suggestions.length > 0) {
-                    await (0, setupWizard_1.applyCopilotConfigFixes)(suggestions);
-                }
             }
             catch (err) {
                 // Startup check should never crash the extension

@@ -36,8 +36,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.runSetupWizard = runSetupWizard;
 exports.runStartupCheck = runStartupCheck;
 exports.runCriticalPreCheck = runCriticalPreCheck;
-exports.checkCopilotChatConfig = checkCopilotChatConfig;
-exports.applyCopilotConfigFixes = applyCopilotConfigFixes;
 const vscode = __importStar(require("vscode"));
 const dependencyChecker_1 = require("../utils/dependencyChecker");
 // -----------------------------------------------------------------------
@@ -121,68 +119,41 @@ async function runCriticalPreCheck(mode, blocking = true) {
         console.log('AgentX: All required dependencies found.');
         return { passed: true, report };
     }
-    // -- 2. Separate missing into VS Code extensions vs external tools -------
+    // -- 2. Collect missing required CLI tool dependencies ------------------
     const missing = report.results.filter(r => r.severity === 'required' && !r.found);
     const missingNames = missing.map(r => r.name).join(', ');
-    const vsExtensions = missing.filter(r => r.fixCommand?.startsWith('code --install-extension'));
-    const externalTools = missing.filter(r => r.fixCommand && !r.fixCommand.startsWith('code --install-extension'));
     // -- 3. Build the prompt -------------------------------------------------
-    const extLabel = vsExtensions.length
-        ? `${vsExtensions.length} VS Code extension(s)`
-        : '';
-    const toolLabel = externalTools.length
-        ? `${externalTools.length} CLI tool(s)`
-        : '';
-    const parts = [extLabel, toolLabel].filter(Boolean).join(' and ');
     const promptMsg = `AgentX is missing ${missing.length} required dependencies: ${missingNames}.\n`
-        + `Install ${parts} now?`;
+        + `Install ${missing.length} CLI tool(s) now?`;
     // Modal gives "Install All" + "Open Setup Docs" + "Skip" (cancel)
     const action = blocking
         ? await vscode.window.showWarningMessage(promptMsg, { modal: true, detail: missing.map(r => `- ${r.name}: ${r.message}`).join('\n') }, 'Install All', 'Open Setup Docs')
         : await vscode.window.showWarningMessage(`AgentX: Missing required dependencies: ${missingNames}`, 'Install All', 'Open Setup Docs', 'Dismiss');
     // -- 4. Handle user choice -----------------------------------------------
     if (action === 'Install All') {
-        let needsReload = false;
-        // 4a. VS Code extensions - install via API
-        for (const ext of vsExtensions) {
-            const extId = ext.fixCommand.replace('code --install-extension ', '').trim();
-            try {
-                await vscode.commands.executeCommand('workbench.extensions.installExtension', extId);
-                vscode.window.showInformationMessage(`Installed ${ext.name}.`);
-                needsReload = true;
-            }
-            catch (err) {
-                const msg = err instanceof Error ? err.message : String(err);
-                vscode.window.showErrorMessage(`Failed to install ${ext.name}: ${msg}`);
-            }
-        }
-        // 4b. External tools - install via a terminal
-        if (externalTools.length > 0) {
+        // Install CLI tools via a terminal
+        const toolsWithFix = missing.filter(r => r.fixCommand);
+        if (toolsWithFix.length > 0) {
             const terminal = vscode.window.createTerminal({
                 name: 'AgentX: Install Dependencies',
                 shellPath: process.platform === 'win32' ? 'powershell.exe' : undefined,
             });
             terminal.show();
-            for (const tool of externalTools) {
+            for (const tool of toolsWithFix) {
                 if (tool.fixCommand) {
                     terminal.sendText(`Write-Host '--- Installing ${tool.name} ---'; ${tool.fixCommand}`);
                 }
             }
             terminal.sendText('Write-Host "--- All installations complete. You may close this terminal. ---"');
-            // Poll until external tools become available (or user cancels / timeout)
-            const toolNames = externalTools.map(t => t.name);
+            // Poll until tools become available (or user cancels / timeout)
+            const toolNames = toolsWithFix.map(t => t.name);
             const toolsReady = await pollForExternalTools(mode, toolNames);
             if (toolsReady) {
-                // External tools installed - if no VS Code extensions need reload
-                // we can verify and return immediately.
-                if (!needsReload) {
-                    const freshReport = await (0, dependencyChecker_1.checkAllDependencies)(mode);
-                    if (freshReport.healthy) {
-                        vscode.window.showInformationMessage('AgentX: All required dependencies are now installed.');
-                        return { passed: true, report: freshReport };
-                    }
+                const freshReport = await (0, dependencyChecker_1.checkAllDependencies)(mode);
+                if (freshReport.healthy) {
+                    vscode.window.showInformationMessage('AgentX: All required dependencies are now installed.');
+                    return { passed: true, report: freshReport };
                 }
-                // If needsReload, fall through to step 4c (reload prompt)
             }
             else {
                 // Polling timed out or was cancelled
@@ -191,15 +162,7 @@ async function runCriticalPreCheck(mode, blocking = true) {
                 return { passed: false, report };
             }
         }
-        // 4c. Prompt for reload / re-check
-        if (needsReload) {
-            const reload = await vscode.window.showInformationMessage('VS Code extensions were installed. Reload window to activate them?', 'Reload Window', 'Later');
-            if (reload === 'Reload Window') {
-                vscode.commands.executeCommand('workbench.action.reloadWindow');
-                return { passed: false, report }; // reload in progress
-            }
-        }
-        // 4d. Offer a re-check
+        // Offer a re-check
         const recheck = await vscode.window.showInformationMessage('Run the dependency check again to verify everything is installed?', 'Re-check Now', 'Skip');
         if (recheck === 'Re-check Now') {
             const freshReport = await (0, dependencyChecker_1.checkAllDependencies)(mode);
@@ -264,8 +227,7 @@ async function pollForExternalTools(mode, toolNames) {
             const freshReport = await (0, dependencyChecker_1.checkAllDependencies)(mode);
             const stillMissing = freshReport.results.filter(r => r.severity === 'required'
                 && !r.found
-                && r.fixCommand
-                && !r.fixCommand.startsWith('code --install-extension'));
+                && r.fixCommand);
             if (stillMissing.length === 0) {
                 return true;
             }
@@ -355,7 +317,7 @@ async function showEnvironmentReport(report) {
 // Fix actions
 // -----------------------------------------------------------------------
 /**
- * Fix a single missing dependency - either run a terminal command or open
+ * Fix a single missing dependency - run a terminal command or open
  * a browser to the download page.
  */
 async function fixSingleDependency(dep) {
@@ -363,17 +325,7 @@ async function fixSingleDependency(dep) {
         vscode.window.showInformationMessage(`${dep.name} is already installed (${dep.version}).`);
         return;
     }
-    // For VS Code extensions, install directly via the API
-    if (dep.fixCommand?.startsWith('code --install-extension')) {
-        const extId = dep.fixCommand.replace('code --install-extension ', '').trim();
-        const action = await vscode.window.showInformationMessage(`Install ${dep.name} extension?`, 'Install', 'Cancel');
-        if (action === 'Install') {
-            await vscode.commands.executeCommand('workbench.extensions.installExtension', extId);
-            vscode.window.showInformationMessage(`${dep.name} installation started. You may need to reload VS Code.`);
-        }
-        return;
-    }
-    // For external tools, offer terminal install or browser download
+    // Offer terminal install or browser download
     const choices = [];
     if (dep.fixCommand) {
         choices.push('Install via Terminal');
@@ -410,20 +362,7 @@ async function fixAllMissing(report) {
         return;
     }
     // Separate VS Code extensions from external tools
-    const vsExtensions = missing.filter(r => r.fixCommand?.startsWith('code --install-extension'));
-    const externalTools = missing.filter(r => r.fixCommand && !r.fixCommand.startsWith('code --install-extension'));
-    // Install VS Code extensions directly
-    for (const ext of vsExtensions) {
-        const extId = ext.fixCommand.replace('code --install-extension ', '').trim();
-        try {
-            await vscode.commands.executeCommand('workbench.extensions.installExtension', extId);
-            vscode.window.showInformationMessage(`Installed ${ext.name}.`);
-        }
-        catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            vscode.window.showErrorMessage(`Failed to install ${ext.name}: ${msg}`);
-        }
-    }
+    const externalTools = missing.filter(r => r.fixCommand);
     // Install external tools via a single terminal
     if (externalTools.length > 0) {
         const terminal = vscode.window.createTerminal({
@@ -440,59 +379,6 @@ async function fixAllMissing(report) {
         }
         terminal.sendText('echo "--- All installations complete. Please restart your terminal and re-run AgentX environment check. ---"');
         vscode.window.showInformationMessage('Installing dependencies in the terminal. Re-run the environment check after installations complete.');
-    }
-    // Remind about reload if extensions were installed
-    if (vsExtensions.length > 0) {
-        const reload = await vscode.window.showInformationMessage('VS Code extensions were installed. Reload window to activate them?', 'Reload Window', 'Later');
-        if (reload === 'Reload Window') {
-            vscode.commands.executeCommand('workbench.action.reloadWindow');
-        }
-    }
-}
-// -----------------------------------------------------------------------
-// Copilot Chat configuration check
-// -----------------------------------------------------------------------
-/**
- * Verify that key Copilot Chat settings are configured for AgentX.
- * Returns a list of suggested setting changes.
- */
-async function checkCopilotChatConfig() {
-    const suggestions = [];
-    const config = vscode.workspace.getConfiguration();
-    // Check that chat.agent.enabled is true (required for @agentx participant)
-    const agentEnabled = config.get('chat.agent.enabled');
-    if (agentEnabled === false) {
-        suggestions.push('"chat.agent.enabled" is disabled. AgentX requires agent mode in Copilot Chat.');
-    }
-    // Check GitHub Copilot is not disabled for the workspace
-    const copilotEnable = config.get('github.copilot.enable');
-    if (copilotEnable && copilotEnable['*'] === false) {
-        suggestions.push('"github.copilot.enable" has Copilot disabled for all languages. Enable it for AgentX to work.');
-    }
-    return suggestions;
-}
-/**
- * Apply suggested Copilot Chat configuration fixes.
- */
-async function applyCopilotConfigFixes(suggestions) {
-    if (suggestions.length === 0) {
-        return;
-    }
-    const action = await vscode.window.showWarningMessage(`AgentX detected ${suggestions.length} Copilot configuration issue(s):\n${suggestions.join('\n')}`, 'Auto-Fix Settings', 'Open Settings', 'Dismiss');
-    if (action === 'Auto-Fix Settings') {
-        const config = vscode.workspace.getConfiguration();
-        for (const s of suggestions) {
-            if (s.includes('chat.agent.enabled')) {
-                await config.update('chat.agent.enabled', true, vscode.ConfigurationTarget.Global);
-            }
-            if (s.includes('github.copilot.enable')) {
-                await config.update('github.copilot.enable', { '*': true }, vscode.ConfigurationTarget.Global);
-            }
-        }
-        vscode.window.showInformationMessage('AgentX: Copilot Chat settings have been updated.');
-    }
-    else if (action === 'Open Settings') {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'copilot');
     }
 }
 //# sourceMappingURL=setupWizard.js.map

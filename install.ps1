@@ -367,17 +367,6 @@ if ($Path) {
  Write-Host "  or the extension will auto-detect up to 2 levels deep." -ForegroundColor DarkGray
 }
 
-# Copilot prerequisite reminder
-$hasCopilot = $false
-try {
- $extensions = code --list-extensions 2>$null
- if ($extensions -match 'github\.copilot') { $hasCopilot = $true }
-} catch {}
-if (-not $hasCopilot) {
- Write-Host " [NOTE] GitHub Copilot + Copilot Chat extensions are required for agent interactions." -ForegroundColor Yellow
- Write-Host "  Install: code --install-extension github.copilot && code --install-extension github.copilot-chat" -ForegroundColor DarkGray
-}
-
 Write-Host ""
 
 } catch {
