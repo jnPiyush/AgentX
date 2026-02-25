@@ -108,16 +108,12 @@ async function loopStart(agentx: AgentXContext): Promise<void> {
  });
 
  try {
-  const args: string[] = [];
-  args.push(`-LoopAction start`);
-  args.push(`-Prompt "${prompt}"`);
-  args.push(`-MaxIterations ${maxIterStr}`);
-  args.push(`-CompletionCriteria "${criteria}"`);
+  const args: string[] = ['start', '-p', `"${prompt}"`, '-m', maxIterStr, '-c', `"${criteria}"`];
   if (issueStr && parseInt(issueStr, 10) > 0) {
-   args.push(`-Issue ${issueStr}`);
+   args.push('-i', issueStr);
   }
 
-  const output = await agentx.runCli('loop', {}, args);
+  const output = await agentx.runCli('loop', args);
   showLoopOutput('Loop Started', output);
  } catch (err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
@@ -127,7 +123,7 @@ async function loopStart(agentx: AgentXContext): Promise<void> {
 
 async function loopStatus(agentx: AgentXContext): Promise<void> {
  try {
-  const output = await agentx.runCli('loop', {}, ['-LoopAction status']);
+  const output = await agentx.runCli('loop', ['status']);
   showLoopOutput('Loop Status', output);
  } catch (err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
@@ -144,9 +140,8 @@ async function loopIterate(agentx: AgentXContext): Promise<void> {
  if (!summary) { return; }
 
  try {
-  const output = await agentx.runCli('loop', {}, [
-   `-LoopAction iterate`,
-   `-Summary "${summary}"`,
+  const output = await agentx.runCli('loop', [
+   'iterate', '-s', `"${summary}"`,
   ]);
   showLoopOutput('Loop Iteration', output);
  } catch (err: unknown) {
@@ -162,11 +157,11 @@ async function loopComplete(agentx: AgentXContext): Promise<void> {
  });
 
  try {
-  const args = ['-LoopAction complete'];
+  const args = ['complete'];
   if (summary) {
-   args.push(`-Summary "${summary}"`);
+   args.push('-s', `"${summary}"`);
   }
-  const output = await agentx.runCli('loop', {}, args);
+  const output = await agentx.runCli('loop', args);
   showLoopOutput('Loop Complete', output);
   vscode.window.showInformationMessage('Iterative loop completed successfully.');
  } catch (err: unknown) {
@@ -177,7 +172,7 @@ async function loopComplete(agentx: AgentXContext): Promise<void> {
 
 async function loopCancel(agentx: AgentXContext): Promise<void> {
  try {
-  const output = await agentx.runCli('loop', {}, ['-LoopAction cancel']);
+  const output = await agentx.runCli('loop', ['cancel']);
   showLoopOutput('Loop Cancelled', output);
   vscode.window.showInformationMessage('Iterative loop cancelled.');
  } catch (err: unknown) {

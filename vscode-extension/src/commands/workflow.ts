@@ -30,7 +30,7 @@ export function registerWorkflowCommand(
  if (!workflowType) { return; }
 
  try {
- const output = await agentx.runCli('workflow', { Type: workflowType.label });
+    const output = await agentx.runCli('workflow', [workflowType.label]);
  const channel = vscode.window.createOutputChannel('AgentX Workflow');
  channel.clear();
  channel.appendLine(`=== AgentX Workflow: ${workflowType.label} ===\n`);

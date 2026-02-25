@@ -225,12 +225,14 @@ class AgentXContext {
     /**
      * Execute an AgentX CLI subcommand and return stdout.
      *
-     * @param subcommand - The CLI subcommand (e.g. 'workflow', 'deps').
-     * @param namedArgs  - Key-value pairs formatted as `-Key value` for PowerShell
-     *                     or as positional `value` args for bash.
-     * @param extraArgs  - Raw argument strings appended as-is (for both shells).
-     */
-    async runCli(subcommand, namedArgs = {}, extraArgs = []) {
+      * Both the PowerShell and Bash wrappers delegate to `node cli.mjs`,
+      * so arguments are always passed in Node CLI format (positional args
+      * and short flags like `-t`, `-n`, etc.).
+      *
+      * @param subcommand - The CLI subcommand (e.g. 'workflow', 'deps').
+      * @param cliArgs    - Arguments passed directly to cli.mjs after the subcommand.
+      */
+    async runCli(subcommand, cliArgs = []) {
         const root = this.workspaceRoot;
         if (!root) {
             throw new Error('No workspace open.');
@@ -238,18 +240,7 @@ class AgentXContext {
         const cliPath = this.getCliCommand();
         const shell = this.getShell();
         const isPwsh = shell === 'pwsh' || (shell === 'auto' && process.platform === 'win32');
-        // Build argument string adapted to the target shell
-        const parts = [];
-        for (const [key, value] of Object.entries(namedArgs)) {
-            if (isPwsh) {
-                parts.push(`-${key} ${value}`);
-            }
-            else {
-                parts.push(value);
-            }
-        }
-        parts.push(...extraArgs);
-        const argStr = parts.length > 0 ? ' ' + parts.join(' ') : '';
+        const argStr = cliArgs.length > 0 ? ' ' + cliArgs.join(' ') : '';
         const cmd = isPwsh
             ? `& "${cliPath}" ${subcommand}${argStr}`
             : `bash "${cliPath}" ${subcommand}${argStr}`;

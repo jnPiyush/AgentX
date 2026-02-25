@@ -23,7 +23,7 @@ export function registerDepsCommand(
  if (!issueNumber) { return; }
 
  try {
- const output = await agentx.runCli('deps', { IssueNumber: issueNumber });
+    const output = await agentx.runCli('deps', [issueNumber]);
  const channel = vscode.window.createOutputChannel('AgentX Dependencies');
  channel.clear();
  channel.appendLine(`=== AgentX Dependencies: Issue #${issueNumber} ===\n`);

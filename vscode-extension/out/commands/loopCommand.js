@@ -133,15 +133,11 @@ async function loopStart(agentx) {
         placeHolder: 'e.g., 42',
     });
     try {
-        const args = [];
-        args.push(`-LoopAction start`);
-        args.push(`-Prompt "${prompt}"`);
-        args.push(`-MaxIterations ${maxIterStr}`);
-        args.push(`-CompletionCriteria "${criteria}"`);
+        const args = ['start', '-p', `"${prompt}"`, '-m', maxIterStr, '-c', `"${criteria}"`];
         if (issueStr && parseInt(issueStr, 10) > 0) {
-            args.push(`-Issue ${issueStr}`);
+            args.push('-i', issueStr);
         }
-        const output = await agentx.runCli('loop', {}, args);
+        const output = await agentx.runCli('loop', args);
         showLoopOutput('Loop Started', output);
     }
     catch (err) {
@@ -151,7 +147,7 @@ async function loopStart(agentx) {
 }
 async function loopStatus(agentx) {
     try {
-        const output = await agentx.runCli('loop', {}, ['-LoopAction status']);
+        const output = await agentx.runCli('loop', ['status']);
         showLoopOutput('Loop Status', output);
     }
     catch (err) {
@@ -169,9 +165,8 @@ async function loopIterate(agentx) {
         return;
     }
     try {
-        const output = await agentx.runCli('loop', {}, [
-            `-LoopAction iterate`,
-            `-Summary "${summary}"`,
+        const output = await agentx.runCli('loop', [
+            'iterate', '-s', `"${summary}"`,
         ]);
         showLoopOutput('Loop Iteration', output);
     }
@@ -186,11 +181,11 @@ async function loopComplete(agentx) {
         placeHolder: 'e.g., All tests passing, coverage at 85%',
     });
     try {
-        const args = ['-LoopAction complete'];
+        const args = ['complete'];
         if (summary) {
-            args.push(`-Summary "${summary}"`);
+            args.push('-s', `"${summary}"`);
         }
-        const output = await agentx.runCli('loop', {}, args);
+        const output = await agentx.runCli('loop', args);
         showLoopOutput('Loop Complete', output);
         vscode.window.showInformationMessage('Iterative loop completed successfully.');
     }
@@ -201,7 +196,7 @@ async function loopComplete(agentx) {
 }
 async function loopCancel(agentx) {
     try {
-        const output = await agentx.runCli('loop', {}, ['-LoopAction cancel']);
+        const output = await agentx.runCli('loop', ['cancel']);
         showLoopOutput('Loop Cancelled', output);
         vscode.window.showInformationMessage('Iterative loop cancelled.');
     }

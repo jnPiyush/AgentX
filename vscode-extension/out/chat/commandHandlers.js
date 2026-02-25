@@ -59,7 +59,7 @@ async function handleWorkflow(request, response, agentx) {
     }
     response.progress(`Running ${workflowType} workflow...`);
     try {
-        const output = await agentx.runCli('workflow', { Type: workflowType });
+        const output = await agentx.runCli('workflow', [workflowType]);
         response.markdown(`**Workflow: ${workflowType}**\n\n`);
         response.markdown('```\n' + output + '\n```');
     }
@@ -102,7 +102,7 @@ async function handleDeps(request, response, agentx) {
     const issueNumber = issueMatch[1];
     response.progress(`Checking dependencies for issue #${issueNumber}...`);
     try {
-        const output = await agentx.runCli('deps', { IssueNumber: issueNumber });
+        const output = await agentx.runCli('deps', [issueNumber]);
         response.markdown(`**Dependencies for Issue #${issueNumber}**\n\n`);
         response.markdown('```\n' + output + '\n```');
     }

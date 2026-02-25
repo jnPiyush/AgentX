@@ -68,12 +68,14 @@ export declare class AgentXContext {
     /**
      * Execute an AgentX CLI subcommand and return stdout.
      *
-     * @param subcommand - The CLI subcommand (e.g. 'workflow', 'deps').
-     * @param namedArgs  - Key-value pairs formatted as `-Key value` for PowerShell
-     *                     or as positional `value` args for bash.
-     * @param extraArgs  - Raw argument strings appended as-is (for both shells).
-     */
-    runCli(subcommand: string, namedArgs?: Record<string, string>, extraArgs?: string[]): Promise<string>;
+      * Both the PowerShell and Bash wrappers delegate to `node cli.mjs`,
+      * so arguments are always passed in Node CLI format (positional args
+      * and short flags like `-t`, `-n`, etc.).
+      *
+      * @param subcommand - The CLI subcommand (e.g. 'workflow', 'deps').
+      * @param cliArgs    - Arguments passed directly to cli.mjs after the subcommand.
+      */
+    runCli(subcommand: string, cliArgs?: string[]): Promise<string>;
     /** Read an agent definition file and return parsed frontmatter fields. */
     readAgentDef(agentFile: string): Promise<AgentDefinition | undefined>;
     /** List all agent definition files. */

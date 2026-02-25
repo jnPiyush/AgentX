@@ -117,7 +117,7 @@ describe('commandHandlers - handleSlashCommand', () => {
             await (0, commandHandlers_1.handleSlashCommand)(makeRequest('workflow', 'feature'), fakeContext, response, fakeToken, agentx);
             assert_1.strict.ok(response.getMarkdown().includes('Workflow: feature'));
             sinon.assert.calledOnce(agentx.runCli);
-            sinon.assert.calledWith(agentx.runCli, 'workflow', { Type: 'feature' });
+            sinon.assert.calledWith(agentx.runCli, 'workflow', ['feature']);
         });
         it('should accept all valid workflow types', async () => {
             const types = ['feature', 'epic', 'story', 'bug', 'spike', 'devops', 'docs'];
@@ -182,13 +182,13 @@ describe('commandHandlers - handleSlashCommand', () => {
             const response = (0, vscode_1.createMockResponseStream)();
             await (0, commandHandlers_1.handleSlashCommand)(makeRequest('deps', '42'), fakeContext, response, fakeToken, agentx);
             assert_1.strict.ok(response.getMarkdown().includes('#42'));
-            sinon.assert.calledWith(agentx.runCli, 'deps', { IssueNumber: '42' });
+            sinon.assert.calledWith(agentx.runCli, 'deps', ['42']);
         });
         it('should accept a hash-prefixed number', async () => {
             const agentx = makeFakeAgentx('No dependencies');
             const response = (0, vscode_1.createMockResponseStream)();
             await (0, commandHandlers_1.handleSlashCommand)(makeRequest('deps', '#7'), fakeContext, response, fakeToken, agentx);
-            sinon.assert.calledWith(agentx.runCli, 'deps', { IssueNumber: '7' });
+            sinon.assert.calledWith(agentx.runCli, 'deps', ['7']);
         });
         it('should handle CLI error', async () => {
             const agentx = makeFakeAgentx(undefined, new Error('issue not found'));
