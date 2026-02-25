@@ -2,10 +2,13 @@
 .vscode-test/**
 src/**
 node_modules/**
+out/test/**
+.mocharc.yml
 .eslintrc.cjs
 tsconfig.json
 **/*.ts
 **/*.map
+**/*.d.ts
 .gitignore
 tmpclaude-*
 *.vsix
