@@ -5,6 +5,7 @@
   "author": "AgentX",
   "type": "tool",
   "entry": {
+    "node": "convert-docs.mjs",
     "pwsh": "convert-docs.ps1",
     "bash": "convert-docs.sh"
   },

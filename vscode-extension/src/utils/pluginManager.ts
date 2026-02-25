@@ -226,8 +226,7 @@ export class PluginManager {
       description,
       type,
       entry: {
-        pwsh: `${name}.ps1`,
-        bash: `${name}.sh`,
+        node: `${name}.mjs`,
       },
       args: [],
       requires: [],
@@ -240,31 +239,15 @@ export class PluginManager {
       JSON.stringify(manifest, null, 2),
     );
 
-    // Create stub entry scripts
+    // Create stub Node.js entry script
     fs.writeFileSync(
-      path.join(pluginDir, `${name}.ps1`),
+      path.join(pluginDir, `${name}.mjs`),
       [
-        '#!/usr/bin/env pwsh',
-        `# AgentX Plugin: ${name}`,
-        `# ${description}`,
+        '#!/usr/bin/env node',
+        `// AgentX Plugin: ${name}`,
+        `// ${description}`,
         '',
-        'param(',
-        '  [string]$Action = "run"',
-        ')',
-        '',
-        'Write-Host "Plugin ${name} running..." -ForegroundColor Cyan',
-        '',
-      ].join('\n'),
-    );
-
-    fs.writeFileSync(
-      path.join(pluginDir, `${name}.sh`),
-      [
-        '#!/bin/bash',
-        `# AgentX Plugin: ${name}`,
-        `# ${description}`,
-        '',
-        `echo "Plugin ${name} running..."`,
+        `console.log('Plugin ${name} running...');`,
         '',
       ].join('\n'),
     );
@@ -278,12 +261,8 @@ export class PluginManager {
         '',
         '## Usage',
         '',
-        '```powershell',
-        `./.agentx/plugins/${name}/${name}.ps1`,
-        '```',
-        '',
         '```bash',
-        `./.agentx/plugins/${name}/${name}.sh`,
+        `node .agentx/plugins/${name}/${name}.mjs`,
         '```',
         '',
       ].join('\n'),
@@ -338,9 +317,9 @@ export class PluginManager {
       throw new Error(`Plugin '${name}' is not installed.`);
     }
 
-    const entry = shell === 'bash'
-      ? plugin.manifest.entry.bash
-      : plugin.manifest.entry.pwsh;
+    // Prefer node entry, fall back to shell-specific
+    const entry = plugin.manifest.entry.node
+      ?? (shell === 'bash' ? plugin.manifest.entry.bash : plugin.manifest.entry.pwsh);
 
     if (!entry) {
       throw new Error(`Plugin '${name}' has no ${shell} entry point.`);
@@ -359,6 +338,10 @@ export class PluginManager {
     }
     const argStr = argParts.length > 0 ? ' ' + argParts.join(' ') : '';
 
+    // Node.js entries use 'node' command
+    if (entry === plugin.manifest.entry.node) {
+      return `node "${scriptPath}"${argStr}`;
+    }
     if (shell === 'pwsh') {
       return `& "${scriptPath}"${argStr}`;
     }
