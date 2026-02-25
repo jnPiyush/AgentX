@@ -443,7 +443,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | CLI Utilities | `.agentx/agentx.ps1`, `.agentx/agentx.sh` |
 | Shared Modules | `scripts/modules/` |
 | Packs | `packs/` |
-| Agent Delegation | `.github/agents/agent-delegation.md` |
+| Agent Delegation | `.github/agent-delegation.md` |
 
 ### New Features (v6.1)
 
