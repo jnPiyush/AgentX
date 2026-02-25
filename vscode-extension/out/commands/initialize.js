@@ -272,6 +272,8 @@ function registerInitializeCommand(context, agentx) {
                     }, null, 2));
                 }
                 progress.report({ message: 'Setting up git...', increment: 10 });
+                // Merge AgentX entries into the user's .gitignore
+                mergeGitignore(root);
                 // Auto-init git + hooks (non-destructive, both modes)
                 try {
                     const { execShell: exec } = await Promise.resolve().then(() => __importStar(require('../utils/shell')));
@@ -384,6 +386,71 @@ function downloadFile(url, dest) {
         };
         request(url);
     });
+}
+/**
+ * Merge AgentX-specific entries into the user's .gitignore.
+ *
+ * Non-destructive: reads the existing file, checks which AgentX entries are
+ * already present, and appends only the missing ones under a clearly marked
+ * section block. If no .gitignore exists, creates one with the AgentX block.
+ */
+function mergeGitignore(root) {
+    const MARKER_START = '# --- AgentX (auto-generated, do not edit this block) ---';
+    const MARKER_END = '# --- /AgentX ---';
+    const agentxEntries = [
+        '# AgentX framework',
+        '.agentx/',
+        '.github/agents/',
+        '.github/instructions/',
+        '.github/prompts/',
+        '.github/skills/',
+        '.github/templates/',
+        '.github/hooks/',
+        '.github/scripts/',
+        '.github/schemas/',
+        '.github/ISSUE_TEMPLATE/',
+        '.github/PULL_REQUEST_TEMPLATE.md',
+        '.github/agent-delegation.md',
+        '.github/agentx-security.yml',
+        '.github/CODEOWNERS',
+        '.github/copilot-instructions.md',
+        'AGENTS.md',
+        'Skills.md',
+        'scripts/',
+        'packs/',
+        '',
+        '# AgentX runtime data',
+        'docs/prd/',
+        'docs/adr/',
+        'docs/specs/',
+        'docs/ux/',
+        'docs/reviews/',
+        'docs/progress/',
+        'docs/analytics/',
+        'docs/architecture/',
+        'docs/deployment/',
+        'docs/coaching/',
+        'docs/presentations/',
+    ];
+    const gitignorePath = path.join(root, '.gitignore');
+    let existing = '';
+    if (fs.existsSync(gitignorePath)) {
+        existing = fs.readFileSync(gitignorePath, 'utf-8');
+    }
+    // If our marker block already exists, replace it (handles upgrades)
+    if (existing.includes(MARKER_START)) {
+        const before = existing.substring(0, existing.indexOf(MARKER_START));
+        const afterIdx = existing.indexOf(MARKER_END);
+        const after = afterIdx >= 0
+            ? existing.substring(afterIdx + MARKER_END.length)
+            : '';
+        const block = [MARKER_START, ...agentxEntries, MARKER_END].join('\n');
+        fs.writeFileSync(gitignorePath, (before.trimEnd() + '\n\n' + block + after).trimStart(), 'utf-8');
+        return;
+    }
+    // Append new block
+    const block = '\n\n' + [MARKER_START, ...agentxEntries, MARKER_END].join('\n') + '\n';
+    fs.writeFileSync(gitignorePath, existing.trimEnd() + block, 'utf-8');
 }
 /** Extract a zip file using VS Code's built-in utilities or shell fallback. */
 async function extractZip(zipPath, destDir) {
