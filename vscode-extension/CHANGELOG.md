@@ -12,6 +12,26 @@
 - Extension checker falls back to CLI only when API is unavailable
 - External tool install flow shows cancellable progress notification while polling
 
+## 6.5.0 - 2026-02-25
+
+### Added
+
+- Plugin system: manifest schema, PluginManager, VS Code commands (List/Run/Create Plugin)
+- First plugin: convert-docs (Markdown to DOCX via Pandoc, now Node.js)
+- Auto-merge AgentX entries into user .gitignore during initialization
+- Unified Node.js CLI (cli.mjs) replacing PowerShell + Bash dual scripts
+
+### Changed
+
+- CLI migrated from PowerShell/Bash to single Node.js file (-4,530 lines)
+- Plugin scaffold generates .mjs entry points instead of PS1/SH
+- PluginManager prefers Node.js entry, falls back to shell
+- Numbered agent names (0-8) for ordered dropdown display
+
+### Testing
+
+- 208 unit tests passing (18 new plugin tests)
+
 ## 6.1.0 - 2026-02-24
 
 ### Added

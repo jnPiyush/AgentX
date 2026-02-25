@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX v6.1.0 - Download, copy, configure.
+ Install AgentX v6.5.0 - Download, copy, configure.
 
 .PARAMETER Mode
  github - Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
@@ -103,7 +103,7 @@ try {
 # -- Banner ----------------------------------------------
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Cyan
-Write-Host "| AgentX v6.1.0 - AI Agent Orchestration |" -ForegroundColor Cyan
+Write-Host "| AgentX v6.5.0 - AI Agent Orchestration |" -ForegroundColor Cyan
 Write-Host "+===================================================+" -ForegroundColor Cyan
 Write-Host ""
 
@@ -191,12 +191,12 @@ Write-Host "[3] Configuring runtime..." -ForegroundColor Cyan
 # Version tracking
 $versionFile = ".agentx/version.json"
 @{
- version = "6.1.0"
+ version = "6.5.0"
  mode = $Mode
  installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 6.1.0 recorded"
+Write-OK "Version 6.5.0 recorded"
 
 # Agent status
 $statusFile = ".agentx/state/agent-status.json"
@@ -352,7 +352,7 @@ if (-not $NoSetup) {
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
-Write-Host " AgentX v6.1.0 installed! [$displayMode]" -ForegroundColor Green
+Write-Host " AgentX v6.5.0 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White

@@ -5,6 +5,46 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.0] - 2026-02-25
+
+### Added
+
+**Plugin System**:
+- Plugin architecture with manifest schema (plugin.json), discovery, install, scaffold, run
+- PluginManager TypeScript module with 18 unit tests
+- VS Code commands: List Plugins, Run Plugin, Create New Plugin
+- First plugin: convert-docs (Markdown to DOCX via Pandoc)
+
+**Auto-Gitignore on Init**:
+- Initialization now auto-appends AgentX entries to user's .gitignore
+- Non-destructive merge with marker block for upgrades
+- Framework files ignored, user deliverables (docs/) committable
+
+### Changed
+
+**Node.js CLI Migration** (from PowerShell/Bash):
+- Unified `cli.mjs` replaces `agentx.ps1` (1,282 lines) + `agentx.sh` (1,337 lines)
+- All commands ported: ready, state, deps, digest, workflow, loop, validate, hooks, issue, version
+- Thin 4-line shell launchers replace full scripts
+- Local issue manager merged into CLI as `issue` subcommand
+- 12 dual PS1/SH scripts removed (validate-handoff, capture-context, collect-metrics, setup-hooks, hook variants)
+- Plugin scaffold and convert-docs plugin now generate Node.js (.mjs) entry points
+- Net reduction: -4,530 lines
+
+**Agent Ordering**:
+- Numbered agent names (0-8) for consistent dropdown ordering in VS Code
+- agent-delegation.md moved out of agents/ to hide from dropdown
+
+**Documentation Consolidation**:
+- Merged FEATURES.md, TROUBLESHOOTING.md, SCENARIOS.md into AGENTS.md, Skills.md, SETUP.md
+- Removed 10 duplicate/unused files (unfilled review templates, release-please configs, template README)
+- AGENTS.md optimized: 582 -> 392 lines (-33%)
+- Skills.md optimized: 572 -> 258 lines (-55%)
+
+### Testing
+
+- 208 unit tests passing (18 new plugin tests)
+
 ## [6.1.0] - 2026-02-24
 
 ### Added
