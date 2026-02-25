@@ -270,7 +270,7 @@ export class InitWizardPanel {
         } catch { /* corrupt version file - reset */ }
       }
       fs.writeFileSync(versionFile, JSON.stringify({
-        version: '6.5.1',
+        version: '6.5.2',
         mode: msg.mode,
         installedAt: previousInstalledAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
