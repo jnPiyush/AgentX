@@ -3,6 +3,8 @@ import * as path from 'path';
 import { AgentXContext, AgentDefinition } from '../agentxContext';
 import { loadAgentInstructions } from './agentContextLoader';
 import { AgentXChatMetadata } from './commandHandlers';
+import { AgenticLoop, ToolRegistry } from '../agentic';
+import { createLocalAgenticAdapter } from './agenticAdapter';
 
 /**
  * Route rule: maps keyword patterns to agent files.
@@ -61,7 +63,7 @@ export async function routeNaturalLanguage(
   request: vscode.ChatRequest,
   _chatContext: vscode.ChatContext,
   response: vscode.ChatResponseStream,
-  _token: vscode.CancellationToken,
+  token: vscode.CancellationToken,
   agentx: AgentXContext
 ): Promise<vscode.ChatResult> {
   const prompt = request.prompt.trim();
@@ -93,6 +95,43 @@ export async function routeNaturalLanguage(
   // Header showing which agent was selected
   const agentName = agentDef?.name ?? route.agentFile;
   response.markdown(`**[${agentName}]** ${route.description}\n\n---\n\n`);
+
+  const abortController = new AbortController();
+  const cancellationSub = token.onCancellationRequested(() => {
+    abortController.abort();
+  });
+
+  try {
+    const loop = new AgenticLoop(
+      {
+        agentName: route.agentFile,
+        systemPrompt: `You are AgentX routing assistant for ${agentName}.`,
+        maxIterations: 8,
+        tokenBudget: 40000,
+      },
+      new ToolRegistry(),
+    );
+
+    const adapter = createLocalAgenticAdapter(agentName, route.description);
+
+    const summary = await loop.run(prompt, adapter, abortController.signal, {
+      onToolCall: (toolName) => response.progress(`Executing tool: ${toolName}...`),
+      onLoopWarning: (result) => response.markdown(`> [WARN] ${result.message}\n\n`),
+    });
+
+    if (summary.finalText) {
+      response.markdown(summary.finalText + '\n\n');
+    }
+    response.markdown(
+      `Loop summary: iterations=${summary.iterations}, tools=${summary.toolCallsExecuted}, `
+      + `exit=${summary.exitReason}.\n\n`
+    );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    response.markdown(`Agentic loop error: ${message}\n\n`);
+  } finally {
+    cancellationSub.dispose();
+  }
 
   // Contextual guidance based on agent role
   if (instructions) {
