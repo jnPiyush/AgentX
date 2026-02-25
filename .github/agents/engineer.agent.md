@@ -19,6 +19,8 @@ constraints:
  - "MUST create progress log at docs/progress/ISSUE-{id}-log.md for each session"
  - "MUST update progress log before ending session or requesting handoff"
  - "MUST commit frequently (atomic commits with issue references)"
+ - "MUST check for active loop state before starting work (.agentx/state/loop-state.json)"
+ - "MUST NOT move to In Review while loop status is active -- complete or cancel first"
 boundaries:
  can_modify:
  - "src/** (source code)"
@@ -175,6 +177,48 @@ When implementing AI-powered features (issue has `needs:ai` label or Tech Spec h
 6. **Implement graceful fallbacks** when model API is unavailable (cached responses, degraded mode, user notification)
 
 > [WARN] **Anti-Pattern**: Implementing hardcoded rules or scoring formulas when the spec calls for model inference. If the Tech Spec's Section 13 specifies a model, implement actual model integration - not a rule-based approximation.
+
+### 5c. Iterative Refinement (ALWAYS active -- built into every workflow)
+
+**All workflows include iterative refinement by default.** Every Engineer implementation step has `iterate = true` in its TOML, so loop state at `.agentx/state/loop-state.json` is auto-initialized when the workflow runs. You ALWAYS work in iterations.
+
+**Your responsibility as Engineer**:
+1. **Check loop state** at the start of every implementation:
+```bash
+.agentx/agentx.ps1 loop -LoopAction status
+```
+
+2. **Work in iterations** -- implement, evaluate, repeat:
+```bash
+# Implement one pass, then record what changed
+.agentx/agentx.ps1 loop -LoopAction iterate -Summary "Added JWT validation, 3 tests passing"
+
+# Check completion criteria -- if not met, do another pass
+.agentx/agentx.ps1 loop -LoopAction iterate -Summary "Fixed edge cases, 8 tests passing, lint clean"
+
+# When ALL criteria are met, mark complete
+.agentx/agentx.ps1 loop -LoopAction complete -Summary "All 12 tests pass, 85% coverage, zero lint"
+```
+
+3. **If no loop state exists** (e.g., manual work outside workflow), start one yourself:
+```bash
+.agentx/agentx.ps1 loop -LoopAction start -Prompt "Implement auth middleware" \
+ -CompletionCriteria "All tests pass, coverage >80%, no lint errors" -MaxIterations 10
+```
+
+**Default iteration limits** (per workflow type):
+| Workflow | Max Iterations | Completion Criteria |
+|----------|---------------|---------------------|
+| story | 10 | All acceptance criteria met, 80% coverage, no lint |
+| bug | 5 | Bug fixed, regression tests, no new issues |
+| feature | 10 | All acceptance criteria met, 80% coverage, no lint |
+| devops | 5 | Pipeline runs, all stages pass, secrets secured |
+| docs | 5 | All sections complete, no broken links, spell-checked |
+| iterative-loop (extended) | 20 | Custom per issue |
+
+**MUST NOT** hand off to Reviewer (Status -> `In Review`) while loop is still `active`. Complete or cancel the loop first.
+
+> See [#42 Iterative Loop Skill](../../.github/skills/ai-systems/iterative-loop/SKILL.md) for patterns and completion criteria examples.
 
 ### 6. Create Low-Level Design (if complex)
 

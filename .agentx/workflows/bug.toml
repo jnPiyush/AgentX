@@ -12,6 +12,9 @@ title = "Fix bug: {{bug_title}}"
 agent = "engineer"
 status_on_start = "In Progress"
 status_on_complete = "In Review"
+iterate = true
+max_iterations = 5
+completion_criteria = "Bug fixed, regression tests added, no new issues introduced, root cause documented"
 
 [[steps]]
 id = "review"

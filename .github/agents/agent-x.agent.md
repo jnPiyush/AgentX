@@ -90,6 +90,19 @@ Agent X analyzes every issue and chooses the optimal path:
 **Flow**: Issue -> **Engineer** -> Reviewer -> Done 
 **Time Savings**: ~75% faster than full workflow
 
+### Universal Iterative Refinement (All Paths)
+**ALL workflows now include iterative refinement by default.** Every workflow TOML has `iterate = true` on the Engineer's implementation step. Loop state is auto-initialized when the workflow runs.
+
+- [PASS] story, bug, feature, devops, docs workflows all iterate by default
+- [PASS] Default limits: story/feature = 10 iterations, bug/devops/docs = 5 iterations
+- [PASS] `needs:iteration` label is reserved for **extended** iteration (uses `iterative-loop.toml` with max 20 and dedicated planning step)
+
+**How it works**: The workflow TOML's `iterate = true` step auto-initializes loop state at `.agentx/state/loop-state.json`. Engineer works in iterations until completion criteria are met, then Reviewer verifies loop completed.
+
+**Extended iteration** (optional, for quality-critical work):
+- Add `needs:iteration` label to use `iterative-loop.toml` (max 20 iterations, dedicated planning step)
+- Workflow: `.agentx/agentx.ps1 workflow -Type iterative-loop -IssueNumber <n>`
+
 ### Full Workflow Mode (Quality Path)
 **Triggers automatically when ANY condition fails**:
 - [FAIL] `type:epic` (always requires planning)
@@ -143,11 +156,16 @@ async function routeIssue(issue_number) {
  const analysis = await analyzeComplexity(issue);
 
  // 4. Route based on analysis
- if (analysis.isSimple) {
- // AUTONOMOUS MODE - Direct to Engineer
+ // NOTE: All workflows now iterate by default (iterate = true in TOML).
+ // The needs:iteration label triggers the EXTENDED iterative-loop workflow.
+ if (analysis.needsExtendedIteration) {
+ // EXTENDED ITERATION - uses iterative-loop.toml (max 20, planning step)
+ return routeToIterativeLoop(issue_number, analysis);
+ } else if (analysis.isSimple) {
+ // AUTONOMOUS MODE - Direct to Engineer (with default iteration)
  return routeToEngineer(issue_number);
  } else {
- // FULL WORKFLOW MODE - Proper pipeline
+ // FULL WORKFLOW MODE - Proper pipeline (with default iteration)
  return routeToFullWorkflow(issue_number, analysis);
  }
 }
@@ -193,7 +211,11 @@ async function analyzeComplexity(issue) {
 
  // Check requirements
  const needsUX = labels.includes('needs:ux');
+ const needsExtendedIteration = labels.includes('needs:iteration');
  const hasAcceptanceCriteria = body.includes('Acceptance Criteria') || body.includes('- [ ]');
+
+ // NOTE: All workflows iterate by default via TOML iterate=true.
+ // needs:iteration label upgrades to extended iterative-loop.toml (max 20).
 
  // Estimate files (search issue body for file mentions)
  const fileMatches = body.match(/\.(ts|js|tsx|jsx|cs|py|md)/g) || [];
@@ -211,14 +233,32 @@ async function analyzeComplexity(issue) {
 
  return {
  isSimple,
+ needsExtendedIteration,
  type: labels.find(l => l.startsWith('type:')),
  estimatedFiles,
  needsUX,
  hasAcceptanceCriteria,
- reason: isSimple ? 
- 'Simple task - direct to Engineer' : 
- 'Complex task - requires full workflow'
+ reason: needsExtendedIteration ?
+ 'Extended iteration requested - using iterative-loop workflow (max 20)' :
+ isSimple ? 
+ 'Simple task - direct to Engineer (with default iteration)' : 
+ 'Complex task - requires full workflow (with default iteration)'
  };
+}
+
+// Route to extended iterative loop workflow (max 20 iterations, planning step)
+async function routeToIterativeLoop(issue_number, analysis) {
+ // Ensure needs:iteration label is present
+ if (!analysis.needsExtendedIteration) {
+ await issue_write({ method: 'update', issue_number, 
+ labels: [...labels, 'needs:iteration'] });
+ }
+ // Use iterative-loop workflow (extended: max 20, dedicated planning step)
+ // .agentx/agentx.ps1 workflow -Type iterative-loop -IssueNumber <n>
+ await add_issue_comment({ issue_number,
+ body: '[LOOP] **Extended Iterative Loop activated** - Engineer will iterate up to 20 times with dedicated planning step. Workflow: `iterative-loop`'
+ });
+ return { mode: 'iterative-loop', agent: 'engineer', issue_number };
 }
 
 // PRD Contradiction Validation (runs after PM completes PRD)
@@ -285,9 +325,12 @@ Agent X automatically executes these CLI commands at key workflow points - **no 
 | **Before routing** | `.agentx/agentx.ps1 deps <issue>` | Verify no open blockers before assigning |
 | **On route** | `.agentx/agentx.ps1 state <agent> working <issue>` | Mark target agent as working |
 | **On route** | `.agentx/agentx.ps1 workflow <type>` | Look up workflow steps for the issue type |
+| **On route** | `.agentx/agentx.ps1 workflow <type> -IssueNumber <n>` | Auto-initialize loop state for iterate steps (ALL workflows) |
+| **On extended loop** | `.agentx/agentx.ps1 workflow -Type iterative-loop -IssueNumber <n>` | Extended iteration: max 20, planning step |
 | **On completion** | `.agentx/agentx.ps1 state <agent> done <issue>` | Mark agent as finished |
+| **Loop check** | `.agentx/agentx.ps1 loop -LoopAction status` | Verify loop completed before handoff to Reviewer |
 
-**How it works**: When Agent X receives a request or picks up backlog work, it runs `ready` to identify the highest-priority unblocked issue, validates dependencies with `deps`, updates agent state with `state`, and consults workflow templates with `workflow` to determine the correct agent pipeline.
+**How it works**: When Agent X receives a request or picks up backlog work, it runs `ready` to identify the highest-priority unblocked issue, validates dependencies with `deps`, updates agent state with `state`, and consults workflow templates with `workflow` to determine the correct agent pipeline. **All workflows include iterative refinement by default** -- every Engineer implementation step has `iterate = true` in its TOML, which auto-initializes loop state when the workflow runs with an issue number. The `needs:iteration` label is reserved for **extended** iteration via `iterative-loop.toml` (max 20 iterations, dedicated planning step) for quality-critical work.
 
 ## Team & Handoffs
 

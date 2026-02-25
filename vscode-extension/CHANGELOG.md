@@ -12,7 +12,7 @@
 - Extension checker falls back to CLI only when API is unavailable
 - External tool install flow shows cancellable progress notification while polling
 
-## 5.4.0 - 2026-02-22
+## 6.0.0 - 2026-02-22
 
 ### Added
 

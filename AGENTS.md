@@ -169,6 +169,7 @@ Epic + Backlog -> Product Manager
 Ready + needs:ux -> UX Designer
 Ready + (no architecture) -> Architect
 Ready + (has architecture) -> Engineer
+needs:iteration -> Engineer (extended iterative-loop workflow, max 20)
 In Review -> Reviewer
 Bug + Backlog -> Engineer (skip PM/Architect)
 Spike + Backlog -> Architect
@@ -176,6 +177,8 @@ type:devops + Backlog -> DevOps Engineer (skip PM/Architect for infrastructure w
 ```
 
 **Autonomous Mode**: For simple tasks (bugs, docs, stories 3 files), Agent X can automatically route to Engineer, skipping manual coordination. See [Agent X](.github/agents/agent-x.agent.md) (mode: adaptive).
+
+**Universal Iterative Refinement**: ALL workflows include `iterate = true` on the Engineer's implementation step by default. Loop state is auto-initialized when the workflow runs, and the Engineer ALWAYS works in iterations until completion criteria are met. The Reviewer ALWAYS verifies loop completion before approval. The `needs:iteration` label is reserved for **extended** iteration via `iterative-loop.toml` (max 20 iterations, dedicated planning step). See [Iterative Loop Skill](.github/skills/ai-systems/iterative-loop/SKILL.md).
 
 ### Validation
 
@@ -516,7 +519,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Packs | `packs/` |
 | Agent Delegation | `.github/agents/agent-delegation.md` |
 
-### New Features (v5.4)
+### New Features (v6.0)
 
 | Feature | Documentation | Status |
 |---------|---------------|--------|
@@ -606,7 +609,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 **Priority Labels**: `priority:p0`, `priority:p1`, `priority:p2`, `priority:p3`
 
-**Workflow Labels**: `needs:ux`, `needs:help`, `needs:changes`
+**Workflow Labels**: `needs:ux`, `needs:help`, `needs:changes`, `needs:iteration` (extended loop, max 20)
 
 ---
 

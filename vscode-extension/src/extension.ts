@@ -5,6 +5,7 @@ import { registerReadyQueueCommand } from './commands/readyQueue';
 import { registerWorkflowCommand } from './commands/workflow';
 import { registerDepsCommand } from './commands/deps';
 import { registerDigestCommand } from './commands/digest';
+import { registerLoopCommand } from './commands/loopCommand';
 import { AgentTreeProvider } from './views/agentTreeProvider';
 import { ReadyQueueTreeProvider } from './views/readyQueueTreeProvider';
 import { WorkflowTreeProvider } from './views/workflowTreeProvider';
@@ -40,6 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
  registerWorkflowCommand(context, agentxContext);
  registerDepsCommand(context, agentxContext);
  registerDigestCommand(context, agentxContext);
+ registerLoopCommand(context, agentxContext);
 
  // Register chat participant (Copilot Chat integration)
  if (typeof vscode.chat?.createChatParticipant === 'function') {

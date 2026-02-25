@@ -149,13 +149,14 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 
 **When**: Building AI agents, LLM integration, orchestration
 
-**Load These Skills** (Total: ~18K tokens):
+**Load These Skills** (Total: ~22K tokens):
 - [#17 AI Agent Development](.github/skills/ai-systems/ai-agent-development/SKILL.md) - Foundry, Agent Framework, tracing (8K)
 - [#41 Cognitive Architecture](.github/skills/ai-systems/cognitive-architecture/SKILL.md) - RAG, Memory, State Persistence (4K)
+- [#42 Iterative Loop](.github/skills/ai-systems/iterative-loop/SKILL.md) - Ralph Loop, iterative refinement, completion criteria (4K)
 - [#04 Security](.github/skills/architecture/security/SKILL.md) - Prompt injection prevention, secrets (4K)
 - [#30 Prompt Engineering](.github/skills/ai-systems/prompt-engineering/SKILL.md) - System prompts, guardrails (2K)
 
-**Context Routing**: AI agent work -> Load Skills #17, #41, #04, #30
+**Context Routing**: AI agent work -> Load Skills #17, #41, #42, #04, #30
 
 ---
 
@@ -306,6 +307,7 @@ description: 'Production-ready guidelines for AI agents to build secure, scalabl
 | 30 | [Prompt Engineering](.github/skills/ai-systems/prompt-engineering/SKILL.md) | System Prompts, Chain-of-Thought, Few-Shot, Guardrails, Tool Use, Agentic Patterns |
 | 37 | [Skill Creator](.github/skills/ai-systems/skill-creator/SKILL.md) | Create, Validate, Maintain Skills (meta-skill) |
 | 41 | [Cognitive Architecture](.github/skills/ai-systems/cognitive-architecture/SKILL.md) | RAG Pipelines, Memory Systems, Vector Search, Agent State Persistence |
+| 42 | [Iterative Loop](.github/skills/ai-systems/iterative-loop/SKILL.md) | Ralph Loop, Iterative Refinement, Completion Criteria, Quality Loops |
 
 ### Design
 
@@ -401,6 +403,7 @@ For complete details, see [docs/FEATURES.md](docs/FEATURES.md#session-persistenc
 - [PASS] Use Microsoft Foundry for production -> [#17](.github/skills/ai-systems/ai-agent-development/SKILL.md)
 - [PASS] Enable OpenTelemetry tracing -> [#17](.github/skills/ai-systems/ai-agent-development/SKILL.md)
 - [PASS] Evaluate with test datasets before deployment -> [#17](.github/skills/ai-systems/ai-agent-development/SKILL.md)
+- [PASS] Use iterative loops for quality-critical work -> [#42](.github/skills/ai-systems/iterative-loop/SKILL.md)
 - [PASS] Monitor token usage and costs
 
 ---

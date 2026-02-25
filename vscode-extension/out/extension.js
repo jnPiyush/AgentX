@@ -42,6 +42,7 @@ const readyQueue_1 = require("./commands/readyQueue");
 const workflow_1 = require("./commands/workflow");
 const deps_1 = require("./commands/deps");
 const digest_1 = require("./commands/digest");
+const loopCommand_1 = require("./commands/loopCommand");
 const agentTreeProvider_1 = require("./views/agentTreeProvider");
 const readyQueueTreeProvider_1 = require("./views/readyQueueTreeProvider");
 const workflowTreeProvider_1 = require("./views/workflowTreeProvider");
@@ -67,6 +68,7 @@ function activate(context) {
     (0, workflow_1.registerWorkflowCommand)(context, agentxContext);
     (0, deps_1.registerDepsCommand)(context, agentxContext);
     (0, digest_1.registerDigestCommand)(context, agentxContext);
+    (0, loopCommand_1.registerLoopCommand)(context, agentxContext);
     // Register chat participant (Copilot Chat integration)
     if (typeof vscode.chat?.createChatParticipant === 'function') {
         (0, chatParticipant_1.registerChatParticipant)(context, agentxContext);

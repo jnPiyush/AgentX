@@ -174,6 +174,35 @@ cp .github/templates/REVIEW-TEMPLATE.md docs/reviews/REVIEW-{story-id}.md
 # Then fill in all sections with detailed review findings
 ```
 
+### 5b. Verify Iterative Loop Completion (MANDATORY for all reviews)
+
+All workflows include iterative refinement by default. Every Engineer implementation step iterates, so loop state MUST exist and be completed before approval:
+
+```bash
+# Check loop state
+.agentx/agentx.ps1 loop -LoopAction status
+```
+
+**Verification checklist**:
+- [ ] Loop status is `completed` (not `active` or `cancelled`)
+- [ ] All completion criteria were met (check `completion_criteria` field)
+- [ ] Iteration count is reasonable (not hitting max_iterations, which suggests criteria were never met)
+- [ ] Loop history shows progressive improvement (not repetitive failures)
+
+**If loop state does not exist**:
+- [WARN] Engineer may have worked outside the workflow -- request justification
+- Ask: "No loop state found. Did you iterate and verify completion criteria?"
+
+**If loop is still active or was cancelled**:
+- [FAIL] **Do NOT approve** - request Engineer to complete the loop or justify cancellation
+- Move Status -> `In Progress` with `needs:changes` label
+- Comment: "Iterative loop not completed. Please run iterations until criteria are met."
+
+**If loop hit max_iterations without completing**:
+- [WARN] Review carefully - the Engineer may have been unable to meet the criteria
+- Check if completion criteria were realistic
+- Consider approving with documented exceptions if close enough
+
 ### 6. Make Decision
 
 #### Path A: Approve

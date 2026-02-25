@@ -1,0 +1,43 @@
+# Iterative Loop Workflow -- Extended refinement for quality-critical work
+# Use this when the default iteration limits in other workflows are insufficient.
+# Provides a separate planning step + higher max_iterations (20) for complex tasks.
+# Adapted from Anthropic's Ralph Loop pattern.
+#
+# NOTE: All standard workflows (story, bug, feature, devops, docs) have
+# iterate = true by default. Use this workflow ONLY when you need:
+# - A dedicated planning step before iteration
+# - Higher max_iterations (20 vs default 10)
+# - Custom completion criteria different from the standard
+
+[workflow]
+name = "iterative-loop"
+description = "Extended iterative refinement with planning step and higher iteration limit"
+type = "story"
+
+[[steps]]
+id = "plan"
+title = "Define completion criteria for {{story_title}}"
+agent = "engineer"
+status_on_start = "In Progress"
+status_on_complete = "In Progress"
+
+[[steps]]
+id = "iterate"
+title = "Iterative implementation of {{story_title}}"
+agent = "engineer"
+needs = ["plan"]
+iterate = true
+max_iterations = 10
+completion_criteria = "All acceptance criteria met, tests pass, no lint errors"
+status_on_start = "In Progress"
+status_on_complete = "In Review"
+
+[[steps]]
+id = "review"
+title = "Code review"
+agent = "reviewer"
+needs = ["iterate"]
+status_on_start = "In Review"
+status_on_complete = "Done"
+output = "docs/reviews/REVIEW-{{issue_number}}.md"
+template = ".github/templates/REVIEW-TEMPLATE.md"

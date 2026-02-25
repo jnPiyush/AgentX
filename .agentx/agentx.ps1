@@ -1,5 +1,5 @@
 # AgentX CLI - Lightweight task orchestration utilities
-# Subcommands: ready, state, deps, digest, workflow
+# Subcommands: ready, state, deps, digest, workflow, loop
 #
 # Usage:
 # .\.agentx\agentx.ps1 ready # Show unblocked work
@@ -8,10 +8,15 @@
 # .\.agentx\agentx.ps1 deps -IssueNumber 42 # Check dependencies
 # .\.agentx\agentx.ps1 digest # Generate weekly digest
 # .\.agentx\agentx.ps1 workflow -Type feature # Show workflow steps
+# .\.agentx\agentx.ps1 loop start -Prompt "..." # Start iterative loop
+# .\.agentx\agentx.ps1 loop status # Check loop state
+# .\.agentx\agentx.ps1 loop iterate -Summary "..." # Record iteration
+# .\.agentx\agentx.ps1 loop complete # Mark loop done
+# .\.agentx\agentx.ps1 loop cancel # Cancel active loop
 
 param(
  [Parameter(Position=0)]
- [ValidateSet('ready', 'state', 'deps', 'digest', 'workflow', 'hook', 'version', 'upgrade', 'run', 'help')]
+ [ValidateSet('ready', 'state', 'deps', 'digest', 'workflow', 'hook', 'version', 'upgrade', 'run', 'loop', 'help')]
  [string]$Command = 'help',
 
  # state subcommand params
@@ -24,12 +29,20 @@ param(
  [int]$IssueNumber,
 
  # workflow subcommand params
- [ValidateSet('feature', 'epic', 'story', 'bug', 'spike', 'devops', 'docs', '')]
+ [ValidateSet('feature', 'epic', 'story', 'bug', 'spike', 'devops', 'docs', 'iterative-loop', '')]
  [string]$Type,
 
  # hook subcommand params
  [ValidateSet('start', 'finish', '')]
  [string]$Phase,
+
+ # loop subcommand params
+ [ValidateSet('start', 'status', 'iterate', 'complete', 'cancel', '')]
+ [string]$LoopAction,
+ [string]$Prompt,
+ [int]$MaxIterations = 20,
+ [string]$CompletionCriteria,
+ [string]$Summary,
 
  # output format
  [switch]$Json
@@ -436,6 +449,12 @@ function Show-Workflow {
  return
  }
 
+ # If IssueNumber provided, delegate to full runner (auto-initializes loop state)
+ if ($IssueNumber) {
+ Run-Workflow-Steps
+ return
+ }
+
  $wfFile = Join-Path $WorkflowsDir "$Type.toml"
  if (-not (Test-Path $wfFile)) {
  Write-Error "Workflow '$Type' not found at $wfFile"
@@ -451,7 +470,7 @@ function Show-Workflow {
  foreach ($line in (Get-Content $wfFile)) {
  if ($line -match '^\[\[steps\]\]') {
  if ($current) { $steps += $current }
- $current = @{ id = ""; title = ""; agent = ""; needs = @() }
+ $current = @{ id = ""; title = ""; agent = ""; needs = @(); iterate = $false; max_iterations = 10; completion_criteria = "" }
  }
  if ($current) {
  if ($line -match '^id\s*=\s*"(.+)"') { $current.id = $Matches[1] }
@@ -460,6 +479,9 @@ function Show-Workflow {
  if ($line -match '^needs\s*=\s*\[(.+)\]') {
  $current.needs = ($Matches[1] -replace '"', '') -split ',\s*'
  }
+ if ($line -match '^iterate\s*=\s*true') { $current.iterate = $true }
+ if ($line -match '^max_iterations\s*=\s*(\d+)') { $current.max_iterations = [int]$Matches[1] }
+ if ($line -match '^completion_criteria\s*=\s*"(.+)"') { $current.completion_criteria = $Matches[1] }
  }
  }
  if ($current) { $steps += $current }
@@ -472,6 +494,14 @@ function Show-Workflow {
  Write-Host " -> $($step.agent)" -NoNewline -ForegroundColor Yellow
  Write-Host "$needsStr" -ForegroundColor DarkGray
  Write-Host " $($step.title)" -ForegroundColor DarkGray
+ if ($step.iterate) {
+ Write-Host " [LOOP] max $($step.max_iterations) iterations" -NoNewline -ForegroundColor Magenta
+ if ($step.completion_criteria) {
+ Write-Host " | criteria: $($step.completion_criteria)" -ForegroundColor DarkMagenta
+ } else {
+ Write-Host "" 
+ }
+ }
  $stepNum++
  }
  Write-Host ""
@@ -745,7 +775,7 @@ function Run-Workflow-Steps {
  $line = $line.Trim()
  if ($line -eq '[[steps]]') {
  if ($currentStep) { $steps += [PSCustomObject]$currentStep }
- $currentStep = @{ needs = @(); optional = $false; condition = "" }
+ $currentStep = @{ needs = @(); optional = $false; condition = ""; iterate = $false; max_iterations = 10; completion_criteria = "" }
  }
  elseif ($currentStep -and $line -match '^(\w+)\s*=\s*(.+)$') {
  $key = $Matches[1]
@@ -754,8 +784,11 @@ function Run-Workflow-Steps {
  $val = $val.Trim('[', ']') -split ',' | ForEach-Object { $_.Trim().Trim('"', "'") } | Where-Object { $_ }
  $currentStep[$key] = $val
  }
- elseif ($key -eq 'optional') {
+ elseif ($key -eq 'optional' -or $key -eq 'iterate') {
  $currentStep[$key] = $val -eq 'true'
+ }
+ elseif ($key -eq 'max_iterations') {
+ $currentStep[$key] = [int]$val
  }
  else {
  $currentStep[$key] = $val
@@ -846,6 +879,32 @@ function Run-Workflow-Steps {
  Write-Host " > ${stepId}: $title" -ForegroundColor White
  Write-Host " Agent: @$agent | Status: $($step.status_on_start) -> $($step.status_on_complete)" -ForegroundColor DarkGray
 
+ # Auto-start iterative loop for iterate steps
+ if ($step.iterate) {
+ $loopCriteria = if ($step.completion_criteria) { $step.completion_criteria } else { "All acceptance criteria met, tests pass" }
+ $loopMax = if ($step.max_iterations) { $step.max_iterations } else { 10 }
+ Write-Host " [LOOP] Iterative refinement enabled (max $loopMax iterations)" -ForegroundColor Magenta
+ Write-Host " Criteria: $loopCriteria" -ForegroundColor DarkMagenta
+
+ # Auto-initialize loop state for this step
+ $loopPrompt = $title
+ Ensure-Dir (Split-Path $LoopStateFile -Parent)
+ $loopState = @{
+ status = "active"
+ prompt = $loopPrompt
+ maxIterations = $loopMax
+ active = $true
+          iteration = 0
+ completionCriteria = $loopCriteria
+ startedAt = (Get-Date).ToUniversalTime().ToString("o")
+ issue = $IssueNumber
+ workflow_step = $stepId
+ history = @()
+ } | ConvertTo-Json -Depth 5
+ Set-Content -Path $LoopStateFile -Value $loopState
+ Write-Host " [LOOP] State initialized at $LoopStateFile" -ForegroundColor DarkGray
+ }
+
  $completedSteps += $stepId
  }
 
@@ -853,6 +912,311 @@ function Run-Workflow-Steps {
  Write-Host " Steps prepared: $($completedSteps.Count)/$($steps.Count)" -ForegroundColor Green
  Write-Host " Next: Invoke each agent with '@agent-name' in Copilot Chat" -ForegroundColor DarkGray
  Write-Host ""
+}
+
+function Add-IssueComment {
+    param($IssueNumber, $Body)
+    if (-not $IssueNumber) { return }
+    
+    if ($script:Mode -eq "github") {
+        gh issue comment $IssueNumber --body $Body 2>$null
+    } else {
+        $localMgr = Join-Path $PSScriptRoot "local-issue-manager.ps1"
+        if (Test-Path $localMgr) {
+            & $localMgr -Action comment -IssueNumber $IssueNumber -Comment $Body 2>$null
+        }
+    }
+}
+
+# --- LOOP: Iterative refinement (Ralph Loop) --------------------------
+
+$LoopStateFile = Join-Path $AgentXDir "state\loop-state.json"
+
+function Get-LoopState {
+ if (Test-Path $LoopStateFile) {
+ return Get-Content $LoopStateFile -Raw | ConvertFrom-Json
+ }
+ return $null
+}
+
+function Save-LoopState {
+ param($Data)
+ Ensure-Dir (Split-Path $LoopStateFile)
+ $Data | ConvertTo-Json -Depth 10 | Set-Content $LoopStateFile -Encoding UTF8
+}
+
+function Loop-Start {
+ if (-not $Prompt) {
+ Write-Host " [FAIL] -Prompt is required to start a loop" -ForegroundColor Red
+ Write-Host ""
+ Write-Host " Usage: .\.agentx\agentx.ps1 loop -LoopAction start -Prompt `"Your task`" -MaxIterations 20 -CompletionCriteria `"ALL_TESTS_PASSING`"" -ForegroundColor DarkGray
+ return
+ }
+
+ $existing = Get-LoopState
+ if ($existing -and $existing.active) {
+ Write-Host " [WARN] An active loop already exists (iteration $($existing.iteration)/$($existing.maxIterations))" -ForegroundColor Yellow
+ Write-Host " Cancel it first: .\.agentx\agentx.ps1 loop -LoopAction cancel" -ForegroundColor DarkGray
+ return
+ }
+
+ $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+ $criteria = if ($CompletionCriteria) { $CompletionCriteria } else { "TASK_COMPLETE" }
+ $maxIter = if ($MaxIterations -gt 0) { $MaxIterations } else { 20 }
+ $issueRef = if ($Issue -gt 0) { $Issue } else { $null }
+
+ $state = [PSCustomObject]@{
+ active = $true
+ status = "active"
+ prompt = $Prompt
+ iteration = 1
+ maxIterations = $maxIter
+ completionCriteria = $criteria
+ issueNumber = $issueRef
+ startedAt = $now
+ lastIterationAt = $now
+ history = @(
+ [PSCustomObject]@{
+ iteration = 1
+ timestamp = $now
+ summary = "Loop started"
+ status = "in-progress"
+ }
+ )
+ }
+
+ Save-LoopState $state
+
+ Write-Host ""
+ Write-Host " Iterative Loop Started" -ForegroundColor Cyan
+ Write-Host " ---------------------------------------------" -ForegroundColor DarkGray
+ Write-Host " Iteration: 1/$maxIter"
+ Write-Host " Criteria: $criteria"
+ if ($issueRef) {
+ Write-Host " Issue: #$issueRef"
+ }
+ Write-Host ""
+ Write-Host " Prompt:" -ForegroundColor White
+ Write-Host " $Prompt" -ForegroundColor DarkGray
+ Write-Host ""
+ Write-Host " [WARN] Loop runs until criteria met or max iterations reached." -ForegroundColor Yellow
+ Write-Host " To cancel: .\.agentx\agentx.ps1 loop -LoopAction cancel" -ForegroundColor DarkGray
+ Write-Host ""
+ Write-Host " CRITICAL: Only output completion promise when criteria are genuinely TRUE." -ForegroundColor Red
+ Write-Host " Do NOT lie to exit the loop. Failures are data -- use them to improve." -ForegroundColor Red
+ Write-Host ""
+}
+
+function Loop-Status {
+ $state = Get-LoopState
+ if (-not $state) {
+ if ($Json) {
+ Write-Output '{"active": false}'
+ } else {
+ Write-Host " No active loop." -ForegroundColor DarkGray
+ }
+ return
+ }
+
+ if ($Json) {
+ $state | ConvertTo-Json -Depth 10
+ return
+ }
+
+ $elapsed = ""
+ try {
+ $start = [datetime]::Parse($state.startedAt).ToUniversalTime()
+ $dur = (Get-Date).ToUniversalTime() - $start
+ if ($dur.TotalSeconds -lt 0) { $dur = -$dur }
+ $elapsed = "$([int]$dur.TotalMinutes)m $($dur.Seconds)s"
+ } catch { $elapsed = "unknown" }
+
+ Write-Host ""
+ Write-Host " Iterative Loop Status" -ForegroundColor Cyan
+ Write-Host " ---------------------------------------------" -ForegroundColor DarkGray
+ Write-Host " Active: $($state.active)"
+ Write-Host " Iteration: $($state.iteration)/$($state.maxIterations)"
+ Write-Host " Criteria: $($state.completionCriteria)"
+ Write-Host " Elapsed: $elapsed"
+ if ($state.issueNumber) {
+ Write-Host " Issue: #$($state.issueNumber)"
+ }
+ Write-Host ""
+
+ if ($state.history -and $state.history.Count -gt 0) {
+ Write-Host " History (last 5):" -ForegroundColor White
+ $recent = $state.history | Select-Object -Last 5
+ foreach ($entry in $recent) {
+ $marker = if ($entry.status -eq "complete") { "[PASS]" } else { "[...]" }
+ Write-Host " $marker Iteration $($entry.iteration): $($entry.summary)" -ForegroundColor DarkGray
+ }
+ }
+ Write-Host ""
+}
+
+function Loop-Iterate {
+ $state = Get-LoopState
+ if (-not $state) {
+    Write-Host " [FAIL] No loop state found." -ForegroundColor Red
+    return
+  }
+
+  if (-not $state.active) {
+    Write-Host " [WARN] Loop was $($state.status). Reopening for new iteration." -ForegroundColor Yellow
+    $state.active = $true
+    $state.status = "active"
+    }
+
+    $nextIter = $state.iteration + 1
+
+ # Check max iterations
+ if ($nextIter -gt $state.maxIterations) {
+ Write-Host " [WARN] Max iterations ($($state.maxIterations)) reached." -ForegroundColor Yellow
+ Write-Host " The loop will be marked as stopped." -ForegroundColor DarkGray
+ $state.active = $false
+ $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+ $historyList = @($state.history)
+ $historyList += [PSCustomObject]@{
+ iteration = $nextIter
+ timestamp = $now
+ summary = "Max iterations reached. $Summary"
+ status = "stopped"
+ }
+ $state.history = $historyList
+ $state.lastIterationAt = $now
+ Save-LoopState $state
+ Write-Host " Loop stopped at iteration $($state.maxIterations)." -ForegroundColor Red
+ if ($state.issueNumber) {
+     Add-IssueComment -IssueNumber $state.issueNumber -Body "🛑 **Ralph Loop Stopped**: Max iterations ($($state.maxIterations)) reached.`nSummary: $Summary"
+ }
+ return
+ }
+
+ $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+ $iterSummary = if ($Summary) { $Summary } else { "Iteration $nextIter" }
+
+ $historyList = @($state.history)
+ $historyList += [PSCustomObject]@{
+ iteration = $nextIter
+ timestamp = $now
+ summary = $iterSummary
+ status = "in-progress"
+ }
+ $state.history = $historyList
+ $state.iteration = $nextIter
+ $state.lastIterationAt = $now
+ Save-LoopState $state
+
+ if ($state.issueNumber) {
+     Add-IssueComment -IssueNumber $state.issueNumber -Body "🔄 **Ralph Loop Iteration $nextIter/$($state.maxIterations)**`nSummary: $iterSummary"
+ }
+
+ Write-Host ""
+ Write-Host " Iteration $nextIter/$($state.maxIterations)" -ForegroundColor Cyan
+ Write-Host " Summary: $iterSummary" -ForegroundColor DarkGray
+ Write-Host ""
+ Write-Host " Prompt (unchanged):" -ForegroundColor White
+ Write-Host " $($state.prompt)" -ForegroundColor DarkGray
+ Write-Host ""
+ Write-Host " Criteria: $($state.completionCriteria)" -ForegroundColor Yellow
+ Write-Host " Remaining: $($state.maxIterations - $nextIter) iterations" -ForegroundColor DarkGray
+ Write-Host ""
+}
+
+function Loop-Complete {
+ $state = Get-LoopState
+ if (-not $state) {
+ Write-Host " [FAIL] No loop state found." -ForegroundColor Red; return }; if (-not $state.active) { Write-Host " [WARN] Loop is already $($state.status)." -ForegroundColor Yellow
+ return
+ }
+
+ $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+ $completeSummary = if ($Summary) { $Summary } else { "Completion criteria met" }
+
+ $historyList = @($state.history)
+ $historyList += [PSCustomObject]@{
+ iteration = $state.iteration
+ timestamp = $now
+ summary = $completeSummary
+ status = "complete"
+ }
+ $state.history = $historyList
+ $state.active = $false
+ $state.lastIterationAt = $now
+ Save-LoopState $state
+
+ $elapsed = ""
+ try {
+ $start = [datetime]::Parse($state.startedAt).ToUniversalTime()
+ $dur = (Get-Date).ToUniversalTime() - $start
+ if ($dur.TotalSeconds -lt 0) { $dur = -$dur }
+ $elapsed = "$([int]$dur.TotalMinutes)m $($dur.Seconds)s"
+ } catch { $elapsed = "unknown" }
+
+ if ($state.issueNumber) {
+     Add-IssueComment -IssueNumber $state.issueNumber -Body "✅ **Ralph Loop Complete!**`nIterations: $($state.iteration)/$($state.maxIterations)`nDuration: $elapsed`nSummary: $completeSummary"
+ }
+
+ Write-Host ""
+ Write-Host " [PASS] Loop Complete!" -ForegroundColor Green
+ Write-Host " ---------------------------------------------" -ForegroundColor DarkGray
+ Write-Host " Iterations: $($state.iteration)/$($state.maxIterations)"
+ Write-Host " Criteria: $($state.completionCriteria)"
+ Write-Host " Duration: $elapsed"
+ Write-Host " Summary: $completeSummary"
+ if ($state.issueNumber) {
+ Write-Host " Issue: #$($state.issueNumber)"
+ }
+ Write-Host ""
+}
+
+function Loop-Cancel {
+ $state = Get-LoopState
+ if (-not $state) {
+ Write-Host " No loop state found." -ForegroundColor DarkGray; return }; if (-not $state.active) { Write-Host " Loop is already $($state.status)." -ForegroundColor DarkGray
+ return
+ }
+
+ $iterCount = $state.iteration
+ $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+ $historyList = @($state.history)
+ $historyList += [PSCustomObject]@{
+ iteration = $state.iteration
+ timestamp = $now
+ summary = "Loop cancelled by user"
+ status = "cancelled"
+ }
+ $state.history = $historyList
+ $state.active = $false
+ $state.lastIterationAt = $now
+ Save-LoopState $state
+
+ if ($state.issueNumber) {
+     Add-IssueComment -IssueNumber $state.issueNumber -Body "⚠️ **Ralph Loop Cancelled** at iteration $iterCount."
+ }
+
+ Write-Host " Cancelled loop at iteration $iterCount." -ForegroundColor Yellow
+}
+
+function Manage-Loop {
+ $action = $LoopAction
+ if (-not $action) {
+ # Default to status if no action specified
+ $action = 'status'
+ }
+
+ switch ($action) {
+ 'start' { Loop-Start }
+ 'status' { Loop-Status }
+ 'iterate' { Loop-Iterate }
+ 'complete' { Loop-Complete }
+ 'cancel' { Loop-Cancel }
+ default {
+ Write-Host " Unknown loop action: $action" -ForegroundColor Red
+ Write-Host " Valid actions: start, status, iterate, complete, cancel" -ForegroundColor DarkGray
+ }
+ }
 }
 
 # --- HELP -------------------------------------------------------------
@@ -873,10 +1237,21 @@ function Show-Help {
  Write-Host " hook -Phase start -Agent <a> Auto-run deps + state on agent start"
  Write-Host " hook -Phase finish -Agent <a> Auto-run state done on agent finish"
  Write-Host " run -Type <t> -IssueNumber <n> Execute workflow steps for an issue"
+ Write-Host " loop -LoopAction start ... Start iterative refinement loop"
+ Write-Host " loop -LoopAction status Check active loop state"
+ Write-Host " loop -LoopAction iterate Advance to next iteration"
+ Write-Host " loop -LoopAction complete Mark loop as done"
+ Write-Host " loop -LoopAction cancel Cancel active loop"
  Write-Host " version Show installed AgentX version"
  Write-Host " upgrade Smart upgrade (preserves user content)"
  Write-Host ""
- Write-Host " Examples:" -ForegroundColor White
+ Write-Host " Loop Examples:" -ForegroundColor White
+ Write-Host " .\.agentx\agentx.ps1 loop -LoopAction start -Prompt `"Fix all tests`" -MaxIterations 20 -CompletionCriteria `"ALL_TESTS_PASSING`""
+ Write-Host " .\.agentx\agentx.ps1 loop -LoopAction iterate -Summary `"3/5 tests passing`""
+ Write-Host " .\.agentx\agentx.ps1 loop -LoopAction complete -Summary `"All tests green`""
+ Write-Host " .\.agentx\agentx.ps1 loop -LoopAction cancel"
+ Write-Host ""
+ Write-Host " Other Examples:" -ForegroundColor White
  Write-Host " .\.agentx\agentx.ps1 ready"
  Write-Host " .\.agentx\agentx.ps1 state -Agent engineer -Set working -Issue 42"
  Write-Host " .\.agentx\agentx.ps1 deps -IssueNumber 42"
@@ -885,7 +1260,7 @@ function Show-Help {
  Write-Host " .\.agentx\agentx.ps1 workflow -Type feature"
  Write-Host ""
  Write-Host " Flags:" -ForegroundColor White
- Write-Host " -Json Output as JSON (for ready, state)"
+ Write-Host " -Json Output as JSON (for ready, state, loop status)"
  Write-Host ""
 }
 
@@ -899,6 +1274,7 @@ switch ($Command) {
  'workflow' { Show-Workflow }
  'hook' { Run-Hook }
  'run' { Run-Workflow-Steps }
+ 'loop' { Manage-Loop }
  'version' { Show-Version }
  'upgrade' { Run-Upgrade }
  'help' { Show-Help }

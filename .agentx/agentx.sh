@@ -774,9 +774,11 @@ cmd_run() {
  local step_optionals=() step_conditions=()
  local step_status_starts=() step_status_completes=()
  local step_outputs=() step_templates=()
+ local step_iterates=() step_max_iters=() step_criteria=()
  local idx=-1
  local id="" title="" agent="" needs="" optional="false" condition=""
  local status_start="" status_complete="" output="" template=""
+ local iterate="false" max_iter="10" criteria=""
 
  while IFS= read -r line; do
   line=$(echo "$line" | sed 's/^[[:space:]]*//')
@@ -788,16 +790,22 @@ cmd_run() {
     step_status_starts[$idx]="$status_start"
     step_status_completes[$idx]="$status_complete"
     step_outputs[$idx]="$output"; step_templates[$idx]="$template"
+    step_iterates[$idx]="$iterate"; step_max_iters[$idx]="$max_iter"
+    step_criteria[$idx]="$criteria"
    fi
    idx=$((idx + 1))
    id=""; title=""; agent=""; needs=""; optional="false"; condition=""
    status_start=""; status_complete=""; output=""; template=""
+   iterate="false"; max_iter="10"; criteria=""
   fi
   [[ "$line" =~ ^id\ =\ \"(.+)\" ]] && id="${BASH_REMATCH[1]}"
   [[ "$line" =~ ^title\ =\ \"(.+)\" ]] && title="${BASH_REMATCH[1]}"
   [[ "$line" =~ ^agent\ =\ \"(.+)\" ]] && agent="${BASH_REMATCH[1]}"
   [[ "$line" =~ ^needs\ =\ \[(.+)\] ]] && needs=$(echo "${BASH_REMATCH[1]}" | tr -d '"' | tr -d ' ')
   [[ "$line" =~ ^optional\ =\ true ]] && optional="true"
+  [[ "$line" =~ ^iterate\ =\ true ]] && iterate="true"
+  [[ "$line" =~ ^maxIterations\ =\ ([0-9]+) ]] && max_iter="${BASH_REMATCH[1]}"
+  [[ "$line" =~ ^completion_criteria\ =\ \"(.+)\" ]] && criteria="${BASH_REMATCH[1]}"
   [[ "$line" =~ ^condition\ =\ \"(.+)\" ]] && condition="${BASH_REMATCH[1]}"
   [[ "$line" =~ ^status_on_start\ =\ \"(.+)\" ]] && status_start="${BASH_REMATCH[1]}"
   [[ "$line" =~ ^status_on_complete\ =\ \"(.+)\" ]] && status_complete="${BASH_REMATCH[1]}"
@@ -813,6 +821,8 @@ cmd_run() {
   step_status_starts[$idx]="$status_start"
   step_status_completes[$idx]="$status_complete"
   step_outputs[$idx]="$output"; step_templates[$idx]="$template"
+  step_iterates[$idx]="$iterate"; step_max_iters[$idx]="$max_iter"
+  step_criteria[$idx]="$criteria"
  fi
 
  local total=$((idx + 1))
@@ -917,6 +927,30 @@ cmd_run() {
   echo -e " ${WHITE}> ${sid}: $stitle${NC}"
   echo -e "    ${GRAY}Agent: @$sagent | Status: $sstatus_start -> $sstatus_complete${NC}"
 
+  # Auto-start iterative loop for iterate steps
+  local siterate="${step_iterates[$i]:-false}"
+  if [[ "$siterate" == "true" ]]; then
+   local smax="${step_max_iters[$i]:-10}"
+   local scriteria="${step_criteria[$i]:-All acceptance criteria met, tests pass}"
+   echo -e "    ${MAGENTA}[LOOP] Iterative refinement enabled (max $smax iterations)${NC}"
+   echo -e "    ${GRAY}Criteria: $scriteria${NC}"
+   # Auto-initialize loop state
+   mkdir -p "$(dirname "$LOOP_STATE_FILE")" 2>/dev/null
+   if command -v jq &>/dev/null; then
+    jq -n \
+     --arg status "active" \
+     --arg prompt "$stitle" \
+     --argjson max "$smax" \
+     --arg criteria "$scriteria" \
+     --arg started "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+     --arg issue "$issue_number" \
+     --arg step "$sid" \
+     '{active:true,status:$status,prompt:$prompt,maxIterations:$max,iteration:0,completionCriteria:$criteria,startedAt:$started,issue:$issue,workflow_step:$step,history:[]}' \
+     > "$LOOP_STATE_FILE"
+    echo -e "    ${GRAY}[LOOP] State initialized at $LOOP_STATE_FILE${NC}"
+   fi
+  fi
+
   completed_steps+=("$sid")
   completed_count=$((completed_count + 1))
  done
@@ -925,6 +959,312 @@ cmd_run() {
  echo -e " ${GREEN}Steps prepared: ${completed_count}/${total}${NC}"
  echo -e " ${GRAY}Next: Invoke each agent with '@agent-name' in Copilot Chat${NC}"
  echo ""
+}
+
+add_issue_comment() {
+    local issue_num="$1"
+    local body="$2"
+    if [[ -z "$issue_num" || "$issue_num" == "null" ]]; then return; fi
+    
+    if [[ "$MODE" == "github" ]]; then
+        gh issue comment "$issue_num" --body "$body" &>/dev/null || true
+    else
+        local local_mgr="$SCRIPT_DIR/local-issue-manager.sh"
+        if [[ -f "$local_mgr" ]]; then
+            bash "$local_mgr" comment "$issue_num" "$body" &>/dev/null || true
+        fi
+    fi
+}
+
+# --- LOOP: Iterative refinement (Ralph Loop) --------------------------
+
+LOOP_STATE_FILE="$AGENTX_DIR/state/loop-state.json"
+
+cmd_loop() {
+ local action="${1:-status}"
+ shift 2>/dev/null || true
+
+ case "$action" in
+ start) loop_start "$@" ;;
+ status) loop_status ;;
+ iterate) loop_iterate "$@" ;;
+ complete) loop_complete "$@" ;;
+ cancel) loop_cancel ;;
+ *)
+ echo " Unknown loop action: $action"
+ echo " Valid actions: start, status, iterate, complete, cancel"
+ ;;
+ esac
+}
+
+loop_start() {
+ # Parse arguments
+ local prompt=""
+ local maxIterations=20
+ local completion_criteria="TASK_COMPLETE"
+ local issue_number=""
+
+ # Collect prompt parts and options
+ local prompt_parts=()
+ while [[ $# -gt 0 ]]; do
+ case $1 in
+ --max-iterations)
+ maxIterations="${2:-20}"
+ shift 2
+ ;;
+ --completion-criteria)
+ completion_criteria="${2:-TASK_COMPLETE}"
+ shift 2
+ ;;
+ --issue)
+ issue_number="$2"
+ shift 2
+ ;;
+ *)
+ prompt_parts+=("$1")
+ shift
+ ;;
+ esac
+ done
+
+ prompt="${prompt_parts[*]}"
+
+ if [[ -z "$prompt" ]]; then
+ echo " [FAIL] Prompt is required to start a loop"
+ echo ""
+ echo " Usage: ./agentx.sh loop start \"Your task\" --max-iterations 20 --completion-criteria \"ALL_TESTS_PASSING\""
+ return 1
+ fi
+
+ # Check for existing active loop
+ if [[ -f "$LOOP_STATE_FILE" ]] && command -v jq &>/dev/null; then
+ local active
+ active=$(jq -r '.active // false' "$LOOP_STATE_FILE")
+ if [[ "$active" == "true" ]]; then
+ local cur_iter
+ cur_iter=$(jq -r '.iteration // 0' "$LOOP_STATE_FILE")
+ echo " [WARN] An active loop already exists (iteration $cur_iter)"
+ echo " Cancel it first: ./agentx.sh loop cancel"
+ return 1
+ fi
+ fi
+
+ local now
+ now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+ local issue_json="null"
+ if [[ -n "$issue_number" ]]; then
+ issue_json="$issue_number"
+ fi
+
+ mkdir -p "$(dirname "$LOOP_STATE_FILE")"
+
+ cat > "$LOOP_STATE_FILE" <<LOOPEOF
+{
+ "active": true,
+ "status": "active",
+ "prompt": $(printf '%s' "$prompt" | jq -Rs .),
+ "iteration": 1,
+ "maxIterations": $maxIterations,
+ "completionCriteria": $(printf '%s' "$completion_criteria" | jq -Rs .),
+ "issueNumber": $issue_json,
+ "startedAt": "$now",
+ "lastIterationAt": "$now",
+ "history": [
+ {
+ "iteration": 1,
+ "timestamp": "$now",
+ "summary": "Loop started",
+ "status": "in-progress"
+ }
+ ]
+}
+LOOPEOF
+
+ echo ""
+ echo -e " ${CYAN}Iterative Loop Started${NC}"
+ echo -e " ${GRAY}---------------------------------------------${NC}"
+ echo " Iteration: 1/$maxIterations"
+ echo " Criteria: $completion_criteria"
+ if [[ -n "$issue_number" ]]; then
+ echo " Issue: #$issue_number"
+ fi
+ echo ""
+ echo -e " ${WHITE}Prompt:${NC}"
+ echo -e " ${GRAY}$prompt${NC}"
+ echo ""
+ echo -e " ${YELLOW}[WARN] Loop runs until criteria met or max iterations reached.${NC}"
+ echo -e " ${GRAY}To cancel: ./agentx.sh loop cancel${NC}"
+ echo ""
+ echo -e " ${RED}CRITICAL: Only output completion promise when criteria are genuinely TRUE.${NC}"
+ echo -e " ${RED}Do NOT lie to exit the loop. Failures are data -- use them to improve.${NC}"
+ echo ""
+}
+
+loop_status() {
+ if [[ ! -f "$LOOP_STATE_FILE" ]] || ! command -v jq &>/dev/null; then
+ echo " No active loop."
+ return
+ fi
+
+ local active
+ active=$(jq -r '.active // false' "$LOOP_STATE_FILE")
+
+ local iteration max_iter criteria startedAt issue_num
+ iteration=$(jq -r '.iteration // 0' "$LOOP_STATE_FILE")
+ max_iter=$(jq -r '.maxIterations // 0' "$LOOP_STATE_FILE")
+ criteria=$(jq -r '.completionCriteria // "none"' "$LOOP_STATE_FILE")
+ startedAt=$(jq -r '.startedAt // "unknown"' "$LOOP_STATE_FILE")
+ issue_num=$(jq -r '.issueNumber // empty' "$LOOP_STATE_FILE")
+
+ echo ""
+ echo -e " ${CYAN}Iterative Loop Status${NC}"
+ echo -e " ${GRAY}---------------------------------------------${NC}"
+ echo " Active: $active"
+ echo " Iteration: $iteration/$max_iter"
+ echo " Criteria: $criteria"
+ echo " Started: $startedAt"
+ if [[ -n "$issue_num" && "$issue_num" != "null" ]]; then
+ echo " Issue: #$issue_num"
+ fi
+ echo ""
+
+ # Show last 5 history entries
+ local history_count
+ history_count=$(jq '.history | length' "$LOOP_STATE_FILE")
+ if [[ $history_count -gt 0 ]]; then
+ echo -e " ${WHITE}History (last 5):${NC}"
+ jq -r '.history | .[-5:] | .[] | " [\(if .status == "complete" then "PASS" else "..." end)] Iteration \(.iteration): \(.summary)"' "$LOOP_STATE_FILE"
+ fi
+ echo ""
+}
+
+loop_iterate() {
+ if [[ ! -f "$LOOP_STATE_FILE" ]] || ! command -v jq &>/dev/null; then
+ echo " [FAIL] No loop state found."
+ return 1
+ fi
+
+local active status
+  active=$(jq -r '.active // false' "$LOOP_STATE_FILE")
+  status=$(jq -r '.status // "unknown"' "$LOOP_STATE_FILE")
+  if [[ "$active" != "true" ]]; then
+    echo -e " ${YELLOW}[WARN] Loop was $status. Reopening for new iteration.${NC}"
+    local tmp_file
+    tmp_file=$(mktemp)
+    jq '.active = true | .status = "active"' "$LOOP_STATE_FILE" > "$tmp_file" && mv "$tmp_file" "$LOOP_STATE_FILE"
+ fi
+
+ local summary="${*:-Iteration}"
+ local iteration max_iter issue_num
+ iteration=$(jq -r '.iteration // 0' "$LOOP_STATE_FILE")
+ max_iter=$(jq -r '.maxIterations // 0' "$LOOP_STATE_FILE")
+ issue_num=$(jq -r '.issueNumber // empty' "$LOOP_STATE_FILE")
+ local next_iter=$((iteration + 1))
+
+ if [[ $next_iter -gt $max_iter ]]; then
+ echo -e " ${YELLOW}[WARN] Max iterations ($max_iter) reached.${NC}"
+ local now
+ now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+ local tmp
+ tmp=$(jq --arg ts "$now" --arg s "Max iterations reached. $summary" --argjson i "$next_iter" \
+ '.active = false | .lastIterationAt = $ts | .history += [{"iteration": $i, "timestamp": $ts, "summary": $s, "status": "stopped"}]' \
+ "$LOOP_STATE_FILE")
+ echo "$tmp" > "$LOOP_STATE_FILE"
+ echo -e " ${RED}Loop stopped at iteration $max_iter.${NC}"
+ add_issue_comment "$issue_num" "🛑 **Ralph Loop Stopped** (Max iterations $max_iter reached). $summary"
+ return
+ fi
+
+ local now
+ now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+ local prompt criteria
+ prompt=$(jq -r '.prompt // ""' "$LOOP_STATE_FILE")
+ criteria=$(jq -r '.completionCriteria // ""' "$LOOP_STATE_FILE")
+
+ local tmp
+ tmp=$(jq --arg ts "$now" --arg s "$summary" --argjson i "$next_iter" \
+ '.iteration = $i | .lastIterationAt = $ts | .history += [{"iteration": $i, "timestamp": $ts, "summary": $s, "status": "in-progress"}]' \
+ "$LOOP_STATE_FILE")
+ echo "$tmp" > "$LOOP_STATE_FILE"
+
+ echo ""
+ echo -e " ${CYAN}Iteration $next_iter/$max_iter${NC}"
+ echo -e " ${GRAY}Summary: $summary${NC}"
+ echo ""
+ echo -e " ${WHITE}Prompt (unchanged):${NC}"
+ echo -e " ${GRAY}$prompt${NC}"
+ echo ""
+ echo -e " ${YELLOW}Criteria: $criteria${NC}"
+ echo -e " ${GRAY}Remaining: $((max_iter - next_iter)) iterations${NC}"
+ echo ""
+ add_issue_comment "$issue_num" "🔄 **Ralph Loop Iteration $next_iter/$max_iter**<br>Summary: $summary"
+}
+
+loop_complete() {
+ if [[ ! -f "$LOOP_STATE_FILE" ]] || ! command -v jq &>/dev/null; then
+ echo " [FAIL] No active loop to complete."
+ return 1
+ fi
+
+ local active
+ active=$(jq -r '.active // false' "$LOOP_STATE_FILE")
+ if [[ "$active" != "true" ]]; then
+    echo -e " ${YELLOW}[WARN] Loop is already inactive/complete.${NC}"
+    return 0
+ fi
+ local now
+ now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+ local iteration max_iter criteria issue_num
+ iteration=$(jq -r '.iteration // 0' "$LOOP_STATE_FILE")
+ max_iter=$(jq -r '.maxIterations // 0' "$LOOP_STATE_FILE")
+ criteria=$(jq -r '.completionCriteria // ""' "$LOOP_STATE_FILE")
+ issue_num=$(jq -r '.issueNumber // empty' "$LOOP_STATE_FILE")
+
+ local tmp
+ tmp=$(jq --arg ts "$now" --arg s "$summary" --argjson i "$iteration" \
+ '.active = false | .lastIterationAt = $ts | .history += [{"iteration": $i, "timestamp": $ts, "summary": $s, "status": "complete"}]' \
+ "$LOOP_STATE_FILE")
+ echo "$tmp" > "$LOOP_STATE_FILE"
+
+ echo ""
+ echo -e " ${GREEN}[PASS] Loop Complete!${NC}"
+ echo -e " ${GRAY}---------------------------------------------${NC}"
+ echo " Iterations: $iteration/$max_iter"
+ echo " Criteria: $criteria"
+ echo " Summary: $summary"
+ if [[ -n "$issue_num" && "$issue_num" != "null" ]]; then
+ echo " Issue: #$issue_num"
+ fi
+ echo ""
+ add_issue_comment "$issue_num" "✅ **Ralph Loop Complete!**<br>Iterations: $iteration/$max_iter<br>Summary: $summary"
+}
+
+loop_cancel() {
+ if [[ ! -f "$LOOP_STATE_FILE" ]] || ! command -v jq &>/dev/null; then
+ echo " No active loop to cancel."
+ return
+ fi
+
+ local active
+ active=$(jq -r '.active // false' "$LOOP_STATE_FILE")
+ if [[ "$active" != "true" ]]; then
+    echo -e " ${YELLOW}[WARN] Loop is already inactive/cancelled.${NC}"
+    return 0
+ fi
+ local iteration issue_num
+ local now
+ now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+ iteration=$(jq -r '.iteration // 0' "$LOOP_STATE_FILE")
+ issue_num=$(jq -r '.issueNumber // empty' "$LOOP_STATE_FILE")
+
+ local tmp
+ tmp=$(jq --arg ts "$now" --argjson i "$iteration" \
+ '.active = false | .lastIterationAt = $ts | .history += [{"iteration": $i, "timestamp": $ts, "summary": "Loop cancelled by user", "status": "cancelled"}]' \
+ "$LOOP_STATE_FILE")
+ echo "$tmp" > "$LOOP_STATE_FILE"
+
+ echo -e " ${YELLOW}Cancelled loop at iteration $iteration.${NC}"
+ add_issue_comment "$issue_num" "⚠️ **Ralph Loop Cancelled** at iteration $iteration."
 }
 
 # --- HELP -------------------------------------------------------------
@@ -947,8 +1287,24 @@ cmd_help() {
  echo " hook finish <agent> [issue] Auto-run state done on agent finish"
  echo " version Show installed version info"
  echo " upgrade Smart upgrade (preserves user content)"
+ echo " loop start <prompt> [opts] Start iterative refinement loop"
+ echo " loop status Check active loop state"
+ echo " loop iterate [summary] Advance to next iteration"
+ echo " loop complete [summary] Mark loop as done"
+ echo " loop cancel Cancel active loop"
  echo ""
- echo -e " ${WHITE}Examples:${NC}"
+ echo -e " ${WHITE}Loop Options:${NC}"
+ echo " --max-iterations <n> Max iterations (default: 20)"
+ echo " --completion-criteria <text> Completion promise phrase"
+ echo " --issue <n> Associated issue number"
+ echo ""
+ echo -e " ${WHITE}Loop Examples:${NC}"
+ echo " ./agentx.sh loop start \"Fix all tests\" --max-iterations 20 --completion-criteria \"ALL_TESTS_PASSING\""
+ echo " ./agentx.sh loop iterate \"3/5 tests passing\""
+ echo " ./agentx.sh loop complete \"All tests green\""
+ echo " ./agentx.sh loop cancel"
+ echo ""
+ echo -e " ${WHITE}Other Examples:${NC}"
  echo " ./agentx.sh ready"
  echo " ./agentx.sh state engineer working 42"
  echo " ./agentx.sh deps 42"
@@ -973,6 +1329,7 @@ case "$COMMAND" in
  workflow) cmd_workflow "$@" ;;
  run) cmd_run "$@" ;;
  hook) cmd_hook "$@" ;;
+ loop) cmd_loop "$@" ;;
  version) cmd_version ;;
  upgrade) cmd_upgrade ;;
  help|*) cmd_help ;;

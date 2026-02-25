@@ -1,15 +1,19 @@
 # DevOps Workflow — CI/CD pipelines and deployment automation
 # DevOps Engineer creates, Reviewer validates
+# Iterative refinement is ON by default for quality assurance
 
 [workflow]
 name = "devops"
-description = "CI/CD and deployment — DevOps engineer builds pipelines"
+description = "CI/CD and deployment -- DevOps engineer with iterative refinement"
 type = "devops"
 
 [[steps]]
 id = "implement"
 title = "Build pipeline: {{task_title}}"
 agent = "devops-engineer"
+iterate = true
+max_iterations = 5
+completion_criteria = "Pipeline runs successfully, all stages pass, secrets secured"
 status_on_start = "In Progress"
 status_on_complete = "In Review"
 

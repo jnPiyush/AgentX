@@ -42,6 +42,9 @@ id = "implement"
 title = "Implement code and tests"
 agent = "engineer"
 needs = ["architecture"]
+iterate = true
+max_iterations = 10
+completion_criteria = "All acceptance criteria met, tests pass at 80% coverage, no lint errors, docs updated"
 status_on_start = "In Progress"
 status_on_complete = "In Review"
 
