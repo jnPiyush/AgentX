@@ -1,4 +1,11 @@
 # Changelog
+
+## 6.5.3 - 2026-02-25
+
+### Changed
+
+- Improved Setup Wizard UI to make the upgrade flow more obvious when AgentX is already initialized in the workspace.
+
 ## 6.5.2 - 2026-02-25
 
 ### Fixed

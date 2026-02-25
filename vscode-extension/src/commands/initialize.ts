@@ -234,7 +234,7 @@ export function registerInitializeCommand(
  } catch { /* corrupt version file - reset */ }
  }
  fs.writeFileSync(versionFile, JSON.stringify({
- version: '6.5.2',
+ version: '6.5.3',
  mode: mode.label,
  installedAt: previousInstalledAt || new Date().toISOString(),
  updatedAt: new Date().toISOString(),

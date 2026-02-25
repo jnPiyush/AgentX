@@ -270,7 +270,7 @@ export class InitWizardPanel {
         } catch { /* corrupt version file - reset */ }
       }
       fs.writeFileSync(versionFile, JSON.stringify({
-        version: '6.5.2',
+        version: '6.5.3',
         mode: msg.mode,
         installedAt: previousInstalledAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -802,8 +802,8 @@ export class InitWizardPanel {
 
     <!-- Header -->
     <div class="wizard-header">
-      <h1>Initialize AgentX</h1>
-      <p>Set up multi-agent orchestration for your project</p>
+      <h1 id="mainHeader">Initialize AgentX</h1>
+      <p id="mainSubheader">Set up multi-agent orchestration for your project</p>
     </div>
 
     <!-- Stepper -->
@@ -826,8 +826,8 @@ export class InitWizardPanel {
 
     <!-- Warning: already initialized -->
     <div class="warning-banner" id="reinitWarning">
-      AgentX is already initialized in this workspace. Continuing will reinstall
-      framework files (your custom files are preserved).
+      <strong>AgentX is already initialized in this workspace.</strong><br>
+      Continuing will upgrade your framework files to the latest version. Your custom files and configurations will be preserved.
     </div>
 
     <!-- Step 1: Mode Selection -->
@@ -910,7 +910,7 @@ export class InitWizardPanel {
           <span class="summary-val" id="sumProject">-</span>
         </div>
       </div>
-      <p style="text-align:center; font-size:12px; color:var(--vscode-descriptionForeground); margin-top:12px;">
+      <p id="summaryDesc" style="text-align:center; font-size:12px; color:var(--vscode-descriptionForeground); margin-top:12px;">
         This will download and install AgentX framework files into your workspace.<br>
         Existing customized files will not be overwritten.
       </p>
@@ -929,7 +929,7 @@ export class InitWizardPanel {
   <!-- Install Progress -->
   <div class="install-view" id="installView">
     <div class="wizard-header">
-      <h1>Installing AgentX</h1>
+      <h1 id="installHeader">Installing AgentX</h1>
     </div>
     <div class="progress-ring">
       <svg viewBox="0 0 80 80">
@@ -1005,7 +1005,7 @@ export class InitWizardPanel {
           el.classList.toggle('visible', i === n - 1);
         });
         $btnBack.style.display = n > 1 ? '' : 'none';
-        $btnNext.textContent = n === totalSteps ? 'Install' : 'Next';
+        $btnNext.textContent = n === totalSteps ? (alreadyInitialized ? 'Reinstall / Upgrade' : 'Install') : 'Next';
         updateStepper();
 
         // Update step 2 visibility
@@ -1166,6 +1166,13 @@ export class InitWizardPanel {
             // Show reinstall warning
             if (alreadyInitialized) {
               $reinitWarning.classList.add('show');
+              document.getElementById('mainHeader').textContent = 'Upgrade AgentX';
+              document.getElementById('mainSubheader').textContent = 'Update framework files to the latest version';
+              document.getElementById('installHeader').textContent = 'Upgrading AgentX';
+              document.getElementById('summaryDesc').innerHTML = 'This will download and upgrade AgentX framework files in your workspace.<br>Your custom files and configurations will be preserved.';
+              if (currentStep === totalSteps) {
+                $btnNext.textContent = 'Reinstall / Upgrade';
+              }
             }
             break;
 
