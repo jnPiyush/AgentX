@@ -1,5 +1,12 @@
 # Changelog
+## 6.5.1 - 2026-02-25
 
+### Fixed
+
+- Agent sidebar empty on Windows: frontmatter regex now handles CRLF line endings so all 9 agents appear
+- Upgrade/reinstall not updating framework files: `copyDirRecursive` now overwrites existing files during upgrade
+- Version tracking preserves original `installedAt` timestamp on upgrade instead of resetting it
+- Runtime `version.json` now writes the correct extension version (was stuck at 5.5.0)
 ## 5.5.0 - 2026-02-23
 
 ### Fixed

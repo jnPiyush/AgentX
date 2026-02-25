@@ -213,6 +213,7 @@ export class InitWizardPanel {
     const tmpDir = path.join(root, '.agentx-install-tmp');
     const rawDir = path.join(root, '.agentx-install-raw');
     const zipFile = path.join(root, '.agentx-install.zip');
+    const isUpgrade = await this._agentx.checkInitialized();
 
     try {
       // Step 1: Download
@@ -244,7 +245,7 @@ export class InitWizardPanel {
       }
       try { fs.rmSync(rawDir, { recursive: true, force: true }); } catch { /* cleanup */ }
       try { fs.unlinkSync(zipFile); } catch { /* cleanup */ }
-      copyDirRecursive(tmpDir, root);
+      copyDirRecursive(tmpDir, root, isUpgrade);
       fs.rmSync(tmpDir, { recursive: true, force: true });
 
       // Step 4: Configure runtime
@@ -261,10 +262,17 @@ export class InitWizardPanel {
 
       // Version tracking
       const versionFile = path.join(root, '.agentx', 'version.json');
+      let previousInstalledAt: string | undefined;
+      if (isUpgrade && fs.existsSync(versionFile)) {
+        try {
+          const prev = JSON.parse(fs.readFileSync(versionFile, 'utf-8'));
+          previousInstalledAt = prev.installedAt;
+        } catch { /* corrupt version file - reset */ }
+      }
       fs.writeFileSync(versionFile, JSON.stringify({
-        version: '5.5.0',
+        version: '6.5.1',
         mode: msg.mode,
-        installedAt: new Date().toISOString(),
+        installedAt: previousInstalledAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }, null, 2));
 
@@ -1204,16 +1212,16 @@ function getNonce(): string {
   return text;
 }
 
-function copyDirRecursive(src: string, dest: string): void {
+function copyDirRecursive(src: string, dest: string, overwrite = false): void {
   if (!fs.existsSync(src)) { return; }
   if (!fs.existsSync(dest)) { fs.mkdirSync(dest, { recursive: true }); }
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
     if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath);
+      copyDirRecursive(srcPath, destPath, overwrite);
     } else {
-      if (!fs.existsSync(destPath)) {
+      if (overwrite || !fs.existsSync(destPath)) {
         fs.copyFileSync(srcPath, destPath);
       }
     }

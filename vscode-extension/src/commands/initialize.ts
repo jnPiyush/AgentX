@@ -68,6 +68,7 @@ export function registerInitializeCommand(
 
  // Check if already initialized
  const initialized = await agentx.checkInitialized();
+ let isUpgrade = false;
  if (initialized) {
  const overwrite = await vscode.window.showWarningMessage(
  'AgentX is already initialized in this workspace. Reinstall?',
@@ -75,6 +76,7 @@ export function registerInitializeCommand(
  'Cancel'
  );
  if (overwrite !== 'Reinstall') { return; }
+ isUpgrade = true;
  }
 
  // Pick mode (local is default)
@@ -202,7 +204,7 @@ export function registerInitializeCommand(
  progress.report({ message: 'Copying files...', increment: 30 });
 
  // Copy files from tmp to workspace root
- copyDirRecursive(tmpDir, root);
+ copyDirRecursive(tmpDir, root, isUpgrade);
 
  // Clean up tmp
  fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -224,10 +226,17 @@ export function registerInitializeCommand(
 
  // Version tracking
  const versionFile = path.join(root, '.agentx', 'version.json');
+ let previousInstalledAt: string | undefined;
+ if (isUpgrade && fs.existsSync(versionFile)) {
+ try {
+ const prev = JSON.parse(fs.readFileSync(versionFile, 'utf-8'));
+ previousInstalledAt = prev.installedAt;
+ } catch { /* corrupt version file - reset */ }
+ }
  fs.writeFileSync(versionFile, JSON.stringify({
- version: '5.5.0',
+ version: '6.5.1',
  mode: mode.label,
- installedAt: new Date().toISOString(),
+ installedAt: previousInstalledAt || new Date().toISOString(),
  updatedAt: new Date().toISOString(),
  }, null, 2));
 
@@ -320,12 +329,15 @@ export function registerInitializeCommand(
 }
 
 /**
- * Recursively copy directory contents into dest, merging without overwriting.
- * Existing files are intentionally preserved so that user-customized files
- * (e.g. AGENTS.md, agent definitions, workflow TOML files) survive a reinstall.
- * Only files that do not yet exist at the destination are copied.
+ * Recursively copy directory contents into dest.
+ *
+ * @param overwrite - When true, existing files are replaced with the source
+ *   version (used during upgrade / reinstall so framework files get updated).
+ *   When false (default), existing files are preserved so that user-customized
+ *   files (e.g. custom agent definitions, workflow TOML files) survive a
+ *   fresh install.
  */
-function copyDirRecursive(src: string, dest: string): void {
+function copyDirRecursive(src: string, dest: string, overwrite = false): void {
   if (!fs.existsSync(src)) { return; }
   if (!fs.existsSync(dest)) { fs.mkdirSync(dest, { recursive: true }); }
 
@@ -334,13 +346,13 @@ function copyDirRecursive(src: string, dest: string): void {
     const destPath = path.join(dest, entry.name);
 
     if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath);
+      copyDirRecursive(srcPath, destPath, overwrite);
     } else {
- if (!fs.existsSync(destPath)) {
- fs.copyFileSync(srcPath, destPath);
- }
- }
- }
+      if (overwrite || !fs.existsSync(destPath)) {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
+  }
 }
 
 /** Download a file via HTTPS, following redirects (GitHub returns 302). */

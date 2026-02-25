@@ -251,7 +251,7 @@ export class AgentXContext {
  if (!fs.existsSync(filePath)) { return undefined; }
 
  const content = fs.readFileSync(filePath, 'utf-8');
- const match = content.match(/^---\n([\s\S]*?)\n---/);
+ const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
  if (!match) { return undefined; }
 
  const frontmatter = match[1];

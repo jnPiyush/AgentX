@@ -275,6 +275,36 @@ describe('AgentXContext', () => {
       assert.equal(def!.fileName, 'test.agent.md');
     });
 
+    it('should parse frontmatter with CRLF line endings (Windows)', async () => {
+      const root = path.join(tmpBase, 'agentdef-crlf');
+      fs.mkdirSync(root, { recursive: true });
+      createAgentXRoot(root);
+      fs.mkdirSync(path.join(root, '.github', 'agents'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.github', 'agents', 'crlf.agent.md'), [
+        '---',
+        'name: CRLF Agent',
+        "description: 'Agent with Windows line endings'",
+        'maturity: stable',
+        'mode: adaptive',
+        'model: Claude Opus',
+        '---',
+        '',
+        '## Role',
+        'Windows content',
+      ].join('\r\n'));
+
+      __setWorkspaceFolders([{ path: root }]);
+      const ctx = new AgentXContext(fakeExtensionContext());
+      const def = await ctx.readAgentDef('crlf.agent.md');
+
+      assert.ok(def, 'should parse agent definition with CRLF line endings');
+      assert.equal(def!.name, 'CRLF Agent');
+      assert.equal(def!.maturity, 'stable');
+      assert.equal(def!.mode, 'adaptive');
+      assert.ok(def!.model.includes('Claude'));
+      assert.equal(def!.fileName, 'crlf.agent.md');
+    });
+
     it('should return undefined for missing file', async () => {
       const root = path.join(tmpBase, 'noagent');
       fs.mkdirSync(root, { recursive: true });
