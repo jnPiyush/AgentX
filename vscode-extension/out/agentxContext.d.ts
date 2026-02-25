@@ -4,12 +4,14 @@ import { ThinkingLog } from './utils/thinkingLog';
 import { ContextCompactor } from './utils/contextCompactor';
 import { ChannelRouter } from './utils/channelRouter';
 import { TaskScheduler } from './utils/taskScheduler';
+import { PluginManager } from './utils/pluginManager';
 /**
  * Optional services injected after construction.
  */
 interface AgentXServices {
     channelRouter: ChannelRouter;
     taskScheduler: TaskScheduler;
+    pluginManager?: PluginManager;
 }
 /**
  * Shared context for all AgentX extension components.
@@ -35,6 +37,8 @@ export declare class AgentXContext {
     get channelRouter(): ChannelRouter | undefined;
     /** Get the task scheduler (if available). */
     get taskScheduler(): TaskScheduler | undefined;
+    /** Get the plugin manager (if available). */
+    get pluginManager(): PluginManager | undefined;
     /** Invalidate the cached root so the next access re-discovers it. */
     invalidateCache(): void;
     /**

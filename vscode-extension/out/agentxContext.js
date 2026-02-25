@@ -127,6 +127,10 @@ class AgentXContext {
     get taskScheduler() {
         return this._services?.taskScheduler;
     }
+    /** Get the plugin manager (if available). */
+    get pluginManager() {
+        return this._services?.pluginManager;
+    }
     /** Invalidate the cached root so the next access re-discovers it. */
     invalidateCache() {
         this._cacheValid = false;

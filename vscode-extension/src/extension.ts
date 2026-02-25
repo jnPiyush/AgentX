@@ -23,6 +23,7 @@ import { ThinkingLog } from './utils/thinkingLog';
 import { ContextCompactor } from './utils/contextCompactor';
 import { ChannelRouter, VsCodeChatChannel, CliChannel } from './utils/channelRouter';
 import { TaskScheduler } from './utils/taskScheduler';
+import { PluginManager } from './utils/pluginManager';
 
 let agentxContext: AgentXContext;
 let eventBus: AgentEventBus;
@@ -30,6 +31,7 @@ let thinkingLog: ThinkingLog;
 let contextCompactor: ContextCompactor;
 let channelRouter: ChannelRouter;
 let taskScheduler: TaskScheduler;
+let pluginManager: PluginManager | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
  console.log('AgentX extension activating...');
@@ -52,8 +54,13 @@ export function activate(context: vscode.ExtensionContext) {
   : undefined;
  taskScheduler = new TaskScheduler(eventBus, agentxDir);
 
+ // Initialize plugin manager
+ if (agentxDir) {
+  pluginManager = new PluginManager(agentxDir, eventBus);
+ }
+
  // Store services on context for access by other modules
- agentxContext.setServices({ channelRouter, taskScheduler });
+ agentxContext.setServices({ channelRouter, taskScheduler, pluginManager });
 
  // Register disposables
  context.subscriptions.push({
@@ -148,6 +155,130 @@ export function activate(context: vscode.ExtensionContext) {
   channel.appendLine('AgentX Scheduled Tasks\n');
   for (const line of lines) { channel.appendLine(line); }
   channel.show(true);
+ })
+ );
+
+ // List installed plugins
+ context.subscriptions.push(
+ vscode.commands.registerCommand('agentx.listPlugins', async () => {
+  if (!pluginManager) {
+   vscode.window.showWarningMessage('AgentX: Not initialized. Plugins unavailable.');
+   return;
+  }
+  const plugins = pluginManager.list();
+  if (plugins.length === 0) {
+   vscode.window.showInformationMessage(
+    'AgentX: No plugins installed. Use "AgentX: Install Plugin" to add plugins.'
+   );
+   return;
+  }
+  const channel = vscode.window.createOutputChannel('AgentX Plugins');
+  channel.clear();
+  channel.appendLine('AgentX Installed Plugins\n');
+  for (const p of plugins) {
+   channel.appendLine(
+    `[${p.manifest.type}] ${p.manifest.name} v${p.manifest.version} - ${p.manifest.description}`
+   );
+   if (p.manifest.requires && p.manifest.requires.length > 0) {
+    channel.appendLine(`  Requires: ${p.manifest.requires.join(', ')}`);
+   }
+  }
+  channel.show(true);
+ })
+ );
+
+ // Run a plugin
+ context.subscriptions.push(
+ vscode.commands.registerCommand('agentx.runPlugin', async () => {
+  if (!pluginManager) {
+   vscode.window.showWarningMessage('AgentX: Not initialized. Plugins unavailable.');
+   return;
+  }
+  const plugins = pluginManager.list();
+  if (plugins.length === 0) {
+   vscode.window.showInformationMessage('AgentX: No plugins installed.');
+   return;
+  }
+  const pick = await vscode.window.showQuickPick(
+   plugins.map((p) => ({
+    label: p.manifest.name,
+    description: `v${p.manifest.version} [${p.manifest.type}]`,
+    detail: p.manifest.description,
+    plugin: p,
+   })),
+   { placeHolder: 'Select a plugin to run', title: 'AgentX - Run Plugin' }
+  );
+  if (!pick) { return; }
+
+  // Collect arguments if the plugin defines any
+  const args: Record<string, string> = {};
+  if (pick.plugin.manifest.args) {
+   for (const arg of pick.plugin.manifest.args) {
+    const value = await vscode.window.showInputBox({
+     prompt: `${arg.name}: ${arg.description}`,
+     value: arg.default ?? '',
+     placeHolder: arg.required ? '(required)' : '(optional, press Enter to skip)',
+    });
+    if (value === undefined) { return; } // cancelled
+    if (value.trim()) { args[arg.name] = value.trim(); }
+   }
+  }
+
+  // Run in terminal
+  const shell = agentxContext.getShell();
+  const isPwsh = shell === 'pwsh' || (shell === 'auto' && process.platform === 'win32');
+  try {
+   const cmd = pluginManager.buildRunCommand(
+    pick.plugin.manifest.name,
+    args,
+    isPwsh ? 'pwsh' : 'bash',
+   );
+   const terminal = vscode.window.createTerminal(`AgentX: ${pick.plugin.manifest.name}`);
+   terminal.show();
+   terminal.sendText(cmd);
+  } catch (err: unknown) {
+   const msg = err instanceof Error ? err.message : String(err);
+   vscode.window.showErrorMessage(`AgentX Plugin Error: ${msg}`);
+  }
+ })
+ );
+
+ // Scaffold a new plugin
+ context.subscriptions.push(
+ vscode.commands.registerCommand('agentx.scaffoldPlugin', async () => {
+  if (!pluginManager) {
+   vscode.window.showWarningMessage('AgentX: Not initialized.');
+   return;
+  }
+  const name = await vscode.window.showInputBox({
+   prompt: 'Plugin name (kebab-case)',
+   placeHolder: 'my-plugin',
+   validateInput: (v) => /^[a-z][a-z0-9-]*$/.test(v) ? undefined : 'Must be kebab-case (e.g., my-plugin)',
+  });
+  if (!name) { return; }
+
+  const type = await vscode.window.showQuickPick(
+   ['tool', 'skill', 'agent', 'channel', 'workflow'],
+   { placeHolder: 'Plugin type', title: 'AgentX - Plugin Type' }
+  );
+  if (!type) { return; }
+
+  const description = await vscode.window.showInputBox({
+   prompt: 'Short description',
+   placeHolder: 'What does this plugin do?',
+  });
+  if (!description) { return; }
+
+  try {
+   const dir = pluginManager.scaffold(name, type as any, description);
+   vscode.window.showInformationMessage(`AgentX: Plugin '${name}' scaffolded at ${dir}`);
+   // Open the plugin.json for editing
+   const doc = await vscode.workspace.openTextDocument(path.join(dir, 'plugin.json'));
+   vscode.window.showTextDocument(doc);
+  } catch (err: unknown) {
+   const msg = err instanceof Error ? err.message : String(err);
+   vscode.window.showErrorMessage(`AgentX: ${msg}`);
+  }
  })
  );
 

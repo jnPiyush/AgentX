@@ -1,0 +1,28 @@
+{
+  "name": "convert-docs",
+  "version": "1.0.0",
+  "description": "Convert Markdown documents to Microsoft Word (DOCX) using Pandoc.",
+  "author": "AgentX",
+  "type": "tool",
+  "entry": {
+    "pwsh": "convert-docs.ps1",
+    "bash": "convert-docs.sh"
+  },
+  "args": [
+    {
+      "name": "Folders",
+      "description": "Comma-separated list of folders to convert (default: docs/prd,docs/adr,docs/specs,docs/ux,docs/reviews)",
+      "required": false,
+      "default": "docs/prd,docs/adr,docs/specs,docs/ux,docs/reviews"
+    },
+    {
+      "name": "Template",
+      "description": "Path to a DOCX reference template for styling (optional)",
+      "required": false
+    }
+  ],
+  "requires": ["pandoc"],
+  "tags": ["docs", "conversion", "word", "docx", "pandoc"],
+  "maturity": "stable",
+  "source": "https://github.com/jnPiyush/AgentX"
+}

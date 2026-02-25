@@ -140,6 +140,24 @@
     "title": "List Scheduled Tasks",
     "category": "AgentX",
     "icon": "$(clock)"
+   },
+   {
+    "command": "agentx.listPlugins",
+    "title": "List Plugins",
+    "category": "AgentX",
+    "icon": "$(extensions)"
+   },
+   {
+    "command": "agentx.runPlugin",
+    "title": "Run Plugin",
+    "category": "AgentX",
+    "icon": "$(play)"
+   },
+   {
+    "command": "agentx.scaffoldPlugin",
+    "title": "Create New Plugin",
+    "category": "AgentX",
+    "icon": "$(add)"
    }
   ],
   "viewsContainers": {

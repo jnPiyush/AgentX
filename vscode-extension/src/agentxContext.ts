@@ -7,6 +7,7 @@ import { ThinkingLog } from './utils/thinkingLog';
 import { ContextCompactor } from './utils/contextCompactor';
 import { ChannelRouter } from './utils/channelRouter';
 import { TaskScheduler } from './utils/taskScheduler';
+import { PluginManager } from './utils/pluginManager';
 
 /**
  * Check whether a directory looks like an AgentX root
@@ -53,6 +54,7 @@ function findAgentXRootInDir(dir: string, depth: number): string | undefined {
 interface AgentXServices {
  channelRouter: ChannelRouter;
  taskScheduler: TaskScheduler;
+ pluginManager?: PluginManager;
 }
 
 /**
@@ -106,6 +108,11 @@ export class AgentXContext {
  /** Get the task scheduler (if available). */
  get taskScheduler(): TaskScheduler | undefined {
   return this._services?.taskScheduler;
+ }
+
+ /** Get the plugin manager (if available). */
+ get pluginManager(): PluginManager | undefined {
+  return this._services?.pluginManager;
  }
 
  /** Invalidate the cached root so the next access re-discovers it. */

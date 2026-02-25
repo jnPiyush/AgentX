@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentX Plugin Manifest",
+  "description": "Defines an installable AgentX plugin with commands, scripts, and metadata.",
+  "type": "object",
+  "required": ["name", "version", "description", "type", "entry"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Plugin identifier (kebab-case).",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this plugin does (one line).",
+      "maxLength": 200
+    },
+    "author": {
+      "type": "string",
+      "description": "Plugin author."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["tool", "skill", "agent", "channel", "workflow"],
+      "description": "Plugin category."
+    },
+    "entry": {
+      "type": "object",
+      "description": "Entry points for execution.",
+      "properties": {
+        "pwsh": {
+          "type": "string",
+          "description": "PowerShell script path relative to plugin root."
+        },
+        "bash": {
+          "type": "string",
+          "description": "Bash script path relative to plugin root."
+        },
+        "node": {
+          "type": "string",
+          "description": "Node.js script path relative to plugin root."
+        }
+      },
+      "minProperties": 1
+    },
+    "args": {
+      "type": "array",
+      "description": "Named arguments the plugin accepts.",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "required": { "type": "boolean", "default": false },
+          "default": { "type": "string" }
+        }
+      }
+    },
+    "requires": {
+      "type": "array",
+      "description": "External tools required (e.g., pandoc, docker).",
+      "items": { "type": "string" }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Searchable tags."
+    },
+    "maturity": {
+      "type": "string",
+      "enum": ["experimental", "preview", "stable", "deprecated"],
+      "default": "stable"
+    },
+    "source": {
+      "type": "string",
+      "description": "URL to the plugin source repository."
+    }
+  },
+  "additionalProperties": false
+}
