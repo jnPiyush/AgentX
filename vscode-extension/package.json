@@ -2,7 +2,7 @@
  "name": "agentx",
  "displayName": "AgentX - Multi-Agent Orchestration",
  "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Engineer, and Reviewer agents in a structured software development workflow.",
- "version": "6.0.0",
+ "version": "6.1.0",
  "publisher": "jnPiyush",
  "author": {
   "name": "Piyush Jain"
@@ -122,6 +122,24 @@
     "title": "Cancel Iterative Loop",
     "category": "AgentX",
     "icon": "$(stop-circle)"
+   },
+   {
+    "command": "agentx.showThinkingLog",
+    "title": "Show Thinking Log",
+    "category": "AgentX",
+    "icon": "$(output)"
+   },
+   {
+    "command": "agentx.contextBudget",
+    "title": "Show Context Budget",
+    "category": "AgentX",
+    "icon": "$(dashboard)"
+   },
+   {
+    "command": "agentx.listSchedules",
+    "title": "List Scheduled Tasks",
+    "category": "AgentX",
+    "icon": "$(clock)"
    }
   ],
   "viewsContainers": {

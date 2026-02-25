@@ -2,6 +2,11 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execShell } from './utils/shell';
+import { AgentEventBus } from './utils/eventBus';
+import { ThinkingLog } from './utils/thinkingLog';
+import { ContextCompactor } from './utils/contextCompactor';
+import { ChannelRouter } from './utils/channelRouter';
+import { TaskScheduler } from './utils/taskScheduler';
 
 /**
  * Check whether a directory looks like an AgentX root
@@ -43,6 +48,14 @@ function findAgentXRootInDir(dir: string, depth: number): string | undefined {
 }
 
 /**
+ * Optional services injected after construction.
+ */
+interface AgentXServices {
+ channelRouter: ChannelRouter;
+ taskScheduler: TaskScheduler;
+}
+
+/**
  * Shared context for all AgentX extension components.
  * Detects workspace state, mode, and provides CLI access.
  */
@@ -51,7 +64,24 @@ export class AgentXContext {
  private _cachedRoot: string | undefined;
  private _cacheValid = false;
 
- constructor(public readonly extensionContext: vscode.ExtensionContext) {
+ /** Core infrastructure services. */
+ readonly eventBus: AgentEventBus;
+ readonly thinkingLog: ThinkingLog;
+ readonly contextCompactor: ContextCompactor;
+
+ /** Optional services set after construction via setServices(). */
+ private _services: AgentXServices | undefined;
+
+ constructor(
+  public readonly extensionContext: vscode.ExtensionContext,
+  eventBus?: AgentEventBus,
+  thinkingLog?: ThinkingLog,
+  contextCompactor?: ContextCompactor,
+ ) {
+  this.eventBus = eventBus ?? new AgentEventBus();
+  this.thinkingLog = thinkingLog ?? new ThinkingLog(this.eventBus);
+  this.contextCompactor = contextCompactor ?? new ContextCompactor(this.eventBus);
+
   // Invalidate cache when configuration or workspace folders change.
   vscode.workspace.onDidChangeConfiguration(e => {
    if (e.affectsConfiguration('agentx')) {
@@ -59,6 +89,23 @@ export class AgentXContext {
    }
   });
   vscode.workspace.onDidChangeWorkspaceFolders(() => this.invalidateCache());
+ }
+
+ /**
+  * Inject optional services (channelRouter, taskScheduler) after construction.
+  */
+ setServices(services: AgentXServices): void {
+  this._services = services;
+ }
+
+ /** Get the channel router (if available). */
+ get channelRouter(): ChannelRouter | undefined {
+  return this._services?.channelRouter;
+ }
+
+ /** Get the task scheduler (if available). */
+ get taskScheduler(): TaskScheduler | undefined {
+  return this._services?.taskScheduler;
  }
 
  /** Invalidate the cached root so the next access re-discovers it. */

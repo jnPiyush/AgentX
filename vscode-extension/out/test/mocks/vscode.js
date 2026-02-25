@@ -136,9 +136,12 @@ exports.window = {
     showErrorMessage: async (..._args) => undefined,
     showQuickPick: async (..._args) => undefined,
     registerTreeDataProvider: () => ({ dispose: () => { } }),
-    createOutputChannel: () => ({
+    createOutputChannel: (_name) => ({
         appendLine: () => { },
+        append: () => { },
+        clear: () => { },
         show: () => { },
+        hide: () => { },
         dispose: () => { },
     }),
     withProgress: async (_options, task) => {

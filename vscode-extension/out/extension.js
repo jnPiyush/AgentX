@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
+const path = __importStar(require("path"));
 const initialize_1 = require("./commands/initialize");
 const status_1 = require("./commands/status");
 const readyQueue_1 = require("./commands/readyQueue");
@@ -50,10 +51,44 @@ const agentxContext_1 = require("./agentxContext");
 const chatParticipant_1 = require("./chat/chatParticipant");
 const agentContextLoader_1 = require("./chat/agentContextLoader");
 const setupWizard_1 = require("./commands/setupWizard");
+const eventBus_1 = require("./utils/eventBus");
+const thinkingLog_1 = require("./utils/thinkingLog");
+const contextCompactor_1 = require("./utils/contextCompactor");
+const channelRouter_1 = require("./utils/channelRouter");
+const taskScheduler_1 = require("./utils/taskScheduler");
 let agentxContext;
+let eventBus;
+let thinkingLog;
+let contextCompactor;
+let channelRouter;
+let taskScheduler;
 function activate(context) {
     console.log('AgentX extension activating...');
-    agentxContext = new agentxContext_1.AgentXContext(context);
+    // Initialize core infrastructure
+    eventBus = new eventBus_1.AgentEventBus();
+    thinkingLog = new thinkingLog_1.ThinkingLog(eventBus);
+    contextCompactor = new contextCompactor_1.ContextCompactor(eventBus);
+    agentxContext = new agentxContext_1.AgentXContext(context, eventBus, thinkingLog, contextCompactor);
+    // Initialize channel router with default channels
+    channelRouter = new channelRouter_1.ChannelRouter(eventBus);
+    channelRouter.register(new channelRouter_1.VsCodeChatChannel());
+    channelRouter.register(new channelRouter_1.CliChannel());
+    // Initialize task scheduler
+    const agentxDir = agentxContext.workspaceRoot
+        ? path.join(agentxContext.workspaceRoot, '.agentx')
+        : undefined;
+    taskScheduler = new taskScheduler_1.TaskScheduler(eventBus, agentxDir);
+    // Store services on context for access by other modules
+    agentxContext.setServices({ channelRouter, taskScheduler });
+    // Register disposables
+    context.subscriptions.push({
+        dispose: () => {
+            eventBus.dispose();
+            thinkingLog.dispose();
+            channelRouter.stopAll();
+            taskScheduler.dispose();
+        }
+    });
     // Register tree view providers
     const agentTreeProvider = new agentTreeProvider_1.AgentTreeProvider(agentxContext);
     const readyQueueProvider = new readyQueueTreeProvider_1.ReadyQueueTreeProvider(agentxContext);
@@ -90,6 +125,34 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('agentx.checkEnvironment', () => {
         const mode = agentxContext.getMode();
         (0, setupWizard_1.runSetupWizard)(mode);
+    }));
+    // Show thinking log output channel
+    context.subscriptions.push(vscode.commands.registerCommand('agentx.showThinkingLog', () => {
+        thinkingLog.show();
+    }));
+    // Show context budget report
+    context.subscriptions.push(vscode.commands.registerCommand('agentx.contextBudget', () => {
+        const report = contextCompactor.formatBudgetReport();
+        const channel = vscode.window.createOutputChannel('AgentX Context Budget');
+        channel.clear();
+        channel.appendLine(report);
+        channel.show(true);
+    }));
+    // List scheduled tasks
+    context.subscriptions.push(vscode.commands.registerCommand('agentx.listSchedules', async () => {
+        const tasks = taskScheduler.getTasks();
+        if (tasks.length === 0) {
+            vscode.window.showInformationMessage('AgentX: No scheduled tasks. Add tasks to .agentx/schedules.json.');
+            return;
+        }
+        const lines = tasks.map((t) => `${t.enabled ? '[ON]' : '[OFF]'} ${t.id}: "${t.schedule}" - ${t.description}`);
+        const channel = vscode.window.createOutputChannel('AgentX Schedules');
+        channel.clear();
+        channel.appendLine('AgentX Scheduled Tasks\n');
+        for (const line of lines) {
+            channel.appendLine(line);
+        }
+        channel.show(true);
     }));
     // Set initialized context for menu visibility
     agentxContext.checkInitialized().then((initialized) => {
@@ -142,6 +205,7 @@ function activate(context) {
     console.log('AgentX extension activated.');
 }
 function deactivate() {
+    // Cleanup handled by disposables registered in activate()
     console.log('AgentX extension deactivated.');
 }
 //# sourceMappingURL=extension.js.map

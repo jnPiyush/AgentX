@@ -664,7 +664,7 @@ function Run-Upgrade {
  $frameworkPaths = @(
  ".github/agents", ".github/templates", ".github/hooks", ".github/scripts",
  ".github/workflows", ".github/instructions", ".github/prompts",
- ".github/copilot-instructions.md", ".github/SCENARIOS.md",
+ ".github/copilot-instructions.md",
  ".agentx/agentx.ps1", ".agentx/agentx.sh",
  ".agentx/local-issue-manager.ps1", ".agentx/local-issue-manager.sh",
  ".agentx/workflows",

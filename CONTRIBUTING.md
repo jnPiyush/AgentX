@@ -284,9 +284,8 @@ If you have **GitHub Copilot**, it will automatically:
 ## 🎓 Learning Resources
 
 - [AGENTS.md](AGENTS.md) - Agent behavior and workflows
-- [Skills.md](Skills.md) - Technical standards index
-- [docs/SETUP.md](docs/SETUP.md) - Project setup, local mode, MCP integration
-- [docs/FEATURES.md](docs/FEATURES.md) - All feature documentation
+- [Skills.md](Skills.md) - Technical standards index + workflow scenarios
+- [docs/SETUP.md](docs/SETUP.md) - Project setup, local mode, MCP integration, troubleshooting
 - [.github/copilot-instructions.md](.github/copilot-instructions.md) - Copilot guidelines
 
 ---

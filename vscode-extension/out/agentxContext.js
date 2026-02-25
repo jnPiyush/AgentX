@@ -38,6 +38,9 @@ const vscode = __importStar(require("vscode"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const shell_1 = require("./utils/shell");
+const eventBus_1 = require("./utils/eventBus");
+const thinkingLog_1 = require("./utils/thinkingLog");
+const contextCompactor_1 = require("./utils/contextCompactor");
 /**
  * Check whether a directory looks like an AgentX root
  * (contains both AGENTS.md and .agentx/).
@@ -91,8 +94,17 @@ class AgentXContext {
     /** Cached AgentX root path (invalidated on config / workspace change). */
     _cachedRoot;
     _cacheValid = false;
-    constructor(extensionContext) {
+    /** Core infrastructure services. */
+    eventBus;
+    thinkingLog;
+    contextCompactor;
+    /** Optional services set after construction via setServices(). */
+    _services;
+    constructor(extensionContext, eventBus, thinkingLog, contextCompactor) {
         this.extensionContext = extensionContext;
+        this.eventBus = eventBus ?? new eventBus_1.AgentEventBus();
+        this.thinkingLog = thinkingLog ?? new thinkingLog_1.ThinkingLog(this.eventBus);
+        this.contextCompactor = contextCompactor ?? new contextCompactor_1.ContextCompactor(this.eventBus);
         // Invalidate cache when configuration or workspace folders change.
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('agentx')) {
@@ -100,6 +112,20 @@ class AgentXContext {
             }
         });
         vscode.workspace.onDidChangeWorkspaceFolders(() => this.invalidateCache());
+    }
+    /**
+     * Inject optional services (channelRouter, taskScheduler) after construction.
+     */
+    setServices(services) {
+        this._services = services;
+    }
+    /** Get the channel router (if available). */
+    get channelRouter() {
+        return this._services?.channelRouter;
+    }
+    /** Get the task scheduler (if available). */
+    get taskScheduler() {
+        return this._services?.taskScheduler;
     }
     /** Invalidate the cached root so the next access re-discovers it. */
     invalidateCache() {

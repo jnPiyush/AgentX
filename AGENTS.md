@@ -14,86 +14,33 @@
 4. **Execute** role-specific work
 5. **Update Status** in GitHub Projects V2 (or local file in Local Mode)
 
-### Issue-First Flow (Ideal)
+### Issue-First Flow
 
-Every piece of work -- bug fix, feature, docs update -- **MUST** start with an issue. The issue is the central coordination point that agents use for context, status tracking, and handoffs.
+Every piece of work -- bug fix, feature, docs update -- **MUST** start with an issue.
 
-**Why issue-first?**
-- Agents (PM, Architect, Engineer, Reviewer) rely on issue data to discover work
-- The ready queue (`agentx.ps1 ready`) sorts unblocked issues by priority
-- Commit messages reference issues for traceability (`feat: add login (#42)`)
-- Reviews validate against acceptance criteria in the issue body
-- Without an issue, agents have nothing to route, track, or review against
-
-**GitHub Mode -- Step by Step:**
-
-```
-1. gh issue create --title "[Story] Add /health endpoint" --label "type:story"
-   -> Creates issue #42 on the project board (status: Backlog)
-
-2. Agent picks up issue from ready queue
-   -> ./.agentx/agentx.ps1 ready
-
-3. Agent works on issue, updates status
-   -> Backlog -> In Progress -> In Review -> Done
-
-4. Commit references issue
-   -> git commit -m "feat: add health endpoint (#42)"
-
-5. Reviewer validates against issue, closes it
-   -> gh issue close 42 --reason completed
-```
-
-**Local Mode -- Step by Step:**
-
-```
-1. .\.agentx\local-issue-manager.ps1 -Action create -Title "[Bug] Fix login timeout" -Labels "type:bug"
-   -> Creates issue #1 in .agentx/issues/1.json (status: Backlog)
-
-2. Agent picks up issue from ready queue
-   -> .\.agentx\agentx.ps1 ready
-
-3. Agent works on issue, updates status
-   -> .\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
-
-4. Commit references issue
-   -> git commit -m "fix: resolve login timeout (#1)"
-
-5. Review and close
-   -> .\.agentx\local-issue-manager.ps1 -Action close -IssueNumber 1
-```
-
-**Emergency bypass**: If you must commit without an issue (hotfix, typo), add `[skip-issue]` to the commit message. Create a retroactive issue afterward to maintain traceability.
-
-### Issue Commands
+**Why issue-first?** Agents rely on issues for routing, status tracking, and handoffs. The ready queue sorts by priority. Commits reference issues for traceability. Without an issue, nothing can be routed or reviewed.
 
 **GitHub Mode:**
 ```bash
-# Create issue (auto-added to Project board)
-gh issue create --title "[Type] Description" --label "type:story"
-
-# Update status via GitHub Projects (NOT labels!)
-# Backlog -> In Progress -> In Review -> Ready -> Done
-
-# Close issue
-gh issue close <ID>
+gh issue create --title "[Story] Add /health endpoint" --label "type:story"  # Creates #42
+.\.agentx\agentx.ps1 ready                        # Pick from ready queue
+# Work... then commit:
+git commit -m "feat: add health endpoint (#42)"
+gh issue close 42 --reason completed
 ```
 
-**Local Mode** (without GitHub):
+**Local Mode:**
 ```powershell
-# Create issue
-.\.agentx\local-issue-manager.ps1 -Action create -Title "[Type] Description" -Labels "type:story"
-
-# Update status
-.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber <ID> -Status "In Progress"
-
-# Close issue
-.\.agentx\local-issue-manager.ps1 -Action close -IssueNumber <ID>
+.\.agentx\local-issue-manager.ps1 -Action create -Title "[Bug] Fix timeout" -Labels "type:bug"  # Creates #1
+.\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
+git commit -m "fix: resolve login timeout (#1)"
+.\.agentx\local-issue-manager.ps1 -Action close -IssueNumber 1
 ```
 
-> [WARN] **Status Tracking**: Use GitHub Projects V2 **Status** field (GitHub mode) or local JSON status (Local mode).
-> 
-> **Local Mode**: See [docs/SETUP.md](docs/SETUP.md#local-mode-no-github) for filesystem-based issue tracking without GitHub.
+**Emergency bypass**: Add `[skip-issue]` to the commit message for hotfixes. Create a retroactive issue afterward.
+
+> **Status Tracking**: Use GitHub Projects V2 **Status** field (GitHub mode) or local JSON status (Local mode).
+> See [docs/SETUP.md](docs/SETUP.md#local-mode-no-github) for local mode details.
 
 ### AgentX CLI Utilities
 
@@ -378,62 +325,30 @@ PM -> UX (optional, parallel) -> Engineer -> Reviewer -> Done
 
 ### Backlog-Based Handoffs
 
-**Work Selection**: Agents query the backlog for the next priority item instead of receiving explicit issue numbers.
+Agents query the backlog for the next priority item instead of receiving explicit issue numbers.
 
-**Selection Criteria**:
-
-| Agent | Queries Backlog For |
-|-------|---------------------|
-| **UX Designer** | Status=`Ready` + `needs:ux` label, sorted by priority |
-| **Architect** | Status=`Ready` + PRD complete, sorted by priority (no UX dependency) |
+| Agent | Picks Up |
+|-------|----------|
+| **UX Designer** | Status=`Ready` + `needs:ux`, sorted by priority |
+| **Architect** | Status=`Ready` + PRD complete, sorted by priority |
 | **Engineer** | Status=`Ready` + ADR/Spec complete, sorted by priority |
 | **Reviewer** | Status=`In Review`, sorted by priority |
 | **DevOps** | `type:devops` + Status=`Ready`, sorted by priority |
 
-**Priority Order**: `priority:p0` > `priority:p1` > `priority:p2` > `priority:p3` > (no priority label)
+**Priority Order**: `priority:p0` > `priority:p1` > `priority:p2` > `priority:p3` > (no label)
 
-**Handoff Query Example**:
-```bash
-# UX Designer queries for next work item:
-gh issue list --label "needs:ux" --json number,title,labels \
- --jq '.[] | select(.labels[].name == "priority:p0" or .labels[].name == "priority:p1") | .number'
-```
-
-**Benefits**:
-- [PASS] **Autonomous work distribution** - No manual issue assignment needed
-- [PASS] **Priority-driven** - Highest priority work gets done first
-- [PASS] **Flexible coordination** - Agents adapt to backlog changes dynamically
-- [PASS] **Parallel work support** - Multiple agents can work on different priority items
-
-**No Work Available**: If no matching issues found, agent reports "No [role] work pending" and waits for backlog updates.
+If no matching issues found, agent reports "No [role] work pending."
 
 ### Context Management
 
-**Critical Rule**: Manage context between major phase transitions to prevent assumption contamination and maintain focus.
+Clear context before implementation phase (UX/Architect -> Engineer) to prevent design assumptions from leaking into code. Use `/clear` in Copilot Chat or start a new session.
 
-| Transition | Clear Context? | Reason |
-|------------|----------------|--------|
-| PM -> UX | [FAIL] No | UX needs PRD context for design decisions |
-| PM -> Architect | [FAIL] No | Architect needs PRD context for technical design |
-| UX/Architect -> Engineer | [PASS] **YES** | Engineer follows spec only, not design assumptions |
-| Engineer -> Reviewer | [FAIL] No | Reviewer needs full context for comprehensive review |
-| Reviewer -> Engineer (rework) | [FAIL] No | Engineer needs review feedback |
-
-**When to Clear Context**:
-1. Before starting implementation (UX/Architect -> Engineer)
-2. When switching from research to execution
-3. When starting autonomous mode for simple tasks
-
-**How to Clear Context**:
-- **VS Code**: Use `/clear` command in Copilot Chat
-- **Manual**: Close current agent session, open new session for next agent
-- **Purpose**: Forces agent to rely on saved artifacts (PRD, ADR, Spec) rather than conversational assumptions
-
-**Why This Matters**:
-- [PASS] Prevents architect's design assumptions from leaking into code
-- [PASS] Forces reliance on documented specs (better for teams)
-- [PASS] Catches incomplete specifications early
-- [PASS] Maintains clean separation between planning and execution
+| Transition | Clear? | Reason |
+|------------|--------|--------|
+| PM -> UX/Architect | No | Needs PRD context |
+| UX/Architect -> Engineer | **Yes** | Engineer follows spec only |
+| Engineer -> Reviewer | No | Reviewer needs full context |
+| Reviewer -> Engineer (rework) | No | Needs review feedback |
 
 | Phase | Status Transition | Meaning |
 |-------|-------------------|---------|
@@ -469,12 +384,24 @@ gh issue list --label "needs:ux" --json number,title,labels \
 | Security Plan | `.github/templates/SECURITY-PLAN-TEMPLATE.md` |
 
 **Template Features**:
-- **Input Variables**: Dynamic content with `${variable_name}` syntax
-- **Required Fields**: Enforce critical data collection
-- **Default Values**: Pre-fill common values
+- **Input Variables**: Dynamic content with `${variable_name}` syntax declared in YAML frontmatter
+- **Required Fields**: Enforce critical data collection (`required: true`)
+- **Default Values**: Pre-fill common values (`default: "p2"`)
 - **Special Tokens**: `${current_date}`, `${user}`, etc.
 
-See [Template Input Variables Guide](docs/FEATURES.md#template-input-variables) for complete documentation.
+Templates declare inputs in frontmatter. Agents substitute values when creating documents:
+```yaml
+---
+inputs:
+  epic_title:
+    description: "Title of the Epic"
+    required: true
+  date:
+    required: false
+    default: "${current_date}"
+---
+# PRD: ${epic_title}
+```
 
 ---
 
@@ -510,7 +437,6 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Templates | `.github/templates/` |
 | Skills | `.github/skills/` |
 | Instructions | `.github/instructions/` |
-| Workflow Scenarios | `.github/SCENARIOS.md` |
 | Workflow Templates | `.agentx/workflows/` |
 | Agent State | `.agentx/state/` |
 | Issue Digests | `.agentx/digests/` |
@@ -519,87 +445,41 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Packs | `packs/` |
 | Agent Delegation | `.github/agents/agent-delegation.md` |
 
+### New Features (v6.1)
+
+| Feature | Location | Status |
+|---------|----------|--------|
+| **Typed Event Bus** | `vscode-extension/src/utils/eventBus.ts` | [PASS] Stable |
+| **Structured Thinking Log** | `vscode-extension/src/utils/thinkingLog.ts` | [PASS] Stable |
+| **Context Compaction** | `vscode-extension/src/utils/contextCompactor.ts` | [PASS] Stable |
+| **Channel Abstraction** | `vscode-extension/src/utils/channelRouter.ts` | [PASS] Stable |
+| **Cron Task Scheduler** | `vscode-extension/src/utils/taskScheduler.ts` | [PASS] Stable |
+
 ### New Features (v6.0)
 
-| Feature | Documentation | Status |
-|---------|---------------|--------|
+| Feature | Location | Status |
+|---------|----------|--------|
 | **Critical Pre-Check Auto-Install** | `src/commands/setupWizard.ts` | [PASS] Stable |
 | **PowerShell Shell Fallback** | `src/utils/shell.ts` | [PASS] Stable |
 | **Copilot Extension Awareness** | `src/commands/initialize.ts` | [PASS] Stable |
 | **Expanded VS Code Test Mocks** | `src/test/mocks/vscode.ts` | [PASS] Stable |
 
-### New Features (v5.3)
-
-| Feature | Documentation | Status |
-|---------|---------------|--------|
-| **Customer Coach Agent** | `.github/agents/customer-coach.agent.md` | [PASS] Stable |
-| **UX Methodology Instructions** | `.github/instructions/ux-methodology.instructions.md` | [PASS] Stable |
-| **Release Automation** | `.github/workflows/auto-release.yml` | [PASS] Stable |
-| **Copilot Coding Agent Setup** | `.github/workflows/copilot-setup-steps.yml` | [PASS] Stable |
-| **Shared PowerShell Modules** | `scripts/modules/CIHelpers.psm1`, `SecurityHelpers.psm1` | [PASS] Stable |
-| **Agent Delegation Protocol** | `.github/agents/agent-delegation.md` | [PASS] Stable |
-| **Pack Bundle System** | `packs/agentx-core/manifest.json` | [PASS] Stable |
-
-### Shipped Features (v5.1-v5.2)
+### Previous Versions
 
 <details>
-<summary>Click to expand v5.1-v5.2 features</summary>
+<summary>Click to expand v2.1-v5.3 features</summary>
 
-| Feature | Documentation | Status |
-|---------|---------------|--------|
-| **Executable Scripts** | 30 scripts across 17 skills (Anthropic pattern) | [PASS] Stable |
-| **Playwright E2E Scaffold** | `scaffold-playwright.py` in testing skill | [PASS] Stable |
-| **Cognitive Architecture** | RAG pipeline + Memory system patterns + scaffold script | [PASS] Stable |
-| **TypeScript Instructions** | `typescript.instructions.md` for Node.js/TS backend | [PASS] Stable |
-| **5-Minute Quickstart** | [docs/QUICKSTART.md](docs/QUICKSTART.md) | [PASS] Stable |
+**v5.3**: Customer Coach Agent, UX Methodology Instructions, Release Automation, Copilot Coding Agent Setup, Shared PowerShell Modules, Agent Delegation Protocol, Pack Bundle System
 
-</details>
+**v5.1-v5.2**: Executable Scripts (30 across 17 skills), Playwright E2E Scaffold, Cognitive Architecture, TypeScript Instructions, 5-Minute Quickstart
 
-**v5.0**:
-| Feature | Documentation | Status |
-|---------|---------------|--------|
-| **100% agentskills.io Compliance** | All 41 skill SKILL.md files | [PASS] Stable |
-| **Progressive Disclosure** | 112 reference files across skills | [PASS] Stable |
-| **Standardized Descriptions** | WHAT + WHEN + KEYWORDS format (234-314 chars) | [PASS] Stable |
-| **Anthropic Guide Compliance** | Validated against Claude skills guide | [PASS] Stable |
-| **Solution Cleanup** | Stale templates removed, .gitignore improved | [PASS] Stable |
+**v5.0**: 100% agentskills.io Compliance (41 skills), Progressive Disclosure (112 reference files), Standardized Descriptions, Anthropic Guide Compliance
 
-</details>
+**v4.0**: Declarative Workflows (7 TOML templates), Smart Ready Queue, Agent State Tracking, Dependency Management, Issue Digests
 
-### Shipped Features (v2.1-v4.0)
+**v3.0**: Agent Analytics, Auto-Fix Reviewer (Preview), Prompt Engineering Skill, Local Mode, Cross-Repo Orchestration, DevOps Agent, Visualization
 
-<details>
-<summary>Click to expand previous version features</summary>
-
-**v4.0**:
-| Feature | Documentation | Status |
-|---------|---------------|--------|
-| **Declarative Workflows** | [docs/FEATURES.md](docs/FEATURES.md#declarative-workflows) | [PASS] Implemented |
-| **Smart Ready Queue** | [docs/FEATURES.md](docs/FEATURES.md#smart-ready-queue) | [PASS] Implemented |
-| **Agent State Tracking** | [docs/FEATURES.md](docs/FEATURES.md#agent-state-tracking) | [PASS] Implemented |
-| **Dependency Management** | [docs/FEATURES.md](docs/FEATURES.md#dependency-management) | [PASS] Implemented |
-| **Issue Digests** | [docs/FEATURES.md](docs/FEATURES.md#issue-digests) | [PASS] Implemented |
-
-**v3.0**:
-| Feature | Documentation | Status |
-|---------|---------------|--------|
-| **Agent Analytics** | [docs/FEATURES.md](docs/FEATURES.md#agent-analytics) | [PASS] Implemented |
-| **Auto-Fix Reviewer** | [.github/agents/reviewer-auto.agent.md](.github/agents/reviewer-auto.agent.md) | Preview |
-| **Prompt Engineering** | [.github/skills/ai-systems/prompt-engineering/SKILL.md](.github/skills/ai-systems/prompt-engineering/SKILL.md) | [PASS] Implemented |
-| **Cross-Repo** | [docs/FEATURES.md](docs/FEATURES.md#cross-repository-orchestration) | [PASS] Implemented |
-| **CLI Specification** | [docs/FEATURES.md](docs/FEATURES.md#cli-specification) | [PASS] Implemented |
-| **Agent Memory** | [docs/FEATURES.md](docs/FEATURES.md#agent-memory-system) | Planned |
-| **Visualization** | [docs/FEATURES.md](docs/FEATURES.md#visualization--debugging) | [PASS] Implemented |
-
-**v2.1**:
-| Feature | Documentation | Status |
-|---------|---------------|--------|
-| **Maturity Levels** | See [Agent Roles](#agent-roles) | [PASS] Stable |
-| **Constraint-Based Design** | All agent `.agent.md` files | [PASS] Stable |
-| **Handoff Buttons** | Agent frontmatter `handoffs:` field | [PASS] Stable |
-| **Input Variables** | [Template Input Variables](docs/FEATURES.md#template-input-variables) | [PASS] Stable |
-| **Context Clearing** | [Context Management](#context-management) | [PASS] Stable |
-| **Agent X Adaptive Mode** | [.github/agents/agent-x.agent.md](.github/agents/agent-x.agent.md) | [PASS] Stable |
+**v2.1**: Maturity Levels, Constraint-Based Design, Handoff Buttons, Template Input Variables, Context Clearing, Agent X Adaptive Mode
 
 </details>
 
@@ -613,4 +493,4 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 ---
 
-**See Also**: [Skills.md](Skills.md) for production code standards | [SCENARIOS.md](.github/SCENARIOS.md) for multi-skill workflow chains | [Quickstart](docs/QUICKSTART.md) for 5-minute onboarding
+**See Also**: [Skills.md](Skills.md) for production code standards and workflow scenarios | [Quickstart](docs/QUICKSTART.md) for 5-minute onboarding | [Setup](docs/SETUP.md) for installation and troubleshooting

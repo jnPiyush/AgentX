@@ -1,4 +1,16 @@
 import * as vscode from 'vscode';
+import { AgentEventBus } from './utils/eventBus';
+import { ThinkingLog } from './utils/thinkingLog';
+import { ContextCompactor } from './utils/contextCompactor';
+import { ChannelRouter } from './utils/channelRouter';
+import { TaskScheduler } from './utils/taskScheduler';
+/**
+ * Optional services injected after construction.
+ */
+interface AgentXServices {
+    channelRouter: ChannelRouter;
+    taskScheduler: TaskScheduler;
+}
 /**
  * Shared context for all AgentX extension components.
  * Detects workspace state, mode, and provides CLI access.
@@ -8,7 +20,21 @@ export declare class AgentXContext {
     /** Cached AgentX root path (invalidated on config / workspace change). */
     private _cachedRoot;
     private _cacheValid;
-    constructor(extensionContext: vscode.ExtensionContext);
+    /** Core infrastructure services. */
+    readonly eventBus: AgentEventBus;
+    readonly thinkingLog: ThinkingLog;
+    readonly contextCompactor: ContextCompactor;
+    /** Optional services set after construction via setServices(). */
+    private _services;
+    constructor(extensionContext: vscode.ExtensionContext, eventBus?: AgentEventBus, thinkingLog?: ThinkingLog, contextCompactor?: ContextCompactor);
+    /**
+     * Inject optional services (channelRouter, taskScheduler) after construction.
+     */
+    setServices(services: AgentXServices): void;
+    /** Get the channel router (if available). */
+    get channelRouter(): ChannelRouter | undefined;
+    /** Get the task scheduler (if available). */
+    get taskScheduler(): TaskScheduler | undefined;
     /** Invalidate the cached root so the next access re-discovers it. */
     invalidateCache(): void;
     /**
@@ -57,4 +83,5 @@ export interface AgentDefinition {
     model: string;
     fileName: string;
 }
+export {};
 //# sourceMappingURL=agentxContext.d.ts.map

@@ -603,6 +603,62 @@ go install github.com/github/github-mcp-server@latest
 
 ---
 
-**Related**: [AGENTS.md](../AGENTS.md) | [FEATURES.md](FEATURES.md) | [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+**Related**: [AGENTS.md](../AGENTS.md) | [Skills.md](../Skills.md) | [QUICKSTART.md](QUICKSTART.md)
 
-**Last Updated**: February 2026
+---
+
+## Troubleshooting
+
+### Installation Issues
+
+| Problem | Solution |
+|---------|----------|
+| Pre-commit hooks not working | `cp .github/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit` |
+| Permission denied on scripts | Linux/Mac: `chmod +x .github/scripts/*.sh`; Windows: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| GitHub CLI not authenticated | `gh auth login` (install first: `winget install GitHub.cli` / `brew install gh`) |
+
+### Workflow Issues
+
+| Problem | Solution |
+|---------|----------|
+| "Issue reference required" error | Include issue number in commit: `git commit -m "feat: add login (#123)"` or bypass: `[skip-issue]` |
+| Status not updating | Verify GitHub Projects V2 (not V1), check Status field has correct values |
+| Agent not triggering | Check Actions is enabled, verify workflow syntax, check Actions tab for failures |
+
+### Validation Failures
+
+| Failure | Fix |
+|---------|-----|
+| PRD missing sections | Ensure: Problem Statement, Target Users, Goals, Requirements, User Stories |
+| ADR missing sections | Ensure: Context, Decision, Options Considered (3+), Consequences |
+| Test coverage below 80% | Run `dotnet test /p:CollectCoverage=true` or `pytest --cov=src`, add more tests |
+
+### Local Mode Issues
+
+| Problem | Solution |
+|---------|----------|
+| Local issues not creating | Run: `mkdir .agentx/issues -Force` then init config |
+| Switching Local to GitHub | Add remote: `git remote add origin <url>`, migrate issues with `gh issue create` |
+
+### Common Error Messages
+
+| Error | Solution |
+|-------|----------|
+| `VALIDATION_FAILED` | Run `validate-handoff.sh <issue> <role>` to see details |
+| `STATUS_NOT_READY` | Wait for previous agent to finish |
+| `PERMISSION_DENIED` | `chmod +x script.sh` |
+| `GH_AUTH_REQUIRED` | `gh auth login` |
+| `ISSUE_NOT_FOUND` | Verify issue number exists |
+
+### Debug Commands
+
+```bash
+gh run list --limit 5            # Recent workflow runs
+gh run view <run-id> --log       # Specific run logs
+DEBUG=1 ./validate-handoff.sh 123 engineer  # Debug mode
+```
+
+### Getting Help
+
+- [GitHub Issues](https://github.com/jnPiyush/AgentX/issues) with `type:bug` label
+- Include reproduction steps

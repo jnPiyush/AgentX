@@ -5,6 +5,56 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.1.0] - 2026-02-24
+
+### Added
+
+**Typed Event Bus** (`utils/eventBus.ts`):
+- Centralized `AgentEventBus` with 11 strongly-typed event types
+- Type-safe `on()`, `once()`, `emit()`, `clear()` methods
+- Event history with configurable limit for debugging
+- Error-resilient listeners (one crashing listener does not affect others)
+
+**Structured Thinking Log** (`utils/thinkingLog.ts`):
+- `ThinkingLog` class writing to VS Code Output Channel ("AgentX Thinking Log")
+- Convenience methods: `info()`, `toolCall()`, `toolResult()`, `apiCall()`, `warning()`, `error()`
+- Queryable with filters by agent, kind, time range, and limit
+- Activity summary generation per agent role
+
+**Context Compaction** (`utils/contextCompactor.ts`):
+- `ContextCompactor` class tracking loaded context items with token estimates
+- Budget checking with 75% threshold and severity levels (GOOD/OK/WARNING/CRITICAL)
+- Usage breakdown by category (skill, instruction, agent-def, template, memory, conversation)
+- `compactConversation()` extracts decisions, code changes, errors, key facts
+- Human-readable `formatBudgetReport()` for the new "Show Context Budget" command
+
+**Channel Abstraction** (`utils/channelRouter.ts`):
+- `Channel` interface for multi-surface message routing
+- `ChannelRouter` class routing messages by group ID prefix (vsc:, cli:, gh:)
+- Three channel implementations: VsCodeChatChannel, CliChannel, GitHubIssueChannel (stub)
+- Emits channel-message events on the event bus for all inbound/outbound traffic
+
+**Cron Task Scheduler** (`utils/taskScheduler.ts`):
+- Zero-dependency cron expression parser (supports *, exact, ranges, lists, steps)
+- `TaskScheduler` with disk persistence to `.agentx/schedules.json`
+- Add/remove/enable/disable tasks with double-fire prevention
+- Emits task-fired events for integration with other systems
+
+**New VS Code Commands**:
+- `AgentX: Show Thinking Log` -- opens the structured activity log output channel
+- `AgentX: Show Context Budget` -- displays token usage breakdown
+- `AgentX: List Scheduled Tasks` -- shows all configured cron tasks
+
+### Changed
+
+- `AgentXContext` now accepts optional `eventBus`, `thinkingLog`, and `contextCompactor` services
+- `extension.ts` initializes all new services on activation with proper disposal
+- VS Code mock expanded with `clear()`, `append()`, `hide()` on output channels
+
+### Testing
+
+- 60 new unit tests across all 5 features (190 total, 0 failing)
+
 ## [6.0.0] - 2026-02-22
 
 ### Added

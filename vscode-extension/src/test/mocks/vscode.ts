@@ -150,9 +150,12 @@ export const window = {
   showErrorMessage: async (..._args: unknown[]) => undefined,
   showQuickPick: async (..._args: unknown[]) => undefined,
   registerTreeDataProvider: () => ({ dispose: () => { /* noop */ } }),
-  createOutputChannel: () => ({
+  createOutputChannel: (_name?: string) => ({
     appendLine: () => { /* noop */ },
+    append: () => { /* noop */ },
+    clear: () => { /* noop */ },
     show: () => { /* noop */ },
+    hide: () => { /* noop */ },
     dispose: () => { /* noop */ },
   }),
   withProgress: async (_options: unknown, task: (progress: unknown, token: unknown) => Promise<unknown>) => {

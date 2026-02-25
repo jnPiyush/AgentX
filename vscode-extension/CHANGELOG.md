@@ -12,6 +12,27 @@
 - Extension checker falls back to CLI only when API is unavailable
 - External tool install flow shows cancellable progress notification while polling
 
+## 6.1.0 - 2026-02-24
+
+### Added
+
+- Typed Event Bus with 11 event types for centralized agent activity notifications
+- Structured Thinking Log writing to VS Code Output Channel with queryable entries
+- Context Compaction with token budget tracking and conversation summarization
+- Channel Abstraction with Router for multi-surface message routing (vsc, cli, gh)
+- Cron Task Scheduler with zero-dependency cron parser and disk persistence
+- New commands: Show Thinking Log, Show Context Budget, List Scheduled Tasks
+
+### Changed
+
+- AgentXContext accepts optional eventBus, thinkingLog, and contextCompactor services
+- Extension activation initializes all new services with proper disposal on deactivate
+- VS Code mock expanded with clear(), append(), hide() on output channels
+
+### Testing
+
+- 60 new unit tests across all 5 features (190 total, 0 failing)
+
 ## 6.0.0 - 2026-02-22
 
 ### Added

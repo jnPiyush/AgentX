@@ -22,7 +22,7 @@ inputs:
 
 > **Purpose**: Track agent sessions, decisions, and continuity across context windows. 
 > **Pattern**: Each agent appends session notes before handoff or context refresh. 
-> **See Also**: [Checkpoint Protocol](../SCENARIOS.md#checkpoint-protocol)
+> **See Also**: [Skills.md Checkpoint Protocol](../../Skills.md#checkpoint-protocol)
 
 ---
 
@@ -50,7 +50,7 @@ inputs:
 ## Checkpoint Log
 
 <!-- Record each checkpoint stop as a structured entry.
- See SCENARIOS.md Checkpoint Protocol for when to use checkpoints. -->
+ See Skills.md Checkpoint Protocol for when to use checkpoints. -->
 
 ### CP-001
 

@@ -93,9 +93,12 @@ export declare const window: {
     registerTreeDataProvider: () => {
         dispose: () => void;
     };
-    createOutputChannel: () => {
+    createOutputChannel: (_name?: string) => {
         appendLine: () => void;
+        append: () => void;
+        clear: () => void;
         show: () => void;
+        hide: () => void;
         dispose: () => void;
     };
     withProgress: (_options: unknown, task: (progress: unknown, token: unknown) => Promise<unknown>) => Promise<unknown>;
