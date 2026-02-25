@@ -420,6 +420,14 @@ AgentX/
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
 | [Setup Guide](docs/SETUP.md) | GitHub Projects V2, Local Mode, MCP Server, troubleshooting |
 
+### Packs
+
+Packs are distributable bundles of agents, skills, instructions, and workflows. Each pack has a `manifest.json` validated against `.github/schemas/pack-manifest.schema.json`.
+
+| Pack | Description | Maturity |
+|------|-------------|----------|
+| `agentx-core` | Full SDLC agents, workflow engine, instructions | stable |
+
 ---
 
 ## 🛠️ Tech Stack Support
