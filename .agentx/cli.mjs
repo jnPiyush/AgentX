@@ -605,7 +605,7 @@ function cmdValidate() {
       check(existsSync(join(ROOT, `docs/specs/SPEC-${num}.md`)), `SPEC-${num}.md exists`);
       break;
     case 'engineer':
-      check(shell(`git log --oneline --grep="#${num}" | head -1`).length > 0, `Commits reference #${num}`);
+      check(shell(`git log --oneline --grep="#${num}" -1`).length > 0, `Commits reference #${num}`);
       break;
     case 'reviewer':
       check(existsSync(join(ROOT, `docs/reviews/REVIEW-${num}.md`)), `REVIEW-${num}.md exists`);
