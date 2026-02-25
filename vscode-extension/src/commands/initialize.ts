@@ -406,19 +406,6 @@ function mergeGitignore(root: string): void {
     'Skills.md',
     'scripts/',
     'packs/',
-    '',
-    '# AgentX runtime data',
-    'docs/prd/',
-    'docs/adr/',
-    'docs/specs/',
-    'docs/ux/',
-    'docs/reviews/',
-    'docs/progress/',
-    'docs/analytics/',
-    'docs/architecture/',
-    'docs/deployment/',
-    'docs/coaching/',
-    'docs/presentations/',
   ];
 
   const gitignorePath = path.join(root, '.gitignore');
