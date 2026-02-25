@@ -37,6 +37,7 @@ interface WizardInitDataMessage {
   workspaceFolders: Array<{ name: string; path: string }>;
   detectedRepo: string | null;
   alreadyInitialized: boolean;
+  initializedWorkspaces: string[];
 }
 
 interface WizardProgressMessage {
@@ -65,6 +66,12 @@ const BRANCH = 'master';
 const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
 const ESSENTIAL_DIRS = ['.agentx', '.github', '.vscode', 'scripts'];
 const ESSENTIAL_FILES = ['AGENTS.md', 'Skills.md', '.gitignore'];
+
+function isInitializedWorkspace(root: string): boolean {
+  const hasAgentxDir = fs.existsSync(path.join(root, '.agentx'));
+  const hasAgentsFile = fs.existsSync(path.join(root, 'AGENTS.md'));
+  return hasAgentxDir || hasAgentsFile;
+}
 
 // -----------------------------------------------------------------------
 // Panel Manager (singleton per session)
@@ -172,13 +179,19 @@ export class InitWizardPanel {
       } catch { /* no git remote */ }
     }
 
-    const alreadyInitialized = await this._agentx.checkInitialized();
+    const initializedWorkspaces = workspaceFolders
+      .filter(ws => isInitializedWorkspace(ws.path))
+      .map(ws => ws.path);
+    const alreadyInitialized = workspaceFolders.length > 0
+      ? initializedWorkspaces.includes(workspaceFolders[0].path)
+      : false;
 
     const data: WizardInitDataMessage = {
       type: 'initData',
       workspaceFolders,
       detectedRepo,
       alreadyInitialized,
+      initializedWorkspaces,
     };
     this._postMessage(data);
   }
@@ -213,7 +226,7 @@ export class InitWizardPanel {
     const tmpDir = path.join(root, '.agentx-install-tmp');
     const rawDir = path.join(root, '.agentx-install-raw');
     const zipFile = path.join(root, '.agentx-install.zip');
-    const isUpgrade = await this._agentx.checkInitialized();
+    const isUpgrade = isInitializedWorkspace(root);
 
     try {
       // Step 1: Download
@@ -961,6 +974,7 @@ export class InitWizardPanel {
       let detectedRepo = null;
       let workspaceFolders = [];
       let alreadyInitialized = false;
+      let initializedWorkspaces = [];
 
       // ----- DOM refs -----
       const $steps = [
@@ -979,6 +993,30 @@ export class InitWizardPanel {
       const $progressCircle = document.getElementById('progressCircle');
       const $progressPercent = document.getElementById('progressPercent');
       const $progressStep = document.getElementById('progressStep');
+
+      function applyUpgradeUi(isUpgrade) {
+        alreadyInitialized = isUpgrade;
+        if (isUpgrade) {
+          $reinitWarning.classList.add('show');
+          document.getElementById('mainHeader').textContent = 'Upgrade AgentX';
+          document.getElementById('mainSubheader').textContent = 'Update framework files to the latest version';
+          document.getElementById('installHeader').textContent = 'Upgrading AgentX';
+          document.getElementById('summaryDesc').innerHTML = 'This will download and upgrade AgentX framework files in your workspace.<br>Your custom files and configurations will be preserved.';
+          return;
+        }
+        $reinitWarning.classList.remove('show');
+        document.getElementById('mainHeader').textContent = 'Initialize AgentX';
+        document.getElementById('mainSubheader').textContent = 'Set up multi-agent orchestration for your project';
+        document.getElementById('installHeader').textContent = 'Installing AgentX';
+        document.getElementById('summaryDesc').innerHTML = 'This will download and install AgentX framework files into your workspace.<br>Existing customized files will not be overwritten.';
+      }
+
+      function refreshUpgradeState() {
+        applyUpgradeUi(initializedWorkspaces.includes(selectedWorkspace));
+        if (currentStep === totalSteps) {
+          $btnNext.textContent = alreadyInitialized ? 'Reinstall / Upgrade' : 'Install';
+        }
+      }
 
       // ----- Stepper update -----
       function updateStepper() {
@@ -1122,6 +1160,7 @@ export class InitWizardPanel {
             workspaceFolders = msg.workspaceFolders;
             detectedRepo = msg.detectedRepo;
             alreadyInitialized = msg.alreadyInitialized;
+            initializedWorkspaces = msg.initializedWorkspaces || [];
 
             // Default to first workspace
             if (workspaceFolders.length > 0) {
@@ -1151,6 +1190,7 @@ export class InitWizardPanel {
                   opt.classList.add('selected');
                   opt.setAttribute('aria-checked', 'true');
                   selectedWorkspace = ws.path;
+                  refreshUpgradeState();
                 });
                 $list.appendChild(opt);
               });
@@ -1163,17 +1203,7 @@ export class InitWizardPanel {
               document.getElementById('detectedRepoName').textContent = detectedRepo;
             }
 
-            // Show reinstall warning
-            if (alreadyInitialized) {
-              $reinitWarning.classList.add('show');
-              document.getElementById('mainHeader').textContent = 'Upgrade AgentX';
-              document.getElementById('mainSubheader').textContent = 'Update framework files to the latest version';
-              document.getElementById('installHeader').textContent = 'Upgrading AgentX';
-              document.getElementById('summaryDesc').innerHTML = 'This will download and upgrade AgentX framework files in your workspace.<br>Your custom files and configurations will be preserved.';
-              if (currentStep === totalSteps) {
-                $btnNext.textContent = 'Reinstall / Upgrade';
-              }
-            }
+            refreshUpgradeState();
             break;
 
           case 'progress':

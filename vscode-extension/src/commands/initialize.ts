@@ -66,8 +66,9 @@ export function registerInitializeCommand(
  return;
  }
 
- // Check if already initialized
- const initialized = await agentx.checkInitialized();
+ // Check if already initialized for the selected target folder
+ const initialized = fs.existsSync(path.join(root, '.agentx'))
+  || fs.existsSync(path.join(root, 'AGENTS.md'));
  let isUpgrade = false;
  if (initialized) {
  const overwrite = await vscode.window.showWarningMessage(
