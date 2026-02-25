@@ -1,5 +1,5 @@
 ---
-name: Product Manager
+name: 1. Product Manager
 description: 'Product Manager: Define product vision, create PRD, break Epic into Features and Stories. Trigger: type:epic label. Status -> Ready when complete.'
 maturity: stable
 mode: agent

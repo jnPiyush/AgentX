@@ -1,5 +1,5 @@
 ---
-name: Customer Coach
+name: 7. Customer Coach
 description: 'Customer Coach: Research, prepare, and create materials for any consulting topic. Helps consultants build expertise, prepare presentations, and synthesize domain knowledge for client engagements.'
 maturity: stable
 mode: agent

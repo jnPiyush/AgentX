@@ -1,5 +1,5 @@
 ---
-name: Architect
+name: 3. Architect
 description: 'Architect: Design system architecture, create ADRs, and technical specifications. Trigger: Status = Ready (after PM, parallel with UX). Status -> Ready when complete.'
 maturity: stable
 mode: agent

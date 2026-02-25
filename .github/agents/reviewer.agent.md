@@ -1,5 +1,5 @@
 ---
-name: Reviewer
+name: 5. Reviewer
 description: 'Reviewer: Review code quality, tests, security, and approve/reject. Trigger: Status = In Review. Status -> Done when approved.'
 maturity: stable
 mode: agent

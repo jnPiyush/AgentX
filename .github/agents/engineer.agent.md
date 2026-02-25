@@ -1,5 +1,5 @@
 ---
-name: Engineer
+name: 4. Engineer
 description: 'Engineer: Implement code, tests, and documentation. Trigger: Status = Ready (spec complete). Status -> In Progress -> In Review.'
 maturity: stable
 mode: agent

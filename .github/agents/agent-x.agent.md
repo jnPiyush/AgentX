@@ -1,5 +1,5 @@
 ---
-name: Agent X (Auto)
+name: 0. Agent X (Auto)
 description: 'Agent X - Adaptive coordinator for multi-agent workflow. Auto-detects issue complexity and routes intelligently: simple tasks go direct to Engineer, complex work flows through PM -> UX -> Architect -> Engineer -> Reviewer.'
 maturity: stable
 mode: adaptive

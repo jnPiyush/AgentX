@@ -1,5 +1,5 @@
 ---
-name: Reviewer (Auto-Fix)
+name: 8. Reviewer (Auto-Fix)
 description: 'Auto-Fix Reviewer: Reviews code AND applies safe fixes automatically. Human approval required before merge. Extends Reviewer agent with fix capabilities.'
 maturity: preview
 mode: agent

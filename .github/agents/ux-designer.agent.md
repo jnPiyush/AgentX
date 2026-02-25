@@ -1,5 +1,5 @@
 ---
-name: UX Designer
+name: 2. UX Designer
 description: 'UX Designer: Create user research, wireframes, HTML/CSS prototypes, and design specifications. Trigger: Status = Ready (after PM). Status -> Ready when complete.'
 maturity: stable
 mode: agent

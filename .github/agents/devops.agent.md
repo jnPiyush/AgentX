@@ -1,5 +1,5 @@
 ---
-name: DevOps Engineer
+name: 6. DevOps Engineer
 description: 'DevOps Engineer: Create and manage CI/CD pipelines, GitHub Actions workflows, and release automation. Trigger: Status = Ready (architecture/code complete). Focus: Pipeline infrastructure, not application logic.'
 maturity: stable
 mode: agent
