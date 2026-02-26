@@ -911,7 +911,7 @@ async function testQualityLoopEnforcement(): Promise<void> {
   // Here we verify the AGENTS.md and engineer.agent.md docs encode the rules.
 
   const agentsMd = fs.readFileSync(
-      path.join(process.cwd(), 'AGENTS.md'), 'utf8'
+      path.join(__dirname, '..', 'AGENTS.md'), 'utf8'
   );
 
   assertIncludes(agentsMd, 'MUST start a quality loop', 'AGENTS.md: MUST start loop');
