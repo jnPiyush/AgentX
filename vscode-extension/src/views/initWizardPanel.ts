@@ -282,8 +282,9 @@ export class InitWizardPanel {
           previousInstalledAt = prev.installedAt;
         } catch { /* corrupt version file - reset */ }
       }
+      const currentExtVersion = this._agentx.extensionContext.extension?.packageJSON?.version ?? '6.6.0';
       fs.writeFileSync(versionFile, JSON.stringify({
-        version: '6.5.3',
+        version: currentExtVersion,
         mode: msg.mode,
         installedAt: previousInstalledAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),

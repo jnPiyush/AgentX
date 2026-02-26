@@ -24,6 +24,7 @@ import { ContextCompactor } from './utils/contextCompactor';
 import { ChannelRouter, VsCodeChatChannel, CliChannel } from './utils/channelRouter';
 import { TaskScheduler } from './utils/taskScheduler';
 import { PluginManager } from './utils/pluginManager';
+import { promptIfUpdateAvailable } from './utils/versionChecker';
 
 let agentxContext: AgentXContext;
 let eventBus: AgentEventBus;
@@ -305,6 +306,21 @@ export function activate(context: vscode.ExtensionContext) {
  }
  }, 3000);
  }
+
+ // Version mismatch check - detect outdated framework files and prompt to upgrade
+ setTimeout(async () => {
+ try {
+ const root = agentxContext.workspaceRoot;
+ if (!root) { return; }
+ const initialized = await agentxContext.checkInitialized();
+ if (!initialized) { return; }
+ const extVersion = context.extension.packageJSON?.version ?? '';
+ if (!extVersion) { return; }
+ await promptIfUpdateAvailable(root, extVersion, context.globalState);
+ } catch (err) {
+ console.warn('AgentX: Version check failed:', err);
+ }
+ }, 5000);
 
  // Watch for AGENTS.md appearing/disappearing in subfolders so the
  // extension auto-discovers AgentX when initialized in a nested path.
