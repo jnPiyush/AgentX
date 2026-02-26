@@ -773,12 +773,12 @@ function Invoke-ValidateCmd {
             $gitLog = & git log --oneline --grep="#$num" -1 2>$null
             Test-Check ([bool]$gitLog) "Commits reference #$num"
 
-            # Quality loop check: a completed loop is required for engineer handoff.
+            # Quality loop check: loop must be status=complete (cancelled does NOT satisfy this).
             $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
             $loopActive = $loopState -and $loopState.active -eq $true
             $loopComplete = $loopState -and $loopState.status -eq 'complete'
-            Test-Check (-not $loopActive) "Quality loop is not still active (must be complete or not started)"
-            Test-Check $loopComplete "Quality loop was completed (tests + review verified)"
+            Test-Check (-not $loopActive) "Quality loop not still running (finish it first)"
+            Test-Check $loopComplete "Quality loop is complete (cancelled does not satisfy this gate)"
         }
         'reviewer' {
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/reviews/REVIEW-$num.md")) "REVIEW-$num.md exists"
@@ -1062,25 +1062,26 @@ function Invoke-AgentHookCmd {
         Invoke-ClarificationMonitorCheck
     } elseif ($phase -eq 'finish') {
         # -----------------------------------------------------------------
-        # QUALITY GATE: block finish if a quality loop is still running.
-        # Engineers MUST complete (or cancel) their iterative loop before
-        # moving work to In Review.
+        # QUALITY GATE (engineer only): block finish unless quality loop
+        # is status=complete.  active=true AND cancelled both block.
+        # Other agent roles (reviewer, architect, etc.) are not affected.
         # -----------------------------------------------------------------
-        $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
-        if ($loopState -and $loopState.active -eq $true) {
-            Write-Host "$($C.r)"
-            Write-Host "  [FAIL] QUALITY LOOP STILL ACTIVE -- cannot finish yet.$($C.n)"
-            Write-Host "$($C.y)  Loop iteration $($loopState.iteration)/$($loopState.maxIterations) is in progress.$($C.n)"
-            Write-Host "$($C.d)  Run: agentx loop iterate -s <summary>  (to record progress)$($C.n)"
-            Write-Host "$($C.d)  Run: agentx loop complete -s <summary>  (when criteria met)$($C.n)`n"
-            exit 1
-        }
-
-        # Warn if no loop was run at all for engineer role.
-        if ($agent -eq 'engineer' -and (-not $loopState -or $loopState.status -notin @('complete', 'cancelled'))) {
-            Write-Host "$($C.y)  [WARN] No completed quality loop found for this session.$($C.n)"
-            Write-Host "$($C.d)  Best practice: run 'agentx loop start' and iterate with full$($C.n)"
-            Write-Host "$($C.d)  test suite before marking work done.$($C.n)"
+        if ($agent -eq 'engineer') {
+            $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
+            if ($loopState -and $loopState.active -eq $true) {
+                Write-Host "$($C.r)  [FAIL] QUALITY LOOP STILL ACTIVE -- cannot finish yet.$($C.n)"
+                Write-Host "$($C.y)  Loop iteration $($loopState.iteration)/$($loopState.maxIterations) is in progress.$($C.n)"
+                Write-Host "$($C.d)  Run: agentx loop iterate -s <summary>  (to record progress)$($C.n)"
+                Write-Host "$($C.d)  Run: agentx loop complete -s <summary>  (when criteria met)$($C.n)`n"
+                exit 1
+            }
+            if (-not $loopState -or $loopState.status -ne 'complete') {
+                $reason = if (-not $loopState) { 'no loop was started' } else { "loop status is '$($loopState.status)'" }
+                Write-Host "$($C.r)  [FAIL] Quality loop not completed ($reason).$($C.n)"
+                Write-Host "$($C.y)  A completed loop ('agentx loop complete') is required before handoff.$($C.n)"
+                Write-Host "$($C.d)  Cancelling a loop does not satisfy the quality gate.$($C.n)`n"
+                exit 1
+            }
         }
 
         $entry = [PSCustomObject]@{ status = 'done'; issue = $(if ($issue) { $issue } else { $null }); lastActivity = Get-Timestamp }

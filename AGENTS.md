@@ -240,8 +240,8 @@ All AgentX core agents are currently **stable** (production-ready).
  - [PASS] MUST start a quality loop (`agentx loop start`) after first implementation commit
  - [PASS] MUST run full test suite in EVERY loop iteration
  - [PASS] MUST iterate until: all tests pass, coverage >=80%, lint clean, self-review done
- - [FAIL] CANNOT move to In Review while loop state is `active` (CLI hard-blocks with exit 1)
- - [FAIL] CANNOT skip the quality loop -- `hook finish` enforces this
+ - [FAIL] CANNOT move to In Review while loop is active OR cancelled (CLI hard-blocks with exit 1)
+ - [FAIL] CANNOT skip the quality loop -- loop MUST reach status=complete; cancelling does not bypass the gate
  - [FAIL] CANNOT modify PRD/ADR/UX docs, skip tests, or merge without review
 - **Boundaries**:
  - Can modify: `src/**`, `tests/**`, `docs/README.md`

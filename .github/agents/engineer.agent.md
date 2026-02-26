@@ -23,8 +23,8 @@ constraints:
  - "MUST run the full test suite in EVERY loop iteration -- no iteration without `npm test` / `pytest` / `dotnet test`"
  - "MUST iterate until ALL of: tests pass, coverage >=80%, tsc/lint clean, self-review checklist done"
  - "MUST check for active loop state before starting work (.agentx/state/loop-state.json)"
- - "MUST NOT move to In Review while loop status is active -- complete or cancel first"
- - "MUST NOT call hook -Phase finish while loop is active (CLI will hard-block with exit 1)"
+ - "MUST NOT move to In Review while loop status is active -- loop MUST reach status=complete first"
+ - "MUST NOT call hook -Phase finish without a completed loop; cancelled loops DO NOT satisfy this gate"
  - "MUST record each iteration summary with meaningful detail: what changed, test counts, coverage %"
 boundaries:
  can_modify:
