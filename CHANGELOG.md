@@ -5,6 +5,33 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.6.0] - 2026-02-25
+
+### Fixed
+
+**Workflow Reliability (110 Failed Runs)**:
+- Removed agent output directories from `.gitignore` (`docs/prd/`, `docs/adr/`, `docs/specs/`, `docs/ux/`, `docs/deployment/`, `docs/progress/`, `docs/analytics/`, `docs/architecture/`) that blocked `git add` in workflow jobs, causing 106 Architect failures
+- Changed `agent-x.yml` trigger from `[labeled, opened]` to `[opened]` only, preventing 3-4x duplicate workflow runs per issue
+- Added `concurrency` group per issue number with `cancel-in-progress: true` to deduplicate any remaining parallel runs
+
+## [6.5.4] - 2026-02-25
+
+### Changed
+
+**PowerShell CLI Migration**:
+- Replaced Node.js `cli.mjs` with unified `agentx-cli.ps1` (PowerShell 7, cross-platform)
+- Updated launcher scripts (`agentx.ps1`, `agentx.sh`, `local-issue-manager.ps1`, `local-issue-manager.sh`) to delegate to PowerShell CLI
+- Removed `.agentx/cli.mjs` runtime dependency from AgentX CLI execution path
+
+**Plugin Runtime Compatibility**:
+- Plugin command resolution now prefers shell-specific entries only when the target file exists
+- Added fallback to legacy Node.js entry for backwards compatibility
+- Added PowerShell and Bash entry scripts for bundled `convert-docs` plugin
+
+### Testing
+
+- Full extension compile + test suite passing (217 tests)
+
 ## [6.5.0] - 2026-02-25
 
 ### Added

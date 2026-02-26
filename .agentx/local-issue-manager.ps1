@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# AgentX Local Issue Manager - delegates to Node.js CLI
+# AgentX Local Issue Manager - delegates to agentx-cli.ps1 (PowerShell 7)
 # Usage: .\.agentx\local-issue-manager.ps1 -Action create -Title "Title" -Labels "type:story"
 param(
   [ValidateSet('create','update','close','list','get','comment')]
@@ -20,4 +20,4 @@ if ($Labels)      { $n += @('-l', ($Labels -join ',')) }
 if ($Status)      { $n += @('-s', $Status) }
 if ($Comment)     { $n += @('-c', $Comment) }
 
-node "$PSScriptRoot/cli.mjs" @n
+& "$PSScriptRoot/agentx-cli.ps1" @n

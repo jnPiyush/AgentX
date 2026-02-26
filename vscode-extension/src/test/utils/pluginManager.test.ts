@@ -140,7 +140,7 @@ describe('PluginManager', () => {
 
     // Check files were created
     assert.ok(fs.existsSync(path.join(dir, 'plugin.json')));
-    assert.ok(fs.existsSync(path.join(dir, 'new-tool.mjs')));
+    assert.ok(fs.existsSync(path.join(dir, 'new-tool.ps1')));
     assert.ok(fs.existsSync(path.join(dir, 'README.md')));
 
     // Check manifest
@@ -166,6 +166,24 @@ describe('PluginManager', () => {
     createTestPlugin('runner');
     const cmd = pm.buildRunCommand('runner', { folders: 'docs/prd' }, 'bash');
     assert.ok(cmd.includes('runner'));
+  });
+
+  it('should fall back to node entry when preferred shell entry is missing', () => {
+    const pluginDir = path.join(tmpDir, 'plugins', 'legacy-node');
+    fs.mkdirSync(pluginDir, { recursive: true });
+    fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({
+      name: 'legacy-node',
+      version: '1.0.0',
+      description: 'legacy',
+      type: 'tool',
+      entry: { pwsh: 'legacy-node.ps1', node: 'legacy-node.mjs' },
+    }));
+    fs.writeFileSync(path.join(pluginDir, 'legacy-node.mjs'), '// legacy node script');
+    fs.writeFileSync(path.join(pluginDir, '.installed'), new Date().toISOString());
+
+    const cmd = pm.buildRunCommand('legacy-node', {}, 'pwsh');
+    assert.ok(cmd.includes('node'));
+    assert.ok(cmd.includes('legacy-node.mjs'));
   });
 
   it('should throw when running nonexistent plugin', () => {

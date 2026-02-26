@@ -1,4 +1,4 @@
 #!/bin/bash
-# AgentX CLI launcher - delegates to Node.js
+# AgentX CLI launcher - delegates to agentx-cli.ps1 (PowerShell 7)
 # Usage: ./.agentx/agentx.sh ready
-node "$(dirname "$0")/cli.mjs" "$@"
+pwsh "$(dirname "$0")/agentx-cli.ps1" "$@"

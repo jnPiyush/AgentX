@@ -4,7 +4,7 @@
 //
 // Discovers, installs, removes, and runs plugins from the .agentx/plugins/
 // directory. Each plugin is a folder with a plugin.json manifest and entry
-// scripts (PowerShell, Bash, or Node.js).
+// scripts (PowerShell or Bash).
 //
 // Plugin types:
 //   tool     - Standalone utilities (convert-docs, scan-secrets, etc.)
@@ -226,7 +226,7 @@ export class PluginManager {
       description,
       type,
       entry: {
-        node: `${name}.mjs`,
+        pwsh: `${name}.ps1`,
       },
       args: [],
       requires: [],
@@ -239,15 +239,16 @@ export class PluginManager {
       JSON.stringify(manifest, null, 2),
     );
 
-    // Create stub Node.js entry script
+    // Create stub PowerShell entry script
     fs.writeFileSync(
-      path.join(pluginDir, `${name}.mjs`),
+      path.join(pluginDir, `${name}.ps1`),
       [
-        '#!/usr/bin/env node',
-        `// AgentX Plugin: ${name}`,
-        `// ${description}`,
+        '#!/usr/bin/env pwsh',
+        '#Requires -Version 7.0',
+        `# AgentX Plugin: ${name}`,
+        `# ${description}`,
         '',
-        `console.log('Plugin ${name} running...');`,
+        `Write-Host 'Plugin ${name} running...'`,
         '',
       ].join('\n'),
     );
@@ -262,7 +263,7 @@ export class PluginManager {
         '## Usage',
         '',
         '```bash',
-        `node .agentx/plugins/${name}/${name}.mjs`,
+        `pwsh .agentx/plugins/${name}/${name}.ps1`,
         '```',
         '',
       ].join('\n'),
@@ -317,9 +318,14 @@ export class PluginManager {
       throw new Error(`Plugin '${name}' is not installed.`);
     }
 
-    // Prefer node entry, fall back to shell-specific
-    const entry = plugin.manifest.entry.node
-      ?? (shell === 'bash' ? plugin.manifest.entry.bash : plugin.manifest.entry.pwsh);
+    const preferredEntry = shell === 'bash' ? plugin.manifest.entry.bash : plugin.manifest.entry.pwsh;
+    const candidateEntries = [preferredEntry, plugin.manifest.entry.node].filter(
+      (entry): entry is string => Boolean(entry),
+    );
+
+    const entry = candidateEntries.find((candidate) =>
+      fs.existsSync(path.join(plugin.pluginDir, candidate)),
+    );
 
     if (!entry) {
       throw new Error(`Plugin '${name}' has no ${shell} entry point.`);
@@ -338,7 +344,7 @@ export class PluginManager {
     }
     const argStr = argParts.length > 0 ? ' ' + argParts.join(' ') : '';
 
-    // Node.js entries use 'node' command
+    // Legacy: Node.js entries still use 'node' command
     if (entry === plugin.manifest.entry.node) {
       return `node "${scriptPath}"${argStr}`;
     }

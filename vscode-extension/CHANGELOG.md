@@ -1,5 +1,22 @@
 # Changelog
 
+## 6.6.0 - 2026-02-25
+
+### Fixed
+
+- Removed agent output directories from `.gitignore` that blocked `git add` in CI workflow jobs (106 Architect failures)
+- Changed `agent-x.yml` workflow trigger from `[labeled, opened]` to `[opened]` to prevent 3-4x duplicate runs per issue
+- Added concurrency group per issue number to deduplicate parallel workflow runs
+
+## 6.5.4 - 2026-02-25
+
+### Changed
+
+- Reverted CLI runtime to PowerShell-first: launchers now delegate to `agentx-cli.ps1` instead of `cli.mjs`
+- Plugin scaffold now generates PowerShell entry points (`.ps1`) by default
+- PluginManager now resolves only existing entry files and falls back to legacy Node entries when needed
+- Added compatibility test coverage for node fallback path
+
 ## 6.5.3 - 2026-02-25
 
 ### Changed

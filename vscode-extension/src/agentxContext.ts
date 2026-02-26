@@ -216,12 +216,12 @@ export class AgentXContext {
  /**
   * Execute an AgentX CLI subcommand and return stdout.
   *
-   * Both the PowerShell and Bash wrappers delegate to `node cli.mjs`,
-   * so arguments are always passed in Node CLI format (positional args
+   * Both the PowerShell and Bash wrappers delegate to `agentx-cli.ps1`,
+   * so arguments are always passed in CLI format (positional args
    * and short flags like `-t`, `-n`, etc.).
    *
    * @param subcommand - The CLI subcommand (e.g. 'workflow', 'deps').
-   * @param cliArgs    - Arguments passed directly to cli.mjs after the subcommand.
+   * @param cliArgs    - Arguments passed directly to agentx-cli.ps1 after the subcommand.
    */
   async runCli(
    subcommand: string,

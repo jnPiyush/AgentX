@@ -6,13 +6,18 @@ name: Agent X (Auto)
 
 on:
   issues:
-    types: [labeled, opened]
+    types: [opened]
   workflow_dispatch:
     inputs:
       issue_number:
         description: 'Issue number to process'
         required: true
         type: string
+
+# Prevent duplicate runs for the same issue
+concurrency:
+  group: agent-x-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
+  cancel-in-progress: true
 
 permissions:
   issues: write

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v6.5.3"><img src="https://img.shields.io/badge/Version-6.5.3-0EA5E9?style=for-the-badge" alt="Version 6.5.3"></a>
+  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v6.6.0"><img src="https://img.shields.io/badge/Version-6.6.0-0EA5E9?style=for-the-badge" alt="Version 6.6.0"></a>
   <a href="https://github.com/github/awesome-copilot"><img src="https://img.shields.io/badge/Standard-awesome--copilot-7C3AED?style=for-the-badge&logo=github" alt="Awesome Copilot"></a>
   <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Skills-agentskills.io-F97316?style=for-the-badge" alt="Skills Spec"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/badge/OpenSSF-Scorecard-4DC71F?style=for-the-badge" alt="OpenSSF Scorecard"></a>
