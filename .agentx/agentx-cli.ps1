@@ -730,7 +730,7 @@ function Invoke-VersionCmd {
     $ver = Read-JsonFile $Script:VERSION_FILE
     if (-not $ver) { Write-Host 'AgentX version unknown.'; return }
     if ($Script:JsonOutput) { $ver | ConvertTo-Json -Depth 5; return }
-    $installed = if ($ver.installedAt) { $ver.installedAt.Substring(0, 10) } else { '?' }
+    $installed = if ($ver.installedAt) { "$($ver.installedAt)".Substring(0, 10) } else { '?' }
     Write-Host "`n$($C.c)  AgentX $($ver.version)$($C.n)"
     Write-Host "$($C.d)  Mode: $($ver.mode)  |  Installed: $installed$($C.n)`n"
 }
@@ -740,11 +740,11 @@ function Invoke-VersionCmd {
 # ---------------------------------------------------------------------------
 
 function Invoke-AgentHookCmd {
-    $phase = Get-Flag @('-p', '--phase')
+    $phase = Get-Flag @('-p', '--phase', '-Phase')
     if (-not $phase -and $Script:SubArgs.Count -gt 0) { $phase = $Script:SubArgs[0] }
-    $agent = Get-Flag @('-a', '--agent')
+    $agent = Get-Flag @('-a', '--agent', '-Agent')
     if (-not $agent -and $Script:SubArgs.Count -gt 1) { $agent = $Script:SubArgs[1] }
-    $issue = [int](Get-Flag @('-i', '--issue') '')
+    $issue = [int](Get-Flag @('-i', '--issue', '-Issue') '')
     if (-not $issue -and $Script:SubArgs.Count -gt 2) { $issue = [int]$Script:SubArgs[2] }
 
     if (-not $phase -or -not $agent) { Write-Host 'Usage: agentx hook <start|finish> <agent> [issue]'; return }
