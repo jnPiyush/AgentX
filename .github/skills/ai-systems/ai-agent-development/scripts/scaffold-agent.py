@@ -21,31 +21,37 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
+
 def create_file(path: Path, content: str) -> None:
- """Create a file with content, making parent directories as needed."""
- path.parent.mkdir(parents=True, exist_ok=True)
- path.write_text(content, encoding="utf-8")
- print(f" Created: {path}")
+    """Create a file with content, making parent directories as needed."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    print(f" Created: {path}")
 
-def scaffold_python_agent(root: Path, name: str, pattern: str, with_eval: bool, with_mcp: bool) -> None:
- """Generate Python agent project structure."""
 
- # pyproject.toml
- deps = [
- '"agent-framework-azure-ai>=0.1.0"',
- '"azure-identity>=1.15.0"',
- '"opentelemetry-api>=1.20.0"',
- '"opentelemetry-sdk>=1.20.0"',
- '"python-dotenv>=1.0.0"',
- ]
- if with_eval:
- deps.append('"azure-ai-evaluation>=1.0.0"')
- if with_mcp:
- deps.append('"agent-framework-mcp>=0.1.0"')
+def scaffold_python_agent(
+    root: Path, name: str, pattern: str, with_eval: bool, with_mcp: bool
+) -> None:
+    """Generate Python agent project structure."""
 
- deps_str = ",\n ".join(deps)
+    # pyproject.toml
+    deps = [
+        '"agent-framework-azure-ai>=0.1.0"',
+        '"azure-identity>=1.15.0"',
+        '"opentelemetry-api>=1.20.0"',
+        '"opentelemetry-sdk>=1.20.0"',
+        '"python-dotenv>=1.0.0"',
+    ]
+    if with_eval:
+        deps.append('"azure-ai-evaluation>=1.0.0"')
+    if with_mcp:
+        deps.append('"agent-framework-mcp>=0.1.0"')
 
- create_file(root / "pyproject.toml", f"""[build-system]
+    deps_str = ",\n ".join(deps)
+
+    create_file(
+        root / "pyproject.toml",
+        f"""[build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
@@ -75,10 +81,13 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-""")
+""",
+    )
 
- # .env template
- create_file(root / ".env.template", """# AI Agent Environment Variables
+    # .env template
+    create_file(
+        root / ".env.template",
+        """# AI Agent Environment Variables
 # Copy to .env and fill in values
 
 # Microsoft Foundry / Azure OpenAI
@@ -93,10 +102,13 @@ OTEL_SERVICE_NAME={name}
 # Application
 LOG_LEVEL=INFO
 MAX_TURNS=10
-""")
+""",
+    )
 
- # .env (gitignored placeholder)
- create_file(root / ".gitignore", """# Environment
+    # .env (gitignored placeholder)
+    create_file(
+        root / ".gitignore",
+        """# Environment
 .env
 .env.local
 
@@ -116,23 +128,26 @@ venv/
 # Traces and outputs
 traces/
 outputs/
-""")
+""",
+    )
 
- # Main agent module
- if pattern == "single":
- agent_code = _python_single_agent(name)
- elif pattern == "multi-agent":
- agent_code = _python_multi_agent(name)
- elif pattern == "sequential":
- agent_code = _python_sequential_workflow(name)
- else:
- agent_code = _python_single_agent(name)
+    # Main agent module
+    if pattern == "single":
+        agent_code = _python_single_agent(name)
+    elif pattern == "multi-agent":
+        agent_code = _python_multi_agent(name)
+    elif pattern == "sequential":
+        agent_code = _python_sequential_workflow(name)
+    else:
+        agent_code = _python_single_agent(name)
 
- create_file(root / "src" / name.replace("-", "_") / "__init__.py", "")
- create_file(root / "src" / name.replace("-", "_") / "agent.py", agent_code)
+    create_file(root / "src" / name.replace("-", "_") / "__init__.py", "")
+    create_file(root / "src" / name.replace("-", "_") / "agent.py", agent_code)
 
- # Tracing setup
- create_file(root / "src" / name.replace("-", "_") / "tracing.py", f"""\"\"\"OpenTelemetry tracing configuration for {name}.\"\"\"
+    # Tracing setup
+    create_file(
+        root / "src" / name.replace("-", "_") / "tracing.py",
+        f"""\"\"\"OpenTelemetry tracing configuration for {name}.\"\"\"
 
 import os
 
@@ -164,10 +179,13 @@ def setup_tracing() -> None:
  AIInferenceInstrumentor().instrument()
 
  print(f"Tracing initialized for {{os.getenv('OTEL_SERVICE_NAME', '{name}')}}")
-""")
+""",
+    )
 
- # Main entry point
- create_file(root / "src" / name.replace("-", "_") / "main.py", f"""\"\"\"Entry point for {name} agent.\"\"\"
+    # Main entry point
+    create_file(
+        root / "src" / name.replace("-", "_") / "main.py",
+        f"""\"\"\"Entry point for {name} agent.\"\"\"
 
 import asyncio
 import os
@@ -188,11 +206,14 @@ async def main() -> None:
 
 if __name__ == "__main__":
  asyncio.run(main())
-""")
+""",
+    )
 
- # Tests
- create_file(root / "tests" / "__init__.py", "")
- create_file(root / "tests" / "test_agent.py", f"""\"\"\"Tests for {name} agent.\"\"\"
+    # Tests
+    create_file(root / "tests" / "__init__.py", "")
+    create_file(
+        root / "tests" / "test_agent.py",
+        f"""\"\"\"Tests for {name} agent.\"\"\"
 
 import pytest
 
@@ -207,11 +228,14 @@ async def test_agent_responds():
  # assert result is not None
  # assert len(result) > 0
  pytest.skip("Requires valid AI endpoint credentials")
-""")
+""",
+    )
 
- # Evaluation harness (optional)
- if with_eval:
- create_file(root / "evaluation" / "evaluate.py", f"""\"\"\"Evaluation harness for {name} agent.\"\"\"
+    # Evaluation harness (optional)
+    if with_eval:
+        create_file(
+            root / "evaluation" / "evaluate.py",
+            f"""\"\"\"Evaluation harness for {name} agent.\"\"\"
 
 import json
 from pathlib import Path
@@ -249,15 +273,21 @@ def run_evaluation():
 
 if __name__ == "__main__":
  run_evaluation()
-""")
+""",
+        )
 
- create_file(root / "evaluation" / "test_dataset.jsonl", """{"query": "What is the capital of France?", "expected": "Paris", "context": "France is a country in Europe."}
+        create_file(
+            root / "evaluation" / "test_dataset.jsonl",
+            """{"query": "What is the capital of France?", "expected": "Paris", "context": "France is a country in Europe."}
 {"query": "What is 2 + 2?", "expected": "4", "context": "Basic arithmetic question."}
-""")
+""",
+        )
 
- # MCP server template (optional)
- if with_mcp:
- create_file(root / "src" / name.replace("-", "_") / "mcp_tools.py", f"""\"\"\"MCP tool definitions for {name} agent.\"\"\"
+    # MCP server template (optional)
+    if with_mcp:
+        create_file(
+            root / "src" / name.replace("-", "_") / "mcp_tools.py",
+            f"""\"\"\"MCP tool definitions for {name} agent.\"\"\"
 
 from agent_framework.mcp import MCPServer, tool
 
@@ -274,10 +304,13 @@ class {name.replace("-", "").title()}Tools(MCPServer):
  \"\"\"Return current UTC timestamp.\"\"\"
  from datetime import datetime, timezone
  return datetime.now(timezone.utc).isoformat()
-""")
+""",
+        )
 
- # README
- create_file(root / "README.md", f"""# {name}
+    # README
+    create_file(
+        root / "README.md",
+        f"""# {name}
 
 AI Agent built with [Microsoft Agent Framework](https://github.com/microsoft/agent-framework).
 
@@ -320,11 +353,13 @@ pytest
 - **Framework**: Microsoft Agent Framework
 - **Tracing**: OpenTelemetry (auto-instrumented)
 {"- **MCP**: Tool server enabled" if with_mcp else ""}
-""")
+""",
+    )
+
 
 def _python_single_agent(name: str) -> str:
- """Generate single agent pattern code."""
- return f"""\"\"\"Single agent implementation for {name}.\"\"\"
+    """Generate single agent pattern code."""
+    return f"""\"\"\"Single agent implementation for {name}.\"\"\"
 
 import os
 
@@ -360,9 +395,10 @@ CONSTRAINTS:
  return response.content
 """
 
+
 def _python_multi_agent(name: str) -> str:
- """Generate multi-agent pattern code."""
- return f"""\"\"\"Multi-agent orchestration for {name}.\"\"\"
+    """Generate multi-agent pattern code."""
+    return f"""\"\"\"Multi-agent orchestration for {name}.\"\"\"
 
 import os
 
@@ -406,9 +442,10 @@ async def run_agent(query: str) -> str:
  return result.final_output
 """
 
+
 def _python_sequential_workflow(name: str) -> str:
- """Generate sequential workflow pattern code."""
- return f"""\"\"\"Sequential workflow for {name}.\"\"\"
+    """Generate sequential workflow pattern code."""
+    return f"""\"\"\"Sequential workflow for {name}.\"\"\"
 
 import os
 
@@ -448,13 +485,16 @@ async def run_agent(query: str) -> str:
  return result.final_output
 """
 
-def scaffold_dotnet_agent(root: Path, name: str, pattern: str, with_eval: bool) -> None:
- """Generate .NET agent project structure."""
- safe_name = name.replace("-", ".")
- namespace = safe_name.replace(".", "").title()
 
- # .csproj
- create_file(root / f"{safe_name}.csproj", f"""<Project Sdk="Microsoft.NET.Sdk">
+def scaffold_dotnet_agent(root: Path, name: str, pattern: str, with_eval: bool) -> None:
+    """Generate .NET agent project structure."""
+    safe_name = name.replace("-", ".")
+    namespace = safe_name.replace(".", "").title()
+
+    # .csproj
+    create_file(
+        root / f"{safe_name}.csproj",
+        f"""<Project Sdk="Microsoft.NET.Sdk">
 
  <PropertyGroup>
  <OutputType>Exe</OutputType>
@@ -474,10 +514,13 @@ def scaffold_dotnet_agent(root: Path, name: str, pattern: str, with_eval: bool) 
  </ItemGroup>
 
 </Project>
-""")
+""",
+    )
 
- # Program.cs
- create_file(root / "Program.cs", f"""using Microsoft.Agents.AI.AzureAI;
+    # Program.cs
+    create_file(
+        root / "Program.cs",
+        f"""using Microsoft.Agents.AI.AzureAI;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 
@@ -506,10 +549,13 @@ var response = await client.ChatAsync(
 );
 
 Console.WriteLine($"Response: {{response.Content}}");
-""")
+""",
+    )
 
- # appsettings.json
- create_file(root / "appsettings.json", """{
+    # appsettings.json
+    create_file(
+        root / "appsettings.json",
+        """{
  "Foundry": {
  "Endpoint": "",
  "Model": "gpt-5.1"
@@ -520,19 +566,25 @@ Console.WriteLine($"Response: {{response.Content}}");
  }
  }
 }
-""")
+""",
+    )
 
- # .gitignore
- create_file(root / ".gitignore", """bin/
+    # .gitignore
+    create_file(
+        root / ".gitignore",
+        """bin/
 obj/
 .vs/
 *.user
 appsettings.Development.json
 .env
-""")
+""",
+    )
 
- # README
- create_file(root / "README.md", f"""# {name}
+    # README
+    create_file(
+        root / "README.md",
+        f"""# {name}
 
 AI Agent built with [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) (.NET).
 
@@ -548,72 +600,77 @@ dotnet restore
 ```bash
 dotnet run
 ```
-""")
+""",
+    )
+
 
 def main():
- parser = argparse.ArgumentParser(
- description="Scaffold an AI agent project with Agent Framework"
- )
- parser.add_argument("--name", required=True, help="Project name (kebab-case)")
- parser.add_argument(
- "--runtime",
- choices=["python", "dotnet"],
- default="python",
- help="Runtime platform (default: python)",
- )
- parser.add_argument(
- "--pattern",
- choices=["single", "multi-agent", "sequential"],
- default="single",
- help="Agent pattern (default: single)",
- )
- parser.add_argument(
- "--with-eval",
- action="store_true",
- help="Include evaluation harness template",
- )
- parser.add_argument(
- "--with-mcp",
- action="store_true",
- help="Include MCP server template (Python only)",
- )
- parser.add_argument(
- "--output",
- type=str,
- default=None,
- help="Output directory (default: ./<name>)",
- )
+    parser = argparse.ArgumentParser(
+        description="Scaffold an AI agent project with Agent Framework"
+    )
+    parser.add_argument("--name", required=True, help="Project name (kebab-case)")
+    parser.add_argument(
+        "--runtime",
+        choices=["python", "dotnet"],
+        default="python",
+        help="Runtime platform (default: python)",
+    )
+    parser.add_argument(
+        "--pattern",
+        choices=["single", "multi-agent", "sequential"],
+        default="single",
+        help="Agent pattern (default: single)",
+    )
+    parser.add_argument(
+        "--with-eval",
+        action="store_true",
+        help="Include evaluation harness template",
+    )
+    parser.add_argument(
+        "--with-mcp",
+        action="store_true",
+        help="Include MCP server template (Python only)",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Output directory (default: ./<name>)",
+    )
 
- args = parser.parse_args()
- root = Path(args.output or args.name).resolve()
+    args = parser.parse_args()
+    root = Path(args.output or args.name).resolve()
 
- if root.exists() and any(root.iterdir()):
- print(f"Error: Directory '{root}' already exists and is not empty.")
- sys.exit(1)
+    if root.exists() and any(root.iterdir()):
+        print(f"Error: Directory '{root}' already exists and is not empty.")
+        sys.exit(1)
 
- print(f"\nScaffolding AI agent project: {args.name}")
- print(f" Runtime: {args.runtime}")
- print(f" Pattern: {args.pattern}")
- print(f" Output: {root}\n")
+    print(f"\nScaffolding AI agent project: {args.name}")
+    print(f" Runtime: {args.runtime}")
+    print(f" Pattern: {args.pattern}")
+    print(f" Output: {root}\n")
 
- if args.runtime == "python":
- scaffold_python_agent(root, args.name, args.pattern, args.with_eval, args.with_mcp)
- else:
- scaffold_dotnet_agent(root, args.name, args.pattern, args.with_eval)
+    if args.runtime == "python":
+        scaffold_python_agent(
+            root, args.name, args.pattern, args.with_eval, args.with_mcp
+        )
+    else:
+        scaffold_dotnet_agent(root, args.name, args.pattern, args.with_eval)
 
- print(f"\n[OK] Agent project scaffolded at: {root}")
- print(f"\nNext steps:")
- if args.runtime == "python":
- print(f" cd {args.name}")
- print(f" python -m venv .venv && .venv/Scripts/activate")
- print(f" pip install -e '.[dev]'")
- print(f" cp .env.template .env # Fill in credentials")
- print(f" python -m {args.name.replace('-', '_')}.main")
- else:
- print(f" cd {args.name}")
- print(f" dotnet restore")
- print(f" # Set FOUNDRY_ENDPOINT and FOUNDRY_API_KEY env vars")
- print(f" dotnet run")
+    print(f"\n[OK] Agent project scaffolded at: {root}")
+    print(f"\nNext steps:")
+    if args.runtime == "python":
+        print(f" cd {args.name}")
+        print(f" python -m venv .venv && .venv/Scripts/activate")
+        print(f" pip install -e '.[dev]'")
+        print(f" cp .env.template .env # Fill in credentials")
+        print(f" python -m {args.name.replace('-', '_')}.main")
+    else:
+        print(f" cd {args.name}")
+        print(f" dotnet restore")
+        print(f" # Set FOUNDRY_ENDPOINT and FOUNDRY_API_KEY env vars")
+        print(f" dotnet run")
+
 
 if __name__ == "__main__":
- main()
+    main()
