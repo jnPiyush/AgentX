@@ -44,6 +44,9 @@ export class AgentTreeProvider implements vscode.TreeDataProvider<AgentTreeItem>
  item.tooltip = agent.description;
  item.contextValue = 'agent';
 
+ // Icon driven by runtime status (clarifying / blocked-clarification / working / idle).
+ item.iconPath = this.statusIcon(agent.runtimeStatus);
+
  // Children with details
  item.children = [
  new AgentTreeItem(`Model: ${agent.model}`, vscode.TreeItemCollapsibleState.None),
@@ -52,6 +55,32 @@ export class AgentTreeProvider implements vscode.TreeDataProvider<AgentTreeItem>
  ];
 
  return item;
+ }
+
+ /**
+  * Returns a ThemeIcon that represents the agent's live runtime status.
+  *
+  * | runtimeStatus           | Icon               | Meaning                         |
+  * |-------------------------|--------------------|---------------------------------|
+  * | 'clarifying'            | sync~spin          | Waiting for a clarification     |
+  * | 'blocked-clarification' | warning (yellow)   | Blocked on unresolved request   |
+  * | 'working'               | loading~spin       | Normal active work              |
+  * | 'idle' / undefined      | circle-outline     | No work in progress             |
+  */
+ private statusIcon(status?: string): vscode.ThemeIcon {
+ switch (status) {
+ case 'clarifying':
+ return new vscode.ThemeIcon('sync~spin');
+ case 'blocked-clarification':
+ return new vscode.ThemeIcon(
+ 'warning',
+ new vscode.ThemeColor('notificationsWarningIcon.foreground')
+ );
+ case 'working':
+ return new vscode.ThemeIcon('loading~spin');
+ default:
+ return new vscode.ThemeIcon('circle-outline');
+ }
  }
 }
 

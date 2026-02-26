@@ -56,6 +56,9 @@ build/
 .agentx/state/
 .agentx/memory/
 
+# Cross-process file lock files (created by JsonFileLock / Lock-JsonFile)
+*.lock
+
 # AgentX output directories - tracked in Git (agent deliverables)
 # NOTE: These directories are intentional deliverables created by agent workflows.
 # They MUST NOT be gitignored or workflow jobs using 'git add' will fail.

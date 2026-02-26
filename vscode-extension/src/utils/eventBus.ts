@@ -48,6 +48,21 @@ export interface AgentEventMap {
 
   /** Generic state change (ready queue, workflow, etc.). */
   'state-change': StateChangeEvent;
+
+  /** Agent sent a clarification request to an upstream agent (via Agent X). */
+  'clarification-requested': ClarificationLifecycleEvent;
+
+  /** Target agent answered a clarification request. */
+  'clarification-answered': ClarificationLifecycleEvent;
+
+  /** Clarification SLA expired -- pending past staleAfter timestamp. */
+  'clarification-stale': ClarificationLifecycleEvent;
+
+  /** Requesting agent marked clarification as resolved. */
+  'clarification-resolved': ClarificationLifecycleEvent;
+
+  /** Clarification auto-escalated (max rounds / stuck / deadlock). */
+  'clarification-escalated': ClarificationLifecycleEvent;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,6 +146,20 @@ export interface StateChangeEvent {
   readonly source: string;
   readonly oldState?: string;
   readonly newState: string;
+  readonly timestamp: number;
+}
+
+/**
+ * Payload for all clarification lifecycle events.
+ * Carries enough context for tree views and history log.
+ */
+export interface ClarificationLifecycleEvent {
+  readonly clarificationId: string;
+  readonly issueNumber: number;
+  readonly fromAgent: string;
+  readonly toAgent: string;
+  readonly topic: string;
+  readonly blocking: boolean;
   readonly timestamp: number;
 }
 

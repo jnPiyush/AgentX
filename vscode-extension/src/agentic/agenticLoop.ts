@@ -123,6 +123,26 @@ export interface AgenticLoopConfig {
   readonly compactKeepRecent: number;
   /** Whether to auto-compact when budget threshold is reached. */
   readonly autoCompact: boolean;
+  /**
+   * Agents this loop instance is allowed to request clarifications from.
+   * Empty / undefined means clarification is disabled for this loop.
+   * Example: ['architect', 'product-manager']
+   */
+  readonly canClarify?: readonly string[];
+  /**
+   * Maximum clarification rounds per request before auto-escalation.
+   * Defaults to 3 if canClarify is set; ignored otherwise.
+   */
+  readonly clarifyMaxRounds?: number;
+  /**
+   * Callback invoked when the LLM signals it needs clarification.
+   * The loop calls this and waits for the resolution before continuing.
+   * If not provided, clarifications are logged but not awaited.
+   */
+  readonly onClarificationNeeded?: (
+    topic: string,
+    question: string,
+  ) => Promise<import('../utils/clarificationTypes').ClarificationResult>;
 }
 
 const DEFAULT_CONFIG: AgenticLoopConfig = {

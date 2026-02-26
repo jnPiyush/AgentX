@@ -294,4 +294,9 @@ export interface AgentDefinition {
  mode: string;
  model: string;
  fileName: string;
+ /**
+  * Live runtime status from agent state file (optional).
+  * Known values: 'idle' | 'working' | 'clarifying' | 'blocked-clarification'
+  */
+ runtimeStatus?: string;
 }

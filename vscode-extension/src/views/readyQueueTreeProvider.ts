@@ -44,7 +44,8 @@ export class ReadyQueueTreeProvider implements vscode.TreeDataProvider<ReadyItem
  this.items = lines.map(line => {
  const issueMatch = line.match(/#(\d+)/);
  const issueNum = issueMatch ? issueMatch[1] : '';
- return new ReadyItem(line.trim(), issueNum, 'ready');
+ const isClarificationBlocked = /BLOCKED.*clarif/i.test(line);
+ return new ReadyItem(line.trim(), issueNum, isClarificationBlocked ? 'blocked-clarification' : 'ready');
  });
 
  return this.items;
@@ -58,13 +59,20 @@ class ReadyItem extends vscode.TreeItem {
  constructor(
  label: string,
  public readonly issueNumber: string,
- type: 'ready' | 'info'
+ type: 'ready' | 'blocked-clarification' | 'info'
  ) {
  super(label, vscode.TreeItemCollapsibleState.None);
 
  if (type === 'ready') {
  this.iconPath = new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
  this.contextValue = 'readyItem';
+ } else if (type === 'blocked-clarification') {
+ this.iconPath = new vscode.ThemeIcon(
+ 'warning',
+ new vscode.ThemeColor('notificationsWarningIcon.foreground')
+ );
+ this.description = 'BLOCKED: Clarification pending';
+ this.contextValue = 'blockedClarificationItem';
  } else {
  this.iconPath = new vscode.ThemeIcon('info');
  this.contextValue = 'infoItem';

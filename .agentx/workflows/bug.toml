@@ -15,6 +15,10 @@ status_on_complete = "In Review"
 iterate = true
 max_iterations = 5
 completion_criteria = "Bug fixed, regression tests added, no new issues introduced, root cause documented"
+can_clarify = ["architect", "product-manager"]
+clarify_max_rounds = 2
+clarify_sla_minutes = 30
+clarify_blocking_allowed = false
 
 [[steps]]
 id = "review"

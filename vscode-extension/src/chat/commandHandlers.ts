@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
+import { renderThreadMarkdown, renderMonitorReportMarkdown } from '../utils/clarificationRenderer';
+import { ClarificationRecord, MonitorReport } from '../utils/clarificationTypes';
 
 /**
  * Metadata attached to every ChatResult for followup logic.
@@ -33,10 +35,12 @@ export async function handleSlashCommand(
       return handleDeps(request, response, agentx);
     case 'digest':
       return handleDigest(response, agentx);
+    case 'clarify':
+      return handleClarify(request, response, agentx);
     default:
       response.markdown(
         `Unknown command: \`/${request.command}\`.\n\n`
-        + 'Available: `/ready`, `/workflow`, `/status`, `/deps`, `/digest`'
+        + 'Available: `/ready`, `/workflow`, `/status`, `/deps`, `/digest`, `/clarify`'
       );
       return { metadata: { command: request.command, initialized: true } as AgentXChatMetadata };
   }
@@ -176,4 +180,72 @@ async function handleDigest(
   }
 
   return { metadata: { command: 'digest', initialized: true } as AgentXChatMetadata };
+}
+
+/**
+ * Handle /clarify [list|show <id>|stale]
+ *
+ * Subcommands:
+ *  (no args)  -- list all active clarifications
+ *  list       -- same as no args
+ *  show <id>  -- show full thread for a specific clarification
+ *  stale      -- show only stale/stuck clarifications
+ */
+async function handleClarify(
+  request: vscode.ChatRequest,
+  response: vscode.ChatResponseStream,
+  agentx: AgentXContext
+): Promise<vscode.ChatResult> {
+  const args = request.prompt.trim().split(/\s+/).filter(Boolean);
+  const subcmd = args[0]?.toLowerCase() ?? 'list';
+
+  response.progress('Loading clarification data...');
+
+  try {
+    // Attempt to call the CLI for live data.
+    const cliArgs = args.length > 0 ? args : ['list'];
+    const output = await agentx.runCli('clarify', cliArgs);
+
+    if (!output || output.trim().length === 0) {
+      response.markdown('**Clarifications**: No active clarifications found.');
+    } else if (subcmd === 'show' && args[1]) {
+      // CLI returns JSON for show subcommand -- try to render as markdown thread.
+      try {
+        const parsed: unknown = JSON.parse(output);
+        const records = Array.isArray(parsed)
+          ? (parsed as ClarificationRecord[])
+          : [parsed as ClarificationRecord];
+        response.markdown(renderThreadMarkdown(records));
+      } catch {
+        // CLI returned plain text -- just display it.
+        response.markdown('```\n' + output + '\n```');
+      }
+    } else if (subcmd === 'stale') {
+      // CLI returns JSON monitor report for stale subcommand.
+      try {
+        const report = JSON.parse(output) as MonitorReport;
+        response.markdown(renderMonitorReportMarkdown(report));
+      } catch {
+        response.markdown('```\n' + output + '\n```');
+      }
+    } else {
+      response.markdown('**Active Clarifications**\n\n');
+      response.markdown('```\n' + output + '\n```');
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    response.markdown(
+      `**Clarification Command Help**\n\n`
+      + '| Subcommand | Description |\n'
+      + '|------------|-------------|\n'
+      + '| `/clarify` | List all active clarifications |\n'
+      + '| `/clarify list` | Same as above |\n'
+      + '| `/clarify show <id>` | Show full thread for one clarification |\n'
+      + '| `/clarify stale` | Show stale / stuck clarifications |\n'
+      + '\n'
+      + `_CLI error: ${message}_`
+    );
+  }
+
+  return { metadata: { command: 'clarify', initialized: true } as AgentXChatMetadata };
 }

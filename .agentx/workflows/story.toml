@@ -15,6 +15,10 @@ status_on_complete = "In Review"
 iterate = true
 max_iterations = 10
 completion_criteria = "All acceptance criteria met, tests pass at 80% coverage, no lint errors, docs updated"
+can_clarify = ["architect", "product-manager"]
+clarify_max_rounds = 3
+clarify_sla_minutes = 60
+clarify_blocking_allowed = true
 
 [[steps]]
 id = "review"

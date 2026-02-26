@@ -33,6 +33,7 @@ $Script:LOOP_STATE_FILE = Join-Path $AGENTX_DIR 'state' 'loop-state.json'
 $Script:ISSUES_DIR = Join-Path $AGENTX_DIR 'issues'
 $Script:WORKFLOWS_DIR = Join-Path $AGENTX_DIR 'workflows'
 $Script:DIGESTS_DIR = Join-Path $AGENTX_DIR 'digests'
+$Script:CLARIFICATIONS_DIR = Join-Path $AGENTX_DIR 'state' 'clarifications'
 $Script:CONFIG_FILE = Join-Path $AGENTX_DIR 'config.json'
 $Script:VERSION_FILE = Join-Path $AGENTX_DIR 'version.json'
 
@@ -51,6 +52,76 @@ function Write-JsonFile([string]$p, $data) {
     $data | ConvertTo-Json -Depth 10 | Set-Content $p -Encoding utf8 -NoNewline
     # Ensure trailing newline
     Add-Content $p -Value '' -NoNewline:$false
+}
+
+# ---------------------------------------------------------------------------
+# File locking helpers (cross-process atomic JSON writes)
+# ---------------------------------------------------------------------------
+
+<#
+.SYNOPSIS
+  Acquire an exclusive .lock file for a given JSON path.
+  Returns $true on success, $false on timeout.
+#>
+function Lock-JsonFile([string]$jsonPath, [string]$agent = 'cli') {
+    $lockPath = $jsonPath + '.lock'
+    $maxRetries = 5
+    $delayMs = 200
+    $staleSecs = 30
+
+    for ($i = 0; $i -lt $maxRetries; $i++) {
+        # Clean stale lock.
+        if (Test-Path $lockPath) {
+            try {
+                $lockData = Get-Content $lockPath -Raw -Encoding utf8 | ConvertFrom-Json
+                $created = [datetime]$lockData.created
+                if (([datetime]::UtcNow - $created).TotalSeconds -gt $staleSecs) {
+                    Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
+                }
+            } catch {
+                Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        # Atomic create: FileMode.CreateNew -- fails if file already exists.
+        try {
+            $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew,
+                [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+            $payload = '{"agent":"' + $agent + '","created":"' + [datetime]::UtcNow.ToString('o') + '"}'
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
+            $stream.Write($bytes, 0, $bytes.Length)
+            $stream.Dispose()
+            return $true
+        } catch [System.IO.IOException] {
+            # Another process holds the lock -- wait with exponential back-off.
+            Start-Sleep -Milliseconds ([int]($delayMs * [Math]::Pow(1.5, $i)))
+        }
+    }
+    return $false
+}
+
+<#
+.SYNOPSIS
+  Release the .lock file for a given JSON path.
+#>
+function Unlock-JsonFile([string]$jsonPath) {
+    $lockPath = $jsonPath + '.lock'
+    Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
+}
+
+<#
+.SYNOPSIS
+  Run a script block with an exclusive lock on $jsonPath.
+  Automatically releases on success or error.
+#>
+function Invoke-WithJsonLock([string]$jsonPath, [string]$agent = 'cli', [scriptblock]$fn) {
+    $acquired = Lock-JsonFile $jsonPath $agent
+    if (-not $acquired) { throw "Lock timeout for '$jsonPath'" }
+    try {
+        & $fn
+    } finally {
+        Unlock-JsonFile $jsonPath
+    }
 }
 
 function Get-Timestamp { return (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ') }
@@ -325,7 +396,25 @@ function Invoke-ReadyCmd {
         $pLabel = if ($p -lt 9) { "P$p" } else { '  ' }
         $pc = switch ($p) { 0 { $C.r } 1 { $C.y } default { $C.d } }
         $typ = Get-IssueType $i
-        Write-Host "  $pc[$pLabel]$($C.n) $($C.c)#$($i.number)$($C.n) $($C.d)($typ)$($C.n) $($i.title)"
+
+        # Check for pending clarification blocking this issue.
+        $clarFile = Join-Path $Script:CLARIFICATIONS_DIR "issue-$($i.number).json"
+        $hasPendingClarification = $false
+        if (Test-Path $clarFile) {
+            try {
+                $ledger = Get-Content $clarFile -Raw -Encoding utf8 | ConvertFrom-Json
+                if ($ledger.clarifications) {
+                    $hasPendingClarification = @($ledger.clarifications |
+                        Where-Object { $_.status -in @('pending', 'stale') }).Count -gt 0
+                }
+            } catch {}
+        }
+
+        if ($hasPendingClarification) {
+            Write-Host "  $($C.y)[BLOCKED: Clarification pending]$($C.n) $($C.c)#$($i.number)$($C.n) $($C.d)($typ)$($C.n) $($i.title)"
+        } else {
+            Write-Host "  $pc[$pLabel]$($C.n) $($C.c)#$($i.number)$($C.n) $($C.d)($typ)$($C.n) $($i.title)"
+        }
     }
     Write-Host ''
 }
@@ -485,6 +574,10 @@ function Read-TomlWorkflow([string]$file) {
                     'iterate' { $cur.iterate = $v -eq 'true' }
                     'optional' { $cur.optional = $v -eq 'true' }
                     'max_iterations' { $cur.max_iterations = [int]$v }
+                    'can_clarify' { $cur.can_clarify = @(($v -replace '[\[\]"\x27]', '') -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+                    'clarify_max_rounds' { $cur.clarify_max_rounds = [int]$v }
+                    'clarify_sla_minutes' { $cur.clarify_sla_minutes = [int]$v }
+                    'clarify_blocking_allowed' { $cur.clarify_blocking_allowed = $v -eq 'true' }
                     default { $cur.$k = $v }
                 }
             }
@@ -736,6 +829,205 @@ function Invoke-VersionCmd {
 }
 
 # ---------------------------------------------------------------------------
+# CLARIFY: Agent-to-Agent Clarification Protocol
+# ---------------------------------------------------------------------------
+
+<#
+.SYNOPSIS
+  Run the clarification monitor: mark stale records, detect stuck/deadlock.
+  Called automatically by hook start/finish.
+#>
+function Invoke-ClarificationMonitorCheck {
+    if (-not (Test-Path $Script:CLARIFICATIONS_DIR)) { return }
+
+    $now = [datetime]::UtcNow
+    $allRecords = @()
+
+    foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
+        try {
+            $ledger = Get-Content $f.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+            foreach ($rec in $ledger.clarifications) {
+                $rec | Add-Member -NotePropertyName '__ledgerFile' -NotePropertyValue $f.FullName -Force
+                $allRecords += $rec
+            }
+        } catch {}
+    }
+
+    $active = @($allRecords | Where-Object { $_.status -notin @('resolved', 'escalated', 'abandoned') })
+
+    foreach ($rec in $active) {
+        # Stale check: pending past staleAfter.
+        if ($rec.status -eq 'pending' -and $rec.staleAfter) {
+            try {
+                $staleAt = [datetime]$rec.staleAfter
+                if ($now -gt $staleAt) {
+                    Write-Host "$($C.y)  [WARN] Clarification $($rec.id) is stale (pending since $($rec.created))$($C.n)"
+                    Invoke-WithJsonLock $rec.__ledgerFile 'monitor' {
+                        $l2 = Read-JsonFile $rec.__ledgerFile
+                        foreach ($r2 in $l2.clarifications) {
+                            if ($r2.id -eq $rec.id) {
+                                $r2 | Add-Member -NotePropertyName 'status' -NotePropertyValue 'stale' -Force
+                            }
+                        }
+                        Write-JsonFile $rec.__ledgerFile $l2
+                    }
+                }
+            } catch {}
+        }
+    }
+
+    # Deadlock: mutual pending A->B and B->A on same issue.
+    for ($a = 0; $a -lt $active.Count; $a++) {
+        for ($b = $a + 1; $b -lt $active.Count; $b++) {
+            $ra = $active[$a]; $rb = $active[$b]
+            if ($ra.status -eq 'pending' -and $rb.status -eq 'pending' -and
+                $ra.from -eq $rb.to -and $ra.to -eq $rb.from -and
+                $ra.issueNumber -eq $rb.issueNumber) {
+                Write-Host "$($C.r)  [FAIL] Deadlock: $($ra.from) <-> $($rb.from) on issue #$($ra.issueNumber)$($C.n)"
+            }
+        }
+    }
+}
+
+<#
+.SYNOPSIS
+  Manage clarification records.
+  Subcommands: list, show <id>, stale, resolve <id>, escalate <id>
+#>
+function Invoke-ClarifyCmd {
+    $sub = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'list' }
+
+    switch ($sub) {
+        'list' {
+            if (-not (Test-Path $Script:CLARIFICATIONS_DIR)) { Write-Host 'No clarification records found.'; return }
+            $found = $false
+            foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
+                try {
+                    $ledger = Get-Content $f.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+                    $active = @($ledger.clarifications | Where-Object { $_.status -notin @('resolved', 'abandoned') })
+                    if ($active.Count -gt 0) {
+                        $found = $true
+                        Write-Host "`n$($C.c)  Issue #$($ledger.issueNumber)$($C.n)"
+                        foreach ($rec in $active) {
+                            $sc = switch ($rec.status) {
+                                'pending'   { $C.y } 'answered' { $C.g }
+                                'stale'     { $C.r } 'escalated' { $C.m } default { $C.d }
+                            }
+                            $blocking = if ($rec.blocking) { ' [BLOCKING]' } else { '' }
+                            Write-Host "  $sc[$($rec.status.ToUpper())]$($C.n) $($C.c)$($rec.id)$($C.n)$($C.r)$blocking$($C.n)"
+                            Write-Host "    $($C.d)$($rec.from) -> $($rec.to): $($rec.topic)$($C.n)"
+                        }
+                    }
+                } catch {}
+            }
+            if (-not $found) { Write-Host 'No active clarifications.' }
+            Write-Host ''
+        }
+
+        'show' {
+            $id = if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1] } else { '' }
+            if (-not $id) { Write-Host 'Usage: agentx clarify show <id>'; return }
+            $found = $false
+            foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
+                try {
+                    $ledger = Get-Content $f.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+                    $rec = $ledger.clarifications | Where-Object { $_.id -eq $id } | Select-Object -First 1
+                    if ($rec) {
+                        $found = $true
+                        Write-Host "`n$($C.c)  Clarification: $($rec.id)$($C.n)"
+                        Write-Host "  $($C.d)Issue #$($ledger.issueNumber) | $($rec.from) -> $($rec.to) | $($rec.status) | Round $($rec.round)/$($rec.maxRounds)$($C.n)"
+                        Write-Host "  $($C.d)Topic: $($rec.topic)$($C.n)`n"
+                        foreach ($entry in $rec.thread) {
+                            $ec = switch ($entry.type) {
+                                'question' { $C.y } 'answer' { $C.g }
+                                'resolution' { $C.c } 'escalation' { $C.r } default { $C.d }
+                            }
+                            Write-Host "  $ec  [$($entry.type.ToUpper())] $($entry.from)$($C.n)"
+                            Write-Host "  $($C.d)  $($entry.body)$($C.n)`n"
+                        }
+                    }
+                } catch {}
+            }
+            if (-not $found) { Write-Host "Clarification '$id' not found." }
+        }
+
+        'stale' { Invoke-ClarificationMonitorCheck }
+
+        'resolve' {
+            $id = if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1] } else { '' }
+            $resolution = Get-Flag @('-m', '--message')
+            if (-not $id) { Write-Host 'Usage: agentx clarify resolve <id> [-m "text"]'; return }
+            $resolved = $false
+            foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
+                try {
+                    $ledger = Read-JsonFile $f.FullName
+                    $rec = $ledger.clarifications | Where-Object { $_.id -eq $id } | Select-Object -First 1
+                    if ($rec) {
+                        Invoke-WithJsonLock $f.FullName 'cli-resolve' {
+                            $l2 = Read-JsonFile $f.FullName
+                            foreach ($r2 in $l2.clarifications) {
+                                if ($r2.id -eq $id) {
+                                    $r2 | Add-Member -NotePropertyName 'status' -NotePropertyValue 'resolved' -Force
+                                    $r2 | Add-Member -NotePropertyName 'resolvedAt' -NotePropertyValue (Get-Timestamp) -Force
+                                    $entry2 = [PSCustomObject]@{ round = $r2.round; from = 'cli'; type = 'resolution'
+                                        body = if ($resolution) { $resolution } else { 'Resolved via CLI' }; timestamp = (Get-Timestamp) }
+                                    if (-not $r2.thread) { $r2 | Add-Member -NotePropertyName 'thread' -NotePropertyValue @() -Force }
+                                    $r2.thread += $entry2
+                                }
+                            }
+                            Write-JsonFile $f.FullName $l2
+                        }
+                        $resolved = $true
+                        Write-Host "$($C.g)  [PASS] Clarification '$id' resolved.$($C.n)"
+                    }
+                } catch {}
+            }
+            if (-not $resolved) { Write-Host "Clarification '$id' not found." }
+        }
+
+        'escalate' {
+            $id = if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1] } else { '' }
+            $reason = Get-Flag @('-m', '--message')
+            if (-not $id) { Write-Host 'Usage: agentx clarify escalate <id> [-m "reason"]'; return }
+            $escalated = $false
+            foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
+                try {
+                    $ledger = Read-JsonFile $f.FullName
+                    $rec = $ledger.clarifications | Where-Object { $_.id -eq $id } | Select-Object -First 1
+                    if ($rec) {
+                        Invoke-WithJsonLock $f.FullName 'cli-escalate' {
+                            $l2 = Read-JsonFile $f.FullName
+                            foreach ($r2 in $l2.clarifications) {
+                                if ($r2.id -eq $id) {
+                                    $r2 | Add-Member -NotePropertyName 'status' -NotePropertyValue 'escalated' -Force
+                                    $entry2 = [PSCustomObject]@{ round = $r2.round; from = 'cli'; type = 'escalation'
+                                        body = if ($reason) { $reason } else { 'Escalated via CLI' }; timestamp = (Get-Timestamp) }
+                                    if (-not $r2.thread) { $r2 | Add-Member -NotePropertyName 'thread' -NotePropertyValue @() -Force }
+                                    $r2.thread += $entry2
+                                }
+                            }
+                            Write-JsonFile $f.FullName $l2
+                        }
+                        $escalated = $true
+                        Write-Host "$($C.y)  [WARN] Clarification '$id' escalated.$($C.n)"
+                    }
+                } catch {}
+            }
+            if (-not $escalated) { Write-Host "Clarification '$id' not found." }
+        }
+
+        default {
+            Write-Host "`n$($C.c)  clarify subcommands:$($C.n)"
+            Write-Host "  list                   List all active clarifications"
+            Write-Host "  show <id>              Show full thread for one clarification"
+            Write-Host "  stale                  Run monitor (detect stale/stuck/deadlock)"
+            Write-Host "  resolve <id> [-m msg]  Mark clarification resolved"
+            Write-Host "  escalate <id> [-m msg] Escalate a clarification`n"
+        }
+    }
+}
+
+# ---------------------------------------------------------------------------
 # HOOK: Agent lifecycle hooks (start/finish)
 # ---------------------------------------------------------------------------
 
@@ -759,11 +1051,15 @@ function Invoke-AgentHookCmd {
         Write-JsonFile $Script:STATE_FILE $data
         $issueRef = if ($issue) { " (issue #$issue)" } else { '' }
         Write-Host "$($C.g)  [PASS] $agent -> $status$issueRef$($C.n)"
+        # Run clarification monitor to detect stale / deadlocks.
+        Invoke-ClarificationMonitorCheck
     } elseif ($phase -eq 'finish') {
         $entry = [PSCustomObject]@{ status = 'done'; issue = $(if ($issue) { $issue } else { $null }); lastActivity = Get-Timestamp }
         $data | Add-Member -NotePropertyName $agent -NotePropertyValue $entry -Force
         Write-JsonFile $Script:STATE_FILE $data
         Write-Host "$($C.g)  [PASS] $agent -> done$($C.n)"
+        # Run clarification monitor on finish as well.
+        Invoke-ClarificationMonitorCheck
     }
 }
 
@@ -784,6 +1080,7 @@ $($C.w)  Commands:$($C.n)
   digest                           Generate weekly digest
   workflow [type]                   List/show workflow steps
   loop <start|status|iterate|complete|cancel>  Iterative refinement
+  clarify [list|show|stale|resolve|escalate]   Agent-to-agent clarifications
   validate <issue> <role>          Pre-handoff validation
   hook <start|finish> <agent> [#]  Agent lifecycle hooks
   hooks install                    Install git hooks
@@ -820,6 +1117,7 @@ switch ($Script:Command) {
     'hook'     { Invoke-AgentHookCmd }
     'hooks'    { Invoke-HooksCmd }
     'issue'    { Invoke-IssueCmd }
+    'clarify'  { Invoke-ClarifyCmd }
     'version'  { Invoke-VersionCmd }
     'help'     { Invoke-HelpCmd }
     default {

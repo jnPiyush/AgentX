@@ -35,5 +35,6 @@
  "chat.useNestedAgentsMdFiles": true,
  "chat.viewProgressBadge.enabled": true,
  "inlineChat.enableV2": true,
- "inlineChat.notebookAgent": true
+"inlineChat.notebookAgent": true,
+"agentx.mode": "github"
 }
