@@ -119,6 +119,13 @@ export class JsonFileLock {
 
   private isLockStale(lockPath: string): boolean {
     try {
+      const raw = fs.readFileSync(lockPath, 'utf8');
+      const content = JSON.parse(raw) as Partial<LockFileContent & { created?: string }>;
+      const ts = content.timestamp ?? content.created;
+      if (ts) {
+        return (Date.now() - new Date(ts).getTime()) > this.staleThresholdMs;
+      }
+      // No timestamp in content -- fall back to file mtime
       const stat = fs.statSync(lockPath);
       return (Date.now() - stat.mtimeMs) > this.staleThresholdMs;
     } catch {

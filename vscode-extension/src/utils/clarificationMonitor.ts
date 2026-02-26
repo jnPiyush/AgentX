@@ -97,8 +97,6 @@ export class ClarificationMonitor {
    * circular back-and-forth.
    */
   isStuck(rec: ClarificationRecord): boolean {
-    if (rec.thread.length < 4) { return false; }
-
     const questions = rec.thread.filter(e => e.type === 'question');
     if (questions.length < 2) { return false; }
 
@@ -115,7 +113,7 @@ export class ClarificationMonitor {
   detectDeadlocks(
     records: ClarificationRecord[],
   ): Array<readonly [ClarificationRecord, ClarificationRecord]> {
-    const blocking = records.filter(r => r.blocking && r.status === 'pending');
+    const blocking = records.filter(r => r.status === 'pending');
     const deadlocked: Array<readonly [ClarificationRecord, ClarificationRecord]> = [];
 
     for (let i = 0; i < blocking.length; i++) {
