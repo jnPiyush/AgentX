@@ -772,6 +772,13 @@ function Invoke-ValidateCmd {
         'engineer' {
             $gitLog = & git log --oneline --grep="#$num" -1 2>$null
             Test-Check ([bool]$gitLog) "Commits reference #$num"
+
+            # Quality loop check: a completed loop is required for engineer handoff.
+            $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
+            $loopActive = $loopState -and $loopState.active -eq $true
+            $loopComplete = $loopState -and $loopState.status -eq 'complete'
+            Test-Check (-not $loopActive) "Quality loop is not still active (must be complete or not started)"
+            Test-Check $loopComplete "Quality loop was completed (tests + review verified)"
         }
         'reviewer' {
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/reviews/REVIEW-$num.md")) "REVIEW-$num.md exists"
@@ -1054,6 +1061,28 @@ function Invoke-AgentHookCmd {
         # Run clarification monitor to detect stale / deadlocks.
         Invoke-ClarificationMonitorCheck
     } elseif ($phase -eq 'finish') {
+        # -----------------------------------------------------------------
+        # QUALITY GATE: block finish if a quality loop is still running.
+        # Engineers MUST complete (or cancel) their iterative loop before
+        # moving work to In Review.
+        # -----------------------------------------------------------------
+        $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
+        if ($loopState -and $loopState.active -eq $true) {
+            Write-Host "$($C.r)"
+            Write-Host "  [FAIL] QUALITY LOOP STILL ACTIVE -- cannot finish yet.$($C.n)"
+            Write-Host "$($C.y)  Loop iteration $($loopState.iteration)/$($loopState.maxIterations) is in progress.$($C.n)"
+            Write-Host "$($C.d)  Run: agentx loop iterate -s <summary>  (to record progress)$($C.n)"
+            Write-Host "$($C.d)  Run: agentx loop complete -s <summary>  (when criteria met)$($C.n)`n"
+            exit 1
+        }
+
+        # Warn if no loop was run at all for engineer role.
+        if ($agent -eq 'engineer' -and (-not $loopState -or $loopState.status -notin @('complete', 'cancelled'))) {
+            Write-Host "$($C.y)  [WARN] No completed quality loop found for this session.$($C.n)"
+            Write-Host "$($C.d)  Best practice: run 'agentx loop start' and iterate with full$($C.n)"
+            Write-Host "$($C.d)  test suite before marking work done.$($C.n)"
+        }
+
         $entry = [PSCustomObject]@{ status = 'done'; issue = $(if ($issue) { $issue } else { $null }); lastActivity = Get-Timestamp }
         $data | Add-Member -NotePropertyName $agent -NotePropertyValue $entry -Force
         Write-JsonFile $Script:STATE_FILE $data

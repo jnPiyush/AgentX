@@ -234,9 +234,14 @@ All AgentX core agents are currently **stable** (production-ready).
 - **Status**: Move to `In Progress` when starting -> `In Review` when code complete
 - **Output**: Code + Tests (80% coverage) + Documentation
 - **Tools**: All tools available (replace_string_in_file, run_in_terminal, get_errors, etc.)
-- **Validation**: `.github/scripts/validate-handoff.sh {issue} engineer`
+- **Validation**: `.agentx/agentx.ps1 validate {issue} engineer`
 - **Constraints**:
  - [PASS] CAN implement code, write tests, update documentation
+ - [PASS] MUST start a quality loop (`agentx loop start`) after first implementation commit
+ - [PASS] MUST run full test suite in EVERY loop iteration
+ - [PASS] MUST iterate until: all tests pass, coverage >=80%, lint clean, self-review done
+ - [FAIL] CANNOT move to In Review while loop state is `active` (CLI hard-blocks with exit 1)
+ - [FAIL] CANNOT skip the quality loop -- `hook finish` enforces this
  - [FAIL] CANNOT modify PRD/ADR/UX docs, skip tests, or merge without review
 - **Boundaries**:
  - Can modify: `src/**`, `tests/**`, `docs/README.md`

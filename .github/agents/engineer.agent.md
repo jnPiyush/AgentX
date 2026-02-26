@@ -19,8 +19,13 @@ constraints:
  - "MUST create progress log at docs/progress/ISSUE-{id}-log.md for each session"
  - "MUST update progress log before ending session or requesting handoff"
  - "MUST commit frequently (atomic commits with issue references)"
+ - "MUST start a quality loop (`agentx loop start`) immediately after first implementation commit"
+ - "MUST run the full test suite in EVERY loop iteration -- no iteration without `npm test` / `pytest` / `dotnet test`"
+ - "MUST iterate until ALL of: tests pass, coverage >=80%, tsc/lint clean, self-review checklist done"
  - "MUST check for active loop state before starting work (.agentx/state/loop-state.json)"
  - "MUST NOT move to In Review while loop status is active -- complete or cancel first"
+ - "MUST NOT call hook -Phase finish while loop is active (CLI will hard-block with exit 1)"
+ - "MUST record each iteration summary with meaningful detail: what changed, test counts, coverage %"
 boundaries:
  can_modify:
  - "src/** (source code)"
@@ -178,9 +183,12 @@ When implementing AI-powered features (issue has `needs:ai` label or Tech Spec h
 
 > [WARN] **Anti-Pattern**: Implementing hardcoded rules or scoring formulas when the spec calls for model inference. If the Tech Spec's Section 13 specifies a model, implement actual model integration - not a rule-based approximation.
 
-### 5c. Iterative Refinement (ALWAYS active -- built into every workflow)
+### 5c. Iterative Refinement (MANDATORY -- quality gate enforced by CLI)
 
-**All workflows include iterative refinement by default.** Every Engineer implementation step has `iterate = true` in its TOML, so loop state at `.agentx/state/loop-state.json` is auto-initialized when the workflow runs. You ALWAYS work in iterations.
+**All workflows include iterative refinement by default.** Every Engineer implementation step has `iterate = true` in its TOML. You ALWAYS work in iterations. This is not optional -- the CLI will hard-block `hook finish` if you try to hand off with an active loop.
+
+**Loop = run tests -> review output -> fix issues -> repeat until criteria met.**
+Minimum loop content per iteration: run full test suite AND record count + result.
 
 **Your responsibility as Engineer**:
 1. **Check loop state** at the start of every implementation:
@@ -477,13 +485,21 @@ Agent X (Auto) automatically triggers Reviewer workflow within 30 seconds.
 
 ### Before Updating Status to In Review
 
-1. [PASS] **Run validation script**:
- ```bash
- ./.github/scripts/validate-handoff.sh <issue_number> engineer
+1. [PASS] **Complete and close the quality loop**:
+ ```powershell
+ # Record final iteration and mark complete
+ .agentx/agentx.ps1 loop iterate -s "All X tests pass, Y% coverage, lint clean"
+ .agentx/agentx.ps1 loop complete -s "All acceptance criteria met, handoff ready"
  ```
- **Checks**: Code committed, tests exist, coverage 80%
+ **The `hook finish` command will hard-block (exit 1) if the loop is still active.**
 
-2. [PASS] **Complete self-review checklist** (document in issue comment):
+2. [PASS] **Run validation script**:
+ ```powershell
+ .agentx/agentx.ps1 validate <issue_number> engineer
+ ```
+ **Checks**: Code committed with issue ref, loop completed.
+
+3. [PASS] **Complete self-review checklist** (document in issue comment):
  - [ ] Low-level design created (if complex story)
  - [ ] Code quality (SOLID principles, DRY, clean code)
  - [ ] Test coverage (80%, unit + integration + e2e)
