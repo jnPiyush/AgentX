@@ -383,7 +383,6 @@ Clear context before implementation phase (UX/Architect -> Engineer) to prevent 
 | PRD | `.github/templates/PRD-TEMPLATE.md` |
 | ADR | `.github/templates/ADR-TEMPLATE.md` |
 | Spec | `.github/templates/SPEC-TEMPLATE.md` |
-| Spec Lite | `.github/templates/SPEC-TEMPLATE-LITE.md` |
 | UX | `.github/templates/UX-TEMPLATE.md` |
 | Review | `.github/templates/REVIEW-TEMPLATE.md` |
 | Security Plan | `.github/templates/SECURITY-PLAN-TEMPLATE.md` |

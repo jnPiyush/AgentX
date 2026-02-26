@@ -174,7 +174,6 @@ echo -e "  \033[1;37m10. Documentation Consistency\033[0m"
 
 assert_file_contains "AGENTS.md"                     "Single source of truth"  "AGENTS.md declares single source"
 assert_file_exists   "docs/QUICKSTART.md"                                      "5-minute Quickstart guide"
-assert_file_exists   ".github/templates/SPEC-TEMPLATE-LITE.md"                 "Spec Template Lite variant"
 assert_file_contains "AGENTS.md"                     "QUICKSTART"              "AGENTS.md links to Quickstart"
 assert_file_contains ".github/copilot-instructions.md" "RFC 2119"             "Router has RFC 2119 directive language"
 assert_file_contains "README.md"                     "OpenSSF"                 "README has OpenSSF Scorecard badge"

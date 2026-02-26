@@ -1,0 +1,156 @@
+# CLAUDE.md - Entry Point for Claude Code
+
+> This file is the equivalent of `.github/copilot-instructions.md` for Claude Code.
+> It loads once at session start. Keep it small -- point to detailed docs, don't duplicate them.
+
+---
+
+## Core Documents (Read Before Coding)
+
+1. **[AGENTS.md](AGENTS.md)** - Agent roles, workflows, issue-first rules, classification, commit format, security checklist. Read for ANY coding or workflow task.
+2. **[Skills.md](Skills.md)** - Production code standards index (41 skills). Use the Quick Reference table to pick 3-4 relevant skills per task, then read those SKILL.md files.
+
+**When to skip AGENTS.md**: Answering questions, research, debugging only.
+
+---
+
+## Context Loading Rules
+
+Load context on-demand, not upfront. Match the task to the right documents:
+
+| Task | Load | Skip |
+|------|------|------|
+| Writing/editing code | AGENTS.md + matching instruction file + relevant skills (max 3-4) | Skills not matching task |
+| Creating new files, features, issues | AGENTS.md (workflow + classification) | Unrelated skills |
+| Multi-agent coordination, handoffs | AGENTS.md (full) | Unrelated skills |
+| Answering questions, research | Nothing extra | AGENTS.md, Skills.md |
+| Debugging | Matching instruction file + error handling skill | AGENTS.md |
+
+**Token budget**: Max 3-4 skills per task (~20K tokens). More = noise.
+
+---
+
+## Instruction Files
+
+Claude Code does not auto-load by file glob. Read the relevant instruction file manually when working on matching files:
+
+| File Pattern | Read This Instruction |
+|--------------|-----------------------|
+| `*.py`, `*.pyx` | [.github/instructions/python.instructions.md](.github/instructions/python.instructions.md) |
+| `*.ts` (backend) | [.github/instructions/typescript.instructions.md](.github/instructions/typescript.instructions.md) |
+| `*.tsx`, `*.jsx`, `components/`, `hooks/` | [.github/instructions/react.instructions.md](.github/instructions/react.instructions.md) |
+| `*.cs`, `*.csx` | [.github/instructions/csharp.instructions.md](.github/instructions/csharp.instructions.md) |
+| `*.razor`, `*.razor.cs` | [.github/instructions/blazor.instructions.md](.github/instructions/blazor.instructions.md) |
+| `*.tf`, `*.tfvars` | [.github/instructions/terraform.instructions.md](.github/instructions/terraform.instructions.md) |
+| `*.bicep`, `*.bicepparam` | [.github/instructions/bicep.instructions.md](.github/instructions/bicep.instructions.md) |
+| `*.sql`, `migrations/` | [.github/instructions/sql.instructions.md](.github/instructions/sql.instructions.md) |
+| `*.yml`, `*.yaml`, `workflows/` | [.github/instructions/yaml.instructions.md](.github/instructions/yaml.instructions.md) + [.github/instructions/devops.instructions.md](.github/instructions/devops.instructions.md) |
+| `Controllers/`, `api/`, `endpoints/` | [.github/instructions/api.instructions.md](.github/instructions/api.instructions.md) |
+| `*agent*`, `*llm*`, `*workflow*` | [.github/instructions/ai.instructions.md](.github/instructions/ai.instructions.md) |
+| `**/ux/**`, `**/prototypes/**` | [.github/instructions/ux-methodology.instructions.md](.github/instructions/ux-methodology.instructions.md) |
+
+---
+
+## Issue-First Workflow
+
+Every piece of work MUST start with an issue. No exceptions (except `[skip-issue]` hotfixes).
+
+```bash
+# GitHub Mode
+gh issue create --title "[Story] Add /health endpoint" --label "type:story"
+# Work...
+git commit -m "feat: add health endpoint (#42)"
+gh issue close 42 --reason completed
+```
+
+```bash
+# Local Mode
+./.agentx/local-issue-manager.ps1 -Action create -Title "[Bug] Fix timeout" -Labels "type:bug"
+git commit -m "fix: resolve login timeout (#1)"
+./.agentx/local-issue-manager.ps1 -Action close -IssueNumber 1
+```
+
+---
+
+## Classification
+
+| Type | Label | Route To |
+|------|-------|----------|
+| Broken? | `type:bug` | Engineer |
+| Research? | `type:spike` | Architect |
+| Docs only? | `type:docs` | Engineer |
+| Pipeline/deploy? | `type:devops` | DevOps Engineer |
+| Large/vague? | `type:epic` | Product Manager |
+| Single capability? | `type:feature` | Architect |
+| Otherwise | `type:story` | Engineer |
+
+---
+
+## Commit Format
+
+```
+type: description (#issue-number)
+```
+
+Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
+
+---
+
+## ASCII-Only Rule
+
+All source code, scripts, config, and documentation MUST use ASCII characters only (U+0000-U+007F).
+
+- MUST NOT use emoji, Unicode symbols, box-drawing characters, smart quotes
+- MUST use ASCII equivalents: `[PASS]` not checkmarks, `[FAIL]` not cross marks, `->` not arrows, `-` not em-dashes
+
+---
+
+## Security Checklist
+
+Before any commit:
+
+- [ ] No hardcoded secrets
+- [ ] SQL parameterization (no string concatenation)
+- [ ] Input validation on all endpoints
+- [ ] Dependencies scanned
+
+**Blocked commands**: `rm -rf /`, `git reset --hard`, `drop database`
+
+---
+
+## Directive Language
+
+- **MUST** / **MUST NOT** - Absolute requirement or prohibition
+- **SHOULD** / **SHOULD NOT** - Strong recommendation (exceptions need justification)
+- **MAY** - Truly optional
+
+---
+
+## Agent Definitions
+
+Agent role files are at `.github/agents/`. Load only the active agent's definition:
+
+| Agent | Definition |
+|-------|-----------|
+| Agent X (Hub) | [.github/agents/agent-x.agent.md](.github/agents/agent-x.agent.md) |
+| Product Manager | [.github/agents/product-manager.agent.md](.github/agents/product-manager.agent.md) |
+| UX Designer | [.github/agents/ux-designer.agent.md](.github/agents/ux-designer.agent.md) |
+| Architect | [.github/agents/architect.agent.md](.github/agents/architect.agent.md) |
+| Engineer | [.github/agents/engineer.agent.md](.github/agents/engineer.agent.md) |
+| Reviewer | [.github/agents/reviewer.agent.md](.github/agents/reviewer.agent.md) |
+| Auto-Fix Reviewer | [.github/agents/reviewer-auto.agent.md](.github/agents/reviewer-auto.agent.md) |
+| DevOps Engineer | [.github/agents/devops.agent.md](.github/agents/devops.agent.md) |
+| Customer Coach | [.github/agents/customer-coach.agent.md](.github/agents/customer-coach.agent.md) |
+
+---
+
+## Templates
+
+| Template | Location |
+|----------|----------|
+| PRD | `.github/templates/PRD-TEMPLATE.md` |
+| ADR | `.github/templates/ADR-TEMPLATE.md` |
+| Tech Spec | `.github/templates/SPEC-TEMPLATE.md` |
+| UX Design | `.github/templates/UX-TEMPLATE.md` |
+| Code Review | `.github/templates/REVIEW-TEMPLATE.md` |
+| Security Plan | `.github/templates/SECURITY-PLAN-TEMPLATE.md` |

@@ -135,7 +135,7 @@ AI assistants continue to produce ad-hoc, unstructured output. Developers get co
 5. **Template System**
    - **User Story**: As an agent, I want standardized templates so that all deliverables follow a consistent structure
    - **Acceptance Criteria**:
-     - [x] 7 templates: PRD, ADR, Spec, Spec Lite, UX, Review, Security Plan
+     - [x] 6 templates: PRD, ADR, Spec, UX, Review, Security Plan
      - [x] Input variables with `${variable_name}` syntax in YAML frontmatter
      - [x] Required fields enforcement and default values
      - [x] Special tokens: `${current_date}`, `${user}`, etc.
