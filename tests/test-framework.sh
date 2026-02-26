@@ -130,8 +130,8 @@ assert_file_exists ".github/skills/ai-systems/cognitive-architecture/scripts/sca
 
 # Instructions
 assert_file_exists ".github/instructions/typescript.instructions.md" "TypeScript instruction file"
-assert_file_exists ".github/instructions/terraform.instructions.md"  "Terraform instruction file"
-assert_file_exists ".github/instructions/bicep.instructions.md"      "Bicep instruction file"
+assert_file_exists ".github/skills/cloud/terraform/SKILL.md"       "Terraform skill"
+assert_file_exists ".github/skills/cloud/bicep/SKILL.md"           "Bicep skill"
 
 # Schemas
 assert_file_exists "scripts/validate-frontmatter.ps1"                    "Frontmatter validation script"

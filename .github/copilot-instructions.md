@@ -51,11 +51,10 @@ These load automatically when editing matching files - no manual action needed:
 | `python.instructions.md` | `*.py`, `*.pyx` |
 | `csharp.instructions.md` | `*.cs`, `*.csx` |
 | `typescript.instructions.md` | `*.ts` (backend/server TypeScript) |
-| `terraform.instructions.md` | `*.tf`, `*.tfvars` (Infrastructure as Code) |
-| `bicep.instructions.md` | `*.bicep`, `*.bicepparam` (Azure IaC) |
 | `react.instructions.md` | `*.tsx`, `*.jsx`, `components/`, `hooks/` |
 
 For file types not listed above, load the matching **skill** on demand from [Skills.md](../Skills.md):
+`*.tf`/`*.tfvars` -> `cloud/terraform`, `*.bicep`/`*.bicepparam` -> `cloud/bicep`,
 `*.razor` -> `development/blazor`, `*.sql` -> `development/sql-server` + `development/postgresql`,
 `*.yml`/`*.yaml` -> `operations/yaml-pipelines` + `operations/github-actions-workflows`,
 `Controllers/`/`api/` -> `architecture/api-design`, `**/ux/**` -> `design/ux-ui-design`.

@@ -32,7 +32,7 @@ Load context on-demand, not upfront. Match the task to the right documents:
 
 ## Context Loading
 
-### Instruction Files (7 remaining)
+### Instruction Files (5 remaining)
 
 | File Pattern | Read This |
 |--------------|-----------|
@@ -40,14 +40,14 @@ Load context on-demand, not upfront. Match the task to the right documents:
 | `*.py`, `*.pyx` | [.github/instructions/python.instructions.md](.github/instructions/python.instructions.md) |
 | `*.cs`, `*.csx` | [.github/instructions/csharp.instructions.md](.github/instructions/csharp.instructions.md) |
 | `*.ts` (backend) | [.github/instructions/typescript.instructions.md](.github/instructions/typescript.instructions.md) |
-| `*.tf`, `*.tfvars` | [.github/instructions/terraform.instructions.md](.github/instructions/terraform.instructions.md) |
-| `*.bicep`, `*.bicepparam` | [.github/instructions/bicep.instructions.md](.github/instructions/bicep.instructions.md) |
 | `*.tsx`, `*.jsx`, `components/`, `hooks/` | [.github/instructions/react.instructions.md](.github/instructions/react.instructions.md) |
 
 ### Skills (load directly for domains without instructions)
 
 | File Pattern | Load Skill |
 |--------------|------------|
+| `*.tf`, `*.tfvars` | [.github/skills/cloud/terraform/SKILL.md](.github/skills/cloud/terraform/SKILL.md) |
+| `*.bicep`, `*.bicepparam` | [.github/skills/cloud/bicep/SKILL.md](.github/skills/cloud/bicep/SKILL.md) |
 | `*.razor`, `*.razor.cs` | [.github/skills/development/blazor/SKILL.md](.github/skills/development/blazor/SKILL.md) |
 | `*.sql`, `migrations/` | [.github/skills/development/sql-server/SKILL.md](.github/skills/development/sql-server/SKILL.md) + [.github/skills/development/postgresql/SKILL.md](.github/skills/development/postgresql/SKILL.md) |
 | `*.yml`, `*.yaml`, `workflows/` | [.github/skills/operations/yaml-pipelines/SKILL.md](.github/skills/operations/yaml-pipelines/SKILL.md) + [.github/skills/operations/github-actions-workflows/SKILL.md](.github/skills/operations/github-actions-workflows/SKILL.md) |

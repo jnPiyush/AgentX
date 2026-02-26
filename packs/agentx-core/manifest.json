@@ -21,9 +21,7 @@
       ".github/instructions/csharp.instructions.md",
       ".github/instructions/python.instructions.md",
       ".github/instructions/typescript.instructions.md",
-      ".github/instructions/react.instructions.md",
-      ".github/instructions/bicep.instructions.md",
-      ".github/instructions/terraform.instructions.md"
+      ".github/instructions/react.instructions.md"
     ],
     "templates": [
       ".github/templates/PRD-TEMPLATE.md",

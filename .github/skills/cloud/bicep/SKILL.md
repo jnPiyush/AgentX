@@ -1,9 +1,31 @@
 ---
-description: 'Bicep and Azure Resource Manager instructions for declarative Azure infrastructure deployment.'
-applyTo: '**/*.bicep, **/*.bicepparam'
+name: "bicep"
+description: 'Deploy Azure infrastructure declaratively using Bicep and ARM templates. Use when writing .bicep or .bicepparam files, creating reusable modules, defining user-defined types, securing parameters, or validating deployments with what-if and PSRule.'
+metadata:
+  author: "AgentX"
+  version: "1.0.0"
+  created: "2026-02-26"
+  updated: "2026-02-26"
+compatibility:
+  providers: ["azure"]
+  platforms: ["windows", "linux", "macos"]
 ---
 
 # Bicep / ARM Instructions
+
+> **Purpose**: Best practices for declarative Azure infrastructure deployment using Bicep, covering code style, file layout, naming, parameters, modules, user-defined types, security, and testing.
+
+---
+
+## When to Use This Skill
+
+- Writing or editing `.bicep` or `.bicepparam` files
+- Creating reusable Bicep modules
+- Defining user-defined types for complex configurations
+- Securing infrastructure parameters
+- Validating deployments with `az deployment group what-if` or PSRule
+
+---
 
 ## Code Style
 
@@ -12,19 +34,23 @@ applyTo: '**/*.bicep, **/*.bicepparam'
 - Use `bicep lint` for static analysis
 - Maximum line length: 120 characters
 
+---
+
 ## File Organization
 
 ```
 infra/
-+-- main.bicep # Entry point, orchestrates modules
-+-- main.bicepparam # Parameter values
++-- main.bicep          # Entry point, orchestrates modules
++-- main.bicepparam     # Parameter values
 +-- modules/
-| +-- networking.bicep # Network resources
-| +-- compute.bicep # Compute resources
-| -- storage.bicep # Storage resources
+|   +-- networking.bicep    # Network resources
+|   +-- compute.bicep       # Compute resources
+|   -- storage.bicep        # Storage resources
 -- types/
- -- config.bicep # User-defined types
+    -- config.bicep         # User-defined types
 ```
+
+---
 
 ## Naming Conventions
 
@@ -38,25 +64,29 @@ infra/
 | Types | PascalCase | `AppConfig` |
 | Files | kebab-case | `app-service.bicep` |
 
+---
+
 ## Resource Definitions
 
 ```bicep
 // MUST: Use resource symbolic names, not string references
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
- name: storageAccountName
- location: location
- kind: 'StorageV2'
- sku: {
- name: skuName
- }
- properties: {
- supportsHttpsTrafficOnly: true
- minimumTlsVersion: 'TLS1_2'
- allowBlobPublicAccess: false
- }
- tags: commonTags
+  name: storageAccountName
+  location: location
+  kind: 'StorageV2'
+  sku: {
+    name: skuName
+  }
+  properties: {
+    supportsHttpsTrafficOnly: true
+    minimumTlsVersion: 'TLS1_2'
+    allowBlobPublicAccess: false
+  }
+  tags: commonTags
 }
 ```
+
+---
 
 ## Parameters
 
@@ -82,61 +112,69 @@ param sqlAdminPassword string
 param projectName string
 ```
 
+---
+
 ## Variables and Expressions
 
 ```bicep
 // SHOULD: Use variables for computed values
 var resourcePrefix = '${projectName}-${environment}'
 var commonTags = {
- Environment: environment
- Project: projectName
- ManagedBy: 'Bicep'
+  Environment: environment
+  Project: projectName
+  ManagedBy: 'Bicep'
 }
 
 // SHOULD: Use ternary for environment-specific values
 var skuName = environment == 'prod' ? 'Standard_GRS' : 'Standard_LRS'
 ```
 
+---
+
 ## Modules
 
 ```bicep
 // MUST: Use modules for reusable components
 module networking './modules/networking.bicep' = {
- name: 'networking-${uniqueString(resourceGroup().id)}'
- params: {
- location: location
- vnetName: '${resourcePrefix}-vnet'
- tags: commonTags
- }
+  name: 'networking-${uniqueString(resourceGroup().id)}'
+  params: {
+    location: location
+    vnetName: '${resourcePrefix}-vnet'
+    tags: commonTags
+  }
 }
 
 // MUST: Reference module outputs, not hardcoded values
 resource appService 'Microsoft.Web/sites@2023-12-01' = {
- properties: {
- virtualNetworkSubnetId: networking.outputs.appSubnetId
- }
+  properties: {
+    virtualNetworkSubnetId: networking.outputs.appSubnetId
+  }
 }
 ```
+
+---
 
 ## User-Defined Types (Bicep v0.30+)
 
 ```bicep
 // SHOULD: Use types for complex parameter shapes
 type appConfig = {
- @description('Application display name')
- name: string
+  @description('Application display name')
+  name: string
 
- @description('SKU tier')
- tier: 'Basic' | 'Standard' | 'Premium'
+  @description('SKU tier')
+  tier: 'Basic' | 'Standard' | 'Premium'
 
- @description('Replica count')
- @minValue(1)
- @maxValue(10)
- replicas: int
+  @description('Replica count')
+  @minValue(1)
+  @maxValue(10)
+  replicas: int
 }
 
 param config appConfig
 ```
+
+---
 
 ## Security
 
@@ -146,6 +184,8 @@ param config appConfig
 - MUST disable public blob access (`allowBlobPublicAccess: false`)
 - SHOULD use managed identity (`identity: { type: 'SystemAssigned' }`)
 - MUST NOT output secrets - use Key Vault references instead
+
+---
 
 ## Testing
 
@@ -160,7 +200,7 @@ az bicep build --file main.bicep
 
 # What-if (dry run)
 az deployment group what-if \
- --resource-group rg-myapp-dev \
- --template-file main.bicep \
- --parameters main.bicepparam
+  --resource-group rg-myapp-dev \
+  --template-file main.bicep \
+  --parameters main.bicepparam
 ```

@@ -114,8 +114,8 @@ Assert-FileContains "Skills.md" "Covers $skillCount skills" "Skills.md descripti
 Assert-FileExists ".github/skills/ai-systems/cognitive-architecture/SKILL.md" "Cognitive Architecture skill"
 Assert-FileExists ".github/skills/ai-systems/cognitive-architecture/scripts/scaffold-cognitive.py" "Cognitive scaffold script"
 Assert-FileExists ".github/instructions/typescript.instructions.md" "TypeScript instruction file"
-Assert-FileExists ".github/instructions/terraform.instructions.md" "Terraform instruction file"
-Assert-FileExists ".github/instructions/bicep.instructions.md" "Bicep instruction file"
+Assert-FileExists ".github/skills/cloud/terraform/SKILL.md" "Terraform skill"
+Assert-FileExists ".github/skills/cloud/bicep/SKILL.md" "Bicep skill"
 
 # Verify enterprise validation
 Assert-FileExists "scripts/validate-frontmatter.ps1" "Frontmatter validation script"
