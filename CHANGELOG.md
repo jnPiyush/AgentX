@@ -5,6 +5,20 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.7.0] - 2026-02-26
+
+### Added
+
+- Version mismatch detection: extension now checks `.agentx/version.json` against extension version on activation and prompts to update outdated framework files
+- New `agentx.skipUpdateCheck` setting to opt out of automatic version check
+- Lightweight semver comparison utility (`versionChecker.ts`) with zero external dependencies
+- 14 new tests for version checker (253 total)
+
+### Fixed
+
+- Hardcoded version `6.5.3` in Setup Wizard now reads dynamically from `package.json`
+- Fixed 13 Python indentation errors in `scaffold-agent.py` skill script
+
 ## [6.6.0] - 2026-02-25
 
 ### Fixed

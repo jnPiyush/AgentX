@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.7.0 - 2026-02-26
+
+### Added
+
+- Version mismatch detection on activation - prompts users to update outdated framework files
+- `agentx.skipUpdateCheck` setting to disable automatic version check
+- `versionChecker.ts` utility with semver comparison and update notification
+
+### Fixed
+
+- Setup Wizard now writes dynamic extension version to `version.json` instead of hardcoded `6.5.3`
+
 ## 6.6.0 - 2026-02-25
 
 ### Fixed
