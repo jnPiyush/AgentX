@@ -53,7 +53,7 @@ Transform product requirements into user-centered designs using the **AgentX UX 
 - **Create UX spec** at `docs/ux/UX-{issue}.md` (design guide for engineers)
 - **Hand off** to Architect by moving Status -> `Ready` in Projects board
 
-**UX Methodology Instructions**: See [ux-methodology.instructions.md](../instructions/ux-methodology.instructions.md) for detailed phase guidance.
+**UX Design Skill**: See [.github/skills/design/ux-ui-design/SKILL.md](../../.github/skills/design/ux-ui-design/SKILL.md) for detailed UX methodology and phase guidance.
 
 **Runs after** Product Manager completes PRD (Status = `Ready`), before Architect designs technical implementation.
 

@@ -54,12 +54,11 @@ These load automatically when editing matching files - no manual action needed:
 | `terraform.instructions.md` | `*.tf`, `*.tfvars` (Infrastructure as Code) |
 | `bicep.instructions.md` | `*.bicep`, `*.bicepparam` (Azure IaC) |
 | `react.instructions.md` | `*.tsx`, `*.jsx`, `components/`, `hooks/` |
-| `blazor.instructions.md` | `*.razor`, `*.razor.cs` |
-| `api.instructions.md` | `Controllers/`, `api/`, `endpoints/` |
-| `sql.instructions.md` | `*.sql`, `migrations/` |
-| `yaml.instructions.md` | `*.yml`, `*.yaml` (config, K8s, compose) |
-| `devops.instructions.md` | `*.yml`, `*.yaml`, `workflows/` |
-| `ux-methodology.instructions.md` | `**/ux/**`, `**/UX-*`, `**/prototypes/**` |
+
+For file types not listed above, load the matching **skill** on demand from [Skills.md](../Skills.md):
+`*.razor` -> `development/blazor`, `*.sql` -> `development/sql-server` + `development/postgresql`,
+`*.yml`/`*.yaml` -> `operations/yaml-pipelines` + `operations/github-actions-workflows`,
+`Controllers/`/`api/` -> `architecture/api-design`, `**/ux/**` -> `design/ux-ui-design`.
 
 ---
 

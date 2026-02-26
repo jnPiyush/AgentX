@@ -30,24 +30,29 @@ Load context on-demand, not upfront. Match the task to the right documents:
 
 ---
 
-## Instruction Files
+## Context Loading
 
-Claude Code does not auto-load by file glob. Read the relevant instruction file manually when working on matching files:
+### Instruction Files (7 remaining)
 
-| File Pattern | Read This Instruction |
-|--------------|-----------------------|
+| File Pattern | Read This |
+|--------------|-----------|
+| `*agent*`, `*llm*`, `*workflow*` | [.github/instructions/ai.instructions.md](.github/instructions/ai.instructions.md) |
 | `*.py`, `*.pyx` | [.github/instructions/python.instructions.md](.github/instructions/python.instructions.md) |
-| `*.ts` (backend) | [.github/instructions/typescript.instructions.md](.github/instructions/typescript.instructions.md) |
-| `*.tsx`, `*.jsx`, `components/`, `hooks/` | [.github/instructions/react.instructions.md](.github/instructions/react.instructions.md) |
 | `*.cs`, `*.csx` | [.github/instructions/csharp.instructions.md](.github/instructions/csharp.instructions.md) |
-| `*.razor`, `*.razor.cs` | [.github/instructions/blazor.instructions.md](.github/instructions/blazor.instructions.md) |
+| `*.ts` (backend) | [.github/instructions/typescript.instructions.md](.github/instructions/typescript.instructions.md) |
 | `*.tf`, `*.tfvars` | [.github/instructions/terraform.instructions.md](.github/instructions/terraform.instructions.md) |
 | `*.bicep`, `*.bicepparam` | [.github/instructions/bicep.instructions.md](.github/instructions/bicep.instructions.md) |
-| `*.sql`, `migrations/` | [.github/instructions/sql.instructions.md](.github/instructions/sql.instructions.md) |
-| `*.yml`, `*.yaml`, `workflows/` | [.github/instructions/yaml.instructions.md](.github/instructions/yaml.instructions.md) + [.github/instructions/devops.instructions.md](.github/instructions/devops.instructions.md) |
-| `Controllers/`, `api/`, `endpoints/` | [.github/instructions/api.instructions.md](.github/instructions/api.instructions.md) |
-| `*agent*`, `*llm*`, `*workflow*` | [.github/instructions/ai.instructions.md](.github/instructions/ai.instructions.md) |
-| `**/ux/**`, `**/prototypes/**` | [.github/instructions/ux-methodology.instructions.md](.github/instructions/ux-methodology.instructions.md) |
+| `*.tsx`, `*.jsx`, `components/`, `hooks/` | [.github/instructions/react.instructions.md](.github/instructions/react.instructions.md) |
+
+### Skills (load directly for domains without instructions)
+
+| File Pattern | Load Skill |
+|--------------|------------|
+| `*.razor`, `*.razor.cs` | [.github/skills/development/blazor/SKILL.md](.github/skills/development/blazor/SKILL.md) |
+| `*.sql`, `migrations/` | [.github/skills/development/sql-server/SKILL.md](.github/skills/development/sql-server/SKILL.md) + [.github/skills/development/postgresql/SKILL.md](.github/skills/development/postgresql/SKILL.md) |
+| `*.yml`, `*.yaml`, `workflows/` | [.github/skills/operations/yaml-pipelines/SKILL.md](.github/skills/operations/yaml-pipelines/SKILL.md) + [.github/skills/operations/github-actions-workflows/SKILL.md](.github/skills/operations/github-actions-workflows/SKILL.md) |
+| `Controllers/`, `api/`, `endpoints/` | [.github/skills/architecture/api-design/SKILL.md](.github/skills/architecture/api-design/SKILL.md) |
+| `**/ux/**`, `**/prototypes/**` | [.github/skills/design/ux-ui-design/SKILL.md](.github/skills/design/ux-ui-design/SKILL.md) |
 
 ---
 

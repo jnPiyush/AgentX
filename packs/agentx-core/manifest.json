@@ -18,18 +18,12 @@
     ],
     "instructions": [
       ".github/instructions/ai.instructions.md",
-      ".github/instructions/api.instructions.md",
       ".github/instructions/csharp.instructions.md",
       ".github/instructions/python.instructions.md",
       ".github/instructions/typescript.instructions.md",
       ".github/instructions/react.instructions.md",
-      ".github/instructions/blazor.instructions.md",
       ".github/instructions/bicep.instructions.md",
-      ".github/instructions/terraform.instructions.md",
-      ".github/instructions/yaml.instructions.md",
-      ".github/instructions/devops.instructions.md",
-      ".github/instructions/sql.instructions.md",
-      ".github/instructions/ux-methodology.instructions.md"
+      ".github/instructions/terraform.instructions.md"
     ],
     "templates": [
       ".github/templates/PRD-TEMPLATE.md",

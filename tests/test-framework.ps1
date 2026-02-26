@@ -116,7 +116,6 @@ Assert-FileExists ".github/skills/ai-systems/cognitive-architecture/scripts/scaf
 Assert-FileExists ".github/instructions/typescript.instructions.md" "TypeScript instruction file"
 Assert-FileExists ".github/instructions/terraform.instructions.md" "Terraform instruction file"
 Assert-FileExists ".github/instructions/bicep.instructions.md" "Bicep instruction file"
-Assert-FileExists ".github/instructions/yaml.instructions.md" "YAML instruction file"
 
 # Verify enterprise validation
 Assert-FileExists "scripts/validate-frontmatter.ps1" "Frontmatter validation script"
