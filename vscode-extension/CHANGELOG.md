@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.8.0 - 2026-02-26
+
+### Added
+
+- Live LLM e2e test for Clarification Protocol (66 assertions, 8 scenarios)
+- Context-aware LLM simulation with optional real API backend (`AGENTX_LLM_ENDPOINT`)
+- Instruction consolidation: 13 -> 5 files, Terraform/Bicep moved to skills
+
+### Changed
+
+- Version stamp: 6.7.0 -> 6.8.0
+
 ## 6.7.0 - 2026-02-26
 
 ### Added

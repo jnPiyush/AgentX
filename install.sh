@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentX v6.7.0 Installer - Download, copy, configure.
+# AgentX v6.8.0 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -79,7 +79,7 @@ skip() { echo -e "${D}[--] $1${N}"; }
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| AgentX v6.7.0 - AI Agent Orchestration |${N}"
+echo -e "${C}| AgentX v6.8.0 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -148,8 +148,8 @@ mkdir -p .agentx/state .agentx/digests docs/{prd,adr,specs,ux,reviews,progress}
 
 # Version tracking
 VERSION_FILE=".agentx/version.json"
-echo "{ \"version\": \"6.7.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 6.7.0 recorded"
+echo "{ \"version\": \"6.8.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 6.8.0 recorded"
 
 # Agent status
 STATUS=".agentx/state/agent-status.json"
@@ -300,7 +300,7 @@ fi
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} AgentX v6.7.0 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} AgentX v6.8.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.agentx/agentx.sh help"

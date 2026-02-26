@@ -282,7 +282,7 @@ export class InitWizardPanel {
           previousInstalledAt = prev.installedAt;
         } catch { /* corrupt version file - reset */ }
       }
-      const currentExtVersion = this._agentx.extensionContext.extension?.packageJSON?.version ?? '6.7.0';
+      const currentExtVersion = this._agentx.extensionContext.extension?.packageJSON?.version ?? '6.8.0';
       fs.writeFileSync(versionFile, JSON.stringify({
         version: currentExtVersion,
         mode: msg.mode,
