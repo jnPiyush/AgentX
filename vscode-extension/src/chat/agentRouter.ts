@@ -5,6 +5,7 @@ import { loadAgentInstructions } from './agentContextLoader';
 import { AgentXChatMetadata } from './commandHandlers';
 import { AgenticLoop, ToolRegistry } from '../agentic';
 import { createLocalAgenticAdapter } from './agenticAdapter';
+import { checkHandoffGate } from '../utils/loopStateChecker';
 
 /**
  * Route rule: maps keyword patterns to agent files.
@@ -86,6 +87,29 @@ export async function routeNaturalLanguage(
   // Classify prompt
   response.progress('Classifying request...');
   const route = classifyPrompt(prompt);
+
+  // -----------------------------------------------------------------------
+  // ENFORCEMENT: Block reviewer routing when quality loop is incomplete.
+  // The engineer MUST complete the iterative loop before handoff to review.
+  // -----------------------------------------------------------------------
+  if (route.agentFile === 'reviewer' && agentx.workspaceRoot) {
+    const gate = checkHandoffGate(agentx.workspaceRoot);
+    if (!gate.allowed) {
+      response.markdown(
+        '**[Quality Gate] Handoff to Reviewer BLOCKED**\n\n'
+        + `> ${gate.reason}\n\n`
+        + 'The iterative quality loop must reach `status=complete` before '
+        + 'code review can begin. Use the following commands:\n\n'
+        + '- `agentx loop start` -- Start a new loop\n'
+        + '- `agentx loop iterate` -- Record iteration progress\n'
+        + '- `agentx loop complete` -- Mark loop as done\n\n'
+        + '---\n'
+      );
+      return {
+        metadata: { agentName: 'quality-gate', initialized: true } as AgentXChatMetadata
+      };
+    }
+  }
 
   // Load agent definition and instructions
   const agentFileName = route.agentFile + '.agent.md';

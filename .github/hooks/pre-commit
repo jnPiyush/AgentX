@@ -111,6 +111,30 @@ fi
 
 # Summary
 echo ""
+
+# ---------------------------------------------------------------
+# Check 8: Quality loop enforcement
+# Block commits when engineer has an active/incomplete loop.
+# Only blocks when loop-state.json exists and loop is NOT complete.
+# ---------------------------------------------------------------
+LOOP_STATE=".agentx/state/loop-state.json"
+if [ -f "$LOOP_STATE" ]; then
+  LOOP_ACTIVE=$(grep -o '"active":\s*true' "$LOOP_STATE" 2>/dev/null)
+  LOOP_STATUS=$(grep -o '"status":\s*"[^"]*"' "$LOOP_STATE" 2>/dev/null | head -1 | sed 's/"status":\s*"//' | sed 's/"//')
+
+  if [ -n "$LOOP_ACTIVE" ]; then
+    echo -e "${RED}[FAIL] Quality loop still ACTIVE (iteration in progress)${NC}"
+    echo "  Complete the loop before committing: agentx loop complete -s <summary>"
+    echo "  Or cancel if needed: agentx loop cancel"
+    FAILED=1
+  elif [ "$LOOP_STATUS" = "cancelled" ]; then
+    echo -e "${YELLOW}[WARN] Quality loop was cancelled (does not satisfy quality gate)${NC}"
+    echo "  Start and complete a new loop for handoff eligibility."
+  elif [ "$LOOP_STATUS" = "complete" ]; then
+    echo -e "${GREEN}[PASS] Quality loop completed${NC}"
+  fi
+fi
+
 if [ $FAILED -eq 1 ]; then
  echo -e "${RED}[FAIL] Pre-commit checks FAILED${NC}"
  exit 1

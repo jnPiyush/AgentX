@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
+import { shouldAutoStartLoop, getLoopStatusDisplay } from '../utils/loopStateChecker';
 
 /**
  * Register the AgentX: Run Workflow command.
  * Lets user pick a workflow type and runs it.
+ * Auto-starts an iterative loop when a workflow step has iterate=true.
  */
 export function registerWorkflowCommand(
  context: vscode.ExtensionContext,
@@ -36,6 +38,25 @@ export function registerWorkflowCommand(
  channel.appendLine(`=== AgentX Workflow: ${workflowType.label} ===\n`);
  channel.appendLine(output);
  channel.show();
+
+ // ---------------------------------------------------------------
+ // Auto-start iterative loop for workflows with iterate=true steps
+ // ---------------------------------------------------------------
+ const hasIterateStep = /\[LOOP\]/i.test(output);
+ const root = agentx.workspaceRoot;
+ if (hasIterateStep && root && shouldAutoStartLoop(root)) {
+   const autoStart = await vscode.window.showInformationMessage(
+     'This workflow has an iterative loop step. Start a quality loop now?',
+     'Start Loop', 'Skip'
+   );
+   if (autoStart === 'Start Loop') {
+     await vscode.commands.executeCommand('agentx.loopStart');
+   }
+ } else if (hasIterateStep && root) {
+   vscode.window.showInformationMessage(
+     `Quality loop already active: ${getLoopStatusDisplay(root)}`
+   );
+ }
  } catch (err: unknown) {
  const message = err instanceof Error ? err.message : String(err);
  vscode.window.showErrorMessage(`Workflow failed: ${message}`);
