@@ -8,6 +8,15 @@ This file is the **thin router** - it tells you what to load and when. It loads 
 
 ---
 
+## Retrieval-Led Reasoning
+
+**IMPORTANT**: Prefer retrieval-led reasoning over pre-training-led reasoning for ALL implementation tasks.
+Always `read_file` the relevant SKILL.md, instruction file, or spec before generating code.
+Do NOT rely on training data for project-specific patterns, conventions, or APIs.
+If a skill, spec, or doc exists in the workspace, read it first; generate second.
+
+---
+
 ## Context Loading Rules
 
 **Load context on-demand, not upfront.** Match the task to the right documents:
@@ -54,8 +63,8 @@ These load automatically when editing matching files - no manual action needed:
 | `react.instructions.md` | `*.tsx`, `*.jsx`, `components/`, `hooks/` |
 
 For file types not listed above, load the matching **skill** on demand from [Skills.md](../Skills.md):
-`*.tf`/`*.tfvars` -> `cloud/terraform`, `*.bicep`/`*.bicepparam` -> `cloud/bicep`,
-`*.razor` -> `development/blazor`, `*.sql` -> `development/sql-server` + `development/postgresql`,
+`*.tf`/`*.tfvars` -> `infrastructure/terraform`, `*.bicep`/`*.bicepparam` -> `infrastructure/bicep`,
+`*.razor` -> `languages/blazor`, `*.sql` -> `languages/sql-server` + `languages/postgresql`,
 `*.yml`/`*.yaml` -> `operations/yaml-pipelines` + `operations/github-actions-workflows`,
 `Controllers/`/`api/` -> `architecture/api-design`, `**/ux/**` -> `design/ux-ui-design`.
 

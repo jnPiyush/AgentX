@@ -49,6 +49,9 @@ export interface AgentEventMap {
   /** Generic state change (ready queue, workflow, etc.). */
   'state-change': StateChangeEvent;
 
+  /** A skill SKILL.md was loaded into context. */
+  'skill-loaded': SkillLoadedEvent;
+
   /** Agent sent a clarification request to an upstream agent (via Agent X). */
   'clarification-requested': ClarificationLifecycleEvent;
 
@@ -146,6 +149,20 @@ export interface StateChangeEvent {
   readonly source: string;
   readonly oldState?: string;
   readonly newState: string;
+  readonly timestamp: number;
+}
+
+/**
+ * Emitted when a skill SKILL.md is loaded into an agent's context.
+ * Enables tracking of skill retrieval rates (per Vercel research:
+ * agents skip on-demand skills ~56% of the time without tracking).
+ */
+export interface SkillLoadedEvent {
+  readonly agent: string;
+  readonly skillName: string;
+  readonly skillPath: string;
+  /** Estimated token count of the loaded skill content. */
+  readonly tokens: number;
   readonly timestamp: number;
 }
 

@@ -14,6 +14,15 @@
 
 ---
 
+## Retrieval-Led Reasoning
+
+**IMPORTANT**: Prefer retrieval-led reasoning over pre-training-led reasoning for ALL implementation tasks.
+Always `read_file` the relevant SKILL.md, instruction file, or spec before generating code.
+Do NOT rely on training data for project-specific patterns, conventions, or APIs.
+If a skill, spec, or doc exists in the workspace, read it first; generate second.
+
+---
+
 ## Context Loading Rules
 
 Load context on-demand, not upfront. Match the task to the right documents:
@@ -46,10 +55,10 @@ Load context on-demand, not upfront. Match the task to the right documents:
 
 | File Pattern | Load Skill |
 |--------------|------------|
-| `*.tf`, `*.tfvars` | [.github/skills/cloud/terraform/SKILL.md](.github/skills/cloud/terraform/SKILL.md) |
-| `*.bicep`, `*.bicepparam` | [.github/skills/cloud/bicep/SKILL.md](.github/skills/cloud/bicep/SKILL.md) |
-| `*.razor`, `*.razor.cs` | [.github/skills/development/blazor/SKILL.md](.github/skills/development/blazor/SKILL.md) |
-| `*.sql`, `migrations/` | [.github/skills/development/sql-server/SKILL.md](.github/skills/development/sql-server/SKILL.md) + [.github/skills/development/postgresql/SKILL.md](.github/skills/development/postgresql/SKILL.md) |
+| `*.tf`, `*.tfvars` | [.github/skills/infrastructure/terraform/SKILL.md](.github/skills/infrastructure/terraform/SKILL.md) |
+| `*.bicep`, `*.bicepparam` | [.github/skills/infrastructure/bicep/SKILL.md](.github/skills/infrastructure/bicep/SKILL.md) |
+| `*.razor`, `*.razor.cs` | [.github/skills/languages/blazor/SKILL.md](.github/skills/languages/blazor/SKILL.md) |
+| `*.sql`, `migrations/` | [.github/skills/languages/sql-server/SKILL.md](.github/skills/languages/sql-server/SKILL.md) + [.github/skills/languages/postgresql/SKILL.md](.github/skills/languages/postgresql/SKILL.md) |
 | `*.yml`, `*.yaml`, `workflows/` | [.github/skills/operations/yaml-pipelines/SKILL.md](.github/skills/operations/yaml-pipelines/SKILL.md) + [.github/skills/operations/github-actions-workflows/SKILL.md](.github/skills/operations/github-actions-workflows/SKILL.md) |
 | `Controllers/`, `api/`, `endpoints/` | [.github/skills/architecture/api-design/SKILL.md](.github/skills/architecture/api-design/SKILL.md) |
 | `**/ux/**`, `**/prototypes/**` | [.github/skills/design/ux-ui-design/SKILL.md](.github/skills/design/ux-ui-design/SKILL.md) |

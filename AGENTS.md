@@ -4,6 +4,15 @@
 
 ---
 
+## Retrieval-Led Reasoning
+
+**IMPORTANT**: Prefer retrieval-led reasoning over pre-training-led reasoning for ALL implementation tasks.
+Always `read_file` the relevant SKILL.md, instruction file, or spec before generating code.
+Do NOT rely on training data for project-specific patterns, conventions, or APIs.
+If a skill, spec, or doc exists in the workspace, read it first; generate second.
+
+---
+
 ## Critical Workflow
 
 ### Before ANY Work
@@ -125,7 +134,7 @@ type:devops + Backlog -> DevOps Engineer (skip PM/Architect for infrastructure w
 
 **Autonomous Mode**: For simple tasks (bugs, docs, stories 3 files), Agent X can automatically route to Engineer, skipping manual coordination. See [Agent X](.github/agents/agent-x.agent.md) (mode: adaptive).
 
-**Universal Iterative Refinement**: ALL workflows include `iterate = true` on the Engineer's implementation step by default. Loop state is auto-initialized when the workflow runs, and the Engineer ALWAYS works in iterations until completion criteria are met. The Reviewer ALWAYS verifies loop completion before approval. The `needs:iteration` label is reserved for **extended** iteration via `iterative-loop.toml` (max 20 iterations, dedicated planning step). See [Iterative Loop Skill](.github/skills/ai-systems/iterative-loop/SKILL.md).
+**Universal Iterative Refinement**: ALL workflows include `iterate = true` on the Engineer's implementation step by default. Loop state is auto-initialized when the workflow runs, and the Engineer ALWAYS works in iterations until completion criteria are met. The Reviewer ALWAYS verifies loop completion before approval. The `needs:iteration` label is reserved for **extended** iteration via `iterative-loop.toml` (max 20 iterations, dedicated planning step). See [Iterative Loop Skill](.github/skills/development/iterative-loop/SKILL.md).
 
 ### Validation
 

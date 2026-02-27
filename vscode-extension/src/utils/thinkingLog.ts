@@ -10,7 +10,7 @@
 // ---------------------------------------------------------------------------
 
 import * as vscode from 'vscode';
-import { AgentEventBus, ThinkingLogEvent } from './eventBus';
+import { AgentEventBus, ThinkingLogEvent, SkillLoadedEvent } from './eventBus';
 
 /**
  * Log entry kinds -- matches ThinkingLogEvent['kind'].
@@ -85,6 +85,25 @@ export class ThinkingLog {
 
   error(agent: string, label: string, detail?: string): void {
     this.log(agent, 'error', label, detail);
+  }
+
+  /**
+   * Record that a skill SKILL.md was loaded into context.
+   * Emits both a thinking-log entry and a dedicated skill-loaded event
+   * so downstream analytics can track retrieval rates.
+   */
+  skillLoad(agent: string, skillName: string, skillPath: string, tokens: number): void {
+    this.log(agent, 'info', `Skill loaded: ${skillName}`, `${skillPath} (~${tokens} tokens)`);
+
+    if (this.eventBus) {
+      this.eventBus.emit('skill-loaded', {
+        agent,
+        skillName,
+        skillPath,
+        tokens,
+        timestamp: Date.now(),
+      } satisfies SkillLoadedEvent);
+    }
   }
 
   // -----------------------------------------------------------------------
