@@ -235,14 +235,16 @@ Agent sessions remain stateless. Every session is a cold start. Knowledge compou
 | US-3.2 | agent operator | a VS Code command to search memory | I can browse history from the editor | - [ ] "AgentX: Search Memory" command<br>- [ ] Results shown in output channel | P1 | 1 day |
 
 ### Feature 4: Lifecycle Hook Integration
-**Description**: Wire memory capture/injection into existing AgentX lifecycle hooks.
-**Priority**: P1
+**Description**: Ensure memory capture/injection works for both VS Code extension sessions (EventBus-driven, delivered in Phase 2a/2b) and standalone CLI sessions (PowerShell hook script extension, future Phase 3+).
+**Priority**: P1 (EventBus) / P2 (CLI hooks)
 **Epic**: #29
+
+> **Note**: For VS Code extension sessions, capture/injection is already delivered by the EventBus subscription in Features 1-2 (subscribe to `context-compacted`, inject at session start). Feature 4 stories cover **explicit CLI hook coverage** for sessions where the extension EventBus is not available.
 
 | Story ID | As a... | I want... | So that... | Acceptance Criteria | Priority | Estimate |
 |----------|---------|-----------|------------|---------------------|----------|----------|
-| US-4.1 | agent framework | observation capture triggered by `hook -Phase finish` | capture is automatic | - [ ] Hook calls `captureObservations()` on session end<br>- [ ] Event bus emits `memory-stored` event | P1 | 2 days |
-| US-4.2 | agent framework | memory injection triggered by `hook -Phase start` | injection is automatic | - [ ] Hook calls `injectMemory()` on session start<br>- [ ] Event bus emits `memory-recalled` event with token count | P1 | 2 days |
+| US-4.1 | agent framework | observation capture triggered by `hook -Phase finish` for CLI sessions | CLI sessions also save to memory | - [ ] PowerShell hook reads session JSON and calls extractor<br>- [ ] Event bus emits `memory-stored` event | P2 | 2 days |
+| US-4.2 | agent framework | memory injection triggered by `hook -Phase start` for CLI sessions | CLI agents also receive memory recall | - [ ] PowerShell hook calls memory store search + formats recall<br>- [ ] Event bus emits `memory-recalled` event with token count | P2 | 2 days |
 
 ### Feature 5: Memory Decay & Compaction
 **Description**: Relevance scoring and periodic summarization of observation clusters.
@@ -305,12 +307,12 @@ Agent sessions remain stateless. Every session is a cold start. Knowledge compou
 | `ContextCompactor` | Internal | Available (v6.1) | AgentX | High - Memory capture depends on compaction output |
 | `AgentEventBus` | Internal | Available (v6.1) | AgentX | Medium - Events are informational, not blocking |
 | AgentX Lifecycle Hooks | Internal | Available (v4.0) | AgentX | High - Automatic capture/injection requires hooks |
-| SQLite or JSON file store | Internal (new) | To Build | AgentX | High - Core persistence layer |
+| Per-issue JSON file store | Internal (new) | To Build | AgentX | High - Core persistence layer (decided in [ADR-29](../adr/ADR-29.md)) |
 
 ### Technical Constraints
 
 - Must use local file storage only (no external database server)
-- Must not require additional runtime dependencies beyond Node.js (prefer built-in `fs` + JSON, or bundled SQLite via better-sqlite3)
+- Must not require additional runtime dependencies beyond Node.js (built-in `fs` + JSON only per [ADR-29](../adr/ADR-29.md))
 - Must integrate with existing `ContextCompactor` API -- extend, do not replace
 - Must work in both `github` and `local` modes
 - Memory store format must be human-readable or inspectable (no opaque binary blobs)
@@ -328,7 +330,7 @@ Agent sessions remain stateless. Every session is a cold start. Knowledge compou
 | Risk | Impact | Probability | Mitigation | Owner |
 |------|--------|-------------|------------|-------|
 | Memory store grows unbounded on large projects | Medium | Medium | Implement P2 compaction + configurable max size with LRU eviction | Engineer |
-| Regex-based extraction misses important observations | Medium | High | Track observation recall accuracy; plan future hybrid extraction | Architect |
+| Regex-based extraction misses important observations | Medium | High | **Phase 1 gate**: Run extractor against 3+ real past sessions and manually inspect captured observations before proceeding to Phase 2 injection. Track recall accuracy; plan hybrid extraction if quality insufficient. | Architect |
 | Session start latency increases with large memory stores | High | Low | Index-first architecture; lazy loading; performance benchmarks in CI | Engineer |
 | Store corruption loses all memory | High | Low | Atomic writes; periodic backup; graceful degradation on read failure | Engineer |
 | Scope creep into embedding/vector search | Medium | Medium | Explicitly out of scope for v1; revisit after FTS baseline established | PM |
@@ -341,9 +343,10 @@ Agent sessions remain stateless. Every session is a cold start. Knowledge compou
 **Goal**: Persistent observation storage with indexing and search.
 **Deliverables**:
 - Observation store module (`observationStore.ts`)
-- JSON-file or SQLite-based persistence at `.agentx/memory/`
+- Per-issue JSON persistence at `.agentx/memory/` (per [ADR-29](../adr/ADR-29.md))
 - CRUD + full-text search API
 - Unit and integration tests (>=80% coverage)
+- **Extraction quality validation**: Run extractor on 3+ real past sessions; manually verify captured observations
 
 **Stories**: US-1.1, US-1.2, US-1.3
 
@@ -370,6 +373,7 @@ Agent sessions remain stateless. Every session is a cold start. Knowledge compou
 ### Launch Criteria
 
 - [ ] All P0 stories completed and tested
+- [ ] **Extraction quality validated**: Manual inspection of 3+ real session extractions confirms useful observations
 - [ ] Performance benchmarks met (<200ms search, <500ms injection)
 - [ ] Documentation updated (CHANGELOG, README feature table)
 - [ ] No P0/P1 bugs open
@@ -400,10 +404,10 @@ Agent sessions remain stateless. Every session is a cold start. Knowledge compou
 
 | Question | Owner | Status | Resolution |
 |----------|-------|--------|------------|
-| JSON file vs SQLite for v1 store? | Architect | Open | JSON is simpler but slower FTS; SQLite (better-sqlite3) is faster but adds a dependency. Recommend starting with JSON + in-memory index, migrate to SQLite if >5K observations. |
-| Should memory injection be opt-in or opt-out? | PM | Open | Recommend opt-out (enabled by default with `agentx.memory.enabled` setting). |
-| What is the right default memory token budget? | PM | Open | Recommend 10% of context limit (20K tokens for 200K context). Configurable via `agentx.memory.maxTokens`. |
-| Should `<private>` tags in conversation exclude content from memory? | PM | Resolved | Yes -- consistent with existing session privacy behavior. SecurityHelpers module strips sensitive content. |
+| JSON file vs SQLite for v1 store? | Architect | **Resolved** | Per-issue JSON files with in-memory manifest index. Zero new dependencies, pattern-consistent with ADR-1. See [ADR-29](../adr/ADR-29.md#decision-1-storage-layout). |
+| Should memory injection be opt-in or opt-out? | PM | **Resolved** | Opt-out (enabled by default with `agentx.memory.enabled` setting). |
+| What is the right default memory token budget? | PM | **Resolved** | 10% of context limit (20K tokens for 200K context). Configurable via `agentx.memory.maxTokens`. |
+| Should `<private>` tags in conversation exclude content from memory? | PM | **Resolved** | Yes -- consistent with existing session privacy behavior. SecurityHelpers module strips sensitive content. |
 
 ---
 

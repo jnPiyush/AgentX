@@ -210,11 +210,9 @@ classDiagram
         +summary: string
         +tokens: number
         +timestamp: string
-        +recallCount: number
-        +relevanceScore: number
         +sessionId: string
-        +archived: boolean
     }
+    %% Phase 3 additions: recallCount, relevanceScore, archived
 
     class ObservationIndex {
         +id: string
@@ -259,14 +257,16 @@ classDiagram
         +getByIssue(issueNumber: number) Promise~Observation[]~
         +getById(id: string) Promise~Observation | null~
         +search(query: string, limit?: number) Promise~ObservationIndex[]~
-        +searchByFilters(filters: SearchFilters) Promise~ObservationIndex[]~
         +listByAgent(agent: string) Promise~ObservationIndex[]~
         +listByCategory(category: string) Promise~ObservationIndex[]~
         +remove(id: string) Promise~boolean~
-        +incrementRecallCount(id: string) Promise~void~
         +getStats() Promise~StoreStats~
-        +compact(issueNumber: number) Promise~CompactionResult~
     }
+
+    %% Phase 3 additions (not in v1 interface):
+    %% +searchByFilters(filters: SearchFilters) Promise~ObservationIndex[]~
+    %% +incrementRecallCount(id: string) Promise~void~
+    %% +compact(issueNumber: number) Promise~CompactionResult~
 
     class JsonObservationStore {
         -memoryDir: string
@@ -277,13 +277,10 @@ classDiagram
         +getByIssue(issueNumber) Promise~Observation[]~
         +getById(id) Promise~Observation | null~
         +search(query, limit) Promise~ObservationIndex[]~
-        +searchByFilters(filters) Promise~ObservationIndex[]~
         +listByAgent(agent) Promise~ObservationIndex[]~
         +listByCategory(category) Promise~ObservationIndex[]~
         +remove(id) Promise~boolean~
-        +incrementRecallCount(id) Promise~void~
         +getStats() Promise~StoreStats~
-        +compact(issueNumber) Promise~CompactionResult~
         -ensureDir() void
         -loadManifest() Promise~ObservationIndex[]~
         -saveManifest(entries: ObservationIndex[]) Promise~void~
@@ -354,7 +351,7 @@ graph TD
     end
 
     subgraph Config["Configuration"]
-        CFG["agentx.memory.enabled<br/>agentx.memory.maxTokens<br/>agentx.memory.maxObservations"]
+        CFG["agentx.memory.enabled<br/>agentx.memory.maxTokens"]
     end
 
     MP --> OS
@@ -386,12 +383,17 @@ graph TD
 | `getByIssue` | `getByIssue(issueNumber: number): Promise<Observation[]>` | Load all observations for an issue |
 | `getById` | `getById(id: string): Promise<Observation \| null>` | Load a single observation by ID |
 | `search` | `search(query: string, limit?: number): Promise<ObservationIndex[]>` | Full-text search over manifest |
-| `searchByFilters` | `searchByFilters(filters: SearchFilters): Promise<ObservationIndex[]>` | Filter by agent, issue, category, date range |
 | `listByAgent` | `listByAgent(agent: string): Promise<ObservationIndex[]>` | List all observations by agent name |
 | `listByCategory` | `listByCategory(category: string): Promise<ObservationIndex[]>` | List all observations by category |
 | `remove` | `remove(id: string): Promise<boolean>` | Remove a single observation |
-| `incrementRecallCount` | `incrementRecallCount(id: string): Promise<void>` | Bump recall count (for relevance scoring) |
 | `getStats` | `getStats(): Promise<StoreStats>` | Return aggregate statistics |
+
+**Phase 3 additions** (not in v1 interface -- added when scoring/compaction is built):
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `searchByFilters` | `searchByFilters(filters: SearchFilters): Promise<ObservationIndex[]>` | Filter by agent, issue, category, date range |
+| `incrementRecallCount` | `incrementRecallCount(id: string): Promise<void>` | Bump recall count (for relevance scoring) |
 | `compact` | `compact(issueNumber: number): Promise<CompactionResult>` | Merge related observations for an issue |
 
 #### MemoryPipeline
@@ -406,12 +408,12 @@ graph TD
 
 ### 3.2 VS Code Commands
 
-| Command ID | Title | Description | Input | Output |
-|------------|-------|-------------|-------|--------|
-| `agentx.searchMemory` | AgentX: Search Memory | Search observations by keyword | Text input (query) | Output channel with compact results |
-| `agentx.getObservation` | AgentX: Get Observation | Show full observation detail | Text input (ID) | Output channel with full content |
-| `agentx.compactMemory` | AgentX: Compact Memory | Merge related observations | QuickPick (issue number) | Information message with result |
-| `agentx.memoryStats` | AgentX: Memory Stats | Show store statistics | None | Output channel with stats |
+| Command ID | Title | Description | Input | Output | Phase |
+|------------|-------|-------------|-------|--------|-------|
+| `agentx.searchMemory` | AgentX: Search Memory | Search observations by keyword | Text input (query) | Output channel with compact results | 2a |
+| `agentx.getObservation` | AgentX: Get Observation | Show full observation detail | Text input (ID) | Output channel with full content | 2a |
+| `agentx.memoryStats` | AgentX: Memory Stats | Show store statistics | None | Output channel with stats | 2b |
+| `agentx.compactMemory` | AgentX: Compact Memory | Merge related observations | QuickPick (issue number) | Information message with result | **3** |
 
 ### 3.3 EventBus Events (New)
 
@@ -437,13 +439,20 @@ graph TD
 
 ### 3.4 Configuration Settings
 
+**User-facing settings (shipped in Phase 2a):**
+
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `agentx.memory.enabled` | boolean | `true` | Enable/disable memory pipeline |
 | `agentx.memory.maxTokens` | number | `20000` | Max tokens for recalled memory (10% of 200K context) |
-| `agentx.memory.maxObservationsPerCapture` | number | `50` | Max observations extracted per session end |
-| `agentx.memory.manifestCacheTtlMs` | number | `30000` | In-memory manifest cache TTL (30s) |
-| `agentx.memory.staleArchiveAfterDays` | number | `90` | Auto-archive observations older than N days |
+
+**Internal constants (hardcoded, not user-exposed):**
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `MAX_OBSERVATIONS_PER_CAPTURE` | `50` | Max observations extracted per session end |
+| `MANIFEST_CACHE_TTL_MS` | `30000` | In-memory manifest cache TTL (30s) |
+| `STALE_ARCHIVE_AFTER_DAYS` | `90` | Archive threshold (Phase 3 only) |
 
 ---
 
@@ -472,11 +481,9 @@ erDiagram
         STRING summary "compact summary ~50 tokens"
         INTEGER tokens "estimated tokens of content"
         STRING timestamp "ISO-8601"
-        INTEGER recallCount "times this observation was injected"
-        FLOAT relevanceScore "computed score (0-1)"
         STRING sessionId "originating session ID"
-        BOOLEAN archived "true if compacted into a summary"
     }
+    %% Phase 3 additions: recallCount INTEGER, relevanceScore FLOAT, archived BOOLEAN
 
     manifest_entry ||--|| observation : "index for"
 ```
@@ -518,10 +525,7 @@ erDiagram
       "summary": "Chose per-issue JSON files for observation storage",
       "tokens": 245,
       "timestamp": "2026-02-27T10:00:00.000Z",
-      "recallCount": 0,
-      "relevanceScore": 0.0,
-      "sessionId": "engineer-1709035100000-x7y8z9",
-      "archived": false
+      "sessionId": "engineer-1709035100000-x7y8z9"
     }
   ]
 }
@@ -606,12 +610,14 @@ graph LR
 
 **Scoring formulas:**
 
-| Factor | Formula | Range |
-|--------|---------|-------|
-| Recency | `1.0 / (1.0 + daysSinceCreation / 30)` | 0.0 - 1.0 (halves every 30 days) |
-| Recall Count | `min(recallCount / 10, 1.0)` | 0.0 - 1.0 (saturates at 10 recalls) |
-| Keyword Overlap | `matchingKeywords / totalQueryKeywords` | 0.0 - 1.0 |
-| **Combined** | `0.4 * recency + 0.2 * recall + 0.4 * keyword` | 0.0 - 1.0 |
+| Factor | Formula | Range | Phase |
+|--------|---------|-------|-------|
+| Recency | `1.0 / (1.0 + daysSinceCreation / 30)` | 0.0 - 1.0 (halves every 30 days) | 2a |
+| Keyword Overlap | `matchingKeywords / totalQueryKeywords` | 0.0 - 1.0 | 2b |
+| Recall Count | `min(recallCount / 10, 1.0)` | 0.0 - 1.0 (saturates at 10 recalls) | **3** |
+| **Phase 2a** | `recency` (sort by recency only) | 0.0 - 1.0 | 2a |
+| **Phase 2b** | `0.5 * recency + 0.5 * keyword` | 0.0 - 1.0 | 2b |
+| **Phase 3** | `0.4 * recency + 0.2 * recall + 0.4 * keyword` | 0.0 - 1.0 | 3 |
 
 ### 5.3 Full-Text Search Implementation
 
@@ -824,9 +830,9 @@ vscode-extension/src/test/
 |------|--------|--------|
 | `utils/eventBus.ts` | Add `MemoryStoredEvent`, `MemoryRecalledEvent` to `AgentEventMap` | Low - additive, no existing events changed |
 | `utils/contextCompactor.ts` | Add memory section to `formatBudgetReport()` | Low - extends output, no API change |
-| `extension.ts` | Initialize `MemoryPipeline`, register 4 new commands | Low - additive to activation |
+| `extension.ts` | Initialize `MemoryPipeline`, register 2 commands (Phase 2a), 1 more (Phase 2b) | Low - additive to activation |
 | `agentxContext.ts` | Expose `MemoryPipeline` via services | Low - optional service |
-| `package.json` | Add 4 new command contributions + 5 new configuration settings | Low - additive |
+| `package.json` | Add 3 command contributions (Phase 2a/2b) + 2 configuration settings | Low - additive |
 
 ### 9.3 New Dependencies
 
@@ -850,26 +856,13 @@ Add to `package.json` contributes:
         "type": "number",
         "default": 20000,
         "description": "Maximum tokens for recalled memory injection"
-      },
-      "agentx.memory.maxObservationsPerCapture": {
-        "type": "number",
-        "default": 50,
-        "description": "Maximum observations to extract per session"
-      },
-      "agentx.memory.manifestCacheTtlMs": {
-        "type": "number",
-        "default": 30000,
-        "description": "Manifest in-memory cache TTL in milliseconds"
-      },
-      "agentx.memory.staleArchiveAfterDays": {
-        "type": "number",
-        "default": 90,
-        "description": "Archive observations older than N days"
       }
     }
   }
 }
 ```
+
+> **Internal constants** (hardcoded in source, not exposed as settings): `MAX_OBSERVATIONS_PER_CAPTURE = 50`, `MANIFEST_CACHE_TTL_MS = 30000`, `STALE_ARCHIVE_AFTER_DAYS = 90` (Phase 3 only).
 
 ### 9.5 Graceful Degradation
 
@@ -897,43 +890,61 @@ Add to `package.json` contributes:
 - `vscode-extension/src/memory/index.ts`
 - Unit + integration tests (>=80% coverage)
 - Performance benchmark: 10K observation search under 200ms
+- **Extraction quality validation**: Run extractor on 3+ real past sessions, manually inspect results
 
 **Acceptance Gate:**
 - [ ] All CRUD operations work with FileLockManager
 - [ ] Manifest stays in sync with issue files
 - [ ] FTS returns relevant results ranked by keyword overlap
 - [ ] 10K observation benchmark passes
+- [ ] **Extraction quality confirmed**: Manual inspection shows useful, non-trivial observations from real sessions
 
-### Phase 2: Integration -- Capture & Injection (Weeks 3-4)
+### Phase 2a: Core Integration -- Capture & Injection (Week 3)
 
-**Stories**: #39, #40, #41, #42, #43, #44
+**Stories**: #39, #40
 
 **Deliverables:**
 - `vscode-extension/src/memory/memoryPipeline.ts`
-- `vscode-extension/src/memory/relevanceScorer.ts`
-- `vscode-extension/src/memory/memoryInjector.ts`
+- `vscode-extension/src/memory/memoryInjector.ts` (recency-only sort for v1)
 - Modified `eventBus.ts` (2 new events)
 - Modified `contextCompactor.ts` (memory budget section)
-- Modified `extension.ts` (pipeline init + 4 commands)
-- Modified `package.json` (commands + configuration)
-- VS Code commands: searchMemory, getObservation, memoryStats, compactMemory
+- Modified `extension.ts` (pipeline init + 2 commands: searchMemory, getObservation)
+- Modified `package.json` (2 commands + 2 configuration settings)
 
 **Acceptance Gate:**
 - [ ] Session-end capture fires automatically via EventBus
 - [ ] Session-start injection returns formatted recall section
 - [ ] Budget report includes memory section with token counts
-- [ ] All 4 VS Code commands work end-to-end
 - [ ] Memory injection stays within configured token budget
+- [ ] searchMemory and getObservation commands work end-to-end
+
+### Phase 2b: Commands & Reporting (Week 4)
+
+**Stories**: #41, #42
+
+**Deliverables:**
+- `vscode-extension/src/memory/relevanceScorer.ts` (recency + keyword, no recall count yet)
+- VS Code command: memoryStats
+- Token displacement counter in ThinkingLog
+- Modified `extension.ts` (+1 command)
+- Modified `package.json` (+1 command)
+
+**Acceptance Gate:**
+- [ ] Relevance scorer improves injection ordering (recency + keyword)
+- [ ] memoryStats command shows observation count, disk size, token totals
+- [ ] Token displacement logged: "Memory recall displaced N tokens of manual re-read"
 
 ### Phase 3: Optimization -- Scoring & Compaction (Weeks 5-6)
 
-**Stories**: #45, #46
+**Stories**: #43, #44, #45, #46
 
 **Deliverables:**
-- Relevance scoring (recency + recall count + keyword overlap)
+- Recall count tracking (`incrementRecallCount`, `searchByFilters` added to store)
+- Full relevance scoring (recency + recall count + keyword overlap)
 - Observation compaction (merge N related into 1 summary)
 - Archive directory for compacted originals
-- CLI subcommand integration (if CLI hook extension scoped)
+- VS Code command: compactMemory
+- CLI hook integration for standalone sessions (#43, #44)
 - Performance benchmarks for 50K observations
 
 **Acceptance Gate:**
@@ -949,7 +960,7 @@ Add to `package.json` contributes:
 | Risk | Impact | Probability | Mitigation |
 |------|--------|-------------|------------|
 | Manifest out of sync with issue files | Medium | Low | Rebuild manifest from issue files on mismatch detection; checksum validation |
-| Regex extraction misses important observations | Medium | High | Track recall accuracy; plan hybrid extraction in future; allow manual observation add |
+| Regex extraction misses important observations | Medium | High | **Phase 1 gate**: Run extractor on 3+ real sessions, manually inspect output. Track recall accuracy; plan hybrid extraction if quality insufficient; allow manual observation add |
 | Session start latency with large memory store | High | Low | Manifest cache (30s TTL); lazy loading; bounded search (limit=20) |
 | File lock contention on manifest.json | Medium | Low | Write issue file first, then manifest; per-issue locks do not contend |
 | Memory store grows unbounded | Medium | Medium | Phase 3 compaction; staleArchiveAfterDays config; getStats() monitoring |
@@ -1003,6 +1014,7 @@ graph LR
 |-------|---------------|------|
 | Observation captured | `memory-stored` event | Agent, issue, count, tokens |
 | Observation recalled | `memory-recalled` event | Agent, issue, count, tokens |
+| **Token displacement** | ThinkingLog entry | "Memory recall displaced {N} tokens of manual re-read" -- estimated tokens saved by injecting from memory vs re-reading source documents |
 | Search performed | ThinkingLog entry | Query, result count, latency |
 | Budget check | `formatBudgetReport()` | Memory section with recalled items |
 | Compaction run | ThinkingLog entry | Issue, before/after counts |

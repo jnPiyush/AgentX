@@ -509,9 +509,9 @@ stateDiagram-v2
 | Feature | Issues | Priority | Phase |
 |---------|--------|----------|-------|
 | F1: Observation Store | #30 (Feature), #36-#38 (Stories) | P0 | 1 |
-| F2: Session Memory Injection | #31 (Feature), #39-#40 (Stories) | P0 | 2 |
-| F3: Progressive Disclosure Search | #32 (Feature), #41-#42 (Stories) | P1 | 2 |
-| F4: Lifecycle Hook Integration | #33 (Feature), #43-#44 (Stories) | P1 | 2 |
+| F2: Session Memory Injection | #31 (Feature), #39-#40 (Stories) | P0 | 2a |
+| F3: Progressive Disclosure Search | #32 (Feature), #41-#42 (Stories) | P1 | 2b |
+| F4: Lifecycle Hook Integration (CLI) | #33 (Feature), #43-#44 (Stories) | P2 | 3 |
 | F5: Memory Decay and Compaction | #34 (Feature), #45-#46 (Stories) | P2 | 3 |
 
 ---
