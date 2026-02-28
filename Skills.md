@@ -33,6 +33,7 @@ description: 'Compressed skill index for AI agents. 42 skills across 8 categorie
 | **AI Agent Development** | [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [Cognitive Arch](.github/skills/ai-systems/cognitive-architecture/SKILL.md), [MCP Server](.github/skills/ai-systems/mcp-server-development/SKILL.md), [Prompt Eng](.github/skills/ai-systems/prompt-engineering/SKILL.md) |
 | **Iterative / Quality Loop** | [Iterative Loop](.github/skills/development/iterative-loop/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **Fabric / Data** | [Fabric Analytics](.github/skills/data/fabric-analytics/SKILL.md), [Data Agent](.github/skills/data/fabric-data-agent/SKILL.md) or [Forecasting](.github/skills/data/fabric-forecasting/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md) |
+| **Databricks / Delta Lake** | [Databricks](.github/skills/data/databricks/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Python](.github/skills/languages/python/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Containerization** | [Containerization](.github/skills/infrastructure/containerization/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Release Mgmt](.github/skills/operations/release-management/SKILL.md) |
 | **Data Analysis** | [Data Analysis](.github/skills/data/data-analysis/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **UX/UI Design** | [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md), [Frontend/UI](.github/skills/design/frontend-ui/SKILL.md), [React](.github/skills/languages/react/SKILL.md) |
@@ -81,6 +82,7 @@ data|data-analysis|.github/skills/data/data-analysis/SKILL.md|Pandas,DuckDB,Pola
 data|fabric-analytics|.github/skills/data/fabric-analytics/SKILL.md|Lakehouse,Warehouse,Spark,OneLake
 data|fabric-data-agent|.github/skills/data/fabric-data-agent/SKILL.md|NL-to-SQL,conversational-agents
 data|fabric-forecast|.github/skills/data/fabric-forecasting/SKILL.md|time-series,LightGBM,Prophet
+data|databricks|.github/skills/data/databricks/SKILL.md|Unity-Catalog,Delta-Lake,DLT,MLflow,Photon,DAB,AutoLoader,Spark,medallion,Vector-Search
 ai|ai-agent-dev|.github/skills/ai-systems/ai-agent-development/SKILL.md|Foundry,Agent-Framework,tracing
 ai|prompt-eng|.github/skills/ai-systems/prompt-engineering/SKILL.md|system-prompts,CoT,few-shot,guardrails
 ai|cognitive-arch|.github/skills/ai-systems/cognitive-architecture/SKILL.md|RAG,memory-systems,vector-search
@@ -153,6 +155,8 @@ Fabric ETL|fabric-analytics->database->testing->code-review
 Fabric Agent|fabric-analytics->fabric-data-agent->prompt-eng->code-review
 Forecasting|fabric-analytics->fabric-forecast->testing->code-review
 Data Analysis|data-analysis->database->testing->code-review
+Databricks ETL|databricks->database->python->testing->code-review
+Databricks ML|databricks->ai-agent-dev->python->testing->code-review
 AI Agent|ai-agent-dev->prompt-eng->python/csharp->error-handling->testing->code-review
 MCP Server|mcp-server->python/csharp->error-handling->testing->code-review
 New Skill|skill-creator->documentation->testing->code-review
@@ -163,5 +167,5 @@ Security Audit|security->configuration->logging->testing->code-review
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 42 skills (arch:5, dev:10, lang:8, ops:5, infra:4, data:4, ai:4, design:2)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 43 skills (arch:5, dev:10, lang:8, ops:5, infra:4, data:5, ai:4, design:2)
 

@@ -6,6 +6,7 @@ import { AgentXChatMetadata } from './commandHandlers';
 import { AgenticLoop, ToolRegistry } from '../agentic';
 import { createLocalAgenticAdapter } from './agenticAdapter';
 import { checkHandoffGate } from '../utils/loopStateChecker';
+import { selectModelForAgent, ModelSelectionResult } from '../utils/modelSelector';
 
 /**
  * Route rule: maps keyword patterns to agent files.
@@ -116,9 +117,26 @@ export async function routeNaturalLanguage(
   const agentDef = await agentx.readAgentDef(agentFileName);
   const instructions = await loadAgentInstructions(agentx, agentFileName);
 
+  // Select the LLM model defined in the agent's frontmatter
+  const modelResult: ModelSelectionResult = await selectModelForAgent(agentDef);
+
   // Header showing which agent was selected
   const agentName = agentDef?.name ?? route.agentFile;
-  response.markdown(`**[${agentName}]** ${route.description}\n\n---\n\n`);
+  response.markdown(`**[${agentName}]** ${route.description}\n\n`);
+
+  // Report model selection result
+  if (modelResult.chatModel) {
+    const sourceLabel = modelResult.source === 'fallback' ? ' (fallback)' : '';
+    response.markdown(
+      `**Model**: ${modelResult.chatModel.name}${sourceLabel}\n\n---\n\n`,
+    );
+  } else if (agentDef?.model) {
+    response.markdown(
+      `**Model**: ${agentDef.model} *(requested but not available -- using default)*\n\n---\n\n`,
+    );
+  } else {
+    response.markdown('---\n\n');
+  }
 
   const abortController = new AbortController();
   const cancellationSub = token.onCancellationRequested(() => {
@@ -209,7 +227,12 @@ function buildAgentResponse(
   if (agentDef) {
     parts.push(`**Agent**: ${agentDef.name}\n`);
     parts.push(`**Description**: ${agentDef.description}\n`);
-    parts.push(`**Model**: ${agentDef.model} | **Maturity**: ${agentDef.maturity}\n\n`);
+    const fallbackInfo = agentDef.modelFallback
+      ? ` | **Fallback**: ${agentDef.modelFallback}`
+      : '';
+    parts.push(
+      `**Model**: ${agentDef.model}${fallbackInfo} | **Maturity**: ${agentDef.maturity}\n\n`,
+    );
   }
 
   // Extract Role section

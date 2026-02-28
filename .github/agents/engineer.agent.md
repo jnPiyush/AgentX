@@ -4,7 +4,7 @@ description: 'Engineer: Implement code, tests, and documentation. Trigger: Statu
 maturity: stable
 mode: agent
 model: Claude Sonnet 4.6 (copilot)
-modelFallback: Claude Sonnet 4.5 (copilot), GPT 5.3 Codex (copilot)
+modelFallback: Claude Sonnet 4.5 (copilot)
 infer: true
 constraints:
  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent engineer -Issue <n>` before starting work"

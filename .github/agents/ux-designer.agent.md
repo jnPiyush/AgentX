@@ -3,8 +3,8 @@ name: 2. UX Designer
 description: 'UX Designer: Create user research, wireframes, HTML/CSS prototypes, and design specifications. Trigger: Status = Ready (after PM). Status -> Ready when complete.'
 maturity: stable
 mode: agent
-model: Gemini 3 Pro (copilot)
-modelFallback: Gemini 3 Flash (copilot)
+model: Gemini 3.1 Pro (Preview) (copilot)
+modelFallback: Gemini 3 Pro (Preview) (copilot)
 infer: true
 constraints:
  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent ux-designer -Issue <n>` before starting work"

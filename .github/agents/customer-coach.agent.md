@@ -4,7 +4,7 @@ description: 'Customer Coach: Research, prepare, and create materials for any co
 maturity: stable
 mode: agent
 model: Claude Opus 4.6 (copilot)
-modelFallback: Gemini 3 Pro (copilot)
+modelFallback: Claude Opus 4.5 (copilot)
 infer: true
 constraints:
  - "MUST research thoroughly before generating deliverables"

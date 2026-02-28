@@ -257,6 +257,7 @@ describe('AgentXContext', () => {
         'maturity: stable',
         'mode: agent',
         'model: Claude Sonnet',
+        'modelFallback: Claude Haiku',
         '---',
         '',
         '## Role',
@@ -272,6 +273,7 @@ describe('AgentXContext', () => {
       assert.equal(def!.maturity, 'stable');
       assert.equal(def!.mode, 'agent');
       assert.ok(def!.model.includes('Claude'));
+      assert.equal(def!.modelFallback, 'Claude Haiku');
       assert.equal(def!.fileName, 'test.agent.md');
     });
 
@@ -302,6 +304,7 @@ describe('AgentXContext', () => {
       assert.equal(def!.maturity, 'stable');
       assert.equal(def!.mode, 'adaptive');
       assert.ok(def!.model.includes('Claude'));
+      assert.equal(def!.modelFallback, undefined);
       assert.equal(def!.fileName, 'crlf.agent.md');
     });
 

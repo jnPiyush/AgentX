@@ -4,7 +4,7 @@ description: 'Architect: Design system architecture, create ADRs, and technical 
 maturity: stable
 mode: agent
 model: Claude Opus 4.6 (copilot)
-modelFallback: GPT 5.2 (copilot)
+modelFallback: Claude Opus 4.5 (copilot)
 infer: true
 constraints:
  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent architect -Issue <n>` before starting work"

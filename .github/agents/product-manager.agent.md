@@ -4,7 +4,7 @@ description: 'Product Manager: Define product vision, create PRD, break Epic int
 maturity: stable
 mode: agent
 model: Claude Opus 4.6 (copilot)
-modelFallback: GPT 5.2 (copilot)
+modelFallback: Claude Opus 4.5 (copilot)
 infer: true
 constraints:
  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent product-manager -Issue <n>` before starting work"

@@ -3,7 +3,8 @@ name: 6. DevOps Engineer
 description: 'DevOps Engineer: Create and manage CI/CD pipelines, GitHub Actions workflows, and release automation. Trigger: Status = Ready (architecture/code complete). Focus: Pipeline infrastructure, not application logic.'
 maturity: stable
 mode: agent
-model: Claude Opus 4.6 (copilot)
+model: Claude Sonnet 4.6 (copilot)
+modelFallback: Claude Sonnet 4.5 (copilot)
 infer: true
 constraints:
  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent devops-engineer -Issue <n>` before starting work"

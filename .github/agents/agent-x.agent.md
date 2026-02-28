@@ -4,6 +4,7 @@ description: 'Agent X - Adaptive coordinator for multi-agent workflow. Auto-dete
 maturity: stable
 mode: adaptive
 model: Claude Opus 4.6 (copilot)
+modelFallback: Claude Opus 4.5 (copilot)
 infer: true
 autonomous_triggers:
  - "type:bug AND clear_scope AND files <= 3"

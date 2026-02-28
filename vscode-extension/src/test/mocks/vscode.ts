@@ -244,6 +244,41 @@ export const chat = {
   }),
 };
 
+// --- Language Model stubs ------------------------------------------------
+
+/** Mock LanguageModelChat instance. */
+export interface MockLanguageModelChat {
+  readonly name: string;
+  readonly family: string;
+  readonly vendor: string;
+}
+
+/** Configurable model inventory for tests. */
+let _mockModels: MockLanguageModelChat[] = [];
+
+export const lm = {
+  selectChatModels: async (
+    selector?: { family?: string; vendor?: string },
+  ): Promise<MockLanguageModelChat[]> => {
+    if (!selector) { return [..._mockModels]; }
+    return _mockModels.filter((m) => {
+      if (selector.family && m.family !== selector.family) { return false; }
+      if (selector.vendor && m.vendor !== selector.vendor) { return false; }
+      return true;
+    });
+  },
+};
+
+/** Test helper: set available mock models. */
+export function __setMockModels(models: MockLanguageModelChat[]): void {
+  _mockModels = [...models];
+}
+
+/** Test helper: clear all mock models. */
+export function __clearMockModels(): void {
+  _mockModels = [];
+}
+
 // --- Mock ChatResponseStream ---------------------------------------------
 
 export function createMockResponseStream() {

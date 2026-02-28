@@ -266,6 +266,7 @@ export class AgentXContext {
  maturity: get('maturity'),
  mode: get('mode'),
  model: get('model'),
+ modelFallback: get('modelFallback') || undefined,
  fileName: agentFile,
  };
  }
@@ -293,6 +294,8 @@ export interface AgentDefinition {
  maturity: string;
  mode: string;
  model: string;
+ /** Fallback model if primary is unavailable. Parsed from `modelFallback` frontmatter. */
+ modelFallback?: string;
  fileName: string;
  /**
   * Live runtime status from agent state file (optional).

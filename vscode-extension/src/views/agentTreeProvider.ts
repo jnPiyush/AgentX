@@ -48,11 +48,19 @@ export class AgentTreeProvider implements vscode.TreeDataProvider<AgentTreeItem>
  item.iconPath = this.statusIcon(agent.runtimeStatus);
 
  // Children with details
- item.children = [
+ const children = [
  new AgentTreeItem(`Model: ${agent.model}`, vscode.TreeItemCollapsibleState.None),
+ ];
+ if (agent.modelFallback) {
+ children.push(
+  new AgentTreeItem(`Fallback: ${agent.modelFallback}`, vscode.TreeItemCollapsibleState.None),
+ );
+ }
+ children.push(
  new AgentTreeItem(`Maturity: ${agent.maturity}`, vscode.TreeItemCollapsibleState.None),
  new AgentTreeItem(`Mode: ${agent.mode}`, vscode.TreeItemCollapsibleState.None),
- ];
+ );
+ item.children = children;
 
  return item;
  }

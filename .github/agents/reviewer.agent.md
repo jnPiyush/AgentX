@@ -3,8 +3,8 @@ name: 5. Reviewer
 description: 'Reviewer: Review code quality, tests, security, and approve/reject. Trigger: Status = In Review. Status -> Done when approved.'
 maturity: stable
 mode: agent
-model: GPT 5.3 Codex (copilot)
-modelFallback: GPT 5.2 Codex (copilot)
+model: GPT-5.3-Codex (copilot)
+modelFallback: GPT-5.2-Codex (copilot)
 infer: true
 constraints:
  - "MUST run `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>` before starting review"
