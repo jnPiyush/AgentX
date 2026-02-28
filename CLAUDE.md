@@ -8,7 +8,7 @@
 ## Core Documents (Read Before Coding)
 
 1. **[AGENTS.md](AGENTS.md)** - Agent roles, workflows, issue-first rules, classification, commit format, security checklist. Read for ANY coding or workflow task.
-2. **[Skills.md](Skills.md)** - Production code standards index (41 skills). Use the Quick Reference table to pick 3-4 relevant skills per task, then read those SKILL.md files.
+2. **[Skills.md](Skills.md)** - Production code standards index (42 skills across 8 categories). Use the Quick Reference table to pick 3-4 relevant skills per task, then read those SKILL.md files.
 
 **When to skip AGENTS.md**: Answering questions, research, debugging only.
 

@@ -486,7 +486,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 **v5.1-v5.2**: Executable Scripts (30 across 17 skills), Playwright E2E Scaffold, Cognitive Architecture, TypeScript Instructions, 5-Minute Quickstart
 
-**v5.0**: 100% agentskills.io Compliance (41 skills), Progressive Disclosure (112 reference files), Standardized Descriptions, Anthropic Guide Compliance
+**v5.0**: 100% agentskills.io Compliance (41 skills -- later reorganized to 42 across 8 categories in v6.8), Progressive Disclosure (112 reference files), Standardized Descriptions, Anthropic Guide Compliance
 
 **v4.0**: Declarative Workflows (7 TOML templates), Smart Ready Queue, Agent State Tracking, Dependency Management, Issue Digests
 

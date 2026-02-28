@@ -41,80 +41,82 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ---
 
-## 🆕 What's New in v5.0
+## 🆕 What's New in v6.8.0
 
 <table>
 <tr>
 <td width="50%">
 
-### ✅ 100% agentskills.io Compliance
-- **All 41 skills** validated against [agentskills.io](https://agentskills.io/specification)
-- Single-quoted **WHAT + WHEN + KEYWORDS** description format
-- Every description **234–314 chars** (well under 1024 limit)
-- Zero compliance violations across the entire skill library
-
-</td>
-<td width="50%">
-
-### 📦 Progressive Disclosure Architecture
-- **112 reference files** across 41 skills for 3-tier loading
-- **Tier 1**: SKILL.md core (<500 lines each, range 95–383)
-- **Tier 2**: Inline details loaded on demand
-- **Tier 3**: Reference files for deep-dive content
-- Optimized for AI token budgets
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 📝 Standardized Skill Descriptions
-- All **40 descriptions** rewritten to agentskills.io spec
-- Consistent format: `'WHAT the skill does. WHEN to use it. KEYWORDS.'`
-- No angle brackets, no multi-line, no markdown in descriptions
-- All kebab-case folder names validated
-
-</td>
-<td width="50%">
-
-### 🧪 Anthropic Guide Compliance
-- Validated against **"The Complete Guide to Building Skills for Claude"**
-- No README.md in skill folders (0 found — correct)
-- No XML angle brackets in descriptions
-- Progressive disclosure pattern matches Anthropic best practices
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 🧹 Solution Cleanup
-- Removed stale issue templates and runtime artifacts
-- Added `.venv/`, `venv/`, `env/` to `.gitignore`
-- Purged local-mode artifacts from version control
-- Clean working tree with zero untracked files
+### 📁 Skills Reorganization
+- **42 skills** reorganized into **8 categories** (was 6)
+- New categories: **languages/**, **infrastructure/**, **data/** (split from cloud)
+- Merged `scalability` into `performance`, `code-organization` into `core-principles`
+- Cleaner taxonomy for faster skill discovery
 
 </td>
 <td width="50%">
 
 ### 📊 Framework Totals
-- **41 skills** across 6 categories
+- **42 skills** across 8 categories
 - **30 executable scripts** across 17 skills
-- **8 agent definitions** (7 stable + 1 preview)
+- **9 agent definitions** (8 stable + 1 preview)
 - **12 instruction files**, **11 prompts**, **9 templates**
 - **7 TOML workflow** templates
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+### 📦 8 Skill Categories
+- **architecture** (5): core-principles, security, performance, database, api-design
+- **development** (10): testing, error-handling, configuration, documentation, type-safety, dependency-management, logging-monitoring, code-review, iterative-loop, skill-creator
+- **languages** (8): csharp, python, go, rust, react, blazor, postgresql, sql-server
+- **operations** (5): github-actions-workflows, yaml-pipelines, release-management, remote-git-operations, version-control
+
+</td>
+<td width="50%">
+
+### 📦 8 Skill Categories (cont.)
+- **infrastructure** (4): azure, bicep, terraform, containerization
+- **data** (4): data-analysis, fabric-analytics, fabric-data-agent, fabric-forecasting
+- **ai-systems** (4): ai-agent-development, cognitive-architecture, mcp-server-development, prompt-engineering
+- **design** (2): ux-ui-design, frontend-ui
+
+</td>
+</tr>
 </table>
 
-Also includes all v4.0 features: declarative workflows, smart ready queue, agent state tracking, dependency management, issue digests, dual-mode CLI.
+Also includes all prior features: VS Code extension (v6.0-6.1), declarative workflows, smart ready queue, agent state tracking, dependency management, issue digests, dual-mode CLI.
 
 [View full changelog →](CHANGELOG.md)
 
 ---
 
 ## 🆙 Previous Versions
+
+<details>
+<summary><strong>v6.0-6.5 — VS Code Extension & Plugin System</strong></summary>
+
+- VS Code extension with critical pre-check auto-install (v6.0)
+- Typed event bus, structured thinking log, context compaction (v6.1)
+- Channel abstraction, cron task scheduler (v6.1)
+- PowerShell shell fallback, Copilot extension awareness (v6.0)
+- Plugin system, Node.js CLI migration (v6.5)
+
+</details>
+
+<details>
+<summary><strong>v5.0-5.3 — Skills Compliance & Customer Coach</strong></summary>
+
+- 100% agentskills.io compliance (41 skills at the time)
+- Progressive disclosure architecture (112 reference files)
+- 30 executable scripts across 17 skills
+- Anthropic Guide compliance
+- Customer Coach Agent, UX Methodology Instructions (v5.3)
+- Playwright E2E Scaffold, Cognitive Architecture (v5.1-5.2)
+
+</details>
 
 <details>
 <summary><strong>v4.0 — Declarative Workflows & CLI</strong></summary>
@@ -177,7 +179,7 @@ Also includes all v4.0 features: declarative workflows, smart ready queue, agent
 </td>
 <td width="50%">
 
-### 📚 41 Production Skills
+### 📚 42 Production Skills
 - Testing (80%+ coverage)
 - Security (OWASP Top 10)
 - API Design (REST patterns)
@@ -370,7 +372,7 @@ Backlog → In Progress → In Review → Ready → Done
 ```
 AgentX/
 ├── 📄 AGENTS.md              # Workflow & orchestration rules
-├── 📄 Skills.md              # 41 production skills index
+├── 📄 Skills.md              # 42 production skills index
 ├── 📄 CONTRIBUTING.md        # Contributor guide
 │
 ├── 📁 .github/
@@ -381,7 +383,7 @@ AgentX/
 │   ├── 📁 templates/         # PRD, ADR, Spec, UX, Progress templates
 │   ├── 📁 prompts/           # 11 reusable prompts
 │   ├── 📁 workflows/         # GitHub Actions (CI/CD, scanning)
-│   └── 📁 skills/            # 41 skill documents
+│   └── 📁 skills/            # 42 skill documents (8 categories)
 │   └── 📁 instructions/      # 12 language/IaC-specific guides
 │   └── 📁 schemas/           # JSON schema validation
 │
@@ -415,7 +417,7 @@ AgentX/
 | Document | Description |
 |----------|-------------|
 | [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
-| [Skills.md](Skills.md) | 41 production skills with guidelines |
+| [Skills.md](Skills.md) | 42 production skills across 8 categories |
 | [**Quickstart**](docs/QUICKSTART.md) | **Build your first feature in 5 minutes** |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
 | [Setup Guide](docs/SETUP.md) | GitHub Projects V2, Local Mode, MCP Server, troubleshooting |

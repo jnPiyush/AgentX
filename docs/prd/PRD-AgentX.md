@@ -140,10 +140,10 @@ AI assistants continue to produce ad-hoc, unstructured output. Developers get co
      - [x] Required fields enforcement and default values
      - [x] Special tokens: `${current_date}`, `${user}`, etc.
 
-6. **Skills Library (41 Production Skills)**
+6. **Skills Library (42 Production Skills)**
    - **User Story**: As an agent, I want domain-specific skills so that I can produce high-quality output in areas like security, testing, API design, and AI development
    - **Acceptance Criteria**:
-     - [x] 41 skills across 6 categories (Architecture, Development, Operations, Cloud, AI Systems, Design)
+     - [x] 42 skills across 8 categories (Architecture, Development, Languages, Operations, Infrastructure, Data, AI Systems, Design)
      - [x] 100% agentskills.io specification compliance
      - [x] Progressive disclosure: frontmatter (~100 tokens) -> SKILL.md (<5K tokens) -> references (on-demand)
      - [x] 30 executable scripts across 17 skills
@@ -356,7 +356,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 | US-3.5 | Developer | Weekly issue digests | I get automated summaries of progress | P2 | Done |
 
 ### Feature 4: Skills Library
-**Description**: 41 production-ready skill documents across 6 categories with progressive disclosure
+**Description**: 42 production-ready skill documents across 8 categories with progressive disclosure
 **Priority**: P0
 
 | Story ID | As a... | I want... | So that... | Priority | Status |
@@ -523,6 +523,14 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 - Channel abstraction, cron task scheduler
 - PowerShell shell fallback
 
+### Phase 5: Skills Reorganization (v6.8.0) [COMPLETED]
+**Goal**: Cleaner skill taxonomy with 8 categories for faster discovery
+**Deliverables**:
+- Reorganized 42 skills into 8 categories (from 6)
+- New categories: languages/, infrastructure/, data/ (split from cloud/)
+- Merged scalability -> performance, code-organization -> core-principles
+- Updated all cross-references across 14+ files
+
 ### Phase 5: Platform Maturity (v6.5) [COMPLETED]
 **Goal**: Plugin system, CLI unification, documentation consolidation
 **Deliverables**:
@@ -613,7 +621,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 | Directory | Purpose |
 |-----------|---------|
 | `.github/agents/` | 8 agent definitions (.agent.md) |
-| `.github/skills/` | 41 skill documents across 6 categories |
+| `.github/skills/` | 42 skill documents across 8 categories |
 | `.github/templates/` | 7 document templates (PRD, ADR, Spec, UX, Review, Security) |
 | `.github/instructions/` | 12 language/IaC-specific instruction files |
 | `.github/prompts/` | 11 reusable prompt files |
@@ -628,6 +636,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 
 | Version | Date | Key Feature |
 |---------|------|-------------|
+| v6.8.0 | 2026-02-27 | Skills reorganization: 8 categories, 42 skills |
 | v6.5 | 2026-02-25 | Plugin system, Node.js CLI migration |
 | v6.1 | 2026-02-24 | Event bus, thinking log, context compaction |
 | v6.0 | 2026-02-22 | VS Code extension with auto-install |
@@ -640,7 +649,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 ### Related Documents
 
 - [AGENTS.md](../../AGENTS.md) - Workflow & orchestration rules
-- [Skills.md](../../Skills.md) - 41 production skills index
+- [Skills.md](../../Skills.md) - 42 production skills index (8 categories)
 - [SETUP.md](../SETUP.md) - Installation & configuration guide
 - [QUICKSTART.md](../QUICKSTART.md) - 5-minute onboarding
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) - Contributor guide

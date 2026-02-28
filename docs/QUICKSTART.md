@@ -161,5 +161,5 @@ Each agent produces a deliverable, validates it, and hands off to the next.
 | Resource | Description |
 |----------|-------------|
 | [AGENTS.md](../AGENTS.md) | Agent roles, workflow, classification rules |
-| [Skills.md](../Skills.md) | 41 production skills index + workflow scenarios |
+| [Skills.md](../Skills.md) | 42 production skills index + workflow scenarios |
 | [SETUP.md](SETUP.md) | Full installation, GitHub Projects setup, troubleshooting |
