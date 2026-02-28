@@ -5,7 +5,7 @@ All notable changes to AgentX will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [6.8.0] - 2026-02-26
+## [6.8.0] - 2026-02-27
 
 ### Added
 
@@ -17,6 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Version stamp: 6.7.0 -> 6.8.0 across all files
+- **Skills reorganization**: 6 categories -> 8 categories, 42 -> 42 skills (net after merges)
+  - Created `languages/` category (blazor, csharp, go, postgresql, python, react, rust, sql-server)
+  - Created `infrastructure/` category (azure, bicep, containerization, terraform)
+  - Created `data/` category (data-analysis, fabric-analytics, fabric-data-agent, fabric-forecasting)
+  - Moved `frontend-ui` to `design/`, `version-control` to `operations/`
+  - Moved `mcp-server-development` to `ai-systems/`, `iterative-loop` and `skill-creator` to `development/`
+  - Renamed `code-review-and-audit` to `code-review`
+  - Merged `scalability` into `performance` (Performance & Scalability)
+  - Merged `code-organization` into `core-principles` (Core Principles & Code Organization)
+  - Eliminated `cloud/` category entirely
+  - Updated all cross-references across agents, prompts, test frameworks, and SKILL.md files
 
 ## [6.7.0] - 2026-02-26
 

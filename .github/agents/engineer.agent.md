@@ -226,7 +226,7 @@ Minimum loop content per iteration: run full test suite AND record count + resul
 
 **MUST NOT** hand off to Reviewer (Status -> `In Review`) while loop is still `active`. Complete or cancel the loop first.
 
-> See [#42 Iterative Loop Skill](../../.github/skills/ai-systems/iterative-loop/SKILL.md) for patterns and completion criteria examples.
+> See [#42 Iterative Loop Skill](../../.github/skills/development/iterative-loop/SKILL.md) for patterns and completion criteria examples.
 
 ### 6. Create Low-Level Design (if complex)
 

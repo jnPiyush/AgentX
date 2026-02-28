@@ -349,7 +349,7 @@ Validate Tag -> Build -> Test -> Create Release -> Deploy Staging
 **Related Skills:**
 - [GitHub Actions & Workflows](../github-actions-workflows/SKILL.md)
 - [YAML Pipelines](../yaml-pipelines/SKILL.md)
-- [Version Control](../../development/version-control/SKILL.md)
+- [Version Control](../version-control/SKILL.md)
 - [Monitoring & Logging](../../development/logging-monitoring/SKILL.md)
 
 **External Resources:**

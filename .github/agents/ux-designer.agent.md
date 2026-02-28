@@ -99,8 +99,8 @@ Use research tools:
 
 **Skills to reference:**
 - **[Skill #29: UX/UI Design](../skills/design/ux-ui-design/SKILL.md)** - Wireframing techniques, HTML/CSS prototypes, design systems
-- **[Skill #21: Frontend/UI](../skills/development/frontend-ui/SKILL.md)** - HTML5, CSS3, responsive design patterns
-- **[Skill #22: React](../skills/development/react/SKILL.md)** - Component patterns (if React is used)
+- **[Skill #21: Frontend/UI](../skills/design/frontend-ui/SKILL.md)** - HTML5, CSS3, responsive design patterns
+- **[Skill #22: React](../skills/languages/react/SKILL.md)** - Component patterns (if React is used)
 
 **Example research:**
 ```javascript
@@ -325,8 +325,8 @@ These commands run automatically at workflow boundaries - **no manual invocation
 - **Standards**: [Skills.md](../../Skills.md) -> See Skill #29 (UX/UI Design), #21 (Frontend/UI), #22 (React)
 - **Skills**:
  - **[Skill #29: UX/UI Design](../skills/design/ux-ui-design/SKILL.md)** - Wireframing, HTML prototypes, accessibility, responsive design
- - **[Skill #21: Frontend/UI](../skills/development/frontend-ui/SKILL.md)** - HTML5, CSS3, BEM, responsive patterns
- - **[Skill #22: React](../skills/development/react/SKILL.md)** - Component patterns (if applicable)
+ - **[Skill #21: Frontend/UI](../skills/design/frontend-ui/SKILL.md)** - HTML5, CSS3, BEM, responsive patterns
+ - **[Skill #22: React](../skills/languages/react/SKILL.md)** - Component patterns (if applicable)
 - **UX Template**: [UX-TEMPLATE.md](../templates/UX-TEMPLATE.md)
 - **Validation Script**: [validate-handoff.sh](../scripts/validate-handoff.sh)
 

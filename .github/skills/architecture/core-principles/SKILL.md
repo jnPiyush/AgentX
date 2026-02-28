@@ -1,19 +1,19 @@
 ---
 name: "core-principles"
-description: 'Apply fundamental coding principles including SOLID, DRY, KISS, and common design patterns. Use when refactoring code for maintainability, reviewing design pattern usage, teaching SOLID principles, or evaluating code quality against engineering standards.'
+description: 'Apply fundamental coding principles (SOLID, DRY, KISS) and structure projects for maintainability with clean architecture and separation of concerns. Use when refactoring, reviewing patterns, setting up project structure, or organizing modules.'
 metadata:
  author: "AgentX"
- version: "1.0.0"
+ version: "2.0.0"
  created: "2025-01-15"
- updated: "2025-01-15"
+ updated: "2026-02-27"
 compatibility:
  languages: ["csharp"]
 ---
 
-# Core Principles
+# Core Principles & Code Organization
 
-> **Purpose**: Fundamental principles guiding production code development. 
-> **Focus**: SOLID, DRY, KISS, design patterns.
+> **Purpose**: Fundamental principles guiding production code development and project structure. 
+> **Focus**: SOLID, DRY, KISS, design patterns, project organization.
 
 ---
 
@@ -23,6 +23,11 @@ compatibility:
 - Refactoring code for maintainability
 - Choosing appropriate design patterns
 - Teaching or evaluating engineering standards
+- Setting up a new project structure
+- Refactoring monolithic codebases
+- Implementing dependency injection
+- Organizing modules for team collaboration
+- Choosing between architectural patterns
 
 ## Prerequisites
 
@@ -230,9 +235,89 @@ Don't build features "just in case". Build what's needed now.
 
 ---
 
-**See Also**: [Code Organization](../code-organization/SKILL.md) - [Testing](../../development/testing/SKILL.md)
+## Code Organization
 
-**Last Updated**: January 13, 2026
+> Merged from code-organization skill. Structure projects for clarity, maintainability, and scalability.
+
+### Organization Decision Tree
+
+```
+Code organization concern?
++- Starting new project? -> Use standard project structure template
++- File getting too long? -> Extract classes per Single Responsibility
++- Unclear naming? -> Apply naming conventions (PascalCase types, camelCase locals, _prefix privates)
++- Deep nesting? -> Flatten with early returns, extract methods
++- Hard to find code? -> Reorganize by namespace/feature grouping
+- Circular dependencies? -> Apply Dependency Inversion, introduce interfaces
+```
+
+### C# Project Structure
+
+```
+src/
++-- MyApp.Api/           # Entry point, controllers, middleware
++-- MyApp.Core/          # Domain models, interfaces, business logic
++-- MyApp.Infrastructure/ # Data access, external services
++-- MyApp.Shared/        # Cross-cutting concerns, utilities
+tests/
++-- MyApp.Api.Tests/
++-- MyApp.Core.Tests/
++-- MyApp.Infrastructure.Tests/
+```
+
+### Single Responsibility Examples
+
+```csharp
+// [FAIL] Multiple responsibilities
+public class UserService
+{
+    public User CreateUser(string email) { /* ... */ }
+    public void SendWelcomeEmail(User user) { /* ... */ }
+    public string GenerateReport() { /* ... */ }
+}
+
+// [PASS] Single responsibility each
+public class UserService
+{
+    public User CreateUser(string email) { /* ... */ }
+}
+
+public class NotificationService
+{
+    public void SendWelcomeEmail(User user) { /* ... */ }
+}
+
+public class UserReportService
+{
+    public string GenerateReport() { /* ... */ }
+}
+```
+
+### Naming Conventions
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| **Class** | PascalCase | `OrderService` |
+| **Interface** | I + PascalCase | `IOrderRepository` |
+| **Method** | PascalCase | `GetOrderById()` |
+| **Property** | PascalCase | `OrderDate` |
+| **Local variable** | camelCase | `orderCount` |
+| **Private field** | _camelCase | `_orderRepository` |
+| **Constant** | PascalCase | `MaxRetryCount` |
+
+### Code Organization Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| File over 500 lines | Split into partial classes or extract helper classes |
+| Too many constructor parameters | Apply facade pattern or restructure dependencies |
+| Feature code scattered | Reorganize by feature folders instead of technical layers |
+
+---
+
+**See Also**: [Testing](../../development/testing/SKILL.md)
+
+**Last Updated**: February 27, 2026
 
 ## Troubleshooting
 

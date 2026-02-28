@@ -47,7 +47,7 @@ Need to work on a skill?
 
 ```powershell
 # Scaffold a new skill with all directories
-./.github/skills/ai-systems/skill-creator/scripts/init-skill.ps1 `
+./.github/skills/development/skill-creator/scripts/init-skill.ps1 `
  -Name "my-new-skill" `
  -Category "development" `
  -Description "Brief description of the skill" `

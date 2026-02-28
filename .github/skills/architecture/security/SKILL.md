@@ -12,7 +12,7 @@ metadata:
 
 > **Purpose**: Language-agnostic security practices to protect against common vulnerabilities. 
 > **Focus**: Input validation, injection prevention, authentication, secrets management. 
-> **Note**: For language-specific implementations, see [C# Development](../../development/csharp/SKILL.md) or [Python Development](../../development/python/SKILL.md).
+> **Note**: For language-specific implementations, see [C# Development](../../languages/csharp/SKILL.md) or [Python Development](../../languages/python/SKILL.md).
 
 ---
 

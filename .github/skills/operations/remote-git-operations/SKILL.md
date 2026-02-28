@@ -169,9 +169,9 @@ git push origin main
 ---
 
 **Related Skills**:
-- [Version Control](../../development/version-control/SKILL.md)
+- [Version Control](../version-control/SKILL.md)
 - [Security](../../architecture/security/SKILL.md)
-- [Code Organization](../../architecture/code-organization/SKILL.md)
+- [Core Principles](../../architecture/core-principles/SKILL.md)
 
 ## References
 

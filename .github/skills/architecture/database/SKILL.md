@@ -12,7 +12,7 @@ metadata:
 
 > **Purpose**: Efficient, reliable database operations with migrations, indexes, and transactions. 
 > **Focus**: ORM patterns, query optimization, data integrity. 
-> **Note**: For database-specific details, see [PostgreSQL](../../development/postgresql/SKILL.md) or [SQL Server](../../development/sql-server/SKILL.md).
+> **Note**: For database-specific details, see [PostgreSQL](../../languages/postgresql/SKILL.md) or [SQL Server](../../languages/sql-server/SKILL.md).
 
 ---
 
@@ -124,7 +124,7 @@ SELECT * FROM users WHERE email = 'test@example.com';
 
 ---
 
-**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md) - [PostgreSQL](../../development/postgresql/SKILL.md) - [SQL Server](../../development/sql-server/SKILL.md)
+**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md) - [PostgreSQL](../../languages/postgresql/SKILL.md) - [SQL Server](../../languages/sql-server/SKILL.md)
 
 **Last Updated**: January 27, 2026
 

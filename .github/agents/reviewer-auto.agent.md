@@ -259,7 +259,7 @@ Use **Standard Reviewer** when:
 
 - **Standard Reviewer**: [reviewer.agent.md](reviewer.agent.md)
 - **Review Template**: [REVIEW-TEMPLATE.md](../templates/REVIEW-TEMPLATE.md)
-- **Skills**: [Code Review & Audit](../skills/development/code-review-and-audit/SKILL.md)
+- **Skills**: [Code Review](../skills/development/code-review/SKILL.md)
 - **Workflow**: [AGENTS.md](../../AGENTS.md)
 
 ---

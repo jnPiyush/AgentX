@@ -1,6 +1,6 @@
 # Changelog
 
-## 6.8.0 - 2026-02-26
+## 6.8.0 - 2026-02-27
 
 ### Added
 
@@ -11,6 +11,7 @@
 ### Changed
 
 - Version stamp: 6.7.0 -> 6.8.0
+- Skills reorganization: 8 categories, 42 skills (languages/, infrastructure/, data/ created; cloud/ eliminated; scalability merged into performance, code-organization merged into core-principles)
 
 ## 6.7.0 - 2026-02-26
 

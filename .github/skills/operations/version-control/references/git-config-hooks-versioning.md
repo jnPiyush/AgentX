@@ -215,5 +215,5 @@ git checkout tags/v1.2.3 -b version-1.2.3
 ---
 
 **Related Skills**:
-- [Code Organization](../../architecture/code-organization/SKILL.md)
-- [Documentation](../documentation/SKILL.md)
+- [Core Principles](../../architecture/core-principles/SKILL.md)
+- [Documentation](../../development/documentation/SKILL.md)

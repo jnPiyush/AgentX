@@ -388,7 +388,7 @@ These commands run automatically at workflow boundaries - **no manual invocation
 ---
 
 ## References
-- **Review Checklist**: [code-review-and-audit/SKILL.md](../skills/development/code-review-and-audit/SKILL.md)
+- **Review Checklist**: [code-review/SKILL.md](../skills/development/code-review/SKILL.md)
 - **Validation Script**: [validate-handoff.sh](../scripts/validate-handoff.sh)
 - **Context Capture**: [capture-context.sh](../scripts/capture-context.sh)
 
