@@ -11,7 +11,7 @@
 //     manifest.json          -- compact index (ObservationIndex[])
 //     issue-{n}.json         -- full observations for issue n (Observation[])
 //
-// See ADR-29.md for storage decision rationale.
+// See ADR-AgentX.md for storage decision rationale.
 // ---------------------------------------------------------------------------
 
 import * as fs from 'fs';
@@ -391,3 +391,4 @@ function groupByIssue(observations: Observation[]): Map<number, Observation[]> {
   }
   return map;
 }
+
