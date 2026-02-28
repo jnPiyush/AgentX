@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v6.8.0"><img src="https://img.shields.io/badge/Version-6.8.0-0EA5E9?style=for-the-badge" alt="Version 6.8.0"></a>
+  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v7.0.0"><img src="https://img.shields.io/badge/Version-7.0.0-0EA5E9?style=for-the-badge" alt="Version 7.0.0"></a>
   <a href="https://github.com/github/awesome-copilot"><img src="https://img.shields.io/badge/Standard-awesome--copilot-7C3AED?style=for-the-badge&logo=github" alt="Awesome Copilot"></a>
   <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Skills-agentskills.io-F97316?style=for-the-badge" alt="Skills Spec"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/badge/OpenSSF-Scorecard-4DC71F?style=for-the-badge" alt="OpenSSF Scorecard"></a>
@@ -40,47 +40,47 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ---
 
-## 🆕 What's New in v6.8.0
+## 🆕 What's New in v7.0.0
 
 <table>
 <tr>
 <td width="50%">
 
-### 📁 Skills Reorganization
-- **42 skills** reorganized into **8 categories** (was 6)
-- New categories: **languages/**, **infrastructure/**, **data/** (split from cloud)
-- Merged `scalability` into `performance`, `code-organization` into `core-principles`
-- Cleaner taxonomy for faster skill discovery
+### 🤖 Intelligent Model Routing
+- **Model Fallback Selector** -- per-agent primary and fallback LLM
+- All 9 agents configured with explicit model + fallback
+- Automatic fallback when primary model is unavailable
+- Maps frontmatter model strings to VS Code LM API
 
 </td>
 <td width="50%">
 
-### 📊 Framework Totals
-- **42 skills** across 8 categories
-- **30 executable scripts** across 17 skills
-- **9 agent definitions** (8 stable + 1 preview)
-- **12 instruction files**, **11 prompts**, **9 templates**
-- **7 TOML workflow** templates
+### 🔷 New Hexagon AX Icon
+- Fresh **hexagon monogram** replacing Claude-like logo
+- Clean geometric "AX" typography inside hexagon badge
+- Full `currentColor` support for dark/light themes
+- Distinct brand identity in VS Code Activity Bar
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 📦 8 Skill Categories
-- **architecture** (5): core-principles, security, performance, database, api-design
-- **development** (10): testing, error-handling, configuration, documentation, type-safety, dependency-management, logging-monitoring, code-review, iterative-loop, skill-creator
-- **languages** (8): csharp, python, go, rust, react, blazor, postgresql, sql-server
-- **operations** (5): github-actions-workflows, yaml-pipelines, release-management, remote-git-operations, version-control
+### 📊 Databricks Skill
+- **43 skills** across 8 categories (was 42)
+- New **data/databricks** skill: Delta Lake, Unity Catalog, MLflow, DLT
+- Medallion architecture, PySpark, Auto Loader patterns
+- Job orchestration and Terraform/Pulumi IaC guidance
 
 </td>
 <td width="50%">
 
-### 📦 8 Skill Categories (cont.)
-- **infrastructure** (4): azure, bicep, terraform, containerization
-- **data** (4): data-analysis, fabric-analytics, fabric-data-agent, fabric-forecasting
-- **ai-systems** (4): ai-agent-development, cognitive-architecture, mcp-server-development, prompt-engineering
-- **design** (2): ux-ui-design, frontend-ui
+### 📦 Framework Totals
+- **43 skills** across 8 categories
+- **30 executable scripts** across 17 skills
+- **9 agent definitions** (8 stable + 1 preview)
+- **12 instruction files**, **11 prompts**, **9 templates**
+- **7 TOML workflow** templates
 
 </td>
 </tr>
@@ -95,7 +95,17 @@ Also includes all prior features: VS Code extension (v6.0-6.1), declarative work
 ## 🆙 Previous Versions
 
 <details>
-<summary><strong>v6.0-6.5 — VS Code Extension & Plugin System</strong></summary>
+<summary><strong>v6.8.0 -- Skills Reorganization</strong></summary>
+
+- 42 skills reorganized into 8 categories (from 6)
+- New categories: languages/, infrastructure/, data/ (split from cloud/)
+- Merged scalability -> performance, code-organization -> core-principles
+- Cleaner taxonomy for faster skill discovery
+
+</details>
+
+<details>
+<summary><strong>v6.0-6.5 -- VS Code Extension & Plugin System</strong></summary>
 
 - VS Code extension with critical pre-check auto-install (v6.0)
 - Typed event bus, structured thinking log, context compaction (v6.1)

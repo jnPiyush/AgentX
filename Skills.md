@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 42 skills across 8 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 43 skills across 8 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index

@@ -458,6 +458,15 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Packs | `packs/` |
 | Agent Delegation | `.github/agent-delegation.md` |
 
+### New Features (v7.0)
+
+| Feature | Location | Status |
+|---------|----------|--------|
+| **Model Fallback Selector** | `vscode-extension/src/utils/modelSelector.ts` | [PASS] Stable |
+| **Hexagon AX Icon** | `vscode-extension/resources/agentx-icon.svg` | [PASS] Stable |
+| **Databricks Skill** | `.github/skills/data/databricks/SKILL.md` | [PASS] Stable |
+| **43 Skills (was 42)** | `Skills.md` | [PASS] Stable |
+
 ### New Features (v6.1)
 
 | Feature | Location | Status |

@@ -533,6 +533,14 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 - Merged scalability -> performance, code-organization -> core-principles
 - Updated all cross-references across 14+ files
 
+### Phase 7: Model Routing, New Icon & Databricks (v7.0.0) [COMPLETED]
+**Goal**: Intelligent model selection, refreshed branding, expanded data skills
+**Deliverables**:
+- Model fallback selector with per-agent primary/fallback LLM routing
+- New hexagon "AX" monogram icon replacing Claude-like logo
+- Databricks skill (43 total skills across 8 categories)
+- Version stamped to 7.0.0 across all artifacts
+
 ### Phase 5: Platform Maturity (v6.5) [COMPLETED]
 **Goal**: Plugin system, CLI unification, documentation consolidation
 **Deliverables**:
@@ -623,7 +631,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 | Directory | Purpose |
 |-----------|---------|
 | `.github/agents/` | 8 agent definitions (.agent.md) |
-| `.github/skills/` | 42 skill documents across 8 categories |
+| `.github/skills/` | 43 skill documents across 8 categories |
 | `.github/templates/` | 7 document templates (PRD, ADR, Spec, UX, Review, Security) |
 | `.github/instructions/` | 12 language/IaC-specific instruction files |
 | `.github/prompts/` | 11 reusable prompt files |
@@ -638,6 +646,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 
 | Version | Date | Key Feature |
 |---------|------|-------------|
+| v7.0.0 | 2026-02-28 | Model routing, hexagon icon, Databricks skill, 43 skills |
 | v6.8.0 | 2026-02-27 | Skills reorganization: 8 categories, 42 skills |
 | v6.5 | 2026-02-25 | Plugin system, Node.js CLI migration |
 | v6.1 | 2026-02-24 | Event bus, thinking log, context compaction |
