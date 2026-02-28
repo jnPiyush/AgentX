@@ -86,7 +86,7 @@ AgentX will:
 
 - [GitHub Repository](https://github.com/jnPiyush/AgentX)
 - [Documentation](https://github.com/jnPiyush/AgentX/blob/master/AGENTS.md)
-- [Changelog](https://github.com/jnPiyush/AgentX/blob/master/CHANGELOG.md)
+- [Guide](https://github.com/jnPiyush/AgentX/blob/master/docs/GUIDE.md)
 - [Report Issues](https://github.com/jnPiyush/AgentX/issues)
 
 ## License

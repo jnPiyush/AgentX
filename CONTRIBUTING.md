@@ -285,7 +285,7 @@ If you have **GitHub Copilot**, it will automatically:
 
 - [AGENTS.md](AGENTS.md) - Agent behavior and workflows
 - [Skills.md](Skills.md) - Technical standards index + workflow scenarios
-- [docs/SETUP.md](docs/SETUP.md) - Project setup, local mode, MCP integration, troubleshooting
+- [docs/GUIDE.md](docs/GUIDE.md) - Quickstart, project setup, local mode, MCP integration, troubleshooting
 - [.github/copilot-instructions.md](.github/copilot-instructions.md) - Copilot guidelines
 
 ---

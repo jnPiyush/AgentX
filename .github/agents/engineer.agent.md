@@ -90,7 +90,7 @@ Verify spec is complete (Status = `Ready` in Projects board):
 > # PowerShell:
 > .agentx/local-issue-manager.ps1 -Action <action> [options]
 > ```
-> See [Local Mode docs](../../docs/SETUP.md#local-mode-no-github) for details.
+> See [Local Mode docs](../../docs/GUIDE.md#local-mode-no-github) for details.
 
 ### 2. Run Verification Tests (CRITICAL!)
 

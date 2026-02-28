@@ -170,8 +170,8 @@ Write-Host " 10. Documentation Consistency" -ForegroundColor White
 
 Assert-FileContains "AGENTS.md" "Single source of truth" "AGENTS.md declares single source"
 Assert-FileContains "README.md" "$skillCount production skills" "README skill count matches ($skillCount)"
-Assert-FileExists "docs/QUICKSTART.md" "5-minute Quickstart guide"
-Assert-FileContains "AGENTS.md" "QUICKSTART" "AGENTS.md links to Quickstart"
+Assert-FileExists "docs/GUIDE.md" "Consolidated Guide (quickstart + setup)"
+Assert-FileContains "AGENTS.md" "GUIDE" "AGENTS.md links to Guide"
 Assert-FileContains ".github/copilot-instructions.md" "RFC 2119" "Router has RFC 2119 directive language"
 Assert-FileContains "README.md" "OpenSSF" "README has OpenSSF Scorecard badge"
 

@@ -304,7 +304,7 @@ echo -e "${G} AgentX v6.8.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.agentx/agentx.sh help"
-echo " Docs: AGENTS.md | Skills.md | docs/SETUP.md"
+echo " Docs: AGENTS.md | Skills.md | docs/GUIDE.md"
 [ "$LOCAL" = "true" ] && echo -e "${D} Issue: ./.agentx/local-issue-manager.sh create \"[Story] Task\" \"\" \"type:story\"${N}"
 if [ -n "$INSTALL_PATH" ]; then
  echo ""

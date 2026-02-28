@@ -155,7 +155,7 @@ cp .github/templates/PRD-TEMPLATE.md docs/prd/PRD-{epic-id}.md
 > # PowerShell:
 > .agentx/local-issue-manager.ps1 -Action <action> [options]
 > ```
-> See [Local Mode docs](../../docs/SETUP.md#local-mode-no-github) for details.
+> See [Local Mode docs](../../docs/GUIDE.md#local-mode-no-github) for details.
 
 ### 4. Self-Review
 

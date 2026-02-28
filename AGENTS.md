@@ -49,7 +49,7 @@ git commit -m "fix: resolve login timeout (#1)"
 **Emergency bypass**: Add `[skip-issue]` to the commit message for hotfixes. Create a retroactive issue afterward.
 
 > **Status Tracking**: Use GitHub Projects V2 **Status** field (GitHub mode) or local JSON status (Local mode).
-> See [docs/SETUP.md](docs/SETUP.md#local-mode-no-github) for local mode details.
+> See [docs/GUIDE.md](docs/GUIDE.md#local-mode-no-github) for local mode details.
 
 ### AgentX CLI Utilities
 
@@ -506,4 +506,4 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 ---
 
-**See Also**: [Skills.md](Skills.md) for production code standards and workflow scenarios | [Quickstart](docs/QUICKSTART.md) for 5-minute onboarding | [Setup](docs/SETUP.md) for installation and troubleshooting
+**See Also**: [Skills.md](Skills.md) for production code standards and workflow scenarios | [Guide](docs/GUIDE.md) for quickstart, setup, and troubleshooting

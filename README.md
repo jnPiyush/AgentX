@@ -21,7 +21,6 @@
   <a href="#-features">Features</a> •
   <a href="#-agent-roles">Agents</a> •
   <a href="#-workflow">Workflow</a> •
-  <a href="CHANGELOG.md">Changelog</a> •
   <a href="AGENTS.md">Documentation</a>
 </p>
 
@@ -89,7 +88,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 Also includes all prior features: VS Code extension (v6.0-6.1), declarative workflows, smart ready queue, agent state tracking, dependency management, issue digests, dual-mode CLI.
 
-[View full changelog →](CHANGELOG.md)
+
 
 ---
 
@@ -238,7 +237,7 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh |
 | **Local Mode** | ✅ Yes | Solo/offline work | Filesystem-based issue tracking, zero prompts |
 | **GitHub Mode** | — | Team projects | Full features: Actions, PRs, Projects (asks for repo/project) |
 
-> 📖 **Local Mode Guide**: [docs/SETUP.md](docs/SETUP.md#local-mode-no-github)
+> 📖 **Local Mode Guide**: [docs/GUIDE.md](docs/GUIDE.md#local-mode-no-github)
 
 ### Install Examples
 
@@ -418,9 +417,8 @@ AgentX/
 |----------|-------------|
 | [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
 | [Skills.md](Skills.md) | 42 production skills across 8 categories |
-| [**Quickstart**](docs/QUICKSTART.md) | **Build your first feature in 5 minutes** |
+| [**Guide**](docs/GUIDE.md) | **Quickstart, setup, local mode, MCP server, troubleshooting** |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
-| [Setup Guide](docs/SETUP.md) | GitHub Projects V2, Local Mode, MCP Server, troubleshooting |
 
 ### Packs
 

@@ -308,7 +308,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 - **Accessibility**: VS Code native accessibility support
 - **Platform Support**: Windows (PowerShell 5.1+/7+), macOS (bash), Linux (bash)
 - **Install Time**: Zero-prompt local install in under 60 seconds
-- **Onboarding**: 5-minute quickstart guide (docs/QUICKSTART.md)
+- **Onboarding**: 5-minute quickstart guide (docs/GUIDE.md)
 
 #### Reliability
 - **Error Handling**: Critical pre-check with auto-install of missing dependencies
@@ -650,10 +650,8 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 
 - [AGENTS.md](../../AGENTS.md) - Workflow & orchestration rules
 - [Skills.md](../../Skills.md) - 42 production skills index (8 categories)
-- [SETUP.md](../SETUP.md) - Installation & configuration guide
-- [QUICKSTART.md](../QUICKSTART.md) - 5-minute onboarding
+- [GUIDE.md](../GUIDE.md) - Quickstart, installation & configuration guide
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) - Contributor guide
-- [CHANGELOG.md](../../CHANGELOG.md) - Full version history
 
 ---
 

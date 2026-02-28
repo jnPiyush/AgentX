@@ -351,7 +351,7 @@ Agent X automatically executes these CLI commands at key workflow points - **no 
 > # PowerShell:
 > .agentx/local-issue-manager.ps1 -Action <action> [options]
 > ```
-> See [Local Mode docs](../../docs/SETUP.md#local-mode-no-github) for details.
+> See [Local Mode docs](../../docs/GUIDE.md#local-mode-no-github) for details.
 
 ## Routing Logic
 

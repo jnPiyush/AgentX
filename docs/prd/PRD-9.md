@@ -520,7 +520,7 @@ The clarification protocol is **rule-based orchestration** (routing, round track
 - [ ] Escalation path verified (max rounds -> human notification)
 - [ ] No regression in existing `agentx` CLI commands
 - [ ] Extension builds and tests pass
-- [ ] Documentation updated (AGENTS.md, SETUP.md)
+- [ ] Documentation updated (AGENTS.md, GUIDE.md)
 
 ---
 

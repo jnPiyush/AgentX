@@ -356,7 +356,7 @@ Write-Host " AgentX v6.8.0 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White
-Write-Host " Docs: AGENTS.md | Skills.md | docs/SETUP.md" -ForegroundColor White
+Write-Host " Docs: AGENTS.md | Skills.md | docs/GUIDE.md" -ForegroundColor White
 if ($Local) {
  Write-Host " Issue: .\.agentx\local-issue-manager.ps1 -Action create -Title '[Story] Task' -Labels 'type:story'" -ForegroundColor DarkGray
 }

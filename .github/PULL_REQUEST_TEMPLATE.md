@@ -27,7 +27,6 @@
 ### Documentation
 - [ ] README updated if needed
 - [ ] API documentation updated
-- [ ] CHANGELOG.md updated
 - [ ] Comments explain "why" not "what"
 
 ### Deployment

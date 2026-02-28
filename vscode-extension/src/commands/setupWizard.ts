@@ -219,14 +219,14 @@ export async function runCriticalPreCheck(
   if (action === 'Open Setup Docs') {
     const docUri = vscode.Uri.joinPath(
       vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file('.'),
-      'docs', 'SETUP.md',
+      'docs', 'GUIDE.md',
     );
     try {
       const doc = await vscode.workspace.openTextDocument(docUri);
       await vscode.window.showTextDocument(doc);
     } catch {
       vscode.env.openExternal(
-        vscode.Uri.parse('https://github.com/jnPiyush/AgentX/blob/master/docs/SETUP.md'),
+        vscode.Uri.parse('https://github.com/jnPiyush/AgentX/blob/master/docs/GUIDE.md'),
       );
     }
     return { passed: false, report };
@@ -343,7 +343,7 @@ async function showEnvironmentReport(report: EnvironmentReport): Promise<void> {
   });
   items.push({
     label: '$(globe) Open Setup Documentation',
-    description: 'View SETUP.md for manual instructions',
+    description: 'View GUIDE.md for manual instructions',
   });
   items.push({
     label: '$(refresh) Re-check Environment',
@@ -365,14 +365,14 @@ async function showEnvironmentReport(report: EnvironmentReport): Promise<void> {
   } else if (pick.label.includes('Open Setup Documentation')) {
     const docUri = vscode.Uri.joinPath(
       vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file('.'),
-      'docs', 'SETUP.md',
+      'docs', 'GUIDE.md',
     );
     try {
       const doc = await vscode.workspace.openTextDocument(docUri);
       await vscode.window.showTextDocument(doc);
     } catch {
       vscode.env.openExternal(
-        vscode.Uri.parse('https://github.com/jnPiyush/AgentX/blob/master/docs/SETUP.md'),
+        vscode.Uri.parse('https://github.com/jnPiyush/AgentX/blob/master/docs/GUIDE.md'),
       );
     }
   } else if (pick.label.includes('Re-check')) {
