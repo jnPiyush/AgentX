@@ -221,3 +221,118 @@ This agent leverages the following skills under `testing/`:
 | Manual regression testing | Automate all repeatable test scenarios |
 | Skip performance testing | Benchmark every release against baselines |
 | Certify without security scan | Always include security testing in release process |
+
+---
+
+## Tools & Capabilities
+
+### Research Tools
+
+- `semantic_search` - Find test patterns, existing test suites, coverage gaps
+- `grep_search` - Search for test configurations, assertion patterns
+- `file_search` - Locate test files, fixtures, test data
+- `read_file` - Read specs, acceptance criteria, existing tests
+- `runSubagent` - Test framework comparisons, coverage analysis, load test research
+
+### Implementation Tools
+
+- `create_file` - Create test suites, test plans, certification docs
+- `replace_string_in_file` - Edit test code, update fixtures
+- `run_in_terminal` - Execute test suites, generate coverage reports, run load tests
+- `get_errors` - Check test compilation errors
+
+---
+
+## Handoff Protocol
+
+### Step 1: Capture Context
+
+Run context capture script:
+```bash
+# Bash
+./.github/scripts/capture-context.sh tester <ISSUE_ID>
+
+# PowerShell
+./.github/scripts/capture-context.ps1 -Role tester -IssueNumber <ISSUE_ID>
+```
+
+### Step 2: Update Status
+
+```json
+// Update Status via GitHub Projects V2
+// Status: In Progress -> In Review
+```
+
+### Step 3: Post Handoff Comment
+
+```json
+{
+  "tool": "add_issue_comment",
+  "args": {
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
+    "issue_number": <ISSUE_ID>,
+    "body": "## [PASS] Tester Complete\n\n**Deliverables:**\n- Test Plan: `docs/testing/TEST-PLAN-<ID>.md`\n- Test Report: `docs/testing/TEST-REPORT-<ID>.md`\n- Certification: `docs/testing/CERT-<ID>.md` (if applicable)\n- Test Code: `tests/**`, `e2e/**`\n\n**Coverage**: X% | **Pass Rate**: X/X\n\n**Next:** Reviewer for approval or Engineer for defect fixes"
+  }
+}
+```
+
+---
+
+## Enforcement (Cannot Bypass)
+
+### Before Starting Work
+
+1. [PASS] **Read issue and acceptance criteria**: Understand what is being tested
+2. [PASS] **Load relevant skills**: Reference testing skills (max 3-4)
+3. [PASS] **Verify test environment**: Ensure environment is available and configured
+
+### Before Updating Status to In Review
+
+1. [PASS] **Run validation script**:
+   ```bash
+   ./.github/scripts/validate-handoff.sh <issue_number> tester
+   ```
+
+2. [PASS] **Complete quality gate checklist**:
+   - [ ] Code coverage >= 80% overall
+   - [ ] Unit tests 100% pass rate
+   - [ ] Integration tests 100% pass rate
+   - [ ] E2E tests >= 95% pass rate
+   - [ ] Security scan completed (0 critical/high)
+   - [ ] Accessibility validated (WCAG 2.1 AA)
+   - [ ] Test report created with all metrics
+
+3. [PASS] **Capture context**:
+   ```bash
+   ./.github/scripts/capture-context.sh <issue_number> tester
+   ```
+
+4. [PASS] **Commit all changes**: Test code, test reports, certification docs
+
+### Recovery from Errors
+
+If quality gates fail:
+1. Document defects in test report with reproduction steps
+2. Hand off to Engineer for fixes (do NOT fix source code)
+3. Re-test after Engineer completes fixes
+
+---
+
+## Automatic CLI Hooks
+
+These commands run automatically at workflow boundaries - **no manual invocation needed**:
+
+| When | Command | Purpose |
+|------|---------|---------|
+| **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent tester -Issue <n>` | Check deps + mark agent working |
+| **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent tester -Issue <n>` | Mark agent done |
+
+The `hook start` command automatically validates dependencies and blocks if open blockers exist. If blocked, **stop and report** - do not begin testing.
+
+---
+
+## References
+
+- **Skills**: [Testing Skills](../../Skills.md) (e2e-testing, test-automation, integration-testing, performance-testing, security-testing, production-readiness)
+- **Workflow**: [AGENTS.md](../../AGENTS.md)

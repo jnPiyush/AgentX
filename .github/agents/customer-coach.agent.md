@@ -216,6 +216,94 @@ git commit -m "docs: add research brief for {topic}"
 
 ---
 
+## Tools & Capabilities
+
+### Research Tools
+
+- `semantic_search` - Find relevant codebase patterns, existing documentation
+- `grep_search` - Search for specific technologies, frameworks, configurations
+- `file_search` - Locate project documentation, design docs, specs
+- `read_file` - Read existing deliverables, PRDs, technical docs
+- `fetch_webpage` - Web research for current state-of-the-art, vendor comparisons
+- `runSubagent` - Deep-dive research, technology evaluations, multi-source synthesis
+
+### Delivery Tools
+
+- `create_file` - Create briefs, presentations, FAQ documents
+- `replace_string_in_file` - Update research materials
+- `run_in_terminal` - Execute data gathering scripts
+
+---
+
+## Handoff Protocol
+
+### Step 1: Capture Context
+
+Run context capture script:
+```bash
+# Bash
+./.github/scripts/capture-context.sh customer-coach <ISSUE_ID>
+
+# PowerShell
+./.github/scripts/capture-context.ps1 -Role customer-coach -IssueNumber <ISSUE_ID>
+```
+
+### Step 2: Deliver Materials
+
+Commit deliverables to the appropriate location:
+```bash
+git add docs/coaching/ docs/presentations/
+git commit -m "docs: add research brief for {topic} (#{issue-id})"
+```
+
+### Step 3: Post Completion Comment
+
+```json
+{
+  "tool": "add_issue_comment",
+  "args": {
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
+    "issue_number": <ISSUE_ID>,
+    "body": "## [PASS] Customer Coach Complete\n\n**Deliverables:**\n- Research Brief: `docs/coaching/BRIEF-{topic}.md`\n- Presentation: `docs/presentations/PRES-{topic}.md` (if requested)\n\n**Audience**: {level} | **Depth**: {type}"
+  }
+}
+```
+
+---
+
+## Enforcement (Cannot Bypass)
+
+### Before Starting Work
+
+1. [PASS] **Understand the engagement**: Topic, audience, depth, and deliverable type
+2. [PASS] **Research thoroughly**: Use web search and codebase analysis before generating
+
+### Before Delivering Materials
+
+1. [PASS] **Complete self-review checklist**:
+   - [ ] All claims are sourced or clearly marked as opinion
+   - [ ] No fabricated statistics or case studies
+   - [ ] Appropriate depth for the audience level
+   - [ ] Actionable recommendations (not just information)
+   - [ ] Anticipated questions have prepared responses
+
+2. [PASS] **Capture context**:
+   ```bash
+   ./.github/scripts/capture-context.sh <issue_number> customer-coach
+   ```
+
+3. [PASS] **Commit all deliverables**: Briefs, presentations, FAQ documents
+
+### Recovery from Errors
+
+If review finds issues:
+1. Research additional sources for unsupported claims
+2. Adjust depth/audience calibration as needed
+3. Re-deliver updated materials
+
+---
+
 ## Automatic CLI Hooks
 
 | When | Command | Purpose |

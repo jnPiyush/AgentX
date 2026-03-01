@@ -228,6 +228,56 @@ Use **Standard Reviewer** when:
 
 ---
 
+## Tools & Capabilities
+
+### Review Tools
+
+- `semantic_search` - Find code patterns, architecture conventions
+- `grep_search` - Search for anti-patterns, security issues, style violations
+- `file_search` - Locate changed files, test coverage reports
+- `read_file` - Read source code, tests, progress logs
+- `get_errors` - Check compilation errors after applying fixes
+- `get_changed_files` - Review uncommitted changes
+
+### Fix Tools
+
+- `replace_string_in_file` - Apply safe fixes (formatting, imports, naming)
+- `run_in_terminal` - Run test suites to verify fixes
+- `create_file` - Create review documents
+
+---
+
+## Enforcement (Cannot Bypass)
+
+### Before Starting Review
+
+1. [PASS] **Verify Status = In Review**: Check issue is ready for review
+2. [PASS] **Read progress log**: Check `docs/progress/ISSUE-{id}-log.md` for context
+3. [PASS] **Run CLI hook**: `.agentx/agentx.ps1 hook -Phase start -Agent reviewer -Issue <n>`
+
+### Before Applying Fixes
+
+1. [PASS] **Classify every fix**: Safe (auto-apply) vs Risky (needs human approval)
+2. [PASS] **Run tests after each safe fix**: Verify no regressions introduced
+3. [PASS] **Revert on test failure**: If tests fail after fix, revert and flag as risky
+
+### Before Completing Review
+
+1. [PASS] **Create review document**: `docs/reviews/REVIEW-{issue}.md` with fix summary
+2. [PASS] **All safe fixes verified**: Tests pass after all auto-applied changes
+3. [PASS] **Human approval required**: Never merge without explicit human approval
+4. [PASS] **Post summary comment**: List auto-fixes applied and suggestions pending
+
+### Recovery from Errors
+
+If tests fail after applying fixes:
+1. Revert the failing fix
+2. Reclassify as risky (needs human approval)
+3. Document in review doc with explanation
+4. Continue with remaining safe fixes
+
+---
+
 ## Handoff Protocol
 
 ### Approved Path (with auto-fixes applied)

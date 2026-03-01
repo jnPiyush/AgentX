@@ -179,100 +179,9 @@ Create design for pipeline before implementation:
 
 ### 5. Implement GitHub Actions Workflows
 
-Follow [Skill #26 GitHub Actions](../../Skills.md) standards:
+Follow [Skill #26 GitHub Actions](../../Skills.md) standards.
 
-**Workflow file structure** (`.github/workflows/{name}.yml`):
-
-```yaml
-name: CI/CD Pipeline
-
-on:
- push:
- branches: [ main, develop ]
- pull_request:
- branches: [ main ]
- workflow_dispatch: # Manual trigger
-
-env:
- DOTNET_VERSION: '8.0.x'
- NODE_VERSION: '20.x'
-
-jobs:
- build:
- runs-on: ubuntu-latest
-
- steps:
- - name: Checkout code
- uses: actions/checkout@v4
- with:
- fetch-depth: 0 # Full history for versioning
-
- - name: Setup .NET
- uses: actions/setup-dotnet@v4
- with:
- dotnet-version: ${{ env.DOTNET_VERSION }}
-
- - name: Restore dependencies
- run: dotnet restore
-
- - name: Build
- run: dotnet build --configuration Release --no-restore
-
- - name: Run tests
- run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
-
- - name: Upload coverage reports
- uses: codecov/codecov-action@v4
- with:
- token: ${{ secrets.CODECOV_TOKEN }}
- files: ./coverage.cobertura.xml
-
- - name: Publish artifacts
- uses: actions/upload-artifact@v4
- with:
- name: app-package
- path: ./publish/
-
- deploy-dev:
- needs: build
- if: github.ref == 'refs/heads/develop'
- runs-on: ubuntu-latest
- environment: development
-
- steps:
- - name: Download artifacts
- uses: actions/download-artifact@v4
- with:
- name: app-package
-
- - name: Deploy to Dev
- run: |
- # Deployment script
- echo "Deploying to development environment"
- env:
- DEPLOY_TOKEN: ${{ secrets.DEV_DEPLOY_TOKEN }}
-
- deploy-prod:
- needs: build
- if: github.ref == 'refs/heads/main'
- runs-on: ubuntu-latest
- environment:
- name: production
- url: https://app.example.com
-
- steps:
- - name: Download artifacts
- uses: actions/download-artifact@v4
- with:
- name: app-package
-
- - name: Deploy to Production
- run: |
- # Deployment script
- echo "Deploying to production environment"
- env:
- DEPLOY_TOKEN: ${{ secrets.PROD_DEPLOY_TOKEN }}
-```
+> See [devops-pipeline-template.yml](references/devops-pipeline-template.yml) for a complete CI/CD workflow template with build, test, and multi-environment deploy stages.
 
 **Key patterns** (see Skill #26 GitHub Actions, #27 CI/CD Pipelines):
 - **Matrix builds**: Test multiple versions/platforms
@@ -309,69 +218,7 @@ gh secret set API_KEY --env staging --body "staging_key"
 
 ### 7. Implement Release Pipelines
 
-**Release workflow** (`.github/workflows/release.yml`):
-
-```yaml
-name: Release Pipeline
-
-on:
- push:
- tags:
- - 'v*.*.*' # Trigger on version tags
-
-jobs:
- create-release:
- runs-on: ubuntu-latest
- permissions:
- contents: write
-
- steps:
- - name: Checkout
- uses: actions/checkout@v4
- with:
- fetch-depth: 0
-
- - name: Generate changelog
- id: changelog
- run: |
- # Generate changelog from commits
- git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s (%h)" > CHANGELOG.md
-
- - name: Create GitHub Release
- uses: softprops/action-gh-release@v1
- with:
- tag_name: ${{ github.ref_name }}
- name: Release ${{ github.ref_name }}
- body_path: CHANGELOG.md
- draft: false
- prerelease: false
- env:
- GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
- - name: Build release artifacts
- run: |
- dotnet publish -c Release -o ./release
-
- - name: Upload release artifacts
- uses: softprops/action-gh-release@v1
- with:
- files: ./release/**
- env:
- GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
- - name: Deploy to production
- run: |
- # Production deployment
- echo "Deploying release ${{ github.ref_name }}"
- env:
- DEPLOY_TOKEN: ${{ secrets.PROD_DEPLOY_TOKEN }}
-
- - name: Notify team
- if: success()
- run: |
- # Send notification (Slack, Teams, email)
- echo "Release ${{ github.ref_name }} deployed successfully"
-```
+> See [devops-release-template.yml](references/devops-release-template.yml) for a complete release workflow template with changelog generation, GitHub Release creation, and artifact upload.
 
 **Versioning strategies:**
 - **Semantic Versioning**: v1.2.3 (major.minor.patch)
@@ -427,116 +274,21 @@ act -s secrets.env
 
 ### 9. Create Deployment Documentation
 
-Create deployment runbook at `docs/deployment/DEPLOY-{issue-id}.md`:
+> See [devops-deployment-doc-template.md](references/devops-deployment-doc-template.md) for the full deployment runbook template with environments, rollback procedures, monitoring, and troubleshooting sections.
 
-```markdown
-# Deployment Guide: {Pipeline Name}
-
-**Issue**: #{issue-id}
-**Pipeline**: `.github/workflows/{name}.yml`
-
-## Overview
-
-This pipeline automates {description of what it does}.
-
-## Trigger Conditions
-
-- **Automatic**: Push to `main` or `develop`
-- **Manual**: Via GitHub Actions UI -> "Run workflow"
-- **Scheduled**: Daily at 2 AM UTC
-
-## Environments
-
-### Development
-- **URL**: https://dev.app.example.com
-- **Deployment**: Automatic on push to `develop`
-- **Secrets Required**: `DEV_DEPLOY_TOKEN`
-
-### Staging
-- **URL**: https://staging.app.example.com
-- **Deployment**: Automatic on push to `main`
-- **Secrets Required**: `STAGING_DEPLOY_TOKEN`
-
-### Production
-- **URL**: https://app.example.com
-- **Deployment**: Requires manual approval
-- **Secrets Required**: `PROD_DEPLOY_TOKEN`, `DATABASE_CONNECTION_STRING`
-
-## Manual Deployment
-
-1. Go to Actions -> {Workflow Name}
-2. Click "Run workflow"
-3. Select branch and environment
-4. Click "Run"
-5. Monitor progress in Actions tab
-
-## Rollback Procedure
-
-If deployment fails or issues arise:
-
-1. **Immediate**: Trigger previous successful deployment
-2. **Git revert**: Revert problematic commit
-3. **Manual rollback**: SSH to server and restore previous version
-
-```bash
-# Example rollback command
-gh workflow run deploy.yml -f version=v1.2.3 -f environment=production
-```
-
-## Monitoring
-
-- **Workflow runs**: https://github.com/{owner}/{repo}/actions
-- **Build logs**: Click on workflow run -> job -> step
-- **Deployment status**: Check environment status in Environments tab
-
-## Troubleshooting
-
-### Issue: Build fails with "dependency not found"
-**Solution**: Check if dependency cache is stale. Clear cache and re-run.
-
-### Issue: Deployment fails with "authentication error"
-**Solution**: Verify secrets are correctly configured in repository settings.
-
-### Issue: Tests timeout
-**Solution**: Increase timeout in workflow file or optimize slow tests.
-
-## Support
-
-- **Slack**: #devops-support
-- **On-call**: DevOps team rotation
-- **Documentation**: See [Skills.md](../../Skills.md) #26, #27
-```
+Create deployment runbook at `docs/deployment/DEPLOY-{issue-id}.md` using the reference template. Customize:
+- Trigger conditions (push, manual, schedule)
+- Environment URLs and secrets
+- Rollback procedure for the specific deployment
+- Troubleshooting for known failure modes
 
 ### 10. Implement Monitoring and Alerts
 
-**Workflow notifications:**
+Add notification steps to workflow files for deployment status:
+- **Success**: Notify deployments channel
+- **Failure**: Alert on-call channel with workflow run link
 
-```yaml
-# Add to workflow file
-notify:
- runs-on: ubuntu-latest
- if: always() # Run even if previous jobs fail
- needs: [build, deploy-prod]
-
- steps:
- - name: Notify on success
- if: success()
- uses: slackapi/slack-github-action@v1
- with:
- channel-id: 'deployments'
- slack-message: '[PASS] Deployment succeeded: ${{ github.ref_name }}'
- env:
- SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
- - name: Notify on failure
- if: failure()
- uses: slackapi/slack-github-action@v1
- with:
- channel-id: 'alerts'
- slack-message: '[FAIL] Deployment failed: ${{ github.ref_name }}\nWorkflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
- env:
- SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-```
+Use `slackapi/slack-github-action@v1` or equivalent for notifications. Store bot tokens in GitHub Secrets.
 
 ### 11. Completion Checklist
 
@@ -659,6 +411,12 @@ The `hook start` command automatically validates dependencies and blocks if open
 ---
 
 ## References
+
+- **Pipeline Template**: [devops-pipeline-template.yml](references/devops-pipeline-template.yml)
+- **Release Template**: [devops-release-template.yml](references/devops-release-template.yml)
+- **Deployment Doc Template**: [devops-deployment-doc-template.md](references/devops-deployment-doc-template.md)
+- **Skills**: [GitHub Actions](../skills/operations/github-actions-workflows/SKILL.md), [CI/CD Pipelines](../skills/operations/yaml-pipelines/SKILL.md)
+- **Workflow**: [AGENTS.md](../../AGENTS.md)
 
 ---
 

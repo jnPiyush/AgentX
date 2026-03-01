@@ -1,0 +1,65 @@
+# DevOps Agent Reference: Release Pipeline Template
+# Used by: devops.agent.md Step 7 (Implement Release Pipelines)
+#
+# This is a reference template for GitHub Actions release pipelines.
+# Customize versioning strategy and deployment targets per project.
+
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # Trigger on version tags
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Generate changelog from commits
+          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s (%h)" > CHANGELOG.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build release artifacts
+        run: |
+          dotnet publish -c Release -o ./release
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./release/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to production
+        run: |
+          # Production deployment
+          echo "Deploying release ${{ github.ref_name }}"
+        env:
+          DEPLOY_TOKEN: ${{ secrets.PROD_DEPLOY_TOKEN }}
+
+      - name: Notify team
+        if: success()
+        run: |
+          # Send notification (Slack, Teams, email)
+          echo "Release ${{ github.ref_name }} deployed successfully"

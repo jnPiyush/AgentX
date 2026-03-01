@@ -300,7 +300,27 @@ async function validatePRDIntent(issue_number) {
 }
 ```
 
-## Constraints & Boundaries
+## Tools & Capabilities
+
+### Routing Tools
+
+- `issue_read` - Read issue details, labels, status
+- `issue_write` - Update labels, assignees, status
+- `add_issue_comment` - Post status updates and routing notifications
+- `semantic_search` - Assess codebase complexity for routing decisions
+- `grep_search` - Search for file patterns to estimate scope
+- `runSubagent` - Delegate to specialized agents (PM, Architect, Engineer, etc.)
+
+### Orchestration Tools
+
+- `.agentx/agentx.ps1 ready` - Find unblocked work sorted by priority
+- `.agentx/agentx.ps1 deps <issue>` - Validate issue dependencies
+- `.agentx/agentx.ps1 state` - Track agent states
+- `.agentx/agentx.ps1 workflow <type>` - Look up workflow steps
+
+---
+
+## Enforcement (Cannot Bypass)
 
 **What I MUST do**:
 - [PASS] Enforce issue-first workflow (create issue BEFORE work)
@@ -333,7 +353,7 @@ Agent X automatically executes these CLI commands at key workflow points - **no 
 
 **How it works**: When Agent X receives a request or picks up backlog work, it runs `ready` to identify the highest-priority unblocked issue, validates dependencies with `deps`, updates agent state with `state`, and consults workflow templates with `workflow` to determine the correct agent pipeline. **All workflows include iterative refinement by default** -- every Engineer implementation step has `iterate = true` in its TOML, which auto-initializes loop state when the workflow runs with an issue number. The `needs:iteration` label is reserved for **extended** iteration via `iterative-loop.toml` (max 20 iterations, dedicated planning step) for quality-critical work.
 
-## Team & Handoffs
+## Handoff Protocol
 
 | Agent | Trigger | Deliverable | Status Transition |
 |-------|---------|-------------|-------------------|
@@ -566,7 +586,14 @@ The Engineer will resume after ${next_agent} completes.
 
 ---
 
+## References
+
+- **Workflow**: [AGENTS.md](../../AGENTS.md)
+- **Skills**: [Skills.md](../../Skills.md)
+- **Workflows**: [.agentx/workflows/](../../.agentx/workflows/) (TOML workflow templates)
+
+---
+
 **Version**: 4.0 (Adaptive) 
 **Last Updated**: February 7, 2026 
-**Replaces**: Agent X (YOLO) + Agent X (Autonomous) - merged into single adaptive agent 
-**See Also**: [AGENTS.md](../../AGENTS.md) - [Skills.md](../../Skills.md)
+**Replaces**: Agent X (YOLO) + Agent X (Autonomous) - merged into single adaptive agent

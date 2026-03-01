@@ -1,0 +1,94 @@
+# DevOps Agent Reference: CI/CD Pipeline Template
+# Used by: devops.agent.md Step 5 (Implement GitHub Actions Workflows)
+#
+# This is a reference template for GitHub Actions CI/CD pipelines.
+# Customize triggers, runtimes, and deployment targets per project.
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # Manual trigger
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '20.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for versioning
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.cobertura.xml
+
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-package
+          path: ./publish/
+
+  deploy-dev:
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: development
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: app-package
+
+      - name: Deploy to Dev
+        run: |
+          # Deployment script
+          echo "Deploying to development environment"
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEV_DEPLOY_TOKEN }}
+
+  deploy-prod:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://app.example.com
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: app-package
+
+      - name: Deploy to Production
+        run: |
+          # Deployment script
+          echo "Deploying to production environment"
+        env:
+          DEPLOY_TOKEN: ${{ secrets.PROD_DEPLOY_TOKEN }}

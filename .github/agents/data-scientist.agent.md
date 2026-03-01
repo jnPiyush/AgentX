@@ -195,3 +195,124 @@ This agent leverages the following skills under `ai-systems/`:
 | Skip drift monitoring | Set up proactive drift detection from day one |
 | Collect feedback without using it | Build feedback-to-training pipeline |
 | Over-engineer for small datasets | Start with prompting; fine-tune only when needed |
+
+---
+
+## Tools & Capabilities
+
+### Research Tools
+
+- `semantic_search` - Find ML patterns, existing pipelines, evaluation frameworks
+- `grep_search` - Search for model configs, training scripts, metrics
+- `file_search` - Locate notebooks, data configs, model cards
+- `read_file` - Read PRD, specs, existing ML code
+- `runSubagent` - Model comparisons, framework evaluations, literature review
+
+### Implementation Tools
+
+- `create_file` - Create pipelines, evaluation harnesses, model cards
+- `replace_string_in_file` - Edit ML code, configs, prompts
+- `run_in_terminal` - Execute training, evaluation, data validation scripts
+
+### AI Toolkit Tools
+
+- `aitk_get_ai_model_guidance` - Model selection and configuration
+- `aitk_get_agent_model_code_sample` - Agent code patterns
+- `aitk_get_tracing_code_gen_best_practices` - Tracing and observability
+- `aitk_get_evaluation_code_gen_best_practices` - Evaluation pipeline patterns
+- `aitk_evaluation_planner` - Evaluation strategy planning
+- `aitk_list_foundry_models` - Available models in Foundry
+
+---
+
+## Handoff Protocol
+
+### Step 1: Capture Context
+
+Run context capture script:
+```bash
+# Bash
+./.github/scripts/capture-context.sh data-scientist <ISSUE_ID>
+
+# PowerShell
+./.github/scripts/capture-context.ps1 -Role data-scientist -IssueNumber <ISSUE_ID>
+```
+
+### Step 2: Update Status
+
+```json
+// Update Status via GitHub Projects V2
+// Status: In Progress -> In Review
+```
+
+### Step 3: Post Handoff Comment
+
+```json
+{
+  "tool": "add_issue_comment",
+  "args": {
+    "owner": "<OWNER>",
+    "repo": "<REPO>",
+    "issue_number": <ISSUE_ID>,
+    "body": "## [PASS] Data Scientist Complete\n\n**Deliverables:**\n- Experiment Log: `docs/data-science/EXP-<ID>.md`\n- Model Card: `docs/data-science/MODEL-CARD-<name>.md`\n- Evaluation: `docs/data-science/EVAL-<ID>.md`\n- Pipeline Code: `src/pipelines/`\n\n**Next:** Engineer for integration or Reviewer for review"
+  }
+}
+```
+
+---
+
+## Enforcement (Cannot Bypass)
+
+### Before Starting Work
+
+1. [PASS] **Read issue and specs**: Understand ML requirements and success criteria
+2. [PASS] **Load relevant skills**: Reference ai-systems skills (max 3-4)
+3. [PASS] **Check data availability**: Verify datasets and access before starting
+
+### Before Updating Status to In Review
+
+1. [PASS] **Run validation script**:
+   ```bash
+   ./.github/scripts/validate-handoff.sh <issue_number> data-scientist
+   ```
+
+2. [PASS] **Complete evaluation checklist**:
+   - [ ] Baseline established before any optimization
+   - [ ] All metrics documented (accuracy, latency, cost)
+   - [ ] No fabricated results or benchmarks
+   - [ ] Reproducible experiments (seeds, versioned data)
+   - [ ] Model card created for any new model
+
+3. [PASS] **Capture context**:
+   ```bash
+   ./.github/scripts/capture-context.sh <issue_number> data-scientist
+   ```
+
+4. [PASS] **Commit all changes**: Pipeline code, model cards, evaluation results
+
+### Recovery from Errors
+
+If validation fails:
+1. Fix the identified issue (missing evaluation, incomplete model card)
+2. Re-run validation script
+3. Try handoff again
+
+---
+
+## Automatic CLI Hooks
+
+These commands run automatically at workflow boundaries - **no manual invocation needed**:
+
+| When | Command | Purpose |
+|------|---------|---------|
+| **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent data-scientist -Issue <n>` | Check deps + mark agent working |
+| **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent data-scientist -Issue <n>` | Mark agent done |
+
+The `hook start` command automatically validates dependencies and blocks if open blockers exist. If blocked, **stop and report** - do not begin ML work.
+
+---
+
+## References
+
+- **Skills**: [AI Systems Skills](../../Skills.md) (prompt-engineering, model-drift, data-drift, fine-tuning, ai-evaluation, rag-pipelines, context-management, feedback-loops)
+- **Workflow**: [AGENTS.md](../../AGENTS.md)
