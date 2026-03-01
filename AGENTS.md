@@ -25,9 +25,14 @@ If a skill, spec, or doc exists in the workspace, read it first; generate second
 
 ### Issue-First Flow
 
-Every piece of work -- bug fix, feature, docs update -- **MUST** start with an issue.
+Every piece of work -- bug fix, feature, docs update -- **SHOULD** start with an issue.
 
 **Why issue-first?** Agents rely on issues for routing, status tracking, and handoffs. The ready queue sorts by priority. Commits reference issues for traceability. Without an issue, nothing can be routed or reviewed.
+
+**Issue enforcement by mode:**
+- **GitHub Mode**: Issue references in commits are **required** by default (teams need traceability)
+- **Local Mode**: Issue references are **optional** by default (solo developers can commit freely)
+- To toggle enforcement: `.agentx/agentx.ps1 config set enforceIssues true` (or `false`)
 
 **GitHub Mode:**
 ```bash
@@ -40,13 +45,20 @@ gh issue close 42 --reason completed
 
 **Local Mode:**
 ```powershell
+# Issues are optional in local mode - you can commit without issue references
+git commit -m "feat: add user login"
+
+# Or use full issue workflow if preferred:
 .\.agentx\local-issue-manager.ps1 -Action create -Title "[Bug] Fix timeout" -Labels "type:bug"  # Creates #1
 .\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
 git commit -m "fix: resolve login timeout (#1)"
 .\.agentx\local-issue-manager.ps1 -Action close -IssueNumber 1
+
+# Enable issue enforcement in local mode:
+.\.agentx\agentx.ps1 config set enforceIssues true
 ```
 
-**Emergency bypass**: Add `[skip-issue]` to the commit message for hotfixes. Create a retroactive issue afterward.
+**Emergency bypass (GitHub mode)**: Add `[skip-issue]` to the commit message for hotfixes. Create a retroactive issue afterward.
 
 > **Status Tracking**: Use GitHub Projects V2 **Status** field (GitHub mode) or local JSON status (Local mode).
 > See [docs/GUIDE.md](docs/GUIDE.md#local-mode-no-github) for local mode details.
@@ -64,6 +76,8 @@ The AgentX CLI provides lightweight orchestration commands that work in both Loc
 .\.agentx\agentx.ps1 digest # Generate weekly digest
 .\.agentx\agentx.ps1 workflow -Type feature # Show workflow steps
 .\.agentx\agentx.ps1 hook -Phase start -Agent engineer -Issue 42 # Lifecycle hook
+.\.agentx\agentx.ps1 config show # View current configuration
+.\.agentx\agentx.ps1 config set enforceIssues true # Toggle issue enforcement
 ```
 
 ```bash

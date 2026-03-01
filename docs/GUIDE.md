@@ -354,9 +354,20 @@ New-Item -ItemType Directory -Path ".agentx/issues" -Force
 
 @{
     mode = "local"
+    enforceIssues = $false
     nextIssueNumber = 1
     created = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content ".agentx/config.json"
+```
+
+**Configure issue enforcement:**
+```powershell
+# Local mode: issues are optional by default
+# Enable if you want commit-msg hook to require issue references:
+.\.agentx\agentx.ps1 config set enforceIssues true
+
+# Disable again:
+.\.agentx\agentx.ps1 config set enforceIssues false
 ```
 
 ### Issue Management
@@ -468,9 +479,17 @@ The CLI works in both Local and GitHub modes (auto-detects from `config.json`):
 
 ### Ideal Issue-First Workflow (Local Mode)
 
-The same issue-first principle applies in Local Mode -- every piece of work starts with an issue, tracked via JSON files instead of GitHub.
+In Local Mode, issue-first workflow is **optional by default** -- you can commit freely without issue references. Issue enforcement can be turned on if preferred via `enforceIssues` config.
 
 ```powershell
+# Simple mode: just commit without issue references
+git commit -m "feat: add user login"
+git commit -m "fix: resolve timeout"
+
+# Enable issue enforcement if you want it:
+.\.agentx\agentx.ps1 config set enforceIssues true
+
+# Full issue workflow (optional but recommended for complex work):
 # Step 1: Create issue BEFORE starting work
 .\.agentx\local-issue-manager.ps1 -Action create `
     -Title "[Bug] Fix login timeout" `
@@ -759,7 +778,8 @@ go install github.com/github/github-mcp-server@latest
 
 | Problem | Solution |
 |---------|----------|
-| "Issue reference required" error | Include issue number in commit: `git commit -m "feat: add login (#123)"` or bypass: `[skip-issue]` |
+| "Issue reference required" error | In local mode: this is now off by default. In GitHub mode: include issue number `git commit -m "feat: add login (#123)"` or bypass with `[skip-issue]` |
+| Issue enforcement in local mode | Toggle with `.agentx/agentx.ps1 config set enforceIssues true` (or `false`) |
 | Status not updating | Verify GitHub Projects V2 (not V1), check Status field has correct values |
 | Agent not triggering | Check Actions is enabled, verify workflow syntax, check Actions tab for failures |
 

@@ -48,6 +48,8 @@ When AGENTS.md applies (see above), follow the issue-first workflow:
 2. Update status: `Backlog -> In Progress -> In Review -> Done`
 3. Reference issue in commits: `type: description (#ID)`
 
+> **Note**: In Local Mode, issue enforcement is **optional** by default. Toggle with `agentx config set enforceIssues true`.
+
 ---
 
 ## Instruction Files (Auto-Loaded)

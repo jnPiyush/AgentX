@@ -217,13 +217,13 @@ $configFile = ".agentx/config.json"
 if (-not (Test-Path $configFile) -or $Force) {
  if ($Local) {
  New-Item -ItemType Directory -Path ".agentx/issues" -Force | Out-Null
- @{ mode="local"; nextIssueNumber=1; created=(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ") } |
+ @{ mode="local"; enforceIssues=$false; nextIssueNumber=1; created=(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ") } |
  ConvertTo-Json | Set-Content $configFile
- Write-OK "Local Mode configured"
+ Write-OK "Local Mode configured (issue enforcement off by default)"
  } else {
- @{ mode="github"; repo=$null; project=$null; created=(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ") } |
+ @{ mode="github"; enforceIssues=$true; repo=$null; project=$null; created=(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ") } |
  ConvertTo-Json | Set-Content $configFile
- Write-OK "GitHub Mode configured"
+ Write-OK "GitHub Mode configured (issue enforcement on)"
  }
 }
 

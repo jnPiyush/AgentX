@@ -823,6 +823,70 @@ function Invoke-HooksCmd {
 }
 
 # ---------------------------------------------------------------------------
+# CONFIG: View and update configuration
+# ---------------------------------------------------------------------------
+
+function Invoke-ConfigCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'show' }
+
+    switch ($action) {
+        'show' {
+            $cfg = Get-AgentXConfig
+            if ($Script:JSON) {
+                $cfg | ConvertTo-Json | Write-Host
+            } else {
+                Write-Host "$($C.c)  AgentX Configuration$($C.n)"
+                Write-Host "$($C.d)  -----------------------------------$($C.n)"
+                foreach ($key in ($cfg.PSObject.Properties ?? $cfg.Keys)) {
+                    $k = if ($key -is [string]) { $key } else { $key.Name }
+                    $v = $cfg.$k
+                    Write-Host "  $($C.w)$k$($C.n) = $v"
+                }
+            }
+        }
+        'set' {
+            if ($Script:SubArgs.Count -lt 3) {
+                Write-Host "Usage: agentx config set <key> <value>"
+                Write-Host "Example: agentx config set enforceIssues true"
+                return
+            }
+            $key = $Script:SubArgs[1]
+            $rawValue = $Script:SubArgs[2]
+            # Parse boolean and numeric values
+            $value = switch -Regex ($rawValue) {
+                '^true$'  { $true }
+                '^false$' { $false }
+                '^\d+$'   { [int]$rawValue }
+                default   { $rawValue }
+            }
+            Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
+                $cfg = Get-AgentXConfig
+                $cfg.$key = $value
+                Write-JsonFile $Script:CONFIG_FILE $cfg
+            }
+            Write-Host "$($C.g)  Set $key = $value$($C.n)"
+        }
+        'get' {
+            if ($Script:SubArgs.Count -lt 2) {
+                Write-Host "Usage: agentx config get <key>"
+                return
+            }
+            $key = $Script:SubArgs[1]
+            $cfg = Get-AgentXConfig
+            $val = $cfg.$key
+            if ($null -ne $val) {
+                Write-Host $val
+            } else {
+                Write-Host "$($C.y)  Key '$key' not set$($C.n)"
+            }
+        }
+        default {
+            Write-Host "Usage: agentx config [show|get|set]"
+        }
+    }
+}
+
+# ---------------------------------------------------------------------------
 # VERSION
 # ---------------------------------------------------------------------------
 
@@ -1114,9 +1178,16 @@ $($C.w)  Commands:$($C.n)
   validate <issue> <role>          Pre-handoff validation
   hook <start|finish> <agent> [#]  Agent lifecycle hooks
   hooks install                    Install git hooks
+  config [show|get|set]            View/update configuration
   issue <create|list|get|update|close|comment>  Issue management
   version                          Show installed version
   help                             Show this help
+
+$($C.w)  Config Commands:$($C.n)
+  config show                        Show all config values
+  config get <key>                   Get a config value
+  config set <key> <value>           Set a config value
+  config set enforceIssues true      Enable issue enforcement in local mode
 
 $($C.w)  Issue Commands:$($C.n)
   issue create -t "Title" -l "type:story"
@@ -1146,6 +1217,7 @@ switch ($Script:Command) {
     'validate'  { Invoke-ValidateCmd }
     'hook'     { Invoke-AgentHookCmd }
     'hooks'    { Invoke-HooksCmd }
+    'config'   { Invoke-ConfigCmd }
     'issue'    { Invoke-IssueCmd }
     'clarify'  { Invoke-ClarifyCmd }
     'version'  { Invoke-VersionCmd }

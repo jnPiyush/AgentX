@@ -67,7 +67,10 @@ Load context on-demand, not upfront. Match the task to the right documents:
 
 ## Issue-First Workflow
 
-Every piece of work MUST start with an issue. No exceptions (except `[skip-issue]` hotfixes).
+Every piece of work SHOULD start with an issue. Issue enforcement depends on mode:
+- **GitHub Mode**: Issue references in commits are **required** (teams need traceability)
+- **Local Mode**: Issue references are **optional** by default (solo developers can commit freely)
+- Toggle: `.agentx/agentx.ps1 config set enforceIssues true` (or `false`)
 
 ```bash
 # GitHub Mode
@@ -78,7 +81,10 @@ gh issue close 42 --reason completed
 ```
 
 ```bash
-# Local Mode
+# Local Mode (issues optional - commit freely)
+git commit -m "feat: add user login"
+
+# Or use full issue workflow if preferred:
 ./.agentx/local-issue-manager.ps1 -Action create -Title "[Bug] Fix timeout" -Labels "type:bug"
 git commit -m "fix: resolve login timeout (#1)"
 ./.agentx/local-issue-manager.ps1 -Action close -IssueNumber 1

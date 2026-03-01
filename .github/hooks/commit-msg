@@ -18,6 +18,36 @@ echo -e "${BLUE}AgentX Workflow Validation${NC}"
 echo -e "${BLUE}-------------------------------------------------------${NC}"
 echo ""
 
+# ===================================================================
+# Mode detection: skip issue enforcement in local mode (opt-in via enforceIssues)
+# ===================================================================
+CONFIG_FILE=".agentx/config.json"
+AGENTX_MODE="local"
+ENFORCE_ISSUES="false"
+
+if [ -f "$CONFIG_FILE" ]; then
+ # Read mode from config (default: local)
+ DETECTED_MODE=$(grep -o '"mode"\s*:\s*"[^"]*"' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*"mode"\s*:\s*"//' | sed 's/"//')
+ if [ -n "$DETECTED_MODE" ]; then
+  AGENTX_MODE="$DETECTED_MODE"
+ fi
+ # Read enforceIssues flag (default: false)
+ DETECTED_ENFORCE=$(grep -o '"enforceIssues"\s*:\s*[a-z]*' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*:\s*//')
+ if [ "$DETECTED_ENFORCE" = "true" ]; then
+  ENFORCE_ISSUES="true"
+ fi
+fi
+
+# In local mode, skip issue enforcement unless explicitly opted in
+if [ "$AGENTX_MODE" = "local" ] && [ "$ENFORCE_ISSUES" != "true" ]; then
+ # Still validate commit format (warning only)
+ if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|test|refactor|perf|chore|style|build|ci):'; then
+  echo -e "${YELLOW}[WARN] Commit format should be: type: description${NC}"
+ fi
+ echo -e "${GREEN}[PASS] Local mode - issue enforcement skipped${NC}"
+ exit 0
+fi
+
 # Skip for merge commits, reverts, and initial commits
 if echo "$COMMIT_MSG" | grep -qE '^(Merge|Revert|Initial commit)'; then
  echo -e "${GREEN}[PASS] Merge/Revert commit - skipping validation${NC}"
