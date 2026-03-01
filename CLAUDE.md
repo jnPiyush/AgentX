@@ -94,6 +94,7 @@ git commit -m "fix: resolve login timeout (#1)"
 | Research? | `type:spike` | Architect |
 | Docs only? | `type:docs` | Engineer |
 | Pipeline/deploy? | `type:devops` | DevOps Engineer |
+| Testing/certification? | `type:testing` | Tester |
 | Large/vague? | `type:epic` | Product Manager |
 | Single capability? | `type:feature` | Architect |
 | Otherwise | `type:story` | Engineer |
@@ -155,6 +156,7 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 | Auto-Fix Reviewer | [.github/agents/reviewer-auto.agent.md](.github/agents/reviewer-auto.agent.md) |
 | DevOps Engineer | [.github/agents/devops.agent.md](.github/agents/devops.agent.md) |
 | Data Scientist | [.github/agents/data-scientist.agent.md](.github/agents/data-scientist.agent.md) |
+| Tester | [.github/agents/tester.agent.md](.github/agents/tester.agent.md) |
 | Customer Coach | [.github/agents/customer-coach.agent.md](.github/agents/customer-coach.agent.md) |
 
 ---

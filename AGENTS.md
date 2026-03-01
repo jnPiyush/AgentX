@@ -131,6 +131,8 @@ Bug + Backlog -> Engineer (skip PM/Architect)
 Spike + Backlog -> Architect
 type:devops + Backlog -> DevOps Engineer (skip PM/Architect for infrastructure work)
 type:data-science + Backlog -> Data Scientist (skip PM/Architect for ML/AI work)
+type:testing + Backlog -> Tester (skip PM/Architect for testing/certification work)
+In Review + needs:testing -> Tester (pre-release certification)
 ```
 
 **Autonomous Mode**: For simple tasks (bugs, docs, stories 3 files), Agent X can automatically route to Engineer, skipping manual coordination. See [Agent X](.github/agents/agent-x.agent.md) (mode: adaptive).
@@ -170,6 +172,7 @@ type:data-science + Backlog -> Data Scientist (skip PM/Architect for ML/AI work)
 | `type:docs` | Engineer | Documentation |
 | `type:devops` | DevOps Engineer | CI/CD Pipelines + Deployment Docs |
 | `type:data-science` | Data Scientist | ML Pipelines + Evals + Model Cards |
+| `type:testing` | Tester | Test Suites + Certification Reports |
 
 **Decision Tree:**
 - Broken? -> `type:bug`
@@ -177,6 +180,7 @@ type:data-science + Backlog -> Data Scientist (skip PM/Architect for ML/AI work)
 - Docs only? -> `type:docs`
 - Pipeline/deployment/release? -> `type:devops`
 - ML/AI model, drift, eval, RAG, fine-tuning? -> `type:data-science`
+- Testing, certification, quality gates, pre-release? -> `type:testing`
 - Large/vague? -> `type:epic`
 - Single capability? -> `type:feature`
 - Else -> `type:story`
@@ -331,6 +335,25 @@ All AgentX core agents are currently **stable** (production-ready).
  - Can modify: `src/**` (ML/AI code), `tests/**`, `docs/data-science/**`, `prompts/**`, `notebooks/**`
  - Cannot modify: `docs/prd/**`, `docs/adr/**`, `docs/ux/**`, `.github/workflows/**`
 
+### Tester
+- **Maturity**: Stable
+- **Trigger**: `type:testing` label, Status = `In Review` + `needs:testing`, or pre-release certification
+- **Output**: Test suites at `tests/**`, `e2e/**`; certification reports at `docs/testing/`
+- **Status**: Move to `In Progress` when starting -> `In Review` when test suite complete
+- **Tools**: All tools available (run_in_terminal, read_file, create_file, get_errors, etc.)
+- **Validation**: `.github/scripts/validate-handoff.sh {issue} tester`
+- **Constraints**:
+ - [PASS] CAN write and execute unit, integration, e2e, performance, and security tests
+ - [PASS] CAN create production readiness certification reports
+ - [PASS] CAN configure test automation pipelines and CI gates
+ - [PASS] MUST achieve >= 80% code coverage, 100% unit/integration pass, >= 95% e2e pass
+ - [FAIL] CANNOT modify application source code (report defects to Engineer)
+ - [FAIL] CANNOT approve releases (provides certification report for go/no-go decision)
+ - [FAIL] CANNOT skip security testing or accessibility validation
+- **Boundaries**:
+ - Can modify: `tests/**`, `e2e/**`, `docs/testing/**`, `scripts/test/**`, `.github/workflows/*test*`
+ - Cannot modify: `src/**`, `docs/prd/**`, `docs/adr/**`, `docs/ux/**`
+
 ### Customer Coach
 - **Maturity**: Stable
 - **Trigger**: Consulting research requests, topic preparation, client engagement prep
@@ -369,6 +392,7 @@ Agents query the backlog for the next priority item instead of receiving explici
 | **Reviewer** | Status=`In Review`, sorted by priority |
 | **DevOps** | `type:devops` + Status=`Ready`, sorted by priority |
 | **Data Scientist** | `type:data-science` + Status=`Ready`, sorted by priority |
+| **Tester** | `type:testing` + Status=`Ready` or `In Review` + `needs:testing`, sorted by priority |
 
 **Priority Order**: `priority:p0` > `priority:p1` > `priority:p2` > `priority:p3` > (no label)
 
@@ -537,11 +561,11 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 ### Labels
 
-**Type Labels**: `type:epic`, `type:feature`, `type:story`, `type:bug`, `type:spike`, `type:docs`, `type:data-science`
+**Type Labels**: `type:epic`, `type:feature`, `type:story`, `type:bug`, `type:spike`, `type:docs`, `type:data-science`, `type:testing`
 
 **Priority Labels**: `priority:p0`, `priority:p1`, `priority:p2`, `priority:p3`
 
-**Workflow Labels**: `needs:ux`, `needs:help`, `needs:changes`, `needs:iteration` (extended loop, max 20)
+**Workflow Labels**: `needs:ux`, `needs:help`, `needs:changes`, `needs:iteration` (extended loop, max 20), `needs:testing` (pre-release certification)
 
 ---
 

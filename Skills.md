@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 50 skills across 8 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 56 skills across 9 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 50 skills across 8 categorie
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 50 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 56 skills. Use Quick Reference below.
 
 ---
 
@@ -40,6 +40,11 @@ description: 'Compressed skill index for AI agents. 50 skills across 8 categorie
 | **Containerization** | [Containerization](.github/skills/infrastructure/containerization/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Release Mgmt](.github/skills/operations/release-management/SKILL.md) |
 | **Data Analysis** | [Data Analysis](.github/skills/data/data-analysis/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **UX/UI Design** | [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md), [Frontend/UI](.github/skills/design/frontend-ui/SKILL.md), [React](.github/skills/languages/react/SKILL.md) |
+| **E2E Testing** | [E2E Testing](.github/skills/testing/e2e-testing/SKILL.md), [Test Automation](.github/skills/testing/test-automation/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
+| **Integration Testing** | [Integration Testing](.github/skills/testing/integration-testing/SKILL.md), [API Design](.github/skills/architecture/api-design/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
+| **Performance Testing** | [Performance Testing](.github/skills/testing/performance-testing/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Test Automation](.github/skills/testing/test-automation/SKILL.md) |
+| **Security Testing** | [Security Testing](.github/skills/testing/security-testing/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
+| **Production Release** | [Production Readiness](.github/skills/testing/production-readiness/SKILL.md), [Security Testing](.github/skills/testing/security-testing/SKILL.md), [Performance Testing](.github/skills/testing/performance-testing/SKILL.md), [Release Mgmt](.github/skills/operations/release-management/SKILL.md) |
 
 ---
 
@@ -99,6 +104,12 @@ ai|context-mgmt|.github/skills/ai-systems/context-management/SKILL.md|compaction
 ai|feedback-loops|.github/skills/ai-systems/feedback-loops/SKILL.md|RLHF,RLAIF,user-feedback,preference-data,continuous-improvement
 design|ux-ui|.github/skills/design/ux-ui-design/SKILL.md|wireframes,user-flows,HTML/CSS,a11y
 design|frontend-ui|.github/skills/design/frontend-ui/SKILL.md|HTML5,CSS3,Tailwind,responsive,BEM
+test|e2e-testing|.github/skills/testing/e2e-testing/SKILL.md|Playwright,Cypress,POM,cross-browser,visual-regression,a11y
+test|test-automation|.github/skills/testing/test-automation/SKILL.md|CI-integration,parallel-execution,sharding,test-data,reporting
+test|integration-testing|.github/skills/testing/integration-testing/SKILL.md|API-testing,contract-testing,Pact,Testcontainers,mocking
+test|performance-testing|.github/skills/testing/performance-testing/SKILL.md|k6,Locust,load-testing,stress-testing,latency,capacity
+test|security-testing|.github/skills/testing/security-testing/SKILL.md|SAST,DAST,OWASP,Semgrep,ZAP,dependency-scanning,secrets
+test|production-readiness|.github/skills/testing/production-readiness/SKILL.md|quality-gates,certification,chaos-testing,rollback,go-no-go
 ```
 
 ---
@@ -175,11 +186,15 @@ Drift Monitoring|model-drift->data-drift->evaluation->logging->testing->code-rev
 AI Feedback System|feedback-loops->evaluation->fine-tuning->testing->code-review
 New Skill|skill-creator->documentation->testing->code-review
 Security Audit|security->configuration->logging->testing->code-review
+E2E Test Suite|e2e-testing->test-automation->integration-testing->code-review
+Performance Validation|performance-testing->test-automation->testing->code-review
+Security Certification|security-testing->production-readiness->testing->code-review
+Production Release|production-readiness->security-testing->performance-testing->e2e-testing
 ```
 
 **Checkpoint**: For chains with 5+ skills, commit + test at each skill boundary.
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 50 skills (arch:5, dev:10, lang:8, ops:5, infra:4, data:5, ai:11, design:2)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 56 skills (arch:5, dev:10, lang:8, ops:5, infra:4, data:5, ai:11, design:2, test:6)
 
