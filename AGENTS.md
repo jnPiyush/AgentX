@@ -130,6 +130,7 @@ In Review -> Reviewer
 Bug + Backlog -> Engineer (skip PM/Architect)
 Spike + Backlog -> Architect
 type:devops + Backlog -> DevOps Engineer (skip PM/Architect for infrastructure work)
+type:data-science + Backlog -> Data Scientist (skip PM/Architect for ML/AI work)
 ```
 
 **Autonomous Mode**: For simple tasks (bugs, docs, stories 3 files), Agent X can automatically route to Engineer, skipping manual coordination. See [Agent X](.github/agents/agent-x.agent.md) (mode: adaptive).
@@ -168,12 +169,14 @@ type:devops + Backlog -> DevOps Engineer (skip PM/Architect for infrastructure w
 | `type:spike` | Architect | Research doc |
 | `type:docs` | Engineer | Documentation |
 | `type:devops` | DevOps Engineer | CI/CD Pipelines + Deployment Docs |
+| `type:data-science` | Data Scientist | ML Pipelines + Evals + Model Cards |
 
 **Decision Tree:**
 - Broken? -> `type:bug`
 - Research? -> `type:spike`
 - Docs only? -> `type:docs`
 - Pipeline/deployment/release? -> `type:devops`
+- ML/AI model, drift, eval, RAG, fine-tuning? -> `type:data-science`
 - Large/vague? -> `type:epic`
 - Single capability? -> `type:feature`
 - Else -> `type:story`
@@ -311,6 +314,23 @@ All AgentX core agents are currently **stable** (production-ready).
 - **Autonomous Triggers**: `type:bug`, `type:docs`, simple `type:story` (3 files, clear acceptance criteria)
 - **Full Workflow Triggers**: `type:epic`, `type:feature`, `needs:ux`, complex stories (>3 files)
 
+### Data Scientist
+- **Maturity**: Stable
+- **Trigger**: `type:data-science` label, or ML/AI optimization tasks
+- **Output**: ML pipelines, evaluation reports, model cards at `docs/data-science/`
+- **Status**: Move to `In Progress` when starting -> `In Review` when implementation complete
+- **Tools**: All tools available (execute, read, edit, search, web, AI Toolkit, etc.)
+- **Validation**: `.github/scripts/validate-handoff.sh {issue} data-scientist`
+- **Constraints**:
+ - [PASS] CAN design ML pipelines, fine-tune models, build RAG systems, create evaluations
+ - [PASS] CAN implement drift monitoring, feedback loops, context management
+ - [FAIL] CANNOT deploy model changes without evaluation gate approval
+ - [FAIL] CANNOT fabricate metrics, benchmarks, or evaluation results
+ - [FAIL] CANNOT modify PRD/ADR/UX docs or CI/CD pipelines
+- **Boundaries**:
+ - Can modify: `src/**` (ML/AI code), `tests/**`, `docs/data-science/**`, `prompts/**`, `notebooks/**`
+ - Cannot modify: `docs/prd/**`, `docs/adr/**`, `docs/ux/**`, `.github/workflows/**`
+
 ### Customer Coach
 - **Maturity**: Stable
 - **Trigger**: Consulting research requests, topic preparation, client engagement prep
@@ -348,6 +368,7 @@ Agents query the backlog for the next priority item instead of receiving explici
 | **Engineer** | Status=`Ready` + ADR/Spec complete, sorted by priority |
 | **Reviewer** | Status=`In Review`, sorted by priority |
 | **DevOps** | `type:devops` + Status=`Ready`, sorted by priority |
+| **Data Scientist** | `type:data-science` + Status=`Ready`, sorted by priority |
 
 **Priority Order**: `priority:p0` > `priority:p1` > `priority:p2` > `priority:p3` > (no label)
 
@@ -474,7 +495,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | **Model Fallback Selector** | `vscode-extension/src/utils/modelSelector.ts` | [PASS] Stable |
 | **Hexagon AX Icon** | `vscode-extension/resources/agentx-icon.svg` | [PASS] Stable |
 | **Databricks Skill** | `.github/skills/data/databricks/SKILL.md` | [PASS] Stable |
-| **43 Skills (was 42)** | `Skills.md` | [PASS] Stable |
+| **50 Skills (was 43)** | `Skills.md` | [PASS] Stable |
 
 ### New Features (v6.1)
 
@@ -516,7 +537,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 ### Labels
 
-**Type Labels**: `type:epic`, `type:feature`, `type:story`, `type:bug`, `type:spike`, `type:docs`
+**Type Labels**: `type:epic`, `type:feature`, `type:story`, `type:bug`, `type:spike`, `type:docs`, `type:data-science`
 
 **Priority Labels**: `priority:p0`, `priority:p1`, `priority:p2`, `priority:p3`
 

@@ -154,6 +154,7 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 | Reviewer | [.github/agents/reviewer.agent.md](.github/agents/reviewer.agent.md) |
 | Auto-Fix Reviewer | [.github/agents/reviewer-auto.agent.md](.github/agents/reviewer-auto.agent.md) |
 | DevOps Engineer | [.github/agents/devops.agent.md](.github/agents/devops.agent.md) |
+| Data Scientist | [.github/agents/data-scientist.agent.md](.github/agents/data-scientist.agent.md) |
 | Customer Coach | [.github/agents/customer-coach.agent.md](.github/agents/customer-coach.agent.md) |
 
 ---

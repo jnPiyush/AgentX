@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 43 skills across 8 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 50 skills across 8 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 43 skills across 8 categorie
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 42 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 50 skills. Use Quick Reference below.
 
 ---
 
@@ -32,6 +32,9 @@ description: 'Compressed skill index for AI agents. 43 skills across 8 categorie
 | **Code Review** | [Code Review](.github/skills/development/code-review/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Core Principles](.github/skills/architecture/core-principles/SKILL.md) |
 | **AI Agent Development** | [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [Cognitive Arch](.github/skills/ai-systems/cognitive-architecture/SKILL.md), [MCP Server](.github/skills/ai-systems/mcp-server-development/SKILL.md), [Prompt Eng](.github/skills/ai-systems/prompt-engineering/SKILL.md) |
 | **Iterative / Quality Loop** | [Iterative Loop](.github/skills/development/iterative-loop/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
+| **Model Fine-Tuning** | [Model Fine-Tuning](.github/skills/ai-systems/model-fine-tuning/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md), [Feedback Loops](.github/skills/ai-systems/feedback-loops/SKILL.md) |
+| **RAG / Retrieval** | [RAG Pipelines](.github/skills/ai-systems/rag-pipelines/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md), [Cognitive Arch](.github/skills/ai-systems/cognitive-architecture/SKILL.md) |
+| **ML Monitoring / Drift** | [Model Drift](.github/skills/ai-systems/model-drift-management/SKILL.md), [Data Drift](.github/skills/ai-systems/data-drift-strategy/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md) |
 | **Fabric / Data** | [Fabric Analytics](.github/skills/data/fabric-analytics/SKILL.md), [Data Agent](.github/skills/data/fabric-data-agent/SKILL.md) or [Forecasting](.github/skills/data/fabric-forecasting/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md) |
 | **Databricks / Delta Lake** | [Databricks](.github/skills/data/databricks/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Python](.github/skills/languages/python/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Containerization** | [Containerization](.github/skills/infrastructure/containerization/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Release Mgmt](.github/skills/operations/release-management/SKILL.md) |
@@ -87,6 +90,13 @@ ai|ai-agent-dev|.github/skills/ai-systems/ai-agent-development/SKILL.md|Foundry,
 ai|prompt-eng|.github/skills/ai-systems/prompt-engineering/SKILL.md|system-prompts,CoT,few-shot,guardrails
 ai|cognitive-arch|.github/skills/ai-systems/cognitive-architecture/SKILL.md|RAG,memory-systems,vector-search
 ai|mcp-server|.github/skills/ai-systems/mcp-server-development/SKILL.md|MCP-protocol,tools,resources,stdio/SSE
+ai|model-drift|.github/skills/ai-systems/model-drift-management/SKILL.md|concept-drift,covariate-shift,PSI,retraining,monitoring
+ai|data-drift|.github/skills/ai-systems/data-drift-strategy/SKILL.md|feature-drift,schema-drift,data-quality,distribution-shift
+ai|fine-tuning|.github/skills/ai-systems/model-fine-tuning/SKILL.md|LoRA,QLoRA,PEFT,DPO,distillation,training-data
+ai|evaluation|.github/skills/ai-systems/ai-evaluation/SKILL.md|RAGAS,LLM-as-judge,benchmarks,quality-gates,metrics
+ai|rag-pipelines|.github/skills/ai-systems/rag-pipelines/SKILL.md|chunking,retrieval,reranking,hybrid-search,embeddings
+ai|context-mgmt|.github/skills/ai-systems/context-management/SKILL.md|compaction,summarization,token-budget,sliding-window
+ai|feedback-loops|.github/skills/ai-systems/feedback-loops/SKILL.md|RLHF,RLAIF,user-feedback,preference-data,continuous-improvement
 design|ux-ui|.github/skills/design/ux-ui-design/SKILL.md|wireframes,user-flows,HTML/CSS,a11y
 design|frontend-ui|.github/skills/design/frontend-ui/SKILL.md|HTML5,CSS3,Tailwind,responsive,BEM
 ```
@@ -159,6 +169,10 @@ Databricks ETL|databricks->database->python->testing->code-review
 Databricks ML|databricks->ai-agent-dev->python->testing->code-review
 AI Agent|ai-agent-dev->prompt-eng->python/csharp->error-handling->testing->code-review
 MCP Server|mcp-server->python/csharp->error-handling->testing->code-review
+RAG Pipeline|rag-pipelines->context-mgmt->cognitive-arch->evaluation->testing->code-review
+Model Fine-Tuning|fine-tuning->evaluation->feedback-loops->testing->code-review
+Drift Monitoring|model-drift->data-drift->evaluation->logging->testing->code-review
+AI Feedback System|feedback-loops->evaluation->fine-tuning->testing->code-review
 New Skill|skill-creator->documentation->testing->code-review
 Security Audit|security->configuration->logging->testing->code-review
 ```
@@ -167,5 +181,5 @@ Security Audit|security->configuration->logging->testing->code-review
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 43 skills (arch:5, dev:10, lang:8, ops:5, infra:4, data:5, ai:4, design:2)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 50 skills (arch:5, dev:10, lang:8, ops:5, infra:4, data:5, ai:11, design:2)
 
