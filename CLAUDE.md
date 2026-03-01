@@ -177,3 +177,4 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 | UX Design | `.github/templates/UX-TEMPLATE.md` |
 | Code Review | `.github/templates/REVIEW-TEMPLATE.md` |
 | Security Plan | `.github/templates/SECURITY-PLAN-TEMPLATE.md` |
+| Progress Log | `.github/templates/PROGRESS-TEMPLATE.md` |

@@ -155,8 +155,10 @@ Create `docs/specs/SPEC-{feature-id}.md` following the [Technical Specification 
 7. Performance Strategy (caching, DB optimization, async, rate limiting)
 8. Testing Strategy (unit/integration/e2e with examples)
 9. Implementation Notes (files, dependencies, config, workflow)
-10. Risks & Mitigations (impact/probability table)
-11. Monitoring & Observability (metrics, alerts, logs)
+10. Rollout Plan (phased deployment strategy)
+11. Risks & Mitigations (impact/probability table)
+12. Monitoring & Observability (metrics, alerts, logs)
+13. AI/ML Specification (if applicable - model config, inference pipeline, evaluation)
 
 > [WARN] **NO CODE EXAMPLES in tech specs** - Use diagrams, interfaces, and architectural patterns only
 

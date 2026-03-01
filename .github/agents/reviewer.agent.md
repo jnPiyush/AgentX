@@ -166,7 +166,8 @@ Create `docs/reviews/REVIEW-{story-id}.md` following the [Code Review template](
 - Documentation Review, Acceptance Criteria Verification
 - Technical Debt, Compliance & Standards
 - Recommendations, Decision, Next Steps
-- Related Issues & PRs, Appendix
+- Related Issues & PRs, Reviewer Notes
+- Plus unnumbered Appendix (files reviewed, coverage report, CI/CD results)
 
 **Quick start**:
 ```bash

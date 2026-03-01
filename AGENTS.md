@@ -454,6 +454,7 @@ Clear context before implementation phase (UX/Architect -> Engineer) to prevent 
 | UX | `.github/templates/UX-TEMPLATE.md` |
 | Review | `.github/templates/REVIEW-TEMPLATE.md` |
 | Security Plan | `.github/templates/SECURITY-PLAN-TEMPLATE.md` |
+| Progress Log | `.github/templates/PROGRESS-TEMPLATE.md` |
 
 **Template Features**:
 - **Input Variables**: Dynamic content with `${variable_name}` syntax declared in YAML frontmatter
