@@ -33,39 +33,34 @@ Set-StrictMode -Version Latest
 
 $Script:GITHUB_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions'
 $Script:COPILOT_API_URL = 'https://api.githubcopilot.com/chat/completions'
-$Script:COPILOT_TOKEN_URL = 'https://api.github.com/copilot_internal/v2/token'
 $Script:DEFAULT_MODEL = 'gpt-4o'
 $Script:MAX_ITERATIONS = 30
 $Script:MAX_TOOL_RESULT_CHARS = 8000
 $Script:SESSION_DIR = $null
-
-# Cached Copilot token (ephemeral, expires)
-$Script:CopilotToken = $null
-$Script:CopilotTokenExpiry = $null
 $Script:ApiMode = $null  # 'copilot' or 'models'
 
-# All models mapped: agent frontmatter name -> Copilot API ID -> GitHub Models fallback ID
-# When Copilot API is available, we use the native model name.
-# When only GitHub Models is available, we fall back to the best available.
+# All models mapped: agent frontmatter name -> Copilot API model ID
+# Copilot API has the full catalog; GitHub Models has limited GPT-only.
 $Script:MODEL_MAP_COPILOT = @{
-    'claude opus 4'     = 'claude-opus-4'
-    'claude opus 4.6'   = 'claude-opus-4'
+    'claude opus 4.6'   = 'claude-opus-4.6'
+    'claude opus 4'     = 'claude-opus-4.6'
+    'claude sonnet 4.6' = 'claude-sonnet-4.6'
     'claude sonnet 4.5' = 'claude-sonnet-4.5'
-    'claude sonnet 4.6' = 'claude-sonnet-4.5'
     'claude sonnet 4'   = 'claude-sonnet-4'
-    'claude haiku'      = 'claude-haiku'
-    'gpt-5.3-codex'    = 'gpt-5.3-codex'
-    'gpt-5'            = 'gpt-5'
+    'claude haiku'      = 'claude-haiku-4.5'
+    'gpt-5.3-codex'    = 'gpt-5.2-codex'
+    'gpt-5.2-codex'    = 'gpt-5.2-codex'
+    'gpt-5.1'          = 'gpt-5.1'
+    'gpt-5'            = 'gpt-5.1'
+    'gpt-5-mini'       = 'gpt-5-mini'
     'gpt-4o'           = 'gpt-4o'
     'gpt-4.1'          = 'gpt-4.1'
-    'gpt-4.1-mini'     = 'gpt-4.1-mini'
-    'gpt-4.1-nano'     = 'gpt-4.1-nano'
     'gpt-4o-mini'      = 'gpt-4o-mini'
-    'gemini 3 pro'     = 'gemini-3-pro'
-    'gemini 3.1 pro'   = 'gemini-3.1-pro'
     'gemini 2.5 pro'   = 'gemini-2.5-pro'
-    'o4-mini'          = 'o4-mini'
-    'o3-mini'          = 'o3-mini'
+    'gemini 3 pro'     = 'gemini-2.5-pro'
+    'gemini 3.1 pro'   = 'gemini-2.5-pro'
+    'o4-mini'          = 'gpt-5-mini'
+    'o3-mini'          = 'gpt-5-mini'
 }
 
 $Script:MODEL_MAP_GHMODELS = @{
@@ -91,6 +86,9 @@ $Script:MODEL_MAP_GHMODELS = @{
 
 # ---------------------------------------------------------------------------
 # Auth -- Dual mode: Copilot API (all models) or GitHub Models (limited)
+#
+# With the 'copilot' scope, the gh auth token works directly as a bearer
+# token on api.githubcopilot.com -- no separate token exchange needed.
 # ---------------------------------------------------------------------------
 
 function Get-GitHubToken {
@@ -103,52 +101,25 @@ function Get-GitHubToken {
 
 <#
 .SYNOPSIS
-  Attempt to exchange the gh token for a Copilot API token.
+  Detect the best API mode by probing the Copilot /models endpoint.
   Requires the 'copilot' scope on the gh auth token.
-  Returns the ephemeral Copilot token or $null if unavailable.
-#>
-function Get-CopilotToken([string]$ghToken) {
-    # Return cached if still valid
-    if ($Script:CopilotToken -and $Script:CopilotTokenExpiry) {
-        if ([datetime]::UtcNow -lt $Script:CopilotTokenExpiry) {
-            return $Script:CopilotToken
-        }
-    }
-
-    try {
-        $resp = Invoke-RestMethod -Uri $Script:COPILOT_TOKEN_URL -Headers @{
-            'Authorization' = "token $ghToken"
-            'Accept'        = 'application/json'
-            'Editor-Version' = 'agentx-cli/1.0'
-        } -ErrorAction Stop
-
-        $Script:CopilotToken = $resp.token
-        if ($resp.expires_at) {
-            $Script:CopilotTokenExpiry = [datetime]::Parse($resp.expires_at).ToUniversalTime().AddMinutes(-2)
-        } else {
-            $Script:CopilotTokenExpiry = [datetime]::UtcNow.AddMinutes(25)
-        }
-        return $Script:CopilotToken
-    } catch {
-        return $null
-    }
-}
-
-<#
-.SYNOPSIS
-  Detect the best API mode and return connection info.
-  Tries Copilot API first (all models), falls back to GitHub Models (limited).
 #>
 function Initialize-ApiMode([string]$ghToken) {
     if ($Script:ApiMode) { return }  # Already initialized
 
-    # Try Copilot token exchange
-    $copilotToken = Get-CopilotToken -ghToken $ghToken
-    if ($copilotToken) {
+    # Probe Copilot API /models endpoint -- works when gh token has copilot scope
+    try {
+        $null = Invoke-RestMethod -Uri 'https://api.githubcopilot.com/models' -Headers @{
+            'Authorization' = "Bearer $ghToken"
+            'Copilot-Integration-Id' = 'vscode-chat'
+            'Editor-Version' = 'vscode/1.96.0'
+            'Editor-Plugin-Version' = 'copilot-chat/0.24.0'
+            'Openai-Organization' = 'github-copilot'
+        } -ErrorAction Stop
         $Script:ApiMode = 'copilot'
         Write-Host "`e[32m  [PASS] Copilot API: All models available (Claude, Gemini, GPT, o-series)`e[0m"
         return
-    }
+    } catch {}
 
     # Fall back to GitHub Models
     $Script:ApiMode = 'models'
@@ -421,15 +392,13 @@ function Invoke-LlmChat(
 
     # Route to the correct API endpoint
     if ($Script:ApiMode -eq 'copilot') {
-        $copilotToken = Get-CopilotToken -ghToken $token
-        if (-not $copilotToken) {
-            throw 'Copilot token expired and could not be refreshed.'
-        }
         $headers = @{
-            'Authorization' = "Bearer $copilotToken"
+            'Authorization' = "Bearer $token"
             'Content-Type'  = 'application/json'
-            'Editor-Version' = 'agentx-cli/1.0'
-            'Copilot-Integration-Id' = 'agentx-cli'
+            'Copilot-Integration-Id' = 'vscode-chat'
+            'Editor-Version' = 'vscode/1.96.0'
+            'Editor-Plugin-Version' = 'copilot-chat/0.24.0'
+            'Openai-Organization' = 'github-copilot'
         }
         $url = $Script:COPILOT_API_URL
     } else {
@@ -718,16 +687,17 @@ function Invoke-AgenticLoop {
         $choice = $response.choices[0]
         $msg = $choice.message
         $hasToolCalls = ($null -ne $msg.PSObject.Properties['tool_calls']) -and ($null -ne $msg.tool_calls) -and ($msg.tool_calls.Count -gt 0)
+        $hasContent = ($null -ne $msg.PSObject.Properties['content']) -and ($null -ne $msg.content) -and ($msg.content.Length -gt 0)
 
         # No content and no tool calls -> empty response
-        if (-not $msg.content -and -not $hasToolCalls) {
+        if (-not $hasContent -and -not $hasToolCalls) {
             $exitReason = 'empty_response'
             break
         }
 
         # Text-only response -> check for clarification, then done
         if (-not $hasToolCalls) {
-            $finalText = $msg.content ?? ''
+            $finalText = if ($hasContent) { $msg.content } else { '' }
 
             # Add to conversation
             $messages += @{ role = 'assistant'; content = $finalText }
@@ -756,7 +726,7 @@ function Invoke-AgenticLoop {
 
         # Record assistant message with tool calls
         $assistantMsg = @{ role = 'assistant' }
-        if ($msg.content) { $assistantMsg['content'] = $msg.content } else { $assistantMsg['content'] = '' }
+        $assistantMsg['content'] = if ($hasContent) { $msg.content } else { '' }
         $assistantMsg['tool_calls'] = @($msg.tool_calls)
         $messages += $assistantMsg
 
