@@ -207,9 +207,13 @@ if (-not (Test-Path $statusFile) -or $Force) {
  "architect" = @{ status="idle"; issue=$null; lastActivity=$null }
  "engineer" = @{ status="idle"; issue=$null; lastActivity=$null }
  "reviewer" = @{ status="idle"; issue=$null; lastActivity=$null }
+ "auto-fix-reviewer" = @{ status="idle"; issue=$null; lastActivity=$null }
  "devops-engineer" = @{ status="idle"; issue=$null; lastActivity=$null }
+ "data-scientist" = @{ status="idle"; issue=$null; lastActivity=$null }
+ "tester" = @{ status="idle"; issue=$null; lastActivity=$null }
+ "customer-coach" = @{ status="idle"; issue=$null; lastActivity=$null }
  } | ConvertTo-Json -Depth 10 | Set-Content $statusFile
- Write-OK "Agent status initialized"
+ Write-OK "Agent status initialized (10 agents)"
 }
 
 # Mode config

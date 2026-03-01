@@ -444,7 +444,7 @@ function Invoke-StateCmd {
 
     Write-Host "`n$($C.c)  Agent Status:$($C.n)"
     Write-Host "$($C.d)  ---------------------------------------------$($C.n)"
-    $agents = @('product-manager', 'ux-designer', 'architect', 'engineer', 'reviewer', 'devops-engineer')
+    $agents = @('product-manager', 'ux-designer', 'architect', 'engineer', 'reviewer', 'auto-fix-reviewer', 'devops-engineer', 'data-scientist', 'tester', 'customer-coach')
     foreach ($a in $agents) {
         $prop = $data.PSObject.Properties[$a]
         $info = if ($prop) { $prop.Value } else { $null }
@@ -785,6 +785,16 @@ function Invoke-ValidateCmd {
         }
         'devops' {
             Test-Check (Test-Path (Join-Path $Script:ROOT '.github/workflows')) 'Workflows directory exists'
+        }
+        'data-scientist' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'docs/data-science')) 'Data science docs directory exists'
+        }
+        'tester' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'tests')) 'Tests directory exists'
+            Test-Check (Test-Path (Join-Path $Script:ROOT "docs/testing/TEST-$num.md")) "TEST-$num.md exists"
+        }
+        'customer-coach' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'docs/coaching')) 'Coaching docs directory exists'
         }
         default {
             Write-Host "  Unknown role: $role"
