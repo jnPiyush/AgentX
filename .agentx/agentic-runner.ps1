@@ -286,8 +286,8 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot) 
             if (-not (Test-Path $fp)) { return @{ error = $true; text = "File not found: $($params.filePath)" } }
             try {
                 $lines = Get-Content $fp -Encoding utf8
-                $start = if ($params.startLine) { [Math]::Max(0, $params.startLine - 1) } else { 0 }
-                $end   = if ($params.endLine) { [Math]::Min($lines.Count, $params.endLine) } else { $lines.Count }
+                $start = if ($params.ContainsKey('startLine') -and $params.startLine) { [Math]::Max(0, [int]$params.startLine - 1) } else { 0 }
+                $end   = if ($params.ContainsKey('endLine') -and $params.endLine) { [Math]::Min($lines.Count, [int]$params.endLine) } else { $lines.Count }
                 $slice = $lines[$start..($end - 1)]
                 $header = "File: $($params.filePath) (lines $($start+1)-$end of $($lines.Count))"
                 $text = "$header`n$($slice -join "`n")"
@@ -327,8 +327,8 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot) 
             }
         }
         'grep_search' {
-            $maxResults = if ($params.maxResults) { $params.maxResults } else { 20 }
-            $include = if ($params.includePattern) { $params.includePattern } else { '*' }
+            $maxResults = if ($params.ContainsKey('maxResults') -and $params.maxResults) { [int]$params.maxResults } else { 20 }
+            $include = if ($params.ContainsKey('includePattern') -and $params.includePattern) { $params.includePattern } else { '*' }
             try {
                 $results = @()
                 $files = Get-ChildItem $workspaceRoot -Recurse -File -Filter $include -ErrorAction SilentlyContinue |
@@ -356,7 +356,7 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot) 
             }
         }
         'list_dir' {
-            $dp = if ($params.dirPath) { Join-Path $workspaceRoot $params.dirPath } else { $workspaceRoot }
+            $dp = if ($params.ContainsKey('dirPath') -and $params.dirPath) { Join-Path $workspaceRoot $params.dirPath } else { $workspaceRoot }
             if (-not (Test-Path $dp)) { return @{ error = $true; text = "Directory not found: $($params.dirPath)" } }
             try {
                 $entries = Get-ChildItem $dp | ForEach-Object { if ($_.PSIsContainer) { "$($_.Name)/" } else { $_.Name } }
@@ -373,7 +373,7 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot) 
                 }
             }
             try {
-                $timeoutSec = if ($params.timeoutMs) { [Math]::Ceiling($params.timeoutMs / 1000) } else { 30 }
+                $timeoutSec = if ($params.ContainsKey('timeoutMs') -and $params.timeoutMs) { [Math]::Ceiling([int]$params.timeoutMs / 1000) } else { 30 }
                 $job = Start-Job -ScriptBlock { param($c, $d) Set-Location $d; Invoke-Expression $c 2>&1 } -ArgumentList $cmd, $workspaceRoot
                 $completed = Wait-Job $job -Timeout $timeoutSec
                 if (-not $completed) { Stop-Job $job; Remove-Job $job -Force; return @{ error = $true; text = "Command timed out after ${timeoutSec}s" } }
