@@ -28,6 +28,28 @@ metadata:
 
 - Language with type system support
 
+## Decision Tree
+
+```
+Type safety concern?
++-- Adding types to existing code?
+|   +-- Greenfield? -> Enable strict mode from day one
+|   +-- Legacy codebase? -> Enable strict incrementally (file-by-file)
+|   +-- Third-party input? -> Validate at boundary, trust internally
++-- Choosing a type strategy?
+|   +-- Primitive obsession? -> Introduce value objects (Email, Money, UserId)
+|   +-- Magic strings/numbers? -> Replace with enums or constants
+|   +-- Nullable confusion? -> Enable nullable reference types, annotate everything
++-- Handling unknown data?
+|   +-- API response -> Parse and validate into typed model (Pydantic, Zod, etc.)
+|   +-- User input -> Validate at boundary, reject invalid shapes early
+|   +-- Config values -> Bind to typed config class at startup
++-- Compiler/analyzer errors?
+    +-- Too many `any`/`object`? -> Replace with generics or specific types
+    +-- Null warnings? -> Add explicit null checks or use non-null assertions with care
+    +-- False positive? -> Suppress with inline comment explaining why
+```
+
 ## Why Type Safety Matters
 
 ```
@@ -137,7 +159,7 @@ Custom Types:
 
 ---
 
-## Best Practices
+## Core Rules
 
 | Practice | Description |
 |----------|-------------|
@@ -149,6 +171,18 @@ Custom Types:
 | **Prefer immutability** | Use readonly/final where possible |
 | **Run analyzers in CI** | Fail builds on type errors |
 | **Document nullable intent** | Explicit `?` for nullable, no `?` for required |
+
+---
+
+## Anti-Patterns
+
+- **Any Escape Hatch**: Using `any`, `object`, or `dynamic` to bypass the type system -> Use generics, union types, or specific interfaces instead
+- **Primitive Obsession**: Passing raw strings for emails, IDs, or money amounts -> Wrap in value objects (EmailAddress, UserId, Money) with built-in validation
+- **Nullable Everywhere**: Making every field nullable "just in case" -> Only mark fields nullable when null is a valid domain state; prefer required by default
+- **Stringly Typed Enums**: Using plain strings where a finite set of values exists -> Define enums or literal union types for known value sets
+- **Ignoring Analyzer Warnings**: Suppressing all static analysis warnings to get a clean build -> Fix warnings or suppress individually with documented justification
+- **Unsafe Casts**: Using force-casts to silence type errors without validation -> Validate the shape first, then let the type system narrow naturally
+- **Missing Return Types**: Relying on type inference for public API return types -> Explicitly annotate return types on all public functions and methods
 
 ---
 

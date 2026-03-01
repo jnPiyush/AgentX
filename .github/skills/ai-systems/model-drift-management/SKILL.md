@@ -148,6 +148,18 @@ Inference Requests
 
 ---
 
+## Core Rules
+
+1. **Version everything** - Every model MUST have a versioned entry in the model registry with training data hash, hyperparameters, and metrics
+2. **Rollback always available** - The previous model version MUST remain deployed and ready for instant rollback
+3. **Validate before promote** - New models MUST pass the evaluation gate (compare against current production model) before promotion
+4. **Shadow before swap** - Run new models in shadow mode on live traffic before routing real users to them
+5. **Monitor continuously** - Track prediction distributions, confidence scores, and performance metrics on every model in production
+6. **Severity-based response** - Use tiered responses: log for low drift, alert for medium, emergency retrain for high, halt for critical
+7. **Document retraining decisions** - Record why a retrain was triggered, what data was used, and what metrics changed for audit trails
+
+---
+
 ## Tools and Frameworks
 
 | Tool | Capabilities | When to Use |
@@ -166,6 +178,17 @@ Inference Requests
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `scaffold-drift-monitor.py` | Generate drift monitoring pipeline scaffold | `python scaffold-drift-monitor.py --name my-model --detector psi` |
+
+---
+
+## Anti-Patterns
+
+- **No monitoring in production**: Deploying models without performance tracking -> Set up drift detection and metric monitoring from day one
+- **Single metric reliance**: Watching only accuracy while ignoring confidence and latency -> Monitor multiple dimensions (accuracy, calibration, latency, confidence)
+- **Retraining without validation**: Pushing retrained models directly to production -> Always run evaluation gates and shadow deployment first
+- **No rollback plan**: Replacing the old model with no way to revert -> Keep the previous version deployed and ready for instant rollback
+- **Ignoring false positives**: Acting on every drift alert without investigation -> Investigate root cause; seasonal or benign shifts may not need retraining
+- **Manual-only governance**: Relying on human reviews for every model update -> Automate severity assessment, evaluation gates, and promotion workflows
 
 ---
 

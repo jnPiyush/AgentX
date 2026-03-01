@@ -95,7 +95,7 @@ Examples by Language:
 
 ---
 
-## Best Practices Summary
+## Core Rules
 
 | Practice | Description |
 |----------|-------------|
@@ -107,6 +107,18 @@ Examples by Language:
 | **Review licenses** | Ensure compatibility |
 | **Separate dev deps** | Don't ship test frameworks |
 | **Audit new deps** | Evaluate before adding |
+
+---
+
+## Anti-Patterns
+
+- **Dependency Hoarding**: Adding packages for trivial functionality (e.g., left-pad) -> Write small utilities in-house if implementable in under an hour
+- **Version Floating**: Using wildcards or ranges (e.g., `*`, `>=2.0`) in production manifests -> Pin exact versions and use lock files for reproducible builds
+- **Ignoring Lock Files**: Deleting or not committing lock files -> Always commit lock files; they guarantee deterministic installs
+- **Transitive Blind Spot**: Never auditing indirect dependencies for vulnerabilities -> Run `npm audit`, `pip-audit`, or `dotnet list package --vulnerable` in CI
+- **Major Yolo**: Upgrading major versions without reading changelogs or testing -> Review breaking changes, create a migration branch, test thoroughly
+- **Abandoned Dependency**: Relying on unmaintained packages with no commits in 12+ months -> Evaluate alternatives, fork if necessary, or internalize the code
+- **Dev-in-Prod**: Shipping test frameworks or build tools to production -> Separate dev dependencies from production dependencies in your manifest
 
 ---
 

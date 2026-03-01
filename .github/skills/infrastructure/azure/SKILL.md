@@ -25,6 +25,28 @@ compatibility:
 - Implementing CI/CD with Azure DevOps
 - Managing Azure costs and monitoring
 
+## Decision Tree
+
+```
+Azure Service Selection
++-- Hosting a web app or API?
+|   +-- Containers? -> Azure Container Apps
+|   +-- Serverless functions? -> Azure Functions
+|   +-- Full PaaS? -> Azure App Service
+|   +-- Kubernetes? -> AKS
++-- Storing data?
+|   +-- Relational? -> Azure SQL / PostgreSQL Flexible Server
+|   +-- Document/NoSQL? -> Cosmos DB
+|   +-- Blob/files? -> Azure Storage
++-- Messaging or events?
+|   +-- Queue-based? -> Service Bus
+|   +-- Event streaming? -> Event Hubs
++-- AI/ML workloads?
+|   +-- LLM hosting? -> Azure OpenAI Service
+|   +-- Search + RAG? -> Azure AI Search
++-- Not sure? -> Start with App Service + Azure SQL
+```
+
 ## Prerequisites
 
 - Azure subscription
@@ -111,7 +133,7 @@ az cognitiveservices account create \
 
 ---
 
-## Best Practices
+## Core Rules
 
 ### [PASS] DO
 
@@ -132,6 +154,17 @@ az cognitiveservices account create \
 - Skip resource locks on production resources
 - Use public endpoints for databases
 - Forget to set up cost alerts
+
+---
+
+## Anti-Patterns
+
+- **Secrets in App Settings**: Storing passwords or keys in plain app config -> Use Key Vault references with managed identity
+- **Oversized SKUs**: Choosing premium tiers for dev/test environments -> Use dev-appropriate SKUs, scale up for production only
+- **No Resource Locks**: Production resources unprotected from accidental deletion -> Apply CanNotDelete locks on production resource groups
+- **Public Database Endpoints**: Databases accessible from the internet -> Use Private Endpoints and VNet integration
+- **Manual Deployments**: Deploying via portal clicks without repeatable process -> Use Infrastructure as Code (Bicep/Terraform) with CI/CD pipelines
+- **Single Region No DR**: All resources in one region with no failover plan -> Deploy across availability zones and plan geo-redundancy
 
 ---
 

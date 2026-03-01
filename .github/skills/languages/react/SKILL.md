@@ -28,6 +28,28 @@ compatibility:
 - Managing application state
 - Testing React components with Testing Library
 
+## Decision Tree
+
+```
+React Decision
++-- Starting a new project?
+|   +-- Full-stack / SSR? -> Next.js (App Router)
+|   +-- SPA / client only? -> Vite + React
+|   +-- Static site? -> Astro or Next.js static export
++-- State management?
+|   +-- Local component state? -> useState / useReducer
+|   +-- Shared across siblings? -> Lift state up or Context API
+|   +-- Complex global state? -> Zustand or Redux Toolkit
+|   +-- Server state / caching? -> TanStack Query (React Query)
++-- Styling approach?
+|   +-- Utility-first? -> Tailwind CSS
+|   +-- Component library? -> shadcn/ui or Radix
+|   +-- CSS-in-JS? -> styled-components or vanilla-extract
++-- Form handling?
+|   +-- Simple forms? -> Controlled components
+|   +-- Complex validation? -> React Hook Form + Zod
+```
+
 ## Prerequisites
 
 - Node.js 18+ and npm/yarn/pnpm
@@ -133,7 +155,20 @@ class UserCard extends React.Component {
 
 ---
 
-## Common Pitfalls
+## Core Rules
+
+1. **Functional Components Only** - Use function components with hooks; never use class components for new code
+2. **Type All Props** - Define TypeScript interfaces for all component props; avoid `any` type
+3. **Complete Dependency Arrays** - Always include all referenced variables in `useEffect` / `useMemo` / `useCallback` dependency arrays
+4. **Unique Keys on Lists** - Provide stable, unique `key` props on list items; never use array index as key for dynamic lists
+5. **Cleanup Effects** - Return cleanup functions from `useEffect` for subscriptions, timers, and event listeners
+6. **Lift State Minimally** - Keep state as close to where it is used as possible; lift up only when siblings need it
+7. **Memoize Expensive Computations** - Use `useMemo` for costly calculations and `React.memo` for pure components that re-render often
+8. **Extract Custom Hooks** - Move reusable stateful logic into `useXxx` custom hooks instead of duplicating across components
+
+---
+
+## Anti-Patterns
 
 | Issue | Problem | Solution |
 |-------|---------|----------|

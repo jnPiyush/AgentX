@@ -27,6 +27,30 @@ compatibility:
 
 ---
 
+## Decision Tree
+
+```
+Terraform Decision
++-- New infrastructure project?
+|   +-- Azure only? -> Consider Bicep as alternative
+|   +-- Multi-cloud or AWS/GCP? -> Use Terraform
+|   +-- Existing Terraform codebase? -> Use Terraform
++-- Structuring code?
+|   +-- Single environment? -> One root module with terraform.tfvars
+|   +-- Multiple environments? -> Workspaces or separate root dirs per env
+|   +-- Shared patterns? -> Extract reusable modules/ with versioning
++-- Managing state?
+|   +-- Team project? -> Remote backend with locking (S3/Azure Storage/GCS)
+|   +-- Solo developer? -> Remote backend still recommended
+|   +-- Never -> Local .tfstate in production
++-- Validating changes?
+|   +-- Syntax? -> terraform validate
+|   +-- Drift detection? -> terraform plan
+|   +-- Integration tests? -> Terratest (Go)
+```
+
+---
+
 ## Code Style
 
 - Use Terraform 1.5+ features (import blocks, `check` blocks, `moved` blocks)
@@ -179,3 +203,27 @@ module "app_service" {
 - Use `terraform plan` for drift detection
 - Use Terratest (Go) for integration testing
 - Name test files: `*_test.go`
+
+---
+
+## Core Rules
+
+1. **Pin Provider Versions** - Always specify `version = "~> X.0"` in required_providers; never use unversioned providers
+2. **Remote State Only** - Use a remote backend with locking for all environments; never commit `.tfstate` files
+3. **Validate All Variables** - Every variable MUST have `description`, `type`, and `validation` blocks where applicable
+4. **Mark Secrets Sensitive** - Use `sensitive = true` on all password, key, and token variables
+5. **Use Modules for Reuse** - Extract repeated resource patterns into `modules/` with documented inputs and outputs
+6. **Format and Lint** - Run `terraform fmt` and `tflint` before every commit; enforce via pre-commit hooks
+7. **Plan Before Apply** - Always run `terraform plan` and review changes before `terraform apply` in CI/CD
+8. **Descriptive Resource Names** - Use meaningful snake_case resource names (e.g., `app_rg`), not generic `this` or `main`
+
+---
+
+## Anti-Patterns
+
+- **Local State in Production**: Using local `.tfstate` for team projects -> Use remote backend with locking
+- **Hardcoded Secrets**: Passwords or keys in `.tf` / `.tfvars` files -> Use Key Vault references or `sensitive` variables
+- **Unpinned Providers**: No version constraint on providers -> Pin with `~>` operator to major version
+- **No Validation Blocks**: Accepting any input without checks -> Add `validation {}` blocks to variables
+- **Monolithic Root Module**: All resources in one `main.tf` -> Split into logical files and extract modules
+- **Apply Without Plan**: Running `terraform apply` without reviewing plan output -> Always plan first, review diff

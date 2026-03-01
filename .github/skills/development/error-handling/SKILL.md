@@ -136,7 +136,22 @@ function mapExceptionToStatusCode(error):
 
 ---
 
-## Common Error Handling Patterns
+## Core Rules
+
+1. **Fail Fast** - Detect errors at the earliest point and surface them immediately; do not let invalid state propagate
+2. **Catch Specific Exceptions** - Handle the narrowest exception type possible; never catch base `Exception` except at top-level boundaries
+3. **Never Swallow Silently** - Every catch block MUST log or re-throw; empty catch blocks hide production bugs
+4. **Log With Context** - Include correlation ID, operation name, input parameters, and stack trace in every error log entry
+5. **Separate User vs Internal Messages** - Return safe, actionable messages to users; log full technical details internally
+6. **Use Resilience Patterns** - Apply retry with exponential backoff for transient failures; circuit breakers for cascading failure prevention
+7. **Timeout Everything** - Every external call (HTTP, database, queue) MUST have an explicit timeout configured
+8. **Validate Inputs at Boundaries** - Check all external input at API/service boundaries; return 400-level errors for bad input, not 500
+9. **Design for Partial Failure** - Distributed systems fail partially; use fallbacks, bulkheads, and graceful degradation
+10. **Test Error Paths** - Write tests for failure scenarios, not just happy paths; verify retry, timeout, and fallback behavior
+
+---
+
+## Resilience Patterns
 
 | Pattern | Use Case | Example |
 |---------|----------|---------|
@@ -149,7 +164,7 @@ function mapExceptionToStatusCode(error):
 
 ---
 
-## Error Handling Anti-Patterns
+## Anti-Patterns
 
 **[FAIL] Swallow Exceptions:**
 ```

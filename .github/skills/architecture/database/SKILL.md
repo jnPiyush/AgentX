@@ -85,7 +85,20 @@ SELECT * FROM users WHERE email = 'test@example.com';
 
 ---
 
-## Common Pitfalls
+## Core Rules
+
+1. **Always use migrations** - Never modify production schemas by hand; every change gets a versioned migration with rollback support.
+2. **Parameterize all queries** - Never concatenate user input into SQL strings; use parameterized queries or ORM bindings.
+3. **Index foreign keys and filter columns** - Every foreign key and every column used in WHERE, JOIN, or ORDER BY should have an index.
+4. **Use connection pooling** - Never open/close connections per request; configure a pool with sensible min/max sizes.
+5. **Keep transactions short** - Acquire locks late, release early; never hold a transaction open across network calls.
+6. **Prefer cursor-based pagination** - Offset pagination degrades on large tables; use keyset (cursor) pagination for stable performance.
+7. **Validate data at the boundary** - Enforce NOT NULL, CHECK, and UNIQUE constraints in the schema, not only in application code.
+8. **Monitor slow queries** - Enable slow-query logging and review EXPLAIN plans regularly in production.
+
+---
+
+## Anti-Patterns
 
 | Issue | Problem | Solution |
 |-------|---------|----------|

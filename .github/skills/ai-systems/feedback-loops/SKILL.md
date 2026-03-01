@@ -256,6 +256,18 @@ Raw Feedback
 
 ---
 
+## Core Rules
+
+1. **Store full context** - Every feedback record MUST include the query, response, model version, and session ID
+2. **Minimize friction** - Default to 1-click feedback (thumbs up/down); offer optional detail fields without requiring them
+3. **Filter before training** - Apply deduplication, spam filtering, and quality scoring before using feedback as training data
+4. **Preference consistency** - Validate inter-annotator agreement (>80%) on preference pairs before training a reward model
+5. **Evaluate after retraining** - Every model retrained on feedback MUST pass the evaluation gate before promotion
+6. **Close the loop** - Track time-to-improvement from feedback collection to model update; target under 7 days for prompt fixes
+7. **Privacy by default** - Anonymize user feedback where required and never store PII in training datasets
+
+---
+
 ## Metrics and Monitoring
 
 | Metric | Target | Alert Threshold |
@@ -287,6 +299,17 @@ Raw Feedback
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `scaffold-feedback-loop.py` | Generate feedback collection and processing pipeline | `python scaffold-feedback-loop.py --type preference --storage postgres` |
+
+---
+
+## Anti-Patterns
+
+- **No feedback collection**: Deploying AI systems without any user feedback mechanism -> Add at minimum inline thumbs up/down on every response
+- **Unfiltered training data**: Using raw user feedback directly for fine-tuning without quality checks -> Filter, deduplicate, and score feedback before training
+- **Feedback without context**: Storing ratings without the associated query and response -> Always store full context with every feedback signal
+- **Ignoring negative signals**: Only acting on positive feedback -> Prioritize negative feedback for failure analysis and prompt fixes
+- **Delayed improvement cycles**: Accumulating feedback for months without acting -> Process safety flags in real-time, prompt fixes weekly
+- **Gaming vulnerability**: No protection against adversarial or automated feedback -> Add spam filters and weight by user trust score
 
 ---
 

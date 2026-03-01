@@ -23,6 +23,28 @@ description: 'Conduct systematic code reviews and audits including automated che
 - Git and GitHub/Azure DevOps familiarity
 - Code analysis tools (ESLint, Roslyn Analyzers, etc.)
 
+## Decision Tree
+
+```
+Review request received?
++-- PR size?
+|   +-- > 400 lines -> Ask author to split into smaller PRs
+|   +-- 100-400 lines -> Full review with checklist
+|   +-- < 100 lines -> Quick review (focus: correctness + tests)
++-- Review type?
+|   +-- Security audit -> Use OWASP checklist, run SAST tools
+|   +-- Architecture review -> Check SOLID, patterns, ADR compliance
+|   +-- Bug fix review -> Verify regression test exists first
+|   +-- Feature review -> Full checklist (quality + security + tests)
++-- Automated checks passing?
+|   +-- No -> Send back before manual review
+|   +-- Yes -> Proceed with manual review
++-- Approval decision?
+    +-- No issues -> Approve
+    +-- Minor issues -> Approve with comments
+    +-- Major issues -> Request changes with clear guidance
+```
+
 ## Code Review Checklist
 
 ### Architecture & Design (AGENTS.md Alignment)
@@ -133,7 +155,7 @@ description: 'Conduct systematic code reviews and audits including automated che
 
 ---
 
-## Best Practices
+## Core Rules
 
 ### [PASS] DO
 
@@ -153,6 +175,18 @@ description: 'Conduct systematic code reviews and audits including automated che
 - **Ignore warnings** - Fix or document exceptions
 - **Manual-only audits** - Automate what you can
 - **Deploy without audit** - Security scans mandatory
+
+---
+
+## Anti-Patterns
+
+- **Rubber Stamping**: Approving without reading the code -> Read every changed line, check tests and edge cases
+- **Nitpick Avalanche**: Blocking PRs over style issues that linters can catch -> Automate formatting checks, focus manual review on logic
+- **Ghost Reviewer**: Assigned but never responds within SLA -> Set 24-hour review SLA, use auto-reassignment on timeout
+- **Scope Creep Review**: Requesting unrelated improvements in the PR -> File separate issues for out-of-scope work
+- **Gatekeeper Bottleneck**: Single reviewer blocks all merges -> Require any 1-of-N reviewers, rotate review assignments
+- **Feedback Without Context**: Saying "this is wrong" with no explanation -> Provide rationale, link to docs or examples
+- **Review-Then-Rewrite**: Reviewer rewrites the author's code entirely -> Suggest changes, let the author implement
 
 ---
 

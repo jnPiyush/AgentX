@@ -25,6 +25,26 @@ compatibility:
 - Writing concurrent code with threads and async
 - Designing trait-based abstractions
 
+## Decision Tree
+
+```
+Rust Project Decision
++-- Building a CLI tool?
+|   +-- Argument parsing? -> clap
+|   +-- Pretty output? -> anyhow + color-eyre
++-- Building a web service?
+|   +-- Async HTTP? -> axum or actix-web
+|   +-- Need middleware? -> tower (used by axum)
++-- Error handling strategy?
+|   +-- Library code? -> thiserror (typed errors)
+|   +-- Application code? -> anyhow (ergonomic errors)
++-- Async runtime?
+|   +-- General purpose? -> tokio
+|   +-- Lightweight? -> smol or async-std
++-- Serialization needed? -> serde + serde_json / serde_yaml
++-- Performance-critical path? -> Benchmark with criterion before optimizing
+```
+
 ## Prerequisites
 
 - Rust 1.75+ installed via rustup
@@ -98,7 +118,7 @@ opt-level = 3
 
 ---
 
-## Best Practices
+## Core Rules
 
 ### [PASS] DO
 
@@ -118,6 +138,17 @@ opt-level = 3
 - Clone unnecessarily
 - Write overly complex lifetimes
 - Panic for expected error conditions
+
+---
+
+## Anti-Patterns
+
+- **Unwrap in Production**: Using `.unwrap()` or `.expect()` in non-test code -> Use `?` operator with proper error types
+- **Unnecessary Cloning**: Cloning data to satisfy the borrow checker -> Refactor ownership or use references and lifetimes
+- **Unsafe Without Justification**: Using `unsafe` blocks without documented safety invariants -> Avoid unsafe; if required, add `// SAFETY:` comments
+- **Stringly Typed APIs**: Passing `String` where an enum or newtype fits -> Use the type system to encode valid states
+- **Blocking in Async**: Calling blocking I/O inside async functions -> Use `tokio::task::spawn_blocking` for blocking work
+- **Ignoring Clippy Warnings**: Suppressing clippy lints without reason -> Fix the issue or document why the lint is suppressed
 
 ---
 

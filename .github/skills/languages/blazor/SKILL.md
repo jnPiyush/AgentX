@@ -28,6 +28,23 @@ compatibility:
 - Adding JavaScript interop to Blazor apps
 - Optimizing Blazor rendering performance
 
+## Decision Tree
+
+```
+Blazor Hosting Decision
++-- Line-of-business / intranet app?
+|   +-- Server resources available? -> Blazor Server
+|   +-- Need real-time updates? -> Blazor Server (SignalR)
++-- Public-facing app?
+|   +-- Offline support needed? -> Blazor WebAssembly
+|   +-- Minimal server load? -> Blazor WebAssembly
++-- Best of both worlds?
+|   +-- .NET 8+? -> Blazor United (SSR + interactive)
+|   +-- Progressive enhancement? -> Blazor United
++-- Heavy JS interop needed? -> Consider React/Angular instead
++-- Simple static site? -> Consider plain HTML/CSS or SSG
+```
+
 ## Prerequisites
 
 - C# and .NET 8+ knowledge
@@ -97,7 +114,20 @@ compatibility:
 
 ---
 
-## Common Pitfalls
+## Core Rules
+
+1. **Use Component Parameters** - Pass data via `[Parameter]` attributes; avoid direct field access across components
+2. **Implement IDisposable** - Unsubscribe from events and dispose resources in `Dispose()` to prevent memory leaks
+3. **Prefer OnInitializedAsync** - Use `OnInitializedAsync` for async data loading, not constructors or `OnParametersSet`
+4. **Match Service Lifetimes** - Do not inject Scoped services into Singleton services; match DI lifetimes carefully
+5. **Minimize JS Interop** - Keep JavaScript interop calls to a minimum; prefer C# solutions where possible
+6. **Use CascadingValue Sparingly** - Reserve `CascadingValue` for truly cross-cutting concerns like theme or auth state
+7. **Call StateHasChanged Correctly** - Only call `StateHasChanged()` when the framework cannot detect changes automatically
+8. **Use Virtualization for Lists** - Use `<Virtualize>` for large lists instead of rendering all items at once
+
+---
+
+## Anti-Patterns
 
 | Issue | Problem | Solution |
 |-------|---------|----------|

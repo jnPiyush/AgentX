@@ -75,7 +75,7 @@ Start: What is the deliverable?
 
 ---
 
-## Best Practices
+## Core Rules
 
 ### [PASS] DO
 
@@ -110,6 +110,17 @@ Start: What is the deliverable?
 - Use large unoptimized images
 - Inline all styles (use external stylesheets)
 - Block rendering with synchronous scripts
+
+## Anti-Patterns
+
+- **Skipping user research**: Designing based on assumptions -> conduct interviews or surveys with 5+ users before wireframing
+- **Lorem ipsum in deliverables**: Placeholder text hides content layout problems -> use realistic content from the actual domain
+- **Desktop-first design**: Retrofitting mobile after desktop -> design mobile breakpoints first, then enhance upward
+- **Ignoring error states**: Only designing the happy path -> design empty, loading, error, partial, and success states for every screen
+- **Pixel-perfect handoff without tokens**: Hardcoded colors and sizes -> define a design token system (CSS custom properties) and reference tokens in specs
+- **Accessibility as afterthought**: Running audits only at the end -> integrate WCAG checks from wireframe stage, not after prototyping
+- **Overly complex user flows**: 10+ step flows without progress indicators -> limit critical paths to 3-5 steps with clear progress feedback
+- **No version control on designs**: Overwriting files with no history -> use Git for HTML prototypes and Figma version history for mockups
 
 ---
 

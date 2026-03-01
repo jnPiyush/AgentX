@@ -272,6 +272,21 @@ e2e-tests:
 
 ---
 
+## Core Rules
+
+1. **Page Object Model** - Encapsulate page interactions in page objects; tests call methods, not raw selectors.
+2. **Semantic Selectors Only** - Use `getByRole`, `getByLabel`, `getByTestId`; never use CSS class or XPath selectors in new tests.
+3. **No Sleep Calls** - Never use `sleep()` or `wait(ms)`; always wait for a specific element state or network condition.
+4. **Test Isolation** - Each test must be independent; no shared state, no execution-order dependencies.
+5. **Critical Paths First** - Cover login, checkout, signup, and core workflows before edge cases.
+6. **Environment Independence** - Tests must run against any environment via configuration (local, staging, CI).
+7. **Stable Test Data** - Use factories and fixtures for test data; never depend on production data.
+8. **Fail-Fast Reporting** - Upload trace/video artifacts on failure; generate HTML reports in CI.
+9. **Cross-Browser Matrix** - Run against Chromium, Firefox, and WebKit at minimum; include one mobile viewport.
+10. **Accessibility Built-In** - Include axe-core accessibility checks in every critical-path test.
+
+---
+
 ## Anti-Patterns
 
 | Don't | Do Instead |

@@ -251,7 +251,7 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 
 ---
 
-## Best Practices
+## Core Rules
 
 ### [PASS] DO
 
@@ -306,6 +306,19 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 - Use org-wide service connections for single projects
 - Skip security scanning to "save time"
 - Share production credentials across environments
+
+---
+
+## Anti-Patterns
+
+- **Monolith Pipeline**: One massive job with build, test, scan, and deploy steps -> Split into stages with explicit dependencies.
+- **Hardcoded Secrets**: Embedding credentials or tokens directly in YAML -> Use platform secret stores (variable groups, CI/CD variables).
+- **No Caching**: Installing dependencies from scratch on every run -> Cache with lockfile-keyed keys (`hashFiles('**/package-lock.json')`).
+- **Sequential Everything**: Running independent jobs one after another -> Parallelize unrelated jobs (lint, unit tests, security scan).
+- **Infinite Artifact Retention**: Storing all build artifacts forever -> Set `expire_in` (GitLab) or `retention-days` (Azure) to a reasonable window.
+- **Production from Feature Branch**: Deploying to production from any branch -> Gate production deploys to `main` or release branches only.
+- **Skipping Stages for Speed**: Removing test or scan stages to get faster deploys -> Optimize slow stages instead; never remove quality gates.
+- **Copy-Paste Pipelines**: Duplicating YAML across repos -> Use templates (`template:` in Azure, `include:` in GitLab) for shared logic.
 
 ---
 

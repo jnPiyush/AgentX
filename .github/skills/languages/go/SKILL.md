@@ -25,6 +25,26 @@ compatibility:
 - Designing Go interfaces for testability
 - Structuring Go project layouts
 
+## Decision Tree
+
+```
+Go Project Decision
++-- Building a CLI tool?
+|   +-- Simple? -> Single cmd/main.go
+|   +-- Multi-command? -> cobra or urfave/cli
++-- Building a web service?
+|   +-- Standard library sufficient? -> net/http + http.ServeMux
+|   +-- Need middleware/routing? -> chi, gorilla/mux, or gin
++-- Need concurrency?
+|   +-- Fan-out/fan-in? -> Goroutines + channels
+|   +-- Shared state? -> sync.Mutex or sync.RWMutex
+|   +-- Cancellation? -> context.Context
++-- Data access?
+|   +-- SQL database? -> database/sql + sqlx
+|   +-- ORM preferred? -> GORM (with caution)
++-- Reusable library? -> pkg/ directory, keep interfaces small
+```
+
 ## Prerequisites
 
 - Go 1.21+ installed
@@ -150,7 +170,7 @@ x++ // increment x - BAD
 
 ---
 
-## Best Practices
+## Core Rules
 
 ### [PASS] DO
 
@@ -171,6 +191,17 @@ x++ // increment x - BAD
 - Use naked returns in long functions
 - Use `panic` for normal errors
 - Premature optimization
+
+---
+
+## Anti-Patterns
+
+- **Ignored Errors**: Discarding error return values with `_` -> Always check and handle or propagate errors
+- **Goroutine Leak**: Starting goroutines without exit conditions -> Use context.Context for cancellation and timeouts
+- **Global Mutable State**: Package-level variables for shared state -> Pass dependencies explicitly via function parameters or structs
+- **Fat Interfaces**: Interfaces with many methods -> Keep interfaces small (1-3 methods); compose as needed
+- **Naked Returns in Long Functions**: Using bare `return` in functions longer than a few lines -> Use explicit named returns only in short functions
+- **Panic for Control Flow**: Using `panic` for expected error conditions -> Return `error` values; reserve panic for truly unrecoverable situations
 
 ---
 

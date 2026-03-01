@@ -28,6 +28,29 @@ metadata:
 - CI/CD pipeline infrastructure
 - Version control system (Git)
 
+## Decision Tree
+
+```
+What release activity?
++-- Choosing deploy strategy?
+|   +-- Need instant rollback? -> Blue-Green or Feature Flags
+|   +-- Need gradual risk reduction? -> Canary
+|   +-- Default / simplest? -> Rolling
++-- Choosing version scheme?
+|   +-- Public API / library? -> SemVer (MAJOR.MINOR.PATCH)
+|   +-- Time-based cadence? -> CalVer (YYYY.MM.DD)
+|   +-- Internal service / CD? -> Commit-based (v1.0.{count}+{sha})
++-- Planning rollback?
+|   +-- Database changes involved? -> Expand-Contract migration pattern
+|   +-- Stateless service? -> Redeploy previous artifact
+|   +-- Feature-flag controlled? -> Disable flag (instant)
++-- Automating releases?
+    +-- Conventional commits? -> Auto version bump + changelog
+    +-- Manual release notes? -> Tag-triggered pipeline + gh release
+```
+
+---
+
 ## Quick-Start: Deployment Strategy Selection
 
 Pick your strategy **first** - everything else follows from this choice.
@@ -312,7 +335,7 @@ Validate Tag -> Build -> Test -> Create Release -> Deploy Staging
 
 ---
 
-## Best Practices
+## Core Rules
 
 ### [PASS] DO
 
@@ -341,6 +364,19 @@ Validate Tag -> Build -> Test -> Create Release -> Deploy Staging
 - Deploy without active monitoring and on-call coverage
 - Ignore failed health checks
 - Rush deployments under time pressure
+
+---
+
+## Anti-Patterns
+
+- **Friday Deploy**: Releasing late in the week with no on-call coverage -> Deploy early-week when the full team is available.
+- **Big-Bang Release**: Bundling weeks of changes into one massive deploy -> Ship smaller increments using canary or feature flags.
+- **Untested Rollback**: Assuming rollback works without ever running it -> Test rollback in staging for every release.
+- **Version Skipping**: Jumping from v1.2 to v2.0 without clear breaking changes -> Follow SemVer rules strictly; bump MAJOR only for incompatible changes.
+- **Artifact Rebuild**: Rebuilding the binary for each environment instead of promoting -> Build once, deploy the same artifact to staging and production.
+- **Manual Changelog**: Writing changelogs by hand after the fact -> Generate from conventional commits during the release pipeline.
+- **Silent Deploy**: Deploying without notifying stakeholders -> Send pre-deploy and post-deploy notifications via Slack, Teams, or email.
+- **Deploy Without Monitoring**: Pushing to production without watching dashboards -> Establish baseline metrics and monitor error rate and latency during rollout.
 
 ---
 

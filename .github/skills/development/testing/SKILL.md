@@ -104,7 +104,7 @@ Target: 80%+ overall coverage
 
 ---
 
-## Testing Best Practices
+## Core Rules
 
 ### Write Testable Code
 
@@ -168,6 +168,18 @@ for each testCase in testCases:
  result = abs(testCase.input)
  assert result == testCase.expected
 ```
+
+---
+
+## Anti-Patterns
+
+- **Test After Ship**: Writing tests after code is merged and deployed -> Write tests before or alongside implementation (TDD or test-with)
+- **Ice Cream Cone**: Mostly E2E tests with few unit tests (inverted pyramid) -> Follow the test pyramid: 70% unit, 20% integration, 10% E2E
+- **Flaky Acceptance**: Tests that pass or fail randomly due to timing or shared state -> Remove timing dependencies, isolate test data, use deterministic fixtures
+- **Testing Implementation**: Tests coupled to private methods or internal structure -> Test public behavior and contracts; refactoring should not break tests
+- **Assertion-Free Tests**: Tests that execute code but never assert expected outcomes -> Every test MUST have at least one meaningful assertion
+- **Shared Mutable State**: Tests that depend on or modify global/shared state -> Reset state in beforeEach/setUp; use isolated test databases or containers
+- **Coverage Gaming**: Writing trivial tests to hit coverage numbers without testing real logic -> Focus coverage on business logic, error paths, and edge cases
 
 ---
 

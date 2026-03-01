@@ -330,6 +330,21 @@ High latency detected?
 
 ---
 
+## Core Rules
+
+1. **Define SLAs First** - Establish P50, P95, P99 latency targets and max error rate before writing any test.
+2. **Production-Like Environment** - Run load tests against an environment that mirrors production in topology, sizing, and data volume.
+3. **Realistic Traffic Patterns** - Model virtual user scenarios from production access logs; include think time between requests.
+4. **Baseline Before Comparing** - Always run a baseline test first; compare subsequent runs against it for regressions.
+5. **Unique Test Data** - Generate unique data per virtual user to avoid cache hits and lock contention that skew results.
+6. **Threshold-Gated CI** - Set k6/Locust thresholds that fail the pipeline if P95 latency or error rate exceeds SLA.
+7. **Separate from Functional Tests** - Performance tests run on a schedule or perf-sensitive PRs, not on every commit.
+8. **Monitor Infrastructure** - Collect CPU, memory, connection pool, and queue depth metrics alongside request metrics.
+9. **Ramp Gradually** - Always include ramp-up and ramp-down phases; sudden load skews cold-start measurements.
+10. **Document Results** - Record test parameters, environment details, and results in a report for every significant run.
+
+---
+
 ## Anti-Patterns
 
 | Don't | Do Instead |

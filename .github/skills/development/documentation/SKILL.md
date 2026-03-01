@@ -104,7 +104,7 @@ Classes:
 
 ---
 
-## Best Practices Summary
+## Core Rules
 
 | Practice | Description |
 |----------|-------------|
@@ -116,6 +116,18 @@ Classes:
 | **Minimal** | Document what's needed, no more |
 | **Accessible** | Store docs near the code |
 | **Versioned** | Docs in repo, not external wikis |
+
+---
+
+## Anti-Patterns
+
+- **Stale Docs**: Documentation that contradicts current code behavior -> Tie doc updates to code changes in the same PR; add doc review to checklist
+- **Comment Parrot**: Comments that restate the code (`i += 1 // increment i`) -> Only comment WHY, never WHAT; delete comments that repeat the code
+- **README Novel**: Putting all documentation in a single massive README -> Split into focused docs/ files (CONTRIBUTING.md, ARCHITECTURE.md) and link from README
+- **Tribal Knowledge**: Critical setup or deployment steps live only in someone's head -> Write runbooks and onboarding guides; if you explained it twice, document it
+- **API Doc Drift**: Hand-written API docs that diverge from actual endpoints -> Generate API docs from code annotations (OpenAPI/Swagger) and validate in CI
+- **TODO Graveyard**: Scattering TODO comments that never get addressed -> Create issues for TODOs with deadlines; remove or resolve stale TODOs regularly
+- **Screenshot Docs**: Using images where text would be searchable and maintainable -> Use code blocks, ASCII diagrams, or Mermaid for diagrams; reserve images for UX mockups
 
 ---
 

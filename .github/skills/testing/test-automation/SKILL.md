@@ -296,6 +296,21 @@ npx playwright test --reporter=junit
 
 ---
 
+## Core Rules
+
+1. **Stage Ordering** - Run tests in order of speed: lint -> unit -> integration -> e2e -> performance.
+2. **Parallelize by Default** - Shard test suites across CI workers; sequential runs are acceptable only for ordered integration tests.
+3. **Coverage Thresholds in CI** - Enforce minimum coverage (80% lines, 70% branches) as a pipeline gate; fail the build on drops.
+4. **Flaky Tests Are Bugs** - Quarantine flaky tests immediately; track and fix root causes within one sprint.
+5. **Cache Aggressively** - Cache dependencies, build outputs, and Docker layers using lockfile-keyed cache keys.
+6. **Test Data Factories** - Use factory functions for dynamic test data; avoid hard-coded inline fixtures.
+7. **JUnit XML for Reporting** - Emit JUnit XML from all frameworks so CI dashboards display consistent results.
+8. **Environment Parity** - Use Testcontainers or Docker Compose for local and CI environments; never rely on shared staging for automated tests.
+9. **Fail Fast** - Stop the pipeline on the first critical-stage failure; do not waste compute on downstream stages.
+10. **Review Test Architecture** - Maintain a test-to-code ratio of at least 1:1; review test quality in code reviews alongside production code.
+
+---
+
 ## Anti-Patterns
 
 | Don't | Do Instead |

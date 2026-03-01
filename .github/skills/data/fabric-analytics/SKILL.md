@@ -265,6 +265,19 @@ Running Total = CALCULATE([Total Sales], FILTER(ALL('Date'), 'Date'[Date] <= MAX
 | Notebook job max duration | 24 hours | Split into stages |
 | Capacity states | Active / Paused / Throttled | Monitor in Azure Portal |
 
+## Core Rules
+
+1. **Lakehouse-first for engineering** - Use Lakehouse for data engineering and ML; use Warehouse only when full T-SQL DML and stored procedures are required.
+2. **Medallion layer discipline** - Maintain Bronze (raw), Silver (clean), Gold (aggregated) as separate Delta tables; never write raw data directly to Gold.
+3. **Batch jobs for production** - Use scheduled notebook jobs for production ETL; reserve interactive Livy sessions for development and debugging.
+4. **Reuse Livy sessions** - Check for existing idle sessions before creating new ones; cold starts take 3-6+ minutes.
+5. **Star schema for semantic models** - Use fact + dimension tables in Gold layer; avoid wide denormalized tables in DirectLake models.
+6. **Measures over calculated columns** - Use DAX measures for aggregations in semantic models; calculated columns degrade performance.
+7. **Delta maintenance** - Schedule OPTIMIZE and VACUUM on Delta tables to prevent storage bloat and slow queries.
+8. **Parameterize environment references** - Never hardcode workspace or lakehouse names; use parameters for dev/test/prod portability.
+9. **Validate before transform** - Check schema and row counts at each pipeline stage before running expensive Spark operations.
+10. **Markdown before code** - Every notebook code cell MUST be preceded by a markdown cell explaining purpose and expected output.
+
 ## Troubleshooting
 
 | Error | Cause | Solution |

@@ -27,6 +27,27 @@ compatibility:
 
 ---
 
+## Decision Tree
+
+```
+Bicep Decision
++-- New Azure infrastructure project?
+|   +-- Single resource group? -> One main.bicep with inline resources
+|   +-- Multiple resource groups? -> Use modules/ per resource group
+|   +-- Shared across teams? -> Create versioned module registry
++-- Parameterizing config?
+|   +-- Simple key-value? -> Use @allowed / @minLength params
+|   +-- Complex shape? -> Use user-defined types (Bicep v0.30+)
+|   +-- Secrets? -> Use @secure() decorator, never output values
++-- Validating before deploy?
+|   +-- Syntax check? -> bicep build
+|   +-- Preview changes? -> az deployment group what-if
+|   +-- Compliance rules? -> PSRule for Azure
++-- Multi-cloud needed? -> Use Terraform instead
+```
+
+---
+
 ## Code Style
 
 - Use Bicep v0.30+ features (user-defined types, lambdas, `assert`)
@@ -204,3 +225,27 @@ az deployment group what-if \
   --template-file main.bicep \
   --parameters main.bicepparam
 ```
+
+---
+
+## Core Rules
+
+1. **Use Modules for Reuse** - Extract repeated resource patterns into `modules/` directory with explicit inputs and outputs
+2. **Decorate All Parameters** - Every parameter MUST have `@description`; use `@allowed`, `@minLength`, `@maxLength` for validation
+3. **Secure Sensitive Values** - Use `@secure()` on all password and key parameters; never output secrets
+4. **Pin API Versions** - Always specify explicit API versions on resources; do not rely on defaults
+5. **Tag All Resources** - Apply a `commonTags` variable to every resource for cost allocation and governance
+6. **Use User-Defined Types** - For complex parameter shapes, define `type` blocks instead of loose parameter lists
+7. **Validate Before Deploy** - Run `bicep lint` and `az deployment group what-if` before every deployment
+8. **Symbolic References Only** - Reference resources by symbolic name, never by hardcoded resource ID strings
+
+---
+
+## Anti-Patterns
+
+- **Hardcoded Resource IDs**: Referencing resources by string ID -> Use symbolic names and module outputs
+- **Secrets in Outputs**: Outputting passwords or keys from templates -> Store secrets in Key Vault, output only resource IDs
+- **Monolithic Templates**: Single 500+ line bicep file -> Split into modules by resource domain
+- **Missing What-If**: Deploying without preview -> Always run `what-if` before `create` in CI/CD
+- **No Parameter Validation**: Accepting any string for constrained values -> Use `@allowed`, `@minLength`, `@maxLength` decorators
+- **Unpinned API Versions**: Omitting API version on resources -> Pin to a specific stable API version

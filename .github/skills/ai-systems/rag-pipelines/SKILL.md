@@ -266,6 +266,18 @@ If the context does not contain enough information, say "I don't have enough inf
 
 ---
 
+## Anti-Patterns
+
+- **No reranking**: Returning raw vector search results directly to the LLM -> Add a cross-encoder or LLM-based reranker to improve precision
+- **Giant chunks**: Using chunk sizes over 2000 tokens -> Keep chunks small (256-1024 tokens) for retrieval, use parent-child for LLM context
+- **Mismatched embeddings**: Using different embedding models for indexing and querying -> Always use the same model and version for both
+- **No metadata filtering**: Searching the entire index for every query -> Add metadata filters (date, source, category) to narrow the search space
+- **Stuffing all chunks**: Feeding all retrieved chunks into the prompt regardless of relevance -> Limit to top 3-5 after reranking
+- **No grounding instructions**: Omitting "answer only from context" instructions in the prompt -> Always instruct the model to use provided context and cite sources
+- **Static index**: Never refreshing the document index after initial ingestion -> Schedule re-ingestion as source documents change
+
+---
+
 ## Troubleshooting
 
 | Issue | Solution |

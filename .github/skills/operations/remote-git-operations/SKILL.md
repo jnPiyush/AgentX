@@ -29,6 +29,29 @@ compatibility:
 - Git 2.30+ installed
 - Remote repository access (GitHub, Azure DevOps, GitLab, etc.)
 
+## Decision Tree
+
+```
+What remote Git operation?
++-- Setting up authentication?
+|   +-- Personal machine? -> SSH key
+|   +-- CI/CD pipeline? -> Deploy key or app token
+|   +-- Temporary access? -> HTTPS + credential helper
++-- Collaborating on code?
+|   +-- Small team, single remote? -> Feature branch + PR
+|   +-- Fork-based (open source)? -> Fork + upstream remote + PR
+|   +-- Multiple remotes? -> Named remotes (origin, upstream)
++-- Syncing with remote?
+|   +-- Linear history preferred? -> git pull --rebase
+|   +-- Merge commits acceptable? -> git pull (merge)
+|   +-- CI branch behind? -> git fetch + git rebase origin/main
++-- Handling large files?
+|   +-- Binary assets (images, models, videos)? -> Git LFS
+|   +-- Large repo history? -> Shallow clone (--depth 1)
+```
+
+---
+
 ## Remote Repository Setup
 
 ### Adding and Managing Remotes
@@ -141,7 +164,7 @@ git push origin main
 
 ---
 
-## Best Practices Summary
+## Core Rules
 
 ### [PASS] DO
 - Use SSH authentication for security
@@ -165,6 +188,18 @@ git push origin main
 - Push directly to main (use PRs)
 - Leave merge conflicts unresolved
 - Ignore .gitignore patterns
+
+---
+
+## Anti-Patterns
+
+- **Force Push to Shared Branch**: Using `git push --force` on main or develop -> Use `--force-with-lease` on personal branches only.
+- **Secrets in History**: Accidentally committing API keys or passwords -> Use `.gitignore`, pre-commit hooks, and secret scanning; rotate leaked credentials immediately.
+- **Stale Fork**: Forking a repo and never syncing upstream -> Regularly `git fetch upstream` and rebase to stay current.
+- **Direct Push to Main**: Bypassing pull requests for speed -> Enforce branch protection rules requiring PR review.
+- **Mega-Push**: Accumulating dozens of local commits before pushing -> Push frequently; small pushes are easier to review and less likely to conflict.
+- **Binary Bloat**: Committing large binaries without LFS -> Configure Git LFS for files over 1 MB (images, models, datasets).
+- **Ambiguous Remotes**: Using default names when working with multiple remotes -> Name remotes clearly (origin, upstream, fork) to avoid pushing to the wrong target.
 
 ---
 

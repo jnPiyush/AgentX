@@ -18,6 +18,18 @@ description: 'Build production-ready AI agents with Microsoft Foundry and Agent 
 - Adding tracing and observability to AI agents
 - Evaluating agent quality and response accuracy
 
+## Decision Tree
+
+```
+Need an AI agent?
++-- Simple request-response? -> Single agent with tools
++-- Multi-step reasoning? -> Chain-of-thought agent with planner
++-- Multiple specialized domains? -> Multi-agent orchestration
++-- Human approval needed? -> Human-in-the-loop workflow
++-- High reliability required? -> Reflection + self-correction loop
++-- Real-time streaming? -> Async event-driven agent architecture
+```
+
 ## Prerequisites
 
 - Python 3.11+ or .NET 8+
@@ -115,7 +127,7 @@ result = await workflow.run(query="Write about AI agents")
 
 ---
 
-## Best Practices
+## Core Rules
 
 ### Prompt & Template File Management
 
@@ -277,6 +289,18 @@ prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
 - [ ] Deployment strategy defined
 - [ ] Rollback plan documented
 - [ ] Cost monitoring enabled
+
+---
+
+## Anti-Patterns
+
+- **Inline prompt strings**: Embedding prompts as multi-line strings in code -> Store in `prompts/` directory as separate files
+- **Unpinned model versions**: Using `gpt-4o` without date suffix -> Pin explicitly (e.g., `gpt-5.1-2026-01-15`)
+- **No evaluation before deploy**: Shipping agents without running eval datasets -> Gate deployment on quality thresholds
+- **Monolithic agent**: One agent handling all domains and tasks -> Split into specialized agents with clear handoffs
+- **Ignoring token costs**: No monitoring of per-request token usage -> Track tokens per component and set budgets
+- **Missing error recovery**: No retry or fallback on LLM failures -> Implement retries with backoff and fallback models
+- **Skipping tracing setup**: Deploying without observability -> Enable OpenTelemetry tracing from day one
 
 ---
 

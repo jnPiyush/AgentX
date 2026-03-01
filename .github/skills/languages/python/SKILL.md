@@ -28,6 +28,29 @@ compatibility:
 - Testing with pytest
 - Structuring Python project layouts
 
+## Decision Tree
+
+```
+Python Project Decision
++-- Building a web API?
+|   +-- High-performance async? -> FastAPI
+|   +-- Full-featured framework? -> Django + DRF
+|   +-- Lightweight / microservice? -> Flask
++-- Data processing / ML?
+|   +-- Data pipelines? -> pandas + polars
+|   +-- ML models? -> scikit-learn, PyTorch, or transformers
+|   +-- Notebooks? -> Jupyter + ipykernel
++-- CLI tool?
+|   +-- Simple? -> argparse (stdlib)
+|   +-- Complex multi-command? -> click or typer
++-- Async I/O needed?
+|   +-- HTTP client? -> httpx or aiohttp
+|   +-- Task queue? -> Celery or asyncio
++-- Package management?
+|   +-- Modern standard? -> pyproject.toml + poetry or hatch
+|   +-- Legacy? -> requirements.txt + pip
+```
+
 ## Prerequisites
 
 - Python 3.11+ installed
@@ -141,7 +164,7 @@ def create_user(user_id: UserId, data: UserData) -> User:
 
 ---
 
-## Best Practices Summary
+## Core Rules
 
 ### Code Style (PEP 8)
 
@@ -197,7 +220,7 @@ if user_id in valid_ids: # O(1) lookup
 
 ---
 
-## Common Pitfalls
+## Anti-Patterns
 
 | Issue | Problem | Solution |
 |-------|---------|----------|

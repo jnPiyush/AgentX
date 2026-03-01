@@ -402,6 +402,21 @@ tests/
 
 ---
 
+## Core Rules
+
+1. **Real Dependencies** - Use Testcontainers or equivalent for databases and brokers; never substitute with in-memory fakes for integration tests.
+2. **Test Isolation** - Each test gets a clean state via transaction rollback, truncation, or container restart.
+3. **Full Middleware Stack** - Test through the real HTTP/gRPC middleware including auth, validation, and error handling.
+4. **Error Paths Matter** - Test 400, 401, 403, 404, 409, and 500 responses, not just the happy path.
+5. **Contract-First** - Use Pact or Spring Cloud Contract for consumer-driven contracts between services.
+6. **No Real External Calls** - Mock third-party APIs with WireMock or MSW; real calls make tests flaky and slow.
+7. **Auth with Test Tokens** - Generate test JWTs or API keys; never use production credentials in tests.
+8. **Database Migrations in CI** - Run the full migration chain before integration tests to catch migration bugs.
+9. **Timeout Every Container** - Set startup timeouts on Testcontainers to fail fast if a service cannot start.
+10. **Separate from Unit Tests** - Run integration tests in a distinct CI stage; they are slower and have different failure modes.
+
+---
+
 ## Anti-Patterns
 
 | Don't | Do Instead |

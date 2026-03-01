@@ -431,6 +431,18 @@ contract: output it only when the statement is TRUE.
 
 ---
 
+## Anti-Patterns
+
+- **Premature Promise**: Claiming completion before verification commands actually pass -> Always run the verification command and confirm exit code 0 before outputting the completion promise
+- **Infinite Drift**: Iterating without progress, changing approach every cycle -> If no progress after 3 iterations, stop, document blockers, and request human input
+- **Gold Plating Loop**: Continuing to iterate after criteria are met to add unrequested improvements -> Stop as soon as completion criteria are satisfied; file separate issues for enhancements
+- **Skipping Verification**: Assuming code works without running tests or build commands -> Run the actual verification command every iteration, not just visual inspection
+- **Vague Criteria**: Using subjective completion criteria like "code looks good" -> Define binary, machine-verifiable criteria (test exit code, lint error count, build success)
+- **Memory Loss**: Repeating the same failed fix across iterations without tracking what was tried -> Log each iteration's approach and outcome in the progress file; read before each new attempt
+- **Loop Avoidance**: Avoiding the loop for complex tasks to save time -> Use the loop for any task with verifiable criteria; iteration beats one-shot for quality
+
+---
+
 ## References
 
 - [Ralph Loop Plugin (Anthropic)](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-loop)

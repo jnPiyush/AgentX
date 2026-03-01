@@ -44,6 +44,39 @@ compatibility:
 | **Typography** | Tailwind text utilities | `text-base md:text-lg` |
 | **Spacing** | Consistent Tailwind scale | `p-4 md:p-6 lg:p-8` |
 
+## Decision Tree
+
+```
+Building a frontend UI?
++-- Need a page layout?
+|   +-- Simple landing page       -> Semantic HTML + Tailwind utilities
+|   +-- Multi-column dashboard     -> CSS Grid with responsive breakpoints
+|   +-- Sidebar + content          -> Flexbox with fixed/fluid split
++-- Need interactive components?
+|   +-- Forms with validation      -> Semantic <form> + ARIA + native validation
+|   +-- Modals / dialogs           -> <dialog> element + focus trap
+|   +-- Navigation menus           -> <nav> + keyboard + aria-expanded
++-- Need styling approach?
+|   +-- Utility-first, rapid dev   -> Tailwind CSS
+|   +-- Pre-built components       -> Bootstrap or component library
+|   +-- Custom design system       -> CSS custom properties + BEM
++-- Need accessibility audit?
+|   -> Run WAVE / axe-core, fix contrast + ARIA + keyboard nav
++-- Need performance optimization?
+    -> Defer scripts, lazy-load images, minimize CSS
+```
+
+## Core Rules
+
+1. **Mobile-first responsive design** - Start with the smallest breakpoint and progressively enhance for larger screens; never design desktop-first.
+2. **Semantic HTML over divs** - Use `<nav>`, `<main>`, `<article>`, `<section>`, `<aside>` for structure; reserve `<div>` for styling-only wrappers.
+3. **WCAG AA minimum** - Maintain 4.5:1 contrast ratio for text, provide visible focus indicators, and add `alt` on all images.
+4. **Keyboard navigable** - Every interactive element MUST be reachable and operable via keyboard alone (Tab, Enter, Escape).
+5. **No inline styles** - Use Tailwind utility classes or external CSS; inline styles break maintainability and cacheability.
+6. **Design all states** - Every component MUST handle empty, loading, error, success, and disabled states.
+7. **Consistent spacing scale** - Use the Tailwind spacing scale (4px increments) or an 8px grid; never use arbitrary pixel values.
+8. **Viewport meta required** - Every HTML page MUST include `<meta name="viewport" content="width=device-width, initial-scale=1.0">`.
+
 ---
 
 ## HTML5 Semantic Elements
@@ -96,7 +129,7 @@ compatibility:
 
 ---
 
-## Common Pitfalls
+## Anti-Patterns
 
 | Issue | Problem | Solution |
 |-------|---------|----------|

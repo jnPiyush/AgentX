@@ -27,6 +27,27 @@ compatibility:
 - Using window functions and CTEs
 - Troubleshooting SQL Server performance issues
 
+## Decision Tree
+
+```
+SQL Server Decision
++-- Writing a data access query?
+|   +-- Simple CRUD? -> Parameterized inline SQL or stored procedure
+|   +-- Complex business logic? -> Stored procedure with TRY...CATCH
+|   +-- Reporting / analytics? -> CTEs + window functions
++-- Performance problem?
+|   +-- Slow query? -> Check execution plan for table scans
+|   +-- Missing indexes? -> Add nonclustered indexes on filter/join columns
+|   +-- Parameter sniffing? -> OPTION (RECOMPILE) or local variables
++-- Data modification?
+|   +-- Upsert needed? -> MERGE statement
+|   +-- Bulk insert? -> BULK INSERT or SqlBulkCopy
+|   +-- Audit trail? -> Temporal tables (system-versioned)
++-- Concurrency issues?
+|   +-- Deadlocks? -> Consistent table access order + short transactions
+|   +-- Read consistency? -> SNAPSHOT isolation level
+```
+
 ## Prerequisites
 
 - SQL Server 2019+ or Azure SQL Database
@@ -52,7 +73,20 @@ compatibility:
 
 ---
 
-## Common Pitfalls
+## Core Rules
+
+1. **Parameterize All Queries** - Always use parameters (`@param`) in queries; never concatenate user input into SQL strings
+2. **Use TRY...CATCH** - Wrap all stored procedures and batch operations in `BEGIN TRY...END TRY BEGIN CATCH...END CATCH`
+3. **Avoid SELECT Star** - Select only the columns you need; `SELECT *` wastes I/O and prevents covering index usage
+4. **Index Filter Columns** - Add nonclustered indexes on columns used in WHERE, JOIN, and ORDER BY clauses
+5. **Prefer Set-Based Operations** - Use JOINs, CTEs, and window functions instead of cursors or row-by-row processing
+6. **Keep Transactions Short** - Minimize lock duration by committing as soon as possible; avoid user interaction inside transactions
+7. **Use Explicit Transactions** - Wrap multi-statement modifications in `BEGIN TRANSACTION...COMMIT` with proper rollback handling
+8. **Review Execution Plans** - Use `SET STATISTICS IO ON` and actual execution plans to diagnose performance before optimizing
+
+---
+
+## Anti-Patterns
 
 | Issue | Problem | Solution |
 |-------|---------|----------|

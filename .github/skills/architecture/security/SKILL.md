@@ -65,6 +65,19 @@ Security concern?
 
 ---
 
+## Core Rules
+
+1. **Never trust user input** - Validate, sanitize, and encode all input at every trust boundary.
+2. **Use parameterized queries only** - Never concatenate strings into SQL, NoSQL, or LDAP queries.
+3. **Store secrets in a vault** - No credentials in source code, config files, or environment variables checked into git.
+4. **Enforce least privilege** - Grant minimum permissions required; use short-lived tokens and scoped API keys.
+5. **Hash passwords with modern algorithms** - Use bcrypt, scrypt, or Argon2id with appropriate work factors.
+6. **Enable HTTPS everywhere** - Enforce TLS 1.2+ with HSTS; never allow plaintext HTTP in production.
+7. **Log security events** - Record authentication attempts, authorization failures, and input validation rejections.
+8. **Scan dependencies continuously** - Automate CVE scanning in CI; block builds on critical vulnerabilities.
+
+---
+
 ## Security Checklist
 
 **Before Production:**
@@ -83,6 +96,17 @@ Security concern?
 - [ ] Error messages don't leak sensitive info
 - [ ] File uploads validated and scanned
 - [ ] API endpoints have input size limits
+
+---
+
+## Anti-Patterns
+
+- **Security by Obscurity**: Relying on hidden URLs or obfuscated code as the only defense -> Use proper authentication and authorization controls
+- **Hardcoded Secrets**: Embedding API keys or passwords directly in source code -> Use a secrets manager (Azure Key Vault, HashiCorp Vault, AWS Secrets Manager)
+- **Rolling Your Own Crypto**: Implementing custom encryption or hashing algorithms -> Use established libraries (bcrypt, Argon2, AES-256-GCM)
+- **Blanket CORS Allow-All**: Setting Access-Control-Allow-Origin to * on authenticated endpoints -> Whitelist specific trusted origins
+- **Client-Side-Only Validation**: Validating input only in JavaScript/UI -> Always re-validate on the server
+- **Logging Sensitive Data**: Writing passwords, tokens, or PII to log files -> Redact sensitive fields; log only event metadata
 
 ---
 

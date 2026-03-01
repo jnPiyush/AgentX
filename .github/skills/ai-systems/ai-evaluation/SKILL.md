@@ -188,6 +188,19 @@ Output JSON: {"correctness": N, "completeness": N, "clarity": N, "reasoning": ".
 
 ---
 
+## Core Rules
+
+1. **Baseline before changes** - Always evaluate the current system before making changes to establish a comparison point
+2. **Ground truth required** - Every evaluation dataset MUST include verified ground truth or human-validated reference answers
+3. **Stronger judge model** - LLM-as-judge MUST use a stronger model than the model being evaluated
+4. **Separate eval data** - Evaluation datasets MUST NOT overlap with training or fine-tuning data
+5. **Multiple dimensions** - Evaluate across correctness, faithfulness, relevance, safety, and latency -- never a single metric
+6. **Reproducible runs** - Pin model versions, temperatures, and random seeds so evaluation runs are deterministic
+7. **Human calibration** - LLM-as-judge scores MUST be calibrated against human agreement (target >80%)
+8. **Fail-fast gates** - Blocking metrics (faithfulness, safety, task completion) MUST fail the pipeline on regression
+
+---
+
 ## Evaluation Types
 
 ### Offline Evaluation (Pre-Deployment)
@@ -236,6 +249,18 @@ Output JSON: {"correctness": N, "completeness": N, "clarity": N, "reasoning": ".
 | **LangSmith** | Tracing + evaluation for LangChain | LangChain-based systems |
 | **OpenAI Evals** | Evaluation framework for OpenAI models | OpenAI model customization |
 | **Inspect AI** | UK AISI evaluation framework | Safety and capability testing |
+
+---
+
+## Anti-Patterns
+
+- **Single metric evaluation**: Relying only on accuracy or F1 -> Measure multiple dimensions (faithfulness, relevance, safety, latency)
+- **Evaluating on training data**: Using fine-tuning examples as eval data -> Maintain a held-out test set that never touches training
+- **Weak judge model**: Using the same or weaker model as judge -> Always use a stronger model for LLM-as-judge
+- **No human calibration**: Trusting LLM-as-judge without human agreement checks -> Calibrate with human annotators (>80% agreement)
+- **Static test sets**: Never updating evaluation datasets as the domain evolves -> Refresh test sets quarterly with new edge cases
+- **Ignoring safety evals**: Skipping toxicity and jailbreak testing -> Run red-team and safety evaluations before every release
+- **Vanity metrics**: Reporting only best-case results -> Report P50, P95, and worst-case performance
 
 ---
 

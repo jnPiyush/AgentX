@@ -202,7 +202,7 @@ full_prompt = f"{prompt}\n\n## Output Format\n{template}"
 
 ---
 
-## Common Mistakes
+## Anti-Patterns
 
 | Mistake | Fix |
 |---------|-----|

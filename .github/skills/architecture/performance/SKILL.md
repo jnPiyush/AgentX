@@ -67,7 +67,21 @@ Performance concern?
 
 ---
 
-## Performance Anti-Patterns
+## Core Rules
+
+1. **Measure before optimizing** - Profile with real workloads first; never guess at bottlenecks.
+2. **Set performance budgets** - Define latency (p95, p99) and throughput targets before writing code.
+3. **Use async I/O for all network calls** - Never block threads on HTTP, database, or file I/O in request paths.
+4. **Cache strategically** - Cache expensive, rarely-changing data; always set TTL and plan for invalidation.
+5. **Paginate large result sets** - Never return unbounded collections; prefer cursor-based pagination.
+6. **Pool connections and clients** - Reuse HTTP clients, DB connections, and gRPC channels; never create per-request.
+7. **Compress responses** - Enable gzip/Brotli for API responses and static assets.
+8. **Scale horizontally first** - Add instances behind a load balancer before scaling vertically.
+9. **Isolate background work** - Offload heavy processing to queues and background workers, not request threads.
+
+---
+
+## Anti-Patterns
 
 | Anti-Pattern | Problem | Solution |
 |--------------|---------|----------|

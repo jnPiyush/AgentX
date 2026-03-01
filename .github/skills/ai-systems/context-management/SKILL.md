@@ -254,6 +254,18 @@ Agent B (receives compressed context)
 
 ---
 
+## Core Rules
+
+1. **Budget before sending** - Count tokens in every context component and verify total stays within the model window before each LLM call
+2. **Reserve output tokens** - Always reserve 15-20% of the context window for the model's response; never use 100% for input
+3. **Critical info at edges** - Place essential instructions at the start and most relevant context at the end to avoid the "lost in the middle" problem
+4. **Summarize before overflow** - Trigger progressive summarization when context reaches 80% of the token budget, not after
+5. **Preserve decisions in summaries** - Summaries MUST retain key decisions, user preferences, and unresolved questions
+6. **Model-specific tokenizer** - Use the correct tokenizer for the target model (tiktoken for OpenAI, etc.) and account for message formatting overhead
+7. **Log token usage** - Track token counts per component (system prompt, history, RAG context) so you can optimize the largest consumer
+
+---
+
 ## Anti-Patterns
 
 | Anti-Pattern | Why It Is Bad | Do Instead |

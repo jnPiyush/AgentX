@@ -210,6 +210,19 @@ run/{timestamp}_{lakehouse}/
 -- completion_report.md # Cross-phase handover document
 ```
 
+## Core Rules
+
+1. **One phase per conversation turn** - Execute Plan, Create, or Validate in a single turn; never combine phases to prevent context rot.
+2. **Gold tables only** - Configure agents with Gold-layer fact and dimension tables; never expose Bronze or Silver tables to the agent.
+3. **T-SQL syntax in few-shots** - Use `SELECT TOP N`, `DATEPART`, `ISNULL` in examples; never use Spark SQL syntax like `LIMIT` or `DATE_FORMAT`.
+4. **Validate SQL before adding** - Test every few-shot example query against the SQL endpoint before adding it to agent configuration.
+5. **Checkpoint between phases** - Present summary and get explicit user approval before moving from Plan to Create to Validate.
+6. **Reuse Livy sessions** - Check for existing idle sessions before creating new ones; session cold start is 3-6+ minutes.
+7. **Timestamped output folders** - Save all artifacts to `run/{timestamp}_{lakehouse}/`; never overwrite previous runs.
+8. **Top-10 coverage** - Few-shot examples MUST cover the 10 most common business questions for the target domain.
+9. **Focused instructions** - Keep agent system prompts concise and domain-specific; long unfocused prompts cause agent confusion.
+10. **Reproducible notebooks** - Generate notebooks for all SDK operations so agents can be recreated without manual steps.
+
 ## Anti-Patterns
 
 - **Skip planning phase**: Creating agents without understanding schema -> poor accuracy

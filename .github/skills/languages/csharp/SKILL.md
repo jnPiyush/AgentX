@@ -28,6 +28,26 @@ compatibility:
 - Implementing dependency injection
 - Configuring nullable reference types
 
+## Decision Tree
+
+```
+C# Project Decision
++-- Building a web API?
+|   +-- REST API? -> ASP.NET Core Minimal API or Controllers
+|   +-- gRPC service? -> ASP.NET Core gRPC
++-- Data access needed?
+|   +-- Relational DB? -> Entity Framework Core
+|   +-- NoSQL / document? -> Azure Cosmos DB SDK
+|   +-- Simple queries? -> Dapper
++-- Background processing?
+|   +-- Scheduled jobs? -> IHostedService / BackgroundService
+|   +-- Message-driven? -> Azure Service Bus + Worker Service
++-- Desktop / cross-platform UI?
+|   +-- Cross-platform? -> .NET MAUI
+|   +-- Windows only? -> WPF or WinForms
++-- Library / shared code? -> .NET Class Library with NuGet packaging
+```
+
 ## Prerequisites
 
 - .NET 8+ SDK installed
@@ -92,7 +112,20 @@ string GetStatus(Order order) => order switch
 
 ---
 
-## Common Pitfalls
+## Core Rules
+
+1. **Async All the Way** - Use `async`/`await` throughout the call chain; never call `.Result` or `.Wait()` on tasks
+2. **Enable Nullable References** - Set `<Nullable>enable</Nullable>` in `.csproj`; treat all warnings as errors
+3. **Constructor Injection** - Use constructor injection with interfaces for all dependencies; avoid service locator pattern
+4. **Structured Logging** - Use `ILogger<T>` with message templates (`{UserId}`), not string interpolation
+5. **Pass CancellationToken** - Accept and forward `CancellationToken` in all async methods
+6. **Catch Specific Exceptions** - Catch the most specific exception type; never catch bare `Exception` without re-throwing
+7. **Use Modern C# Features** - Prefer primary constructors, file-scoped namespaces, pattern matching, and raw string literals
+8. **Validate Inputs Early** - Validate method arguments at entry points using guard clauses or `ArgumentException`
+
+---
+
+## Anti-Patterns
 
 | Issue | Problem | Solution |
 |-------|---------|----------|

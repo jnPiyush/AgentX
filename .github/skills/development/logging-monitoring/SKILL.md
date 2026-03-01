@@ -108,7 +108,7 @@ Production: INFO (or WARN)
 
 ---
 
-## Best Practices Summary
+## Core Rules
 
 | Practice | Description |
 |----------|-------------|
@@ -120,6 +120,18 @@ Production: INFO (or WARN)
 | **Meaningful metrics** | Track rate, errors, duration |
 | **Health checks** | Liveness + readiness endpoints |
 | **Actionable alerts** | Include runbooks, reduce noise |
+
+---
+
+## Anti-Patterns
+
+- **Log and Forget**: Writing logs but never querying or reviewing them -> Set up dashboards and alerts on ERROR/FATAL; review logs in incident postmortems
+- **PII in Logs**: Logging email addresses, passwords, tokens, or credit card numbers -> Scrub sensitive fields before logging; use allowlists for loggable fields
+- **Unstructured Strings**: Logging plain text messages that are hard to parse or search -> Use structured logging (JSON key-value pairs) for all log entries
+- **Missing Correlation**: Logs from different services with no shared request ID -> Propagate W3C trace context or a correlation ID header across all service calls
+- **Alert Fatigue**: Alerting on every warning or non-actionable metric -> Page only on SLO budget burn rate; group related alerts; include runbook links
+- **Debug in Production**: Running production with DEBUG or TRACE level enabled -> Use INFO or WARN in production; enable DEBUG temporarily and only on specific components
+- **Metric Overload**: Tracking hundreds of custom metrics with no clear purpose -> Focus on RED (Rate, Errors, Duration) for services and USE (Utilization, Saturation, Errors) for resources
 
 ---
 

@@ -44,6 +44,28 @@ compatibility:
 - Performance baselines established
 - Staging environment matching production topology
 
+## Decision Tree
+
+```
+Production readiness task?
++-- Pre-release certification?
+|   +-- All tests passing? -> Run quality gate pipeline
+|   +-- Security scans done? -> Check SAST, SCA, secret scan results
+|   +-- Performance validated? -> Run smoke load test against staging
++-- Rollback validation?
+|   +-- Database migrations? -> Test expand-contract rollback
+|   +-- Stateless deploy? -> Verify previous image redeploy
+|   +-- Feature flags? -> Test flag disable path
++-- Chaos / resilience testing?
+|   +-- Upstream dependency failure? -> Inject latency and 5xx errors
+|   +-- Infrastructure failure? -> Simulate pod kill, network partition
+|   +-- Data store failure? -> Test connection drop and recovery
++-- Go/no-go decision?
+    +-- Score all categories -> Use weighted decision matrix
+    +-- Any category below 3? -> NO-GO, remediate first
+    +-- Total >= 4.0? -> GO with documented risks
+```
+
 ---
 
 ## Production Readiness Checklist
@@ -413,6 +435,21 @@ describe('Post-Deployment Smoke Tests', () => {
 | Change failure rate | < 5% | > 10% |
 | Deployment frequency | Weekly+ | < monthly |
 | Post-deploy incidents (P1/P2) | 0 per release | Any P1 within 24h |
+
+---
+
+## Core Rules
+
+1. **All Gates Must Pass** - Never deploy with a failing quality gate; fix the issue or obtain documented risk acceptance.
+2. **Rollback Tested Every Release** - Execute the full rollback procedure in staging before every production deploy.
+3. **Observability Before Deploy** - Dashboards, alerts, and health endpoints must be verified working before go-live.
+4. **Expand-Contract Migrations** - Database changes must be backward-compatible; never drop columns in the same release that removes their usage.
+5. **Multi-Person Approval** - Production go/no-go requires sign-off from Engineering, QA, and Operations.
+6. **Canary or Blue-Green for Critical Services** - Never do big-bang deploys for user-facing production workloads.
+7. **Automated Smoke Tests Post-Deploy** - Run health check and critical-path smoke tests immediately after every deployment.
+8. **Feature Flags for Risky Changes** - Wrap new features behind flags so they can be disabled without a redeploy.
+9. **Document Known Risks** - Record any accepted risks, workarounds, or deferred fixes in the release decision record.
+10. **Chaos Test Before Major Releases** - Run resilience experiments (latency injection, service failure) in staging before big releases.
 
 ---
 

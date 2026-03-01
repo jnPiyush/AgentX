@@ -200,6 +200,18 @@ Extract -> [Quality Gate 1: Schema] -> Transform -> [Quality Gate 2: Stats] -> L
 
 ---
 
+## Core Rules
+
+1. **Baseline everything** - Profile and store reference distributions for all features at training time before any monitoring begins
+2. **Tiered alerting** - Use severity tiers (green/yellow/red) with escalating actions; never treat all drift equally
+3. **Statistical rigor** - Apply appropriate statistical tests per feature type (KS for continuous, chi-squared for categorical) with minimum sample sizes
+4. **Automate schema validation** - Validate column names, types, and nullability on every pipeline run before any transformation
+5. **Window-based comparison** - Compare rolling windows against reference data, not single-point snapshots
+6. **Retrain on critical drift** - Trigger retraining when PSI > 0.25 persists for 7+ days on any critical feature
+7. **Version reference data** - Store and version reference distributions alongside model versions for reproducibility
+
+---
+
 ## Tools and Frameworks
 
 | Tool | Capabilities | When to Use |
@@ -218,6 +230,17 @@ Extract -> [Quality Gate 1: Schema] -> Transform -> [Quality Gate 2: Stats] -> L
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `scaffold-data-monitor.py` | Generate data drift monitoring pipeline | `python scaffold-data-monitor.py --name my-pipeline --features config.yaml` |
+
+---
+
+## Anti-Patterns
+
+- **No baseline**: Monitoring drift without a stored reference distribution -> Profile and version training data distributions before deployment
+- **Single global threshold**: Using one threshold for all features -> Set per-feature thresholds based on importance and variability
+- **Ignoring seasonal patterns**: Alerting on expected cyclical changes -> Use time-aware baselines comparing same period last year
+- **Alert fatigue**: Firing on every minor fluctuation -> Implement tiered severity with actionable thresholds only
+- **Manual-only checks**: Relying on ad-hoc spot checks instead of automated monitoring -> Automate profiling in the data pipeline
+- **Reacting without investigating**: Retraining immediately on any drift signal -> Investigate root cause first; benign drift may not need retraining
 
 ---
 

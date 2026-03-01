@@ -30,6 +30,30 @@ compatibility:
 - GitHub repository with admin access
 - YAML syntax knowledge
 
+## Decision Tree
+
+```
+What GitHub Actions task?
++-- New CI pipeline?
+|   +-- Single language? -> Minimal workflow with build + test
+|   +-- Multi-platform/version? -> Matrix strategy
+|   +-- Monorepo? -> Path-filtered triggers per project
++-- Reusing workflow logic?
+|   +-- Multi-job orchestration? -> Reusable workflow (workflow_call)
+|   +-- Reusable step sequence? -> Composite action
+|   +-- Complex logic with API calls? -> JavaScript action
++-- Choosing triggers?
+|   +-- See Trigger Decision Tree below
++-- Securing workflows?
+|   +-- Third-party actions? -> Pin to SHA
+|   +-- Fork PRs? -> Use pull_request (NOT pull_request_target)
+|   +-- Production deploy? -> Environment protection + approval gates
++-- Debugging failures?
+    +-- Workflow not triggering? -> Check branch/path filters
+    +-- Permission denied? -> Add explicit permissions block
+    +-- Cache miss? -> Verify lockfile and cache key
+```
+
 ## Table of Contents
 
 1. [Trigger Decision Tree](#trigger-decision-tree)
@@ -280,7 +304,7 @@ actionlint .github/workflows/*.yml # local syntax validation
 
 ---
 
-## Best Practices Summary
+## Core Rules
 
 ### [PASS] DO
 
@@ -305,6 +329,19 @@ actionlint .github/workflows/*.yml # local syntax validation
 - Use mutable branch refs (`@main`) for third-party actions
 - Commit build artifacts to the repository
 - Mix application logic with workflow orchestration logic
+
+---
+
+## Anti-Patterns
+
+- **Monolith Workflow**: Cramming build, test, lint, deploy, and notifications into a single job -> Split into discrete jobs with `needs:` dependencies.
+- **Secret Sprawl**: Duplicating secrets across repos instead of scoping -> Use organization-level secrets and environment-scoped secrets.
+- **Workflow Duplication**: Copy-pasting the same CI logic across repositories -> Extract into reusable workflows (`workflow_call`) or composite actions.
+- **Uncapped Matrix**: Using open-ended matrix dimensions that explode into dozens of jobs -> Constrain with `exclude` / `include` and limit to supported platforms.
+- **Mutable Action Refs**: Pinning actions to `@main` or `@latest` -> Pin to SHA or major version tag (`@v4`).
+- **Trigger Overload**: Using `on: [push]` with no path or branch filter -> Scope triggers with `branches:` and `paths:` to avoid wasted runs.
+- **Artifact Hoarding**: Uploading large artifacts with no retention policy -> Set `retention-days` and upload only what downstream jobs need.
+- **Catch-All Permissions**: Using `permissions: write-all` for convenience -> Declare the minimum permissions each job requires.
 
 ---
 

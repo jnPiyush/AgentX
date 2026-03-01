@@ -172,7 +172,7 @@ Response: 204 No Content
 
 ---
 
-## API Best Practices
+## Core Rules
 
 ### Security
 
@@ -205,7 +205,7 @@ Response: 204 No Content
 
 ---
 
-## Common API Pitfalls
+## Anti-Patterns
 
 | Pitfall | Problem | Solution |
 |---------|---------|----------|

@@ -89,7 +89,7 @@ Priority (highest to lowest):
 
 ---
 
-## Best Practices Summary
+## Core Rules
 
 | Practice | Description |
 |----------|-------------|
@@ -101,6 +101,18 @@ Priority (highest to lowest):
 | **Document** | List all config options and their purpose |
 | **Environment parity** | Same config structure across all environments |
 | **Immutable config** | Don't change config at runtime |
+
+---
+
+## Anti-Patterns
+
+- **Hardcoded Secrets**: Embedding API keys or passwords in source code -> Use a secrets manager (Key Vault, AWS Secrets Manager) and environment variables
+- **Config Sprawl**: Scattering configuration across dozens of unrelated files -> Consolidate into a layered config hierarchy with clear precedence
+- **Runtime Mutation**: Changing configuration values after startup without restart -> Treat config as immutable; redeploy or use feature flag service for dynamic values
+- **Missing Validation**: Accessing config values deep in business logic without checking them -> Validate all required config at startup and fail fast with clear error messages
+- **Environment Leakage**: Using production secrets in dev or committing .env files -> Use .env.example as template, add .env to .gitignore, separate secrets per environment
+- **Stringly Typed Config**: Accessing config as raw strings throughout the codebase -> Bind config to strongly-typed classes or models with validation
+- **Default Overuse**: Silently falling back to defaults for critical values like database URLs -> Require explicit values for critical config; only default non-critical settings
 
 ---
 

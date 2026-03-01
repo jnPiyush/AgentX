@@ -300,151 +300,21 @@ paths = [
 
 ## Security Test Categories
 
-### Authentication Tests
+Test suites should cover three critical areas:
 
-```typescript
-describe('Authentication Security', () => {
-  it('rejects expired tokens', async () => {
-    const expired = createToken({ exp: pastTimestamp });
-    const res = await request(app)
-      .get('/api/protected')
-      .set('Authorization', `Bearer ${expired}`);
-    expect(res.status).toBe(401);
-  });
+- **Authentication**: Expired tokens, tampered tokens, rate limiting on login
+- **Authorization**: Horizontal escalation (user A accessing user B data), vertical escalation (user accessing admin routes)
+- **Injection**: SQL injection payloads, XSS payloads (reflected/persistent), command injection
 
-  it('rejects tampered tokens', async () => {
-    const tampered = validToken.slice(0, -5) + 'XXXXX';
-    const res = await request(app)
-      .get('/api/protected')
-      .set('Authorization', `Bearer ${tampered}`);
-    expect(res.status).toBe(401);
-  });
-
-  it('enforces rate limiting on login', async () => {
-    for (let i = 0; i < 10; i++) {
-      await request(app).post('/auth/login').send({ email: 'test@test.com', password: 'wrong' });
-    }
-    const res = await request(app).post('/auth/login').send({ email: 'test@test.com', password: 'wrong' });
-    expect(res.status).toBe(429);
-  });
-});
-```
-
-### Authorization Tests
-
-```typescript
-describe('Authorization Security', () => {
-  it('prevents horizontal privilege escalation', async () => {
-    const userAToken = createToken({ sub: 'user-a' });
-    const res = await request(app)
-      .get('/api/users/user-b/data')
-      .set('Authorization', `Bearer ${userAToken}`);
-    expect(res.status).toBe(403);
-  });
-
-  it('prevents vertical privilege escalation', async () => {
-    const userToken = createToken({ roles: ['user'] });
-    const res = await request(app)
-      .delete('/api/admin/users/123')
-      .set('Authorization', `Bearer ${userToken}`);
-    expect(res.status).toBe(403);
-  });
-});
-```
-
-### Injection Tests
-
-```typescript
-describe('Injection Prevention', () => {
-  const sqlPayloads = [
-    "'; DROP TABLE users; --",
-    "1 OR 1=1",
-    "' UNION SELECT * FROM users --",
-  ];
-
-  sqlPayloads.forEach((payload) => {
-    it(`blocks SQL injection: ${payload.substring(0, 30)}`, async () => {
-      const res = await request(app).get(`/api/users?search=${encodeURIComponent(payload)}`);
-      expect(res.status).not.toBe(500); // Should not cause server error
-      // Verify no data leakage
-      expect(res.body).not.toHaveProperty('password');
-    });
-  });
-
-  const xssPayloads = [
-    '<script>alert(1)</script>',
-    '<img onerror="alert(1)" src="x">',
-    'javascript:alert(1)',
-  ];
-
-  xssPayloads.forEach((payload) => {
-    it(`blocks XSS: ${payload.substring(0, 30)}`, async () => {
-      const res = await request(app)
-        .post('/api/comments')
-        .send({ body: payload });
-      if (res.status === 201) {
-        // If accepted, verify sanitized
-        expect(res.body.body).not.toContain('<script>');
-        expect(res.body.body).not.toContain('onerror');
-      }
-    });
-  });
-});
-```
+> **Deep Dive**: See [security-test-examples.md](references/security-test-examples.md) for complete TypeScript test suites.
 
 ---
 
 ## Security Pipeline (Full)
 
-```yaml
-# .github/workflows/security.yml
-name: Security Pipeline
-on:
-  push:
-    branches: [main]
-  pull_request:
-  schedule:
-    - cron: '0 6 * * 1'  # Weekly Monday 6 AM
+A complete security pipeline chains SAST, SCA, secret detection, DAST, and container scanning as separate jobs. DAST runs only after static checks pass. A final report job aggregates all results into the GitHub Step Summary.
 
-jobs:
-  sast:
-    name: Static Analysis
-    # ... (Semgrep + CodeQL)
-
-  sca:
-    name: Dependency Scan
-    # ... (Trivy + npm audit)
-
-  secrets:
-    name: Secret Detection
-    # ... (Gitleaks)
-
-  dast:
-    name: Dynamic Analysis
-    needs: [sast, sca]  # Only if static checks pass
-    # ... (ZAP baseline)
-
-  container:
-    name: Container Scan
-    if: github.event_name == 'push'
-    # ... (Trivy image scan)
-
-  report:
-    name: Security Report
-    needs: [sast, sca, secrets, dast]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Aggregate Results
-        run: |
-          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| SAST | ${{ needs.sast.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| SCA | ${{ needs.sca.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Secrets | ${{ needs.secrets.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| DAST | ${{ needs.dast.result }} |" >> $GITHUB_STEP_SUMMARY
-```
+> **Deep Dive**: See [security-pipeline.md](references/security-pipeline.md) for the full GitHub Actions workflow.
 
 ---
 
@@ -469,6 +339,21 @@ jobs:
 | Secret scan coverage | 100% of repos | Missing repo |
 | DAST scan frequency | Weekly minimum | > 2 weeks gap |
 | Mean time to remediate (critical) | < 24 hours | > 48 hours |
+
+---
+
+## Core Rules
+
+1. **Shift Left** - Run SAST and secret detection on every PR; do not defer security scanning to release time.
+2. **Zero Critical/High in Production** - Block deployments with unresolved critical or high severity findings.
+3. **Automate Everything** - SAST, SCA, secret scanning, and DAST must run in CI pipelines, not manually.
+4. **OWASP Top 10 Coverage** - Every application must have test coverage for the current OWASP Top 10 categories.
+5. **Scan Dependencies Weekly** - Run SCA scans on a schedule in addition to PR-triggered scans to catch newly disclosed CVEs.
+6. **Test Auth Boundaries** - Explicitly test expired tokens, tampered tokens, horizontal escalation, and vertical escalation.
+7. **Injection Testing Required** - Include SQL injection, XSS, and command injection payloads in integration test suites.
+8. **Container Image Scanning** - Scan both base images and built images; fail the pipeline on critical/high CVEs.
+9. **Document Exceptions** - Any suppressed finding must have a written risk acceptance with owner and review date.
+10. **Rotate Credentials on Leak** - If a secret scan detects a leaked credential, rotate it immediately; do not just remove from code.
 
 ---
 

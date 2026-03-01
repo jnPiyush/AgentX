@@ -33,6 +33,20 @@ compatibility:
 
 - Basic OOP programming knowledge
 
+## Decision Tree
+
+```
+Architecture or code quality concern?
++-- New project setup? -> Apply Clean Architecture layers (Api/Core/Infrastructure)
++-- Class doing too much? -> Apply SRP - split by responsibility
++-- Need to extend behavior? -> Apply OCP - use interfaces, not if/else chains
++-- Deep inheritance tree? -> Favor composition over inheritance
++-- Hard to test? -> Apply DIP - inject abstractions, not concretions
++-- Code duplicated? -> Extract shared logic (DRY), but avoid premature abstraction
++-- Complex solution? -> Simplify (KISS) - can a junior dev understand it?
++-- Building speculative features? -> Stop (YAGNI) - build only what is needed now
+```
+
 ## SOLID Principles
 
 ### Single Responsibility (SRP)
@@ -212,7 +226,7 @@ Don't build features "just in case". Build what's needed now.
 
 ---
 
-## Best Practices
+## Core Rules
 
 ### [PASS] DO
 
@@ -318,6 +332,15 @@ public class UserReportService
 **See Also**: [Testing](../../development/testing/SKILL.md)
 
 **Last Updated**: February 27, 2026
+
+## Anti-Patterns
+
+- **God Class**: One class handles persistence, validation, and notifications -> Split into focused classes per SRP
+- **Speculative Generality**: Building abstract factories and plugin systems for one implementation -> Start concrete, abstract when a second case appears (YAGNI)
+- **Premature DRY**: Merging two vaguely similar functions into one with flag parameters -> Tolerate minor duplication until the pattern is clear
+- **Deep Inheritance**: 4+ level inheritance hierarchies -> Flatten with composition and interfaces
+- **Service Locator**: Resolving dependencies at runtime from a global container -> Use constructor injection (DIP)
+- **Copy-Paste Architecture**: Duplicating entire classes instead of extracting shared behavior -> Extract base class or shared utility
 
 ## Troubleshooting
 

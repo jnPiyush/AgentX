@@ -260,6 +260,19 @@ run/{scenario_name}_{YYYYMMDD}/
 -- requirements.txt (if new dependencies)
 ```
 
+## Core Rules
+
+1. **Profile before modeling** - Always run NB02 (Profiling) to classify series as regular, erratic, lumpy, or intermittent before selecting a model.
+2. **12+ months of history** - Require at least two full seasonal cycles of data; reduce forecast horizon or aggregate to coarser grain if data is insufficient.
+3. **Train/test split is mandatory** - Hold out the last N periods (matching forecast horizon) for evaluation; never evaluate on training data.
+4. **Sequential notebook execution** - Run NB01 through NB05 in order; each notebook depends on the output table of the previous one.
+5. **Validate after each notebook** - Check row counts, null counts, and date ranges before proceeding to the next notebook.
+6. **Low-risk auto, high-risk approval** - Apply parameter substitutions automatically; require explicit user approval for algorithm changes or new dependencies.
+7. **LightGBM for many series** - Default to LightGBM for 100+ series with external features; use Prophet only for few series with strong seasonality.
+8. **Lag features match granularity** - Set lag windows to match the time granularity (e.g., lag_7 for daily, lag_4 for weekly); avoid arbitrary lag counts.
+9. **Timestamped output folders** - Save all notebooks and reports to `run/{scenario}_{YYYYMMDD}/`; never overwrite previous runs.
+10. **Livy validation first** - Validate all generated code via Livy session before including it in final notebooks.
+
 ## Anti-Patterns
 
 - **Skip profiling**: Treating all series identically -> wrong model for intermittent data

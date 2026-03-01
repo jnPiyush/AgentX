@@ -222,7 +222,20 @@ Serving: vLLM, TGI, llama.cpp (GGUF)
 
 ---
 
-## Common Mistakes
+## Core Rules
+
+1. **Benchmark base model first** - Evaluate the base model on your task before fine-tuning to establish an improvement baseline
+2. **Start with LoRA** - Use LoRA or QLoRA as the default approach; only consider full fine-tuning when LoRA results are insufficient
+3. **Validate data format** - Training data MUST match the model's expected chat template or completion format exactly
+4. **Deduplicate rigorously** - Remove duplicate and near-duplicate examples from training data to prevent memorization
+5. **Watch validation loss** - Stop training when validation loss plateaus or increases; do not rely on training loss alone
+6. **80/10/10 split** - Use 80% train, 10% validation, 10% test split; never evaluate on training data
+7. **Include refusal examples** - Add safety refusal examples in training data so the model retains the ability to decline harmful requests
+8. **Merge adapters for inference** - Merge LoRA adapters into the base model for production serving to avoid inference overhead
+
+---
+
+## Anti-Patterns
 
 | Mistake | Fix |
 |---------|-----|

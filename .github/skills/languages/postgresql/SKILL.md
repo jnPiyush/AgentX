@@ -27,6 +27,25 @@ compatibility:
 - Using window functions and CTEs
 - Configuring row-level security (RLS)
 
+## Decision Tree
+
+```
+PostgreSQL Decision
++-- Need semi-structured data?
+|   +-- Dynamic schema? -> JSONB columns with GIN index
+|   +-- Fixed schema? -> Regular columns with B-tree indexes
++-- Need full-text search?
+|   +-- Simple keyword match? -> ILIKE or trigram (pg_trgm)
+|   +-- Ranked relevance? -> tsvector + GIN index
++-- Pagination needed?
+|   +-- Small dataset (<10K rows)? -> LIMIT/OFFSET acceptable
+|   +-- Large dataset? -> Cursor-based (keyset) pagination
++-- Multi-tenant data?
+|   +-- Row isolation? -> Row-Level Security (RLS) policies
+|   +-- Schema isolation? -> Separate schemas per tenant
++-- Aggregation heavy? -> Materialized views with periodic refresh
+```
+
 ## Prerequisites
 
 - PostgreSQL 14+ installed or accessible
@@ -52,7 +71,20 @@ compatibility:
 
 ---
 
-## Common Pitfalls
+## Core Rules
+
+1. **Use Parameterized Queries** - Always use `$1, $2` placeholders; never concatenate user input into SQL strings
+2. **Index WHERE and JOIN Columns** - Add indexes on columns used in WHERE, JOIN, and ORDER BY clauses
+3. **Prefer Specific Columns** - Select only needed columns; avoid `SELECT *` in application queries
+4. **Use Connection Pooling** - Use pgBouncer or application-level pooling; never open unlimited connections
+5. **EXPLAIN Before Optimizing** - Run `EXPLAIN ANALYZE` to understand query plans before adding indexes or rewriting
+6. **Use CTEs for Readability** - Use Common Table Expressions for complex queries; prefer `WITH` over deeply nested subqueries
+7. **Keep Transactions Short** - Minimize lock duration by keeping transactions as brief as possible
+8. **Use JSONB Over JSON** - Prefer `jsonb` type for storage and querying; `json` is only for write-once scenarios
+
+---
+
+## Anti-Patterns
 
 | Issue | Problem | Solution |
 |-------|---------|----------|
