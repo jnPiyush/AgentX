@@ -17,6 +17,7 @@ import {
  runSetupWizard,
  runStartupCheck,
  runCriticalPreCheck,
+ runSilentInstall,
 } from './commands/setupWizard';
 import { AgentEventBus } from './utils/eventBus';
 import { ThinkingLog } from './utils/thinkingLog';
@@ -288,21 +289,22 @@ export function activate(context: vscode.ExtensionContext) {
  vscode.commands.executeCommand('setContext', 'agentx.initialized', initialized);
  });
 
- // Non-blocking startup health check - runs after activation
+ // Non-blocking startup dependency install - runs silently after activation
+ // Automatically installs missing required dependencies without user prompts.
  // Respects the agentx.skipStartupCheck setting
  const skipStartupCheck = vscode.workspace
  .getConfiguration('agentx')
  .get<boolean>('skipStartupCheck', false);
  if (!skipStartupCheck) {
- // Delay the check slightly so it does not block extension activation
+ // Delay slightly so it does not block extension activation
  setTimeout(async () => {
  try {
  const mode = agentxContext.getMode();
- // Run critical pre-check - auto-installs missing required deps
- await runCriticalPreCheck(mode, /* blocking */ false);
+ // Silently install all missing required dependencies
+ await runSilentInstall(mode);
  } catch (err) {
  // Startup check should never crash the extension
- console.warn('AgentX: Startup environment check failed:', err);
+ console.warn('AgentX: Startup silent install failed:', err);
  }
  }, 3000);
  }

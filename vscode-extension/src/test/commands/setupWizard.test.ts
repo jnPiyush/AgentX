@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import {
   runCriticalPreCheck,
   runStartupCheck,
+  runSilentInstall,
   PreCheckResult,
 } from '../../commands/setupWizard';
 
@@ -447,5 +448,170 @@ describe('setupWizard - runStartupCheck', () => {
 
     // Should have shown a warning because deps are missing
     sinon.assert.called(showWarningStub);
+  });
+});
+
+// -----------------------------------------------------------------
+// runSilentInstall - auto-installs without any user prompts
+// -----------------------------------------------------------------
+
+describe('setupWizard - runSilentInstall', () => {
+  let checkAllStub: sinon.SinonStub;
+  let createTerminalStub: sinon.SinonStub;
+  let showWarningStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    checkAllStub = sinon.stub(depChecker, 'checkAllDependencies');
+    createTerminalStub = sinon.stub(vscode.window, 'createTerminal');
+    showWarningStub = sinon.stub(vscode.window, 'showWarningMessage');
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  // ---------------------------------------------------------------
+  // Scenario 1: All deps present -> passed = true, no terminal
+  // ---------------------------------------------------------------
+  it('should return passed=true immediately when all deps are found', async () => {
+    checkAllStub.resolves(makeHealthyReport());
+
+    const result = await runSilentInstall('local');
+
+    assert.strictEqual(result.passed, true);
+    sinon.assert.notCalled(createTerminalStub);
+    sinon.assert.notCalled(showWarningStub);
+  });
+
+  // ---------------------------------------------------------------
+  // Scenario 2: Missing deps -> installs silently via hidden terminal
+  // ---------------------------------------------------------------
+  it('should install missing deps silently without prompting', async () => {
+    const clock = sinon.useFakeTimers({ toFake: ['setTimeout'] });
+
+    try {
+      const unhealthyReport = makeUnhealthyReport(['Git']);
+      const healthyReport = makeHealthyReport();
+
+      // First call (initial check): unhealthy; second call (poll): healthy
+      checkAllStub.onFirstCall().resolves(unhealthyReport);
+      checkAllStub.onSecondCall().resolves(healthyReport);
+      checkAllStub.resolves(healthyReport);
+
+      // Mock hidden terminal
+      const terminalSendTextSpy = sinon.spy();
+      const terminalDisposeSpy = sinon.spy();
+      createTerminalStub.returns({
+        show: sinon.spy(),
+        sendText: terminalSendTextSpy,
+        dispose: terminalDisposeSpy,
+      });
+
+      const resultPromise = runSilentInstall('local');
+
+      // Advance timer to trigger polling
+      await clock.tickAsync(5_000);
+
+      const result = await resultPromise;
+
+      // Terminal was created with hideFromUser: true
+      sinon.assert.calledOnce(createTerminalStub);
+      const termOpts = createTerminalStub.getCall(0).args[0];
+      assert.strictEqual(termOpts.hideFromUser, true, 'Terminal should be hidden');
+
+      // Install command was sent
+      assert.ok(
+        terminalSendTextSpy.getCalls().some(
+          (c: sinon.SinonSpyCall) => String(c.args[0]).includes('winget install Git.Git')
+        ),
+        'should send Git install command silently'
+      );
+
+      // No user prompts were shown
+      sinon.assert.notCalled(showWarningStub);
+
+      // Terminal was disposed after success
+      sinon.assert.calledOnce(terminalDisposeSpy);
+
+      assert.strictEqual(result.passed, true);
+    } finally {
+      clock.restore();
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Scenario 3: Multiple missing deps -> all installed silently
+  // ---------------------------------------------------------------
+  it('should install multiple missing deps in a single terminal', async () => {
+    const clock = sinon.useFakeTimers({ toFake: ['setTimeout'] });
+
+    try {
+      const unhealthyReport = makeUnhealthyReport(['Git', 'Node.js']);
+      const healthyReport = makeHealthyReport();
+
+      checkAllStub.onFirstCall().resolves(unhealthyReport);
+      checkAllStub.onSecondCall().resolves(healthyReport);
+      checkAllStub.resolves(healthyReport);
+
+      const terminalSendTextSpy = sinon.spy();
+      createTerminalStub.returns({
+        show: sinon.spy(),
+        sendText: terminalSendTextSpy,
+        dispose: sinon.spy(),
+      });
+
+      const resultPromise = runSilentInstall('local');
+
+      await clock.tickAsync(5_000);
+
+      const result = await resultPromise;
+
+      // Both install commands sent
+      const allCmds = terminalSendTextSpy.getCalls().map(
+        (c: sinon.SinonSpyCall) => String(c.args[0])
+      );
+      assert.ok(allCmds.some(cmd => cmd.includes('Git')), 'should install Git');
+      assert.ok(allCmds.some(cmd => cmd.includes('Node')), 'should install Node.js');
+      assert.strictEqual(result.passed, true);
+    } finally {
+      clock.restore();
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Scenario 4: Polling times out -> returns passed=false with warning
+  // ---------------------------------------------------------------
+  it('should return passed=false and show warning when polling times out', async () => {
+    const clock = sinon.useFakeTimers({ toFake: ['setTimeout'] });
+
+    try {
+      const unhealthyReport = makeUnhealthyReport(['Git']);
+      // Always return unhealthy
+      checkAllStub.resolves(unhealthyReport);
+
+      const terminalDisposeSpy = sinon.spy();
+      createTerminalStub.returns({
+        show: sinon.spy(),
+        sendText: sinon.spy(),
+        dispose: terminalDisposeSpy,
+      });
+
+      showWarningStub.resolves(undefined);
+
+      const resultPromise = runSilentInstall('local');
+
+      // Advance past max wait (180s)
+      await clock.tickAsync(180_000);
+
+      const result = await resultPromise;
+
+      assert.strictEqual(result.passed, false);
+      // Terminal was cleaned up
+      sinon.assert.calledOnce(terminalDisposeSpy);
+      // Warning shown after timeout
+      sinon.assert.calledOnce(showWarningStub);
+    } finally {
+      clock.restore();
+    }
   });
 });

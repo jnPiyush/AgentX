@@ -7,7 +7,7 @@ metadata:
   created: "2025-06-15"
   updated: "2025-06-15"
 compatibility:
-  frameworks: ["langchain", "semantic-kernel", "openai", "anthropic", "azure-openai"]
+  frameworks: ["langchain", "microsoft-agent-framework", "openai", "anthropic", "azure-openai"]
   languages: ["python", "typescript", "csharp"]
 ---
 

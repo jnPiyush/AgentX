@@ -7,7 +7,7 @@ metadata:
   created: "2025-06-15"
   updated: "2025-06-15"
 compatibility:
-  frameworks: ["langchain", "llamaindex", "semantic-kernel", "azure-ai-search", "qdrant", "chroma", "pgvector"]
+  frameworks: ["langchain", "llamaindex", "microsoft-agent-framework", "azure-ai-search", "qdrant", "chroma", "pgvector"]
   languages: ["python", "typescript", "csharp"]
 ---
 
@@ -250,7 +250,7 @@ If the context does not contain enough information, say "I don't have enough inf
 |------|-------------|-------------|
 | **LangChain** | Full RAG pipeline orchestration | Rapid prototyping, Python |
 | **LlamaIndex** | Advanced indexing and retrieval | Complex document structures |
-| **Semantic Kernel** | .NET/Python RAG with plugins | Microsoft ecosystem |
+| **Microsoft Agent Framework** | .NET/Python/TS RAG with plugins and agents | Microsoft ecosystem |
 | **Azure AI Search** | Managed hybrid search + vector | Production Azure deployments |
 | **Qdrant** | High-performance vector DB | Self-hosted, filtering |
 | **ChromaDB** | Lightweight vector DB | Prototyping, local dev |

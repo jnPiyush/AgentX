@@ -6,7 +6,7 @@ import * as https from 'https';
 import * as http from 'http';
 import { InitWizardPanel } from '../views/initWizardPanel';
 import { resolveWindowsShell } from '../utils/shell';
-import { runCriticalPreCheck } from './setupWizard';
+import { runSilentInstall } from './setupWizard';
 
 const BRANCH = 'master';
 const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
@@ -58,11 +58,14 @@ export function registerInitializeCommand(
  return;
  }
 
- // Pre-flight: check all required dependencies and auto-install if missing
+ // Pre-flight: silently install all required dependencies
  const modeConfig = vscode.workspace.getConfiguration('agentx').get<string>('mode', 'local');
- const preCheck = await runCriticalPreCheck(modeConfig, /* blocking */ true);
+ const preCheck = await runSilentInstall(modeConfig);
  if (!preCheck.passed) {
- // User chose not to install or install is pending reload
+ // Silent install could not resolve all deps - notify and abort
+ vscode.window.showWarningMessage(
+ 'AgentX: Some required dependencies could not be installed. Run "AgentX: Check Environment" for details.'
+ );
  return;
  }
 

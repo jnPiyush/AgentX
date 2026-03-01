@@ -75,10 +75,105 @@ export async function runSetupWizard(mode: string): Promise<void> {
  * When missing required dependencies are found it offers to auto-install them.
  */
 export async function runStartupCheck(mode: string): Promise<void> {
-  const result = await runCriticalPreCheck(mode, /* silent */ false);
+  const result = await runCriticalPreCheck(mode, /* blocking */ false);
   if (!result.passed) {
     console.warn('AgentX: Environment pre-check did not pass.');
   }
+}
+
+/**
+ * Silently install all missing required dependencies without any user prompts.
+ *
+ * Checks all dependencies, then auto-installs any missing required tools
+ * via a hidden terminal. A progress notification tracks the install. If all
+ * tools are already present, resolves immediately with `passed: true`.
+ *
+ * @param mode - The AgentX operating mode ('local' or 'github').
+ * @returns PreCheckResult - `passed` is true when all required deps
+ *   are satisfied after the silent install attempt.
+ */
+export async function runSilentInstall(mode: string): Promise<PreCheckResult> {
+  // -- 1. Run all checks quietly ----------------------------------------
+  const report = await checkAllDependencies(mode);
+
+  if (report.healthy) {
+    console.log('AgentX: All required dependencies found (silent check).');
+    return { passed: true, report };
+  }
+
+  // -- 2. Collect missing required CLI tools -----------------------------
+  const missing = report.results.filter(
+    r => r.severity === 'required' && !r.found,
+  );
+  const toolsWithFix = missing.filter(r => r.fixCommand);
+
+  if (toolsWithFix.length === 0) {
+    // Missing deps have no auto-fix command - nothing we can do silently
+    console.warn(
+      'AgentX: Missing dependencies with no auto-fix:',
+      missing.map(r => r.name).join(', '),
+    );
+    return { passed: false, report };
+  }
+
+  // -- 3. Install silently via a hidden terminal -------------------------
+  const terminalNames = toolsWithFix.map(t => t.name).join(', ');
+
+  return vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `AgentX: Installing ${terminalNames}...`,
+      cancellable: false,
+    },
+    async (progress) => {
+      const terminal = vscode.window.createTerminal({
+        name: 'AgentX: Silent Install',
+        shellPath: process.platform === 'win32' ? 'powershell.exe' : undefined,
+        hideFromUser: true,
+      });
+
+      for (const tool of toolsWithFix) {
+        if (tool.fixCommand) {
+          terminal.sendText(tool.fixCommand);
+        }
+      }
+
+      // -- 4. Poll until tools become available ---------------------------
+      progress.report({ message: `Waiting for ${terminalNames}...` });
+
+      const POLL_MS = 5_000;
+      const MAX_WAIT_MS = 180_000;
+      let elapsed = 0;
+
+      while (elapsed < MAX_WAIT_MS) {
+        await new Promise<void>(resolve => setTimeout(resolve, POLL_MS));
+        elapsed += POLL_MS;
+
+        progress.report({
+          message: `Checking ${terminalNames}... (${Math.round(elapsed / 1000)}s)`,
+        });
+
+        const freshReport = await checkAllDependencies(mode);
+        if (freshReport.healthy) {
+          terminal.dispose();
+          console.log('AgentX: All dependencies installed silently.');
+          return { passed: true, report: freshReport };
+        }
+      }
+
+      // -- 5. Timed out ---------------------------------------------------
+      terminal.dispose();
+      const stillMissing = (await checkAllDependencies(mode)).results
+        .filter(r => r.severity === 'required' && !r.found)
+        .map(r => r.name)
+        .join(', ');
+      console.warn(`AgentX: Silent install timed out. Still missing: ${stillMissing}`);
+      vscode.window.showWarningMessage(
+        `AgentX: Could not install: ${stillMissing}. Run "AgentX: Check Environment" to retry.`,
+      );
+      return { passed: false, report };
+    },
+  );
 }
 
 // -----------------------------------------------------------------------
