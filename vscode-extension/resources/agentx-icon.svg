@@ -1,19 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
   <!--
-    AgentX Hexagon Monogram.
-    Solid filled geometric "A" inside hexagon for maximum clarity.
+    AgentX Robot Icon for VS Code sidebar.
+    24x24 canvas, pure monochrome for activity bar rendering.
   -->
-  <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Hexagon -->
-    <polygon points="8,0.5 14.5,4.25 14.5,11.75 8,15.5 1.5,11.75 1.5,4.25" stroke-width="1.2" />
-  </g>
 
-  <!-- Solid "A" using fill with counter cutout (fill-rule: evenodd) -->
-  <path
-    d="M 8 2.5 L 3.5 13 L 6 13 L 6.8 10.8 L 9.2 10.8 L 10 13 L 12.5 13 Z
-       M 7.3 9 L 8 6.5 L 8.7 9 Z"
-    fill="currentColor"
-    fill-rule="evenodd"
-    stroke="none"
-  />
+  <!-- Antenna stick -->
+  <rect x="11" y="1" width="2" height="4" rx="1" fill="currentColor" />
+  <!-- Antenna dot -->
+  <circle cx="12" cy="1.5" r="2" fill="currentColor" />
+
+  <!-- Head (rounded rectangle) -->
+  <rect x="3" y="5" width="18" height="15" rx="3.5" ry="3.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+
+  <!-- Left eye -->
+  <circle cx="8.5" cy="12" r="2.2" fill="currentColor" />
+  <!-- Right eye -->
+  <circle cx="15.5" cy="12" r="2.2" fill="currentColor" />
+
+  <!-- Mouth -->
+  <rect x="8" y="16.5" width="8" height="1.5" rx="0.75" fill="currentColor" />
 </svg>

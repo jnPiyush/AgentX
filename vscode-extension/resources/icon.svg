@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!--
+    AgentX Robot - Marketplace Icon (colored).
+    Purple-blue gradient robot with green eyes and orange antenna. No background.
+  -->
+  <defs>
+    <linearGradient id="headGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#3B82F6" />
+    </linearGradient>
+  </defs>
+
+  <!-- Antenna stick -->
+  <rect x="60" y="12" width="8" height="18" rx="4" fill="#F97316" />
+  <!-- Antenna bulb -->
+  <circle cx="64" cy="12" r="7" fill="#F97316" />
+  <!-- Antenna highlight -->
+  <circle cx="62" cy="10" r="2.5" fill="#FDBA74" opacity="0.7" />
+
+  <!-- Robot head -->
+  <rect x="16" y="30" width="96" height="80" rx="18" ry="18" fill="url(#headGrad)" />
+
+  <!-- Face plate (slightly darker inset) -->
+  <rect x="24" y="38" width="80" height="64" rx="12" ry="12" fill="rgba(0,0,0,0.15)" />
+
+  <!-- Left eye background -->
+  <circle cx="46" cy="66" r="14" fill="#1E293B" />
+  <!-- Left eye glow -->
+  <circle cx="46" cy="66" r="10" fill="#22C55E" />
+  <!-- Left eye highlight -->
+  <circle cx="43" cy="63" r="3.5" fill="#86EFAC" opacity="0.8" />
+
+  <!-- Right eye background -->
+  <circle cx="82" cy="66" r="14" fill="#1E293B" />
+  <!-- Right eye glow -->
+  <circle cx="82" cy="66" r="10" fill="#22C55E" />
+  <!-- Right eye highlight -->
+  <circle cx="79" cy="63" r="3.5" fill="#86EFAC" opacity="0.8" />
+
+  <!-- Mouth -->
+  <rect x="40" y="88" width="48" height="8" rx="4" fill="#1E293B" />
+</svg>
