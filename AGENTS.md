@@ -458,6 +458,15 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Packs | `packs/` |
 | Agent Delegation | `.github/agent-delegation.md` |
 
+### New Features (v7.1)
+
+| Feature | Location | Status |
+|---------|----------|--------|
+| **Agentic Loop for Copilot Chat** | `vscode-extension/src/chat/agenticChatHandler.ts` | [PASS] Stable |
+| **VS Code LM Adapter** | `vscode-extension/src/chat/vscodeLmAdapter.ts` | [PASS] Stable |
+| **Agent-to-Agent Communication** | `vscode-extension/src/utils/clarificationRouter.ts` | [PASS] Stable |
+| **Sub-Agent Runner** | `vscode-extension/src/chat/agenticChatHandler.ts` | [PASS] Stable |
+
 ### New Features (v7.0)
 
 | Feature | Location | Status |
