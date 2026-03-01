@@ -458,7 +458,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Packs | `packs/` |
 | Agent Delegation | `.github/agent-delegation.md` |
 
-### New Features (v7.1)
+### New Features (v7.2)
 
 | Feature | Location | Status |
 |---------|----------|--------|

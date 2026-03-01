@@ -646,6 +646,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 
 | Version | Date | Key Feature |
 |---------|------|-------------|
+| v7.2.0 | 2026-02-28 | Robot icon redesign, duplicate section cleanup, version bump |
 | v7.1.0 | 2026-02-28 | Agentic loop + agent-to-agent communication for Copilot Chat |
 | v7.0.0 | 2026-02-28 | Model routing, hexagon icon, Databricks skill, 43 skills |
 | v6.8.0 | 2026-02-27 | Skills reorganization: 8 categories, 42 skills |
