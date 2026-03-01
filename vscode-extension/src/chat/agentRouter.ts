@@ -3,10 +3,8 @@ import * as path from 'path';
 import { AgentXContext, AgentDefinition } from '../agentxContext';
 import { loadAgentInstructions } from './agentContextLoader';
 import { AgentXChatMetadata } from './commandHandlers';
-import { AgenticLoop, ToolRegistry } from '../agentic';
-import { createLocalAgenticAdapter } from './agenticAdapter';
+import { runAgenticChat } from './agenticChatHandler';
 import { checkHandoffGate } from '../utils/loopStateChecker';
-import { selectModelForAgent, ModelSelectionResult } from '../utils/modelSelector';
 
 /**
  * Route rule: maps keyword patterns to agent files.
@@ -117,73 +115,40 @@ export async function routeNaturalLanguage(
   const agentDef = await agentx.readAgentDef(agentFileName);
   const instructions = await loadAgentInstructions(agentx, agentFileName);
 
-  // Select the LLM model defined in the agent's frontmatter
-  const modelResult: ModelSelectionResult = await selectModelForAgent(agentDef);
-
   // Header showing which agent was selected
   const agentName = agentDef?.name ?? route.agentFile;
   response.markdown(`**[${agentName}]** ${route.description}\n\n`);
 
-  // Report model selection result
-  if (modelResult.chatModel) {
-    const sourceLabel = modelResult.source === 'fallback' ? ' (fallback)' : '';
-    response.markdown(
-      `**Model**: ${modelResult.chatModel.name}${sourceLabel}\n\n---\n\n`,
-    );
-  } else if (agentDef?.model) {
-    response.markdown(
-      `**Model**: ${agentDef.model} *(requested but not available -- using default)*\n\n---\n\n`,
-    );
-  } else {
-    response.markdown('---\n\n');
-  }
-
-  const abortController = new AbortController();
-  const cancellationSub = token.onCancellationRequested(() => {
-    abortController.abort();
-  });
-
+  // Run the full agentic chat session (real LLM + tools + clarification)
   try {
-    const loop = new AgenticLoop(
-      {
-        agentName: route.agentFile,
-        systemPrompt: `You are AgentX routing assistant for ${agentName}.`,
-        maxIterations: 8,
-        tokenBudget: 40000,
-      },
-      new ToolRegistry(),
+    const result = await runAgenticChat(
+      route.agentFile,
+      agentDef,
+      instructions,
+      prompt,
+      response,
+      token,
+      agentx,
     );
 
-    const adapter = createLocalAgenticAdapter(agentName, route.description);
-
-    const summary = await loop.run(prompt, adapter, abortController.signal, {
-      onToolCall: (toolName) => response.progress(`Executing tool: ${toolName}...`),
-      onLoopWarning: (result) => response.markdown(`> [WARN] ${result.message}\n\n`),
-    });
-
-    if (summary.finalText) {
-      response.markdown(summary.finalText + '\n\n');
+    // After the agentic loop completes, show contextual agent guidance
+    if (instructions) {
+      response.markdown(buildAgentResponse(agentDef, instructions));
     }
-    response.markdown(
-      `Loop summary: iterations=${summary.iterations}, tools=${summary.toolCallsExecuted}, `
-      + `exit=${summary.exitReason}.\n\n`
-    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    response.markdown(`Agentic loop error: ${message}\n\n`);
-  } finally {
-    cancellationSub.dispose();
-  }
+    response.markdown(`**Agentic loop error**: ${message}\n\n`);
 
-  // Contextual guidance based on agent role
-  if (instructions) {
-    response.markdown(buildAgentResponse(agentDef, instructions));
-  } else {
-    response.markdown(
-      `I identified **${agentName}** as the right agent for this request, `
-      + `but could not load agent instructions. `
-      + `Make sure \`.github/agents/${agentFileName}\` exists.\n`
-    );
+    // Fall back to showing agent context on error
+    if (instructions) {
+      response.markdown(buildAgentResponse(agentDef, instructions));
+    } else {
+      response.markdown(
+        `I identified **${agentName}** as the right agent for this request, `
+        + `but could not load agent instructions. `
+        + `Make sure \`.github/agents/${agentFileName}\` exists.\n`
+      );
+    }
   }
 
   // Link to agent file

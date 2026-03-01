@@ -40,53 +40,91 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ---
 
-## 🆕 What's New in v7.0.0
+## Core Capabilities
 
 <table>
 <tr>
 <td width="50%">
 
-### 🤖 Intelligent Model Routing
-- **Model Fallback Selector** -- per-agent primary and fallback LLM
-- All 9 agents configured with explicit model + fallback
-- Automatic fallback when primary model is unavailable
-- Maps frontmatter model strings to VS Code LM API
+### Multi-Agent Orchestration
+- **9 specialized agents** working as a real software team
+- PM, UX, Architect, Engineer, Reviewer, DevOps + more
+- Hub-and-spoke coordination via **Agent X**
+- Issue-first workflow with automatic routing by type & priority
 
 </td>
 <td width="50%">
 
-### 🔷 New Hexagon AX Icon
-- Fresh **hexagon monogram** replacing Claude-like logo
-- Clean geometric "AX" typography inside hexagon badge
-- Full `currentColor` support for dark/light themes
-- Distinct brand identity in VS Code Activity Bar
+### Structured SDLC Workflow
+- **Pre-handoff validation** between every phase
+- Templates for PRD, ADR, Tech Spec, UX, Review, Security
+- Git commit conventions with issue traceability
+- Status-driven pipeline: Backlog -> In Progress -> In Review -> Done
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 📊 Databricks Skill
-- **43 skills** across 8 categories (was 42)
-- New **data/databricks** skill: Delta Lake, Unity Catalog, MLflow, DLT
-- Medallion architecture, PySpark, Auto Loader patterns
-- Job orchestration and Terraform/Pulumi IaC guidance
+### 43 Production Skills
+- **8 categories**: architecture, development, languages, operations, infrastructure, data, ai-systems, design
+- Retrieval-led reasoning -- agents read skills before generating
+- 30 executable scripts across 17 skills
+- Covers C#, Python, Go, Rust, React, Terraform, Bicep, Databricks + more
 
 </td>
 <td width="50%">
 
-### 📦 Framework Totals
+### VS Code Extension
+- One-click initialization & setup wizard
+- **Intelligent model routing** with per-agent LLM fallbacks
+- Ready queue, agent state tree, workflow visualization
+- Event bus, context compaction, thinking log, plugin system
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### Agentic Loop (LLM + Tools)
+- **Real LLM-powered execution** -- agents call tools, read files, run commands
+- VS Code Language Model API bridge for Copilot Chat models
+- Loop detection with circuit breaker (hash-based cycle prevention)
+- Session persistence, auto-compaction, and multi-turn resume
+
+</td>
+<td width="50%">
+
+### Agent-to-Agent Communication
+- **Hub-routed clarification protocol** -- agents ask each other questions
+- Each sub-agent uses its own Copilot model from `.agent.md` frontmatter
+- File-locked ledger with round management and auto-escalation
+- Scope validation, SLA monitoring, and deadlock detection
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### Dual-Mode CLI
+- **GitHub Mode**: Full GitHub Actions, PRs, Projects integration
+- **Local Mode**: Filesystem-based issue tracking, offline-capable
+- 10 subcommands: ready, state, deps, digest, workflow, hook + more
+- PowerShell + Bash parity across all commands
+
+</td>
+<td width="50%">
+
+### Framework Totals
 - **43 skills** across 8 categories
-- **30 executable scripts** across 17 skills
 - **9 agent definitions** (8 stable + 1 preview)
+- **7 TOML workflow** templates (feature, epic, story, bug, spike, devops, docs)
 - **12 instruction files**, **11 prompts**, **9 templates**
-- **7 TOML workflow** templates
+- Declarative workflows with dependency management
 
 </td>
 </tr>
 </table>
-
-Also includes all prior features: VS Code extension (v6.0-6.1), declarative workflows, smart ready queue, agent state tracking, dependency management, issue digests, dual-mode CLI.
 
 
 
