@@ -75,8 +75,8 @@ The AgentX CLI provides lightweight orchestration commands that work in both Loc
 .\.agentx\agentx.ps1 deps -IssueNumber 42 # Check issue dependencies
 .\.agentx\agentx.ps1 digest # Generate weekly digest
 .\.agentx\agentx.ps1 workflow -Type feature # Show workflow steps
-.\.agentx\agentx.ps1 hook -Phase start -Agent engineer -Issue 42 # Lifecycle hook
-.\.agentx\agentx.ps1 config show # View current configuration
+.\.agentx\agentx.ps1 hook -Phase start -Agent engineer -Issue 42 # Lifecycle hook.\.\.agentx\agentx.ps1 run engineer "Fix the failing tests" # Run agentic loop (LLM + tools)
+.\.\.agentx\agentx.ps1 run architect "Design auth system" -i 42 # Run with issue number.\.agentx\agentx.ps1 config show # View current configuration
 .\.agentx\agentx.ps1 config set enforceIssues true # Toggle issue enforcement
 ```
 
@@ -514,6 +514,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Agent State | `.agentx/state/` |
 | Issue Digests | `.agentx/digests/` |
 | CLI Utilities | `.agentx/agentx.ps1`, `.agentx/agentx.sh` |
+| CLI Agentic Runner | `.agentx/agentic-runner.ps1` |
 | Shared Modules | `scripts/modules/` |
 | Packs | `packs/` |
 | Agent Delegation | `.github/agent-delegation.md` |
@@ -523,6 +524,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Feature | Location | Status |
 |---------|----------|--------|
 | **Agentic Loop for Copilot Chat** | `vscode-extension/src/chat/agenticChatHandler.ts` | [PASS] Stable |
+| **CLI Agentic Loop Runner** | `.agentx/agentic-runner.ps1` | [PASS] Stable |
 | **VS Code LM Adapter** | `vscode-extension/src/chat/vscodeLmAdapter.ts` | [PASS] Stable |
 | **Agent-to-Agent Communication** | `vscode-extension/src/utils/clarificationRouter.ts` | [PASS] Stable |
 | **Sub-Agent Runner** | `vscode-extension/src/chat/agenticChatHandler.ts` | [PASS] Stable |

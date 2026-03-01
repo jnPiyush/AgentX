@@ -1168,6 +1168,85 @@ function Invoke-AgentHookCmd {
 }
 
 # ---------------------------------------------------------------------------
+# RUN: Agentic loop execution (LLM + tools via GitHub Models API)
+# ---------------------------------------------------------------------------
+
+function Invoke-RunCmd {
+    # Dot-source the agentic runner module
+    . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
+
+    $agent = Get-Flag @('-a', '--agent')
+    $prompt = Get-Flag @('-p', '--prompt')
+    $model = Get-Flag @('-m', '--model')
+    $max = [int](Get-Flag @('--max', '-n') '30')
+    $issue = [int](Get-Flag @('-i', '--issue') '0')
+
+    if (-not $agent -and $Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') {
+        $agent = $Script:SubArgs[0]
+    }
+    if (-not $prompt -and $Script:SubArgs.Count -gt 1 -and $Script:SubArgs[1] -notmatch '^-') {
+        # Collect remaining non-flag args as the prompt
+        $promptParts = @()
+        for ($i = 1; $i -lt $Script:SubArgs.Count; $i++) {
+            if ($Script:SubArgs[$i] -match '^-') { break }
+            $promptParts += $Script:SubArgs[$i]
+        }
+        if ($promptParts.Count -gt 0) { $prompt = $promptParts -join ' ' }
+    }
+
+    if (-not $agent) {
+        Write-Host "`n$($C.c)  AgentX Run - Agentic Loop (LLM + Tools)$($C.n)"
+        Write-Host "$($C.d)  Uses GitHub Models API via gh auth token.$($C.n)`n"
+        Write-Host "$($C.w)  Usage:$($C.n)"
+        Write-Host '  agentx run <agent> <prompt>'
+        Write-Host '  agentx run -a engineer -p "Fix the failing tests"'
+        Write-Host '  agentx run architect "Design the auth system" -i 42'
+        Write-Host '  agentx run engineer "Implement login" --max 20 -m openai/gpt-4.1'
+        Write-Host "`n$($C.w)  Available agents:$($C.n)"
+        $agentsDir = Join-Path $Script:ROOT '.github' 'agents'
+        if (Test-Path $agentsDir) {
+            foreach ($f in (Get-ChildItem $agentsDir -Filter '*.agent.md')) {
+                $name = $f.BaseName -replace '\.agent$', ''
+                Write-Host "  $($C.c)$name$($C.n)"
+            }
+        }
+        Write-Host ''
+        return
+    }
+
+    if (-not $prompt) {
+        Write-Host "$($C.r)  [FAIL] Prompt required. Use: agentx run $agent \"your prompt\"$($C.n)"
+        return
+    }
+
+    # Verify gh auth
+    $ghToken = $null
+    try { $ghToken = (gh auth token 2>$null) } catch {}
+    if (-not $ghToken) {
+        Write-Host "$($C.r)  [FAIL] GitHub CLI not authenticated.$($C.n)"
+        Write-Host "$($C.d)  Run: gh auth login --scopes 'models:read'$($C.n)"
+        return
+    }
+
+    Write-Host "`n$($C.c)  Starting agentic loop...$($C.n)`n"
+
+    $params = @{
+        Agent = $agent
+        Prompt = $prompt
+        MaxIterations = $max
+        WorkspaceRoot = $Script:ROOT
+    }
+    if ($issue) { $params['IssueNumber'] = $issue }
+    if ($model) { $params['Model'] = $model }
+
+    $result = Invoke-AgenticLoop @params
+
+    if ($Script:JsonOutput -and $result) {
+        $result | ConvertTo-Json -Depth 5
+    }
+}
+
+# ---------------------------------------------------------------------------
 # HELP
 # ---------------------------------------------------------------------------
 
@@ -1184,6 +1263,7 @@ $($C.w)  Commands:$($C.n)
   digest                           Generate weekly digest
   workflow [type]                   List/show workflow steps
   loop <start|status|iterate|complete|cancel>  Iterative refinement
+  run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
   clarify [list|show|stale|resolve|escalate]   Agent-to-agent clarifications
   validate <issue> <role>          Pre-handoff validation
   hook <start|finish> <agent> [#]  Agent lifecycle hooks
@@ -1230,6 +1310,7 @@ switch ($Script:Command) {
     'config'   { Invoke-ConfigCmd }
     'issue'    { Invoke-IssueCmd }
     'clarify'  { Invoke-ClarifyCmd }
+    'run'      { Invoke-RunCmd }
     'version'  { Invoke-VersionCmd }
     'help'     { Invoke-HelpCmd }
     default {
