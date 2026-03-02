@@ -1,6 +1,6 @@
 ---
 name: 0. Agent X (Auto)
-description: 'Agent X - Adaptive coordinator for multi-agent workflow. Auto-detects issue complexity and routes intelligently: simple tasks go direct to Engineer, complex work flows through PM -> UX -> Architect -> Engineer -> Reviewer.'
+description: 'Agent X - Adaptive coordinator for multi-agent workflow. Auto-detects issue complexity and routes intelligently: simple tasks go direct to Engineer, complex work flows through PM -> [Architect, Data Scientist, UX] -> Engineer -> Reviewer -> [DevOps, Tester] -> Engineer (bug fixes).'
 maturity: stable
 mode: adaptive
 model: Claude Opus 4.6 (copilot)
@@ -53,12 +53,12 @@ handoffs:
  agent: architect
  prompt: "Design system architecture, create ADR and technical specifications for issue #${issue_number}"
  send: false
- context: "Triggered after PM completion when Status=Ready (parallel with UX)"
+ context: "Triggered after PM completion when Status=Ready (parallel with UX, Data Scientist)"
  - label: "UX Design"
  agent: ux-designer
  prompt: "Design user interface, create wireframes and user flows for issue #${issue_number}"
  send: false
- context: "Triggered for needs:ux label after PM completion"
+ context: "Triggered for needs:ux label after PM completion (parallel with Architect, Data Scientist)"
  - label: "Implementation"
  agent: engineer
  prompt: "Implement code, write tests (80% coverage), and update documentation for issue #${issue_number}"
@@ -73,22 +73,22 @@ handoffs:
    agent: customer-coach
    prompt: "Research and prepare materials on the requested topic for consulting engagement"
    send: false
-   context: "Triggered for consulting research and topic preparation requests"
+   context: "Standalone agent (not part of SDLC pipeline). Triggered for consulting research and topic preparation requests"
  - label: "DevOps Pipeline"
    agent: devops
    prompt: "Create CI/CD pipelines, GitHub Actions workflows, and deployment automation for issue #${issue_number}"
    send: false
-   context: "Triggered for type:devops labels (skip PM/Architect for infrastructure work)"
+   context: "Triggered for type:devops labels OR post-review validation (parallel with Tester)"
  - label: "Data Science"
    agent: data-scientist
    prompt: "Design ML pipelines, create evaluations, and implement AI/ML solutions for issue #${issue_number}"
    send: false
-   context: "Triggered for type:data-science labels (skip PM/Architect for ML/AI work)"
+   context: "Triggered for type:data-science labels (parallel with Architect, UX in design phase)"
  - label: "Testing & Certification"
    agent: tester
    prompt: "Create test suites, run quality validation, and certify production readiness for issue #${issue_number}"
    send: false
-   context: "Triggered for type:testing labels or In Review + needs:testing (pre-release certification)"
+   context: "Triggered for type:testing labels, post-review validation (parallel with DevOps), or In Review + needs:testing"
 
 ## Maturity: Stable
 
@@ -132,7 +132,7 @@ Agent X analyzes every issue and chooses the optimal path:
 - [FAIL] Unclear/missing acceptance criteria
 - [FAIL] Architecture decisions required
 
-**Flow**: Issue -> PM -> UX (optional) -> Architect -> **Engineer** -> Reviewer -> Done
+**Flow**: Issue -> PM -> [UX, Architect, Data Scientist] (parallel) -> **Engineer** -> Reviewer -> [DevOps, Tester] (parallel) -> Engineer (bug fixes) -> Done
 
 ### Intent Preservation (All Modes)
 **Before routing any issue**, check the user's request for domain-specific intent:

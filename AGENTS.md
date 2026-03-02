@@ -107,17 +107,31 @@ Blocks: #15
 AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
 
 ```
- Agent X (Hub)
- |
- --------------+--------------
- | | |
- PM Agent Architect Agent UX Agent
- | | |
- --------------+--------------
- |
- Engineer Agent
- |
- Reviewer Agent
+                        Agent X (Hub)
+                             |
+              +--------------+--------------+
+              |              |              |
+         PM Agent     (PRD complete)        |
+              |              |              |
+    +---------+---------+    |              |
+    |         |         |    |              |
+ Architect  Data     UX     |              |
+  Agent   Scientist Agent   |              |
+    |         |         |    |              |
+    +---------+---------+    |              |
+              |              |              |
+         Engineer Agent      |              |
+              |              |              |
+         Reviewer Agent      |              |
+              |              |              |
+    +---------+---------+    |              |
+    |                   |    |              |
+  DevOps Agent    Tester Agent              |
+    |                   |    |              |
+    +---------+---------+    |              |
+              |              |              |
+    Engineer (bug fixes) <---+     Customer Coach
+                                  (standalone)
 ```
 
 **Key Principles:**
@@ -127,6 +141,8 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
 3. **Universal Tool Access** - All agents have access to all tools for maximum flexibility
 4. **Status-Driven** - GitHub Projects V2 Status field is the source of truth
 5. **Pre-Handoff Validation** - Artifacts validated before status transitions
+6. **Post-Review Validation** - DevOps and Tester validate in parallel after Reviewer approves
+7. **Bug-Fix Feedback Loop** - Tester defects route back to Engineer for resolution
 
 ### Routing Logic
 
@@ -139,11 +155,14 @@ Agent X routes issues based on:
 **Routing rules:**
 ```
 Epic + Backlog -> Product Manager
-Ready + needs:ux -> UX Designer
-Ready + (no architecture) -> Architect
+Ready + needs:ux -> UX Designer (parallel with Architect, Data Scientist)
+Ready + (no architecture) -> Architect (parallel with UX, Data Scientist)
+Ready + type:data-science -> Data Scientist (parallel with Architect, UX)
 Ready + (has architecture) -> Engineer
 needs:iteration -> Engineer (extended iterative-loop workflow, max 20)
 In Review -> Reviewer
+Reviewer approved -> DevOps Engineer + Tester (parallel post-review validation)
+Tester defects found -> Engineer (bug-fix feedback loop)
 Bug + Backlog -> Engineer (skip PM/Architect)
 Spike + Backlog -> Architect
 type:devops + Backlog -> DevOps Engineer (skip PM/Architect for infrastructure work)
@@ -172,8 +191,11 @@ In Review + needs:testing -> Tester (pre-release certification)
 - PM: PRD exists, child issues created, required sections present
 - UX: Wireframes + user flows + **HTML/CSS prototypes (MANDATORY)** complete, accessibility considered
 - Architect: ADR + Tech Spec exist, NO CODE EXAMPLES compliance
+- Data Scientist: ML pipeline design, evaluation plan, model card present
 - Engineer: Code committed, tests 80% coverage, docs updated
 - Reviewer: Review document complete, approval decision present
+- DevOps: CI/CD pipelines validated, deployment docs present
+- Tester: Test suites pass, certification report complete
 
 ---
 
@@ -284,7 +306,7 @@ All AgentX core agents are currently **stable** (production-ready).
 - **Maturity**: Stable
 - **Trigger**: Status = `In Review`
 - **Output**: Review at `docs/reviews/REVIEW-{issue}.md`
-- **Status**: Move to `Done` and close issue (or back to `In Progress` if changes needed)
+- **Status**: Move to `Validating` when approved (or back to `In Progress` if changes needed)
 - **Tools**: All tools available (get_changed_files, run_in_terminal, semantic_search, etc.)
 - **Validation**: `.github/scripts/validate-handoff.sh {issue} reviewer`
 - **Constraints**:
@@ -296,7 +318,7 @@ All AgentX core agents are currently **stable** (production-ready).
 
 ### DevOps Engineer
 - **Maturity**: Stable
-- **Trigger**: `type:devops`, or Status = `Ready` (for pipeline/deployment work)
+- **Trigger**: `type:devops`, Status = `Validating` (post-review validation), or Status = `Ready` (for pipeline/deployment work)
 - **Output**: Workflows at `.github/workflows/**`, Deployment docs at `docs/deployment/**`
 - **Status**: Move to `Ready` when pipelines complete -> `In Review` for review
 - **Tools**: All tools available (create_file, semantic_search, run_in_terminal, etc.)
@@ -391,11 +413,14 @@ All AgentX core agents are currently **stable** (production-ready).
 ## Handoff Flow
 
 ```
-PM -> UX (optional, parallel) -> Engineer -> Reviewer -> Done
- (down) Architect (parallel) -------(up)
+PM -> [Architect, Data Scientist, UX] (parallel) -> Engineer -> Reviewer -> [DevOps, Tester] (parallel) -> Engineer (bug fixes)
 ```
 
-**Parallel Work**: UX Designer and Architect can work simultaneously after PM completes PRD.
+**Parallel Design Phase**: Architect, Data Scientist, and UX Designer work simultaneously after PM completes PRD.
+**Parallel Validation Phase**: DevOps Engineer and Tester validate in parallel after Reviewer approves.
+**Bug-Fix Feedback Loop**: Tester defects route back to Engineer for resolution before closing.
+
+> **Note**: Customer Coach operates **standalone** (not part of the SDLC pipeline). It handles consulting research, topic preparation, and client engagement prep independently.
 
 ### Backlog-Based Handoffs
 
@@ -417,23 +442,27 @@ If no matching issues found, agent reports "No [role] work pending."
 
 ### Context Management
 
-Clear context before implementation phase (UX/Architect -> Engineer) to prevent design assumptions from leaking into code. Use `/clear` in Copilot Chat or start a new session.
+Clear context before implementation phase (UX/Architect/Data Scientist -> Engineer) to prevent design assumptions from leaking into code. Use `/clear` in Copilot Chat or start a new session.
 
 | Transition | Clear? | Reason |
 |------------|--------|--------|
-| PM -> UX/Architect | No | Needs PRD context |
-| UX/Architect -> Engineer | **Yes** | Engineer follows spec only |
+| PM -> UX/Architect/Data Scientist | No | Needs PRD context |
+| UX/Architect/Data Scientist -> Engineer | **Yes** | Engineer follows spec only |
 | Engineer -> Reviewer | No | Reviewer needs full context |
+| Reviewer -> DevOps/Tester | No | Needs review context |
+| Tester -> Engineer (bug fixes) | No | Needs defect details |
 | Reviewer -> Engineer (rework) | No | Needs review feedback |
 
 | Phase | Status Transition | Meaning |
 |-------|-------------------|---------|
 | PM completes PRD | -> `Ready` | Ready for design/architecture |
-| UX completes designs | -> `Ready` | Ready for architecture |
+| UX completes designs | -> `Ready` | Ready for implementation |
 | Architect completes spec | -> `Ready` | Ready for implementation |
+| Data Scientist completes ML design | -> `Ready` | Ready for implementation |
 | Engineer starts work | -> `In Progress` | Active development |
 | Engineer completes code | -> `In Review` | Ready for code review |
-| Reviewer approves | -> `Done` + Close | Work complete |
+| Reviewer approves | -> `Validating` | Ready for post-review validation |
+| DevOps + Tester validate | -> `Done` + Close | Work complete (or back to Engineer for bug fixes) |
 
 ### Status Values
 
@@ -442,6 +471,7 @@ Clear context before implementation phase (UX/Architect -> Engineer) to prevent 
 | `Backlog` | Issue created, not started |
 | `In Progress` | Active work by Engineer |
 | `In Review` | Code review phase |
+| `Validating` | Post-review validation by DevOps + Tester |
 | `Ready` | Design/spec done, awaiting next phase |
 | `Done` | Completed and closed |
 

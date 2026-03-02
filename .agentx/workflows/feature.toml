@@ -42,6 +42,17 @@ clarify_sla_minutes = 60
 clarify_blocking_allowed = true
 
 [[steps]]
+id = "data-science"
+title = "Design ML pipeline and evaluation plan"
+agent = "data-scientist"
+needs = ["prd"]
+optional = true
+condition = "has_label:type:data-science"
+status_on_start = "Ready"
+status_on_complete = "Ready"
+output = "docs/data-science/DS-{{issue_number}}.md"
+
+[[steps]]
 id = "implement"
 title = "Implement code and tests"
 agent = "engineer"
@@ -62,6 +73,40 @@ title = "Code review"
 agent = "reviewer"
 needs = ["implement"]
 status_on_start = "In Review"
-status_on_complete = "Done"
+status_on_complete = "Validating"
 output = "docs/reviews/REVIEW-{{issue_number}}.md"
 template = ".github/templates/REVIEW-TEMPLATE.md"
+
+[[steps]]
+id = "devops"
+title = "Validate CI/CD and deployment"
+agent = "devops"
+needs = ["review"]
+optional = true
+status_on_start = "Validating"
+status_on_complete = "Done"
+output = "docs/deployment/DEPLOY-{{issue_number}}.md"
+
+[[steps]]
+id = "testing"
+title = "Test suite and certification"
+agent = "tester"
+needs = ["review"]
+optional = true
+condition = "has_label:needs:testing"
+status_on_start = "Validating"
+status_on_complete = "Done"
+output = "docs/testing/TEST-{{issue_number}}.md"
+
+[[steps]]
+id = "bugfix"
+title = "Fix defects from testing"
+agent = "engineer"
+needs = ["testing"]
+optional = true
+condition = "has_defects"
+iterate = true
+max_iterations = 5
+completion_criteria = "All defects resolved, tests pass, tester confirms fixes"
+status_on_start = "In Progress"
+status_on_complete = "Done"
