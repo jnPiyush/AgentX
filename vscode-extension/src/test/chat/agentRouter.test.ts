@@ -1,5 +1,5 @@
 import { strict as assert } from 'assert';
-import { classifyPrompt } from '../../chat/agentRouter';
+import { classifyPrompt, isAutonomousMode } from '../../chat/agentRouter';
 
 describe('agentRouter - classifyPrompt', () => {
 
@@ -227,5 +227,64 @@ describe('agentRouter - classifyPrompt', () => {
     const result = classifyPrompt('implement a new feature');
     assert.ok(result.description.length > 0, 'description should not be empty');
     assert.ok(result.keywords instanceof RegExp, 'keywords should be a RegExp');
+  });
+});
+
+describe('agentRouter - isAutonomousMode', () => {
+
+  it('should detect "yolo" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('build the auth system yolo'));
+  });
+
+  it('should detect "full permission" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('you have full permission, implement the feature'));
+  });
+
+  it('should detect "best judgment" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('use your best judgment to pick options'));
+  });
+
+  it('should detect "don\'t ask" as autonomous mode', () => {
+    assert.ok(isAutonomousMode("don't ask questions, just do it"));
+  });
+
+  it('should detect "just do it" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('just do it, implement login'));
+  });
+
+  it('should detect "go ahead" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('go ahead and build the feature'));
+  });
+
+  it('should detect "autonomous" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('run in autonomous mode'));
+  });
+
+  it('should detect "decide for me" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('decide for me on the approach'));
+  });
+
+  it('should detect "figure it out" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('figure it out yourself'));
+  });
+
+  it('should detect "you decide" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('you decide the best pattern'));
+  });
+
+  it('should detect "skip questions" as autonomous mode', () => {
+    assert.ok(isAutonomousMode('skip questions and proceed'));
+  });
+
+  it('should NOT detect normal prompts as autonomous', () => {
+    assert.ok(!isAutonomousMode('implement the login feature'));
+  });
+
+  it('should NOT detect empty prompt as autonomous', () => {
+    assert.ok(!isAutonomousMode(''));
+  });
+
+  it('should be case-insensitive', () => {
+    assert.ok(isAutonomousMode('YOLO build everything'));
   });
 });

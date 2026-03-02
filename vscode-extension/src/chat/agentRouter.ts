@@ -7,6 +7,19 @@ import { runAgenticChat } from './agenticChatHandler';
 import { checkHandoffGate } from '../utils/loopStateChecker';
 
 /**
+ * Regex that detects autonomous-mode / yolo intent from the user.
+ * When matched, agents should use best judgment instead of asking questions.
+ */
+const YOLO_PATTERN = /\b(yolo|full permission|best judg[e]?ment|don'?t ask|just do it|go ahead|autonomous|auto.?decide|skip questions?|no questions?|decide for me|figure it out|make it happen|do your thing|you decide)\b/i;
+
+/**
+ * Check whether a user prompt signals autonomous / yolo intent.
+ */
+export function isAutonomousMode(prompt: string): boolean {
+  return YOLO_PATTERN.test(prompt);
+}
+
+/**
  * Route rule: maps keyword patterns to agent files.
  * Order matters -- first match wins.
  */
@@ -69,16 +82,27 @@ export async function routeNaturalLanguage(
   const prompt = request.prompt.trim();
 
   if (!prompt) {
+    // Show available agents with their roles
+    const agents = await agentx.listAgents();
+    const agentTable = agents.length > 0
+      ? agents.map(a => `| **${a.name}** | ${a.description.slice(0, 80)}${a.description.length > 80 ? '...' : ''} | ${a.maturity} |`).join('\n')
+      : '| (none found) | Run "AgentX: Initialize Project" first | -- |';
+
     response.markdown(
       'Hello! I am **AgentX**, your multi-agent orchestrator.\n\n'
-      + 'You can ask me anything, and I will route to the best agent.\n\n'
-      + '**Slash commands:**\n'
+      + '### Available Agents\n\n'
+      + '| Agent | Role | Maturity |\n|-------|------|----------|\n'
+      + agentTable + '\n\n'
+      + '### Quick Actions\n\n'
       + '- `/ready` -- Show unblocked work\n'
-      + '- `/workflow <type>` -- Run a workflow\n'
+      + '- `/workflow <type>` -- Run a workflow (feature, epic, story, bug, spike, devops, docs)\n'
       + '- `/status` -- Show agent states\n'
       + '- `/deps <issue>` -- Check dependencies\n'
       + '- `/digest` -- Weekly digest\n\n'
-      + 'Or just describe what you need in plain English.\n'
+      + '### How to Use\n\n'
+      + 'Just describe what you need in plain English and I will route to the right agent.\n\n'
+      + '**Tip**: Add "yolo" or "use your best judgment" to your request and the agent '
+      + 'will make decisions autonomously without asking clarifying questions.\n'
     );
     return { metadata: { initialized: true } as AgentXChatMetadata };
   }
@@ -110,6 +134,9 @@ export async function routeNaturalLanguage(
     }
   }
 
+  // Detect autonomous (yolo) mode
+  const autonomous = isAutonomousMode(prompt);
+
   // Load agent definition and instructions
   const agentFileName = route.agentFile + '.agent.md';
   const agentDef = await agentx.readAgentDef(agentFileName);
@@ -117,7 +144,8 @@ export async function routeNaturalLanguage(
 
   // Header showing which agent was selected
   const agentName = agentDef?.name ?? route.agentFile;
-  response.markdown(`**[${agentName}]** ${route.description}\n\n`);
+  const modeLabel = autonomous ? ' (autonomous mode)' : '';
+  response.markdown(`**[${agentName}]** ${route.description}${modeLabel}\n\n`);
 
   // Run the full agentic chat session (real LLM + tools + clarification)
   try {
@@ -129,6 +157,7 @@ export async function routeNaturalLanguage(
       response,
       token,
       agentx,
+      autonomous ? { enableClarification: false, autonomous: true } : undefined,
     );
 
     // After the agentic loop completes, show contextual agent guidance

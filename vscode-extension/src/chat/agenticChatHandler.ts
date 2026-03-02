@@ -42,6 +42,11 @@ export interface AgenticChatConfig {
   readonly enableClarification?: boolean;
   /** Issue number for traceability (optional). */
   readonly issueNumber?: number;
+  /**
+   * Autonomous / yolo mode. When true, the agent should use best judgment
+   * and avoid asking clarifying questions. Defaults to false.
+   */
+  readonly autonomous?: boolean;
 }
 
 const DEFAULT_CHAT_CONFIG: Required<AgenticChatConfig> = {
@@ -49,6 +54,7 @@ const DEFAULT_CHAT_CONFIG: Required<AgenticChatConfig> = {
   tokenBudget: 60_000,
   enableClarification: true,
   issueNumber: 0,
+  autonomous: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -184,6 +190,8 @@ function buildAgentSystemPrompt(
   parts.push('');
   parts.push('## Clarification');
   parts.push('If you need input from another agent, state clearly: "I need clarification from [agent-name] about [topic]".');
+  parts.push('Only request clarification when the missing information truly blocks progress.');
+  parts.push('For minor decisions, use your best judgment and proceed.');
 
   return parts.join('\n');
 }
@@ -227,7 +235,20 @@ export async function runAgenticChat(
   // -----------------------------------------------------------------------
   // 2. Build system prompt
   // -----------------------------------------------------------------------
-  const systemPrompt = buildAgentSystemPrompt(agentDef, instructions, agentName);
+  let systemPrompt = buildAgentSystemPrompt(agentDef, instructions, agentName);
+
+  // Autonomous / yolo mode: append strong instructions to avoid questions
+  if (cfg.autonomous) {
+    systemPrompt += '\n\n## Autonomous Mode (ACTIVE)\n'
+      + 'The user has requested autonomous mode. You MUST:\n'
+      + '- Make decisions independently using your best judgment\n'
+      + '- Do NOT ask clarifying questions -- pick the most reasonable option and proceed\n'
+      + '- Do NOT request clarification from other agents\n'
+      + '- If multiple approaches exist, choose the most standard/conventional one\n'
+      + '- If information is missing, infer from context or use sensible defaults\n'
+      + '- Report what you decided and why after completing the task\n'
+      + '- Act decisively -- the user trusts your expertise\n';
+  }
 
   // -----------------------------------------------------------------------
   // 3. Set up clarification callback (agent-to-agent communication)
