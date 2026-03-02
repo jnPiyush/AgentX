@@ -260,6 +260,28 @@ export class AgentXContext {
  return m ? m[1].replace(/^['"]|['"]$/g, '').trim() : '';
  };
 
+ // Parse YAML list values (lines starting with " - " after a key)
+ const getList = (key: string): string[] => {
+  const re = new RegExp(`^${key}:\s*\n((?:\s+-\s+.+\n?)*)`, 'm');
+  const m = frontmatter.match(re);
+  if (!m) { return []; }
+  return m[1]
+   .split('\n')
+   .map(l => l.replace(/^\s*-\s*/, '').replace(/^['"]|['"]$/g, '').trim())
+   .filter(l => l.length > 0);
+ };
+
+ // Parse nested boundary lists (can_modify / cannot_modify under boundaries:)
+ const getBoundaryList = (section: string): string[] => {
+  const re = new RegExp(`${section}:\s*\n((?:\s+-\s+.+\n?)*)`, 'm');
+  const m = frontmatter.match(re);
+  if (!m) { return []; }
+  return m[1]
+   .split('\n')
+   .map(l => l.replace(/^\s*-\s*/, '').replace(/^['"]|['"]$/g, '').trim())
+   .filter(l => l.length > 0);
+ };
+
  return {
  name: get('name'),
  description: get('description'),
@@ -268,6 +290,9 @@ export class AgentXContext {
  model: get('model'),
  modelFallback: get('modelFallback') || undefined,
  fileName: agentFile,
+ constraints: getList('constraints'),
+ canModify: getBoundaryList('can_modify'),
+ cannotModify: getBoundaryList('cannot_modify'),
  };
  }
 
@@ -297,6 +322,12 @@ export interface AgentDefinition {
  /** Fallback model if primary is unavailable. Parsed from `modelFallback` frontmatter. */
  modelFallback?: string;
  fileName: string;
+ /** Constraints listed under the `constraints:` key in frontmatter. */
+ constraints?: string[];
+ /** Directories/patterns the agent can modify. */
+ canModify?: string[];
+ /** Directories/patterns the agent cannot modify. */
+ cannotModify?: string[];
  /**
   * Live runtime status from agent state file (optional).
   * Known values: 'idle' | 'working' | 'clarifying' | 'blocked-clarification'

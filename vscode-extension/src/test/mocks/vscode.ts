@@ -82,6 +82,12 @@ export class TreeItem {
 // --- ThemeIcon -----------------------------------------------------------
 
 export class ThemeIcon {
+  constructor(public readonly id: string, public readonly color?: ThemeColor) {}
+}
+
+// --- ThemeColor ----------------------------------------------------------
+
+export class ThemeColor {
   constructor(public readonly id: string) {}
 }
 

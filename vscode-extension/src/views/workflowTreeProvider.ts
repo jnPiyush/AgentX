@@ -36,13 +36,14 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowIte
  }
 
  const icons: Record<string, string> = {
- feature: 'git-pull-request',
+ feature: 'extensions',
  epic: 'layers',
  story: 'note',
  bug: 'bug',
  spike: 'beaker',
  devops: 'server-process',
  docs: 'book',
+ 'iterative-loop': 'sync',
  };
 
  return files.map(f => {

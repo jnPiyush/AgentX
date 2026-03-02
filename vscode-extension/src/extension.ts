@@ -10,6 +10,7 @@ import { registerLoopCommand } from './commands/loopCommand';
 import { AgentTreeProvider } from './views/agentTreeProvider';
 import { ReadyQueueTreeProvider } from './views/readyQueueTreeProvider';
 import { WorkflowTreeProvider } from './views/workflowTreeProvider';
+import { TemplateTreeProvider } from './views/templateTreeProvider';
 import { AgentXContext } from './agentxContext';
 import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
@@ -22,6 +23,7 @@ import { ThinkingLog } from './utils/thinkingLog';
 import { ContextCompactor } from './utils/contextCompactor';
 import { ChannelRouter, VsCodeChatChannel, CliChannel } from './utils/channelRouter';
 import { TaskScheduler } from './utils/taskScheduler';
+import { stripAnsi } from './utils/stripAnsi';
 import { PluginManager } from './utils/pluginManager';
 import { promptIfUpdateAvailable } from './utils/versionChecker';
 
@@ -98,10 +100,12 @@ export function activate(context: vscode.ExtensionContext) {
  // Register tree view providers
  const agentTreeProvider = new AgentTreeProvider(agentxContext);
  const readyQueueProvider = new ReadyQueueTreeProvider(agentxContext);
+ const templateProvider = new TemplateTreeProvider(agentxContext);
  const workflowProvider = new WorkflowTreeProvider(agentxContext);
 
  vscode.window.registerTreeDataProvider('agentx-agents', agentTreeProvider);
  vscode.window.registerTreeDataProvider('agentx-ready', readyQueueProvider);
+ vscode.window.registerTreeDataProvider('agentx-templates', templateProvider);
  vscode.window.registerTreeDataProvider('agentx-workflows', workflowProvider);
 
  // Register commands
@@ -112,6 +116,63 @@ export function activate(context: vscode.ExtensionContext) {
  registerDepsCommand(context, agentxContext);
  registerDigestCommand(context, agentxContext);
  registerLoopCommand(context, agentxContext);
+
+ // Show issue detail command (used by ready queue tree item click)
+ let issueChannel: vscode.OutputChannel | undefined;
+ context.subscriptions.push(
+ vscode.commands.registerCommand('agentx.showIssue', async (issueNumber: string) => {
+  if (!issueNumber) { return; }
+  try {
+   // CLI subcommand is "issue get <num>" (not "show")
+   const output = await agentxContext.runCli('issue', ['get', issueNumber]);
+   const cleaned = stripAnsi(output);
+
+   if (!issueChannel) {
+    issueChannel = vscode.window.createOutputChannel('AgentX Issue Detail');
+   }
+   issueChannel.clear();
+
+   // Try to render a human-friendly view from JSON
+   try {
+    const issue = JSON.parse(cleaned);
+    issueChannel.appendLine(`=== Issue #${issue.number}: ${issue.title} ===`);
+    issueChannel.appendLine('');
+    issueChannel.appendLine(`  Status : ${issue.status ?? 'unknown'}`);
+    issueChannel.appendLine(`  State  : ${issue.state ?? 'unknown'}`);
+    if (issue.labels && issue.labels.length > 0) {
+     issueChannel.appendLine(`  Labels : ${issue.labels.join(', ')}`);
+    }
+    if (issue.created) {
+     issueChannel.appendLine(`  Created: ${issue.created}`);
+    }
+    if (issue.updated) {
+     issueChannel.appendLine(`  Updated: ${issue.updated}`);
+    }
+    if (issue.body) {
+     issueChannel.appendLine('');
+     issueChannel.appendLine('--- Body ---');
+     issueChannel.appendLine(issue.body);
+    }
+    if (issue.comments && issue.comments.length > 0) {
+     issueChannel.appendLine('');
+     issueChannel.appendLine('--- Comments ---');
+     for (const c of issue.comments) {
+      issueChannel.appendLine(`  [${c.created ?? '?'}] ${c.body}`);
+     }
+    }
+   } catch {
+    // Fallback: show raw CLI output
+    issueChannel.appendLine(`=== Issue #${issueNumber} ===\n`);
+    issueChannel.appendLine(cleaned);
+   }
+
+   issueChannel.show(true);
+  } catch (err: unknown) {
+   const message = err instanceof Error ? err.message : String(err);
+   vscode.window.showErrorMessage(`Failed to load issue #${issueNumber}: ${message}`);
+  }
+ })
+ );
 
  // Register chat participant (Copilot Chat integration)
  if (typeof vscode.chat?.createChatParticipant === 'function') {
@@ -124,6 +185,7 @@ export function activate(context: vscode.ExtensionContext) {
  agentxContext.invalidateCache();
  agentTreeProvider.refresh();
  readyQueueProvider.refresh();
+ templateProvider.refresh();
  workflowProvider.refresh();
  clearInstructionCache();
  // Re-check initialization state after cache clear

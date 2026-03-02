@@ -145,10 +145,14 @@ function Invoke-Shell([string]$cmd) {
     } catch { return '' }
 }
 
-# ANSI colors
-$Script:C = @{
-    r = "`e[31m"; g = "`e[32m"; y = "`e[33m"; b = "`e[34m"
-    m = "`e[35m"; c = "`e[36m"; w = "`e[37m"; d = "`e[90m"; n = "`e[0m"
+# ANSI colors (disabled when NO_COLOR env is set per https://no-color.org/)
+if ($env:NO_COLOR) {
+    $Script:C = @{ r = ''; g = ''; y = ''; b = ''; m = ''; c = ''; w = ''; d = ''; n = '' }
+} else {
+    $Script:C = @{
+        r = "`e[31m"; g = "`e[32m"; y = "`e[33m"; b = "`e[34m"
+        m = "`e[35m"; c = "`e[36m"; w = "`e[37m"; d = "`e[90m"; n = "`e[0m"
+    }
 }
 
 # ---------------------------------------------------------------------------

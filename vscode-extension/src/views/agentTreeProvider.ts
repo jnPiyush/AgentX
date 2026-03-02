@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { AgentXContext, AgentDefinition } from '../agentxContext';
 
 /**
@@ -41,25 +42,83 @@ export class AgentTreeProvider implements vscode.TreeDataProvider<AgentTreeItem>
  agent
  );
 
+ // Build full file path for click-to-open
+ const root = this.agentx.workspaceRoot;
+ if (root && agent.fileName) {
+  const filePath = path.join(root, '.github', 'agents', agent.fileName);
+  item.command = {
+  command: 'vscode.open',
+  title: 'Open Agent Definition',
+  arguments: [vscode.Uri.file(filePath)],
+  };
+ }
+
  item.tooltip = agent.description;
  item.contextValue = 'agent';
+
+ // Description shown inline after the label
+ item.description = agent.maturity ? `(${agent.maturity})` : '';
 
  // Icon driven by runtime status (clarifying / blocked-clarification / working / idle).
  item.iconPath = this.statusIcon(agent.runtimeStatus);
 
  // Children with details
- const children = [
- new AgentTreeItem(`Model: ${agent.model}`, vscode.TreeItemCollapsibleState.None),
- ];
- if (agent.modelFallback) {
+ const children: AgentTreeItem[] = [];
+
+ // Description
+ if (agent.description) {
  children.push(
-  new AgentTreeItem(`Fallback: ${agent.modelFallback}`, vscode.TreeItemCollapsibleState.None),
+  AgentTreeItem.detail('info', `${agent.description}`)
  );
  }
- children.push(
- new AgentTreeItem(`Maturity: ${agent.maturity}`, vscode.TreeItemCollapsibleState.None),
- new AgentTreeItem(`Mode: ${agent.mode}`, vscode.TreeItemCollapsibleState.None),
+
+ // Model info
+ children.push(AgentTreeItem.detail('symbol-method', `Model: ${agent.model}`));
+ if (agent.modelFallback) {
+ children.push(AgentTreeItem.detail('symbol-method', `Fallback: ${agent.modelFallback}`));
+ }
+
+ // Maturity & Mode
+ children.push(AgentTreeItem.detail('verified', `Maturity: ${agent.maturity}`));
+ children.push(AgentTreeItem.detail('gear', `Mode: ${agent.mode}`));
+
+ // Constraints
+ if (agent.constraints && agent.constraints.length > 0) {
+ const constraintGroup = new AgentTreeItem(
+  `Constraints (${agent.constraints.length})`,
+  vscode.TreeItemCollapsibleState.Collapsed
  );
+ constraintGroup.iconPath = new vscode.ThemeIcon('shield');
+ constraintGroup.children = agent.constraints.map(c => {
+  const isPositive = c.startsWith('MUST') && !c.startsWith('MUST NOT');
+  const icon = isPositive ? 'pass' : 'error';
+  return AgentTreeItem.detail(icon, c);
+ });
+ children.push(constraintGroup);
+ }
+
+ // Boundaries - Can Modify
+ if (agent.canModify && agent.canModify.length > 0) {
+ const canGroup = new AgentTreeItem(
+  `Can Modify (${agent.canModify.length})`,
+  vscode.TreeItemCollapsibleState.Collapsed
+ );
+ canGroup.iconPath = new vscode.ThemeIcon('check', new vscode.ThemeColor('charts.green'));
+ canGroup.children = agent.canModify.map(p => AgentTreeItem.detail('file-directory', p));
+ children.push(canGroup);
+ }
+
+ // Boundaries - Cannot Modify
+ if (agent.cannotModify && agent.cannotModify.length > 0) {
+ const cannotGroup = new AgentTreeItem(
+  `Cannot Modify (${agent.cannotModify.length})`,
+  vscode.TreeItemCollapsibleState.Collapsed
+ );
+ cannotGroup.iconPath = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('errorForeground'));
+ cannotGroup.children = agent.cannotModify.map(p => AgentTreeItem.detail('file-directory', p));
+ children.push(cannotGroup);
+ }
+
  item.children = children;
 
  return item;
@@ -101,5 +160,14 @@ export class AgentTreeItem extends vscode.TreeItem {
  public readonly agent?: AgentDefinition
  ) {
  super(label, collapsibleState);
+ }
+
+ /**
+  * Create a non-collapsible detail child item with an icon.
+  */
+ static detail(iconId: string, text: string): AgentTreeItem {
+ const item = new AgentTreeItem(text, vscode.TreeItemCollapsibleState.None);
+ item.iconPath = new vscode.ThemeIcon(iconId);
+ return item;
  }
 }

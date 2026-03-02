@@ -94,6 +94,12 @@
     "icon": "$(refresh)"
    },
    {
+    "command": "agentx.showIssue",
+    "title": "Show Issue Detail",
+    "category": "AgentX",
+    "icon": "$(eye)"
+   },
+   {
     "command": "agentx.checkEnvironment",
     "title": "Check Environment",
     "category": "AgentX",
@@ -196,6 +202,12 @@
      "contextualTitle": "AgentX Ready Queue"
     },
     {
+     "id": "agentx-templates",
+     "name": "Templates",
+     "icon": "$(file-text)",
+     "contextualTitle": "AgentX Templates"
+    },
+    {
      "id": "agentx-workflows",
      "name": "Workflows",
      "icon": "$(git-merge)",
@@ -214,11 +226,27 @@
    "view/title": [
     {
      "command": "agentx.refresh",
-     "when": "view == agentx-agents || view == agentx-ready",
+     "when": "view == agentx-agents || view == agentx-ready || view == agentx-templates",
      "group": "navigation"
     }
    ],
+   "view/item/context": [
+    {
+     "command": "agentx.showIssue",
+     "when": "view == agentx-ready && viewItem == readyItem",
+     "group": "inline"
+    },
+    {
+     "command": "agentx.showIssue",
+     "when": "view == agentx-ready && viewItem == blockedClarificationItem",
+     "group": "inline"
+    }
+   ],
    "commandPalette": [
+    {
+     "command": "agentx.showIssue",
+     "when": "false"
+    },
     {
      "command": "agentx.refresh",
      "when": "agentx.initialized"

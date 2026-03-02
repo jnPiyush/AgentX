@@ -79,6 +79,7 @@ export function execShell(
  shell: shellPath,
  maxBuffer: 1024 * 1024,
  timeout: 30_000,
+ env: { ...process.env, NO_COLOR: '1' },
  };
 
  exec(command, options, (error, stdout, stderr) => {
