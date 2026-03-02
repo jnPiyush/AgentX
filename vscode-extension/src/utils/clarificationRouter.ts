@@ -46,6 +46,7 @@ export const AGENT_PRIORITY_DEFAULT = [
   'ux-designer',
   'engineer',
   'reviewer',
+  'devops',
   'devops-engineer',
   'data-scientist',
   'tester',

@@ -286,7 +286,7 @@ gh label create "needs:ux" --color "EC4899"
 
 ### Hub-and-Spoke Pattern
 
-AgentX uses a **centralized hub** (Agent X) that routes work to **7 specialized agents**:
+AgentX uses a **centralized hub** (Agent X) that routes work to specialized agents with parallel design and validation phases:
 
 ```
                 Agent X (Hub)
@@ -297,11 +297,24 @@ AgentX uses a **centralized hub** (Agent X) that routes work to **7 specialized 
       │              │              │
       └──────────────┼──────────────┘
                      │
-          ┌──────────┴──────────┐
-          │                     │
-    Engineer Agent        DevOps Agent
-          │
-    Reviewer Agent
+          +---------+---------+
+          |         |         |
+       Architect  Data     UX
+        Agent   Scientist Agent
+          |         |         |
+          +---------+---------+
+              |
+            Engineer Agent
+              |
+            Reviewer Agent
+              |
+          +---------+---------+
+          |                   |
+       DevOps Agent     Tester Agent
+          |                   |
+          +---------+---------+
+              |
+        Engineer (bug fixes)
 ```
 
 **Key Principles**:
@@ -320,9 +333,12 @@ AgentX uses a **centralized hub** (Agent X) that routes work to **7 specialized 
 | 📋 **Product Manager** | `type:epic` | PRD + Feature/Story issues | `.github/scripts/validate-handoff.sh {issue} pm` | → Ready |
 | 🎨 **UX Designer** | `needs:ux` + Status=Ready | Wireframes + User flows + Prototypes | `.github/scripts/validate-handoff.sh {issue} ux` | → Ready |
 | 🏗️ **Architect** | `type:feature` or Status=Ready | ADR + Tech Spec (diagrams, NO CODE) | `.github/scripts/validate-handoff.sh {issue} architect` | → Ready |
+| 📊 **Data Scientist** | `type:data-science` or Status=Ready | ML pipelines + evaluations + model cards | `.github/scripts/validate-handoff.sh {issue} data-scientist` | → Ready |
 | 🔧 **Engineer** | `type:story` or Status=Ready | Code + Tests (≥80%) + Docs | `.github/scripts/validate-handoff.sh {issue} engineer` | → In Review |
 | 🔍 **Reviewer** | Status = In Review | Review Report + Approval/Rejection | `.github/scripts/validate-handoff.sh {issue} reviewer` | → Done |
-| ⚙️ **DevOps** | `type:devops` | CI/CD pipelines + Deployment configs | `.github/scripts/validate-handoff.sh {issue} devops` | → Done |
+| ⚙️ **DevOps** | `type:devops` or Status=Validating | CI/CD pipelines + Deployment configs | `.github/scripts/validate-handoff.sh {issue} devops` | → Done |
+| 🧪 **Tester** | `type:testing` or Status=Validating | Test suites + certification reports | `.github/scripts/validate-handoff.sh {issue} tester` | → Done |
+| 🧭 **Customer Coach** | Consulting research requests | Research briefs + presentation outlines | standalone (outside SDLC pipeline) | standalone |
 
 **All agents have access to all tools** for maximum flexibility.
 
@@ -343,11 +359,12 @@ AgentX uses a **centralized hub** (Agent X) that routes work to **7 specialized 
 │   │ Request │            │ type:story│         │    ↓     │    │
 │   └─────────┘            └───────────┘         │ Progress │    │
 │                                                │    ↓     │    │
-│   ┌─────────────────────────────────────────┐  │ Review   │    │
-│   │                                         │  │    ↓     │    │
-│   │  📋 PM → 🎨 UX → 🏗️ Arch → 🔧 Eng → 🔍 │  │  Done    │    │
-│   │                                         │  └──────────┘    │
-│   └─────────────────────────────────────────┘                  │
+│   ┌───────────────────────────────────────────────────────────────┐
+│   │                                                               │
+│   │  📋 PM -> [🏗️ Arch | 📊 Data Science | 🎨 UX] -> 🔧 Eng -> 🔍 │
+│   │                 -> [⚙️ DevOps | 🧪 Tester] -> 🔧 bug fixes      │
+│   │                                                               │
+│   └───────────────────────────────────────────────────────────────┘
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -355,7 +372,9 @@ AgentX uses a **centralized hub** (Agent X) that routes work to **7 specialized 
 ### Status Flow (GitHub Projects V2)
 
 ```
-Backlog → In Progress → In Review → Ready → Done
+Backlog -> Ready -> In Progress -> In Review -> Validating -> Done
+
+Bug-fix loop: Validating -> In Progress (Engineer) when Tester reports defects.
 ```
 
 ---

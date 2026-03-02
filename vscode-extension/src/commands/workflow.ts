@@ -19,13 +19,14 @@ export function registerWorkflowCommand(
 
  const workflowType = await vscode.window.showQuickPick(
  [
- { label: 'feature', description: 'PM -> UX -> Architect -> Engineer -> Reviewer' },
+ { label: 'feature', description: 'PM -> [Architect, Data Scientist, UX] -> Engineer -> Reviewer -> [DevOps, Tester]' },
  { label: 'epic', description: 'Full epic workflow with PRD and breakdown' },
  { label: 'story', description: 'Engineer -> Reviewer (spec ready)' },
  { label: 'bug', description: 'Engineer -> Reviewer (direct)' },
  { label: 'spike', description: 'Architect research spike' },
  { label: 'devops', description: 'DevOps pipeline workflow' },
  { label: 'docs', description: 'Documentation update' },
+ { label: 'iterative-loop', description: 'Extended iterative refinement with planning + review' },
  ],
  { placeHolder: 'Select workflow type', title: 'AgentX Workflow' }
  );

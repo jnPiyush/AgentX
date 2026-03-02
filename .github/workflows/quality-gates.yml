@@ -24,6 +24,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Setup Environment
         run: |
           echo "ISSUE_NUMBER=${{ github.event.pull_request.number || github.event.inputs.issue_number }}" >> $GITHUB_ENV
@@ -98,6 +103,16 @@ jobs:
           fi
 
           echo "[PASS] File structure validation complete"
+
+      - name: Extension Lint and Test
+        if: hashFiles('vscode-extension/package.json') != ''
+        working-directory: vscode-extension
+        run: |
+          echo "Running extension test gate and lint advisory..."
+          npm ci
+          npm test
+          npm run lint || echo "[WARN] Lint warnings/errors present (advisory mode)"
+          echo "[PASS] Extension tests passed"
 
       - name: Agent Deliverable Validation
         if: github.event_name == 'pull_request'

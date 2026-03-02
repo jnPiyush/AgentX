@@ -90,6 +90,10 @@ jobs:
               agent = 'ux';
             } else if (labels.includes('type:devops')) {
               agent = 'devops';
+            } else if (labels.includes('type:data-science')) {
+              agent = 'data-scientist';
+            } else if (labels.includes('type:testing') || labels.includes('needs:testing')) {
+              agent = 'tester';
             } else if (labels.includes('type:feature') || labels.includes('type:spike')) {
               agent = 'architect';
             } else if (labels.includes('type:story') || labels.includes('type:docs')) {
@@ -304,3 +308,61 @@ jobs:
           git diff --cached --quiet || git commit -m "docs: scaffold deployment plan for #${ISSUE}"
           git push || true
           gh issue comment ${ISSUE} --body "**DevOps Agent**: Deployment scaffold created at docs/deployment/DEPLOY-${ISSUE}.md - Implement pipeline and move to In Review when ready."
+
+  data-scientist:
+    name: Data Scientist
+    needs: route
+    if: needs.route.outputs.agent == 'data-scientist'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Data Science Scaffold
+        run: |
+          mkdir -p docs/data-science
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          FILE="docs/data-science/DS-${ISSUE}.md"
+          if [ ! -f "$FILE" ]; then
+            cat > "$FILE" <<'DS_EOF'
+          # Data Science Plan - Issue #ISSUE_PLACEHOLDER
+
+          ## Problem Framing
+          <!-- Define target outcome and constraints -->
+
+          ## Data and Evaluation Plan
+          <!-- Datasets, metrics, baseline, acceptance thresholds -->
+
+          ## Model and Prompt Strategy
+          <!-- Model choices, prompt strategy, fallback behavior -->
+          DS_EOF
+            sed -i 's/^          //' "$FILE"
+            sed -i "s/ISSUE_PLACEHOLDER/${ISSUE}/g" "$FILE"
+            echo "[PASS] Created data science scaffold"
+          else
+            echo "[SKIP] Data science doc already exists"
+          fi
+
+      - name: Commit & Comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data-science/
+          git diff --cached --quiet || git commit -m "docs: scaffold data science plan for #${ISSUE}"
+          git push || true
+          gh issue comment ${ISSUE} --body "**Data Scientist Agent**: Data science scaffold created at docs/data-science/DS-${ISSUE}.md - Define evaluation and model strategy before implementation."
+
+  tester:
+    name: Tester
+    needs: route
+    if: needs.route.outputs.agent == 'tester'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acknowledge Assignment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "**Tester Agent**: Ready to validate test coverage, regression safety, and certification criteria."

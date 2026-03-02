@@ -76,7 +76,7 @@ async function handleWorkflow(
   response: vscode.ChatResponseStream,
   agentx: AgentXContext
 ): Promise<vscode.ChatResult> {
-  const VALID_TYPES = ['feature', 'epic', 'story', 'bug', 'spike', 'devops', 'docs'];
+  const VALID_TYPES = ['feature', 'epic', 'story', 'bug', 'spike', 'devops', 'docs', 'iterative-loop'];
   const workflowType = request.prompt.trim().toLowerCase();
 
   if (!workflowType || !VALID_TYPES.includes(workflowType)) {
@@ -84,13 +84,14 @@ async function handleWorkflow(
       '**Usage**: `@agentx /workflow <type>`\n\n'
       + '| Type | Pipeline |\n'
       + '|------|----------|\n'
-      + '| `feature` | PM -> UX -> Architect -> Engineer -> Reviewer |\n'
+      + '| `feature` | PM -> [Architect, Data Scientist, UX] -> Engineer -> Reviewer -> [DevOps, Tester] |\n'
       + '| `epic` | Full epic workflow with PRD and breakdown |\n'
       + '| `story` | Engineer -> Reviewer (spec ready) |\n'
       + '| `bug` | Engineer -> Reviewer (direct) |\n'
       + '| `spike` | Architect research spike |\n'
       + '| `devops` | DevOps pipeline workflow |\n'
       + '| `docs` | Documentation update |\n'
+      + '| `iterative-loop` | Extended engineer refinement loop with review handoff |\n'
     );
     return { metadata: { command: 'workflow', initialized: true } as AgentXChatMetadata };
   }

@@ -22,7 +22,7 @@ describe('agenticChatHandler', () => {
       const handoffMatch = instructions.match(/## (?:Team & )?Handoffs[^\n]*\n([\s\S]*?)(?=\n## |\n---)/);
       if (handoffMatch) {
         const agents: string[] = [];
-        const agentPattern = /\b(product-manager|architect|ux-designer|engineer|reviewer|devops-engineer|customer-coach|agent-x)\b/gi;
+        const agentPattern = /\b(product-manager|architect|ux-designer|engineer|reviewer|devops|devops-engineer|customer-coach|agent-x)\b/gi;
         let m;
         while ((m = agentPattern.exec(handoffMatch[1])) !== null) {
           const name = m[1].toLowerCase();
@@ -112,6 +112,7 @@ Work with engineer for code. Also check with engineer for tests.
         'ux-designer': /\b(ux|ui|wireframe|prototype|user flow)/i,
         'engineer': /\b(implement|code|build|test|function)/i,
         'reviewer': /\b(review|quality|approval|merge)/i,
+        'devops': /\b(deploy|pipeline|ci\/cd|infrastructure)/i,
         'devops-engineer': /\b(deploy|pipeline|ci\/cd|infrastructure)/i,
       };
 
@@ -155,6 +156,14 @@ Work with engineer for code. Also check with engineer for tests.
         ['devops-engineer', 'engineer'],
       );
       assert.equal(result, 'devops-engineer');
+    });
+
+    it('should match deployment keywords to devops alias', () => {
+      const result = detectTargetAgent(
+        'How do we deploy this to production?',
+        ['devops', 'engineer'],
+      );
+      assert.equal(result, 'devops');
     });
 
     it('should fall back to first agent in list when no match', () => {

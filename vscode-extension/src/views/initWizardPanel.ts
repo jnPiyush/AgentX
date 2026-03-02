@@ -292,7 +292,17 @@ export class InitWizardPanel {
       const statusFile = path.join(root, '.agentx', 'state', 'agent-status.json');
       if (!fs.existsSync(statusFile)) {
         const agentStatus: Record<string, unknown> = {};
-        for (const agent of ['product-manager', 'ux-designer', 'architect', 'engineer', 'reviewer', 'devops-engineer']) {
+        for (const agent of [
+          'product-manager',
+          'ux-designer',
+          'architect',
+          'engineer',
+          'reviewer',
+          'devops',
+          'data-scientist',
+          'tester',
+          'customer-coach',
+        ]) {
           agentStatus[agent] = { status: 'idle', issue: null, lastActivity: null };
         }
         fs.writeFileSync(statusFile, JSON.stringify(agentStatus, null, 2));

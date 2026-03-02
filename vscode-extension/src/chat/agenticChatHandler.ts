@@ -450,7 +450,7 @@ function parseCanClarifyList(instructions: string | undefined): string[] {
   const handoffMatch = instructions.match(/## (?:Team & )?Handoffs[^\n]*\n([\s\S]*?)(?=\n## |\n---)/);
   if (handoffMatch) {
     const agents: string[] = [];
-    const agentPattern = /\b(product-manager|architect|ux-designer|engineer|reviewer|devops-engineer|data-scientist|tester|customer-coach|agent-x)\b/gi;
+    const agentPattern = /\b(product-manager|architect|ux-designer|engineer|reviewer|devops|devops-engineer|data-scientist|tester|customer-coach|agent-x)\b/gi;
     let m;
     while ((m = agentPattern.exec(handoffMatch[1])) !== null) {
       const name = m[1].toLowerCase();
@@ -480,6 +480,7 @@ function detectTargetAgent(question: string, canClarify: string[]): string {
     'ux-designer': /\b(ux|ui|wireframe|prototype|user flow)/i,
     'engineer': /\b(implement|code|build|test|function)/i,
     'reviewer': /\b(review|quality|approval|merge)/i,
+    'devops': /\b(deploy|pipeline|ci\/cd|infrastructure)/i,
     'devops-engineer': /\b(deploy|pipeline|ci\/cd|infrastructure)/i,
     'data-scientist': /\b(model|ml|drift|evaluation|fine.?tun|rag|embeddings)/i,
     'tester': /\b(e2e|integration test|test suite|certification|coverage)/i,
