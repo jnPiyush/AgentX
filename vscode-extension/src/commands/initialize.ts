@@ -237,7 +237,7 @@ export function registerInitializeCommand(
  previousInstalledAt = prev.installedAt;
  } catch { /* corrupt version file - reset */ }
  }
- const currentExtVersion = context.extension?.packageJSON?.version ?? '7.2.0';
+ const currentExtVersion = context.extension?.packageJSON?.version ?? '7.2.1';
  fs.writeFileSync(versionFile, JSON.stringify({
  version: currentExtVersion,
  mode: mode.label,
