@@ -22,3 +22,12 @@ export {
 
 export { JsonObservationStore } from './observationStore';
 export { ObservationExtractor } from './observationExtractor';
+
+// Persistent Cross-Session Memory
+export {
+  PersistentStore,
+  MemoryEntry,
+  MemoryQuery,
+  MemoryStats,
+  PersistentStoreConfig,
+} from './persistentStore';

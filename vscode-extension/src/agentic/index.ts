@@ -76,6 +76,9 @@ export {
   LoopProgressCallback,
   LoopSummary,
   LoopExitReason,
+  ErrorHookAction,
+  ErrorHookContext,
+  ErrorHookResult,
 } from './agenticLoop';
 
 // Sub-Agent Spawner
@@ -87,6 +90,12 @@ export {
   AgentLoader,
   spawnSubAgent,
   spawnSubAgentWithHistory,
+  ParallelStrategy,
+  ConsolidationStrategy,
+  ParallelSubAgentInvocation,
+  ParallelSubAgentOptions,
+  ParallelSubAgentResult,
+  runParallelSubAgents,
 } from './subAgentSpawner';
 
 // Self-Review Loop
@@ -140,3 +149,13 @@ export {
   DependencyGraph,
   detectDependencies,
 } from './parallelToolExecutor';
+
+// Codebase Analysis
+export {
+  CodebaseStats,
+  DependencyInfo,
+  ArchitectureMap,
+  analyzeCo,
+  findDependencies,
+  mapArchitecture,
+} from './codebaseAnalysis';

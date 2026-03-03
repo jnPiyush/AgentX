@@ -23,6 +23,12 @@ import { SessionMessage } from './sessionState';
 // Types
 // ---------------------------------------------------------------------------
 
+/** Strategy for parallel sub-agent execution. */
+export type ParallelStrategy = 'all' | 'race' | 'quorum';
+
+/** Strategy for consolidating results from parallel sub-agents. */
+export type ConsolidationStrategy = 'merge' | 'vote' | 'best';
+
 /** Configuration for spawning a sub-agent. */
 export interface SubAgentConfig {
   /** Role name of the sub-agent (e.g., 'engineer', 'architect'). */
@@ -331,4 +337,309 @@ export async function spawnSubAgentWithHistory(
     toolCalls: summary.toolCallsExecuted,
     durationMs: summary.durationMs,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Parallel Sub-Agent Execution
+// ---------------------------------------------------------------------------
+
+/** Configuration for a single sub-agent invocation in a parallel batch. */
+export interface ParallelSubAgentInvocation {
+  /** Sub-agent configuration. */
+  readonly config: SubAgentConfig;
+  /** Prompt for this sub-agent. */
+  readonly prompt: string;
+  /** Weight for consolidation scoring (default: 1.0). */
+  readonly weight?: number;
+}
+
+/** Options for parallel sub-agent execution. */
+export interface ParallelSubAgentOptions {
+  /** Execution strategy (default: 'all'). */
+  readonly strategy: ParallelStrategy;
+  /** Result consolidation method (default: 'merge'). */
+  readonly consolidation: ConsolidationStrategy;
+  /** Per-agent timeout in ms (default: 60000). 0 = no timeout. */
+  readonly timeoutMs?: number;
+  /** Quorum threshold (fraction 0-1). Only used with strategy='quorum'. Default: 0.5. */
+  readonly quorumThreshold?: number;
+}
+
+/** Result from parallel sub-agent execution. */
+export interface ParallelSubAgentResult {
+  /** Consolidated response text. */
+  readonly response: string;
+  /** Individual results from each sub-agent. */
+  readonly individual: readonly SubAgentResult[];
+  /** Which strategy was used. */
+  readonly strategy: ParallelStrategy;
+  /** Which consolidation was used. */
+  readonly consolidation: ConsolidationStrategy;
+  /** Total duration in ms (wall-clock). */
+  readonly durationMs: number;
+  /** How many sub-agents completed successfully. */
+  readonly successCount: number;
+}
+
+const PARALLEL_DEFAULTS = {
+  strategy: 'all' as ParallelStrategy,
+  consolidation: 'merge' as ConsolidationStrategy,
+  timeoutMs: 60_000,
+  quorumThreshold: 0.5,
+} as const;
+
+/**
+ * Run multiple sub-agents in parallel with configurable strategies.
+ *
+ * Strategies:
+ *   - all:    Wait for ALL sub-agents to complete (Promise.allSettled)
+ *   - race:   Return as soon as the FIRST sub-agent completes successfully
+ *   - quorum: Return when a threshold fraction of sub-agents complete
+ *
+ * Consolidation:
+ *   - merge: Concatenate all responses with section headers
+ *   - vote:  Weight responses and pick the most common/highest-scored
+ *   - best:  Pick the single best response by weight * output length
+ *
+ * @param invocations - Sub-agent configurations with prompts
+ * @param options - Parallel execution options
+ * @param llmFactory - Factory for LLM adapters
+ * @param agentLoader - Loader for agent definitions
+ * @param abortSignal - Abort signal for cancellation
+ * @returns Consolidated parallel result
+ */
+export async function runParallelSubAgents(
+  invocations: readonly ParallelSubAgentInvocation[],
+  options: Partial<ParallelSubAgentOptions>,
+  llmFactory: LlmAdapterFactory,
+  agentLoader: AgentLoader,
+  abortSignal: AbortSignal,
+): Promise<ParallelSubAgentResult> {
+  const opts: ParallelSubAgentOptions = { ...PARALLEL_DEFAULTS, ...options };
+  const startTime = Date.now();
+
+  if (invocations.length === 0) {
+    return {
+      response: '',
+      individual: [],
+      strategy: opts.strategy,
+      consolidation: opts.consolidation,
+      durationMs: 0,
+      successCount: 0,
+    };
+  }
+
+  // Wrap each invocation in a timeout-capable promise
+  const makePromise = (inv: ParallelSubAgentInvocation): Promise<SubAgentResult> => {
+    const agentPromise = spawnSubAgent(inv.config, inv.prompt, llmFactory, agentLoader, abortSignal);
+
+    if (opts.timeoutMs && opts.timeoutMs > 0) {
+      return Promise.race([
+        agentPromise,
+        new Promise<SubAgentResult>((_, reject) =>
+          setTimeout(() => reject(new Error(`Sub-agent "${inv.config.role}" timed out after ${opts.timeoutMs}ms`)), opts.timeoutMs),
+        ),
+      ]);
+    }
+
+    return agentPromise;
+  };
+
+  let results: SubAgentResult[];
+
+  switch (opts.strategy) {
+    case 'race':
+      results = await executeRace(invocations, makePromise);
+      break;
+
+    case 'quorum':
+      results = await executeQuorum(invocations, makePromise, opts.quorumThreshold ?? 0.5);
+      break;
+
+    case 'all':
+    default:
+      results = await executeAll(invocations, makePromise);
+      break;
+  }
+
+  const successResults = results.filter((r) => r.exitReason !== 'error');
+  const consolidated = consolidateResults(
+    invocations,
+    results,
+    opts.consolidation,
+  );
+
+  return {
+    response: consolidated,
+    individual: results,
+    strategy: opts.strategy,
+    consolidation: opts.consolidation,
+    durationMs: Date.now() - startTime,
+    successCount: successResults.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Strategy implementations
+// ---------------------------------------------------------------------------
+
+async function executeAll(
+  invocations: readonly ParallelSubAgentInvocation[],
+  makePromise: (inv: ParallelSubAgentInvocation) => Promise<SubAgentResult>,
+): Promise<SubAgentResult[]> {
+  const settled = await Promise.allSettled(invocations.map(makePromise));
+
+  return settled.map((r, i) => {
+    if (r.status === 'fulfilled') {
+      return r.value;
+    }
+    const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+    return {
+      response: `Error: ${msg}`,
+      iterations: 0,
+      exitReason: 'error' as LoopExitReason,
+      toolCalls: 0,
+      durationMs: 0,
+    };
+  });
+}
+
+async function executeRace(
+  invocations: readonly ParallelSubAgentInvocation[],
+  makePromise: (inv: ParallelSubAgentInvocation) => Promise<SubAgentResult>,
+): Promise<SubAgentResult[]> {
+  // Start all, return on first success
+  const promises = invocations.map((inv, idx) =>
+    makePromise(inv).then((result) => ({ result, idx })),
+  );
+
+  try {
+    const { result, idx } = await Promise.any(promises);
+    // Return array with only the winner populated, errors for rest
+    return invocations.map((_, i) =>
+      i === idx
+        ? result
+        : { response: '(not selected - race strategy)', iterations: 0, exitReason: 'aborted' as LoopExitReason, toolCalls: 0, durationMs: 0 },
+    );
+  } catch {
+    // All failed
+    return invocations.map(() => ({
+      response: '(all sub-agents failed in race)',
+      iterations: 0,
+      exitReason: 'error' as LoopExitReason,
+      toolCalls: 0,
+      durationMs: 0,
+    }));
+  }
+}
+
+async function executeQuorum(
+  invocations: readonly ParallelSubAgentInvocation[],
+  makePromise: (inv: ParallelSubAgentInvocation) => Promise<SubAgentResult>,
+  threshold: number,
+): Promise<SubAgentResult[]> {
+  const needed = Math.ceil(invocations.length * threshold);
+  const results: Array<SubAgentResult | null> = new Array(invocations.length).fill(null);
+  let completedCount = 0;
+
+  return new Promise((resolve) => {
+    let resolved = false;
+
+    invocations.forEach((inv, idx) => {
+      makePromise(inv)
+        .then((result) => {
+          results[idx] = result;
+          completedCount++;
+          if (!resolved && completedCount >= needed) {
+            resolved = true;
+            // Fill remaining with placeholder
+            resolve(results.map((r) => r ?? {
+              response: '(quorum reached before completion)',
+              iterations: 0,
+              exitReason: 'aborted' as LoopExitReason,
+              toolCalls: 0,
+              durationMs: 0,
+            }));
+          }
+        })
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          results[idx] = {
+            response: `Error: ${msg}`,
+            iterations: 0,
+            exitReason: 'error' as LoopExitReason,
+            toolCalls: 0,
+            durationMs: 0,
+          };
+          completedCount++;
+          if (!resolved && completedCount >= invocations.length) {
+            resolved = true;
+            resolve(results as SubAgentResult[]);
+          }
+        });
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Consolidation
+// ---------------------------------------------------------------------------
+
+function consolidateResults(
+  invocations: readonly ParallelSubAgentInvocation[],
+  results: readonly SubAgentResult[],
+  strategy: ConsolidationStrategy,
+): string {
+  const successPairs = invocations
+    .map((inv, i) => ({ inv, result: results[i] }))
+    .filter(({ result }) => result.exitReason !== 'error');
+
+  if (successPairs.length === 0) {
+    return '(All sub-agents failed)';
+  }
+
+  switch (strategy) {
+    case 'merge':
+      return successPairs
+        .map(({ inv, result }) => `## ${inv.config.role}\n\n${result.response}`)
+        .join('\n\n---\n\n');
+
+    case 'vote': {
+      // Weight-based voting: each response gets a score = weight
+      // Pick the response with highest total weight (dedup by trimmed content)
+      const votes = new Map<string, number>();
+      for (const { inv, result } of successPairs) {
+        const key = result.response.trim();
+        const weight = inv.weight ?? 1.0;
+        votes.set(key, (votes.get(key) ?? 0) + weight);
+      }
+      let bestResponse = '';
+      let bestScore = -1;
+      for (const [resp, score] of votes.entries()) {
+        if (score > bestScore) {
+          bestScore = score;
+          bestResponse = resp;
+        }
+      }
+      return bestResponse;
+    }
+
+    case 'best': {
+      // Pick single best: score = weight * response.length
+      let bestResponse = '';
+      let bestScore = -1;
+      for (const { inv, result } of successPairs) {
+        const weight = inv.weight ?? 1.0;
+        const score = weight * result.response.length;
+        if (score > bestScore) {
+          bestScore = score;
+          bestResponse = result.response;
+        }
+      }
+      return bestResponse;
+    }
+
+    default:
+      return successPairs.map(({ result }) => result.response).join('\n\n');
+  }
 }

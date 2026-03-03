@@ -6,6 +6,9 @@ import {
   LlmResponse,
   SessionMessage,
   ToolRegistry,
+  ErrorHookAction,
+  ErrorHookContext,
+  ErrorHookResult,
 } from '../../agentic';
 
 class FakeToolThenTextAdapter implements LlmAdapter {
@@ -252,5 +255,198 @@ describe('AgenticLoop', () => {
     assert.ok(beforeClarificationCalled, 'onBeforeClarification should be called');
     assert.ok(afterClarificationCalled, 'onAfterClarification should be called');
     assert.ok(patchedQuestionSeen, 'patched clarification question should reach callback');
+  });
+
+  // -----------------------------------------------------------------------
+  // onError hook tests (P2 - Story #64)
+  // -----------------------------------------------------------------------
+  describe('onError hook', () => {
+    it('should retry LLM call when onError returns retry', async () => {
+      let callCount = 0;
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          callCount++;
+          if (callCount <= 2) {
+            throw new Error(`Transient error #${callCount}`);
+          }
+          return { text: 'Success after retry', toolCalls: [] };
+        },
+      };
+
+      let hookCalls = 0;
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Test onError retry',
+          maxIterations: 5,
+          hooks: {
+            onError: async (ctx: ErrorHookContext): Promise<ErrorHookResult> => {
+              hookCalls++;
+              return { action: 'retry' };
+            },
+          },
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      const summary = await loop.run('do work', adapter, ac.signal);
+
+      assert.equal(summary.exitReason, 'text_response');
+      assert.ok(summary.finalText.includes('Success after retry'));
+      assert.ok(hookCalls >= 2, `onError hook should be called at least twice, got ${hookCalls}`);
+      assert.equal(callCount, 3, 'LLM should be called 3 times (2 errors + 1 success)');
+    });
+
+    it('should use fallback text when onError returns fallback', async () => {
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          throw new Error('LLM is down');
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Test onError fallback',
+          maxIterations: 5,
+          hooks: {
+            onError: async (ctx: ErrorHookContext): Promise<ErrorHookResult> => {
+              return {
+                action: 'fallback',
+                fallbackResult: 'Fallback response: service unavailable',
+              };
+            },
+          },
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      const summary = await loop.run('do work', adapter, ac.signal);
+
+      assert.equal(summary.exitReason, 'text_response');
+      assert.ok(
+        summary.finalText.includes('Fallback response'),
+        'Should return fallback text',
+      );
+    });
+
+    it('should abort immediately when onError returns abort', async () => {
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          throw new Error('Fatal error');
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Test onError abort',
+          maxIterations: 5,
+          hooks: {
+            onError: async (ctx: ErrorHookContext): Promise<ErrorHookResult> => {
+              return { action: 'abort' };
+            },
+          },
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      const summary = await loop.run('do work', adapter, ac.signal);
+
+      assert.equal(summary.exitReason, 'error');
+      assert.ok(summary.finalText.includes('LLM error'));
+    });
+
+    it('should abort when no onError hook is set', async () => {
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          throw new Error('Unhandled error');
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Test no onError',
+          maxIterations: 5,
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      const summary = await loop.run('do work', adapter, ac.signal);
+
+      assert.equal(summary.exitReason, 'error');
+      assert.ok(summary.finalText.includes('Unhandled error'));
+    });
+
+    it('should provide correct context to onError hook', async () => {
+      let receivedCtx: ErrorHookContext | undefined;
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          throw new Error('Context test error');
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'test-agent',
+          systemPrompt: 'Test onError context',
+          maxIterations: 5,
+          hooks: {
+            onError: async (ctx: ErrorHookContext): Promise<ErrorHookResult> => {
+              receivedCtx = ctx;
+              return { action: 'abort' };
+            },
+          },
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      await loop.run('do work', adapter, ac.signal);
+
+      assert.ok(receivedCtx !== undefined, 'Hook should receive context');
+      const ctx = receivedCtx as ErrorHookContext;
+      assert.equal(ctx.agentName, 'test-agent');
+      assert.equal(ctx.phase, 'llm_call');
+      assert.equal(ctx.retryCount, 0);
+      assert.equal(ctx.errorMessage, 'Context test error');
+      assert.ok(ctx.iteration >= 1);
+    });
+
+    it('should cap retries at MAX_ERROR_RETRIES even with retry action', async () => {
+      let hookCalls = 0;
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          throw new Error('Always fails');
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Test max retries',
+          maxIterations: 5,
+          hooks: {
+            onError: async (): Promise<ErrorHookResult> => {
+              hookCalls++;
+              return { action: 'retry' };
+            },
+          },
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      const summary = await loop.run('do work', adapter, ac.signal);
+
+      assert.equal(summary.exitReason, 'error');
+      // MAX_ERROR_RETRIES = 3, so hook called 3 times (retries) + final abort
+      assert.ok(hookCalls <= 4, `Hook should be called at most 4 times, got ${hookCalls}`);
+    });
   });
 });

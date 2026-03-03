@@ -38,24 +38,24 @@ boundaries:
 handoffs:
   - label: "Hand off to Engineer"
     agent: engineer
-    prompt: "Implement the ML pipeline / integration code designed by Data Scientist. Specs and evaluation criteria are in the issue."
+    prompt: "Implement the pipeline / integration code designed by Data Scientist. Specs and evaluation criteria are in the issue."
     send: false
-    context: "When ML design is ready for production integration"
+    context: "When AI design is ready for production integration"
   - label: "Hand off to Architect"
     agent: architect
-    prompt: "Review and create ADR for the ML system architecture proposed by Data Scientist."
+    prompt: "Review and create ADR for the AI system architecture proposed by Data Scientist."
     send: false
-    context: "When ML system needs architecture review"
+    context: "When AI system needs architecture review"
   - label: "Hand off to Reviewer"
     agent: reviewer
-    prompt: "Review ML code, evaluation methodology, and data pipeline quality."
+    prompt: "Review AI code, evaluation methodology, and data pipeline quality."
     send: false
-    context: "When ML implementation is complete"
+    context: "When AI implementation is complete"
   - label: "Hand off to DevOps"
     agent: devops
-    prompt: "Set up CI/CD pipeline for ML model training, evaluation, and deployment."
+    prompt: "Set up CI/CD pipeline for AI model training, evaluation, and deployment."
     send: false
-    context: "When ML pipeline needs deployment automation"
+    context: "When AI pipeline needs deployment automation"
 tools:
   - vscode
   - execute

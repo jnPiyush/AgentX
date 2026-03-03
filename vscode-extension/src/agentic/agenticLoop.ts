@@ -199,6 +199,39 @@ export interface ClarificationResultHookContext extends ClarificationHookContext
 }
 
 /**
+ * Action the onError hook can request.
+ *
+ * - retry:    Re-attempt the failed operation (up to maxRetries)
+ * - fallback: Accept the provided fallback text and continue
+ * - abort:    Stop the loop immediately with exitReason 'error'
+ */
+export type ErrorHookAction = 'retry' | 'fallback' | 'abort';
+
+/**
+ * Context passed to the onError hook.
+ */
+export interface ErrorHookContext {
+  readonly sessionId: string;
+  readonly agentName: string;
+  readonly iteration: number;
+  readonly error: unknown;
+  readonly errorMessage: string;
+  /** Which phase the error occurred in. */
+  readonly phase: 'llm_call' | 'tool_execution' | 'compaction' | 'self_review';
+  /** How many retries have been attempted for this error already. */
+  readonly retryCount: number;
+}
+
+/**
+ * Result returned from the onError hook.
+ */
+export interface ErrorHookResult {
+  readonly action: ErrorHookAction;
+  /** Fallback text to use when action='fallback'. */
+  readonly fallbackResult?: string;
+}
+
+/**
  * Internal extension hooks for chat-mode control points.
  */
 export interface AgenticLoopHooks {
@@ -213,6 +246,14 @@ export interface AgenticLoopHooks {
     | Partial<Pick<ClarificationHookContext, 'targetAgent' | 'topic' | 'question'>>
     | void;
   onAfterClarification?(context: ClarificationResultHookContext): Promise<void> | void;
+  /**
+   * Called when an error occurs during the agentic loop.
+   * Return an ErrorHookResult to control error recovery:
+   *   - retry:    Re-attempt (up to 3 retries per error)
+   *   - fallback: Accept fallbackResult text and continue
+   *   - abort:    Stop the loop (default if hook not set)
+   */
+  onError?(context: ErrorHookContext): Promise<ErrorHookResult> | ErrorHookResult;
   onHookError?(hookName: string, error: unknown): void;
 }
 
@@ -601,18 +642,69 @@ export class AgenticLoop {
         }
       }
 
-      // Call LLM
+      // Call LLM (with onError hook support for retry/fallback/abort)
       const messages = this.sessionManager.getMessages(sessionId);
-      let response: LlmResponse;
-      try {
-        response = await llm.chat(messages, toolSchemas, abortSignal);
-      } catch (err: unknown) {
-        if (abortSignal.aborted) {
-          exitReason = 'aborted';
+      let response!: LlmResponse;
+      let llmRetryCount = 0;
+      const MAX_ERROR_RETRIES = 3;
+      let llmSuccess = false;
+      let llmAbort = false;
+
+      while (!llmSuccess && llmRetryCount <= MAX_ERROR_RETRIES) {
+        try {
+          response = await llm.chat(messages, toolSchemas, abortSignal);
+          llmSuccess = true;
+        } catch (err: unknown) {
+          if (abortSignal.aborted) {
+            exitReason = 'aborted';
+            llmAbort = true;
+            break;
+          }
+
+          const msg = err instanceof Error ? err.message : String(err);
+
+          // Invoke onError hook if available
+          if (this.config.hooks?.onError) {
+            try {
+              const hookResult = await this.config.hooks.onError({
+                sessionId,
+                agentName: this.config.agentName,
+                iteration: iterations,
+                error: err,
+                errorMessage: msg,
+                phase: 'llm_call',
+                retryCount: llmRetryCount,
+              });
+
+              if (hookResult.action === 'retry' && llmRetryCount < MAX_ERROR_RETRIES) {
+                llmRetryCount++;
+                continue;
+              } else if (hookResult.action === 'fallback' && hookResult.fallbackResult) {
+                // Treat fallback text as the LLM response
+                response = {
+                  text: hookResult.fallbackResult,
+                  toolCalls: [],
+                } as LlmResponse;
+                llmSuccess = true;
+                break;
+              }
+              // action === 'abort' or retries exhausted
+            } catch (hookErr: unknown) {
+              this.handleHookError('onError', hookErr);
+            }
+          }
+
+          // Default: abort on error
+          finalText = `LLM error: ${msg}`;
+          exitReason = 'error';
+          llmAbort = true;
           break;
         }
-        const msg = err instanceof Error ? err.message : String(err);
-        finalText = `LLM error: ${msg}`;
+      }
+
+      if (llmAbort) { break; }
+      if (!llmSuccess) {
+        finalText = 'LLM error: max retries exhausted';
         exitReason = 'error';
         break;
       }
