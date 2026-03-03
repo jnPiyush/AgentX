@@ -177,4 +177,80 @@ describe('AgenticLoop', () => {
 
     assert.ok(validationCallbackCalled, 'onValidation callback should be invoked');
   });
+
+  it('should run internal hooks for tool and clarification lifecycle', async () => {
+    let step = 0;
+    const adapter: LlmAdapter = {
+      async chat(_messages: readonly SessionMessage[]): Promise<LlmResponse> {
+        step++;
+        if (step === 1) {
+          return {
+            text: 'Need architecture input',
+            toolCalls: [
+              {
+                id: 'tc-hook-1',
+                name: 'request_clarification',
+                arguments: {
+                  targetAgent: 'architect',
+                  topic: 'schema',
+                  question: 'Should we use completedAt?',
+                },
+              },
+            ],
+          };
+        }
+        return { text: 'Done with clarification', toolCalls: [] };
+      },
+    };
+
+    let beforeToolCalled = false;
+    let afterToolCalled = false;
+    let beforeClarificationCalled = false;
+    let afterClarificationCalled = false;
+    let patchedQuestionSeen = false;
+
+    const loop = new AgenticLoop(
+      {
+        agentName: 'engineer',
+        systemPrompt: 'Test hook loop',
+        maxIterations: 6,
+        canClarify: ['architect'],
+        onClarificationNeeded: async (_topic, question) => {
+          patchedQuestionSeen = question.includes('[hooked]');
+          return {
+            clarificationId: 'CLR-1',
+            answer: 'Use completedAt.',
+            status: 'answered',
+            round: 1,
+          };
+        },
+        hooks: {
+          onBeforeToolUse: async () => {
+            beforeToolCalled = true;
+          },
+          onAfterToolUse: async () => {
+            afterToolCalled = true;
+          },
+          onBeforeClarification: async ({ question }) => {
+            beforeClarificationCalled = true;
+            return { question: `${question} [hooked]` };
+          },
+          onAfterClarification: async ({ answer }) => {
+            afterClarificationCalled = answer.includes('completedAt');
+          },
+        },
+      },
+      new ToolRegistry(),
+    );
+
+    const ac = new AbortController();
+    const summary = await loop.run('do work', adapter, ac.signal);
+
+    assert.equal(summary.exitReason, 'text_response');
+    assert.ok(beforeToolCalled, 'onBeforeToolUse should be called');
+    assert.ok(afterToolCalled, 'onAfterToolUse should be called');
+    assert.ok(beforeClarificationCalled, 'onBeforeClarification should be called');
+    assert.ok(afterClarificationCalled, 'onAfterClarification should be called');
+    assert.ok(patchedQuestionSeen, 'patched clarification question should reach callback');
+  });
 });

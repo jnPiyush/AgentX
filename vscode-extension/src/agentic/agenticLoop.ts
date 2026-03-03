@@ -145,6 +145,74 @@ export interface DoneValidator {
   validate(): Promise<{ passed: boolean; feedback?: string }>;
 }
 
+/**
+ * Hook context for tool execution interception.
+ */
+export interface ToolHookContext {
+  readonly sessionId: string;
+  readonly iteration: number;
+  readonly agentName: string;
+  readonly toolName: string;
+  readonly params: Record<string, unknown>;
+}
+
+/**
+ * Hook context after tool execution.
+ */
+export interface ToolResultHookContext extends ToolHookContext {
+  readonly result: ToolResult;
+}
+
+/**
+ * Hook context for compaction events.
+ */
+export interface CompactionHookContext {
+  readonly sessionId: string;
+  readonly agentName: string;
+  readonly beforeTokens: number;
+  readonly afterTokens: number;
+  readonly didCompact: boolean;
+  readonly keepRecent: number;
+  readonly tokenBudget: number;
+  readonly summary?: string;
+}
+
+/**
+ * Hook context for clarification interception.
+ */
+export interface ClarificationHookContext {
+  readonly agentName: string;
+  readonly targetAgent: string;
+  readonly topic: string;
+  readonly question: string;
+  readonly mode: 'loop' | 'callback';
+}
+
+/**
+ * Hook context after clarification resolution.
+ */
+export interface ClarificationResultHookContext extends ClarificationHookContext {
+  readonly answer: string;
+}
+
+/**
+ * Internal extension hooks for chat-mode control points.
+ */
+export interface AgenticLoopHooks {
+  onBeforeToolUse?(
+    context: ToolHookContext,
+  ): Promise<Record<string, unknown> | void> | Record<string, unknown> | void;
+  onAfterToolUse?(context: ToolResultHookContext): Promise<void> | void;
+  onCompaction?(context: CompactionHookContext): Promise<void> | void;
+  onBeforeClarification?(
+    context: ClarificationHookContext,
+  ): Promise<Partial<Pick<ClarificationHookContext, 'targetAgent' | 'topic' | 'question'>> | void>
+    | Partial<Pick<ClarificationHookContext, 'targetAgent' | 'topic' | 'question'>>
+    | void;
+  onAfterClarification?(context: ClarificationResultHookContext): Promise<void> | void;
+  onHookError?(hookName: string, error: unknown): void;
+}
+
 /** Configuration for the agentic loop. */
 export interface AgenticLoopConfig {
   /** Maximum iterations before forced stop (default 30). */
@@ -242,6 +310,12 @@ export interface AgenticLoopConfig {
    * to stay synchronized with the CLI-based iterative loop.
    */
   readonly workspaceRoot?: string;
+  /**
+   * Optional internal hooks for pre/post tool calls, compaction, and
+   * clarification interception. Hook failures are isolated and do not
+   * terminate the main loop.
+   */
+  readonly hooks?: AgenticLoopHooks;
 }
 
 const DEFAULT_CONFIG: AgenticLoopConfig = {
@@ -327,6 +401,10 @@ export class AgenticLoop {
     this.sessionManager = new SessionManager(
       sessionStorage ?? new InMemorySessionStorage(),
     );
+  }
+
+  private handleHookError(hookName: string, error: unknown): void {
+    this.config.hooks?.onHookError?.(hookName, error);
   }
 
   /**
@@ -469,11 +547,39 @@ export class AgenticLoop {
 
       // Auto-compact if needed
       if (this.config.autoCompact) {
+        const beforeTokens = this.sessionManager.getMeta(sessionId)?.totalTokensEstimate ?? 0;
         this.sessionManager.compact(
           sessionId,
           this.config.tokenBudget,
           this.config.compactKeepRecent,
         );
+        const afterTokens = this.sessionManager.getMeta(sessionId)?.totalTokensEstimate ?? 0;
+        const didCompact = afterTokens < beforeTokens;
+        if (this.config.hooks?.onCompaction) {
+          let summary: string | undefined;
+          if (didCompact) {
+            const compacted = this.sessionManager
+              .getMessages(sessionId)
+              .find(
+                (m) => m.role === 'system' && m.content.startsWith('[Session compacted:'),
+              );
+            summary = compacted?.content;
+          }
+          try {
+            await this.config.hooks.onCompaction({
+              sessionId,
+              agentName: this.config.agentName,
+              beforeTokens,
+              afterTokens,
+              didCompact,
+              keepRecent: this.config.compactKeepRecent,
+              tokenBudget: this.config.tokenBudget,
+              summary,
+            });
+          } catch (err: unknown) {
+            this.handleHookError('onCompaction', err);
+          }
+        }
       }
 
       // Call LLM
@@ -601,12 +707,30 @@ export class AgenticLoop {
           break;
         }
 
-        progress?.onToolCall?.(toolCall.name, toolCall.arguments);
+        let effectiveParams: Record<string, unknown> = toolCall.arguments;
+        if (this.config.hooks?.onBeforeToolUse) {
+          try {
+            const patched = await this.config.hooks.onBeforeToolUse({
+              sessionId,
+              iteration: iterations,
+              agentName: this.config.agentName,
+              toolName: toolCall.name,
+              params: toolCall.arguments,
+            });
+            if (patched && typeof patched === 'object') {
+              effectiveParams = patched;
+            }
+          } catch (err: unknown) {
+            this.handleHookError('onBeforeToolUse', err);
+          }
+        }
+
+        progress?.onToolCall?.(toolCall.name, effectiveParams);
 
         const request: ToolCallRequest = {
           id: toolCall.id,
           name: toolCall.name,
-          params: toolCall.arguments,
+          params: effectiveParams,
         };
 
         const result = await this.toolRegistry.execute(request, toolCtx);
@@ -615,7 +739,22 @@ export class AgenticLoop {
 
         // Record for loop detection
         const resultText = result.content.map((c) => c.text).join('\n');
-        this.loopDetector.record(toolCall.name, toolCall.arguments, resultText);
+        this.loopDetector.record(toolCall.name, effectiveParams, resultText);
+
+        if (this.config.hooks?.onAfterToolUse) {
+          try {
+            await this.config.hooks.onAfterToolUse({
+              sessionId,
+              iteration: iterations,
+              agentName: this.config.agentName,
+              toolName: toolCall.name,
+              params: effectiveParams,
+              result,
+            });
+          } catch (err: unknown) {
+            this.handleHookError('onAfterToolUse', err);
+          }
+        }
 
         // Append tool result to session
         this.sessionManager.addMessage(sessionId, {
@@ -700,11 +839,32 @@ export class AgenticLoop {
       const agentName = this.config.agentName;
 
       return async (targetAgent: string, topic: string, question: string) => {
+        let effectiveTarget = targetAgent;
+        let effectiveTopic = topic;
+        let effectiveQuestion = question;
+
+        if (this.config.hooks?.onBeforeClarification) {
+          try {
+            const patched = await this.config.hooks.onBeforeClarification({
+              agentName,
+              targetAgent,
+              topic,
+              question,
+              mode: 'loop',
+            });
+            if (patched?.targetAgent) { effectiveTarget = patched.targetAgent; }
+            if (patched?.topic) { effectiveTopic = patched.topic; }
+            if (patched?.question) { effectiveQuestion = patched.question; }
+          } catch (err: unknown) {
+            this.handleHookError('onBeforeClarification', err);
+          }
+        }
+
         // Scope check
-        const normalized = targetAgent.toLowerCase();
+        const normalized = effectiveTarget.toLowerCase();
         if (!canClarify.includes(normalized)) {
           throw new Error(
-            `Cannot request clarification from '${targetAgent}'. `
+            `Cannot request clarification from '${effectiveTarget}'. `
             + `Allowed agents: [${canClarify.join(', ')}]`,
           );
         }
@@ -713,14 +873,29 @@ export class AgenticLoop {
           loopConfig,
           agentName,
           normalized,
-          topic,
-          question,
+          effectiveTopic,
+          effectiveQuestion,
           llmFactory,
           agentLoader,
           new AbortController().signal, // Sub-loops get their own abort
           evaluator,
           clarificationProgress,
         );
+
+        if (this.config.hooks?.onAfterClarification) {
+          try {
+            await this.config.hooks.onAfterClarification({
+              agentName,
+              targetAgent: normalized,
+              topic: effectiveTopic,
+              question: effectiveQuestion,
+              answer: result.answer,
+              mode: 'loop',
+            });
+          } catch (err: unknown) {
+            this.handleHookError('onAfterClarification', err);
+          }
+        }
 
         return { answer: result.answer };
       };
@@ -734,16 +909,53 @@ export class AgenticLoop {
     const callback = this.config.onClarificationNeeded;
 
     return async (targetAgent: string, topic: string, question: string) => {
+      let effectiveTarget = targetAgent;
+      let effectiveTopic = topic;
+      let effectiveQuestion = question;
+
+      if (this.config.hooks?.onBeforeClarification) {
+        try {
+          const patched = await this.config.hooks.onBeforeClarification({
+            agentName: this.config.agentName,
+            targetAgent,
+            topic,
+            question,
+            mode: 'callback',
+          });
+          if (patched?.targetAgent) { effectiveTarget = patched.targetAgent; }
+          if (patched?.topic) { effectiveTopic = patched.topic; }
+          if (patched?.question) { effectiveQuestion = patched.question; }
+        } catch (err: unknown) {
+          this.handleHookError('onBeforeClarification', err);
+        }
+      }
+
       // Scope check
-      const normalized = targetAgent.toLowerCase();
+      const normalized = effectiveTarget.toLowerCase();
       if (!canClarify.includes(normalized)) {
         throw new Error(
-          `Cannot request clarification from '${targetAgent}'. `
+          `Cannot request clarification from '${effectiveTarget}'. `
           + `Allowed agents: [${canClarify.join(', ')}]`,
         );
       }
 
-      const result = await callback(topic, question);
+      const result = await callback(effectiveTopic, effectiveQuestion);
+
+      if (this.config.hooks?.onAfterClarification) {
+        try {
+          await this.config.hooks.onAfterClarification({
+            agentName: this.config.agentName,
+            targetAgent: normalized,
+            topic: effectiveTopic,
+            question: effectiveQuestion,
+            answer: result.answer,
+            mode: 'callback',
+          });
+        } catch (err: unknown) {
+          this.handleHookError('onAfterClarification', err);
+        }
+      }
+
       return { answer: result.answer };
     };
   }

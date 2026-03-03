@@ -141,6 +141,12 @@
     "category": "AgentX",
     "icon": "$(output)"
    },
+  {
+   "command": "agentx.showHookEvents",
+   "title": "Show Hook Events",
+   "category": "AgentX",
+   "icon": "$(pulse)"
+  },
    {
     "command": "agentx.contextBudget",
     "title": "Show Context Budget",
@@ -430,8 +436,9 @@
   }
  },
  "scripts": {
+  "clean": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\"",
   "vscode:prepublish": "npm run compile",
-  "compile": "tsc -p ./",
+  "compile": "npm run clean && tsc -p ./",
   "watch": "tsc -watch -p ./",
   "lint": "eslint src --ext ts",
   "test": "npm run compile && mocha",

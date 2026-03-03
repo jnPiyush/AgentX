@@ -8,6 +8,7 @@ import { registerDepsCommand } from './commands/deps';
 import { registerDigestCommand } from './commands/digest';
 import { registerLoopCommand } from './commands/loopCommand';
 import { registerTodoDemoCommand } from './commands/todoDemo';
+import { registerHookEventsCommand } from './commands/hookEvents';
 import { AgentTreeProvider } from './views/agentTreeProvider';
 import { ReadyQueueTreeProvider } from './views/readyQueueTreeProvider';
 import { WorkflowTreeProvider } from './views/workflowTreeProvider';
@@ -126,6 +127,7 @@ export function activate(context: vscode.ExtensionContext) {
  registerDigestCommand(context, agentxContext);
  registerLoopCommand(context, agentxContext);
  registerTodoDemoCommand(context, agentxContext);
+ registerHookEventsCommand(context, eventBus);
  registerEditSettingCommand(context, settingsProvider);
 
  // Show issue detail command (used by ready queue tree item click)

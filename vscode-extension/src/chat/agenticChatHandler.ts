@@ -451,6 +451,7 @@ export async function runAgenticChat(
   // 4. Create the agentic loop (self-review + clarification loop)
   // -----------------------------------------------------------------------
   const toolRegistry = new ToolRegistry();
+  const eventBus = getEventBus();
 
   // Self-review config: applicable to ALL agents (not just code-producing)
   const wsRoot = agentx.workspaceRoot ?? process.cwd();
@@ -565,6 +566,56 @@ export async function runAgenticChat(
             `> **[Clarification Resolved]** After ${iterations} iteration(s):\n\n`
             + `> ${answer}\n\n`,
           );
+        },
+      },
+      hooks: {
+        onBeforeToolUse: async ({ agentName: hookAgent, toolName, params }) => {
+          eventBus.emit('tool-invoked', {
+            agent: hookAgent,
+            tool: toolName,
+            status: 'running',
+            detail: Object.keys(params).slice(0, 3).join(','),
+            timestamp: Date.now(),
+          });
+        },
+        onAfterToolUse: async ({ agentName: hookAgent, toolName, result }) => {
+          eventBus.emit('tool-invoked', {
+            agent: hookAgent,
+            tool: toolName,
+            status: result.isError ? 'error' : 'done',
+            detail: result.content[0]?.text.slice(0, 120),
+            timestamp: Date.now(),
+          });
+        },
+        onCompaction: async ({ agentName: hookAgent, beforeTokens, afterTokens, summary, didCompact }) => {
+          if (!didCompact) { return; }
+          eventBus.emit('context-compacted', {
+            agent: hookAgent,
+            originalTokens: beforeTokens,
+            compactedTokens: afterTokens,
+            summary: summary ?? '',
+            timestamp: Date.now(),
+          });
+          response.markdown(
+            `> **[Compaction]** ${beforeTokens} -> ${afterTokens} tokens\n\n`,
+          );
+        },
+        onBeforeClarification: async ({ agentName: hookAgent, targetAgent }) => {
+          eventBus.emit('handoff-triggered', {
+            fromAgent: hookAgent,
+            toAgent: targetAgent,
+            issueNumber: cfg.issueNumber || undefined,
+            timestamp: Date.now(),
+          });
+        },
+        onHookError: (hookName, error) => {
+          const msg = error instanceof Error ? error.message : String(error);
+          eventBus.emit('agent-error', {
+            agent: agentName,
+            error: `[hook:${hookName}] ${msg}`,
+            issueNumber: cfg.issueNumber || undefined,
+            timestamp: Date.now(),
+          });
         },
       },
     },
