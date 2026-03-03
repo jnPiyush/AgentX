@@ -7,11 +7,14 @@ import { registerWorkflowCommand } from './commands/workflow';
 import { registerDepsCommand } from './commands/deps';
 import { registerDigestCommand } from './commands/digest';
 import { registerLoopCommand } from './commands/loopCommand';
+import { registerTodoDemoCommand } from './commands/todoDemo';
 import { AgentTreeProvider } from './views/agentTreeProvider';
 import { ReadyQueueTreeProvider } from './views/readyQueueTreeProvider';
 import { WorkflowTreeProvider } from './views/workflowTreeProvider';
 import { SettingsTreeProvider, registerEditSettingCommand } from './views/settingsTreeProvider';
 import { TemplateTreeProvider } from './views/templateTreeProvider';
+import { DocsTreeProvider } from './views/docsTreeProvider';
+import { SourceTreeProvider } from './views/sourceTreeProvider';
 import { AgentXContext } from './agentxContext';
 import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
@@ -104,9 +107,12 @@ export function activate(context: vscode.ExtensionContext) {
  const templateProvider = new TemplateTreeProvider(agentxContext);
  const workflowProvider = new WorkflowTreeProvider(agentxContext);
  const settingsProvider = new SettingsTreeProvider();
+ const docsProvider = new DocsTreeProvider(agentxContext);
+ const sourceProvider = new SourceTreeProvider(agentxContext);
 
  vscode.window.registerTreeDataProvider('agentx-agents', agentTreeProvider);
- vscode.window.registerTreeDataProvider('agentx-ready', readyQueueProvider);
+ vscode.window.registerTreeDataProvider('agentx-docs', docsProvider);
+ vscode.window.registerTreeDataProvider('agentx-source', sourceProvider);
  vscode.window.registerTreeDataProvider('agentx-templates', templateProvider);
  vscode.window.registerTreeDataProvider('agentx-workflows', workflowProvider);
  vscode.window.registerTreeDataProvider('agentx-settings', settingsProvider);
@@ -119,6 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
  registerDepsCommand(context, agentxContext);
  registerDigestCommand(context, agentxContext);
  registerLoopCommand(context, agentxContext);
+ registerTodoDemoCommand(context, agentxContext);
  registerEditSettingCommand(context, settingsProvider);
 
  // Show issue detail command (used by ready queue tree item click)
@@ -192,6 +199,8 @@ export function activate(context: vscode.ExtensionContext) {
  templateProvider.refresh();
  workflowProvider.refresh();
  settingsProvider.refresh();
+ docsProvider.refresh();
+ sourceProvider.refresh();
  clearInstructionCache();
  // Re-check initialization state after cache clear
  agentxContext.checkInitialized().then((initialized: boolean) => {
@@ -496,6 +505,8 @@ export function activate(context: vscode.ExtensionContext) {
  agentTreeProvider.refresh();
  readyQueueProvider.refresh();
  workflowProvider.refresh();
+ docsProvider.refresh();
+ sourceProvider.refresh();
  }
  });
  };

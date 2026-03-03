@@ -131,8 +131,15 @@ function getClarificationRouter(workspaceRoot: string, agentx: AgentXContext): C
  * Build an LlmAdapterFactory that creates LLM adapters via the VS Code
  * Language Model API. Used by the self-review and clarification loops
  * to spawn sub-agents.
+ *
+ * When `parentAdapter` is supplied, sub-agents that cannot find their own
+ * model will fall back to the parent agent's adapter instead of returning
+ * null. This eliminates silent sub-agent failures when the child's model
+ * preference is unavailable.
  */
-function buildChatLlmAdapterFactory(): LlmAdapterFactory {
+function buildChatLlmAdapterFactory(
+  parentAdapter?: LlmAdapter,
+): LlmAdapterFactory {
   return async (
     _role: string,
     agentDef: { model?: string; modelFallback?: string } | undefined,
@@ -140,10 +147,14 @@ function buildChatLlmAdapterFactory(): LlmAdapterFactory {
     const modelResult = await selectModelForAgent(
       agentDef as AgentDefinition | undefined,
     );
-    if (!modelResult.chatModel) {
-      return null;
+    if (modelResult.chatModel) {
+      return createVsCodeLmAdapter({ chatModel: modelResult.chatModel });
     }
-    return createVsCodeLmAdapter({ chatModel: modelResult.chatModel });
+    // Fallback: reuse parent adapter if available
+    if (parentAdapter) {
+      return parentAdapter;
+    }
+    return null;
   };
 }
 
@@ -363,7 +374,16 @@ export async function runAgenticChat(
   const modelName = modelResult.chatModel?.name ?? agentDef?.model ?? 'default';
   const sourceLabel = modelResult.source === 'fallback' ? ' (fallback)' : '';
 
-  response.markdown(`**Model**: ${modelName}${sourceLabel}\n\n---\n\n`);
+  // Derive token budget from the model's actual context window (75% utilization)
+  const contextWindow = modelResult.maxInputTokens;
+  const MODEL_UTILIZATION = 0.75;
+  const derivedTokenBudget = Math.floor(contextWindow * MODEL_UTILIZATION);
+
+  response.markdown(
+    `**Model**: ${modelName}${sourceLabel} | `
+    + `**Context**: ${(contextWindow / 1000).toFixed(0)}K tokens | `
+    + `**Budget**: ${(derivedTokenBudget / 1000).toFixed(0)}K tokens\n\n---\n\n`,
+  );
 
   // -----------------------------------------------------------------------
   // 2. Build system prompt
@@ -386,7 +406,7 @@ export async function runAgenticChat(
   // -----------------------------------------------------------------------
   // 3. Build sub-agent infrastructure (self-review & clarification)
   // -----------------------------------------------------------------------
-  const llmAdapterFactory = buildChatLlmAdapterFactory();
+  let llmAdapterFactory: LlmAdapterFactory = buildChatLlmAdapterFactory();
   const agentLoader = buildChatAgentLoader(agentx);
   const canClarify = cfg.enableClarification ? parseCanClarifyList(instructions) : [];
 
@@ -465,7 +485,7 @@ export async function runAgenticChat(
       agentName,
       systemPrompt,
       maxIterations: cfg.maxIterations ?? loopSettings.loop.maxIterations,
-      tokenBudget: cfg.tokenBudget ?? loopSettings.loop.tokenBudget,
+      tokenBudget: derivedTokenBudget,
       issueNumber: cfg.issueNumber || undefined,
       canClarify: canClarify.length > 0 ? canClarify : undefined,
       onClarificationNeeded: clarificationCallback,
@@ -566,6 +586,11 @@ export async function runAgenticChat(
     adapter = createLocalAgenticAdapter(agentName, `Routing to ${agentName}`);
   }
 
+  // Patch the LLM adapter factory with the resolved parent adapter so
+  // sub-agents (self-review, clarification) can reuse it as a fallback
+  // when they cannot resolve their own model.
+  llmAdapterFactory = buildChatLlmAdapterFactory(adapter);
+
   // -----------------------------------------------------------------------
   // 6. Run the loop with streaming progress
   // -----------------------------------------------------------------------
@@ -652,34 +677,69 @@ export async function runAgenticChat(
 
 /**
  * Extract the list of agents this agent can request clarification from.
- * Parses from the agent .md instructions body.
+ * Parses from the agent .md instructions body using multiple strategies:
+ *   1. TOML/YAML-style `can_clarify: [agent1, agent2]`
+ *   2. `## Handoffs` or `## Team & Handoffs` section with agent names
+ *   3. Inline mentions anywhere in the doc body (last resort, broad match)
+ *
+ * Returns empty array only when no agent names are found at all.
+ * Logs a diagnostic when falling back to the broad match strategy.
  */
 function parseCanClarifyList(instructions: string | undefined): string[] {
   if (!instructions) { return []; }
 
-  // Look for can_clarify in TOML-style config or markdown
-  const match = instructions.match(/can_clarify\s*[:=]\s*\[([^\]]*)\]/);
-  if (match) {
-    return match[1]
+  const KNOWN_AGENTS = [
+    'product-manager', 'architect', 'ux-designer', 'engineer',
+    'reviewer', 'devops-engineer', 'devops', 'data-scientist',
+    'tester', 'customer-coach', 'agent-x',
+  ];
+
+  // Sort longest-first for regex alternation so 'devops-engineer' matches
+  // before 'devops'.
+  const sortedForRegex = [...KNOWN_AGENTS].sort((a, b) => b.length - a.length);
+
+  // Strategy 1: TOML/YAML-style config block
+  const configMatch = instructions.match(/can_clarify\s*[:=]\s*\[([^\]]*)\]/);
+  if (configMatch) {
+    const parsed = configMatch[1]
       .split(',')
       .map((s) => s.trim().replace(/['"]/g, ''))
       .filter(Boolean);
+    if (parsed.length > 0) { return parsed; }
   }
 
-  // Look for "Handoffs" section listing agent names
-  const handoffMatch = instructions.match(/## (?:Team & )?Handoffs[^\n]*\n([\s\S]*?)(?=\n## |\n---)/);
+  // Strategy 2: Handoffs section (multiple heading variants)
+  const handoffMatch = instructions.match(
+    /## (?:Team (?:& |and )?)?Handoffs[^\n]*\n([\s\S]*?)(?=\n## |\n---|\n\*\*|$)/i,
+  );
   if (handoffMatch) {
     const agents: string[] = [];
-    const agentPattern = /\b(product-manager|architect|ux-designer|engineer|reviewer|devops|devops-engineer|data-scientist|tester|customer-coach|agent-x)\b/gi;
+    const agentPattern = new RegExp(
+      `\\b(${sortedForRegex.join('|')})\\b`, 'gi',
+    );
     let m;
     while ((m = agentPattern.exec(handoffMatch[1])) !== null) {
       const name = m[1].toLowerCase();
       if (!agents.includes(name)) { agents.push(name); }
     }
-    return agents;
+    if (agents.length > 0) { return agents; }
   }
 
-  return [];
+  // Strategy 3: Broad scan -- look for agent names anywhere in the body
+  // This catches cases where the section heading doesn't match our regex
+  // Iterate longest-first so 'devops-engineer' is found before 'devops'
+  const agents: string[] = [];
+  for (const agentName of sortedForRegex) {
+    if (instructions.toLowerCase().includes(agentName)) {
+      // Skip shorter name if a longer name containing it was already matched
+      const dominated = agents.some(
+        (a) => a.includes(agentName) || agentName.includes(a),
+      );
+      if (!dominated) { agents.push(agentName); }
+    }
+  }
+  // Exclude the agent's own name if it appears in its own doc
+  return agents;
 }
 
 /**

@@ -147,8 +147,8 @@ $root = (Get-ChildItem $TMPRAW -Directory | Select-Object -First 1).FullName
 
 # Copy only essential paths (skip vscode-extension, tests, CHANGELOG, CONTRIBUTING, etc.)
 New-Item -ItemType Directory -Path $TMP -Force | Out-Null
-$neededDirs = @(".agentx", ".github", ".vscode", "scripts")
-$neededFiles = @("AGENTS.md", "Skills.md", ".gitignore")
+$neededDirs = @(".agentx", ".github", ".vscode", "scripts", "docs", "packs")
+$neededFiles = @("AGENTS.md", "Skills.md", "CLAUDE.md", ".gitignore")
 foreach ($d in $neededDirs) {
  $src = Join-Path $root $d
  if (Test-Path $src) { Copy-Item $src (Join-Path $TMP $d) -Recurse -Force }
@@ -197,6 +197,51 @@ $versionFile = ".agentx/version.json"
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
 Write-OK "Version 7.3.0 recorded"
+
+# Merge AgentX entries into user's .gitignore
+$MARKER_START = "# --- AgentX (auto-generated, do not edit this block) ---"
+$MARKER_END   = "# --- /AgentX ---"
+$agentxBlock = @(
+ $MARKER_START
+ "# AgentX framework"
+ ".agentx/"
+ ".github/agents/"
+ ".github/instructions/"
+ ".github/prompts/"
+ ".github/skills/"
+ ".github/templates/"
+ ".github/hooks/"
+ ".github/scripts/"
+ ".github/schemas/"
+ ".github/ISSUE_TEMPLATE/"
+ ".github/PULL_REQUEST_TEMPLATE.md"
+ ".github/agent-delegation.md"
+ ".github/agentx-security.yml"
+ ".github/CODEOWNERS"
+ ".github/copilot-instructions.md"
+ "AGENTS.md"
+ "Skills.md"
+ "CLAUDE.md"
+ "scripts/"
+ "packs/"
+ $MARKER_END
+) -join "`n"
+
+$giPath = ".gitignore"
+if (Test-Path $giPath) {
+ $giContent = Get-Content $giPath -Raw
+ if ($giContent -match [regex]::Escape($MARKER_START)) {
+  # Replace existing block (handles upgrades)
+  $pattern = [regex]::Escape($MARKER_START) + "[\s\S]*?" + [regex]::Escape($MARKER_END)
+  $giContent = [regex]::Replace($giContent, $pattern, $agentxBlock)
+  Set-Content $giPath $giContent -NoNewline
+ } else {
+  Add-Content $giPath ("`n`n" + $agentxBlock + "`n")
+ }
+} else {
+ Set-Content $giPath ($agentxBlock + "`n")
+}
+Write-OK "AgentX entries merged into .gitignore"
 
 # Agent status
 $statusFile = ".agentx/state/agent-status.json"

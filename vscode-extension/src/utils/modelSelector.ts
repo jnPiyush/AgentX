@@ -21,6 +21,89 @@ export interface ModelSelectionResult {
   readonly source: 'primary' | 'fallback' | 'none';
   /** The human-readable model name that was resolved (or attempted). */
   readonly modelName: string;
+  /**
+   * Maximum input tokens the model supports (context window size).
+   * Read from `chatModel.maxInputTokens` when available;  falls back to
+   * a conservative estimate based on model family.
+   */
+  readonly maxInputTokens: number;
+}
+
+// ---------------------------------------------------------------------------
+// Context Window Defaults
+// ---------------------------------------------------------------------------
+
+/**
+ * Default token budget when no model info is available.
+ * Conservative estimate suitable for most Copilot models.
+ */
+const DEFAULT_TOKEN_BUDGET = 100_000;
+
+/**
+ * Known context window sizes by model family prefix.
+ * Used as fallback when `chatModel.maxInputTokens` is not available.
+ * Values represent the full context window; callers should apply a
+ * utilization ratio (e.g., 75%) to leave room for output tokens.
+ */
+const CONTEXT_WINDOW_MAP: ReadonlyArray<{
+  readonly pattern: RegExp;
+  readonly tokens: number;
+}> = [
+  // Claude models
+  { pattern: /claude.*opus/i, tokens: 200_000 },
+  { pattern: /claude.*sonnet/i, tokens: 200_000 },
+  { pattern: /claude.*haiku/i, tokens: 200_000 },
+  // GPT models
+  { pattern: /gpt-?5/i, tokens: 200_000 },
+  { pattern: /gpt-?4o/i, tokens: 128_000 },
+  { pattern: /gpt-?4/i, tokens: 128_000 },
+  { pattern: /o[34]-?mini/i, tokens: 128_000 },
+  // Gemini models
+  { pattern: /gemini.*3.*pro/i, tokens: 1_000_000 },
+  { pattern: /gemini.*3.*flash/i, tokens: 1_000_000 },
+  { pattern: /gemini.*2.*pro/i, tokens: 1_000_000 },
+  { pattern: /gemini/i, tokens: 1_000_000 },
+];
+
+/**
+ * Resolve the context window size for a model in order of preference:
+ *   1. `chatModel.maxInputTokens` (VS Code LM API, most accurate)
+ *   2. Family-based lookup from CONTEXT_WINDOW_MAP
+ *   3. Conservative default (100K)
+ *
+ * @param chatModel - Resolved VS Code chat model (may expose maxInputTokens)
+ * @param modelName - Human-readable model name for family-based fallback
+ * @returns Maximum input tokens the model supports
+ */
+export function resolveContextWindow(
+  chatModel: vscode.LanguageModelChat | undefined,
+  modelName: string,
+): number {
+  // 1. Prefer the API-reported value
+  const apiTokens = (chatModel as { maxInputTokens?: number } | undefined)?.maxInputTokens;
+  if (typeof apiTokens === 'number' && apiTokens > 0) {
+    return apiTokens;
+  }
+
+  // 2. Family-based lookup
+  for (const entry of CONTEXT_WINDOW_MAP) {
+    if (entry.pattern.test(modelName)) {
+      return entry.tokens;
+    }
+  }
+
+  // Also check the chatModel name/family strings
+  if (chatModel) {
+    const identifier = `${chatModel.name} ${chatModel.family}`;
+    for (const entry of CONTEXT_WINDOW_MAP) {
+      if (entry.pattern.test(identifier)) {
+        return entry.tokens;
+      }
+    }
+  }
+
+  // 3. Conservative default
+  return DEFAULT_TOKEN_BUDGET;
 }
 
 /**
@@ -129,24 +212,39 @@ export async function selectModelForAgent(
   agentDef: AgentDefinition | undefined,
 ): Promise<ModelSelectionResult> {
   if (!agentDef || !agentDef.model) {
-    return { chatModel: undefined, source: 'none', modelName: '' };
+    return { chatModel: undefined, source: 'none', modelName: '', maxInputTokens: DEFAULT_TOKEN_BUDGET };
   }
 
   // Try primary model
   const primary = await trySelectModel(agentDef.model);
   if (primary) {
-    return { chatModel: primary, source: 'primary', modelName: agentDef.model };
+    return {
+      chatModel: primary,
+      source: 'primary',
+      modelName: agentDef.model,
+      maxInputTokens: resolveContextWindow(primary, agentDef.model),
+    };
   }
 
   // Try fallback model
   if (agentDef.modelFallback) {
     const fallback = await trySelectModel(agentDef.modelFallback);
     if (fallback) {
-      return { chatModel: fallback, source: 'fallback', modelName: agentDef.modelFallback };
+      return {
+        chatModel: fallback,
+        source: 'fallback',
+        modelName: agentDef.modelFallback,
+        maxInputTokens: resolveContextWindow(fallback, agentDef.modelFallback),
+      };
     }
   }
 
-  return { chatModel: undefined, source: 'none', modelName: agentDef.model };
+  return {
+    chatModel: undefined,
+    source: 'none',
+    modelName: agentDef.model,
+    maxInputTokens: resolveContextWindow(undefined, agentDef.model),
+  };
 }
 
 /**

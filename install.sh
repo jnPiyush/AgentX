@@ -118,8 +118,11 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/.github" \
  "$PREFIX/.vscode" \
  "$PREFIX/scripts" \
+ "$PREFIX/docs" \
+ "$PREFIX/packs" \
  "$PREFIX/AGENTS.md" \
  "$PREFIX/Skills.md" \
+ "$PREFIX/CLAUDE.md" \
  "$PREFIX/.gitignore" 2>/dev/null || true
 
 [ -f "$TMP/AGENTS.md" ] || { echo "Download failed. Check network."; exit 1; }
@@ -151,6 +154,50 @@ VERSION_FILE=".agentx/version.json"
 echo "{ \"version\": \"7.3.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
 ok "Version 7.3.0 recorded"
 
+# Merge AgentX entries into user's .gitignore
+MARKER_START="# --- AgentX (auto-generated, do not edit this block) ---"
+MARKER_END="# --- /AgentX ---"
+AGENTX_BLOCK="$MARKER_START
+# AgentX framework
+.agentx/
+.github/agents/
+.github/instructions/
+.github/prompts/
+.github/skills/
+.github/templates/
+.github/hooks/
+.github/scripts/
+.github/schemas/
+.github/ISSUE_TEMPLATE/
+.github/PULL_REQUEST_TEMPLATE.md
+.github/agent-delegation.md
+.github/agentx-security.yml
+.github/CODEOWNERS
+.github/copilot-instructions.md
+AGENTS.md
+Skills.md
+CLAUDE.md
+scripts/
+packs/
+$MARKER_END"
+
+GI_PATH=".gitignore"
+if [ -f "$GI_PATH" ]; then
+ if grep -qF "$MARKER_START" "$GI_PATH"; then
+  # Replace existing block (handles upgrades)
+  sed -i.bak "/$MARKER_START/,/$MARKER_END/c\\
+$(echo "$AGENTX_BLOCK" | sed 's/$/\\/' | sed '$ s/\\$//')" "$GI_PATH" 2>/dev/null \
+  || sed -i '' "/$MARKER_START/,/$MARKER_END/c\\
+$(echo "$AGENTX_BLOCK" | sed 's/$/\\/' | sed '$ s/\\$//')" "$GI_PATH" 2>/dev/null || true
+  rm -f "$GI_PATH.bak"
+ else
+  printf '\n\n%s\n' "$AGENTX_BLOCK" >> "$GI_PATH"
+ fi
+else
+ printf '%s\n' "$AGENTX_BLOCK" > "$GI_PATH"
+fi
+ok "AgentX entries merged into .gitignore"
+
 # Agent status
 STATUS=".agentx/state/agent-status.json"
 if [ ! -f "$STATUS" ] || [ "$FORCE" = "true" ]; then
@@ -161,7 +208,11 @@ if [ ! -f "$STATUS" ] || [ "$FORCE" = "true" ]; then
  "architect": { "status": "idle", "issue": null, "lastActivity": null },
  "engineer": { "status": "idle", "issue": null, "lastActivity": null },
  "reviewer": { "status": "idle", "issue": null, "lastActivity": null },
- "devops-engineer": { "status": "idle", "issue": null, "lastActivity": null }
+ "devops-engineer": { "status": "idle", "issue": null, "lastActivity": null },
+ "auto-fix-reviewer": { "status": "idle", "issue": null, "lastActivity": null },
+ "data-scientist": { "status": "idle", "issue": null, "lastActivity": null },
+ "tester": { "status": "idle", "issue": null, "lastActivity": null },
+ "customer-coach": { "status": "idle", "issue": null, "lastActivity": null }
 }
 EOF
  ok "Agent status initialized"

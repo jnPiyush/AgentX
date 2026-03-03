@@ -7,31 +7,55 @@ import { strict as assert } from 'assert';
 describe('agenticChatHandler', () => {
 
   describe('parseCanClarifyList', () => {
+    const KNOWN_AGENTS = [
+      'product-manager', 'architect', 'ux-designer', 'engineer',
+      'reviewer', 'devops-engineer', 'devops', 'data-scientist',
+      'tester', 'customer-coach', 'agent-x',
+    ];
+    const sortedForRegex = [...KNOWN_AGENTS].sort((a, b) => b.length - a.length);
+
     // Re-implement the parsing logic for testing since it is not exported
     function parseCanClarifyList(instructions: string | undefined): string[] {
       if (!instructions) { return []; }
 
-      const match = instructions.match(/can_clarify\s*[:=]\s*\[([^\]]*)\]/);
-      if (match) {
-        return match[1]
+      // Strategy 1: TOML/YAML-style config block
+      const configMatch = instructions.match(/can_clarify\s*[:=]\s*\[([^\]]*)\]/);
+      if (configMatch) {
+        const parsed = configMatch[1]
           .split(',')
           .map((s) => s.trim().replace(/['"]/g, ''))
           .filter(Boolean);
+        if (parsed.length > 0) { return parsed; }
       }
 
-      const handoffMatch = instructions.match(/## (?:Team & )?Handoffs[^\n]*\n([\s\S]*?)(?=\n## |\n---)/);
+      // Strategy 2: Handoffs section (multiple heading variants)
+      const handoffMatch = instructions.match(
+        /## (?:Team (?:& |and )?)?Handoffs[^\n]*\n([\s\S]*?)(?=\n## |\n---|\n\*\*|$)/i,
+      );
       if (handoffMatch) {
         const agents: string[] = [];
-        const agentPattern = /\b(product-manager|architect|ux-designer|engineer|reviewer|devops|devops-engineer|customer-coach|agent-x)\b/gi;
+        const agentPattern = new RegExp(
+          `\\b(${sortedForRegex.join('|')})\\b`, 'gi',
+        );
         let m;
         while ((m = agentPattern.exec(handoffMatch[1])) !== null) {
           const name = m[1].toLowerCase();
           if (!agents.includes(name)) { agents.push(name); }
         }
-        return agents;
+        if (agents.length > 0) { return agents; }
       }
 
-      return [];
+      // Strategy 3: Broad scan (longest-first)
+      const agents: string[] = [];
+      for (const agentName of sortedForRegex) {
+        if (instructions.toLowerCase().includes(agentName)) {
+          const dominated = agents.some(
+            (a) => a.includes(agentName) || agentName.includes(a),
+          );
+          if (!dominated) { agents.push(agentName); }
+        }
+      }
+      return agents;
     }
 
     it('should parse TOML-style can_clarify list', () => {
@@ -80,8 +104,27 @@ May request clarification from **architect** for design questions.
     });
 
     it('should return empty array when no clarify config found', () => {
-      const instructions = '## Role\nJust a simple role description.\n';
+      const instructions = '## Role\nJust a simple role description with no agent names.\n';
       assert.deepEqual(parseCanClarifyList(instructions), []);
+    });
+
+    it('should broad-scan for agent names when no section matches', () => {
+      const instructions = '## Role\nCollaborates with engineer and architect.\n';
+      const result = parseCanClarifyList(instructions);
+      assert.ok(result.includes('engineer'));
+      assert.ok(result.includes('architect'));
+    });
+
+    it('should parse Team and Handoffs heading variant', () => {
+      const instructions = `## Team and Handoffs
+Works with devops-engineer and tester.
+
+## Other
+More stuff.
+`;
+      const result = parseCanClarifyList(instructions);
+      assert.ok(result.includes('devops-engineer'));
+      assert.ok(result.includes('tester'));
     });
 
     it('should deduplicate agent names', () => {

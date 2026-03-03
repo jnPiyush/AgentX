@@ -200,7 +200,12 @@ export async function spawnSubAgent(
   const adapter = await llmFactory(config.role, agentDef);
 
   if (!adapter) {
-    // No model available -- return a stub response based on instructions
+    // No model available -- return a stub response based on instructions.
+    // This should be rare now that the parent adapter is passed as fallback.
+    console.warn(
+      `[AgentX] Sub-agent "${config.role}" could not obtain an LLM adapter. `
+      + 'Returning degraded stub response.',
+    );
     return {
       response: `[${config.role}] Model not available. `
         + `Based on role definition:\n\n${instructions?.slice(0, 500) ?? 'No instructions available.'}`,
@@ -286,6 +291,10 @@ export async function spawnSubAgentWithHistory(
   const adapter = await llmFactory(config.role, agentDef);
 
   if (!adapter) {
+    console.warn(
+      `[AgentX] Sub-agent "${config.role}" (with history) could not obtain an LLM adapter. `
+      + 'Returning degraded stub response.',
+    );
     return {
       response: `[${config.role}] Model not available.`,
       iterations: 0,

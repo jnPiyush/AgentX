@@ -85,6 +85,16 @@ function buildToolIntent(prompt: string): LlmResponse | undefined {
   return undefined;
 }
 
+/**
+ * Degradation banner prepended to every local-adapter response so the user
+ * knows that full LLM reasoning is unavailable.
+ */
+const DEGRADED_BANNER =
+  '> **Note**: No language model was available for this agent. '
+  + 'Running in degraded mode with rule-based responses only. '
+  + 'Ensure a Copilot Chat model (e.g. GPT-4o, Claude) is configured in VS Code '
+  + 'for full agentic reasoning.\n\n';
+
 export function createLocalAgenticAdapter(agentName: string, routeDescription: string): LlmAdapter {
   return {
     async chat(
@@ -98,7 +108,8 @@ export function createLocalAgenticAdapter(agentName: string, routeDescription: s
         const toolOutput = lastTool.content.trim();
         return {
           text:
-            `Agent selected: ${agentName}. ${routeDescription}\n\n`
+            DEGRADED_BANNER
+            + `Agent selected: ${agentName}. ${routeDescription}\n\n`
             + 'Tool execution completed.\n\n'
             + '```\n'
             + `${toolOutput || '(no output)'}`
@@ -110,12 +121,16 @@ export function createLocalAgenticAdapter(agentName: string, routeDescription: s
       const prompt = getLastUserMessage(messages);
       const toolIntent = buildToolIntent(prompt);
       if (toolIntent) {
-        return toolIntent;
+        return {
+          text: DEGRADED_BANNER + toolIntent.text,
+          toolCalls: toolIntent.toolCalls,
+        };
       }
 
       return {
         text:
-          `Agent selected: ${agentName}. ${routeDescription}\n\n`
+          DEGRADED_BANNER
+          + `Agent selected: ${agentName}. ${routeDescription}\n\n`
           + 'No direct workspace action was needed. I can run tools if you ask explicitly '
           + '(for example: list files, read a file, search text, or run a command).',
         toolCalls: [],

@@ -82,39 +82,86 @@ function toVsCodeMessages(
 /**
  * Extract tool calls from the LLM text response.
  *
- * Models that support function calling via VS Code LM API may embed tool
- * calls in structured format. For models that return plain text with
- * embedded JSON tool calls, we parse them out.
+ * Supports multiple formats that models may produce:
+ *   1. XML tags: <tool_call>{"name": "...", "arguments": {...}}</tool_call>
+ *   2. JSON code blocks: ```json\n{"name": "...", "arguments": {...}}\n```
+ *   3. Markdown tool blocks: ```tool_call\n{...}\n```
+ *   4. Bare JSON objects with "name" and "arguments" keys on their own line
  *
- * Expected format in the text:
- * ```
- * <tool_call>{"name": "file_read", "arguments": {"filePath": "README.md"}}</tool_call>
- * ```
+ * Falls back gracefully -- malformed calls are skipped, not thrown.
  */
 function extractToolCalls(text: string): { cleanText: string; toolCalls: LlmToolCall[] } {
   const toolCalls: LlmToolCall[] = [];
   let callIndex = 0;
+  let cleanText = text;
 
-  const cleanText = text.replace(
+  // Strategy 1: XML tags (primary, most reliable)
+  cleanText = cleanText.replace(
     /<tool_call>([\s\S]*?)<\/tool_call>/g,
     (_match, json: string) => {
-      try {
-        const parsed = JSON.parse(json.trim());
-        if (parsed.name && typeof parsed.name === 'string') {
-          toolCalls.push({
-            id: `tc-${Date.now()}-${callIndex++}`,
-            name: parsed.name,
-            arguments: parsed.arguments ?? {},
-          });
-        }
-      } catch {
-        // Malformed JSON -- skip
-      }
+      parseAndPush(json, toolCalls, callIndex++);
       return '';
     },
-  ).trim();
+  );
 
-  return { cleanText, toolCalls };
+  // Strategy 2: Markdown code blocks labeled tool_call or tool
+  if (toolCalls.length === 0) {
+    cleanText = cleanText.replace(
+      /```(?:tool_call|tool)\s*\n([\s\S]*?)```/g,
+      (_match, json: string) => {
+        parseAndPush(json, toolCalls, callIndex++);
+        return '';
+      },
+    );
+  }
+
+  // Strategy 3: JSON code blocks containing tool-like objects
+  if (toolCalls.length === 0) {
+    cleanText = cleanText.replace(
+      /```json\s*\n([\s\S]*?)```/g,
+      (_match, json: string) => {
+        if (looksLikeToolCall(json)) {
+          parseAndPush(json, toolCalls, callIndex++);
+          return '';
+        }
+        return _match; // Not a tool call -- keep the code block
+      },
+    );
+  }
+
+  // Strategy 4: Bare JSON objects at line boundaries with "name" + "arguments"
+  if (toolCalls.length === 0) {
+    cleanText = cleanText.replace(
+      /^\s*(\{[\s\S]*?"name"\s*:\s*"[^"]+?"[\s\S]*?"arguments"\s*:[\s\S]*?\})\s*$/gm,
+      (_match, json: string) => {
+        parseAndPush(json, toolCalls, callIndex++);
+        return '';
+      },
+    );
+  }
+
+  return { cleanText: cleanText.trim(), toolCalls };
+}
+
+/** Check if a JSON string looks like a tool call. */
+function looksLikeToolCall(json: string): boolean {
+  return /["']name["']\s*:/.test(json) && /["']arguments["']\s*:/.test(json);
+}
+
+/** Safely parse JSON and push a valid tool call. */
+function parseAndPush(json: string, calls: LlmToolCall[], index: number): void {
+  try {
+    const parsed = JSON.parse(json.trim());
+    if (parsed.name && typeof parsed.name === 'string') {
+      calls.push({
+        id: `tc-${Date.now()}-${index}`,
+        name: parsed.name,
+        arguments: parsed.arguments ?? {},
+      });
+    }
+  } catch {
+    // Malformed JSON -- skip this call attempt
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -87,6 +87,12 @@
     "category": "AgentX",
     "icon": "$(notebook)"
    },
+  {
+   "command": "agentx.runTodoDemo",
+   "title": "Run Todo Demo (Real LLM)",
+   "category": "AgentX",
+   "icon": "$(beaker)"
+  },
    {
     "command": "agentx.refresh",
     "title": "Refresh",
@@ -202,10 +208,16 @@
      "contextualTitle": "AgentX Agents"
     },
     {
-     "id": "agentx-ready",
-     "name": "Ready Queue",
-     "icon": "$(checklist)",
-     "contextualTitle": "AgentX Ready Queue"
+     "id": "agentx-docs",
+     "name": "Documents",
+     "icon": "$(book)",
+     "contextualTitle": "AgentX Documents"
+    },
+    {
+     "id": "agentx-source",
+     "name": "Source",
+     "icon": "$(code)",
+     "contextualTitle": "AgentX Source"
     },
     {
      "id": "agentx-templates",
@@ -238,19 +250,14 @@
    "view/title": [
     {
      "command": "agentx.refresh",
-     "when": "view == agentx-agents || view == agentx-ready || view == agentx-templates || view == agentx-settings",
+     "when": "view == agentx-agents || view == agentx-docs || view == agentx-source || view == agentx-templates || view == agentx-settings",
      "group": "navigation"
     }
    ],
    "view/item/context": [
     {
      "command": "agentx.showIssue",
-     "when": "view == agentx-ready && viewItem == readyItem",
-     "group": "inline"
-    },
-    {
-     "command": "agentx.showIssue",
-     "when": "view == agentx-ready && viewItem == blockedClarificationItem",
+     "when": "false",
      "group": "inline"
     }
    ],

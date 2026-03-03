@@ -12,8 +12,8 @@ const BRANCH = 'master';
 const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
 
 /** Essential directories and files to extract (everything else is skipped). */
-const ESSENTIAL_DIRS = ['.agentx', '.github', '.vscode', 'scripts'];
-const ESSENTIAL_FILES = ['AGENTS.md', 'Skills.md', '.gitignore'];
+const ESSENTIAL_DIRS = ['.agentx', '.github', '.vscode', 'scripts', 'docs', 'packs'];
+const ESSENTIAL_FILES = ['AGENTS.md', 'Skills.md', 'CLAUDE.md', '.gitignore'];
 
 /**
  * Register the AgentX: Initialize Project command.
@@ -255,7 +255,8 @@ export function registerInitializeCommand(
   'architect',
   'engineer',
   'reviewer',
-  'devops',
+  'devops-engineer',
+  'auto-fix-reviewer',
   'data-scientist',
   'tester',
   'customer-coach',
@@ -431,6 +432,7 @@ function mergeGitignore(root: string): void {
     '.github/copilot-instructions.md',
     'AGENTS.md',
     'Skills.md',
+    'CLAUDE.md',
     'scripts/',
     'packs/',
   ];

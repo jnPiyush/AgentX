@@ -3,7 +3,7 @@ import {
   __setMockModels,
   __clearMockModels,
 } from '../mocks/vscode';
-import { selectModelForAgent, listAvailableModels } from '../../utils/modelSelector';
+import { selectModelForAgent, listAvailableModels, resolveContextWindow } from '../../utils/modelSelector';
 import { AgentDefinition } from '../../agentxContext';
 
 function makeDef(overrides: Partial<AgentDefinition> = {}): AgentDefinition {
@@ -147,6 +147,83 @@ describe('modelSelector', () => {
       __clearMockModels();
       const list = await listAvailableModels();
       assert.deepEqual(list, []);
+    });
+  });
+
+  // --- resolveContextWindow -----------------------------------------------
+
+  describe('resolveContextWindow', () => {
+    it('should prefer maxInputTokens from the model API', () => {
+      const fakeModel = { name: 'Claude Opus 4', family: 'claude-opus-4', maxInputTokens: 250_000 };
+      const result = resolveContextWindow(fakeModel as any, 'Claude Opus 4');
+      assert.equal(result, 250_000);
+    });
+
+    it('should fall back to family-based lookup for Claude', () => {
+      const fakeModel = { name: 'Claude Sonnet 4', family: 'claude-sonnet-4' };
+      const result = resolveContextWindow(fakeModel as any, 'Claude Sonnet 4');
+      assert.equal(result, 200_000);
+    });
+
+    it('should fall back to family-based lookup for GPT-4o', () => {
+      const fakeModel = { name: 'GPT 4o', family: 'gpt-4o' };
+      const result = resolveContextWindow(fakeModel as any, 'GPT 4o');
+      assert.equal(result, 128_000);
+    });
+
+    it('should fall back to family-based lookup for Gemini', () => {
+      const fakeModel = { name: 'Gemini 3 Pro', family: 'gemini-3-pro' };
+      const result = resolveContextWindow(fakeModel as any, 'Gemini 3 Pro');
+      assert.equal(result, 1_000_000);
+    });
+
+    it('should return conservative default for unknown model', () => {
+      const fakeModel = { name: 'Unknown Model', family: 'mystery' };
+      const result = resolveContextWindow(fakeModel as any, 'Unknown Model');
+      assert.equal(result, 100_000);
+    });
+
+    it('should return conservative default when chatModel is undefined', () => {
+      const result = resolveContextWindow(undefined, 'Unknown');
+      assert.equal(result, 100_000);
+    });
+
+    it('should ignore maxInputTokens when it is zero', () => {
+      const fakeModel = { name: 'Claude Opus 4', family: 'claude-opus-4', maxInputTokens: 0 };
+      const result = resolveContextWindow(fakeModel as any, 'Claude Opus 4');
+      assert.equal(result, 200_000); // Falls back to family-based
+    });
+  });
+
+  // --- maxInputTokens in selectModelForAgent --------------------------------
+
+  describe('selectModelForAgent maxInputTokens', () => {
+    it('should include maxInputTokens in result when model is selected', async () => {
+      __setMockModels([
+        { name: 'Claude Opus 4.6', family: 'claude-opus-4', vendor: 'copilot', maxInputTokens: 200_000 },
+      ]);
+
+      const result = await selectModelForAgent(makeDef({ model: 'Claude Opus 4.6 (copilot)' }));
+      assert.equal(result.source, 'primary');
+      assert.equal(result.maxInputTokens, 200_000);
+    });
+
+    it('should include maxInputTokens from family lookup when API missing', async () => {
+      __setMockModels([
+        { name: 'Claude Sonnet 4.6', family: 'claude-sonnet-4', vendor: 'copilot' },
+      ]);
+
+      const result = await selectModelForAgent(makeDef({ model: 'Claude Sonnet 4.6 (copilot)' }));
+      assert.equal(result.source, 'primary');
+      // Should be 200K from CONTEXT_WINDOW_MAP
+      assert.equal(result.maxInputTokens, 200_000);
+    });
+
+    it('should include default maxInputTokens when no model available', async () => {
+      __setMockModels([]);
+      const result = await selectModelForAgent(makeDef({ model: 'Unknown Model' }));
+      assert.equal(result.source, 'none');
+      assert.equal(result.maxInputTokens, 100_000);
     });
   });
 });

@@ -326,11 +326,33 @@ export class SessionManager {
     // Build compaction summary
     const toolCallCount = middle.filter((m) => m.toolCalls?.length).length;
     const toolResultCount = middle.filter((m) => m.role === 'tool').length;
-    const summary = [
+
+    // Extract richer context from compacted messages
+    const filesModified = extractFilePaths(middle, 'mutating');
+    const filesRead = extractFilePaths(middle, 'reading');
+    const decisions = extractDecisions(middle);
+    const errors = extractErrors(middle);
+
+    const summaryLines = [
       `[Session compacted: ${middle.length} messages summarized]`,
       `- ${toolCallCount} tool call(s), ${toolResultCount} tool result(s)`,
       `- Topics: ${extractTopics(middle)}`,
-    ].join('\n');
+    ];
+
+    if (filesModified.length > 0) {
+      summaryLines.push(`- Files modified: ${filesModified.join(', ')}`);
+    }
+    if (filesRead.length > 0) {
+      summaryLines.push(`- Files read: ${filesRead.slice(0, 10).join(', ')}${filesRead.length > 10 ? ` (+${filesRead.length - 10} more)` : ''}`);
+    }
+    if (decisions.length > 0) {
+      summaryLines.push(`- Key decisions:\n${decisions.map(d => `  * ${d}`).join('\n')}`);
+    }
+    if (errors.length > 0) {
+      summaryLines.push(`- Errors encountered:\n${errors.map(e => `  * ${e}`).join('\n')}`);
+    }
+
+    const summary = summaryLines.join('\n');
 
     const compactionMsg: SessionMessage = {
       role: 'system',
@@ -381,6 +403,82 @@ function randomSuffix(): string {
 
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN);
+}
+
+/**
+ * Extract file paths from tool calls and results.
+ * @param mode - 'mutating' for writes/edits, 'reading' for reads
+ */
+function extractFilePaths(
+  messages: readonly SessionMessage[],
+  mode: 'mutating' | 'reading',
+): string[] {
+  const paths = new Set<string>();
+  const mutatingTools = ['file_write', 'file_edit'];
+  const readingTools = ['file_read'];
+  const targetTools = mode === 'mutating' ? mutatingTools : readingTools;
+
+  for (const msg of messages) {
+    if (msg.toolCalls) {
+      for (const tc of msg.toolCalls) {
+        if (targetTools.includes(tc.name) && tc.params.filePath) {
+          paths.add(String(tc.params.filePath));
+        }
+      }
+    }
+  }
+  return [...paths];
+}
+
+/**
+ * Extract key decisions from assistant messages.
+ * Looks for decision-like patterns: "I will", "decided to", "choosing",
+ * "approach:", headings, and similar markers.
+ */
+function extractDecisions(messages: readonly SessionMessage[]): string[] {
+  const decisions: string[] = [];
+  const patterns = [
+    /(?:I (?:will|decided to|chose to|am going to)|decision:|approach:|strategy:)\s*(.{20,120})/gi,
+  ];
+
+  for (const msg of messages) {
+    if (msg.role !== 'assistant') { continue; }
+    for (const pattern of patterns) {
+      pattern.lastIndex = 0;
+      let match;
+      while ((match = pattern.exec(msg.content)) !== null) {
+        const decision = match[1].replace(/\n/g, ' ').trim();
+        if (decision && decisions.length < 8) {
+          decisions.push(decision);
+        }
+      }
+    }
+  }
+  return decisions;
+}
+
+/**
+ * Extract error messages from tool results.
+ */
+function extractErrors(messages: readonly SessionMessage[]): string[] {
+  const errors: string[] = [];
+
+  for (const msg of messages) {
+    if (msg.role !== 'tool') { continue; }
+    // Tool results with error indicators
+    if (
+      msg.content.includes('Error') ||
+      msg.content.includes('FAIL') ||
+      msg.content.includes('failed')
+    ) {
+      // Take first line as error summary (max 150 chars)
+      const firstLine = msg.content.split('\n')[0].slice(0, 150);
+      if (errors.length < 5) {
+        errors.push(firstLine);
+      }
+    }
+  }
+  return errors;
 }
 
 function extractTopics(messages: readonly SessionMessage[]): string {

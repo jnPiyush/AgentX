@@ -257,6 +257,8 @@ export interface MockLanguageModelChat {
   readonly name: string;
   readonly family: string;
   readonly vendor: string;
+  /** Maximum input tokens the model supports (context window). */
+  readonly maxInputTokens?: number;
 }
 
 /** Configurable model inventory for tests. */

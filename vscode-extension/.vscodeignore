@@ -12,3 +12,7 @@ tsconfig.json
 .gitignore
 tmpclaude-*
 *.vsix
+README.md
+CONTRIBUTING.md
+CHANGELOG.md
+package-lock.json
