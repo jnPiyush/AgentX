@@ -10,6 +10,7 @@
 //   - Sub-Agent Spawner (generalized sub-agent invocation)
 //   - Self-Review Loop (same-role iterative review)
 //   - Clarification Loop (inter-agent iterative Q&A)
+//   - Boundary Hooks (file-path and constraint enforcement per agent)
 // ---------------------------------------------------------------------------
 
 // Tool Engine
@@ -21,6 +22,7 @@ export {
   ToolCallRequest,
   ToolRegistry,
   ClarificationHandler,
+  resolveToolCategories,
   // Built-in tools
   fileReadTool,
   fileWriteTool,
@@ -110,3 +112,15 @@ export {
   runClarificationLoop,
   getDefaultClarificationConfig,
 } from './clarificationLoop';
+
+// Boundary Enforcement Hooks
+export {
+  BoundaryRules,
+  BoundaryCheckResult,
+  BoundaryViolationError,
+  BoundaryViolationHandler,
+  buildBoundaryHooks,
+  composeBoundaryHooks,
+  matchesBoundaryPattern,
+  checkBoundary,
+} from './boundaryHook';

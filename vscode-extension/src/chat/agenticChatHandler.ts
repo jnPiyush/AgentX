@@ -21,6 +21,10 @@ import {
   LoopSummary,
   DoneValidator,
   LlmAdapter,
+  ToolHookContext,
+  ToolResultHookContext,
+  CompactionHookContext,
+  ClarificationHookContext,
 } from '../agentic';
 import {
   LlmAdapterFactory,
@@ -33,6 +37,12 @@ import {
 import {
   getDefaultClarificationConfig,
 } from '../agentic/clarificationLoop';
+import {
+  BoundaryRules,
+  BoundaryViolationError,
+  buildBoundaryHooks,
+  composeBoundaryHooks,
+} from '../agentic/boundaryHook';
 import { createVsCodeLmAdapter } from './vscodeLmAdapter';
 import { loadAgentInstructions } from './agentContextLoader';
 import { selectModelForAgent, ModelSelectionResult } from '../utils/modelSelector';
@@ -385,6 +395,11 @@ export async function runAgenticChat(
     + `**Budget**: ${(derivedTokenBudget / 1000).toFixed(0)}K tokens\n\n---\n\n`,
   );
 
+  // Fire CLI lifecycle hook: start
+  // Non-blocking -- failures do not interrupt the chat flow.
+  const issueArg = cfg.issueNumber ? String(cfg.issueNumber) : undefined;
+  fireCLIHook(agentx, 'start', agentName, issueArg);
+
   // -----------------------------------------------------------------------
   // 2. Build system prompt
   // -----------------------------------------------------------------------
@@ -452,6 +467,22 @@ export async function runAgenticChat(
   // -----------------------------------------------------------------------
   const toolRegistry = new ToolRegistry();
   const eventBus = getEventBus();
+
+  // Build boundary rules from agent definition (canModify / cannotModify)
+  let boundaryRules: BoundaryRules | undefined;
+  if (agentDef) {
+    const hasModify = agentDef.canModify && agentDef.canModify.length > 0;
+    const hasBlock = agentDef.cannotModify && agentDef.cannotModify.length > 0;
+    const hasConstraints = agentDef.constraints && agentDef.constraints.length > 0;
+    if (hasModify || hasBlock || hasConstraints) {
+      boundaryRules = {
+        agentName,
+        canModify: agentDef.canModify ?? [],
+        cannotModify: agentDef.cannotModify ?? [],
+        constraints: agentDef.constraints ?? [],
+      };
+    }
+  }
 
   // Self-review config: applicable to ALL agents (not just code-producing)
   const wsRoot = agentx.workspaceRoot ?? process.cwd();
@@ -568,47 +599,52 @@ export async function runAgenticChat(
           );
         },
       },
-      hooks: {
-        onBeforeToolUse: async ({ agentName: hookAgent, toolName, params }) => {
+      // Compose boundary hooks with EventBus hooks.
+      // Boundary hooks run FIRST (onBeforeToolUse) so violations are caught
+      // before the EventBus emits a 'running' event for a blocked tool.
+      hooks: composeBoundaryHooks(
+        boundaryRules ? buildBoundaryHooks(boundaryRules) : {},
+        {
+        onBeforeToolUse: async (ctx: ToolHookContext) => {
           eventBus.emit('tool-invoked', {
-            agent: hookAgent,
-            tool: toolName,
+            agent: ctx.agentName,
+            tool: ctx.toolName,
             status: 'running',
-            detail: Object.keys(params).slice(0, 3).join(','),
+            detail: Object.keys(ctx.params).slice(0, 3).join(','),
             timestamp: Date.now(),
           });
         },
-        onAfterToolUse: async ({ agentName: hookAgent, toolName, result }) => {
+        onAfterToolUse: async (ctx: ToolResultHookContext) => {
           eventBus.emit('tool-invoked', {
-            agent: hookAgent,
-            tool: toolName,
-            status: result.isError ? 'error' : 'done',
-            detail: result.content[0]?.text.slice(0, 120),
+            agent: ctx.agentName,
+            tool: ctx.toolName,
+            status: ctx.result.isError ? 'error' : 'done',
+            detail: ctx.result.content[0]?.text.slice(0, 120),
             timestamp: Date.now(),
           });
         },
-        onCompaction: async ({ agentName: hookAgent, beforeTokens, afterTokens, summary, didCompact }) => {
-          if (!didCompact) { return; }
+        onCompaction: async (ctx: CompactionHookContext) => {
+          if (!ctx.didCompact) { return; }
           eventBus.emit('context-compacted', {
-            agent: hookAgent,
-            originalTokens: beforeTokens,
-            compactedTokens: afterTokens,
-            summary: summary ?? '',
+            agent: ctx.agentName,
+            originalTokens: ctx.beforeTokens,
+            compactedTokens: ctx.afterTokens,
+            summary: ctx.summary ?? '',
             timestamp: Date.now(),
           });
           response.markdown(
-            `> **[Compaction]** ${beforeTokens} -> ${afterTokens} tokens\n\n`,
+            `> **[Compaction]** ${ctx.beforeTokens} -> ${ctx.afterTokens} tokens\n\n`,
           );
         },
-        onBeforeClarification: async ({ agentName: hookAgent, targetAgent }) => {
+        onBeforeClarification: async (ctx: ClarificationHookContext) => {
           eventBus.emit('handoff-triggered', {
-            fromAgent: hookAgent,
-            toAgent: targetAgent,
+            fromAgent: ctx.agentName,
+            toAgent: ctx.targetAgent,
             issueNumber: cfg.issueNumber || undefined,
             timestamp: Date.now(),
           });
         },
-        onHookError: (hookName, error) => {
+        onHookError: (hookName: string, error: unknown) => {
           const msg = error instanceof Error ? error.message : String(error);
           eventBus.emit('agent-error', {
             agent: agentName,
@@ -617,7 +653,9 @@ export async function runAgenticChat(
             timestamp: Date.now(),
           });
         },
-      },
+      }),
+      // Tool filtering: restrict available tools per agent definition
+      allowedTools: agentDef?.tools,
     },
     toolRegistry,
   );
@@ -629,7 +667,7 @@ export async function runAgenticChat(
   if (modelResult.chatModel) {
     adapter = createVsCodeLmAdapter({
       chatModel: modelResult.chatModel,
-      toolSchemas: toolRegistry.toFunctionSchemas(),
+      toolSchemas: toolRegistry.toFilteredFunctionSchemas(agentDef?.tools),
     });
   } else {
     // Fallback: use the local pattern-matching adapter
@@ -712,6 +750,8 @@ export async function runAgenticChat(
     };
   } finally {
     cancellationSub.dispose();
+    // Fire CLI lifecycle hook: finish (non-blocking)
+    fireCLIHook(agentx, 'finish', agentName, issueArg);
   }
 
   return {
@@ -725,6 +765,27 @@ export async function runAgenticChat(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Fire an AgentX CLI lifecycle hook (non-blocking, fire-and-forget).
+ * Calls `.agentx/agentx.ps1 hook -Phase <phase> -Agent <agent> [-Issue <n>]`
+ * so external scripts and CI hooks can observe agent start/finish events.
+ * Failures are silently swallowed -- the chat flow must not break.
+ */
+function fireCLIHook(
+  agentx: AgentXContext,
+  phase: 'start' | 'finish',
+  agentName: string,
+  issueNumber?: string,
+): void {
+  const args = ['-Phase', phase, '-Agent', agentName];
+  if (issueNumber) {
+    args.push('-Issue', issueNumber);
+  }
+  agentx.runCli('hook', args).catch(() => {
+    // Intentionally swallowed -- CLI hooks are best-effort.
+  });
+}
 
 /**
  * Extract the list of agents this agent can request clarification from.

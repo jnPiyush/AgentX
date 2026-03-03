@@ -21,6 +21,7 @@
 // ---------------------------------------------------------------------------
 
 import { ToolRegistry, ToolCallRequest, ToolResult, ToolContext, ClarificationHandler } from './toolEngine';
+import { BoundaryViolationError } from './boundaryHook';
 import {
   ToolLoopDetector,
   LoopDetectionResult,
@@ -316,6 +317,15 @@ export interface AgenticLoopConfig {
    * terminate the main loop.
    */
   readonly hooks?: AgenticLoopHooks;
+  /**
+   * Tool category names from agent frontmatter. When set, the LLM only
+   * sees schemas for tools in these categories (e.g., 'read', 'edit',
+   * 'execute', 'search', 'agent'). The tool registry still has all
+   * tools, but the LLM schemas are filtered at the prompt level.
+   *
+   * If empty or undefined, all tools are exposed (backward-compatible).
+   */
+  readonly allowedTools?: readonly string[];
 }
 
 const DEFAULT_CONFIG: AgenticLoopConfig = {
@@ -525,7 +535,9 @@ export class AgenticLoop {
       clarificationHandler,
     };
 
-    const toolSchemas = this.toolRegistry.toFunctionSchemas();
+    const toolSchemas = this.config.allowedTools && this.config.allowedTools.length > 0
+      ? this.toolRegistry.toFilteredFunctionSchemas(this.config.allowedTools)
+      : this.toolRegistry.toFunctionSchemas();
 
     let iterations = 0;
     let totalToolCalls = 0;
@@ -708,6 +720,7 @@ export class AgenticLoop {
         }
 
         let effectiveParams: Record<string, unknown> = toolCall.arguments;
+        let boundaryBlocked = false;
         if (this.config.hooks?.onBeforeToolUse) {
           try {
             const patched = await this.config.hooks.onBeforeToolUse({
@@ -721,9 +734,31 @@ export class AgenticLoop {
               effectiveParams = patched;
             }
           } catch (err: unknown) {
+            // BoundaryViolationError: inject a blocked result instead of
+            // executing the tool. The LLM will see the error message and
+            // can adjust its approach.
+            if (err instanceof BoundaryViolationError) {
+              boundaryBlocked = true;
+              const blockedResult: ToolResult = {
+                content: [{ type: 'text', text: `[BOUNDARY BLOCKED] ${err.message}` }],
+                isError: true,
+              };
+              totalToolCalls++;
+              progress?.onToolResult?.(toolCall.name, blockedResult);
+              const blockedText = blockedResult.content.map((c) => c.text).join('\n');
+              this.loopDetector.record(toolCall.name, effectiveParams, blockedText);
+              this.sessionManager.addMessage(sessionId, {
+                role: 'tool',
+                content: blockedText,
+                toolCallId: toolCall.id,
+                timestamp: new Date().toISOString(),
+              });
+            }
             this.handleHookError('onBeforeToolUse', err);
           }
         }
+
+        if (boundaryBlocked) { continue; }
 
         progress?.onToolCall?.(toolCall.name, effectiveParams);
 

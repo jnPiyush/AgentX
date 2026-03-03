@@ -440,6 +440,60 @@ function escapeRegExp(str: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Tool Category Resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Mapping from abstract agent frontmatter tool categories to concrete
+ * built-in tool names. Categories are the values used in .agent.md
+ * frontmatter `tools:` arrays.
+ *
+ * External tools (e.g., 'github/*', 'ms-azuretools...') are passed
+ * through as-is since they are VS Code extension tools, not managed
+ * by this registry.
+ */
+const TOOL_CATEGORY_MAP: ReadonlyMap<string, readonly string[]> = new Map([
+  ['read', ['file_read', 'list_dir']],
+  ['edit', ['file_write', 'file_edit']],
+  ['execute', ['terminal_exec']],
+  ['search', ['grep_search', 'file_read', 'list_dir']],
+  ['agent', ['request_clarification']],
+  ['vscode', ['file_read', 'file_write', 'file_edit', 'list_dir', 'grep_search']],
+  ['web', []], // External capability, not a built-in tool
+  ['todo', ['validate_done']],
+  ['validate', ['validate_done']],
+]);
+
+/**
+ * Resolve abstract tool categories to concrete tool names.
+ *
+ * @param categories - Array of category names from agent frontmatter
+ * @returns Set of concrete tool names the agent can use
+ */
+export function resolveToolCategories(
+  categories: readonly string[],
+): Set<string> {
+  const resolved = new Set<string>();
+  for (const cat of categories) {
+    const mapped = TOOL_CATEGORY_MAP.get(cat.toLowerCase().trim());
+    if (mapped) {
+      for (const toolName of mapped) {
+        resolved.add(toolName);
+      }
+    }
+    // If the category exactly matches a built-in tool name, add it directly
+    if (cat.includes('_') || cat.startsWith('file_') || cat.startsWith('terminal_')
+        || cat.startsWith('grep_') || cat.startsWith('list_')) {
+      resolved.add(cat);
+    }
+    // External tool references (e.g. 'github/*') are not in the registry
+    // but we add them so the filter doesn't accidentally exclude them
+    // if someone uses them as direct names.
+  }
+  return resolved;
+}
+
+// ---------------------------------------------------------------------------
 // Agent Communication Tools
 // ---------------------------------------------------------------------------
 
@@ -748,6 +802,34 @@ export class ToolRegistry {
           .map(([key]) => key),
       },
     }));
+  }
+
+  /**
+   * Get tool schemas filtered by agent's declared tool categories.
+   *
+   * Agent definitions use abstract category names (e.g., 'read', 'edit',
+   * 'execute', 'search', 'agent') which map to concrete tool names.
+   * If `allowedTools` is empty or undefined, all tools are returned
+   * (backward-compatible default).
+   *
+   * @param allowedTools - Tool category names from agent definition
+   * @returns Filtered tool schemas for the LLM
+   */
+  toFilteredFunctionSchemas(
+    allowedTools?: readonly string[],
+  ): ReadonlyArray<{
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  }> {
+    if (!allowedTools || allowedTools.length === 0) {
+      return this.toFunctionSchemas();
+    }
+
+    const resolvedNames = resolveToolCategories(allowedTools);
+    return this.toFunctionSchemas().filter(
+      (schema) => resolvedNames.has(schema.name),
+    );
   }
 
   /**

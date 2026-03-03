@@ -282,6 +282,43 @@ export class AgentXContext {
    .filter(l => l.length > 0);
  };
 
+ // Parse handoffs (YAML list of objects under `handoffs:`).
+ // Each entry has: label, agent, prompt, send, context
+ const parseHandoffs = (): AgentHandoff[] => {
+  const handoffRe = /^handoffs:\s*\n((?:\s+-\s+[\s\S]*?)(?=\n\w|$))/m;
+  const hm = frontmatter.match(handoffRe);
+  if (!hm) { return []; }
+  const entries: AgentHandoff[] = [];
+  const blocks = hm[1].split(/\n\s+-\s+/).filter(Boolean);
+  for (const block of blocks) {
+   const agent = block.match(/agent:\s*(.+)/)?.[1]?.trim().replace(/^['"]|['"]$/g, '') ?? '';
+   const label = block.match(/label:\s*(.+)/)?.[1]?.trim().replace(/^['"]|['"]$/g, '') ?? '';
+   const prompt = block.match(/prompt:\s*(.+)/)?.[1]?.trim().replace(/^['"]|['"]$/g, '') ?? '';
+   const context = block.match(/context:\s*(.+)/)?.[1]?.trim().replace(/^['"]|['"]$/g, '') ?? '';
+   const sendStr = block.match(/send:\s*(\w+)/)?.[1]?.trim() ?? 'false';
+   if (agent) {
+    entries.push({ agent, label, prompt, context, send: sendStr === 'true' });
+   }
+  }
+  return entries;
+ };
+
+ // Parse tools (YAML array -- may be bracket-style or list-style)
+ const parseTools = (): string[] => {
+  // Bracket-style: tools: ['a', 'b', 'c']
+  const bracketMatch = frontmatter.match(/^tools:\s*\[([^\]]+)\]/m);
+  if (bracketMatch) {
+   return bracketMatch[1]
+    .split(',')
+    .map(t => t.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(t => t.length > 0);
+  }
+  // List-style: tools:\n  - a\n  - b
+  return getList('tools');
+ };
+
+ const inferStr = get('infer');
+
  return {
  name: get('name'),
  description: get('description'),
@@ -293,6 +330,9 @@ export class AgentXContext {
  constraints: getList('constraints'),
  canModify: getBoundaryList('can_modify'),
  cannotModify: getBoundaryList('cannot_modify'),
+ handoffs: parseHandoffs(),
+ tools: parseTools(),
+ infer: inferStr === 'true',
  };
  }
 
@@ -313,6 +353,22 @@ export class AgentXContext {
  }
 }
 
+/**
+ * A declared agent-to-agent handoff from frontmatter.
+ */
+export interface AgentHandoff {
+ /** Target agent name (e.g., 'engineer'). */
+ readonly agent: string;
+ /** Human-readable label (e.g., 'Hand off to Engineer'). */
+ readonly label: string;
+ /** Prompt/instruction for the target agent. */
+ readonly prompt: string;
+ /** Context description for when the handoff applies. */
+ readonly context: string;
+ /** Whether to send context automatically. */
+ readonly send: boolean;
+}
+
 export interface AgentDefinition {
  name: string;
  description: string;
@@ -328,6 +384,12 @@ export interface AgentDefinition {
  canModify?: string[];
  /** Directories/patterns the agent cannot modify. */
  cannotModify?: string[];
+ /** Declared handoffs to other agents. */
+ handoffs?: AgentHandoff[];
+ /** Declared tool names this agent can access. */
+ tools?: string[];
+ /** Whether the agent supports automatic context inference. */
+ infer?: boolean;
  /**
   * Live runtime status from agent state file (optional).
   * Known values: 'idle' | 'working' | 'clarifying' | 'blocked-clarification'

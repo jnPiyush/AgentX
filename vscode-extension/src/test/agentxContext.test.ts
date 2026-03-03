@@ -334,6 +334,49 @@ describe('AgentXContext', () => {
       const def = await ctx.readAgentDef('bad.agent.md');
       assert.equal(def, undefined);
     });
+
+    it('should parse tools, handoffs, and infer fields', async () => {
+      const root = path.join(tmpBase, 'agentdef-extended');
+      fs.mkdirSync(root, { recursive: true });
+      createAgentXRoot(root);
+      fs.mkdirSync(path.join(root, '.github', 'agents'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.github', 'agents', 'rich.agent.md'), [
+        '---',
+        'name: Rich Agent',
+        "description: 'Agent with extended fields'",
+        'maturity: stable',
+        'mode: agent',
+        'model: Claude Opus',
+        'infer: true',
+        "tools: ['read', 'edit', 'search']",
+        'handoffs:',
+        '  - agent: engineer',
+        '    label: Hand off to Engineer',
+        '    prompt: Implement the spec',
+        '    context: Architecture spec complete',
+        '    send: true',
+        '---',
+        '',
+        '## Role',
+        'Rich agent content',
+      ].join('\n'));
+
+      __setWorkspaceFolders([{ path: root }]);
+      const ctx = new AgentXContext(fakeExtensionContext());
+      const def = await ctx.readAgentDef('rich.agent.md');
+
+      assert.ok(def, 'should parse agent definition');
+      assert.equal(def!.name, 'Rich Agent');
+      assert.equal(def!.infer, true);
+      assert.ok(Array.isArray(def!.tools), 'tools should be an array');
+      assert.ok(def!.tools!.length > 0, 'tools should not be empty');
+      assert.ok(def!.tools!.includes('read'));
+      assert.ok(def!.tools!.includes('edit'));
+      assert.ok(def!.tools!.includes('search'));
+      assert.ok(Array.isArray(def!.handoffs), 'handoffs should be an array');
+      assert.ok(def!.handoffs!.length > 0, 'handoffs should not be empty');
+      assert.equal(def!.handoffs![0].agent, 'engineer');
+    });
   });
 
   // --- listAgents -------------------------------------------------------
