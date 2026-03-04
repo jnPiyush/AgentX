@@ -36,6 +36,9 @@ import { promptIfUpdateAvailable } from './utils/versionChecker';
 import { StructuredLogger } from './utils/structuredLogger';
 import { ObservationExtractor } from './memory/observationExtractor';
 import { JsonObservationStore } from './memory/observationStore';
+import { OutcomeTracker } from './memory/outcomeTracker';
+import { SessionRecorder } from './memory/sessionRecorder';
+import { MemoryHealth } from './memory/memoryHealth';
 
 let agentxContext: AgentXContext;
 let eventBus: AgentEventBus;
@@ -138,6 +141,9 @@ export function activate(context: vscode.ExtensionContext) {
   const memoryDir = path.join(agentxDir, 'memory');
   const observationStore = new JsonObservationStore(memoryDir);
   const observationExtractor = new ObservationExtractor();
+  const outcomeTracker = new OutcomeTracker(memoryDir);
+  const sessionRecorder = new SessionRecorder(memoryDir);
+  const memoryHealth = new MemoryHealth(memoryDir);
 
   eventBus.on('context-compacted', (e) => {
    if (!e.summary) { return; }
@@ -157,6 +163,153 @@ export function activate(context: vscode.ExtensionContext) {
     console.warn('AgentX: Observation extraction failed:', err);
    }
   });
+
+  // Phase 1: Memory Health command
+  context.subscriptions.push(
+   vscode.commands.registerCommand('agentx.memoryHealth', async () => {
+    const channel = vscode.window.createOutputChannel('AgentX Memory Health');
+    channel.clear();
+    channel.show(true);
+    channel.appendLine('=== AgentX Memory Health Report ===');
+    channel.appendLine('Scanning...');
+
+    try {
+     const report = await memoryHealth.scan();
+     channel.clear();
+     channel.appendLine('=== AgentX Memory Health Report ===');
+     channel.appendLine(`Scan time: ${report.scanTime} (${report.durationMs}ms)`);
+     channel.appendLine('');
+     channel.appendLine(`Observations: ${report.observations.total} total | ${report.observations.stale} stale (> 90 days)`);
+     channel.appendLine(`Outcomes:     ${report.outcomes.total} total    | ${report.outcomes.stale} stale`);
+     channel.appendLine(`Sessions:     ${report.sessions.total} total    | ${report.sessions.stale} stale`);
+     channel.appendLine(`Disk usage:   ${formatBytes(report.diskSizeBytes)}`);
+     channel.appendLine('');
+
+     if (report.issues.length > 0) {
+      channel.appendLine('Issues Found:');
+      for (const issue of report.issues) {
+       channel.appendLine(`  ${issue}`);
+      }
+      channel.appendLine('');
+      channel.appendLine('Status: NEEDS REPAIR');
+      channel.appendLine('');
+
+      const fix = await vscode.window.showWarningMessage(
+       `Memory health: ${report.issues.length} issue(s) found. Run repair?`,
+       'Repair',
+       'Dismiss',
+      );
+      if (fix === 'Repair') {
+       channel.appendLine('Repairing...');
+       const repairResult = await memoryHealth.repair();
+       channel.appendLine('');
+       channel.appendLine('=== AgentX Memory Health Repair ===');
+       for (const action of repairResult.actions) {
+        channel.appendLine(action);
+       }
+       channel.appendLine('');
+       channel.appendLine(`Status: ${repairResult.healthyAfterRepair ? 'HEALTHY' : 'NEEDS ATTENTION'}`);
+      }
+     } else {
+      channel.appendLine('Status: HEALTHY');
+     }
+    } catch (err: unknown) {
+     const msg = err instanceof Error ? err.message : String(err);
+     channel.appendLine(`[FAIL] Scan failed: ${msg}`);
+    }
+   }),
+  );
+
+  // Phase 1: Session History command
+  context.subscriptions.push(
+   vscode.commands.registerCommand('agentx.sessionHistory', async () => {
+    try {
+     const sessions = await sessionRecorder.list(50);
+     if (sessions.length === 0) {
+      vscode.window.showInformationMessage('AgentX: No sessions recorded yet.');
+      return;
+     }
+
+     const items = sessions.map((s) => ({
+      label: `${s.endTime.substring(0, 10)} | ${s.agent} | Issue #${s.issueNumber ?? 'N/A'}`,
+      description: s.summaryPreview,
+      detail: `${s.messageCount} messages`,
+      sessionId: s.id,
+     }));
+
+     const picked = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Select a session to view',
+      title: 'AgentX Session History',
+     });
+
+     if (!picked) { return; }
+
+     const full = await sessionRecorder.getById(picked.sessionId);
+     if (!full) {
+      vscode.window.showWarningMessage('AgentX: Session record not found.');
+      return;
+     }
+
+     const doc = await vscode.workspace.openTextDocument({
+      language: 'json',
+      content: JSON.stringify(full, null, 2),
+     });
+     vscode.window.showTextDocument(doc, { preview: true });
+    } catch (err: unknown) {
+     const msg = err instanceof Error ? err.message : String(err);
+     vscode.window.showErrorMessage(`AgentX Session History: ${msg}`);
+    }
+   }),
+  );
+
+  // Phase 1: Resume Session command
+  context.subscriptions.push(
+   vscode.commands.registerCommand('agentx.resumeSession', async () => {
+    try {
+     const recent = await sessionRecorder.getMostRecent();
+     if (!recent) {
+      vscode.window.showInformationMessage('AgentX: No sessions to resume.');
+      return;
+     }
+
+     const lines: string[] = [
+      `## Session Resume (${recent.endTime.substring(0, 16).replace('T', ' ')})`,
+      `**Agent**: ${recent.agent} | **Issue**: #${recent.issueNumber ?? 'N/A'}`,
+      '',
+      '### Summary',
+      recent.summary,
+      '',
+     ];
+
+     if (recent.decisions.length > 0) {
+      lines.push('### Decisions');
+      for (const d of recent.decisions) { lines.push(`- ${d}`); }
+      lines.push('');
+     }
+
+     if (recent.filesChanged.length > 0) {
+      lines.push('### Files Changed');
+      for (const f of recent.filesChanged) { lines.push(`- ${f}`); }
+      lines.push('');
+     }
+
+     if (recent.actions.length > 0) {
+      lines.push('### Actions Taken');
+      for (const a of recent.actions) { lines.push(`- ${a}`); }
+      lines.push('');
+     }
+
+     const doc = await vscode.workspace.openTextDocument({
+      language: 'markdown',
+      content: lines.join('\n'),
+     });
+     vscode.window.showTextDocument(doc, { preview: true });
+    } catch (err: unknown) {
+     const msg = err instanceof Error ? err.message : String(err);
+     vscode.window.showErrorMessage(`AgentX Resume Session: ${msg}`);
+    }
+   }),
+  );
  }
 
  // Start scheduler when enabled tasks exist
@@ -614,4 +767,11 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
  // Cleanup handled by disposables registered in activate()
  console.log('AgentX extension deactivated.');
+}
+
+/** Format byte count as human-readable string. */
+function formatBytes(bytes: number): string {
+ if (bytes < 1024) { return `${bytes} B`; }
+ if (bytes < 1024 * 1024) { return `${(bytes / 1024).toFixed(1)} KB`; }
+ return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

@@ -32,3 +32,33 @@ export {
   MemoryStats,
   PersistentStoreConfig,
 } from './persistentStore';
+
+// Phase 1 -- Cognitive Foundation: Outcome Tracker
+export { OutcomeTracker } from './outcomeTracker';
+export type {
+  OutcomeRecord,
+  OutcomeIndex,
+  OutcomeManifest,
+  OutcomeQuery,
+  OutcomeStats,
+  OutcomeResult,
+  IOutcomeTracker,
+} from './outcomeTypes';
+
+// Phase 1 -- Cognitive Foundation: Session Recorder
+export { SessionRecorder } from './sessionRecorder';
+export type {
+  SessionRecord,
+  SessionIndex,
+  SessionManifest,
+  ISessionRecorder,
+} from './sessionTypes';
+
+// Phase 1 -- Cognitive Foundation: Memory Health
+export { MemoryHealth } from './memoryHealth';
+export type {
+  HealthReport,
+  RepairResult,
+  SubsystemHealth,
+  IMemoryHealth,
+} from './healthTypes';

@@ -90,7 +90,16 @@ For AI/ML features, include:
 | Evaluation | Metrics, benchmarks, A/B testing plan |
 | Fallback | Graceful degradation when AI components fail |
 
-### 5. Self-Review
+### 5. Confidence Markers (REQUIRED)
+
+Every major recommendation MUST include a confidence tag:
+- [Confidence: HIGH] -- Strong evidence, proven pattern, low risk
+- [Confidence: MEDIUM] -- Reasonable approach, some uncertainty, may need validation
+- [Confidence: LOW] -- Speculative, limited evidence, requires further research
+
+Apply to: technology choices, pattern selections, trade-off conclusions, risk assessments.
+
+### 6. Self-Review
 
 - [ ] ADR evaluates 3+ options with clear criteria
 - [ ] Tech Spec covers all 13 sections
@@ -100,7 +109,7 @@ For AI/ML features, include:
 - [ ] Migration plan covers backward compatibility
 - [ ] An engineer can implement without ambiguity
 
-### 6. Commit & Handoff
+### 7. Commit & Handoff
 
 ```bash
 git add docs/adr/ docs/specs/

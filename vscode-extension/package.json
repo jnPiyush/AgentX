@@ -194,6 +194,24 @@
     "title": "Edit Setting",
     "category": "AgentX",
     "icon": "$(edit)"
+   },
+   {
+    "command": "agentx.memoryHealth",
+    "title": "Memory Health Check",
+    "category": "AgentX",
+    "icon": "$(heart)"
+   },
+   {
+    "command": "agentx.sessionHistory",
+    "title": "Session History",
+    "category": "AgentX",
+    "icon": "$(history)"
+   },
+   {
+    "command": "agentx.resumeSession",
+    "title": "Resume Session",
+    "category": "AgentX",
+    "icon": "$(debug-continue)"
    }
   ],
   "viewsContainers": {

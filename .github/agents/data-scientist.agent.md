@@ -93,7 +93,16 @@ Create documentation at `docs/data-science/`:
 | Evaluation Report | Test results, benchmark comparisons, failure analysis |
 | Pipeline Docs | Architecture diagram, data flow, deployment steps |
 
-### 6. Self-Review
+### 6. Confidence Markers (REQUIRED)
+
+Every major recommendation MUST include a confidence tag:
+- [Confidence: HIGH] -- Strong evidence, proven pattern, low risk
+- [Confidence: MEDIUM] -- Reasonable approach, some uncertainty, may need validation
+- [Confidence: LOW] -- Speculative, limited evidence, requires further research
+
+Apply to: model selection, hyperparameter choices, evaluation conclusions, drift thresholds, data quality assessments.
+
+### 7. Self-Review
 
 - [ ] All metrics are real (not fabricated)
 - [ ] Evaluation plan covers accuracy, latency, cost, and safety
@@ -102,7 +111,7 @@ Create documentation at `docs/data-science/`:
 - [ ] Fallback strategy exists for model failures
 - [ ] No data leakage between train/test sets
 
-### 7. Commit & Handoff
+### 8. Commit & Handoff
 
 ```bash
 git add src/ tests/ docs/data-science/ prompts/ notebooks/

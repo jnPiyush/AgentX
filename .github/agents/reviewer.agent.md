@@ -103,7 +103,16 @@ Create `docs/reviews/REVIEW-{issue}.md` from template at `.github/templates/REVI
 | Minor | Style inconsistency, naming, minor refactor opportunity | No |
 | Nit | Cosmetic, optional improvement | No |
 
-### 5.1. Self-Review
+### 5.1. Confidence Markers (REQUIRED)
+
+Every major recommendation MUST include a confidence tag:
+- [Confidence: HIGH] -- Strong evidence, proven pattern, low risk
+- [Confidence: MEDIUM] -- Reasonable approach, some uncertainty, may need validation
+- [Confidence: LOW] -- Speculative, limited evidence, requires further research
+
+Apply to: findings severity, refactoring suggestions, performance observations, security assessments.
+
+### 5.2. Self-Review
 
 Before issuing the final decision, verify with fresh eyes:
 
