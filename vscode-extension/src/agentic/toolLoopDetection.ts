@@ -2,8 +2,8 @@
 // AgentX -- Tool Loop Detection
 // ---------------------------------------------------------------------------
 //
-// Ported from OpenClaw's hash-based loop detection pattern. Detects when the
-// LLM gets stuck in repetitive tool-call cycles:
+// Hash-based loop detection. Detects when the LLM gets stuck in
+// repetitive tool-call cycles:
 //
 //   1. generic_repeat   -- same tool call N times in a row
 //   2. ping_pong        -- alternating A-B-A-B pattern

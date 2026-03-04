@@ -47,6 +47,7 @@ import { createVsCodeLmAdapter } from './vscodeLmAdapter';
 import { loadAgentInstructions } from './agentContextLoader';
 import { selectModelForAgent, ModelSelectionResult } from '../utils/modelSelector';
 import { ClarificationRouter } from '../utils/clarificationRouter';
+import { ClarificationMonitor } from '../utils/clarificationMonitor';
 import { AgentEventBus } from '../utils/eventBus';
 
 // ---------------------------------------------------------------------------
@@ -114,6 +115,7 @@ function getLoopSettings() {
 
 let sharedEventBus: AgentEventBus | undefined;
 let sharedClarificationRouter: ClarificationRouter | undefined;
+let sharedClarificationMonitor: ClarificationMonitor | undefined;
 
 function getEventBus(): AgentEventBus {
   if (!sharedEventBus) {
@@ -129,6 +131,15 @@ function getClarificationRouter(workspaceRoot: string, agentx: AgentXContext): C
       eventBus: getEventBus(),
       runSubagent: createSubagentRunner(agentx),
     });
+    // Wire the clarification monitor to detect stale/stuck/deadlocked requests
+    sharedClarificationMonitor = new ClarificationMonitor(
+      sharedClarificationRouter,
+      getEventBus(),
+    );
+    // Run monitor checks on agent lifecycle boundaries
+    const bus = getEventBus();
+    bus.on('agent-started', () => { sharedClarificationMonitor?.runCheck().catch(() => {}); });
+    bus.on('agent-completed', () => { sharedClarificationMonitor?.runCheck().catch(() => {}); });
   }
   return sharedClarificationRouter;
 }

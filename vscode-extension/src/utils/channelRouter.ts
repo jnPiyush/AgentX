@@ -6,7 +6,6 @@
 // Each surface (VS Code Chat, CLI, GitHub Issues, etc.) implements the
 // interface and registers with the ChannelRouter.
 //
-// Inspired by OpenBrowserClaw's Router + Channel pattern.
 // ---------------------------------------------------------------------------
 
 import { AgentEventBus } from './eventBus';

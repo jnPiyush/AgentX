@@ -5,6 +5,10 @@
 # Provides reusable checks for secrets detection, command blocking,
 # and dependency auditing.
 #
+# CANONICAL SOURCE for secret detection patterns:
+#   vscode-extension/src/utils/secretRedactor.ts
+# Keep patterns in sync when adding new detectors.
+#
 # Usage:
 #   . "$PSScriptRoot/../modules/SecurityHelpers.psm1"
 #   $violations = Find-HardcodedSecrets -Path "src/"

@@ -6,7 +6,6 @@
 // UI components (tree views, chat participant, status bar) subscribe to events
 // instead of polling or being manually refreshed.
 //
-// Inspired by OpenBrowserClaw's EventBus pattern, adapted for VS Code.
 // ---------------------------------------------------------------------------
 
 /**

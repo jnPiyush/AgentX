@@ -2,8 +2,7 @@
 // AgentX -- Inner Agentic Loop
 // ---------------------------------------------------------------------------
 //
-// The core LLM <-> Tool execution cycle, inspired by OpenClaw's
-// pi-embedded-runner. This module orchestrates:
+// The core LLM <-> Tool execution cycle. This module orchestrates:
 //
 //   1. Send messages + tool schemas to the LLM
 //   2. If LLM returns tool_calls -> execute each tool

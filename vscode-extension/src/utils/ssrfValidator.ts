@@ -9,8 +9,8 @@
 // Usage pattern mirrors pathSandbox.ts: pure functions, pre-compiled regexes,
 // readonly data, no external npm dependencies (Node.js builtins only).
 //
-// Integration: call validateUrl() or resolveAndValidate() in toolEngine.ts
-// before executing any tool that takes a URL parameter.
+// Integration: validateToolUrlParams() is called in ToolRegistry.execute()
+// (toolEngine.ts) before executing any tool call.
 // ---------------------------------------------------------------------------
 
 import * as dns from 'dns';

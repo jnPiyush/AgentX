@@ -214,7 +214,7 @@ No major performance concerns observed in this scope. Precompiled pattern approa
 ## 10. Compliance & Standards
 
 - ASCII-only compliance appears maintained in reviewed files.
-- No forbidden references (`sharkbait`, `shyamsridhar`) found in repository scan excluding `.git` and `node_modules`.
+- No forbidden references found in repository scan excluding `.git` and `node_modules`.
 - Loop state file indicates completed iteration state (`status: complete`).
 
 ---
@@ -273,7 +273,7 @@ This review intentionally held a high bar because Feature #49 is P0 security har
 
 ### Validation evidence
 - Test execution: `cd vscode-extension && npm test` -> `666 passing (15s)`
-- Forbidden term scan: no matches for `sharkbait` or `shyamsridhar` (excluding `.git` and `node_modules`)
+- Forbidden term scan: no matches found (excluding `.git` and `node_modules`)
 
 ---
 
@@ -392,9 +392,8 @@ All three previously blocking findings are fixed with corresponding regression t
 
 ### Forbidden-Term Scan
 
-- Scan performed for `sharkbait` and `shyamsridhar`.
+- Forbidden term scan performed.
 - No matches found in `vscode-extension/src/**`.
-- Existing mentions are present in this review document from prior review notes.
 
 ### P1 Decision
 

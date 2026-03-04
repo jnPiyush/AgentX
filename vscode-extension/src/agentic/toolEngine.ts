@@ -7,7 +7,6 @@
 // building block that the agentic loop uses to perform actions on behalf of
 // the LLM.
 //
-// Inspired by OpenClaw's pi-tools architecture, adapted for VS Code.
 // ---------------------------------------------------------------------------
 
 import * as vscode from 'vscode';
@@ -17,6 +16,8 @@ import { exec } from 'child_process';
 import { validateCommand } from '../utils/commandValidator';
 import { redactSecrets } from '../utils/secretRedactor';
 import { validatePath } from '../utils/pathSandbox';
+import { validateToolUrlParams } from '../utils/ssrfValidator';
+import { analyzeCo, findDependencies, mapArchitecture } from './codebaseAnalysis';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -772,6 +773,104 @@ function runShellCommand(
 }
 
 // ---------------------------------------------------------------------------
+// Codebase Analysis Tools
+// ---------------------------------------------------------------------------
+
+/** Analyze workspace structure, file counts, LOC, and detected technologies. */
+export const analyzeCodebaseTool: AgentToolDef = {
+  name: 'analyze_codebase',
+  description:
+    'Analyze the workspace for file counts, lines of code, directory tree, '
+    + 'and detected technologies (languages, frameworks).',
+  parameters: {
+    maxDepth: {
+      type: 'number',
+      description: 'Maximum directory depth for the tree view (default 4).',
+      default: 4,
+    },
+  },
+  mutating: false,
+  async execute(params, ctx) {
+    const maxDepth = (params.maxDepth as number) ?? 4;
+    const stats = analyzeCo(ctx.workspaceRoot, maxDepth);
+    const lines = [
+      `Total files: ${stats.totalFiles}`,
+      `Total directories: ${stats.totalDirectories}`,
+      `Total lines: ${stats.totalLines}`,
+      `Technologies: ${stats.technologies.join(', ') || '(none detected)'}`,
+      '',
+      'Files by extension:',
+      ...Object.entries(stats.filesByExtension)
+        .sort(([, a], [, b]) => b - a)
+        .map(([ext, count]) => `  ${ext}: ${count}`),
+      '',
+      'Directory tree:',
+      stats.tree,
+    ];
+    return textResult(lines.join('\n'));
+  },
+};
+
+/** Detect package managers and parse dependency files. */
+export const findDependenciesTool: AgentToolDef = {
+  name: 'find_dependencies',
+  description:
+    'Detect package managers and parse dependency files in the workspace '
+    + '(package.json, requirements.txt, *.csproj, go.mod, Cargo.toml, etc.).',
+  parameters: {},
+  mutating: false,
+  async execute(_params, ctx) {
+    const deps = findDependencies(ctx.workspaceRoot);
+    if (deps.length === 0) {
+      return textResult('No dependency files detected in the workspace.');
+    }
+    const sections = deps.map((d) => {
+      const depCount = Object.keys(d.dependencies).length;
+      const devCount = Object.keys(d.devDependencies).length;
+      const lines = [`[${d.manager}] ${d.file} (${depCount} deps, ${devCount} dev)`];
+      if (depCount > 0) {
+        lines.push('  Dependencies:');
+        for (const [name, version] of Object.entries(d.dependencies)) {
+          lines.push(`    ${name}: ${version}`);
+        }
+      }
+      if (devCount > 0) {
+        lines.push('  Dev Dependencies:');
+        for (const [name, version] of Object.entries(d.devDependencies)) {
+          lines.push(`    ${name}: ${version}`);
+        }
+      }
+      return lines.join('\n');
+    });
+    return textResult(sections.join('\n\n'));
+  },
+};
+
+/** Map workspace architecture: entry points, configs, tests, CI, docs. */
+export const mapArchitectureTool: AgentToolDef = {
+  name: 'map_architecture',
+  description:
+    'Map the architecture of the workspace by identifying entry points, '
+    + 'config files, test directories, CI pipelines, documentation, '
+    + 'build outputs, and scripts.',
+  parameters: {},
+  mutating: false,
+  async execute(_params, ctx) {
+    const arch = mapArchitecture(ctx.workspaceRoot);
+    const sections = [
+      `Entry points: ${arch.entryPoints.join(', ') || '(none)'}`,
+      `Config files: ${arch.configFiles.join(', ') || '(none)'}`,
+      `Test directories: ${arch.testDirectories.join(', ') || '(none)'}`,
+      `CI files: ${arch.ciFiles.join(', ') || '(none)'}`,
+      `Documentation: ${arch.docFiles.join(', ') || '(none)'}`,
+      `Build outputs: ${arch.buildOutputs.join(', ') || '(none)'}`,
+      `Scripts: ${arch.scripts.join(', ') || '(none)'}`,
+    ];
+    return textResult(sections.join('\n'));
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Tool Registry
 // ---------------------------------------------------------------------------
 
@@ -794,6 +893,10 @@ export class ToolRegistry {
     this.register(listDirTool);
     this.register(requestClarificationTool);
     this.register(validateDoneTool);
+    // Codebase analysis tools
+    this.register(analyzeCodebaseTool);
+    this.register(findDependenciesTool);
+    this.register(mapArchitectureTool);
   }
 
   /** Register a tool definition. Overwrites if name already exists. */
@@ -891,6 +994,12 @@ export class ToolRegistry {
     const validationError = validateParams(tool, call.params);
     if (validationError) {
       return textResult(`Parameter validation failed for ${call.name}: ${validationError}`, true);
+    }
+
+    // SSRF protection: validate any URL-valued parameters before execution
+    const ssrfCheck = validateToolUrlParams(call.params);
+    if (!ssrfCheck.allowed) {
+      return textResult(`SSRF validation blocked ${call.name}: ${ssrfCheck.reason ?? 'Blocked by SSRF policy'}`, true);
     }
 
     if (ctx.abortSignal.aborted) {

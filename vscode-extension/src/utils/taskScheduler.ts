@@ -6,7 +6,6 @@
 // Evaluates cron expressions and fires callbacks on schedule.
 // Zero dependencies -- cron parser is ~80 lines of pure TypeScript.
 //
-// Inspired by OpenBrowserClaw's task-scheduler.ts.
 // ---------------------------------------------------------------------------
 
 import * as fs from 'fs';

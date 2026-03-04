@@ -6,7 +6,6 @@
 // Feeds into the VS Code Output Channel and the event bus for real-time
 // visibility into agent behavior.
 //
-// Inspired by OpenBrowserClaw's thinking-log system.
 // ---------------------------------------------------------------------------
 
 import * as vscode from 'vscode';

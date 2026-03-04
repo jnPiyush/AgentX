@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # scan-secrets.sh - Scan repository for hardcoded secrets
 #
+# Canonical source for secret detection patterns:
+#   vscode-extension/src/utils/secretRedactor.ts
+# Keep patterns in sync when adding new detectors.
+#
 # Usage: ./scan-secrets.sh [--path ./src] [--format table|json]
 
 set -euo pipefail

@@ -32,6 +32,9 @@ export {
   listDirTool,
   requestClarificationTool,
   validateDoneTool,
+  analyzeCodebaseTool,
+  findDependenciesTool,
+  mapArchitectureTool,
 } from './toolEngine';
 
 // Tool Loop Detection

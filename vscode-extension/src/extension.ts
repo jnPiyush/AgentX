@@ -31,6 +31,7 @@ import { TaskScheduler } from './utils/taskScheduler';
 import { stripAnsi } from './utils/stripAnsi';
 import { PluginManager } from './utils/pluginManager';
 import { promptIfUpdateAvailable } from './utils/versionChecker';
+import { StructuredLogger } from './utils/structuredLogger';
 
 let agentxContext: AgentXContext;
 let eventBus: AgentEventBus;
@@ -39,6 +40,7 @@ let contextCompactor: ContextCompactor;
 let channelRouter: ChannelRouter;
 let taskScheduler: TaskScheduler;
 let pluginManager: PluginManager | undefined;
+let structuredLogger: StructuredLogger | undefined;
 
 function parseCommandArgs(raw: string): string[] {
  const args: string[] = [];
@@ -74,6 +76,33 @@ export function activate(context: vscode.ExtensionContext) {
  // Initialize plugin manager
  if (agentxDir) {
   pluginManager = new PluginManager(agentxDir, eventBus);
+ }
+
+ // Initialize structured disk logger for persistent JSON Lines logging
+ if (agentxDir) {
+  structuredLogger = new StructuredLogger({
+   logDir: path.join(agentxDir, 'logs'),
+  });
+  // Wire event bus to disk logger -- log key agent lifecycle events
+  eventBus.on('agent-started', (e) => {
+   structuredLogger!.info(e.agent, `Agent started on issue #${e.issueNumber ?? 'N/A'}`, {
+    issueNumber: e.issueNumber ?? 0,
+   });
+  });
+  eventBus.on('agent-completed', (e) => {
+   structuredLogger!.info(e.agent, `Agent completed on issue #${e.issueNumber ?? 'N/A'}`, {
+    issueNumber: e.issueNumber ?? 0,
+    durationMs: e.durationMs,
+   });
+  });
+  eventBus.on('thinking-log', (e) => {
+   structuredLogger!.log({
+    level: 'debug',
+    agentName: e.agent ?? 'system',
+    message: e.label ?? '',
+    toolName: e.kind === 'tool-call' ? e.detail : undefined,
+   });
+  });
  }
 
  // Start scheduler when enabled tasks exist

@@ -5,6 +5,10 @@
 .DESCRIPTION
  Detects high-entropy strings, known secret patterns, and files
  that typically contain secrets (.env, *.pem, *.key, etc.).
+
+ Canonical source for secret detection patterns:
+   vscode-extension/src/utils/secretRedactor.ts
+ Keep patterns in sync when adding new detectors.
 .PARAMETER Path
  Path to scan (default: current directory)
 .PARAMETER MinEntropy

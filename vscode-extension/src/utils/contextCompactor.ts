@@ -5,7 +5,6 @@
 // Detects when agent context is approaching token limits and provides
 // utilities to summarize/compact conversation history and loaded context.
 //
-// Inspired by OpenBrowserClaw's compactContext() orchestrator method.
 // ---------------------------------------------------------------------------
 
 import * as fs from 'fs';
