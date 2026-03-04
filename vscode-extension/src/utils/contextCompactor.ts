@@ -13,6 +13,157 @@ import * as path from 'path';
 import { AgentEventBus } from './eventBus';
 
 // ---------------------------------------------------------------------------
+// Bounded Message Pruning (US-2.5)
+// ---------------------------------------------------------------------------
+
+/** Default maximum conversation message count. */
+const DEFAULT_MAX_MESSAGES = 200;
+
+/**
+ * Configuration for bounded message pruning.
+ */
+export interface BoundedMessageConfig {
+  /** Maximum number of messages to retain. Default: 200. */
+  readonly maxMessages: number;
+  /**
+   * Whether to emit a warning event before pruning.
+   * Default: true.
+   */
+  readonly warnBeforePrune: boolean;
+}
+
+/**
+ * Result of a bounded message pruning operation.
+ */
+export interface PruneResult {
+  /** Messages after pruning. */
+  readonly messages: ReadonlyArray<{ role: string; content: string }>;
+  /** Number of messages removed. */
+  readonly prunedCount: number;
+  /** Whether pruning was applied. */
+  readonly didPrune: boolean;
+  /** Total messages before pruning. */
+  readonly originalCount: number;
+}
+
+/**
+ * Enforce a hard cap on conversation messages by removing the oldest
+ * non-system messages when the cap is reached.
+ *
+ * Rules:
+ *   1. System messages (role='system') are NEVER pruned
+ *   2. Oldest non-system messages are pruned first
+ *   3. Works alongside token-based compaction (independent mechanism)
+ *   4. Warning emitted via eventBus before pruning (if configured)
+ *
+ * @param messages - Full conversation history.
+ * @param config - Bounded message configuration.
+ * @param eventBus - Optional event bus for warning emission.
+ * @param agentName - Agent name for event metadata.
+ * @returns PruneResult with the pruned message array and metadata.
+ */
+export function pruneMessages(
+  messages: ReadonlyArray<{ role: string; content: string }>,
+  config?: Partial<BoundedMessageConfig>,
+  eventBus?: AgentEventBus,
+  agentName = 'unknown',
+): PruneResult {
+  const maxMessages = config?.maxMessages ?? DEFAULT_MAX_MESSAGES;
+  const warnBeforePrune = config?.warnBeforePrune ?? true;
+
+  if (maxMessages <= 0) {
+    // Safety: if misconfigured, return original
+    return {
+      messages,
+      prunedCount: 0,
+      didPrune: false,
+      originalCount: messages.length,
+    };
+  }
+
+  if (messages.length <= maxMessages) {
+    return {
+      messages,
+      prunedCount: 0,
+      didPrune: false,
+      originalCount: messages.length,
+    };
+  }
+
+  // Separate system messages from non-system messages
+  const systemMessages: { role: string; content: string; originalIndex: number }[] = [];
+  const nonSystemMessages: { role: string; content: string; originalIndex: number }[] = [];
+
+  for (let i = 0; i < messages.length; i++) {
+    if (messages[i].role === 'system') {
+      systemMessages.push({ ...messages[i], originalIndex: i });
+    } else {
+      nonSystemMessages.push({ ...messages[i], originalIndex: i });
+    }
+  }
+
+  // Calculate how many non-system messages to keep
+  const nonSystemBudget = maxMessages - systemMessages.length;
+
+  if (nonSystemBudget <= 0) {
+    // Edge case: more system messages than max -- keep all system, prune all non-system
+    const prunedCount = nonSystemMessages.length;
+    if (warnBeforePrune && eventBus && prunedCount > 0) {
+      eventBus.emit('bounded-message-warning', {
+        agent: agentName,
+        totalMessages: messages.length,
+        maxMessages,
+        prunedCount,
+        timestamp: Date.now(),
+      });
+    }
+    return {
+      messages: systemMessages.map(({ role, content }) => ({ role, content })),
+      prunedCount,
+      didPrune: prunedCount > 0,
+      originalCount: messages.length,
+    };
+  }
+
+  const prunedCount = nonSystemMessages.length - nonSystemBudget;
+
+  if (prunedCount <= 0) {
+    return {
+      messages,
+      prunedCount: 0,
+      didPrune: false,
+      originalCount: messages.length,
+    };
+  }
+
+  // Emit warning before pruning
+  if (warnBeforePrune && eventBus) {
+    eventBus.emit('bounded-message-warning', {
+      agent: agentName,
+      totalMessages: messages.length,
+      maxMessages,
+      prunedCount,
+      timestamp: Date.now(),
+    });
+  }
+
+  // Keep only the most recent non-system messages
+  const keptNonSystem = nonSystemMessages.slice(prunedCount);
+
+  // Merge system and kept non-system messages, preserving original order
+  const merged = [...systemMessages, ...keptNonSystem]
+    .sort((a, b) => a.originalIndex - b.originalIndex)
+    .map(({ role, content }) => ({ role, content }));
+
+  return {
+    messages: merged,
+    prunedCount,
+    didPrune: true,
+    originalCount: messages.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Token estimation
 // ---------------------------------------------------------------------------
 

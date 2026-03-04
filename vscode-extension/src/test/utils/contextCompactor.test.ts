@@ -2,6 +2,9 @@ import { strict as assert } from 'assert';
 import {
   estimateTokens,
   ContextCompactor,
+  pruneMessages,
+  BoundedMessageConfig,
+  PruneResult,
 } from '../../utils/contextCompactor';
 import { AgentEventBus } from '../../utils/eventBus';
 
@@ -113,5 +116,158 @@ describe('ContextCompactor', () => {
     assert.ok(report.includes('AgentX Context Budget'));
     assert.ok(report.includes('Usage by Category'));
     assert.ok(report.includes('testing'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bounded Message Pruning (US-2.5)
+// ---------------------------------------------------------------------------
+
+describe('pruneMessages (US-2.5)', () => {
+  const sysMsg = { role: 'system', content: 'You are an assistant.' };
+  const userMsg = (n: number) => ({ role: 'user', content: `Message ${n}` });
+  const assistantMsg = (n: number) => ({ role: 'assistant', content: `Reply ${n}` });
+
+  it('should not prune when under max', () => {
+    const messages = [sysMsg, userMsg(1), assistantMsg(1)];
+    const result = pruneMessages(messages, { maxMessages: 10, warnBeforePrune: false });
+    assert.equal(result.didPrune, false);
+    assert.equal(result.prunedCount, 0);
+    assert.equal(result.messages.length, 3);
+  });
+
+  it('should not prune when exactly at max', () => {
+    const messages = [sysMsg, userMsg(1), assistantMsg(1)];
+    const result = pruneMessages(messages, { maxMessages: 3, warnBeforePrune: false });
+    assert.equal(result.didPrune, false);
+  });
+
+  it('should prune oldest non-system messages when over max', () => {
+    const messages = [
+      sysMsg,
+      userMsg(1), assistantMsg(1),
+      userMsg(2), assistantMsg(2),
+      userMsg(3), assistantMsg(3),
+    ];
+    // Max 4: 1 system + 3 non-system
+    const result = pruneMessages(messages, { maxMessages: 4, warnBeforePrune: false });
+    assert.equal(result.didPrune, true);
+    assert.equal(result.prunedCount, 3); // 6 non-system - 3 budget = 3 pruned
+    assert.equal(result.messages.length, 4);
+    // System message always kept
+    assert.equal(result.messages[0].role, 'system');
+    // Most recent messages kept
+    assert.ok(result.messages.some((m) => m.content === 'Reply 3'));
+  });
+
+  it('should preserve system messages and never prune them', () => {
+    const messages = [
+      { role: 'system', content: 'Sys 1' },
+      userMsg(1),
+      { role: 'system', content: 'Sys 2' },
+      userMsg(2),
+      assistantMsg(2),
+    ];
+    // Max 3: keeps both system (2) + 1 non-system
+    const result = pruneMessages(messages, { maxMessages: 3, warnBeforePrune: false });
+    assert.equal(result.didPrune, true);
+    const systemMessages = result.messages.filter((m) => m.role === 'system');
+    assert.equal(systemMessages.length, 2);
+    assert.equal(result.messages.length, 3);
+  });
+
+  it('should preserve original message order after pruning', () => {
+    const messages = [
+      sysMsg,
+      userMsg(1),
+      assistantMsg(1),
+      userMsg(2),
+      assistantMsg(2),
+    ];
+    // Max 3: 1 system + 2 non-system (keep most recent)
+    const result = pruneMessages(messages, { maxMessages: 3, warnBeforePrune: false });
+    assert.equal(result.messages[0].role, 'system');
+    assert.equal(result.messages[1].content, 'Message 2');
+    assert.equal(result.messages[2].content, 'Reply 2');
+  });
+
+  it('should use default maxMessages (200) when no config', () => {
+    // Build 201 messages
+    const messages: Array<{ role: string; content: string }> = [sysMsg];
+    for (let i = 1; i <= 200; i++) {
+      messages.push(userMsg(i));
+    }
+    // 201 total, default 200 max -> prune 1
+    const result = pruneMessages(messages);
+    assert.equal(result.didPrune, true);
+    assert.equal(result.prunedCount, 1);
+    assert.equal(result.messages.length, 200);
+  });
+
+  it('should emit warning event before pruning', () => {
+    const bus = new AgentEventBus();
+    const warnings: unknown[] = [];
+    bus.on('bounded-message-warning', (e) => warnings.push(e));
+
+    const messages = [sysMsg, userMsg(1), userMsg(2), userMsg(3)];
+    pruneMessages(messages, { maxMessages: 2, warnBeforePrune: true }, bus, 'test-agent');
+
+    assert.equal(warnings.length, 1);
+    const w = warnings[0] as { agent: string; prunedCount: number };
+    assert.equal(w.agent, 'test-agent');
+    assert.equal(w.prunedCount, 2);
+
+    bus.dispose();
+  });
+
+  it('should not emit warning when warnBeforePrune is false', () => {
+    const bus = new AgentEventBus();
+    const warnings: unknown[] = [];
+    bus.on('bounded-message-warning', (e) => warnings.push(e));
+
+    const messages = [sysMsg, userMsg(1), userMsg(2), userMsg(3)];
+    pruneMessages(messages, { maxMessages: 2, warnBeforePrune: false }, bus);
+
+    assert.equal(warnings.length, 0);
+    bus.dispose();
+  });
+
+  it('should handle edge case: maxMessages <= 0', () => {
+    const messages = [sysMsg, userMsg(1)];
+    const result = pruneMessages(messages, { maxMessages: 0, warnBeforePrune: false });
+    assert.equal(result.didPrune, false);
+    assert.equal(result.messages.length, 2);
+  });
+
+  it('should handle edge case: more system messages than maxMessages', () => {
+    const messages = [
+      { role: 'system', content: 'Sys 1' },
+      { role: 'system', content: 'Sys 2' },
+      { role: 'system', content: 'Sys 3' },
+      userMsg(1),
+    ];
+    // Max 2, but 3 system messages -> keep all system, prune all non-system
+    const result = pruneMessages(messages, { maxMessages: 2, warnBeforePrune: false });
+    assert.equal(result.didPrune, true);
+    assert.equal(result.messages.length, 3); // all system kept
+    assert.ok(result.messages.every((m) => m.role === 'system'));
+  });
+
+  it('should handle empty message array', () => {
+    const result = pruneMessages([], { maxMessages: 10, warnBeforePrune: false });
+    assert.equal(result.didPrune, false);
+    assert.equal(result.messages.length, 0);
+  });
+
+  it('should work alongside token-based compaction (independent)', () => {
+    // pruneMessages is purely count-based, not token-based
+    const messages = [
+      sysMsg,
+      { role: 'user', content: 'x'.repeat(100000) }, // huge message
+      { role: 'assistant', content: 'short' },
+    ];
+    const result = pruneMessages(messages, { maxMessages: 3, warnBeforePrune: false });
+    assert.equal(result.didPrune, false);
+    assert.equal(result.messages.length, 3);
   });
 });

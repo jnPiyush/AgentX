@@ -66,6 +66,9 @@ export interface AgentEventMap {
 
   /** Clarification auto-escalated (max rounds / stuck / deadlock). */
   'clarification-escalated': ClarificationLifecycleEvent;
+
+  /** Bounded message pruning is about to remove old messages (US-2.5). */
+  'bounded-message-warning': BoundedMessageWarningEvent;
 }
 
 // ---------------------------------------------------------------------------
@@ -177,6 +180,17 @@ export interface ClarificationLifecycleEvent {
   readonly toAgent: string;
   readonly topic: string;
   readonly blocking: boolean;
+  readonly timestamp: number;
+}
+
+/**
+ * Bounded message pruning warning event (US-2.5).
+ */
+export interface BoundedMessageWarningEvent {
+  readonly agent: string;
+  readonly totalMessages: number;
+  readonly maxMessages: number;
+  readonly prunedCount: number;
   readonly timestamp: number;
 }
 

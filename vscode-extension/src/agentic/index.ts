@@ -159,3 +159,26 @@ export {
   findDependencies,
   mapArchitecture,
 } from './codebaseAnalysis';
+
+// Prompting Modes (US-4.4)
+export {
+  BuiltInMode,
+  PromptMode,
+  ModeResolutionOptions,
+  ModeResolutionResult,
+  registerMode,
+  unregisterMode,
+  listModes,
+  getMode,
+  resolveMode,
+  resetModeRegistry,
+} from './promptingModes';
+
+// Hook Priority (US-4.5)
+export {
+  PrioritizedHook,
+  HookRegistrationOptions,
+  HookChainResult,
+  HookRegistry,
+  DEFAULT_HOOK_PRIORITY,
+} from './hookPriority';
