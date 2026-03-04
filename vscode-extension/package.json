@@ -2,7 +2,7 @@
  "name": "agentx",
  "displayName": "AgentX - Multi-Agent Orchestration",
  "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Customer Coach agents in a structured software development workflow.",
- "version": "7.3.5",
+ "version": "7.6.0",
  "publisher": "jnPiyush",
  "author": {
   "name": "Piyush Jain"
@@ -212,6 +212,18 @@
     "title": "Resume Session",
     "category": "AgentX",
     "icon": "$(debug-continue)"
+   },
+   {
+    "command": "agentx.openDashboard",
+    "title": "Open Dashboard",
+    "category": "AgentX",
+    "icon": "$(dashboard)"
+   },
+   {
+    "command": "agentx.promoteToGlobal",
+    "title": "Promote to Global Knowledge",
+    "category": "AgentX",
+    "icon": "$(cloud-upload)"
    }
   ],
   "viewsContainers": {
@@ -509,6 +521,25 @@
      "minimum": 5,
      "maximum": 100,
      "description": "Sliding window of recent tool calls to analyze for loop patterns."
+    },
+    "agentx.backgroundEngine.enabled": {
+     "type": "boolean",
+     "default": true,
+     "description": "Enable the background intelligence engine that detects stale issues, dependency changes, and recurring patterns."
+    },
+    "agentx.backgroundEngine.scanIntervalMinutes": {
+     "type": "number",
+     "default": 5,
+     "minimum": 1,
+     "maximum": 60,
+     "description": "Minutes between background intelligence scans."
+    },
+    "agentx.dashboard.autoRefreshSeconds": {
+     "type": "number",
+     "default": 30,
+     "minimum": 5,
+     "maximum": 300,
+     "description": "Seconds between automatic dashboard data refreshes."
     }
    }
   }

@@ -39,6 +39,10 @@ import { JsonObservationStore } from './memory/observationStore';
 import { OutcomeTracker } from './memory/outcomeTracker';
 import { SessionRecorder } from './memory/sessionRecorder';
 import { MemoryHealth } from './memory/memoryHealth';
+import { SynapseNetwork } from './memory/synapseNetwork';
+import { GlobalKnowledgeStore } from './memory/globalKnowledgeStore';
+import { BackgroundEngine, type INotificationDispatcher } from './intelligence';
+import { DashboardPanel } from './dashboard/dashboardPanel';
 
 let agentxContext: AgentXContext;
 let eventBus: AgentEventBus;
@@ -49,6 +53,7 @@ let taskScheduler: TaskScheduler;
 let pluginManager: PluginManager | undefined;
 let gitStorageProvider: GitStorageProvider | undefined;
 let structuredLogger: StructuredLogger | undefined;
+let backgroundEngine: BackgroundEngine | undefined;
 
 function parseCommandArgs(raw: string): string[] {
  const args: string[] = [];
@@ -310,6 +315,91 @@ export function activate(context: vscode.ExtensionContext) {
     }
    }),
   );
+
+  // Phase 3: Synapse Network and Global Knowledge Store
+  const synapseNetwork = new SynapseNetwork(memoryDir);
+  const globalKnowledge = new GlobalKnowledgeStore();
+
+  // Phase 3: Background Intelligence Engine
+  const vscodeNotificationDispatcher: INotificationDispatcher = {
+   info: (msg: string) => { vscode.window.showInformationMessage(`AgentX: ${msg}`); },
+   warning: (msg: string) => { vscode.window.showWarningMessage(`AgentX: ${msg}`); },
+   error: (msg: string) => { vscode.window.showErrorMessage(`AgentX: ${msg}`); },
+  };
+
+  const bgEnabled = vscode.workspace.getConfiguration('agentx.backgroundEngine').get<boolean>('enabled', true);
+  const scanMinutes = vscode.workspace.getConfiguration('agentx.backgroundEngine').get<number>('scanIntervalMinutes', 5);
+  backgroundEngine = new BackgroundEngine(
+   agentxDir,
+   memoryDir,
+   vscodeNotificationDispatcher,
+   { scanIntervalMs: scanMinutes * 60_000 },
+  );
+  if (bgEnabled) {
+   backgroundEngine.start();
+  }
+
+  // Phase 3: Dashboard command
+  context.subscriptions.push(
+   vscode.commands.registerCommand('agentx.openDashboard', () => {
+    DashboardPanel.createOrShow(agentxDir, memoryDir);
+   }),
+  );
+
+  // Phase 3: Promote to Global Knowledge command
+  context.subscriptions.push(
+   vscode.commands.registerCommand('agentx.promoteToGlobal', async () => {
+    try {
+     const title = await vscode.window.showInputBox({
+      prompt: 'Knowledge title',
+      placeHolder: 'e.g., Always validate JWT expiration before trusting claims',
+     });
+     if (!title) { return; }
+
+     const content = await vscode.window.showInputBox({
+      prompt: 'Knowledge content / detail',
+      placeHolder: 'Describe the lesson or pattern in detail',
+     });
+     if (!content) { return; }
+
+     const categoryItems: Array<{ label: string; value: import('./memory/globalKnowledgeTypes').KnowledgeCategory }> = [
+      { label: 'Pattern', value: 'pattern' },
+      { label: 'Pitfall', value: 'pitfall' },
+      { label: 'Convention', value: 'convention' },
+      { label: 'Insight', value: 'insight' },
+     ];
+     const picked = await vscode.window.showQuickPick(
+      categoryItems.map((c) => c.label),
+      {
+       placeHolder: 'Select knowledge category',
+       title: 'AgentX: Promote to Global Knowledge',
+      },
+     );
+     if (!picked) { return; }
+     const category = categoryItems.find((c) => c.label === picked)!.value;
+
+     const entry = await globalKnowledge.promote({
+      category,
+      title,
+      content,
+      sourceProject: vscode.workspace.name ?? 'unknown',
+      sourceIssue: null,
+      sourceObservationId: null,
+      promotionType: 'manual',
+      labels: [],
+     });
+
+     if (entry) {
+      vscode.window.showInformationMessage(`AgentX: Promoted to global knowledge (${entry.id})`);
+     } else {
+      vscode.window.showInformationMessage('AgentX: Duplicate knowledge entry detected, skipped.');
+     }
+    } catch (err: unknown) {
+     const msg = err instanceof Error ? err.message : String(err);
+     vscode.window.showErrorMessage(`AgentX Promote Knowledge: ${msg}`);
+    }
+   }),
+  );
  }
 
  // Start scheduler when enabled tasks exist
@@ -335,6 +425,7 @@ export function activate(context: vscode.ExtensionContext) {
    thinkingLog.dispose();
    channelRouter.stopAll();
    taskScheduler.dispose();
+   if (backgroundEngine) { backgroundEngine.stop(); }
   }
  });
 

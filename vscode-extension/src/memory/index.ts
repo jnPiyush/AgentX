@@ -62,3 +62,35 @@ export type {
   SubsystemHealth,
   IMemoryHealth,
 } from './healthTypes';
+
+// Phase 3 -- Proactive Intelligence: Synapse Network
+export { SynapseNetwork } from './synapseNetwork';
+export type {
+  SynapseLink,
+  SynapseManifest,
+  ISynapseNetwork,
+} from './synapseTypes';
+export {
+  SIMILARITY_THRESHOLD,
+  MAX_LINKS_PER_OBSERVATION,
+  MAX_CROSS_ISSUE_CONTEXT_TOKENS,
+  SYNAPSE_MANIFEST_FILE,
+} from './synapseTypes';
+
+// Phase 3 -- Proactive Intelligence: Global Knowledge Store
+export { GlobalKnowledgeStore } from './globalKnowledgeStore';
+export type {
+  KnowledgeCategory,
+  KnowledgeEntry,
+  KnowledgeIndex,
+  GlobalKnowledgeManifest,
+  KnowledgeStats,
+  IGlobalKnowledgeStore,
+} from './globalKnowledgeTypes';
+export {
+  GLOBAL_KNOWLEDGE_DIR_NAME,
+  PROMOTION_RECALL_THRESHOLD,
+  DEDUP_SIMILARITY_THRESHOLD,
+  MAX_GLOBAL_STORE_BYTES,
+  PRUNE_UNUSED_AFTER_DAYS,
+} from './globalKnowledgeTypes';
