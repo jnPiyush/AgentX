@@ -16,6 +16,10 @@ constraints:
  - "MUST create HTML/CSS prototypes - production-ready, interactive demos"
  - "MUST create progress log at docs/progress/ISSUE-{id}-log.md"
  - "MUST validate designs meet user needs from PRD"
+ - "MUST follow Handoff Workflow Protocol: validate -> capture context -> commit -> post handoff comment"
+ - "MUST iterate deliverables through agentic self-review loop before handoff (max 5 iterations)"
+ - "MUST manage context via memory compaction (progress logs, pruneMessages, token budgeting)"
+ - "MUST communicate via structured channels only (issue comments, status fields, clarification router)"
 boundaries:
  can_modify:
  - "docs/ux/** (UX designs and specifications)"
@@ -318,6 +322,64 @@ These commands run automatically at workflow boundaries - **no manual invocation
 |------|---------|---------|
 | **On start** | `.agentx/agentx.ps1 hook -Phase start -Agent ux-designer -Issue <n>` | Mark agent working |
 | **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent ux-designer -Issue <n>` | Mark agent done |
+
+---
+
+## Cross-Cutting Protocols
+
+### Handoff Workflow Protocol
+
+**MUST** follow for every status transition:
+
+1. Run validation: `.github/scripts/validate-handoff.sh <issue_number> ux`
+2. Capture context: `.github/scripts/capture-context.sh <issue_number> ux`
+3. Commit deliverables: `git commit -m "feat: create UX designs and prototypes (#issue)"`
+4. Post handoff comment on issue with deliverable summary and next agent
+
+**Status Transitions:**
+
+| From | To | Gate |
+|------|----|------|
+| Ready (picked up) | Ready (designs complete) | Wireframes, flows, HTML/CSS prototypes, validation passed |
+
+### Agentic Loop (Self-Review Iteration)
+
+**MUST** iterate deliverables until quality gates pass:
+
+1. **Produce** initial wireframes, flows, and prototypes
+2. **Self-review** against UX design checklist (accessibility, responsiveness, completeness)
+3. **Fix** gaps (missing flows, accessibility violations, incomplete prototypes)
+4. **Re-review** until all items pass (max 5 iterations)
+5. **Finalize** only when self-review is clean
+
+**Runtime**: `agenticLoop.ts` orchestrates LLM-Tool cycles. `selfReviewLoop.ts` validates before finalizing. `toolLoopDetection.ts` prevents infinite cycles.
+
+### Memory Compaction
+
+**MUST** manage context in long sessions:
+
+- **Read** progress log at session start: `docs/progress/ISSUE-{id}-log.md`
+- **Update** progress log during session with key decisions and changes
+- **Write** final status to progress log before handoff or session end
+- **Prune** context when exceeding ~50K tokens via `contextCompactor.ts` (`pruneMessages()`)
+- **Summarize** completed work rather than carrying full conversation history
+
+### Agent-to-Agent Communication
+
+**MUST** use structured channels only -- never communicate directly:
+
+| Channel | Purpose |
+|---------|---------|
+| **Issue Comments** | Handoff messages, status updates, deliverable summaries |
+| **GitHub Projects V2 Status** | Drives routing (Backlog -> Ready -> In Progress -> In Review -> Done) |
+| **Labels** | Signal workflow state (`needs:ux`, `needs:changes`, `needs:help`) |
+| **Deliverable Files** | PRD, ADR, Spec, Review docs carry context between agents |
+| **Progress Logs** | `docs/progress/ISSUE-{id}-log.md` carries session context |
+| **Clarification Router** | `request_clarification` tool -> Agent X mediates (max 3 rounds) |
+
+- [FAIL] MUST NOT modify another agent's deliverables
+- [FAIL] MUST NOT bypass Agent X for routing decisions
+- [FAIL] MUST NOT attempt direct agent-to-agent communication outside these channels
 
 ---
 

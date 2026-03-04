@@ -21,6 +21,7 @@ export {
 } from './types';
 
 export { JsonObservationStore } from './observationStore';
+export { GitObservationStore } from './gitObservationStore';
 export { ObservationExtractor } from './observationExtractor';
 
 // Persistent Cross-Session Memory

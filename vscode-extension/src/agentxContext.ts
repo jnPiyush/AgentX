@@ -8,6 +8,7 @@ import { ContextCompactor } from './utils/contextCompactor';
 import { ChannelRouter } from './utils/channelRouter';
 import { TaskScheduler } from './utils/taskScheduler';
 import { PluginManager } from './utils/pluginManager';
+import { GitStorageProvider } from './utils/gitStorageProvider';
 
 /**
  * Check whether a directory looks like an AgentX root
@@ -55,6 +56,7 @@ interface AgentXServices {
  channelRouter: ChannelRouter;
  taskScheduler: TaskScheduler;
  pluginManager?: PluginManager;
+ gitStorageProvider?: GitStorageProvider;
 }
 
 /**
@@ -113,6 +115,11 @@ export class AgentXContext {
  /** Get the plugin manager (if available). */
  get pluginManager(): PluginManager | undefined {
   return this._services?.pluginManager;
+ }
+
+ /** Get the Git storage provider (if available). */
+ get gitStorageProvider(): GitStorageProvider | undefined {
+  return this._services?.gitStorageProvider;
  }
 
  /** Invalidate the cached root so the next access re-discovers it. */

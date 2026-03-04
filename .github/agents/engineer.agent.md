@@ -27,6 +27,9 @@ constraints:
  - "MUST NOT move to In Review while loop status is active -- loop MUST reach status=complete first"
  - "MUST NOT call hook -Phase finish without a completed loop; cancelled loops DO NOT satisfy this gate"
  - "MUST record each iteration summary with meaningful detail: what changed, test counts, coverage %"
+ - "MUST follow Handoff Workflow Protocol: validate -> capture context -> commit -> post handoff comment"
+ - "MUST manage context via memory compaction (progress logs, pruneMessages, token budgeting)"
+ - "MUST communicate via structured channels only (issue comments, status fields, clarification router)"
 boundaries:
  can_modify:
  - "src/** (source code)"
@@ -542,6 +545,71 @@ These commands run automatically at workflow boundaries - **no manual invocation
 | **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent engineer -Issue <n>` | Mark agent done |
 
 The `hook start` command automatically validates dependencies and blocks if open blockers exist. If blocked, **stop and report** - do not begin implementation.
+
+---
+
+## Cross-Cutting Protocols
+
+### Handoff Workflow Protocol
+
+**MUST** follow for every status transition:
+
+1. Complete and close the quality loop: `agentx loop complete`
+2. Run validation: `.agentx/agentx.ps1 validate <issue_number> engineer`
+3. Capture context: `.github/scripts/capture-context.sh <issue_number> engineer`
+4. Commit deliverables: `git commit -m "feat: implement feature (#issue)"`
+5. Post handoff comment on issue with deliverable summary and next agent
+
+**Status Transitions:**
+
+| From | To | Gate |
+|------|----|------|
+| Ready (picked up) | In Progress | Loop started, implementation begins |
+| In Progress | In Review | Loop complete, tests pass, 80% coverage, validation passed |
+
+### Agentic Loop (Quality Loop)
+
+Engineer uses the **quality loop** -- the most rigorous iteration protocol:
+
+1. `agentx loop start` -- Initialize loop after first commit
+2. **Implement** code changes
+3. **Run full test suite** (`npm test` / `pytest` / `dotnet test`) -- EVERY iteration
+4. `agentx loop iterate -s "summary"` -- Record iteration with test counts, coverage %
+5. **Self-review** against checklist (SOLID, DRY, security, coverage)
+6. **Repeat** until: all tests pass, coverage >=80%, lint clean, self-review done
+7. `agentx loop complete -s "final summary"` -- Close loop
+
+**Hard gate**: `hook finish` exits with code 1 if loop is still active. Cancelled loops do NOT satisfy the gate.
+
+**Runtime**: `agenticLoop.ts` orchestrates LLM-Tool cycles. `selfReviewLoop.ts` validates before finalizing. `toolLoopDetection.ts` prevents infinite cycles.
+
+### Memory Compaction
+
+**MUST** manage context in long sessions:
+
+- **Read** progress log at session start: `docs/progress/ISSUE-{id}-log.md`
+- **Update** progress log during session with key decisions and changes
+- **Write** final status to progress log before handoff or session end
+- **Prune** context when exceeding ~50K tokens via `contextCompactor.ts` (`pruneMessages()`)
+- **Summarize** completed work rather than carrying full conversation history
+- **Checkpoint** after each loop iteration to preserve state across sessions
+
+### Agent-to-Agent Communication
+
+**MUST** use structured channels only -- never communicate directly:
+
+| Channel | Purpose |
+|---------|---------|
+| **Issue Comments** | Handoff messages, status updates, deliverable summaries |
+| **GitHub Projects V2 Status** | Drives routing (Ready -> In Progress -> In Review) |
+| **Labels** | Signal workflow state (`needs:changes`, `needs:help`, `needs:iteration`) |
+| **Deliverable Files** | Code, tests, docs carry implementation context |
+| **Progress Logs** | `docs/progress/ISSUE-{id}-log.md` carries session context |
+| **Clarification Router** | `request_clarification` tool -> Agent X mediates (max 3 rounds) |
+
+- [FAIL] MUST NOT modify another agent's deliverables (PRD, ADR, UX)
+- [FAIL] MUST NOT bypass Agent X for routing decisions
+- [FAIL] MUST NOT attempt direct agent-to-agent communication outside these channels
 
 ---
 

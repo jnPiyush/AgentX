@@ -135,6 +135,194 @@ function Get-AgentXConfig {
 
 function Get-AgentXMode { return (Get-AgentXConfig).mode ?? 'local' }
 
+# ---------------------------------------------------------------------------
+# Git-backed persistence helpers
+# ---------------------------------------------------------------------------
+# When config.persistence = 'git', issues and memory are stored on a Git
+# orphan branch (agentx/data) using low-level plumbing commands. The working
+# tree and real index are never touched.
+# ---------------------------------------------------------------------------
+
+$Script:DATA_BRANCH = 'agentx/data'
+$Script:EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf899d15f3277a76d'
+
+function Get-PersistenceMode {
+    $cfg = Get-AgentXConfig
+    if ($cfg -is [hashtable]) { return $cfg['persistence'] ?? 'file' }
+    $p = $cfg.PSObject.Properties['persistence']
+    if ($p) { return $p.Value }
+    return 'file'
+}
+
+function Test-GitDataBranch {
+    try {
+        $null = & git -C $Script:ROOT rev-parse --verify "refs/heads/$Script:DATA_BRANCH" 2>$null
+        return $LASTEXITCODE -eq 0
+    } catch { return $false }
+}
+
+function Initialize-GitDataBranch {
+    if (Test-GitDataBranch) { return }
+    try {
+        $commitHash = (& git -C $Script:ROOT commit-tree $Script:EMPTY_TREE_HASH -m 'Initialize agentx data branch' 2>$null).Trim()
+        & git -C $Script:ROOT update-ref "refs/heads/$Script:DATA_BRANCH" $commitHash 2>$null
+    } catch {
+        throw "Failed to initialize Git data branch: $_"
+    }
+}
+
+function Read-GitFile([string]$filePath) {
+    $normalized = $filePath -replace '\\', '/'
+    try {
+        $content = & git -C $Script:ROOT show "${Script:DATA_BRANCH}:${normalized}" 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        return ($content -join "`n")
+    } catch { return $null }
+}
+
+function Read-GitJson([string]$filePath) {
+    $raw = Read-GitFile $filePath
+    if (-not $raw) { return $null }
+    try { return $raw | ConvertFrom-Json } catch { return $null }
+}
+
+function Write-GitFiles([array]$entries, [string]$message) {
+    Initialize-GitDataBranch
+    $gitDir = (& git -C $Script:ROOT rev-parse --git-dir 2>$null).Trim()
+    if (-not [System.IO.Path]::IsPathRooted($gitDir)) {
+        $gitDir = Join-Path $Script:ROOT $gitDir
+    }
+    $rand = [System.IO.Path]::GetRandomFileName() -replace '\.', ''
+    $tmpIndex = Join-Path $gitDir "agentx-tmp-index-$rand"
+    $savedIndex = $env:GIT_INDEX_FILE
+
+    try {
+        $env:GIT_INDEX_FILE = $tmpIndex
+
+        # Read current tree into temp index
+        if (Test-GitDataBranch) {
+            & git -C $Script:ROOT read-tree $Script:DATA_BRANCH 2>$null
+        }
+
+        # Hash each file and add to temp index
+        foreach ($entry in $entries) {
+            $normalized = $entry.filePath -replace '\\', '/'
+            $blobHash = ($entry.content | & git -C $Script:ROOT hash-object -w --stdin 2>$null).Trim()
+            & git -C $Script:ROOT update-index --add --cacheinfo "100644,$blobHash,$normalized" 2>$null
+        }
+
+        # Write tree from temp index
+        $treeHash = (& git -C $Script:ROOT write-tree 2>$null).Trim()
+
+        # Get parent commit
+        $parentArgs = @()
+        try {
+            $parent = (& git -C $Script:ROOT rev-parse $Script:DATA_BRANCH 2>$null).Trim()
+            if ($parent) { $parentArgs = @('-p', $parent) }
+        } catch {}
+
+        # Create commit
+        $commitHash = (& git -C $Script:ROOT commit-tree $treeHash @parentArgs -m $message 2>$null).Trim()
+
+        # Update branch ref
+        & git -C $Script:ROOT update-ref "refs/heads/$Script:DATA_BRANCH" $commitHash 2>$null
+
+        return $commitHash
+    } finally {
+        if ($savedIndex) { $env:GIT_INDEX_FILE = $savedIndex }
+        else { Remove-Item Env:GIT_INDEX_FILE -ErrorAction SilentlyContinue }
+        Remove-Item $tmpIndex -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Write-GitFile([string]$filePath, [string]$content, [string]$message) {
+    return Write-GitFiles @(@{ filePath = $filePath; content = $content }) $message
+}
+
+function Write-GitJson([string]$filePath, $data, [string]$message) {
+    $json = ($data | ConvertTo-Json -Depth 10) + "`n"
+    return Write-GitFile $filePath $json $message
+}
+
+function Remove-GitFile([string]$filePath, [string]$message) {
+    if (-not (Test-GitDataBranch)) { return $null }
+    $gitDir = (& git -C $Script:ROOT rev-parse --git-dir 2>$null).Trim()
+    if (-not [System.IO.Path]::IsPathRooted($gitDir)) {
+        $gitDir = Join-Path $Script:ROOT $gitDir
+    }
+    $rand = [System.IO.Path]::GetRandomFileName() -replace '\.', ''
+    $tmpIndex = Join-Path $gitDir "agentx-tmp-index-$rand"
+    $savedIndex = $env:GIT_INDEX_FILE
+
+    try {
+        $env:GIT_INDEX_FILE = $tmpIndex
+        & git -C $Script:ROOT read-tree $Script:DATA_BRANCH 2>$null
+        $normalized = $filePath -replace '\\', '/'
+        & git -C $Script:ROOT update-index --force-remove $normalized 2>$null
+        $treeHash = (& git -C $Script:ROOT write-tree 2>$null).Trim()
+        $parent = (& git -C $Script:ROOT rev-parse $Script:DATA_BRANCH 2>$null).Trim()
+        $commitHash = (& git -C $Script:ROOT commit-tree $treeHash -p $parent -m $message 2>$null).Trim()
+        & git -C $Script:ROOT update-ref "refs/heads/$Script:DATA_BRANCH" $commitHash 2>$null
+        return $commitHash
+    } finally {
+        if ($savedIndex) { $env:GIT_INDEX_FILE = $savedIndex }
+        else { Remove-Item Env:GIT_INDEX_FILE -ErrorAction SilentlyContinue }
+        Remove-Item $tmpIndex -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Get-GitFileList([string]$dirPath) {
+    $normalized = ($dirPath -replace '\\', '/').TrimEnd('/')
+    if ($normalized) { $normalized += '/' }
+    try {
+        $output = & git -C $Script:ROOT ls-tree --name-only "${Script:DATA_BRANCH}" $normalized 2>$null
+        if ($LASTEXITCODE -ne 0) { return @() }
+        return @($output | Where-Object { $_ } | ForEach-Object {
+            if ($_.StartsWith($normalized)) { $_.Substring($normalized.Length) } else { $_ }
+        })
+    } catch { return @() }
+}
+
+# ---------------------------------------------------------------------------
+# Git Sync: Push/pull the data branch to/from remote
+# ---------------------------------------------------------------------------
+
+function Invoke-GitSyncCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'status' }
+    switch ($action) {
+        'push' {
+            if (-not (Test-GitDataBranch)) { Write-Host "$($C.y)No data branch to push.$($C.n)"; return }
+            try {
+                & git -C $Script:ROOT push origin "${Script:DATA_BRANCH}:${Script:DATA_BRANCH}" 2>&1
+                Write-Host "$($C.g)  Pushed data branch to origin.$($C.n)"
+            } catch {
+                Write-Host "$($C.r)  Push failed: $_$($C.n)"
+            }
+        }
+        'pull' {
+            try {
+                & git -C $Script:ROOT fetch origin "${Script:DATA_BRANCH}:${Script:DATA_BRANCH}" 2>&1
+                Write-Host "$($C.g)  Pulled data branch from origin.$($C.n)"
+            } catch {
+                Write-Host "$($C.r)  Pull failed: $_$($C.n)"
+            }
+        }
+        default {
+            Write-Host "`n$($C.c)  Git Data Sync$($C.n)"
+            Write-Host "$($C.d)  ---------------------------------------------$($C.n)"
+            $persistence = Get-PersistenceMode
+            Write-Host "  Persistence mode: $persistence"
+            if (Test-GitDataBranch) {
+                $lastCommit = (& git -C $Script:ROOT log -1 --format='%h %s (%ar)' $Script:DATA_BRANCH 2>$null)
+                if ($lastCommit) { Write-Host "  Branch: $Script:DATA_BRANCH" ; Write-Host "  Last commit: $lastCommit" }
+            } else {
+                Write-Host "  No data branch found. Run 'agentx config set persistence git' to enable."
+            }
+            Write-Host "`n  Usage: agentx git-sync [push|pull]`n"
+        }
+    }
+}
+
 function Invoke-Shell([string]$cmd) {
     try {
         $result = & $env:COMSPEC /c $cmd 2>$null
@@ -198,6 +386,14 @@ function Invoke-IssueCmd {
 }
 
 function Get-NextIssueNumber {
+    if ((Get-PersistenceMode) -eq 'git') {
+        Initialize-GitDataBranch
+        $counter = Read-GitJson 'state/counter.json'
+        $num = if ($counter -and $counter.PSObject.Properties['nextIssueNumber']) { $counter.nextIssueNumber } else { 1 }
+        $newCounter = [PSCustomObject]@{ nextIssueNumber = ($num + 1) }
+        Write-GitJson 'state/counter.json' $newCounter "state: increment issue counter to $($num + 1)"
+        return $num
+    }
     $cfg = Get-AgentXConfig
     $num = if ($cfg.PSObject.Properties['nextIssueNumber']) { $cfg.nextIssueNumber } else { 1 }
     $cfg | Add-Member -NotePropertyName 'nextIssueNumber' -NotePropertyValue ($num + 1) -Force
@@ -206,10 +402,17 @@ function Get-NextIssueNumber {
 }
 
 function Get-Issue([int]$num) {
+    if ((Get-PersistenceMode) -eq 'git') {
+        return Read-GitJson "issues/$num.json"
+    }
     return Read-JsonFile (Join-Path $Script:ISSUES_DIR "$num.json")
 }
 
 function Save-Issue($issue) {
+    if ((Get-PersistenceMode) -eq 'git') {
+        Write-GitJson "issues/$($issue.number).json" $issue "issue: update #$($issue.number) - $($issue.title)"
+        return
+    }
     if (-not (Test-Path $Script:ISSUES_DIR)) { New-Item -ItemType Directory -Path $Script:ISSUES_DIR -Force | Out-Null }
     Write-JsonFile (Join-Path $Script:ISSUES_DIR "$($issue.number).json") $issue
 }
@@ -333,6 +536,14 @@ function Get-AllIssues {
             }
         } catch { <# fall through to local #> }
     }
+    # Git-backed persistence
+    if ((Get-PersistenceMode) -eq 'git') {
+        $files = Get-GitFileList 'issues'
+        return @($files | Where-Object { $_ -match '\.json$' } | ForEach-Object {
+            Read-GitJson "issues/$_"
+        } | Where-Object { $_ })
+    }
+    # File-based persistence (default)
     if (-not (Test-Path $Script:ISSUES_DIR)) { return @() }
     return @(Get-ChildItem $Script:ISSUES_DIR -Filter '*.json' |
         ForEach-Object { Read-JsonFile $_.FullName } | Where-Object { $_ })
@@ -1276,6 +1487,7 @@ $($C.w)  Commands:$($C.n)
   hooks install                    Install git hooks
   config [show|get|set]            View/update configuration
   issue <create|list|get|update|close|comment>  Issue management
+  git-sync [push|pull]             Push/pull data branch to/from remote
   version                          Show installed version
   help                             Show this help
 
@@ -1316,6 +1528,7 @@ switch ($Script:Command) {
     'config'   { Invoke-ConfigCmd }
     'issue'    { Invoke-IssueCmd }
     'clarify'  { Invoke-ClarifyCmd }
+    'git-sync' { Invoke-GitSyncCmd }
     'run'      { Invoke-RunCmd }
     'version'  { Invoke-VersionCmd }
     'help'     { Invoke-HelpCmd }

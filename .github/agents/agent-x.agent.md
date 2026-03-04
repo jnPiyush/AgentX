@@ -31,6 +31,9 @@ constraints:
  - "MUST enforce READ PRD, EXISTING Spec, Code and any other artifacts before agents start working on"
  - "MUST validate prerequisites before handoffs"
  - "MUST escalate to full workflow when complexity detected"
+ - "MUST enforce memory compaction protocol (progress logs, pruneMessages, token budgeting)"
+ - "MUST enforce agent-to-agent communication via structured channels only (issue comments, status fields, clarification router)"
+ - "MUST verify agentic loop completion before handoff to Reviewer"
 boundaries:
  can_modify:
  - "GitHub Issues (create, update, comment)"
@@ -633,6 +636,59 @@ The Engineer will resume after ${next_agent} completes.
 | **Missing artifacts** | Status changed without files | Reset status, retry workflow |
 | **Blocked >30 min** | Prerequisites unmet | Add `needs:resolution`, escalate |
 | **Test failure** | CI fails | Add `needs:fixes`, Status -> `In Progress` |
+
+---
+
+## Cross-Cutting Protocols (Hub Enforcement)
+
+Agent X **enforces** these protocols across all agents:
+
+### Handoff Workflow Enforcement
+
+Before routing any issue to the next agent, Agent X **MUST**:
+
+1. Verify the current agent ran validation: `.github/scripts/validate-handoff.sh`
+2. Verify context was captured: `.github/scripts/capture-context.sh`
+3. Verify deliverables were committed with issue reference
+4. Verify handoff comment was posted on the issue
+5. Only then transition status and route to next agent
+
+**If any step is missing**: Block the transition, post a comment, and request completion.
+
+### Agentic Loop Enforcement
+
+Agent X **MUST** verify loop state before accepting handoffs:
+
+1. **Engineer -> Reviewer**: Check `agentx loop status` -- loop MUST be `complete` (not active/cancelled)
+2. **All agents**: Verify self-review checklist was completed (check issue comments)
+3. **Extended iteration**: When `needs:iteration` label present, use `iterative-loop.toml` (max 20 iterations)
+
+**Runtime integration**: `agenticLoop.ts` orchestrates the inner loop. Agent X validates the outer workflow loop.
+
+### Memory Compaction Enforcement
+
+Agent X **MUST** enforce context management:
+
+1. **Before routing**: Verify progress log exists at `docs/progress/ISSUE-{id}-log.md`
+2. **Context clearing**: Clear context on UX/Architect -> Engineer transition (see Context Management table)
+3. **Long sessions**: Instruct agents to use `contextCompactor.ts` (`pruneMessages()`) for token management
+4. **Session continuity**: Progress logs carry state across sessions -- verify agents read them
+
+### Agent-to-Agent Communication Enforcement
+
+Agent X IS the communication hub. All inter-agent traffic flows through it:
+
+| Protocol | Enforcement |
+|----------|-------------|
+| **Issue Comments** | Agent X posts routing comments on every transition |
+| **Status Fields** | Only Agent X should trigger status transitions |
+| **Labels** | Agent X manages workflow labels (`needs:ux`, `needs:changes`, `needs:help`) |
+| **Clarification Router** | `clarificationRouter.ts` routes questions through Agent X (max 3 rounds) |
+| **Direct Communication** | BLOCKED -- agents cannot talk to each other directly |
+
+- [PASS] Agent X posts routing comments: `[PASS] Routed: {agent}`, `[WARN] Blocked: {reason}`
+- [PASS] Agent X mediates clarification traffic between agents
+- [FAIL] Agents MUST NOT modify status or labels without Agent X involvement
 
 ---
 

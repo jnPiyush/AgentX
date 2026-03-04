@@ -20,6 +20,10 @@ constraints:
  - "MUST implement proper error handling and notifications"
  - "MUST follow Skills.md standards for DevOps practices"
  - "MUST create progress log at docs/progress/ISSUE-{id}-log.md"
+ - "MUST follow Handoff Workflow Protocol: validate -> capture context -> commit -> post handoff comment"
+ - "MUST iterate deliverables through agentic self-review loop before handoff (max 5 iterations)"
+ - "MUST manage context via memory compaction (progress logs, pruneMessages, token budgeting)"
+ - "MUST communicate via structured channels only (issue comments, status fields, clarification router)"
 boundaries:
  can_modify:
  - ".github/workflows/** (GitHub Actions workflows)"
@@ -409,6 +413,65 @@ These commands run automatically at workflow boundaries - **no manual invocation
 | **On complete** | `.agentx/agentx.ps1 hook -Phase finish -Agent devops-engineer -Issue <n>` | Mark agent done |
 
 The `hook start` command automatically validates dependencies and blocks if open blockers exist. If blocked, **stop and report** - do not begin pipeline work.
+
+---
+
+## Cross-Cutting Protocols
+
+### Handoff Workflow Protocol
+
+**MUST** follow for every status transition:
+
+1. Run validation: `.github/scripts/validate-handoff.sh <issue_number> devops`
+2. Capture context: `.github/scripts/capture-context.sh <issue_number> devops`
+3. Commit deliverables: `git commit -m "feat: create CI/CD pipeline (#issue)"`
+4. Post handoff comment on issue with deliverable summary and next agent
+
+**Status Transitions:**
+
+| From | To | Gate |
+|------|----|------|
+| Ready (picked up) | In Progress | Pipeline design started |
+| In Progress | In Review | Pipeline tested, docs complete, validation passed |
+
+### Agentic Loop (Self-Review Iteration)
+
+**MUST** iterate deliverables until quality gates pass:
+
+1. **Produce** initial pipeline configuration and scripts
+2. **Self-review** against DevOps checklist (security, error handling, rollback)
+3. **Test** pipeline in feature branch
+4. **Fix** issues found during review or testing
+5. **Re-review** until all items pass (max 5 iterations)
+
+**Runtime**: `agenticLoop.ts` orchestrates LLM-Tool cycles. `selfReviewLoop.ts` validates before finalizing. `toolLoopDetection.ts` prevents infinite cycles.
+
+### Memory Compaction
+
+**MUST** manage context in long sessions:
+
+- **Read** progress log at session start: `docs/progress/ISSUE-{id}-log.md`
+- **Update** progress log during session with key decisions and changes
+- **Write** final status to progress log before handoff or session end
+- **Prune** context when exceeding ~50K tokens via `contextCompactor.ts` (`pruneMessages()`)
+- **Summarize** completed work rather than carrying full conversation history
+
+### Agent-to-Agent Communication
+
+**MUST** use structured channels only -- never communicate directly:
+
+| Channel | Purpose |
+|---------|---------|
+| **Issue Comments** | Handoff messages, pipeline status, deployment results |
+| **GitHub Projects V2 Status** | Drives routing (Ready -> In Progress -> In Review) |
+| **Labels** | Signal workflow state (`needs:changes`, `needs:help`) |
+| **Deliverable Files** | Workflows, scripts, deployment docs carry context |
+| **Progress Logs** | `docs/progress/ISSUE-{id}-log.md` carries session context |
+| **Clarification Router** | `request_clarification` tool -> Agent X mediates (max 3 rounds) |
+
+- [FAIL] MUST NOT modify application source code (src/**)
+- [FAIL] MUST NOT bypass Agent X for routing decisions
+- [FAIL] MUST NOT attempt direct agent-to-agent communication outside these channels
 
 ---
 

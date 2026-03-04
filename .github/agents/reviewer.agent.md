@@ -17,6 +17,10 @@ constraints:
  - "CAN request changes by moving Status -> In Progress with needs:changes label"
  - "MUST read progress log at docs/progress/ISSUE-{id}-log.md for context"
  - "MUST append review summary to progress log before closing issue"
+ - "MUST follow Handoff Workflow Protocol: validate -> capture context -> commit -> post handoff comment"
+ - "MUST iterate review through agentic self-review loop before approval (max 5 iterations)"
+ - "MUST manage context via memory compaction (progress logs, pruneMessages, token budgeting)"
+ - "MUST communicate via structured channels only (issue comments, status fields, clarification router)"
 boundaries:
  can_modify:
  - "docs/reviews/** (review documents)"
@@ -386,6 +390,65 @@ These commands run automatically at workflow boundaries - **no manual invocation
 | **On approve** | `.agentx/agentx.ps1 hook -Phase finish -Agent reviewer -Issue <n>` | Mark agent done |
 | **On approve** | `.agentx/agentx.ps1 state -Agent engineer -Set idle` | Reset engineer state |
 | **Weekly** | `.agentx/agentx.ps1 digest` | Generate digest after closing issues |
+
+---
+
+## Cross-Cutting Protocols
+
+### Handoff Workflow Protocol
+
+**MUST** follow for every status transition:
+
+1. Run validation: `.github/scripts/validate-handoff.sh <issue_number> reviewer`
+2. Capture context: `.github/scripts/capture-context.sh <issue_number> reviewer`
+3. Commit review doc: `git commit -m "docs: review for (#issue)"`
+4. Post approval/rejection comment on issue with review summary
+
+**Status Transitions:**
+
+| From | To | Gate |
+|------|----|------|
+| In Review (picked up) | Done | All quality gates pass, review doc created, approval posted |
+| In Review | In Progress | Changes needed -- add `needs:changes` label, return to Engineer |
+
+### Agentic Loop (Review Iteration)
+
+**MUST** iterate review until thorough:
+
+1. **Read** all changed files, specs, and acceptance criteria
+2. **Review** code quality, security, test coverage, documentation
+3. **Verify** quality gates (80% coverage, tests pass, no security issues)
+4. **Self-review** the review document for completeness
+5. **Finalize** only when confident in approval or change request (max 5 iterations)
+
+**Runtime**: `agenticLoop.ts` orchestrates LLM-Tool cycles. `selfReviewLoop.ts` validates before finalizing. `toolLoopDetection.ts` prevents infinite cycles.
+
+### Memory Compaction
+
+**MUST** manage context in long sessions:
+
+- **Read** progress log at session start: `docs/progress/ISSUE-{id}-log.md`
+- **Update** progress log during session with review findings
+- **Write** review summary to progress log before closing issue
+- **Prune** context when exceeding ~50K tokens via `contextCompactor.ts` (`pruneMessages()`)
+- **Summarize** completed review sections rather than re-reading all files
+
+### Agent-to-Agent Communication
+
+**MUST** use structured channels only -- never communicate directly:
+
+| Channel | Purpose |
+|---------|---------|
+| **Issue Comments** | Approval/rejection messages, change request details |
+| **GitHub Projects V2 Status** | Drives routing (In Review -> Done or In Progress) |
+| **Labels** | Signal state (`needs:changes`, `needs:help`) |
+| **Review Document** | `docs/reviews/REVIEW-{id}.md` carries detailed findings |
+| **Progress Logs** | `docs/progress/ISSUE-{id}-log.md` carries session context |
+| **Clarification Router** | `request_clarification` tool -> Agent X mediates (max 3 rounds) |
+
+- [FAIL] MUST NOT modify source code directly (must request changes)
+- [FAIL] MUST NOT bypass Agent X for routing decisions
+- [FAIL] MUST NOT attempt direct agent-to-agent communication outside these channels
 
 ---
 

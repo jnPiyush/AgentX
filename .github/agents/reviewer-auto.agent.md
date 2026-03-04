@@ -19,6 +19,10 @@ constraints:
  - "MUST read progress log at docs/progress/ISSUE-{id}-log.md for context"
  - "CAN auto-fix: formatting, imports, typos, naming conventions"
  - "CAN suggest: refactoring, logic changes, architecture improvements"
+ - "MUST follow Handoff Workflow Protocol: validate -> capture context -> commit -> post handoff comment"
+ - "MUST iterate review through agentic self-review loop before approval (max 5 iterations)"
+ - "MUST manage context via memory compaction (progress logs, pruneMessages, token budgeting)"
+ - "MUST communicate via structured channels only (issue comments, status fields, clarification router)"
 boundaries:
  can_modify:
  - "src/** (safe fixes only: formatting, imports, naming)"
@@ -303,6 +307,65 @@ If tests fail after applying fixes:
 | **On approve** | `.agentx/agentx.ps1 hook -Phase finish -Agent reviewer -Issue <n>` | Mark agent done |
 
 > Hooks are called by the reviewer-auto agent at the start and end of each review. They update `.agentx/state/agent-status.json` and validate dependencies.
+
+---
+
+## Cross-Cutting Protocols
+
+### Handoff Workflow Protocol
+
+**MUST** follow for every status transition:
+
+1. Run validation: `.github/scripts/validate-handoff.sh <issue_number> reviewer`
+2. Capture context: `.github/scripts/capture-context.sh <issue_number> reviewer`
+3. Commit review doc + safe fixes: `git commit -m "fix: auto-fix review for (#issue)"`
+4. Post approval/rejection comment on issue with fix summary
+
+**Status Transitions:**
+
+| From | To | Gate |
+|------|----|------|
+| In Review (picked up) | Done | All gates pass, safe fixes applied, human approval obtained |
+| In Review | In Progress | Complex changes needed -- add `needs:changes`, return to Engineer |
+
+### Agentic Loop (Auto-Fix Iteration)
+
+**MUST** iterate fixes until verified:
+
+1. **Classify** each issue as safe (auto-apply) or risky (manual approval)
+2. **Apply** safe fix
+3. **Run tests** after each fix to verify no regressions
+4. **Revert** on test failure and reclassify as risky
+5. **Repeat** for all safe fixes (max 5 iterations per fix)
+
+**Runtime**: `agenticLoop.ts` orchestrates LLM-Tool cycles. `selfReviewLoop.ts` validates before finalizing. `toolLoopDetection.ts` prevents infinite cycles.
+
+### Memory Compaction
+
+**MUST** manage context in long sessions:
+
+- **Read** progress log at session start: `docs/progress/ISSUE-{id}-log.md`
+- **Update** progress log during session with fix results
+- **Write** review summary to progress log before closing issue
+- **Prune** context when exceeding ~50K tokens via `contextCompactor.ts` (`pruneMessages()`)
+- **Summarize** completed fixes rather than re-reading all files
+
+### Agent-to-Agent Communication
+
+**MUST** use structured channels only -- never communicate directly:
+
+| Channel | Purpose |
+|---------|---------|
+| **Issue Comments** | Fix summaries, approval requests, change request details |
+| **GitHub Projects V2 Status** | Drives routing (In Review -> Done or In Progress) |
+| **Labels** | Signal state (`needs:changes`, `needs:help`) |
+| **Review Document** | `docs/reviews/REVIEW-{id}.md` carries findings + fix log |
+| **Progress Logs** | `docs/progress/ISSUE-{id}-log.md` carries session context |
+| **Clarification Router** | `request_clarification` tool -> Agent X mediates (max 3 rounds) |
+
+- [FAIL] MUST NOT merge without human approval
+- [FAIL] MUST NOT bypass Agent X for routing decisions
+- [FAIL] MUST NOT attempt direct agent-to-agent communication outside these channels
 
 ---
 

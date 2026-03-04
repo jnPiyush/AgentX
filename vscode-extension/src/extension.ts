@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { registerInitializeCommand } from './commands/initialize';
 import { registerStatusCommand } from './commands/status';
 import { registerReadyQueueCommand } from './commands/readyQueue';
@@ -30,6 +31,7 @@ import { ChannelRouter, VsCodeChatChannel, CliChannel } from './utils/channelRou
 import { TaskScheduler } from './utils/taskScheduler';
 import { stripAnsi } from './utils/stripAnsi';
 import { PluginManager } from './utils/pluginManager';
+import { GitStorageProvider } from './utils/gitStorageProvider';
 import { promptIfUpdateAvailable } from './utils/versionChecker';
 import { StructuredLogger } from './utils/structuredLogger';
 
@@ -40,6 +42,7 @@ let contextCompactor: ContextCompactor;
 let channelRouter: ChannelRouter;
 let taskScheduler: TaskScheduler;
 let pluginManager: PluginManager | undefined;
+let gitStorageProvider: GitStorageProvider | undefined;
 let structuredLogger: StructuredLogger | undefined;
 
 function parseCommandArgs(raw: string): string[] {
@@ -76,6 +79,30 @@ export function activate(context: vscode.ExtensionContext) {
  // Initialize plugin manager
  if (agentxDir) {
   pluginManager = new PluginManager(agentxDir, eventBus);
+ }
+
+ // Initialize Git storage provider when workspace root is available.
+ // Reads config.json persistence setting to decide whether to use Git backend.
+ if (agentxContext.workspaceRoot) {
+  try {
+   const configPath = path.join(agentxContext.workspaceRoot, '.agentx', 'config.json');
+   let useGit = false;
+   if (fs.existsSync(configPath)) {
+    const raw = fs.readFileSync(configPath, 'utf-8');
+    const cfg = JSON.parse(raw);
+    useGit = cfg.persistence === 'git';
+   }
+   if (useGit) {
+    gitStorageProvider = new GitStorageProvider({
+     workspaceRoot: agentxContext.workspaceRoot,
+     eventBus,
+    });
+    // Lazy init -- the branch is created on first write.
+    console.log('AgentX: Git storage provider initialized (orphan branch: agentx/data).');
+   }
+  } catch (err) {
+   console.warn('AgentX: Git storage provider initialization skipped:', err);
+  }
  }
 
  // Initialize structured disk logger for persistent JSON Lines logging
@@ -119,7 +146,7 @@ export function activate(context: vscode.ExtensionContext) {
  }
 
  // Store services on context for access by other modules
- agentxContext.setServices({ channelRouter, taskScheduler, pluginManager });
+ agentxContext.setServices({ channelRouter, taskScheduler, pluginManager, gitStorageProvider });
 
  // Register disposables
  context.subscriptions.push({
