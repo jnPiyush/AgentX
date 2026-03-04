@@ -780,6 +780,8 @@ function Read-TomlWorkflow([string]$file) {
                 max_iterations = 10; completion_criteria = ''; optional = $false
                 condition = ''; status_on_start = ''; status_on_complete = ''
                 output = ''; template = ''
+                can_clarify = @(); clarify_max_rounds = 6
+                clarify_sla_minutes = 30; clarify_blocking_allowed = $true
             }
         } elseif ($cur) {
             if ($t -match '^(\w+)\s*=\s*(.+)$') {
@@ -807,7 +809,11 @@ function Read-TomlWorkflow([string]$file) {
 }
 
 function Invoke-WorkflowCmd {
-    $type = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { Get-Flag @('-t', '--type') }
+    $type = if ($Script:SubArgs.Count -gt 0 -and -not $Script:SubArgs[0].StartsWith('-')) {
+        $Script:SubArgs[0]
+    } else {
+        Get-Flag @('-t', '--type', '-Type', '--Type')
+    }
 
     if (-not $type) {
         Write-Host "`n$($C.c)  Available Workflows:$($C.n)"

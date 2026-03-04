@@ -84,7 +84,6 @@ For file types not listed above, load the matching **skill** on demand from [Ski
 
 - **Workflows & Agent Roles**: [AGENTS.md](../AGENTS.md) (load when needed)
 - **Skills Index**: [Skills.md](../Skills.md) (use Quick Reference to pick skills)
-- **Guide**: [docs/GUIDE.md](../docs/GUIDE.md)
 - **Frontmatter Validation**: `pwsh scripts/validate-frontmatter.ps1`
 
 ## ASCII-Only Rule
