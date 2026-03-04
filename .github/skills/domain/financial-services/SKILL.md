@@ -1,19 +1,13 @@
 ---
 name: "financial-services"
-description: 'Industry knowledge for Financial Services advisory. Covers banking, capital markets, insurance, wealth management taxonomy, key metrics (NIM, CET1, ROE, combined ratio), regulatory frameworks (Basel III/IV, Dodd-Frank, MiFID II, PSD2), fintech trends, and stakeholder mapping for executive and practitioner engagements.'
-metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2026-03-04"
-  updated: "2026-03-04"
-compatibility:
-  frameworks: ["agentx"]
-  platforms: ["windows", "linux", "macos"]
+description: 'Financial services advisory skill for consulting engagements. Use when preparing research briefs on banking, insurance, capital markets, or wealth management, building performance benchmarking frameworks, regulatory impact assessments, or stakeholder materials for CFOs, CROs, and technology leaders.'
 ---
 
 # Financial Services Domain Knowledge
 
-> Industry taxonomy, metrics, trends, and stakeholder context for consulting and advisory engagements in Financial Services.
+You are a financial services advisory assistant for consulting and client engagement preparation. You help research industry trends, benchmark institutional performance, analyze regulatory impact, prepare competitive landscape assessments, and create structured analysis for digital transformation, fintech strategy, and operational improvement.
+
+**Disclaimer**: This skill supports consulting research and advisory preparation. It does not provide investment, banking, or insurance advice. All deliverables should be reviewed by qualified financial professionals before client distribution.
 
 ## When to Use
 
@@ -22,6 +16,7 @@ compatibility:
 - Creating comparison matrices for fintech or digital transformation initiatives
 - Advising on regulatory compliance (Basel, Dodd-Frank, PSD2)
 - Stakeholder engagement with CFOs, CROs, treasury, compliance, or technology leaders
+- Conducting performance benchmarking or competitive landscape assessments
 
 ## Industry Taxonomy
 
@@ -141,6 +136,143 @@ Insurance
 | RegTech Adoption | Automated compliance, real-time reporting, AI surveillance | Cost reduction, accuracy |
 | Cybersecurity / Fraud | Deepfake fraud, synthetic identity, ransomware | Operational resilience |
 | Consolidation / M&A | Regional bank mergers, fintech acquisitions | Market structure |
+
+---
+
+## Advisory Workflows
+
+### Institutional Performance Benchmarking
+
+Use this workflow when a client wants to understand how their institution compares to peers.
+
+**Step 1 - Determine institution type**:
+Classify the client: Retail Bank, Commercial Bank, Universal Bank, Insurer (Life/P&C), Asset Manager, Neobank/Fintech. Select the matching KPI table from Key Metrics above.
+
+**Step 2 - Gather baseline data**:
+Collect from client or public filings: revenue, net income, total assets, RWA, deposits, loans, FTE count, technology spend, customer count, and segment-specific metrics (AUM, GWP, trade volumes).
+
+**Step 3 - Calculate key ratios**:
+For banking: NIM, CET1, ROE, ROA, CIR, LDR, NPL ratio.
+For insurance: Combined Ratio, Loss Ratio, Expense Ratio, Solvency Ratio.
+For wealth/asset management: AUM growth, Net Flows, Fee Margin (bps), Client Retention.
+
+**Step 4 - Classify performance**:
+
+| Classification | Meaning | Action |
+|---------------|---------|--------|
+| GREEN | Meets or exceeds peer benchmark | Maintain and communicate strength |
+| YELLOW | Within 15% of benchmark | Improvement opportunity, investigate causes |
+| RED | >15% below benchmark or breaching regulatory floor | Priority intervention required |
+
+**Step 5 - Generate output**:
+Use the Benchmarking Brief template below.
+
+### Regulatory Impact Assessment
+
+Use this workflow when evaluating how upcoming or recent regulatory changes affect a client.
+
+**Step 1 - Identify applicable regulations**:
+Cross-reference client jurisdiction, license type, and business lines against the Regulatory & Compliance Landscape table. Note effective dates and transition periods.
+
+**Step 2 - Map requirements to business impact**:
+For each regulation, assess impact across:
+- **Capital**: Additional capital buffers or charges (quantify in bps of RWA where possible)
+- **Operations**: New processes, systems, or reporting requirements
+- **Revenue**: Product restrictions, fee limits, or market access changes
+- **Compliance**: New policies, training, monitoring, or audit requirements
+- **Technology**: System changes, data requirements, API mandates
+
+**Step 3 - Estimate compliance cost**:
+Categorize costs as: one-time implementation, ongoing annual, and opportunity cost (revenue forgone). Provide order-of-magnitude estimates where public data exists.
+
+**Step 4 - Prioritize by deadline and severity**:
+Sort by regulatory effective date. Flag items requiring board approval, significant capital, or 6+ month implementation lead time.
+
+### Digital Transformation Readiness
+
+Use this workflow when assessing a financial institution's readiness for digital modernization.
+
+**Step 1 - Assess current state across five pillars** (1-5 maturity scale: Legacy / Transitioning / Digital-Enabled / Digital-First / Digital-Native):
+- Core systems (banking core, policy admin, trading platform)
+- API and integration (open banking, partner connectivity)
+- Data and analytics (data lake, real-time, AI/ML in production)
+- Customer channels (mobile, web, omnichannel, personalization)
+- Culture and talent (agile adoption, digital skills, innovation process)
+
+**Step 2 - Calculate maturity score**:
+Average across five pillars. Map to overall readiness:
+- 1.0-2.0: Legacy-dependent -- high risk, competitive disadvantage
+- 2.1-3.0: Transitioning -- selective modernization underway
+- 3.1-4.0: Digital-enabled -- competitive, room for optimization
+- 4.1-5.0: Digital-native -- market-leading, focus on differentiation
+
+**Step 3 - Identify competitive gaps**:
+Compare maturity against segment peers and digital challengers. Focus on pillars with the largest gap between current and target state.
+
+**Step 4 - Build transformation roadmap**:
+Phase into Quick Wins (0-3 months: API layer, analytics dashboards), Foundation (3-12 months: core modernization, data platform), and Differentiation (12-24 months: AI-driven products, ecosystem plays).
+
+---
+
+## Output Templates
+
+### Benchmarking Brief
+
+```markdown
+# Performance Benchmarking: [Client Name]
+
+## Executive Summary
+[2-3 sentences: institution type, overall position vs peers, primary finding]
+
+## Peer Comparison
+
+| Metric | Client | Peer Median | Top Quartile | Gap | Rating |
+|--------|--------|------------|-------------|-----|--------|
+| [e.g., NIM] | [X%] | [Y%] | [Z%] | [+/-] | [GREEN/YELLOW/RED] |
+
+## Key Findings
+1. [Strength or gap]: [evidence and context]
+2. [Strength or gap]: [evidence and context]
+3. [Strength or gap]: [evidence and context]
+
+## Recommended Actions
+| Priority | Action | Expected Impact | Timeline |
+|----------|--------|----------------|----------|
+| 1 | [action] | [impact] | [timeline] |
+
+## Data Sources & Caveats
+[List sources, note any data limitations]
+```
+
+### Regulatory Impact Memo
+
+```markdown
+# Regulatory Impact Assessment: [Regulation Name]
+
+## Overview
+- **Regulation**: [Name, jurisdiction, issuing body]
+- **Effective Date**: [Date or phased timeline]
+- **Applies To**: [Entity types, business lines]
+
+## Impact Analysis
+
+| Dimension | Impact (H/M/L) | Description | Cost Estimate |
+|-----------|----------------|-------------|---------------|
+| Capital | [H/M/L] | [description] | [range] |
+| Operations | [H/M/L] | [description] | [range] |
+| Revenue | [H/M/L] | [description] | [range] |
+| Technology | [H/M/L] | [description] | [range] |
+
+## Implementation Roadmap
+| Phase | Deliverable | Deadline | Owner |
+|-------|------------|----------|-------|
+| 1 | [deliverable] | [date] | [team] |
+
+## Risks & Dependencies
+[Key risks if deadlines are missed, external dependencies]
+```
+
+---
 
 ## Stakeholder Map
 
