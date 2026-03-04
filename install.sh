@@ -35,6 +35,10 @@ ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/heads/$BRANCH.tar.g
 # -- Guaranteed cleanup (runs on success, error, or Ctrl+C) --
 cleanup() {
  rm -rf "$TMP" "$TMPARCHIVE"
+ # Verify cleanup succeeded
+ if [ -d "$TMP" ]; then
+  echo -e "\033[1;33m[WARN] Could not fully remove $TMP - please delete manually.\033[0m"
+ fi
  # Return to original dir if --path was used
  [ -n "$INSTALL_PATH" ] && cd - >/dev/null 2>&1 || true
 }
@@ -112,19 +116,22 @@ mkdir -p "$TMP"
 $FETCH "$ARCHIVE_URL" > "$TMPARCHIVE"
 [ -s "$TMPARCHIVE" ] || { echo "Download failed. Check network."; exit 1; }
 
-# Extract only essential paths (skip vscode-extension, tests, CHANGELOG, CONTRIBUTING, etc.)
+# Extract only essential paths (skip vscode-extension, tests, docs content, CHANGELOG, CONTRIBUTING, etc.)
 tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/.agentx" \
  "$PREFIX/.github" \
  "$PREFIX/.claude" \
  "$PREFIX/.vscode" \
  "$PREFIX/scripts" \
- "$PREFIX/docs" \
  "$PREFIX/packs" \
  "$PREFIX/AGENTS.md" \
  "$PREFIX/Skills.md" \
  "$PREFIX/CLAUDE.md" \
  "$PREFIX/.gitignore" 2>/dev/null || true
+
+# Extract only docs/GUIDE.md (user guide) - NOT AgentX project docs (PRDs, ADRs, specs, reviews, etc.)
+tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
+ "$PREFIX/docs/GUIDE.md" 2>/dev/null || true
 
 [ -f "$TMP/AGENTS.md" ] || { echo "Download failed. Check network."; exit 1; }
 ok "AgentX downloaded (essential files only)"

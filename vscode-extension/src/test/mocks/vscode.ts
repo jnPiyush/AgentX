@@ -155,6 +155,7 @@ export const window = {
   showWarningMessage: async (..._args: unknown[]) => undefined,
   showErrorMessage: async (..._args: unknown[]) => undefined,
   showQuickPick: async (..._args: unknown[]) => undefined,
+  showInputBox: async (..._args: unknown[]) => undefined,
   registerTreeDataProvider: () => ({ dispose: () => { /* noop */ } }),
   createOutputChannel: (_name?: string) => ({
     appendLine: () => { /* noop */ },
@@ -179,6 +180,16 @@ export const window = {
     command: '',
     show: () => { /* noop */ },
     dispose: () => { /* noop */ },
+  }),
+  createWebviewPanel: (_viewType: string, _title: string, _showOptions: unknown, _options?: unknown) => ({
+    webview: {
+      html: '',
+      onDidReceiveMessage: () => ({ dispose: () => { /* noop */ } }),
+      postMessage: async () => true,
+    },
+    reveal: () => { /* noop */ },
+    dispose: () => { /* noop */ },
+    onDidDispose: () => ({ dispose: () => { /* noop */ } }),
   }),
   showTextDocument: async (_doc: unknown) => undefined,
 };

@@ -93,7 +93,17 @@ function Write-Skip($m) { Write-Host "[--] $m" -ForegroundColor DarkGray }
 # -- Cleanup helper (guaranteed on exit, error, or Ctrl+C) --
 function Invoke-InstallCleanup {
  foreach ($p in @($TMP, $TMPRAW)) {
- if (Test-Path $p) { Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue }
+  if (Test-Path $p) {
+   Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue
+   # Retry with delay if files were locked (common on Windows)
+   if (Test-Path $p) {
+    Start-Sleep -Milliseconds 500
+    Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue
+   }
+   if (Test-Path $p) {
+    Write-Host "[WARN] Could not fully remove $p - please delete manually." -ForegroundColor Yellow
+   }
+  }
  }
  if (Test-Path $ZIPFILE) { Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue }
 }
@@ -145,9 +155,9 @@ try {
 Expand-Archive -Path $ZIPFILE -DestinationPath $TMPRAW -Force
 $root = (Get-ChildItem $TMPRAW -Directory | Select-Object -First 1).FullName
 
-# Copy only essential paths (skip vscode-extension, tests, CHANGELOG, CONTRIBUTING, etc.)
+# Copy only essential paths (skip vscode-extension, tests, docs content, CHANGELOG, CONTRIBUTING, etc.)
 New-Item -ItemType Directory -Path $TMP -Force | Out-Null
-$neededDirs = @(".agentx", ".github", ".claude", ".vscode", "scripts", "docs", "packs")
+$neededDirs = @(".agentx", ".github", ".claude", ".vscode", "scripts", "packs")
 $neededFiles = @("AGENTS.md", "Skills.md", "CLAUDE.md", ".gitignore")
 foreach ($d in $neededDirs) {
  $src = Join-Path $root $d
@@ -157,8 +167,18 @@ foreach ($f in $neededFiles) {
  $src = Join-Path $root $f
  if (Test-Path $src) { Copy-Item $src (Join-Path $TMP $f) -Force }
 }
+# Copy only docs/GUIDE.md (user guide) - NOT AgentX project docs (PRDs, ADRs, specs, reviews, etc.)
+$docsGuide = Join-Path $root "docs/GUIDE.md"
+if (Test-Path $docsGuide) {
+ New-Item -ItemType Directory -Path (Join-Path $TMP "docs") -Force | Out-Null
+ Copy-Item $docsGuide (Join-Path $TMP "docs/GUIDE.md") -Force
+}
 
 Remove-Item $TMPRAW -Recurse -Force -ErrorAction SilentlyContinue
+if (Test-Path $TMPRAW) {
+ Start-Sleep -Milliseconds 500
+ Remove-Item $TMPRAW -Recurse -Force -ErrorAction SilentlyContinue
+}
 Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue
 if (-not (Test-Path "$TMP/AGENTS.md")) { Write-Error "Download failed. Check network connection." }
 Write-OK "AgentX downloaded (essential files only)"
