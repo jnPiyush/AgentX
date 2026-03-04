@@ -81,7 +81,7 @@ The implementation successfully introduces a layered command-validation utility,
 - Secret redaction utility exists and is integrated in execution and thinking log paths.
 
 ### Architecture Gaps
-- Current allowlist matching strategy is too permissive for some bare program entries, which conflicts with the intent of "known-safe commands only auto-execute" from SPEC-47 P0 criteria.
+- Current allowlist matching strategy is too permissive for some bare program entries, which conflicts with the intent of "known-safe commands only auto-execute" from SPEC-AgentX P0 criteria.
 
 ---
 
@@ -339,8 +339,8 @@ All three previously blocking findings are fixed with corresponding regression t
   - `toolEngine.ts`
   - `vscodeLmAdapter.ts`
 - Cross-referenced with:
-  - `docs/specs/SPEC-47.md` sections 3.4-3.8
-  - `docs/adr/ADR-47.md` decisions 47.2-47.5
+  - `docs/specs/SPEC-AgentX.md` sections 3.4-3.8 (Security Hardening spec)
+  - `docs/adr/ADR-AgentX.md` decisions 47.2-47.5
 
 ### Validation Results
 
@@ -400,7 +400,7 @@ All three previously blocking findings are fixed with corresponding regression t
 **[WARN] CHANGES REQUESTED**
 
 Rationale:
-- SPEC-47 section 3.5 requires UUID-format `correlationId`; implementation currently generates a non-UUID string.
+- SPEC-AgentX section 3.5 requires UUID-format `correlationId`; implementation currently generates a non-UUID string.
 - SPEC/sequence expectations include stale-warning signaling; `ProgressTracker.isStale()` is not currently consumed by `agenticLoop` for warning emission.
 
 ### Required Follow-ups
