@@ -97,9 +97,12 @@ git commit -m "docs: add research brief for {topic}"
 
 | Task | Skill |
 |------|-------|
-| Research brief structure and clarity | [Documentation](../skills/development/documentation/SKILL.md) |
-| Comparative option analysis | [Code Review](../skills/development/code-review/SKILL.md) |
-| Domain-specific topic deep dives | [Data Analysis](../skills/data/data-analysis/SKILL.md) |
+| Oil & Gas client research | [Oil & Gas](../skills/domain/oil-and-gas/SKILL.md) |
+| Financial Services client research | [Financial Services](../skills/domain/financial-services/SKILL.md) |
+| Audit & Assurance client research | [Audit & Assurance](../skills/domain/audit-assurance/SKILL.md) |
+| Tax client research | [Tax](../skills/domain/tax/SKILL.md) |
+| Legal client research | [Legal](../skills/domain/legal/SKILL.md) |
+| Brief structure and formatting | [Documentation](../skills/development/documentation/SKILL.md) |
 
 ## Enforcement Gates
 

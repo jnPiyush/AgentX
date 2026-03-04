@@ -66,8 +66,8 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <tr>
 <td width="50%">
 
-### 56 Production Skills
-- **9 categories**: architecture, development, languages, operations, infrastructure, data, ai-systems, design, testing
+### 62 Production Skills
+- **10 categories**: architecture, development, languages, operations, infrastructure, data, ai-systems, design, testing, domain
 - Retrieval-led reasoning -- agents read skills before generating
 - 30 executable scripts across 17 skills
 - Covers C#, Python, Go, Rust, React, Terraform, Bicep, Databricks + more
@@ -116,7 +116,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <td width="50%">
 
 ### Framework Totals
-- **56 skills** across 9 categories
+- **62 skills** across 10 categories
 - **11 agent definitions** (10 stable + 1 preview)
 - **7 TOML workflow** templates (feature, epic, story, bug, spike, devops, docs)
 - **12 instruction files**, **11 prompts**, **9 templates**
@@ -395,7 +395,7 @@ AgentX/
 │   ├── 📁 templates/         # PRD, ADR, Spec, UX, Progress templates
 │   ├── 📁 prompts/           # 11 reusable prompts
 │   ├── 📁 workflows/         # GitHub Actions (CI/CD, scanning)
-│   └── 📁 skills/            # 42 skill documents (9 categories)
+│   └── 📁 skills/            # 62 skill documents (10 categories)
 │   └── 📁 instructions/      # 12 language/IaC-specific guides
 │   └── 📁 schemas/           # JSON schema validation
 │
@@ -429,7 +429,7 @@ AgentX/
 | Document | Description |
 |----------|-------------|
 | [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
-| [Skills.md](Skills.md) | 56 production skills across 9 categories |
+| [Skills.md](Skills.md) | 62 production skills across 10 categories |
 | [**Guide**](docs/GUIDE.md) | **Quickstart, setup, local mode, MCP server, troubleshooting** |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
 

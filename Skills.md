@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 57 skills across 9 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 62 skills across 10 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 57 skills across 9 categorie
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 57 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 62 skills. Use Quick Reference below.
 
 ---
 
@@ -46,10 +46,15 @@ description: 'Compressed skill index for AI agents. 57 skills across 9 categorie
 | **Performance Testing** | [Performance Testing](.github/skills/testing/performance-testing/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Test Automation](.github/skills/testing/test-automation/SKILL.md) |
 | **Security Testing** | [Security Testing](.github/skills/testing/security-testing/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Production Release** | [Production Readiness](.github/skills/testing/production-readiness/SKILL.md), [Security Testing](.github/skills/testing/security-testing/SKILL.md), [Performance Testing](.github/skills/testing/performance-testing/SKILL.md), [Release Mgmt](.github/skills/operations/release-management/SKILL.md) |
+| **Oil & Gas Advisory** | [Oil & Gas](.github/skills/domain/oil-and-gas/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
+| **Financial Services Advisory** | [Financial Services](.github/skills/domain/financial-services/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
+| **Audit & Assurance Advisory** | [Audit & Assurance](.github/skills/domain/audit-assurance/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
+| **Tax Advisory** | [Tax](.github/skills/domain/tax/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
+| **Legal Advisory** | [Legal](.github/skills/domain/legal/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
 
 ---
 
-## Skills Directory (57 skills -- pipe-delimited)
+## Skills Directory (62 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -112,6 +117,11 @@ test|integration-testing|.github/skills/testing/integration-testing/SKILL.md|API
 test|performance-testing|.github/skills/testing/performance-testing/SKILL.md|k6,Locust,load-testing,stress-testing,latency,capacity
 test|security-testing|.github/skills/testing/security-testing/SKILL.md|SAST,DAST,OWASP,Semgrep,ZAP,dependency-scanning,secrets
 test|production-readiness|.github/skills/testing/production-readiness/SKILL.md|quality-gates,certification,chaos-testing,rollback,go-no-go
+domain|oil-and-gas|.github/skills/domain/oil-and-gas/SKILL.md|upstream,midstream,downstream,E&P,drilling,refining,LNG,ESG,OPEC,reserves
+domain|financial-services|.github/skills/domain/financial-services/SKILL.md|banking,insurance,capital-markets,wealth,NIM,CET1,Basel,fintech,payments
+domain|audit-assurance|.github/skills/domain/audit-assurance/SKILL.md|audit,assurance,PCAOB,SOX,COSO,internal-audit,SOC,ICFR,ESG-assurance
+domain|tax|.github/skills/domain/tax/SKILL.md|corporate-tax,transfer-pricing,BEPS,Pillar-Two,VAT,SALT,ETR,provision,ASC-740
+domain|legal|.github/skills/domain/legal/SKILL.md|litigation,corporate-law,IP,employment,CLM,e-discovery,GDPR,compliance,contracts
 ```
 
 ---
@@ -192,11 +202,16 @@ E2E Test Suite|e2e-testing->test-automation->integration-testing->code-review
 Performance Validation|performance-testing->test-automation->testing->code-review
 Security Certification|security-testing->production-readiness->testing->code-review
 Production Release|production-readiness->security-testing->performance-testing->e2e-testing
+Oil & Gas Brief|oil-and-gas->documentation
+Financial Services Brief|financial-services->documentation
+Audit Engagement Prep|audit-assurance->documentation
+Tax Advisory Brief|tax->documentation
+Legal Research Brief|legal->documentation
 ```
 
 **Checkpoint**: For chains with 5+ skills, commit + test at each skill boundary.
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 56 skills (arch:5, dev:10, lang:8, ops:5, infra:4, data:5, ai:11, design:2, test:6)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 62 skills (arch:5, dev:10, lang:8, ops:5, infra:4, data:5, ai:11, design:2, test:6, domain:5)
 

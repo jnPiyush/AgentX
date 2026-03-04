@@ -704,7 +704,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | **Model Fallback Selector** | `vscode-extension/src/utils/modelSelector.ts` | [PASS] Stable |
 | **Hexagon AX Icon** | `vscode-extension/resources/agentx-icon.svg` | [PASS] Stable |
 | **Databricks Skill** | `.github/skills/data/databricks/SKILL.md` | [PASS] Stable |
-| **50 Skills (was 43)** | `Skills.md` | [PASS] Stable |
+| **62 Skills (was 50)** | `Skills.md` | [PASS] Stable |
 
 ### New Features (v6.1)
 
