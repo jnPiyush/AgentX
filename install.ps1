@@ -147,7 +147,7 @@ $root = (Get-ChildItem $TMPRAW -Directory | Select-Object -First 1).FullName
 
 # Copy only essential paths (skip vscode-extension, tests, CHANGELOG, CONTRIBUTING, etc.)
 New-Item -ItemType Directory -Path $TMP -Force | Out-Null
-$neededDirs = @(".agentx", ".github", ".vscode", "scripts", "docs", "packs")
+$neededDirs = @(".agentx", ".github", ".claude", ".vscode", "scripts", "docs", "packs")
 $neededFiles = @("AGENTS.md", "Skills.md", "CLAUDE.md", ".gitignore")
 foreach ($d in $neededDirs) {
  $src = Join-Path $root $d
@@ -219,6 +219,7 @@ $agentxBlock = @(
  ".github/agentx-security.yml"
  ".github/CODEOWNERS"
  ".github/copilot-instructions.md"
+ ".claude/"
  "AGENTS.md"
  "Skills.md"
  "CLAUDE.md"

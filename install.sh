@@ -116,6 +116,7 @@ $FETCH "$ARCHIVE_URL" > "$TMPARCHIVE"
 tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/.agentx" \
  "$PREFIX/.github" \
+ "$PREFIX/.claude" \
  "$PREFIX/.vscode" \
  "$PREFIX/scripts" \
  "$PREFIX/docs" \
@@ -174,6 +175,7 @@ AGENTX_BLOCK="$MARKER_START
 .github/agentx-security.yml
 .github/CODEOWNERS
 .github/copilot-instructions.md
+.claude/
 AGENTS.md
 Skills.md
 CLAUDE.md

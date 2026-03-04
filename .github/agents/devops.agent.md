@@ -54,6 +54,8 @@ Design and implement CI/CD pipelines, deployment automation, and release workflo
 - Read deployment docs at `docs/deployment/`
 - Read Tech Spec for deployment requirements
 - Check for DevOps-specific templates at `.github/templates/`
+- Check pipeline examples at `.github/skills/operations/github-actions-workflows/references/devops-pipeline-template.yml`
+- Check release and deployment doc examples at `.github/skills/operations/release-management/references/`
 
 ### 2. Design Pipeline
 
@@ -134,6 +136,7 @@ Update Status in GitHub Projects.
 |------|-------|
 | GitHub Actions patterns | [GitHub Actions](../skills/operations/github-actions-workflows/SKILL.md) |
 | YAML pipeline design | [YAML Pipelines](../skills/operations/yaml-pipelines/SKILL.md) |
+| Release workflow examples | [Release references](../skills/operations/release-management/references/) |
 | Infrastructure as Code | [Terraform](../skills/infrastructure/terraform/SKILL.md) or [Bicep](../skills/infrastructure/bicep/SKILL.md) |
 
 ## Enforcement Gates

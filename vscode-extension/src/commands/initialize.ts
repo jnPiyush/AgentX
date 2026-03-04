@@ -12,7 +12,7 @@ const BRANCH = 'master';
 const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
 
 /** Essential directories and files to extract (everything else is skipped). */
-const ESSENTIAL_DIRS = ['.agentx', '.github', '.vscode', 'scripts', 'docs', 'packs'];
+const ESSENTIAL_DIRS = ['.agentx', '.github', '.claude', '.vscode', 'scripts', 'docs', 'packs'];
 const ESSENTIAL_FILES = ['AGENTS.md', 'Skills.md', 'CLAUDE.md', '.gitignore'];
 
 /**
@@ -430,6 +430,7 @@ function mergeGitignore(root: string): void {
     '.github/agentx-security.yml',
     '.github/CODEOWNERS',
     '.github/copilot-instructions.md',
+    '.claude/',
     'AGENTS.md',
     'Skills.md',
     'CLAUDE.md',
