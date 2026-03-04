@@ -22,6 +22,10 @@
 
 import { ToolRegistry, ToolCallRequest, ToolResult, ToolContext, ClarificationHandler } from './toolEngine';
 import { BoundaryViolationError } from './boundaryHook';
+import { resolveMode } from './promptingModes';
+import { time } from '../utils/timingUtils';
+import { pruneMessages } from '../utils/contextCompactor';
+import { HookRegistry } from './hookPriority';
 import {
   ToolLoopDetector,
   LoopDetectionResult,
@@ -369,6 +373,36 @@ export interface AgenticLoopConfig {
    * If empty or undefined, all tools are exposed (backward-compatible).
    */
   readonly allowedTools?: readonly string[];
+  /**
+   * Prompting mode for the agent (US-4.4). When set, a mode-specific
+   * system prompt suffix is appended to the base system prompt.
+   * Built-in modes for Engineer: 'write', 'refactor', 'test', 'docs'.
+   * Default: undefined (no mode suffix applied, backward-compatible).
+   */
+  readonly mode?: string;
+  /**
+   * Hard cap on conversation messages (US-2.5). When the message count
+   * exceeds this limit, the oldest non-system messages are pruned.
+   * System messages are NEVER pruned (they are exempt from the cap).
+   * Works alongside token-based compaction.
+   * Default: 200.
+   */
+  readonly maxMessages?: number;
+  /**
+   * Priority-based hook registries (US-4.5). When set, the loop executes
+   * registered hooks through HookRegistry in priority order BEFORE calling
+   * the legacy hooks from `hooks`. This enables multiple handlers per event
+   * with deterministic execution ordering.
+   *
+   * Each registry key corresponds to an AgenticLoopHooks event name.
+   * Backward-compatible: legacy hooks still fire after registry hooks.
+   */
+  readonly hookRegistries?: {
+    readonly onBeforeToolUse?: HookRegistry<ToolHookContext, Record<string, unknown> | void>;
+    readonly onAfterToolUse?: HookRegistry<ToolResultHookContext, void>;
+    readonly onCompaction?: HookRegistry<CompactionHookContext, void>;
+    readonly onError?: HookRegistry<ErrorHookContext, ErrorHookResult>;
+  };
 }
 
 const DEFAULT_CONFIG: AgenticLoopConfig = {
@@ -484,10 +518,15 @@ export class AgenticLoop {
     );
     const sessionId = session.meta.sessionId;
 
-    // Add system prompt
+    // Add system prompt (with optional mode suffix, US-4.4)
+    const modeResolution = resolveMode({
+      baseSystemPrompt: this.config.systemPrompt,
+      mode: this.config.mode,
+      role: this.config.agentName,
+    });
     this.sessionManager.addMessage(sessionId, {
       role: 'system',
-      content: this.config.systemPrompt,
+      content: modeResolution.systemPrompt,
       timestamp: new Date().toISOString(),
     });
 
@@ -615,7 +654,7 @@ export class AgenticLoop {
         );
         const afterTokens = this.sessionManager.getMeta(sessionId)?.totalTokensEstimate ?? 0;
         const didCompact = afterTokens < beforeTokens;
-        if (this.config.hooks?.onCompaction) {
+        if (this.config.hooks?.onCompaction || this.config.hookRegistries?.onCompaction) {
           let summary: string | undefined;
           if (didCompact) {
             const compacted = this.sessionManager
@@ -625,17 +664,27 @@ export class AgenticLoop {
               );
             summary = compacted?.content;
           }
+          const compactionContext = {
+            sessionId,
+            agentName: this.config.agentName,
+            beforeTokens,
+            afterTokens,
+            didCompact,
+            keepRecent: this.config.compactKeepRecent,
+            tokenBudget: this.config.tokenBudget,
+            summary,
+          };
+          // Execute priority-registered compaction hooks (US-4.5)
+          if (this.config.hookRegistries?.onCompaction) {
+            try {
+              await this.config.hookRegistries.onCompaction.executeAll(compactionContext);
+            } catch (err: unknown) {
+              this.handleHookError('hookRegistry:onCompaction', err);
+            }
+          }
+          // Legacy compaction hook (backward-compatible)
           try {
-            await this.config.hooks.onCompaction({
-              sessionId,
-              agentName: this.config.agentName,
-              beforeTokens,
-              afterTokens,
-              didCompact,
-              keepRecent: this.config.compactKeepRecent,
-              tokenBudget: this.config.tokenBudget,
-              summary,
-            });
+            await this.config.hooks?.onCompaction?.(compactionContext);
           } catch (err: unknown) {
             this.handleHookError('onCompaction', err);
           }
@@ -643,7 +692,13 @@ export class AgenticLoop {
       }
 
       // Call LLM (with onError hook support for retry/fallback/abort)
-      const messages = this.sessionManager.getMessages(sessionId);
+      // Apply bounded message pruning (US-2.5) before sending to LLM
+      const rawMessages = this.sessionManager.getMessages(sessionId);
+      const pruneResult = pruneMessages(rawMessages, {
+        maxMessages: this.config.maxMessages ?? 200,
+        warnBeforePrune: true,
+      });
+      const messages = pruneResult.messages as ReadonlyArray<SessionMessage>;
       let response!: LlmResponse;
       let llmRetryCount = 0;
       const MAX_ERROR_RETRIES = 3;
@@ -652,7 +707,12 @@ export class AgenticLoop {
 
       while (!llmSuccess && llmRetryCount <= MAX_ERROR_RETRIES) {
         try {
-          response = await llm.chat(messages, toolSchemas, abortSignal);
+          // Wrap LLM call with time() for performance measurement (US-3.2)
+          const timed = await time(
+            `llm-chat-iter-${iterations}`,
+            () => llm.chat(messages, toolSchemas, abortSignal),
+          );
+          response = timed.result;
           llmSuccess = true;
         } catch (err: unknown) {
           if (abortSignal.aborted) {
@@ -662,19 +722,43 @@ export class AgenticLoop {
           }
 
           const msg = err instanceof Error ? err.message : String(err);
+          const errorContext = {
+            sessionId,
+            agentName: this.config.agentName,
+            iteration: iterations,
+            error: err,
+            errorMessage: msg,
+            phase: 'llm_call' as const,
+            retryCount: llmRetryCount,
+          };
 
-          // Invoke onError hook if available
+          // Execute priority-registered error hooks first (US-4.5)
+          if (this.config.hookRegistries?.onError) {
+            try {
+              const registryResult = await this.config.hookRegistries.onError.executeUntilResult(errorContext);
+              if (registryResult.result) {
+                if (registryResult.result.action === 'retry' && llmRetryCount < MAX_ERROR_RETRIES) {
+                  llmRetryCount++;
+                  continue;
+                } else if (registryResult.result.action === 'fallback' && registryResult.result.fallbackResult) {
+                  response = {
+                    text: registryResult.result.fallbackResult,
+                    toolCalls: [],
+                  } as LlmResponse;
+                  llmSuccess = true;
+                  break;
+                }
+                // action === 'abort' falls through to legacy hook / default abort
+              }
+            } catch (registryErr: unknown) {
+              this.handleHookError('hookRegistry:onError', registryErr);
+            }
+          }
+
+          // Legacy onError hook (backward-compatible)
           if (this.config.hooks?.onError) {
             try {
-              const hookResult = await this.config.hooks.onError({
-                sessionId,
-                agentName: this.config.agentName,
-                iteration: iterations,
-                error: err,
-                errorMessage: msg,
-                phase: 'llm_call',
-                retryCount: llmRetryCount,
-              });
+              const hookResult = await this.config.hooks.onError(errorContext);
 
               if (hookResult.action === 'retry' && llmRetryCount < MAX_ERROR_RETRIES) {
                 llmRetryCount++;
@@ -825,6 +909,30 @@ export class AgenticLoop {
 
         let effectiveParams: Record<string, unknown> = toolCall.arguments;
         let boundaryBlocked = false;
+
+        // Execute priority-registered hooks first (US-4.5)
+        if (this.config.hookRegistries?.onBeforeToolUse) {
+          try {
+            const chainResult = await this.config.hookRegistries.onBeforeToolUse.executeAll({
+              sessionId,
+              iteration: iterations,
+              agentName: this.config.agentName,
+              toolName: toolCall.name,
+              params: effectiveParams,
+            });
+            // Apply first non-void result as parameter patch
+            for (const entry of chainResult.results) {
+              if (entry.result && typeof entry.result === 'object') {
+                effectiveParams = entry.result as Record<string, unknown>;
+                break;
+              }
+            }
+          } catch (err: unknown) {
+            this.handleHookError('hookRegistry:onBeforeToolUse', err);
+          }
+        }
+
+        // Legacy hook (backward-compatible)
         if (this.config.hooks?.onBeforeToolUse) {
           try {
             const patched = await this.config.hooks.onBeforeToolUse({
@@ -899,6 +1007,21 @@ export class AgenticLoop {
           progressTracker.recordFailure(stepIndex, resultText);
         } else {
           progressTracker.recordSuccess(stepIndex, resultText);
+        }
+
+        if (this.config.hookRegistries?.onAfterToolUse) {
+          try {
+            await this.config.hookRegistries.onAfterToolUse.executeAll({
+              sessionId,
+              iteration: iterations,
+              agentName: this.config.agentName,
+              toolName: request.name,
+              params: effectiveParams,
+              result,
+            });
+          } catch (err: unknown) {
+            this.handleHookError('hookRegistry:onAfterToolUse', err);
+          }
         }
 
         if (this.config.hooks?.onAfterToolUse) {

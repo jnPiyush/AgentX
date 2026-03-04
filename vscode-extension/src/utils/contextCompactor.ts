@@ -51,8 +51,12 @@ export interface PruneResult {
  * non-system messages when the cap is reached.
  *
  * Rules:
- *   1. System messages (role='system') are NEVER pruned
- *   2. Oldest non-system messages are pruned first
+ *   1. System messages (role='system') are NEVER pruned -- they are exempt
+ *      from the hard cap by design. This means the returned array MAY
+ *      exceed `maxMessages` when system messages alone exceed the limit.
+ *      Callers that need a strict total count should filter system messages
+ *      separately or adjust `maxMessages` upward to accommodate them.
+ *   2. Oldest non-system messages are pruned first (preserves recent context)
  *   3. Works alongside token-based compaction (independent mechanism)
  *   4. Warning emitted via eventBus before pruning (if configured)
  *

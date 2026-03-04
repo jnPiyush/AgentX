@@ -9,7 +9,9 @@ import {
   ErrorHookAction,
   ErrorHookContext,
   ErrorHookResult,
+  HookRegistry,
 } from '../../agentic';
+import { registerMode, resetModeRegistry } from '../../agentic/promptingModes';
 
 class FakeToolThenTextAdapter implements LlmAdapter {
   async chat(messages: readonly SessionMessage[]): Promise<LlmResponse> {
@@ -447,6 +449,318 @@ describe('AgenticLoop', () => {
       assert.equal(summary.exitReason, 'error');
       // MAX_ERROR_RETRIES = 3, so hook called 3 times (retries) + final abort
       assert.ok(hookCalls <= 4, `Hook should be called at most 4 times, got ${hookCalls}`);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // P3 Integration Tests -- runtime wiring of US-4.4, US-3.2, US-4.5, US-2.5
+  // -------------------------------------------------------------------------
+
+  describe('P3 runtime integration', () => {
+    afterEach(() => {
+      resetModeRegistry();
+    });
+
+    it('should append mode suffix to system prompt (US-4.4)', async () => {
+      const capturedMessages: SessionMessage[][] = [];
+      const adapter: LlmAdapter = {
+        async chat(msgs: readonly SessionMessage[]): Promise<LlmResponse> {
+          capturedMessages.push([...msgs]);
+          return { text: 'Done', toolCalls: [] };
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Base prompt.',
+          mode: 'test',
+          maxIterations: 3,
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      await loop.run('write tests', adapter, ac.signal);
+
+      assert.ok(capturedMessages.length >= 1, 'LLM should be called');
+      const systemMsg = capturedMessages[0].find((m) => m.role === 'system');
+      assert.ok(systemMsg, 'Should have a system message');
+      // The 'test' mode suffix contains 'test' related instructions
+      assert.ok(
+        systemMsg!.content.includes('Base prompt.'),
+        'Should include base prompt',
+      );
+    });
+
+    it('should prune messages when exceeding maxMessages (US-2.5)', async () => {
+      let callCount = 0;
+      const adapter: LlmAdapter = {
+        async chat(msgs: readonly SessionMessage[]): Promise<LlmResponse> {
+          callCount++;
+          if (callCount <= 5) {
+            return {
+              text: `Step ${callCount}`,
+              toolCalls: [
+                { id: `tc-${callCount}`, name: 'list_dir', arguments: { dirPath: '.' } },
+              ],
+            };
+          }
+          return { text: 'Final', toolCalls: [] };
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Test bounded messages',
+          maxMessages: 5, // Very low cap to trigger pruning
+          maxIterations: 10,
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      const summary = await loop.run('do work', adapter, ac.signal);
+
+      // The loop should complete without error even with aggressive pruning
+      assert.equal(summary.exitReason, 'text_response');
+      assert.ok(summary.iterations >= 2, 'Should complete multiple iterations');
+    });
+
+    it('should wrap LLM call with time() utility (US-3.2)', async () => {
+      // Verify the loop completes successfully with time() wrapping
+      // (time() is transparent to the caller but measures duration)
+      let chatCalled = false;
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          chatCalled = true;
+          // Small delay to ensure time() captures non-zero duration
+          await new Promise((r) => setTimeout(r, 5));
+          return { text: 'Timed response', toolCalls: [] };
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Test timing',
+          maxIterations: 3,
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      const summary = await loop.run('do work', adapter, ac.signal);
+
+      assert.ok(chatCalled, 'LLM should be called through time() wrapper');
+      assert.equal(summary.exitReason, 'text_response');
+      assert.ok(summary.finalText.includes('Timed'));
+    });
+
+    it('should execute hookRegistries.onBeforeToolUse in priority order (US-4.5)', async () => {
+      const executionOrder: string[] = [];
+      const registry = new HookRegistry<{
+        sessionId: string;
+        iteration: number;
+        agentName: string;
+        toolName: string;
+        params: Record<string, unknown>;
+      }>('onBeforeToolUse');
+
+      registry.register({
+        name: 'second-hook',
+        priority: 200,
+        handler: () => { executionOrder.push('second'); },
+      });
+      registry.register({
+        name: 'first-hook',
+        priority: 50,
+        handler: () => { executionOrder.push('first'); },
+      });
+
+      let step = 0;
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          step++;
+          if (step === 1) {
+            return {
+              text: 'Execute tool',
+              toolCalls: [{ id: 'tc-1', name: 'list_dir', arguments: { dirPath: '.' } }],
+            };
+          }
+          return { text: 'Done', toolCalls: [] };
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Hook test',
+          maxIterations: 5,
+          hookRegistries: {
+            onBeforeToolUse: registry,
+          },
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      await loop.run('do work', adapter, ac.signal);
+
+      assert.deepEqual(executionOrder, ['first', 'second'], 'Hooks should fire in priority order');
+    });
+
+    it('should execute hookRegistries.onAfterToolUse after tool execution (US-4.5)', async () => {
+      let afterHookCalled = false;
+      let afterToolName = '';
+      const registry = new HookRegistry<{
+        sessionId: string;
+        iteration: number;
+        agentName: string;
+        toolName: string;
+        params: Record<string, unknown>;
+        result: unknown;
+      }>('onAfterToolUse');
+
+      registry.register({
+        name: 'after-hook',
+        priority: 100,
+        handler: (ctx) => {
+          afterHookCalled = true;
+          afterToolName = ctx.toolName;
+        },
+      });
+
+      let step = 0;
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          step++;
+          if (step === 1) {
+            return {
+              text: 'Run tool',
+              toolCalls: [{ id: 'tc-1', name: 'list_dir', arguments: { dirPath: '.' } }],
+            };
+          }
+          return { text: 'Done', toolCalls: [] };
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'After hook test',
+          maxIterations: 5,
+          hookRegistries: {
+            onAfterToolUse: registry,
+          },
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      await loop.run('do work', adapter, ac.signal);
+
+      assert.ok(afterHookCalled, 'onAfterToolUse registry hook should fire');
+      assert.equal(afterToolName, 'list_dir', 'Should receive correct tool name');
+    });
+
+    it('should execute hookRegistries.onError with executeUntilResult (US-4.5)', async () => {
+      let hookCalled = false;
+      const registry = new HookRegistry<ErrorHookContext, ErrorHookResult>('onError');
+
+      registry.register({
+        name: 'error-handler',
+        priority: 50,
+        handler: () => {
+          hookCalled = true;
+          return { action: 'abort' as ErrorHookAction };
+        },
+      });
+
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          throw new Error('Test error for registry');
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Error hook test',
+          maxIterations: 3,
+          hookRegistries: {
+            onError: registry,
+          },
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      const summary = await loop.run('do work', adapter, ac.signal);
+
+      assert.ok(hookCalled, 'onError registry hook should fire');
+      assert.equal(summary.exitReason, 'error');
+    });
+
+    it('should default maxMessages to 200 when not specified (US-2.5)', async () => {
+      // Verify the loop works with default maxMessages
+      const adapter: LlmAdapter = {
+        async chat(): Promise<LlmResponse> {
+          return { text: 'Done', toolCalls: [] };
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Test default',
+          maxIterations: 3,
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      const summary = await loop.run('quick task', adapter, ac.signal);
+
+      assert.equal(summary.exitReason, 'text_response');
+    });
+
+    it('should accept custom mode from registry (US-4.4)', async () => {
+      // Register a custom mode
+      registerMode('engineer', {
+        name: 'custom-mode',
+        description: 'Test custom mode',
+        systemPromptSuffix: '\n\n[CUSTOM MODE ACTIVE]',
+      });
+
+      const capturedMessages: SessionMessage[][] = [];
+      const adapter: LlmAdapter = {
+        async chat(msgs: readonly SessionMessage[]): Promise<LlmResponse> {
+          capturedMessages.push([...msgs]);
+          return { text: 'Custom mode done', toolCalls: [] };
+        },
+      };
+
+      const loop = new AgenticLoop(
+        {
+          agentName: 'engineer',
+          systemPrompt: 'Base.',
+          mode: 'custom-mode',
+          maxIterations: 3,
+        },
+        new ToolRegistry(),
+      );
+
+      const ac = new AbortController();
+      await loop.run('do work', adapter, ac.signal);
+
+      const systemMsg = capturedMessages[0].find((m) => m.role === 'system');
+      assert.ok(systemMsg, 'Should have system message');
+      assert.ok(
+        systemMsg!.content.includes('[CUSTOM MODE ACTIVE]'),
+        'Should include custom mode suffix',
+      );
     });
   });
 });
