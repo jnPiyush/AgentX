@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "read_file",
+      "write_file",
+      "edit_file",
+      "search",
+      "grep",
+      "glob",
+      "run_terminal_command"
+    ],
+    "deny": "See .github/security/allowed-commands.json for blocked commands"
+  },
+  "settings": {
+    "model": "claude-sonnet-4-20250514",
+    "maxTokens": 16384
+  }
+}

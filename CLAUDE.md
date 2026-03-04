@@ -167,6 +167,30 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 
 ---
 
+## Claude Code Commands
+
+All 11 agents are available as `/project:` slash commands in Claude Code via `.claude/commands/`:
+
+| Command | Agent | Purpose |
+|---------|-------|---------|
+| `/project:agent-x` | Agent X (Hub) | Route work to specialist agents based on type and complexity |
+| `/project:product-manager` | Product Manager | Create PRD, break Epics into Features and Stories |
+| `/project:ux-designer` | UX Designer | Wireframes, HTML/CSS prototypes, WCAG 2.1 AA |
+| `/project:architect` | Architect | ADR with 3+ options, Tech Spec with diagrams |
+| `/project:engineer` | Engineer | Implement code, tests (80% coverage), quality loop |
+| `/project:reviewer` | Reviewer | Code review (8 categories), approve or reject |
+| `/project:reviewer-auto` | Auto-Fix Reviewer | Review + auto-apply safe fixes |
+| `/project:devops` | DevOps Engineer | GitHub Actions pipelines, deployment automation |
+| `/project:data-scientist` | Data Scientist | ML pipelines, evaluations, drift monitoring |
+| `/project:tester` | Tester | Automated testing, certification reports |
+| `/project:customer-coach` | Customer Coach | Consulting research, client-ready materials |
+
+**Usage**: Type `/project:engineer Implement the health endpoint for issue #1` in Claude Code.
+
+Each command file contains the agent's constraints, boundaries, execution steps, and self-review checklist. It also instructs Claude to `read_file` the full agent definition at `.github/agents/` for retrieval-led reasoning.
+
+---
+
 ## Templates
 
 | Template | Location |

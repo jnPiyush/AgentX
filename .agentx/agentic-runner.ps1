@@ -562,6 +562,148 @@ function Save-Session([string]$sessionId, [array]$messages, [hashtable]$meta, [s
 }
 
 # ---------------------------------------------------------------------------
+# Context Compaction (prevents unbounded message growth)
+# ---------------------------------------------------------------------------
+# Mirrors the TypeScript contextCompactor.ts behavior:
+#   - Prunes oldest non-system messages when count exceeds $MaxMessages
+#   - System messages (role='system') are NEVER pruned
+#   - Keeps the most recent $KeepRecent messages intact
+#   - Returns the compacted messages array
+# ---------------------------------------------------------------------------
+
+function Invoke-ContextCompaction {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][array]$Messages,
+        [int]$MaxMessages = 200,
+        [int]$KeepRecent = 40
+    )
+
+    if ($Messages.Count -le $MaxMessages) {
+        return $Messages
+    }
+
+    # Separate system messages (always kept) from non-system messages
+    $systemMsgs = @($Messages | Where-Object { $_.role -eq 'system' })
+    $nonSystemMsgs = @($Messages | Where-Object { $_.role -ne 'system' })
+
+    if ($nonSystemMsgs.Count -le $KeepRecent) {
+        return $Messages
+    }
+
+    # Keep only the most recent non-system messages
+    $kept = $nonSystemMsgs[($nonSystemMsgs.Count - $KeepRecent)..($nonSystemMsgs.Count - 1)]
+    $pruned = $nonSystemMsgs.Count - $KeepRecent
+
+    # Insert a compaction summary as the first non-system message
+    $compactionMsg = @{
+        role = 'user'
+        content = "[Context Compaction] $pruned older messages were pruned to stay within token budget. " +
+                  "Focus on the remaining conversation context."
+    }
+
+    $result = @($systemMsgs) + @($compactionMsg) + @($kept)
+
+    Write-Host "`e[90m  [COMPACTION] $pruned messages pruned ($($Messages.Count) -> $($result.Count))`e[0m"
+
+    return $result
+}
+
+# ---------------------------------------------------------------------------
+# Boundary Enforcement (prevents agents from modifying unauthorized paths)
+# ---------------------------------------------------------------------------
+# Mirrors the TypeScript boundaryHook.ts behavior:
+#   - Parses canModify / cannotModify globs from agent definition
+#   - Blocks file_write and file_edit calls targeting unauthorized paths
+#   - Returns $true if the operation is allowed, $false if blocked
+# ---------------------------------------------------------------------------
+
+function Read-BoundaryRules([hashtable]$AgentDef) {
+    $canModify = @()
+    $cannotModify = @()
+
+    if ($AgentDef.body) {
+        # Parse canModify from frontmatter or body
+        $cmMatch = [regex]::Match($AgentDef.body, '(?s)can_modify\s*[:=]\s*\[([^\]]*)\]')
+        if ($cmMatch.Success) {
+            $canModify = @($cmMatch.Groups[1].Value -replace "['""]", '' -split ',' |
+                ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        }
+        # Parse cannotModify from frontmatter or body
+        $cnmMatch = [regex]::Match($AgentDef.body, '(?s)cannot_modify\s*[:=]\s*\[([^\]]*)\]')
+        if ($cnmMatch.Success) {
+            $cannotModify = @($cnmMatch.Groups[1].Value -replace "['""]", '' -split ',' |
+                ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        }
+
+        # Also parse from Boundaries section (markdown table or list format)
+        $boundaryMatch = [regex]::Match($AgentDef.body, '(?s)## Boundaries[^\n]*\n(.*?)(?=\n## |\n---|\z)')
+        if ($boundaryMatch.Success -and $canModify.Count -eq 0) {
+            $section = $boundaryMatch.Groups[1].Value
+            # Can modify patterns
+            $cmLines = [regex]::Matches($section, '(?i)can modify[:\s]*([\w\s,/*.*]+)')
+            foreach ($m in $cmLines) {
+                $patterns = $m.Groups[1].Value -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                $canModify += $patterns
+            }
+            # Cannot modify patterns
+            $cnmLines = [regex]::Matches($section, '(?i)cannot modify[:\s]*([\w\s,/*.*]+)')
+            foreach ($m in $cnmLines) {
+                $patterns = $m.Groups[1].Value -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                $cannotModify += $patterns
+            }
+        }
+    }
+
+    return @{
+        canModify = $canModify
+        cannotModify = $cannotModify
+    }
+}
+
+function Test-BoundaryAllowed {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$FilePath,
+        [Parameter(Mandatory)][hashtable]$Rules,
+        [string]$WorkspaceRoot = ''
+    )
+
+    # Normalize path to relative
+    $relativePath = $FilePath -replace '\\', '/'
+    if ($WorkspaceRoot) {
+        $wsNorm = ($WorkspaceRoot -replace '\\', '/').TrimEnd('/')
+        if ($relativePath.StartsWith($wsNorm, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $relativePath = $relativePath.Substring($wsNorm.Length).TrimStart('/')
+        }
+    }
+
+    # Check cannotModify first (deny takes precedence)
+    foreach ($pattern in $Rules.cannotModify) {
+        $glob = $pattern -replace '\\', '/'
+        # Convert glob to regex: ** -> .*, * -> [^/]*, ? -> .
+        $regex = '^' + [regex]::Escape($glob) -replace '\\\*\\\*', '.*' -replace '\\\*', '[^/]*' -replace '\\\?', '.' + '$'
+        if ($relativePath -match $regex) {
+            return $false
+        }
+    }
+
+    # If canModify is specified, path must match at least one pattern
+    if ($Rules.canModify.Count -gt 0) {
+        foreach ($pattern in $Rules.canModify) {
+            $glob = $pattern -replace '\\', '/'
+            $regex = '^' + [regex]::Escape($glob) -replace '\\\*\\\*', '.*' -replace '\\\*', '[^/]*' -replace '\\\?', '.' + '$'
+            if ($relativePath -match $regex) {
+                return $true
+            }
+        }
+        return $false  # canModify specified but no pattern matched
+    }
+
+    return $true  # No restrictions defined
+}
+
+# ---------------------------------------------------------------------------
 # Clarification detection
 # ---------------------------------------------------------------------------
 
@@ -994,6 +1136,12 @@ function Invoke-AgenticLoop {
     $tools = Get-ToolSchemas
     $loopDetector = New-LoopDetector
 
+    # Parse boundary rules from agent definition (canModify / cannotModify)
+    $boundaryRules = Read-BoundaryRules -AgentDef $agentDef
+    if ($boundaryRules.canModify.Count -gt 0 -or $boundaryRules.cannotModify.Count -gt 0) {
+        Write-Host "`e[90m  Boundaries: canModify=[$($boundaryRules.canModify -join ', ')] cannotModify=[$($boundaryRules.cannotModify -join ', ')]`e[0m"
+    }
+
     # Conversation messages
     $messages = @(
         @{ role = 'system'; content = $systemPrompt }
@@ -1111,7 +1259,20 @@ function Invoke-AgenticLoop {
 
             Write-Host "`e[34m  Tool: $toolName($($toolArgs.Keys -join ', '))...`e[0m"
 
-            $result = Invoke-Tool -name $toolName -params $toolArgs -workspaceRoot $WorkspaceRoot
+            # --- Boundary enforcement: block unauthorized file modifications ---
+            $boundaryBlocked = $false
+            if ($toolName -in @('file_write', 'file_edit') -and $toolArgs.ContainsKey('filePath')) {
+                $allowed = Test-BoundaryAllowed -FilePath $toolArgs.filePath -Rules $boundaryRules -WorkspaceRoot $WorkspaceRoot
+                if (-not $allowed) {
+                    $boundaryBlocked = $true
+                    $result = @{ error = $true; text = "[BOUNDARY BLOCKED] Agent '$Agent' is not allowed to modify '$($toolArgs.filePath)'. Check canModify/cannotModify rules." }
+                    Write-Host "`e[31m  [BOUNDARY BLOCKED] $toolName -> $($toolArgs.filePath)`e[0m"
+                }
+            }
+
+            if (-not $boundaryBlocked) {
+                $result = Invoke-Tool -name $toolName -params $toolArgs -workspaceRoot $WorkspaceRoot
+            }
             $totalToolCalls++
 
             if ($result.error) {
@@ -1141,6 +1302,9 @@ function Invoke-AgenticLoop {
         if ($loopResult.severity -eq 'warning') {
             Write-Host "`e[33m  [LOOP WARNING] $($loopResult.message)`e[0m"
         }
+
+        # Context compaction: prune old messages to prevent unbounded growth
+        $messages = @(Invoke-ContextCompaction -Messages $messages -MaxMessages 200 -KeepRecent 40)
     }
 
     if ($iterations -ge $MaxIterations -and -not $finalText) {

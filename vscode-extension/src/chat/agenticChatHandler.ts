@@ -91,20 +91,34 @@ const DEFAULT_CHAT_CONFIG: Required<AgenticChatConfig> = {
  */
 function getLoopSettings() {
   const loopCfg = vscode.workspace.getConfiguration('agentx.loop');
+  const ctxCfg = vscode.workspace.getConfiguration('agentx.context');
   const srCfg = vscode.workspace.getConfiguration('agentx.selfReview');
   const clCfg = vscode.workspace.getConfiguration('agentx.clarification');
+  const ldCfg = vscode.workspace.getConfiguration('agentx.loopDetection');
   return {
     loop: {
       maxIterations: loopCfg.get<number>('maxIterations', 20),
       tokenBudget: loopCfg.get<number>('tokenBudget', 100_000),
     },
+    context: {
+      autoCompact: ctxCfg.get<boolean>('autoCompact', true),
+      maxMessages: ctxCfg.get<number>('maxMessages', 200),
+      compactKeepRecent: ctxCfg.get<number>('compactKeepRecent', 10),
+    },
     selfReview: {
       maxIterations: srCfg.get<number>('maxIterations', 15),
       reviewerMaxIterations: srCfg.get<number>('reviewerMaxIterations', 8),
+      reviewerTokenBudget: srCfg.get<number>('reviewerTokenBudget', 30_000),
     },
     clarification: {
       maxIterations: clCfg.get<number>('maxIterations', 6),
       responderMaxIterations: clCfg.get<number>('responderMaxIterations', 5),
+      responderTokenBudget: clCfg.get<number>('responderTokenBudget', 20_000),
+    },
+    loopDetection: {
+      warningThreshold: ldCfg.get<number>('warningThreshold', 10),
+      circuitBreakerThreshold: ldCfg.get<number>('circuitBreakerThreshold', 30),
+      windowSize: ldCfg.get<number>('windowSize', 30),
     },
   };
 }
@@ -501,6 +515,7 @@ export async function runAgenticChat(
     ...getDefaultSelfReviewConfig(agentName, wsRoot),
     maxIterations: loopSettings.selfReview.maxIterations,
     reviewerMaxIterations: loopSettings.selfReview.reviewerMaxIterations,
+    reviewerTokenBudget: loopSettings.selfReview.reviewerTokenBudget,
   };
 
   // Clarification loop config
@@ -509,6 +524,7 @@ export async function runAgenticChat(
         ...getDefaultClarificationConfig(agentx.workspaceRoot),
         maxIterations: loopSettings.clarification.maxIterations,
         responderMaxIterations: loopSettings.clarification.responderMaxIterations,
+        responderTokenBudget: loopSettings.clarification.responderTokenBudget,
         onHumanFallback: async (topic: string, context: string) => {
           response.markdown(
             `> **[Human Escalation]** The agents could not resolve a question.\n\n`
@@ -529,11 +545,18 @@ export async function runAgenticChat(
       systemPrompt,
       maxIterations: cfg.maxIterations ?? loopSettings.loop.maxIterations,
       tokenBudget: derivedTokenBudget,
+      autoCompact: loopSettings.context.autoCompact,
+      compactKeepRecent: loopSettings.context.compactKeepRecent,
       issueNumber: cfg.issueNumber || undefined,
       canClarify: canClarify.length > 0 ? canClarify : undefined,
       onClarificationNeeded: clarificationCallback,
       doneValidator,
       workspaceRoot: agentx.workspaceRoot,
+      loopDetection: {
+        warningThreshold: loopSettings.loopDetection.warningThreshold,
+        circuitBreakerThreshold: loopSettings.loopDetection.circuitBreakerThreshold,
+        windowSize: loopSettings.loopDetection.windowSize,
+      },
       // New: self-review loop (replaces DoneValidator)
       selfReviewConfig,
       selfReviewProgress: {

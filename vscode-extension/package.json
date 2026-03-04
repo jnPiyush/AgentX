@@ -404,6 +404,25 @@
      "maximum": 500000,
      "description": "Token budget for the main agentic loop session."
     },
+    "agentx.context.autoCompact": {
+     "type": "boolean",
+     "default": true,
+     "description": "Automatically compact context when approaching token limits."
+    },
+    "agentx.context.maxMessages": {
+     "type": "number",
+     "default": 200,
+     "minimum": 10,
+     "maximum": 1000,
+     "description": "Maximum conversation messages before pruning oldest non-system messages."
+    },
+    "agentx.context.compactKeepRecent": {
+     "type": "number",
+     "default": 10,
+     "minimum": 1,
+     "maximum": 100,
+     "description": "Number of recent messages to preserve during context compaction."
+    },
     "agentx.selfReview.maxIterations": {
      "type": "number",
      "default": 15,
@@ -418,6 +437,13 @@
      "maximum": 20,
      "description": "Maximum internal iterations for the reviewer sub-agent during self-review."
     },
+    "agentx.selfReview.reviewerTokenBudget": {
+     "type": "number",
+     "default": 30000,
+     "minimum": 5000,
+     "maximum": 200000,
+     "description": "Token budget for the reviewer sub-agent during self-review."
+    },
     "agentx.clarification.maxIterations": {
      "type": "number",
      "default": 6,
@@ -431,6 +457,34 @@
      "minimum": 1,
      "maximum": 15,
      "description": "Maximum internal iterations for the responding sub-agent during clarification."
+    },
+    "agentx.clarification.responderTokenBudget": {
+     "type": "number",
+     "default": 20000,
+     "minimum": 5000,
+     "maximum": 200000,
+     "description": "Token budget for the responding sub-agent during clarification."
+    },
+    "agentx.loopDetection.warningThreshold": {
+     "type": "number",
+     "default": 10,
+     "minimum": 3,
+     "maximum": 50,
+     "description": "Consecutive identical tool calls before issuing a warning."
+    },
+    "agentx.loopDetection.circuitBreakerThreshold": {
+     "type": "number",
+     "default": 30,
+     "minimum": 5,
+     "maximum": 100,
+     "description": "Total repeated tool calls before hard-stopping the agentic loop."
+    },
+    "agentx.loopDetection.windowSize": {
+     "type": "number",
+     "default": 30,
+     "minimum": 5,
+     "maximum": 100,
+     "description": "Sliding window of recent tool calls to analyze for loop patterns."
     }
    }
   }

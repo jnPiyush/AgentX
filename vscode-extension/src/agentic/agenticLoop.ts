@@ -46,6 +46,7 @@ import {
   SelfReviewResult,
   SelfReviewProgress,
   runSelfReview,
+  getDefaultSelfReviewConfig,
 } from './selfReviewLoop';
 import {
   ClarificationLoopConfig,
@@ -53,6 +54,7 @@ import {
   ClarificationProgress,
   ClarificationEvaluator,
   runClarificationLoop,
+  getDefaultClarificationConfig,
 } from './clarificationLoop';
 import { ProgressTracker } from './progressTracker';
 import { ParallelToolExecutor } from './parallelToolExecutor';
@@ -809,16 +811,25 @@ export class AgenticLoop {
           timestamp: new Date().toISOString(),
         });
 
-        // --- Self-Review Loop (replaces old DoneValidator) ---
-        if (
+        // --- Self-Review Loop (enforced by default when infrastructure is available) ---
+        // Auto-apply default selfReviewConfig when the caller did not provide one
+        // but the sub-agent infrastructure (llmAdapterFactory + agentLoader) IS
+        // available. This prevents silent skipping of self-review.
+        const effectiveSelfReview: SelfReviewConfig | undefined =
           this.config.selfReviewConfig
+          ?? (this.config.llmAdapterFactory && this.config.agentLoader
+            ? getDefaultSelfReviewConfig(this.config.agentName, workspaceRoot)
+            : undefined);
+
+        if (
+          effectiveSelfReview
           && this.config.llmAdapterFactory
           && this.config.agentLoader
           && validationRetries < MAX_VALIDATION_RETRIES
         ) {
           try {
             const reviewResult: SelfReviewResult = await runSelfReview(
-              this.config.selfReviewConfig,
+              effectiveSelfReview,
               finalText,
               this.config.llmAdapterFactory,
               this.config.agentLoader,
@@ -1137,13 +1148,23 @@ export class AgenticLoop {
 
     const canClarify = this.config.canClarify;
 
-    // Prefer the new clarification loop if configured
-    if (
+    // Auto-apply default clarificationLoopConfig when the caller did not
+    // provide one but the sub-agent infrastructure IS available.
+    const effectiveClarificationConfig: ClarificationLoopConfig | undefined =
       this.config.clarificationLoopConfig
+      ?? (this.config.llmAdapterFactory && this.config.agentLoader
+        ? getDefaultClarificationConfig(
+            this.config.workspaceRoot ?? this.resolveWorkspaceRoot(),
+          )
+        : undefined);
+
+    // Prefer the new clarification loop (always-on when infrastructure exists)
+    if (
+      effectiveClarificationConfig
       && this.config.llmAdapterFactory
       && this.config.agentLoader
     ) {
-      const loopConfig = this.config.clarificationLoopConfig;
+      const loopConfig = effectiveClarificationConfig;
       const llmFactory = this.config.llmAdapterFactory;
       const agentLoader = this.config.agentLoader;
       const evaluator = this.config.clarificationEvaluator;

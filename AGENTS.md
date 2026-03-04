@@ -199,6 +199,130 @@ In Review + needs:testing -> Tester (pre-release certification)
 
 ---
 
+## Runtime Implementation Reference
+
+Maps core AgentX concepts to their implementation files. Agents and tools reference these modules at runtime.
+
+### Agentic Loop
+
+The core LLM <-> Tool execution cycle. All agents run through this loop.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Inner Loop | `vscode-extension/src/agentic/agenticLoop.ts` | LLM -> tool calls -> results -> repeat until validated |
+| Chat Handler | `vscode-extension/src/chat/agenticChatHandler.ts` | VS Code Chat integration, session management, streaming |
+| CLI Runner | `.agentx/agentic-runner.ps1` | Terminal-based agentic loop (GitHub Models API) |
+| LM Adapter | `vscode-extension/src/chat/vscodeLmAdapter.ts` | Bridges loop to VS Code Language Model API |
+| Adapter Layer | `vscode-extension/src/chat/agenticAdapter.ts` | Response parsing for chat flow |
+| Model Selector | `vscode-extension/src/utils/modelSelector.ts` | Per-agent model selection with fallback chain |
+
+**Trigger**: Every `@agentx` chat message or `.agentx/agentx.ps1 run <agent> <prompt>` invocation.
+
+### Agent Routing
+
+How user requests get matched to the right specialized agent.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Route Rules | `vscode-extension/src/chat/agentRouter.ts` | Keyword-based routing to agents (first match wins) |
+| Context Loader | `vscode-extension/src/chat/agentContextLoader.ts` | Loads `.agent.md` definitions + skill files |
+| Chat Participant | `vscode-extension/src/chat/chatParticipant.ts` | VS Code Chat participant entry point |
+| Agent X Definition | `.github/agents/agent-x.agent.md` | Hub coordinator routing rules |
+
+**Trigger**: User sends a message to `@agentx`. Router matches keywords against `ROUTE_RULES` (architect, reviewer, tester, devops, engineer, etc.). Fallback: Agent X.
+
+### Agent-to-Agent Communication
+
+Hub-routed clarification protocol. Agents never communicate directly -- Agent X mediates all traffic.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Clarification Loop | `vscode-extension/src/agentic/clarificationLoop.ts` | Inter-agent Q&A loop (max 6 rounds, configurable) |
+| Clarification Router | `vscode-extension/src/utils/clarificationRouter.ts` | Hub-routed protocol, ledger persistence, scope validation |
+| Clarification Types | `vscode-extension/src/utils/clarificationTypes.ts` | Shared types: ClarificationRecord, ClarificationLedger |
+| Clarification Monitor | `vscode-extension/src/utils/clarificationMonitor.ts` | Watches for pending requests, triggers notifications |
+| Clarification Renderer | `vscode-extension/src/utils/clarificationRenderer.ts` | Renders clarification threads in VS Code UI |
+
+**Trigger**: Agent calls `request_clarification` tool -> Router validates scope via TOML `can_clarify` -> spawns target agent as sub-agent -> manages back-and-forth -> auto-escalates to human if unresolved.
+
+### Self-Review Loop
+
+After completing work, every agent spawns a same-role sub-agent to review its output.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Self-Review Loop | `vscode-extension/src/agentic/selfReviewLoop.ts` | Spawns reviewer sub-agent, iterates until approved (max 15) |
+| Sub-Agent Spawner | `vscode-extension/src/agentic/subAgentSpawner.ts` | Generalized sub-agent creation (parallel, race, quorum) |
+
+**Trigger**: Agent completes its primary work -> self-review loop runs automatically -> reviewer sub-agent produces structured findings (high/medium/low) -> agent addresses non-low findings -> loop approves or hits max iterations.
+
+### Handoff & Status Transitions
+
+Handoffs are status-driven. Each status change triggers the next agent in the pipeline.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Loop State Checker | `vscode-extension/src/utils/loopStateChecker.ts` | Validates quality loop completion before handoff |
+| Boundary Hook | `vscode-extension/src/agentic/boundaryHook.ts` | Enforces canModify/cannotModify per agent role |
+| Handoff Validator | `.github/scripts/validate-handoff.sh` | Pre-handoff artifact validation (PRD, ADR, code, tests) |
+| CLI State Command | `.agentx/agentx.ps1 state` | Read/write agent state for issue tracking |
+
+**Trigger**: Agent completes work -> self-review passes -> validation script runs -> status moves (e.g., `In Progress` -> `In Review`) -> next agent picks up from backlog.
+
+### Memory & Compaction
+
+Agent memory persists observations across sessions. Context compaction prevents token overflow during long conversations.
+
+**Memory Pipeline** (observations extracted from compaction summaries):
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Observation Types | `vscode-extension/src/memory/types.ts` | Core types: Observation, ObservationCategory, IObservationStore |
+| Observation Extractor | `vscode-extension/src/memory/observationExtractor.ts` | Extracts structured observations from compaction summaries |
+| JSON Observation Store | `vscode-extension/src/memory/observationStore.ts` | File-based observation persistence (per-issue JSON files) |
+| Git Observation Store | `vscode-extension/src/memory/gitObservationStore.ts` | Git-tracked observation persistence (survives branch switches) |
+| Persistent Store | `vscode-extension/src/memory/persistentStore.ts` | JSONL cross-session memory with TTL + tag-based lookup |
+| Memory Module | `vscode-extension/src/memory/index.ts` | Public API barrel file |
+
+**Context Compaction** (conversation pruning to stay within token limits):
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Context Compactor | `vscode-extension/src/utils/contextCompactor.ts` | Token limit detection, bounded message pruning (max 200) |
+| Session State | `vscode-extension/src/agentic/sessionState.ts` | Conversation history persistence + token counting |
+
+**Trigger**: Agentic loop calls `pruneMessages()` when conversation approaches token limit -> compactor summarizes older messages -> `ObservationExtractor` pulls key facts (decisions, code changes, errors) -> observations persist to `.agentx/memory/` -> available in future sessions via `IObservationStore.query()`.
+
+**Observation categories**: `decision`, `code-change`, `error`, `key-fact`, `compaction-summary`.
+
+### Tool Execution & Safety
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Tool Engine | `vscode-extension/src/agentic/toolEngine.ts` | Tool registry, JSON schema validation, execute dispatch |
+| Parallel Executor | `vscode-extension/src/agentic/parallelToolExecutor.ts` | Dependency-aware concurrent tool execution |
+| Loop Detection | `vscode-extension/src/agentic/toolLoopDetection.ts` | Detects stuck cycles (repeat, ping-pong, poll) via SHA-256 |
+| Command Validator | `vscode-extension/src/utils/commandValidator.ts` | Blocks dangerous commands (`rm -rf /`, `drop database`) |
+| Path Sandbox | `vscode-extension/src/utils/pathSandbox.ts` | Prevents path traversal outside workspace |
+| Secret Redactor | `vscode-extension/src/utils/secretRedactor.ts` | Strips secrets from tool output before LLM sees it |
+| SSRF Validator | `vscode-extension/src/utils/ssrfValidator.ts` | Validates URLs in tool parameters |
+
+### Supporting Infrastructure
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Event Bus | `vscode-extension/src/utils/eventBus.ts` | Typed pub-sub for agent activity (started, completed, error) |
+| Progress Tracker | `vscode-extension/src/agentic/progressTracker.ts` | Dual-ledger (TaskLedger + ProgressLedger) with stall detection |
+| Hook Priority | `vscode-extension/src/agentic/hookPriority.ts` | Priority-ordered hook execution (lower = earlier) |
+| Prompting Modes | `vscode-extension/src/agentic/promptingModes.ts` | write/refactor/test/docs mode switching for Engineer |
+| Codebase Analysis | `vscode-extension/src/agentic/codebaseAnalysis.ts` | analyze_codebase, find_dependencies, map_architecture tools |
+| Task Scheduler | `vscode-extension/src/utils/taskScheduler.ts` | Cron-based task automation |
+| Thinking Log | `vscode-extension/src/utils/thinkingLog.ts` | Structured reasoning trace |
+| Channel Router | `vscode-extension/src/utils/channelRouter.ts` | Output channel abstraction |
+| Structured Logger | `vscode-extension/src/utils/structuredLogger.ts` | JSON-structured logging |
+
+---
+
 ## Classification
 
 | Type | Role | Deliverable |

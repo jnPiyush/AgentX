@@ -13,7 +13,9 @@ interface SettingDef {
   /** Tooltip / description. */
   readonly tooltip: string;
   /** Default value (must match package.json). */
-  readonly defaultValue: number;
+  readonly defaultValue: number | boolean;
+  /** Value type for rendering and editing. Default: 'number'. */
+  readonly type?: 'number' | 'boolean';
 }
 
 interface SettingGroup {
@@ -42,6 +44,31 @@ const SETTING_GROUPS: readonly SettingGroup[] = [
     ],
   },
   {
+    label: 'Context Management',
+    icon: 'archive',
+    settings: [
+      {
+        key: 'agentx.context.autoCompact',
+        label: 'Auto Compact',
+        tooltip: 'Automatically compact context when approaching token limits',
+        defaultValue: true,
+        type: 'boolean',
+      },
+      {
+        key: 'agentx.context.maxMessages',
+        label: 'Max Messages',
+        tooltip: 'Maximum conversation messages before pruning oldest non-system messages',
+        defaultValue: 200,
+      },
+      {
+        key: 'agentx.context.compactKeepRecent',
+        label: 'Keep Recent Messages',
+        tooltip: 'Number of recent messages to preserve during compaction',
+        defaultValue: 10,
+      },
+    ],
+  },
+  {
     label: 'Self-Review',
     icon: 'checklist',
     settings: [
@@ -56,6 +83,12 @@ const SETTING_GROUPS: readonly SettingGroup[] = [
         label: 'Reviewer Max Iterations',
         tooltip: 'Maximum internal iterations for the reviewer sub-agent',
         defaultValue: 8,
+      },
+      {
+        key: 'agentx.selfReview.reviewerTokenBudget',
+        label: 'Reviewer Token Budget',
+        tooltip: 'Token budget for the reviewer sub-agent during self-review',
+        defaultValue: 30_000,
       },
     ],
   },
@@ -74,6 +107,36 @@ const SETTING_GROUPS: readonly SettingGroup[] = [
         label: 'Responder Max Iterations',
         tooltip: 'Maximum internal iterations for the responding sub-agent',
         defaultValue: 5,
+      },
+      {
+        key: 'agentx.clarification.responderTokenBudget',
+        label: 'Responder Token Budget',
+        tooltip: 'Token budget for the responding sub-agent during clarification',
+        defaultValue: 20_000,
+      },
+    ],
+  },
+  {
+    label: 'Loop Detection',
+    icon: 'debug-disconnect',
+    settings: [
+      {
+        key: 'agentx.loopDetection.warningThreshold',
+        label: 'Warning Threshold',
+        tooltip: 'Consecutive identical tool calls before issuing a warning',
+        defaultValue: 10,
+      },
+      {
+        key: 'agentx.loopDetection.circuitBreakerThreshold',
+        label: 'Circuit Breaker',
+        tooltip: 'Total repeated tool calls before hard-stopping the loop',
+        defaultValue: 30,
+      },
+      {
+        key: 'agentx.loopDetection.windowSize',
+        label: 'Window Size',
+        tooltip: 'Sliding window of recent tool calls to analyze for loop patterns',
+        defaultValue: 30,
       },
     ],
   },
@@ -94,11 +157,18 @@ class SettingGroupItem extends vscode.TreeItem {
 }
 
 class SettingValueItem extends vscode.TreeItem {
-  constructor(readonly def: SettingDef, currentValue: number) {
+  constructor(readonly def: SettingDef, currentValue: number | boolean) {
     super(def.label, vscode.TreeItemCollapsibleState.None);
-    this.description = String(currentValue);
-    this.tooltip = `${def.tooltip} (default: ${def.defaultValue})`;
-    this.iconPath = new vscode.ThemeIcon('symbol-number');
+    const isBool = def.type === 'boolean';
+    this.description = isBool
+      ? (currentValue ? 'Enabled' : 'Disabled')
+      : String(currentValue);
+    this.tooltip = isBool
+      ? `${def.tooltip} (default: ${def.defaultValue ? 'Enabled' : 'Disabled'})`
+      : `${def.tooltip} (default: ${def.defaultValue})`;
+    this.iconPath = new vscode.ThemeIcon(
+      isBool ? (currentValue ? 'pass' : 'circle-slash') : 'symbol-number',
+    );
     this.contextValue = 'settingValue';
     this.command = {
       command: 'agentx.editSetting',
@@ -147,12 +217,15 @@ export class SettingsTreeProvider implements vscode.TreeDataProvider<SettingsNod
   // Helpers
   // -----------------------------------------------------------------------
 
-  private readSetting(def: SettingDef): number {
+  private readSetting(def: SettingDef): number | boolean {
     // Split "agentx.loop.maxIterations" -> section "agentx.loop", key "maxIterations"
     const lastDot = def.key.lastIndexOf('.');
     const section = def.key.slice(0, lastDot);
     const key = def.key.slice(lastDot + 1);
-    return vscode.workspace.getConfiguration(section).get<number>(key, def.defaultValue);
+    if (def.type === 'boolean') {
+      return vscode.workspace.getConfiguration(section).get<boolean>(key, def.defaultValue as boolean);
+    }
+    return vscode.workspace.getConfiguration(section).get<number>(key, def.defaultValue as number);
   }
 }
 
@@ -175,7 +248,27 @@ export function registerEditSettingCommand(
       const lastDot = def.key.lastIndexOf('.');
       const section = def.key.slice(0, lastDot);
       const key = def.key.slice(lastDot + 1);
-      const current = vscode.workspace.getConfiguration(section).get<number>(key, def.defaultValue);
+
+      // Boolean setting -- quick pick toggle
+      if (def.type === 'boolean') {
+        const current = vscode.workspace.getConfiguration(section).get<boolean>(key, def.defaultValue as boolean);
+        const items: vscode.QuickPickItem[] = [
+          { label: 'Enabled', description: current ? '(current)' : '' },
+          { label: 'Disabled', description: !current ? '(current)' : '' },
+        ];
+        const pick = await vscode.window.showQuickPick(items, {
+          title: def.label,
+          placeHolder: def.tooltip,
+        });
+        if (!pick) { return; }
+        const newValue = pick.label === 'Enabled';
+        await vscode.workspace.getConfiguration(section).update(key, newValue, vscode.ConfigurationTarget.Workspace);
+        provider.refresh();
+        return;
+      }
+
+      // Numeric setting -- input box
+      const current = vscode.workspace.getConfiguration(section).get<number>(key, def.defaultValue as number);
 
       const input = await vscode.window.showInputBox({
         title: `${def.label}`,
