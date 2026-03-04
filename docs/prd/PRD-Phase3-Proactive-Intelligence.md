@@ -137,6 +137,20 @@ Build on the session recorder from Phase 1 to enable seamless session resumption
 - Include relevant outcome lessons and linked observations
 - No manual `/resume` command needed -- context loads automatically
 
+### Feature 6: Global Knowledge Base
+
+**Priority**: P1
+
+Promote high-value observations and outcomes from workspace-scoped memory to a user-level global knowledge base at `~/.agentx/knowledge/`. This enables cross-project learning -- a pattern discovered in Project A automatically surfaces when relevant in Project B.
+
+- **Knowledge Store**: Global directory at `~/.agentx/knowledge/` with pattern files (`GK-{id}.json`) and a global manifest
+- **Promotion Criteria**: Observations referenced >= 3 times (high recallCount), outcomes with `pass` result that contain reusable lessons, or manually promoted by the user
+- **Auto-Promotion**: Background engine periodically scans workspace memory for promotion candidates and copies them to global store with source attribution
+- **Global Search**: When querying observations for prompt injection, search global knowledge base as a fallback after workspace-local search returns < 3 results
+- **Knowledge Categories**: `pattern` (reusable code/architecture patterns), `pitfall` (common mistakes to avoid), `convention` (project conventions that may apply elsewhere), `insight` (cross-cutting lessons)
+- **Deduplication**: Before promoting, check global store for similar entries (Jaccard similarity >= 0.8) to prevent bloat
+- **Dashboard Integration**: Add a "Global Knowledge" section to the MCP App Dashboard showing promoted entries, source projects, and usage frequency
+
 ---
 
 ## 4. User Stories
@@ -180,6 +194,15 @@ Build on the session recorder from Phase 1 to enable seamless session resumption
 |----|-------|---------------------|
 | US-3.14 | As a developer, I want session context to auto-load when I return to an issue so I can resume without re-reading code | When a chat session starts for an issue that has prior sessions, the last session summary is injected as context automatically |
 | US-3.15 | As a developer, I want the resume context to include relevant outcomes so I know what worked and what did not | Resume context includes top 3 relevant outcomes from the same issue and any linked issues |
+
+### Global Knowledge Base
+
+| ID | Story | Acceptance Criteria |
+|----|-------|---------------------|
+| US-3.16 | As a developer working on multiple projects, I want lessons learned in one project to surface when relevant in another so I do not repeat the same mistakes | When workspace-local search returns < 3 results, global knowledge base is searched; matching entries appear in prompt with `[Global]` prefix and source project |
+| US-3.17 | As a developer, I want high-value observations to be automatically promoted to global knowledge so I do not have to manually curate | Background engine promotes observations with recallCount >= 3 and outcomes with reusable lessons; deduplication prevents bloat |
+| US-3.18 | As a developer, I want to manually promote an observation to global knowledge so I can curate what is shared | `agentx.promoteToGlobal` command accepts an observation ID and copies it to `~/.agentx/knowledge/` with metadata |
+| US-3.19 | As a developer, I want to see my global knowledge entries in the dashboard so I can review and manage cross-project knowledge | Dashboard "Global Knowledge" section shows entries with source project, category, usage count, and a "Remove" action |
 
 ---
 
@@ -274,6 +297,11 @@ AgentX: Pattern detected -- 3 of 5 auth-related issues failed on token validatio
 | FR-3.12 | Observation linking MUST store bidirectional links in a synapse manifest | P1 |
 | FR-3.13 | Cross-session continuity MUST auto-inject last session context when returning to an issue | P1 |
 | FR-3.14 | Cross-session continuity MUST include relevant outcomes in resume context | P1 |
+| FR-3.15 | Global knowledge base MUST store promoted entries at `~/.agentx/knowledge/` with global manifest | P1 |
+| FR-3.16 | Global knowledge base MUST auto-promote observations with recallCount >= 3 via background engine | P1 |
+| FR-3.17 | Global knowledge base MUST deduplicate before promotion (Jaccard similarity >= 0.8) | P1 |
+| FR-3.18 | Global knowledge base MUST be searched as fallback when workspace-local results < 3 | P1 |
+| FR-3.19 | Global knowledge base MUST provide manual promotion via `agentx.promoteToGlobal` command | P1 |
 
 ### Non-Functional Requirements
 
@@ -285,6 +313,8 @@ AgentX: Pattern detected -- 3 of 5 auth-related issues failed on token validatio
 | NFR-3.4 | Background engine MUST consume < 5% CPU when idle | P0 |
 | NFR-3.5 | All new modules MUST have >= 80% test coverage | P0 |
 | NFR-3.6 | Observation linking similarity computation MUST complete in < 1 second per observation | P1 |
+| NFR-3.7 | Global knowledge base search MUST complete in < 500ms | P1 |
+| NFR-3.8 | Global knowledge store MUST remain < 10 MB (auto-prune oldest low-usage entries) | P1 |
 
 ---
 
@@ -299,6 +329,8 @@ AgentX: Pattern detected -- 3 of 5 auth-related issues failed on token validatio
 | Background engine resource consumption | Medium | Low | Configurable scan intervals, CPU throttle, opt-out setting |
 | Observation linking false positives | Medium | Medium | High similarity threshold (>= 0.7), user feedback loop |
 | MCP server security (unauthorized access) | High | Low | Localhost-only by default, optional auth token for SSE mode |
+| Global knowledge store bloat | Medium | Medium | Deduplication on promotion, 10 MB cap, usage-based pruning |
+| Global knowledge cross-contamination | Medium | Low | Source project attribution, category tagging, manual removal |
 
 ### Dependencies
 
@@ -324,7 +356,8 @@ AgentX: Pattern detected -- 3 of 5 auth-related issues failed on token validatio
 | Sprint 3 | Dashboard scaffold | React app, Vite config, MCP App registration, agent status + ready queue sections |
 | Sprint 4 | Dashboard completion | Outcome trends, session timeline, memory health sections, theme integration |
 | Sprint 5 | Observation linking | `synapseNetwork.ts`, similarity computation, synapse manifest, prompt injection |
-| Sprint 6 | Cross-session + polish | Auto-resume, integration testing, performance testing, documentation |
+| Sprint 6 | Cross-session continuity | Auto-resume, session context injection, outcome inclusion |
+| Sprint 7 | Global Knowledge Base | `globalKnowledgeStore.ts`, promotion engine, global search fallback, dashboard section, manual promote command |
 
 ### Milestones
 
@@ -332,7 +365,8 @@ AgentX: Pattern detected -- 3 of 5 auth-related issues failed on token validatio
 |-----------|--------|----------|
 | v7.6.0-alpha | End Sprint 2 | Background engine + MCP server working, tests pass |
 | v7.6.0-beta | End Sprint 4 | Dashboard functional, all P0 features implemented |
-| v7.6.0 | End Sprint 6 | All features complete, >= 80% coverage, docs updated |
+| v7.6.0-rc | End Sprint 6 | Cross-session continuity complete, P1 features in progress |
+| v7.6.0 | End Sprint 7 | All features complete including Global Knowledge Base, >= 80% coverage, docs updated |
 
 ---
 
@@ -345,6 +379,8 @@ AgentX: Pattern detected -- 3 of 5 auth-related issues failed on token validatio
 | 3 | What similarity algorithm for observation linking? (TF-IDF, Jaccard, embedding-based?) | Data Scientist | Open |
 | 4 | Should background intelligence be opt-in or opt-out by default? | PM | Open -- recommend opt-out (on by default) |
 | 5 | Should the MCP App Dashboard be a separate package or bundled in the VS Code extension? | Architect | Open -- recommend bundled |
+| 6 | Should the global knowledge base support team sharing (e.g., git-backed `~/.agentx/knowledge/`)? | Architect | Open -- recommend single-user first, team sharing in future phase |
+| 7 | Should global knowledge entries have a TTL or usage-based expiry? | PM | Open -- recommend usage-based (prune entries not recalled in 90 days) |
 
 ---
 

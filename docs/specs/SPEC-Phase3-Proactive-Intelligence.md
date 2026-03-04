@@ -369,6 +369,51 @@ export const MAX_LINKS_PER_OBSERVATION = 10;
 export const MAX_CROSS_ISSUE_CONTEXT_TOKENS = 300;
 ```
 
+### 3.5 Global Knowledge Types
+
+```typescript
+// vscode-extension/src/memory/globalKnowledgeTypes.ts
+
+export type KnowledgeCategory = 'pattern' | 'pitfall' | 'convention' | 'insight';
+
+export interface KnowledgeEntry {
+  readonly id: string;                    // GK-{shortHash}
+  readonly category: KnowledgeCategory;
+  readonly title: string;                 // Short title (< 100 chars)
+  readonly content: string;               // Full knowledge text (< 500 chars)
+  readonly sourceProject: string;         // Workspace folder name
+  readonly sourceIssue: number | null;    // Original issue number
+  readonly sourceObservationId: string | null;  // Original observation ID
+  readonly promotedAt: string;            // ISO-8601
+  readonly promotionType: 'auto' | 'manual';
+  readonly usageCount: number;            // Times recalled in prompt injection
+  readonly lastUsedAt: string | null;     // ISO-8601
+  readonly labels: string[];              // Inherited from source observation
+}
+
+export interface KnowledgeIndex {
+  readonly id: string;
+  readonly category: KnowledgeCategory;
+  readonly title: string;
+  readonly sourceProject: string;
+  readonly labels: string[];
+  readonly usageCount: number;
+  readonly promotedAt: string;
+}
+
+export interface GlobalKnowledgeManifest {
+  readonly version: 1;
+  updatedAt: string;
+  entries: KnowledgeIndex[];
+}
+
+export const GLOBAL_KNOWLEDGE_DIR = '~/.agentx/knowledge';
+export const PROMOTION_RECALL_THRESHOLD = 3;    // recallCount >= 3 triggers auto-promote
+export const DEDUP_SIMILARITY_THRESHOLD = 0.80;  // Skip if existing entry >= 0.80 similar
+export const MAX_GLOBAL_STORE_BYTES = 10_485_760; // 10 MB cap
+export const PRUNE_UNUSED_AFTER_DAYS = 90;       // Remove if not used in 90 days
+```
+
 ### 3.5 File Layout (Phase 3 Additions)
 
 ```
@@ -413,6 +458,7 @@ vscode-extension/src/
       SessionTimeline.tsx
       MemoryHealthPanel.tsx
       WorkflowProgress.tsx
+      GlobalKnowledgePanel.tsx
     hooks/
       useDashboardData.ts
       useAutoRefresh.ts
@@ -425,6 +471,18 @@ vscode-extension/src/
   memory/
     synapseNetwork.ts                      # NEW: Observation linking
     synapseTypes.ts                        # NEW
+    globalKnowledgeStore.ts                # NEW: Global knowledge base
+    globalKnowledgeTypes.ts                # NEW
+```
+
+**Global Knowledge File Layout:**
+
+```
+~/.agentx/
+  knowledge/
+    global-manifest.json                   # Global knowledge index
+    GK-{id}.json                           # Individual knowledge entries
+    .stats.json                            # Usage statistics
 ```
 
 ---
@@ -510,6 +568,83 @@ similarity(a, b) = 0.4 * jaccard(a.labels, b.labels)
 ```
 
 Where `jaccard(A, B) = |A intersection B| / |A union B|` and `keywords()` extracts significant words (>= 4 chars, not in stop list).
+
+### 4.3 Global Knowledge Store (`memory/globalKnowledgeStore.ts`)
+
+**Responsibilities:**
+- Manage the user-level global knowledge base at `~/.agentx/knowledge/`
+- Support auto-promotion from background engine and manual promotion via command
+- Provide search/recall for prompt injection (fallback after workspace-local search)
+- Enforce deduplication, size cap, and usage-based pruning
+
+**Public API:**
+
+```typescript
+export interface IGlobalKnowledgeStore {
+  /** Promote an observation or outcome to global knowledge. */
+  promote(entry: Omit<KnowledgeEntry, 'id' | 'promotedAt' | 'usageCount' | 'lastUsedAt'>): Promise<KnowledgeEntry | null>;
+
+  /** Search global knowledge by keyword and/or labels. Returns newest first. */
+  search(query: string, labels?: string[], limit?: number): Promise<KnowledgeIndex[]>;
+
+  /** Get full knowledge entry by ID. */
+  getById(id: string): Promise<KnowledgeEntry | null>;
+
+  /** Increment usage count (called when entry used in prompt injection). */
+  recordUsage(id: string): Promise<void>;
+
+  /** List all entries, optionally filtered by category. */
+  list(category?: KnowledgeCategory, limit?: number): Promise<KnowledgeIndex[]>;
+
+  /** Remove a knowledge entry. */
+  remove(id: string): Promise<boolean>;
+
+  /** Prune entries unused for > PRUNE_UNUSED_AFTER_DAYS. Returns count removed. */
+  prune(): Promise<number>;
+
+  /** Get store statistics. */
+  getStats(): Promise<{ total: number; byCategory: Record<KnowledgeCategory, number>; sizeBytes: number }>;
+
+  /** Format global knowledge for prompt injection (< 500 tokens). */
+  formatForPrompt(query: string, labels?: string[]): Promise<string>;
+}
+```
+
+**Implementation Notes:**
+- Store path resolved via `os.homedir()` + `/.agentx/knowledge/`
+- Directory auto-created on first write if missing
+- Manifest loaded into memory on first access, cached with 60s TTL
+- `promote()` checks deduplication before writing: computes Jaccard similarity of title + content keywords against existing entries; if >= `DEDUP_SIMILARITY_THRESHOLD` (0.80), returns `null` (skipped)
+- `promote()` checks total store size; if >= `MAX_GLOBAL_STORE_BYTES`, prunes lowest-usage entries first
+- `formatForPrompt()` returns a block like:
+  ```
+  ## Global Knowledge (Cross-Project)
+  - [Pattern] From project-alpha: Cache invalidation requires versioned keys (used 12 times)
+  - [Pitfall] From project-beta: JWT refresh tokens must be rotated on each use (used 8 times)
+  ```
+
+**Auto-Promotion Flow (via Background Engine):**
+
+```mermaid
+sequenceDiagram
+    participant BE as Background Engine
+    participant OS as Observation Store
+    participant GK as Global Knowledge Store
+    participant FS as File System (~/.agentx/knowledge/)
+
+    BE->>OS: getPromotionCandidates(recallCount >= 3)
+    OS-->>BE: candidate observations
+    loop Each candidate
+        BE->>GK: promote(candidate)
+        GK->>GK: checkDedup(candidate)
+        alt Not duplicate
+            GK->>FS: Write GK-{id}.json
+            GK->>FS: Update global-manifest.json
+        else Duplicate found
+            GK-->>BE: null (skipped)
+        end
+    end
+```
 
 ---
 
@@ -605,7 +740,7 @@ export function createAgentXMcpServer(context: AgentXContext): Server {
     "type": "object",
     "properties": {
       "query": { "type": "string" },
-      "store": { "type": "string", "enum": ["observations", "outcomes", "sessions", "all"] },
+      "store": { "type": "string", "enum": ["observations", "outcomes", "sessions", "knowledge", "all"] },
       "limit": { "type": "number", "default": 10 }
     },
     "required": ["query"]
@@ -622,6 +757,7 @@ export function createAgentXMcpServer(context: AgentXContext): Server {
 | `agentx://memory/outcomes` | Outcome statistics + recent entries | `{ stats, recent: OutcomeIndex[] }` |
 | `agentx://memory/sessions` | Session history (last 50) | `SessionIndex[]` |
 | `agentx://memory/health` | Latest health report | `HealthReport` |
+| `agentx://memory/knowledge` | Global knowledge base entries + stats | `{ stats, entries: KnowledgeIndex[] }` |
 | `agentx://config` | Current AgentX configuration | `AgentXConfig` |
 
 Each resource returns JSON with `mimeType: 'application/json'`.
@@ -651,7 +787,7 @@ registerAppTool(server, 'agentx_dashboard', {
   params: {
     type: 'object',
     properties: {
-      view: { type: 'string', enum: ['overview', 'outcomes', 'sessions', 'health'] }
+      view: { type: 'string', enum: ['overview', 'outcomes', 'sessions', 'health', 'knowledge'] }
     }
   }
 });
@@ -689,6 +825,10 @@ DashboardApp (root)
   |   |-- WorkflowProgress
   |       |-- WorkflowCard (per active workflow)
   |       |-- StepIndicator (current step highlighted)
+  |   |-- GlobalKnowledgePanel
+  |       |-- KnowledgeRow (per entry)
+  |       |-- CategoryBadge (pattern/pitfall/convention/insight)
+  |       |-- StatsBar (total, size, category breakdown)
   |-- Footer (version, docs link)
 ```
 
@@ -870,6 +1010,25 @@ interface HealthPanelProps {
 - Repair button triggers `agentx_memory_health --fix` via tool call
 - Shows last scan timestamp
 
+#### GlobalKnowledgePanel
+
+```typescript
+interface GlobalKnowledgePanelProps {
+  entries: KnowledgeIndex[];
+  stats: { total: number; byCategory: Record<KnowledgeCategory, number>; sizeBytes: number };
+  onRemove: (id: string) => void;
+}
+
+// Category badges: pattern=blue, pitfall=red, convention=green, insight=purple
+// Columns: Category | Title | Source Project | Usage Count | Promoted
+// Actions: [Remove] per entry
+// Stats bar: Total entries | Size | Category breakdown
+```
+
+- Filterable by category and source project
+- Sorted by usage count (most-used first)
+- Shows source project name for cross-project attribution
+
 ---
 
 ## 7. Integration Points
@@ -893,7 +1052,8 @@ context.subscriptions.push(mcpServer);
 context.subscriptions.push(
   vscode.commands.registerCommand('agentx.openDashboard', () => {
     // Open MCP App Dashboard
-  })
+  }),
+  vscode.commands.registerCommand('agentx.promoteToGlobal', promoteToGlobalHandler),
 );
 ```
 
@@ -982,6 +1142,8 @@ export type { AgentXMcpConfig, ReadyQueueItem, AgentStateItem } from './mcpTypes
 // vscode-extension/src/memory/index.ts (additions)
 export { SynapseNetwork } from './synapseNetwork';
 export type { SynapseLink, SynapseManifest } from './synapseTypes';
+export { GlobalKnowledgeStore } from './globalKnowledgeStore';
+export type { KnowledgeEntry, KnowledgeIndex, GlobalKnowledgeManifest } from './globalKnowledgeTypes';
 ```
 
 ---
@@ -998,6 +1160,9 @@ export type { SynapseLink, SynapseManifest } from './synapseTypes';
 | Dashboard bundle size | < 500 KB | Tree-shaking, no heavy chart libraries |
 | Synapse similarity computation | < 1s per observation | Precomputed keyword sets, cached labels |
 | Synapse manifest load | < 100ms | In-memory cache with 60s TTL |
+| Global knowledge search | < 500ms | In-memory manifest cache, keyword index |
+| Global knowledge promotion | < 200ms per entry | Async write, dedup check against cached manifest |
+| Global knowledge store size | < 10 MB | Usage-based pruning, 90-day unused expiry |
 
 ---
 
@@ -1015,6 +1180,7 @@ export type { SynapseLink, SynapseManifest } from './synapseTypes';
 | Tool handlers | `test/mcp/tools/*.test.ts` | Input validation, response format, error handling |
 | Resource handlers | `test/mcp/resources/*.test.ts` | Data format, empty state, large data sets |
 | `synapseNetwork.ts` | `test/memory/synapseNetwork.test.ts` | similarity computation, link creation, threshold, prune |
+| `globalKnowledgeStore.ts` | `test/memory/globalKnowledgeStore.test.ts` | promote, search, dedup, prune unused, size cap, manual promote |
 | Dashboard components | `test/dashboard/*.test.ts` | Render, data binding, theme integration, empty states |
 
 ### 9.2 Integration Tests
@@ -1076,13 +1242,26 @@ export type { SynapseLink, SynapseManifest } from './synapseTypes';
 4. Implement cross-issue context for prompt injection
 5. Unit tests (>= 80%)
 
-### Sprint 6: Cross-Session + Polish (v7.6.0)
+### Sprint 6: Cross-Session Continuity (v7.6.0-rc.2)
 
 1. Implement auto-resume in agentic loop
-2. Full integration testing
-3. Performance testing and optimization
-4. Documentation (AGENTS.md, Skills.md updates)
-5. Version stamp and VSIX build
+2. Session context injection on issue re-entry
+3. Integration testing for Sprints 1-6
+4. Performance testing and optimization
+
+### Sprint 7: Global Knowledge Base (v7.6.0)
+
+1. Create `memory/globalKnowledgeTypes.ts`
+2. Implement `globalKnowledgeStore.ts` with read/write/search/promote API
+3. Implement promotion engine in background engine (auto-promote detector)
+4. Implement global search fallback in observation query pipeline
+5. Register `agentx.promoteToGlobal` command
+6. Add Global Knowledge section to MCP App Dashboard
+7. Add `agentx://memory/knowledge` MCP resource
+8. Unit tests (>= 80%)
+9. Full integration + performance testing
+10. Documentation (AGENTS.md, Skills.md updates)
+11. Version stamp and VSIX build
 
 ---
 
@@ -1096,6 +1275,8 @@ export type { SynapseLink, SynapseManifest } from './synapseTypes';
 | Synapse false positive links | Medium | Medium | Conservative threshold (0.70), user feedback mechanism, manual unlink |
 | MCP server security (SSE mode) | High | Low | Localhost-only default, auth token required, rate limiting |
 | Phase 1 not delivered yet | High | Low | Phase 3 design is modular; can proceed with MCP server and dashboard independently |
+| Global knowledge store bloat | Medium | Medium | 10 MB cap, dedup on promotion, 90-day usage-based pruning |
+| Cross-project knowledge contamination | Medium | Low | Source project attribution, category tagging, manual removal command |
 
 ---
 

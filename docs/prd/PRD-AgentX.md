@@ -602,10 +602,11 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 ### Phase 10: Knowledge Evolution (v7.5.0) [PLANNED]
 **Goal**: Evolve observations into shared knowledge with expertise tracking
 **Deliverables**:
-- Global Knowledge Base (cross-issue pattern promotion)
 - Agent Expertise Model (per-agent performance profiles)
 - Model-Task Mapping (learned model preferences)
-- Knowledge promotion workflow (observation -> knowledge)
+- Knowledge promotion workflow enhancements (team sharing, git-backed global store)
+
+> **Note**: Global Knowledge Base moved to Phase 11 (v7.6.0) for tighter integration with MCP Dashboard and Background Engine.
 
 ### Phase 11: Proactive Intelligence & MCP Dashboard (v7.6.0) [PLANNED]
 **Goal**: Transform AgentX from reactive orchestrator to proactive intelligence platform with rich UI
@@ -617,6 +618,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 - MCP App Dashboard (interactive React UI in VS Code via MCP Apps framework)
 - Synapse Network (cross-issue observation linking)
 - Cross-Session Continuity (auto-resume with outcome context)
+- Global Knowledge Base (`~/.agentx/knowledge/`) -- cross-project learning with auto-promotion, global search fallback, and dashboard integration
 
 ### Phase 12: Growth & Ecosystem [PLANNED]
 **Goal**: Community growth, marketplace, and enterprise features
