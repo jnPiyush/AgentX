@@ -26,7 +26,7 @@ function makeHealthyReport(): depChecker.EnvironmentReport {
     results: [
       { name: 'Git', found: true, version: '2.43.0', severity: 'required', message: 'Git 2.43.0 detected.' },
       { name: 'PowerShell', found: true, version: '7.4.1', severity: 'required', message: 'PowerShell 7.4.1 detected.' },
-      { name: 'Node.js', found: true, version: '20.11.0', severity: 'required', message: 'Node.js 20.11.0 detected.' },
+      { name: 'Node.js', found: true, version: '20.11.0', severity: 'optional', message: 'Node.js 20.11.0 detected.' },
       { name: 'GitHub CLI (gh)', found: false, version: '', severity: 'optional', message: 'GitHub CLI not installed.' },
     ],
     healthy: true,
@@ -43,7 +43,7 @@ function makeUnhealthyReport(
   const allDeps: depChecker.DependencyResult[] = [
     { name: 'Git', found: true, version: '2.43.0', severity: 'required', message: 'Git 2.43.0 detected.', fixCommand: 'winget install Git.Git', fixUrl: 'https://git-scm.com/downloads' },
     { name: 'PowerShell', found: true, version: '7.4.1', severity: 'required', message: 'PowerShell 7.4.1 detected.', fixCommand: 'winget install Microsoft.PowerShell', fixUrl: 'https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell' },
-    { name: 'Node.js', found: true, version: '20.11.0', severity: 'required', message: 'Node.js 20.11.0 detected.', fixCommand: 'winget install OpenJS.NodeJS.LTS', fixUrl: 'https://nodejs.org/' },
+    { name: 'Node.js', found: true, version: '20.11.0', severity: 'optional', message: 'Node.js 20.11.0 detected.', fixUrl: 'https://nodejs.org/' },
     { name: 'GitHub CLI (gh)', found: true, version: '2.40.0', severity: 'optional', message: 'GitHub CLI 2.40.0 detected.', fixCommand: 'winget install GitHub.cli' },
   ];
 
@@ -163,7 +163,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
   //   passes -> returned passed=true
   // ---------------------------------------------------------------
   it('should return passed=true after successful re-check', async () => {
-    const unhealthy = makeUnhealthyReport(['Node.js']);
+    const unhealthy = makeUnhealthyReport(['Git']);
     const healthy = makeHealthyReport();
 
     // First call: unhealthy. Second call (poll): healthy.
@@ -268,7 +268,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
     const clock = sinon.useFakeTimers({ toFake: ['setTimeout'] });
 
     try {
-      const unhealthyReport = makeUnhealthyReport(['Git', 'Node.js']);
+      const unhealthyReport = makeUnhealthyReport(['Git', 'PowerShell']);
       const healthyReport = makeHealthyReport();
 
       checkAllStub.onFirstCall().resolves(unhealthyReport);
@@ -303,7 +303,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
       );
       assert.ok(
         terminalSendTextSpy.getCalls().some(
-          (c: sinon.SinonSpyCall) => String(c.args[0]).includes('Installing Node.js')
+          (c: sinon.SinonSpyCall) => String(c.args[0]).includes('Installing PowerShell')
         ),
       );
       // Polling detected tools are now available -> passed
@@ -546,7 +546,7 @@ describe('setupWizard - runSilentInstall', () => {
     const clock = sinon.useFakeTimers({ toFake: ['setTimeout'] });
 
     try {
-      const unhealthyReport = makeUnhealthyReport(['Git', 'Node.js']);
+      const unhealthyReport = makeUnhealthyReport(['Git', 'PowerShell']);
       const healthyReport = makeHealthyReport();
 
       checkAllStub.onFirstCall().resolves(unhealthyReport);
@@ -571,7 +571,7 @@ describe('setupWizard - runSilentInstall', () => {
         (c: sinon.SinonSpyCall) => String(c.args[0])
       );
       assert.ok(allCmds.some(cmd => cmd.includes('Git')), 'should install Git');
-      assert.ok(allCmds.some(cmd => cmd.includes('Node')), 'should install Node.js');
+      assert.ok(allCmds.some(cmd => cmd.includes('PowerShell')), 'should install PowerShell');
       assert.strictEqual(result.passed, true);
     } finally {
       clock.restore();

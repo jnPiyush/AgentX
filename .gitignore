@@ -5,6 +5,9 @@
 *~
 .DS_Store
 
+# Binary artifacts
+*.xlsx
+
 # Claude temporary files
 tmpclaude-*
 

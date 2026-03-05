@@ -35,15 +35,15 @@ export interface ModelSelectionResult {
 
 /**
  * Default token budget when no model info is available.
- * Conservative estimate suitable for most Copilot models.
+ * Conservative estimate suitable for most models with 70% utilization already applied.
  */
-const DEFAULT_TOKEN_BUDGET = 100_000;
+const DEFAULT_TOKEN_BUDGET = 70_000;
 
 /**
  * Known context window sizes by model family prefix.
  * Used as fallback when `chatModel.maxInputTokens` is not available.
  * Values represent the full context window; callers should apply a
- * utilization ratio (e.g., 75%) to leave room for output tokens.
+ * utilization ratio (e.g., 70%) to leave room for output tokens.
  */
 const CONTEXT_WINDOW_MAP: ReadonlyArray<{
   readonly pattern: RegExp;
@@ -69,7 +69,7 @@ const CONTEXT_WINDOW_MAP: ReadonlyArray<{
  * Resolve the context window size for a model in order of preference:
  *   1. `chatModel.maxInputTokens` (VS Code LM API, most accurate)
  *   2. Family-based lookup from CONTEXT_WINDOW_MAP
- *   3. Conservative default (100K)
+ *   3. Conservative default (70K)
  *
  * @param chatModel - Resolved VS Code chat model (may expose maxInputTokens)
  * @param modelName - Human-readable model name for family-based fallback

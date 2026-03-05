@@ -16,7 +16,7 @@
 //   - Quarantine corrupt files to .archive/
 //   - Remove orphaned manifest entries
 //
-// See SPEC-Phase1-Cognitive-Foundation.md Section 4.3 for module spec.
+// See SPEC-AgentX.md (Cognitive Foundation Specification) Section 4.3 for module spec.
 // ---------------------------------------------------------------------------
 
 import * as fs from 'fs';

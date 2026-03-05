@@ -1470,6 +1470,255 @@ function Invoke-RunCmd {
 }
 
 # ---------------------------------------------------------------------------
+# LESSONS: Learning pipeline management
+# ---------------------------------------------------------------------------
+
+function Invoke-LessonsCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'list' }
+    # Shift subargs past the action for lesson subcommands
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+    
+    switch ($action) {
+        'list'    { Invoke-LessonsList }
+        'query'   { Invoke-LessonsQuery }
+        'show'    { Invoke-LessonsShow }
+        'promote' { Invoke-LessonsPromote }
+        'archive' { Invoke-LessonsArchive }
+        'stats'   { Invoke-LessonsStats }
+        'clean'   { Invoke-LessonsClean }
+        default   { Write-Host "Unknown lessons action: $action"; Invoke-LessonsHelp }
+    }
+}
+
+function Invoke-LessonsList {
+    $lessonsDir = Join-Path $Script:AGENTX_DIR 'lessons'
+    $globalLessonsDir = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)) '.agentx' 'lessons'
+    
+    $projectLessons = @()
+    $globalLessons = @()
+    
+    # Read project lessons
+    if (Test-Path $lessonsDir) {
+        foreach ($file in (Get-ChildItem $lessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue)) {
+            try {
+                $content = Get-Content $file.FullName -Encoding utf8
+                foreach ($line in $content) {
+                    if ($line.Trim()) {
+                        $lesson = $line | ConvertFrom-Json
+                        $lesson | Add-Member -NotePropertyName '__source' -NotePropertyValue 'project' -Force
+                        $projectLessons += $lesson
+                    }
+                }
+            } catch {}
+        }
+    }
+    
+    # Read global lessons (top 5 for overview)
+    if (Test-Path $globalLessonsDir) {
+        foreach ($file in (Get-ChildItem $globalLessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue | Select-Object -First 3)) {
+            try {
+                $content = Get-Content $file.FullName -Encoding utf8 | Select-Object -Last 5
+                foreach ($line in $content) {
+                    if ($line.Trim()) {
+                        $lesson = $line | ConvertFrom-Json
+                        $lesson | Add-Member -NotePropertyName '__source' -NotePropertyValue 'global' -Force
+                        $globalLessons += $lesson
+                    }
+                }
+            } catch {}
+        }
+    }
+    
+    $allLessons = @($projectLessons) + @($globalLessons)
+    
+    if ($Script:JsonOutput) {
+        $allLessons | ConvertTo-Json -Depth 5
+        return
+    }
+    
+    if ($allLessons.Count -eq 0) {
+        Write-Host "$($C.y)No lessons found. Lessons are extracted automatically from agent sessions.$($C.n)"
+        return
+    }
+    
+    Write-Host "`n$($C.c)  Lessons Learned Overview$($C.n)"
+    Write-Host "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-Host "  Project lessons: $(@($projectLessons).Count)"
+    Write-Host "  Global lessons:  $(@($globalLessons).Count) (showing sample)"
+    Write-Host ""
+    
+    # Group by category and show recent
+    $byCategory = @{}
+    foreach ($lesson in ($allLessons | Sort-Object updatedAt -Descending | Select-Object -First 10)) {
+        if (-not $byCategory[$lesson.category]) {
+            $byCategory[$lesson.category] = @()
+        }
+        $byCategory[$lesson.category] += $lesson
+    }
+    
+    foreach ($category in $byCategory.Keys) {
+        $categoryLessons = @($byCategory[$category])
+        Write-Host "$($C.w)  $($category.ToUpper()) ($($categoryLessons.Count)):$($C.n)"
+        foreach ($lesson in ($categoryLessons | Select-Object -First 3)) {
+            $source = if ($lesson.__source -eq 'project') { '' } else { ' (global)' }
+            $confidence = $lesson.confidence
+            $cc = switch ($confidence) { 'high' { $C.g } 'medium' { $C.y } 'low' { $C.d } }
+            Write-Host "    $cc[$confidence]$($C.n) $($lesson.pattern)$source"
+        }
+        Write-Host ""
+    }
+    
+    Write-Host "$($C.d)Use 'agentx lessons query' for specific searches or 'agentx lessons show <id>' for details.$($C.n)"
+}
+
+function Invoke-LessonsQuery {
+    $category = Get-Flag @('-c', '--category')
+    $confidence = Get-Flag @('--confidence')
+    $tag = Get-Flag @('-t', '--tag')
+    $pattern = Get-Flag @('-p', '--pattern')
+    $limit = [int](Get-Flag @('-l', '--limit') '10')
+    
+    if (-not $category -and -not $confidence -and -not $tag -and -not $pattern) {
+        Write-Host "`n$($C.c)  Query Lessons$($C.n)"
+        Write-Host "$($C.w)  Usage:$($C.n)"
+        Write-Host "    agentx lessons query -c error-pattern"
+        Write-Host "    agentx lessons query -t typescript --confidence high"
+        Write-Host "    agentx lessons query -p \"timeout\" -l 5"
+        Write-Host "`n$($C.w)  Categories:$($C.n)"
+        Write-Host "    error-pattern, success-pattern, tool-usage, security"
+        Write-Host "    performance, configuration, integration, workflow, testing"
+        Write-Host "`n$($C.w)  Confidence:$($C.n)"
+        Write-Host "    high, medium, low"
+        Write-Host ""
+        return
+    }
+    
+    # This would integrate with the TypeScript lesson store in a real implementation
+    Write-Host "$($C.y)Query functionality requires TypeScript lesson store integration.$($C.n)"
+    Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+}
+
+function Invoke-LessonsShow {
+    $id = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '' }
+    if (-not $id) {
+        Write-Host "Usage: agentx lessons show <lesson-id>"
+        return
+    }
+    
+    # Search for lesson by ID
+    Write-Host "$($C.y)Show lesson functionality requires TypeScript lesson store integration.$($C.n)"
+    Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+}
+
+function Invoke-LessonsPromote {
+    $id = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '' }
+    if (-not $id) {
+        Write-Host "Usage: agentx lessons promote <lesson-id>"
+        return
+    }
+    
+    Write-Host "$($C.y)Promote lesson functionality requires TypeScript lesson store integration.$($C.n)"
+    Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+}
+
+function Invoke-LessonsArchive {
+    $id = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '' }
+    if (-not $id) {
+        Write-Host "Usage: agentx lessons archive <lesson-id>"
+        return
+    }
+    
+    Write-Host "$($C.y)Archive lesson functionality requires TypeScript lesson store integration.$($C.n)"
+    Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+}
+
+function Invoke-LessonsStats {
+    $lessonsDir = Join-Path $Script:AGENTX_DIR 'lessons'
+    $globalLessonsDir = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)) '.agentx' 'lessons'
+    
+    $projectCount = 0
+    $globalCount = 0
+    
+    # Count project lessons
+    if (Test-Path $lessonsDir) {
+        foreach ($file in (Get-ChildItem $lessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue)) {
+            try {
+                $lines = @(Get-Content $file.FullName -Encoding utf8 | Where-Object { $_.Trim() })
+                $projectCount += $lines.Count
+            } catch {}
+        }
+    }
+    
+    # Count global lessons
+    if (Test-Path $globalLessonsDir) {
+        foreach ($file in (Get-ChildItem $globalLessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue)) {
+            try {
+                $lines = @(Get-Content $file.FullName -Encoding utf8 | Where-Object { $_.Trim() })
+                $globalCount += $lines.Count
+            } catch {}
+        }
+    }
+    
+    Write-Host "`n$($C.c)  Learning Pipeline Statistics$($C.n)"
+    Write-Host "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-Host "  Project lessons:     $projectCount"
+    Write-Host "  Global lessons:      $globalCount"
+    Write-Host "  Total lessons:       $($projectCount + $globalCount)"
+    Write-Host ""
+    
+    $configFile = Join-Path $Script:AGENTX_DIR 'config.json'
+    $config = Read-JsonFile $configFile
+    $learningEnabled = if ($config -and $config.PSObject.Properties['learningEnabled']) { $config.learningEnabled } else { $true }
+    
+    Write-Host "  Learning enabled:    $learningEnabled"
+    Write-Host "  Storage mode:        JSONL (two-tier)"
+    Write-Host ""
+    
+    if ($projectCount -eq 0 -and $globalCount -eq 0) {
+        Write-Host "$($C.y)  No lessons found yet. Lessons are automatically extracted from agent sessions$($C.n)"
+        Write-Host "$($C.d)  when context compaction occurs. Start using agents to build your lesson base.$($C.n)"
+    }
+    Write-Host ""
+}
+
+function Invoke-LessonsClean {
+    $dryRun = Test-Flag @('--dry-run', '-d')
+    $lessonsDir = Join-Path $Script:AGENTX_DIR 'lessons'
+    
+    if ($dryRun) {
+        Write-Host "$($C.c)  Dry Run: Lesson Cleanup$($C.n)"
+        Write-Host "$($C.d)  Would clean up archived and low-confidence lessons older than 90 days$($C.n)"
+    } else {
+        Write-Host "$($C.y)Clean functionality requires TypeScript lesson store integration.$($C.n)"
+        Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+    }
+}
+
+function Invoke-LessonsHelp {
+    Write-Host "`n$($C.c)  Lessons Commands$($C.n)"
+    Write-Host "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-Host "$($C.w)  Usage:$($C.n)"
+    Write-Host "    agentx lessons list                  Show lessons overview"
+    Write-Host "    agentx lessons query [options]       Search lessons"
+    Write-Host "    agentx lessons show <id>             Show lesson details"
+    Write-Host "    agentx lessons promote <id>          Promote lesson to higher confidence"
+    Write-Host "    agentx lessons archive <id>          Archive lesson"
+    Write-Host "    agentx lessons stats                 Show learning pipeline statistics"
+    Write-Host "    agentx lessons clean [--dry-run]     Clean up old archived lessons"
+    Write-Host ""
+    Write-Host "$($C.w)  Query Options:$($C.n)"
+    Write-Host "    -c, --category <name>     Filter by category (error-pattern, success-pattern, etc.)"
+    Write-Host "    -t, --tag <tag>           Filter by tag"
+    Write-Host "    -p, --pattern <text>      Search in lesson patterns and descriptions"
+    Write-Host "    --confidence <level>      Filter by confidence (high, medium, low)"
+    Write-Host "    -l, --limit <n>           Limit results (default: 10)"
+    Write-Host ""
+    Write-Host "$($C.d)  Note: Lessons are automatically extracted from agent sessions during context$($C.n)"
+    Write-Host "$($C.d)  compaction. Full query/modify functionality available in Phase D.$($C.n)"
+    Write-Host ""
+}
+
+# ---------------------------------------------------------------------------
 # HELP
 # ---------------------------------------------------------------------------
 
@@ -1493,6 +1742,7 @@ $($C.w)  Commands:$($C.n)
   hooks install                    Install git hooks
   config [show|get|set]            View/update configuration
   issue <create|list|get|update|close|comment>  Issue management
+  lessons [list|query|show|stats|promote|archive|clean]  Learning pipeline management
   git-sync [push|pull]             Push/pull data branch to/from remote
   version                          Show installed version
   help                             Show this help
@@ -1534,6 +1784,7 @@ switch ($Script:Command) {
     'config'   { Invoke-ConfigCmd }
     'issue'    { Invoke-IssueCmd }
     'clarify'  { Invoke-ClarifyCmd }
+    'lessons'  { Invoke-LessonsCmd }
     'git-sync' { Invoke-GitSyncCmd }
     'run'      { Invoke-RunCmd }
     'version'  { Invoke-VersionCmd }

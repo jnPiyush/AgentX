@@ -11,7 +11,7 @@
 //     session-manifest.json             -- lightweight index (SessionIndex[])
 //     session-{YYYYMMDD}-{6char}.json   -- full SessionRecord
 //
-// See SPEC-Phase1-Cognitive-Foundation.md Section 3.2 for data model.
+// See SPEC-AgentX.md (Cognitive Foundation Specification) Section 3.2 for data model.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

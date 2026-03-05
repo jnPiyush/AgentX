@@ -10,7 +10,6 @@
 // result instead of allowing the tool to execute.
 // ---------------------------------------------------------------------------
 
-import * as path from 'path';
 import { AgenticLoopHooks, ToolHookContext, ToolResultHookContext, CompactionHookContext } from './agenticLoop';
 
 // ---------------------------------------------------------------------------
@@ -155,11 +154,6 @@ export function matchesBoundaryPattern(filePath: string, pattern: string): boole
  * Tools that write or modify files. Only these need boundary checking.
  */
 const FILE_MUTATING_TOOLS = new Set(['file_write', 'file_edit']);
-
-/**
- * Tools that can execute arbitrary commands (may mutate anything).
- */
-const TERMINAL_TOOLS = new Set(['terminal_exec']);
 
 /**
  * Check if a tool call violates the agent's boundary rules.

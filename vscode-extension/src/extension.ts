@@ -8,7 +8,6 @@ import { registerWorkflowCommand } from './commands/workflow';
 import { registerDepsCommand } from './commands/deps';
 import { registerDigestCommand } from './commands/digest';
 import { registerLoopCommand } from './commands/loopCommand';
-import { registerTodoDemoCommand } from './commands/todoDemo';
 import { registerHookEventsCommand } from './commands/hookEvents';
 import { AgentTreeProvider } from './views/agentTreeProvider';
 import { ReadyQueueTreeProvider } from './views/readyQueueTreeProvider';
@@ -41,6 +40,7 @@ import { SessionRecorder } from './memory/sessionRecorder';
 import { MemoryHealth } from './memory/memoryHealth';
 import { SynapseNetwork } from './memory/synapseNetwork';
 import { GlobalKnowledgeStore } from './memory/globalKnowledgeStore';
+import { LearningIntegration } from './learning';
 import { BackgroundEngine, type INotificationDispatcher } from './intelligence';
 import { DashboardPanel } from './dashboard/dashboardPanel';
 
@@ -142,7 +142,7 @@ export function activate(context: vscode.ExtensionContext) {
  }
 
  // Wire memory pipeline: extract observations from compaction summaries
- if (agentxDir) {
+ if (agentxDir && fs.existsSync(agentxDir)) {
   const memoryDir = path.join(agentxDir, 'memory');
   const observationStore = new JsonObservationStore(memoryDir);
   const observationExtractor = new ObservationExtractor();
@@ -168,6 +168,27 @@ export function activate(context: vscode.ExtensionContext) {
     console.warn('AgentX: Observation extraction failed:', err);
    }
   });
+
+  // Initialize integrated learning system (Phases A-D)
+  const learningIntegration = new LearningIntegration(
+    agentxContext.workspaceRoot!,
+    eventBus,
+    {
+      // Learning system configuration
+      enabled: true,
+      promotionThreshold: 3,
+      maxInjectPerSession: 5,
+      feedbackPromptEnabled: true,
+      decayDays: 90,
+      archiveDays: 180,
+      autoCommitHighConfidence: true,
+    }
+  );
+
+  // Learning system is now automatically wired via events in LearningIntegration
+  // - Lesson extraction triggered on 'context-compacted' events
+  // - Feedback collection triggered on 'session-ended' events 
+  // - User feedback prompts triggered on 'learning-feedback-requested' events
 
   // Phase 1: Memory Health command
   context.subscriptions.push(
@@ -454,7 +475,6 @@ export function activate(context: vscode.ExtensionContext) {
  registerDepsCommand(context, agentxContext);
  registerDigestCommand(context, agentxContext);
  registerLoopCommand(context, agentxContext);
- registerTodoDemoCommand(context, agentxContext);
  registerHookEventsCommand(context, eventBus);
  registerEditSettingCommand(context, settingsProvider);
 
@@ -823,9 +843,9 @@ export function activate(context: vscode.ExtensionContext) {
  }
  }, 5000);
 
- // Watch for AGENTS.md appearing/disappearing in subfolders so the
+ // Watch for .agentx/ directory appearing/disappearing in subfolders so the
  // extension auto-discovers AgentX when initialized in a nested path.
- const agentsWatcher = vscode.workspace.createFileSystemWatcher('**/AGENTS.md');
+ const agentsWatcher = vscode.workspace.createFileSystemWatcher('**/.agentx/config.json');
  const onAgentsChange = () => {
  agentxContext.invalidateCache();
  clearInstructionCache();

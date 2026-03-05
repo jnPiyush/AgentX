@@ -65,7 +65,12 @@ function main(): void {
   process.stderr.write(`[AgentX MCP] Transport: stdio (JSON-RPC 2.0)\n`);
   process.stderr.write(`[AgentX MCP] Ready for requests.\n`);
 
-  const server = new AgentXMcpServer(agentxDir, memoryDir);
+  // Use process.stdout/stderr explicitly -- output is isolated at the
+  // server level so tests can inject piped streams instead.
+  const server = new AgentXMcpServer(agentxDir, memoryDir, undefined, {
+    stdout: process.stdout,
+    stderr: process.stderr,
+  });
   server.start();
 
   // Graceful shutdown

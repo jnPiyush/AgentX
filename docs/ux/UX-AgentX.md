@@ -29,8 +29,8 @@ inputs:
 **Status**: Draft
 **Designer**: UX Designer Agent
 **Date**: 2026-03-04
-**Related PRD**: [PRD-Phase3-Proactive-Intelligence.md](../prd/PRD-Phase3-Proactive-Intelligence.md)
-**Related Spec**: [SPEC-Phase3-Proactive-Intelligence.md](../specs/SPEC-Phase3-Proactive-Intelligence.md)
+**Related PRD**: [PRD-AgentX.md](../prd/PRD-AgentX.md)
+**Related Spec**: [SPEC-AgentX.md](../specs/SPEC-AgentX.md)
 
 ---
 
@@ -83,7 +83,7 @@ The Phase 3 MCP App Dashboard provides a **single-pane-of-glass** interface insi
 
 ### User Personas (from PRD)
 
-**Primary Persona: Solo Developer (Alex)**
+**Primary Persona: Solo Developer**
 - **Goals**: Stay aware of agent work while writing code; quickly triage failures; know if memory needs maintenance
 - **Pain Points**: Cannot tell which agent is blocked; outcome patterns repeat across issues; terminal output is ephemeral
 - **Technical Skill**: Advanced
@@ -912,8 +912,8 @@ Open `docs/ux/prototypes/phase3-dashboard/index.html` in any modern browser. Use
 - [Frontend/UI Skill](../../.github/skills/design/frontend-ui/SKILL.md)
 
 ### Related Documents
-- [PRD Phase 3](../prd/PRD-Phase3-Proactive-Intelligence.md)
-- [Tech Spec Phase 3](../specs/SPEC-Phase3-Proactive-Intelligence.md)
+- [PRD Phase 3](../prd/PRD-AgentX.md)
+- [Tech Spec Phase 3](../specs/SPEC-AgentX.md)
 - [AGENTS.md](../../AGENTS.md) -- Agent roles and handoff flow
 
 ---

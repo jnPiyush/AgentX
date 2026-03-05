@@ -280,6 +280,8 @@ export interface MockLanguageModelChat {
   readonly vendor: string;
   /** Maximum input tokens the model supports (context window). */
   readonly maxInputTokens?: number;
+  /** Send a chat request to the mock model. */
+  sendRequest?(messages: unknown[], options?: unknown, token?: unknown): Promise<unknown>;
 }
 
 /** Configurable model inventory for tests. */
@@ -308,9 +310,218 @@ export function __clearMockModels(): void {
   _mockModels = [];
 }
 
+// --- Additional Missing APIs (from lessons learned audit) ----------------
+
+// CancellationToken and related
+export class CancellationTokenSource {
+  token: CancellationToken;
+  constructor() {
+    this.token = new CancellationToken();
+  }
+  cancel(): void { /* noop */ }
+  dispose(): void { /* noop */ }
+}
+
+export class CancellationToken {
+  isCancellationRequested = false;
+  onCancellationRequested = () => ({ dispose: () => { /* noop */ } });
+}
+
+// Disposable
+export class Disposable {
+  constructor(private _callOnDispose: () => void) {}
+  dispose(): void {
+    this._callOnDispose();
+  }
+  static from(...disposables: { dispose(): unknown }[]): Disposable {
+    return new Disposable(() => {
+      disposables.forEach(d => d.dispose());
+    });
+  }
+}
+
+// Chat-related types
+export interface ChatContext {
+  readonly history: ChatRequestTurn[];
+}
+
+export interface ChatRequestTurn {
+  readonly prompt: string;
+  readonly response: unknown;
+}
+
+export interface ChatRequest {
+  readonly prompt: string;
+  readonly references: readonly ChatReference[];
+  readonly location: ChatLocation;
+  readonly attempt: number;
+}
+
+export interface ChatReference {
+  readonly id: string;
+  readonly value: unknown;
+}
+
+export enum ChatLocation {
+  Panel = 1,
+  Terminal = 2,
+  Notebook = 3,
+  Editor = 4
+}
+
+export interface ChatFollowup {
+  readonly prompt: string;
+  readonly label?: string;
+  readonly tooltip?: string;
+}
+
+export interface ChatResult {
+  readonly errorDetails?: {
+    readonly message: string;
+    readonly cause?: Error;
+  };
+}
+
+export type ChatRequestHandler = (
+  request: ChatRequest,
+  context: ChatContext,
+  stream: ChatResponseStream,
+  token: CancellationToken
+) => ProviderResult<ChatResult>;
+
+export type ChatFollowupProvider = (
+  result: ChatResult,
+  context: ChatContext,
+  token: CancellationToken
+) => ProviderResult<ChatFollowup[]>;
+
+export interface ChatResponseStream {
+  markdown(value: string): void;
+  progress(value: string): void;
+  reference(value: unknown, iconPath?: unknown): void;
+  button(command: unknown): void;
+  anchor(value: unknown, title?: string): void;
+}
+
+// Language Model Chat types
+export class LanguageModelChatMessage {
+  static User(content: string): LanguageModelChatMessage {
+    return new LanguageModelChatMessage('user', content);
+  }
+  static Assistant(content: string): LanguageModelChatMessage {  
+    return new LanguageModelChatMessage('assistant', content);
+  }
+  
+  constructor(public role: string, public content: string) {}
+}
+
+export interface LanguageModelChat {
+  readonly name: string;
+  readonly family: string;
+  readonly id: string;
+  readonly vendor: string;
+  readonly version?: string;
+  readonly maxInputTokens?: number;
+  countTokens(text: string, token?: CancellationToken): Thenable<number>;
+  sendRequest(messages: LanguageModelChatMessage[], options?: unknown, token?: CancellationToken): Thenable<unknown>;
+}
+
+// Status Bar Alignment
+export enum StatusBarAlignment {
+  Left = 1,
+  Right = 2,
+}
+
+// Provider Result type
+export type ProviderResult<T> = T | undefined | null | Promise<T | undefined | null>;
+
+// Memento (storage interface)
+export interface Memento {
+  keys(): readonly string[];
+  get<T>(key: string): T | undefined;
+  get<T>(key: string, defaultValue: T): T;
+  update(key: string, value: unknown): Promise<void>;
+}
+
+// OutputChannel
+export interface OutputChannel {
+  readonly name: string;
+  append(value: string): void;
+  appendLine(value: string): void;
+  clear(): void;
+  show(column?: ViewColumn, preserveFocus?: boolean): void;
+  hide(): void;
+  dispose(): void;
+}
+
+// ExtensionContext
+export interface ExtensionContext {
+  subscriptions: { dispose(): unknown }[];
+  workspaceState: Memento;
+  globalState: Memento;
+  secrets: unknown;
+  extensionUri: Uri;
+  extensionPath: string;
+  globalStorageUri: Uri;
+  logUri: Uri;
+  storageUri: Uri | undefined;
+  extensionMode: unknown;
+}
+
+// TreeDataProvider
+export interface TreeDataProvider<T> {
+  onDidChangeTreeData?: (listener: (e: T | undefined | null) => unknown) => Disposable;
+  getTreeItem(element: T): TreeItem | Thenable<TreeItem>;
+  getChildren(element?: T): ProviderResult<T[]>;
+  getParent?(element: T): ProviderResult<T>;
+}
+
+// QuickPickItem
+export interface QuickPickItem {
+  label: string;
+  description?: string;
+  detail?: string;
+  picked?: boolean;
+  alwaysShow?: boolean;
+  kind?: QuickPickItemKind;
+}
+
+// Webview
+export interface Webview {
+  readonly options: unknown;
+  readonly cspSource: string;
+  html: string;
+  onDidReceiveMessage: (listener: (message: unknown) => unknown) => Disposable;
+  postMessage(message: unknown): Promise<boolean>;
+  asWebviewUri(localResource: Uri): Uri;
+}
+
+// WebviewPanel
+export interface WebviewPanel {
+  readonly viewType: string;
+  title: string;
+  readonly webview: Webview;
+  readonly options: unknown;
+  readonly viewColumn: ViewColumn | undefined;
+  readonly visible: boolean;
+  readonly active: boolean;
+  onDidDispose: (listener: () => unknown) => Disposable;
+  onDidChangeViewState: (listener: (e: unknown) => unknown) => Disposable;
+  reveal(viewColumn?: ViewColumn, preserveFocus?: boolean): void;
+  dispose(): void;
+}
+
 // --- Mock ChatResponseStream ---------------------------------------------
 
-export function createMockResponseStream() {
+/** Extended mock stream with test assertion helpers. */
+export interface MockChatResponseStream extends ChatResponseStream {
+  /** All recorded calls for assertion. */
+  calls: Array<{ method: string; args: unknown[] }>;
+  /** Get all markdown text concatenated. */
+  getMarkdown(): string;
+}
+
+export function createMockResponseStream(): MockChatResponseStream {
   const calls: Array<{ method: string; args: unknown[] }> = [];
 
   return {
@@ -319,9 +530,7 @@ export function createMockResponseStream() {
     reference: (...args: unknown[]) => { calls.push({ method: 'reference', args }); },
     button: (...args: unknown[]) => { calls.push({ method: 'button', args }); },
     anchor: (...args: unknown[]) => { calls.push({ method: 'anchor', args }); },
-    /** All recorded calls for assertion. */
     calls,
-    /** Get all markdown text concatenated. */
     getMarkdown: () => calls
       .filter(c => c.method === 'markdown')
       .map(c => String(c.args[0]))

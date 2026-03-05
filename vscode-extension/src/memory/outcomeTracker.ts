@@ -16,7 +16,7 @@
 //   - record() is fire-and-forget: callers should not await
 //   - Manifest writes use FileLockManager for cross-process safety
 //
-// See SPEC-Phase1-Cognitive-Foundation.md Section 4.1 for module spec.
+// See SPEC-AgentX.md (Cognitive Foundation Specification) Section 4.1 for module spec.
 // ---------------------------------------------------------------------------
 
 import * as fs from 'fs';

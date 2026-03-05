@@ -176,8 +176,8 @@ export class SessionManager {
   private readonly storage: SessionStorage;
   private readonly active = new Map<string, SessionState>();
 
-  /** Default compaction threshold (75% of budget). */
-  private static readonly COMPACT_THRESHOLD = 0.75;
+  /** Default compaction threshold (70% of budget to match model utilization). */
+  private static readonly COMPACT_THRESHOLD = 0.7;
 
   constructor(storage: SessionStorage) {
     this.storage = storage;

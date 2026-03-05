@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX v7.3.5 - Download, copy, configure.
+ Install AgentX v7.4.0 - Download, copy, configure.
 
 .PARAMETER Mode
  github - Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
@@ -113,7 +113,7 @@ try {
 # -- Banner ----------------------------------------------
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Cyan
-Write-Host "| AgentX v7.3.5 - AI Agent Orchestration |" -ForegroundColor Cyan
+Write-Host "| AgentX v7.4.0 - AI Agent Orchestration |" -ForegroundColor Cyan
 Write-Host "+===================================================+" -ForegroundColor Cyan
 Write-Host ""
 
@@ -158,7 +158,7 @@ $root = (Get-ChildItem $TMPRAW -Directory | Select-Object -First 1).FullName
 # Copy only essential paths (skip vscode-extension, tests, docs content, CHANGELOG, CONTRIBUTING, etc.)
 New-Item -ItemType Directory -Path $TMP -Force | Out-Null
 $neededDirs = @(".agentx", ".github", ".claude", ".vscode", "scripts", "packs")
-$neededFiles = @("AGENTS.md", "Skills.md", "CLAUDE.md", ".gitignore")
+$neededFiles = @(".gitignore")
 foreach ($d in $neededDirs) {
  $src = Join-Path $root $d
  if (Test-Path $src) { Copy-Item $src (Join-Path $TMP $d) -Recurse -Force }
@@ -167,12 +167,7 @@ foreach ($f in $neededFiles) {
  $src = Join-Path $root $f
  if (Test-Path $src) { Copy-Item $src (Join-Path $TMP $f) -Force }
 }
-# Copy only docs/GUIDE.md (user guide) - NOT AgentX project docs (PRDs, ADRs, specs, reviews, etc.)
-$docsGuide = Join-Path $root "docs/GUIDE.md"
-if (Test-Path $docsGuide) {
- New-Item -ItemType Directory -Path (Join-Path $TMP "docs") -Force | Out-Null
- Copy-Item $docsGuide (Join-Path $TMP "docs/GUIDE.md") -Force
-}
+
 
 Remove-Item $TMPRAW -Recurse -Force -ErrorAction SilentlyContinue
 if (Test-Path $TMPRAW) {
@@ -180,7 +175,7 @@ if (Test-Path $TMPRAW) {
  Remove-Item $TMPRAW -Recurse -Force -ErrorAction SilentlyContinue
 }
 Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue
-if (-not (Test-Path "$TMP/AGENTS.md")) { Write-Error "Download failed. Check network connection." }
+if (-not (Test-Path "$TMP/.agentx")) { Write-Error "Download failed. Check network connection." }
 Write-OK "AgentX downloaded (essential files only)"
 
 # -- Step 2: Copy files ----------------------------------
@@ -211,12 +206,12 @@ Write-Host "[3] Configuring runtime..." -ForegroundColor Cyan
 # Version tracking
 $versionFile = ".agentx/version.json"
 @{
- version = "7.3.5"
+ version = "7.4.0"
  mode = $Mode
  installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 7.3.5 recorded"
+Write-OK "Version 7.4.0 recorded"
 
 # Merge AgentX entries into user's .gitignore
 $MARKER_START = "# --- AgentX (auto-generated, do not edit this block) ---"
@@ -240,9 +235,6 @@ $agentxBlock = @(
  ".github/CODEOWNERS"
  ".github/copilot-instructions.md"
  ".claude/"
- "AGENTS.md"
- "Skills.md"
- "CLAUDE.md"
  "scripts/"
  "packs/"
  $MARKER_END
@@ -423,11 +415,11 @@ if (-not $NoSetup) {
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
-Write-Host " AgentX v7.3.5 installed! [$displayMode]" -ForegroundColor Green
+Write-Host " AgentX v7.4.0 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White
-Write-Host " Docs: AGENTS.md | Skills.md | docs/GUIDE.md" -ForegroundColor White
+Write-Host " Docs: .github/copilot-instructions.md" -ForegroundColor White
 if ($Local) {
  Write-Host " Issue: .\.agentx\local-issue-manager.ps1 -Action create -Title '[Story] Task' -Labels 'type:story'" -ForegroundColor DarkGray
 }

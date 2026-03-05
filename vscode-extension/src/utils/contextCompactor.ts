@@ -9,14 +9,21 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { AgentEventBus } from './eventBus';
 
 // ---------------------------------------------------------------------------
 // Bounded Message Pruning (US-2.5)
 // ---------------------------------------------------------------------------
 
-/** Default maximum conversation message count. */
-const DEFAULT_MAX_MESSAGES = 200;
+/** Check context compaction every N messages (59-message increment rule). */
+const COMPACTION_CHECK_INTERVAL = 59;
+
+/** Default compaction threshold (70% of token budget). */
+const DEFAULT_COMPACTION_THRESHOLD = 0.7;
+
+/** Default maximum conversation message count for modern models. */
+const DEFAULT_MAX_MESSAGES = 100;
 
 /**
  * Configuration for bounded message pruning.
@@ -173,8 +180,11 @@ export function pruneMessages(
 /** Rough token-per-character ratio for English text (GPT/Claude). */
 const CHARS_PER_TOKEN = 4;
 
-/** Default context window size in tokens. */
-const DEFAULT_CONTEXT_LIMIT = 200_000;
+/**
+ * Default context window size in tokens for cases where model info is unavailable.
+ * Conservative estimate that works for typical models with 70% utilization applied.
+ */
+const DEFAULT_CONTEXT_LIMIT = 70_000;
 
 /**
  * Estimate token count for a string.
@@ -239,7 +249,7 @@ export class ContextCompactor {
   constructor(
     eventBus?: AgentEventBus,
     contextLimit = DEFAULT_CONTEXT_LIMIT,
-    compactionThreshold = 0.75,
+    compactionThreshold = DEFAULT_COMPACTION_THRESHOLD,
   ) {
     this.eventBus = eventBus;
     this.contextLimit = contextLimit;
@@ -507,9 +517,345 @@ export class ContextCompactor {
 }
 
 // ---------------------------------------------------------------------------
+// Smart Message Management (59-Message Interval Rule)
+// ---------------------------------------------------------------------------
+
+/**
+ * Configuration for smart message management with compaction.
+ */
+export interface SmartMessageConfig {
+  /** Token budget for context window (70% of model max). */
+  readonly tokenBudget: number;
+  /** Message check interval (default: 59). */
+  readonly checkInterval?: number;
+  /** Compaction threshold (default: 0.7 = 70%). */
+  readonly compactionThreshold?: number;
+  /** Number of recent messages to preserve during compaction. */
+  readonly keepRecent?: number;
+}
+
+/**
+ * Result of smart message management operation.
+ */
+export interface SmartMessageResult {
+  /** Messages after processing. */
+  readonly messages: ReadonlyArray<{ role: string; content: string }>;
+  /** Whether compaction was triggered. */
+  readonly didCompact: boolean;
+  /** Whether simple pruning was applied. */
+  readonly didPrune: boolean;
+  /** Total estimated tokens before processing. */
+  readonly tokensBeforeProcessing: number;
+  /** Total estimated tokens after processing. */
+  readonly tokensAfterProcessing: number;
+  /** Number of messages removed (if pruned). */
+  readonly prunedCount?: number;
+  /** Compaction summary (if compacted). */
+  readonly compactionSummary?: string;
+}
+
+/**
+ * Smart message management that checks every 59 messages and triggers
+ * compaction when token usage reaches 70% of the context window.
+ *
+ * Algorithm:
+ * 1. Check if message count is at 59-message intervals
+ * 2. If yes, estimate token usage of all messages
+ * 3. If token usage >= 70% of budget, trigger AI-powered compaction
+ * 4. Otherwise, apply simple bounded pruning if needed
+ *
+ * @param messages - Full conversation history.
+ * @param config - Smart message management configuration.
+ * @param eventBus - Optional event bus for event emission.
+ * @param agentName - Agent name for event metadata.
+ * @returns Promise with SmartMessageResult containing processed messages and metadata.
+ */
+export async function manageMessagesSmartly(
+  messages: ReadonlyArray<{ role: string; content: string }>,
+  config: SmartMessageConfig,
+  eventBus?: AgentEventBus,
+  agentName = 'unknown',
+): Promise<SmartMessageResult> {
+  const checkInterval = config.checkInterval ?? COMPACTION_CHECK_INTERVAL;
+  const compactionThreshold = config.compactionThreshold ?? DEFAULT_COMPACTION_THRESHOLD;
+  const keepRecent = config.keepRecent ?? 10;
+  
+  // Calculate total tokens for current conversation
+  const totalContent = messages.map(m => m.content).join('\n');
+  const currentTokens = estimateTokens(totalContent);
+  
+  // Check if we're at a 59-message interval OR past threshold regardless of interval
+  const isAtCheckInterval = messages.length % checkInterval === 0;
+  
+  // Check if we need compaction (70% threshold)
+  const needsCompaction = currentTokens >= config.tokenBudget * compactionThreshold;
+  
+  if (needsCompaction && (isAtCheckInterval || messages.length >= checkInterval)) {
+    // Trigger AI-powered compaction using VS Code Language Model
+    const compactionResult = await performCompaction(messages, keepRecent, agentName, eventBus);
+    return {
+      messages: compactionResult.messages,
+      didCompact: true,
+      didPrune: false,
+      tokensBeforeProcessing: currentTokens,
+      tokensAfterProcessing: estimateTokens(compactionResult.messages.map(m => m.content).join('\n')),
+      compactionSummary: compactionResult.summary,
+    };
+  } else if (messages.length > DEFAULT_MAX_MESSAGES) {
+    // Fallback: simple bounded pruning if too many messages
+    const pruneResult = pruneMessages(messages, {
+      maxMessages: DEFAULT_MAX_MESSAGES,
+      warnBeforePrune: true,
+    }, eventBus, agentName);
+    
+    return {
+      messages: pruneResult.messages,
+      didCompact: false,
+      didPrune: pruneResult.didPrune,
+      tokensBeforeProcessing: currentTokens,
+      tokensAfterProcessing: estimateTokens(pruneResult.messages.map(m => m.content).join('\n')),
+      prunedCount: pruneResult.prunedCount,
+    };
+  } else {
+    // No processing needed
+    return {
+      messages,
+      didCompact: false,
+      didPrune: false,
+      tokensBeforeProcessing: currentTokens,
+      tokensAfterProcessing: currentTokens,
+    };
+  }
+}
+
+/**
+ * Perform message compaction using VS Code's Language Model API for intelligent summarization.
+ * 
+ * @param messages - Messages to compact.
+ * @param keepRecent - Number of recent messages to preserve.
+ * @param agentName - Agent name for event metadata.
+ * @param eventBus - Optional event bus for events.
+ * @returns Compaction result with messages and summary.
+ */
+async function performCompaction(
+  messages: ReadonlyArray<{ role: string; content: string }>,
+  keepRecent: number,
+  agentName: string,
+  eventBus?: AgentEventBus,
+): Promise<{ messages: ReadonlyArray<{ role: string; content: string }>; summary: string }> {
+  if (messages.length <= keepRecent + 1) {
+    return { messages, summary: 'No compaction needed - too few messages' };
+  }
+
+  // Partition: system prompt | middle (compactable) | recent
+  const systemPrompt = messages[0]?.role === 'system' ? messages[0] : null;
+  const startIdx = systemPrompt ? 1 : 0;
+  const recentStart = Math.max(startIdx, messages.length - keepRecent);
+  const middle = messages.slice(startIdx, recentStart);
+  const recent = messages.slice(recentStart);
+
+  if (middle.length === 0) {
+    return { messages, summary: 'No compaction needed - no middle messages' };
+  }
+
+  // Use VS Code LM API for intelligent compaction
+  const intelligentSummary = await compactConversationWithVSCodeLM(middle, agentName);
+
+  const compactionMsg = {
+    role: 'system' as const,
+    content: `[COMPACTED CONTEXT] ${intelligentSummary}`,
+  };
+
+  // Build final message list
+  const newMessages = [];
+  if (systemPrompt) {
+    newMessages.push(systemPrompt);
+  }
+  newMessages.push(compactionMsg);
+  newMessages.push(...recent);
+
+  // Emit compaction event
+  if (eventBus) {
+    eventBus.emit('context-compacted', {
+      agent: agentName,
+      originalTokens: estimateTokens(messages.map(m => m.content).join('\n')),
+      compactedTokens: estimateTokens(newMessages.map(m => m.content).join('\n')),
+      summary: intelligentSummary,
+      timestamp: Date.now(),
+    });
+  }
+
+  return {
+    messages: newMessages,
+    summary: intelligentSummary,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function unique(arr: string[]): string[] {
   return [...new Set(arr)];
+}
+
+// ---------------------------------------------------------------------------
+// VS Code LM-Powered Intelligent Compaction
+// ---------------------------------------------------------------------------
+
+/**
+ * Uses VS Code's Language Model API to intelligently compact conversation history.
+ * This provides much better summarization than rule-based pattern extraction.
+ *
+ * @param messages - Messages to compact using AI.
+ * @param agentName - Agent name for context.
+ * @returns Promise with intelligent summary or falls back to rule-based if LM unavailable.
+ */
+export async function compactConversationWithVSCodeLM(
+  messages: ReadonlyArray<{ role: string; content: string }>,
+  agentName: string,
+): Promise<string> {
+  try {
+    // Try to get a VS Code Language Model
+    // Try broader selector first, then fall back to GPT family
+    let availableModels = await vscode.lm.selectChatModels({
+      vendor: 'copilot',
+    });
+
+    if (availableModels.length === 0) {
+      availableModels = await vscode.lm.selectChatModels({});
+    }
+
+    if (availableModels.length === 0) {
+      // Fallback to rule-based compaction if no model available
+      return performRuleBasedCompaction(messages);
+    }
+
+    const model = availableModels[0];
+    
+    // Build the compaction prompt
+    const conversationText = messages.map((msg, i) => 
+      `${i + 1}. ${msg.role.toUpperCase()}: ${msg.content}`
+    ).join('\n\n');
+
+    const compactionPrompt = `You are analyzing a coding conversation to create a concise summary that preserves essential context. 
+
+CONVERSATION TO SUMMARIZE:
+${conversationText}
+
+Please create a structured summary that includes:
+1. **Context & Goal**: What was being worked on
+2. **Key Decisions**: Important choices made during the conversation  
+3. **Code Changes**: Files created, modified, or key implementations
+4. **Current State**: Status of work and any pending tasks
+5. **Important Details**: Technical details that must be preserved for context
+
+Keep the summary comprehensive but concise. Focus on actionable information that would help continue the work. Omit redundant explanations and keep technical details precise.
+
+Format as structured markdown with clear sections.`;
+
+    const compactionRequest = [
+      vscode.LanguageModelChatMessage.User(compactionPrompt)
+    ];
+
+    // Send request to VS Code LM
+    const tokenSource = new vscode.CancellationTokenSource();
+    const chatResponse = await model.sendRequest(
+      compactionRequest,
+      {},
+      tokenSource.token,
+    );
+
+    // Collect the response
+    let summary = '';
+    for await (const fragment of chatResponse.text) {
+      summary += fragment;
+    }
+
+    // Add metadata header
+    const messageCount = messages.length;
+    const originalTokens = estimateTokens(conversationText);
+    const compactedTokens = estimateTokens(summary);
+    
+    const finalSummary = `## AI-Powered Context Compaction
+
+**Agent**: ${agentName} | **Messages**: ${messageCount} → 1 | **Tokens**: ~${originalTokens} → ~${compactedTokens}
+
+${summary}
+
+---
+*This summary was generated using VS Code's Language Model API*`;
+
+    return finalSummary;
+
+  } catch (error) {
+    console.warn('VS Code LM compaction failed, falling back to rule-based:', error);
+    return performRuleBasedCompaction(messages);
+  }
+}
+
+/**
+ * Traditional rule-based compaction as fallback when VS Code LM is unavailable.
+ */
+function performRuleBasedCompaction(
+  messages: ReadonlyArray<{ role: string; content: string }>,
+): string {
+  const originalText = messages.map((m) => m.content).join('\n');
+  const originalTokens = estimateTokens(originalText);
+
+  // Extract key information patterns
+  const keyFacts: string[] = [];
+  const decisions: string[] = [];
+  const codeChanges: string[] = [];
+  const errors: string[] = [];
+
+  for (const msg of messages) {
+    const content = msg.content;
+
+    // Extract key patterns using regex
+    const decisionMatches = content.match(/(?:decided|decision|chose|selected|agreed|approved)[:.]?\s+.+/gi);
+    if (decisionMatches) {
+      decisions.push(...decisionMatches.map((m) => m.trim()));
+    }
+
+    const fileMatches = content.match(/(?:created|modified|updated|deleted|wrote)\s+(?:file\s+)?[`']?[\w./\\-]+\.\w+[`']?/gi);
+    if (fileMatches) {
+      codeChanges.push(...fileMatches.map((m) => m.trim()));
+    }
+
+    const errorMatches = content.match(/(?:error|failed|exception|bug)[:.]?\s+.+/gi);
+    if (errorMatches) {
+      errors.push(...errorMatches.map((m) => m.trim()));
+    }
+
+    const lines = content.split('\n').filter((l) => l.trim().length > 10 && l.trim().length < 200);
+    for (const line of lines.slice(0, 5)) {
+      if (/(?:important|note|require|must|should|critical)/i.test(line)) {
+        keyFacts.push(line.trim());
+      }
+    }
+  }
+
+  // Build structured summary
+  const sections: string[] = [
+    '## Rule-Based Context Compaction Summary',
+    '',
+    `Compacted from ${messages.length} messages (~${originalTokens} tokens).`,
+    '',
+  ];
+
+  if (decisions.length > 0) {
+    sections.push('### Decisions', ...unique(decisions).slice(0, 10).map((d) => `- ${d}`), '');
+  }
+  if (codeChanges.length > 0) {
+    sections.push('### Code Changes', ...unique(codeChanges).slice(0, 15).map((c) => `- ${c}`), '');
+  }
+  if (errors.length > 0) {
+    sections.push('### Errors Encountered', ...unique(errors).slice(0, 10).map((e) => `- ${e}`), '');
+  }
+  if (keyFacts.length > 0) {
+    sections.push('### Key Facts', ...unique(keyFacts).slice(0, 10).map((f) => `- ${f}`), '');
+  }
+
+  return sections.join('\n');
 }

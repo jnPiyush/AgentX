@@ -12,8 +12,8 @@ const BRANCH = 'master';
 const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
 
 /** Essential directories and files to extract (everything else is skipped). */
-const ESSENTIAL_DIRS = ['.agentx', '.github', '.claude', '.vscode', 'scripts', 'docs', 'packs'];
-const ESSENTIAL_FILES = ['AGENTS.md', 'Skills.md', 'CLAUDE.md', '.gitignore'];
+const ESSENTIAL_DIRS = ['.agentx', '.github', '.claude', '.vscode', 'scripts', 'packs'];
+const ESSENTIAL_FILES = ['.gitignore'];
 
 /**
  * Register the AgentX: Initialize Project command.
@@ -69,9 +69,8 @@ export function registerInitializeCommand(
  return;
  }
 
- // Check if already initialized for the selected target folder
- const initialized = fs.existsSync(path.join(root, '.agentx'))
-  || fs.existsSync(path.join(root, 'AGENTS.md'));
+ // Check if already initialized - requires config.json, not just .agentx/ dir
+ const initialized = fs.existsSync(path.join(root, '.agentx', 'config.json'));
  let isUpgrade = false;
  if (initialized) {
  const overwrite = await vscode.window.showWarningMessage(
@@ -237,7 +236,7 @@ export function registerInitializeCommand(
  previousInstalledAt = prev.installedAt;
  } catch { /* corrupt version file - reset */ }
  }
- const currentExtVersion = context.extension?.packageJSON?.version ?? '7.3.5';
+ const currentExtVersion = context.extension?.packageJSON?.version ?? '7.4.0';
  fs.writeFileSync(versionFile, JSON.stringify({
  version: currentExtVersion,
  mode: mode.label,
@@ -432,9 +431,6 @@ function mergeGitignore(root: string): void {
     '.github/CODEOWNERS',
     '.github/copilot-instructions.md',
     '.claude/',
-    'AGENTS.md',
-    'Skills.md',
-    'CLAUDE.md',
     'scripts/',
     'packs/',
   ];

@@ -16,7 +16,7 @@
 //   - capture() wrapped in try/catch -- never throws to callers
 //   - Oldest sessions pruned when MAX_SESSIONS_RETAINED exceeded
 //
-// See SPEC-Phase1-Cognitive-Foundation.md Section 4.2 for module spec.
+// See SPEC-AgentX.md (Cognitive Foundation Specification) Section 4.2 for module spec.
 // ---------------------------------------------------------------------------
 
 import * as fs from 'fs';

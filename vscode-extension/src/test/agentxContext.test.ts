@@ -11,11 +11,12 @@ import { AgentXContext } from '../agentxContext';
 
 /**
  * Create a temporary directory that looks like an AgentX project root
- * (contains AGENTS.md and .agentx/).
+ * (contains .agentx/ directory with config.json).
  */
 function createAgentXRoot(dir: string): void {
-  fs.writeFileSync(path.join(dir, 'AGENTS.md'), '# AGENTS\n');
-  fs.mkdirSync(path.join(dir, '.agentx'), { recursive: true });
+  const agentxDir = path.join(dir, '.agentx');
+  fs.mkdirSync(agentxDir, { recursive: true });
+  fs.writeFileSync(path.join(agentxDir, 'config.json'), '{}');
 }
 
 /**

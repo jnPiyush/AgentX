@@ -58,7 +58,7 @@ const SETTING_GROUPS: readonly SettingGroup[] = [
         key: 'agentx.context.maxMessages',
         label: 'Max Messages',
         tooltip: 'Maximum conversation messages before pruning oldest non-system messages',
-        defaultValue: 200,
+        defaultValue: 100,
       },
       {
         key: 'agentx.context.compactKeepRecent',

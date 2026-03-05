@@ -145,5 +145,5 @@ export interface MemorySearchInput {
 // ---------------------------------------------------------------------------
 
 export const MCP_SERVER_NAME = 'agentx';
-export const MCP_SERVER_VERSION = '7.6.0';
+export const MCP_SERVER_VERSION = '7.4.0';
 export const DEFAULT_SSE_PORT = 3100;

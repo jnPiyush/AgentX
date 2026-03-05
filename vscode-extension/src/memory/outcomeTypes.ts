@@ -11,7 +11,7 @@
 //     outcome-manifest.json        -- lightweight index (OutcomeIndex[])
 //     outcome-{agent}-{issue}-{ts}.json -- full OutcomeRecord
 //
-// See SPEC-Phase1-Cognitive-Foundation.md Section 3.1 for data model.
+// See SPEC-AgentX.md (Cognitive Foundation Specification) Section 3.1 for data model.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

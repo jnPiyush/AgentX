@@ -23,8 +23,10 @@ import { ToolRegistry, ToolCallRequest, ToolResult, ToolContext, ClarificationHa
 import { BoundaryViolationError } from './boundaryHook';
 import { resolveMode } from './promptingModes';
 import { time } from '../utils/timingUtils';
-import { pruneMessages } from '../utils/contextCompactor';
+import { pruneMessages, manageMessagesSmartly } from '../utils/contextCompactor';
 import { HookRegistry } from './hookPriority';
+import * as fs from 'fs';
+import * as pathMod from 'path';
 import {
   ToolLoopDetector,
   LoopDetectionResult,
@@ -408,7 +410,7 @@ export interface AgenticLoopConfig {
 
 const DEFAULT_CONFIG: AgenticLoopConfig = {
   maxIterations: 20,
-  tokenBudget: 100_000,
+  tokenBudget: 70_000, // Default budget (70% of ~100K context window)
   systemPrompt: 'You are a helpful AI coding assistant.',
   agentName: 'engineer',
   compactKeepRecent: 10,
@@ -610,7 +612,7 @@ export class AgenticLoop {
 
     // Build tool context with clarification handler injected
     const workspaceRoot = this.config.workspaceRoot ?? this.resolveWorkspaceRoot();
-    const clarificationHandler = this.buildClarificationHandler();
+    const clarificationHandler = this.buildClarificationHandler(abortSignal);
     const toolCtx: ToolContext & { clarificationHandler?: ClarificationHandler } = {
       workspaceRoot,
       abortSignal,
@@ -693,13 +695,35 @@ export class AgenticLoop {
       }
 
       // Call LLM (with onError hook support for retry/fallback/abort)
-      // Apply bounded message pruning (US-2.5) before sending to LLM
+      // Apply AI-powered smart message management (59-message interval with VS Code LM compaction)
       const rawMessages = this.sessionManager.getMessages(sessionId);
-      const pruneResult = pruneMessages(rawMessages, {
-        maxMessages: this.config.maxMessages ?? 200,
-        warnBeforePrune: true,
+      const smartResult = await manageMessagesSmartly(rawMessages, {
+        tokenBudget: this.config.tokenBudget,
+        checkInterval: 59,
+        compactionThreshold: 0.7,
+        keepRecent: 10,
       });
-      const messages = pruneResult.messages as ReadonlyArray<SessionMessage>;
+      
+      const messages = smartResult.messages as ReadonlyArray<SessionMessage>;
+      
+      // Emit progress events for compaction or pruning
+      if (smartResult.didCompact && smartResult.compactionSummary) {
+        const compactionContext: CompactionHookContext = {
+          sessionId,
+          agentName: this.config.agentName,
+          beforeTokens: smartResult.tokensBeforeProcessing,
+          afterTokens: smartResult.tokensAfterProcessing,
+          didCompact: true,
+          keepRecent: 10, // Same as what we used in the compaction
+          tokenBudget: this.config.tokenBudget,
+          summary: smartResult.compactionSummary,
+        };
+        try {
+          await this.config.hooks?.onCompaction?.(compactionContext);
+        } catch (err) {
+          this.handleHookError('onCompaction', err);
+        }
+      }
       let response!: LlmResponse;
       let llmRetryCount = 0;
       const MAX_ERROR_RETRIES = 3;
@@ -1141,7 +1165,7 @@ export class AgenticLoop {
    * clarification loop for iterative back-and-forth with human fallback.
    * Otherwise, falls back to the single-shot onClarificationNeeded callback.
    */
-  private buildClarificationHandler(): ClarificationHandler | undefined {
+  private buildClarificationHandler(parentAbortSignal: AbortSignal): ClarificationHandler | undefined {
     if (!this.config.canClarify || this.config.canClarify.length === 0) {
       return undefined;
     }
@@ -1210,7 +1234,7 @@ export class AgenticLoop {
           effectiveQuestion,
           llmFactory,
           agentLoader,
-          new AbortController().signal, // Sub-loops get their own abort
+          parentAbortSignal,
           evaluator,
           clarificationProgress,
         );
@@ -1309,8 +1333,6 @@ export class AgenticLoop {
     summary: string,
   ): void {
     try {
-      const fs = require('fs');
-      const pathMod = require('path');
       const stateFile = pathMod.join(workspaceRoot, '.agentx', 'state', 'loop-state.json');
 
       if (!fs.existsSync(stateFile)) {
@@ -1342,10 +1364,11 @@ export class AgenticLoop {
   }
 
   private resolveWorkspaceRoot(): string {
-    // Use VS Code workspace if available, otherwise cwd
+    // Dynamic require: vscode may not be available in CLI mode
     try {
-      const vscode = require('vscode');
-      const folders = vscode.workspace.workspaceFolders;
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const vscodeApi = require('vscode');
+      const folders = vscodeApi.workspace.workspaceFolders;
       if (folders && folders.length > 0) {
         return folders[0].uri.fsPath;
       }

@@ -64,13 +64,16 @@ type WizardOutgoingMessage =
 
 const BRANCH = 'master';
 const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
-const ESSENTIAL_DIRS = ['.agentx', '.github', '.claude', '.vscode', 'scripts', 'docs', 'packs'];
-const ESSENTIAL_FILES = ['AGENTS.md', 'Skills.md', 'CLAUDE.md', '.gitignore'];
+const ESSENTIAL_DIRS = ['.agentx', '.github', '.claude', '.vscode', 'scripts', 'packs'];
+const ESSENTIAL_FILES = ['.gitignore'];
 
+/**
+ * A workspace is considered initialized only when .agentx/config.json exists.
+ * A bare .agentx/ directory (which can be created accidentally by services
+ * during extension activation) does NOT count as initialized.
+ */
 function isInitializedWorkspace(root: string): boolean {
-  const hasAgentxDir = fs.existsSync(path.join(root, '.agentx'));
-  const hasAgentsFile = fs.existsSync(path.join(root, 'AGENTS.md'));
-  return hasAgentxDir || hasAgentsFile;
+  return fs.existsSync(path.join(root, '.agentx', 'config.json'));
 }
 
 // -----------------------------------------------------------------------
@@ -280,7 +283,7 @@ export class InitWizardPanel {
           previousInstalledAt = prev.installedAt;
         } catch { /* corrupt version file - reset */ }
       }
-      const currentExtVersion = this._agentx.extensionContext.extension?.packageJSON?.version ?? '7.3.5';
+      const currentExtVersion = this._agentx.extensionContext.extension?.packageJSON?.version ?? '7.4.0';
       fs.writeFileSync(versionFile, JSON.stringify({
         version: currentExtVersion,
         mode: msg.mode,
@@ -361,14 +364,15 @@ export class InitWizardPanel {
       vscode.commands.executeCommand('agentx.refresh');
 
       // Done!
+      const actionWord = isUpgrade ? 'upgraded' : 'initialized';
       this._postMessage({
         type: 'complete',
         success: true,
-        message: `AgentX initialized successfully in ${msg.mode} mode!`,
+        message: `AgentX ${actionWord} successfully in ${msg.mode} mode!`,
         mode: msg.mode,
       });
 
-      vscode.window.showInformationMessage(`AgentX initialized! Mode: ${msg.mode}`);
+      vscode.window.showInformationMessage(`AgentX ${actionWord}! Mode: ${msg.mode}`);
 
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -850,7 +854,7 @@ export class InitWizardPanel {
 
     <!-- Warning: already initialized -->
     <div class="warning-banner" id="reinitWarning">
-      <strong>AgentX is already initialized in this workspace.</strong><br>
+      <strong>AgentX is already initialized in <span id="reinitWorkspaceName">this workspace</span>.</strong><br>
       Continuing will upgrade your framework files to the latest version. Your custom files and configurations will be preserved.
     </div>
 
@@ -858,7 +862,7 @@ export class InitWizardPanel {
     <div class="step-content visible" id="step1">
       <div class="card-grid">
         <div class="mode-card selected" data-mode="local" tabindex="0" role="radio" aria-checked="true">
-          <span class="card-icon" aria-hidden="true">&#128193;</span>
+          <span class="card-icon" aria-hidden="true">&gt;_</span>
           <div class="card-title">Local Mode</div>
           <div class="card-desc">
             Filesystem-based issue tracking.<br>No GitHub required.
@@ -866,7 +870,7 @@ export class InitWizardPanel {
           <span class="badge badge-default">Default</span>
         </div>
         <div class="mode-card" data-mode="github" tabindex="0" role="radio" aria-checked="false">
-          <span class="card-icon" aria-hidden="true">&#9729;</span>
+          <span class="card-icon" aria-hidden="true">@</span>
           <div class="card-title">GitHub Mode</div>
           <div class="card-desc">
             Full integration with GitHub<br>Actions, PRs, and Projects.
@@ -889,7 +893,7 @@ export class InitWizardPanel {
     <div class="step-content" id="step2">
       <!-- Local mode: nothing extra needed -->
       <div id="localConfig">
-        <p style="text-align:center; color:var(--vscode-descriptionForeground); padding: 24px 0;">
+        <p id="localConfigMsg" style="text-align:center; color:var(--vscode-descriptionForeground); padding: 24px 0;">
           Local mode requires no additional configuration.<br>
           You can switch to GitHub mode later by changing the
           <code>agentx.mode</code> setting.
@@ -935,8 +939,7 @@ export class InitWizardPanel {
         </div>
       </div>
       <p id="summaryDesc" style="text-align:center; font-size:12px; color:var(--vscode-descriptionForeground); margin-top:12px;">
-        This will download and install AgentX framework files into your workspace.<br>
-        Existing customized files will not be overwritten.
+        This will download and install AgentX framework files into your workspace.
       </p>
     </div>
 
@@ -1007,6 +1010,12 @@ export class InitWizardPanel {
 
       function applyUpgradeUi(isUpgrade) {
         alreadyInitialized = isUpgrade;
+        // Update warning banner with workspace name
+        var wsName = '';
+        var wsObj = workspaceFolders.find(function(f) { return f.path === selectedWorkspace; });
+        if (wsObj) { wsName = wsObj.name; }
+        var reinitName = document.getElementById('reinitWorkspaceName');
+        if (reinitName) { reinitName.textContent = wsName || 'this workspace'; }
         if (isUpgrade) {
           $reinitWarning.classList.add('show');
           document.getElementById('mainHeader').textContent = 'Upgrade AgentX';
@@ -1019,7 +1028,7 @@ export class InitWizardPanel {
         document.getElementById('mainHeader').textContent = 'Initialize AgentX';
         document.getElementById('mainSubheader').textContent = 'Set up multi-agent orchestration for your project';
         document.getElementById('installHeader').textContent = 'Installing AgentX';
-        document.getElementById('summaryDesc').innerHTML = 'This will download and install AgentX framework files into your workspace.<br>Existing customized files will not be overwritten.';
+        document.getElementById('summaryDesc').innerHTML = 'This will download and install AgentX framework files into your workspace.';
       }
 
       function refreshUpgradeState() {
@@ -1035,7 +1044,7 @@ export class InitWizardPanel {
           const s = parseInt(dot.getAttribute('data-step'));
           dot.classList.toggle('active', s === currentStep);
           dot.classList.toggle('done', s < currentStep);
-          dot.textContent = s < currentStep ? '\\u2713' : String(s);
+          dot.textContent = s < currentStep ? '*' : String(s);
         });
         document.querySelectorAll('.step-label').forEach(lbl => {
           const s = parseInt(lbl.getAttribute('data-step'));
@@ -1054,7 +1063,9 @@ export class InitWizardPanel {
           el.classList.toggle('visible', i === n - 1);
         });
         $btnBack.style.display = n > 1 ? '' : 'none';
-        $btnNext.textContent = n === totalSteps ? (alreadyInitialized ? 'Reinstall / Upgrade' : 'Install') : 'Next';
+        // Refresh upgrade state on every step to ensure consistency
+        refreshUpgradeState();
+        if (n !== totalSteps) { $btnNext.textContent = 'Next'; }
         updateStepper();
 
         // Update step 2 visibility
@@ -1067,6 +1078,13 @@ export class InitWizardPanel {
           } else {
             $localCfg.style.display = '';
             $githubCfg.classList.remove('show');
+          }
+          // Update local config message for upgrade vs init
+          var $msg = document.getElementById('localConfigMsg');
+          if ($msg && selectedMode === 'local') {
+            $msg.innerHTML = alreadyInitialized
+              ? 'Your existing local mode configuration will be preserved.<br>Framework files will be updated to the latest version.'
+              : 'Local mode requires no additional configuration.<br>You can switch to GitHub mode later by changing the <code>agentx.mode</code> setting.';
           }
         }
 
@@ -1155,7 +1173,7 @@ export class InitWizardPanel {
       function showResult(success, title, desc) {
         $installView.classList.remove('visible');
         $resultView.classList.add('visible');
-        document.getElementById('resultIcon').textContent = success ? '\\u2713' : '!';
+        document.getElementById('resultIcon').textContent = success ? '[OK]' : '[!]';
         document.getElementById('resultIcon').style.color = success
           ? 'var(--vscode-testing-iconPassed, #73c991)'
           : 'var(--vscode-errorForeground, #f44747)';

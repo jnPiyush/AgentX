@@ -57,6 +57,10 @@ function parseVersion(raw: string): string {
 
 /**
  * Check if Node.js is installed and meets minimum version.
+ *
+ * Node.js is optional for end users -- VS Code bundles its own Node.js
+ * runtime for extensions. It is only needed for extension development
+ * (compilation, tests, packaging).
  */
 async function checkNodeJs(): Promise<DependencyResult> {
   const raw = await tryExec('node --version');
@@ -65,11 +69,11 @@ async function checkNodeJs(): Promise<DependencyResult> {
 
   let message = '';
   if (!found) {
-    message = 'Node.js is not installed. Required for extension compilation and npm scripts.';
+    message = 'Node.js is not installed. Only needed for extension development (not required for end users).';
   } else {
     const major = parseInt(version.split('.')[0], 10);
     if (major < 18) {
-      message = `Node.js ${version} found but v18+ is recommended.`;
+      message = `Node.js ${version} found but v18+ is recommended for development.`;
     } else {
       message = `Node.js ${version} detected.`;
     }
@@ -79,13 +83,10 @@ async function checkNodeJs(): Promise<DependencyResult> {
     name: 'Node.js',
     found,
     version,
-    severity: 'required',
+    severity: 'optional',
     message,
     fixUrl: 'https://nodejs.org/',
     fixLabel: 'Download Node.js',
-    fixCommand: process.platform === 'win32'
-      ? 'winget install OpenJS.NodeJS.LTS'
-      : 'curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs',
   };
 }
 

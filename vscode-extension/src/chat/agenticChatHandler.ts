@@ -39,7 +39,6 @@ import {
 } from '../agentic/clarificationLoop';
 import {
   BoundaryRules,
-  BoundaryViolationError,
   buildBoundaryHooks,
   composeBoundaryHooks,
 } from '../agentic/boundaryHook';
@@ -102,7 +101,7 @@ function getLoopSettings() {
     },
     context: {
       autoCompact: ctxCfg.get<boolean>('autoCompact', true),
-      maxMessages: ctxCfg.get<number>('maxMessages', 200),
+      maxMessages: ctxCfg.get<number>('maxMessages', 100),
       compactKeepRecent: ctxCfg.get<number>('compactKeepRecent', 10),
     },
     selfReview: {
@@ -409,9 +408,9 @@ export async function runAgenticChat(
   const modelName = modelResult.chatModel?.name ?? agentDef?.model ?? 'default';
   const sourceLabel = modelResult.source === 'fallback' ? ' (fallback)' : '';
 
-  // Derive token budget from the model's actual context window (75% utilization)
+  // Derive token budget from the model's actual context window (70% utilization)
   const contextWindow = modelResult.maxInputTokens;
-  const MODEL_UTILIZATION = 0.75;
+  const MODEL_UTILIZATION = 0.7;
   const derivedTokenBudget = Math.floor(contextWindow * MODEL_UTILIZATION);
 
   response.markdown(
@@ -545,6 +544,7 @@ export async function runAgenticChat(
       systemPrompt,
       maxIterations: cfg.maxIterations ?? loopSettings.loop.maxIterations,
       tokenBudget: derivedTokenBudget,
+      maxMessages: loopSettings.context.maxMessages,
       autoCompact: loopSettings.context.autoCompact,
       compactKeepRecent: loopSettings.context.compactKeepRecent,
       issueNumber: cfg.issueNumber || undefined,
@@ -722,7 +722,7 @@ export async function runAgenticChat(
     abortController.abort();
   });
 
-  let summary: LoopSummary;
+  let summary: LoopSummary | undefined;
   try {
     summary = await loop.run(prompt, adapter, abortController.signal, {
       onIteration: (iter, max) => {
@@ -784,6 +784,30 @@ export async function runAgenticChat(
     };
   } finally {
     cancellationSub.dispose();
+    
+    // Emit agentic-loop-completed event for session-based learning
+    if (summary != null && summary.iterations > 0) {
+      // Parse issueArg (string) to number, ensuring proper type conversion
+      const issueNumber: number | undefined = issueArg 
+        ? (parseInt(issueArg, 10) || undefined) 
+        : undefined;
+      
+      eventBus.emit('agentic-loop-completed', {
+        agent: agentName,
+        sessionId: summary.sessionId,
+        issueNumber,
+        messageCount: summary.iterations * 2, // Rough estimate: user + assistant per iteration
+        duration: summary.durationMs,
+        outcome: summary.exitReason === 'text_response' 
+          ? `Successful completion in ${summary.iterations} iterations` 
+          : summary.exitReason,
+        toolsUsed: [], // TODO: Extract from loop if needed
+        completedTasks: [], // TODO: Extract from summary if available
+        errors: summary.exitReason === 'error' ? [summary.finalText || 'Unknown error'] : [],
+        timestamp: Date.now(),
+      });
+    }
+    
     // Fire CLI lifecycle hook: finish (non-blocking)
     fireCLIHook(agentx, 'finish', agentName, issueArg);
   }

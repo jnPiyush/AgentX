@@ -11,12 +11,13 @@ import { PluginManager } from './utils/pluginManager';
 import { GitStorageProvider } from './utils/gitStorageProvider';
 
 /**
- * Check whether a directory looks like an AgentX root
- * (contains both AGENTS.md and .agentx/).
+ * Check whether a directory looks like a properly initialized AgentX root.
+ * Requires .agentx/config.json (created only during full initialization),
+ * not just a bare .agentx/ directory which can be created accidentally
+ * by services that eagerly ensure their storage directories.
  */
 function isAgentXRoot(dir: string): boolean {
- return fs.existsSync(path.join(dir, 'AGENTS.md'))
-  && fs.existsSync(path.join(dir, '.agentx'));
+ return fs.existsSync(path.join(dir, '.agentx', 'config.json'));
 }
 
 /**
@@ -141,7 +142,7 @@ export class AgentXContext {
   *
   * Resolution order:
   * 1. Explicit `agentx.rootPath` setting (if set and valid).
-  * 2. Search every workspace folder root for AGENTS.md + .agentx/.
+  * 2. Search every workspace folder root for .agentx/ directory.
   * 3. Search subdirectories of each workspace folder up to
   *    `agentx.searchDepth` levels (default 2).
   * 4. Fall back to the first workspace folder (legacy behaviour).

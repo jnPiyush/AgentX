@@ -180,12 +180,12 @@ describe('modelSelector', () => {
     it('should return conservative default for unknown model', () => {
       const fakeModel = { name: 'Unknown Model', family: 'mystery' };
       const result = resolveContextWindow(fakeModel as any, 'Unknown Model');
-      assert.equal(result, 100_000);
+      assert.equal(result, 70_000);
     });
 
     it('should return conservative default when chatModel is undefined', () => {
       const result = resolveContextWindow(undefined, 'Unknown');
-      assert.equal(result, 100_000);
+      assert.equal(result, 70_000);
     });
 
     it('should ignore maxInputTokens when it is zero', () => {
@@ -223,7 +223,7 @@ describe('modelSelector', () => {
       __setMockModels([]);
       const result = await selectModelForAgent(makeDef({ model: 'Unknown Model' }));
       assert.equal(result.source, 'none');
-      assert.equal(result.maxInputTokens, 100_000);
+      assert.equal(result.maxInputTokens, 70_000);
     });
   });
 });

@@ -5,7 +5,7 @@
 // Phase 1 type definitions for the Memory Health subsystem.
 // Provides diagnostic scanning and repair of the memory store directories.
 //
-// See SPEC-Phase1-Cognitive-Foundation.md Section 3.3 for data model.
+// See SPEC-AgentX.md (Cognitive Foundation Specification) Section 3.3 for data model.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

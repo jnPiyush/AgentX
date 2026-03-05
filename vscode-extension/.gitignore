@@ -2,3 +2,8 @@ node_modules/
 *.vsix
 .vscode-test/
 out/
+coverage/
+.nyc_output/
+test-output.txt
+test-results.txt
+coverage-output.txt

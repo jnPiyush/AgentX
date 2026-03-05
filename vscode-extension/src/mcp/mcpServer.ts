@@ -38,6 +38,11 @@ import {
   MCP_SERVER_VERSION,
   DEFAULT_SSE_PORT,
 } from './mcpTypes';
+
+/** Writable stream interface for stdio isolation (testability). */
+export interface McpWritable {
+  write(data: string): boolean;
+}
 import {
   handleSetAgentState,
   handleCreateIssue,
@@ -163,6 +168,8 @@ export class AgentXMcpServer {
   private readonly memoryDir: string;
   private readonly knowledgeDir: string;
   private readonly config: AgentXMcpConfig;
+  private readonly stdout: McpWritable;
+  private readonly stderr: McpWritable;
   private running = false;
   private inputBuffer = '';
 
@@ -170,6 +177,7 @@ export class AgentXMcpServer {
     agentxDir: string,
     memoryDir: string,
     config?: Partial<AgentXMcpConfig>,
+    options?: { stdout?: McpWritable; stderr?: McpWritable },
   ) {
     this.agentxDir = agentxDir;
     this.memoryDir = memoryDir;
@@ -181,6 +189,9 @@ export class AgentXMcpServer {
       enableTools: config?.enableTools ?? true,
       enableResources: config?.enableResources ?? true,
     };
+    // Injectable streams for stdout/stderr isolation (prevents test pollution)
+    this.stdout = options?.stdout ?? process.stdout;
+    this.stderr = options?.stderr ?? process.stderr;
   }
 
   // -----------------------------------------------------------------------
@@ -252,7 +263,7 @@ export class AgentXMcpServer {
         const request = parsed as unknown as JsonRpcRequest;
         void this.handleRequest(request).then((response) => {
           if (request.id !== undefined) {
-            process.stdout.write(JSON.stringify(response) + '\n');
+            this.stdout.write(JSON.stringify(response) + '\n');
           }
         });
       } catch {

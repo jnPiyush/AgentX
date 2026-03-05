@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentX v7.3.5 Installer - Download, copy, configure.
+# AgentX v7.4.0 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -83,7 +83,7 @@ skip() { echo -e "${D}[--] $1${N}"; }
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| AgentX v7.3.5 - AI Agent Orchestration |${N}"
+echo -e "${C}| AgentX v7.4.0 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -116,7 +116,7 @@ mkdir -p "$TMP"
 $FETCH "$ARCHIVE_URL" > "$TMPARCHIVE"
 [ -s "$TMPARCHIVE" ] || { echo "Download failed. Check network."; exit 1; }
 
-# Extract only essential paths (skip vscode-extension, tests, docs content, CHANGELOG, CONTRIBUTING, etc.)
+# Extract only essential paths (skip vscode-extension, tests, docs, MD files, CHANGELOG, CONTRIBUTING, etc.)
 tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/.agentx" \
  "$PREFIX/.github" \
@@ -124,16 +124,9 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/.vscode" \
  "$PREFIX/scripts" \
  "$PREFIX/packs" \
- "$PREFIX/AGENTS.md" \
- "$PREFIX/Skills.md" \
- "$PREFIX/CLAUDE.md" \
  "$PREFIX/.gitignore" 2>/dev/null || true
 
-# Extract only docs/GUIDE.md (user guide) - NOT AgentX project docs (PRDs, ADRs, specs, reviews, etc.)
-tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
- "$PREFIX/docs/GUIDE.md" 2>/dev/null || true
-
-[ -f "$TMP/AGENTS.md" ] || { echo "Download failed. Check network."; exit 1; }
+[ -d "$TMP/.agentx" ] || { echo "Download failed. Check network."; exit 1; }
 ok "AgentX downloaded (essential files only)"
 
 # -- Step 2: Copy files ----------------------------------
@@ -159,8 +152,8 @@ mkdir -p .agentx/state .agentx/digests docs/{prd,adr,specs,ux,reviews,progress}
 
 # Version tracking
 VERSION_FILE=".agentx/version.json"
-echo "{ \"version\": \"7.3.5\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 7.3.5 recorded"
+echo "{ \"version\": \"7.4.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 7.4.0 recorded"
 
 # Merge AgentX entries into user's .gitignore
 MARKER_START="# --- AgentX (auto-generated, do not edit this block) ---"
@@ -183,9 +176,6 @@ AGENTX_BLOCK="$MARKER_START
 .github/CODEOWNERS
 .github/copilot-instructions.md
 .claude/
-AGENTS.md
-Skills.md
-CLAUDE.md
 scripts/
 packs/
 $MARKER_END"
@@ -361,11 +351,11 @@ fi
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} AgentX v7.3.5 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} AgentX v7.4.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.agentx/agentx.sh help"
-echo " Docs: AGENTS.md | Skills.md | docs/GUIDE.md"
+echo " Docs: .github/copilot-instructions.md"
 [ "$LOCAL" = "true" ] && echo -e "${D} Issue: ./.agentx/local-issue-manager.sh create \"[Story] Task\" \"\" \"type:story\"${N}"
 if [ -n "$INSTALL_PATH" ]; then
  echo ""

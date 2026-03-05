@@ -68,6 +68,15 @@ export interface AgentEventMap {
 
   /** Bounded message pruning is about to remove old messages (US-2.5). */
   'bounded-message-warning': BoundedMessageWarningEvent;
+
+  /** Agentic loop completed (for session-based learning). */
+  'agentic-loop-completed': AgenticLoopCompletedEvent;
+
+  /** Session ended (for feedback collection). */
+  'session-ended': SessionEndedEvent;
+
+  /** Learning system requesting feedback prompts. */
+  'learning-feedback-requested': LearningFeedbackRequestedEvent;
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +199,37 @@ export interface BoundedMessageWarningEvent {
   readonly totalMessages: number;
   readonly maxMessages: number;
   readonly prunedCount: number;
+  readonly timestamp: number;
+}
+
+export interface AgenticLoopCompletedEvent {
+  readonly agent: string;
+  readonly sessionId: string;
+  readonly issueNumber?: number;
+  readonly messageCount: number;
+  readonly duration: number;
+  readonly outcome: string;
+  readonly toolsUsed: string[];
+  readonly completedTasks: string[];
+  readonly errors: string[];
+  readonly timestamp: number;
+}
+
+export interface SessionEndedEvent {
+  readonly sessionId: string;
+  readonly agent: string;
+  readonly issueNumber?: number;
+  readonly appliedLessons: string[];
+  readonly summary: string;
+  readonly errorOccurred: boolean;
+  readonly successfulOutcome: boolean;
+  readonly completionTime: number;
+  readonly timestamp: number;
+}
+
+export interface LearningFeedbackRequestedEvent {
+  readonly sessionId: string;
+  readonly prompts: string[];
   readonly timestamp: number;
 }
 

@@ -191,17 +191,17 @@ describe('pruneMessages (US-2.5)', () => {
     assert.equal(result.messages[2].content, 'Reply 2');
   });
 
-  it('should use default maxMessages (200) when no config', () => {
-    // Build 201 messages
+  it('should use default maxMessages (100) when no config', () => {
+    // Build 101 messages
     const messages: Array<{ role: string; content: string }> = [sysMsg];
-    for (let i = 1; i <= 200; i++) {
+    for (let i = 1; i <= 100; i++) {
       messages.push(userMsg(i));
     }
-    // 201 total, default 200 max -> prune 1
+    // 101 total, default 100 max -> prune 1
     const result = pruneMessages(messages);
     assert.equal(result.didPrune, true);
     assert.equal(result.prunedCount, 1);
-    assert.equal(result.messages.length, 200);
+    assert.equal(result.messages.length, 100);
   });
 
   it('should emit warning event before pruning', () => {

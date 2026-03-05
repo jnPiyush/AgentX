@@ -26,6 +26,8 @@
 13. [Feature PRD: Agent-to-Agent Clarification Protocol](#feature-prd-agent-to-agent-clarification-protocol)
 14. [Feature PRD: Persistent Agent Memory Pipeline](#feature-prd-persistent-agent-memory-pipeline)
 15. [Feature PRD: Agentic Loop Quality Framework](#feature-prd-agentic-loop-quality-framework)
+16. [Feature PRD: Cognitive Foundation](#feature-prd-cognitive-foundation)
+17. [Feature PRD: Proactive Intelligence & MCP Dashboard](#feature-prd-proactive-intelligence--mcp-dashboard)
 
 ---
 
@@ -589,8 +591,8 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 
 ### Phase 9: Cognitive Foundation (v7.4.0) [PLANNED]
 **Goal**: Establish learning-from-experience capability with outcome tracking, episodic memory, confidence markers, and memory health
-**PRD**: [PRD-Phase1-Cognitive-Foundation.md](PRD-Phase1-Cognitive-Foundation.md)
-**Spec**: [SPEC-Phase1-Cognitive-Foundation.md](../specs/SPEC-Phase1-Cognitive-Foundation.md)
+**PRD**: [PRD-AgentX.md](PRD-AgentX.md) (Feature PRD: Cognitive Foundation)
+**Spec**: [SPEC-AgentX.md](../specs/SPEC-AgentX.md) (Cognitive Foundation Specification)
 **Deliverables**:
 - Outcome Tracker (`outcomeTracker.ts`) -- structured outcome recording after quality loops
 - Session Recorder (`sessionRecorder.ts`) -- auto-capture at context compaction
@@ -610,8 +612,8 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 
 ### Phase 11: Proactive Intelligence & MCP Dashboard (v7.6.0) [PLANNED]
 **Goal**: Transform AgentX from reactive orchestrator to proactive intelligence platform with rich UI
-**PRD**: [PRD-Phase3-Proactive-Intelligence.md](PRD-Phase3-Proactive-Intelligence.md)
-**Spec**: [SPEC-Phase3-Proactive-Intelligence.md](../specs/SPEC-Phase3-Proactive-Intelligence.md)
+**PRD**: [PRD-AgentX.md](PRD-AgentX.md) (Feature PRD: Proactive Intelligence)
+**Spec**: [SPEC-AgentX.md](../specs/SPEC-AgentX.md) (Proactive Intelligence Specification)
 **Deliverables**:
 - Background Intelligence Engine (stale issue detection, dependency monitoring, pattern analysis)
 - AgentX MCP Server (4 tools + 6 resources, stdio/SSE transport)
@@ -713,6 +715,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 
 | Version | Date | Key Feature |
 |---------|------|-------------|
+| v7.4.0 | 2026-03-05 | Cognitive Foundation, document consolidation, version stamp |
 | v7.3.5 | 2026-03-04 | Documentation consolidation, version alignment, skill/agent count corrections |
 | v7.3.0 | 2026-03-15 | Agentic Loop Quality Framework, configurable settings sidebar, streaming visibility |
 | v7.2.1 | 2026-03-01 | Workflow restructure with parallel stages, bug-fix loop, version bump |
@@ -2714,6 +2717,312 @@ AgentX's agentic loop grants LLM-driven agents the ability to execute shell comm
 
 ---
 
+## Feature PRD: Cognitive Foundation
+
+**Epic**: Phase 1 -- Cognitive Foundation
+**Status**: Draft
+**Date**: 2026-03-04
+**Priority**: p1
+**Target Version**: v7.4.0
+
+### Problem Statement
+
+AgentX agents execute tasks effectively but do not **learn from past outcomes**. The self-review loop validates code quality in the moment but discards lessons. There is no way to recall what happened in prior sessions, no uncertainty signals in agent deliverables, and the memory store accumulates stale data with no health maintenance.
+
+**Why this matters:**
+- Engineers waste time on recurring mistakes the system already solved before.
+- Resuming work after a break requires manually re-reading files to rebuild context.
+- Reviewers and Engineers cannot distinguish high-confidence recommendations from speculative ones in Architect ADRs.
+- The `.agentx/memory/` folder grows unbounded with orphaned files and stale observations.
+
+### Target Users
+
+**Solo Developer (Local Mode)**: Uses AgentX on personal projects, switches between projects frequently, wants past lessons applied automatically.
+
+**Team Lead (GitHub Mode)**: Oversees 3-5 engineers using AgentX, needs visibility into agent decision confidence.
+
+### Goals & Success Metrics
+
+| Metric | Current | Target | Timeline |
+|--------|---------|--------|----------|
+| Outcome records per quality loop | 0 | 1 per loop completion | v7.4.0 |
+| Session summaries auto-captured | 0 | 1 per compaction event | v7.4.0 |
+| Agent outputs with confidence markers | 0% | 100% of Architect/Reviewer outputs | v7.4.0 |
+| Memory health check available | No | Yes, via command | v7.4.0 |
+| Orphaned memory files detected/repaired | N/A | 100% detected, auto-repaired | v7.4.0 |
+
+### Requirements
+
+#### Must Have (P0)
+
+1. **Outcome Tracker**: Record structured outcomes after each quality loop completion
+   - Each quality loop completion writes an outcome record to `.agentx/memory/outcomes/`
+   - Record includes: agent, issue, action summary, outcome (pass/fail), root cause (if fail), lesson learned
+   - Outcomes queryable by agent, issue, or keyword in < 500ms for stores with < 1000 records
+
+2. **Episodic Memory (Session Recorder)**: Auto-capture session summaries at context compaction
+   - Context compactor triggers session recording automatically
+   - Session record includes: agent, issue, actions performed, decisions made, timestamp range
+   - Sessions stored in `.agentx/memory/sessions/session-{date}-{id}.json`
+   - `agentx.sessionHistory` command lists recent sessions
+
+3. **Confidence Markers**: Agent outputs include uncertainty signals
+   - Architect and Reviewer agent prompt templates include confidence marker instructions
+   - Markers use standard format: `[Confidence: HIGH]`, `[Confidence: MEDIUM]`, `[Confidence: LOW]`
+   - At least one marker per major section in ADR and Review outputs
+
+4. **Memory Health Command**: Validate and repair memory store integrity
+   - `agentx.memoryHealth` command scans manifest.json against actual files
+   - Detects: orphaned files, missing manifest entries, corrupt JSON, stale observations (> 90 days)
+   - `--fix` flag auto-repairs: rebuilds manifest from disk, removes orphaned files
+   - Completes in < 2 seconds for stores with < 5000 observations
+
+#### Should Have (P1)
+
+5. **Outcome-Informed Prompts**: Query past outcomes before starting similar work, inject top 3 relevant lessons into agent system prompt (< 500 tokens)
+6. **Session Resume Command**: `agentx.resumeSession` loads the most recent session for the current issue
+
+#### Could Have (P2)
+
+7. **Session Timeline View**: Visual timeline of sessions in sidebar
+
+### User Stories
+
+| Story ID | As a... | I want... | So that... | Priority |
+|----------|---------|-----------|------------|----------|
+| US-CF-1.1 | Engineer | outcomes auto-recorded after each quality loop | the system learns from my work | P0 |
+| US-CF-1.2 | Engineer | to query past outcomes by keyword | I can find relevant lessons before starting similar work | P0 |
+| US-CF-1.3 | Engineer | top lessons injected into my agent prompt | I avoid repeating past mistakes | P1 |
+| US-CF-2.1 | Developer | sessions auto-captured at compaction | I have a record of what happened | P0 |
+| US-CF-2.2 | Developer | to list recent sessions via command | I can browse my work history | P0 |
+| US-CF-2.3 | Developer | a "resume" command for the last session | I can pick up where I left off | P1 |
+| US-CF-3.1 | Reviewer | Architect ADRs to have confidence markers | I know which sections need deeper scrutiny | P0 |
+| US-CF-3.2 | Engineer | Reviewer feedback to have confidence markers | I can prioritize which feedback is firm vs. exploratory | P0 |
+| US-CF-4.1 | Developer | a health check command for my memory store | I know if my store is healthy | P0 |
+| US-CF-4.2 | Developer | auto-repair via `--fix` flag | orphaned/corrupt entries are cleaned up | P0 |
+
+### User Flows
+
+**Outcome Learning**: Quality loop completes -> system extracts outcome record -> outcome written to `.agentx/memory/outcomes/` -> manifest updated. On failure: outcome recorded with `result: "fail"`, root cause captured. Write errors logged but do not block loop completion.
+
+**Session Resume**: User runs `agentx.resumeSession` -> system loads most recent session for active issue -> summary displayed with decisions and files changed -> user resumes with full context.
+
+**Memory Health Check**: User runs `agentx.memoryHealth` -> system scans manifest vs disk -> reports orphans, stale entries, corrupt JSON, disk size -> `--fix` flag auto-repairs.
+
+### Dependencies & Constraints
+
+- MUST extend existing `IObservationStore` interface, not replace it
+- MUST NOT introduce external dependencies (npm packages)
+- MUST use the same JSON file-based storage pattern as existing observation pipeline
+- Confidence markers are prompt-level guidance, not code enforcement
+
+### Risks
+
+| Risk | Impact | Probability | Mitigation |
+|------|--------|-------------|------------|
+| Outcome records grow unbounded | Medium | Medium | Max count per issue (100), oldest auto-archived |
+| Session recording slows compaction | High | Low | Fire-and-forget async write, 200ms timeout |
+| Confidence markers ignored by LLM | Medium | Medium | Include few-shot examples in prompt template |
+| Memory health scan slow on large stores | Medium | Low | Stream processing, early exit on first N errors |
+
+### Timeline
+
+| Sprint | Focus | Deliverables |
+|--------|-------|-------------|
+| Sprint 1 (Days 1-3) | Core Infrastructure | `outcomeTracker.ts`, `sessionRecorder.ts`, integration with selfReviewLoop and contextCompactor, unit tests |
+| Sprint 2 (Days 4-6) | Commands & Confidence | `agentx.memoryHealth` command, `agentx.sessionHistory` command, confidence marker instructions in agent prompts |
+| Sprint 3 (Days 7-9) | Polish & Integration | `agentx.resumeSession` command, outcome query integration, end-to-end testing, documentation |
+
+---
+
+## Feature PRD: Proactive Intelligence & MCP Dashboard
+
+**Epic**: Phase 3 -- Proactive Intelligence
+**Status**: Draft
+**Date**: 2026-03-04
+**Target Version**: v7.6.0
+**Related**: [Feature PRD: Cognitive Foundation](#feature-prd-cognitive-foundation)
+
+### Problem Statement
+
+AgentX v7.4.0 (Phase 1) establishes a cognitive foundation with outcome tracking, session recording, and memory health. However, three critical gaps remain:
+
+1. **Reactive-only scheduling**: The `taskScheduler.ts` cron system executes tasks on fixed intervals but cannot detect stale issues, dependency resolution, or memory patterns on its own.
+2. **No programmatic access**: External tools, scripts, and custom dashboards cannot interact with AgentX's ready queue, agent states, or memory store.
+3. **No unified visibility**: Developers lack a single, interactive view of what AgentX is doing.
+4. **Disconnected observations**: Memory observations are per-issue with no cross-issue linking.
+
+### Goals & Success Metrics
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Background tasks surfacing actionable items | >= 3 insights per week (active repo) | Count of proactive notifications |
+| MCP server response latency | < 200ms p95 for tool calls | Performance test suite |
+| Dashboard user engagement | >= 60% of sessions open dashboard at least once | Telemetry (opt-in) |
+| Cross-issue link accuracy | >= 75% of auto-linked observations rated relevant | Feedback tracking |
+| Developer satisfaction | >= 4.0/5.0 on dashboard usefulness | User survey |
+
+### Features
+
+#### Feature 1: Background Intelligence Engine (P0)
+
+Replace the simple cron-based `taskScheduler.ts` with an intelligent background engine:
+- **Stale Issue Detector**: Identify issues stuck in a status for too long (configurable thresholds)
+- **Dependency Monitor**: Watch for dependency resolution and auto-notify
+- **Memory Pattern Promoter**: Surface recurring patterns from outcomes
+- **Health Auto-Scan**: Periodic memory health checks with auto-repair
+
+#### Feature 2: AgentX MCP Server (P0)
+
+Expose AgentX's core capabilities as an MCP server (`@agentx/mcp-server`):
+
+**Tools**: `agentx_set_agent_state`, `agentx_create_issue`, `agentx_trigger_workflow`, `agentx_memory_search`
+
+**Resources**: `agentx://ready-queue`, `agentx://agent-states`, `agentx://memory/outcomes`, `agentx://memory/sessions`, `agentx://memory/health`, `agentx://config`
+
+#### Feature 3: MCP App Dashboard (P0)
+
+Rich, interactive dashboard rendered inside VS Code via MCP Apps framework:
+- **Agent Status Overview**: Cards showing each agent's state, active issue, and time in state
+- **Ready Queue**: Interactive table of unblocked work sorted by priority
+- **Outcome Trends**: Pass/fail/partial outcomes chart over time
+- **Session Timeline**: Visual timeline of recent sessions
+- **Memory Health**: At-a-glance health status with one-click repair
+- **Active Workflows**: Progress view of in-flight workflows
+
+#### Feature 4: Observation Linking / Synapse Network (P1)
+
+Cross-issue linking of observations based on semantic similarity:
+- Compute lightweight similarity score against recent observations from other issues
+- Create bidirectional links stored in `synapse-manifest.json`
+- Include linked observations in prompt injection with `[From #{issue}]` prefix
+
+#### Feature 5: Cross-Session Continuity (P1)
+
+Auto-detect when a developer returns to an issue and proactively display session resume context including relevant outcome lessons and linked observations.
+
+#### Feature 6: Global Knowledge Base (P1)
+
+Promote high-value observations from workspace memory to user-level global knowledge base at `~/.agentx/knowledge/`:
+- **Promotion Criteria**: recallCount >= 3, or outcomes with reusable lessons
+- **Auto-Promotion**: Background engine periodically scans for candidates
+- **Global Search**: Fallback when workspace-local search returns < 3 results
+- **Deduplication**: Jaccard similarity >= 0.8 check before promotion
+- **Knowledge Categories**: pattern, pitfall, convention, insight
+
+### User Stories
+
+| ID | Story | Acceptance Criteria |
+|----|-------|---------------------|
+| US-PI-3.1 | As a developer, I want notification when an issue is stuck too long | Notification when issue age exceeds threshold (24h In Progress, 48h In Review) |
+| US-PI-3.2 | As a developer, I want auto-notification when blocking issues resolve | When blocking issue closes, dependent issues get notification; ready queue updates |
+| US-PI-3.3 | As a developer, I want AgentX to surface recurring failure patterns | When >= 3 outcomes share a root cause, a "Pattern Alert" notification appears |
+| US-PI-3.4 | As a tool developer, I want to query the ready queue programmatically | `agentx_ready_queue` tool returns JSON array of unblocked issues |
+| US-PI-3.5 | As a script author, I want to trigger workflows from external tools | `agentx_trigger_workflow` accepts issue number and workflow type |
+| US-PI-3.6 | As a developer, I want to browse AgentX resources in any MCP client | All 6 resources return well-structured JSON |
+| US-PI-3.7 | As a developer, I want a single dashboard in VS Code | Dashboard shows agent states, ready queue, and active workflows; auto-refreshes every 30s |
+| US-PI-3.8 | As a developer, I want outcome trend charts | Pass/fail/partial trend chart, filterable by agent and label |
+| US-PI-3.9 | As a developer, I want memory health at a glance | Green/yellow/red status with counts, disk usage, and "Repair" button |
+| US-PI-3.10 | As a developer, I want the dashboard to respect my VS Code theme | Uses `var(--host-*)` CSS variables |
+| US-PI-3.12 | As a developer, I want related observations to surface automatically | Working on issue #87 shows linked observations from #42 with prefix |
+| US-PI-3.14 | As a developer, I want session context to auto-load on return | Last session summary injected as context automatically |
+| US-PI-3.16 | As a developer, I want cross-project lessons to surface | Global knowledge searched as fallback with `[Global]` prefix |
+| US-PI-3.17 | As a developer, I want auto-promotion of high-value observations | Background engine promotes observations with recallCount >= 3 |
+
+### Dashboard Layout
+
+```
++------------------------------------------------------------------+
+|                    AgentX Dashboard                               |
++------------------------------------------------------------------+
+|  Agent Status                               Ready Queue           |
+|  +----------+----------+----------+    +---------------------+    |
+|  | Engineer  | Reviewer | Architect|    | #42 [P0] Auth flow  |    |
+|  | Working   | Idle     | Idle     |    | #55 [P1] API route  |    |
+|  | Issue #42 |          |          |    | #61 [P2] Docs       |    |
+|  +----------+----------+----------+    +---------------------+    |
+|                                                                    |
+|  Outcome Trends (Last 30 Days)         Memory Health              |
+|  +----------------------------+    +---------------------+        |
+|  |  Pass: |||||||||| 78%      |    | Status: HEALTHY     |        |
+|  |  Fail: |||        15%      |    | Observations: 1,247 |        |
+|  |  Part: ||          7%      |    | Outcomes: 89        |        |
+|  +----------------------------+    | Sessions: 42        |        |
+|                                    | Disk: 2.1 MB        |        |
+|  Active Workflows                  | [Repair] [Scan]     |        |
+|  +----------------------------+    +---------------------+        |
+|  | #42 Engineer Step 3/5      |                                   |
+|  | Iteration 2, Tests pass    |    Session Timeline               |
+|  +----------------------------+    +---------------------+        |
+|                                    | Mar 4 09:15 - 10:30 |        |
+|                                    | Engineer #42         |        |
+|                                    +---------------------+        |
++------------------------------------------------------------------+
+```
+
+### Requirements
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-PI-1 | Background engine MUST detect stale issues with configurable thresholds | P0 |
+| FR-PI-2 | Background engine MUST detect unblocked issues and update ready queue | P0 |
+| FR-PI-3 | Background engine MUST surface recurring failure patterns (>= 3 similar outcomes) | P0 |
+| FR-PI-4 | MCP server MUST expose ready queue, agent states, and memory data as resources | P0 |
+| FR-PI-5 | MCP server MUST provide tools for state updates, issue creation, workflow triggers, and memory search | P0 |
+| FR-PI-6 | Dashboard MUST display agent status, ready queue, outcome trends, session timeline, memory health | P0 |
+| FR-PI-7 | Dashboard MUST auto-refresh at 30-second intervals and respect VS Code theme | P0 |
+| FR-PI-8 | Dashboard MUST be a single-file HTML bundle (MCP Apps requirement) | P0 |
+| FR-PI-9 | Observation linking MUST compute similarity and store bidirectional links | P1 |
+| FR-PI-10 | Cross-session continuity MUST auto-inject last session context | P1 |
+| FR-PI-11 | Global knowledge MUST store promoted entries at `~/.agentx/knowledge/` | P1 |
+| FR-PI-12 | Global knowledge MUST auto-promote observations with recallCount >= 3 | P1 |
+| FR-PI-13 | Global knowledge MUST deduplicate before promotion (Jaccard >= 0.8) | P1 |
+
+### Non-Functional Requirements
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| NFR-PI-1 | MCP server response time < 200ms p95 | P0 |
+| NFR-PI-2 | Dashboard initial render < 2 seconds | P0 |
+| NFR-PI-3 | Dashboard bundle size < 500 KB | P0 |
+| NFR-PI-4 | Background engine < 5% CPU when idle | P0 |
+| NFR-PI-5 | All new modules >= 80% test coverage | P0 |
+| NFR-PI-6 | Global knowledge store < 10 MB (auto-prune) | P1 |
+
+### Risks & Dependencies
+
+| Risk | Impact | Probability | Mitigation |
+|------|--------|-------------|------------|
+| MCP Apps SDK stability (spec evolving) | High | Medium | Pin SDK version, abstract adapter layer |
+| Dashboard performance with large data sets | Medium | Medium | Paginate, virtualized list rendering |
+| Background engine resource consumption | Medium | Low | Configurable intervals, CPU throttle, opt-out |
+| Observation linking false positives | Medium | Medium | High similarity threshold (>= 0.7), user feedback |
+| Global knowledge store bloat | Medium | Medium | Deduplication, 10 MB cap, usage-based pruning |
+
+### Dependencies
+
+| Dependency | Type | Status |
+|------------|------|--------|
+| Phase 1 (Cognitive Foundation v7.4.0) | Must ship first | In progress |
+| `@modelcontextprotocol/sdk` | NPM package | Stable |
+| `@modelcontextprotocol/ext-apps` | NPM package | Preview |
+| Vite | Build tool for dashboard bundle | Stable |
+| React 19+ | Dashboard UI framework | Stable |
+
+### Timeline
+
+| Sprint | Focus | Deliverables |
+|--------|-------|-------------|
+| Sprint 1 | Background intelligence core | `backgroundEngine.ts`, stale issue detector, dependency monitor |
+| Sprint 2 | MCP server | `mcpServer.ts`, 4 tools + 6 resources, stdio transport |
+| Sprint 3 | Dashboard scaffold | React app, Vite config, MCP App registration, agent status + ready queue |
+| Sprint 4 | Dashboard completion | Outcome trends, session timeline, memory health, theme integration |
+| Sprint 5 | Observation linking | `synapseNetwork.ts`, similarity computation, synapse manifest |
+| Sprint 6 | Cross-session continuity | Auto-resume, session context injection, outcome inclusion |
+| Sprint 7 | Global Knowledge Base | `globalKnowledgeStore.ts`, promotion engine, global search, dashboard section |
+
+---
+
 **Generated by AgentX Product Manager Agent**
-**Last Updated**: 2026-03-03
+**Last Updated**: 2026-03-04
 **Version**: 1.0
