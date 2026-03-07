@@ -1,5 +1,5 @@
 ---
-name: Product Manager
+name: AgentX Product Manager
 description: 'Define product vision, create PRD, break Epics into Features and Stories with acceptance criteria.'
 model: Claude Opus 4.6 (copilot)
 constraints:

@@ -1,5 +1,5 @@
 ---
-name: Power BI Analyst
+name: AgentX Power BI Analyst
 description: 'Design and build Power BI reports, dashboards, semantic models, and DAX measures for data-driven insights.'
 model: Claude Sonnet 4 (copilot)
 constraints:

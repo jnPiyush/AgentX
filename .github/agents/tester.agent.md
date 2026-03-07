@@ -1,5 +1,5 @@
 ---
-name: Tester
+name: AgentX Tester
 description: 'Validate software quality through automated testing, performance testing, security testing, and production readiness certification.'
 model: Claude Sonnet 4 (copilot)
 constraints:

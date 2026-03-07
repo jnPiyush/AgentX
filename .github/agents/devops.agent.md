@@ -1,5 +1,5 @@
 ---
-name: DevOps Engineer
+name: AgentX DevOps Engineer
 description: 'Create and manage CI/CD pipelines, GitHub Actions workflows, deployment automation, and release pipelines.'
 model: Claude Sonnet 4 (copilot)
 constraints:

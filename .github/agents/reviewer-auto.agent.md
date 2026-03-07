@@ -1,5 +1,5 @@
 ---
-name: Auto-Fix Reviewer
+name: AgentX Auto-Fix Reviewer
 description: 'Review code AND auto-apply safe fixes (formatting, imports, naming, null checks, docs). Suggest complex changes for human approval.'
 model: Claude Sonnet 4 (copilot)
 constraints:

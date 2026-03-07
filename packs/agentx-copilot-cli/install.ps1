@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX Copilot CLI Plugin v8.1.0 into a workspace.
+ Install AgentX Copilot CLI Plugin v8.1.1 into a workspace.
 
 .DESCRIPTION
  Copies AgentX agents, skills, instructions, and prompts into a target workspace
@@ -130,7 +130,7 @@ if (-not $Target) {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "| AgentX Copilot CLI Plugin v8.1.0        |" -ForegroundColor Cyan
+Write-Host "| AgentX Copilot CLI Plugin v8.1.1        |" -ForegroundColor Cyan
 Write-Host "| Standalone plugin for GitHub Copilot CLI |" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
@@ -257,7 +257,7 @@ if (-not (Test-Path $versionDir)) {
 if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
  @{
   plugin = "agentx-copilot-cli"
-  version = "8.1.0"
+  version = "8.1.1"
   installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
   source = $Source
   includeCli = [bool]$IncludeCli
@@ -269,7 +269,7 @@ if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
-Write-Host " AgentX Copilot CLI Plugin v8.1.0 installed" -ForegroundColor Green
+Write-Host " AgentX Copilot CLI Plugin v8.1.1 installed" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " Files copied  : $totalCopied" -ForegroundColor White
