@@ -47,34 +47,7 @@ export function registerLoopCommand(
   }
  });
 
- // Quick-start loop command
- const loopStartCmd = vscode.commands.registerCommand('agentx.loopStart', async () => {
-  if (!await agentx.checkInitialized()) {
-   vscode.window.showWarningMessage('AgentX is not initialized.');
-   return;
-  }
-  await loopStart(agentx);
- });
-
- // Quick status command
- const loopStatusCmd = vscode.commands.registerCommand('agentx.loopStatus', async () => {
-  if (!await agentx.checkInitialized()) {
-   vscode.window.showWarningMessage('AgentX is not initialized.');
-   return;
-  }
-  await loopStatus(agentx);
- });
-
- // Quick cancel command
- const loopCancelCmd = vscode.commands.registerCommand('agentx.loopCancel', async () => {
-  if (!await agentx.checkInitialized()) {
-   vscode.window.showWarningMessage('AgentX is not initialized.');
-   return;
-  }
-  await loopCancel(agentx);
- });
-
- context.subscriptions.push(loopCmd, loopStartCmd, loopStatusCmd, loopCancelCmd);
+ context.subscriptions.push(loopCmd);
 }
 
 async function loopStart(agentx: AgentXContext): Promise<void> {

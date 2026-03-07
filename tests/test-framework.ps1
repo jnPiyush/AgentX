@@ -71,18 +71,18 @@ Assert-FileContains ".github/templates/PRD-TEMPLATE.md" "AI/ML Requirements" "PR
 Assert-FileContains ".github/templates/ADR-TEMPLATE.md" "AI/ML Architecture" "ADR has AI/ML Architecture section"
 Assert-FileContains ".github/templates/SPEC-TEMPLATE.md" "AI/ML Specification" "SPEC has AI/ML Specification section"
 
-# --- 4. TOML Workflows ------------------------------------------------------------------
+# --- 4. Agent Definitions ----------------------------------------------------------------
 Write-Host ""
-Write-Host " 4. TOML Workflows" -ForegroundColor White
+Write-Host " 4. Agent Definitions" -ForegroundColor White
 
-$workflows = @("feature", "epic", "story", "bug", "spike", "devops", "docs")
-foreach ($wf in $workflows) {
- Assert-FileExists ".agentx/workflows/$wf.toml" "Workflow: $wf"
+$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "reviewer-auto", "ux-designer", "devops", "data-scientist", "tester", "powerbi-analyst", "customer-coach")
+foreach ($ag in $agents) {
+ Assert-FileExists ".github/agents/$ag.agent.md" "Agent: $ag"
 }
 
-# Verify TOML structure
-Assert-FileContains ".agentx/workflows/feature.toml" "\[\[steps\]\]" "feature.toml has steps"
-Assert-FileContains ".agentx/workflows/feature.toml" "agent\s*=" "feature.toml has agent assignments"
+# Verify agent frontmatter structure
+Assert-FileContains ".github/agents/engineer.agent.md" "description:" "engineer.agent.md has description"
+Assert-FileContains ".github/agents/engineer.agent.md" "model:" "engineer.agent.md has model"
 
 # --- 5. CLI -----------------------------------------------------------------------------
 Write-Host ""

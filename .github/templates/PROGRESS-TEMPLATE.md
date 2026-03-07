@@ -45,6 +45,22 @@ inputs:
 - [ ] Documentation
 - [ ] Review ready
 
+### GenAI Phase Checklist (if applicable)
+
+- [ ] Prompt engineering (system prompt, structured output schema)
+- [ ] Evaluation dataset created ({N} test cases)
+- [ ] Model version pinned with evaluation baseline
+- [ ] Guardrails configured and tested
+- [ ] LLM-as-judge evaluation passing thresholds
+- [ ] AgentOps tracing enabled
+
+### MCP Phase Checklist (if applicable)
+
+- [ ] Tool definitions with JSON Schema validation
+- [ ] Resource providers implemented
+- [ ] End-to-end test with target AI host
+- [ ] Security review (input validation, path traversal, SSRF)
+
 ---
 
 ## Checkpoint Log

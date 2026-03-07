@@ -44,10 +44,12 @@ inputs:
 7. [Interactions & Animations](#7-interactions--animations)
 8. [Accessibility (WCAG 2.1 AA)](#8-accessibility-wcag-21-aa)
 9. [Responsive Design](#9-responsive-design)
-10. [Interactive Prototypes](#10-interactive-prototypes)
-11. [Implementation Notes](#11-implementation-notes)
-12. [Open Questions](#12-open-questions)
-13. [References](#13-references)
+10. [AI & Conversational UX](#10-ai--conversational-ux) *(if applicable)*
+11. [MCP App UI Design](#11-mcp-app-ui-design) *(if applicable)*
+12. [Interactive Prototypes](#12-interactive-prototypes)
+13. [Implementation Notes](#13-implementation-notes)
+14. [Open Questions](#14-open-questions)
+15. [References](#15-references)
 
 ---
 
@@ -431,7 +433,222 @@ flowchart TD
 
 ---
 
-## 10. Interactive Prototypes
+## 10. AI & Conversational UX (if applicable)
+
+> **Trigger**: Include this section when the feature involves chat interfaces, AI agents,
+> LLM-powered interactions, or conversational UI. Skip for traditional web/mobile UX.
+
+### 10.1 Conversation Flow Architecture
+
+```mermaid
+graph TD
+ subgraph ConvFlow["Conversational UX Flow"]
+ direction TB
+
+ U["User Input"] --> IC{"Input Classification"}
+
+ IC -->|"Text Query"| NL["Natural Language\nProcessing"]
+ IC -->|"Button / Action"| DA["Direct Action\nHandler"]
+ IC -->|"File Upload"| FH["File Handler\n+ Preview"]
+
+ NL --> AI{"AI Response Type"}
+
+ AI -->|"Text"| TR["Text Response\n+ Markdown"]
+ AI -->|"Structured Data"| SR["Rich Card /\nTable / Chart"]
+ AI -->|"Action Required"| CF["Confirmation\nDialog"]
+ AI -->|"Multi-Step"| WZ["Guided Wizard\n/ Stepper"]
+ AI -->|"Interactive UI"| MCP["MCP App View\n(iframe)"]
+
+ TR --> FB["Feedback\n(thumbs up/down)"]
+ SR --> FB
+ CF -->|"Confirmed"| EX["Execute Action"]
+ CF -->|"Cancelled"| U
+ WZ --> EX
+ MCP --> FB
+ end
+
+ style U fill:#E3F2FD,stroke:#1565C0
+ style AI fill:#F3E5F5,stroke:#6A1B9A
+ style FB fill:#E8F5E9,stroke:#2E7D32
+ style CF fill:#FFF3E0,stroke:#E65100
+```
+
+### 10.2 Chat Interface Wireframe
+
+```
++===========================================================+
+| Agent Name [Status: Online] |
+===========================================================+
+| |
+| [Agent] Hello! How can I help you today? |
+| |
+| [User] Show me the Q4 sales report |
+| |
+| [Agent] Here is the Q4 summary: |
+| +-------------------------------------------+ |
+| | Q4 Sales Report | |
+| | Total: $2.4M (+12% YoY) | |
+| | Top Region: West ($890K) | |
+| | [View Full Report] [Export CSV] | |
+| +-------------------------------------------+ |
+| |
+| [Agent] Would you like me to drill into | |
+| a specific region? | |
+| |
+| +-------+ +----------+ +--------+ |
+| | West | | Central | | East | |
+| +-------+ +----------+ +--------+ |
+| |
++===========================================================+
+| [Attach] [ Type your message... ] [Send ->] |
++===========================================================+
+```
+
+### 10.3 AI Response Patterns
+
+| Pattern | When to Use | UX Treatment |
+|---------|------------|-------------|
+| **Text reply** | Simple answers, explanations | Markdown with code blocks, links |
+| **Rich card** | Structured data (reports, summaries) | Card with header, body, action buttons |
+| **Confirmation** | Destructive or irreversible actions | Modal or inline confirm/cancel |
+| **Stepper** | Multi-step workflows | Progress indicator + step content |
+| **Inline edit** | Data corrections, form fill | Editable fields within chat |
+| **Streaming** | Long responses | Typing indicator + progressive render |
+| **Error** | Model failure, timeout | Friendly message + retry button |
+| **MCP App view** | Complex interactive UI | iframe rendering within chat |
+
+### 10.4 Conversation UX Guidelines
+
+- **Typing indicator**: Show when AI is generating (pulsing dots)
+- **Progressive rendering**: Stream tokens as they arrive (no waiting for full response)
+- **Feedback mechanism**: Thumbs up/down on every AI response for quality tracking
+- **Context breadcrumbs**: Show conversation topic/context in header
+- **Quick actions**: Suggest follow-up actions as buttons below responses
+- **Error recovery**: "Retry" button on failures, "Start over" for stuck conversations
+- **Transparency**: Label AI-generated content clearly ("AI-generated")
+- **Escape hatch**: Always provide a way to reach human support
+
+### 10.5 AI-Specific Accessibility
+
+- Screen reader announces new AI messages via ARIA live regions
+- Streaming text is announced progressively (not on every token)
+- Rich cards provide text alternatives for data visualizations
+- Keyboard users can navigate suggested actions with arrow keys
+- Confirmation dialogs trap focus until resolved
+
+---
+
+## 11. MCP App UI Design (if applicable)
+
+> **Trigger**: Include this section when the feature is an MCP App rendering interactive UI
+> inside an AI host (VS Code Copilot, Claude Desktop, etc.). Skip for standalone web apps.
+
+### 11.1 MCP App Layout Architecture
+
+```mermaid
+graph TD
+ subgraph Host["AI Host Environment"]
+ Chat["Chat Panel"]
+ IFrame["iframe Container\n(MCP App View)"]
+ end
+
+ subgraph AppLayout["MCP App Views"]
+ direction TB
+
+ subgraph V1["View 1: {Name}"]
+ H1["Header / Toolbar"]
+ C1["Content Area\n(data, forms, charts)"]
+ A1["Action Bar\n(buttons, submit)"]
+ end
+
+ subgraph V2["View 2: {Name}"]
+ H2["Header"]
+ C2["Content"]
+ A2["Actions"]
+ end
+ end
+
+ Chat -->|"tool call"| AppLayout
+ V1 -->|"result"| Chat
+ IFrame -->|"renders"| AppLayout
+
+ style Host fill:#E3F2FD,stroke:#1565C0
+ style V1 fill:#FFF3E0,stroke:#E65100
+ style V2 fill:#F3E5F5,stroke:#6A1B9A
+```
+
+### 11.2 Host-Adaptive Layout
+
+| Context | Width | Layout Strategy |
+|---------|-------|-----------------|
+| **VS Code Side Panel** | ~400px | Single column, compact spacing, collapsible sections |
+| **VS Code Editor Tab** | ~800px | Two-column with sidebar, full data tables |
+| **Claude Desktop** | ~600px | Medium layout, cards with fold |
+| **Mobile Host** | <400px | Single column, stacked, touch-optimized |
+
+### 11.3 MCP App Wireframe
+
+```
++=======================================+
+| {App Name} [Refresh] [Close] |
++=======================================+
+| |
+| +-----------------------------------+ |
+| | Filter Bar | |
+| | [Date Range v] [Status v] [Apply] | |
+| +-----------------------------------+ |
+| |
+| +-----------------------------------+ |
+| | Results (12 items) | |
+| |-----------------------------------| |
+| | Name | Status | Value | |
+| | Item A | Active | $1,200 | |
+| | Item B | Pending | $340 | |
+| | Item C | Active | $8,900 | |
+| | [Load More...] | |
+| +-----------------------------------+ |
+| |
+| +-----------------------------------+ |
+| | [Export CSV] [Send to Chat] | |
+| +-----------------------------------+ |
+| |
++=======================================+
+```
+
+### 11.4 Theme Integration
+
+- **MUST** detect host theme (dark/light) via CSS media query or host API
+- **MUST** use CSS custom properties for theming:
+
+```css
+:root {
+ --app-bg: var(--vscode-editor-background, #ffffff);
+ --app-text: var(--vscode-editor-foreground, #212529);
+ --app-border: var(--vscode-panel-border, #dee2e6);
+ --app-accent: var(--vscode-button-background, #007bff);
+}
+
+@media (prefers-color-scheme: dark) {
+ :root {
+ --app-bg: #1e1e1e;
+ --app-text: #cccccc;
+ --app-border: #404040;
+ }
+}
+```
+
+### 11.5 Interaction with Chat
+
+| User Action in App | Result in Chat |
+|-------------------|---------------|
+| Clicks "Send to Chat" | Inserts formatted result as chat message |
+| Submits a form | Returns structured result to LLM |
+| Selects items | LLM receives selection context for follow-up |
+| Closes view | Chat shows summary of what was done |
+
+---
+
+## 12. Interactive Prototypes
 
 > **[WARN] MANDATORY**: HTML/CSS prototypes are REQUIRED per AGENTS.md. Output to `docs/ux/prototypes/`.
 > Prototypes must be production-ready HTML/CSS that engineers can reference for implementation.
@@ -450,9 +667,9 @@ flowchart TD
 
 ---
 
-## 11. Implementation Notes
+## 13. Implementation Notes
 
-### 11.1 For Engineers
+### 13.1 For Engineers
 
 **Existing Components to Reuse**:
 - `Button` component from `src/components/Button.tsx`
@@ -496,13 +713,13 @@ flowchart TD
 }
 ```
 
-### 11.2 Assets Needed
+### 13.2 Assets Needed
 - [ ] Icon set (from design system)
 - [ ] Illustrations (if any)
 - [ ] Logo files (SVG format)
 - [ ] Favicon (multiple sizes)
 
-### 11.3 Testing Checklist
+### 13.3 Testing Checklist
 - [ ] Test on Chrome, Firefox, Safari, Edge
 - [ ] Test on iOS Safari, Android Chrome
 - [ ] Test with keyboard only (no mouse)
@@ -512,7 +729,7 @@ flowchart TD
 
 ---
 
-## 12. Open Questions
+## 14. Open Questions
 
 | Question | Owner | Status | Resolution |
 |----------|-------|--------|------------|
@@ -521,7 +738,7 @@ flowchart TD
 
 ---
 
-## 13. References
+## 15. References
 
 ### Design Inspiration
 - [Example 1](link)

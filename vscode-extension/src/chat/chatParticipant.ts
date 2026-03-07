@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { AgentXContext } from '../agentxContext';
-import { handleSlashCommand, AgentXChatMetadata } from './commandHandlers';
-import { routeNaturalLanguage } from './agentRouter';
-import { AgentXFollowupProvider } from './followupProvider';
+import { stripAnsi } from '../utils/stripAnsi';
 
 const PARTICIPANT_ID = 'agentx.chat';
 
@@ -16,56 +14,59 @@ export function registerChatParticipant(
 ): void {
   const handler: vscode.ChatRequestHandler = async (
     request: vscode.ChatRequest,
-    chatContext: vscode.ChatContext,
+    _chatContext: vscode.ChatContext,
     response: vscode.ChatResponseStream,
-    token: vscode.CancellationToken
+    _token: vscode.CancellationToken
   ): Promise<vscode.ChatResult> => {
-    // Check initialization
+    // Auto-ensure local config so chat works without explicit initialization
     const initialized = await agentx.checkInitialized();
-
     if (!initialized) {
+      // Only block if we still can't initialize (e.g. no workspace open)
       return handleNotInitialized(response);
     }
 
-    // Slash command -> dispatch to command handler
-    if (request.command) {
-      return handleSlashCommand(request, chatContext, response, token, agentx);
+    const userText = request.prompt.trim();
+    if (!userText) {
+      response.markdown('Please describe what you need AgentX to do.');
+      return {};
     }
 
-    // Natural language -> classify and route to agent
-    return routeNaturalLanguage(request, chatContext, response, token, agentx);
+    // Detect simple run pattern: "run <agent> <task>"
+    const runMatch = userText.match(/^run\s+(\S+)\s+(.+)$/is);
+    if (runMatch) {
+      const agentName = runMatch[1].toLowerCase();
+      const task = runMatch[2].trim();
+      try {
+        response.progress(`Running ${agentName} agent...`);
+        const output = await agentx.runCli('run', [agentName, `"${task.replace(/"/g, '\\"')}"`]);
+        response.markdown(stripAnsi(output));
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        response.markdown(`**AgentX error:** ${msg}`);
+      }
+      return {};
+    }
+
+    // Default: show usage guidance
+    response.markdown(
+      '**AgentX** - Multi-Agent Orchestration\n\n'
+      + 'Usage:\n'
+      + '- `@agentx run engineer "implement the health endpoint for issue #42"`\n'
+      + '- `@agentx run architect "design the auth system"`\n'
+      + '- `@agentx run reviewer "review the changes in issue #42"`\n\n'
+      + 'Or use the AgentX sidebar to browse agents, templates, and workflows.'
+    );
+    return {};
   };
 
   const participant = vscode.chat.createChatParticipant(PARTICIPANT_ID, handler);
   participant.iconPath = vscode.Uri.file(
     path.join(context.extensionPath, 'resources', 'icon.png')
   );
-  participant.followupProvider = new AgentXFollowupProvider();
-
   context.subscriptions.push(participant);
 }
 
-function handleNotInitialized(
-  response: vscode.ChatResponseStream
-): vscode.ChatResult {
-  response.markdown(
-    '**AgentX is not initialized in this workspace.**\n\n'
-    + 'Click below to open the setup wizard:\n\n'
-  );
-  response.button({
-    command: 'agentx.initialize',
-    title: '$(rocket) Open Setup Wizard',
-  });
-  response.markdown(
-    '\nThe wizard will guide you through:\n'
-    + '1. Choosing **Local** or **GitHub** mode\n'
-    + '2. Configuring your repository (GitHub mode)\n'
-    + '3. Installing the AgentX framework files\n\n'
-    + 'Once initialized, you can:\n'
-    + '- Ask me to route work to the right agent\n'
-    + '- Use `/ready` to see unblocked work\n'
-    + '- Use `/workflow feature` to run a workflow\n'
-    + '- Use `/status` to check agent states\n'
-  );
-  return { metadata: { initialized: false } as AgentXChatMetadata };
+function handleNotInitialized(response: vscode.ChatResponseStream): vscode.ChatResult {
+  response.markdown('**AgentX requires an open workspace folder.**\n\nOpen a folder in VS Code to get started.');
+  return {};
 }

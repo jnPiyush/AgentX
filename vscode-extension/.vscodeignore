@@ -1,6 +1,7 @@
 .vscode/**
 .vscode-test/**
 src/**
+scripts/**
 node_modules/**
 out/test/**
 .mocharc.yml

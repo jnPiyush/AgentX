@@ -41,7 +41,14 @@ Load context on-demand, not upfront. Match the task to the right documents:
 
 ## Context Loading
 
-### Instruction Files (5 remaining)
+### Session-Persistent Instructions (load at session start)
+
+Read these two files at the start of EVERY session -- they apply to all tasks:
+
+- [.github/instructions/memory.instructions.md](.github/instructions/memory.instructions.md) -- memory read/write protocol
+- [.github/instructions/project-conventions.instructions.md](.github/instructions/project-conventions.instructions.md) -- learned project conventions
+
+### Instruction Files (5 remaining -- load on demand)
 
 | File Pattern | Read This |
 |--------------|-----------|
@@ -165,12 +172,20 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 | Tester | [.github/agents/tester.agent.md](.github/agents/tester.agent.md) |
 | Power BI Analyst | [.github/agents/powerbi-analyst.agent.md](.github/agents/powerbi-analyst.agent.md) |
 | Customer Coach | [.github/agents/customer-coach.agent.md](.github/agents/customer-coach.agent.md) |
+| GitHub Ops | [.github/agents/internal/github-ops.agent.md](.github/agents/internal/github-ops.agent.md) |
+| ADO Ops | [.github/agents/internal/ado-ops.agent.md](.github/agents/internal/ado-ops.agent.md) |
+| Functional Reviewer | [.github/agents/internal/functional-reviewer.agent.md](.github/agents/internal/functional-reviewer.agent.md) |
+| Prompt Engineer | [.github/agents/internal/prompt-engineer.agent.md](.github/agents/internal/prompt-engineer.agent.md) |
+| Eval Specialist | [.github/agents/internal/eval-specialist.agent.md](.github/agents/internal/eval-specialist.agent.md) |
+| Ops Monitor | [.github/agents/internal/ops-monitor.agent.md](.github/agents/internal/ops-monitor.agent.md) |
+| RAG Specialist | [.github/agents/internal/rag-specialist.agent.md](.github/agents/internal/rag-specialist.agent.md) |
+| Agile Coach | [.github/agents/agile-coach.agent.md](.github/agents/agile-coach.agent.md) |
 
 ---
 
 ## Claude Code Commands
 
-All 12 agents are available as `/project:` slash commands in Claude Code via `.claude/commands/`:
+All 20 agents are available as `/project:` slash commands in Claude Code via `.claude/commands/` (invisible sub-agents do not have commands):
 
 | Command | Agent | Purpose |
 |---------|-------|---------|
@@ -186,6 +201,9 @@ All 12 agents are available as `/project:` slash commands in Claude Code via `.c
 | `/project:tester` | Tester | Automated testing, certification reports |
 | `/project:powerbi-analyst` | Power BI Analyst | Power BI reports, DAX measures, semantic models |
 | `/project:customer-coach` | Customer Coach | Consulting research, client-ready materials |
+| `/project:github-ops` | GitHub Ops | GitHub issue triage, sprint planning, backlog management |
+| `/project:ado-ops` | ADO Ops | Azure DevOps work items, sprint planning, PRD decomposition |
+| `/project:agile-coach` | Agile Coach | Story creation, refinement, INVEST compliance |
 
 **Usage**: Type `/project:engineer Implement the health endpoint for issue #1` in Claude Code.
 

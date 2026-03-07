@@ -37,8 +37,10 @@ inputs:
 5. [Network Security](#5-network-security)
 6. [Secrets Management](#6-secrets-management)
 7. [Monitoring & Incident Response](#7-monitoring--incident-response)
-8. [Compliance](#8-compliance)
-9. [Security Checklist](#9-security-checklist)
+8. [GenAI & LLM Security](#8-genai--llm-security) *(if applicable)*
+9. [MCP Security](#9-mcp-security) *(if applicable)*
+10. [Compliance](#10-compliance)
+11. [Security Checklist](#11-security-checklist)
 
 ---
 
@@ -218,7 +220,159 @@ graph TD
 
 ---
 
-## 8. Compliance
+## 8. GenAI & LLM Security (if applicable)
+
+> **Trigger**: Include this section when the system uses LLMs, AI agents, or GenAI inference.
+> Skip if no AI/ML components exist.
+
+### GenAI Threat Landscape
+
+```mermaid
+graph TD
+ subgraph Threats["GenAI Attack Surface"]
+ direction TB
+
+ subgraph Input["Input Threats"]
+ PI["Prompt Injection\n(direct + indirect)"]
+ JB["Jailbreak\nAttempts"]
+ ADV["Adversarial\nInputs"]
+ end
+
+ subgraph Model["Model Threats"]
+ HALL["Hallucination\n(false facts)"]
+ LEAK["Training Data\nLeakage"]
+ BIAS["Bias &\nFairness"]
+ end
+
+ subgraph Output["Output Threats"]
+ EXFIL["Data\nExfiltration"]
+ CODE["Malicious Code\nGeneration"]
+ PRIV["PII\nExposure"]
+ end
+
+ subgraph Ops["Operational Threats"]
+ COST["Cost / Token\nExhaustion"]
+ DRIFT["Silent Model\nDegradation"]
+ SUPPLY["Model Supply\nChain"]
+ end
+ end
+
+ style Input fill:#FFEBEE,stroke:#C62828
+ style Model fill:#FFF3E0,stroke:#E65100
+ style Output fill:#FCE4EC,stroke:#AD1457
+ style Ops fill:#E3F2FD,stroke:#1565C0
+```
+
+### OWASP LLM Top 10 Assessment
+
+| # | Threat | Applicable? | Mitigation | Status |
+|---|--------|-------------|------------|--------|
+| LLM01 | Prompt Injection | {Yes/No} | {Input sanitization, system prompt hardening, output validation} | {Open/Mitigated} |
+| LLM02 | Insecure Output Handling | {Yes/No} | {Output validation, escaping, structured output enforcement} | {Open/Mitigated} |
+| LLM03 | Training Data Poisoning | {Yes/No} | {Data provenance, validation, curated datasets} | {Open/Mitigated} |
+| LLM04 | Model Denial of Service | {Yes/No} | {Rate limiting, token budgets, request size limits} | {Open/Mitigated} |
+| LLM05 | Supply Chain Vulnerabilities | {Yes/No} | {Model pinning, vendor assessment, fallback providers} | {Open/Mitigated} |
+| LLM06 | Sensitive Information Disclosure | {Yes/No} | {PII filtering, output scanning, system prompt protection} | {Open/Mitigated} |
+| LLM07 | Insecure Plugin/Tool Design | {Yes/No} | {Input validation per tool, least-privilege, no shell exec} | {Open/Mitigated} |
+| LLM08 | Excessive Agency | {Yes/No} | {Human-in-the-loop, tool restrictions, confirmation prompts} | {Open/Mitigated} |
+| LLM09 | Overreliance | {Yes/No} | {Confidence scoring, human review, factual grounding} | {Open/Mitigated} |
+| LLM10 | Model Theft | {Yes/No} | {API key rotation, access logging, usage monitoring} | {Open/Mitigated} |
+
+### Prompt Injection Defense
+
+```mermaid
+graph LR
+ subgraph Defense["Defense-in-Depth for Prompt Injection"]
+ direction LR
+ IN["User Input"] --> F1["Layer 1:\nInput Filter\n(pattern matching)"]
+ F1 --> F2["Layer 2:\nSystem Prompt\nHardening"]
+ F2 --> F3["Layer 3:\nModel Inference"]
+ F3 --> F4["Layer 4:\nOutput Validator\n(structured output)"]
+ F4 --> F5["Layer 5:\nAction Gate\n(confirm destructive)"]
+ F5 --> OUT["Safe Output"]
+ end
+
+ style F1 fill:#FFEBEE,stroke:#C62828
+ style F2 fill:#FFF3E0,stroke:#E65100
+ style F3 fill:#F3E5F5,stroke:#6A1B9A
+ style F4 fill:#E8F5E9,stroke:#2E7D32
+ style F5 fill:#E3F2FD,stroke:#1565C0
+```
+
+**Defense Layers:**
+1. **Input Filter**: Block known injection patterns, enforce character limits, sanitize
+2. **System Prompt Hardening**: Instruction hierarchy, role boundaries, canary tokens
+3. **Model Inference**: Use models with strong instruction-following (e.g., system prompt priority)
+4. **Output Validator**: Enforce structured output schema, reject unexpected formats
+5. **Action Gate**: Require confirmation for destructive actions (delete, send, deploy)
+
+### Guardrails Configuration
+
+| Guardrail | Type | Trigger | Action |
+|-----------|------|---------|--------|
+| Topic boundary | Input | Query outside defined scope | Polite refusal + redirect |
+| PII detection | Output | PII in generated response | Redact before returning |
+| Content safety | Input/Output | Harmful / inappropriate content | Block + log incident |
+| Token budget | Input | Request exceeds token limit | Reject with size error |
+| Hallucination check | Output | Low groundedness score | Flag for human review |
+
+---
+
+## 9. MCP Security (if applicable)
+
+> **Trigger**: Include this section when the system exposes an MCP Server or MCP App.
+> Skip if no MCP components exist.
+
+### MCP Attack Surface
+
+```mermaid
+graph TD
+ subgraph MCPThreats["MCP Security Concerns"]
+ direction TB
+
+ subgraph ToolThreats["Tool Layer"]
+ TI["Tool Input\nInjection"]
+ PE["Privilege\nEscalation"]
+ SE["Side Effect\nAbuse"]
+ end
+
+ subgraph ResourceThreats["Resource Layer"]
+ PT["Path\nTraversal"]
+ SSRF["SSRF via\nResource URI"]
+ DL["Data\nLeakage"]
+ end
+
+ subgraph TransportThreats["Transport Layer"]
+ MITM["Man-in-the-Middle\n(SSE/HTTP)"]
+ AUTH["Auth\nBypass"]
+ DOS["Denial of\nService"]
+ end
+ end
+
+ style ToolThreats fill:#FFEBEE,stroke:#C62828
+ style ResourceThreats fill:#FFF3E0,stroke:#E65100
+ style TransportThreats fill:#E3F2FD,stroke:#1565C0
+```
+
+### MCP Security Controls
+
+| Control | Implementation | Status |
+|---------|---------------|--------|
+| **Tool input validation** | JSON Schema validation on all parameters | {TODO/Done} |
+| **Path sandboxing** | Restrict file access to allowed directories | {TODO/Done} |
+| **SSRF prevention** | URL allowlist for external requests | {TODO/Done} |
+| **Rate limiting** | Max {N} tool calls per minute per session | {TODO/Done} |
+| **Authentication** | {OAuth / API key / stdio (no auth needed)} | {TODO/Done} |
+| **Transport encryption** | TLS 1.2+ for SSE/HTTP transports | {TODO/Done} |
+| **Audit logging** | Log all tool invocations with context | {TODO/Done} |
+| **Error sanitization** | No system internals in error responses | {TODO/Done} |
+| **Destructive action gate** | Require confirmation for write/delete tools | {TODO/Done} |
+
+> **Reference**: Read `.github/skills/ai-systems/mcp-server-development/SKILL.md` for MCP security patterns.
+
+---
+
+## 10. Compliance
 
 ### Applicable Standards
 
@@ -236,7 +390,7 @@ graph TD
 
 ---
 
-## 9. Security Checklist
+## 11. Security Checklist
 
 ### Pre-Deployment
 
@@ -249,6 +403,26 @@ graph TD
 - [ ] Dependency vulnerability scan passed
 - [ ] Security code review completed
 - [ ] Penetration testing scheduled (if applicable)
+
+### GenAI Pre-Deployment (if applicable)
+
+- [ ] OWASP LLM Top 10 assessment completed (Section 8)
+- [ ] Prompt injection defenses tested
+- [ ] Guardrails configured and validated
+- [ ] PII filtering verified on model outputs
+- [ ] Model version pinned with evaluation baseline
+- [ ] Token budgets and rate limits configured
+- [ ] Fallback model/provider configured
+
+### MCP Pre-Deployment (if applicable)
+
+- [ ] All tool inputs validated with JSON Schema (Section 9)
+- [ ] Path traversal prevention tested
+- [ ] SSRF prevention validated
+- [ ] Rate limiting configured
+- [ ] Transport encryption enabled (if SSE/HTTP)
+- [ ] Destructive action confirmation gates active
+- [ ] Audit logging enabled for all tool calls
 
 ### Post-Deployment
 

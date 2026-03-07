@@ -1,6 +1,15 @@
 import { exec } from 'child_process';
 
 /**
+ * Minimal interface for integration detection (avoids circular import).
+ * AgentXContext satisfies this interface.
+ */
+export interface IntegrationProvider {
+  githubConnected: boolean;
+  adoConnected: boolean;
+}
+
+/**
  * Severity level for dependency check results.
  */
 export type DependencySeverity = 'required' | 'recommended' | 'optional';
@@ -203,9 +212,14 @@ async function checkGitHubCli(): Promise<DependencyResult> {
 /**
  * Run all dependency checks and return a full environment report.
  *
- * @param mode - The AgentX operating mode ('local' or 'github').
+ * @param integrations - Provider with githubConnected / adoConnected flags.
+ *   When omitted, defaults to no integrations (local-only behavior).
  */
-export async function checkAllDependencies(mode: string = 'local'): Promise<EnvironmentReport> {
+export async function checkAllDependencies(
+  integrations?: IntegrationProvider,
+): Promise<EnvironmentReport> {
+  const github = integrations?.githubConnected ?? false;
+  const ado = integrations?.adoConnected ?? false;
   // Run independent checks in parallel
   // NOTE: GitHub Copilot is bundled into VS Code 1.96+. No runtime
   // check is needed. The extension.ts activation guard
@@ -218,14 +232,14 @@ export async function checkAllDependencies(mode: string = 'local'): Promise<Envi
     checkGitHubCli(),
   ]);
 
-  // Adjust severity based on mode
+  // Adjust severity based on active integrations
   const results = checks.map(r => {
-    // GitHub CLI is only required in github mode
+    // GitHub CLI is required when GitHub integration is configured
     if (r.name === 'GitHub CLI (gh)') {
-      r.severity = mode === 'github' ? 'required' : 'optional';
+      r.severity = github ? 'required' : 'optional';
     }
-    // PowerShell on non-Windows in local mode is optional (bash works too)
-    if (r.name === 'PowerShell' && process.platform !== 'win32' && mode === 'local') {
+    // PowerShell on non-Windows without any integration is optional (bash works)
+    if (r.name === 'PowerShell' && process.platform !== 'win32' && !github && !ado) {
       r.severity = 'recommended';
     }
     return r;

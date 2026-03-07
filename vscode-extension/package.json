@@ -1,594 +1,584 @@
 {
- "name": "agentx",
- "displayName": "AgentX - Multi-Agent Orchestration",
- "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Customer Coach agents in a structured software development workflow.",
- "version": "7.4.0",
- "publisher": "jnPiyush",
- "author": {
-  "name": "Piyush Jain"
- },
- "icon": "resources/icon.png",
- "license": "Apache-2.0",
- "galleryBanner": {
-  "color": "#1e1e2e",
-  "theme": "dark"
- },
- "repository": {
-  "type": "git",
-  "url": "https://github.com/jnPiyush/AgentX"
- },
- "bugs": {
-  "url": "https://github.com/jnPiyush/AgentX/issues"
- },
- "homepage": "https://github.com/jnPiyush/AgentX#readme",
- "engines": {
-  "vscode": "^1.85.0"
- },
- "categories": [
-  "AI",
-  "Other",
-  "SCM Providers"
- ],
- "keywords": [
-  "copilot",
-  "ai-agents",
-  "multi-agent",
-  "orchestration",
-  "workflow",
-  "product-manager",
-  "architect",
-  "engineer",
-  "code-review",
-  "agentx"
- ],
- "activationEvents": [
-  "workspaceContains:AGENTS.md",
-  "workspaceContains:**/AGENTS.md",
-  "workspaceContains:.agentx/agentx.ps1",
-  "workspaceContains:**/.agentx/agentx.ps1",
-  "onChatParticipant:agentx.chat"
- ],
- "main": "./out/extension.js",
- "contributes": {
-  "commands": [
-   {
-    "command": "agentx.initialize",
-    "title": "Initialize Project",
-    "category": "AgentX",
-    "icon": "$(rocket)"
-   },
-   {
-    "command": "agentx.showStatus",
-    "title": "Show Agent Status",
-    "category": "AgentX",
-    "icon": "$(info)"
-   },
-   {
-    "command": "agentx.readyQueue",
-    "title": "Show Ready Queue",
-    "category": "AgentX",
-    "icon": "$(checklist)"
-   },
-   {
-    "command": "agentx.runWorkflow",
-    "title": "Run Workflow",
-    "category": "AgentX",
-    "icon": "$(play)"
-   },
-   {
-    "command": "agentx.checkDeps",
-    "title": "Check Dependencies",
-    "category": "AgentX",
-    "icon": "$(git-merge)"
-   },
-   {
-    "command": "agentx.generateDigest",
-    "title": "Generate Weekly Digest",
-    "category": "AgentX",
-    "icon": "$(notebook)"
-   },
-   {
-    "command": "agentx.refresh",
-    "title": "Refresh",
-    "category": "AgentX",
-    "icon": "$(refresh)"
-   },
-   {
-    "command": "agentx.showIssue",
-    "title": "Show Issue Detail",
-    "category": "AgentX",
-    "icon": "$(eye)"
-   },
-   {
-    "command": "agentx.checkEnvironment",
-    "title": "Check Environment",
-    "category": "AgentX",
-    "icon": "$(beaker)"
-   },
-   {
-    "command": "agentx.loop",
-    "title": "Iterative Loop",
-    "category": "AgentX",
-    "icon": "$(sync)"
-   },
-   {
-    "command": "agentx.loopStart",
-    "title": "Start Iterative Loop",
-    "category": "AgentX",
-    "icon": "$(play-circle)"
-   },
-   {
-    "command": "agentx.loopStatus",
-    "title": "Loop Status",
-    "category": "AgentX",
-    "icon": "$(pulse)"
-   },
-   {
-    "command": "agentx.loopCancel",
-    "title": "Cancel Iterative Loop",
-    "category": "AgentX",
-    "icon": "$(stop-circle)"
-   },
-   {
-    "command": "agentx.showThinkingLog",
-    "title": "Show Thinking Log",
-    "category": "AgentX",
-    "icon": "$(output)"
-   },
-  {
-   "command": "agentx.showHookEvents",
-   "title": "Show Hook Events",
-   "category": "AgentX",
-   "icon": "$(pulse)"
-  },
-   {
-    "command": "agentx.contextBudget",
-    "title": "Show Context Budget",
-    "category": "AgentX",
-    "icon": "$(dashboard)"
-   },
-   {
-    "command": "agentx.listSchedules",
-    "title": "List Scheduled Tasks",
-    "category": "AgentX",
-    "icon": "$(clock)"
-   },
-   {
-    "command": "agentx.listPlugins",
-    "title": "List Plugins",
-    "category": "AgentX",
-    "icon": "$(extensions)"
-   },
-    {
-     "command": "agentx.installPlugin",
-     "title": "Install Plugin",
-     "category": "AgentX",
-     "icon": "$(cloud-download)"
-    },
-    {
-     "command": "agentx.removePlugin",
-     "title": "Remove Plugin",
-     "category": "AgentX",
-     "icon": "$(trash)"
-    },
-   {
-    "command": "agentx.runPlugin",
-    "title": "Run Plugin",
-    "category": "AgentX",
-    "icon": "$(play)"
-   },
-   {
-    "command": "agentx.scaffoldPlugin",
-    "title": "Create New Plugin",
-    "category": "AgentX",
-    "icon": "$(add)"
-   },
-   {
-    "command": "agentx.editSetting",
-    "title": "Edit Setting",
-    "category": "AgentX",
-    "icon": "$(edit)"
-   },
-   {
-    "command": "agentx.memoryHealth",
-    "title": "Memory Health Check",
-    "category": "AgentX",
-    "icon": "$(heart)"
-   },
-   {
-    "command": "agentx.sessionHistory",
-    "title": "Session History",
-    "category": "AgentX",
-    "icon": "$(history)"
-   },
-   {
-    "command": "agentx.resumeSession",
-    "title": "Resume Session",
-    "category": "AgentX",
-    "icon": "$(debug-continue)"
-   },
-   {
-    "command": "agentx.openDashboard",
-    "title": "Open Dashboard",
-    "category": "AgentX",
-    "icon": "$(dashboard)"
-   },
-   {
-    "command": "agentx.promoteToGlobal",
-    "title": "Promote to Global Knowledge",
-    "category": "AgentX",
-    "icon": "$(cloud-upload)"
-   }
+  "name": "agentx",
+  "displayName": "AgentX - Multi-Agent Orchestration",
+  "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Customer Coach agents in a structured software development workflow.",
+  "version": "8.0.0",
+  "publisher": "jnPiyush",
+  "extensionKind": [
+    "workspace",
+    "ui"
   ],
-  "viewsContainers": {
-   "activitybar": [
-    {
-     "id": "agentx-sidebar",
-     "title": "AgentX",
-     "icon": "resources/agentx-icon.svg"
-    }
-   ]
+  "author": {
+    "name": "Piyush Jain"
   },
-  "views": {
-   "agentx-sidebar": [
-    {
-     "id": "agentx-agents",
-     "name": "Agents",
-     "icon": "$(organization)",
-     "contextualTitle": "AgentX Agents"
-    },
-    {
-     "id": "agentx-docs",
-     "name": "Documents",
-     "icon": "$(book)",
-     "contextualTitle": "AgentX Documents"
-    },
-    {
-     "id": "agentx-source",
-     "name": "Source",
-     "icon": "$(code)",
-     "contextualTitle": "AgentX Source"
-    },
-    {
-     "id": "agentx-templates",
-     "name": "Templates",
-     "icon": "$(file-text)",
-     "contextualTitle": "AgentX Templates"
-    },
-    {
-     "id": "agentx-workflows",
-     "name": "Workflows",
-     "icon": "$(git-merge)",
-     "contextualTitle": "AgentX Workflows"
-    },
-    {
-     "id": "agentx-ready",
-     "name": "Ready Queue",
-     "icon": "$(checklist)",
-     "contextualTitle": "AgentX Ready Queue"
-    },
-    {
-     "id": "agentx-settings",
-     "name": "Settings",
-     "icon": "$(settings-gear)",
-     "contextualTitle": "AgentX Loop Settings"
-    }
-   ]
+  "icon": "resources/icon.png",
+  "license": "Apache-2.0",
+  "galleryBanner": {
+    "color": "#1e1e2e",
+    "theme": "dark"
   },
-  "viewsWelcome": [
-   {
-    "view": "agentx-agents",
-    "contents": "AgentX is not initialized in this workspace.\n[Initialize AgentX](command:agentx.initialize)\nLearn more at [GitHub](https://github.com/jnPiyush/AgentX).",
-    "when": "!agentx.initialized"
-   }
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jnPiyush/AgentX"
+  },
+  "bugs": {
+    "url": "https://github.com/jnPiyush/AgentX/issues"
+  },
+  "homepage": "https://github.com/jnPiyush/AgentX#readme",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Other",
+    "SCM Providers"
   ],
-  "menus": {
-   "view/title": [
-    {
-     "command": "agentx.refresh",
-     "when": "view == agentx-agents || view == agentx-ready || view == agentx-docs || view == agentx-source || view == agentx-templates || view == agentx-settings",
-     "group": "navigation"
-    }
-   ],
-   "view/item/context": [
-    {
-     "command": "agentx.showIssue",
-     "when": "false",
-     "group": "inline"
-    }
-   ],
-   "commandPalette": [
-    {
-     "command": "agentx.showIssue",
-     "when": "false"
-    },
-    {
-     "command": "agentx.editSetting",
-     "when": "false"
-    },
-    {
-     "command": "agentx.refresh",
-     "when": "agentx.initialized"
-    },
-    {
-     "command": "agentx.showStatus",
-     "when": "agentx.initialized"
-    },
-    {
-     "command": "agentx.readyQueue",
-     "when": "agentx.initialized"
-    },
-    {
-     "command": "agentx.runWorkflow",
-     "when": "agentx.initialized"
-    },
-    {
-     "command": "agentx.checkDeps",
-     "when": "agentx.initialized"
-    },
-    {
-     "command": "agentx.generateDigest",
-     "when": "agentx.initialized"
-    }
-   ]
-  },
-  "chatParticipants": [
-   {
-    "id": "agentx.chat",
-    "name": "agentx",
-    "fullName": "AgentX Orchestrator",
-    "description": "Multi-agent orchestration for software development workflows",
-    "isSticky": true,
+  "keywords": [
+    "copilot",
+    "ai-agents",
+    "multi-agent",
+    "orchestration",
+    "workflow",
+    "product-manager",
+    "architect",
+    "engineer",
+    "code-review",
+    "agentx"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onChatParticipant:agentx.chat"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
     "commands": [
-     {
-      "name": "ready",
-      "description": "Show unblocked work sorted by priority"
-     },
-     {
-      "name": "workflow",
-      "description": "Run a workflow (feature/epic/story/bug/spike/devops/docs)"
-     },
-     {
-      "name": "status",
-      "description": "Show all agent states"
-     },
-     {
-      "name": "deps",
-      "description": "Check issue dependencies (e.g. /deps 42)"
-     },
-     {
-      "name": "digest",
-      "description": "Generate weekly progress digest"
+      {
+        "command": "agentx.initialize",
+        "title": "Add Integration",
+        "category": "AgentX",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "agentx.showStatus",
+        "title": "Show Agent Status",
+        "category": "AgentX",
+        "icon": "$(info)"
+      },
+      {
+        "command": "agentx.runWorkflow",
+        "title": "Run Workflow",
+        "category": "AgentX",
+        "icon": "$(play)"
+      },
+      {
+        "command": "agentx.checkDeps",
+        "title": "Check Dependencies",
+        "category": "AgentX",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "agentx.generateDigest",
+        "title": "Generate Weekly Digest",
+        "category": "AgentX",
+        "icon": "$(notebook)"
+      },
+      {
+        "command": "agentx.refresh",
+        "title": "Refresh",
+        "category": "AgentX",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "agentx.showIssue",
+        "title": "Show Issue Detail",
+        "category": "AgentX",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "agentx.checkEnvironment",
+        "title": "Check Environment",
+        "category": "AgentX",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "agentx.loop",
+        "title": "Iterative Loop",
+        "category": "AgentX",
+        "icon": "$(sync)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "agentx-sidebar",
+          "title": "AgentX",
+          "icon": "resources/agentx-icon.svg"
+        }
+      ]
     },
-    {
-     "name": "clarify",
-     "description": "Show and manage agent clarifications"
-     }
-    ]
-   }
-  ],
-  "configuration": {
-   "title": "AgentX",
-   "properties": {
-    "agentx.mode": {
-     "type": "string",
-     "default": "local",
-     "enum": [
-      "local",
-      "github"
-     ],
-     "enumDescriptions": [
-      "Filesystem-based issue tracking, no GitHub required (default)",
-      "Full features: GitHub Actions, PRs, Projects"
-     ],
-     "description": "Operating mode for AgentX. Defaults to local (zero prompts). Use github for full GitHub integration."
+    "views": {
+      "agentx-sidebar": [
+        {
+          "id": "agentx-agents",
+          "name": "Agents",
+          "icon": "$(organization)",
+          "contextualTitle": "AgentX Agents"
+        },
+        {
+          "id": "agentx-templates",
+          "name": "Templates",
+          "icon": "$(file-text)",
+          "contextualTitle": "AgentX Templates"
+        },
+        {
+          "id": "agentx-workflows",
+          "name": "Workflows",
+          "icon": "$(git-merge)",
+          "contextualTitle": "AgentX Workflows"
+        }
+      ]
     },
-    "agentx.autoRefresh": {
-     "type": "boolean",
-     "default": true,
-     "description": "Automatically refresh agent status and ready queue."
+    "viewsWelcome": [
+      {
+        "view": "agentx-agents",
+        "contents": "AgentX is ready to use.\n\nAdd integrations for GitHub or Azure DevOps:\n[Add Integration](command:agentx.initialize)\n\n[Learn more](https://github.com/jnPiyush/AgentX)",
+        "when": "!agentx.githubConnected && !agentx.adoConnected"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "agentx.refresh",
+          "when": "view == agentx-agents || view == agentx-templates || view == agentx-workflows",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "agentx.showIssue",
+          "when": "false",
+          "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "agentx.showIssue",
+          "when": "false"
+        },
+        {
+          "command": "agentx.refresh"
+        },
+        {
+          "command": "agentx.showStatus"
+        },
+        {
+          "command": "agentx.runWorkflow"
+        },
+        {
+          "command": "agentx.checkDeps"
+        },
+        {
+          "command": "agentx.generateDigest"
+        }
+      ]
     },
-    "agentx.shell": {
-     "type": "string",
-     "default": "auto",
-     "enum": [
-      "auto",
-      "pwsh",
-      "bash"
-     ],
-     "description": "Shell to use for AgentX CLI commands."
-    },
-    "agentx.rootPath": {
-     "type": "string",
-     "default": "",
-     "description": "Explicit path to the AgentX project root (folder containing AGENTS.md and .agentx/). Leave empty for auto-detection. Useful when AgentX is initialized in a subfolder or non-first workspace folder."
-    },
-    "agentx.searchDepth": {
-     "type": "number",
-     "default": 2,
-     "minimum": 0,
-     "maximum": 5,
-     "description": "How many subfolder levels to search when auto-detecting the AgentX root. Set to 0 to only check workspace folder roots."
-    },
-    "agentx.skipStartupCheck": {
-     "type": "boolean",
-     "default": false,
-     "description": "Skip the automatic environment health check on extension activation. You can always run it manually via AgentX: Check Environment."
-    },
-    "agentx.skipUpdateCheck": {
-     "type": "boolean",
-     "default": false,
-     "description": "Skip the automatic version check that detects outdated framework files on extension activation. When enabled, you will not be prompted to update."
-    },
-    "agentx.loop.maxIterations": {
-     "type": "number",
-     "default": 20,
-     "minimum": 1,
-     "maximum": 100,
-     "description": "Maximum tool-call cycles for the main agentic loop before the agent stops."
-    },
-    "agentx.loop.tokenBudget": {
-     "type": "number",
-     "default": 100000,
-     "minimum": 10000,
-     "maximum": 500000,
-     "description": "Token budget for the main agentic loop session."
-    },
-    "agentx.context.autoCompact": {
-     "type": "boolean",
-     "default": true,
-     "description": "Automatically compact context when approaching token limits."
-    },
-    "agentx.context.maxMessages": {
-     "type": "number",
-     "default": 200,
-     "minimum": 10,
-     "maximum": 1000,
-     "description": "Maximum conversation messages before pruning oldest non-system messages."
-    },
-    "agentx.context.compactKeepRecent": {
-     "type": "number",
-     "default": 10,
-     "minimum": 1,
-     "maximum": 100,
-     "description": "Number of recent messages to preserve during context compaction."
-    },
-    "agentx.selfReview.maxIterations": {
-     "type": "number",
-     "default": 15,
-     "minimum": 1,
-     "maximum": 30,
-     "description": "Maximum review-fix-re-review rounds in the self-review loop."
-    },
-    "agentx.selfReview.reviewerMaxIterations": {
-     "type": "number",
-     "default": 8,
-     "minimum": 1,
-     "maximum": 20,
-     "description": "Maximum internal iterations for the reviewer sub-agent during self-review."
-    },
-    "agentx.selfReview.reviewerTokenBudget": {
-     "type": "number",
-     "default": 30000,
-     "minimum": 5000,
-     "maximum": 200000,
-     "description": "Token budget for the reviewer sub-agent during self-review."
-    },
-    "agentx.clarification.maxIterations": {
-     "type": "number",
-     "default": 6,
-     "minimum": 1,
-     "maximum": 20,
-     "description": "Maximum question-answer exchange rounds between agents in the clarification loop."
-    },
-    "agentx.clarification.responderMaxIterations": {
-     "type": "number",
-     "default": 5,
-     "minimum": 1,
-     "maximum": 15,
-     "description": "Maximum internal iterations for the responding sub-agent during clarification."
-    },
-    "agentx.clarification.responderTokenBudget": {
-     "type": "number",
-     "default": 20000,
-     "minimum": 5000,
-     "maximum": 200000,
-     "description": "Token budget for the responding sub-agent during clarification."
-    },
-    "agentx.loopDetection.warningThreshold": {
-     "type": "number",
-     "default": 10,
-     "minimum": 3,
-     "maximum": 50,
-     "description": "Consecutive identical tool calls before issuing a warning."
-    },
-    "agentx.loopDetection.circuitBreakerThreshold": {
-     "type": "number",
-     "default": 30,
-     "minimum": 5,
-     "maximum": 100,
-     "description": "Total repeated tool calls before hard-stopping the agentic loop."
-    },
-    "agentx.loopDetection.windowSize": {
-     "type": "number",
-     "default": 30,
-     "minimum": 5,
-     "maximum": 100,
-     "description": "Sliding window of recent tool calls to analyze for loop patterns."
-    },
-    "agentx.backgroundEngine.enabled": {
-     "type": "boolean",
-     "default": true,
-     "description": "Enable the background intelligence engine that detects stale issues, dependency changes, and recurring patterns."
-    },
-    "agentx.backgroundEngine.scanIntervalMinutes": {
-     "type": "number",
-     "default": 5,
-     "minimum": 1,
-     "maximum": 60,
-     "description": "Minutes between background intelligence scans."
-    },
-    "agentx.dashboard.autoRefreshSeconds": {
-     "type": "number",
-     "default": 30,
-     "minimum": 5,
-     "maximum": 300,
-     "description": "Seconds between automatic dashboard data refreshes."
+    "chatParticipants": [
+      {
+        "id": "agentx.chat",
+        "name": "agentx",
+        "fullName": "AgentX Orchestrator",
+        "description": "Multi-agent orchestration for software development workflows",
+        "isSticky": true,
+        "commands": []
+      }
+    ],
+    "chatAgents": [
+      {
+        "path": "./.github/agentx/agents/agent-x.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/agile-coach.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/architect.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/customer-coach.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/data-scientist.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/devops.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/engineer.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/powerbi-analyst.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/product-manager.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/reviewer-auto.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/reviewer.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/tester.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/ux-designer.agent.md"
+      }
+    ],
+    "chatInstructions": [
+      {
+        "path": "./.github/agentx/instructions/ai.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/csharp.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/memory.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/project-conventions.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/python.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/react.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/typescript.instructions.md"
+      }
+    ],
+    "chatPromptFiles": [
+      {
+        "path": "./.github/agentx/prompts/ai-agent.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/architecture.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/bug-triage.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/code-review.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/devops.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/evaluation.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/prd-gen.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/refactor.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/security-review.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/test-gen.prompt.md"
+      },
+      {
+        "path": "./.github/agentx/prompts/ux-design.prompt.md"
+      }
+    ],
+    "chatSkills": [
+      {
+        "path": "./.github/agentx/skills/ai-systems/ai-agent-development/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/ai-evaluation/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/cognitive-architecture/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/context-management/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/data-drift-strategy/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/feedback-loops/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/mcp-apps-development/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/mcp-server-development/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/model-drift-management/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/model-fine-tuning/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/prompt-engineering/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/rag-pipelines/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/architecture/api-design/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/architecture/core-principles/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/architecture/database/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/architecture/performance/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/architecture/security/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/data/data-analysis/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/data/databricks/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/data/fabric-analytics/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/data/fabric-data-agent/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/data/fabric-forecasting/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/data/powerbi/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/design/frontend-ui/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/design/ux-ui-design/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/code-review/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/configuration/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/dependency-management/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/documentation/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/error-handling/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/iterative-loop/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/logging-monitoring/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/skill-creator/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/testing/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/type-safety/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/domain/audit-assurance/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/domain/financial-services/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/domain/legal/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/domain/oil-and-gas/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/domain/tax/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/infrastructure/azure/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/infrastructure/bicep/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/infrastructure/containerization/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/infrastructure/terraform/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/languages/blazor/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/languages/csharp/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/languages/go/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/languages/postgresql/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/languages/python/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/languages/react/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/languages/rust/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/languages/sql-server/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/operations/github-actions-workflows/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/operations/release-management/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/operations/remote-git-operations/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/operations/version-control/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/operations/yaml-pipelines/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/testing/e2e-testing/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/testing/integration-testing/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/testing/performance-testing/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/testing/production-readiness/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/testing/security-testing/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/testing/test-automation/SKILL.md"
+      }
+    ],
+    "configuration": {
+      "title": "AgentX",
+      "properties": {
+        "agentx.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh agent status."
+        },
+        "agentx.shell": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "pwsh",
+            "bash"
+          ],
+          "description": "Shell to use for AgentX CLI commands."
+        },
+        "agentx.rootPath": {
+          "type": "string",
+          "default": "",
+          "description": "Explicit path to the AgentX project root (folder containing AGENTS.md and .agentx/). Leave empty for auto-detection. Useful when AgentX is initialized in a subfolder or non-first workspace folder."
+        },
+        "agentx.searchDepth": {
+          "type": "number",
+          "default": 2,
+          "minimum": 0,
+          "maximum": 5,
+          "description": "How many subfolder levels to search when auto-detecting the AgentX root. Set to 0 to only check workspace folder roots."
+        },
+        "agentx.skipStartupCheck": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip the automatic environment health check on extension activation. You can always run it manually via AgentX: Check Environment."
+        },
+        "agentx.skipUpdateCheck": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip the automatic version check that detects outdated framework files on extension activation. When enabled, you will not be prompted to update."
+        }
+      }
     }
-   }
+  },
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\"",
+    "copy:assets": "node scripts/copy-assets.js",
+    "prepare:chat": "node scripts/prepare-chat-contributions.js",
+    "vscode:prepublish": "npm run prepare:chat && npm run copy:assets && npm run compile",
+    "compile": "npm run clean && tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "npm run compile && mocha",
+    "test:coverage": "npm run compile && nyc mocha",
+    "coverage:html": "npm run test:coverage && nyc report --reporter=html",
+    "coverage:lcov": "npm run test:coverage && nyc report --reporter=lcov",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.11.0",
+    "@types/sinon": "^21.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vscode/vsce": "^3.0.0",
+    "eslint": "^8.56.0",
+    "mocha": "^11.7.5",
+    "nyc": "^15.1.0",
+    "sinon": "^21.0.1",
+    "typescript": "^5.3.0"
+  },
+  "nyc": {
+    "extends": "@istanbuljs/nyc-config-typescript",
+    "all": true,
+    "check-coverage": true,
+    "lines": 80,
+    "statements": 80,
+    "functions": 80,
+    "branches": 80,
+    "include": [
+      "src/**/*.ts"
+    ],
+    "exclude": [
+      "src/test/**",
+      "src/**/*.test.ts",
+      "src/**/mocks/**",
+      "src/extension.ts",
+      "out/**"
+    ],
+    "reporter": [
+      "text",
+      "html",
+      "lcov"
+    ],
+    "report-dir": "coverage"
   }
- },
- "scripts": {
-  "clean": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\"",
-  "vscode:prepublish": "npm run compile",
-  "compile": "npm run clean && tsc -p ./",
-  "watch": "tsc -watch -p ./",
-  "lint": "eslint src --ext ts",
-  "test": "npm run compile && mocha",
-  "test:coverage": "npm run compile && nyc mocha",
-  "coverage:html": "npm run test:coverage && nyc report --reporter=html",
-  "coverage:lcov": "npm run test:coverage && nyc report --reporter=lcov",
-  "package": "vsce package",
-  "publish": "vsce publish"
- },
- "devDependencies": {
-  "@istanbuljs/nyc-config-typescript": "^1.0.2",
-  "@types/mocha": "^10.0.10",
-  "@types/node": "^20.11.0",
-  "@types/sinon": "^21.0.0",
-  "@types/vscode": "^1.85.0",
-  "@typescript-eslint/eslint-plugin": "^8.0.0",
-  "@typescript-eslint/parser": "^8.0.0",
-  "@vscode/vsce": "^3.0.0",
-  "eslint": "^8.56.0",
-  "mocha": "^11.7.5",
-  "nyc": "^15.1.0",
-  "sinon": "^21.0.1",
-  "typescript": "^5.3.0"
- },
- "nyc": {
-  "extends": "@istanbuljs/nyc-config-typescript",
-  "all": true,
-  "check-coverage": true,
-  "lines": 80,
-  "statements": 80,
-  "functions": 80,
-  "branches": 80,
-  "include": [
-   "src/**/*.ts"
-  ],
-  "exclude": [
-   "src/test/**",
-   "src/**/*.test.ts",
-   "src/**/mocks/**",
-   "src/extension.ts",
-   "out/**"
-  ],
-  "reporter": [
-   "text",
-   "html",
-   "lcov"
-  ],
-  "report-dir": "coverage"
- }
 }

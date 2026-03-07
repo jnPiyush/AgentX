@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import * as path from 'path';
+import * as fs from 'fs';
 import { AgentXContext } from '../agentxContext';
 
 /**
  * Tree data provider for the Workflows sidebar view.
- * Shows available TOML workflow templates.
+ * Shows agent handoff chains derived from .agent.md frontmatter.
  */
 export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowItem> {
  private _onDidChangeTreeData = new vscode.EventEmitter<WorkflowItem | undefined | void>();
@@ -22,35 +22,39 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowIte
  }
 
  async getChildren(): Promise<WorkflowItem[]> {
- const root = this.agentx.workspaceRoot;
- if (!root) { return []; }
-
- const workflowsDir = path.join(root, '.agentx', 'workflows');
- if (!fs.existsSync(workflowsDir)) {
- return [new WorkflowItem('No workflows found', '', 'info')];
- }
-
- const files = fs.readdirSync(workflowsDir).filter(f => f.endsWith('.toml'));
- if (files.length === 0) {
- return [new WorkflowItem('No workflows found', '', 'info')];
+  const agents = await this.agentx.listVisibleAgents();
+ if (agents.length === 0) {
+ return [new WorkflowItem('No agents found', '', 'info')];
  }
 
  const icons: Record<string, string> = {
- feature: 'extensions',
- epic: 'layers',
- story: 'note',
- bug: 'bug',
- spike: 'beaker',
- devops: 'server-process',
- docs: 'book',
- 'iterative-loop': 'sync',
+ 'agent-x': 'hubot',
+ 'engineer': 'code',
+ 'architect': 'symbol-structure',
+ 'reviewer': 'eye',
+ 'reviewer-auto': 'eye',
+ 'product-manager': 'notebook',
+ 'ux-designer': 'paintcan',
+ 'devops': 'server-process',
+ 'data-scientist': 'graph',
+ 'tester': 'beaker',
+ 'customer-coach': 'comment-discussion',
+ 'powerbi-analyst': 'graph-line',
+ 'github-ops': 'github',
+ 'ado-ops': 'organization',
+ 'agile-coach': 'comment',
  };
 
- return files.map(f => {
- const name = f.replace('.toml', '');
- const iconId = icons[name] || 'file';
- const filePath = path.join(workflowsDir, f);
- return new WorkflowItem(name, filePath, 'workflow', iconId);
+ return agents.map(a => {
+ const stem = a.fileName.replace('.agent.md', '');
+ const displayName = a.name || stem;
+ const iconId = icons[stem] || 'file';
+ const root = this.agentx.workspaceRoot;
+ const wsPath = root ? path.join(root, '.github', 'agents', a.fileName) : '';
+ const wsInternalPath = root ? path.join(root, '.github', 'agents', 'internal', a.fileName) : '';
+ const filePath = (wsPath && fs.existsSync(wsPath)) ? wsPath
+  : (wsInternalPath && fs.existsSync(wsInternalPath)) ? wsInternalPath : wsPath;
+ return new WorkflowItem(displayName, filePath, 'workflow', iconId);
  });
  }
 }

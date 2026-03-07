@@ -1,8 +1,14 @@
 # ADR: AgentX Architecture Decision Records
 
-**Status**: Accepted
+> **SUPERSEDED (v8.0.0)**: These ADRs document decisions made for the v7.x TypeScript runtime.
+> All three decisions (Clarification Protocol, Memory Pipeline, Agentic Loop) were
+> **superseded by the declarative migration** (v8.0.0), which replaced TypeScript
+> implementations with agent body text instructions, `memory.instructions.md`, and
+> Copilot's native agentic loop. See [AGENTS.md](../../AGENTS.md) for current architecture.
+
+**Status**: Accepted -> Superseded
 **Author**: Solution Architect Agent
-**Last Updated**: 2026-02-27
+**Last Updated**: 2026-03-06
 
 ---
 

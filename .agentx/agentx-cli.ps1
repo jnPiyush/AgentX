@@ -32,9 +32,7 @@ $Script:AGENTX_DIR = Join-Path $ROOT '.agentx'
 $Script:STATE_FILE = Join-Path $AGENTX_DIR 'state' 'agent-status.json'
 $Script:LOOP_STATE_FILE = Join-Path $AGENTX_DIR 'state' 'loop-state.json'
 $Script:ISSUES_DIR = Join-Path $AGENTX_DIR 'issues'
-$Script:WORKFLOWS_DIR = Join-Path $AGENTX_DIR 'workflows'
 $Script:DIGESTS_DIR = Join-Path $AGENTX_DIR 'digests'
-$Script:CLARIFICATIONS_DIR = Join-Path $AGENTX_DIR 'state' 'clarifications'
 $Script:CONFIG_FILE = Join-Path $AGENTX_DIR 'config.json'
 $Script:VERSION_FILE = Join-Path $AGENTX_DIR 'version.json'
 
@@ -613,24 +611,7 @@ function Invoke-ReadyCmd {
         $pc = switch ($p) { 0 { $C.r } 1 { $C.y } default { $C.d } }
         $typ = Get-IssueType $i
 
-        # Check for pending clarification blocking this issue.
-        $clarFile = Join-Path $Script:CLARIFICATIONS_DIR "issue-$($i.number).json"
-        $hasPendingClarification = $false
-        if (Test-Path $clarFile) {
-            try {
-                $ledger = Get-Content $clarFile -Raw -Encoding utf8 | ConvertFrom-Json
-                if ($ledger.clarifications) {
-                    $hasPendingClarification = @($ledger.clarifications |
-                        Where-Object { $_.status -in @('pending', 'stale') }).Count -gt 0
-                }
-            } catch {}
-        }
-
-        if ($hasPendingClarification) {
-            Write-Host "  $($C.y)[BLOCKED: Clarification pending]$($C.n) $($C.c)#$($i.number)$($C.n) $($C.d)($typ)$($C.n) $($i.title)"
-        } else {
-            Write-Host "  $pc[$pLabel]$($C.n) $($C.c)#$($i.number)$($C.n) $($C.d)($typ)$($C.n) $($i.title)"
-        }
+        Write-Host "  $pc[$pLabel]$($C.n) $($C.c)#$($i.number)$($C.n) $($C.d)($typ)$($C.n) $($i.title)"
     }
     Write-Host ''
 }
@@ -765,84 +746,70 @@ function Invoke-DigestCmd {
 # WORKFLOW: Show/run workflow steps
 # ---------------------------------------------------------------------------
 
-function Read-TomlWorkflow([string]$file) {
-    $content = Get-Content $file -Raw -Encoding utf8
-    $steps = @()
-    $cur = $null
-    $wfName = ''; $wfDesc = ''
-
-    foreach ($line in ($content -split "`n")) {
-        $t = $line.Trim()
-        if ($t -eq '[[steps]]') {
-            if ($cur) { $steps += $cur }
-            $cur = [PSCustomObject]@{
-                id = ''; title = ''; agent = ''; needs = @(); iterate = $false
-                max_iterations = 10; completion_criteria = ''; optional = $false
-                condition = ''; status_on_start = ''; status_on_complete = ''
-                output = ''; template = ''
-                can_clarify = @(); clarify_max_rounds = 6
-                clarify_sla_minutes = 30; clarify_blocking_allowed = $true
-            }
-        } elseif ($cur) {
-            if ($t -match '^(\w+)\s*=\s*(.+)$') {
-                $k = $Matches[1]; $raw = $Matches[2]
-                $v = $raw -replace '^["\x27]|["\x27]$', '' | ForEach-Object { $_.Trim() }
-                switch ($k) {
-                    'needs' { $cur.needs = @(($v -replace '[\[\]"\x27]', '') -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
-                    'iterate' { $cur.iterate = $v -eq 'true' }
-                    'optional' { $cur.optional = $v -eq 'true' }
-                    'max_iterations' { $cur.max_iterations = [int]$v }
-                    'can_clarify' { $cur.can_clarify = @(($v -replace '[\[\]"\x27]', '') -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
-                    'clarify_max_rounds' { $cur.clarify_max_rounds = [int]$v }
-                    'clarify_sla_minutes' { $cur.clarify_sla_minutes = [int]$v }
-                    'clarify_blocking_allowed' { $cur.clarify_blocking_allowed = $v -eq 'true' }
-                    default { $cur.$k = $v }
-                }
-            }
-        } else {
-            if ($t -match '^name\s*=\s*"(.+)"') { $wfName = $Matches[1] }
-            if ($t -match '^description\s*=\s*"(.+)"') { $wfDesc = $Matches[1] }
-        }
-    }
-    if ($cur) { $steps += $cur }
-    return [PSCustomObject]@{ name = $wfName; description = $wfDesc; steps = $steps }
-}
-
 function Invoke-WorkflowCmd {
-    $type = if ($Script:SubArgs.Count -gt 0 -and -not $Script:SubArgs[0].StartsWith('-')) {
+    $agentName = if ($Script:SubArgs.Count -gt 0 -and -not $Script:SubArgs[0].StartsWith('-')) {
         $Script:SubArgs[0]
     } else {
         Get-Flag @('-t', '--type', '-Type', '--Type')
     }
 
-    if (-not $type) {
-        Write-Host "`n$($C.c)  Available Workflows:$($C.n)"
+    $agentsDir = Join-Path $Script:ROOT '.github' 'agents'
+
+    if (-not $agentName) {
+        Write-Host "`n$($C.c)  Agent Handoff Chains:$($C.n)"
         Write-Host "$($C.d)  ---------------------------------------------$($C.n)"
-        if (Test-Path $Script:WORKFLOWS_DIR) {
-            foreach ($f in (Get-ChildItem $Script:WORKFLOWS_DIR -Filter '*.toml')) {
-                $wf = Read-TomlWorkflow $f.FullName
-                $name = $f.BaseName
-                Write-Host "  $($C.w)$name$($C.n) $($C.d)- $($wf.description)$($C.n)"
+        if (Test-Path $agentsDir) {
+            foreach ($f in (Get-ChildItem $agentsDir -Filter '*.agent.md')) {
+                $name = $f.BaseName -replace '\.agent$', ''
+                $content = Get-Content $f.FullName -Raw -Encoding utf8
+                $desc = ''
+                if ($content -match '(?m)^description:\s*[''"]?(.+?)[''"]?\s*$') { $desc = $Matches[1] }
+                Write-Host "  $($C.w)$name$($C.n) $($C.d)- $desc$($C.n)"
             }
         }
-        Write-Host "`n$($C.d)  Usage: agentx workflow <type>$($C.n)`n"
+        Write-Host "`n$($C.d)  Usage: agentx workflow <agent-name>$($C.n)`n"
         return
     }
 
-    $wfFile = Join-Path $Script:WORKFLOWS_DIR "$type.toml"
-    if (-not (Test-Path $wfFile)) { Write-Host "Error: Workflow '$type' not found"; exit 1 }
+    $agentFile = Join-Path $agentsDir "$agentName.agent.md"
+    if (-not (Test-Path $agentFile)) { Write-Host "Error: Agent '$agentName' not found"; exit 1 }
 
-    $wf = Read-TomlWorkflow $wfFile
-    Write-Host "`n$($C.c)  Workflow: $type$($C.n)"
+    $content = Get-Content $agentFile -Raw -Encoding utf8
+
+    # Extract handoffs from YAML frontmatter
+    $handoffs = @()
+    if ($content -match '(?s)^---\r?\n(.+?)\r?\n---') {
+        $fm = $Matches[1]
+        # Parse handoffs: array
+        $inHandoffs = $false
+        foreach ($line in ($fm -split '\r?\n')) {
+            if ($line -match '^\s*handoffs:\s*$') { $inHandoffs = $true; continue }
+            if ($inHandoffs -and $line -match '^\s+-\s+') {
+                # Start of a new handoff entry
+                $agent = ''; $label = ''
+                if ($line -match 'agent:\s*(.+)') { $agent = $Matches[1].Trim().Trim("'`"") }
+            }
+            if ($inHandoffs -and $line -match '^\s+agent:\s*(.+)') { $agent = $Matches[1].Trim().Trim("'`"") }
+            if ($inHandoffs -and $line -match '^\s+label:\s*(.+)') { $label = $Matches[1].Trim().Trim("'`"") }
+            if ($inHandoffs -and $line -match '^\s+send:\s*(.+)') {
+                if ($agent) { $handoffs += [PSCustomObject]@{ agent = $agent; label = $label } }
+            }
+            # Stop parsing handoffs when we hit a non-indented line (next top-level key)
+            if ($inHandoffs -and $line -match '^\w' -and $line -notmatch '^\s*handoffs:') { $inHandoffs = $false }
+        }
+    }
+
+    Write-Host "`n$($C.c)  Handoff Chain: $agentName$($C.n)"
     Write-Host "$($C.d)  ---------------------------------------------$($C.n)"
 
-    $n = 1
-    foreach ($s in $wf.steps) {
-        $needs = if ($s.needs.Count -gt 0) { " $($C.d)(after: $($s.needs -join ', '))$($C.n)" } else { '' }
-        Write-Host "  $($C.c)$n.$($C.n) $($C.w)$($s.id)$($C.n) -> $($C.y)$($s.agent)$($C.n)$needs"
-        Write-Host "$($C.d)     $($s.title)$($C.n)"
-        if ($s.iterate) { Write-Host "     $($C.m)[LOOP] max $($s.max_iterations) iterations$($C.n)" }
-        $n++
+    if ($handoffs.Count -eq 0) {
+        Write-Host "  $($C.d)(no handoffs defined)$($C.n)"
+    } else {
+        $n = 1
+        foreach ($h in $handoffs) {
+            Write-Host "  $($C.c)$n.$($C.n) -> $($C.y)$($h.agent)$($C.n) $($C.d)$($h.label)$($C.n)"
+            $n++
+        }
     }
     Write-Host ''
 }
@@ -1131,204 +1098,9 @@ function Invoke-VersionCmd {
     Write-Host "$($C.d)  Mode: $($ver.mode)  |  Installed: $installed$($C.n)`n"
 }
 
-# ---------------------------------------------------------------------------
-# CLARIFY: Agent-to-Agent Clarification Protocol
-# ---------------------------------------------------------------------------
 
-<#
-.SYNOPSIS
-  Run the clarification monitor: mark stale records, detect stuck/deadlock.
-  Called automatically by hook start/finish.
-#>
-function Invoke-ClarificationMonitorCheck {
-    if (-not (Test-Path $Script:CLARIFICATIONS_DIR)) { return }
 
-    $now = [datetime]::UtcNow
-    $allRecords = @()
 
-    foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
-        try {
-            $ledger = Get-Content $f.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-            foreach ($rec in $ledger.clarifications) {
-                $rec | Add-Member -NotePropertyName '__ledgerFile' -NotePropertyValue $f.FullName -Force
-                $allRecords += $rec
-            }
-        } catch {}
-    }
-
-    $active = @($allRecords | Where-Object { $_.status -notin @('resolved', 'escalated', 'abandoned') })
-
-    foreach ($rec in $active) {
-        # Stale check: pending past staleAfter.
-        if ($rec.status -eq 'pending' -and $rec.staleAfter) {
-            try {
-                $staleAt = [datetime]$rec.staleAfter
-                if ($now -gt $staleAt) {
-                    Write-Host "$($C.y)  [WARN] Clarification $($rec.id) is stale (pending since $($rec.created))$($C.n)"
-                    Invoke-WithJsonLock $rec.__ledgerFile 'monitor' {
-                        $l2 = Read-JsonFile $rec.__ledgerFile
-                        foreach ($r2 in $l2.clarifications) {
-                            if ($r2.id -eq $rec.id) {
-                                $r2 | Add-Member -NotePropertyName 'status' -NotePropertyValue 'stale' -Force
-                            }
-                        }
-                        Write-JsonFile $rec.__ledgerFile $l2
-                    }
-                }
-            } catch {}
-        }
-    }
-
-    # Deadlock: mutual pending A->B and B->A on same issue.
-    for ($a = 0; $a -lt $active.Count; $a++) {
-        for ($b = $a + 1; $b -lt $active.Count; $b++) {
-            $ra = $active[$a]; $rb = $active[$b]
-            if ($ra.status -eq 'pending' -and $rb.status -eq 'pending' -and
-                $ra.from -eq $rb.to -and $ra.to -eq $rb.from -and
-                $ra.issueNumber -eq $rb.issueNumber) {
-                Write-Host "$($C.r)  [FAIL] Deadlock: $($ra.from) <-> $($rb.from) on issue #$($ra.issueNumber)$($C.n)"
-            }
-        }
-    }
-}
-
-<#
-.SYNOPSIS
-  Manage clarification records.
-  Subcommands: list, show <id>, stale, resolve <id>, escalate <id>
-#>
-function Invoke-ClarifyCmd {
-    $sub = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'list' }
-
-    switch ($sub) {
-        'list' {
-            if (-not (Test-Path $Script:CLARIFICATIONS_DIR)) { Write-Host 'No clarification records found.'; return }
-            $found = $false
-            foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
-                try {
-                    $ledger = Get-Content $f.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-                    $active = @($ledger.clarifications | Where-Object { $_.status -notin @('resolved', 'abandoned') })
-                    if ($active.Count -gt 0) {
-                        $found = $true
-                        Write-Host "`n$($C.c)  Issue #$($ledger.issueNumber)$($C.n)"
-                        foreach ($rec in $active) {
-                            $sc = switch ($rec.status) {
-                                'pending'   { $C.y } 'answered' { $C.g }
-                                'stale'     { $C.r } 'escalated' { $C.m } default { $C.d }
-                            }
-                            $blocking = if ($rec.blocking) { ' [BLOCKING]' } else { '' }
-                            Write-Host "  $sc[$($rec.status.ToUpper())]$($C.n) $($C.c)$($rec.id)$($C.n)$($C.r)$blocking$($C.n)"
-                            Write-Host "    $($C.d)$($rec.from) -> $($rec.to): $($rec.topic)$($C.n)"
-                        }
-                    }
-                } catch {}
-            }
-            if (-not $found) { Write-Host 'No active clarifications.' }
-            Write-Host ''
-        }
-
-        'show' {
-            $id = if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1] } else { '' }
-            if (-not $id) { Write-Host 'Usage: agentx clarify show <id>'; return }
-            $found = $false
-            foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
-                try {
-                    $ledger = Get-Content $f.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-                    $rec = $ledger.clarifications | Where-Object { $_.id -eq $id } | Select-Object -First 1
-                    if ($rec) {
-                        $found = $true
-                        Write-Host "`n$($C.c)  Clarification: $($rec.id)$($C.n)"
-                        Write-Host "  $($C.d)Issue #$($ledger.issueNumber) | $($rec.from) -> $($rec.to) | $($rec.status) | Round $($rec.round)/$($rec.maxRounds)$($C.n)"
-                        Write-Host "  $($C.d)Topic: $($rec.topic)$($C.n)`n"
-                        foreach ($entry in $rec.thread) {
-                            $ec = switch ($entry.type) {
-                                'question' { $C.y } 'answer' { $C.g }
-                                'resolution' { $C.c } 'escalation' { $C.r } default { $C.d }
-                            }
-                            Write-Host "  $ec  [$($entry.type.ToUpper())] $($entry.from)$($C.n)"
-                            Write-Host "  $($C.d)  $($entry.body)$($C.n)`n"
-                        }
-                    }
-                } catch {}
-            }
-            if (-not $found) { Write-Host "Clarification '$id' not found." }
-        }
-
-        'stale' { Invoke-ClarificationMonitorCheck }
-
-        'resolve' {
-            $id = if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1] } else { '' }
-            $resolution = Get-Flag @('-m', '--message')
-            if (-not $id) { Write-Host 'Usage: agentx clarify resolve <id> [-m "text"]'; return }
-            $resolved = $false
-            foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
-                try {
-                    $ledger = Read-JsonFile $f.FullName
-                    $rec = $ledger.clarifications | Where-Object { $_.id -eq $id } | Select-Object -First 1
-                    if ($rec) {
-                        Invoke-WithJsonLock $f.FullName 'cli-resolve' {
-                            $l2 = Read-JsonFile $f.FullName
-                            foreach ($r2 in $l2.clarifications) {
-                                if ($r2.id -eq $id) {
-                                    $r2 | Add-Member -NotePropertyName 'status' -NotePropertyValue 'resolved' -Force
-                                    $r2 | Add-Member -NotePropertyName 'resolvedAt' -NotePropertyValue (Get-Timestamp) -Force
-                                    $entry2 = [PSCustomObject]@{ round = $r2.round; from = 'cli'; type = 'resolution'
-                                        body = if ($resolution) { $resolution } else { 'Resolved via CLI' }; timestamp = (Get-Timestamp) }
-                                    if (-not $r2.thread) { $r2 | Add-Member -NotePropertyName 'thread' -NotePropertyValue @() -Force }
-                                    $r2.thread += $entry2
-                                }
-                            }
-                            Write-JsonFile $f.FullName $l2
-                        }
-                        $resolved = $true
-                        Write-Host "$($C.g)  [PASS] Clarification '$id' resolved.$($C.n)"
-                    }
-                } catch {}
-            }
-            if (-not $resolved) { Write-Host "Clarification '$id' not found." }
-        }
-
-        'escalate' {
-            $id = if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1] } else { '' }
-            $reason = Get-Flag @('-m', '--message')
-            if (-not $id) { Write-Host 'Usage: agentx clarify escalate <id> [-m "reason"]'; return }
-            $escalated = $false
-            foreach ($f in (Get-ChildItem $Script:CLARIFICATIONS_DIR -Filter 'issue-*.json' -ErrorAction SilentlyContinue)) {
-                try {
-                    $ledger = Read-JsonFile $f.FullName
-                    $rec = $ledger.clarifications | Where-Object { $_.id -eq $id } | Select-Object -First 1
-                    if ($rec) {
-                        Invoke-WithJsonLock $f.FullName 'cli-escalate' {
-                            $l2 = Read-JsonFile $f.FullName
-                            foreach ($r2 in $l2.clarifications) {
-                                if ($r2.id -eq $id) {
-                                    $r2 | Add-Member -NotePropertyName 'status' -NotePropertyValue 'escalated' -Force
-                                    $entry2 = [PSCustomObject]@{ round = $r2.round; from = 'cli'; type = 'escalation'
-                                        body = if ($reason) { $reason } else { 'Escalated via CLI' }; timestamp = (Get-Timestamp) }
-                                    if (-not $r2.thread) { $r2 | Add-Member -NotePropertyName 'thread' -NotePropertyValue @() -Force }
-                                    $r2.thread += $entry2
-                                }
-                            }
-                            Write-JsonFile $f.FullName $l2
-                        }
-                        $escalated = $true
-                        Write-Host "$($C.y)  [WARN] Clarification '$id' escalated.$($C.n)"
-                    }
-                } catch {}
-            }
-            if (-not $escalated) { Write-Host "Clarification '$id' not found." }
-        }
-
-        default {
-            Write-Host "`n$($C.c)  clarify subcommands:$($C.n)"
-            Write-Host "  list                   List all active clarifications"
-            Write-Host "  show <id>              Show full thread for one clarification"
-            Write-Host "  stale                  Run monitor (detect stale/stuck/deadlock)"
-            Write-Host "  resolve <id> [-m msg]  Mark clarification resolved"
-            Write-Host "  escalate <id> [-m msg] Escalate a clarification`n"
-        }
-    }
-}
 
 # ---------------------------------------------------------------------------
 # HOOK: Agent lifecycle hooks (start/finish)
@@ -1354,8 +1126,6 @@ function Invoke-AgentHookCmd {
         Write-JsonFile $Script:STATE_FILE $data
         $issueRef = if ($issue) { " (issue #$issue)" } else { '' }
         Write-Host "$($C.g)  [PASS] $agent -> $status$issueRef$($C.n)"
-        # Run clarification monitor to detect stale / deadlocks.
-        Invoke-ClarificationMonitorCheck
     } elseif ($phase -eq 'finish') {
         # -----------------------------------------------------------------
         # QUALITY GATE (engineer only): block finish unless quality loop
@@ -1384,8 +1154,6 @@ function Invoke-AgentHookCmd {
         $data | Add-Member -NotePropertyName $agent -NotePropertyValue $entry -Force
         Write-JsonFile $Script:STATE_FILE $data
         Write-Host "$($C.g)  [PASS] $agent -> done$($C.n)"
-        # Run clarification monitor on finish as well.
-        Invoke-ClarificationMonitorCheck
     }
 }
 
@@ -1593,9 +1361,9 @@ function Invoke-LessonsQuery {
         return
     }
     
-    # This would integrate with the TypeScript lesson store in a real implementation
-    Write-Host "$($C.y)Query functionality requires TypeScript lesson store integration.$($C.n)"
-    Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+    # Query is handled by memory.instructions.md in the declarative architecture
+    Write-Host "$($C.y)Query functionality uses /memories/*.md files in v8.0.0.$($C.n)"
+    Write-Host "$($C.d)Use 'agentx lessons list' for the local JSONL overview, or check /memories/ for cross-session facts.$($C.n)"
 }
 
 function Invoke-LessonsShow {
@@ -1606,8 +1374,8 @@ function Invoke-LessonsShow {
     }
     
     # Search for lesson by ID
-    Write-Host "$($C.y)Show lesson functionality requires TypeScript lesson store integration.$($C.n)"
-    Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+    Write-Host "$($C.y)Show lesson by ID uses /memories/*.md files in v8.0.0.$($C.n)"
+    Write-Host "$($C.d)Check /memories/ for cross-session decisions and pitfalls.$($C.n)"
 }
 
 function Invoke-LessonsPromote {
@@ -1617,8 +1385,8 @@ function Invoke-LessonsPromote {
         return
     }
     
-    Write-Host "$($C.y)Promote lesson functionality requires TypeScript lesson store integration.$($C.n)"
-    Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+    Write-Host "$($C.y)Promote functionality uses /memories/*.md files in v8.0.0.$($C.n)"
+    Write-Host "$($C.d)Promote lessons by editing /memories/conventions.md or project-conventions.instructions.md.$($C.n)"
 }
 
 function Invoke-LessonsArchive {
@@ -1628,8 +1396,8 @@ function Invoke-LessonsArchive {
         return
     }
     
-    Write-Host "$($C.y)Archive lesson functionality requires TypeScript lesson store integration.$($C.n)"
-    Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+    Write-Host "$($C.y)Archive functionality uses /memories/*.md files in v8.0.0.$($C.n)"
+    Write-Host "$($C.d)Archive lessons by moving entries from /memories/ to /memories/session/.$($C.n)"
 }
 
 function Invoke-LessonsStats {
@@ -1689,8 +1457,8 @@ function Invoke-LessonsClean {
         Write-Host "$($C.c)  Dry Run: Lesson Cleanup$($C.n)"
         Write-Host "$($C.d)  Would clean up archived and low-confidence lessons older than 90 days$($C.n)"
     } else {
-        Write-Host "$($C.y)Clean functionality requires TypeScript lesson store integration.$($C.n)"
-        Write-Host "$($C.d)This will be available in Phase D of the learning loop implementation.$($C.n)"
+        Write-Host "$($C.y)Clean functionality uses /memories/*.md files in v8.0.0.$($C.n)"
+        Write-Host "$($C.d)Manually review and prune /memories/ files as needed.$($C.n)"
     }
 }
 
@@ -1714,7 +1482,7 @@ function Invoke-LessonsHelp {
     Write-Host "    -l, --limit <n>           Limit results (default: 10)"
     Write-Host ""
     Write-Host "$($C.d)  Note: Lessons are automatically extracted from agent sessions during context$($C.n)"
-    Write-Host "$($C.d)  compaction. Full query/modify functionality available in Phase D.$($C.n)"
+    Write-Host "$($C.d)  compaction. Full query/modify uses /memories/*.md files in v8.0.0.$($C.n)"
     Write-Host ""
 }
 
@@ -1736,7 +1504,6 @@ $($C.w)  Commands:$($C.n)
   workflow [type]                   List/show workflow steps
   loop <start|status|iterate|complete|cancel>  Iterative refinement
   run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
-  clarify [list|show|stale|resolve|escalate]   Agent-to-agent clarifications
   validate <issue> <role>          Pre-handoff validation
   hook <start|finish> <agent> [#]  Agent lifecycle hooks
   hooks install                    Install git hooks
@@ -1783,7 +1550,6 @@ switch ($Script:Command) {
     'hooks'    { Invoke-HooksCmd }
     'config'   { Invoke-ConfigCmd }
     'issue'    { Invoke-IssueCmd }
-    'clarify'  { Invoke-ClarifyCmd }
     'lessons'  { Invoke-LessonsCmd }
     'git-sync' { Invoke-GitSyncCmd }
     'run'      { Invoke-RunCmd }

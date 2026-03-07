@@ -1,7 +1,13 @@
 # Technical Specification: AgentX
 
+> **SUPERSEDED (v8.0.0)**: This specification documents the v7.x TypeScript runtime
+> implementation details. All specifications herein (Clarification Protocol, Memory Pipeline,
+> Agentic Loop, Security Hardening, Learning Loop, Cognitive Foundation, Proactive Intelligence)
+> describe code that was **deleted during the v8.0.0 declarative migration**.
+> Current architecture: [AGENTS.md](../../AGENTS.md) | Migration plan: [MIGRATION-PLAN.md](../architecture/MIGRATION-PLAN.md).
+
 **Author**: Solution Architect Agent
-**Last Updated**: 2026-02-27
+**Last Updated**: 2026-03-06
 
 ---
 

@@ -85,13 +85,6 @@ function Test-AgentFile([string]$FilePath) {
  return
  }
 
- # Required: name
- if (-not $fm["name"]) {
- Write-Fail "$name : Missing required field 'name'"
- } else {
- Write-Pass "$name : name OK ($($fm['name']))"
- }
-
  # Required: description
  if (-not $fm["description"]) {
  Write-Fail "$name : Missing required field 'description'"
@@ -101,13 +94,19 @@ function Test-AgentFile([string]$FilePath) {
  Write-Pass "$name : description OK"
  }
 
- # Recommended: maturity
- if (-not $fm["maturity"]) {
- Write-Warn "$name : Missing recommended field 'maturity'"
- } elseif ($fm["maturity"] -notin @("stable", "preview", "experimental", "deprecated")) {
- Write-Fail "$name : Invalid maturity '$($fm['maturity'])' (must be stable|preview|experimental|deprecated)"
+ # Recommended: model
+ if (-not $fm["model"]) {
+ Write-Warn "$name : Missing recommended field 'model'"
  } else {
- Write-Pass "$name : maturity OK ($($fm['maturity']))"
+ Write-Pass "$name : model OK ($($fm['model']))"
+ }
+
+ # Forbidden legacy fields: name (use filename instead)
+ # Optional: name (display name for UI)
+ if ($fm.ContainsKey("name") -and $fm["name"].Length -lt 2) {
+ Write-Fail "$name : name too short (min 2 chars)"
+ } elseif ($fm.ContainsKey("name")) {
+ Write-Pass "$name : name OK ($($fm['name']))"
  }
 }
 
@@ -156,6 +155,8 @@ Write-Host ""
 Write-Host " Agents:" -ForegroundColor White
 $agents = Get-ChildItem -Path "$Path/.github/agents" -Filter "*.agent.md" -ErrorAction SilentlyContinue
 foreach ($f in $agents) { Test-AgentFile $f.FullName }
+$internalAgents = Get-ChildItem -Path "$Path/.github/agents/internal" -Filter "*.agent.md" -ErrorAction SilentlyContinue
+foreach ($f in $internalAgents) { Test-AgentFile $f.FullName }
 
 # Skills
 Write-Host ""

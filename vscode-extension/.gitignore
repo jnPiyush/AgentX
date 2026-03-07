@@ -7,3 +7,5 @@ coverage/
 test-output.txt
 test-results.txt
 coverage-output.txt
+# Build artifact: copied from repo root by scripts/copy-assets.js
+.github/agentx/

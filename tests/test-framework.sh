@@ -91,16 +91,16 @@ assert_file_contains ".github/templates/PRD-TEMPLATE.md"  "AI/ML Requirements"  
 assert_file_contains ".github/templates/ADR-TEMPLATE.md"  "AI/ML Architecture"  "ADR has AI/ML Architecture section"
 assert_file_contains ".github/templates/SPEC-TEMPLATE.md" "AI/ML Specification" "SPEC has AI/ML Specification section"
 
-# --- 4. TOML Workflows ------------------------------------------------------
+# --- 4. Agent Definitions ------------------------------------------------
 echo ""
-echo -e "  \033[1;37m4. TOML Workflows\033[0m"
+echo -e "  \033[1;37m4. Agent Definitions\033[0m"
 
-for wf in feature epic story bug spike devops docs; do
-  assert_file_exists ".agentx/workflows/$wf.toml" "Workflow: $wf"
+for ag in agent-x product-manager architect engineer reviewer reviewer-auto ux-designer devops data-scientist tester powerbi-analyst customer-coach; do
+  assert_file_exists ".github/agents/$ag.agent.md" "Agent: $ag"
 done
 
-assert_file_contains ".agentx/workflows/feature.toml" '\[\[steps\]\]' "feature.toml has steps"
-assert_file_contains ".agentx/workflows/feature.toml" 'agent\s*='     "feature.toml has agent assignments"
+assert_file_contains ".github/agents/engineer.agent.md" 'description:' "engineer.agent.md has description"
+assert_file_contains ".github/agents/engineer.agent.md" 'model:'       "engineer.agent.md has model"
 
 # --- 5. CLI (agentx.sh + agentx-cli.ps1) -----------------------------------
 echo ""

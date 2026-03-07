@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 140">
   <!--
-    AgentX Robot v7.4.0 - Marketplace Icon (colored).
+    AgentX Robot v8.0.0 - Marketplace Icon (colored).
     Purple-blue gradient robot with green eyes and orange antenna.
   -->
   <defs>
@@ -39,7 +39,4 @@
 
   <!-- Mouth -->
   <rect x="40" y="88" width="48" height="8" rx="4" fill="#1E293B" />
-
-  <!-- Version badge -->
-  <text x="64" y="130" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" fill="#94A3B8">v7.4.0</text>
 </svg>

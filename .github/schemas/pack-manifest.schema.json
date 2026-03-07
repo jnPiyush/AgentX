@@ -57,7 +57,7 @@
         "workflows": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Relative paths to .toml workflow files."
+          "description": "Relative paths to workflow files (reserved for future use)."
         },
         "scripts": {
           "type": "array",

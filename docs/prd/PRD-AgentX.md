@@ -1,5 +1,11 @@
 # PRD: AgentX - Multi-Agent Orchestration Framework
 
+> **SUPERSEDED (v8.0.0)**: This PRD was written for the v7.x TypeScript runtime architecture.
+> The core problem statement, users, goals, and requirements (Sections 1-10) remain valid.
+> The Feature PRDs (Sections 13-17) describe TypeScript implementations that were
+> **replaced by declarative architecture** in v8.0.0. The current architecture reference
+> is [AGENTS.md](../../AGENTS.md). Migration details: [MIGRATION-PLAN.md](../architecture/MIGRATION-PLAN.md).
+
 **Epic**: AgentX Full Solution
 **Status**: Approved
 **Author**: Product Manager Agent

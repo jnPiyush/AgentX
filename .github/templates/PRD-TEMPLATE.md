@@ -159,6 +159,42 @@ inputs:
 - [ ] Fine-tuned model
 - [ ] Agent with tools (function calling / tool use)
 - [ ] Multi-agent orchestration (sequential / parallel / hierarchical)
+- [ ] MCP Server (Model Context Protocol - expose tools/resources for AI hosts)
+- [ ] MCP App (interactive UI rendered inside an AI host via iframe)
+
+#### Integration Pattern
+
+```mermaid
+graph TD
+ subgraph Patterns["GenAI Integration Patterns"]
+ direction TB
+ subgraph Direct["Direct API"]
+ U1["User"] --> A1["App"] --> M1["LLM API"]
+ end
+ subgraph RAG["RAG Pipeline"]
+ U2["User"] --> A2["App"] --> VS["Vector\nStore"] --> M2["LLM"]
+ end
+ subgraph Agent["Agent + Tools"]
+ U3["User"] --> AG["Agent"] --> T["Tools /\nFunctions"]
+ AG --> M3["LLM"]
+ end
+ subgraph MCP["MCP Server / App"]
+ HOST["AI Host\n(Copilot, Claude)"] --> MCPS["MCP Server"]
+ MCPS --> TOOLS["Tools"]
+ MCPS --> RES["Resources"]
+ HOST --> MCPA["MCP App\n(iframe UI)"]
+ end
+ end
+
+ style Direct fill:#E3F2FD,stroke:#1565C0
+ style RAG fill:#E8F5E9,stroke:#2E7D32
+ style Agent fill:#FFF3E0,stroke:#E65100
+ style MCP fill:#F3E5F5,stroke:#6A1B9A
+```
+
+> **Which pattern?** Direct API for simple Q&A. RAG for knowledge-grounded answers.
+> Agent for multi-step tasks. MCP Server to expose capabilities to external AI hosts.
+> MCP App for interactive UI within AI hosts.
 
 #### Data Requirements
 - **Training / Evaluation data**: {source, format, volume}
@@ -166,14 +202,42 @@ inputs:
 - **Data sensitivity**: {PII / Confidential / Public}
 - **Volume**: {requests per hour/day/month}
 
+#### MCP Requirements (if MCP Server or MCP App)
+
+| Requirement | Specification |
+|-------------|---------------|
+| **Protocol** | MCP Server (tools/resources) / MCP App (interactive UI) / Both |
+| **Transport** | stdio (local) / SSE (remote) / Streamable HTTP |
+| **AI Host** | VS Code Copilot / Claude Desktop / GitHub Copilot / Custom |
+| **Tools Exposed** | {list of tool names and purposes} |
+| **Resources Exposed** | {list of resource URIs and content types} |
+| **UI Views** | {list of interactive views, if MCP App} |
+| **Authentication** | {OAuth / API key / none (local stdio)} |
+
+#### Responsible AI Requirements
+
+| Concern | Requirement |
+|---------|-------------|
+| **Guardrails** | {Input/output filtering, content safety, topic boundaries} |
+| **Transparency** | {Disclosure to users that AI is generating content} |
+| **Fairness** | {Bias testing strategy, diverse evaluation dataset} |
+| **Privacy** | {PII handling, data retention, opt-out mechanism} |
+| **Human Oversight** | {Human-in-the-loop for high-stakes decisions} |
+| **Accountability** | {Logging, audit trail, explainability} |
+
 #### AI-Specific Acceptance Criteria
 - [ ] Model produces responses meeting quality threshold
 - [ ] Inference latency meets requirements
 - [ ] Cost per request within budget
 - [ ] Evaluation dataset created with {N} test cases
 - [ ] Graceful fallback when model is unavailable
+- [ ] Guardrails block harmful/off-topic content
+- [ ] MCP tools/resources respond within latency budget (if MCP)
+- [ ] MCP App renders correctly in target AI host (if MCP App)
 
-> **Reference**: Read `.github/skills/ai-systems/ai-agent-development/SKILL.md` for implementation patterns and model guidance.
+> **Reference**: Read `.github/skills/ai-systems/ai-agent-development/SKILL.md` for agent patterns,
+> `.github/skills/ai-systems/mcp-server-development/SKILL.md` for MCP Server guidance,
+> `.github/skills/ai-systems/mcp-apps-development/SKILL.md` for MCP App guidance.
 
 ### 4.3 Non-Functional Requirements
 

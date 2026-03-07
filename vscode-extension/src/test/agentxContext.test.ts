@@ -116,7 +116,9 @@ describe('AgentXContext', () => {
       fs.mkdirSync(valid, { recursive: true });
       createAgentXRoot(valid);
       __setWorkspaceFolders([{ path: valid }]);
-      __setConfig('agentx.rootPath', '/nonexistent/path');
+      // Use a path that cannot exist on any OS (including Windows where
+      // /nonexistent/path maps to C:\nonexistent\path on the current drive).
+      __setConfig('agentx.rootPath', path.join(tmpBase, 'does-not-exist-' + Date.now()));
 
       const ctx = new AgentXContext(fakeExtensionContext());
       assert.equal(ctx.workspaceRoot, valid);
@@ -172,10 +174,20 @@ describe('AgentXContext', () => {
       assert.equal(result, true);
     });
 
-    it('should return false when no AgentX root', async () => {
+    it('should return true in local mode without config files (zero-config)', async () => {
       const root = path.join(tmpBase, 'noinit');
       fs.mkdirSync(root, { recursive: true });
       __setWorkspaceFolders([{ path: root }]);
+
+      const ctx = new AgentXContext(fakeExtensionContext());
+      const result = await ctx.checkInitialized();
+      // Local mode works without any project files
+      assert.equal(result, true);
+      assert.equal(fs.existsSync(path.join(root, '.agentx', 'config.json')), false);
+    });
+
+    it('should return false when no workspace folder', async () => {
+      __setWorkspaceFolders([]);
 
       const ctx = new AgentXContext(fakeExtensionContext());
       const result = await ctx.checkInitialized();
@@ -183,20 +195,67 @@ describe('AgentXContext', () => {
     });
   });
 
-  // --- getMode / getShell -----------------------------------------------
+  // --- Integration detection / getShell ---------------------------------
 
-  describe('configuration accessors', () => {
-    it('should default mode to local', () => {
-      __setWorkspaceFolders([{ path: tmpBase }]);
+  describe('integration detection', () => {
+    it('should return false for githubConnected when no mcp.json', () => {
+      const root = path.join(tmpBase, 'nomcp');
+      fs.mkdirSync(root, { recursive: true });
+      __setWorkspaceFolders([{ path: root }]);
       const ctx = new AgentXContext(fakeExtensionContext());
-      assert.equal(ctx.getMode(), 'local');
+      assert.equal(ctx.githubConnected, false);
+      assert.equal(ctx.adoConnected, false);
     });
 
-    it('should return configured mode', () => {
-      __setConfig('agentx.mode', 'github');
-      __setWorkspaceFolders([{ path: tmpBase }]);
+    it('should detect github integration from mcp.json', () => {
+      const root = path.join(tmpBase, 'ghint');
+      fs.mkdirSync(path.join(root, '.vscode'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.vscode', 'mcp.json'), JSON.stringify({
+        servers: { github: { type: 'http', url: 'https://api.githubcopilot.com/mcp/' } }
+      }));
+      __setWorkspaceFolders([{ path: root }]);
       const ctx = new AgentXContext(fakeExtensionContext());
-      assert.equal(ctx.getMode(), 'github');
+      assert.equal(ctx.githubConnected, true);
+      assert.equal(ctx.adoConnected, false);
+    });
+
+    it('should detect ado integration from mcp.json', () => {
+      const root = path.join(tmpBase, 'adoint');
+      fs.mkdirSync(path.join(root, '.vscode'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.vscode', 'mcp.json'), JSON.stringify({
+        servers: { ado: { type: 'http', url: 'https://example.com/ado-mcp/' } }
+      }));
+      __setWorkspaceFolders([{ path: root }]);
+      const ctx = new AgentXContext(fakeExtensionContext());
+      assert.equal(ctx.githubConnected, false);
+      assert.equal(ctx.adoConnected, true);
+    });
+
+    it('should detect both integrations simultaneously', () => {
+      const root = path.join(tmpBase, 'bothint');
+      fs.mkdirSync(path.join(root, '.vscode'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.vscode', 'mcp.json'), JSON.stringify({
+        servers: {
+          github: { type: 'http', url: 'https://api.githubcopilot.com/mcp/' },
+          ado: { type: 'http', url: 'https://example.com/ado/' }
+        }
+      }));
+      __setWorkspaceFolders([{ path: root }]);
+      const ctx = new AgentXContext(fakeExtensionContext());
+      assert.equal(ctx.githubConnected, true);
+      assert.equal(ctx.adoConnected, true);
+    });
+
+    it('should handle hasIntegration with partial name match', () => {
+      const root = path.join(tmpBase, 'partial');
+      fs.mkdirSync(path.join(root, '.vscode'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.vscode', 'mcp.json'), JSON.stringify({
+        servers: { 'ado-prd-to-wit': { type: 'http', url: 'https://example.com/' } }
+      }));
+      __setWorkspaceFolders([{ path: root }]);
+      const ctx = new AgentXContext(fakeExtensionContext());
+      assert.equal(ctx.hasIntegration('ado'), true);
+      assert.equal(ctx.hasIntegration('github'), false);
     });
 
     it('should default shell to auto', () => {
@@ -253,12 +312,8 @@ describe('AgentXContext', () => {
       fs.mkdirSync(path.join(root, '.github', 'agents'), { recursive: true });
       fs.writeFileSync(path.join(root, '.github', 'agents', 'test.agent.md'), [
         '---',
-        'name: Test Agent',
         "description: 'A test agent for unit tests'",
-        'maturity: stable',
-        'mode: agent',
         'model: Claude Sonnet',
-        'modelFallback: Claude Haiku',
         '---',
         '',
         '## Role',
@@ -270,12 +325,9 @@ describe('AgentXContext', () => {
       const def = await ctx.readAgentDef('test.agent.md');
 
       assert.ok(def, 'should parse agent definition');
-      assert.equal(def!.name, 'Test Agent');
-      assert.equal(def!.maturity, 'stable');
-      assert.equal(def!.mode, 'agent');
       assert.ok(def!.model.includes('Claude'));
-      assert.equal(def!.modelFallback, 'Claude Haiku');
       assert.equal(def!.fileName, 'test.agent.md');
+      assert.equal(def!.description, 'A test agent for unit tests');
     });
 
     it('should parse frontmatter with CRLF line endings (Windows)', async () => {
@@ -285,10 +337,7 @@ describe('AgentXContext', () => {
       fs.mkdirSync(path.join(root, '.github', 'agents'), { recursive: true });
       fs.writeFileSync(path.join(root, '.github', 'agents', 'crlf.agent.md'), [
         '---',
-        'name: CRLF Agent',
         "description: 'Agent with Windows line endings'",
-        'maturity: stable',
-        'mode: adaptive',
         'model: Claude Opus',
         '---',
         '',
@@ -301,12 +350,9 @@ describe('AgentXContext', () => {
       const def = await ctx.readAgentDef('crlf.agent.md');
 
       assert.ok(def, 'should parse agent definition with CRLF line endings');
-      assert.equal(def!.name, 'CRLF Agent');
-      assert.equal(def!.maturity, 'stable');
-      assert.equal(def!.mode, 'adaptive');
       assert.ok(def!.model.includes('Claude'));
-      assert.equal(def!.modelFallback, undefined);
       assert.equal(def!.fileName, 'crlf.agent.md');
+      assert.equal(def!.description, 'Agent with Windows line endings');
     });
 
     it('should return undefined for missing file', async () => {
@@ -343,18 +389,13 @@ describe('AgentXContext', () => {
       fs.mkdirSync(path.join(root, '.github', 'agents'), { recursive: true });
       fs.writeFileSync(path.join(root, '.github', 'agents', 'rich.agent.md'), [
         '---',
-        'name: Rich Agent',
         "description: 'Agent with extended fields'",
-        'maturity: stable',
-        'mode: agent',
         'model: Claude Opus',
-        'infer: true',
         "tools: ['read', 'edit', 'search']",
         'handoffs:',
         '  - agent: engineer',
         '    label: Hand off to Engineer',
         '    prompt: Implement the spec',
-        '    context: Architecture spec complete',
         '    send: true',
         '---',
         '',
@@ -367,8 +408,6 @@ describe('AgentXContext', () => {
       const def = await ctx.readAgentDef('rich.agent.md');
 
       assert.ok(def, 'should parse agent definition');
-      assert.equal(def!.name, 'Rich Agent');
-      assert.equal(def!.infer, true);
       assert.ok(Array.isArray(def!.tools), 'tools should be an array');
       assert.ok(def!.tools!.length > 0, 'tools should not be empty');
       assert.ok(def!.tools!.includes('read'));
@@ -393,10 +432,7 @@ describe('AgentXContext', () => {
       for (const name of ['alpha', 'beta']) {
         fs.writeFileSync(path.join(agentsDir, `${name}.agent.md`), [
           '---',
-          `name: ${name}`,
           `description: Agent ${name}`,
-          'maturity: stable',
-          'mode: agent',
           'model: TestModel',
           '---',
           '',
@@ -411,8 +447,8 @@ describe('AgentXContext', () => {
       const agents = await ctx.listAgents();
 
       assert.equal(agents.length, 2);
-      const names = agents.map((a: any) => a.name).sort();
-      assert.deepEqual(names, ['alpha', 'beta']);
+      const fileNames = agents.map((a: any) => a.fileName).sort();
+      assert.deepEqual(fileNames, ['alpha.agent.md', 'beta.agent.md']);
     });
 
     it('should return empty array when agents dir does not exist', async () => {

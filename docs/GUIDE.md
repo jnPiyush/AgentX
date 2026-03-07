@@ -169,7 +169,7 @@ Control what gets installed with the `-Profile` flag:
 | **dotnet** | C#, Blazor, Azure, SQL, architecture | csharp, blazor, api | [PASS] | [PASS] | [PASS] |
 | **react** | React, TypeScript, UI, design, architecture | react, api | [PASS] | [PASS] | [PASS] |
 
-**All profiles always include**: agents, templates, CLI, TOML workflows, issue templates, documentation.
+**All profiles always include**: agents, templates, CLI, instructions, issue templates, documentation.
 
 ```powershell
 # PowerShell examples
@@ -425,14 +425,6 @@ function issue { .\.agentx\local-issue-manager.ps1 @args }
   issues/
     1.json                       # Issue #1 data
     2.json                       # Issue #2 data
-  workflows/
-    feature.toml                 # Declarative workflow templates
-    epic.toml
-    story.toml
-    bug.toml
-    spike.toml
-    devops.toml
-    docs.toml
   state/
     agent-status.json            # Agent state tracking
   digests/                       # Weekly issue digests
@@ -454,7 +446,7 @@ The CLI works in both Local and GitHub modes (auto-detects from `config.json`):
 .\.agentx\agentx.ps1 workflow -Type feature          # Show workflow steps
 .\.agentx\agentx.ps1 hook -Phase start -Agent engineer -Issue 42
 .\.agentx\agentx.ps1 run engineer "Fix the tests"   # Run agentic loop (LLM + tools)
-.\.agentx\agentx.ps1 clarify list                   # Show active clarifications
+.\.agentx\agentx.ps1 config show                    # View current configuration
 ```
 
 ```bash

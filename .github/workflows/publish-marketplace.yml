@@ -1,0 +1,54 @@
+# ------------------------------------------------------------------
+# Publish to VS Code Marketplace (Manual)
+# ------------------------------------------------------------------
+# Triggered manually from GitHub Actions UI.
+# Downloads the VSIX attached to a GitHub Release and publishes it
+# to the VS Code Marketplace.
+#
+# Required secret: VSCE_PAT (Azure DevOps PAT with Marketplace > Manage scope)
+#
+# Usage:
+#   GitHub -> Actions -> "Publish to Marketplace" -> Run workflow
+#   Select the release tag to publish (e.g. v8.0.0)
+# ------------------------------------------------------------------
+
+name: Publish to Marketplace
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g. v8.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish ${{ github.event.inputs.tag }} to Marketplace
+    runs-on: ubuntu-latest
+    environment: marketplace
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Package VSIX
+        working-directory: vscode-extension
+        run: npx @vscode/vsce package
+
+      - name: Publish to VS Code Marketplace
+        working-directory: vscode-extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx @vscode/vsce publish --pat "$VSCE_PAT" --packagePath $(ls *.vsix)

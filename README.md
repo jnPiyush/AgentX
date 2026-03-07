@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v7.4.0"><img src="https://img.shields.io/badge/Version-7.4.0-0EA5E9?style=for-the-badge" alt="Version 7.4.0"></a>
+  <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.0.0"><img src="https://img.shields.io/badge/Version-8.0.0-0EA5E9?style=for-the-badge" alt="Version 8.0.0"></a>
   <a href="https://github.com/github/awesome-copilot"><img src="https://img.shields.io/badge/Standard-awesome--copilot-7C3AED?style=for-the-badge&logo=github" alt="Awesome Copilot"></a>
   <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Skills-agentskills.io-F97316?style=for-the-badge" alt="Skills Spec"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/badge/OpenSSF-Scorecard-4DC71F?style=for-the-badge" alt="OpenSSF Scorecard"></a>
@@ -66,7 +66,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <tr>
 <td width="50%">
 
-### 62 Production Skills
+### 63 Production Skills
 - **10 categories**: architecture, development, languages, operations, infrastructure, data, ai-systems, design, testing, domain
 - Retrieval-led reasoning -- agents read skills before generating
 - 30 executable scripts across 17 skills
@@ -75,31 +75,31 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 </td>
 <td width="50%">
 
-### VS Code Extension
+### VS Code Extension (Thin Shell)
 - One-click initialization & setup wizard
-- **Intelligent model routing** with per-agent LLM fallbacks
+- **20 agents** in Copilot Chat agent picker with frontmatter-driven routing
 - Ready queue, agent state tree, workflow visualization
-- Event bus, context compaction, thinking log, plugin system
+- Declarative architecture -- agents, skills, and instructions as markdown files
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### Agentic Loop (LLM + Tools)
-- **Real LLM-powered execution** -- agents call tools, read files, run commands
-- VS Code Language Model API bridge for Copilot Chat models
-- Loop detection with circuit breaker (hash-based cycle prevention)
-- Session persistence, auto-compaction, and multi-turn resume
+### Copilot-Native Orchestration
+- **Copilot's native agentic loop** -- agents call tools, read files, run commands
+- Body text instructions drive self-review, quality loops, and handoffs
+- `runSubagent` for agent-to-agent delegation (Mode 1: Agent X Hub)
+- `handoffs:` frontmatter for workflow routing (Mode 2: Human-Orchestrated)
 
 </td>
 <td width="50%">
 
-### Agent-to-Agent Communication
-- **Hub-routed clarification protocol** -- agents ask each other questions
-- Each sub-agent uses its own Copilot model from `.agent.md` frontmatter
-- File-locked ledger with round management and auto-escalation
-- Scope validation, SLA monitoring, and deadlock detection
+### Cross-Session Memory
+- **memory.instructions.md** -- persists decisions, pitfalls, conventions across sessions
+- `/memories/*.md` files read at session start, written during work
+- **project-conventions.instructions.md** -- auto-applied patterns from prior sessions
+- Works across VS Code, Claude Code, and CLI
 
 </td>
 </tr>
@@ -118,7 +118,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 ### Framework Totals
 - **63 skills** across 10 categories
 - **12 agent definitions** (11 stable + 1 preview)
-- **7 TOML workflow** templates (feature, epic, story, bug, spike, devops, docs)
+- **7 workflow types** via frontmatter handoffs (feature, epic, story, bug, spike, devops, docs)
 - **12 instruction files**, **11 prompts**, **9 templates**
 - Declarative workflows with dependency management
 
@@ -130,7 +130,32 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ---
 
-## 🆙 Previous Versions
+## 🆙 What's New in v8.0.0
+
+**Declarative Migration** -- Replaced 108-file TypeScript runtime with ~23-file thin shell + declarative `.agent.md` files.
+
+| Feature | Description |
+|---------|-------------|
+| Declarative Architecture | All agent logic lives in markdown frontmatter and body text -- not TypeScript |
+| Copilot-Native Agents | 20 agents use standard frontmatter (description, model, handoffs, tools, agents) |
+| Cross-Session Memory | `memory.instructions.md` + `/memories/*.md` for persistent context |
+| Frontmatter Handoffs | `handoffs:` drives workflow routing and "Hand off to X" buttons |
+| CLI Frontmatter Workflow | `agentx.ps1 workflow` reads `.agent.md` handoffs (replaced TOML) |
+| Claude Code Commands | 12 `.claude/commands/*.md` stubs with context-first rule and quality loop |
+| 63 Skills | Skills index across 10 categories |
+| Multi-Platform | Works across VS Code, Copilot CLI, Claude Code, and GitHub.com |
+
+### Previous Versions
+
+<details>
+<summary><strong>v7.0-v7.4 -- TypeScript Runtime (Superseded by v8.0.0)</strong></summary>
+
+- Custom agentic loop, self-review loop, clarification protocol (all replaced by declarative body text)
+- TypeScript event bus, context compactor, thinking log (deleted)
+- Model fallback selector, plugin system (deleted)
+- 108 TypeScript files, 27 commands, 23 settings (replaced by 23 files, 9 commands, 7 settings)
+
+</details>
 
 <details>
 <summary><strong>v6.8.0 -- Skills Reorganization</strong></summary>
@@ -399,10 +424,9 @@ AgentX/
 │   └── 📁 instructions/      # 12 language/IaC-specific guides
 │   └── 📁 schemas/           # JSON schema validation
 │
-├── 📁 .agentx/               # CLI, workflows, state, local issues
+├── 📁 .agentx/               # CLI, state, local issues
 │   ├── 📄 agentx.ps1         # PowerShell CLI (11 subcommands)
 │   ├── 📄 agentx.sh          # Bash CLI (11 subcommands)
-│   ├── 📁 workflows/         # 7 TOML workflow templates
 │   ├── 📁 state/             # Agent status tracking
 │   ├── 📁 digests/           # Weekly issue digests
 │   └── 📁 issues/            # Local mode issue storage
@@ -412,14 +436,13 @@ AgentX/
 │
 ├── 📁 scripts/               # Install, convert, deploy scripts
 │
+├── 📁 memories/              # Cross-session memory files
+│
 └── 📁 docs/
     ├── 📁 adr/               # Architecture Decision Records
-    ├── 📁 analytics/         # Agent performance metrics
+    ├── 📁 architecture/      # Architecture docs & migration plan
     ├── 📁 prd/               # Product Requirements Docs
-    ├── 📁 specs/             # Technical Specifications
-    ├── 📁 ux/                # UX Design Documents
-    ├── 📁 reviews/           # Code Review Documents
-    └── 📁 progress/          # Session progress logs
+    └── 📁 specs/             # Technical Specifications
 ```
 
 ---
@@ -429,7 +452,7 @@ AgentX/
 | Document | Description |
 |----------|-------------|
 | [AGENTS.md](AGENTS.md) | Complete workflow, agent roles, handoff rules |
-| [Skills.md](Skills.md) | 62 production skills across 10 categories |
+| [Skills.md](Skills.md) | 63 production skills across 10 categories |
 | [**Guide**](docs/GUIDE.md) | **Quickstart, setup, local mode, MCP server, troubleshooting** |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to AgentX |
 

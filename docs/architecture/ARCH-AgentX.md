@@ -1,7 +1,13 @@
 # Architecture: AgentX System Architecture
 
+> **SUPERSEDED (v8.0.0)**: This document describes the v7.x TypeScript runtime architecture.
+> All component diagrams, data flows, and integration points herein reference TypeScript modules
+> that were **deleted during the v8.0.0 declarative migration**. The current architecture
+> is documented in [AGENTS.md](../../AGENTS.md) (Runtime Implementation Reference section).
+> Migration journey: [MIGRATION-PLAN.md](MIGRATION-PLAN.md).
+
 **Author**: Solution Architect Agent
-**Last Updated**: 2026-02-27
+**Last Updated**: 2026-03-06
 
 ---
 

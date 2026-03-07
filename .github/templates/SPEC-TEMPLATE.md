@@ -51,6 +51,9 @@ inputs:
 11. [Risks & Mitigations](#11-risks--mitigations)
 12. [Monitoring & Observability](#12-monitoring--observability)
 13. [AI/ML Specification](#13-aiml-specification-if-applicable) *(if applicable)*
+14. [MCP Server Specification](#14-mcp-server-specification-if-applicable) *(if applicable)*
+15. [MCP App Specification](#15-mcp-app-specification-if-applicable) *(if applicable)*
+
 ---
 
 ## 1. Overview
@@ -912,6 +915,285 @@ graph LR
 - **Dashboard**: {Link to monitoring dashboard}
 
 > **Reference**: Read `.github/skills/ai-systems/ai-agent-development/SKILL.md` for implementation patterns, model guidance, and production checklist.
+
+---
+
+## 14. MCP Server Specification (if applicable)
+
+> **Trigger**: Include this section when the PRD or ADR specifies an MCP Server pattern.
+> If the product does NOT expose tools/resources via MCP, skip this section entirely.
+
+### 14.1 Server Overview
+
+| Parameter | Value |
+|-----------|-------|
+| **Server Name** | {e.g., my-data-server} |
+| **Transport** | stdio / SSE / Streamable HTTP |
+| **Language** | {Python / TypeScript / C#} |
+| **SDK** | {e.g., @modelcontextprotocol/sdk, mcp-python-sdk} |
+| **Authentication** | {None (stdio) / OAuth 2.0 / API Key} |
+| **Target Hosts** | {VS Code Copilot / Claude Desktop / GitHub Copilot / Custom} |
+
+### 14.2 MCP Server Architecture
+
+```mermaid
+graph TD
+ subgraph Hosts["AI Hosts"]
+ H1["VS Code Copilot"]
+ H2["Claude Desktop"]
+ H3["Custom Agent"]
+ end
+
+ subgraph Transport["Transport Layer"]
+ T1["stdio\n(local process)"]
+ T2["SSE\n(HTTP stream)"]
+ end
+
+ subgraph Server["MCP Server"]
+ direction TB
+ INIT["Server Init\nname, version, capabilities"]
+
+ subgraph Tools["Tool Handlers"]
+ T_A["tool_a\n{description}"]
+ T_B["tool_b\n{description}"]
+ T_C["tool_c\n{description}"]
+ end
+
+ subgraph Resources["Resource Providers"]
+ R_A["resource://type/a\n{MIME type}"]
+ R_B["resource://type/b\n{MIME type}"]
+ end
+
+ subgraph Prompts["Prompt Templates"]
+ P_A["prompt_a\n{description}"]
+ end
+ end
+
+ subgraph Backend["Backend Services"]
+ DB[("Database")]
+ API["External API"]
+ FS["File System"]
+ CACHE["Cache"]
+ end
+
+ Hosts -->|"JSON-RPC 2.0"| Transport
+ Transport --> INIT
+ INIT --> Tools
+ INIT --> Resources
+ INIT --> Prompts
+ Tools --> Backend
+ Resources --> Backend
+
+ style Hosts fill:#E3F2FD,stroke:#1565C0
+ style Server fill:#F3E5F5,stroke:#6A1B9A
+ style Backend fill:#E8F5E9,stroke:#2E7D32
+```
+
+### 14.3 Tool Definitions
+
+| Tool Name | Description | Parameters | Returns | Side Effects |
+|-----------|-------------|------------|---------|--------------|
+| {tool_name} | {what it does} | `{param}: {type}` (required), `{param}: {type}` (optional) | {return type/schema} | {DB write / API call / None} |
+| {tool_name} | {what it does} | `{param}: {type}` | {return type} | {side effects} |
+
+**Tool Design Rules:**
+- One action per tool (no multi-mode mega-tools)
+- Descriptive names: `verb_noun` format (e.g., `search_documents`, `create_ticket`)
+- All parameters validated with JSON Schema
+- Errors return structured MCP error responses
+- Idempotent where possible
+
+### 14.4 Resource Definitions
+
+| Resource URI | MIME Type | Description | Dynamic? |
+|-------------|-----------|-------------|----------|
+| `resource://type/{id}` | {application/json, text/markdown, etc.} | {what it provides} | {Yes/No} |
+| `resource://config/settings` | application/json | {configuration data} | No |
+
+### 14.5 Prompt Templates (if any)
+
+| Prompt Name | Description | Arguments | Output |
+|-------------|-------------|-----------|--------|
+| {prompt_name} | {when to use} | `{arg}: {type}` | {structured text} |
+
+### 14.6 MCP Server Request Flow
+
+```mermaid
+sequenceDiagram
+ participant Host as AI Host
+ participant LLM as LLM
+ participant Server as MCP Server
+ participant Backend as Backend Service
+
+ Host->>Server: initialize (protocol version, capabilities)
+ Server-->>Host: server info + capabilities
+
+ Host->>Server: tools/list
+ Server-->>Host: [{name, description, inputSchema}]
+
+ Host->>LLM: User query + available tools
+ LLM-->>Host: tool_call: search_documents({query})
+
+ Host->>Server: tools/call {name: search_documents, args: {query}}
+ Server->>Backend: Execute search
+ Backend-->>Server: Results
+ Server-->>Host: {content: [{type: text, text: results}]}
+
+ Host->>LLM: Tool result + continue
+ LLM-->>Host: Final response to user
+```
+
+### 14.7 Error Handling
+
+| Error Scenario | MCP Error Code | Response | Recovery |
+|---------------|---------------|----------|---------|
+| Invalid parameters | InvalidParams | Structured validation errors | Host retries with corrected params |
+| Backend unavailable | InternalError | Friendly error message | Host may retry or inform user |
+| Authentication failure | InvalidRequest | Auth error + instructions | User re-authenticates |
+| Rate limited | InternalError | Retry-after hint | Host backs off |
+
+### 14.8 Security
+
+- MUST validate all tool input parameters (types, ranges, patterns)
+- MUST sanitize file paths to prevent path traversal
+- MUST validate URLs to prevent SSRF
+- MUST NOT expose system internals in error messages
+- SHOULD use least-privilege access to backend services
+- SHOULD log all tool invocations with request context
+
+> **Reference**: Read `.github/skills/ai-systems/mcp-server-development/SKILL.md` for MCP Server implementation patterns.
+
+---
+
+## 15. MCP App Specification (if applicable)
+
+> **Trigger**: Include this section when the PRD or ADR specifies an MCP App (interactive UI) pattern.
+> If the product does NOT render interactive UI inside an AI host, skip this section entirely.
+
+### 15.1 App Overview
+
+| Parameter | Value |
+|-----------|-------|
+| **App Name** | {e.g., data-explorer-app} |
+| **UI Framework** | {React / HTML+CSS / Vue / Svelte} |
+| **Rendering** | iframe inside AI host |
+| **State Management** | {React state / custom store} |
+| **Communication** | MCP App SDK (registerAppTool, postMessage) |
+
+### 15.2 MCP App Architecture
+
+```mermaid
+graph TD
+ subgraph AIHost["AI Host (VS Code Copilot / Claude)"]
+ Chat["Chat\nInterface"]
+ Frame["iframe\nContainer"]
+ end
+
+ subgraph MCPApp["MCP App"]
+ direction TB
+ Entry["App Entry\nindex.html"]
+
+ subgraph Views["Interactive Views"]
+ V1["View 1: {name}\n{description}"]
+ V2["View 2: {name}\n{description}"]
+ end
+
+ subgraph AppTools["App Tools"]
+ AT1["registerAppTool()\n{tool description}"]
+ AT2["registerAppTool()\n{tool description}"]
+ end
+
+ subgraph State["State Layer"]
+ AS["App State"]
+ EVT["Event Handlers"]
+ end
+ end
+
+ subgraph Backend["Backend / MCP Server"]
+ MCPS["MCP Server"]
+ API["API Endpoints"]
+ end
+
+ Chat -->|"LLM triggers tool"| AppTools
+ AppTools -->|"render"| Views
+ Views -->|"user interaction"| State
+ State -->|"result callback"| Chat
+ Frame -->|"hosts"| Entry
+ AppTools -->|"data fetch"| Backend
+
+ style AIHost fill:#E3F2FD,stroke:#1565C0
+ style MCPApp fill:#FFF3E0,stroke:#E65100
+ style Backend fill:#E8F5E9,stroke:#2E7D32
+```
+
+### 15.3 View Specifications
+
+| View Name | Purpose | Trigger | Interactions |
+|-----------|---------|---------|-------------|
+| {view_name} | {what it displays} | {LLM tool call / user action} | {buttons, forms, charts, tables} |
+| {view_name} | {what it displays} | {trigger} | {interactions} |
+
+### 15.4 App Tool Registrations
+
+```
+Tool: {tool_name}
+Description: {what it does - shown to LLM}
+Parameters:
+  - {param}: {type} ({required/optional}) - {description}
+UI Behavior:
+  - Renders: {View name}
+  - User actions: {click, submit, select}
+  - Returns: {result sent back to chat}
+```
+
+### 15.5 App Interaction Flow
+
+```mermaid
+sequenceDiagram
+ participant User
+ participant Chat as Chat Interface
+ participant LLM
+ participant App as MCP App (iframe)
+ participant Server as MCP Server
+
+ User->>Chat: "Show me the sales dashboard"
+ Chat->>LLM: User message + app tools
+ LLM-->>Chat: Call: show_dashboard({period: "Q4"})
+
+ Chat->>App: Render view with params
+ App->>Server: Fetch dashboard data
+ Server-->>App: Data response
+ App->>App: Render interactive chart
+
+ User->>App: Clicks "Drill into Region X"
+ App->>Server: Fetch region detail
+ Server-->>App: Region data
+ App->>App: Update view
+
+ User->>App: Clicks "Export"
+ App-->>Chat: Result: "Exported Q4 report for Region X"
+ Chat->>LLM: App result
+ LLM-->>User: "Here is your exported Q4 report for Region X."
+```
+
+### 15.6 Responsive Design
+
+| Context | Width | Behavior |
+|---------|-------|----------|
+| VS Code Side Panel | ~400px | Compact layout, stacked components |
+| VS Code Editor Tab | ~800px | Full layout with sidebar |
+| Claude Desktop | ~600px | Medium layout |
+| Mobile Host | <400px | Single column, touch-friendly |
+
+### 15.7 Accessibility
+
+- MUST meet WCAG 2.1 AA for all interactive elements
+- MUST support keyboard navigation within iframe
+- MUST provide ARIA labels for dynamic content
+- SHOULD support screen readers for data visualizations
+- SHOULD respect host dark/light theme
+
+> **Reference**: Read `.github/skills/ai-systems/mcp-apps-development/SKILL.md` for MCP App patterns and best practices.
 
 ---
 

@@ -46,9 +46,9 @@ export async function loadAgentInstructions(
 export async function loadAllAgentSummaries(
   agentx: AgentXContext
 ): Promise<Array<{ name: string; description: string; fileName: string }>> {
-  const agents = await agentx.listAgents();
+  const agents = await agentx.listVisibleAgents();
   return agents.map(a => ({
-    name: a.name,
+    name: a.name || a.fileName.replace('.agent.md', ''),
     description: a.description,
     fileName: a.fileName,
   }));

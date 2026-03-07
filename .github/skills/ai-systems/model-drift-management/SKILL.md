@@ -1,24 +1,28 @@
 ---
 name: "model-drift-management"
-description: 'Detect, monitor, and manage model drift in production ML/AI systems. Use when building model monitoring pipelines, implementing drift detection algorithms, designing change management workflows for model updates, or establishing model governance policies.'
+description: 'Detect, monitor, and manage model drift in production GenAI and ML systems. Use when monitoring LLM output quality, detecting prompt regression, managing model version changes, implementing drift detection for traditional ML, or establishing model governance policies.'
 metadata:
   author: "AgentX"
-  version: "1.0.0"
+  version: "2.0.0"
   created: "2025-06-15"
-  updated: "2025-06-15"
+  updated: "2025-07-18"
 compatibility:
-  frameworks: ["mlflow", "evidently", "whylogs", "azure-ml", "sagemaker"]
+  frameworks: ["mlflow", "evidently", "whylogs", "azure-ml", "opentelemetry", "azure-ai-evaluation", "agent-framework"]
   languages: ["python", "typescript"]
 ---
 
 # Model Drift Management
 
-> **Purpose**: Detect model performance degradation, manage model lifecycle changes, and maintain production model quality over time.
+> **Purpose**: Detect model performance degradation in GenAI agents and traditional ML systems. Covers LLM output quality monitoring, prompt regression detection, model version change management, and classical statistical drift detection.
 
 ---
 
 ## When to Use This Skill
 
+- Monitoring LLM output quality in production (hallucination rate, format compliance, coherence)
+- Detecting prompt regression after prompt edits or model version changes
+- Managing model version transitions (provider silent updates, planned migrations)
+- Implementing LLM-as-judge evaluation pipelines for continuous quality monitoring
 - Monitoring model performance in production (accuracy decay, prediction shifts)
 - Implementing drift detection pipelines (concept drift, prior probability shift)
 - Designing change management workflows for model retraining and replacement
@@ -27,28 +31,166 @@ compatibility:
 
 ## Prerequisites
 
-- A deployed ML/AI model with inference logging
-- Access to ground truth labels (or proxy metrics) for comparison
-- Monitoring infrastructure (logging, metrics pipeline)
+- A deployed GenAI agent or ML model with inference logging
+- OpenTelemetry tracing enabled (for GenAI) or metric pipeline (for ML)
+- Evaluation baseline saved from last known-good model version
+- Access to ground truth labels or LLM-as-judge evaluator (for quality scoring)
 
 ## Decision Tree
 
 ```
 Model in production?
-+- Performance degrading?
-|  +- Sudden drop? -> Concept drift (data distribution changed)
-|  +- Gradual decline? -> Model staleness (retrain on recent data)
-|  +- Intermittent? -> Check data pipeline quality first
-+- Predictions shifting?
-|  +- Output distribution changed? -> Prior probability shift
-|  +- Confidence scores dropping? -> Feature drift (inputs changing)
-|  +- New unseen categories? -> Covariate shift (retrain or extend)
++- GenAI / LLM agent?
+|  +- Output quality declining? -> LLM Drift (see GenAI Drift section below)
+|  +- Provider updated the model silently? -> Model version drift (pin versions)
+|  +- Prompt was edited? -> Prompt regression (run eval baseline comparison)
+|  +- Structured output breaking? -> Format compliance drift
+|  +- Tool calls failing more often? -> Tool accuracy drift
+|  +- Latency or cost spiking? -> Operational drift (check token usage)
++- Traditional ML model?
+|  +- Performance degrading?
+|  |  +- Sudden drop? -> Concept drift (data distribution changed)
+|  |  +- Gradual decline? -> Model staleness (retrain on recent data)
+|  |  +- Intermittent? -> Check data pipeline quality first
+|  +- Predictions shifting?
+|  |  +- Output distribution changed? -> Prior probability shift
+|  |  +- Confidence scores dropping? -> Feature drift (inputs changing)
+|  |  +- New unseen categories? -> Covariate shift (retrain or extend)
 +- No visible issues?
-   +- Set up proactive monitoring -> Statistical tests on inputs/outputs
+   +- Set up proactive monitoring -> Evaluation baselines + statistical tests
    +- Schedule periodic evaluation -> Compare current vs. baseline metrics
 ```
 
 ---
+
+## GenAI / LLM Drift
+
+GenAI drift is fundamentally different from traditional ML drift. LLMs do not have feature vectors or training labels in the same sense. Instead, drift manifests as output quality degradation, format compliance failures, and behavioral changes.
+
+### LLM Drift Signals
+
+| Signal | What It Indicates | Detection Method | Response |
+|--------|------------------|-----------------|----------|
+| **Hallucination rate increase** | Model generating ungrounded claims | LLM-as-judge with groundedness evaluator | Investigate prompt, retrieval, or model version |
+| **Format compliance drop** | Structured outputs (JSON, tables) breaking | Schema validation on every response | Check model version; adjust prompt or use structured output mode |
+| **Coherence/fluency decline** | Response quality degrading | LLM-as-judge with coherence evaluator | Compare against evaluation baseline |
+| **Tool calling accuracy drop** | Agent calling wrong tools or wrong args | Track tool call success rate vs. baseline | Re-evaluate function schemas; check model version |
+| **Latency spike** | Slower responses, possibly different model version | P50/P95 response time monitoring | Check provider status; consider fallback model |
+| **Token usage increase** | Model generating more verbose responses | Track avg prompt + completion tokens per request | Model version change; adjust max_tokens or prompt |
+| **Confidence distribution shift** | Model uncertain on previously clear tasks | Track response consistency (run same query 3x) | May indicate model version change by provider |
+| **Refusal rate increase** | Model refusing previously acceptable requests | Track refusal rate by category | Provider safety update; adjust system prompt |
+
+### LLM Drift Detection Architecture
+
+```
+User Queries
+      |
+      v
+[GenAI Agent] --> [Response + Trace Logs]
+      |                      |
+      v                      v
+[OpenTelemetry]     [Evaluation Pipeline]
+      |                      |
+      v                      v
+[Latency / Tokens   [LLM-as-Judge Scores]
+ / Error Rates]             |
+      |                      v
+      v              [Baseline Comparison]
+[Operational               |
+ Dashboard]         +------+------+
+                    |      |      |
+                  Green  Yellow   Red
+                    |      |      |
+                    v      v      v
+                 [Log]  [Alert] [Switch to fallback model]
+```
+
+### Evaluation Baseline Management
+
+Every GenAI agent MUST maintain an evaluation baseline:
+
+1. **Create baseline** - Run evaluation suite on current model, save scores
+2. **Pin model version** - Use date-stamped versions (e.g., `gpt-5.1-2026-01-15`)
+3. **Schedule weekly eval** - Re-run the same evaluation dataset weekly
+4. **Compare against baseline** - Alert when any metric drops > 10% from baseline
+5. **Update baseline after migration** - Save new baseline after successful model switch
+
+```python
+# Baseline file structure: evaluation/baseline.json
+{
+    "model": "gpt-5.1-2026-01-15",
+    "timestamp": "2026-02-01T00:00:00Z",
+    "scores": {
+        "task_completion": 0.92,
+        "coherence": 4.3,
+        "relevance": 4.1,
+        "format_compliance": 0.97,
+        "tool_accuracy": 0.95,
+        "groundedness": 4.0
+    },
+    "dataset": "evaluation/core-regression.jsonl",
+    "dataset_size": 75
+}
+```
+
+### LLM-as-Judge for Drift Detection
+
+Use a separate LLM (different from the agent being monitored) to score responses:
+
+| Evaluator | What It Measures | Alert Threshold |
+|-----------|-----------------|-----------------|
+| `builtin.coherence` | Natural text flow and structure | Score drops > 0.5 from baseline |
+| `builtin.relevance` | Addresses the user's query | Score drops > 0.5 from baseline |
+| `builtin.groundedness` | Claims substantiated by context | Score drops > 0.5 from baseline |
+| `builtin.task_completion` | End-to-end task success | Rate drops > 10% from baseline |
+| `builtin.tool_call_accuracy` | Correct tool selection and arguments | Rate drops > 5% from baseline |
+| Custom: `format_compliance` | JSON/structured output validity | Rate drops below 95% |
+
+**MUST** use a different model for the judge than the agent being evaluated to avoid self-evaluation bias.
+
+### Model Version Change Management
+
+```
+Model version change detected (planned or provider-initiated)?
+|
+1. BASELINE EXISTS? -> If not, create one immediately on current model
+|
+2. RUN EVALUATION -> Same dataset, same evaluators, against new model version
+|
+3. COMPARE SCORES -> Check all dimensions against baseline
+   +- All within threshold? -> Proceed to canary
+   +- Format compliance dropped? -> Adjust prompt for new model
+   +- Tool accuracy dropped? -> Review function schemas
+   +- Any metric > 10% regression? -> Block promotion, investigate
+|
+4. CANARY DEPLOY -> Route 5-10% traffic to new model version
+|
+5. MONITOR 48 HOURS -> Watch all drift signals in production
+|
+6. PROMOTE or ROLLBACK -> Full switch if canary passes; rollback if not
+|
+7. UPDATE BASELINE -> Save new scores as the baseline for next comparison
+```
+
+### GenAI Governance Rules
+
+- **MUST** pin model versions with date suffix (e.g., `gpt-5.1-2026-01-15`, not `gpt-5.1`)
+- **MUST** maintain evaluation baseline per model version per agent
+- **MUST** run evaluation suite before any model version change
+- **MUST** use a different model (ideally different provider) as the judge LLM
+- **MUST** keep fallback model from a different provider tested and ready
+- **SHOULD** run weekly evaluation on a fixed dataset to detect silent provider updates
+- **SHOULD** track token usage, latency, and cost per model as operational drift signals
+- **SHOULD** log all agent inputs, outputs, and tool calls for post-hoc analysis
+- **MAY** implement automated model switching when drift exceeds thresholds
+
+---
+
+## Traditional ML Drift
+
+## Traditional ML Drift
+
+The following sections cover classical drift detection for traditional ML models with feature vectors, labels, and statistical metrics.
 
 ## Types of Model Drift
 
@@ -162,6 +304,17 @@ Inference Requests
 
 ## Tools and Frameworks
 
+### GenAI / LLM Monitoring
+
+| Tool | Capabilities | When to Use |
+|------|-------------|-------------|
+| **Azure AI Evaluation** | LLM-as-judge evaluators, baseline comparison, dataset evaluation | Primary evaluation framework for Foundry-based agents |
+| **OpenTelemetry + AI Toolkit** | Trace LLM calls, token usage, latency, tool accuracy | Real-time operational monitoring for agent performance |
+| **Agent Framework Instrumentor** | Auto-instrument agent calls with spans and metrics | Enable before agent creation for full observability |
+| **Custom LLM-as-Judge** | Prompt-based evaluators for domain-specific quality | When builtin evaluators do not cover domain requirements |
+
+### Traditional ML Monitoring
+
 | Tool | Capabilities | When to Use |
 |------|-------------|-------------|
 | **Evidently AI** | Drift reports, data quality, model performance | Comprehensive open-source monitoring |
@@ -183,6 +336,18 @@ Inference Requests
 
 ## Anti-Patterns
 
+### GenAI Anti-Patterns
+
+- **Unpinned model versions**: Using `gpt-5.1` without date suffix -> Pin explicitly (e.g., `gpt-5.1-2026-01-15`)
+- **No evaluation baseline**: Deploying without saved quality scores -> Run eval suite and save baseline before every deployment
+- **Self-evaluation bias**: Using the same model as both agent and judge -> Use a different model (ideally different provider) as the judge
+- **Single-metric monitoring**: Watching only task completion while ignoring format compliance and tool accuracy -> Monitor all dimensions
+- **No fallback model**: Only deploying one model with no backup -> Test and maintain a fallback model from a different provider
+- **Ignoring silent provider updates**: Assuming model behavior is static -> Schedule weekly evaluation runs to detect silent changes
+- **Inline prompt strings**: Embedding prompts in code makes drift harder to track -> Store prompts as versioned files in `prompts/`
+
+### Traditional ML Anti-Patterns
+
 - **No monitoring in production**: Deploying models without performance tracking -> Set up drift detection and metric monitoring from day one
 - **Single metric reliance**: Watching only accuracy while ignoring confidence and latency -> Monitor multiple dimensions (accuracy, calibration, latency, confidence)
 - **Retraining without validation**: Pushing retrained models directly to production -> Always run evaluation gates and shadow deployment first
@@ -196,8 +361,13 @@ Inference Requests
 
 | Issue | Solution |
 |-------|----------|
+| LLM output quality suddenly dropped | Check if provider updated the model version; compare eval scores against baseline |
+| Structured output (JSON) breaking | Model version likely changed; enable structured output mode or adjust prompt |
+| Tool calling accuracy declined | Review function schemas; model version may handle tool calls differently |
+| Evaluation scores inconsistent | Run judge 3x on same input to check variance; consider judge ensemble |
+| Token usage spiked without code changes | Provider model update increased verbosity; set explicit max_tokens |
 | False positive drift alerts | Increase window size or raise threshold; check for seasonal patterns |
-| No ground truth available | Use proxy metrics (confidence, feature distributions) or NannyML |
+| No ground truth available | Use LLM-as-judge evaluators or proxy metrics (confidence, format compliance) |
 | Drift detected but model metrics stable | May be benign covariate shift; monitor but do not retrain |
 | Retraining does not improve metrics | Investigate concept drift; may need new features or architecture |
 | Too many alerts | Implement severity tiers and aggregate alerts by drift magnitude |

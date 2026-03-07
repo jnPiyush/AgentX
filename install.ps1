@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX v7.4.0 - Download, copy, configure.
+ Install AgentX v8.0.0 - Download, copy, configure.
 
 .PARAMETER Mode
  github - Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
@@ -113,7 +113,7 @@ try {
 # -- Banner ----------------------------------------------
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Cyan
-Write-Host "| AgentX v7.4.0 - AI Agent Orchestration |" -ForegroundColor Cyan
+Write-Host "| AgentX v8.0.0 - AI Agent Orchestration |" -ForegroundColor Cyan
 Write-Host "+===================================================+" -ForegroundColor Cyan
 Write-Host ""
 
@@ -130,6 +130,68 @@ Write-Host ""
 
 # -- Prerequisites ---------------------------------------
 # Git is optional - only needed for git init and hooks in Step 5
+
+# -- Upgrade detection: uninstall old version, preserve user data --
+$previousVersion = $null
+if (Test-Path ".agentx/version.json") {
+ try {
+  $vInfo = Get-Content ".agentx/version.json" -Raw | ConvertFrom-Json
+  $previousVersion = $vInfo.version
+ } catch {}
+}
+
+if ($previousVersion -and $previousVersion -ne "8.0.0") {
+ $majorVersion = 0
+ try { $majorVersion = [int]($previousVersion -split '\.')[0] } catch {}
+
+ if ($majorVersion -lt 8) {
+  Write-Host "[!] Detected AgentX v$previousVersion - upgrading to v8.0.0..." -ForegroundColor Yellow
+  Write-Host "  Uninstalling v$previousVersion and performing clean install." -ForegroundColor DarkGray
+
+  # Back up user data that must survive the upgrade
+  $backupDir = ".agentx-upgrade-backup"
+  if (Test-Path $backupDir) { Remove-Item $backupDir -Recurse -Force }
+  New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+
+  $userPaths = @(
+   ".agentx/config.json",   # Mode, repo, project settings
+   ".agentx/issues",        # Local issue data
+   ".agentx/state",         # Agent state
+   "memories"               # Cross-session memory
+  )
+  foreach ($up in $userPaths) {
+   if (Test-Path $up) {
+    $dest = Join-Path $backupDir $up
+    $parent = Split-Path $dest -Parent
+    if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+    Copy-Item $up $dest -Recurse -Force
+   }
+  }
+  Write-OK "User data backed up"
+
+  # Remove all AgentX-managed directories (full uninstall)
+  $agentxDirs = @(".agentx", ".github", ".claude", "scripts", "packs")
+  foreach ($d in $agentxDirs) {
+   if (Test-Path $d) { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
+  }
+  Write-OK "AgentX v$previousVersion uninstalled"
+
+  # Restore user data after removal
+  foreach ($up in $userPaths) {
+   $src = Join-Path $backupDir $up
+   if (Test-Path $src) {
+    $parent = Split-Path $up -Parent
+    if ($parent -and -not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+    Copy-Item $src $up -Recurse -Force
+   }
+  }
+  Remove-Item $backupDir -Recurse -Force -ErrorAction SilentlyContinue
+  Write-OK "User data restored"
+
+  # Force overwrite for fresh install
+  $Force = [switch]$true
+ }
+}
 
 # -- Step 1: Download ------------------------------------
 Write-Host "[1] Downloading AgentX..." -ForegroundColor Cyan
@@ -199,19 +261,19 @@ Write-OK "$copied files installed ($skipped existing skipped)"
 # -- Step 3: Generate runtime files ----------------------
 Write-Host "[3] Configuring runtime..." -ForegroundColor Cyan
 
-@(".agentx/state",".agentx/digests","docs/prd","docs/adr","docs/specs","docs/ux","docs/reviews","docs/progress") | ForEach-Object {
+@(".agentx/state",".agentx/digests","docs/prd","docs/adr","docs/specs","docs/architecture","memories","memories/session") | ForEach-Object {
  if (-not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
 }
 
 # Version tracking
 $versionFile = ".agentx/version.json"
 @{
- version = "7.4.0"
+ version = "8.0.0"
  mode = $Mode
  installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 7.4.0 recorded"
+Write-OK "Version 8.0.0 recorded"
 
 # Merge AgentX entries into user's .gitignore
 $MARKER_START = "# --- AgentX (auto-generated, do not edit this block) ---"
@@ -415,7 +477,7 @@ if (-not $NoSetup) {
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
-Write-Host " AgentX v7.4.0 installed! [$displayMode]" -ForegroundColor Green
+Write-Host " AgentX v8.0.0 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White

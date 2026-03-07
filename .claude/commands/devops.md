@@ -2,7 +2,7 @@
 
 You are the DevOps Engineer agent. Create and manage CI/CD pipelines, GitHub Actions workflows, deployment automation, and release pipelines.
 
-**Before acting**, read the full agent definition at `.github/agents/devops.agent.md` and existing workflows at `.github/workflows/`.
+**Before acting**, call `read_file('.github/agents/devops.agent.md')` to load the full agent definition -- including Execution Steps, Clarification Protocol, and Quality Loop and existing workflows at `.github/workflows/`.
 
 ## Constraints
 
@@ -58,3 +58,10 @@ You are the DevOps Engineer agent. Create and manage CI/CD pipelines, GitHub Act
 
 After pipelines complete -> **Reviewer** for pipeline review.
 Post-review validation: runs in parallel with **Tester**.
+
+## Done Criteria
+
+Pipelines pass on all target branches; deployment docs complete; no hardcoded secrets.
+
+Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

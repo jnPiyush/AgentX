@@ -1,0 +1,44 @@
+[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
+[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
+[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
+[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
+[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
+[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
+[AgentX] Sub-agent "engineer" could not obtain an LLM adapter. Returning degraded stub response.
+[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
+[2J[1;3HAgentX: All required dependencies found.
+AgentX: All required dependencies found.
+AgentX: Environment pre-check did not pass.
+AgentX: All required dependencies found (silent check).
+AgentX: All dependencies installed silently.
+AgentX: All dependencies installed silently.
+AgentX: Silent install timed out. Still missing: Git
+ChannelRouter: no channel for groupId 'unknown:group'
+VS Code LM compaction failed, falling back to rule-based: Error: Model unavailable
+    at Object.sendRequest (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\contextCompactorSmart.test.js:277:23)
+    at compactConversationWithVSCodeLM (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\utils\contextCompactor.js:606:42)
+    at async Context.<anonymous> (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\contextCompactorSmart.test.js:286:24)
+AgentEventBus: listener error on 'agent-started': Error: test error
+    at C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\eventBus.test.js:98:47
+    at AgentEventBus.emit (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\utils\eventBus.js:81:17)
+    at C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\eventBus.test.js:101:17
+    at getActual (node:assert:611:5)
+    at strict.doesNotThrow (node:assert:779:32)
+    at Context.<anonymous> (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\eventBus.test.js:100:25)
+    at callFn (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:366:21)
+    at Runnable.run (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:354:5)
+    at Runner.runTest (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:719:10)
+    at C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:842:12
+    at next (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:634:14)
+    at C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:644:7
+    at next (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:527:14)
+    at cbHookRun (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:592:7)
+    at done (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:310:5)
+    at callFn (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:389:7)
+    at Runnable.run (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:354:5)
+    at next (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:551:10)
+    at Immediate._onImmediate (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:612:5)
+    at process.processImmediate (node:internal/timers:504:21)
+
+  1341 passing (6m)
+

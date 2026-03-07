@@ -24,7 +24,7 @@ describe('registerStatusCommand', () => {
     fakeAgentx = {
       checkInitialized: sandbox.stub(),
       runCli: sandbox.stub(),
-      listAgents: sandbox.stub(),
+      listVisibleAgents: sandbox.stub(),
     } as unknown as sinon.SinonStubbedInstance<AgentXContext>;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
@@ -72,18 +72,18 @@ describe('registerStatusCommand', () => {
   it('should fall back to listAgents when runCli fails', async () => {
     fakeAgentx.checkInitialized.resolves(true);
     fakeAgentx.runCli.rejects(new Error('CLI not available'));
-    fakeAgentx.listAgents.resolves([
-      { name: 'Engineer', model: 'gpt-4o', maturity: 'stable', mode: 'standard', description: 'Implement code', fileName: 'engineer.agent.md' },
+    fakeAgentx.listVisibleAgents.resolves([
+      { description: 'Implement code', model: 'gpt-4o', fileName: 'engineer.agent.md' },
     ]);
 
     await registeredCallback();
-    assert.ok(fakeAgentx.listAgents.calledOnce);
+    assert.ok(fakeAgentx.listVisibleAgents.calledOnce);
   });
 
   it('should show info message when no agents found in fallback', async () => {
     fakeAgentx.checkInitialized.resolves(true);
     fakeAgentx.runCli.rejects(new Error('no CLI'));
-    fakeAgentx.listAgents.resolves([]);
+    fakeAgentx.listVisibleAgents.resolves([]);
     const infoSpy = sandbox.spy(vscode.window, 'showInformationMessage');
 
     await registeredCallback();

@@ -41,15 +41,12 @@ describe('registerLoopCommand', () => {
     sandbox.restore();
   });
 
-  it('should register 4 loop commands', () => {
+  it('should register the loop command', () => {
     assert.ok(registeredCallbacks['agentx.loop'], 'Missing agentx.loop');
-    assert.ok(registeredCallbacks['agentx.loopStart'], 'Missing agentx.loopStart');
-    assert.ok(registeredCallbacks['agentx.loopStatus'], 'Missing agentx.loopStatus');
-    assert.ok(registeredCallbacks['agentx.loopCancel'], 'Missing agentx.loopCancel');
   });
 
-  it('should add all commands to subscriptions', () => {
-    assert.strictEqual(fakeContext.subscriptions.length, 4);
+  it('should add the loop command to subscriptions', () => {
+    assert.strictEqual(fakeContext.subscriptions.length, 1);
   });
 
   describe('agentx.loop (main)', () => {
@@ -88,42 +85,4 @@ describe('registerLoopCommand', () => {
     });
   });
 
-  describe('agentx.loopStart', () => {
-    it('should warn when not initialized', async () => {
-      fakeAgentx.checkInitialized.resolves(false);
-      const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
-
-      await registeredCallbacks['agentx.loopStart']!();
-      assert.ok(warnSpy.calledOnce);
-    });
-  });
-
-  describe('agentx.loopStatus', () => {
-    it('should call CLI loop status', async () => {
-      fakeAgentx.checkInitialized.resolves(true);
-      fakeAgentx.runCli.resolves('No active loop');
-
-      await registeredCallbacks['agentx.loopStatus']!();
-      assert.ok(fakeAgentx.runCli.calledWith('loop', ['status']));
-    });
-
-    it('should show error on CLI failure', async () => {
-      fakeAgentx.checkInitialized.resolves(true);
-      fakeAgentx.runCli.rejects(new Error('status error'));
-      const errSpy = sandbox.spy(vscode.window, 'showErrorMessage');
-
-      await registeredCallbacks['agentx.loopStatus']!();
-      assert.ok(errSpy.calledOnce);
-    });
-  });
-
-  describe('agentx.loopCancel', () => {
-    it('should call CLI loop cancel', async () => {
-      fakeAgentx.checkInitialized.resolves(true);
-      fakeAgentx.runCli.resolves('cancelled');
-
-      await registeredCallbacks['agentx.loopCancel']!();
-      assert.ok(fakeAgentx.runCli.calledWith('loop', ['cancel']));
-    });
-  });
 });

@@ -1,9 +1,15 @@
 {
   "name": "agentx-core",
-  "version": "7.4.0",
+  "version": "8.0.0",
   "description": "Core AgentX pack -- full SDLC agents, workflow engine, and essential instructions for multi-agent orchestration.",
   "maturity": "stable",
-  "tags": ["sdlc", "orchestration", "multi-agent", "copilot", "workflow"],
+  "tags": [
+    "sdlc",
+    "orchestration",
+    "multi-agent",
+    "copilot",
+    "workflow"
+  ],
   "artifacts": {
     "agents": [
       ".github/agents/agent-x.agent.md",
@@ -24,7 +30,9 @@
       ".github/instructions/csharp.instructions.md",
       ".github/instructions/python.instructions.md",
       ".github/instructions/typescript.instructions.md",
-      ".github/instructions/react.instructions.md"
+      ".github/instructions/react.instructions.md",
+      ".github/instructions/memory.instructions.md",
+      ".github/instructions/project-conventions.instructions.md"
     ],
     "templates": [
       ".github/templates/PRD-TEMPLATE.md",
@@ -35,15 +43,7 @@
       ".github/templates/SECURITY-PLAN-TEMPLATE.md",
       ".github/templates/PROGRESS-TEMPLATE.md"
     ],
-    "workflows": [
-      ".agentx/workflows/epic.toml",
-      ".agentx/workflows/feature.toml",
-      ".agentx/workflows/story.toml",
-      ".agentx/workflows/bug.toml",
-      ".agentx/workflows/spike.toml",
-      ".agentx/workflows/devops.toml",
-      ".agentx/workflows/docs.toml"
-    ],
+    "workflows": [],
     "scripts": [
       ".agentx/agentx.ps1",
       ".agentx/agentx.sh",

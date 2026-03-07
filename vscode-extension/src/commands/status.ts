@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { AgentXContext, AgentDefinition } from '../agentxContext';
 
 /**
  * Register the AgentX: Show Agent Status command.
@@ -27,7 +27,7 @@ export function registerStatusCommand(
  panel.webview.html = buildStatusHtml(output);
  } catch {
  // Fallback: list agents from definitions
- const agents = await agentx.listAgents();
+  const agents = await agentx.listVisibleAgents();
  if (agents.length === 0) {
  vscode.window.showInformationMessage('No agents found.');
  return;
@@ -65,16 +65,15 @@ function buildStatusHtml(cliOutput: string): string {
 </html>`;
 }
 
-function buildAgentListHtml(agents: { name: string; model: string; maturity: string; mode: string }[]): string {
+function buildAgentListHtml(agents: AgentDefinition[]): string {
  const rows = agents.map(a => {
- const badge = a.maturity === 'stable'
- ? '<span style="color:#22c55e;">(*) stable</span>'
- : '<span style="color:#f59e0b;">(*) preview</span>';
+ const label = a.name || a.fileName.replace('.agent.md', '');
+ const maturity = a.maturity ? escapeHtml(a.maturity) : '';
  return `<tr>
- <td><strong>${escapeHtml(a.name)}</strong></td>
+ <td><strong>${escapeHtml(label)}</strong></td>
  <td>${escapeHtml(a.model)}</td>
- <td>${badge}</td>
- <td>${escapeHtml(a.mode)}</td>
+ <td>${maturity}</td>
+ <td>${escapeHtml(a.description)}</td>
  </tr>`;
  }).join('\n');
 
@@ -93,7 +92,7 @@ function buildAgentListHtml(agents: { name: string; model: string; maturity: str
 <body>
  <h1>AgentX - Agents (${agents.length})</h1>
  <table>
- <thead><tr><th>Agent</th><th>Model</th><th>Maturity</th><th>Mode</th></tr></thead>
+ <thead><tr><th>Agent</th><th>Model</th><th>Maturity</th><th>Description</th></tr></thead>
  <tbody>${rows}</tbody>
  </table>
 </body>

@@ -134,6 +134,36 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
                                   (standalone)
 ```
 
+**Standalone Agents** (outside SDLC pipeline):
+
+```
+  Agile Coach    Customer Coach    Power BI Analyst
+     |               |                  |
+  (Stories)       (Research)         (Reports)
+```
+
+**Invisible Sub-Agents** (spawned by parent agents):
+
+```
+  Agent X -------> GitHub Ops (GitHub backlog management)
+  Agent X -------> ADO Ops (ADO backlog management)
+  PM -------------> GitHub Ops (child issue creation)
+  PM -------------> ADO Ops (work item creation)
+  Reviewer ------> GitHub Ops (issue status/labels)
+  Reviewer ------> ADO Ops (work item status)
+  Reviewer ------> Functional Reviewer (branch diff analysis)
+  Reviewer ------> Eval Specialist (AI model quality review)
+  Tester --------> GitHub Ops (defect issue creation)
+  Tester --------> ADO Ops (defect work item creation)
+  Data Scientist -> Prompt Engineer (prompt lifecycle)
+  Data Scientist -> Eval Specialist (evaluation pipelines)
+  Data Scientist -> Ops Monitor (AgentOps + drift)
+  Data Scientist -> RAG Specialist (retrieval pipelines)
+  Engineer -------> Prompt Engineer (needs:ai prompt work)
+  Engineer -------> RAG Specialist (needs:ai RAG implementation)
+  DevOps ---------> Ops Monitor (deployment monitoring)
+```
+
 **Key Principles:**
 
 1. **Centralized Coordination** - Agent X routes all work, validates prerequisites, handles errors
@@ -203,125 +233,81 @@ In Review + needs:testing -> Tester (pre-release certification)
 
 ## Runtime Implementation Reference
 
-Maps core AgentX concepts to their implementation files. Agents and tools reference these modules at runtime.
+Maps core AgentX concepts to their implementation. v8.0.0 uses a **declarative architecture**:
+agents, skills, and instructions are defined in markdown files; Copilot's native agentic loop
+executes them. The VS Code extension provides sidebar views and CLI command wrappers only.
 
-### Agentic Loop
+### Declarative Layer (Source of Truth)
 
-The core LLM <-> Tool execution cycle. All agents run through this loop.
+| Concept | Location | Purpose |
+|---------|----------|---------|
+| Agent Definitions | `.github/agents/*.agent.md` + `.github/agents/internal/*.agent.md` | 20 agents (15 visible + 5 internal sub-agents) with YAML frontmatter (name, description, model, handoffs, tools, agents) + body text instructions |
+| Skills | `.github/skills/*/SKILL.md` | 63 domain skills loaded on demand |
+| Instructions | `.github/instructions/*.instructions.md` | 7 instruction files auto-applied via `applyTo:` patterns |
+| Prompts | `.github/prompts/*.prompt.md` | 11 reusable prompt templates |
+| Templates | `.github/templates/*.md` | PRD, ADR, Spec, UX, Review, Security Plan, Progress templates |
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| Inner Loop | `vscode-extension/src/agentic/agenticLoop.ts` | LLM -> tool calls -> results -> repeat until validated |
-| Chat Handler | `vscode-extension/src/chat/agenticChatHandler.ts` | VS Code Chat integration, session management, streaming |
-| CLI Runner | `.agentx/agentic-runner.ps1` | Terminal-based agentic loop (GitHub Models API) |
-| LM Adapter | `vscode-extension/src/chat/vscodeLmAdapter.ts` | Bridges loop to VS Code Language Model API |
-| Adapter Layer | `vscode-extension/src/chat/agenticAdapter.ts` | Response parsing for chat flow |
-| Model Selector | `vscode-extension/src/utils/modelSelector.ts` | Per-agent model selection with fallback chain |
+### Agent Orchestration
 
-**Trigger**: Every `@agentx` chat message or `.agentx/agentx.ps1 run <agent> <prompt>` invocation.
-
-### Agent Routing
-
-How user requests get matched to the right specialized agent.
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| Route Rules | `vscode-extension/src/chat/agentRouter.ts` | Keyword-based routing to agents (first match wins) |
-| Context Loader | `vscode-extension/src/chat/agentContextLoader.ts` | Loads `.agent.md` definitions + skill files |
-| Chat Participant | `vscode-extension/src/chat/chatParticipant.ts` | VS Code Chat participant entry point |
-| Agent X Definition | `.github/agents/agent-x.agent.md` | Hub coordinator routing rules |
-
-**Trigger**: User sends a message to `@agentx`. Router matches keywords against `ROUTE_RULES` (architect, reviewer, tester, devops, engineer, etc.). Fallback: Agent X.
+| Mode | How It Works | Platform |
+|------|-------------|----------|
+| **Mode 1: Agent X Hub** | Agent X body text + `runSubagent` calls route work through PM -> [Architect, UX, Data Scientist] -> Engineer -> Reviewer -> [DevOps, Tester] | VS Code, Claude Code |
+| **Mode 2: Human-Orchestrated** | User picks agent from Copilot agent picker; `handoffs:` frontmatter renders "Hand off to X" buttons | VS Code |
+| **CLI Standalone** | `agentx.ps1 run <agent> <task>` runs agent via GitHub Models API; no sub-agent chaining | CLI |
 
 ### Agent-to-Agent Communication
 
-Hub-routed clarification protocol. Agents never communicate directly -- Agent X mediates all traffic.
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| Clarification Loop | `vscode-extension/src/agentic/clarificationLoop.ts` | Inter-agent Q&A loop (max 6 rounds, configurable) |
-| Clarification Router | `vscode-extension/src/utils/clarificationRouter.ts` | Hub-routed protocol, ledger persistence, scope validation |
-| Clarification Types | `vscode-extension/src/utils/clarificationTypes.ts` | Shared types: ClarificationRecord, ClarificationLedger |
-| Clarification Monitor | `vscode-extension/src/utils/clarificationMonitor.ts` | Watches for pending requests, triggers notifications |
-| Clarification Renderer | `vscode-extension/src/utils/clarificationRenderer.ts` | Renders clarification threads in VS Code UI |
-
-**Trigger**: Agent calls `request_clarification` tool -> Router validates scope via TOML `can_clarify` -> spawns target agent as sub-agent -> manages back-and-forth -> auto-escalates to human if unresolved.
+Agents use Copilot's built-in `runSubagent` tool. Body text instructs: read artifacts first,
+spawn target agent with full context, max 3 follow-up exchanges, escalate to user if unresolved.
+Scope is controlled by `agents:` frontmatter (which agents can be spawned).
 
 ### Self-Review Loop
 
-After completing work, every agent spawns a same-role sub-agent to review its output.
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| Self-Review Loop | `vscode-extension/src/agentic/selfReviewLoop.ts` | Spawns reviewer sub-agent, iterates until approved (max 15) |
-| Sub-Agent Spawner | `vscode-extension/src/agentic/subAgentSpawner.ts` | Generalized sub-agent creation (parallel, race, quorum) |
-
-**Trigger**: Agent completes its primary work -> self-review loop runs automatically -> reviewer sub-agent produces structured findings (high/medium/low) -> agent addresses non-low findings -> loop approves or hits max iterations.
+Body text in every agent instructs: "Before handoff, spawn a same-role reviewer sub-agent."
+Reviewer produces structured findings ([HIGH], [MEDIUM], [LOW]). Agent addresses HIGH/MEDIUM
+findings, then re-runs. Copilot executes this natively via `runSubagent`.
 
 ### Handoff & Status Transitions
 
-Handoffs are status-driven. Each status change triggers the next agent in the pipeline.
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| Loop State Checker | `vscode-extension/src/utils/loopStateChecker.ts` | Validates quality loop completion before handoff |
-| Boundary Hook | `vscode-extension/src/agentic/boundaryHook.ts` | Enforces canModify/cannotModify per agent role |
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Handoff Buttons | Agent frontmatter `handoffs:` | Renders "Hand off to X" in VS Code Copilot |
+| Quality Loop Gate | `.agentx/agentx.ps1 loop` | CLI blocks handoff if loop not complete (exit 1) |
 | Handoff Validator | `.github/scripts/validate-handoff.sh` | Pre-handoff artifact validation (PRD, ADR, code, tests) |
-| CLI State Command | `.agentx/agentx.ps1 state` | Read/write agent state for issue tracking |
+| Agent State | `.agentx/agentx.ps1 state` | Read/write agent state for issue tracking |
 
-**Trigger**: Agent completes work -> self-review passes -> validation script runs -> status moves (e.g., `In Progress` -> `In Review`) -> next agent picks up from backlog.
+### Memory & Cross-Session Context
 
-### Memory & Compaction
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Memory Protocol | `.github/instructions/memory.instructions.md` | Instructs Copilot to read/write `/memories/*.md` files |
+| Conventions | `.github/instructions/project-conventions.instructions.md` | Auto-applied patterns and pitfalls from prior sessions |
+| Session Memory | `/memories/session/` | Temporary in-progress notes for current conversation |
+| Persistent Memory | `/memories/*.md` | Cross-session decisions, pitfalls, conventions |
 
-Agent memory persists observations across sessions. Context compaction prevents token overflow during long conversations.
+### VS Code Extension (Thin Shell)
 
-**Memory Pipeline** (observations extracted from compaction summaries):
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| Observation Types | `vscode-extension/src/memory/types.ts` | Core types: Observation, ObservationCategory, IObservationStore |
-| Observation Extractor | `vscode-extension/src/memory/observationExtractor.ts` | Extracts structured observations from compaction summaries |
-| JSON Observation Store | `vscode-extension/src/memory/observationStore.ts` | File-based observation persistence (per-issue JSON files) |
-| Git Observation Store | `vscode-extension/src/memory/gitObservationStore.ts` | Git-tracked observation persistence (survives branch switches) |
-| Persistent Store | `vscode-extension/src/memory/persistentStore.ts` | JSONL cross-session memory with TTL + tag-based lookup |
-| Memory Module | `vscode-extension/src/memory/index.ts` | Public API barrel file |
-
-**Context Compaction** (conversation pruning to stay within token limits):
+23 TypeScript source files providing sidebar views and CLI command wrappers only.
+All agent logic lives in declarative `.agent.md` files, not TypeScript.
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| Context Compactor | `vscode-extension/src/utils/contextCompactor.ts` | Token limit detection, bounded message pruning (max 200) |
-| Session State | `vscode-extension/src/agentic/sessionState.ts` | Conversation history persistence + token counting |
+| Extension Entry | `vscode-extension/src/extension.ts` | Activation, command registration, sidebar setup |
+| Context Provider | `vscode-extension/src/agentxContext.ts` | AgentX initialisation state for UI |
+| Agent Tree View | `vscode-extension/src/views/agentTreeProvider.ts` | Sidebar: lists agents from `.agent.md` frontmatter |
+| Template Tree View | `vscode-extension/src/views/templateTreeProvider.ts` | Sidebar: lists templates |
+| Workflow Tree View | `vscode-extension/src/views/workflowTreeProvider.ts` | Sidebar: lists agent handoff chains |
+| Agent Context Loader | `vscode-extension/src/chat/agentContextLoader.ts` | Loads agent definitions for Copilot Chat |
+| CLI Command Wrappers | `vscode-extension/src/commands/*.ts` | VS Code commands that invoke `.agentx/agentx.ps1` |
 
-**Trigger**: Agentic loop calls `pruneMessages()` when conversation approaches token limit -> compactor summarizes older messages -> `ObservationExtractor` pulls key facts (decisions, code changes, errors) -> observations persist to `.agentx/memory/` -> available in future sessions via `IObservationStore.query()`.
+### CLI Utilities
 
-**Observation categories**: `decision`, `code-change`, `error`, `key-fact`, `compaction-summary`.
-
-### Tool Execution & Safety
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| Tool Engine | `vscode-extension/src/agentic/toolEngine.ts` | Tool registry, JSON schema validation, execute dispatch |
-| Parallel Executor | `vscode-extension/src/agentic/parallelToolExecutor.ts` | Dependency-aware concurrent tool execution |
-| Loop Detection | `vscode-extension/src/agentic/toolLoopDetection.ts` | Detects stuck cycles (repeat, ping-pong, poll) via SHA-256 |
-| Command Validator | `vscode-extension/src/utils/commandValidator.ts` | Blocks dangerous commands (`rm -rf /`, `drop database`) |
-| Path Sandbox | `vscode-extension/src/utils/pathSandbox.ts` | Prevents path traversal outside workspace |
-| Secret Redactor | `vscode-extension/src/utils/secretRedactor.ts` | Strips secrets from tool output before LLM sees it |
-| SSRF Validator | `vscode-extension/src/utils/ssrfValidator.ts` | Validates URLs in tool parameters |
-
-### Supporting Infrastructure
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| Event Bus | `vscode-extension/src/utils/eventBus.ts` | Typed pub-sub for agent activity (started, completed, error) |
-| Progress Tracker | `vscode-extension/src/agentic/progressTracker.ts` | Dual-ledger (TaskLedger + ProgressLedger) with stall detection |
-| Hook Priority | `vscode-extension/src/agentic/hookPriority.ts` | Priority-ordered hook execution (lower = earlier) |
-| Prompting Modes | `vscode-extension/src/agentic/promptingModes.ts` | write/refactor/test/docs mode switching for Engineer |
-| Codebase Analysis | `vscode-extension/src/agentic/codebaseAnalysis.ts` | analyze_codebase, find_dependencies, map_architecture tools |
-| Task Scheduler | `vscode-extension/src/utils/taskScheduler.ts` | Cron-based task automation |
-| Thinking Log | `vscode-extension/src/utils/thinkingLog.ts` | Structured reasoning trace |
-| Channel Router | `vscode-extension/src/utils/channelRouter.ts` | Output channel abstraction |
-| Structured Logger | `vscode-extension/src/utils/structuredLogger.ts` | JSON-structured logging |
+| Script | Purpose |
+|--------|---------|
+| `.agentx/agentx.ps1` | Main CLI: ready, state, deps, digest, workflow, loop, hook, config, issue, version |
+| `.agentx/agentx.sh` | Bash wrapper for Linux/Mac |
+| `.agentx/agentic-runner.ps1` | Standalone agentic loop via GitHub Models API (no sub-agent chaining) |
+| `.agentx/local-issue-manager.ps1` | Local mode issue CRUD |
 
 ---
 
@@ -553,6 +539,144 @@ All AgentX core agents are currently **stable** (production-ready).
  - Can modify: `docs/coaching/**`, `docs/presentations/**`, GitHub Issues
  - Cannot modify: `src/**`, `docs/prd/**`, `docs/adr/**`, `docs/ux/**`
 
+### GitHub Ops (Preview)
+- **Maturity**: Preview
+- **Trigger**: Spawned by Agent X, Product Manager, Reviewer, or Tester via `runSubagent` for GitHub issue/PR management
+- **Output**: Triage reports, sprint plans, execution logs at `.copilot-tracking/github-issues/`
+- **Status**: Invisible sub-agent (not user-invokable, spawned by parent agents)
+- **Tools**: All tools available + `mcp_github_*` for GitHub API
+- **Constraints**:
+ - [PASS] CAN triage, discover, plan sprints, execute work items, manage labels and status
+ - [PASS] CAN persist state to `.copilot-tracking/` for resumable workflows
+ - [PASS] MUST sanitize content before GitHub API calls (strip internal tracking paths)
+ - [PASS] MUST respect autonomy level (Full/Partial/Manual) for mutations
+ - [FAIL] CANNOT modify source code, PRD, ADR, UX, or architecture documents
+ - [FAIL] CANNOT create issues without duplicate checking
+- **Boundaries**:
+ - Can modify: GitHub Issues/PRs/Projects, `.copilot-tracking/github-issues/**`
+ - Cannot modify: `src/**`, `docs/prd/**`, `docs/adr/**`, `docs/ux/**`
+
+### ADO Ops (Preview)
+- **Maturity**: Preview
+- **Trigger**: Spawned by Agent X, Product Manager, Reviewer, or Tester via `runSubagent` for ADO work item management
+- **Output**: Triage reports, sprint plans, PRD decompositions at `.copilot-tracking/ado-items/`
+- **Status**: Invisible sub-agent (not user-invokable, spawned by parent agents)
+- **Tools**: All tools available for ADO API interaction
+- **Constraints**:
+ - [PASS] CAN triage, discover, plan sprints, decompose PRDs, execute work items
+ - [PASS] CAN adapt to ADO process templates (Agile, Scrum, CMMI, Basic)
+ - [PASS] MUST sanitize content before ADO API calls
+ - [PASS] MUST respect autonomy level (Full/Partial/Manual) for mutations
+ - [FAIL] CANNOT modify source code, PRD, ADR, UX, or architecture documents
+ - [FAIL] CANNOT create work items without duplicate checking
+- **Boundaries**:
+ - Can modify: ADO Work Items/Boards/Queries, `.copilot-tracking/ado-items/**`
+ - Cannot modify: `src/**`, `docs/prd/**`, `docs/adr/**`, `docs/ux/**`
+
+### Functional Reviewer (Preview)
+- **Maturity**: Preview
+- **Trigger**: Spawned by Code Reviewer via `runSubagent` during review phase
+- **Output**: Severity-ordered findings report at `.copilot-tracking/reviews/`
+- **Status**: Invisible sub-agent (not user-invokable, not routed by Agent X)
+- **Tools**: Read-only tools (codebase, search, changes, problems)
+- **Constraints**:
+ - [PASS] CAN analyze branch diffs for logic, edge cases, error handling, concurrency, contract issues
+ - [PASS] MUST apply false positive mitigation (6 filters) before reporting any finding
+ - [PASS] MUST provide evidence of harm for every finding
+ - [FAIL] CANNOT modify source code or tests
+ - [FAIL] CANNOT flag style/formatting issues (linter territory)
+ - [FAIL] CANNOT report findings outside the scope of changed files
+- **Boundaries**:
+ - Can modify: `.copilot-tracking/reviews/**`
+ - Cannot modify: `src/**`, `tests/**`, `docs/**`
+
+### Prompt Engineer (Preview)
+- **Maturity**: Preview
+- **Trigger**: Spawned by Data Scientist or Engineer via `runSubagent` for prompt lifecycle tasks
+- **Output**: Prompt files at `prompts/`, evaluation results at `.copilot-tracking/prompt-eval/`
+- **Status**: Invisible sub-agent (not user-invokable, not routed by Agent X)
+- **Tools**: codebase, editFiles, search, runCommands, fetch, think
+- **Constraints**:
+ - [PASS] CAN design, evaluate, test, iterate, and version prompts
+ - [PASS] MUST test prompts across at least 2 models (primary + fallback)
+ - [PASS] MUST use structured scoring rubrics for evaluation
+ - [PASS] MUST store all prompts as separate files in `prompts/`
+ - [FAIL] CANNOT modify application source code
+ - [FAIL] CANNOT deploy prompts without passing quality gates
+ - [FAIL] CANNOT fabricate evaluation scores
+- **Boundaries**:
+ - Can modify: `prompts/**`, `.copilot-tracking/prompt-eval/**`
+ - Cannot modify: `src/**`, `docs/prd/**`, `docs/adr/**`, `.github/workflows/**`
+
+### Eval Specialist (Preview)
+- **Maturity**: Preview
+- **Trigger**: Spawned by Data Scientist or Reviewer via `runSubagent` for evaluation pipelines
+- **Output**: Evaluation reports at `.copilot-tracking/eval-reports/`, docs at `docs/data-science/EVAL-*.md`
+- **Status**: Invisible sub-agent (not user-invokable, not routed by Agent X)
+- **Tools**: codebase, editFiles, search, runCommands, fetch, think
+- **Constraints**:
+ - [PASS] CAN design LLM-as-judge rubrics, build test datasets, run benchmarks, compare models
+ - [PASS] MUST use a different model for judge than the model under test
+ - [PASS] MUST validate judge against known-answer set (agreement > 0.6)
+ - [PASS] MUST define quality gates with actionable thresholds
+ - [FAIL] CANNOT fabricate metrics, benchmarks, or evaluation results
+ - [FAIL] CANNOT approve model deployment without all quality gates passing
+ - [FAIL] CANNOT modify application source code
+- **Boundaries**:
+ - Can modify: `.copilot-tracking/eval-reports/**`, `docs/data-science/EVAL-*.md`, `tests/**`
+ - Cannot modify: `src/**`, `docs/prd/**`, `docs/adr/**`, `.github/workflows/**`
+
+### Ops Monitor (Preview)
+- **Maturity**: Preview
+- **Trigger**: Spawned by Data Scientist or DevOps via `runSubagent` for production AI monitoring
+- **Output**: Monitoring config at `.copilot-tracking/ops-monitor/`, docs at `docs/data-science/DRIFT-*.md`, `docs/data-science/AGENTOPS-*.md`
+- **Status**: Invisible sub-agent (not user-invokable, not routed by Agent X)
+- **Tools**: codebase, editFiles, search, runCommands, fetch, think
+- **Constraints**:
+ - [PASS] CAN setup OpenTelemetry tracing, configure drift detection, track cost/latency, define alerts
+ - [PASS] MUST establish baselines before configuring drift alerts
+ - [PASS] MUST define drift thresholds with statistical backing
+ - [PASS] MUST monitor both model drift and data drift
+ - [FAIL] CANNOT fabricate monitoring data or drift signals
+ - [FAIL] CANNOT disable alerting without documenting the reason
+- **Boundaries**:
+ - Can modify: `.copilot-tracking/ops-monitor/**`, `docs/data-science/DRIFT-*.md`, `docs/data-science/AGENTOPS-*.md`, `src/**` (tracing code only)
+ - Cannot modify: `docs/prd/**`, `docs/adr/**`, `.github/workflows/**`
+
+### RAG Specialist (Preview)
+- **Maturity**: Preview
+- **Trigger**: Spawned by Data Scientist or Engineer via `runSubagent` for RAG pipeline tasks
+- **Output**: Pipeline config at `.copilot-tracking/rag-pipeline/`, docs at `docs/data-science/RAG-*.md`
+- **Status**: Invisible sub-agent (not user-invokable, not routed by Agent X)
+- **Tools**: codebase, editFiles, search, runCommands, fetch, think
+- **Constraints**:
+ - [PASS] CAN design chunking strategies, select embeddings, configure retrieval, implement reranking
+ - [PASS] MUST analyze corpus characteristics before design decisions
+ - [PASS] MUST implement hybrid search as default retrieval approach
+ - [PASS] MUST evaluate retrieval quality with RAGAS metrics
+ - [FAIL] CANNOT hardcode embedding model choices without comparison testing
+ - [FAIL] CANNOT skip retrieval quality evaluation
+- **Boundaries**:
+ - Can modify: `.copilot-tracking/rag-pipeline/**`, `docs/data-science/RAG-*.md`, `src/**`, `tests/**`
+ - Cannot modify: `docs/prd/**`, `docs/adr/**`, `.github/workflows/**`
+
+### Agile Coach (Preview)
+- **Maturity**: Preview
+- **Trigger**: Story creation, refinement, or decomposition requests
+- **Output**: Copy-paste ready stories at `docs/coaching/`
+- **Status**: Standalone agent (not part of core SDLC pipeline)
+- **Tools**: Read-only tools + editFiles for coaching docs
+- **Constraints**:
+ - [PASS] CAN guide conversational story elicitation (one question at a time)
+ - [PASS] CAN evaluate stories against INVEST criteria
+ - [PASS] CAN decompose large stories into smaller ones
+ - [PASS] MUST produce stories with Given-When-Then acceptance criteria
+ - [FAIL] CANNOT write code or create technical specifications
+ - [FAIL] CANNOT create GitHub issues or ADO work items directly
+- **Boundaries**:
+ - Can modify: `docs/coaching/**`
+ - Cannot modify: `src/**`, `docs/prd/**`, `docs/adr/**`, `docs/ux/**`
+
 ---
 
 ## Handoff Flow
@@ -565,7 +689,7 @@ PM -> [Architect, Data Scientist, UX] (parallel) -> Engineer -> Reviewer -> [Dev
 **Parallel Validation Phase**: DevOps Engineer and Tester validate in parallel after Reviewer approves.
 **Bug-Fix Feedback Loop**: Tester defects route back to Engineer for resolution before closing.
 
-> **Note**: Customer Coach and Power BI Analyst operate **standalone** (not part of the core SDLC pipeline). Customer Coach handles consulting research. Power BI Analyst handles reporting/BI work independently or after data layer is ready.
+> **Note**: Customer Coach, Power BI Analyst, and Agile Coach operate **standalone** (not part of the core SDLC pipeline). Customer Coach handles consulting research. Power BI Analyst handles reporting/BI work. Agile Coach helps create and refine user stories. GitHub Ops, ADO Ops, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, and RAG Specialist are invisible sub-agents spawned by their parent agents.
 
 ### Backlog-Based Handoffs
 
@@ -685,11 +809,10 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 | Need | Location |
 |------|----------|
-| Agent Definitions | `.github/agents/` |
+| Agent Definitions | `.github/agents/` + `.github/agents/internal/` |
 | Templates | `.github/templates/` |
 | Skills | `.github/skills/` |
 | Instructions | `.github/instructions/` |
-| Workflow Templates | `.agentx/workflows/` |
 | Agent State | `.agentx/state/` |
 | Issue Digests | `.agentx/digests/` |
 | CLI Utilities | `.agentx/agentx.ps1`, `.agentx/agentx.sh` |
@@ -697,70 +820,39 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | Shared Modules | `scripts/modules/` |
 | Packs | `packs/` |
 | Agent Delegation | `.github/agent-delegation.md` |
+| Memory Files | `/memories/*.md` |
+| Claude Code Commands | `.claude/commands/*.md` |
 
-### New Features (v7.3)
+### New Features (v8.0.0) -- Declarative Migration
 
-| Feature | Location | Status |
-|---------|----------|--------|
-| **Self-Review Loop** | `vscode-extension/src/agentic/selfReviewLoop.ts` | [PASS] Stable |
-| **Clarification Loop** | `vscode-extension/src/agentic/clarificationLoop.ts` | [PASS] Stable |
-| **Sub-Agent Spawner** | `vscode-extension/src/agentic/subAgentSpawner.ts` | [PASS] Stable |
-| **Streaming Visibility** | `vscode-extension/src/chat/agenticChatHandler.ts` | [PASS] Stable |
-| **Configurable Settings Sidebar** | `vscode-extension/src/views/settingsTreeProvider.ts` | [PASS] Stable |
-| **VS Code Loop Settings** | `vscode-extension/package.json` (6 settings) | [PASS] Stable |
-
-### New Features (v7.2)
-
-| Feature | Location | Status |
-|---------|----------|--------|
-| **Agentic Loop for Copilot Chat** | `vscode-extension/src/chat/agenticChatHandler.ts` | [PASS] Stable |
-| **CLI Agentic Loop Runner** | `.agentx/agentic-runner.ps1` | [PASS] Stable |
-| **VS Code LM Adapter** | `vscode-extension/src/chat/vscodeLmAdapter.ts` | [PASS] Stable |
-| **Agent-to-Agent Communication** | `vscode-extension/src/utils/clarificationRouter.ts` | [PASS] Stable |
-| **Sub-Agent Runner** | `vscode-extension/src/chat/agenticChatHandler.ts` | [PASS] Stable |
-
-### New Features (v7.0)
-
-| Feature | Location | Status |
-|---------|----------|--------|
-| **Model Fallback Selector** | `vscode-extension/src/utils/modelSelector.ts` | [PASS] Stable |
-| **Hexagon AX Icon** | `vscode-extension/resources/agentx-icon.svg` | [PASS] Stable |
-| **Databricks Skill** | `.github/skills/data/databricks/SKILL.md` | [PASS] Stable |
-| **62 Skills (was 50)** | `Skills.md` | [PASS] Stable |
-
-### New Features (v6.1)
-
-| Feature | Location | Status |
-|---------|----------|--------|
-| **Typed Event Bus** | `vscode-extension/src/utils/eventBus.ts` | [PASS] Stable |
-| **Structured Thinking Log** | `vscode-extension/src/utils/thinkingLog.ts` | [PASS] Stable |
-| **Context Compaction** | `vscode-extension/src/utils/contextCompactor.ts` | [PASS] Stable |
-| **Channel Abstraction** | `vscode-extension/src/utils/channelRouter.ts` | [PASS] Stable |
-| **Cron Task Scheduler** | `vscode-extension/src/utils/taskScheduler.ts` | [PASS] Stable |
-
-### New Features (v6.0)
-
-| Feature | Location | Status |
-|---------|----------|--------|
-| **Critical Pre-Check Auto-Install** | `src/commands/setupWizard.ts` | [PASS] Stable |
-| **PowerShell Shell Fallback** | `src/utils/shell.ts` | [PASS] Stable |
-| **Copilot Extension Awareness** | `src/commands/initialize.ts` | [PASS] Stable |
-| **Expanded VS Code Test Mocks** | `src/test/mocks/vscode.ts` | [PASS] Stable |
+| Feature | Description | Status |
+|---------|------------|--------|
+| **Declarative Architecture** | 108-file TS runtime replaced with 23-file thin shell + declarative `.agent.md` files | [PASS] Stable |
+| **Copilot-Native Agents** | 20 agents use standard frontmatter (description, model, handoffs, tools, agents) | [PASS] Stable |
+| **Body Text Instructions** | Clarification protocol + quality loop embedded in agent body text | [PASS] Stable |
+| **Memory Instructions** | `.github/instructions/memory.instructions.md` for cross-session facts | [PASS] Stable |
+| **Project Conventions** | `.github/instructions/project-conventions.instructions.md` auto-applied | [PASS] Stable |
+| **Frontmatter Handoffs** | `handoffs:` in agent YAML drives workflow routing and "Hand off to X" buttons | [PASS] Stable |
+| **CLI Frontmatter Workflow** | `agentx.ps1 workflow` reads `.agent.md` handoffs (replaced TOML) | [PASS] Stable |
+| **Claude Code Commands** | 12 `.claude/commands/*.md` stubs with context-first rule and quality loop | [PASS] Stable |
+| **63 Skills** | Skills index across 10 categories | [PASS] Stable |
 
 ### Previous Versions
 
 <details>
-<summary>Click to expand v2.1-v5.3 features</summary>
+<summary>Click to expand v2.1-v7.3 features</summary>
+
+**v7.0-v7.3**: Self-Review Loop, Clarification Loop, Sub-Agent Spawner, Streaming Visibility, Settings Sidebar, Agentic Loop for Copilot Chat, CLI Agentic Runner, Model Fallback Selector, Databricks Skill, Typed Event Bus, Context Compaction
+
+**v6.0-v6.1**: Critical Pre-Check Auto-Install, PowerShell Shell Fallback, Copilot Extension Awareness, Channel Abstraction, Cron Task Scheduler
 
 **v5.3**: Customer Coach Agent, UX Methodology Instructions, Release Automation, Copilot Coding Agent Setup, Shared PowerShell Modules, Agent Delegation Protocol, Pack Bundle System
 
-**v5.1-v5.2**: Executable Scripts (30 across 17 skills), Playwright E2E Scaffold, Cognitive Architecture, TypeScript Instructions, 5-Minute Quickstart
+**v5.0-v5.2**: Executable Scripts (30 across 17 skills), Playwright E2E Scaffold, Cognitive Architecture, TypeScript Instructions, 5-Minute Quickstart, agentskills.io Compliance
 
-**v5.0**: 100% agentskills.io Compliance (41 skills -- later reorganized to 42 across 8 categories in v6.8), Progressive Disclosure (112 reference files), Standardized Descriptions, Anthropic Guide Compliance
+**v4.0**: Declarative Workflows (TOML templates -- replaced by frontmatter handoffs in v8.0.0), Smart Ready Queue, Agent State Tracking, Dependency Management, Issue Digests
 
-**v4.0**: Declarative Workflows (7 TOML templates), Smart Ready Queue, Agent State Tracking, Dependency Management, Issue Digests
-
-**v3.0**: Agent Analytics, Auto-Fix Reviewer (Preview), Prompt Engineering Skill, Local Mode, Cross-Repo Orchestration, DevOps Agent, Visualization
+**v3.0**: Agent Analytics, Auto-Fix Reviewer (Preview), Prompt Engineering Skill, Local Mode, Cross-Repo Orchestration, DevOps Agent
 
 **v2.1**: Maturity Levels, Constraint-Based Design, Handoff Buttons, Template Input Variables, Context Clearing, Agent X Adaptive Mode
 

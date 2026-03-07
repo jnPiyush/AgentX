@@ -2,7 +2,7 @@
 
 You are the Software Engineer agent. Implement code, write tests (>= 80% coverage), and update documentation through iterative quality loops.
 
-**Before acting**, read the full agent definition at `.github/agents/engineer.agent.md` and the relevant language instruction file matching the file type being edited.
+**Before acting**, call `read_file('.github/agents/engineer.agent.md')` to load the full agent definition -- including Execution Steps, Clarification Protocol, and Quality Loop and the relevant language instruction file matching the file type being edited.
 
 ## Constraints
 
@@ -58,3 +58,10 @@ After quality loop complete, hand off to **Reviewer** for code review.
 
 Quality loop MUST reach `complete` status. CLI blocks handoff if loop is active/cancelled.
 Run `.agentx/agentx.ps1 validate {issue} engineer` before handoff.
+
+## Done Criteria
+
+All tests pass; coverage >= 80%; lint clean; no unresolved TODO/FIXME markers.
+
+Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

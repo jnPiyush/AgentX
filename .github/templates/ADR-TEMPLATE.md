@@ -211,6 +211,8 @@ We chose **Option X** because:
 - [ ] **Human-in-the-Loop** - agent proposes, human approves
 - [ ] **Reflection / Self-Correction** - agent evaluates and refines its own output
 - [ ] **RAG Pipeline** - retrieval-augmented generation with knowledge base
+- [ ] **MCP Server** - expose tools and resources via Model Context Protocol for AI hosts
+- [ ] **MCP App** - interactive UI (iframe) rendered inside an AI host (Copilot, Claude)
 - [ ] **Hybrid** - rule-based preprocessing + AI/ML core + deterministic post-processing
 
 ### Inference Pipeline
@@ -247,6 +249,91 @@ graph LR
 | API rate limits | Medium | Retry with backoff, fallback model, caching |
 | Cost overrun | Medium | Token budgets, model tiering, caching |
 | Latency spikes | Medium | Streaming, async, timeout with fallback |
+| Prompt injection | High | Input sanitization, guardrails, output validation |
+| Silent model updates | Medium | Version pinning, evaluation baseline, drift monitoring |
+
+### MCP Architecture (if MCP Server or MCP App)
+
+#### MCP Server Design
+
+```mermaid
+graph TD
+ subgraph Host["AI Host (Copilot / Claude / Custom)"]
+ LLM["LLM"] --> TC["Tool Call"]
+ LLM --> RR["Resource Read"]
+ end
+
+ subgraph Server["MCP Server"]
+ direction TB
+ TR["Transport\nstdio / SSE / HTTP"]
+ TH["Tool Handlers"]
+ RH["Resource Handlers"]
+ TR --> TH
+ TR --> RR2["Resource\nRouter"] --> RH
+ end
+
+ subgraph Backend["Backend Services"]
+ DB[("Database")]
+ API["External API"]
+ FS["File System"]
+ end
+
+ TC -->|"JSON-RPC"| TR
+ RR -->|"JSON-RPC"| TR
+ TH --> DB
+ TH --> API
+ RH --> FS
+ RH --> DB
+
+ style Host fill:#E3F2FD,stroke:#1565C0
+ style Server fill:#F3E5F5,stroke:#6A1B9A
+ style Backend fill:#E8F5E9,stroke:#2E7D32
+```
+
+#### MCP App Design (if interactive UI)
+
+```mermaid
+graph LR
+ subgraph AIHost["AI Host"]
+ Chat["Chat Interface"]
+ Frame["iframe Container"]
+ end
+
+ subgraph MCPApp["MCP App"]
+ View["Interactive View\n(HTML/React)"]
+ AppTool["registerAppTool()"]
+ State["App State"]
+ end
+
+ Chat -->|"user triggers tool"| AppTool
+ AppTool -->|"renders"| View
+ View -->|"user interaction"| State
+ State -->|"result"| Chat
+ Frame -->|"hosts"| View
+
+ style AIHost fill:#E3F2FD,stroke:#1565C0
+ style MCPApp fill:#FFF3E0,stroke:#E65100
+```
+
+**MCP Decision Factors:**
+- **Transport**: stdio for local dev tools, SSE/HTTP for remote services
+- **Tool Granularity**: One tool per action (not mega-tools with mode parameters)
+- **Resource Design**: URI-based, cacheable, with MIME types
+- **Error Handling**: Structured MCP error responses, not raw exceptions
+- **Security**: Input validation on all tool parameters, SSRF prevention on resource URIs
+
+> **Reference**: Read `.github/skills/ai-systems/mcp-server-development/SKILL.md` for MCP Server patterns,
+> `.github/skills/ai-systems/mcp-apps-development/SKILL.md` for MCP App patterns.
+
+### AgentOps & Observability
+
+| Concern | Decision |
+|---------|----------|
+| **Tracing** | {OpenTelemetry / Azure Monitor / Foundry tracing} |
+| **Evaluation** | {Azure AI Evaluation / RAGAS / Custom LLM-as-judge} |
+| **Drift Monitoring** | {Eval baseline comparison / output quality scoring} |
+| **Cost Tracking** | {Token counting per request / monthly budget alerts} |
+| **Model Versioning** | {Pin with date suffix / canary deploy / fallback provider} |
 
 > **Reference**: Read `.github/skills/ai-systems/ai-agent-development/SKILL.md` for architecture patterns and model guidance.
 

@@ -15,10 +15,22 @@ import {
 
 // We need to stub checkAllDependencies at the module level
 import * as depChecker from '../../utils/dependencyChecker';
+import { AgentXContext } from '../../agentxContext';
 
 // -----------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------
+
+/** Create a minimal mock AgentXContext for testing. */
+function fakeAgentx(overrides?: { githubConnected?: boolean; adoConnected?: boolean }): AgentXContext {
+  return {
+    githubConnected: overrides?.githubConnected ?? false,
+    adoConnected: overrides?.adoConnected ?? false,
+    checkInitialized: async () => true,
+    invalidateCache: () => {},
+    workspaceRoot: '/tmp/test',
+  } as unknown as AgentXContext;
+}
 
 /** Build a healthy EnvironmentReport (all found). */
 function makeHealthyReport(): depChecker.EnvironmentReport {
@@ -97,7 +109,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
   it('should return passed=true when all required deps are found', async () => {
     checkAllStub.resolves(makeHealthyReport());
 
-    const result = await runCriticalPreCheck('local');
+    const result = await runCriticalPreCheck(fakeAgentx());
 
     assert.strictEqual(result.passed, true);
     assert.strictEqual(result.report.healthy, true);
@@ -135,7 +147,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
       showInfoStub.resolves(undefined);
 
       // Start the operation (don't await yet - polling will block on setTimeout)
-      const resultPromise = runCriticalPreCheck('local', true);
+      const resultPromise = runCriticalPreCheck(fakeAgentx(), true);
 
       // Advance timer to trigger the first poll interval (5s)
       await clock.tickAsync(5_000);
@@ -184,7 +196,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
 
     showInfoStub.resolves(undefined);
 
-    const result = await runCriticalPreCheck('local', true);
+    const result = await runCriticalPreCheck(fakeAgentx(), true);
 
     assert.strictEqual(result.passed, true);
     assert.strictEqual(result.report.healthy, true);
@@ -200,7 +212,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
 
     showWarningStub.resolves('Open Setup Docs');
 
-    const result = await runCriticalPreCheck('local', true);
+    const result = await runCriticalPreCheck(fakeAgentx(), true);
 
     assert.strictEqual(result.passed, false);
   });
@@ -216,7 +228,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
     // User dismisses (undefined return)
     showWarningStub.resolves(undefined);
 
-    const result = await runCriticalPreCheck('local', true);
+    const result = await runCriticalPreCheck(fakeAgentx(), true);
 
     assert.strictEqual(result.passed, false);
   });
@@ -230,7 +242,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
 
     showWarningStub.resolves('Dismiss');
 
-    const result = await runCriticalPreCheck('local', false);
+    const result = await runCriticalPreCheck(fakeAgentx(), false);
 
     assert.strictEqual(result.passed, false);
     // The non-blocking call should NOT use modal option
@@ -251,7 +263,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
 
     showWarningStub.resolves(undefined);
 
-    await runCriticalPreCheck('local', true);
+    await runCriticalPreCheck(fakeAgentx(), true);
 
     const call = showWarningStub.getCall(0);
     // In blocking mode the second arg should be the modal options object
@@ -287,7 +299,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
 
       showInfoStub.resolves(undefined);
 
-      const resultPromise = runCriticalPreCheck('local', true);
+      const resultPromise = runCriticalPreCheck(fakeAgentx(), true);
 
       // Advance timer for the polling interval
       await clock.tickAsync(5_000);
@@ -347,7 +359,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
 
       showInfoStub.resolves(undefined);
 
-      const resultPromise = runCriticalPreCheck('github', true);
+      const resultPromise = runCriticalPreCheck(fakeAgentx({ githubConnected: true }), true);
 
       // Advance timer for the polling interval
       await clock.tickAsync(5_000);
@@ -398,7 +410,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
         return Promise.resolve(undefined);
       });
 
-      const resultPromise = runCriticalPreCheck('local', true);
+      const resultPromise = runCriticalPreCheck(fakeAgentx(), true);
 
       // Advance timer past the max wait (180s = 36 poll intervals of 5s)
       await clock.tickAsync(180_000);
@@ -432,7 +444,7 @@ describe('setupWizard - runStartupCheck', () => {
   it('should not show any prompt when all deps are healthy', async () => {
     checkAllStub.resolves(makeHealthyReport());
 
-    await runStartupCheck('local');
+    await runStartupCheck(fakeAgentx());
 
     sinon.assert.notCalled(showWarningStub);
   });
@@ -444,7 +456,7 @@ describe('setupWizard - runStartupCheck', () => {
     // User dismisses
     showWarningStub.resolves(undefined);
 
-    await runStartupCheck('local');
+    await runStartupCheck(fakeAgentx());
 
     // Should have shown a warning because deps are missing
     sinon.assert.called(showWarningStub);
@@ -476,7 +488,7 @@ describe('setupWizard - runSilentInstall', () => {
   it('should return passed=true immediately when all deps are found', async () => {
     checkAllStub.resolves(makeHealthyReport());
 
-    const result = await runSilentInstall('local');
+    const result = await runSilentInstall(fakeAgentx());
 
     assert.strictEqual(result.passed, true);
     sinon.assert.notCalled(createTerminalStub);
@@ -507,7 +519,7 @@ describe('setupWizard - runSilentInstall', () => {
         dispose: terminalDisposeSpy,
       });
 
-      const resultPromise = runSilentInstall('local');
+      const resultPromise = runSilentInstall(fakeAgentx());
 
       // Advance timer to trigger polling
       await clock.tickAsync(5_000);
@@ -560,7 +572,7 @@ describe('setupWizard - runSilentInstall', () => {
         dispose: sinon.spy(),
       });
 
-      const resultPromise = runSilentInstall('local');
+      const resultPromise = runSilentInstall(fakeAgentx());
 
       await clock.tickAsync(5_000);
 
@@ -598,7 +610,7 @@ describe('setupWizard - runSilentInstall', () => {
 
       showWarningStub.resolves(undefined);
 
-      const resultPromise = runSilentInstall('local');
+      const resultPromise = runSilentInstall(fakeAgentx());
 
       // Advance past max wait (180s)
       await clock.tickAsync(180_000);

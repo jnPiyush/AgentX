@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentX v7.4.0 Installer - Download, copy, configure.
+# AgentX v8.0.0 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -83,7 +83,7 @@ skip() { echo -e "${D}[--] $1${N}"; }
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| AgentX v7.4.0 - AI Agent Orchestration |${N}"
+echo -e "${C}| AgentX v8.0.0 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -108,6 +108,62 @@ else
  echo "curl or wget is required. Install one and retry."; exit 1
 fi
 command -v tar &>/dev/null || { echo "tar is required for extraction."; exit 1; }
+
+# -- Upgrade detection: uninstall old version, preserve user data --
+PREVIOUS_VERSION=""
+if [ -f ".agentx/version.json" ]; then
+ PREVIOUS_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' .agentx/version.json 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)"/\1/')
+fi
+
+if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "8.0.0" ]; then
+ MAJOR_VERSION=$(echo "$PREVIOUS_VERSION" | cut -d. -f1)
+
+ if [ "$MAJOR_VERSION" -lt 8 ] 2>/dev/null; then
+  echo -e "${Y}[!] Detected AgentX v$PREVIOUS_VERSION - upgrading to v8.0.0...${N}"
+  echo -e "${D}  Uninstalling v$PREVIOUS_VERSION and performing clean install.${N}"
+
+  # Back up user data that must survive the upgrade
+  BACKUP_DIR=".agentx-upgrade-backup"
+  rm -rf "$BACKUP_DIR"
+  mkdir -p "$BACKUP_DIR"
+
+  USER_PATHS=(
+   ".agentx/config.json"
+   ".agentx/issues"
+   ".agentx/state"
+   "memories"
+  )
+  for up in "${USER_PATHS[@]}"; do
+   if [ -e "$up" ]; then
+    dest="$BACKUP_DIR/$up"
+    mkdir -p "$(dirname "$dest")"
+    cp -r "$up" "$dest"
+   fi
+  done
+  ok "User data backed up"
+
+  # Remove all AgentX-managed directories (full uninstall)
+  AGENTX_DIRS=(".agentx" ".github" ".claude" "scripts" "packs")
+  for d in "${AGENTX_DIRS[@]}"; do
+   [ -d "$d" ] && rm -rf "$d"
+  done
+  ok "AgentX v$PREVIOUS_VERSION uninstalled"
+
+  # Restore user data after removal
+  for up in "${USER_PATHS[@]}"; do
+   src="$BACKUP_DIR/$up"
+   if [ -e "$src" ]; then
+    mkdir -p "$(dirname "$up")"
+    cp -r "$src" "$up"
+   fi
+  done
+  rm -rf "$BACKUP_DIR"
+  ok "User data restored"
+
+  # Force overwrite for fresh install
+  FORCE=true
+ fi
+fi
 
 # -- Step 1: Download ------------------------------------
 echo -e "${C}[1] Downloading AgentX...${N}"
@@ -148,12 +204,12 @@ ok "$copied files installed ($skipped existing skipped)"
 
 # -- Step 3: Generate runtime files ----------------------
 echo -e "${C}[3] Configuring runtime...${N}"
-mkdir -p .agentx/state .agentx/digests docs/{prd,adr,specs,ux,reviews,progress}
+mkdir -p .agentx/state .agentx/digests docs/{prd,adr,specs,architecture} memories/session
 
 # Version tracking
 VERSION_FILE=".agentx/version.json"
-echo "{ \"version\": \"7.4.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 7.4.0 recorded"
+echo "{ \"version\": \"8.0.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 8.0.0 recorded"
 
 # Merge AgentX entries into user's .gitignore
 MARKER_START="# --- AgentX (auto-generated, do not edit this block) ---"
@@ -351,7 +407,7 @@ fi
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} AgentX v7.4.0 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} AgentX v8.0.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.agentx/agentx.sh help"

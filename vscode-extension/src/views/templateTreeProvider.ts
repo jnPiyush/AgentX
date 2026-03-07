@@ -62,11 +62,16 @@ export class TemplateTreeProvider implements vscode.TreeDataProvider<TemplateTre
    return element.children || [];
   }
 
+  // Try workspace templates first, fall back to extension-bundled templates
   const root = this.agentx.workspaceRoot;
-  if (!root) { return []; }
+  if (!root && !this.agentx.extensionContext) { return []; }
+  const workspaceDir = root ? path.join(root, '.github', 'templates') : '';
+  const extPath = this.agentx.extensionContext?.extensionPath;
+  const bundledDir = extPath ? path.join(extPath, '.github', 'agentx', 'templates') : '';
+  const templatesDir = (workspaceDir && fs.existsSync(workspaceDir)) ? workspaceDir
+   : (bundledDir && fs.existsSync(bundledDir)) ? bundledDir : '';
 
-  const templatesDir = path.join(root, '.github', 'templates');
-  if (!fs.existsSync(templatesDir)) {
+  if (!templatesDir) {
    return [TemplateTreeItem.info('No templates found')];
   }
 

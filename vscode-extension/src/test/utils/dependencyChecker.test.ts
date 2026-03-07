@@ -47,17 +47,17 @@ describe('dependencyChecker', () => {
       assert.ok(!isNaN(parsed), 'timestamp should be a valid date');
     });
 
-    it('should adjust GitHub CLI severity based on mode', async function () {
+    it('should adjust GitHub CLI severity based on integrations', async function () {
       this.timeout(30_000);
-      const localReport = await checkAllDependencies('local');
+      const localReport = await checkAllDependencies();
       const ghLocal = localReport.results.find((r) => r.name === 'GitHub CLI (gh)');
       assert.ok(ghLocal, 'GitHub CLI entry should exist');
-      assert.strictEqual(ghLocal.severity, 'optional', 'gh should be optional in local mode');
+      assert.strictEqual(ghLocal.severity, 'optional', 'gh should be optional with no integrations');
 
-      const githubReport = await checkAllDependencies('github');
+      const githubReport = await checkAllDependencies({ githubConnected: true, adoConnected: false });
       const ghGithub = githubReport.results.find((r) => r.name === 'GitHub CLI (gh)');
       assert.ok(ghGithub, 'GitHub CLI entry should exist');
-      assert.strictEqual(ghGithub.severity, 'required', 'gh should be required in github mode');
+      assert.strictEqual(ghGithub.severity, 'required', 'gh should be required with github integration');
     });
 
     it('should count criticals correctly', () => {

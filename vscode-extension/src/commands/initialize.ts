@@ -4,39 +4,30 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as https from 'https';
 import * as http from 'http';
-import { InitWizardPanel } from '../views/initWizardPanel';
 import { resolveWindowsShell } from '../utils/shell';
 import { runSilentInstall } from './setupWizard';
 
 const BRANCH = 'master';
 const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
 
-/** Essential directories and files to extract (everything else is skipped). */
-const ESSENTIAL_DIRS = ['.agentx', '.github', '.claude', '.vscode', 'scripts', 'packs'];
-const ESSENTIAL_FILES = ['.gitignore'];
+/** Essential directories and files to extract (everything else is skipped).
+ *  Agents, instructions, prompts, skills, templates, workflows, schemas,
+ *  and security files are bundled in the extension. Only GitHub-specific
+ *  runtime files need downloading. */
+const ESSENTIAL_DIRS = ['.github/hooks', '.github/workflows', '.github/ISSUE_TEMPLATE'];
+const ESSENTIAL_FILES = ['.github/PULL_REQUEST_TEMPLATE.md', '.github/agent-delegation.md', '.github/agentx-security.yml', '.github/CODEOWNERS'];
 
 /**
- * Register the AgentX: Initialize Project command.
- * Opens a WebView wizard for guided setup, or falls back to the legacy
- * quick-pick flow when launched with `{ legacy: true }` argument.
+ * Register the AgentX: Add Integration command.
+ * Downloads GitHub-specific runtime files (hooks, workflows, templates)
+ * and configures remote integration via .vscode/mcp.json entries.
+ * Local mode works out of the box without running this command.
  */
 export function registerInitializeCommand(
  context: vscode.ExtensionContext,
  agentx: AgentXContext
 ) {
- const cmd = vscode.commands.registerCommand('agentx.initialize', async (opts?: { legacy?: boolean }) => {
- // Default: open the WebView wizard
- if (!opts?.legacy) {
- const folders = vscode.workspace.workspaceFolders;
- if (!folders || folders.length === 0) {
- vscode.window.showErrorMessage('AgentX: Open a workspace folder first.');
- return;
- }
- InitWizardPanel.createOrShow(context.extensionUri, agentx);
- return;
- }
-
- // ----------- Legacy quick-pick flow (kept for CLI / test usage) -----------
+ const cmd = vscode.commands.registerCommand('agentx.initialize', async (_opts?: { legacy?: boolean }) => {
  let root: string | undefined;
  const folders = vscode.workspace.workspaceFolders;
  if (!folders || folders.length === 0) {
@@ -59,8 +50,7 @@ export function registerInitializeCommand(
  }
 
  // Pre-flight: silently install all required dependencies
- const modeConfig = vscode.workspace.getConfiguration('agentx').get<string>('mode', 'local');
- const preCheck = await runSilentInstall(modeConfig);
+ const preCheck = await runSilentInstall(agentx);
  if (!preCheck.passed) {
  // Silent install could not resolve all deps - notify and abort
  vscode.window.showWarningMessage(
@@ -82,19 +72,23 @@ export function registerInitializeCommand(
  isUpgrade = true;
  }
 
- // Pick mode (local is default)
+ // Pick integration to add
  const mode = await vscode.window.showQuickPick(
  [
- { label: 'local', description: 'Filesystem-based issue tracking, no GitHub required (default)' },
- { label: 'github', description: 'Full features: GitHub Actions, PRs, Projects' },
+ { label: 'github', description: 'GitHub Actions, PRs, Projects (via MCP)' },
+ { label: 'ado', description: 'Azure DevOps work items, boards, pipelines (via MCP)' },
  ],
- { placeHolder: 'Select operating mode (default: local)', title: 'AgentX Mode' }
+ { placeHolder: 'Select integration to add', title: 'AgentX - Add Integration' }
  );
  if (!mode) { return; }
 
  // GitHub mode: ask for repo and project
  let repoSlug: string | undefined;
  let projectNum: number | undefined;
+
+ // ADO mode: ask for org and project
+ let adoOrg: string | undefined;
+ let adoProject: string | undefined;
 
  if (mode.label === 'github') {
  // Try to auto-detect repo from git remote
@@ -146,9 +140,59 @@ export function registerInitializeCommand(
  }
  }
 
- // Save to settings
- const config = vscode.workspace.getConfiguration('agentx');
- await config.update('mode', mode.label, vscode.ConfigurationTarget.Workspace);
+ // ADO mode: collect org and project
+ if (mode.label === 'ado') {
+  adoOrg = await vscode.window.showInputBox({
+   prompt: 'Azure DevOps organization name (e.g. myorg)',
+   placeHolder: 'myorg',
+  });
+  adoProject = await vscode.window.showInputBox({
+   prompt: 'Azure DevOps project name',
+   placeHolder: 'MyProject',
+  });
+ }
+
+ // Write MCP integration entry to .vscode/mcp.json
+ const vscodeDir = path.join(root, '.vscode');
+ fs.mkdirSync(vscodeDir, { recursive: true });
+ const mcpPath = path.join(vscodeDir, 'mcp.json');
+ let mcpConfig: { servers?: Record<string, unknown> } = {};
+ if (fs.existsSync(mcpPath)) {
+  try {
+   const raw = fs.readFileSync(mcpPath, 'utf-8');
+   try { mcpConfig = JSON.parse(raw); } catch {
+    // Strip JSONC comments outside strings (same logic as agentxContext)
+    let stripped = '';
+    let inStr = false;
+    let esc = false;
+    for (let i = 0; i < raw.length; i++) {
+     const c = raw[i];
+     if (esc) { stripped += c; esc = false; continue; }
+     if (inStr) { if (c === '\\') { esc = true; } else if (c === '"') { inStr = false; } stripped += c; continue; }
+     if (c === '"') { inStr = true; stripped += c; continue; }
+     if (c === '/' && raw[i + 1] === '/') { while (i < raw.length && raw[i] !== '\n') { i++; } continue; }
+     if (c === '/' && raw[i + 1] === '*') { i += 2; while (i < raw.length && !(raw[i] === '*' && raw[i + 1] === '/')) { i++; } i++; continue; }
+     stripped += c;
+    }
+    mcpConfig = JSON.parse(stripped);
+   }
+  } catch { /* start fresh */ }
+ }
+ if (!mcpConfig.servers) { mcpConfig.servers = {}; }
+
+ if (mode.label === 'github') {
+  mcpConfig.servers['github'] = {
+   type: 'http',
+   url: 'https://api.githubcopilot.com/mcp/',
+  };
+ } else if (mode.label === 'ado') {
+  mcpConfig.servers['ado'] = {
+   type: 'http',
+   url: 'https://api.githubcopilot.com/mcp/',
+  };
+ }
+
+ fs.writeFileSync(mcpPath, JSON.stringify(mcpConfig, null, 2));
 
  // Run installation with progress
  await vscode.window.withProgress(
@@ -196,7 +240,9 @@ export function registerInitializeCommand(
  for (const file of ESSENTIAL_FILES) {
  const src = path.join(extractedRoot, file);
  if (fs.existsSync(src)) {
- fs.copyFileSync(src, path.join(tmpDir, file));
+ const destFile = path.join(tmpDir, file);
+ fs.mkdirSync(path.dirname(destFile), { recursive: true });
+ fs.copyFileSync(src, destFile);
  }
  }
 
@@ -220,9 +266,6 @@ export function registerInitializeCommand(
  'docs/prd', 'docs/adr', 'docs/specs',
  'docs/ux', 'docs/reviews', 'docs/progress',
  ];
- if (mode.label === 'local') {
- runtimeDirs.push('.agentx/issues');
- }
  for (const dir of runtimeDirs) {
  fs.mkdirSync(path.join(root, dir), { recursive: true });
  }
@@ -236,10 +279,10 @@ export function registerInitializeCommand(
  previousInstalledAt = prev.installedAt;
  } catch { /* corrupt version file - reset */ }
  }
- const currentExtVersion = context.extension?.packageJSON?.version ?? '7.4.0';
+ const currentExtVersion = context.extension?.packageJSON?.version ?? '8.0.0';
  fs.writeFileSync(versionFile, JSON.stringify({
  version: currentExtVersion,
- mode: mode.label,
+ integration: mode.label,
  installedAt: previousInstalledAt || new Date().toISOString(),
  updatedAt: new Date().toISOString(),
  }, null, 2));
@@ -266,18 +309,19 @@ export function registerInitializeCommand(
  fs.writeFileSync(statusFile, JSON.stringify(agentStatus, null, 2));
  }
 
- // Mode config
+ // Mode config (metadata without mode field)
  const configDir = path.join(root, '.agentx');
  const configFile = path.join(configDir, 'config.json');
- if (mode.label === 'local') {
+ if (mode.label === 'ado') {
  fs.writeFileSync(configFile, JSON.stringify({
- mode: 'local',
- nextIssueNumber: 1,
+ integration: 'ado',
+ organization: adoOrg || null,
+ project: adoProject || null,
  created: new Date().toISOString(),
  }, null, 2));
  } else {
  fs.writeFileSync(configFile, JSON.stringify({
- mode: 'github',
+ integration: 'github',
  repo: repoSlug || null,
  project: projectNum || null,
  created: new Date().toISOString(),
@@ -319,9 +363,11 @@ export function registerInitializeCommand(
 
  // Set context
  vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
+ vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
+ vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
 
  vscode.window.showInformationMessage(
- `AgentX initialized! Mode: ${mode.label}`
+ `AgentX: ${mode.label === 'github' ? 'GitHub' : 'Azure DevOps'} integration added!`
  );
 
  // Refresh tree views
@@ -350,7 +396,7 @@ export function registerInitializeCommand(
  * @param overwrite - When true, existing files are replaced with the source
  *   version (used during upgrade / reinstall so framework files get updated).
  *   When false (default), existing files are preserved so that user-customized
- *   files (e.g. custom agent definitions, workflow TOML files) survive a
+ *   files (e.g. custom agent definitions, configuration files) survive a
  *   fresh install.
  */
 function copyDirRecursive(src: string, dest: string, overwrite = false): void {
@@ -414,25 +460,11 @@ function mergeGitignore(root: string): void {
   const MARKER_END = '# --- /AgentX ---';
 
   const agentxEntries = [
-    '# AgentX framework',
+    '# AgentX runtime (GitHub mode)',
     '.agentx/',
-    '.github/agents/',
-    '.github/instructions/',
-    '.github/prompts/',
-    '.github/skills/',
-    '.github/templates/',
     '.github/hooks/',
-    '.github/scripts/',
-    '.github/schemas/',
+    '.github/workflows/',
     '.github/ISSUE_TEMPLATE/',
-    '.github/PULL_REQUEST_TEMPLATE.md',
-    '.github/agent-delegation.md',
-    '.github/agentx-security.yml',
-    '.github/CODEOWNERS',
-    '.github/copilot-instructions.md',
-    '.claude/',
-    'scripts/',
-    'packs/',
   ];
 
   const gitignorePath = path.join(root, '.gitignore');

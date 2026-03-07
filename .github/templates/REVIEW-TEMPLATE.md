@@ -57,13 +57,15 @@ inputs:
 6. [Performance Review](#6-performance-review)
 7. [Documentation Review](#7-documentation-review)
 8. [Acceptance Criteria Verification](#8-acceptance-criteria-verification)
-9. [Technical Debt](#9-technical-debt)
-10. [Compliance & Standards](#10-compliance--standards)
-11. [Recommendations](#11-recommendations)
-12. [Decision](#12-decision)
-13. [Next Steps](#13-next-steps)
-14. [Related Issues & PRs](#14-related-issues--prs)
-15. [Reviewer Notes](#15-reviewer-notes)
+9. [GenAI Review](#9-genai-review) *(if applicable)*
+10. [MCP Review](#10-mcp-review) *(if applicable)*
+11. [Technical Debt](#11-technical-debt)
+12. [Compliance & Standards](#12-compliance--standards)
+13. [Recommendations](#13-recommendations)
+14. [Decision](#14-decision)
+15. [Next Steps](#15-next-steps)
+16. [Related Issues & PRs](#16-related-issues--prs)
+17. [Reviewer Notes](#17-reviewer-notes)
 
 ---
 
@@ -396,7 +398,118 @@ From Issue #{story-id}:
 
 ---
 
-## 9. Technical Debt
+## 9. GenAI Review (if applicable)
+
+> **Trigger**: Include this section when the code involves LLM calls, AI agents, GenAI inference,
+> prompt engineering, or evaluation pipelines. Skip if no GenAI components.
+
+### GenAI Review Flow
+
+```mermaid
+graph TD
+ subgraph Review["GenAI Code Review Checklist"]
+ direction TB
+
+ subgraph Prompts["Prompt Quality"]
+ P1["System prompt\nexternalized?"]
+ P2["Prompt injection\ndefenses?"]
+ P3["Structured output\nenforced?"]
+ end
+
+ subgraph Model["Model Governance"]
+ M1["Version pinned\n(with date)?"]
+ M2["Fallback model\nconfigured?"]
+ M3["Token budget\nenforced?"]
+ end
+
+ subgraph Eval["Evaluation"]
+ E1["Eval dataset\nexists?"]
+ E2["Quality metrics\ndefined?"]
+ E3["LLM-as-judge\nuses different model?"]
+ end
+
+ subgraph Safety["Safety"]
+ S1["Guardrails\nconfigured?"]
+ S2["PII filtering\non output?"]
+ S3["Human-in-loop\nfor destructive?"]
+ end
+ end
+
+ style Prompts fill:#F3E5F5,stroke:#6A1B9A
+ style Model fill:#E3F2FD,stroke:#1565C0
+ style Eval fill:#E8F5E9,stroke:#2E7D32
+ style Safety fill:#FFEBEE,stroke:#C62828
+```
+
+### GenAI Checklist
+
+| Category | Check | Status | Notes |
+|----------|-------|--------|-------|
+| **Prompt Engineering** | System prompt externalized (not inline strings) | [PASS] / [FAIL] | |
+| **Prompt Engineering** | Prompt injection defenses present | [PASS] / [FAIL] | |
+| **Prompt Engineering** | Structured output schema enforced | [PASS] / [FAIL] | |
+| **Model Governance** | Model version pinned with date suffix | [PASS] / [FAIL] | |
+| **Model Governance** | Fallback model from different provider configured | [PASS] / [FAIL] | |
+| **Model Governance** | Token budget enforced per request | [PASS] / [FAIL] | |
+| **Evaluation** | Evaluation dataset exists with {N}+ test cases | [PASS] / [FAIL] | |
+| **Evaluation** | Quality thresholds defined (coherence, relevance, etc.) | [PASS] / [FAIL] | |
+| **Evaluation** | LLM-as-judge uses different model than agent | [PASS] / [FAIL] | |
+| **Safety** | Input/output guardrails configured | [PASS] / [FAIL] | |
+| **Safety** | PII detection on model outputs | [PASS] / [FAIL] | |
+| **Safety** | Human-in-the-loop for high-risk actions | [PASS] / [FAIL] | |
+| **Observability** | All LLM calls traced (OpenTelemetry / equivalent) | [PASS] / [FAIL] | |
+| **Observability** | Token usage and cost tracked per request | [PASS] / [FAIL] | |
+| **Error Handling** | Graceful fallback when model unavailable | [PASS] / [FAIL] | |
+| **Error Handling** | Timeout configured with fallback response | [PASS] / [FAIL] | |
+
+### GenAI Issues Found
+
+| Severity | Issue | Location | Recommendation |
+|----------|-------|----------|--------------|
+| {Critical/High/Medium/Low} | {description} | [file](path#L10) | {fix} |
+
+---
+
+## 10. MCP Review (if applicable)
+
+> **Trigger**: Include this section when the code implements an MCP Server or MCP App.
+> Skip if no MCP components.
+
+### MCP Server Checklist (if applicable)
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| Tool input parameters validated with JSON Schema | [PASS] / [FAIL] | |
+| One action per tool (no multi-mode mega-tools) | [PASS] / [FAIL] | |
+| Tool names use `verb_noun` convention | [PASS] / [FAIL] | |
+| Resource URIs follow consistent naming scheme | [PASS] / [FAIL] | |
+| Path traversal prevention on file-access tools | [PASS] / [FAIL] | |
+| SSRF prevention on URL-accepting tools | [PASS] / [FAIL] | |
+| Error responses are structured MCP errors (not raw exceptions) | [PASS] / [FAIL] | |
+| Destructive tools require confirmation | [PASS] / [FAIL] | |
+| Transport security (TLS for SSE/HTTP) | [PASS] / [FAIL] | |
+| All tool calls logged with context | [PASS] / [FAIL] | |
+
+### MCP App Checklist (if applicable)
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| registerAppTool() calls have clear descriptions | [PASS] / [FAIL] | |
+| Views render correctly in target host widths | [PASS] / [FAIL] | |
+| WCAG 2.1 AA accessibility in iframe content | [PASS] / [FAIL] | |
+| Dark/light theme support | [PASS] / [FAIL] | |
+| State management handles host disconnection gracefully | [PASS] / [FAIL] | |
+| Event cleanup on view unmount | [PASS] / [FAIL] | |
+
+### MCP Issues Found
+
+| Severity | Issue | Location | Recommendation |
+|----------|-------|----------|--------------|
+| {Critical/High/Medium/Low} | {description} | [file](path#L10) | {fix} |
+
+---
+
+## 11. Technical Debt
 
 ### New Technical Debt Introduced
 1. **{Debt Item 1}**: {Description}
@@ -414,7 +527,7 @@ From Issue #{story-id}:
 
 ---
 
-## 10. Compliance & Standards
+## 12. Compliance & Standards
 
 ### Coding Standards
 - [x] Follows C# naming conventions [PASS]
@@ -432,7 +545,7 @@ From Issue #{story-id}:
 
 ---
 
-## 11. Recommendations
+## 13. Recommendations
 
 ### Must Fix (Blocking)
 1. ** {Critical Issue}**: {Brief description}
@@ -453,7 +566,7 @@ From Issue #{story-id}:
 
 ---
 
-## 12. Decision
+## 14. Decision
 
 ### Verdict
 **Status**: [PASS] APPROVED | [WARN] CHANGES REQUESTED | [FAIL] REJECTED
@@ -479,7 +592,7 @@ From Issue #{story-id}:
 
 ---
 
-## 13. Next Steps
+## 15. Next Steps
 
 ### For Engineer (if changes requested)
 1. Address all Critical issues
@@ -500,7 +613,7 @@ From Issue #{story-id}:
 
 ---
 
-## 14. Related Issues & PRs
+## 16. Related Issues & PRs
 
 ### Related Issues
 - Blocks: #{issue-id}
@@ -512,7 +625,7 @@ From Issue #{story-id}:
 
 ---
 
-## 15. Reviewer Notes
+## 17. Reviewer Notes
 
 ### Review Process
 - **Review Method**: Line-by-line | High-level | Pair review

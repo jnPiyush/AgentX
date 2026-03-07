@@ -5,6 +5,7 @@ import {
   EnvironmentReport,
   DependencySeverity,
 } from '../utils/dependencyChecker';
+import { AgentXContext } from '../agentxContext';
 
 /**
  * Result of the critical pre-check.
@@ -40,14 +41,14 @@ function severityIcon(r: DependencyResult): string {
  * Run the full environment check and present an interactive report.
  * Called by the `agentx.checkEnvironment` command and on first activation.
  */
-export async function runSetupWizard(mode: string): Promise<void> {
+export async function runSetupWizard(agentx: AgentXContext): Promise<void> {
   const report = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: 'AgentX: Checking environment...',
       cancellable: false,
     },
-    async () => checkAllDependencies(mode),
+    async () => checkAllDependencies(agentx),
   );
 
   if (report.healthy && report.warningCount === 0) {
@@ -66,8 +67,8 @@ export async function runSetupWizard(mode: string): Promise<void> {
  * surfaces a notification when critical problems are detected.
  * When missing required dependencies are found it offers to auto-install them.
  */
-export async function runStartupCheck(mode: string): Promise<void> {
-  const result = await runCriticalPreCheck(mode, /* blocking */ false);
+export async function runStartupCheck(agentx: AgentXContext): Promise<void> {
+  const result = await runCriticalPreCheck(agentx, /* blocking */ false);
   if (!result.passed) {
     console.warn('AgentX: Environment pre-check did not pass.');
   }
@@ -84,9 +85,9 @@ export async function runStartupCheck(mode: string): Promise<void> {
  * @returns PreCheckResult - `passed` is true when all required deps
  *   are satisfied after the silent install attempt.
  */
-export async function runSilentInstall(mode: string): Promise<PreCheckResult> {
+export async function runSilentInstall(agentx: AgentXContext): Promise<PreCheckResult> {
   // -- 1. Run all checks quietly ----------------------------------------
-  const report = await checkAllDependencies(mode);
+  const report = await checkAllDependencies(agentx);
 
   if (report.healthy) {
     console.log('AgentX: All required dependencies found (silent check).');
@@ -145,7 +146,7 @@ export async function runSilentInstall(mode: string): Promise<PreCheckResult> {
           message: `Checking ${terminalNames}... (${Math.round(elapsed / 1000)}s)`,
         });
 
-        const freshReport = await checkAllDependencies(mode);
+        const freshReport = await checkAllDependencies(agentx);
         if (freshReport.healthy) {
           terminal.dispose();
           console.log('AgentX: All dependencies installed silently.');
@@ -155,7 +156,7 @@ export async function runSilentInstall(mode: string): Promise<PreCheckResult> {
 
       // -- 5. Timed out ---------------------------------------------------
       terminal.dispose();
-      const stillMissing = (await checkAllDependencies(mode)).results
+      const stillMissing = (await checkAllDependencies(agentx)).results
         .filter(r => r.severity === 'required' && !r.found)
         .map(r => r.name)
         .join(', ');
@@ -177,7 +178,7 @@ export async function runSilentInstall(mode: string): Promise<PreCheckResult> {
  * to install them automatically. VS Code extensions are installed via the
  * Extensions API; external CLI tools are installed via a terminal.
  *
- * @param mode  - The AgentX operating mode ('local' or 'github').
+ * @param agentx  - The AgentX context for integration detection.
  * @param blocking - When true (default), shows a modal dialog that demands
  *   action before the user can continue. When false, uses a
  *   non-modal warning (suitable for background startup checks).
@@ -185,7 +186,7 @@ export async function runSilentInstall(mode: string): Promise<PreCheckResult> {
  *   are satisfied (either already present or successfully installed).
  */
 export async function runCriticalPreCheck(
-  mode: string,
+  agentx: AgentXContext,
   blocking = true,
 ): Promise<PreCheckResult> {
   // -- 1. Run all checks --------------------------------------------------
@@ -195,7 +196,7 @@ export async function runCriticalPreCheck(
       title: 'AgentX: Checking dependencies...',
       cancellable: false,
     },
-    async () => checkAllDependencies(mode),
+    async () => checkAllDependencies(agentx),
   );
 
   if (report.healthy) {
@@ -254,10 +255,10 @@ export async function runCriticalPreCheck(
 
       // Poll until tools become available (or user cancels / timeout)
       const toolNames = toolsWithFix.map(t => t.name);
-      const toolsReady = await pollForExternalTools(mode, toolNames);
+      const toolsReady = await pollForExternalTools(agentx, toolNames);
 
       if (toolsReady) {
-        const freshReport = await checkAllDependencies(mode);
+        const freshReport = await checkAllDependencies(agentx);
         if (freshReport.healthy) {
           vscode.window.showInformationMessage(
             'AgentX: All required dependencies are now installed.',
@@ -281,7 +282,7 @@ export async function runCriticalPreCheck(
       'Skip',
     );
     if (recheck === 'Re-check Now') {
-      const freshReport = await checkAllDependencies(mode);
+      const freshReport = await checkAllDependencies(agentx);
       if (freshReport.healthy) {
         vscode.window.showInformationMessage(
           'AgentX: All required dependencies are now present.',
@@ -339,7 +340,7 @@ const POLL_MAX_WAIT_MS = 180_000;  // 3 minute maximum wait
  * rather than failing immediately.
  */
 async function pollForExternalTools(
-  mode: string,
+  agentx: AgentXContext,
   toolNames: string[],
 ): Promise<boolean> {
   return vscode.window.withProgress(
@@ -363,7 +364,7 @@ async function pollForExternalTools(
           message: `Checking ${toolNames.join(', ')}... (${Math.round(elapsed / 1000)}s)`,
         });
 
-        const freshReport = await checkAllDependencies(mode);
+        const freshReport = await checkAllDependencies(agentx);
         const stillMissing = freshReport.results.filter(
           r => r.severity === 'required'
             && !r.found
@@ -463,9 +464,19 @@ async function showEnvironmentReport(report: EnvironmentReport): Promise<void> {
       );
     }
   } else if (pick.label.includes('Re-check')) {
-    await runSetupWizard(
-      vscode.workspace.getConfiguration('agentx').get<string>('mode', 'local'),
-    );
+    // Re-check requires a context -- create a minimal integration provider
+    const recheckProvider: import('../utils/dependencyChecker').IntegrationProvider = {
+      githubConnected: false,
+      adoConnected: false,
+    };
+    const recheckReport = await checkAllDependencies(recheckProvider);
+    if (recheckReport.healthy && recheckReport.warningCount === 0) {
+      vscode.window.showInformationMessage(
+        'AgentX: Environment is healthy - all dependencies found.',
+      );
+    } else {
+      await showEnvironmentReport(recheckReport);
+    }
   } else if ((pick as DepItem).dep) {
     await fixSingleDependency((pick as DepItem).dep!);
   }
