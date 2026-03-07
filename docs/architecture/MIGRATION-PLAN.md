@@ -846,30 +846,35 @@ contributes:
 Copilot reads these contribution points and runs agents natively. The 10 remaining
 TypeScript files provide sidebar views, CLI command wrappers, and setup wizard ONLY.
 
-### Step 3.2: Copilot CLI Plugin [DEFERRED to v8.1.0]
+### Step 3.2: Copilot CLI Plugin [IMPLEMENTED in v8.1.0]
 
-> **Q5 resolved**: Copilot CLI plugin ecosystem is still evolving. This step is
-> deferred to v8.1.0. v8.0.0 ships Phase 1 + Phase 2 + Phase 3 (VSIX + Claude
-> Code stubs). The CLI plugin manifest will be added once the plugin API stabilises.
+> **Implemented** in v8.1.0 as a standalone pack at `packs/agentx-copilot-cli/`.
+> Separate from the core AgentX installation and VS Code extension.
 
-When implemented in v8.1.0, create a plugin manifest for Copilot CLI distribution:
+Plugin lives at `packs/agentx-copilot-cli/` with 4 files:
 
 ```
-.agentx/copilot-plugin/
-  manifest.json       # Plugin metadata
-  agents/             # Symlinks or copies of .github/agents/
-  skills/             # Symlinks or copies of .github/skills/
-  instructions/       # Symlinks or copies of .github/instructions/
-  prompts/            # Symlinks or copies of .github/prompts/
+packs/agentx-copilot-cli/
+  manifest.json       # Plugin metadata (20 agents, 64 skills, 7 instructions, 12 prompts)
+  install.ps1         # PowerShell installer (copies assets into target workspace)
+  install.sh          # Bash installer (same functionality)
+  README.md           # Documentation with usage, limitations, comparison table
 ```
 
 Users install via:
-```bash
-copilot plugin install agentx
+```powershell
+# PowerShell
+pwsh packs/agentx-copilot-cli/install.ps1 -Target /path/to/workspace
+
+# Bash
+bash packs/agentx-copilot-cli/install.sh -t /path/to/workspace
 ```
 
 All agent definitions, skills, and instructions become available in Copilot CLI.
-The `.agentx/*.ps1` scripts work directly since CLI agents invoke them via terminal.
+The `.agentx/*.ps1` scripts are optionally installed with `-IncludeCli` / `-c`.
+
+**Known limitations (GAP-19)**: No `runSubagent` in CLI -- agents run standalone,
+no Mode 1 orchestration. Quality loop uses Layer 2 (body) + Layer 3 (CLI gate) only.
 
 ### Step 3.3: Claude Code Support
 
