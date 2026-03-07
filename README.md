@@ -47,8 +47,8 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <td width="50%">
 
 ### Multi-Agent Orchestration
-- **12 specialized agents** working as a real software team
-- PM, UX, Architect, Data Scientist, Engineer, Reviewer, Auto-Fix Reviewer, DevOps, Tester, Power BI Analyst, Customer Coach
+- **20 specialized agents** (13 visible + 7 internal sub-agents)
+- PM, UX, Architect, Data Scientist, Engineer, Reviewer, Auto-Fix Reviewer, DevOps, Tester, Power BI Analyst, Customer Coach, Agile Coach + 7 invisible sub-agents
 - Hub-and-spoke coordination via **Agent X**
 - Issue-first workflow with automatic routing by type & priority
 
@@ -117,9 +117,9 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ### Framework Totals
 - **63 skills** across 10 categories
-- **12 agent definitions** (11 stable + 1 preview)
+- **20 agent definitions** (11 stable + 9 preview)
 - **7 workflow types** via frontmatter handoffs (feature, epic, story, bug, spike, devops, docs)
-- **12 instruction files**, **11 prompts**, **9 templates**
+- **7 instruction files**, **11 prompts**, **7 templates**
 - Declarative workflows with dependency management
 
 </td>
@@ -141,7 +141,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 | Cross-Session Memory | `memory.instructions.md` + `/memories/*.md` for persistent context |
 | Frontmatter Handoffs | `handoffs:` drives workflow routing and "Hand off to X" buttons |
 | CLI Frontmatter Workflow | `agentx.ps1 workflow` reads `.agent.md` handoffs (replaced TOML) |
-| Claude Code Commands | 12 `.claude/commands/*.md` stubs with context-first rule and quality loop |
+| Claude Code Commands | 15 `.claude/commands/*.md` stubs with context-first rule and quality loop |
 | 63 Skills | Skills index across 10 categories |
 | Multi-Platform | Works across VS Code, Copilot CLI, Claude Code, and GitHub.com |
 
@@ -314,33 +314,36 @@ gh label create "needs:ux" --color "EC4899"
 AgentX uses a **centralized hub** (Agent X) that routes work to specialized agents with parallel design and validation phases:
 
 ```
-                Agent X (Hub)
-                     │
-      ┌──────────────┼──────────────┐
-      │              │              │
-   PM Agent   Architect Agent  UX Agent
-      │              │              │
-      └──────────────┼──────────────┘
-                     │
-          +---------+---------+
-          |         |         |
-       Architect  Data     UX
-        Agent   Scientist Agent
-          |         |         |
-          +---------+---------+
-              |
-            Engineer Agent
-              |
-            Reviewer Agent
-              |
-          +---------+---------+
-          |                   |
-       DevOps Agent     Tester Agent
-          |                   |
-          +---------+---------+
-              |
-        Engineer (bug fixes)
+                    Agent X (Hub)
+                         |
+          +--------------+--------------+
+          |              |              |
+     PM Agent    (PRD complete)         |
+          |              |              |
+    +---------+---------+              |
+    |         |         |              |
+ Architect  Data     UX               |
+  Agent   Scientist Agent             |
+    |         |         |              |
+    +---------+---------+              |
+              |                        |
+         Engineer Agent                |
+              |                        |
+         Reviewer Agent                |
+              |                        |
+    +---------+---------+              |
+    |                   |              |
+  DevOps Agent    Tester Agent         |
+    |                   |              |
+    +---------+---------+              |
+              |                        |
+    Engineer (bug fixes) <---+   Customer Coach
+                                  (standalone)
 ```
+
+**Standalone Agents** (outside SDLC pipeline): Agile Coach, Customer Coach, Power BI Analyst
+
+**Internal Sub-Agents** (spawned by parent agents): GitHub Ops, ADO Ops, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist
 
 **Key Principles**:
 1. **Centralized Coordination** - Agent X validates prerequisites and routes work
@@ -355,15 +358,18 @@ AgentX uses a **centralized hub** (Agent X) that routes work to specialized agen
 
 | Agent | Trigger | Deliverable | Validation | Status Flow |
 |-------|---------|-------------|------------|-------------|
-| 📋 **Product Manager** | `type:epic` | PRD + Feature/Story issues | `.github/scripts/validate-handoff.sh {issue} pm` | → Ready |
-| 🎨 **UX Designer** | `needs:ux` + Status=Ready | Wireframes + User flows + Prototypes | `.github/scripts/validate-handoff.sh {issue} ux` | → Ready |
-| 🏗️ **Architect** | `type:feature` or Status=Ready | ADR + Tech Spec (diagrams, NO CODE) | `.github/scripts/validate-handoff.sh {issue} architect` | → Ready |
-| 📊 **Data Scientist** | `type:data-science` or Status=Ready | ML pipelines + evaluations + model cards | `.github/scripts/validate-handoff.sh {issue} data-scientist` | → Ready |
-| 🔧 **Engineer** | `type:story` or Status=Ready | Code + Tests (≥80%) + Docs | `.github/scripts/validate-handoff.sh {issue} engineer` | → In Review |
-| 🔍 **Reviewer** | Status = In Review | Review Report + Approval/Rejection | `.github/scripts/validate-handoff.sh {issue} reviewer` | → Done |
-| ⚙️ **DevOps** | `type:devops` or Status=Validating | CI/CD pipelines + Deployment configs | `.github/scripts/validate-handoff.sh {issue} devops` | → Done |
-| 🧪 **Tester** | `type:testing` or Status=Validating | Test suites + certification reports | `.github/scripts/validate-handoff.sh {issue} tester` | → Done |
+| 📋 **Product Manager** | `type:epic` | PRD + Feature/Story issues | `.github/scripts/validate-handoff.sh {issue} pm` | -> Ready |
+| 🎨 **UX Designer** | `needs:ux` + Status=Ready | Wireframes + User flows + Prototypes | `.github/scripts/validate-handoff.sh {issue} ux` | -> Ready |
+| 🏗️ **Architect** | `type:feature` or Status=Ready | ADR + Tech Spec (diagrams, NO CODE) | `.github/scripts/validate-handoff.sh {issue} architect` | -> Ready |
+| 📊 **Data Scientist** | `type:data-science` or Status=Ready | ML pipelines + evaluations + model cards | `.github/scripts/validate-handoff.sh {issue} data-scientist` | -> Ready |
+| 🔧 **Engineer** | `type:story` or Status=Ready | Code + Tests (>=80%) + Docs | `.github/scripts/validate-handoff.sh {issue} engineer` | -> In Review |
+| 🔍 **Reviewer** | Status = In Review | Review Report + Approval/Rejection | `.github/scripts/validate-handoff.sh {issue} reviewer` | -> Done |
+| 🔧🔍 **Auto-Fix Reviewer** | Status = In Review (auto-fix) | Review + safe auto-fixes | `.github/scripts/validate-handoff.sh {issue} reviewer` | -> Done |
+| ⚙️ **DevOps** | `type:devops` or Status=Validating | CI/CD pipelines + Deployment configs | `.github/scripts/validate-handoff.sh {issue} devops` | -> Done |
+| 🧪 **Tester** | `type:testing` or Status=Validating | Test suites + certification reports | `.github/scripts/validate-handoff.sh {issue} tester` | -> Done |
+| 📊 **Power BI Analyst** | `type:powerbi` | Reports + semantic models + DAX | `.github/scripts/validate-handoff.sh {issue} powerbi-analyst` | -> In Review |
 | 🧭 **Customer Coach** | Consulting research requests | Research briefs + presentation outlines | standalone (outside SDLC pipeline) | standalone |
+| 🏋️ **Agile Coach** | Story creation/refinement | Copy-paste ready stories | standalone (outside SDLC pipeline) | standalone |
 
 **All agents have access to all tools** for maximum flexibility.
 
@@ -413,7 +419,7 @@ AgentX/
 ├── 📄 CONTRIBUTING.md        # Contributor guide
 │
 ├── 📁 .github/
-│   ├── 📁 agents/            # 12 agent definitions
+│   ├── 📁 agents/            # 20 agent definitions (13 visible + 7 internal)
 │   ├── 📁 hooks/             # Pre-commit validation
 │   ├── 📁 scripts/           # Validation & metrics scripts
 │   ├── 📁 security/          # Command allowlist
@@ -421,7 +427,7 @@ AgentX/
 │   ├── 📁 prompts/           # 11 reusable prompts
 │   ├── 📁 workflows/         # GitHub Actions (CI/CD, scanning)
 │   └── 📁 skills/            # 63 skill documents (10 categories)
-│   └── 📁 instructions/      # 12 language/IaC-specific guides
+│   └── 📁 instructions/      # 7 auto-applied instruction files
 │   └── 📁 schemas/           # JSON schema validation
 │
 ├── 📁 .agentx/               # CLI, state, local issues

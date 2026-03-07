@@ -241,7 +241,7 @@ executes them. The VS Code extension provides sidebar views and CLI command wrap
 
 | Concept | Location | Purpose |
 |---------|----------|---------|
-| Agent Definitions | `.github/agents/*.agent.md` + `.github/agents/internal/*.agent.md` | 20 agents (15 visible + 5 internal sub-agents) with YAML frontmatter (name, description, model, handoffs, tools, agents) + body text instructions |
+| Agent Definitions | `.github/agents/*.agent.md` + `.github/agents/internal/*.agent.md` | 20 agents (13 visible + 7 internal sub-agents) with YAML frontmatter (name, description, model, handoffs, tools, agents) + body text instructions |
 | Skills | `.github/skills/*/SKILL.md` | 63 domain skills loaded on demand |
 | Instructions | `.github/instructions/*.instructions.md` | 7 instruction files auto-applied via `applyTo:` patterns |
 | Prompts | `.github/prompts/*.prompt.md` | 11 reusable prompt templates |
@@ -834,7 +834,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 | **Project Conventions** | `.github/instructions/project-conventions.instructions.md` auto-applied | [PASS] Stable |
 | **Frontmatter Handoffs** | `handoffs:` in agent YAML drives workflow routing and "Hand off to X" buttons | [PASS] Stable |
 | **CLI Frontmatter Workflow** | `agentx.ps1 workflow` reads `.agent.md` handoffs (replaced TOML) | [PASS] Stable |
-| **Claude Code Commands** | 12 `.claude/commands/*.md` stubs with context-first rule and quality loop | [PASS] Stable |
+| **Claude Code Commands** | 15 `.claude/commands/*.md` stubs with context-first rule and quality loop | [PASS] Stable |
 | **63 Skills** | Skills index across 10 categories | [PASS] Stable |
 
 ### Previous Versions

@@ -163,7 +163,7 @@ Control what gets installed with the `-Profile` flag:
 
 | Profile | Skills | Instructions | Prompts | Hooks | VS Code |
 |---------|--------|-------------|---------|-------|---------|
-| **full** (default) | All 62 | All 12 | [PASS] | [PASS] | [PASS] |
+| **full** (default) | All 63 | All 7 | [PASS] | [PASS] | [PASS] |
 | **minimal** | None | None | [FAIL] | [FAIL] | [FAIL] |
 | **python** | Python, testing, data, architecture | python, api | [PASS] | [PASS] | [PASS] |
 | **dotnet** | C#, Blazor, Azure, SQL, architecture | csharp, blazor, api | [PASS] | [PASS] | [PASS] |
@@ -238,7 +238,8 @@ In your project settings, create a **Status** field (Single Select) with these v
 | Architect completes spec | -> `Ready` | Ready for implementation |
 | Engineer starts work | -> `In Progress` | Active development |
 | Engineer completes code | -> `In Review` | Ready for code review |
-| Reviewer approves | -> `Done` + Close | Work complete |
+| Reviewer approves | -> `Validating` | Ready for post-review validation |
+| DevOps + Tester validate | -> `Done` + Close | Work complete (or back to Engineer for bug fixes) |
 
 ### Agent Workflow with Projects
 

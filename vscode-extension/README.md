@@ -15,7 +15,7 @@ Initialize AgentX in any workspace with a single command. Defaults to **Local mo
 | **Local** | ✅ Yes | Filesystem-based issue tracking, zero prompts |
 | **GitHub** | — | Full features: GitHub Actions, PRs, Projects (asks for repo/project) |
 
-### 🤖 12 Specialized Agents
+### 🤖 20 Specialized Agents (13 Visible + 7 Internal Sub-Agents)
 | Agent | Role | Model |
 |-------|------|-------|
 | 🎯 Agent X | Adaptive coordinator | Claude Opus 4.6 |
@@ -30,6 +30,18 @@ Initialize AgentX in any workspace with a single command. Defaults to **Local mo
 | 🧪 Tester | Test automation and certification | Claude Sonnet 4.5 |
 | 📊 Power BI Analyst | Reports, dashboards & DAX | Claude Sonnet 4.5 |
 | 🧭 Customer Coach | Research and consulting preparation | Claude Sonnet 4.5 |
+| 🧑‍🏋️ Agile Coach | Story creation and INVEST refinement | Claude Sonnet 4.5 |
+
+**Internal Sub-Agents** (spawned by parent agents, not user-invokable):
+| Agent | Role | Spawned By |
+|-------|------|------------|
+| GitHub Ops | GitHub issue triage & sprint planning | Agent X, PM, Reviewer, Tester |
+| ADO Ops | Azure DevOps work item management | Agent X, PM, Reviewer, Tester |
+| Functional Reviewer | Branch diff analysis | Reviewer |
+| Prompt Engineer | Prompt lifecycle management | Data Scientist, Engineer |
+| Eval Specialist | AI evaluation pipelines | Data Scientist, Reviewer |
+| Ops Monitor | Production AI monitoring | Data Scientist, DevOps |
+| RAG Specialist | Retrieval pipeline design | Data Scientist, Engineer |
 
 ### 📊 Sidebar Views
 - **Agents** — All agent definitions with model, maturity, and status
@@ -46,9 +58,10 @@ Initialize AgentX in any workspace with a single command. Defaults to **Local mo
 | `AgentX: Check Dependencies` | Validate issue dependencies |
 | `AgentX: Generate Weekly Digest` | Create a summary digest |
 
-### 🔄 Two Operating Modes
-- **Local Mode** (default) — Filesystem-based issue tracking, no GitHub required, zero prompts
-- **GitHub Mode** (opt-in) — Full features: Actions, PRs, Projects V2 (asks for repo/project info)
+### 🔄 MCP-Based Integrations
+- **Local Mode** (default) -- Filesystem-based issue tracking, no GitHub required, zero prompts
+- **GitHub Integration** (opt-in) -- Add `.vscode/mcp.json` with GitHub MCP server for full Actions, PRs, Projects V2
+- **ADO Integration** (opt-in) -- Add Azure DevOps MCP server for work items, boards, iterations
 
 ## Requirements
 
@@ -82,7 +95,6 @@ AgentX will:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `agentx.mode` | `local` | Operating mode (local / github). Defaults to local (zero prompts). |
 | `agentx.autoRefresh` | `true` | Auto-refresh sidebar views |
 | `agentx.shell` | `auto` | Shell for CLI commands (auto / pwsh / bash) |
 
