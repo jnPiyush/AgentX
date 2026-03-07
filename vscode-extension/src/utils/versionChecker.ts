@@ -101,58 +101,48 @@ export function checkVersionMismatch(
 }
 
 // -----------------------------------------------------------------------
-// Notification (integrated with VS Code UI)
+// Silent version sync (replaces notification-based prompt)
 // -----------------------------------------------------------------------
 
-/** Global key used to suppress the prompt for a specific version. */
-const DISMISSED_VERSION_KEY = 'agentx.dismissedUpdateVersion';
-
 /**
- * Run the version check and, when an upgrade is available, show an
- * informational notification with an "Update Now" button that opens
- * the Setup Wizard.
+ * Silently sync the workspace version.json to match the extension version.
  *
- * The prompt is suppressed when the user has dismissed it for the
- * current extension version, or when the `agentx.skipUpdateCheck`
- * setting is true.
+ * When the extension version is newer than the installed framework version,
+ * this updates version.json directly -- no user prompt, no download from
+ * GitHub, no heavy re-initialization. The bundled agents, instructions,
+ * skills, and templates are always read from the extension bundle, so the
+ * only thing that needs updating is the version stamp.
  *
- * @param workspaceRoot  - Absolute path to the AgentX project root.
+ * @param workspaceRoot    - Absolute path to the workspace root.
  * @param extensionVersion - The version string from `package.json`.
- * @param globalState    - VS Code `ExtensionContext.globalState` for
- *   persisting dismiss decisions across sessions.
+ * @param extensionPath    - Absolute path to the extension install directory.
  */
-export async function promptIfUpdateAvailable(
+export async function silentVersionSync(
   workspaceRoot: string,
   extensionVersion: string,
-  globalState: vscode.Memento,
+  extensionPath: string,
 ): Promise<void> {
-  // Respect user opt-out
-  const skip = vscode.workspace
-    .getConfiguration('agentx')
-    .get<boolean>('skipUpdateCheck', false);
-  if (skip) { return; }
+  if (!workspaceRoot) { return; }
 
   const result = checkVersionMismatch(workspaceRoot, extensionVersion);
   if (!result.updateAvailable) { return; }
 
-  // Check whether the user already dismissed this exact version
-  const dismissed = globalState.get<string>(DISMISSED_VERSION_KEY);
-  if (dismissed === extensionVersion) { return; }
+  // Update version.json silently
+  const versionFile = path.join(workspaceRoot, '.agentx', 'version.json');
+  const versionDir = path.join(workspaceRoot, '.agentx');
 
-  const updateNow = 'Update Now';
-  const dismiss = 'Dismiss';
+  if (!fs.existsSync(versionDir)) { return; } // No .agentx/ dir = not initialized
 
-  const choice = await vscode.window.showInformationMessage(
-    `AgentX framework v${result.installedVersion} is installed, ` +
-    `but v${result.extensionVersion} is available. ` +
-    `Update to get the latest agents, templates, and workflows.`,
-    updateNow,
-    dismiss,
-  );
-
-  if (choice === updateNow) {
-    vscode.commands.executeCommand('agentx.initialize');
-  } else if (choice === dismiss) {
-    await globalState.update(DISMISSED_VERSION_KEY, extensionVersion);
+  try {
+    let existing: Record<string, unknown> = {};
+    if (fs.existsSync(versionFile)) {
+      existing = JSON.parse(fs.readFileSync(versionFile, 'utf-8'));
+    }
+    existing.version = extensionVersion;
+    existing.updatedAt = new Date().toISOString();
+    fs.writeFileSync(versionFile, JSON.stringify(existing, null, 2));
+    console.log(`AgentX: Synced workspace version to ${extensionVersion}`);
+  } catch {
+    // Best-effort -- don't block activation
   }
 }

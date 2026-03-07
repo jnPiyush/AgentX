@@ -12,7 +12,7 @@ import { AgentXContext } from './agentxContext';
 import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
 import { runSetupWizard, runSilentInstall } from './commands/setupWizard';
-import { promptIfUpdateAvailable } from './utils/versionChecker';
+import { silentVersionSync } from './utils/versionChecker';
 
 let agentxContext: AgentXContext;
 
@@ -97,11 +97,11 @@ export function activate(context: vscode.ExtensionContext) {
  statusBar.show();
  context.subscriptions.push(statusBar);
 
- // Prompt if update available (non-blocking)
- promptIfUpdateAvailable(
+ // Silently sync workspace version.json to match extension version (non-blocking)
+ silentVersionSync(
   agentxContext.workspaceRoot ?? '',
   context.extension.packageJSON.version,
-  context.globalState
+  context.extensionPath
  ).catch(() => { /* ignore */ });
 
  // Run silent install (non-blocking)

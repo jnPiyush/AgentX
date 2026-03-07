@@ -1,19 +1,14 @@
 import { strict as assert } from 'assert';
-import * as sinon from 'sinon';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import * as vscode from 'vscode';
 
 import {
   compareSemver,
   readInstalledVersion,
   checkVersionMismatch,
-  promptIfUpdateAvailable,
+  silentVersionSync,
 } from '../../utils/versionChecker';
-
-// Re-import mock helpers for config manipulation
-import { __setConfig, __clearConfig } from '../mocks/vscode';
 
 // -----------------------------------------------------------------
 // compareSemver
@@ -180,124 +175,73 @@ describe('versionChecker - checkVersionMismatch', () => {
 });
 
 // -----------------------------------------------------------------
-// promptIfUpdateAvailable
+// silentVersionSync
 // -----------------------------------------------------------------
 
-describe('versionChecker - promptIfUpdateAvailable', () => {
+describe('versionChecker - silentVersionSync', () => {
   let tmpDir: string;
-  let showInfoStub: sinon.SinonStub;
-  let execCommandStub: sinon.SinonStub;
-  let globalState: vscode.Memento;
-  let stateStore: Record<string, unknown>;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-prompt-'));
-    __clearConfig();
-
-    showInfoStub = sinon.stub(vscode.window, 'showInformationMessage');
-    execCommandStub = sinon.stub(vscode.commands, 'executeCommand');
-
-    // Minimal Memento mock
-    stateStore = {};
-    globalState = {
-      keys: () => Object.keys(stateStore),
-      get: <T>(key: string, defaultValue?: T): T | undefined => {
-        return (key in stateStore ? stateStore[key] : defaultValue) as T | undefined;
-      },
-      update: async (key: string, value: unknown) => {
-        stateStore[key] = value;
-      },
-    } as vscode.Memento;
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-sync-'));
   });
 
   afterEach(() => {
-    sinon.restore();
-    __clearConfig();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('should not prompt when no version file exists', async () => {
-    await promptIfUpdateAvailable(tmpDir, '6.6.0', globalState);
-    assert.equal(showInfoStub.called, false);
+  it('should not error when no .agentx dir exists', async () => {
+    await silentVersionSync(tmpDir, '8.1.1', tmpDir);
+    // No .agentx/ dir = not initialized, should silently return
+    assert.ok(!fs.existsSync(path.join(tmpDir, '.agentx', 'version.json')));
   });
 
-  it('should not prompt when versions match', async () => {
+  it('should update version.json when extension is newer', async () => {
     const agentxDir = path.join(tmpDir, '.agentx');
     fs.mkdirSync(agentxDir, { recursive: true });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
-      version: '6.6.0', mode: 'local',
+      version: '8.1.0', mode: 'local',
       installedAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
     }));
 
-    await promptIfUpdateAvailable(tmpDir, '6.6.0', globalState);
-    assert.equal(showInfoStub.called, false);
+    await silentVersionSync(tmpDir, '8.1.1', tmpDir);
+
+    const updated = JSON.parse(fs.readFileSync(path.join(agentxDir, 'version.json'), 'utf-8'));
+    assert.equal(updated.version, '8.1.1');
+    assert.equal(updated.mode, 'local'); // preserved
   });
 
-  it('should prompt when installed version is older', async () => {
+  it('should not update when versions match', async () => {
     const agentxDir = path.join(tmpDir, '.agentx');
     fs.mkdirSync(agentxDir, { recursive: true });
-    fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
-      version: '6.5.0', mode: 'local',
+    const original = JSON.stringify({
+      version: '8.1.1', mode: 'local',
       installedAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
-    }));
+    });
+    fs.writeFileSync(path.join(agentxDir, 'version.json'), original);
 
-    showInfoStub.resolves(undefined); // user dismisses
+    await silentVersionSync(tmpDir, '8.1.1', tmpDir);
 
-    await promptIfUpdateAvailable(tmpDir, '6.6.0', globalState);
-    assert.ok(showInfoStub.calledOnce, 'should show notification');
-    assert.ok(
-      String(showInfoStub.firstCall.args[0]).includes('v6.5.0'),
-      'message should mention installed version',
-    );
+    const content = fs.readFileSync(path.join(agentxDir, 'version.json'), 'utf-8');
+    assert.equal(content, original); // unchanged
   });
 
-  it('should open wizard when user clicks Update Now', async () => {
+  it('should not update when installed is newer than extension', async () => {
     const agentxDir = path.join(tmpDir, '.agentx');
     fs.mkdirSync(agentxDir, { recursive: true });
-    fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
-      version: '6.5.0', mode: 'local',
+    const original = JSON.stringify({
+      version: '9.0.0', mode: 'local',
       installedAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
-    }));
+    });
+    fs.writeFileSync(path.join(agentxDir, 'version.json'), original);
 
-    showInfoStub.resolves('Update Now');
+    await silentVersionSync(tmpDir, '8.1.1', tmpDir);
 
-    await promptIfUpdateAvailable(tmpDir, '6.6.0', globalState);
-    assert.ok(execCommandStub.calledOnce, 'should execute command');
-    assert.equal(execCommandStub.firstCall.args[0], 'agentx.initialize');
+    const content = fs.readFileSync(path.join(agentxDir, 'version.json'), 'utf-8');
+    assert.equal(content, original); // unchanged
   });
 
-  it('should persist dismiss decision and not prompt again', async () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
-    fs.mkdirSync(agentxDir, { recursive: true });
-    fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
-      version: '6.5.0', mode: 'local',
-      installedAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
-    }));
-
-    showInfoStub.resolves('Dismiss');
-
-    // First call - should prompt and user dismisses
-    await promptIfUpdateAvailable(tmpDir, '6.6.0', globalState);
-    assert.ok(showInfoStub.calledOnce);
-
-    showInfoStub.resetHistory();
-
-    // Second call - should not prompt (dismissed for this version)
-    await promptIfUpdateAvailable(tmpDir, '6.6.0', globalState);
-    assert.equal(showInfoStub.called, false, 'should not prompt after dismiss');
-  });
-
-  it('should respect skipUpdateCheck setting', async () => {
-    const agentxDir = path.join(tmpDir, '.agentx');
-    fs.mkdirSync(agentxDir, { recursive: true });
-    fs.writeFileSync(path.join(agentxDir, 'version.json'), JSON.stringify({
-      version: '6.5.0', mode: 'local',
-      installedAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
-    }));
-
-    __setConfig('agentx.skipUpdateCheck', true);
-
-    await promptIfUpdateAvailable(tmpDir, '6.6.0', globalState);
-    assert.equal(showInfoStub.called, false, 'should not prompt when opt-out is set');
+  it('should not error with empty workspace root', async () => {
+    await silentVersionSync('', '8.1.1', tmpDir);
+    // Should return silently
   });
 });
