@@ -1,9 +1,6 @@
 ---
-name: 'Code Reviewer'
 description: 'Review code quality, test coverage, security, performance, and architectural conformance. Approve or request changes.'
-maturity: stable
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST read the Tech Spec and PRD before reviewing code"
   - "MUST verify the Engineer's quality loop reached status=complete"

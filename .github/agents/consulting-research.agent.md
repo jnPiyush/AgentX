@@ -1,9 +1,6 @@
 ---
-name: 'Consulting Research'
 description: 'Research, analyze, and create domain-expert materials for consulting topics. Synthesize domain knowledge from specialized skills (Oil & Gas, Financial Services, Audit, Tax, Legal) for client engagements.'
-maturity: stable
 model: Gemini 3.1 Pro (Preview) (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST verify facts through multiple sources before including in deliverables"
   - "MUST create a structured research plan before starting research -- define scope, key questions, source types, and depth"

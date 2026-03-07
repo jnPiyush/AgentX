@@ -1,9 +1,6 @@
 ---
-name: 'Architect'
 description: 'AI-first system architecture -- evaluate GenAI/Agentic AI solutions as the default lens, create ADRs with 3+ evaluated options, and technical specifications with diagrams -- NO CODE EXAMPLES.'
-maturity: stable
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST read the PRD, existing ADRs, and codebase patterns before designing"
   - "MUST read `.github/skills/architecture` for architecture work"

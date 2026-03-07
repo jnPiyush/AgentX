@@ -1,9 +1,6 @@
 ---
-name: 'Tester'
 description: 'Validate software quality through automated testing, performance testing, security testing, and production readiness certification.'
-maturity: stable
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST write executable test code -- never just test plans or checklists"
   - "MUST use Playwright as default E2E framework unless project specifies otherwise"

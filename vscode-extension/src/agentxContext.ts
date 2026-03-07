@@ -321,18 +321,18 @@ export class AgentXContext {
    return { canModify: extractPaths('can_modify'), cannotModify: extractPaths('cannot_modify') };
   };
 
+  // Extract display name from first # heading in body text (after frontmatter)
+  const bodyAfterFm = content.substring(match.index! + match[0].length);
+  const headingMatch = bodyAfterFm.match(/^#\s+(.+)$/m);
+  const displayName = headingMatch ? headingMatch[1].trim() : undefined;
+
   return {
-   name: get('name') || undefined,
+   name: displayName,
    description: get('description'),
    model: get('model'),
-   maturity: get('maturity') || undefined,
-   modelFallback: get('modelFallback') || undefined,
-   mode: get('mode') || undefined,
    visibility: (get('visibility') as 'public' | 'internal') || undefined,
    constraints: getList('constraints'),
    boundaries: parseBoundaries(),
-   autonomousTriggers: getList('autonomous_triggers'),
-   complexityEscalation: getList('complexity_escalation'),
    fileName: agentFile,
    handoffs: parseHandoffs(),
    tools: parseTools(),
@@ -410,14 +410,9 @@ export interface AgentDefinition {
  name?: string;
  description: string;
  model: string;
- maturity?: string;
- modelFallback?: string;
- mode?: string;
  visibility?: 'public' | 'internal';
  constraints?: string[];
  boundaries?: AgentBoundaries;
- autonomousTriggers?: string[];
- complexityEscalation?: string[];
  fileName: string;
  handoffs?: AgentHandoff[];
  tools?: string[];

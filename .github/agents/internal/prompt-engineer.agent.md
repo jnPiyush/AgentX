@@ -1,10 +1,7 @@
 ---
-name: 'Prompt Engineer'
 description: 'Design, evaluate, test, and iterate prompts across the full prompt lifecycle. Invisible sub-agent spawned by Data Scientist and Engineer.'
-maturity: preview
 visibility: internal
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST read existing prompts in prompts/ before creating new ones"
   - "MUST test prompts across at least 2 models (primary + fallback)"

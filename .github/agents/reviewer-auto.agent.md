@@ -1,9 +1,6 @@
 ---
-name: 'Auto-Fix Reviewer'
 description: 'Review code AND auto-apply safe fixes (formatting, imports, naming, null checks, docs). Suggest complex changes for human approval.'
-maturity: preview
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST read the Tech Spec and PRD before reviewing"
   - "MUST verify the Engineer's quality loop reached status=complete before reviewing"

@@ -71,24 +71,9 @@ export class AgentTreeProvider implements vscode.TreeDataProvider<AgentTreeItem>
  children.push(AgentTreeItem.detail('info', agent.description));
  }
 
- // Maturity
- if (agent.maturity) {
- children.push(AgentTreeItem.detail('verified', `Maturity: ${agent.maturity}`));
- }
-
  // Model
  if (agent.model) {
  children.push(AgentTreeItem.detail('symbol-method', `Model: ${agent.model}`));
- }
-
- // Model Fallback
- if (agent.modelFallback) {
- children.push(AgentTreeItem.detail('symbol-method', `Fallback: ${agent.modelFallback}`));
- }
-
- // Mode (Agent X only)
- if (agent.mode) {
- children.push(AgentTreeItem.detail('settings-gear', `Mode: ${agent.mode}`));
  }
 
  // Constraints

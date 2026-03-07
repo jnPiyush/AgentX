@@ -1,9 +1,6 @@
 ---
-name: 'UX Designer'
 description: 'Create user research, wireframes, interactive HTML/CSS prototypes, and design specifications following WCAG 2.1 AA standards.'
-maturity: stable
 model: Gemini 3.1 Pro (Preview) (copilot)
-modelFallback: Gemini 3 Pro (Preview) (copilot)
 constraints:
   - "MUST read the PRD before starting any design work"
   - "MUST read `.github/skills/design/ux-ui-design/SKILL.md` before designing"

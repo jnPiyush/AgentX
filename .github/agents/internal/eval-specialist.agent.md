@@ -1,10 +1,7 @@
 ---
-name: 'Eval Specialist'
 description: 'Design and execute AI evaluation pipelines including LLM-as-judge, benchmarks, quality gates, and model comparison. Invisible sub-agent spawned by Data Scientist and Reviewer.'
-maturity: preview
 visibility: internal
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST define evaluation dimensions before running any tests"
   - "MUST use structured scoring rubrics (1-5 scale with criteria per level)"

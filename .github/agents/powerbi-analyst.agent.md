@@ -1,9 +1,6 @@
 ---
-name: 'Power BI Analyst'
 description: 'Design and build Power BI reports, dashboards, semantic models, and DAX measures for data-driven insights.'
-maturity: stable
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST read PRD, existing data specs, and relevant Power BI skills before starting"
   - "MUST use DAX best practices -- avoid CALCULATE misuse, prefer variables, use KEEPFILTERS"

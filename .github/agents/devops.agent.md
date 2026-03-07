@@ -1,9 +1,6 @@
 ---
-name: 'DevOps Engineer'
 description: 'Create and manage CI/CD pipelines, GitHub Actions workflows, deployment automation, and release pipelines.'
-maturity: stable
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST read existing workflows and deployment docs before creating new ones"
   - "MUST use GitHub Actions for CI/CD (not Jenkins, CircleCI, etc.)"

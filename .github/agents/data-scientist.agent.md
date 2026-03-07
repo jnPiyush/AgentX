@@ -1,9 +1,6 @@
 ---
-name: 'Data Scientist'
 description: 'Design and implement GenAI pipelines, LLM-as-judge evaluations, drift monitoring, RAG systems, agent orchestration, and fine-tuning workflows.'
-maturity: stable
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST read the PRD, existing specs, and relevant AI skills before starting"
   - "MUST create evaluation plans before model changes"

@@ -68,11 +68,9 @@ function buildStatusHtml(cliOutput: string): string {
 function buildAgentListHtml(agents: AgentDefinition[]): string {
  const rows = agents.map(a => {
  const label = a.name || a.fileName.replace('.agent.md', '');
- const maturity = a.maturity ? escapeHtml(a.maturity) : '';
  return `<tr>
  <td><strong>${escapeHtml(label)}</strong></td>
  <td>${escapeHtml(a.model)}</td>
- <td>${maturity}</td>
  <td>${escapeHtml(a.description)}</td>
  </tr>`;
  }).join('\n');
@@ -92,7 +90,7 @@ function buildAgentListHtml(agents: AgentDefinition[]): string {
 <body>
  <h1>AgentX - Agents (${agents.length})</h1>
  <table>
- <thead><tr><th>Agent</th><th>Model</th><th>Maturity</th><th>Description</th></tr></thead>
+ <thead><tr><th>Agent</th><th>Model</th><th>Description</th></tr></thead>
  <tbody>${rows}</tbody>
  </table>
 </body>

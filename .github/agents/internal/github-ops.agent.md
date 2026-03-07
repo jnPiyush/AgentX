@@ -1,11 +1,7 @@
 ---
-name: 'GitHub Ops'
 description: 'Orchestrate GitHub Issues and Pull Requests. Triage, discover, plan sprints, execute work items, and manage backlog operations.'
 visibility: internal
-maturity: preview
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
-mode: adaptive
 constraints:
   - "MUST classify user intent before dispatching any workflow"
   - "MUST persist workflow state to .copilot-tracking/github-issues/ for resumability"

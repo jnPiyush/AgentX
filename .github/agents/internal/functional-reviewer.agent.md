@@ -1,10 +1,7 @@
 ---
-name: 'Functional Reviewer'
 description: 'Pre-PR branch diff analysis for functional correctness. Evaluates logic, edge cases, error handling, concurrency, and contract compliance.'
-maturity: preview
 visibility: internal
 model: Claude Sonnet 4 (copilot)
-modelFallback: GPT-4.1 (copilot)
 constraints:
   - "MUST analyze only the branch diff, not the entire codebase"
   - "MUST apply false positive mitigation before reporting any finding"

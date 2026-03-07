@@ -1,9 +1,6 @@
 ---
-name: 'Product Manager'
 description: 'Define product vision, create PRD, break Epics into Features and Stories with acceptance criteria.'
-maturity: stable
 model: Claude Opus 4.6 (copilot)
-modelFallback: Claude Opus 4.5 (copilot)
 constraints:
   - "MUST read the PRD template and existing artifacts before starting work"
   - "MUST create PRD before creating any child issues"

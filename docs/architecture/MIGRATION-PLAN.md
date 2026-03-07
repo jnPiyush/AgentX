@@ -268,7 +268,7 @@ settings natively (`Ctrl+,` -> search "agentx"). No custom sidebar view needed.
 
 ### Step 1.6: Simplify Root Files
 
-**extension.ts** - Rewrite from ~450 LOC to ~80 LOC:
+**extension.ts** - Rewrite from ~450 LOC to ~110 LOC:
 - Remove: event bus, thinking log, context compactor, channel router, task scheduler,
   plugin manager, git storage, structured logger, memory pipeline (observations,
   outcomes, sessions, synapse, global knowledge), learning integration,
@@ -280,25 +280,21 @@ settings natively (`Ctrl+,` -> search "agentx"). No custom sidebar view needed.
 - Remove: setServices() for channelRouter, taskScheduler, pluginManager, gitStorageProvider
 - Keep: workspace root detection, mode detection, CLI runner, agent definition loading
 
-### Step 1.7: Delete Corresponding Test Files
+### Step 1.7: Test Files -- KEPT
 
-Delete test files that correspond to deleted source modules:
+**Decision (2026-03-07)**: Keep `src/test/` directory. Extension unit tests provide
+regression coverage for remaining source files. Tests for deleted modules (agentic/,
+memory/) were already removed when their source directories were deleted.
 
 ```
-vscode-extension/src/test/agentic/         (17 files -- DELETE ALL)
-vscode-extension/src/test/memory/          (9 files -- DELETE ALL)
-vscode-extension/src/test/dashboard/       (DELETE ALL)
-vscode-extension/src/test/intelligence/    (DELETE ALL)
-vscode-extension/src/test/mcp/             (DELETE ALL)
-vscode-extension/src/test/chat/            (DELETE 6: agenticAdapter, agenticChatHandler,
-                                              agentRouter, commandHandlers, followupProvider,
-                                              vscodeLmAdapter -- KEEP agentContextLoader.test.ts)
-vscode-extension/src/test/utils/           (DELETE 16 for deleted utils -- KEEP 8 for kept utils)
-vscode-extension/src/test/commands/        (DELETE hookEvents, readyQueue -- KEEP 6)
+vscode-extension/src/test/                 (KEPT -- ~22 test files for remaining source)
 ```
 
-After deletion, run `npm run test:coverage` and confirm the 80% threshold still
-passes for the remaining ~24 source files before proceeding.
+Existing test files provide regression coverage for kept source code.
+No test deletions needed.
+
+After any source changes, run `npm run test:coverage` and confirm the 80% threshold
+still passes for the remaining source files.
 
 ### Step 1.8: Remove All Chat Participant Slash Commands and Prune Menus
 
@@ -1163,7 +1159,7 @@ src/commands/               (3 of 9 files)
 
 ```
 src/
-  extension.ts              (REWRITTEN - ~80 LOC, down from ~450)
+  extension.ts              (REWRITTEN - ~110 LOC, down from ~450)
   agentxContext.ts           (SIMPLIFIED)
 
   chat/
@@ -1337,29 +1333,18 @@ git checkout pre-declarative-migration
 The following gaps were identified by cross-referencing the plan against the actual
 codebase. Addressed before implementation begins.
 
-### GAP-01: Test File Migration Entirely Absent (Critical)
+### GAP-01: Test File Migration -- KEEP All Remaining Tests (Critical -- RESOLVED)
 
-The plan describes deleting ~98 source files but says nothing about the
-corresponding test files. The actual test inventory is:
+The plan originally described deleting test files corresponding to deleted source
+modules. **Decision (2026-03-07): Keep `src/test/` directory.** Extension unit
+tests provide regression coverage for the remaining source files and should not
+be deleted. Tests for deleted modules (agentic/, memory/) are already gone since
+their source directories were removed.
 
-| Test Directory | Files | Status |
-|---------------|-------|--------|
-| test/agentic/ | 17 files | DELETE (modules being deleted) |
-| test/memory/ | 9 files | DELETE (modules being deleted) |
-| test/utils/ | 24 files | DELETE 16, KEEP 8 (for kept utils) |
-| test/chat/ | 7 files | DELETE 6, KEEP 1 (agentContextLoader.test.ts) |
-| test/commands/ | 8 files | DELETE 3, KEEP 5 |
-| test/views/ | 1 file | KEEP (templateTreeProvider.test.ts) |
-| test/dashboard/, test/intelligence/, test/mcp/ | ~9 files (est.) | DELETE |
+The remaining ~22 test files cover kept source code (commands, views, utils, chat)
+and are kept as-is. Coverage verification applies to the reduced source set.
 
-**Impact**: `package.json` has `nyc` configured with 80% coverage threshold enforced
-in CI (`check-coverage: true`). After deleting source+test files in bulk, the
-remaining ~24 kept source files must still have 80% test coverage. The
-kept test files (test/commands/ + test/utils/ subset) likely satisfy this, but
-this must be verified rather than assumed.
-
-**Resolution**: Add a Phase 1 step: delete test directories corresponding to deleted
-source directories. Verify remaining coverage for kept files before CI commit.
+**Resolution**: `src/test/` is KEPT. Migration plan updated. No further action needed.
 
 ---
 
@@ -1730,7 +1715,7 @@ stubs and the `CLAUDE.md` context-loading section as part of Phase 3.
 
 | Phase | Gap # | Summary | Severity |
 |-------|-------|---------|---------|
-| Phase 1 | GAP-01 | Test file migration plan missing | Critical |
+| Phase 1 | GAP-01 | Test files -- KEEP src/test/ | Critical -- RESOLVED |
 | Phase 1 | GAP-02 | Chat participant slash command handler missing | Critical -- RESOLVED (Option B) |
 | Phase 1 | GAP-03 | `clarify` slash command orphaned | Critical |
 | Phase 1 | GAP-06 | CI/CD workflows need updating after deletions | Significant |
