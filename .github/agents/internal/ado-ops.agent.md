@@ -25,6 +25,8 @@ boundaries:
     - "docs/reviews/** (review documents)"
     - ".github/workflows/** (CI/CD pipelines)"
 tools: ['codebase', 'editFiles', 'search', 'changes', 'runCommands', 'problems', 'usages', 'fetch', 'think']
+agents:
+  - AgentX
 handoffs:
   - label: "Triage Backlog"
     agent: ADOOps

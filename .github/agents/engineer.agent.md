@@ -1,4 +1,5 @@
 ---
+name: Engineer
 description: 'Implement code, tests (80% coverage), and documentation through iterative quality loops.'
 model: Claude Sonnet 4 (copilot)
 constraints:

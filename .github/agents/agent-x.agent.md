@@ -1,4 +1,5 @@
 ---
+name: Agent-X
 description: 'Adaptive hub coordinator. Routes work through PM -> [Architect, Data Scientist, UX] -> Engineer -> Reviewer -> [DevOps, Tester] based on issue type and complexity.'
 model: Claude Opus 4.6 (copilot)
 constraints:

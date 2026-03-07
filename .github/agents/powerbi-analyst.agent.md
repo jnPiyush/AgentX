@@ -1,4 +1,5 @@
 ---
+name: Power BI Analyst
 description: 'Design and build Power BI reports, dashboards, semantic models, and DAX measures for data-driven insights.'
 model: Claude Sonnet 4 (copilot)
 constraints:
@@ -25,6 +26,10 @@ boundaries:
     - "docs/ux/** (UX documents)"
     - ".github/workflows/** (CI/CD pipelines)"
 tools: ['codebase', 'editFiles', 'search', 'changes', 'runCommands', 'problems', 'usages', 'fetch', 'think', 'github/*']
+agents:
+  - DataScientist
+  - Engineer
+  - ProductManager
 handoffs:
   - label: "Hand off to Reviewer"
     agent: Reviewer

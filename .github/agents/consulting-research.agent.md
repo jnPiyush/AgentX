@@ -1,4 +1,5 @@
 ---
+name: Consulting Research
 description: 'Research, analyze, and create domain-expert materials for consulting topics. Synthesize domain knowledge from specialized skills (Oil & Gas, Financial Services, Audit, Tax, Legal) for client engagements.'
 model: Gemini 3.1 Pro (Preview) (copilot)
 constraints:

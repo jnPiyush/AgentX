@@ -321,10 +321,11 @@ export class AgentXContext {
    return { canModify: extractPaths('can_modify'), cannotModify: extractPaths('cannot_modify') };
   };
 
-  // Extract display name from first # heading in body text (after frontmatter)
+  // Extract display name: frontmatter 'name' first, then first # heading as fallback
+  const fmName = get('name') || undefined;
   const bodyAfterFm = content.substring(match.index! + match[0].length);
   const headingMatch = bodyAfterFm.match(/^#\s+(.+)$/m);
-  const displayName = headingMatch ? headingMatch[1].trim() : undefined;
+  const displayName = fmName || (headingMatch ? headingMatch[1].trim() : undefined);
 
   return {
    name: displayName,

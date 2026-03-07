@@ -1,4 +1,5 @@
 ---
+name: Reviewer
 description: 'Review code quality, test coverage, security, performance, and architectural conformance. Approve or request changes.'
 model: Claude Sonnet 4 (copilot)
 constraints:
