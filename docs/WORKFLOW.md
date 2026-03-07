@@ -124,7 +124,7 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
 
 **Key Principles:**
 
-1. **Centralized Coordination** - Agent X routes all work, validates prerequisites, handles errors
+1. **Centralized Coordination** - Agent X delegates ALL work to specialist agents via `runSubagent` -- it NEVER performs tasks itself (no coding, no docs, no analysis)
 2. **Strict Role Separation** - Each agent produces one deliverable type (PRD, ADR, Code, Review)
 3. **Universal Tool Access** - All agents have access to all tools for maximum flexibility
 4. **Status-Driven** - GitHub Projects V2 Status field is the source of truth
