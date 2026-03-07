@@ -344,7 +344,7 @@ Use these to scope engagements and understand client context:
 
 ## Anti-Patterns
 
-- **Providing legal advice**: Customer Coach MUST NOT give legal advice -- provide industry context and frameworks only
+- **Providing legal advice**: Consulting Research MUST NOT give legal advice -- provide industry context and frameworks only
 - **Jurisdiction confusion**: Always specify which jurisdiction's law or regulation is being discussed
 - **Ignoring privilege**: Recommendations must consider attorney-client privilege implications
 - **One-size-fits-all**: Law firm economics differ fundamentally from in-house legal department economics

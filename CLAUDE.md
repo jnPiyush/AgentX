@@ -172,7 +172,7 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 | Data Scientist | [.github/agents/data-scientist.agent.md](.github/agents/data-scientist.agent.md) |
 | Tester | [.github/agents/tester.agent.md](.github/agents/tester.agent.md) |
 | Power BI Analyst | [.github/agents/powerbi-analyst.agent.md](.github/agents/powerbi-analyst.agent.md) |
-| Customer Coach | [.github/agents/customer-coach.agent.md](.github/agents/customer-coach.agent.md) |
+| Consulting Research | [.github/agents/consulting-research.agent.md](.github/agents/consulting-research.agent.md) |
 | GitHub Ops | [.github/agents/internal/github-ops.agent.md](.github/agents/internal/github-ops.agent.md) |
 | ADO Ops | [.github/agents/internal/ado-ops.agent.md](.github/agents/internal/ado-ops.agent.md) |
 | Functional Reviewer | [.github/agents/internal/functional-reviewer.agent.md](.github/agents/internal/functional-reviewer.agent.md) |
@@ -201,7 +201,7 @@ All 20 agents are available as `/project:` slash commands in Claude Code via `.c
 | `/project:data-scientist` | Data Scientist | ML pipelines, evaluations, drift monitoring |
 | `/project:tester` | Tester | Automated testing, certification reports |
 | `/project:powerbi-analyst` | Power BI Analyst | Power BI reports, DAX measures, semantic models |
-| `/project:customer-coach` | Customer Coach | Consulting research, client-ready materials |
+| `/project:consulting-research` | Consulting Research | Domain-expert consulting research, client-ready materials |
 | `/project:github-ops` | GitHub Ops | GitHub issue triage, sprint planning, backlog management |
 | `/project:ado-ops` | ADO Ops | Azure DevOps work items, sprint planning, PRD decomposition |
 | `/project:agile-coach` | Agile Coach | Story creation, refinement, INVEST compliance |

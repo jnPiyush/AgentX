@@ -38,7 +38,7 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowIte
  'devops': 'server-process',
  'data-scientist': 'graph',
  'tester': 'beaker',
- 'customer-coach': 'comment-discussion',
+ 'consulting-research': 'comment-discussion',
  'powerbi-analyst': 'graph-line',
  'github-ops': 'github',
  'ado-ops': 'organization',

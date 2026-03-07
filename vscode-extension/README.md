@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/badge/Version-8.0.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
-**AgentX** brings structured multi-agent orchestration to your VS Code workspace. Coordinate AI coding assistants (GitHub Copilot, Claude, etc.) as a real software team with parallel design and validation stages across PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Customer Coach.
+**AgentX** brings structured multi-agent orchestration to your VS Code workspace. Coordinate AI coding assistants (GitHub Copilot, Claude, etc.) as a real software team with parallel design and validation stages across PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research.
 
 ## Features
 
@@ -29,7 +29,7 @@ Initialize AgentX in any workspace with a single command. Defaults to **Local mo
 | 📊 Data Scientist | ML pipelines and evaluations | Claude Sonnet 4.5 |
 | 🧪 Tester | Test automation and certification | Claude Sonnet 4.5 |
 | 📊 Power BI Analyst | Reports, dashboards & DAX | Claude Sonnet 4.5 |
-| 🧭 Customer Coach | Research and consulting preparation | Claude Sonnet 4.5 |
+| 🧭 Consulting Research | Research and consulting preparation | Claude Sonnet 4.5 |
 | 🧑‍🏋️ Agile Coach | Story creation and INVEST refinement | Claude Sonnet 4.5 |
 
 **Internal Sub-Agents** (spawned by parent agents, not user-invokable):

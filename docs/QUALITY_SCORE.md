@@ -34,7 +34,7 @@
 | Data Scientist | A | ML pipeline, evaluation, drift monitoring |
 | Tester | A | Full test pyramid, certification reports |
 | Power BI Analyst | A | Star schema, DAX, DirectLake patterns |
-| Customer Coach | A | Research briefs, standalone workflow |
+| Consulting Research | A | Research briefs, domain skill wiring, standalone workflow |
 | Agile Coach | B | Story creation solid, INVEST evaluation could be expanded |
 | GitHub Ops | B | Preview maturity -- triage/sprint planning functional, needs duplicate-check hardening |
 | ADO Ops | B | Preview maturity -- process template adaptation works, ADO API coverage partial |

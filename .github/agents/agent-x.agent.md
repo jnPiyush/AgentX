@@ -51,7 +51,7 @@ agents:
   - DevOpsEngineer
   - Tester
   - PowerBIAnalyst
-  - CustomerCoach
+  - ConsultingResearch
   - GitHubOps
   - ADOOps
   - AgileCoach

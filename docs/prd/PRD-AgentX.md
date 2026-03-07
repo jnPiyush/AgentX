@@ -81,7 +81,7 @@ AI assistants continue to produce ad-hoc, unstructured output. Developers get co
 ### Secondary Users
 
 - **Open-source contributors** who want to improve AgentX skills, agents, or workflows
-- **Consultants** preparing client engagements using the Customer Coach agent
+- **Consultants** preparing client engagements using the Consulting Research agent
 - **DevOps engineers** automating CI/CD pipelines using the DevOps agent
 
 ---
@@ -684,7 +684,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
              |
        Reviewer Agent
              |
-    Customer Coach Agent (standalone)
+    Consulting Research Agent (standalone)
 ```
 
 ### Technology Stack
@@ -732,7 +732,7 @@ AgentX itself is a **rule-based orchestration framework** that coordinates AI-po
 | v6.5 | 2026-02-25 | Plugin system, Node.js CLI migration |
 | v6.1 | 2026-02-24 | Event bus, thinking log, context compaction |
 | v6.0 | 2026-02-22 | VS Code extension with auto-install |
-| v5.3 | 2026-02-21 | Customer Coach, UX methodology, release automation |
+| v5.3 | 2026-02-21 | Consulting Research, UX methodology, release automation |
 | v5.0 | 2026-02-18 | 100% agentskills.io compliance, 41 skills |
 | v4.0 | - | Declarative workflows, CLI, state tracking |
 | v3.0 | - | Analytics, local mode, DevOps agent |

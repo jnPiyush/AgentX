@@ -301,7 +301,7 @@ export function registerInitializeCommand(
   'auto-fix-reviewer',
   'data-scientist',
   'tester',
-  'customer-coach',
+  'consulting-research',
   'powerbi-analyst',
  ]) {
  agentStatus[agent] = { status: 'idle', issue: null, lastActivity: null };

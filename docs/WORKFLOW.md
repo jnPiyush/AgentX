@@ -88,14 +88,14 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
     |                   |    |              |
     +---------+---------+    |              |
               |              |              |
-    Engineer (bug fixes) <---+     Customer Coach
+    Engineer (bug fixes) <---+     Consulting Research
                                   (standalone)
 ```
 
 **Standalone Agents** (outside SDLC pipeline):
 
 ```
-  Agile Coach    Customer Coach    Power BI Analyst
+  Agile Coach    Consulting Research    Power BI Analyst
      |               |                  |
   (Stories)       (Research)         (Reports)
 ```
@@ -221,7 +221,7 @@ PM -> [Architect, Data Scientist, UX] (parallel) -> Engineer -> Reviewer -> [Dev
 **Parallel Validation Phase**: DevOps Engineer and Tester validate in parallel after Reviewer approves.
 **Bug-Fix Feedback Loop**: Tester defects route back to Engineer for resolution before closing.
 
-> **Note**: Customer Coach, Power BI Analyst, and Agile Coach operate **standalone** (not part of the core SDLC pipeline). GitHub Ops, ADO Ops, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, and RAG Specialist are invisible sub-agents spawned by their parent agents.
+> **Note**: Consulting Research, Power BI Analyst, and Agile Coach operate **standalone** (not part of the core SDLC pipeline). GitHub Ops, ADO Ops, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, and RAG Specialist are invisible sub-agents spawned by their parent agents.
 
 ### Backlog-Based Handoffs
 
@@ -291,4 +291,4 @@ Clear context before implementation phase to prevent design assumptions from lea
 
 ---
 
-**See Also**: [AGENTS.md](../AGENTS.md) (map) | [Skills.md](../Skills.md) (production code standards) | [GUIDE.md](GUIDE.md) (quickstart and setup)
+**See Also**: [AGENTS.md](../AGENTS.md) (map) | [Skills.md](../Skills.md) (production code standards) 

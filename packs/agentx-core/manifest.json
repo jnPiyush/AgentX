@@ -22,7 +22,7 @@
       ".github/agents/devops.agent.md",
       ".github/agents/data-scientist.agent.md",
       ".github/agents/tester.agent.md",
-      ".github/agents/customer-coach.agent.md",
+      ".github/agents/consulting-research.agent.md",
       ".github/agents/powerbi-analyst.agent.md"
     ],
     "instructions": [

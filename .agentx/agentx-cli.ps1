@@ -641,7 +641,7 @@ function Invoke-StateCmd {
 
     Write-Host "`n$($C.c)  Agent Status:$($C.n)"
     Write-Host "$($C.d)  ---------------------------------------------$($C.n)"
-    $agents = @('product-manager', 'ux-designer', 'architect', 'engineer', 'reviewer', 'auto-fix-reviewer', 'devops-engineer', 'data-scientist', 'tester', 'customer-coach')
+    $agents = @('product-manager', 'ux-designer', 'architect', 'engineer', 'reviewer', 'auto-fix-reviewer', 'devops-engineer', 'data-scientist', 'tester', 'consulting-research')
     foreach ($a in $agents) {
         $prop = $data.PSObject.Properties[$a]
         $info = if ($prop) { $prop.Value } else { $null }
@@ -982,7 +982,7 @@ function Invoke-ValidateCmd {
             Test-Check (Test-Path (Join-Path $Script:ROOT 'tests')) 'Tests directory exists'
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/testing/TEST-$num.md")) "TEST-$num.md exists"
         }
-        'customer-coach' {
+        'consulting-research' {
             Test-Check (Test-Path (Join-Path $Script:ROOT 'docs/coaching')) 'Coaching docs directory exists'
         }
         default {

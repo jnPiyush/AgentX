@@ -7,6 +7,7 @@ modelFallback: Gemini 3 Pro (Preview) (copilot)
 constraints:
   - "MUST read the PRD before starting any design work"
   - "MUST read `.github/skills/design/ux-ui-design/SKILL.md` before designing"
+  - "MUST read `.github/skills/design/prototype-craft/SKILL.md` for visual polish, color, typography, and CSS techniques"
   - "MUST create HTML/CSS prototypes at `docs/ux/prototypes/` -- this is mandatory, not optional"
   - "MUST follow WCAG 2.1 AA accessibility standards"
   - "MUST create responsive designs (mobile, tablet, desktop)"
@@ -104,11 +105,17 @@ Create `docs/ux/UX-{feature-id}.md` from template at `.github/templates/UX-TEMPL
 
 Create interactive prototypes at `docs/ux/prototypes/`:
 
+- **Read [Prototype Craft](../skills/design/prototype-craft/SKILL.md) BEFORE building** -- follow its visual techniques
 - Semantic HTML5 markup
-- Clean, modular CSS (BEM naming or similar)
-- Interactive JavaScript (modals, forms, validation)
-- WCAG 2.1 AA compliant (keyboard nav, screen reader, color contrast)
-- Responsive across mobile, tablet, desktop
+- Modern CSS: Grid, Flexbox, custom properties, clamp() for fluid sizing
+- Define a color palette with CSS custom properties (primary, neutral, semantic colors)
+- Typography: use a proper type scale (1.25 ratio), max 2-3 font families
+- Elevation: layered box-shadows for depth; smooth transitions on all interactive elements (150-300ms)
+- Tailwind CSS via CDN for rapid prototyping, or pure CSS with BEM naming
+- Interactive JavaScript (modals, forms, validation, tab switches)
+- WCAG 2.1 AA compliant (keyboard nav, screen reader, color contrast 4.5:1+)
+- Responsive across mobile, tablet, desktop (use clamp() and CSS Grid auto-fit)
+- Design ALL states: empty, loading, error, success, hover, active, focus, disabled
 
 ### 5. Self-Review
 
@@ -148,6 +155,7 @@ Update Status to `Ready` in GitHub Projects.
 | Task | Skill |
 |------|-------|
 | Wireframing, prototyping, methodology | [UX/UI Design](../skills/design/ux-ui-design/SKILL.md) |
+| Visual polish, color, typography, CSS craft | [Prototype Craft](../skills/design/prototype-craft/SKILL.md) |
 | HTML5, CSS3, responsive patterns | [Frontend/UI](../skills/design/frontend-ui/SKILL.md) |
 | React components (if applicable) | [React](../skills/languages/react/SKILL.md) |
 

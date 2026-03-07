@@ -675,7 +675,7 @@ both Mode 1 (hub-mediated) and Mode 2 (direct access):
 | DevOps | `[Engineer, Architect]` | Needs implementation + architecture details |
 | Tester | `[Engineer, DevOps]` | Needs code + deployment details |
 | Power BI Analyst | `[Data Scientist, Engineer]` | Needs data model + API details |
-| Customer Coach | `[]` | Standalone -- no agent delegation |
+| Consulting Research | `[]` | Standalone -- no agent delegation |
 | Auto-Fix Reviewer | `[Engineer]` | Fix-cycle only |
 
 ### Step 2.5: Add Iterative Quality Loop to Agent Body Text
@@ -758,7 +758,7 @@ The CLI blocks handoff with exit 1 if the loop is not in `complete` state.
 | Tester | All test suites pass; coverage >= 80%; certification report complete |
 | Data Scientist | ML pipeline runs end-to-end; evaluation metrics documented; model card complete |
 | Power BI Analyst | Report renders; DAX measures validated; semantic model documented |
-| Customer Coach | Research brief complete; all claims sourced; no fabricated statistics |
+| Consulting Research | Research brief complete; all claims sourced; no fabricated statistics |
 
 No TypeScript needed. Copilot reads these instructions and iterates natively.
 The CLI hard gate (`agentx.loop`) provides the code-enforced backstop.
@@ -1610,7 +1610,7 @@ Proposed assignments (to be validated -- see also GAP-17):
 | data-scientist | **true** | false | Mode 2: user can invoke directly; Mode 1: sub-agent only |
 | tester | **true** | false | Mode 2: user can invoke directly; Mode 1: sub-agent only |
 | powerbi-analyst | **true** | false | Mode 2: user can invoke directly; Mode 1: sub-agent only |
-| customer-coach | **true** | false | Standalone -- always user-invoked |
+| consulting-research | **true** | false | Standalone -- always user-invoked |
 
 **Key correction vs original draft**: All specialist agents must be `user-invocable: true`
 because Mode 2 (Human-Orchestrated) requires users to pick agents directly from the

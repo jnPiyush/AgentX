@@ -75,7 +75,7 @@ assert_file_exists "LICENSE"     "LICENSE"
 echo ""
 echo -e "  \033[1;37m2. Agent Definitions\033[0m"
 
-for agent in agent-x product-manager architect engineer reviewer ux-designer devops reviewer-auto data-scientist tester customer-coach powerbi-analyst; do
+for agent in agent-x product-manager architect engineer reviewer ux-designer devops reviewer-auto data-scientist tester consulting-research powerbi-analyst; do
   assert_file_exists ".github/agents/$agent.agent.md" "Agent: $agent"
 done
 
@@ -95,7 +95,7 @@ assert_file_contains ".github/templates/SPEC-TEMPLATE.md" "AI/ML Specification" 
 echo ""
 echo -e "  \033[1;37m4. Agent Definitions\033[0m"
 
-for ag in agent-x product-manager architect engineer reviewer reviewer-auto ux-designer devops data-scientist tester powerbi-analyst customer-coach; do
+for ag in agent-x product-manager architect engineer reviewer reviewer-auto ux-designer devops data-scientist tester powerbi-analyst consulting-research; do
   assert_file_exists ".github/agents/$ag.agent.md" "Agent: $ag"
 done
 

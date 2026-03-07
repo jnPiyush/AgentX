@@ -48,7 +48,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 
 ### Multi-Agent Orchestration
 - **20 specialized agents** (13 visible + 7 internal sub-agents)
-- PM, UX, Architect, Data Scientist, Engineer, Reviewer, Auto-Fix Reviewer, DevOps, Tester, Power BI Analyst, Customer Coach, Agile Coach + 7 invisible sub-agents
+- PM, UX, Architect, Data Scientist, Engineer, Reviewer, Auto-Fix Reviewer, DevOps, Tester, Power BI Analyst, Consulting Research, Agile Coach + 7 invisible sub-agents
 - Hub-and-spoke coordination via **Agent X**
 - Issue-first workflow with automatic routing by type & priority
 
@@ -179,13 +179,13 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 </details>
 
 <details>
-<summary><strong>v5.0-5.3 — Skills Compliance & Customer Coach</strong></summary>
+<summary><strong>v5.0-5.3 -- Skills Compliance & Consulting Research</strong></summary>
 
 - 100% agentskills.io compliance (41 skills at the time)
 - Progressive disclosure architecture (112 reference files)
 - 30 executable scripts across 17 skills
 - Anthropic Guide compliance
-- Customer Coach Agent, UX Methodology Instructions (v5.3)
+- Consulting Research Agent, UX Methodology Instructions (v5.3)
 - Playwright E2E Scaffold, Cognitive Architecture (v5.1-5.2)
 
 </details>
@@ -337,11 +337,11 @@ AgentX uses a **centralized hub** (Agent X) that routes work to specialized agen
     |                   |              |
     +---------+---------+              |
               |                        |
-    Engineer (bug fixes) <---+   Customer Coach
+    Engineer (bug fixes) <---+   Consulting Research
                                   (standalone)
 ```
 
-**Standalone Agents** (outside SDLC pipeline): Agile Coach, Customer Coach, Power BI Analyst
+**Standalone Agents** (outside SDLC pipeline): Agile Coach, Consulting Research, Power BI Analyst
 
 **Internal Sub-Agents** (spawned by parent agents): GitHub Ops, ADO Ops, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist
 
@@ -368,7 +368,7 @@ AgentX uses a **centralized hub** (Agent X) that routes work to specialized agen
 | ⚙️ **DevOps** | `type:devops` or Status=Validating | CI/CD pipelines + Deployment configs | `.github/scripts/validate-handoff.sh {issue} devops` | -> Done |
 | 🧪 **Tester** | `type:testing` or Status=Validating | Test suites + certification reports | `.github/scripts/validate-handoff.sh {issue} tester` | -> Done |
 | 📊 **Power BI Analyst** | `type:powerbi` | Reports + semantic models + DAX | `.github/scripts/validate-handoff.sh {issue} powerbi-analyst` | -> In Review |
-| 🧭 **Customer Coach** | Consulting research requests | Research briefs + presentation outlines | standalone (outside SDLC pipeline) | standalone |
+| 🧭 **Consulting Research** | Consulting research requests | Research briefs + presentation outlines | standalone (outside SDLC pipeline) | standalone |
 | 🏋️ **Agile Coach** | Story creation/refinement | Copy-paste ready stories | standalone (outside SDLC pipeline) | standalone |
 
 **All agents have access to all tools** for maximum flexibility.

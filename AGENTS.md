@@ -96,7 +96,7 @@ Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/
 | Data Scientist | `data-scientist.agent.md` | ML pipelines + evals at `docs/data-science/` |
 | Tester | `tester.agent.md` | Test suites + certification at `docs/testing/` |
 | Power BI Analyst | `powerbi-analyst.agent.md` | Reports at `reports/`, `datasets/` |
-| Customer Coach | `customer-coach.agent.md` | Research briefs at `docs/coaching/` |
+| Consulting Research | `consulting-research.agent.md` | Research briefs at `docs/coaching/` |
 | Agile Coach | `agile-coach.agent.md` | Stories at `docs/coaching/` |
 
 **Internal sub-agents** (spawned by parent agents, not user-invokable):

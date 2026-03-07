@@ -1124,7 +1124,7 @@ function Invoke-AgenticLoop {
             # Extract from Handoffs section
             $hMatch = [regex]::Match($agentDef.body, '(?s)## (?:Team & )?Handoffs[^\n]*\n(.*?)(?=\n## |\n---)')
             if ($hMatch.Success) {
-                $agentPattern = '\b(product-manager|architect|ux-designer|engineer|reviewer|devops-engineer|data-scientist|tester|customer-coach|agent-x)\b'
+                $agentPattern = '\b(product-manager|architect|ux-designer|engineer|reviewer|devops-engineer|data-scientist|tester|consulting-research|agent-x)\b'
                 $canClarify = @([regex]::Matches($hMatch.Groups[1].Value, $agentPattern, 'IgnoreCase') |
                     ForEach-Object { $_.Value.ToLower() } | Select-Object -Unique)
             }

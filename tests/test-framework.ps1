@@ -52,7 +52,7 @@ Assert-FileExists "LICENSE" "LICENSE"
 Write-Host ""
 Write-Host " 2. Agent Definitions" -ForegroundColor White
 
-$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "ux-designer", "devops", "reviewer-auto", "data-scientist", "tester", "customer-coach", "powerbi-analyst")
+$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "ux-designer", "devops", "reviewer-auto", "data-scientist", "tester", "consulting-research", "powerbi-analyst")
 foreach ($agent in $agents) {
  Assert-FileExists ".github/agents/$agent.agent.md" "Agent: $agent"
 }
@@ -75,7 +75,7 @@ Assert-FileContains ".github/templates/SPEC-TEMPLATE.md" "AI/ML Specification" "
 Write-Host ""
 Write-Host " 4. Agent Definitions" -ForegroundColor White
 
-$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "reviewer-auto", "ux-designer", "devops", "data-scientist", "tester", "powerbi-analyst", "customer-coach")
+$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "reviewer-auto", "ux-designer", "devops", "data-scientist", "tester", "powerbi-analyst", "consulting-research")
 foreach ($ag in $agents) {
  Assert-FileExists ".github/agents/$ag.agent.md" "Agent: $ag"
 }

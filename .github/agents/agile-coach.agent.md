@@ -194,5 +194,5 @@ If the user cannot answer elicitation questions or the domain is unfamiliar:
 3. **Never fabricate** requirements -- always confirm with the user
 4. **Escalate to PM** if the story needs broader product context (recommend running the Product Manager agent)
 
-> **Standalone Agent**: This agent is not part of the core SDLC pipeline. Like Customer Coach, it is invoked directly by users.
+> **Standalone Agent**: This agent is not part of the core SDLC pipeline. Like Consulting Research, it is invoked directly by users.
 > **Shared Protocols**: Follow [AGENTS.md](../../AGENTS.md#handoff-flow) for agent communication conventions.
