@@ -22,6 +22,9 @@ const standaloneFiles = ['agent-delegation.md', 'agentx-security.yml', 'CODEOWNE
 // Root-level reference documents to bundle alongside .github/ assets
 const rootDocs = ['AGENTS.md', 'Skills.md'];
 
+// docs/ reference files referenced by agents (bundled to docs/ subdirectory)
+const docFiles = ['WORKFLOW.md', 'GUIDE.md', 'GOLDEN_PRINCIPLES.md', 'QUALITY_SCORE.md', 'tech-debt-tracker.md'];
+
 // Clean destination
 if (fs.existsSync(destRoot)) {
     fs.rmSync(destRoot, { recursive: true });
@@ -80,6 +83,24 @@ for (const file of rootDocs) {
 }
 if (rootDocCount > 0) {
     console.log('  Copied ' + rootDocCount + ' root docs');
+}
+
+// Copy docs/ reference files to docs/ subdirectory
+const docsDestDir = path.join(destRoot, 'docs');
+if (!fs.existsSync(docsDestDir)) {
+    fs.mkdirSync(docsDestDir, { recursive: true });
+}
+let docFileCount = 0;
+for (const file of docFiles) {
+    const src = path.join(repoRoot, 'docs', file);
+    if (fs.existsSync(src)) {
+        fs.copyFileSync(src, path.join(docsDestDir, file));
+        totalFiles++;
+        docFileCount++;
+    }
+}
+if (docFileCount > 0) {
+    console.log('  Copied ' + docFileCount + ' docs/ reference files');
 }
 
 console.log('Done: ' + totalFiles + ' files copied to .github/agentx/');
