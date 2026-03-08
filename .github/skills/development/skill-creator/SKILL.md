@@ -22,6 +22,25 @@ compatibility:
 - Restructuring a skill for progressive disclosure
 - Adding scripts/, references/, or assets/ to an existing skill
 
+## Knowledge vs Execution Principle
+
+Every agent task is either a **knowledge problem** or an **execution problem**:
+
+| Problem Type | Solution | Example |
+|---|---|---|
+| **Knowledge** (know something) | Skill (Markdown) | Coding standards, triage workflows, deployment conventions |
+| **Execution** (do something) | MCP Server | Query a database, create a GitHub issue, send an email |
+| **Hybrid** (know how to do well) | Skill that references MCP tools | Skill encodes workflow + judgment; MCP provides API calls |
+
+**Standalone Principle**: Every skill SHOULD produce useful output without MCP connections.
+If disconnecting all MCP servers makes the skill non-functional, the knowledge layer is
+not properly separated from the execution layer.
+
+When deciding whether to create a skill or an MCP server, ask:
+1. Is it stable knowledge (changes weekly/monthly)? -> Skill
+2. Does it require a live API call at runtime? -> MCP
+3. Both? -> Skill that orchestrates MCP tools as a subordinate layer
+
 ## Decision Tree
 
 ```
@@ -182,6 +201,8 @@ Example:
 - **Code-dump skills**: Walls of example code -> move to references/
 - **Undiscoverable skills**: Not listed in Skills.md -> invisible to routing
 - **Stale metadata**: `version` never bumped after changes -> unreliable
+- **MCP-dependent skills**: Skills that do nothing without an MCP server -> separate knowledge from execution
+- **Token-tax skills**: Encoding knowledge via MCP tool schemas (~23K-50K tokens) instead of a skill file (~200-500 tokens)
 
 ## Scripts
 

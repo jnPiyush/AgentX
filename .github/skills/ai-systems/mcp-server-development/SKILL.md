@@ -176,6 +176,22 @@ For sharing MCP server config across a team, add `.mcp.json` at the repo root:
 - `.vscode/mcp.json` -- Workspace level, can override repo-level settings
 - Use `${input:varName}` for secrets to prompt users (never hardcode)
 
+## Skill-First Pattern (Hybrid)
+
+Before building an MCP server, ask: is this a **knowledge problem** or an **execution problem**?
+
+- **Knowledge** (coding standards, workflows, conventions) -> Write a SKILL.md (200-500 tokens)
+- **Execution** (API calls, database queries, sending emails) -> Build an MCP server
+- **Hybrid** (knowledge + execution) -> Skill file orchestrates; MCP server executes
+
+The hybrid pattern keeps workflow logic in a version-controlled Markdown skill while
+MCP provides the API plumbing. The skill works standalone (produces drafts, analysis,
+recommendations) even without the MCP server connected. MCP adds auto-execution.
+
+A full MCP tool schema can consume 23,000-50,000 tokens of context window. A skill
+file encoding the same workflow knowledge uses 200-500 tokens -- a 50-100x reduction.
+Only load MCP servers when the agent genuinely needs to execute API calls.
+
 ## Anti-Patterns
 
 - **Mega-tools**: One tool that accepts a "command" string and switches behavior
@@ -184,6 +200,7 @@ For sharing MCP server config across a team, add `.mcp.json` at the repo root:
 - **Stateful servers**: Storing session state in memory (use external stores)
 - **Missing descriptions**: Tools without clear descriptions -> agents can't use them effectively
 - **Hardcoded secrets**: API keys in server code -> use environment variables
+- **Knowledge-as-MCP**: Building MCP servers to teach agents conventions instead of using skill files
 
 ## Testing
 

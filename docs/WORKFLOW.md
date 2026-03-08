@@ -131,6 +131,7 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
 5. **Pre-Handoff Validation** - Artifacts validated before status transitions
 6. **Post-Review Validation** - DevOps and Tester validate in parallel after Reviewer approves
 7. **Bug-Fix Feedback Loop** - Tester defects route back to Engineer for resolution
+8. **Two-Layer Architecture** - Skills (Markdown) encode domain knowledge; MCP servers handle tool execution. Skills are the orchestration layer; MCP is the plumbing. Every skill works standalone without MCP connections.
 
 ### Routing Logic
 
