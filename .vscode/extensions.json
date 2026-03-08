@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "jnPiyush.agentx",
+    "ms-azuretools.vscode-azure-github-copilot",
+    "GitHub.copilot",
+    "GitHub.copilot-chat"
+  ],
+  "unwantedRecommendations": []
+}

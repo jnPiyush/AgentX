@@ -8,6 +8,9 @@
     "workspace",
     "ui"
   ],
+  "extensionDependencies": [
+    "ms-azuretools.vscode-azure-github-copilot"
+  ],
   "author": {
     "name": "Piyush Jain"
   },

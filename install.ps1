@@ -474,6 +474,33 @@ if (-not $NoSetup) {
  Write-Skip "Setup skipped (-NoSetup)"
 }
 
+# -- Step 5: Companion Extensions ---------------------
+Write-Host "[5] Companion extensions..." -ForegroundColor Cyan
+$companionExtensions = @(
+ @{ id = "ms-azuretools.vscode-azure-github-copilot"; name = "GitHub Copilot for Azure" }
+)
+if (Get-Command code -ErrorAction SilentlyContinue) {
+ $installedExts = code --list-extensions 2>$null
+ foreach ($ext in $companionExtensions) {
+  if ($installedExts -contains $ext.id) {
+   Write-OK "$($ext.name) already installed"
+  } else {
+   Write-Host " Installing $($ext.name)..." -ForegroundColor DarkGray
+   code --install-extension $ext.id --force 2>$null
+   if ($LASTEXITCODE -eq 0) {
+    Write-OK "$($ext.name) installed"
+   } else {
+    Write-Host " [--] Could not install $($ext.name) -- install manually: code --install-extension $($ext.id)" -ForegroundColor Yellow
+   }
+  }
+ }
+} else {
+ Write-Skip "VS Code CLI (code) not found -- install companion extensions manually:"
+ foreach ($ext in $companionExtensions) {
+  Write-Host "  code --install-extension $($ext.id)" -ForegroundColor DarkGray
+ }
+}
+
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green

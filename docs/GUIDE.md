@@ -195,6 +195,42 @@ PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/mast
 3. **Copy** -- Merges files into your project (skips existing files unless `-Force`)
 4. **Configure** -- Generates `agent-status.json`, `config.json`, output directories
 5. **Setup** -- Interactive: git init, hooks install, username config (skip with `-NoSetup`)
+6. **Companion Extensions** -- Installs recommended VS Code extensions (e.g., GitHub Copilot for Azure)
+
+---
+
+## Companion Extensions
+
+AgentX works with companion extensions that provide complementary capabilities. The installer auto-installs these when the `code` CLI is available.
+
+| Extension | ID | Purpose | Auto-Installed |
+|-----------|-----|---------|----------------|
+| **GitHub Copilot for Azure** | `ms-azuretools.vscode-azure-github-copilot` | Operational Foundry playbooks: create, deploy, invoke, trace, troubleshoot agents | [PASS] Yes |
+| **GitHub Copilot** | `GitHub.copilot` | AI code completions (required for Copilot Chat) | Prerequisite |
+| **GitHub Copilot Chat** | `GitHub.copilot-chat` | Chat interface for agent interactions | Prerequisite |
+
+### Why GitHub Copilot for Azure?
+
+Most AI projects require Azure AI Foundry for agent deployment. Microsoft's extension provides **15+ detailed operational sub-skills** that complement AgentX's design-level skills:
+
+| Layer | Provider | Covers |
+|-------|----------|--------|
+| **Design and Architecture** | AgentX `azure-foundry` | Model selection, eval strategy, guardrails, deployment patterns |
+| **Operational Execution** | GitHub Copilot for Azure | Step-by-step: create agents, deploy containers, invoke endpoints, trace, troubleshoot, RBAC, quota |
+
+Both extensions' skills load simultaneously in VS Code Copilot -- no configuration needed.
+
+### Manual Install
+
+If the installer couldn't auto-install (no `code` CLI):
+
+```bash
+code --install-extension ms-azuretools.vscode-azure-github-copilot
+```
+
+### Workspace Recommendations
+
+AgentX includes a `.vscode/extensions.json` that recommends companion extensions. VS Code will prompt users to install them when opening the workspace.
 
 ---
 

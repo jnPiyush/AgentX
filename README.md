@@ -305,6 +305,10 @@ gh label create "type:bug" --color "EF4444"
 gh label create "needs:ux" --color "EC4899"
 ```
 
+### Companion Extensions
+
+The installer auto-installs **GitHub Copilot for Azure** (`ms-azuretools.vscode-azure-github-copilot`) -- essential for AI agent projects on Azure Foundry. It provides 15+ operational sub-skills (create, deploy, invoke, trace, troubleshoot) that complement AgentX's design-level skills. See [Companion Extensions](docs/GUIDE.md#companion-extensions) for details.
+
 ---
 
 ## 🏗️ Architecture

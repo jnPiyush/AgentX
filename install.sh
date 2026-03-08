@@ -404,6 +404,27 @@ else
  skip "Setup skipped (--no-setup)"
 fi
 
+# -- Step 5: Companion extensions ----------------------
+echo -e "${C}[5] Companion extensions...${N}"
+COMPANION_EXTS="ms-azuretools.vscode-azure-github-copilot"
+COMPANION_NAMES="GitHub Copilot for Azure"
+if command -v code &>/dev/null; then
+ INSTALLED_EXTS=$(code --list-extensions 2>/dev/null || true)
+ if echo "$INSTALLED_EXTS" | grep -qF "$COMPANION_EXTS"; then
+  ok "$COMPANION_NAMES already installed"
+ else
+  echo -e "${D} Installing $COMPANION_NAMES...${N}"
+  if code --install-extension "$COMPANION_EXTS" --force &>/dev/null; then
+   ok "$COMPANION_NAMES installed"
+  else
+   echo -e "${Y} [--] Could not install $COMPANION_NAMES -- install manually: code --install-extension $COMPANION_EXTS${N}"
+  fi
+ fi
+else
+ skip "VS Code CLI (code) not found -- install companion extensions manually:"
+ echo -e "${D}  code --install-extension $COMPANION_EXTS${N}"
+fi
+
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"

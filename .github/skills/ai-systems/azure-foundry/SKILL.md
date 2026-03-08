@@ -1,21 +1,30 @@
 ---
 name: azure-foundry
 description: >-
-  Build production AI agents on Azure AI Foundry with agent lifecycle management,
-  model selection, tracing, evaluation, and deployment patterns. Use when building
-  AI agents on Azure Foundry, selecting models, implementing tracing with Application
-  Insights, or evaluating agent quality with Foundry evals.
+  Design and architect AI agents on Azure AI Foundry -- lifecycle planning,
+  model selection strategy, evaluation frameworks, guardrail design, and
+  deployment patterns. Use when designing agent architecture on Foundry,
+  choosing models, planning evaluation strategy, or defining guardrails.
+  For step-by-step operational workflows (create, deploy, invoke, trace,
+  troubleshoot), install the companion extension: GitHub Copilot for Azure
+  (ms-azuretools.vscode-azure-github-copilot).
 ---
 
 # Azure AI Foundry
 
+> **Companion Extension**: For detailed operational playbooks (create agents,
+> deploy containers, invoke endpoints, trace with App Insights, troubleshoot),
+> install **GitHub Copilot for Azure** (`ms-azuretools.vscode-azure-github-copilot`).
+> It provides 15+ step-by-step sub-skills that complement this design-level skill.
+> AgentX installs it automatically as a dependency.
+
 ## When to Use This Skill
 
-- Building AI agents on Azure Foundry or Azure AI Agent Service
-- Selecting models via GitHub Models or Azure AI model catalog
-- Deploying agent services to Foundry managed endpoints or AKS
-- Implementing tracing with Application Insights and OpenTelemetry
-- Evaluating agent quality with Foundry evals (RAGAS, LLM-as-judge)
+- **Designing** agent architecture on Azure Foundry or Azure AI Agent Service
+- **Selecting** models via GitHub Models or Azure AI model catalog (cost/quality tradeoffs)
+- **Planning** evaluation strategy with Foundry evals (RAGAS, LLM-as-judge)
+- **Defining** guardrails, safety instructions, and content filtering policies
+- **Choosing** deployment patterns (managed endpoint vs AKS vs serverless)
 
 ## Agent Lifecycle
 
@@ -95,3 +104,20 @@ Run evals before every deployment:
 - [ ] Fallback model chain defined
 - [ ] Token limits set per conversation turn
 - [ ] Content filters enabled
+
+## Companion Extension
+
+This skill covers **design and architecture** for Azure AI Foundry agents.
+For **operational execution** (step-by-step create, deploy, invoke, trace,
+troubleshoot, RBAC, quota management), install:
+
+- **GitHub Copilot for Azure** (`ms-azuretools.vscode-azure-github-copilot`)
+- Marketplace: Search "GitHub Copilot for Azure" in VS Code Extensions
+- AgentX includes this as an `extensionDependencies` -- it installs automatically
+
+The two extensions are complementary:
+
+| Layer | Extension | Covers |
+|-------|-----------|--------|
+| Design | AgentX `azure-foundry` | Architecture, model selection, eval strategy, guardrails |
+| Execution | GitHub Copilot for Azure | Create, deploy, invoke, trace, troubleshoot, RBAC, quota |
