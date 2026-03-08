@@ -1,0 +1,101 @@
+name: Issue Triage
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Classify Issue
+        id: classify
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          TITLE_LOWER=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]')
+
+          # Type detection
+          if echo "$TITLE_LOWER" | grep -qE '\[bug\]|bug:|broken|crash|error'; then
+            echo "type=type:bug" >> "$GITHUB_OUTPUT"
+            echo "route=Engineer" >> "$GITHUB_OUTPUT"
+          elif echo "$TITLE_LOWER" | grep -qE '\[epic\]|epic:'; then
+            echo "type=type:epic" >> "$GITHUB_OUTPUT"
+            echo "route=Product Manager" >> "$GITHUB_OUTPUT"
+          elif echo "$TITLE_LOWER" | grep -qE '\[feature\]|feature:'; then
+            echo "type=type:feature" >> "$GITHUB_OUTPUT"
+            echo "route=Architect" >> "$GITHUB_OUTPUT"
+          elif echo "$TITLE_LOWER" | grep -qE '\[spike\]|spike:|research'; then
+            echo "type=type:spike" >> "$GITHUB_OUTPUT"
+            echo "route=Architect" >> "$GITHUB_OUTPUT"
+          elif echo "$TITLE_LOWER" | grep -qE '\[docs\]|docs:|documentation'; then
+            echo "type=type:docs" >> "$GITHUB_OUTPUT"
+            echo "route=Engineer" >> "$GITHUB_OUTPUT"
+          elif echo "$TITLE_LOWER" | grep -qE '\[devops\]|devops:|pipeline|deploy|ci/cd'; then
+            echo "type=type:devops" >> "$GITHUB_OUTPUT"
+            echo "route=DevOps Engineer" >> "$GITHUB_OUTPUT"
+          elif echo "$TITLE_LOWER" | grep -qE '\[test\]|testing:|certification'; then
+            echo "type=type:testing" >> "$GITHUB_OUTPUT"
+            echo "route=Tester" >> "$GITHUB_OUTPUT"
+          elif echo "$TITLE_LOWER" | grep -qE 'power.bi|report|dashboard|dax'; then
+            echo "type=type:powerbi" >> "$GITHUB_OUTPUT"
+            echo "route=Power BI Analyst" >> "$GITHUB_OUTPUT"
+          elif echo "$TITLE_LOWER" | grep -qE 'ml|ai|llm|model|genai|data.science'; then
+            echo "type=type:data-science" >> "$GITHUB_OUTPUT"
+            echo "route=Data Scientist" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=type:story" >> "$GITHUB_OUTPUT"
+            echo "route=Engineer" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Domain detection
+          DOMAINS=""
+          if echo "$TITLE_LOWER $ISSUE_BODY" | grep -qiE 'ai|llm|genai|agent|rag|embedding'; then
+            DOMAINS="needs:ai"
+          fi
+          if echo "$TITLE_LOWER $ISSUE_BODY" | grep -qiE 'ux|wireframe|prototype|design'; then
+            DOMAINS="$DOMAINS needs:ux"
+          fi
+          echo "domains=$DOMAINS" >> "$GITHUB_OUTPUT"
+
+      - name: Apply Labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const type = '${{ steps.classify.outputs.type }}';
+            const domains = '${{ steps.classify.outputs.domains }}'.trim().split(/\s+/).filter(Boolean);
+            const labels = [type, ...domains];
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: labels
+            });
+
+      - name: Post Routing Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const route = '${{ steps.classify.outputs.route }}';
+            const type = '${{ steps.classify.outputs.type }}';
+            const domains = '${{ steps.classify.outputs.domains }}'.trim();
+
+            let body = `**Auto-Triage**\n\n`;
+            body += `- **Type**: \`${type}\`\n`;
+            body += `- **Route to**: ${route}\n`;
+            if (domains) body += `- **Domain signals**: ${domains}\n`;
+            body += `\n> Classified by issue-triage workflow. Adjust labels if incorrect.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });

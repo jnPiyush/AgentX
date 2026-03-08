@@ -1,0 +1,19 @@
+{
+  "description": "Token budget limits for AgentX skill and documentation files. ~4 chars = 1 token.",
+  "defaults": {
+    ".github/skills/**/SKILL.md": 1500,
+    ".github/skills/**/references/**/*.md": 2000,
+    ".github/instructions/*.md": 1500,
+    ".github/agents/*.agent.md": 5000,
+    ".github/agents/internal/*.agent.md": 3000,
+    ".github/templates/*-TEMPLATE.md": 10000,
+    "docs/**/*.md": 8000
+  },
+  "overrides": {
+    "docs/adr/ADR-AgentX.md": 20000,
+    "docs/architecture/ARCH-AgentX.md": 15000,
+    "docs/architecture/MIGRATION-PLAN.md": 25000,
+    "docs/prd/PRD-AgentX.md": 50000,
+    "docs/specs/SPEC-AgentX.md": 45000
+  }
+}

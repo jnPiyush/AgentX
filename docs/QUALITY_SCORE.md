@@ -17,7 +17,7 @@
 
 ---
 
-## Component Scores (v8.1.4)
+## Component Scores (v8.2.0)
 
 ### Agent Definitions (.github/agents/)
 
@@ -49,13 +49,13 @@
 | Category | Count | Grade | Notes |
 |----------|-------|-------|-------|
 | Architecture | 5 | A | Core principles, security, performance, database, API design |
-| Development | 10 | A | Testing, error handling, iterative loop, code review, etc. |
+| Development | 11 | A | Testing, error handling, iterative loop, code review, token optimizer, etc. |
 | Languages | 8 | A | C#, Python, Go, Rust, React, Blazor, PostgreSQL, SQL Server |
 | Operations | 5 | A | Git, GitHub Actions, YAML pipelines, release mgmt, version control |
 | Infrastructure | 4 | A | Azure, Bicep, Terraform, containerization |
 | Data | 6 | A | Data analysis, Fabric, Databricks, Power BI |
-| AI Systems | 11 | A | Agent dev, prompt eng, RAG, drift, evaluation, MCP |
-| Design | 2 | A | UX/UI design, frontend/UI |
+| AI Systems | 12 | A | Agent dev, prompt eng, RAG, drift, evaluation, MCP, Azure Foundry |
+| Design | 3 | A | UX/UI design, prototype craft, frontend/UI |
 | Testing | 6 | A | E2E, integration, performance, security, production readiness |
 | Domain | 5 | B | Oil & gas, financial services, audit, tax, legal -- could add more verticals |
 
@@ -75,7 +75,7 @@
 
 | Script | Grade | Notes |
 |--------|-------|-------|
-| agentx.ps1 | A | Main CLI with 12 commands |
+| agentx.ps1 | A | Main CLI with 14 commands |
 | agentx.sh | B | Bash wrapper -- covers core commands, missing some PS1-only features |
 | agentic-runner.ps1 | B | Standalone loop works, no sub-agent chaining by design |
 | local-issue-manager.ps1 | A | Full CRUD for local issues |
@@ -124,8 +124,25 @@
 | Script | Grade | Notes |
 |--------|-------|-------|
 | validate-frontmatter.ps1 | B | Validates well, error messages now include remediation |
+| validate-references.ps1 | A | Scans all markdown links, reports broken references with severity |
+| token-counter.ps1 | A | Count/check/report with configurable limits from .token-limits.json |
+| score-skill.ps1 | A | 7-category skill scoring (40 pts max), batch mode |
+| score-output.ps1 | A | Agent output scoring for Engineer/Architect/PM roles |
+| validate-handoff.ps1 | A | Generate + validate structured handoff messages against JSON Schema |
+| validate-skill.ps1 | A | Unified skill validation pipeline (frontmatter + tokens + scoring + structure + references) |
+| eval-harness.ps1 | A | Skill eval framework (Phil Schmid pattern): 15 deterministic checks across trigger/instruction/convention dimensions, prompt-set testing, JSON output |
 | test-framework.ps1 | B | Basic test runner, could add parallel execution |
+| memory-scale-test.ps1 | A | Validates JsonObservationStore pattern at 1500+ observations (11 tests, performance thresholds) |
 | install.ps1 / install.sh | A | Cross-platform with upgrade detection |
+
+### CI/CD Workflows (.github/workflows/)
+
+| Workflow | Grade | Notes |
+|----------|-------|-------|
+| quality-gates.yml | A | 9 check steps: secrets, commits, docs, structure, tokens, skill validation, references, extension, agent validation |
+| issue-triage.yml | B | Auto-classifies issues by type and domain, posts routing comment |
+| skill-factory.yml | B | Scaffolds new skills from labeled issues, creates PR |
+| weekly-status.yml | B | Automated health report: counts, token budget, broken links |
 
 ---
 
@@ -137,4 +154,4 @@
 
 ---
 
-**Last updated**: v8.1.4
+**Last updated**: v8.2.0

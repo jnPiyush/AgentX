@@ -277,6 +277,18 @@ Copilot runs this loop natively within its agentic session.
 
 All tests pass; coverage >= 80%; lint clean; no unresolved TODO/FIXME markers.
 
+### Quantitative Scoring Gate
+
+After all done criteria pass, run the output scorer:
+
+```powershell
+.\scripts\score-output.ps1 -Role engineer -IssueNumber <issue>
+```
+
+The script scores 7 checks (45 pts max). Tier must be **Medium-High** (70%+) to proceed.
+If below threshold, read individual check results, fix the highest-point failure, re-run.
+See [IMPROVEMENT-LOOP.md](../skills/development/skill-creator/references/IMPROVEMENT-LOOP.md) for the full 12-step loop.
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

@@ -116,7 +116,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 <td width="50%">
 
 ### Framework Totals
-- **63 skills** across 10 categories
+- **66 skills** across 10 categories
 - **20 agent definitions** (11 stable + 9 preview)
 - **7 workflow types** via frontmatter handoffs (feature, epic, story, bug, spike, devops, docs)
 - **7 instruction files**, **11 prompts**, **7 templates**
@@ -142,7 +142,7 @@ AgentX is a **multi-agent orchestration framework** that enables AI coding assis
 | Frontmatter Handoffs | `handoffs:` drives workflow routing and "Hand off to X" buttons |
 | CLI Frontmatter Workflow | `agentx.ps1 workflow` reads `.agent.md` handoffs (replaced TOML) |
 | Claude Code Commands | 15 `.claude/commands/*.md` stubs with context-first rule and quality loop |
-| 63 Skills | Skills index across 10 categories |
+| 66 Skills | Skills index across 10 categories |
 | Multi-Platform | Works across VS Code, Copilot CLI, Claude Code, and GitHub.com |
 
 ### Previous Versions

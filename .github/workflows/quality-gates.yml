@@ -104,6 +104,111 @@ jobs:
 
           echo "[PASS] File structure validation complete"
 
+      - name: Token Budget Check
+        run: |
+          echo "Checking token budgets..."
+          VIOLATIONS=0
+          while IFS= read -r f; do
+            CHARS=$(wc -c < "$f")
+            TOKENS=$((CHARS / 4))
+            LIMIT=5000
+            if [ "$TOKENS" -gt "$LIMIT" ]; then
+              echo "[FAIL] $f: $TOKENS tokens (limit: $LIMIT)"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done < <(find .github/skills -name 'SKILL.md' 2>/dev/null || true)
+
+          while IFS= read -r f; do
+            CHARS=$(wc -c < "$f")
+            TOKENS=$((CHARS / 4))
+            LIMIT=3000
+            if [ "$TOKENS" -gt "$LIMIT" ]; then
+              echo "[FAIL] $f: $TOKENS tokens (limit: $LIMIT)"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done < <(find .github/instructions -name '*.instructions.md' 2>/dev/null || true)
+
+          if [ "$VIOLATIONS" -gt 0 ]; then
+            echo "[FAIL] $VIOLATIONS file(s) exceed token budget"
+            exit 1
+          fi
+          echo "[PASS] All files within token budget"
+
+      - name: Skill Validation Pipeline
+        run: |
+          echo "Running skill validation pipeline..."
+          FAIL=0
+          for skill_dir in .github/skills/*/; do
+            for sub_dir in "$skill_dir"*/; do
+              if [ -f "$sub_dir/SKILL.md" ]; then
+                SKILL_NAME=$(basename "$sub_dir")
+                CONTENT=$(cat "$sub_dir/SKILL.md")
+
+                # Check frontmatter exists
+                if ! echo "$CONTENT" | head -1 | grep -q '^---'; then
+                  echo "[FAIL] $SKILL_NAME: missing YAML frontmatter"
+                  FAIL=$((FAIL + 1))
+                  continue
+                fi
+
+                # Check name field
+                if ! echo "$CONTENT" | grep -q 'name:'; then
+                  echo "[FAIL] $SKILL_NAME: missing name field in frontmatter"
+                  FAIL=$((FAIL + 1))
+                fi
+
+                # Check description field
+                if ! echo "$CONTENT" | grep -q 'description:'; then
+                  echo "[FAIL] $SKILL_NAME: missing description field in frontmatter"
+                  FAIL=$((FAIL + 1))
+                fi
+
+                # Check token budget (5000 tokens ~ 20000 chars)
+                CHARS=$(wc -c < "$sub_dir/SKILL.md")
+                TOKENS=$((CHARS / 4))
+                if [ "$TOKENS" -gt 5000 ]; then
+                  echo "[FAIL] $SKILL_NAME: $TOKENS tokens (limit: 5000)"
+                  FAIL=$((FAIL + 1))
+                fi
+
+                # Check directory name is kebab-case
+                if ! echo "$SKILL_NAME" | grep -qE '^[a-z][a-z0-9-]*$'; then
+                  echo "[FAIL] $SKILL_NAME: directory name not kebab-case"
+                  FAIL=$((FAIL + 1))
+                fi
+              fi
+            done
+          done
+          if [ "$FAIL" -gt 0 ]; then
+            echo "[FAIL] $FAIL skill validation error(s) found"
+            exit 1
+          fi
+          echo "[PASS] All skills passed validation pipeline"
+
+      - name: Reference Link Validation
+        run: |
+          echo "Validating cross-references in key docs..."
+          BROKEN=0
+          for doc in AGENTS.md Skills.md docs/WORKFLOW.md README.md; do
+            if [ ! -f "$doc" ]; then continue; fi
+            while IFS= read -r link; do
+              TARGET=$(echo "$link" | grep -oP '(?<=\]\()[^)#]+' | head -1)
+              if [ -z "$TARGET" ]; then continue; fi
+              if echo "$TARGET" | grep -qE '^https?://|^mailto:'; then continue; fi
+              DIR=$(dirname "$doc")
+              RESOLVED="$DIR/$TARGET"
+              if [ ! -e "$RESOLVED" ]; then
+                echo "[FAIL] $doc: broken link -> $TARGET"
+                BROKEN=$((BROKEN + 1))
+              fi
+            done < <(grep -oP '\[[^\]]+\]\([^)]+\)' "$doc" 2>/dev/null || true)
+          done
+          if [ "$BROKEN" -gt 0 ]; then
+            echo "[WARN] $BROKEN broken link(s) found (advisory)"
+          else
+            echo "[PASS] All references valid"
+          fi
+
       - name: Extension Lint and Test
         if: hashFiles('vscode-extension/package.json') != ''
         working-directory: vscode-extension

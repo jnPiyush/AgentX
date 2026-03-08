@@ -1,12 +1,20 @@
 ---
 name: prototype-craft
-description: 'Craft visually polished, production-quality HTML/CSS prototypes with modern styling, typography, color theory, and micro-interactions for UX deliverables.'
+description: 'Craft visually polished, production-quality HTML/CSS prototypes with modern styling, typography, color theory, and micro-interactions. Use when building UX deliverables that need visual polish beyond wireframes, implementing color systems, typography scales, elevation shadows, or smooth transitions for interactive prototypes.'
 category: design
 ---
 
 # Prototype Craft
 
 Build beautiful, interactive HTML/CSS prototypes that look and feel like real products -- not wireframes.
+
+## When to Use This Skill
+
+- Building HTML/CSS prototypes that need production-quality visual polish
+- Implementing color palettes, typography scales, and spacing systems
+- Adding micro-interactions, transitions, and elevation shadows
+- Crafting responsive layouts with modern CSS (Grid, Flexbox, custom properties)
+- Polishing UX deliverables beyond skeletal wireframes
 
 ## Core Rules
 

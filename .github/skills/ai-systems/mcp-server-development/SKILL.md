@@ -156,6 +156,26 @@ Add to `.vscode/mcp.json` (or user settings):
 }
 ```
 
+### 6. Repository-Level MCP Configuration
+
+For sharing MCP server config across a team, add `.mcp.json` at the repo root:
+
+```json
+{
+ "servers": {
+ "shared-tools": {
+ "command": "npx",
+ "args": ["-y", "@team/mcp-tools"],
+ "env": { "DB_URL": "${input:dbUrl}" }
+ }
+ }
+}
+```
+
+- `.mcp.json` -- Repository root, shared via Git, team-wide defaults
+- `.vscode/mcp.json` -- Workspace level, can override repo-level settings
+- Use `${input:varName}` for secrets to prompt users (never hardcode)
+
 ## Anti-Patterns
 
 - **Mega-tools**: One tool that accepts a "command" string and switches behavior

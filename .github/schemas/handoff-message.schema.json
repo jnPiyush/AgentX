@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentX Handoff Message",
+  "description": "Schema for structured agent-to-agent communication during handoffs.",
+  "type": "object",
+  "required": ["version", "handoff"],
+  "properties": {
+    "version": {
+      "const": "1.0",
+      "description": "Schema version."
+    },
+    "handoff": {
+      "type": "object",
+      "required": ["fromAgent", "toAgent", "issueNumber", "timestamp", "context"],
+      "properties": {
+        "fromAgent": {
+          "type": "string",
+          "description": "Agent role handing off.",
+          "enum": ["agent-x", "pm", "ux", "architect", "data-scientist", "engineer", "reviewer", "reviewer-auto", "devops", "tester", "powerbi", "consulting-research", "agile-coach", "github-ops", "ado-ops"]
+        },
+        "toAgent": {
+          "type": "string",
+          "description": "Target agent role receiving the handoff.",
+          "enum": ["agent-x", "pm", "ux", "architect", "data-scientist", "engineer", "reviewer", "reviewer-auto", "devops", "tester", "powerbi", "consulting-research", "agile-coach", "github-ops", "ado-ops"]
+        },
+        "issueNumber": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Issue number being handed off."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of handoff."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Backlog", "Ready", "In Progress", "In Review", "Validating", "Done"],
+          "description": "Issue status after this handoff."
+        },
+        "context": {
+          "type": "object",
+          "required": ["summary"],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 2000,
+              "description": "What was done and what the next agent needs to know."
+            },
+            "artifacts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["path", "type"],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "Relative path to the deliverable file."
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["prd", "adr", "spec", "ux", "code", "test", "review", "pipeline", "certification", "report", "other"],
+                    "description": "Artifact type."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "What this artifact contains."
+                  }
+                }
+              },
+              "description": "Files produced by the handing-off agent."
+            },
+            "decisions": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Key decisions made during this phase."
+            },
+            "openQuestions": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Unresolved questions for the next agent."
+            },
+            "blockers": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Known blockers or risks."
+            },
+            "labels": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Labels applied or recommended."
+            }
+          }
+        },
+        "validation": {
+          "type": "object",
+          "properties": {
+            "handoffChecked": {
+              "type": "boolean",
+              "description": "Whether validate-handoff was run."
+            },
+            "contextCaptured": {
+              "type": "boolean",
+              "description": "Whether capture-context was run."
+            },
+            "deliverablesCommitted": {
+              "type": "boolean",
+              "description": "Whether deliverables were committed with issue ref."
+            },
+            "loopCompleted": {
+              "type": "boolean",
+              "description": "Whether the iterative quality loop completed."
+            },
+            "scoreResult": {
+              "type": "object",
+              "properties": {
+                "score": { "type": "integer" },
+                "maxScore": { "type": "integer" },
+                "tier": {
+                  "type": "string",
+                  "enum": ["High", "Medium-High", "Medium", "Low", "Invalid"]
+                }
+              },
+              "description": "Output from score-output.ps1."
+            }
+          }
+        }
+      }
+    }
+  }
+}

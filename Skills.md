@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 64 skills across 10 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 66 skills across 10 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 64 skills across 10 categori
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 64 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 66 skills. Use Quick Reference below.
 
 ---
 
@@ -33,6 +33,8 @@ description: 'Compressed skill index for AI agents. 64 skills across 10 categori
 | **AI Agent Development** | [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [Cognitive Arch](.github/skills/ai-systems/cognitive-architecture/SKILL.md), [MCP Server](.github/skills/ai-systems/mcp-server-development/SKILL.md), [Prompt Eng](.github/skills/ai-systems/prompt-engineering/SKILL.md) |
 | **MCP Apps / Interactive UI** | [MCP Apps](.github/skills/ai-systems/mcp-apps-development/SKILL.md), [MCP Server](.github/skills/ai-systems/mcp-server-development/SKILL.md), [React](.github/skills/languages/react/SKILL.md), [Frontend/UI](.github/skills/design/frontend-ui/SKILL.md) |
 | **Iterative / Quality Loop** | [Iterative Loop](.github/skills/development/iterative-loop/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
+| **Token Budget / Context** | [Token Optimizer](.github/skills/development/token-optimizer/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md) |
+| **Azure AI Foundry Agent** | [Azure Foundry](.github/skills/ai-systems/azure-foundry/SKILL.md), [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md) |
 | **Model Fine-Tuning** | [Model Fine-Tuning](.github/skills/ai-systems/model-fine-tuning/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md), [Feedback Loops](.github/skills/ai-systems/feedback-loops/SKILL.md) |
 | **RAG / Retrieval** | [RAG Pipelines](.github/skills/ai-systems/rag-pipelines/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md), [Cognitive Arch](.github/skills/ai-systems/cognitive-architecture/SKILL.md) |
 | **ML Monitoring / Drift** | [Model Drift](.github/skills/ai-systems/model-drift-management/SKILL.md), [Data Drift](.github/skills/ai-systems/data-drift-strategy/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md) |
@@ -55,7 +57,7 @@ description: 'Compressed skill index for AI agents. 64 skills across 10 categori
 
 ---
 
-## Skills Directory (64 skills -- pipe-delimited)
+## Skills Directory (66 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -76,6 +78,7 @@ dev|logging|.github/skills/development/logging-monitoring/SKILL.md|structured-lo
 dev|code-review|.github/skills/development/code-review/SKILL.md|checklists,automated-checks,compliance
 dev|iterative-loop|.github/skills/development/iterative-loop/SKILL.md|quality-loop,refinement,completion-criteria
 dev|skill-creator|.github/skills/development/skill-creator/SKILL.md|scaffold,validate,maintain-skills
+dev|token-optimizer|.github/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
 lang|csharp|.github/skills/languages/csharp/SKILL.md|C#,.NET,EF-Core,DI,async/await,xUnit
 lang|python|.github/skills/languages/python/SKILL.md|Python,type-hints,pytest,dataclasses
 lang|go|.github/skills/languages/go/SKILL.md|Go-modules,goroutines,channels
@@ -111,6 +114,7 @@ ai|evaluation|.github/skills/ai-systems/ai-evaluation/SKILL.md|RAGAS,LLM-as-judg
 ai|rag-pipelines|.github/skills/ai-systems/rag-pipelines/SKILL.md|chunking,retrieval,reranking,hybrid-search,embeddings
 ai|context-mgmt|.github/skills/ai-systems/context-management/SKILL.md|compaction,summarization,token-budget,sliding-window
 ai|feedback-loops|.github/skills/ai-systems/feedback-loops/SKILL.md|RLHF,RLAIF,user-feedback,preference-data,continuous-improvement
+ai|azure-foundry|.github/skills/ai-systems/azure-foundry/SKILL.md|Foundry,agent-lifecycle,model-selection,tracing,guardrails,deployment
 design|ux-ui|.github/skills/design/ux-ui-design/SKILL.md|wireframes,user-flows,HTML/CSS,a11y
 design|prototype-craft|.github/skills/design/prototype-craft/SKILL.md|visual-polish,color-palette,typography,CSS-craft,Tailwind,transitions,elevation
 design|frontend-ui|.github/skills/design/frontend-ui/SKILL.md|HTML5,CSS3,Tailwind,responsive,BEM
@@ -134,7 +138,7 @@ domain|legal|.github/skills/domain/legal/SKILL.md|litigation,corporate-law,IP,em
 Path: `.github/skills/{category}/{skill-name}/SKILL.md` (<5K tokens each)
 Optional: `scripts/*.ps1` (automation), `references/*.md` (extended docs), `assets/` (templates)
 
-Key scripts: `check-coverage.ps1` (Testing), `scan-security.ps1` (Security), `scan-secrets.ps1` (Security), `version-bump.ps1` (Release), `init-skill.ps1` (Skill Creator), `scaffold-cognitive.py` (Cognitive Arch)
+Key scripts: `check-coverage.ps1` (Testing), `scan-security.ps1` (Security), `scan-secrets.ps1` (Security), `version-bump.ps1` (Release), `init-skill.ps1` (Skill Creator), `scaffold-cognitive.py` (Cognitive Arch), `token-counter.ps1` (Token Optimizer), `score-skill.ps1` (Skill Creator), `score-output.ps1` (Quality Loop)
 
 ---
 
@@ -218,5 +222,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 64 skills (arch:5, dev:10, lang:8, ops:5, infra:4, data:6, ai:11, design:3, test:6, domain:5)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 66 skills (arch:5, dev:11, lang:8, ops:5, infra:4, data:6, ai:12, design:3, test:6, domain:5)
 

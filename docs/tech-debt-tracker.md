@@ -13,7 +13,6 @@
 |----|------|-------------|--------|-------|
 | TD-001 | VS Code Extension | Test coverage gaps in `agentic/`, `chat/`, and `memory/` modules | Regressions may go undetected | v8.0.0 |
 | TD-002 | Bash CLI | `agentx.sh` missing parity with `agentx.ps1` (config, loop, workflow commands) | Linux/macOS users have reduced CLI functionality | v8.0.0 |
-| TD-003 | Documentation | No automated link validation in CI -- broken cross-references can ship | Agents follow dead links, waste context | v8.0.0 |
 | TD-004 | Documentation | No automated doc count validation in CI -- counts can drift from reality | Agents given wrong counts, confusion in routing | v8.0.0 |
 
 ### Medium Priority
@@ -21,8 +20,6 @@
 | ID | Area | Description | Impact | Added |
 |----|------|-------------|--------|-------|
 | TD-005 | Preview Agents | 7 internal sub-agents (GitHub Ops, ADO Ops, etc.) need field-testing hardening | Edge cases may cause unexpected behavior | v8.0.0 |
-| TD-006 | Memory System | Git-backed observation store untested at scale (>1000 observations) | Performance degradation possible in long-lived repos | v8.0.0 |
-| TD-007 | Instruction Tokens | No automated token count enforcement for instruction files | Oversized instructions waste context budget | v8.0.0 |
 | TD-008 | Template Inputs | Not all templates declare `<!-- Inputs: -->` comment blocks | Agents may fill templates incorrectly | v8.0.0 |
 
 ### Low Priority
@@ -42,6 +39,9 @@
 | TD-R01 | AGENTS.md | Monolithic 920-line file crowding agent context | v8.0.0 | Split into slim AGENTS.md + docs/WORKFLOW.md |
 | TD-R02 | Documentation | Stale agent/skill/template counts across 4 files | v8.0.0 | Audited and fixed all counts (commit 3850f1e) |
 | TD-R03 | Frontmatter | validate-frontmatter.ps1 had terse error messages | v8.0.0 | Added remediation instructions to all error messages |
+| TD-R04 | Documentation | No automated link validation in CI (TD-003) | v8.2.0 | Added `scripts/validate-references.ps1` + reference check step in `quality-gates.yml` |
+| TD-R05 | Instruction Tokens | No automated token count enforcement (TD-007) | v8.2.0 | Added `scripts/token-counter.ps1`, `.token-limits.json`, token-optimizer skill, and CI token budget check |
+| TD-R06 | Memory System | Git-backed observation store untested at scale (>1000 observations) (TD-006) | v8.2.0 | Added `tests/memory-scale-test.ps1` - validates JsonObservationStore pattern at 1500+ observations (all 11 tests pass, performance thresholds met) |
 
 ---
 

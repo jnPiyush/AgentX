@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "AgentX - Multi-Agent Orchestration",
   "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
-  "version": "8.1.4",
+  "version": "8.2.0",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -303,6 +303,9 @@
         "path": "./.github/agentx/skills/ai-systems/ai-evaluation/SKILL.md"
       },
       {
+        "path": "./.github/agentx/skills/ai-systems/azure-foundry/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/ai-systems/cognitive-architecture/SKILL.md"
       },
       {
@@ -400,6 +403,9 @@
       },
       {
         "path": "./.github/agentx/skills/development/testing/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/token-optimizer/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/development/type-safety/SKILL.md"

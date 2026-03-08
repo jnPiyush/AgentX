@@ -45,7 +45,7 @@ compared to today where only VS Code is supported.
 | Capability | VS Code | Copilot CLI | Claude Code | GitHub.com Copilot |
 |-----------|---------|-------------|-------------|-------------------|
 | 12 agent roles | Custom runtime only | Not available | Via .claude/commands/ (separate files) | Not available |
-| 63 skills | Bundled in VSIX | Not available | Via applyTo in workspace | Not available |
+| 66 skills | Bundled in VSIX | Not available | Via applyTo in workspace | Not available |
 | 5 instructions | Bundled in VSIX | Not available | Via applyTo in workspace | Not available |
 | 11 prompts | Bundled in VSIX | Not available | Not available | Not available |
 | Agent routing | Custom agentRouter.ts | Not available | Manual agent selection | Not available |
@@ -61,7 +61,7 @@ compared to today where only VS Code is supported.
 | Capability | VS Code | Copilot CLI | Claude Code | GitHub.com Copilot |
 |-----------|---------|-------------|-------------|-------------------|
 | 12 agent roles | contributes.chatAgents (.agent.md) | copilot plugin install | .claude/commands/ + .github/agents/ | .github/agents/ in repo |
-| 63 skills | contributes.chatSkills | copilot plugin install | Workspace SKILL.md files (applyTo) | .github/skills/ in repo |
+| 66 skills | contributes.chatSkills | copilot plugin install | Workspace SKILL.md files (applyTo) | .github/skills/ in repo |
 | 5 instructions | contributes.chatInstructions | copilot plugin install | Workspace instruction files (applyTo) | .github/instructions/ in repo |
 | 11 prompts | contributes.chatPromptFiles | copilot plugin install | /project: commands | .github/prompts/ in repo |
 | Agent routing (AgentX mode) | Agent X hub: routes via `handoffs:` frontmatter + body instructions | Agent X body instructions | Agent X `/project:` command | Agent X in repo |
@@ -855,7 +855,7 @@ Plugin lives at `packs/agentx-copilot-cli/` with 4 files:
 
 ```
 packs/agentx-copilot-cli/
-  manifest.json       # Plugin metadata (20 agents, 64 skills, 7 instructions, 12 prompts)
+  manifest.json       # Plugin metadata (20 agents, 66 skills, 7 instructions, 12 prompts)
   install.ps1         # PowerShell installer (copies assets into target workspace)
   install.sh          # Bash installer (same functionality)
   README.md           # Documentation with usage, limitations, comparison table

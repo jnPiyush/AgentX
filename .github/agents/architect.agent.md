@@ -283,6 +283,18 @@ Copilot runs this loop natively within its agentic session.
 
 ADR documents 3+ options with decision rationale; Tech Spec has all required sections, diagrams only -- no code examples.
 
+### Quantitative Scoring Gate
+
+After all done criteria pass, run the output scorer:
+
+```powershell
+.\scripts\score-output.ps1 -Role architect -IssueNumber <issue>
+```
+
+The script scores 8 checks (40 pts max). Tier must be **Medium-High** (70%+) to proceed.
+If below threshold, read individual check results, fix the highest-point failure, re-run.
+See [IMPROVEMENT-LOOP.md](../skills/development/skill-creator/references/IMPROVEMENT-LOOP.md) for the full 12-step loop.
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

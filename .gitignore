@@ -59,6 +59,7 @@ build/
 .agentx/state/
 .agentx/sessions/
 .agentx/memory/
+.agentx/handoffs/
 
 # Cross-process file lock files (created by JsonFileLock / Lock-JsonFile)
 *.lock

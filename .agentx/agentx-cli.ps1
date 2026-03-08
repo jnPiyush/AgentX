@@ -1487,6 +1487,38 @@ function Invoke-LessonsHelp {
 }
 
 # ---------------------------------------------------------------------------
+# TOKENS: Token budget management
+# ---------------------------------------------------------------------------
+
+function Invoke-TokensCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'check' }
+    $scriptPath = Join-Path $Script:ROOT 'scripts/token-counter.ps1'
+    if (-not (Test-Path $scriptPath)) {
+        Write-Host "$($C.r)  Error: scripts/token-counter.ps1 not found.$($C.n)"
+        exit 1
+    }
+    & $scriptPath -Action $action
+}
+
+# ---------------------------------------------------------------------------
+# SCORE: Agent output quality scoring
+# ---------------------------------------------------------------------------
+
+function Invoke-ScoreCmd {
+    $role = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '' }
+    if (-not $role) { Write-Host 'Usage: agentx score <engineer|architect|pm> [issue-number]'; exit 1 }
+    $issue = if ($Script:SubArgs.Count -gt 1) { [int]$Script:SubArgs[1] } else { 0 }
+    $scriptPath = Join-Path $Script:ROOT 'scripts/score-output.ps1'
+    if (-not (Test-Path $scriptPath)) {
+        Write-Host "$($C.r)  Error: scripts/score-output.ps1 not found.$($C.n)"
+        exit 1
+    }
+    $params = @{ Role = $role }
+    if ($issue -gt 0) { $params.IssueNumber = $issue }
+    & $scriptPath @params
+}
+
+# ---------------------------------------------------------------------------
 # HELP
 # ---------------------------------------------------------------------------
 
@@ -1510,6 +1542,8 @@ $($C.w)  Commands:$($C.n)
   config [show|get|set]            View/update configuration
   issue <create|list|get|update|close|comment>  Issue management
   lessons [list|query|show|stats|promote|archive|clean]  Learning pipeline management
+  tokens [count|check|report]      Token budget management
+  score <engineer|architect|pm> [issue]  Score agent output quality
   git-sync [push|pull]             Push/pull data branch to/from remote
   version                          Show installed version
   help                             Show this help
@@ -1553,6 +1587,8 @@ switch ($Script:Command) {
     'lessons'  { Invoke-LessonsCmd }
     'git-sync' { Invoke-GitSyncCmd }
     'run'      { Invoke-RunCmd }
+    'tokens'   { Invoke-TokensCmd }
+    'score'    { Invoke-ScoreCmd }
     'version'  { Invoke-VersionCmd }
     'help'     { Invoke-HelpCmd }
     default {

@@ -127,12 +127,12 @@ ALL workflows include iteration by default (`iterate = true` in TOML). Default l
 
 Before routing any issue to the next agent, MUST verify:
 
-1. Current agent ran `.github/scripts/validate-handoff.sh`
-2. Context was captured via `.github/scripts/capture-context.sh`
+1. Run `scripts/validate-handoff.ps1 -IssueNumber <n> -FromAgent <role> -ToAgent <role>` to generate and validate a structured handoff message (schema: `.github/schemas/handoff-message.schema.json`)
+2. CLI validates deliverables exist: `.agentx/agentx.ps1 validate <issue-number> <role>`
 3. Deliverables were committed with issue reference
-4. Handoff comment was posted on the issue
+4. Handoff message saved to `.agentx/handoffs/handoff-<n>-<from>-to-<to>.json`
 
-**If any step is missing**: Block the transition, post a comment, request completion.
+**If any step fails**: Block the transition and request completion.
 
 ## PRD Intent Validation
 

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "positive_rest_api",
+    "prompt": "Design a REST API for managing user accounts with CRUD operations",
+    "should_trigger": true,
+    "expected_keywords": ["REST", "API", "design", "versioning"]
+  },
+  {
+    "id": "positive_pagination",
+    "prompt": "Add pagination to the /products endpoint",
+    "should_trigger": true,
+    "expected_keywords": ["pagination", "endpoint"]
+  },
+  {
+    "id": "positive_rate_limiting",
+    "prompt": "Implement rate limiting for our public API",
+    "should_trigger": true,
+    "expected_keywords": ["rate-limiting", "API"]
+  },
+  {
+    "id": "positive_openapi",
+    "prompt": "Generate OpenAPI documentation for our service",
+    "should_trigger": true,
+    "expected_keywords": ["OpenAPI", "API"]
+  },
+  {
+    "id": "positive_error_responses",
+    "prompt": "Standardize error response format across all REST endpoints",
+    "should_trigger": true,
+    "expected_keywords": ["REST", "error", "endpoint"]
+  },
+  {
+    "id": "positive_versioning",
+    "prompt": "Add API versioning to our service using URL path prefix",
+    "should_trigger": true,
+    "expected_keywords": ["versioning", "API"]
+  },
+  {
+    "id": "negative_database",
+    "prompt": "Create a PostgreSQL migration to add an index on the users table",
+    "should_trigger": false,
+    "expected_keywords": []
+  },
+  {
+    "id": "negative_frontend",
+    "prompt": "Build a React component for the login form",
+    "should_trigger": false,
+    "expected_keywords": []
+  },
+  {
+    "id": "negative_testing",
+    "prompt": "Write unit tests for the authentication module",
+    "should_trigger": false,
+    "expected_keywords": []
+  },
+  {
+    "id": "negative_deployment",
+    "prompt": "Set up a GitHub Actions workflow for CI/CD",
+    "should_trigger": false,
+    "expected_keywords": []
+  }
+]

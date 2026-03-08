@@ -1,0 +1,106 @@
+name: Skill Factory
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  scaffold:
+    if: contains(github.event.label.name, 'new-skill')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse Skill Request
+        id: parse
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          # Extract skill name from title: "[Skill] category/skill-name"
+          SKILL_NAME=$(echo "$ISSUE_TITLE" | grep -oP '(?<=\[Skill\]\s*)\S+' || echo "")
+          if [ -z "$SKILL_NAME" ]; then
+            echo "error=Could not parse skill name from title. Expected format: [Skill] category/skill-name" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CATEGORY=$(echo "$SKILL_NAME" | cut -d'/' -f1)
+          NAME=$(echo "$SKILL_NAME" | cut -d'/' -f2)
+          echo "category=$CATEGORY" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "path=.github/skills/$CATEGORY/$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Scaffold Skill
+        if: steps.parse.outputs.name != ''
+        run: |
+          SKILL_PATH="${{ steps.parse.outputs.path }}"
+          SKILL_NAME="${{ steps.parse.outputs.name }}"
+
+          mkdir -p "$SKILL_PATH"
+          mkdir -p "$SKILL_PATH/references"
+          mkdir -p "$SKILL_PATH/scripts"
+
+          cat > "$SKILL_PATH/SKILL.md" << 'SKILL_EOF'
+          ---
+          name: PLACEHOLDER_NAME
+          description: >-
+            TODO: Add a description of at least 50 characters explaining what this skill does
+            and when to use it.
+          ---
+
+          # PLACEHOLDER_NAME
+
+          > WHEN: TODO - Add trigger phrases describing when this skill should be loaded.
+
+          ## Rules
+
+          <!-- TODO: Add 3-5 core rules for this skill -->
+
+          1. Rule one
+          2. Rule two
+          3. Rule three
+
+          ## Patterns
+
+          <!-- TODO: Add common patterns and examples -->
+
+          ## Error Handling
+
+          <!-- TODO: Add error handling guidance specific to this skill -->
+
+          ## Checklist
+
+          - [ ] Description is 50+ characters
+          - [ ] WHEN: trigger phrases added
+          - [ ] At least 3 rules defined
+          - [ ] Error handling section filled
+          - [ ] Under 5,000 tokens
+          SKILL_EOF
+
+          # Replace placeholder
+          sed -i "s/PLACEHOLDER_NAME/$SKILL_NAME/g" "$SKILL_PATH/SKILL.md"
+
+          # Strip leading whitespace from heredoc
+          sed -i 's/^          //' "$SKILL_PATH/SKILL.md"
+
+      - name: Create Branch and PR
+        if: steps.parse.outputs.name != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="skill/${{ steps.parse.outputs.name }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add "${{ steps.parse.outputs.path }}"
+          git commit -m "chore: scaffold ${{ steps.parse.outputs.name }} skill (#${{ github.event.issue.number }})"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "chore: scaffold ${{ steps.parse.outputs.name }} skill (#${{ github.event.issue.number }})" \
+            --body "Scaffolded by Skill Factory workflow from #${{ github.event.issue.number }}. Fill in the TODOs." \
+            --base main \
+            --head "$BRANCH"

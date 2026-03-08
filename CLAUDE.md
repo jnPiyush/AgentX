@@ -9,7 +9,7 @@
 
 1. **[AGENTS.md](AGENTS.md)** - Map of all resources, quick-reference rules, pointers to detailed docs. Read for ANY coding or workflow task.
 2. **[docs/WORKFLOW.md](docs/WORKFLOW.md)** - Workflow, routing, handoff, status transitions, architecture. Read for multi-agent coordination.
-3. **[Skills.md](Skills.md)** - Production code standards index (63 skills across 10 categories). Use the Quick Reference table to pick 3-4 relevant skills per task, then read those SKILL.md files.
+3. **[Skills.md](Skills.md)** - Production code standards index (66 skills across 10 categories). Use the Quick Reference table to pick 3-4 relevant skills per task, then read those SKILL.md files.
 
 **When to skip AGENTS.md**: Answering questions, research, debugging only.
 

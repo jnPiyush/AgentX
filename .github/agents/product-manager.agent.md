@@ -251,6 +251,18 @@ Copilot runs this loop natively within its agentic session.
 
 PRD contains all required sections; child issues created with clear acceptance criteria; no contradictory constraints.
 
+### Quantitative Scoring Gate
+
+After all done criteria pass, run the output scorer:
+
+```powershell
+.\scripts\score-output.ps1 -Role pm -IssueNumber <issue>
+```
+
+The script scores 6 checks (33 pts max). Tier must be **Medium-High** (70%+) to proceed.
+If below threshold, read individual check results, fix the highest-point failure, re-run.
+See [IMPROVEMENT-LOOP.md](../skills/development/skill-creator/references/IMPROVEMENT-LOOP.md) for the full 12-step loop.
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

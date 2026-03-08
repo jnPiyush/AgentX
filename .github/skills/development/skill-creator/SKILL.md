@@ -142,14 +142,38 @@ Skills load in 3 tiers to manage context window tokens:
 - [ ] Frontmatter has `metadata.version` (recommended)
 - [ ] SKILL.md is under 500 lines
 - [ ] Has a decision tree section
-- [ ] Has "When to Use" section
+- [ ] Has "When to Use" section with WHEN: trigger phrase
 - [ ] Has "Core Rules" section
+- [ ] Has "Error Handling" section
 - [ ] Has "Anti-Patterns" section
 - [ ] Large examples are in references/ (not inline)
 - [ ] Executable tools are in scripts/ (not just documented)
 - [ ] Reusable templates/starter code in assets/ (not inline)
 - [ ] `prerequisites` listed if skill requires external tools
 - [ ] Added to Skills.md master index
+
+## Required Sections Standard
+
+Every SKILL.md MUST include these sections:
+
+| Section | Purpose |
+|---------|---------|
+| Frontmatter | `name`, `description` (50+ chars) |
+| When to Use | WHEN: trigger phrase describing file patterns and keywords |
+| Decision Tree | Quick routing for sub-decisions |
+| Core Rules | 3-5 actionable rules |
+| Error Handling | What to do when things go wrong in this skill domain |
+| Checklist | Pre-handoff verification items |
+
+**WHEN: Trigger Phrase**: Every skill SHOULD start with a `> WHEN:` blockquote after the title
+that describes when to load the skill. This enables better routing by agents.
+
+Example:
+```markdown
+# API Design
+
+> WHEN: Creating REST endpoints, designing API versioning, adding pagination or rate limiting.
+```
 
 ## Anti-Patterns
 
