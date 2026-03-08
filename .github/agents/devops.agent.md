@@ -30,7 +30,7 @@ agents:
   - OpsMonitor
 handoffs:
   - label: "Pipelines Ready -> Engineer or Reviewer"
-    agent: Engineer
+    agent: AgentX Engineer
     prompt: "CI/CD pipelines are ready. Query backlog for next Ready issue."
     send: false
 ---

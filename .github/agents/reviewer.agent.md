@@ -30,12 +30,12 @@ agents:
   - ADOOps
 handoffs:
   - label: "Approve -> DevOps + Tester"
-    agent: DevOps
+    agent: AgentX DevOps Engineer
     prompt: "Query backlog for highest priority issue with Status=Validating. Validate CI/CD and deployment readiness."
     send: false
     context: "DevOps and Tester validate in parallel after approval"
   - label: "Request Changes -> Engineer"
-    agent: Engineer
+    agent: AgentX Engineer
     prompt: "Query backlog for highest priority issue with Status=In Progress and needs:changes label. Address review feedback."
     send: false
 ---

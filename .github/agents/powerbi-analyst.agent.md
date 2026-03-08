@@ -33,7 +33,7 @@ agents:
   - ProductManager
 handoffs:
   - label: "Hand off to Reviewer"
-    agent: Reviewer
+    agent: AgentX Reviewer
     prompt: "Query backlog for highest priority issue with Status=In Review. Review the Power BI implementation."
     send: false
 ---

@@ -30,7 +30,7 @@ agents:
   - ProductManager
 handoffs:
   - label: "Hand off to Architect"
-    agent: Architect
+    agent: AgentX Architect
     prompt: "Query backlog for highest priority issue with Status=Ready and PRD complete. Design architecture for that issue."
     send: false
     context: "Architect can work in parallel with UX"

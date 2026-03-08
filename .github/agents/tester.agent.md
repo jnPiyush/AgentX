@@ -30,12 +30,12 @@ agents:
   - ADOOps
 handoffs:
   - label: "Defects Found -> Engineer"
-    agent: Engineer
+    agent: AgentX Engineer
     prompt: "Query backlog for highest priority issue with type:bug label. Fix the defect."
     send: false
     context: "Tester creates bug issues for each defect, Engineer fixes them"
   - label: "Certification Complete -> Done"
-    agent: Agent-X
+    agent: AgentX
     prompt: "Testing certification complete. Ready for go/no-go decision."
     send: false
 ---

@@ -32,7 +32,7 @@ agents:
   - UXDesigner
 handoffs:
   - label: "Hand off to Engineer"
-    agent: Engineer
+    agent: AgentX Engineer
     prompt: "Query backlog for highest priority issue with Status=Ready and ADR/Spec complete. Implement the solution."
     send: false
 ---
