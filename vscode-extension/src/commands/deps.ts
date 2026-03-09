@@ -9,16 +9,16 @@ export function registerDepsCommand(
  context: vscode.ExtensionContext,
  agentx: AgentXContext
 ) {
- const cmd = vscode.commands.registerCommand('agentx.checkDeps', async () => {
+ const cmd = vscode.commands.registerCommand('agentx.checkDeps', async (providedIssueNumber?: string) => {
  if (!await agentx.checkInitialized()) {
  vscode.window.showWarningMessage('AgentX is not initialized.');
  return;
  }
 
- const issueNumber = await vscode.window.showInputBox({
- prompt: 'Enter issue number to check dependencies',
- placeHolder: '42',
- validateInput: (val) => /^\d+$/.test(val) ? null : 'Enter a valid issue number',
+ const issueNumber = providedIssueNumber ?? await vscode.window.showInputBox({
+  prompt: 'Enter issue number to check dependencies',
+  placeHolder: '42',
+  validateInput: (val) => /^\d+$/.test(val) ? null : 'Enter a valid issue number',
  });
  if (!issueNumber) { return; }
 

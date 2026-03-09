@@ -82,6 +82,16 @@ describe('registerDepsCommand', () => {
     assert.ok(fakeAgentx.runCli.notCalled);
   });
 
+  it('should use provided issue number without prompting', async () => {
+    fakeAgentx.checkInitialized.resolves(true);
+    const inputSpy = sandbox.spy(vscode.window, 'showInputBox');
+    fakeAgentx.runCli.resolves('No blockers found');
+
+    await registeredCallback('77');
+    assert.ok(inputSpy.notCalled);
+    assert.ok(fakeAgentx.runCli.calledWith('deps', ['77']));
+  });
+
   it('should show error when CLI throws', async () => {
     fakeAgentx.checkInitialized.resolves(true);
     sandbox.stub(vscode.window, 'showInputBox').resolves('42');

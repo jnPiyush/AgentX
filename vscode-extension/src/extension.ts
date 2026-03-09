@@ -6,8 +6,13 @@ import { registerDepsCommand } from './commands/deps';
 import { registerDigestCommand } from './commands/digest';
 import { registerLoopCommand } from './commands/loopCommand';
 import { registerShowIssueCommand } from './commands/showIssue';
+import { registerPendingClarificationCommand } from './commands/pendingClarification';
 import { AgentTreeProvider } from './views/agentTreeProvider';
+import { WorkTreeProvider } from './views/workTreeProvider';
+import { WorkflowTreeProvider } from './views/workflowTreeProvider';
 import { TemplateTreeProvider } from './views/templateTreeProvider';
+import { QualityTreeProvider } from './views/qualityTreeProvider';
+import { IntegrationTreeProvider } from './views/integrationTreeProvider';
 import { AgentXContext } from './agentxContext';
 import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
@@ -50,11 +55,19 @@ export function activate(context: vscode.ExtensionContext) {
  };
 
  // Register sidebar tree view providers (VS Code-only value)
+ const workTreeProvider = new WorkTreeProvider(agentxContext);
  const agentTreeProvider = new AgentTreeProvider(agentxContext);
+ const workflowTreeProvider = new WorkflowTreeProvider(agentxContext);
  const templateProvider = new TemplateTreeProvider(agentxContext);
+ const qualityTreeProvider = new QualityTreeProvider(agentxContext);
+ const integrationTreeProvider = new IntegrationTreeProvider(agentxContext);
 
+ vscode.window.registerTreeDataProvider('agentx-work', workTreeProvider);
  vscode.window.registerTreeDataProvider('agentx-agents', agentTreeProvider);
+ vscode.window.registerTreeDataProvider('agentx-workflow', workflowTreeProvider);
  vscode.window.registerTreeDataProvider('agentx-templates', templateProvider);
+ vscode.window.registerTreeDataProvider('agentx-quality', qualityTreeProvider);
+ vscode.window.registerTreeDataProvider('agentx-integrations', integrationTreeProvider);
 
  // Register commands
  registerInitializeCommand(context, agentxContext);
@@ -66,13 +79,18 @@ export function activate(context: vscode.ExtensionContext) {
 
  // Show issue detail (used by agent tree item click)
  registerShowIssueCommand(context, agentxContext);
+ registerPendingClarificationCommand(context, agentxContext);
 
  // Refresh all views
  context.subscriptions.push(
   vscode.commands.registerCommand('agentx.refresh', () => {
    agentxContext.invalidateCache();
+   workTreeProvider.refresh();
    agentTreeProvider.refresh();
+   workflowTreeProvider.refresh();
    templateProvider.refresh();
+   qualityTreeProvider.refresh();
+   integrationTreeProvider.refresh();
    clearInstructionCache();
     void updateUiState();
    vscode.window.showInformationMessage('AgentX: Refreshed all views.');
@@ -99,7 +117,12 @@ export function activate(context: vscode.ExtensionContext) {
   clearInstructionCache();
     updateUiState().then(() => {
      if (agentxContext.workspaceRoot) {
+        workTreeProvider.refresh();
         agentTreeProvider.refresh();
+        workflowTreeProvider.refresh();
+        templateProvider.refresh();
+        qualityTreeProvider.refresh();
+        integrationTreeProvider.refresh();
      }
     });
  };

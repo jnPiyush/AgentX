@@ -99,6 +99,12 @@
         "icon": "$(eye)"
       },
       {
+        "command": "agentx.showPendingClarification",
+        "title": "Show Pending Clarification",
+        "category": "AgentX",
+        "icon": "$(comment-discussion)"
+      },
+      {
         "command": "agentx.checkEnvironment",
         "title": "Check Environment",
         "category": "AgentX",
@@ -123,16 +129,40 @@
     "views": {
       "agentx-sidebar": [
         {
+          "id": "agentx-work",
+          "name": "Work",
+          "icon": "$(briefcase)",
+          "contextualTitle": "AgentX Work"
+        },
+        {
           "id": "agentx-agents",
           "name": "Agents",
           "icon": "$(organization)",
           "contextualTitle": "AgentX Agents"
         },
         {
+          "id": "agentx-workflow",
+          "name": "Workflow",
+          "icon": "$(git-pull-request)",
+          "contextualTitle": "AgentX Workflow"
+        },
+        {
           "id": "agentx-templates",
           "name": "Templates",
           "icon": "$(file-text)",
           "contextualTitle": "AgentX Templates"
+        },
+        {
+          "id": "agentx-quality",
+          "name": "Quality",
+          "icon": "$(checklist)",
+          "contextualTitle": "AgentX Quality"
+        },
+        {
+          "id": "agentx-integrations",
+          "name": "Integrations",
+          "icon": "$(plug)",
+          "contextualTitle": "AgentX Integrations"
         }
       ]
     },
@@ -141,13 +171,18 @@
         "view": "agentx-agents",
         "contents": "AgentX is ready to use.\n\nAdd integrations for GitHub or Azure DevOps:\n[Add Integration](command:agentx.initialize)\n\n[Learn more](https://github.com/jnPiyush/AgentX)",
         "when": "!agentx.githubConnected && !agentx.adoConnected"
+      },
+      {
+        "view": "agentx-work",
+        "contents": "No active work yet.\n\n[Run Workflow](command:agentx.runWorkflow)\n[Show Agent Status](command:agentx.showStatus)",
+        "when": "agentx.initialized"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "agentx.refresh",
-          "when": "view == agentx-agents || view == agentx-templates",
+          "when": "view == agentx-work || view == agentx-agents || view == agentx-workflow || view == agentx-templates || view == agentx-quality || view == agentx-integrations",
           "group": "navigation"
         }
       ],

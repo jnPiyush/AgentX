@@ -18,3 +18,4 @@
 - 2026-03-09: Keep bulky AgentX chat stdout out of the Copilot thread; send the full transcript to a VS Code output channel and inline only a short preview when the payload is large.
 - 2026-03-09: Keep `tests/test-install.ps1` aligned with the real installer contract; if the installer advertises an operational repo scaffold, it must create the expected docs/runtime folders and ship the core reference docs used by the framework.
 - 2026-03-09: Keep the VS Code `agentx.initialize` scaffold aligned with `install.ps1`; extension-based setup must leave behind the same core docs and runtime directories or the workspace drifts depending on how AgentX was installed.
+- 2026-03-09: In the VS Code sidebar, prefer contextual capability links over flat taxonomy dumps; show curated skills under each agent and put direct issue/dependency actions in `Work` where the active thread already provides the needed context.
