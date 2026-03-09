@@ -540,7 +540,9 @@
         },
         "agentx.companionDismissed": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "List of companion extension IDs for which the install prompt has been permanently dismissed."
         }
