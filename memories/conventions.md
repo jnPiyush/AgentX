@@ -20,3 +20,4 @@
 - 2026-03-09: Keep the VS Code `agentx.initialize` scaffold aligned with `install.ps1`; extension-based setup must leave behind the same core docs and runtime directories or the workspace drifts depending on how AgentX was installed.
 - 2026-03-09: In the VS Code sidebar, prefer contextual capability links over flat taxonomy dumps; show curated skills under each agent and put direct issue/dependency actions in `Work` where the active thread already provides the needed context.
 - 2026-03-09: When agent frontmatter uses human-readable preview labels like `Gemini 3.1 Pro (Preview) (copilot)`, add an explicit runner mapping in `.agentx/agentic-runner.ps1` instead of relying on partial substring matches.
+- 2026-03-09: For AgentX extension releases, prefer `npm run package` in `vscode-extension/` over manual asset edits because `prepare:chat`, `copy:assets`, and `compile` regenerate the bundled `vscode-extension/.github/agentx` tree and `out/` artifacts consistently.

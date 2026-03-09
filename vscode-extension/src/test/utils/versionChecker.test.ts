@@ -190,7 +190,7 @@ describe('versionChecker - silentVersionSync', () => {
   });
 
   it('should not error when no .agentx dir exists', async () => {
-    await silentVersionSync(tmpDir, '8.2.1', tmpDir);
+    await silentVersionSync(tmpDir, '8.2.2', tmpDir);
     // No .agentx/ dir = not initialized, should silently return
     assert.ok(!fs.existsSync(path.join(tmpDir, '.agentx', 'version.json')));
   });
@@ -203,10 +203,10 @@ describe('versionChecker - silentVersionSync', () => {
       installedAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
     }));
 
-    await silentVersionSync(tmpDir, '8.2.1', tmpDir);
+    await silentVersionSync(tmpDir, '8.2.2', tmpDir);
 
     const updated = JSON.parse(fs.readFileSync(path.join(agentxDir, 'version.json'), 'utf-8'));
-    assert.equal(updated.version, '8.2.1');
+    assert.equal(updated.version, '8.2.2');
     assert.equal(updated.mode, 'local'); // preserved
   });
 
@@ -214,12 +214,12 @@ describe('versionChecker - silentVersionSync', () => {
     const agentxDir = path.join(tmpDir, '.agentx');
     fs.mkdirSync(agentxDir, { recursive: true });
     const original = JSON.stringify({
-      version: '8.2.1', mode: 'local',
+      version: '8.2.2', mode: 'local',
       installedAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
     });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), original);
 
-    await silentVersionSync(tmpDir, '8.2.1', tmpDir);
+    await silentVersionSync(tmpDir, '8.2.2', tmpDir);
 
     const content = fs.readFileSync(path.join(agentxDir, 'version.json'), 'utf-8');
     assert.equal(content, original); // unchanged
@@ -234,14 +234,14 @@ describe('versionChecker - silentVersionSync', () => {
     });
     fs.writeFileSync(path.join(agentxDir, 'version.json'), original);
 
-    await silentVersionSync(tmpDir, '8.2.1', tmpDir);
+    await silentVersionSync(tmpDir, '8.2.2', tmpDir);
 
     const content = fs.readFileSync(path.join(agentxDir, 'version.json'), 'utf-8');
     assert.equal(content, original); // unchanged
   });
 
   it('should not error with empty workspace root', async () => {
-    await silentVersionSync('', '8.2.1', tmpDir);
+    await silentVersionSync('', '8.2.2', tmpDir);
     // Should return silently
   });
 });
