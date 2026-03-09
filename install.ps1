@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX v8.2.0 - Download, copy, configure.
+ Install AgentX v8.2.1 - Download, copy, configure.
 
 .PARAMETER Mode
  github - Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
@@ -113,7 +113,7 @@ try {
 # -- Banner ----------------------------------------------
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Cyan
-Write-Host "| AgentX v8.2.0 - AI Agent Orchestration |" -ForegroundColor Cyan
+Write-Host "| AgentX v8.2.1 - AI Agent Orchestration |" -ForegroundColor Cyan
 Write-Host "+===================================================+" -ForegroundColor Cyan
 Write-Host ""
 
@@ -140,12 +140,12 @@ if (Test-Path ".agentx/version.json") {
  } catch {}
 }
 
-if ($previousVersion -and $previousVersion -ne "8.2.0") {
+if ($previousVersion -and $previousVersion -ne "8.2.1") {
  $majorVersion = 0
  try { $majorVersion = [int]($previousVersion -split '\.')[0] } catch {}
 
  if ($majorVersion -lt 8) {
-    Write-Host "[!] Detected AgentX v$previousVersion - upgrading to v8.2.0..." -ForegroundColor Yellow
+    Write-Host "[!] Detected AgentX v$previousVersion - upgrading to v8.2.1..." -ForegroundColor Yellow
   Write-Host "  Uninstalling v$previousVersion and performing clean install." -ForegroundColor DarkGray
 
   # Back up user data that must survive the upgrade
@@ -280,12 +280,12 @@ Write-Host "[3] Configuring runtime..." -ForegroundColor Cyan
 # Version tracking
 $versionFile = ".agentx/version.json"
 @{
- version = "8.2.0"
+ version = "8.2.1"
  mode = $Mode
  installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 8.2.0 recorded"
+Write-OK "Version 8.2.1 recorded"
 
 # Merge AgentX entries into user's .gitignore
 $MARKER_START = "# --- AgentX (auto-generated, do not edit this block) ---"
@@ -516,7 +516,7 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
-Write-Host " AgentX v8.2.0 installed! [$displayMode]" -ForegroundColor Green
+Write-Host " AgentX v8.2.1 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White

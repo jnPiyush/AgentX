@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentX v8.2.0 Installer - Download, copy, configure.
+# AgentX v8.2.1 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -83,7 +83,7 @@ skip() { echo -e "${D}[--] $1${N}"; }
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| AgentX v8.2.0 - AI Agent Orchestration |${N}"
+echo -e "${C}| AgentX v8.2.1 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -115,11 +115,11 @@ if [ -f ".agentx/version.json" ]; then
  PREVIOUS_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' .agentx/version.json 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)"/\1/')
 fi
 
-if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "8.2.0" ]; then
+if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "8.2.1" ]; then
  MAJOR_VERSION=$(echo "$PREVIOUS_VERSION" | cut -d. -f1)
 
  if [ "$MAJOR_VERSION" -lt 8 ] 2>/dev/null; then
-  echo -e "${Y}[!] Detected AgentX v$PREVIOUS_VERSION - upgrading to v8.2.0...${N}"
+  echo -e "${Y}[!] Detected AgentX v$PREVIOUS_VERSION - upgrading to v8.2.1...${N}"
   echo -e "${D}  Uninstalling v$PREVIOUS_VERSION and performing clean install.${N}"
 
   # Back up user data that must survive the upgrade
@@ -208,8 +208,8 @@ mkdir -p .agentx/state .agentx/digests docs/{prd,adr,specs,architecture} memorie
 
 # Version tracking
 VERSION_FILE=".agentx/version.json"
-echo "{ \"version\": \"8.2.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 8.2.0 recorded"
+echo "{ \"version\": \"8.2.1\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 8.2.1 recorded"
 
 # Merge AgentX entries into user's .gitignore
 MARKER_START="# --- AgentX (auto-generated, do not edit this block) ---"
@@ -428,7 +428,7 @@ fi
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} AgentX v8.2.0 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} AgentX v8.2.1 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.agentx/agentx.sh help"
