@@ -26,6 +26,19 @@ interface AgentCheckResult {
   detail: string;
 }
 
+export const REQUIRED_AGENT_TOOLS = [
+  'codebase',
+  'editFiles',
+  'search',
+  'changes',
+  'runCommands',
+  'problems',
+  'usages',
+  'fetch',
+  'think',
+  'github/*',
+] as const;
+
 /**
  * Load and parse all agent definitions from the agents directory.
  */
@@ -142,6 +155,29 @@ export function validateAgentXAutonomous(agents: AgentDef[]): AgentCheckResult[]
   return results;
 }
 
+/**
+ * Verify that every agent definition includes the standard minimum tool baseline.
+ */
+export function validateMinimumTooling(
+  agents: AgentDef[],
+  requiredTools: readonly string[] = REQUIRED_AGENT_TOOLS
+): AgentCheckResult[] {
+  return agents.map((agent) => {
+    const toolSet = new Set(agent.tools.map((tool) => tool.toLowerCase()));
+    const missing = requiredTools.filter((tool) => !toolSet.has(tool.toLowerCase()));
+
+    return {
+      agent: agent.name,
+      check: 'minimum-tooling',
+      passed: missing.length === 0,
+      detail:
+        missing.length === 0
+          ? 'Agent includes the standard minimum tool set'
+          : `Missing tools: ${missing.join(', ')}`,
+    };
+  });
+}
+
 // -- Internal helpers --
 
 function findAgentFiles(dir: string): string[] {
@@ -168,25 +204,67 @@ function parseFrontmatter(
 
   const yaml = match[1];
   const result: Record<string, unknown> = {};
+  let currentArrayKey: string | null = null;
 
-  for (const line of yaml.split('\n')) {
-    const colonIdx = line.indexOf(':');
-    if (colonIdx === -1) continue;
-    const key = line.substring(0, colonIdx).trim();
-    let value: unknown = line.substring(colonIdx + 1).trim();
-
-    // Handle simple arrays (- item format handled below)
-    if (typeof value === 'string' && value.startsWith('[')) {
-      try {
-        value = JSON.parse((value as string).replace(/'/g, '"'));
-      } catch {
-        // keep as string
+  for (const rawLine of yaml.split(/\r?\n/)) {
+    const arrayItemMatch = rawLine.match(/^\s+-\s+(.*)$/);
+    if (arrayItemMatch && currentArrayKey) {
+      const currentValue = result[currentArrayKey];
+      if (Array.isArray(currentValue)) {
+        currentValue.push(stripQuotes(arrayItemMatch[1].trim()));
       }
+      continue;
     }
-    if (key && value !== '') {
-      result[key] = value;
+
+    const keyValueMatch = rawLine.match(/^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/);
+    if (!keyValueMatch) {
+      currentArrayKey = null;
+      continue;
     }
+
+    const key = keyValueMatch[1].trim();
+    const rawValue = keyValueMatch[2].trim();
+
+    if (rawValue === '') {
+      if (key === 'tools' || key === 'agents' || key === 'constraints') {
+        result[key] = [];
+        currentArrayKey = key;
+      } else {
+        currentArrayKey = null;
+      }
+      continue;
+    }
+
+    currentArrayKey = null;
+    result[key] = parseScalarValue(rawValue);
   }
 
   return result;
+}
+
+function parseScalarValue(value: string): unknown {
+  if (value === '[]') {
+    return [];
+  }
+
+  if (value.startsWith('[') && value.endsWith(']')) {
+    return value
+      .slice(1, -1)
+      .split(',')
+      .map((item) => stripQuotes(item.trim()))
+      .filter((item) => item.length > 0);
+  }
+
+  return stripQuotes(value);
+}
+
+function stripQuotes(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
 }

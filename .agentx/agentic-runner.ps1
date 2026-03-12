@@ -598,14 +598,76 @@ function Read-AgentDef([string]$agentName, [string]$root) {
         return ''
     }
 
+    $getList = {
+        param([string]$key)
+
+        $items = New-Object System.Collections.Generic.List[string]
+        $multiline = [regex]::Match($fm, "(?ms)^${key}:\s*\r?\n((?:\s+-\s+.*\r?\n?)*)")
+        if ($multiline.Success) {
+            $block = $multiline.Groups[1].Value
+            foreach ($lineMatch in [regex]::Matches($block, "(?m)^\s+-\s+(.+)$")) {
+                $value = $lineMatch.Groups[1].Value.Trim().Trim(@([char]39, [char]34))
+                if ($value) { $items.Add($value) }
+            }
+        }
+
+        if ($items.Count -eq 0) {
+            $inline = [regex]::Match($fm, "(?m)^${key}:\s*\[(.*)\]\s*$")
+            if ($inline.Success) {
+                foreach ($rawItem in ($inline.Groups[1].Value -split ',')) {
+                    $value = $rawItem.Trim().Trim(@([char]39, [char]34))
+                    if ($value) { $items.Add($value) }
+                }
+            }
+        }
+
+        return @($items)
+    }
+
+    $getNestedList = {
+        param([string]$parentKey, [string]$childKey)
+
+        $items = New-Object System.Collections.Generic.List[string]
+        $parentMatch = [regex]::Match($fm, "(?ms)^${parentKey}:\s*\r?\n((?:\s{2,}.+\r?\n?)*)")
+        if (-not $parentMatch.Success) { return @($items) }
+
+        $parentBlock = $parentMatch.Groups[1].Value
+        $childMatch = [regex]::Match($parentBlock, "(?ms)^\s{2,}${childKey}:\s*\r?\n((?:\s{4,}-\s+.*\r?\n?)*)")
+        if (-not $childMatch.Success) { return @($items) }
+
+        foreach ($lineMatch in [regex]::Matches($childMatch.Groups[1].Value, "(?m)^\s{4,}-\s+(.+)$")) {
+            $value = $lineMatch.Groups[1].Value.Trim().Trim(@([char]39, [char]34))
+            if ($value) { $items.Add($value) }
+        }
+
+        return @($items)
+    }
+
     return @{
         name = & $get 'name'
         description = & $get 'description'
         model = & $get 'model'
         modelFallback = & $get 'modelFallback'
         maturity = & $get 'maturity'
+        constraints = & $getList 'constraints'
+        tools = & $getList 'tools'
+        agents = & $getList 'agents'
+        canModify = & $getNestedList 'boundaries' 'can_modify'
+        cannotModify = & $getNestedList 'boundaries' 'cannot_modify'
+        frontmatter = $fm
         body = $body
     }
+}
+
+function Get-MarkdownSection([string]$text, [string]$sectionName) {
+    if (-not $text) { return '' }
+
+    $match = [regex]::Match($text, "(?s)##\s+$([regex]::Escape($sectionName))[^\n]*\n(.*?)(?=\n## |\n---|\z)")
+    if ($match.Success) {
+        return $match.Groups[1].Value.Trim()
+    }
+
+    return ''
 }
 
 function Build-SystemPrompt([hashtable]$agentDef, [string]$agentName) {
@@ -621,23 +683,57 @@ function Build-SystemPrompt([hashtable]$agentDef, [string]$agentName) {
     }
 
     if ($agentDef.body) {
-        $roleMatch = [regex]::Match($agentDef.body, '(?s)## Role\n(.*?)(?=\n## |\n---)')
-        if ($roleMatch.Success) {
+        $roleSection = Get-MarkdownSection -text $agentDef.body -sectionName 'Role'
+        if ($roleSection) {
             $parts += "## Detailed Role"
-            $parts += $roleMatch.Groups[1].Value.Trim()
+            $parts += $roleSection
             $parts += ""
         }
-        $constraintMatch = [regex]::Match($agentDef.body, '(?s)## Constraints[^\n]*\n(.*?)(?=\n## |\n---)')
-        if ($constraintMatch.Success) {
+
+        $constraintSection = Get-MarkdownSection -text $agentDef.body -sectionName 'Constraints'
+        if ($constraintSection) {
             $parts += "## Constraints"
-            $parts += $constraintMatch.Groups[1].Value.Trim()
+            $parts += $constraintSection
+            $parts += ""
+        } elseif ($agentDef.constraints -and $agentDef.constraints.Count -gt 0) {
+            $parts += "## Constraints"
+            foreach ($constraint in $agentDef.constraints) {
+                $parts += "- $constraint"
+            }
+            $parts += ""
+        }
+
+        $outputTypesSection = Get-MarkdownSection -text $agentDef.body -sectionName 'Output Types'
+        if ($outputTypesSection) {
+            $parts += "## Output Types"
+            $parts += $outputTypesSection
+            $parts += ""
+        }
+
+        $executionStepsSection = Get-MarkdownSection -text $agentDef.body -sectionName 'Execution Steps'
+        if ($executionStepsSection) {
+            $parts += "## Execution Steps"
+            $parts += $executionStepsSection
             $parts += ""
         }
     }
 
+    if (($agentDef.canModify -and $agentDef.canModify.Count -gt 0) -or ($agentDef.cannotModify -and $agentDef.cannotModify.Count -gt 0)) {
+        $parts += "## Boundaries"
+        if ($agentDef.canModify -and $agentDef.canModify.Count -gt 0) {
+            $parts += "Allowed write paths: $($agentDef.canModify -join ', ')"
+        }
+        if ($agentDef.cannotModify -and $agentDef.cannotModify.Count -gt 0) {
+            $parts += "Blocked write paths: $($agentDef.cannotModify -join ', ')"
+        }
+        $parts += ""
+    }
+
     $parts += "## Tool Usage"
     $parts += "You have workspace tools: file_read, file_write, file_edit, grep_search, list_dir, terminal_exec."
-    $parts += "Use them to explore the codebase and complete tasks. When done, provide a text summary."
+    $parts += "Use them to explore the codebase and complete tasks."
+    $parts += "If the task implies a deliverable artifact, create or update the appropriate file in the workspace before you finish."
+    $parts += "After completing any required file changes, provide a concise text summary of what you created or changed."
     $parts += ""
     $parts += "## Self-Review"
     $parts += "When you report work as complete, a same-role reviewer sub-agent will"
@@ -800,6 +896,13 @@ function Read-BoundaryRules([hashtable]$AgentDef) {
     $canModify = @()
     $cannotModify = @()
 
+    if ($AgentDef.canModify) {
+        $canModify += @($AgentDef.canModify)
+    }
+    if ($AgentDef.cannotModify) {
+        $cannotModify += @($AgentDef.cannotModify)
+    }
+
     if ($AgentDef.body) {
         # Parse canModify from frontmatter or body
         $cmMatch = [regex]::Match($AgentDef.body, '(?s)can_modify\s*[:=]\s*\[([^\]]*)\]')
@@ -860,7 +963,9 @@ function Test-BoundaryAllowed {
     foreach ($pattern in $Rules.cannotModify) {
         $glob = $pattern -replace '\\', '/'
         # Convert glob to regex: ** -> .*, * -> [^/]*, ? -> .
-        $regex = '^' + [regex]::Escape($glob) -replace '\\\*\\\*', '.*' -replace '\\\*', '[^/]*' -replace '\\\?', '.' + '$'
+        $escaped = [regex]::Escape($glob)
+        $bodyRegex = $escaped -replace '\\\*\\\*', '.*' -replace '\\\*', '[^/]*' -replace '\\\?', '.'
+        $regex = '^' + $bodyRegex + '$'
         if ($relativePath -match $regex) {
             return $false
         }
@@ -870,7 +975,9 @@ function Test-BoundaryAllowed {
     if ($Rules.canModify.Count -gt 0) {
         foreach ($pattern in $Rules.canModify) {
             $glob = $pattern -replace '\\', '/'
-            $regex = '^' + [regex]::Escape($glob) -replace '\\\*\\\*', '.*' -replace '\\\*', '[^/]*' -replace '\\\?', '.' + '$'
+            $escaped = [regex]::Escape($glob)
+            $bodyRegex = $escaped -replace '\\\*\\\*', '.*' -replace '\\\*', '[^/]*' -replace '\\\?', '.'
+            $regex = '^' + $bodyRegex + '$'
             if ($relativePath -match $regex) {
                 return $true
             }

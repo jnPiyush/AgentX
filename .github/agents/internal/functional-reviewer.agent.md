@@ -20,6 +20,7 @@ boundaries:
     - ".github/workflows/** (CI/CD pipelines)"
 tools:
   - codebase
+  - editFiles
   - search
   - changes
   - runCommands
@@ -27,6 +28,7 @@ tools:
   - usages
   - fetch
   - think
+  - github/*
 ---
 
 # Functional Reviewer Agent

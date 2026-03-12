@@ -31,6 +31,7 @@ tools:
   - editFiles
   - search
   - changes
+  - runCommands
   - problems
   - usages
   - fetch

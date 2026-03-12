@@ -23,10 +23,13 @@ tools:
   - codebase
   - editFiles
   - search
+  - changes
   - runCommands
   - problems
+  - usages
   - fetch
   - think
+  - github/*
 agents: []
 handoffs: []
 ---

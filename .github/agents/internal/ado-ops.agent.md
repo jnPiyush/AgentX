@@ -34,6 +34,7 @@ tools:
   - usages
   - fetch
   - think
+  - github/*
 agents:
   - AgentX
 handoffs:

