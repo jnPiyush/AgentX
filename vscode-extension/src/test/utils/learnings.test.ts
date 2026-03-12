@@ -81,8 +81,8 @@ describe('learnings utility', () => {
     );
 
     fs.writeFileSync(
-      path.join(tmpDir, 'docs', 'guides', 'KNOWLEDGE-CAPTURE.md'),
-      '# Knowledge Capture\n',
+      path.join(tmpDir, 'docs', 'guides', 'KNOWLEDGE-REVIEW-WORKFLOWS.md'),
+      '# Knowledge And Review Workflows\n',
       'utf-8',
     );
   });

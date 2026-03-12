@@ -31,7 +31,6 @@
 | ID | Area | Description | Impact | Added |
 |----|------|-------------|--------|-------|
 | TD-009 | Domain Skills | Only 5 domain verticals (oil & gas, financial, audit, tax, legal) | Limited domain coverage for consulting agents | v8.0.0 |
-| TD-010 | COMPARISON-REPORT | Point-in-time comparison document will go stale | Misleading comparisons over time | v8.0.0 |
 | TD-011 | README | Missing badges (CI status, coverage, version) and screenshots | Less professional first impression | v8.0.0 |
 
 ---
@@ -46,6 +45,7 @@
 | TD-R04 | Documentation | No automated link validation in CI (TD-003) | v8.2.0 | Added `scripts/validate-references.ps1` + reference check step in `quality-gates.yml` |
 | TD-R05 | Instruction Tokens | No automated token count enforcement (TD-007) | v8.2.0 | Added `scripts/token-counter.ps1`, `.token-limits.json`, token-optimizer skill, and CI token budget check |
 | TD-R06 | Memory System | Git-backed observation store untested at scale (>1000 observations) (TD-006) | v8.2.0 | Added `tests/memory-scale-test.ps1` - validates JsonObservationStore pattern at 1500+ observations (all 11 tests pass, performance thresholds met) |
+| TD-R07 | Comparison Docs | Point-in-time comparison and adoption review documents created documentation drift and clutter | v8.2.8 | Removed the stale comparison-review debt and unreferenced external adoption review during documentation cleanup |
 
 ---
 

@@ -280,7 +280,6 @@ We chose **Option 3: Deterministic Native Evaluation Layer** because it best mat
 - [QUALITY_SCORE.md](../QUALITY_SCORE.md)
 - [tech-debt-tracker.md](../tech-debt-tracker.md)
 - [ADR-Harness-Engineering.md](../adr/ADR-Harness-Engineering.md)
-- [HARNESS-EVALUATION-ADOPTION.md](../plans/HARNESS-EVALUATION-ADOPTION.md)
 
 ---
 

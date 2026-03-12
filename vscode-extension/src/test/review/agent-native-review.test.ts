@@ -15,11 +15,11 @@ function writeFile(root: string, relativePath: string, content: string): void {
 
 describe('agent-native review', () => {
   let tmpDir: string;
+  const workflowGuidePath = 'docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md';
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-agent-review-'));
-    writeFile(tmpDir, 'docs/guides/AGENT-NATIVE-REVIEW.md', '# Agent-Native Review\n');
-    writeFile(tmpDir, 'docs/guides/KNOWLEDGE-CAPTURE.md', '# Knowledge Capture\n');
+    writeFile(tmpDir, workflowGuidePath, '# Knowledge And Review Workflows\n');
     writeFile(tmpDir, '.github/templates/REVIEW-TEMPLATE.md', '# Review\n');
     writeFile(tmpDir, 'docs/learnings/LEARNING-165.md', '# Learning\n');
     writeFile(tmpDir, 'vscode-extension/package.json', JSON.stringify({
@@ -88,6 +88,6 @@ describe('agent-native review', () => {
 
     assert.ok(markdown.includes('Agent-Native Review'));
     assert.ok(markdown.includes('Capability map:'));
-    assert.ok(markdown.includes('Reference guide: docs/guides/AGENT-NATIVE-REVIEW.md'));
+    assert.ok(markdown.includes(`Reference guide: ${workflowGuidePath}`));
   });
 });

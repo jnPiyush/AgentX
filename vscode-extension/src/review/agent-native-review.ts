@@ -5,6 +5,8 @@ import { AgentXContext } from '../agentxContext';
 export type ReviewPillar = 'action-parity' | 'context-parity' | 'workspace-parity';
 export type ReviewSeverity = 'none' | 'low' | 'medium' | 'high';
 
+const workflowGuidePath = 'docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md';
+
 export interface CapabilityMapEntry {
   readonly id: string;
   readonly label: string;
@@ -83,7 +85,7 @@ const CAPABILITIES: ReadonlyArray<CapabilityDefinition> = [
     label: 'Knowledge capture guidance',
     userSignals: ['agentx.showKnowledgeCaptureGuidance', 'Capture guidance'],
     agentSignals: ['capture guidance', 'showKnowledgeCaptureGuidance'],
-    sharedSignals: ['docs/guides/AGENT-NATIVE-REVIEW.md', 'docs/guides/KNOWLEDGE-CAPTURE.md'],
+    sharedSignals: [workflowGuidePath],
     summary: 'Both surfaces should be able to resolve the same post-review capture guidance and artifact rules.',
   },
 ];
@@ -159,7 +161,7 @@ function buildCapabilityMap(signals: ReviewSignals): CapabilityMapEntry[] {
 function buildChecks(root: string, capabilityMap: ReadonlyArray<CapabilityMapEntry>): ParityCheckResult[] {
   const actionEntries = capabilityMap;
   const contextSignals = readText(path.join(root, 'vscode-extension', 'src', 'agentxContext.ts'));
-  const workspaceGuideExists = fileExists(root, 'docs/guides/AGENT-NATIVE-REVIEW.md');
+  const workspaceGuideExists = fileExists(root, workflowGuidePath);
   const reviewTemplateExists = fileExists(root, '.github/templates/REVIEW-TEMPLATE.md');
   const reviewSurfaceExists = readText(path.join(root, 'vscode-extension', 'src', 'views', 'qualityTreeProvider.ts')).includes('showAgentNativeReview');
 
@@ -317,7 +319,7 @@ export function renderAgentNativeReviewMarkdown(report: AgentNativeReviewReport)
     lines.push(`- ${check.label}: ${check.summary} [${check.severity}]`);
   }
 
-  lines.push('', 'Reference guide: docs/guides/AGENT-NATIVE-REVIEW.md');
+  lines.push('', `Reference guide: ${workflowGuidePath}`);
   return lines.join('\n');
 }
 

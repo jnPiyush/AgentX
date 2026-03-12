@@ -50,8 +50,8 @@ describe('chatParticipant', () => {
       'utf-8',
     );
     fs.writeFileSync(
-      path.join(tmpDir, 'docs', 'guides', 'KNOWLEDGE-CAPTURE.md'),
-      '# Knowledge Capture\n',
+      path.join(tmpDir, 'docs', 'guides', 'KNOWLEDGE-REVIEW-WORKFLOWS.md'),
+      '# Knowledge And Review Workflows\n',
       'utf-8',
     );
     fs.writeFileSync(
@@ -193,7 +193,7 @@ describe('chatParticipant', () => {
   });
 
   it('returns agent-native review output from chat', async () => {
-    fs.writeFileSync(path.join(tmpDir, 'docs', 'guides', 'AGENT-NATIVE-REVIEW.md'), '# Agent review\n', 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, 'docs', 'guides', 'KNOWLEDGE-REVIEW-WORKFLOWS.md'), '# Knowledge And Review Workflows\n', 'utf-8');
     fs.mkdirSync(path.join(tmpDir, '.github', 'templates'), { recursive: true });
     fs.writeFileSync(path.join(tmpDir, '.github', 'templates', 'REVIEW-TEMPLATE.md'), '# Review\n', 'utf-8');
     fs.mkdirSync(path.join(tmpDir, 'vscode-extension', 'src', 'views'), { recursive: true });

@@ -8,7 +8,7 @@ validation: approved
 evidence: high
 mode: shared
 keywords: review,parity,agent-native,capability map,workspace,context,artifacts
-sources: docs/guides/AGENT-NATIVE-REVIEW.md,docs/prd/PRD-157.md
+sources: docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md,docs/prd/PRD-157.md
 ---
 
 ## Summary

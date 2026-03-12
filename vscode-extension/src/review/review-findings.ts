@@ -442,6 +442,7 @@ export function getPromotableFindingTooltip(agentx: AgentXContext): string {
 }
 
 export function renderReviewFindingsMarkdown(records: ReadonlyArray<ReviewFindingRecord>): string {
+  const workflowGuidePath = 'docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md';
   const lines = [
     '**Review Findings**',
     '',
@@ -454,7 +455,7 @@ export function renderReviewFindingsMarkdown(records: ReadonlyArray<ReviewFindin
     lines.push(
       'No durable review findings were found.',
       '',
-      'Reference guide: docs/guides/REVIEW-FINDINGS.md',
+      `Reference guide: ${workflowGuidePath}`,
       'Template: docs/reviews/FINDING-TEMPLATE.md',
     );
     return lines.join('\n');
@@ -480,7 +481,7 @@ export function renderReviewFindingsMarkdown(records: ReadonlyArray<ReviewFindin
     lines.push('');
   }
 
-  lines.push('Reference guide: docs/guides/REVIEW-FINDINGS.md');
+  lines.push(`Reference guide: ${workflowGuidePath}`);
   return lines.join('\n').trim();
 }
 

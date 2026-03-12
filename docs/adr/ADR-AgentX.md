@@ -891,7 +891,7 @@ The `IObservationStore` interface enables swapping `JsonObservationStore` for `S
 - [PRD-AgentX: Persistent Agent Memory Pipeline](../prd/PRD-AgentX.md)
 - [ADR-1: Agent-to-Agent Clarification Protocol](#adr-1-agent-to-agent-clarification-protocol) (established per-issue JSON + FileLock pattern)
 - [SPEC-AgentX: Technical Specification](../specs/SPEC-AgentX.md)
-- [ARCH-AgentX: Architecture Document](../architecture/ARCH-AgentX.md)
+- [AGENTS.md](../../AGENTS.md) - current declarative runtime reference
 - [ContextCompactor](../../vscode-extension/src/utils/contextCompactor.ts)
 - [AgentEventBus](../../vscode-extension/src/utils/eventBus.ts)
 - [SessionManager](../../vscode-extension/src/agentic/sessionState.ts)
@@ -1042,7 +1042,7 @@ This prevents infinite review loops where the reviewer keeps finding minor issue
 - [ADR-1: Agent-to-Agent Clarification Protocol](#adr-1-agent-to-agent-clarification-protocol) (established the hub-routed clarification pattern)
 - [ADR-29: Persistent Agent Memory Pipeline](#adr-29-persistent-agent-memory-pipeline) (parallel but independent initiative)
 - [SPEC-AgentX: Technical Specification](../specs/SPEC-AgentX.md#agentic-loop-quality-framework-specification)
-- [ARCH-AgentX: Architecture Document](../architecture/ARCH-AgentX.md#agentic-loop-quality-framework-architecture)
+- [AGENTS.md](../../AGENTS.md) - current declarative runtime reference
 - [SubAgentSpawner](../../vscode-extension/src/agentic/subAgentSpawner.ts)
 - [SelfReviewLoop](../../vscode-extension/src/agentic/selfReviewLoop.ts)
 - [ClarificationLoop](../../vscode-extension/src/agentic/clarificationLoop.ts)
@@ -1495,7 +1495,7 @@ We chose **Option C** because:
 
 - [PRD-AgentX.md](../prd/PRD-AgentX.md) -- Product Requirements Document
 - [SPEC-AgentX.md](../specs/SPEC-AgentX.md) -- Technical Specification
-- [ARCH-AgentX.md](../architecture/ARCH-AgentX.md) -- Existing Architecture
+- [AGENTS.md](../../AGENTS.md) -- Current runtime reference
 - [toolEngine.ts](../../vscode-extension/src/agentic/toolEngine.ts) -- Existing tool execution engine (line ~299: current denylist)
 - [agenticLoop.ts](../../vscode-extension/src/agentic/agenticLoop.ts) -- Existing agentic loop
 - [thinkingLog.ts](../../vscode-extension/src/utils/thinkingLog.ts) -- Existing thinking log
@@ -1527,6 +1527,6 @@ We chose **Option C** because:
 ## Related Documents
 
 - [PRD-AgentX.md](../prd/PRD-AgentX.md) - Product Requirements Document
-- [ARCH-AgentX.md](../architecture/ARCH-AgentX.md) - Architecture Document
 - [SPEC-AgentX.md](../specs/SPEC-AgentX.md) - Technical Specifications
+- [AGENTS.md](../../AGENTS.md) - Current runtime reference
 

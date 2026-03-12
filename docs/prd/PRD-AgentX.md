@@ -2084,7 +2084,7 @@ The heavy file-based protocol remains a future option for **cross-session, cross
 
 - [Technical Specification](../specs/SPEC-AgentX.md#agentic-loop-quality-framework-specification)
 - [Architecture Decision Record](../adr/ADR-AgentX.md#adr-30-agentic-loop-quality-framework)
-- [Architecture Document](../architecture/ARCH-AgentX.md#agentic-loop-quality-framework-architecture)
+- [AGENTS.md](../../AGENTS.md)
 
 ---
 
@@ -2692,7 +2692,7 @@ AgentX's agentic loop grants LLM-driven agents the ability to execute shell comm
 
 - [Technical Specification](../specs/SPEC-AgentX.md) (to be created by Architect)
 - [Architecture Decision Record](../adr/ADR-AgentX.md) (to be created by Architect)
-- [Existing Architecture](../architecture/ARCH-AgentX.md)
+- [AGENTS.md](../../AGENTS.md) - current runtime reference
 - [Existing PRD](../prd/PRD-AgentX.md)
 
 #### File Impact Summary

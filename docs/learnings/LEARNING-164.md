@@ -8,7 +8,7 @@ validation: approved
 evidence: high
 mode: shared
 keywords: review,findings,status,priority,owner,dependencies,evidence,backlog
-sources: docs/guides/REVIEW-FINDINGS.md,docs/reviews/FINDING-TEMPLATE.md,docs/prd/PRD-157.md
+sources: docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md,docs/reviews/FINDING-TEMPLATE.md,docs/prd/PRD-157.md
 ---
 
 ## Summary

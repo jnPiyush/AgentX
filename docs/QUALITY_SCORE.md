@@ -114,7 +114,6 @@
 | CLAUDE.md | A | Claude Code entry point with all pointers |
 | README.md | B | Feature-complete, badges and screenshots could improve |
 | CONTRIBUTING.md | B | Contribution guidelines present, needs PR template link |
-| COMPARISON-REPORT.md | C | Point-in-time comparison, will go stale |
 
 ### Templates (.github/templates/)
 

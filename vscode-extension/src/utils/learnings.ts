@@ -363,7 +363,7 @@ export function renderRankedLearningsText(
 }
 
 export function renderCaptureGuidanceMarkdown(root?: string): string {
-  const guidePath = 'docs/guides/KNOWLEDGE-CAPTURE.md';
+  const guidePath = 'docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md';
   const learningsPath = 'docs/learnings/LEARNING-<issue>.md';
   const hasGuide = root ? fs.existsSync(path.join(root, guidePath)) : false;
 

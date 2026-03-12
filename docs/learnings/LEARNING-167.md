@@ -8,7 +8,7 @@ validation: approved
 evidence: high
 mode: shared
 keywords: review,findings,promotion,backlog,issue,priority,deps,follow-up
-sources: docs/guides/REVIEW-FINDINGS.md,docs/prd/PRD-157.md
+sources: docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md,docs/prd/PRD-157.md
 ---
 
 ## Summary

@@ -34,7 +34,7 @@ describe('review findings', () => {
       'suggested_type: story',
       'labels: type:story,needs:changes',
       'dependencies: #163,#165',
-      'evidence: docs/reviews/REVIEW-164.md,docs/guides/REVIEW-FINDINGS.md',
+      'evidence: docs/reviews/REVIEW-164.md,docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md',
       'backlog_issue: ',
       'created: 2026-03-12',
       'updated: 2026-03-12',
@@ -89,6 +89,7 @@ describe('review findings', () => {
     assert.ok(markdown.includes('Open findings: 1'));
     assert.ok(markdown.includes('Promotable findings: 1'));
     assert.ok(markdown.includes('FINDING-164-001'));
+    assert.ok(markdown.includes('Reference guide: docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md'));
   });
 
   it('promotes a finding into a normal AgentX issue and links it back', async () => {

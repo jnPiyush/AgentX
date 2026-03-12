@@ -4329,5 +4329,4 @@ vscode-extension/src/
 
 - [PRD-AgentX.md](../prd/PRD-AgentX.md) - Product Requirements Document
 - [ADR-AgentX.md](../adr/ADR-AgentX.md) - Architecture Decision Records
-- [ARCH-AgentX.md](../architecture/ARCH-AgentX.md) - Architecture Document
 - [AGENTS.md](../../AGENTS.md) - Workflow & orchestration rules
