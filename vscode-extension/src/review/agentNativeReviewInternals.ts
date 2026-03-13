@@ -49,7 +49,7 @@ interface ReviewSignals {
  readonly packageJson: string;
  readonly chatParticipant: string;
  readonly workTreeProvider: string;
- readonly qualityTreeProvider: string;
+ readonly statusTreeProvider: string;
  readonly agentxContext: string;
 }
 
@@ -103,7 +103,7 @@ function readSignals(root: string): ReviewSignals {
   packageJson: readText(path.join(root, 'vscode-extension', 'package.json')),
   chatParticipant: readText(path.join(root, 'vscode-extension', 'src', 'chat', 'chatParticipant.ts')),
   workTreeProvider: readText(path.join(root, 'vscode-extension', 'src', 'views', 'workTreeProvider.ts')),
-  qualityTreeProvider: readText(path.join(root, 'vscode-extension', 'src', 'views', 'qualityTreeProvider.ts')),
+  statusTreeProvider: readText(path.join(root, 'vscode-extension', 'src', 'views', 'statusTreeProvider.ts')),
   agentxContext: readText(path.join(root, 'vscode-extension', 'src', 'agentxContext.ts')),
  };
 }
@@ -161,7 +161,7 @@ function buildChecks(root: string, capabilityMap: ReadonlyArray<CapabilityMapEnt
  const contextSignals = readText(path.join(root, 'vscode-extension', 'src', 'agentxContext.ts'));
  const workspaceGuideExists = fileExists(root, WORKFLOW_GUIDE_PATH);
  const reviewTemplateExists = fileExists(root, '.github/templates/REVIEW-TEMPLATE.md');
- const reviewSurfaceExists = readText(path.join(root, 'vscode-extension', 'src', 'views', 'qualityTreeProvider.ts')).includes('showAgentNativeReview');
+ const reviewSurfaceExists = readText(path.join(root, 'vscode-extension', 'src', 'views', 'statusTreeProvider.ts')).includes('showAgentNativeReview');
 
  const actionMatches = capabilityMap.filter((entry) => entry.userSurface && entry.agentSurface).length;
  const actionScore = actionMatches * 10;

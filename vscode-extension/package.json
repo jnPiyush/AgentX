@@ -192,28 +192,16 @@
           "contextualTitle": "AgentX Agents"
         },
         {
-          "id": "agentx-workflow",
-          "name": "Workflow",
-          "icon": "$(git-pull-request)",
-          "contextualTitle": "AgentX Workflow"
+          "id": "agentx-status",
+          "name": "Status",
+          "icon": "$(pulse)",
+          "contextualTitle": "AgentX Status"
         },
         {
           "id": "agentx-templates",
           "name": "Templates",
           "icon": "$(file-text)",
           "contextualTitle": "AgentX Templates"
-        },
-        {
-          "id": "agentx-quality",
-          "name": "Quality",
-          "icon": "$(checklist)",
-          "contextualTitle": "AgentX Quality"
-        },
-        {
-          "id": "agentx-integrations",
-          "name": "Integrations",
-          "icon": "$(plug)",
-          "contextualTitle": "AgentX Integrations"
         }
       ]
     },
@@ -233,7 +221,7 @@
       "view/title": [
         {
           "command": "agentx.refresh",
-          "when": "view == agentx-work || view == agentx-agents || view == agentx-workflow || view == agentx-templates || view == agentx-quality || view == agentx-integrations",
+          "when": "view == agentx-work || view == agentx-agents || view == agentx-status || view == agentx-templates",
           "group": "navigation"
         }
       ],

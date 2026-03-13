@@ -49,7 +49,7 @@ describe('agent-native review', () => {
       'Capture guidance',
       'agentx.showKnowledgeCaptureGuidance',
     ].join('\n'));
-    writeFile(tmpDir, 'vscode-extension/src/views/qualityTreeProvider.ts', 'agentx.showAgentNativeReview\n');
+    writeFile(tmpDir, 'vscode-extension/src/views/statusTreeProvider.ts', 'agentx.showAgentNativeReview\n');
     writeFile(tmpDir, 'vscode-extension/src/agentxContext.ts', [
       'workspaceRoot',
       'getPendingClarification',
