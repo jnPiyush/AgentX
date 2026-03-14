@@ -4,6 +4,9 @@ src/**
 scripts/**
 node_modules/**
 out/test/**
+coverage/**
+.nyc_output/**
+coverage-output.txt
 .mocharc.yml
 .eslintrc.cjs
 tsconfig.json
