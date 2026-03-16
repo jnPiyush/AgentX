@@ -1,15 +1,13 @@
 <div align="center">
   <img src="docs/assets/agentx-logo.svg" width="200" alt="AgentX Logo">
-
-  # AgentX
-
-  **The Multi-Agent Workflow System for Software Delivery**
-
-    [![Version](https://img.shields.io/badge/Version-8.3.6-0EA5E9?style=for-the-badge)](https://github.com/jnPiyush/AgentX/releases/tag/v8.3.6)
-  [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
-  [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&label=OpenSSF)](https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX)
-
-  *Turn AI coding agents into a structured, highly capable development team with routing, domain skills, execution templates, long-term memory, and validation.*
+  <h1>AgentX</h1>
+  <p><strong>The Multi-Agent Workflow System for Software Delivery</strong></p>
+  <p>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.3.6"><img src="https://img.shields.io/badge/Version-8.3.6-0EA5E9?style=for-the-badge" alt="Version 8.3.6"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
+    <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
+  </p>
+  <p><em>Turn AI coding agents into a structured, highly capable development team with routing, domain skills, execution templates, long-term memory, and validation.</em></p>
 </div>
 
 ---
@@ -132,13 +130,13 @@ flowchart LR
 
 ## Quick Start
 
-`powershell
+```powershell
 irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
-`
+```
 
-`ash
+```bash
 curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
-`
+```
 
 Default install mode is local. GitHub and Azure DevOps modes are available for remote workflow integration.
 
@@ -148,13 +146,13 @@ If AgentX detects Azure-oriented files such as `azure.yaml`, `.azure/`, Azure Fu
 
 ## Main Repo Areas
 
-- \AGENTS.md\ - Top-level guidance and routing rules
-- \docs/WORKFLOW.md\ - Workflow and handoffs
-- \Skills.md\ - Complete skill index
-- \.github/agents/\ - Individual agent definitions
-- \.github/skills/\ - Reusable implementation knowledge
-- \scode-extension/\ - VS Code extension source
-- \.agentx/\ - CLI runtime and local workflow utilities
+- `AGENTS.md` - Top-level guidance and routing rules
+- `docs/WORKFLOW.md` - Workflow and handoffs
+- `Skills.md` - Complete skill index
+- `.github/agents/` - Individual agent definitions
+- `.github/skills/` - Reusable implementation knowledge
+- `vscode-extension/` - VS Code extension source
+- `.agentx/` - CLI runtime and local workflow utilities
 
 ## Read More
 
