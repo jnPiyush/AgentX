@@ -187,7 +187,7 @@ describe('sidebar providers', () => {
     const root = createWorkspaceRoot();
     fs.writeFileSync(
       path.join(root, '.agentx', 'version.json'),
-      JSON.stringify({ version: '8.3.1', mode: 'github' }),
+      JSON.stringify({ version: '8.3.2', mode: 'github' }),
       'utf-8',
     );
     fs.writeFileSync(
@@ -201,7 +201,7 @@ describe('sidebar providers', () => {
     const items = await provider.getChildren();
 
     const overviewChildren = await provider.getChildren(items[0]);
-    assert.ok(overviewChildren.some((item) => item.label === 'Version' && item.description === '8.3.1'));
+    assert.ok(overviewChildren.some((item) => item.label === 'Version' && item.description === '8.3.2'));
     assert.ok(overviewChildren.some((item) => item.label === 'Mode' && item.description === 'github'));
     assert.ok(overviewChildren.some((item) => item.label === 'GitHub MCP' && item.description === 'connected'));
     assert.ok(overviewChildren.some((item) => item.label === 'Azure skills' && item.description === 'installed'));

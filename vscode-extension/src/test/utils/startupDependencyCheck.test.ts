@@ -7,7 +7,7 @@ import {
 
 describe('startupDependencyCheck', () => {
  const workspaceRoot = '/tmp/agentx';
- const extensionVersion = '8.3.1';
+ const extensionVersion = '8.3.2';
 
  function createContext() {
   const state = new Map<string, unknown>();

@@ -1,6 +1,6 @@
 {
   "name": "agentx-core",
-  "version": "8.3.1",
+  "version": "8.3.2",
   "description": "Core AgentX pack -- full SDLC agents, workflow engine, and essential instructions for multi-agent orchestration.",
   "maturity": "stable",
   "tags": [
