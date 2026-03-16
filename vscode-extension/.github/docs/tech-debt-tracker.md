@@ -61,4 +61,4 @@ When resolving debt, move the row to the Resolved section with the version and r
 
 ---
 
-**See Also**: [QUALITY_SCORE.md](QUALITY_SCORE.md) | [GOLDEN_PRINCIPLES.md](GOLDEN_PRINCIPLES.md) | [AGENTS.md](../AGENTS.md) | [ADR-Harness-Engineering.md](../agentx/docs/artifacts/adr/ADR-Harness-Engineering.md) | [SPEC-Harness-Engineering.md](../agentx/docs/artifacts/specs/SPEC-Harness-Engineering.md)
+**See Also**: [QUALITY_SCORE.md](QUALITY_SCORE.md) | [GOLDEN_PRINCIPLES.md](GOLDEN_PRINCIPLES.md) | [AGENTS.md](../AGENTS.md)

@@ -264,12 +264,6 @@
           "contextualTitle": "AgentX Work"
         },
         {
-          "id": "agentx-agents",
-          "name": "Agents",
-          "icon": "$(organization)",
-          "contextualTitle": "AgentX Agents"
-        },
-        {
           "id": "agentx-status",
           "name": "Status",
           "icon": "$(pulse)",
@@ -285,11 +279,6 @@
     },
     "viewsWelcome": [
       {
-        "view": "agentx-agents",
-        "contents": "AgentX is ready to use.\n\nAdd integrations for GitHub or Azure DevOps:\n[Add Integration](command:agentx.initialize)\n\n[Learn more](https://github.com/jnPiyush/AgentX)",
-        "when": "!agentx.githubConnected && !agentx.adoConnected"
-      },
-      {
         "view": "agentx-work",
         "contents": "No active work yet.\n\n[Show Workflow Steps](command:agentx.runWorkflow)\n[Show Agent Status](command:agentx.showStatus)",
         "when": "agentx.initialized"
@@ -299,7 +288,7 @@
       "view/title": [
         {
           "command": "agentx.refresh",
-          "when": "view == agentx-work || view == agentx-agents || view == agentx-status || view == agentx-templates",
+          "when": "view == agentx-work || view == agentx-status || view == agentx-templates",
           "group": "navigation"
         }
       ],

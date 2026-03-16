@@ -38,7 +38,7 @@ describe('sidebar providers', () => {
     __clearExtensions();
   });
 
-  it('WorkTreeProvider should show active work and local issues', async () => {
+  it('WorkTreeProvider should show only open issues and actions', async () => {
     const root = createWorkspaceRoot();
     fs.writeFileSync(
       path.join(root, '.agentx', 'state', 'agent-status.json'),
@@ -101,27 +101,16 @@ describe('sidebar providers', () => {
     });
     const items = await provider.getChildren();
 
-    assert.equal(items.length, 6);
-    assert.equal(items[2].label, 'Implement sidebar');
+    assert.equal(items.length, 2);
+    assert.equal(items[0].label, 'Open issues');
+    assert.equal(items[1].label, 'Actions');
 
-    const overviewChildren = await provider.getChildren(items[0]);
-    assert.ok(overviewChildren.some((item) => item.label === 'Pending clarification'));
-    assert.ok(overviewChildren.some((item) => item.command?.command === 'agentx.showPendingClarification'));
-
-    const nextStepChildren = await provider.getChildren(items[1]);
-    assert.ok(nextStepChildren.some((item) => item.label === 'Current checkpoint'));
-    assert.ok(nextStepChildren.some((item) => item.label === 'Show rollout scorecard'));
-
-    const activeThreadChildren = await provider.getChildren(items[2]);
-    assert.ok(activeThreadChildren.some((item) => item.label === 'Open linked issue'));
-    assert.ok(activeThreadChildren.some((item) => item.command?.command === 'agentx.checkDeps'));
-
-    const issueSection = items[4];
+    const issueSection = items[0];
     const issueChildren = await provider.getChildren(issueSection);
     assert.equal(issueChildren.length, 1);
     assert.ok(String(issueChildren[0].label).includes('#7 Add sidebar'));
 
-    const actionChildren = await provider.getChildren(items[5]);
+    const actionChildren = await provider.getChildren(items[1]);
     assert.ok(actionChildren.some((item) => item.label === 'Workflow next step'));
     assert.ok(actionChildren.some((item) => item.label === 'Brainstorm'));
     assert.ok(actionChildren.some((item) => item.label === 'Compound loop'));
@@ -132,7 +121,7 @@ describe('sidebar providers', () => {
     assert.ok(actionChildren.some((item) => item.label === 'Promote review finding'));
   });
 
-  it('StatusTreeProvider should show current state, quality signals, and workflow catalog', async () => {
+  it('StatusTreeProvider should show only overview and quality', async () => {
     const root = createWorkspaceRoot();
     fs.mkdirSync(path.join(root, 'docs', 'guides'), { recursive: true });
     fs.mkdirSync(path.join(root, 'docs', 'artifacts', 'specs'), { recursive: true });
@@ -185,32 +174,13 @@ describe('sidebar providers', () => {
     const provider = new StatusTreeProvider(createAgentxStub(root));
     const items = await provider.getChildren();
 
-  assert.equal(items.length, 6);
+    assert.equal(items.length, 2);
+    assert.equal(items[0].label, 'Overview');
+    assert.equal(items[1].label, 'Quality');
 
-    const stateChildren = await provider.getChildren(items[1]);
-    assert.ok(stateChildren.some((item) => item.label === 'Loop'));
-    assert.ok(stateChildren.some((item) => item.label === 'Harness'));
-    assert.ok(stateChildren.some((item) => item.label === 'Active workflow'));
-
-    const qualityChildren = await provider.getChildren(items[2]);
+    const qualityChildren = await provider.getChildren(items[1]);
     assert.ok(qualityChildren.some((item) => item.label === 'Evaluation' && item.description === '100% (5/5 checks)'));
     assert.ok(qualityChildren.some((item) => item.label === 'Reviewer handoff' && item.description === 'ready'));
-
-    const nextStepChildren = await provider.getChildren(items[3]);
-    assert.ok(nextStepChildren.some((item) => item.label === 'Current checkpoint'));
-    assert.ok(nextStepChildren.some((item) => String(item.label).includes('Kick off review') || item.label === 'Recommended action'));
-
-    const catalogChildren = await provider.getChildren(items[4]);
-    assert.ok(catalogChildren.some((item) => item.label === 'feature'));
-    assert.ok(catalogChildren.some((item) => item.command));
-
-    const actionsChildren = await provider.getChildren(items[5]);
-    assert.ok(actionsChildren.some((item) => item.label === 'Workflow next step'));
-    assert.ok(actionsChildren.some((item) => item.label === 'Deepen plan'));
-    assert.ok(actionsChildren.some((item) => item.label === 'Kick off review'));
-    assert.ok(actionsChildren.some((item) => item.label === 'Compound loop'));
-    assert.ok(actionsChildren.some((item) => item.label === 'Check environment'));
-    assert.ok(actionsChildren.some((item) => item.label === 'Add integration'));
   });
 
   it('StatusTreeProvider should show overview with version, mode, and companion state', async () => {

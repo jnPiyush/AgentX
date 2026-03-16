@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
-import { AgentTreeProvider } from './agentTreeProvider';
 import { WorkTreeProvider } from './workTreeProvider';
 import { StatusTreeProvider } from './statusTreeProvider';
 import { TemplateTreeProvider } from './templateTreeProvider';
@@ -11,7 +10,6 @@ type RefreshableProvider = {
 
 export interface SidebarProviders {
  readonly workTreeProvider: WorkTreeProvider;
- readonly agentTreeProvider: AgentTreeProvider;
  readonly statusTreeProvider: StatusTreeProvider;
  readonly templateProvider: TemplateTreeProvider;
 }
@@ -19,7 +17,6 @@ export interface SidebarProviders {
 export function createSidebarProviders(agentx: AgentXContext): SidebarProviders {
  return {
   workTreeProvider: new WorkTreeProvider(agentx),
-  agentTreeProvider: new AgentTreeProvider(agentx),
   statusTreeProvider: new StatusTreeProvider(agentx),
   templateProvider: new TemplateTreeProvider(agentx),
  };
@@ -27,7 +24,6 @@ export function createSidebarProviders(agentx: AgentXContext): SidebarProviders 
 
 export function registerSidebarProviders(providers: SidebarProviders): void {
  vscode.window.registerTreeDataProvider('agentx-work', providers.workTreeProvider);
- vscode.window.registerTreeDataProvider('agentx-agents', providers.agentTreeProvider);
  vscode.window.registerTreeDataProvider('agentx-status', providers.statusTreeProvider);
  vscode.window.registerTreeDataProvider('agentx-templates', providers.templateProvider);
 }
@@ -35,7 +31,6 @@ export function registerSidebarProviders(providers: SidebarProviders): void {
 export function refreshSidebarProviders(providers: SidebarProviders): void {
  const refreshableProviders: RefreshableProvider[] = [
   providers.workTreeProvider,
-  providers.agentTreeProvider,
   providers.statusTreeProvider,
   providers.templateProvider,
  ];

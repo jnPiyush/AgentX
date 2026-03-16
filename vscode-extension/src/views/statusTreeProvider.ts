@@ -22,11 +22,8 @@ import {
  getReviewFindingSummary,
  getReviewFindingTooltip,
 } from '../review/review-findings';
-import { getHarnessStatusDisplay, readHarnessState } from '../utils/harnessState';
-import { checkHandoffGate, getLoopStatusDisplay } from '../utils/loopStateChecker';
+import { checkHandoffGate } from '../utils/loopStateChecker';
 import { getAzureCompanionState } from '../utils/companionExtensions';
-import { evaluateWorkflowGuidance } from '../utils/workflowGuidance';
-import { WORKFLOW_OPTIONS } from '../commands/workflow';
 import { SidebarTreeItem } from './sidebarTreeItem';
 
 interface VersionStamp {
@@ -100,27 +97,6 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<SidebarTreeIt
    return [SidebarTreeItem.section('Overview', 'plug', overviewChildren)];
   }
 
-  // State section — loop, harness, active work, execution plans
-  const harnessState = readHarnessState(root);
-  const activeThread = harnessState.threads.find((t) => t.status === 'active');
-  const plans = this.agentx.listExecutionPlanFiles();
-    const workflowGuidance = evaluateWorkflowGuidance(root, !!(await this.agentx.getPendingClarification()));
-
-  const stateChildren = [
-   SidebarTreeItem.detail('Loop', 'sync', getLoopStatusDisplay(root)),
-   SidebarTreeItem.detail('Harness', 'pulse', getHarnessStatusDisplay(root)),
-   SidebarTreeItem.detail('Active workflow', 'run-all', activeThread?.taskType ?? 'none'),
-   SidebarTreeItem.detail('Execution plans', 'repo', String(plans.length)),
-   ...plans.slice(0, 5).map((planPath) => SidebarTreeItem.action(
-    `Open ${path.basename(planPath)}`,
-    'go-to-file',
-    'vscode.open',
-    'Open Execution Plan',
-    [vscode.Uri.file(path.join(root, planPath))],
-    planPath,
-   )),
-  ];
-
   // Quality section — signals + handoff gate
   const handoff = checkHandoffGate(root);
   const gateIcon = handoff.allowed ? 'pass-filled' : 'warning';
@@ -137,64 +113,9 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<SidebarTreeIt
    SidebarTreeItem.detail('Reviewer handoff', gateIcon, gateState, handoff.reason),
   ];
 
-    const nextStepChildren = workflowGuidance
-     ? [
-        workflowGuidance.recommendedCommand && workflowGuidance.recommendedCommandTitle
-         ? SidebarTreeItem.action(
-            workflowGuidance.recommendedAction,
-            'play-circle',
-            workflowGuidance.recommendedCommand,
-            workflowGuidance.recommendedCommandTitle,
-         )
-         : SidebarTreeItem.detail('Recommended action', 'play-circle', workflowGuidance.recommendedAction),
-        SidebarTreeItem.detail('Current checkpoint', 'milestone', workflowGuidance.currentCheckpoint),
-        SidebarTreeItem.detail('Why now', 'comment', workflowGuidance.rationale),
-        ...(workflowGuidance.planDeepening.allowed
-         ? [SidebarTreeItem.action('Deepen plan', 'notebook', 'agentx.deepenPlan', 'Deepen Plan')]
-         : []),
-        ...(workflowGuidance.reviewKickoff.allowed
-         ? [SidebarTreeItem.action('Kick off review', 'comment-discussion', 'agentx.kickoffReview', 'Kick Off Review')]
-         : []),
-        ...workflowGuidance.blockers.map((blocker) => SidebarTreeItem.detail('Blocker', 'warning', blocker)),
-     ]
-     : [SidebarTreeItem.info('Open a workspace folder to resolve workflow guidance.')];
-
-  // Workflows section — runnable workflow types
-  const workflowChildren = WORKFLOW_OPTIONS.map((workflow) => SidebarTreeItem.action(
-   workflow.label,
-   'play-circle',
-   'agentx.runWorkflowType',
-   'Show Workflow Steps',
-   [workflow.label],
-   workflow.description,
-  ));
-
-  // Actions section — deduplicated across all former panels
-  const actionsChildren = [
-    SidebarTreeItem.action('Workflow next step', 'debug-step-over', 'agentx.showWorkflowNextStep', 'Show Workflow Next Step'),
-    SidebarTreeItem.action('Deepen plan', 'notebook', 'agentx.deepenPlan', 'Deepen Plan'),
-    SidebarTreeItem.action('Kick off review', 'comment-discussion', 'agentx.kickoffReview', 'Kick Off Review'),
-    SidebarTreeItem.action('Rollout scorecard', 'graph', 'agentx.showWorkflowRolloutScorecard', 'Show Workflow Rollout Scorecard'),
-    SidebarTreeItem.action('Operator checklist', 'checklist', 'agentx.showOperatorEnablementChecklist', 'Show Operator Enablement Checklist'),
-   SidebarTreeItem.action('Loop status', 'history', 'agentx.loopStatus', 'Loop Status'),
-   SidebarTreeItem.action('Start loop', 'play', 'agentx.loopStart', 'Loop Start'),
-   SidebarTreeItem.action('Complete loop', 'check', 'agentx.loopComplete', 'Loop Complete'),
-   SidebarTreeItem.action('Compound loop', 'layers', 'agentx.showCompoundLoop', 'Compound Loop'),
-   SidebarTreeItem.action('Create learning capture', 'new-file', 'agentx.createLearningCapture', 'Create Learning Capture'),
-   SidebarTreeItem.action('Agent-native review', 'symbol-interface', 'agentx.showAgentNativeReview', 'Agent-Native Review'),
-   SidebarTreeItem.action('Review findings', 'comment-discussion', 'agentx.showReviewFindings', 'Review Findings'),
-   SidebarTreeItem.action('Promote review finding', 'repo-push', 'agentx.promoteReviewFinding', 'Promote Review Finding'),
-   SidebarTreeItem.action('Add integration', 'plug', 'agentx.initialize', 'Add Integration'),
-   SidebarTreeItem.action('Check environment', 'beaker', 'agentx.checkEnvironment', 'Check Environment'),
-  ];
-
   return [
    SidebarTreeItem.section('Overview', 'plug', overviewChildren),
-   SidebarTreeItem.section('State', 'git-pull-request', stateChildren),
    SidebarTreeItem.section('Quality', 'checklist', qualityChildren),
-    SidebarTreeItem.section('Next step', 'debug-step-over', nextStepChildren),
-   SidebarTreeItem.section('Workflows', 'symbol-class', workflowChildren, String(workflowChildren.length)),
-   SidebarTreeItem.section('Actions', 'tools', actionsChildren),
   ];
  }
 }
