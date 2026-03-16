@@ -61,6 +61,8 @@ type: description (#issue-number)
 
 Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
+For final delivery in GitHub mode, plain `(#123)` is traceability only. Use `fixes #123`, `closes #123`, or `resolves #123` in the final PR body or delivery commit so GitHub closes the issue automatically.
+
 ### Security Checklist
 
 - [PASS] No hardcoded secrets

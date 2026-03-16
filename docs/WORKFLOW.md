@@ -34,9 +34,14 @@ Every piece of work -- bug fix, feature, docs update -- **SHOULD** start with an
 gh issue create --title "[Story] Add /health endpoint" --label "type:story"  # Creates #42
 .\.agentx\agentx.ps1 ready                        # Pick from ready queue
 # Work... then commit:
-git commit -m "feat: add health endpoint (#42)"
+git commit -m "feat: add health endpoint (refs #42)"
+# Final delivery should use a closing keyword in the PR body or merge commit:
+# fix: add health endpoint (fixes #42)
+# If no closing keyword was used, close the issue manually:
 gh issue close 42 --reason completed
 ```
+
+**Closeout rule:** Plain issue references like `(#42)` or `refs #42` do not close GitHub issues. The final PR or delivery commit MUST use `fixes #42`, `closes #42`, or `resolves #42`, or the issue must be closed manually as an explicit release step.
 
 **Local Mode:**
 ```powershell

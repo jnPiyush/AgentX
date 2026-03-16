@@ -82,6 +82,11 @@ fi
 ISSUE_NUMBER=$(echo "$COMMIT_MSG" | grep -oP '#\K\d+' | head -1)
 echo -e "${GREEN}[PASS] Found #${ISSUE_NUMBER}${NC}"
 
+if ! echo "$COMMIT_MSG" | grep -qiE '\b(closes|fixes|resolves)\s+#[0-9]+'; then
+ echo -e "${YELLOW}[WARN] Plain issue references do not auto-close GitHub issues${NC}"
+ echo -e "${YELLOW}[WARN] Use fixes #${ISSUE_NUMBER}, closes #${ISSUE_NUMBER}, or resolves #${ISSUE_NUMBER} in the final PR or delivery commit${NC}"
+fi
+
 # ===================================================================
 # STEP 2: Validate commit message format (warning only)
 # ===================================================================

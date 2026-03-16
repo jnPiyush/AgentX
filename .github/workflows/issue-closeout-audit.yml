@@ -1,0 +1,191 @@
+name: Issue Closeout Audit
+
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: issue-closeout-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Flag Open Issues Referenced By Delivered Commits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Audit issue closeout signals
+        uses: actions/github-script@v7
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const defaultBranch = process.env.DEFAULT_BRANCH || 'master';
+            const marker = '<!-- agentx-issue-closeout-audit -->';
+
+            function extractIssueRefs(text) {
+              const refs = new Set();
+              for (const match of text.matchAll(/#(\d+)/g)) {
+                refs.add(Number(match[1]));
+              }
+              return [...refs];
+            }
+
+            function hasClosingKeyword(text, issueNumber) {
+              const pattern = new RegExp(`\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\s+#${issueNumber}\\b`, 'i');
+              return pattern.test(text);
+            }
+
+            function summarizeMessage(message) {
+              return (message || '').split('\n')[0].trim();
+            }
+
+            async function upsertAuditComment(issueNumber, body) {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              });
+
+              const existing = comments.find((comment) =>
+                comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker),
+              );
+
+              if (existing) {
+                if (existing.body !== body) {
+                  await github.rest.issues.updateComment({
+                    owner,
+                    repo,
+                    comment_id: existing.id,
+                    body,
+                  });
+                }
+                return 'updated';
+              }
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body,
+              });
+              return 'created';
+            }
+
+            let commitSources = [];
+
+            if (context.eventName === 'push' && Array.isArray(context.payload.commits)) {
+              commitSources = context.payload.commits.map((commit) => ({
+                sha: commit.id,
+                message: commit.message || '',
+                url: commit.url || `https://github.com/${owner}/${repo}/commit/${commit.id}`,
+              }));
+            } else {
+              const commits = await github.paginate(github.rest.repos.listCommits, {
+                owner,
+                repo,
+                sha: defaultBranch,
+                per_page: 100,
+              });
+
+              commitSources = commits.map((commit) => ({
+                sha: commit.sha,
+                message: commit.commit.message || '',
+                url: commit.html_url || `https://github.com/${owner}/${repo}/commit/${commit.sha}`,
+              }));
+            }
+
+            const issueSignals = new Map();
+
+            for (const commit of commitSources) {
+              const refs = extractIssueRefs(commit.message);
+              for (const issueNumber of refs) {
+                const entry = issueSignals.get(issueNumber) || { commits: [], hasClosingKeyword: false };
+                entry.commits.push(commit);
+                if (hasClosingKeyword(commit.message, issueNumber)) {
+                  entry.hasClosingKeyword = true;
+                }
+                issueSignals.set(issueNumber, entry);
+              }
+            }
+
+            const candidates = [];
+
+            for (const [issueNumber, signal] of issueSignals.entries()) {
+              if (signal.hasClosingKeyword) {
+                continue;
+              }
+
+              try {
+                const issue = await github.rest.issues.get({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                });
+
+                if (issue.data.pull_request || issue.data.state !== 'open') {
+                  continue;
+                }
+
+                candidates.push({ issueNumber, signal, title: issue.data.title });
+              } catch (error) {
+                core.warning(`Skipping #${issueNumber}: ${error.message}`);
+              }
+            }
+
+            if (candidates.length === 0) {
+              core.summary
+                .addHeading('Issue closeout audit')
+                .addRaw('No open issues referenced by delivered commits without closing keywords.')
+                .write();
+              return;
+            }
+
+            let created = 0;
+            let updated = 0;
+
+            for (const candidate of candidates) {
+              const recentCommits = candidate.signal.commits
+                .slice(0, 5)
+                .map((commit) => `- ${commit.sha.slice(0, 7)}: ${summarizeMessage(commit.message)}`)
+                .join('\n');
+
+              const body = [
+                marker,
+                `Issue closeout audit found commits on \`${defaultBranch}\` that reference this issue but do not include a GitHub closing keyword.`,
+                '',
+                'Recent commit references:',
+                recentCommits,
+                '',
+                `If this issue is complete, close it manually or use \`fixes #${candidate.issueNumber}\`, \`closes #${candidate.issueNumber}\`, or \`resolves #${candidate.issueNumber}\` in the final PR body or delivery commit next time.`,
+                '',
+                'This audit is advisory and does not auto-close issues.',
+              ].join('\n');
+
+              const result = await upsertAuditComment(candidate.issueNumber, body);
+              if (result === 'created') {
+                created += 1;
+              } else if (result === 'updated') {
+                updated += 1;
+              }
+            }
+
+            core.summary
+              .addHeading('Issue closeout audit')
+              .addTable([
+                ['Metric', 'Count'],
+                ['Open issues flagged', String(candidates.length)],
+                ['Comments created', String(created)],
+                ['Comments updated', String(updated)],
+              ])
+              .write();
