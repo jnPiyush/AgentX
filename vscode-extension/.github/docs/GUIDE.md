@@ -386,11 +386,16 @@ None"
 .\.agentx\agentx.ps1 issue update -n 42 -s "In Review"
 
 # Step 4: Commit with issue reference
-git commit -m "feat: add health endpoint (#42)"
+git commit -m "feat: add health endpoint (refs #42)"
 
-# Step 5: After review, close the issue
+# Final delivery should use a closing keyword in the PR body or merge commit:
+# fix: add health endpoint (fixes #42)
+
+# Step 5: After review, close the issue if it was not auto-closed
 gh issue close 42 --reason completed
 ```
+
+Important: `(#42)` is a link, not a close action. Use `fixes #42`, `closes #42`, or `resolves #42` in the final PR or delivery commit to prevent stale-open issues.
 
 **What agents get from the issue:**
 - **Engineer**: Acceptance criteria, dependencies, priority
