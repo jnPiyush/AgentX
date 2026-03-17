@@ -163,6 +163,7 @@ jobs:
           if [ "$HIGH_VULNS" -gt 0 ] || [ "$CRITICAL_VULNS" -gt 0 ]; then
             echo "HAS_VULNERABILITIES=true" >> $GITHUB_OUTPUT
             echo "::warning::Found $HIGH_VULNS high and $CRITICAL_VULNS critical vulnerabilities in Node.js dependencies"
+            exit 1
           else
             echo "HAS_VULNERABILITIES=false" >> $GITHUB_OUTPUT
             echo "[PASS] No high/critical vulnerabilities found"

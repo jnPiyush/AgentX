@@ -43,6 +43,12 @@ jobs:
         working-directory: vscode-extension
         run: npm ci
 
+      - name: Validate extension quality gates
+        working-directory: vscode-extension
+        run: |
+          npm run test:coverage
+          npm audit --audit-level=high
+
       - name: Package VSIX
         working-directory: vscode-extension
         run: npx @vscode/vsce package

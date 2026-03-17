@@ -220,9 +220,10 @@ jobs:
         run: |
           echo "Running extension test gate and lint advisory..."
           npm ci
-          npm test
+          npm run test:coverage
+          npm audit --audit-level=high
           npm run lint || echo "[WARN] Lint warnings/errors present (advisory mode)"
-          echo "[PASS] Extension tests passed"
+          echo "[PASS] Extension coverage and audit gates passed"
 
       - name: Agent Deliverable Validation
         if: github.event_name == 'pull_request'
