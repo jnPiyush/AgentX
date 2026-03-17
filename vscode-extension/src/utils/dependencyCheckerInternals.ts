@@ -46,7 +46,7 @@ export function resolvePowerShellCoreExecutable(
   return 'pwsh';
 }
 
-export function tryExec(command: string, timeoutMs = 10_000): Promise<string> {
+export function tryExec(command: string, timeoutMs = 5_000): Promise<string> {
   return new Promise((resolve) => {
     // Use the platform default shell (cmd.exe on Windows, /bin/sh on Unix).
     // Overriding with powershell.exe causes Node.js to pass CMD-style /d /s /c flags
@@ -108,7 +108,9 @@ export async function checkPowerShell(options: PowerShellCheckOptions = {}): Pro
   const meetsMinimum = hasPwsh && compareSemver(pwshVersion, MIN_POWERSHELL_VERSION) >= 0;
 
   let legacyVersion = '';
-  if (platform === 'win32') {
+  // Only probe legacy powershell.exe when pwsh 7+ is not already found.
+  // Avoids an unnecessary exec call in the happy path.
+  if (platform === 'win32' && !meetsMinimum) {
     const rawLegacy = await execute(buildPowerShellVersionCommand('powershell.exe', platform));
     legacyVersion = rawLegacy.length > 0 ? parseVersion(rawLegacy) : '';
   }
@@ -168,11 +170,15 @@ export async function checkGitHubCli(): Promise<DependencyResult> {
   const found = raw.length > 0;
   const version = found ? parseVersion(raw) : '';
 
-  let authStatus = '';
+  // 'gh auth token' reads the locally stored credential and exits 0 with the
+  // token on stdout when authenticated, or exits non-zero with empty stdout
+  // when not authenticated.  This is faster and more reliable than parsing
+  // 'gh auth status', which writes to stderr and whose message format can change.
+  let authenticated = false;
   if (found) {
-    authStatus = await tryExec('gh auth status 2>&1');
+    const token = await tryExec('gh auth token');
+    authenticated = token.length > 0;
   }
-  const authenticated = authStatus.includes('Logged in');
 
   let message = '';
   if (!found) {
@@ -200,14 +206,28 @@ export async function checkGitHubCli(): Promise<DependencyResult> {
 }
 
 export async function checkAzureCli(): Promise<DependencyResult> {
-  const raw = await tryExec('az --version');
-  const found = raw.length > 0;
-  const version = found ? parseVersion(raw) : '';
-
+  // Single call: 'az version --output json' returns both the CLI version and
+  // all installed extension versions in one JSON document, avoiding a second
+  // Python VM startup that 'az extension show' would require.
+  const raw = await tryExec('az version --output json', 10_000);
+  let found = false;
+  let version = '';
   let extensionInstalled = false;
-  if (found) {
-    const extRaw = await tryExec('az extension show --name azure-devops --output json');
-    extensionInstalled = extRaw.length > 0;
+
+  if (raw.length > 0) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const azVer = parsed['azure-cli'];
+      found = typeof azVer === 'string';
+      version = found ? parseVersion(azVer as string) : '';
+      const extensions = parsed['extensions'] as Record<string, unknown> | undefined;
+      extensionInstalled = typeof extensions?.['azure-devops'] === 'string';
+    } catch {
+      // az printed a non-JSON preamble (e.g. upgrade notice); treat as found
+      // but extension status unknown.
+      found = true;
+      version = parseVersion(raw);
+    }
   }
 
   let message = '';

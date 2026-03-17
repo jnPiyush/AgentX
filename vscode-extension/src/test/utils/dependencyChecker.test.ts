@@ -87,13 +87,36 @@ describe('dependencyChecker', () => {
         },
       });
 
+      // Legacy powershell.exe probe is skipped when pwsh already meets the minimum.
       assert.deepEqual(commands, [
         'pwsh -NoProfile -Command $PSVersionTable.PSVersion.ToString()',
-        'powershell.exe -NoProfile -Command $PSVersionTable.PSVersion.ToString()',
       ]);
       assert.equal(result.found, true);
       assert.equal(result.version, '7.5.4');
       assert.equal(result.message, 'PowerShell 7.5.4 detected.');
+    });
+
+    it('should probe legacy powershell.exe on Windows only when pwsh is missing or too old', async () => {
+      const commands: string[] = [];
+
+      const result = await checkPowerShell({
+        platform: 'win32',
+        resolveExecutable: () => 'pwsh',
+        execute: async (command) => {
+          commands.push(command);
+          if (command.startsWith('powershell.exe ')) {
+            return '5.1.22621.2506';
+          }
+          return ''; // pwsh not found
+        },
+      });
+
+      assert.deepEqual(commands, [
+        'pwsh -NoProfile -Command $PSVersionTable.PSVersion.ToString()',
+        'powershell.exe -NoProfile -Command $PSVersionTable.PSVersion.ToString()',
+      ]);
+      assert.equal(result.found, false);
+      assert.ok(result.message.includes('Windows PowerShell 5.1'));
     });
   });
 
