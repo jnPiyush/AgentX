@@ -106,6 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
     .finally(() => onConfigChange());
  };
  configWatcher.onDidCreate(onConfigChange);
+ configWatcher.onDidChange(onConfigChange);
  configWatcher.onDidDelete(onConfigChange);
  mcpWatcher.onDidCreate(onConfigChange);
  mcpWatcher.onDidChange(onConfigChange);

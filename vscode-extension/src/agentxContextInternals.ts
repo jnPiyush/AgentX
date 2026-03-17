@@ -282,6 +282,17 @@ export function buildCliCommand(root: string | undefined, shell: string): string
   return path.join(root, '.agentx', 'agentx.ps1');
 }
 
+function safeQuoteArg(arg: string): string {
+  const trimmed = arg.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return arg; // already quoted by caller
+  }
+  return /\s/.test(arg) ? `"${arg}"` : arg;
+}
+
 export function buildCliInvocation(
   cliPath: string,
   shell: string,
@@ -289,7 +300,7 @@ export function buildCliInvocation(
   cliArgs: string[],
 ): { command: string; shellKind: 'pwsh' | 'bash' } {
   const isPwsh = shell === 'pwsh' || (shell === 'auto' && process.platform === 'win32');
-  const argStr = cliArgs.length > 0 ? ' ' + cliArgs.join(' ') : '';
+  const argStr = cliArgs.length > 0 ? ' ' + cliArgs.map(safeQuoteArg).join(' ') : '';
 
   return {
     command: isPwsh
@@ -305,6 +316,9 @@ export function listExecutionPlanFilesForRoot(root: string | undefined): string[
   }
 
   const candidates: string[] = [];
+  // Primary canonical location (docs/execution/plans/)
+  collectMatchingFiles(path.join(root, 'docs', 'execution', 'plans'), (name) => name.endsWith('.md'), candidates);
+  // Legacy shim paths retained for migration compatibility
   collectMatchingFiles(path.join(root, 'docs', 'plans'), (name) => name.endsWith('.md'), candidates);
   collectMatchingFiles(path.join(root, 'docs'), (name) => /^EXEC-PLAN.+\.md$/i.test(name), candidates);
 
