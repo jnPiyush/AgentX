@@ -38,7 +38,7 @@ describe('sidebar providers', () => {
     __clearExtensions();
   });
 
-  it('WorkTreeProvider should show only open issues and actions', async () => {
+  it('WorkTreeProvider should show only open issues', async () => {
     const root = createWorkspaceRoot();
     fs.writeFileSync(
       path.join(root, '.agentx', 'state', 'agent-status.json'),
@@ -101,27 +101,16 @@ describe('sidebar providers', () => {
     });
     const items = await provider.getChildren();
 
-    assert.equal(items.length, 2);
+    assert.equal(items.length, 1);
     assert.equal(items[0].label, 'Open issues');
-    assert.equal(items[1].label, 'Actions');
 
     const issueSection = items[0];
     const issueChildren = await provider.getChildren(issueSection);
     assert.equal(issueChildren.length, 1);
     assert.ok(String(issueChildren[0].label).includes('#7 Add sidebar'));
-
-    const actionChildren = await provider.getChildren(items[1]);
-    assert.ok(actionChildren.some((item) => item.label === 'Workflow next step'));
-    assert.ok(actionChildren.some((item) => item.label === 'Brainstorm'));
-    assert.ok(actionChildren.some((item) => item.label === 'Compound loop'));
-    assert.ok(actionChildren.some((item) => item.label === 'Rollout scorecard'));
-    assert.ok(actionChildren.some((item) => item.label === 'Operator checklist'));
-    assert.ok(actionChildren.some((item) => item.label === 'Create learning capture'));
-    assert.ok(actionChildren.some((item) => item.label === 'Review findings'));
-    assert.ok(actionChildren.some((item) => item.label === 'Promote review finding'));
   });
 
-  it('StatusTreeProvider should show only overview and quality', async () => {
+  it('StatusTreeProvider should show only overview', async () => {
     const root = createWorkspaceRoot();
     fs.mkdirSync(path.join(root, 'docs', 'guides'), { recursive: true });
     fs.mkdirSync(path.join(root, 'docs', 'artifacts', 'specs'), { recursive: true });
@@ -174,13 +163,8 @@ describe('sidebar providers', () => {
     const provider = new StatusTreeProvider(createAgentxStub(root));
     const items = await provider.getChildren();
 
-    assert.equal(items.length, 2);
+    assert.equal(items.length, 1);
     assert.equal(items[0].label, 'Overview');
-    assert.equal(items[1].label, 'Quality');
-
-    const qualityChildren = await provider.getChildren(items[1]);
-    assert.ok(qualityChildren.some((item) => item.label === 'Evaluation' && item.description === '100% (5/5 checks)'));
-    assert.ok(qualityChildren.some((item) => item.label === 'Reviewer handoff' && item.description === 'ready'));
   });
 
   it('StatusTreeProvider should show overview with version, mode, and companion state', async () => {

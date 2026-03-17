@@ -2,27 +2,6 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AgentXContext } from '../agentxContext';
-import {
- getAttributionSummary,
- getAttributionTooltip,
- getCoverageSummary,
- getCoverageTooltip,
- getEvaluationSummary,
- getEvaluationTooltip,
-} from '../eval/harnessEvaluator';
-import {
- getAgentNativeGapSummary,
- getAgentNativeGapTooltip,
- getAgentNativeReviewSummary,
- getAgentNativeReviewTooltip,
-} from '../review/agent-native-review';
-import {
- getPromotableFindingSummary,
- getPromotableFindingTooltip,
- getReviewFindingSummary,
- getReviewFindingTooltip,
-} from '../review/review-findings';
-import { checkHandoffGate } from '../utils/loopStateChecker';
 import { getAzureCompanionState } from '../utils/companionExtensions';
 import { SidebarTreeItem } from './sidebarTreeItem';
 
@@ -97,25 +76,8 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<SidebarTreeIt
    return [SidebarTreeItem.section('Overview', 'plug', overviewChildren)];
   }
 
-  // Quality section — signals + handoff gate
-  const handoff = checkHandoffGate(root);
-  const gateIcon = handoff.allowed ? 'pass-filled' : 'warning';
-  const gateState = handoff.allowed ? 'ready' : 'blocked';
-
-  const qualityChildren = [
-   SidebarTreeItem.detail('Evaluation', handoff.allowed ? 'graph' : 'warning', getEvaluationSummary(this.agentx), getEvaluationTooltip(this.agentx)),
-   SidebarTreeItem.detail('Coverage', 'layers', getCoverageSummary(this.agentx), getCoverageTooltip(this.agentx)),
-   SidebarTreeItem.detail('Attribution', 'symbol-key', getAttributionSummary(this.agentx), getAttributionTooltip(this.agentx)),
-   SidebarTreeItem.detail('Agent-native review', 'symbol-interface', getAgentNativeReviewSummary(this.agentx), getAgentNativeReviewTooltip(this.agentx)),
-   SidebarTreeItem.detail('Parity gaps', 'warning', getAgentNativeGapSummary(this.agentx), getAgentNativeGapTooltip(this.agentx)),
-   SidebarTreeItem.detail('Review findings', 'comment-discussion', getReviewFindingSummary(this.agentx), getReviewFindingTooltip(this.agentx)),
-   SidebarTreeItem.detail('Promotable findings', 'repo-push', getPromotableFindingSummary(this.agentx), getPromotableFindingTooltip(this.agentx)),
-   SidebarTreeItem.detail('Reviewer handoff', gateIcon, gateState, handoff.reason),
-  ];
-
   return [
    SidebarTreeItem.section('Overview', 'plug', overviewChildren),
-   SidebarTreeItem.section('Quality', 'checklist', qualityChildren),
   ];
  }
 }

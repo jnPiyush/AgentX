@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
 import { SidebarTreeItem } from './sidebarTreeItem';
 import {
- buildActionChildren,
  buildIssueChildren,
  getLocalIssues,
 } from './workTreeProviderInternals';
@@ -35,11 +34,9 @@ export class WorkTreeProvider implements vscode.TreeDataProvider<SidebarTreeItem
   const openIssues = localIssues.filter((issue) => (issue.state ?? 'open') !== 'closed');
 
   const issueChildren = buildIssueChildren(openIssues);
-  const actionChildren = buildActionChildren();
 
   return [
    SidebarTreeItem.section('Open issues', 'issues', issueChildren, String(openIssues.length)),
-   SidebarTreeItem.section('Actions', 'tools', actionChildren),
   ];
  }
 }
