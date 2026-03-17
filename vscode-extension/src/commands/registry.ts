@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
 import { registerInitializeCommand } from './initialize';
+import { registerAddPluginCommand } from './plugins';
 import { registerStatusCommand } from './status';
 import { registerWorkflowCommand } from './workflow';
 import { registerDepsCommand } from './deps';
@@ -19,6 +20,7 @@ export function registerAgentXCommands(
  agentx: AgentXContext,
 ): void {
  registerInitializeCommand(context, agentx);
+ registerAddPluginCommand(context, agentx);
  registerStatusCommand(context, agentx);
  registerWorkflowCommand(context, agentx);
  registerDepsCommand(context, agentx);

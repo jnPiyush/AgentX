@@ -68,7 +68,7 @@ export async function runInitializeCommand(
    { label: 'github', description: 'GitHub Actions, PRs, Projects (via MCP)' },
    { label: 'ado', description: 'Azure DevOps work items, boards, pipelines (via MCP)' },
   ],
-  { placeHolder: 'Select integration to add', title: 'AgentX - Add Integration' },
+  { placeHolder: 'Select integration to add', title: 'AgentX - Config Advance' },
  );
  if (!mode) {
   return;

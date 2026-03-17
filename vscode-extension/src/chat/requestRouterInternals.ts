@@ -50,7 +50,7 @@ function renderMissingRuntimeMessage(): string {
     '',
     'This workspace has an open folder, but it does not contain the local `.agentx` runtime needed for `run`, loop execution, or clarification resume.',
     '',
-    'To enable formal AgentX execution in this repo, run **AgentX: Add Integration** first.',
+    'To enable formal AgentX execution in this repo, run **AgentX: Config Advance** first.',
   ].join('\n');
 }
 

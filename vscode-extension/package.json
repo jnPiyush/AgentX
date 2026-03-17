@@ -55,9 +55,15 @@
     "commands": [
       {
         "command": "agentx.initialize",
-        "title": "Add Integration",
+        "title": "Config Advance",
         "category": "AgentX",
         "icon": "$(plug)"
+      },
+      {
+        "command": "agentx.addPlugin",
+        "title": "Add Plugin",
+        "category": "AgentX",
+        "icon": "$(extensions)"
       },
       {
         "command": "agentx.showStatus",

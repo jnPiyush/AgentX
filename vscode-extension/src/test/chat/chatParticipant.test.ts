@@ -174,7 +174,7 @@ describe('chatParticipant', () => {
 
     const markdown = response.getMarkdown();
     assert.ok(markdown.includes('AgentX CLI runtime is not available in this workspace.'));
-    assert.ok(markdown.includes('AgentX: Add Integration'));
+    assert.ok(markdown.includes('AgentX: Config Advance'));
   });
 
   it('returns ranked planning learnings from chat', async () => {
@@ -509,7 +509,7 @@ describe('chatParticipant', () => {
 
     const markdown = response.getMarkdown();
     assert.ok(markdown.includes('AgentX CLI runtime is not available in this workspace.'));
-    assert.ok(markdown.includes('AgentX: Add Integration'));
+    assert.ok(markdown.includes('AgentX: Config Advance'));
   });
 
   it('shows pending clarification context for bare continue', async () => {
