@@ -251,7 +251,12 @@ Need a prototype?
 - Color contrast below 4.5:1 for text
 - Missing focus indicators on interactive elements
 
+## Assets
+
+- `assets/prototype-tokens.css` - Production-ready CSS custom properties for spacing, typography scale, Apple-style elevation, and Stripe-style precision. Use this file as a foundation for HTML prototypes to ensure consistency.
+
 ## References
 
+- [Design System Reasoning](../design-system-reasoning/SKILL.md) -- posture and archetype framework
 - [UX/UI Design Skill](../ux-ui-design/SKILL.md) -- methodology and research
 - [Frontend/UI Skill](../frontend-ui/SKILL.md) -- semantic HTML, accessibility patterns

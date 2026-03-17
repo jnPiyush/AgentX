@@ -166,5 +166,8 @@ Building a frontend UI?
 
 ## References
 
+- [UX/UI Design Skill](../ux-ui-design/SKILL.md) -- wireframes and methodology
+- [Prototype Craft](../prototype-craft/SKILL.md) -- UI visual polish and CSS variables
+- [Design System Reasoning](../design-system-reasoning/SKILL.md) -- page archetypes and visual language
 - [Tailwind A11y Css](references/tailwind-a11y-css.md)
 - [Images Forms Layouts](references/images-forms-layouts.md)

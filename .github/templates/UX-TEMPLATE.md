@@ -36,20 +36,21 @@ inputs:
 ## Table of Contents
 
 1. [Overview](#1-overview)
-2. [User Research](#2-user-research)
-3. [User Flows](#3-user-flows)
-4. [Wireframes](#4-wireframes)
-5. [Component Specifications](#5-component-specifications)
-6. [Design System](#6-design-system)
-7. [Interactions & Animations](#7-interactions--animations)
-8. [Accessibility (WCAG 2.1 AA)](#8-accessibility-wcag-21-aa)
-9. [Responsive Design](#9-responsive-design)
-10. [AI & Conversational UX](#10-ai--conversational-ux) *(if applicable)*
-11. [MCP App UI Design](#11-mcp-app-ui-design) *(if applicable)*
-12. [Interactive Prototypes](#12-interactive-prototypes)
-13. [Implementation Notes](#13-implementation-notes)
-14. [Open Questions](#14-open-questions)
-15. [References](#15-references)
+2. [Design Research & Posture](#2-design-research--posture)
+3. [User Research](#3-user-research)
+4. [User Flows](#4-user-flows)
+5. [Wireframes](#5-wireframes)
+6. [Component Specifications](#6-component-specifications)
+7. [Design System](#7-design-system)
+8. [Interactions & Animations](#8-interactions--animations)
+9. [Accessibility (WCAG 2.1 AA)](#9-accessibility-wcag-21-aa)
+10. [Responsive Design](#10-responsive-design)
+11. [AI & Conversational UX](#11-ai--conversational-ux) *(if applicable)*
+12. [MCP App UI Design](#12-mcp-app-ui-design) *(if applicable)*
+13. [Interactive Prototypes](#13-interactive-prototypes)
+14. [Implementation Notes](#14-implementation-notes)
+15. [Open Questions](#15-open-questions)
+16. [References](#16-references)
 
 ---
 
@@ -70,7 +71,30 @@ inputs:
 
 ---
 
-## 2. User Research
+## 2. Design Research & Posture
+
+### Product Posture
+- **Primary Posture**: {e.g., Trust-led, Workflow-led, Emotion-led, Utility-led}
+- **Confidence Level Needed**: {e.g., High-precision auditability, Fast task throughput}
+
+### Page Archetypes
+- **Dominant Archetype**: {e.g., Proof-led Landing, Operations Surface, Guided Utility}
+- **Rationale**: {Why this archetype fits the primary user goal}
+
+### Competitive Audit
+| Product | Layout Strategy | Interaction Model | Takeaways (Use/Avoid) |
+|---------|-----------------|-------------------|-----------------------|
+| {Company X} | {Notes on layout} | {Notes on interaction} | {Specific patterns to adopt or avoid} |
+| {Company Y} | {Notes on layout} | {Notes on interaction} | {Specific patterns to adopt or avoid} |
+| {Company Z} | {Notes on layout} | {Notes on interaction} | {Specific patterns to adopt or avoid} |
+
+### Anti-Patterns (What to Avoid)
+- **Avoid 1**: {e.g., No playful animations during secure transactions}
+- **Avoid 2**: {e.g., Do not hide critical filters in collapsed menus}
+
+---
+
+## 3. User Research
 
 ### User Personas (from PRD)
 **Primary Persona: {Name}**
@@ -90,9 +114,9 @@ inputs:
 
 ---
 
-## 3. User Flows
+## 4. User Flows
 
-### 3.1 Primary Flow: {Action Name}
+### 4.1 Primary Flow: {Action Name}
 **Trigger**: {What initiates this flow - e.g., User clicks "Create Account"} 
 **Goal**: {What user wants to accomplish} 
 **Preconditions**: {Required state - e.g., User is logged out}
@@ -145,7 +169,7 @@ flowchart TD
 
 ---
 
-## 4. Wireframes
+## 5. Wireframes
 
 ### Screen 1: Registration Modal
 **Purpose**: Capture user information for account creation 
@@ -218,7 +242,7 @@ flowchart TD
 
 ---
 
-## 5. Component Specifications
+## 6. Component Specifications
 
 ### 5.1 Button: Primary CTA
 **Purpose**: Main call-to-action for forms and critical actions 
@@ -276,7 +300,7 @@ flowchart TD
 
 ---
 
-## 6. Design System
+## 7. Design System
 
 ### 6.1 Layout & Grid
 - **Grid System**: 12-column responsive grid
@@ -351,7 +375,7 @@ flowchart TD
 
 ---
 
-## 7. Interactions & Animations
+## 8. Interactions & Animations
 
 ### 7.1 Transitions
 **Standard Duration**: 200ms 
@@ -377,7 +401,7 @@ flowchart TD
 
 ---
 
-## 8. Accessibility (WCAG 2.1 AA)
+## 9. Accessibility (WCAG 2.1 AA)
 
 ### 8.1 Keyboard Navigation
 - **Tab Order**: Logical flow (top-to-bottom, left-to-right)
@@ -413,7 +437,7 @@ flowchart TD
 
 ---
 
-## 9. Responsive Design
+## 10. Responsive Design
 
 ### Mobile (<768px)
 - **Layout**: Single column, full width
@@ -433,7 +457,7 @@ flowchart TD
 
 ---
 
-## 10. AI & Conversational UX (if applicable)
+## 11. AI & Conversational UX (if applicable)
 
 > **Trigger**: Include this section when the feature involves chat interfaces, AI agents,
 > LLM-powered interactions, or conversational UI. Skip for traditional web/mobile UX.
@@ -538,7 +562,7 @@ graph TD
 
 ---
 
-## 11. MCP App UI Design (if applicable)
+## 12. MCP App UI Design (if applicable)
 
 > **Trigger**: Include this section when the feature is an MCP App rendering interactive UI
 > inside an AI host (VS Code Copilot, Claude Desktop, etc.). Skip for standalone web apps.
@@ -648,7 +672,7 @@ graph TD
 
 ---
 
-## 12. Interactive Prototypes
+## 13. Interactive Prototypes
 
 > **[WARN] MANDATORY**: HTML/CSS prototypes are REQUIRED per AGENTS.md. Output to `docs/ux/prototypes/`.
 > Prototypes must be production-ready HTML/CSS that engineers can reference for implementation.
@@ -667,7 +691,7 @@ graph TD
 
 ---
 
-## 13. Implementation Notes
+## 14. Implementation Notes
 
 ### 13.1 For Engineers
 
@@ -729,7 +753,7 @@ graph TD
 
 ---
 
-## 14. Open Questions
+## 15. Open Questions
 
 | Question | Owner | Status | Resolution |
 |----------|-------|--------|------------|
@@ -738,7 +762,7 @@ graph TD
 
 ---
 
-## 15. References
+## 16. References
 
 ### Design Inspiration
 - [Example 1](link)
@@ -757,3 +781,4 @@ graph TD
 **Generated by AgentX UX Designer Agent** 
 **Last Updated**: {YYYY-MM-DD} 
 **Version**: 1.0
+

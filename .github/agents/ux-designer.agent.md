@@ -165,6 +165,7 @@ Update Status to `Ready` in GitHub Projects.
 
 | Task | Skill |
 |------|-------|
+| Defining posture, archetype, trust cues | [Design System Reasoning](../skills/design/design-system-reasoning/SKILL.md) |
 | Wireframing, prototyping, methodology | [UX/UI Design](../skills/design/ux-ui-design/SKILL.md) |
 | Visual polish, color, typography, CSS craft | [Prototype Craft](../skills/design/prototype-craft/SKILL.md) |
 | HTML5, CSS3, responsive patterns | [Frontend/UI](../skills/design/frontend-ui/SKILL.md) |

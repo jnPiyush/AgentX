@@ -1,0 +1,131 @@
+/* ==========================================================================
+   AgentX Prototype Tokens
+   A production-ready CSS custom property system for HTML prototypes.
+   Inspired by Apple (depth/typography) and Stripe (precision/shadows).
+   ========================================================================== */
+
+:root {
+  /* ----------------------------------------------------------------------
+     TYPOGRAPHY (Fluid Scale using clamp, 1.25 Ratio)
+     ---------------------------------------------------------------------- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, Helvetica, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
+
+  /* Baseline ranges from 16px to 18px based on viewport */
+  --text-xs:   clamp(0.70rem, 0.65vw, 0.75rem);   /* 11px - 12px */
+  --text-sm:   clamp(0.80rem, 0.75vw, 0.875rem);  /* 13px - 14px */
+  --text-base: clamp(1.00rem, 1.0vw,  1.125rem);  /* 16px - 18px */
+  --text-lg:   clamp(1.25rem, 1.25vw, 1.375rem);  /* 20px - 22px */
+  --text-xl:   clamp(1.56rem, 1.5vw,  1.75rem);   /* 25px - 28px */
+  --text-2xl:  clamp(1.95rem, 2.0vw,  2.25rem);   /* 31px - 36px */
+  --text-3xl:  clamp(2.44rem, 2.5vw,  3.00rem);   /* 39px - 48px */
+  
+  --leading-none:   1;
+  --leading-tight:  1.25;
+  --leading-normal: 1.5;
+  --leading-loose:  1.75;
+
+  /* ----------------------------------------------------------------------
+     SPACING (8px Harmonic Scale)
+     ---------------------------------------------------------------------- */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-24:  96px;
+
+  /* ----------------------------------------------------------------------
+     COLOR SYSTEM (Workflows require distinct hierarchy and subtle greys)
+     ---------------------------------------------------------------------- */
+  /* Primary Action */
+  --color-primary-50:  #E8F2FF;
+  --color-primary-100: #BAD6FE;
+  --color-primary-500: #2563EB; /* WCAG AA valid vs white */
+  --color-primary-600: #1D4ED8;
+  --color-primary-900: #1E3A8A;
+
+  /* Neutrals / Greys (Slight cool tint) */
+  --color-neutral-0:   #FFFFFF;
+  --color-neutral-50:  #F8FAFC;
+  --color-neutral-100: #F1F5F9;
+  --color-neutral-200: #E2E8F0;
+  --color-neutral-300: #CBD5E1;
+  --color-neutral-400: #94A3B8;
+  --color-neutral-500: #64748B;
+  --color-neutral-600: #475569;
+  --color-neutral-800: #1E293B; /* High contrast body text */
+  --color-neutral-900: #0F172A; /* Headings */
+
+  /* States */
+  --color-success: #10B981;
+  --color-error:   #EF4444;
+  --color-warning: #F59E0B;
+  --color-info:    #3B82F6;
+
+  /* ----------------------------------------------------------------------
+     ELEVATION & DEPTH (Layered realistic shadow formulas)
+     ---------------------------------------------------------------------- */
+  /* Used for focused states, borders, soft card separation */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+
+  /* Used for cards, drop-downs */
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
+               0 2px 4px -2px rgba(0, 0, 0, 0.03);
+
+  /* Used for modals, popovers */
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06),
+               0 4px 6px  -4px rgba(0, 0, 0, 0.03),
+               0 0   0    1px  rgba(0, 0, 0, 0.03); /* subtle border illusion */
+
+  /* Used for high-priority floating elements / tooltips */
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08),
+               0 8px  10px -6px rgba(0, 0, 0, 0.03),
+               0 0    0    1px  rgba(0, 0, 0, 0.03);
+
+  /* ----------------------------------------------------------------------
+     SURFACE RADII (Border Radius)
+     ---------------------------------------------------------------------- */
+  --radius-sm:  4px;  /* Inputs, small buttons */
+  --radius-md:  8px;  /* Default buttons, cards */
+  --radius-lg:  12px; /* Modals, large cards */
+  --radius-xl:  16px; /* High-level layout wrappers */
+  --radius-pill: 9999px;
+
+  /* ----------------------------------------------------------------------
+     MOTION & TRANSITIONS
+     ---------------------------------------------------------------------- */
+  --ease-spring:  cubic-bezier(0.175, 0.885, 0.32, 1.1); /* Bouncy */
+  --ease-out:     cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-in-out:  cubic-bezier(0.65, 0, 0.35, 1);
+  
+  --duration-fast:   150ms;
+  --duration-normal: 250ms;
+  --duration-slow:   350ms;
+}
+
+/* ==========================================================================
+   GLOBAL RESET PROTOTYPE UTILITIES
+   ========================================================================== */
+body {
+  font-family: var(--font-sans);
+  color: var(--color-neutral-800);
+  background-color: var(--color-neutral-50);
+  line-height: var(--leading-normal);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Focus States (WCAG 2.1 AA) */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Base Interactive Transitions */
+a, button, input, select, textarea {
+  transition: all var(--duration-fast) var(--ease-out);
+}

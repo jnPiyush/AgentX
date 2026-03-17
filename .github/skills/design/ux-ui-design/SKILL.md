@@ -80,6 +80,7 @@ Start: What is the deliverable?
 ### [PASS] DO
 
 **Research & Wireframing:**
+- Define Product Posture & Archetype BEFORE sketching any screens
 - Start with lo-fi sketches; iterate on paper first
 - Use real content, never lorem ipsum in final designs
 - Annotate interactions on every wireframe
@@ -87,10 +88,10 @@ Start: What is the deliverable?
 
 **Design & Prototyping:**
 - Follow the 8px spacing grid
-- Design for ALL states: empty, loading, error, success
+- Design for ALL states: empty, loading, error, success, partial
 - Build production-ready HTML/CSS prototypes (mandatory)
 - Use semantic HTML5 + ARIA attributes from the start
-- Use CSS custom properties for all design tokens
+- Use CSS custom properties for all design tokens (see `prototype-craft` asset)
 - Validate HTML & CSS
 
 **Collaboration:**
@@ -192,6 +193,8 @@ Detailed code blocks and templates are extracted into dedicated reference files:
 
 ## References
 
+- [Prototype Tokens Asset](../prototype-craft/assets/prototype-tokens.css) - Production-ready CSS variables
+- [Design System Reasoning](../design-system-reasoning/SKILL.md) - Posture and archetype framework
 - [Research Ia Wireframing](references/research-ia-wireframing.md)
 - [Flows Mockups Prototypes](references/flows-mockups-prototypes.md)
 - [Design Systems A11y](references/design-systems-a11y.md)
