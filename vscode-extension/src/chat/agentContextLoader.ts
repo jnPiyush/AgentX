@@ -24,7 +24,11 @@ export async function loadAgentInstructions(
   const root = agentx.workspaceRoot;
   if (!root) { return undefined; }
 
-  const filePath = path.join(root, '.github', 'agents', agentFileName);
+  // Guard against path traversal: agentFileName must be a plain filename, not a path.
+  const safeFileName = path.basename(agentFileName);
+  if (safeFileName !== agentFileName) { return undefined; }
+
+  const filePath = path.join(root, '.github', 'agents', safeFileName);
   if (!fs.existsSync(filePath)) { return undefined; }
 
   const content = fs.readFileSync(filePath, 'utf-8');
