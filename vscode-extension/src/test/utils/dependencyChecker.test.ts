@@ -53,10 +53,17 @@ describe('dependencyChecker', () => {
       assert.ok(candidates.includes('C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe'));
     });
 
-    it('should build a shell-safe version probe command', () => {
+    it('should build a shell-safe version probe command for Unix', () => {
       assert.equal(
-        buildPowerShellVersionCommand('pwsh'),
+        buildPowerShellVersionCommand('pwsh', 'linux'),
         "pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'",
+      );
+    });
+
+    it('should build a platform-correct version probe command for Windows', () => {
+      assert.equal(
+        buildPowerShellVersionCommand('pwsh', 'win32'),
+        'pwsh -NoProfile -Command $PSVersionTable.PSVersion.ToString()',
       );
     });
 
@@ -79,8 +86,8 @@ describe('dependencyChecker', () => {
       });
 
       assert.deepEqual(commands, [
-        "pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'",
-        "powershell.exe -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'",
+        'pwsh -NoProfile -Command $PSVersionTable.PSVersion.ToString()',
+        'powershell.exe -NoProfile -Command $PSVersionTable.PSVersion.ToString()',
       ]);
       assert.equal(result.found, true);
       assert.equal(result.version, '7.5.4');

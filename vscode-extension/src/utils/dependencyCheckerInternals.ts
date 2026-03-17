@@ -48,8 +48,10 @@ export function resolvePowerShellCoreExecutable(
 
 export function tryExec(command: string, timeoutMs = 10_000): Promise<string> {
   return new Promise((resolve) => {
-    const shell = process.platform === 'win32' ? 'powershell.exe' : '/bin/bash';
-    exec(command, { shell, timeout: timeoutMs }, (error, stdout) => {
+    // Use the platform default shell (cmd.exe on Windows, /bin/sh on Unix).
+    // Overriding with powershell.exe causes Node.js to pass CMD-style /d /s /c flags
+    // that powershell.exe does not understand, making every exec silently fail.
+    exec(command, { timeout: timeoutMs }, (error, stdout) => {
       if (error) {
         resolve('');
         return;
@@ -59,7 +61,14 @@ export function tryExec(command: string, timeoutMs = 10_000): Promise<string> {
   });
 }
 
-export function buildPowerShellVersionCommand(executable: string): string {
+export function buildPowerShellVersionCommand(executable: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform === 'win32') {
+    // On Windows, cmd.exe does NOT strip single quotes, so PowerShell would receive
+    // '$PSVersionTable.PSVersion.ToString()' as a string literal, not executable code.
+    // cmd.exe also does not expand $VARNAME, so no quoting is needed here.
+    return `${executable} -NoProfile -Command ${POWERSHELL_VERSION_COMMAND}`;
+  }
+  // On Unix, single quotes prevent the shell (/bin/sh) from expanding $PSVersionTable.
   return `${executable} -NoProfile -Command '${POWERSHELL_VERSION_COMMAND}'`;
 }
 
@@ -121,14 +130,14 @@ export async function checkPowerShell(options: PowerShellCheckOptions = {}): Pro
   const pwshExecutable = options.resolveExecutable
     ? options.resolveExecutable()
     : resolvePowerShellCoreExecutable(platform);
-  const rawPwsh = await execute(buildPowerShellVersionCommand(pwshExecutable));
+  const rawPwsh = await execute(buildPowerShellVersionCommand(pwshExecutable, platform));
   const hasPwsh = rawPwsh.length > 0;
   const pwshVersion = hasPwsh ? parseVersion(rawPwsh) : '';
   const meetsMinimum = hasPwsh && compareSemver(pwshVersion, MIN_POWERSHELL_VERSION) >= 0;
 
   let legacyVersion = '';
   if (platform === 'win32') {
-    const rawLegacy = await execute(buildPowerShellVersionCommand('powershell.exe'));
+    const rawLegacy = await execute(buildPowerShellVersionCommand('powershell.exe', platform));
     legacyVersion = rawLegacy.length > 0 ? parseVersion(rawLegacy) : '';
   }
 
