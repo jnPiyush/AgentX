@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>The Multi-Agent Workflow System for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.2"><img src="https://img.shields.io/badge/Version-8.4.2-0EA5E9?style=for-the-badge" alt="Version 8.4.2"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.3"><img src="https://img.shields.io/badge/Version-8.4.3-0EA5E9?style=for-the-badge" alt="Version 8.4.3"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -90,7 +90,7 @@ AgentX now adds explicit brainstorm and compound-loop entry points, ranked plann
 
 ---
 
-## New In 8.4.2
+## New In 8.4.3
 
 - Explicit `brainstorm`, `compound`, and `create learning capture` surfaces in chat, sidebars, and commands
 - Ranked curated learnings for planning and review entry points
