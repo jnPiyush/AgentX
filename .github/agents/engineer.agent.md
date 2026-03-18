@@ -16,6 +16,7 @@ constraints:
   - "MUST NOT modify PRD, ADR, UX docs, or CI/CD workflows"
   - "MUST NOT make architectural decisions not covered by the Spec/ADR -- escalate to Architect"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
+  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - "src/**"

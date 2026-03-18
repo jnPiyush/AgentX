@@ -10,6 +10,7 @@ constraints:
   - "MUST NOT write code or create technical specifications"
   - "MUST NOT create GitHub issues or ADO work items directly (output is copy-paste ready)"
   - "MUST NOT skip the confirmation step before finalizing a story"
+  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - "docs/coaching/**"

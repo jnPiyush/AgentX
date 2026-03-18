@@ -79,6 +79,15 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 > HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. Minimum 3 iterations. Complete with `.agentx/agentx.ps1 loop complete -s "<summary>"`. No exceptions. The pre-commit hook blocks review artifacts when no completed loop exists.
 
+### Compound Engineering Hard Rule
+
+> HARD RULE: Every agent MUST resolve Compound Capture before declaring work Done. After delivery and review are complete, classify the capture decision:
+> - **Mandatory**: Work produces reusable workflow, architecture, review, or operator guidance -> create `docs/artifacts/learnings/LEARNING-<issue>.md`
+> - **Optional**: Narrow or low-leverage work -> capture is helpful but not required
+> - **Skip**: Trivial, transient, or duplicated -> record skip rationale in the issue close comment
+>
+> Work is NOT Done until Compound Capture is resolved. The pre-commit hook validates LEARNING file structure when staged. See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the full Compound Capture contract.
+
 ### CLI Quick Reference
 
 ```powershell

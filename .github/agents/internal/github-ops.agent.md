@@ -11,6 +11,7 @@ constraints:
   - "MUST NOT create issues without validating against existing backlog for duplicates"
   - "MUST NOT close issues without verifying acceptance criteria are met"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
+  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - "GitHub Issues (create, update, close, label, assign, comment)"

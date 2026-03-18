@@ -161,6 +161,61 @@ if [ -n "$REVIEW_DOCS" ]; then
   fi
 fi
 
+# ---------------------------------------------------------------
+# Check 10: Learning capture file structure validation
+# Validates LEARNING-*.md files have required sections.
+# Catches incomplete compound capture artifacts before they land.
+# ---------------------------------------------------------------
+LEARNING_FILES=$(git diff --cached --name-only | grep '^docs/artifacts/learnings/LEARNING-.*\.md$')
+if [ -n "$LEARNING_FILES" ]; then
+  for LEARNING_FILE in $LEARNING_FILES; do
+    if [ -f "$LEARNING_FILE" ]; then
+      LEARNING_OK=1
+      # Must reference an issue number
+      if ! grep -qE '#[0-9]+|issue|Issue' "$LEARNING_FILE" 2>/dev/null; then
+        echo -e "${YELLOW}[WARN] Learning capture missing issue reference: $LEARNING_FILE${NC}"
+        echo "  Add a reference to the originating issue (e.g. #42)."
+        LEARNING_OK=0
+      fi
+      # Must have a review/source link section
+      if ! grep -qiE 'review|source|origin' "$LEARNING_FILE" 2>/dev/null; then
+        echo -e "${YELLOW}[WARN] Learning capture missing review/source link: $LEARNING_FILE${NC}"
+        echo "  Link back to the review artifact that makes this learning trustworthy."
+        LEARNING_OK=0
+      fi
+      if [ $LEARNING_OK -eq 1 ]; then
+        echo -e "${GREEN}[PASS] Learning capture structure valid: $LEARNING_FILE${NC}"
+      fi
+    fi
+  done
+fi
+
+# ---------------------------------------------------------------
+# Check 11: Approved review without learning capture (advisory)
+# Warns when approving a review without a matching LEARNING file.
+# ---------------------------------------------------------------
+APPROVED_REVIEWS=$(git diff --cached --name-only | grep '^docs/artifacts/reviews/REVIEW-.*\.md$')
+if [ -n "$APPROVED_REVIEWS" ]; then
+  for REVIEW_FILE in $APPROVED_REVIEWS; do
+    if [ -f "$REVIEW_FILE" ] && grep -qiE 'APPROVED|approved|Approved' "$REVIEW_FILE" 2>/dev/null; then
+      # Extract issue number from review filename (REVIEW-<issue>.md)
+      ISSUE_NUM=$(echo "$REVIEW_FILE" | grep -oE '[0-9]+' | head -1)
+      if [ -n "$ISSUE_NUM" ]; then
+        LEARNING_PATH="docs/artifacts/learnings/LEARNING-${ISSUE_NUM}.md"
+        if [ ! -f "$LEARNING_PATH" ]; then
+          echo -e "${YELLOW}[WARN] Approved review staged without Compound Capture: $REVIEW_FILE${NC}"
+          echo "  Resolve Compound Capture before declaring work Done:"
+          echo "    Mandatory: create $LEARNING_PATH"
+          echo "    Skip: record rationale in the issue close comment"
+          echo "  See docs/WORKFLOW.md for the full Compound Capture contract."
+        else
+          echo -e "${GREEN}[PASS] Learning capture exists for approved review: $LEARNING_PATH${NC}"
+        fi
+      fi
+    fi
+  done
+fi
+
 if [ $FAILED -eq 1 ]; then
  echo -e "${RED}[FAIL] Pre-commit checks FAILED${NC}"
  exit 1

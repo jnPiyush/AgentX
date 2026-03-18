@@ -15,6 +15,7 @@ constraints:
   - "MUST include only original DAX, M (Power Query), and report layout guidance -- no copyrighted visuals or templates"
   - "MUST iterate until ALL done criteria pass, minimum iterations = 3"
   - "MUST verify agentic loop completion before declaring implementation complete"
+  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - "reports/**"

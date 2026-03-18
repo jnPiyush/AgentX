@@ -11,6 +11,7 @@ constraints:
   - "MUST NOT modify source code, PRD, ADR, UX, or architecture documents"
   - "MUST NOT create work items without checking for duplicates in the backlog"
   - "MUST NOT close work items without verifying acceptance criteria"
+  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - "Azure DevOps Work Items (create, update, close, assign, tag)"

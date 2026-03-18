@@ -10,6 +10,7 @@ constraints:
   - "MUST design for citation and source attribution in generated responses"
   - "MUST NOT hardcode embedding model choices without comparison testing"
   - "MUST NOT skip retrieval quality evaluation"
+  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - ".copilot-tracking/rag-pipeline/** (RAG pipeline configuration and reports)"

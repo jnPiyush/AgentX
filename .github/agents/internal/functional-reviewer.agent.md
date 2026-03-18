@@ -10,6 +10,7 @@ constraints:
   - "MUST NOT modify source code -- report findings only"
   - "MUST NOT flag style or formatting issues (those belong to linters)"
   - "MUST NOT report findings outside the scope of changed files"
+  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - ".copilot-tracking/reviews/** (review reports)"
