@@ -75,14 +75,36 @@ For final delivery in GitHub mode, plain `(#123)` is traceability only. Use `fix
 
 All agents MUST create deliverable files locally using `editFiles` -- MUST NOT use `mcp_github_create_or_update_file` or `mcp_github_push_files` to push files directly to GitHub. Users must be able to review files locally before committing.
 
+### Quality Loop Hard Rule
+
+> HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. Minimum 3 iterations. Complete with `.agentx/agentx.ps1 loop complete -s "<summary>"`. No exceptions. The pre-commit hook blocks review artifacts when no completed loop exists.
+
+### Compound Engineering Hard Rule
+
+> HARD RULE: Every agent MUST resolve Compound Capture before declaring work Done. After delivery and review are complete, classify the capture decision:
+> - **Mandatory**: Work produces reusable workflow, architecture, review, or operator guidance -> create `docs/artifacts/learnings/LEARNING-<issue>.md`
+> - **Optional**: Narrow or low-leverage work -> capture is helpful but not required
+> - **Skip**: Trivial, transient, or duplicated -> record skip rationale in the issue close comment
+>
+> Work is NOT Done until Compound Capture is resolved. The pre-commit hook validates LEARNING file structure when staged. See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the full Compound Capture contract.
+
+### Pipeline Phase Compliance Hard Rule
+
+> HARD RULE: Every agent MUST follow their prescribed pipeline phases IN SEQUENCE. No phase may be skipped. Each phase has a completion gate -- the gate MUST pass before advancing to the next phase. Agents MUST NOT write deliverables before completing research phases, MUST NOT implement before planning, MUST NOT approve before verifying all checks.
+>
+> See the Role Pipeline Reference table (below the Agents table) for each role's phases and key delivery gate. The pre-commit hook validates deliverable structure for key artifacts (PRD, ADR, UX). Use `.agentx/agentx.ps1 workflow <agent>` to print the phase list for any role.
+
 ### CLI Quick Reference
 
 ```powershell
+.\.agentx\agentx.ps1 loop start -p "Task description"  # FIRST command - start before any work
+.\.agentx\agentx.ps1 loop iterate -s "Progress summary"  # After each verification pass
+.\.agentx\agentx.ps1 loop complete -s "All gates passed"  # LAST command - required before handoff
 .\.agentx\agentx.ps1 ready                    # Show unblocked work
 .\.agentx\agentx.ps1 state -a engineer -s working -i 42
 .\.agentx\agentx.ps1 deps 42                  # Check blockers
 .\.agentx\agentx.ps1 workflow engineer        # Show workflow steps
-.\.agentx\agentx.ps1 loop -LoopAction status   # Check quality loop
+.\.agentx\agentx.ps1 loop -LoopAction status   # Check quality loop status
 .\.agentx\agentx.ps1 config show               # View configuration
 ```
 
@@ -110,6 +132,28 @@ Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/
 
 **Internal sub-agents** (spawned by parent agents, not user-invokable):
 GitHub Ops, ADO Ops, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist.
+
+---
+
+## Role Pipeline Reference
+
+Each role follows a prescribed phase pipeline. All phases are mandatory. No phase may be skipped without an explicit documented reason. The pre-commit hook validates artifact structure for PRD, ADR, and UX deliverables as a mechanical enforcement layer.
+
+| Role | Pipeline Phases (in order) | Key Delivery Gate |
+|------|---------------------------|-------------------|
+| **Agent X (Hub)** | Classify -> Route -> Execute specialist phases -> Validate handoffs | All specialist phase gates pass before advancing |
+| **Product Manager** | Research (5 phases) -> Classify Intent -> PRD -> Backlog (Epic, Feature, User Stories) -> Self-Review -> Commit | PRD has all required sections; Backlog items (Epic, Features, User Stories) linked to PRD |
+| **UX Designer** | Read PRD -> Design Research -> UX Spec -> HTML/CSS Prototypes -> Self-Review -> Commit | WCAG 2.1 AA prototypes exist at `docs/ux/prototypes/` |
+| **Architect** | Research (6 phases) -> ADR (3+ options) -> Tech Spec -> GenAI Assessment -> Self-Review -> Commit | ADR + Spec exist; zero code examples in Spec |
+| **Engineer** | Research -> Brainstorm -> Plan -> Design -> Implement -> Test -> Review | Loop complete + coverage >=80% + score >=70% |
+| **Reviewer** | Read Context -> Verify Loop -> Functional Review -> Code Review -> Run Tests -> Write Review -> Decision | Review doc complete; approval/rejection explicitly stated |
+| **Auto-Fix Reviewer** | Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document -> Self-Review -> Decision | All auto-fixes pass full test suite; review doc complete |
+| **DevOps Engineer** | Read Context -> Design Pipeline -> Implement Workflows -> Validate -> Self-Review -> Commit | Pipelines pass lint + execution; deployment docs updated |
+| **Data Scientist** | Research (6 phases) -> Pipeline Design -> Eval Plan -> Implementation -> Drift Monitoring -> Self-Review -> Commit | Eval baseline + model card exist |
+| **Tester** | Read Context -> Write Tests -> Execute Suite -> Report Defects -> Certification Report -> Commit | Test pyramid complete; certification report signed off |
+| **Power BI Analyst** | Read Context -> Semantic Model -> DAX Measures -> Power Query -> Report Layout -> Optimize -> Docs -> Self-Review -> Commit | Semantic model validated; DAX measures tested |
+| **Consulting Research** | Understand Request -> Research (7 phases) -> Calibrate Audience -> Create Deliverable | All key claims sourced + triangulated; deliverable complete |
+| **Agile Coach** | Mode Selection -> Create/Refine/Decompose Story -> Confirm -> Output | INVEST criteria met; ACs in Given/When/Then format |
 
 ---
 
