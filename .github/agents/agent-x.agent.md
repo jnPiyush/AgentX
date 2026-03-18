@@ -163,7 +163,7 @@ ALL workflows include iteration by default (`iterate = true` in TOML). Default l
 | Before execution | `.agentx/agentx.ps1 deps <issue>` | Verify no open blockers |
 | On phase transition | `.agentx/agentx.ps1 state <agent> working <issue>` | Record the active workflow phase |
 | On workflow start | `.agentx/agentx.ps1 workflow <type> -IssueNumber <n>` | Load workflow steps, init loop state |
-| Before completion | `.agentx/agentx.ps1 loop -LoopAction status` | Verify loop completed |
+| Before completion | `.agentx/agentx.ps1 loop status` | Verify loop completed |
 
 ## Phase Validation
 
@@ -289,7 +289,7 @@ If a complex task required multiple internal phases, the loop only passes when e
 
 Before handing off, mark the loop complete:
 
-`.agentx/agentx.ps1 loop complete <issue>`
+`.agentx/agentx.ps1 loop complete -s "All quality gates passed"`
 
 The CLI blocks handoff with exit 1 if the loop state is not `complete`.
 

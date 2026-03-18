@@ -210,7 +210,7 @@ Pipelines pass on all target branches; deployment docs complete; no hardcoded se
 
 Before handing off, mark the loop complete:
 
-`.agentx/agentx.ps1 loop complete <issue>`
+`.agentx/agentx.ps1 loop complete -s "All quality gates passed"`
 
 The CLI blocks handoff with exit 1 if the loop state is not `complete`.
 

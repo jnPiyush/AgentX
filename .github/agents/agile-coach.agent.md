@@ -233,7 +233,7 @@ Story follows As a/I want/So that format; all 6 INVEST properties satisfied; 3-7
 
 Before handing off, mark the loop complete:
 
-`.agentx/agentx.ps1 loop complete <issue>`
+`.agentx/agentx.ps1 loop complete -s "All quality gates passed"`
 
 The CLI blocks handoff with exit 1 if the loop state is not `complete`.
 

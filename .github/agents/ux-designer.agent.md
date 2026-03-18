@@ -231,7 +231,7 @@ Wireframes complete for all key flows; HTML/CSS prototype renders correctly; WCA
 
 Before handing off, mark the loop complete:
 
-`.agentx/agentx.ps1 loop complete <issue>`
+`.agentx/agentx.ps1 loop complete -s "All quality gates passed"`
 
 The CLI blocks handoff with exit 1 if the loop state is not `complete`.
 

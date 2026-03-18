@@ -75,7 +75,7 @@ Review implementations for quality, correctness, security, and spec conformance.
 **This is a hard gate -- do not proceed if the loop is not complete.**
 
 ```bash
-.agentx/agentx.ps1 loop status <issue>
+.agentx/agentx.ps1 loop status
 ```
 
 - Status MUST be `complete`
@@ -257,7 +257,7 @@ Review document complete; approval/rejection decision stated explicitly; all fin
 
 Before handing off, mark the loop complete:
 
-`.agentx/agentx.ps1 loop complete <issue>`
+`.agentx/agentx.ps1 loop complete -s "All quality gates passed"`
 
 The CLI blocks handoff with exit 1 if the loop state is not `complete`.
 
