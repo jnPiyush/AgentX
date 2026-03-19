@@ -233,7 +233,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
         {
           ...fakeContext,
           extensionUri: vscode.Uri.file(extensionRoot),
-          extension: { packageJSON: { version: '8.4.6' } },
+          extension: { packageJSON: { version: '8.4.7' } },
         } as vscode.ExtensionContext,
         commandAgentx,
       );

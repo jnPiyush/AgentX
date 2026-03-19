@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.4.6-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-8.4.7-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -168,7 +168,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 - Quality sidebar: `Compound loop`, `Create learning capture`, `Agent-native review`, `Review findings`
 - Command palette equivalents exist for each of the same surfaces under the `AgentX:` prefix
 
-## New In 8.4.6
+## New In 8.4.7
 
 - Explicit `brainstorm`, `compound`, and `create learning capture` surfaces in chat, sidebars, and commands
 - Ranked curated learnings for planning and review entry points
