@@ -66,12 +66,88 @@ To run AgentX successfully within VS Code:
 
 ## Quick Start
 
-1. **Install** the extension from the VS Code Marketplace.
-2. **Open** to your target project workspace.
-3. **Initialize** the local runtime by running AgentX: Initialize Local Runtime in the Command Palette.
-4. **Optionally add a remote adapter** with AgentX: Add Remote Adapter when you want GitHub or Azure DevOps repo operations.
-5. **Brainstorm or run work** from Copilot Chat with prompts like `@agentx brainstorm rollout constraints`, `@agentx run engineer "implement the health endpoint"`, or `@agentx compound`.
+1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
+2. **Open** your target project workspace in VS Code.
+3. **Initialize** the workspace by running `AgentX: Initialize Local Runtime` from the Command Palette.
+4. **Optionally add a remote adapter** with `AgentX: Add Remote Adapter` when you want GitHub or Azure DevOps issue and workflow operations.
+5. **Select a role in Copilot Chat** and run the next step for that role, or select **AgentX Auto** to orchestrate the full flow in one session.
 6. **Capture reusable outcomes** with `AgentX: Create Learning Capture` once review confirms the result should compound future work.
+
+### Workspace Initialization
+
+AgentX initialization is workspace-scoped. After opening a repository or project folder in VS Code, run:
+
+```text
+AgentX: Initialize Local Runtime
+```
+
+This prepares the local AgentX runtime for the current workspace by:
+
+- creating local runtime folders and state files
+- preparing repo-local execution artifacts such as plans, progress, reviews, and learnings
+- making the bundled AgentX runtime available without requiring a manual repo bootstrap
+
+Repeat this step for each workspace where you want AgentX to run.
+
+### Optional Remote Integration
+
+If you want GitHub or Azure DevOps issue and workflow operations, run:
+
+```text
+AgentX: Add Remote Adapter
+```
+
+Stay on local runtime only when you want repo-local planning, implementation, and review without remote backlog integration.
+
+## Build Software With AgentX
+
+Once a workspace is initialized, you can use AgentX inside VS Code to move an app from planning through review.
+
+```mermaid
+flowchart LR
+    I[Install Extension] --> W[Open Workspace]
+    W --> R[Initialize Local Runtime]
+    R --> B[Select Role Or AgentX Auto]
+    B --> E[Create Or Execute Work]
+    E --> V[Review And Validate]
+    V --> C[Capture Learnings]
+```
+
+### Recommended Flow
+
+In VS Code, select the role in chat first, then send a prompt for that role. For example, if you are building a simple task-tracker app for small teams:
+
+| Step | Role | What To Do | Sample Prompt |
+|:-----|:-----|:-----------|:--------------|
+| **1. Define the product** | **Product Manager** | Create the product scope, goals, and acceptance criteria | `Create a PRD for a task-tracker app for small teams with email login, task CRUD, due dates, and a dashboard for overdue work.` |
+| **2. Shape the UX** | **UX Designer** | Turn the PRD into user flows and prototype-ready screens | `Create the user flow and prototype plan for the task-tracker app, covering sign-in, task creation, task filtering, and dashboard views.` |
+| **3. Design the architecture** | **Architect** | Define the technical approach and key tradeoffs | `Create an ADR and tech spec for the task-tracker app using a web frontend, backend API, persistence, and role-based access.` |
+| **4. Implement the app** | **Engineer** | Build the code and tests from the approved artifacts | `Implement the task-tracker app from the PRD and spec, including authentication, task CRUD APIs, dashboard data, and automated tests.` |
+| **5. Review the result** | **Reviewer** | Check correctness, risk, and missing coverage before sign-off | `Review the task-tracker implementation for correctness, security, regressions, and missing tests.` |
+| **6. Preserve the learning** | **AgentX Auto** | Capture reusable guidance from the work you just completed | `Create a learning capture for the task-tracker delivery workflow and major implementation lessons.` |
+
+If you want one orchestrated session instead of switching roles manually, select **AgentX Auto** and use one prompt such as:
+
+```text
+Build a task-tracker app for small teams. Start by creating the PRD, then produce UX and architecture guidance, implement the app, review it, and capture reusable learnings.
+```
+
+### Typical Chat Prompts
+
+```text
+[Product Manager selected] Create a PRD for a task-tracker app for small teams
+[UX Designer selected] Create the primary flows and screen plan for the task-tracker app
+[Architect selected] Create an ADR and implementation spec for the task-tracker app
+[Engineer selected] Implement the task-tracker app and its tests from the approved artifacts
+[Reviewer selected] Review the task-tracker app implementation before sign-off
+[AgentX Auto selected] Create a learning capture
+```
+
+### When To Use Which Mode
+
+- Use **AgentX Auto** when you want end-to-end orchestration in one session.
+- Use a specialist role such as **Product Manager**, **Architect**, **Engineer**, or **Reviewer** when you want tighter control over one phase.
+- Use the Command Palette and sidebars when you want a more guided workflow inside VS Code.
 
 ## Compound Loop In The IDE
 
@@ -90,6 +166,15 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 - Work sidebar: `Brainstorm`, `Planning learnings`, `Review learnings`, `Compound loop`, `Create learning capture`
 - Quality sidebar: `Compound loop`, `Create learning capture`, `Agent-native review`, `Review findings`
 - Command palette equivalents exist for each of the same surfaces under the `AgentX:` prefix
+
+## New In 8.4.5
+
+- Explicit `brainstorm`, `compound`, and `create learning capture` surfaces in chat, sidebars, and commands
+- Ranked curated learnings for planning and review entry points
+- Explicit knowledge-capture guidance, scaffolding, and durable learnings artifacts
+- Advisory agent-native review with parity and context checks
+- Harness evaluation summaries in the Quality sidebar
+- Durable review findings with promotion into standard AgentX issues
 
 ---
 

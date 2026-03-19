@@ -90,15 +90,6 @@ AgentX now adds explicit brainstorm and compound-loop entry points, ranked plann
 
 ---
 
-## New In 8.4.5
-
-- Explicit `brainstorm`, `compound`, and `create learning capture` surfaces in chat, sidebars, and commands
-- Ranked curated learnings for planning and review entry points
-- Explicit knowledge-capture guidance, scaffolding, and durable learnings artifacts
-- Advisory agent-native review with parity and context checks
-- Harness evaluation summaries in the Quality sidebar
-- Durable review findings with promotion into standard AgentX issues
-
 ## Architecture at a Glance
 
 ```mermaid
@@ -130,19 +121,115 @@ flowchart LR
 
 ## Quick Start
 
-```powershell
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.ps1 | iex
+For script-based repo setup and contributor bootstrap steps, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+If you want to use AgentX from VS Code, the setup flow below covers Marketplace installation, per-workspace initialization, and the basic delivery workflow.
+
+## Setup AgentX In VS Code
+
+If you want to use AgentX from the VS Code Marketplace instead of bootstrapping from the install scripts, use the extension workflow below.
+
+### 1. Install The Extension
+
+Install [AgentX on the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
+
+Recommended prerequisites:
+
+- VS Code 1.85.0 or newer
+- Git available on your PATH
+- PowerShell 7.4+ on Windows, or Bash on Linux/macOS
+- GitHub Copilot and GitHub Copilot Chat enabled in VS Code
+
+### 2. Initialize Each Workspace
+
+AgentX initialization is workspace-scoped. After you open a repo or project folder in VS Code, run:
+
+```text
+AgentX: Initialize Local Runtime
 ```
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/master/install.sh | bash
+You can launch it from the Command Palette with `Ctrl+Shift+P` or `Cmd+Shift+P`.
+
+What initialization does for the current workspace:
+
+- creates the local AgentX runtime folders and state files
+- prepares repo-local execution artifacts such as plans, progress, reviews, and learnings
+- makes the bundled AgentX runtime available to the workspace without requiring a full manual repo install
+
+Repeat this step for every new workspace where you want AgentX to run.
+
+### 3. Optionally Connect Remote Systems
+
+If the workspace needs GitHub or Azure DevOps issue and workflow operations, run:
+
+```text
+AgentX: Add Remote Adapter
 ```
 
-Default install mode is local. GitHub and Azure DevOps modes are available for remote workflow integration.
+Use local runtime only when you want repo-local planning, implementation, and review without remote backlog integration.
 
-If AgentX detects Azure-oriented files such as `azure.yaml`, `.azure/`, Azure Functions config, or Bicep, it can also recommend or install the Azure MCP Extension so the Azure Skills plugin is available when the app targets Azure.
+## Build Software With AgentX
+
+Once a workspace is initialized, AgentX can drive delivery from planning through review.
+
+```mermaid
+flowchart LR
+  I[Install Extension] --> W[Open Workspace]
+  W --> R[Initialize Local Runtime]
+  R --> B[Brainstorm Or Create Work]
+  B --> E[Implement With AgentX]
+  E --> V[Review And Validate]
+  V --> C[Capture Learnings]
+```
+
+### Recommended Flow
+
+One practical way to use AgentX is to walk a small product idea through the same roles your team would normally use. For example, imagine you want to build a simple task-tracker app with user sign-in, a task list, and a status dashboard.
+
+In VS Code, select the role in chat first, then send a prompt like the ones below.
+
+| Step | Role | What To Ask AgentX | Sample Prompt |
+|:-----|:-----|:-------------------|:--------------|
+| **1. Define the product** | **Product Manager** | Start with the user problem, goals, and acceptance criteria | `Create a PRD for a task-tracker app for small teams with email login, task CRUD, due dates, and a dashboard for overdue work.` |
+| **2. Shape the UX** | **UX Designer** | Turn the PRD into flows, screens, and interaction patterns | `Create the user flow and prototype plan for the task-tracker app, covering sign-in, task creation, task filtering, and dashboard views.` |
+| **3. Design the architecture** | **Architect** | Define the technical approach, tradeoffs, and implementation boundaries | `Create an ADR and tech spec for the task-tracker app using a web frontend, backend API, persistence, and role-based access.` |
+| **4. Implement the app** | **Engineer** | Build the code and tests from the approved scope and spec | `Implement the task-tracker app from the PRD and spec, including authentication, task CRUD APIs, dashboard data, and automated tests.` |
+| **5. Review and verify** | **Reviewer** | Run the review workflow and call out risks before completion | `Review the task-tracker implementation for correctness, security, regressions, and missing tests.` |
+| **6. Capture reusable learning** | **AgentX Auto** | Save the outcome if the workflow, architecture, or review produced reusable guidance | `Create a learning capture for the task-tracker delivery workflow and major implementation lessons.` |
+
+If you prefer a single orchestrated session, select **AgentX Auto** in chat and use one prompt that lets it route internally:
+
+```text
+Build a task-tracker app for small teams. Start by creating the PRD, then produce UX and architecture guidance, implement the app, review it, and capture reusable learnings.
+```
+
+### Typical Chat Prompts
+
+```text
+[Product Manager selected] Create a PRD for a task-tracker app for small teams
+[UX Designer selected] Create the primary flows and screen plan for the task-tracker app
+[Architect selected] Create an ADR and implementation spec for the task-tracker app
+[Engineer selected] Implement the task-tracker app and its tests from the approved artifacts
+[Reviewer selected] Review the task-tracker app implementation before sign-off
+[AgentX Auto selected] Create a learning capture
+```
+
+### When To Use Which Mode
+
+- Use **AgentX Auto** when you want end-to-end orchestration in one session.
+- Use a specialist role such as **Engineer**, **Architect**, or **Reviewer** when you want tighter control over one phase.
+- Use the Command Palette and sidebars when you want a more guided, visual workflow inside VS Code.
 
 ---
+
+## New In 8.4.5
+
+- Explicit `brainstorm`, `compound`, and `create learning capture` surfaces in chat, sidebars, and commands
+- Ranked curated learnings for planning and review entry points
+- Explicit knowledge-capture guidance, scaffolding, and durable learnings artifacts
+- Advisory agent-native review with parity and context checks
+- Harness evaluation summaries in the Quality sidebar
+- Durable review findings with promotion into standard AgentX issues
 
 ## Main Repo Areas
 
