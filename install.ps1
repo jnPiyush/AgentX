@@ -450,6 +450,22 @@ Write-Host "[3] Configuring runtime..." -ForegroundColor Cyan
  if (-not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
 }
 
+$memoryTemplateSource = Join-Path ".agentx" "templates/memories"
+if (Test-Path $memoryTemplateSource) {
+ Get-ChildItem $memoryTemplateSource -File -Recurse | ForEach-Object {
+  $relativePath = $_.FullName.Substring($memoryTemplateSource.Length + 1)
+  $destination = Join-Path "memories" $relativePath
+  $destinationParent = Split-Path $destination -Parent
+  if ($destinationParent -and -not (Test-Path $destinationParent)) {
+   New-Item -ItemType Directory -Path $destinationParent -Force | Out-Null
+  }
+  if (-not (Test-Path $destination)) {
+   Copy-Item $_.FullName $destination -Force
+  }
+ }
+ Write-OK "Starter memory files seeded where missing"
+}
+
 # Version tracking
 $versionFile = ".agentx/version.json"
 @{

@@ -3,12 +3,32 @@
   "title": "AgentX Plugin Manifest",
   "description": "Defines an installable AgentX plugin with commands, scripts, and metadata.",
   "type": "object",
-  "required": ["name", "version", "description", "type", "entry"],
+  "required": ["name", "version", "description", "entry"],
   "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Plugin manifest schema version."
+    },
     "name": {
       "type": "string",
       "description": "Plugin identifier (kebab-case).",
       "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "id": {
+      "type": "string",
+      "description": "Stable plugin identifier for published packages.",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "publisher": {
+      "type": "string",
+      "description": "Publisher or organization identifier for published packages.",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Human-readable plugin name.",
+      "maxLength": 120
     },
     "version": {
       "type": "string",
@@ -24,10 +44,31 @@
       "type": "string",
       "description": "Plugin author."
     },
+    "license": {
+      "type": "string",
+      "description": "License identifier for the plugin package."
+    },
+    "homepage": {
+      "type": "string",
+      "description": "Plugin homepage URL."
+    },
+    "bugs": {
+      "type": "string",
+      "description": "Issue tracker URL for the plugin package."
+    },
     "type": {
       "type": "string",
-      "enum": ["tool", "skill", "agent", "channel", "workflow"],
+      "enum": ["tool", "skill", "agent", "channel", "workflow", "pack-extension", "mcp-server", "mcp-app"],
       "description": "Plugin category."
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "Declared capabilities contributed by the plugin.",
+      "items": {
+        "type": "string",
+        "enum": ["tool", "skill", "agent", "channel", "workflow", "pack-extension", "mcp-server", "mcp-app"]
+      },
+      "minItems": 1
     },
     "entry": {
       "type": "object",
@@ -76,6 +117,69 @@
       "type": "string",
       "enum": ["experimental", "preview", "stable", "deprecated"],
       "default": "stable"
+    },
+    "engines": {
+      "type": "object",
+      "description": "Host compatibility ranges.",
+      "properties": {
+        "agentx": {
+          "type": "string",
+          "description": "Semver range describing compatible AgentX host versions."
+        }
+      },
+      "additionalProperties": false
+    },
+    "permissions": {
+      "type": "object",
+      "description": "Permission envelope required by the plugin.",
+      "properties": {
+        "filesystem": {
+          "type": "string",
+          "enum": ["none", "read", "write", "read-write", "allowlist", "full"]
+        },
+        "network": {
+          "type": "string",
+          "enum": ["none", "read", "write", "read-write", "allowlist", "full"]
+        },
+        "process": {
+          "type": "string",
+          "enum": ["none", "read", "write", "read-write", "allowlist", "full"]
+        },
+        "secrets": {
+          "type": "string",
+          "enum": ["none", "read", "write", "read-write", "allowlist", "full"]
+        },
+        "remoteHosts": {
+          "type": "array",
+          "description": "Remote hosts required by the plugin when network access is requested.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "distribution": {
+      "type": "object",
+      "description": "Published artifact metadata for independent plugin releases.",
+      "properties": {
+        "artifactUrl": {
+          "type": "string",
+          "description": "Download URL for the published plugin artifact."
+        },
+        "checksum": {
+          "type": "string",
+          "description": "Artifact checksum in the form sha256:<hex> or sha512:<hex>.",
+          "pattern": "^(sha256|sha512):[a-fA-F0-9]+$"
+        },
+        "signatureMode": {
+          "type": "string",
+          "enum": ["none", "optional", "required"]
+        },
+        "packageSize": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
     },
     "source": {
       "type": "string",

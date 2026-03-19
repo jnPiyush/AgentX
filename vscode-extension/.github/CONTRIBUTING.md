@@ -24,18 +24,35 @@ Thank you for contributing! This guide ensures all contributors follow the same 
 
 ## 🚀 Quick Start
 
-### First Time Setup
+### Script-Based Repo Setup
+
+Use the script-based flow when you are setting up a local clone of the AgentX repository for contribution work.
 
 ```powershell
 # Clone the repository
 git clone https://github.com/jnPiyush/AgentX.git
 cd AgentX
 
-# Run setup script (installs pre-commit hooks)
-.\install.ps1   # Windows
-# OR
-./install.sh    # Linux/Mac
+# Run setup script
+.\install.ps1
+```
 
+```bash
+# Clone the repository
+git clone https://github.com/jnPiyush/AgentX.git
+cd AgentX
+
+# Run setup script
+./install.sh
+```
+
+Default install mode is local. GitHub and Azure DevOps modes are available for remote workflow integration.
+
+If AgentX detects Azure-oriented files such as `azure.yaml`, `.azure/`, Azure Functions config, or Bicep, it can also recommend or install the Azure MCP Extension so the Azure Skills plugin is available when the app targets Azure.
+
+### First Time Setup
+
+```powershell
 # Install GitHub CLI (if not already installed)
 # Windows: winget install GitHub.cli
 # Mac: brew install gh

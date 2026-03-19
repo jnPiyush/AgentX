@@ -54,5 +54,5 @@ Prototypes must exist at `docs/ux/prototypes/` and be interactive, responsive, W
 
 Wireframes complete for all key flows; HTML/CSS prototype renders; WCAG 2.1 AA validated.
 
-Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+Run `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` before handing off, and only after the minimum iteration gate and all role criteria are satisfied.
 The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

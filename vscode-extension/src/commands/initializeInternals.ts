@@ -10,7 +10,12 @@ export const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/head
 
 export const ESSENTIAL_DIRS: string[] = [];
 
-export const RUNTIME_ASSET_DIRS: Array<{ source: string; destination: string }> = [];
+export const RUNTIME_ASSET_DIRS: Array<{ source: string; destination: string }> = [
+  {
+    source: path.join('.github', 'agentx', '.agentx', 'templates', 'memories'),
+    destination: 'memories',
+  },
+];
 
 export const ESSENTIAL_FILES: string[] = [];
 
@@ -120,6 +125,16 @@ export function copyDirRecursive(src: string, dest: string, overwrite = false): 
     } else if (overwrite || !fs.existsSync(destPath)) {
       fs.copyFileSync(srcPath, destPath);
     }
+  }
+}
+
+export function copyBundledRuntimeAssets(extensionRoot: string, workspaceRoot: string): void {
+  for (const asset of RUNTIME_ASSET_DIRS) {
+    copyDirRecursive(
+      path.join(extensionRoot, asset.source),
+      path.join(workspaceRoot, asset.destination),
+      false,
+    );
   }
 }
 

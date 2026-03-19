@@ -1,9 +1,18 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerInitializeLocalRuntimeCommand } from '../../commands/initialize';
 import { runInitializeLocalRuntimeCommand } from '../../commands/initializeCommandInternals';
-import { ESSENTIAL_DIRS, ESSENTIAL_FILES, RUNTIME_ASSET_DIRS, RUNTIME_DIRS } from '../../commands/initializeInternals';
+import {
+  copyBundledRuntimeAssets,
+  ESSENTIAL_DIRS,
+  ESSENTIAL_FILES,
+  RUNTIME_ASSET_DIRS,
+  RUNTIME_DIRS,
+} from '../../commands/initializeInternals';
 import { AgentXContext } from '../../agentxContext';
 
 // ---------------------------------------------------------------------------
@@ -119,7 +128,12 @@ describe('runInitializeLocalRuntimeCommand', () => {
   it('should keep Initialize scoped to minimal runtime assets', () => {
     assert.deepEqual(ESSENTIAL_DIRS, []);
     assert.deepEqual(ESSENTIAL_FILES, []);
-    assert.deepEqual(RUNTIME_ASSET_DIRS, []);
+    assert.deepEqual(RUNTIME_ASSET_DIRS, [
+      {
+        source: path.join('.github', 'agentx', '.agentx', 'templates', 'memories'),
+        destination: 'memories',
+      },
+    ]);
 
     assert.ok(RUNTIME_DIRS.includes('.agentx/state'));
     assert.ok(RUNTIME_DIRS.includes('.agentx/sessions'));
@@ -133,5 +147,35 @@ describe('runInitializeLocalRuntimeCommand', () => {
 
     assert.ok(!RUNTIME_DIRS.includes('docs/architecture'));
     assert.ok(!RUNTIME_DIRS.includes('.agentx/runtime'));
+  });
+
+  it('should seed starter memory files without overwriting existing workspace memory', () => {
+    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
+
+    try {
+      const bundledMemories = path.join(extensionRoot, RUNTIME_ASSET_DIRS[0].source);
+      fs.mkdirSync(bundledMemories, { recursive: true });
+      fs.writeFileSync(path.join(bundledMemories, 'conventions.md'), 'starter convention\n', 'utf8');
+      fs.writeFileSync(path.join(bundledMemories, 'pitfalls.md'), 'starter pitfall\n', 'utf8');
+
+      const workspaceMemories = path.join(workspaceRoot, 'memories');
+      fs.mkdirSync(workspaceMemories, { recursive: true });
+      fs.writeFileSync(path.join(workspaceMemories, 'pitfalls.md'), 'existing pitfall\n', 'utf8');
+
+      copyBundledRuntimeAssets(extensionRoot, workspaceRoot);
+
+      assert.strictEqual(
+        fs.readFileSync(path.join(workspaceMemories, 'conventions.md'), 'utf8'),
+        'starter convention\n',
+      );
+      assert.strictEqual(
+        fs.readFileSync(path.join(workspaceMemories, 'pitfalls.md'), 'utf8'),
+        'existing pitfall\n',
+      );
+    } finally {
+      fs.rmSync(extensionRoot, { recursive: true, force: true });
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
   });
 });

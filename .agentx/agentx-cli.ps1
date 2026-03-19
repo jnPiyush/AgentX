@@ -35,6 +35,7 @@ $Script:INSTALL_AGENTX_DIR = $PSScriptRoot
 $Script:AGENTX_DIR = Join-Path $Script:ROOT '.agentx'
 $Script:STATE_FILE = Join-Path $AGENTX_DIR 'state' 'agent-status.json'
 $Script:LOOP_STATE_FILE = Join-Path $AGENTX_DIR 'state' 'loop-state.json'
+$Script:LOOP_STALE_AFTER_HOURS = 8
 $Script:ISSUES_DIR = Join-Path $AGENTX_DIR 'issues'
 $Script:TASK_BUNDLES_DIR = Join-Path $ROOT 'docs' 'execution' 'task-bundles'
 $Script:BOUNDED_PARALLEL_DIR = Join-Path $ROOT 'docs' 'execution' 'bounded-parallel'
@@ -3006,6 +3007,57 @@ function Invoke-LoopCmd {
     }
 }
 
+function Get-LoopStateLastTouchedUtc {
+    param($State)
+
+    if (-not $State) { return $null }
+
+    foreach ($propertyName in @('lastIterationAt', 'startedAt')) {
+        if (-not ($State.PSObject.Properties.Name -contains $propertyName)) { continue }
+        $rawValue = $State.$propertyName
+        if (-not $rawValue) { continue }
+
+        try {
+            return ([datetimeoffset]::Parse([string]$rawValue)).ToUniversalTime()
+        } catch {
+            continue
+        }
+    }
+
+    return $null
+}
+
+function Get-LoopStateStaleReason {
+    param(
+        $State,
+        [Nullable[int]]$ExpectedIssue = $null
+    )
+
+    if (-not $State) { return $null }
+
+    if ($ExpectedIssue -and ($State.PSObject.Properties.Name -contains 'issueNumber') -and $State.issueNumber) {
+        try {
+            if ([int]$State.issueNumber -ne [int]$ExpectedIssue) {
+                return "loop belongs to issue #$($State.issueNumber), not #$ExpectedIssue"
+            }
+        } catch {
+            return 'loop issue number is invalid'
+        }
+    }
+
+    $lastTouched = Get-LoopStateLastTouchedUtc $State
+    if (-not $lastTouched) {
+        return 'loop timestamp is missing or invalid'
+    }
+
+    $ageHours = ([datetimeoffset]::UtcNow - $lastTouched).TotalHours
+    if ($ageHours -ge $Script:LOOP_STALE_AFTER_HOURS) {
+        return ('loop last updated {0:N1} hours ago' -f $ageHours)
+    }
+
+    return $null
+}
+
 function Invoke-LoopStart {
     $prompt = Get-Flag @('-p', '--prompt')
     if (-not $prompt) { Write-Host 'Error: --prompt required'; exit 1 }
@@ -3016,7 +3068,25 @@ function Invoke-LoopStart {
     if (-not $issue) { $issue = $null }
 
     $existing = Read-JsonFile $Script:LOOP_STATE_FILE
-    if ($existing -and $existing.active) { Write-Host 'An active loop exists. Cancel it first.'; return }
+    $staleReason = Get-LoopStateStaleReason $existing $issue
+    if ($existing -and $existing.active) {
+        if (-not $staleReason) {
+            Write-Host 'An active loop exists. Cancel it first.'
+            return
+        }
+
+        $existing.active = $false
+        $existing.status = 'cancelled'
+        $existing.lastIterationAt = Get-Timestamp
+        $existing.history = @($existing.history) + @([PSCustomObject]@{
+                iteration = $existing.iteration
+                timestamp = Get-Timestamp
+                summary   = "Auto-reset stale loop before starting new task ($staleReason)"
+                status    = 'cancelled'
+            })
+        Write-JsonFile $Script:LOOP_STATE_FILE $existing
+        Write-Host "$($C.y)  Auto-reset stale active loop ($staleReason).$($C.n)"
+    }
 
     $state = [PSCustomObject]@{
         active             = $true
@@ -3051,8 +3121,27 @@ function Invoke-LoopStatus {
     if ($Script:JsonOutput) { $state | ConvertTo-Json -Depth 5; return }
 
     Write-Host "`n$($C.c)  Iterative Loop Status$($C.n)"
-    Write-Host "$($C.d)  Active: $($state.active)  |  Iteration: $($state.iteration)/$($state.maxIterations)  |  Minimum review iterations: $($state.minIterations)$($C.n)"
+    Write-Host "$($C.d)  Status: $($state.status)  |  Active: $($state.active)  |  Iteration: $($state.iteration)/$($state.maxIterations)  |  Minimum review iterations: $($state.minIterations)$($C.n)"
     Write-Host "$($C.d)  Criteria: $($state.completionCriteria)$($C.n)"
+    $staleReason = Get-LoopStateStaleReason $state
+    if ($staleReason) {
+        Write-Host "$($C.y)  Staleness: $staleReason. Start a new loop for the current task.$($C.n)"
+    }
+    if ($state.status -eq 'complete' -and $staleReason) {
+        Write-Host "$($C.y)  Completion gate: STALE. A previous completed loop does not satisfy the current task.$($C.n)"
+    }
+    elseif ($state.status -eq 'complete') {
+        Write-Host "$($C.g)  Completion gate: SATISFIED (loop already completed).$($C.n)"
+    }
+    elseif ($state.active -and ([int]$state.iteration -lt [int]$state.minIterations)) {
+        Write-Host "$($C.y)  Completion gate: BLOCKED until minimum iterations are met ($($state.iteration)/$($state.minIterations)).$($C.n)"
+    }
+    elseif ($state.active) {
+        Write-Host "$($C.y)  Completion gate: Minimum iterations met. Run 'agentx loop complete -s <summary>' only after all quality gates pass.$($C.n)"
+    }
+    else {
+        Write-Host "$($C.y)  Completion gate: NOT SATISFIED. Loop must reach status 'complete' before handoff.$($C.n)"
+    }
     if ($state.history -and $state.history.Count -gt 0) {
         Write-Host "`n$($C.w)  History (last 5):$($C.n)"
         $recent = $state.history | Select-Object -Last 5
@@ -3152,8 +3241,10 @@ function Invoke-ValidateCmd {
             $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
             $loopActive = $loopState -and $loopState.active -eq $true
             $loopComplete = $loopState -and $loopState.status -eq 'complete'
+            $loopStaleReason = Get-LoopStateStaleReason $loopState $num
             Test-Check (-not $loopActive) "Quality loop not still running (finish it first)"
             Test-Check $loopComplete "Quality loop is complete (cancelled does not satisfy this gate)"
+            Test-Check (-not $loopStaleReason) "Quality loop is current for issue #$num"
         }
         'reviewer' {
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/reviews/REVIEW-$num.md")) "REVIEW-$num.md exists"
@@ -3349,6 +3440,12 @@ function Invoke-AgentHookCmd {
                 Write-Host "$($C.y)  Loop iteration $($loopState.iteration)/$($loopState.maxIterations) is in progress.$($C.n)"
                 Write-Host "$($C.d)  Run: agentx loop iterate -s <summary>  (to record progress)$($C.n)"
                 Write-Host "$($C.d)  Run: agentx loop complete -s <summary>  (when criteria met)$($C.n)`n"
+                exit 1
+            }
+            $staleReason = Get-LoopStateStaleReason $loopState $issue
+            if ($staleReason) {
+                Write-Host "$($C.r)  [FAIL] Quality loop is stale ($staleReason).$($C.n)"
+                Write-Host "$($C.y)  Start a new loop for the current task before handoff.$($C.n)`n"
                 exit 1
             }
             if (-not $loopState -or $loopState.status -ne 'complete') {

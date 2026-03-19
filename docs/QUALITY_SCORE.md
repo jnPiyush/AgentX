@@ -38,6 +38,7 @@
 | Agile Coach | B | Story creation solid, INVEST evaluation could be expanded |
 | GitHub Ops | B | Preview maturity -- triage/sprint planning functional, needs duplicate-check hardening |
 | ADO Ops | B | Preview maturity -- process template adaptation works, ADO API coverage partial |
+| AzDO PRD to WIT | B | Preview maturity -- 5-phase PRD analysis solid, field-testing not yet done |
 | Functional Reviewer | B | Preview maturity -- false-positive mitigation effective, scope filtering could improve |
 | Prompt Engineer | B | Preview maturity -- lifecycle management solid, multi-model testing needs automation |
 | Eval Specialist | B | Preview maturity -- RAGAS integration works, judge validation threshold tuning needed |

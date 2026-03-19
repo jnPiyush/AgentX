@@ -16,6 +16,10 @@ function writeFile(root: string, relativePath: string, content: string): void {
   fs.writeFileSync(filePath, content, 'utf-8');
 }
 
+function isoMinutesAgo(minutes: number): string {
+  return new Date(Date.now() - (minutes * 60 * 1000)).toISOString();
+}
+
 describe('workflow guidance utility', () => {
   let tmpDir: string;
 
@@ -47,12 +51,13 @@ describe('workflow guidance utility', () => {
       active: false,
       status: 'complete',
       prompt: 'done',
-      iteration: 2,
+      iteration: 3,
+      minIterations: 3,
       maxIterations: 10,
       completionCriteria: 'TASK_COMPLETE',
       issueNumber: 219,
-      startedAt: '2026-03-13T10:00:00Z',
-      lastIterationAt: '2026-03-13T10:08:00Z',
+      startedAt: isoMinutesAgo(30),
+      lastIterationAt: isoMinutesAgo(5),
       history: [],
     }));
     writeFile(tmpDir, 'docs/execution/plans/ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md', '# Plan\n');
@@ -133,6 +138,28 @@ describe('workflow guidance utility', () => {
     assert.ok(snapshot);
     assert.equal(snapshot?.currentCheckpoint, 'Compound Capture');
     assert.equal(snapshot?.recommendedAction, 'Record the curated learning capture before final closeout');
+  });
+
+  it('keeps the checkpoint in work when the completed loop state is stale', () => {
+    writeFile(tmpDir, '.agentx/state/loop-state.json', JSON.stringify({
+      active: false,
+      status: 'complete',
+      prompt: 'done',
+      iteration: 3,
+      minIterations: 3,
+      maxIterations: 10,
+      completionCriteria: 'TASK_COMPLETE',
+      issueNumber: 219,
+      startedAt: '2025-01-01T00:00:00Z',
+      lastIterationAt: '2025-01-01T01:00:00Z',
+      history: [],
+    }));
+
+    const snapshot = evaluateWorkflowGuidance(tmpDir);
+
+    assert.ok(snapshot);
+    assert.equal(snapshot?.currentCheckpoint, 'Work');
+    assert.equal(snapshot?.recommendedAction, 'Continue implementation and validation evidence');
   });
 
   it('renders workflow guidance, entry point, rollout, and checklist markdown', () => {

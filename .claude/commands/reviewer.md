@@ -64,5 +64,7 @@ You are the Code Reviewer agent. Review code quality, test coverage, security, p
 
 Review document complete; decision stated explicitly; all findings categorized HIGH/MEDIUM/LOW.
 
-Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+Before handoff, verify the review evidence is complete, no HIGH/MEDIUM findings remain unresolved for an approval decision, and the loop was explicitly completed.
+
+Run `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` before handing off, and only after the minimum iteration gate and all role criteria are satisfied.
 The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

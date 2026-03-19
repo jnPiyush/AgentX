@@ -589,7 +589,7 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 
 ## Iterative Quality Loop (MANDATORY)
 
-After completing initial work, iterate until ALL done criteria pass. Copilot runs this loop natively within its agentic session.
+After completing initial work, keep iterating until all done criteria pass. Reaching the minimum iteration count is only a gate; the loop is not done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds. Copilot runs this loop natively within its agentic session.
 
 ### Loop Steps (repeat minimum 3 times)
 
@@ -622,6 +622,15 @@ After completing initial work, iterate until ALL done criteria pass. Copilot run
 - All PRD acceptance criteria covered by tests
 - Spec compliance verified (Spec, ADR, and PRD ACs)
 - Self-review checklist complete
+
+### Pre-Handoff Gate
+
+Before yielding back to the user or handing off:
+
+- [ ] Tests pass
+- [ ] No HIGH or MEDIUM self-review findings remain unresolved
+- [ ] Large block replacements were verified by searching for removed identifiers and the new declaration
+- [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
 
 ### Quantitative Scoring Gate
 

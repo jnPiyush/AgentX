@@ -45,5 +45,5 @@ ADR must have: Context, Decision, 3+ Options Considered, Consequences.
 
 ADR documents 3+ options with decision rationale; Tech Spec has all sections and diagrams only.
 
-Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+Run `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` before handing off, and only after the minimum iteration gate and all role criteria are satisfied.
 The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

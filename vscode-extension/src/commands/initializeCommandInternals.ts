@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
 import {
+  copyBundledRuntimeAssets,
   mergeGitignore,
   promptWorkspaceRoot,
   readJsonWithComments,
@@ -55,6 +56,7 @@ export async function runInitializeLocalRuntimeCommand(
     for (const dir of RUNTIME_DIRS) {
      fs.mkdirSync(path.join(root, dir), { recursive: true });
     }
+      copyBundledRuntimeAssets(context.extensionUri.fsPath, root);
 
     const versionFile = path.join(root, '.agentx', 'version.json');
     const previousVersion = isUpgrade ? readJsonWithComments<ExistingVersionStamp>(versionFile) : undefined;

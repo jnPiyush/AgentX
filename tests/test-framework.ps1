@@ -53,6 +53,11 @@ Assert-FileContains "install.sh" "docs/WORKFLOW\.md" "install.sh bundles WORKFLO
 Assert-FileContains "install.sh" "docs/GUIDE\.md" "install.sh bundles GUIDE reference doc"
 Assert-FileContains "install.ps1" "runtimeStatePatterns" "install.ps1 excludes repo runtime state from fresh installs"
 Assert-FileContains "install.sh" "\.agentx/config\.json|\.agentx/issues/\*|\.agentx/state/\*" "install.sh excludes repo runtime state from fresh installs"
+Assert-FileContains "install.ps1" "templates/memories" "install.ps1 seeds starter memory templates"
+Assert-FileContains "install.sh" "templates/memories" "install.sh seeds starter memory templates"
+Assert-FileExists ".agentx/templates/memories/conventions.md" "Starter memory: conventions"
+Assert-FileExists ".agentx/templates/memories/pitfalls.md" "Starter memory: pitfalls"
+Assert-FileExists ".agentx/templates/memories/decisions.md" "Starter memory: decisions"
 
 # --- 2. Agent Definitions ---------------------------------------------------------------
 Write-Host ""

@@ -50,5 +50,5 @@ Required sections: Problem Statement, Target Users, Goals, Requirements, User St
 
 PRD contains all required sections; child issues created with clear acceptance criteria.
 
-Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+Run `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` before handing off, and only after the minimum iteration gate and all role criteria are satisfied.
 The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

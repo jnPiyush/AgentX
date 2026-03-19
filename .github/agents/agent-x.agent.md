@@ -13,7 +13,7 @@ constraints:
   - "MUST NOT skip any required role constraints, templates, skills, entry gates, or exit gates for the phase it is acting as"
   - "MUST read relevant SKILL.md files and existing artifacts before each phase begins"
   - "MUST validate prerequisites before every major phase transition"
-  - "MUST iterate until ALL done criteria pass, minimum iterations = 3"
+  - "MUST iterate until ALL done criteria pass; minimum iterations = 3 is only the earliest point at which completion is allowed, and the loop is NOT done until '.agentx/agentx.ps1 loop complete -s <summary>' succeeds"
   - "MUST verify agentic loop completion before declaring implementation complete"
   - "MUST escalate from simple execution to the full internal workflow when complexity is detected mid-stream"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
@@ -266,7 +266,7 @@ Use the shared guide for the artifact-first clarification flow, internal special
 
 ## Iterative Quality Loop (MANDATORY)
 
-After completing initial work, iterate until ALL done criteria pass.
+After completing initial work, keep iterating until all done criteria pass. Reaching the minimum iteration count is only a gate; the loop is not done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds.
 Copilot runs this loop natively within its agentic session.
 
 ### Loop Steps (repeat until all criteria met)
@@ -280,7 +280,7 @@ Copilot runs this loop natively within its agentic session.
    - APPROVED: true when no HIGH or MEDIUM findings remain
    - APPROVED: false when any HIGH or MEDIUM findings exist
 6. **Address findings** -- fix all HIGH and MEDIUM findings, then re-run from Step 1
-7. **Repeat** until APPROVED and all Done Criteria pass
+7. **Repeat** until APPROVED, all Done Criteria pass, the minimum iteration gate is satisfied, and the loop is explicitly completed at the end
 
 ### Done Criteria
 

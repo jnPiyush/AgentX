@@ -25,6 +25,10 @@ function writeLoopState(wsRoot: string, state: Record<string, unknown>): void {
   fs.writeFileSync(filePath, JSON.stringify(state), 'utf-8');
 }
 
+function isoMinutesAgo(minutes: number): string {
+  return new Date(Date.now() - (minutes * 60 * 1000)).toISOString();
+}
+
 function makeCompleteState(overrides?: Partial<LoopState>): Record<string, unknown> {
   return {
     active: false,
@@ -35,12 +39,12 @@ function makeCompleteState(overrides?: Partial<LoopState>): Record<string, unkno
     maxIterations: 10,
     completionCriteria: 'ALL_TESTS_PASSING',
     issueNumber: 42,
-    startedAt: '2025-01-01T00:00:00Z',
-    lastIterationAt: '2025-01-01T01:00:00Z',
+    startedAt: isoMinutesAgo(70),
+    lastIterationAt: isoMinutesAgo(5),
     history: [
-      { iteration: 1, timestamp: '2025-01-01T00:10:00Z', summary: 'Initial impl', status: 'iterated' },
-      { iteration: 2, timestamp: '2025-01-01T00:30:00Z', summary: 'Fix tests', status: 'iterated' },
-      { iteration: 3, timestamp: '2025-01-01T01:00:00Z', summary: 'All green', status: 'complete' },
+      { iteration: 1, timestamp: isoMinutesAgo(60), summary: 'Initial impl', status: 'iterated' },
+      { iteration: 2, timestamp: isoMinutesAgo(30), summary: 'Fix tests', status: 'iterated' },
+      { iteration: 3, timestamp: isoMinutesAgo(5), summary: 'All green', status: 'complete' },
     ],
     ...overrides,
   };
@@ -56,10 +60,10 @@ function makeActiveState(overrides?: Partial<LoopState>): Record<string, unknown
     maxIterations: 10,
     completionCriteria: 'ALL_TESTS_PASSING',
     issueNumber: 42,
-    startedAt: '2025-01-01T00:00:00Z',
-    lastIterationAt: '2025-01-01T00:30:00Z',
+    startedAt: isoMinutesAgo(45),
+    lastIterationAt: isoMinutesAgo(10),
     history: [
-      { iteration: 1, timestamp: '2025-01-01T00:10:00Z', summary: 'Initial impl', status: 'iterated' },
+      { iteration: 1, timestamp: isoMinutesAgo(30), summary: 'Initial impl', status: 'iterated' },
     ],
     ...overrides,
   };
@@ -75,8 +79,8 @@ function makeCancelledState(): Record<string, unknown> {
     maxIterations: 10,
     completionCriteria: 'ALL_TESTS_PASSING',
     issueNumber: null,
-    startedAt: '2025-01-01T00:00:00Z',
-    lastIterationAt: '2025-01-01T00:05:00Z',
+    startedAt: isoMinutesAgo(20),
+    lastIterationAt: isoMinutesAgo(5),
     history: [],
   };
 }
@@ -211,6 +215,18 @@ describe('checkHandoffGate', () => {
     assert.ok(gate.reason.includes('1/3'));
   });
 
+  it('blocks when a completed loop is stale', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      startedAt: '2025-01-01T00:00:00Z',
+      lastIterationAt: '2025-01-01T01:00:00Z',
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('stale'));
+    assert.ok(gate.reason.includes('hours ago'));
+  });
+
   it('blocks for unexpected status values', () => {
     writeLoopState(wsRoot, makeCompleteState({ status: 'unknown' as any, active: false }));
 
@@ -253,6 +269,14 @@ describe('shouldAutoStartLoop', () => {
     writeLoopState(wsRoot, makeActiveState());
     assert.equal(shouldAutoStartLoop(wsRoot), false);
   });
+
+  it('returns true when an active loop is stale', () => {
+    writeLoopState(wsRoot, makeActiveState({
+      startedAt: '2025-01-01T00:00:00Z',
+      lastIterationAt: '2025-01-01T01:00:00Z',
+    }));
+    assert.equal(shouldAutoStartLoop(wsRoot), true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -277,8 +301,10 @@ describe('getLoopStatusDisplay', () => {
   it('returns active loop display with iteration and criteria', () => {
     writeLoopState(wsRoot, makeActiveState());
     const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(display.includes('active'));
     assert.ok(display.includes('2/10'));
-    assert.ok(display.includes('min 3'));
+    assert.ok(display.includes('not ready to complete'));
+    assert.ok(display.includes('2/3'));
     assert.ok(display.includes('ALL_TESTS_PASSING'));
   });
 
@@ -290,6 +316,14 @@ describe('getLoopStatusDisplay', () => {
     assert.ok(display.includes('min 3'));
   });
 
+  it('shows stale completed status clearly', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      startedAt: '2025-01-01T00:00:00Z',
+      lastIterationAt: '2025-01-01T01:00:00Z',
+    }));
+    assert.ok(getLoopStatusDisplay(wsRoot).includes('stale; loop last updated'));
+  });
+
   it('uses the default minimum when reading a legacy loop-state file', () => {
     writeLoopState(wsRoot, {
       active: true,
@@ -299,13 +333,20 @@ describe('getLoopStatusDisplay', () => {
       maxIterations: 10,
       completionCriteria: 'TASK_COMPLETE',
       issueNumber: null,
-      startedAt: '2025-01-01T00:00:00Z',
-      lastIterationAt: '2025-01-01T00:05:00Z',
+        startedAt: isoMinutesAgo(10),
+        lastIterationAt: isoMinutesAgo(5),
       history: [],
     });
 
     const display = getLoopStatusDisplay(wsRoot);
-    assert.ok(display.includes('min 3'));
+    assert.ok(display.includes('1/3'));
+  });
+
+  it('shows when minimum iterations are met for an active loop', () => {
+    writeLoopState(wsRoot, makeActiveState({ iteration: 3, minIterations: 3 }));
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(display.includes('minimum iterations met'));
   });
 
   it('returns cancelled status', () => {

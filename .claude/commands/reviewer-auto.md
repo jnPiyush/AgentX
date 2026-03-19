@@ -48,6 +48,8 @@ You are the Auto-Fix Reviewer agent. Review code AND auto-apply safe fixes (form
 5. **Self-Review** - Verify all auto-fixes pass tests, safe/risky categorization correct, no business logic modified without approval
 6. **Decision & Handoff** - Same as standard Reviewer (approve -> Validating, reject -> In Progress)
 
+Before handoff, verify tests still pass, no HIGH/MEDIUM findings remain, large block replacements were checked for orphaned old identifiers plus the new declaration, and the loop was explicitly completed.
+
 ## Key Difference from Standard Reviewer
 
 Standard Reviewer finds issues and requests changes. Auto-Fix Reviewer auto-applies safe fixes AND runs tests to verify. Human merge approval is always required.
@@ -56,5 +58,5 @@ Standard Reviewer finds issues and requests changes. Auto-Fix Reviewer auto-appl
 
 Review document complete; safe auto-fixes applied and verified; tests still pass; decision stated.
 
-Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+Run `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` before handing off, and only after the minimum iteration gate and all role criteria are satisfied.
 The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

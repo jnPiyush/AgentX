@@ -1,7 +1,7 @@
 ---
 name: AgentX UX Designer
 description: 'Create user research, wireframes, interactive HTML/CSS prototypes, and design specifications following WCAG 2.1 AA standards.'
-model: Gemini 3.1 Pro (Preview) (copilot)
+model: Claude Sonnet 4.6 (copilot)
 constraints:
   - "MUST follow pipeline phases in prescribed sequence: Read PRD -> Design Research -> UX Spec -> HTML/CSS Prototypes -> Self-Review; MUST NOT start prototyping before the UX Spec is documented; MUST NOT handoff before prototypes exist at docs/ux/prototypes/ and are WCAG 2.1 AA compliant"
   - "MUST read the PRD before starting any design work"
@@ -209,7 +209,7 @@ Use the shared guide for the artifact-first clarification flow, agent-switch wor
 
 ## Iterative Quality Loop (MANDATORY)
 
-After completing initial work, iterate until ALL done criteria pass.
+After completing initial work, keep iterating until all done criteria pass. Reaching the minimum iteration count is only a gate; the loop is not done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds.
 Copilot runs this loop natively within its agentic session.
 
 ### Loop Steps (repeat until all criteria met)
@@ -223,7 +223,7 @@ Copilot runs this loop natively within its agentic session.
    - APPROVED: true when no HIGH or MEDIUM findings remain
    - APPROVED: false when any HIGH or MEDIUM findings exist
 6. **Address findings** -- fix all HIGH and MEDIUM findings, then re-run from Step 1
-7. **Repeat** until APPROVED and all Done Criteria pass
+7. **Repeat** until APPROVED, all Done Criteria pass, the minimum iteration gate is satisfied, and the loop is explicitly completed at the end
 
 ### Done Criteria
 

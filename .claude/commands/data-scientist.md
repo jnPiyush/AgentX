@@ -68,5 +68,5 @@ After implementation complete -> **Reviewer** for code review.
 
 ML pipeline runs end-to-end; evaluation metrics documented; model card complete.
 
-Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+Run `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` before handing off, and only after the minimum iteration gate and all role criteria are satisfied.
 The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

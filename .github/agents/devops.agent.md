@@ -12,7 +12,7 @@ constraints:
   - "MUST NOT modify application source code"
   - "MUST NOT modify PRD, ADR, or UX documents"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
-  - "MUST iterate until ALL done criteria pass, minimum iterations = 3"
+  - "MUST iterate until ALL done criteria pass; minimum iterations = 3 is only the earliest point at which completion is allowed, and the loop is NOT done until '.agentx/agentx.ps1 loop complete -s <summary>' succeeds"
   - "MUST verify agentic loop completion before declaring implementation complete"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
@@ -188,7 +188,7 @@ Use the shared guide for the artifact-first clarification flow, agent-switch wor
 
 ## Iterative Quality Loop (MANDATORY)
 
-After completing initial work, iterate until ALL done criteria pass.
+After completing initial work, keep iterating until all done criteria pass. Reaching the minimum iteration count is only a gate; the loop is not done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds.
 Copilot runs this loop natively within its agentic session.
 
 ### Loop Steps (repeat until all criteria met)
@@ -202,11 +202,19 @@ Copilot runs this loop natively within its agentic session.
    - APPROVED: true when no HIGH or MEDIUM findings remain
    - APPROVED: false when any HIGH or MEDIUM findings exist
 6. **Address findings** -- fix all HIGH and MEDIUM findings, then re-run from Step 1
-7. **Repeat** until APPROVED and all Done Criteria pass
+7. **Repeat** until APPROVED, all Done Criteria pass, the minimum iteration gate is satisfied, and the loop is explicitly completed at the end
 
 ### Done Criteria
 
 Pipelines pass on all target branches; deployment docs complete; no hardcoded secrets.
+
+### Pre-Handoff Gate
+
+Before yielding back to the user or handing off:
+
+- [ ] Validation checks pass on the edited pipeline surface
+- [ ] No HIGH or MEDIUM self-review findings remain unresolved
+- [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
 
 ### Hard Gate (CLI)
 

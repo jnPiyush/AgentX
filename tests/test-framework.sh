@@ -70,6 +70,11 @@ assert_file_exists "README.md"   "README.md"
 assert_file_exists "install.ps1" "install.ps1"
 assert_file_exists "install.sh"  "install.sh"
 assert_file_exists "LICENSE"     "LICENSE"
+assert_file_contains "install.ps1" "templates/memories" "install.ps1 seeds starter memory templates"
+assert_file_contains "install.sh"  "templates/memories" "install.sh seeds starter memory templates"
+assert_file_exists ".agentx/templates/memories/conventions.md" "Starter memory: conventions"
+assert_file_exists ".agentx/templates/memories/pitfalls.md" "Starter memory: pitfalls"
+assert_file_exists ".agentx/templates/memories/decisions.md" "Starter memory: decisions"
 
 # --- 2. Agent Definitions --------------------------------------------------
 echo ""

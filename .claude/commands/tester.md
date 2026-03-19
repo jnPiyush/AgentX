@@ -71,5 +71,7 @@ You are the Tester agent. Validate software quality through automated testing, p
 
 All tests pass; coverage >= 80%; E2E pass rate >= 95%; certification report complete.
 
-Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+Before handoff, verify the required test evidence is complete, no HIGH/MEDIUM findings remain unresolved, and the loop was explicitly completed.
+
+Run `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` before handing off, and only after the minimum iteration gate and all role criteria are satisfied.
 The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

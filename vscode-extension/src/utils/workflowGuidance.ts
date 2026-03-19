@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { readHarnessState } from './harnessState';
 import { assetExistsInWorkspaceRuntime, resolveWorkspaceRuntimeAssetPath } from './runtimeAssets';
-import { readLoopState } from './loopStateChecker';
+import { checkHandoffGate, readLoopState } from './loopStateChecker';
 import {
   resolveWorkflowCheckpoint,
   resolveWorkflowRecommendation,
@@ -111,7 +111,7 @@ export function evaluateWorkflowGuidance(
     ? resolveExistingPath(workspaceRoot, `${LEARNINGS_DIR}/LEARNING-${issueNumber}.md`)
     : undefined;
   const loopState = readLoopState(workspaceRoot);
-  const loopComplete = !!loopState && !loopState.active && loopState.status === 'complete';
+  const loopComplete = checkHandoffGate(workspaceRoot, issueNumber ?? null).allowed;
   const issueClosed = normalizeText(issue?.state) === 'closed' || preferredThread?.status === 'complete';
   const statusText = normalizeText(issueStatus);
   const hasPlanEvidence = !!activePlanPath;

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-03-19T00:00:00Z",
+  "plugins": [
+    {
+      "publisher": "jnpiyush",
+      "pluginId": "convert-docs",
+      "displayName": "Convert Docs",
+      "description": "Convert Markdown documents to Microsoft Word (DOCX) using Pandoc.",
+      "latestVersion": "1.0.0",
+      "maturity": "stable",
+      "capabilities": [
+        "tool"
+      ],
+      "tags": [
+        "docs",
+        "conversion"
+      ],
+      "releases": [
+        {
+          "version": "1.0.0",
+          "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-convert-docs/releases/download/v1.0.0/agentx-plugin-convert-docs-1.0.0.zip",
+          "checksum": "sha256:1f1e4da255498f1ce92ec2f6ae8a31c290a8b4f89af82c5d1b6f743f1570dd7a",
+          "publishedAt": "2026-03-19T00:00:00Z",
+          "engines": {
+            "agentx": "^8.4.0"
+          }
+        }
+      ]
+    }
+  ]
+}

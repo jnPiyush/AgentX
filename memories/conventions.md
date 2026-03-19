@@ -22,7 +22,7 @@
 - 2026-03-09: Keep `tests/test-install.ps1` aligned with the real installer contract; if the installer advertises an operational repo scaffold, it must create the expected docs/runtime folders and ship the core reference docs used by the framework.
 - 2026-03-09: Keep the VS Code `agentx.initialize` scaffold aligned with `install.ps1`; extension-based setup must leave behind the same core docs and runtime directories or the workspace drifts depending on how AgentX was installed.
 - 2026-03-09: In the VS Code sidebar, prefer contextual capability links over flat taxonomy dumps; show curated skills under each agent and put direct issue/dependency actions in `Work` where the active thread already provides the needed context.
-- 2026-03-09: When agent frontmatter uses human-readable preview labels like `Gemini 3.1 Pro (Preview) (copilot)`, add an explicit runner mapping in `.agentx/agentic-runner.ps1` instead of relying on partial substring matches.
+- 2026-03-09: When agent frontmatter uses human-readable model labels like `Claude Sonnet 4.6 (copilot)`, keep an explicit runner mapping in `.agentx/agentic-runner.ps1` instead of relying on partial substring matches.
 - 2026-03-09: For AgentX extension releases, prefer `npm run package` in `vscode-extension/` over manual asset edits because `prepare:chat`, `copy:assets`, and `compile` regenerate the bundled `vscode-extension/.github/agentx` tree and `out/` artifacts consistently.
 - 2026-03-10: Treat Azure companion support as Azure-aware, not unconditional: detect Azure workspaces from files like `azure.yaml`, `.azure/`, `host.json`, `local.settings.json`, or Bicep before prompting/installing the Azure MCP Extension, and keep `-Azure` / `--azure` as the explicit override.
 - 2026-03-13: For bounded extension cleanup in `src/utils/`, preserve the original module as a facade and extract only internal layers like types, policy tables, or pure helpers into adjacent files so import paths stay stable while file concentration drops.
@@ -35,3 +35,5 @@
 - 2026-03-13: For bounded parallel task-unit payloads, keep the extension facade responsible for mapping camelCase UI inputs onto the CLI's snake_case JSON fields before base64 encoding; do not broaden the CLI parser to accept multiple shapes.
 - 2026-03-17: Keep local runtime initialization and remote provider setup as separate VS Code commands; local-only capabilities should point users to `Initialize Local Runtime`, not to provider-specific setup.
 - 2026-03-17: In `.agentx/config.json`, treat `adapters.github` and `adapters.ado` as additive metadata for local-first workspaces; do not auto-switch `provider` just because a repo remote or adapter exists.
+- 2026-03-19: Treat `loop complete` as a pre-handoff hard gate, not a user-prompted post-condition.
+- 2026-03-19: After replacing a large code block, search for removed identifiers and the new declaration before trusting tests alone.

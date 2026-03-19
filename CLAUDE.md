@@ -179,6 +179,7 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 | Consulting Research | [.github/agents/consulting-research.agent.md](.github/agents/consulting-research.agent.md) |
 | GitHub Ops | [.github/agents/internal/github-ops.agent.md](.github/agents/internal/github-ops.agent.md) |
 | ADO Ops | [.github/agents/internal/ado-ops.agent.md](.github/agents/internal/ado-ops.agent.md) |
+| AzDO PRD to WIT | [.github/agents/internal/ado-prd-to-wit.agent.md](.github/agents/internal/ado-prd-to-wit.agent.md) |
 | Functional Reviewer | [.github/agents/internal/functional-reviewer.agent.md](.github/agents/internal/functional-reviewer.agent.md) |
 | Prompt Engineer | [.github/agents/internal/prompt-engineer.agent.md](.github/agents/internal/prompt-engineer.agent.md) |
 | Eval Specialist | [.github/agents/internal/eval-specialist.agent.md](.github/agents/internal/eval-specialist.agent.md) |
@@ -190,7 +191,7 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 
 ## Claude Code Commands
 
-All 20 agents are available as `/project:` slash commands in Claude Code via `.claude/commands/` (invisible sub-agents do not have commands):
+All 21 agents are available as `/project:` slash commands in Claude Code via `.claude/commands/` (invisible sub-agents do not have commands):
 
 | Command | Agent | Purpose |
 |---------|-------|---------|
@@ -208,6 +209,7 @@ All 20 agents are available as `/project:` slash commands in Claude Code via `.c
 | `/project:consulting-research` | Consulting Research | Domain-expert consulting research, client-ready materials |
 | `/project:github-ops` | GitHub Ops | GitHub issue triage, sprint planning, backlog management |
 | `/project:ado-ops` | ADO Ops | Azure DevOps work items, sprint planning, PRD decomposition |
+| `/project:ado-prd-to-wit` | AzDO PRD to WIT | Analyze PRDs and plan ADO work item hierarchies for execution |
 | `/project:agile-coach` | Agile Coach | Story creation, refinement, INVEST compliance |
 
 **Usage**: Type `/project:engineer Implement the health endpoint for issue #1` in Claude Code.

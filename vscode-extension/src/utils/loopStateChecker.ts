@@ -51,6 +51,7 @@ export interface LoopGateResult {
 
 /** Relative path from workspace root to the loop state file. */
 const LOOP_STATE_REL = '.agentx/state/loop-state.json';
+const LOOP_STALE_AFTER_MS = 8 * 60 * 60 * 1000;
 
 function getEffectiveMinIterations(state: LoopState): number {
   const defaultMin = Math.min(3, state.maxIterations);
@@ -59,6 +60,40 @@ function getEffectiveMinIterations(state: LoopState): number {
   }
 
   return defaultMin;
+}
+
+function getLoopLastTouchedMs(state: LoopState): number | null {
+  const candidates = [state.lastIterationAt, state.startedAt];
+  for (const candidate of candidates) {
+    const value = Date.parse(candidate);
+    if (!Number.isNaN(value)) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function getLoopStaleReason(
+  state: LoopState,
+  expectedIssue?: number | null,
+  nowMs: number = Date.now(),
+): string | null {
+  if (typeof expectedIssue === 'number' && expectedIssue > 0 && typeof state.issueNumber === 'number' && state.issueNumber !== expectedIssue) {
+    return `loop belongs to issue #${state.issueNumber}, not #${expectedIssue}`;
+  }
+
+  const lastTouchedMs = getLoopLastTouchedMs(state);
+  if (lastTouchedMs === null) {
+    return 'loop timestamp is missing or invalid';
+  }
+
+  const ageMs = nowMs - lastTouchedMs;
+  if (ageMs >= LOOP_STALE_AFTER_MS) {
+    return `loop last updated ${(ageMs / (60 * 60 * 1000)).toFixed(1)} hours ago`;
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,7 +126,7 @@ export function readLoopState(workspaceRoot: string): LoopState | null {
  *  - Loop cancelled (status=cancelled) -> BLOCKED
  *  - Loop complete (status=complete) -> ALLOWED
  */
-export function checkHandoffGate(workspaceRoot: string): LoopGateResult {
+export function checkHandoffGate(workspaceRoot: string, expectedIssue?: number | null): LoopGateResult {
   const state = readLoopState(workspaceRoot);
 
   if (!state) {
@@ -102,7 +137,17 @@ export function checkHandoffGate(workspaceRoot: string): LoopGateResult {
     };
   }
 
+  const staleReason = getLoopStaleReason(state, expectedIssue);
+
   if (state.active) {
+    if (staleReason) {
+      return {
+        allowed: false,
+        reason: `Quality loop is stale (${staleReason}). Start a new loop for the current task.`,
+        state,
+      };
+    }
+
     return {
       allowed: false,
       reason: `Quality loop still active (iteration ${state.iteration}/${state.maxIterations}). `
@@ -116,6 +161,14 @@ export function checkHandoffGate(workspaceRoot: string): LoopGateResult {
       allowed: false,
       reason: 'Quality loop was cancelled. Cancelling does not satisfy the quality gate. '
         + 'Start a new loop and complete it.',
+      state,
+    };
+  }
+
+  if (staleReason) {
+    return {
+      allowed: false,
+      reason: `Quality loop is stale (${staleReason}). Start a new loop for the current task.`,
       state,
     };
   }
@@ -150,10 +203,17 @@ export function checkHandoffGate(workspaceRoot: string): LoopGateResult {
  * Check whether a loop should be auto-started for a workflow step.
  * Returns true if the step has iterate=true and no loop is currently active.
  */
-export function shouldAutoStartLoop(workspaceRoot: string): boolean {
+export function shouldAutoStartLoop(workspaceRoot: string, expectedIssue?: number | null): boolean {
   const state = readLoopState(workspaceRoot);
-  // Auto-start if no loop exists or previous loop is done
-  return !state || !state.active;
+  if (!state) {
+    return true;
+  }
+
+  if (state.active) {
+    return getLoopStaleReason(state, expectedIssue) !== null;
+  }
+
+  return true;
 }
 
 /**
@@ -165,9 +225,21 @@ export function getLoopStatusDisplay(workspaceRoot: string): string {
     return 'No loop';
   }
   const minIterations = getEffectiveMinIterations(state);
+  const staleReason = getLoopStaleReason(state);
   if (state.active) {
-    return `Loop ${state.iteration}/${state.maxIterations} (min ${minIterations}) [${state.completionCriteria}]`;
+    const readiness = state.iteration < minIterations
+      ? `not ready to complete (${state.iteration}/${minIterations} min)`
+      : 'minimum iterations met';
+    if (staleReason) {
+      return `Loop active ${state.iteration}/${state.maxIterations} (stale; ${staleReason}) [${state.completionCriteria}]`;
+    }
+
+    return `Loop active ${state.iteration}/${state.maxIterations} (${readiness}) [${state.completionCriteria}]`;
   }
+  if (staleReason) {
+    return `Loop ${state.status} (stale; ${staleReason})`;
+  }
+
   return `Loop ${state.status} (${state.iteration} iterations, min ${minIterations})`;
 }
 

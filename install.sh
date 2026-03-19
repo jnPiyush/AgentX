@@ -304,6 +304,17 @@ ok "$copied files installed ($skipped existing skipped)"
 echo -e "${C}[3] Configuring runtime...${N}"
 mkdir -p .agentx/state .agentx/digests docs/artifacts/{prd,adr,specs,reviews} docs/execution/{plans,progress} docs/{ux,architecture} memories/session
 
+memory_template_source=".agentx/templates/memories"
+if [ -d "$memory_template_source" ]; then
+ while IFS= read -r src; do
+  rel="${src#$memory_template_source/}"
+  dest="memories/$rel"
+  mkdir -p "$(dirname "$dest")"
+  [ -f "$dest" ] || cp "$src" "$dest"
+ done < <(find "$memory_template_source" -type f)
+ ok "Starter memory files seeded where missing"
+fi
+
 # Version tracking
 VERSION_FILE=".agentx/version.json"
 echo "{ \"version\": \"8.4.5\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"

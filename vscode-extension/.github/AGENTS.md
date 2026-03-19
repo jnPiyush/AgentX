@@ -77,7 +77,7 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 ### Quality Loop Hard Rule
 
-> HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. Minimum 3 iterations. Complete with `.agentx/agentx.ps1 loop complete -s "<summary>"`. No exceptions. The pre-commit hook blocks review artifacts when no completed loop exists.
+> HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. Minimum 3 iterations means at least 3 loop passes before completion is allowed; the loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds. No exceptions. The pre-commit hook blocks review artifacts when no completed loop exists.
 
 ### Compound Engineering Hard Rule
 
@@ -104,7 +104,7 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 .\.agentx\agentx.ps1 state -a engineer -s working -i 42
 .\.agentx\agentx.ps1 deps 42                  # Check blockers
 .\.agentx\agentx.ps1 workflow engineer        # Show workflow steps
-.\.agentx\agentx.ps1 loop -LoopAction status   # Check quality loop status
+.\.agentx\agentx.ps1 loop status                # Check quality loop status
 .\.agentx\agentx.ps1 config show               # View configuration
 ```
 
@@ -131,7 +131,7 @@ Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/
 | Agile Coach | `agile-coach.agent.md` | Stories at `docs/coaching/` |
 
 **Internal sub-agents** (spawned by parent agents, not user-invokable):
-GitHub Ops, ADO Ops, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist.
+GitHub Ops, ADO Ops, AzDO PRD to WIT, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist.
 
 ---
 

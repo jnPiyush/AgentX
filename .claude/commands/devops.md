@@ -63,5 +63,7 @@ Post-review validation: runs in parallel with **Tester**.
 
 Pipelines pass on all target branches; deployment docs complete; no hardcoded secrets.
 
-Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+Before handoff, verify the edited pipeline surface validates cleanly, no HIGH/MEDIUM self-review findings remain, and the loop was explicitly completed.
+
+Run `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` before handing off, and only after the minimum iteration gate and all role criteria are satisfied.
 The CLI blocks handoff with exit 1 if the loop is not in `complete` state.

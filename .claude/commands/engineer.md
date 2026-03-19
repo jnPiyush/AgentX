@@ -63,5 +63,7 @@ Run `.agentx/agentx.ps1 validate {issue} engineer` before handoff.
 
 All tests pass; coverage >= 80%; lint clean; no unresolved TODO/FIXME markers.
 
-Run `.agentx/agentx.ps1 loop complete <issue>` before handing off.
+Before handoff, verify tests still pass, no HIGH/MEDIUM self-review findings remain, large block replacements were checked for orphaned old identifiers plus the new declaration, and the loop was explicitly completed.
+
+Run `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` before handing off, and only after the minimum iteration gate and all role criteria are satisfied.
 The CLI blocks handoff with exit 1 if the loop is not in `complete` state.
