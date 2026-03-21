@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { parse } from 'yaml';
 import type {
   AIEvaluationExecutionShell,
   AIEvaluationBaseline,
@@ -69,7 +68,8 @@ function pushIssue(
 
 function readYamlFile(filePath: string, issues: AIEvaluationIssue[]): unknown {
   try {
-    return parse(fs.readFileSync(filePath, 'utf-8'));
+    const yamlModule = require('yaml') as { parse: (input: string) => unknown };
+    return yamlModule.parse(fs.readFileSync(filePath, 'utf-8'));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown YAML parse error';
     pushIssue(issues, 'error', 'manifest.parse', `Unable to parse evaluation manifest: ${message}`, filePath);

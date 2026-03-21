@@ -2,7 +2,6 @@
 .vscode-test/**
 src/**
 scripts/**
-node_modules/**
 out/test/**
 coverage/**
 .nyc_output/**
