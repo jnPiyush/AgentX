@@ -144,8 +144,8 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | **Agent X (Hub)** | Classify -> Route -> Execute specialist phases -> Validate handoffs | All specialist phase gates pass before advancing |
 | **Product Manager** | Research (5 phases) -> Classify Intent -> PRD -> Backlog (Epic, Feature, User Stories) -> Self-Review -> Commit | PRD has all required sections; Backlog items (Epic, Features, User Stories) linked to PRD |
 | **UX Designer** | Read PRD -> Design Research -> UX Spec -> HTML/CSS Prototypes -> Self-Review -> Commit | WCAG 2.1 AA prototypes exist at `docs/ux/prototypes/` |
-| **Architect** | Research (6 phases) -> ADR (3+ options) -> Tech Spec -> GenAI Assessment -> Self-Review -> Commit | ADR + Spec exist; zero code examples in Spec |
-| **Engineer** | Research -> Brainstorm -> Plan -> Design -> Implement -> Test -> Review | Loop complete + coverage >=80% + score >=70% |
+| **Architect** | Research (6 phases) -> ADR (3+ options) -> Tech Spec -> PM Fit Validation -> GenAI Assessment -> Self-Review -> Commit | ADR + Spec exist; PM requirement-fit validation complete; zero code examples in Spec |
+| **Engineer** | Research -> Brainstorm -> Plan -> Design -> Conditional Design Alignment -> Implement -> Test -> Review | Loop complete + coverage >=80% + score >=70% + required Architect/Data Scientist alignment captured |
 | **Reviewer** | Read Context -> Verify Loop -> Functional Review -> Code Review -> Run Tests -> Write Review -> Decision | Review doc complete; approval/rejection explicitly stated |
 | **Auto-Fix Reviewer** | Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document -> Self-Review -> Decision | All auto-fixes pass full test suite; review doc complete |
 | **DevOps Engineer** | Read Context -> Design Pipeline -> Implement Workflows -> Validate -> Self-Review -> Commit | Pipelines pass lint + execution; deployment docs updated |
