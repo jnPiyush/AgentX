@@ -54,8 +54,101 @@ for ($i = 0; $i -lt 25; $i++) {
 $compacted = @(Invoke-ContextCompaction -Messages $largeMessages -ModelId 'gpt-4o' -KeepRecent 12 -MinRecent 4 -ThresholdPercent 0.01)
 $compactionUsage = Get-ConversationTokenUsage -Messages $compacted -ModelId 'gpt-4o' -ThresholdPercent 0.01
 Assert-True ($compacted.Count -lt $largeMessages.Count) 'Invoke-ContextCompaction prunes messages when token threshold is exceeded'
-Assert-True ($compacted[1].content -match '^\[Context Compaction\]') 'Invoke-ContextCompaction inserts a compaction summary message'
+Assert-True ($compacted[1].content -match '^\[Context Compaction(?: Summary)?\]') 'Invoke-ContextCompaction inserts a compaction summary message'
 Assert-True ($compactionUsage.totalTokens -le $compactionUsage.thresholdTokens) 'Invoke-ContextCompaction compacts to within the configured token threshold'
+
+$compactionSummaryContent = @"
+[Context Compaction Summary]
+Decisions
+- Use PostgreSQL.
+Preferences
+- None
+Constraints
+- Stay within budget.
+Open Questions
+- None
+Current State
+- Migration pending.
+Important References
+- src/app.ts
+"@
+$summaryHeavyMessages = @(
+    @{ role = 'system'; content = 'You are a test agent.' },
+    @{ role = 'user'; content = $compactionSummaryContent }
+)
+for ($i = 0; $i -lt 15; $i++) {
+    $summaryHeavyMessages += @{ role = 'assistant'; content = ('history ' + $i + ' ' + ('y' * 800)) }
+}
+
+$summaryCompacted = @(Invoke-ContextCompaction -Messages $summaryHeavyMessages -ModelId 'gpt-4o' -KeepRecent 6 -MinRecent 3 -ThresholdPercent 0.01)
+$summaryMessages = @($summaryCompacted | Where-Object { $_.content -is [string] -and $_.content.StartsWith('[Context Compaction Summary]') })
+Assert-Equal $summaryMessages.Count 1 'Invoke-ContextCompaction keeps a single merged compaction summary message'
+Assert-True ($summaryMessages[0].content -match 'Decisions') 'Merged compaction summary preserves structured sections'
+
+$script:compactionSummaryRequest = $null
+$originalInvokeLlmChat = ${function:Invoke-LlmChat}
+function Invoke-LlmChat {
+    param(
+        [string]$token,
+        [string]$modelId,
+        [array]$messages,
+        [array]$tools,
+        [hashtable]$RequestOptions = @{},
+        [int]$maxTokens = 4096
+    )
+
+    $script:compactionSummaryRequest = @($messages)
+    return @{
+        choices = @(
+            @{
+                message = @{
+                    content = @"
+Decisions
+- Use PostgreSQL.
+- Capture the billing schema change.
+Preferences
+- None
+Constraints
+- Stay within budget.
+Open Questions
+- None
+Current State
+- Migration pending.
+- Billing schema updated.
+Important References
+- src/app.ts
+- docs/billing.md
+"@
+                }
+            }
+        )
+    }
+}
+
+try {
+    $llmSummaryMessages = @(
+        @{ role = 'system'; content = 'You are a test agent.' },
+        @{ role = 'user'; content = $compactionSummaryContent }
+    )
+    for ($i = 0; $i -lt 10; $i++) {
+        $content = if ($i -eq 2) {
+            'billing schema updated for invoice export and reconciliation'
+        } else {
+            'history ' + $i + ' ' + ('z' * 850)
+        }
+        $llmSummaryMessages += @{ role = 'assistant'; content = $content }
+    }
+
+    $llmSummaryCompacted = @(Invoke-ContextCompaction -Messages $llmSummaryMessages -Token 'fake-token' -ModelId 'gpt-4o' -KeepRecent 4 -MinRecent 3 -ThresholdPercent 0.01)
+    $llmSummaryMessage = @($llmSummaryCompacted | Where-Object { $_.content -is [string] -and $_.content.StartsWith('[Context Compaction Summary]') })[0]
+    Assert-True ($null -ne $script:compactionSummaryRequest) 'Invoke-ContextCompaction calls Invoke-LlmChat when a token is available for summary generation'
+    Assert-True ($script:compactionSummaryRequest[1].content -match 'Previous Compaction Summary') 'Compaction summary request includes the prior summary context'
+    Assert-True ($script:compactionSummaryRequest[1].content -match 'billing schema updated') 'Compaction summary request includes newly pruned turns'
+    Assert-True ($llmSummaryMessage.content -match 'Capture the billing schema change') 'Compaction summary stores the merged LLM summary output'
+    Assert-True ($llmSummaryMessage.content -match 'docs/billing\.md') 'Compaction summary preserves new important references from the merged summary'
+} finally {
+    ${function:Invoke-LlmChat} = $originalInvokeLlmChat
+}
 
 Push-ExecutionSummaryScope
 Add-ExecutionSummaryEvent -Type 'COMPACTION' -Message 'Initial compaction event.'

@@ -73,7 +73,7 @@ AgentX is powered by the explicit knowledge layer defined above. Agents read exa
 
 ### 3. Context Compaction
 **Long sessions without context amnesia.**
-Long-running AI tasks often break token limits. AgentX intelligently compacts conversational history, preserving system rules and essential facts while summarizing older history, ensuring the agent remains stable and focused.
+Long-running AI tasks often break token limits. AgentX compacts conversational history once estimated prompt usage crosses 70% of the active model context window, preserving system rules, keeping recent turns verbatim, and replacing older history with a structured continuation summary so the agent remains stable and focused.
 
 ### 4. Self Review & Validation Gates
 **Trust, but mechanically verify.**

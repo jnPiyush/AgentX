@@ -35,6 +35,9 @@ $Script:GITHUB_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completi
 $Script:COPILOT_API_URL = 'https://api.githubcopilot.com/chat/completions'
 $Script:DEFAULT_MODEL = 'gpt-4o'
 $Script:COMPACTION_THRESHOLD_PERCENT = 0.70
+$Script:COMPACTION_SUMMARY_MAX_CHARS = 2200
+$Script:COMPACTION_SUMMARY_MAX_SOURCE_CHARS = 24000
+$Script:COMPACTION_SUMMARY_RESERVED_TOKENS = 800
 $Script:MAX_ITERATIONS = 30
 $Script:MAX_TOOL_RESULT_CHARS = 8000
 $Script:SESSION_DIR = $null
@@ -349,6 +352,164 @@ function Get-ConversationTokenUsage {
         thresholdTokens = $thresholdTokens
         contextWindow = $window
         thresholdPercent = $ThresholdPercent
+    }
+}
+
+function Test-IsCompactionSummaryMessage([object]$Message) {
+    if ($null -eq $Message) { return $false }
+    $content = Get-MessageFieldValue -Message $Message -Name 'content'
+    if (-not ($content -is [string])) { return $false }
+    return $content.StartsWith('[Context Compaction Summary]')
+}
+
+function Convert-CompactionMessageToTranscriptLine {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][object]$Message,
+        [int]$MaxChars = 500
+    )
+
+    $role = Get-MessageFieldValue -Message $Message -Name 'role'
+    if (-not $role) { $role = 'unknown' }
+
+    $parts = New-Object System.Collections.Generic.List[string]
+    $content = Get-MessageFieldValue -Message $Message -Name 'content'
+    if ($content -is [string]) {
+        $normalized = (($content -replace "\r", '') -replace "\n+", ' ').Trim()
+        if ($normalized) { $parts.Add($normalized) }
+    } elseif ($null -ne $content) {
+        try {
+            $json = $content | ConvertTo-Json -Depth 10 -Compress
+            if ($json) { $parts.Add($json) }
+        } catch {
+            $parts.Add(([string]$content).Trim())
+        }
+    }
+
+    $toolCalls = Get-MessageFieldValue -Message $Message -Name 'tool_calls'
+    if ($null -ne $toolCalls) {
+        try {
+            $toolJson = $toolCalls | ConvertTo-Json -Depth 10 -Compress
+            if ($toolJson) { $parts.Add("tool_calls=$toolJson") }
+        } catch {
+            $parts.Add('tool_calls=[unavailable]') }
+    }
+
+    $name = Get-MessageFieldValue -Message $Message -Name 'name'
+    if ($name) { $parts.Add("name=$name") }
+
+    $toolCallId = Get-MessageFieldValue -Message $Message -Name 'tool_call_id'
+    if ($toolCallId) { $parts.Add("tool_call_id=$toolCallId") }
+
+    $text = (($parts -join ' | ') -replace '\s+', ' ').Trim()
+    if (-not $text) { $text = '(no content)' }
+    if ($text.Length -gt $MaxChars) {
+        $text = $text.Substring(0, $MaxChars).TrimEnd() + '...'
+    }
+
+    return "[$role] $text"
+}
+
+function Get-CompactionTranscript {
+    [CmdletBinding()]
+    param(
+        [string]$ExistingSummary = '',
+        [Parameter(Mandatory)][array]$Messages,
+        [int]$MaxChars = $Script:COMPACTION_SUMMARY_MAX_SOURCE_CHARS
+    )
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    if ($ExistingSummary) {
+        $lines.Add('[Previous Compaction Summary]')
+        $lines.Add($ExistingSummary.Trim())
+        $lines.Add('')
+    }
+
+    $lines.Add('[Pruned Conversation Transcript]')
+    foreach ($message in $Messages) {
+        $lines.Add((Convert-CompactionMessageToTranscriptLine -Message $message))
+    }
+
+    $text = ($lines -join "`n").Trim()
+    if ($text.Length -le $MaxChars) {
+        return $text
+    }
+
+    $headChars = [int][Math]::Floor(($MaxChars - 64) / 2)
+    $tailChars = [int][Math]::Max(0, $MaxChars - $headChars - 64)
+    $head = $text.Substring(0, [Math]::Min($headChars, $text.Length)).TrimEnd()
+    $tailStart = [Math]::Max(0, $text.Length - $tailChars)
+    $tail = $text.Substring($tailStart).TrimStart()
+    return ($head + "`n...[compaction transcript truncated]...`n" + $tail).Trim()
+}
+
+function Invoke-CompactionSummary {
+    [CmdletBinding()]
+    param(
+        [string]$Token,
+        [string]$ModelId,
+        [string]$ExistingSummary = '',
+        [Parameter(Mandatory)][array]$Messages,
+        [int]$MaxSummaryChars = $Script:COMPACTION_SUMMARY_MAX_CHARS
+    )
+
+    if (-not $ModelId) {
+        return $ExistingSummary
+    }
+
+    if (-not $Messages -or $Messages.Count -eq 0) {
+        return $ExistingSummary
+    }
+
+    if (-not $Token) {
+        return $ExistingSummary
+    }
+
+    $transcript = Get-CompactionTranscript -ExistingSummary $ExistingSummary -Messages $Messages
+    if (-not $transcript) {
+        return $ExistingSummary
+    }
+
+    $summaryMessages = @(
+        @{
+            role = 'system'
+            content = @"
+You are compacting prior AgentX conversation history.
+Return ASCII only.
+Summarize the supplied transcript into these exact sections:
+- Decisions
+- Preferences
+- Constraints
+- Open Questions
+- Current State
+- Important References
+Rules:
+- Preserve concrete facts only.
+- Keep file paths, issue numbers, agent names, and model names when present.
+- Do not invent missing details.
+- Use '- None' when a section has no meaningful content.
+- Keep the total response under $MaxSummaryChars characters.
+"@
+        },
+        @{
+            role = 'user'
+            content = "Summarize this compacted conversation context for future continuation:`n`n$transcript"
+        }
+    )
+
+    try {
+        $response = Invoke-LlmChat -token $Token -modelId $ModelId -messages $summaryMessages -tools @() -maxTokens 700
+        $summaryText = [string]($response.choices[0].message.content)
+        if (-not $summaryText) { return '' }
+        $summaryText = (($summaryText -replace "\r", '') -replace "\n{3,}", "`n`n").Trim()
+        if ($summaryText.Length -gt $MaxSummaryChars) {
+            $summaryText = $summaryText.Substring(0, $MaxSummaryChars).TrimEnd() + '...'
+        }
+        return $summaryText
+    } catch {
+        Write-Host "`e[90m  [COMPACTION WARN] Summary generation failed; retaining the prior summary and prune-only context. $_`e[0m"
+        Add-ExecutionSummaryEvent -Type 'WARN' -Message 'Compaction summary generation failed; retained the prior summary and prune-only context.' -ReplaceExisting
+        return $ExistingSummary
     }
 }
 
@@ -929,6 +1090,7 @@ function Invoke-ContextCompaction {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][array]$Messages,
+        [string]$Token = '',
         [string]$ModelId = '',
         [int]$KeepRecent = 40,
         [int]$MinRecent = 10,
@@ -940,9 +1102,16 @@ function Invoke-ContextCompaction {
         return $Messages
     }
 
-    # Separate system messages (always kept) from non-system messages
+    # Separate system messages (always kept) and prior compaction summaries
     $systemMsgs = @($Messages | Where-Object { $_.role -eq 'system' })
-    $nonSystemMsgs = @($Messages | Where-Object { $_.role -ne 'system' })
+    $summaryMsgs = @($Messages | Where-Object { Test-IsCompactionSummaryMessage -Message $_ })
+    $existingSummary = ''
+    if ($summaryMsgs.Count -gt 0) {
+        $existingSummary = [string](Get-MessageFieldValue -Message $summaryMsgs[-1] -Name 'content')
+        $existingSummary = $existingSummary -replace '^\[Context Compaction Summary\]\s*', ''
+        $existingSummary = $existingSummary.Trim()
+    }
+    $nonSystemMsgs = @($Messages | Where-Object { $_.role -ne 'system' -and -not (Test-IsCompactionSummaryMessage -Message $_) })
 
     if ($nonSystemMsgs.Count -le 1) {
         return $Messages
@@ -953,26 +1122,49 @@ function Invoke-ContextCompaction {
     $pruned = $nonSystemMsgs.Count - $initialKeepCount
 
     $minRecentCount = [Math]::Min([Math]::Max(1, $MinRecent), $nonSystemMsgs.Count)
+    $baseSystemUsage = (Get-ConversationTokenUsage -Messages $systemMsgs -ModelId $ModelId -ThresholdPercent $ThresholdPercent).totalTokens
 
     $buildResult = {
-        param([array]$CurrentKept, [int]$CurrentPruned)
+        param([array]$CurrentKept, [int]$CurrentPruned, [string]$SummaryText)
 
-        $currentUsage = Get-ConversationTokenUsage -Messages (@($systemMsgs) + @($CurrentKept)) -ModelId $ModelId -ThresholdPercent $ThresholdPercent
         $compactionMsg = @{
             role = 'user'
-            content = "[Context Compaction] $CurrentPruned older messages were pruned. Approx prompt tokens: $($currentUsage.totalTokens)/$($currentUsage.contextWindow) with threshold $($currentUsage.thresholdTokens). Focus on the remaining conversation context and recorded summaries."
+            content = if ($SummaryText) {
+                "[Context Compaction Summary]`n$SummaryText"
+            } else {
+                $currentUsage = Get-ConversationTokenUsage -Messages (@($systemMsgs) + @($CurrentKept)) -ModelId $ModelId -ThresholdPercent $ThresholdPercent
+                "[Context Compaction] $CurrentPruned older messages were pruned. Approx prompt tokens: $($currentUsage.totalTokens)/$($currentUsage.contextWindow) with threshold $($currentUsage.thresholdTokens). Focus on the remaining conversation context and recorded summaries."
+            }
         }
 
         return @($systemMsgs) + @($compactionMsg) + @($CurrentKept)
     }
 
-    $result = & $buildResult $kept $pruned
+    $estimatedBudget = $baseSystemUsage + $Script:COMPACTION_SUMMARY_RESERVED_TOKENS
+    foreach ($message in $kept) {
+        $estimatedBudget += Get-ApproxMessageTokens -Message $message
+    }
+
+    while ($estimatedBudget -gt $usage.thresholdTokens -and $kept.Count -gt $minRecentCount) {
+        $kept = @($kept[1..($kept.Count - 1)])
+        $pruned++
+        $estimatedBudget = $baseSystemUsage + $Script:COMPACTION_SUMMARY_RESERVED_TOKENS
+        foreach ($message in $kept) {
+            $estimatedBudget += Get-ApproxMessageTokens -Message $message
+        }
+    }
+
+    $prunedMessages = if ($pruned -gt 0) { @($nonSystemMsgs[0..($pruned - 1)]) } else { @() }
+    $summaryText = Invoke-CompactionSummary -Token $Token -ModelId $ModelId -ExistingSummary $existingSummary -Messages $prunedMessages
+    $result = & $buildResult $kept $pruned $summaryText
     $resultUsage = Get-ConversationTokenUsage -Messages $result -ModelId $ModelId -ThresholdPercent $ThresholdPercent
 
     while ($resultUsage.totalTokens -gt $resultUsage.thresholdTokens -and $kept.Count -gt $minRecentCount) {
         $kept = @($kept[1..($kept.Count - 1)])
         $pruned++
-        $result = & $buildResult $kept $pruned
+        $prunedMessages = @($nonSystemMsgs[0..($pruned - 1)])
+        $summaryText = Invoke-CompactionSummary -Token $Token -ModelId $ModelId -ExistingSummary $existingSummary -Messages $prunedMessages
+        $result = & $buildResult $kept $pruned $summaryText
         $resultUsage = Get-ConversationTokenUsage -Messages $result -ModelId $ModelId -ThresholdPercent $ThresholdPercent
     }
 
@@ -1848,7 +2040,7 @@ function Invoke-AgenticLoop {
         Write-Host "`e[90m  Iteration $iterations/$MaxIterations...`e[0m"
 
         # Context compaction: compact before each LLM call based on token budget
-        $messages = @(Invoke-ContextCompaction -Messages $messages -ModelId $modelId -KeepRecent 40 -MinRecent 10 -ThresholdPercent $Script:COMPACTION_THRESHOLD_PERCENT)
+        $messages = @(Invoke-ContextCompaction -Messages $messages -Token $token -ModelId $modelId -KeepRecent 40 -MinRecent 10 -ThresholdPercent $Script:COMPACTION_THRESHOLD_PERCENT)
 
         # Call LLM
         try {
