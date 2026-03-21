@@ -16,6 +16,7 @@ constraints:
   - "MUST NOT add constraints that contradict the user's stated technology intent"
   - "MUST conduct deep research before writing requirements -- prior art, competitive landscape, industry standards, user needs validation"
   - "MUST document research findings with sources in a Research Summary section within the PRD"
+  - "MUST participate in the Architect requirement-fit checkpoint when requested and verify PRD alignment, scope boundaries, and business outcomes without taking over technical design approval"
   - "MUST create PRD files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
   - "MUST use the iterative quality loop and output scorer to ensure high-quality requirements, minimum iterations = 3"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
@@ -144,6 +145,24 @@ Create `docs/artifacts/prd/PRD-{epic-id}.md` **locally** using `editFiles` tool,
 
 - Add `needs:ux` label to stories requiring UI work
 - Add `needs:ai` label to stories requiring GenAI capabilities
+
+### 4.5 Support Architect Requirement-Fit Validation
+
+When Architect completes the ADR and Tech Spec, participate in a lightweight requirement-fit checkpoint.
+
+**Validate**:
+- the proposed solution still addresses the PRD problem statement
+- scope boundaries and out-of-scope items remain intact
+- business outcomes and success metrics are still served by the architecture
+
+**Do not validate**:
+- low-level technical design choices
+- code structure or implementation details
+- concerns owned by Reviewer, Architect, or Engineer quality gates
+
+**Live execution rule**:
+- When Architect triggers this checkpoint through the clarification loop, answer in that thread so the user can see the requirement-fit discussion in chat/CLI.
+- Keep the response focused on PRD alignment, scope boundaries, and business outcomes rather than technical approval.
 
 ### 5. Self-Review
 

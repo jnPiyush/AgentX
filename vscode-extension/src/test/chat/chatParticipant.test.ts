@@ -139,6 +139,9 @@ describe('chatParticipant', () => {
     assert.ok(progressCalls.some((value) => value.includes('[CLARIFY DETAIL]')));
     assert.ok(progressCalls.some((value) => value.includes('[SELF-REVIEW] Approved')));
     assert.ok(progressCalls.some((value) => value.includes('iteration 3')));
+    assert.ok(progressStream.getMarkdown().includes('Clarification Discussion'));
+    assert.ok(progressStream.getMarkdown().includes('Asked architect about auth flow.'));
+    assert.ok(progressStream.getMarkdown().includes('Guidance: Use the existing auth provider and preserve refresh tokens.'));
     assert.ok(progressStream.getMarkdown().includes('[SELF-REVIEW SUMMARY] Completed 3/3 required review iterations'));
     assert.ok(progressStream.getMarkdown().includes('Final answer from AgentX'));
   });
@@ -494,6 +497,8 @@ describe('chatParticipant', () => {
       prompt: 'implement the login fix',
       humanPrompt: 'Need your guidance on auth rollout.',
     });
+    assert.ok(response.getMarkdown().includes('Clarification Discussion'));
+    assert.ok(response.getMarkdown().includes('Escalated for human input: Clarification not resolved after 6 iterations.'));
     assert.ok(response.getMarkdown().includes('@agentx continue'));
   });
 
@@ -586,6 +591,43 @@ describe('chatParticipant', () => {
     ]);
     assert.equal(cleared, true);
     assert.ok(response.getMarkdown().includes('Final answer after human clarification'));
+  });
+
+  it('keeps clarification discussion visible in markdown after resume', async () => {
+    const response = createMockResponseStream();
+    const agentx = {
+      checkInitialized: async () => true,
+      getPendingClarification: async () => ({
+        sessionId: 'engineer-20260309120000-abcd',
+        agentName: 'engineer',
+        prompt: 'implement the login fix',
+      }),
+      runCliStreaming: async (
+        _subcommand: string,
+        _cliArgs: string[],
+        onLine?: (line: string, source: 'stdout' | 'stderr') => void,
+      ) => {
+        onLine?.('  [CLARIFY 2/6] Asking architect about: token semantics', 'stdout');
+        onLine?.('  [CLARIFY DETAIL] Keep refresh tokens unchanged.', 'stdout');
+        onLine?.('  [HUMAN RESPONSE] Use the existing auth flow.', 'stdout');
+        return 'Final answer after human clarification';
+      },
+      setPendingClarification: async () => undefined,
+      clearPendingClarification: async () => undefined,
+    };
+
+    await handleAgentXChatRequest(
+      { prompt: 'continue use the existing auth flow' } as any,
+      response as any,
+      agentx as any,
+    );
+
+    const markdown = response.getMarkdown();
+    assert.ok(markdown.includes('Clarification Discussion'));
+    assert.ok(markdown.includes('Asked architect about token semantics.'));
+    assert.ok(markdown.includes('Guidance: Keep refresh tokens unchanged.'));
+    assert.ok(markdown.includes('Human response: Use the existing auth flow.'));
+    assert.ok(markdown.includes('Final answer after human clarification'));
   });
 
   it('blocks clarification resume when workspace initialization is missing', async () => {

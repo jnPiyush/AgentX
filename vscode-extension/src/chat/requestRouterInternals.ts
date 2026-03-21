@@ -31,6 +31,7 @@ const CHAT_OUTPUT_CHANNEL_NAME = 'AgentX Chat';
 const CHAT_OUTPUT_INLINE_LIMIT = 4000;
 const CHAT_OUTPUT_PREVIEW_LINES = 8;
 const LIVE_STATUS_PATTERN = /\[(?:COMPACTION|CLARIFY(?: RESPONSE| DETAIL| \d+\/\d+)?|SELF-REVIEW(?: SUMMARY)?|EXECUTION SUMMARY|MODEL FALLBACK|LOOP WARNING|CIRCUIT BREAKER|TOOL ERROR|BOUNDARY BLOCKED|FAIL|WARN|PASS|HUMAN ESCALATION|HUMAN REQUIRED|HUMAN RESPONSE|HUMAN REQUIRED SESSION)\]|^\s*Iteration \d+\/\d+|^\s*Tool:/i;
+const CHAT_VISIBLE_DISCUSSION_PATTERN = /^\[(?:CLARIFY(?: RESPONSE| DETAIL| \d+\/\d+)?|HUMAN ESCALATION|HUMAN REQUIRED|HUMAN RESPONSE)\]/i;
 const HUMAN_REQUIRED_SESSION_PATTERN = /\[HUMAN REQUIRED SESSION\]\s+(.+)$/i;
 const EXECUTION_SUMMARY_PATTERN = /^\[EXECUTION SUMMARY\].*$/gim;
 const SELF_REVIEW_SUMMARY_PATTERN = /^\[SELF-REVIEW SUMMARY\].*$/gim;
@@ -74,6 +75,7 @@ export async function runAgentCommand(
   try {
     response.progress(`Running ${agentName} agent...`);
     let pendingSessionId = '';
+    const visibleDiscussionLines: string[] = [];
     const output = await agentx.runCliStreaming(
       'run',
       [agentName, task],
@@ -85,6 +87,9 @@ export async function runAgentCommand(
         }
         if (normalized && shouldSurfaceCliLine(normalized)) {
           response.progress(normalized);
+        }
+        if (normalized && shouldKeepDiscussionLineInChat(normalized)) {
+          visibleDiscussionLines.push(normalized);
         }
       },
       { AGENTX_NONINTERACTIVE_HUMAN: '1' },
@@ -99,12 +104,12 @@ export async function runAgentCommand(
         prompt: task,
         humanPrompt: stripAnsi(output),
       });
-      response.markdown(`${formatOutputPreview(output)}\n\n${buildContinueGuidance(agentName)}`);
+      response.markdown(`${formatChatVisibleOutput(output, visibleDiscussionLines)}\n\n${buildContinueGuidance(agentName)}`);
       return {};
     }
 
     await clearPendingClarification(agentx);
-    response.markdown(formatOutputPreview(output));
+    response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     response.markdown(`**AgentX error:** ${msg}`);
@@ -127,6 +132,7 @@ export async function resumePendingClarification(
   try {
     response.progress(`Resuming ${pending.agentName} agent...`);
     let nextPendingSessionId = '';
+    const visibleDiscussionLines: string[] = [];
     const output = await agentx.runCliStreaming(
       'run',
       [
@@ -142,6 +148,9 @@ export async function resumePendingClarification(
         if (normalized && shouldSurfaceCliLine(normalized)) {
           response.progress(normalized);
         }
+        if (normalized && shouldKeepDiscussionLineInChat(normalized)) {
+          visibleDiscussionLines.push(normalized);
+        }
       },
       { AGENTX_NONINTERACTIVE_HUMAN: '1' },
     );
@@ -155,12 +164,12 @@ export async function resumePendingClarification(
         prompt: pending.prompt,
         humanPrompt: stripAnsi(output),
       });
-      response.markdown(`${formatOutputPreview(output)}\n\n${buildContinueGuidance(pending.agentName)}`);
+      response.markdown(`${formatChatVisibleOutput(output, visibleDiscussionLines)}\n\n${buildContinueGuidance(pending.agentName)}`);
       return {};
     }
 
     await clearPendingClarification(agentx);
-    response.markdown(formatOutputPreview(output));
+    response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     response.markdown(`**AgentX error:** ${msg}`);
@@ -545,6 +554,10 @@ function shouldSurfaceCliLine(line: string): boolean {
   return LIVE_STATUS_PATTERN.test(line);
 }
 
+function shouldKeepDiscussionLineInChat(line: string): boolean {
+  return CHAT_VISIBLE_DISCUSSION_PATTERN.test(line) && !HUMAN_REQUIRED_SESSION_PATTERN.test(line);
+}
+
 function getChatOutputChannel(): vscode.OutputChannel {
   if (!chatOutputChannel) {
     chatOutputChannel = vscode.window.createOutputChannel(CHAT_OUTPUT_CHANNEL_NAME);
@@ -592,6 +605,71 @@ function formatOutputPreview(output: string): string {
     previewLines.join('\n'),
     '```',
   ].join('\n');
+}
+
+function formatChatVisibleOutput(output: string, visibleDiscussionLines: string[]): string {
+  const formattedOutput = formatOutputPreview(output);
+  const discussionMarkdown = formatDiscussionMarkdown(output, visibleDiscussionLines);
+  if (!discussionMarkdown) {
+    return formattedOutput;
+  }
+
+  return `${discussionMarkdown}\n\n${formattedOutput}`;
+}
+
+function formatDiscussionMarkdown(output: string, lines: string[]): string {
+  const formattedLines = Array.from(new Set(lines
+    .map(formatDiscussionLine)
+    .filter((line): line is string => Boolean(line))));
+
+  if (formattedLines.length === 0) {
+    return '';
+  }
+
+  const normalizedOutput = stripAnsi(output);
+  if (formattedLines.every((line) => normalizedOutput.includes(line))) {
+    return '';
+  }
+
+  return [
+    '**Clarification Discussion**',
+    '',
+    ...formattedLines.map((line) => `- ${line}`),
+  ].join('\n');
+}
+
+function formatDiscussionLine(line: string): string | undefined {
+  const askedMatch = line.match(/^\[CLARIFY \d+\/\d+\]\s+Asking\s+([^\s]+)\s+about:\s+(.+)$/i);
+  if (askedMatch) {
+    return `Asked ${askedMatch[1]} about ${askedMatch[2]}.`;
+  }
+
+  const detailMatch = line.match(/^\[CLARIFY DETAIL\]\s+(.+)$/i);
+  if (detailMatch) {
+    return `Guidance: ${detailMatch[1]}`;
+  }
+
+  const responseMatch = line.match(/^\[CLARIFY RESPONSE\]\s+(.+)$/i);
+  if (responseMatch) {
+    return `Response: ${responseMatch[1]}`;
+  }
+
+  const humanEscalationMatch = line.match(/^\[HUMAN ESCALATION\]\s+(.+)$/i);
+  if (humanEscalationMatch) {
+    return `Escalated for human input: ${humanEscalationMatch[1]}`;
+  }
+
+  const humanRequiredMatch = line.match(/^\[HUMAN REQUIRED\]\s+(.+)$/i);
+  if (humanRequiredMatch) {
+    return `Human input required: ${humanRequiredMatch[1]}`;
+  }
+
+  const humanResponseMatch = line.match(/^\[HUMAN RESPONSE\]\s+(.+)$/i);
+  if (humanResponseMatch) {
+    return `Human response: ${humanResponseMatch[1]}`;
+  }
+
+  return undefined;
 }
 
 function getOutputSummarySections(output: string): Array<{ label: string; content: string }> {

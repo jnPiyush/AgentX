@@ -5,7 +5,7 @@ model: GPT-5.4 (copilot)
 reasoning:
   level: high
 constraints:
-  - "MUST follow pipeline phases in prescribed sequence: Research (6 phases) -> ADR (3+ options) -> Tech Spec -> GenAI Assessment -> Self-Review; MUST NOT write the ADR before completing all research phases; MUST NOT write the Tech Spec before the ADR is finalized"
+  - "MUST follow pipeline phases in prescribed sequence: Research (6 phases) -> ADR (3+ options) -> Tech Spec -> PM Fit Validation -> GenAI Assessment -> Self-Review; MUST NOT write the ADR before completing all research phases; MUST NOT write the Tech Spec before the ADR is finalized"
   - "MUST read the PRD, existing ADRs, and codebase patterns before designing"
   - "MUST read `.github/skills/architecture` for architecture work"
   - "MUST evaluate at least 3 options in each ADR"
@@ -18,6 +18,7 @@ constraints:
   - "MUST apply AI-first thinking -- evaluate GenAI/Agentic AI solutions as the default lens for every architecture decision, not only when features explicitly request AI"
   - "MUST conduct deep technology research before designing -- landscape scan, failure modes, benchmarks, security posture, long-term viability"
   - "MUST document research findings with sources in the ADR Context section"
+  - "MUST run a lightweight requirement-fit validation with Product Manager before moving architecture work back to Ready; this checkpoint verifies PRD alignment, scope, and success metrics, not implementation details"
   - "MUST iterate until ALL the self review done criteria pass, minimum iterations = 3"
   - "MUST verify agentic loop completion before declaring implementation complete"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
@@ -147,7 +148,30 @@ Create `docs/artifacts/specs/SPEC-{issue}.md` from template at `.github/template
 - Code: MUST NOT include any code examples or snippets
 - Tables: use for API contracts, data schemas, comparison matrices
 
-### 4. GenAI/AI-First Architecture Assessment (MANDATORY)
+### 4. PM Fit Validation (MANDATORY, lightweight)
+
+Before handing architecture work to implementation, perform a short requirement-fit validation with Product Manager.
+
+**Purpose**:
+- Verify the selected architecture still satisfies the PRD problem statement, scope boundaries, and success metrics
+- Catch requirement drift before Engineer starts implementing
+- Confirm open questions are explicit rather than hidden in the spec
+
+**This checkpoint does NOT do**:
+- Technical re-approval of diagrams, APIs, or service decomposition
+- Replacement of Reviewer or Engineer quality gates
+- Reopening settled architecture decisions without concrete requirement evidence
+
+**Minimum output**:
+- A short validation note or clarification record stating either:
+  - the architecture is aligned with the PRD, or
+  - the exact requirement mismatch that must be resolved before handoff
+
+**Live execution rule**:
+- When this checkpoint needs Product Manager input during an AgentX run, trigger it through the clarification loop so the discussion stays visible to the user in chat/CLI.
+- Use the exact runtime agent id in the prompt, for example: `I need clarification from product-manager about requirement-fit validation for auth scope and success metrics`.
+
+### 5. GenAI/AI-First Architecture Assessment (MANDATORY)
 
 For EVERY architecture decision, document the AI assessment. Even if the solution does not use AI, document why a traditional approach was chosen over an AI-powered alternative. For solutions that DO use GenAI/Agentic AI, document all of these concerns:
 
@@ -166,7 +190,7 @@ For EVERY architecture decision, document the AI assessment. Even if the solutio
 | Guardrails | Input sanitization, output content filtering, jailbreak prevention, out-of-domain handling, token budget limits |
 | Responsible AI | Bias detection plan, content safety filters, model card requirements, ethical review process |
 
-### 5. Confidence Markers (REQUIRED)
+### 6. Confidence Markers (REQUIRED)
 
 Every major recommendation MUST include a confidence tag:
 - Confidence: HIGH -- Strong evidence, proven pattern, low risk
@@ -175,7 +199,7 @@ Every major recommendation MUST include a confidence tag:
 
 Apply to: technology choices, pattern selections, trade-off conclusions, risk assessments.
 
-### 6. Self-Review
+### 7. Self-Review
 
 - [ ] ADR evaluates 3+ options with clear criteria
 - [ ] Tech Spec covers all required template sections
@@ -189,9 +213,10 @@ Apply to: technology choices, pattern selections, trade-off conclusions, risk as
 - [ ] **Failure modes documented**: Known risks, anti-patterns, and post-mortems researched and addressed in design
 - [ ] **Long-term viability assessed**: Technology maturity, community health, and 3-5 year outlook documented
 - [ ] **AI-first assessment documented**: GenAI/Agentic AI alternatives evaluated for the problem; decision to use or not use AI is justified with evidence
+- [ ] PM requirement-fit validation completed and any scope mismatch resolved or explicitly recorded
 - [ ] An engineer can implement without ambiguity
 
-### 7. Commit & Handoff
+### 8. Commit & Handoff
 
 ```bash
 git add docs/artifacts/adr/ docs/artifacts/specs/
@@ -234,11 +259,12 @@ Update Status to `Ready` in GitHub Projects.
 - PASS Selected tech stack is explicitly documented before implementation handoff
 - PASS Zero code examples in any spec
 - PASS ADR Context section includes research evidence with sources (benchmarks, failure modes, security)
+- PASS PM requirement-fit validation completed before Status returns to `Ready`
 - PASS Validation passes: `.github/scripts/validate-handoff.sh <issue> architect`
 
 ## When Blocked (Agent-to-Agent Communication)
 
-If PRD requirements are ambiguous or technical constraints are unclear:
+If PRD requirements are ambiguous, requirement-fit validation fails, or technical constraints are unclear:
 
 1. **Clarify first**: Use the clarification loop to request missing context from PM or Data Scientist
 2. **Post blocker**: Add `needs:help` label and comment describing the architecture question

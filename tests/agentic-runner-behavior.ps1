@@ -176,10 +176,23 @@ Assert-True ($consultingResearchDef.constraints.Count -gt 0) 'Read-AgentDef pars
 Assert-True ($consultingResearchDef.canModify -contains 'docs/coaching/**') 'Read-AgentDef parses nested can_modify boundaries'
 Assert-True ($consultingResearchDef.cannotModify -contains 'src/**') 'Read-AgentDef parses nested cannot_modify boundaries'
 
+$architectDef = Read-AgentDef -agentName 'architect' -root $script:repoRoot
+Assert-True ($architectDef.agents -contains 'AgentX Product Manager') 'Read-AgentDef parses multiline collaborator agents from frontmatter'
+$architectClarifyTargets = @(Resolve-CanClarifyTargets -agentDef $architectDef)
+Assert-True ($architectClarifyTargets -contains 'product-manager') 'Resolve-CanClarifyTargets maps Architect collaborators to runtime agent IDs'
+
+$engineerDef = Read-AgentDef -agentName 'engineer' -root $script:repoRoot
+$engineerClarifyTargets = @(Resolve-CanClarifyTargets -agentDef $engineerDef)
+Assert-True ($engineerClarifyTargets -contains 'architect') 'Resolve-CanClarifyTargets keeps direct runtime agent IDs available for Engineer'
+Assert-True ($engineerClarifyTargets -contains 'data-scientist') 'Resolve-CanClarifyTargets includes Data Scientist for Engineer alignment checkpoints'
+
 $consultingResearchPrompt = Build-SystemPrompt -agentDef $consultingResearchDef -agentName 'consulting-research'
 Assert-True ($consultingResearchPrompt -match '## Output Types') 'Build-SystemPrompt includes output type guidance for deliverable agents'
 Assert-True ($consultingResearchPrompt -match 'docs/coaching/BRIEF-\{topic\}\.md') 'Build-SystemPrompt includes Consulting Research deliverable file targets'
 Assert-True ($consultingResearchPrompt -match 'create or update the appropriate file in the workspace') 'Build-SystemPrompt explicitly instructs the agent to create required deliverable files'
+
+$architectPrompt = Build-SystemPrompt -agentDef $architectDef -agentName 'architect'
+Assert-True ($architectPrompt -match 'Use runtime agent IDs such as product-manager, architect, ux-designer, engineer, data-scientist') 'Build-SystemPrompt documents runtime agent IDs for clarification requests'
 
 $consultingResearchBoundaries = Read-BoundaryRules -AgentDef $consultingResearchDef
 Assert-True ($consultingResearchBoundaries.canModify -contains 'docs/coaching/**') 'Read-BoundaryRules honors frontmatter can_modify entries'

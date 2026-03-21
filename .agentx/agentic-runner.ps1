@@ -918,6 +918,100 @@ function Read-AgentDef([string]$agentName, [string]$root) {
     }
 }
 
+function Normalize-AgentReference([string]$value) {
+    if (-not $value) { return '' }
+
+    $normalized = $value.Trim().ToLower()
+    if (-not $normalized) { return '' }
+
+    $normalized = $normalized -replace '^agentx\s+', ''
+    $normalized = $normalized -replace '^agent\s*x\s+', ''
+    $normalized = $normalized -replace '\s+', '-'
+
+    switch -Regex ($normalized) {
+        '^product-manager$' { return 'product-manager' }
+        '^architect$' { return 'architect' }
+        '^ux-designer$' { return 'ux-designer' }
+        '^engineer$' { return 'engineer' }
+        '^reviewer$' { return 'reviewer' }
+        '^reviewer-auto$' { return 'reviewer-auto' }
+        '^devops(-engineer)?$' { return 'devops' }
+        '^data-scientist$' { return 'data-scientist' }
+        '^tester$' { return 'tester' }
+        '^consulting-research$' { return 'consulting-research' }
+        '^powerbi-analyst$' { return 'powerbi-analyst' }
+        '^github-ops$' { return 'github-ops' }
+        '^ado-ops$' { return 'ado-ops' }
+        '^agent-x$' { return 'agent-x' }
+        '^prompt-engineer$' { return 'prompt-engineer' }
+        '^rag-specialist$' { return 'rag-specialist' }
+        '^eval-specialist$' { return 'eval-specialist' }
+        '^ops-monitor$' { return 'ops-monitor' }
+        '^functional-reviewer$' { return 'functional-reviewer' }
+        default { return $normalized }
+    }
+}
+
+function Resolve-CanClarifyTargets([hashtable]$agentDef) {
+    $targets = New-Object System.Collections.Generic.List[string]
+    $agentCollaborators = @()
+
+    if ($null -ne $agentDef) {
+        if ($agentDef -is [hashtable] -and $agentDef.ContainsKey('agents')) {
+            $agentCollaborators = @($agentDef.agents)
+        } elseif ($null -ne $agentDef.PSObject.Properties['agents']) {
+            $agentCollaborators = @($agentDef.agents)
+        }
+    }
+
+    foreach ($agent in $agentCollaborators) {
+        $normalized = Normalize-AgentReference $agent
+        if ($normalized -and -not $targets.Contains($normalized)) {
+            $targets.Add($normalized)
+        }
+    }
+
+    if ($targets.Count -gt 0) {
+        return @($targets)
+    }
+
+    if (-not $agentDef.body) {
+        return @($targets)
+    }
+
+    $clMatch = [regex]::Match($agentDef.body, 'can_clarify\s*[:=]\s*\[([^\]]*)\]')
+    if ($clMatch.Success) {
+        foreach ($rawTarget in ($clMatch.Groups[1].Value -split ',')) {
+            $rawTarget = $rawTarget.Trim().Trim(@([char]39, [char]34))
+            $normalized = Normalize-AgentReference $rawTarget
+            if ($normalized -and -not $targets.Contains($normalized)) {
+                $targets.Add($normalized)
+            }
+        }
+    }
+
+    if ($targets.Count -gt 0) {
+        return @($targets)
+    }
+
+    $handoffSection = Get-MarkdownSection -text $agentDef.body -sectionName 'Team & Handoffs'
+    if (-not $handoffSection) {
+        $handoffSection = Get-MarkdownSection -text $agentDef.body -sectionName 'Handoffs'
+    }
+
+    if ($handoffSection) {
+        $agentPattern = '\b(product-manager|architect|ux-designer|engineer|reviewer|devops-engineer|devops|data-scientist|tester|consulting-research|agent-x|github-ops|ado-ops|powerbi-analyst|reviewer-auto|prompt-engineer|rag-specialist|eval-specialist|ops-monitor|functional-reviewer)\b'
+        foreach ($match in [regex]::Matches($handoffSection, $agentPattern, 'IgnoreCase')) {
+            $normalized = Normalize-AgentReference $match.Value
+            if ($normalized -and -not $targets.Contains($normalized)) {
+                $targets.Add($normalized)
+            }
+        }
+    }
+
+    return @($targets)
+}
+
 function Get-MarkdownSection([string]$text, [string]$sectionName) {
     if (-not $text) { return '' }
 
@@ -1003,6 +1097,7 @@ function Build-SystemPrompt([hashtable]$agentDef, [string]$agentName) {
     $parts += ""
     $parts += "## Clarification"
     $parts += 'If you need input from another agent, say: "I need clarification from [agent-name] about [topic]".'
+    $parts += 'Use runtime agent IDs such as product-manager, architect, ux-designer, engineer, data-scientist, reviewer, devops, or agent-x.'
 
     return ($parts -join "`n")
 }
@@ -1955,23 +2050,8 @@ function Invoke-AgenticLoop {
     # Build system prompt
     $systemPrompt = Build-SystemPrompt -agentDef $agentDef -agentName $Agent
 
-    # Parse can_clarify from agent body
-    $canClarify = @()
-    if ($agentDef.body) {
-        $clMatch = [regex]::Match($agentDef.body, 'can_clarify\s*[:=]\s*\[([^\]]*)\]')
-        if ($clMatch.Success) {
-            $canClarify = @($clMatch.Groups[1].Value -replace "['""]", '' -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-        }
-        if ($canClarify.Count -eq 0) {
-            # Extract from Handoffs section
-            $hMatch = [regex]::Match($agentDef.body, '(?s)## (?:Team & )?Handoffs[^\n]*\n(.*?)(?=\n## |\n---)')
-            if ($hMatch.Success) {
-                $agentPattern = '\b(product-manager|architect|ux-designer|engineer|reviewer|devops-engineer|data-scientist|tester|consulting-research|agent-x)\b'
-                $canClarify = @([regex]::Matches($hMatch.Groups[1].Value, $agentPattern, 'IgnoreCase') |
-                    ForEach-Object { $_.Value.ToLower() } | Select-Object -Unique)
-            }
-        }
-    }
+    # Parse can_clarify targets from frontmatter collaborators first, then fall back to body hints.
+    $canClarify = @(Resolve-CanClarifyTargets -agentDef $agentDef)
 
     # Initialize session
     $sessionId = if ($isResume) { $ResumeSessionId } else { "$Agent-$(Get-Date -Format 'yyyyMMddHHmmss')-$([System.IO.Path]::GetRandomFileName().Substring(0,4))" }

@@ -8,6 +8,8 @@ constraints:
   - "MUST follow Compound Engineering: complete each phase gate before advancing to the next phase"
   - "MUST read ALL available artifacts before writing any code: PRD, ADR, Tech Spec, UX Spec, and any Data Science artifacts"
   - "MUST seek inter-agent clarification for ANY spec, ADR, or UX ambiguity BEFORE writing code that depends on the ambiguous requirement"
+  - "MUST perform a design-alignment checkpoint with Architect before coding when the implementation crosses architecture boundaries, introduces a new pattern outside the ADR/Spec, or requires a meaningful design deviation"
+  - "MUST perform a design-alignment checkpoint with Data Scientist before coding when `needs:ai` work changes model behavior, prompt flow, eval logic, RAG design, or ML input/output contracts"
   - "MUST load and read the skills prescribed for each phase before performing that phase's work"
   - "MUST start quality loop after first implementation commit: .agentx/agentx.ps1 loop start -p <prompt-text> -i <issue> (--prompt flag is REQUIRED; omitting it causes exit 1 -- see iterative-loop skill for full syntax)"
   - "MUST complete a minimum of 3 quality loop iterations before declaring implementation done"
@@ -282,7 +284,27 @@ Verify layer assignments match the Spec's service layer design:
 | Core/Domain | Business rules + validation + use cases; zero framework/I/O imports | DB calls, HTTP calls |
 | Infrastructure | DB access + external API calls + file I/O | Business logic |
 
-**Phase 4 Gate**: Interfaces defined + SOLID check passed + Clean Architecture layers verified.
+### 4.4 Conditional Design Alignment Checkpoint
+
+Run this checkpoint after the design is concrete but before writing implementation logic.
+
+| Trigger | Who to Consult | What to Validate |
+|---------|----------------|------------------|
+| Implementation crosses architecture boundaries or introduces a new pattern not explicit in ADR/Spec | AgentX Architect | The chosen implementation still fits the selected architecture and does not create hidden architecture drift |
+| `needs:ai` work changes model behavior, prompt flow, evals, RAG, or ML contracts | AgentX Data Scientist | Input/output contracts, eval hooks, operating assumptions, and ML/AI behavior remain aligned with the spec |
+
+**Minimum output**:
+- a short validation note, clarification record, or explicit confirmation captured in the task context before coding proceeds
+
+**Live execution rule**:
+- When this checkpoint needs specialist input during an AgentX run, trigger it through the clarification loop so the discussion stays visible to the user in chat/CLI.
+- Use the exact runtime agent ids in the prompt, for example:
+  - `I need clarification from architect about service boundary alignment for the auth token flow`
+  - `I need clarification from data-scientist about prompt and eval contract changes for the retrieval flow`
+
+This is a lightweight alignment checkpoint, not a universal second approval loop for every story.
+
+**Phase 4 Gate**: Interfaces defined + SOLID check passed + Clean Architecture layers verified + required specialist alignment completed.
 
 ---
 
@@ -396,6 +418,7 @@ Load `code-review` and `security` skills.
 - [ ] No unnecessary complexity or dead code (YAGNI)
 - [ ] No unresolved TODO/FIXME markers (resolve now or raise a follow-up issue)
 - [ ] Naming clear and consistent with codebase conventions
+- [ ] Required Architect/Data Scientist design alignment checkpoints were completed where the implementation crossed those boundaries
 
 **Documentation**:
 - [ ] Public APIs documented where behavior is non-obvious
@@ -434,9 +457,11 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 |--------------------|---------|----------------|
 | Tech Spec section unclear | AgentX Architect | "In SPEC-{issue} section {X}, {field/behavior} is unclear. My interpretation is {Y}. Is that correct, or should I do {Z}?" |
 | ADR implementation notes unclear | AgentX Architect | "ADR-{epic} chose option {A}. The implementation note says {B} but the codebase has {C}. Which takes precedence?" |
+| Implementation approach crosses architecture boundaries | AgentX Architect | "My implementation plan adds {pattern/change} beyond ADR-{epic}/SPEC-{issue}. Does this stay within the intended architecture, or should I revise it?" |
 | UX flow step missing | AgentX UX Designer | "UX-{issue} Story #{id}: step {N} of the flow is undefined. What happens when the user does {action}?" |
 | Acceptance criteria ambiguous | AgentX Product Manager | "PRD-{epic} Story #{id} AC#{n}: '{text}' -- does this mean {X} or {Y}? My default is {X}." |
 | ML/AI integration unclear | AgentX Data Scientist | "The Spec AI/ML section says call {model} at step {X}. What is the expected input schema and fallback behavior?" |
+| AI/ML design approach changes contract or eval behavior | AgentX Data Scientist | "My implementation plan changes {prompt/eval/RAG/model contract} from the current spec. Does this preserve the intended ML behavior and validation path?" |
 | Complex prompt design needed | AgentX Prompt Engineer | Delegate: "Design system prompt for {purpose} per ai-agent-development/SKILL.md rules." |
 | RAG pipeline needed | AgentX RAG Specialist | Delegate: "Design retrieval pipeline for {corpus/goal} with latency target {L}ms." |
 
