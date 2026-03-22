@@ -44,7 +44,7 @@ describe('harness evaluator', () => {
       active: false,
       status: 'complete',
       prompt: 'Ship evaluation',
-      iteration: 3,
+      iteration: 5,
       maxIterations: 10,
       completionCriteria: 'TASK_COMPLETE',
       startedAt: recentTimestamp,
@@ -92,5 +92,52 @@ describe('harness evaluator', () => {
     assert.equal(report?.dominantAttribution, 'harness');
     assert.ok(report?.checks.some((check) => check.id === 'loop-complete' && check.attribution === 'policy'));
     assert.ok(report?.checks.some((check) => check.id === 'evidence-recorded' && check.attribution === 'harness'));
+  });
+
+  it('should respect disabled checks from .agentx/config.json', () => {
+    const root = createWorkspaceRoot();
+    const recentTimestamp = createRecentTimestamp();
+    fs.writeFileSync(path.join(root, '.agentx', 'config.json'), JSON.stringify({
+      harnessDisabledChecks: 'execution-plan-present,progress-log-present',
+    }), 'utf-8');
+    fs.writeFileSync(path.join(root, '.agentx', 'state', 'loop-state.json'), JSON.stringify({
+      active: false,
+      status: 'complete',
+      prompt: 'Ship evaluation',
+      iteration: 5,
+      maxIterations: 10,
+      completionCriteria: 'TASK_COMPLETE',
+      startedAt: recentTimestamp,
+      lastIterationAt: recentTimestamp,
+      history: [],
+    }), 'utf-8');
+    fs.writeFileSync(path.join(root, '.agentx', 'state', 'harness-state.json'), JSON.stringify({
+      version: 1,
+      threads: [{
+        id: 'thread-1',
+        title: 'Implement evaluator',
+        taskType: 'story',
+        status: 'complete',
+        startedAt: recentTimestamp,
+        updatedAt: recentTimestamp,
+      }],
+      turns: [],
+      items: [],
+      evidence: [{
+        id: 'evidence-1',
+        threadId: 'thread-1',
+        evidenceType: 'completion',
+        summary: 'Completed evaluator',
+        createdAt: recentTimestamp,
+      }],
+    }), 'utf-8');
+
+    const report = evaluateHarnessQuality(createAgentxStub(root));
+
+    assert.ok(report);
+    assert.equal(report?.checks.length, 3);
+    assert.ok(report?.checks.every((check) => check.id !== 'execution-plan-present'));
+    assert.ok(report?.checks.every((check) => check.id !== 'progress-log-present'));
+    assert.equal(report?.score.percent, 100);
   });
 });

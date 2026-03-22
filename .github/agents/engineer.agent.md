@@ -330,7 +330,11 @@ Implement in this order (bottom-up per spec, inner-to-outer per architecture):
 
 ### 5.3 GenAI Implementation Rules (applies when `needs:ai` label present)
 
+For GenAI features, complete the AI implementation setup before writing production logic.
+
 Load `.github/skills/ai-systems/ai-agent-development/SKILL.md` and follow all GenAI implementation rules from that skill: prompts stored as files in `prompts/`, model versions pinned with date suffix and loaded from env vars, OpenTelemetry initialized before any agent/client, exponential backoff on all LLM calls, structured outputs validated against schema, guardrails on all LLM inputs/outputs, LLM calls mocked in unit tests, evaluation baseline saved to `evaluation/baseline.json`, token usage logged. Delegate complex prompt work to AgentX Prompt Engineer and RAG work to AgentX RAG Specialist.
+
+Store all system prompts as separate files in `prompts/`; do not embed multi-line prompt content inline in code.
 
 ### 5.4 Start Quality Loop
 

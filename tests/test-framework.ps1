@@ -121,6 +121,7 @@ Assert-FileContains ".agentx/agentic-runner.ps1" "Copilot" "Agentic runner suppo
 Assert-FileExists "tests/provider-behavior.ps1" "Provider behavior test script"
 Assert-FileExists "tests/task-bundle-behavior.ps1" "Task bundle behavior test script"
 Assert-FileExists "tests/bounded-parallel-behavior.ps1" "Bounded parallel behavior test script"
+Assert-FileExists "tests/harness-audit-behavior.ps1" "Harness audit behavior test script"
 Assert-FileExists "tests/agentic-runner-behavior.ps1" "Agentic runner behavior test script"
 
 $providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
@@ -140,6 +141,12 @@ if ($LASTEXITCODE -ne 0) {
  Write-Host $boundedParallelBehaviorResult
 }
 Assert-True ($LASTEXITCODE -eq 0) "Bounded parallel CLI behavior tests pass"
+
+$harnessAuditBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/harness-audit-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $harnessAuditBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Harness audit CLI behavior tests pass"
 
 $agenticRunnerBehaviorTempFile = [System.IO.Path]::GetTempFileName()
 & pwsh -NoProfile -File (Join-Path $script:root "tests/agentic-runner-behavior.ps1") *> $agenticRunnerBehaviorTempFile

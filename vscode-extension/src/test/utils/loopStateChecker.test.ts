@@ -215,6 +215,16 @@ describe('checkHandoffGate', () => {
     assert.ok(gate.reason.includes('1/3'));
   });
 
+  it('uses five as the default minimum when minIterations is missing', () => {
+    const state = makeCompleteState({ iteration: 4 }) as Record<string, unknown>;
+    delete state.minIterations;
+    writeLoopState(wsRoot, state);
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('4/5'));
+  });
+
   it('blocks when a completed loop is stale', () => {
     writeLoopState(wsRoot, makeCompleteState({
       startedAt: '2025-01-01T00:00:00Z',

@@ -54,7 +54,7 @@ const LOOP_STATE_REL = '.agentx/state/loop-state.json';
 const LOOP_STALE_AFTER_MS = 8 * 60 * 60 * 1000;
 
 function getEffectiveMinIterations(state: LoopState): number {
-  const defaultMin = Math.min(3, state.maxIterations);
+  const defaultMin = Math.min(5, state.maxIterations);
   if (typeof state.minIterations === 'number' && state.minIterations > 0) {
     return Math.min(state.minIterations, state.maxIterations);
   }

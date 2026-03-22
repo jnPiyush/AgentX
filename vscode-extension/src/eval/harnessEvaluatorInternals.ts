@@ -35,6 +35,10 @@ export interface HarnessEvaluationInput {
  readonly harnessStatePath: string | undefined;
 }
 
+interface HarnessPolicy {
+ readonly disabledChecks: ReadonlySet<string>;
+}
+
 function fileExists(filePath: string | undefined): boolean {
  return !!filePath && fs.existsSync(filePath);
 }
@@ -52,6 +56,41 @@ function countMarkdownFiles(dirPath: string): string[] {
 
 function formatCount(label: string, count: number): string {
  return `${count} ${label}${count === 1 ? '' : 's'}`;
+}
+
+function readHarnessPolicy(root: string): HarnessPolicy {
+ const configPath = path.join(root, '.agentx', 'config.json');
+ if (!fs.existsSync(configPath)) {
+  return { disabledChecks: new Set<string>() };
+ }
+
+ try {
+  const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as {
+   harness?: { disabledChecks?: unknown };
+   harnessDisabledChecks?: unknown;
+  };
+  const rawValue = parsed.harness?.disabledChecks ?? parsed.harnessDisabledChecks;
+  const disabledChecks = new Set<string>();
+
+  if (Array.isArray(rawValue)) {
+   for (const entry of rawValue) {
+    if (typeof entry === 'string' && entry.trim().length > 0) {
+     disabledChecks.add(entry.trim().toLowerCase());
+    }
+   }
+  } else if (typeof rawValue === 'string') {
+   for (const entry of rawValue.split(/[;,\r\n]+/)) {
+    const normalized = entry.trim().toLowerCase();
+    if (normalized.length > 0) {
+     disabledChecks.add(normalized);
+    }
+   }
+  }
+
+  return { disabledChecks };
+ } catch {
+  return { disabledChecks: new Set<string>() };
+ }
 }
 
 function buildObservations(input: HarnessEvaluationInput): {
@@ -216,6 +255,7 @@ export function evaluateHarnessQualityFromInput(
 ): EvaluationReport {
  const { observations, progressFiles } = buildObservations(input);
  const harnessState = readHarnessState(input.root);
+ const policy = readHarnessPolicy(input.root);
  const handoff = checkHandoffGate(input.root);
  const context: CheckContext = {
   root: input.root,
@@ -228,7 +268,9 @@ export function evaluateHarnessQualityFromInput(
   harnessEvidenceCount: harnessState.evidence.length,
  };
 
- const checks = CHECKS.map((check) => check.run(context));
+ const checks = CHECKS
+  .filter((check) => !policy.disabledChecks.has(check.id))
+  .map((check) => check.run(context));
  const earned = checks.reduce((sum, check) => sum + check.score, 0);
  const max = checks.reduce((sum, check) => sum + check.maxScore, 0);
  const observed = observations.filter((observation) => observation.mode === 'observed' && observation.present).length;

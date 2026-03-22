@@ -42,6 +42,8 @@ $Script:MAX_ITERATIONS = 30
 $Script:MAX_TOOL_RESULT_CHARS = 8000
 $Script:SESSION_DIR = $null
 $Script:ApiMode = $null  # 'copilot' or 'models'
+$Script:DEFAULT_SESSION_SUMMARY_MAX_CHARS = 1600
+$Script:RESEARCH_FIRST_MIN_STEPS = 2
 
 # Self-review & clarification defaults (configurable per invocation)
 $Script:SELF_REVIEW_MAX_ITERATIONS = 15
@@ -66,6 +68,181 @@ $Script:MODEL_CONTEXT_WINDOWS = @{
     'gpt-4.1-nano'      = 128000
     'gpt-4o-mini'       = 128000
     'gemini-2.5-pro'    = 1000000
+}
+
+function Get-RunnerConfig([string]$WorkspaceRoot) {
+    if (-not $WorkspaceRoot) { return @{} }
+
+    $configPath = Join-Path $WorkspaceRoot '.agentx' 'config.json'
+    if (-not (Test-Path $configPath)) { return @{} }
+
+    try {
+        return Get-Content $configPath -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
+    } catch {
+        return @{}
+    }
+}
+
+function Get-RunnerConfigValue($Config, [string]$Name, $Default = $null) {
+    if ($Config -is [hashtable]) {
+        if ($Config.ContainsKey($Name)) { return $Config[$Name] }
+        return $Default
+    }
+
+    if ($null -eq $Config) { return $Default }
+    $prop = $Config.PSObject.Properties[$Name]
+    if ($prop) { return $prop.Value }
+    return $Default
+}
+
+function Get-RunnerNestedConfigValue($Config, [string]$ParentName, [string]$ChildName, $Default = $null) {
+    $parent = Get-RunnerConfigValue $Config $ParentName
+    if ($null -eq $parent) { return $Default }
+    return Get-RunnerConfigValue $parent $ChildName $Default
+}
+
+function Get-ResearchFirstMode($Config) {
+    $nested = Get-RunnerNestedConfigValue $Config 'harness' 'researchFirstMode'
+    $rawValue = if ($null -ne $nested -and -not [string]::IsNullOrWhiteSpace([string]$nested)) {
+        [string]$nested
+    } else {
+        [string](Get-RunnerConfigValue $Config 'researchFirstMode' 'off')
+    }
+
+    switch ($rawValue.Trim().ToLowerInvariant()) {
+        'enforced' { return 'enforced' }
+        'strict' { return 'enforced' }
+        'true' { return 'enforced' }
+        'advisory' { return 'advisory' }
+        'on' { return 'advisory' }
+        'off' { return 'off' }
+        'false' { return 'off' }
+        'disabled' { return 'off' }
+        'none' { return 'off' }
+        default { return 'off' }
+    }
+}
+
+function Get-SessionSummaryMaxChars($Config) {
+    $nested = Get-RunnerNestedConfigValue $Config 'harness' 'sessionSummaryMaxChars'
+    $rawValue = if ($null -ne $nested) { $nested } else { Get-RunnerConfigValue $Config 'sessionSummaryMaxChars' $Script:DEFAULT_SESSION_SUMMARY_MAX_CHARS }
+    $value = 0
+    if (-not [int]::TryParse([string]$rawValue, [ref]$value)) {
+        return $Script:DEFAULT_SESSION_SUMMARY_MAX_CHARS
+    }
+
+    return [Math]::Min([Math]::Max($value, 400), 4000)
+}
+
+function Get-BoundedPreview([string]$Text, [int]$MaxChars) {
+    if (-not $Text) { return '' }
+
+    $normalized = (($Text -replace "\r", '') -replace "\n{3,}", "`n`n").Trim()
+    if (-not $normalized) { return '' }
+    if ($normalized.Length -le $MaxChars) { return $normalized }
+    if ($MaxChars -le 3) { return $normalized.Substring(0, $MaxChars) }
+    return $normalized.Substring(0, $MaxChars - 3).TrimEnd() + '...'
+}
+
+function Get-MessagePreview([object]$Message, [int]$MaxChars = 320) {
+    if ($null -eq $Message) { return '' }
+    $content = [string](Get-MessageFieldValue -Message $Message -Name 'content')
+    return Get-BoundedPreview -Text $content -MaxChars $MaxChars
+}
+
+function Build-BoundedSessionSummary {
+    param(
+        [array]$Messages,
+        [string]$FinalText = '',
+        [array]$ExecutionSummaryEvents = @(),
+        $PendingHumanClarification = $null,
+        [int]$MaxChars = $Script:DEFAULT_SESSION_SUMMARY_MAX_CHARS
+    )
+
+    $parts = @()
+    $userMessages = @($Messages | Where-Object { $_.role -eq 'user' })
+    if ($userMessages.Count -gt 0) {
+        $promptPreview = Get-MessagePreview -Message $userMessages[0] -MaxChars 260
+        if ($promptPreview) {
+            $parts += "Prompt: $promptPreview"
+        }
+    }
+
+    if ($ExecutionSummaryEvents.Count -gt 0) {
+        $executionSummary = Format-ExecutionSummary -Events $ExecutionSummaryEvents
+        $executionPreview = Get-BoundedPreview -Text $executionSummary -MaxChars 500
+        if ($executionPreview) {
+            $parts += "Execution: $executionPreview"
+        }
+    }
+
+    $summaryMessages = @($Messages | Where-Object { Test-IsCompactionSummaryMessage -Message $_ })
+    if ($summaryMessages.Count -gt 0) {
+        $summaryPreview = Get-MessagePreview -Message $summaryMessages[-1] -MaxChars 600
+        if ($summaryPreview) {
+            $parts += "Context: $summaryPreview"
+        }
+    }
+
+    $finalPreview = Get-BoundedPreview -Text $FinalText -MaxChars 420
+    if ($finalPreview) {
+        $parts += "Latest Output: $finalPreview"
+    }
+
+    if ($null -ne $PendingHumanClarification) {
+        $topic = [string]$PendingHumanClarification.topic
+        $target = [string]$PendingHumanClarification.targetAgent
+        $pendingText = if ($topic -or $target) {
+            "Awaiting clarification from $target on $topic."
+        } else {
+            'Awaiting human clarification.'
+        }
+        $parts += "Pending: $pendingText"
+    }
+
+    if ($parts.Count -eq 0) {
+        return ''
+    }
+
+    return Get-BoundedPreview -Text ($parts -join "`n`n") -MaxChars $MaxChars
+}
+
+function Test-IsResearchReadOnlyTool([string]$ToolName) {
+    return $ToolName -in @('file_read', 'grep_search', 'list_dir')
+}
+
+function Test-IsResearchMutationTool([string]$ToolName) {
+    return $ToolName -in @('file_write', 'file_edit')
+}
+
+function Test-ResearchFirstToolUse {
+    param(
+        [string]$Mode,
+        [int]$ExplorationCount,
+        [string]$ToolName
+    )
+
+    $result = @{
+        blocked = $false
+        explorationDelta = 0
+        reason = ''
+    }
+
+    if ($Mode -eq 'off') {
+        return $result
+    }
+
+    if (Test-IsResearchReadOnlyTool -ToolName $ToolName) {
+        $result.explorationDelta = 1
+        return $result
+    }
+
+    if ($Mode -eq 'enforced' -and (Test-IsResearchMutationTool -ToolName $ToolName) -and $ExplorationCount -lt $Script:RESEARCH_FIRST_MIN_STEPS) {
+        $result.blocked = $true
+        $result.reason = "Research-first mode requires at least $($Script:RESEARCH_FIRST_MIN_STEPS) read-only exploration steps before '$ToolName'."
+    }
+
+    return $result
 }
 
 # All models mapped: agent frontmatter name -> Copilot API model ID
@@ -1999,6 +2176,10 @@ function Invoke-AgenticLoop {
         $WorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
     }
 
+    $runtimeConfig = Get-RunnerConfig -WorkspaceRoot $WorkspaceRoot
+    $researchFirstMode = Get-ResearchFirstMode -Config $runtimeConfig
+    $sessionSummaryMaxChars = Get-SessionSummaryMaxChars -Config $runtimeConfig
+
     $isResume = -not [string]::IsNullOrWhiteSpace($ResumeSessionId)
     $resumedSession = $null
 
@@ -2049,6 +2230,9 @@ function Invoke-AgenticLoop {
 
     # Build system prompt
     $systemPrompt = Build-SystemPrompt -agentDef $agentDef -agentName $Agent
+    if ($researchFirstMode -ne 'off') {
+        $systemPrompt += "`n`n[Research-First Mode] Start by using read-only workspace tools to inspect the relevant files and gather context before making edits."
+    }
 
     # Parse can_clarify targets from frontmatter collaborators first, then fall back to body hints.
     $canClarify = @(Resolve-CanClarifyTargets -agentDef $agentDef)
@@ -2058,6 +2242,10 @@ function Invoke-AgenticLoop {
     $tools = Get-ToolSchemas
     $loopDetector = New-LoopDetector
     Push-ExecutionSummaryScope
+    if ($researchFirstMode -ne 'off') {
+        Add-ExecutionSummaryEvent -Type 'RESEARCH MODE' -Message "Research-first mode '$researchFirstMode' is active." -ReplaceExisting
+    }
+    Add-ExecutionSummaryEvent -Type 'SESSION SUMMARY' -Message 'Bounded session summary tracking is active.' -ReplaceExisting
 
     # Parse boundary rules from agent definition (canModify / cannotModify)
     $boundaryRules = Read-BoundaryRules -AgentDef $agentDef
@@ -2068,9 +2256,13 @@ function Invoke-AgenticLoop {
     # Conversation messages
     $messages = @()
     $pendingHumanClarification = $null
+    $researchExplorationCount = 0
     if ($isResume) {
         $messages = @($resumedSession.messages)
         $pendingHumanClarification = $resumedSession.meta.pendingHumanClarification
+        if ($null -ne $resumedSession.meta.researchExplorationCount) {
+            $researchExplorationCount = [int]$resumedSession.meta.researchExplorationCount
+        }
         if (-not $pendingHumanClarification) {
             Write-Host "`e[31m  [FAIL] Session '$ResumeSessionId' has no pending human clarification.`e[0m"
             return @{ sessionId = $sessionId; iterations = 0; toolCalls = 0; finalText = 'No pending clarification'; exitReason = 'error' }
@@ -2111,6 +2303,32 @@ function Invoke-AgenticLoop {
     $selfReviewMin = [Math]::Min($Script:SELF_REVIEW_MIN_ITERATIONS, $selfReviewMax)
     $selfReviewHistory = @()
     $finalSelfReviewSummary = ''
+
+    $initialSessionSummary = if ($isResume -and $resumedSession -and $resumedSession.meta.sessionSummary) {
+        Get-BoundedPreview -Text ([string]$resumedSession.meta.sessionSummary) -MaxChars $sessionSummaryMaxChars
+    } else {
+        Build-BoundedSessionSummary -Messages $messages -MaxChars $sessionSummaryMaxChars
+    }
+
+    $initialMeta = @{
+        sessionId = $sessionId
+        agentName = $Agent
+        issueNumber = $IssueNumber
+        modelId = $modelId
+        iterations = 0
+        toolCalls = 0
+        exitReason = 'active'
+        durationMs = 0
+        createdAt = $startTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+        pendingHumanClarification = $pendingHumanClarification
+        resumedFromSession = $isResume
+        researchFirstMode = $researchFirstMode
+        researchExplorationCount = $researchExplorationCount
+        sessionSummary = $initialSessionSummary
+        sessionSummaryMaxChars = $sessionSummaryMaxChars
+        sessionSummaryUpdatedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+    }
+    Save-Session -sessionId $sessionId -messages $messages -meta $initialMeta -root $WorkspaceRoot
 
     Write-Host "`e[90m  -----------------------------------------------`e[0m"
 
@@ -2270,6 +2488,14 @@ function Invoke-AgenticLoop {
 
             # --- Boundary enforcement: block unauthorized file modifications ---
             $boundaryBlocked = $false
+            $researchBlocked = $false
+            $researchCheck = Test-ResearchFirstToolUse -Mode $researchFirstMode -ExplorationCount $researchExplorationCount -ToolName $toolName
+            if ($researchCheck.blocked) {
+                $researchBlocked = $true
+                $result = @{ error = $true; text = "[RESEARCH FIRST] $($researchCheck.reason)" }
+                Write-Host "`e[33m  [RESEARCH FIRST] $($researchCheck.reason)`e[0m"
+                Add-ExecutionSummaryEvent -Type 'RESEARCH FIRST' -Message $researchCheck.reason -ReplaceExisting
+            }
             if ($toolName -in @('file_write', 'file_edit') -and $toolArgs.ContainsKey('filePath')) {
                 $allowed = Test-BoundaryAllowed -FilePath $toolArgs.filePath -Rules $boundaryRules -WorkspaceRoot $WorkspaceRoot
                 if (-not $allowed) {
@@ -2280,8 +2506,12 @@ function Invoke-AgenticLoop {
                 }
             }
 
-            if (-not $boundaryBlocked) {
+            if (-not $boundaryBlocked -and -not $researchBlocked) {
                 $result = Invoke-Tool -name $toolName -params $toolArgs -workspaceRoot $WorkspaceRoot
+                if (-not $result.error -and $researchCheck.explorationDelta -gt 0) {
+                    $researchExplorationCount += $researchCheck.explorationDelta
+                    Add-ExecutionSummaryEvent -Type 'RESEARCH' -Message "Completed $researchExplorationCount read-only exploration step(s)." -ReplaceExisting
+                }
             }
             $totalToolCalls++
 
@@ -2343,6 +2573,7 @@ function Invoke-AgenticLoop {
 
     # Save session
     $duration = ((Get-Date) - $startTime).TotalMilliseconds
+    $sessionSummary = Build-BoundedSessionSummary -Messages $messages -FinalText $finalText -ExecutionSummaryEvents $executionSummaryEvents -PendingHumanClarification $pendingHumanClarification -MaxChars $sessionSummaryMaxChars
     $meta = @{
         sessionId = $sessionId
         agentName = $Agent
@@ -2355,6 +2586,11 @@ function Invoke-AgenticLoop {
         createdAt = $startTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
         pendingHumanClarification = $pendingHumanClarification
         resumedFromSession = $isResume
+        researchFirstMode = $researchFirstMode
+        researchExplorationCount = $researchExplorationCount
+        sessionSummary = $sessionSummary
+        sessionSummaryMaxChars = $sessionSummaryMaxChars
+        sessionSummaryUpdatedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
     }
     Save-Session -sessionId $sessionId -messages $messages -meta $meta -root $WorkspaceRoot
 

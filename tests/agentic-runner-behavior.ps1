@@ -160,6 +160,25 @@ Assert-True ($executionSummary -match '\[EXECUTION SUMMARY\] COMPACTION: Latest 
 Assert-True (-not ($executionSummary -match 'Initial compaction event')) 'Format-ExecutionSummary replaces superseded singleton events'
 Assert-True ($executionSummary -match '\[EXECUTION SUMMARY\] HUMAN RESPONSE: Use the existing auth flow\.') 'Format-ExecutionSummary includes other captured runtime events'
 
+$boundedSessionSummary = Build-BoundedSessionSummary -Messages @(
+    @{ role = 'system'; content = 'system prompt' },
+    @{ role = 'user'; content = 'Implement the login flow with bounded session state.' },
+    @{ role = 'assistant'; content = "[Context Compaction Summary]`nDecisions`n- Keep login simple.`nCurrent State`n- Need regression coverage." }
+) -FinalText ('Resolved the flow and added regression coverage. ' + ('x' * 240)) -ExecutionSummaryEvents @(
+    @{ type = 'WARN'; message = 'A fallback path was used.' }
+) -MaxChars 180
+Assert-True ($boundedSessionSummary.Length -le 180) 'Build-BoundedSessionSummary enforces the configured character budget'
+Assert-True ($boundedSessionSummary -match 'Prompt:') 'Build-BoundedSessionSummary includes the initial user prompt preview'
+Assert-True ($boundedSessionSummary -match 'Execution:') 'Build-BoundedSessionSummary includes execution summary context when present'
+
+$researchWriteBlock = Test-ResearchFirstToolUse -Mode 'enforced' -ExplorationCount 0 -ToolName 'file_edit'
+Assert-True $researchWriteBlock.blocked 'Test-ResearchFirstToolUse blocks writes before enough exploration in enforced mode'
+Assert-True ($researchWriteBlock.reason -match 'requires at least 2 read-only exploration steps') 'Test-ResearchFirstToolUse explains the research-first block reason'
+
+$researchReadOnly = Test-ResearchFirstToolUse -Mode 'enforced' -ExplorationCount 0 -ToolName 'grep_search'
+Assert-Equal $researchReadOnly.explorationDelta 1 'Test-ResearchFirstToolUse counts read-only exploration steps'
+Assert-True (-not $researchReadOnly.blocked) 'Test-ResearchFirstToolUse allows read-only exploration in enforced mode'
+
 $clarificationSummary = Build-ClarificationSummary -FromAgent 'engineer' -TargetAgent 'architect' -Topic 'database indexing' -Exchanges @(
     @{ question = 'What index should we use?'; response = 'Use a composite index on tenant_id and created_at.'; iteration = 1; respondedBy = 'sub-agent' },
     @{ question = 'Any caveats?'; response = 'Keep write amplification in mind for high-ingest tables.'; iteration = 2; respondedBy = 'sub-agent' }
@@ -234,6 +253,7 @@ try {
     $script:runnerMessages = [System.Collections.Generic.List[object]]::new()
     $script:runnerLlmCalls = 0
     $script:selfReviewCalls = 0
+    $script:lastSavedSessionMeta = $null
 
     function Get-GitHubToken { return 'fake-token' }
     function Initialize-ApiMode { param([string]$ghToken) $Script:ApiMode = 'models' }
@@ -241,7 +261,10 @@ try {
     function Get-ModelCandidates { param([string]$preferredModel, [string]$modelFallback) return @('gpt-4o') }
     function Build-SystemPrompt { param($agentDef, [string]$agentName) return 'system prompt' }
     function Get-ToolSchemas { return @() }
-    function Save-Session { param($sessionId, $messages, $meta, $root) }
+    function Save-Session {
+        param($sessionId, $messages, $meta, $root)
+        $script:lastSavedSessionMeta = $meta
+    }
     function New-LoopDetector { return [PSCustomObject]@{} }
     function Add-LoopRecord { param($detector, $toolName, $paramsJson, $resultSnippet) }
     function Test-LoopDetection { param($detector) return @{ severity = 'none'; message = '' } }
@@ -277,6 +300,8 @@ try {
         $_ -match '^\[Self-Review MINIMUM NOT YET MET - Iteration 1/5\]' -and $_ -match 'every role must complete at least 5 self-review passes before finishing'
     }).Count -gt 0
     Assert-True $minimumReminderSeen 'Invoke-AgenticLoop injects a minimum-self-review reminder after the first approved pass'
+    Assert-True ($null -ne $script:lastSavedSessionMeta.sessionSummary) 'Invoke-AgenticLoop saves a bounded session summary in session metadata'
+    Assert-True ([string]$script:lastSavedSessionMeta.sessionSummary).Length -le 1600 'Invoke-AgenticLoop bounds the saved session summary length'
 } finally {
     Remove-Item Function:Get-GitHubToken -ErrorAction SilentlyContinue
     Remove-Item Function:Initialize-ApiMode -ErrorAction SilentlyContinue

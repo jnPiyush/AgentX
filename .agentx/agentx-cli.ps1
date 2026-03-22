@@ -205,6 +205,96 @@ function Get-AgentXConfig {
     return $cfg
 }
 
+function Get-NestedConfigValue($cfg, [string]$parentName, [string]$childName, $default = $null) {
+    $parent = Get-ConfigValue $cfg $parentName
+    if ($null -eq $parent) { return $default }
+    return Get-ConfigValue $parent $childName $default
+}
+
+function ConvertTo-StringArray($value) {
+    if ($null -eq $value) { return @() }
+
+    if ($value -is [string]) {
+        $trimmed = $value.Trim()
+        if (-not $trimmed) { return @() }
+
+        if ($trimmed.StartsWith('[') -and $trimmed.EndsWith(']')) {
+            try {
+                return @(ConvertTo-StringArray ($trimmed | ConvertFrom-Json -Depth 10))
+            } catch {
+                # Fall back to delimiter parsing.
+            }
+        }
+
+        return @(
+            $trimmed -split '[,;\r\n]+'
+            | ForEach-Object { $_.Trim() }
+            | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            | Select-Object -Unique
+        )
+    }
+
+    if ($value -is [System.Collections.IEnumerable]) {
+        $items = @()
+        foreach ($entry in $value) {
+            $items += @(ConvertTo-StringArray $entry)
+        }
+
+        return @($items | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    }
+
+    return @([string]$value)
+}
+
+function Get-HarnessEnforcementProfile($cfg, [string]$override = '') {
+    $rawValue = if (-not [string]::IsNullOrWhiteSpace($override)) {
+        $override
+    } else {
+        $nested = Get-NestedConfigValue $cfg 'harness' 'enforcementProfile'
+        if ($null -ne $nested -and -not [string]::IsNullOrWhiteSpace([string]$nested)) {
+            [string]$nested
+        } else {
+            [string](Get-ConfigValue $cfg 'harnessEnforcementProfile' 'balanced')
+        }
+    }
+
+    switch ($rawValue.Trim().ToLowerInvariant()) {
+        'strict' { return 'strict' }
+        'balanced' { return 'balanced' }
+        'standard' { return 'balanced' }
+        'default' { return 'balanced' }
+        'advisory' { return 'advisory' }
+        'off' { return 'off' }
+        'disabled' { return 'off' }
+        'none' { return 'off' }
+        'false' { return 'off' }
+        'true' { return 'balanced' }
+        default { return 'balanced' }
+    }
+}
+
+function Get-HarnessDisabledChecks($cfg, [string[]]$overrides = @()) {
+    $rawValues = @()
+    if ($overrides.Count -gt 0) {
+        $rawValues += $overrides
+    } else {
+        $nested = Get-NestedConfigValue $cfg 'harness' 'disabledChecks'
+        if ($null -ne $nested) {
+            $rawValues += @(ConvertTo-StringArray $nested)
+        } else {
+            $rawValues += @(ConvertTo-StringArray (Get-ConfigValue $cfg 'harnessDisabledChecks' @()))
+        }
+    }
+
+    return @(
+        $rawValues
+        | ForEach-Object { ([string]$_).Trim().ToLowerInvariant() }
+        | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        | Select-Object -Unique
+        | Sort-Object
+    )
+}
+
 function Ensure-AgentXAdapters($cfg) {
     $adapters = Get-ConfigValue $cfg 'adapters'
     if ($adapters) { return $adapters }
@@ -3384,6 +3474,304 @@ function Invoke-ConfigCmd {
 }
 
 # ---------------------------------------------------------------------------
+# AUDIT: Deterministic harness audit
+# ---------------------------------------------------------------------------
+
+function Get-HarnessMarkdownFiles([string]$dirPath, [string]$prefix) {
+    if (-not (Test-Path $dirPath)) { return @() }
+
+    return @(
+        Get-ChildItem -Path $dirPath -Filter '*.md' -File -ErrorAction SilentlyContinue
+        | Sort-Object Name
+        | ForEach-Object { "$prefix/$($_.Name)" }
+    )
+}
+
+function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
+    $statePath = Join-Path $workspaceRoot '.agentx' 'state' 'loop-state.json'
+    $state = Read-JsonFile $statePath
+
+    if (-not $state) {
+        return [PSCustomObject]@{
+            passed = $false
+            attribution = 'policy'
+            summary = 'No quality loop was started. Run `agentx loop start` before review handoff.'
+        }
+    }
+
+    $maxIterations = if ($state.PSObject.Properties['maxIterations']) { [int]$state.maxIterations } else { 0 }
+    $hasMinIterations = $null -ne $state.PSObject.Properties['minIterations']
+    $minIterations = if ($hasMinIterations -and [int]$state.minIterations -gt 0) {
+        [Math]::Min([int]$state.minIterations, $maxIterations)
+    } else {
+        [Math]::Min(5, $maxIterations)
+    }
+
+    $lastTouched = $null
+    foreach ($candidate in @([string]$state.lastIterationAt, [string]$state.startedAt)) {
+        $parsed = [datetime]::MinValue
+        if ([datetime]::TryParse($candidate, [ref]$parsed)) {
+            $lastTouched = $parsed
+            break
+        }
+    }
+
+    if ($state.active) {
+        return [PSCustomObject]@{
+            passed = $false
+            attribution = 'policy'
+            summary = "Quality loop still active (iteration $($state.iteration)/$($state.maxIterations))."
+        }
+    }
+
+    if ([string]$state.status -eq 'cancelled') {
+        return [PSCustomObject]@{
+            passed = $false
+            attribution = 'policy'
+            summary = 'Quality loop was cancelled. Start a new loop and complete it.'
+        }
+    }
+
+    if ($lastTouched -and (((Get-Date).ToUniversalTime()) - $lastTouched.ToUniversalTime()).TotalHours -ge $Script:LOOP_STALE_AFTER_HOURS) {
+        return [PSCustomObject]@{
+            passed = $false
+            attribution = 'policy'
+            summary = 'Quality loop is stale. Start a new loop for the current task.'
+        }
+    }
+
+    if ([string]$state.status -eq 'complete' -and [int]$state.iteration -lt $minIterations) {
+        return [PSCustomObject]@{
+            passed = $false
+            attribution = 'policy'
+            summary = "Quality loop completed too early ($($state.iteration)/$minIterations minimum review iterations)."
+        }
+    }
+
+    if ([string]$state.status -eq 'complete') {
+        return [PSCustomObject]@{
+            passed = $true
+            attribution = 'clear'
+            summary = 'Quality loop completed successfully.'
+        }
+    }
+
+    return [PSCustomObject]@{
+        passed = $false
+        attribution = 'policy'
+        summary = "Unexpected loop status '$($state.status)'."
+    }
+}
+
+function Invoke-HarnessComplianceReport([string]$baseRef = '') {
+    $scriptPath = Join-Path $Script:ROOT 'scripts' 'check-harness-compliance.ps1'
+    if (-not (Test-Path $scriptPath)) {
+        return [PSCustomObject]@{
+            available = $false
+            passed = $false
+            requiresPlan = $false
+            failureCount = 0
+            lines = @('Harness compliance script missing.')
+            summary = 'Harness compliance script missing.'
+        }
+    }
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = 'pwsh'
+    $startInfo.WorkingDirectory = $Script:ROOT
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.UseShellExecute = $false
+    $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-File')
+    $startInfo.ArgumentList.Add($scriptPath)
+    if (-not [string]::IsNullOrWhiteSpace($baseRef)) {
+        $startInfo.ArgumentList.Add('-BaseRef')
+        $startInfo.ArgumentList.Add($baseRef)
+    }
+    $startInfo.ArgumentList.Add('-ReportOnly')
+
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    $stdout = $process.StandardOutput.ReadToEnd()
+    $stderr = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+
+    $lines = @((($stdout + $stderr) -split "`r?`n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $failures = @($lines | Where-Object { $_ -match '^\[FAIL\]' })
+    $requiresPlan = @($lines | Where-Object { $_ -match 'Requires execution plan:\s+True' }).Count -gt 0
+    $summary = if ($failures.Count -gt 0) {
+        ($failures[0] -replace '^\[FAIL\]\s*', '').Trim()
+    } elseif ($lines.Count -gt 0) {
+        $lastLine = ($lines | Select-Object -Last 1)
+        ($lastLine -replace '^\[[A-Z]+\]\s*', '').Trim()
+    } else {
+        'Harness compliance check completed.'
+    }
+
+    return [PSCustomObject]@{
+        available = $true
+        passed = ($failures.Count -eq 0)
+        requiresPlan = $requiresPlan
+        failureCount = $failures.Count
+        lines = $lines
+        summary = $summary
+    }
+}
+
+function Get-HarnessAuditChecks([string]$workspaceRoot, [string]$baseRef = '') {
+    $planFiles = @(Get-HarnessMarkdownFiles (Join-Path $workspaceRoot 'docs' 'execution' 'plans') 'docs/execution/plans')
+    $progressFiles = @(Get-HarnessMarkdownFiles (Join-Path $workspaceRoot 'docs' 'execution' 'progress') 'docs/execution/progress')
+    $harnessState = Read-JsonFile (Join-Path $workspaceRoot '.agentx' 'state' 'harness-state.json')
+    $threadCount = if ($harnessState -and $harnessState.threads) { @($harnessState.threads).Count } else { 0 }
+    $evidenceCount = if ($harnessState -and $harnessState.evidence) { @($harnessState.evidence).Count } else { 0 }
+    $loopCheck = Get-HarnessLoopAuditResult -workspaceRoot $workspaceRoot
+    $compliance = Invoke-HarnessComplianceReport -baseRef $baseRef
+
+    return @(
+        [PSCustomObject]@{
+            id = 'execution-plan-present'
+            pillar = 'planning'
+            label = 'Execution plan linked'
+            passed = $planFiles.Count -gt 0
+            score = if ($planFiles.Count -gt 0) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($planFiles.Count -gt 0) { 'clear' } else { 'harness' }
+            summary = if ($planFiles.Count -gt 0) { "$($planFiles.Count) plan file(s) discovered." } else { 'No execution plan found for the current workspace.' }
+        }
+        [PSCustomObject]@{
+            id = 'progress-log-present'
+            pillar = 'planning'
+            label = 'Progress log tracked'
+            passed = $progressFiles.Count -gt 0
+            score = if ($progressFiles.Count -gt 0) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($progressFiles.Count -gt 0) { 'clear' } else { 'harness' }
+            summary = if ($progressFiles.Count -gt 0) { "$($progressFiles.Count) progress log(s) discovered." } else { 'No progress log found under docs/execution/progress.' }
+        }
+        [PSCustomObject]@{
+            id = 'loop-complete'
+            pillar = 'execution'
+            label = 'Loop gate satisfied'
+            passed = [bool]$loopCheck.passed
+            score = if ($loopCheck.passed) { 20 } else { 0 }
+            maxScore = 20
+            attribution = [string]$loopCheck.attribution
+            summary = [string]$loopCheck.summary
+        }
+        [PSCustomObject]@{
+            id = 'harness-thread-recorded'
+            pillar = 'execution'
+            label = 'Harness thread captured'
+            passed = $threadCount -gt 0
+            score = if ($threadCount -gt 0) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($threadCount -gt 0) { 'clear' } else { 'harness' }
+            summary = if ($threadCount -gt 0) { "$threadCount thread(s) recorded in harness state." } else { 'Harness state has no recorded threads.' }
+        }
+        [PSCustomObject]@{
+            id = 'evidence-recorded'
+            pillar = 'evidence'
+            label = 'Evidence captured'
+            passed = $evidenceCount -gt 0
+            score = if ($evidenceCount -gt 0) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($evidenceCount -gt 0) { 'clear' } else { 'harness' }
+            summary = if ($evidenceCount -gt 0) { "$evidenceCount evidence item(s) recorded." } else { 'Harness state has no recorded evidence.' }
+        }
+        [PSCustomObject]@{
+            id = 'plan-compliance'
+            pillar = 'planning'
+            label = 'Plan compliance script'
+            passed = [bool]$compliance.passed
+            score = if ($compliance.passed) { 20 } else { 0 }
+            maxScore = 20
+            attribution = if ($compliance.passed) { 'clear' } else { 'harness' }
+            summary = [string]$compliance.summary
+            metadata = [PSCustomObject]@{
+                requiresPlan = [bool]$compliance.requiresPlan
+                available = [bool]$compliance.available
+            }
+        }
+    )
+}
+
+function Test-HarnessCheckRequired([string]$profile, [string]$checkId) {
+    switch ($profile) {
+        'strict' { return $true }
+        'balanced' { return $checkId -in @('loop-complete', 'harness-thread-recorded', 'evidence-recorded', 'plan-compliance') }
+        default { return $false }
+    }
+}
+
+function Invoke-AuditCmd {
+    $auditTarget = if ($Script:SubArgs.Count -gt 0) { [string]$Script:SubArgs[0] } else { 'harness' }
+    if ($auditTarget -notin @('harness')) {
+        Write-Host 'Usage: agentx audit harness [--profile strict|balanced|advisory|off] [--disable-check <id>] [--base-ref <branch>]'
+        return
+    }
+
+    $cfg = Get-AgentXConfig
+    $profileOverride = Get-Flag @('--profile') ''
+    $disableOverrides = @()
+    for ($i = 0; $i -lt $Script:SubArgs.Count; $i++) {
+        if ($Script:SubArgs[$i] -eq '--disable-check' -and ($i + 1) -lt $Script:SubArgs.Count) {
+            $disableOverrides += @(ConvertTo-StringArray $Script:SubArgs[$i + 1])
+        }
+    }
+    $profile = Get-HarnessEnforcementProfile -cfg $cfg -override $profileOverride
+    $disabledChecks = Get-HarnessDisabledChecks -cfg $cfg -overrides $disableOverrides
+    $baseRef = Get-Flag @('--base-ref') ''
+
+    $allChecks = @(Get-HarnessAuditChecks -workspaceRoot $Script:ROOT -baseRef $baseRef)
+    $enabledChecks = @($allChecks | Where-Object { $_.id -notin $disabledChecks })
+    $requiredChecks = @($enabledChecks | Where-Object { Test-HarnessCheckRequired -profile $profile -checkId ([string]$_.id) })
+    $failedRequiredChecks = @($requiredChecks | Where-Object { -not $_.passed })
+    $earned = ($enabledChecks | Measure-Object -Property score -Sum).Sum
+    $max = ($enabledChecks | Measure-Object -Property maxScore -Sum).Sum
+    $passedChecks = @($enabledChecks | Where-Object { $_.passed }).Count
+    $totalChecks = $enabledChecks.Count
+    $scorePercent = if ($max -gt 0) { [int][Math]::Round(($earned / $max) * 100) } else { 0 }
+    $allowed = $failedRequiredChecks.Count -eq 0
+
+    $result = [PSCustomObject]@{
+        target = 'harness'
+        profile = $profile
+        allowed = $allowed
+        disabledChecks = @($disabledChecks)
+        requiredChecks = @($requiredChecks | ForEach-Object { $_.id })
+        failedRequiredChecks = @($failedRequiredChecks | ForEach-Object { $_.id })
+        score = [PSCustomObject]@{
+            earned = $earned
+            max = $max
+            percent = $scorePercent
+            passedChecks = $passedChecks
+            totalChecks = $totalChecks
+        }
+        checks = $enabledChecks
+    }
+
+    if ($Script:JsonOutput) {
+        $result | ConvertTo-Json -Depth 12 | Write-Host
+    } else {
+        Write-Host "$($C.c)  AgentX Harness Audit$($C.n)"
+        Write-Host "$($C.d)  Profile: $profile$($C.n)"
+        Write-Host "$($C.d)  Disabled checks: $(if ($disabledChecks.Count -gt 0) { $disabledChecks -join ', ' } else { 'none' })$($C.n)"
+        Write-Host "$($C.d)  Score: $scorePercent% ($passedChecks/$totalChecks checks)$($C.n)"
+        Write-Host "$($C.d)  Gate: $(if ($allowed) { 'PASS' } else { 'FAIL' })$($C.n)"
+        foreach ($check in $enabledChecks) {
+            $mark = if ($check.passed) { '[PASS]' } else { '[FAIL]' }
+            $requiredMarker = if (Test-HarnessCheckRequired -profile $profile -checkId ([string]$check.id)) { 'required' } else { 'advisory' }
+            Write-Host "  $mark $($check.label) [$requiredMarker]"
+            Write-Host "      $($check.summary)"
+        }
+    }
+
+    if (-not $allowed -and $profile -notin @('advisory', 'off')) {
+        exit 1
+    }
+}
+
+# ---------------------------------------------------------------------------
 # VERSION
 # ---------------------------------------------------------------------------
 
@@ -3864,6 +4252,7 @@ $($C.w)  Commands:$($C.n)
   ready                            Show unblocked work, sorted by priority
   state [-a agent -s status]       Show/update agent states
   deps <issue>                     Check dependencies for an issue
+    audit harness                    Run deterministic harness audit checks
   digest                           Generate weekly digest
     workflow [agent-name]            List/show workflow steps for an agent
   loop <start|status|iterate|complete|cancel>  Iterative refinement
@@ -3888,6 +4277,8 @@ $($C.w)  Config Commands:$($C.n)
   config get <key>                   Get a config value
   config set <key> <value>           Set a config value
   config set enforceIssues true      Enable issue enforcement in local mode
+    config set harnessEnforcementProfile strict   Require every enabled harness check
+    config set harnessDisabledChecks loop-complete,evidence-recorded
 
 $($C.w)  Issue Commands:$($C.n)
   issue create -t "Title" -l "type:story"
@@ -3909,6 +4300,10 @@ $($C.w)  Bounded Parallel Commands:$($C.n)
     parallel start --id <parallel-id> --units-base64 <base64-json-array>
     parallel reconcile --id <parallel-id> --overlap-review pass --conflict-review pass --acceptance-evidence pass --owner-approval approved
 
+$($C.w)  Audit Commands:$($C.n)
+    audit harness --profile balanced
+    audit harness --profile strict --disable-check progress-log-present
+
 $($C.w)  Flags:$($C.n)
   --json / -j                      Output as JSON
 
@@ -3923,6 +4318,7 @@ switch ($Script:Command) {
     'ready'    { Invoke-ReadyCmd }
     'state'    { Invoke-StateCmd }
     'deps'     { Invoke-DepsCmd }
+    'audit'    { Invoke-AuditCmd }
     'digest'   { Invoke-DigestCmd }
     'workflow'  { Invoke-WorkflowCmd }
     'loop'     { Invoke-LoopCmd }
