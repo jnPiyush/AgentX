@@ -31,11 +31,17 @@ export interface LoopState {
   readonly issueNumber?: number | null;
   readonly startedAt: string;
   readonly lastIterationAt: string;
+  /** Optional time budget in minutes set at loop start. */
+  readonly budgetMinutes?: number;
   readonly history: ReadonlyArray<{
     readonly iteration: number;
     readonly timestamp: string;
     readonly summary: string;
     readonly status: string;
+    /** Structured outcome of this iteration: pass, fail, or partial. */
+    readonly outcome?: 'pass' | 'fail' | 'partial';
+    /** Harness audit score snapshot recorded during this iteration. */
+    readonly harnessScore?: number;
   }>;
 }
 
@@ -94,6 +100,56 @@ function getLoopStaleReason(
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Budget & Score helpers
+// ---------------------------------------------------------------------------
+
+function getBudgetRemainingMs(state: LoopState, nowMs: number = Date.now()): number | null {
+  if (typeof state.budgetMinutes !== 'number' || state.budgetMinutes <= 0) {
+    return null;
+  }
+  const startMs = Date.parse(state.startedAt);
+  if (Number.isNaN(startMs)) {
+    return null;
+  }
+  return (startMs + state.budgetMinutes * 60 * 1000) - nowMs;
+}
+
+function getBudgetSuffix(state: LoopState, nowMs: number = Date.now()): string {
+  const remainingMs = getBudgetRemainingMs(state, nowMs);
+  if (remainingMs === null) {
+    return '';
+  }
+  if (remainingMs <= 0) {
+    return ' (budget exceeded)';
+  }
+  const mins = Math.ceil(remainingMs / 60_000);
+  return ` (${mins}m remaining)`;
+}
+
+function getScoreTrendSuffix(state: LoopState): string {
+  if (!state.history || state.history.length === 0) {
+    return '';
+  }
+  const scored = state.history.filter(
+    (h): h is typeof h & { harnessScore: number } => typeof h.harnessScore === 'number',
+  );
+  if (scored.length === 0) {
+    return '';
+  }
+  const latest = scored[scored.length - 1].harnessScore;
+  if (scored.length === 1) {
+    return ` [score: ${latest}]`;
+  }
+  const prev = scored[scored.length - 2].harnessScore;
+  const delta = latest - prev;
+  if (delta === 0) {
+    return ` [score: ${latest}]`;
+  }
+  const arrow = delta > 0 ? '+' : '';
+  return ` [score: ${latest} (${arrow}${delta})]`;
 }
 
 // ---------------------------------------------------------------------------
@@ -226,21 +282,23 @@ export function getLoopStatusDisplay(workspaceRoot: string): string {
   }
   const minIterations = getEffectiveMinIterations(state);
   const staleReason = getLoopStaleReason(state);
+  const budgetSuffix = getBudgetSuffix(state);
+  const scoreSuffix = getScoreTrendSuffix(state);
   if (state.active) {
     const readiness = state.iteration < minIterations
       ? `not ready to complete (${state.iteration}/${minIterations} min)`
       : 'minimum iterations met';
     if (staleReason) {
-      return `Loop active ${state.iteration}/${state.maxIterations} (stale; ${staleReason}) [${state.completionCriteria}]`;
+      return `Loop active ${state.iteration}/${state.maxIterations} (stale; ${staleReason}) [${state.completionCriteria}]${budgetSuffix}${scoreSuffix}`;
     }
 
-    return `Loop active ${state.iteration}/${state.maxIterations} (${readiness}) [${state.completionCriteria}]`;
+    return `Loop active ${state.iteration}/${state.maxIterations} (${readiness}) [${state.completionCriteria}]${budgetSuffix}${scoreSuffix}`;
   }
   if (staleReason) {
-    return `Loop ${state.status} (stale; ${staleReason})`;
+    return `Loop ${state.status} (stale; ${staleReason})${scoreSuffix}`;
   }
 
-  return `Loop ${state.status} (${state.iteration} iterations, min ${minIterations})`;
+  return `Loop ${state.status} (${state.iteration} iterations, min ${minIterations})${scoreSuffix}`;
 }
 
 /**
@@ -250,4 +308,17 @@ export function getQualityStateDisplay(workspaceRoot: string): string {
   const loop = getLoopStatusDisplay(workspaceRoot);
   const harness = getHarnessStatusDisplay(workspaceRoot);
   return `${loop} | ${harness}`;
+}
+
+/**
+ * Check whether the loop has exceeded its optional time budget.
+ * Returns false when no budget is set.
+ */
+export function isBudgetExceeded(workspaceRoot: string): boolean {
+  const state = readLoopState(workspaceRoot);
+  if (!state) {
+    return false;
+  }
+  const remaining = getBudgetRemainingMs(state);
+  return remaining !== null && remaining <= 0;
 }

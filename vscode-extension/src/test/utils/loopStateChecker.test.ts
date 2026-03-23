@@ -7,6 +7,7 @@ import {
   checkHandoffGate,
   shouldAutoStartLoop,
   getLoopStatusDisplay,
+  isBudgetExceeded,
   LoopState,
 } from '../../utils/loopStateChecker';
 
@@ -365,5 +366,200 @@ describe('getLoopStatusDisplay', () => {
     writeLoopState(wsRoot, makeCancelledState());
     const display = getLoopStatusDisplay(wsRoot);
     assert.ok(display.includes('cancelled'));
+  });
+
+  it('shows budget remaining when budgetMinutes is set', () => {
+    writeLoopState(wsRoot, makeActiveState({
+      budgetMinutes: 60,
+      startedAt: isoMinutesAgo(20),
+    }));
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(display.includes('remaining'), `Expected 'remaining' in: ${display}`);
+  });
+
+  it('shows budget exceeded when time exceeds budget', () => {
+    writeLoopState(wsRoot, makeActiveState({
+      budgetMinutes: 10,
+      startedAt: isoMinutesAgo(30),
+    }));
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(display.includes('budget exceeded'), `Expected 'budget exceeded' in: ${display}`);
+  });
+
+  it('does not show budget info when budgetMinutes is not set', () => {
+    writeLoopState(wsRoot, makeActiveState());
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(!display.includes('budget'), `Unexpected budget info in: ${display}`);
+    assert.ok(!display.includes('remaining'), `Unexpected remaining info in: ${display}`);
+  });
+
+  it('shows latest harness score from history', () => {
+    writeLoopState(wsRoot, makeActiveState({
+      history: [
+        { iteration: 1, timestamp: isoMinutesAgo(30), summary: 'Init', status: 'iterated', outcome: 'partial' as const, harnessScore: 40 },
+        { iteration: 2, timestamp: isoMinutesAgo(15), summary: 'Fix', status: 'iterated', outcome: 'partial' as const, harnessScore: 60 },
+      ],
+    }));
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(display.includes('score: 60'), `Expected 'score: 60' in: ${display}`);
+    assert.ok(display.includes('+20'), `Expected '+20' delta in: ${display}`);
+  });
+
+  it('shows single harness score without delta', () => {
+    writeLoopState(wsRoot, makeActiveState({
+      history: [
+        { iteration: 1, timestamp: isoMinutesAgo(10), summary: 'Init', status: 'iterated', outcome: 'partial' as const, harnessScore: 40 },
+      ],
+    }));
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(display.includes('[score: 40]'), `Expected '[score: 40]' in: ${display}`);
+    assert.ok(!display.includes('+'), `Unexpected delta in: ${display}`);
+  });
+
+  it('shows score without delta when delta is zero', () => {
+    writeLoopState(wsRoot, makeActiveState({
+      history: [
+        { iteration: 1, timestamp: isoMinutesAgo(20), summary: 'Init', status: 'iterated', outcome: 'partial' as const, harnessScore: 60 },
+        { iteration: 2, timestamp: isoMinutesAgo(10), summary: 'Recheck', status: 'iterated', outcome: 'partial' as const, harnessScore: 60 },
+      ],
+    }));
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(display.includes('[score: 60]'), `Expected '[score: 60]' without delta in: ${display}`);
+    assert.ok(!display.includes('[score: 60 ('), `Unexpected delta parenthetical in: ${display}`);
+  });
+
+  it('does not show score when history has no harnessScore', () => {
+    writeLoopState(wsRoot, makeActiveState());
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(!display.includes('score:'), `Unexpected score in: ${display}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isBudgetExceeded
+// ---------------------------------------------------------------------------
+
+describe('isBudgetExceeded', () => {
+  let wsRoot: string;
+
+  beforeEach(() => {
+    wsRoot = makeTmpWorkspace();
+  });
+
+  afterEach(() => {
+    fs.rmSync(wsRoot, { recursive: true, force: true });
+  });
+
+  it('returns false when no loop state exists', () => {
+    assert.equal(isBudgetExceeded(wsRoot), false);
+  });
+
+  it('returns false when no budget is set', () => {
+    writeLoopState(wsRoot, makeActiveState());
+    assert.equal(isBudgetExceeded(wsRoot), false);
+  });
+
+  it('returns false when budget is not yet exceeded', () => {
+    writeLoopState(wsRoot, makeActiveState({
+      budgetMinutes: 60,
+      startedAt: isoMinutesAgo(10),
+    }));
+    assert.equal(isBudgetExceeded(wsRoot), false);
+  });
+
+  it('returns true when budget is exceeded', () => {
+    writeLoopState(wsRoot, makeActiveState({
+      budgetMinutes: 10,
+      startedAt: isoMinutesAgo(30),
+    }));
+    assert.equal(isBudgetExceeded(wsRoot), true);
+  });
+
+  it('returns true when budget is exactly at boundary', () => {
+    writeLoopState(wsRoot, makeActiveState({
+      budgetMinutes: 10,
+      startedAt: isoMinutesAgo(10),
+    }));
+    assert.equal(isBudgetExceeded(wsRoot), true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LoopState history outcome and harnessScore fields
+// ---------------------------------------------------------------------------
+
+describe('LoopState history fields', () => {
+  let wsRoot: string;
+
+  beforeEach(() => {
+    wsRoot = makeTmpWorkspace();
+  });
+
+  afterEach(() => {
+    fs.rmSync(wsRoot, { recursive: true, force: true });
+  });
+
+  it('reads outcome field from history entries', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 1, timestamp: isoMinutesAgo(30), summary: 'Init', status: 'iterated', outcome: 'partial' },
+        { iteration: 2, timestamp: isoMinutesAgo(15), summary: 'Fix', status: 'iterated', outcome: 'fail' },
+        { iteration: 3, timestamp: isoMinutesAgo(5), summary: 'Done', status: 'complete', outcome: 'pass' },
+      ],
+    }));
+
+    const state = readLoopState(wsRoot);
+    assert.notEqual(state, null);
+    assert.equal(state!.history[0].outcome, 'partial');
+    assert.equal(state!.history[1].outcome, 'fail');
+    assert.equal(state!.history[2].outcome, 'pass');
+  });
+
+  it('reads harnessScore field from history entries', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 1, timestamp: isoMinutesAgo(30), summary: 'Init', status: 'iterated', harnessScore: 40 },
+        { iteration: 2, timestamp: isoMinutesAgo(15), summary: 'Fix', status: 'iterated', harnessScore: 80 },
+        { iteration: 3, timestamp: isoMinutesAgo(5), summary: 'Done', status: 'complete', harnessScore: 100 },
+      ],
+    }));
+
+    const state = readLoopState(wsRoot);
+    assert.notEqual(state, null);
+    assert.equal(state!.history[0].harnessScore, 40);
+    assert.equal(state!.history[1].harnessScore, 80);
+    assert.equal(state!.history[2].harnessScore, 100);
+  });
+
+  it('handles history entries without outcome or harnessScore (backward compat)', () => {
+    writeLoopState(wsRoot, makeCompleteState());
+
+    const state = readLoopState(wsRoot);
+    assert.notEqual(state, null);
+    assert.equal(state!.history[0].outcome, undefined);
+    assert.equal(state!.history[0].harnessScore, undefined);
+  });
+
+  it('reads budgetMinutes from state', () => {
+    writeLoopState(wsRoot, makeActiveState({ budgetMinutes: 45 }));
+
+    const state = readLoopState(wsRoot);
+    assert.notEqual(state, null);
+    assert.equal(state!.budgetMinutes, 45);
+  });
+
+  it('handles missing budgetMinutes gracefully', () => {
+    writeLoopState(wsRoot, makeActiveState());
+
+    const state = readLoopState(wsRoot);
+    assert.notEqual(state, null);
+    assert.equal(state!.budgetMinutes, undefined);
   });
 });

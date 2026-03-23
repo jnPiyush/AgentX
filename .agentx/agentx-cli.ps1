@@ -3156,6 +3156,16 @@ function Invoke-LoopStart {
     $criteria = Get-Flag @('-c', '--criteria') 'TASK_COMPLETE'
     $issue = [int](Get-Flag @('-i', '--issue') '0')
     if (-not $issue) { $issue = $null }
+    $budgetRaw = Get-Flag @('-b', '--budget') ''
+    $budget = $null
+    if ($budgetRaw) {
+        $parsed = 0
+        if (-not [int]::TryParse($budgetRaw, [ref]$parsed) -or $parsed -le 0) {
+            Write-Host "$($C.r)Error: --budget must be a positive integer (got '$budgetRaw').$($C.n)"
+            return
+        }
+        $budget = $parsed
+    }
 
     $existing = Read-JsonFile $Script:LOOP_STATE_FILE
     $staleReason = Get-LoopStateStaleReason $existing $issue
@@ -3173,6 +3183,7 @@ function Invoke-LoopStart {
                 timestamp = Get-Timestamp
                 summary   = "Auto-reset stale loop before starting new task ($staleReason)"
                 status    = 'cancelled'
+                outcome   = 'fail'
             })
         Write-JsonFile $Script:LOOP_STATE_FILE $existing
         Write-Host "$($C.y)  Auto-reset stale active loop ($staleReason).$($C.n)"
@@ -3187,14 +3198,16 @@ function Invoke-LoopStart {
         maxIterations      = $max
         completionCriteria = $criteria
         issueNumber        = $issue
+        budgetMinutes      = $budget
         startedAt          = Get-Timestamp
         lastIterationAt    = Get-Timestamp
-        history            = @([PSCustomObject]@{ iteration = 1; timestamp = Get-Timestamp; summary = 'Loop started'; status = 'in-progress' })
+        history            = @([PSCustomObject]@{ iteration = 1; timestamp = Get-Timestamp; summary = 'Loop started'; status = 'in-progress'; outcome = 'partial' })
     }
     Write-JsonFile $Script:LOOP_STATE_FILE $state
 
     Write-Host "`n$($C.c)  Iterative Loop Started$($C.n)"
     Write-Host "$($C.d)  Iteration: 1/$max  |  Minimum review iterations: $min  |  Criteria: $criteria$($C.n)"
+    if ($budget) { Write-Host "$($C.d)  Budget: $budget minutes$($C.n)" }
     if ($issue) { Write-Host "$($C.d)  Issue: #$issue$($C.n)" }
     Write-Host "`n$($C.w)  Prompt:$($C.n) $prompt`n"
 }
@@ -3213,6 +3226,36 @@ function Invoke-LoopStatus {
     Write-Host "`n$($C.c)  Iterative Loop Status$($C.n)"
     Write-Host "$($C.d)  Status: $($state.status)  |  Active: $($state.active)  |  Iteration: $($state.iteration)/$($state.maxIterations)  |  Minimum review iterations: $($state.minIterations)$($C.n)"
     Write-Host "$($C.d)  Criteria: $($state.completionCriteria)$($C.n)"
+
+    # Budget info
+    $hasBudget = ($state.PSObject.Properties.Name -contains 'budgetMinutes') -and $state.budgetMinutes
+    if ($hasBudget -and $state.startedAt) {
+        try {
+            $startTime = [datetimeoffset]::Parse($state.startedAt)
+            $elapsed = ([datetimeoffset]::UtcNow - $startTime).TotalMinutes
+            $remaining = [Math]::Ceiling($state.budgetMinutes - $elapsed)
+            if ($remaining -le 0) {
+                Write-Host "$($C.r)  Budget: EXCEEDED (budget was $($state.budgetMinutes)m, elapsed $([Math]::Round($elapsed))m)$($C.n)"
+            } else {
+                Write-Host "$($C.d)  Budget: ${remaining}m remaining of $($state.budgetMinutes)m$($C.n)"
+            }
+        } catch { }
+    }
+
+    # Score trend from history
+    $scored = @($state.history | Where-Object { $_.PSObject.Properties.Name -contains 'harnessScore' -and $null -ne $_.harnessScore })
+    if ($scored.Count -gt 0) {
+        $latest = $scored[-1].harnessScore
+        if ($scored.Count -ge 2) {
+            $prev = $scored[-2].harnessScore
+            $delta = $latest - $prev
+            $arrow = if ($delta -gt 0) { "+$delta" } elseif ($delta -lt 0) { "$delta" } else { "=$delta" }
+            Write-Host "$($C.d)  Harness score: $latest ($arrow from prev)$($C.n)"
+        } else {
+            Write-Host "$($C.d)  Harness score: $latest$($C.n)"
+        }
+    }
+
     $staleReason = Get-LoopStateStaleReason $state
     if ($staleReason) {
         Write-Host "$($C.y)  Staleness: $staleReason. Start a new loop for the current task.$($C.n)"
@@ -3236,8 +3279,10 @@ function Invoke-LoopStatus {
         Write-Host "`n$($C.w)  History (last 5):$($C.n)"
         $recent = $state.history | Select-Object -Last 5
         foreach ($h in $recent) {
-            $mark = if ($h.status -eq 'complete') { '[PASS]' } else { '[...]' }
-            Write-Host "$($C.d)    $mark Iteration $($h.iteration): $($h.summary)$($C.n)"
+            $outcomeVal = if ($h.PSObject.Properties.Name -contains 'outcome') { $h.outcome } else { $null }
+            $mark = switch ($outcomeVal) { 'pass' { '[PASS]' } 'fail' { '[FAIL]' } default { if ($h.status -eq 'complete') { '[PASS]' } else { '[...]' } } }
+            $scorePart = if ($h.PSObject.Properties.Name -contains 'harnessScore' -and $null -ne $h.harnessScore) { " (score: $($h.harnessScore))" } else { '' }
+            Write-Host "$($C.d)    $mark Iteration $($h.iteration): $($h.summary)$scorePart$($C.n)"
         }
     }
     Write-Host ''
@@ -3251,19 +3296,48 @@ function Invoke-LoopIterate {
     $next = $state.iteration + 1
     if ($next -gt $state.maxIterations) {
         $state.active = $false
-        $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = 'Max iterations reached'; status = 'stopped' })
+        $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = 'Max iterations reached'; status = 'stopped'; outcome = 'fail' })
         Write-JsonFile $Script:LOOP_STATE_FILE $state
         Write-Host "$($C.r)  Max iterations ($($state.maxIterations)) reached. Loop stopped.$($C.n)"
         return
     }
 
     $summary = Get-Flag @('-s', '--summary') "Iteration $next"
+    $outcomeRaw = Get-Flag @('-o', '--outcome') 'partial'
+    $outcome = if ($outcomeRaw -in @('pass', 'fail', 'partial')) { $outcomeRaw } else { 'partial' }
+
+    # Collect harness audit score when available
+    $harnessScore = $null
+    try {
+        $checks = @(Get-HarnessAuditChecks $Script:ROOT)
+        if ($checks.Count -gt 0) {
+            $harnessScore = ($checks | Measure-Object -Property score -Sum).Sum
+        }
+    } catch { }
+
     $state.iteration = $next
     $state.lastIterationAt = Get-Timestamp
-    $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = $summary; status = 'in-progress' })
+    $entry = [PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = $summary; status = 'in-progress'; outcome = $outcome }
+    if ($null -ne $harnessScore) { $entry | Add-Member -NotePropertyName harnessScore -NotePropertyValue $harnessScore }
+    $state.history = @($state.history) + @($entry)
     Write-JsonFile $Script:LOOP_STATE_FILE $state
+
+    # Budget warning
+    $hasBudget = ($state.PSObject.Properties.Name -contains 'budgetMinutes') -and $state.budgetMinutes
+    if ($hasBudget -and $state.startedAt) {
+        try {
+            $startTime = [datetimeoffset]::Parse($state.startedAt)
+            $elapsed = ([datetimeoffset]::UtcNow - $startTime).TotalMinutes
+            if ($elapsed -ge $state.budgetMinutes) {
+                Write-Host "$($C.r)  [WARN] Time budget of $($state.budgetMinutes)m exceeded (elapsed: $([Math]::Round($elapsed))m).$($C.n)"
+            }
+        } catch { }
+    }
+
     Write-Host "`n$($C.c)  Iteration $next/$($state.maxIterations)$($C.n)"
-    Write-Host "$($C.d)  Summary: $summary$($C.n)`n"
+    Write-Host "$($C.d)  Summary: $summary  |  Outcome: $outcome$($C.n)"
+    if ($null -ne $harnessScore) { Write-Host "$($C.d)  Harness score: $harnessScore$($C.n)" }
+    Write-Host ''
 }
 
 function Invoke-LoopComplete {
@@ -3278,7 +3352,7 @@ function Invoke-LoopComplete {
     }
     $summary = Get-Flag @('-s', '--summary') 'Criteria met'
     $state.active = $false; $state.status = 'complete'; $state.lastIterationAt = Get-Timestamp
-    $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = $summary; status = 'complete' })
+    $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = $summary; status = 'complete'; outcome = 'pass' })
     Write-JsonFile $Script:LOOP_STATE_FILE $state
     Write-Host "`n$($C.g)  [PASS] Loop Complete! Iterations: $($state.iteration)/$($state.maxIterations) (minimum $($state.minIterations))$($C.n)`n"
 }
@@ -3287,7 +3361,7 @@ function Invoke-LoopCancel {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
     if (-not $state -or -not $state.active) { Write-Host 'No active loop.'; return }
     $state.active = $false; $state.status = 'cancelled'; $state.lastIterationAt = Get-Timestamp
-    $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = 'Cancelled'; status = 'cancelled' })
+    $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = 'Cancelled'; status = 'cancelled'; outcome = 'fail' })
     Write-JsonFile $Script:LOOP_STATE_FILE $state
     Write-Host "$($C.y)  Loop cancelled at iteration $($state.iteration).$($C.n)"
 }
