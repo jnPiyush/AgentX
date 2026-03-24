@@ -51,7 +51,10 @@ function Invoke-InstallerFile {
  $previousArchive = $env:AGENTX_INSTALL_ARCHIVE
  $env:AGENTX_INSTALL_ARCHIVE = $ArchiveOverride
  try {
-  & $SCRIPT_PATH @ArgumentList 2>&1 | Out-Null
+   $process = Start-Process -FilePath 'pwsh' -ArgumentList (@('-NoProfile', '-File', $SCRIPT_PATH) + $ArgumentList) -NoNewWindow -Wait -PassThru
+   if ($process.ExitCode -ne 0) {
+    throw "Installer exited with code $($process.ExitCode)."
+   }
  } finally {
   $env:AGENTX_INSTALL_ARCHIVE = $previousArchive
  }

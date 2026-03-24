@@ -26,3 +26,4 @@
 - 2026-03-22: Long-running installer regressions can look like mid-suite product failures when the terminal call times out near a scenario header; rerun the full suite with a generous timeout before debugging the installer itself.
 - 2026-03-24: Live-download installer tests can fail nondeterministically and look like GitHub-mode logic bugs; verify with a local archive override before changing installer behavior.
 - 2026-03-24: Extension coverage failures can be a mix of real test gaps and stale policy. Add focused branch tests first, then decide explicitly whether the global threshold itself still matches repo reality.
+- 2026-03-24: In PowerShell, splatting a plain string array like `@('-Mode','github','-NoSetup')` into a script or function call does not preserve named-parameter intent; it binds positionally and can turn flags like `-NoSetup` into string arguments. For installer harnesses, invoke a child `pwsh` process with an explicit argument vector instead.

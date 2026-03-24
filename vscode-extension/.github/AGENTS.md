@@ -77,7 +77,7 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 ### Quality Loop Hard Rule
 
-> HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. Minimum 3 iterations means at least 3 loop passes before completion is allowed; the loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds. No exceptions. The pre-commit hook blocks review artifacts when no completed loop exists.
+> HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. Minimum 5 iterations means at least 5 loop passes before completion is allowed; the loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds. No exceptions. The pre-commit hook blocks review artifacts when no completed loop exists.
 
 ### Compound Engineering Hard Rule
 
