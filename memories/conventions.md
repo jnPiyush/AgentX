@@ -44,3 +44,4 @@
 - 2026-03-20: For lightweight AI-evaluation starters, a small local smoke runner is acceptable if it validates the repo contract and intentionally fails on placeholder assets; use it to prove the workflow shape, not as a substitute for real evaluator logic.
 - 2026-03-20: After the lightweight starter path is proven, replace generic placeholders with one concrete repo-native example workflow before adding more machinery; a deterministic local baseline is acceptable if it keeps the contract executable and legible.
 - 2026-03-24: For installer regression suites, build one local archive fixture up front and route installer invocations through an environment override instead of patching download URLs inside the installer script.
+- 2026-03-24: For provider-backend migrations in `.agentx/agentx-cli.ps1`, add or preserve shared CRUD/list/update helper seams first, then swap only the provider-specific implementation behind them.

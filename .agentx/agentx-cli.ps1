@@ -727,7 +727,7 @@ function Get-BacklogTaskNumber([string]$taskId) {
 function Convert-AgentXLabelsToBacklogPriority([string[]]$labels) {
     foreach ($label in @($labels)) {
         switch ([string]$label) {
-            'priority:p0' { return 'high' }
+            'priority:p0' { return 'urgent' }
             'priority:p1' { return 'high' }
             'priority:p2' { return 'medium' }
             'priority:p3' { return 'low' }
@@ -2801,14 +2801,17 @@ function Invoke-IssueCmd {
 
 function Get-NextIssueNumber {
     if ((Get-LocalIssueBackend) -eq 'backlog') {
-        $existingNumbers = @(Get-LocalBacklogIssues | ForEach-Object { [int]$_.number } | Where-Object { $_ -gt 0 })
-        $cfg = Get-AgentXConfig
-        $configuredNext = [int](Get-ConfigValue $cfg 'nextIssueNumber' 1)
-        $candidate = if (@($existingNumbers).Count -gt 0) { ((($existingNumbers | Measure-Object -Maximum).Maximum) + 1) } else { 1 }
-        $num = [Math]::Max($candidate, $configuredNext)
-        Set-ConfigValue $cfg 'nextIssueNumber' ($num + 1)
-        Write-JsonFile $Script:CONFIG_FILE $cfg
-        return $num
+        $result = @{ num = 1 }
+        Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
+            $existingNumbers = @(Get-LocalBacklogIssues | ForEach-Object { [int]$_.number } | Where-Object { $_ -gt 0 })
+            $lockedCfg = Get-AgentXConfig
+            $configuredNext = [int](Get-ConfigValue $lockedCfg 'nextIssueNumber' 1)
+            $candidate = if (@($existingNumbers).Count -gt 0) { ((($existingNumbers | Measure-Object -Maximum).Maximum) + 1) } else { 1 }
+            $result.num = [Math]::Max($candidate, $configuredNext)
+            Set-ConfigValue $lockedCfg 'nextIssueNumber' ($result.num + 1)
+            Write-JsonFile $Script:CONFIG_FILE $lockedCfg
+        }
+        return $result.num
     }
 
     if ((Get-PersistenceMode) -eq 'git') {

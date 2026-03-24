@@ -374,6 +374,13 @@ task_prefix: 'task'
     Assert-True ($backlogClose.ExitCode -eq 0) 'Backlog-backed local issue close exits successfully'
     Assert-True ($completedTaskContent -match "status: 'Done'" -and $completedTaskContent -match 'Backlog comment') 'Backlog-backed local issue close moves markdown task to completed storage and preserves metadata'
 
+    # priority:p0 round-trip regression guard (FINDING-1 fix)
+    $p0Create = Invoke-AgentX $localBacklogRoot @('issue', 'create', '--title', '[Story] P0 Priority', '--body', 'P0 body', '--labels', 'type:story,priority:p0')
+    $p0Get = Invoke-AgentX $localBacklogRoot @('issue', 'get', '-n', '2', '--json')
+    $p0Issue = $p0Get.Output | ConvertFrom-Json -Depth 10
+    Assert-True ($p0Create.ExitCode -eq 0) 'Backlog-backed local issue create with priority:p0 exits successfully'
+    Assert-True (@($p0Issue.labels) -contains 'priority:p0') 'Backlog-backed priority:p0 round-trips through markdown storage without degrading to priority:p1'
+
     $version = Invoke-AgentX $localRoot @('version')
     Assert-True ($version.ExitCode -eq 0) 'Version exits cleanly on success'
     Assert-True ($version.Output -match 'AgentX version') 'Version prints version details'
