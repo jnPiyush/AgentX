@@ -24,3 +24,5 @@
 - 2026-03-22: Some framework checks assert exact phrases inside agent definition markdown, not just semantic guidance. When cleaning up `.agent.md` wording, grep the framework assertions first or doc-only edits can break the suite.
 - 2026-03-22: For PowerShell commands that must emit clean JSON, do not inline-call helper scripts that use `Write-Host`; spawn them through a redirected child process and set the working directory explicitly or machine-readable output will be polluted and nondeterministic.
 - 2026-03-22: Long-running installer regressions can look like mid-suite product failures when the terminal call times out near a scenario header; rerun the full suite with a generous timeout before debugging the installer itself.
+- 2026-03-24: Live-download installer tests can fail nondeterministically and look like GitHub-mode logic bugs; verify with a local archive override before changing installer behavior.
+- 2026-03-24: Extension coverage failures can be a mix of real test gaps and stale policy. Add focused branch tests first, then decide explicitly whether the global threshold itself still matches repo reality.

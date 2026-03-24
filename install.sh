@@ -36,6 +36,7 @@ BRANCH="master"
 TMP=".agentx-install-tmp"
 TMPARCHIVE="$TMP.tar.gz"
 ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/heads/$BRANCH.tar.gz"
+ARCHIVE_SOURCE="${AGENTX_INSTALL_ARCHIVE:-$ARCHIVE_URL}"
 
 # -- Guaranteed cleanup (runs on success, error, or Ctrl+C) --
 cleanup() {
@@ -54,6 +55,33 @@ on_error() {
  echo -e "\033[0;90m Temp files will be cleaned up automatically.\033[0m"
 }
 trap 'on_error; cleanup' ERR
+
+download_archive() {
+ local source="$1"
+ local destination="$2"
+
+ if [ -z "$source" ]; then
+  echo "Installer archive source was not provided."
+  exit 1
+ fi
+
+ if [ -f "$source" ]; then
+  cp "$source" "$destination"
+  return
+ fi
+
+ local attempt
+ for attempt in 1 2 3; do
+  if $FETCH "$source" > "$destination"; then
+   [ -s "$destination" ] && return
+  fi
+  [ "$attempt" -lt 3 ] && sleep "$attempt"
+ done
+
+ echo "Download failed. Check network."
+ exit 1
+}
+
 PREFIX="AgentX-$BRANCH"
 # Legacy: support LOCAL=true -> MODE=local
 [ -z "$MODE" ] && [ "${LOCAL:-false}" = "true" ] && MODE="local"
@@ -255,7 +283,7 @@ fi
 echo -e "${C}[1] Downloading AgentX...${N}"
 rm -rf "$TMP"
 mkdir -p "$TMP"
-$FETCH "$ARCHIVE_URL" > "$TMPARCHIVE"
+download_archive "$ARCHIVE_SOURCE" "$TMPARCHIVE"
 [ -s "$TMPARCHIVE" ] || { echo "Download failed. Check network."; exit 1; }
 
 # Extract only essential paths (skip vscode-extension, tests, and large historical docs content)

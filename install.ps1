@@ -198,9 +198,49 @@ $TMP = ".agentx-install-tmp"
 $TMPRAW = ".agentx-install-raw"
 $ZIPFILE = ".agentx-install.zip"
 $ARCHIVE = "https://github.com/jnPiyush/AgentX/archive/refs/heads/$BRANCH.zip"
+$ARCHIVE_SOURCE = if ($env:AGENTX_INSTALL_ARCHIVE) { $env:AGENTX_INSTALL_ARCHIVE } else { $ARCHIVE }
 
 function Write-OK($m) { Write-Host "[OK] $m" -ForegroundColor Green }
 function Write-Skip($m) { Write-Host "[--] $m" -ForegroundColor DarkGray }
+
+function Copy-InstallerArchive {
+ param(
+  [string]$Source,
+  [string]$Destination
+ )
+
+ if ([string]::IsNullOrWhiteSpace($Source)) {
+  throw 'Installer archive source was not provided.'
+ }
+
+ $resolvedSource = Resolve-Path -LiteralPath $Source -ErrorAction SilentlyContinue
+ if ($resolvedSource) {
+  Copy-Item -LiteralPath $resolvedSource.Path -Destination $Destination -Force
+  return
+ }
+
+ [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+ $lastError = $null
+ for ($attempt = 1; $attempt -le 3; $attempt++) {
+  try {
+   Invoke-WebRequest -Uri $Source -OutFile $Destination -UseBasicParsing
+   if (Test-Path $Destination -PathType Leaf) {
+    return
+   }
+  } catch {
+   $lastError = $_
+   if ($attempt -lt 3) {
+    Start-Sleep -Seconds $attempt
+   }
+  }
+ }
+
+ if ($lastError) {
+  throw $lastError
+ }
+
+ throw "Download failed for archive source '$Source'."
+}
 
 function Test-AzureWorkspace {
  if ($Azure) { return $true }
@@ -352,9 +392,8 @@ foreach ($p in @($TMP, $TMPRAW)) {
 }
 if (Test-Path $ZIPFILE) { Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue }
 
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 try {
- Invoke-WebRequest -Uri $ARCHIVE -OutFile $ZIPFILE -UseBasicParsing
+ Copy-InstallerArchive -Source $ARCHIVE_SOURCE -Destination $ZIPFILE
 } catch {
  Write-Error "Download failed. Check network connection."
 }

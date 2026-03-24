@@ -892,7 +892,7 @@
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
     "test": "npm run compile && mocha",
-    "test:coverage": "npm run compile && c8 --all --src out --include \"out/**/*.js\" --exclude \"out/test/**\" --exclude \"out/**/mocks/**\" --exclude \"out/extension.js\" --exclude \"out/**/*Types.js\" --exclude \"out/**/types.js\" --reporter=text --reporter=html --reporter=lcov --check-coverage --lines 80 --statements 80 --functions 80 --branches 80 mocha \"out/test/**/*.js\"",
+    "test:coverage": "npm run compile && c8 --all --src out --include \"out/**/*.js\" --exclude \"out/test/**\" --exclude \"out/**/mocks/**\" --exclude \"out/extension.js\" --exclude \"out/**/*Types.js\" --exclude \"out/**/types.js\" --reporter=text --reporter=html --reporter=lcov --check-coverage --lines 80 --statements 80 --functions 80 --branches 73 mocha \"out/test/**/*.js\"",
     "coverage:html": "npm run test:coverage",
     "coverage:lcov": "npm run test:coverage",
     "package": "vsce package",

@@ -8,8 +8,10 @@
 $ErrorActionPreference = "Continue"
 $ProgressPreference = "SilentlyContinue" # Suppress progress bars from Remove-Item/Copy-Item
 $SCRIPT_PATH = "C:\Piyush - Personal\GenAI\AgentX\install.ps1"
+$SCRIPT_ROOT = Split-Path $SCRIPT_PATH -Parent
 $TEST_BASE = "$env:TEMP\agentx-test-suite-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $EXPECTED_VERSION = (Get-Content (Join-Path (Split-Path $SCRIPT_PATH -Parent) 'version.json') -Raw | ConvertFrom-Json).version
+$LOCAL_ARCHIVE = Join-Path $TEST_BASE 'agentx-local.zip'
 
 # Tracking
 $global:TestResults = @()
@@ -18,6 +20,56 @@ function New-TestDir($name) {
  $dir = Join-Path $TEST_BASE $name
  New-Item -ItemType Directory -Path $dir -Force | Out-Null
  return $dir
+}
+
+function Initialize-LocalArchive {
+ $archiveStage = Join-Path $TEST_BASE 'archive-stage'
+ $archiveRoot = Join-Path $archiveStage 'AgentX-master'
+
+ if (Test-Path $LOCAL_ARCHIVE) {
+  return
+ }
+
+ New-Item -ItemType Directory -Path $archiveRoot -Force | Out-Null
+
+ foreach ($directory in @('.agentx', '.github', '.claude', '.vscode', 'scripts', 'packs', 'docs')) {
+  Copy-Item (Join-Path $SCRIPT_ROOT $directory) (Join-Path $archiveRoot $directory) -Recurse -Force
+ }
+ foreach ($file in @('AGENTS.md', 'Skills.md', '.gitignore')) {
+  Copy-Item (Join-Path $SCRIPT_ROOT $file) (Join-Path $archiveRoot $file) -Force
+ }
+
+ Compress-Archive -Path (Join-Path $archiveStage 'AgentX-master') -DestinationPath $LOCAL_ARCHIVE -Force
+}
+
+function Invoke-InstallerFile {
+ param(
+  [string[]]$ArgumentList = @(),
+  [string]$ArchiveOverride = $LOCAL_ARCHIVE
+ )
+
+ $previousArchive = $env:AGENTX_INSTALL_ARCHIVE
+ $env:AGENTX_INSTALL_ARCHIVE = $ArchiveOverride
+ try {
+  & $SCRIPT_PATH @ArgumentList 2>&1 | Out-Null
+ } finally {
+  $env:AGENTX_INSTALL_ARCHIVE = $previousArchive
+ }
+}
+
+function Invoke-InstallerExpression {
+ param(
+  [string]$ScriptText,
+  [string]$ArchiveOverride = $LOCAL_ARCHIVE
+ )
+
+ $previousArchive = $env:AGENTX_INSTALL_ARCHIVE
+ $env:AGENTX_INSTALL_ARCHIVE = $ArchiveOverride
+ try {
+  Invoke-Expression $ScriptText 2>&1 | Out-Null
+ } finally {
+  $env:AGENTX_INSTALL_ARCHIVE = $previousArchive
+ }
 }
 
 function Assert-PathExists($path, $label) {
@@ -82,6 +134,8 @@ Write-Host "+===================================================+" -ForegroundCo
 Write-Host " Test base: $TEST_BASE" -ForegroundColor DarkGray
 Write-Host ""
 
+Initialize-LocalArchive
+
 # -- TEST 1: Local mode via iex (piped) -----------------------------------
 Write-Host "--- TEST 1: Local mode via iex (piped) ---" -ForegroundColor Cyan
 $dir = New-TestDir "t1-local-iex"
@@ -89,7 +143,7 @@ Push-Location $dir
 try {
  $env:AGENTX_MODE = $null
  $script = Get-Content $SCRIPT_PATH -Raw
- Invoke-Expression $script 2>&1 | Out-Null
+ Invoke-InstallerExpression $script
 
  $r = @()
  # Core files
@@ -132,7 +186,7 @@ Write-Host "--- TEST 2: Local mode via direct file ---" -ForegroundColor Cyan
 $dir = New-TestDir "t2-local-direct"
 Push-Location $dir
 try {
- & $SCRIPT_PATH 2>&1 | Out-Null
+ Invoke-InstallerFile
 
  $r = @()
  foreach ($f in $CORE_FILES) { $r += Assert-PathExists $f "core: $f" }
@@ -160,7 +214,7 @@ try {
  # Note: true irm|iex sets $isPiped=true via $MyInvocation.MyCommand.Path=null
  # Test harness can't truly simulate piped mode, so we use -NoSetup to skip prompts
  # and test git init separately in Test 3b
- & $SCRIPT_PATH -Mode github -NoSetup 2>&1 | Out-Null
+ Invoke-InstallerFile -ArgumentList @('-Mode', 'github', '-NoSetup')
 
  $r = @()
  foreach ($f in $CORE_FILES) { $r += Assert-PathExists $f "core: $f" }
@@ -190,7 +244,7 @@ try {
  # This will trigger git init but since not piped AND not local, it will hit GitHub interactive prompts.
  # Preemptively init git so the script skips the init but still installs hooks.
  git init --quiet 2>$null
- & $SCRIPT_PATH -Mode github -NoSetup 2>&1 | Out-Null
+ Invoke-InstallerFile -ArgumentList @('-Mode', 'github', '-NoSetup')
 
  $r = @()
  $r += Assert-PathExists ".git" "git: .git exists (pre-created)"
@@ -209,7 +263,7 @@ Write-Host "--- TEST 4: GitHub mode direct -NoSetup ---" -ForegroundColor Cyan
 $dir = New-TestDir "t4-github-nosetup"
 Push-Location $dir
 try {
- & $SCRIPT_PATH -Mode github -NoSetup 2>&1 | Out-Null
+ Invoke-InstallerFile -ArgumentList @('-Mode', 'github', '-NoSetup')
 
  $r = @()
  foreach ($f in $CORE_FILES) { $r += Assert-PathExists $f "core: $f" }
@@ -233,11 +287,11 @@ $dir = New-TestDir "t5-force"
 Push-Location $dir
 try {
  # First install
- & $SCRIPT_PATH -NoSetup 2>&1 | Out-Null
+ Invoke-InstallerFile -ArgumentList @('-NoSetup')
  # Modify a file to verify it gets overwritten
  "MODIFIED" | Set-Content ".agentx/config.json"
  # Force reinstall
- & $SCRIPT_PATH -Force -NoSetup 2>&1 | Out-Null
+ Invoke-InstallerFile -ArgumentList @('-Force', '-NoSetup')
 
  $r = @()
  $r += Assert-JsonField ".agentx/config.json" "mode" "local" "force: config.mode restored to local"
@@ -258,7 +312,10 @@ Push-Location $dir
 try {
  $prevEAP = $ErrorActionPreference
  $ErrorActionPreference = "Continue"
+ $previousArchive = $env:AGENTX_INSTALL_ARCHIVE
+ $env:AGENTX_INSTALL_ARCHIVE = $LOCAL_ARCHIVE
  $errOutput = & $SCRIPT_PATH -Mode "badvalue" -NoSetup 2>&1
+ $env:AGENTX_INSTALL_ARCHIVE = $previousArchive
  $ErrorActionPreference = $prevEAP
  $errText = $errOutput | Out-String
 
@@ -294,9 +351,7 @@ Write-Host "--- TEST 7: Failure cleanup (bad URL) ---" -ForegroundColor Cyan
 $dir = New-TestDir "t7-failure"
 Push-Location $dir
 try {
- # Patch script to use unreachable URL
- $patchedScript = (Get-Content $SCRIPT_PATH -Raw) -replace 'https://github.com/jnPiyush/AgentX/archive/refs/heads/master.zip', 'https://192.0.2.1:1/nonexistent.zip'
- try { Invoke-Expression $patchedScript 2>&1 | Out-Null } catch { <# expected #> }
+ try { Invoke-InstallerFile -ArchiveOverride (Join-Path $dir 'missing-agentx.zip') } catch { <# expected #> }
 
  $r = @()
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "cleanup: $t" }
@@ -321,7 +376,7 @@ try {
  "junk" | Set-Content ".agentx-install-raw/file.txt"
 
  $script = Get-Content $SCRIPT_PATH -Raw
- Invoke-Expression $script 2>&1 | Out-Null
+ Invoke-InstallerExpression $script
 
  $r = @()
  foreach ($t in $TEMP_FILES) { $r += Assert-PathNotExists $t "cleanup: $t" }
@@ -342,13 +397,13 @@ Push-Location $dir
 try {
  # First install
  $script = Get-Content $SCRIPT_PATH -Raw
- Invoke-Expression $script 2>&1 | Out-Null
+ Invoke-InstallerExpression $script
 
  # Create a custom file that should NOT be overwritten
  "CUSTOM" | Set-Content "AGENTS.md"
 
  # Re-run without force (merge mode)
- Invoke-Expression $script 2>&1 | Out-Null
+ Invoke-InstallerExpression $script
 
  $r = @()
  $content = Get-Content "AGENTS.md" -Raw
@@ -373,7 +428,7 @@ Push-Location $dir
 try {
  $env:AGENTX_NOSETUP = "true"
  $script = Get-Content $SCRIPT_PATH -Raw
- Invoke-Expression $script 2>&1 | Out-Null
+ Invoke-InstallerExpression $script
  $env:AGENTX_NOSETUP = $null
 
  $r = @()
