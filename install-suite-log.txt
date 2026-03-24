@@ -1,0 +1,329 @@
+
++===================================================+
+| AgentX Install Test Suite |
+| 2026-03-24 06:44:04 |
++===================================================+
+ Test base: C:\Users\piyushj\AppData\Local\Temp\agentx-test-suite-20260324-064404
+
+--- TEST 1: Local mode via iex (piped) ---
+
++===================================================+
+| AgentX v8.4.12 - AI Agent Orchestration |
++===================================================+
+
+
+ Mode: Local
+
+[1] Downloading AgentX...
+[OK] AgentX downloaded (essential files only)
+[2] Installing files...
+[OK] 395 files installed (0 existing skipped)
+[3] Configuring runtime...
+[OK] Starter memory files seeded where missing
+[OK] Version 8.4.12 recorded
+[OK] AgentX entries merged into .gitignore
+[OK] Agent status initialized (11 agents)
+[OK] Local Mode configured (issue enforcement off by default)
+[4] Setup...
+[OK] Git initialized
+[OK] Git hooks installed
+[5] Companion extensions...
+[--] Azure companion skipped (no Azure signals detected)
+ Re-run with -Azure or set AGENTX_AZURE=true to install Azure Skills support.
+
+===================================================
+ AgentX v8.4.12 installed! [Local]
+===================================================
+
+ CLI: .\.agentx\agentx.ps1 help
+ Docs: .github/copilot-instructions.md
+ Issue: .\.agentx\local-issue-manager.ps1 -Action create -Title '[Story] Task' -Labels 'type:story'
+
+ PASS [36/36] Local mode via iex
+--- TEST 2: Local mode via direct file ---
+The argument 'C:\Piyush' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}] 
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA] 
+                  [-Version] [-WindowStyle <style>] 
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+ CRASH: Installer exited with code 64.
+--- TEST 3: GitHub mode via iex (piped) ---
+The argument 'C:\Piyush' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}] 
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA] 
+                  [-Version] [-WindowStyle <style>] 
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+ CRASH: Installer exited with code 64.
+--- TEST 3b: GitHub mode with git init ---
+The argument 'C:\Piyush' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}] 
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA] 
+                  [-Version] [-WindowStyle <style>] 
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+ CRASH: Installer exited with code 64.
+--- TEST 4: GitHub mode direct -NoSetup ---
+The argument 'C:\Piyush' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}] 
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA] 
+                  [-Version] [-WindowStyle <style>] 
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+ CRASH: Installer exited with code 64.
+--- TEST 5: Force reinstall ---
+The argument 'C:\Piyush' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}] 
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA] 
+                  [-Version] [-WindowStyle <style>] 
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+ CRASH: Installer exited with code 64.
+--- TEST 6: Invalid mode validation ---
+ PASS [6/6] Invalid mode validation
+--- TEST 7: Failure cleanup (bad URL) ---
+The argument 'C:\Piyush' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}] 
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA] 
+                  [-Version] [-WindowStyle <style>] 
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+ PASS [3/3] Failure cleanup (bad URL)
+--- TEST 8: Leftover temp cleanup ---
+
++===================================================+
+| AgentX v8.4.12 - AI Agent Orchestration |
++===================================================+
+
+
+ Mode: Local
+
+[1] Downloading AgentX...
+[OK] AgentX downloaded (essential files only)
+[2] Installing files...
+[OK] 395 files installed (0 existing skipped)
+[3] Configuring runtime...
+[OK] Starter memory files seeded where missing
+[OK] Version 8.4.12 recorded
+[OK] AgentX entries merged into .gitignore
+[OK] Agent status initialized (11 agents)
+[OK] Local Mode configured (issue enforcement off by default)
+[4] Setup...
+[OK] Git initialized
+[OK] Git hooks installed
+[5] Companion extensions...
+[--] Azure companion skipped (no Azure signals detected)
+ Re-run with -Azure or set AGENTX_AZURE=true to install Azure Skills support.
+
+===================================================
+ AgentX v8.4.12 installed! [Local]
+===================================================
+
+ CLI: .\.agentx\agentx.ps1 help
+ Docs: .github/copilot-instructions.md
+ Issue: .\.agentx\local-issue-manager.ps1 -Action create -Title '[Story] Task' -Labels 'type:story'
+
+ PASS [5/5] Leftover temp cleanup
+--- TEST 9: Merge mode (re-run) ---
+
++===================================================+
+| AgentX v8.4.12 - AI Agent Orchestration |
++===================================================+
+
+
+ Mode: Local
+
+[1] Downloading AgentX...
+[OK] AgentX downloaded (essential files only)
+[2] Installing files...
+[OK] 395 files installed (0 existing skipped)
+[3] Configuring runtime...
+[OK] Starter memory files seeded where missing
+[OK] Version 8.4.12 recorded
+[OK] AgentX entries merged into .gitignore
+[OK] Agent status initialized (11 agents)
+[OK] Local Mode configured (issue enforcement off by default)
+[4] Setup...
+[OK] Git initialized
+[OK] Git hooks installed
+[5] Companion extensions...
+[--] Azure companion skipped (no Azure signals detected)
+ Re-run with -Azure or set AGENTX_AZURE=true to install Azure Skills support.
+
+===================================================
+ AgentX v8.4.12 installed! [Local]
+===================================================
+
+ CLI: .\.agentx\agentx.ps1 help
+ Docs: .github/copilot-instructions.md
+ Issue: .\.agentx\local-issue-manager.ps1 -Action create -Title '[Story] Task' -Labels 'type:story'
+
+
++===================================================+
+| AgentX v8.4.12 - AI Agent Orchestration |
++===================================================+
+
+
+ Mode: Local
+
+[1] Downloading AgentX...
+[OK] AgentX downloaded (essential files only)
+[2] Installing files...
+[OK] 0 files installed (395 existing skipped)
+[3] Configuring runtime...
+[OK] Starter memory files seeded where missing
+[OK] Version 8.4.12 recorded
+[OK] AgentX entries merged into .gitignore
+[4] Setup...
+[OK] Git hooks installed
+[5] Companion extensions...
+[--] Azure companion skipped (no Azure signals detected)
+ Re-run with -Azure or set AGENTX_AZURE=true to install Azure Skills support.
+
+===================================================
+ AgentX v8.4.12 installed! [Local]
+===================================================
+
+ CLI: .\.agentx\agentx.ps1 help
+ Docs: .github/copilot-instructions.md
+ Issue: .\.agentx\local-issue-manager.ps1 -Action create -Title '[Story] Task' -Labels 'type:story'
+
+ PASS [4/4] Merge mode (re-run)
+--- TEST 10: AGENTX_NOSETUP env var ---
+
++===================================================+
+| AgentX v8.4.12 - AI Agent Orchestration |
++===================================================+
+
+
+ Mode: Local
+
+[1] Downloading AgentX...
+[OK] AgentX downloaded (essential files only)
+[2] Installing files...
+[OK] 395 files installed (0 existing skipped)
+[3] Configuring runtime...
+[OK] Starter memory files seeded where missing
+[OK] Version 8.4.12 recorded
+[OK] AgentX entries merged into .gitignore
+[OK] Agent status initialized (11 agents)
+[OK] Local Mode configured (issue enforcement off by default)
+[--] Setup skipped (-NoSetup)
+[5] Companion extensions...
+[--] Azure companion skipped (no Azure signals detected)
+ Re-run with -Azure or set AGENTX_AZURE=true to install Azure Skills support.
+
+===================================================
+ AgentX v8.4.12 installed! [Local]
+===================================================
+
+ CLI: .\.agentx\agentx.ps1 help
+ Docs: .github/copilot-instructions.md
+ Issue: .\.agentx\local-issue-manager.ps1 -Action create -Title '[Story] Task' -Labels 'type:story'
+
+ PASS [5/5] AGENTX_NOSETUP env var
+
+===================================================
+ TEST SUITE SUMMARY
+===================================================
+ [PASS] Local mode via iex [36/36]
+ [FAIL] Local mode via direct file [0/1]
+ [FAIL] GitHub mode -NoSetup [0/1]
+ [FAIL] GitHub mode with git init [0/1]
+ [FAIL] GitHub mode direct -NoSetup [0/1]
+ [FAIL] Force reinstall [0/1]
+ [PASS] Invalid mode validation [6/6]
+ [PASS] Failure cleanup (bad URL) [3/3]
+ [PASS] Leftover temp cleanup [5/5]
+ [PASS] Merge mode (re-run) [4/4]
+ [PASS] AGENTX_NOSETUP env var [5/5]
+
+ FAILURES: 5/64 assertions failed
+
+ Test directory cleaned up.
+
