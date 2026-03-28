@@ -6,11 +6,11 @@
 
 | Artifact | Count | Description |
 |----------|-------|-------------|
-| Agents | 20 | 13 external + 7 internal sub-agents |
+| Agents | 21 | 13 external + 8 internal sub-agents |
 | Skills | 69 | Production code standards across 10 categories |
 | Instructions | 7 | Auto-applied coding guidelines by file pattern |
-| Prompts | 12 | Reusable prompt templates |
-| Templates | 8 | PRD, ADR, Spec, UX, Review, Security, Progress, Exec Plan |
+| Prompts | 20 | Reusable prompt templates |
+| Templates | 10 | PRD, ADR, Spec, UX, Review, Security, Progress, Exec Plan, Contract, Evidence Summary |
 | CLI Utilities | 4 | Optional `.agentx/` wrappers backed by a bundled hidden runtime |
 
 ## Installation
@@ -66,7 +66,7 @@ After installation, your workspace will contain:
 ```
 your-project/
   .github/
-    agents/                    # 20 agent definitions
+    agents/                    # 21 agent definitions
       agent-x.agent.md
       engineer.agent.md
       ...
@@ -82,7 +82,7 @@ your-project/
       ai.instructions.md
       python.instructions.md
       ...
-    prompts/                   # 12 prompt templates
+    prompts/                   # 20 prompt templates
       prd-gen.prompt.md
       code-review.prompt.md
       ...

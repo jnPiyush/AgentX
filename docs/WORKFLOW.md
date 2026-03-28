@@ -249,6 +249,7 @@ a stall and injects pivot-vs-refine guidance before the next attempt.
 
 **Harness pruning**: if models consistently self-correct before reaching the stall threshold,
 this component can be disabled via config. See [HARNESS-PRUNING-RUBRIC.md](guides/HARNESS-PRUNING-RUBRIC.md).
+
 | `Review -> Compound Capture` | Review outcome is explicit and any durable findings are captured | Review still in progress, unresolved findings, approval state unclear |
 | `Compound Capture -> Done` | Curated learning exists or the closeout rationale is explicitly recorded in durable artifacts | Missing learning capture and no durable skip rationale |
 

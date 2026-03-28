@@ -110,9 +110,9 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 ---
 
-## Agents (20 total)
+## Agents (21 total)
 
-Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/agents/internal/*.agent.md` (7 internal sub-agents). Each file contains the role's constraints, boundaries, deliverables, and self-review checklist.
+Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/agents/internal/*.agent.md` (8 internal sub-agents). Each file contains the role's constraints, boundaries, deliverables, and self-review checklist.
 
 | Agent | File | Deliverable |
 |-------|------|-------------|
@@ -171,8 +171,8 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | `.github/skills/` | 69 skill files across 10 categories |
 | `.github/instructions/` | 7 instruction files (auto-loaded by file pattern) |
 | `.github/schemas/` | Handoff message JSON Schema + communication protocol |
-| `.github/templates/` | 8 templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Exec Plan) |
-| `.github/prompts/` | 12 reusable prompt templates |
+| `.github/templates/` | 10 templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Exec Plan, Contract, Evidence Summary) |
+| `.github/prompts/` | 20 reusable prompt templates |
 | `.agentx/` | CLI utilities (agentx.ps1, agentx.sh, agentic-runner.ps1) |
 | `scripts/modules/` | Shared PowerShell modules |
 | `packs/` | Agent pack bundles |

@@ -114,7 +114,7 @@ flowchart LR
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
 - **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 69 skills, 20 agents, 7 instructions, 8 templates, 12 prompts -- all Markdown-defined
+- **Knowledge Layer:** 69 skills, 21 agents, 7 instructions, 10 templates, 20 prompts -- all Markdown-defined
 - **Control Layer:** Execution plans, repo-local state, automated validation gates
 
 ---
