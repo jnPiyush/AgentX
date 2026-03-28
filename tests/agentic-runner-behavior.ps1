@@ -253,6 +253,7 @@ try {
     $loopStateDir = Join-Path $runnerTestRoot '.agentx\state'
     New-Item -ItemType Directory -Path $loopStateDir -Force | Out-Null
     $loopStatePath = Join-Path $loopStateDir 'loop-state.json'
+    $currentLoopTimestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
 
     $script:runnerMessages = [System.Collections.Generic.List[object]]::new()
     $script:runnerLlmCalls = 0
@@ -301,12 +302,12 @@ try {
         minIterations = 5
         maxIterations = 20
         completionCriteria = 'TASK_COMPLETE'
-        startedAt = '2026-03-28T00:00:00.000Z'
-        lastIterationAt = '2026-03-28T00:00:00.000Z'
+        startedAt = $currentLoopTimestamp
+        lastIterationAt = $currentLoopTimestamp
         history = @(
             @{
                 iteration = 1
-                timestamp = '2026-03-28T00:00:00.000Z'
+            timestamp = $currentLoopTimestamp
                 summary = 'Loop started'
                 status = 'active'
                 outcome = 'pending'
@@ -340,12 +341,12 @@ try {
         minIterations = 5
         maxIterations = 20
         completionCriteria = 'TASK_COMPLETE'
-        startedAt = '2026-03-28T00:00:00.000Z'
-        lastIterationAt = '2026-03-28T00:00:00.000Z'
+        startedAt = $currentLoopTimestamp
+        lastIterationAt = $currentLoopTimestamp
         history = @(
             @{
                 iteration = 1
-                timestamp = '2026-03-28T00:00:00.000Z'
+            timestamp = $currentLoopTimestamp
                 summary = 'Loop started'
                 status = 'active'
                 outcome = 'pending'

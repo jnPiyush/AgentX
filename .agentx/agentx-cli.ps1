@@ -4465,6 +4465,7 @@ function Invoke-RunCmd {
         $session = Read-Session -sessionId $resumeSession -root $Script:ROOT
         if (-not $session) {
             Write-Host "$($C.r)  [FAIL] Session '$resumeSession' not found.$($C.n)"
+            $global:LASTEXITCODE = 1
             return
         }
 
@@ -4474,10 +4475,12 @@ function Invoke-RunCmd {
 
         if (-not $clarificationResponse) {
             Write-Host "$($C.r)  [FAIL] Clarification response required. Use: agentx run --resume-session $resumeSession --clarification-response \"your guidance\"$($C.n)"
+            $global:LASTEXITCODE = 1
             return
         }
     } elseif (-not $prompt) {
         Write-Host "$($C.r)  [FAIL] Prompt required. Use: agentx run $agent \"your prompt\"$($C.n)"
+        $global:LASTEXITCODE = 1
         return
     }
 
@@ -4487,6 +4490,7 @@ function Invoke-RunCmd {
     if (-not $ghToken) {
         Write-Host "$($C.r)  [FAIL] GitHub CLI not authenticated.$($C.n)"
         Write-Host "$($C.d)  Run: gh auth login --scopes 'models:read'$($C.n)"
+        $global:LASTEXITCODE = 1
         return
     }
 
@@ -4511,6 +4515,16 @@ function Invoke-RunCmd {
     if ($model) { $params['Model'] = $model }
 
     $result = Invoke-AgenticLoop @params
+
+    if ($result) {
+        $global:LASTEXITCODE = switch ([string]$result.exitReason) {
+            'text_response' { 0 }
+            'human_required' { 2 }
+            default { 1 }
+        }
+    } else {
+        $global:LASTEXITCODE = 1
+    }
 
     if ($Script:JsonOutput -and $result) {
         $result | ConvertTo-Json -Depth 5

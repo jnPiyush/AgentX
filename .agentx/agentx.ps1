@@ -5,9 +5,7 @@ $global:LASTEXITCODE = 0
 & "$PSScriptRoot/agentx-cli.ps1" @args
 $succeeded = $?
 $exitCode = if (Test-Path variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
-if ($succeeded) {
- $exitCode = 0
-} elseif ($exitCode -eq 0) {
+if (-not $succeeded -and $exitCode -eq 0) {
  $exitCode = 1
 }
 exit $exitCode

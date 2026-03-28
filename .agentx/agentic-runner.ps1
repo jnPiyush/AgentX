@@ -1161,6 +1161,13 @@ function Invoke-LlmChat(
         $statusCode = $_.Exception.Response.StatusCode.value__
         $errBody = ''
         try { $errBody = $_.ErrorDetails.Message } catch { $errBody = '' }
+
+        if ($Script:ApiMode -eq 'copilot' -and $statusCode -in @(401, 403)) {
+            Write-Host "`e[33m  [API FALLBACK] Copilot API returned HTTP $statusCode. Retrying with GitHub Models.`e[0m"
+            $Script:ApiMode = 'models'
+            return Invoke-LlmChat -token $token -modelId $modelId -messages $messages -tools $tools -RequestOptions $RequestOptions -maxTokens $maxTokens
+        }
+
         $apiName = if ($Script:ApiMode -eq 'copilot') { 'Copilot' } else { 'GitHub Models' }
         throw "$apiName API error (HTTP $statusCode): $errBody"
     }
