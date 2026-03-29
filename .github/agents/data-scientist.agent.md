@@ -290,7 +290,7 @@ Update Status to `In Review` in GitHub Projects.
 - PASS Model card documents limitations and ethical considerations
 - PASS Drift monitoring configured
 - PASS Research documented: Model Card includes state-of-the-art survey and cost-performance analysis with sources
-- PASS Validation passes: `.github/scripts/validate-handoff.sh <issue> data-scientist`
+- PASS Validation passes: `scripts/validate-handoff.ps1 -IssueNumber <issue> -FromAgent data-scientist -ToAgent engineer`
 
 ## When Blocked (Agent-to-Agent Communication)
 

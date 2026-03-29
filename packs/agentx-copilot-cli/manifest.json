@@ -67,6 +67,10 @@
     "schemas": [
       ".github/schemas/handoff-message.schema.json"
     ],
+    "scripts": [
+      "scripts/score-output.ps1",
+      "scripts/validate-handoff.ps1"
+    ],
     "templates": [
       ".github/templates/ADR-TEMPLATE.md",
       ".github/templates/EXEC-PLAN-TEMPLATE.md",
@@ -165,7 +169,12 @@
       ".github/schemas/agent-frontmatter.schema.json",
       "AGENTS.md",
       "Skills.md",
-      "docs/WORKFLOW.md"
+      "docs/WORKFLOW.md",
+      "docs/GUIDE.md",
+      "docs/GOLDEN_PRINCIPLES.md",
+      "docs/QUALITY_SCORE.md",
+      "docs/tech-debt-tracker.md",
+      "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md"
     ]
   },
   "capabilities": {

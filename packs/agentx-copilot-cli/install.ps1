@@ -114,6 +114,7 @@ $StarterAgentStatus = @{
 }
 
 function Copy-Tree {
+ [CmdletBinding(SupportsShouldProcess)]
  param(
   [string]$SrcDir,
   [string]$DestDir,
@@ -187,12 +188,13 @@ function Get-PackInstallPlan {
  }
 
  $artifactGroups = @(
-  @{ Key = 'agents'; Label = 'Agents' },
-  @{ Key = 'skills'; Label = 'Skills' },
-  @{ Key = 'instructions'; Label = 'Instructions' },
-  @{ Key = 'prompts'; Label = 'Prompts' },
-  @{ Key = 'templates'; Label = 'Templates' },
-  @{ Key = 'schemas'; Label = 'Schemas' }
+  @{ Key = 'agents'; Label = 'Agents'; RelativePath = '.github/agents' },
+  @{ Key = 'skills'; Label = 'Skills'; RelativePath = '.github/skills' },
+  @{ Key = 'instructions'; Label = 'Instructions'; RelativePath = '.github/instructions' },
+  @{ Key = 'prompts'; Label = 'Prompts'; RelativePath = '.github/prompts' },
+  @{ Key = 'templates'; Label = 'Templates'; RelativePath = '.github/templates' },
+  @{ Key = 'schemas'; Label = 'Schemas'; RelativePath = '.github/schemas' },
+  @{ Key = 'scripts'; Label = 'Scripts'; RelativePath = 'scripts' }
  )
 
  $entries = @()
@@ -202,7 +204,7 @@ function Get-PackInstallPlan {
    $entries += [pscustomobject]@{
     Label = $group.Label
     Type = 'tree'
-    RelativePath = (('.github/' + $group.Key) -replace '\\', '/')
+    RelativePath = ($group.RelativePath -replace '\\', '/')
    }
   }
  }
@@ -222,6 +224,7 @@ function Get-PackInstallPlan {
 }
 
 function Copy-FileIfNeeded {
+ [CmdletBinding(SupportsShouldProcess)]
  param(
   [string]$SrcPath,
   [string]$DestPath,
@@ -252,6 +255,7 @@ function Copy-FileIfNeeded {
 }
 
 function Write-FileIfNeeded {
+ [CmdletBinding(SupportsShouldProcess)]
  param(
   [string]$Path,
   [string]$Content,
@@ -333,6 +337,7 @@ function Install-StarterMemories {
 }
 
 function Initialize-WorkspaceCliState {
+ [CmdletBinding(SupportsShouldProcess)]
  param([string]$TargetRoot)
 
  foreach ($dir in $RuntimeStateDirs) {
@@ -428,6 +433,8 @@ if (-not (Test-Path (Join-Path $Source ".github" "agents"))) {
  Write-Err "Source does not contain .github/agents/: $Source"
  exit 1
 }
+
+$Source = (Resolve-Path $Source).Path
 
 $Target = [System.IO.Path]::GetFullPath($Target)
 

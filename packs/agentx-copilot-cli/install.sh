@@ -106,6 +106,10 @@ if [ ! -d "$SOURCE/.github/agents" ]; then
   exit 1
 fi
 
+SOURCE="$(cd "$SOURCE" && pwd)"
+mkdir -p "$TARGET"
+TARGET="$(cd "$TARGET" && pwd)"
+
 # -- Helpers ---------------------------------------------------------------
 
 TOTAL_COPIED=0
@@ -379,10 +383,20 @@ copy_tree "$SOURCE/.github/templates" "$TARGET/.github/templates" "Templates"
 info "Installing schemas..."
 copy_tree "$SOURCE/.github/schemas" "$TARGET/.github/schemas" "Schemas"
 
+info "Installing scripts..."
+copy_file "scripts/score-output.ps1" "scripts/score-output.ps1"
+copy_file "scripts/validate-handoff.ps1" "scripts/validate-handoff.ps1"
+ok "Scripts: copied supporting scorer files"
+
 info "Installing reference docs..."
 copy_file "AGENTS.md" "AGENTS.md"
 copy_file "Skills.md" "Skills.md"
 copy_file "docs/WORKFLOW.md" "docs/WORKFLOW.md"
+copy_file "docs/GUIDE.md" "docs/GUIDE.md"
+copy_file "docs/GOLDEN_PRINCIPLES.md" "docs/GOLDEN_PRINCIPLES.md"
+copy_file "docs/QUALITY_SCORE.md" "docs/QUALITY_SCORE.md"
+copy_file "docs/tech-debt-tracker.md" "docs/tech-debt-tracker.md"
+copy_file "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md" "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md"
 copy_file ".github/agent-delegation.md" ".github/agent-delegation.md"
 ok "Docs: copied reference files"
 

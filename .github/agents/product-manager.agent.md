@@ -221,7 +221,7 @@ Update Epic Status to `Ready` in GitHub Projects.
 - PASS All stories have acceptance criteria
 - PASS PRD committed to repository
 - PASS Research Summary section documents prior art analysis with sources and evidence
-- PASS Validation passes: `.github/scripts/validate-handoff.sh <issue> pm`
+- PASS Validation passes: `scripts/validate-handoff.ps1 -IssueNumber <issue> -FromAgent pm -ToAgent architect`
 
 ## When Blocked (Agent-to-Agent Communication)
 

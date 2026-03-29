@@ -13,12 +13,23 @@ function fail(message) {
   process.exit(1);
 }
 
+function info(message) {
+  console.log(`[OK] ${message}`);
+}
+
 function readText(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
 function writeText(relativePath, content) {
-  fs.writeFileSync(path.join(root, relativePath), content, 'utf8');
+  const targetPath = path.join(root, relativePath);
+  if (fs.existsSync(targetPath)) {
+    const current = fs.readFileSync(targetPath, 'utf8');
+    if (current === content) {
+      return;
+    }
+  }
+  fs.writeFileSync(targetPath, content, 'utf8');
 }
 
 function parseArgs(argv) {
@@ -96,8 +107,11 @@ function replaceStrict(content, relativePath, pattern, replacement, label) {
 function updateJsonVersionFile(version) {
   const raw = readText(sourceVersionPath);
   const json = JSON.parse(raw);
+  const versionChanged = json.version !== version;
   json.version = version;
-  json.updatedAt = new Date().toISOString();
+  if (versionChanged || !json.updatedAt) {
+    json.updatedAt = new Date().toISOString();
+  }
   writeText(sourceVersionPath, `${JSON.stringify(json, null, 2)}\n`);
 }
 
@@ -146,6 +160,66 @@ function quoteShellArg(value) {
   return `"${String(value).replace(/"/g, '\\"')}"`;
 }
 
+function assertFileExists(absolutePath, label) {
+  if (!fs.existsSync(absolutePath)) {
+    fail(`Bundled asset missing: ${label} (${path.relative(root, absolutePath)})`);
+  }
+}
+
+function assertBundledJsonVersion(relativePath, expectedVersion, label) {
+  const absolutePath = path.join(root, relativePath);
+  assertFileExists(absolutePath, label);
+  const content = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
+  if (content.version !== expectedVersion) {
+    fail(`${label} version mismatch in ${relativePath}. Expected ${expectedVersion}, found ${content.version}.`);
+  }
+}
+
+function syncBundledAssets(version) {
+  const copyAssetsScript = path.join(extensionDir, 'scripts', 'copy-assets.js');
+  runCommand(process.execPath, [copyAssetsScript], extensionDir);
+
+  const requiredFiles = [
+    {
+      relativePath: 'vscode-extension/.github/agentx/.agentx/agentic-runner.ps1',
+      label: 'bundled agentic runner',
+    },
+    {
+      relativePath: 'vscode-extension/.github/agentx/docs/QUALITY_SCORE.md',
+      label: 'bundled quality score doc',
+    },
+    {
+      relativePath: 'vscode-extension/.github/agentx/docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md',
+      label: 'bundled knowledge review workflow guide',
+    },
+    {
+      relativePath: 'vscode-extension/.github/agentx/packs/agentx-copilot-cli/install.ps1',
+      label: 'bundled Copilot CLI installer',
+    },
+    {
+      relativePath: 'vscode-extension/.github/agentx/packs/agentx-copilot-cli/install.sh',
+      label: 'bundled Copilot CLI bash installer',
+    },
+  ];
+
+  for (const file of requiredFiles) {
+    assertFileExists(path.join(root, file.relativePath), file.label);
+  }
+
+  assertBundledJsonVersion(
+    'vscode-extension/.github/agentx/packs/agentx-core/manifest.json',
+    version,
+    'bundled core pack manifest',
+  );
+  assertBundledJsonVersion(
+    'vscode-extension/.github/agentx/packs/agentx-copilot-cli/manifest.json',
+    version,
+    'bundled Copilot CLI pack manifest',
+  );
+
+  info(`Synced bundled extension assets for ${version}`);
+}
+
 function packageVsix(version, vsixOutput) {
   const defaultOutput = path.join(extensionDir, `agentx-${version}.vsix`);
   const resolvedOutput = vsixOutput
@@ -187,6 +261,7 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   const currentVersionJson = JSON.parse(readText(sourceVersionPath));
   let targetVersion = currentVersionJson.version;
+  const isBumpCommand = Boolean(args.bumpType);
 
   if (args.setVersion) {
     validateVersion(args.setVersion);
@@ -393,9 +468,14 @@ function main() {
     },
   ]);
 
-  console.log(`[OK] Stamped repo version ${targetVersion}`);
+  syncBundledAssets(targetVersion);
+  info(`Stamped repo version ${targetVersion}`);
 
-  if (args.packageVsix) {
+  if (isBumpCommand && !args.packageVsix) {
+    info(`Semantic bump detected; packaging VSIX for ${targetVersion}`);
+  }
+
+  if (args.packageVsix || isBumpCommand) {
     packageVsix(targetVersion, args.vsixOutput);
   }
 }

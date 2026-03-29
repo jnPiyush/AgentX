@@ -216,7 +216,7 @@ Update Status back to `In Progress`.
 - PASS All Critical and Major findings resolved
 - PASS Review document created with clear decision
 - PASS Status updated to `Validating`
-- PASS Validation passes: `.github/scripts/validate-handoff.sh <issue> reviewer`
+- PASS Validation passes: `scripts/validate-handoff.ps1 -IssueNumber <issue> -FromAgent reviewer -ToAgent devops`
 
 ### Exit (Reject)
 

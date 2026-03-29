@@ -168,7 +168,7 @@ Update Status in GitHub Projects.
 - PASS Workflows pass syntax validation
 - PASS Secrets stored securely (no hardcoded values)
 - PASS Deployment documentation complete with rollback procedures
-- PASS Validation passes: `.github/scripts/validate-handoff.sh <issue> devops`
+- PASS Validation passes: `scripts/validate-handoff.ps1 -IssueNumber <issue> -FromAgent devops -ToAgent reviewer`
 
 ## When Blocked (Agent-to-Agent Communication)
 

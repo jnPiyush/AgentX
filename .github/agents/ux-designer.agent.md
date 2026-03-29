@@ -190,7 +190,7 @@ Update Status to `Ready` in GitHub Projects.
 - PASS HTML/CSS prototypes exist at `docs/ux/prototypes/`
 - PASS Prototypes are interactive, responsive, WCAG 2.1 AA compliant
 - PASS Design Research section documents competitive audit with sources and pattern rationale
-- PASS Validation passes: `.github/scripts/validate-handoff.sh <issue> ux`
+- PASS Validation passes: `scripts/validate-handoff.ps1 -IssueNumber <issue> -FromAgent ux -ToAgent architect`
 
 ## When Blocked (Agent-to-Agent Communication)
 

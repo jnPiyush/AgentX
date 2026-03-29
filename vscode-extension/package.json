@@ -887,7 +887,7 @@
     "sync:version": "node ../scripts/stamp-version.js",
     "copy:assets": "node scripts/copy-assets.js",
     "prepare:chat": "node scripts/prepare-chat-contributions.js",
-    "vscode:prepublish": "npm run sync:version && npm run prepare:chat && npm run copy:assets && npm run clean && tsc -p ./",
+    "vscode:prepublish": "npm run sync:version && npm run prepare:chat && npm run clean && tsc -p ./",
     "compile": "npm run sync:version && npm run clean && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",

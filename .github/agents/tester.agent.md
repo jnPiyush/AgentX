@@ -203,7 +203,7 @@ Before committing, verify with fresh eyes:
 - PASS All quality gates met (see table above)
 - PASS Defects filed as separate bug issues
 - PASS Certification report created at `docs/testing/CERT-{issue}.md`
-- PASS Validation passes: `.github/scripts/validate-handoff.sh <issue> tester`
+- PASS Validation passes: `scripts/validate-handoff.ps1 -IssueNumber <issue> -FromAgent tester -ToAgent engineer`
 
 ## When Blocked (Agent-to-Agent Communication)
 

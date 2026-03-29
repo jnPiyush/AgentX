@@ -72,8 +72,8 @@ jobs:
           npm run test:coverage
           npm audit --audit-level=high
 
-      - name: Package VSIX via release stamper
-        run: node scripts/stamp-version.js --set "${{ needs.create-release.outputs.version }}" --package-vsix
+      - name: Package VSIX from stamped release state
+        run: node scripts/stamp-version.js --package-vsix
 
       - name: Upload VSIX to Release
         env:

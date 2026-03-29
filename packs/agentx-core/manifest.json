@@ -49,6 +49,8 @@
       ".agentx/agentx.sh",
       ".agentx/local-issue-manager.ps1",
       ".agentx/local-issue-manager.sh",
+      "scripts/score-output.ps1",
+      "scripts/validate-handoff.ps1",
       "scripts/validate-frontmatter.ps1",
       "scripts/modules/CIHelpers.psm1",
       "scripts/modules/SecurityHelpers.psm1"

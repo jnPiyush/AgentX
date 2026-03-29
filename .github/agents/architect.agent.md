@@ -278,7 +278,7 @@ Update Status to `Ready` in GitHub Projects.
 - PASS Zero code examples in any spec
 - PASS ADR Context section includes research evidence with sources (benchmarks, failure modes, security)
 - PASS PM requirement-fit validation completed before Status returns to `Ready`
-- PASS Validation passes: `.github/scripts/validate-handoff.sh <issue> architect`
+- PASS Validation passes: `scripts/validate-handoff.ps1 -IssueNumber <issue> -FromAgent architect -ToAgent engineer`
 
 ## When Blocked (Agent-to-Agent Communication)
 
