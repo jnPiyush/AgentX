@@ -32,6 +32,44 @@ permissions:
   pull-requests: write
 
 jobs:
+  detect-version-bump:
+    runs-on: ubuntu-latest
+    outputs:
+      version_changed: ${{ steps.detect.outputs.version_changed }}
+      version: ${{ steps.detect.outputs.version }}
+      tag_name: ${{ steps.detect.outputs.tag_name }}
+      tag_exists: ${{ steps.detect.outputs.tag_exists }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect stamped version bump
+        id: detect
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./version.json').version")"
+          TAG_NAME="v${VERSION}"
+
+          if git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" | grep -qx "version.json"; then
+            VERSION_CHANGED=true
+          else
+            VERSION_CHANGED=false
+          fi
+
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
+            TAG_EXISTS=true
+          else
+            TAG_EXISTS=false
+          fi
+
+          {
+            echo "version_changed=${VERSION_CHANGED}"
+            echo "version=${VERSION}"
+            echo "tag_name=${TAG_NAME}"
+            echo "tag_exists=${TAG_EXISTS}"
+          } >> "$GITHUB_OUTPUT"
+
   create-release:
     runs-on: ubuntu-latest
     outputs:
@@ -45,13 +83,46 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: simple
 
-  # Package VSIX after a release is created
-  package-vsix:
-    needs: create-release
-    if: needs.create-release.outputs.release_created == 'true'
+  create-version-bump-release:
+    needs: [detect-version-bump, create-release]
+    if: needs.create-release.outputs.release_created != 'true' && needs.detect-version-bump.outputs.version_changed == 'true' && needs.detect-version-bump.outputs.tag_exists != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      release_created: ${{ steps.publish.outputs.release_created }}
+      tag_name: ${{ steps.publish.outputs.tag_name }}
+      version: ${{ steps.publish.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub release for stamped version
+        id: publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release create "${{ needs.detect-version-bump.outputs.tag_name }}" \
+            --target "$GITHUB_SHA" \
+            --title "${{ needs.detect-version-bump.outputs.tag_name }}" \
+            --generate-notes
+
+          {
+            echo "release_created=true"
+            echo "tag_name=${{ needs.detect-version-bump.outputs.tag_name }}"
+            echo "version=${{ needs.detect-version-bump.outputs.version }}"
+          } >> "$GITHUB_OUTPUT"
+
+  # Package VSIX after a release is created
+  package-vsix:
+    needs: [create-release, create-version-bump-release]
+    if: needs.create-release.outputs.release_created == 'true' || needs.create-version-bump-release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ needs.create-release.outputs.tag_name || needs.create-version-bump-release.outputs.tag_name }}
+      RELEASE_VERSION: ${{ needs.create-release.outputs.version || needs.create-version-bump-release.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +131,7 @@ jobs:
           node-version: '20'
 
       - name: Stamp repo version across release surfaces
-        run: node scripts/stamp-version.js --set "${{ needs.create-release.outputs.version }}"
+        run: node scripts/stamp-version.js --set "${{ env.RELEASE_VERSION }}"
 
       - name: Install dependencies
         working-directory: vscode-extension
@@ -79,4 +150,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ needs.create-release.outputs.tag_name }}" "vscode-extension/agentx-${{ needs.create-release.outputs.version }}.vsix"
+          gh release upload "${{ env.RELEASE_TAG }}" "vscode-extension/agentx-${{ env.RELEASE_VERSION }}.vsix"
