@@ -38,7 +38,7 @@ describe('sidebar providers', () => {
     __clearExtensions();
   });
 
-  it('WorkTreeProvider should show Overview, Open issues, and Actions sections', async () => {
+  it('WorkTreeProvider should show Overview and Open issues sections', async () => {
     const root = createWorkspaceRoot();
     fs.writeFileSync(
       path.join(root, '.agentx', 'state', 'agent-status.json'),
@@ -101,10 +101,9 @@ describe('sidebar providers', () => {
     });
     const items = await provider.getChildren();
 
-    assert.equal(items.length, 3);
+    assert.equal(items.length, 2);
     assert.equal(items[0].label, 'Overview');
     assert.equal(items[1].label, 'Open issues');
-    assert.equal(items[2].label, 'Actions');
 
     // Open issues section contains the one open issue
     const issueSection = items[1];
@@ -191,6 +190,7 @@ describe('sidebar providers', () => {
     assert.ok(overviewChildren.some((item) => item.label === 'Version' && item.description === '8.4.0'));
     assert.ok(overviewChildren.some((item) => item.label === 'Mode' && item.description === 'github'));
     assert.ok(overviewChildren.some((item) => item.label === 'GitHub MCP' && item.description === 'connected'));
+    assert.ok(overviewChildren.some((item) => item.label === 'ADO Provider' && item.description === 'not connected'));
     assert.ok(overviewChildren.some((item) => item.label === 'Azure skills' && item.description === 'installed'));
   });
 

@@ -21,8 +21,8 @@ Store all state under `.copilot-tracking/workitems/triage/{YYYY-MM-DD}/`.
 
 ## Phase 1: Query Un-triaged Items
 
-1. Call `mcp_ado_search_workitem` with filter `state: New` and no area path.
-2. For each result, call `mcp_ado_wit_get_work_item` to retrieve full details.
+1. Query candidate work items with state `New` and no area path using Azure CLI or WIQL.
+2. For each result, retrieve full work item details.
 3. Write results to `artifact-analysis.md` keyed by WI[NNN] reference.
 
 Skip items that already have both `Priority` and `AreaPath` set; they are
@@ -51,7 +51,7 @@ Write all classifications to `work-items.md` using the WI[NNN] scheme.
 For each un-triaged item:
 
 1. Build a keyword group from the item title and first two sentences of description.
-2. Run `mcp_ado_search_workitem` with those keywords.
+2. Run a WIQL-backed Azure CLI search with those keywords.
 3. Perform similarity assessment (see `ado-wit-planning.instructions.md`).
 4. For high-confidence duplicates (Category = Match):
    - Set proposed action to "Close as Duplicate".

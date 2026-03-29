@@ -39,25 +39,6 @@ tools:
   - fetch
   - think
   - github/*
-  - ado/search_workitem
-  - ado/wit_get_work_item
-  - ado/wit_get_work_items_batch_by_ids
-  - ado/wit_my_work_items
-  - ado/wit_get_work_items_for_iteration
-  - ado/wit_list_backlog_work_items
-  - ado/wit_list_backlogs
-  - ado/work_list_team_iterations
-  - ado/wit_get_query_results_by_id
-  - ado/wit_create_work_item
-  - ado/wit_add_child_work_items
-  - ado/wit_update_work_item
-  - ado/wit_update_work_items_batch
-  - ado/wit_work_items_link
-  - ado/wit_add_artifact_link
-  - ado/wit_list_work_item_comments
-  - ado/wit_add_work_item_comment
-  - ado/wit_list_work_item_revisions
-  - ado/core_get_identity_ids
   - read
   - edit/createFile
   - edit/createDirectory
@@ -118,6 +99,12 @@ Use interaction templates from
 [ado-interaction-templates.instructions.md](../../instructions/ado/ado-interaction-templates.instructions.md)
 when composing work item descriptions and comments for ADO API calls.
 
+AgentX runtime note:
+
+- The built-in AgentX ADO provider uses Azure CLI plus the `azure-devops` extension.
+- Do not assume `mcp_ado_*` tools are available in this repository runtime.
+- If a team separately installs Microsoft's Azure DevOps MCP Server, treat that as an optional external integration rather than the default AgentX path.
+
 ## Core Directives
 
 - Classify every request before dispatching. Resolve ambiguous requests through
@@ -172,7 +159,7 @@ Load the corresponding instruction file and execute the workflow.
 | PRD Planning | Delegates to `AzDO PRD to WIT` agent                                   | `.copilot-tracking/workitems/prds/{artifact-name}/`      |
 | Sprint Plan  | [ado-backlog-sprint.instructions.md](../../instructions/ado/ado-backlog-sprint.instructions.md)       | `.copilot-tracking/workitems/sprint/{iteration-kebab}/`  |
 | Execution    | [ado-update-wit-items.instructions.md](../../instructions/ado/ado-update-wit-items.instructions.md)   | `.copilot-tracking/workitems/execution/{YYYY-MM-DD}/`    |
-| Single Item  | Direct MCP calls + [interaction templates](../../instructions/ado/ado-interaction-templates.instructions.md) | `.copilot-tracking/workitems/execution/{YYYY-MM-DD}/`  |
+| Single Item  | Direct Azure CLI or REST calls + [interaction templates](../../instructions/ado/ado-interaction-templates.instructions.md) | `.copilot-tracking/workitems/execution/{YYYY-MM-DD}/`  |
 | Task Plan    | Via existing prompt flow                                               | `.copilot-tracking/workitems/current-work/`              |
 | Build Info   | [ado-get-build-info.instructions.md](../../instructions/ado/ado-get-build-info.instructions.md)       | `.copilot-tracking/pr/`                                  |
 | PR Creation  | [ado-create-pull-request.instructions.md](../../instructions/ado/ado-create-pull-request.instructions.md) | `.copilot-tracking/pr/new/`                          |
@@ -193,19 +180,22 @@ Summary contents:
 - Items requiring follow-up attention
 - Suggested next steps or related workflows
 
-## ADO MCP Tool Reference
+## Current ADO Command Reference
 
-| Category  | Tools                                                                                           |
-|-----------|-------------------------------------------------------------------------------------------------|
-| Search    | `mcp_ado_search_workitem`                                                                       |
-| Retrieval | `mcp_ado_wit_get_work_item`, `mcp_ado_wit_get_work_items_batch_by_ids`, `mcp_ado_wit_my_work_items`, `mcp_ado_wit_get_work_items_for_iteration`, `mcp_ado_wit_list_backlog_work_items`, `mcp_ado_wit_list_backlogs`, `mcp_ado_wit_get_query_results_by_id` |
-| Iteration | `mcp_ado_work_list_team_iterations`                                                             |
-| Mutation  | `mcp_ado_wit_create_work_item`, `mcp_ado_wit_add_child_work_items`, `mcp_ado_wit_update_work_item`, `mcp_ado_wit_update_work_items_batch`, `mcp_ado_wit_work_items_link`, `mcp_ado_wit_add_artifact_link`, `mcp_ado_wit_add_work_item_comment` |
-| History   | `mcp_ado_wit_list_work_item_comments`, `mcp_ado_wit_list_work_item_revisions`                   |
-| Identity  | `mcp_ado_core_get_identity_ids`                                                                 |
+Use Azure CLI with the `azure-devops` extension as the default execution path:
 
-Call `mcp_ado_core_get_identity_ids` at the start of any workflow to establish
-authenticated user context and resolve display names to identity references.
+| Category  | Command Path |
+|-----------|--------------|
+| Search    | `az boards query --wiql ... --organization ... --project ... --output json` |
+| Retrieval | `az boards work-item show --id ... --organization ... --project ... --output json` |
+| Mutation  | `az boards work-item create/update ... --organization ... --project ... --output json` |
+| Comments  | `az boards work-item update --discussion ...` |
+| Pull Requests | `az repos pr ...` or `az devops invoke` when the CLI surface is incomplete |
+| Build Info | `az pipelines build list/show ...` or `az devops invoke` for timeline/log detail |
+| Fallback | `az devops invoke` against Azure DevOps REST endpoints when no first-class CLI command exists |
+
+Authenticate with either interactive `az login`, `az devops login`, or a scoped
+`AZURE_DEVOPS_EXT_PAT` environment variable for automation.
 
 ## State Management
 

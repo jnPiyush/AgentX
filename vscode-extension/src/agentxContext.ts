@@ -7,6 +7,7 @@ import {
   buildCliInvocation,
   collectAgentDefinitionFiles,
   getConfiguredShell,
+  hasConfiguredAdoAdapter,
   hasCliRuntime,
   hasConfiguredIntegration,
   listExecutionPlanFilesForRoot,
@@ -32,8 +33,9 @@ const AGENTX_WORKSPACE_ROOT_ENV = 'AGENTX_WORKSPACE_ROOT';
  * Shared context for all AgentX extension components.
  * Detects workspace state, integrations, and provides CLI access.
  *
- * Integrations are additive (not modal). GitHub and ADO can be active
- * simultaneously. Detection is based on MCP server entries in .vscode/mcp.json.
+ * Integrations are additive (not modal). GitHub MCP and the ADO provider can be
+ * active simultaneously. GitHub connectivity is detected from .vscode/mcp.json,
+ * while ADO connectivity is detected from .agentx/config.json.
  */
 export class AgentXContext {
  /** Cached workspace root path (invalidated on config / workspace change). */
@@ -111,8 +113,10 @@ export class AgentXContext {
  /** Check if GitHub MCP integration is configured. */
  get githubConnected(): boolean { return this.hasIntegration('github'); }
 
- /** Check if ADO MCP integration is configured. */
- get adoConnected(): boolean { return this.hasIntegration('ado'); }
+ /** Check if the ADO provider is configured in AgentX workspace config. */
+ get adoConnected(): boolean {
+  return hasConfiguredAdoAdapter(this.workspaceRoot ?? this.firstWorkspaceFolder);
+ }
 
  /** Get the configured shell (auto, pwsh, bash). */
  getShell(): string {

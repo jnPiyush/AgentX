@@ -239,7 +239,7 @@ As a {{persona}}, I want {{capability}} so that {{outcome}}.
 
 ## Comment Templates (B-series)
 
-Use these when adding comments to existing work items via `mcp_ado_wit_add_work_item_comment`.
+Use these when adding comments to existing work items through the Azure CLI or Azure DevOps REST comment path.
 
 ### B1: Status Update
 

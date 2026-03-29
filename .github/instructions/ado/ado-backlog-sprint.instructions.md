@@ -21,9 +21,9 @@ Store all state under `.copilot-tracking/workitems/sprint/{iteration-kebab}/`.
 
 ## Phase 1: Retrieve Team Context
 
-1. Call `mcp_ado_work_list_team_iterations` to list all team iterations.
+1. Use Azure CLI or REST to list all team iterations.
 2. Identify the target iteration (current sprint or user-specified).
-3. Call `mcp_ado_wit_get_work_items_for_iteration` to see items already assigned.
+3. Retrieve work items already assigned to that iteration.
 4. Extract team capacity from existing `planning-log.md` or ask user for capacity
    when not available.
 
@@ -31,8 +31,8 @@ Write sprint info (iteration path, dates, capacity) to `planning-log.md`.
 
 ## Phase 2: Gather Backlog Candidates
 
-1. Call `mcp_ado_wit_list_backlog_work_items` for priority-ordered backlog items.
-2. For top candidates, call `mcp_ado_wit_get_work_item` to retrieve full details.
+1. Retrieve priority-ordered backlog items using Azure CLI or REST.
+2. For top candidates, retrieve full work item details.
 3. Filter out items with unresolved blockers or missing acceptance criteria.
 4. Record candidates in `artifact-analysis.md` with fields:
    - Priority, Story Points or Effort, AreaPath, AssignedTo, Blocked flag.
@@ -62,8 +62,8 @@ Under Partial autonomy: present the plan and wait for user confirmation.
 
 After user confirmation:
 
-1. Apply iteration path updates using `mcp_ado_wit_update_work_items_batch`.
-2. Add sprint planning comment using `mcp_ado_wit_add_work_item_comment` with
+1. Apply iteration path updates using Azure CLI or REST patch calls.
+2. Add sprint planning comment using the Azure CLI discussion path with
    template B1 (Status Update) for each committed item.
 3. Write summary to `handoff.md`:
    - Sprint name and dates

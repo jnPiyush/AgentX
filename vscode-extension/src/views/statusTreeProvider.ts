@@ -69,7 +69,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<SidebarTreeIt
    SidebarTreeItem.detail('Version', 'versions', versionInfo?.version ?? 'not installed'),
    SidebarTreeItem.detail('Mode', 'server-environment', configInfo?.provider ?? configInfo?.integration ?? configInfo?.mode ?? versionInfo?.mode ?? 'workspace only'),
    SidebarTreeItem.detail('GitHub MCP', 'github', formatConnection(this.agentx.githubConnected)),
-   SidebarTreeItem.detail('ADO MCP', 'repo', formatConnection(this.agentx.adoConnected)),
+    SidebarTreeItem.detail('ADO Provider', 'repo', formatConnection(this.agentx.adoConnected)),
    SidebarTreeItem.detail('Azure skills', azureCompanionIcon, azureCompanionDescription),
   ];
 

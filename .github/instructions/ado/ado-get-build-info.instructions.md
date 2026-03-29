@@ -33,7 +33,7 @@ Write gathered context to `planning-log.md`.
 
 ## Phase 2: Retrieve Build Status
 
-Use `web` tool to query the ADO REST API or MCP search tools to retrieve:
+Use Azure CLI, the `web` tool, or Azure DevOps REST APIs to retrieve:
 
 - Build status (succeeded, failed, running, canceled)
 - Timeline stages and tasks
@@ -54,14 +54,14 @@ For failed builds:
 ## Phase 4: Retrieve Associated Work Items
 
 1. Search for work items tagged or linked to the current branch or PR.
-2. Call `mcp_ado_search_workitem` with the PR branch name or feature name.
+2. Search work items with WIQL or other Azure DevOps query mechanisms using the PR branch name or feature name.
 3. Record associated work item IDs in `planning-log.md`.
 
 ## Phase 5: Link Build to Work Items (when applicable)
 
 When the user requests linking build artifacts to work items:
 
-1. Call `mcp_ado_wit_add_artifact_link` for each work item.
+1. Add artifact links through Azure DevOps REST when the user requests that linkage.
 2. Record link results in `planning-log.md`.
 
 Under Partial autonomy: confirm before adding artifact links.

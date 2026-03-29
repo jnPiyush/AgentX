@@ -43,7 +43,7 @@ Write validation results to `artifact-analysis.md`.
 
 ## Phase 3: Resolve Reviewer Identities
 
-1. For each reviewer, call `mcp_ado_core_get_identity_ids` to get identity GUIDs.
+1. Resolve reviewer identities through Azure DevOps REST when GUIDs are required.
 2. Record identity GUIDs in `planning-log.md`.
 
 ## Phase 4: Compose PR Description
@@ -77,7 +77,7 @@ linked items) and wait for approval.
 After confirmation:
 
 1. Create the pull request via the ADO REST API or MCP PR tool.
-2. Call `mcp_ado_wit_link_work_item_to_pull_request` for each linked work item.
+2. Link work items during PR creation when the CLI surface supports it, otherwise use REST.
 3. Write PR URL and ID to `handoff.md`.
 
 ## Phase 6: Post-creation

@@ -54,22 +54,9 @@ export function resolveTemplateFiles(agentx: AgentXContext): string[] {
  );
 }
 
-function buildInputChildren(inputs: TemplateInput[]): TemplateTreeItem[] {
- return inputs.map((input) => {
-  const reqTag = input.required ? '(required)' : '(optional)';
-  const defTag = input.defaultValue ? ` [default: ${input.defaultValue}]` : '';
-  const label = `${input.name} ${reqTag}${defTag}`;
-
-  const child = new TemplateTreeItem(label, vscode.TreeItemCollapsibleState.None);
-  child.iconPath = new vscode.ThemeIcon(input.required ? 'star-full' : 'star-empty');
-  child.tooltip = input.description || input.name;
-  child.contextValue = 'templateInput';
-  return child;
- });
-}
-
 export function createTemplateTreeItem(filePath: string, fileName: string): TemplateTreeItem {
- const name = fileName.replace(/-TEMPLATE\.md$/i, '').replace(/\.md$/i, '');
+ const template = parseTemplate(filePath, fileName);
+ const name = template.name;
  const item = new TemplateTreeItem(name, vscode.TreeItemCollapsibleState.None);
 
  item.iconPath = new vscode.ThemeIcon(TEMPLATE_ICONS[name] || 'file');
@@ -80,6 +67,7 @@ export function createTemplateTreeItem(filePath: string, fileName: string): Temp
  };
  item.tooltip = `Open ${name} template`;
  item.contextValue = 'templateItem';
+ item.description = `${template.inputs.length} input${template.inputs.length === 1 ? '' : 's'}`;
 
  return item;
 }

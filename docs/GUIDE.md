@@ -715,6 +715,11 @@ If you prefer to switch explicitly before the first auto-detected command, set `
 
 Use the ADO provider when your team tracks work in Azure DevOps instead of GitHub issues.
 
+Current AgentX runtime path:
+- ADO provider operations use Azure CLI plus the `azure-devops` extension.
+- AgentX does not provision or require Azure DevOps MCP for its built-in ADO provider.
+- Microsoft's Azure DevOps MCP Server exists as an optional external integration, but it is not the default AgentX contract in this repository.
+
 Requirements:
 - Azure CLI installed
 - `azure-devops` CLI extension available

@@ -231,7 +231,8 @@ describe('AgentXContext', () => {
   describe('integration detection', () => {
     it('should return false for githubConnected when no mcp.json', () => {
       const root = path.join(tmpBase, 'nomcp');
-      fs.mkdirSync(root, { recursive: true });
+      fs.mkdirSync(path.join(root, '.agentx'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.agentx', 'config.json'), JSON.stringify({ provider: 'local' }));
       __setWorkspaceFolders([{ path: root }]);
       const ctx = new AgentXContext(fakeExtensionContext());
       assert.equal(ctx.githubConnected, false);
@@ -250,11 +251,13 @@ describe('AgentXContext', () => {
       assert.equal(ctx.adoConnected, false);
     });
 
-    it('should detect ado integration from mcp.json', () => {
+    it('should detect ado integration from workspace config', () => {
       const root = path.join(tmpBase, 'adoint');
-      fs.mkdirSync(path.join(root, '.vscode'), { recursive: true });
-      fs.writeFileSync(path.join(root, '.vscode', 'mcp.json'), JSON.stringify({
-        servers: { ado: { type: 'http', url: 'https://example.com/ado-mcp/' } }
+      fs.mkdirSync(path.join(root, '.agentx'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.agentx', 'config.json'), JSON.stringify({
+        provider: 'ado',
+        organization: 'octo-org',
+        project: 'OctoProject'
       }));
       __setWorkspaceFolders([{ path: root }]);
       const ctx = new AgentXContext(fakeExtensionContext());
@@ -265,11 +268,16 @@ describe('AgentXContext', () => {
     it('should detect both integrations simultaneously', () => {
       const root = path.join(tmpBase, 'bothint');
       fs.mkdirSync(path.join(root, '.vscode'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.agentx'), { recursive: true });
       fs.writeFileSync(path.join(root, '.vscode', 'mcp.json'), JSON.stringify({
         servers: {
-          github: { type: 'http', url: 'https://api.githubcopilot.com/mcp/' },
-          ado: { type: 'http', url: 'https://example.com/ado/' }
+          github: { type: 'http', url: 'https://api.githubcopilot.com/mcp/' }
         }
+      }));
+      fs.writeFileSync(path.join(root, '.agentx', 'config.json'), JSON.stringify({
+        provider: 'ado',
+        organization: 'octo-org',
+        project: 'OctoProject'
       }));
       __setWorkspaceFolders([{ path: root }]);
       const ctx = new AgentXContext(fakeExtensionContext());

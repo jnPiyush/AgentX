@@ -11,8 +11,8 @@ to compose the description and acceptance criteria.
 
 1. Identify the work item type from the user request (Bug, User Story, Task, etc.).
 2. Confirm or detect the ADO project and process template.
-3. Check for existing duplicates using `mcp_ado_search_workitem`.
+3. Check for existing duplicates using the Azure CLI or WIQL-backed discovery flow.
 4. If no duplicates found, compose field values using the appropriate A-series template.
 5. Apply content format detection (Markdown vs. HTML).
-6. Create the item using `mcp_ado_wit_create_work_item`.
+6. Create the item using the Azure CLI-based ADO provider flow.
 7. Present the new work item ID and URL to the user.

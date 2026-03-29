@@ -39,7 +39,7 @@ For each entry:
 
 1. Build the `fields` array using templates from
    `ado-interaction-templates.instructions.md`.
-2. Call `mcp_ado_wit_create_work_item` with `project`, `workItemType`, and `fields`.
+2. Create the work item with Azure CLI using the resolved project, work item type, and fields.
 3. Record the new ADO ID in `planning-log.md`.
 4. Update the checkbox in `handoff.md` to checked.
 5. Under Partial autonomy: present each create operation before calling the API.
@@ -50,9 +50,9 @@ Process all unchecked `(Update)` entries in `handoff.md`:
 
 For each entry:
 
-1. Call `mcp_ado_wit_get_work_item` to confirm the item still exists.
+1. Retrieve the work item to confirm it still exists.
 2. Build the `updates` array with patch operations for changed fields only.
-3. Call `mcp_ado_wit_update_work_item`.
+3. Apply the update with Azure CLI or REST.
 4. Update the checkbox in `handoff.md` to checked.
 5. Under Partial autonomy: present state-change updates before calling the API.
 
@@ -61,7 +61,7 @@ For each entry:
 For each item with a `Relationships` section in `work-items.md`:
 
 1. Resolve linked item IDs (from planning-log.md ADO ID map).
-2. Call `mcp_ado_wit_work_items_link` for each link.
+2. Apply each relationship with Azure CLI or REST.
 3. Record linked pairs in `planning-log.md`.
 
 ## Phase 5: Post Comments
@@ -70,7 +70,7 @@ For items with required comment templates:
 
 1. Compose comment using B-series templates from
    `ado-interaction-templates.instructions.md`.
-2. Call `mcp_ado_wit_add_work_item_comment`.
+2. Add the comment through the Azure CLI discussion/update path.
 
 ## Phase 6: Execution Summary
 

@@ -119,7 +119,7 @@ describe('TemplateTreeProvider', () => {
   assert.equal(items[0].description, '2 inputs');
  });
 
- it('should expand to show input children', async () => {
+ it('should not expose input metadata as expandable children', async () => {
   const root = createTemplatesDir({
    'REVIEW-TEMPLATE.md': '---\ninputs:\n story_title:\n  description: "Title"\n  required: true\n  default: ""\n reviewer:\n  description: "Reviewer name"\n  required: false\n  default: "Agent"\n---\n# Review',
   });
@@ -128,16 +128,7 @@ describe('TemplateTreeProvider', () => {
   assert.equal(items.length, 1);
 
   const children = await provider.getChildren(items[0]);
-  assert.equal(children.length, 2);
-
-  const first = children[0];
-  assert.ok((first.label as string).includes('story_title'));
-  assert.ok((first.label as string).includes('(required)'));
-
-  const second = children[1];
-  assert.ok((second.label as string).includes('reviewer'));
-  assert.ok((second.label as string).includes('(optional)'));
-  assert.ok((second.label as string).includes('[default: Agent]'));
+  assert.equal(children.length, 0);
  });
 
  it('should handle template with no frontmatter', async () => {

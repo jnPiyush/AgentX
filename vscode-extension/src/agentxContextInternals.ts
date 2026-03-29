@@ -8,6 +8,15 @@ interface McpConfig {
   servers?: Record<string, { type?: string; url?: string; command?: string }>;
 }
 
+interface AgentXConfig {
+  provider?: string;
+  integration?: string;
+  mode?: string;
+  organization?: string;
+  project?: string | number;
+  adapters?: Record<string, unknown>;
+}
+
 export function readMcpConfig(root: string): McpConfig {
   const mcpPath = path.join(root, '.vscode', 'mcp.json');
   if (!fs.existsSync(mcpPath)) { return {}; }
@@ -255,6 +264,39 @@ export function hasConfiguredIntegration(root: string | undefined, integration: 
   return Object.keys(mcpConfig.servers).some(
     (name) => name.toLowerCase().includes(integration.toLowerCase()),
   );
+}
+
+export function hasConfiguredAdoAdapter(root: string | undefined): boolean {
+  if (!root) {
+    return false;
+  }
+
+  const configPath = path.join(root, '.agentx', 'config.json');
+  if (!fs.existsSync(configPath)) {
+    return false;
+  }
+
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as AgentXConfig;
+    const adapter = (config.adapters?.ado ?? {}) as Record<string, unknown>;
+    const organization = typeof adapter.organization === 'string'
+      ? adapter.organization
+      : typeof config.organization === 'string'
+        ? config.organization
+        : '';
+    const project = typeof adapter.project === 'string' || typeof adapter.project === 'number'
+      ? String(adapter.project)
+      : typeof config.project === 'string' || typeof config.project === 'number'
+        ? String(config.project)
+        : '';
+    const activeProvider = [config.provider, config.integration, config.mode]
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.toLowerCase());
+
+    return activeProvider.includes('ado') || (!!organization && !!project);
+  } catch {
+    return false;
+  }
 }
 
 export function getConfiguredShell(config: vscode.WorkspaceConfiguration): string {

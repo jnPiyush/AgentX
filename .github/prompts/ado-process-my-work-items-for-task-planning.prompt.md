@@ -5,7 +5,7 @@ description: 'Retrieve work items assigned to the current user and recommend a p
 
 Retrieve the current user assigned work items and produce a task plan.
 
-1. Call `mcp_ado_wit_my_work_items` with type `assignedtome` and `includeCompleted: false`.
+1. Retrieve assigned work items using Azure DevOps CLI or REST with completed items filtered out.
 2. Group items by sprint (current, upcoming, backlog).
 3. Sort within each group by priority and estimated effort.
 4. Flag items missing estimates, acceptance criteria, or parent assignments.

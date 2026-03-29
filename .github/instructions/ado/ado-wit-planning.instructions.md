@@ -20,68 +20,56 @@ Follow all instructions from
 this workflow.
 ```
 
-## MCP ADO Tools
+## Current ADO Execution Path
 
-Work item operations reference these MCP ADO tools:
+Current AgentX runtime behavior for Azure DevOps uses Azure CLI plus the
+`azure-devops` extension. Do not assume `mcp_ado_*` tools exist in this
+repository runtime.
+
+Microsoft's Azure DevOps MCP Server exists as a separate optional integration,
+but AgentX does not provision or depend on it for built-in ADO provider flows.
+
+Work item operations should use Azure CLI first and fall back to `az devops invoke`
+for REST endpoints that do not have a convenient first-class CLI wrapper.
 
 Discovery and retrieval:
 
-- `mcp_ado_search_workitem`: Search work items by text, project, type, or state.
-  Key params: `searchText` (required), `project`, `workItemType`, `state`, `top`, `skip`.
-- `mcp_ado_wit_get_work_item`: Retrieve a single work item.
-  Key params: `id` (required), `project` (required), `expand`, `fields`.
-- `mcp_ado_wit_get_work_items_batch_by_ids`: Retrieve multiple work items.
-  Key params: `ids` (required), `project` (required), `fields`.
-- `mcp_ado_wit_my_work_items`: Retrieve work items assigned to or modified by the
-  current user. Key params: `project` (required), `type` (assignedtome or myactivity),
-  `includeCompleted` (boolean, default false), `top` (default 50).
-- `mcp_ado_wit_get_work_items_for_iteration`: Retrieve work items for a specific sprint.
-  Key params: `project` (required), `iterationId` (required), `team`.
-- `mcp_ado_wit_list_backlog_work_items`: List backlog items not assigned to an iteration.
-  Key params: `project` (required), `team`, `backlogId`.
-- `mcp_ado_wit_list_backlogs`: List available backlogs for a project.
-  Key params: `project` (required), `team`.
-- `mcp_ado_wit_get_query_results_by_id`: Execute a saved ADO query by ID or path.
-  Key params: `id` (required), `project`, `team`, `responseType` (full or ids), `top`.
+- `az boards query`: Search work items with WIQL.
+  Key inputs: WIQL string, `--organization`, `--project`, `--output json`.
+- `az boards work-item show`: Retrieve a single work item.
+  Key inputs: `--id`, `--organization`, `--project`, `--output json`.
+- `az devops invoke`: Fallback for batch retrieval or specialized REST endpoints.
 
 Iteration:
 
-- `mcp_ado_work_list_team_iterations`: List team iterations and sprints.
-  Key params: `project` (required), `team`, `timeframe`.
+- Prefer Azure CLI commands when available; otherwise use `az devops invoke`
+  against the team iterations REST endpoints.
 
 Creation and updates:
 
-- `mcp_ado_wit_create_work_item`: Create a new work item.
-  Key params: `project` (required), `workItemType` (required),
-  `fields` (required array of name/value pairs).
-- `mcp_ado_wit_add_child_work_items`: Add child items to a parent.
-  Key params: `parentId` (required), `project` (required), `workItemType` (required),
-  `items` (required array).
-- `mcp_ado_wit_update_work_item`: Update a single work item.
-  Key params: `id` (required), `updates` (required array with path/value).
-- `mcp_ado_wit_update_work_items_batch`: Batch update multiple items.
-  Key params: `updates` (required array with id/path/value).
+- `az boards work-item create`: Create a new work item.
+  Key inputs: `--title`, `--type`, optional `--description`, `--fields`,
+  `--organization`, `--project`, `--output json`.
+- `az boards work-item update`: Update work item fields, state, tags, and discussion.
+  Key inputs: `--id`, `--fields`, `--state`, `--discussion`,
+  `--organization`, `--project`, `--output json`.
+- `az devops invoke`: Fallback for batch updates or relationship patch payloads.
 
 Relationships and linking:
 
-- `mcp_ado_wit_work_items_link`: Link work items together.
-  Key params: `project` (required), `updates` (required array with id/linkToId/type).
-- `mcp_ado_wit_add_artifact_link`: Add artifact links (branch, commit, build).
-  Key params: `workItemId` (required), `project` (required), `linkType`.
+- Prefer `az devops invoke` against the work item relations REST endpoints.
+- For pull requests and builds, prefer first-class `az repos pr` or
+  `az pipelines build` commands when they cover the scenario; otherwise use REST.
 
 History and comments:
 
-- `mcp_ado_wit_list_work_item_comments`: List comments on a work item.
-  Key params: `workItemId` (required), `project` (required).
-- `mcp_ado_wit_list_work_item_revisions`: Get revision history.
-  Key params: `workItemId` (required), `project` (required), `top`.
-- `mcp_ado_wit_add_work_item_comment`: Add a comment.
-  Key params: `workItemId` (required), `project` (required), `comment` (required).
+- `az boards work-item update --discussion ...` adds a discussion entry.
+- Use `az devops invoke` for comment history or revision history when needed.
 
 Identity:
 
-- `mcp_ado_core_get_identity_ids`: Resolve identity GUIDs from email or name.
-  Key params: `searchFilter` (required, email or name string).
+- Prefer Azure DevOps REST identity lookups via `az devops invoke` when reviewer
+  or assignee GUID resolution is required.
 
 ## Planning File Definitions and Directory Conventions
 
@@ -186,10 +174,10 @@ action as No Change and add a `Related` link from any new stories back to that i
 
 ```markdown
 # Work Items
-* **Project**: [projects field for mcp ado tool]
-* **Area Path**: [(Optional) areaPath field for mcp ado tool]
-* **Iteration Path**: [(Optional) iterationPath field for mcp ado tool]
-* **Repository**: [(Optional) repository field for mcp ado tool]
+* **Project**: [ADO project name]
+* **Area Path**: [(Optional) area path]
+* **Iteration Path**: [(Optional) iteration path]
+* **Repository**: [(Optional) repository name]
 
 ## WI[Reference Number] - [Action: Create|Update|No Change] - [Summarized Title]
 [1-5 Sentence Explanation of Change]
@@ -223,8 +211,8 @@ Phase tracking applies when the consuming workflow file defines phases:
 
 ```markdown
 # [Planning Type] - Work Item Planning Log
-* **Project**: [projects field for mcp ado tool]
-* **Repository**: [(Optional) repository field for mcp ado tool]
+* **Project**: [ADO project name]
+* **Repository**: [(Optional) repository name]
 * **Previous Phase**: [(Optional) Phase-1, Phase-2, N/A, Just Started]
 * **Current Phase**: [Phase-1, Phase-2, N/A, Just Started]
 
@@ -253,8 +241,8 @@ Phase tracking applies when the consuming workflow file defines phases:
 
 ```markdown
 # Work Item Handoff
-* **Project**: [projects field for mcp ado tool]
-* **Repository**: [(Optional) repository field for mcp ado tool]
+* **Project**: [ADO project name]
+* **Repository**: [(Optional) repository name]
 
 ## Planning Files:
   * .copilot-tracking/workitems/<planning-type>/<artifact-normalized-name>/handoff.md
@@ -338,7 +326,7 @@ Format the `searchText` parameter:
 
 ### Step 3: Execute Search and Process Results
 
-Execute `mcp_ado_search_workitem` with a page size of 50.
+Execute a WIQL-backed Azure CLI search and limit downstream review to roughly 50 results.
 
 Filter results to identify candidates for similarity assessment:
 
@@ -348,7 +336,7 @@ Filter results to identify candidates for similarity assessment:
 
 Assess the candidates by relevance. For each candidate:
 
-1. Fetch full work item using `mcp_ado_wit_get_work_item` and update planning-log.md.
+1. Fetch full work item using `az boards work-item show` and update planning-log.md.
 2. Perform similarity assessment.
 3. Assign action using the Similarity Categories table.
 4. Record the assessment in planning-log.md.

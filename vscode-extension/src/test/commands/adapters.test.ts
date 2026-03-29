@@ -156,12 +156,7 @@ describe('syncDetectedAdoAdapter', () => {
     assert.equal(config.project, 'OctoProject');
     assert.equal(config.adapters.ado.organization, 'octo-org');
     assert.equal(config.adapters.ado.project, 'OctoProject');
-
-    const mcpConfig = JSON.parse(fs.readFileSync(path.join(tempRoot, '.vscode', 'mcp.json'), 'utf-8'));
-    assert.deepEqual(mcpConfig.servers.ado, {
-      type: 'http',
-      url: 'https://api.githubcopilot.com/mcp/',
-    });
+    assert.equal(fs.existsSync(path.join(tempRoot, '.vscode', 'mcp.json')), false);
   });
 
   it('adds an Azure DevOps adapter from a detected ssh.dev.azure.com origin', async () => {

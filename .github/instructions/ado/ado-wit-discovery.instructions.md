@@ -34,7 +34,7 @@ Write keyword groups and scoping decisions to `planning-log.md`.
 
 For each keyword group:
 
-1. Call `mcp_ado_search_workitem` with `top: 50`.
+1. Execute a WIQL-backed Azure CLI search and cap review to roughly 50 items.
 2. Deduplicate results across groups (same ID seen in multiple groups).
 3. Write raw results to `artifact-analysis.md` keyed by work item ID.
 
@@ -42,7 +42,7 @@ For each keyword group:
 
 For each unique work item in the result set:
 
-1. Call `mcp_ado_wit_get_work_item` with `expand: all`.
+1. Retrieve each work item in full using Azure CLI or REST.
 2. Extract: Title, Type, State, AreaPath, IterationPath, AssignedTo, Tags,
    Description preview, and relationship counts.
 3. Update `artifact-analysis.md` with full detail rows.

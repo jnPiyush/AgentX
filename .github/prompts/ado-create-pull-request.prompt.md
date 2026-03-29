@@ -10,7 +10,7 @@ Follow the PR Creation workflow in
 
 1. Gather source branch, target branch, project, and repository from context.
 2. Validate the branch and check for existing open PRs.
-3. Resolve reviewer identity GUIDs using `mcp_ado_core_get_identity_ids`.
+3. Resolve reviewers through the Azure CLI or Azure DevOps REST flow described in the instruction file.
 4. Compose the PR description using the Summary / Related Work Items / Testing template.
 5. Present the PR details for approval, then create it.
 6. Link the PR to associated work items and add a B7 comment on each.

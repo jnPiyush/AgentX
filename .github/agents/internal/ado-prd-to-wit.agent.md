@@ -31,13 +31,6 @@ tools:
   - fetch
   - think
   - github/*
-  - ado/search_workitem
-  - ado/wit_get_work_item
-  - ado/wit_get_work_items_for_iteration
-  - ado/wit_list_backlog_work_items
-  - ado/wit_list_backlogs
-  - ado/wit_list_work_item_comments
-  - ado/work_list_team_iterations
   - read
   - edit/createDirectory
   - edit/createFile
@@ -72,7 +65,7 @@ based on information discovery or user interactions.
 |-------|----------------------------------|---------------------------|------------------------------------------------------|
 | 1     | Analyze PRD Artifacts            | search, read              | planning-log.md, artifact-analysis.md                |
 | 2     | Discover Codebase Information    | search, read              | planning-log.md, artifact-analysis.md, work-items.md |
-| 3     | Discover Related Work Items      | mcp_ado, search, read     | planning-log.md, work-items.md                       |
+| 3     | Discover Related Work Items      | Azure CLI, search, read   | planning-log.md, work-items.md                       |
 | 4     | Refine Work Items                | search, read              | planning-log.md, artifact-analysis.md, work-items.md |
 | 5     | Finalize Handoff                 | search, read              | planning-log.md, handoff.md                          |
 
@@ -146,15 +139,15 @@ Phase 3.
 
 ### Phase 3: Discover Related Work Items
 
-Key Tools: `mcp_ado_search_workitem`, `mcp_ado_wit_get_work_item`, file search, read.
+Key Tools: `az boards query`, `az boards work-item show`, file search, read.
 Planning Files: planning-log.md, work-items.md.
 
 Tool parameters:
 
 | Tool                       | Parameters                                                                                    |
 |----------------------------|-----------------------------------------------------------------------------------------------|
-| `mcp_ado_search_workitem`  | searchText (OR between keyword groups, AND for multi-group matches), project[], workItemType[], state[] |
-| `mcp_ado_wit_get_work_item`| id, project, expand (optional: all, fields, links, none, relations)                           |
+| `az boards query`          | WIQL string, organization URL, project name                                                   |
+| `az boards work-item show` | work item id, organization URL, project name                                                  |
 
 Actions:
 

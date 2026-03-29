@@ -191,7 +191,7 @@ async function upsertRemoteAdapter(
   mode: AdapterMode,
   settings: GitHubAdapterSettings | AdoAdapterSettings,
 ): Promise<boolean> {
-  const mcpChanged = upsertMcpServer(root, mode);
+  const mcpChanged = mode === 'github' ? upsertMcpServer(root, mode) : false;
   const configChanged = mode === 'github'
     ? upsertGitHubAdapterConfig(root, settings as GitHubAdapterSettings)
     : upsertAdoAdapterConfig(root, settings as AdoAdapterSettings);
@@ -391,7 +391,7 @@ export async function runAddRemoteAdapterCommand(agentx: AgentXContext): Promise
   const modePick = await vscode.window.showQuickPick(
     [
       { label: 'github', description: 'GitHub Actions, PRs, Projects (via MCP)' },
-      { label: 'ado', description: 'Azure DevOps work items, boards, pipelines (via MCP)' },
+      { label: 'ado', description: 'Azure DevOps work items and boards (Azure CLI provider)' },
     ],
     { placeHolder: 'Select remote adapter to add', title: 'AgentX - Add Remote Adapter' },
   );
