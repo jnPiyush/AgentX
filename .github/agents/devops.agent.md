@@ -84,6 +84,9 @@ Determine pipeline type and structure:
 | CD (deploy) | Tag, release, manual | Deploy to environments |
 | Release | Manual, schedule | Version bump, changelog, publish |
 | Validation | Post-review | Pre-deployment checks |
+| AI model deploy | Tag, manual | Deploy model to Foundry / serving endpoint; run eval regression gate before promoting |
+| AI eval regression | PR, push to prompts/ | Run evaluation dataset and fail pipeline if quality scores drop below baseline |
+| Prompt asset publish | Push to prompts/ | Version and publish prompt files alongside code; never deploy prompt changes without passing eval gate |
 
 ### 3. Implement Workflows
 
@@ -110,6 +113,14 @@ Create deployment docs at `docs/deployment/` covering:
 - Health check endpoints
 - Monitoring and alerting thresholds
 
+**When `needs:ai` is in scope, also document**:
+- Model card location and version (from `evaluation/` or Data Scientist deliverable)
+- Eval baseline file used as the CI gate threshold (`evaluation/baseline.json`)
+- AI health check signals: model endpoint latency (p95), schema-validity rate, eval score delta from baseline
+- Token budget alert thresholds and cost-per-request upper bound
+- Drift signal re-evaluation cadence and who owns it post-deploy
+- Invoke **Ops Monitor** sub-agent after first production deployment to configure tracing, drift detection, and cost/latency alerting
+
 ### 5. Validate
 
 ```bash
@@ -128,6 +139,9 @@ actionlint .github/workflows/*.yml
 - [ ] Pipeline jobs have appropriate dependencies (`needs:`)
 - [ ] Deployment docs cover rollback procedures
 - [ ] Health checks configured for deployed services
+- [ ] If `needs:ai`: eval regression gate present in AI deploy pipeline; eval baseline file referenced
+- [ ] If `needs:ai`: prompt asset changes gated by eval pipeline; model config not hardcoded in workflow
+- [ ] If `needs:ai`: Ops Monitor sub-agent invocation planned for post-deploy observability setup
 
 ### 7. Commit & Handoff
 
@@ -155,6 +169,8 @@ Update Status in GitHub Projects.
 | YAML pipeline design | [YAML Pipelines](../skills/operations/yaml-pipelines/SKILL.md) |
 | Release workflow examples | [Release references](../skills/operations/release-management/references/) |
 | Infrastructure as Code | [Terraform](../skills/infrastructure/terraform/SKILL.md) or [Bicep](../skills/infrastructure/bicep/SKILL.md) |
+| AI observability and alerting | [Logging & Monitoring](../skills/development/logging-monitoring/SKILL.md) |
+| Azure AI Foundry deployments | [Azure Foundry](../skills/ai-systems/azure-foundry/SKILL.md) |
 
 ## Enforcement Gates
 
