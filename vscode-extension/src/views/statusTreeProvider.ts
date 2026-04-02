@@ -10,6 +10,7 @@ interface VersionStamp {
  readonly provider?: string;
  readonly integration?: string;
  readonly mode?: string;
+ readonly llmProvider?: string;
 }
 
 function readJsonFile<T>(filePath: string): T | undefined {
@@ -68,6 +69,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<SidebarTreeIt
    SidebarTreeItem.detail('Workspace', 'root-folder', root ? 'ready' : 'none'),
    SidebarTreeItem.detail('Version', 'versions', versionInfo?.version ?? 'not installed'),
    SidebarTreeItem.detail('Mode', 'server-environment', configInfo?.provider ?? configInfo?.integration ?? configInfo?.mode ?? versionInfo?.mode ?? 'workspace only'),
+    SidebarTreeItem.detail('LLM Adapter', 'hubot', configInfo?.llmProvider ?? 'copilot (default)'),
    SidebarTreeItem.detail('GitHub MCP', 'github', formatConnection(this.agentx.githubConnected)),
     SidebarTreeItem.detail('ADO Provider', 'repo', formatConnection(this.agentx.adoConnected)),
    SidebarTreeItem.detail('Azure skills', azureCompanionIcon, azureCompanionDescription),

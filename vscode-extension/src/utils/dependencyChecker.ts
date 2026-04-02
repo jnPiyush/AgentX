@@ -1,4 +1,5 @@
 import {
+  checkClaudeCodeCli,
   checkAzureCli,
   checkGit,
   checkGitHubCli,
@@ -27,6 +28,7 @@ export async function checkAllDependencies(
 ): Promise<EnvironmentReport> {
   const github = integrations?.githubConnected ?? false;
   const ado = integrations?.adoConnected ?? false;
+  const llmProvider = (integrations?.llmProvider ?? '').trim().toLowerCase();
   // Run independent checks in parallel
   // NOTE: GitHub Copilot is bundled into VS Code 1.96+. No runtime
   // check is needed. The extension.ts activation guard
@@ -37,6 +39,7 @@ export async function checkAllDependencies(
     checkGit(),
     checkGitHubCli(),
     checkAzureCli(),
+    checkClaudeCodeCli(),
   ]);
 
   // Adjust severity based on active integrations
@@ -47,6 +50,9 @@ export async function checkAllDependencies(
     }
     if (r.name === 'Azure CLI (az)') {
       r.severity = ado ? 'required' : 'optional';
+    }
+    if (r.name === 'Claude Code CLI') {
+      r.severity = llmProvider === 'claude-code' ? 'required' : 'optional';
     }
     // PowerShell is recommended (not required) in local mode.
     // It is only required when GitHub or ADO integrations are active, because

@@ -258,3 +258,37 @@ export async function checkAzureCli(): Promise<DependencyResult> {
       : 'az extension add --name azure-devops',
   };
 }
+
+export async function checkClaudeCodeCli(): Promise<DependencyResult> {
+  const raw = await tryExec('claude --version');
+  const found = raw.length > 0;
+  const version = found ? parseVersion(raw) : '';
+
+  let authenticated = false;
+  if (found) {
+    const authStatus = await tryExec('claude auth status', 10_000);
+    authenticated = authStatus.length > 0;
+  }
+
+  let message = '';
+  if (!found) {
+    message = 'Claude Code CLI not installed. Required for Claude subscription mode.';
+  } else if (!authenticated) {
+    message = `Claude Code CLI ${version} found but not authenticated. Run: claude auth login`;
+  } else {
+    message = `Claude Code CLI ${version} detected and authenticated.`;
+  }
+
+  return {
+    name: 'Claude Code CLI',
+    found: found && authenticated,
+    version,
+    severity: 'optional',
+    message,
+    fixUrl: 'https://docs.anthropic.com/en/docs/claude-code/quickstart',
+    fixLabel: 'Install Claude Code',
+    fixCommand: process.platform === 'win32'
+      ? 'irm https://claude.ai/install.ps1 | iex'
+      : 'curl -fsSL https://claude.ai/install.sh | bash',
+  };
+}

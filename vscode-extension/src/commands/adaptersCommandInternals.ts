@@ -5,7 +5,11 @@ import { AgentXContext } from '../agentxContext';
 import { promptWorkspaceRoot, readJsonWithComments } from './initializeInternals';
 import { runCriticalPreCheck } from './setupWizard';
 
-type AdapterMode = 'github' | 'ado';
+export type AdapterMode = 'github' | 'ado' | 'local';
+
+interface AdapterPick extends vscode.QuickPickItem {
+  readonly value: AdapterMode;
+}
 
 interface AgentXConfig {
   readonly created?: string;
@@ -15,15 +19,27 @@ interface AgentXConfig {
   readonly [key: string]: unknown;
 }
 
-interface GitHubAdapterSettings {
+export interface GitHubAdapterSettings {
   readonly repoSlug: string;
   readonly projectNum?: number | null;
 }
 
-interface AdoAdapterSettings {
+export interface AdoAdapterSettings {
   readonly organization: string;
   readonly project: string;
 }
+
+export interface RemoteAdapterApplyResult {
+  readonly changed: boolean;
+  readonly mode: AdapterMode;
+  readonly preCheckPassed: boolean;
+}
+
+const ADAPTER_MODE_ITEMS: readonly AdapterPick[] = [
+  { label: 'github', value: 'github', description: 'GitHub Actions, PRs, Projects (via MCP)' },
+  { label: 'ado', value: 'ado', description: 'Azure DevOps work items and boards (Azure CLI provider)' },
+  { label: 'local', value: 'local', description: 'Workspace-only mode without a remote backlog adapter' },
+];
 
 async function detectOriginRemoteUrl(root: string): Promise<string | undefined> {
   try {
@@ -36,7 +52,7 @@ async function detectOriginRemoteUrl(root: string): Promise<string | undefined> 
   }
 }
 
-async function detectGitHubOriginRepo(root: string): Promise<string | undefined> {
+export async function detectGitHubOriginRepo(root: string): Promise<string | undefined> {
   const remoteUrl = await detectOriginRemoteUrl(root);
   if (!remoteUrl) {
     return undefined;
@@ -54,7 +70,7 @@ async function detectGitHubOriginRepo(root: string): Promise<string | undefined>
   }
 }
 
-async function detectAdoOrigin(root: string): Promise<AdoAdapterSettings | undefined> {
+export async function detectAdoOrigin(root: string): Promise<AdoAdapterSettings | undefined> {
   const remoteUrl = await detectOriginRemoteUrl(root);
   if (!remoteUrl) {
     return undefined;
@@ -184,6 +200,51 @@ function upsertAdoAdapterConfig(root: string, settings: AdoAdapterSettings): boo
   };
 
   return writeJsonIfChanged(configFile, nextConfig);
+}
+
+function switchToLocalAdapterConfig(root: string): boolean {
+  const configFile = path.join(root, '.agentx', 'config.json');
+  const existingConfig = readJsonWithComments<AgentXConfig>(configFile) ?? {};
+
+  const nextConfig: Record<string, unknown> = {
+    ...existingConfig,
+    provider: 'local',
+    integration: 'local',
+    mode: 'local',
+    created: existingConfig.created ?? new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return writeJsonIfChanged(configFile, nextConfig);
+}
+
+export async function applyRemoteAdapterConfiguration(
+  agentx: AgentXContext,
+  root: string,
+  mode: AdapterMode,
+  settings?: GitHubAdapterSettings | AdoAdapterSettings,
+  options?: { readonly runPreCheck?: boolean },
+): Promise<RemoteAdapterApplyResult> {
+  const changed = mode === 'local'
+    ? switchToLocalAdapterConfig(root)
+    : await upsertRemoteAdapter(root, mode, settings as GitHubAdapterSettings | AdoAdapterSettings);
+
+  agentx.invalidateCache();
+  await vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
+  await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
+  await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
+
+  let preCheckPassed = true;
+  if ((options?.runPreCheck ?? true) && mode !== 'local') {
+    const preCheck = await runCriticalPreCheck(agentx, true);
+    preCheckPassed = preCheck.passed;
+  }
+
+  return {
+    changed,
+    mode,
+    preCheckPassed,
+  };
 }
 
 async function upsertRemoteAdapter(
@@ -374,7 +435,23 @@ async function promptAdoSettings(root: string): Promise<{ organization?: string;
   return { organization, project };
 }
 
-export async function runAddRemoteAdapterCommand(agentx: AgentXContext): Promise<void> {
+async function promptAdapterMode(preferredMode?: AdapterMode): Promise<AdapterMode | undefined> {
+  if (preferredMode) {
+    return preferredMode;
+  }
+
+  const picked = await vscode.window.showQuickPick(ADAPTER_MODE_ITEMS, {
+    placeHolder: 'Select remote adapter to add or switch',
+    title: 'AgentX - Add Remote Adapter',
+  });
+
+  return picked?.value;
+}
+
+export async function runAddRemoteAdapterCommand(
+  agentx: AgentXContext,
+  preferredMode?: AdapterMode,
+): Promise<void> {
   const root = await promptWorkspaceRoot('AgentX - Add Remote Adapter');
   if (!root) {
     return;
@@ -388,18 +465,20 @@ export async function runAddRemoteAdapterCommand(agentx: AgentXContext): Promise
     return;
   }
 
-  const modePick = await vscode.window.showQuickPick(
-    [
-      { label: 'github', description: 'GitHub Actions, PRs, Projects (via MCP)' },
-      { label: 'ado', description: 'Azure DevOps work items and boards (Azure CLI provider)' },
-    ],
-    { placeHolder: 'Select remote adapter to add', title: 'AgentX - Add Remote Adapter' },
-  );
-  if (!modePick) {
+  const mode = await promptAdapterMode(preferredMode);
+  if (!mode) {
     return;
   }
 
-  const mode = modePick.label as AdapterMode;
+  if (mode === 'local') {
+    const result = await applyRemoteAdapterConfiguration(agentx, root, 'local', undefined, { runPreCheck: false });
+
+    const suffix = result.changed ? 'Active mode switched to local.' : 'Local mode is already active for this workspace.';
+    vscode.window.showInformationMessage(`AgentX: ${suffix}`);
+    vscode.commands.executeCommand('agentx.refresh');
+    return;
+  }
+
   const githubSettings = mode === 'github' ? await promptGitHubSettings(root) : undefined;
   if (mode === 'github' && !githubSettings) {
     return;
@@ -410,7 +489,8 @@ export async function runAddRemoteAdapterCommand(agentx: AgentXContext): Promise
     return;
   }
 
-  await upsertRemoteAdapter(
+  const result = await applyRemoteAdapterConfiguration(
+    agentx,
     root,
     mode,
     mode === 'github'
@@ -422,15 +502,10 @@ export async function runAddRemoteAdapterCommand(agentx: AgentXContext): Promise
           organization: adoSettings?.organization ?? '',
           project: adoSettings?.project ?? '',
         },
+    { runPreCheck: true },
   );
 
-  agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
-
-  const preCheck = await runCriticalPreCheck(agentx, true);
-  if (!preCheck.passed) {
+  if (!result.preCheckPassed) {
     vscode.window.showWarningMessage(
       `AgentX: ${mode === 'github' ? 'GitHub' : 'Azure DevOps'} adapter added and active mode switched, but some required dependencies still need attention.`,
     );

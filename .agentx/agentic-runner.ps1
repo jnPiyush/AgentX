@@ -4,7 +4,8 @@
 # ---------------------------------------------------------------------------
 #
 # Provides an LLM-powered agentic loop for the CLI, equivalent to the VS Code
-# extension's AgenticLoop. Uses GitHub Models API via `gh auth token` OAuth.
+# extension's AgenticLoop. Current execution supports GitHub-hosted providers,
+# with provider-aware readiness checks for follow-on local runtimes.
 #
 # Features:
 #   - Calls GitHub Models API (Claude, GPT, Gemini) with tool schemas
@@ -21,7 +22,8 @@
 #
 # Requirements:
 #   - PowerShell 7+
-#   - gh CLI authenticated (`gh auth token` must return a valid token)
+#   - gh CLI authenticated for GitHub-hosted providers
+#   - claude CLI authenticated for Claude Code provider readiness checks
 # ---------------------------------------------------------------------------
 
 #Requires -Version 7.0
@@ -33,6 +35,9 @@ Set-StrictMode -Version Latest
 
 $Script:GITHUB_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions'
 $Script:COPILOT_API_URL = 'https://api.githubcopilot.com/chat/completions'
+$Script:OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
+$Script:ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
+$Script:ANTHROPIC_API_VERSION = '2023-06-01'
 $Script:DEFAULT_MODEL = 'gpt-4o'
 $Script:COMPACTION_THRESHOLD_PERCENT = 0.70
 $Script:COMPACTION_SUMMARY_MAX_CHARS = 2200
@@ -40,8 +45,12 @@ $Script:COMPACTION_SUMMARY_MAX_SOURCE_CHARS = 24000
 $Script:COMPACTION_SUMMARY_RESERVED_TOKENS = 800
 $Script:MAX_ITERATIONS = 30
 $Script:MAX_TOOL_RESULT_CHARS = 8000
+$Script:CLAUDE_CODE_MAX_TURNS = 12
 $Script:SESSION_DIR = $null
-$Script:ApiMode = $null  # 'copilot' or 'models'
+$Script:ApiMode = $null  # 'copilot', 'models', or provider-specific transport ids
+$Script:ActiveProvider = $null
+$Script:ProviderRegistry = @{}
+$Script:RunnerConfig = @{}
 $Script:DEFAULT_SESSION_SUMMARY_MAX_CHARS = 1600
 $Script:RESEARCH_FIRST_MIN_STEPS = 2
 
@@ -52,22 +61,22 @@ $Script:SELF_REVIEW_REVIEWER_MAX_ITERATIONS = 8
 $Script:CLARIFICATION_MAX_ITERATIONS = 6
 $Script:CLARIFICATION_RESPONDER_MAX_ITERATIONS = 5
 
-$Script:MODEL_CONTEXT_WINDOWS = @{
-    'claude-opus-4.6'   = 200000
-    'claude-sonnet-4.6' = 200000
-    'claude-sonnet-4.5' = 200000
-    'claude-sonnet-4'   = 200000
-    'claude-haiku-4.5'  = 200000
-    'gpt-5.4'           = 200000
-    'gpt-5.2-codex'     = 272000
-    'gpt-5.1'           = 200000
-    'gpt-5-mini'        = 200000
-    'gpt-4o'            = 128000
-    'gpt-4.1'           = 128000
-    'gpt-4.1-mini'      = 128000
-    'gpt-4.1-nano'      = 128000
-    'gpt-4o-mini'       = 128000
-    'gemini-2.5-pro'    = 1000000
+$Script:MODEL_CAPABILITIES = @{
+    'claude-opus-4.6' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
+    'claude-sonnet-4.6' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
+    'claude-sonnet-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
+    'claude-sonnet-4' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
+    'claude-haiku-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
+    'gpt-5.4' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
+    'gpt-5.2-codex' = @{ contextWindow = 272000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
+    'gpt-5.1' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
+    'gpt-5-mini' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
+    'gpt-4o' = @{ contextWindow = 128000; providers = @('copilot', 'github-models', 'openai-api'); reasoningMode = 'none' }
+    'gpt-4.1' = @{ contextWindow = 128000; providers = @('copilot', 'github-models', 'openai-api'); reasoningMode = 'none' }
+    'gpt-4.1-mini' = @{ contextWindow = 128000; providers = @('copilot', 'github-models', 'openai-api'); reasoningMode = 'none' }
+    'gpt-4.1-nano' = @{ contextWindow = 128000; providers = @('copilot', 'github-models', 'openai-api'); reasoningMode = 'none' }
+    'gpt-4o-mini' = @{ contextWindow = 128000; providers = @('copilot', 'github-models', 'openai-api'); reasoningMode = 'none' }
+    'gemini-2.5-pro' = @{ contextWindow = 1000000; providers = @('copilot'); reasoningMode = 'none' }
 }
 
 function Get-RunnerConfig([string]$WorkspaceRoot) {
@@ -99,6 +108,462 @@ function Get-RunnerNestedConfigValue($Config, [string]$ParentName, [string]$Chil
     $parent = Get-RunnerConfigValue $Config $ParentName
     if ($null -eq $parent) { return $Default }
     return Get-RunnerConfigValue $parent $ChildName $Default
+}
+
+function ConvertTo-RunnerProviderId([string]$Value, [string]$Default = 'auto') {
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $Default }
+
+    switch ($Value.Trim().ToLowerInvariant()) {
+        'auto' { return 'auto' }
+        'copilot' { return 'copilot' }
+        'github-models' { return 'github-models' }
+        'github_models' { return 'github-models' }
+        'githubmodels' { return 'github-models' }
+        'models' { return 'github-models' }
+        'claude' { return 'claude-code' }
+        'claude-code' { return 'claude-code' }
+        'claude_code' { return 'claude-code' }
+        'claudecode' { return 'claude-code' }
+        'anthropic' { return 'anthropic-api' }
+        'anthropic-api' { return 'anthropic-api' }
+        'anthropic_api' { return 'anthropic-api' }
+        'claude-api' { return 'anthropic-api' }
+        'claude_api' { return 'anthropic-api' }
+        'openai' { return 'openai-api' }
+        'openai-api' { return 'openai-api' }
+        'openai_api' { return 'openai-api' }
+        default { return $null }
+    }
+}
+
+function Test-RunnerCommandAvailable([string]$CommandName) {
+    try {
+        $null = Get-Command $CommandName -ErrorAction Stop
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Invoke-RunnerCommand {
+    param(
+        [Parameter(Mandatory)][string]$FileName,
+        [string[]]$Arguments = @()
+    )
+
+    $output = & $FileName @Arguments 2>&1
+    $exitCode = if (Test-Path variable:LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
+
+    return [PSCustomObject]@{
+        output = [string]($output -join [Environment]::NewLine)
+        exitCode = $exitCode
+    }
+}
+
+function Invoke-RunnerCommandWithInput {
+    param(
+        [Parameter(Mandatory)][string]$FileName,
+        [string[]]$Arguments = @(),
+        [string]$InputText = ''
+    )
+
+    try {
+        $output = $InputText | & $FileName @Arguments 2>&1
+        $exitCode = if (Test-Path variable:LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
+
+        return [PSCustomObject]@{
+            output = [string]($output -join [Environment]::NewLine)
+            exitCode = $exitCode
+        }
+    } catch {
+        throw $_
+    }
+}
+
+function Get-RunnerProviderPreference($Config) {
+    $envValue = [string]$env:AGENTX_LLM_PROVIDER
+    if (-not [string]::IsNullOrWhiteSpace($envValue)) {
+        return [PSCustomObject]@{
+            providerId = ConvertTo-RunnerProviderId -Value $envValue
+            source = 'env'
+            rawValue = $envValue
+        }
+    }
+
+    $configValue = Get-RunnerConfigValue $Config 'llmProvider'
+    if (-not [string]::IsNullOrWhiteSpace([string]$configValue)) {
+        return [PSCustomObject]@{
+            providerId = ConvertTo-RunnerProviderId -Value ([string]$configValue)
+            source = 'config'
+            rawValue = [string]$configValue
+        }
+    }
+
+    return [PSCustomObject]@{
+        providerId = 'auto'
+        source = 'default'
+        rawValue = 'auto'
+    }
+}
+
+function Get-RunnerReadinessMode($Config, [string]$PreferredProviderId = 'auto') {
+    $envValue = [string]$env:AGENTX_LLM_READINESS_MODE
+    $configValue = [string](Get-RunnerConfigValue $Config 'llmReadinessMode' '')
+    $rawValue = if (-not [string]::IsNullOrWhiteSpace($envValue)) { $envValue } elseif (-not [string]::IsNullOrWhiteSpace($configValue)) { $configValue } elseif ($PreferredProviderId -and $PreferredProviderId -ne 'auto') { 'strict' } else { 'advisory' }
+
+    switch ($rawValue.Trim().ToLowerInvariant()) {
+        'strict' { return 'strict' }
+        'enforced' { return 'strict' }
+        'advisory' { return 'advisory' }
+        'warn' { return 'advisory' }
+        default { return 'advisory' }
+    }
+}
+
+function Get-RunnerProviderConfigRecord($Config, [string]$ProviderId) {
+    $providers = Get-RunnerConfigValue $Config 'llmProviders'
+    if ($null -eq $providers) { return $null }
+    return Get-RunnerConfigValue $providers $ProviderId
+}
+
+function Test-RunnerProviderEnabled($Config, [string]$ProviderId) {
+    $record = Get-RunnerProviderConfigRecord -Config $Config -ProviderId $ProviderId
+    if ($null -eq $record) { return $true }
+
+    $enabled = Get-RunnerConfigValue $record 'enabled' $null
+    if ($null -eq $enabled) { return $true }
+
+    if ($enabled -is [bool]) { return $enabled }
+    return ([string]$enabled).Trim().ToLowerInvariant() -notin @('false', '0', 'off', 'disabled', 'no')
+}
+
+function Get-RunnerProviderDisplayName([string]$ProviderId) {
+    switch ($ProviderId) {
+        'copilot' { return 'Copilot API' }
+        'github-models' { return 'GitHub Models' }
+        'claude-code' { return 'Claude Code' }
+        'anthropic-api' { return 'Anthropic API' }
+        'openai-api' { return 'OpenAI API' }
+        default { return $ProviderId }
+    }
+}
+
+function Get-RunnerProviderTransport([string]$ProviderId) {
+    switch ($ProviderId) {
+        'copilot' { return 'copilot' }
+        'github-models' { return 'models' }
+        'claude-code' { return 'claude-code' }
+        'anthropic-api' { return 'anthropic-api' }
+        'openai-api' { return 'openai-api' }
+        default { return 'models' }
+    }
+}
+
+function Get-RunnerDefaultModel([string]$ProviderId) {
+    switch ($ProviderId) {
+        'claude-code' { return 'claude-sonnet-4.6' }
+        'anthropic-api' { return 'claude-sonnet-4.6' }
+        'openai-api' { return 'gpt-5.4' }
+        'copilot' { return $Script:DEFAULT_MODEL }
+        'github-models' { return $Script:DEFAULT_MODEL }
+        default { return $Script:DEFAULT_MODEL }
+    }
+}
+
+function Get-RunnerProviderEnvVarName(
+    $Config,
+    [string]$ProviderId,
+    [string]$SettingName,
+    [string]$DefaultName
+) {
+    $record = Get-RunnerProviderConfigRecord -Config $Config -ProviderId $ProviderId
+    $configuredName = [string](Get-RunnerConfigValue $record $SettingName '')
+    if (-not [string]::IsNullOrWhiteSpace($configuredName)) {
+        return $configuredName.Trim()
+    }
+
+    return $DefaultName
+}
+
+function Get-RunnerProviderEnvValue(
+    $Config,
+    [string]$ProviderId,
+    [string]$SettingName,
+    [string]$DefaultName
+) {
+    $envVarName = Get-RunnerProviderEnvVarName -Config $Config -ProviderId $ProviderId -SettingName $SettingName -DefaultName $DefaultName
+    if (-not $envVarName) {
+        return ''
+    }
+
+    return [string][Environment]::GetEnvironmentVariable($envVarName)
+}
+
+function Get-RunnerProviderConfigString(
+    $Config,
+    [string]$ProviderId,
+    [string]$SettingName,
+    [string]$DefaultValue = ''
+) {
+    $record = Get-RunnerProviderConfigRecord -Config $Config -ProviderId $ProviderId
+    $configuredValue = [string](Get-RunnerConfigValue $record $SettingName $DefaultValue)
+    if ([string]::IsNullOrWhiteSpace($configuredValue)) {
+        return $DefaultValue
+    }
+
+    return $configuredValue.Trim()
+}
+
+function Get-RunnerModelCapability([string]$ModelId) {
+    if ([string]::IsNullOrWhiteSpace($ModelId)) { return $null }
+
+    $normalizedModelId = $ModelId.Trim().ToLowerInvariant()
+    if ($Script:MODEL_CAPABILITIES.ContainsKey($normalizedModelId)) {
+        return $Script:MODEL_CAPABILITIES[$normalizedModelId]
+    }
+
+    return $null
+}
+
+function New-RunnerProviderRecord {
+    param(
+        [string]$ProviderId,
+        [bool]$Enabled,
+        [bool]$Ready,
+        [string]$Reason,
+        [string]$AuthSource = '',
+        [string]$SelectionSource = '',
+        [string]$RequestedProviderId = 'auto'
+    )
+
+    return [PSCustomObject]@{
+        id = $ProviderId
+        displayName = Get-RunnerProviderDisplayName -ProviderId $ProviderId
+        transport = Get-RunnerProviderTransport -ProviderId $ProviderId
+        enabled = $Enabled
+        ready = $Ready
+        reason = $Reason
+        authSource = $AuthSource
+        selectionSource = $SelectionSource
+        requestedProviderId = $RequestedProviderId
+    }
+}
+
+function Test-CopilotProviderReady([string]$GitHubToken) {
+    if ([string]::IsNullOrWhiteSpace($GitHubToken)) {
+        return [PSCustomObject]@{
+            ready = $false
+            reason = 'GitHub CLI not authenticated. Run: gh auth login'
+        }
+    }
+
+    try {
+        $null = Invoke-RestMethod -Uri 'https://api.githubcopilot.com/models' -Headers @{
+            'Authorization' = "Bearer $GitHubToken"
+            'Copilot-Integration-Id' = 'vscode-chat'
+            'Editor-Version' = 'vscode/1.96.0'
+            'Editor-Plugin-Version' = 'copilot-chat/0.24.0'
+            'Openai-Organization' = 'github-copilot'
+        } -ErrorAction Stop
+
+        return [PSCustomObject]@{
+            ready = $true
+            reason = 'Copilot scope available via gh auth token.'
+        }
+    } catch {
+        return [PSCustomObject]@{
+            ready = $false
+            reason = 'Copilot API unavailable for the current gh auth token. Run gh auth refresh -s copilot to unlock the full catalog.'
+        }
+    }
+}
+
+function Test-ClaudeCodeProviderReady {
+    if (-not (Test-RunnerCommandAvailable 'claude')) {
+        return [PSCustomObject]@{
+            ready = $false
+            reason = 'Claude Code CLI not installed. Install it with: irm https://claude.ai/install.ps1 | iex'
+        }
+    }
+
+    $status = Invoke-RunnerCommand -FileName 'claude' -Arguments @('auth', 'status')
+    if ($status.exitCode -eq 0) {
+        return [PSCustomObject]@{
+            ready = $true
+            reason = 'Claude Code CLI authenticated via claude auth status.'
+        }
+    }
+
+    return [PSCustomObject]@{
+        ready = $false
+        reason = 'Claude Code CLI is not authenticated. Run: claude auth login'
+    }
+}
+
+function Test-AnthropicApiProviderReady($Config) {
+    $apiKey = Get-RunnerProviderEnvValue -Config $Config -ProviderId 'anthropic-api' -SettingName 'apiKeyEnvVar' -DefaultName 'ANTHROPIC_API_KEY'
+    if (-not [string]::IsNullOrWhiteSpace($apiKey)) {
+        return [PSCustomObject]@{
+            ready = $true
+            reason = 'Anthropic API key detected from environment.'
+        }
+    }
+
+    return [PSCustomObject]@{
+        ready = $false
+        reason = 'Anthropic API key missing. Set ANTHROPIC_API_KEY or configure the workspace LLM adapter.'
+    }
+}
+
+function Test-OpenAIApiProviderReady($Config) {
+    $apiKey = Get-RunnerProviderEnvValue -Config $Config -ProviderId 'openai-api' -SettingName 'apiKeyEnvVar' -DefaultName 'OPENAI_API_KEY'
+    if (-not [string]::IsNullOrWhiteSpace($apiKey)) {
+        return [PSCustomObject]@{
+            ready = $true
+            reason = 'OpenAI API key detected from environment.'
+        }
+    }
+
+    return [PSCustomObject]@{
+        ready = $false
+        reason = 'OpenAI API key missing. Set OPENAI_API_KEY or configure the workspace LLM adapter.'
+    }
+}
+
+function Select-RunnerProviderFromRegistry($Registry, [string]$RequestedProviderId = 'auto', [string]$ReadinessMode = 'advisory') {
+    if (-not $Registry) {
+        throw 'No provider registry is available.'
+    }
+
+    $requested = if ([string]::IsNullOrWhiteSpace($RequestedProviderId)) { 'auto' } else { $RequestedProviderId }
+    $copilot = $Registry['copilot']
+    $githubModels = $Registry['github-models']
+
+    if ($requested -eq 'auto') {
+        if ($copilot -and $copilot.enabled -and $copilot.ready) { return $copilot }
+        if ($githubModels -and $githubModels.enabled -and $githubModels.ready) { return $githubModels }
+        throw 'No ready provider is available. GitHub CLI authentication is required.'
+    }
+
+    $selected = $Registry[$requested]
+    if (-not $selected) {
+        throw "Unsupported llmProvider '$requested'. Supported values are auto, copilot, github-models, claude-code, anthropic-api, and openai-api."
+    }
+
+    if (-not $selected.enabled) {
+        throw "$($selected.displayName) is disabled by llmProviders.$requested.enabled."
+    }
+
+    if ($selected.ready) {
+        return $selected
+    }
+
+    if ($ReadinessMode -eq 'advisory' -and $githubModels -and $githubModels.enabled -and $githubModels.ready -and $requested -ne 'github-models') {
+        $githubModels.reason = "$($selected.displayName) is not ready. Falling back to GitHub Models because readiness mode is advisory."
+        return $githubModels
+    }
+
+    throw "$($selected.displayName) is not ready. $($selected.reason)"
+}
+
+function Get-ActiveProviderId {
+    if ($Script:ActiveProvider -and $Script:ActiveProvider.id) { return [string]$Script:ActiveProvider.id }
+    if ($Script:ApiMode -eq 'copilot') { return 'copilot' }
+    if ($Script:ApiMode -eq 'claude-code') { return 'claude-code' }
+    if ($Script:ApiMode -eq 'anthropic-api') { return 'anthropic-api' }
+    if ($Script:ApiMode -eq 'openai-api') { return 'openai-api' }
+    return 'github-models'
+}
+
+function Get-RunnerModelMap([string]$ProviderId) {
+    switch ($ProviderId) {
+        'copilot' { return $Script:MODEL_MAP_COPILOT }
+        'github-models' { return $Script:MODEL_MAP_GHMODELS }
+        'claude-code' { return $Script:MODEL_MAP_CLAUDE_CODE }
+        'anthropic-api' { return $Script:MODEL_MAP_ANTHROPIC_API }
+        'openai-api' { return $Script:MODEL_MAP_OPENAI_API }
+        default { return $Script:MODEL_MAP_GHMODELS }
+    }
+}
+
+function Test-RunnerModelSupportedByProvider([string]$ProviderId, [string]$ModelId) {
+    $normalizedProviderId = if ($ProviderId) { $ProviderId.Trim().ToLowerInvariant() } else { '' }
+    $normalizedModelId = if ($ModelId) { $ModelId.Trim().ToLowerInvariant() } else { '' }
+    if (-not $normalizedModelId) { return $false }
+
+    $capability = Get-RunnerModelCapability -ModelId $normalizedModelId
+    if ($capability) {
+        return @($capability.providers) -contains $normalizedProviderId
+    }
+
+    switch ($normalizedProviderId) {
+        'claude-code' {
+            return $normalizedModelId -match '^claude-(opus|sonnet|haiku)-'
+        }
+        'anthropic-api' {
+            return $normalizedModelId -match '^claude-(opus|sonnet|haiku)-'
+        }
+        'openai-api' {
+            return $normalizedModelId -match '^gpt-'
+        }
+        'github-models' {
+            return $normalizedModelId -match '^(gpt|gemini)-'
+        }
+        default {
+            return $true
+        }
+    }
+}
+
+function Write-RunnerProviderDiagnostics($Provider, [array]$ModelCandidates = @()) {
+    if (-not $Provider) { return }
+
+    $detail = @("Provider: $($Provider.displayName)")
+    if ($Provider.selectionSource) { $detail += "source: $($Provider.selectionSource)" }
+    if ($Provider.authSource) { $detail += "auth: $($Provider.authSource)" }
+    $detail += "transport: $($Provider.transport)"
+    Write-Host "`e[36m  $($detail -join ' | ')`e[0m"
+
+    if (-not [string]::IsNullOrWhiteSpace([string]$Provider.reason)) {
+        $tone = if ($Provider.ready) { 90 } else { 33 }
+        Write-Host ("`e[{0}m  {1}`e[0m" -f $tone, $Provider.reason)
+    }
+
+    if ($ModelCandidates -and $ModelCandidates.Count -gt 0) {
+        Write-Host "`e[90m  Model fallback chain: $($ModelCandidates -join ' -> ')`e[0m"
+    }
+}
+
+function Initialize-ProviderRegistry([string]$GitHubToken) {
+    $preference = Get-RunnerProviderPreference -Config $Script:RunnerConfig
+    $requestedProviderId = $preference.providerId
+    if (-not $requestedProviderId) {
+        throw "Unsupported llmProvider '$($preference.rawValue)'. Supported values are auto, copilot, github-models, claude-code, anthropic-api, and openai-api."
+    }
+
+    $readinessMode = Get-RunnerReadinessMode -Config $Script:RunnerConfig -PreferredProviderId $requestedProviderId
+    $copilotEnabled = Test-RunnerProviderEnabled -Config $Script:RunnerConfig -ProviderId 'copilot'
+    $githubModelsEnabled = Test-RunnerProviderEnabled -Config $Script:RunnerConfig -ProviderId 'github-models'
+    $claudeCodeEnabled = Test-RunnerProviderEnabled -Config $Script:RunnerConfig -ProviderId 'claude-code'
+    $anthropicApiEnabled = Test-RunnerProviderEnabled -Config $Script:RunnerConfig -ProviderId 'anthropic-api'
+    $openAiApiEnabled = Test-RunnerProviderEnabled -Config $Script:RunnerConfig -ProviderId 'openai-api'
+    $copilotProbe = if ($copilotEnabled) { Test-CopilotProviderReady -GitHubToken $GitHubToken } else { [PSCustomObject]@{ ready = $false; reason = 'Copilot API is disabled in configuration.' } }
+    $githubModelsReady = $githubModelsEnabled -and -not [string]::IsNullOrWhiteSpace($GitHubToken)
+    $githubModelsReason = if ($githubModelsReady) { 'GitHub Models available via gh auth token.' } elseif ($githubModelsEnabled) { 'GitHub CLI not authenticated. Run: gh auth login' } else { 'GitHub Models is disabled in configuration.' }
+    $claudeCodeProbe = if ($claudeCodeEnabled) { Test-ClaudeCodeProviderReady } else { [PSCustomObject]@{ ready = $false; reason = 'Claude Code is disabled in configuration.' } }
+    $anthropicApiProbe = if ($anthropicApiEnabled) { Test-AnthropicApiProviderReady -Config $Script:RunnerConfig } else { [PSCustomObject]@{ ready = $false; reason = 'Anthropic API is disabled in configuration.' } }
+    $openAiApiProbe = if ($openAiApiEnabled) { Test-OpenAIApiProviderReady -Config $Script:RunnerConfig } else { [PSCustomObject]@{ ready = $false; reason = 'OpenAI API is disabled in configuration.' } }
+
+    $Script:ProviderRegistry = @{
+        'copilot' = New-RunnerProviderRecord -ProviderId 'copilot' -Enabled $copilotEnabled -Ready ([bool]$copilotProbe.ready) -Reason ([string]$copilotProbe.reason) -AuthSource 'gh' -SelectionSource $preference.source -RequestedProviderId $requestedProviderId
+        'github-models' = New-RunnerProviderRecord -ProviderId 'github-models' -Enabled $githubModelsEnabled -Ready $githubModelsReady -Reason $githubModelsReason -AuthSource 'gh' -SelectionSource $preference.source -RequestedProviderId $requestedProviderId
+        'claude-code' = New-RunnerProviderRecord -ProviderId 'claude-code' -Enabled $claudeCodeEnabled -Ready ([bool]$claudeCodeProbe.ready) -Reason ([string]$claudeCodeProbe.reason) -AuthSource 'claude' -SelectionSource $preference.source -RequestedProviderId $requestedProviderId
+        'anthropic-api' = New-RunnerProviderRecord -ProviderId 'anthropic-api' -Enabled $anthropicApiEnabled -Ready ([bool]$anthropicApiProbe.ready) -Reason ([string]$anthropicApiProbe.reason) -AuthSource 'env' -SelectionSource $preference.source -RequestedProviderId $requestedProviderId
+        'openai-api' = New-RunnerProviderRecord -ProviderId 'openai-api' -Enabled $openAiApiEnabled -Ready ([bool]$openAiApiProbe.ready) -Reason ([string]$openAiApiProbe.reason) -AuthSource 'env' -SelectionSource $preference.source -RequestedProviderId $requestedProviderId
+    }
+
+    $Script:ActiveProvider = Select-RunnerProviderFromRegistry -Registry $Script:ProviderRegistry -RequestedProviderId $requestedProviderId -ReadinessMode $readinessMode
+    $Script:ApiMode = $Script:ActiveProvider.transport
 }
 
 function Get-ResearchFirstMode($Config) {
@@ -483,6 +948,50 @@ $Script:MODEL_MAP_GHMODELS = @{
     'o3-mini'          = 'gpt-4.1-mini'
 }
 
+$Script:MODEL_MAP_CLAUDE_CODE = @{
+    'opus 4.6'          = 'claude-opus-4.6'
+    'opus 4'            = 'claude-opus-4.6'
+    'claude opus 4.6'   = 'claude-opus-4.6'
+    'claude opus 4'     = 'claude-opus-4.6'
+    'claude sonnet 4.6' = 'claude-sonnet-4.6'
+    'claude sonnet 4.5' = 'claude-sonnet-4.5'
+    'claude sonnet 4'   = 'claude-sonnet-4'
+    'claude haiku'      = 'claude-haiku-4.5'
+    'sonnet'            = 'claude-sonnet-4.6'
+    'opus'              = 'claude-opus-4.6'
+    'haiku'             = 'claude-haiku-4.5'
+}
+
+$Script:MODEL_MAP_ANTHROPIC_API = @{
+    'opus 4.6'          = 'claude-opus-4.6'
+    'opus 4'            = 'claude-opus-4.6'
+    'claude opus 4.6'   = 'claude-opus-4.6'
+    'claude opus 4'     = 'claude-opus-4.6'
+    'claude sonnet 4.6' = 'claude-sonnet-4.6'
+    'claude sonnet 4.5' = 'claude-sonnet-4.5'
+    'claude sonnet 4'   = 'claude-sonnet-4'
+    'claude haiku'      = 'claude-haiku-4.5'
+    'sonnet'            = 'claude-sonnet-4.6'
+    'opus'              = 'claude-opus-4.6'
+    'haiku'             = 'claude-haiku-4.5'
+}
+
+$Script:MODEL_MAP_OPENAI_API = @{
+    'gpt-5.4'       = 'gpt-5.4'
+    'gpt-5.3-codex' = 'gpt-5.2-codex'
+    'gpt-5.2-codex' = 'gpt-5.2-codex'
+    'gpt-5.1'       = 'gpt-5.1'
+    'gpt-5'         = 'gpt-5.1'
+    'gpt-5-mini'    = 'gpt-5-mini'
+    'gpt-4o'        = 'gpt-4o'
+    'gpt-4.1'       = 'gpt-4.1'
+    'gpt-4.1-mini'  = 'gpt-4.1-mini'
+    'gpt-4.1-nano'  = 'gpt-4.1-nano'
+    'gpt-4o-mini'   = 'gpt-4o-mini'
+    'o4-mini'       = 'gpt-5-mini'
+    'o3-mini'       = 'gpt-5-mini'
+}
+
 # ---------------------------------------------------------------------------
 # Auth -- Dual mode: Copilot API (all models) or GitHub Models (limited)
 #
@@ -507,27 +1016,7 @@ function Get-GitHubToken {
 #>
 function Initialize-ApiMode([string]$ghToken) {
     if ($Script:ApiMode) { return }  # Already initialized
-
-    # Probe Copilot API /models endpoint -- works when gh token has copilot scope
-    try {
-        $null = Invoke-RestMethod -Uri 'https://api.githubcopilot.com/models' -Headers @{
-            'Authorization' = "Bearer $ghToken"
-            'Copilot-Integration-Id' = 'vscode-chat'
-            'Editor-Version' = 'vscode/1.96.0'
-            'Editor-Plugin-Version' = 'copilot-chat/0.24.0'
-            'Openai-Organization' = 'github-copilot'
-        } -ErrorAction Stop
-        $Script:ApiMode = 'copilot'
-        Write-Host "`e[32m  [PASS] Copilot API: All models available (Claude, Gemini, GPT, o-series)`e[0m"
-        return
-    } catch {
-        Write-Verbose "Copilot API probe failed; falling back to GitHub Models. $_"
-    }
-
-    # Fall back to GitHub Models
-    $Script:ApiMode = 'models'
-    Write-Host "`e[33m  [WARN] Copilot API unavailable - using GitHub Models (limited catalog)`e[0m"
-    Write-Host "`e[90m  To unlock all models: gh auth refresh -s copilot`e[0m"
+    Initialize-ProviderRegistry -GitHubToken $ghToken
 }
 
 # ---------------------------------------------------------------------------
@@ -535,15 +1024,21 @@ function Initialize-ApiMode([string]$ghToken) {
 # ---------------------------------------------------------------------------
 
 function Resolve-ModelId([string]$agentModel) {
-    if (-not $agentModel) { return $Script:DEFAULT_MODEL }
+    $providerId = Get-ActiveProviderId
+    if (-not $agentModel) { return Get-RunnerDefaultModel -ProviderId $providerId }
     $lower = $agentModel.ToLower() -replace '\(copilot\)', '' -replace '\s+', ' ' | ForEach-Object { $_.Trim() }
-    $map = if ($Script:ApiMode -eq 'copilot') { $Script:MODEL_MAP_COPILOT } else { $Script:MODEL_MAP_GHMODELS }
+    $map = Get-RunnerModelMap -ProviderId $providerId
     foreach ($key in @($map.Keys | Sort-Object Length -Descending)) {
         if ($lower -like "*$key*") {
             return $map[$key]
         }
     }
-    return $Script:DEFAULT_MODEL
+
+    if ($providerId -eq 'claude-code') {
+        return $lower
+    }
+
+    return Get-RunnerDefaultModel -ProviderId $providerId
 }
 
 function ConvertFrom-ModelFallbackList([string]$modelFallback) {
@@ -569,7 +1064,7 @@ function Get-ModelCandidateList([string]$preferredModel, [string]$modelFallback)
         $labels += $preferredModel
     }
     $labels += @(ConvertFrom-ModelFallbackList -modelFallback $modelFallback)
-    $labels += $Script:DEFAULT_MODEL
+    $labels += Get-RunnerDefaultModel -ProviderId (Get-ActiveProviderId)
 
     $candidates = New-Object System.Collections.Generic.List[string]
     foreach ($label in $labels) {
@@ -609,18 +1104,29 @@ function Get-ReasoningRequestConfig([hashtable]$agentDef, [string]$modelId) {
     $effort = Convert-ReasoningLevelToEffort -level $reasoningLevel
     if (-not $effort) { return @{} }
 
-    if ($Script:ApiMode -ne 'copilot') {
+    $activeProviderId = Get-ActiveProviderId
+    if ($activeProviderId -notin @('copilot', 'openai-api', 'claude-code')) {
         return @{}
     }
 
     $normalizedModelId = if ($modelId) { $modelId.Trim().ToLower() } else { '' }
     $normalizedMode = if ($reasoningMode) { $reasoningMode.Trim().ToLower() } else { '' }
+    $capability = Get-RunnerModelCapability -ModelId $normalizedModelId
+    $providerReasoningMode = if ($capability) { [string]$capability.reasoningMode } else { 'none' }
 
-    if ($normalizedModelId -like 'gpt-5*') {
+    if ($providerReasoningMode -eq 'openai-effort') {
         return @{ reasoning = @{ effort = $effort } }
     }
 
-    if ($normalizedModelId -in @('claude-opus-4.6', 'claude-sonnet-4.6')) {
+    if ($activeProviderId -eq 'claude-code' -and $providerReasoningMode -eq 'claude-thinking') {
+        if ($normalizedMode -in @('disabled', 'off', 'none')) {
+            return @{}
+        }
+
+        return @{ effort = $effort }
+    }
+
+    if ($providerReasoningMode -eq 'claude-thinking') {
         if ($normalizedMode -in @('disabled', 'off', 'none')) {
             return @{}
         }
@@ -639,13 +1145,14 @@ function Get-ModelContextWindow([string]$modelId) {
     if (-not $modelId) { return 128000 }
 
     $normalized = $modelId.Trim().ToLower()
-    if ($Script:MODEL_CONTEXT_WINDOWS.ContainsKey($normalized)) {
-        return $Script:MODEL_CONTEXT_WINDOWS[$normalized]
+    $capability = Get-RunnerModelCapability -ModelId $normalized
+    if ($capability -and $capability.contextWindow) {
+        return [int]$capability.contextWindow
     }
 
-    foreach ($key in $Script:MODEL_CONTEXT_WINDOWS.Keys) {
+    foreach ($key in $Script:MODEL_CAPABILITIES.Keys) {
         if ($normalized -like "*$key*") {
-            return $Script:MODEL_CONTEXT_WINDOWS[$key]
+            return [int]$Script:MODEL_CAPABILITIES[$key].contextWindow
         }
     }
 
@@ -1111,6 +1618,448 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot) 
 # LLM API caller -- routes to Copilot API or GitHub Models based on ApiMode
 # ---------------------------------------------------------------------------
 
+function Get-ProviderExecutionToken([string]$ProviderId, [string]$GitHubToken) {
+    switch ($ProviderId) {
+        'anthropic-api' {
+            return Get-RunnerProviderEnvValue -Config $Script:RunnerConfig -ProviderId 'anthropic-api' -SettingName 'apiKeyEnvVar' -DefaultName 'ANTHROPIC_API_KEY'
+        }
+        'openai-api' {
+            return Get-RunnerProviderEnvValue -Config $Script:RunnerConfig -ProviderId 'openai-api' -SettingName 'apiKeyEnvVar' -DefaultName 'OPENAI_API_KEY'
+        }
+        default {
+            return $GitHubToken
+        }
+    }
+}
+
+function Resolve-ProviderApiUrl([string]$ProviderId) {
+    switch ($ProviderId) {
+        'anthropic-api' {
+            $configured = Get-RunnerProviderConfigString -Config $Script:RunnerConfig -ProviderId 'anthropic-api' -SettingName 'baseUrl' -DefaultValue ''
+            if ([string]::IsNullOrWhiteSpace($configured)) {
+                $configured = [string]$env:AGENTX_ANTHROPIC_BASE_URL
+            }
+
+            if ([string]::IsNullOrWhiteSpace($configured)) {
+                return $Script:ANTHROPIC_API_URL
+            }
+
+            return ($configured.TrimEnd('/') + '/v1/messages') -replace '/v1/messages/v1/messages$', '/v1/messages'
+        }
+        'openai-api' {
+            $configured = Get-RunnerProviderConfigString -Config $Script:RunnerConfig -ProviderId 'openai-api' -SettingName 'baseUrl' -DefaultValue ''
+            if ([string]::IsNullOrWhiteSpace($configured)) {
+                $configured = [string]$env:AGENTX_OPENAI_BASE_URL
+            }
+
+            if ([string]::IsNullOrWhiteSpace($configured)) {
+                return $Script:OPENAI_API_URL
+            }
+
+            return ($configured.TrimEnd('/') + '/chat/completions') -replace '/chat/completions/chat/completions$', '/chat/completions'
+        }
+        default {
+            return ''
+        }
+    }
+}
+
+function ConvertTo-AnthropicToolSchema([array]$Tools) {
+    $converted = @()
+    foreach ($tool in $Tools) {
+        $functionSpec = if ($tool.function) { $tool.function } else { $null }
+        if (-not $functionSpec) { continue }
+
+        $inputSchema = if ($functionSpec.parameters) { $functionSpec.parameters } else { @{ type = 'object'; properties = @{} } }
+        $converted += @{
+            name = [string]$functionSpec.name
+            description = [string]$functionSpec.description
+            input_schema = $inputSchema
+        }
+    }
+
+    return @($converted)
+}
+
+function ConvertTo-AnthropicMessages([array]$Messages) {
+    $systemParts = New-Object System.Collections.Generic.List[string]
+    $converted = New-Object System.Collections.Generic.List[object]
+
+    foreach ($message in $Messages) {
+        $role = [string](Get-MessageFieldValue -Message $message -Name 'role')
+        $content = Get-MessageFieldValue -Message $message -Name 'content'
+
+        if ($role -eq 'system') {
+            if ($content) {
+                $systemParts.Add([string]$content)
+            }
+            continue
+        }
+
+        if ($role -eq 'tool') {
+            $toolCallId = [string](Get-MessageFieldValue -Message $message -Name 'tool_call_id')
+            $toolResultContent = if ($content) { [string]$content } else { '' }
+            $converted.Add(@{
+                role = 'user'
+                content = @(
+                    @{
+                        type = 'tool_result'
+                        tool_use_id = $toolCallId
+                        content = $toolResultContent
+                    }
+                )
+            })
+            continue
+        }
+
+        if ($role -eq 'assistant') {
+            $blocks = New-Object System.Collections.Generic.List[object]
+            if ($content) {
+                $blocks.Add(@{
+                    type = 'text'
+                    text = [string]$content
+                })
+            }
+
+            $toolCalls = @(Get-MessageFieldValue -Message $message -Name 'tool_calls')
+            foreach ($toolCall in $toolCalls) {
+                $toolArgs = @{}
+                try {
+                    $toolArgs = $toolCall.function.arguments | ConvertFrom-Json -AsHashtable
+                } catch {
+                    $toolArgs = @{}
+                }
+
+                $blocks.Add(@{
+                    type = 'tool_use'
+                    id = [string]$toolCall.id
+                    name = [string]$toolCall.function.name
+                    input = $toolArgs
+                })
+            }
+
+            $converted.Add(@{
+                role = 'assistant'
+                content = @($blocks)
+            })
+            continue
+        }
+
+        $converted.Add(@{
+            role = 'user'
+            content = if ($content) { [string]$content } else { '' }
+        })
+    }
+
+    return [PSCustomObject]@{
+        system = ($systemParts -join "`n`n")
+        messages = @($converted)
+    }
+}
+
+function ConvertFrom-AnthropicResponse($Response) {
+    $textParts = New-Object System.Collections.Generic.List[string]
+    $toolCalls = New-Object System.Collections.Generic.List[object]
+
+    foreach ($block in @($Response.content)) {
+        if ($block.type -eq 'text' -and $block.text) {
+            $textParts.Add([string]$block.text)
+            continue
+        }
+
+        if ($block.type -eq 'tool_use') {
+            $toolCalls.Add(@{
+                id = [string]$block.id
+                type = 'function'
+                function = @{
+                    name = [string]$block.name
+                    arguments = ($block.input | ConvertTo-Json -Depth 20 -Compress)
+                }
+            })
+        }
+    }
+
+    $message = @{
+        content = ($textParts -join "`n`n")
+        tool_calls = @($toolCalls.ToArray())
+    }
+    $choice = @{
+        message = $message
+        finish_reason = [string]$Response.stop_reason
+    }
+
+    return @{
+        choices = @($choice)
+    }
+}
+
+function ConvertTo-ClaudeCodeModelId([string]$ModelId) {
+    if ([string]::IsNullOrWhiteSpace($ModelId)) {
+        return 'claude-sonnet-4-6'
+    }
+
+    return ($ModelId.Trim().ToLowerInvariant()) -replace '\.', '-'
+}
+
+function Get-ClaudeCodeAllowedTools([array]$Tools) {
+    $mapped = New-Object System.Collections.Generic.List[string]
+
+    foreach ($tool in @($Tools)) {
+        $toolName = ''
+        if ($tool -and $tool.function) {
+            $toolName = [string]$tool.function.name
+        }
+
+        switch ($toolName) {
+            'file_read' {
+                if (-not $mapped.Contains('Read')) { $mapped.Add('Read') }
+            }
+            'file_write' {
+                if (-not $mapped.Contains('Write')) { $mapped.Add('Write') }
+            }
+            'file_edit' {
+                if (-not $mapped.Contains('Edit')) { $mapped.Add('Edit') }
+            }
+            'grep_search' {
+                if (-not $mapped.Contains('Grep')) { $mapped.Add('Grep') }
+            }
+            'list_dir' {
+                if (-not $mapped.Contains('Glob')) { $mapped.Add('Glob') }
+            }
+            'terminal_exec' {
+                if (-not $mapped.Contains('Bash')) { $mapped.Add('Bash') }
+            }
+        }
+    }
+
+    if ($mapped.Count -eq 0) {
+        return '""'
+    }
+
+    return ($mapped.ToArray() -join ',')
+}
+
+function ConvertTo-ClaudeCodeSystemPrompt([array]$Messages) {
+    $systemParts = New-Object System.Collections.Generic.List[string]
+
+    foreach ($message in @($Messages)) {
+        $role = [string](Get-MessageFieldValue -Message $message -Name 'role')
+        if ($role -ne 'system') {
+            continue
+        }
+
+        $content = Get-MessageFieldValue -Message $message -Name 'content'
+        if ($content) {
+            $systemParts.Add([string]$content)
+        }
+    }
+
+    if ($systemParts.Count -eq 0) {
+        return @"
+You are continuing an AgentX session inside the current workspace.
+Use Claude Code's built-in tools only when needed.
+Return only the next assistant response for the conversation.
+"@
+    }
+
+    $systemParts.Add('Return only the next assistant response for the conversation. Do not wrap your answer in JSON unless explicitly asked by the user.')
+    return ($systemParts -join "`n`n")
+}
+
+function ConvertTo-ClaudeCodePrompt([array]$Messages) {
+    $parts = New-Object System.Collections.Generic.List[string]
+
+    foreach ($message in @($Messages)) {
+        $role = [string](Get-MessageFieldValue -Message $message -Name 'role')
+        if ($role -eq 'system') {
+            continue
+        }
+
+        $content = Get-MessageFieldValue -Message $message -Name 'content'
+        $contentText = if ($content) { [string]$content } else { '' }
+
+        switch ($role) {
+            'user' {
+                $parts.Add("[USER]`n$contentText")
+            }
+            'assistant' {
+                $parts.Add("[ASSISTANT]`n$contentText")
+                $toolCalls = @(Get-MessageFieldValue -Message $message -Name 'tool_calls')
+                if ($toolCalls.Count -gt 0) {
+                    foreach ($toolCall in $toolCalls) {
+                        $argsText = ''
+                        try {
+                            $argsText = ($toolCall.function.arguments | ConvertFrom-Json -AsHashtable | ConvertTo-Json -Depth 10 -Compress)
+                        } catch {
+                            $argsText = [string]$toolCall.function.arguments
+                        }
+                        $parts.Add("[ASSISTANT TOOL REQUEST] $([string]$toolCall.function.name) $argsText")
+                    }
+                }
+            }
+            'tool' {
+                $toolCallId = [string](Get-MessageFieldValue -Message $message -Name 'tool_call_id')
+                if ($toolCallId) {
+                    $parts.Add("[TOOL RESULT $toolCallId]`n$contentText")
+                } else {
+                    $parts.Add("[TOOL RESULT]`n$contentText")
+                }
+            }
+            default {
+                $parts.Add("[$role]`n$contentText")
+            }
+        }
+    }
+
+    $parts.Add(@"
+[INSTRUCTION]
+Continue this AgentX conversation from the transcript above.
+You may inspect, edit, and run commands in the current workspace using Claude Code's built-in tools when needed.
+Return only the next assistant response for the conversation after completing any work you decide is necessary.
+"@)
+
+    return ($parts -join "`n`n")
+}
+
+function Get-ClaudeCodeResponseText($Node) {
+    if ($null -eq $Node) {
+        return ''
+    }
+
+    if ($Node -is [string]) {
+        return $Node.Trim()
+    }
+
+    if ($Node -is [array]) {
+        $parts = @()
+        foreach ($item in $Node) {
+            $text = Get-ClaudeCodeResponseText -Node $item
+            if (-not [string]::IsNullOrWhiteSpace($text)) {
+                $parts += $text
+            }
+        }
+        return ($parts -join "`n`n").Trim()
+    }
+
+    if ($Node -is [hashtable] -or $Node -is [pscustomobject]) {
+        foreach ($propertyName in @('result', 'content', 'message', 'text', 'completion', 'output')) {
+            if ($null -ne $Node.PSObject.Properties[$propertyName]) {
+                $text = Get-ClaudeCodeResponseText -Node $Node.$propertyName
+                if (-not [string]::IsNullOrWhiteSpace($text)) {
+                    return $text.Trim()
+                }
+            }
+        }
+    }
+
+    return ([string]$Node).Trim()
+}
+
+function ConvertFrom-ClaudeCodeResponse([string]$OutputText) {
+    $trimmed = if ($OutputText) { $OutputText.Trim() } else { '' }
+    if ([string]::IsNullOrWhiteSpace($trimmed)) {
+        throw 'Claude Code returned an empty response.'
+    }
+
+    $parsed = $null
+    try {
+        $parsed = $trimmed | ConvertFrom-Json -Depth 30
+    } catch {
+        $parsed = $null
+    }
+
+    if ($null -eq $parsed) {
+        return @{
+            choices = @(
+                @{
+                    message = @{
+                        content = $trimmed
+                        tool_calls = @()
+                    }
+                    finish_reason = 'stop'
+                }
+            )
+        }
+    }
+
+    if ($null -ne $parsed.PSObject.Properties['is_error'] -and [bool]$parsed.is_error) {
+        $errorText = Get-ClaudeCodeResponseText -Node $parsed
+        throw "Claude Code error: $errorText"
+    }
+
+    if ($null -ne $parsed.PSObject.Properties['error']) {
+        $errorText = Get-ClaudeCodeResponseText -Node $parsed.error
+        if (-not [string]::IsNullOrWhiteSpace($errorText)) {
+            throw "Claude Code error: $errorText"
+        }
+    }
+
+    $content = Get-ClaudeCodeResponseText -Node $parsed
+    if ([string]::IsNullOrWhiteSpace($content)) {
+        $content = $trimmed
+    }
+
+    return @{
+        choices = @(
+            @{
+                message = @{
+                    content = $content
+                    tool_calls = @()
+                }
+                finish_reason = 'stop'
+            }
+        )
+    }
+}
+
+function Invoke-ClaudeCodePrintMode(
+    [string]$ModelId,
+    [array]$Messages,
+    [array]$Tools,
+    [hashtable]$RequestOptions = @{}
+) {
+    $promptFile = [System.IO.Path]::GetTempFileName()
+    $systemPromptFile = [System.IO.Path]::GetTempFileName()
+
+    try {
+        $promptText = ConvertTo-ClaudeCodePrompt -Messages $Messages
+        $systemPrompt = ConvertTo-ClaudeCodeSystemPrompt -Messages $Messages
+        Set-Content -Path $promptFile -Value $promptText -Encoding utf8 -NoNewline
+        Set-Content -Path $systemPromptFile -Value $systemPrompt -Encoding utf8 -NoNewline
+
+        $arguments = @(
+            '-p'
+            '--bare'
+            '--output-format', 'json'
+            '--input-format', 'text'
+            '--append-system-prompt-file', $systemPromptFile
+            '--model', (ConvertTo-ClaudeCodeModelId -ModelId $ModelId)
+            '--permission-mode', 'bypassPermissions'
+            '--tools', (Get-ClaudeCodeAllowedTools -Tools $Tools)
+            '--max-turns', [string]$Script:CLAUDE_CODE_MAX_TURNS
+            '--no-session-persistence'
+        )
+
+        if ($null -ne $RequestOptions['effort'] -and -not [string]::IsNullOrWhiteSpace([string]$RequestOptions['effort'])) {
+            $arguments += @('--effort', [string]$RequestOptions['effort'])
+        }
+
+        $commandResult = Invoke-RunnerCommandWithInput -FileName 'claude' -Arguments $arguments -InputText $promptText
+        if ($commandResult.exitCode -ne 0) {
+            $errorOutput = if ($commandResult.output) { $commandResult.output.Trim() } else { 'Unknown Claude Code failure.' }
+            throw "Claude Code CLI error (exit $($commandResult.exitCode)): $errorOutput"
+        }
+
+        return ConvertFrom-ClaudeCodeResponse -OutputText $commandResult.output
+    } finally {
+        foreach ($tempFile in @($promptFile, $systemPromptFile)) {
+            if ($tempFile -and (Test-Path $tempFile)) {
+                Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+}
+
 function Invoke-LlmChat(
     [string]$token,
     [string]$modelId,
@@ -1119,6 +2068,46 @@ function Invoke-LlmChat(
     [hashtable]$RequestOptions = @{},
     [int]$maxTokens = 4096
 ) {
+    $activeProviderId = Get-ActiveProviderId
+
+    if ($activeProviderId -eq 'claude-code') {
+        return Invoke-ClaudeCodePrintMode -ModelId $modelId -Messages $messages -Tools $tools -RequestOptions $RequestOptions
+    }
+
+    if ($activeProviderId -eq 'anthropic-api') {
+        $anthropicRequest = ConvertTo-AnthropicMessages -Messages $messages
+        $body = @{
+            model = $modelId
+            messages = $anthropicRequest.messages
+            max_tokens = $maxTokens
+            temperature = 0.1
+        }
+        if ($anthropicRequest.system) {
+            $body['system'] = $anthropicRequest.system
+        }
+        if ($tools.Count -gt 0) {
+            $body['tools'] = ConvertTo-AnthropicToolSchema -Tools $tools
+        }
+
+        $json = $body | ConvertTo-Json -Depth 30 -Compress
+        $headers = @{
+            'x-api-key' = $token
+            'anthropic-version' = if ($env:AGENTX_ANTHROPIC_VERSION) { [string]$env:AGENTX_ANTHROPIC_VERSION } else { $Script:ANTHROPIC_API_VERSION }
+            'Content-Type' = 'application/json'
+        }
+        $url = Resolve-ProviderApiUrl -ProviderId 'anthropic-api'
+
+        try {
+            $resp = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $json -ErrorAction Stop
+            return ConvertFrom-AnthropicResponse -Response $resp
+        } catch {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            $errBody = ''
+            try { $errBody = $_.ErrorDetails.Message } catch { $errBody = '' }
+            throw "Anthropic API error (HTTP $statusCode): $errBody"
+        }
+    }
+
     $body = @{
         model = $modelId
         messages = $messages
@@ -1136,7 +2125,7 @@ function Invoke-LlmChat(
     $json = $body | ConvertTo-Json -Depth 20 -Compress
 
     # Route to the correct API endpoint
-    if ($Script:ApiMode -eq 'copilot') {
+    if ($activeProviderId -eq 'copilot') {
         $headers = @{
             'Authorization' = "Bearer $token"
             'Content-Type'  = 'application/json'
@@ -1146,6 +2135,12 @@ function Invoke-LlmChat(
             'Openai-Organization' = 'github-copilot'
         }
         $url = $Script:COPILOT_API_URL
+    } elseif ($activeProviderId -eq 'openai-api') {
+        $headers = @{
+            'Authorization' = "Bearer $token"
+            'Content-Type' = 'application/json'
+        }
+        $url = Resolve-ProviderApiUrl -ProviderId 'openai-api'
     } else {
         $headers = @{
             'Authorization' = "Bearer $token"
@@ -1162,13 +2157,22 @@ function Invoke-LlmChat(
         $errBody = ''
         try { $errBody = $_.ErrorDetails.Message } catch { $errBody = '' }
 
-        if ($Script:ApiMode -eq 'copilot' -and $statusCode -in @(401, 403)) {
+        if ($activeProviderId -eq 'copilot' -and $statusCode -in @(401, 403)) {
             Write-Host "`e[33m  [API FALLBACK] Copilot API returned HTTP $statusCode. Retrying with GitHub Models.`e[0m"
+            if ($Script:ProviderRegistry.ContainsKey('github-models')) {
+                $fallback = $Script:ProviderRegistry['github-models']
+                $fallback.reason = 'Copilot API returned an auth failure during request execution. Falling back to GitHub Models.'
+                $Script:ActiveProvider = $fallback
+            }
             $Script:ApiMode = 'models'
             return Invoke-LlmChat -token $token -modelId $modelId -messages $messages -tools $tools -RequestOptions $RequestOptions -maxTokens $maxTokens
         }
 
-        $apiName = if ($Script:ApiMode -eq 'copilot') { 'Copilot' } else { 'GitHub Models' }
+        $apiName = switch ($activeProviderId) {
+            'copilot' { 'Copilot' }
+            'openai-api' { 'OpenAI' }
+            default { 'GitHub Models' }
+        }
         throw "$apiName API error (HTTP $statusCode): $errBody"
     }
 }
@@ -2456,18 +3460,15 @@ function Invoke-AgenticLoop {
     }
 
     $runtimeConfig = Get-RunnerConfig -WorkspaceRoot $WorkspaceRoot
+    $Script:RunnerConfig = $runtimeConfig
+    $Script:ApiMode = $null
+    $Script:ActiveProvider = $null
+    $Script:ProviderRegistry = @{}
     $researchFirstMode = Get-ResearchFirstMode -Config $runtimeConfig
     $sessionSummaryMaxChars = Get-SessionSummaryCharacterLimit -Config $runtimeConfig
 
     $isResume = -not [string]::IsNullOrWhiteSpace($ResumeSessionId)
     $resumedSession = $null
-
-    # Get GitHub token
-    $token = Get-GitHubToken
-    if (-not $token) {
-        Write-Host "`e[31m  [FAIL] GitHub CLI not authenticated. Run: gh auth login`e[0m"
-        return @{ sessionId = ''; iterations = 0; toolCalls = 0; finalText = 'Auth failed'; exitReason = 'error' }
-    }
 
     if ($isResume) {
         $resumedSession = Read-Session -sessionId $ResumeSessionId -root $WorkspaceRoot
@@ -2478,7 +3479,9 @@ function Invoke-AgenticLoop {
     }
 
     # Detect API mode (Copilot vs GitHub Models)
-    Initialize-ApiMode -ghToken $token
+    $githubToken = Get-GitHubToken
+    Initialize-ApiMode -ghToken $githubToken
+    $token = Get-ProviderExecutionToken -ProviderId (Get-ActiveProviderId) -GitHubToken $githubToken
 
     # Load agent definition
     $agentDef = Read-AgentDef -agentName $Agent -root $WorkspaceRoot
@@ -2497,9 +3500,11 @@ function Invoke-AgenticLoop {
     }
     $modelCandidates = @(Get-ModelCandidateList -preferredModel $preferredModel -modelFallback $agentDef.modelFallback)
     $modelId = $modelCandidates[0]
-    Write-Host "`e[36m  Agent: $($agentDef.name ?? $Agent) | Model: $modelId ($Script:ApiMode mode)`e[0m"
-    if ($modelCandidates.Count -gt 1) {
-        Write-Host "`e[90m  Model fallback chain: $($modelCandidates -join ' -> ')`e[0m"
+    Write-Host "`e[36m  Agent: $($agentDef.name ?? $Agent) | Model: $modelId`e[0m"
+    Write-RunnerProviderDiagnostics -Provider $Script:ActiveProvider -ModelCandidates $modelCandidates
+    if (-not (Test-RunnerModelSupportedByProvider -ProviderId (Get-ActiveProviderId) -ModelId $modelId)) {
+        Write-Host "`e[31m  [FAIL] Model '$modelId' is not supported by provider '$((Get-ActiveProviderId))'.`e[0m"
+        return @{ sessionId = ''; iterations = 0; toolCalls = 0; finalText = 'Unsupported model for provider'; exitReason = 'error' }
     }
     $reasoningPreview = Get-ReasoningRequestConfig -agentDef $agentDef -modelId $modelId
     if ($reasoningPreview.Count -gt 0) {

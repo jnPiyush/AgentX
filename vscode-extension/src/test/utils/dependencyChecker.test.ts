@@ -131,7 +131,7 @@ describe('dependencyChecker', () => {
     it('should return EnvironmentReport shape', () => {
       assert.ok(report.timestamp, 'timestamp should be set');
       assert.ok(Array.isArray(report.results), 'results should be an array');
-      assert.strictEqual(report.results.length, 4, 'should check 4 dependencies');
+      assert.strictEqual(report.results.length, 5, 'should check 5 dependencies');
       assert.strictEqual(typeof report.healthy, 'boolean');
       assert.strictEqual(typeof report.criticalCount, 'number');
       assert.strictEqual(typeof report.warningCount, 'number');
@@ -160,6 +160,19 @@ describe('dependencyChecker', () => {
       const ghGithub = githubReport.results.find((r) => r.name === 'GitHub CLI (gh)');
       assert.ok(ghGithub, 'GitHub CLI entry should exist');
       assert.strictEqual(ghGithub.severity, 'required', 'gh should be required with github integration');
+
+      const claudeLocal = localReport.results.find((r) => r.name === 'Claude Code CLI');
+      assert.ok(claudeLocal, 'Claude Code CLI entry should exist');
+      assert.strictEqual(claudeLocal.severity, 'optional', 'Claude Code CLI should be optional by default');
+
+      const claudeReport = await checkAllDependencies({
+        githubConnected: false,
+        adoConnected: false,
+        llmProvider: 'claude-code',
+      });
+      const claudeConfigured = claudeReport.results.find((r) => r.name === 'Claude Code CLI');
+      assert.ok(claudeConfigured, 'Claude Code CLI entry should exist when Claude subscription mode is active');
+      assert.strictEqual(claudeConfigured.severity, 'required', 'Claude Code CLI should be required for claude-code mode');
     });
 
     it('should count criticals correctly', () => {

@@ -6,7 +6,9 @@ import {
   buildCliCommand,
   buildCliInvocation,
   collectAgentDefinitionFiles,
+  getConfiguredLlmProviderRecord,
   getConfiguredShell,
+  getConfiguredLlmProvider,
   hasConfiguredAdoAdapter,
   hasCliRuntime,
   hasConfiguredIntegration,
@@ -18,16 +20,25 @@ import {
 import {
   AgentDefinition,
   PendingClarificationState,
+  PendingSetupState,
 } from './agentxContextTypes';
 export type {
   AgentBoundaries,
   AgentDefinition,
   AgentHandoff,
   PendingClarificationState,
+  PendingSetupState,
 } from './agentxContextTypes';
 
 const PENDING_CLARIFICATION_KEY = 'agentx.pendingClarification';
+const PENDING_SETUP_KEY = 'agentx.pendingSetup';
 const AGENTX_WORKSPACE_ROOT_ENV = 'AGENTX_WORKSPACE_ROOT';
+const OPENAI_SECRET_STORAGE_KEY = 'agentx.llm.openai-api';
+const ANTHROPIC_SECRET_STORAGE_KEY = 'agentx.llm.anthropic-api';
+
+function getWorkspaceScopedSecretKey(root: string, providerId: string): string {
+  return `${providerId}::${root.toLowerCase()}`;
+}
 
 /**
  * Shared context for all AgentX extension components.
@@ -118,6 +129,10 @@ export class AgentXContext {
   return hasConfiguredAdoAdapter(this.workspaceRoot ?? this.firstWorkspaceFolder);
  }
 
+ get llmProvider(): string {
+  return getConfiguredLlmProvider(this.workspaceRoot ?? this.firstWorkspaceFolder) ?? 'copilot';
+ }
+
  /** Get the configured shell (auto, pwsh, bash). */
  getShell(): string {
   return getConfiguredShell(vscode.workspace.getConfiguration('agentx'));
@@ -126,6 +141,115 @@ export class AgentXContext {
  /** Resolve the AgentX CLI command path for the current platform. */
  getCliCommand(): string {
   return buildCliCommand(this.extensionContext.extensionPath, this.getShell());
+ }
+
+ private async getWorkspaceSecret(
+  storageKey: string,
+  providerId: string,
+ ): Promise<string | undefined> {
+  const root = this.workspaceRoot ?? this.firstWorkspaceFolder;
+  if (!root || !this.extensionContext.secrets?.get) {
+    return undefined;
+  }
+
+  return this.extensionContext.secrets.get(
+    getWorkspaceScopedSecretKey(root, `${storageKey}:${providerId}`),
+  );
+ }
+
+ async storeWorkspaceLlmSecret(providerId: 'openai-api' | 'anthropic-api', secret: string): Promise<void> {
+  const root = this.workspaceRoot ?? this.firstWorkspaceFolder;
+  if (!root || !this.extensionContext.secrets?.store) {
+    return;
+  }
+
+  const storageKey = providerId === 'openai-api'
+    ? OPENAI_SECRET_STORAGE_KEY
+    : ANTHROPIC_SECRET_STORAGE_KEY;
+  await this.extensionContext.secrets.store(
+    getWorkspaceScopedSecretKey(root, `${storageKey}:${providerId}`),
+    secret,
+  );
+ }
+
+ async deleteWorkspaceLlmSecret(providerId: 'openai-api' | 'anthropic-api'): Promise<void> {
+  const root = this.workspaceRoot ?? this.firstWorkspaceFolder;
+  if (!root || !this.extensionContext.secrets?.delete) {
+    return;
+  }
+
+  const storageKey = providerId === 'openai-api'
+    ? OPENAI_SECRET_STORAGE_KEY
+    : ANTHROPIC_SECRET_STORAGE_KEY;
+  await this.extensionContext.secrets.delete(
+    getWorkspaceScopedSecretKey(root, `${storageKey}:${providerId}`),
+  );
+ }
+
+ async hasWorkspaceLlmSecret(providerId: 'openai-api' | 'anthropic-api'): Promise<boolean> {
+  const storageKey = providerId === 'openai-api'
+    ? OPENAI_SECRET_STORAGE_KEY
+    : ANTHROPIC_SECRET_STORAGE_KEY;
+  return !!(await this.getWorkspaceSecret(storageKey, providerId));
+ }
+
+ private async getWorkspaceLlmEnvOverrides(): Promise<NodeJS.ProcessEnv> {
+  const root = this.workspaceRoot ?? this.firstWorkspaceFolder;
+  if (!root) {
+    return {};
+  }
+
+  const env: NodeJS.ProcessEnv = {};
+  const provider = getConfiguredLlmProvider(root);
+  if (provider) {
+    env.AGENTX_LLM_PROVIDER = provider;
+  }
+
+  const openAiRecord = getConfiguredLlmProviderRecord(root, 'openai-api');
+  if (openAiRecord) {
+    const baseUrl = typeof openAiRecord.baseUrl === 'string' ? openAiRecord.baseUrl.trim() : '';
+    const defaultModel = typeof openAiRecord.defaultModel === 'string'
+      ? openAiRecord.defaultModel.trim()
+      : '';
+    if (baseUrl) {
+      env.AGENTX_OPENAI_BASE_URL = baseUrl;
+    }
+    if (defaultModel) {
+      env.AGENTX_OPENAI_MODEL = defaultModel;
+    }
+  }
+
+  const anthropicRecord = getConfiguredLlmProviderRecord(root, 'anthropic-api');
+  if (anthropicRecord) {
+    const baseUrl = typeof anthropicRecord.baseUrl === 'string' ? anthropicRecord.baseUrl.trim() : '';
+    const defaultModel = typeof anthropicRecord.defaultModel === 'string'
+      ? anthropicRecord.defaultModel.trim()
+      : '';
+    const version = typeof anthropicRecord.anthropicVersion === 'string'
+      ? anthropicRecord.anthropicVersion.trim()
+      : '';
+    if (baseUrl) {
+      env.AGENTX_ANTHROPIC_BASE_URL = baseUrl;
+    }
+    if (defaultModel) {
+      env.AGENTX_ANTHROPIC_MODEL = defaultModel;
+    }
+    if (version) {
+      env.AGENTX_ANTHROPIC_VERSION = version;
+    }
+  }
+
+  const openAiSecret = await this.getWorkspaceSecret(OPENAI_SECRET_STORAGE_KEY, 'openai-api');
+  if (openAiSecret) {
+    env.OPENAI_API_KEY = openAiSecret;
+  }
+
+  const anthropicSecret = await this.getWorkspaceSecret(ANTHROPIC_SECRET_STORAGE_KEY, 'anthropic-api');
+  if (anthropicSecret) {
+    env.ANTHROPIC_API_KEY = anthropicSecret;
+  }
+
+  return env;
  }
 
  /**
@@ -138,8 +262,10 @@ export class AgentXContext {
   const cliPath = this.getCliCommand();
   const shell = this.getShell();
   const invocation = buildCliInvocation(cliPath, shell, subcommand, cliArgs);
+  const llmEnv = await this.getWorkspaceLlmEnvOverrides();
 
   return execShell(invocation.command, root, invocation.shellKind, {
+   ...llmEnv,
    [AGENTX_WORKSPACE_ROOT_ENV]: root,
   });
  }
@@ -159,8 +285,10 @@ export class AgentXContext {
   const cliPath = this.getCliCommand();
   const shell = this.getShell();
   const invocation = buildCliInvocation(cliPath, shell, subcommand, cliArgs);
+    const llmEnv = await this.getWorkspaceLlmEnvOverrides();
 
   return execShellStreaming(invocation.command, root, invocation.shellKind, onLine, {
+     ...llmEnv,
    ...envOverrides,
    [AGENTX_WORKSPACE_ROOT_ENV]: root,
   });
@@ -176,6 +304,18 @@ export class AgentXContext {
 
  async clearPendingClarification(): Promise<void> {
   await this.extensionContext.workspaceState.update(PENDING_CLARIFICATION_KEY, undefined);
+ }
+
+ async getPendingSetup(): Promise<PendingSetupState | undefined> {
+  return this.extensionContext.workspaceState.get<PendingSetupState>(PENDING_SETUP_KEY);
+ }
+
+ async setPendingSetup(state: PendingSetupState): Promise<void> {
+  await this.extensionContext.workspaceState.update(PENDING_SETUP_KEY, state);
+ }
+
+ async clearPendingSetup(): Promise<void> {
+  await this.extensionContext.workspaceState.update(PENDING_SETUP_KEY, undefined);
  }
 
  /** Resolve a file path under .agentx/state for the current workspace. */

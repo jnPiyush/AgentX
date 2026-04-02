@@ -12,9 +12,55 @@ interface AgentXConfig {
   provider?: string;
   integration?: string;
   mode?: string;
+  llmProvider?: string;
+  llmProviders?: Record<string, unknown>;
   organization?: string;
   project?: string | number;
   adapters?: Record<string, unknown>;
+}
+
+export function readAgentXConfig(root: string | undefined): AgentXConfig | undefined {
+  if (!root) {
+    return undefined;
+  }
+
+  const configPath = path.join(root, '.agentx', 'config.json');
+  if (!fs.existsSync(configPath)) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8')) as AgentXConfig;
+  } catch {
+    return undefined;
+  }
+}
+
+export function getConfiguredLlmProvider(root: string | undefined): string | undefined {
+  const config = readAgentXConfig(root);
+  if (!config || typeof config.llmProvider !== 'string') {
+    return undefined;
+  }
+
+  const normalized = config.llmProvider.trim().toLowerCase();
+  return normalized || undefined;
+}
+
+export function getConfiguredLlmProviderRecord(
+  root: string | undefined,
+  providerId: string,
+): Record<string, unknown> | undefined {
+  const config = readAgentXConfig(root);
+  if (!config?.llmProviders) {
+    return undefined;
+  }
+
+  const record = config.llmProviders[providerId];
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    return undefined;
+  }
+
+  return record as Record<string, unknown>;
 }
 
 export function readMcpConfig(root: string): McpConfig {
@@ -271,13 +317,12 @@ export function hasConfiguredAdoAdapter(root: string | undefined): boolean {
     return false;
   }
 
-  const configPath = path.join(root, '.agentx', 'config.json');
-  if (!fs.existsSync(configPath)) {
+  const config = readAgentXConfig(root);
+  if (!config) {
     return false;
   }
 
   try {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as AgentXConfig;
     const adapter = (config.adapters?.ado ?? {}) as Record<string, unknown>;
     const organization = typeof adapter.organization === 'string'
       ? adapter.organization

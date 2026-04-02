@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
 import { registerInitializeLocalRuntimeCommand } from './initialize';
 import { registerAddRemoteAdapterCommand } from './adapters';
+import { registerAddLlmAdapterCommand } from './llmAdapters';
 import { registerAddPluginCommand } from './plugins';
 import { registerStatusCommand } from './status';
 import { registerWorkflowCommand } from './workflow';
@@ -25,6 +26,7 @@ export function registerAgentXCommands(
 ): void {
  registerInitializeLocalRuntimeCommand(context, agentx);
  registerAddRemoteAdapterCommand(context, agentx);
+ registerAddLlmAdapterCommand(context, agentx);
  registerAddPluginCommand(context, agentx);
  registerStatusCommand(context, agentx);
  registerWorkflowCommand(context, agentx);

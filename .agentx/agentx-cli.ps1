@@ -4443,8 +4443,9 @@ function Invoke-RunCmd {
 
     if (-not $agent -and -not $resumeSession) {
         Write-Host "`n$($C.c)  AgentX Run - Agentic Loop (LLM + Tools)$($C.n)"
-        Write-Host "$($C.d)  Auto-detects: Copilot API (all models) or GitHub Models (GPT only).$($C.n)"
-        Write-Host "$($C.d)  To unlock Claude/Gemini/o-series: gh auth refresh -s copilot$($C.n)`n"
+        Write-Host "$($C.d)  Auto-detects GitHub-hosted providers by default; explicit llmProvider config can also target Claude Code readiness.$($C.n)"
+        Write-Host "$($C.d)  For Claude/Gemini/o-series via GitHub, run: gh auth refresh -s copilot$($C.n)"
+        Write-Host "$($C.d)  For Claude Code readiness, install Claude Code and run: claude auth login$($C.n)`n"
         Write-Host "$($C.w)  Usage:$($C.n)"
         Write-Host '  agentx run <agent> <prompt>'
         Write-Host '  agentx run -a engineer -p "Fix the failing tests"'
@@ -4480,16 +4481,6 @@ function Invoke-RunCmd {
         }
     } elseif (-not $prompt) {
         Write-Host "$($C.r)  [FAIL] Prompt required. Use: agentx run $agent \"your prompt\"$($C.n)"
-        $global:LASTEXITCODE = 1
-        return
-    }
-
-    # Verify gh auth
-    $ghToken = $null
-    try { $ghToken = (gh auth token 2>$null) } catch {}
-    if (-not $ghToken) {
-        Write-Host "$($C.r)  [FAIL] GitHub CLI not authenticated.$($C.n)"
-        Write-Host "$($C.d)  Run: gh auth login --scopes 'models:read'$($C.n)"
         $global:LASTEXITCODE = 1
         return
     }

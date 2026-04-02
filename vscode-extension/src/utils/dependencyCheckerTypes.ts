@@ -1,6 +1,7 @@
 export interface IntegrationProvider {
   githubConnected: boolean;
   adoConnected: boolean;
+  llmProvider?: string;
 }
 
 export type DependencySeverity = 'required' | 'recommended' | 'optional';

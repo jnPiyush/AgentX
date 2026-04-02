@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.4.17-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-8.4.19-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -69,9 +69,10 @@ To run AgentX successfully within VS Code:
 1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
 2. **Open** your target project workspace in VS Code.
 3. **Initialize** the workspace by running `AgentX: Initialize Local Runtime` from the Command Palette.
-4. **Optionally add a remote adapter** with `AgentX: Add Remote Adapter` when you want GitHub or Azure DevOps issue and workflow operations.
-5. **Select a role in Copilot Chat** and run the next step for that role, or select **AgentX Auto** to orchestrate the full flow in one session.
-6. **Capture reusable outcomes** with `AgentX: Create Learning Capture` once review confirms the result should compound future work.
+4. **Optionally add a remote adapter** with `AgentX: Add Remote Adapter` or start it in chat with `@agentx connect github`, `@agentx connect ado`, `@agentx use local`, or `@agentx add remote adapter`.
+5. **Optionally switch the workspace LLM adapter** with `AgentX: Add LLM Adapter` or start it in chat with `@agentx switch llm`, `@agentx connect claude`, `@agentx connect openai`, or `@agentx use copilot`.
+6. **Select a role in Copilot Chat** and run the next step for that role, or select **AgentX Auto** to orchestrate the full flow in one session.
+7. **Capture reusable outcomes** with `AgentX: Create Learning Capture` once review confirms the result should compound future work.
 
 ### Workspace Initialization
 
@@ -98,7 +99,33 @@ If you want GitHub or Azure DevOps issue and workflow operations, run:
 AgentX: Add Remote Adapter
 ```
 
+You can also start repo-adapter setup in chat with:
+
+- `@agentx add remote adapter`
+- `@agentx connect github`
+- `@agentx connect ado`
+- `@agentx use local`
+
+The extension now keeps repo-adapter setup conversational. Non-secret values are collected in chat, pending setup survives between turns, and the chat UI offers follow-up actions to continue or cancel the flow.
+
 Stay on local runtime only when you want repo-local planning, implementation, and review without remote backlog integration.
+
+### Workspace LLM Adapter Setup
+
+If you want to switch the workspace away from the default Copilot-backed path, run:
+
+```text
+AgentX: Add LLM Adapter
+```
+
+You can also start LLM setup in chat with:
+
+- `@agentx switch llm`
+- `@agentx connect claude`
+- `@agentx connect openai`
+- `@agentx use copilot`
+
+The extension now keeps LLM setup conversational. Non-secret values are collected in chat, pending setup survives between turns, and secret-bearing steps use VS Code's secure password prompt instead of asking you to paste keys into the chat transcript.
 
 ## Build Software With AgentX
 

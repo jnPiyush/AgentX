@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as sinon from 'sinon';
 import { createMockResponseStream } from '../mocks/vscode';
 import {
   getAgentXChatFollowups,
@@ -190,32 +191,301 @@ describe('chatParticipant', () => {
     assert.ok(response.getMarkdown().includes('Opened **AgentX: Initialize Local Runtime** for this workspace.'));
   });
 
-  it('launches Add Remote Adapter directly from chat', async () => {
+  it('starts a chat-first remote adapter flow from chat', async () => {
     const response = createMockResponseStream();
-    const executed: string[] = [];
-    const originalExecuteCommand = vscode.commands.executeCommand;
-    (vscode.commands as any).executeCommand = async (command: string) => {
-      executed.push(command);
-      return undefined;
-    };
+    let pending: unknown;
+    fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.agentx', 'config.json'), JSON.stringify({ provider: 'local' }, null, 2));
 
     const agentx = {
       checkInitialized: async () => true,
       workspaceRoot: tmpDir,
+      setPendingSetup: async (value: unknown) => { pending = value; },
+      clearPendingSetup: async () => undefined,
+      getPendingClarification: async () => undefined,
+      getPendingSetup: async () => undefined,
     };
 
+    await handleAgentXChatRequest(
+      { prompt: 'add remote adapter' } as any,
+      response as any,
+      agentx as any,
+    );
+
+    assert.deepEqual(pending, {
+      kind: 'remote-adapter',
+      step: 'choose-remote-adapter',
+      prompt: 'add remote adapter',
+    });
+    assert.ok(response.getMarkdown().includes('Choose a repo adapter'));
+  });
+
+  it('starts chat-first GitHub and Azure DevOps adapter flows for the supported aliases', async () => {
+    const sandbox = sinon.createSandbox();
+    const shell = await import('../../utils/shell');
+    sandbox.stub(shell, 'execShell').rejects(new Error('no remote'));
+
+    const cases = [
+      {
+        prompt: 'connect github',
+        expectedPending: {
+          kind: 'remote-adapter',
+          step: 'enter-github-repo',
+          prompt: 'connect github',
+          adapterMode: 'github',
+          detectedValue: undefined,
+        },
+        expectedText: 'GitHub adapter setup',
+      },
+      {
+        prompt: 'connect ado',
+        expectedPending: {
+          kind: 'remote-adapter',
+          step: 'enter-ado-project',
+          prompt: 'connect ado',
+          adapterMode: 'ado',
+          detectedValue: undefined,
+        },
+        expectedText: 'Azure DevOps adapter setup',
+      },
+    ];
+
     try {
-      await handleAgentXChatRequest(
-        { prompt: 'add remote adapter' } as any,
-        response as any,
-        agentx as any,
-      );
+      for (const testCase of cases) {
+        const response = createMockResponseStream();
+        let pending: unknown;
+        fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+        fs.writeFileSync(path.join(tmpDir, '.agentx', 'config.json'), JSON.stringify({ provider: 'local' }, null, 2));
+
+        const agentx = {
+          checkInitialized: async () => true,
+          workspaceRoot: tmpDir,
+          firstWorkspaceFolder: tmpDir,
+          getPendingClarification: async () => undefined,
+          getPendingSetup: async () => undefined,
+          setPendingSetup: async (value: unknown) => { pending = value; },
+          clearPendingSetup: async () => undefined,
+        };
+
+        await handleAgentXChatRequest(
+          { prompt: testCase.prompt } as any,
+          response as any,
+          agentx as any,
+        );
+
+        assert.deepEqual(pending, testCase.expectedPending);
+        assert.ok(response.getMarkdown().includes(testCase.expectedText));
+      }
+    } finally {
+      sandbox.restore();
+    }
+  });
+
+  it('completes direct chat-first Copilot and Claude subscription setup for supported aliases', async () => {
+    const originalExecuteCommand = vscode.commands.executeCommand;
+
+    const cases = [
+      {
+        prompt: 'use copilot',
+        expectedProvider: 'copilot',
+        expectedText: 'Configured **GitHub Copilot**',
+      },
+      {
+        prompt: 'connect claude',
+        expectedProvider: 'claude-code',
+        expectedText: 'Configured **Claude Subscription**',
+      },
+    ];
+
+    try {
+      for (const testCase of cases) {
+        const response = createMockResponseStream();
+        (vscode.commands as any).executeCommand = async () => undefined;
+        fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+        fs.writeFileSync(
+          path.join(tmpDir, '.agentx', 'config.json'),
+          JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
+        );
+
+        const agentx = {
+          checkInitialized: async () => true,
+          workspaceRoot: tmpDir,
+          githubConnected: false,
+          adoConnected: false,
+          invalidateCache: () => undefined,
+          getPendingClarification: async () => undefined,
+          getPendingSetup: async () => undefined,
+          clearPendingSetup: async () => undefined,
+          deleteWorkspaceLlmSecret: async () => undefined,
+        };
+
+        await handleAgentXChatRequest(
+          { prompt: testCase.prompt } as any,
+          response as any,
+          agentx as any,
+        );
+
+        const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+        assert.equal(config.llmProvider, testCase.expectedProvider);
+        assert.ok(response.getMarkdown().includes(testCase.expectedText));
+      }
     } finally {
       (vscode.commands as any).executeCommand = originalExecuteCommand;
     }
+  });
 
-    assert.deepEqual(executed, ['agentx.addRemoteAdapter']);
-    assert.ok(response.getMarkdown().includes('Opened **AgentX: Add Remote Adapter** for this workspace.'));
+  it('starts a chat-first LLM adapter setup flow for switch llm', async () => {
+    const response = createMockResponseStream();
+    let pending: unknown;
+    fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.agentx', 'config.json'), JSON.stringify({ provider: 'local' }, null, 2));
+
+    const agentx = {
+      checkInitialized: async () => true,
+      workspaceRoot: tmpDir,
+      setPendingSetup: async (value: unknown) => { pending = value; },
+      clearPendingSetup: async () => undefined,
+      getPendingClarification: async () => undefined,
+    };
+
+    await handleAgentXChatRequest(
+      { prompt: 'switch llm' } as any,
+      response as any,
+      agentx as any,
+    );
+
+    assert.deepEqual(pending, {
+      kind: 'llm-adapter',
+      step: 'choose-llm-provider',
+      prompt: 'switch llm',
+    });
+    assert.ok(response.getMarkdown().includes('Choose an LLM adapter'));
+    assert.ok(response.getMarkdown().includes('claude api'));
+  });
+
+  it('completes a chat-first OpenAI setup flow using a secure API key prompt', async () => {
+    const response = createMockResponseStream();
+    let pending: unknown;
+    const originalExecuteCommand = vscode.commands.executeCommand;
+    const originalShowInputBox = vscode.window.showInputBox;
+
+    fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpDir, '.agentx', 'config.json'),
+      JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
+    );
+
+    const storedSecrets = new Map<string, string>();
+    const agentx = {
+      checkInitialized: async () => true,
+      workspaceRoot: tmpDir,
+      githubConnected: false,
+      adoConnected: false,
+      invalidateCache: () => undefined,
+      getPendingClarification: async () => undefined,
+      getPendingSetup: async () => pending,
+      setPendingSetup: async (value: unknown) => { pending = value; },
+      clearPendingSetup: async () => { pending = undefined; },
+      storeWorkspaceLlmSecret: async (_providerId: 'openai-api' | 'anthropic-api', secret: string) => {
+        storedSecrets.set('openai-api', secret);
+      },
+      deleteWorkspaceLlmSecret: async () => undefined,
+    };
+
+    try {
+      (vscode.commands as any).executeCommand = async () => undefined;
+      (vscode.window as any).showInputBox = async () => 'sk-test-openai-key';
+
+      await handleAgentXChatRequest(
+        { prompt: 'switch llm' } as any,
+        response as any,
+        agentx as any,
+      );
+
+      const applyResponse = createMockResponseStream();
+      await handleAgentXChatRequest(
+        { prompt: 'openai' } as any,
+        applyResponse as any,
+        agentx as any,
+      );
+
+      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+      assert.equal(config.llmProvider, 'openai-api');
+      assert.equal(config.llmProviders['openai-api'].defaultModel, 'gpt-5.4');
+      assert.equal(storedSecrets.get('openai-api'), 'sk-test-openai-key');
+      assert.equal(pending, undefined);
+      assert.ok(applyResponse.getMarkdown().includes('Configured **OpenAI API**'));
+      assert.ok(applyResponse.getMarkdown().includes('secure VS Code prompt'));
+    } finally {
+      (vscode.commands as any).executeCommand = originalExecuteCommand;
+      (vscode.window as any).showInputBox = originalShowInputBox;
+    }
+  });
+
+  it('completes a chat-first Azure DevOps setup flow after collecting organization and project in chat', async () => {
+    const response = createMockResponseStream();
+    let pending: unknown;
+    const sandbox = sinon.createSandbox();
+    const originalExecuteCommand = vscode.commands.executeCommand;
+
+    fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpDir, '.agentx', 'config.json'),
+      JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
+    );
+
+    const shell = await import('../../utils/shell');
+    sandbox.stub(shell, 'execShell').rejects(new Error('no remote'));
+
+    const agentx = {
+      checkInitialized: async () => true,
+      workspaceRoot: tmpDir,
+      firstWorkspaceFolder: tmpDir,
+      githubConnected: false,
+      adoConnected: false,
+      invalidateCache: () => undefined,
+      getPendingClarification: async () => undefined,
+      getPendingSetup: async () => pending,
+      setPendingSetup: async (value: unknown) => { pending = value; },
+      clearPendingSetup: async () => { pending = undefined; },
+    };
+
+    try {
+      (vscode.commands as any).executeCommand = async () => undefined;
+
+      await handleAgentXChatRequest(
+        { prompt: 'connect ado' } as any,
+        response as any,
+        agentx as any,
+      );
+
+      assert.deepEqual(pending, {
+        kind: 'remote-adapter',
+        step: 'enter-ado-project',
+        prompt: 'connect ado',
+        adapterMode: 'ado',
+        detectedValue: undefined,
+      });
+      assert.ok(response.getMarkdown().includes('Azure DevOps adapter setup'));
+
+      const applyResponse = createMockResponseStream();
+      await handleAgentXChatRequest(
+        { prompt: 'contoso/Platform' } as any,
+        applyResponse as any,
+        agentx as any,
+      );
+
+      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+      assert.equal(config.provider, 'ado');
+      assert.equal(config.integration, 'ado');
+      assert.equal(config.organization, 'contoso');
+      assert.equal(config.project, 'Platform');
+      assert.equal(pending, undefined);
+      assert.ok(applyResponse.getMarkdown().includes('Configured **Azure DevOps** mode'));
+    } finally {
+      (vscode.commands as any).executeCommand = originalExecuteCommand;
+      sandbox.restore();
+    }
   });
 
   it('launches Add Plugin directly from chat', async () => {
@@ -723,5 +993,21 @@ describe('chatParticipant', () => {
     assert.equal(followups[0].prompt, 'continue');
     assert.ok(followups[0].label?.includes('engineer'));
     assert.equal(followups[1].prompt, 'clarification status');
+  });
+
+  it('returns follow-up suggestions when adapter setup is pending', async () => {
+    const agentx = {
+      getPendingSetup: async () => ({
+        kind: 'llm-adapter',
+        step: 'choose-llm-provider',
+        prompt: 'switch llm',
+      }),
+      getPendingClarification: async () => undefined,
+    };
+
+    const followups = await getAgentXChatFollowups(agentx as any);
+    assert.equal(followups.length, 2);
+    assert.equal(followups[0].prompt, 'continue');
+    assert.equal(followups[1].prompt, 'cancel setup');
   });
 });

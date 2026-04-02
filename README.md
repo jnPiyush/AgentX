@@ -1,9 +1,9 @@
 <div align="center">
   <img src="docs/assets/agentx-logo.svg" width="200" alt="AgentX Logo">
   <h1>AgentX</h1>
-  <p><strong>The Multi-Agent Workflow System for Software Delivery</strong></p>
+  <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.17"><img src="https://img.shields.io/badge/Version-8.4.17-0EA5E9?style=for-the-badge" alt="Version 8.4.17"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.19"><img src="https://img.shields.io/badge/Version-8.4.19-0EA5E9?style=for-the-badge" alt="Version 8.4.19"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -167,7 +167,58 @@ If the workspace needs GitHub or Azure DevOps issue and workflow operations, run
 AgentX: Add Remote Adapter
 ```
 
+You can also start the same flow directly in chat. Common phrases include:
+
+- `@agentx add remote adapter`
+- `@agentx connect github`
+- `@agentx connect ado`
+- `@agentx use local`
+- `@agentx switch adapter`
+
+The extension now treats repo-adapter setup as a chat-first workflow. It asks for the next non-secret value in chat, keeps the setup pending between turns, and lets you continue or cancel the flow from follow-up suggestions.
+
 Use local runtime only when you want repo-local planning, implementation, and review without remote backlog integration.
+
+### 4. Switch LLM Adapters For The Workspace
+
+If you want to run AgentX with a different model provider than the default GitHub Copilot path, run:
+
+```text
+AgentX: Add LLM Adapter
+```
+
+You can also start the same flow directly in chat. Common phrases include:
+
+- `@agentx switch llm`
+- `@agentx connect claude`
+- `@agentx connect openai`
+- `@agentx use copilot`
+
+The extension now treats LLM setup as a chat-first workflow. It asks for the next non-secret value in chat, keeps the setup pending between turns, and lets you continue or cancel the flow from follow-up suggestions.
+
+Supported workspace adapters:
+
+- `GitHub Copilot` keeps the current default behavior for Copilot Chat and the AgentX CLI runner.
+- `Claude Subscription` uses the local Claude Code CLI after `claude auth login` succeeds.
+- `Claude API` uses an Anthropic API key stored in VS Code secret storage.
+- `OpenAI API` uses an OpenAI API key stored in VS Code secret storage.
+
+What gets saved for the workspace:
+
+- the active adapter and non-secret provider settings are written to `.agentx/config.json`
+- API keys are stored in VS Code secret storage, not in repo files
+- the Status sidebar shows the active `LLM Adapter` so you can verify what the runner will use
+
+Security note:
+
+- AgentX does not ask you to paste API keys into the chat transcript.
+- When a provider needs a secret, the chat flow switches to VS Code's secure password prompt for that one step and then resumes the conversational setup.
+
+Provider notes:
+
+- `Claude Subscription` requires the Claude Code CLI to be installed and authenticated. AgentX uses Claude Code's official non-interactive print mode for execution.
+- `Claude API` requires `ANTHROPIC_API_KEY`-equivalent credentials, but the extension stores the key for the workspace and injects it automatically when AgentX runs.
+- `OpenAI API` is handled the same way with workspace-scoped secret storage and automatic injection at runtime.
 
 ## Build Software With AgentX
 
@@ -223,7 +274,7 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.17
+## New In 8.4.19
 
 - Summary-based context compaction in the runner while keeping the existing 70% threshold trigger
 - Per-agent `reasoning` frontmatter support in the runner, including Copilot-mode request options for GPT-5 and Claude 4.6 mappings

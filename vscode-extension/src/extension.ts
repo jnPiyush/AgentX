@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
 
  const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
  statusBar.text = '$(hubot) AgentX';
- statusBar.tooltip = 'AgentX - Multi-Agent Orchestration';
+ statusBar.tooltip = 'AgentX - Digital Force for Software Delivery';
  statusBar.command = 'agentx.showStatus';
  statusBar.show();
  context.subscriptions.push(statusBar);
@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
    : false;
 
   statusBar.text = '$(hubot) AgentX';
-  statusBar.tooltip = `AgentX - Multi-Agent Orchestration\n${qualityState}`;
+  statusBar.tooltip = `AgentX - Digital Force for Software Delivery\n${qualityState}`;
 
   await vscode.commands.executeCommand('setContext', 'agentx.initialized', initialized);
   await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentxContext.githubConnected);

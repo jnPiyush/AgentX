@@ -233,10 +233,11 @@ export function buildPendingClarificationMessage(
 
 export function renderUsageGuidance(): string {
   return (
-    '**AgentX** - Multi-Agent Orchestration\n\n'
+    '**AgentX** - Digital Force for Software Delivery\n\n'
     + 'Usage:\n'
     + '- `@agentx initialize local runtime`\n'
     + '- `@agentx add remote adapter`\n'
+    + '- `@agentx add llm adapter`\n'
     + '- `@agentx add plugin`\n'
     + '- `@agentx run engineer "implement the health endpoint for issue #42"`\n'
     + '- `@agentx continue "use the existing auth flow and keep refresh tokens"`\n'
@@ -270,17 +271,6 @@ export async function tryHandleWorkspaceSetupRequest(
     try {
       await vscode.commands.executeCommand('agentx.initializeLocalRuntime');
       response.markdown('Opened **AgentX: Initialize Local Runtime** for this workspace.');
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      response.markdown(`**AgentX error:** ${message}`);
-    }
-    return {};
-  }
-
-  if (/^(?:agentx:\s*)?(?:add remote adapter|connect github|connect ado|setup github|setup ado)$/i.test(userText)) {
-    try {
-      await vscode.commands.executeCommand('agentx.addRemoteAdapter');
-      response.markdown('Opened **AgentX: Add Remote Adapter** for this workspace.');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       response.markdown(`**AgentX error:** ${message}`);

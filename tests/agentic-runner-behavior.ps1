@@ -27,6 +27,100 @@ Write-Host ' ================================================' -ForegroundColor 
 
 $Script:ApiMode = 'models'
 
+$originalLlmProviderEnv = $env:AGENTX_LLM_PROVIDER
+$originalReadinessModeEnv = $env:AGENTX_LLM_READINESS_MODE
+
+try {
+    Assert-Equal (ConvertTo-RunnerProviderId 'models') 'github-models' 'ConvertTo-RunnerProviderId normalizes models alias'
+    Assert-Equal (ConvertTo-RunnerProviderId 'github_models') 'github-models' 'ConvertTo-RunnerProviderId normalizes underscore alias'
+    Assert-Equal (ConvertTo-RunnerProviderId 'copilot') 'copilot' 'ConvertTo-RunnerProviderId preserves copilot provider id'
+    Assert-Equal (ConvertTo-RunnerProviderId 'claude') 'claude-code' 'ConvertTo-RunnerProviderId normalizes claude alias'
+    Assert-Equal (ConvertTo-RunnerProviderId 'claude_code') 'claude-code' 'ConvertTo-RunnerProviderId normalizes claude_code alias'
+    Assert-Equal (ConvertTo-RunnerProviderId 'anthropic') 'anthropic-api' 'ConvertTo-RunnerProviderId normalizes anthropic alias'
+    Assert-Equal (ConvertTo-RunnerProviderId 'openai') 'openai-api' 'ConvertTo-RunnerProviderId normalizes openai alias'
+
+    $env:AGENTX_LLM_PROVIDER = ''
+    $env:AGENTX_LLM_READINESS_MODE = ''
+    $defaultPreference = Get-RunnerProviderPreference @{ }
+    Assert-Equal $defaultPreference.providerId 'auto' 'Get-RunnerProviderPreference defaults to auto when unset'
+    Assert-Equal $defaultPreference.source 'default' 'Get-RunnerProviderPreference reports default source when unset'
+
+    $configPreference = Get-RunnerProviderPreference ([PSCustomObject]@{ llmProvider = 'copilot' })
+    Assert-Equal $configPreference.providerId 'copilot' 'Get-RunnerProviderPreference reads llmProvider from config'
+    Assert-Equal $configPreference.source 'config' 'Get-RunnerProviderPreference reports config source'
+
+    $env:AGENTX_LLM_PROVIDER = 'github-models'
+    $envPreference = Get-RunnerProviderPreference ([PSCustomObject]@{ llmProvider = 'copilot' })
+    Assert-Equal $envPreference.providerId 'github-models' 'Get-RunnerProviderPreference lets env override config'
+    Assert-Equal $envPreference.source 'env' 'Get-RunnerProviderPreference reports env source'
+    $env:AGENTX_LLM_PROVIDER = ''
+
+    Assert-Equal (Get-RunnerReadinessMode -Config ([PSCustomObject]@{ }) -PreferredProviderId 'copilot') 'strict' 'Get-RunnerReadinessMode defaults explicit providers to strict mode'
+    Assert-Equal (Get-RunnerReadinessMode -Config ([PSCustomObject]@{ }) -PreferredProviderId 'auto') 'advisory' 'Get-RunnerReadinessMode keeps auto selection advisory by default'
+    Assert-Equal (Get-RunnerDefaultModel 'claude-code') 'claude-sonnet-4.6' 'Get-RunnerDefaultModel returns Claude default for claude-code provider'
+    Assert-Equal (Get-RunnerDefaultModel 'anthropic-api') 'claude-sonnet-4.6' 'Get-RunnerDefaultModel returns Claude default for anthropic-api provider'
+    Assert-Equal (Get-RunnerDefaultModel 'openai-api') 'gpt-5.4' 'Get-RunnerDefaultModel returns GPT default for openai-api provider'
+    $claudeCapability = Get-RunnerModelCapability 'claude-sonnet-4.6'
+    Assert-Equal $claudeCapability.contextWindow 200000 'Get-RunnerModelCapability returns Claude context window metadata'
+    Assert-Equal $claudeCapability.reasoningMode 'claude-thinking' 'Get-RunnerModelCapability returns Claude reasoning metadata'
+    Assert-True (Test-RunnerModelSupportedByProvider -ProviderId 'claude-code' -ModelId 'claude-sonnet-4.6') 'Test-RunnerModelSupportedByProvider accepts Claude model ids for claude-code'
+    Assert-True (-not (Test-RunnerModelSupportedByProvider -ProviderId 'claude-code' -ModelId 'gpt-4o')) 'Test-RunnerModelSupportedByProvider rejects GPT models for claude-code'
+    Assert-True (Test-RunnerModelSupportedByProvider -ProviderId 'anthropic-api' -ModelId 'claude-sonnet-4.6') 'Test-RunnerModelSupportedByProvider accepts Claude model ids for anthropic-api'
+    Assert-True (Test-RunnerModelSupportedByProvider -ProviderId 'openai-api' -ModelId 'gpt-5.4') 'Test-RunnerModelSupportedByProvider accepts GPT model ids for openai-api'
+
+    $providerRegistry = @{
+        'copilot' = [PSCustomObject]@{ id = 'copilot'; displayName = 'Copilot API'; enabled = $true; ready = $true; reason = 'ready'; transport = 'copilot'; selectionSource = 'default'; authSource = 'gh' }
+        'github-models' = [PSCustomObject]@{ id = 'github-models'; displayName = 'GitHub Models'; enabled = $true; ready = $true; reason = 'ready'; transport = 'models'; selectionSource = 'default'; authSource = 'gh' }
+        'claude-code' = [PSCustomObject]@{ id = 'claude-code'; displayName = 'Claude Code'; enabled = $true; ready = $true; reason = 'ready'; transport = 'claude-code'; selectionSource = 'default'; authSource = 'claude' }
+    }
+    $selectedAuto = Select-RunnerProviderFromRegistry -Registry $providerRegistry -RequestedProviderId 'auto' -ReadinessMode 'advisory'
+    Assert-Equal $selectedAuto.id 'copilot' 'Select-RunnerProviderFromRegistry prefers copilot in auto mode when ready'
+
+    $providerRegistry['copilot'].ready = $false
+    $selectedFallback = Select-RunnerProviderFromRegistry -Registry $providerRegistry -RequestedProviderId 'copilot' -ReadinessMode 'advisory'
+    Assert-Equal $selectedFallback.id 'github-models' 'Select-RunnerProviderFromRegistry falls back in advisory mode when copilot is unavailable'
+
+    $strictFailed = $false
+    try {
+        $null = Select-RunnerProviderFromRegistry -Registry $providerRegistry -RequestedProviderId 'copilot' -ReadinessMode 'strict'
+    } catch {
+        $strictFailed = $_.Exception.Message -match 'Copilot API is not ready'
+    }
+    Assert-True $strictFailed 'Select-RunnerProviderFromRegistry fails closed for explicit providers in strict mode'
+
+    $selectedClaude = Select-RunnerProviderFromRegistry -Registry $providerRegistry -RequestedProviderId 'claude-code' -ReadinessMode 'strict'
+    Assert-Equal $selectedClaude.id 'claude-code' 'Select-RunnerProviderFromRegistry selects claude-code when explicitly requested and ready'
+
+    $providerRegistry['copilot'].ready = $true
+} finally {
+    $env:AGENTX_LLM_PROVIDER = $originalLlmProviderEnv
+    $env:AGENTX_LLM_READINESS_MODE = $originalReadinessModeEnv
+}
+
+$originalTestRunnerCommandAvailable = ${function:Test-RunnerCommandAvailable}
+$originalInvokeRunnerCommand = ${function:Invoke-RunnerCommand}
+try {
+    function Test-RunnerCommandAvailable {
+        param([string]$CommandName)
+        return ($CommandName -eq 'claude')
+    }
+
+    function Invoke-RunnerCommand {
+        param([string]$FileName, [string[]]$Arguments = @())
+        return [PSCustomObject]@{
+            output = '{"authenticated":true}'
+            exitCode = 0
+        }
+    }
+
+    $claudeReady = Test-ClaudeCodeProviderReady
+    Assert-True $claudeReady.ready 'Test-ClaudeCodeProviderReady reports ready when claude auth status succeeds'
+    Assert-True ($claudeReady.reason -match 'authenticated') 'Test-ClaudeCodeProviderReady returns an authentication success reason'
+} finally {
+    ${function:Test-RunnerCommandAvailable} = $originalTestRunnerCommandAvailable
+    ${function:Invoke-RunnerCommand} = $originalInvokeRunnerCommand
+}
+
 $parsedFallbacks = @(ConvertFrom-ModelFallbackList "['gpt-4.1', 'gpt-4o-mini']")
 Assert-Equal $parsedFallbacks.Count 2 'ConvertFrom-ModelFallbackList returns two entries'
 Assert-Equal $parsedFallbacks[0] 'gpt-4.1' 'ConvertFrom-ModelFallbackList trims quotes from first entry'
@@ -38,11 +132,111 @@ Assert-Equal $modelCandidates[0] 'gpt-4.1' 'Primary model is resolved first in G
 Assert-Equal $modelCandidates[1] 'gpt-4o-mini' 'Fallback candidate is preserved after primary model'
 Assert-Equal $modelCandidates[2] 'gpt-4o' 'Default model is appended as final fallback'
 
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'claude-code' }
+$claudeModelCandidates = @(Get-ModelCandidateList -preferredModel 'Claude Sonnet 4.6' -modelFallback '')
+Assert-Equal $claudeModelCandidates[0] 'claude-sonnet-4.6' 'Get-ModelCandidateList resolves Claude aliases for claude-code provider'
+Assert-Equal $claudeModelCandidates[-1] 'claude-sonnet-4.6' 'Get-ModelCandidateList appends Claude default model for claude-code provider'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'openai-api' }
+$openAiModelCandidates = @(Get-ModelCandidateList -preferredModel 'GPT-5.4' -modelFallback 'gpt-4o')
+Assert-Equal $openAiModelCandidates[0] 'gpt-5.4' 'Get-ModelCandidateList resolves GPT aliases for openai-api provider'
+Assert-Equal $openAiModelCandidates[-1] 'gpt-4o' 'Get-ModelCandidateList preserves configured fallback for openai-api provider'
+$Script:ActiveProvider = $null
+
+$anthropicResponse = ConvertFrom-AnthropicResponse ([PSCustomObject]@{
+    stop_reason = 'tool_use'
+    content = @(
+        [PSCustomObject]@{ type = 'text'; text = 'Need to inspect the workspace.' },
+        [PSCustomObject]@{ type = 'tool_use'; id = 'toolu_123'; name = 'list_dir'; input = @{ dirPath = 'docs' } }
+    )
+})
+Assert-Equal $anthropicResponse.choices[0].message.content 'Need to inspect the workspace.' 'ConvertFrom-AnthropicResponse preserves text content'
+Assert-Equal $anthropicResponse.choices[0].message.tool_calls[0].function.name 'list_dir' 'ConvertFrom-AnthropicResponse normalizes Anthropic tool use blocks'
+
+Assert-Equal (ConvertTo-ClaudeCodeModelId 'claude-sonnet-4.6') 'claude-sonnet-4-6' 'ConvertTo-ClaudeCodeModelId normalizes dot-version Claude model ids for CLI usage'
+
+$claudeToolList = Get-ClaudeCodeAllowedTools @(
+    @{ function = @{ name = 'file_read' } },
+    @{ function = @{ name = 'file_edit' } },
+    @{ function = @{ name = 'terminal_exec' } },
+    @{ function = @{ name = 'list_dir' } }
+)
+Assert-Equal $claudeToolList 'Read,Edit,Bash,Glob' 'Get-ClaudeCodeAllowedTools maps AgentX tools to Claude Code built-ins'
+
+$claudeNormalized = ConvertFrom-ClaudeCodeResponse '{"result":"Updated the auth flow and added tests.","session_id":"abc"}'
+Assert-Equal $claudeNormalized.choices[0].message.content 'Updated the auth flow and added tests.' 'ConvertFrom-ClaudeCodeResponse normalizes json result payloads'
+
+$claudeRawText = ConvertFrom-ClaudeCodeResponse 'Plain text response from Claude Code'
+Assert-Equal $claudeRawText.choices[0].message.content 'Plain text response from Claude Code' 'ConvertFrom-ClaudeCodeResponse falls back to raw text when output is not json'
+
+$originalInvokeRunnerCommandWithInput = ${function:Invoke-RunnerCommandWithInput}
+try {
+    function Invoke-RunnerCommandWithInput {
+        param([string]$FileName, [string[]]$Arguments = @(), [string]$InputText = '')
+        return [PSCustomObject]@{
+            output = '{"result":"Claude bridge executed successfully."}'
+            exitCode = 0
+        }
+    }
+
+    $claudeResponse = Invoke-ClaudeCodePrintMode -ModelId 'claude-sonnet-4.6' -Messages @(
+        @{ role = 'system'; content = 'Follow repo rules.' },
+        @{ role = 'user'; content = 'Inspect the workspace and summarize the next step.' }
+    ) -Tools @(
+        @{ function = @{ name = 'file_read' } },
+        @{ function = @{ name = 'grep_search' } }
+    ) -RequestOptions @{ effort = 'medium' }
+    Assert-Equal $claudeResponse.choices[0].message.content 'Claude bridge executed successfully.' 'Invoke-ClaudeCodePrintMode returns normalized Claude Code output'
+} finally {
+    ${function:Invoke-RunnerCommandWithInput} = $originalInvokeRunnerCommandWithInput
+}
+
 Assert-True (Test-IsModelAvailabilityError 'Copilot API error (HTTP 404): model not found') 'Model availability detector matches model-not-found errors'
 Assert-True (-not (Test-IsModelAvailabilityError 'Copilot API error (HTTP 429): rate limit exceeded')) 'Model availability detector ignores rate-limit errors'
 
 Assert-Equal (Get-ModelContextWindow 'gpt-4o') 128000 'Get-ModelContextWindow returns GPT-4o context size'
 Assert-Equal (Get-ModelContextWindow 'claude-sonnet-4.6') 200000 'Get-ModelContextWindow returns Claude context size'
+
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
+$gptReasoning = Get-ReasoningRequestConfig -agentDef @{ reasoningLevel = 'high' } -modelId 'gpt-5.4'
+Assert-Equal $gptReasoning.reasoning.effort 'high' 'Get-ReasoningRequestConfig uses metadata-driven GPT reasoning support'
+
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'claude-code' }
+$claudeCliReasoning = Get-ReasoningRequestConfig -agentDef @{ reasoningLevel = 'medium' } -modelId 'claude-sonnet-4.6'
+Assert-Equal $claudeCliReasoning.effort 'medium' 'Get-ReasoningRequestConfig emits Claude Code effort settings for Claude models'
+
+$originalClaudeBridge = ${function:Invoke-ClaudeCodePrintMode}
+try {
+    function Invoke-ClaudeCodePrintMode {
+        param(
+            [string]$ModelId,
+            [array]$Messages,
+            [array]$Tools,
+            [hashtable]$RequestOptions = @{}
+        )
+
+        return @{
+            choices = @(
+                @{
+                    message = @{
+                        content = 'Claude Code handled the request.'
+                        tool_calls = @()
+                    }
+                    finish_reason = 'stop'
+                }
+            )
+        }
+    }
+
+    $claudeBridgeResponse = Invoke-LlmChat -token '' -modelId 'claude-sonnet-4.6' -messages @(@{ role = 'user'; content = 'hello' }) -tools @() -RequestOptions @{ effort = 'medium' }
+    Assert-Equal $claudeBridgeResponse.choices[0].message.content 'Claude Code handled the request.' 'Invoke-LlmChat routes claude-code provider requests through the Claude bridge'
+} finally {
+    ${function:Invoke-ClaudeCodePrintMode} = $originalClaudeBridge
+}
+
+    $Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
+$claudeReasoning = Get-ReasoningRequestConfig -agentDef @{ reasoningLevel = 'medium' } -modelId 'claude-sonnet-4.6'
+Assert-Equal $claudeReasoning.thinking.type 'adaptive' 'Get-ReasoningRequestConfig uses metadata-driven Claude reasoning support'
+$Script:ActiveProvider = $null
 
 $largeMessages = @(
     @{ role = 'system'; content = 'system prompt' }

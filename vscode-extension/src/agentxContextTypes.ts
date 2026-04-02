@@ -5,6 +5,15 @@ export interface PendingClarificationState {
   humanPrompt?: string;
 }
 
+export interface PendingSetupState {
+  kind: 'llm-adapter' | 'remote-adapter';
+  step: 'choose-llm-provider' | 'choose-remote-adapter' | 'enter-github-repo' | 'enter-ado-project';
+  prompt: string;
+  providerId?: 'copilot' | 'claude-code' | 'anthropic-api' | 'openai-api';
+  adapterMode?: 'github' | 'ado' | 'local';
+  detectedValue?: string;
+}
+
 export interface AgentHandoff {
   readonly agent: string;
   readonly label: string;

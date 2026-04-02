@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
 import {
+  getPendingSetup,
+  tryHandleAdapterSetupRequest,
+  tryHandlePendingSetupRequest,
+} from './adapterSetup';
+import {
   getPendingClarification,
   renderUsageGuidance,
   resetChatRouterInternalStateForTests,
@@ -29,6 +34,20 @@ import {
 export async function getAgentXChatFollowups(
   agentx: AgentXContext,
 ): Promise<vscode.ChatFollowup[]> {
+  const pendingSetup = await getPendingSetup(agentx);
+  if (pendingSetup) {
+    return [
+      {
+        prompt: 'continue',
+        label: 'Continue adapter setup',
+      },
+      {
+        prompt: 'cancel setup',
+        label: 'Cancel adapter setup',
+      },
+    ];
+  }
+
   const pending = await getPendingClarification(agentx);
   if (!pending) {
     return [];
@@ -55,6 +74,11 @@ export async function routeAgentXChatRequest(
   response: vscode.ChatResponseStream,
   agentx: AgentXContext,
 ): Promise<vscode.ChatResult> {
+  const adapterSetupResult = await tryHandleAdapterSetupRequest(userText, response, agentx);
+  if (adapterSetupResult) {
+    return adapterSetupResult;
+  }
+
   const workspaceSetupResult = await tryHandleWorkspaceSetupRequest(userText, response);
   if (workspaceSetupResult) {
     return workspaceSetupResult;
@@ -63,6 +87,12 @@ export async function routeAgentXChatRequest(
   const runMatch = userText.match(/^run\s+(\S+)\s+(.+)$/is);
   if (runMatch) {
     return runAgentCommand(response, agentx, runMatch[1].toLowerCase(), runMatch[2].trim());
+  }
+
+  const pendingSetup = await getPendingSetup(agentx);
+  const pendingSetupResult = await tryHandlePendingSetupRequest(userText, response, agentx, pendingSetup);
+  if (pendingSetupResult) {
+    return pendingSetupResult;
   }
 
   const pending = await getPendingClarification(agentx);
