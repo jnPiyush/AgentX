@@ -16,6 +16,8 @@ import { registerReviewFindingCommands } from './review-findings';
 import { registerShowIssueCommand } from './showIssue';
 import { registerTaskBundleCommands } from './task-bundles';
 import { registerPendingClarificationCommand } from './pendingClarification';
+import { registerHireAgentCommand } from './hireAgent';
+import { registerAddSkillCommand } from './addSkill';
 
 export function registerAgentXCommands(
  context: vscode.ExtensionContext,
@@ -37,4 +39,6 @@ export function registerAgentXCommands(
  registerTaskBundleCommands(context, agentx);
  registerShowIssueCommand(context, agentx);
  registerPendingClarificationCommand(context, agentx);
+ registerHireAgentCommand(context, agentx);
+ registerAddSkillCommand(context, agentx);
 }

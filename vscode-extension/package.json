@@ -304,6 +304,18 @@
         "title": "Reconcile Bounded Parallel Run",
         "category": "AgentX",
         "icon": "$(git-merge)"
+      },
+      {
+        "command": "agentx.addSkill",
+        "title": "Add Skill",
+        "category": "AgentX",
+        "icon": "$(add)"
+      },
+      {
+        "command": "agentx.hireAgent",
+        "title": "Hire Agent",
+        "category": "AgentX",
+        "icon": "$(person-add)"
       }
     ],
     "viewsContainers": {
@@ -334,6 +346,12 @@
           "name": "Templates",
           "icon": "$(file-text)",
           "contextualTitle": "AgentX Templates"
+        },
+        {
+          "id": "agentx-skills",
+          "name": "Skills",
+          "icon": "$(library)",
+          "contextualTitle": "AgentX Skills"
         }
       ]
     },
@@ -348,7 +366,17 @@
       "view/title": [
         {
           "command": "agentx.refresh",
-          "when": "view == agentx-work || view == agentx-status",
+          "when": "view == agentx-work || view == agentx-status || view == agentx-skills",
+          "group": "navigation"
+        },
+        {
+          "command": "agentx.addSkill",
+          "when": "view == agentx-skills",
+          "group": "navigation"
+        },
+        {
+          "command": "agentx.hireAgent",
+          "when": "view == agentx-work",
           "group": "navigation"
         }
       ],
@@ -477,6 +505,12 @@
         },
         {
           "command": "agentx.runAIEvaluation"
+        },
+        {
+          "command": "agentx.addSkill"
+        },
+        {
+          "command": "agentx.hireAgent"
         }
       ]
     },

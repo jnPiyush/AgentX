@@ -4827,6 +4827,8 @@ $($C.w)  Commands:$($C.n)
     workflow [agent-name]            List/show workflow steps for an agent
   loop <start|status|iterate|complete|cancel>  Iterative refinement
   run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
+  hire <name>                      Scaffold a new custom agent definition
+  watch                            Background daemon - polls backlog and auto-routes work
   validate <issue> <role>          Pre-handoff validation
   hook <start|finish> <agent> [#]  Agent lifecycle hooks
   hooks install                    Install git hooks
@@ -4881,6 +4883,242 @@ $($C.w)  Flags:$($C.n)
 }
 
 # ---------------------------------------------------------------------------
+# HIRE: Scaffold a new custom agent definition
+# ---------------------------------------------------------------------------
+
+function Invoke-HireCmd {
+    $agentName = Get-Flag @('-n', '--name')
+    if (-not $agentName -and $Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') {
+        $agentName = $Script:SubArgs[0]
+    }
+    $description = Get-Flag @('-d', '--description')
+    $model = Get-Flag @('-m', '--model') 'gpt-4.1'
+    $role = Get-Flag @('-r', '--role') 'Engineer'
+
+    if (-not $agentName) {
+        Write-Host "`n$($C.c)  AgentX Hire - Create a Custom Agent$($C.n)"
+        Write-Host "$($C.d)  Scaffold a new agent definition in .github/agents/$($C.n)`n"
+        Write-Host "$($C.w)  Usage:$($C.n)"
+        Write-Host '  agentx hire <name>'
+        Write-Host '  agentx hire "Security Auditor" -d "Performs security audits" -r Researcher'
+        Write-Host '  agentx hire "Data Pipeline" -m claude-sonnet-4 -r Engineer'
+        Write-Host ''
+        Write-Host "$($C.w)  Options:$($C.n)"
+        Write-Host '  -n, --name          Agent display name (required)'
+        Write-Host '  -d, --description   Short description'
+        Write-Host '  -m, --model         LLM model (default: gpt-4.1)'
+        Write-Host '  -r, --role          Role type (default: Engineer)'
+        Write-Host ''
+        return
+    }
+
+    $agentId = $agentName.ToLower() -replace '[^a-z0-9]+', '-' -replace '^-|-$', ''
+    if (-not $description) { $description = "$agentName agent for the $role role" }
+
+    $agentsDir = Join-Path $Script:ROOT '.github' 'agents'
+    if (-not (Test-Path $agentsDir)) { New-Item -ItemType Directory -Path $agentsDir -Force | Out-Null }
+
+    $fileName = "$agentId.agent.md"
+    $filePath = Join-Path $agentsDir $fileName
+
+    if (Test-Path $filePath) {
+        Write-Host "$($C.y)  Agent '$agentId' already exists at $fileName.$($C.n)"
+        Write-Host "$($C.d)  Use a different name or delete the existing file.$($C.n)"
+        $global:LASTEXITCODE = 1
+        return
+    }
+
+    $content = @"
+---
+name: $agentName
+description: "$description"
+model: "$model"
+tools:
+  - "any"
+constraints:
+  - "Follow workspace coding standards"
+  - "Validate all outputs before delivery"
+  - "Operate within the $role domain"
+---
+
+# $agentName
+
+**Role**: $role
+
+## Purpose
+
+$description
+
+## Constraints
+
+- Follow workspace coding standards
+- Validate all outputs before delivery
+- Operate within the $role domain
+
+## Deliverables
+
+- Produce artifacts relevant to the $role role
+- Follow the AgentX quality loop (minimum 5 iterations)
+- Self-review before handoff
+
+## Self-Review Checklist
+
+Before completing work, verify:
+
+- [ ] All deliverables are present and complete
+- [ ] Outputs follow workspace conventions
+- [ ] No security violations in generated content
+- [ ] Quality loop completed with passing gates
+"@
+
+    Set-Content $filePath -Value $content -Encoding utf8
+    Write-Host "`n$($C.g)  [PASS] Agent '$agentName' hired!$($C.n)"
+    Write-Host "$($C.d)  Definition: $fileName$($C.n)"
+    Write-Host "$($C.d)  Model: $model  |  Role: $role$($C.n)"
+    Write-Host "$($C.d)  Edit the file to customize constraints, deliverables, and workflow.$($C.n)`n"
+}
+
+# ---------------------------------------------------------------------------
+# WATCH: Background daemon - polls backlog and auto-routes work
+# ---------------------------------------------------------------------------
+
+function Invoke-WatchCmd {
+    $intervalMinutes = [int](Get-Flag @('--interval', '-i') '5')
+    $maxConcurrent = [int](Get-Flag @('--max-concurrent', '-c') '1')
+    $timeoutMinutes = [int](Get-Flag @('--timeout', '-t') '0')
+    $dryRun = Test-Flag @('--dry-run', '-n')
+    $execute = Test-Flag @('--execute', '-x')
+    $statusOnly = Test-Flag @('--status', '-s')
+
+    if ($statusOnly) {
+        $watchState = Read-JsonFile (Join-Path $AGENTX_DIR 'state' 'watch-state.json')
+        if (-not $watchState) {
+            Write-Host 'No watch session active.'
+            return
+        }
+        if ($Script:JsonOutput) { $watchState | ConvertTo-Json -Depth 5; return }
+        Write-Host "`n$($C.c)  Watch Status$($C.n)"
+        Write-Host "$($C.d)  Started: $($watchState.started)$($C.n)"
+        Write-Host "$($C.d)  Cycles: $($watchState.cycles)$($C.n)"
+        Write-Host "$($C.d)  Items routed: $($watchState.itemsRouted)$($C.n)"
+        Write-Host "$($C.d)  Items executed: $($watchState.itemsExecuted)$($C.n)"
+        Write-Host "$($C.d)  Last poll: $($watchState.lastPoll)$($C.n)`n"
+        return
+    }
+
+    Write-Host "`n$($C.c)  AgentX Watch - Continuous Backlog Monitor$($C.n)"
+    Write-Host "$($C.d)  Polls backlog every $intervalMinutes minutes for unblocked work.$($C.n)"
+    if ($dryRun) { Write-Host "$($C.y)  DRY RUN: Will report but not execute.$($C.n)" }
+    if (-not $execute) {
+        Write-Host "$($C.y)  REPORT MODE: Add --execute to auto-run agents on ready items.$($C.n)"
+    }
+    Write-Host "$($C.d)  Max concurrent: $maxConcurrent  |  Timeout: $(if ($timeoutMinutes -gt 0) { "$timeoutMinutes min" } else { 'none' })$($C.n)"
+    Write-Host "$($C.d)  Press Ctrl+C to stop.$($C.n)`n"
+
+    # Initialize watch state
+    $watchStateFile = Join-Path $AGENTX_DIR 'state' 'watch-state.json'
+    $watchState = [PSCustomObject]@{
+        started       = Get-Timestamp
+        lastPoll      = $null
+        cycles        = 0
+        itemsRouted   = 0
+        itemsExecuted = 0
+        active        = $true
+    }
+    Write-JsonFile $watchStateFile $watchState
+
+    $startTime = [datetime]::UtcNow
+
+    try {
+        while ($true) {
+            $watchState.cycles++
+            $watchState.lastPoll = Get-Timestamp
+
+            # Poll for ready items
+            $all = Get-AllIssues
+            $providerInfo = Get-AgentXProviderInfo
+            $usesExplicitReadyState = $providerInfo.readyUsesExplicitReadyState -or ($providerInfo.name -eq 'github' -and (Test-GitHubProjectConfigured))
+            $open = if ($usesExplicitReadyState) {
+                @($all | Where-Object { $_.state -eq 'open' -and $_.status -eq 'Ready' })
+            } else {
+                @($all | Where-Object { $_.state -eq 'open' })
+            }
+
+            $ready = @($open | Where-Object {
+                $deps = Get-IssueDeps $_
+                $blocked = $false
+                foreach ($bid in $deps.blocked_by) {
+                    $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
+                    if ($b -and $b.state -eq 'open') { $blocked = $true }
+                }
+                -not $blocked
+            } | Sort-Object { Get-IssuePriority $_ })
+
+            if ($ready.Count -gt 0) {
+                Write-Host "$($C.c)  [$((Get-Date).ToString('HH:mm:ss'))] Found $($ready.Count) ready item(s):$($C.n)"
+                foreach ($item in $ready) {
+                    $p = Get-IssuePriority $item
+                    $pLabel = if ($p -lt 9) { "P$p" } else { '  ' }
+                    $typ = Get-IssueType $item
+                    $agent = switch -Regex ($typ) {
+                        'epic'          { 'product-manager' }
+                        'bug'           { 'engineer' }
+                        'spike'         { 'architect' }
+                        'devops'        { 'devops' }
+                        'data-science'  { 'data-scientist' }
+                        'testing'       { 'tester' }
+                        'powerbi'       { 'powerbi-analyst' }
+                        default         { 'engineer' }
+                    }
+                    Write-Host "    [$pLabel] #$($item.number) ($typ) $($item.title) -> $agent"
+                    $watchState.itemsRouted++
+
+                    if ($execute -and -not $dryRun) {
+                        Write-Host "$($C.y)    Spawning $agent for #$($item.number)...$($C.n)"
+                        try {
+                            . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
+                            $params = @{
+                                Agent = $agent
+                                Prompt = "Work on issue #$($item.number): $($item.title)"
+                                MaxIterations = 10
+                                WorkspaceRoot = $Script:ROOT
+                                IssueNumber = [int]$item.number
+                            }
+                            $result = Invoke-AgenticLoop @params
+                            if ($result) {
+                                $watchState.itemsExecuted++
+                                Write-Host "$($C.g)    [PASS] #$($item.number) completed ($($result.exitReason))$($C.n)"
+                            }
+                        } catch {
+                            Write-Host "$($C.r)    [FAIL] #$($item.number) error: $($_.Exception.Message)$($C.n)"
+                        }
+                    }
+                }
+            } else {
+                Write-Host "$($C.d)  [$((Get-Date).ToString('HH:mm:ss'))] No ready items. Sleeping $intervalMinutes min...$($C.n)"
+            }
+
+            Write-JsonFile $watchStateFile $watchState
+
+            # Check timeout
+            if ($timeoutMinutes -gt 0) {
+                $elapsed = ([datetime]::UtcNow - $startTime).TotalMinutes
+                if ($elapsed -ge $timeoutMinutes) {
+                    Write-Host "`n$($C.y)  Watch timeout ($timeoutMinutes min) reached. Stopping.$($C.n)"
+                    break
+                }
+            }
+
+            Start-Sleep -Seconds ($intervalMinutes * 60)
+        }
+    } finally {
+        $watchState.active = $false
+        Write-JsonFile $watchStateFile $watchState
+        Write-Host "`n$($C.d)  Watch stopped. Cycles: $($watchState.cycles) | Routed: $($watchState.itemsRouted) | Executed: $($watchState.itemsExecuted)$($C.n)"
+    }
+}
+
+# ---------------------------------------------------------------------------
 # Main router
 # ---------------------------------------------------------------------------
 
@@ -4903,6 +5141,8 @@ switch ($Script:Command) {
     'lessons'  { Invoke-LessonsCmd }
     'git-sync' { Invoke-GitSyncCmd }
     'run'      { Invoke-RunCmd }
+    'hire'     { Invoke-HireCmd }
+    'watch'    { Invoke-WatchCmd }
     'tokens'   { Invoke-TokensCmd }
     'score'    { Invoke-ScoreCmd }
     'version'  { Invoke-VersionCmd }
