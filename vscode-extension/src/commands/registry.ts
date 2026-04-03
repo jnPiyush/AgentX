@@ -17,7 +17,7 @@ import { registerReviewFindingCommands } from './review-findings';
 import { registerShowIssueCommand } from './showIssue';
 import { registerTaskBundleCommands } from './task-bundles';
 import { registerPendingClarificationCommand } from './pendingClarification';
-import { registerHireAgentCommand } from './hireAgent';
+import { registerAddAgentCommand } from './addAgent';
 import { registerAddSkillCommand } from './addSkill';
 
 export function registerAgentXCommands(
@@ -41,6 +41,6 @@ export function registerAgentXCommands(
  registerTaskBundleCommands(context, agentx);
  registerShowIssueCommand(context, agentx);
  registerPendingClarificationCommand(context, agentx);
- registerHireAgentCommand(context, agentx);
+ registerAddAgentCommand(context, agentx);
  registerAddSkillCommand(context, agentx);
 }

@@ -32,23 +32,15 @@ export function registerAddSkillCommand(
         return;
       }
 
-      const hasCliRuntime = agentx.hasCliRuntime();
-      if (hasCliRuntime) {
-        // Prefer workspace-local script (AgentX repo or install.ps1 users);
-        // fall back to the bundled copy inside the installed extension.
-        const workspaceScript = path.join(root, '.github', 'skills', 'development', 'skill-creator', 'scripts', 'init-skill.ps1');
-        const bundledScript = path.join(context.extensionUri.fsPath, '.github', 'agentx', 'skills', 'development', 'skill-creator', 'scripts', 'init-skill.ps1');
-        const scriptPath = fs.existsSync(workspaceScript) ? workspaceScript : bundledScript;
+      // Prefer workspace-local scaffold script; fall back to the bundled copy inside the extension.
+      const workspaceScript = path.join(root, '.github', 'skills', 'development', 'skill-creator', 'scripts', 'init-skill.ps1');
+      const bundledScript = path.join(context.extensionUri.fsPath, '.github', 'agentx', 'skills', 'development', 'skill-creator', 'scripts', 'init-skill.ps1');
+      const scriptPath = fs.existsSync(workspaceScript) ? workspaceScript : bundledScript;
 
-        const terminal = vscode.window.createTerminal('AgentX Skill Scaffold');
-        terminal.show();
-        terminal.sendText(`cd "${root}"`);
-        terminal.sendText(`pwsh -NoProfile -File "${scriptPath}"`);
-      } else {
-        vscode.window.showInformationMessage(
-          'Skill scaffolding requires the AgentX CLI runtime. Run "AgentX: Initialize Local Runtime" first.',
-        );
-      }
+      const terminal = vscode.window.createTerminal('AgentX Add Skill');
+      terminal.show();
+      terminal.sendText(`cd "${root}"`);
+      terminal.sendText(`pwsh -NoProfile -File "${scriptPath}"`);
     }),
   );
 }

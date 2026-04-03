@@ -87,74 +87,80 @@ metadata:
 
 ## When to Use
 
-<!-- Describe the scenarios where this skill applies -->
-
-- [ ] TODO: Add trigger conditions
+- Use this skill when a task needs repeatable guidance for $Description.
+- Apply it when the work falls under the $Category category and needs consistent decisions.
+- Reach for it when reusable patterns are better than one-off instructions.
 
 ## Decision Tree
 
-``````
-Is this about [$Name]?
-+- Yes -> Apply this skill
-| +- Simple case? -> Follow Quick Start
-| - Complex case? -> See references/
-- No -> Check other skills
-``````
+Is the task primarily about $Name?
++- Yes -> Apply this skill.
+| +- Need a fast path? -> Start with Quick Start.
+| - Need edge-case handling? -> Review Common Patterns and Anti-Patterns.
+- No -> Pick a skill whose scope matches the main task more closely.
 
 ## Quick Start
 
-<!-- Most common patterns and commands -->
-
-1. **Step 1**: TODO
-2. **Step 2**: TODO
-3. **Step 3**: TODO
+1. Confirm the goal, inputs, and constraints for the requested work.
+2. Apply the patterns and rules in this skill before editing or generating outputs.
+3. Validate the result against the user request and repository conventions.
 
 ## Core Rules
 
-<!-- Non-negotiable standards for this skill domain -->
-
-1. **Rule 1**: TODO
-2. **Rule 2**: TODO
-3. **Rule 3**: TODO
+1. Keep outputs tightly aligned to $Description instead of drifting into adjacent scope.
+2. Prefer explicit, reusable patterns over improvised instructions.
+3. Make tradeoffs and assumptions visible when requirements are ambiguous.
+4. Remove placeholders and filler before treating the skill as ready.
 
 ## Common Patterns
 
-<!-- Frequently used patterns / templates -->
+### Discovery Pattern
 
-### Pattern 1
+- Clarify the expected outcome and success criteria.
+- Identify the minimum context required before acting.
+- Keep terminology consistent across prompts, docs, and artifacts.
 
-TODO: Add pattern details
+### Execution Pattern
+
+- Start with the smallest useful implementation or recommendation.
+- Structure the output so the highest-value guidance appears first.
+- Use examples that directly reflect the requested domain.
+
+### Validation Pattern
+
+- Check whether the output matches the requested format and scope.
+- Remove duplicated guidance, vague filler, and unresolved placeholders.
+- Ensure another engineer can reuse the result without extra explanation.
 
 ## Anti-Patterns
 
-<!-- What NOT to do -->
-
-- [ ] TODO: Add anti-patterns
+- Do not leave TODO markers or empty sections in the final skill.
+- Do not broaden the skill into unrelated domains unless the description requires it.
+- Do not hide assumptions that materially change the recommended approach.
+- Do not provide examples that contradict the purpose of $Name.
 
 ## References
 
-<!-- For detailed guidance, see: -->
-
 $(if ($WithReferences) {
-"- [Reference Guide](references/reference-guide.md) - Detailed examples and patterns"
+"- [Reference Guide](references/reference-guide.md) - Extended examples and detailed patterns"
 } else {
-"- None yet. Add references/ directory for extended content."
+"- Add references/ when this skill needs deeper examples or domain notes."
 })
 
 ## Assets
 
 $(if ($WithAssets) {
-"- ``assets/`` - Templates, starter code, and sample data"
+"- `assets/` - Reusable templates, sample inputs, and starter artifacts"
 } else {
-"- None yet. Add assets/ directory for reusable templates and starter code."
+"- Add assets/ for reusable templates, sample inputs, or starter artifacts."
 })
 
 ## Scripts
 
 $(if ($WithScripts) {
-"- ``scripts/example.ps1`` - TODO: Describe script purpose"
+"- `scripts/example.ps1` - Starter helper for repeated workflow steps"
 } else {
-"- None yet. Add scripts/ directory for executable tools."
+"- Add scripts/ for deterministic helpers that support this skill."
 })
 "@
 
@@ -221,7 +227,7 @@ if ($WithScripts) { Write-Host " - scripts/example.ps1 (starter)" -ForegroundCol
 if ($WithReferences) { Write-Host " - references/reference-guide.md (starter)" -ForegroundColor Gray }
 if ($WithAssets) { Write-Host " - assets/ (templates, starter code)" -ForegroundColor Gray }
 Write-Host "`n Next steps:" -ForegroundColor Yellow
-Write-Host " 1. Edit SKILL.md to fill in content" -ForegroundColor Gray
+Write-Host " 1. Review SKILL.md and tailor the generated guidance to your exact workflow" -ForegroundColor Gray
 Write-Host " 2. Add the skill to Skills.md master index" -ForegroundColor Gray
 Write-Host " 3. Test: read_file on the SKILL.md in Copilot" -ForegroundColor Gray
 Write-Host ""

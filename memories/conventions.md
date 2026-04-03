@@ -53,3 +53,5 @@
 - 2026-03-28: For agent-chat parity audits, inspect `requestRouter.ts` and `requestRouterInternals.ts` in addition to `chatParticipant.ts`, because the routed capability surface lives there.
 - 2026-03-28: In `.github/prompts/*.prompt.md`, reference local skills and templates as explicit repo-root files to read first; passive relative markdown links are valid references but too weak for prompt-loading semantics.
 - 2026-04-02: When upgrading a chat shortcut into a real conversational workflow, do not leave command-palette behavior as the only setup path. Persist pending setup state in `AgentXContext`, reuse command-internal apply helpers, and use secure password prompts for secrets instead of asking users to paste keys into chat.
+- 2026-04-03: For skill and agent creation in the extension, keep command files thin and put prompt collection plus AI-first/deterministic-fallback content generation in shared scaffold internals.
+- 2026-04-03: When command behavior is reverted after a refactor, keep the richer internals and fallback content tests if they still provide value; only restore the entrypoint UX and update execution tests to match the live command contract.

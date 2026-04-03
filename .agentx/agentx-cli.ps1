@@ -4926,26 +4926,39 @@ function Invoke-HireCmd {
         return
     }
 
-    $content = @"
+        $content = @"
 ---
 name: $agentName
 description: "$description"
 model: "$model"
 tools:
-  - "any"
+    - "any"
 constraints:
-  - "Follow workspace coding standards"
-  - "Validate all outputs before delivery"
-  - "Operate within the $role domain"
+    - "Follow workspace coding standards"
+    - "Validate all outputs before delivery"
+    - "Operate within the $role domain"
 ---
 
 # $agentName
 
 **Role**: $role
 
-## Purpose
+## Mission
 
 $description
+
+## Use When
+
+- Use this agent when the task clearly aligns to the $role role.
+- Use it when $description is the main requested outcome.
+- Use it when a dedicated workflow is needed instead of a generic agent response.
+
+## Responsibilities
+
+- Translate the request into a focused $role workflow.
+- Produce concrete outputs that match the stated mission and repository conventions.
+- Surface blockers, assumptions, and tradeoffs early.
+- Finish with verification before delivery.
 
 ## Constraints
 
@@ -4953,27 +4966,34 @@ $description
 - Validate all outputs before delivery
 - Operate within the $role domain
 
+## Workflow
+
+1. Clarify the requested outcome and gather the minimum context required.
+2. Plan the work around the stated mission and role-specific boundaries.
+3. Execute the task with outputs that stay inside the described scope.
+4. Review the result for correctness, completeness, and safety before delivery.
+
 ## Deliverables
 
-- Produce artifacts relevant to the $role role
-- Follow the AgentX quality loop (minimum 5 iterations)
-- Self-review before handoff
+- Primary deliverables relevant to the $role role.
+- Supporting notes or evidence needed to explain decisions and validation.
+- Clear next steps when additional work remains outside the current scope.
 
 ## Self-Review Checklist
 
 Before completing work, verify:
 
-- [ ] All deliverables are present and complete
-- [ ] Outputs follow workspace conventions
-- [ ] No security violations in generated content
-- [ ] Quality loop completed with passing gates
+- [ ] The output directly supports the stated mission.
+- [ ] The result stays inside the $role role boundaries.
+- [ ] Constraints and repository conventions were followed.
+- [ ] Risks, assumptions, and validation outcomes are clearly stated.
 "@
 
     Set-Content $filePath -Value $content -Encoding utf8
     Write-Host "`n$($C.g)  [PASS] Agent '$agentName' hired!$($C.n)"
     Write-Host "$($C.d)  Definition: $fileName$($C.n)"
     Write-Host "$($C.d)  Model: $model  |  Role: $role$($C.n)"
-    Write-Host "$($C.d)  Edit the file to customize constraints, deliverables, and workflow.$($C.n)`n"
+    Write-Host "$($C.d)  Review the generated workflow sections and tailor them to your domain.$($C.n)`n"
 }
 
 # ---------------------------------------------------------------------------
