@@ -165,6 +165,7 @@
       ".github/agentx/.agentx/local-issue-manager.sh"
     ],
     "supporting": [
+      ".github/copilot-instructions.md",
       ".github/agent-delegation.md",
       ".github/schemas/agent-frontmatter.schema.json",
       "AGENTS.md",
