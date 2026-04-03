@@ -151,7 +151,11 @@ AgentX initialization is workspace-scoped. After you open a repo or project fold
 AgentX: Initialize Local Runtime
 ```
 
-You can launch it from the Command Palette with `Ctrl+Shift+P` or `Cmd+Shift+P`.
+You can launch it from the Command Palette with `Ctrl+Shift+P` or `Cmd+Shift+P`, or start the same flow in chat with:
+
+```text
+@agentx initialize local runtime
+```
 
 What initialization does for the current workspace:
 

@@ -68,7 +68,7 @@ To run AgentX successfully within VS Code:
 
 1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
 2. **Open** your target project workspace in VS Code.
-3. **Initialize** the workspace by running `AgentX: Initialize Local Runtime` from the Command Palette.
+3. **Initialize** the workspace by running `AgentX: Initialize Local Runtime` from the Command Palette, or start the same flow in chat with `@agentx initialize local runtime`.
 4. **Optionally add a remote adapter** with `AgentX: Add Remote Adapter` or start it in chat with `@agentx connect github`, `@agentx connect ado`, `@agentx use local`, or `@agentx add remote adapter`.
 5. **Optionally switch the workspace LLM adapter** with `AgentX: Add LLM Adapter` or start it in chat with `@agentx switch llm`, `@agentx connect claude`, `@agentx connect openai`, or `@agentx use copilot`.
 6. **Select a role in Copilot Chat** and run the next step for that role, or select **AgentX Auto** to orchestrate the full flow in one session.
@@ -80,6 +80,12 @@ AgentX initialization is workspace-scoped. After opening a repository or project
 
 ```text
 AgentX: Initialize Local Runtime
+```
+
+You can also start the same flow in chat with:
+
+```text
+@agentx initialize local runtime
 ```
 
 This prepares the local AgentX runtime for the current workspace by:
