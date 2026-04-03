@@ -328,6 +328,48 @@ while IFS= read -r src; do
 done < <(find "$TMP" -type f)
 ok "$copied files installed ($skipped existing skipped)"
 
+# -- ADO remote detection: overwrite mcp.json for ADO workspaces --------
+ado_remote_url=""
+if command -v git &>/dev/null; then
+ ado_remote_url=$(git remote get-url origin 2>/dev/null || true)
+fi
+if echo "$ado_remote_url" | grep -qE 'visualstudio\.com|dev\.azure\.com'; then
+ ado_org_url="https://dev.azure.com/myorg"
+ if echo "$ado_remote_url" | grep -qE 'https://([^.]+)\.visualstudio\.com'; then
+  org=$(echo "$ado_remote_url" | sed -E 's|https://([^.]+)\.visualstudio\.com.*|\1|')
+  ado_org_url="https://${org}.visualstudio.com"
+ elif echo "$ado_remote_url" | grep -qE 'https://dev\.azure\.com/([^/]+)'; then
+  org=$(echo "$ado_remote_url" | sed -E 's|https://dev\.azure\.com/([^/]+).*|\1|')
+  ado_org_url="https://dev.azure.com/${org}"
+ fi
+ mkdir -p .vscode
+ cat > .vscode/mcp.json <<MCPEOF
+{
+  "\$schema": "https://json.schemastore.org/mcp.json",
+  "servers": {
+    "azure-devops": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "azure-devops-mcp@latest"],
+      "env": {
+        "ADO_ORGANIZATION_URL": "${ado_org_url}",
+        "ADO_TOKEN": "\${input:ado_pat}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "ado_pat",
+      "description": "Azure DevOps Personal Access Token (needs Work Items read/write, Code read)",
+      "password": true
+    }
+  ]
+}
+MCPEOF
+ ok "ADO workspace detected -- .vscode/mcp.json configured for Azure DevOps MCP (${ado_org_url})"
+fi
+
 # -- Step 3: Generate runtime files ----------------------
 echo -e "${C}[3] Configuring runtime...${N}"
 mkdir -p .agentx/state .agentx/digests docs/artifacts/{prd,adr,specs,reviews} docs/execution/{plans,progress} docs/{ux,architecture} memories/session

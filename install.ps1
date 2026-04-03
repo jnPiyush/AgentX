@@ -483,6 +483,50 @@ Get-ChildItem $TMP -Recurse -File -Force | ForEach-Object {
 }
 Write-OK "$copied files installed ($skipped existing skipped)"
 
+# -- ADO remote detection: overwrite mcp.json for ADO workspaces --------
+$adoRemoteUrl = $null
+if (Get-Command git -ErrorAction SilentlyContinue) {
+ try { $adoRemoteUrl = git remote get-url origin 2>$null } catch { Write-Verbose "Git remote detect failed: $($_.Exception.Message)" }
+}
+$isAdoWorkspace = $adoRemoteUrl -and ($adoRemoteUrl -match 'visualstudio\.com|dev\.azure\.com')
+if ($isAdoWorkspace) {
+ # Parse org URL from remote
+ $adoOrgUrl = 'https://dev.azure.com/myorg'
+ if ($adoRemoteUrl -match 'https://([^.]+)\.visualstudio\.com') {
+  $adoOrgUrl = "https://$($Matches[1]).visualstudio.com"
+ } elseif ($adoRemoteUrl -match 'https://dev\.azure\.com/([^/]+)') {
+  $adoOrgUrl = "https://dev.azure.com/$($Matches[1])"
+ }
+ $mcpJsonPath = '.vscode/mcp.json'
+ $adoMcpJson = @"
+{
+  "`$schema": "https://json.schemastore.org/mcp.json",
+  "servers": {
+    "azure-devops": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "azure-devops-mcp@latest"],
+      "env": {
+        "ADO_ORGANIZATION_URL": "$adoOrgUrl",
+        "ADO_TOKEN": "`${input:ado_pat}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "ado_pat",
+      "description": "Azure DevOps Personal Access Token (needs Work Items read/write, Code read)",
+      "password": true
+    }
+  ]
+}
+"@
+ New-Item -ItemType Directory -Path '.vscode' -Force | Out-Null
+ Set-Content -Path $mcpJsonPath -Value $adoMcpJson -Encoding utf8
+ Write-OK "ADO workspace detected -- .vscode/mcp.json configured for Azure DevOps MCP ($adoOrgUrl)"
+}
+
 # -- Step 3: Generate runtime files ----------------------
 Write-Host "[3] Configuring runtime..." -ForegroundColor Cyan
 
