@@ -60,10 +60,13 @@ stateDiagram-v2
     classDef success fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#166534
 
     [*] --> Generate
-    Generate --> Verify:::highlight
-    Verify --> SelfReview:::highlight
+    Generate --> Verify
+    Verify --> SelfReview
     SelfReview --> Generate : Fix Gaps
-    SelfReview --> Done:::success : Approved
+    SelfReview --> Done : Approved
+
+    class Verify,SelfReview highlight
+    class Done success
 ```
 AgentX leverages a robust, iterative execution model. The agent researches the repo, classifies the task, writes code against clear criteria, verifies the result, and loops until the task is definitively "Done."
 
