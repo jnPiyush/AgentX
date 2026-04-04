@@ -494,12 +494,35 @@ New-Item -ItemType Directory -Path '.vscode' -Force | Out-Null
 if ($isAdoWorkspace) {
  # ADO workspaces: write empty mcp.json so Copilot does not auto-insert a github MCP server.
  # The workspace uses ADO REST APIs directly -- no MCP server is needed or wanted.
- $emptyMcpJson = "{`n  \"`$schema\": \"https://json.schemastore.org/mcp.json\",`n  \"servers\": {}`n}"
+ $emptyMcpJson = @'
+{
+  "$schema": "https://json.schemastore.org/mcp.json",
+  "servers": {}
+}
+'@
  Set-Content -Path '.vscode/mcp.json' -Value $emptyMcpJson -Encoding utf8
  Write-OK "ADO workspace detected -- .vscode/mcp.json set to empty (no MCP servers; workspace uses ADO REST APIs)"
 } else {
  # GitHub / no-remote workspaces: write standard github MCP server entry.
- $githubMcpJson = "{`n  \"`$schema\": \"https://json.schemastore.org/mcp.json\",`n  \"servers\": {`n    \"github\": {`n      \"type\": \"http\",`n      \"url\": \"https://api.githubcopilot.com/mcp/\"\n    }`n  },`n  \"inputs\": [`n    {`n      \"type\": \"promptString\",`n      \"id\": \"github_token\",`n      \"description\": \"GitHub Personal Access Token (only needed if using PAT auth)\",`n      \"password\": true`n    }`n  ]`n}"
+ $githubMcpJson = @'
+{
+  "$schema": "https://json.schemastore.org/mcp.json",
+  "servers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  },
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "github_token",
+      "description": "GitHub Personal Access Token (only needed if using PAT auth)",
+      "password": true
+    }
+  ]
+}
+'@
  if (-not (Test-Path '.vscode/mcp.json') -or $Force) {
   Set-Content -Path '.vscode/mcp.json' -Value $githubMcpJson -Encoding utf8
   Write-OK "GitHub workspace -- .vscode/mcp.json configured with GitHub MCP server"
