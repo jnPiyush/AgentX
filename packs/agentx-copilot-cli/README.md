@@ -175,7 +175,7 @@ rm -rf memories  # if starter memories were installed with CLI utilities
 ## Version
 
 - Plugin: `agentx-copilot-cli`
-- Version: `8.4.26`
+- Version: `8.4.27`
 - Publisher: jnPiyush
 - License: MIT
 
