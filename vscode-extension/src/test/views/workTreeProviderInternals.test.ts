@@ -11,6 +11,7 @@ import {
   buildWorkflowGuidanceChildren,
   formatTimestamp,
   getLocalIssues,
+  normalizeIssues,
   readJsonFile,
 } from '../../views/workTreeProviderInternals';
 
@@ -55,6 +56,17 @@ describe('workTreeProviderInternals', () => {
     assert.deepEqual(issues.map((issue) => issue.number), [1, 2]);
   });
 
+  it('normalizes issue arrays from provider and local sources', () => {
+    const issues = normalizeIssues([
+      { number: 2, title: 'Second', state: 'open' },
+      { number: 1, title: 'First', state: 'closed' },
+      null,
+      { number: 'bad' },
+    ]);
+
+    assert.deepEqual(issues.map((issue) => issue.number), [1, 2]);
+  });
+
   it('builds overview children with and without pending clarification', () => {
     const withPending = buildOverviewChildren(tempRoot, { agentName: 'Engineer' }, 3);
     const withoutPending = buildOverviewChildren(tempRoot, undefined, 0);
@@ -63,6 +75,7 @@ describe('workTreeProviderInternals', () => {
     assert.equal(withPending[1].description, 'Engineer');
     assert.equal(withoutPending[1].description, 'none');
     assert.equal(withoutPending[2].description, '0');
+    assert.equal(withoutPending[2].label, 'Open issues');
   });
 
   it('builds active thread children for missing and populated active threads', () => {
@@ -107,7 +120,7 @@ describe('workTreeProviderInternals', () => {
   it('builds issue children and caps the list to five items', () => {
     const emptyChildren = buildIssueChildren([]);
     assert.equal(emptyChildren.length, 1);
-    assert.equal(emptyChildren[0].label, 'No open local issues found.');
+    assert.equal(emptyChildren[0].label, 'No open issues found.');
 
     const issueChildren = buildIssueChildren([
       { number: 1, title: 'One', status: 'Backlog' },

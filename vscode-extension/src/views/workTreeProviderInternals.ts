@@ -17,6 +17,23 @@ export interface LocalIssue {
  readonly state?: string;
 }
 
+export function normalizeIssues(value: unknown): LocalIssue[] {
+ if (!Array.isArray(value)) {
+  return [];
+ }
+
+ return value
+  .filter((issue): issue is Record<string, unknown> => !!issue && typeof issue === 'object')
+  .filter((issue) => typeof issue.number === 'number')
+  .map((issue) => ({
+   number: typeof issue.number === 'number' ? issue.number : undefined,
+   title: typeof issue.title === 'string' ? issue.title : undefined,
+   status: typeof issue.status === 'string' ? issue.status : undefined,
+   state: typeof issue.state === 'string' ? issue.state : undefined,
+  }))
+  .sort((left, right) => (left.number ?? 0) - (right.number ?? 0));
+}
+
 export function readJsonFile<T>(filePath: string): T | undefined {
  try {
   if (!fs.existsSync(filePath)) {
@@ -47,11 +64,10 @@ export function getLocalIssues(root: string): LocalIssue[] {
   return [];
  }
 
- return fs.readdirSync(issuesDir)
+ return normalizeIssues(fs.readdirSync(issuesDir)
   .filter((entry) => entry.endsWith('.json'))
   .map((entry) => readJsonFile<LocalIssue>(path.join(issuesDir, entry)))
-  .filter((issue): issue is LocalIssue => !!issue)
-  .sort((left, right) => (left.number ?? 0) - (right.number ?? 0));
+  .filter((issue): issue is LocalIssue => !!issue));
 }
 
 export function buildOverviewChildren(
@@ -71,7 +87,7 @@ export function buildOverviewChildren(
     pendingClarification.agentName,
    )
    : SidebarTreeItem.detail('Pending clarification', 'comment-discussion', 'none'),
-  SidebarTreeItem.detail('Open local issues', 'issues', String(openIssueCount)),
+  SidebarTreeItem.detail('Open issues', 'issues', String(openIssueCount)),
  ];
 }
 
@@ -159,7 +175,7 @@ export function buildIssueChildren(openIssues: ReadonlyArray<LocalIssue>): Sideb
    [String(issue.number ?? '')],
    issue.status ?? issue.state ?? 'open',
   ))
-  : [SidebarTreeItem.info('No open local issues found.')];
+  : [SidebarTreeItem.info('No open issues found.')];
 }
 
 export function buildActionChildren(): SidebarTreeItem[] {

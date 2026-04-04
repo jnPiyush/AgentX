@@ -5,6 +5,7 @@ import {
  buildIssueChildren,
  buildOverviewChildren,
  getLocalIssues,
+ normalizeIssues,
 } from './workTreeProviderInternals';
 
 export class WorkTreeProvider implements vscode.TreeDataProvider<SidebarTreeItem> {
@@ -21,6 +22,16 @@ export class WorkTreeProvider implements vscode.TreeDataProvider<SidebarTreeItem
   return element;
  }
 
+ private async getOpenIssues(root: string) {
+  try {
+   const output = await this.agentx.runCli('issue', ['list', '--json']);
+   return normalizeIssues(JSON.parse(output)).filter((issue) => (issue.state ?? 'open') !== 'closed');
+  } catch {
+   const localIssues = getLocalIssues(root);
+   return localIssues.filter((issue) => (issue.state ?? 'open') !== 'closed');
+  }
+ }
+
  async getChildren(element?: SidebarTreeItem): Promise<SidebarTreeItem[]> {
   if (element) {
    return element.children ?? [];
@@ -32,8 +43,7 @@ export class WorkTreeProvider implements vscode.TreeDataProvider<SidebarTreeItem
   }
 
   const pending = await this.agentx.getPendingClarification();
-  const localIssues = getLocalIssues(root);
-  const openIssues = localIssues.filter((issue) => (issue.state ?? 'open') !== 'closed');
+    const openIssues = await this.getOpenIssues(root);
 
   return [
    SidebarTreeItem.section('Overview', 'home', buildOverviewChildren(root, pending, openIssues.length)),

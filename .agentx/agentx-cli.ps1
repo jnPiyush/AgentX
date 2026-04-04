@@ -1186,7 +1186,7 @@ function Update-ProviderIssue([int]$num, [string]$title, [string]$body, [string]
         Assert-AdoCliAvailable
         $orgUrl = Get-AdoOrganizationUrl
         $project = Get-AdoProjectName
-        $adoArgs = @('boards', 'work-item', 'update', '--id', "$num", '--organization', $orgUrl, '--project', $project, '--output', 'json')
+            $adoArgs = @('boards', 'work-item', 'update', '--id', "$num", '--organization', $orgUrl, '--output', 'json')
         $hasEdit = $false
 
         if ($title) {
@@ -1241,7 +1241,7 @@ function Close-ProviderIssue([int]$num) {
         Assert-AdoCliAvailable
         $orgUrl = Get-AdoOrganizationUrl
         $project = Get-AdoProjectName
-        $null = & az boards work-item update --id $num --state Closed --organization $orgUrl --project $project --output json 2>$null
+        $null = & az boards work-item update --id $num --state Closed --organization $orgUrl --output json 2>$null
         return (Get-AdoIssue $num)
     }
 
@@ -1267,7 +1267,7 @@ function Add-ProviderIssueComment([int]$num, [string]$body) {
         Assert-AdoCliAvailable
         $orgUrl = Get-AdoOrganizationUrl
         $project = Get-AdoProjectName
-        $null = & az boards work-item update --id $num --discussion $body --organization $orgUrl --project $project --output json 2>$null
+        $null = & az boards work-item update --id $num --discussion $body --organization $orgUrl --output json 2>$null
         return (Get-AdoIssue $num)
     }
 
@@ -3224,7 +3224,7 @@ function Get-AdoIssue([int]$num) {
     if ([string]::IsNullOrWhiteSpace($orgUrl) -or [string]::IsNullOrWhiteSpace($project)) {
         throw 'ADO provider requires organization and project in .agentx/config.json.'
     }
-    $json = & az boards work-item show --id $num --organization $orgUrl --project $project --output json 2>$null
+    $json = & az boards work-item show --id $num --organization $orgUrl --output json 2>$null
     if (-not $json) { return $null }
     return Convert-AdoWorkItemToAgentXIssue ($json | ConvertFrom-Json)
 }

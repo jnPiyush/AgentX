@@ -28,6 +28,7 @@ function createAgentxStub(root: string) {
     githubConnected: true,
     adoConnected: false,
     getPendingClarification: async () => undefined,
+    runCli: async () => '[]',
     listExecutionPlanFiles: () => ['docs/execution/plans/EXEC-PLAN-1.md'],
     getStatePath: (fileName: string) => path.join(root, '.agentx', 'state', fileName),
   } as any;
@@ -94,6 +95,9 @@ describe('sidebar providers', () => {
 
     const provider = new WorkTreeProvider({
       ...createAgentxStub(root),
+      runCli: async () => JSON.stringify([
+        { number: 7, title: 'Add sidebar', state: 'open', status: 'In Progress' },
+      ]),
       getPendingClarification: async () => ({
         agentName: 'Engineer',
         prompt: 'Need acceptance criteria',
@@ -110,6 +114,28 @@ describe('sidebar providers', () => {
     const issueChildren = await provider.getChildren(issueSection);
     assert.equal(issueChildren.length, 1);
     assert.ok(String(issueChildren[0].label).includes('#7 Add sidebar'));
+  });
+
+  it('WorkTreeProvider should fall back to local issues when provider issue listing fails', async () => {
+    const root = createWorkspaceRoot();
+    fs.writeFileSync(
+      path.join(root, '.agentx', 'issues', '9.json'),
+      JSON.stringify({ number: 9, title: 'Fallback issue', state: 'open', status: 'Backlog' }),
+      'utf-8',
+    );
+
+    const provider = new WorkTreeProvider({
+      ...createAgentxStub(root),
+      runCli: async () => {
+        throw new Error('gh unavailable');
+      },
+    });
+
+    const items = await provider.getChildren();
+    const issueChildren = await provider.getChildren(items[1]);
+
+    assert.equal(issueChildren.length, 1);
+    assert.ok(String(issueChildren[0].label).includes('#9 Fallback issue'));
   });
 
   it('StatusTreeProvider should show only overview', async () => {

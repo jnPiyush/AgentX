@@ -289,8 +289,152 @@ switch ($Args[0]) {
     return $toolsDir
 }
 
+function Initialize-AdoMock([string]$root) {
+    $toolsDir = Join-Path $root 'mock-tools'
+    New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
+
+    $state = [PSCustomObject]@{
+        commandLog = @()
+        workItems = @(
+            [PSCustomObject]@{
+                id = 501
+                fields = [PSCustomObject]@{
+                    'System.Title' = '[Story] ADO Ready'
+                    'System.Description' = 'ADO body'
+                    'System.State' = 'New'
+                    'System.Tags' = 'type:story; priority:p1'
+                }
+                comments = @()
+            },
+            [PSCustomObject]@{
+                id = 502
+                fields = [PSCustomObject]@{
+                    'System.Title' = '[Bug] ADO Active'
+                    'System.Description' = 'Active body'
+                    'System.State' = 'Active'
+                    'System.Tags' = 'type:bug'
+                }
+                comments = @()
+            }
+        )
+    }
+
+    Write-Utf8File (Join-Path $toolsDir 'az-state.json') ($state | ConvertTo-Json -Depth 20)
+
+    $mockScript = @'
+param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
+
+$ErrorActionPreference = 'Stop'
+$statePath = Join-Path $PSScriptRoot 'az-state.json'
+$state = Get-Content $statePath -Raw | ConvertFrom-Json -Depth 20
+
+function Save-State {
+    $state | ConvertTo-Json -Depth 20 | Set-Content $statePath -Encoding utf8
+}
+
+function Add-Log([string[]]$CommandArgs) {
+    $state.commandLog = @($state.commandLog) + @(($CommandArgs -join ' '))
+}
+
+function Get-ArgValue([string[]]$AllArgs, [string]$Name, [string]$Default = '') {
+    for ($i = 0; $i -lt $AllArgs.Count; $i++) {
+        if ($AllArgs[$i] -eq $Name -and ($i + 1) -lt $AllArgs.Count) {
+            return $AllArgs[$i + 1]
+        }
+    }
+    return $Default
+}
+
+function Get-WorkItem([int]$Id) {
+    return @($state.workItems | Where-Object { [int]$_.id -eq $Id } | Select-Object -First 1)[0]
+}
+
+if ($Args.Count -eq 0) {
+    Write-Error 'No az command provided'
+    exit 1
+}
+
+Add-Log $Args
+
+if ($Args[0] -eq 'boards' -and $Args[1] -eq 'query') {
+    [PSCustomObject]@{
+        workItems = @($state.workItems | ForEach-Object { [PSCustomObject]@{ id = $_.id } })
+    } | ConvertTo-Json -Depth 10
+    Save-State
+    exit 0
+}
+
+if ($Args[0] -eq 'boards' -and $Args[1] -eq 'work-item' -and $Args[2] -eq 'show') {
+    if ('--project' -in $Args) {
+        Write-Error 'unrecognized arguments: --project'
+        exit 1
+    }
+
+    $id = [int](Get-ArgValue $Args '--id' '0')
+    $item = Get-WorkItem $id
+    if (-not $item) {
+        Write-Error 'Work item not found'
+        exit 1
+    }
+
+    $item | ConvertTo-Json -Depth 10
+    Save-State
+    exit 0
+}
+
+if ($Args[0] -eq 'boards' -and $Args[1] -eq 'work-item' -and $Args[2] -eq 'update') {
+    if ('--project' -in $Args) {
+        Write-Error 'unrecognized arguments: --project'
+        exit 1
+    }
+
+    $id = [int](Get-ArgValue $Args '--id' '0')
+    $item = Get-WorkItem $id
+    if (-not $item) {
+        Write-Error 'Work item not found'
+        exit 1
+    }
+
+    $title = Get-ArgValue $Args '--title'
+    if ($title) { $item.fields.'System.Title' = $title }
+
+    $description = Get-ArgValue $Args '--description'
+    if ($description) { $item.fields.'System.Description' = $description }
+
+    $stateValue = Get-ArgValue $Args '--state'
+    if ($stateValue) { $item.fields.'System.State' = $stateValue }
+
+    $discussion = Get-ArgValue $Args '--discussion'
+    if ($discussion) {
+        $item.comments = @($item.comments) + @([PSCustomObject]@{ body = $discussion })
+    }
+
+    $fieldUpdate = Get-ArgValue $Args '--fields'
+    if ($fieldUpdate -and $fieldUpdate.StartsWith('System.Tags=')) {
+        $item.fields.'System.Tags' = $fieldUpdate.Substring('System.Tags='.Length)
+    }
+
+    $item | ConvertTo-Json -Depth 10
+    Save-State
+    exit 0
+}
+
+Write-Error 'Unsupported az command'
+exit 1
+'@
+
+    $cmdScript = "@echo off`r`npwsh -NoProfile -File `"%~dp0az.ps1`" %*`r`n"
+    Write-Utf8File (Join-Path $toolsDir 'az.ps1') $mockScript
+    Write-Utf8File (Join-Path $toolsDir 'az.cmd') $cmdScript
+    return $toolsDir
+}
+
 function Get-GitHubMockState([string]$toolsDir) {
     return Get-Content (Join-Path $toolsDir 'gh-state.json') -Raw | ConvertFrom-Json -Depth 20
+}
+
+function Get-AdoMockState([string]$toolsDir) {
+    return Get-Content (Join-Path $toolsDir 'az-state.json') -Raw | ConvertFrom-Json -Depth 20
 }
 
 Write-Host ''
@@ -299,6 +443,7 @@ Write-Host ' ================================================' -ForegroundColor 
 
 $localRoot = $null
 $localBacklogRoot = $null
+$adoRoot = $null
 $githubRoot = $null
 $inferredRoot = $null
 $remoteDetectedRoot = $null
@@ -439,6 +584,52 @@ task_prefix: 'task'
     Assert-True ($loopStart.ExitCode -eq 0) 'Workspace launcher loop start exits successfully even when AGENTX_WORKSPACE_ROOT points elsewhere'
     Assert-True ($workflowLoopState.active -and $workflowLoopState.prompt -eq 'Local launcher loop') 'Workspace launcher writes loop state to its own workspace root'
     Assert-True ($overrideLoopState.active -and $overrideLoopState.prompt -eq 'Foreign active loop') 'Workspace launcher does not mutate foreign loop state from leaked environment overrides'
+
+    $adoRoot = New-TestWorkspace 'ado'
+    $adoToolsDir = Initialize-AdoMock $adoRoot
+    Write-Utf8File (Join-Path $adoRoot '.agentx\config.json') (@{
+        provider = 'ado'
+        integration = 'ado'
+        mode = 'ado'
+        organization = 'PJCloud'
+        project = 'Contract Lifecycle Management'
+        created = '2026-03-08T00:00:00Z'
+    } | ConvertTo-Json -Depth 5)
+
+    $originalPath = $env:PATH
+    $env:PATH = "$adoToolsDir;$originalPath"
+    try {
+        $adoList = Invoke-AgentX $adoRoot @('issue', 'list', '--json')
+        $adoIssues = $adoList.Output | ConvertFrom-Json -Depth 10
+        Assert-True ($adoList.ExitCode -eq 0) 'ADO issue list exits successfully with mocked az'
+        Assert-True (@($adoIssues).Count -eq 2 -and @(@($adoIssues).number) -contains 501 -and @(@($adoIssues).number) -contains 502) 'ADO issue list resolves work items through query plus work-item show'
+
+        $adoUpdate = Invoke-AgentX $adoRoot @('issue', 'update', '-n', '501', '-s', 'In Progress', '-b', 'Updated ADO body', '-l', 'type:story,priority:p0')
+        Assert-True ($adoUpdate.ExitCode -eq 0) 'ADO issue update exits successfully with mocked az'
+        $adoUpdatedGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
+        $adoUpdatedIssue = $adoUpdatedGet.Output | ConvertFrom-Json -Depth 10
+        Assert-True ($adoUpdatedIssue.status -eq 'Active' -and $adoUpdatedIssue.body -eq 'Updated ADO body' -and (@($adoUpdatedIssue.labels) -contains 'priority:p0')) 'ADO issue update maps AgentX edits onto Azure DevOps work-item fields'
+
+        $adoComment = Invoke-AgentX $adoRoot @('issue', 'comment', '-n', '501', '-c', 'ADO comment')
+        Assert-True ($adoComment.ExitCode -eq 0) 'ADO issue comment exits successfully with mocked az'
+        $adoCommentGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
+        $adoCommentIssue = $adoCommentGet.Output | ConvertFrom-Json -Depth 10
+        Assert-True ($adoCommentIssue.number -eq 501) 'ADO issue comment keeps the work item readable after discussion updates'
+
+        $adoClose = Invoke-AgentX $adoRoot @('issue', 'close', '-n', '501')
+        Assert-True ($adoClose.ExitCode -eq 0) 'ADO issue close exits successfully with mocked az'
+        $adoClosedGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
+        $adoClosedIssue = $adoClosedGet.Output | ConvertFrom-Json -Depth 10
+        Assert-True ($adoClosedIssue.status -eq 'Closed' -and $adoClosedIssue.state -eq 'closed') 'ADO issue close maps to Closed state and returns a closed issue'
+
+        $adoState = Get-AdoMockState $adoToolsDir
+        $adoWorkItem = @($adoState.workItems | Where-Object { [int]$_.id -eq 501 } | Select-Object -First 1)[0]
+        $adoShowOrUpdateCommands = @($adoState.commandLog | Where-Object { $_ -match 'boards work-item (show|update)' })
+        Assert-True (@($adoWorkItem.comments).Count -eq 1 -and $adoWorkItem.comments[0].body -eq 'ADO comment') 'ADO mock captures discussion updates on the work item'
+        Assert-True (@($adoShowOrUpdateCommands | Where-Object { $_ -match ' --project(\s|$)' }).Count -eq 0) 'ADO work-item show/update commands no longer send the unsupported --project flag'
+    } finally {
+        $env:PATH = $originalPath
+    }
 
     $githubRoot = New-TestWorkspace 'github'
     $toolsDir = Initialize-GitHubMock $githubRoot
@@ -626,6 +817,7 @@ task_prefix: 'task'
 finally {
     Remove-TestWorkspace $localRoot
     Remove-TestWorkspace $localBacklogRoot
+    Remove-TestWorkspace $adoRoot
     Remove-TestWorkspace $githubRoot
     Remove-TestWorkspace $inferredRoot
     Remove-TestWorkspace $remoteDetectedRoot
