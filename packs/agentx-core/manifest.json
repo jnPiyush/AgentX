@@ -23,7 +23,8 @@
       ".github/agents/data-scientist.agent.md",
       ".github/agents/tester.agent.md",
       ".github/agents/consulting-research.agent.md",
-      ".github/agents/powerbi-analyst.agent.md"
+      ".github/agents/powerbi-analyst.agent.md",
+      ".github/agents/agile-coach.agent.md"
     ],
     "instructions": [
       ".github/instructions/ai.instructions.md",

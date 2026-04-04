@@ -39,7 +39,8 @@
       ".github/agents/internal/prompt-engineer.agent.md",
       ".github/agents/internal/eval-specialist.agent.md",
       ".github/agents/internal/ops-monitor.agent.md",
-      ".github/agents/internal/rag-specialist.agent.md"
+      ".github/agents/internal/rag-specialist.agent.md",
+      ".github/agents/internal/ado-prd-to-wit.agent.md"
     ],
     "instructions": [
       ".github/instructions/ai.instructions.md",
@@ -62,7 +63,15 @@
       ".github/prompts/refactor.prompt.md",
       ".github/prompts/security-review.prompt.md",
       ".github/prompts/test-gen.prompt.md",
-      ".github/prompts/ux-design.prompt.md"
+      ".github/prompts/ux-design.prompt.md",
+      ".github/prompts/ado-add-work-item.prompt.md",
+      ".github/prompts/ado-create-pull-request.prompt.md",
+      ".github/prompts/ado-discover-work-items.prompt.md",
+      ".github/prompts/ado-get-build-info.prompt.md",
+      ".github/prompts/ado-process-my-work-items-for-task-planning.prompt.md",
+      ".github/prompts/ado-sprint-plan.prompt.md",
+      ".github/prompts/ado-triage-work-items.prompt.md",
+      ".github/prompts/ado-update-wit-items.prompt.md"
     ],
     "schemas": [
       ".github/schemas/handoff-message.schema.json"
@@ -79,7 +88,9 @@
       ".github/templates/REVIEW-TEMPLATE.md",
       ".github/templates/SECURITY-PLAN-TEMPLATE.md",
       ".github/templates/SPEC-TEMPLATE.md",
-      ".github/templates/UX-TEMPLATE.md"
+      ".github/templates/UX-TEMPLATE.md",
+      ".github/templates/CONTRACT-TEMPLATE.md",
+      ".github/templates/EVIDENCE-SUMMARY-TEMPLATE.md"
     ],
     "skills": [
       ".github/skills/ai-systems/ai-agent-development/SKILL.md",
@@ -122,6 +133,8 @@
       ".github/skills/development/token-optimizer/SKILL.md",
       ".github/skills/development/type-safety/SKILL.md",
       ".github/skills/domain/audit-assurance/SKILL.md",
+      ".github/skills/domain/clm/SKILL.md",
+      ".github/skills/domain/corporate-governance/SKILL.md",
       ".github/skills/domain/financial-services/SKILL.md",
       ".github/skills/domain/legal/SKILL.md",
       ".github/skills/domain/oil-and-gas/SKILL.md",
@@ -180,9 +193,9 @@
   },
   "capabilities": {
     "agentOrchestration": "Copilot CLI agent definitions with handoffs and body instructions",
-    "skillLibrary": "64 production code skills across 10 categories",
+    "skillLibrary": "69 production code skills across 10 categories",
     "instructionFiles": "7 auto-applied instruction files for language-specific patterns",
-    "promptTemplates": "12 reusable prompt templates for common workflows",
+    "promptTemplates": "20 reusable prompt templates for common workflows",
     "cliUtilities": "Workspace wrapper scripts plus a bundled hidden runtime for issue tracking, loop management, and workflow",
     "iterativeLoop": "Quality loop enforcement via CLI hard gate (Layer 3)"
   },

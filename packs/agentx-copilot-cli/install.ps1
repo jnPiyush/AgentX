@@ -375,7 +375,7 @@ function Initialize-WorkspaceCliState {
  }
 
  $version = [ordered]@{
-  version = '8.4.7'
+  version = '8.4.25'
   provider = 'local'
   mode = 'local'
   integration = 'local'
@@ -533,10 +533,10 @@ Write-Host ""
 Write-Host " Files copied  : $totalCopied" -ForegroundColor White
 Write-Host " Files skipped : $totalSkipped (already exist, use -Force to overwrite)" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host " Agents        : 20 (13 external + 7 internal)" -ForegroundColor White
-Write-Host " Skills        : 64 across 10 categories" -ForegroundColor White
-Write-Host " Instructions  : 7 (auto-applied by file pattern)" -ForegroundColor White
-Write-Host " Prompts       : 12 reusable templates" -ForegroundColor White
+ Write-Host " Agents        : 21 (13 external + 8 internal)" -ForegroundColor White
+ Write-Host " Skills        : 69 across 10 categories" -ForegroundColor White
+ Write-Host " Instructions  : 7 (auto-applied by file pattern)" -ForegroundColor White
+ Write-Host " Prompts       : 20 reusable templates" -ForegroundColor White
 if ($IncludeCli) {
  Write-Host " CLI utilities : 4 wrappers (.agentx/) + bundled runtime (.github/agentx/.agentx)" -ForegroundColor White
 }
