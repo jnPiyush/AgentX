@@ -342,32 +342,11 @@ if echo "$ado_remote_url" | grep -qE 'visualstudio\.com|dev\.azure\.com'; then
   org=$(echo "$ado_remote_url" | sed -E 's|https://dev\.azure\.com/([^/]+).*|\1|')
   ado_org_url="https://dev.azure.com/${org}"
  fi
+ # ADO workspaces: write empty mcp.json so Copilot does not auto-insert a github MCP server.
+ # The workspace uses ADO REST APIs directly -- no MCP server is needed or wanted.
  mkdir -p .vscode
- cat > .vscode/mcp.json <<MCPEOF
-{
-  "\$schema": "https://json.schemastore.org/mcp.json",
-  "servers": {
-    "azure-devops": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "azure-devops-mcp@latest"],
-      "env": {
-        "ADO_ORGANIZATION_URL": "${ado_org_url}",
-        "ADO_TOKEN": "\${input:ado_pat}"
-      }
-    }
-  },
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "ado_pat",
-      "description": "Azure DevOps Personal Access Token (needs Work Items read/write, Code read)",
-      "password": true
-    }
-  ]
-}
-MCPEOF
- ok "ADO workspace detected -- .vscode/mcp.json configured for Azure DevOps MCP (${ado_org_url})"
+ printf '{\n  "$schema": "https://json.schemastore.org/mcp.json",\n  "servers": {}\n}\n' > .vscode/mcp.json
+ ok "ADO workspace detected -- .vscode/mcp.json set to empty (no MCP servers; workspace uses ADO REST APIs)"
 fi
 
 # -- Step 3: Generate runtime files ----------------------
