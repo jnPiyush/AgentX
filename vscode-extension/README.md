@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.4.30-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-8.4.31-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -21,12 +21,15 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 
 | Feature | Description |
 |:--------|:------------|
-| **Copilot Chat Integration** | Native chat participant for triggering AgentX routines seamlessly. |
-| **Workspace Setup Wizard** | Local-runtime-first setup with optional remote adapters for GitHub or Azure DevOps. |
-| **Live Sidebar Views** | Instantly visualize queues, active workflows, agent roles, and output templates. |
-| **Quality & Integration Gates** | Sidebar dashboards that track loop states, unresolved dependencies, and constraints. |
-| **Command Palette Access** | Fast workflow-oriented actions like Status sync, Ready Queue checks, Digests, brainstorm, and compound-loop inspection. |
-| **Knowledge Compounding Surfaces** | Ranked learnings, compound-loop visibility, learning-capture scaffolds, and durable review-finding promotion directly inside the IDE. |
+| **13 Declarative Chat Agents** | Role-specific agents (PM, UX, Architect, Engineer, Reviewer, DevOps, Tester, Data Scientist, Power BI, Consulting Research, Agile Coach, Auto-Fix Reviewer) plus AgentX Auto for end-to-end orchestration. |
+| **Copilot Chat Participant** | Native `@agentx` chat participant for triggering routines, brainstorm, learnings, and compound-loop inspection. |
+| **Workspace Setup Wizard** | Local-runtime-first setup with optional remote adapters for GitHub or Azure DevOps and configurable LLM adapters. |
+| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (75 production skills). |
+| **45 Commands** | Workflow, loop management, knowledge compounding, AI evaluation, task bundles, bounded parallel delivery, and plugin management from the Command Palette. |
+| **Knowledge Compounding** | Ranked learnings, compound-loop visibility, learning-capture scaffolds, durable review-finding promotion, and agent-native review parity checks. |
+| **AI Evaluation** | Scaffold, run, and inspect AI evaluation contracts with rubric-based quality gates. |
+| **Task Bundles & Bounded Parallel** | Create, resolve, and promote scoped task bundles; run and reconcile bounded parallel delivery slices. |
+| **Plugin System** | Extend the workspace with `Add Skill`, `Add Agent`, and `Add Plugin` commands. |
 
 ---
 
@@ -197,17 +200,158 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 ### Sidebar And Command Palette
 
 - Work sidebar: `Brainstorm`, `Planning learnings`, `Review learnings`, `Compound loop`, `Create learning capture`
-- Quality sidebar: `Compound loop`, `Create learning capture`, `Agent-native review`, `Review findings`
+- Status sidebar: `Compound loop`, `Create learning capture`, `Agent-native review`, `Review findings`, `AI Evaluation Status`
 - Command palette equivalents exist for each of the same surfaces under the `AgentX:` prefix
 
-## New In 8.4.7
+---
 
-- Explicit `brainstorm`, `compound`, and `create learning capture` surfaces in chat, sidebars, and commands
-- Ranked curated learnings for planning and review entry points
-- Explicit knowledge-capture guidance, scaffolding, and durable learnings artifacts
-- Advisory agent-native review with parity and context checks
-- Harness evaluation summaries in the Quality sidebar
-- Durable review findings with promotion into standard AgentX issues
+## Sidebar Views
+
+| View | Contents |
+|:-----|:---------|
+| **Work** | Workflow next step, brainstorm guidance, planning and review learnings, compound loop, learning capture, ready queue, and workflow rollout surfaces. |
+| **Status** | Agent status, loop state, dependency checks, AI evaluation, review findings, task bundles, bounded parallel runs, and digests. |
+| **Templates** | All output templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence). |
+| **Skills** | 75 production skills across 10 categories (architecture, development, languages, operations, infrastructure, data, AI systems, design, testing, domain). |
+
+---
+
+## Command Reference
+
+### Workspace Setup
+
+| Command | Description |
+|:--------|:------------|
+| Initialize Local Runtime | Prepare local runtime for the current workspace |
+| Add Remote Adapter | Connect GitHub or Azure DevOps for backlog integration |
+| Add LLM Adapter | Switch the workspace LLM adapter (Copilot, Claude, OpenAI) |
+| Add Plugin | Extend the workspace with additional capabilities |
+| Add Skill | Add a production skill to the workspace |
+| Add Agent | Add an agent definition to the workspace |
+
+### Workflow
+
+| Command | Description |
+|:--------|:------------|
+| Show Workflow Next Step | Show the recommended next action based on current checkpoint |
+| Deepen Plan | Refine the current execution plan |
+| Kick Off Review | Initiate the review phase |
+| Show Workflow Steps | Display the full workflow step list for a role |
+| Show Workflow Rollout Scorecard | View rollout readiness scores |
+| Show Operator Enablement Checklist | View the operator enablement checklist |
+
+### Quality Loop
+
+| Command | Description |
+|:--------|:------------|
+| Loop: Start | Start a new quality loop iteration |
+| Loop: Status | Check current loop state |
+| Loop: Iterate | Record a loop iteration pass |
+| Loop: Complete | Mark the loop as complete |
+| Loop: Cancel | Cancel the active loop |
+| Iterative Loop | Run the full iterative loop flow |
+
+### Knowledge Compounding
+
+| Command | Description |
+|:--------|:------------|
+| Show Brainstorm Guide | Start planning with ranked prior learnings |
+| Show Planning Learnings | View ranked planning learnings |
+| Show Review Learnings | View ranked review learnings |
+| Show Knowledge Capture Guidance | View capture guidance for the current context |
+| Show Compound Loop | Inspect the compound-engineering loop state |
+| Create Learning Capture | Scaffold a durable learning artifact |
+| Show Agent-Native Review | Run advisory agent-native review parity checks |
+| Show Review Findings | Inspect durable review findings |
+| Promote Review Finding | Promote a finding into a standard AgentX issue |
+
+### AI Evaluation
+
+| Command | Description |
+|:--------|:------------|
+| Show AI Evaluation Status | View AI evaluation contract and results |
+| Scaffold AI Evaluation Contract | Create a new evaluation contract |
+| Run AI Evaluation | Execute an evaluation run |
+
+### Task Bundles & Parallel Delivery
+
+| Command | Description |
+|:--------|:------------|
+| Show Task Bundles | View scoped task bundles |
+| Create Task Bundle | Create a new task bundle |
+| Resolve Task Bundle | Mark a task bundle as resolved |
+| Promote Task Bundle | Promote a bundle to an issue |
+| Show Bounded Parallel Runs | View active parallel delivery runs |
+| Assess Bounded Parallel Delivery | Assess readiness for parallel delivery |
+| Start Bounded Parallel Delivery | Launch a bounded parallel delivery slice |
+| Reconcile Bounded Parallel Run | Reconcile a completed parallel run |
+
+### Status & Diagnostics
+
+| Command | Description |
+|:--------|:------------|
+| Show Agent Status | View agent states and active work |
+| Check Dependencies | Check issue dependency blockers |
+| Generate Weekly Digest | Generate a weekly status digest |
+| Show Issue Detail | View detailed issue information |
+| Show Pending Clarification | Check for pending clarification requests |
+| Check Environment | Validate the AgentX runtime environment |
+| Refresh | Refresh all sidebar views |
+
+---
+
+## Chat Agents
+
+The extension registers 13 declarative chat agents, each mapped to an AgentX role:
+
+| Agent | Role | Use For |
+|:------|:-----|:--------|
+| **AgentX Auto** | Autonomous orchestrator | End-to-end delivery in one session |
+| **Product Manager** | PRD and backlog | Product scope, goals, stories |
+| **UX Designer** | UX and prototypes | User flows, wireframes, HTML/CSS prototypes |
+| **Architect** | Architecture | ADR, tech spec, tradeoff analysis |
+| **Engineer** | Implementation | Code, tests, quality loop |
+| **Reviewer** | Code review | Review, findings, approve/reject |
+| **Auto-Fix Reviewer** | Review + fix | Review with safe auto-applied fixes |
+| **DevOps** | CI/CD | Pipelines, deployment automation |
+| **Data Scientist** | ML/AI | ML pipelines, evaluation, drift |
+| **Tester** | Testing | Test suites, certification |
+| **Power BI Analyst** | Reports | Power BI, DAX, semantic models |
+| **Consulting Research** | Research | Domain research, client materials |
+| **Agile Coach** | Stories | Story creation, INVEST refinement |
+
+---
+
+## Recent Changes
+
+### 8.4.30
+
+- Updated agent model assignments across core roles (AgentX Auto, PM, Architect, Engineer, Reviewer, Auto-Fix Reviewer)
+
+### 8.4.29
+
+- Fixed ADO provider `--project` flag handling for work item operations
+- Provider-aware issue counting in the Work sidebar
+- Closed stale issues with evidence-backed comments
+
+### 8.4.28
+
+- Bounded parallel delivery: assess, start, and reconcile parallel work slices
+- Task bundle create, resolve, and promote commands
+- Plugin system with `Add Plugin`, `Add Skill`, `Add Agent`
+- AI evaluation contract scaffolding and execution
+
+### 8.4.25
+
+- Workspace LLM adapter setup (Claude, OpenAI, Claude Code + LiteLLM)
+- Conversational repo-adapter setup with pending state across turns
+- Secure secret collection via VS Code password prompt
+
+### Earlier
+
+- Compound loop, brainstorm, and knowledge-capture surfaces (8.4.7)
+- Workspace initialization and remote adapter setup (8.4.0)
+- Full sidebar views for Work, Status, Templates, Skills
 
 ---
 
