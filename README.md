@@ -95,15 +95,15 @@ flowchart LR
   UI([User Intent]) --> Hub{AgentX Hub}
 
   subgraph SpecialistRouting[Specialist Routing]
-        direction LR
+    direction LR
     D[Discover and Plan] --> I[Implement] --> V[Validate]
-    end
+  end
 
-    Hub --> SpecialistRouting
+  Hub --> SpecialistRouting
 
   D -.->|PM, UX, Architect| Assets[(Repo Assets)]
   I -.->|Engineer and Skills| Assets
-    V -.->|Reviewer, Tester| Assets
+  V -.->|Reviewer, Tester| Assets
 ```
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
