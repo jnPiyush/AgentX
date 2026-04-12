@@ -74,7 +74,7 @@ Review implementations for quality, correctness, security, and spec conformance.
 - Read Tech Spec at `docs/artifacts/specs/SPEC-{issue}.md`
 - Read PRD at `docs/artifacts/prd/PRD-{epic-id}.md` for original intent
 - Read ADR at `docs/artifacts/adr/ADR-{issue}.md` for design decisions
-- If `needs:ai`, confirm Tech Spec §13.0 AI/ML Alignment Record status = Reviewed before proceeding; a missing or incomplete alignment record is a blocking finding
+- If `needs:ai`, confirm Tech Spec Section 13.0 AI/ML Alignment Record status = Reviewed before proceeding; a missing or incomplete alignment record is a blocking finding
 
 ### 2. Verify Quality Loop
 
@@ -132,8 +132,8 @@ MUST NOT downgrade them.
 | **Drift Readiness** | Drift monitoring plan documented; re-evaluation cadence defined |
 | **Cost Control** | Token usage tracked per component; cost projections documented |
 | **Responsible AI** | Model card exists with limitations; content safety filters configured |
-| **RAG/Retrieval Contract** | Retrieval implementation matches spec §13.5: knowledge source, chunk strategy, relevance threshold, and fallback retrieval behavior |
-| **I/O Failure Modes** | Non-retryable errors fail fast; user-visible failure modes and error paths match spec §13.2 |
+| **RAG/Retrieval Contract** | Retrieval implementation matches spec Section 13.5: knowledge source, chunk strategy, relevance threshold, and fallback retrieval behavior |
+| **I/O Failure Modes** | Non-retryable errors fail fast; user-visible failure modes and error paths match spec Section 13.2 |
 
 ### 5. Run Tests (Verify)
 

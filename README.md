@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.31"><img src="https://img.shields.io/badge/Version-8.4.31-0EA5E9?style=for-the-badge" alt="Version 8.4.31"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.32"><img src="https://img.shields.io/badge/Version-8.4.32-0EA5E9?style=for-the-badge" alt="Version 8.4.32"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -22,7 +22,7 @@ Zero-shot AI generation is unpredictable for complex software engineering. Agent
 
 ## The AI Development Team
 
-AgentX acts as an autonomous orchestrator, routing tasks to **20 specialized agents** based on required skills.
+AgentX acts as an autonomous orchestrator, routing tasks to **21 specialized agents** based on required skills.
 
 | Domain | Agents | Deliverables |
 |:-------|:-------|:-------------|
@@ -108,7 +108,7 @@ flowchart LR
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
 - **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 75 skills, 21 agents, 7 instructions, 10 templates, 20 prompts -- all Markdown-defined
+- **Knowledge Layer:** 75 skills, 21 agents, 7 instructions, 11 templates, 21 prompts -- all Markdown-defined
 - **Control Layer:** Execution plans, repo-local state, automated validation gates
 
 ---
@@ -275,7 +275,7 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.31
+## New In 8.4.32
 
 - Summary-based context compaction in the runner while keeping the existing 70% threshold trigger
 - Per-agent `reasoning` frontmatter support in the runner, including Copilot-mode request options for GPT-5 and Claude 4.6 mappings

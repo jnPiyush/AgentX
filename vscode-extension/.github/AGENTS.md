@@ -167,7 +167,7 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) | Graded quality assessment of every component |
 | [docs/GOLDEN_PRINCIPLES.md](docs/GOLDEN_PRINCIPLES.md) | Mechanical rules enforced by linters and agents |
 | [docs/tech-debt-tracker.md](docs/tech-debt-tracker.md) | Known gaps and deferred work |
-| `.github/agents/` | 20 agent definition files |
+| `.github/agents/` | 21 agent definition files |
 | `.github/skills/` | 75 skill files across 10 categories |
 | `.github/instructions/` | 7 instruction files (auto-loaded by file pattern) |
 | `.github/schemas/` | Handoff message JSON Schema + communication protocol |

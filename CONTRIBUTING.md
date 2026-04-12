@@ -4,14 +4,14 @@ Thank you for contributing! This guide ensures all contributors follow the same 
 
 ---
 
-## 🎯 Core Workflow (Mandatory)
+## Core Workflow (Mandatory)
 
 ### The Issue-First Rule
 
 **ALL work MUST start with a GitHub Issue created BEFORE you write any code.**
 
 ```
-1. Create Issue → 2. Claim Issue → 3. Write Code → 4. Commit with Issue# → 5. Close Issue
+1. Create Issue -> 2. Claim Issue -> 3. Write Code -> 4. Commit with Issue# -> 5. Close Issue
 ```
 
 **Why?** This ensures:
@@ -22,7 +22,7 @@ Thank you for contributing! This guide ensures all contributors follow the same 
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Script-Based Repo Setup
 
@@ -92,7 +92,7 @@ gh issue close <ISSUE#> --comment "Completed in commit <SHA>"
 
 ---
 
-## 📋 Issue Types
+## Issue Types
 
 | Type | When to Use | Example |
 |------|-------------|---------|
@@ -125,7 +125,7 @@ gh issue create --title "[Feature] Add OAuth login" --label "type:feature,needs:
 
 ---
 
-## 📝 Commit Message Format
+## Commit Message Format
 
 ```
 type: description (#issue-number)
@@ -151,9 +151,9 @@ git commit -m "docs: update README with setup instructions (#125)"
 
 ---
 
-## 🧪 Testing Requirements
+## Testing Requirements
 
-**All code must have tests with ≥80% coverage**
+**All code must have tests with >=80% coverage**
 
 ```powershell
 # Run tests
@@ -174,7 +174,7 @@ npm run test:coverage
 
 ---
 
-## 🔒 Security Checklist
+## Security Checklist
 
 Before committing:
 - [ ] No secrets/credentials in code
@@ -195,7 +195,7 @@ npm audit                      # Node.js
 
 ---
 
-## 📚 Code Standards
+## Code Standards
 
 ### Read Before Coding
 1. [AGENTS.md](AGENTS.md) - Workflow and behavior guidelines
@@ -216,7 +216,7 @@ npm audit                      # Node.js
 
 ---
 
-## 🔍 Code Review Process
+## Code Review Process
 
 1. **Self-Review**: Check your own code before requesting review
 2. **Automated Checks**: CI must pass (tests, linting, security scan)
@@ -233,7 +233,7 @@ npm audit                      # Node.js
 
 ---
 
-## 🛠️ Development Tools
+## Development Tools
 
 ### Required
 - **Git** - Version control
@@ -252,9 +252,9 @@ npm audit                      # Node.js
 
 ---
 
-## 🚨 Common Mistakes to Avoid
+## Common Mistakes to Avoid
 
-### ❌ DON'T
+### DON'T
 - Start coding before creating an issue
 - Create issues retroactively after work is done
 - Commit without issue reference in message
@@ -263,7 +263,7 @@ npm audit                      # Node.js
 - Skip tests
 - Merge your own PRs without review
 
-### ✅ DO
+### DO
 - Create issue FIRST, then code
 - Use descriptive issue titles
 - Reference issues in commits (#123)
@@ -274,7 +274,7 @@ npm audit                      # Node.js
 
 ---
 
-## 📞 Getting Help
+## Getting Help
 
 - **Questions**: Open a [Discussion](https://github.com/jnPiyush/AgentX/discussions)
 - **Bugs**: Use the [Bug Report template](.github/ISSUE_TEMPLATE/bug.yml)
@@ -283,7 +283,7 @@ npm audit                      # Node.js
 
 ---
 
-## 🤖 Working with AI Agents
+## Working with AI Agents
 
 If you have **GitHub Copilot**, it will automatically:
 - Guide you through the Issue-First workflow
@@ -298,7 +298,7 @@ If you have **GitHub Copilot**, it will automatically:
 
 ---
 
-## 🎓 Learning Resources
+## Learning Resources
 
 - [AGENTS.md](AGENTS.md) - Agent behavior and workflows
 - [Skills.md](Skills.md) - Technical standards index + workflow scenarios
@@ -307,7 +307,7 @@ If you have **GitHub Copilot**, it will automatically:
 
 ---
 
-## 📜 License
+## License
 
 By contributing, you agree that your contributions will be licensed under the project's license (see [LICENSE](LICENSE)).
 

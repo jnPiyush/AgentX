@@ -94,7 +94,7 @@ Write and execute automated tests to validate software quality. Automation-first
 - Read Tech Spec for testable requirements
 - Read existing test suites at `tests/**` and `e2e/**`
 - Identify test gaps from the review document
-- If `needs:ai`, confirm Tech Spec §13.0 AI/ML Alignment Record is complete (status = Reviewed) before writing GenAI tests
+- If `needs:ai`, confirm Tech Spec Section 13.0 AI/ML Alignment Record is complete (status = Reviewed) before writing GenAI tests
 
 ### 2. Write Tests
 
@@ -121,7 +121,7 @@ Follow the test pyramid:
 | Drift baseline | Establish evaluation baseline for ongoing drift detection | Baseline snapshot script |
 | Cost/latency bounds | Token usage and latency stay within budget per request | Tracing metrics validation |
 | RAG/retrieval quality | Context relevance, faithfulness, top-K accuracy, and fallback retrieval behavior | RAGAS / DeepEval |
-| I/O contract validation | Input/output schemas correct, non-retryable error paths fail fast, failure modes match spec §13.2 | JSON Schema + custom test harness |
+| I/O contract validation | Input/output schemas correct, non-retryable error paths fail fast, failure modes match spec Section 13.2 | JSON Schema + custom test harness |
 
 ### 3. Execute Full Suite
 

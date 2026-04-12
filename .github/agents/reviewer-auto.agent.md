@@ -95,7 +95,7 @@ Is it a security issue?             -> Block & reject
 Same as standard Reviewer:
 - Read Tech Spec, PRD, ADR
 - Verify quality loop status = `complete`
-- If `needs:ai`, confirm Tech Spec §13.0 AI/ML Alignment Record status = Reviewed before proceeding
+- If `needs:ai`, confirm Tech Spec Section 13.0 AI/ML Alignment Record status = Reviewed before proceeding
 
 ### 2. Review Code Changes
 

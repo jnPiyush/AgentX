@@ -215,9 +215,56 @@ jobs:
             done < <(grep -oP '\[[^\]]+\]\([^)]+\)' "$doc" 2>/dev/null || true)
           done
           if [ "$BROKEN" -gt 0 ]; then
-            echo "[WARN] $BROKEN broken link(s) found (advisory)"
+            echo "[FAIL] $BROKEN broken link(s) found"
+            exit 1
           else
             echo "[PASS] All references valid"
+          fi
+
+      - name: Doc Count Validation
+        run: |
+          echo "Validating documented counts match actual file counts..."
+          ERRORS=0
+
+          AGENT_COUNT=$(find .github/agents -name '*.agent.md' | wc -l | tr -d ' ')
+          SKILL_COUNT=$(find .github/skills -name 'SKILL.md' | wc -l | tr -d ' ')
+          TEMPLATE_COUNT=$(find .github/templates -name '*-TEMPLATE.md' | wc -l | tr -d ' ')
+          PROMPT_COUNT=$(find .github/prompts -name '*.prompt.md' | wc -l | tr -d ' ')
+          INSTRUCTION_COUNT=$(find .github/instructions -maxdepth 1 -name '*.instructions.md' | wc -l | tr -d ' ')
+
+          echo "Actual: agents=$AGENT_COUNT skills=$SKILL_COUNT templates=$TEMPLATE_COUNT prompts=$PROMPT_COUNT instructions=$INSTRUCTION_COUNT"
+
+          check_count() {
+            local FILE=$1 PATTERN=$2 EXPECTED=$3 LABEL=$4
+            if ! grep -qP "$PATTERN" "$FILE" 2>/dev/null; then
+              echo "[FAIL] $FILE: pattern not found for $LABEL"
+              ERRORS=$((ERRORS + 1))
+            else
+              FOUND=$(grep -oP "$PATTERN" "$FILE" | head -1)
+              if [ "$FOUND" != "$EXPECTED" ]; then
+                echo "[FAIL] $FILE: $LABEL says '$FOUND' but actual is '$EXPECTED'"
+                ERRORS=$((ERRORS + 1))
+              fi
+            fi
+          }
+
+          check_count "AGENTS.md" '\b[0-9]* agent definition files' "$AGENT_COUNT agent definition files" "agent count"
+          check_count "AGENTS.md" '\b[0-9]* skill files' "$SKILL_COUNT skill files" "skill count"
+          check_count "AGENTS.md" '\b[0-9]* instruction files' "$INSTRUCTION_COUNT instruction files" "instruction count"
+          check_count "AGENTS.md" '\b[0-9]* templates' "$TEMPLATE_COUNT templates" "template count"
+          check_count "AGENTS.md" '\b[0-9]* reusable prompt templates' "$PROMPT_COUNT reusable prompt templates" "prompt count"
+          check_count "README.md" '\*\*[0-9]+ specialized agents\*\*' "**$AGENT_COUNT specialized agents**" "agent count"
+          check_count "README.md" '75 skills, [0-9]+ agents, [0-9]+ instructions, [0-9]+ templates, [0-9]+ prompts' "75 skills, $AGENT_COUNT agents, $INSTRUCTION_COUNT instructions, $TEMPLATE_COUNT templates, $PROMPT_COUNT prompts" "knowledge-layer counts"
+
+          if [ -f "vscode-extension/.github/AGENTS.md" ]; then
+            check_count "vscode-extension/.github/AGENTS.md" '\b[0-9]* agent definition files' "$AGENT_COUNT agent definition files" "bundled agent count"
+          fi
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "[FAIL] $ERRORS doc-count mismatch(es) found"
+            exit 1
+          else
+            echo "[PASS] All documented counts match actual file counts"
           fi
 
       - name: Extension Lint and Test

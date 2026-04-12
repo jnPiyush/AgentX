@@ -223,7 +223,7 @@ Not blocking. No correctness impact.
 
 ## Positive Observations
 
-- `Format-YamlScalar` correctly escapes single quotes by doubling them — no injection surface.
+- `Format-YamlScalar` correctly escapes single quotes by doubling them -- no injection surface.
 - `Save-LocalIssue` atomically handles the `tasks/ -> completed/` file move when status changes.
 - `Build-BacklogTaskContent` cleanly separates frontmatter, description, and metadata comment sections.
 - `Remove-SurroundingQuotes` handles both single and double quote wrapping with double-quote escape.
@@ -240,8 +240,8 @@ Not blocking. No correctness impact.
 
 Approve after Engineer resolves:
 
-1. FINDING-1 (P0 priority round-trip) — map `priority:p0` to the `'urgent'` slot and add a test
-2. FINDING-2 (unlocked nextIssueNumber write) — wrap the backlog branch in `Invoke-WithJsonLock`
+1. FINDING-1 (P0 priority round-trip) -- map `priority:p0` to the `'urgent'` slot and add a test
+2. FINDING-2 (unlocked nextIssueNumber write) -- wrap the backlog branch in `Invoke-WithJsonLock`
 
 Findings 3-6 are advisory. They do not block approval but should be tracked as
 tech-debt items or addressed in follow-up stories.

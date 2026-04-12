@@ -3,3 +3,13 @@
 {"id":"story-1","input":"Add a command that shows AI evaluation status in the VS Code extension.","expected":"type:story","tags":["happy","story"]}
 {"id":"spike-1","input":"Investigate whether AI evaluation reports should surface in the Quality sidebar before implementation.","expected":"type:spike","tags":["edge","research"]}
 {"id":"devops-1","input":"Create a GitHub Actions workflow that validates markdown links and token budgets on pull requests.","expected":"type:devops","tags":["edge","devops"]}
+{"id":"epic-1","input":"Build a complete user authentication system with OAuth, MFA, and session management across all client apps.","expected":"type:epic","tags":["edge","epic"]}
+{"id":"feature-1","input":"Add a new sidebar panel that displays real-time agent workflow status and checkpoint progress.","expected":"type:feature","tags":["happy","feature"]}
+{"id":"bug-2","input":"The SSRF validator incorrectly allows IPv4-mapped IPv6 addresses like ::ffff:127.0.0.1 to bypass private IP checks.","expected":"type:bug","tags":["edge","security","bug"]}
+{"id":"story-2","input":"Update the ASCII-only validation script to scan CONTRIBUTING.md and agent definition files.","expected":"type:story","tags":["happy","story"]}
+{"id":"testing-1","input":"Write end-to-end Playwright tests for the AgentX sidebar tree views and command palette interactions.","expected":"type:testing","tags":["edge","testing"]}
+{"id":"powerbi-1","input":"Create a Power BI report that tracks agent task completion rates and quality loop iteration counts over time.","expected":"type:powerbi","tags":["edge","powerbi"]}
+{"id":"data-science-1","input":"Train a classifier to predict whether an issue will require architecture review based on title and label patterns.","expected":"type:data-science","tags":["edge","data-science"]}
+{"id":"bug-3","input":"The command validator does not block base64-encoded PowerShell payloads passed through pwsh -EncodedCommand.","expected":"type:bug","tags":["edge","security","bug"]}
+{"id":"story-3","input":"Add a quality loop iteration counter to the VS Code status bar that updates in real time.","expected":"type:story","tags":["happy","story"]}
+{"id":"devops-2","input":"Set up automated doc-count validation in CI to catch drift between documented and actual file counts.","expected":"type:devops","tags":["happy","devops"]}
