@@ -2978,6 +2978,130 @@ function Find-ClarificationRequest([string]$text, [string[]]$canClarify) {
     return @{ targetAgent = $target; topic = $topic; question = $text }
 }
 
+# ---------------------------------------------------------------------------
+# Clarification Ledger Persistence
+# ---------------------------------------------------------------------------
+# Writes clarification records to .agentx/state/clarifications/issue-{n}.json
+# conforming to .github/schemas/clarification-ledger.schema.json.
+# ---------------------------------------------------------------------------
+
+function Save-ClarificationRecord {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$WorkspaceRoot,
+        [Parameter(Mandatory)][int]$IssueNumber,
+        [Parameter(Mandatory)][string]$FromAgent,
+        [Parameter(Mandatory)][string]$TargetAgent,
+        [Parameter(Mandatory)][string]$Topic,
+        [Parameter(Mandatory)][array]$Exchanges,
+        [Parameter(Mandatory)][bool]$Resolved,
+        [Parameter(Mandatory)][bool]$EscalatedToHuman,
+        [string]$RecordType = 'clarification'
+    )
+
+    if ($IssueNumber -le 0) {
+        # No issue context -- use a general ledger file
+        $IssueNumber = 0
+    }
+
+    $dir = Join-Path $WorkspaceRoot '.agentx' 'state' 'clarifications'
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $file = Join-Path $dir "issue-$IssueNumber.json"
+
+    # Read existing ledger or create new one
+    $ledger = $null
+    if (Test-Path $file) {
+        try {
+            $ledger = Get-Content $file -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
+        } catch {
+            $ledger = $null
+        }
+    }
+    if (-not $ledger) {
+        $ledger = @{ issueNumber = $IssueNumber; clarifications = @() }
+    }
+
+    # Ensure clarifications is a proper array
+    $existing = @($ledger.clarifications)
+
+    # Generate sequential ID: CLR-{issue}-{seq:03d}
+    $seq = $existing.Count + 1
+    $id = "CLR-$($IssueNumber)-$($seq.ToString('000'))"
+
+    $now = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $staleAfter = (Get-Date).AddDays(7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+
+    # Determine status
+    $status = if ($Resolved) { 'resolved' } elseif ($EscalatedToHuman) { 'escalated' } else { 'pending' }
+
+    # Build thread entries from exchanges
+    $thread = @()
+    foreach ($exchange in $Exchanges) {
+        $round = [int]$exchange.iteration
+        $fromName = $FromAgent.ToLower() -replace '[^a-z0-9-]', ''
+        $toName = $TargetAgent.ToLower() -replace '[^a-z0-9-]', ''
+
+        # Question entry
+        $questionBody = [string]$exchange.question
+        if ($questionBody.Length -gt 2000) { $questionBody = $questionBody.Substring(0, 2000) + '...' }
+        $thread += @{
+            round = $round
+            from = $fromName
+            type = 'question'
+            body = $questionBody
+            timestamp = $now
+        }
+
+        # Answer entry
+        $answerBody = [string]$exchange.response
+        if ($answerBody.Length -gt 2000) { $answerBody = $answerBody.Substring(0, 2000) + '...' }
+        $responder = if ($exchange.respondedBy -eq 'human') { 'human' } else { $toName }
+        $entryType = if ($exchange.respondedBy -eq 'human') { 'escalation' } else { 'answer' }
+        $thread += @{
+            round = $round
+            from = $responder
+            type = $entryType
+            body = $answerBody
+            timestamp = $now
+        }
+    }
+
+    # Add resolution entry if resolved
+    if ($Resolved) {
+        $lastRound = if ($Exchanges.Count -gt 0) { [int]$Exchanges[-1].iteration } else { 1 }
+        $thread += @{
+            round = $lastRound
+            from = $TargetAgent.ToLower() -replace '[^a-z0-9-]', ''
+            type = 'resolution'
+            body = "Clarification resolved after $($Exchanges.Count) exchange(s)."
+            timestamp = $now
+        }
+    }
+
+    $record = @{
+        id = $id
+        from = $FromAgent.ToLower() -replace '[^a-z0-9-]', ''
+        to = $TargetAgent.ToLower() -replace '[^a-z0-9-]', ''
+        topic = $Topic
+        blocking = $true
+        status = $status
+        round = $Exchanges.Count
+        maxRounds = 6
+        created = $now
+        staleAfter = $staleAfter
+        resolvedAt = if ($Resolved) { $now } else { $null }
+        thread = @($thread)
+        recordType = $RecordType
+    }
+
+    $existing += $record
+    $ledger.clarifications = @($existing)
+    $ledger | ConvertTo-Json -Depth 15 | Set-Content $file -Encoding utf8
+    Write-RunnerConsole "`e[90m  [LEDGER] Saved $RecordType record $id to $file`e[0m"
+
+    return $id
+}
+
 function Format-ClarificationHistory {
     [CmdletBinding()]
     param(
@@ -3522,6 +3646,7 @@ function Invoke-ClarificationLoop {
         [Parameter(Mandatory)][string]$Question,
         [Parameter(Mandatory)][string]$ModelId,
         [Parameter(Mandatory)][string]$WorkspaceRoot,
+        [int]$IssueNumber = 0,
         [int]$MaxIterations = $Script:CLARIFICATION_MAX_ITERATIONS,
         [switch]$NonInteractiveHumanEscalation
     )
@@ -3587,6 +3712,7 @@ function Invoke-ClarificationLoop {
 
         if ($answerContract.resolved) {
             # Answer seems substantive -- resolved
+            Save-ClarificationRecord -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -FromAgent $FromAgent -TargetAgent $TargetAgent -Topic $Topic -Exchanges $exchanges -Resolved $true -EscalatedToHuman $false -RecordType 'clarification'
             return @{
                 resolved = $true
                 answer = $answer
@@ -3656,8 +3782,11 @@ function Invoke-ClarificationLoop {
         Add-ExecutionSummaryEvent -Type 'HUMAN RESPONSE' -Message $humanPreview -ReplaceExisting
     }
 
+    $humanResolved = ($humanAnswer -and $humanAnswer -ne '(Human escalation -- awaiting response)')
+    Save-ClarificationRecord -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -FromAgent $FromAgent -TargetAgent $TargetAgent -Topic $Topic -Exchanges $exchanges -Resolved $humanResolved -EscalatedToHuman $true -RecordType 'clarification'
+
     return @{
-        resolved = ($humanAnswer -and $humanAnswer -ne '(Human escalation -- awaiting response)')
+        resolved = $humanResolved
         answer = $humanAnswer
         iterations = $MaxIterations + 1
         escalatedToHuman = $true
@@ -3672,7 +3801,7 @@ function Invoke-ClarificationLoop {
             exchanges = $exchanges
         }
         exchanges = $exchanges
-        summary = (Build-ClarificationSummary -FromAgent $FromAgent -TargetAgent $TargetAgent -Topic $Topic -Exchanges $exchanges -FinalAnswer $humanAnswer -Resolved ($humanAnswer -and $humanAnswer -ne '(Human escalation -- awaiting response)') -EscalatedToHuman $true)
+        summary = (Build-ClarificationSummary -FromAgent $FromAgent -TargetAgent $TargetAgent -Topic $Topic -Exchanges $exchanges -FinalAnswer $humanAnswer -Resolved $humanResolved -EscalatedToHuman $true)
     }
 }
 
@@ -3949,6 +4078,7 @@ function Invoke-AgenticLoop {
                     -Question $clarifyReq.question `
                     -ModelId $modelId `
                     -WorkspaceRoot $WorkspaceRoot `
+                    -IssueNumber $IssueNumber `
                     -NonInteractiveHumanEscalation:($env:AGENTX_NONINTERACTIVE_HUMAN -eq '1')
 
                 if ($clarifyResult.awaitingHuman) {

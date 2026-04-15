@@ -30,6 +30,9 @@ import {
   renderTaskBundlesText,
 } from '../taskBundles/task-bundles';
 import {
+  saveBrainstormRecord,
+} from '../utils/clarificationLedger';
+import {
   listBoundedParallelRuns,
   renderBoundedParallelRunsText,
 } from '../parallel/parallel-delivery';
@@ -533,7 +536,19 @@ export async function tryHandleBrainstormRequest(
 
   const resolvedQuery = brainstormMatch[1]?.trim() || getDefaultLearningsQuery(workspaceRoot, 'planning');
   const results = rankLearnings(workspaceRoot, 'planning', resolvedQuery);
-  response.markdown(renderBrainstormGuidanceMarkdown(workspaceRoot, resolvedQuery, results));
+  const rendered = renderBrainstormGuidanceMarkdown(workspaceRoot, resolvedQuery, results);
+  response.markdown(rendered);
+
+  // Persist the brainstorm session to the local clarification ledger
+  try {
+    const summary = results.length > 0
+      ? results.slice(0, 3).map(r => r.title || r.relativePath || '(untitled)').join('; ')
+      : '(no matching learnings)';
+    saveBrainstormRecord(workspaceRoot, 0, resolvedQuery, summary);
+  } catch {
+    // Best-effort persistence -- do not block the brainstorm response
+  }
+
   return {};
 }
 

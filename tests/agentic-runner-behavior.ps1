@@ -154,13 +154,13 @@ Assert-Equal $anthropicResponse.choices[0].message.tool_calls[0].function.name '
 
 Assert-Equal (ConvertTo-ClaudeCodeModelId 'claude-sonnet-4.6') 'claude-sonnet-4-6' 'ConvertTo-ClaudeCodeModelId normalizes dot-version Claude model ids for CLI usage'
 
-$claudeToolList = Get-ClaudeCodeAllowedTools @(
+$claudeToolList = Get-ClaudeCodeAllowedTool @(
     @{ function = @{ name = 'file_read' } },
     @{ function = @{ name = 'file_edit' } },
     @{ function = @{ name = 'terminal_exec' } },
     @{ function = @{ name = 'list_dir' } }
 )
-Assert-Equal $claudeToolList 'Read,Edit,Bash,Glob' 'Get-ClaudeCodeAllowedTools maps AgentX tools to Claude Code built-ins'
+Assert-Equal $claudeToolList 'Read,Edit,Bash,Glob' 'Get-ClaudeCodeAllowedTool maps AgentX tools to Claude Code built-ins'
 
 $claudeNormalized = ConvertFrom-ClaudeCodeResponse '{"result":"Updated the auth flow and added tests.","session_id":"abc"}'
 Assert-Equal $claudeNormalized.choices[0].message.content 'Updated the auth flow and added tests.' 'ConvertFrom-ClaudeCodeResponse normalizes json result payloads'
@@ -392,7 +392,7 @@ Assert-True ($clarificationSummary -match 'To: architect') 'Build-ClarificationS
 Assert-True ($clarificationSummary -match 'database indexing') 'Build-ClarificationSummary includes the clarification topic'
 Assert-True ($clarificationSummary -match 'resolved') 'Build-ClarificationSummary includes the resolution status'
 
-$clarificationContract = Parse-ClarificationResponseContract @"
+$clarificationContract = Read-ClarificationResponseContract @"
 Status: resolved
 ## Direct Answer
 Use the composite index on tenant_id and created_at.
@@ -401,17 +401,17 @@ The current query path filters by tenant first and sorts by created_at.
 ## Remaining Uncertainty
 Review ingest amplification before enabling it on the highest-volume table.
 "@
-Assert-Equal $clarificationContract.status 'resolved' 'Parse-ClarificationResponseContract reads the declared status'
-Assert-True $clarificationContract.resolved 'Parse-ClarificationResponseContract recognizes a complete resolved clarification contract'
-Assert-Equal $clarificationContract.missingSections.Count 0 'Parse-ClarificationResponseContract tracks no missing sections for a complete contract'
+Assert-Equal $clarificationContract.status 'resolved' 'Read-ClarificationResponseContract reads the declared status'
+Assert-True $clarificationContract.resolved 'Read-ClarificationResponseContract recognizes a complete resolved clarification contract'
+Assert-Equal $clarificationContract.missingSections.Count 0 'Read-ClarificationResponseContract tracks no missing sections for a complete contract'
 
-$clarificationMissingSections = Parse-ClarificationResponseContract @"
+$clarificationMissingSections = Read-ClarificationResponseContract @"
 Status: partial
 ## Direct Answer
 Use the composite index.
 "@
-Assert-True (-not $clarificationMissingSections.resolved) 'Parse-ClarificationResponseContract does not treat partial answers as resolved'
-Assert-True ($clarificationMissingSections.missingSections -contains 'Evidence And Constraints') 'Parse-ClarificationResponseContract reports missing evidence sections'
+Assert-True (-not $clarificationMissingSections.resolved) 'Read-ClarificationResponseContract does not treat partial answers as resolved'
+Assert-True ($clarificationMissingSections.missingSections -contains 'Evidence And Constraints') 'Read-ClarificationResponseContract reports missing evidence sections'
 
 $consultingResearchDef = Read-AgentDef -agentName 'consulting-research' -root $script:repoRoot
 Assert-True ($null -ne $consultingResearchDef) 'Read-AgentDef loads the Consulting Research definition'
@@ -470,6 +470,114 @@ try {
     Assert-Equal $loadedSession.messages.Count 2 'Read-Session preserves saved messages'
 } finally {
     Remove-Item $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# ---------------------------------------------------------------------------
+# Clarification Ledger Persistence Tests
+# ---------------------------------------------------------------------------
+$ledgerRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-ledger-" + [System.IO.Path]::GetRandomFileName())
+New-Item -ItemType Directory -Path $ledgerRoot -Force | Out-Null
+try {
+    # Test 1: Save a resolved clarification record
+    $ledgerId = Save-ClarificationRecord `
+        -WorkspaceRoot $ledgerRoot `
+        -IssueNumber 42 `
+        -FromAgent 'engineer' `
+        -TargetAgent 'architect' `
+        -Topic 'database indexing strategy' `
+        -Exchanges @(
+            @{ question = 'What index should we use?'; response = 'Use a composite index.'; iteration = 1; respondedBy = 'sub-agent' }
+        ) `
+        -Resolved $true `
+        -EscalatedToHuman $false `
+        -RecordType 'clarification'
+    Assert-Equal $ledgerId 'CLR-42-001' 'Save-ClarificationRecord generates sequential CLR ID'
+
+    $ledgerFile = Join-Path $ledgerRoot '.agentx' 'state' 'clarifications' 'issue-42.json'
+    Assert-True (Test-Path $ledgerFile) 'Save-ClarificationRecord creates the ledger file on disk'
+
+    $ledgerContent = Get-Content $ledgerFile -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
+    Assert-Equal $ledgerContent.issueNumber 42 'Ledger file records the correct issue number'
+    Assert-Equal $ledgerContent.clarifications.Count 1 'Ledger file contains one clarification record'
+    Assert-Equal $ledgerContent.clarifications[0].id 'CLR-42-001' 'Ledger record has the correct ID'
+    Assert-Equal $ledgerContent.clarifications[0].from 'engineer' 'Ledger record captures the from agent'
+    Assert-Equal $ledgerContent.clarifications[0].to 'architect' 'Ledger record captures the to agent'
+    Assert-Equal $ledgerContent.clarifications[0].topic 'database indexing strategy' 'Ledger record captures the topic'
+    Assert-Equal $ledgerContent.clarifications[0].status 'resolved' 'Ledger record status is resolved'
+    Assert-True ($ledgerContent.clarifications[0].thread.Count -ge 2) 'Ledger record contains thread entries for question and answer'
+
+    # Test 2: Append a second record to the same issue
+    $ledgerId2 = Save-ClarificationRecord `
+        -WorkspaceRoot $ledgerRoot `
+        -IssueNumber 42 `
+        -FromAgent 'engineer' `
+        -TargetAgent 'data-scientist' `
+        -Topic 'model evaluation threshold' `
+        -Exchanges @(
+            @{ question = 'What eval threshold?'; response = 'Use 0.85 F1.'; iteration = 1; respondedBy = 'sub-agent' },
+            @{ question = 'Any caveats?'; response = 'Watch for class imbalance.'; iteration = 2; respondedBy = 'sub-agent' }
+        ) `
+        -Resolved $true `
+        -EscalatedToHuman $false `
+        -RecordType 'clarification'
+    Assert-Equal $ledgerId2 'CLR-42-002' 'Save-ClarificationRecord increments the sequence number'
+
+    $ledgerContent2 = Get-Content $ledgerFile -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
+    Assert-Equal $ledgerContent2.clarifications.Count 2 'Ledger file appends the second record'
+
+    # Test 3: Escalated clarification gets status=escalated
+    $ledgerId3 = Save-ClarificationRecord `
+        -WorkspaceRoot $ledgerRoot `
+        -IssueNumber 42 `
+        -FromAgent 'engineer' `
+        -TargetAgent 'architect' `
+        -Topic 'auth flow decision' `
+        -Exchanges @(
+            @{ question = 'Which auth?'; response = 'Need human input.'; iteration = 1; respondedBy = 'human' }
+        ) `
+        -Resolved $false `
+        -EscalatedToHuman $true `
+        -RecordType 'clarification'
+    Assert-Equal $ledgerId3 'CLR-42-003' 'Escalated record gets the next sequential ID'
+    $ledgerContent3 = Get-Content $ledgerFile -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
+    Assert-Equal $ledgerContent3.clarifications[2].status 'escalated' 'Escalated clarification has status=escalated'
+    $escalationEntries = @($ledgerContent3.clarifications[2].thread | Where-Object { $_.type -eq 'escalation' })
+    Assert-True ($escalationEntries.Count -gt 0) 'Escalated record contains an escalation thread entry'
+
+    # Test 4: Brainstorm record type
+    $brainstormId = Save-ClarificationRecord `
+        -WorkspaceRoot $ledgerRoot `
+        -IssueNumber 42 `
+        -FromAgent 'agent-x' `
+        -TargetAgent 'architect' `
+        -Topic 'scaling approach brainstorm' `
+        -Exchanges @(
+            @{ question = 'How should we scale the ingest pipeline?'; response = 'Consider horizontal partitioning with event-driven consumers.'; iteration = 1; respondedBy = 'sub-agent' }
+        ) `
+        -Resolved $true `
+        -EscalatedToHuman $false `
+        -RecordType 'brainstorm'
+    Assert-Equal $brainstormId 'CLR-42-004' 'Brainstorm record gets next sequential ID'
+    $ledgerContent4 = Get-Content $ledgerFile -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
+    Assert-Equal $ledgerContent4.clarifications[3].recordType 'brainstorm' 'Brainstorm record preserves the recordType field'
+
+    # Test 5: Issue 0 (no issue context) creates a general ledger
+    $generalId = Save-ClarificationRecord `
+        -WorkspaceRoot $ledgerRoot `
+        -IssueNumber 0 `
+        -FromAgent 'engineer' `
+        -TargetAgent 'architect' `
+        -Topic 'general question' `
+        -Exchanges @(
+            @{ question = 'General question?'; response = 'General answer.'; iteration = 1; respondedBy = 'sub-agent' }
+        ) `
+        -Resolved $true `
+        -EscalatedToHuman $false
+    $generalFile = Join-Path $ledgerRoot '.agentx' 'state' 'clarifications' 'issue-0.json'
+    Assert-True (Test-Path $generalFile) 'Save-ClarificationRecord creates a general ledger for issue 0'
+    Assert-Equal $generalId 'CLR-0-001' 'General ledger record gets CLR-0 prefix'
+} finally {
+    Remove-Item $ledgerRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 $runnerTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-runner-loop-" + [System.IO.Path]::GetRandomFileName())

@@ -11,8 +11,8 @@
   "properties": {
     "issueNumber": {
       "type": "integer",
-      "minimum": 1,
-      "description": "Issue number that owns this clarification ledger."
+      "minimum": 0,
+      "description": "Issue number that owns this clarification ledger. Use 0 for general context without a linked issue."
     },
     "clarifications": {
       "type": "array",
@@ -93,7 +93,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^CLR-[1-9][0-9]*-[0-9]{3}$",
+          "pattern": "^CLR-[0-9]+-[0-9]{3}$",
           "description": "Clarification identifier in CLR-{issue}-{seq:03d} format."
         },
         "from": {
@@ -157,6 +157,12 @@
           "items": {
             "$ref": "#/definitions/threadEntry"
           }
+        },
+        "recordType": {
+          "type": "string",
+          "enum": ["clarification", "brainstorm"],
+          "default": "clarification",
+          "description": "Distinguishes clarification exchanges from brainstorm sessions."
         }
       }
     }
