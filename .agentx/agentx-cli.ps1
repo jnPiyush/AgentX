@@ -5077,6 +5077,9 @@ $($C.w)  Commands:$($C.n)
   lessons [list|query|show|stats|promote|archive|clean]  Learning pipeline management
   tokens [count|check|report]      Token budget management
   score <engineer|architect|pm> [issue]  Score agent output quality
+  discover [run|status|reset]      Analyze signals + git history for patterns
+  graduate [run|list|preview]      Promote high-confidence patterns to skills
+  sprint "<task>" [-i issue]       Full pipeline: plan -> build -> review -> hygiene -> discover
   git-sync [push|pull]             Push/pull data branch to/from remote
   version                          Show installed version
   help                             Show this help
@@ -5383,6 +5386,886 @@ function Invoke-WatchCmd {
 }
 
 # ---------------------------------------------------------------------------
+# DISCOVER: Analyze signals + git history to extract reusable patterns
+# ---------------------------------------------------------------------------
+
+function Invoke-DiscoverCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'run' }
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+
+    switch ($action) {
+        'run'     { Invoke-DiscoverRun }
+        'status'  { Invoke-DiscoverStatus }
+        'reset'   { Invoke-DiscoverReset }
+        default   { Invoke-DiscoverHelp }
+    }
+}
+
+function Invoke-DiscoverRun {
+    $patternsDir = Join-Path $Script:AGENTX_DIR 'patterns'
+    $signalsDir = Join-Path $Script:AGENTX_DIR 'signals'
+    $patternsFile = Join-Path $patternsDir 'discovered.yaml'
+
+    if (-not (Test-Path $patternsDir)) { New-Item -ItemType Directory -Path $patternsDir -Force | Out-Null }
+
+    Write-CliOutput "`n$($C.c)  Pattern Discovery$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    function Get-SignalFieldValue([string]$JsonLine, [string]$FieldName) {
+        try {
+            $pattern = '"' + [regex]::Escape($FieldName) + '"\s*:\s*"((?:\\.|[^"\\])*)"'
+            $match = [regex]::Match($JsonLine, $pattern)
+            if (-not $match.Success) { return $null }
+
+            return [regex]::Unescape($match.Groups[1].Value)
+        } catch {
+            return $null
+        }
+    }
+
+    # --- Evidence Source 1: Signal capture data ---
+    $signalCount = 0
+    $toolFrequency = @{}
+    $errorPatterns = @()
+    $signalsFile = Join-Path $signalsDir 'sessions.jsonl'
+
+    # Pre-read watermark from existing patterns file to avoid re-scoring already-processed signals
+    $lastWatermark = $null
+    $maxNewTimestamp = $null
+    if (Test-Path $patternsFile) {
+        foreach ($hLine in (Get-Content $patternsFile -Encoding utf8 | Select-Object -First 15)) {
+            if ($hLine -match '^#\s*last_signal_watermark:\s*(.+)$') {
+                $lastWatermark = $Matches[1].Trim()
+                break
+            }
+        }
+    }
+
+    if (Test-Path $signalsFile) {
+        $lines = @(Get-Content $signalsFile -Encoding utf8 | Where-Object { $_.Trim() })
+        foreach ($line in $lines) {
+            $toolName = $null
+            $errorMessage = $null
+            $sigTimestamp = $null
+            try {
+                $sig = $line | ConvertFrom-Json
+                $toolName = if ($sig.PSObject.Properties.Name -contains 'tool') { [string]$sig.tool } else { $null }
+                $errorMessage = if ($sig.PSObject.Properties.Name -contains 'error') { [string]$sig.error } else { $null }
+                $sigTimestamp = if ($sig.PSObject.Properties.Name -contains 'timestamp') { [string]$sig.timestamp } else { $null }
+            } catch {
+                $toolName = Get-SignalFieldValue $line 'tool'
+                $errorMessage = Get-SignalFieldValue $line 'error'
+                $sigTimestamp = Get-SignalFieldValue $line 'timestamp'
+            }
+
+            # Skip signals already processed in a previous run (DateTime comparison handles mixed formats)
+            if ($lastWatermark -and $sigTimestamp) {
+                $wmDate = $null; $sigDate = $null
+                try { $wmDate = [DateTime]::Parse($lastWatermark, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal) } catch { }
+                try { $sigDate = [DateTime]::Parse($sigTimestamp, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal) } catch { }
+                if ($wmDate -and $sigDate) {
+                    if ($sigDate -le $wmDate) { continue }
+                } elseif ($sigTimestamp -le $lastWatermark) {
+                    # Fallback to string comparison when parsing fails
+                    continue
+                }
+            }
+
+            # Track the latest new timestamp seen for the watermark (string compare is safe for same-format timestamps within one run)
+            if ($sigTimestamp -and (-not $maxNewTimestamp -or $sigTimestamp -gt $maxNewTimestamp)) {
+                $maxNewTimestamp = $sigTimestamp
+            }
+
+            $signalCount++
+            if (-not [string]::IsNullOrWhiteSpace($toolName)) {
+                if (-not $toolFrequency.ContainsKey($toolName)) { $toolFrequency[$toolName] = 0 }
+                $toolFrequency[$toolName]++
+            }
+            if (-not [string]::IsNullOrWhiteSpace($errorMessage)) {
+                $errorPatterns += $errorMessage
+            }
+        }
+        $newLabel = if ($lastWatermark) { " ($signalCount new)" } else { '' }
+        Write-CliOutput "  Signals analyzed:    $($lines.Count)$newLabel"
+        Write-CliOutput "  Unique tools used:   $($toolFrequency.Count)"
+        Write-CliOutput "  Error signals:       $($errorPatterns.Count)"
+    } else {
+        Write-CliOutput "$($C.y)  No signal data found at $signalsFile$($C.n)"
+        Write-CliOutput "$($C.d)  Signal capture starts automatically via Copilot hooks.$($C.n)"
+    }
+
+    # --- Evidence Source 2: Git history ---
+    $gitPatterns = @{}
+    try {
+        $recentCommits = & git log --oneline -20 2>$null
+        $diffStat = & git diff HEAD~5..HEAD --stat 2>$null
+        if ($recentCommits) {
+            Write-CliOutput "  Recent commits:      $(($recentCommits | Measure-Object).Count)"
+        }
+
+        # Extract file change frequency from diff stat
+        if ($diffStat) {
+            foreach ($statLine in $diffStat) {
+                if ($statLine -match '^\s*([^\|]+)\|') {
+                    $filePath = $Matches[1].Trim()
+                    $ext = [System.IO.Path]::GetExtension($filePath)
+                    if ($ext) {
+                        if (-not $gitPatterns.ContainsKey($ext)) { $gitPatterns[$ext] = 0 }
+                        $gitPatterns[$ext]++
+                    }
+                }
+            }
+        }
+    } catch {
+        Write-CliOutput "$($C.d)  Git history not available.$($C.n)"
+    }
+
+    # --- Evidence Source 3: Existing lessons ---
+    $lessonsDir = Join-Path $Script:AGENTX_DIR 'lessons'
+    $lessonCount = 0
+    if (Test-Path $lessonsDir) {
+        foreach ($file in (Get-ChildItem $lessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue)) {
+            try {
+                $lc = @(Get-Content $file.FullName -Encoding utf8 | Where-Object { $_.Trim() })
+                $lessonCount += $lc.Count
+            } catch { continue }
+        }
+    }
+    if ($lessonCount -gt 0) {
+        Write-CliOutput "  Existing lessons:    $lessonCount"
+    }
+
+    # --- Read existing patterns ---
+    $existingPatterns = @()
+    if (Test-Path $patternsFile) {
+        $content = Get-Content $patternsFile -Raw -Encoding utf8
+        # Simple YAML parser for our known format
+        $currentPattern = $null
+        $inEvidence = $false
+        foreach ($yamlLine in ($content -split "`n")) {
+            if ($yamlLine -match '^\s*- id:\s*(.+)') {
+                if ($currentPattern) { $existingPatterns += $currentPattern }
+                $currentPattern = @{ id = $Matches[1].Trim(); confidence = 0.5; observations = 0; evidence = @() }
+                $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+confidence:\s*([\d.]+)') {
+                $currentPattern.confidence = [double]$Matches[1]; $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+observations:\s*(\d+)') {
+                $currentPattern.observations = [int]$Matches[1]; $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+trigger:\s*(.+)') {
+                $currentPattern.trigger = $Matches[1].Trim().Trim('"'); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+behavior:\s*(.+)') {
+                $currentPattern.behavior = $Matches[1].Trim().Trim('"'); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+domain:\s*(.+)') {
+                $currentPattern.domain = $Matches[1].Trim(); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+first_seen:\s*(.+)') {
+                $currentPattern.firstSeen = $Matches[1].Trim(); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+last_seen:\s*(.+)') {
+                $currentPattern.lastSeen = $Matches[1].Trim(); $inEvidence = $false
+            } elseif ($currentPattern -and $yamlLine -match '^\s+evidence:\s*$') {
+                $inEvidence = $true
+            } elseif ($currentPattern -and $inEvidence -and $yamlLine -match '^\s+-\s+"(.+)"\s*$') {
+                $currentPattern.evidence += $Matches[1] -replace '\\"', '"'
+            }
+        }
+        if ($currentPattern) { $existingPatterns += $currentPattern }
+    }
+
+    Write-CliOutput ""
+
+    # --- Discover new patterns from tool usage frequency ---
+    $newPatterns = @()
+    $updatedPatterns = @()
+    $now = (Get-Date).ToString('yyyy-MM-dd')
+
+    foreach ($entry in ($toolFrequency.GetEnumerator() | Sort-Object -Property Value -Descending | Select-Object -First 10)) {
+        $toolName = $entry.Key
+        $count = $entry.Value
+        if ($count -lt 2) { continue }
+
+        $patternId = "tool-preference-$($toolName -replace '[^a-zA-Z0-9]', '-')"
+        $existing = $existingPatterns | Where-Object { $_.id -eq $patternId }
+
+        if ($existing) {
+            # Update existing pattern confidence
+            $newObs = $existing.observations + $count
+            $newConf = [Math]::Min(0.95, $existing.confidence + ($count * 0.05))
+            $updatedPatterns += @{
+                id = $patternId
+                oldConfidence = $existing.confidence
+                newConfidence = $newConf
+                observations = $newObs
+            }
+            $existing.confidence = $newConf
+            $existing.observations = $newObs
+        } else {
+            $newPatterns += @{
+                id = $patternId
+                trigger = "when working with $toolName"
+                behavior = "prefer $toolName for this type of operation (used $count times)"
+                confidence = 0.50
+                domain = 'tooling'
+                observations = $count
+                firstSeen = $now
+                lastSeen = $now
+                evidence = @("Signal capture: $toolName used $count times in recent sessions")
+            }
+        }
+    }
+
+    # --- Discover patterns from error frequency ---
+    $errorGroups = @{}
+    foreach ($err in $errorPatterns) {
+        $key = if ($err.Length -gt 60) { $err.Substring(0, 60) } else { $err }
+        if (-not $errorGroups.ContainsKey($key)) { $errorGroups[$key] = 0 }
+        $errorGroups[$key]++
+    }
+
+    foreach ($entry in ($errorGroups.GetEnumerator() | Where-Object { $_.Value -ge 2 } | Sort-Object -Property Value -Descending | Select-Object -First 5)) {
+        $errKey = $entry.Key -replace '[^a-zA-Z0-9\s]', '' -replace '\s+', '-'
+        $patternId = "error-avoid-$($errKey.Substring(0, [Math]::Min(40, $errKey.Length)).ToLower())"
+        $existing = $existingPatterns | Where-Object { $_.id -eq $patternId }
+
+        if (-not $existing) {
+            $newPatterns += @{
+                id = $patternId
+                trigger = "when encountering: $($entry.Key)"
+                behavior = "avoid this error pattern (occurred $($entry.Value) times)"
+                confidence = 0.50
+                domain = 'error-handling'
+                observations = $entry.Value
+                firstSeen = $now
+                lastSeen = $now
+                evidence = @("Signal capture: error occurred $($entry.Value) times")
+            }
+        }
+    }
+
+    # --- Discover patterns from file extension frequency ---
+    # Only process git-derived patterns when new signals exist in this run. This keeps git
+    # activity tied to active Copilot work and preserves idempotency on signal-empty reruns.
+    if ($signalCount -gt 0) {
+        foreach ($entry in ($gitPatterns.GetEnumerator() | Where-Object { $_.Value -ge 3 } | Sort-Object -Property Value -Descending | Select-Object -First 5)) {
+            $ext = $entry.Key
+            $patternId = "primary-lang-$($ext.TrimStart('.').ToLower())"
+            $existing = $existingPatterns | Where-Object { $_.id -eq $patternId }
+
+            if ($existing) {
+                # Refresh existing git-derived pattern so it does not decay while still active.
+                # Observations are set (not accumulated) to reflect the current diff window rather than a running total.
+                $newObs = [Math]::Max($existing.observations, $entry.Value)
+                $newConf = [Math]::Min(0.95, $existing.confidence + 0.05)
+                $updatedPatterns += @{
+                    id = $patternId
+                    oldConfidence = $existing.confidence
+                    newConfidence = $newConf
+                    observations = $newObs
+                }
+                $existing.confidence = $newConf
+                $existing.observations = $newObs
+            } else {
+                $newPatterns += @{
+                    id = $patternId
+                    trigger = "when creating new files"
+                    behavior = "this project primarily uses $ext files ($($entry.Value) changed recently)"
+                    confidence = 0.50
+                    domain = 'code-style'
+                    observations = $entry.Value
+                    firstSeen = $now
+                    lastSeen = $now
+                    evidence = @("Git diff: $($entry.Value) $ext files changed in recent commits")
+                }
+            }
+        }
+    }
+
+    # --- Apply confidence decay to patterns not seen recently ---
+    # Only decay when new signals were processed; skips spurious decay on reruns with identical data
+    if ($signalCount -gt 0) {
+        foreach ($p in $existingPatterns) {
+            if ($p.id -notin ($updatedPatterns | ForEach-Object { $_.id })) {
+                # Decay by 0.05 for unexercised patterns
+                $newConf = [Math]::Max(0.10, $p.confidence - 0.05)
+                if ($newConf -ne $p.confidence) {
+                    $updatedPatterns += @{
+                        id = $p.id
+                        oldConfidence = $p.confidence
+                        newConfidence = $newConf
+                        observations = $p.observations
+                    }
+                    $p.confidence = $newConf
+                }
+            }
+        }
+    }
+
+    # --- Remove patterns below minimum confidence ---
+    $existingPatterns = @($existingPatterns | Where-Object { $_.confidence -ge 0.10 })
+
+    # --- Merge new patterns into existing ---
+    foreach ($np in $newPatterns) {
+        $existingPatterns += $np
+    }
+
+    # --- Write patterns file ---
+    $yaml = "# AgentX Discovered Patterns`n"
+    $yaml += "# Auto-generated by 'agentx discover' -- do not edit manually`n"
+    $yaml += "# Patterns with confidence > 0.80 can be graduated to skills via 'agentx graduate'`n"
+    $yaml += "# Last updated: $now`n"
+    $newWatermark = if ($maxNewTimestamp) { $maxNewTimestamp } elseif ($lastWatermark) { $lastWatermark } else { $null }
+    if ($newWatermark) { $yaml += "# last_signal_watermark: $newWatermark`n" }
+    $yaml += "`n"
+    $yaml += "patterns:`n"
+
+    # Cap at 50 patterns, sorted by confidence descending
+    $sorted = @($existingPatterns | Sort-Object { -($_.confidence) } | Select-Object -First 50)
+
+    foreach ($p in $sorted) {
+        $safeTrigger = $p.trigger -replace '\\', '\\' -replace '"', '\"'
+        $safeBehavior = $p.behavior -replace '\\', '\\' -replace '"', '\"'
+        $yaml += "  - id: $($p.id)`n"
+        $yaml += "    trigger: `"$safeTrigger`"`n"
+        $yaml += "    behavior: `"$safeBehavior`"`n"
+        $yaml += "    confidence: $([string]::Format('{0:F2}', $p.confidence))`n"
+        $yaml += "    domain: $($p.domain)`n"
+        $yaml += "    observations: $($p.observations)`n"
+        $yaml += "    first_seen: $(if ($p.firstSeen) { $p.firstSeen } else { $now })`n"
+        $yaml += "    last_seen: $now`n"
+        if ($p.evidence) {
+            $yaml += "    evidence:`n"
+            foreach ($ev in $p.evidence) {
+                $safeEv = $ev -replace '\\', '\\' -replace '"', '\"'
+                $yaml += "      - `"$safeEv`"`n"
+            }
+        }
+        $yaml += "`n"
+    }
+
+    Set-Content $patternsFile $yaml -Encoding utf8 -NoNewline
+
+    # --- Report ---
+    $readyCount = @($sorted | Where-Object { $_.confidence -ge 0.80 }).Count
+
+    if ($newPatterns.Count -gt 0) {
+        Write-CliOutput "$($C.g)  New patterns:$($C.n)"
+        foreach ($np in $newPatterns) {
+            Write-CliOutput "    + $($np.id) ($([string]::Format('{0:F2}', $np.confidence))) -- $($np.behavior)"
+        }
+    }
+
+    if ($updatedPatterns.Count -gt 0) {
+        Write-CliOutput "$($C.c)  Updated patterns:$($C.n)"
+        foreach ($up in $updatedPatterns) {
+            $arrow = if ($up.newConfidence -gt $up.oldConfidence) { '+' } else { '-' }
+            Write-CliOutput "    $arrow $($up.id) ($([string]::Format('{0:F2}', $up.oldConfidence)) -> $([string]::Format('{0:F2}', $up.newConfidence)))"
+        }
+    }
+
+    if ($readyCount -gt 0) {
+        Write-CliOutput "`n$($C.y)  Ready to graduate ($readyCount patterns with confidence > 0.80):$($C.n)"
+        foreach ($rp in ($sorted | Where-Object { $_.confidence -ge 0.80 })) {
+            Write-CliOutput "    [*] $($rp.id) ($([string]::Format('{0:F2}', $rp.confidence))) -- run 'agentx graduate' to promote"
+        }
+    }
+
+    $total = $sorted.Count
+    Write-CliOutput "`n  Total: $total patterns ($($newPatterns.Count) new, $($updatedPatterns.Count) updated)"
+    Write-CliOutput "  Patterns file: $patternsFile`n"
+
+    if ($Script:JsonOutput) {
+        [PSCustomObject]@{
+            total = $total
+            new = $newPatterns.Count
+            updated = $updatedPatterns.Count
+            readyToGraduate = $readyCount
+            patternsFile = $patternsFile
+        } | ConvertTo-Json -Depth 5
+    }
+}
+
+function Invoke-DiscoverStatus {
+    $patternsFile = Join-Path $Script:AGENTX_DIR 'patterns' 'discovered.yaml'
+    $signalsFile = Join-Path $Script:AGENTX_DIR 'signals' 'sessions.jsonl'
+
+    Write-CliOutput "`n$($C.c)  Pattern Discovery Status$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    # Signal stats
+    if (Test-Path $signalsFile) {
+        $lines = @(Get-Content $signalsFile -Encoding utf8 | Where-Object { $_.Trim() })
+        $size = (Get-Item $signalsFile).Length
+        $sizeKB = [Math]::Round($size / 1024, 1)
+        Write-CliOutput "  Signal file:    $signalsFile"
+        Write-CliOutput "  Signal entries: $($lines.Count) ($sizeKB KB)"
+    } else {
+        Write-CliOutput "  Signal file:    (not yet created)"
+        Write-CliOutput "$($C.d)  Signals capture automatically via Copilot hooks.$($C.n)"
+    }
+
+    # Pattern stats
+    if (Test-Path $patternsFile) {
+        $content = Get-Content $patternsFile -Raw -Encoding utf8
+        $patternCount = ([regex]::Matches($content, '^\s*- id:', [System.Text.RegularExpressions.RegexOptions]::Multiline)).Count
+        $readyCount = ([regex]::Matches($content, 'confidence:\s*0\.(8\d|9\d)', [System.Text.RegularExpressions.RegexOptions]::Multiline)).Count
+        Write-CliOutput "  Patterns file:  $patternsFile"
+        Write-CliOutput "  Total patterns: $patternCount"
+        Write-CliOutput "  Ready to graduate: $readyCount (confidence > 0.80)"
+    } else {
+        Write-CliOutput "  Patterns file:  (not yet created)"
+        Write-CliOutput "$($C.d)  Run 'agentx discover' to analyze signals and git history.$($C.n)"
+    }
+    Write-CliOutput ""
+}
+
+function Invoke-DiscoverReset {
+    $patternsFile = Join-Path $Script:AGENTX_DIR 'patterns' 'discovered.yaml'
+    $archiveDir = Join-Path $Script:AGENTX_DIR 'patterns' 'archive'
+
+    if (-not (Test-Path $patternsFile)) {
+        Write-CliOutput "$($C.y)  No patterns file to reset.$($C.n)"
+        return
+    }
+
+    if (-not (Test-Path $archiveDir)) { New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null }
+    $ts = (Get-Date).ToString('yyyy-MM-dd-HHmmss')
+    $archivePath = Join-Path $archiveDir "discovered-$ts.yaml"
+    Copy-Item $patternsFile $archivePath -Force
+    Remove-Item $patternsFile -Force
+    Write-CliOutput "$($C.g)  Patterns archived to: $archivePath$($C.n)"
+    Write-CliOutput "  Run 'agentx discover' to start fresh.`n"
+}
+
+function Invoke-DiscoverHelp {
+    Write-CliOutput "`n$($C.c)  Discover Commands$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-CliOutput "    agentx discover                 Analyze signals + git history for patterns"
+    Write-CliOutput "    agentx discover run             Same as above (default)"
+    Write-CliOutput "    agentx discover status          Show signal and pattern statistics"
+    Write-CliOutput "    agentx discover reset           Archive current patterns and start fresh"
+    Write-CliOutput ""
+}
+
+# ---------------------------------------------------------------------------
+# GRADUATE: Promote high-confidence patterns to permanent skills
+# ---------------------------------------------------------------------------
+
+function Invoke-GraduateCmd {
+    $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'run' }
+    $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
+
+    switch ($action) {
+        'run'     { Invoke-GraduateRun }
+        'list'    { Invoke-GraduateList }
+        'preview' { Invoke-GraduateList }
+        default   { Invoke-GraduateHelp }
+    }
+}
+
+function Invoke-GraduateRun {
+    $patternsFile = Join-Path $Script:AGENTX_DIR 'patterns' 'discovered.yaml'
+    $skillsDir = Join-Path $Script:ROOT '.github' 'skills'
+    $archiveDir = Join-Path $Script:AGENTX_DIR 'patterns' 'archive'
+
+    if (-not (Test-Path $patternsFile)) {
+        Write-CliOutput "$($C.y)  No patterns found. Run 'agentx discover' first.$($C.n)"
+        return
+    }
+
+    # Parse patterns
+    $content = Get-Content $patternsFile -Raw -Encoding utf8
+    $patterns = @()
+    $currentPattern = $null
+    foreach ($yamlLine in ($content -split "`n")) {
+        if ($yamlLine -match '^\s*- id:\s*(.+)') {
+            if ($currentPattern) { $patterns += [PSCustomObject]$currentPattern }
+            $currentPattern = @{ id = $Matches[1].Trim(); confidence = 0.5; observations = 0; domain = 'general'; trigger = ''; behavior = ''; evidence = @() }
+        } elseif ($currentPattern -and $yamlLine -match '^\s+confidence:\s*([\d.]+)') {
+            $currentPattern.confidence = [double]$Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+observations:\s*(\d+)') {
+            $currentPattern.observations = [int]$Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+trigger:\s*"?(.+?)"?\s*$') {
+            $currentPattern.trigger = $Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+behavior:\s*"?(.+?)"?\s*$') {
+            $currentPattern.behavior = $Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+domain:\s*(.+)') {
+            $currentPattern.domain = $Matches[1].Trim()
+        } elseif ($currentPattern -and $yamlLine -match '^\s+- "(.+)"') {
+            $currentPattern.evidence += $Matches[1]
+        }
+    }
+    if ($currentPattern) { $patterns += [PSCustomObject]$currentPattern }
+
+    # Filter candidates: confidence > 0.80 and observations >= 5
+    $candidates = @($patterns | Where-Object { $_.confidence -ge 0.80 -and $_.observations -ge 5 })
+
+    if ($candidates.Count -eq 0) {
+        Write-CliOutput "$($C.y)  No patterns ready to graduate yet.$($C.n)"
+        Write-CliOutput "$($C.d)  Patterns need confidence > 0.80 and 5+ observations.$($C.n)"
+        Write-CliOutput "$($C.d)  Run 'agentx discover' to build pattern confidence.`n$($C.n)"
+        return
+    }
+
+    Write-CliOutput "`n$($C.c)  Pattern Graduation$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    # Group candidates by domain -> each domain cluster becomes one skill
+    $clusters = @{}
+    foreach ($candidate in $candidates) {
+        $domain = $candidate.domain
+        if (-not $clusters.ContainsKey($domain)) { $clusters[$domain] = @() }
+        $clusters[$domain] += $candidate
+    }
+
+    $generatedSkills = @()
+    $graduatedIds = @()
+    $now = (Get-Date).ToString('yyyy-MM-dd')
+
+    foreach ($entry in $clusters.GetEnumerator()) {
+        $domain = $entry.Key
+        $clusterPatterns = $entry.Value
+        $skillName = "graduated-$domain"
+        $skillDir = Join-Path $skillsDir "development" $skillName
+        $skillFile = Join-Path $skillDir 'SKILL.md'
+
+        if (-not (Test-Path $skillDir)) { New-Item -ItemType Directory -Path $skillDir -Force | Out-Null }
+
+        # Generate SKILL.md
+        $totalObs = ($clusterPatterns | Measure-Object -Property observations -Sum).Sum
+        $patternCount = $clusterPatterns.Count
+
+        $skillContent = "---`n"
+        $skillContent += "name: $skillName`n"
+        $skillContent += "description: `"[Auto-graduated] Project conventions for $domain domain from $totalObs observations across $patternCount patterns.`"`n"
+        $skillContent += "---`n`n"
+        $skillContent += "# Graduated Patterns: $($domain.Substring(0,1).ToUpper())$($domain.Substring(1))`n`n"
+        $skillContent += "These conventions were automatically graduated from observed patterns.`n"
+        $skillContent += "Each pattern reached high confidence (>0.80) through repeated observation in this project.`n`n"
+        $skillContent += "**Review these and adjust as needed -- they are a starting point from observed behavior.**`n`n"
+        $skillContent += "## Conventions`n`n"
+
+        $idx = 1
+        foreach ($p in $clusterPatterns) {
+            $skillContent += "### $idx. $($p.id)`n`n"
+            $skillContent += "- **When:** $($p.trigger)`n"
+            $skillContent += "- **Then:** $($p.behavior)`n"
+            $skillContent += "- **Confidence:** $([string]::Format('{0:F2}', $p.confidence)) ($($p.observations) observations)`n"
+            if ($p.evidence -and $p.evidence.Count -gt 0) {
+                $skillContent += "- **Evidence:**`n"
+                foreach ($ev in $p.evidence) {
+                    $skillContent += "  - $ev`n"
+                }
+            }
+            $skillContent += "`n"
+            $idx++
+            $graduatedIds += $p.id
+        }
+
+        $skillContent += "## Notes`n`n"
+        $skillContent += "- Generated on $now by ``agentx graduate```n"
+        $skillContent += "- Source: ``.agentx/patterns/discovered.yaml```n"
+        $skillContent += "- These skills are auto-discovered by Copilot in future sessions`n"
+        $skillContent += "- Delete this file if the conventions no longer apply -- patterns will re-accumulate if still valid`n"
+
+        Set-Content $skillFile $skillContent -Encoding utf8 -NoNewline
+        $generatedSkills += $skillFile
+
+        Write-CliOutput "  $($C.g)[PASS]$($C.n) Generated: $skillFile (from $patternCount patterns)"
+    }
+
+    # Archive graduated patterns
+    if (-not (Test-Path $archiveDir)) { New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null }
+    $archivePath = Join-Path $archiveDir "graduated-$now.yaml"
+    $archiveYaml = "# Graduated patterns - $now`n"
+    $archiveYaml += "# These patterns were promoted to skills under .github/skills/`n`n"
+    foreach ($candidate in $candidates) {
+        $archiveYaml += "- id: $($candidate.id)`n"
+        $archiveYaml += "  graduated_to: .github/skills/development/graduated-$($candidate.domain)/SKILL.md`n"
+        $archiveYaml += "  graduated_at: $now`n"
+        $archiveYaml += "  final_confidence: $([string]::Format('{0:F2}', $candidate.confidence))`n`n"
+    }
+    Set-Content $archivePath $archiveYaml -Encoding utf8 -NoNewline
+
+    # Remove graduated patterns from active file
+    $remainingPatterns = @($patterns | Where-Object { $_.id -notin $graduatedIds })
+    $remainingYaml = "# AgentX Discovered Patterns`n"
+    $remainingYaml += "# Auto-generated by 'agentx discover' -- do not edit manually`n"
+    $remainingYaml += "# Patterns with confidence > 0.80 can be graduated to skills via 'agentx graduate'`n"
+    $remainingYaml += "# Last updated: $now`n`n"
+    $remainingYaml += "patterns:`n"
+    foreach ($p in $remainingPatterns) {
+        $safeTrigger = $p.trigger -replace '\\', '\\' -replace '"', '\"'
+        $safeBehavior = $p.behavior -replace '\\', '\\' -replace '"', '\"'
+        $remainingYaml += "  - id: $($p.id)`n"
+        $remainingYaml += "    trigger: `"$safeTrigger`"`n"
+        $remainingYaml += "    behavior: `"$safeBehavior`"`n"
+        $remainingYaml += "    confidence: $([string]::Format('{0:F2}', $p.confidence))`n"
+        $remainingYaml += "    domain: $($p.domain)`n"
+        $remainingYaml += "    observations: $($p.observations)`n`n"
+    }
+    Set-Content $patternsFile $remainingYaml -Encoding utf8 -NoNewline
+
+    Write-CliOutput "`n  Graduated: $($graduatedIds.Count) patterns -> $($generatedSkills.Count) skills"
+    Write-CliOutput "  Archived:  $archivePath"
+    Write-CliOutput "  Remaining: $($remainingPatterns.Count) active patterns`n"
+
+    if ($Script:JsonOutput) {
+        [PSCustomObject]@{
+            graduated = $graduatedIds.Count
+            skills = $generatedSkills
+            remaining = $remainingPatterns.Count
+            archivePath = $archivePath
+        } | ConvertTo-Json -Depth 5
+    }
+}
+
+function Invoke-GraduateList {
+    $patternsFile = Join-Path $Script:AGENTX_DIR 'patterns' 'discovered.yaml'
+
+    if (-not (Test-Path $patternsFile)) {
+        Write-CliOutput "$($C.y)  No patterns found. Run 'agentx discover' first.$($C.n)"
+        return
+    }
+
+    $content = Get-Content $patternsFile -Raw -Encoding utf8
+    $patterns = @()
+    $currentPattern = $null
+    foreach ($yamlLine in ($content -split "`n")) {
+        if ($yamlLine -match '^\s*- id:\s*(.+)') {
+            if ($currentPattern) { $patterns += [PSCustomObject]$currentPattern }
+            $currentPattern = @{ id = $Matches[1].Trim(); confidence = 0.5; observations = 0; domain = 'general' }
+        } elseif ($currentPattern -and $yamlLine -match '^\s+confidence:\s*([\d.]+)') {
+            $currentPattern.confidence = [double]$Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+observations:\s*(\d+)') {
+            $currentPattern.observations = [int]$Matches[1]
+        } elseif ($currentPattern -and $yamlLine -match '^\s+domain:\s*(.+)') {
+            $currentPattern.domain = $Matches[1].Trim()
+        }
+    }
+    if ($currentPattern) { $patterns += [PSCustomObject]$currentPattern }
+
+    $candidates = @($patterns | Where-Object { $_.confidence -ge 0.80 -and $_.observations -ge 5 })
+    $building = @($patterns | Where-Object { $_.confidence -lt 0.80 -or $_.observations -lt 5 })
+
+    Write-CliOutput "`n$($C.c)  Graduation Candidates$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+
+    if ($candidates.Count -gt 0) {
+        Write-CliOutput "$($C.g)  Ready to graduate:$($C.n)"
+        foreach ($candidate in $candidates) {
+            Write-CliOutput "    [*] $($candidate.id) (conf: $([string]::Format('{0:F2}', $candidate.confidence)), obs: $($candidate.observations), domain: $($candidate.domain))"
+        }
+    } else {
+        Write-CliOutput "$($C.y)  No patterns ready yet.$($C.n)"
+    }
+
+    if ($building.Count -gt 0) {
+        Write-CliOutput "`n$($C.d)  Building confidence:$($C.n)"
+        foreach ($b in ($building | Sort-Object { -($_.confidence) } | Select-Object -First 10)) {
+            Write-CliOutput "    $($C.d)  $($b.id) (conf: $([string]::Format('{0:F2}', $b.confidence)), obs: $($b.observations))$($C.n)"
+        }
+    }
+    Write-CliOutput ""
+}
+
+function Invoke-GraduateHelp {
+    Write-CliOutput "`n$($C.c)  Graduate Commands$($C.n)"
+    Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+    Write-CliOutput "    agentx graduate                 Promote high-confidence patterns to skills"
+    Write-CliOutput "    agentx graduate run             Same as above (default)"
+    Write-CliOutput "    agentx graduate list            Preview candidates without promoting"
+    Write-CliOutput "    agentx graduate preview         Same as list"
+    Write-CliOutput ""
+    Write-CliOutput "$($C.d)  Patterns need confidence > 0.80 and 5+ observations to graduate.$($C.n)"
+    Write-CliOutput "$($C.d)  Generated skills land in .github/skills/development/graduated-<domain>/$($C.n)"
+    Write-CliOutput ""
+}
+
+# ---------------------------------------------------------------------------
+# SPRINT: One-shot full pipeline execution
+# ---------------------------------------------------------------------------
+
+function Invoke-SprintCmd {
+    $issueNumber = Get-Flag @('-i', '--issue')
+    $dryRun = Test-Flag @('--dry-run', '-d')
+    $skipHygiene = Test-Flag @('--skip-hygiene')
+    $normalizedArgs = @($Script:SubArgs | ForEach-Object { [string]$_ })
+    $descriptionParts = @()
+    $skipNextArg = $false
+    foreach ($arg in $normalizedArgs) {
+        if ($skipNextArg) {
+            $skipNextArg = $false
+            continue
+        }
+
+        if ($arg -in @('-i', '--issue')) {
+            $skipNextArg = $true
+            continue
+        }
+
+        if ($arg.StartsWith('-')) {
+            continue
+        }
+
+        $descriptionParts += $arg
+    }
+    $description = $descriptionParts -join ' '
+    $sprintScope = if ($issueNumber -and -not [string]::IsNullOrWhiteSpace($description)) {
+        "issue #${issueNumber}: $description"
+    } elseif ($issueNumber) {
+        "issue #${issueNumber}"
+    } else {
+        $description
+    }
+
+    if ([string]::IsNullOrWhiteSpace($description) -and [string]::IsNullOrWhiteSpace($issueNumber)) {
+        Write-CliOutput "`n$($C.c)  Sprint -- Full Pipeline Execution$($C.n)"
+        Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
+        Write-CliOutput "$($C.w)  Usage:$($C.n)"
+        Write-CliOutput "    agentx sprint `"Add user authentication`""
+        Write-CliOutput "    agentx sprint -i 42"
+        Write-CliOutput "    agentx sprint `"Fix login bug`" --skip-hygiene"
+        Write-CliOutput "    agentx sprint `"Redesign dashboard`" --dry-run"
+        Write-CliOutput ""
+        Write-CliOutput "$($C.w)  Pipeline Stages:$($C.n)"
+        Write-CliOutput "    1. Plan     -- Create execution plan and validate scope"
+        Write-CliOutput "    2. Build    -- Implement changes with iterative quality loop"
+        Write-CliOutput "    3. Review   -- Self-review with structured findings"
+        Write-CliOutput "    4. Hygiene  -- Code hygiene sweep (skip with --skip-hygiene)"
+        Write-CliOutput "    5. Discover -- Extract patterns from this session"
+        Write-CliOutput ""
+        Write-CliOutput "$($C.w)  Flags:$($C.n)"
+        Write-CliOutput "    -i, --issue <number>   Work on existing issue"
+        Write-CliOutput "    --dry-run              Show pipeline plan without executing"
+        Write-CliOutput "    --skip-hygiene         Skip code hygiene pass"
+        Write-CliOutput ""
+        return
+    }
+
+    Write-CliOutput "`n$($C.c)  Sprint -- Full Pipeline$($C.n)"
+    Write-CliOutput "$($C.d)  =============================================$($C.n)"
+
+    $stages = @(
+        @{ name = 'Plan';     description = 'Create execution plan and validate scope' }
+        @{ name = 'Build';    description = 'Implement changes with iterative quality loop' }
+        @{ name = 'Review';   description = 'Self-review with structured findings' }
+    )
+    if (-not $skipHygiene) {
+        $stages += @{ name = 'Hygiene';  description = 'Code hygiene sweep on changed files' }
+    }
+    $stages += @{ name = 'Discover'; description = 'Extract patterns from this session' }
+
+    $stageNum = 1
+    foreach ($stage in $stages) {
+        Write-CliOutput "`n$($C.y)  [$stageNum/$($stages.Count)] $($stage.name)$($C.n) -- $($stage.description)"
+
+        if ($dryRun) {
+            Write-CliOutput "$($C.d)    (dry-run: would execute $($stage.name) stage)$($C.n)"
+            $stageNum++
+            continue
+        }
+
+        switch ($stage.name) {
+            'Plan' {
+                # Stage 1: Create or load plan
+                if ($issueNumber) {
+                    Write-CliOutput "    Loading issue #$issueNumber..."
+                    try {
+                        & "$PSScriptRoot/agentx.ps1" issue get -n $issueNumber 2>$null | Out-Null
+                        Write-CliOutput "    $($C.g)[PASS]$($C.n) Issue #$issueNumber loaded"
+                    } catch {
+                        Write-CliOutput "    $($C.r)[FAIL]$($C.n) Could not load issue #$issueNumber"
+                        return
+                    }
+                }
+                $prompt = if ($issueNumber) { "Plan work for $sprintScope" } else { "Plan: $description" }
+                Write-CliOutput "    $($C.g)[PASS]$($C.n) Plan scope: $prompt"
+            }
+            'Build' {
+                # Stage 2: Run agentic loop
+                Write-CliOutput "    Starting iterative build..."
+                try {
+                    . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
+                    $buildPrompt = if ($issueNumber) {
+                        "Implement $sprintScope"
+                    } else {
+                        "Implement: $description"
+                    }
+                    $params = @{
+                        Agent = 'engineer'
+                        Prompt = $buildPrompt
+                        MaxIterations = 10
+                        WorkspaceRoot = $Script:ROOT
+                    }
+                    if ($issueNumber) { $params.IssueNumber = [int]$issueNumber }
+                    $result = Invoke-AgenticLoop @params
+                    if ($result) {
+                        Write-CliOutput "    $($C.g)[PASS]$($C.n) Build completed ($($result.exitReason))"
+                    } else {
+                        Write-CliOutput "    $($C.r)[FAIL]$($C.n) Build did not complete"
+                        return
+                    }
+                } catch {
+                    Write-CliOutput "    $($C.y)[WARN]$($C.n) Build encountered error: $($_.Exception.Message)"
+                }
+            }
+            'Review' {
+                # Stage 3: Self-review
+                Write-CliOutput "    Running self-review..."
+                try {
+                    . (Join-Path $PSScriptRoot 'agentic-runner.ps1')
+                    $reviewParams = @{
+                        Agent = 'reviewer'
+                        Prompt = if ($issueNumber) { "Review changes for $sprintScope" } else { "Review changes for: $description" }
+                        MaxIterations = 5
+                        WorkspaceRoot = $Script:ROOT
+                    }
+                    if ($issueNumber) { $reviewParams.IssueNumber = [int]$issueNumber }
+                    $reviewResult = Invoke-AgenticLoop @reviewParams
+                    if ($reviewResult) {
+                        Write-CliOutput "    $($C.g)[PASS]$($C.n) Review completed ($($reviewResult.exitReason))"
+                    }
+                } catch {
+                    Write-CliOutput "    $($C.y)[WARN]$($C.n) Review encountered error: $($_.Exception.Message)"
+                }
+            }
+            'Hygiene' {
+                # Stage 4: Code hygiene sweep -- advisory. Identifies scope and points to the code-hygiene skill.
+                # Actual analysis is performed by an agent reading .github/skills/development/code-hygiene/SKILL.md.
+                Write-CliOutput "    Identifying code hygiene sweep scope..."
+                try {
+                    $changedFiles = @(& git diff --name-only HEAD 2>$null | Where-Object { $_.Trim() } | Select-Object -Unique)
+                    $fileCount = ($changedFiles | Measure-Object).Count
+                    if ($fileCount -gt 0) {
+                        Write-CliOutput "    $($C.c)[INFO]$($C.n) Hygiene scope: $fileCount file(s) changed -- run 'code-hygiene' skill for analysis"
+                    } else {
+                        Write-CliOutput "    $($C.c)[INFO]$($C.n) No uncommitted changes detected; hygiene sweep skipped"
+                    }
+                } catch {
+                    Write-CliOutput "    $($C.y)[WARN]$($C.n) Could not determine changed files"
+                }
+            }
+            'Discover' {
+                # Stage 5: Pattern discovery
+                Write-CliOutput "    Extracting patterns from this session..."
+                try {
+                    Invoke-DiscoverRun
+                    Write-CliOutput "    $($C.g)[PASS]$($C.n) Pattern discovery complete"
+                } catch {
+                    Write-CliOutput "    $($C.y)[WARN]$($C.n) Pattern discovery encountered error: $($_.Exception.Message)"
+                }
+            }
+        }
+
+        $stageNum++
+    }
+
+    Write-CliOutput "`n$($C.g)  Sprint complete!$($C.n)"
+    if ($issueNumber) {
+        Write-CliOutput "$($C.d)  Issue: #${issueNumber}$($C.n)"
+    }
+    Write-CliOutput "$($C.d)  Stages: $($stages.Count) executed$($C.n)`n"
+}
+
+# ---------------------------------------------------------------------------
 # Main router
 # ---------------------------------------------------------------------------
 
@@ -5409,6 +6292,9 @@ switch ($Script:Command) {
     'watch'    { Invoke-WatchCmd }
     'tokens'   { Invoke-TokensCmd }
     'score'    { Invoke-ScoreCmd }
+    'discover' { Invoke-DiscoverCmd }
+    'graduate' { Invoke-GraduateCmd }
+    'sprint'   { Invoke-SprintCmd }
     'version'  { Invoke-VersionCmd }
     'help'     { Invoke-HelpCmd }
     default {

@@ -123,6 +123,7 @@ Assert-FileExists "tests/task-bundle-behavior.ps1" "Task bundle behavior test sc
 Assert-FileExists "tests/bounded-parallel-behavior.ps1" "Bounded parallel behavior test script"
 Assert-FileExists "tests/harness-audit-behavior.ps1" "Harness audit behavior test script"
 Assert-FileExists "tests/agentic-runner-behavior.ps1" "Agentic runner behavior test script"
+Assert-FileExists "tests/sprint-discover-behavior.ps1" "Sprint/discover behavior test script"
 
 $providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -156,6 +157,12 @@ if ($agenticRunnerBehaviorExitCode -ne 0) {
 }
 Remove-Item $agenticRunnerBehaviorTempFile -ErrorAction SilentlyContinue
 Assert-True ($agenticRunnerBehaviorExitCode -eq 0) "Agentic runner behavior tests pass"
+
+$sprintDiscoverBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/sprint-discover-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $sprintDiscoverBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Sprint/discover CLI behavior tests pass"
 
 # --- 6. Skills --------------------------------------------------------------------------
 Write-Host ""
@@ -235,6 +242,7 @@ Assert-FileExists "docs/GUIDE.md" "Consolidated Guide (quickstart + setup)"
 Assert-FileContains "AGENTS.md" "GUIDE" "AGENTS.md links to Guide"
 Assert-FileContains ".github/copilot-instructions.md" "RFC 2119" "Router has RFC 2119 directive language"
 Assert-FileContains "README.md" "OpenSSF" "README has OpenSSF Scorecard badge"
+Assert-FileContains "vscode-extension/package.json" '"vscode:prepublish": "npm run sync:version && npm run copy:assets' "VS Code extension prepublish refreshes bundled assets before packaging"
 
 # --- Results ----------------------------------------------------------------------------
 Write-Host ""

@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 75 skills across 10 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 76 skills across 10 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 75 skills across 10 categori
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 75 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 76 skills. Use Quick Reference below.
 
 ---
 
@@ -65,7 +65,7 @@ description: 'Compressed skill index for AI agents. 75 skills across 10 categori
 
 ---
 
-## Skills Directory (75 skills -- pipe-delimited)
+## Skills Directory (76 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -87,6 +87,7 @@ dev|code-review|agentx/skills/development/code-review/SKILL.md|checklists,automa
 dev|iterative-loop|agentx/skills/development/iterative-loop/SKILL.md|quality-loop,refinement,completion-criteria
 dev|skill-creator|agentx/skills/development/skill-creator/SKILL.md|scaffold,validate,maintain-skills
 dev|token-optimizer|agentx/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
+dev|code-hygiene|agentx/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
 lang|csharp|agentx/skills/languages/csharp/SKILL.md|C#,.NET,EF-Core,DI,async/await,xUnit
 lang|c|agentx/skills/languages/c/SKILL.md|C,C23,pointers,embedded,systems,FFI,ABI,memory
 lang|cpp|agentx/skills/languages/cpp/SKILL.md|C++,C++23,RAII,templates,span,string_view,native
@@ -243,5 +244,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 75 skills (arch:5, dev:11, lang:10, ops:5, infra:4, data:6, ai:17, design:4, test:6, domain:7)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 76 skills (arch:5, dev:12, lang:10, ops:5, infra:4, data:6, ai:17, design:4, test:6, domain:7)
 

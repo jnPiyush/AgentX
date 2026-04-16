@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "AgentX - Multi-Agent Orchestration",
   "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
-  "version": "8.4.33",
+  "version": "8.4.34",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -763,6 +763,9 @@
         "path": "./.github/agentx/skills/design/ux-ui-design/SKILL.md"
       },
       {
+        "path": "./.github/agentx/skills/development/code-hygiene/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/development/code-review/SKILL.md"
       },
       {
@@ -948,7 +951,7 @@
     "sync:version": "node ../scripts/stamp-version.js",
     "copy:assets": "node scripts/copy-assets.js",
     "prepare:chat": "node scripts/prepare-chat-contributions.js",
-    "vscode:prepublish": "npm run sync:version && npm run prepare:chat && npm run clean && tsc -p ./",
+    "vscode:prepublish": "npm run sync:version && npm run copy:assets && npm run prepare:chat && npm run clean && tsc -p ./",
     "compile": "npm run sync:version && npm run clean && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",

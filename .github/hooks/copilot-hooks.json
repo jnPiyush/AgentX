@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "copilot-agent:sessionStart": [
+      {
+        "command": "node",
+        "args": [".github/hooks/scripts/signal-capture.js"],
+        "description": "Record session start marker for AgentX signal capture"
+      }
+    ],
+    "copilot-agent:sessionEnd": [
+      {
+        "command": "node",
+        "args": [".github/hooks/scripts/signal-capture.js"],
+        "description": "Record session end marker and finalize signal capture"
+      }
+    ],
+    "copilot-agent:postToolUse": [
+      {
+        "command": "node",
+        "args": [".github/hooks/scripts/signal-capture.js"],
+        "description": "Capture tool usage data for pattern discovery"
+      }
+    ],
+    "copilot-agent:userPromptSubmitted": [
+      {
+        "command": "node",
+        "args": [".github/hooks/scripts/signal-capture.js"],
+        "description": "Capture user prompt context for session correlation"
+      }
+    ],
+    "copilot-agent:errorOccurred": [
+      {
+        "command": "node",
+        "args": [".github/hooks/scripts/signal-capture.js"],
+        "description": "Capture error patterns for automated discovery"
+      }
+    ]
+  }
+}

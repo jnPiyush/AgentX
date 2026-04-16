@@ -1,6 +1,6 @@
 {
   "name": "agentx-copilot-cli",
-  "version": "8.4.33",
+  "version": "8.4.34",
   "description": "AgentX Copilot CLI plugin -- installs agents, skills, instructions, and prompts into any workspace for GitHub Copilot CLI usage. Separate from the core AgentX VS Code extension.",
   "maturity": "stable",
   "platform": "copilot-cli",
