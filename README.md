@@ -7,14 +7,14 @@
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
-  <p><em>Turn AI coding agents into a structured, highly capable development team with routing, domain skills, execution templates, long-term memory, and validation.</em></p>
+  <p><em>Turn AI coding agents into a structured, highly capable development team with routing, domain skills, execution templates, long-term memory, multi-model deliberation, and validation.</em></p>
 </div>
 
 ---
 
 ## Why AgentX?
 
-Zero-shot AI generation is unpredictable for complex software engineering. AgentX introduces a **Harness-Oriented Architecture** that forces AI models to plan, execute, iterate, review, and validate -- just like a high-performing engineering team.
+Zero-shot AI generation is unpredictable for complex software engineering. AgentX introduces a **Harness-Oriented Architecture** that forces AI models to plan, execute, iterate, review, and validate -- just like a high-performing engineering team. Critical decisions are pressure-tested by a **Model Council** of diverse models that debate the call before it ships.
 
 > **"Stop passively generating code. Start autonomously delivering software."**
 
@@ -42,7 +42,7 @@ AgentX is powered by a rich knowledge layer of **77 production skills** distribu
 |:---------|:---------------|:--------|
 | **Architecture** | `api-design`, `security`, `database` | System design, performance, and scaling |
 | **AI Systems** | `langgraph`, `foundry-sdk`, `genaiops` | Agent orchestration, Foundry implementation, release gates, and evaluations |
-| **Development** | `testing`, `error-handling`, `karpathy-guidelines` | Code robustness, linting, and behavioral guardrails against common LLM coding pitfalls |
+| **Development** | `testing`, `error-handling`, `karpathy-guidelines` | Code robustness, linting, and Karpathy-style behavioral guardrails (think-before-coding, surgical changes, assumption audits) against common LLM coding pitfalls |
 | **Languages & UI** | `c`, `cpp`, `react` | Native systems work, application stacks, and frontend visuals |
 | **Ops & Infra** | `github-actions`, `terraform`, `azure` | CI/CD pipelines, containerization, and IaC |
 | **Data & Testing** | `databricks`, `fabric-analytics`, `e2e-testing` | Analytics pipelines, AI data platforms, and verification |
@@ -65,25 +65,48 @@ stateDiagram-v2
 ```
 AgentX leverages a robust, iterative execution model. The agent researches the repo, classifies the task, writes code against clear criteria, verifies the result, and loops until the task is definitively "Done."
 
-### 2. Deep Domain Skills
-**Repo-driven knowledge, not model-memory guesses.**
-AgentX is powered by the explicit knowledge layer defined above. Agents read exact, peer-reviewed technical standards before writing a single line of code.
+### 2. Model Council -- Multi-Model Deliberation
 
-### 3. Context Compaction
+**Single-model reasoning is a blind spot. Stress-test the decision, not just the code.**
+
+High-stakes decisions -- PRD scope, ADR options, AI design, code review, and deep research -- are pressure-tested by a three-member council of diverse models that independently debate the call before it ships.
+
+```mermaid
+flowchart LR
+    Q([Decision / Artifact]) --> Analyst[Analyst<br/>Decompose + Evidence]
+    Q --> Strategist[Strategist<br/>Frame + Second-Order]
+    Q --> Skeptic[Skeptic<br/>Contrarian + Failure Modes]
+    Analyst --> Synth{Synthesis}
+    Strategist --> Synth
+    Skeptic --> Synth
+    Synth -->|Consensus, Divergences,<br/>Blind Spots, Net Adjustment| Out([Hardened Deliverable])
+```
+
+- Three roles by design: **Analyst** (evidence), **Strategist** (framing), **Skeptic** (contrarian risk surfacing).
+- Five purpose packs: `prd-scope`, `adr-options`, `ai-design`, `code-review`, `research`.
+- Agent-internal by default -- the calling agent runs the council and synthesizes silently; the user sees only the hardened output, with the council file available as supporting evidence.
+- Optional `-AutoInvoke` for genuine multi-vendor diversity via `gh models`.
+- Mandatory for PM, Architect, Reviewer, Data Scientist, and Consulting Research phases on high-stakes work; skip reasons must be recorded.
+
+### 3. Deep Domain Skills
+**Repo-driven knowledge, not model-memory guesses.**
+AgentX is powered by the explicit knowledge layer defined above. Agents read exact, peer-reviewed technical standards before writing a single line of code. The `karpathy-guidelines` skill is wired into Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist to enforce Andrej Karpathy's *think-before-coding, surgical-change, goal-driven* discipline and block the most common LLM coding pitfalls at authoring time.
+
+### 4. Context Compaction
 **Long sessions without context amnesia.**
 Long-running AI tasks often break token limits. AgentX compacts conversational history once estimated prompt usage crosses 70% of the active model context window, preserving system rules, keeping recent turns verbatim, and replacing older history with a structured continuation summary so the agent remains stable and focused.
 
-### 4. Self Review & Validation Gates
+### 5. Self Review & Validation Gates
 **Trust, but mechanically verify.**
-Before any handoff, the active agent rigorously reviews its own work. Complex tasks require evidence-backed execution plans, and HIGH/MEDIUM severity issues block the workflow from advancing until resolved.
+Before any handoff, the active agent rigorously reviews its own work against the Karpathy-guideline checks (assumption audit, minimal-diff, no speculative generality) as well as domain criteria. Complex tasks require evidence-backed execution plans, and HIGH/MEDIUM severity issues block the workflow from advancing until resolved.
 
-### 5. Standardized Templates
+### 6. Standardized Templates
 Every deliverable -- from PRDs to Tech Specs to Security Plans -- is written into predictable, structured templates. This makes inter-agent handoffs seamless and ensures a consistent paper trail.
 
-### 6. Harness Engineering
+### 7. Harness Engineering
 Make AI execution durable and resumable. AgentX treats the workspace as the state, utilizing tracked progress files, memory files, and formal architecture decisions to keep execution grounded in reality.
 
-### 7. Knowledge Compounding And Review Intelligence
+### 8. Knowledge Compounding And Review Intelligence
 AgentX now adds explicit brainstorm and compound-loop entry points, ranked planning and review learnings, learning-capture scaffolds tied to the active issue context, advisory agent-native review parity checks, durable review-finding records, and one-step promotion of important findings into the normal backlog workflow.
 
 ---
