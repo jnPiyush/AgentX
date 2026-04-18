@@ -472,6 +472,7 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 
 | Phase | Skill to Load |
 |-------|--------------|
+| Phase 1 Research | `.github/skills/development/karpathy-guidelines/SKILL.md` (think before coding, simplicity, surgical changes, goal-driven loops) |
 | Phase 1 Research | `.github/skills/development/iterative-loop/SKILL.md` |
 | Phase 1 Research | `.github/skills/architecture/core-principles/SKILL.md` |
 | Phase 1 Research | `.github/skills/development/testing/SKILL.md` |

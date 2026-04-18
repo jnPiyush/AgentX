@@ -113,6 +113,8 @@ export const workspace = {
 
   openTextDocument: async (_uri: unknown) => ({ getText: () => '' }),
 
+  textDocuments: [] as Array<{ uri: Uri; isDirty?: boolean }>,
+
   createFileSystemWatcher: (_pattern: string) => ({
     onDidCreate: () => ({ dispose: () => { /* noop */ } }),
     onDidChange: () => ({ dispose: () => { /* noop */ } }),
@@ -191,7 +193,9 @@ export const window = {
     dispose: () => { /* noop */ },
     onDidDispose: () => ({ dispose: () => { /* noop */ } }),
   }),
-  showTextDocument: async (_doc: unknown) => undefined,
+  showTextDocument: async (_doc: unknown, _options?: unknown) => undefined,
+  showOpenDialog: async (_options?: unknown) => undefined as Uri[] | undefined,
+  activeTextEditor: undefined as { document: { uri: Uri; isDirty?: boolean } } | undefined,
 };
 
 // --- ProgressLocation enum -----------------------------------------------

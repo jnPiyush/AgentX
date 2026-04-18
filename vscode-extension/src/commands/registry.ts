@@ -19,6 +19,7 @@ import { registerTaskBundleCommands } from './task-bundles';
 import { registerPendingClarificationCommand } from './pendingClarification';
 import { registerAddAgentCommand } from './addAgent';
 import { registerAddSkillCommand } from './addSkill';
+import { registerRunCouncilCommand } from './runCouncil';
 
 export function registerAgentXCommands(
  context: vscode.ExtensionContext,
@@ -43,4 +44,5 @@ export function registerAgentXCommands(
  registerPendingClarificationCommand(context, agentx);
  registerAddAgentCommand(context, agentx);
  registerAddSkillCommand(context, agentx);
+ registerRunCouncilCommand(context, agentx);
 }

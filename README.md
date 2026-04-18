@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.34"><img src="https://img.shields.io/badge/Version-8.4.34-0EA5E9?style=for-the-badge" alt="Version 8.4.34"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.35"><img src="https://img.shields.io/badge/Version-8.4.35-0EA5E9?style=for-the-badge" alt="Version 8.4.35"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -36,13 +36,13 @@ AgentX acts as an autonomous orchestrator, routing tasks to **21 specialized age
 
 ## Domain Skills Library
 
-AgentX is powered by a rich knowledge layer of **76 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
+AgentX is powered by a rich knowledge layer of **77 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
 
 | Category | Example Skills | Purpose |
 |:---------|:---------------|:--------|
 | **Architecture** | `api-design`, `security`, `database` | System design, performance, and scaling |
 | **AI Systems** | `langgraph`, `foundry-sdk`, `genaiops` | Agent orchestration, Foundry implementation, release gates, and evaluations |
-| **Development** | `testing`, `error-handling`, `type-safety` | Code robustness, linting, and quality |
+| **Development** | `testing`, `error-handling`, `karpathy-guidelines` | Code robustness, linting, and behavioral guardrails against common LLM coding pitfalls |
 | **Languages & UI** | `c`, `cpp`, `react` | Native systems work, application stacks, and frontend visuals |
 | **Ops & Infra** | `github-actions`, `terraform`, `azure` | CI/CD pipelines, containerization, and IaC |
 | **Data & Testing** | `databricks`, `fabric-analytics`, `e2e-testing` | Analytics pipelines, AI data platforms, and verification |
@@ -108,7 +108,7 @@ flowchart LR
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
 - **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 76 skills, 21 agents, 7 instructions, 11 templates, 21 prompts -- all Markdown-defined
+- **Knowledge Layer:** 77 skills, 21 agents, 7 instructions, 11 templates, 21 prompts -- all Markdown-defined
 - **Control Layer:** Execution plans, repo-local state, automated validation gates
 
 ---
@@ -275,8 +275,10 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.34
+## New In 8.4.35
 
+- Model Council mechanism: opt-in multi-perspective review pack (Analyst, Strategist, Skeptic) for PRD scope, ADR options, AI design, code review, and research, completed agent-internally without involving the user
+- New `karpathy-guidelines` skill wired into Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist to reduce common LLM coding pitfalls (think before coding, simplicity, surgical changes, goal-driven execution)
 - Summary-based context compaction in the runner while keeping the existing 70% threshold trigger
 - Per-agent `reasoning` frontmatter support in the runner, including Copilot-mode request options for GPT-5 and Claude 4.6 mappings
 - User-visible `Clarification Discussion` blocks in VS Code chat so inter-agent clarification stays visible during execution

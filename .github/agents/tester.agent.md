@@ -185,6 +185,7 @@ Before committing, verify with fresh eyes:
 
 | Task | Skill |
 |------|-------|
+| Goal-driven verification (each test = a verifiable success criterion) | [Karpathy Guidelines](../skills/development/karpathy-guidelines/SKILL.md) |
 | Testing strategy | [Testing](../skills/development/testing/SKILL.md) |
 | E2E with Playwright | [E2E Testing](../skills/testing/e2e-testing/SKILL.md) |
 | Unit testing patterns | [Testing](../skills/development/testing/SKILL.md) |

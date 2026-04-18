@@ -142,17 +142,17 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | Role | Pipeline Phases (in order) | Key Delivery Gate |
 |------|---------------------------|-------------------|
 | **Agent X (Hub)** | Classify -> Route -> Execute specialist phases -> Validate handoffs | All specialist phase gates pass before advancing |
-| **Product Manager** | Research (5 phases) -> Classify Intent -> PRD -> Backlog (Epic, Feature, User Stories) -> Self-Review -> Commit | PRD has all required sections; Backlog items (Epic, Features, User Stories) linked to PRD |
+| **Product Manager** | Research (5 phases) -> Classify Intent -> Model Council (prd-scope) -> PRD -> Backlog (Epic, Feature, User Stories) -> Self-Review -> Commit | PRD has all required sections; Backlog items (Epic, Features, User Stories) linked to PRD; Model Council convened or skip rationale recorded |
 | **UX Designer** | Read PRD -> Design Research -> UX Spec -> HTML/CSS Prototypes -> Self-Review -> Commit | WCAG 2.1 AA prototypes exist at `docs/ux/prototypes/` |
-| **Architect** | Research (6 phases) -> ADR (3+ options) -> Tech Spec -> AI Spec Alignment (if `needs:ai`) -> PM Fit Validation -> GenAI Assessment -> Self-Review -> Commit | ADR + Spec exist; AI-bearing specs include Data Scientist implementation-depth alignment; PM requirement-fit validation complete; zero code examples in Spec |
+| **Architect** | Research (6 phases) -> ADR (3+ options) -> Model Council (adr-options) -> Tech Spec -> AI Spec Alignment (if `needs:ai`) -> PM Fit Validation -> GenAI Assessment -> Self-Review -> Commit | ADR + Spec exist; ADR Decision matches a council-consensus option (or override rationale documented); AI-bearing specs include Data Scientist implementation-depth alignment; PM requirement-fit validation complete; zero code examples in Spec |
 | **Engineer** | Research -> Brainstorm -> Plan -> Design -> Conditional Design Alignment -> Implement -> Test -> Review | Loop complete + coverage >=80% + score >=70% + required Architect/Data Scientist alignment captured |
-| **Reviewer** | Read Context -> Verify Loop -> Functional Review -> Code Review -> Run Tests -> Write Review -> Decision | Review doc complete; approval/rejection explicitly stated |
+| **Reviewer** | Read Context -> Verify Loop -> Functional Review -> Code Review -> Run Tests -> Model Council (code-review) -> Write Review -> Decision | Review doc complete; approval/rejection explicitly stated; Model Council convened or skip rationale recorded; Findings/Severity/Decision reflect council Synthesis (or override rationale documented) |
 | **Auto-Fix Reviewer** | Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document -> Self-Review -> Decision | All auto-fixes pass full test suite; review doc complete |
 | **DevOps Engineer** | Read Context -> Design Pipeline -> Implement Workflows -> Validate -> Self-Review -> Commit | Pipelines pass lint + execution; deployment docs updated |
-| **Data Scientist** | Research (6 phases) -> Pipeline Design -> Eval Plan -> Implementation -> Drift Monitoring -> Self-Review -> Commit | Eval baseline + model card exist |
+| **Data Scientist** | Research (6 phases) -> Model Council (ai-design) -> Pipeline Design -> Eval Plan -> Implementation -> Drift Monitoring -> Self-Review -> Commit | Eval baseline + model card exist; Model Council convened or skip rationale recorded |
 | **Tester** | Read Context -> Write Tests -> Execute Suite -> Report Defects -> Certification Report -> Commit | Test pyramid complete; certification report signed off |
 | **Power BI Analyst** | Read Context -> Semantic Model -> DAX Measures -> Power Query -> Report Layout -> Optimize -> Docs -> Self-Review -> Commit | Semantic model validated; DAX measures tested |
-| **Consulting Research** | Understand Request -> Research (7 phases) -> Calibrate Audience -> Create Deliverable | All key claims sourced + triangulated; deliverable complete |
+| **Consulting Research** | Understand Request -> Research (7 phases) -> Model Council (research) -> Calibrate Audience -> Create Deliverable | All key claims sourced + triangulated; deliverable complete; Model Council convened or skip rationale recorded |
 | **Agile Coach** | Mode Selection -> Create/Refine/Decompose Story -> Confirm -> Output | INVEST criteria met; ACs in Given/When/Then format |
 
 ---

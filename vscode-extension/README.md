@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.4.34-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-8.4.35-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -24,7 +24,7 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 | **13 Declarative Chat Agents** | Role-specific agents (PM, UX, Architect, Engineer, Reviewer, DevOps, Tester, Data Scientist, Power BI, Consulting Research, Agile Coach, Auto-Fix Reviewer) plus AgentX Auto for end-to-end orchestration. |
 | **Copilot Chat Participant** | Native `@agentx` chat participant for triggering routines, brainstorm, learnings, and compound-loop inspection. |
 | **Workspace Setup Wizard** | Local-runtime-first setup with optional remote adapters for GitHub or Azure DevOps and configurable LLM adapters. |
-| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (75 production skills). |
+| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (77 production skills). |
 | **45 Commands** | Workflow, loop management, knowledge compounding, AI evaluation, task bundles, bounded parallel delivery, and plugin management from the Command Palette. |
 | **Knowledge Compounding** | Ranked learnings, compound-loop visibility, learning-capture scaffolds, durable review-finding promotion, and agent-native review parity checks. |
 | **AI Evaluation** | Scaffold, run, and inspect AI evaluation contracts with rubric-based quality gates. |
@@ -212,7 +212,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | **Work** | Workflow next step, brainstorm guidance, planning and review learnings, compound loop, learning capture, ready queue, and workflow rollout surfaces. |
 | **Status** | Agent status, loop state, dependency checks, AI evaluation, review findings, task bundles, bounded parallel runs, and digests. |
 | **Templates** | All output templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence). |
-| **Skills** | 75 production skills across 10 categories (architecture, development, languages, operations, infrastructure, data, AI systems, design, testing, domain). |
+| **Skills** | 77 production skills across 10 categories (architecture, development, languages, operations, infrastructure, data, AI systems, design, testing, domain). |
 
 ---
 
@@ -323,6 +323,11 @@ The extension registers 13 declarative chat agents, each mapped to an AgentX rol
 ---
 
 ## Recent Changes
+
+### 8.4.35
+
+- Model Council mechanism: opt-in multi-perspective brief (Analyst, Strategist, Skeptic) for PRD scope, ADR options, AI design, code review, and research, completed agent-internally without involving the user
+- New `karpathy-guidelines` skill wired into Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist to reduce common LLM coding pitfalls
 
 ### 8.4.30
 

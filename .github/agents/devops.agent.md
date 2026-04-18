@@ -1,9 +1,9 @@
 ---
 name: AgentX DevOps Engineer
 description: 'Create and manage CI/CD pipelines, GitHub Actions workflows, deployment automation, and release pipelines.'
-model: GPT-5.4 (copilot)
+model: Claude Sonnet 4.6 (copilot)
 reasoning:
-  level: low
+  level: medium
 constraints:
   - "MUST follow pipeline phases in prescribed sequence: Read Context -> Design Pipeline -> Implement Workflows -> Validate -> Self-Review; MUST NOT implement pipelines before the design phase is complete; MUST NOT handoff before all pipeline runs pass validation"
   - "MUST read existing workflows and deployment docs before creating new ones"
@@ -165,6 +165,7 @@ Update Status in GitHub Projects.
 
 | Task | Skill |
 |------|-------|
+| Behavioral guardrails (think first, simplicity, surgical changes, goal-driven) | [Karpathy Guidelines](../skills/development/karpathy-guidelines/SKILL.md) |
 | GitHub Actions patterns | [GitHub Actions](../skills/operations/github-actions-workflows/SKILL.md) |
 | YAML pipeline design | [YAML Pipelines](../skills/operations/yaml-pipelines/SKILL.md) |
 | Release workflow examples | [Release references](../skills/operations/release-management/references/) |

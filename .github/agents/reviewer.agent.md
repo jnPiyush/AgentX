@@ -6,7 +6,7 @@ reasoning:
   mode: adaptive
   level: high
 constraints:
-  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Functional Review -> Code Review -> Run Tests -> Write Review Doc -> Decision; MUST NOT issue an approval or rejection before completing all phases"
+  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Functional Review -> Code Review -> Run Tests -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT issue an approval or rejection before completing all phases"
   - "MUST read the Tech Spec and PRD before reviewing code"
   - "MUST verify the Engineer's quality loop reached status=complete"
   - "MUST check test coverage >= 80%"
@@ -15,6 +15,7 @@ constraints:
   - "MUST NOT approve code with active or cancelled quality loops"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
+  - "MUST convene a Model Council (default: openai/gpt-5.4 + anthropic/claude-opus-4.7 + google/gemini-3.1-pro) for non-trivial reviews to stress-test severity assignments and the Approve/Reject decision; record results at docs/artifacts/reviews/COUNCIL-{issue}.md before the Decision is locked; reflect the Synthesis section's Consensus, Divergences, and Hidden Risks in the review document's Findings, Severity, and Decision"
 boundaries:
   can_modify:
     - "docs/artifacts/reviews/**"
@@ -142,6 +143,51 @@ MUST NOT downgrade them.
 npm test  # or equivalent for the project
 ```
 
+### 5.5 Model Council Deliberation (MANDATORY for non-trivial reviews)
+
+After running tests and forming a leaning decision, but before drafting the review document, convene a Model Council to stress-test severity assignments and the Approve/Reject call. Single-model reviews carry the reviewing model's prior; the council exposes that prior, surfaces false positives, and catches risks the diff alone hides.
+
+**When to convene (mandatory)**:
+- any review with at least one Critical or Major finding
+- any review where the leaning decision is close (mixed verdicts across the 8 categories)
+- any `needs:ai` review (model pinning, prompt files, evaluation, drift)
+- any review touching security, auth, payments, data persistence, or migrations
+- any review tagged `[Council]` by the Engineer or PM
+
+**When to skip (allowed)**:
+- pure docs / typo / comment-only diffs
+- mechanical refactors with no behavior change AND full coverage AND no Critical/Major findings
+- in either case, record a one-line skip rationale in the review document and proceed
+
+**Default council composition** (mix of vendors and reasoning styles):
+
+| Role | Model | Lens |
+|------|-------|------|
+| Analyst | `openai/gpt-5.4` | Enumerate concrete defects with file:line evidence; propose severity per category |
+| Strategist | `anthropic/claude-opus-4.7` | Which findings actually block ship; smallest viable fix; defend the right severity and Approve/Reject |
+| Skeptic | `google/gemini-3.1-pro` | Argue the OPPOSITE of the leaning decision; surface false positives AND hidden production/concurrency/dependency risks the diff hides |
+
+**How to convene**:
+
+```pwsh
+pwsh scripts/model-council.ps1 `
+    -Topic "review-{issue}" `
+    -Question "Given the diff, the spec, the test results, and the per-category verdicts so far, what is the correct Approve / Request Changes decision, what is the correct severity for each finding, and what is the strongest case AGAINST the leaning decision?" `
+    -Context "<paste leaning decision, per-category verdicts, top 5 findings with file:line, test results, coverage delta, spec sections in scope>" `
+    -OutputDir "docs/artifacts/reviews" `
+    -Purpose code-review
+```
+
+**This is an internal agent mechanism. After running the script, YOU (the Reviewer agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final review document, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
+
+**Synthesis (MUST complete before Write Review Document)**:
+- **Consensus on Blocking Defects** -- findings at least two members agree must block approval; lock at the proposed severity and carry into the review document Findings section
+- **Divergences on Severity or Decision** -- findings where members disagree on severity or Approve vs. Request Changes; resolve explicitly or record as open questions in the review document
+- **Hidden Risks and False Positives Surfaced** -- Skeptic-raised risks the diff scan missed AND findings the Skeptic argues are false positives; promote both classes into the review document with explicit rationale (downgrade or escalate as appropriate)
+- **Net Adjustment to Review Decision** -- explicit list of changes to the Approve/Reject decision, severity assignments, or recommended changes; if no change, state why
+
+The review document MUST cite the council file path. Severity assignments and the final Decision MUST reflect the council Consensus and resolved Divergences (or document an explicit override rationale).
+
 ### 6. Write Review Document
 
 Create `docs/artifacts/reviews/REVIEW-{issue}.md` from template at `.github/templates/REVIEW-TEMPLATE.md`.
@@ -176,6 +222,7 @@ Before issuing the final decision, verify with fresh eyes:
 - [ ] Feedback is actionable -- Engineer can fix without ambiguity
 - [ ] Original PRD intent is preserved in the implementation
 - [ ] Quality loop status verified as `complete`
+- [ ] Model Council convened (or skip rationale recorded in the review document); `COUNCIL-{issue}.md` Synthesis section is complete and the Findings, Severity assignments, and final Decision reflect Consensus / resolved Divergences / Hidden Risks captured by the council (or override rationale is documented)
 
 ### 7. Decision & Handoff
 
@@ -201,6 +248,7 @@ Update Status back to `In Progress`.
 
 | Task | Skill |
 |------|-------|
+| Behavioral guardrails (especially scope creep / surgical changes) | [Karpathy Guidelines](../skills/development/karpathy-guidelines/SKILL.md) |
 | Review checklist and audit rigor | [Code Review](../skills/development/code-review/SKILL.md) |
 | Security validation | [Security](../skills/architecture/security/SKILL.md) |
 | Test quality and coverage checks | [Testing](../skills/development/testing/SKILL.md) |

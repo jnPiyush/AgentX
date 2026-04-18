@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 76 skills across 10 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 77 skills across 10 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 76 skills across 10 categori
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 76 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 77 skills. Use Quick Reference below.
 
 ---
 
@@ -25,15 +25,15 @@ description: 'Compressed skill index for AI agents. 76 skills across 10 categori
 | **API Implementation** | [API Design](.github/skills/architecture/api-design/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
 | **Database Changes** | [Database](.github/skills/architecture/database/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Security Feature** | [Security](.github/skills/architecture/security/SKILL.md), [Configuration](.github/skills/development/configuration/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Type Safety](.github/skills/development/type-safety/SKILL.md) |
-| **Bug Fix** | [Error Handling](.github/skills/development/error-handling/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Logging](.github/skills/development/logging-monitoring/SKILL.md) |
+| **Bug Fix** | [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Error Handling](.github/skills/development/error-handling/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Logging](.github/skills/development/logging-monitoring/SKILL.md) |
 | **Performance / Scaling** | [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Documentation** | [Documentation](.github/skills/development/documentation/SKILL.md) |
 | **DevOps / CI/CD** | [GitHub Actions](.github/skills/operations/github-actions-workflows/SKILL.md), [YAML Pipelines](.github/skills/operations/yaml-pipelines/SKILL.md), [Release Mgmt](.github/skills/operations/release-management/SKILL.md) |
-| **Code Review** | [Code Review](.github/skills/development/code-review/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Core Principles](.github/skills/architecture/core-principles/SKILL.md) |
+| **Code Review** | [Code Review](.github/skills/development/code-review/SKILL.md), [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **AI Agent Development** | [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [Cognitive Arch](.github/skills/ai-systems/cognitive-architecture/SKILL.md), [MCP Server](.github/skills/ai-systems/mcp-server-development/SKILL.md), [Prompt Eng](.github/skills/ai-systems/prompt-engineering/SKILL.md) |
 | **LangGraph Agent Workflow** | [LangGraph](.github/skills/ai-systems/langgraph/SKILL.md), [Cognitive Arch](.github/skills/ai-systems/cognitive-architecture/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md), [Prompt Versioning](.github/skills/ai-systems/prompt-versioning/SKILL.md) |
 | **MCP Apps / Interactive UI** | [MCP Apps](.github/skills/ai-systems/mcp-apps-development/SKILL.md), [MCP Server](.github/skills/ai-systems/mcp-server-development/SKILL.md), [React](.github/skills/languages/react/SKILL.md), [Frontend/UI](.github/skills/design/frontend-ui/SKILL.md) |
-| **Iterative / Quality Loop** | [Iterative Loop](.github/skills/development/iterative-loop/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
+| **Iterative / Quality Loop** | [Iterative Loop](.github/skills/development/iterative-loop/SKILL.md), [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **Token Budget / Context** | [Token Optimizer](.github/skills/development/token-optimizer/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md) |
 | **Azure AI Foundry Agent** | [Azure Foundry](.github/skills/ai-systems/azure-foundry/SKILL.md), [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md). For operational workflows (create, deploy, trace), install companion: GitHub Copilot for Azure |
 | **Foundry SDK Implementation** | [Foundry SDK](.github/skills/ai-systems/foundry-sdk/SKILL.md), [Azure Foundry](.github/skills/ai-systems/azure-foundry/SKILL.md), [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md) |
@@ -65,7 +65,7 @@ description: 'Compressed skill index for AI agents. 76 skills across 10 categori
 
 ---
 
-## Skills Directory (76 skills -- pipe-delimited)
+## Skills Directory (77 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -88,6 +88,7 @@ dev|iterative-loop|.github/skills/development/iterative-loop/SKILL.md|quality-lo
 dev|skill-creator|.github/skills/development/skill-creator/SKILL.md|scaffold,validate,maintain-skills
 dev|token-optimizer|.github/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
 dev|code-hygiene|.github/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
+dev|karpathy-guidelines|.github/skills/development/karpathy-guidelines/SKILL.md|think-before-coding,simplicity,surgical-changes,goal-driven,LLM-pitfalls,assumptions
 lang|csharp|.github/skills/languages/csharp/SKILL.md|C#,.NET,EF-Core,DI,async/await,xUnit
 lang|c|.github/skills/languages/c/SKILL.md|C,C23,pointers,embedded,systems,FFI,ABI,memory
 lang|cpp|.github/skills/languages/cpp/SKILL.md|C++,C++23,RAII,templates,span,string_view,native
@@ -244,5 +245,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 76 skills (arch:5, dev:12, lang:10, ops:5, infra:4, data:6, ai:17, design:4, test:6, domain:7)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 77 skills (arch:5, dev:13, lang:10, ops:5, infra:4, data:6, ai:17, design:4, test:6, domain:7)
 

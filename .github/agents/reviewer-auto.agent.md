@@ -152,6 +152,7 @@ Before issuing the final decision, verify with fresh eyes:
 
 | Task | Skill |
 |------|-------|
+| Behavioral guardrails (only auto-fix surgical changes) | [Karpathy Guidelines](../skills/development/karpathy-guidelines/SKILL.md) |
 | Safe auto-fix boundaries and review process | [Code Review](../skills/development/code-review/SKILL.md) |
 | Test regressions after auto-fixes | [Testing](../skills/development/testing/SKILL.md) |
 | Security blocking criteria | [Security](../skills/architecture/security/SKILL.md) |
