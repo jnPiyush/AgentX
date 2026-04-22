@@ -31,31 +31,46 @@ Load this skill any time an agent needs to:
 
 ---
 
+## Default Format Policy (Mermaid-First)
+
+**Mermaid is the default for all AgentX templates and artifacts.** It renders natively in GitHub, VS Code preview, most markdown tooling, and is the lowest-friction option for reviewers.
+
+Use another format ONLY when one of these is true:
+
+1. Mermaid cannot express the diagram intent (e.g. true swimlanes with role columns, native Visio `.vsdx` round-trip, complex cluster layouts).
+2. The user explicitly asks for PlantUML, draw.io, Structurizr, or Graphviz.
+3. The artifact must round-trip to Visio (`.vsdx`) -- in that case use draw.io.
+
+When falling back, record the reason in the diagram's header comment (e.g. `<!-- Format: draw.io; reason: Visio round-trip required -->`).
+
+---
+
 ## Decision Matrix (pick-the-format)
 
-| Intent | Primary format | Fallback | Visio round-trip |
-|--------|----------------|----------|------------------|
-| **Cross-functional workflow / swimlane / RACI** | **PlantUML activity beta** | draw.io CFF | draw.io -> `.vsdx` (best) |
-| **Role-phase matrix** (e.g. the attached CLM template: roles as columns, phases as bands) | **draw.io CFF** | PlantUML activity beta | Native `.vsdx` export |
-| System context (C4 L1) / containers (C4 L2) | Mermaid C4 | Structurizr DSL | Mermaid -> Visio web |
-| Component / class structure (C4 L3, UML) | PlantUML | Mermaid class | Draw.io |
-| Sequence (API, message, handoff) | Mermaid sequence | PlantUML sequence | Mermaid -> Visio web |
-| State machine / lifecycle | Mermaid state | PlantUML state | Draw.io |
-| ER / data model | Mermaid ER | PlantUML ER | Draw.io |
-| Dependency / call graph | Graphviz DOT | Mermaid flowchart | SVG -> draw.io -> `.vsdx` |
-| Network / infra topology | draw.io | Graphviz DOT | Native `.vsdx` export |
-| Journey map / capability map | Mermaid flowchart (LR) | draw.io | Mermaid -> Visio web |
+| Intent | Primary format | Fallback (only if Mermaid cannot express it) | Visio round-trip |
+|--------|----------------|-----------------------------------------------|------------------|
+| System context (C4 L1) / containers (C4 L2) | **Mermaid C4** | Structurizr DSL | Mermaid -> Visio web |
+| Component / class structure (C4 L3, UML) | **Mermaid class / flowchart** | PlantUML | draw.io |
+| Sequence (API, message, handoff) | **Mermaid sequence** | PlantUML sequence | Mermaid -> Visio web |
+| State machine / lifecycle | **Mermaid state** | PlantUML state | draw.io |
+| ER / data model | **Mermaid ER** | PlantUML ER | draw.io |
+| Journey map / capability map | **Mermaid flowchart (LR) or journey** | draw.io | Mermaid -> Visio web |
+| Dependency / call graph | **Mermaid flowchart** | Graphviz DOT | SVG -> draw.io -> `.vsdx` |
+| Gantt / roadmap timeline | **Mermaid gantt** | draw.io | draw.io |
+| Cross-functional workflow / swimlane / RACI | **Mermaid flowchart with subgraph lanes** | PlantUML activity beta, then draw.io CFF | draw.io -> `.vsdx` |
+| Role-phase matrix (roles as columns, phases as bands) | **Mermaid flowchart with subgraph lanes** | draw.io CFF | Native `.vsdx` export |
+| Network / infra topology with many cluster boundaries | **Mermaid flowchart with subgraphs** | draw.io | Native `.vsdx` export |
 
-Rule: if the deliverable must round-trip to native Visio (`.vsdx`), choose **draw.io** or a format with a documented `.vsdx` export path.
+Rule: Mermaid first. If the intent fits the matrix fallback column, justify it in the header comment. If the deliverable must round-trip to native Visio (`.vsdx`), draw.io is the only allowed format.
 
 ---
 
 ## Five Non-Negotiables
 
-1. **Text-first source** -- the diagram code is committed in git; any PNG/SVG/VSDX is an export next to it, not a replacement.
-2. **Titled and legended** -- every diagram has a title, a legend for non-obvious shapes/colors, and a link back to the PRD/ADR/spec it supports.
-3. **Intent-matched format** -- swimlane flows use a swimlane-capable format (PlantUML activity beta or draw.io CFF), not generic Mermaid subgraphs.
-4. **No lane-spanning shapes** -- in swimlane diagrams, every activity belongs to exactly one lane; handoffs are arrows, not shapes.
+1. **Mermaid-first** -- use Mermaid unless the intent cannot be expressed in Mermaid, Visio round-trip is required, or the user explicitly requests another format. Record the reason in the diagram header comment when falling back.
+2. **Text-first source** -- the diagram code is committed in git; any PNG/SVG/VSDX is an export next to it, not a replacement.
+3. **Titled and legended** -- every diagram has a title, a legend for non-obvious shapes/colors, and a link back to the PRD/ADR/spec it supports.
+4. **Intent-matched format** -- if a non-Mermaid format is chosen, it must match the Decision Matrix and the justification must be recorded.
 5. **Rendered before merge** -- the author validated the render in the target surface (GitHub markdown, Visio web, draw.io, PlantUML) before handoff.
 
 ---

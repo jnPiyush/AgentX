@@ -7,7 +7,7 @@ metadata:
   created: "2025-06-15"
   updated: "2025-06-15"
 compatibility:
-  frameworks: ["ragas", "deepeval", "promptfoo", "azure-ai-evaluation", "openai-evals", "langsmith"]
+  frameworks: ["ragas", "deepeval", "promptfoo", "azure-ai-evaluation", "openai-evals", "anthropic", "langsmith"]
   languages: ["python", "typescript"]
 ---
 

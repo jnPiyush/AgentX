@@ -7,7 +7,7 @@ metadata:
   created: "2025-06-15"
   updated: "2025-07-18"
 compatibility:
-  frameworks: ["mlflow", "evidently", "whylogs", "azure-ml", "opentelemetry", "azure-ai-evaluation", "agent-framework"]
+  frameworks: ["mlflow", "evidently", "whylogs", "azure-ml", "opentelemetry", "azure-ai-evaluation", "agent-framework", "anthropic"]
   languages: ["python", "typescript"]
 ---
 

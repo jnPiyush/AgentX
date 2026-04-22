@@ -69,6 +69,10 @@ inputs:
 
 ---
 
+> **Diagram policy**: Mermaid is the default format for all diagrams produced or referenced in this review. Use PlantUML, draw.io, Structurizr, or Graphviz only when Mermaid cannot express the intent, a Visio (.vsdx) round-trip is required, or the user explicitly requests another format. See the [diagram-as-code skill](../skills/diagrams/diagram-as-code/SKILL.md). When falling back, record the reason in a header comment.
+
+---
+
 ## 1. Executive Summary
 
 ### Overview

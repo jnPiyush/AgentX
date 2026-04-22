@@ -7,7 +7,7 @@ metadata:
   created: "2025-06-15"
   updated: "2025-06-15"
 compatibility:
-  frameworks: ["trl", "openai", "azure-ml", "langsmith", "argilla", "label-studio"]
+  frameworks: ["trl", "openai", "anthropic", "azure-ml", "langsmith", "argilla", "label-studio"]
   languages: ["python", "typescript"]
 ---
 

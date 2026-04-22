@@ -47,6 +47,10 @@ ${related_prds}
 
 ---
 
+> **Diagram policy**: Mermaid is the default format for all diagrams in this roadmap (gantt charts, dependency graphs, release timelines). Use PlantUML, draw.io, Structurizr, or Graphviz only when Mermaid cannot express the intent, a Visio (.vsdx) round-trip is required, or the user explicitly requests another format. See the [diagram-as-code skill](../skills/diagrams/diagram-as-code/SKILL.md). When falling back, record the reason in a header comment.
+
+---
+
 ## 1. Purpose
 
 This document provides the dated portfolio roadmap and release plan for the workstreams in scope. It complements the roadmap sections embedded in each PRD by giving one shared calendar, one milestone model, and one visual planning view.

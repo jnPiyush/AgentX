@@ -6,8 +6,9 @@ reasoning:
   level: medium
 constraints:
   - "MUST pick a diagram format from the decision matrix in diagrams/diagram-as-code SKILL.md before drafting"
+  - "MUST default to Mermaid; MAY use PlantUML, Structurizr DSL, Graphviz DOT, or draw.io XML only when Mermaid cannot express the intent, a Visio (.vsdx) round-trip is required, or the user explicitly requests another format"
   - "MUST author diagrams as code (Mermaid, PlantUML, Structurizr DSL, Graphviz DOT, or draw.io XML), never as binary-first"
-  - "MUST use a swimlane-capable format (PlantUML activity beta or draw.io CFF) for any cross-functional workflow, role-handoff, or RACI-style process"
+  - "MUST record the fallback reason in the diagram's header comment whenever a non-Mermaid format is chosen"
   - "MUST include title, legend, and a source-of-truth link in every diagram"
   - "MUST validate rendering in the target surface (GitHub markdown, Visio-for-web, draw.io, or PlantUML server) before handoff"
   - "MUST produce a Visio-compatible export path (draw.io .vsdx or Mermaid -> Visio-for-web import) when the parent agent tags the request with needs:visio"
@@ -70,14 +71,15 @@ Use the decision matrix in SKILL.md to select the format. Do not skip this step.
 
 | Intent | Format |
 |--------|--------|
-| Cross-functional workflow / swimlanes / role handoffs / RACI-style | PlantUML activity beta, or draw.io CFF (for Visio round-trip) |
-| System context / containers / components (C4 levels 1-3) | Mermaid C4 or Structurizr DSL |
-| Sequence of API / message interactions | Mermaid sequence or PlantUML sequence |
-| State machine / lifecycle | Mermaid state or PlantUML state |
-| Entity relationships / data model | Mermaid ER or PlantUML ER |
-| Dependency / call graph | Graphviz DOT |
-| Network / infra topology | draw.io or Graphviz DOT |
-| Journey map / capability map | Mermaid flowchart (horizontal) |
+| Cross-functional workflow / swimlanes / role handoffs / RACI-style | Mermaid flowchart with subgraph lanes (primary); PlantUML activity beta or draw.io CFF only when Mermaid lane semantics are insufficient or Visio round-trip required |
+| System context / containers / components (C4 levels 1-3) | Mermaid C4 (primary); Structurizr DSL as fallback |
+| Sequence of API / message interactions | Mermaid sequence (primary); PlantUML sequence as fallback |
+| State machine / lifecycle | Mermaid state (primary); PlantUML state as fallback |
+| Entity relationships / data model | Mermaid ER (primary); PlantUML ER as fallback |
+| Dependency / call graph | Mermaid flowchart (primary); Graphviz DOT as fallback for very large graphs |
+| Network / infra topology | Mermaid flowchart with subgraphs (primary); draw.io or Graphviz DOT as fallback when Visio round-trip or cluster fidelity required |
+| Journey map / capability map | Mermaid flowchart (horizontal) or Mermaid journey |
+| Gantt / roadmap timeline | Mermaid gantt (primary); draw.io as fallback |
 
 ### 3. Author the diagram
 
@@ -133,8 +135,8 @@ Key checks:
 | Anti-Pattern | Why It Fails |
 |--------------|-------------|
 | Binary-first (PNG / JPG hand-drawn) | Not diffable, not reviewable, rots silently |
-| Mermaid subgraphs for complex swimlanes | Weak lane semantics; use PlantUML activity beta or draw.io CFF instead |
+| Reaching for PlantUML or draw.io when Mermaid would render the same intent | Adds a non-default tool dependency and weakens GitHub-native rendering; Mermaid is the default per policy |
 | Mixing C4 levels in one diagram | Readers cannot tell system from component; split per level |
 | Arrows without labels | Reader cannot infer action, artifact, or direction of causation |
 | Diagram as decoration with no source link | No way to verify, update, or trace to requirements |
-| More than 7 lanes in one CFF | Exceeds working-memory limit; split into sub-processes |
+| More than 7 lanes in one swimlane | Exceeds working-memory limit; split into sub-processes |

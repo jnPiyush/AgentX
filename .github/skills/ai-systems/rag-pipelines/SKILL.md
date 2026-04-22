@@ -7,7 +7,7 @@ metadata:
   created: "2025-06-15"
   updated: "2025-06-15"
 compatibility:
-  frameworks: ["langchain", "llamaindex", "microsoft-agent-framework", "azure-ai-search", "qdrant", "chroma", "pgvector"]
+  frameworks: ["langchain", "llamaindex", "microsoft-agent-framework", "anthropic", "azure-ai-search", "qdrant", "chroma", "pgvector"]
   languages: ["python", "typescript", "csharp"]
 ---
 

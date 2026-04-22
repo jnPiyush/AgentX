@@ -14,12 +14,14 @@
 | **Mermaid flowchart + subgraphs** | Partial (subgraph = lane) | Weak (styled nodes) | GitHub markdown, VS Code | Mermaid -> Visio-for-web import |
 | **BPMN (via bpmn.io, draw.io)** | Yes (pools + lanes) | Yes | bpmn.io | Via draw.io `.vsdx` |
 
-Picking rule:
+Picking rule (Mermaid-first):
 
-- **Must render in GitHub markdown + simple swimlane** -> Mermaid subgraphs
-- **Must round-trip to native `.vsdx`** -> draw.io CFF (preferred) or BPMN
-- **Code-first + CI-renderable + strong swimlane semantics** -> PlantUML activity beta
+- **Default (renders in GitHub markdown, diff-friendly, no extra tooling)** -> Mermaid flowchart with subgraph lanes
+- **Lane semantics too weak in Mermaid for this process** -> PlantUML activity beta
+- **Must round-trip to native `.vsdx`** -> draw.io CFF (preferred) or BPMN via draw.io
 - **Formal BPMN notation required (events, gateways, messages)** -> BPMN via draw.io
+
+Record the reason in the diagram header comment whenever falling back from Mermaid.
 
 ---
 
