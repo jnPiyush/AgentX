@@ -269,6 +269,7 @@ Update Epic Status to `Ready` in GitHub Projects.
 
 | Task | Skill |
 |------|-------|
+| PRD conventions, requirements quality, worked examples | [PRD](../skills/product/prd/SKILL.md) |
 | Product requirements documentation | [Documentation](../skills/development/documentation/SKILL.md) |
 | GenAI requirement framing | [AI Agent Development](../skills/ai-systems/ai-agent-development/SKILL.md) |
 | Prioritization and decomposition quality checks | [Code Review](../skills/development/code-review/SKILL.md) |

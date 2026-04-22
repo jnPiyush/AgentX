@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 77 skills across 10 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 78 skills across 11 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 77 skills across 10 categori
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 77 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 78 skills. Use Quick Reference below.
 
 ---
 
@@ -65,7 +65,7 @@ description: 'Compressed skill index for AI agents. 77 skills across 10 categori
 
 ---
 
-## Skills Directory (77 skills -- pipe-delimited)
+## Skills Directory (78 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -148,6 +148,7 @@ domain|tax|.github/skills/domain/tax/SKILL.md|corporate-tax,transfer-pricing,BEP
 domain|clm|.github/skills/domain/clm/SKILL.md|contracts,CLM,contract-lifecycle,negotiation,obligations,renewals,playbooks
 domain|corporate-governance|.github/skills/domain/corporate-governance/SKILL.md|entity-management,board-governance,resolutions,delegated-authority,statutory-filings,corporate-secretary
 domain|legal|.github/skills/domain/legal/SKILL.md|litigation,corporate-law,IP,employment,CLM,e-discovery,GDPR,compliance,contracts
+product|prd|.github/skills/product/prd/SKILL.md|PRD,requirements,product-manager,user-stories,acceptance-criteria,non-goals,requirements-quality,vague-vs-concrete,AI-contract
 ```
 
 ---
@@ -245,5 +246,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 77 skills (arch:5, dev:13, lang:10, ops:5, infra:4, data:6, ai:17, design:4, test:6, domain:7)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 78 skills (arch:5, dev:13, lang:10, ops:5, infra:4, data:6, ai:17, design:4, test:6, domain:7, product:1)
 

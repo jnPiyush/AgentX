@@ -105,6 +105,8 @@ inputs:
 
 ## 4. Requirements
 
+> **Requirements Quality Rule**: Every requirement below MUST be rewritable as a test. No "fast", "easy", "modern", "secure", "good" without an attached number, named standard, rubric, or eval-dataset path. See `.github/skills/product/prd/references/requirements-quality.md` for the vague-vs-concrete anti-pattern catalogue. A worked example lives at `.github/skills/product/prd/references/worked-example.md`.
+
 ### 4.1 Functional Requirements
 
 #### Must Have (P0)
