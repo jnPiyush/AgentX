@@ -8,7 +8,7 @@ metadata:
   updated: "2026-04-21"
 compatibility:
   languages: ["python", "csharp", "javascript", "java", "groovy"]
-  frameworks: ["gremlin-python", "gremlinpython", "azure-cosmos", "Microsoft.Azure.Cosmos", "spring-data-cosmos"]
+  frameworks: ["gremlinpython", "azure-cosmos", "Microsoft.Azure.Cosmos", "spring-data-cosmos"]
   platforms: ["azure"]
 prerequisites:
   - "Azure subscription with Cosmos DB account creation rights"
@@ -53,7 +53,7 @@ Picked Gremlin? Then:
 | Account | Top-level resource; pinned to one API family (Gremlin, NoSQL, Mongo, ...) |
 | Database | Logical grouping; can hold provisioned-throughput shared by graphs |
 | Graph (container) | Holds vertices and edges; analogous to a NoSQL container |
-| Logical partition | All vertices/edges sharing the same partition key value |
+| Logical partition | All vertices/edges sharing the same partition key value; **20 GB hard limit** per logical partition |
 | Physical partition | Cosmos-managed shard; ~50 GB and ~10k RU/s soft cap per partition |
 | RU/s | Normalized cost unit; provisioned (manual/autoscale) or serverless |
 | Consistency | Strong, Bounded Staleness, Session (default), Consistent Prefix, Eventual |
@@ -84,7 +84,8 @@ g.V().has('person','id','p-001').as('a')
 // 2-hop friend-of-friend, dedup, limit 25
 g.V().has('person','id','p-001').out('knows').out('knows').dedup().limit(25)
 
-// Pattern: shortest path up to 5 hops between two known vertices
+// Pattern: bounded path search up to 5 hops between two known vertices
+// (returns the first path found within the bound, not guaranteed shortest)
 g.V().has('id','p-001').repeat(both().simplePath()).until(has('id','p-099').or().loops().is(5)).path().limit(1)
 
 // Project to a flat shape (drives down RU vs valueMap())

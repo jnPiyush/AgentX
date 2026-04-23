@@ -47,6 +47,7 @@ description: 'Compressed skill index for AI agents. 80 skills across 12 categori
 | **Databricks / Delta Lake** | [Databricks](.github/skills/data/databricks/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Python](.github/skills/languages/python/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Containerization** | [Containerization](.github/skills/infrastructure/containerization/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Release Mgmt](.github/skills/operations/release-management/SKILL.md) |
 | **Data Analysis** | [Data Analysis](.github/skills/data/data-analysis/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
+| **Cosmos DB / Graph (Gremlin)** | [Cosmos DB](.github/skills/data/cosmos-db/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Azure](.github/skills/infrastructure/azure/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md) |
 | **Power BI Report / Dashboard** | [Power BI](.github/skills/data/powerbi/SKILL.md), [Fabric Analytics](.github/skills/data/fabric-analytics/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
 | **C / Systems Programming** | [C](.github/skills/languages/c/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **C++ / Native Applications** | [C++](.github/skills/languages/cpp/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
@@ -115,6 +116,7 @@ data|fabric-data-agent|.github/skills/data/fabric-data-agent/SKILL.md|NL-to-SQL,
 data|fabric-forecast|.github/skills/data/fabric-forecasting/SKILL.md|time-series,LightGBM,Prophet
 data|databricks|.github/skills/data/databricks/SKILL.md|Unity-Catalog,Delta-Lake,DLT,MLflow,Photon,DAB,AutoLoader,Spark,medallion,Vector-Search
 data|powerbi|.github/skills/data/powerbi/SKILL.md|Power-BI,DAX,semantic-model,star-schema,DirectLake,Power-Query,M,RLS,PBIP,report,dashboard
+data|cosmos-db|.github/skills/data/cosmos-db/SKILL.md|Cosmos-DB,Gremlin,Graph,NoSQL,partition-key,RU,RBAC,change-feed,TTL
 ai|ai-agent-dev|.github/skills/ai-systems/ai-agent-development/SKILL.md|Foundry,Agent-Framework,tracing
 ai|langgraph|.github/skills/ai-systems/langgraph/SKILL.md|LangGraph,stateful-agents,durable-execution,interrupts,subgraphs,LangSmith
 ai|foundry-sdk|.github/skills/ai-systems/foundry-sdk/SKILL.md|Foundry-SDK,azure-ai-projects,AIProjectClient,agents,evals,datasets,indexes
@@ -221,6 +223,7 @@ Forecasting|fabric-analytics->fabric-forecast->testing->code-review
 Data Analysis|data-analysis->database->testing->code-review
 Power BI Report|powerbi->fabric-analytics->database->documentation->code-review
 Power BI Dashboard|powerbi->data-analysis->database->code-review
+Cosmos Gremlin Graph|cosmos-db->azure->bicep->security->code-review
 Databricks ETL|databricks->database->python->testing->code-review
 Databricks ML|databricks->ai-agent-dev->python->testing->code-review
 AI Agent|ai-agent-dev->prompt-eng->python/csharp->error-handling->testing->code-review
