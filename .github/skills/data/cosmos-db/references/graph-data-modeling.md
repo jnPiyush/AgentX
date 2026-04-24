@@ -41,7 +41,7 @@ A supernode is any vertex whose edge count grows unbounded (a celebrity user, a 
 
 ## Edge Direction
 
-Cosmos Gremlin stores each edge twice (once on each endpoint partition by default). Heavy write loads on bidirectional edges double RUs. Choose the direction that matches read patterns and document the convention.
+Cosmos Gremlin stores each edge once, on the out-vertex's logical partition. Traversing the edge from the in-vertex side (`inE`/`in`) requires a cross-partition lookup, which roughly doubles read RUs versus traversing in the stored direction. Choose the stored direction to match the dominant read pattern and document the convention.
 
 ## Hybrid: Gremlin + NoSQL
 

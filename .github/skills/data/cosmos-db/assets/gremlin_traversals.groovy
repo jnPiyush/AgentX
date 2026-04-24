@@ -47,7 +47,7 @@ g.V().has('person','id','p-001').has('pk','tenant-42')
  .where(neq(__.V().has('person','id','p-001').has('pk','tenant-42')))
  .dedup().limit(25)
 
-// Bounded path search up to 5 hops
+// Bounded path search up to 5 hops (first path within bound, not guaranteed shortest)
 g.V().has('id','p-001').has('pk','tenant-42')
  .repeat(both('knows').simplePath()).times(5).emit()
  .has('id','p-099')

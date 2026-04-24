@@ -58,13 +58,22 @@ print(f"Returned {len(results)} items at {ru} RU")
 
 ## Paging Large Result Sets
 
-Cosmos Gremlin streams results in batches (~100 per page). Iterate the result set rather than calling `.all()` for large outputs.
+Cosmos Gremlin streams results in batches (~100 per page) server-side, but the `gremlinpython` driver materializes the full set on `.all().result()`. For very large outputs, paginate at the query level using Gremlin `range(start, end)` rather than relying on driver-side iteration.
 
 ```python
-result_set = gremlin_client.submit("g.V().has('pk','t-1').values('id')")
-for page in iter(result_set):
+PAGE = 500
+start = 0
+while True:
+    rs = gremlin_client.submit(
+        "g.V().has('pk','t-1').values('id').range(s, e)",
+        {"s": start, "e": start + PAGE},
+    )
+    page = rs.all().result()
+    if not page:
+        break
     for item in page:
         process(item)
+    start += PAGE
 ```
 
 ## Bulk Loading

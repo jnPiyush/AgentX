@@ -113,7 +113,9 @@ resource graph 'Microsoft.DocumentDB/databaseAccounts/gremlinDatabases/graphs@20
   }
 }
 
-// Built-in Cosmos DB Data Contributor role (data plane)
+// Built-in Cosmos DB Data Contributor role (data plane).
+// Note: Gremlin reuses the SQL data-plane RBAC surface (sqlRoleAssignments),
+// so this role grants Gremlin data-plane access on Gremlin-capable accounts.
 var dataContributorRoleId = '00000000-0000-0000-0000-000000000002'
 
 resource roleAssignments 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = [for (pid, idx) in dataContributorPrincipalIds: {

@@ -79,11 +79,16 @@ class CosmosGremlinClient:
         raise RuntimeError("gremlin: exhausted retries with no exception captured")
 
     def stream(self, query: str, bindings: Optional[Mapping[str, Any]] = None) -> Iterable[Any]:
-        """Iterate results page by page for large result sets."""
+        """Drain results for large result sets.
+
+        Cosmos Gremlin streams results in pages server-side, but the
+        gremlinpython driver materializes them; call ``all().result()`` and
+        iterate. For very large outputs, paginate at the query level using
+        ``range(start, end)`` Gremlin steps.
+        """
         result_set = self._client.submit(query, dict(bindings or {}))
-        for page in iter(result_set):
-            for item in page:
-                yield item
+        for item in result_set.all().result():
+            yield item
 
     def close(self) -> None:
         self._client.close()
