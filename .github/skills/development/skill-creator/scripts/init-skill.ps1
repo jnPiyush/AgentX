@@ -8,7 +8,7 @@
 .PARAMETER Name
  Skill name (lowercase, hyphens only, 1-64 chars). E.g., "mcp-server-development"
 .PARAMETER Category
- Category folder: ai-systems, architecture, cloud, design, development, operations
+ Category folder. Must be one of: ai-systems, architecture, data, design, development, diagrams, domain, infrastructure, languages, operations, product, testing
 .PARAMETER Description
  Short description (1-1024 chars) for the frontmatter
 .PARAMETER WithScripts
@@ -17,14 +17,14 @@
  Create a references/ directory with a placeholder reference
 .EXAMPLE
  ./init-skill.ps1 -Name "mcp-server-development" -Category "development" -Description "Build MCP servers"
- ./init-skill.ps1 -Name "docker-k8s" -Category "cloud" -Description "Container orchestration" -WithScripts -WithReferences -WithAssets
+ ./init-skill.ps1 -Name "my-skill" -Category "infrastructure" -Description "..." -WithScripts -WithReferences -WithAssets
 #>
 param(
  [Parameter(Mandatory = $true)]
  [string]$Name,
 
  [Parameter(Mandatory = $true)]
- [ValidateSet("ai-systems", "architecture", "cloud", "design", "development", "operations")]
+ [ValidateSet("ai-systems", "architecture", "data", "design", "development", "diagrams", "domain", "infrastructure", "languages", "operations", "product", "testing")]
  [string]$Category,
 
  [Parameter(Mandatory = $true)]
