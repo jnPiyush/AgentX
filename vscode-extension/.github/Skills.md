@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 80 skills across 12 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 81 skills across 12 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 80 skills across 12 categori
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 80 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 81 skills. Use Quick Reference below.
 
 ---
 
@@ -34,6 +34,7 @@ description: 'Compressed skill index for AI agents. 80 skills across 12 categori
 | **LangGraph Agent Workflow** | [LangGraph](agentx/skills/ai-systems/langgraph/SKILL.md), [Cognitive Arch](agentx/skills/ai-systems/cognitive-architecture/SKILL.md), [AI Evaluation](agentx/skills/ai-systems/ai-evaluation/SKILL.md), [Prompt Versioning](agentx/skills/ai-systems/prompt-versioning/SKILL.md) |
 | **MCP Apps / Interactive UI** | [MCP Apps](agentx/skills/ai-systems/mcp-apps-development/SKILL.md), [MCP Server](agentx/skills/ai-systems/mcp-server-development/SKILL.md), [React](agentx/skills/languages/react/SKILL.md), [Frontend/UI](agentx/skills/design/frontend-ui/SKILL.md) |
 | **Iterative / Quality Loop** | [Iterative Loop](agentx/skills/development/iterative-loop/SKILL.md), [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Code Review](agentx/skills/development/code-review/SKILL.md) |
+| **Metric-Driven Experimentation** | [Experimentation Loop](agentx/skills/development/experimentation-loop/SKILL.md), [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md), [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Token Budget / Context** | [Token Optimizer](agentx/skills/development/token-optimizer/SKILL.md), [Context Mgmt](agentx/skills/ai-systems/context-management/SKILL.md) |
 | **Azure AI Foundry Agent** | [Azure Foundry](agentx/skills/ai-systems/azure-foundry/SKILL.md), [AI Agent Dev](agentx/skills/ai-systems/ai-agent-development/SKILL.md), [AI Evaluation](agentx/skills/ai-systems/ai-evaluation/SKILL.md). For operational workflows (create, deploy, trace), install companion: GitHub Copilot for Azure |
 | **Anthropic Claude Implementation** | [Anthropic Claude](agentx/skills/ai-systems/anthropic-claude/SKILL.md), [Prompt Eng](agentx/skills/ai-systems/prompt-engineering/SKILL.md), [Context Mgmt](agentx/skills/ai-systems/context-management/SKILL.md), [AI Evaluation](agentx/skills/ai-systems/ai-evaluation/SKILL.md) |
@@ -67,7 +68,7 @@ description: 'Compressed skill index for AI agents. 80 skills across 12 categori
 
 ---
 
-## Skills Directory (80 skills -- pipe-delimited)
+## Skills Directory (81 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -87,6 +88,7 @@ dev|dependencies|agentx/skills/development/dependency-management/SKILL.md|lock-f
 dev|logging|agentx/skills/development/logging-monitoring/SKILL.md|structured-logging,metrics,tracing
 dev|code-review|agentx/skills/development/code-review/SKILL.md|checklists,automated-checks,compliance
 dev|iterative-loop|agentx/skills/development/iterative-loop/SKILL.md|quality-loop,refinement,completion-criteria
+dev|experimentation-loop|agentx/skills/development/experimentation-loop/SKILL.md|metric-driven,benchmark,keep-or-revert,attempt-log,branch-isolation,hill-climb
 dev|skill-creator|agentx/skills/development/skill-creator/SKILL.md|scaffold,validate,maintain-skills
 dev|token-optimizer|agentx/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
 dev|code-hygiene|agentx/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
@@ -252,5 +254,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 80 skills (arch:5, dev:13, lang:10, ops:5, infra:4, data:6, ai:18, design:4, test:6, domain:7, product:1, diagrams:1)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 81 skills (arch:5, dev:14, lang:10, ops:5, infra:4, data:6, ai:18, design:4, test:6, domain:7, product:1, diagrams:1)
 

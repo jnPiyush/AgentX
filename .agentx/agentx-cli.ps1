@@ -5046,6 +5046,168 @@ function Invoke-ScoreCmd {
 }
 
 # ---------------------------------------------------------------------------
+# DOCTOR: Aggregated workspace health checks
+# ---------------------------------------------------------------------------
+
+function Invoke-DoctorCmd {
+    # Aggregate the existing validate-* scripts and runtime invariants behind one
+    # entry point. Each check returns: { id, label, passed, summary, hint }.
+    # JSON output is supported via the global --json / -j flag.
+    $verbose = Test-Flag @('--verbose', '-v')
+    $checks = [System.Collections.Generic.List[object]]::new()
+
+    function Add-DoctorCheck {
+        param(
+            [Parameter(Mandatory)] $List,
+            [Parameter(Mandatory)] [string]$Id,
+            [Parameter(Mandatory)] [string]$Label,
+            [Parameter(Mandatory)] [bool]$Passed,
+            [Parameter(Mandatory)] [string]$Summary,
+            [string]$Hint = ''
+        )
+        $List.Add([PSCustomObject]@{
+            id      = $Id
+            label   = $Label
+            passed  = $Passed
+            summary = $Summary
+            hint    = $Hint
+        })
+    }
+
+    # 1. Required workspace files
+    $required = @(
+        @{ path = (Join-Path $Script:AGENTX_DIR 'config.json'); id = 'config'; label = 'Workspace config (.agentx/config.json)' },
+        @{ path = (Join-Path $Script:AGENTX_DIR 'agentx-cli.ps1'); id = 'cli';    label = 'CLI script (.agentx/agentx-cli.ps1)' },
+        @{ path = (Join-Path $Script:ROOT '.github'); id = 'github-dir'; label = 'AgentX assets directory (.github/)' }
+    )
+    foreach ($r in $required) {
+        $exists = Test-Path $r.path
+        Add-DoctorCheck -List $checks -Id $r.id -Label $r.label -Passed $exists -Summary $(if ($exists) { 'present' } else { 'missing' })
+    }
+
+    # 2. Git hooks installed
+    $gitDir = Join-Path $Script:ROOT '.git'
+    if (Test-Path $gitDir) {
+        $preCommit = Join-Path $gitDir 'hooks/pre-commit'
+        $hookOk = Test-Path $preCommit
+        Add-DoctorCheck -List $checks -Id 'git-hooks' -Label 'Git pre-commit hook installed' -Passed $hookOk `
+            -Summary $(if ($hookOk) { 'pre-commit hook present' } else { 'pre-commit hook missing' }) `
+            -Hint 'Run: agentx hooks install'
+    } else {
+        Add-DoctorCheck -List $checks -Id 'git-hooks' -Label 'Git pre-commit hook installed' -Passed $true -Summary 'no .git directory (skipped)'
+    }
+
+    # 3. Frontmatter validation
+    $fmScript = Join-Path $Script:ROOT 'scripts/validate-frontmatter.ps1'
+    if (Test-Path $fmScript) {
+        $fmOutput = & pwsh -NoProfile -File $fmScript 2>&1
+        $fmExit = $LASTEXITCODE
+        $fmTailMatch = $fmOutput | Select-String -Pattern '^\s*Results:' | Select-Object -Last 1
+        $fmTail = if ($fmTailMatch) { $fmTailMatch.ToString().Trim() } else { 'no summary line' }
+        Add-DoctorCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter (skills, agents, instructions, prompts)' `
+            -Passed ($fmExit -eq 0) -Summary $fmTail -Hint 'Run: pwsh scripts/validate-frontmatter.ps1'
+    } else {
+        Add-DoctorCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter validator' -Passed $false -Summary 'scripts/validate-frontmatter.ps1 missing'
+    }
+
+    # 4. Reference / link validation
+    $refScript = Join-Path $Script:ROOT 'scripts/validate-references.ps1'
+    if (Test-Path $refScript) {
+        $refOutput = & pwsh -NoProfile -File $refScript -Quiet 2>&1
+        $refExit = $LASTEXITCODE
+        $refSummary = if ($refExit -eq 0) { 'all internal links resolve' } else { 'broken links detected' }
+        Add-DoctorCheck -List $checks -Id 'references' -Label 'Cross-reference link validity' `
+            -Passed ($refExit -eq 0) -Summary $refSummary -Hint 'Run: pwsh scripts/validate-references.ps1'
+        if ($verbose -and $refExit -ne 0) {
+            $tail = ($refOutput | Select-Object -Last 5) -join "`n"
+            Write-CliOutput "    $($C.d)$tail$($C.n)"
+        }
+    } else {
+        Add-DoctorCheck -List $checks -Id 'references' -Label 'Reference validator' -Passed $false -Summary 'scripts/validate-references.ps1 missing'
+    }
+
+    # 5. Token budget check
+    $tokScript = Join-Path $Script:ROOT 'scripts/token-counter.ps1'
+    if (Test-Path $tokScript) {
+        $tokOutput = & pwsh -NoProfile -File $tokScript -Action check 2>&1
+        $tokExit = $LASTEXITCODE
+        $tokSummary = if ($tokExit -eq 0) { 'all files within token limits' } else { 'one or more files exceed token limits' }
+        Add-DoctorCheck -List $checks -Id 'tokens' -Label 'Token budget (skills, instructions)' `
+            -Passed ($tokExit -eq 0) -Summary $tokSummary -Hint 'Run: agentx tokens report'
+        if ($verbose -and $tokExit -ne 0) {
+            $tail = ($tokOutput | Select-Object -Last 5) -join "`n"
+            Write-CliOutput "    $($C.d)$tail$($C.n)"
+        }
+    } else {
+        Add-DoctorCheck -List $checks -Id 'tokens' -Label 'Token budget check' -Passed $false -Summary 'scripts/token-counter.ps1 missing'
+    }
+
+    # 6. Loop state schema sanity
+    $loopOk = $true
+    $loopSummary = 'no active loop'
+    if (Test-Path $Script:LOOP_STATE_FILE) {
+        try {
+            $loopState = Get-Content $Script:LOOP_STATE_FILE -Raw -Encoding utf8 | ConvertFrom-Json
+            if ($null -eq $loopState) { throw 'empty loop state' }
+            $statusVal = if ($loopState.PSObject.Properties['status']) { $loopState.status } else { 'unknown' }
+            $loopSummary = "loop status: $statusVal"
+        } catch {
+            $loopOk = $false
+            $loopSummary = "loop-state.json unreadable: $($_.Exception.Message)"
+        }
+    }
+    Add-DoctorCheck -List $checks -Id 'loop-state' -Label 'Loop state file readable' -Passed $loopOk -Summary $loopSummary -Hint 'Run: agentx loop status'
+
+    # 7. Bundle sync (vscode-extension/.github/agentx) -- advisory only when present
+    $bundleDir = Join-Path $Script:ROOT 'vscode-extension/.github/agentx'
+    if (Test-Path $bundleDir) {
+        $srcSkills = @(Get-ChildItem -Path (Join-Path $Script:ROOT '.github/skills') -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue).Count
+        $bndSkills = @(Get-ChildItem -Path (Join-Path $bundleDir 'skills') -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue).Count
+        $synced = ($srcSkills -eq $bndSkills) -and ($srcSkills -gt 0)
+        Add-DoctorCheck -List $checks -Id 'bundle-sync' -Label 'VS Code extension bundle in sync' `
+            -Passed $synced -Summary "source=$srcSkills bundle=$bndSkills" `
+            -Hint 'Run: node vscode-extension/scripts/copy-assets.js'
+    }
+
+    # Render
+    $passedCount = @($checks | Where-Object { $_.passed }).Count
+    $failedCount = @($checks | Where-Object { -not $_.passed }).Count
+    $total = $checks.Count
+    $allOk = $failedCount -eq 0
+
+    $result = [PSCustomObject]@{
+        ok      = $allOk
+        total   = $total
+        passed  = $passedCount
+        failed  = $failedCount
+        checks  = @($checks)
+    }
+
+    if ($Script:JsonOutput) {
+        Write-CliOutput ($result | ConvertTo-Json -Depth 6)
+    } else {
+        Write-CliOutput "`n$($C.c)  AgentX Doctor$($C.n)"
+        Write-CliOutput "$($C.d)  Workspace: $Script:ROOT$($C.n)"
+        Write-CliOutput "$($C.d)  Result: $passedCount/$total checks passed$($C.n)`n"
+        foreach ($chk in $checks) {
+            $mark = if ($chk.passed) { "$($C.g)[PASS]$($C.n)" } else { "$($C.r)[FAIL]$($C.n)" }
+            Write-CliOutput "  $mark $($chk.label)"
+            Write-CliOutput "      $($C.d)$($chk.summary)$($C.n)"
+            if (-not $chk.passed -and $chk.hint) {
+                Write-CliOutput "      $($C.y)hint: $($chk.hint)$($C.n)"
+            }
+        }
+        Write-CliOutput ''
+        if ($allOk) {
+            Write-CliOutput "$($C.g)  All checks passed.$($C.n)`n"
+        } else {
+            Write-CliOutput "$($C.r)  $failedCount check(s) failed. See hints above.$($C.n)`n"
+        }
+    }
+
+    if (-not $allOk) { exit 1 }
+}
+# ---------------------------------------------------------------------------
 # HELP
 # ---------------------------------------------------------------------------
 
@@ -5081,6 +5243,7 @@ $($C.w)  Commands:$($C.n)
   graduate [run|list|preview]      Promote high-confidence patterns to skills
   sprint "<task>" [-i issue]       Full pipeline: plan -> build -> review -> hygiene -> discover
   git-sync [push|pull]             Push/pull data branch to/from remote
+  doctor [--verbose] [--json]      Aggregate workspace health checks
   version                          Show installed version
   help                             Show this help
 
@@ -6295,6 +6458,7 @@ switch ($Script:Command) {
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }
     'sprint'   { Invoke-SprintCmd }
+    'doctor'   { Invoke-DoctorCmd }
     'version'  { Invoke-VersionCmd }
     'help'     { Invoke-HelpCmd }
     default {
