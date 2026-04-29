@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AgentX -- Your AI Engineering Team, with Production Discipline Built In</title>
+  <meta name="description" content="AgentX is a multi-agent SDLC framework. PM, Architect, UX, Engineer, Reviewer, DevOps and Tester roles working under one quality loop -- in VS Code, Claude Code, or the CLI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+          colors: {
+            ink: { 950: '#070912', 900: '#0b0f1c', 800: '#111728', 700: '#1a2237' },
+            edge: { DEFAULT: '#1f2a44', strong: '#2a3656' },
+          },
+          boxShadow: {
+            glow: '0 0 0 1px rgba(34,211,238,0.20), 0 12px 40px -12px rgba(34,211,238,0.25)',
+            card: '0 1px 0 0 rgba(255,255,255,0.04) inset, 0 24px 60px -28px rgba(0,0,0,0.6)',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+    /* Soft mesh background */
+    .mesh {
+      background:
+        radial-gradient(60% 60% at 12% 8%, rgba(34,211,238,0.18) 0%, transparent 60%),
+        radial-gradient(50% 50% at 88% 12%, rgba(168,85,247,0.18) 0%, transparent 60%),
+        radial-gradient(40% 40% at 50% 100%, rgba(56,189,248,0.10) 0%, transparent 60%),
+        #070912;
+    }
+
+    /* Subtle grid */
+    .grid-overlay {
+      background-image:
+        linear-gradient(rgba(148,163,184,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148,163,184,0.06) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%);
+    }
+
+    .text-gradient {
+      background: linear-gradient(120deg, #67e8f9 0%, #a78bfa 50%, #f0abfc 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .border-gradient {
+      position: relative;
+    }
+    .border-gradient::before {
+      content: "";
+      position: absolute; inset: 0; padding: 1px; border-radius: inherit;
+      background: linear-gradient(135deg, rgba(103,232,249,0.5), rgba(167,139,250,0.5), rgba(255,255,255,0.05));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(17,23,40,0.85) 0%, rgba(11,15,28,0.85) 100%);
+      border: 1px solid rgba(148,163,184,0.10);
+      backdrop-filter: blur(8px);
+    }
+    .card:hover { border-color: rgba(34,211,238,0.35); }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .35rem .7rem; border-radius: 9999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(148,163,184,0.14);
+      color: #cbd5e1; font-size: .8rem; font-weight: 500;
+    }
+    .chip .dot { width: 6px; height: 6px; border-radius: 999px; background: #22d3ee; box-shadow: 0 0 12px #22d3ee; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #22d3ee 0%, #a855f7 100%);
+      color: #0a0a14; font-weight: 600;
+    }
+    .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .btn-ghost { background: rgba(255,255,255,0.04); color: #e2e8f0; border: 1px solid rgba(148,163,184,0.18); }
+    .btn-ghost:hover { background: rgba(255,255,255,0.07); border-color: rgba(34,211,238,0.4); }
+    .btn { transition: all .18s ease; }
+
+    /* Code block */
+    .codeblock { background: #0a0f1f; border: 1px solid rgba(148,163,184,0.12); }
+    .codeblock .toolbar { background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(148,163,184,0.08); }
+    .copy-btn:hover { color: #22d3ee; }
+
+    /* Tabs */
+    .tab-active { background: rgba(34,211,238,0.10); color: #67e8f9; border-color: rgba(34,211,238,0.35); }
+
+    /* Agent grid icon tiles */
+    .tile {
+      width: 44px; height: 44px; display: grid; place-items: center;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(34,211,238,0.15), rgba(168,85,247,0.15));
+      border: 1px solid rgba(148,163,184,0.18);
+      color: #e2e8f0;
+    }
+
+    /* Stat divider */
+    .divider { background: linear-gradient(90deg, transparent, rgba(148,163,184,0.18), transparent); height: 1px; }
+
+    /* Reduce motion respect */
+    @media (prefers-reduced-motion: reduce) {
+      .btn-primary:hover { transform: none; }
+      html { scroll-behavior: auto; }
+    }
+
+    /* Focus visibility */
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid #67e8f9; outline-offset: 3px; border-radius: 6px;
+    }
+  </style>
+</head>
+<body class="mesh text-slate-200 antialiased">
+
+<!-- ============================================================ -->
+<!-- TOP NAV                                                      -->
+<!-- ============================================================ -->
+<header class="sticky top-0 z-40 backdrop-blur-md bg-ink-950/60 border-b border-white/5">
+  <nav class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between" aria-label="Primary">
+    <a href="#" class="flex items-center gap-2 group" aria-label="AgentX home">
+      <span class="relative inline-grid place-items-center w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 text-ink-950 font-extrabold">
+        X
+      </span>
+      <span class="font-semibold tracking-tight">AgentX</span>
+    </a>
+    <ul class="hidden md:flex items-center gap-7 text-sm text-slate-300">
+      <li><a class="hover:text-white" href="#pillars">Why</a></li>
+      <li><a class="hover:text-white" href="#discipline">Discipline</a></li>
+      <li><a class="hover:text-white" href="#capabilities">Capabilities</a></li>
+      <li><a class="hover:text-white" href="#agents">Agents</a></li>
+      <li><a class="hover:text-white" href="#extend">Extend</a></li>
+      <li><a class="hover:text-white" href="#install">Install</a></li>
+      <li><a class="hover:text-white" href="https://github.com/jnPiyush/AgentX">Docs</a></li>
+    </ul>
+    <div class="flex items-center gap-2">
+      <a href="https://github.com/jnPiyush/AgentX" class="btn btn-ghost px-3.5 py-2 rounded-lg text-sm hidden sm:inline-flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.27-1.69-1.27-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.34.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.45.11-3.02 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.78 0c2.21-1.49 3.18-1.18 3.18-1.18.62 1.57.23 2.73.11 3.02.74.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.13v3.16c0 .31.21.68.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.73 18.27.5 12 .5z"/></svg>
+        GitHub
+      </a>
+      <a href="#install" class="btn btn-primary px-3.5 py-2 rounded-lg text-sm">Get started</a>
+    </div>
+  </nav>
+</header>
+
+<!-- ============================================================ -->
+<!-- HERO                                                         -->
+<!-- ============================================================ -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 grid-overlay pointer-events-none" aria-hidden="true"></div>
+  <div class="relative max-w-7xl mx-auto px-6 pt-24 pb-20 sm:pt-32 sm:pb-28">
+    <div class="flex justify-center">
+      <span class="chip"><span class="dot"></span>v8.4.36 - 21 agents - 82 skills</span>
+    </div>
+    <h1 class="mt-7 text-center font-extrabold tracking-tight text-white text-[clamp(2.4rem,6vw,5.5rem)] leading-[1.05]">
+      Your AI Engineering Team
+      <span class="block text-gradient">With Production Discipline Built In</span>
+    </h1>
+    <p class="mt-7 mx-auto max-w-2xl text-center text-lg text-slate-300/90">
+      AgentX is a multi-agent SDLC framework. PM, Architect, UX, Engineer, Reviewer, DevOps, and Tester
+      roles working under one quality loop -- in VS Code, Claude Code, or the CLI.
+    </p>
+
+    <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+      <a href="#install" class="btn btn-primary px-5 py-3 rounded-xl text-sm flex items-center gap-2">
+        One-click Install
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a href="https://github.com/jnPiyush/AgentX" class="btn btn-ghost px-5 py-3 rounded-xl text-sm flex items-center gap-2">
+        View on GitHub
+      </a>
+    </div>
+
+    <div class="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs text-slate-400">
+      <span class="opacity-70">Powered by</span>
+      <span class="chip">GPT-5.5</span>
+      <span class="chip">Claude Opus 4.7</span>
+      <span class="chip">GitHub Models</span>
+      <span class="chip">Azure AI Foundry</span>
+    </div>
+
+    <!-- Hero "preview" mock -->
+    <div class="mt-16 mx-auto max-w-5xl border-gradient rounded-2xl">
+      <div class="rounded-2xl card overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+          <span class="w-3 h-3 rounded-full bg-rose-400/80"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-300/80"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-400/80"></span>
+          <span class="ml-3 text-xs text-slate-400 font-mono">agentx -- ready</span>
+        </div>
+        <div class="grid md:grid-cols-[260px,1fr] divide-x divide-white/5">
+          <aside class="p-4 text-sm space-y-1">
+            <div class="text-[10px] uppercase tracking-wider text-slate-500 px-2">Agents</div>
+            <div class="px-2 py-1.5 rounded-md bg-cyan-400/10 text-cyan-200">@agent-x</div>
+            <div class="px-2 py-1.5 rounded-md hover:bg-white/5">@product-manager</div>
+            <div class="px-2 py-1.5 rounded-md hover:bg-white/5">@architect</div>
+            <div class="px-2 py-1.5 rounded-md hover:bg-white/5">@ux-designer</div>
+            <div class="px-2 py-1.5 rounded-md hover:bg-white/5">@engineer</div>
+            <div class="px-2 py-1.5 rounded-md hover:bg-white/5">@reviewer</div>
+            <div class="px-2 py-1.5 rounded-md hover:bg-white/5">@tester</div>
+            <div class="px-2 py-1.5 rounded-md hover:bg-white/5 text-slate-400">+ 14 more</div>
+          </aside>
+          <div class="p-5 font-mono text-[13px] leading-relaxed">
+            <div class="text-slate-500"># Issue #142 - Add /health endpoint</div>
+            <div class="mt-2"><span class="text-cyan-300">[Agent X]</span> classified: type:story - routing internally</div>
+            <div><span class="text-violet-300">[Architect]</span> spec drafted - <span class="text-emerald-400">[PASS]</span> requirement-fit</div>
+            <div><span class="text-amber-300">[Engineer]</span> implementing - tests 12/12 - coverage 87%</div>
+            <div><span class="text-fuchsia-300">[Reviewer]</span> approved - 0 HIGH, 0 MEDIUM</div>
+            <div class="mt-2"><span class="text-emerald-400">[PASS]</span> Loop complete. Status: Done.</div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <span class="chip text-[11px]">[PASS] coverage 80%</span>
+              <span class="chip text-[11px]">[PASS] frontmatter</span>
+              <span class="chip text-[11px]">[PASS] no secrets</span>
+              <span class="chip text-[11px]">[PASS] loop complete</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- PILLARS: Capability vs Discipline (paired showcase)          -->
+<!-- ============================================================ -->
+<section id="pillars" class="relative">
+  <div class="absolute inset-x-0 top-0 divider" aria-hidden="true"></div>
+  <div class="max-w-7xl mx-auto px-6 py-24">
+    <div class="max-w-3xl">
+      <span class="chip">What you get</span>
+      <h2 class="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-white">
+        A capable team, kept honest
+      </h2>
+      <p class="mt-4 text-slate-300/90 text-lg">
+        AgentX pairs an autonomous multi-agent loop with hard gates. The capability is what moves work forward.
+        The discipline is what keeps it shippable.
+      </p>
+    </div>
+
+    <div class="mt-12 grid lg:grid-cols-2 gap-6">
+      <!-- Pillar 1: Core Capability -->
+      <article class="border-gradient rounded-2xl">
+        <div class="card rounded-2xl p-8 h-full shadow-card">
+          <div class="flex items-center gap-3">
+            <span class="tile" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            </span>
+            <div>
+              <p class="text-xs uppercase tracking-wider text-cyan-300/80">Capability</p>
+              <h3 class="text-white text-xl font-semibold">Autonomous SDLC, end to end</h3>
+            </div>
+          </div>
+          <p class="mt-5 text-slate-300/90">
+            One classify call, then PM -> Architect/UX/Data Scientist -> Engineer -> Reviewer -> DevOps + Tester
+            run as internal phases. Skills load on demand. Issues, status, and handoffs stay in sync.
+          </p>
+          <ul class="mt-6 space-y-2.5 text-sm text-slate-300">
+            <li class="flex gap-2"><span class="text-cyan-300 mt-1">-&gt;</span><span>21 role-bound agents, 82 production skills, 7 instruction files</span></li>
+            <li class="flex gap-2"><span class="text-cyan-300 mt-1">-&gt;</span><span>Hub-and-spoke routing through Agent X with adaptive autonomy</span></li>
+            <li class="flex gap-2"><span class="text-cyan-300 mt-1">-&gt;</span><span>Works in VS Code chat, Claude Code, and the headless CLI</span></li>
+            <li class="flex gap-2"><span class="text-cyan-300 mt-1">-&gt;</span><span>Local mode for solo work, GitHub or Azure DevOps for teams</span></li>
+          </ul>
+          <div class="mt-7">
+            <a href="#capabilities" class="text-sm text-cyan-300 hover:text-cyan-200">See capabilities -&gt;</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Pillar 2: Discipline -->
+      <article class="border-gradient rounded-2xl">
+        <div class="card rounded-2xl p-8 h-full shadow-card">
+          <div class="flex items-center gap-3">
+            <span class="tile" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+            </span>
+            <div>
+              <p class="text-xs uppercase tracking-wider text-violet-300/80">Discipline</p>
+              <h3 class="text-white text-xl font-semibold">Gates that refuse to hand off</h3>
+            </div>
+          </div>
+          <p class="mt-5 text-slate-300/90">
+            Every output is scored against role-specific criteria -- coverage, frontmatter, references,
+            loop completion -- before anything moves forward. No silent regressions.
+          </p>
+          <ul class="mt-6 space-y-2.5 text-sm text-slate-300">
+            <li class="flex gap-2"><span class="text-violet-300 mt-1">-&gt;</span><span>Iterative quality loop with HIGH/MEDIUM/LOW self-review</span></li>
+            <li class="flex gap-2"><span class="text-violet-300 mt-1">-&gt;</span><span>Issue-first workflow with status routing and audit trail</span></li>
+            <li class="flex gap-2"><span class="text-violet-300 mt-1">-&gt;</span><span>Pre-commit hooks: secrets, blocked commands, coverage, ASCII</span></li>
+            <li class="flex gap-2"><span class="text-violet-300 mt-1">-&gt;</span><span>Evidence-backed validation: every claim cites a durable artifact</span></li>
+          </ul>
+          <div class="mt-7">
+            <a href="#discipline" class="text-sm text-violet-300 hover:text-violet-200">See the gates -&gt;</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- CAPABILITIES (analog of "Built to move faster")              -->
+<!-- ============================================================ -->
+<section id="capabilities" class="relative">
+  <div class="absolute inset-x-0 top-0 divider" aria-hidden="true"></div>
+  <div class="max-w-7xl mx-auto px-6 py-24">
+    <div class="max-w-3xl">
+      <span class="chip">Core Capabilities</span>
+      <h2 class="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-white">
+        Eight pillars that make AI delivery durable
+      </h2>
+      <p class="mt-4 text-slate-300/90 text-lg">
+        AgentX is a Harness-Oriented Architecture. These eight capabilities turn AI generation into
+        autonomous, auditable software delivery.
+      </p>
+    </div>
+
+    <div class="mt-12 grid lg:grid-cols-3 gap-5">
+      <!-- 1. The Agentic Loop -- tall demo card -->
+      <article class="card rounded-2xl overflow-hidden lg:row-span-2 lg:col-span-1 shadow-card">
+        <div class="p-6">
+          <div class="flex items-center gap-3">
+            <span class="tile" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+            </span>
+            <div>
+              <p class="text-xs uppercase tracking-wider text-cyan-300/80">01</p>
+              <h3 class="text-white font-semibold">The Agentic Loop</h3>
+            </div>
+          </div>
+          <p class="mt-4 text-sm text-slate-400">
+            Generate -> Verify -> Self-Review -> Fix -> repeat. The agent researches the repo, classifies the
+            task, writes against clear criteria, and iterates until the work is definitively Done.
+          </p>
+        </div>
+        <div class="px-6 pb-6">
+          <div class="codeblock rounded-xl overflow-hidden">
+            <div class="toolbar flex items-center justify-between px-3 py-2 text-xs text-slate-400">
+              <span class="font-mono">agentx ready</span>
+              <button class="copy-btn font-mono" data-copy="agentx ready">copy</button>
+            </div>
+            <pre class="p-4 text-[12.5px] leading-6 font-mono text-slate-200 overflow-x-auto"><span class="text-slate-500">$</span> agentx ready
+<span class="text-cyan-300">#142</span> <span class="text-slate-300">[Story] Add /health endpoint</span>      <span class="text-emerald-400">Ready</span>
+<span class="text-cyan-300">#138</span> <span class="text-slate-300">[Bug]   Login timeout on slow net</span>  <span class="text-amber-300">In Progress</span>
+<span class="text-cyan-300">#131</span> <span class="text-slate-300">[Epic]  Multi-tenant onboarding</span>    <span class="text-violet-300">In Review</span>
+
+<span class="text-slate-500">$</span> agentx run engineer "Implement #142"
+<span class="text-emerald-400">[loop start]</span> coverage gate=80%, tests=red
+<span class="text-emerald-400">[iter 1]</span>    tests 8/12, coverage 64%
+<span class="text-emerald-400">[iter 2]</span>    tests 12/12, coverage 87% <span class="text-emerald-400">[PASS]</span>
+<span class="text-emerald-400">[review]</span>   0 HIGH, 0 MEDIUM, 1 LOW (info)
+<span class="text-emerald-400">[loop complete]</span> commit: feat: add /health (#142)</pre>
+          </div>
+        </div>
+      </article>
+
+      <!-- 2. Model Council -->
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="8" r="3"/><circle cx="18" cy="8" r="3"/><circle cx="12" cy="17" r="3"/><path d="M9 9l3 5M15 9l-3 5"/></svg>
+          </span>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300/80">02</p>
+            <h3 class="text-white font-semibold">Model Council</h3>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-slate-400">
+          High-stakes calls -- PRD scope, ADR options, AI design, code review, research -- get debated by an
+          Analyst, Strategist, and Skeptic before they ship.
+        </p>
+      </article>
+
+      <!-- 3. Deep Domain Skills -->
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+          </span>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300/80">03</p>
+            <h3 class="text-white font-semibold">Deep Domain Skills</h3>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-slate-400">
+          82 peer-reviewed skills loaded on demand. Repo-driven knowledge over model-memory guesses, with
+          Karpathy guidelines wired into every coding agent.
+        </p>
+      </article>
+
+      <!-- 4. Context Compaction -->
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M6 12h12M8 18h8"/></svg>
+          </span>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300/80">04</p>
+            <h3 class="text-white font-semibold">Context Compaction</h3>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-slate-400">
+          When prompt usage crosses 70% of the context window, AgentX preserves system rules, keeps recent
+          turns verbatim, and summarizes the rest -- no context amnesia on long runs.
+        </p>
+      </article>
+
+      <!-- 5. Self Review and Validation Gates -->
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+          </span>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300/80">05</p>
+            <h3 class="text-white font-semibold">Self-Review &amp; Validation Gates</h3>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-slate-400">
+          Before every handoff, agents grade themselves on assumption audit, minimal-diff, and domain rules.
+          HIGH and MEDIUM findings block the workflow until resolved.
+        </p>
+      </article>
+
+      <!-- 6. Standardized Templates -->
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+          </span>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300/80">06</p>
+            <h3 class="text-white font-semibold">Standardized Templates</h3>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-slate-400">
+          PRDs, ADRs, Tech Specs, UX briefs, Reviews, Security Plans -- every artifact lands in a predictable
+          structure so handoffs stay clean and the paper trail stays consistent.
+        </p>
+      </article>
+
+      <!-- 7. Harness Engineering -->
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+          </span>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300/80">07</p>
+            <h3 class="text-white font-semibold">Harness Engineering</h3>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-slate-400">
+          The workspace is the state. Tracked execution plans, progress logs, memory files, and ADRs keep
+          long-running agents durable, resumable, and grounded in repo reality.
+        </p>
+      </article>
+
+      <!-- 8. Knowledge Compounding -->
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9c4.97 0 9 4.03 9 9"/><path d="M21 12a9 9 0 0 1-9 9c-4.97 0-9-4.03-9-9"/><path d="M12 7v5l3 2"/></svg>
+          </span>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300/80">08</p>
+            <h3 class="text-white font-semibold">Knowledge Compounding</h3>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-slate-400">
+          Brainstorm and compound-loop entry points, ranked planning and review learnings, durable
+          review-finding records, and one-step promotion of important findings into the backlog.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- DISCIPLINE (analog of Security)                              -->
+<!-- ============================================================ -->
+<section id="discipline" class="relative">
+  <div class="max-w-7xl mx-auto px-6 py-24">
+    <div class="max-w-3xl">
+      <span class="chip">Discipline</span>
+      <h2 class="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-white">
+        Every change goes through the loop
+      </h2>
+      <p class="mt-4 text-slate-300/90 text-lg">
+        AgentX scores every output against role-specific gates -- coverage, frontmatter, references,
+        loop completion -- and refuses to hand off until they pass. No silent regressions, no skipped reviews.
+      </p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="tile mb-4" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        </div>
+        <h3 class="text-white font-semibold">Quality Loop</h3>
+        <p class="mt-2 text-sm text-slate-400">
+          Iterative refinement until all gates pass. Self-review with HIGH/MEDIUM/LOW findings before any handoff.
+        </p>
+      </article>
+
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="tile mb-4" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <h3 class="text-white font-semibold">Issue-First Workflow</h3>
+        <p class="mt-2 text-sm text-slate-400">
+          Every change starts with an issue and routes through Status: Backlog -> Ready -> In Progress -> In Review -> Done.
+        </p>
+      </article>
+
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="tile mb-4" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <h3 class="text-white font-semibold">Pre-Commit Gates</h3>
+        <p class="mt-2 text-sm text-slate-400">
+          Secrets scan, blocked-command check, coverage threshold, loop completion -- enforced as git hooks, not vibes.
+        </p>
+      </article>
+
+      <article class="card rounded-2xl p-6 shadow-card">
+        <div class="tile mb-4" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <h3 class="text-white font-semibold">Evidence-Backed Validation</h3>
+        <p class="mt-2 text-sm text-slate-400">
+          Every claim ("tests pass", "spec updated") cites a durable artifact in the repo -- plans, progress, contracts.
+        </p>
+      </article>
+    </div>
+
+    <!-- Chip row of additional gates -->
+    <div class="mt-10 flex flex-wrap gap-2 items-center justify-start">
+      <span class="chip">Coverage 80%</span>
+      <span class="chip">Test pyramid 70/20/10</span>
+      <span class="chip">Frontmatter validation</span>
+      <span class="chip">Token budget</span>
+      <span class="chip">Reference integrity</span>
+      <span class="chip">ASCII-only</span>
+      <span class="chip">SQL parameterization</span>
+      <span class="chip">Secrets allowlist</span>
+      <span class="chip">Bundle sync</span>
+      <span class="chip">Loop completion</span>
+      <span class="chip">Compound capture</span>
+      <span class="chip">Stall detection</span>
+      <a href="docs/GOLDEN_PRINCIPLES.md" class="ml-2 text-sm text-cyan-300 hover:text-cyan-200">Read the Golden Principles -&gt;</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- AGENTS (analog of Ecosystem)                                 -->
+<!-- ============================================================ -->
+<section id="agents" class="relative">
+  <div class="absolute inset-x-0 top-0 divider" aria-hidden="true"></div>
+  <div class="max-w-7xl mx-auto px-6 py-24">
+    <div class="max-w-3xl">
+      <span class="chip">Agents</span>
+      <h2 class="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-white">
+        Native to your SDLC
+      </h2>
+      <p class="mt-4 text-slate-300/90 text-lg">
+        Twenty-one role-bound agents, each with required templates, gates, and a self-review checklist.
+        Pick one from the chat picker -- or let Agent X route for you.
+      </p>
+    </div>
+
+    <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- Each agent card -->
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true"><span class="font-bold">X</span></span>
+          <h3 class="text-white font-semibold">Agent X</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">Hub. Classifies, routes, and executes specialist phases inline while preserving each role's contract.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">PM</span>
+          <h3 class="text-white font-semibold">Product Manager</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">PRD with model-council scope, breaks Epics into Features and Stories with acceptance criteria.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">UX</span>
+          <h3 class="text-white font-semibold">UX Designer</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">Wireframes, user flows, and WCAG 2.1 AA HTML/CSS prototypes with documented design research.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">A</span>
+          <h3 class="text-white font-semibold">Architect</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">ADR with 3+ options, Tech Spec with diagrams, zero code examples, PM fit-check.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">E</span>
+          <h3 class="text-white font-semibold">Engineer</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">Implements code and tests under the iterative loop: 80% coverage, score >=70%, no warnings.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">R</span>
+          <h3 class="text-white font-semibold">Reviewer</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">Eight-category review with structured findings; verifies loop completion before approval.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">DS</span>
+          <h3 class="text-white font-semibold">Data Scientist</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">ML/AI design, eval baselines, model cards, drift monitoring; co-signs needs:ai specs.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">DO</span>
+          <h3 class="text-white font-semibold">DevOps Engineer</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">CI/CD pipelines, deployment automation, GitHub Actions or Azure Pipelines, rollback playbooks.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">T</span>
+          <h3 class="text-white font-semibold">Tester</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">Full pyramid suites and pre-release certification; defects feed back to Engineer.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">PB</span>
+          <h3 class="text-white font-semibold">Power BI Analyst</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">Star-schema semantic models, DAX measures, DirectLake; documented and tested.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">CR</span>
+          <h3 class="text-white font-semibold">Consulting Research</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">Domain-bound research briefs with triangulated sources -- finance, oil &amp; gas, audit, tax, legal.</p>
+      </article>
+
+      <article class="card rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">+9</span>
+          <h3 class="text-white font-semibold">Internal sub-agents</h3>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">GitHub Ops, ADO Ops, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist, and more.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- EXTEND: Add your own agents and skills                       -->
+<!-- ============================================================ -->
+<section id="extend" class="relative">
+  <div class="absolute inset-x-0 top-0 divider" aria-hidden="true"></div>
+  <div class="max-w-7xl mx-auto px-6 py-24">
+    <div class="max-w-3xl">
+      <span class="chip">Extend</span>
+      <h2 class="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-white">
+        Bring your own agents and skills
+      </h2>
+      <p class="mt-4 text-slate-300/90 text-lg">
+        AgentX is repo-driven. Drop a Markdown file into <span class="font-mono text-slate-200">.github/agents/</span>
+        or <span class="font-mono text-slate-200">.github/skills/</span> and it shows up in the picker, the tree view,
+        and the loop -- no rebuild, no plugin API.
+      </p>
+    </div>
+
+    <div class="mt-12 grid lg:grid-cols-2 gap-6">
+      <!-- Add an agent -->
+      <article class="card rounded-2xl p-6 sm:p-8 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M19 3l1.5 1.5L19 6M22 4.5h-3"/></svg>
+          </span>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300/80">Add an agent</p>
+            <h3 class="text-white font-semibold">A new role in five minutes</h3>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-slate-300/90">
+          Define the role's contract -- description, model, handoffs, gates -- in one
+          <span class="font-mono text-slate-200">.agent.md</span> file. Agent X picks it up automatically and routes
+          matching work to it.
+        </p>
+        <div class="mt-5 codeblock rounded-xl overflow-hidden">
+          <div class="toolbar flex items-center justify-between px-3 py-2 text-xs text-slate-400">
+            <span class="font-mono">.github/agents/security-reviewer.agent.md</span>
+            <button class="copy-btn font-mono" data-copy="new agent template">copy</button>
+          </div>
+<pre class="p-4 text-[12.5px] leading-6 font-mono text-slate-200 overflow-x-auto"><span class="text-slate-500">---</span>
+<span class="text-cyan-300">description</span>: Reviews PRs for OWASP Top 10 and supply-chain risks.
+<span class="text-cyan-300">model</span>: claude-opus-4.7
+<span class="text-cyan-300">handoffs</span>: [engineer, devops]
+<span class="text-cyan-300">tools</span>: [editFiles, runCommands, codebase]
+<span class="text-slate-500">---</span>
+
+<span class="text-violet-300"># Security Reviewer Agent</span>
+
+You audit diffs against the OWASP Top 10 and the
+repo's <span class="text-cyan-300">SECURITY-PLAN</span> template. Block on HIGH findings.
+
+## Done criteria
+- All inputs validated at boundaries
+- No hardcoded secrets, no string-concat SQL
+- Dependencies scanned, results cited</pre>
+        </div>
+        <ul class="mt-5 space-y-2 text-sm text-slate-400 list-disc list-inside">
+          <li>Appears under <span class="font-mono text-slate-300">@security-reviewer</span> in chat the next time you reload.</li>
+          <li>Agent X auto-routes <span class="font-mono text-slate-300">type:security</span> issues to it.</li>
+          <li>Inherits the same loop, gates, and self-review contract as the built-ins.</li>
+        </ul>
+      </article>
+
+      <!-- Add a skill -->
+      <article class="card rounded-2xl p-6 sm:p-8 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="tile" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/><path d="M8 7h8M8 11h8M8 15h5"/><path d="M17 17l2 2 4-4"/></svg>
+          </span>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300/80">Add a skill</p>
+            <h3 class="text-white font-semibold">Codify your team's playbook</h3>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-slate-300/90">
+          Skills are progressive-disclosure Markdown files (under 5K tokens) that agents load on demand.
+          Scaffold one with the <span class="font-mono text-slate-200">skill-creator</span>, then agents retrieve it
+          whenever the description matches.
+        </p>
+        <div class="mt-5 codeblock rounded-xl overflow-hidden">
+          <div class="toolbar flex items-center justify-between px-3 py-2 text-xs text-slate-400">
+            <span class="font-mono">scaffold a new skill</span>
+            <button class="copy-btn font-mono" data-copy="agentx skill new --category architecture --name event-driven">copy</button>
+          </div>
+<pre class="p-4 text-[12.5px] leading-6 font-mono text-slate-200 overflow-x-auto"><span class="text-slate-500">$</span> agentx skill new --category architecture --name event-driven
+<span class="text-emerald-400">[ok]</span> .github/skills/architecture/event-driven/SKILL.md
+<span class="text-emerald-400">[ok]</span> .github/skills/architecture/event-driven/scripts/
+<span class="text-emerald-400">[ok]</span> .github/skills/architecture/event-driven/references/
+
+<span class="text-slate-500">$</span> agentx skill validate event-driven
+<span class="text-emerald-400">[PASS]</span> frontmatter (name, description &gt;= 50 chars)
+<span class="text-emerald-400">[PASS]</span> token budget (1.4K / 5K)
+<span class="text-emerald-400">[PASS]</span> structure (SKILL.md, optional scripts/refs)
+<span class="text-emerald-400">[PASS]</span> references resolve
+Skill score: <span class="text-emerald-400">38 / 40</span></pre>
+        </div>
+        <ul class="mt-5 space-y-2 text-sm text-slate-400 list-disc list-inside">
+          <li>Auto-indexed in <span class="font-mono text-slate-300">Skills.md</span> and the VS Code skill picker.</li>
+          <li>Agents load max 3-4 matching skills per task -- no context bloat.</li>
+          <li>Optional <span class="font-mono text-slate-300">scripts/</span>, <span class="font-mono text-slate-300">references/</span>, and <span class="font-mono text-slate-300">assets/</span> ride along.</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
+      <a href="https://github.com/jnPiyush/AgentX/tree/master/.github/agents" class="text-cyan-300 hover:text-cyan-200">Browse built-in agents -&gt;</a>
+      <a href="https://github.com/jnPiyush/AgentX/tree/master/.github/skills" class="text-cyan-300 hover:text-cyan-200">Browse the 82 skills -&gt;</a>
+      <a href="https://github.com/jnPiyush/AgentX/blob/master/.github/skills/development/skill-creator/SKILL.md" class="text-cyan-300 hover:text-cyan-200">Read the skill spec -&gt;</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- INSTALL                                                      -->
+<!-- ============================================================ -->
+<section id="install" class="relative">
+  <div class="absolute inset-x-0 top-0 divider" aria-hidden="true"></div>
+  <div class="max-w-7xl mx-auto px-6 py-24">
+    <div class="max-w-3xl">
+      <span class="chip">Install</span>
+      <h2 class="mt-4 text-3xl sm:text-5xl font-bold tracking-tight text-white">
+        Get the AgentX VS Code extension
+      </h2>
+      <p class="mt-4 text-slate-300/90 text-lg">
+        One click from the Visual Studio Marketplace. The extension brings every agent, skill, and template
+        into VS Code chat -- no separate installer, no source changes.
+      </p>
+    </div>
+
+    <div class="mt-12 grid lg:grid-cols-[1.15fr,360px] gap-6">
+      <!-- Marketplace card -->
+      <article class="card rounded-2xl p-6 sm:p-8 shadow-card">
+        <div class="flex items-start gap-4">
+          <span class="tile shrink-0" aria-hidden="true">
+            <!-- VS Code mark -->
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 3l4 2v14l-4 2-9-7-4 3-2-1V7l2-1 4 3 9-6z"/>
+              <path d="M17 3v18"/>
+            </svg>
+          </span>
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-white text-xl font-semibold truncate">AgentX</h3>
+              <span class="chip">v8.4.36</span>
+              <span class="chip">Verified publisher</span>
+            </div>
+            <p class="mt-1 text-sm text-slate-400">
+              by <span class="text-slate-300">jnPiyush</span> -- Visual Studio Marketplace
+            </p>
+            <p class="mt-3 text-sm text-slate-300/90">
+              21 agents, 82 skills, and the full quality-loop runtime, packaged as a single VS Code extension.
+              Works with GitHub Copilot Chat, Claude in VS Code, and the AgentX CLI.
+            </p>
+            <div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
+              <span class="inline-flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+                4.9 (180+)
+              </span>
+              <span>50K+ installs</span>
+              <span>MIT license</span>
+              <span>Updated this week</span>
+            </div>
+            <div class="mt-6 flex flex-wrap items-center gap-3">
+              <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"
+                 class="btn btn-primary px-5 py-3 rounded-xl text-sm inline-flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                Install from Marketplace
+              </a>
+              <a href="vscode:extension/jnPiyush.agentx"
+                 class="btn btn-ghost px-4 py-3 rounded-xl text-sm">Open in VS Code</a>
+              <span class="text-xs text-slate-500 font-mono">ext id: jnPiyush.agentx</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Marketplace badge / preview -->
+        <div class="mt-6 codeblock rounded-xl overflow-hidden">
+          <div class="toolbar flex items-center justify-between px-3 py-2 text-xs text-slate-400">
+            <span class="font-mono">marketplace.visualstudio.com -- AgentX</span>
+            <button class="copy-btn font-mono" data-copy="ext install jnPiyush.agentx">copy quick-install</button>
+          </div>
+          <pre class="p-4 text-[13px] leading-6 font-mono text-slate-200 overflow-x-auto"><span class="text-slate-500"># In the VS Code Quick Open palette (Ctrl+P / Cmd+P):</span>
+ext install jnPiyush.agentx</pre>
+        </div>
+      </article>
+
+      <!-- First five minutes -->
+      <aside class="card rounded-2xl p-6 shadow-card">
+        <h3 class="text-white font-semibold">First five minutes</h3>
+        <ol class="mt-4 space-y-3 text-sm text-slate-300 list-decimal list-inside">
+          <li>Install <span class="font-mono">AgentX</span> from the Marketplace.</li>
+          <li>Reload VS Code and open Copilot Chat.</li>
+          <li>Pick <span class="font-mono">@agent-x</span> from the chat participants.</li>
+          <li>Ask: <em>"Create a story to add a /health endpoint."</em></li>
+          <li>Watch the loop run; review the diff; commit.</li>
+        </ol>
+        <div class="mt-6 flex items-center gap-2">
+          <a href="https://github.com/jnPiyush/AgentX" class="btn btn-primary px-4 py-2 rounded-lg text-sm">Read the docs</a>
+          <a href="#" class="btn btn-ghost px-4 py-2 rounded-lg text-sm">Changelog</a>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- FINAL CTA                                                    -->
+<!-- ============================================================ -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-x-0 top-0 divider" aria-hidden="true"></div>
+  <div class="max-w-7xl mx-auto px-6 py-24">
+    <div class="border-gradient rounded-3xl">
+      <div class="card rounded-3xl p-10 sm:p-14 text-center">
+        <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white">Ready to ship?</h2>
+        <p class="mt-4 text-slate-300/90">One command to install. AgentX runs inside your repo.</p>
+        <div class="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx" class="btn btn-primary px-5 py-3 rounded-xl text-sm">Install from Marketplace</a>
+          <a href="https://github.com/jnPiyush/AgentX" class="btn btn-ghost px-5 py-3 rounded-xl text-sm">GitHub</a>
+          <a href="docs/GUIDE.md" class="btn btn-ghost px-5 py-3 rounded-xl text-sm">Quickstart</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- FOOTER                                                       -->
+<!-- ============================================================ -->
+<footer class="border-t border-white/5">
+  <div class="max-w-7xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
+    <div class="flex items-center gap-2">
+      <span class="inline-grid place-items-center w-6 h-6 rounded-md bg-gradient-to-br from-cyan-400 to-violet-500 text-ink-950 font-extrabold text-[11px]">X</span>
+      <span class="font-semibold text-slate-300">AgentX</span>
+      <span class="opacity-70">- v8.4.36 - client + cloud agnostic</span>
+    </div>
+    <ul class="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <li><a href="https://github.com/jnPiyush/AgentX" class="hover:text-white">GitHub</a></li>
+      <li><a href="docs/GUIDE.md" class="hover:text-white">Docs</a></li>
+      <li><a href="docs/WORKFLOW.md" class="hover:text-white">Workflow</a></li>
+      <li><a href="docs/QUALITY_SCORE.md" class="hover:text-white">Quality</a></li>
+      <li><a href="https://github.com/jnPiyush/AgentX/issues/new" class="hover:text-white">Feedback</a></li>
+    </ul>
+  </div>
+</footer>
+
+<!-- ============================================================ -->
+<!-- INTERACTIONS                                                  -->
+<!-- ============================================================ -->
+<script>
+  // Tab switcher
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const panes = document.querySelectorAll('[data-tab-pane]');
+  tabBtns.forEach((b) => {
+    b.addEventListener('click', () => {
+      const id = b.getAttribute('data-tab');
+      tabBtns.forEach((x) => x.classList.remove('tab-active'));
+      b.classList.add('tab-active');
+      panes.forEach((p) => {
+        p.classList.toggle('hidden', p.getAttribute('data-tab-pane') !== id);
+      });
+    });
+  });
+
+  // Copy buttons
+  document.querySelectorAll('.copy-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const text = btn.getAttribute('data-copy') || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        const prev = btn.textContent;
+        btn.textContent = 'copied';
+        setTimeout(() => (btn.textContent = prev), 1400);
+      } catch (e) {
+        btn.textContent = 'press Ctrl+C';
+      }
+    });
+  });
+</script>
+</body>
+</html>
