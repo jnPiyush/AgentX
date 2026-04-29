@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 81 skills across 12 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 82 skills across 12 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 81 skills across 12 categori
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 81 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 82 skills. Use Quick Reference below.
 
 ---
 
@@ -68,7 +68,7 @@ description: 'Compressed skill index for AI agents. 81 skills across 12 categori
 
 ---
 
-## Skills Directory (81 skills -- pipe-delimited)
+## Skills Directory (82 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -254,5 +254,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 81 skills (arch:5, dev:14, lang:10, ops:5, infra:4, data:6, ai:18, design:4, test:6, domain:7, product:1, diagrams:1)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 82 skills (arch:5, dev:14, lang:10, ops:5, infra:4, data:7, ai:18, design:4, test:6, domain:7, product:1, diagrams:1)
 

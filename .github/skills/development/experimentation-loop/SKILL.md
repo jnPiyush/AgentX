@@ -38,6 +38,7 @@ compatibility:
 - A metric command that exits 0 and prints a single numeric value, OR a JSON value reachable by a fixed JSON pointer
 - A baseline measurement captured before the loop starts
 - Permission to commit on the experimentation branch
+- The loop runner MUST record `files_changed` (modified tracked files) and `files_added` (new untracked files) per attempt; reverts without that list are forbidden
 
 ---
 
@@ -149,9 +150,22 @@ For each attempt, after running the metric command:
 | Condition | Action |
 |-----------|--------|
 | `delta` improves the metric in the desired direction by more than `noise_threshold` | `keep`: `git add -A && git commit -m "exp(<n>): <hypothesis>"` |
-| `delta` regresses or is within `noise_threshold` | `revert`: `git checkout -- .` and `git clean -fd` for new files |
+| `delta` regresses or is within `noise_threshold` | `revert`: scoped restore (see below) |
 | Metric command failed to run | `skip`: revert and log the failure mode |
 | Same `hypothesis` keyword tried in last 3 attempts | `skip`: avoid re-running near-identical changes |
+
+### Scoped Revert Procedure
+
+A blanket `git checkout -- .` plus `git clean -fd` will destroy unrelated untracked work. The loop MUST revert only what the current attempt produced:
+
+1. Run `git status --porcelain`. If any path is dirty or untracked AND not in `files_changed` ∪ `files_added` for this attempt, abort the revert and surface the unexpected paths -- do not auto-clean.
+2. Restore tracked changes scoped to this attempt:
+   - `git restore --source=HEAD --staged --worktree -- <files_changed>`
+3. Remove untracked files this attempt created, one path at a time:
+   - `Remove-Item -LiteralPath <path>` (or `rm <path>`) for each entry in `files_added`
+4. Re-run `git status --porcelain` and assert it is empty before the next attempt begins.
+
+If the runner cannot produce reliable `files_changed` / `files_added` lists, the loop MUST stop and escalate rather than fall back to a blanket revert.
 
 `noise_threshold` SHOULD be set explicitly per metric (for example, 1% for benchmark times, exact equality for integer counts).
 

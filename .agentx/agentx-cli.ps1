@@ -5063,14 +5063,16 @@ function Invoke-DoctorCmd {
             [Parameter(Mandatory)] [string]$Label,
             [Parameter(Mandatory)] [bool]$Passed,
             [Parameter(Mandatory)] [string]$Summary,
-            [string]$Hint = ''
+            [string]$Hint = '',
+            [string]$VerboseTail = ''
         )
         $List.Add([PSCustomObject]@{
-            id      = $Id
-            label   = $Label
-            passed  = $Passed
-            summary = $Summary
-            hint    = $Hint
+            id          = $Id
+            label       = $Label
+            passed      = $Passed
+            summary     = $Summary
+            hint        = $Hint
+            verboseTail = $VerboseTail
         })
     }
 
@@ -5116,12 +5118,10 @@ function Invoke-DoctorCmd {
         $refOutput = & pwsh -NoProfile -File $refScript -Quiet 2>&1
         $refExit = $LASTEXITCODE
         $refSummary = if ($refExit -eq 0) { 'all internal links resolve' } else { 'broken links detected' }
+        $refTail = if ($refExit -ne 0) { ($refOutput | Select-Object -Last 5) -join "`n" } else { '' }
         Add-DoctorCheck -List $checks -Id 'references' -Label 'Cross-reference link validity' `
-            -Passed ($refExit -eq 0) -Summary $refSummary -Hint 'Run: pwsh scripts/validate-references.ps1'
-        if ($verbose -and $refExit -ne 0) {
-            $tail = ($refOutput | Select-Object -Last 5) -join "`n"
-            Write-CliOutput "    $($C.d)$tail$($C.n)"
-        }
+            -Passed ($refExit -eq 0) -Summary $refSummary -Hint 'Run: pwsh scripts/validate-references.ps1' `
+            -VerboseTail $refTail
     } else {
         Add-DoctorCheck -List $checks -Id 'references' -Label 'Reference validator' -Passed $false -Summary 'scripts/validate-references.ps1 missing'
     }
@@ -5132,12 +5132,10 @@ function Invoke-DoctorCmd {
         $tokOutput = & pwsh -NoProfile -File $tokScript -Action check 2>&1
         $tokExit = $LASTEXITCODE
         $tokSummary = if ($tokExit -eq 0) { 'all files within token limits' } else { 'one or more files exceed token limits' }
+        $tokTail = if ($tokExit -ne 0) { ($tokOutput | Select-Object -Last 5) -join "`n" } else { '' }
         Add-DoctorCheck -List $checks -Id 'tokens' -Label 'Token budget (skills, instructions)' `
-            -Passed ($tokExit -eq 0) -Summary $tokSummary -Hint 'Run: agentx tokens report'
-        if ($verbose -and $tokExit -ne 0) {
-            $tail = ($tokOutput | Select-Object -Last 5) -join "`n"
-            Write-CliOutput "    $($C.d)$tail$($C.n)"
-        }
+            -Passed ($tokExit -eq 0) -Summary $tokSummary -Hint 'Run: agentx tokens report' `
+            -VerboseTail $tokTail
     } else {
         Add-DoctorCheck -List $checks -Id 'tokens' -Label 'Token budget check' -Passed $false -Summary 'scripts/token-counter.ps1 missing'
     }
@@ -5159,14 +5157,81 @@ function Invoke-DoctorCmd {
     Add-DoctorCheck -List $checks -Id 'loop-state' -Label 'Loop state file readable' -Passed $loopOk -Summary $loopSummary -Hint 'Run: agentx loop status'
 
     # 7. Bundle sync (vscode-extension/.github/agentx) -- advisory only when present
+    # copy-assets.js intentionally rewrites internal markdown links in bundled
+    # files, so hash comparison would produce constant false positives. Drift
+    # in practice means files added/removed/renamed without re-running the
+    # bundle sync, so check by relative path existence instead.
     $bundleDir = Join-Path $Script:ROOT 'vscode-extension/.github/agentx'
     if (Test-Path $bundleDir) {
-        $srcSkills = @(Get-ChildItem -Path (Join-Path $Script:ROOT '.github/skills') -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue).Count
-        $bndSkills = @(Get-ChildItem -Path (Join-Path $bundleDir 'skills') -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue).Count
-        $synced = ($srcSkills -eq $bndSkills) -and ($srcSkills -gt 0)
+        $srcSkillRoot = Join-Path $Script:ROOT '.github/skills'
+        $bndSkillRoot = Join-Path $bundleDir 'skills'
+        $srcFiles = @(Get-ChildItem -Path $srcSkillRoot -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue)
+        $bndFiles = @(Get-ChildItem -Path $bndSkillRoot -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue)
+        $srcSkills = $srcFiles.Count
+        $bndSkills = $bndFiles.Count
+
+        $drift = [System.Collections.Generic.List[string]]::new()
+        foreach ($f in $srcFiles) {
+            $rel = ($f.FullName.Substring($srcSkillRoot.Length).TrimStart('\','/')) -replace '\\','/'
+            if (-not (Test-Path (Join-Path $bndSkillRoot $rel))) { $drift.Add("missing in bundle: skills/$rel") }
+        }
+        foreach ($f in $bndFiles) {
+            $rel = ($f.FullName.Substring($bndSkillRoot.Length).TrimStart('\','/')) -replace '\\','/'
+            if (-not (Test-Path (Join-Path $srcSkillRoot $rel))) { $drift.Add("orphaned in bundle: skills/$rel") }
+        }
+        # Critical non-skill files: existence-only check.
+        $critical = @(
+            @{ src = 'Skills.md'; bnd = 'Skills.md' },
+            @{ src = 'AGENTS.md'; bnd = 'AGENTS.md' },
+            @{ src = '.github/copilot-instructions.md'; bnd = 'copilot-instructions.md' }
+        )
+        $instrDir = Join-Path $Script:ROOT '.github/instructions'
+        if (Test-Path $instrDir) {
+            foreach ($i in (Get-ChildItem -Path $instrDir -Filter '*.instructions.md' -ErrorAction SilentlyContinue)) {
+                $critical += @{ src = ".github/instructions/$($i.Name)"; bnd = "instructions/$($i.Name)" }
+            }
+        }
+        $agentsDir = Join-Path $Script:ROOT '.github/agents'
+        if (Test-Path $agentsDir) {
+            foreach ($a in (Get-ChildItem -Path $agentsDir -Recurse -Filter '*.agent.md' -ErrorAction SilentlyContinue)) {
+                $relA = ($a.FullName.Substring($agentsDir.Length).TrimStart('\','/')) -replace '\\','/'
+                $critical += @{ src = ".github/agents/$relA"; bnd = "agents/$relA" }
+            }
+        }
+        foreach ($pair in $critical) {
+            $srcPath = Join-Path $Script:ROOT $pair.src
+            $bndPath = Join-Path $bundleDir $pair.bnd
+            if (-not (Test-Path $srcPath)) { continue }
+            if (-not (Test-Path $bndPath)) { $drift.Add("missing in bundle: $($pair.src)") }
+        }
+
+        $synced = ($drift.Count -eq 0) -and ($srcSkills -gt 0)
+        $bndSummary = if ($synced) { "in sync (skills=$srcSkills)" } else { "$($drift.Count) drift(s) (skills src=$srcSkills bnd=$bndSkills)" }
+        $bndTail = if ($drift.Count -gt 0) { ($drift | Select-Object -First 5) -join "`n" } else { '' }
         Add-DoctorCheck -List $checks -Id 'bundle-sync' -Label 'VS Code extension bundle in sync' `
-            -Passed $synced -Summary "source=$srcSkills bundle=$bndSkills" `
-            -Hint 'Run: node vscode-extension/scripts/copy-assets.js'
+            -Passed $synced -Summary $bndSummary `
+            -Hint 'Run: node vscode-extension/scripts/copy-assets.js' `
+            -VerboseTail $bndTail
+    }
+
+    # 8. Skills index count drift
+    $skillsIndex = Join-Path $Script:ROOT 'Skills.md'
+    if (Test-Path $skillsIndex) {
+        $diskCount = @(Get-ChildItem -Path (Join-Path $Script:ROOT '.github/skills') -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue).Count
+        $idxText = Get-Content $skillsIndex -Raw -Encoding utf8
+        # Match count claims like "82 skills" but not "3-4 skills" / "max N skills" guidance.
+        $matches = [regex]::Matches($idxText, '(?<![\d\-])(\d{2,})\s+skills')
+        $declared = @($matches | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique)
+        $expected = @($diskCount)
+        $idxOk = ($declared.Count -eq 1) -and ($declared[0] -eq $diskCount)
+        $idxSummary = if ($idxOk) {
+            "Skills.md declares $diskCount, disk has $diskCount"
+        } else {
+            "disk=$diskCount declared=[$([string]::Join(',', $declared))]"
+        }
+        Add-DoctorCheck -List $checks -Id 'skills-index' -Label 'Skills.md count matches disk' `
+            -Passed $idxOk -Summary $idxSummary `
+            -Hint 'Update count strings in Skills.md (description, anti-pattern, directory header, footer)'
     }
 
     # Render
@@ -5195,6 +5260,11 @@ function Invoke-DoctorCmd {
             Write-CliOutput "      $($C.d)$($chk.summary)$($C.n)"
             if (-not $chk.passed -and $chk.hint) {
                 Write-CliOutput "      $($C.y)hint: $($chk.hint)$($C.n)"
+            }
+            if ($verbose -and $chk.verboseTail) {
+                foreach ($line in ($chk.verboseTail -split "`n")) {
+                    Write-CliOutput "      $($C.d)$line$($C.n)"
+                }
             }
         }
         Write-CliOutput ''
