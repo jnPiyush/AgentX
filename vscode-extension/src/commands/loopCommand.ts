@@ -7,6 +7,7 @@ import {
   loopCancel,
   loopComplete,
   loopIterate,
+  loopRollback,
   loopStart,
   loopStatus,
 } from './loopCommandInternals';
@@ -71,6 +72,13 @@ export function registerLoopCommand(
   await loopCancel(agentx);
  });
 
+ const loopRollbackCmd = vscode.commands.registerCommand('agentx.loopRollback', async () => {
+  if (!await ensureInitialized()) {
+   return;
+  }
+  await loopRollback(agentx);
+ });
+
  context.subscriptions.push(
   loopCmd,
   loopStartCmd,
@@ -78,5 +86,6 @@ export function registerLoopCommand(
   loopIterateCmd,
   loopCompleteCmd,
   loopCancelCmd,
+  loopRollbackCmd,
  );
 }

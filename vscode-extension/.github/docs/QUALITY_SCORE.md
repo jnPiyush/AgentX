@@ -17,7 +17,7 @@
 
 ---
 
-## Component Scores (v8.4.37)
+## Component Scores (v8.4.38)
 
 ### Agent Definitions (.github/agents/)
 
@@ -40,6 +40,7 @@
 | ADO Ops | B | Preview maturity -- process template adaptation works, ADO API coverage partial |
 | AzDO PRD to WIT | B | Preview maturity -- 5-phase PRD analysis solid, field-testing not yet done |
 | Functional Reviewer | B | Preview maturity -- false-positive mitigation effective, scope filtering could improve |
+| Architecture Reviewer | B | Preview maturity -- 12-dimension review checklist aligned with Azure/AWS WAF, ATAM, STRIDE; supports both AgentX issue-driven and standalone (human-written doc) modes including .docx/.pptx/.pdf/diagram inputs; needs field testing on real corpus |
 | Prompt Engineer | B | Preview maturity -- lifecycle management solid, multi-model testing needs automation |
 | Eval Specialist | B | Preview maturity -- RAGAS integration works, judge validation threshold tuning needed |
 | Ops Monitor | B | Preview maturity -- OpenTelemetry setup solid, drift baseline automation incomplete |
@@ -55,7 +56,7 @@
 | Operations | 5 | A | Git, GitHub Actions, YAML pipelines, release mgmt, version control |
 | Infrastructure | 4 | A | Azure, Bicep, Terraform, containerization |
 | Data | 6 | A | Data analysis, Fabric, Databricks, Power BI |
-| AI Systems | 17 | A | Agent dev, LangGraph, Foundry SDK, GenAIOps, prompt versioning, RAG, drift, evaluation, MCP, Azure Foundry |
+| AI Systems | 29 | A | Agent dev, LangGraph, Foundry SDK, GenAIOps, prompt versioning, RAG, drift, evaluation, MCP, Azure Foundry, Anthropic Claude, multi-agent orchestration, tool use, agent observability, reasoning models, AI safety, vector DBs, computer use, LLM gateway, voice agents, synthetic data, agent memory |
 | Design | 4 | A | design-system reasoning, UX/UI design, prototype craft, frontend/UI |
 | Testing | 6 | A | E2E, integration, performance, security, production readiness |
 | Domain | 7 | B | Oil & gas, financial services, audit, tax, legal, CLM, and corporate governance coverage is now present; more verticals could still be added |
@@ -108,7 +109,7 @@
 
 | Document | Grade | Notes |
 |----------|-------|-------|
-| AGENTS.md | A | Slim TOC/map (v8.4.37) |
+| AGENTS.md | A | Slim TOC/map (v8.4.38) |
 | WORKFLOW.md | A- | Complete workflow reference with harness-oriented policy additions; enforcement is still partial |
 | Skills.md | A | Compressed index, Quick Reference table |
 | GUIDE.md | B | Quickstart solid, troubleshooting section could expand |
@@ -125,6 +126,7 @@
 | SPEC-TEMPLATE.md | A | Diagram-first, no code examples |
 | UX-TEMPLATE.md | A | Wireframe + prototype sections |
 | REVIEW-TEMPLATE.md | A | 8-category review structure |
+| ARCH-REVIEW-TEMPLATE.md | A | 12-dimension architecture review with STRIDE, NFR traceability, ATAM trade-offs; dual mode (`agentx` issue-driven and `standalone` for human-written docs of any format) |
 | SECURITY-PLAN-TEMPLATE.md | A | OWASP-aligned |
 | PROGRESS-TEMPLATE.md | A | Status tracking |
 | ROADMAP-TEMPLATE.md | A | Portfolio roadmap and release planning structure |
@@ -165,4 +167,4 @@
 
 ---
 
-**Last updated**: v8.4.37
+**Last updated**: v8.4.38

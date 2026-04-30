@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 82 skills across 12 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 93 skills across 12 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 82 skills across 12 categori
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 82 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 93 skills. Use Quick Reference below.
 
 ---
 
@@ -38,6 +38,17 @@ description: 'Compressed skill index for AI agents. 82 skills across 12 categori
 | **Token Budget / Context** | [Token Optimizer](.github/skills/development/token-optimizer/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md) |
 | **Azure AI Foundry Agent** | [Azure Foundry](.github/skills/ai-systems/azure-foundry/SKILL.md), [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md). For operational workflows (create, deploy, trace), install companion: GitHub Copilot for Azure |
 | **Anthropic Claude Implementation** | [Anthropic Claude](.github/skills/ai-systems/anthropic-claude/SKILL.md), [Prompt Eng](.github/skills/ai-systems/prompt-engineering/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md) |
+| **Multi-Agent System** | [Multi-Agent Orchestration](.github/skills/ai-systems/multi-agent-orchestration/SKILL.md), [Tool Use](.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md), [Agent Observability](.github/skills/ai-systems/agent-observability/SKILL.md), [AI Safety](.github/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md) |
+| **LLM Tool / Function Calling** | [Tool Use](.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md), [Prompt Eng](.github/skills/ai-systems/prompt-engineering/SKILL.md), [AI Safety](.github/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md), [Agent Observability](.github/skills/ai-systems/agent-observability/SKILL.md) |
+| **Reasoning Model Tasks** | [Reasoning Models](.github/skills/ai-systems/reasoning-models/SKILL.md), [Prompt Eng](.github/skills/ai-systems/prompt-engineering/SKILL.md), [LLM Gateway](.github/skills/ai-systems/llm-gateway-and-routing/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md) |
+| **AI Safety / Red Team** | [AI Safety](.github/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md), [Tool Use](.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md), [RAG Pipelines](.github/skills/ai-systems/rag-pipelines/SKILL.md) |
+| **Agent Observability** | [Agent Observability](.github/skills/ai-systems/agent-observability/SKILL.md), [GenAIOps](.github/skills/ai-systems/genaiops/SKILL.md), [Prompt Versioning](.github/skills/ai-systems/prompt-versioning/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md) |
+| **Vector DB Selection** | [Vector Databases](.github/skills/ai-systems/vector-databases/SKILL.md), [RAG Pipelines](.github/skills/ai-systems/rag-pipelines/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md) |
+| **Computer Use / Browser Agent** | [Computer Use](.github/skills/ai-systems/computer-use-and-browser-agents/SKILL.md), [Tool Use](.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md), [AI Safety](.github/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md), [Agent Observability](.github/skills/ai-systems/agent-observability/SKILL.md) |
+| **LLM Gateway / Routing** | [LLM Gateway](.github/skills/ai-systems/llm-gateway-and-routing/SKILL.md), [Agent Observability](.github/skills/ai-systems/agent-observability/SKILL.md), [Prompt Versioning](.github/skills/ai-systems/prompt-versioning/SKILL.md), [GenAIOps](.github/skills/ai-systems/genaiops/SKILL.md) |
+| **Voice Agent (Realtime)** | [Voice Agents](.github/skills/ai-systems/voice-agents/SKILL.md), [Tool Use](.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md), [Agent Observability](.github/skills/ai-systems/agent-observability/SKILL.md), [AI Safety](.github/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md) |
+| **Synthetic Data Generation** | [Synthetic Data](.github/skills/ai-systems/synthetic-data-generation/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md), [Model Fine-Tuning](.github/skills/ai-systems/model-fine-tuning/SKILL.md), [AI Safety](.github/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md) |
+| **Agent Memory** | [Agent Memory](.github/skills/ai-systems/agent-memory-systems/SKILL.md), [Vector Databases](.github/skills/ai-systems/vector-databases/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md), [Cognitive Arch](.github/skills/ai-systems/cognitive-architecture/SKILL.md) |
 | **Foundry SDK Implementation** | [Foundry SDK](.github/skills/ai-systems/foundry-sdk/SKILL.md), [Azure Foundry](.github/skills/ai-systems/azure-foundry/SKILL.md), [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md) |
 | **GenAIOps / LLMOps** | [GenAIOps](.github/skills/ai-systems/genaiops/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md), [Model Drift](.github/skills/ai-systems/model-drift-management/SKILL.md), [Feedback Loops](.github/skills/ai-systems/feedback-loops/SKILL.md) |
 | **Model Fine-Tuning** | [Model Fine-Tuning](.github/skills/ai-systems/model-fine-tuning/SKILL.md), [AI Evaluation](.github/skills/ai-systems/ai-evaluation/SKILL.md), [Feedback Loops](.github/skills/ai-systems/feedback-loops/SKILL.md) |
@@ -68,7 +79,7 @@ description: 'Compressed skill index for AI agents. 82 skills across 12 categori
 
 ---
 
-## Skills Directory (82 skills -- pipe-delimited)
+## Skills Directory (93 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -137,6 +148,17 @@ ai|context-mgmt|.github/skills/ai-systems/context-management/SKILL.md|compaction
 ai|feedback-loops|.github/skills/ai-systems/feedback-loops/SKILL.md|RLHF,RLAIF,user-feedback,preference-data,continuous-improvement
 ai|azure-foundry|.github/skills/ai-systems/azure-foundry/SKILL.md|Foundry,agent-lifecycle,model-selection,tracing,guardrails,deployment
 ai|anthropic-claude|.github/skills/ai-systems/anthropic-claude/SKILL.md|Claude,Anthropic,Messages-API,tool-use,prompt-caching,extended-thinking,Bedrock,Vertex,Claude-Agent-SDK
+ai|multi-agent-orchestration|.github/skills/ai-systems/multi-agent-orchestration/SKILL.md|multi-agent,supervisor,swarm,handoff,hierarchical,graph,A2A,AutoGen,CrewAI,OpenAI-Agents-SDK,Microsoft-Agent-Framework
+ai|tool-use|.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md|tool-use,function-calling,JSON-Schema,structured-outputs,parallel-tools,tool-error,idempotency
+ai|agent-observability|.github/skills/ai-systems/agent-observability/SKILL.md|OpenTelemetry,GenAI-conventions,Langfuse,LangSmith,Phoenix,Helicone,OpenLLMetry,traces,metrics,cost
+ai|reasoning-models|.github/skills/ai-systems/reasoning-models/SKILL.md|o-series,o3,GPT-5-thinking,extended-thinking,DeepSeek-R1,Gemini-Thinking,reasoning_effort,planner-executor
+ai|ai-safety|.github/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md|prompt-injection,indirect-injection,jailbreak,LlamaGuard,ShieldGemma,Prompt-Shields,PyRIT,Garak,promptfoo,OWASP-LLM
+ai|vector-databases|.github/skills/ai-systems/vector-databases/SKILL.md|Azure-AI-Search,Pinecone,Qdrant,Weaviate,Milvus,pgvector,LanceDB,HNSW,DiskANN,hybrid-search,embeddings
+ai|computer-use|.github/skills/ai-systems/computer-use-and-browser-agents/SKILL.md|Computer-Use,Operator,CUA,browser-use,Playwright,Browserbase,E2B,sandboxing,screenshots
+ai|llm-gateway|.github/skills/ai-systems/llm-gateway-and-routing/SKILL.md|LiteLLM,Portkey,Azure-AI-Gateway,APIM,OpenRouter,routing,fallback,semantic-cache,rate-limit
+ai|voice-agents|.github/skills/ai-systems/voice-agents/SKILL.md|OpenAI-Realtime,Voice-Live,Gemini-Live,Deepgram,ElevenLabs,LiveKit,Pipecat,barge-in,turn-taking,latency
+ai|synthetic-data|.github/skills/ai-systems/synthetic-data-generation/SKILL.md|Self-Instruct,Evol-Instruct,distillation,persona,decontamination,distilabel,argilla,dataset-cards
+ai|agent-memory|.github/skills/ai-systems/agent-memory-systems/SKILL.md|mem0,Zep,Letta,MemGPT,LangMem,episodic,semantic,procedural,consolidation,personalization
 design|design-system-reasoning|.github/skills/design/design-system-reasoning/SKILL.md|design-system,art-direction,tokens,visual-language,anti-patterns,ui-direction
 design|ux-ui|.github/skills/design/ux-ui-design/SKILL.md|wireframes,user-flows,HTML/CSS,a11y
 design|prototype-craft|.github/skills/design/prototype-craft/SKILL.md|visual-polish,color-palette,typography,CSS-craft,Tailwind,transitions,elevation
@@ -229,6 +251,17 @@ Cosmos Gremlin Graph|cosmos-db->azure->bicep->security->code-review
 Databricks ETL|databricks->database->python->testing->code-review
 Databricks ML|databricks->ai-agent-dev->python->testing->code-review
 AI Agent|ai-agent-dev->prompt-eng->python/csharp->error-handling->testing->code-review
+Multi-Agent System|multi-agent-orchestration->tool-use->agent-observability->ai-safety->code-review
+Tool / Function Calling|tool-use->prompt-eng->ai-safety->agent-observability->testing
+Reasoning Model Task|reasoning-models->prompt-eng->llm-gateway->evaluation->code-review
+AI Safety / Red Team|ai-safety->evaluation->tool-use->rag-pipelines->code-review
+Agent Observability Setup|agent-observability->genaiops->prompt-versioning->evaluation
+Vector DB Selection|vector-databases->rag-pipelines->evaluation->code-review
+Computer Use Agent|computer-use->tool-use->ai-safety->agent-observability->testing
+LLM Gateway Rollout|llm-gateway->agent-observability->prompt-versioning->genaiops->release-mgmt
+Voice Agent (Realtime)|voice-agents->tool-use->agent-observability->ai-safety->testing
+Synthetic Data Pipeline|synthetic-data->evaluation->fine-tuning->ai-safety->code-review
+Agent Memory System|agent-memory->vector-databases->context-mgmt->cognitive-arch->testing
 LangGraph Agent|langgraph->cognitive-arch->evaluation->prompt-versioning->code-review
 Foundry SDK App|foundry-sdk->azure-foundry->ai-agent-dev->evaluation->code-review
 GenAIOps Rollout|genaiops->evaluation->model-drift->feedback-loops->release-mgmt
@@ -254,5 +287,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 82 skills (arch:5, dev:14, lang:10, ops:5, infra:4, data:7, ai:18, design:4, test:6, domain:7, product:1, diagrams:1)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 93 skills (arch:5, dev:14, lang:10, ops:5, infra:4, data:7, ai:29, design:4, test:6, domain:7, product:1, diagrams:1)
 

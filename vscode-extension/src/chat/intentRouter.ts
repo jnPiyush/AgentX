@@ -290,13 +290,22 @@ const PHRASE_RULES: ReadonlyArray<PhraseRule> = [
   },
   {
     id: 'loop-complete',
-    description: 'Mark the iterative loop complete with a summary',
+    description: 'Mark the iterative loop complete with a summary (and optional evidence path)',
     destructive: true,
     subcommand: 'loop',
-    pattern: /^(?:complete|finish|finalize|close)\s+(?:the\s+)?loop\s*(?:with\s+|saying\s+|:\s*)(.+)$/i,
+    // Optional trailer "evidence <path>" or "with evidence <path>" maps to -e <path>.
+    // The CLI requires --evidence on loop complete; without it, completion fails with
+    // a clear CLI error pointing the user to provide a final gate artifact.
+    pattern: /^(?:complete|finish|finalize|close)\s+(?:the\s+)?loop\s*(?:with\s+|saying\s+|:\s*)(.+?)(?:\s+(?:with\s+)?evidence\s+(\S+))?\.?$/i,
     argMapper: (m) => {
       const summary = (m[1] ?? '').trim();
-      return summary.length > 0 ? ['complete', '-s', summary] : undefined;
+      if (summary.length === 0) { return undefined; }
+      const evidence = (m[2] ?? '').trim();
+      const args = ['complete', '-s', summary];
+      if (evidence.length > 0) {
+        args.push('-e', evidence);
+      }
+      return args;
     },
   },
   {

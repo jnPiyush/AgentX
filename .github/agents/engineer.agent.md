@@ -11,7 +11,7 @@ constraints:
   - "MUST perform a design-alignment checkpoint with Architect before coding when the implementation crosses architecture boundaries, introduces a new pattern outside the ADR/Spec, or requires a meaningful design deviation"
   - "MUST perform a design-alignment checkpoint with Data Scientist before coding when `needs:ai` work changes model behavior, prompt flow, eval logic, RAG design, or ML input/output contracts"
   - "MUST load and read the skills prescribed for each phase before performing that phase's work"
-  - "MUST start quality loop after first implementation commit: .agentx/agentx.ps1 loop start -p <prompt-text> -i <issue> (--prompt flag is REQUIRED; omitting it causes exit 1 -- see iterative-loop skill for full syntax)"
+  - "MUST run '.agentx/agentx.ps1 loop start -p <prompt-text> -i <issue>' as the ABSOLUTE FIRST action before any file edit (--prompt flag is REQUIRED; omitting it causes exit 1 -- see iterative-loop skill for full syntax)"
   - "MUST complete a minimum of 5 quality loop iterations before declaring implementation done"
   - "MUST attach a real evidence file to EVERY `loop iterate` and to `loop complete` (--evidence <path>); the CLI rejects iterations without it"
   - "MUST execute Iteration 4 (Adversarial) -- property-based tests, mutation testing on changed lines, fuzzing of any parser/deserializer/LLM-output handler, and at least 3 negative tests per public endpoint -- before declaring production-ready"

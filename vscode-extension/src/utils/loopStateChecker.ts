@@ -25,7 +25,7 @@ export interface LoopState {
   readonly status: 'active' | 'complete' | 'cancelled';
   readonly prompt: string;
   readonly taskType?: string;
-  readonly taskClass?: 'complex-delivery' | 'standard';
+  readonly taskClass?: 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x';
   readonly iteration: number;
   readonly minIterations?: number;
   readonly maxIterations: number;
@@ -61,10 +61,14 @@ export interface LoopGateResult {
 const LOOP_STATE_REL = '.agentx/state/loop-state.json';
 const LOOP_STALE_AFTER_MS = 8 * 60 * 60 * 1000;
 const LOOP_STUCK_AFTER_MS = 90 * 60 * 1000;
+// Per-task-class minimum iterations. Must mirror agentx-cli.ps1
+// ($Script:LOOP_*_MIN_ITERATIONS).
 const DEFAULT_COMPLEX_MIN_ITERATIONS = 5;
 const DEFAULT_STANDARD_MIN_ITERATIONS = 3;
+const DEFAULT_AUTO_FIX_MIN_ITERATIONS = 5;
+const DEFAULT_AGENT_X_MIN_ITERATIONS = 5;
 
-type LoopTaskClass = 'complex-delivery' | 'standard';
+type LoopTaskClass = 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x';
 type LoopHealthKind = 'healthy' | 'stale' | 'stuck';
 
 interface LoopHealth {
@@ -74,15 +78,23 @@ interface LoopHealth {
 
 function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completionCriteria' | 'taskType' | 'taskClass'>): LoopTaskClass {
   const explicitTaskClass = (state.taskClass ?? '').trim().toLowerCase();
-  if (explicitTaskClass === 'complex-delivery') {
-    return 'complex-delivery';
-  }
-
-  if (explicitTaskClass === 'standard') {
-    return 'standard';
-  }
+  if (explicitTaskClass === 'complex-delivery') { return 'complex-delivery'; }
+  if (explicitTaskClass === 'standard') { return 'standard'; }
+  if (explicitTaskClass === 'auto-fix-review') { return 'auto-fix-review'; }
+  if (explicitTaskClass === 'agent-x') { return 'agent-x'; }
 
   const fingerprint = `${state.taskType ?? ''}\n${state.prompt ?? ''}\n${state.completionCriteria ?? ''}`.toLowerCase();
+
+  // Auto-fix and agent-x checks before the generic 'review' keyword so a prompt
+  // like 'Review code and apply safe fixes' resolves to auto-fix-review, not standard.
+  // Mirrors agentx-cli.ps1 Get-LoopTaskClass detection order.
+  if (/\b(auto-fix|auto fix|apply safe fix|apply.*fixes|reviewer.*fix|fix.*review)\b/.test(fingerprint)) {
+    return 'auto-fix-review';
+  }
+  if (/\b(autonomous|orchestrat|classify.*route|agent.x|agent x)\b/.test(fingerprint)) {
+    return 'agent-x';
+  }
+
   const standardPattern = /\b(bug|hotfix|regression|prd|product requirement|tech spec|technical spec|specification|adr|architecture doc|review|brainstorm|clarification|docs|documentation)\b/;
   const complexPattern = /\b(implement|implementation|build|create|ship|refactor|feature|endpoint|component|screen|prototype|wireframe|ux|ui|frontend|backend|model|training|data science|evaluation pipeline|notebook|agent|workflow|all_tests_passing|coverage)\b/;
 
@@ -98,9 +110,13 @@ function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completionCriteri
 }
 
 function getDefaultMinIterations(state: LoopState): number {
-  const baseMinimum = inferLoopTaskClass(state) === 'complex-delivery'
-    ? DEFAULT_COMPLEX_MIN_ITERATIONS
-    : DEFAULT_STANDARD_MIN_ITERATIONS;
+  let baseMinimum: number;
+  switch (inferLoopTaskClass(state)) {
+    case 'complex-delivery': baseMinimum = DEFAULT_COMPLEX_MIN_ITERATIONS; break;
+    case 'auto-fix-review': baseMinimum = DEFAULT_AUTO_FIX_MIN_ITERATIONS; break;
+    case 'agent-x': baseMinimum = DEFAULT_AGENT_X_MIN_ITERATIONS; break;
+    default: baseMinimum = DEFAULT_STANDARD_MIN_ITERATIONS;
+  }
   return Math.min(baseMinimum, state.maxIterations);
 }
 
@@ -165,11 +181,17 @@ function getLoopHealth(
     };
   }
 
-  const latestHistory = state.history[state.history.length - 1];
-  if (latestHistory && typeof latestHistory.iteration === 'number' && latestHistory.iteration > state.iteration) {
+  // Find the latest non-rollback history entry. Rollback entries record the
+  // iteration that was rolled BACK FROM (so their iteration number is
+  // legitimately ahead of state.iteration after a rollback) -- they are not a
+  // stuck signal. Mirrors Invoke-LoopRollback in agentx-cli.ps1.
+  const latestForwardHistory = [...state.history]
+    .reverse()
+    .find((h) => h && h.status !== 'rollback');
+  if (latestForwardHistory && typeof latestForwardHistory.iteration === 'number' && latestForwardHistory.iteration > state.iteration) {
     return {
       kind: 'stuck',
-      reason: `history iteration ${latestHistory.iteration} is ahead of loop iteration ${state.iteration}`,
+      reason: `history iteration ${latestForwardHistory.iteration} is ahead of loop iteration ${state.iteration}`,
     };
   }
 

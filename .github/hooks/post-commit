@@ -3,25 +3,99 @@
 # This prevents a stale "complete" loop state from being silently reused
 # across multiple unrelated commits without starting a fresh loop.
 # The next code commit will require a new "agentx loop start" call.
+#
+# IMPORTANT: This hook MUST succeed in marking loopConsumed=true whenever a
+# complete loop is present. If it cannot (no node, no python, no pwsh), it
+# emits a [WARN] and falls back to a shell sed-based rewrite. Silent failure
+# would let the same complete loop pass the pre-commit gate on the next commit.
 
 LOOP_STATE=".agentx/state/loop-state.json"
-if [ -f "$LOOP_STATE" ]; then
-  LOOP_STATUS=$(grep -o '"status":[[:space:]]*"[^"]*"' "$LOOP_STATE" 2>/dev/null | head -1 | sed 's/"status":[[:space:]]*"//' | sed 's/"//')
-  if [ "$LOOP_STATUS" = "complete" ]; then
-    # Mark loop as consumed using node (available in VS Code / npm environments).
-    # Adds "loopConsumed": true to the state JSON (top-level only, not history).
-    if command -v node &>/dev/null; then
-      node -e "
+[ -f "$LOOP_STATE" ] || exit 0
+
+LOOP_STATUS=$(grep -o '"status":[[:space:]]*"[^"]*"' "$LOOP_STATE" 2>/dev/null | head -1 | sed 's/"status":[[:space:]]*"//' | sed 's/"//')
+[ "$LOOP_STATUS" = "complete" ] || exit 0
+
+# Already marked? Nothing to do.
+if grep -q '"loopConsumed"[[:space:]]*:[[:space:]]*true' "$LOOP_STATE" 2>/dev/null; then
+  exit 0
+fi
+
+mark_consumed_node() {
+  command -v node >/dev/null 2>&1 || return 1
+  node -e "
 var fs = require('fs');
 var f = process.argv[1];
-try {
-  var s = JSON.parse(fs.readFileSync(f, 'utf8'));
-  if (s.status === 'complete') {
-    s.loopConsumed = true;
-    fs.writeFileSync(f, JSON.stringify(s, null, 2) + '\n');
-  }
-} catch (e) {}
-" "$LOOP_STATE" 2>/dev/null || true
-    fi
+var s = JSON.parse(fs.readFileSync(f, 'utf8'));
+if (s.status === 'complete') {
+  s.loopConsumed = true;
+  fs.writeFileSync(f, JSON.stringify(s, null, 2) + '\n');
+}
+" "$LOOP_STATE" 2>/dev/null
+}
+
+mark_consumed_python() {
+  local PY=""
+  command -v python3 >/dev/null 2>&1 && PY=python3
+  [ -z "$PY" ] && command -v python >/dev/null 2>&1 && PY=python
+  [ -z "$PY" ] && return 1
+  "$PY" -c "
+import json, sys
+f = sys.argv[1]
+with open(f, 'r', encoding='utf-8') as fh:
+    s = json.load(fh)
+if s.get('status') == 'complete':
+    s['loopConsumed'] = True
+    with open(f, 'w', encoding='utf-8') as fh:
+        json.dump(s, fh, indent=2)
+        fh.write('\n')
+" "$LOOP_STATE" 2>/dev/null
+}
+
+mark_consumed_pwsh() {
+  command -v pwsh >/dev/null 2>&1 || return 1
+  pwsh -NoProfile -Command "
+\$f = '$LOOP_STATE'
+\$s = Get-Content -Raw -LiteralPath \$f | ConvertFrom-Json
+if (\$s.status -eq 'complete') {
+    if (\$s.PSObject.Properties.Name -contains 'loopConsumed') { \$s.loopConsumed = \$true }
+    else { Add-Member -InputObject \$s -NotePropertyName loopConsumed -NotePropertyValue \$true -Force }
+    \$s | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath \$f -Encoding utf8
+}
+" 2>/dev/null
+}
+
+# Last-resort sed fallback. Handles two cases:
+# 1. Existing "loopConsumed": false -> rewrite to true.
+# 2. Field missing -> insert before final closing brace.
+mark_consumed_sed() {
+  if grep -q '"loopConsumed"[[:space:]]*:[[:space:]]*false' "$LOOP_STATE"; then
+    sed -i.bak 's/"loopConsumed"[[:space:]]*:[[:space:]]*false/"loopConsumed": true/' "$LOOP_STATE" 2>/dev/null
+    rm -f "${LOOP_STATE}.bak"
+  else
+    # Insert before the last '}' on its own line
+    awk '
+      { lines[NR] = $0 }
+      END {
+        last_brace = 0
+        for (i = NR; i >= 1; i--) {
+          if (lines[i] ~ /^[[:space:]]*}[[:space:]]*$/) { last_brace = i; break }
+        }
+        for (i = 1; i <= NR; i++) {
+          if (i == last_brace) print "  ,\"loopConsumed\": true"
+          print lines[i]
+        }
+      }
+    ' "$LOOP_STATE" > "${LOOP_STATE}.tmp" && mv "${LOOP_STATE}.tmp" "$LOOP_STATE"
   fi
+  # Verify
+  grep -q '"loopConsumed"[[:space:]]*:[[:space:]]*true' "$LOOP_STATE"
+}
+
+if mark_consumed_node || mark_consumed_python || mark_consumed_pwsh || mark_consumed_sed; then
+  exit 0
 fi
+
+echo "[WARN] post-commit could not mark loopConsumed=true (no node/python/pwsh and sed fallback failed)." >&2
+echo "[WARN] The next code commit may pass the loop gate using this stale complete state." >&2
+echo "[WARN] Manually edit .agentx/state/loop-state.json to add: \"loopConsumed\": true" >&2
+exit 0

@@ -124,10 +124,20 @@ LOOP_STATE=".agentx/state/loop-state.json"
 LOOP_ACTIVE=""
 LOOP_STATUS=""
 LOOP_CONSUMED=""
+LOOP_ITERATION=0
+LOOP_MIN_ITERATIONS=0
+LOOP_HAS_REVIEW_ITERATION=""
 if [ -f "$LOOP_STATE" ]; then
   LOOP_ACTIVE=$(grep -o '"active":[[:space:]]*true' "$LOOP_STATE" 2>/dev/null || true)
   LOOP_STATUS=$(grep -o '"status":[[:space:]]*"[^"]*"' "$LOOP_STATE" 2>/dev/null | head -1 | sed 's/"status":[[:space:]]*"//' | sed 's/"//')
   LOOP_CONSUMED=$(grep -o '"loopConsumed":[[:space:]]*true' "$LOOP_STATE" 2>/dev/null || true)
+  # Top-level iteration counter (first match -- nested history entries follow it)
+  LOOP_ITERATION=$(grep -oE '"iteration":[[:space:]]*[0-9]+' "$LOOP_STATE" 2>/dev/null | head -1 | grep -oE '[0-9]+')
+  LOOP_MIN_ITERATIONS=$(grep -oE '"minIterations":[[:space:]]*[0-9]+' "$LOOP_STATE" 2>/dev/null | head -1 | grep -oE '[0-9]+')
+  # Subagent review marker: any history summary mentioning "review" (case-insensitive)
+  LOOP_HAS_REVIEW_ITERATION=$(grep -iE '"summary":[[:space:]]*"[^"]*\b(reviewer|sub-?agent[^"]*review|subagent[^"]*review|review[^"]*pass|review[^"]*loop)' "$LOOP_STATE" 2>/dev/null | head -1)
+  : "${LOOP_ITERATION:=0}"
+  : "${LOOP_MIN_ITERATIONS:=0}"
 fi
 
 # Block active loops first (regardless of file type)
@@ -153,20 +163,28 @@ fi
 CODE_FILES_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|mjs|cjs|ps1|psm1|psd1|py|pyx|cs|csx|go|rs|sh|bash|tf|tfvars|bicep|sql)$' | head -1)
 if [ -n "$CODE_FILES_STAGED" ] && [ -z "$LOOP_ACTIVE" ]; then
   LOOP_GATE_FAIL=0
+  LOOP_GATE_MSG=""
   if [ "$LOOP_STATUS" != "complete" ]; then
     LOOP_GATE_FAIL=1
     LOOP_GATE_MSG="Code files staged but no completed quality loop found"
   elif [ -n "$LOOP_CONSUMED" ]; then
     LOOP_GATE_FAIL=1
     LOOP_GATE_MSG="Quality loop was already consumed by a prior commit -- start a fresh loop"
+  elif [ "${LOOP_MIN_ITERATIONS:-0}" -gt 0 ] && [ "${LOOP_ITERATION:-0}" -lt "${LOOP_MIN_ITERATIONS:-0}" ]; then
+    LOOP_GATE_FAIL=1
+    LOOP_GATE_MSG="Quality loop completed below minimum iterations: $LOOP_ITERATION/$LOOP_MIN_ITERATIONS -- run more 'agentx loop iterate' passes"
+  elif [ -z "$LOOP_HAS_REVIEW_ITERATION" ]; then
+    LOOP_GATE_FAIL=1
+    LOOP_GATE_MSG="Quality loop missing subagent reviewer pass -- at least one iteration summary MUST contain 'review' (e.g. 'Iter N (Subagent Review): ...')"
   fi
   if [ $LOOP_GATE_FAIL -eq 1 ]; then
     if [ -z "$AGENTX_SKIP_LOOP_GATE" ]; then
       echo -e "${RED}[FAIL] $LOOP_GATE_MSG${NC}"
-      echo "  ALL code changes MUST be wrapped in a completed quality loop:"
+      echo "  ALL code changes MUST be wrapped in a completed quality loop with subagent review:"
       echo "    agentx loop start -p \"<task description>\""
-      echo "    agentx loop iterate -s \"<progress summary>\""
-      echo "    agentx loop complete -s \"All gates passed\""
+      echo "    agentx loop iterate -s \"<progress summary>\" -e <evidence-file>   # repeat >= minIterations"
+      echo "    agentx loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence>"
+      echo "    agentx loop complete -s \"All gates passed\" -e <final-gate-evidence>"
       echo "  Emergency hotfix bypass: AGENTX_SKIP_LOOP_GATE=1 git commit"
       FAILED=1
     else

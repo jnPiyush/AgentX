@@ -121,7 +121,7 @@ Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/
 | UX Designer | `ux-designer.agent.md` | Wireframes + HTML prototypes at `docs/ux/` |
 | Architect | `architect.agent.md` | ADR + Tech Specs at `docs/artifacts/adr/`, `docs/artifacts/specs/` |
 | Engineer | `engineer.agent.md` | Code + Tests (80% coverage) |
-| Reviewer | `reviewer.agent.md` | Review at `docs/artifacts/reviews/` |
+| Reviewer | `reviewer.agent.md` | Review at `docs/artifacts/reviews/` (code reviews + standalone architecture doc reviews) |
 | Auto-Fix Reviewer | `reviewer-auto.agent.md` | Review + safe auto-fixes |
 | DevOps Engineer | `devops.agent.md` | Pipelines at `.github/workflows/` |
 | Data Scientist | `data-scientist.agent.md` | ML pipelines + evals at `docs/data-science/` |
@@ -131,7 +131,7 @@ Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/
 | Agile Coach | `agile-coach.agent.md` | Stories at `docs/coaching/` |
 
 **Internal sub-agents** (spawned by parent agents, not user-invokable):
-GitHub Ops, ADO Ops, AzDO PRD to WIT, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist.
+GitHub Ops, ADO Ops, AzDO PRD to WIT, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist.
 
 ---
 
@@ -171,7 +171,7 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | `.github/skills/` | 75 skill files across 10 categories |
 | `.github/instructions/` | 7 instruction files (auto-loaded by file pattern) |
 | `.github/schemas/` | Handoff message JSON Schema + communication protocol |
-| `.github/templates/` | 11 templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary) |
+| `.github/templates/` | 12 templates (PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary) |
 | `.github/prompts/` | 21 reusable prompt templates |
 | `.agentx/` | CLI utilities (agentx.ps1, agentx.sh, agentic-runner.ps1) |
 | `scripts/modules/` | Shared PowerShell modules |

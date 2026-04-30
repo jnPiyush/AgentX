@@ -14,6 +14,7 @@ import {
 } from '../utils/learnings';
 import {
  evaluateWorkflowGuidance,
+ fetchProviderAwareIssues,
  renderOperatorEnablementChecklistMarkdown,
  renderWorkflowEntryPointMarkdown,
  renderWorkflowGuidanceMarkdown,
@@ -90,7 +91,8 @@ export async function showWorkflowNextStep(agentx: AgentXContext): Promise<void>
   return;
  }
 
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()));
+ const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
+ const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
  const channel = getLearningsChannel();
  channel.clear();
  channel.appendLine(renderWorkflowGuidanceMarkdown(snapshot));
@@ -104,7 +106,8 @@ export async function showWorkflowRolloutScorecard(agentx: AgentXContext): Promi
   return;
  }
 
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()));
+ const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
+ const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
  const channel = getLearningsChannel();
  channel.clear();
  channel.appendLine(renderWorkflowRolloutScorecardMarkdown(snapshot));
@@ -118,7 +121,8 @@ export async function showOperatorEnablementChecklist(agentx: AgentXContext): Pr
   return;
  }
 
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()));
+ const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
+ const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
  const channel = getLearningsChannel();
  channel.clear();
  channel.appendLine(renderOperatorEnablementChecklistMarkdown(snapshot));
@@ -132,7 +136,8 @@ export async function launchPlanDeepening(agentx: AgentXContext): Promise<void> 
   return;
  }
 
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()));
+ const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
+ const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
  const channel = getLearningsChannel();
  channel.clear();
  channel.appendLine(renderWorkflowEntryPointMarkdown(snapshot, 'plan-deepening'));
@@ -146,7 +151,8 @@ export async function launchReviewKickoff(agentx: AgentXContext): Promise<void> 
   return;
  }
 
- const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()));
+ const issues = await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root);
+ const snapshot = evaluateWorkflowGuidance(root, !!(await agentx.getPendingClarification?.()), issues);
  const channel = getLearningsChannel();
  channel.clear();
  channel.appendLine(renderWorkflowEntryPointMarkdown(snapshot, 'review-kickoff'));

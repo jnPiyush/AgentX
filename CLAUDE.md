@@ -181,6 +181,7 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 | ADO Ops | [.github/agents/internal/ado-ops.agent.md](.github/agents/internal/ado-ops.agent.md) |
 | AzDO PRD to WIT | [.github/agents/internal/ado-prd-to-wit.agent.md](.github/agents/internal/ado-prd-to-wit.agent.md) |
 | Functional Reviewer | [.github/agents/internal/functional-reviewer.agent.md](.github/agents/internal/functional-reviewer.agent.md) |
+| Architecture Reviewer | [.github/agents/internal/architecture-reviewer.agent.md](.github/agents/internal/architecture-reviewer.agent.md) |
 | Prompt Engineer | [.github/agents/internal/prompt-engineer.agent.md](.github/agents/internal/prompt-engineer.agent.md) |
 | Eval Specialist | [.github/agents/internal/eval-specialist.agent.md](.github/agents/internal/eval-specialist.agent.md) |
 | Ops Monitor | [.github/agents/internal/ops-monitor.agent.md](.github/agents/internal/ops-monitor.agent.md) |
@@ -200,7 +201,7 @@ All 21 agents are available as `/project:` slash commands in Claude Code via `.c
 | `/project:ux-designer` | UX Designer | Wireframes, HTML/CSS prototypes, WCAG 2.1 AA |
 | `/project:architect` | Architect | ADR with 3+ options, Tech Spec with diagrams |
 | `/project:engineer` | Engineer | Implement code, tests (80% coverage), quality loop |
-| `/project:reviewer` | Reviewer | Code review (8 categories), approve or reject |
+| `/project:reviewer` | Reviewer | Code review (8 categories), approve or reject; also reviews standalone human-written architecture docs (`.md`/`.docx`/`.pptx`/`.pdf`/diagrams) via the Architecture Reviewer sub-agent |
 | `/project:reviewer-auto` | Auto-Fix Reviewer | Review + auto-apply safe fixes |
 | `/project:devops` | DevOps Engineer | GitHub Actions pipelines, deployment automation |
 | `/project:data-scientist` | Data Scientist | ML pipelines, evaluations, drift monitoring |
@@ -227,6 +228,7 @@ Each command file contains the agent's constraints, boundaries, execution steps,
 | Tech Spec | `.github/templates/SPEC-TEMPLATE.md` |
 | UX Design | `.github/templates/UX-TEMPLATE.md` |
 | Code Review | `.github/templates/REVIEW-TEMPLATE.md` |
+| Architecture Review | `.github/templates/ARCH-REVIEW-TEMPLATE.md` |
 | Security Plan | `.github/templates/SECURITY-PLAN-TEMPLATE.md` |
 | Progress Log | `.github/templates/PROGRESS-TEMPLATE.md` |
 | Roadmap | `.github/templates/ROADMAP-TEMPLATE.md` |

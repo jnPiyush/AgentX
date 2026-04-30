@@ -70,7 +70,7 @@ export interface WorkflowGuidanceSnapshot {
   readonly operatorChecklist: readonly OperatorChecklistItem[];
 }
 
-interface LocalIssue {
+export interface LocalIssue {
   readonly number?: number;
   readonly title?: string;
   readonly status?: string;
@@ -87,6 +87,11 @@ const LEARNINGS_DIR = 'docs/artifacts/learnings';
 export function evaluateWorkflowGuidance(
   workspaceRoot: string | undefined,
   pendingClarification = false,
+  // Optional provider-aware issue list. Async callers (chat router, learnings
+  // command) can pass `agentx issue list --json` results so guidance reflects
+  // GitHub/ADO state, not just local files. When omitted, falls back to local
+  // .agentx/issues/ JSON, which keeps existing sync callers and tests working.
+  issuesOverride?: readonly LocalIssue[],
 ): WorkflowGuidanceSnapshot | undefined {
   if (!workspaceRoot) {
     return undefined;
@@ -95,7 +100,9 @@ export function evaluateWorkflowGuidance(
   const harnessState = readHarnessState(workspaceRoot);
   const preferredThread = [...harnessState.threads]
     .sort((left, right) => compareThreads(left.status, right.status, left.updatedAt, right.updatedAt))[0];
-  const issues = getLocalIssues(workspaceRoot);
+  const issues = issuesOverride && issuesOverride.length > 0
+    ? [...issuesOverride]
+    : getLocalIssues(workspaceRoot);
   const issue = preferredThread?.issueNumber
     ? issues.find((candidate) => candidate.number === preferredThread.issueNumber)
     : issues.find((candidate) => (candidate.state ?? 'open') !== 'closed') ?? issues[0];
@@ -577,6 +584,28 @@ function getLocalIssues(root: string): LocalIssue[] {
     .map((entry) => readJsonFile<LocalIssue>(path.join(issuesDir, entry)))
     .filter((issue): issue is LocalIssue => !!issue)
     .sort((left, right) => (left.number ?? 0) - (right.number ?? 0));
+}
+
+/**
+ * Fetch provider-aware issues via the CLI ('agentx issue list --json'), with
+ * a local-file fallback. Use this from async callers (chat router, command
+ * handlers) so workflow guidance reflects GitHub/ADO state rather than only
+ * .agentx/issues/ JSON. Mirrors WorkTreeProvider.getOpenIssues.
+ */
+export async function fetchProviderAwareIssues(
+  runCli: (subcommand: string, args: string[]) => Promise<string>,
+  workspaceRoot: string,
+): Promise<LocalIssue[]> {
+  try {
+    const output = await runCli('issue', ['list', '--json']);
+    const parsed = JSON.parse(output);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((entry): entry is LocalIssue => !!entry && typeof entry === 'object');
+    }
+  } catch {
+    // Fall through to local issues.
+  }
+  return getLocalIssues(workspaceRoot);
 }
 
 function getKnownPlanPaths(root: string): string[] {

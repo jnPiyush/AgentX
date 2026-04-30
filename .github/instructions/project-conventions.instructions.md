@@ -21,6 +21,7 @@ Use concise bullet points with a date and context.
 - For PowerShell heredocs and other large multi-line edits, prefer one well-scoped `apply_patch` change instead of brittle piecemeal replacements
 - Treat `.agentx/agentx.ps1 loop complete -s "..."` as the final pre-handoff gate, not a user-prompted post-condition
 - After a large block replacement, immediately search for removed unique identifiers and the new declaration before moving on
+- Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as the ABSOLUTE FIRST action before any file edit for code or docs changes; iterate with `loop iterate -s "..." -e <evidence>` after each verification pass; close with `loop complete -s "..." -e <fresh-evidence>` before handoff. Applies to Agent X, Engineer, and Auto-Fix Reviewer alike.
 
 ## Known Pitfalls
 
@@ -28,6 +29,8 @@ Use concise bullet points with a date and context.
 - Do NOT use fragile exact-match block replacement habits for large rewrites -- prefer a single well-scoped `apply_patch` edit with enough context to anchor the change
 - PowerShell `ConvertTo-Json` flattens single-element arrays; always use `@(...)` to force arrays
 - Passing tests is necessary but not sufficient; unexercised UI or wiring regressions can survive unless post-edit verification checks the edited surface directly
+- The pre-commit hook only enforces the AgentX quality loop at commit time. A session that edits files and runs tests but never commits can finish without the loop ever starting, leaving `.agentx/state/loop-state.json` with `loopConsumed: true` from a prior session. Run `loop start` BEFORE the first file edit, not at the end. Verifying tests pass is necessary but not sufficient -- the loop is a separate gate.
+- The pre-commit hook now BLOCKS code commits unless the quality loop has (1) status=complete, (2) loopConsumed=false, (3) iteration >= minIterations, AND (4) at least one history iteration whose summary contains "review" (case-insensitive). The subagent reviewer pass is non-negotiable -- record it as `agentx loop iterate -s "Subagent Review: <findings>" -e <review-evidence>` before `loop complete`.
 
 ## Architecture Decisions
 

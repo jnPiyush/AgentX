@@ -41,6 +41,7 @@ agents:
   - AgentX Engineer
   - AgentX Auto-Fix Reviewer
   - AgentX Functional Reviewer
+  - AgentX Architecture Reviewer
   - AgentX Eval Specialist
   - AgentX GitHub Ops
   - AgentX ADO Ops
@@ -67,6 +68,37 @@ Review implementations for quality, correctness, security, and spec conformance.
 - **Trigger**: Status = `In Review`
 - **Approve path**: In Review -> Validating (DevOps + Tester validate in parallel)
 - **Reject path**: In Review -> In Progress (add `needs:changes` label)
+
+## Standalone Architecture Document Review (No Issue Required)
+
+When a user (or another agent) asks the Reviewer to review an existing **human-written** architecture document, ADR, technical specification, design doc, or RFC -- regardless of whether it was produced by AgentX or originated outside it -- the Reviewer MUST delegate to the **Architecture Reviewer** sub-agent in standalone mode rather than running the code review pipeline.
+
+**How to recognize this trigger** (any of):
+
+- User provides a path to one or more architecture / spec / ADR / RFC / design documents and asks for a review, audit, or assessment
+- User pastes architecture content inline and asks the Reviewer to evaluate it
+- User asks for a "design review" or "architecture review" with no associated GitHub/ADO issue
+- The document is not at the canonical AgentX paths (`docs/artifacts/adr/`, `docs/artifacts/specs/`, `docs/artifacts/prd/`)
+
+**Supported input formats**: Markdown, plain text, Word (`.docx`/`.doc`), PowerPoint (`.pptx`/`.ppt`), PDF, images (`.png`/`.jpg`/`.svg`), diagram source (`.drawio`/`.vsdx`/`.puml`/`.mmd`), HTML. Multiple files (e.g. a docx narrative plus several diagram images) are reviewed as one logical artifact and cross-cited. The Architecture Reviewer extracts text and image content per format and cites findings appropriately:
+
+- Markdown / text: file + line range
+- Word / PDF: file + page or heading
+- PowerPoint: file + slide number + slide title
+- Diagrams: file + named component / region observed
+
+If a format cannot be extracted (e.g. password-protected `.vsd`, missing converter), the Reviewer returns `BLOCKED` with an `extraction_failure` reason and asks the user to re-supply in a parseable form (PDF, PNG, or SVG export).
+
+**What to do**:
+
+1. **Do NOT run the code review pipeline** (no quality-loop check, no test run, no spec-conformance check against an Engineer's diff)
+2. **Spawn the Architecture Reviewer sub-agent in standalone mode** with the document path(s) as input
+3. **Skip pre-review Gates 1-5** (issue/ADR/Spec/PRD presence) and instead apply the standalone-mode gate set: artifact present, decision rationale captured, alternatives considered, NFRs stated
+4. **Apply the full 12-dimension review** with framework-cited findings; produce the same `ARCH-REVIEW-<id>.md` report using `ARCH-REVIEW-TEMPLATE.md`
+5. **Replace `<issue>` with a stable identifier** chosen from (in order): user-provided id, document filename stem, or `standalone-<YYYYMMDD-HHmm>`
+6. **Save the report** to `docs/artifacts/reviews/ARCH-REVIEW-<id>.md` (or a user-specified path)
+
+**Severity rubric and decision (APPROVED / CHANGES REQUESTED / BLOCKED) remain unchanged** -- the same evidence-of-harm and section-citation requirements apply. Only the AgentX-workflow gates relax; the engineering rigor does not.
 
 ## Execution Steps
 

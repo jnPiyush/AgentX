@@ -15,6 +15,7 @@ import {
   renderWorkflowEntryPointMarkdown,
   renderWorkflowGuidanceMarkdown,
   renderWorkflowRolloutScorecardMarkdown,
+  type LocalIssue,
 } from '../utils/workflowGuidance';
 import {
   evaluateAgentNativeReview,
@@ -329,13 +330,14 @@ export async function tryHandleWorkflowNextStepRequest(
   response: vscode.ChatResponseStream,
   workspaceRoot: string | undefined,
   pending: PendingClarification | undefined,
+  issues?: readonly LocalIssue[],
 ): Promise<vscode.ChatResult | undefined> {
   if (!/^(workflow next step|workflow guidance|next workflow step)$/i.test(userText)) {
     return undefined;
   }
 
   response.markdown(renderWorkflowGuidanceMarkdown(
-    evaluateWorkflowGuidance(workspaceRoot, !!pending),
+    evaluateWorkflowGuidance(workspaceRoot, !!pending, issues),
   ));
   return {};
 }
@@ -345,13 +347,14 @@ export async function tryHandlePlanDeepeningRequest(
   response: vscode.ChatResponseStream,
   workspaceRoot: string | undefined,
   pending: PendingClarification | undefined,
+  issues?: readonly LocalIssue[],
 ): Promise<vscode.ChatResult | undefined> {
   if (!/^(deepen plan|plan deepening)$/i.test(userText)) {
     return undefined;
   }
 
   response.markdown(renderWorkflowEntryPointMarkdown(
-    evaluateWorkflowGuidance(workspaceRoot, !!pending),
+    evaluateWorkflowGuidance(workspaceRoot, !!pending, issues),
     'plan-deepening',
   ));
   return {};
@@ -362,13 +365,14 @@ export async function tryHandleReviewKickoffRequest(
   response: vscode.ChatResponseStream,
   workspaceRoot: string | undefined,
   pending: PendingClarification | undefined,
+  issues?: readonly LocalIssue[],
 ): Promise<vscode.ChatResult | undefined> {
   if (!/^(kick off review|review kickoff)$/i.test(userText)) {
     return undefined;
   }
 
   response.markdown(renderWorkflowEntryPointMarkdown(
-    evaluateWorkflowGuidance(workspaceRoot, !!pending),
+    evaluateWorkflowGuidance(workspaceRoot, !!pending, issues),
     'review-kickoff',
   ));
   return {};
@@ -379,13 +383,14 @@ export async function tryHandleWorkflowRolloutRequest(
   response: vscode.ChatResponseStream,
   workspaceRoot: string | undefined,
   pending: PendingClarification | undefined,
+  issues?: readonly LocalIssue[],
 ): Promise<vscode.ChatResult | undefined> {
   if (!/^(rollout scorecard|workflow rollout)$/i.test(userText)) {
     return undefined;
   }
 
   response.markdown(renderWorkflowRolloutScorecardMarkdown(
-    evaluateWorkflowGuidance(workspaceRoot, !!pending),
+    evaluateWorkflowGuidance(workspaceRoot, !!pending, issues),
   ));
   return {};
 }
@@ -395,13 +400,14 @@ export async function tryHandleEnablementChecklistRequest(
   response: vscode.ChatResponseStream,
   workspaceRoot: string | undefined,
   pending: PendingClarification | undefined,
+  issues?: readonly LocalIssue[],
 ): Promise<vscode.ChatResult | undefined> {
   if (!/^(enablement checklist|operator checklist)$/i.test(userText)) {
     return undefined;
   }
 
   response.markdown(renderOperatorEnablementChecklistMarkdown(
-    evaluateWorkflowGuidance(workspaceRoot, !!pending),
+    evaluateWorkflowGuidance(workspaceRoot, !!pending, issues),
   ));
   return {};
 }

@@ -9,6 +9,7 @@ import {
   resetIntentRouterStateForTests,
   tryHandleNaturalLanguageIntent,
 } from './intentRouter';
+import { fetchProviderAwareIssues } from '../utils/workflowGuidance';
 import {
   getPendingClarification,
   renderUsageGuidance,
@@ -113,28 +114,31 @@ export async function routeAgentXChatRequest(
   }
 
   const root = agentx.workspaceRoot;
+  const workflowIssues = root
+    ? await fetchProviderAwareIssues((sub, args) => agentx.runCli(sub, args), root)
+    : [];
 
-  const workflowNextStepResult = await tryHandleWorkflowNextStepRequest(userText, response, root, pending);
+  const workflowNextStepResult = await tryHandleWorkflowNextStepRequest(userText, response, root, pending, workflowIssues);
   if (workflowNextStepResult) {
     return workflowNextStepResult;
   }
 
-  const planDeepeningResult = await tryHandlePlanDeepeningRequest(userText, response, root, pending);
+  const planDeepeningResult = await tryHandlePlanDeepeningRequest(userText, response, root, pending, workflowIssues);
   if (planDeepeningResult) {
     return planDeepeningResult;
   }
 
-  const reviewKickoffResult = await tryHandleReviewKickoffRequest(userText, response, root, pending);
+  const reviewKickoffResult = await tryHandleReviewKickoffRequest(userText, response, root, pending, workflowIssues);
   if (reviewKickoffResult) {
     return reviewKickoffResult;
   }
 
-  const workflowRolloutResult = await tryHandleWorkflowRolloutRequest(userText, response, root, pending);
+  const workflowRolloutResult = await tryHandleWorkflowRolloutRequest(userText, response, root, pending, workflowIssues);
   if (workflowRolloutResult) {
     return workflowRolloutResult;
   }
 
-  const enablementChecklistResult = await tryHandleEnablementChecklistRequest(userText, response, root, pending);
+  const enablementChecklistResult = await tryHandleEnablementChecklistRequest(userText, response, root, pending, workflowIssues);
   if (enablementChecklistResult) {
     return enablementChecklistResult;
   }

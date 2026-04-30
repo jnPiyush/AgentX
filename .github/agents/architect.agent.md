@@ -296,6 +296,7 @@ Apply to: technology choices, pattern selections, trade-off conclusions, risk as
 - [ ] PM requirement-fit validation completed and any scope mismatch resolved or explicitly recorded
 - [ ] An engineer can implement without ambiguity
 - [ ] **No over-specification**: Spec defines WHAT and WHY, not HOW at the implementation level; no dictated variable names, loop structures, or internal algorithms that the Engineer should decide
+- [ ] **Architecture Reviewer pass**: AgentX Architecture Reviewer was spawned against the ADR + Tech Spec; resulting `docs/artifacts/reviews/ARCH-REVIEW-<issue>.md` exists with decision APPROVED or all CHANGES REQUESTED findings addressed and re-reviewed
 - [ ] **Model Council convened** (or skip rationale recorded in ADR Context); `COUNCIL-{issue}.md` Synthesis section is complete and the ADR Decision matches a council-consensus option (or the override rationale is documented); ADR Consequences and Tech Spec risk register reflect Skeptic-raised failure modes
 
 ### Over-Specification Guardrails

@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "AgentX - Multi-Agent Orchestration",
   "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
-  "version": "8.4.37",
+  "version": "8.4.38",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -160,6 +160,12 @@
         "title": "Loop: Cancel",
         "category": "AgentX",
         "icon": "$(stop)"
+      },
+      {
+        "command": "agentx.loopRollback",
+        "title": "Loop: Rollback",
+        "category": "AgentX",
+        "icon": "$(discard)"
       },
       {
         "command": "agentx.showPlanningLearnings",
@@ -502,6 +508,9 @@
         },
         {
           "command": "agentx.loopCancel"
+        },
+        {
+          "command": "agentx.loopRollback"
         },
         {
           "command": "agentx.checkEnvironment"

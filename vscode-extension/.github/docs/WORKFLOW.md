@@ -324,7 +324,9 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
   Reviewer ------> GitHub Ops (issue status/labels)
   Reviewer ------> ADO Ops (work item status)
   Reviewer ------> Functional Reviewer (branch diff analysis)
+  Reviewer ------> Architecture Reviewer (ADR/Spec architectural review; also ad-hoc human-written docs)
   Reviewer ------> Eval Specialist (AI model quality review)
+  Architect -----> Architecture Reviewer (pre-handoff ADR/Spec review)
   Tester --------> GitHub Ops (defect issue creation)
   Tester --------> ADO Ops (defect work item creation)
   Data Scientist -> Prompt Engineer (prompt lifecycle)
@@ -451,9 +453,58 @@ Discover/Plan -> [Architect, Data Scientist, UX] -> Architect/Data Scientist AI 
 **Parallel Validation Phase**: DevOps Engineer and Tester validate in parallel after Reviewer approves.
 **Bug-Fix Feedback Loop**: Tester defects route back to Engineer for resolution before closing.
 
+### Standalone Architecture Document Review
+
+The Reviewer agent supports a **standalone mode** for reviewing human-written architecture documents that are not part of the AgentX issue lifecycle. Use this when an architect, designer, or external party hands over a doc and asks for a structured review.
+
+**When the Reviewer enters standalone mode** (any of):
+
+- User supplies a document path with no associated issue
+- User pastes architecture content inline and asks for a review
+- User asks for a "design review" or "architecture audit" without an issue reference
+- The document is outside the canonical AgentX paths (`docs/artifacts/adr/`, `docs/artifacts/specs/`, `docs/artifacts/prd/`)
+
+**Behavior**:
+
+- Reviewer skips the code-review pipeline (no quality-loop check, no test run, no spec-conformance against an Engineer diff)
+- Reviewer delegates to the Architecture Reviewer sub-agent in standalone mode
+- The 12-dimension review still applies in full: business fit, scalability, reliability, security, data, integration, observability, deployment, cost, maintainability, compliance, risks
+- Severity rubric, evidence-of-harm, citation requirement, STRIDE coverage, NFR traceability, and ATAM trade-offs are unchanged
+- Pre-review gates 1-5 (issue/PRD/ADR/Spec/options) are replaced by the standalone gate set: document extractable, decision stated, rationale recorded, alternatives considered, NFRs stated, diagram or component model present
+
+**Supported input formats**:
+
+| Format | Extensions | Citation style |
+|--------|------------|----------------|
+| Markdown / text | `.md`, `.txt`, `.rst`, `.adoc` | file path + line range |
+| Word | `.docx`, `.doc` | file path + page or heading |
+| PowerPoint | `.pptx`, `.ppt` | file path + slide number + slide title |
+| PDF | `.pdf` | file path + page |
+| Image diagrams | `.png`, `.jpg`, `.jpeg`, `.svg`, `.webp` | file path + named region or component |
+| Diagram source | `.drawio`, `.vsdx`, `.puml`, `.mmd` | parsed source or exported image |
+| Visio | `.vsd`, `.vsdx` | converted to PDF/PNG |
+| HTML | `.html`, `.htm` | stripped text + image list |
+
+Multiple files (e.g. a docx narrative plus several diagram images) are reviewed as one logical artifact and cross-cited so the review can flag contradictions between the narrative and the diagrams. If a format cannot be extracted (password-protected, missing converter, corrupted), the Reviewer returns `BLOCKED` with reason `extraction_failure` and asks the user to re-supply in a parseable form.
+
+**Output**:
+
+- Report file: `docs/artifacts/reviews/ARCH-REVIEW-<id>.md` where `<id>` resolves in order: user-provided id, primary document filename stem, or `standalone-<YYYYMMDD-HHmm>`
+- Always Markdown regardless of input format
+- Same template as issue-driven reviews: `.github/templates/ARCH-REVIEW-TEMPLATE.md` with `mode: standalone`
+- Decision rubric unchanged: `APPROVED` / `CHANGES REQUESTED` / `BLOCKED`
+
+**How to invoke** (any of these reach the standalone flow):
+
+- "Review the architecture document at `docs/design/payment-system.docx`"
+- "Review these design files and produce a detailed report: `arch.pptx`, `topology.png`, `design.docx`"
+- "Audit this RFC and tell me what's missing: `docs/rfcs/auth-redesign.pdf`"
+
+For issue-driven architecture reviews (Architect or Reviewer auto-spawning the Architecture Reviewer for an ADR/Spec under an `In Review` issue), use the standard `agentx` mode -- nothing changes there.
+
 For Agent X autonomous execution, each phase above inherits the same non-skippable contract as the corresponding specialist agent. PM phase still requires PRD rules and PM boundaries, Architect phase still requires ADR/Spec and zero-code policy, UX phase still requires prototypes and accessibility rules, Engineer phase still requires the quality loop, and Reviewer phase still requires review artifacts and approval gates.
 
-> **Note**: Consulting Research, Power BI Analyst, and Agile Coach operate **standalone** (not part of the core SDLC pipeline). GitHub Ops, ADO Ops, Functional Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, and RAG Specialist are invisible sub-agents spawned by their parent agents.
+> **Note**: Consulting Research, Power BI Analyst, and Agile Coach operate **standalone** (not part of the core SDLC pipeline). GitHub Ops, ADO Ops, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, and RAG Specialist are invisible sub-agents spawned by their parent agents.
 
 ### Backlog-Based Handoffs
 

@@ -51,10 +51,11 @@ describe('registerLoopCommand', () => {
     assert.ok(registeredCallbacks['agentx.loopIterate'], 'Missing agentx.loopIterate');
     assert.ok(registeredCallbacks['agentx.loopComplete'], 'Missing agentx.loopComplete');
     assert.ok(registeredCallbacks['agentx.loopCancel'], 'Missing agentx.loopCancel');
+    assert.ok(registeredCallbacks['agentx.loopRollback'], 'Missing agentx.loopRollback');
   });
 
   it('should add the loop command to subscriptions', () => {
-    assert.strictEqual(fakeContext.subscriptions.length, 6);
+    assert.strictEqual(fakeContext.subscriptions.length, 7);
   });
 
   describe('agentx.loop (main)', () => {

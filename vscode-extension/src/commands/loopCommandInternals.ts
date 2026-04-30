@@ -14,6 +14,7 @@ export const LOOP_ACTION_ITEMS = [
   { label: 'iterate', description: 'Advance to next iteration with summary' },
   { label: 'complete', description: 'Mark loop as successfully done' },
   { label: 'cancel', description: 'Cancel the active loop' },
+  { label: 'rollback', description: 'Roll the loop back to an earlier iteration' },
 ];
 
 export async function ensureLoopInitialized(agentx: AgentXContext): Promise<boolean> {
@@ -44,6 +45,9 @@ export async function executeLoopAction(
       break;
     case 'cancel':
       await loopCancel(agentx);
+      break;
+    case 'rollback':
+      await loopRollback(agentx);
       break;
   }
 }
@@ -131,10 +135,22 @@ export async function loopComplete(agentx: AgentXContext): Promise<void> {
     placeHolder: 'e.g., All tests passing, coverage at 85%',
   });
 
+  // The CLI quality gate requires a fresh final-gate evidence artifact
+  // (e.g., quality-gate.log, full-suite-report.xml). Prompt for it so the
+  // command can complete instead of bouncing on the CLI's evidence check.
+  const evidence = await vscode.window.showInputBox({
+    prompt: 'Final-gate evidence file (required by quality gate)',
+    placeHolder: 'e.g., .agentx/state/final-gate.log',
+    ignoreFocusOut: true,
+  });
+
   try {
     const args = ['complete'];
     if (summary) {
       args.push('-s', summary);
+    }
+    if (evidence && evidence.trim().length > 0) {
+      args.push('-e', evidence.trim());
     }
 
     const output = await agentx.runCli('loop', args);
@@ -156,6 +172,37 @@ export async function loopCancel(agentx: AgentXContext): Promise<void> {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     vscode.window.showErrorMessage(`Loop cancel failed: ${message}`);
+  }
+}
+
+export async function loopRollback(agentx: AgentXContext): Promise<void> {
+  const target = await vscode.window.showInputBox({
+    prompt: 'Roll back to which iteration number?',
+    placeHolder: 'e.g., 3',
+    validateInput: (value) => {
+      const n = parseInt(value, 10);
+      return Number.isNaN(n) || n < 1 ? 'Enter a positive integer' : null;
+    },
+    ignoreFocusOut: true,
+  });
+  if (!target) { return; }
+
+  const reason = await vscode.window.showInputBox({
+    prompt: 'Reason (optional)',
+    placeHolder: 'e.g., Security finding requires re-doing the fix iteration',
+  });
+
+  try {
+    const args = ['rollback', '-n', target.trim()];
+    if (reason && reason.trim().length > 0) {
+      args.push('-r', reason.trim());
+    }
+    const output = await agentx.runCli('loop', args);
+    showLoopOutput('Loop Rollback', output, getHarnessDisplay(agentx));
+    vscode.window.showInformationMessage(`Iterative loop rolled back to iteration ${target}.`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Loop rollback failed: ${message}`);
   }
 }
 
