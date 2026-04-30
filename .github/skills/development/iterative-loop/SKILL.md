@@ -66,6 +66,26 @@ Need iterative refinement?
 | **Build Loop** | 5-15 | Compilation fixes | Clean build |
 | **Phased Loop** | 10-50 | Large features | All phases complete |
 | **Review Loop** | 2-5 | Self-review | No issues found |
+| **Adversarial Loop** | 1 (mandatory pass) | Bug-finding before ship | Mutation score met + zero HIGH findings |
+| **Subagent Review Loop** | 1 (mandatory pass) | Blind-spot detection | Zero HIGH/MEDIUM findings from clean reviewer |
+
+---
+
+## Deterministic Gates (Engineer default)
+
+The Engineer's quality loop is gated by the CLI, not by judgment:
+
+1. `loop start` initializes `.agentx/state/tests-baseline.json` as a placeholder and cleans the prior loop's archived evidence workspace. Record the actual baseline with `loop baseline -c <passing-test-count>` before iterating.
+2. `loop iterate -e <path>` REQUIRES an existing evidence file (test report, coverage xml, scan json, mutation report). On accept, the CLI:
+   - **moves the original file** into a sealed archive at `.agentx/state/loop-evidence/iter-<N>/<timestamp>-<filename>` (the source path no longer exists, so the next iterate cannot point at the same path),
+  - records `{ evidence, evidenceOriginal }` in loop history.
+3. If a tests baseline has been recorded, both `loop iterate` and `loop complete` REQUIRE `--passing <count>` and reject any count below baseline.
+4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact (for example, `final-gate.json` or a full-suite report) AND every iteration after #1 must already carry a still-existing archived evidence file. The final artifact is moved to `.agentx/state/loop-evidence/complete/`.
+5. The commit-msg hook rejects `fix:` commits that change production code under `.agentx/`, `scripts/`, `vscode-extension/src/`, or the standard app roots without adding a regression test in the same diff.
+
+Practical consequence: **generate a fresh file per iteration**. Re-running the same `npm test` into a newly written report is fine. The accepted source file is moved away, so the next iteration must produce a new file rather than reuse the old accepted path.
+
+Bypass envs (use only for legacy/manual flows): `AGENTX_SKIP_EVIDENCE_GATE=1` skips evidence-file requirements only; it does not disable baseline pass-count enforcement. `AGENTX_SKIP_FIX_TEST_GATE=1` bypasses the fix-commit regression-test hook.
 
 ---
 
@@ -184,6 +204,47 @@ Fix all {{tool}} errors in {{scope}}:
 
 When zero errors reported, output: <promise>ZERO_ERRORS</promise>
 ```
+
+### 2b. Adversarial Loop (Break-it-Before-Ship)
+
+Mandatory bug-finding pass before declaring code production-ready. The goal is NOT to demonstrate correctness -- it is to actively try to break the change. Use after iteration 3 (security) and before iteration 5 (subagent review).
+
+**Required artifacts (any iteration calling itself "Adversarial" MUST produce all of these as evidence):**
+
+1. **Property-based tests** for every pure function added or changed -- Hypothesis (Python), fast-check (TS), FsCheck (.NET), QuickCheck (Rust/Haskell). Run for at least 100 examples.
+2. **Mutation testing** on changed lines only -- Stryker (TS/.NET), mutmut (Python), pitest (Java). Surviving mutants on changed lines MUST be killed by new tests. Target >= 60% mutation score on the diff.
+3. **Fuzzing** of every parser, deserializer, schema validator, or LLM-output handler in the diff -- minimum 60s per target with random + structured inputs.
+4. **Negative tests** -- at least 3 per public endpoint or exported function: malformed input, boundary value, concurrent access / race condition.
+5. **Chaos pass** for stateful flows -- random latency, dependency timeout, partial failure injection. The system must degrade gracefully or fail fast with clear errors.
+
+**Prompt template:**
+```
+Iteration 4: ADVERSARIAL.
+Your only goal is to find bugs in the diff for {{issue}}.
+
+For each public function in the diff:
+  1. Write a property-based test that asserts an invariant (idempotence,
+     monotonicity, round-trip equality, no panic on bounded input).
+  2. Run mutation testing on changed lines. List every surviving mutant.
+  3. Write at least 3 negative tests (malformed/boundary/concurrent).
+
+For each parser/deserializer/LLM-output handler:
+  4. Run a 60s fuzzing pass with seed corpus + random bytes.
+
+For stateful flows:
+  5. Inject latency, timeouts, partial failures. Confirm graceful degradation.
+
+Report:
+  - Surviving mutants killed: list with new test name.
+  - Property failures found: list and fix.
+  - Crashes/hangs from fuzzing: file + input + fix.
+  - Negative test list: 3+ per endpoint.
+
+When mutation score >= 60% on diff AND zero surviving mutants AND zero
+unhandled fuzz crashes, output: <promise>ADVERSARIAL_PASSED</promise>
+```
+
+**Evidence to attach to `loop iterate -e`**: mutation report, property test report, fuzz log -- combined into a single summary file at `.agentx/state/loop-evidence/iter-4/adversarial.md` linking to each artifact.
 
 ### 3. Phased Loop (Multi-Phase Implementation)
 

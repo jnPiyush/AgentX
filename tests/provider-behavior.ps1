@@ -585,6 +585,84 @@ task_prefix: 'task'
     Assert-True ($workflowLoopState.active -and $workflowLoopState.prompt -eq 'Local launcher loop') 'Workspace launcher writes loop state to its own workspace root'
     Assert-True ($overrideLoopState.active -and $overrideLoopState.prompt -eq 'Foreign active loop') 'Workspace launcher does not mutate foreign loop state from leaked environment overrides'
 
+    $loopBaseline = Invoke-AgentX $workflowRoot @('loop', 'baseline', '--count', '5')
+    $baselineState = Get-Content (Join-Path $workflowRoot '.agentx\state\tests-baseline.json') -Raw | ConvertFrom-Json -Depth 10
+    Assert-True ($loopBaseline.ExitCode -eq 0) 'loop baseline exits successfully'
+    Assert-True ([int]$baselineState.passing -eq 5) 'loop baseline records the passing-test baseline count'
+
+    $failingEvidence = Join-Path $workflowRoot '.agentx\state\iter-2-failing.txt'
+    Write-Utf8File $failingEvidence 'iteration 2 evidence that should fail baseline gate'
+    $loopIterateBelowBaseline = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Below baseline', '--evidence', $failingEvidence, '--passing', '4')
+    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    Assert-True ($loopIterateBelowBaseline.Output -match 'would regress passing tests') 'loop iterate reports baseline regression when passing count drops'
+    Assert-True ([int]$workflowLoopState.iteration -eq 1) 'loop iterate does not advance the loop on a baseline regression'
+    Assert-True (Test-Path $failingEvidence) 'loop iterate leaves evidence file in place when baseline validation fails before acceptance'
+
+    $iter2Evidence = Join-Path $workflowRoot '.agentx\state\iter-2-pass.txt'
+    Write-Utf8File $iter2Evidence 'iteration 2 fresh artifact'
+    $loopIterate = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Fresh iteration evidence', '--evidence', $iter2Evidence, '--passing', '5')
+    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $iter2Archive = Get-ChildItem (Join-Path $workflowRoot '.agentx\state\loop-evidence\iter-2') -File | Select-Object -First 1
+    Assert-True ($loopIterate.ExitCode -eq 0) 'loop iterate exits successfully with fresh evidence and passing count'
+    Assert-True ([int]$workflowLoopState.iteration -eq 2) 'loop iterate advances the loop when baseline and evidence gates pass'
+    Assert-True (-not (Test-Path $iter2Evidence)) 'loop iterate moves the accepted source evidence away so the old path cannot be reused'
+    Assert-True ($null -ne $iter2Archive -and (Test-Path $iter2Archive.FullName)) 'loop iterate archives accepted evidence into the per-iteration folder'
+
+    $iter3Evidence = Join-Path $workflowRoot '.agentx\state\iter-3-pass.txt'
+    $iter4Evidence = Join-Path $workflowRoot '.agentx\state\iter-4-pass.txt'
+    $iter5Evidence = Join-Path $workflowRoot '.agentx\state\subagent-review.json'
+    Write-Utf8File $iter3Evidence 'iteration 3 fresh artifact'
+    Write-Utf8File $iter4Evidence 'iteration 4 fresh artifact'
+    Write-Utf8File $iter5Evidence '{"findings":[]}'
+    [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Secure pass', '--evidence', $iter3Evidence, '--passing', '5'))
+    [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Adversarial pass', '--evidence', $iter4Evidence, '--passing', '5'))
+    [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Subagent review pass', '--evidence', $iter5Evidence, '--passing', '5'))
+    $finalEvidence = Join-Path $workflowRoot '.agentx\state\final-gate.json'
+    Write-Utf8File $finalEvidence '{"status":"pass","source":"final gate"}'
+    $loopComplete = Invoke-AgentX $workflowRoot @('loop', 'complete', '--summary', 'All gates passed', '--evidence', $finalEvidence, '--passing', '5')
+    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $completeArchive = Get-ChildItem (Join-Path $workflowRoot '.agentx\state\loop-evidence\complete') -File | Select-Object -First 1
+    Assert-True ($loopComplete.ExitCode -eq 0) 'loop complete exits successfully with a fresh final artifact distinct from iteration 5 input'
+    Assert-True ($workflowLoopState.status -eq 'complete' -and -not $workflowLoopState.active) 'loop complete marks the loop complete after passing the final gate'
+    Assert-True (-not (Test-Path $finalEvidence)) 'loop complete moves the accepted final artifact away from the source path'
+    Assert-True ($null -ne $completeArchive -and (Test-Path $completeArchive.FullName)) 'loop complete archives the final artifact'
+
+    $restartLoop = Invoke-AgentX $workflowRoot @('loop', 'start', '--prompt', 'Second loop after cleanup', '--max', '5')
+    Assert-True ($restartLoop.ExitCode -eq 0) 'starting a new loop after completion exits successfully'
+    Assert-True (-not (Test-Path (Join-Path $workflowRoot '.agentx\state\loop-evidence'))) 'loop start cleans the prior loop evidence workspace before the new task begins'
+
+    # Loop baseline read path: no --count flag reports current baseline value
+    [void](Invoke-AgentX $workflowRoot @('loop', 'baseline', '--count', '7'))
+    $loopBaselineRead = Invoke-AgentX $workflowRoot @('loop', 'baseline')
+    Assert-True ($loopBaselineRead.ExitCode -eq 0) 'loop baseline read (no flags) exits successfully'
+    Assert-True ($loopBaselineRead.Output -match 'Loop baseline passing tests:\s*7') 'loop baseline read prints the recorded baseline value'
+
+    # Invalid --passing values are rejected and do not advance the loop
+    $loopBeforeInvalid = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $invalidEvidenceA = Join-Path $workflowRoot '.agentx\state\invalid-passing-a.txt'
+    $invalidEvidenceB = Join-Path $workflowRoot '.agentx\state\invalid-passing-b.txt'
+    Write-Utf8File $invalidEvidenceA 'placeholder'
+    Write-Utf8File $invalidEvidenceB 'placeholder'
+    $loopIterateNegPassing = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Negative', '--evidence', $invalidEvidenceA, '--passing', '-1')
+    $loopIterateBadPassing = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'NaN', '--evidence', $invalidEvidenceB, '--passing', 'abc')
+    $loopAfterInvalid = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    Assert-True ($loopIterateNegPassing.Output -match 'requires --passing <non-negative-integer>') 'loop iterate rejects negative --passing values'
+    Assert-True ($loopIterateBadPassing.Output -match 'requires --passing <non-negative-integer>') 'loop iterate rejects non-integer --passing values'
+    Assert-True ([int]$loopAfterInvalid.iteration -eq [int]$loopBeforeInvalid.iteration) 'loop iterate does not advance when --passing is invalid'
+    Assert-True ((Test-Path $invalidEvidenceA) -and (Test-Path $invalidEvidenceB)) 'loop iterate leaves source evidence in place when --passing validation fails'
+
+    # AGENTX_SKIP_EVIDENCE_GATE=1 bypass: iterate skips evidence requirement but still enforces baseline passing count.
+    $loopAfterValid = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $loopIterateBypass = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Bypass', '--passing', '7') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
+    $loopAfterBypass = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    Assert-True ($loopIterateBypass.Output -notmatch '\[FAIL\]') 'loop iterate emits no [FAIL] when AGENTX_SKIP_EVIDENCE_GATE=1 and baseline passing count is provided'
+    Assert-True ([int]$loopAfterBypass.iteration -eq ([int]$loopAfterValid.iteration + 1)) 'loop iterate advances under AGENTX_SKIP_EVIDENCE_GATE bypass when baseline passing count is satisfied'
+
+    $loopIterateBypassMissingPassing = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Bypass missing passing') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
+    $loopAfterBypassMissingPassing = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    Assert-True ($loopIterateBypassMissingPassing.Output -match 'requires --passing <count>') 'loop iterate still requires --passing when a baseline exists even if AGENTX_SKIP_EVIDENCE_GATE=1'
+    Assert-True ([int]$loopAfterBypassMissingPassing.iteration -eq [int]$loopAfterBypass.iteration) 'loop iterate does not advance under evidence bypass when baseline passing count is missing'
+
     $adoRoot = New-TestWorkspace 'ado'
     $adoToolsDir = Initialize-AdoMock $adoRoot
     Write-Utf8File (Join-Path $adoRoot '.agentx\config.json') (@{

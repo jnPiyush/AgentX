@@ -96,6 +96,42 @@ if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|test|refactor|perf|chore|sty
  echo -e "${YELLOW}[WARN] Commit format should be: type: description (#issue)${NC}"
 fi
 
+# ===================================================================
+# STEP 3: fix: commits MUST add a regression test in the same diff
+# Deterministic rule: a bug fix without a test cannot enter the repo.
+# Bypass: AGENTX_SKIP_FIX_TEST_GATE=1 (use only when fix is provably untestable).
+# ===================================================================
+if echo "$COMMIT_MSG" | grep -qE '^fix(\([^)]+\))?:'; then
+ # Source files that look like production code under change
+ PROD_CHANGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null \
+   | grep -E '^(\.agentx/|src/|lib/|app/|server/|services/|packages/|scripts/|vscode-extension/src/|install\.ps1$|install\.sh$)' \
+   | grep -E '\.(ts|tsx|js|mjs|cjs|py|cs|go|rs|java|kt|rb|ps1|psm1)$' \
+   | grep -vE '(\.test\.|\.spec\.|/tests?/|/__tests__/)' || true)
+ if [ -n "$PROD_CHANGED" ]; then
+  TEST_CHANGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null \
+    | grep -E '(\.test\.|\.spec\.|/tests?/|/__tests__/|test_.*\.py$|.*_test\.go$|.*Tests\.cs$)' || true)
+  TEST_LINES_ADDED=0
+  if [ -n "$TEST_CHANGED" ]; then
+   TEST_LINES_ADDED=$(git diff --cached --diff-filter=ACM -- $TEST_CHANGED 2>/dev/null \
+     | grep -cE '^\+[^+].*((it|test|describe)\(|def test_|\[Fact\]|\[Theory\]|func Test|@Test)' || true)
+  fi
+  if [ -z "$TEST_CHANGED" ] || [ "$TEST_LINES_ADDED" -lt 1 ]; then
+   if [ -z "$AGENTX_SKIP_FIX_TEST_GATE" ]; then
+    echo -e "${RED}[FAIL] fix: commit must include a new regression test in the same diff${NC}"
+    echo "  Production files changed:"
+    echo "$PROD_CHANGED" | sed 's/^/    /'
+    echo "  Add a failing test that reproduces the bug, then fix."
+    echo "  Bypass (rare): AGENTX_SKIP_FIX_TEST_GATE=1 git commit ..."
+    exit 1
+   else
+    echo -e "${YELLOW}[WARN] fix-test gate bypassed (AGENTX_SKIP_FIX_TEST_GATE)${NC}"
+   fi
+  else
+   echo -e "${GREEN}[PASS] fix: commit includes test changes${NC}"
+  fi
+ fi
+fi
+
 echo ""
 echo -e "${GREEN}[PASS] Workflow validation passed${NC}"
 exit 0

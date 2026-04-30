@@ -3706,6 +3706,7 @@ function Invoke-LoopCmd {
     $Script:SubArgs = @(if ($Script:SubArgs.Count -gt 1) { $Script:SubArgs[1..($Script:SubArgs.Count - 1)] } else { @() })
     switch ($action) {
         'start'    { Invoke-LoopStart }
+        'baseline' { Invoke-LoopBaseline }
         'status'   { Invoke-LoopStatus }
         'iterate'  { Invoke-LoopIterate }
         'complete' { Invoke-LoopComplete }
@@ -3861,6 +3862,106 @@ function Get-LoopStateHealth {
     return [PSCustomObject]@{ kind = 'healthy'; reason = $null }
 }
 
+function Get-LoopStateDirectory {
+    return (Split-Path $Script:LOOP_STATE_FILE -Parent)
+}
+
+function Get-LoopBaselineFilePath {
+    return (Join-Path (Get-LoopStateDirectory) 'tests-baseline.json')
+}
+
+function Get-LoopEvidenceRoot {
+    return (Join-Path (Get-LoopStateDirectory) 'loop-evidence')
+}
+
+function Read-LoopBaseline {
+    return (Read-JsonFile (Get-LoopBaselineFilePath))
+}
+
+function Reset-LoopEvidenceArtifacts {
+    $evidenceRoot = Get-LoopEvidenceRoot
+    if (Test-Path -LiteralPath $evidenceRoot) {
+        Remove-Item -LiteralPath $evidenceRoot -Recurse -Force
+    }
+}
+
+function Get-LoopPassingCount([string]$contextLabel) {
+    $raw = Get-Flag @('--passing') ''
+    if (-not $raw) { return $null }
+
+    $parsed = 0
+    if (-not [int]::TryParse($raw, [ref]$parsed) -or $parsed -lt 0) {
+        Write-CliOutput "$($C.r)  [FAIL] $contextLabel requires --passing <non-negative-integer> when provided.$($C.n)"
+        return '__INVALID__'
+    }
+
+    return $parsed
+}
+
+function Test-LoopPassingBaseline {
+    param(
+        $Baseline,
+        [Nullable[int]]$CurrentPassing,
+        [string]$ContextLabel
+    )
+
+    if (-not $Baseline) { return $true }
+
+    $baselineHasPassing = ($Baseline.PSObject.Properties.Name -contains 'passing') -and $null -ne $Baseline.passing -and "$($Baseline.passing)" -ne ''
+    if (-not $baselineHasPassing) {
+        Write-CliOutput "$($C.y)  [WARN] ${ContextLabel}: tests-baseline.json is a placeholder (passing count not recorded). Pass-count regression checks are DISABLED. Record the baseline with: agentx loop baseline -c <passing-tests>$($C.n)"
+        return $true
+    }
+
+    if ($null -eq $CurrentPassing) {
+        Write-CliOutput "$($C.r)  [FAIL] $ContextLabel requires --passing <count> because tests-baseline.json is set to $($Baseline.passing).$($C.n)"
+        Write-CliOutput "$($C.d)    Record the baseline once with: agentx loop baseline -c <passing-tests>$($C.n)"
+        return $false
+    }
+
+    if ([int]$CurrentPassing -lt [int]$Baseline.passing) {
+        Write-CliOutput "$($C.r)  [FAIL] $ContextLabel would regress passing tests: current=$CurrentPassing baseline=$($Baseline.passing).$($C.n)"
+        return $false
+    }
+
+    return $true
+}
+
+function Invoke-LoopBaseline {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state) {
+        Write-CliOutput 'No loop state found. Run `agentx loop start` first.'
+        return
+    }
+
+    $countRaw = Get-Flag @('-c', '--count') ''
+    if (-not $countRaw) {
+        $baseline = Read-LoopBaseline
+        if ($baseline) {
+            Write-CliOutput "$($C.c)  Loop baseline passing tests: $($baseline.passing)$($C.n)"
+        } else {
+            Write-CliOutput 'No tests baseline recorded.'
+        }
+        return
+    }
+
+    $count = 0
+    if (-not [int]::TryParse($countRaw, [ref]$count) -or $count -lt 0) {
+        Write-CliOutput "$($C.r)  [FAIL] loop baseline requires --count <non-negative-integer>.$($C.n)"
+        return
+    }
+
+    $baselineFile = Get-LoopBaselineFilePath
+    $baseline = [PSCustomObject]@{
+        capturedAt = Get-Timestamp
+        issue      = if ($state.PSObject.Properties.Name -contains 'issueNumber') { $state.issueNumber } else { $null }
+        passing    = $count
+        note       = 'Recorded via: agentx loop baseline -c <passing-count>. iterate/complete reject counts below baseline.'
+    }
+    Write-JsonFile $baselineFile $baseline
+    Write-CliOutput "$($C.g)  [PASS] Loop baseline set to $count passing tests.$($C.n)"
+}
+
 function Invoke-LoopStart {
     $prompt = Get-Flag @('-p', '--prompt')
     if (-not $prompt) { Write-CliOutput 'Error: --prompt required'; exit 1 }
@@ -3895,13 +3996,17 @@ function Invoke-LoopStart {
         $existing.history = @($existing.history) + @([PSCustomObject]@{
                 iteration = $existing.iteration
                 timestamp = Get-Timestamp
-                summary   = "Auto-reset stale loop before starting new task ($staleReason)"
+                summary   = "Auto-reset stale loop before starting new task ($($loopHealth.reason))"
                 status    = 'cancelled'
                 outcome   = 'fail'
             })
         Write-JsonFile $Script:LOOP_STATE_FILE $existing
         Write-CliOutput "$($C.y)  Auto-reset $($loopHealth.kind) active loop ($($loopHealth.reason)).$($C.n)"
     }
+
+    # Fresh loop means fresh evidence workspace: remove archived artifacts from the
+    # prior loop so a new task cannot accidentally reason over stale evidence.
+    try { Reset-LoopEvidenceArtifacts } catch { Write-Verbose "Loop evidence cleanup failed: $_" }
 
     $state = [PSCustomObject]@{
         active             = $true
@@ -3919,6 +4024,18 @@ function Invoke-LoopStart {
         history            = @([PSCustomObject]@{ iteration = 1; timestamp = Get-Timestamp; summary = 'Loop started'; status = 'in-progress'; outcome = 'partial' })
     }
     Write-JsonFile $Script:LOOP_STATE_FILE $state
+
+    # Snapshot tests-passing baseline so iterations cannot regress passing tests.
+    # The baseline file is advisory: agents/CI write the actual count via
+    # `agentx loop baseline -c <count>` before iterating. Stored next to loop state.
+    $baselineFile = Get-LoopBaselineFilePath
+    $baseline = [PSCustomObject]@{
+        capturedAt = Get-Timestamp
+        issue      = $issue
+        passing    = $null
+        note       = 'Set via: agentx loop baseline -c <passing-count>. iterate/complete reject counts below baseline.'
+    }
+    try { Write-JsonFile $baselineFile $baseline } catch { Write-Verbose "Baseline write failed: $_" }
 
     Write-CliOutput "`n$($C.c)  Iterative Loop Started$($C.n)"
     Write-CliOutput "$($C.d)  Iteration: 1/$max  |  Minimum review iterations: $min  |  Criteria: $criteria$($C.n)"
@@ -4013,6 +4130,7 @@ function Invoke-LoopIterate {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
     if (-not $state) { Write-CliOutput 'No loop state found.'; return }
     if (-not $state.active) { $state.active = $true; $state.status = 'active' }
+    $baseline = Read-LoopBaseline
 
     $next = $state.iteration + 1
     if ($next -gt $state.maxIterations) {
@@ -4026,6 +4144,50 @@ function Invoke-LoopIterate {
     $summary = Get-Flag @('-s', '--summary') "Iteration $next"
     $outcomeRaw = Get-Flag @('-o', '--outcome') 'partial'
     $outcome = if ($outcomeRaw -in @('pass', 'fail', 'partial')) { $outcomeRaw } else { 'partial' }
+    $currentPassing = Get-LoopPassingCount 'loop iterate'
+    if ($currentPassing -eq '__INVALID__') { return }
+    if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop iterate')) { return }
+
+    # Evidence requirement: every iterate call must point to a real artifact
+    # (test report, coverage file, lint output, scan json, etc.). Bypass only via
+    # AGENTX_SKIP_EVIDENCE_GATE=1 -- intended for legacy/manual flows.
+    $evidencePath = Get-Flag @('-e', '--evidence') ''
+    $evidenceOk = $false
+    $evidenceAbs = $null
+    if ($evidencePath) {
+        $evidenceAbs = if ([System.IO.Path]::IsPathRooted($evidencePath)) { $evidencePath } else { Join-Path (Get-Location) $evidencePath }
+        if (Test-Path -LiteralPath $evidenceAbs -PathType Leaf) { $evidenceOk = $true }
+    }
+    if (-not $evidenceOk) {
+        if (-not $env:AGENTX_SKIP_EVIDENCE_GATE) {
+            Write-CliOutput "$($C.r)  [FAIL] loop iterate requires --evidence <path-to-existing-file>$($C.n)"
+            Write-CliOutput "$($C.d)    Acceptable artifacts: test report (junit/trx), coverage xml, semgrep/gitleaks json, build log.$($C.n)"
+            Write-CliOutput "$($C.d)    Example: agentx loop iterate -s 'fixed null deref' -e .agentx/state/loop-evidence/iter-2/test-report.xml$($C.n)"
+            Write-CliOutput "$($C.d)    Bypass: `$env:AGENTX_SKIP_EVIDENCE_GATE = '1' (legacy flows only).$($C.n)"
+            return
+        } else {
+            Write-CliOutput "$($C.y)  [WARN] Evidence gate bypassed (AGENTX_SKIP_EVIDENCE_GATE).$($C.n)"
+        }
+    }
+
+    # Archive the accepted artifact into a per-iteration folder so the source path
+    # no longer exists after acceptance. This forces a fresh file to be generated
+    # for the next iteration and avoids stale evidence reuse.
+    $archivedPath = $null
+    if ($evidenceOk) {
+        $loopDir = Get-LoopStateDirectory
+        $archDir = Join-Path $loopDir "loop-evidence/iter-$next"
+        if (-not (Test-Path -LiteralPath $archDir)) { New-Item -ItemType Directory -Path $archDir -Force | Out-Null }
+        $stamp = (Get-Date -Format 'yyyyMMddTHHmmss')
+        $leaf = [System.IO.Path]::GetFileName($evidenceAbs)
+        $archivedPath = Join-Path $archDir "$stamp-$leaf"
+        try {
+            Move-Item -LiteralPath $evidenceAbs -Destination $archivedPath -Force
+        } catch {
+            Write-CliOutput "$($C.r)  [FAIL] Could not archive evidence (move): $_$($C.n)"
+            return
+        }
+    }
 
     # Collect harness audit score when available
     $harnessScore = $null
@@ -4040,6 +4202,11 @@ function Invoke-LoopIterate {
     $state.lastIterationAt = Get-Timestamp
     $entry = [PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = $summary; status = 'in-progress'; outcome = $outcome }
     if ($null -ne $harnessScore) { $entry | Add-Member -NotePropertyName harnessScore -NotePropertyValue $harnessScore }
+    if ($archivedPath) {
+        $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $archivedPath
+        $entry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $evidenceAbs
+    }
+    if ($null -ne $currentPassing) { $entry | Add-Member -NotePropertyName passingTests -NotePropertyValue ([int]$currentPassing) }
     $state.history = @($state.history) + @($entry)
     Write-JsonFile $Script:LOOP_STATE_FILE $state
 
@@ -4057,6 +4224,7 @@ function Invoke-LoopIterate {
 
     Write-CliOutput "`n$($C.c)  Iteration $next/$($state.maxIterations)$($C.n)"
     Write-CliOutput "$($C.d)  Summary: $summary  |  Outcome: $outcome$($C.n)"
+    if ($archivedPath) { Write-CliOutput "$($C.d)  Evidence archived to: $archivedPath$($C.n)" }
     if ($null -ne $harnessScore) { Write-CliOutput "$($C.d)  Harness score: $harnessScore$($C.n)" }
     Write-CliOutput ''
 }
@@ -4064,6 +4232,7 @@ function Invoke-LoopIterate {
 function Invoke-LoopComplete {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
     if (-not $state -or -not $state.active) { Write-CliOutput 'No active loop.'; return }
+    $baseline = Read-LoopBaseline
     if (-not ($state.PSObject.Properties.Name -contains 'minIterations') -or -not $state.minIterations) {
         $state | Add-Member -NotePropertyName minIterations -NotePropertyValue (Get-LoopDefaultMinIterations $state) -Force
     }
@@ -4071,11 +4240,72 @@ function Invoke-LoopComplete {
         Write-CliOutput "$($C.y)  Minimum review iterations not yet met: $($state.iteration)/$($state.minIterations). Use 'agentx loop iterate' before completing.$($C.n)"
         return
     }
+    $currentPassing = Get-LoopPassingCount 'loop complete'
+    if ($currentPassing -eq '__INVALID__') { return }
+    if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop complete')) { return }
+
+    # Gate: every iteration entry after #1 must carry an evidence file path that still exists.
+    if (-not $env:AGENTX_SKIP_EVIDENCE_GATE) {
+        $missing = @()
+        foreach ($h in @($state.history)) {
+            if ($null -eq $h) { continue }
+            if ($h.PSObject.Properties.Name -notcontains 'iteration') { continue }
+            if ([int]$h.iteration -lt 2) { continue }
+            if ($h.PSObject.Properties.Name -notcontains 'status' -or $h.status -ne 'in-progress') { continue }
+            $hasEvidence = ($h.PSObject.Properties.Name -contains 'evidence') -and $h.evidence -and (Test-Path -LiteralPath $h.evidence -PathType Leaf)
+            if (-not $hasEvidence) { $missing += $h.iteration }
+        }
+        if ($missing.Count -gt 0) {
+            Write-CliOutput "$($C.r)  [FAIL] Cannot complete loop: iterations missing or stale evidence: $($missing -join ', ').$($C.n)"
+            Write-CliOutput "$($C.d)    Re-run those iterations with: agentx loop iterate -s '<summary>' -e <evidence-file>$($C.n)"
+            return
+        }
+    }
+
+    # Gate: loop complete itself must point to a final evidence artifact (e.g., quality-gate log).
+    $finalEvidence = Get-Flag @('-e', '--evidence') ''
+    $finalEvidenceAbs = $null
+    if ($finalEvidence) {
+        $finalEvidenceAbs = if ([System.IO.Path]::IsPathRooted($finalEvidence)) { $finalEvidence } else { Join-Path (Get-Location) $finalEvidence }
+        if (-not (Test-Path -LiteralPath $finalEvidenceAbs -PathType Leaf)) { $finalEvidenceAbs = $null }
+    }
+    if (-not $finalEvidenceAbs -and -not $env:AGENTX_SKIP_EVIDENCE_GATE) {
+        Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., quality-gate.log, full-suite-report.xml).$($C.n)"
+        Write-CliOutput "$($C.d)    Bypass: `$env:AGENTX_SKIP_EVIDENCE_GATE = '1' (legacy flows only).$($C.n)"
+        return
+    }
+
+    # Archive the final evidence. It MUST be a fresh final artifact, but it does
+    # not need to differ byte-for-byte from earlier reports if it was regenerated.
+    $finalArchivedPath = $null
+    if ($finalEvidenceAbs) {
+        $loopDir = Get-LoopStateDirectory
+        $archDir = Join-Path $loopDir "loop-evidence/complete"
+        if (-not (Test-Path -LiteralPath $archDir)) { New-Item -ItemType Directory -Path $archDir -Force | Out-Null }
+        $stamp = (Get-Date -Format 'yyyyMMddTHHmmss')
+        $leaf = [System.IO.Path]::GetFileName($finalEvidenceAbs)
+        $finalArchivedPath = Join-Path $archDir "$stamp-$leaf"
+        try {
+            Move-Item -LiteralPath $finalEvidenceAbs -Destination $finalArchivedPath -Force
+        } catch {
+            Write-CliOutput "$($C.r)  [FAIL] Could not archive final evidence (move): $_$($C.n)"
+            return
+        }
+    }
+
     $summary = Get-Flag @('-s', '--summary') 'Criteria met'
     $state.active = $false; $state.status = 'complete'; $state.lastIterationAt = Get-Timestamp
-    $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = $summary; status = 'complete'; outcome = 'pass' })
+    $completionEntry = [PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = $summary; status = 'complete'; outcome = 'pass' }
+    if ($finalArchivedPath) {
+        $completionEntry | Add-Member -NotePropertyName evidence -NotePropertyValue $finalArchivedPath
+        $completionEntry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $finalEvidenceAbs
+    }
+    if ($null -ne $currentPassing) { $completionEntry | Add-Member -NotePropertyName passingTests -NotePropertyValue ([int]$currentPassing) }
+    $state.history = @($state.history) + @($completionEntry)
     Write-JsonFile $Script:LOOP_STATE_FILE $state
-    Write-CliOutput "`n$($C.g)  [PASS] Loop Complete! Iterations: $($state.iteration)/$($state.maxIterations) (minimum $($state.minIterations))$($C.n)`n"
+    Write-CliOutput "`n$($C.g)  [PASS] Loop Complete! Iterations: $($state.iteration)/$($state.maxIterations) (minimum $($state.minIterations))$($C.n)"
+    if ($finalArchivedPath) { Write-CliOutput "$($C.d)  Final evidence archived to: $finalArchivedPath$($C.n)" }
+    Write-CliOutput ''
 }
 
 function Invoke-LoopCancel {
@@ -5171,6 +5401,7 @@ function Invoke-DoctorCmd {
         $bndSkills = $bndFiles.Count
 
         $drift = [System.Collections.Generic.List[string]]::new()
+        # Skill paths must round-trip in both directions.
         foreach ($f in $srcFiles) {
             $rel = ($f.FullName.Substring($srcSkillRoot.Length).TrimStart('\','/')) -replace '\\','/'
             if (-not (Test-Path (Join-Path $bndSkillRoot $rel))) { $drift.Add("missing in bundle: skills/$rel") }
@@ -5179,10 +5410,10 @@ function Invoke-DoctorCmd {
             $rel = ($f.FullName.Substring($bndSkillRoot.Length).TrimStart('\','/')) -replace '\\','/'
             if (-not (Test-Path (Join-Path $srcSkillRoot $rel))) { $drift.Add("orphaned in bundle: skills/$rel") }
         }
-        # Critical non-skill files: existence-only check.
+        # Critical non-skill files: existence-only.
         $critical = @(
-            @{ src = 'Skills.md'; bnd = 'Skills.md' },
-            @{ src = 'AGENTS.md'; bnd = 'AGENTS.md' },
+            @{ src = 'Skills.md';        bnd = 'Skills.md' },
+            @{ src = 'AGENTS.md';        bnd = 'AGENTS.md' },
             @{ src = '.github/copilot-instructions.md'; bnd = 'copilot-instructions.md' }
         )
         $instrDir = Join-Path $Script:ROOT '.github/instructions'
@@ -5194,7 +5425,7 @@ function Invoke-DoctorCmd {
         $agentsDir = Join-Path $Script:ROOT '.github/agents'
         if (Test-Path $agentsDir) {
             foreach ($a in (Get-ChildItem -Path $agentsDir -Recurse -Filter '*.agent.md' -ErrorAction SilentlyContinue)) {
-                $relA = ($a.FullName.Substring($agentsDir.Length).TrimStart('\','/')) -replace '\\','/'
+                $relA = (($a.FullName.Substring($agentsDir.Length).TrimStart('\','/')) -replace '\\','/')
                 $critical += @{ src = ".github/agents/$relA"; bnd = "agents/$relA" }
             }
         }

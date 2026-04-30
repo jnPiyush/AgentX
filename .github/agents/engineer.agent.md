@@ -13,9 +13,12 @@ constraints:
   - "MUST load and read the skills prescribed for each phase before performing that phase's work"
   - "MUST start quality loop after first implementation commit: .agentx/agentx.ps1 loop start -p <prompt-text> -i <issue> (--prompt flag is REQUIRED; omitting it causes exit 1 -- see iterative-loop skill for full syntax)"
   - "MUST complete a minimum of 5 quality loop iterations before declaring implementation done"
-  - "MUST run the full test suite at the end of EVERY loop iteration"
+  - "MUST attach a real evidence file to EVERY `loop iterate` and to `loop complete` (--evidence <path>); the CLI rejects iterations without it"
+  - "MUST execute Iteration 4 (Adversarial) -- property-based tests, mutation testing on changed lines, fuzzing of any parser/deserializer/LLM-output handler, and at least 3 negative tests per public endpoint -- before declaring production-ready"
+  - "MUST execute Iteration 5 (Subagent Review) -- spawn a separate reviewer pass with only the diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings reset the loop"
+  - "MUST run the full test suite at the end of EVERY loop iteration; passing-test count MUST NOT decrease vs the loop-start baseline (.agentx/state/tests-baseline.json)"
   - "MUST verify quality loop reached 'complete' status before moving to In Review"
-  - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix)"
+  - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix); the commit-msg hook rejects fix: commits without test changes"
   - "MUST store all AI/LLM prompts as separate files in prompts/; MUST NOT embed multi-line prompts as inline strings in code"
   - "MUST NOT modify PRD, ADR, UX docs, or CI/CD workflows"
   - "MUST NOT make architectural decisions not covered by the Spec/ADR -- escalate to Architect"
@@ -99,17 +102,22 @@ The quality loop is mandatory for every implementation task.
 | Command | When |
 |---------|------|
 | `.agentx/agentx.ps1 loop start -p "Implementing #<issue>: <title>" -i <issue>` | After first implementation commit |
-| `.agentx/agentx.ps1 loop iterate -s "Iteration summary"` | After each fix/improvement cycle |
-| `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` | When ALL quality gates pass |
+| `.agentx/agentx.ps1 loop baseline -c <passing-tests>` | After the first full suite run establishes the non-regression baseline |
+| `.agentx/agentx.ps1 loop iterate -s "Iteration summary" -e <artifact> --passing <count>` | After each fix/improvement cycle |
+| `.agentx/agentx.ps1 loop complete -s "All quality gates passed" -e <final-artifact> --passing <count>` | When ALL quality gates pass |
 | `.agentx/agentx.ps1 loop status` | Check current loop state |
 
-**Minimum 5 iterations with a defined focus per iteration:**
+**Minimum 5 iterations with a defined focus per iteration. Each iteration MUST attach an evidence file via `loop iterate -e <path>`:**
 
-| Iteration | Focus | Gate to Advance |
-|-----------|-------|----------------|
-| 1 - Make it Work | Core functionality; failing tests turn green | Tests passing; feature functional |
-| 2 - Make it Right | Refactor; edge cases; lint clean; coverage >=80% | Coverage gate + lint clean |
-| 3 - Make it Production-Ready | Security scan; performance check; docs updated | Score >=70%; self-review done |
+| Iteration | Focus | Required Evidence | Gate to Advance |
+|-----------|-------|-------------------|----------------|
+| 1 - Make it Work | Core functionality; failing tests turn green | test report (junit/trx/pytest junit) | Tests passing; feature functional |
+| 2 - Make it Right | Refactor; edge cases; lint clean; coverage >=80% on changed lines | coverage xml + lint output | Diff coverage gate + lint clean |
+| 3 - Make it Secure | SAST + secrets + SCA scans; dependency audit | semgrep json + gitleaks json + audit log | Zero high/critical findings |
+| 4 - Adversarial (Break it) | Property-based tests; mutation testing on changed lines; fuzz parsers/LLM output; 3+ negative tests per endpoint | mutation report + property test report + negative-test list | Mutation score >= 60% on changed lines; surviving mutants killed |
+| 5 - Subagent Review | Separate reviewer pass with only diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings reset to relevant earlier iteration | reviewer findings json/md | Zero HIGH, zero MEDIUM findings |
+
+**Baseline lock**: `loop start` creates the baseline file and clears the prior loop's evidence cache. Record the actual passing-test count with `loop baseline -c <count>`. Once recorded, any later `loop iterate` or `loop complete` whose `--passing <count>` is below baseline MUST NOT advance -- roll back the diff or fix forward.
 
 **Hard gate**: CLI blocks `hook finish` with exit 1 if loop state is not `complete`. Cancelled or skipped does NOT bypass the gate.
 
@@ -418,16 +426,26 @@ Load `code-review` and `security` skills.
 
 Score must be >= 70% (Medium-High tier). If below threshold, read individual check results, fix highest-point failure, re-run.
 
-### 7.4 Complete the Loop and Hand Off
+### 7.4 Subagent Review (Iteration 5)
+
+Before completing the loop, run a fresh reviewer pass that ONLY sees the diff, the Spec, and the tests -- not your implementation rationale. This catches blind spots the original implementer cannot see.
+
+Minimum prompt to the subagent reviewer:
+
+> You are a code reviewer. Read SPEC-{issue}.md and the staged diff. Do NOT read any chat history or rationale. Find HIGH (security/correctness), MEDIUM (design/maintainability), LOW (style) findings. Output JSON: { findings: [{ severity, file, line, issue, suggested_fix }] }.
+
+Write the response to a fresh file such as `.agentx/state/subagent-review.json` and use it as the evidence for iteration 5. The CLI archives that file on acceptance, so generate a separate fresh final artifact for `loop complete` (for example `.agentx/state/final-gate.json`). If any HIGH or MEDIUM finding remains, fix it and reset to the relevant earlier iteration (do NOT call `loop complete`).
+
+### 7.5 Complete the Loop and Hand Off
 
 ```bash
 git add -A && git commit -m "feat: complete <description> (#<issue>)"
-.agentx/agentx.ps1 loop complete -s "All quality gates passed"
+.agentx/agentx.ps1 loop complete -s "All quality gates passed" -e .agentx/state/final-gate.json --passing <full-suite-pass-count>
 ```
 
 Update GitHub Projects Status to `In Review`.
 
-**Phase 7 Gate**: Self-review checklist complete + score >= 70% + loop status = `complete`.
+**Phase 7 Gate**: Self-review checklist complete + score >= 70% + subagent review zero HIGH/MEDIUM + loop status = `complete` (CLI enforces evidence on every iteration).
 
 ---
 
