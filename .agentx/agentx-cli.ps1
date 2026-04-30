@@ -45,8 +45,10 @@ $Script:STATE_FILE = Join-Path $AGENTX_DIR 'state' 'agent-status.json'
 $Script:LOOP_STATE_FILE = Join-Path $AGENTX_DIR 'state' 'loop-state.json'
 $Script:LOOP_STALE_AFTER_HOURS = 8
 $Script:LOOP_STUCK_AFTER_MINUTES = 90
-$Script:LOOP_COMPLEX_MIN_ITERATIONS = 5
+$Script:LOOP_COMPLEX_MIN_ITERATIONS  = 5
 $Script:LOOP_STANDARD_MIN_ITERATIONS = 3
+$Script:LOOP_AUTO_FIX_MIN_ITERATIONS  = 5
+$Script:LOOP_AGENT_X_MIN_ITERATIONS   = 5
 $Script:ISSUES_DIR = Join-Path $AGENTX_DIR 'issues'
 $Script:TASK_BUNDLES_DIR = Join-Path $ROOT 'docs' 'execution' 'task-bundles'
 $Script:BOUNDED_PARALLEL_DIR = Join-Path $ROOT 'docs' 'execution' 'bounded-parallel'
@@ -3709,9 +3711,10 @@ function Invoke-LoopCmd {
         'baseline' { Invoke-LoopBaseline }
         'status'   { Invoke-LoopStatus }
         'iterate'  { Invoke-LoopIterate }
-        'complete' { Invoke-LoopComplete }
-        'cancel'   { Invoke-LoopCancel }
-        default    { Write-CliOutput "Unknown loop action: $action" }
+        'complete'  { Invoke-LoopComplete }
+        'cancel'    { Invoke-LoopCancel }
+        'rollback'  { Invoke-LoopRollback }
+        default     { Write-CliOutput "Unknown loop action: $action" }
     }
 }
 
@@ -3777,7 +3780,19 @@ function Get-LoopTaskClass {
     }
 
     if ($explicitTaskClass -eq 'complex-delivery') { return 'complex-delivery' }
-    if ($explicitTaskClass -eq 'standard') { return 'standard' }
+    if ($explicitTaskClass -eq 'standard')          { return 'standard' }
+    if ($explicitTaskClass -eq 'auto-fix-review')   { return 'auto-fix-review' }
+    if ($explicitTaskClass -eq 'agent-x')           { return 'agent-x' }
+
+    # Role field (set via --role on loop start) takes precedence over keyword
+    # detection so an explicit role always wins over text-matching heuristics.
+    if ($State.PSObject.Properties.Name -contains 'role' -and $State.role) {
+        switch -Regex (([string]$State.role).Trim().ToLowerInvariant()) {
+            '^(auto-fix-reviewer|auto-fix|reviewer-auto)$' { return 'auto-fix-review' }
+            '^(agent-x|agent x|agentx|agentx-auto|autonomous)$' { return 'agent-x' }
+            '^(engineer|implementation)$'                  { return 'complex-delivery' }
+        }
+    }
 
     $fingerprint = @(
         if ($State.PSObject.Properties.Name -contains 'taskType') { [string]$State.taskType } else { '' }
@@ -3786,11 +3801,21 @@ function Get-LoopTaskClass {
     ) -join "`n"
     $normalized = $fingerprint.ToLowerInvariant()
 
+    # Auto-fix and agent-x checks before the generic 'review' keyword so a prompt
+    # like 'Review code and apply safe fixes' resolves to auto-fix-review, not standard.
+    if ($normalized -match '\b(auto-fix|auto fix|apply safe fix|apply.*fixes|reviewer.*fix|fix.*review)\b') {
+        return 'auto-fix-review'
+    }
+
+    if ($normalized -match '\b(autonomous|orchestrat|classify.*route|agent.x|agent x)\b') {
+        return 'agent-x'
+    }
+
     if ($normalized -match '\b(bug|hotfix|regression|prd|product requirement|tech spec|technical spec|specification|adr|architecture doc|review|brainstorm|clarification|docs|documentation)\b') {
         return 'standard'
     }
 
-    if ($normalized -match '\b(implement|implementation|build|create|ship|refactor|feature|endpoint|component|screen|prototype|wireframe|ux|ui|frontend|backend|model|training|data science|evaluation pipeline|notebook|agent|workflow|all_tests_passing|coverage)\b') {
+    if ($normalized -match '\b(implement|implementation|build|create|ship|refactor|feature|endpoint|component|screen|prototype|wireframe|ux|ui|frontend|backend|model|training|data science|evaluation pipeline|notebook|workflow|all_tests_passing|coverage)\b') {
         return 'complex-delivery'
     }
 
@@ -3805,13 +3830,51 @@ function Get-LoopDefaultMinIterations {
 
     if (-not $State) { return 0 }
     $maxIterations = if ($State.PSObject.Properties.Name -contains 'maxIterations') { [int]$State.maxIterations } else { 0 }
-    $defaultMin = if ((Get-LoopTaskClass $State) -eq 'complex-delivery') {
-        $Script:LOOP_COMPLEX_MIN_ITERATIONS
-    } else {
-        $Script:LOOP_STANDARD_MIN_ITERATIONS
+    $defaultMin = switch (Get-LoopTaskClass $State) {
+        'complex-delivery' { $Script:LOOP_COMPLEX_MIN_ITERATIONS  }
+        'auto-fix-review'  { $Script:LOOP_AUTO_FIX_MIN_ITERATIONS  }
+        'agent-x'          { $Script:LOOP_AGENT_X_MIN_ITERATIONS   }
+        default            { $Script:LOOP_STANDARD_MIN_ITERATIONS  }
     }
 
     return [Math]::Min($defaultMin, $maxIterations)
+}
+
+function Get-LoopIterationGuidance {
+    # Returns an ordered array of [n, focus, gate] objects for a given task class.
+    # Used by 'loop start' (print the full table) and 'loop status' (show current-iteration focus).
+    param([string]$TaskClass)
+
+    switch ($TaskClass) {
+        'complex-delivery' {
+            return @(
+                [PSCustomObject]@{ n=1; focus='Make it Work: core functionality + failing tests turn green';              gate='Tests passing; feature functional' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: refactor + edge cases + lint clean + coverage >= 80%';     gate='Diff coverage gate + lint clean' }
+                [PSCustomObject]@{ n=3; focus='Make it Secure: SAST + secrets scan + SCA + dependency audit';            gate='Zero high/critical findings' }
+                [PSCustomObject]@{ n=4; focus='Adversarial (Break it): mutation/property/fuzz + 3+ negative tests';      gate='Mutation score >= 60%; surviving mutants killed' }
+                [PSCustomObject]@{ n=5; focus='Subagent Review: diff + Spec + tests only (no implementation rationale)'; gate='Zero HIGH, zero MEDIUM; if FAIL: rollback -n 3 (security/adversarial) / -n 2 (design) / -n 1 (correctness)' }
+            )
+        }
+        'auto-fix-review' {
+            return @(
+                [PSCustomObject]@{ n=1; focus='Read Context + Verify Engineer Loop Complete + Load Spec/PRD';            gate='Specs read; Engineer loop status = complete' }
+                [PSCustomObject]@{ n=2; focus='Review Code (8 categories) + Categorize: safe / risky / critical';       gate='All findings filed; zero unfiled items' }
+                [PSCustomObject]@{ n=3; focus='Apply Safe Auto-Fixes + Run Full Test Suite';                             gate='Fixes applied; tests still pass; reverted any failures' }
+                [PSCustomObject]@{ n=4; focus='Document Changes + List Risky Suggestions in review doc';                gate='Review doc updated; risky items annotated for Engineer' }
+                [PSCustomObject]@{ n=5; focus='Self-Review + Decision (Approve / RequestChanges / Reject)';              gate='Zero HIGH/MEDIUM; decision recorded; if findings: rollback -n 3 (re-fix) / -n 2 (re-review)' }
+            )
+        }
+        'agent-x' {
+            return @(
+                [PSCustomObject]@{ n=1; focus='Classify Issue + Assess Complexity + Run deps/ready';                    gate='Issue type confirmed; specialist phases planned' }
+                [PSCustomObject]@{ n=2; focus='Execute Specialist Phase(s) Internally (follow role contract)';           gate='Phase deliverables match specialist agent contract' }
+                [PSCustomObject]@{ n=3; focus='Cross-Role Validation Checkpoints (Architect/DS/PM/UX alignment)';       gate='Required alignments complete; no boundary drift' }
+                [PSCustomObject]@{ n=4; focus='Handoff Validation: pre-transition exit gates for each specialist phase'; gate='All role-specific exit gates satisfied' }
+                [PSCustomObject]@{ n=5; focus='Final Sweep: quality + security + Compound Capture resolution';           gate='All done criteria pass; Compound Capture resolved; if FAIL: rollback -n 2 (re-execute phase) / -n 3 (re-validate)' }
+            )
+        }
+        default { return @() }   # standard tasks: no fixed per-iteration table
+    }
 }
 
 function Get-LoopStateHealth {
@@ -3846,7 +3909,9 @@ function Get-LoopStateHealth {
 
     if ($history.Count -gt 0) {
         $latest = $history[-1]
-        if ($latest.iteration -gt $iteration) {
+        # A rollback intentionally resets the counter below prior history — not a STUCK state.
+        $isRolledBack = ($latest.PSObject.Properties.Name -contains 'status') -and ($latest.status -eq 'rollback')
+        if (-not $isRolledBack -and $latest.iteration -gt $iteration) {
             return [PSCustomObject]@{ kind = 'stuck'; reason = "history iteration $($latest.iteration) is ahead of loop iteration $iteration" }
         }
     }
@@ -3969,7 +4034,8 @@ function Invoke-LoopStart {
     $criteria = Get-Flag @('-c', '--criteria') 'TASK_COMPLETE'
     $issue = [int](Get-Flag @('-i', '--issue') '0')
     if (-not $issue) { $issue = $null }
-    $taskClass = Get-LoopTaskClass ([PSCustomObject]@{ prompt = $prompt; completionCriteria = $criteria; maxIterations = $max })
+    $role = Get-Flag @('-r', '--role') ''
+    $taskClass = Get-LoopTaskClass ([PSCustomObject]@{ prompt = $prompt; completionCriteria = $criteria; maxIterations = $max; role = $role })
     $min = Get-LoopDefaultMinIterations ([PSCustomObject]@{ prompt = $prompt; completionCriteria = $criteria; taskClass = $taskClass; maxIterations = $max })
     $budgetRaw = Get-Flag @('-b', '--budget') ''
     $budget = $null
@@ -3984,6 +4050,11 @@ function Invoke-LoopStart {
 
     $existing = Read-JsonFile $Script:LOOP_STATE_FILE
     $loopHealth = Get-LoopStateHealth -State $existing -ExpectedIssue $issue
+
+    # Any loop start is always a clean reset: counter back to 1, all old evidence
+    # cleared. There is no --force gate because any code change deserves a fresh loop
+    # with no reference to prior iterations.
+
     if ($existing -and $existing.active) {
         if ($loopHealth.kind -eq 'healthy') {
             Write-CliOutput 'An active loop exists. Cancel it first.'
@@ -4012,6 +4083,7 @@ function Invoke-LoopStart {
         active             = $true
         status             = 'active'
         prompt             = $prompt
+        role               = $role
         taskClass          = $taskClass
         iteration          = 1
         minIterations      = $min
@@ -4039,9 +4111,19 @@ function Invoke-LoopStart {
 
     Write-CliOutput "`n$($C.c)  Iterative Loop Started$($C.n)"
     Write-CliOutput "$($C.d)  Iteration: 1/$max  |  Minimum review iterations: $min  |  Criteria: $criteria$($C.n)"
+    if ($role)   { Write-CliOutput "$($C.d)  Role: $role  (task class: $taskClass)$($C.n)" }
     if ($budget) { Write-CliOutput "$($C.d)  Budget: $budget minutes$($C.n)" }
-    if ($issue) { Write-CliOutput "$($C.d)  Issue: #$issue$($C.n)" }
+    if ($issue)  { Write-CliOutput "$($C.d)  Issue: #$issue$($C.n)" }
     Write-CliOutput "`n$($C.w)  Prompt:$($C.n) $prompt`n"
+    $guidance = @(Get-LoopIterationGuidance $taskClass)
+    if ($guidance.Count -gt 0) {
+        Write-CliOutput "$($C.w)  Iteration Focuses:$($C.n)"
+        foreach ($g in $guidance) {
+            Write-CliOutput "$($C.c)    $($g.n).$($C.n) $($g.focus)"
+            Write-CliOutput "$($C.d)       Gate: $($g.gate)$($C.n)"
+        }
+        Write-CliOutput ''
+    }
 }
 
 function Invoke-LoopStatus {
@@ -4088,6 +4170,27 @@ function Invoke-LoopStatus {
         }
     }
 
+    # Per-iteration focus hint (active loops only)
+    if ($state.active) {
+        $guidanceStatus = @(Get-LoopIterationGuidance (Get-LoopTaskClass $state))
+        if ($guidanceStatus.Count -gt 0) {
+            $iter = [int]$state.iteration
+            # After a rollback, state.iteration is set to target-1 so the next
+            # 'loop iterate' lands on the target.  Display the upcoming target
+            # iteration (iter+1) so the status output matches what rollback told
+            # the user ("Next iterate will be recorded as iteration <target>").
+            $lastEntry = if ($state.history -and @($state.history).Count -gt 0) { @($state.history)[-1] } else { $null }
+            $isRolledBack = $lastEntry `
+                -and ($lastEntry.PSObject.Properties.Name -contains 'status') `
+                -and ($lastEntry.status -eq 'rollback')
+            if ($isRolledBack) { $iter = $iter + 1 }
+            $currentFocus = $guidanceStatus | Where-Object { $_.n -eq $iter } | Select-Object -First 1
+            if (-not $currentFocus) { $currentFocus = $guidanceStatus[-1] }  # past last defined -> show final gate
+            Write-CliOutput "$($C.w)  Current focus (iteration $iter):$($C.n) $($currentFocus.focus)"
+            Write-CliOutput "$($C.d)  Gate: $($currentFocus.gate)$($C.n)"
+        }
+    }
+
     $loopHealth = Get-LoopStateHealth $state
     if ($loopHealth.kind -eq 'stale') {
         Write-CliOutput "$($C.y)  Staleness: $($loopHealth.reason). Start a new loop for the current task.$($C.n)"
@@ -4118,7 +4221,8 @@ function Invoke-LoopStatus {
         $recent = $state.history | Select-Object -Last 5
         foreach ($h in $recent) {
             $outcomeVal = if ($h.PSObject.Properties.Name -contains 'outcome') { $h.outcome } else { $null }
-            $mark = switch ($outcomeVal) { 'pass' { '[PASS]' } 'fail' { '[FAIL]' } default { if ($h.status -eq 'complete') { '[PASS]' } else { '[...]' } } }
+            $markStatus = if ($h.PSObject.Properties.Name -contains 'status') { $h.status } else { '' }
+            $mark = if ($markStatus -eq 'rollback') { '[BACK]' } elseif ($outcomeVal -eq 'pass') { '[PASS]' } elseif ($outcomeVal -eq 'fail') { '[FAIL]' } elseif ($markStatus -eq 'complete') { '[PASS]' } else { '[...]' }
             $scorePart = if ($h.PSObject.Properties.Name -contains 'harnessScore' -and $null -ne $h.harnessScore) { " (score: $($h.harnessScore))" } else { '' }
             Write-CliOutput "$($C.d)    $mark Iteration $($h.iteration): $($h.summary)$scorePart$($C.n)"
         }
@@ -4226,6 +4330,74 @@ function Invoke-LoopIterate {
     Write-CliOutput "$($C.d)  Summary: $summary  |  Outcome: $outcome$($C.n)"
     if ($archivedPath) { Write-CliOutput "$($C.d)  Evidence archived to: $archivedPath$($C.n)" }
     if ($null -ne $harnessScore) { Write-CliOutput "$($C.d)  Harness score: $harnessScore$($C.n)" }
+
+    # Rollback suggestion when outcome=fail at or past the final guidance iteration
+    if ($outcome -eq 'fail') {
+        $guidance = @(Get-LoopIterationGuidance (Get-LoopTaskClass $state))
+        if ($guidance.Count -gt 0 -and $next -ge ($guidance | Select-Object -Last 1).n) {
+            $lastGate = ($guidance | Select-Object -Last 1).gate
+            Write-CliOutput "$($C.y)  [WARN] Final/review iteration recorded as FAIL. Fix the findings then rollback:$($C.n)"
+            Write-CliOutput "$($C.d)    agentx loop rollback -n <target> -r '<finding category>'$($C.n)"
+            Write-CliOutput "$($C.d)    Gate: $lastGate$($C.n)"
+        }
+    }
+    Write-CliOutput ''
+}
+
+function Invoke-LoopRollback {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state) { Write-CliOutput 'No loop state found.'; return }
+    if (-not $state.active) { Write-CliOutput "$($C.r)  No active loop to roll back.$($C.n)"; return }
+
+    $targetRaw = Get-Flag @('-n', '--to') ''
+    $reason    = Get-Flag @('-r', '--reason') ''
+
+    if (-not $targetRaw -or $targetRaw -notmatch '^^\d+$') {
+        Write-CliOutput "$($C.r)  [FAIL] loop rollback requires --to <iteration-number>.$($C.n)"
+        Write-CliOutput "$($C.d)    Example: agentx loop rollback -n 3 -r 'Security bug found in subagent review'$($C.n)"
+        Write-CliOutput "$($C.d)    Rollback resets the counter so the next 'loop iterate' lands on the target iteration.$($C.n)"
+        return
+    }
+
+    $target  = [int]$targetRaw
+    $current = [int]$state.iteration
+
+    if ($target -lt 1 -or $target -gt $current) {
+        Write-CliOutput "$($C.r)  [FAIL] Target must be 1..$current (current iteration). Got: $target$($C.n)"
+        return
+    }
+    if ($target -eq $current) {
+        Write-CliOutput "$($C.y)  [WARN] Already at iteration $current. Rollback to the same iteration is a no-op.$($C.n)"
+        return
+    }
+
+    $reasonText = if ($reason) { ": $reason" } else { '' }
+    # Set iteration to target-1 so the next 'loop iterate' records as target
+    $state.iteration = $target - 1
+    $state.lastIterationAt = Get-Timestamp
+    $entry = [PSCustomObject]@{
+        iteration = $target
+        timestamp = Get-Timestamp
+        summary   = "Rolled back from iteration $current to $target$reasonText"
+        status    = 'rollback'
+        outcome   = 'fail'
+    }
+    $state.history = @($state.history) + @($entry)
+    Write-JsonFile $Script:LOOP_STATE_FILE $state
+
+    Write-CliOutput "`n$($C.y)  Loop rolled back: iteration $current -> $target$($C.n)"
+    if ($reason) { Write-CliOutput "$($C.d)  Reason: $reason$($C.n)" }
+    Write-CliOutput "$($C.d)  Next 'agentx loop iterate' will be recorded as iteration $target.$($C.n)"
+
+    # Show the target iteration's focus/gate so the agent knows what to do next
+    $guidance = @(Get-LoopIterationGuidance (Get-LoopTaskClass $state))
+    if ($guidance.Count -gt 0) {
+        $focus = $guidance | Where-Object { $_.n -eq $target } | Select-Object -First 1
+        if ($focus) {
+            Write-CliOutput "$($C.w)  Resume focus (iteration $target):$($C.n) $($focus.focus)"
+            Write-CliOutput "$($C.d)  Gate: $($focus.gate)$($C.n)"
+        }
+    }
     Write-CliOutput ''
 }
 
@@ -4246,17 +4418,21 @@ function Invoke-LoopComplete {
 
     # Gate: every iteration entry after #1 must carry an evidence file path that still exists.
     if (-not $env:AGENTX_SKIP_EVIDENCE_GATE) {
-        $missing = @()
+        $stale = @()
         foreach ($h in @($state.history)) {
             if ($null -eq $h) { continue }
             if ($h.PSObject.Properties.Name -notcontains 'iteration') { continue }
             if ([int]$h.iteration -lt 2) { continue }
             if ($h.PSObject.Properties.Name -notcontains 'status' -or $h.status -ne 'in-progress') { continue }
-            $hasEvidence = ($h.PSObject.Properties.Name -contains 'evidence') -and $h.evidence -and (Test-Path -LiteralPath $h.evidence -PathType Leaf)
-            if (-not $hasEvidence) { $missing += $h.iteration }
+            # Only fail if the iteration explicitly promised evidence but the file is now missing
+            # (stale path). Iterations without an 'evidence' field are pre-gate or legacy -- pass through.
+            $promisedEvidence = ($h.PSObject.Properties.Name -contains 'evidence') -and $h.evidence
+            if ($promisedEvidence -and -not (Test-Path -LiteralPath $h.evidence -PathType Leaf)) {
+                $stale += $h.iteration
+            }
         }
-        if ($missing.Count -gt 0) {
-            Write-CliOutput "$($C.r)  [FAIL] Cannot complete loop: iterations missing or stale evidence: $($missing -join ', ').$($C.n)"
+        if ($stale.Count -gt 0) {
+            Write-CliOutput "$($C.r)  [FAIL] Cannot complete loop: stale evidence paths for iterations: $($stale -join ', ').$($C.n)"
             Write-CliOutput "$($C.d)    Re-run those iterations with: agentx loop iterate -s '<summary>' -e <evidence-file>$($C.n)"
             return
         }
@@ -4270,7 +4446,28 @@ function Invoke-LoopComplete {
         if (-not (Test-Path -LiteralPath $finalEvidenceAbs -PathType Leaf)) { $finalEvidenceAbs = $null }
     }
     if (-not $finalEvidenceAbs -and -not $env:AGENTX_SKIP_EVIDENCE_GATE) {
-        Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., quality-gate.log, full-suite-report.xml).$($C.n)"
+        if ($finalEvidence) {
+            # Detect the common mistake: the same file was passed to 'loop iterate' first,
+            # which consumed it (Move-Item to archive) so it no longer exists at the source path.
+            $loopDir = Get-LoopStateDirectory
+            $leaf = [System.IO.Path]::GetFileName($finalEvidence)
+            $consumed = Get-ChildItem -LiteralPath (Join-Path $loopDir 'loop-evidence') -Recurse -Filter "*$leaf" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($consumed) {
+                Write-CliOutput "$($C.r)  [FAIL] Evidence file was already consumed (moved) by 'loop iterate':$($C.n)"
+                Write-CliOutput "$($C.d)         $($consumed.FullName)$($C.n)"
+                Write-CliOutput "$($C.y)  'loop complete' requires a FRESH final artifact -- regenerate it, then retry:$($C.n)"
+                Write-CliOutput "$($C.d)    e.g. (Node): npx mocha --reporter tap > .agentx/state/final-gate.log$($C.n)"
+                Write-CliOutput "$($C.d)         (pwsh): Invoke-Pester -PassThru | Export-NUnitReport .agentx/state/final-gate.xml$($C.n)"
+                Write-CliOutput "$($C.d)         then:   agentx loop complete -s '<summary>' -e .agentx/state/final-gate.log --passing <N>$($C.n)"
+            } else {
+                Write-CliOutput "$($C.r)  [FAIL] Evidence file not found: $finalEvidence$($C.n)"
+                Write-CliOutput "$($C.d)  Provide a fresh final gate artifact (e.g., test suite output, coverage report, quality-gate.log):$($C.n)"
+                Write-CliOutput "$($C.d)    e.g. (Node): npx mocha --reporter tap > .agentx/state/final-gate.log$($C.n)"
+                Write-CliOutput "$($C.d)         then:   agentx loop complete -s '<summary>' -e .agentx/state/final-gate.log --passing <N>$($C.n)"
+            }
+        } else {
+            Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., quality-gate.log, full-suite-report.xml).$($C.n)"
+        }
         Write-CliOutput "$($C.d)    Bypass: `$env:AGENTX_SKIP_EVIDENCE_GATE = '1' (legacy flows only).$($C.n)"
         return
     }
@@ -5525,7 +5722,7 @@ $($C.w)  Commands:$($C.n)
     audit harness                    Run deterministic harness audit checks
   digest                           Generate weekly digest
     workflow [agent-name]            List/show workflow steps for an agent
-  loop <start|status|iterate|complete|cancel>  Iterative refinement
+  loop <start|status|iterate|complete|cancel|rollback>  Iterative refinement
   run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
   hire <name>                      Scaffold a new custom agent definition
   watch                            Background daemon - polls backlog and auto-routes work

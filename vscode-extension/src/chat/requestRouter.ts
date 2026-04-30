@@ -6,6 +6,10 @@ import {
   tryHandlePendingSetupRequest,
 } from './adapterSetup';
 import {
+  resetIntentRouterStateForTests,
+  tryHandleNaturalLanguageIntent,
+} from './intentRouter';
+import {
   getPendingClarification,
   renderUsageGuidance,
   resetChatRouterInternalStateForTests,
@@ -67,6 +71,7 @@ export async function getAgentXChatFollowups(
 
 export function resetChatRouterStateForTests(): void {
   resetChatRouterInternalStateForTests();
+  resetIntentRouterStateForTests();
 }
 
 export async function routeAgentXChatRequest(
@@ -186,6 +191,11 @@ export async function routeAgentXChatRequest(
 
   if (pending) {
     return resumePendingClarification(response, agentx, pending, userText);
+  }
+
+  const intentResult = await tryHandleNaturalLanguageIntent(userText, response, agentx);
+  if (intentResult) {
+    return intentResult;
   }
 
   response.markdown(renderUsageGuidance());

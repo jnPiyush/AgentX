@@ -36,8 +36,12 @@ tools:
   - editFiles
   - search
   - changes
+  - runCommands
+  - problems
+  - usages
   - think
   - fetch
+  - github/*
 agents: []
 handoffs: []
 ---
