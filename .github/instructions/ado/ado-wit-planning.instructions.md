@@ -22,22 +22,28 @@ this workflow.
 
 ## Current ADO Execution Path
 
-Current AgentX runtime behavior for Azure DevOps uses Azure CLI plus the
-`azure-devops` extension. Do not assume `mcp_ado_*` tools exist in this
-repository runtime.
+The AgentX ADO provider supports two transports, selected by `adapters.ado.transport` (or top-level `adoTransport`) in `.agentx/config.json`:
 
-Microsoft's Azure DevOps MCP Server exists as a separate optional integration,
-but AgentX does not provision or depend on it for built-in ADO provider flows.
+- `auto` (default): Probe for Node.js + `npx`. If found, dispatch through Microsoft's Azure DevOps MCP Server (`@azure-devops/mcp`). On any MCP failure, transparently fall back to Azure CLI.
+- `mcp`: MCP only (Node.js + `npx` required).
+- `cli`: Azure CLI plus the `azure-devops` extension only.
 
-Work item operations should use Azure CLI first and fall back to `az devops invoke`
-for REST endpoints that do not have a convenient first-class CLI wrapper.
+Default MCP tool names (overridable via `adapters.ado.mcpTools`):
+
+- Retrieval: `wit_get_work_item`
+- Create: `wit_create_work_item`
+- Update: `wit_update_work_item`
+- Comment: `wit_add_work_item_comment`
+- Query (WIQL): `wit_query_by_wiql`
+
+When CLI is in use (either by configuration or as MCP fallback), operations should use Azure CLI first and fall back to `az devops invoke` for REST endpoints without a convenient first-class CLI wrapper.
 
 Discovery and retrieval:
 
 - `az boards query`: Search work items with WIQL.
   Key inputs: WIQL string, `--organization`, `--project`, `--output json`.
 - `az boards work-item show`: Retrieve a single work item.
-  Key inputs: `--id`, `--organization`, `--project`, `--output json`.
+  Key inputs: `--id`, `--organization`, `--output json`.
 - `az devops invoke`: Fallback for batch retrieval or specialized REST endpoints.
 
 Iteration:
@@ -52,7 +58,7 @@ Creation and updates:
   `--organization`, `--project`, `--output json`.
 - `az boards work-item update`: Update work item fields, state, tags, and discussion.
   Key inputs: `--id`, `--fields`, `--state`, `--discussion`,
-  `--organization`, `--project`, `--output json`.
+  `--organization`, `--output json`.
 - `az devops invoke`: Fallback for batch updates or relationship patch payloads.
 
 Relationships and linking:

@@ -671,6 +671,7 @@ task_prefix: 'task'
         mode = 'ado'
         organization = 'PJCloud'
         project = 'Contract Lifecycle Management'
+        adoTransport = 'cli'
         created = '2026-03-08T00:00:00Z'
     } | ConvertTo-Json -Depth 5)
 

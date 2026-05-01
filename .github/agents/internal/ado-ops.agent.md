@@ -101,9 +101,10 @@ when composing work item descriptions and comments for ADO API calls.
 
 AgentX runtime note:
 
-- The built-in AgentX ADO provider uses Azure CLI plus the `azure-devops` extension.
-- Do not assume `mcp_ado_*` tools are available in this repository runtime.
-- If a team separately installs Microsoft's Azure DevOps MCP Server, treat that as an optional external integration rather than the default AgentX path.
+- The built-in AgentX ADO provider supports two transports: Microsoft's Azure DevOps MCP Server (`@azure-devops/mcp` via `npx`) and Azure CLI plus the `azure-devops` extension.
+- Default transport is `auto`: AgentX probes for Node.js + `npx` and uses MCP when available; on any MCP failure or absence it falls back to `az boards` CLI transparently and emits a one-time `[INFO]` warning.
+- Configure explicitly in `.agentx/config.json` via `adapters.ado.transport` (`mcp` | `cli` | `auto`) or top-level `adoTransport`.
+- MCP tool names default to `wit_get_work_item`, `wit_create_work_item`, `wit_update_work_item`, `wit_add_work_item_comment`, `wit_query_by_wiql`, and may be overridden via `adapters.ado.mcpTools`.
 
 ## Core Directives
 
@@ -182,20 +183,35 @@ Summary contents:
 
 ## Current ADO Command Reference
 
-Use Azure CLI with the `azure-devops` extension as the default execution path:
+The AgentX ADO provider routes work-item operations through MCP (preferred) with Azure CLI fallback. PR and pipeline operations remain on `az` CLI today.
+
+### MCP transport (preferred)
+
+When `node` and `npx` are on PATH, AgentX spawns Microsoft's Azure DevOps MCP Server and dispatches JSON-RPC `tools/call` requests:
+
+| Category  | MCP Tool (default) | AgentX operation |
+|-----------|--------------------|------------------|
+| Search    | `wit_query_by_wiql` | `Get-ProviderIssues` (WIQL) |
+| Retrieval | `wit_get_work_item` | `Get-AdoIssue` |
+| Mutation  | `wit_create_work_item`, `wit_update_work_item` | `New-ProviderIssue`, `Update-ProviderIssue`, `Close-ProviderIssue` |
+| Comments  | `wit_add_work_item_comment` | `Add-ProviderIssueComment` |
+
+Tool names are overridable via `adapters.ado.mcpTools` for forks of the server.
+
+### CLI transport (fallback / explicit)
 
 | Category  | Command Path |
 |-----------|--------------|
-| Search    | `az boards query --wiql ... --organization ... --project ... --output json` |
-| Retrieval | `az boards work-item show --id ... --organization ... --project ... --output json` |
-| Mutation  | `az boards work-item create/update ... --organization ... --project ... --output json` |
+| Search    | `az boards query --wiql ... --organization ... --output json` |
+| Retrieval | `az boards work-item show --id ... --organization ... --output json` |
+| Mutation  | `az boards work-item create/update ... --organization ... --output json` |
 | Comments  | `az boards work-item update --discussion ...` |
 | Pull Requests | `az repos pr ...` or `az devops invoke` when the CLI surface is incomplete |
 | Build Info | `az pipelines build list/show ...` or `az devops invoke` for timeline/log detail |
 | Fallback | `az devops invoke` against Azure DevOps REST endpoints when no first-class CLI command exists |
 
 Authenticate with either interactive `az login`, `az devops login`, or a scoped
-`AZURE_DEVOPS_EXT_PAT` environment variable for automation.
+`AZURE_DEVOPS_EXT_PAT` environment variable for automation. The MCP server reads its credentials per its own documentation (typically `AZURE_DEVOPS_PAT`).
 
 ## State Management
 
