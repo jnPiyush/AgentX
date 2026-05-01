@@ -22,11 +22,14 @@ this workflow.
 
 ## Current ADO Execution Path
 
-The AgentX ADO provider supports two transports, selected by `adapters.ado.transport` (or top-level `adoTransport`) in `.agentx/config.json`:
+The AgentX ADO work-item provider uses Microsoft's Azure DevOps MCP Server only.
 
-- `auto` (default): Probe for Node.js + `npx`. If found, dispatch through Microsoft's Azure DevOps MCP Server (`@azure-devops/mcp`). On any MCP failure, transparently fall back to Azure CLI.
-- `mcp`: MCP only (Node.js + `npx` required).
-- `cli`: Azure CLI plus the `azure-devops` extension only.
+Required config in `.agentx/config.json`:
+
+- `organization`: plain org name, `https://dev.azure.com/<org>`, or `https://<org>.visualstudio.com`
+- `project`: Azure DevOps project name
+- Optional `adapters.ado.mcpCommand`: custom server launch command
+- Optional `adapters.ado.mcpTools`: tool-name overrides for forks or wrappers of the MCP server
 
 Default MCP tool names (overridable via `adapters.ado.mcpTools`):
 
@@ -36,7 +39,9 @@ Default MCP tool names (overridable via `adapters.ado.mcpTools`):
 - Comment: `wit_add_work_item_comment`
 - Query (WIQL): `wit_query_by_wiql`
 
-When CLI is in use (either by configuration or as MCP fallback), operations should use Azure CLI first and fall back to `az devops invoke` for REST endpoints without a convenient first-class CLI wrapper.
+Authenticate the MCP server per its documentation, typically with `AZURE_DEVOPS_PAT`.
+
+For PR, pipeline, or REST scenarios outside the built-in work-item provider, use Azure CLI first and `az devops invoke` only when no first-class CLI wrapper exists.
 
 Discovery and retrieval:
 

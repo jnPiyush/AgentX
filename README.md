@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.38"><img src="https://img.shields.io/badge/Version-8.4.38-0EA5E9?style=for-the-badge" alt="Version 8.4.38"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.39"><img src="https://img.shields.io/badge/Version-8.4.39-0EA5E9?style=for-the-badge" alt="Version 8.4.39"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -298,7 +298,7 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.38
+## New In 8.4.39
 
 - New `product/prd` skill usable by non-PM agents (Engineer, Architect, Auto agents) to author PRDs with a requirements-quality catalogue, vague-vs-concrete examples, and an AI-contract worked example
 - New `diagrams/diagram-as-code` skill covering Mermaid, PlantUML, C4/Structurizr, Graphviz DOT, and draw.io, with first-class support for cross-functional swimlanes, BPMN patterns, and Visio (`.vsdx`) interop via draw.io export

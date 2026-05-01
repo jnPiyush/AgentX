@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "AgentX - Multi-Agent Orchestration",
   "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
-  "version": "8.4.38",
+  "version": "8.4.39",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -682,10 +682,19 @@
     ],
     "chatSkills": [
       {
+        "path": "./.github/agentx/skills/ai-systems/agent-memory-systems/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/agent-observability/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/ai-systems/ai-agent-development/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/ai-systems/ai-evaluation/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/ai-systems/anthropic-claude/SKILL.md"
@@ -695,6 +704,9 @@
       },
       {
         "path": "./.github/agentx/skills/ai-systems/cognitive-architecture/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/computer-use-and-browser-agents/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/ai-systems/context-management/SKILL.md"
@@ -715,6 +727,9 @@
         "path": "./.github/agentx/skills/ai-systems/langgraph/SKILL.md"
       },
       {
+        "path": "./.github/agentx/skills/ai-systems/llm-gateway-and-routing/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/ai-systems/mcp-apps-development/SKILL.md"
       },
       {
@@ -727,6 +742,9 @@
         "path": "./.github/agentx/skills/ai-systems/model-fine-tuning/SKILL.md"
       },
       {
+        "path": "./.github/agentx/skills/ai-systems/multi-agent-orchestration/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/ai-systems/prompt-engineering/SKILL.md"
       },
       {
@@ -734,6 +752,21 @@
       },
       {
         "path": "./.github/agentx/skills/ai-systems/rag-pipelines/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/reasoning-models/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/synthetic-data-generation/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/tool-use-and-function-calling/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/vector-databases/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/ai-systems/voice-agents/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/architecture/api-design/SKILL.md"

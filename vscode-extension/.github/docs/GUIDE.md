@@ -717,15 +717,9 @@ If you prefer to switch explicitly before the first auto-detected command, set `
 
 Use the ADO provider when your team tracks work in Azure DevOps instead of GitHub issues.
 
-Transport options (configured in `.agentx/config.json`):
+The built-in work-item provider is MCP-only and uses Microsoft's Azure DevOps MCP Server (`@azure-devops/mcp`).
 
-| Transport | When AgentX uses it | Requirements |
-|-----------|---------------------|--------------|
-| `auto` (default) | Probes for Node.js + `npx`. If found, dispatches via Microsoft's Azure DevOps MCP Server (`@azure-devops/mcp`). On any MCP failure, transparently falls back to `az` CLI and prints a one-time `[INFO]` warning. | Either Node.js 18+ (for MCP) or Azure CLI + `azure-devops` extension (for fallback). Both is best. |
-| `mcp` | MCP only; hard error if Node.js is missing. | Node.js 18+, `npx` on PATH. |
-| `cli` | Azure CLI only. Skips MCP probe entirely (legacy / scripted environments). | Azure CLI + `azure-devops` extension. |
-
-Set the transport via either `adapters.ado.transport` or top-level `adoTransport`:
+Required config:
 
 ```json
 {
@@ -733,12 +727,10 @@ Set the transport via either `adapters.ado.transport` or top-level `adoTransport
   "integration": "ado",
   "organization": "myorg",
   "project": "MyProject",
-  "adoTransport": "auto",
   "adapters": {
     "ado": {
       "organization": "myorg",
       "project": "MyProject",
-      "transport": "auto",
       "mcpCommand": "npx -y @azure-devops/mcp myorg",
       "mcpTools": {
         "get": "wit_get_work_item",
@@ -753,11 +745,11 @@ Set the transport via either `adapters.ado.transport` or top-level `adoTransport
 }
 ```
 
-`mcpCommand` and `mcpTools` are optional overrides. Defaults work with Microsoft's official Azure DevOps MCP Server.
+`organization` may be a plain org name, `https://dev.azure.com/<org>`, or `https://<org>.visualstudio.com`. `mcpCommand` and `mcpTools` are optional overrides; the defaults work with Microsoft's official Azure DevOps MCP Server.
 
 Authentication:
-- **MCP**: per the MCP server's documentation (typically `AZURE_DEVOPS_PAT` environment variable).
-- **CLI fallback**: interactive `az login`, `az devops login`, or a scoped `AZURE_DEVOPS_EXT_PAT` environment variable for automation.
+- **Work-item provider**: configure the MCP server per its documentation, typically with `AZURE_DEVOPS_PAT`.
+- **Other Azure DevOps automation**: PR and pipeline flows still use Azure CLI authentication where those commands remain CLI-based.
 
 The same harness compliance script runs locally, in GitHub Actions, and in Azure Pipelines so plan/evidence checks stay aligned across providers.
 

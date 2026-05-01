@@ -37,7 +37,7 @@ export interface RemoteAdapterApplyResult {
 
 const ADAPTER_MODE_ITEMS: readonly AdapterPick[] = [
   { label: 'github', value: 'github', description: 'GitHub Actions, PRs, Projects (via MCP)' },
-  { label: 'ado', value: 'ado', description: 'Azure DevOps work items and boards (MCP-first, az CLI fallback)' },
+  { label: 'ado', value: 'ado', description: 'Azure DevOps work items and boards (MCP-backed)' },
   { label: 'local', value: 'local', description: 'Workspace-only mode without a remote backlog adapter' },
 ];
 

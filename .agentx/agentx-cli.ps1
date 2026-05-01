@@ -92,7 +92,6 @@ function Write-JsonFile([string]$p, $data) {
 # ---------------------------------------------------------------------------
 
 <#
-.SYNOPSIS
   Acquire an exclusive .lock file for a given JSON path.
   Returns $true on success, $false on timeout.
 #>
@@ -103,36 +102,37 @@ function Lock-JsonFile([string]$jsonPath, [string]$agent = 'cli') {
     $staleSecs = 30
 
     for ($i = 0; $i -lt $maxRetries; $i++) {
-        # Clean stale lock.
         if (Test-Path $lockPath) {
             try {
                 $lockData = Get-Content $lockPath -Raw -Encoding utf8 | ConvertFrom-Json
                 $created = [datetime]$lockData.created
                 if (([datetime]::UtcNow - $created).TotalSeconds -gt $staleSecs) {
                     Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
+                } else {
+                    Start-Sleep -Milliseconds ([int]($delayMs * [Math]::Pow(1.5, $i)))
+                    continue
                 }
             } catch {
                 Remove-Item $lockPath -Force -ErrorAction SilentlyContinue
             }
         }
 
-        # Atomic create: FileMode.CreateNew -- fails if file already exists.
         try {
-            $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew,
-                [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
-                $payload = ([ordered]@{
-                        agent = $agent
-                        created = [datetime]::UtcNow.ToString('o')
-                    } | ConvertTo-Json -Compress)
+            $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+            $payloadObject = @{
+                agent = $agent
+                created = [datetime]::UtcNow.ToString('o')
+            }
+            $payload = $payloadObject | ConvertTo-Json -Compress
             $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
             $stream.Write($bytes, 0, $bytes.Length)
             $stream.Dispose()
             return $true
         } catch [System.IO.IOException] {
-            # Another process holds the lock -- wait with exponential back-off.
             Start-Sleep -Milliseconds ([int]($delayMs * [Math]::Pow(1.5, $i)))
         }
     }
+
     return $false
 }
 
@@ -531,287 +531,274 @@ function Get-AgentXProviderResolution {
     return [PSCustomObject]@{ name = $resolved; source = 'mode'; inferred = $false; warning = '' }
 }
 
-function Assert-AdoCliAvailable {
-    if (-not (Test-CommandAvailable 'az')) {
-        throw 'Azure CLI is required for ADO provider support. Install Azure CLI and the azure-devops extension.'
-    }
-}
+    # --- ADO MCP transport ---------------------------------------------------------
+    # AgentX's built-in ADO work-item provider uses MCP only.
+    # Tool overrides: adapters.ado.mcpTools (hashtable: get/create/update/comment/query/list).
+    # Server override: adapters.ado.mcpCommand (defaults to 'npx -y @azure-devops/mcp <org>').
 
-# --- ADO MCP transport ---------------------------------------------------------
-# Transport modes:
-#   'auto' (default) - try MCP first, fall back to az CLI on any failure
-#   'mcp'            - MCP only, fail hard if unavailable
-#   'cli'            - az CLI only (legacy / test path)
-# Configured via .agentx/config.json: adapters.ado.transport OR top-level adoTransport.
-# Tool overrides: adapters.ado.mcpTools (hashtable: get/create/update/comment/query/list).
-# Server override: adapters.ado.mcpCommand (defaults to 'npx -y @azure-devops/mcp <org>').
-
-$Script:AdoMcpProcess = $null
-$Script:AdoMcpRequestId = 0
-$Script:AdoMcpInitialized = $false
-$Script:AdoMcpProbed = $false
-$Script:AdoMcpProbeResult = $false
-$Script:AdoMcpFallbackWarned = $false
-
-function Get-AdoTransport {
-    $cfg = Get-AgentXConfig
-    $transport = [string](Get-AgentXAdapterValue $cfg 'ado' 'transport' '')
-    if ([string]::IsNullOrWhiteSpace($transport)) {
-        $transport = [string](Get-ConfigValue $cfg 'adoTransport' '')
-    }
-    $normalized = if ($transport) { $transport.Trim().ToLowerInvariant() } else { 'auto' }
-    switch ($normalized) {
-        'mcp'  { return 'mcp' }
-        'cli'  { return 'cli' }
-        'az'   { return 'cli' }
-        default { return 'auto' }
-    }
-}
-
-function Get-AdoMcpToolName([string]$operation) {
-    $defaults = @{
-        get     = 'wit_get_work_item'
-        create  = 'wit_create_work_item'
-        update  = 'wit_update_work_item'
-        comment = 'wit_add_work_item_comment'
-        query   = 'wit_query_by_wiql'
-        list    = 'wit_list_backlog_work_items'
-    }
-    $cfg = Get-AgentXConfig
-    $override = Get-AgentXAdapterValue $cfg 'ado' 'mcpTools' $null
-    if ($override) {
-        $value = Get-ConfigValue $override $operation ''
-        if (-not [string]::IsNullOrWhiteSpace([string]$value)) { return [string]$value }
-    }
-    return $defaults[$operation]
-}
-
-function Get-AdoMcpServerCommand {
-    $cfg = Get-AgentXConfig
-    $override = [string](Get-AgentXAdapterValue $cfg 'ado' 'mcpCommand' '')
-    if (-not [string]::IsNullOrWhiteSpace($override)) {
-        return $override
-    }
-    $org = [string](Get-AgentXAdapterValue $cfg 'ado' 'organization' '')
-    if ([string]::IsNullOrWhiteSpace($org)) {
-        $org = [string](Get-ConfigValue $cfg 'organization' '')
-    }
-    # Strip URL prefix if user gave a full URL; the MS MCP server expects org name only.
-    if ($org -match '^https?://') {
-        $org = ($org -replace '^https?://(?:dev\.azure\.com/|[^/]+/)?', '').Trim('/')
-    }
-    return "npx -y @azure-devops/mcp $org"
-}
-
-function Test-AdoMcpAvailable {
-    if ($Script:AdoMcpProbed) { return $Script:AdoMcpProbeResult }
-    $Script:AdoMcpProbed = $true
-    if (-not (Test-CommandAvailable 'node')) {
-        $Script:AdoMcpProbeResult = $false
-        return $false
-    }
-    if (-not (Test-CommandAvailable 'npx')) {
-        $Script:AdoMcpProbeResult = $false
-        return $false
-    }
-    $Script:AdoMcpProbeResult = $true
-    return $true
-}
-
-function Start-AdoMcpServer {
-    if ($Script:AdoMcpProcess -and -not $Script:AdoMcpProcess.HasExited) {
-        return $Script:AdoMcpProcess
-    }
-
-    $command = Get-AdoMcpServerCommand
-    if ([string]::IsNullOrWhiteSpace($command)) {
-        throw 'ADO MCP server command is empty. Configure adapters.ado.organization or adapters.ado.mcpCommand.'
-    }
-
-    $tokens = @($command -split '\s+' | Where-Object { $_ })
-    if ($tokens.Count -eq 0) {
-        throw "ADO MCP server command is invalid: '$command'."
-    }
-
-    $exe = $tokens[0]
-    $argList = if ($tokens.Count -gt 1) { $tokens[1..($tokens.Count - 1)] } else { @() }
-
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = $exe
-    foreach ($a in $argList) { $psi.ArgumentList.Add($a) | Out-Null } 2>$null
-    if ($psi.ArgumentList.Count -eq 0 -and $argList.Count -gt 0) {
-        # Fallback for older PS without ArgumentList support.
-        $psi.Arguments = ($argList -join ' ')
-    }
-    $psi.UseShellExecute = $false
-    $psi.RedirectStandardInput = $true
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
-    $psi.CreateNoWindow = $true
-
-    $proc = [System.Diagnostics.Process]::Start($psi)
-    if (-not $proc) {
-        throw "Failed to start ADO MCP server: $command"
-    }
-    $Script:AdoMcpProcess = $proc
+    $Script:AdoMcpProcess = $null
     $Script:AdoMcpRequestId = 0
     $Script:AdoMcpInitialized = $false
-    return $proc
-}
 
-function Stop-AdoMcpServer {
-    if ($Script:AdoMcpProcess) {
-        try {
-            if (-not $Script:AdoMcpProcess.HasExited) {
-                $Script:AdoMcpProcess.StandardInput.Close()
-                if (-not $Script:AdoMcpProcess.WaitForExit(2000)) {
-                    $Script:AdoMcpProcess.Kill()
-                }
+    function Get-AdoOrganizationName {
+        $cfg = Get-AgentXConfig
+        $organization = [string](Get-ConfigValue $cfg 'organization' '')
+        if ([string]::IsNullOrWhiteSpace($organization)) {
+            $organization = [string](Get-AgentXAdapterValue $cfg 'ado' 'organization' '')
+        }
+        if ([string]::IsNullOrWhiteSpace($organization)) { return '' }
+
+        $organization = $organization.Trim()
+        if ($organization -notmatch '^https?://') {
+            if ($organization -match '^([^.]+)\.visualstudio\.com/?$') {
+                return $matches[1]
             }
-        } catch { Write-Verbose "Stop-AdoMcpServer: $_" }
-        $Script:AdoMcpProcess = $null
-        $Script:AdoMcpInitialized = $false
-    }
-}
-
-function Send-AdoMcpRpc([System.Diagnostics.Process]$proc, [hashtable]$message, [int]$timeoutMs = 30000) {
-    $json = ($message | ConvertTo-Json -Depth 10 -Compress)
-    $proc.StandardInput.WriteLine($json)
-    $proc.StandardInput.Flush()
-
-    $deadline = [DateTime]::UtcNow.AddMilliseconds($timeoutMs)
-    while ([DateTime]::UtcNow -lt $deadline) {
-        if ($proc.HasExited) {
-            $stderr = ''
-            try { $stderr = $proc.StandardError.ReadToEnd() } catch {}
-            throw "ADO MCP server exited unexpectedly. stderr: $stderr"
+            return $organization.Trim('/')
         }
-        $line = $proc.StandardOutput.ReadLine()
-        if ($null -eq $line) { Start-Sleep -Milliseconds 50; continue }
-        $trimmed = $line.Trim()
-        if (-not $trimmed) { continue }
-        # Skip non-JSON log lines.
-        if ($trimmed[0] -ne '{') { continue }
+
         try {
-            return ($trimmed | ConvertFrom-Json -Depth 20)
+            $uri = [System.Uri]$organization
         } catch {
-            continue
+            throw "ADO organization '$organization' is not a valid URL. Use an organization name, a dev.azure.com URL, a visualstudio.com URL, or set adapters.ado.mcpCommand explicitly."
         }
-    }
-    throw "Timed out waiting for ADO MCP response (>${timeoutMs}ms)."
-}
 
-function Initialize-AdoMcpSession {
-    if ($Script:AdoMcpInitialized) { return }
-    $proc = Start-AdoMcpServer
-    $Script:AdoMcpRequestId++
-    $req = @{
-        jsonrpc = '2.0'
-        id = $Script:AdoMcpRequestId
-        method = 'initialize'
-        params = @{
-            protocolVersion = '2024-11-05'
-            capabilities = @{}
-            clientInfo = @{ name = 'agentx-cli'; version = '1.0.0' }
+        if ($uri.Host -eq 'dev.azure.com') {
+            $segments = @($uri.AbsolutePath.Trim('/') -split '/' | Where-Object { $_ })
+            if ($segments.Count -gt 0) { return $segments[0] }
         }
-    }
-    $resp = Send-AdoMcpRpc $proc $req
-    if ($resp.error) {
-        throw "ADO MCP initialize failed: $($resp.error.message)"
-    }
-    # Send initialized notification (no id, no response expected).
-    $note = @{ jsonrpc = '2.0'; method = 'notifications/initialized'; params = @{} }
-    $proc.StandardInput.WriteLine(($note | ConvertTo-Json -Depth 5 -Compress))
-    $proc.StandardInput.Flush()
-    $Script:AdoMcpInitialized = $true
-}
 
-function Invoke-AdoMcpTool {
-    param(
-        [Parameter(Mandatory)][string]$Tool,
-        [hashtable]$Arguments = @{}
-    )
-    Initialize-AdoMcpSession
-    $proc = $Script:AdoMcpProcess
-    $Script:AdoMcpRequestId++
-    $req = @{
-        jsonrpc = '2.0'
-        id = $Script:AdoMcpRequestId
-        method = 'tools/call'
-        params = @{ name = $Tool; arguments = $Arguments }
-    }
-    $resp = Send-AdoMcpRpc $proc $req
-    if ($resp.error) {
-        throw "ADO MCP tool '$Tool' failed: $($resp.error.message)"
-    }
-    if ($resp.result.isError) {
-        $msg = ''
-        if ($resp.result.content) {
-            $msg = (@($resp.result.content) | ForEach-Object { [string]$_.text }) -join "`n"
+        if ($uri.Host -match '^([^.]+)\.visualstudio\.com$') {
+            return $matches[1]
         }
-        throw "ADO MCP tool '$Tool' returned an error: $msg"
-    }
-    return $resp.result
-}
 
-function ConvertFrom-AdoMcpToolResult($result) {
-    # MCP tool results are content-array; the JSON payload is typically the first text block.
-    if (-not $result) { return $null }
-    if ($result.structuredContent) { return $result.structuredContent }
-    $content = @($result.content)
-    foreach ($block in $content) {
-        if ($block.type -eq 'text' -and $block.text) {
-            $text = [string]$block.text
-            try { return ($text | ConvertFrom-Json -Depth 20) } catch { return $text }
-        }
-    }
-    return $null
-}
-
-function Invoke-AdoOperation {
-    <#
-    .SYNOPSIS
-        Dispatches an ADO operation through MCP, az CLI, or both based on configured transport.
-    .DESCRIPTION
-        - transport=mcp:  invoke McpBlock; throw on failure.
-        - transport=cli:  invoke CliBlock.
-        - transport=auto (default): probe MCP availability; if available invoke McpBlock,
-          fall back to CliBlock on any failure (with one-time warning).
-    #>
-    param(
-        [Parameter(Mandatory)][scriptblock]$McpBlock,
-        [Parameter(Mandatory)][scriptblock]$CliBlock,
-        [string]$OperationName = 'ado'
-    )
-    $transport = Get-AdoTransport
-    if ($transport -eq 'cli') { return (& $CliBlock) }
-
-    if ($transport -eq 'mcp') {
-        if (-not (Test-AdoMcpAvailable)) {
-            throw "ADO transport is set to 'mcp' but Node.js (node + npx) is not on PATH. Install Node.js 18+ or set adapters.ado.transport='cli'."
-        }
-        return (& $McpBlock)
+        throw "Unable to derive Azure DevOps organization name from '$organization'. Use an organization name, a dev.azure.com URL, a visualstudio.com URL, or set adapters.ado.mcpCommand explicitly."
     }
 
-    # auto
-    if (-not (Test-AdoMcpAvailable)) {
-        if (-not $Script:AdoMcpFallbackWarned -and -not $Script:JsonOutput) {
-            Write-CliOutput "$($C.y)  [INFO] ADO MCP unavailable (Node.js not found); falling back to az CLI. Install Node.js 18+ to enable MCP transport.$($C.n)"
-            $Script:AdoMcpFallbackWarned = $true
+    function Get-AdoMcpToolName([string]$operation) {
+        $defaults = @{
+            get     = 'wit_get_work_item'
+            create  = 'wit_create_work_item'
+            update  = 'wit_update_work_item'
+            comment = 'wit_add_work_item_comment'
+            query   = 'wit_query_by_wiql'
+            list    = 'wit_list_backlog_work_items'
         }
-        return (& $CliBlock)
-    }
-    try {
-        return (& $McpBlock)
-    } catch {
-        if (-not $Script:AdoMcpFallbackWarned -and -not $Script:JsonOutput) {
-            Write-CliOutput "$($C.y)  [INFO] ADO MCP call failed for $OperationName ($($_.Exception.Message)); falling back to az CLI.$($C.n)"
-            $Script:AdoMcpFallbackWarned = $true
+        $cfg = Get-AgentXConfig
+        $override = Get-AgentXAdapterValue $cfg 'ado' 'mcpTools' $null
+        if ($override) {
+            $value = Get-ConfigValue $override $operation ''
+            if (-not [string]::IsNullOrWhiteSpace([string]$value)) { return [string]$value }
         }
-        Stop-AdoMcpServer
-        return (& $CliBlock)
+        return $defaults[$operation]
     }
-}
+
+    function Get-AdoMcpServerCommand {
+        $cfg = Get-AgentXConfig
+        $override = [string](Get-AgentXAdapterValue $cfg 'ado' 'mcpCommand' '')
+        if (-not [string]::IsNullOrWhiteSpace($override)) {
+            return $override
+        }
+
+        $org = Get-AdoOrganizationName
+        if ([string]::IsNullOrWhiteSpace($org)) {
+            throw 'ADO MCP requires an organization name or URL in .agentx/config.json, or adapters.ado.mcpCommand.'
+        }
+        return "npx -y @azure-devops/mcp $org"
+    }
+
+    function Start-AdoMcpServer {
+        if ($Script:AdoMcpProcess -and -not $Script:AdoMcpProcess.HasExited) {
+            return $Script:AdoMcpProcess
+        }
+
+        $command = Get-AdoMcpServerCommand
+        if ([string]::IsNullOrWhiteSpace($command)) {
+            throw 'ADO MCP server command is empty. Configure adapters.ado.organization or adapters.ado.mcpCommand.'
+        }
+
+        $exe = ''
+        $rawArguments = ''
+        if ($command -match '^\s*"([^"]+)"\s*(.*)$') {
+            $exe = $matches[1]
+            $rawArguments = $matches[2]
+        } elseif ($command -match '^\s*(\S+)\s*(.*)$') {
+            $exe = $matches[1]
+            $rawArguments = $matches[2]
+        }
+
+        if ([string]::IsNullOrWhiteSpace($exe)) {
+            throw "ADO MCP server command is invalid: '$command'."
+        }
+
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $exe
+        if (-not [string]::IsNullOrWhiteSpace($rawArguments)) {
+            $psi.Arguments = $rawArguments.Trim()
+        }
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardInput = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.CreateNoWindow = $true
+
+        try {
+            $proc = [System.Diagnostics.Process]::Start($psi)
+        } catch {
+            throw "Failed to start ADO MCP server '$command': $($_.Exception.Message)"
+        }
+        if (-not $proc) {
+            throw "Failed to start ADO MCP server: $command"
+        }
+
+        $Script:AdoMcpProcess = $proc
+        $Script:AdoMcpRequestId = 0
+        $Script:AdoMcpInitialized = $false
+        return $proc
+    }
+
+    function Stop-AdoMcpServer {
+        if ($Script:AdoMcpProcess) {
+            try {
+                if (-not $Script:AdoMcpProcess.HasExited) {
+                    $Script:AdoMcpProcess.StandardInput.Close()
+                    if (-not $Script:AdoMcpProcess.WaitForExit(2000)) {
+                        $Script:AdoMcpProcess.Kill()
+                    }
+                }
+            } catch { Write-Verbose "Stop-AdoMcpServer: $_" }
+            $Script:AdoMcpProcess = $null
+            $Script:AdoMcpInitialized = $false
+        }
+    }
+
+    function Send-AdoMcpRpc([System.Diagnostics.Process]$proc, [hashtable]$message, [int]$timeoutMs = 30000) {
+        $json = ($message | ConvertTo-Json -Depth 10 -Compress)
+        $proc.StandardInput.WriteLine($json)
+        $proc.StandardInput.Flush()
+
+        $deadline = [DateTime]::UtcNow.AddMilliseconds($timeoutMs)
+        $expectedId = if ($message.ContainsKey('id')) { [string]$message.id } else { $null }
+        while ([DateTime]::UtcNow -lt $deadline) {
+            if ($proc.HasExited) {
+                $stderr = ''
+                try { $stderr = $proc.StandardError.ReadToEnd() } catch {}
+                throw "ADO MCP server exited unexpectedly. stderr: $stderr"
+            }
+
+            $remainingMs = [Math]::Max(1, [int]($deadline - [DateTime]::UtcNow).TotalMilliseconds)
+            $readTask = $proc.StandardOutput.ReadLineAsync()
+            if (-not $readTask.Wait($remainingMs)) {
+                throw "Timed out waiting for ADO MCP response (>${timeoutMs}ms)."
+            }
+
+            $line = $readTask.Result
+            if ($null -eq $line) { continue }
+            $trimmed = $line.Trim()
+            if (-not $trimmed) { continue }
+            if ($trimmed[0] -ne '{') { continue }
+            try {
+                $response = ($trimmed | ConvertFrom-Json -Depth 20)
+                if ($null -ne $expectedId) {
+                    $responseId = $response.PSObject.Properties['id']
+                    if ($null -eq $responseId -or [string]$responseId.Value -ne $expectedId) {
+                        continue
+                    }
+                }
+                return $response
+            } catch {
+                continue
+            }
+        }
+        throw "Timed out waiting for ADO MCP response (>${timeoutMs}ms)."
+    }
+
+    function Initialize-AdoMcpSession {
+        if ($Script:AdoMcpInitialized) { return }
+        $proc = Start-AdoMcpServer
+        $Script:AdoMcpRequestId++
+        $req = @{
+            jsonrpc = '2.0'
+            id = $Script:AdoMcpRequestId
+            method = 'initialize'
+            params = @{
+                protocolVersion = '2024-11-05'
+                capabilities = @{}
+                clientInfo = @{ name = 'agentx-cli'; version = '1.0.0' }
+            }
+        }
+        $resp = Send-AdoMcpRpc $proc $req
+        $errorProperty = $resp.PSObject.Properties['error']
+        if ($errorProperty -and $errorProperty.Value) {
+            throw "ADO MCP initialize failed: $($errorProperty.Value.message)"
+        }
+        $note = @{ jsonrpc = '2.0'; method = 'notifications/initialized'; params = @{} }
+        $proc.StandardInput.WriteLine(($note | ConvertTo-Json -Depth 5 -Compress))
+        $proc.StandardInput.Flush()
+        $Script:AdoMcpInitialized = $true
+    }
+
+    function Invoke-AdoMcpTool {
+        param(
+            [Parameter(Mandatory)][string]$Tool,
+            [hashtable]$Arguments = @{}
+        )
+        Initialize-AdoMcpSession
+        $proc = $Script:AdoMcpProcess
+        $Script:AdoMcpRequestId++
+        $req = @{
+            jsonrpc = '2.0'
+            id = $Script:AdoMcpRequestId
+            method = 'tools/call'
+            params = @{ name = $Tool; arguments = $Arguments }
+        }
+        $resp = Send-AdoMcpRpc $proc $req
+        $errorProperty = $resp.PSObject.Properties['error']
+        if ($errorProperty -and $errorProperty.Value) {
+            throw "ADO MCP tool '$Tool' failed: $($errorProperty.Value.message)"
+        }
+        $resultProperty = $resp.PSObject.Properties['result']
+        if (-not $resultProperty -or -not $resultProperty.Value) {
+            throw "ADO MCP tool '$Tool' returned an empty result."
+        }
+        $toolResult = $resultProperty.Value
+        $isErrorProperty = $toolResult.PSObject.Properties['isError']
+        if ($isErrorProperty -and $isErrorProperty.Value) {
+            $msg = ''
+            $contentProperty = $toolResult.PSObject.Properties['content']
+            if ($contentProperty -and $contentProperty.Value) {
+                $msg = (@($contentProperty.Value) | ForEach-Object { [string]$_.text }) -join "`n"
+            }
+            throw "ADO MCP tool '$Tool' returned an error: $msg"
+        }
+        return $toolResult
+    }
+
+    function ConvertFrom-AdoMcpToolResult($result) {
+        if (-not $result) { return $null }
+        if ($result.structuredContent) { return $result.structuredContent }
+        $content = @($result.content)
+        foreach ($block in $content) {
+            if ($block.type -eq 'text' -and $block.text) {
+                $text = [string]$block.text
+                try { return ($text | ConvertFrom-Json -Depth 20) } catch { return $text }
+            }
+        }
+        return $null
+    }
+
+    function Invoke-AdoOperation {
+        param(
+            [Parameter(Mandatory)][scriptblock]$McpBlock,
+            [string]$OperationName = 'ado'
+        )
+        try {
+            return (& $McpBlock)
+        } catch {
+            $message = $_.Exception.Message
+            Stop-AdoMcpServer
+            throw "ADO MCP $OperationName failed: $message"
+        }
+    }
 
 function Get-AgentXProviderInfo {
     $providerResolution = Get-AgentXProviderResolution
@@ -1394,14 +1381,6 @@ function Get-ProviderIssues {
                 if ($payload.workItems) { return @($payload.workItems) }
                 if ($payload.value) { return @($payload.value) }
                 return @($payload)
-            } -CliBlock {
-                Assert-AdoCliAvailable
-                $json = & az boards query --wiql $wiql --organization $orgUrl --project $project --output json 2>$null
-                if (-not $json) { return @() }
-                $queryResult = $json | ConvertFrom-Json
-                if ($queryResult.workItems) { return @($queryResult.workItems) }
-                if ($queryResult.value) { return @($queryResult.value) }
-                return @($queryResult)
             }
 
             $issues = @()
@@ -1469,7 +1448,6 @@ function Update-ProviderIssue([int]$num, [string]$title, [string]$body, [string]
     }
 
     if ($provider -eq 'ado') {
-        $orgUrl = Get-AdoOrganizationUrl
         $project = Get-AdoProjectName
         $hasEdit = $false
 
@@ -1486,19 +1464,8 @@ function Update-ProviderIssue([int]$num, [string]$title, [string]$body, [string]
         if ($hasEdit) {
             Invoke-AdoOperation -OperationName 'update' -McpBlock {
                 $tool = Get-AdoMcpToolName 'update'
-                $args = @{ project = $project; id = $num; fields = $mcpFields }
-                $null = Invoke-AdoMcpTool -Tool $tool -Arguments $args
-            } -CliBlock {
-                Assert-AdoCliAvailable
-                $adoArgs = @('boards', 'work-item', 'update', '--id', "$num", '--organization', $orgUrl, '--output', 'json')
-                if ($title) { $adoArgs += @('--title', $title) }
-                if ($body) { $adoArgs += @('--description', $body) }
-                if ($status) { $adoArgs += @('--state', (Convert-AgentXStatusToAdoState $status)) }
-                if ($labelStr) {
-                    $labels = ConvertTo-IssueLabels $labelStr
-                    $adoArgs += @('--fields', "System.Tags=$($labels -join '; ')")
-                }
-                $null = & az @adoArgs 2>$null
+                $toolArguments = @{ project = $project; id = $num; fields = $mcpFields }
+                $null = Invoke-AdoMcpTool -Tool $tool -Arguments $toolArguments
             }
         }
 
@@ -1529,7 +1496,6 @@ function Close-ProviderIssue([int]$num) {
     }
 
     if ($provider -eq 'ado') {
-        $orgUrl = Get-AdoOrganizationUrl
         $project = Get-AdoProjectName
         Invoke-AdoOperation -OperationName 'close' -McpBlock {
             $tool = Get-AdoMcpToolName 'update'
@@ -1538,9 +1504,6 @@ function Close-ProviderIssue([int]$num) {
                 id = $num
                 fields = @{ 'System.State' = 'Closed' }
             }
-        } -CliBlock {
-            Assert-AdoCliAvailable
-            $null = & az boards work-item update --id $num --state Closed --organization $orgUrl --output json 2>$null
         }
         return (Get-AdoIssue $num)
     }
@@ -1564,7 +1527,6 @@ function Add-ProviderIssueComment([int]$num, [string]$body) {
     }
 
     if ($provider -eq 'ado') {
-        $orgUrl = Get-AdoOrganizationUrl
         $project = Get-AdoProjectName
         Invoke-AdoOperation -OperationName 'comment' -McpBlock {
             $tool = Get-AdoMcpToolName 'comment'
@@ -1573,9 +1535,6 @@ function Add-ProviderIssueComment([int]$num, [string]$body) {
                 workItemId = $num
                 comment = $body
             }
-        } -CliBlock {
-            Assert-AdoCliAvailable
-            $null = & az boards work-item update --id $num --discussion $body --organization $orgUrl --output json 2>$null
         }
         return (Get-AdoIssue $num)
     }
@@ -3187,9 +3146,8 @@ function New-AgentXIssue([string]$title, [string]$body, [string[]]$labels, [stri
     }
 
     if ($provider -eq 'ado') {
-        $orgUrl = Get-AdoOrganizationUrl
         $project = Get-AdoProjectName
-        if ([string]::IsNullOrWhiteSpace($orgUrl) -or [string]::IsNullOrWhiteSpace($project)) {
+        if ([string]::IsNullOrWhiteSpace($project)) {
             throw 'ADO provider requires organization and project in .agentx/config.json.'
         }
 
@@ -3201,18 +3159,10 @@ function New-AgentXIssue([string]$title, [string]$body, [string[]]$labels, [stri
             $fields = @{ 'System.Title' = $title }
             if ($body) { $fields['System.Description'] = $body }
             if ($tagString) { $fields['System.Tags'] = $tagString }
-            $args = @{ project = $project; workItemType = $workItemType; fields = $fields }
-            $result = Invoke-AdoMcpTool -Tool $tool -Arguments $args
+            $toolArguments = @{ project = $project; workItemType = $workItemType; fields = $fields }
+            $result = Invoke-AdoMcpTool -Tool $tool -Arguments $toolArguments
             $payload = ConvertFrom-AdoMcpToolResult $result
             if ($payload) { return Convert-AdoWorkItemToAgentXIssue $payload }
-            return $null
-        } -CliBlock {
-            Assert-AdoCliAvailable
-            $adoArgs = @('boards', 'work-item', 'create', '--title', $title, '--type', $workItemType, '--organization', $orgUrl, '--project', $project, '--output', 'json')
-            if ($body) { $adoArgs += @('--description', $body) }
-            if ($tagString) { $adoArgs += @('--fields', "System.Tags=$tagString") }
-            $json = & az @adoArgs 2>$null
-            if ($json) { return Convert-AdoWorkItemToAgentXIssue ($json | ConvertFrom-Json) }
             return $null
         }
 
@@ -3554,11 +3504,6 @@ function Get-AdoIssue([int]$num) {
         $payload = ConvertFrom-AdoMcpToolResult $result
         if ($payload) { return Convert-AdoWorkItemToAgentXIssue $payload }
         return $null
-    } -CliBlock {
-        Assert-AdoCliAvailable
-        $json = & az boards work-item show --id $num --organization $orgUrl --output json 2>$null
-        if (-not $json) { return $null }
-        return Convert-AdoWorkItemToAgentXIssue ($json | ConvertFrom-Json)
     }
 }
 

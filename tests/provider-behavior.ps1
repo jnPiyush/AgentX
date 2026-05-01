@@ -319,113 +319,144 @@ function Initialize-AdoMock([string]$root) {
         )
     }
 
-    Write-Utf8File (Join-Path $toolsDir 'az-state.json') ($state | ConvertTo-Json -Depth 20)
+    Write-Utf8File (Join-Path $toolsDir 'ado-mcp-state.json') ($state | ConvertTo-Json -Depth 20)
 
     $mockScript = @'
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
 
 $ErrorActionPreference = 'Stop'
-$statePath = Join-Path $PSScriptRoot 'az-state.json'
+$statePath = Join-Path $PSScriptRoot 'ado-mcp-state.json'
 $state = Get-Content $statePath -Raw | ConvertFrom-Json -Depth 20
 
 function Save-State {
     $state | ConvertTo-Json -Depth 20 | Set-Content $statePath -Encoding utf8
 }
 
-function Add-Log([string[]]$CommandArgs) {
-    $state.commandLog = @($state.commandLog) + @(($CommandArgs -join ' '))
+function Add-Log([string]$Entry) {
+    $state.commandLog = @($state.commandLog) + @($Entry)
 }
 
-function Get-ArgValue([string[]]$AllArgs, [string]$Name, [string]$Default = '') {
-    for ($i = 0; $i -lt $AllArgs.Count; $i++) {
-        if ($AllArgs[$i] -eq $Name -and ($i + 1) -lt $AllArgs.Count) {
-            return $AllArgs[$i + 1]
-        }
+function Set-FieldValue($fields, [string]$name, $value) {
+    $property = $fields.PSObject.Properties[$name]
+    if ($property) {
+        $property.Value = $value
+    } else {
+        $fields | Add-Member -NotePropertyName $name -NotePropertyValue $value -Force
     }
-    return $Default
 }
 
 function Get-WorkItem([int]$Id) {
     return @($state.workItems | Where-Object { [int]$_.id -eq $Id } | Select-Object -First 1)[0]
 }
 
-if ($Args.Count -eq 0) {
-    Write-Error 'No az command provided'
-    exit 1
+function New-ToolResult($payload) {
+    return @{ structuredContent = $payload; content = @(@{ type = 'text'; text = ($payload | ConvertTo-Json -Depth 20 -Compress) }); isError = $false }
 }
 
-Add-Log $Args
+while ($true) {
+    $line = [Console]::In.ReadLine()
+    if ($null -eq $line) { break }
+    if ([string]::IsNullOrWhiteSpace($line)) { continue }
 
-if ($Args[0] -eq 'boards' -and $Args[1] -eq 'query') {
-    [PSCustomObject]@{
-        workItems = @($state.workItems | ForEach-Object { [PSCustomObject]@{ id = $_.id } })
-    } | ConvertTo-Json -Depth 10
-    Save-State
-    exit 0
+    $message = $line | ConvertFrom-Json -Depth 30
+
+    if ($message.method -eq 'notifications/initialized') {
+        continue
+    }
+
+    if ($message.method -eq 'initialize') {
+        @{ jsonrpc = '2.0'; id = $message.id; result = @{ protocolVersion = '2024-11-05'; capabilities = @{}; serverInfo = @{ name = 'ado-mock'; version = '1.0.0' } } } | ConvertTo-Json -Depth 20 -Compress | Write-Output
+        continue
+    }
+
+    if ($message.method -ne 'tools/call') {
+        @{ jsonrpc = '2.0'; id = $message.id; error = @{ code = -32601; message = 'Unsupported method' } } | ConvertTo-Json -Depth 20 -Compress | Write-Output
+        continue
+    }
+
+    $toolName = [string]$message.params.name
+    $arguments = $message.params.arguments
+    Add-Log $toolName
+
+    switch ($toolName) {
+        'wit_query_by_wiql' {
+            $payload = @{ workItems = @($state.workItems | ForEach-Object { @{ id = $_.id } }) }
+            Save-State
+            @{ jsonrpc = '2.0'; id = $message.id; result = (New-ToolResult $payload) } | ConvertTo-Json -Depth 30 -Compress | Write-Output
+            continue
+        }
+        'wit_list_backlog_work_items' {
+            $payload = @{ value = @($state.workItems | ForEach-Object { @{ id = $_.id } }) }
+            Save-State
+            @{ jsonrpc = '2.0'; id = $message.id; result = (New-ToolResult $payload) } | ConvertTo-Json -Depth 30 -Compress | Write-Output
+            continue
+        }
+        'wit_get_work_item' {
+            $itemId = [int]$arguments.id
+            $item = Get-WorkItem $itemId
+            if (-not $item) {
+                @{ jsonrpc = '2.0'; id = $message.id; error = @{ code = -32000; message = 'Work item not found' } } | ConvertTo-Json -Depth 20 -Compress | Write-Output
+                continue
+            }
+            Save-State
+            @{ jsonrpc = '2.0'; id = $message.id; result = (New-ToolResult $item) } | ConvertTo-Json -Depth 30 -Compress | Write-Output
+            continue
+        }
+        'wit_update_work_item' {
+            $itemId = [int]$arguments.id
+            $item = Get-WorkItem $itemId
+            if (-not $item) {
+                @{ jsonrpc = '2.0'; id = $message.id; error = @{ code = -32000; message = 'Work item not found' } } | ConvertTo-Json -Depth 20 -Compress | Write-Output
+                continue
+            }
+
+            foreach ($property in $arguments.fields.PSObject.Properties) {
+                Set-FieldValue $item.fields $property.Name $property.Value
+            }
+            Save-State
+            @{ jsonrpc = '2.0'; id = $message.id; result = (New-ToolResult $item) } | ConvertTo-Json -Depth 30 -Compress | Write-Output
+            continue
+        }
+        'wit_add_work_item_comment' {
+            $itemId = [int]$arguments.workItemId
+            $item = Get-WorkItem $itemId
+            if (-not $item) {
+                @{ jsonrpc = '2.0'; id = $message.id; error = @{ code = -32000; message = 'Work item not found' } } | ConvertTo-Json -Depth 20 -Compress | Write-Output
+                continue
+            }
+
+            $item.comments = @($item.comments) + @([PSCustomObject]@{ body = [string]$arguments.comment })
+            Save-State
+            @{ jsonrpc = '2.0'; id = $message.id; result = (New-ToolResult @{ ok = $true }) } | ConvertTo-Json -Depth 30 -Compress | Write-Output
+            continue
+        }
+        'wit_create_work_item' {
+            $nextId = ((@($state.workItems | ForEach-Object { [int]$_.id } | Measure-Object -Maximum).Maximum) + 1)
+            $newItem = [PSCustomObject]@{
+                id = $nextId
+                fields = [PSCustomObject]@{}
+                comments = @()
+            }
+            foreach ($property in $arguments.fields.PSObject.Properties) {
+                Set-FieldValue $newItem.fields $property.Name $property.Value
+            }
+            if (-not $newItem.fields.PSObject.Properties['System.State']) {
+                Set-FieldValue $newItem.fields 'System.State' 'New'
+            }
+            $state.workItems = @($state.workItems) + @($newItem)
+            Save-State
+            @{ jsonrpc = '2.0'; id = $message.id; result = (New-ToolResult $newItem) } | ConvertTo-Json -Depth 30 -Compress | Write-Output
+            continue
+        }
+        default {
+            @{ jsonrpc = '2.0'; id = $message.id; error = @{ code = -32601; message = "Unsupported tool: $toolName" } } | ConvertTo-Json -Depth 20 -Compress | Write-Output
+            continue
+        }
+    }
 }
-
-if ($Args[0] -eq 'boards' -and $Args[1] -eq 'work-item' -and $Args[2] -eq 'show') {
-    if ('--project' -in $Args) {
-        Write-Error 'unrecognized arguments: --project'
-        exit 1
-    }
-
-    $id = [int](Get-ArgValue $Args '--id' '0')
-    $item = Get-WorkItem $id
-    if (-not $item) {
-        Write-Error 'Work item not found'
-        exit 1
-    }
-
-    $item | ConvertTo-Json -Depth 10
-    Save-State
-    exit 0
-}
-
-if ($Args[0] -eq 'boards' -and $Args[1] -eq 'work-item' -and $Args[2] -eq 'update') {
-    if ('--project' -in $Args) {
-        Write-Error 'unrecognized arguments: --project'
-        exit 1
-    }
-
-    $id = [int](Get-ArgValue $Args '--id' '0')
-    $item = Get-WorkItem $id
-    if (-not $item) {
-        Write-Error 'Work item not found'
-        exit 1
-    }
-
-    $title = Get-ArgValue $Args '--title'
-    if ($title) { $item.fields.'System.Title' = $title }
-
-    $description = Get-ArgValue $Args '--description'
-    if ($description) { $item.fields.'System.Description' = $description }
-
-    $stateValue = Get-ArgValue $Args '--state'
-    if ($stateValue) { $item.fields.'System.State' = $stateValue }
-
-    $discussion = Get-ArgValue $Args '--discussion'
-    if ($discussion) {
-        $item.comments = @($item.comments) + @([PSCustomObject]@{ body = $discussion })
-    }
-
-    $fieldUpdate = Get-ArgValue $Args '--fields'
-    if ($fieldUpdate -and $fieldUpdate.StartsWith('System.Tags=')) {
-        $item.fields.'System.Tags' = $fieldUpdate.Substring('System.Tags='.Length)
-    }
-
-    $item | ConvertTo-Json -Depth 10
-    Save-State
-    exit 0
-}
-
-Write-Error 'Unsupported az command'
-exit 1
 '@
 
-    $cmdScript = "@echo off`r`npwsh -NoProfile -File `"%~dp0az.ps1`" %*`r`n"
-    Write-Utf8File (Join-Path $toolsDir 'az.ps1') $mockScript
-    Write-Utf8File (Join-Path $toolsDir 'az.cmd') $cmdScript
+    Write-Utf8File (Join-Path $toolsDir 'ado-mcp.ps1') $mockScript
     return $toolsDir
 }
 
@@ -434,7 +465,7 @@ function Get-GitHubMockState([string]$toolsDir) {
 }
 
 function Get-AdoMockState([string]$toolsDir) {
-    return Get-Content (Join-Path $toolsDir 'az-state.json') -Raw | ConvertFrom-Json -Depth 20
+    return Get-Content (Join-Path $toolsDir 'ado-mcp-state.json') -Raw | ConvertFrom-Json -Depth 20
 }
 
 Write-Host ''
@@ -671,44 +702,38 @@ task_prefix: 'task'
         mode = 'ado'
         organization = 'PJCloud'
         project = 'Contract Lifecycle Management'
-        adoTransport = 'cli'
+        adapters = @{ ado = @{ mcpCommand = ("pwsh -NoProfile -File {0}" -f (Join-Path $adoToolsDir 'ado-mcp.ps1')) } }
         created = '2026-03-08T00:00:00Z'
     } | ConvertTo-Json -Depth 5)
 
-    $originalPath = $env:PATH
-    $env:PATH = "$adoToolsDir;$originalPath"
-    try {
-        $adoList = Invoke-AgentX $adoRoot @('issue', 'list', '--json')
-        $adoIssues = $adoList.Output | ConvertFrom-Json -Depth 10
-        Assert-True ($adoList.ExitCode -eq 0) 'ADO issue list exits successfully with mocked az'
-        Assert-True (@($adoIssues).Count -eq 2 -and @(@($adoIssues).number) -contains 501 -and @(@($adoIssues).number) -contains 502) 'ADO issue list resolves work items through query plus work-item show'
+    $adoList = Invoke-AgentX $adoRoot @('issue', 'list', '--json')
+    $adoIssues = $adoList.Output | ConvertFrom-Json -Depth 10
+    Assert-True ($adoList.ExitCode -eq 0) 'ADO issue list exits successfully with mocked MCP'
+    Assert-True (@($adoIssues).Count -eq 2 -and @(@($adoIssues).number) -contains 501 -and @(@($adoIssues).number) -contains 502) 'ADO issue list resolves work items through MCP query plus work-item get'
 
-        $adoUpdate = Invoke-AgentX $adoRoot @('issue', 'update', '-n', '501', '-s', 'In Progress', '-b', 'Updated ADO body', '-l', 'type:story,priority:p0')
-        Assert-True ($adoUpdate.ExitCode -eq 0) 'ADO issue update exits successfully with mocked az'
-        $adoUpdatedGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
-        $adoUpdatedIssue = $adoUpdatedGet.Output | ConvertFrom-Json -Depth 10
-        Assert-True ($adoUpdatedIssue.status -eq 'Active' -and $adoUpdatedIssue.body -eq 'Updated ADO body' -and (@($adoUpdatedIssue.labels) -contains 'priority:p0')) 'ADO issue update maps AgentX edits onto Azure DevOps work-item fields'
+    $adoUpdate = Invoke-AgentX $adoRoot @('issue', 'update', '-n', '501', '-s', 'In Progress', '-b', 'Updated ADO body', '-l', 'type:story,priority:p0')
+    Assert-True ($adoUpdate.ExitCode -eq 0) 'ADO issue update exits successfully with mocked MCP'
+    $adoUpdatedGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
+    $adoUpdatedIssue = $adoUpdatedGet.Output | ConvertFrom-Json -Depth 10
+    Assert-True ($adoUpdatedIssue.status -eq 'Active' -and $adoUpdatedIssue.body -eq 'Updated ADO body' -and (@($adoUpdatedIssue.labels) -contains 'priority:p0')) 'ADO issue update maps AgentX edits onto Azure DevOps work-item fields'
 
-        $adoComment = Invoke-AgentX $adoRoot @('issue', 'comment', '-n', '501', '-c', 'ADO comment')
-        Assert-True ($adoComment.ExitCode -eq 0) 'ADO issue comment exits successfully with mocked az'
-        $adoCommentGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
-        $adoCommentIssue = $adoCommentGet.Output | ConvertFrom-Json -Depth 10
-        Assert-True ($adoCommentIssue.number -eq 501) 'ADO issue comment keeps the work item readable after discussion updates'
+    $adoComment = Invoke-AgentX $adoRoot @('issue', 'comment', '-n', '501', '-c', 'ADO comment')
+    Assert-True ($adoComment.ExitCode -eq 0) 'ADO issue comment exits successfully with mocked MCP'
+    $adoCommentGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
+    $adoCommentIssue = $adoCommentGet.Output | ConvertFrom-Json -Depth 10
+    Assert-True ($adoCommentIssue.number -eq 501) 'ADO issue comment keeps the work item readable after discussion updates'
 
-        $adoClose = Invoke-AgentX $adoRoot @('issue', 'close', '-n', '501')
-        Assert-True ($adoClose.ExitCode -eq 0) 'ADO issue close exits successfully with mocked az'
-        $adoClosedGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
-        $adoClosedIssue = $adoClosedGet.Output | ConvertFrom-Json -Depth 10
-        Assert-True ($adoClosedIssue.status -eq 'Closed' -and $adoClosedIssue.state -eq 'closed') 'ADO issue close maps to Closed state and returns a closed issue'
+    $adoClose = Invoke-AgentX $adoRoot @('issue', 'close', '-n', '501')
+    Assert-True ($adoClose.ExitCode -eq 0) 'ADO issue close exits successfully with mocked MCP'
+    $adoClosedGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
+    $adoClosedIssue = $adoClosedGet.Output | ConvertFrom-Json -Depth 10
+    Assert-True ($adoClosedIssue.status -eq 'Closed' -and $adoClosedIssue.state -eq 'closed') 'ADO issue close maps to Closed state and returns a closed issue'
 
-        $adoState = Get-AdoMockState $adoToolsDir
-        $adoWorkItem = @($adoState.workItems | Where-Object { [int]$_.id -eq 501 } | Select-Object -First 1)[0]
-        $adoShowOrUpdateCommands = @($adoState.commandLog | Where-Object { $_ -match 'boards work-item (show|update)' })
-        Assert-True (@($adoWorkItem.comments).Count -eq 1 -and $adoWorkItem.comments[0].body -eq 'ADO comment') 'ADO mock captures discussion updates on the work item'
-        Assert-True (@($adoShowOrUpdateCommands | Where-Object { $_ -match ' --project(\s|$)' }).Count -eq 0) 'ADO work-item show/update commands no longer send the unsupported --project flag'
-    } finally {
-        $env:PATH = $originalPath
-    }
+    $adoState = Get-AdoMockState $adoToolsDir
+    $adoWorkItem = @($adoState.workItems | Where-Object { [int]$_.id -eq 501 } | Select-Object -First 1)[0]
+    Assert-True (@($adoWorkItem.comments).Count -eq 1 -and $adoWorkItem.comments[0].body -eq 'ADO comment') 'ADO mock captures discussion updates on the work item'
+    Assert-True ((@($adoState.commandLog | Where-Object { $_ -eq 'wit_query_by_wiql' }).Count -ge 1) -and (@($adoState.commandLog | Where-Object { $_ -eq 'wit_get_work_item' }).Count -ge 3)) 'ADO list/get flows use MCP query and get tools'
+    Assert-True ((@($adoState.commandLog | Where-Object { $_ -eq 'wit_update_work_item' }).Count -ge 2) -and (@($adoState.commandLog | Where-Object { $_ -eq 'wit_add_work_item_comment' }).Count -eq 1)) 'ADO mutate flows use MCP update and comment tools'
 
     $githubRoot = New-TestWorkspace 'github'
     $toolsDir = Initialize-GitHubMock $githubRoot
