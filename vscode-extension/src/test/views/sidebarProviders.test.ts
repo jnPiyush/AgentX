@@ -138,6 +138,26 @@ describe('sidebar providers', () => {
     assert.ok(String(issueChildren[0].label).includes('#9 Fallback issue'));
   });
 
+  it('WorkTreeProvider should fall back to local issues when provider returns empty list', async () => {
+    const root = createWorkspaceRoot();
+    fs.writeFileSync(
+      path.join(root, '.agentx', 'issues', '11.json'),
+      JSON.stringify({ number: 11, title: 'Empty-CLI fallback', state: 'open', status: 'Backlog' }),
+      'utf-8',
+    );
+
+    const provider = new WorkTreeProvider({
+      ...createAgentxStub(root),
+      runCli: async () => '[]',
+    });
+
+    const items = await provider.getChildren();
+    const issueChildren = await provider.getChildren(items[1]);
+
+    assert.equal(issueChildren.length, 1);
+    assert.ok(String(issueChildren[0].label).includes('#11 Empty-CLI fallback'));
+  });
+
   it('StatusTreeProvider should show only overview', async () => {
     const root = createWorkspaceRoot();
     fs.mkdirSync(path.join(root, 'docs', 'guides'), { recursive: true });

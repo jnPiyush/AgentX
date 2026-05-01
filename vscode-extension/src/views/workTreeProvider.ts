@@ -25,11 +25,14 @@ export class WorkTreeProvider implements vscode.TreeDataProvider<SidebarTreeItem
  private async getOpenIssues(root: string) {
   try {
    const output = await this.agentx.runCli('issue', ['list', '--json']);
-   return normalizeIssues(JSON.parse(output)).filter((issue) => (issue.state ?? 'open') !== 'closed');
+   const remote = normalizeIssues(JSON.parse(output)).filter((issue) => (issue.state ?? 'open') !== 'closed');
+   if (remote.length > 0) {
+    return remote;
+   }
   } catch {
-   const localIssues = getLocalIssues(root);
-   return localIssues.filter((issue) => (issue.state ?? 'open') !== 'closed');
+   // Fall through to local issues below.
   }
+  return getLocalIssues(root).filter((issue) => (issue.state ?? 'open') !== 'closed');
  }
 
  async getChildren(element?: SidebarTreeItem): Promise<SidebarTreeItem[]> {

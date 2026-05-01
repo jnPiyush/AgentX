@@ -1349,7 +1349,7 @@ function Get-ProviderIssues {
     $provider = Get-AgentXProvider
     if ($provider -eq 'github') {
         try {
-            $json = & gh issue list --state all --json number,title,labels,body,state --limit 200 2>$null
+            $json = & gh issue list --state all --json number,title,labels,body,state,url --limit 200 2>$null
             if ($json) {
                 $raw = $json | ConvertFrom-Json
                 $statusByIssue = if (Test-GitHubProjectConfigured) { Get-GitHubProjectIssueStatusMap } else { @{} }
@@ -3231,20 +3231,34 @@ function Convert-GitHubIssueStateToIssueState([string]$state) {
 }
 
 function Convert-GitHubIssueToAgentXIssue($issue, [string]$status = '') {
-    $issueLabels = if ($null -ne $issue.labels) { @($issue.labels) } else { @() }
+    $getProp = {
+        param($obj, $name)
+        if ($null -eq $obj) { return $null }
+        $prop = $obj.PSObject.Properties[$name]
+        if ($prop) { return $prop.Value }
+        return $null
+    }
+    $labelsValue = & $getProp $issue 'labels'
+    $issueLabels = if ($null -ne $labelsValue) { @($labelsValue) } else { @() }
+    $bodyValue = & $getProp $issue 'body'
+    $stateValue = & $getProp $issue 'state'
+    $urlValue = & $getProp $issue 'url'
+    $commentsValue = & $getProp $issue 'comments'
     return [PSCustomObject]@{
         number = $issue.number
         title = $issue.title
-        body = if ($issue.body) { $issue.body } else { '' }
-        state = Convert-GitHubIssueStateToIssueState $(if ($issue.state) { [string]$issue.state } else { '' })
-        url = if ($issue.url) { $issue.url } else { '' }
+        body = if ($bodyValue) { $bodyValue } else { '' }
+        state = Convert-GitHubIssueStateToIssueState $(if ($stateValue) { [string]$stateValue } else { '' })
+        url = if ($urlValue) { $urlValue } else { '' }
         labels = @($issueLabels | ForEach-Object {
             if ($_ -is [string]) { $_ } else { $_.name }
         } | Where-Object { $_ })
         status = $status
-        comments = @($issue.comments | ForEach-Object {
-            [PSCustomObject]@{ body = $_.body; created = $_.createdAt }
-        })
+        comments = @(if ($null -ne $commentsValue) { @($commentsValue) | ForEach-Object {
+            $cBody = & $getProp $_ 'body'
+            $cCreated = & $getProp $_ 'createdAt'
+            [PSCustomObject]@{ body = $cBody; created = $cCreated }
+        } })
     }
 }
 
