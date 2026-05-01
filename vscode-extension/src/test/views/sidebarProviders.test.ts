@@ -216,7 +216,7 @@ describe('sidebar providers', () => {
     assert.ok(overviewChildren.some((item) => item.label === 'Version' && item.description === '8.4.0'));
     assert.ok(overviewChildren.some((item) => item.label === 'Mode' && item.description === 'github'));
     assert.ok(overviewChildren.some((item) => item.label === 'GitHub MCP' && item.description === 'connected'));
-    assert.ok(overviewChildren.some((item) => item.label === 'ADO Provider' && item.description === 'not connected'));
+    assert.ok(overviewChildren.some((item) => item.label === 'ADO MCP' && item.description === 'not connected'));
     assert.ok(overviewChildren.some((item) => item.label === 'Azure skills' && item.description === 'installed'));
   });
 
