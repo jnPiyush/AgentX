@@ -296,11 +296,43 @@ export function renderUsageGuidance(): string {
   );
 }
 
+/**
+ * Match natural-language intents to initialize the AgentX local runtime in the
+ * current workspace. Tolerates common phrasings such as "initialize agentx",
+ * "init agent x", "setup agentx", "agentx initialize", and the typo "initalize".
+ */
+export function matchesInitializeIntent(userText: string): boolean {
+  const normalized = userText
+    .toLowerCase()
+    .replace(/^(?:please|can you|could you)\s+/i, '')
+    .replace(/^agentx[:,\s]+/i, '')
+    .replace(/\bagent\s*x\b/gi, 'agentx')
+    .replace(/[?!.]+$/g, '')
+    .trim();
+
+  if (!normalized) {
+    return false;
+  }
+
+  const initVerb = '(?:initialize|initialise|initalize|init|setup|set\\s*up|configure|bootstrap)';
+  const target = '(?:local\\s*runtime|workspace|project|repo|repository|agentx)';
+
+  const patterns: RegExp[] = [
+    new RegExp(`^${initVerb}$`),
+    new RegExp(`^${initVerb}\\s+(?:the\\s+)?${target}(?:\\s+(?:in|for)\\s+(?:this|the)\\s+(?:workspace|repo|repository|project))?$`),
+    new RegExp(`^agentx\\s+${initVerb}(?:\\s+${target})?$`),
+    new RegExp(`^${target}\\s+${initVerb}$`),
+    new RegExp(`^run\\s+(?:the\\s+)?agentx\\s+${initVerb}(?:\\s+command)?$`),
+  ];
+
+  return patterns.some((pattern) => pattern.test(normalized));
+}
+
 export async function tryHandleWorkspaceSetupRequest(
   userText: string,
   response: vscode.ChatResponseStream,
 ): Promise<vscode.ChatResult | undefined> {
-  if (/^(?:agentx:\s*)?(?:initialize local runtime|setup local runtime|initialize(?: project| workspace)?|setup workspace)$/i.test(userText)) {
+  if (matchesInitializeIntent(userText)) {
     try {
       await vscode.commands.executeCommand('agentx.initializeLocalRuntime');
       response.markdown('Opened **AgentX: Initialize Local Runtime** for this workspace.');

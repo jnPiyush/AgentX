@@ -191,6 +191,50 @@ describe('chatParticipant', () => {
     assert.ok(response.getMarkdown().includes('Opened **AgentX: Initialize Local Runtime** for this workspace.'));
   });
 
+  it('launches Initialize Local Runtime for natural-language phrasings', async () => {
+    const phrasings = [
+      'initialize agentx',
+      'Initialize AgentX',
+      'initalize agentx',
+      'init agent x',
+      'setup agentx',
+      'agentx initialize',
+      'Please initialize AgentX',
+      'agentx: initialize workspace',
+    ];
+
+    for (const prompt of phrasings) {
+      const response = createMockResponseStream();
+      const executed: string[] = [];
+      const originalExecuteCommand = vscode.commands.executeCommand;
+      (vscode.commands as any).executeCommand = async (command: string) => {
+        executed.push(command);
+        return undefined;
+      };
+
+      const agentx = {
+        checkInitialized: async () => true,
+        workspaceRoot: tmpDir,
+      };
+
+      try {
+        await handleAgentXChatRequest(
+          { prompt } as any,
+          response as any,
+          agentx as any,
+        );
+      } finally {
+        (vscode.commands as any).executeCommand = originalExecuteCommand;
+      }
+
+      assert.deepEqual(executed, ['agentx.initializeLocalRuntime'], `phrasing should match: ${prompt}`);
+      assert.ok(
+        response.getMarkdown().includes('Opened **AgentX: Initialize Local Runtime** for this workspace.'),
+        `phrasing should produce launch message: ${prompt}`,
+      );
+    }
+  });
+
   it('starts a chat-first remote adapter flow from chat', async () => {
     const response = createMockResponseStream();
     let pending: unknown;
