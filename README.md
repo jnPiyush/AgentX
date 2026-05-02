@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.44"><img src="https://img.shields.io/badge/Version-8.4.44-0EA5E9?style=for-the-badge" alt="Version 8.4.44"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.45"><img src="https://img.shields.io/badge/Version-8.4.45-0EA5E9?style=for-the-badge" alt="Version 8.4.45"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -298,7 +298,7 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.44
+## New In 8.4.45
 
 - Reviewer agent template-enforcement fix: hard frontmatter constraint requiring `read_file` of canonical templates first; explicit path + section list for `.github/templates/ARCH-REVIEW-TEMPLATE.md` in the standalone arch-review path; Code Review Step 6 strengthened with same read-first rule. Closes the gap where the Reviewer could draft an architecture review without picking up `ARCH-REVIEW-TEMPLATE.md`.
 - New `BACKLOG-TEMPLATE.md` (15 sections: Vision, Hierarchy, RICE/WSJF/MoSCoW/Kano/ICE prioritization, INVEST, DoR/DoD, Active Backlog tables, Capacity, Dependencies, Release Plan, Flow Metrics, State Machine, Refinement Cadence, Local Mode Wiring) with 7 Mermaid diagrams; live AgentX backlog instantiated at `docs/artifacts/backlog/BACKLOG.md`
