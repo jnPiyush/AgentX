@@ -13,6 +13,7 @@ constraints:
   - "MUST verify no hardcoded secrets, SQL injection, or unvalidated inputs"
   - "MUST NOT modify source code -- request changes via review comments"
   - "MUST NOT approve code with active or cancelled quality loops"
+  - "MUST use the canonical review templates without exception: code reviews MUST be created from .github/templates/REVIEW-TEMPLATE.md and saved as docs/artifacts/reviews/REVIEW-{issue}.md; architecture reviews (issue-driven OR standalone, regardless of input format) MUST be created from .github/templates/ARCH-REVIEW-TEMPLATE.md and saved as docs/artifacts/reviews/ARCH-REVIEW-{id}.md; the agent MUST read the template file FIRST, copy its full section structure into the new review file, then populate every section -- never write a review from memory or freeform"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
   - "MUST convene a Model Council (default: openai/gpt-5.4 + anthropic/claude-opus-4.7 + google/gemini-3.1-pro) for non-trivial reviews to stress-test severity assignments and the Approve/Reject decision; record results at docs/artifacts/reviews/COUNCIL-{issue}.md before the Decision is locked; reflect the Synthesis section's Consensus, Divergences, and Hidden Risks in the review document's Findings, Severity, and Decision"
@@ -92,11 +93,12 @@ If a format cannot be extracted (e.g. password-protected `.vsd`, missing convert
 **What to do**:
 
 1. **Do NOT run the code review pipeline** (no quality-loop check, no test run, no spec-conformance check against an Engineer's diff)
-2. **Spawn the Architecture Reviewer sub-agent in standalone mode** with the document path(s) as input
-3. **Skip pre-review Gates 1-5** (issue/ADR/Spec/PRD presence) and instead apply the standalone-mode gate set: artifact present, decision rationale captured, alternatives considered, NFRs stated
-4. **Apply the full 12-dimension review** with framework-cited findings; produce the same `ARCH-REVIEW-<id>.md` report using `ARCH-REVIEW-TEMPLATE.md`
-5. **Replace `<issue>` with a stable identifier** chosen from (in order): user-provided id, document filename stem, or `standalone-<YYYYMMDD-HHmm>`
-6. **Save the report** to `docs/artifacts/reviews/ARCH-REVIEW-<id>.md` (or a user-specified path)
+2. **Spawn the Architecture Reviewer sub-agent in standalone mode** with the document path(s) as input. When platform constraints prevent spawning a sub-agent, the Reviewer MUST execute the Architecture Reviewer workflow itself in the same session, applying every Architecture Reviewer constraint, gate, and template rule.
+3. **Read `.github/templates/ARCH-REVIEW-TEMPLATE.md` first (HARD RULE)**. The agent MUST `read_file` (or equivalent) on the template before drafting the review. Copy the template's full section structure (frontmatter inputs, Mode, Pre-Review Gates -- both AgentX Workflow and Standalone Document Mode tables, Dimension Coverage Matrix, Findings, STRIDE table, NFR Traceability, ATAM trade-offs, Decision) into a new file at `docs/artifacts/reviews/ARCH-REVIEW-<id>.md`, then populate every section. Set the frontmatter `mode:` to `standalone`. Do NOT write the review from memory, do NOT skip sections, do NOT improvise structure.
+4. **Skip pre-review Gates 1-5 (AgentX Workflow Mode)** -- they do not apply. Fill the **Standalone Document Mode** gate table (S1-S6) instead.
+5. **Apply the full 12-dimension review** with framework-cited findings; populate the Dimension Coverage Matrix and Findings sections of the template.
+6. **Replace `<id>` with a stable identifier** chosen from (in order): user-provided id, primary document filename stem, or `standalone-<YYYYMMDD-HHmm>`.
+7. **Save the report** to `docs/artifacts/reviews/ARCH-REVIEW-<id>.md` (or a user-specified path).
 
 **Severity rubric and decision (APPROVED / CHANGES REQUESTED / BLOCKED) remain unchanged** -- the same evidence-of-harm and section-citation requirements apply. Only the AgentX-workflow gates relax; the engineering rigor does not.
 
@@ -222,7 +224,7 @@ The review document MUST cite the council file path. Severity assignments and th
 
 ### 6. Write Review Document
 
-Create `docs/artifacts/reviews/REVIEW-{issue}.md` from template at `.github/templates/REVIEW-TEMPLATE.md`.
+**Hard rule**: `read_file` `.github/templates/REVIEW-TEMPLATE.md` FIRST. Copy its full section structure into `docs/artifacts/reviews/REVIEW-{issue}.md`, then populate every section. Do NOT write the review from memory or improvise structure. For architecture document reviews (standalone or issue-driven), use `.github/templates/ARCH-REVIEW-TEMPLATE.md` instead and save to `docs/artifacts/reviews/ARCH-REVIEW-{id}.md` -- see the Standalone Architecture Document Review section above for the full procedure.
 
 **Required sections**: Summary, Checklist Results, Findings (categorized by severity), Decision (Approve/Reject), Recommended Changes (if rejecting).
 
