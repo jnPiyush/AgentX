@@ -1,5 +1,6 @@
 import { strict as assert } from 'assert';
 import { createMockResponseStream } from '../mocks/vscode';
+import { __setMockModels, __clearMockModels, MockLanguageModelChat } from '../mocks/vscode';
 import {
   resetIntentRouterStateForTests,
   setNowFnForTests,
@@ -32,6 +33,10 @@ function makeAgentX(stdout: string = '(stub)', workspaceRoot: string | undefined
 describe('intentRouter', () => {
   beforeEach(() => {
     resetIntentRouterStateForTests();
+  });
+
+  afterEach(() => {
+    __clearMockModels();
   });
 
   describe('phrase matching', () => {
@@ -352,6 +357,103 @@ describe('intentRouter', () => {
       const result2 = await tryHandleNaturalLanguageIntent('yes', r2 as any, agentx as any);
       assert.equal(agentx.cliCalls.length, 0, 'yes after no-workspace must still run nothing');
       assert.equal(result2, undefined, 'yes with no pending should return undefined');
+    });
+  });
+
+  describe('LM classifier path', () => {
+    function makeMockModel(jsonResponse: string): MockLanguageModelChat {
+      return {
+        name: 'copilot/gpt-4o',
+        vendor: 'copilot',
+        family: 'gpt-4o',
+        sendRequest: async () => ({
+          text: (async function* () { yield jsonResponse; })(),
+        }),
+      };
+    }
+
+    it('routes paraphrase outside regex catalog to ready-queue via LM (high confidence)', async () => {
+      __setMockModels([makeMockModel('{"id":"ready-queue","args":[],"confidence":"high","reason":"user wants today work"}')]);
+      const agentx = makeAgentX();
+      const r = createMockResponseStream();
+      const result = await tryHandleNaturalLanguageIntent('what work am I supposed to do today', r as any, agentx as any);
+      assert.deepEqual(result, {});
+      assert.equal(agentx.cliCalls.length, 1);
+      assert.equal(agentx.cliCalls[0].subcommand, 'ready');
+      assert.deepEqual(agentx.cliCalls[0].args, []);
+    });
+
+    it('low-confidence LM result requires confirmation even for read-only intents', async () => {
+      __setMockModels([makeMockModel('{"id":"ready-queue","args":[],"confidence":"low","reason":"ambiguous"}')]);
+      const agentx = makeAgentX();
+      const r = createMockResponseStream();
+      const result = await tryHandleNaturalLanguageIntent('what now', r as any, agentx as any);
+      assert.deepEqual(result, {});
+      assert.equal(agentx.cliCalls.length, 0, 'low-confidence must not auto-execute');
+      // Confirm via follow-up turn.
+      const r2 = createMockResponseStream();
+      const result2 = await tryHandleNaturalLanguageIntent('yes', r2 as any, agentx as any);
+      assert.deepEqual(result2, {});
+      assert.equal(agentx.cliCalls.length, 1);
+      assert.equal(agentx.cliCalls[0].subcommand, 'ready');
+    });
+
+    it('LM returning id not in allowlist falls back to regex', async () => {
+      __setMockModels([makeMockModel('{"id":"NOT_A_REAL_INTENT","args":[],"confidence":"high","reason":"hallucinated"}')]);
+      const agentx = makeAgentX();
+      const r = createMockResponseStream();
+      // Use a regex-matchable phrase so we can prove fallback fired.
+      const result = await tryHandleNaturalLanguageIntent('show ready', r as any, agentx as any);
+      assert.deepEqual(result, {});
+      assert.equal(agentx.cliCalls.length, 1);
+      assert.equal(agentx.cliCalls[0].subcommand, 'ready');
+    });
+
+    it('LM returning invalid JSON falls back to regex', async () => {
+      __setMockModels([makeMockModel('this is not json at all')]);
+      const agentx = makeAgentX();
+      const r = createMockResponseStream();
+      const result = await tryHandleNaturalLanguageIntent('show config', r as any, agentx as any);
+      assert.deepEqual(result, {});
+      assert.equal(agentx.cliCalls.length, 1);
+      assert.equal(agentx.cliCalls[0].subcommand, 'config');
+      assert.deepEqual(agentx.cliCalls[0].args, ['show']);
+    });
+
+    it('no models available -> falls back to regex (existing behavior)', async () => {
+      __clearMockModels();
+      const agentx = makeAgentX();
+      const r = createMockResponseStream();
+      const result = await tryHandleNaturalLanguageIntent('show ready', r as any, agentx as any);
+      assert.deepEqual(result, {});
+      assert.equal(agentx.cliCalls.length, 1);
+      assert.equal(agentx.cliCalls[0].subcommand, 'ready');
+    });
+
+    it('LM proposing destructive intent still requires confirmation', async () => {
+      __setMockModels([makeMockModel('{"id":"issue-close","args":["42"],"confidence":"high","reason":"user wants to close 42"}')]);
+      const agentx = makeAgentX();
+      const r = createMockResponseStream();
+      const result = await tryHandleNaturalLanguageIntent('please wrap up issue forty-two', r as any, agentx as any);
+      assert.deepEqual(result, {});
+      assert.equal(agentx.cliCalls.length, 0, 'destructive LM intent must not auto-execute');
+      const r2 = createMockResponseStream();
+      const result2 = await tryHandleNaturalLanguageIntent('yes', r2 as any, agentx as any);
+      assert.deepEqual(result2, {});
+      assert.equal(agentx.cliCalls.length, 1);
+      assert.equal(agentx.cliCalls[0].subcommand, 'issue');
+      assert.deepEqual(agentx.cliCalls[0].args, ['close', '42']);
+    });
+
+    it('LM args failing allowlist validation falls back to regex', async () => {
+      // LM proposes a non-numeric issue number.
+      __setMockModels([makeMockModel('{"id":"issue-get","args":["abc"],"confidence":"high","reason":"bad"}')]);
+      const agentx = makeAgentX();
+      const r = createMockResponseStream();
+      // Phrase has no regex match, so we expect undefined (no fallthrough run).
+      const result = await tryHandleNaturalLanguageIntent('???', r as any, agentx as any);
+      assert.equal(result, undefined);
+      assert.equal(agentx.cliCalls.length, 0);
     });
   });
 });

@@ -1,12 +1,19 @@
 /**
  * Natural-language intent router for the @agentx chat participant.
  *
- * Translates conversational phrases into AgentX CLI commands.
- * First slice: deterministic phrase rules + confirmation gate for destructive ops.
- * Future slice: LM-backed classifier fallback for broader phrasing coverage.
+ * Two-stage classifier:
+ *  1. LM-based classifier (vscode.lm) maps free-text phrases to an allowlisted
+ *     CLI intent. Low-confidence results require explicit confirmation even
+ *     for read-only commands.
+ *  2. Regex phrase rules act as graceful-degradation fallback when the LM API
+ *     is unavailable or returns an invalid / null result.
+ *
+ * Destructive intents (mutations, syncs, scaffolding) always require an
+ * explicit `yes` / `cancel` confirmation turn before execution.
  */
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
+import { classifyIntentWithLM, LmClassification } from './lmIntentClassifier';
 
 // Pending-confirmation store keyed by workspace root. In-memory only --
 // if VS Code reloads mid-confirmation, the user just retypes the request.
@@ -437,10 +444,13 @@ export function setNowFnForTests(fn: () => number): void {
   nowFn = fn;
 }
 
-function renderProposed(intent: IntentMatch): string {
+function renderProposed(intent: IntentMatch, lowConfidence = false): string {
   const cmd = formatCli(intent);
+  const header = lowConfidence
+    ? `**Did you mean:** \`${cmd}\`?`
+    : `**Proposed:** \`${cmd}\``;
   return [
-    `**Proposed:** \`${cmd}\``,
+    header,
     '',
     intent.description,
     '',
@@ -519,19 +529,47 @@ export async function tryHandleNaturalLanguageIntent(
     }
   }
 
-  // 2. Phrase rule match.
-  const match = matchPhrase(text);
+  // 2. Try LM classifier first (best phrasing coverage). Low-confidence or
+  //    invalid results fall through to the regex rules.
+  let match: IntentMatch | undefined;
+  let requireConfirmFromLowConfidence = false;
+  const lmResult = await tryClassifyWithLM(text);
+  if (lmResult) {
+    match = {
+      id: lmResult.id,
+      description: lmResult.description,
+      subcommand: lmResult.subcommand,
+      args: lmResult.args,
+      destructive: lmResult.destructive,
+    };
+    if (lmResult.confidence === 'low') {
+      requireConfirmFromLowConfidence = true;
+    }
+  }
+
+  // 3. Regex phrase rule fallback.
+  if (!match) {
+    match = matchPhrase(text);
+  }
   if (!match) { return undefined; }
 
-  if (match.destructive) {
+  if (match.destructive || requireConfirmFromLowConfidence) {
     if (!agentx.workspaceRoot) {
       response.markdown('**No workspace open.** Open a folder with AgentX before running commands.');
       return {};
     }
     setPending(agentx, match);
-    response.markdown(renderProposed(match));
+    response.markdown(renderProposed(match, requireConfirmFromLowConfidence));
     return {};
   }
 
   return executeIntent(match, response, agentx);
+}
+
+async function tryClassifyWithLM(text: string): Promise<LmClassification | undefined> {
+  try {
+    return await classifyIntentWithLM(text);
+  } catch {
+    return undefined;
+  }
 }
