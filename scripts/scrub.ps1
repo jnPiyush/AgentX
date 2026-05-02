@@ -30,10 +30,10 @@
   Suppress non-finding output.
 
 .EXAMPLE
-  pwsh scripts/unslop.ps1 -Path src/components
+  pwsh scripts/scrub.ps1 -Path src/components
 
 .EXAMPLE
-  pwsh scripts/unslop.ps1 -Path src/components -Fix
+  pwsh scripts/scrub.ps1 -Path src/components -Fix
 #>
 
 [CmdletBinding()]
@@ -291,7 +291,7 @@ if ($Fix) {
     $changed = Invoke-SafeFix
     if (-not $Quiet) {
         Write-Host ""
-        Write-Host "[unslop] Fix applied to $($changed.Count) file(s)." -ForegroundColor Green
+        Write-Host "[scrub] Fix applied to $($changed.Count) file(s)." -ForegroundColor Green
         foreach ($cf in $changed) { Write-Host "  $cf" }
     }
 }
@@ -303,7 +303,7 @@ if ($Json) {
 
 if (-not $Quiet) {
     Write-Host ""
-    Write-Host "[unslop] $($Findings.Count) finding(s) across $($files.Count) file(s)." -ForegroundColor Cyan
+    Write-Host "[scrub] $($Findings.Count) finding(s) across $($files.Count) file(s)." -ForegroundColor Cyan
     if ($Findings.Count -gt 0) {
         $byCat = $Findings | Group-Object category | Sort-Object Count -Descending
         foreach ($c in $byCat) {
@@ -324,7 +324,7 @@ if (-not $Quiet) {
             $safeCount = ($Findings | Where-Object { $_.safeFix }).Count
             if ($safeCount -gt 0) {
                 Write-Host ""
-                Write-Host "[unslop] $safeCount finding(s) are safe-fix. Re-run with -Fix to apply." -ForegroundColor Yellow
+                Write-Host "[scrub] $safeCount finding(s) are safe-fix. Re-run with -Fix to apply." -ForegroundColor Yellow
             }
         }
     }

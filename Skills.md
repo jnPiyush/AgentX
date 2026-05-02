@@ -101,7 +101,7 @@ dev|code-review|.github/skills/development/code-review/SKILL.md|checklists,autom
 dev|iterative-loop|.github/skills/development/iterative-loop/SKILL.md|quality-loop,refinement,completion-criteria
 dev|experimentation-loop|.github/skills/development/experimentation-loop/SKILL.md|metric-driven,benchmark,keep-or-revert,attempt-log,branch-isolation,hill-climb
 dev|skill-creator|.github/skills/development/skill-creator/SKILL.md|scaffold,validate,maintain-skills
-dev|unslop|.github/skills/development/unslop/SKILL.md|comment-rot,obvious-restate,ai-filler,stale-byline,generic-gradient,empty-catch,presentation-cleanup
+dev|scrub|.github/skills/development/scrub/SKILL.md|comment-rot,obvious-restate,ai-filler,stale-byline,generic-gradient,empty-catch,presentation-cleanup
 dev|token-optimizer|.github/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
 dev|code-hygiene|.github/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
 dev|karpathy-guidelines|.github/skills/development/karpathy-guidelines/SKILL.md|think-before-coding,simplicity,surgical-changes,goal-driven,LLM-pitfalls,assumptions

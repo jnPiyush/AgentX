@@ -1,7 +1,7 @@
 #requires -Version 7.0
 <#
 .SYNOPSIS
-  One-command pipeline orchestrator. Run plan -> work -> review -> unslop ->
+  One-command pipeline orchestrator. Run plan -> work -> review -> scrub ->
   test -> compound on a single issue, gating each step on durable evidence
   from the previous step. Retries each step once on failure.
 
@@ -16,15 +16,15 @@
   Issue number to ship.
 
 .PARAMETER From
-  Starting step. Defaults to 'plan'. One of: plan, work, review, unslop,
+  Starting step. Defaults to 'plan'. One of: plan, work, review, scrub,
   test, compound.
 
 .PARAMETER To
   Ending step (inclusive). Defaults to 'compound'.
 
-.PARAMETER SkipUnslop
+.PARAMETER SkipScrub
   Skip the presentation pass. Useful when changes are obviously machine-clean
-  or the diff was already passed through unslop.
+  or the diff was already passed through scrub.
 
 .PARAMETER DryRun
   Print the plan without executing.
@@ -39,15 +39,15 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)] [int]$Issue,
-    [ValidateSet('plan','work','review','unslop','test','compound')] [string]$From = 'plan',
-    [ValidateSet('plan','work','review','unslop','test','compound')] [string]$To = 'compound',
-    [switch]$SkipUnslop,
+    [ValidateSet('plan','work','review','scrub','test','compound')] [string]$From = 'plan',
+    [ValidateSet('plan','work','review','scrub','test','compound')] [string]$To = 'compound',
+    [switch]$SkipScrub,
     [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Continue'
 
-$Order = @('plan','work','review','unslop','test','compound')
+$Order = @('plan','work','review','scrub','test','compound')
 $fromIdx = [array]::IndexOf($Order, $From)
 $toIdx   = [array]::IndexOf($Order, $To)
 if ($fromIdx -lt 0 -or $toIdx -lt 0 -or $toIdx -lt $fromIdx) { throw "Invalid step range: $From -> $To" }
@@ -109,11 +109,11 @@ $steps = @(
         gate = { Test-ReviewArtifact }
     },
     @{
-        name = 'unslop'; agent = 'engineer';
-        run  = { if ($SkipUnslop) { Write-Host "[ship] Unslop: skipped" -ForegroundColor DarkYellow; return 0 }
-                  Write-Host "[ship] Unslop: scanning workspace" -ForegroundColor Cyan
-                  $unslopScript = Join-Path (Resolve-Path .).Path 'scripts/unslop.ps1'
-                  & pwsh -NoProfile -File $unslopScript -Path . -Quiet
+        name = 'scrub'; agent = 'engineer';
+        run  = { if ($SkipScrub) { Write-Host "[ship] Scrub: skipped" -ForegroundColor DarkYellow; return 0 }
+                  Write-Host "[ship] Scrub: scanning workspace" -ForegroundColor Cyan
+                  $scrubScript = Join-Path (Resolve-Path .).Path 'scripts/scrub.ps1'
+                  & pwsh -NoProfile -File $scrubScript -Path . -Quiet
                   return 0 }
         gate = { $true }
     },
@@ -143,7 +143,7 @@ if ($DryRun) {
 $failures = New-Object 'System.Collections.Generic.List[string]'
 for ($i = $fromIdx; $i -le $toIdx; $i++) {
     $step = $steps[$i]
-    if ($step.name -eq 'unslop' -and $SkipUnslop) { continue }
+    if ($step.name -eq 'scrub' -and $SkipScrub) { continue }
 
     Set-Phase -Agent $step.agent
     Write-Host ""; Write-Host ("==== [ship] step: {0} ====" -f $step.name) -ForegroundColor Magenta

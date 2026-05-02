@@ -6028,12 +6028,12 @@ $($C.d)  ---------------------------------------------$($C.n)
 
 $($C.w)  Commands:$($C.n)
   ready                            Show unblocked work, sorted by priority
-  ship <issue>                     One-command pipeline: plan->work->review->unslop->test->compound
-  unslop [path] [-Fix]             Scan for AI-generated slop; -Fix applies safe deletions
-  autoresearch <action>            Metric-driven experimentation loop (start/attempt/end/status)
-  learn                            Capture observations from current session (alias of 'discover run')
-  evolve                           Promote stable patterns into graduated skills (alias of 'graduate run')
-  instincts                        Inspect discovered patterns and graduation candidates
+  ship <issue>                     One-command pipeline: plan->work->review->scrub->test->compound
+  scrub [path] [-Fix]              Presentation-layer scan for filler/comment-rot; -Fix applies safe deletions
+  tune <action>                    Metric-driven experimentation loop (start/attempt/end/status)
+  reflect                          Capture observations from current session (alias of 'discover run')
+  promote                          Graduate stable patterns into skills (alias of 'graduate run')
+  patterns                         Inspect discovered patterns and graduation candidates
   manifest <action>                Install manifest: generate | verify | list
   state [-a agent -s status]       Show/update agent states
   deps <issue>                     Check dependencies for an issue
@@ -7261,8 +7261,8 @@ function Invoke-ScriptWrapper {
     exit $LASTEXITCODE
 }
 
-function Invoke-UnslopCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/unslop.ps1'           -Label 'unslop' }
-function Invoke-AutoresearchCmd  { Invoke-ScriptWrapper -ScriptRelPath 'scripts/autoresearch.ps1'    -Label 'autoresearch' }
+function Invoke-ScrubCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scrub.ps1'             -Label 'scrub' }
+function Invoke-TuneCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/tune.ps1'              -Label 'tune' }
 function Invoke-ShipCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ship.ps1'            -Label 'ship' }
 function Invoke-ManifestCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/install-manifest.ps1' -Label 'install-manifest' }
 
@@ -7296,13 +7296,15 @@ switch ($Script:Command) {
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }
     'sprint'   { Invoke-SprintCmd }
-    'unslop'   { Invoke-UnslopCmd }
-    'autoresearch' { Invoke-AutoresearchCmd }
+    'unslop'   { Invoke-ScrubCmd }   # deprecated alias
+    'scrub'    { Invoke-ScrubCmd }
+    'autoresearch' { Invoke-TuneCmd }   # deprecated alias
+    'tune'     { Invoke-TuneCmd }
     'ship'     { Invoke-ShipCmd }
     'manifest' { Invoke-ManifestCmd }
-    'learn'    { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-DiscoverCmd }
-    'evolve'   { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-GraduateCmd }
-    'instincts' { $Script:SubArgs = @('status') + @($Script:SubArgs); Invoke-DiscoverCmd }
+    'reflect'  { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-DiscoverCmd }
+    'promote'  { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-GraduateCmd }
+    'patterns' { $Script:SubArgs = @('status') + @($Script:SubArgs); Invoke-DiscoverCmd }
     'diagnose' { Invoke-DiagnoseCmd }
     'doctor'   { Invoke-DiagnoseCmd }  # deprecated alias
     'version'  { Invoke-VersionCmd }

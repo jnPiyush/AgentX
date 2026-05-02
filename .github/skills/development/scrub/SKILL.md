@@ -1,5 +1,5 @@
 ---
-name: "unslop"
+name: "scrub"
 description: "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, and design tells -- and optionally apply safe automated fixes. Use after a code-generation or refactor pass to remove the visible signs of machine authorship before review."
 metadata:
   author: "AgentX"
@@ -10,7 +10,7 @@ compatibility:
   frameworks: ["agentx", "copilot", "claude-code"]
 ---
 
-# Unslop
+# Scrub
 
 > **Purpose**: Detect and remove the visible tells of AI-generated code without changing behavior.
 > **Scope**: Comment rot, over-abstracted code, generic design defaults, AI filler phrasing.
@@ -29,7 +29,7 @@ compatibility:
 - During active debugging -- focus on correctness first
 - On generated code that is intentionally machine-owned (build output, OpenAPI clients)
 - On vendored third-party files
-- As a substitute for code review -- unslop catches presentation, review catches behavior
+- As a substitute for code review -- scrub catches presentation, review catches behavior
 
 ---
 
@@ -69,7 +69,7 @@ Recent diff contains machine-generated text?
 Run the scanner over the directory or files that changed:
 
 ```pwsh
-pwsh scripts/unslop.ps1 -Path src/components
+pwsh scripts/scrub.ps1 -Path src/components
 ```
 
 The scanner walks the path, parses comments and content by file extension, and prints findings grouped by category and severity. It does not modify any file in scan mode.
@@ -96,7 +96,7 @@ Findings come in three severities:
 Only after reading the report, run with `--fix` to apply the auto-safe categories:
 
 ```pwsh
-pwsh scripts/unslop.ps1 -Path src/components -Fix
+pwsh scripts/scrub.ps1 -Path src/components -Fix
 ```
 
 Safe-fix categories (v1):
@@ -117,7 +117,7 @@ After fixes:
 
 - Run the test suite. Behavior must not change.
 - Re-run the scanner. The remaining findings are the manual-triage list.
-- Commit fixes as a single change with `chore: unslop <area>`.
+- Commit fixes as a single change with `chore: scrub <area>`.
 
 ---
 
@@ -134,7 +134,7 @@ After fixes:
 
 - Running `--fix` without reading the scan report first
 - Suppressing findings instead of fixing them
-- Using unslop to refactor logic -- it is a presentation pass only
+- Using scrub to refactor logic -- it is a presentation pass only
 - Treating LOW findings as required fixes -- they are signals, not gates
 
 ---
@@ -142,5 +142,5 @@ After fixes:
 ## Related Skills
 
 - [Code Hygiene](../code-hygiene/SKILL.md) -- broader cleanup discipline including dead code and over-engineering
-- [Code Review](../code-review/SKILL.md) -- behavioral review that runs alongside unslop
+- [Code Review](../code-review/SKILL.md) -- behavioral review that runs alongside scrub
 - [Karpathy Guidelines](../karpathy-guidelines/SKILL.md) -- the underlying behavioral contract that prevents slop in the first place

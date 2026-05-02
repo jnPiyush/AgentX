@@ -1,6 +1,6 @@
 {
   "version": "8.4.45",
-  "createdAt": "2026-05-02T21:40:19Z",
+  "createdAt": "2026-05-02T21:51:41Z",
   "files": [
     {
       "path": ".agentx/agentic-runner.ps1",
@@ -9,7 +9,7 @@
     },
     {
       "path": ".agentx/agentx-cli.ps1",
-      "sha256": "69822b781c8190b70cccf3b7aab71b685ce4cf22429e222722991bf63668eeb6",
+      "sha256": "7e8ba163522e83ce4bc70f742b0f19ec3e0652e670da60a66b7170f572c2a256",
       "category": "cli"
     },
     {
@@ -593,6 +593,11 @@
       "category": "skill"
     },
     {
+      "path": ".github/skills/development/scrub/SKILL.md",
+      "sha256": "10342a436957f287c9497730bd6b84e09c6ce73e0a4a7ae7d4eec08c8533746b",
+      "category": "skill"
+    },
+    {
       "path": ".github/skills/development/skill-creator/SKILL.md",
       "sha256": "f3ca8a9edac84a1fd6ed47c27798fb3ca7cb6b1fb704f2699e30b52e848f70ee",
       "category": "skill"
@@ -610,11 +615,6 @@
     {
       "path": ".github/skills/development/type-safety/SKILL.md",
       "sha256": "73cf11c4a6aad58932bd4b3a9ecf92397bf38d9e58858dbc47e0aa48e3f44be2",
-      "category": "skill"
-    },
-    {
-      "path": ".github/skills/development/unslop/SKILL.md",
-      "sha256": "804b5dec6d163bc337d61730bc02716de3e7e25d1ef667dae5681deee50043af",
       "category": "skill"
     },
     {
@@ -864,7 +864,7 @@
     },
     {
       "path": "Skills.md",
-      "sha256": "54adbc8dbc06a7a10adea3195dbf351eb98c9c1a9ba32a00ac7c7447cbce73a6",
+      "sha256": "ecc3868c2ef094b20c21389a2707311b155ecc077b315c33e91d9fc099716b92",
       "category": "doc"
     }
   ]
