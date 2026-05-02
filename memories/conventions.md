@@ -38,6 +38,7 @@
 - 2026-03-13: For new cross-surface workflow features in the extension, prefer a CLI-first contract with a thin facade in `src/<domain>/` plus command registration in `src/commands/`; keep parsing/rendering in an adjacent engine module instead of duplicating business rules in VS Code.
 - 2026-03-13: For bounded parallel task-unit payloads, keep the extension facade responsible for mapping camelCase UI inputs onto the CLI's snake_case JSON fields before base64 encoding; do not broaden the CLI parser to accept multiple shapes.
 - 2026-03-17: Keep local runtime initialization and remote provider setup as separate VS Code commands; local-only capabilities should point users to `Initialize Local Runtime`, not to provider-specific setup.
+- 2026-05-01: For broad AgentX certification, use the executable pack rather than a single suite: `tests/test-framework.ps1`, `tests/test-install.ps1`, `vscode-extension` `npm test` plus `npm run test:coverage`, `scripts/validate-frontmatter.ps1`, `scripts/validate-references.ps1`, `scripts/run-ai-eval-sample.ps1`, and `tests/cli-live-e2e.ps1`.
 - 2026-03-17: In `.agentx/config.json`, treat `adapters.github` and `adapters.ado` as additive metadata for local-first workspaces; do not auto-switch `provider` just because a repo remote or adapter exists.
 - 2026-03-19: Treat `loop complete` as a pre-handoff hard gate, not a user-prompted post-condition.
 - 2026-03-19: After replacing a large code block, search for removed identifiers and the new declaration before trusting tests alone.

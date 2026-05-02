@@ -369,3 +369,163 @@ graph LR
 **Author**: {Agent/Person Name} 
 **Last Updated**: {YYYY-MM-DD} 
 **Version**: 1.0
+
+---
+
+## Appendix A: MADR 4.0 Alignment and Decision Diagrams (v8.4.43+)
+
+> Additive section. Reference: MADR 4.0 (https://adr.github.io/madr/, released 2024-09). Aligns this template with the de-facto Markdown ADR standard while preserving the existing structure.
+
+### A.1 MADR 4.0 Frontmatter (recommended)
+
+Add these fields to the YAML frontmatter at the top of a new ADR (all optional but encouraged):
+
+```yaml
+status: "proposed | accepted | rejected | deprecated | superseded by ADR-NNNN"
+date: YYYY-MM-DD
+decision-makers:
+  - "{role or name}"
+consulted:
+  - "{subject-matter expert (two-way)}"
+informed:
+  - "{stakeholder kept up-to-date (one-way)}"
+```
+
+### A.2 Decision Drivers (MADR canonical section)
+
+List the forces that shape the decision before discussing options. Keep this list short (3-7 drivers) and sortable by weight.
+
+| # | Driver | Weight (1-5) | Why it matters |
+|---|--------|--------------|----------------|
+| 1 | {e.g., Latency under p95 < 200ms} | {1-5} | {rationale} |
+| 2 | {e.g., Operational cost per 1M requests} | {1-5} | {rationale} |
+| 3 | {e.g., Team familiarity / time-to-ship} | {1-5} | {rationale} |
+
+### A.3 Y-Statement Summary
+
+Capture the decision in one sentence using Olaf Zimmermann's Y-statement form:
+
+> In the context of `<use case>`, facing `<concern>`, we decided for `<option>` and against `<alternatives>`, to achieve `<quality / outcome>`, accepting `<downside>`.
+
+### A.4 Decision Drivers Fan-In
+
+```mermaid
+flowchart LR
+    D1["Driver 1<br/>weight {n}"] --> Eval((Evaluation))
+    D2["Driver 2<br/>weight {n}"] --> Eval
+    D3["Driver 3<br/>weight {n}"] --> Eval
+    Eval --> O1["Option 1"]
+    Eval --> O2["Option 2"]
+    Eval --> O3["Option 3"]
+    O1 -. rejected .-> Out
+    O2 -. rejected .-> Out
+    O3 ==> Out["Chosen Option"]
+```
+
+### A.5 Weighted Decision Matrix
+
+| Driver | Weight | Option 1 score (1-5) | Option 2 score | Option 3 score |
+|--------|--------|----------------------|----------------|----------------|
+| {Driver 1} | {n} | {n} | {n} | {n} |
+| {Driver 2} | {n} | {n} | {n} | {n} |
+| {Driver 3} | {n} | {n} | {n} | {n} |
+| **Weighted total** | - | {sum} | {sum} | {sum} |
+
+### A.6 Confirmation (MADR section)
+
+Describe how compliance with this decision will be confirmed over time. Examples: ArchUnit test, dependency-rule lint, OPA policy, eval gate, fitness function in CI.
+
+| Mechanism | What it verifies | Frequency | Owner |
+|-----------|------------------|-----------|-------|
+| {e.g., ArchUnit test `noLayerLeak`} | {invariant} | {every PR} | {team} |
+| {e.g., Eval gate threshold >= 0.85} | {invariant} | {every release} | {team} |
+
+### A.7 ADR Status Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Proposed
+    Proposed --> Accepted: review + approval
+    Proposed --> Rejected: better option found
+    Accepted --> Deprecated: no longer recommended
+    Accepted --> Superseded: replaced by ADR-NNNN
+    Deprecated --> [*]
+    Superseded --> [*]
+    Rejected --> [*]
+```
+
+### A.8 Supersedes / Superseded-By Graph
+
+```mermaid
+flowchart LR
+    A0["ADR-0001<br/>{title}"] -- superseded by --> A1["ADR-0007<br/>{title}"]
+    A1 -- supersedes --> A0
+    A1 -- relates to --> A2["ADR-0010<br/>{title}"]
+```
+
+
+## Appendix B: Rich Visual Diagrams (v8.4.43+)
+
+### B.1 Decision Review Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Author
+  participant Deciders
+  participant Consulted
+  participant Informed
+  Author->>Deciders: Draft ADR (Proposed)
+  Deciders->>Consulted: Solicit input
+  Consulted-->>Deciders: Trade-off feedback
+  Deciders->>Author: Decision drivers + chosen option
+  Author->>Author: Update ADR (Accepted)
+  Author->>Informed: Broadcast decision
+  Note over Author,Informed: Confirmation evidence linked
+```
+
+### B.2 Options Mindmap
+
+```mermaid
+mindmap
+  root((Decision))
+    Option 1
+      Pros
+      Cons
+      Cost
+    Option 2
+      Pros
+      Cons
+      Risk
+    Option 3
+      Pros
+      Cons
+      Effort
+```
+
+### B.3 Lifecycle Flow (styled)
+
+```mermaid
+flowchart LR
+  P[Proposed]:::p --> A[Accepted]:::a
+  A --> D[Deprecated]:::d
+  A --> S[Superseded]:::s
+  P -.rejected.-> R[Rejected]:::r
+  classDef p fill:#fff3e0,stroke:#f57c00
+  classDef a fill:#e8f5e9,stroke:#388e3c
+  classDef d fill:#fafafa,stroke:#9e9e9e
+  classDef s fill:#e3f2fd,stroke:#1976d2
+  classDef r fill:#ffebee,stroke:#c62828
+```
+
+### B.4 Decision-Driver Weights (pie)
+
+```mermaid
+pie showData
+  title Decision driver weights
+  "Reliability" : 25
+  "Cost" : 15
+  "Time-to-market" : 20
+  "Operability" : 15
+  "Security" : 25
+```

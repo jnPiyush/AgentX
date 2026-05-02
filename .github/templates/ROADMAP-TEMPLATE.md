@@ -305,3 +305,152 @@ flowchart LR
 - Keep this roadmap synchronized with related PRDs, ADRs, UX artifacts, and release-readiness evidence.
 - Use one roadmap for shared platform or portfolio planning; avoid duplicating milestone dates across multiple PRDs unless each PRD needs a local summary.
 - Update dates and readiness status when major scope, release sequencing, or operational assumptions change.
+---
+
+## Appendix A: Roadmap Diagrams (v8.4.43+)
+
+> Additive section. References: Janna Bastow / ProdPad Now/Next/Later, OKR alignment patterns.
+
+### A.1 Now / Next / Later
+
+```mermaid
+flowchart LR
+    subgraph Now["Now (this quarter)"]
+        N1["{Theme A - outcome}"]
+        N2["{Theme B - outcome}"]
+    end
+    subgraph Next["Next (next quarter)"]
+        X1["{Theme C - outcome}"]
+        X2["{Theme D - outcome}"]
+    end
+    subgraph Later["Later (beyond)"]
+        L1["{Theme E - outcome}"]
+        L2["{Theme F - outcome}"]
+    end
+    Now --> Next --> Later
+```
+
+### A.2 Theme -> Initiative -> Release
+
+```mermaid
+flowchart TD
+    Th1["Theme: {north-star sub-goal}"]
+    I1["Initiative: {capability}"]
+    I2["Initiative: {capability}"]
+    R1["Release v{x}.{y}<br/>{date}"]
+    R2["Release v{x}.{y+1}<br/>{date}"]
+    F1["Feature {a}"]
+    F2["Feature {b}"]
+    F3["Feature {c}"]
+    Th1 --> I1
+    Th1 --> I2
+    I1 --> F1
+    I1 --> F2
+    I2 --> F3
+    F1 --> R1
+    F2 --> R1
+    F3 --> R2
+```
+
+### A.3 Inter-Release Dependency
+
+```mermaid
+flowchart LR
+    R1["Release A"] --> R2["Release B"]
+    R1 --> R3["Release C"]
+    R2 --> R4["Release D"]
+    R3 --> R4
+```
+
+### A.4 OKR Alignment
+
+| Objective | Key Result | Tied initiatives | Confidence (0-1) | Owner |
+|-----------|------------|-------------------|------------------|-------|
+| {Objective 1} | KR-1.1 | {init list} | {value} | {owner} |
+| {Objective 1} | KR-1.2 | {init list} | {value} | {owner} |
+| {Objective 2} | KR-2.1 | {init list} | {value} | {owner} |
+
+### A.5 Release Train Gantt (optional)
+
+```mermaid
+gantt
+    title Release plan
+    dateFormat YYYY-MM-DD
+    section v1.x
+      Initiative A         :a1, 2026-05-01, 30d
+      Initiative B         :a2, after a1, 20d
+    section v2.x
+      Initiative C         :b1, 2026-07-01, 25d
+      Initiative D         :b2, after b1, 15d
+```
+
+
+## Appendix B: Rich Visual Diagrams (v8.4.43+)
+
+### B.1 Release Timeline
+
+```mermaid
+timeline
+  title Release timeline
+  Q1 : v1.0 Foundation
+  Q2 : v1.1 Activation : v1.2 Retention
+  Q3 : v2.0 Platform : v2.1 Mobile
+  Q4 : v2.2 Enterprise : v3.0 GA
+```
+
+### B.2 Theme Allocation (pie)
+
+```mermaid
+pie showData
+  title Capacity allocation by theme
+  "Growth" : 35
+  "Reliability" : 25
+  "Platform" : 20
+  "Compliance" : 10
+  "Discovery" : 10
+```
+
+### B.3 Release Branch Strategy (gitGraph)
+
+```mermaid
+gitGraph
+  commit id: "v1.0"
+  branch release/1.x
+  commit id: "1.1.0"
+  commit id: "1.2.0"
+  checkout main
+  branch release/2.x
+  commit id: "2.0.0-beta"
+  commit id: "2.0.0"
+  checkout main
+  merge release/2.x tag: "v2.0"
+```
+
+### B.4 OKR Trajectory (xychart)
+
+```mermaid
+xychart-beta
+  title "OKR progress (KR1, KR2, KR3)"
+  x-axis [Q1, Q2, Q3, Q4]
+  y-axis "% to target" 0 --> 100
+  line [25, 50, 75, 100]
+  bar [20, 45, 65, 90]
+```
+
+### B.5 Initiative Roll-up (styled)
+
+```mermaid
+flowchart LR
+  V[Vision]:::v --> O1[Outcome 1]:::o
+  V --> O2[Outcome 2]:::o
+  O1 --> I1[Initiative A]:::i
+  O1 --> I2[Initiative B]:::i
+  O2 --> I3[Initiative C]:::i
+  I1 --> R1[Release 1.x]:::r
+  I2 --> R2[Release 1.x]:::r
+  I3 --> R3[Release 2.x]:::r
+  classDef v fill:#fce4ec,stroke:#c2185b,color:#880e4f
+  classDef o fill:#e3f2fd,stroke:#1976d2
+  classDef i fill:#fff3e0,stroke:#f57c00
+  classDef r fill:#e8f5e9,stroke:#388e3c
+```

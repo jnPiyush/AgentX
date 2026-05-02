@@ -680,3 +680,160 @@ tests/
 Reviewed by: {Reviewer Name/Agent} 
 Date: {YYYY-MM-DD} 
 Status: {APPROVED | CHANGES REQUESTED | REJECTED}
+
+---
+
+## Appendix A: Conventional Comments and Review Diagrams (v8.4.43+)
+
+> Additive section. References: Conventional Comments (https://conventionalcomments.org/) v1.0 - labels and decorations, Google Code Review Developer Guide.
+
+### A.1 Conventional Comments Cheat Sheet
+
+Use this format on every code review comment:
+
+```
+<label> [decorations]: <subject>
+
+[discussion]
+```
+
+| Label | When to use |
+|-------|-------------|
+| `praise` | Highlight something good. Real praise, not a sandwich. |
+| `nitpick` | Trivial. Personal preference. Author may ignore. |
+| `suggestion` | Concrete change request that would improve the code. |
+| `issue` | A bug or concrete problem that needs fixing. |
+| `todo` | Small follow-up that can ship in a separate PR. |
+| `question` | Real question seeking information. |
+| `thought` | Explores an idea; not a request. |
+| `chore` | Process step (rebase, retitle, link issue). |
+| `note` | Permanent note for future readers. |
+
+| Decoration | Meaning |
+|------------|---------|
+| `(blocking)` | Author MUST resolve before merge. |
+| `(non-blocking)` | Author MAY merge without addressing. |
+| `(if-minor)` | Resolve if it is minor; otherwise mark resolved. |
+
+Example:
+```
+issue (blocking): SQL string is concatenated, not parameterized.
+
+This is OWASP A03:2021 Injection. Replace with a parameterized query.
+```
+
+### A.2 Review Lifecycle State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Requested
+    Requested --> InReview: reviewer assigned
+    InReview --> ChangesRequested: blocking findings
+    InReview --> Approved: no blockers
+    ChangesRequested --> InReview: author pushed fixes
+    Approved --> Merged: CI green + merge
+    Approved --> Stale: branch behind base
+    Stale --> InReview: rebased
+    Merged --> [*]
+```
+
+### A.3 Risk Heat Map of Findings
+
+```mermaid
+quadrantChart
+    title Findings - severity vs likelihood
+    x-axis Low likelihood --> High likelihood
+    y-axis Low impact --> High impact
+    quadrant-1 Fix now (blocking)
+    quadrant-2 Fix soon
+    quadrant-3 Note and move on
+    quadrant-4 Watch
+    Finding-1: [0.8, 0.9]
+    Finding-2: [0.3, 0.7]
+    Finding-3: [0.6, 0.2]
+    Finding-4: [0.2, 0.3]
+```
+
+### A.4 Test Pyramid (target shape per project)
+
+```mermaid
+flowchart TB
+    E2E["End-to-End - 10%<br/>UI / cross-service"]
+    Integ["Integration - 20%<br/>API / DB / contract"]
+    Unit["Unit - 70%<br/>fast, isolated"]
+    E2E --> Integ --> Unit
+    style E2E fill:#fee
+    style Integ fill:#fef
+    style Unit fill:#efe
+```
+
+### A.5 Review Decision Rubric
+
+| Decision | Required state |
+|----------|----------------|
+| APPROVED | 0 blocking issues. Tests >= 80% coverage. CI green. Self-review checklist passed. |
+| CHANGES REQUESTED | >=1 blocking issue, or >=2 non-blocking issue + suggestion combinations on the same area. |
+| BLOCKED | Cannot review (missing artifact, broken build, scope unclear). |
+
+
+## Appendix B: Rich Visual Diagrams (v8.4.43+)
+
+### B.1 Review Interaction Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Author
+  participant CI
+  participant Reviewer
+  participant Council as Model Council
+  Author->>CI: Push branch
+  CI-->>Author: Build/test results
+  Author->>Reviewer: Request review
+  Reviewer->>Reviewer: Read context + diff
+  Reviewer->>Council: Convene (if applicable)
+  Council-->>Reviewer: Synthesis
+  Reviewer-->>Author: Findings (Conventional Comments)
+  Author->>Reviewer: Address findings
+  Reviewer-->>Author: Approve / Changes Requested
+```
+
+### B.2 Finding Distribution (pie)
+
+```mermaid
+pie showData
+  title Finding distribution by severity
+  "HIGH" : 2
+  "MEDIUM" : 5
+  "LOW" : 8
+  "Nit / praise" : 6
+```
+
+### B.3 Conventional Comments Mindmap
+
+```mermaid
+mindmap
+  root((Comments))
+    praise
+    nitpick
+    suggestion
+    issue
+    question
+    todo
+    chore
+    note
+    decorations
+      blocking
+      non-blocking
+      if-minor
+```
+
+### B.4 Coverage Trend (xychart)
+
+```mermaid
+xychart-beta
+  title "Test coverage trend"
+  x-axis [Iter1, Iter2, Iter3, Iter4, Iter5]
+  y-axis "Coverage %" 60 --> 100
+  line [72, 78, 83, 88, 92]
+```

@@ -786,3 +786,220 @@ graph TD
 **Last Updated**: {YYYY-MM-DD} 
 **Version**: 1.0
 
+
+---
+
+## Appendix A: NN/g Journey Map, Service Blueprint, IA, and Heuristics (v8.4.43+)
+
+> Additive section. References: Nielsen Norman Group "Journey Mapping 101" (Actor, Scenario, Phases, Actions+Mindsets+Emotions, Opportunities), NN/g "Service Blueprints: Definition" (frontstage / backstage / support processes), NN/g "10 Usability Heuristics for User Interface Design" (Jakob Nielsen, last updated 2024).
+
+### A.1 Customer Journey Map (NN/g 5-element model)
+
+```mermaid
+journey
+    title {Persona} - {Scenario}
+    section Discover
+      Becomes aware of need: 3: User
+      Searches for solutions: 4: User
+    section Consider
+      Compares options: 3: User
+      Reads reviews: 4: User
+    section Onboard
+      Signs up: 4: User
+      First-run setup: 2: User
+    section Use
+      Reaches first value: 5: User
+      Hits a friction point: 2: User
+    section Retain / Advocate
+      Returns regularly: 5: User
+      Recommends product: 5: User
+```
+
+| Phase | Actions | Mindset / questions | Emotion (1-5) | Touchpoint | Opportunity |
+|-------|---------|---------------------|---------------|------------|-------------|
+| Discover | {actions} | {questions} | {n} | {channel} | {idea} |
+| Consider | {actions} | {questions} | {n} | {channel} | {idea} |
+| Onboard | {actions} | {questions} | {n} | {channel} | {idea} |
+| Use | {actions} | {questions} | {n} | {channel} | {idea} |
+| Retain | {actions} | {questions} | {n} | {channel} | {idea} |
+
+### A.2 Service Blueprint (frontstage / backstage / support)
+
+```mermaid
+flowchart TD
+    subgraph Evidence["Physical evidence"]
+        E1["Email"]
+        E2["App UI"]
+        E3["Receipt"]
+    end
+    subgraph Frontstage["Frontstage actions (user-visible)"]
+        F1["Sign-up form"]
+        F2["Dashboard"]
+        F3["Confirmation screen"]
+    end
+    subgraph Backstage["Backstage actions (employee/system)"]
+        B1["Identity verification"]
+        B2["Data sync job"]
+        B3["Receipt generation"]
+    end
+    subgraph Support["Support processes"]
+        S1["Auth provider"]
+        S2["Database"]
+        S3["Email service"]
+    end
+    F1 -. line of interaction .-> B1
+    F2 -. line of interaction .-> B2
+    F3 -. line of interaction .-> B3
+    B1 -. line of internal interaction .-> S1
+    B2 -. line of internal interaction .-> S2
+    B3 -. line of internal interaction .-> S3
+    E1 --- F1
+    E2 --- F2
+    E3 --- F3
+```
+
+### A.3 Information Architecture / Sitemap
+
+```mermaid
+flowchart TD
+    Root["/ (Home)"]
+    Root --> Auth["/auth"]
+    Auth --> Login["/auth/login"]
+    Auth --> Signup["/auth/signup"]
+    Root --> Dash["/dashboard"]
+    Dash --> Reports["/dashboard/reports"]
+    Dash --> Settings["/dashboard/settings"]
+    Settings --> Profile["/dashboard/settings/profile"]
+    Settings --> Billing["/dashboard/settings/billing"]
+    Root --> Help["/help"]
+```
+
+### A.4 Per-Screen State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Loading: fetch
+    Loading --> Empty: zero results
+    Loading --> Success: data
+    Loading --> Error: failure
+    Error --> Loading: retry
+    Empty --> Loading: filter changed
+    Success --> Loading: refresh
+```
+
+> Repeat per critical screen. Each prototype screen MUST visually represent every state.
+
+### A.5 NN/g 10-Heuristics Self-Audit Checklist
+
+| # | Heuristic | Pass | Evidence / fix needed |
+|---|-----------|------|------------------------|
+| 1 | Visibility of system status | {Y/N} | {note} |
+| 2 | Match between system and the real world | {Y/N} | {note} |
+| 3 | User control and freedom | {Y/N} | {note} |
+| 4 | Consistency and standards | {Y/N} | {note} |
+| 5 | Error prevention | {Y/N} | {note} |
+| 6 | Recognition rather than recall | {Y/N} | {note} |
+| 7 | Flexibility and efficiency of use | {Y/N} | {note} |
+| 8 | Aesthetic and minimalist design | {Y/N} | {note} |
+| 9 | Help users recognize, diagnose, and recover from errors | {Y/N} | {note} |
+| 10 | Help and documentation | {Y/N} | {note} |
+
+### A.6 Microcopy Table
+
+| Surface | Default copy | Empty state | Error state | Success state | i18n key |
+|---------|--------------|-------------|-------------|---------------|----------|
+| {screen.section} | {copy} | {copy} | {copy} | {copy} | {key} |
+
+### A.7 State Matrix (per critical component)
+
+| Component | Idle | Loading | Empty | Error | Success | Disabled |
+|-----------|------|---------|-------|-------|---------|----------|
+| {Component} | {behavior} | {behavior} | {behavior} | {behavior} | {behavior} | {behavior} |
+
+### A.8 Dark-Mode and Theming Tokens
+
+| Token | Light | Dark | Contrast vs background |
+|-------|-------|------|------------------------|
+| color.bg.surface | #FFFFFF | #0F1115 | n/a |
+| color.fg.primary | #111827 | #E5E7EB | >= 7:1 |
+| color.fg.secondary | #4B5563 | #9CA3AF | >= 4.5:1 |
+| color.accent | #2563EB | #60A5FA | >= 4.5:1 vs surface |
+| color.danger | #DC2626 | #F87171 | >= 4.5:1 vs surface |
+
+### A.9 Accessibility Crosswalk (WCAG 2.1 AA)
+
+| WCAG criterion | How this design satisfies it | Evidence |
+|----------------|------------------------------|----------|
+| 1.4.3 Contrast (Minimum) | {note} | {token table} |
+| 2.1.1 Keyboard | {note} | {prototype} |
+| 2.4.7 Focus Visible | {note} | {prototype} |
+| 4.1.2 Name, Role, Value | {note} | {ARIA notes} |
+
+
+## Appendix B: Rich Visual Diagrams (v8.4.43+)
+
+### B.1 User Timeline
+
+```mermaid
+timeline
+  title User journey across touchpoints
+  Discover : Ad : Search : Referral
+  Consider : Landing page : Pricing : Reviews
+  Convert  : Sign up : Onboard : First value
+  Retain   : Habit loop : Notifications : Tips
+  Expand   : Upgrade : Invite teammates
+```
+
+### B.2 Funnel (sankey)
+
+```mermaid
+sankey-beta
+Visitors,Signed up,1000
+Visitors,Bounced,4000
+Signed up,Activated,700
+Signed up,Churned early,300
+Activated,Retained 30d,500
+Activated,Churned 30d,200
+Retained 30d,Power users,200
+```
+
+### B.3 Interaction Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant UI
+  participant API
+  U->>UI: Tap "Save"
+  UI->>UI: Optimistic update
+  UI->>API: PATCH /resource
+  API-->>UI: 200 OK
+  UI-->>U: Toast "Saved"
+  Note over UI,U: Error path: rollback + inline error
+```
+
+### B.4 Heuristic Coverage (pie)
+
+```mermaid
+pie showData
+  title NN/g 10 heuristics coverage
+  "Covered" : 8
+  "Partial" : 1
+  "Gap" : 1
+```
+
+### B.5 Screen Flow (styled)
+
+```mermaid
+flowchart LR
+  H[Home]:::primary --> L[List]:::primary
+  L --> D[Detail]:::primary
+  D --> E[Edit]:::action
+  E -->|save| D
+  E -->|cancel| D
+  D --> Sh[Share]:::action
+  classDef primary fill:#e3f2fd,stroke:#1976d2
+  classDef action fill:#fff3e0,stroke:#f57c00
+```
