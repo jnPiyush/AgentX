@@ -5763,17 +5763,17 @@ function Invoke-ScoreCmd {
 }
 
 # ---------------------------------------------------------------------------
-# DOCTOR: Aggregated workspace health checks
+# DIAGNOSE: Aggregated workspace health checks
 # ---------------------------------------------------------------------------
 
-function Invoke-DoctorCmd {
+function Invoke-DiagnoseCmd {
     # Aggregate the existing validate-* scripts and runtime invariants behind one
     # entry point. Each check returns: { id, label, passed, summary, hint }.
     # JSON output is supported via the global --json / -j flag.
     $verbose = Test-Flag @('--verbose', '-v')
     $checks = [System.Collections.Generic.List[object]]::new()
 
-    function Add-DoctorCheck {
+    function Add-DiagnoseCheck {
         param(
             [Parameter(Mandatory)] $List,
             [Parameter(Mandatory)] [string]$Id,
@@ -5801,7 +5801,7 @@ function Invoke-DoctorCmd {
     )
     foreach ($r in $required) {
         $exists = Test-Path $r.path
-        Add-DoctorCheck -List $checks -Id $r.id -Label $r.label -Passed $exists -Summary $(if ($exists) { 'present' } else { 'missing' })
+        Add-DiagnoseCheck -List $checks -Id $r.id -Label $r.label -Passed $exists -Summary $(if ($exists) { 'present' } else { 'missing' })
     }
 
     # 2. Git hooks installed
@@ -5809,11 +5809,11 @@ function Invoke-DoctorCmd {
     if (Test-Path $gitDir) {
         $preCommit = Join-Path $gitDir 'hooks/pre-commit'
         $hookOk = Test-Path $preCommit
-        Add-DoctorCheck -List $checks -Id 'git-hooks' -Label 'Git pre-commit hook installed' -Passed $hookOk `
+        Add-DiagnoseCheck -List $checks -Id 'git-hooks' -Label 'Git pre-commit hook installed' -Passed $hookOk `
             -Summary $(if ($hookOk) { 'pre-commit hook present' } else { 'pre-commit hook missing' }) `
             -Hint 'Run: agentx hooks install'
     } else {
-        Add-DoctorCheck -List $checks -Id 'git-hooks' -Label 'Git pre-commit hook installed' -Passed $true -Summary 'no .git directory (skipped)'
+        Add-DiagnoseCheck -List $checks -Id 'git-hooks' -Label 'Git pre-commit hook installed' -Passed $true -Summary 'no .git directory (skipped)'
     }
 
     # 3. Frontmatter validation
@@ -5823,10 +5823,10 @@ function Invoke-DoctorCmd {
         $fmExit = $LASTEXITCODE
         $fmTailMatch = $fmOutput | Select-String -Pattern '^\s*Results:' | Select-Object -Last 1
         $fmTail = if ($fmTailMatch) { $fmTailMatch.ToString().Trim() } else { 'no summary line' }
-        Add-DoctorCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter (skills, agents, instructions, prompts)' `
+        Add-DiagnoseCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter (skills, agents, instructions, prompts)' `
             -Passed ($fmExit -eq 0) -Summary $fmTail -Hint 'Run: pwsh scripts/validate-frontmatter.ps1'
     } else {
-        Add-DoctorCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter validator' -Passed $false -Summary 'scripts/validate-frontmatter.ps1 missing'
+        Add-DiagnoseCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter validator' -Passed $false -Summary 'scripts/validate-frontmatter.ps1 missing'
     }
 
     # 4. Reference / link validation
@@ -5836,11 +5836,11 @@ function Invoke-DoctorCmd {
         $refExit = $LASTEXITCODE
         $refSummary = if ($refExit -eq 0) { 'all internal links resolve' } else { 'broken links detected' }
         $refTail = if ($refExit -ne 0) { ($refOutput | Select-Object -Last 5) -join "`n" } else { '' }
-        Add-DoctorCheck -List $checks -Id 'references' -Label 'Cross-reference link validity' `
+        Add-DiagnoseCheck -List $checks -Id 'references' -Label 'Cross-reference link validity' `
             -Passed ($refExit -eq 0) -Summary $refSummary -Hint 'Run: pwsh scripts/validate-references.ps1' `
             -VerboseTail $refTail
     } else {
-        Add-DoctorCheck -List $checks -Id 'references' -Label 'Reference validator' -Passed $false -Summary 'scripts/validate-references.ps1 missing'
+        Add-DiagnoseCheck -List $checks -Id 'references' -Label 'Reference validator' -Passed $false -Summary 'scripts/validate-references.ps1 missing'
     }
 
     # 5. Token budget check
@@ -5850,11 +5850,11 @@ function Invoke-DoctorCmd {
         $tokExit = $LASTEXITCODE
         $tokSummary = if ($tokExit -eq 0) { 'all files within token limits' } else { 'one or more files exceed token limits' }
         $tokTail = if ($tokExit -ne 0) { ($tokOutput | Select-Object -Last 5) -join "`n" } else { '' }
-        Add-DoctorCheck -List $checks -Id 'tokens' -Label 'Token budget (skills, instructions)' `
+        Add-DiagnoseCheck -List $checks -Id 'tokens' -Label 'Token budget (skills, instructions)' `
             -Passed ($tokExit -eq 0) -Summary $tokSummary -Hint 'Run: agentx tokens report' `
             -VerboseTail $tokTail
     } else {
-        Add-DoctorCheck -List $checks -Id 'tokens' -Label 'Token budget check' -Passed $false -Summary 'scripts/token-counter.ps1 missing'
+        Add-DiagnoseCheck -List $checks -Id 'tokens' -Label 'Token budget check' -Passed $false -Summary 'scripts/token-counter.ps1 missing'
     }
 
     # 6. Loop state schema sanity
@@ -5871,7 +5871,7 @@ function Invoke-DoctorCmd {
             $loopSummary = "loop-state.json unreadable: $($_.Exception.Message)"
         }
     }
-    Add-DoctorCheck -List $checks -Id 'loop-state' -Label 'Loop state file readable' -Passed $loopOk -Summary $loopSummary -Hint 'Run: agentx loop status'
+    Add-DiagnoseCheck -List $checks -Id 'loop-state' -Label 'Loop state file readable' -Passed $loopOk -Summary $loopSummary -Hint 'Run: agentx loop status'
 
     # 7. Bundle sync (vscode-extension/.github/agentx) -- advisory only when present
     # copy-assets.js intentionally rewrites internal markdown links in bundled
@@ -5926,7 +5926,7 @@ function Invoke-DoctorCmd {
         $synced = ($drift.Count -eq 0) -and ($srcSkills -gt 0)
         $bndSummary = if ($synced) { "in sync (skills=$srcSkills)" } else { "$($drift.Count) drift(s) (skills src=$srcSkills bnd=$bndSkills)" }
         $bndTail = if ($drift.Count -gt 0) { ($drift | Select-Object -First 5) -join "`n" } else { '' }
-        Add-DoctorCheck -List $checks -Id 'bundle-sync' -Label 'VS Code extension bundle in sync' `
+        Add-DiagnoseCheck -List $checks -Id 'bundle-sync' -Label 'VS Code extension bundle in sync' `
             -Passed $synced -Summary $bndSummary `
             -Hint 'Run: node vscode-extension/scripts/copy-assets.js' `
             -VerboseTail $bndTail
@@ -5947,7 +5947,7 @@ function Invoke-DoctorCmd {
         } else {
             "disk=$diskCount declared=[$([string]::Join(',', $declared))]"
         }
-        Add-DoctorCheck -List $checks -Id 'skills-index' -Label 'Skills.md count matches disk' `
+        Add-DiagnoseCheck -List $checks -Id 'skills-index' -Label 'Skills.md count matches disk' `
             -Passed $idxOk -Summary $idxSummary `
             -Hint 'Update count strings in Skills.md (description, anti-pattern, directory header, footer)'
     }
@@ -5969,7 +5969,7 @@ function Invoke-DoctorCmd {
     if ($Script:JsonOutput) {
         Write-CliOutput ($result | ConvertTo-Json -Depth 6)
     } else {
-        Write-CliOutput "`n$($C.c)  AgentX Doctor$($C.n)"
+        Write-CliOutput "`n$($C.c)  AgentX Diagnose$($C.n)"
         Write-CliOutput "$($C.d)  Workspace: $Script:ROOT$($C.n)"
         Write-CliOutput "$($C.d)  Result: $passedCount/$total checks passed$($C.n)`n"
         foreach ($chk in $checks) {
@@ -6031,7 +6031,7 @@ $($C.w)  Commands:$($C.n)
   graduate [run|list|preview]      Promote high-confidence patterns to skills
   sprint "<task>" [-i issue]       Full pipeline: plan -> build -> review -> hygiene -> discover
   git-sync [push|pull]             Push/pull data branch to/from remote
-  doctor [--verbose] [--json]      Aggregate workspace health checks
+  diagnose [--verbose] [--json]    Aggregate workspace health checks (alias: doctor)
   version                          Show installed version
   help                             Show this help
 
@@ -7246,7 +7246,8 @@ switch ($Script:Command) {
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }
     'sprint'   { Invoke-SprintCmd }
-    'doctor'   { Invoke-DoctorCmd }
+    'diagnose' { Invoke-DiagnoseCmd }
+    'doctor'   { Invoke-DiagnoseCmd }  # deprecated alias
     'version'  { Invoke-VersionCmd }
     'help'     { Invoke-HelpCmd }
     default {

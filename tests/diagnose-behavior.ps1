@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Smoke tests for the agentx doctor subcommand.
+# Smoke tests for the agentx diagnose subcommand (formerly: doctor).
 # Asserts: JSON shape, expected check ids present, exit code semantics.
 
 $ErrorActionPreference = 'Stop'
@@ -20,19 +20,19 @@ function Assert-True {
 }
 
 Write-Host ""
-Write-Host "  agentx doctor smoke tests" -ForegroundColor Cyan
+Write-Host "  agentx diagnose smoke tests" -ForegroundColor Cyan
 Write-Host "  ================================================" -ForegroundColor DarkGray
 Write-Host ""
 
-$jsonRaw = & pwsh -NoProfile -File $cli doctor --json 2>&1
+$jsonRaw = & pwsh -NoProfile -File $cli diagnose --json 2>&1
 $exit    = $LASTEXITCODE
 $jsonText = ($jsonRaw | Out-String).Trim()
 
 try {
     $obj = $jsonText | ConvertFrom-Json
-    Assert-True ($null -ne $obj) 'doctor --json returns parseable JSON'
+    Assert-True ($null -ne $obj) 'diagnose --json returns parseable JSON'
 } catch {
-    Assert-True $false "doctor --json must be parseable JSON ($($_.Exception.Message))"
+    Assert-True $false "diagnose --json must be parseable JSON ($($_.Exception.Message))"
     Write-Host "  Tests: $pass passed, $fail failed" -ForegroundColor (if ($fail -eq 0) { 'Green' } else { 'Red' })
     if ($fail -gt 0) { exit 1 } else { exit 0 }
 }
