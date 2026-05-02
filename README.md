@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.42"><img src="https://img.shields.io/badge/Version-8.4.42-0EA5E9?style=for-the-badge" alt="Version 8.4.42"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.43"><img src="https://img.shields.io/badge/Version-8.4.43-0EA5E9?style=for-the-badge" alt="Version 8.4.43"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -298,8 +298,11 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.42
+## New In 8.4.43
 
+- New `BACKLOG-TEMPLATE.md` (15 sections: Vision, Hierarchy, RICE/WSJF/MoSCoW/Kano/ICE prioritization, INVEST, DoR/DoD, Active Backlog tables, Capacity, Dependencies, Release Plan, Flow Metrics, State Machine, Refinement Cadence, Local Mode Wiring) with 7 Mermaid diagrams; live AgentX backlog instantiated at `docs/artifacts/backlog/BACKLOG.md`
+- All 12 existing templates upgraded with rich industry-best-practice content and 47 new Mermaid diagrams across PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, and Evidence Summary
+- Template registry expanded from 12 to 13 templates in `AGENTS.md` and `docs/artifacts/README.md`
 - New `product/prd` skill usable by non-PM agents (Engineer, Architect, Auto agents) to author PRDs with a requirements-quality catalogue, vague-vs-concrete examples, and an AI-contract worked example
 - New `diagrams/diagram-as-code` skill covering Mermaid, PlantUML, C4/Structurizr, Graphviz DOT, and draw.io, with first-class support for cross-functional swimlanes, BPMN patterns, and Visio (`.vsdx`) interop via draw.io export
 - New internal `diagram-specialist` sub-agent wired into Architect, Engineer, PM, UX Designer, Data Scientist, Reviewer, and Power BI Analyst for producing review-ready swimlane and architecture diagrams
