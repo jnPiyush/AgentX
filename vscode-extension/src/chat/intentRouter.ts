@@ -228,6 +228,37 @@ const PHRASE_RULES: ReadonlyArray<PhraseRule> = [
     argMapper: () => ['list'],
   },
 
+  // --- Compound-loop / experiments (read-only) ---
+  {
+    id: 'patterns-status',
+    description: 'Inspect discovered patterns and graduation candidates',
+    destructive: false,
+    subcommand: 'patterns',
+    pattern: /^(?:show\s+|list\s+|view\s+)?patterns\??$|^(?:show\s+|list\s+)?(?:discovered\s+)?patterns(?:\s+status)?\??$/i,
+    argMapper: () => [],
+  },
+  {
+    id: 'research-status',
+    description: 'Show active metric-driven research experiment',
+    destructive: false,
+    subcommand: 'research',
+    pattern: /^(?:show\s+)?research(?:\s+status)?\??$|^(?:show\s+|what(?:'s| is)\s+)?(?:the\s+)?(?:active\s+)?(?:research\s+)?experiment\??$/i,
+    argMapper: () => ['status'],
+  },
+
+  // --- Presentation scrub (read-only by default) ---
+  {
+    id: 'scrub-scan',
+    description: 'Scan files for filler / comment-rot (no fix)',
+    destructive: false,
+    subcommand: 'scrub',
+    pattern: /^scrub\s+(\S+)\.?$|^(?:run\s+)?scrub(?:\s+scan)?\.?$/i,
+    argMapper: (m) => {
+      const path = (m[1] ?? '').trim();
+      return path.length > 0 ? [path] : [];
+    },
+  },
+
   // --- Validation (positional, read-only) ---
   {
     id: 'validate-handoff',
@@ -375,6 +406,59 @@ const PHRASE_RULES: ReadonlyArray<PhraseRule> = [
     argMapper: (m) => {
       const name = ((m[1] ?? m[2]) ?? '').toLowerCase();
       return name ? [name] : undefined;
+    },
+  },
+
+  // --- Compound-loop mutations ---
+  {
+    id: 'learn-observations',
+    description: 'Capture observations from the current session into the patterns store',
+    destructive: true,
+    subcommand: 'learn',
+    pattern: /^(?:run\s+)?learn(?:\s+(?:from\s+)?(?:this\s+)?session)?\.?$|^capture\s+(?:session\s+)?observations\.?$/i,
+    argMapper: () => [],
+  },
+  {
+    id: 'promote-patterns',
+    description: 'Graduate stable patterns into skills',
+    destructive: true,
+    subcommand: 'promote',
+    pattern: /^(?:run\s+)?promote(?:\s+patterns)?\.?$|^graduate\s+(?:stable\s+)?patterns\.?$/i,
+    argMapper: () => [],
+  },
+  {
+    id: 'scrub-fix',
+    description: 'Scrub files and apply safe deletions for filler / comment-rot',
+    destructive: true,
+    subcommand: 'scrub',
+    pattern: /^(?:run\s+)?scrub\s+(?:and\s+)?fix(?:\s+(\S+))?\.?$|^scrub\s+(\S+)\s+(?:--?fix|with\s+fix)\.?$|^fix\s+(?:filler|comment[\s-]?rot)(?:\s+in\s+(\S+))?\.?$/i,
+    argMapper: (m) => {
+      const path = ((m[1] ?? m[2] ?? m[3]) ?? '').trim();
+      const args = path.length > 0 ? [path, '-Fix'] : ['-Fix'];
+      return args;
+    },
+  },
+
+  // --- Research experimentation ---
+  {
+    id: 'research-end',
+    description: 'End the active research experiment',
+    destructive: true,
+    subcommand: 'research',
+    pattern: /^(?:end|stop|finish|close)\s+(?:the\s+)?(?:research\s+)?experiment\.?$|^research\s+end\.?$/i,
+    argMapper: () => ['-Action', 'end'],
+  },
+
+  // --- Ship pipeline ---
+  {
+    id: 'ship-issue',
+    description: 'Run plan->work->review->scrub->test->compound for an issue',
+    destructive: true,
+    subcommand: 'ship',
+    pattern: /^ship\s+(?:issue\s+)?#?(\d+)\.?$|^ship\s+#(\d+)\.?$/i,
+    argMapper: (m) => {
+      const issue = m[1] ?? m[2];
+      return issue ? ['-Issue', issue] : undefined;
     },
   },
 ];

@@ -235,6 +235,36 @@ export const INTENT_CATALOG: ReadonlyArray<IntentSpec> = [
       return [issue, role];
     },
   },
+  {
+    id: 'patterns-status',
+    subcommand: 'patterns',
+    destructive: false,
+    description: 'Inspect discovered patterns and graduation candidates',
+    cliShape: 'agentx patterns',
+    examples: ['show patterns', 'list discovered patterns', 'patterns status'],
+    validate: (a) => expectNoArgs(a, []),
+  },
+  {
+    id: 'research-status',
+    subcommand: 'research',
+    destructive: false,
+    description: 'Show the active metric-driven research experiment',
+    cliShape: 'agentx research status',
+    examples: ['show research', 'research status', 'show active experiment'],
+    validate: (a) => expectNoArgs(a, ['status']),
+  },
+  {
+    id: 'scrub-scan',
+    subcommand: 'scrub',
+    destructive: false,
+    description: 'Scan a file or path for filler / comment-rot (no fix)',
+    cliShape: 'agentx scrub [path]',
+    examples: ['scrub scripts/ship.ps1', 'run scrub', 'scrub scan'],
+    validate: (a) => {
+      const path = (a[0] ?? '').trim();
+      return path.length > 0 ? [path] : [];
+    },
+  },
   // -- destructive --
   {
     id: 'config-set-provider',
@@ -354,6 +384,54 @@ export const INTENT_CATALOG: ReadonlyArray<IntentSpec> = [
     cliShape: 'agentx hire <agent-name>',
     examples: ['hire policy-reviewer', 'scaffold a new agent risk-analyst'],
     validate: (a) => isAgentName(a[0]) ? [a[0]] : undefined,
+  },
+  {
+    id: 'learn-observations',
+    subcommand: 'learn',
+    destructive: true,
+    description: 'Capture observations from the current session into the patterns store',
+    cliShape: 'agentx learn',
+    examples: ['learn from this session', 'capture session observations', 'run learn'],
+    validate: (a) => expectNoArgs(a, []),
+  },
+  {
+    id: 'promote-patterns',
+    subcommand: 'promote',
+    destructive: true,
+    description: 'Graduate stable patterns into skills',
+    cliShape: 'agentx promote',
+    examples: ['promote patterns', 'graduate stable patterns', 'run promote'],
+    validate: (a) => expectNoArgs(a, []),
+  },
+  {
+    id: 'scrub-fix',
+    subcommand: 'scrub',
+    destructive: true,
+    description: 'Scrub files and apply safe deletions for filler / comment-rot',
+    cliShape: 'agentx scrub [path] -Fix',
+    examples: ['scrub and fix', 'scrub and fix scripts/', 'fix filler in docs/README.md'],
+    validate: (a) => {
+      const path = (a[0] ?? '').trim();
+      return path.length > 0 ? [path, '-Fix'] : ['-Fix'];
+    },
+  },
+  {
+    id: 'research-end',
+    subcommand: 'research',
+    destructive: true,
+    description: 'End the active research experiment',
+    cliShape: 'agentx research -Action end',
+    examples: ['end the experiment', 'stop research', 'finish the research experiment'],
+    validate: (a) => expectNoArgs(a, ['-Action', 'end']),
+  },
+  {
+    id: 'ship-issue',
+    subcommand: 'ship',
+    destructive: true,
+    description: 'Run the ship pipeline (plan->work->review->scrub->test->compound) for an issue',
+    cliShape: 'agentx ship -Issue <issue-number>',
+    examples: ['ship issue 42', 'ship #17', 'ship 99'],
+    validate: (a) => isDigitString(a[0]) ? ['-Issue', a[0]] : undefined,
   },
 ];
 

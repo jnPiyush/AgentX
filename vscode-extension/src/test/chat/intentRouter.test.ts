@@ -94,6 +94,15 @@ describe('intentRouter', () => {
       { phrase: 'validate 42 engineer', subcommand: 'validate', args: ['42', 'engineer'] },
       { phrase: 'validate issue #17 for architect', subcommand: 'validate', args: ['17', 'architect'] },
       { phrase: 'validate 99 as reviewer', subcommand: 'validate', args: ['99', 'reviewer'] },
+      // patterns / research / scrub (read-only)
+      { phrase: 'show patterns', subcommand: 'patterns', args: [] },
+      { phrase: 'patterns', subcommand: 'patterns', args: [] },
+      { phrase: 'list discovered patterns', subcommand: 'patterns', args: [] },
+      { phrase: 'research status', subcommand: 'research', args: ['status'] },
+      { phrase: 'show research', subcommand: 'research', args: ['status'] },
+      { phrase: 'show active experiment', subcommand: 'research', args: ['status'] },
+      { phrase: 'run scrub', subcommand: 'scrub', args: [] },
+      { phrase: 'scrub scripts/ship.ps1', subcommand: 'scrub', args: ['scripts/ship.ps1'] },
     ];
 
     for (const c of cases) {
