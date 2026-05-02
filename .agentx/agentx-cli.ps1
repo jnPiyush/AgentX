@@ -5952,6 +5952,27 @@ function Invoke-DiagnoseCmd {
             -Hint 'Update count strings in Skills.md (description, anti-pattern, directory header, footer)'
     }
 
+    # 9. Install manifest drift (advisory if absent)
+    $manifestScript = Join-Path $Script:ROOT 'scripts/install-manifest.ps1'
+    $manifestPath = Join-Path $Script:ROOT '.agentx/install-manifest.json'
+    if (Test-Path $manifestScript) {
+        if (Test-Path $manifestPath) {
+            $mfOutput = & pwsh -NoProfile -File $manifestScript -Action verify 2>&1
+            $mfExit = $LASTEXITCODE
+            $mfTail = ($mfOutput | Where-Object { $_ -match '^(\s*Missing|\s*User-modified|\s*Status)' } | Select-Object -First 5) -join "`n"
+            if ([string]::IsNullOrWhiteSpace($mfTail)) { $mfTail = ($mfOutput | Select-Object -Last 3) -join "`n" }
+            $mfSummary = if ($mfExit -eq 0) { 'manifest verified, no missing files' } else { 'install manifest drift detected' }
+            Add-DiagnoseCheck -List $checks -Id 'install-manifest' -Label 'Install manifest integrity' `
+                -Passed ($mfExit -eq 0) -Summary $mfSummary `
+                -Hint 'Run: pwsh scripts/install-manifest.ps1 -Action verify' `
+                -VerboseTail $mfTail
+        } else {
+            Add-DiagnoseCheck -List $checks -Id 'install-manifest' -Label 'Install manifest integrity' `
+                -Passed $true -Summary 'no manifest present (advisory)' `
+                -Hint 'Run: pwsh scripts/install-manifest.ps1 -Action generate'
+        }
+    }
+
     # Render
     $passedCount = @($checks | Where-Object { $_.passed }).Count
     $failedCount = @($checks | Where-Object { -not $_.passed }).Count
@@ -6007,6 +6028,13 @@ $($C.d)  ---------------------------------------------$($C.n)
 
 $($C.w)  Commands:$($C.n)
   ready                            Show unblocked work, sorted by priority
+  ship <issue>                     One-command pipeline: plan->work->review->unslop->test->compound
+  unslop [path] [-Fix]             Scan for AI-generated slop; -Fix applies safe deletions
+  autoresearch <action>            Metric-driven experimentation loop (start/attempt/end/status)
+  learn                            Capture observations from current session (alias of 'discover run')
+  evolve                           Promote stable patterns into graduated skills (alias of 'graduate run')
+  instincts                        Inspect discovered patterns and graduation candidates
+  manifest <action>                Install manifest: generate | verify | list
   state [-a agent -s status]       Show/update agent states
   deps <issue>                     Check dependencies for an issue
     audit harness                    Run deterministic harness audit checks
@@ -7217,6 +7245,28 @@ function Invoke-SprintCmd {
 }
 
 # ---------------------------------------------------------------------------
+# Thin script wrappers (presentation, experimentation, orchestration)
+# ---------------------------------------------------------------------------
+
+function Invoke-ScriptWrapper {
+    param([string]$ScriptRelPath, [string]$Label)
+    $full = Join-Path $Script:ROOT $ScriptRelPath
+    if (-not (Test-Path $full)) {
+        Write-CliOutput "$($C.r)[FAIL]$($C.n) $Label script missing at $ScriptRelPath"
+        exit 1
+    }
+    $extra = @()
+    if ($Script:SubArgs -and $Script:SubArgs.Count -gt 0) { $extra = @($Script:SubArgs) }
+    & pwsh -NoProfile -File $full @extra
+    exit $LASTEXITCODE
+}
+
+function Invoke-UnslopCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/unslop.ps1'           -Label 'unslop' }
+function Invoke-AutoresearchCmd  { Invoke-ScriptWrapper -ScriptRelPath 'scripts/autoresearch.ps1'    -Label 'autoresearch' }
+function Invoke-ShipCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ship.ps1'            -Label 'ship' }
+function Invoke-ManifestCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/install-manifest.ps1' -Label 'install-manifest' }
+
+# ---------------------------------------------------------------------------
 # Main router
 # ---------------------------------------------------------------------------
 
@@ -7246,6 +7296,13 @@ switch ($Script:Command) {
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }
     'sprint'   { Invoke-SprintCmd }
+    'unslop'   { Invoke-UnslopCmd }
+    'autoresearch' { Invoke-AutoresearchCmd }
+    'ship'     { Invoke-ShipCmd }
+    'manifest' { Invoke-ManifestCmd }
+    'learn'    { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-DiscoverCmd }
+    'evolve'   { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-GraduateCmd }
+    'instincts' { $Script:SubArgs = @('status') + @($Script:SubArgs); Invoke-DiscoverCmd }
     'diagnose' { Invoke-DiagnoseCmd }
     'doctor'   { Invoke-DiagnoseCmd }  # deprecated alias
     'version'  { Invoke-VersionCmd }

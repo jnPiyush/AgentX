@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 93 skills across 12 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 94 skills across 12 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 93 skills across 12 categori
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 93 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 94 skills. Use Quick Reference below.
 
 ---
 
@@ -79,7 +79,7 @@ description: 'Compressed skill index for AI agents. 93 skills across 12 categori
 
 ---
 
-## Skills Directory (93 skills -- pipe-delimited)
+## Skills Directory (94 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -101,6 +101,7 @@ dev|code-review|.github/skills/development/code-review/SKILL.md|checklists,autom
 dev|iterative-loop|.github/skills/development/iterative-loop/SKILL.md|quality-loop,refinement,completion-criteria
 dev|experimentation-loop|.github/skills/development/experimentation-loop/SKILL.md|metric-driven,benchmark,keep-or-revert,attempt-log,branch-isolation,hill-climb
 dev|skill-creator|.github/skills/development/skill-creator/SKILL.md|scaffold,validate,maintain-skills
+dev|unslop|.github/skills/development/unslop/SKILL.md|comment-rot,obvious-restate,ai-filler,stale-byline,generic-gradient,empty-catch,presentation-cleanup
 dev|token-optimizer|.github/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
 dev|code-hygiene|.github/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
 dev|karpathy-guidelines|.github/skills/development/karpathy-guidelines/SKILL.md|think-before-coding,simplicity,surgical-changes,goal-driven,LLM-pitfalls,assumptions
@@ -287,5 +288,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 93 skills (arch:5, dev:14, lang:10, ops:5, infra:4, data:7, ai:29, design:4, test:6, domain:7, product:1, diagrams:1)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 94 skills (arch:5, dev:15, lang:10, ops:5, infra:4, data:7, ai:29, design:4, test:6, domain:7, product:1, diagrams:1)
 
