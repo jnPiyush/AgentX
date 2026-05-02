@@ -90,15 +90,32 @@ describe('addAgent command - execution', () => {
   });
 
   it('opens a terminal and runs agentx hire when invoked', async () => {
-    const sendTextStub = sandbox.stub();
-    const fakeTerminal = { show: sandbox.stub(), sendText: sendTextStub };
-    sandbox.stub(vscode.window, 'createTerminal').returns(fakeTerminal as any);
+    const inputStub = sandbox.stub(vscode.window, 'showInputBox');
+    inputStub.onCall(0).resolves('Validator Agent');
+    inputStub.onCall(1).resolves('Validates scaffolded agent definitions end to end');
+
+    const pickStub = sandbox.stub(vscode.window, 'showQuickPick');
+    pickStub.onCall(0).resolves({ label: 'Engineer' } as any);
+    pickStub.onCall(1).resolves({ label: 'GPT-4.1', value: 'gpt-4.1' } as any);
+
+    sandbox.stub(vscode.window, 'withProgress').callsFake(
+      async (_opts: any, task: any) => task({ report: () => undefined }, { isCancellationRequested: false }),
+    );
+    sandbox.stub(vscode.workspace, 'openTextDocument').resolves({} as any);
+    sandbox.stub(vscode.window, 'showTextDocument').resolves({} as any);
+    sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined as any);
+
+    const fs = require('fs');
+    sandbox.stub(fs, 'existsSync').returns(false);
+    const mkdirStub = sandbox.stub(fs, 'mkdirSync');
+    const writeStub = sandbox.stub(fs, 'writeFileSync');
 
     await commandCallback();
 
-    assert.ok((vscode.window.createTerminal as sinon.SinonStub).calledOnce);
-    assert.ok(sendTextStub.calledWith('cd "/tmp/workspace"'));
-    const hireCalls = sendTextStub.args.filter((args: string[]) => args[0].includes('hire'));
-    assert.ok(hireCalls.length > 0, 'should invoke the add-agent CLI flow');
+    assert.ok(mkdirStub.called, 'should create the agents directory');
+    assert.ok(writeStub.called, 'should write the .agent.md file');
+    const writePath = writeStub.firstCall.args[0] as string;
+    assert.ok(writePath.endsWith('.agent.md'), 'should write a .agent.md file');
+    assert.ok(writePath.includes('validator-agent'), 'should derive id from the supplied name');
   });
 });

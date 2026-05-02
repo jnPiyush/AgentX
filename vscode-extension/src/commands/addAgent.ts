@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
+import { promptAgentDetails, resolveAgentOutputDir } from './addAgentInternals';
+import { generateAgentContent } from './scaffoldGeneration';
 
 export function registerAddAgentCommand(
   context: vscode.ExtensionContext,
@@ -15,15 +17,50 @@ export function registerAddAgentCommand(
         return;
       }
 
-      // Prefer workspace-local CLI; fall back to the bundled copy inside the extension.
-      const workspaceCli = path.join(root, '.agentx', 'agentx.ps1');
-      const bundledCli = path.join(context.extensionUri.fsPath, '.github', 'agentx', 'agentx.ps1');
-      const cliPath = fs.existsSync(workspaceCli) ? workspaceCli : bundledCli;
+      const details = await promptAgentDetails();
+      if (!details) { return; }
 
-      const terminal = vscode.window.createTerminal('AgentX Add Agent');
-      terminal.show();
-      terminal.sendText(`cd "${root}"`);
-      terminal.sendText(`pwsh -NoProfile -File "${cliPath}" hire`);
+      const outputDir = resolveAgentOutputDir(root);
+      try {
+        fs.mkdirSync(outputDir, { recursive: true });
+      } catch (err) {
+        vscode.window.showErrorMessage(
+          `Failed to create agents directory: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        return;
+      }
+
+      const targetPath = path.join(outputDir, `${details.id}.agent.md`);
+      if (fs.existsSync(targetPath)) {
+        vscode.window.showWarningMessage(
+          `Agent '${details.id}' already exists at ${path.relative(root, targetPath)}.`,
+        );
+        return;
+      }
+
+      const content = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `Generating agent definition for ${details.name}...`,
+          cancellable: true,
+        },
+        async (_progress, token) => generateAgentContent(details, token),
+      );
+
+      try {
+        fs.writeFileSync(targetPath, content, 'utf8');
+      } catch (err) {
+        vscode.window.showErrorMessage(
+          `Failed to write agent file: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        return;
+      }
+
+      const doc = await vscode.workspace.openTextDocument(targetPath);
+      await vscode.window.showTextDocument(doc);
+      vscode.window.showInformationMessage(
+        `Agent '${details.name}' created at ${path.relative(root, targetPath)}.`,
+      );
     }),
   );
 }

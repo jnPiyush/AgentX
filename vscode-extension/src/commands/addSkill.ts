@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
+import { promptSkillDetails, resolveSkillOutputDir } from './addSkillInternals';
+import { generateSkillContent } from './scaffoldGeneration';
 
 export function registerAddSkillCommand(
   context: vscode.ExtensionContext,
@@ -25,22 +27,56 @@ export function registerAddSkillCommand(
         return;
       }
 
-      // Scaffold a custom skill
       const root = agentx.workspaceRoot;
       if (!root) {
         vscode.window.showWarningMessage('Open a workspace to scaffold a skill.');
         return;
       }
 
-      // Prefer workspace-local scaffold script; fall back to the bundled copy inside the extension.
-      const workspaceScript = path.join(root, '.github', 'skills', 'development', 'skill-creator', 'scripts', 'init-skill.ps1');
-      const bundledScript = path.join(context.extensionUri.fsPath, '.github', 'agentx', 'skills', 'development', 'skill-creator', 'scripts', 'init-skill.ps1');
-      const scriptPath = fs.existsSync(workspaceScript) ? workspaceScript : bundledScript;
+      const details = await promptSkillDetails();
+      if (!details) { return; }
 
-      const terminal = vscode.window.createTerminal('AgentX Add Skill');
-      terminal.show();
-      terminal.sendText(`cd "${root}"`);
-      terminal.sendText(`pwsh -NoProfile -File "${scriptPath}"`);
+      const outputDir = resolveSkillOutputDir(root, details.category, details.slug);
+      if (fs.existsSync(outputDir)) {
+        vscode.window.showWarningMessage(
+          `Skill '${details.slug}' already exists at ${path.relative(root, outputDir)}.`,
+        );
+        return;
+      }
+
+      try {
+        fs.mkdirSync(outputDir, { recursive: true });
+      } catch (err) {
+        vscode.window.showErrorMessage(
+          `Failed to create skill directory: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        return;
+      }
+
+      const content = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `Generating SKILL.md for ${details.name}...`,
+          cancellable: true,
+        },
+        async (_progress, token) => generateSkillContent(details, token),
+      );
+
+      const targetPath = path.join(outputDir, 'SKILL.md');
+      try {
+        fs.writeFileSync(targetPath, content, 'utf8');
+      } catch (err) {
+        vscode.window.showErrorMessage(
+          `Failed to write SKILL.md: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        return;
+      }
+
+      const doc = await vscode.workspace.openTextDocument(targetPath);
+      await vscode.window.showTextDocument(doc);
+      vscode.window.showInformationMessage(
+        `Skill '${details.name}' created at ${path.relative(root, targetPath)}.`,
+      );
     }),
   );
 }

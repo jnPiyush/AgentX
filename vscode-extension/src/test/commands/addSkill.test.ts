@@ -89,16 +89,31 @@ describe('registerAddSkillCommand', () => {
   it('opens a terminal and runs the skill scaffold script when scaffold is selected', async () => {
     const pickStub = sandbox.stub(vscode.window, 'showQuickPick');
     pickStub.onCall(0).resolves({ label: 'Scaffold Custom Skill', value: 'scaffold' } as any);
-    const sendTextStub = sandbox.stub();
-    const fakeTerminal = { show: sandbox.stub(), sendText: sendTextStub };
-    sandbox.stub(vscode.window, 'createTerminal').returns(fakeTerminal as any);
+    // Skill details prompts: name -> category pick -> description.
+    const inputStub = sandbox.stub(vscode.window, 'showInputBox');
+    inputStub.onCall(0).resolves('Test Skill');
+    inputStub.onCall(1).resolves('Guides validation of the skill scaffold flow end to end');
+    pickStub.onCall(1).resolves({ label: 'development' } as any);
+
+    sandbox.stub(vscode.window, 'withProgress').callsFake(
+      async (_opts: any, task: any) => task({ report: () => undefined }, { isCancellationRequested: false }),
+    );
+    sandbox.stub(vscode.workspace, 'openTextDocument').resolves({} as any);
+    sandbox.stub(vscode.window, 'showTextDocument').resolves({} as any);
+    sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined as any);
+
+    const fs = require('fs');
+    sandbox.stub(fs, 'existsSync').returns(false);
+    const mkdirStub = sandbox.stub(fs, 'mkdirSync');
+    const writeStub = sandbox.stub(fs, 'writeFileSync');
 
     await commandCallback();
 
-    assert.ok(pickStub.calledOnce);
-    assert.ok((vscode.window.createTerminal as sinon.SinonStub).calledOnce);
-    assert.ok(sendTextStub.calledWith('cd "/tmp/workspace"'));
-    const scaffoldCalls = sendTextStub.args.filter((args: string[]) => args[0].includes('init-skill.ps1'));
-    assert.ok(scaffoldCalls.length > 0, 'should invoke the skill scaffold script');
+    assert.ok(pickStub.calledTwice, 'category pick should be shown after the registry/scaffold pick');
+    assert.ok(mkdirStub.called, 'should create the skill directory');
+    assert.ok(writeStub.called, 'should write SKILL.md');
+    const writePath = writeStub.firstCall.args[0] as string;
+    assert.ok(writePath.endsWith('SKILL.md'), 'should write to SKILL.md');
+    assert.ok(writePath.includes('test-skill'), 'should derive slug from the supplied name');
   });
 });
