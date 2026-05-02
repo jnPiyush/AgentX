@@ -6030,8 +6030,8 @@ $($C.w)  Commands:$($C.n)
   ready                            Show unblocked work, sorted by priority
   ship <issue>                     One-command pipeline: plan->work->review->scrub->test->compound
   scrub [path] [-Fix]              Presentation-layer scan for filler/comment-rot; -Fix applies safe deletions
-  tune <action>                    Metric-driven experimentation loop (start/attempt/end/status)
-  reflect                          Capture observations from current session (alias of 'discover run')
+  research <action>                Metric-driven experimentation loop (start/attempt/end/status)
+  learn                            Capture observations from current session (alias of 'discover run')
   promote                          Graduate stable patterns into skills (alias of 'graduate run')
   patterns                         Inspect discovered patterns and graduation candidates
   manifest <action>                Install manifest: generate | verify | list
@@ -7262,7 +7262,7 @@ function Invoke-ScriptWrapper {
 }
 
 function Invoke-ScrubCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scrub.ps1'             -Label 'scrub' }
-function Invoke-TuneCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/tune.ps1'              -Label 'tune' }
+function Invoke-ResearchCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/research.ps1'          -Label 'research' }
 function Invoke-ShipCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ship.ps1'            -Label 'ship' }
 function Invoke-ManifestCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/install-manifest.ps1' -Label 'install-manifest' }
 
@@ -7296,13 +7296,11 @@ switch ($Script:Command) {
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }
     'sprint'   { Invoke-SprintCmd }
-    'unslop'   { Invoke-ScrubCmd }   # deprecated alias
     'scrub'    { Invoke-ScrubCmd }
-    'autoresearch' { Invoke-TuneCmd }   # deprecated alias
-    'tune'     { Invoke-TuneCmd }
+    'research' { Invoke-ResearchCmd }
     'ship'     { Invoke-ShipCmd }
     'manifest' { Invoke-ManifestCmd }
-    'reflect'  { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-DiscoverCmd }
+    'learn'    { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-DiscoverCmd }
     'promote'  { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-GraduateCmd }
     'patterns' { $Script:SubArgs = @('status') + @($Script:SubArgs); Invoke-DiscoverCmd }
     'diagnose' { Invoke-DiagnoseCmd }

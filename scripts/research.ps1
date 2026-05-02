@@ -34,13 +34,13 @@
   Floating-point tolerance for "no change" classification. Default 0.0.
 
 .EXAMPLE
-  pwsh scripts/tune.ps1 -Action start -Goal "shrink build time" -Metric "npm run build:time" -Direction lower -Tag build-time
+  pwsh scripts/research.ps1 -Action start -Goal "shrink build time" -Metric "npm run build:time" -Direction lower -Tag build-time
 
 .EXAMPLE
-  pwsh scripts/tune.ps1 -Action attempt -Note "drop unused webpack plugin"
+  pwsh scripts/research.ps1 -Action attempt -Note "drop unused webpack plugin"
 
 .EXAMPLE
-  pwsh scripts/tune.ps1 -Action end
+  pwsh scripts/research.ps1 -Action end
 #>
 
 [CmdletBinding()]
@@ -57,7 +57,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $RootDir   = (Resolve-Path .).Path
-$StateDir  = Join-Path $RootDir '.agentx/state/tune'
+$StateDir  = Join-Path $RootDir '.agentx/state/research'
 $StateFile = Join-Path $StateDir 'session.json'
 
 function Get-Timestamp { (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') }
@@ -98,10 +98,10 @@ switch ($Action) {
         $existing = Get-State
         if ($existing -and $existing.active) { throw "An experiment is already active (tag '$($existing.tag)'). Run -Action end first." }
 
-        $branch = "tune/$Tag"
+        $branch = "research/$Tag"
         $startedFrom = Get-CurrentBranch
         & git checkout -B $branch | Out-Null
-        Write-Host "[tune] Capturing baseline..." -ForegroundColor Cyan
+        Write-Host "[research] Capturing baseline..." -ForegroundColor Cyan
         $baseline = Invoke-Metric -Cmd $Metric
 
         $state = [pscustomobject]@{
@@ -126,7 +126,7 @@ switch ($Action) {
         Write-ResultsHeader -File $results
         ("{0}`t0`tbaseline`t{1}`t{1}`t0`t`tinitial baseline" -f (Get-Timestamp), $baseline) | Add-Content -Encoding utf8 $results
 
-        Write-Host ("[tune] Started '$Tag' on branch $branch") -ForegroundColor Green
+        Write-Host ("[research] Started '$Tag' on branch $branch") -ForegroundColor Green
         Write-Host ("  Baseline: $baseline ($Direction is better)")
         Write-Host ("  Results:  $results")
     }
@@ -145,7 +145,7 @@ switch ($Action) {
         $state.attempts = [int]$state.attempts + 1
         $attemptNum = $state.attempts
 
-        Write-Host "[tune] Attempt $attemptNum running metric..." -ForegroundColor Cyan
+        Write-Host "[research] Attempt $attemptNum running metric..." -ForegroundColor Cyan
         $value = Invoke-Metric -Cmd $state.metric
         $baseline = [double]$state.currentBest
         $delta = $value - $baseline
@@ -156,17 +156,17 @@ switch ($Action) {
 
         if ($isImprovement) {
             & git add -A | Out-Null
-            $msg = "tune($($state.tag)): attempt $attemptNum kept ($baseline -> $value)"
+            $msg = "research($($state.tag)): attempt $attemptNum kept ($baseline -> $value)"
             if ($Note) { $msg += " - $Note" }
             & git commit -m $msg | Out-Null
             $state.kept = [int]$state.kept + 1
             $state.currentBest = $value
-            Write-Host ("[tune] KEEP. {0} -> {1} (delta {2:N4})" -f $baseline, $value, $delta) -ForegroundColor Green
+            Write-Host ("[research] KEEP. {0} -> {1} (delta {2:N4})" -f $baseline, $value, $delta) -ForegroundColor Green
         } else {
             & git checkout -- . 2>&1 | Out-Null
             & git clean -fd 2>&1 | Out-Null
             $state.reverted = [int]$state.reverted + 1
-            Write-Host ("[tune] REVERT. {0} did not beat {1} (delta {2:N4})" -f $value, $baseline, $delta) -ForegroundColor Yellow
+            Write-Host ("[research] REVERT. {0} did not beat {1} (delta {2:N4})" -f $value, $baseline, $delta) -ForegroundColor Yellow
         }
 
         Save-State $state
@@ -178,8 +178,8 @@ switch ($Action) {
 
     'status' {
         $state = Get-State
-        if (-not $state -or -not $state.active) { Write-Host "[tune] No active experiment."; return }
-        Write-Host "[tune] Active experiment" -ForegroundColor Cyan
+        if (-not $state -or -not $state.active) { Write-Host "[research] No active experiment."; return }
+        Write-Host "[research] Active experiment" -ForegroundColor Cyan
         Write-Host "  Tag:        $($state.tag)"
         Write-Host "  Goal:       $($state.goal)"
         Write-Host "  Branch:     $($state.branch)"
@@ -192,11 +192,11 @@ switch ($Action) {
 
     'end' {
         $state = Get-State
-        if (-not $state -or -not $state.active) { Write-Host "[tune] No active experiment."; return }
+        if (-not $state -or -not $state.active) { Write-Host "[research] No active experiment."; return }
         $state.active = $false
         $state.endedAt = Get-Timestamp
         Save-State $state
-        Write-Host "[tune] Closed experiment '$($state.tag)'." -ForegroundColor Green
+        Write-Host "[research] Closed experiment '$($state.tag)'." -ForegroundColor Green
         Write-Host "  Baseline -> Best: $($state.baseline) -> $($state.currentBest)"
         Write-Host "  Attempts: $($state.attempts) (kept $($state.kept), reverted $($state.reverted))"
         Write-Host "  Branch '$($state.branch)' is left in place. Merge or discard manually."

@@ -1,6 +1,6 @@
 {
   "version": "8.4.45",
-  "createdAt": "2026-05-02T21:51:41Z",
+  "createdAt": "2026-05-02T23:46:33Z",
   "files": [
     {
       "path": ".agentx/agentic-runner.ps1",
@@ -9,7 +9,7 @@
     },
     {
       "path": ".agentx/agentx-cli.ps1",
-      "sha256": "7e8ba163522e83ce4bc70f742b0f19ec3e0652e670da60a66b7170f572c2a256",
+      "sha256": "062bb2ec57fd19dc8b297e8c5d473ab9b65a56ffff604dff93c18bb27a1ed669",
       "category": "cli"
     },
     {
