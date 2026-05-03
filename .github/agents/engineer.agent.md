@@ -590,7 +590,15 @@ Before yielding back to the user or handing off:
 - [ ] Tests pass
 - [ ] No HIGH or MEDIUM self-review findings remain unresolved
 - [ ] Large block replacements were verified by searching for removed identifiers and the new declaration
+- [ ] `.agentx/agentx.ps1 scrub <changed-path>` (scan-only) reviewed for filler / comment-rot on every file you modified; address findings or record skip rationale
 - [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
+
+### Compound Capture (Capture Phase)
+
+When resolving Compound Capture, in addition to the LEARNING file or skip rationale:
+
+- Run `.agentx/agentx.ps1 learn` to fold session observations into the patterns store
+- If you noticed a reusable pattern emerge, run `.agentx/agentx.ps1 patterns` to inspect graduation candidates; nominate stable ones for `promote` (see Agent X)
 
 ### Quantitative Scoring Gate
 

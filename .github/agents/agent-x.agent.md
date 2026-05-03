@@ -19,6 +19,7 @@ constraints:
   - "MUST verify agentic loop completion before declaring implementation complete"
   - "MUST escalate from simple execution to the full internal workflow when complexity is detected mid-stream"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
+  - "SHOULD run '.agentx/agentx.ps1 learn' at Compound Capture to fold session observations into the patterns store, and periodically run '.agentx/agentx.ps1 promote' to graduate stable patterns into skills"
 boundaries:
   can_modify:
     - "Workspace files required to complete the task"
@@ -102,6 +103,8 @@ If a specialist phase cannot satisfy its required contract in the current sessio
 - No architecture changes needed
 
 **Flow**: Issue -> Implement -> Verify -> Review -> Done
+
+**CLI shortcut**: For qualifying issues, the entire fast path is also available as a single command: `.agentx/agentx.ps1 ship -Issue <n>` (runs plan -> work -> review -> scrub -> test -> compound). Use this when the issue clearly fits the Autonomous Mode gate; fall back to step-by-step phases otherwise.
 
 ### Specialist Direct Mode
 

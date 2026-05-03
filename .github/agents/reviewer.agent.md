@@ -177,6 +177,10 @@ MUST NOT downgrade them.
 npm test  # or equivalent for the project
 ```
 
+### 5.1 Pattern Advisory (Read-Only)
+
+Before drafting the review, run `.agentx/agentx.ps1 patterns` to surface any in-flight pattern candidates relevant to the diff. This is advisory: if a candidate pattern matches code in this PR, mention it in the review document's Notes section and consider whether the diff strengthens or weakens the candidate. Do NOT block approval on pattern advisory output alone.
+
 ### 5.5 Model Council Deliberation (MANDATORY for non-trivial reviews)
 
 After running tests and forming a leaning decision, but before drafting the review document, convene a Model Council to stress-test severity assignments and the Approve/Reject call. Single-model reviews carry the reviewing model's prior; the council exposes that prior, surfaces false positives, and catches risks the diff alone hides.
