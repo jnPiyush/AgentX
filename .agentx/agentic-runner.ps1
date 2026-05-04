@@ -961,11 +961,16 @@ function Get-RunnerSelfReviewMinIteration {
         [string]$AgentName,
         [string]$Prompt,
         $LoopState,
-        [int]$MaxReviewerIterations
+        [int]$MaxReviewerIterations,
+        $ConfiguredMinimum = $null
     )
 
     if ($LoopState) {
         return [Math]::Min((Get-EffectiveLoopMinIterationCount -State $LoopState), $MaxReviewerIterations)
+    }
+
+    if ($null -ne $ConfiguredMinimum -and [int]$ConfiguredMinimum -gt 0) {
+        return [Math]::Min([int]$ConfiguredMinimum, $MaxReviewerIterations)
     }
 
     $syntheticState = [PSCustomObject]@{
@@ -3249,7 +3254,9 @@ function Invoke-SelfReviewLoop {
         [Parameter(Mandatory)][string]$Token,
         [Parameter(Mandatory)][string]$ModelId,
         [Parameter(Mandatory)][string]$WorkspaceRoot,
-        [int]$MaxReviewerIterations = $Script:SELF_REVIEW_REVIEWER_MAX_ITERATIONS
+        [int]$MaxReviewerIterations = $Script:SELF_REVIEW_REVIEWER_MAX_ITERATIONS,
+        [bool]$EnableCategoryVerdicts = $true,
+        [bool]$EnableCalibrationExamples = $true
     )
 
     $reviewPrompt = @"
@@ -3263,6 +3270,11 @@ $WorkOutput
 ## Review Instructions
 1. Use workspace tools (file_read, grep_search, list_dir) to INDEPENDENTLY verify every claim
 2. Do NOT trust the agent's self-assessment -- verify by reading the actual files
+"@
+
+    if ($EnableCategoryVerdicts) {
+        $reviewPrompt += @"
+
 3. Check each category below with a PASS/FAIL verdict and brief evidence
 
 ## Per-Category Checklist (each must independently pass)
@@ -3301,6 +3313,26 @@ FINDINGS:
 If ANY category verdict is FAIL, you MUST set APPROVED: false regardless of how
 many categories pass. A single FAIL in Correctness, Security, or Testing is
 automatically HIGH severity.
+"@
+    } else {
+        $reviewPrompt += @"
+
+3. Produce a structured review that explicitly states APPROVED: true|false and a FINDINGS list.
+
+4. Provide your review in this EXACT format:
+
+``````review
+APPROVED: true|false
+FINDINGS:
+- [HIGH] category: description of critical issue
+- [MEDIUM] category: description of moderate issue
+- [LOW] category: description of minor suggestion
+``````
+"@
+    }
+
+    if ($EnableCalibrationExamples) {
+        $reviewPrompt += @"
 
 ## Calibration Examples
 
@@ -3316,6 +3348,10 @@ in the SQL query instead of parameterized queries -> FAIL Security, HIGH finding
 file_read confirms all acceptance criteria have matching test cases, grep_search
 finds no hardcoded secrets, lint output is clean, and docs are updated ->
 all categories PASS, APPROVED: true.
+"@
+    }
+
+    $reviewPrompt += @"
 
 Impact Guidelines:
 - HIGH: Blocks completion (bugs, missing features, security issues, broken tests, any FAIL in Correctness/Security/Testing)
@@ -3370,7 +3406,7 @@ Produce a structured review with per-category verdicts, APPROVED status, and FIN
             $response = Invoke-LlmChat -token $Token -modelId $ModelId -messages $reviewMessages -tools $readOnlyTools -RequestOptions $reviewRequestOptions -maxTokens 4096
         } catch {
             Write-RunnerConsole "`e[31m  [SELF-REVIEW] Reviewer LLM error: $_`e[0m"
-            return @{ approved = $true; findings = @(); feedback = '(Reviewer error -- auto-approving)' }
+            return @{ approved = $false; findings = @(); feedback = "(Reviewer error: $($_.Exception.Message)). Quality gate not satisfied." }
         }
 
         $choice = $response.choices[0]
@@ -3980,9 +4016,68 @@ function Invoke-AgenticLoop {
 
     # Self-review state (tracks review iterations across the main loop)
     $selfReviewIteration = 0
-    $selfReviewMax = $Script:SELF_REVIEW_MAX_ITERATIONS
+    $convertSelfReviewBoolean = {
+        param($Value, [bool]$Default)
+
+        if ($null -eq $Value) { return $Default }
+        if ($Value -is [bool]) { return [bool]$Value }
+
+        switch (([string]$Value).Trim().ToLowerInvariant()) {
+            'true' { return $true }
+            '1' { return $true }
+            'on' { return $true }
+            'enabled' { return $true }
+            'yes' { return $true }
+            'false' { return $false }
+            '0' { return $false }
+            'off' { return $false }
+            'disabled' { return $false }
+            'no' { return $false }
+            default { return $Default }
+        }
+    }
+    $selfReviewRecord = Get-RunnerNestedConfigValue $runtimeConfig 'harness' 'selfReview'
+    $selfReviewMaxRaw = if ($null -ne $selfReviewRecord) {
+        Get-RunnerConfigValue $selfReviewRecord 'maxIterations' $Script:SELF_REVIEW_MAX_ITERATIONS
+    } else {
+        Get-RunnerConfigValue $runtimeConfig 'selfReviewMaxIterations' $Script:SELF_REVIEW_MAX_ITERATIONS
+    }
+    $selfReviewMinRaw = if ($null -ne $selfReviewRecord) {
+        Get-RunnerConfigValue $selfReviewRecord 'minIterations' $null
+    } else {
+        Get-RunnerConfigValue $runtimeConfig 'selfReviewMinIterations' $null
+    }
+    $selfReviewStallRaw = if ($null -ne $selfReviewRecord) {
+        Get-RunnerConfigValue $selfReviewRecord 'stallThreshold' 3
+    } else {
+        Get-RunnerConfigValue $runtimeConfig 'selfReviewStallThreshold' 3
+    }
+    $selfReviewMaxParsed = 0
+    if (-not [int]::TryParse([string]$selfReviewMaxRaw, [ref]$selfReviewMaxParsed)) {
+        $selfReviewMaxParsed = $Script:SELF_REVIEW_MAX_ITERATIONS
+    }
+    $selfReviewMaxParsed = [Math]::Min([Math]::Max($selfReviewMaxParsed, 1), 50)
+    $selfReviewMinParsed = 0
+    $selfReviewMinValue = $null
+    if ($null -ne $selfReviewMinRaw -and [int]::TryParse([string]$selfReviewMinRaw, [ref]$selfReviewMinParsed) -and $selfReviewMinParsed -gt 0) {
+        $selfReviewMinValue = [Math]::Min($selfReviewMinParsed, $selfReviewMaxParsed)
+    }
+    $selfReviewStallParsed = 0
+    if (-not [int]::TryParse([string]$selfReviewStallRaw, [ref]$selfReviewStallParsed)) {
+        $selfReviewStallParsed = 3
+    }
+    $selfReviewStallParsed = [Math]::Min([Math]::Max($selfReviewStallParsed, 1), $selfReviewMaxParsed)
+    $selfReviewConfig = [PSCustomObject]@{
+        minIterations = $selfReviewMinValue
+        maxIterations = $selfReviewMaxParsed
+        stallThreshold = $selfReviewStallParsed
+        enableCategoryVerdicts = if ($null -ne $selfReviewRecord) { & $convertSelfReviewBoolean (Get-RunnerConfigValue $selfReviewRecord 'enableCategoryVerdicts' $true) $true } else { & $convertSelfReviewBoolean (Get-RunnerConfigValue $runtimeConfig 'enableCategoryVerdicts' $true) $true }
+        enableCalibrationExamples = if ($null -ne $selfReviewRecord) { & $convertSelfReviewBoolean (Get-RunnerConfigValue $selfReviewRecord 'enableCalibrationExamples' $true) $true } else { & $convertSelfReviewBoolean (Get-RunnerConfigValue $runtimeConfig 'enableCalibrationExamples' $true) $true }
+        enableStallDetection = if ($null -ne $selfReviewRecord) { & $convertSelfReviewBoolean (Get-RunnerConfigValue $selfReviewRecord 'enableStallDetection' $true) $true } else { & $convertSelfReviewBoolean (Get-RunnerConfigValue $runtimeConfig 'enableStallDetection' $true) $true }
+    }
+    $selfReviewMax = $selfReviewConfig.maxIterations
     $activeLoopState = Read-LoopState -WorkspaceRoot $WorkspaceRoot
-    $selfReviewMin = Get-RunnerSelfReviewMinIteration -AgentName $Agent -Prompt $Prompt -LoopState $activeLoopState -MaxReviewerIterations $selfReviewMax
+    $selfReviewMin = Get-RunnerSelfReviewMinIteration -AgentName $Agent -Prompt $Prompt -LoopState $activeLoopState -MaxReviewerIterations $selfReviewMax -ConfiguredMinimum $selfReviewConfig.minIterations
     $selfReviewHistory = @()
     $finalSelfReviewSummary = ''
 
@@ -4110,7 +4205,9 @@ function Invoke-AgenticLoop {
                     -WorkOutput $finalText `
                     -Token $token `
                     -ModelId $modelId `
-                    -WorkspaceRoot $WorkspaceRoot
+                    -WorkspaceRoot $WorkspaceRoot `
+                    -EnableCategoryVerdicts $selfReviewConfig.enableCategoryVerdicts `
+                    -EnableCalibrationExamples $selfReviewConfig.enableCalibrationExamples
 
                 $reviewFindings = if ($reviewResult.findings) { @($reviewResult.findings) } else { @() }
                 $reviewActionable = @($reviewFindings | Where-Object { $_.impact -ne 'low' })
@@ -4125,9 +4222,9 @@ function Invoke-AgenticLoop {
 
                 if (-not $reviewResult.approved) {
                     # --- Stall detection: pivot-vs-refine decision ---
-                    $stallThreshold = 3
+                    $stallThreshold = $selfReviewConfig.stallThreshold
                     $recentFailures = @($selfReviewHistory | Select-Object -Last $stallThreshold)
-                    $isStalled = ($recentFailures.Count -ge $stallThreshold) -and ($recentFailures | Where-Object { $_.approved } | Measure-Object).Count -eq 0
+                    $isStalled = $selfReviewConfig.enableStallDetection -and ($recentFailures.Count -ge $stallThreshold) -and ($recentFailures | Where-Object { $_.approved } | Measure-Object).Count -eq 0
                     $stallGuidance = ''
 
                     if ($isStalled) {

@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.45"><img src="https://img.shields.io/badge/Version-8.4.45-0EA5E9?style=for-the-badge" alt="Version 8.4.45"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.46"><img src="https://img.shields.io/badge/Version-8.4.46-0EA5E9?style=for-the-badge" alt="Version 8.4.46"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -36,7 +36,7 @@ AgentX acts as an autonomous orchestrator, routing tasks to **21 specialized age
 
 ## Domain Skills Library
 
-AgentX is powered by a rich knowledge layer of **93 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
+AgentX is powered by a rich knowledge layer of **94 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
 
 | Category | Example Skills | Purpose |
 |:---------|:---------------|:--------|
@@ -131,7 +131,7 @@ flowchart LR
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
 - **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 93 skills, 21 agents, 7 instructions, 11 templates, 21 prompts -- all Markdown-defined
+- **Knowledge Layer:** 94 skills, 21 agents, 7 instructions, 11 templates, 21 prompts -- all Markdown-defined
 - **Control Layer:** Execution plans, repo-local state, automated validation gates
 
 ---
@@ -298,7 +298,7 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.45
+## New In 8.4.46
 
 - Reviewer agent template-enforcement fix: hard frontmatter constraint requiring `read_file` of canonical templates first; explicit path + section list for `.github/templates/ARCH-REVIEW-TEMPLATE.md` in the standalone arch-review path; Code Review Step 6 strengthened with same read-first rule. Closes the gap where the Reviewer could draft an architecture review without picking up `ARCH-REVIEW-TEMPLATE.md`.
 - New `BACKLOG-TEMPLATE.md` (15 sections: Vision, Hierarchy, RICE/WSJF/MoSCoW/Kano/ICE prioritization, INVEST, DoR/DoD, Active Backlog tables, Capacity, Dependencies, Release Plan, Flow Metrics, State Machine, Refinement Cadence, Local Mode Wiring) with 7 Mermaid diagrams; live AgentX backlog instantiated at `docs/artifacts/backlog/BACKLOG.md`

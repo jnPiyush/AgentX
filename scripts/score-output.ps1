@@ -80,13 +80,13 @@ function Invoke-EngineerScore {
     else { $checks += '[FAIL] Hardcoded secrets detected (+0)' }
 
     # SQL parameterized (5 pts) - check for string concatenation in SQL
-    $sqlConcat = Get-ChildItem -Path $ROOT -Include '*.ts','*.cs','*.py' -Recurse -File -ErrorAction SilentlyContinue |
+    $sqlConcat = Get-ChildItem -Path $ROOT -Include '*.ts','*.cs','*.py','*.ps1' -Recurse -File -ErrorAction SilentlyContinue |
         Select-String -Pattern '(\$"|f")[^"]*SELECT|INSERT|UPDATE|DELETE' -ErrorAction SilentlyContinue
     if ((Get-ItemCount $sqlConcat) -eq 0) { $score += 5; $checks += '[PASS] SQL parameterized (+5)' }
     else { $checks += '[FAIL] SQL string concatenation found (+0)' }
 
     # No TODO/FIXME (2 pts)
-    $todos = Get-ChildItem -Path $ROOT -Include '*.ts','*.cs','*.py' -Recurse -File -ErrorAction SilentlyContinue |
+    $todos = Get-ChildItem -Path $ROOT -Include '*.ts','*.cs','*.py','*.ps1' -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object { $_.FullName -notmatch 'node_modules|\.git' } |
         Select-String -Pattern 'TODO|FIXME' -ErrorAction SilentlyContinue
     $todoCount = Get-ItemCount $todos
@@ -107,9 +107,9 @@ function Invoke-EngineerScore {
     $testRoots = @()
     if (Test-Path (Join-Path $ROOT 'tests')) { $testRoots += (Join-Path $ROOT 'tests') }
     if (Test-Path (Join-Path $ROOT 'vscode-extension/src/test')) { $testRoots += (Join-Path $ROOT 'vscode-extension/src/test') }
-    $srcFiles = Get-ItemCount (Get-ChildItem -Path $srcRoots -Filter '*.ts' -Recurse -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -notmatch 'test' })
-    $testFiles = Get-ItemCount (Get-ChildItem -Path $testRoots -Include '*.test.ts','*.spec.ts' -Recurse -File -ErrorAction SilentlyContinue)
+    $srcFiles = Get-ItemCount (Get-ChildItem -Path $srcRoots -Include '*.ts','*.ps1' -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -notmatch 'test|node_modules|\.git' })
+    $testFiles = Get-ItemCount (Get-ChildItem -Path $testRoots -Include '*.test.ts','*.spec.ts','*.ps1' -Recurse -File -ErrorAction SilentlyContinue)
     if ($srcFiles -gt 0) {
         $ratio = [math]::Round(($testFiles / $srcFiles) * 100, 0)
         if ($ratio -ge 50) { $score += 10; $checks += "[PASS] Test coverage proxy: $ratio% test-to-source ratio (+10)" }

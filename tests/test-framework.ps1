@@ -190,6 +190,8 @@ Assert-FileExists ".github/schemas/instruction-frontmatter.schema.json" "Instruc
 Assert-FileExists ".github/schemas/agent-frontmatter.schema.json" "Agent schema"
 Assert-FileExists ".github/schemas/skill-frontmatter.schema.json" "Skill schema"
 Assert-FileExists ".github/workflows/scorecard.yml" "OpenSSF Scorecard workflow"
+Assert-FileContains "scripts/score-output.ps1" "\*\.ps1" "score-output includes PowerShell files in engineer scoring checks"
+Assert-FileContains "scripts/score-output.ps1" "\*\.test\.ts','\*\.spec\.ts','\*\.ps1" "score-output includes PowerShell tests in engineer coverage proxy"
 
 # --- 7. AI-First Intent Preservation ----------------------------------------------------
 Write-Host ""

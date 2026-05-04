@@ -99,6 +99,24 @@ try {
 
 $originalTestRunnerCommandAvailable = ${function:Test-RunnerCommandAvailable}
 $originalInvokeRunnerCommand = ${function:Invoke-RunnerCommand}
+$originalReadAgentDef = ${function:Read-AgentDef}
+$originalGetToolSchemaList = ${function:Get-ToolSchemaList}
+$originalGetLoopDetector = ${function:Get-LoopDetector}
+$originalGetReasoningRequestConfig = ${function:Get-ReasoningRequestConfig}
+$originalInvokeLlmChat = ${function:Invoke-LlmChat}
+${function:Read-AgentDef} = {
+    param($agentName, $root)
+    return @{ name = $agentName; description = ''; model = ''; body = '' }
+}
+${function:Get-ToolSchemaList} = {
+    @(
+        [PSCustomObject]@{ function = [PSCustomObject]@{ name = 'file_read' } }
+        [PSCustomObject]@{ function = [PSCustomObject]@{ name = 'grep_search' } }
+        [PSCustomObject]@{ function = [PSCustomObject]@{ name = 'list_dir' } }
+    )
+}
+${function:Get-LoopDetector} = { [PSCustomObject]@{} }
+${function:Get-ReasoningRequestConfig} = { param($agentDef, $modelId) return @{} }
 try {
     function Test-RunnerCommandAvailable {
         param([string]$CommandName)
@@ -116,9 +134,22 @@ try {
     $claudeReady = Test-ClaudeCodeProviderReady
     Assert-True $claudeReady.ready 'Test-ClaudeCodeProviderReady reports ready when claude auth status succeeds'
     Assert-True ($claudeReady.reason -match 'authenticated') 'Test-ClaudeCodeProviderReady returns an authentication success reason'
+
+    ${function:Invoke-LlmChat} = {
+        param($token, $modelId, $messages, $tools, $RequestOptions, $maxTokens)
+        throw 'synthetic reviewer failure'
+    }
+    $reviewFailure = Invoke-SelfReviewLoop -AgentName 'engineer' -WorkOutput 'done' -Token 't' -ModelId 'gpt-4o' -WorkspaceRoot $script:repoRoot
+    Assert-Equal ([bool]$reviewFailure.approved) $false 'Invoke-SelfReviewLoop fails closed when reviewer LLM execution fails'
+    Assert-True (([string]$reviewFailure.feedback) -match 'Quality gate not satisfied') 'Invoke-SelfReviewLoop returns actionable failure feedback on reviewer errors'
 } finally {
     ${function:Test-RunnerCommandAvailable} = $originalTestRunnerCommandAvailable
     ${function:Invoke-RunnerCommand} = $originalInvokeRunnerCommand
+    if ($null -ne $originalReadAgentDef) { ${function:Read-AgentDef} = $originalReadAgentDef } else { Remove-Item Function:Read-AgentDef -ErrorAction SilentlyContinue }
+    if ($null -ne $originalGetToolSchemaList) { ${function:Get-ToolSchemaList} = $originalGetToolSchemaList } else { Remove-Item Function:Get-ToolSchemaList -ErrorAction SilentlyContinue }
+    if ($null -ne $originalGetLoopDetector) { ${function:Get-LoopDetector} = $originalGetLoopDetector } else { Remove-Item Function:Get-LoopDetector -ErrorAction SilentlyContinue }
+    if ($null -ne $originalGetReasoningRequestConfig) { ${function:Get-ReasoningRequestConfig} = $originalGetReasoningRequestConfig } else { Remove-Item Function:Get-ReasoningRequestConfig -ErrorAction SilentlyContinue }
+    if ($null -ne $originalInvokeLlmChat) { ${function:Invoke-LlmChat} = $originalInvokeLlmChat } else { Remove-Item Function:Invoke-LlmChat -ErrorAction SilentlyContinue }
 }
 
 $parsedFallbacks = @(ConvertFrom-ModelFallbackList "['gpt-4.1', 'gpt-4o-mini']")
@@ -730,6 +761,16 @@ try {
     Assert-Equal $unsyncedLoopState.status 'active' 'Invoke-AgenticLoop leaves the parent loop active when SkipLoopStateSync is used'
     Assert-True $unsyncedLoopState.active 'Invoke-AgenticLoop preserves the active loop flag when SkipLoopStateSync is used'
     Assert-Equal ([int]$unsyncedLoopState.iteration) 1 'Invoke-AgenticLoop does not mutate loop iterations when SkipLoopStateSync is used'
+
+    '{"harness":{"selfReview":{"minIterations":2,"maxIterations":4,"stallThreshold":2,"enableCategoryVerdicts":false,"enableCalibrationExamples":false,"enableStallDetection":false}}}' | Set-Content -Path (Join-Path $runnerTestRoot '.agentx\config.json') -Encoding UTF8
+    Remove-Item $loopStatePath -ErrorAction SilentlyContinue
+    $script:runnerMessages.Clear()
+    $script:selfReviewCalls = 0
+    $configuredResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+
+    Assert-Equal $configuredResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully with self-review config overrides'
+    Assert-Equal $script:selfReviewCalls 2 'Invoke-AgenticLoop respects configured minimum self-review iterations when no active loop override exists'
+    Assert-Equal $configuredResult.iterations 2 'Invoke-AgenticLoop finishes at the configured self-review minimum for this workspace'
 } finally {
     Remove-Item Function:Get-GitHubToken -ErrorAction SilentlyContinue
     Remove-Item Function:Initialize-ApiMode -ErrorAction SilentlyContinue
