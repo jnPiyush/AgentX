@@ -56,6 +56,102 @@
           }
         }
       ]
+    },
+    {
+      "publisher": "jnpiyush",
+      "pluginId": "read-docs",
+      "displayName": "Read Docs",
+      "description": "Convert Microsoft Word, OpenDocument, RTF, HTML, and EPUB documents to Markdown using Pandoc.",
+      "latestVersion": "1.0.0",
+      "maturity": "stable",
+      "capabilities": [
+        "tool"
+      ],
+      "tags": [
+        "read",
+        "ingest",
+        "docs",
+        "docx",
+        "rtf",
+        "odt",
+        "html",
+        "epub",
+        "pandoc",
+        "markdown"
+      ],
+      "releases": [
+        {
+          "version": "1.0.0",
+          "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-read-docs/releases/download/v1.0.0/agentx-plugin-read-docs-1.0.0.zip",
+          "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "publishedAt": "2026-05-07T00:00:00Z",
+          "engines": {
+            "agentx": "^8.4.0"
+          }
+        }
+      ]
+    },
+    {
+      "publisher": "jnpiyush",
+      "pluginId": "read-slides",
+      "displayName": "Read Slides",
+      "description": "Convert Microsoft PowerPoint (.pptx) decks to Markdown using python-pptx.",
+      "latestVersion": "1.0.0",
+      "maturity": "stable",
+      "capabilities": [
+        "tool"
+      ],
+      "tags": [
+        "read",
+        "ingest",
+        "slides",
+        "pptx",
+        "powerpoint",
+        "python-pptx",
+        "markdown"
+      ],
+      "releases": [
+        {
+          "version": "1.0.0",
+          "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-read-slides/releases/download/v1.0.0/agentx-plugin-read-slides-1.0.0.zip",
+          "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "publishedAt": "2026-05-07T00:00:00Z",
+          "engines": {
+            "agentx": "^8.4.0"
+          }
+        }
+      ]
+    },
+    {
+      "publisher": "jnpiyush",
+      "pluginId": "read-pdf",
+      "displayName": "Read PDF",
+      "description": "Convert PDF documents to Markdown with per-page anchors. Uses pdftotext (poppler) when available, falls back to pypdf.",
+      "latestVersion": "1.0.0",
+      "maturity": "stable",
+      "capabilities": [
+        "tool"
+      ],
+      "tags": [
+        "read",
+        "ingest",
+        "pdf",
+        "pdftotext",
+        "poppler",
+        "pypdf",
+        "markdown"
+      ],
+      "releases": [
+        {
+          "version": "1.0.0",
+          "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-read-pdf/releases/download/v1.0.0/agentx-plugin-read-pdf-1.0.0.zip",
+          "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "publishedAt": "2026-05-07T00:00:00Z",
+          "engines": {
+            "agentx": "^8.4.0"
+          }
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "name": "read-docs",
+  "id": "read-docs",
+  "publisher": "jnpiyush",
+  "displayName": "Read Docs",
+  "version": "1.0.0",
+  "description": "Convert Microsoft Word, OpenDocument, RTF, HTML, and EPUB documents to Markdown using Pandoc.",
+  "author": "AgentX",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/jnPiyush/AgentX/tree/master/.agentx/plugins/read-docs",
+  "bugs": "https://github.com/jnPiyush/AgentX/issues",
+  "type": "tool",
+  "capabilities": ["tool"],
+  "entry": {
+    "pwsh": ".agentx/plugins/read-docs/read-docs.ps1",
+    "bash": ".agentx/plugins/read-docs/read-docs.sh"
+  },
+  "args": [
+    { "name": "Files", "type": "string", "required": true,  "description": "Comma-separated paths to .docx, .doc, .odt, .rtf, .html, .htm, .epub files" },
+    { "name": "Output", "type": "string", "required": false, "description": "Destination folder for generated .md files" },
+    { "name": "ExtractMedia", "type": "boolean", "required": false, "description": "Extract embedded images to <basename>.media folder" }
+  ],
+  "requires": ["pandoc"],
+  "tags": ["read", "ingest", "docs", "docx", "rtf", "odt", "html", "epub", "pandoc", "markdown"],
+  "maturity": "stable",
+  "engines": { "agentx": "^8.4.0" },
+  "permissions": { "filesystem": "read-write", "process": "allowlist" },
+  "distribution": {
+    "artifactUrl": "https://github.com/jnPiyush/AgentX/raw/master/.agentx/plugins/read-docs/",
+    "checksum": "sha256:placeholder",
+    "signatureMode": "optional"
+  },
+  "source": "https://github.com/jnPiyush/AgentX/tree/master/.agentx/plugins/read-docs"
+}

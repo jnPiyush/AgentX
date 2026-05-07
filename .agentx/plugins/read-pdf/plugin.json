@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "name": "read-pdf",
+  "id": "read-pdf",
+  "publisher": "jnpiyush",
+  "displayName": "Read PDF",
+  "version": "1.0.0",
+  "description": "Convert PDF documents to Markdown with per-page anchors. Uses pdftotext (poppler) when available, falls back to pypdf.",
+  "author": "AgentX",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/jnPiyush/AgentX/tree/master/.agentx/plugins/read-pdf",
+  "bugs": "https://github.com/jnPiyush/AgentX/issues",
+  "type": "tool",
+  "capabilities": ["tool"],
+  "entry": {
+    "pwsh": ".agentx/plugins/read-pdf/read-pdf.ps1",
+    "bash": ".agentx/plugins/read-pdf/read-pdf.sh"
+  },
+  "args": [
+    { "name": "Files",  "type": "string",  "required": true,  "description": "Comma-separated paths to .pdf files" },
+    { "name": "Output", "type": "string",  "required": false, "description": "Destination folder for generated .md files" },
+    { "name": "Layout", "type": "boolean", "required": false, "description": "Preserve layout (pdftotext -layout); ignored when using pypdf fallback" }
+  ],
+  "requires": ["pdftotext OR python+pypdf"],
+  "tags": ["read", "ingest", "pdf", "pdftotext", "poppler", "pypdf", "markdown"],
+  "maturity": "stable",
+  "engines": { "agentx": "^8.4.0" },
+  "permissions": { "filesystem": "read-write", "process": "allowlist" },
+  "distribution": {
+    "artifactUrl": "https://github.com/jnPiyush/AgentX/raw/master/.agentx/plugins/read-pdf/",
+    "checksum": "sha256:placeholder",
+    "signatureMode": "optional"
+  },
+  "source": "https://github.com/jnPiyush/AgentX/tree/master/.agentx/plugins/read-pdf"
+}

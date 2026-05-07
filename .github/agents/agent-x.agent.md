@@ -194,19 +194,22 @@ ALL workflows include iteration by default (`iterate = true` in TOML). Default l
 
 ## Plugins (Optional Capabilities)
 
-AgentX Auto MAY invoke workspace plugins from `.agentx/plugins/` when the active phase needs a capability beyond core tooling. Plugins are inspected via [.agentx/plugins/registry.json](../../.agentx/plugins/registry.json). Always prefer the canonical Markdown deliverable as the source of truth and use plugins only as rendering bridges when the user explicitly asks for a binary artifact.
+AgentX Auto MAY invoke workspace plugins from `.agentx/plugins/` when the active phase needs a capability beyond core tooling. Plugins are inspected via [.agentx/plugins/registry.json](../../.agentx/plugins/registry.json). Always prefer the canonical Markdown deliverable as the source of truth and use plugins only as conversion bridges -- inbound (binary -> Markdown so the agent can review and cite text) or outbound (Markdown -> binary when the user explicitly asks for a `.docx` or `.pptx`).
 
-| Plugin | Capability | Trigger | Entry |
-|--------|------------|---------|-------|
-| [convert-docs](../../.agentx/plugins/convert-docs/) | Markdown -> Microsoft Word (`.docx`) via Pandoc | User asks for a `.docx` of a PRD, ADR, spec, brief, or review | `.agentx\plugins\convert-docs\convert-docs.ps1` |
-| [convert-slides](../../.agentx/plugins/convert-slides/) | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User asks for a `.pptx` of a storyboard, presentation outline, or pitch deck | `.agentx\plugins\convert-slides\convert-slides.ps1` |
+| Plugin | Direction | Capability | When to use |
+|--------|-----------|------------|-------------|
+| [convert-docs](../../.agentx/plugins/convert-docs/) | Out | Markdown -> Microsoft Word (`.docx`) via Pandoc | User explicitly asks for a `.docx` of a PRD, ADR, spec, brief, or review |
+| [convert-slides](../../.agentx/plugins/convert-slides/) | Out | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User explicitly asks for a `.pptx` of a storyboard, presentation, or pitch deck |
+| [read-docs](../../.agentx/plugins/read-docs/) | In | Word / OpenDocument / RTF / HTML / EPUB -> Markdown via Pandoc | User attaches or references `.docx`/`.odt`/`.rtf`/`.html`/`.epub` for review, ingestion, or citation |
+| [read-slides](../../.agentx/plugins/read-slides/) | In | PowerPoint (`.pptx`) -> Markdown via python-pptx | User attaches or references a `.pptx` deck and the agent needs to cite slide content |
+| [read-pdf](../../.agentx/plugins/read-pdf/) | In | PDF -> Markdown with per-page anchors via pdftotext or pypdf | User attaches or references a `.pdf` and the agent needs to cite by `p.N` |
 
 Plugin invocation rules:
 
 - Confirm the dependency declared in `plugin.json` (`requires`) is on `PATH` before invoking; if missing, surface the install link from the plugin and stop.
 - Pass user inputs through plugin parameters; never concatenate paths into shell strings.
-- Report the generated artifact path and size after a successful run.
-- Do not edit generated binary artifacts directly -- regenerate them from the Markdown source if changes are needed.
+- For inbound plugins: persist the generated `.md` under `docs/extracted/` (or a phase-specific folder) and cite findings against the extracted Markdown so they remain reviewable.
+- For outbound plugins: report the generated artifact path and size after a successful run; never edit generated binaries directly -- regenerate from the Markdown source if changes are needed.
 
 ## Phase Validation
 
