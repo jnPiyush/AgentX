@@ -41,9 +41,14 @@
       ".github/templates/SPEC-TEMPLATE.md",
       ".github/templates/UX-TEMPLATE.md",
       ".github/templates/REVIEW-TEMPLATE.md",
+      ".github/templates/ARCH-REVIEW-TEMPLATE.md",
       ".github/templates/SECURITY-PLAN-TEMPLATE.md",
       ".github/templates/ROADMAP-TEMPLATE.md",
-      ".github/templates/PROGRESS-TEMPLATE.md"
+      ".github/templates/PROGRESS-TEMPLATE.md",
+      ".github/templates/EXEC-PLAN-TEMPLATE.md",
+      ".github/templates/CONTRACT-TEMPLATE.md",
+      ".github/templates/EVIDENCE-SUMMARY-TEMPLATE.md",
+      ".github/templates/BACKLOG-TEMPLATE.md"
     ],
     "workflows": [],
     "scripts": [

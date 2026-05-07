@@ -8,10 +8,10 @@ import { loadAgentInstructions, clearInstructionCache } from '../../chat/agentCo
  * Creates a minimal AgentXContext-like object whose workspaceRoot
  * points to a temporary directory we control.
  */
-function createFakeAgentx(root: string) {
+function createFakeAgentx(root: string, extensionPath?: string) {
   return {
     workspaceRoot: root,
-    extensionContext: undefined,
+    extensionContext: extensionPath ? { extensionPath } : undefined,
     // Other properties are not used by agentContextLoader
   } as any;
 }
@@ -124,5 +124,105 @@ describe('agentContextLoader', () => {
     fs.writeFileSync(filePath, '---\nname: R\n---\n\nUpdated');
     const second = await loadAgentInstructions(agentx, 'refresh.agent.md');
     assert.ok(second!.includes('Updated'), 'should return updated content after cache clear');
+  });
+
+  it('rewrites canonical template references to bundled extension paths when zero-copy runtime is in effect', async () => {
+    // Bundled extension layout (zero-copy): only the bundle holds the template
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
+    const bundledTemplateDir = path.join(extensionPath, '.github', 'agentx', 'templates');
+    const bundledSkillDir = path.join(extensionPath, '.github', 'agentx', 'skills', 'development', 'testing');
+    fs.mkdirSync(bundledTemplateDir, { recursive: true });
+    fs.mkdirSync(bundledSkillDir, { recursive: true });
+    const bundledTemplatePath = path.join(bundledTemplateDir, 'ARCH-REVIEW-TEMPLATE.md');
+    const bundledSkillPath = path.join(bundledSkillDir, 'SKILL.md');
+    fs.writeFileSync(bundledTemplatePath, '# Arch Review Template');
+    fs.writeFileSync(bundledSkillPath, '# Testing Skill');
+
+    const agentFile = path.join(tmpDir, '.github', 'agents', 'reviewer.agent.md');
+    const content = [
+      '---',
+      'name: Reviewer',
+      '---',
+      '',
+      'Read .github/templates/ARCH-REVIEW-TEMPLATE.md before drafting.',
+      'Load .github/skills/development/testing/SKILL.md before validating.',
+      'Also read `.github/templates/REVIEW-TEMPLATE.md` for code reviews.',
+    ].join('\n');
+    fs.writeFileSync(agentFile, content);
+
+    try {
+      const agentx = createFakeAgentx(tmpDir, extensionPath);
+      const result = await loadAgentInstructions(agentx, 'reviewer.agent.md');
+
+      assert.ok(result, 'should return content');
+      const expectedBundledPath = bundledTemplatePath.replace(/\\/g, '/');
+      assert.ok(
+        result!.includes(expectedBundledPath),
+        `body should reference resolved bundled template path, got: ${result}`,
+      );
+      assert.ok(
+        result!.includes(bundledSkillPath.replace(/\\/g, '/')),
+        'body should reference resolved bundled skill path',
+      );
+      assert.ok(
+        !/(?:^|[^\/])\.github\/templates\/ARCH-REVIEW-TEMPLATE\.md/.test(result!),
+        'unresolved canonical ARCH template reference must be rewritten',
+      );
+      assert.ok(
+        !/(?:^|[^\/])\.github\/skills\/development\/testing\/SKILL\.md/.test(result!),
+        'unresolved canonical skill reference must be rewritten',
+      );
+    } finally {
+      fs.rmSync(extensionPath, { recursive: true, force: true });
+    }
+  });
+
+  it('prefers workspace runtime mirror over bundled path when both exist', async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
+    fs.mkdirSync(path.join(extensionPath, '.github', 'agentx', 'templates'), { recursive: true });
+    fs.writeFileSync(
+      path.join(extensionPath, '.github', 'agentx', 'templates', 'ARCH-REVIEW-TEMPLATE.md'),
+      'bundled',
+    );
+
+    const runtimeDir = path.join(tmpDir, '.agentx', 'runtime', 'templates');
+    fs.mkdirSync(runtimeDir, { recursive: true });
+    fs.writeFileSync(path.join(runtimeDir, 'ARCH-REVIEW-TEMPLATE.md'), 'runtime');
+
+    const agentFile = path.join(tmpDir, '.github', 'agents', 'reviewer-runtime.agent.md');
+    fs.writeFileSync(
+      agentFile,
+      '---\nname: R\n---\n\nUse .github/templates/ARCH-REVIEW-TEMPLATE.md\n',
+    );
+
+    try {
+      const agentx = createFakeAgentx(tmpDir, extensionPath);
+      const result = await loadAgentInstructions(agentx, 'reviewer-runtime.agent.md');
+
+      assert.ok(result!.includes('.agentx/runtime/templates/ARCH-REVIEW-TEMPLATE.md'),
+        'should rewrite to workspace runtime path');
+      assert.ok(!result!.includes(extensionPath.replace(/\\/g, '/')),
+        'should not use bundled path when runtime mirror exists');
+    } finally {
+      fs.rmSync(extensionPath, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves canonical references unchanged when a workspace override exists', async () => {
+    const overrideDir = path.join(tmpDir, '.github', 'templates');
+    fs.mkdirSync(overrideDir, { recursive: true });
+    fs.writeFileSync(path.join(overrideDir, 'ARCH-REVIEW-TEMPLATE.md'), 'override');
+
+    const agentFile = path.join(tmpDir, '.github', 'agents', 'reviewer-override.agent.md');
+    fs.writeFileSync(
+      agentFile,
+      '---\nname: R\n---\n\nUse .github/templates/ARCH-REVIEW-TEMPLATE.md\n',
+    );
+
+    const agentx = createFakeAgentx(tmpDir);
+    const result = await loadAgentInstructions(agentx, 'reviewer-override.agent.md');
+
+    assert.ok(result!.includes('.github/templates/ARCH-REVIEW-TEMPLATE.md'),
+      'should preserve canonical path when workspace override exists');
   });
 });

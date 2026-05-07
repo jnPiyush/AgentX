@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 2,
+  "name": "convert-slides",
+  "id": "convert-slides",
+  "publisher": "jnpiyush",
+  "displayName": "Convert Slides",
+  "version": "1.0.0",
+  "description": "Convert Markdown documents to Microsoft PowerPoint (PPTX) using Pandoc.",
+  "author": "AgentX",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/jnPiyush/agentx-plugin-convert-slides",
+  "bugs": "https://github.com/jnPiyush/agentx-plugin-convert-slides/issues",
+  "type": "tool",
+  "capabilities": ["tool"],
+  "entry": {
+    "pwsh": "convert-slides.ps1",
+    "bash": "convert-slides.sh"
+  },
+  "args": [
+    {
+      "name": "Folders",
+      "description": "Comma-separated list of folders to convert (default: docs/prd,docs/adr,docs/specs,docs/ux,docs/reviews)",
+      "required": false,
+      "default": "docs/prd,docs/adr,docs/specs,docs/ux,docs/reviews"
+    },
+    {
+      "name": "Files",
+      "description": "Comma-separated list of specific .md files to convert (overrides Folders when set)",
+      "required": false
+    },
+    {
+      "name": "Template",
+      "description": "Path to a PPTX reference template for styling (optional)",
+      "required": false
+    },
+    {
+      "name": "Output",
+      "description": "Output folder for generated .pptx files (default: alongside source)",
+      "required": false
+    },
+    {
+      "name": "SlideLevel",
+      "description": "Heading level that starts a new slide (default: 2)",
+      "required": false,
+      "default": "2"
+    }
+  ],
+  "requires": ["pandoc"],
+  "tags": ["docs", "conversion", "powerpoint", "pptx", "slides", "pandoc"],
+  "maturity": "stable",
+  "engines": {
+    "agentx": "^8.4.0"
+  },
+  "permissions": {
+    "filesystem": "read-write",
+    "process": "allowlist"
+  },
+  "distribution": {
+    "artifactUrl": "https://github.com/jnPiyush/agentx-plugin-convert-slides/releases/download/v1.0.0/agentx-plugin-convert-slides-1.0.0.zip",
+    "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "signatureMode": "optional"
+  },
+  "source": "https://github.com/jnPiyush/agentx-plugin-convert-slides"
+}

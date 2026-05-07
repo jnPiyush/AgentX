@@ -26,6 +26,7 @@ Use concise bullet points with a date and context.
 ## Known Pitfalls
 
 <!-- Agents: append pitfalls here -->
+- Do NOT manually copy AgentX scaffolding (`.github/agentx/`, `.github/agents/`, `.github/skills/`, `.github/templates/`, `.github/instructions/`, `docs/guides/`, `prompts/`, or any extension-bundled asset tree) from the extension installation into the user workspace. AgentX uses a zero-copy runtime: assets are read in place from the installed extension. When the user asks to "initialize / set up / install / scaffold AgentX", invoke the VS Code command `agentx.initializeLocalRuntime` (palette: "AgentX: Initialize Local Runtime") or instruct the user to run `@agentx initialize local runtime` in chat. That command is the only sanctioned initializer and only seeds `.agentx/`, `docs/artifacts/` skeleton, `memories/` (3 seed files), and runtime wrappers.
 - Do NOT use fragile exact-match block replacement habits for large rewrites -- prefer a single well-scoped `apply_patch` edit with enough context to anchor the change
 - PowerShell `ConvertTo-Json` flattens single-element arrays; always use `@(...)` to force arrays
 - Passing tests is necessary but not sufficient; unexercised UI or wiring regressions can survive unless post-edit verification checks the edited surface directly

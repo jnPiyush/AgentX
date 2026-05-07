@@ -3,6 +3,9 @@ import * as path from 'path';
 
 const WORKSPACE_PREFIXES = [
   '.github/agents/',
+  '.github/skills/',
+  '.github/instructions/',
+  '.github/prompts/',
   '.github/templates/',
   'docs/guides/',
 ] as const;
@@ -15,6 +18,15 @@ function mapToRuntimeRelativePath(relativePath: string): string | undefined {
   const normalized = normalizeRelativePath(relativePath);
   if (normalized.startsWith('.github/agents/')) {
     return `.agentx/runtime/agents/${normalized.substring('.github/agents/'.length)}`;
+  }
+  if (normalized.startsWith('.github/skills/')) {
+    return `.agentx/runtime/skills/${normalized.substring('.github/skills/'.length)}`;
+  }
+  if (normalized.startsWith('.github/instructions/')) {
+    return `.agentx/runtime/instructions/${normalized.substring('.github/instructions/'.length)}`;
+  }
+  if (normalized.startsWith('.github/prompts/')) {
+    return `.agentx/runtime/prompts/${normalized.substring('.github/prompts/'.length)}`;
   }
   if (normalized.startsWith('.github/templates/')) {
     return `.agentx/runtime/templates/${normalized.substring('.github/templates/'.length)}`;
@@ -117,6 +129,14 @@ export function assetExistsInWorkspaceRuntime(
   return !!resolveWorkspaceRuntimeAssetPath(workspaceRoot, relativePath);
 }
 
+export function assetExistsInWorkspaceOrBundle(
+  workspaceRoot: string | undefined,
+  extensionPath: string | undefined,
+  relativePath: string,
+): boolean {
+  return !!resolveAssetPath(workspaceRoot, extensionPath, relativePath);
+}
+
 export function collectAssetFiles(
   workspaceRoot: string | undefined,
   extensionPath: string | undefined,
@@ -139,6 +159,61 @@ export function collectAssetFiles(
   }
 
   return [...files.values()].sort((left, right) => path.basename(left).localeCompare(path.basename(right)));
+}
+
+/**
+ * Pattern that matches canonical AgentX asset paths inside agent instructions
+ * or other markdown content. Matches:
+ *   .github/agents/<file>.agent.md
+ *   .github/agents/internal/<file>.agent.md
+ *   .github/skills/<category>/<skill>/SKILL.md
+ *   .github/instructions/<FILE>.md
+ *   .github/prompts/<FILE>.md
+ *   .github/templates/<FILE>.md
+ *   docs/guides/<FILE>.md
+ *
+ * Uses a non-capturing group and is case-sensitive on the prefix segments.
+ */
+const ASSET_REFERENCE_PATTERN = /(?:\.github\/agents(?:\/internal)?\/[A-Za-z0-9._-]+\.agent\.md|\.github\/skills\/(?:[A-Za-z0-9._-]+\/)+SKILL\.md|\.github\/(?:instructions|prompts|templates)\/[A-Za-z0-9._-]+\.md|docs\/guides\/[A-Za-z0-9._-]+\.md)/g;
+
+/**
+ * Rewrite canonical asset references inside an instruction body to paths the
+ * agent runtime can actually read. The model receives literal paths it then
+ * passes to read_file, so unresolved canonical paths fail under the zero-copy
+ * runtime model when the file only exists inside the bundled extension.
+ *
+ * Resolution order matches resolveAssetPath:
+ *   1. Workspace override at the canonical path -> leave unchanged.
+ *   2. Workspace runtime mirror under .agentx/runtime/... -> rewrite to that
+ *      workspace-relative path.
+ *   3. Bundled extension copy under <ext>/.github/agentx/... -> rewrite to the
+ *      absolute extension path.
+ *   4. Otherwise leave unchanged.
+ */
+export function rewriteAssetReferences(
+  body: string,
+  workspaceRoot: string | undefined,
+  extensionPath: string | undefined,
+): string {
+  return body.replace(ASSET_REFERENCE_PATTERN, (match) => {
+    if (getWorkspaceAssetPath(workspaceRoot, match)) {
+      return match;
+    }
+
+    const runtimeRelative = workspaceRoot && getRuntimeAssetPath(workspaceRoot, match)
+      ? mapToRuntimeRelativePath(match)
+      : undefined;
+    if (runtimeRelative) {
+      return runtimeRelative;
+    }
+
+    const bundledAbsolute = getBundledAssetPath(extensionPath, match);
+    if (bundledAbsolute) {
+      return bundledAbsolute.replace(/\\/g, '/');
+    }
+
+    return match;
+  });
 }
 
 export function isWorkspaceOverridePath(filePath: string, workspaceRoot: string | undefined): boolean {

@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AgentXContext } from '../agentxContext';
 import { resolveAgentDefinitionPath } from '../agentxContextInternals';
+import { rewriteAssetReferences } from '../utils/runtimeAssets';
 
 /**
  * Cache of loaded agent instructions (markdown body, without frontmatter).
@@ -40,7 +41,12 @@ export async function loadAgentInstructions(
   const fmEnd = content.indexOf('\n---', firstDelim + 3);
   if (fmEnd === -1) { return undefined; }
 
-  const body = content.substring(fmEnd + 4).trim();
+  const rawBody = content.substring(fmEnd + 4).trim();
+  const body = rewriteAssetReferences(
+    rawBody,
+    root,
+    agentx.extensionContext?.extensionPath,
+  );
   instructionCache.set(agentFileName, body);
   return body;
 }

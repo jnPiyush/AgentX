@@ -29,7 +29,7 @@ export function evaluateAgentNativeReview(agentx: AgentXContext): AgentNativeRev
     return undefined;
   }
 
-  return evaluateAgentNativeReviewFromRoot(root);
+  return evaluateAgentNativeReviewFromRoot(root, agentx.extensionContext?.extensionPath);
 }
 
 export function getAgentNativeReviewSummary(agentx: AgentXContext): string {

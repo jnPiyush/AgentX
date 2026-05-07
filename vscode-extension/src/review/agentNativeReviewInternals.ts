@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { assetExistsInWorkspaceRuntime } from '../utils/runtimeAssets';
+import { assetExistsInWorkspaceOrBundle } from '../utils/runtimeAssets';
 
 export type ReviewPillar = 'action-parity' | 'context-parity' | 'workspace-parity';
 export type ReviewSeverity = 'none' | 'low' | 'medium' | 'high';
@@ -149,8 +149,8 @@ function hasAllSignals(content: string, signals: ReadonlyArray<string>): boolean
  return signals.every((signal) => content.includes(signal));
 }
 
-function fileExists(root: string, relativePath: string): boolean {
- return assetExistsInWorkspaceRuntime(root, relativePath)
+function fileExists(root: string, extensionPath: string | undefined, relativePath: string): boolean {
+ return assetExistsInWorkspaceOrBundle(root, extensionPath, relativePath)
   || fs.existsSync(path.join(root, ...relativePath.split('/')));
 }
 
@@ -173,7 +173,7 @@ function buildCapabilityMap(signals: ReviewSignals): CapabilityMapEntry[] {
   );
   const sharedArtifacts = capability.sharedSignals.every((signal) => {
    if (signal.startsWith('docs/')) {
-    return fileExists(signals.root, signal);
+    return fileExists(signals.root, undefined, signal);
    }
    return signals.agentxContext.includes(signal);
   });
@@ -198,10 +198,15 @@ function buildCapabilityMap(signals: ReviewSignals): CapabilityMapEntry[] {
  });
 }
 
-function buildChecks(root: string, capabilityMap: ReadonlyArray<CapabilityMapEntry>): ParityCheckResult[] {
+function buildChecks(
+ root: string,
+ extensionPath: string | undefined,
+ capabilityMap: ReadonlyArray<CapabilityMapEntry>,
+): ParityCheckResult[] {
  const contextSignals = readText(path.join(root, 'vscode-extension', 'src', 'agentxContext.ts'));
- const workspaceGuideExists = fileExists(root, WORKFLOW_GUIDE_PATH);
- const reviewTemplateExists = fileExists(root, '.github/templates/REVIEW-TEMPLATE.md');
+ const workspaceGuideExists = fileExists(root, extensionPath, WORKFLOW_GUIDE_PATH);
+ const reviewTemplateExists = fileExists(root, extensionPath, '.github/templates/REVIEW-TEMPLATE.md');
+ const archReviewTemplateExists = fileExists(root, extensionPath, '.github/templates/ARCH-REVIEW-TEMPLATE.md');
  const reviewSurfaceExists = readText(path.join(root, 'vscode-extension', 'src', 'views', 'statusTreeProvider.ts')).includes('showAgentNativeReview');
 
  const actionMatches = capabilityMap.filter((entry) => entry.userSurface && entry.agentSurface).length;
@@ -236,11 +241,11 @@ function buildChecks(root: string, capabilityMap: ReadonlyArray<CapabilityMapEnt
    id: 'workspace-parity',
    pillar: 'workspace-parity',
    label: 'Shared workspace expectations',
-   passed: workspaceGuideExists && reviewTemplateExists && reviewSurfaceExists,
-   score: [workspaceGuideExists, reviewTemplateExists, reviewSurfaceExists].filter(Boolean).length * 10,
-   maxScore: 30,
-   severity: workspaceGuideExists && reviewTemplateExists && reviewSurfaceExists ? 'none' : 'medium',
-   summary: 'Review guidance, the review template, and an attached review surface should point to the same repo-local contract.',
+   passed: workspaceGuideExists && reviewTemplateExists && archReviewTemplateExists && reviewSurfaceExists,
+   score: [workspaceGuideExists, reviewTemplateExists, archReviewTemplateExists, reviewSurfaceExists].filter(Boolean).length * 10,
+   maxScore: 40,
+   severity: workspaceGuideExists && reviewTemplateExists && archReviewTemplateExists && reviewSurfaceExists ? 'none' : 'medium',
+   summary: 'Review guidance, code review template, architecture review template, and an attached review surface should all point to the same repo-local contract.',
   },
  ];
 }
@@ -258,10 +263,13 @@ function getDominantSeverity(checks: ReadonlyArray<ParityCheckResult>): ReviewSe
  return 'none';
 }
 
-export function evaluateAgentNativeReviewFromRoot(root: string): AgentNativeReviewReport {
+export function evaluateAgentNativeReviewFromRoot(
+ root: string,
+ extensionPath?: string,
+): AgentNativeReviewReport {
  const signals = readSignals(root);
  const capabilityMap = buildCapabilityMap(signals);
- const checks = buildChecks(root, capabilityMap);
+ const checks = buildChecks(root, extensionPath, capabilityMap);
  const earned = checks.reduce((sum, check) => sum + check.score, 0);
  const max = checks.reduce((sum, check) => sum + check.maxScore, 0);
  const percent = max === 0 ? 0 : Math.round((earned / max) * 100);

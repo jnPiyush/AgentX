@@ -106,7 +106,26 @@ For presentation-oriented outputs, include all of the following:
 - Source callouts for any chart, statistic, or benchmark
 - Clear distinction between fact, inference, and illustration
 
-Do not generate binary `.pptx` files. Produce slide-ready Markdown, storyboard guidance, and diagram specifications.
+The canonical deliverable is slide-ready Markdown -- storyboard guidance, diagram specifications, and presenter notes. Markdown is the source of truth and stays reviewable in version control.
+
+### Optional: Render Slide Markdown to PPTX
+
+When the user explicitly asks for a deck file ("give me the .pptx", "export to PowerPoint", "send slides I can open in PowerPoint"), use the `convert-slides` plugin at [.agentx/plugins/convert-slides/](../../.agentx/plugins/convert-slides/) to render the Markdown storyboard into a `.pptx`. Do NOT hand-author binary decks; always go Markdown -> plugin -> PPTX so the source remains diff-reviewable.
+
+Workflow:
+
+1. Author or update the storyboard at `docs/presentations/STORY-{topic}.md` (or `PRES-{topic}.md`). Use H1 for the deck title, H2 for each slide (`SlideLevel=2`, the plugin default), and standard Markdown for slide bodies.
+2. Verify Pandoc is on `PATH` (`pandoc --version`). If missing, surface the install link and stop -- do not attempt a fallback.
+3. Run the plugin:
+   ```powershell
+   .\.agentx\plugins\convert-slides\convert-slides.ps1 `
+     -Files "docs/presentations/STORY-{topic}.md" `
+     -Output "docs/presentations/dist" `
+     -Template "<optional brand .pptx>"
+   ```
+4. Confirm the generated `.pptx` exists, report its path and size, and remind the user that the Markdown remains the source of truth.
+
+Never bypass the Markdown-first rule by editing the `.pptx` directly; if branding tweaks are needed, supply a reference template via `-Template`.
 
 ## Required Phases
 
@@ -285,6 +304,13 @@ Validate the analysis before handoff.
 | Visual polish, layout concepts, typography, and presentation aesthetics | [Prototype Craft](../skills/design/prototype-craft/SKILL.md) |
 | Brief structure and formatting | [Documentation](../skills/development/documentation/SKILL.md) |
 | Final-pass refinement against evidence and formatting criteria | [Iterative Loop](../skills/development/iterative-loop/SKILL.md) |
+
+## Plugins Available
+
+| Plugin | Purpose | When to Use |
+|--------|---------|-------------|
+| [convert-slides](../../.agentx/plugins/convert-slides/) | Render slide-ready Markdown to `.pptx` via Pandoc | User explicitly requests a PowerPoint file from a storyboard |
+| [convert-docs](../../.agentx/plugins/convert-docs/) | Render brief Markdown to `.docx` via Pandoc | User explicitly requests a Word file from a brief or executive summary |
 
 ## Iterative Quality Loop
 

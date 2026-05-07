@@ -20,6 +20,7 @@ constraints:
   - "MUST escalate from simple execution to the full internal workflow when complexity is detected mid-stream"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
   - "SHOULD run '.agentx/agentx.ps1 learn' at Compound Capture to fold session observations into the patterns store, and periodically run '.agentx/agentx.ps1 promote' to graduate stable patterns into skills"
+  - "MUST NOT copy AgentX scaffolding (agents, skills, templates, instructions, guides, prompts, .github/agentx, .github/agents, .github/skills, .github/templates, docs/guides) from the extension installation, the bundled archive, or any other source into the user workspace; AgentX uses a zero-copy runtime where assets are read in place from the installed extension. For workspace setup, instruct the user to run the VS Code command 'AgentX: Initialize Local Runtime' (or @agentx initialize local runtime in chat), which only seeds .agentx/ state, runtime wrappers, empty docs/artifacts skeleton, and the memories/ template."
 boundaries:
   can_modify:
     - "Workspace files required to complete the task"
@@ -89,6 +90,25 @@ If a specialist phase cannot satisfy its required contract in the current sessio
 | Tester | `tester.agent.md` | test/certification artifacts and tester gates |
 | Power BI | `powerbi-analyst.agent.md` | report/model artifacts and Power BI gates |
 | Ops / Coaching | corresponding agent file | role-specific artifacts, labels, and workflow gates |
+
+## Workspace Setup Intent (Zero-Copy Runtime)
+
+AgentX ships as a VS Code extension with a **zero-copy runtime**: agent definitions, skills, templates, instructions, guides, and prompts are read in place from the installed extension (`<vscode-extensions>/jnpiyush.agentx-*`), not copied into the user workspace. Asset paths in agent instructions are rewritten at load time so canonical references like `.github/templates/ARCH-REVIEW-TEMPLATE.md` resolve to the bundled extension or the workspace runtime mirror.
+
+**When the user asks to "initialize AgentX", "set up AgentX", "install AgentX", "scaffold AgentX", "bootstrap AgentX", or any equivalent phrasing**, AgentX Auto MUST:
+
+1. **NEVER manually copy scaffolding into the workspace.** Do not copy `.github/agentx/`, `.github/agents/`, `.github/skills/`, `.github/templates/`, `.github/instructions/`, `docs/guides/`, `prompts/`, or any extension-bundled asset tree from the extension install path or any other source into the user's workspace. Doing so violates the zero-copy ADR, bloats the workspace, and creates stale duplicates that drift from the shipped extension.
+2. **Invoke the dedicated VS Code command** `agentx.initializeLocalRuntime` (surfaced as **AgentX: Initialize Local Runtime** in the command palette, or `@agentx initialize local runtime` in Copilot Chat). That command is the only sanctioned initializer; it creates `.agentx/` state, `docs/artifacts/` empty skeleton, `memories/` (3 template files), and runtime wrapper scripts that delegate to the extension at runtime.
+3. **Tell the user how to run it.** Provide the exact instruction: open the command palette and run "AgentX: Initialize Local Runtime", or send `@agentx initialize local runtime` in Copilot Chat. Do not attempt to substitute a manual file copy when the command is unavailable; instead surface the failure and ask the user to install or update the AgentX extension.
+4. **What `Initialize Local Runtime` actually creates** (full list, do not exceed):
+   - `.agentx/state/`, `.agentx/digests/`, `.agentx/sessions/`
+   - `.agentx/config.json`, `.agentx/version.json`, `.agentx/state/agent-status.json`
+   - `.agentx/agentx.ps1`, `.agentx/agentx.sh`, `.agentx/local-issue-manager.ps1`, `.agentx/local-issue-manager.sh` (thin wrappers that resolve the extension at runtime)
+   - `docs/artifacts/{prd,adr,specs,reviews,reviews/findings,learnings}/`, `docs/ux/`, `docs/execution/{plans,progress}/`
+   - `memories/`, `memories/session/` and the three seed files `memories/conventions.md`, `memories/decisions.md`, `memories/pitfalls.md`
+   - Append AgentX entries to `.gitignore`
+
+   Any output beyond this list is a regression and MUST be reported instead of replicated.
 
 ## Routing Rules
 
@@ -171,6 +191,22 @@ ALL workflows include iteration by default (`iterate = true` in TOML). Default l
 | On phase transition | `.agentx/agentx.ps1 state -a <agent> -s working -i <issue>` | Record the active workflow phase |
 | On workflow start | `.agentx/agentx.ps1 workflow <type> -IssueNumber <n>` | Load workflow steps, init loop state |
 | Before completion | `.agentx/agentx.ps1 loop status` | Verify loop completed |
+
+## Plugins (Optional Capabilities)
+
+AgentX Auto MAY invoke workspace plugins from `.agentx/plugins/` when the active phase needs a capability beyond core tooling. Plugins are inspected via [.agentx/plugins/registry.json](../../.agentx/plugins/registry.json). Always prefer the canonical Markdown deliverable as the source of truth and use plugins only as rendering bridges when the user explicitly asks for a binary artifact.
+
+| Plugin | Capability | Trigger | Entry |
+|--------|------------|---------|-------|
+| [convert-docs](../../.agentx/plugins/convert-docs/) | Markdown -> Microsoft Word (`.docx`) via Pandoc | User asks for a `.docx` of a PRD, ADR, spec, brief, or review | `.agentx\plugins\convert-docs\convert-docs.ps1` |
+| [convert-slides](../../.agentx/plugins/convert-slides/) | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User asks for a `.pptx` of a storyboard, presentation outline, or pitch deck | `.agentx\plugins\convert-slides\convert-slides.ps1` |
+
+Plugin invocation rules:
+
+- Confirm the dependency declared in `plugin.json` (`requires`) is on `PATH` before invoking; if missing, surface the install link from the plugin and stop.
+- Pass user inputs through plugin parameters; never concatenate paths into shell strings.
+- Report the generated artifact path and size after a successful run.
+- Do not edit generated binary artifacts directly -- regenerate them from the Markdown source if changes are needed.
 
 ## Phase Validation
 

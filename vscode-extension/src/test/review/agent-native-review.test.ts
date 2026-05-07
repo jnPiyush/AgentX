@@ -22,6 +22,7 @@ describe('agent-native review', () => {
     writeFile(tmpDir, workflowGuidePath, '# Knowledge And Review Workflows\n');
     writeFile(tmpDir, 'docs/guides/WORKFLOW-PILOT-ORDER.md', '# Pilot Order\n');
     writeFile(tmpDir, '.github/templates/REVIEW-TEMPLATE.md', '# Review\n');
+    writeFile(tmpDir, '.github/templates/ARCH-REVIEW-TEMPLATE.md', '# Arch Review\n');
     writeFile(tmpDir, 'docs/artifacts/learnings/LEARNING-165.md', '# Learning\n');
     writeFile(tmpDir, 'docs/artifacts/reviews/findings/FINDING-165-001.md', '# Finding\n');
     writeFile(tmpDir, 'vscode-extension/package.json', JSON.stringify({
@@ -113,15 +114,27 @@ describe('agent-native review', () => {
     assert.ok(markdown.includes(`Reference guide: ${workflowGuidePath}`));
   });
 
-  it('accepts hidden runtime review assets when visible defaults are absent', () => {
+  it('accepts bundled review assets when visible defaults are absent', () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-review-ext-'));
     fs.rmSync(path.join(tmpDir, 'docs', 'guides'), { recursive: true, force: true });
     fs.rmSync(path.join(tmpDir, '.github', 'templates'), { recursive: true, force: true });
-    writeFile(tmpDir, '.agentx/runtime/docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md', '# Runtime Guide\n');
-    writeFile(tmpDir, '.agentx/runtime/templates/REVIEW-TEMPLATE.md', '# Runtime Review\n');
+    const bundledRoot = path.join(extensionPath, '.github', 'agentx');
+    fs.mkdirSync(path.join(bundledRoot, 'docs', 'guides'), { recursive: true });
+    fs.mkdirSync(path.join(bundledRoot, 'templates'), { recursive: true });
+    fs.writeFileSync(path.join(bundledRoot, 'docs', 'guides', 'KNOWLEDGE-REVIEW-WORKFLOWS.md'), '# Bundled Guide\n');
+    fs.writeFileSync(path.join(bundledRoot, 'templates', 'REVIEW-TEMPLATE.md'), '# Bundled Review\n');
+    fs.writeFileSync(path.join(bundledRoot, 'templates', 'ARCH-REVIEW-TEMPLATE.md'), '# Bundled Arch Review\n');
 
-    const report = evaluateAgentNativeReview({ workspaceRoot: tmpDir } as any);
+    try {
+      const report = evaluateAgentNativeReview({
+        workspaceRoot: tmpDir,
+        extensionContext: { extensionPath },
+      } as any);
 
-    assert.ok(report);
-    assert.equal(report?.dominantSeverity, 'none');
+      assert.ok(report);
+      assert.equal(report?.dominantSeverity, 'none');
+    } finally {
+      fs.rmSync(extensionPath, { recursive: true, force: true });
+    }
   });
 });
