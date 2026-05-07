@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.46"><img src="https://img.shields.io/badge/Version-8.4.46-0EA5E9?style=for-the-badge" alt="Version 8.4.46"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.47"><img src="https://img.shields.io/badge/Version-8.4.47-0EA5E9?style=for-the-badge" alt="Version 8.4.47"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -298,21 +298,12 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.46
+## New In 8.4.47
 
-- Reviewer agent template-enforcement fix: hard frontmatter constraint requiring `read_file` of canonical templates first; explicit path + section list for `.github/templates/ARCH-REVIEW-TEMPLATE.md` in the standalone arch-review path; Code Review Step 6 strengthened with same read-first rule. Closes the gap where the Reviewer could draft an architecture review without picking up `ARCH-REVIEW-TEMPLATE.md`.
-- New `BACKLOG-TEMPLATE.md` (15 sections: Vision, Hierarchy, RICE/WSJF/MoSCoW/Kano/ICE prioritization, INVEST, DoR/DoD, Active Backlog tables, Capacity, Dependencies, Release Plan, Flow Metrics, State Machine, Refinement Cadence, Local Mode Wiring) with 7 Mermaid diagrams; live AgentX backlog instantiated at `docs/artifacts/backlog/BACKLOG.md`
-- All 12 existing templates upgraded with rich industry-best-practice content and 47 new Mermaid diagrams across PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, and Evidence Summary
-- Template registry expanded from 12 to 13 templates in `AGENTS.md` and `docs/artifacts/README.md`
-- New `product/prd` skill usable by non-PM agents (Engineer, Architect, Auto agents) to author PRDs with a requirements-quality catalogue, vague-vs-concrete examples, and an AI-contract worked example
-- New `diagrams/diagram-as-code` skill covering Mermaid, PlantUML, C4/Structurizr, Graphviz DOT, and draw.io, with first-class support for cross-functional swimlanes, BPMN patterns, and Visio (`.vsdx`) interop via draw.io export
-- New internal `diagram-specialist` sub-agent wired into Architect, Engineer, PM, UX Designer, Data Scientist, Reviewer, and Power BI Analyst for producing review-ready swimlane and architecture diagrams
-- Model Council mechanism: opt-in multi-perspective review pack (Analyst, Strategist, Skeptic) for PRD scope, ADR options, AI design, code review, and research, completed agent-internally without involving the user
-- `karpathy-guidelines` skill wired into Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist to reduce common LLM coding pitfalls
-- Summary-based context compaction in the runner while keeping the existing 70% threshold trigger
-- Per-agent `reasoning` frontmatter support in the runner, including Copilot-mode request options for GPT-5 and Claude 4.6 mappings
-- User-visible `Clarification Discussion` blocks in VS Code chat so inter-agent clarification stays visible during execution
-- Lightweight cross-role validation checkpoints between Architect and PM, plus conditional Engineer alignment with Architect or Data Scientist
+- New `convert-slides` plugin (`.agentx/plugins/convert-slides/`) renders slide-ready Markdown storyboards into Microsoft PowerPoint (`.pptx`) via Pandoc, with PowerShell and Bash entry points and registry integration alongside the existing `convert-docs` plugin
+- AgentX Auto agent gains a new `Plugins (Optional Capabilities)` section documenting both `convert-docs` (MD->DOCX) and `convert-slides` (MD->PPTX) with trigger conditions, entry paths, and invocation rules (PATH precheck, no shell concatenation, regenerate-from-Markdown discipline)
+- Consulting Research agent replaces its absolute "do not generate `.pptx`" rule with a Markdown-first plugin-bridge workflow: storyboard Markdown remains the source of truth and is rendered via `convert-slides` only when the user explicitly asks for a deck file
+- Zero-copy asset rewrite regression fix in the VS Code extension: agent context loader, runtime asset utilities, and agent-native review surface now correctly resolve canonical template references through the bundled extension path again (16/16 tests green)
 
 ## Main Repo Areas
 
