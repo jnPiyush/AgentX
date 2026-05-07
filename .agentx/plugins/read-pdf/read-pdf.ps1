@@ -61,16 +61,17 @@ foreach ($p in $fileList) {
       Remove-Item $tmp -Force -ErrorAction SilentlyContinue
       $pages = $raw -split "`f"
       $md = @("# $($item.BaseName)", '')
-      $pageCount = 0
       for ($i = 0; $i -lt $pages.Count; $i++) {
+        $physPage = $i + 1
         $pg = $pages[$i].TrimEnd()
-        if (-not $pg) { continue }
-        $pageCount++
-        $md += "## Page $pageCount"
+        $md += "## Page $physPage"
         $md += ''
-        $md += ($pg -split "`r?`n" | ForEach-Object { $_.TrimEnd() } | Where-Object { $_ })
-        $md += ''
+        if ($pg) {
+          $md += ($pg -split "`r?`n" | ForEach-Object { $_.TrimEnd() } | Where-Object { $_ })
+          $md += ''
+        }
       }
+      $pageCount = $pages.Count
       Set-Content -Path $out -Value ($md -join "`n") -Encoding UTF8
       $sizeKb = [math]::Round(((Get-Item $out).Length / 1KB), 1)
       Write-Host "  $($c.g)[PASS]$($c.n) $($item.Name) -> $($item.BaseName).md ($pageCount pages, $sizeKb KB)"

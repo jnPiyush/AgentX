@@ -36,7 +36,7 @@ AgentX plugin that converts Microsoft Word, OpenDocument, RTF, HTML, and EPUB do
 
 ## Supported Inputs
 
-`.docx`, `.doc`, `.odt`, `.rtf`, `.html`, `.htm`, `.epub`
+`.docx`, `.odt`, `.rtf`, `.html`, `.htm`, `.epub`
 
 ## Output
 

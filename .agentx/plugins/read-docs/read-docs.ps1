@@ -25,7 +25,7 @@ try {
   exit 1
 }
 
-$supported = @('.docx', '.doc', '.odt', '.rtf', '.html', '.htm', '.epub')
+$supported = @('.docx', '.odt', '.rtf', '.html', '.htm', '.epub')
 $total = 0
 $errors = 0
 
@@ -41,7 +41,6 @@ function Read-OneFile {
 
   $fromFmt = switch ($File.Extension.ToLower()) {
     '.docx' { 'docx' }
-    '.doc'  { 'docx' }
     '.odt'  { 'odt' }
     '.rtf'  { 'rtf' }
     '.html' { 'html' }
