@@ -8,6 +8,8 @@ import { registerInitializeLocalRuntimeCommand } from '../../commands/initialize
 import { runInitializeLocalRuntimeCommand } from '../../commands/initializeCommandInternals';
 import {
   copyBundledRuntimeAssets,
+  copyCopilotCliAssets,
+  COPILOT_CLI_ASSET_DIRS,
   ESSENTIAL_DIRS,
   ESSENTIAL_FILES,
   RUNTIME_ASSET_DIRS,
@@ -148,6 +150,39 @@ describe('runInitializeLocalRuntimeCommand', () => {
 
     assert.ok(!RUNTIME_DIRS.includes('docs/architecture'));
     assert.ok(!RUNTIME_DIRS.includes('.agentx/runtime'));
+  });
+
+  it('should seed Copilot-CLI-friendly .github asset trees from the extension bundle', () => {
+    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
+
+    try {
+      for (const asset of COPILOT_CLI_ASSET_DIRS) {
+        const sourceDir = path.join(extensionRoot, asset.source);
+        fs.mkdirSync(sourceDir, { recursive: true });
+        fs.writeFileSync(path.join(sourceDir, 'marker.md'), `bundled ${asset.destination}\n`, 'utf8');
+      }
+
+      const customAgentsDir = path.join(workspaceRoot, '.github', 'agents');
+      fs.mkdirSync(customAgentsDir, { recursive: true });
+      fs.writeFileSync(path.join(customAgentsDir, 'marker.md'), 'user override\n', 'utf8');
+
+      copyCopilotCliAssets(extensionRoot, workspaceRoot, false);
+
+      assert.strictEqual(
+        fs.readFileSync(path.join(customAgentsDir, 'marker.md'), 'utf8'),
+        'user override\n',
+      );
+
+      for (const asset of COPILOT_CLI_ASSET_DIRS.filter((a) => a.destination !== path.join('.github', 'agents'))) {
+        const seeded = path.join(workspaceRoot, asset.destination, 'marker.md');
+        assert.ok(fs.existsSync(seeded), `expected ${asset.destination}/marker.md to exist`);
+        assert.strictEqual(fs.readFileSync(seeded, 'utf8'), `bundled ${asset.destination}\n`);
+      }
+    } finally {
+      fs.rmSync(extensionRoot, { recursive: true, force: true });
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
   });
 
   it('should seed starter memory files without overwriting existing workspace memory', () => {

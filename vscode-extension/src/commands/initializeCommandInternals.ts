@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
 import {
   copyBundledRuntimeAssets,
+  copyCopilotCliAssets,
   mergeGitignore,
   promptWorkspaceRoot,
   readJsonWithComments,
@@ -58,6 +59,11 @@ export async function runInitializeLocalRuntimeCommand(
      fs.mkdirSync(path.join(root, dir), { recursive: true });
     }
     copyBundledRuntimeAssets(context.extensionUri.fsPath, root);
+    // Seed workspace .github/ with AgentX assets so GitHub Copilot CLI and
+    // other repo-context tools can discover agents, skills, instructions,
+    // prompts, templates, and schemas. Always skip-existing to preserve any
+    // workspace overrides the user has committed to .github/.
+    copyCopilotCliAssets(context.extensionUri.fsPath, root, false);
     writeWorkspaceRuntimeWrappers(context.extensionUri.fsPath, root);
 
     const versionFile = path.join(root, '.agentx', 'version.json');

@@ -17,6 +17,28 @@ export const RUNTIME_ASSET_DIRS: Array<{ source: string; destination: string }> 
   },
 ];
 
+/**
+ * Asset trees copied from the extension bundle into the user workspace `.github/`
+ * so external tools (notably GitHub Copilot CLI) that only read the workspace's
+ * `.github/` folder can discover AgentX agents, skills, instructions, prompts,
+ * templates, and schemas. The VS Code extension itself still resolves these
+ * via `runtimeAssets.resolveAssetPath` -- this copy is purely for surfaces
+ * that have no extension-context awareness.
+ *
+ * NOTE: scripts/ (score-output.ps1, validate-handoff.ps1) are referenced by bundled agents but
+ * are NOT seeded here because they are not included in the extension bundle's .github/agentx/ tree.
+ * Users who need those scripts can install them via packs/agentx-copilot-cli/install.ps1 -Force.
+ * Adding scripts/ seeding requires a separate bundle-packaging change.
+ */
+export const COPILOT_CLI_ASSET_DIRS: Array<{ source: string; destination: string }> = [
+  { source: path.join('.github', 'agentx', 'agents'), destination: path.join('.github', 'agents') },
+  { source: path.join('.github', 'agentx', 'skills'), destination: path.join('.github', 'skills') },
+  { source: path.join('.github', 'agentx', 'instructions'), destination: path.join('.github', 'instructions') },
+  { source: path.join('.github', 'agentx', 'prompts'), destination: path.join('.github', 'prompts') },
+  { source: path.join('.github', 'agentx', 'templates'), destination: path.join('.github', 'templates') },
+  { source: path.join('.github', 'agentx', 'schemas'), destination: path.join('.github', 'schemas') },
+];
+
 const WORKSPACE_WRAPPER_FILES = [
   { relativePath: path.join('.agentx', 'agentx.ps1'), entryFile: 'agentx.ps1', shell: 'pwsh' as const },
   { relativePath: path.join('.agentx', 'local-issue-manager.ps1'), entryFile: 'local-issue-manager.ps1', shell: 'pwsh' as const },
@@ -141,6 +163,26 @@ export function copyBundledRuntimeAssets(extensionRoot: string, workspaceRoot: s
       path.join(extensionRoot, asset.source),
       path.join(workspaceRoot, asset.destination),
       false,
+    );
+  }
+}
+
+/**
+ * Seed workspace `.github/{agents,skills,instructions,prompts,templates,schemas}`
+ * from the extension bundle. Required by GitHub Copilot CLI and any other surface
+ * that only reads the repo-local `.github/` folder for context. Always uses
+ * overwrite=false to preserve any workspace overrides the user has committed to .github/.
+ */
+export function copyCopilotCliAssets(
+  extensionRoot: string,
+  workspaceRoot: string,
+  overwrite = false,
+): void {
+  for (const asset of COPILOT_CLI_ASSET_DIRS) {
+    copyDirRecursive(
+      path.join(extensionRoot, asset.source),
+      path.join(workspaceRoot, asset.destination),
+      overwrite,
     );
   }
 }
