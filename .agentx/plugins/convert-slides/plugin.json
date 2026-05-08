@@ -4,8 +4,8 @@
   "id": "convert-slides",
   "publisher": "jnpiyush",
   "displayName": "Convert Slides",
-  "version": "1.0.0",
-  "description": "Convert Markdown documents to Microsoft PowerPoint (PPTX) using Pandoc.",
+  "version": "1.1.0",
+  "description": "Convert Markdown documents to Microsoft PowerPoint (PPTX) using Pandoc, with automatic Mermaid diagram rendering when mermaid-cli is available.",
   "author": "AgentX",
   "license": "Apache-2.0",
   "homepage": "https://github.com/jnPiyush/agentx-plugin-convert-slides",
@@ -43,10 +43,28 @@
       "description": "Heading level that starts a new slide (default: 2)",
       "required": false,
       "default": "2"
+    },
+    {
+      "name": "MermaidTheme",
+      "description": "Mermaid theme for diagram rendering: default, dark, forest, neutral (default: default)",
+      "required": false,
+      "default": "default"
+    },
+    {
+      "name": "MermaidWidth",
+      "description": "Pixel width for rendered Mermaid PNGs (default: 1600 for 16:9 slides)",
+      "required": false,
+      "default": "1600"
+    },
+    {
+      "name": "NoMermaid",
+      "description": "Switch: skip Mermaid pre-rendering even if mermaid-cli is installed",
+      "required": false
     }
   ],
   "requires": ["pandoc"],
-  "tags": ["docs", "conversion", "powerpoint", "pptx", "slides", "pandoc"],
+  "optionalRequires": ["mermaid-cli"],
+  "tags": ["docs", "conversion", "powerpoint", "pptx", "slides", "pandoc", "mermaid", "diagrams"],
   "maturity": "stable",
   "engines": {
     "agentx": "^8.4.0"

@@ -1,11 +1,18 @@
 # convert-slides
 
-AgentX plugin that converts Markdown documents to Microsoft PowerPoint (PPTX) using [Pandoc](https://pandoc.org).
+AgentX plugin that converts Markdown documents to Microsoft PowerPoint (PPTX) using [Pandoc](https://pandoc.org), with automatic Mermaid diagram rendering.
+
+## What's new in 1.1.0
+
+- Fenced ```` ```mermaid ```` blocks are pre-rendered to high-resolution PNGs and embedded in slides when [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) is on `PATH`.
+- AgentX templates that already use Mermaid (ADR, Spec, Roadmap, Arch-Review) now produce decks with real diagrams instead of code blocks.
+- Graceful degradation: without `mmdc` the plugin behaves exactly as 1.0.0 (diagrams render as code).
 
 ## Requirements
 
 - PowerShell 7+
 - Pandoc on `PATH` (`pandoc --version`)
+- Optional: [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) for diagram rendering -- `npm install -g @mermaid-js/mermaid-cli`
 
 ## Usage
 
@@ -46,6 +53,24 @@ Bash wrapper:
 | `Template` | (none) | Path to a reference `.pptx` for branding/layout |
 | `Output` | (alongside source) | Destination folder for `.pptx` files |
 | `SlideLevel` | `2` | Heading level that begins a new slide (Pandoc `--slide-level`) |
+| `MermaidTheme` | `default` | Mermaid theme: `default`, `dark`, `forest`, `neutral` |
+| `MermaidWidth` | `1600` | Pixel width for rendered Mermaid PNGs (sized for 16:9 slides) |
+| `NoMermaid` | (off) | Switch: skip Mermaid rendering even if `mmdc` is installed |
+
+## Mermaid diagrams
+
+Any fenced ```` ```mermaid ```` block in your Markdown is rendered to a transparent PNG and embedded as a slide image. When `mmdc` is missing the plugin emits a warning and falls back to Pandoc's default code-block rendering -- nothing is lost, just visually flatter.
+
+```markdown
+## Architecture
+
+```mermaid
+graph LR
+  A[Client] --> B[API Gateway]
+  B --> C[Auth Service]
+  B --> D[Data Service]
+```
+```
 
 ## Slide Structure
 

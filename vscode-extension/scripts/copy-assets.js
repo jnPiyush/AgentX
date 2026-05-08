@@ -15,6 +15,7 @@ const githubDirs = ['agents', 'instructions', 'prompts', 'skills', 'templates', 
 // Directories from repo root to bundle
 const rootDirs = [
     { src: path.join(repoRoot, '.agentx', 'templates'), dest: path.join('.agentx', 'templates') },
+    { src: path.join(repoRoot, '.agentx', 'plugins'), dest: path.join('.agentx', 'plugins') },
     { src: path.join(repoRoot, 'packs'), dest: 'packs' },
 ];
 

@@ -4,8 +4,8 @@
   "id": "convert-docs",
   "publisher": "jnpiyush",
   "displayName": "Convert Docs",
-  "version": "1.0.0",
-  "description": "Convert Markdown documents to Microsoft Word (DOCX) using Pandoc.",
+  "version": "1.1.0",
+  "description": "Convert Markdown documents to Microsoft Word (DOCX) using Pandoc, with automatic Mermaid diagram rendering when mermaid-cli is available.",
   "author": "AgentX",
   "license": "Apache-2.0",
   "homepage": "https://github.com/jnPiyush/agentx-plugin-convert-docs",
@@ -27,10 +27,28 @@
       "name": "Template",
       "description": "Path to a DOCX reference template for styling (optional)",
       "required": false
+    },
+    {
+      "name": "MermaidTheme",
+      "description": "Mermaid theme for diagram rendering: default, dark, forest, neutral (default: default)",
+      "required": false,
+      "default": "default"
+    },
+    {
+      "name": "MermaidWidth",
+      "description": "Pixel width for rendered Mermaid PNGs (default: 1400)",
+      "required": false,
+      "default": "1400"
+    },
+    {
+      "name": "NoMermaid",
+      "description": "Switch: skip Mermaid pre-rendering even if mermaid-cli is installed",
+      "required": false
     }
   ],
   "requires": ["pandoc"],
-  "tags": ["docs", "conversion", "word", "docx", "pandoc"],
+  "optionalRequires": ["mermaid-cli"],
+  "tags": ["docs", "conversion", "word", "docx", "pandoc", "mermaid", "diagrams"],
   "maturity": "stable",
   "engines": {
     "agentx": "^8.4.0"

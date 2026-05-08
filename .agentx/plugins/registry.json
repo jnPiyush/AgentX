@@ -6,15 +6,17 @@
       "publisher": "jnpiyush",
       "pluginId": "convert-docs",
       "displayName": "Convert Docs",
-      "description": "Convert Markdown documents to Microsoft Word (DOCX) using Pandoc.",
-      "latestVersion": "1.0.0",
+      "description": "Convert Markdown to Microsoft Word (DOCX) using Pandoc, with automatic Mermaid diagram rendering when mermaid-cli is installed.",
+      "latestVersion": "1.1.0",
       "maturity": "stable",
       "capabilities": [
         "tool"
       ],
       "tags": [
         "docs",
-        "conversion"
+        "conversion",
+        "mermaid",
+        "diagrams"
       ],
       "releases": [
         {
@@ -32,8 +34,8 @@
       "publisher": "jnpiyush",
       "pluginId": "convert-slides",
       "displayName": "Convert Slides",
-      "description": "Convert Markdown documents to Microsoft PowerPoint (PPTX) using Pandoc.",
-      "latestVersion": "1.0.0",
+      "description": "Convert Markdown to Microsoft PowerPoint (PPTX) using Pandoc, with automatic Mermaid diagram rendering when mermaid-cli is installed.",
+      "latestVersion": "1.1.0",
       "maturity": "stable",
       "capabilities": [
         "tool"
@@ -43,7 +45,9 @@
         "conversion",
         "powerpoint",
         "pptx",
-        "slides"
+        "slides",
+        "mermaid",
+        "diagrams"
       ],
       "releases": [
         {
