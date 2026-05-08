@@ -82,3 +82,8 @@ build/
 
 .vercel
 
+
+# Office temp lock files
+~$*.docx
+~$*.xlsx
+~$*.pptx
