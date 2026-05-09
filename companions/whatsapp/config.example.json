@@ -1,0 +1,19 @@
+{
+    "allowedNumbers": ["14155551234"],
+    "repoPath": "C:/Piyush - Personal/GenAI/AgentX",
+    "cliRelativePath": ".agentx/agentx.ps1",
+    "defaultAgent": "engineer",
+    "commandTimeoutMs": 600000,
+    "maxOutputChars": 6000,
+
+    "openaiApiKey": "sk-...",
+    "whisperModel": "whisper-1",
+    "whisperLanguage": "en",
+    "voiceAutoExecute": true,
+
+    "notifications": {
+        "enabled": true,
+        "targets": ["14155551234"],
+        "events": ["started", "iteration", "complete", "status"]
+    }
+}

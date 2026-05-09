@@ -1,0 +1,19 @@
+{
+  "name": "agentx-whatsapp-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WhatsApp companion that controls AgentX running on your desktop via the local CLI.",
+  "main": "src/bot.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/bot.js",
+    "start:debug": "cross-env DEBUG=agentx:* node src/bot.js"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.23.0"
+  }
+}
