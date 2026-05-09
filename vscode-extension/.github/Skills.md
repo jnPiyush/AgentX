@@ -64,6 +64,8 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 | **C / Systems Programming** | [C](agentx/skills/languages/c/SKILL.md), [Security](agentx/skills/architecture/security/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Code Review](agentx/skills/development/code-review/SKILL.md) |
 | **C++ / Native Applications** | [C++](agentx/skills/languages/cpp/SKILL.md), [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Code Review](agentx/skills/development/code-review/SKILL.md) |
 | **UX/UI Design** | [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](agentx/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Frontend/UI](agentx/skills/design/frontend-ui/SKILL.md) |
+| **UX Prototype Validation (a11y, axe, WCAG)** | [Browser Automation](agentx/skills/development/browser-automation/SKILL.md), [UX/UI Design](agentx/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md) |
+| **Web Research / JS-Rendered Page Reading** | [Browser Automation](agentx/skills/development/browser-automation/SKILL.md), [Documentation](agentx/skills/development/documentation/SKILL.md) |
 | **E2E Testing** | [E2E Testing](agentx/skills/testing/e2e-testing/SKILL.md), [Test Automation](agentx/skills/testing/test-automation/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Integration Testing** | [Integration Testing](agentx/skills/testing/integration-testing/SKILL.md), [API Design](agentx/skills/architecture/api-design/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Performance Testing** | [Performance Testing](agentx/skills/testing/performance-testing/SKILL.md), [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md), [Test Automation](agentx/skills/testing/test-automation/SKILL.md) |
@@ -105,6 +107,7 @@ dev|scrub|agentx/skills/development/scrub/SKILL.md|comment-rot,obvious-restate,a
 dev|token-optimizer|agentx/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
 dev|code-hygiene|agentx/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
 dev|karpathy-guidelines|agentx/skills/development/karpathy-guidelines/SKILL.md|think-before-coding,simplicity,surgical-changes,goal-driven,LLM-pitfalls,assumptions
+dev|browser-automation|agentx/skills/development/browser-automation/SKILL.md|playwright,browser,a11y,axe,prototype-validation,web-research,screenshot,wcag
 lang|csharp|agentx/skills/languages/csharp/SKILL.md|C#,.NET,EF-Core,DI,async/await,xUnit
 lang|c|agentx/skills/languages/c/SKILL.md|C,C23,pointers,embedded,systems,FFI,ABI,memory
 lang|cpp|agentx/skills/languages/cpp/SKILL.md|C++,C++23,RAII,templates,span,string_view,native

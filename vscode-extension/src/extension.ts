@@ -91,26 +91,37 @@ export function activate(context: vscode.ExtensionContext) {
  const configWatcher = vscode.workspace.createFileSystemWatcher('**/.agentx/config.json');
  const mcpWatcher = vscode.workspace.createFileSystemWatcher('**/.vscode/mcp.json');
  const gitConfigWatcher = vscode.workspace.createFileSystemWatcher('**/.git/config');
- const onConfigChange = () => {
-  agentxContext.invalidateCache();
-  clearInstructionCache();
-    updateUiState().then(() => {
-     if (agentxContext.workspaceRoot) {
-        refreshSidebarProviders(sidebarProviders);
-     }
-    });
+
+ // Debounce refreshes. .git/config in particular is touched frequently by
+ // VS Code's git extension, gh, and Copilot, which would otherwise trigger
+ // a refresh storm (each refresh re-runs `gh issue list`, ~2-5s).
+ let refreshTimer: NodeJS.Timeout | undefined;
+ const scheduleRefresh = () => {
+  if (refreshTimer) { clearTimeout(refreshTimer); }
+  refreshTimer = setTimeout(() => {
+   refreshTimer = undefined;
+   agentxContext.invalidateCache();
+   clearInstructionCache();
+   void updateUiState().then(() => {
+    if (agentxContext.workspaceRoot) {
+     refreshSidebarProviders(sidebarProviders);
+    }
+   });
+  }, 500);
  };
+
+ // Only refresh on git remote changes when adapter detection actually
+ // produced a change. syncAutoAdapters already triggers its own refresh
+ // (see line ~57) when it detects a new GitHub/ADO remote.
  const onGitRemoteChange = () => {
-   void syncAutoAdapters()
-    .catch(() => { /* ignore */ })
-    .finally(() => onConfigChange());
+  void syncAutoAdapters().catch(() => { /* ignore */ });
  };
- configWatcher.onDidCreate(onConfigChange);
- configWatcher.onDidChange(onConfigChange);
- configWatcher.onDidDelete(onConfigChange);
- mcpWatcher.onDidCreate(onConfigChange);
- mcpWatcher.onDidChange(onConfigChange);
- mcpWatcher.onDidDelete(onConfigChange);
+ configWatcher.onDidCreate(scheduleRefresh);
+ configWatcher.onDidChange(scheduleRefresh);
+ configWatcher.onDidDelete(scheduleRefresh);
+ mcpWatcher.onDidCreate(scheduleRefresh);
+ mcpWatcher.onDidChange(scheduleRefresh);
+ mcpWatcher.onDidDelete(scheduleRefresh);
  gitConfigWatcher.onDidCreate(onGitRemoteChange);
  gitConfigWatcher.onDidChange(onGitRemoteChange);
  gitConfigWatcher.onDidDelete(onGitRemoteChange);
