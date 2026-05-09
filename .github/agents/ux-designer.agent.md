@@ -144,6 +144,7 @@ Before handoff, verify with fresh eyes:
 - [ ] Mobile, tablet, desktop variants specified
 - [ ] WCAG 2.1 AA: keyboard navigation, screen reader friendly, sufficient contrast
 - [ ] HTML/CSS prototypes are interactive, responsive, and accessible
+- [ ] **Browser-validated**: prototype rendered through the [Browser Automation](../skills/development/browser-automation/SKILL.md) skill; axe-core audit attached to UX deliverable; HIGH/MEDIUM findings resolved or explicitly waived in Open Questions
 - [ ] **Design research documented**: UX Spec includes Design Research section with sources and rationale
 - [ ] **Competitive audit completed**: 3+ products studied; findings documented with strengths and weaknesses
 - [ ] **Pattern selection evidence-based**: Chosen patterns grounded in established research, not personal preference
@@ -176,6 +177,7 @@ Update Status to `Ready` in GitHub Projects.
 | Wireframing, prototyping, methodology | [UX/UI Design](../skills/design/ux-ui-design/SKILL.md) |
 | Visual polish, color, typography, CSS craft | [Prototype Craft](../skills/design/prototype-craft/SKILL.md) |
 | HTML5, CSS3, responsive patterns | [Frontend/UI](../skills/design/frontend-ui/SKILL.md) |
+| Validate prototype in a real browser (axe-core a11y, WCAG 2.1 AA, keyboard nav, screenshots) | [Browser Automation](../skills/development/browser-automation/SKILL.md) |
 | React components (if applicable) | [React](../skills/languages/react/SKILL.md) |
 
 ## Enforcement Gates

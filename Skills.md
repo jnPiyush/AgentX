@@ -64,6 +64,8 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 | **C / Systems Programming** | [C](.github/skills/languages/c/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **C++ / Native Applications** | [C++](.github/skills/languages/cpp/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **UX/UI Design** | [Design System Reasoning](.github/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](.github/skills/design/prototype-craft/SKILL.md), [Frontend/UI](.github/skills/design/frontend-ui/SKILL.md) |
+| **UX Prototype Validation (a11y, axe, WCAG)** | [Browser Automation](.github/skills/development/browser-automation/SKILL.md), [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](.github/skills/design/prototype-craft/SKILL.md) |
+| **Web Research / JS-Rendered Page Reading** | [Browser Automation](.github/skills/development/browser-automation/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
 | **E2E Testing** | [E2E Testing](.github/skills/testing/e2e-testing/SKILL.md), [Test Automation](.github/skills/testing/test-automation/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Integration Testing** | [Integration Testing](.github/skills/testing/integration-testing/SKILL.md), [API Design](.github/skills/architecture/api-design/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Performance Testing** | [Performance Testing](.github/skills/testing/performance-testing/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Test Automation](.github/skills/testing/test-automation/SKILL.md) |
@@ -105,6 +107,7 @@ dev|scrub|.github/skills/development/scrub/SKILL.md|comment-rot,obvious-restate,
 dev|token-optimizer|.github/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
 dev|code-hygiene|.github/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
 dev|karpathy-guidelines|.github/skills/development/karpathy-guidelines/SKILL.md|think-before-coding,simplicity,surgical-changes,goal-driven,LLM-pitfalls,assumptions
+dev|browser-automation|.github/skills/development/browser-automation/SKILL.md|playwright,browser,a11y,axe,prototype-validation,web-research,screenshot,wcag
 lang|csharp|.github/skills/languages/csharp/SKILL.md|C#,.NET,EF-Core,DI,async/await,xUnit
 lang|c|.github/skills/languages/c/SKILL.md|C,C23,pointers,embedded,systems,FFI,ABI,memory
 lang|cpp|.github/skills/languages/cpp/SKILL.md|C++,C++23,RAII,templates,span,string_view,native
