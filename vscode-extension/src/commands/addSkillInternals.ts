@@ -5,10 +5,16 @@ import { SkillScaffoldDetails } from './scaffoldGeneration';
 const CATEGORY_OPTIONS = [
   'ai-systems',
   'architecture',
-  'cloud',
+  'data',
   'design',
   'development',
+  'diagrams',
+  'domain',
+  'infrastructure',
+  'languages',
   'operations',
+  'product',
+  'testing',
 ];
 
 export async function promptSkillDetails(): Promise<SkillScaffoldDetails | undefined> {

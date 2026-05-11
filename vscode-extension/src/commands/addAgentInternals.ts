@@ -5,18 +5,25 @@ import { AgentScaffoldDetails } from './scaffoldGeneration';
 export type AgentDetails = AgentScaffoldDetails;
 
 const MODEL_OPTIONS = [
+  { label: 'Claude Sonnet 4.6 (copilot)', value: 'Claude Sonnet 4.6 (copilot)' },
+  { label: 'Claude Opus 4 (copilot)', value: 'Claude Opus 4 (copilot)' },
   { label: 'GPT-4.1', value: 'gpt-4.1' },
-  { label: 'Claude Sonnet 4', value: 'claude-sonnet-4' },
-  { label: 'Claude Opus 4', value: 'claude-opus-4' },
-  { label: 'o4-mini', value: 'o4-mini' },
   { label: 'GPT-4o', value: 'gpt-4o' },
+  { label: 'GPT-5 (copilot)', value: 'GPT-5 (copilot)' },
+  { label: 'o4-mini', value: 'o4-mini' },
 ];
 
 const ROLE_OPTIONS = [
-  { label: 'Engineer', description: 'Code implementation and testing' },
-  { label: 'Researcher', description: 'Research and documentation' },
+  { label: 'Engineer', description: 'Code implementation, tests, quality loop' },
+  { label: 'Architect', description: 'ADRs, tech specs, design decisions' },
+  { label: 'Reviewer', description: 'Code and architecture review' },
+  { label: 'Product Manager', description: 'PRDs, backlog, product strategy' },
+  { label: 'UX Designer', description: 'Wireframes, prototypes, accessibility' },
+  { label: 'Researcher', description: 'Research, analysis, documentation' },
   { label: 'Analyst', description: 'Data analysis and reporting' },
-  { label: 'Designer', description: 'UX/UI design and prototyping' },
+  { label: 'DevOps', description: 'CI/CD, infrastructure, deployment' },
+  { label: 'Tester', description: 'Test design, certification, QA' },
+  { label: 'Data Scientist', description: 'ML pipelines, evals, drift monitoring' },
   { label: 'Custom', description: 'Define your own role' },
 ];
 

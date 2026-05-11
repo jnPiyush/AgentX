@@ -59,11 +59,19 @@ export async function runInitializeLocalRuntimeCommand(
      fs.mkdirSync(path.join(root, dir), { recursive: true });
     }
     copyBundledRuntimeAssets(context.extensionUri.fsPath, root);
-    // Seed workspace .github/ with AgentX assets so GitHub Copilot CLI and
-    // other repo-context tools can discover agents, skills, instructions,
-    // prompts, templates, and schemas. Always skip-existing to preserve any
-    // workspace overrides the user has committed to .github/.
-    copyCopilotCliAssets(context.extensionUri.fsPath, root, false);
+    // Optionally seed workspace .github/ with AgentX assets for non-VS-Code
+    // surfaces (e.g. GitHub Copilot CLI) that need repo-local discovery of
+    // agents/skills/instructions/prompts/templates/schemas. VS Code chat,
+    // commands, and the AgentX runtime resolve these from the extension bundle
+    // via runtimeAssets.resolveAssetPath, so the seed is opt-in.
+    // Setting: agentx.seedRepoLocalAssets (default false). Always skip-existing
+    // to preserve any workspace overrides the user has committed to .github/.
+    const seedRepoLocalAssets = vscode.workspace
+      .getConfiguration('agentx')
+      .get<boolean>('seedRepoLocalAssets', false);
+    if (seedRepoLocalAssets) {
+      copyCopilotCliAssets(context.extensionUri.fsPath, root, false);
+    }
     writeWorkspaceRuntimeWrappers(context.extensionUri.fsPath, root);
 
     const versionFile = path.join(root, '.agentx', 'version.json');

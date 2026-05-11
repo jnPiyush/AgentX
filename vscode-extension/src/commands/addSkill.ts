@@ -72,6 +72,18 @@ export function registerAddSkillCommand(
         return;
       }
 
+      // Scaffold canonical skill substructure (per Skills.md): scripts/, references/, assets/
+      // with .gitkeep placeholders so the layout is discoverable immediately.
+      for (const sub of ['scripts', 'references', 'assets']) {
+        try {
+          const subDir = path.join(outputDir, sub);
+          fs.mkdirSync(subDir, { recursive: true });
+          fs.writeFileSync(path.join(subDir, '.gitkeep'), '', 'utf8');
+        } catch {
+          // non-fatal: SKILL.md is the deliverable; subdirs are conveniences
+        }
+      }
+
       const doc = await vscode.workspace.openTextDocument(targetPath);
       await vscode.window.showTextDocument(doc);
       vscode.window.showInformationMessage(
