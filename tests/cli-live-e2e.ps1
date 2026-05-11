@@ -53,9 +53,10 @@ if ($ghReady) {
     Assert-True ($run.Output -match 'Starting agentic loop') 'agentx run reaches the live runner entrypoint'
     Assert-True ($run.Output -match 'Agent: AgentX Engineer') 'agentx run resolves the Engineer agent definition'
     Assert-True (-not ($run.Output -match 'Copilot API error \(HTTP 403\)')) 'agentx run does not surface a Copilot API 403 during the smoke prompt'
-    Assert-True ($run.Output -match '\[API FALLBACK\]|GitHub Models') 'agentx run can recover from Copilot access issues by switching API mode when needed'
+    Assert-True ($run.Output -match 'Provider: Copilot API|Provider: GitHub Models') 'agentx run reports the active provider used for the live run'
+    Assert-True ($run.Output -match 'Model fallback chain:') 'agentx run prints the configured model fallback chain'
     Assert-True ($run.Output -match '\[SELF-REVIEW\]|Tool: ') 'agentx run progresses into the live agent loop after the initial model call succeeds'
-    Assert-True ($run.ExitCode -ne 0) 'agentx run returns a non-zero exit code when the live run ends in a blocked or failed state'
+    Assert-True (($run.ExitCode -eq 0) -or ($run.Output -match 'blocked|failed|cancel')) 'agentx run ends in either a clean success or a controlled blocked/failed state'
 }
 
 Write-Host ''

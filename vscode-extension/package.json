@@ -60,6 +60,12 @@
         "icon": "$(plug)"
       },
       {
+        "command": "agentx.initializeCli",
+        "title": "Initialize CLI",
+        "category": "AgentX",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "agentx.addRemoteAdapter",
         "title": "Add Remote Adapter",
         "category": "AgentX",
@@ -1014,6 +1020,17 @@
           },
           "default": [],
           "description": "List of companion extension IDs for which the install prompt has been permanently dismissed."
+        },
+        "agentx.seedRepoLocalAssets": {
+          "type": "boolean",
+          "default": false,
+          "description": "When Initialize Local Runtime runs, also copy bundled agents, skills, instructions, prompts, templates, and schemas into the workspace .github/ folder. Required only for non-VS-Code surfaces (e.g. GitHub Copilot CLI) that need repo-local discovery. VS Code chat, commands, and the AgentX runtime resolve these assets from the extension bundle and do not need this seed. Default: false (zero-copy)."
+        },
+        "agentx.cliAssetMode": {
+          "type": "string",
+          "enum": ["copy", "symlink"],
+          "default": "copy",
+          "description": "Default mode used by 'AgentX: Initialize CLI'. 'copy' duplicates bundled assets into .github/ (team-friendly, committable). 'symlink' creates directory junctions/symlinks pointing at the installed extension bundle (zero-copy, single-user; .gitignore'd; auto-refreshed when the bundle moves on extension upgrade)."
         }
       }
     }

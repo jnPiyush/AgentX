@@ -187,6 +187,199 @@ export function copyCopilotCliAssets(
   }
 }
 
+// --- CLI asset symlink mode --------------------------------------------------
+
+export type CliAssetMode = 'copy' | 'symlink';
+
+export interface CliAssetState {
+  mode: CliAssetMode;
+  extensionRoot: string;
+  destinations: string[]; // relative to workspace root
+  updatedAt: string;
+}
+
+export const CLI_ASSET_STATE_FILE = path.join('.agentx', 'cli-asset-state.json');
+
+export function readCliAssetState(workspaceRoot: string): CliAssetState | undefined {
+  const statePath = path.join(workspaceRoot, CLI_ASSET_STATE_FILE);
+  if (!fs.existsSync(statePath)) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(statePath, 'utf-8')) as CliAssetState;
+  } catch {
+    return undefined;
+  }
+}
+
+export function writeCliAssetState(workspaceRoot: string, state: CliAssetState): void {
+  const statePath = path.join(workspaceRoot, CLI_ASSET_STATE_FILE);
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf-8');
+}
+
+function symlinkType(): 'junction' | 'dir' {
+  return process.platform === 'win32' ? 'junction' : 'dir';
+}
+
+function isSymlink(p: string): boolean {
+  try {
+    return fs.lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function targetExists(linkPath: string): boolean {
+  try {
+    fs.statSync(linkPath); // follows the link
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Create directory symlinks (NTFS junctions on Windows) so the workspace
+ * `.github/{agents,skills,...}` paths resolve into the installed extension
+ * bundle without copying bytes. Skips destinations that already exist as a
+ * real directory or file (preserves user content). Stale symlinks are
+ * recreated against the supplied extensionRoot.
+ *
+ * Returns lists of destinations (workspace-relative) by outcome.
+ */
+export function createCopilotCliSymlinks(
+  extensionRoot: string,
+  workspaceRoot: string,
+): { linked: string[]; refreshed: string[]; skipped: string[] } {
+  const linked: string[] = [];
+  const refreshed: string[] = [];
+  const skipped: string[] = [];
+
+  for (const asset of COPILOT_CLI_ASSET_DIRS) {
+    const target = path.join(extensionRoot, asset.source);
+    const linkPath = path.join(workspaceRoot, asset.destination);
+
+    if (!fs.existsSync(target)) {
+      skipped.push(asset.destination);
+      continue;
+    }
+
+    const linkExists = fs.existsSync(linkPath) || isSymlink(linkPath);
+    if (linkExists) {
+      if (!isSymlink(linkPath)) {
+        // Real directory or file -- never destroy user content.
+        skipped.push(asset.destination);
+        continue;
+      }
+      try {
+        fs.unlinkSync(linkPath);
+      } catch {
+        skipped.push(asset.destination);
+        continue;
+      }
+      try {
+        fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+        fs.symlinkSync(target, linkPath, symlinkType());
+        refreshed.push(asset.destination);
+      } catch {
+        skipped.push(asset.destination);
+      }
+      continue;
+    }
+
+    try {
+      fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+      fs.symlinkSync(target, linkPath, symlinkType());
+      linked.push(asset.destination);
+    } catch {
+      skipped.push(asset.destination);
+    }
+  }
+
+  return { linked, refreshed, skipped };
+}
+
+/**
+ * Re-validate previously created CLI symlinks. Recreates any link whose
+ * target no longer exists (e.g. the extension version folder changed after
+ * an upgrade). Leaves real directories alone.
+ */
+export function refreshCopilotCliSymlinks(
+  extensionRoot: string,
+  workspaceRoot: string,
+): { refreshed: string[]; stillValid: string[]; skipped: string[] } {
+  const refreshed: string[] = [];
+  const stillValid: string[] = [];
+  const skipped: string[] = [];
+
+  for (const asset of COPILOT_CLI_ASSET_DIRS) {
+    const linkPath = path.join(workspaceRoot, asset.destination);
+    if (!isSymlink(linkPath)) {
+      if (fs.existsSync(linkPath)) {
+        skipped.push(asset.destination);
+      }
+      continue;
+    }
+
+    if (targetExists(linkPath)) {
+      stillValid.push(asset.destination);
+      continue;
+    }
+
+    const target = path.join(extensionRoot, asset.source);
+    if (!fs.existsSync(target)) {
+      skipped.push(asset.destination);
+      continue;
+    }
+
+    try {
+      fs.unlinkSync(linkPath);
+      fs.symlinkSync(target, linkPath, symlinkType());
+      refreshed.push(asset.destination);
+    } catch {
+      skipped.push(asset.destination);
+    }
+  }
+
+  return { refreshed, stillValid, skipped };
+}
+
+/**
+ * Append AgentX CLI symlink destinations to `.gitignore` under a dedicated
+ * marker block so the symlinks themselves are not committed.
+ */
+export function appendCliSymlinksToGitignore(workspaceRoot: string): void {
+  const markerStart = '# --- AgentX CLI symlinks (auto-generated, do not edit this block) ---';
+  const markerEnd = '# --- /AgentX CLI symlinks ---';
+  const entries = COPILOT_CLI_ASSET_DIRS.map(
+    (a) => '/' + toPosixPath(a.destination),
+  );
+
+  const gitignorePath = path.join(workspaceRoot, '.gitignore');
+  let existing = '';
+  if (fs.existsSync(gitignorePath)) {
+    existing = fs.readFileSync(gitignorePath, 'utf-8');
+  }
+
+  const block = [markerStart, ...entries, markerEnd].join('\n');
+
+  if (existing.includes(markerStart)) {
+    const before = existing.substring(0, existing.indexOf(markerStart));
+    const afterIndex = existing.indexOf(markerEnd);
+    const after = afterIndex >= 0 ? existing.substring(afterIndex + markerEnd.length) : '';
+    fs.writeFileSync(
+      gitignorePath,
+      (before.trimEnd() + '\n\n' + block + after).trimStart(),
+      'utf-8',
+    );
+    return;
+  }
+
+  const appended = '\n\n' + block + '\n';
+  fs.writeFileSync(gitignorePath, existing.trimEnd() + appended, 'utf-8');
+}
+
 function toPosixPath(filePath: string): string {
   return filePath.replace(/\\/g, '/');
 }

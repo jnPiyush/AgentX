@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
 import { registerInitializeLocalRuntimeCommand } from './initialize';
+import { registerInitializeCliCommand } from './initializeCli';
 import { registerAddRemoteAdapterCommand } from './adapters';
 import { registerAddLlmAdapterCommand } from './llmAdapters';
 import { registerAddPluginCommand } from './plugins';
@@ -26,6 +27,7 @@ export function registerAgentXCommands(
  agentx: AgentXContext,
 ): void {
  registerInitializeLocalRuntimeCommand(context, agentx);
+ registerInitializeCliCommand(context, agentx);
  registerAddRemoteAdapterCommand(context, agentx);
  registerAddLlmAdapterCommand(context, agentx);
  registerAddPluginCommand(context, agentx);

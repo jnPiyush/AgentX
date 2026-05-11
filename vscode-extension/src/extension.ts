@@ -10,6 +10,7 @@ import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
 import { runSetupWizard } from './commands/setupWizard';
 import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from './commands/adaptersCommandInternals';
+import { readCliAssetState, refreshCopilotCliSymlinks } from './commands/initializeInternals';
 import { silentVersionSync } from './utils/versionChecker';
 import { checkCompanionExtensions } from './utils/companionExtensions';
 import { getQualityStateDisplay } from './utils/loopStateChecker';
@@ -136,6 +137,19 @@ export function activate(context: vscode.ExtensionContext) {
 
  // Check companion extensions are installed (non-blocking)
  checkCompanionExtensions(agentxContext.workspaceRoot).catch(() => { /* ignore */ });
+
+ // Refresh CLI symlinks if the workspace was initialized in symlink mode.
+ // The extension version folder changes on upgrade, so any stale junctions
+ // need to be re-pointed at the current bundle.
+ try {
+  const wsRoot = agentxContext.workspaceRoot;
+  if (wsRoot) {
+   const cliState = readCliAssetState(wsRoot);
+   if (cliState && cliState.mode === 'symlink') {
+    refreshCopilotCliSymlinks(context.extensionUri.fsPath, wsRoot);
+   }
+  }
+ } catch { /* non-fatal */ }
 
  // Set initial context flags
  void syncAutoAdapters()
