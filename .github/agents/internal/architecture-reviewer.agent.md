@@ -126,6 +126,7 @@ Before evaluating dimensions, verify the artifacts exist and meet AgentX baselin
 6. Tech Spec contains diagrams (Mermaid, PlantUML, or referenced images)
 7. Tech Spec contains **zero code examples** (Architect zero-code policy)
 8. For `needs:ai` issues, Tech Spec contains a Data Scientist alignment note
+9. Platform approach (pro-code vs low-code vs hybrid) is stated with rationale and at least one alternative considered -- REQUIRED for `needs:ai` or any AI/ML behavior, recommended otherwise. See the [Low-Code vs Pro-Code skill](../../skills/architecture/low-code-vs-pro-code/SKILL.md). The review report MUST fill the "Platform Approach" section of the template; missing analysis on an AI-bearing solution is a HIGH finding (or CRITICAL if a clear platform mismatch is evident).
 
 If any gate fails, return `BLOCKED` with the specific gap rather than proceeding to the 12 dimensions.
 

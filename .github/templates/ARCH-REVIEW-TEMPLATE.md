@@ -94,6 +94,7 @@ Use the **AgentX Workflow** gate table when the review is for an issue with PRD/
 | 6 | Tech Spec contains diagrams (Mermaid / PlantUML / referenced images) | PASS / FAIL | |
 | 7 | Tech Spec contains zero code examples (Architect zero-code policy) | PASS / FAIL | |
 | 8 | Data Scientist alignment present (only when `needs:ai`) | PASS / FAIL / N/A | |
+| 9 | Platform approach (pro-code vs low-code vs hybrid) stated with rationale -- REQUIRED for `needs:ai`, recommended otherwise | PASS / FAIL / N/A | |
 
 ### Standalone Document Mode (Human-Written Doc / ADR / Spec / RFC)
 
@@ -128,6 +129,27 @@ Mark each dimension `OK` (no findings), `Issues` (one or more findings), or `N/A
 | 10 | Maintainability and Evolution | | | Conway's Law, ISO/IEC 25010 (maintainability) |
 | 11 | Compliance and Governance | | | TOGAF, NIST CSF |
 | 12 | Risks and Trade-offs | | | ATAM (sensitivity points, tradeoffs) |
+
+---
+
+## Platform Approach (Pro-Code vs Low-Code vs Hybrid)
+
+> REQUIRED for AI-bearing solutions (`needs:ai`, AI behavior in PRD/ADR, or AI/ML in the selected architecture). Recommended for all other solutions; mark `N/A` only when the decision is genuinely trivial (e.g., a one-file bug fix in an existing pro-code codebase).
+>
+> Reference: [Low-Code vs Pro-Code skill](../skills/architecture/low-code-vs-pro-code/SKILL.md) (12-dimension rubric, anti-patterns, hybrid patterns).
+
+| Field | Value |
+|-------|-------|
+| Selected approach | `Pro-Code` / `Low-Code` / `Hybrid` |
+| Platforms / SDKs named in ADR/Spec | `<e.g. Copilot Studio + Foundry Agent Framework, or Power Apps + Azure Functions, or pure Python + LangGraph>` |
+| Alternatives considered in ADR | `<list at least one alternative on the opposite side of the spectrum, or state why none was viable>` |
+| Hybrid boundary (if Hybrid) | `<which capabilities sit in low-code vs pro-code, and the contract between them>` |
+| Rubric score summary | `<e.g. complexity 4/5, integration 3/5, governance 2/5; full table in ADR section X>` |
+| Anti-patterns checked | `<list anti-patterns evaluated from the skill; note any that apply>` |
+| AI-specific call-out (if `needs:ai`) | `<e.g. Copilot Studio for conversation orchestration; Foundry + Agent Framework for tools/RAG/evals; or pure pro-code with rationale>` |
+| Decision risk | `Low` / `Medium` / `High` (with one-line rationale) |
+
+Findings raised from this section MUST be recorded in the Findings list below with `Dimension: 10 (Maintainability and Evolution)` or `Dimension: 12 (Risks and Trade-offs)` and reference this section.
 
 ---
 
