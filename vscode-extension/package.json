@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "AgentX - Multi-Agent Orchestration",
   "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
-  "version": "8.4.49",
+  "version": "8.4.50",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -784,6 +784,9 @@
         "path": "./.github/agentx/skills/architecture/database/SKILL.md"
       },
       {
+        "path": "./.github/agentx/skills/architecture/low-code-vs-pro-code/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/architecture/performance/SKILL.md"
       },
       {
@@ -1028,7 +1031,10 @@
         },
         "agentx.cliAssetMode": {
           "type": "string",
-          "enum": ["copy", "symlink"],
+          "enum": [
+            "copy",
+            "symlink"
+          ],
           "default": "copy",
           "description": "Default mode used by 'AgentX: Initialize CLI'. 'copy' duplicates bundled assets into .github/ (team-friendly, committable). 'symlink' creates directory junctions/symlinks pointing at the installed extension bundle (zero-copy, single-user; .gitignore'd; auto-refreshed when the bundle moves on extension upgrade)."
         }

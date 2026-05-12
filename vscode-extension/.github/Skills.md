@@ -23,6 +23,7 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 | Task | Load These Skills |
 |------|-------------------|
 | **API Implementation** | [API Design](agentx/skills/architecture/api-design/SKILL.md), [Security](agentx/skills/architecture/security/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Documentation](agentx/skills/development/documentation/SKILL.md) |
+| **Low-Code vs Pro-Code Review** | [Low-Code vs Pro-Code](agentx/skills/architecture/low-code-vs-pro-code/SKILL.md), [Core Principles](agentx/skills/architecture/core-principles/SKILL.md), [Security](agentx/skills/architecture/security/SKILL.md), [Documentation](agentx/skills/development/documentation/SKILL.md) |
 | **Database Changes** | [Database](agentx/skills/architecture/database/SKILL.md), [Security](agentx/skills/architecture/security/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Security Feature** | [Security](agentx/skills/architecture/security/SKILL.md), [Configuration](agentx/skills/development/configuration/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Type Safety](agentx/skills/development/type-safety/SKILL.md) |
 | **Bug Fix** | [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Error Handling](agentx/skills/development/error-handling/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Logging](agentx/skills/development/logging-monitoring/SKILL.md) |
@@ -92,6 +93,7 @@ arch|security|agentx/skills/architecture/security/SKILL.md|validation,SQL-inject
 arch|performance|agentx/skills/architecture/performance/SKILL.md|async,caching,profiling,scaling,load-balancing
 arch|database|agentx/skills/architecture/database/SKILL.md|migrations,indexing,transactions,pooling
 arch|api-design|agentx/skills/architecture/api-design/SKILL.md|REST,versioning,rate-limiting,OpenAPI
+arch|low-code-vs-pro-code|agentx/skills/architecture/low-code-vs-pro-code/SKILL.md|low-code,no-code,pro-code,Copilot-Studio,Power-Platform,Power-Apps,Power-Automate,Logic-Apps,citizen-developer,platform-selection,hybrid,Foundry,Agent-Framework
 dev|testing|agentx/skills/development/testing/SKILL.md|unit,integration,e2e,coverage-80%,pyramid-70/20/10
 dev|error-handling|agentx/skills/development/error-handling/SKILL.md|exceptions,retry,circuit-breaker
 dev|configuration|agentx/skills/development/configuration/SKILL.md|env-vars,feature-flags,secrets-mgmt
