@@ -23,6 +23,7 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 | Task | Load These Skills |
 |------|-------------------|
 | **API Implementation** | [API Design](.github/skills/architecture/api-design/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
+| **Low-Code vs Pro-Code Review** | [Low-Code vs Pro-Code](.github/skills/architecture/low-code-vs-pro-code/SKILL.md), [Core Principles](.github/skills/architecture/core-principles/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
 | **Database Changes** | [Database](.github/skills/architecture/database/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Security Feature** | [Security](.github/skills/architecture/security/SKILL.md), [Configuration](.github/skills/development/configuration/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Type Safety](.github/skills/development/type-safety/SKILL.md) |
 | **Bug Fix** | [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Error Handling](.github/skills/development/error-handling/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Logging](.github/skills/development/logging-monitoring/SKILL.md) |
@@ -92,6 +93,7 @@ arch|security|.github/skills/architecture/security/SKILL.md|validation,SQL-injec
 arch|performance|.github/skills/architecture/performance/SKILL.md|async,caching,profiling,scaling,load-balancing
 arch|database|.github/skills/architecture/database/SKILL.md|migrations,indexing,transactions,pooling
 arch|api-design|.github/skills/architecture/api-design/SKILL.md|REST,versioning,rate-limiting,OpenAPI
+arch|low-code-vs-pro-code|.github/skills/architecture/low-code-vs-pro-code/SKILL.md|low-code,no-code,pro-code,Copilot-Studio,Power-Platform,Power-Apps,Power-Automate,Logic-Apps,citizen-developer,platform-selection,hybrid,Foundry,Agent-Framework
 dev|testing|.github/skills/development/testing/SKILL.md|unit,integration,e2e,coverage-80%,pyramid-70/20/10
 dev|error-handling|.github/skills/development/error-handling/SKILL.md|exceptions,retry,circuit-breaker
 dev|configuration|.github/skills/development/configuration/SKILL.md|env-vars,feature-flags,secrets-mgmt

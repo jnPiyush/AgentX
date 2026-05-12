@@ -340,6 +340,7 @@ Update Status to `Ready` in GitHub Projects.
 | Think before coding, surface tradeoffs, simplicity bias | [Karpathy Guidelines](../skills/development/karpathy-guidelines/SKILL.md) |
 | API design, REST/GraphQL patterns | [API Design](../skills/architecture/api-design/SKILL.md) |
 | System design patterns | [Core Principles](../skills/architecture/core-principles/SKILL.md) |
+| Low-code vs pro-code platform selection | [Low-Code vs Pro-Code](../skills/architecture/low-code-vs-pro-code/SKILL.md) |
 | GenAI agent architecture | [AI Agent Development](../skills/ai-systems/ai-agent-development/SKILL.md) |
 | LLM evaluation and quality gates | [AI Evaluation](../skills/ai-systems/ai-evaluation/SKILL.md) |
 | RAG and retrieval patterns | [RAG Pipelines](../skills/ai-systems/rag-pipelines/SKILL.md) |

@@ -350,6 +350,7 @@ Before returning findings to the spawning agent:
 | Task | Skill |
 |------|-------|
 | Architecture principles and patterns | [Core Principles](../../skills/architecture/core-principles/SKILL.md) |
+| Low-code vs pro-code platform selection | [Low-Code vs Pro-Code](../../skills/architecture/low-code-vs-pro-code/SKILL.md) |
 | Security review and STRIDE | [Security](../../skills/architecture/security/SKILL.md) |
 | Performance and scalability | [Performance](../../skills/architecture/performance/SKILL.md) |
 | Data architecture and consistency | [Database](../../skills/architecture/database/SKILL.md) |
