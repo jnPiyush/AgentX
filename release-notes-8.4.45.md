@@ -20,7 +20,6 @@ First Marketplace-ready Preview of the AgentX Visual Studio extension. Reuses th
 
 ### Modified
 
-- **`.gitignore`** - Replaced narrow `.vs/CopilotSnapshots/` with broader `.vs/` block (was leaking IDE cache into staged diffs); added `.copilot-tracking/` so RPI/agent session state stays out of commits.
 - **`azure-pipelines.yml`** - Stages the `AgentX.VisualStudio.vsix` build artifact so the produced VSIX is downloadable from CI runs. Includes a commented signing stage prepared to plug in a code-signing cert.
 - **`vs-extension/AgentX.VisualStudio/AgentX.VisualStudio.csproj`** - Documents the optional signing properties (`SignVsix`, `VsixCertPath`, `VsixCertPassword`, `VsixTimestampUrl`) consumed by `Sign-Vsix.ps1`.
 - **`vs-extension/README.md`** - Adds a "Signing the VSIX" section documenting how to plug in a real cert.

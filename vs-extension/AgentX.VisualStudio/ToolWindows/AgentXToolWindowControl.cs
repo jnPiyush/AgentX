@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AgentX.VisualStudio.Services;
@@ -13,16 +15,33 @@ namespace AgentX.VisualStudio.ToolWindows;
 /// CLI, mirroring the surface that the VS Code sidebar exposes (status,
 /// workflows, loop, council, agents).
 /// </summary>
-internal sealed class AgentXToolWindowControl : RemoteUserControl
+internal sealed class AgentXToolWindowControl : RemoteUserControl, IDisposable
 {
     private readonly VisualStudioExtensibility _extensibility;
     private readonly AgentXOutput _output;
+    private readonly LoopStatusNotifier _loopNotifier = new();
+
+    // Live-refresh plumbing (H-4 fix). Watchers fire on workspace state file
+    // changes; the debounce timer collapses bursts (e.g. CLI rewrites
+    // loop-state.json several times during `loop iterate`) into a single
+    // RefreshAsync invocation 500 ms after the last write. Mirrors
+    // vscode-extension/src/extension.ts (FileSystemWatcher debounce of 500 ms).
+    private readonly object _watcherGate = new();
+    private readonly List<FileSystemWatcher> _watchers = new();
+    private System.Timers.Timer? _debounceTimer;
+    private string? _watchedRoot;
+    private bool _disposed;
 
     public AgentXToolWindowControl(VisualStudioExtensibility extensibility)
         : base(dataContext: new AgentXToolWindowViewModel())
     {
         _extensibility = extensibility;
         _output = new AgentXOutput(extensibility);
+
+        // Re-target watchers when the workspace root flips (H-3 fix). Resolver
+        // raises this event whenever ResolveAsync produces a different path
+        // than the previous call.
+        WorkspaceResolver.WorkspaceRootChanged += OnWorkspaceRootChanged;
 
         ViewModel.RefreshCommand = new AsyncRelayCommand(_ => RefreshAsync(CancellationToken.None));
 
@@ -111,6 +130,9 @@ internal sealed class AgentXToolWindowControl : RemoteUserControl
             }
 
             ViewModel.WorkspaceRoot = root;
+            // Install or re-target FileSystemWatchers on every successful resolve so
+            // the tool window auto-refreshes when CLI state changes (H-4 fix).
+            EnsureWatchers(root);
             var shell = await AgentXSettings.ReadShellAsync(_extensibility, cancellationToken).ConfigureAwait(false);
 
             // Use --json so we can render structured WPF lists. Each section keeps the legacy
@@ -144,6 +166,12 @@ internal sealed class AgentXToolWindowControl : RemoteUserControl
                 ? ar
                 : null;
             ViewModel.SetStructuredStatus(loopStatusModel, readyRows, agentRows);
+
+            // Maj-2: prompt on terminal loop transitions. Setting-gated; no-op when disabled.
+            var notifyEnabled = await AgentXSettings.ReadShowLoopStatusNotificationsAsync(_extensibility, cancellationToken)
+                .ConfigureAwait(false);
+            await _loopNotifier.UpdateAsync(_extensibility, loopStatusModel, notifyEnabled, cancellationToken)
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -208,4 +236,139 @@ internal sealed class AgentXToolWindowControl : RemoteUserControl
 
     private static string FallbackIfBlank(string? value, string fallback)
         => string.IsNullOrWhiteSpace(value) ? fallback : value!;
+
+    /// <summary>
+    /// Installs (or re-targets) <see cref="FileSystemWatcher"/> instances on the three
+    /// workspace state files the VS Code extension also watches:
+    /// <c>.agentx/config.json</c>, <c>.vscode/mcp.json</c>, and <c>.git/config</c>.
+    /// Each change triggers a debounced (500 ms) <see cref="RefreshAsync"/> so the
+    /// status badge, ready-issues, and agent-state views stay live without polling.
+    /// Idempotent: re-invoking with the same root is a no-op.
+    /// </summary>
+    private void EnsureWatchers(string root)
+    {
+        if (_disposed) return;
+        lock (_watcherGate)
+        {
+            if (string.Equals(_watchedRoot, root, StringComparison.OrdinalIgnoreCase) && _watchers.Count > 0)
+            {
+                return;
+            }
+
+            DisposeWatchersLocked();
+            _watchedRoot = root;
+
+            // Each watched file lives in a distinct subfolder, so we register one
+            // watcher per parent directory with a precise filter. NotifyFilter
+            // covers the rewrite patterns the CLI uses (atomic writes that
+            // create + rename, plus in-place edits via PowerShell Set-Content).
+            TryAddFileWatcher(Path.Combine(root, ".agentx"), "config.json");
+            TryAddFileWatcher(Path.Combine(root, ".agentx", "state"), "loop-state.json");
+            TryAddFileWatcher(Path.Combine(root, ".vscode"), "mcp.json");
+            TryAddFileWatcher(Path.Combine(root, ".git"), "config");
+
+            // Lazily create the debounce timer on first watcher install.
+            if (_debounceTimer is null)
+            {
+                _debounceTimer = new System.Timers.Timer(500) { AutoReset = false };
+                _debounceTimer.Elapsed += OnDebounceElapsed;
+            }
+        }
+    }
+
+    private void TryAddFileWatcher(string directory, string filter)
+    {
+        try
+        {
+            if (!Directory.Exists(directory)) return;
+            var watcher = new FileSystemWatcher(directory, filter)
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
+                             | NotifyFilters.FileName | NotifyFilters.CreationTime,
+                IncludeSubdirectories = false,
+            };
+            watcher.Changed += OnWatchedFileChanged;
+            watcher.Created += OnWatchedFileChanged;
+            watcher.Renamed += OnWatchedFileChanged;
+            watcher.Deleted += OnWatchedFileChanged;
+            watcher.EnableRaisingEvents = true;
+            _watchers.Add(watcher);
+        }
+        catch
+        {
+            // Swallow: watcher install failures must never crash the tool window.
+            // The user can still click Refresh manually.
+        }
+    }
+
+    private void OnWatchedFileChanged(object sender, FileSystemEventArgs e)
+    {
+        // Reset (debounce) so a burst of writes collapses into one refresh.
+        try { _debounceTimer?.Stop(); _debounceTimer?.Start(); }
+        catch { /* timer disposed during shutdown */ }
+    }
+
+    private void OnDebounceElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        if (_disposed) return;
+        // Fire-and-forget: RefreshAsync handles its own busy-state and never throws.
+        _ = RefreshAsync(CancellationToken.None);
+    }
+
+    private void OnWorkspaceRootChanged(object? sender, WorkspaceRootChangedEventArgs e)
+    {
+        // The next RefreshAsync will pick up the new root and call EnsureWatchers
+        // with the new path; explicitly clear watchers here so we do not keep
+        // firing on stale paths in the meantime.
+        if (_disposed) return;
+        lock (_watcherGate)
+        {
+            DisposeWatchersLocked();
+            _watchedRoot = null;
+        }
+        // Reset notifier so the new workspace re-arms transitions cleanly.
+        _loopNotifier.Reset();
+        _ = RefreshAsync(CancellationToken.None);
+    }
+
+    private void DisposeWatchersLocked()
+    {
+        foreach (var watcher in _watchers)
+        {
+            try
+            {
+                watcher.EnableRaisingEvents = false;
+                watcher.Changed -= OnWatchedFileChanged;
+                watcher.Created -= OnWatchedFileChanged;
+                watcher.Renamed -= OnWatchedFileChanged;
+                watcher.Deleted -= OnWatchedFileChanged;
+                watcher.Dispose();
+            }
+            catch { /* best-effort cleanup */ }
+        }
+        _watchers.Clear();
+    }
+
+    public new void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        WorkspaceResolver.WorkspaceRootChanged -= OnWorkspaceRootChanged;
+        lock (_watcherGate)
+        {
+            DisposeWatchersLocked();
+            try
+            {
+                if (_debounceTimer is not null)
+                {
+                    _debounceTimer.Stop();
+                    _debounceTimer.Elapsed -= OnDebounceElapsed;
+                    _debounceTimer.Dispose();
+                    _debounceTimer = null;
+                }
+            }
+            catch { /* timer already disposed */ }
+        }
+        base.Dispose();
+    }
 }

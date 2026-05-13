@@ -95,6 +95,24 @@ internal static class AgentXSettings
     };
 
     /// <summary>
+    /// Toggle for the Maj-2 loop-status notifier. When true (default), the
+    /// AgentX tool window posts a transient prompt when <c>.agentx/state/loop-state.json</c>
+    /// transitions into a terminal state (complete, blocked) so users do not
+    /// need to keep the tool window in the foreground. Mirrors the VS Code
+    /// status-bar item (`$(hubot) AgentX`) since the VS 17.14 out-of-process
+    /// SDK does not expose <c>IVsStatusbar</c>.
+    /// </summary>
+    [VisualStudioContribution]
+    public static Setting.Boolean ShowLoopStatusNotifications { get; } = new(
+        "showLoopStatusNotifications",
+        "%AgentX.Settings.ShowLoopStatusNotifications.DisplayName%",
+        Category,
+        defaultValue: true)
+    {
+        Description = "%AgentX.Settings.ShowLoopStatusNotifications.Description%",
+    };
+
+    /// <summary>
     /// Reads the <see cref="Shell"/> setting and returns the canonical value
     /// (one of <see cref="ShellAuto"/>, <see cref="ShellPwsh"/>, <see cref="ShellBash"/>).
     /// </summary>
@@ -166,6 +184,24 @@ internal static class AgentXSettings
         {
             var result = await extensibility.Settings()
                 .ReadEffectiveValueAsync(AutoRefresh, cancellationToken)
+                .ConfigureAwait(false);
+            return result.ValueOrDefault(defaultValue: true);
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    /// <summary>Reads <see cref="ShowLoopStatusNotifications"/> with a safe default of <c>true</c>.</summary>
+    public static async Task<bool> ReadShowLoopStatusNotificationsAsync(
+        VisualStudioExtensibility extensibility,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await extensibility.Settings()
+                .ReadEffectiveValueAsync(ShowLoopStatusNotifications, cancellationToken)
                 .ConfigureAwait(false);
             return result.ValueOrDefault(defaultValue: true);
         }

@@ -21,13 +21,28 @@
     <NoWarn>$(NoWarn);VSEXTPREVIEW_SETTINGS;VSEXTPREVIEW_OUTPUTWINDOW;VSEXTPREVIEW_TOOLWINDOWS;VSTHRD100</NoWarn>
     <!-- The build pipeline treats warnings as errors by default; the explicit NoWarn above keeps the preview surfaces from breaking the build. -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!--
+      Copilot Chat opt-in. Enable by passing `-p:EnableCopilotChat=true` to dotnet build,
+      OR by setting the property to `true` here. When enabled, the
+      Microsoft.VisualStudio.Extensibility.Copilot.Chat PackageReference (below) is
+      included AND the AGENTX_COPILOT_CHAT compilation symbol is defined, so
+      Chat/AgentXChatTool.cs compiles into the shipped DLL. This is gated by a flag
+      because the Copilot Chat extensibility package is preview-track and version
+      compatibility shifts across VS releases; the flag lets adopters opt in
+      without forking the csproj. See Chat/AgentXChatTool.cs for activation notes.
+    -->
+    <EnableCopilotChat Condition="'$(EnableCopilotChat)' == ''">false</EnableCopilotChat>
+    <DefineConstants Condition="'$(EnableCopilotChat)' == 'true'">$(DefineConstants);AGENTX_COPILOT_CHAT</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- VisualStudio.Extensibility (out-of-process, modern). Bump versions as the SDK ships. -->
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Sdk" Version="17.14.40608" />
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Build" Version="17.14.40608" />
-     <!--Optional: Copilot Chat extensibility. Uncomment when targeting VS 17.10+ Copilot Chat.--> 
+    <!-- Copilot Chat extensibility. Included only when EnableCopilotChat=true. -->
+    <PackageReference Include="Microsoft.VisualStudio.Extensibility.Copilot.Chat"
+                      Version="17.14.40608"
+                      Condition="'$(EnableCopilotChat)' == 'true'" />
   </ItemGroup>
 
   <ItemGroup>

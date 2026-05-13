@@ -1,15 +1,29 @@
-// Copilot Chat extensibility for Visual Studio is a preview/preview-track API.
-// This file is a stub that compiles only when the matching package is enabled
-// in the .csproj (PackageReference 'Microsoft.VisualStudio.Copilot.Extensibility').
+// Copilot Chat participant for the AgentX Visual Studio extension.
 //
-// When you opt in:
-//   1. Uncomment the PackageReference in AgentX.VisualStudio.csproj.
-//   2. Remove the '#if AGENTX_COPILOT_CHAT' guard below.
-//   3. Implement the tool surface using whichever attribute the SDK exposes
-//      (e.g. [VisualStudioContribution] on a ChatTool subclass).
+// This file compiles only when the AGENTX_COPILOT_CHAT compilation symbol is
+// defined. The symbol is gated by the <EnableCopilotChat> MSBuild property in
+// AgentX.VisualStudio.csproj (default: false). Enable the chat surface with:
 //
-// The tool simply delegates the user's prompt to `agentx loop iterate` and
-// returns the CLI output, mirroring how the VS Code chat participant works.
+//   dotnet build .\AgentX.VisualStudio.sln -c Release -p:EnableCopilotChat=true
+//
+// or set <EnableCopilotChat>true</EnableCopilotChat> in the csproj. When the
+// symbol is defined, the Microsoft.VisualStudio.Extensibility.Copilot.Chat
+// PackageReference is also brought in conditionally, exposing the
+// ChatTool / ChatToolConfiguration / ChatToolRequest surfaces used below.
+//
+// The tool routes a user's prompt through `agentx loop iterate -s <prompt>`,
+// mirroring how the VS Code chat participant `agentx.chat` integrates the same
+// CLI (see vscode-extension/src/chat/chatParticipant.ts).
+//
+// Behaviour parity with VS Code:
+//   * Activation guard: chat is registered only when the SDK package is
+//     available at compile time. The VS Code equivalent uses a runtime probe
+//     (`typeof vscode.chat?.createChatParticipant === 'function'`), which is
+//     not necessary here because the build-time gate already prevents
+//     reference errors.
+//   * Workspace resolution: shares WorkspaceResolver with the menu commands
+//     and tool window so the chat surface targets the same `.agentx` root the
+//     user sees in the AgentX panel.
 
 #if AGENTX_COPILOT_CHAT
 using System.Threading;
@@ -34,7 +48,7 @@ internal sealed class AgentXChatTool : ChatTool
         IChatToolContext context,
         CancellationToken cancellationToken)
     {
-        var configured = await Settings.AgentXSettings.RootPath.GetValueAsync(cancellationToken).ConfigureAwait(false);
+        var configured = await Settings.AgentXSettings.ReadRootPathAsync(this.Extensibility, cancellationToken).ConfigureAwait(false);
         var root = await WorkspaceResolver.ResolveAsync(this.Extensibility, configured, cancellationToken)
             .ConfigureAwait(false);
         if (root is null)
@@ -43,7 +57,7 @@ internal sealed class AgentXChatTool : ChatTool
         }
 
         var args = new[] { "loop", "iterate", "-s", request.Prompt };
-        var result = await AgentXCli.RunAsync(root, args, cancellationToken).ConfigureAwait(false);
+        var result = await AgentXCli.RunAsync(root, args, cancellationToken: cancellationToken).ConfigureAwait(false);
         return new ChatToolResult(result.Success ? result.StdOut : result.StdErr);
     }
 }

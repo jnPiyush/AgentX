@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Extensibility;
@@ -21,9 +22,18 @@ internal sealed class AgentXToolWindow : ToolWindow
         Title = "AgentX";
     }
 
+    // Solution Explorer's well-known tool window guid. ToolWindowPlacement.DockedTo(guid)
+    // is the only sidebar-style dock the VS 17.14 out-of-process SDK exposes; pure
+    // "DockedRight" is not surfaced. Docking next to Solution Explorer puts AgentX in
+    // the right sidebar by default and mirrors the VS Code activity-bar placement
+    // (`agentx-work` / `agentx-status` view containers). Users can redock or float;
+    // VS persists their choice per window layout.
+    private static readonly Guid SolutionExplorerToolWindowGuid =
+        new("3ae79031-e1bc-11d0-8f78-00a0c9110057");
+
     public override ToolWindowConfiguration ToolWindowConfiguration => new()
     {
-        Placement = ToolWindowPlacement.Floating,
+        Placement = ToolWindowPlacement.DockedTo(SolutionExplorerToolWindowGuid),
     };
 
     public override Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)

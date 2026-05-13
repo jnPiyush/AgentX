@@ -28,6 +28,9 @@
          (which fire VSEXT0004 on any non-extension project that transitively references them)
          into a plain xUnit test project. -->
     <Compile Include="..\AgentX.VisualStudio\Services\AgentXCliJson.cs" Link="Source\AgentXCliJson.cs" />
+    <Compile Include="..\AgentX.VisualStudio\Services\LoopStatusTransitionState.cs" Link="Source\LoopStatusTransitionState.cs" />
+    <Compile Include="..\AgentX.VisualStudio\Services\DependencyChecker.cs" Link="Source\DependencyChecker.cs" />
+    <Compile Include="..\AgentX.VisualStudio\Services\WorkspaceRootChangedEventArgs.cs" Link="Source\WorkspaceRootChangedEventArgs.cs" />
   </ItemGroup>
 
   <ItemGroup>

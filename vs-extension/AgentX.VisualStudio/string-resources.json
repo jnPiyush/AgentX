@@ -13,6 +13,7 @@
   "AgentX.LoopCancel.DisplayName": "AgentX: Loop Cancel",
   "AgentX.LoopRollback.DisplayName": "AgentX: Loop Rollback",
   "AgentX.ShowToolWindow.DisplayName": "AgentX: Show Tool Window",
+  "AgentX.CheckEnvironment.DisplayName": "AgentX: Check Environment",
 
   "AgentX.Workflow.Feature.DisplayName": "AgentX: Workflow - Feature",
   "AgentX.Workflow.Epic.DisplayName": "AgentX: Workflow - Epic",
@@ -52,6 +53,8 @@
   "AgentX.Settings.SkipStartupCheck.DisplayName": "Skip Startup Check",
   "AgentX.Settings.SkipStartupCheck.Description": "Skip the automatic environment health check on extension activation.",
   "AgentX.Settings.SkipUpdateCheck.DisplayName": "Skip Update Check",
-  "AgentX.Settings.SkipUpdateCheck.Description": "Skip the automatic version check that detects outdated framework files on extension activation."
+  "AgentX.Settings.SkipUpdateCheck.Description": "Skip the automatic version check that detects outdated framework files on extension activation.",
+  "AgentX.Settings.ShowLoopStatusNotifications.DisplayName": "Show Loop Status Notifications",
+  "AgentX.Settings.ShowLoopStatusNotifications.Description": "Show a transient prompt when the AgentX quality loop transitions into a terminal state (complete or blocked). Mirrors the VS Code status-bar item; the VS 17.14 out-of-process SDK does not expose a status bar API."
 }
 
