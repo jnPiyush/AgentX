@@ -79,10 +79,12 @@ case "$TARGET" in
     trap 'git worktree remove "$tmp" --force >/dev/null 2>&1 || true' EXIT
     git worktree add "$tmp" "$BRANCH" 2>/dev/null || git worktree add -B "$BRANCH" "$tmp"
     # Clear the worktree contents (excluding .git) before copying the build.
-    # Uses 'find ... -exec rm --' to satisfy the AgentX command policy (no recursive force delete).
-    find "$tmp" -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -- {} +
-    find "$tmp" -mindepth 1 -maxdepth 1 ! -name ".git" -type d -exec rmdir {} + 2>/dev/null || true
-    cp -R "$BUILD_DIR"/* "$tmp"/
+    # Uses 'find ... -delete' (depth-first) so both files and directories are removed
+    # without invoking a recursive force delete command.
+    find "$tmp" -depth -mindepth 1 ! -path "$tmp/.git" ! -path "$tmp/.git/*" -delete
+    # Copy build output INCLUDING dotfiles (e.g. .nojekyll required by GitHub Pages).
+    # The trailing '/.' form copies hidden entries that a bare '/*' glob would skip.
+    cp -R "$BUILD_DIR"/. "$tmp"/
     (
       cd "$tmp"
       git add -A

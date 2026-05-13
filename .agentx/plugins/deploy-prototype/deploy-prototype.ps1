@@ -64,8 +64,11 @@ switch ($Target) {
             if ($LASTEXITCODE -ne 0) {
                 git worktree add -B $Branch $tmp
             }
+            # Clear worktree (excluding .git) before copying the new build.
             Get-ChildItem $tmp -Force -Exclude '.git' | Remove-Item -Recurse -Force
-            Copy-Item (Join-Path $BuildDir '*') $tmp -Recurse -Force
+            # Copy build output INCLUDING dotfiles (e.g. .nojekyll for GitHub Pages).
+            # Enumerate with -Force so hidden / dot-prefixed entries are included.
+            Get-ChildItem -Path $BuildDir -Force | Copy-Item -Destination $tmp -Recurse -Force
             Push-Location $tmp
             git add -A
             git commit -m "deploy: prototype build" 2>$null
