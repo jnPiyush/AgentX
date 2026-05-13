@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AgentX.VisualStudio</RootNamespace>
+    <AssemblyName>AgentX.VisualStudio</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <!-- Version is stamped from ../../version.json by scripts/Stamp-Version.ps1. -->
+    <Version Condition="'$(Version)' == ''">8.4.45</Version>
+    <FileVersion>$(Version).0</FileVersion>
+    <AssemblyVersion>$(Version).0</AssemblyVersion>
+    <Description>AI-powered multi-agent orchestration for Visual Studio. Coordinates PM, UX, Architect, Engineer, Reviewer, DevOps, Tester, and other agents via the shared AgentX CLI.</Description>
+    <Authors>Piyush Jain</Authors>
+    <Company>jnPiyush</Company>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/jnPiyush/AgentX</RepositoryUrl>
+    <!-- Suppress preview-API warnings for VS Extensibility 17.14 surfaces we depend on. -->
+    <NoWarn>$(NoWarn);VSEXTPREVIEW_SETTINGS;VSEXTPREVIEW_OUTPUTWINDOW;VSEXTPREVIEW_TOOLWINDOWS;VSTHRD100</NoWarn>
+    <!-- The build pipeline treats warnings as errors by default; the explicit NoWarn above keeps the preview surfaces from breaking the build. -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- VisualStudio.Extensibility (out-of-process, modern). Bump versions as the SDK ships. -->
+    <PackageReference Include="Microsoft.VisualStudio.Extensibility.Sdk" Version="17.14.40608" />
+    <PackageReference Include="Microsoft.VisualStudio.Extensibility.Build" Version="17.14.40608" />
+     <!--Optional: Copilot Chat extensibility. Uncomment when targeting VS 17.10+ Copilot Chat.--> 
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="string-resources.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- Ship the marketplace icon and license inside the VSIX so the manifest can reference them. -->
+    <Content Include="resources\icon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="LICENSE">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

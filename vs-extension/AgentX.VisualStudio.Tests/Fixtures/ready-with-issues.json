@@ -1,0 +1,23 @@
+[
+  {
+    "number": 101,
+    "title": "Wire AgentX tool window to live CLI with auto-refresh on open",
+    "state": "open",
+    "url": "https://github.com/jnPiyush/AgentX/issues/101",
+    "labels": ["type:story", "needs:engineer", "priority:high"]
+  },
+  {
+    "number": 102,
+    "title": "Add --json parsing to enable structured WPF lists in tool window",
+    "state": "open",
+    "url": "https://github.com/jnPiyush/AgentX/issues/102",
+    "labels": ["type:feature", "area:vs-extension"]
+  },
+  {
+    "number": 103,
+    "title": "Marketplace metadata: icon, license, more-info, release-notes, tags",
+    "state": "open",
+    "url": "https://github.com/jnPiyush/AgentX/issues/103",
+    "labels": ["type:chore"]
+  }
+]

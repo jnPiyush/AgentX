@@ -1,0 +1,282 @@
+<DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:vs="http://schemas.microsoft.com/visualstudio/extensibility/2022/xaml"
+              xmlns:vm="clr-namespace:AgentX.VisualStudio.ToolWindows">
+    <DataTemplate.DataType>vm:AgentXToolWindowViewModel</DataTemplate.DataType>
+    <DataTemplate.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <vm:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+    </DataTemplate.Resources>
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="160" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
+            <TextBlock Text="AgentX" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" />
+            <TextBlock Text="  " />
+            <TextBlock Text="{Binding WorkspaceRoot}" Opacity="0.7" VerticalAlignment="Center" />
+            <TextBlock Text="  Loading..." Margin="8,0,0,0" Opacity="0.7" VerticalAlignment="Center"
+                       Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+
+        <!-- Tabs -->
+        <TabControl Grid.Row="1">
+            <!-- Status -->
+            <TabItem Header="Status">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="4">
+                        <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="10,4" HorizontalAlignment="Left" />
+
+                        <!-- Loop Status (structured) -->
+                        <TextBlock Text="Loop Status" FontWeight="Bold" Margin="0,8,0,2" />
+                        <Border BorderBrush="#40808080" BorderThickness="1" Padding="8" CornerRadius="2"
+                                Visibility="{Binding HasStructuredLoopStatus, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="State" FontWeight="SemiBold" Margin="0,0,12,2" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding LoopStatusModel.Status}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Iteration" FontWeight="SemiBold" Margin="0,0,12,2" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LoopStatusModel.Iteration}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Issue" FontWeight="SemiBold" Margin="0,0,12,2" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LoopStatusModel.IssueNumber}" />
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Last" FontWeight="SemiBold" Margin="0,0,12,2" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LoopStatusModel.LastIterationAt}" />
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Prompt" FontWeight="SemiBold" Margin="0,0,12,2" />
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding LoopStatusModel.Prompt}" TextWrapping="Wrap" />
+                                </Grid>
+                                <TextBlock Text="Recent history" FontWeight="SemiBold" Margin="0,6,0,2"
+                                           Visibility="{Binding LoopStatusHistoryRows.Count, Converter={StaticResource BoolToVisibility}}" />
+                                <ItemsControl ItemsSource="{Binding LoopStatusHistoryRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Iteration, StringFormat=[{0}] }" Opacity="0.7" Margin="0,0,4,0" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Status}" FontWeight="SemiBold" Margin="0,0,8,0" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                        <TextBox Text="{Binding LoopStatus, Mode=OneWay}"
+                                 IsReadOnly="True" TextWrapping="Wrap"
+                                 MaxHeight="180" VerticalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas"
+                                 Visibility="{Binding HasStructuredLoopStatus, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                        <!-- Ready Issues (structured) -->
+                        <TextBlock Text="Ready Issues" FontWeight="Bold" Margin="0,12,0,2" />
+                        <Border BorderBrush="#40808080" BorderThickness="1" Padding="4" CornerRadius="2"
+                                Visibility="{Binding HasStructuredReadyIssues, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="(no ready work)" Opacity="0.6" Margin="4,4,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ReadyIssueRows.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <ItemsControl ItemsSource="{Binding ReadyIssueRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Number, StringFormat=#{0} }"
+                                                           FontWeight="SemiBold" Margin="0,0,8,0" />
+                                                <ItemsControl Grid.Column="1" ItemsSource="{Binding Labels}" Margin="0,0,8,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="#20808080" CornerRadius="3" Margin="0,0,4,0" Padding="4,1">
+                                                                <TextBlock Text="{Binding}" FontSize="10" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Grid.Column="2" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="3" Text="{Binding State}" Opacity="0.6" Margin="8,0,0,0" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                        <TextBox Text="{Binding ReadyIssues, Mode=OneWay}"
+                                 IsReadOnly="True" TextWrapping="Wrap"
+                                 MaxHeight="180" VerticalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas"
+                                 Visibility="{Binding HasStructuredReadyIssues, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                        <!-- Agent State (structured) -->
+                        <TextBlock Text="Agent State" FontWeight="Bold" Margin="0,12,0,2" />
+                        <Border BorderBrush="#40808080" BorderThickness="1" Padding="4" CornerRadius="2"
+                                Visibility="{Binding HasStructuredAgentState, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="(no agent state)" Opacity="0.6" Margin="4,4,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding AgentStateRows.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <ItemsControl ItemsSource="{Binding AgentStateRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="180" />
+                                                    <ColumnDefinition Width="110" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" />
+                                                <Border Grid.Column="1" Background="#20808080" CornerRadius="3" Padding="4,1" HorizontalAlignment="Left">
+                                                    <TextBlock Text="{Binding Status}" FontSize="10" />
+                                                </Border>
+                                                <TextBlock Grid.Column="2" Text="{Binding Issue, StringFormat=#{0}}" Margin="8,0,0,0" Opacity="0.8" />
+                                                <TextBlock Grid.Column="3" Text="{Binding LastActivity}" Margin="8,0,0,0" Opacity="0.6" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                        <TextBox Text="{Binding AgentState, Mode=OneWay}"
+                                 IsReadOnly="True" TextWrapping="Wrap"
+                                 MaxHeight="180" VerticalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas"
+                                 Visibility="{Binding HasStructuredAgentState, Converter={StaticResource InverseBoolToVisibility}}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Workflows -->
+            <TabItem Header="Workflows">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding WorkflowItems}" Margin="4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding DisplayName}"
+                                        Command="{Binding DataContext.RunWorkflowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}"
+                                        Margin="0,2" Padding="10,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Loop -->
+            <TabItem Header="Loop">
+                <Grid Margin="4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Loop Prompt" FontWeight="Bold" Margin="0,0,0,2" />
+                    <TextBox Grid.Row="1" Text="{Binding LoopPromptInput, UpdateSourceTrigger=PropertyChanged}" />
+                    <Button Grid.Row="2" Content="Loop Start" Command="{Binding StartLoopCommand}"
+                            Padding="10,4" HorizontalAlignment="Left" Margin="0,4,0,8" />
+
+                    <TextBlock Grid.Row="3" Text="Iteration Summary" FontWeight="Bold" Margin="0,4,0,2" />
+                    <TextBox Grid.Row="4" Text="{Binding IterationSummaryInput, UpdateSourceTrigger=PropertyChanged}" />
+                    <Button Grid.Row="5" Content="Loop Iterate" Command="{Binding IterateLoopCommand}"
+                            Padding="10,4" HorizontalAlignment="Left" Margin="0,4,0,8" />
+
+                    <TextBlock Grid.Row="6" Text="Completion Summary" FontWeight="Bold" Margin="0,4,0,2" />
+                    <TextBox Grid.Row="7" Text="{Binding CompletionSummaryInput, UpdateSourceTrigger=PropertyChanged}" />
+                    <StackPanel Grid.Row="8" Orientation="Horizontal" Margin="0,4,0,0">
+                        <Button Content="Loop Complete" Command="{Binding CompleteLoopCommand}" Padding="10,4" Margin="0,0,8,0" />
+                        <Button Content="Loop Cancel" Command="{Binding CancelLoopCommand}" Padding="10,4" Margin="0,0,8,0" />
+                        <Button Content="Loop Rollback" Command="{Binding RollbackLoopCommand}" Padding="10,4" />
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- Council -->
+            <TabItem Header="Council">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding CouncilRoles}" Margin="4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding DisplayName}"
+                                        Command="{Binding DataContext.RunCouncilCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}"
+                                        Margin="0,2" Padding="10,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Agents -->
+            <TabItem Header="Agents">
+                <StackPanel Margin="4">
+                    <TextBlock Text="Authoring" FontWeight="Bold" Margin="0,0,0,4" />
+                    <Button Content="Add Agent" Command="{Binding AddAgentCommand}" Padding="10,6" Margin="0,2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                    <Button Content="Add Skill" Command="{Binding AddSkillCommand}" Padding="10,6" Margin="0,2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+
+                    <TextBlock Text="Maintenance" FontWeight="Bold" Margin="0,12,0,4" />
+                    <Button Content="Generate Digest" Command="{Binding GenerateDigestCommand}" Padding="10,6" Margin="0,2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                    <Button Content="Scrub" Command="{Binding ScrubCommand}" Padding="10,6" Margin="0,2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+
+        <TextBlock Grid.Row="2" Text="Output" FontWeight="Bold" Margin="0,8,0,2" />
+        <TextBox Grid.Row="3" Text="{Binding LogOutput, Mode=OneWay}"
+                 IsReadOnly="True" TextWrapping="NoWrap"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas" />
+    </Grid>
+</DataTemplate>
+

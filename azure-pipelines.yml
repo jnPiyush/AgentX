@@ -40,3 +40,58 @@ stages:
     - script: npm test
       displayName: Run extension tests
       workingDirectory: vscode-extension
+
+  - job: vs_extension_build
+    displayName: Build VS extension (.vsix)
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: self
+      fetchDepth: 0
+
+    - task: UseDotNet@2
+      displayName: Use .NET 8 SDK
+      inputs:
+        version: 8.0.x
+
+    - task: PowerShell@2
+      displayName: Build AgentX.VisualStudio
+      inputs:
+        pwsh: true
+        targetType: filePath
+        filePath: vs-extension/scripts/Build.ps1
+        arguments: -Configuration Release
+
+    # Optional: sign the produced VSIX when a code-signing cert is available.
+    # Provide $(VSIX_CERT_PATH) and $(VSIX_CERT_PASSWORD) via secret pipeline
+    # variables. The script no-ops (exit 0) when no cert is supplied so Preview
+    # builds continue to ship unsigned. Required before flipping Preview="false".
+    - task: PowerShell@2
+      displayName: Sign .vsix (no-op when no cert)
+      condition: succeeded()
+      inputs:
+        pwsh: true
+        targetType: filePath
+        filePath: vs-extension/scripts/Sign-Vsix.ps1
+        arguments: -CertPath "$(VSIX_CERT_PATH)" -CertPassword "$(VSIX_CERT_PASSWORD)"
+
+    - task: PowerShell@2
+      displayName: Stage .vsix for publish
+      condition: succeededOrFailed()
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: |
+          $stage = Join-Path '$(Build.ArtifactStagingDirectory)' 'agentx-vs-extension'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          $vsix = Get-ChildItem -Path 'vs-extension/AgentX.VisualStudio/bin/Release' -Filter *.vsix -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($null -eq $vsix) { Write-Warning 'No .vsix found.'; exit 0 }
+          Copy-Item -Path $vsix.FullName -Destination (Join-Path $stage $vsix.Name) -Force
+          Write-Host "Staged $($vsix.Name) ($([math]::Round($vsix.Length/1MB,2)) MB) at $stage"
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish .vsix
+      condition: succeededOrFailed()
+      inputs:
+        PathtoPublish: $(Build.ArtifactStagingDirectory)/agentx-vs-extension
+        ArtifactName: agentx-vs-extension

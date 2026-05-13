@@ -1,0 +1,16 @@
+{
+  "active": true,
+  "status": "active",
+  "iteration": 3,
+  "maxIterations": 10,
+  "minIterations": 5,
+  "issueNumber": 42,
+  "prompt": "Add unit tests for AgentXCliJson and harden malformed JSON fallback paths.",
+  "startedAt": "2026-05-12T08:15:00Z",
+  "lastIterationAt": "2026-05-12T09:42:31Z",
+  "history": [
+    { "iteration": 1, "timestamp": "2026-05-12T08:20:11Z", "summary": "Read AgentXCliJson API surface and confirmed 3 public Format* methods.", "status": "active", "outcome": "pass" },
+    { "iteration": 2, "timestamp": "2026-05-12T08:55:02Z", "summary": "Drafted fixture files capturing loop-status, ready, and state schemas.", "status": "active", "outcome": "pass" },
+    { "iteration": 3, "timestamp": "2026-05-12T09:42:31Z", "summary": "Wrote happy-path and malformed-JSON tests; all green.", "status": "active", "outcome": "partial" }
+  ]
+}

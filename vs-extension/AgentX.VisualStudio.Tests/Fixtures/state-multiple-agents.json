@@ -1,0 +1,6 @@
+{
+  "engineer":          { "status": "working",   "issue": 42,   "lastActivity": "2026-05-12T09:42:31Z" },
+  "reviewer":          { "status": "reviewing", "issue": 41,   "lastActivity": "2026-05-12T09:30:00Z" },
+  "architect":         { "status": "idle",      "issue": null, "lastActivity": "2026-05-11T17:11:08Z" },
+  "auto-fix-reviewer": { "status": "done",      "issue": 38,   "lastActivity": "2026-05-12T08:00:00Z" }
+}
