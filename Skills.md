@@ -65,7 +65,8 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 | **C / Systems Programming** | [C](.github/skills/languages/c/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **C++ / Native Applications** | [C++](.github/skills/languages/cpp/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **UX/UI Design** | [Design System Reasoning](.github/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](.github/skills/design/prototype-craft/SKILL.md), [Frontend/UI](.github/skills/design/frontend-ui/SKILL.md) |
-| **UX Prototype Validation (a11y, axe, WCAG)** | [Browser Automation](.github/skills/development/browser-automation/SKILL.md), [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](.github/skills/design/prototype-craft/SKILL.md) |
+| **UX Working Prototype** | [Design System Reasoning](.github/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](.github/skills/design/prototype-craft/SKILL.md), [Working Prototype App](.github/skills/design/working-prototype-app/SKILL.md) |
+| **UX Prototype Validation (a11y, axe, WCAG)** | [Accessibility](.github/skills/design/accessibility/SKILL.md), [Prototype Audit](.github/skills/design/prototype-audit/SKILL.md), [Browser Automation](.github/skills/development/browser-automation/SKILL.md), [Prototype Craft](.github/skills/design/prototype-craft/SKILL.md) |
 | **Web Research / JS-Rendered Page Reading** | [Browser Automation](.github/skills/development/browser-automation/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
 | **E2E Testing** | [E2E Testing](.github/skills/testing/e2e-testing/SKILL.md), [Test Automation](.github/skills/testing/test-automation/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Integration Testing** | [Integration Testing](.github/skills/testing/integration-testing/SKILL.md), [API Design](.github/skills/architecture/api-design/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
@@ -165,10 +166,13 @@ ai|llm-gateway|.github/skills/ai-systems/llm-gateway-and-routing/SKILL.md|LiteLL
 ai|voice-agents|.github/skills/ai-systems/voice-agents/SKILL.md|OpenAI-Realtime,Voice-Live,Gemini-Live,Deepgram,ElevenLabs,LiveKit,Pipecat,barge-in,turn-taking,latency
 ai|synthetic-data|.github/skills/ai-systems/synthetic-data-generation/SKILL.md|Self-Instruct,Evol-Instruct,distillation,persona,decontamination,distilabel,argilla,dataset-cards
 ai|agent-memory|.github/skills/ai-systems/agent-memory-systems/SKILL.md|mem0,Zep,Letta,MemGPT,LangMem,episodic,semantic,procedural,consolidation,personalization
-design|design-system-reasoning|.github/skills/design/design-system-reasoning/SKILL.md|design-system,art-direction,tokens,visual-language,anti-patterns,ui-direction
+design|design-system-reasoning|.github/skills/design/design-system-reasoning/SKILL.md|design-system,art-direction,tokens,visual-language,anti-patterns,ui-direction,theme-presets,scaffold-theme
 design|ux-ui|.github/skills/design/ux-ui-design/SKILL.md|wireframes,user-flows,HTML/CSS,a11y
-design|prototype-craft|.github/skills/design/prototype-craft/SKILL.md|visual-polish,color-palette,typography,CSS-craft,Tailwind,transitions,elevation
+design|prototype-craft|.github/skills/design/prototype-craft/SKILL.md|visual-polish,color-palette,typography,CSS-craft,Tailwind,transitions,elevation,animation-recipes,framer-motion
 design|frontend-ui|.github/skills/design/frontend-ui/SKILL.md|HTML5,CSS3,Tailwind,responsive,BEM
+design|accessibility|.github/skills/design/accessibility/SKILL.md|WCAG-2.1-AA,POUR,axe-core,reduced-motion,keyboard-shortcuts,screen-reader,focus-trap
+design|working-prototype-app|.github/skills/design/working-prototype-app/SKILL.md|Vite,React,Tailwind,Framer-Motion,Lucide,routing,localStorage,data-driven,SPA-prototype
+design|prototype-audit|.github/skills/design/prototype-audit/SKILL.md|6-pass-audit,self-healing,axe,Lighthouse,responsive-check,routes,build-hygiene,auto-fix
 test|e2e-testing|.github/skills/testing/e2e-testing/SKILL.md|Playwright,Cypress,POM,cross-browser,visual-regression,a11y
 test|test-automation|.github/skills/testing/test-automation/SKILL.md|CI-integration,parallel-execution,sharding,test-data,reporting
 test|integration-testing|.github/skills/testing/integration-testing/SKILL.md|API-testing,contract-testing,Pact,Testcontainers,mocking
@@ -238,6 +242,8 @@ These rules are always active. They are embedded here so agents never skip them.
 ```
 React Component|ux-ui->react->frontend-ui->testing->code-review
 Design System|design-system-reasoning->ux-ui->prototype-craft->frontend-ui
+Prototype Build|design-system-reasoning->ux-ui->prototype-craft->working-prototype-app->accessibility->prototype-audit
+Prototype Validation|accessibility->prototype-audit->browser-automation
 Blazor Component|ux-ui->blazor->csharp->testing->code-review
 Frontend Bug|error-handling->react/blazor->testing->code-review
 REST API|api-design->database->csharp/python->security->testing->code-review

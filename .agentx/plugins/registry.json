@@ -156,6 +156,38 @@
           }
         }
       ]
+    },
+    {
+      "publisher": "jnpiyush",
+      "pluginId": "deploy-prototype",
+      "displayName": "Deploy Prototype",
+      "description": "Publish a UX prototype build (static HTML or SPA dist) to Vercel, Netlify, Cloudflare Pages, GitHub Pages, or Surge via the target's official CLI. Never embeds credentials.",
+      "latestVersion": "1.0.0",
+      "maturity": "preview",
+      "capabilities": [
+        "tool"
+      ],
+      "tags": [
+        "deploy",
+        "prototype",
+        "hosting",
+        "vercel",
+        "netlify",
+        "cloudflare",
+        "github-pages",
+        "surge"
+      ],
+      "releases": [
+        {
+          "version": "1.0.0",
+          "artifactUrl": "https://github.com/jnPiyush/AgentX/releases",
+          "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "publishedAt": "2026-05-12T00:00:00Z",
+          "engines": {
+            "agentx": "^8.4.0"
+          }
+        }
+      ]
     }
   ]
 }

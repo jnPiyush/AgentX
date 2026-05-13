@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "name": "deploy-prototype",
+  "id": "deploy-prototype",
+  "publisher": "jnpiyush",
+  "displayName": "Deploy Prototype",
+  "version": "1.0.0",
+  "description": "Publish a UX prototype build (static HTML or SPA dist) to a chosen hosting target. Supports Vercel, Netlify, Cloudflare Pages, GitHub Pages, and Surge via the target CLI -- the plugin never embeds credentials.",
+  "author": "AgentX",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/jnPiyush/AgentX",
+  "bugs": "https://github.com/jnPiyush/AgentX/issues",
+  "type": "tool",
+  "capabilities": ["tool"],
+  "entry": {
+    "pwsh": "deploy-prototype.ps1",
+    "bash": "deploy-prototype.sh"
+  },
+  "args": [
+    {
+      "name": "Target",
+      "description": "Hosting target: vercel | netlify | cloudflare | github-pages | surge",
+      "required": true
+    },
+    {
+      "name": "BuildDir",
+      "description": "Path to the built prototype directory (default: dist)",
+      "required": false,
+      "default": "dist"
+    },
+    {
+      "name": "ProjectName",
+      "description": "Project / site name for targets that require one (Netlify site, Surge subdomain, Cloudflare project)",
+      "required": false
+    },
+    {
+      "name": "Branch",
+      "description": "Branch to publish for github-pages (default: gh-pages)",
+      "required": false,
+      "default": "gh-pages"
+    },
+    {
+      "name": "Prod",
+      "description": "Switch: deploy as production rather than preview (where supported)",
+      "required": false
+    }
+  ],
+  "requires": [],
+  "optionalRequires": ["vercel", "netlify", "wrangler", "gh", "surge"],
+  "tags": ["deploy", "prototype", "hosting", "vercel", "netlify", "cloudflare", "github-pages", "surge"],
+  "maturity": "preview",
+  "engines": {
+    "agentx": "^8.4.0"
+  },
+  "permissions": {
+    "filesystem": "read",
+    "process": "allowlist"
+  },
+  "distribution": {
+    "source": "bundled",
+    "registry": ".agentx/plugins/registry.json"
+  }
+}
