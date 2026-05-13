@@ -1,5 +1,5 @@
 ---
-description: 'Mechanically audit UX prototypes through six self-healing passes (accessibility, performance, content, responsive layout, routes, build hygiene). Spawned by the UX Designer and the Code Reviewer for any work touching docs/ux/prototypes/ or with the needs:ux label.'
+description: 'Mechanically audit UX prototypes through eight self-healing passes (accessibility, performance, content, responsive layout, routes, build hygiene, usability heuristics, visual regression). Spawned by the UX Designer and the Code Reviewer for any work touching docs/ux/prototypes/ or with the needs:ux label.'
 visibility: internal
 model: Claude Opus 4.7
 reasoning:
@@ -99,6 +99,4 @@ The auditor MUST NOT include speculative findings. Every entry must point to a r
 - `design/visual-regression/SKILL.md`
 - `design/working-prototype-app/SKILL.md` (when auditing a working app)
 - `design/prototype-craft/SKILL.md` (when fixing visual issues)
-- `development/browser-automation/SKILL.md` (for axe, Lighthouse, and Playwright snapshotg app)
-- `design/prototype-craft/SKILL.md` (when fixing visual issues)
-- `development/browser-automation/SKILL.md` (for axe + Lighthouse runs)
+- `development/browser-automation/SKILL.md` (for axe, Lighthouse, and Playwright snapshots)
