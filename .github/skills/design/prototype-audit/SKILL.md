@@ -175,6 +175,41 @@ Auto-fix recipes:
 | Lockfile drift | Run `npm install` and commit the updated lock |
 | Committed secret | Rotate the secret upstream first, then remove from history |
 
+## Pass 7: Usability heuristics
+
+Reference: `design/usability-heuristics/SKILL.md`.
+
+Check list:
+
+- Each of Nielsen H1-H10 inspected against the top 3-5 user tasks
+- Every finding scored on the 0-4 severity rubric
+- No severity 3 (major) or 4 (catastrophic) finding left unfixed without an explicit accepted waiver
+- Content failures (vague errors, missing empty states, jargon) cross-checked against `design/content-design`
+
+Auto-fix recipes: defer to the heuristic-specific patterns in `design/usability-heuristics/SKILL.md` -- this audit only enforces that the inspection was run and scored, not how each fix is implemented.
+
+## Pass 8: Visual regression (optional, recommended)
+
+Reference: `design/visual-regression/SKILL.md`.
+
+Skip only when the prototype is a single throwaway HTML file with no iteration planned.
+
+Check list:
+
+- Baselines exist for every primary route at mobile (360), tablet (768), and desktop (1440)
+- Playwright `toHaveScreenshot` suite runs to completion with `maxDiffPixelRatio <= 0.01`
+- Determinism rules applied (animations disabled, fonts settled, volatile content masked)
+- Any baseline update in this audit cycle is reviewable in the PR diff with a justification
+
+Auto-fix recipes:
+
+| Symptom | Recipe |
+|---------|--------|
+| Animation flake | Add `vr-mode` class + `animations: "disabled"` and re-run |
+| Font flake | `await page.evaluate(() => document.fonts.ready)` before screenshot |
+| Live data flake | Mask the volatile region with `data-vr-mask` and re-run |
+| Intentional layout change | Update baseline with `--update-snapshots`; document in audit report |
+
 ## Reporting template
 
 The auditor writes `docs/artifacts/reviews/PROTOTYPE-AUDIT-<issue>.md` using this skeleton:
@@ -187,7 +222,7 @@ Auditor: prototype-auditor
 Date: <yyyy-mm-dd>
 
 ## Summary
-- Passes: <n>/6
+- Passes: <n>/8
 - Fixed automatically: <count>
 - Blocked: <count>
 
@@ -203,6 +238,10 @@ Date: <yyyy-mm-dd>
 ...
 ## Pass 6: Build hygiene
 ...
+## Pass 7: Usability heuristics
+...
+## Pass 8: Visual regression
+...
 
 ## Blocked findings (escalate)
 - <finding> -- owner: <agent> -- next action: <text>
@@ -210,7 +249,8 @@ Date: <yyyy-mm-dd>
 
 ## Done Criteria
 
-- All six passes have a status of PASS or FIXED, or the BLOCKED findings are explicitly accepted in the review document.
+- All passes have a status of PASS or FIXED, or the BLOCKED findings are explicitly accepted in the review document.
+- No severity 3 or 4 usability finding (Pass 7) remains open without a documented waiver.
 - Auto-fix recipes were applied through the prototype source, not by patching the build output.
 - Verification step recorded for every fix.
 - Report committed to `docs/artifacts/reviews/`.
@@ -218,6 +258,10 @@ Date: <yyyy-mm-dd>
 ## Skills to Compose With
 
 - `design/accessibility` (Pass 1 ground truth)
+- `design/usability-heuristics` (Pass 7 ground truth)
+- `design/content-design` (cross-check for Pass 3 and Pass 7)
+- `design/visual-regression` (Pass 8 ground truth)
+- `development/browser-automation` (runtime for axe, Lighthouse, Playwright)
 - `design/working-prototype-app` (route + build context)
 - `design/prototype-craft` (visual fixes for contrast / motion)
 - `development/browser-automation` (axe-core + Lighthouse automation)

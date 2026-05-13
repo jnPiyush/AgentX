@@ -7,7 +7,10 @@ reasoning:
 constraints:
   - "MUST read .github/skills/design/prototype-audit/SKILL.md before starting an audit"
   - "MUST read .github/skills/design/accessibility/SKILL.md as ground truth for Pass 1"
-  - "MUST run all six passes; skip Pass 5 only when the prototype is pure static HTML"
+  - "MUST read .github/skills/design/usability-heuristics/SKILL.md as ground truth for Pass 7"
+  - "MUST read .github/skills/design/content-design/SKILL.md when Pass 3 or Pass 7 flags copy issues"
+  - "MUST read .github/skills/design/visual-regression/SKILL.md when running Pass 8"
+  - "MUST run all eight passes; skip Pass 5 only when the prototype is pure static HTML; skip Pass 8 only when the prototype is a single throwaway HTML file with no planned iteration"
   - "MUST apply auto-fix recipes from the audit skill before raising a finding"
   - "MUST cap each pass at three fix cycles before marking BLOCKED"
   - "MUST write the audit report to docs/artifacts/reviews/PROTOTYPE-AUDIT-<issue>.md"
@@ -51,14 +54,16 @@ Invisible sub-agent spawned by the UX Designer (after the prototype is built) an
 
 ## Audit Passes
 
-The mechanics live in `design/prototype-audit/SKILL.md`. The auditor MUST read that file first and follow the same six passes:
+The mechanics live in `design/prototype-audit/SKILL.md`. The auditor MUST read that file first and follow the same eight passes:
 
 1. **Accessibility** -- axe-core + manual smoke against the `design/accessibility` checklist.
 2. **Performance** -- bundle size, Lighthouse, lazy images, font-display.
-3. **Content** -- no placeholder copy, no broken links, sequential headings, unique titles.
+3. **Content** -- no placeholder copy, no broken links, sequential headings, unique titles; cross-checked against `design/content-design`.
 4. **Responsive** -- 360 / 640 / 1024 / 1440 / 1920 px without horizontal scroll, 44x44 touch targets.
 5. **Routes** -- catch-all 404, unique route titles, deep-link support (skip for static HTML).
 6. **Build hygiene** -- zero errors/warnings on build and lint, no `console.log`, no secrets.
+7. **Usability heuristics** -- Nielsen H1-H10 inspected against the top user tasks, scored on the 0-4 severity rubric; severity 3 and 4 findings block release without a documented waiver. Ground truth: `design/usability-heuristics`.
+8. **Visual regression** -- Playwright `toHaveScreenshot` diffs at mobile / tablet / desktop within `maxDiffPixelRatio <= 0.01`. Ground truth: `design/visual-regression`.
 
 Each pass runs `check -> diagnose -> fix -> verify` with a maximum of three fix cycles.
 
@@ -89,8 +94,11 @@ The auditor MUST NOT include speculative findings. Every entry must point to a r
 
 ## Skills to Load
 
-- `design/prototype-audit/SKILL.md`
-- `design/accessibility/SKILL.md`
+- `design/usability-heuristics/SKILL.md`
+- `design/content-design/SKILL.md`
+- `design/visual-regression/SKILL.md`
 - `design/working-prototype-app/SKILL.md` (when auditing a working app)
+- `design/prototype-craft/SKILL.md` (when fixing visual issues)
+- `development/browser-automation/SKILL.md` (for axe, Lighthouse, and Playwright snapshotg app)
 - `design/prototype-craft/SKILL.md` (when fixing visual issues)
 - `development/browser-automation/SKILL.md` (for axe + Lighthouse runs)

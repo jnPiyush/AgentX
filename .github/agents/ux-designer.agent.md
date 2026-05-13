@@ -11,6 +11,10 @@ constraints:
   - "MUST read `.github/skills/design/ux-ui-design/SKILL.md` before designing"
   - "MUST read `.github/skills/design/prototype-craft/SKILL.md` for visual polish, color, typography, and CSS techniques"
   - "MUST read `.github/skills/design/accessibility/SKILL.md` and apply the POUR checklist to every prototype before handoff"
+  - "MUST read `.github/skills/design/usability-heuristics/SKILL.md` and score every prototype on Nielsen H1-H10 with the 0-4 severity rubric; MUST NOT hand off while any severity 3 or 4 finding is open without an explicit accepted waiver"
+  - "MUST read `.github/skills/design/content-design/SKILL.md` and apply the voice rubric, length budgets, and anti-pattern list to every user-facing string before handoff"
+  - "MUST read `.github/skills/design/visual-regression/SKILL.md` and run a Playwright `toHaveScreenshot` baseline at mobile/tablet/desktop for every iterated prototype; baselines live next to the prototype under `__screenshots__/`"
+  - "MUST read `.github/skills/development/browser-automation/SKILL.md` and run an axe-core audit through the browser-automation skill on every prototype before handoff; MUST attach the axe report under `docs/ux/prototypes/<id>/audit/axe-report.json` and reference it from the UX Spec; MUST NOT hand off while any HIGH or MEDIUM axe finding is unresolved or unwaived"
   - "MUST read `.github/skills/design/working-prototype-app/SKILL.md` when the prototype requires routing, persisted state, or dynamic data; otherwise use static HTML/CSS via prototype-craft"
   - "MUST document the static-HTML-vs-working-app decision in the UX Spec with the trigger that justified it (routing, persisted state, dynamic data, or interactive demo)"
   - "MUST invoke the prototype-auditor internal sub-agent after publishing the prototype; MUST NOT hand off while any audit pass is BLOCKED without an accepted finding"
@@ -148,7 +152,10 @@ Before handoff, verify with fresh eyes:
 - [ ] Mobile, tablet, desktop variants specified
 - [ ] WCAG 2.1 AA: keyboard navigation, screen reader friendly, sufficient contrast
 - [ ] HTML/CSS prototypes are interactive, responsive, and accessible
-- [ ] **Browser-validated**: prototype rendered through the [Browser Automation](../skills/development/browser-automation/SKILL.md) skill; axe-core audit attached to UX deliverable; HIGH/MEDIUM findings resolved or explicitly waived in Open Questions
+- [ ] **Browser-validated (MANDATORY)**: prototype rendered through the [Browser Automation](../skills/development/browser-automation/SKILL.md) skill; axe-core report saved at `docs/ux/prototypes/<id>/audit/axe-report.json` and referenced from the UX Spec; HIGH/MEDIUM findings resolved or explicitly waived in Open Questions
+- [ ] **Usability heuristics (MANDATORY)**: Nielsen H1-H10 scored on the 0-4 severity rubric via [Usability Heuristics](../skills/design/usability-heuristics/SKILL.md); no S3/S4 finding left open without an accepted waiver
+- [ ] **Content design (MANDATORY)**: every user-facing string passes the [Content Design](../skills/design/content-design/SKILL.md) voice rubric, length budgets, and anti-pattern list; no placeholder copy remains
+- [ ] **Visual regression baselines (MANDATORY when prototype iterates)**: Playwright `toHaveScreenshot` baselines committed at mobile/tablet/desktop under `__screenshots__/`; suite passes within `maxDiffPixelRatio <= 0.01`
 - [ ] **Design research documented**: UX Spec includes Design Research section with sources and rationale
 - [ ] **Competitive audit completed**: 3+ products studied; findings documented with strengths and weaknesses
 - [ ] **Pattern selection evidence-based**: Chosen patterns grounded in established research, not personal preference
@@ -181,7 +188,12 @@ Update Status to `Ready` in GitHub Projects.
 | Wireframing, prototyping, methodology | [UX/UI Design](../skills/design/ux-ui-design/SKILL.md) |
 | Visual polish, color, typography, CSS craft | [Prototype Craft](../skills/design/prototype-craft/SKILL.md) |
 | HTML5, CSS3, responsive patterns | [Frontend/UI](../skills/design/frontend-ui/SKILL.md) |
-| Validate prototype in a real browser (axe-core a11y, WCAG 2.1 AA, keyboard nav, screenshots) | [Browser Automation](../skills/development/browser-automation/SKILL.md) |
+| WCAG 2.1 AA checklist (MANDATORY) | [Accessibility](../skills/design/accessibility/SKILL.md) |
+| Nielsen heuristic evaluation (MANDATORY) | [Usability Heuristics](../skills/design/usability-heuristics/SKILL.md) |
+| Microcopy, empty states, errors, tone (MANDATORY) | [Content Design](../skills/design/content-design/SKILL.md) |
+| Playwright screenshot diff baselines (MANDATORY when iterated) | [Visual Regression](../skills/design/visual-regression/SKILL.md) |
+| Browser axe/Lighthouse/screenshot runtime (MANDATORY) | [Browser Automation](../skills/development/browser-automation/SKILL.md) |
+| Working SPA prototype (routing, state) | [Working Prototype App](../skills/design/working-prototype-app/SKILL.md) |
 | React components (if applicable) | [React](../skills/languages/react/SKILL.md) |
 
 ## Enforcement Gates
@@ -196,6 +208,10 @@ Update Status to `Ready` in GitHub Projects.
 - PASS UX specs created for all stories with `needs:ux`
 - PASS HTML/CSS prototypes exist at `docs/ux/prototypes/`
 - PASS Prototypes are interactive, responsive, WCAG 2.1 AA compliant
+- PASS axe-core report committed at `docs/ux/prototypes/<id>/audit/axe-report.json` with no open HIGH/MEDIUM findings
+- PASS Usability heuristic evaluation committed in audit report with no open S3/S4 findings
+- PASS Visual regression baselines committed at mobile/tablet/desktop when the prototype has iterated
+- PASS Content review applied; no placeholder copy or banned strings remain
 - PASS Design Research section documents competitive audit with sources and pattern rationale
 - PASS Validation passes: `scripts/validate-handoff.ps1 -IssueNumber <issue> -FromAgent ux -ToAgent architect`
 

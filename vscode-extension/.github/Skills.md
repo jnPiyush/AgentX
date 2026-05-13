@@ -67,6 +67,9 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 | **UX/UI Design** | [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](agentx/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Frontend/UI](agentx/skills/design/frontend-ui/SKILL.md) |
 | **UX Working Prototype** | [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](agentx/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Working Prototype App](agentx/skills/design/working-prototype-app/SKILL.md) |
 | **UX Prototype Validation (a11y, axe, WCAG)** | [Accessibility](agentx/skills/design/accessibility/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md), [Browser Automation](agentx/skills/development/browser-automation/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md) |
+| **UX Usability Heuristic Eval** | [Usability Heuristics](agentx/skills/design/usability-heuristics/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md), [Content Design](agentx/skills/design/content-design/SKILL.md), [Accessibility](agentx/skills/design/accessibility/SKILL.md) |
+| **UX Content / Microcopy** | [Content Design](agentx/skills/design/content-design/SKILL.md), [UX/UI Design](agentx/skills/design/ux-ui-design/SKILL.md), [Accessibility](agentx/skills/design/accessibility/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md) |
+| **UX Visual Regression** | [Visual Regression](agentx/skills/design/visual-regression/SKILL.md), [Browser Automation](agentx/skills/development/browser-automation/SKILL.md), [E2E Testing](agentx/skills/testing/e2e-testing/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md) |
 | **Web Research / JS-Rendered Page Reading** | [Browser Automation](agentx/skills/development/browser-automation/SKILL.md), [Documentation](agentx/skills/development/documentation/SKILL.md) |
 | **E2E Testing** | [E2E Testing](agentx/skills/testing/e2e-testing/SKILL.md), [Test Automation](agentx/skills/testing/test-automation/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Integration Testing** | [Integration Testing](agentx/skills/testing/integration-testing/SKILL.md), [API Design](agentx/skills/architecture/api-design/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
@@ -172,7 +175,10 @@ design|prototype-craft|agentx/skills/design/prototype-craft/SKILL.md|visual-poli
 design|frontend-ui|agentx/skills/design/frontend-ui/SKILL.md|HTML5,CSS3,Tailwind,responsive,BEM
 design|accessibility|agentx/skills/design/accessibility/SKILL.md|WCAG-2.1-AA,POUR,axe-core,reduced-motion,keyboard-shortcuts,screen-reader,focus-trap
 design|working-prototype-app|agentx/skills/design/working-prototype-app/SKILL.md|Vite,React,Tailwind,Framer-Motion,Lucide,routing,localStorage,data-driven,SPA-prototype
-design|prototype-audit|agentx/skills/design/prototype-audit/SKILL.md|6-pass-audit,self-healing,axe,Lighthouse,responsive-check,routes,build-hygiene,auto-fix
+design|prototype-audit|agentx/skills/design/prototype-audit/SKILL.md|8-pass-audit,self-healing,axe,Lighthouse,responsive-check,routes,build-hygiene,heuristics,visual-regression,auto-fix
+design|usability-heuristics|agentx/skills/design/usability-heuristics/SKILL.md|Nielsen-10,heuristic-evaluation,severity-rubric,cognitive-walkthrough,H1-H10,S0-S4
+design|content-design|agentx/skills/design/content-design/SKILL.md|microcopy,empty-states,error-messages,voice-tone,length-budgets,localization,inclusive-language
+design|visual-regression|agentx/skills/design/visual-regression/SKILL.md|Playwright,toHaveScreenshot,snapshot-diff,baselines,Chromatic,Percy,Applitools,maxDiffPixelRatio
 test|e2e-testing|agentx/skills/testing/e2e-testing/SKILL.md|Playwright,Cypress,POM,cross-browser,visual-regression,a11y
 test|test-automation|agentx/skills/testing/test-automation/SKILL.md|CI-integration,parallel-execution,sharding,test-data,reporting
 test|integration-testing|agentx/skills/testing/integration-testing/SKILL.md|API-testing,contract-testing,Pact,Testcontainers,mocking
@@ -243,7 +249,9 @@ These rules are always active. They are embedded here so agents never skip them.
 React Component|ux-ui->react->frontend-ui->testing->code-review
 Design System|design-system-reasoning->ux-ui->prototype-craft->frontend-ui
 Prototype Build|design-system-reasoning->ux-ui->prototype-craft->working-prototype-app->accessibility->prototype-audit
-Prototype Validation|accessibility->prototype-audit->browser-automation
+Prototype Validation|accessibility->prototype-audit->usability-heuristics->visual-regression->browser-automation
+Heuristic Eval|usability-heuristics->content-design->prototype-audit->browser-automation
+Visual Regression Setup|visual-regression->browser-automation->e2e-testing->prototype-audit
 Blazor Component|ux-ui->blazor->csharp->testing->code-review
 Frontend Bug|error-handling->react/blazor->testing->code-review
 REST API|api-design->database->csharp/python->security->testing->code-review
@@ -299,5 +307,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 94 skills (arch:5, dev:15, lang:10, ops:5, infra:4, data:7, ai:29, design:4, test:6, domain:7, product:1, diagrams:1)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 97 skills (arch:5, dev:15, lang:10, ops:5, infra:4, data:7, ai:29, design:7, test:6, domain:7, product:1, diagrams:1)
 
