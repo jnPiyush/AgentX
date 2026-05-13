@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "AgentX - Multi-Agent Orchestration",
   "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
-  "version": "8.4.50",
+  "version": "8.4.51",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -814,16 +814,34 @@
         "path": "./.github/agentx/skills/data/powerbi/SKILL.md"
       },
       {
+        "path": "./.github/agentx/skills/design/accessibility/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/design/content-design/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/design/design-system-reasoning/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/design/frontend-ui/SKILL.md"
       },
       {
+        "path": "./.github/agentx/skills/design/prototype-audit/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/design/prototype-craft/SKILL.md"
       },
       {
+        "path": "./.github/agentx/skills/design/usability-heuristics/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/design/ux-ui-design/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/design/visual-regression/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/design/working-prototype-app/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/development/browser-automation/SKILL.md"
