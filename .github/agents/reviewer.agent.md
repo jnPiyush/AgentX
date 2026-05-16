@@ -261,6 +261,7 @@ Before issuing the final decision, verify with fresh eyes:
 - [ ] Original PRD intent is preserved in the implementation
 - [ ] Quality loop status verified as `complete`
 - [ ] Model Council convened (or skip rationale recorded in the review document); `COUNCIL-{issue}.md` Synthesis section is complete and the Findings, Severity assignments, and final Decision reflect Consensus / resolved Divergences / Hidden Risks captured by the council (or override rationale is documented)
+- [ ] **UI-bearing check**: if the changeset triggers the UI-Bearing Change Review Gate (modifies `*.tsx`, `*.jsx`, `*.razor`, `*.razor.cs`, `*.vue`, `*.svelte`, UX prototypes, CSS/SCSS, or is labeled `needs:ux` / `type:powerbi`), confirm: (a) at least one screenshot per primary route captured via the `browser-automation` skill; (b) an axe-core or equivalent accessibility scan result is recorded in the review doc; (c) at least one scripted interaction verified per primary user task; (d) the Weighted Score Originality row is graded and not skipped
 
 ### 7. Decision & Handoff
 
@@ -293,6 +294,7 @@ Update Status back to `In Progress`.
 | GenAI implementation review | [AI Agent Development](../skills/ai-systems/ai-agent-development/SKILL.md) |
 | LLM evaluation quality | [AI Evaluation](../skills/ai-systems/ai-evaluation/SKILL.md) |
 | RAG-bearing AI app review | [RAG Pipelines](../skills/ai-systems/rag-pipelines/SKILL.md) |
+| UI-bearing reviews (screenshots, axe, scripted interaction) | [Browser Automation](../skills/development/browser-automation/SKILL.md) |
 
 ## Enforcement Gates
 

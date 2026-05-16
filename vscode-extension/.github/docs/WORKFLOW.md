@@ -199,6 +199,37 @@ Bounded work contracts are nested under `Work` with these expectations:
 
 Contract status is local to the artifact and MUST NOT be treated as a new checkpoint. Typical statuses such as `Proposed`, `Active`, `Blocked`, `Complete`, or `Superseded` help describe the slice, but the issue lifecycle still resolves through the canonical checkpoints and normal AgentX status values.
 
+#### Pre-Implementation Contract Handshake (Recommended For Complex Slices)
+
+For complex slices that introduce a bounded work contract, Engineer and Reviewer SHOULD perform a brief contract handshake **before code is written**:
+
+1. Engineer drafts `CONTRACT-<issue>-<topic>.md` with the minimum sections above and proposes acceptance criteria + verification method.
+2. Reviewer reads the contract and either accepts it or returns at most one round of focused feedback (missing criteria, untestable acceptance, runtime evidence gaps).
+3. Engineer revises the contract once if needed.
+4. Implementation begins only after the contract is in `Active` status.
+
+This handshake is intentionally lightweight (1-3 turns, not a formal approval gate). Its purpose is to catch scope, testability, and runtime-proof errors at the cheapest point -- before any code exists -- the way the Anthropic harness-design article describes sprint-contract negotiation between generator and evaluator. If the work is simple enough that the contract is obvious, the handshake can be skipped and recorded as such in the contract's Decision Log.
+
+#### UI-Bearing Change Review Gate (Live Interaction Required)
+
+For any change that touches a UI surface, the Reviewer or evaluator MUST exercise the running application, not only the static diff.
+
+Triggers (any one of these makes the review UI-bearing):
+
+- changeset modifies `**/*.tsx`, `**/*.jsx`, `**/*.razor`, `**/*.razor.cs`, `**/*.vue`, `**/*.svelte`
+- changeset modifies files under `docs/ux/prototypes/**` or any working prototype app
+- changeset modifies `**/*.css`, `**/*.scss`, or design-token files when a visual route is in scope
+- the issue carries `needs:ux` or `type:powerbi` (for visual outputs)
+
+Required evidence for UI-bearing reviews:
+
+- at least one screenshot per primary route or component state, captured via the [`browser-automation`](../agentx/skills/development/browser-automation/SKILL.md) skill against the running build
+- an axe-core or equivalent automated accessibility scan with results recorded in the review doc
+- at least one scripted interaction (click / type / keyboard navigation) per primary user task in the contract
+- the Originality row in the [REVIEW-TEMPLATE weighted scoring](../agentx/templates/REVIEW-TEMPLATE.md#14-decision) is graded, not skipped
+
+This gate exists because, per the Anthropic article, agents reliably overrate their own UI work when reviewing only the diff or a single static screenshot. Driving the live app catches broken wiring, dead interactions, and library-default tells that a diff review will miss.
+
 #### Reset Vs Compaction Policy
 
 Long-running work inside `Work` should prefer durable artifact continuity over transcript continuity.

@@ -107,4 +107,21 @@ Record all pruning decisions here for traceability.
 
 ---
 
+## Model Upgrade Trigger
+
+> From the Anthropic harness-design article: every component in a harness encodes an assumption about what the model can't do on its own; those assumptions can go stale quickly as models improve.
+
+When the active provider model changes (new Sonnet / Opus / GPT / Gemini family release, or an in-family bump that the vendor advertises as improving long-context, planning, or self-review), the operator SHOULD walk this rubric within the first few real tasks on the new model.
+
+Suggested operator routine on a model upgrade:
+
+1. Record the previous and new model identifiers in the Pruning Log row, even if no pruning is decided.
+2. Re-run one representative complex task end-to-end without changing the harness, and capture: total iterations to first APPROVED, number of stall events, total token cost, and any review categories where the evaluator and reviewer disagreed.
+3. Compare against the prior baseline if one exists (see [evaluation/baseline.json](../../evaluation/baseline.json)). If a component now appears to add cost without adding lift on this model, propose it for pruning following the criteria above.
+4. Treat additions and removals symmetrically: a better model also unlocks harness *capabilities* that were previously infeasible (e.g., dropping context-reset overhead, lowering the stall threshold, or removing per-sprint decomposition). Capture these as candidate additions, not just removals.
+
+This is a process expectation, not a runtime gate. AgentX does not automatically suspend the harness on a model change.
+
+---
+
 **See Also**: [WORKFLOW.md](../WORKFLOW.md) | [EVALUATOR-CALIBRATION.md](EVALUATOR-CALIBRATION.md) | [tech-debt-tracker.md](../tech-debt-tracker.md)

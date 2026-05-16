@@ -575,8 +575,35 @@ graph TD
 ### Verdict
 **Status**: [PASS] APPROVED | [WARN] CHANGES REQUESTED | [FAIL] REJECTED
 
+### Weighted Score (optional for non-UI reviews; MANDATORY for UI-bearing reviews)
+
+> Originated from the Anthropic harness-design article (Mar 2026). Use this rubric when the verdict feels close, or when comparing iterations across a quality loop. For UI-bearing changes (see `UI-Bearing Change Review Gate` in docs/WORKFLOW.md), this section is mandatory and the Originality row MUST be graded. The narrative verdict above remains authoritative -- the score is an aid, not a substitute.
+
+Grade each category from 0 to 100. Multiply by the weight to get the weighted contribution.
+
+| Category | Weight | Hard Floor | Score (0-100) | Weighted |
+|----------|-------:|-----------:|--------------:|---------:|
+| Correctness (does it work? regressions?) | 25 | 70 | | |
+| Security | 20 | 80 | | |
+| Testing (coverage + meaningfulness) | 15 | 70 | | |
+| Architecture & Design fit | 10 | 60 | | |
+| Performance | 10 | 60 | | |
+| Documentation | 5 | 50 | | |
+| Acceptance criteria coverage | 10 | 80 | | |
+| Originality / non-generic output *(UI-bearing only; drop and renormalize otherwise)* | 5 | 50 | | |
+| **Total (out of 100)** | 100 | -- | | |
+
+Gate rules:
+
+- Total >= 80 AND no floor breach -> APPROVED is defensible.
+- Total 60-79 -> CHANGES REQUESTED.
+- Total < 60 -> REJECTED.
+- Floor breach in a non-blocker category (Architecture, Performance, Documentation, Originality) -> CHANGES REQUESTED.
+- Floor breach in a blocker category (Correctness, Security, Testing, Acceptance criteria) -> REJECTED, regardless of total.
+- For non-UI-bearing changes, drop the Originality row and renormalize the remaining weights to sum to 100.
+
 ### Rationale
-{Explain the decision}
+{Explain the decision. If a weighted score was computed, cite the floors that drove the verdict, not the total alone.}
 
 **If APPROVED**:
 - Code meets all acceptance criteria

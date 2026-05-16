@@ -149,6 +149,85 @@ file_read: REVIEW-42.md -> all 8 categories checked, loop status = complete veri
 
 ---
 
+## UX Designer / Prototype Auditor Role
+
+> These exemplars target the subjective-quality failure mode called out in the Anthropic harness-design article: agents tend to rate their own design output generously. The originality criterion explicitly penalises generic AI-slop patterns.
+
+### Example: FAIL -- AI-Slop Visual Defaults
+
+**Agent claim**: "Prototype built with polished, modern styling."
+
+**Evaluator verification**:
+```
+browser_navigate: file:///.../prototype.html
+browser_screenshot -> hero section uses purple-to-pink gradient over white card, stock Heroicons, default shadcn button styles, generic 'AI assistant' icon
+grep_search: "from-purple|to-pink|bg-white.*shadow|backdrop-blur" in prototype.html -> 7 matches
+```
+
+**Correct verdict**:
+- Originality: FAIL (floor 50, observed ~25 -- composed entirely of recognisable AI/library defaults)
+- Finding: [HIGH] Originality: hero uses canonical AI-slop pattern (purple gradient on white card with backdrop-blur). Replace with a deliberate, brand-aligned visual choice that a human designer would recognise as intentional.
+
+### Example: FAIL -- Subjective Self-Approval Without Live Interaction
+
+**Agent claim**: "Prototype looks great, approving."
+
+**Evaluator verification**:
+```
+grep_search: "browser_navigate|playwright|screenshot" in review/audit log -> 0 matches
+```
+
+**Correct verdict**:
+- Completeness: FAIL (UI-bearing change reviewed without running it; static-diff-only approval is not allowed for UI surfaces)
+- Finding: [HIGH] Completeness: prototype audit did not exercise the running page. Re-run with the `browser-automation` skill and record at least one screenshot per primary route plus an axe-core scan.
+
+### Example: PASS -- Deliberate Design Choices
+
+**Evaluator verification**:
+```
+browser_navigate -> distinct typographic hierarchy, custom color palette with three weighted hues, deliberate negative space, custom illustration in hero
+axe-core scan -> 0 serious / critical violations
+browser_screenshot per route -> visual identity is consistent across pages, no library-default tells
+```
+
+**Correct verdict**: All categories PASS, APPROVED: true; note [LOW] Craft: consider tightening line-height on body copy from 1.7 to 1.55.
+
+---
+
+## Contract-Criterion / FAIL Pattern (Generator vs Evaluator)
+
+> Borrowed from the Anthropic article: when an Engineer is operating against a `CONTRACT-<issue>-<topic>.md`, the Reviewer writes findings in the same shape as the contract's acceptance criteria so the Engineer can act without further investigation.
+
+Use this table format inside the review document for contract-driven slices:
+
+| Contract criterion | Evaluator finding |
+|-------------------|-------------------|
+| Rectangle fill tool fills a rectangular region on click-drag | FAIL -- only places tiles at drag start/end. `fillRectangle` exists at `LevelEditor.tsx:412` but is not invoked from the mouseUp handler. |
+| `PUT /frames/reorder` endpoint reorders animation frames | FAIL -- route declared after `/{frame_id}` in `routes.py:88`; FastAPI matches `reorder` as an int frame_id and returns 422. Move the literal route above the parameterised one. |
+| Delete key removes the selected entity spawn point | FAIL -- handler at `LevelEditor.tsx:892` requires both `selection` and `selectedEntityId`. Click-select sets only `selectedEntityId`. Change to `selection \|\| (selectedEntityId && activeLayer === 'entity')`. |
+
+Findings written this way satisfy three properties at once:
+
+1. They cite the exact contract criterion that was promised.
+2. They cite the exact code location where the promise broke.
+3. They include a concrete suggested fix the generator can act on without re-reading the contract.
+
+---
+
+## Per-Iteration Reflection (Lightweight Pivot-vs-Refine)
+
+> The runtime stall detector triggers a strong PIVOT-vs-REFINE prompt only after the configured stall threshold (default 3 consecutive failures). The Anthropic article asks for a *lighter* reflection on **every** iteration after the first rejection. This is a prompting-level habit -- it does not change runtime behavior.
+
+When the evaluator returns `APPROVED: false`, the generator's next response SHOULD open with a one-line reflection:
+
+- `Reflection: REFINE -- findings are narrowing (3 -> 1) and all in the same area; tightening the same approach.`
+- `Reflection: PIVOT -- third consecutive fail in the same category; abandoning the helper-class approach and inlining the logic.`
+- `Reflection: REFINE -- new finding is an edge case the prior fix exposed, not a structural issue.`
+
+The reflection is informational. It does not unlock or block the loop. Its purpose is to make the generator's strategic choice visible to the evaluator (and to anyone reading the trace), so a wrong direction can be caught earlier than the stall threshold.
+
+---
+
 ## How the Runner Uses These Examples
 
 The `Invoke-SelfReviewLoop` function in `.agentx/agentic-runner.ps1` embeds abbreviated
