@@ -73,13 +73,13 @@ High-stakes decisions -- PRD scope, ADR options, AI design, code review, and dee
 
 ```mermaid
 flowchart LR
-    Q([Decision / Artifact]) --> Analyst[Analyst<br/>Decompose + Evidence]
-    Q --> Strategist[Strategist<br/>Frame + Second-Order]
-    Q --> Skeptic[Skeptic<br/>Contrarian + Failure Modes]
+    Q(["Decision / Artifact"]) --> Analyst["Analyst<br/>Decompose + Evidence"]
+    Q --> Strategist["Strategist<br/>Frame + Second-Order"]
+    Q --> Skeptic["Skeptic<br/>Contrarian + Failure Modes"]
     Analyst --> Synth{Synthesis}
     Strategist --> Synth
     Skeptic --> Synth
-    Synth -->|Consensus, Divergences,<br/>Blind Spots, Net Adjustment| Out([Hardened Deliverable])
+    Synth -->|"Consensus, Divergences,<br/>Blind Spots, Net Adjustment"| Out(["Hardened Deliverable"])
 ```
 
 - Three roles by design: **Analyst** (evidence), **Strategist** (framing), **Skeptic** (contrarian risk surfacing).
@@ -115,18 +115,18 @@ AgentX now adds explicit brainstorm and compound-loop entry points, ranked plann
 
 ```mermaid
 flowchart LR
-  UI([User Intent]) --> Hub{AgentX Hub}
+  UI(["User Intent"]) --> Hub{"AgentX Hub"}
 
-  subgraph SpecialistRouting[Specialist Routing]
+  subgraph SpecialistRouting["Specialist Routing"]
     direction LR
-    D[Discover and Plan] --> I[Implement] --> V[Validate]
+    D["Discover and Plan"] --> I["Implement"] --> V["Validate"]
   end
 
   Hub --> SpecialistRouting
 
-  D -.->|PM, UX, Architect| Assets[(Repo Assets)]
-  I -.->|Engineer and Skills| Assets
-  V -.->|Reviewer, Tester| Assets
+  D -.->|"PM, UX, Architect"| Assets[("Repo Assets")]
+  I -.->|"Engineer and Skills"| Assets
+  V -.->|"Reviewer, Tester"| Assets
 ```
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
