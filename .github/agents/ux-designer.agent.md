@@ -81,6 +81,37 @@ Design user interfaces using the AgentX UX methodology: Empathize, Define, Ideat
 - Identify all stories with `needs:ux` label
 - Understand user flows and requirements
 
+### 1a. Brand & Direction Clarification (MANDATORY before any UI work)
+
+UX MUST NOT emit wireframes, prototypes, or HTML in turn 1 when brand or
+visual direction is undefined. Two branches:
+
+**Branch A: User supplied a reference (URL, screenshot, deck, existing
+product).** Follow the [Brand Spec Extraction](../skills/design/brand-spec-extraction/SKILL.md)
+protocol: capture -> grep visual atoms -> codify into
+`docs/ux/brand-spec-<issue>.md` -> vocalise back for confirmation. Only
+proceed after the user confirms (or corrects) the captured spec.
+
+**Branch B: No reference supplied and brand is undefined.** Respond with a
+6-axis clarification form (NOT code, NOT wireframes) covering:
+
+1. **Surface** -- web app, marketing site, internal tool, mobile, dashboard
+2. **Audience** -- who is the primary user; what is their context
+3. **Tone** -- editorial, utility, playful, formal, technical (pick one
+   primary, one secondary)
+4. **Brand** -- existing brand spec, reference site, or "choose from
+   visual-directions D1-D5"
+5. **Scale** -- single page, MVP (3-5 screens), full product
+6. **Constraints** -- stack (React/Vue/HTML), accessibility floor, dark
+   mode required, motion preferences, hard prohibitions
+
+Reference the five starter directions in
+[references/visual-directions.md](../skills/design/design-system-reasoning/references/visual-directions.md)
+(D1 Editorial Monocle, D2 Modern Minimal, D3 Tech Utility, D4 Brutalist,
+D5 Soft Warm) and offer them as picks. Use the 5-axis selection rubric to
+recommend one. Only proceed to step 2 once the user has answered the form
+or accepted a recommended direction.
+
 ### 2. Deep Design Research (MANDATORY -- research before designing)
 
 Design decisions must be grounded in evidence, not personal preference. Invest effort here before sketching anything.
@@ -184,7 +215,9 @@ Update Status to `Ready` in GitHub Projects.
 
 | Task | Skill |
 |------|-------|
-| Defining posture, archetype, trust cues | [Design System Reasoning](../skills/design/design-system-reasoning/SKILL.md) |
+| Brand clarification form, extracting brand from URL/screenshot | [Brand Spec Extraction](../skills/design/brand-spec-extraction/SKILL.md) |
+| Forbidden visual tells T1-T10, honest placeholders (MANDATORY before any UI emission) | [Anti-Slop](../skills/design/anti-slop/SKILL.md) |
+| Defining posture, archetype, trust cues; visual directions D1-D5 | [Design System Reasoning](../skills/design/design-system-reasoning/SKILL.md) |
 | Wireframing, prototyping, methodology | [UX/UI Design](../skills/design/ux-ui-design/SKILL.md) |
 | Visual polish, color, typography, CSS craft | [Prototype Craft](../skills/design/prototype-craft/SKILL.md) |
 | HTML5, CSS3, responsive patterns | [Frontend/UI](../skills/design/frontend-ui/SKILL.md) |

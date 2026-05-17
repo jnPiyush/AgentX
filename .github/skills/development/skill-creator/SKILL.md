@@ -184,6 +184,18 @@ Every SKILL.md MUST include these sections:
 | Error Handling | What to do when things go wrong in this skill domain |
 | Checklist | Pre-handoff verification items |
 
+**Required for `development/` category**: skills under `.github/skills/development/` MUST also include a `## Rationalization Table` section between `## Prerequisites` (or `## When to Use`) and `## Decision Tree`. The table lists 5-8 common excuses an agent or human uses to skip the skill's discipline, paired with a one-line rebuttal. This is the highest-leverage section against LLM rationalization patterns. Format:
+
+```markdown
+## Rationalization Table
+
+| Rationalization | Reality |
+|-----------------|---------|
+| "{the excuse the agent would make}" | {why the excuse is wrong and what to do instead} |
+```
+
+Other categories (architecture, languages, ai-systems, etc.) MAY include a Rationalization Table when the skill encodes a discipline that is commonly skipped under pressure.
+
 **WHEN: Trigger Phrase**: Every skill SHOULD start with a `> WHEN:` blockquote after the title
 that describes when to load the skill. This enables better routing by agents.
 

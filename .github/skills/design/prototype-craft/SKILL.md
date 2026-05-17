@@ -257,6 +257,8 @@ Need a prototype?
 
 ## References
 
+- [Anti-Slop Skill](../anti-slop/SKILL.md) -- forbidden visual tells (T1-T10) and honest-placeholder rules. Load alongside this skill when crafting prototypes.
+- [Brand Spec Extraction](../brand-spec-extraction/SKILL.md) -- protocol for extracting a brand spec from a referenced site or screenshot before crafting.
 - [Design System Reasoning](../design-system-reasoning/SKILL.md) -- posture and archetype framework
 - [UX/UI Design Skill](../ux-ui-design/SKILL.md) -- methodology and research
 - [Frontend/UI Skill](../frontend-ui/SKILL.md) -- semantic HTML, accessibility patterns

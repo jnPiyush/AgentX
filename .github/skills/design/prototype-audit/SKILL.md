@@ -210,6 +210,59 @@ Auto-fix recipes:
 | Live data flake | Mask the volatile region with `data-vr-mask` and re-run |
 | Intentional layout change | Update baseline with `--update-snapshots`; document in audit report |
 
+<!--
+Source: 5-dimension pre-emit self-critique rubric and anti-slop pass
+  adapted from alchaincyf/huashu-design via nexu-io/open-design
+  (Apache-2.0). See repository NOTICE.
+-->
+
+## Pass 9: Anti-slop self-critique (pre-emit hard gate)
+
+Before the prototype is emitted for review, run the 5-dimension self-critique
+from the `anti-slop` skill. Each dimension is scored 1-5; anything under 3/5
+on any axis is a P0 hard-gate finding and the prototype must be revised
+before Pass 9 is re-run. Anything at 3/5 is a P1 (should-fix). 4/5 and 5/5
+are passing.
+
+**Severity convention** (applies to all 9 passes):
+
+- **P0** -- hard gate. Prototype is not review-ready until resolved.
+- **P1** -- should-fix before review unless explicitly waived in the audit
+  report with rationale.
+- **P2** -- nice-to-have. Logged for follow-up.
+
+### The five dimensions
+
+1. **Philosophy** -- Does the surface have a defended point of view? Generic
+   SaaS template = 1. Clearly derived from a brand spec or visual direction
+   = 5.
+2. **Hierarchy** -- Can a first-time viewer name the primary action within
+   one second? Every element competing = 1. One CTA wins decisively = 5.
+3. **Execution** -- Spacing, alignment, contrast, and typography quality.
+   Default Tailwind everywhere with no scale = 1. Disciplined tokens and
+   intentional rhythm = 5.
+4. **Specificity** -- Does the prototype use real (or honestly-placeholder)
+   content and product-specific concepts? Lorem ipsum + stock metrics = 1.
+   Product-true content with cited placeholders = 5.
+5. **Restraint** -- Did the build avoid forbidden tells (purple-teal-pink
+   gradients, generic emoji icons, glassmorphism on body text, AI-voiced
+   microcopy, aurora blobs, fake trust badges)? See `anti-slop` skill for
+   the full T1-T10 list. Any T-violation present unwaived = 1. None
+   present = 5.
+
+### Procedure
+
+1. Run anti-slop detection (T1-T10) and honest-placeholders check.
+2. Score each of the five dimensions 1-5 with a one-line justification
+   each.
+3. If a brand-spec exists for the issue, score against the brand-spec
+   prohibited-patterns list, not generic taste.
+4. Any dimension below 3/5 = P0; fix and re-run from step 1.
+5. Record final scores and justifications in the audit report under
+   "Pass 9: Anti-slop self-critique".
+
+Maximum three revision cycles before escalating to the user.
+
 ## Reporting template
 
 The auditor writes `docs/artifacts/reviews/PROTOTYPE-AUDIT-<issue>.md` using this skeleton:
@@ -222,7 +275,7 @@ Auditor: prototype-auditor
 Date: <yyyy-mm-dd>
 
 ## Summary
-- Passes: <n>/8
+- Passes: <n>/9
 - Fixed automatically: <count>
 - Blocked: <count>
 
@@ -242,6 +295,13 @@ Date: <yyyy-mm-dd>
 ...
 ## Pass 8: Visual regression
 ...
+## Pass 9: Anti-slop self-critique
+- Philosophy: <score>/5 -- <one-line justification>
+- Hierarchy: <score>/5 -- <one-line justification>
+- Execution: <score>/5 -- <one-line justification>
+- Specificity: <score>/5 -- <one-line justification>
+- Restraint: <score>/5 -- <one-line justification>
+- Forbidden tells found: <T-numbers or none>
 
 ## Blocked findings (escalate)
 - <finding> -- owner: <agent> -- next action: <text>

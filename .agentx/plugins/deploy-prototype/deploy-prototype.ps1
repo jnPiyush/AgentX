@@ -57,6 +57,8 @@ switch ($Target) {
     'github-pages' {
         Require-Command 'gh' "Install GitHub CLI: https://cli.github.com/"
         # Uses gh + git to push the build dir to the chosen branch via a worktree.
+        # Canonical primitive: .github/skills/development/git-worktrees/SKILL.md
+        # (Step 0 detection, sibling-path placement, and `git worktree remove` cleanup all derive from that skill.)
         $tmp = Join-Path $env:TEMP ("ghp-" + [Guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Force -Path $tmp | Out-Null
         try {

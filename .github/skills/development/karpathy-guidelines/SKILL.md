@@ -26,6 +26,20 @@ Load this skill when:
 Skip when the task is trivial (single-line typo, obvious config rename) and
 the success criteria are self-evident.
 
+## Rationalization Table
+
+LLMs systematically reach for these shortcuts. Push back against each.
+
+| Rationalization | Reality |
+|-----------------|---------|
+| "I understand the intent, I can skip stating assumptions." | You only think you understand. State assumptions explicitly so the user can correct the wrong ones cheaply. |
+| "I'll add a small abstraction now, it might be useful later." | Speculative abstractions are the leading source of code that is hard to delete. Inline first, abstract on the second real use. |
+| "I'll rewrite this whole function, it will be cleaner." | Rewrites import new bugs and break call sites you did not read. Make the smallest surgical change that satisfies the requirement. |
+| "The tests pass, so the change is correct." | Passing tests prove the tests pass. They do not prove the change matches the user's intent or the spec. Re-read the request after the code is written. |
+| "I'll add error handling for every imaginable failure." | Defensive code for impossible failures hides the real failures and inflates the diff. Validate at boundaries; trust internal invariants. |
+| "I'll polish the comments and structure while I'm here." | Drive-by formatting and comment edits hide the real change from the reviewer. Keep the diff focused; open a separate hygiene PR if needed. |
+| "The user did not specify, so I'll pick the safer-sounding option." | Silent picks are silent decisions. Either ask, or pick and surface the decision explicitly so it can be reverted. |
+
 ## 1. Think Before Coding
 
 **Don''t assume. Don''t hide confusion. Surface tradeoffs.**

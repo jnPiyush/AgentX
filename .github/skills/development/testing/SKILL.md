@@ -29,6 +29,19 @@ metadata:
 - Testing framework installed (pytest, Jest, xUnit, etc.)
 - CI/CD pipeline for automated test execution
 
+## Rationalization Table
+
+If you find yourself thinking one of these, push back against it. These are the common ways agents and humans skip the discipline.
+
+| Rationalization | Reality |
+|-----------------|---------|
+| "The change is small, tests are overkill." | Small changes hide the highest-leverage regressions because reviewers under-scrutinize them. Add at least one regression test per behavioral change. |
+| "I'll add tests after the feature works." | Tests written after code are shaped to pass current code, not to specify behavior. Write the failing test first; confirm it fails for the expected reason; then code. |
+| "This code is too hard to test, so we'll skip it." | "Hard to test" almost always means "badly factored". Refactor for testability instead of waiving the requirement. |
+| "Coverage is at 80%, we're fine." | Coverage measures lines, not behavior. Branches, error paths, and boundary inputs can all be untested at 80% line coverage. Inspect what is covered, not just the number. |
+| "The test is flaky, just rerun it." | A flaky test is a bug report. Fix the timing, the shared state, or the assertion. Do not retry until green. |
+| "This is a refactor, behavior is identical." | Then the existing tests must all stay green without modification. If you had to edit tests to keep them green, the refactor changed behavior. |
+
 ## Decision Tree
 
 ```

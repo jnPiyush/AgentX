@@ -35,13 +35,13 @@
 ```powershell
 # PowerShell -- into an existing project directory
 cd your-project
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.25/install.ps1 | iex
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.51/install.ps1 | iex
 ```
 
 ```bash
 # Bash
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.25/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.51/install.sh | bash
 ```
 
 **What happens**: AgentX copies agents, skills, templates, and CLI into your project. Your existing code is untouched.
@@ -153,8 +153,8 @@ Each agent produces a deliverable, validates it, and hands off to the next.
 ./install.sh
 
 # One-liner (downloads and runs)
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.25/install.ps1 | iex    # PowerShell
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.25/install.sh | bash  # Bash
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.51/install.ps1 | iex    # PowerShell
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.51/install.sh | bash  # Bash
 ```
 
 PowerShell install path note:
@@ -166,7 +166,7 @@ Control what gets installed with the `-Profile` flag:
 
 | Profile | Skills | Instructions | Prompts | Hooks | VS Code |
 |---------|--------|-------------|---------|-------|---------|
-| **full** (default) | All 75 | All 7 | Yes | Yes | Yes |
+| **full** (default) | All 107 | All 7 | Yes | Yes | Yes |
 | **minimal** | None | None | No | No | No |
 | **python** | Python, testing, data, architecture | python, api | Yes | Yes | Yes |
 | **dotnet** | C#, Blazor, Azure, SQL, architecture | csharp, blazor, api | Yes | Yes | Yes |
@@ -188,7 +188,7 @@ Control what gets installed with the `-Profile` flag:
 ./install.sh --no-setup
 
 # One-liner with profile (env vars)
-PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.25/install.sh | bash
+PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.51/install.sh | bash
 ```
 
 ### What the Installer Does

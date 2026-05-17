@@ -214,6 +214,10 @@ Run this before implementation handoff or final critique:
 
 ## References
 
+- [Visual Directions Starter Set](references/visual-directions.md) -- five seeded design directions (D1-D5) with OKLch palettes, font stacks, and a 5-axis selection rubric. Use when proposing or comparing visual directions.
+- [Design System Template](../../../templates/DESIGN-SYSTEM-TEMPLATE.md) -- 9-section schema (Brand, Color, Typography, Spacing, Layout, Components, Motion, Voice and Content, Anti-Patterns) for codifying the chosen direction into a project design system.
+- [Anti-Slop Skill](../anti-slop/SKILL.md) -- forbidden tells and honest-placeholder rules; load before emitting any UI.
+- [Brand Spec Extraction](../brand-spec-extraction/SKILL.md) -- protocol to derive a brand spec from a referenced URL or screenshot.
 - [Design Direction Playbook](references/design-direction-playbook.md)
 - [Industry Presets](references/industry-presets.md)
 - [Design Brief Template](assets/design-brief-template.md)

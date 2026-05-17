@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 94 skills across 12 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 107 skills across 12 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 94 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 107 skills. Use Quick Reference below.
 
 ---
 
@@ -35,6 +35,9 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 | **LangGraph Agent Workflow** | [LangGraph](agentx/skills/ai-systems/langgraph/SKILL.md), [Cognitive Arch](agentx/skills/ai-systems/cognitive-architecture/SKILL.md), [AI Evaluation](agentx/skills/ai-systems/ai-evaluation/SKILL.md), [Prompt Versioning](agentx/skills/ai-systems/prompt-versioning/SKILL.md) |
 | **MCP Apps / Interactive UI** | [MCP Apps](agentx/skills/ai-systems/mcp-apps-development/SKILL.md), [MCP Server](agentx/skills/ai-systems/mcp-server-development/SKILL.md), [React](agentx/skills/languages/react/SKILL.md), [Frontend/UI](agentx/skills/design/frontend-ui/SKILL.md) |
 | **Iterative / Quality Loop** | [Iterative Loop](agentx/skills/development/iterative-loop/SKILL.md), [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Code Review](agentx/skills/development/code-review/SKILL.md) |
+| **Completion Verification (before claiming done)** | [Verification Before Completion](agentx/skills/development/verification-before-completion/SKILL.md), [Iterative Loop](agentx/skills/development/iterative-loop/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
+| **Stalled / Repeat-Failure Debugging** | [Systematic Debugging](agentx/skills/development/systematic-debugging/SKILL.md), [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Error Handling](agentx/skills/development/error-handling/SKILL.md), [Logging](agentx/skills/development/logging-monitoring/SKILL.md) |
+| **Parallel Agent Sessions / Isolated Sandbox** | [Git Worktrees](agentx/skills/development/git-worktrees/SKILL.md), [Version Control](agentx/skills/operations/version-control/SKILL.md), [Experimentation Loop](agentx/skills/development/experimentation-loop/SKILL.md) |
 | **Metric-Driven Experimentation** | [Experimentation Loop](agentx/skills/development/experimentation-loop/SKILL.md), [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md), [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Token Budget / Context** | [Token Optimizer](agentx/skills/development/token-optimizer/SKILL.md), [Context Mgmt](agentx/skills/ai-systems/context-management/SKILL.md) |
 | **Azure AI Foundry Agent** | [Azure Foundry](agentx/skills/ai-systems/azure-foundry/SKILL.md), [AI Agent Dev](agentx/skills/ai-systems/ai-agent-development/SKILL.md), [AI Evaluation](agentx/skills/ai-systems/ai-evaluation/SKILL.md). For operational workflows (create, deploy, trace), install companion: GitHub Copilot for Azure |
@@ -65,6 +68,8 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 | **C / Systems Programming** | [C](agentx/skills/languages/c/SKILL.md), [Security](agentx/skills/architecture/security/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Code Review](agentx/skills/development/code-review/SKILL.md) |
 | **C++ / Native Applications** | [C++](agentx/skills/languages/cpp/SKILL.md), [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Code Review](agentx/skills/development/code-review/SKILL.md) |
 | **UX/UI Design** | [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](agentx/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Frontend/UI](agentx/skills/design/frontend-ui/SKILL.md) |
+| **UI Slop Prevention (before emitting any UI)** | [Anti-Slop](agentx/skills/design/anti-slop/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md) |
+| **Brand Spec from URL / Screenshot** | [Brand Spec Extraction](agentx/skills/design/brand-spec-extraction/SKILL.md), [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [Anti-Slop](agentx/skills/design/anti-slop/SKILL.md), [Accessibility](agentx/skills/design/accessibility/SKILL.md) |
 | **UX Working Prototype** | [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](agentx/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Working Prototype App](agentx/skills/design/working-prototype-app/SKILL.md) |
 | **UX Prototype Validation (a11y, axe, WCAG)** | [Accessibility](agentx/skills/design/accessibility/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md), [Browser Automation](agentx/skills/development/browser-automation/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md) |
 | **UX Usability Heuristic Eval** | [Usability Heuristics](agentx/skills/design/usability-heuristics/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md), [Content Design](agentx/skills/design/content-design/SKILL.md), [Accessibility](agentx/skills/design/accessibility/SKILL.md) |
@@ -86,7 +91,7 @@ description: 'Compressed skill index for AI agents. 94 skills across 12 categori
 
 ---
 
-## Skills Directory (94 skills -- pipe-delimited)
+## Skills Directory (107 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -114,6 +119,9 @@ dev|token-optimizer|agentx/skills/development/token-optimizer/SKILL.md|token-bud
 dev|code-hygiene|agentx/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
 dev|karpathy-guidelines|agentx/skills/development/karpathy-guidelines/SKILL.md|think-before-coding,simplicity,surgical-changes,goal-driven,LLM-pitfalls,assumptions
 dev|browser-automation|agentx/skills/development/browser-automation/SKILL.md|playwright,browser,a11y,axe,prototype-validation,web-research,screenshot,wcag
+dev|verification-before-completion|agentx/skills/development/verification-before-completion/SKILL.md|verification,gate,completion-claims,loop-complete,tests-pass,deploy,evidence,no-false-done
+dev|systematic-debugging|agentx/skills/development/systematic-debugging/SKILL.md|debugging,root-cause,hypothesis-testing,stalled-fixes,three-failed-fixes,architecture-question,bug-investigation
+dev|git-worktrees|agentx/skills/development/git-worktrees/SKILL.md|git-worktree,parallel-sessions,isolated-checkout,sandbox,submodule-guard,detection,deploy-prototype
 lang|csharp|agentx/skills/languages/csharp/SKILL.md|C#,.NET,EF-Core,DI,async/await,xUnit
 lang|c|agentx/skills/languages/c/SKILL.md|C,C23,pointers,embedded,systems,FFI,ABI,memory
 lang|cpp|agentx/skills/languages/cpp/SKILL.md|C++,C++23,RAII,templates,span,string_view,native
@@ -170,6 +178,8 @@ ai|voice-agents|agentx/skills/ai-systems/voice-agents/SKILL.md|OpenAI-Realtime,V
 ai|synthetic-data|agentx/skills/ai-systems/synthetic-data-generation/SKILL.md|Self-Instruct,Evol-Instruct,distillation,persona,decontamination,distilabel,argilla,dataset-cards
 ai|agent-memory|agentx/skills/ai-systems/agent-memory-systems/SKILL.md|mem0,Zep,Letta,MemGPT,LangMem,episodic,semantic,procedural,consolidation,personalization
 design|design-system-reasoning|agentx/skills/design/design-system-reasoning/SKILL.md|design-system,art-direction,tokens,visual-language,anti-patterns,ui-direction,theme-presets,scaffold-theme
+design|anti-slop|agentx/skills/design/anti-slop/SKILL.md|anti-slop,AI-slop,purple-gradients,honest-placeholders,forbidden-tells,T1-T10,placeholder-policy
+design|brand-spec-extraction|agentx/skills/design/brand-spec-extraction/SKILL.md|brand-spec,brand-extraction,5-step-protocol,palette-extraction,voice-extraction,brand-from-url,brand-from-screenshot
 design|ux-ui|agentx/skills/design/ux-ui-design/SKILL.md|wireframes,user-flows,HTML/CSS,a11y
 design|prototype-craft|agentx/skills/design/prototype-craft/SKILL.md|visual-polish,color-palette,typography,CSS-craft,Tailwind,transitions,elevation,animation-recipes,framer-motion
 design|frontend-ui|agentx/skills/design/frontend-ui/SKILL.md|HTML5,CSS3,Tailwind,responsive,BEM
@@ -307,5 +317,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 97 skills (arch:5, dev:15, lang:10, ops:5, infra:4, data:7, ai:29, design:7, test:6, domain:7, product:1, diagrams:1)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 107 skills (arch:6, dev:19, lang:10, ops:5, infra:4, data:7, ai:29, design:12, test:6, domain:7, product:1, diagrams:1)
 

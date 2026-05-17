@@ -291,6 +291,9 @@ Update Status back to `In Progress`.
 | Review checklist and audit rigor | [Code Review](../skills/development/code-review/SKILL.md) |
 | Security validation | [Security](../skills/architecture/security/SKILL.md) |
 | Test quality and coverage checks | [Testing](../skills/development/testing/SKILL.md) |
+| Two-pass review (spec-compliance Pass A before code-quality Pass B) | [Code Review](../skills/development/code-review/SKILL.md) |
+| Verifying the Engineer's completion claims (tests, coverage, loop complete) | [Verification Before Completion](../skills/development/verification-before-completion/SKILL.md) |
+| Isolated rebuild of a CHANGES REQUESTED diff (separate from primary checkout) | [Git Worktrees](../skills/development/git-worktrees/SKILL.md) |
 | GenAI implementation review | [AI Agent Development](../skills/ai-systems/ai-agent-development/SKILL.md) |
 | LLM evaluation quality | [AI Evaluation](../skills/ai-systems/ai-evaluation/SKILL.md) |
 | RAG-bearing AI app review | [RAG Pipelines](../skills/ai-systems/rag-pipelines/SKILL.md) |

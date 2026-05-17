@@ -89,8 +89,8 @@ Every implementation task follows `Research -> Brainstorm -> Plan -> Design -> I
 | 2. Brainstorm | `core-principles` | Chosen approach + rationale |
 | 3. Plan | `api-design`, `database` if applicable | File inventory + test plan |
 | 4. Design | `core-principles` | Interfaces + SOLID check |
-| 5. Implement | Language instruction, `ai-agent-development` if `needs:ai` | Committed code + loop started |
-| 6. Test | `testing`, `ai-evaluation` if `needs:ai` | Coverage >=80% + ACs covered |
+| 5. Implement | Language instruction, `ai-agent-development` if `needs:ai`, `systematic-debugging` if 2+ fixes failed | Committed code + loop started |
+| 6. Test | `testing`, `ai-evaluation` if `needs:ai`, `verification-before-completion` before loop complete | Coverage >=80% + ACs covered + verification gate passed |
 | 7. Review | `code-review`, `security` | Self-review complete + score >=70% |
 
 ---
@@ -495,11 +495,14 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 | Phase 1 Research | `.github/skills/development/iterative-loop/SKILL.md` |
 | Phase 1 Research | `.github/skills/architecture/core-principles/SKILL.md` |
 | Phase 1 Research | `.github/skills/development/testing/SKILL.md` |
+| Phase 1 Research | `.github/skills/development/git-worktrees/SKILL.md` (if parallel branches or isolated experiments are likely) |
 | Phase 3-4 Plan/Design | `.github/skills/architecture/api-design/SKILL.md` (if API work) |
 | Phase 3-4 Plan/Design | `.github/skills/architecture/database/SKILL.md` (if DB work) |
 | Phase 5 Implement | `.github/skills/ai-systems/ai-agent-development/SKILL.md` (if `needs:ai`) |
 | Phase 5 Implement | `.github/skills/ai-systems/prompt-engineering/SKILL.md` (if `needs:ai`) |
+| Phase 5 Implement | `.github/skills/development/systematic-debugging/SKILL.md` (when 2+ fixes have already failed for the same symptom) |
 | Phase 6 Test | `.github/skills/ai-systems/ai-evaluation/SKILL.md` (if `needs:ai`) |
+| Phase 6 Test | `.github/skills/development/verification-before-completion/SKILL.md` (MUST run before claiming tests pass or marking the loop complete) |
 | Phase 7 Review | `.github/skills/development/code-review/SKILL.md` |
 | Phase 7 Review | `.github/skills/architecture/security/SKILL.md` |
 

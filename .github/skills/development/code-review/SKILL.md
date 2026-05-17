@@ -23,6 +23,20 @@ description: 'Conduct systematic code reviews and audits including automated che
 - Git and GitHub/Azure DevOps familiarity
 - Code analysis tools (ESLint, Roslyn Analyzers, etc.)
 
+## Rationalization Table
+
+Common excuses reviewers use to ship work that should have been returned. Push back against each.
+
+| Rationalization | Reality |
+|-----------------|---------|
+| "The author is senior, the code is probably fine." | Seniority is not evidence. Read the diff, run the tests, check the spec. |
+| "It passed CI, I'll skim and approve." | CI proves nothing failed, not that the right thing was built. Pass A (spec compliance) is on the reviewer, not CI. |
+| "The diff is huge, I'll trust the high-signal parts." | Large diffs hide the dangerous changes in the noise. Ask for a smaller PR or block out time to read it all. |
+| "It's only test code / docs / config." | Test code that does not actually exercise the change is worse than no tests. Config and infra diffs cause most production incidents. |
+| "The author already addressed it once, requesting changes again is rude." | Reviewer politeness is not a quality gate. If the rework still does not meet the bar, say so. |
+| "We can fix it in a follow-up." | Almost never happens. Either it blocks merge or it becomes durable tech debt; pick consciously and record the debt item. |
+| "Pass A and Pass B both look fine, I'll write 'LGTM'." | A review with no findings and no evidence of having run the code reads as a rubber stamp. Cite at least the verification steps you performed. |
+
 ## Decision Tree
 
 ```

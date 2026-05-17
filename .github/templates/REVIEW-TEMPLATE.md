@@ -50,7 +50,8 @@ inputs:
 ## Table of Contents
 
 1. [Executive Summary](#1-executive-summary)
-2. [Code Quality](#2-code-quality)
+2. [Two-Pass Review Protocol](#1a-two-pass-review-protocol)
+3. [Code Quality](#2-code-quality)
 3. [Architecture & Design](#3-architecture--design)
 4. [Testing](#4-testing)
 5. [Security Review](#5-security-review)
@@ -89,6 +90,33 @@ inputs:
 
 **Confidence Level**: High | Medium | Low 
 **Recommendation**: {Merge | Request Changes | Reject}
+
+---
+
+## 1a. Two-Pass Review Protocol
+
+> **Hard rule**: Run Pass A to completion BEFORE starting Pass B. Pass A asks "does this build the right thing?". Pass B asks "is the thing built well?". A code-quality-perfect change that misses the PRD or ADR is still a reject.
+
+### Pass A: Spec & Intent Compliance (gate)
+
+Complete this pass first. If any row is `[FAIL]`, stop the review, return `CHANGES REQUESTED`, and do not score Pass B.
+
+| Check | Status | Evidence |
+|-------|--------|----------|
+| PRD acceptance criteria all addressed (see Section 8) | [PASS] / [FAIL] / [N/A] | {link or note} |
+| ADR decision honored (no silent deviation) | [PASS] / [FAIL] / [N/A] | {ADR-### link} |
+| Tech Spec contract honored (interfaces, schemas, error model) | [PASS] / [FAIL] / [N/A] | {SPEC-### link} |
+| UX prototype intent honored for UI-bearing change | [PASS] / [FAIL] / [N/A] | {UX-### link} |
+| Scope matches issue (no scope creep, no scope cut) | [PASS] / [FAIL] | {issue link} |
+| Non-goals from PRD respected | [PASS] / [FAIL] / [N/A] | {note} |
+| Quality loop completed (`loop status` = complete) | [PASS] / [FAIL] | {iteration count} |
+| Fresh verification evidence present (tests run on current commit) | [PASS] / [FAIL] | {commit SHA + run log} |
+
+**Pass A verdict**: [PASS] proceed to Pass B | [FAIL] return CHANGES REQUESTED with the failing rows above as required fixes.
+
+### Pass B: Code Quality & Craft
+
+Only run when Pass A is `[PASS]`. Covers sections 2-7 and 9-12 below. Pass B can request changes on quality grounds even when Pass A is green; in that case the final decision is `CHANGES REQUESTED` with severity per the Pass B findings.
 
 ---
 

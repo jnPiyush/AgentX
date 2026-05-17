@@ -36,7 +36,7 @@ AgentX acts as an autonomous orchestrator, routing tasks to **21 specialized age
 
 ## Domain Skills Library
 
-AgentX is powered by a rich knowledge layer of **94 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
+AgentX is powered by a rich knowledge layer of **107 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
 
 | Category | Example Skills | Purpose |
 |:---------|:---------------|:--------|
@@ -131,7 +131,7 @@ flowchart LR
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
 - **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 94 skills, 21 agents, 7 instructions, 11 templates, 21 prompts -- all Markdown-defined
+- **Knowledge Layer:** 107 skills, 21 agents, 7 instructions, 11 templates, 21 prompts -- all Markdown-defined
 - **Control Layer:** Execution plans, repo-local state, automated validation gates
 
 ---
@@ -321,6 +321,10 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 - [docs/WORKFLOW.md](docs/WORKFLOW.md)
 - [docs/GUIDE.md](docs/GUIDE.md)
 - [Skills.md](Skills.md)
+
+## Related Work
+
+AgentX is developed independently and predates this comparison. During a recent review we read [obra/superpowers](https://github.com/obra/superpowers) (a Claude-Code-shaped TDD methodology with strong verification, debugging, and worktree skills) and used it as a benchmark for a few specific AgentX subsystems. We did not vendor Superpowers code and we deliberately did not adopt its single-spec folder, "iron-law" absolutism, or step-level plan format, because those conflict with AgentX's multi-agent, multi-domain, multi-provider design. Concrete adoption decisions (verification-before-completion skill, systematic-debugging skill, first-class worktree workflow, two-pass review separation) are tracked in the repo rather than claimed here.
 
 
 

@@ -38,6 +38,19 @@ compatibility:
 - Clear completion criteria defined before starting
 - Test framework configured (for TDD loops)
 
+## Rationalization Table
+
+The loop is the gate, not a suggestion. Push back against these common ways of skipping it.
+
+| Rationalization | Reality |
+|-----------------|---------|
+| "The change is small, the loop adds overhead." | The CLI loop is seconds of overhead and forces a fresh verification step that LLMs habitually skip. Run it anyway. |
+| "The first attempt looks correct, I'll mark complete." | LLMs systematically overrate their first attempts. Run the verification step at least once before claiming completion. |
+| "I hit the minimum iteration count, I'm done." | The minimum is a floor, not a ceiling. The loop is complete when the done criteria pass, not when the counter ticks over. |
+| "Self-review found nothing, no need for another pass." | Self-review with no findings on a non-trivial change usually means you reviewed too generously. Re-read against the spec, not against the code. |
+| "Tests pass, so the loop is complete." | Tests passing is necessary but not sufficient. The loop requires that the done criteria pass, evidence is fresh, and `loop complete` is recorded. |
+| "I'll run `loop complete` now and add the verification later." | `loop complete` is the artifact that gates handoff. Backfilling evidence after the gate defeats the gate. Verify first, then close. |
+
 ## Decision Tree
 
 ```

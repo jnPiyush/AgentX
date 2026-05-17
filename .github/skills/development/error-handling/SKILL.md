@@ -29,6 +29,19 @@ metadata:
 - Understanding of exception hierarchies in target language
 - Resilience library available
 
+## Rationalization Table
+
+Error handling is where shortcuts hide. Push back against these.
+
+| Rationalization | Reality |
+|-----------------|---------|
+| "I'll catch `Exception` / `except:` here, narrower types take too long." | Bare catches swallow the bugs you most need to see, including programmer errors. Catch the specific exception types you can actually handle. |
+| "This error can't happen in practice." | Then the right move is to fail loudly when it does, not to silently swallow it. Log + re-raise, do not return a default. |
+| "I'll log and continue so the request still succeeds." | A partially-completed request that returns 200 is harder to debug than a clean 500. Decide explicitly whether to fail the request or to degrade. |
+| "Retries will paper over the transient failure." | Retries without backoff or budget make outages worse. Always pair retries with exponential backoff, jitter, and a circuit breaker. |
+| "Adding context to the error is noise." | The agent or operator reading the log has no other context. Include the operation, the identifiers, and the upstream cause. |
+| "The framework already handles this." | Frameworks handle transport errors. They do not handle your domain invariants. Domain errors need explicit types and explicit handling. |
+
 ## Decision Tree
 
 ```

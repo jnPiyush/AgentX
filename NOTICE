@@ -1,0 +1,55 @@
+AgentX
+Copyright 2025-2026 AgentX Contributors
+
+This product includes software developed at AgentX (https://github.com/jnPiyush/AgentX).
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+------------------------------------------------------------------------
+Third-Party Attributions
+------------------------------------------------------------------------
+
+Portions of the AgentX design skill set are derived from or inspired by:
+
+1. nexu-io/open-design (Apache-2.0)
+   https://github.com/nexu-io/open-design
+   - Anti-AI-slop blacklist and honest-placeholders rule
+   - Five curated visual directions with deterministic OKLch palettes
+   - Five-step brand-spec extraction protocol
+   - Five-dimensional pre-emit self-critique rubric
+   - Question-form-first turn-1 contract for ambiguous design briefs
+
+   open-design itself credits the following upstream sources for the
+   above ideas; the same credit chain applies to AgentX:
+
+   1a. alchaincyf/huashu-design
+       https://github.com/alchaincyf/huashu-design
+       Junior-Designer workflow, five-step brand-asset protocol,
+       anti-AI-slop checklist, five-dimensional self-critique, and the
+       "five schools, twenty design philosophies" framing that the
+       visual-directions reference distills.
+
+   1b. VoltAgent/awesome-design-md
+       https://github.com/VoltAgent/awesome-design-md
+       The nine-section DESIGN.md schema used by
+       .github/templates/DESIGN-SYSTEM-TEMPLATE.md.
+
+   1c. bergside/awesome-design-skills
+       https://github.com/bergside/awesome-design-skills
+       Skill-catalog patterns that informed the design-skill directory
+       structure under .github/skills/design/.
+
+Files in this repository that adapt material from the sources above
+carry a "Source:" header citing the upstream repository. Per
+Apache-2.0 Section 4, no modification has been made to the licensed
+material's NOTICE; this file is the cumulative notice for AgentX.
+
+AgentX has NOT vendored any code from open-design's bundled
+sub-projects (skills/guizang-ppt, skills/html-ppt), which carry
+separate MIT licenses with their own attribution requirements. If
+those sub-projects are ever vendored, their LICENSE files must be
+preserved verbatim and credited here.
