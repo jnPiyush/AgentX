@@ -26,7 +26,7 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 | **Copilot Chat Participant** | Native `@agentx` chat participant for triggering routines, brainstorm, learnings, and compound-loop inspection. |
 | **Karpathy Guidelines (built-in)** | The `karpathy-guidelines` skill is auto-loaded for Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist -- enforcing *think before coding*, surgical diffs, assumption audits, and goal-driven execution to block common LLM coding pitfalls at authoring and review time. |
 | **Workspace Setup Wizard** | Local-runtime-first setup with optional remote adapters for GitHub or Azure DevOps and configurable LLM adapters. |
-| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (93 production skills). |
+| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (107 production skills). |
 | **45 Commands** | Workflow, loop management, knowledge compounding, AI evaluation, task bundles, bounded parallel delivery, and plugin management from the Command Palette. |
 | **Knowledge Compounding** | Ranked learnings, compound-loop visibility, learning-capture scaffolds, durable review-finding promotion, and agent-native review parity checks. |
 | **AI Evaluation** | Scaffold, run, and inspect AI evaluation contracts with rubric-based quality gates. |
@@ -39,13 +39,13 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 
 ```mermaid
 flowchart LR
-    Chat[Copilot Chat] --> Context[AgentX Context] --> Engine[Execution Engine]
+    Chat["Copilot Chat"] --> Context["AgentX Context"] --> Engine["Execution Engine"]
 
-    Engine --> View[Sidebar & Live State]
-    Engine --> File[Repo-Defined Assets]
+    Engine --> View["Sidebar and Live State"]
+    Engine --> File["Repo-Defined Assets"]
 
-    View -.->|Queues and Workflows| UI[VS Code UI]
-    File -.->|Skills and Templates| Workspace[Local Files]
+    View -.->|"Queues and Workflows"| UI["VS Code UI"]
+    File -.->|"Skills and Templates"| Workspace["Local Files"]
 ```
 
 * **Inputs:** VS Code Chat drives intent into the orchestrator.
@@ -214,7 +214,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | **Work** | Workflow next step, brainstorm guidance, planning and review learnings, compound loop, learning capture, ready queue, and workflow rollout surfaces. |
 | **Status** | Agent status, loop state, dependency checks, AI evaluation, review findings, task bundles, bounded parallel runs, and digests. |
 | **Templates** | All output templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence). |
-| **Skills** | 93 production skills across 12 categories (architecture, development, languages, operations, infrastructure, data, AI systems, design, testing, domain, product, diagrams). |
+| **Skills** | 107 production skills across 12 categories (architecture, development, languages, operations, infrastructure, data, AI systems, design, testing, domain, product, diagrams). |
 
 ---
 
@@ -325,6 +325,25 @@ The extension registers 13 declarative chat agents, each mapped to an AgentX rol
 ---
 
 ## Recent Changes
+
+### 8.4.52
+
+- New `convert-slides` plugin renders Markdown storyboards into Microsoft PowerPoint (`.pptx`) via Pandoc, alongside the existing `convert-docs` (MD->DOCX) plugin
+- AgentX Auto agent documents both plugins with trigger conditions and invocation rules (PATH precheck, no shell concatenation, regenerate-from-Markdown discipline)
+- Consulting Research agent adopts a Markdown-first plugin-bridge workflow: storyboard Markdown is the source of truth and is rendered to `.pptx` only on explicit request
+- Zero-copy asset rewrite regression fix: agent context loader, runtime asset utilities, and agent-native review surface correctly resolve canonical template references through the bundled extension path (16/16 tests green)
+
+### 8.4.51
+
+- Bump version, sync bundled extension assets, repackage VSIX
+
+### 8.4.47 - 8.4.49
+
+- Bundled-asset sync fixes and VSIX repackaging across point releases
+
+### 8.4.39
+
+- MCP-only Azure DevOps provider: ADO work-item operations route through the official `@azure-devops/mcp` server with configurable tool overrides
 
 ### 8.4.36
 
