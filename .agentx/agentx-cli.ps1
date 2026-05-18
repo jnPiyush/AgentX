@@ -7265,6 +7265,9 @@ function Invoke-ScrubCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/s
 function Invoke-ResearchCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/research.ps1'          -Label 'research' }
 function Invoke-ShipCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ship.ps1'            -Label 'ship' }
 function Invoke-ManifestCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/install-manifest.ps1' -Label 'install-manifest' }
+function Invoke-ScanCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scan.ps1'             -Label 'scan' }
+function Invoke-StocktakeCmd     { Invoke-ScriptWrapper -ScriptRelPath 'scripts/stocktake.ps1'        -Label 'stocktake' }
+function Invoke-RouteCmd         { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-route.ps1'      -Label 'route' }
 
 # ---------------------------------------------------------------------------
 # Main router
@@ -7300,6 +7303,10 @@ switch ($Script:Command) {
     'research' { Invoke-ResearchCmd }
     'ship'     { Invoke-ShipCmd }
     'manifest' { Invoke-ManifestCmd }
+    'scan'        { Invoke-ScanCmd }
+    'stocktake'   { Invoke-StocktakeCmd }
+    'route'       { Invoke-RouteCmd }
+    'model-route' { Invoke-RouteCmd }
     'learn'    { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-DiscoverCmd }
     'promote'  { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-GraduateCmd }
     'patterns' { $Script:SubArgs = @('status') + @($Script:SubArgs); Invoke-DiscoverCmd }

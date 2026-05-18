@@ -90,6 +90,12 @@
         "icon": "$(info)"
       },
       {
+        "command": "agentx.openDashboard",
+        "title": "Open Dashboard",
+        "category": "AgentX",
+        "icon": "$(dashboard)"
+      },
+      {
         "command": "agentx.runWorkflow",
         "title": "Show Workflow Steps",
         "category": "AgentX",

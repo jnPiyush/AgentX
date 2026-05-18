@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 107 skills across 12 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 109 skills across 12 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 107 skills across 12 categor
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 107 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 109 skills. Use Quick Reference below.
 
 ---
 
@@ -37,6 +37,8 @@ description: 'Compressed skill index for AI agents. 107 skills across 12 categor
 | **Iterative / Quality Loop** | [Iterative Loop](.github/skills/development/iterative-loop/SKILL.md), [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **Completion Verification (before claiming done)** | [Verification Before Completion](.github/skills/development/verification-before-completion/SKILL.md), [Iterative Loop](.github/skills/development/iterative-loop/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Stalled / Repeat-Failure Debugging** | [Systematic Debugging](.github/skills/development/systematic-debugging/SKILL.md), [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Error Handling](.github/skills/development/error-handling/SKILL.md), [Logging](.github/skills/development/logging-monitoring/SKILL.md) |
+| **Subagent Retrieval / Scoped Reads** | [Iterative Retrieval](.github/skills/ai-systems/iterative-retrieval/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md), [Token Optimizer](.github/skills/development/token-optimizer/SKILL.md) |
+| **Strategic Compaction / When to /compact or reset** | [Strategic Compaction](.github/skills/development/strategic-compaction/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md), [Iterative Loop](.github/skills/development/iterative-loop/SKILL.md) |
 | **Parallel Agent Sessions / Isolated Sandbox** | [Git Worktrees](.github/skills/development/git-worktrees/SKILL.md), [Version Control](.github/skills/operations/version-control/SKILL.md), [Experimentation Loop](.github/skills/development/experimentation-loop/SKILL.md) |
 | **Metric-Driven Experimentation** | [Experimentation Loop](.github/skills/development/experimentation-loop/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Token Budget / Context** | [Token Optimizer](.github/skills/development/token-optimizer/SKILL.md), [Context Mgmt](.github/skills/ai-systems/context-management/SKILL.md) |
@@ -122,6 +124,7 @@ dev|browser-automation|.github/skills/development/browser-automation/SKILL.md|pl
 dev|verification-before-completion|.github/skills/development/verification-before-completion/SKILL.md|verification,gate,completion-claims,loop-complete,tests-pass,deploy,evidence,no-false-done
 dev|systematic-debugging|.github/skills/development/systematic-debugging/SKILL.md|debugging,root-cause,hypothesis-testing,stalled-fixes,three-failed-fixes,architecture-question,bug-investigation
 dev|git-worktrees|.github/skills/development/git-worktrees/SKILL.md|git-worktree,parallel-sessions,isolated-checkout,sandbox,submodule-guard,detection,deploy-prototype
+dev|strategic-compaction|.github/skills/development/strategic-compaction/SKILL.md|compaction,reset,checkpoint,context-budget
 lang|csharp|.github/skills/languages/csharp/SKILL.md|C#,.NET,EF-Core,DI,async/await,xUnit
 lang|c|.github/skills/languages/c/SKILL.md|C,C23,pointers,embedded,systems,FFI,ABI,memory
 lang|cpp|.github/skills/languages/cpp/SKILL.md|C++,C++23,RAII,templates,span,string_view,native
@@ -177,6 +180,7 @@ ai|llm-gateway|.github/skills/ai-systems/llm-gateway-and-routing/SKILL.md|LiteLL
 ai|voice-agents|.github/skills/ai-systems/voice-agents/SKILL.md|OpenAI-Realtime,Voice-Live,Gemini-Live,Deepgram,ElevenLabs,LiveKit,Pipecat,barge-in,turn-taking,latency
 ai|synthetic-data|.github/skills/ai-systems/synthetic-data-generation/SKILL.md|Self-Instruct,Evol-Instruct,distillation,persona,decontamination,distilabel,argilla,dataset-cards
 ai|agent-memory|.github/skills/ai-systems/agent-memory-systems/SKILL.md|mem0,Zep,Letta,MemGPT,LangMem,episodic,semantic,procedural,consolidation,personalization
+ai|iterative-retrieval|.github/skills/ai-systems/iterative-retrieval/SKILL.md|subagent,scoped-reads,progressive-context,citation
 design|design-system-reasoning|.github/skills/design/design-system-reasoning/SKILL.md|design-system,art-direction,tokens,visual-language,anti-patterns,ui-direction,theme-presets,scaffold-theme
 design|anti-slop|.github/skills/design/anti-slop/SKILL.md|anti-slop,AI-slop,purple-gradients,honest-placeholders,forbidden-tells,T1-T10,placeholder-policy
 design|brand-spec-extraction|.github/skills/design/brand-spec-extraction/SKILL.md|brand-spec,brand-extraction,5-step-protocol,palette-extraction,voice-extraction,brand-from-url,brand-from-screenshot
@@ -317,5 +321,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 107 skills (arch:6, dev:19, lang:10, ops:5, infra:4, data:7, ai:29, design:12, test:6, domain:7, product:1, diagrams:1)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 109 skills (arch:6, dev:20, lang:10, ops:5, infra:4, data:7, ai:30, design:12, test:6, domain:7, product:1, diagrams:1)
 

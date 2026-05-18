@@ -51,12 +51,12 @@
 | Category | Count | Grade | Notes |
 |----------|-------|-------|-------|
 | Architecture | 6 | A | Core principles, security, performance, database, API design, low-code vs pro-code |
-| Development | 19 | A | Testing, error handling, iterative loop, code review, token optimizer, verification, debugging, git worktrees, and related engineering workflow skills |
+| Development | 20 | A | Testing, error handling, iterative loop, code review, token optimizer, verification, debugging, git worktrees, strategic compaction, and related engineering workflow skills |
 | Languages | 10 | A | C, C++, C#, Python, Go, Rust, React, Blazor, PostgreSQL, SQL Server |
 | Operations | 5 | A | Git, GitHub Actions, YAML pipelines, release mgmt, version control |
 | Infrastructure | 4 | A | Azure, Bicep, Terraform, containerization |
 | Data | 7 | A | Data analysis, Fabric, Databricks, Power BI, and Cosmos DB |
-| AI Systems | 29 | A | Agent dev, LangGraph, Foundry SDK, GenAIOps, prompt versioning, RAG, drift, evaluation, MCP, Azure Foundry, Anthropic Claude, multi-agent orchestration, tool use, agent observability, reasoning models, AI safety, vector DBs, computer use, LLM gateway, voice agents, synthetic data, agent memory |
+| AI Systems | 30 | A | Agent dev, LangGraph, Foundry SDK, GenAIOps, prompt versioning, RAG, drift, evaluation, MCP, Azure Foundry, Anthropic Claude, multi-agent orchestration, tool use, agent observability, reasoning models, AI safety, vector DBs, computer use, LLM gateway, voice agents, synthetic data, agent memory, iterative retrieval |
 | Design | 12 | A | design-system reasoning, anti-slop, brand extraction, UX/UI design, prototype craft, frontend/UI, accessibility, working prototypes, audits, heuristics, content design, and visual regression |
 | Testing | 6 | A | E2E, integration, performance, security, production readiness |
 | Domain | 7 | B | Oil & gas, financial services, audit, tax, legal, CLM, and corporate governance coverage is now present; more verticals could still be added |
