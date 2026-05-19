@@ -240,6 +240,10 @@ If GitHub API calls fail, permissions are insufficient, or issue context is uncl
 
 ## Iterative Quality Loop (MANDATORY)
 
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation. Do NOT wait for the pre-commit hook to catch this -- start the loop now.
+
+**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
+
 After completing initial work, keep iterating until all done criteria pass. Reaching the minimum iteration count is only a gate; the loop is not done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds.
 Copilot runs this loop natively within its agentic session.
 
