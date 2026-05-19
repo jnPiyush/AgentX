@@ -11,7 +11,11 @@ they find a pattern, pitfall, or convention that should be shared.
 ## Always-On Rules
 
 - **Quality Loop**: Run `.agentx/agentx.ps1 loop start -p "<task>"` as the ABSOLUTE FIRST tool call before any file edit for code or docs changes. Close with `loop complete -s "<summary>"` only after at least one history iteration summary contains the word "review" (subagent review pass). Pre-commit hook enforces this.
-- **Honesty**: If asked about loop state, run `.agentx/agentx.ps1 loop status` and report the actual state. Do not claim completion unless `loop complete` succeeded in the current session.
+- **Compound Capture**: APPROVED review staged -> matching `docs/artifacts/learnings/LEARNING-<issue>.md` MUST also be staged, or commit msg tagged `[skip-capture]`. Pre-commit hook hard-fails otherwise.
+- **Model Council**: New `docs/artifacts/adr/ADR-*.md` staged -> matching `docs/artifacts/adr/COUNCIL-*.md` MUST also be staged (3 diverse models + Synthesis), or commit msg tagged `[skip-council]`. Pre-commit hook hard-fails otherwise. Applies to PM (prd-scope), Architect (adr-options), Data Scientist (ai-design), Reviewer (code-review), Consulting Research.
+- **Execution Plan**: Commits changing >= 8 code files MUST stage a matching `docs/execution/plans/EXEC-PLAN-*.md`, or commit msg tagged `[skip-plan]`. Pre-commit hook hard-fails otherwise.
+- **Brainstorm (Engineer)**: `Research -> Brainstorm -> Plan -> ...` pipeline is mandatory; Brainstorm step is satisfied by a `brainstorm` ledger entry or `## Alternatives Considered` in the execution plan **before** Plan. Reviewer-enforced (no missing-file hook).
+- **Honesty**: If asked about any gate state, run `.agentx/agentx.ps1 loop status`, inspect staged files, and report the actual state. Do not claim completion unless the corresponding artifact is staged or the skip token is in the commit message.
 - **Zero-copy runtime**: Never copy `.github/agentx/`, `.github/agents/`, `.github/skills/`, `.github/templates/`, `.github/instructions/`, `docs/guides/`, or `prompts/` from the extension install into the user workspace. For setup, invoke `agentx.initializeLocalRuntime` (palette: "AgentX: Initialize Local Runtime").
 
 ## How to Update This File

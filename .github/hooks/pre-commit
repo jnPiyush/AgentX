@@ -249,25 +249,38 @@ if [ -n "$LEARNING_FILES" ]; then
 fi
 
 # ---------------------------------------------------------------
-# Check 11: Approved review without learning capture (advisory)
-# Warns when approving a review without a matching LEARNING file.
+# Check 11: Compound Capture gate (HARD FAIL)
+# Approved review staged -> matching LEARNING-<issue>.md MUST also be staged,
+# OR commit message includes [skip-capture] token with rationale.
 # ---------------------------------------------------------------
+COMMIT_MSG_FILE=".git/COMMIT_EDITMSG"
+COMMIT_MSG_CONTENT=""
+if [ -f "$COMMIT_MSG_FILE" ]; then
+  COMMIT_MSG_CONTENT=$(cat "$COMMIT_MSG_FILE" 2>/dev/null)
+fi
+
 APPROVED_REVIEWS=$(git diff --cached --name-only | grep '^docs/artifacts/reviews/REVIEW-.*\.md$')
 if [ -n "$APPROVED_REVIEWS" ]; then
   for REVIEW_FILE in $APPROVED_REVIEWS; do
     if [ -f "$REVIEW_FILE" ] && grep -qiE 'APPROVED|approved|Approved' "$REVIEW_FILE" 2>/dev/null; then
-      # Extract issue number from review filename (REVIEW-<issue>.md)
       ISSUE_NUM=$(echo "$REVIEW_FILE" | grep -oE '[0-9]+' | head -1)
       if [ -n "$ISSUE_NUM" ]; then
         LEARNING_PATH="docs/artifacts/learnings/LEARNING-${ISSUE_NUM}.md"
-        if [ ! -f "$LEARNING_PATH" ]; then
-          echo -e "${YELLOW}[WARN] Approved review staged without Compound Capture: $REVIEW_FILE${NC}"
-          echo "  Resolve Compound Capture before declaring work Done:"
-          echo "    Mandatory: create $LEARNING_PATH"
-          echo "    Skip: record rationale in the issue close comment"
-          echo "  See docs/WORKFLOW.md for the full Compound Capture contract."
+        LEARNING_STAGED=$(git diff --cached --name-only | grep -F "$LEARNING_PATH")
+        if [ -z "$LEARNING_STAGED" ]; then
+          if echo "$COMMIT_MSG_CONTENT" | grep -qF '[skip-capture]'; then
+            echo -e "${YELLOW}[WARN] Compound Capture bypassed via [skip-capture]: $REVIEW_FILE${NC}"
+            echo "  Ensure the skip rationale is recorded in the issue close comment."
+          else
+            echo -e "${RED}[FAIL] Approved review staged without Compound Capture: $REVIEW_FILE${NC}"
+            echo "  Resolve Compound Capture before declaring work Done:"
+            echo "    Mandatory: stage $LEARNING_PATH (create from .github/templates/LEARNING-TEMPLATE.md if available)"
+            echo "    Bypass:    add [skip-capture] to commit message AND record rationale in issue close comment"
+            echo "  See docs/WORKFLOW.md#compound-capture for the full contract."
+            FAILED=1
+          fi
         else
-          echo -e "${GREEN}[PASS] Learning capture exists for approved review: $LEARNING_PATH${NC}"
+          echo -e "${GREEN}[PASS] Learning capture staged for approved review: $LEARNING_PATH${NC}"
         fi
       fi
     fi
@@ -332,6 +345,79 @@ if [ -n "$UX_SPEC_FILES" ]; then
       fi
     fi
   done
+fi
+
+# ---------------------------------------------------------------
+# Check 13: Model Council gate (HARD FAIL)
+# New ADR staged -> matching COUNCIL-*.md MUST also be staged,
+# OR commit message includes [skip-council] token.
+# The COUNCIL file must capture 3 diverse-model perspectives and a Synthesis section.
+# ---------------------------------------------------------------
+STAGED_ADRS=$(git diff --cached --name-only --diff-filter=A | grep '^docs/artifacts/adr/ADR-.*\.md$')
+if [ -n "$STAGED_ADRS" ]; then
+  for ADR_FILE in $STAGED_ADRS; do
+    ADR_BASENAME=$(basename "$ADR_FILE" .md)
+    ADR_ID=$(echo "$ADR_BASENAME" | sed 's/^ADR-//')
+    COUNCIL_PATH="docs/artifacts/adr/COUNCIL-${ADR_ID}.md"
+    COUNCIL_STAGED=$(git diff --cached --name-only | grep -F "$COUNCIL_PATH")
+    if [ -z "$COUNCIL_STAGED" ]; then
+      if echo "$COMMIT_MSG_CONTENT" | grep -qF '[skip-council]'; then
+        echo -e "${YELLOW}[WARN] Model Council bypassed via [skip-council]: $ADR_FILE${NC}"
+        echo "  Ensure the skip rationale is documented inside the ADR's Decision section."
+      else
+        echo -e "${RED}[FAIL] New ADR staged without matching Model Council: $ADR_FILE${NC}"
+        echo "  Architect/PM/Data Scientist/Reviewer MUST convene a Model Council before landing a new ADR:"
+        echo "    Mandatory: stage $COUNCIL_PATH with 3 diverse-model perspectives + Synthesis section"
+        echo "    Helper:    pwsh scripts/model-council.ps1 -AdrId $ADR_ID"
+        echo "    Bypass:    add [skip-council] to commit message AND document rationale in ADR Decision"
+        echo "  See docs/WORKFLOW.md#model-council for the full contract."
+        FAILED=1
+      fi
+    else
+      if [ -f "$COUNCIL_PATH" ]; then
+        if ! grep -qiE '^##+ *(Synthesis|Consensus|Conclusion)' "$COUNCIL_PATH" 2>/dev/null; then
+          echo -e "${RED}[FAIL] Model Council file missing Synthesis section: $COUNCIL_PATH${NC}"
+          echo "  COUNCIL files MUST include a '## Synthesis' section that resolves the 3 perspectives."
+          FAILED=1
+        else
+          PERSPECTIVE_COUNT=$(grep -ciE '^##+ *(Model|Perspective|Opinion|Reviewer)[[:space:]]*[0-9A-Za-z]' "$COUNCIL_PATH" 2>/dev/null || echo 0)
+          if [ "$PERSPECTIVE_COUNT" -lt 3 ] 2>/dev/null; then
+            echo -e "${RED}[FAIL] Model Council has fewer than 3 model perspectives: $COUNCIL_PATH (found $PERSPECTIVE_COUNT)${NC}"
+            echo "  COUNCIL files MUST capture at least 3 diverse-model perspectives."
+            FAILED=1
+          else
+            echo -e "${GREEN}[PASS] Model Council valid ($PERSPECTIVE_COUNT perspectives + Synthesis): $COUNCIL_PATH${NC}"
+          fi
+        fi
+      fi
+    fi
+  done
+fi
+
+# ---------------------------------------------------------------
+# Check 14: Execution Plan gate (HARD FAIL)
+# Commits changing >= 8 code files MUST stage a matching EXEC-PLAN-*.md,
+# OR commit message includes [skip-plan] token.
+# Code file extensions: .ts .tsx .js .jsx .ps1 .py .cs .go .rs .tf .bicep .sql .java .rb .php
+# ---------------------------------------------------------------
+CODE_FILES_CHANGED=$(git diff --cached --name-only --diff-filter=ACMR | grep -cE '\.(ts|tsx|js|jsx|ps1|py|cs|go|rs|tf|bicep|sql|java|rb|php)$' 2>/dev/null || echo 0)
+if [ "$CODE_FILES_CHANGED" -ge 8 ] 2>/dev/null; then
+  PLAN_STAGED=$(git diff --cached --name-only | grep '^docs/execution/plans/EXEC-PLAN-.*\.md$' | head -1)
+  if [ -z "$PLAN_STAGED" ]; then
+    if echo "$COMMIT_MSG_CONTENT" | grep -qF '[skip-plan]'; then
+      echo -e "${YELLOW}[WARN] Execution Plan bypassed via [skip-plan] ($CODE_FILES_CHANGED code files changed)${NC}"
+      echo "  Confirm this is genuinely simple/mechanical work that does not need a plan."
+    else
+      echo -e "${RED}[FAIL] Complex commit ($CODE_FILES_CHANGED code files) without execution plan${NC}"
+      echo "  Commits touching >= 8 code files MUST be backed by a living execution plan:"
+      echo "    Mandatory: stage docs/execution/plans/EXEC-PLAN-<topic>.md (template: .github/templates/EXEC-PLAN-TEMPLATE.md)"
+      echo "    Bypass:    add [skip-plan] to commit message (use only for trivial bulk edits)"
+      echo "  See docs/WORKFLOW.md#execution-plans-for-complex-work for required plan sections."
+      FAILED=1
+    fi
+  else
+    echo -e "${GREEN}[PASS] Execution plan staged for complex commit ($CODE_FILES_CHANGED code files): $PLAN_STAGED${NC}"
+  fi
 fi
 
 if [ $FAILED -eq 1 ]; then

@@ -19,6 +19,22 @@ This file is the **thin router** - it tells you what to load and when. It loads 
 
 ---
 
+## Mandatory Workflow Gates (NON-SKIPPABLE)
+
+These four rules carry the same weight as the Quality Loop. The pre-commit hook hard-fails commits that violate them. Bypass tokens exist for genuine emergencies only.
+
+> **Compound Capture (Done gate)**: Any commit that stages an APPROVED review under `docs/artifacts/reviews/REVIEW-*.md` MUST also stage the matching `docs/artifacts/learnings/LEARNING-<issue>.md`, OR record a skip rationale in the issue close comment and tag the commit message with `[skip-capture]`. Work is NOT Done until Compound Capture is resolved. See [AGENTS.md#compound-engineering-hard-rule](../AGENTS.md#compound-engineering-hard-rule).
+>
+> **Model Council (ADR/PRD/Eval gate)**: Any commit that stages a new `docs/artifacts/adr/ADR-*.md` MUST also stage a matching `docs/artifacts/adr/COUNCIL-*.md` capturing 3 diverse-model perspectives and a Synthesis section, OR tag the commit message with `[skip-council]` and document the rationale inside the ADR's Decision section. PM (prd-scope), Architect (adr-options), Data Scientist (ai-design), Reviewer (code-review), and Consulting Research MUST convene a council unless they record a skip rationale. See [AGENTS.md#role-pipeline-reference](../AGENTS.md#role-pipeline-reference).
+>
+> **Execution Plan (complex-work gate)**: Any commit changing **8 or more** code files (`.ts/.tsx/.js/.ps1/.py/.cs/.go/.rs/.tf/.bicep/.sql`) MUST stage a corresponding `docs/execution/plans/EXEC-PLAN-*.md` derived from [.github/templates/EXEC-PLAN-TEMPLATE.md](../.github/templates/EXEC-PLAN-TEMPLATE.md), OR tag the commit message with `[skip-plan]`. Plans are living documents and MUST be updated, not only authored. See [docs/WORKFLOW.md#execution-plans-for-complex-work](../docs/WORKFLOW.md#execution-plans-for-complex-work).
+>
+> **Brainstorm (Engineer pre-Plan gate)**: When acting in the Engineer phase on non-trivial work, the `Research -> Brainstorm -> Plan -> Design -> Implement -> Test -> Review` pipeline is mandatory. The Brainstorm step is satisfied by recording at least one entry of type `brainstorm` in the clarification ledger OR an `## Alternatives Considered` block inside the execution plan **before** Plan is written. This step has no missing-file hook gate; reviewers MUST verify it during the review phase. See [AGENTS.md#pipeline-phase-compliance-hard-rule](../AGENTS.md#pipeline-phase-compliance-hard-rule).
+
+**Honesty rule**: If asked whether any of these gates ran, inspect the staged files and commit message and report the actual state. Never claim a gate was satisfied without the artifact or skip token.
+
+---
+
 ## Retrieval-Led Reasoning
 
 **IMPORTANT**: Prefer retrieval-led reasoning over pre-training-led reasoning for ALL implementation tasks.
