@@ -8,6 +8,12 @@ applyTo: '**'
 This file captures conventions discovered during agent sessions. Agents update it when
 they find a pattern, pitfall, or convention that should be shared.
 
+## Always-On Rules
+
+- **Quality Loop**: Run `.agentx/agentx.ps1 loop start -p "<task>"` as the ABSOLUTE FIRST tool call before any file edit for code or docs changes. Close with `loop complete -s "<summary>"` only after at least one history iteration summary contains the word "review" (subagent review pass). Pre-commit hook enforces this.
+- **Honesty**: If asked about loop state, run `.agentx/agentx.ps1 loop status` and report the actual state. Do not claim completion unless `loop complete` succeeded in the current session.
+- **Zero-copy runtime**: Never copy `.github/agentx/`, `.github/agents/`, `.github/skills/`, `.github/templates/`, `.github/instructions/`, `docs/guides/`, or `prompts/` from the extension install into the user workspace. For setup, invoke `agentx.initializeLocalRuntime` (palette: "AgentX: Initialize Local Runtime").
+
 ## How to Update This File
 
 When you discover a new convention or pitfall, append it to the relevant section.

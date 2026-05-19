@@ -9,6 +9,10 @@ applyTo: '**/*agent*, **/*llm*, **/*model*, **/*workflow*, **/agents/**, **/*ai*
 
 **Skill**: [.github/skills/ai-systems/ai-agent-development/SKILL.md](../skills/ai-systems/ai-agent-development/SKILL.md)
 
+## Quality Loop Gate (read before editing)
+
+Before editing any agent definition, prompt, workflow, or LLM-integration file, run `.agentx/agentx.ps1 loop start -p "<task>"` as your ABSOLUTE FIRST tool call. Close with `.agentx/agentx.ps1 loop complete -s "<summary>"` once a subagent review iteration has passed. The pre-commit hook blocks commits when the loop is missing or incomplete. See [.github/copilot-instructions.md](../copilot-instructions.md#quality-loop-hard-rule-non-skippable) for the full rule.
+
 ## Key Rules
 
 - **Never** hardcode API keys, endpoints, or model names -- use env vars

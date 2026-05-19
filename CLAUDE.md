@@ -5,6 +5,16 @@
 
 ---
 
+## Quality Loop Hard Rule (NON-SKIPPABLE)
+
+> **HARD RULE**: Before editing, creating, or deleting any file for a code or docs change, run `.agentx/agentx.ps1 loop start -p "<task>"` as your ABSOLUTE FIRST tool call. Reading files and running `loop status` are allowed; mutating the workspace before `loop start` succeeds is a contract violation. The loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, and at least one history iteration summary must contain the word "review" (subagent review pass). The pre-commit hook blocks commits when these conditions are unmet.
+>
+> **Honesty rule**: If asked whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state. Do not claim completion unless `loop complete` succeeded in the current session.
+>
+> Frontmatter-only enforcement is insufficient -- this rule lives here in body prose because models routinely skip rules placed only in deeper docs.
+
+---
+
 ## Core Documents (Read Before Coding)
 
 1. **[AGENTS.md](AGENTS.md)** - Map of all resources, quick-reference rules, pointers to detailed docs. Read for ANY coding or workflow task.
