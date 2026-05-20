@@ -4341,28 +4341,33 @@ function Invoke-LoopStart {
     $existing = Read-JsonFile $Script:LOOP_STATE_FILE
     $loopHealth = Get-LoopStateHealth -State $existing -ExpectedIssue $issue
 
-    # Any loop start is always a clean reset: counter back to 1, all old evidence
-    # cleared. There is no --force gate because any code change deserves a fresh loop
-    # with no reference to prior iterations.
+    # Any loop start is always a clean reset: counter back to 1, all old history
+    # archived, all old evidence cleared. A new `loop start` is the explicit signal
+    # that a new task is beginning, so prior iteration counts MUST NOT leak through.
+    # Agents reading loop status mid-task were getting confused by stale iteration
+    # numbers and history entries from earlier work.
 
     if ($existing -and $existing.active) {
-        if ($loopHealth.kind -eq 'healthy') {
-            Write-CliOutput 'An active loop exists. Cancel it first.'
-            return
-        }
-
+        $resetReason = if ($loopHealth.kind -eq 'healthy') { 'new task started' } else { $loopHealth.reason }
         $existing.active = $false
         $existing.status = 'cancelled'
         $existing.lastIterationAt = Get-Timestamp
         $existing.history = @($existing.history) + @([PSCustomObject]@{
                 iteration = $existing.iteration
                 timestamp = Get-Timestamp
-                summary   = "Auto-reset stale loop before starting new task ($($loopHealth.reason))"
+                summary   = "Auto-reset prior loop before starting new task ($resetReason)"
                 status    = 'cancelled'
                 outcome   = 'fail'
             })
-        Write-JsonFile $Script:LOOP_STATE_FILE $existing
-        Write-CliOutput "$($C.y)  Auto-reset $($loopHealth.kind) active loop ($($loopHealth.reason)).$($C.n)"
+        # Archive the cancelled loop alongside evidence so audit history is preserved
+        try {
+            $archiveDir = Join-Path (Split-Path $Script:LOOP_STATE_FILE -Parent) 'loop-history'
+            if (-not (Test-Path $archiveDir)) { New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null }
+            $stamp = (Get-Date -Format 'yyyyMMddTHHmmss')
+            $archivePath = Join-Path $archiveDir "loop-$stamp.json"
+            Write-JsonFile $archivePath $existing
+        } catch { Write-Verbose "Loop archive failed: $_" }
+        Write-CliOutput "$($C.y)  Auto-reset prior loop (was iteration $($existing.iteration), $resetReason). Counter back to 1.$($C.n)"
     }
 
     # Fresh loop means fresh evidence workspace: remove archived artifacts from the
