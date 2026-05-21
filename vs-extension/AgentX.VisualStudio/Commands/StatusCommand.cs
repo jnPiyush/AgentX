@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using AgentX.VisualStudio.Services;
 using Microsoft.VisualStudio.Extensibility;
 using Microsoft.VisualStudio.Extensibility.Commands;
 
@@ -15,8 +16,25 @@ internal sealed class ShowStatusCommand : AgentXCommand
         Placements = new[] { CommandPlacement.KnownPlacements.ToolsMenu },
     };
 
-    public override Task ExecuteCommandAsync(IClientContext context, CancellationToken cancellationToken)
-        => RunCliAsync(new[] { "state" }, cancellationToken);
+    public override async Task ExecuteCommandAsync(IClientContext context, CancellationToken cancellationToken)
+    {
+        // Run `agentx state` and stream the CLI output to the AgentX Output
+        // window via the shared RunCliAsync helper.
+        await RunCliAsync(new[] { "state" }, cancellationToken).ConfigureAwait(false);
+
+        // Append a discoverability trailer enumerating the
+        // `AgentX: Workflow - *` shortcuts so users reaching for "Show Agent
+        // Status" also learn what workflow shortcuts ship with this extension.
+        // The trailer text mirrors string-resources.json so anything printed
+        // here can be typed back into Ctrl+Q.
+        //
+        // Intentionally emitted on both success and failure: the trailer is a
+        // discoverability hint, not a result summary. On failure the user has
+        // already seen RunCliAsync's prompt; the trailer still helps them find
+        // alternate AgentX commands to try.
+        await Output.WriteLineAsync(WorkflowShortcutsTrailer.Build(), cancellationToken)
+            .ConfigureAwait(false);
+    }
 }
 
 [VisualStudioContribution]

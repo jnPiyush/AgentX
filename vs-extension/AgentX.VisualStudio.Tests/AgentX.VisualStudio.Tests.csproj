@@ -31,6 +31,7 @@
     <Compile Include="..\AgentX.VisualStudio\Services\LoopStatusTransitionState.cs" Link="Source\LoopStatusTransitionState.cs" />
     <Compile Include="..\AgentX.VisualStudio\Services\DependencyChecker.cs" Link="Source\DependencyChecker.cs" />
     <Compile Include="..\AgentX.VisualStudio\Services\WorkspaceRootChangedEventArgs.cs" Link="Source\WorkspaceRootChangedEventArgs.cs" />
+    <Compile Include="..\AgentX.VisualStudio\Services\WorkflowShortcutsTrailer.cs" Link="Source\WorkflowShortcutsTrailer.cs" />
   </ItemGroup>
 
   <ItemGroup>

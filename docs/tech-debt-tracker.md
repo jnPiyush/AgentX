@@ -16,6 +16,7 @@
 | TD-004 | Documentation | No automated doc count validation in CI -- counts can drift from reality | Agents given wrong counts, confusion in routing | v8.0.0 |
 | TD-012 | Harness Enforcement | Complex-task execution plan policy exists in docs but is not yet enforced by CI or workflow automation | Plan-first workflow can drift or be skipped | v8.2.0 |
 | TD-013 | Harness Runtime | No explicit thread/turn/item/evidence runtime model in the visible extension and CLI surfaces | Limits durable progress tracking and rich agent legibility | v8.2.0 |
+| TD-016 | VS Extension | Watch `microsoft/VSExtensibility` + nuget.org for `Microsoft.VisualStudio.Extensibility.Copilot.Chat`; when shipped, reconcile `Chat/AgentXChatTool.cs` against the real namespace and flip the `EnableCopilotChat` gate so `@agentx` becomes visible in VS Copilot Chat (see vs-extension/README.md "Why don't I see @agentx in Visual Studio Copilot Chat?", issue #345) | VS users currently see no AgentX chat participant -- only the tool window and Tools menu commands work | v8.4.45 |
 
 ### Medium Priority
 
@@ -32,6 +33,7 @@
 |----|------|-------------|--------|-------|
 | TD-009 | Domain Skills | Only 5 domain verticals (oil & gas, financial, audit, tax, legal) | Limited domain coverage for consulting agents | v8.0.0 |
 | TD-011 | README | Missing badges (CI status, coverage, version) and screenshots | Less professional first impression | v8.0.0 |
+| TD-017 | Quality Loop | `tests-baseline.json` is a placeholder, so `agentx loop iterate`/`complete` emit a `[WARN]` on every invocation and pass-count regression checks are disabled; record the baseline once tests are green via `agentx loop baseline -c <passing-tests>` (current count: 63 for vs-extension as of v8.4.45) | Warnings desensitize operators; pass-count regressions can slip through the loop gate | v8.4.45 |
 
 ---
 

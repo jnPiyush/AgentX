@@ -55,6 +55,7 @@
 | Agent State list shows alphabetical agents | `Name`, status badge, `#<issue>`, last-activity (local time) | `04-status-agents.png` | |
 | Force a malformed CLI output (rename `agentx-cli.ps1`) and click `Refresh` | Each section falls back to formatted text in a fallback TextBox; no exception | `04-status-fallback.png` | |
 | Click `Refresh` | Spinner shows briefly; data reloads | `04-status-refresh.png` | |
+| `Tools -> AgentX: Show Agent Status` (or Ctrl+Q `AgentX: Show Agent Status`) | Output pane prints `agentx state` followed by a `Workflow shortcuts available (Tools menu / Ctrl+Q):` trailer listing all 8 `AgentX: Workflow - {Feature,Epic,Story,Bug,Spike,DevOps,Docs,Iterative Loop}` shortcuts | `04-status-workflow-trailer.png` | |
 
 ---
 
@@ -77,6 +78,8 @@
 | `Iterate` with a summary | Iteration counter increments | `06-loop-iterate.png` | |
 | `Complete Loop` | Loop transitions to inactive | `06-loop-complete.png` | |
 | `Rollback Loop` (when active) | Loop reset to a prior iteration | `06-loop-rollback.png` | |
+| After `Rollback Loop` (active loop, iteration > 1) | Iteration counter decrements by 1 (the Tools menu invokes `loop rollback` with no count argument; `-n <count>` is available from the terminal); the most recent `History` entry is dropped; Status tab auto-refreshes to reflect the new iteration and history | `06-loop-rollback-after.png` | |
+| `Tools -> AgentX: Rollback Loop` from the menu | Same effect as the tool-window `Rollback Loop` button; `Output` pane prints the CLI exit line | `06-loop-rollback-tools.png` | |
 
 ---
 
