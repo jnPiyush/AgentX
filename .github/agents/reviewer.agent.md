@@ -6,7 +6,7 @@ reasoning:
   mode: adaptive
   level: high
 constraints:
-  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Functional Review -> Code Review -> Run Tests -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT issue an approval or rejection before completing all phases"
+  - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Pass A (Spec Compliance) -> Pass A Verdict Gate -> Pass B (Code Quality) -> Run Tests -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT start Pass B until Pass A has an explicit PASS verdict recorded; MUST NOT issue an approval or rejection before completing all phases"
   - "MUST read the Tech Spec and PRD before reviewing code"
   - "MUST verify the Engineer's quality loop reached status=complete"
   - "MUST check test coverage >= 80%"
@@ -122,34 +122,53 @@ If a format cannot be extracted (e.g. password-protected `.vsd`, missing convert
 - Status MUST be `complete`
 - If `active` or `cancelled`: REJECT immediately, add `needs:changes` label
 
-### 3. Functional Review
+### 3. Pass A -- Spec & Intent Compliance (gate)
 
-Perform a deep functional correctness analysis of the branch diff, focusing on:
-- Logic correctness (off-by-one errors, incorrect boolean logic, wrong comparisons)
-- Edge cases (null/empty inputs, boundary values, overflow potential)
-- Error handling (swallowed exceptions, missing cleanup, exposed internals)
-- Concurrency issues (race conditions, deadlocks, shared state mutation)
-- Contract compliance (does the implementation match the spec?)
+**This is a hard gate.** Pass A answers one question: *does this implement what the PRD and Tech Spec said?* Run Pass A to completion BEFORE starting Pass B. A code-quality-perfect change that misses the PRD or ADR is still a reject.
 
-Order findings by severity: Critical > High > Medium > Low. Incorporate Critical and High findings into the review document. Medium and Low findings are advisory.
-
-### 4. Review Code Changes
-
-Use `get_changed_files` and `read_file` to inspect all changes. Evaluate against this checklist:
+Evaluate against this Pass A checklist (matches `REVIEW-TEMPLATE.md` Pass A table):
 
 | Category | Check | Hard Threshold |
 |----------|-------|----------------|
-| **Spec Conformance** | Implementation matches Tech Spec requirements | Any deviation = Critical |
+| **Spec Conformance** | Implementation matches Tech Spec requirements end-to-end | Any deviation = Critical |
+| **PRD Intent Preservation** | Original PRD intent not distorted through implementation layers | Distortion = Major |
+| **Contract Compliance** | Public API / schema / interface matches the documented contract | Any drift = Critical |
+| **Acceptance Criteria** | Every AC in the issue is demonstrably satisfied by the diff | Any miss = Major |
+| **Scope** | Diff stays within the issue scope; no unrelated refactors | Out-of-scope change = Major |
+
+**Pass A verdict** (record verbatim in the review doc Pass A row):
+
+- `[PASS]` -> proceed to Pass B
+- `[FAIL]` -> STOP. Decision is `CHANGES REQUESTED`. Do NOT score Pass B. List failing rows as required fixes.
+
+### 3.5 Pass A Verdict Gate (NON-SKIPPABLE)
+
+Before starting Pass B, the reviewer MUST:
+
+1. Write the Pass A table into the review document with explicit `[PASS]` / `[FAIL]` per row.
+2. Write the **Pass A verdict** line (`[PASS] proceed to Pass B` or `[FAIL] return CHANGES REQUESTED ...`).
+3. If `[FAIL]`, skip to Step 6 (Write Review Document) with decision `CHANGES REQUESTED`.
+
+Do NOT collapse Pass A and Pass B into a single sweep. The gate exists because code-quality bias suppresses spec-fit findings when both passes run concurrently.
+
+### 4. Pass B -- Code Quality & Craft
+
+Only run Pass B when Pass A is `[PASS]`. Use `get_changed_files` and `read_file` to inspect all changes. Evaluate against this checklist:
+
+| Category | Check | Hard Threshold |
+|----------|-------|----------------|
 | **Code Quality** | Clean, readable, follows codebase patterns and naming | - |
 | **Testing** | Coverage >= 80%, test pyramid balanced, edge cases covered | Coverage < 80% = Major |
 | **Security** | No secrets, parameterized SQL, input validation, no SSRF | Any violation = Critical |
 | **Performance** | No N+1 queries, appropriate caching, no blocking I/O in hot paths | - |
 | **Error Handling** | Graceful failures, useful error messages, no swallowed exceptions | Bare catch = Major |
 | **Documentation** | README updated, complex logic commented, API docs current | - |
-| **Intent Preservation** | Original PRD intent not distorted through implementation layers | Distortion = Major |
+| **Logic Correctness** | Off-by-one, boolean logic, comparison defects, concurrency hazards | Defect = Major |
+| **Edge Cases** | Null/empty inputs, boundary values, overflow potential covered | Missing = Major |
 
-**Per-Category Verdict Rule**: Each category MUST receive an independent PASS or FAIL verdict.
-If ANY category is FAIL, the review decision MUST be Reject regardless of how many categories pass.
+**Per-Category Verdict Rule**: Each Pass B category MUST receive an independent PASS or FAIL verdict.
+If ANY category is FAIL, the review decision MUST be `CHANGES REQUESTED` regardless of how many categories pass.
+Pass B FAIL is still a reject even when Pass A is PASS.
 Categories marked with a Hard Threshold automatically escalate to the stated severity -- the reviewer
 MUST NOT downgrade them.
 
@@ -254,11 +273,12 @@ Apply to: findings severity, refactoring suggestions, performance observations, 
 
 Before issuing the final decision, verify with fresh eyes:
 
-- [ ] Review checklist covers all 8 categories (spec, quality, testing, security, performance, errors, docs, intent)
+- [ ] **Pass A verdict recorded explicitly** (`[PASS]` or `[FAIL]`) with per-row results
+- [ ] If Pass A failed, Pass B was NOT scored and decision is `CHANGES REQUESTED`
+- [ ] If Pass A passed, Pass B per-category verdicts are recorded (quality, testing, security, performance, errors, docs, logic, edge cases)
 - [ ] All Critical and Major findings have clear reproduction steps
 - [ ] Severity levels correctly assigned (not over/under-classifying)
 - [ ] Feedback is actionable -- Engineer can fix without ambiguity
-- [ ] Original PRD intent is preserved in the implementation
 - [ ] Quality loop status verified as `complete`
 - [ ] Model Council convened (or skip rationale recorded in the review document); `COUNCIL-{issue}.md` Synthesis section is complete and the Findings, Severity assignments, and final Decision reflect Consensus / resolved Divergences / Hidden Risks captured by the council (or override rationale is documented)
 - [ ] **UI-bearing check**: if the changeset triggers the UI-Bearing Change Review Gate (modifies `*.tsx`, `*.jsx`, `*.razor`, `*.razor.cs`, `*.vue`, `*.svelte`, UX prototypes, CSS/SCSS, or is labeled `needs:ux` / `type:powerbi`), confirm: (a) at least one screenshot per primary route captured via the `browser-automation` skill; (b) an axe-core or equivalent accessibility scan result is recorded in the review doc; (c) at least one scripted interaction verified per primary user task; (d) the Weighted Score Originality row is graded and not skipped
