@@ -6,10 +6,10 @@ AgentX extension for Visual Studio 2022 (17.9+). Mirrors the VS Code extension a
 
 Implements the milestones from the rollout plan:
 
-- M1 Commands: `Ready`, `Initialize`, `Ship`, `Show Status`, `Check Deps`, `Run Workflow`, `Validate Handoff`, `Loop Start/Status/Iterate/Complete/Cancel`.
+- M1 Commands: `Ready`, `Initialize`, `Ship`, `Show Status`, `Check Deps`, `Run Workflow`, `Validate Handoff`, `Loop Start/Status/Iterate/Complete/Cancel/Rollback`.
 - M2 Tool Window: WPF panel with Refresh button showing loop status + ready issues.
 - M3 Settings: `agentx.autoRefresh`, `agentx.shell`, `agentx.rootPath`, `agentx.searchDepth`, `agentx.skipStartupCheck`, `agentx.skipUpdateCheck`.
-- M4 Copilot Chat tool: stubbed under `#if AGENTX_COPILOT_CHAT` -- enable when you opt in to the preview SDK.
+- M4 Copilot Chat tool: **stub only**. The `Microsoft.VisualStudio.Extensibility.Copilot.Chat` package is not yet published on public NuGet, and the VS Extensibility SDK does not expose a chat-participant surface today, so the stub cannot be activated. See [Why don't I see @agentx in Visual Studio Copilot Chat?](#why-dont-i-see-agentx-in-visual-studio-copilot-chat) below.
 - M5 Packaging: `dotnet build -c Release` produces a `.vsix`. CI job added to `azure-pipelines.yml`.
 
 ## Build
@@ -62,10 +62,31 @@ vs-extension/
 
 Both extensions read agent/skill/prompt files from the repo's `.github/` and `packs/agentx-core/` directories and invoke the same `.agentx/agentx.ps1` CLI. No business logic is duplicated.
 
+## Why don't I see @agentx in Visual Studio Copilot Chat?
+
+**Short answer**: Visual Studio does not currently support third-party Copilot Chat participants the way VS Code does. After you install the AgentX VSIX, the extension is active and its commands and tool window are available, but the chat window does not show an `@agentx` participant or AgentX agents -- because the public Visual Studio Extensibility SDK does not yet expose a chat-participant surface (no `Microsoft.VisualStudio.Extensibility.Copilot.Chat` package on nuget.org).
+
+**Technical details**:
+
+- The VS Code extension registers `@agentx` via `vscode.chat.createChatParticipant`, a public API. See [vscode-extension/src/chat/chatParticipant.ts](../vscode-extension/src/chat/chatParticipant.ts).
+- The Visual Studio Extensibility SDK (`Microsoft.VisualStudio.Extensibility` 17.14.x) does **not** ship a `ChatTool` / `ChatParticipant` surface today. The forward-looking package `Microsoft.VisualStudio.Extensibility.Copilot.Chat` referenced in `AgentX.VisualStudio.csproj` is **not published on any public NuGet feed**; `dotnet restore` with `-p:EnableCopilotChat=true` fails with NU1101.
+- [Chat/AgentXChatTool.cs](AgentX.VisualStudio/Chat/AgentXChatTool.cs) is intentionally kept as a forward-looking stub so the chat surface can be enabled with a one-line flip the day Microsoft ships the SDK. Until then, the stub is compiled out via `#if AGENTX_COPILOT_CHAT` and does not affect runtime behavior.
+- Track package availability at [microsoft/VSExtensibility](https://github.com/microsoft/VSExtensibility) and watch for new versions of `Microsoft.VisualStudio.Extensibility.*` on nuget.org.
+
+**What to use instead today** (all fully working surfaces in VS):
+
+| Surface | How to open | What you get |
+|---------|-------------|--------------|
+| AgentX Tool Window | `View` -> `Other Windows` -> `AgentX: Show Tool Window` | Loop status, ready issues, refresh button |
+| AgentX commands | `Tools` menu, or `Ctrl+Q` Command Palette: type `AgentX:` | `Ready`, `Initialize`, `Ship`, `Show Status`, `Check Deps`, `Run Workflow`, `Validate Handoff`, `Loop Start/Status/Iterate/Complete/Cancel/Rollback`, `Check Environment`, plus the per-classification `Workflow - Feature/Epic/Story/Bug/Spike/DevOps/Docs/Iterative Loop` shortcuts |
+| Direct CLI | Open a terminal in your repo root | `pwsh ./.agentx/agentx.ps1 ready`, `loop status`, `workflow engineer`, etc. |
+
+If you want chat-driven AgentX orchestration today, use the VS Code extension. The two extensions share the same `.agentx/agentx.ps1` CLI, the same `.github/agentx/` assets, and the same loop state, so you can switch IDEs without losing context.
+
 ## Notes / TODOs
 
 - The Visual Studio Extensibility SDK does not yet expose a free-text input dialog. `Loop Start` uses a sensible default summary; refine with subsequent `Loop: Iterate` invocations.
-- The Copilot Chat extensibility surface is preview. Enable `AGENTX_COPILOT_CHAT` and add the matching package reference in `AgentX.VisualStudio.csproj` once the SDK stabilizes.
+- The Copilot Chat extensibility surface is not yet publicly available -- see [Why don't I see @agentx in Visual Studio Copilot Chat?](#why-dont-i-see-agentx-in-visual-studio-copilot-chat) above. Re-evaluate when Microsoft publishes `Microsoft.VisualStudio.Extensibility.Copilot.Chat` (or an equivalent) on nuget.org.
 - Marketplace publishing is manual: upload the `.vsix` to the [Visual Studio Marketplace](https://marketplace.visualstudio.com/manage) under the `jnPiyush` publisher.
 
 ## Signing the VSIX

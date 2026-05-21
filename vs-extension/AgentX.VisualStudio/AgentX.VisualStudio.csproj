@@ -22,14 +22,27 @@
     <!-- The build pipeline treats warnings as errors by default; the explicit NoWarn above keeps the preview surfaces from breaking the build. -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <!--
-      Copilot Chat opt-in. Enable by passing `-p:EnableCopilotChat=true` to dotnet build,
-      OR by setting the property to `true` here. When enabled, the
-      Microsoft.VisualStudio.Extensibility.Copilot.Chat PackageReference (below) is
-      included AND the AGENTX_COPILOT_CHAT compilation symbol is defined, so
-      Chat/AgentXChatTool.cs compiles into the shipped DLL. This is gated by a flag
-      because the Copilot Chat extensibility package is preview-track and version
-      compatibility shifts across VS releases; the flag lets adopters opt in
-      without forking the csproj. See Chat/AgentXChatTool.cs for activation notes.
+      Copilot Chat opt-in. Defaults to FALSE because the underlying
+      Microsoft.VisualStudio.Extensibility.Copilot.Chat package is NOT yet
+      published on any public NuGet feed (verified 17.14.x; no chat-tool /
+      chat-participant surface exists in the public VisualStudio.Extensibility
+      SDK today). VS Code already exposes vscode.chat.createChatParticipant,
+      which is why the AgentX VS Code extension shows @agentx in Copilot Chat
+      and the VS extension cannot. See vs-extension/README.md for the user-
+      facing explanation and the supported surfaces in VS today (Tool Window,
+      Tools menu, Command Palette).
+
+      Do NOT flip this default to true: `dotnet restore` will fail with NU1101
+      because the package id resolves to nothing on nuget.org. The gate exists
+      so that when Microsoft publishes the chat extensibility package, a
+      single property flip plus a namespace/type reconciliation in
+      Chat/AgentXChatTool.cs enables the surface without an architectural
+      change. Track package availability via
+      https://github.com/microsoft/VSExtensibility/issues and the SDK
+      release notes before enabling.
+
+      When that day comes, also re-test with:
+        dotnet build .\AgentX.VisualStudio.sln -c Release -p:EnableCopilotChat=true
     -->
     <EnableCopilotChat Condition="'$(EnableCopilotChat)' == ''">false</EnableCopilotChat>
     <DefineConstants Condition="'$(EnableCopilotChat)' == 'true'">$(DefineConstants);AGENTX_COPILOT_CHAT</DefineConstants>
@@ -39,7 +52,13 @@
     <!-- VisualStudio.Extensibility (out-of-process, modern). Bump versions as the SDK ships. -->
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Sdk" Version="17.14.40608" />
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Build" Version="17.14.40608" />
-    <!-- Copilot Chat extensibility. Included only when EnableCopilotChat=true. -->
+    <!--
+      Copilot Chat extensibility. NOT YET PUBLISHED on public NuGet (the id
+      Microsoft.VisualStudio.Extensibility.Copilot.Chat does not resolve on
+      nuget.org as of SDK 17.14.40608). Conditionally included only when
+      EnableCopilotChat=true so this csproj still restores out of the box.
+      See the EnableCopilotChat comment above for the full rationale.
+    -->
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Copilot.Chat"
                       Version="17.14.40608"
                       Condition="'$(EnableCopilotChat)' == 'true'" />

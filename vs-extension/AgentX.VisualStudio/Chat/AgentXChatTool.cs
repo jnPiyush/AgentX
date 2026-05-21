@@ -1,22 +1,37 @@
 // Copilot Chat participant for the AgentX Visual Studio extension.
 //
-// This file compiles only when the AGENTX_COPILOT_CHAT compilation symbol is
+// NOTE (current state, verified against SDK 17.14.40608):
+//   The package Microsoft.VisualStudio.Extensibility.Copilot.Chat is NOT yet
+//   published on any public NuGet feed. The VisualStudio.Extensibility OOP
+//   SDK does not currently expose a chat-tool or chat-participant surface.
+//   That is why @agentx does not appear in Visual Studio's Copilot chat
+//   window after installing the VSIX -- the chat surface itself does not
+//   exist for VS extensions today. The VS Code analogue
+//   (vscode-extension/src/chat/chatParticipant.ts) uses VS Code's public
+//   vscode.chat API, which has no equivalent in the VS Extensibility SDK
+//   at this version. See vs-extension/README.md for the user-facing
+//   explanation and the supported surfaces (Tool Window, Tools menu,
+//   Command Palette).
+//
+//   This file is kept as a forward-looking stub so that the day Microsoft
+//   publishes the chat extensibility package, enabling it is a single MSBuild
+//   property flip plus a namespace/type reconciliation against the real
+//   shipped API surface. The using directives and type names below are
+//   speculative -- they will almost certainly need to be updated against the
+//   actual SDK once it ships.
+//
+// This file compiles ONLY when the AGENTX_COPILOT_CHAT compilation symbol is
 // defined. The symbol is gated by the <EnableCopilotChat> MSBuild property in
-// AgentX.VisualStudio.csproj (default: false). Enable the chat surface with:
+// AgentX.VisualStudio.csproj (default: false). Do NOT flip the default to
+// true: dotnet restore will fail with NU1101 because the package id does not
+// resolve on nuget.org.
 //
-//   dotnet build .\AgentX.VisualStudio.sln -c Release -p:EnableCopilotChat=true
+// When the SDK ships, route a user's prompt through
+// `agentx loop iterate -s <prompt>`, mirroring how the VS Code chat
+// participant `agentx.chat` integrates the same CLI.
 //
-// or set <EnableCopilotChat>true</EnableCopilotChat> in the csproj. When the
-// symbol is defined, the Microsoft.VisualStudio.Extensibility.Copilot.Chat
-// PackageReference is also brought in conditionally, exposing the
-// ChatTool / ChatToolConfiguration / ChatToolRequest surfaces used below.
-//
-// The tool routes a user's prompt through `agentx loop iterate -s <prompt>`,
-// mirroring how the VS Code chat participant `agentx.chat` integrates the same
-// CLI (see vscode-extension/src/chat/chatParticipant.ts).
-//
-// Behaviour parity with VS Code:
-//   * Activation guard: chat is registered only when the SDK package is
+// Behaviour parity with VS Code (planned, not active today):
+//   * Activation guard: chat will be registered only when the SDK package is
 //     available at compile time. The VS Code equivalent uses a runtime probe
 //     (`typeof vscode.chat?.createChatParticipant === 'function'`), which is
 //     not necessary here because the build-time gate already prevents
