@@ -225,6 +225,22 @@ Copilot runs this loop natively within its agentic session.
 
 Chunking strategy configured to match document type (prose, tables, code treated separately); hybrid search implemented (keyword + semantic); retrieval quality evaluated with RAGAS metrics (faithfulness >= 0.8, context precision >= 0.75); citation and source attribution present in all generated responses; embedding model selection backed by comparison testing on the actual corpus.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "RAG pipeline for #42 complete: hybrid search configured, RAGAS faithfulness 0.84 (>= 0.8), context precision 0.79 (>= 0.75), citations present."
+
+| Check | Result |
+|-------|--------|
+| Chunking strategy document-type-aware | Yes / No |
+| Hybrid search implemented (keyword + semantic) | Yes / No |
+| RAGAS faithfulness score | N (required >= 0.8) |
+| RAGAS context precision score | N (required >= 0.75) |
+| Citation and source attribution in all responses | Yes / No |
+| Embedding model selection backed by corpus testing | Yes / No |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

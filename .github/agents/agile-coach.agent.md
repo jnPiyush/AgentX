@@ -238,6 +238,24 @@ Copilot runs this loop natively within its agentic session.
 
 Story follows As a/I want/So that format; all 6 INVEST properties satisfied; 3-7 acceptance criteria in Given-When-Then format; happy path, error case, and boundary covered; user confirmed the final version.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Story #42 refined: INVEST passed (6/6), 5 ACs in GWT format, happy path + error + boundary covered."
+
+| Check | Result |
+|-------|--------|
+| Story format (As a/I want/So that) | PASS / FAIL |
+| INVEST properties | N/6 satisfied |
+| Acceptance criteria count | N (3-7 required) |
+| GWT format on all ACs | Yes / N not in GWT |
+| Happy path covered | Yes / No |
+| Error case covered | Yes / No |
+| Boundary covered | Yes / No |
+| User confirmed final version | Yes / Pending |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

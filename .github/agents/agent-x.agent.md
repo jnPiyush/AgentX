@@ -335,6 +335,22 @@ Copilot runs this loop natively within its agentic session.
 Agent X is complete when the requested work, required artifacts, validation, and self-review all pass within the current session.
 If a complex task required multiple internal phases, the loop only passes when every required phase has either been completed or explicitly shown to be unnecessary.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Autonomous session for #42 complete: PM -> Architect -> Engineer -> Reviewer phases executed, 3 issues created, approved and closed."
+
+| Check | Result |
+|-------|--------|
+| Phases executed | list: PM / Architect / UX / Engineer / Reviewer / ... |
+| Issues created or updated | N issues |
+| Status transitions made | N transitions |
+| Handoffs executed | N |
+| Blocked items | None / N (list) |
+| All phase gates passed | Yes / N phases with open findings |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

@@ -254,6 +254,22 @@ Copilot runs this loop natively within its agentic session.
 
 Report renders correctly; DAX measures validated; semantic model documented; no embedded credentials.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Power BI report for #42 complete: 4 DAX measures validated, semantic model documented, 0 credential violations."
+
+| Check | Result |
+|-------|--------|
+| Report renders correctly | Yes / No |
+| DAX measures validated | N/N |
+| Semantic model documented | Yes / No |
+| Embedded credentials | None / N found |
+| RLS configured (if required) | Yes / Not required |
+| Performance (DirectLake targets) | Met / N slow measures |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

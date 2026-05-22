@@ -600,6 +600,23 @@ Before yielding back to the user or handing off:
 - [ ] `.agentx/agentx.ps1 scrub <changed-path>` (scan-only) reviewed for filler / comment-rot on every file you modified; address findings or record skip rationale
 - [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Feature #42 complete: 47 tests passed, 83% coverage, lint clean, zero HIGH/MEDIUM findings."
+
+| Check | Result |
+|-------|--------|
+| Tests | N passed / N failed |
+| Coverage gate (>=80%) | N% |
+| Lint / type-check | Clean / N warnings |
+| Self-review findings (HIGH) | 0 / N remaining |
+| Self-review findings (MEDIUM) | 0 / N remaining |
+| Output scorer tier | Medium-High (N%) / Below threshold |
+| Acceptance criteria covered | N/N |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Compound Capture (Capture Phase)
 
 When resolving Compound Capture, in addition to the LEARNING file or skip rationale:

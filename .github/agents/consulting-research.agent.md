@@ -368,6 +368,21 @@ git commit -m "docs: add research brief for {topic}"
 
 Research brief complete; all claims sourced with references; no fabricated statistics or quotes.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Research brief for 'AI in banking' complete: 12 claims sourced, 3 frameworks applied, Model Council convened."
+
+| Check | Result |
+|-------|--------|
+| Brief sections complete | N/N required |
+| Claims with citations | N/N (0 unsourced) |
+| Fabricated statistics/quotes | None found / N flagged |
+| Model Council convened | Yes / Skipped (reason) |
+| Audience calibration applied | Yes / No |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

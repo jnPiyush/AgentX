@@ -186,6 +186,22 @@ Copilot runs this loop natively within its agentic session.
 
 All prompts stored as separate files in `prompts/` (never inline strings in code); evaluation passing with structured rubrics (not subjective ratings); tested across at least 2 models (primary + fallback from a different provider); versioned with semantic naming and changelog; adversarial and edge cases covered.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Prompt engineering for #42 complete: 3 prompts versioned in prompts/, tested on 2 models, eval score 4.2/5, adversarial cases covered."
+
+| Check | Result |
+|-------|--------|
+| Prompts stored as files in prompts/ (no inline strings) | Yes / No |
+| Structured rubric used for evaluation | Yes / No |
+| Models tested | N (required >= 2, different providers) |
+| Semantic versioning + changelog | Yes / No |
+| Adversarial and edge cases covered | Yes / No |
+| Eval score (primary model) | N/5 |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

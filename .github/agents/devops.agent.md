@@ -240,6 +240,22 @@ Before yielding back to the user or handing off:
 - [ ] No HIGH or MEDIUM self-review findings remain unresolved
 - [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "CI/CD pipeline for #42 complete: 3 workflows valid, all secrets externalised, deployment docs updated."
+
+| Check | Result |
+|-------|--------|
+| Workflow YAML syntax (all files) | PASS / FAIL (N errors) |
+| Secrets hardcoded | None / N found |
+| Action SHA pins | All pinned / N unpinned |
+| Pipeline run (latest trigger) | N passed / N failed |
+| Deployment docs updated | Yes / No |
+| Rollback procedure documented | Yes / No |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

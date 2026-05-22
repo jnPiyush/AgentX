@@ -283,6 +283,22 @@ All requested work items created or updated in ADO; workflow state persisted;
 content sanitization applied; handoff.md written; no HIGH or MEDIUM self-review
 findings remain.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "ADO Ops complete: 6 work items created, 2 updated, handoff.md written, 0 HIGH/MEDIUM findings."
+
+| Check | Result |
+|-------|--------|
+| Work items created | N |
+| Work items updated | N |
+| Content sanitization applied | Yes / No |
+| handoff.md written | Yes / No |
+| HIGH findings | 0 / N |
+| MEDIUM findings | 0 / N |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 `.agentx/agentx.ps1 loop complete -s "All quality gates passed"`

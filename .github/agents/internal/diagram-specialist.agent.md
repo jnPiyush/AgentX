@@ -134,6 +134,21 @@ Key checks:
 | C4 architecture | [references/c4-structurizr.md](../../skills/diagrams/diagram-as-code/references/c4-structurizr.md) |
 | Visio interop | [references/visio-interop.md](../../skills/diagrams/diagram-as-code/references/visio-interop.md) |
 
+## Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Diagrams for #42 complete: 3 diagrams authored in Mermaid, rendering validated in GitHub markdown, Visio export produced, source files committed."
+
+| Check | Result |
+|-------|--------|
+| Diagrams rendered correctly in target surface | Yes / No |
+| Diagram format matches intent (decision matrix) | Yes / No |
+| Title, legend, and source-of-truth link present | Yes / No |
+| Source code committed (no binary-only diagrams) | Yes / No |
+| Visio export produced (if needs:visio tag set) | Yes / No / N/A |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ## Anti-Patterns
 
 | Anti-Pattern | Why It Fails |

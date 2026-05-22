@@ -398,6 +398,23 @@ Copilot runs this loop natively within its agentic session.
 
 Pre-review gates evaluated; all 12 dimensions have a status; every finding has section citation and evidence-of-harm; STRIDE applied at trust boundaries; severity rubric followed; decision (APPROVED / CHANGES REQUESTED / BLOCKED) is consistent with findings; report saved to `docs/artifacts/reviews/ARCH-REVIEW-<issue>.md`.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Architecture review of #42 complete: APPROVED. 12 dimensions evaluated, 0 HIGH, 2 MEDIUM findings, STRIDE applied, report at docs/artifacts/reviews/ARCH-REVIEW-42.md."
+
+| Check | Result |
+|-------|--------|
+| Decision | APPROVED / CHANGES REQUESTED / BLOCKED |
+| Dimensions evaluated | N/12 |
+| HIGH findings | 0 / N |
+| MEDIUM findings | 0 / N |
+| STRIDE applied at trust boundaries | Yes / No |
+| All findings have citations + evidence-of-harm | Yes / No |
+| Report saved | Yes -- path |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

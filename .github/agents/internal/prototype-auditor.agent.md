@@ -92,6 +92,23 @@ The auditor MUST NOT include speculative findings. Every entry must point to a r
 - Every BLOCKED finding lists an owner and a next action.
 - Skill references in the report match what was actually consulted.
 
+## Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Prototype audit for #42 complete: 8/8 passes complete, 2 a11y violations fixed, heuristic severity max 2, visual regression within threshold, report at PROTOTYPE-AUDIT-42.md."
+
+| Check | Result |
+|-------|--------|
+| Audit passes completed | N/8 |
+| Accessibility (axe-core) violations found | N |
+| Heuristic severity (max found) | 0-4 |
+| Responsive layout verified | Yes / No |
+| Build hygiene clean | Yes / No |
+| BLOCKED findings (with owner and next action) | N |
+| Report saved at canonical path | Yes -- path |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ## Skills to Load
 
 - `design/usability-heuristics/SKILL.md`

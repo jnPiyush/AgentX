@@ -264,6 +264,23 @@ Copilot runs this loop natively within its agentic session.
 
 All requested GitHub operations completed (issues created, updated, closed, or labeled); duplicate check completed before creating any new issue; workflow state persisted to `.copilot-tracking/github-issues/`; summary provided with action counts; blocked or ambiguous items flagged for user attention.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "GitHub Ops for sprint-12 complete: 5 issues created, 3 updated, 2 closed, 0 duplicates detected."
+
+| Check | Result |
+|-------|--------|
+| Issues created | N |
+| Issues updated | N |
+| Issues closed | N |
+| Issues labeled | N |
+| Duplicate check completed | Yes / No |
+| Blocked or ambiguous items flagged | None / N (list) |
+| Workflow state persisted | Yes -- path |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

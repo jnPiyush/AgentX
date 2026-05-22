@@ -408,6 +408,23 @@ Copilot runs this loop natively within its agentic session.
 
 ADR documents 3+ options with decision rationale; Tech Spec has all required sections, includes an explicit selected tech stack, and uses diagrams only -- no code examples.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Architecture for #42 complete: ADR with 3 options, Model Council convened, Spec passes score 78%."
+
+| Check | Result |
+|-------|--------|
+| ADR options documented | N options (min 3) |
+| ADR decision stated | Yes / No |
+| Model Council convened | Yes / Skipped (reason) |
+| Tech Spec sections complete | N/N required |
+| Code examples in Spec | 0 / N found |
+| PM requirement-fit validation | Complete / Skipped |
+| Output scorer tier | Medium-High (N%) / Below threshold |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Quantitative Scoring Gate
 
 After all done criteria pass, run the output scorer:

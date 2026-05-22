@@ -207,6 +207,24 @@ Copilot runs this loop natively within its agentic session.
 
 All changed files in the diff analyzed; findings categorized by severity (Critical/High/Medium/Low); false positive mitigation applied to every finding; evidence of harm provided for each reported issue; no speculative warnings included; review report saved to `.copilot-tracking/reviews/`.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Functional review of #42 complete: 3 files analyzed, 0 Critical, 1 High, 2 Medium findings, report at .copilot-tracking/reviews/."
+
+| Check | Result |
+|-------|--------|
+| Files analyzed | N |
+| Critical findings | 0 / N |
+| High findings | 0 / N |
+| Medium findings | 0 / N |
+| Low findings | N |
+| False positive check applied to every finding | Yes / No |
+| Evidence of harm on each finding | Yes / No |
+| Report saved | Yes -- path |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

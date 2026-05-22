@@ -292,6 +292,21 @@ Copilot runs this loop natively within its agentic session.
 
 Wireframes complete for all key flows; HTML/CSS prototype renders correctly; WCAG 2.1 AA accessibility validated.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "UX for #42 complete: 4 wireframes, prototype renders, 0 WCAG AA violations found."
+
+| Check | Result |
+|-------|--------|
+| Wireframes created | N (covering N key flows) |
+| HTML/CSS prototype renders | Yes / No |
+| WCAG 2.1 AA violations | 0 / N found |
+| User flows documented | N flows |
+| Component inventory complete | Yes / No |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

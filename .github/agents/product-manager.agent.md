@@ -336,6 +336,21 @@ Copilot runs this loop natively within its agentic session.
 
 PRD contains all required sections; child issues created with clear acceptance criteria; no contradictory constraints.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "PRD for epic #12 complete: all sections authored, 3 features and 8 stories created, score 74%."
+
+| Check | Result |
+|-------|--------|
+| PRD sections complete | N/N required |
+| Child issues created | N (N features, N stories) |
+| Acceptance criteria present | Yes / N stories missing ACs |
+| Contradictory constraints | None / N found |
+| Output scorer tier | Medium-High (N%) / Below threshold |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Quantitative Scoring Gate
 
 After all done criteria pass, run the output scorer:

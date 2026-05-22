@@ -388,6 +388,22 @@ Copilot runs this loop natively within its agentic session.
 
 ML pipeline runs end-to-end; evaluation metrics documented accurately; model card complete.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "ML pipeline for #42 complete: eval baseline saved (F1 0.87), model card authored, drift monitoring wired."
+
+| Check | Result |
+|-------|--------|
+| ML pipeline end-to-end | PASS / FAIL |
+| Evaluation baseline saved | Yes (path: evaluation/baseline.json) / No |
+| Evaluation metrics documented | Yes / No |
+| Model card complete | Yes / No |
+| Drift monitoring hooks wired | Yes / Not applicable |
+| Prompt assets externalised | Yes / Not applicable |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

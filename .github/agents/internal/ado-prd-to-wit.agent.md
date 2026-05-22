@@ -237,6 +237,24 @@ All five phases complete; handoff.md finalized with all work item entries and
 Create/Update/No Change classifications; content sanitization applied; no HIGH or
 MEDIUM self-review findings remain.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "PRD-to-WIT analysis for #42 complete: 5 phases done, 12 work items planned (8 Create, 3 Update, 1 No Change), handoff.md ready."
+
+| Check | Result |
+|-------|--------|
+| Phases complete | N/5 |
+| Work items planned (Create) | N |
+| Work items planned (Update) | N |
+| Work items planned (No Change) | N |
+| Content sanitization applied | Yes / No |
+| handoff.md finalized | Yes / No |
+| HIGH findings | 0 / N |
+| MEDIUM findings | 0 / N |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 `.agentx/agentx.ps1 loop complete -s "All quality gates passed"`

@@ -390,6 +390,23 @@ Before yielding back to the user or handing off:
 - [ ] No HIGH or MEDIUM findings remain unresolved for an approval decision
 - [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Review of PR #42 complete: APPROVED. 0 HIGH, 1 MEDIUM (resolved), 3 LOW findings."
+
+| Check | Result |
+|-------|--------|
+| Decision | APPROVED / CHANGES REQUESTED |
+| HIGH findings | 0 / N (N resolved) |
+| MEDIUM findings | 0 / N (N resolved) |
+| LOW findings | N |
+| Test suite verified | PASS / FAIL |
+| Coverage confirmed | N% |
+| Security checklist | PASS / N items flagged |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

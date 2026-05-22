@@ -210,6 +210,22 @@ Copilot runs this loop natively within its agentic session.
 
 OpenTelemetry tracing instrumented before agent creation; baselines saved from last known-good deployment; drift thresholds defined with statistical backing (not arbitrary values); P0-P3 alert tiers configured with response procedures; cost and latency tracking active alongside quality metrics; monitoring artifacts documented in `.copilot-tracking/ops-monitor/`.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Ops monitoring for #42 complete: OTel tracing active, baselines saved, P0-P3 alerts configured, drift thresholds statistically backed, artifacts at .copilot-tracking/ops-monitor/."
+
+| Check | Result |
+|-------|--------|
+| OpenTelemetry tracing instrumented | Yes / No |
+| Baselines saved from last known-good deployment | Yes / No |
+| Drift thresholds statistically backed | Yes / No |
+| P0-P3 alert tiers configured with response procedures | Yes / No |
+| Cost and latency tracking active | Yes / No |
+| Monitoring artifacts documented | Yes -- path |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

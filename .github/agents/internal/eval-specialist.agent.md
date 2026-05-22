@@ -216,6 +216,22 @@ Copilot runs this loop natively within its agentic session.
 
 Evaluation framework defined with structured rubrics (1-5 scale with criteria per level); judge validated against known-answer set (agreement > 0.6); multi-model comparison completed (primary + at least 1 alternative from a different provider); all quality gates passing; results documented in `.copilot-tracking/eval-reports/`.
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Eval for #42 complete: rubric validated (judge agreement 0.72), primary model score 4.1/5, fallback 3.8/5, results at .copilot-tracking/eval-reports/."
+
+| Check | Result |
+|-------|--------|
+| Rubric defined (1-5 scale with level criteria) | Yes / No |
+| Judge agreement vs known-answer set | N (required > 0.6) |
+| Models compared | N (required >= 2, different providers) |
+| Primary model score | N/5 |
+| Fallback model score | N/5 |
+| Results documented | Yes -- path |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:

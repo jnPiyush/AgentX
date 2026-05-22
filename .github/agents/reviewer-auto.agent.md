@@ -230,6 +230,22 @@ Before yielding back to the user or handing off:
 - [ ] Large block replacements were verified by searching for removed identifiers and the new declaration
 - [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
 
+### Delivery Report (MANDATORY)
+
+Before handing off, print a one-line outcome summary then this table populated with actual values:
+
+> Example: "Auto-review of #42 complete: APPROVED. 0 HIGH, 1 MEDIUM resolved via auto-fix, 2 safe fixes applied, tests still green."
+
+| Check | Result |
+|-------|--------|
+| Decision | APPROVED / CHANGES REQUESTED |
+| HIGH findings | 0 / N remaining |
+| MEDIUM findings | 0 / N (N auto-fixed) |
+| LOW findings | N |
+| Safe auto-fixes applied | N |
+| Tests after auto-fixes | PASS / FAIL |
+| AgentX quality loop | Complete (N/20 iterations) |
+
 ### Hard Gate (CLI)
 
 Before handing off, mark the loop complete:
