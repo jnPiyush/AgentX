@@ -4367,7 +4367,7 @@ function Invoke-LoopStart {
             $archivePath = Join-Path $archiveDir "loop-$stamp.json"
             Write-JsonFile $archivePath $existing
         } catch { Write-Verbose "Loop archive failed: $_" }
-        Write-CliOutput "$($C.y)  Auto-reset prior loop (was iteration $($existing.iteration), $resetReason). Counter back to 1.$($C.n)"
+        Write-CliOutput "$($C.y)  Auto-reset prior loop (was iteration $($existing.iteration), $resetReason). Counter reset to 0.$($C.n)"
     }
 
     # Fresh loop means fresh evidence workspace: remove archived artifacts from the
@@ -4380,7 +4380,7 @@ function Invoke-LoopStart {
         prompt             = $prompt
         role               = $role
         taskClass          = $taskClass
-        iteration          = 1
+        iteration          = 0
         minIterations      = $min
         maxIterations      = $max
         completionCriteria = $criteria
@@ -4388,7 +4388,7 @@ function Invoke-LoopStart {
         budgetMinutes      = $budget
         startedAt          = Get-Timestamp
         lastIterationAt    = Get-Timestamp
-        history            = @([PSCustomObject]@{ iteration = 1; timestamp = Get-Timestamp; summary = 'Loop started'; status = 'in-progress'; outcome = 'partial' })
+        history            = @([PSCustomObject]@{ iteration = 0; timestamp = Get-Timestamp; summary = 'Loop started'; status = 'in-progress'; outcome = 'partial' })
     }
     Write-JsonFile $Script:LOOP_STATE_FILE $state
 
@@ -4405,7 +4405,7 @@ function Invoke-LoopStart {
     try { Write-JsonFile $baselineFile $baseline } catch { Write-Verbose "Baseline write failed: $_" }
 
     Write-CliOutput "`n$($C.c)  Iterative Loop Started$($C.n)"
-    Write-CliOutput "$($C.d)  Iteration: 1/$max  |  Minimum review iterations: $min  |  Criteria: $criteria$($C.n)"
+    Write-CliOutput "$($C.d)  Iteration: 0/$max  |  Minimum review iterations: $min  |  Criteria: $criteria$($C.n)"
     if ($role)   { Write-CliOutput "$($C.d)  Role: $role  (task class: $taskClass)$($C.n)" }
     if ($budget) { Write-CliOutput "$($C.d)  Budget: $budget minutes$($C.n)" }
     if ($issue)  { Write-CliOutput "$($C.d)  Issue: #$issue$($C.n)" }
@@ -4717,7 +4717,7 @@ function Invoke-LoopComplete {
         foreach ($h in @($state.history)) {
             if ($null -eq $h) { continue }
             if ($h.PSObject.Properties.Name -notcontains 'iteration') { continue }
-            if ([int]$h.iteration -lt 2) { continue }
+            if ([int]$h.iteration -lt 1) { continue }
             if ($h.PSObject.Properties.Name -notcontains 'status' -or $h.status -ne 'in-progress') { continue }
             # Only fail if the iteration explicitly promised evidence but the file is now missing
             # (stale path). Iterations without an 'evidence' field are pre-gate or legacy -- pass through.
