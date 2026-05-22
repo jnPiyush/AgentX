@@ -1,0 +1,49 @@
+{
+  "$schemaVersion": 1,
+  "generated": null,
+  "source": "docs/WORKFLOW.md (Routing Logic section)",
+  "notes": "Hand-authored mirror of routing prose. Update both this file and WORKFLOW.md together. Rules are evaluated top-to-bottom; first match wins.",
+  "statusValues": ["Backlog", "Ready", "In Progress", "In Review", "Validating", "Done"],
+  "priorityOrder": ["priority:p0", "priority:p1", "priority:p2", "priority:p3"],
+  "rules": [
+    { "when": { "type": "type:epic", "status": "Backlog" }, "route": "product-manager", "reason": "Epics need PRD before any other work" },
+    { "when": { "type": "type:bug", "status": "Backlog" }, "route": "engineer", "reason": "Skip PM/Architect for bug fixes" },
+    { "when": { "type": "type:spike", "status": "Backlog" }, "route": "architect", "reason": "Research/spike work routes to architect" },
+    { "when": { "type": "type:devops", "status": "Backlog" }, "route": "devops", "reason": "Infrastructure work skips PM/Architect" },
+    { "when": { "type": "type:data-science", "status": "Backlog" }, "route": "data-scientist", "reason": "ML/AI work skips PM/Architect" },
+    { "when": { "type": "type:testing", "status": "Backlog" }, "route": "tester", "reason": "Testing/certification skips PM/Architect" },
+    { "when": { "type": "type:powerbi", "status": "Backlog" }, "route": "powerbi-analyst", "reason": "Report/dashboard work skips PM/Architect" },
+    { "when": { "status": "Ready", "labels": ["needs:ux"] }, "route": "ux-designer", "reason": "UX work runs in parallel with Architect and Data Scientist" },
+    { "when": { "status": "Ready", "type": "type:data-science" }, "route": "data-scientist", "reason": "Data Scientist parallel with Architect, UX" },
+    { "when": { "status": "Ready", "hasArchitecture": false }, "route": "architect", "reason": "Architecture missing; route to Architect parallel with UX, Data Scientist" },
+    { "when": { "status": "Ready", "hasArchitecture": true }, "route": "engineer", "reason": "Architecture complete; route to Engineer" },
+    { "when": { "labels": ["needs:iteration"] }, "route": "engineer", "reason": "Extended iterative-loop workflow (max 20 iterations)" },
+    { "when": { "status": "In Review", "labels": ["needs:testing"] }, "route": "tester", "reason": "Pre-release certification" },
+    { "when": { "status": "In Review" }, "route": "reviewer", "reason": "Default reviewer path for In Review status" },
+    { "when": { "status": "Validating", "reviewerApproved": true }, "route": ["devops", "tester"], "reason": "Parallel post-review validation" },
+    { "when": { "testerDefectsFound": true }, "route": "engineer", "reason": "Bug-fix feedback loop" }
+  ],
+  "backlogPickup": {
+    "ux-designer":      { "status": "Ready", "requireLabels": ["needs:ux"] },
+    "architect":        { "status": "Ready", "requirePRDComplete": true },
+    "engineer":         { "status": "Ready", "requireSpecComplete": true },
+    "reviewer":         { "status": "In Review" },
+    "devops":           { "status": "Ready", "requireType": "type:devops" },
+    "data-scientist":   { "status": "Ready", "requireType": "type:data-science" },
+    "tester":           { "anyOf": [ { "status": "Ready", "requireType": "type:testing" }, { "status": "In Review", "requireLabels": ["needs:testing"] } ] },
+    "powerbi-analyst":  { "status": "Ready", "requireType": "type:powerbi" }
+  },
+  "statusTransitions": [
+    { "phase": "PM completes PRD",            "to": "Ready" },
+    { "phase": "UX completes designs",         "to": "Ready" },
+    { "phase": "Architect completes spec",     "to": "Ready" },
+    { "phase": "Data Scientist completes ML",  "to": "Ready" },
+    { "phase": "Engineer starts work",         "to": "In Progress" },
+    { "phase": "Engineer completes code",      "to": "In Review" },
+    { "phase": "Reviewer approves",            "to": "Validating" },
+    { "phase": "DevOps + Tester validate",     "to": "Done" }
+  ],
+  "contextClearOnTransition": [
+    { "from": "ux-architect-datascientist", "to": "engineer", "clear": true, "reason": "Engineer follows spec only" }
+  ]
+}

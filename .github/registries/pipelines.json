@@ -1,0 +1,107 @@
+{
+  "$schemaVersion": 1,
+  "generated": null,
+  "source": "AGENTS.md (Role Pipeline Reference table)",
+  "notes": "Hand-authored mirror of per-role phase pipelines. Each role's phases MUST be executed in order; no phase may be skipped without an explicit documented reason. Update this file and AGENTS.md together.",
+  "pipelines": [
+    {
+      "role": "agent-x",
+      "displayName": "Agent X (Hub)",
+      "phases": ["Classify", "Route", "Execute specialist phases", "Validate handoffs"],
+      "deliveryGate": "All specialist phase gates pass before advancing"
+    },
+    {
+      "role": "product-manager",
+      "displayName": "Product Manager",
+      "phases": ["Research (5 phases)", "Classify Intent", "Model Council (prd-scope)", "PRD", "Backlog (Epic, Feature, User Stories)", "Self-Review", "Commit"],
+      "deliveryGate": "PRD has all required sections; Backlog items linked to PRD; Model Council convened or skip rationale recorded",
+      "deliverable": "docs/artifacts/prd/PRD-{id}.md"
+    },
+    {
+      "role": "ux-designer",
+      "displayName": "UX Designer",
+      "phases": ["Read PRD", "Design Research", "UX Spec", "HTML/CSS Prototypes", "Self-Review", "Commit"],
+      "deliveryGate": "WCAG 2.1 AA prototypes exist at docs/ux/prototypes/",
+      "deliverable": "docs/ux/UX-{id}.md + docs/ux/prototypes/"
+    },
+    {
+      "role": "architect",
+      "displayName": "Architect",
+      "phases": ["Research (6 phases)", "ADR (3+ options)", "Model Council (adr-options)", "Tech Spec", "AI Spec Alignment (if needs:ai)", "PM Fit Validation", "GenAI Assessment", "Self-Review", "Commit"],
+      "deliveryGate": "ADR + Spec exist; ADR Decision matches a council-consensus option (or override rationale documented); AI-bearing specs include Data Scientist implementation-depth alignment; PM requirement-fit validation complete; zero code examples in Spec",
+      "deliverable": "docs/artifacts/adr/ADR-{id}.md + docs/artifacts/specs/SPEC-{id}.md"
+    },
+    {
+      "role": "engineer",
+      "displayName": "Engineer",
+      "phases": ["Research", "Brainstorm", "Plan", "Design", "Conditional Design Alignment", "Implement", "Test", "Review"],
+      "deliveryGate": "Loop complete + coverage >=80% + score >=70% + required Architect/Data Scientist alignment captured",
+      "deliverable": "Code + Tests + Docs"
+    },
+    {
+      "role": "reviewer",
+      "displayName": "Reviewer",
+      "phases": ["Read Context", "Verify Loop", "Functional Review", "Code Review", "Run Tests", "Model Council (code-review)", "Write Review", "Decision"],
+      "deliveryGate": "Review doc complete; approval/rejection explicitly stated; Model Council convened or skip rationale recorded",
+      "deliverable": "docs/artifacts/reviews/REVIEW-{id}.md"
+    },
+    {
+      "role": "reviewer-auto",
+      "displayName": "Auto-Fix Reviewer",
+      "phases": ["Read Context", "Verify Loop", "Review Code", "Apply Safe Fixes", "Document", "Self-Review", "Decision"],
+      "deliveryGate": "All auto-fixes pass full test suite; review doc complete",
+      "deliverable": "docs/artifacts/reviews/REVIEW-{id}.md + safe auto-fixes"
+    },
+    {
+      "role": "devops",
+      "displayName": "DevOps Engineer",
+      "phases": ["Read Context", "Design Pipeline", "Implement Workflows", "Validate", "Self-Review", "Commit"],
+      "deliveryGate": "Pipelines pass lint + execution; deployment docs updated",
+      "deliverable": ".github/workflows/*.yml + deployment docs"
+    },
+    {
+      "role": "data-scientist",
+      "displayName": "Data Scientist",
+      "phases": ["Research (6 phases)", "Model Council (ai-design)", "Pipeline Design", "Eval Plan", "Implementation", "Drift Monitoring", "Self-Review", "Commit"],
+      "deliveryGate": "Eval baseline + model card exist; Model Council convened or skip rationale recorded",
+      "deliverable": "docs/data-science/ artifacts + model card + eval baseline"
+    },
+    {
+      "role": "tester",
+      "displayName": "Tester",
+      "phases": ["Read Context", "Write Tests", "Execute Suite", "Report Defects", "Certification Report", "Commit"],
+      "deliveryGate": "Test pyramid complete; certification report signed off",
+      "deliverable": "docs/testing/ test suites + certification report"
+    },
+    {
+      "role": "powerbi-analyst",
+      "displayName": "Power BI Analyst",
+      "phases": ["Read Context", "Semantic Model", "DAX Measures", "Power Query", "Report Layout", "Optimize", "Docs", "Self-Review", "Commit"],
+      "deliveryGate": "Semantic model validated; DAX measures tested",
+      "deliverable": "reports/ + datasets/ + docs/powerbi/"
+    },
+    {
+      "role": "consulting-research",
+      "displayName": "Consulting Research",
+      "phases": ["Understand Request", "Research (7 phases)", "Model Council (research)", "Calibrate Audience", "Create Deliverable"],
+      "deliveryGate": "All key claims sourced + triangulated; deliverable complete; Model Council convened or skip rationale recorded",
+      "deliverable": "docs/coaching/ research briefs"
+    },
+    {
+      "role": "agile-coach",
+      "displayName": "Agile Coach",
+      "phases": ["Mode Selection", "Create/Refine/Decompose Story", "Confirm", "Output"],
+      "deliveryGate": "INVEST criteria met; ACs in Given/When/Then format",
+      "deliverable": "docs/coaching/ user stories"
+    }
+  ],
+  "iterationLimits": {
+    "default":           { "minReviewIterations": 5, "max": 10 },
+    "story":             { "minReviewIterations": 5, "max": 10 },
+    "feature":           { "minReviewIterations": 5, "max": 10 },
+    "bug":               { "minReviewIterations": 5, "max": 5 },
+    "devops":            { "minReviewIterations": 5, "max": 5 },
+    "docs":              { "minReviewIterations": 5, "max": 5 },
+    "extendedIteration": { "minReviewIterations": 5, "max": 20, "trigger": "needs:iteration label" }
+  }
+}

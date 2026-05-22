@@ -1,0 +1,835 @@
+{
+  "$schemaVersion": 1,
+  "generated": "2026-05-22T03:30:56Z",
+  "source": ".github/skills/**/SKILL.md",
+  "totalCount": 111,
+  "countsByCategory": [
+    {
+      "category": "ai-systems",
+      "count": 30
+    },
+    {
+      "category": "architecture",
+      "count": 6
+    },
+    {
+      "category": "data",
+      "count": 7
+    },
+    {
+      "category": "design",
+      "count": 12
+    },
+    {
+      "category": "development",
+      "count": 22
+    },
+    {
+      "category": "diagrams",
+      "count": 1
+    },
+    {
+      "category": "domain",
+      "count": 7
+    },
+    {
+      "category": "infrastructure",
+      "count": 4
+    },
+    {
+      "category": "languages",
+      "count": 10
+    },
+    {
+      "category": "operations",
+      "count": 5
+    },
+    {
+      "category": "product",
+      "count": 1
+    },
+    {
+      "category": "testing",
+      "count": 6
+    }
+  ],
+  "skills": [
+    {
+      "id": "ai-systems/agent-memory-systems",
+      "name": "agent-memory-systems",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/agent-memory-systems/SKILL.md",
+      "description": "Design agent memory beyond a single context window: short-term (working / scratchpad), long-term (episodic, semantic, procedural), and shared / cross-session memory. Covers mem0, Zep, Letta / MemGPT, LangMem, OpenAI Memory, retrieval and consolidation policies, PII handling, and eviction."
+    },
+    {
+      "id": "ai-systems/agent-observability",
+      "name": "agent-observability",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/agent-observability/SKILL.md",
+      "description": "Instrument LLM agents with tracing, metrics, and evaluation telemetry. Use when adding OpenTelemetry GenAI semantic conventions, integrating Langfuse / LangSmith / Arize Phoenix / Helicone / OpenLLMetry, capturing prompt/response spans, tool-call latency, token cost, eval scores, and feedback signals. Distinct from genaiops (release policy) and ai-evaluation (rubric design)."
+    },
+    {
+      "id": "ai-systems/ai-agent-development",
+      "name": "ai-agent-development",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/ai-agent-development/SKILL.md",
+      "description": "Build production-ready AI agents with Microsoft Foundry and Agent Framework. Use when creating AI agents, selecting LLM models, implementing agent orchestration, adding tracing/observability, or evaluating agent quality. Covers agent architecture, model selection, multi-agent workflows, and production deployment."
+    },
+    {
+      "id": "ai-systems/ai-evaluation",
+      "name": "ai-evaluation",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/ai-evaluation/SKILL.md",
+      "description": "Evaluate AI/ML model quality, safety, and reliability. Use when designing evaluation frameworks, implementing automated evals, running benchmarks, measuring RAG quality (RAGAS), or establishing quality gates for model deployment."
+    },
+    {
+      "id": "ai-systems/ai-safety-and-red-teaming",
+      "name": "ai-safety-and-red-teaming",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md",
+      "description": "Defend LLM systems against prompt injection, jailbreaks, data exfiltration, and unsafe output. Covers input/output guardrails (NeMo Guardrails, LlamaGuard 3, ShieldGemma, Azure AI Content Safety, Bedrock Guardrails), red-team frameworks (Microsoft PyRIT, Garak, promptfoo redteam), and Responsible AI controls (groundedness, PII, toxicity, indirect prompt injection)."
+    },
+    {
+      "id": "ai-systems/anthropic-claude",
+      "name": "anthropic-claude",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/anthropic-claude/SKILL.md",
+      "description": "Implement production applications with Anthropic Claude models -- Messages API, tool use, prompt caching, extended thinking, vision, computer use, and the Claude Agent SDK. Use when coding directly against Anthropic APIs, Claude via AWS Bedrock, or Claude via GCP Vertex AI rather than a higher-level framework."
+    },
+    {
+      "id": "ai-systems/azure-foundry",
+      "name": "azure-foundry",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/azure-foundry/SKILL.md",
+      "description": ">-"
+    },
+    {
+      "id": "ai-systems/cognitive-architecture",
+      "name": "cognitive-architecture",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/cognitive-architecture/SKILL.md",
+      "description": "Design and implement the cognitive architecture of AI agents including memory systems, RAG pipelines, and state management. Use when defining agent memory strategy (short/long-term), building RAG pipelines (knowledge retrieval), designing state management systems, or selecting vector databases for semantic search."
+    },
+    {
+      "id": "ai-systems/computer-use-and-browser-agents",
+      "name": "computer-use-and-browser-agents",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/computer-use-and-browser-agents/SKILL.md",
+      "description": "Build agents that operate browsers and desktop GUIs via screenshots and actions. Covers Anthropic Computer Use, OpenAI Operator / Computer-Using Agent (CUA), browser-use, Playwright-based agents, sandboxing (containers, VM, ephemeral profiles), permissions and approvals, failure recovery, and testing patterns."
+    },
+    {
+      "id": "ai-systems/context-management",
+      "name": "context-management",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/context-management/SKILL.md",
+      "description": "Manage LLM context windows efficiently. Use when implementing context compaction, conversation summarization, token budget management, sliding window strategies, or optimizing prompt length for cost and quality."
+    },
+    {
+      "id": "ai-systems/data-drift-strategy",
+      "name": "data-drift-strategy",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/data-drift-strategy/SKILL.md",
+      "description": "Design strategies to detect, monitor, and remediate data drift in GenAI applications and ML pipelines. Use when monitoring LLM input patterns, detecting query distribution shifts, tracking embedding drift, building RAG retrieval quality monitoring, or establishing data governance for model inputs."
+    },
+    {
+      "id": "ai-systems/feedback-loops",
+      "name": "feedback-loops",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/feedback-loops/SKILL.md",
+      "description": "Design and implement feedback loops for continuous AI/ML improvement. Use when building RLHF/RLAIF pipelines, user feedback collection systems, reward modeling, iterative model refinement workflows, or online learning strategies."
+    },
+    {
+      "id": "ai-systems/foundry-sdk",
+      "name": "foundry-sdk",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/foundry-sdk/SKILL.md",
+      "description": "Implement agentic applications with the Microsoft Foundry SDKs. Use when coding against Microsoft Foundry project clients, agent operations, evaluations, datasets, indexes, tracing, or SDK-driven tool wiring rather than only high-level architecture guidance."
+    },
+    {
+      "id": "ai-systems/genaiops",
+      "name": "genaiops",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/genaiops/SKILL.md",
+      "description": "Operate generative AI systems safely in production. Use when designing GenAIOps workflows for prompt and model release management, evaluation gates, observability, drift detection, rollback, governance, and continuous improvement."
+    },
+    {
+      "id": "ai-systems/iterative-retrieval",
+      "name": "iterative-retrieval",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/iterative-retrieval/SKILL.md",
+      "description": "Progressive context refinement for subagents and tool-using LLMs. Use when a parent agent must delegate research, code reading, or document Q&A to a subagent with a tight context budget. Replaces one-shot context dumps with a query -> retrieve -> filter -> requery loop that returns only the evidence the parent needs."
+    },
+    {
+      "id": "ai-systems/langgraph",
+      "name": "langgraph",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/langgraph/SKILL.md",
+      "description": "Build stateful, durable agent workflows with LangGraph. Use when implementing graph-based orchestration, long-running agent state, human-in-the-loop checkpoints, subgraphs, memory, or LangSmith-observed agent execution."
+    },
+    {
+      "id": "ai-systems/llm-gateway-and-routing",
+      "name": "llm-gateway-and-routing",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/llm-gateway-and-routing/SKILL.md",
+      "description": "Front LLM calls behind a gateway: model routing, fallbacks, semantic caching, rate limits, key vaulting, cost controls, and unified APIs. Covers LiteLLM, Portkey, Azure AI Gateway / APIM, OpenRouter, AWS Bedrock proxy, and self-built gateways. Includes routing policies (cost/latency/capability/RBAC) and caching (exact + semantic)."
+    },
+    {
+      "id": "ai-systems/mcp-apps-development",
+      "name": "mcp-apps-development",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/mcp-apps-development/SKILL.md",
+      "description": "Build MCP Apps (ext-apps) that render interactive UI inside conversational AI clients. Use when creating visual tool outputs, interactive dashboards, form-based tools, or rich media experiences in MCP-compatible hosts like Claude Desktop, VS Code Copilot Chat, or other MCP clients that support the Apps specification."
+    },
+    {
+      "id": "ai-systems/mcp-server-development",
+      "name": "mcp-server-development",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/mcp-server-development/SKILL.md",
+      "description": "Build Model Context Protocol (MCP) servers that expose tools, resources, and prompts to AI agents. Use when creating MCP servers in TypeScript or Python, defining MCP tools, implementing resource providers, or integrating MCP servers with AI agent workflows."
+    },
+    {
+      "id": "ai-systems/model-drift-management",
+      "name": "model-drift-management",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/model-drift-management/SKILL.md",
+      "description": "Detect, monitor, and manage model drift in production GenAI and ML systems. Use when monitoring LLM output quality, detecting prompt regression, managing model version changes, implementing drift detection for traditional ML, or establishing model governance policies."
+    },
+    {
+      "id": "ai-systems/model-fine-tuning",
+      "name": "model-fine-tuning",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/model-fine-tuning/SKILL.md",
+      "description": "Fine-tune foundation models for domain-specific tasks. Use when adapting LLMs with LoRA/QLoRA/PEFT, full fine-tuning, knowledge distillation, or designing training data pipelines for model customization."
+    },
+    {
+      "id": "ai-systems/multi-agent-orchestration",
+      "name": "multi-agent-orchestration",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/multi-agent-orchestration/SKILL.md",
+      "description": "Design and operate multi-agent systems where several specialized LLM agents collaborate. Use when choosing between supervisor/worker, swarm/handoff, hierarchical, or graph patterns; selecting frameworks (AutoGen, CrewAI, OpenAI Swarm/Agents SDK, LangGraph, Microsoft Agent Framework, Google A2A); designing handoff contracts; preventing infinite loops, role drift, and coordination failures."
+    },
+    {
+      "id": "ai-systems/prompt-engineering",
+      "name": "prompt-engineering",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/prompt-engineering/SKILL.md",
+      "description": "Write effective prompts for AI coding agents. Use when crafting system prompts, implementing chain-of-thought reasoning, building few-shot examples, adding guardrails, configuring tool use, or designing agentic prompt patterns. Covers CoT, few-shot, guardrails, and function calling."
+    },
+    {
+      "id": "ai-systems/prompt-versioning",
+      "name": "prompt-versioning",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/prompt-versioning/SKILL.md",
+      "description": "Version, test, promote, and roll back prompts like production artifacts. Use when managing prompt lifecycle, prompt variants, few-shot changes, rubric alignment, baseline comparisons, and safe prompt release workflows across models or environments."
+    },
+    {
+      "id": "ai-systems/rag-pipelines",
+      "name": "rag-pipelines",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/rag-pipelines/SKILL.md",
+      "description": "Design and build production RAG (Retrieval-Augmented Generation) pipelines. Use when implementing document ingestion, chunking strategies, embedding selection, vector search, hybrid retrieval, reranking, or generation with grounding."
+    },
+    {
+      "id": "ai-systems/reasoning-models",
+      "name": "reasoning-models",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/reasoning-models/SKILL.md",
+      "description": "Use reasoning / thinking models (OpenAI o-series, Anthropic extended thinking, DeepSeek R1, Gemini Thinking) effectively. Covers when to choose reasoning vs fast models, prompt patterns for reasoners, reasoning_effort / thinking budget controls, structured outputs with reasoning, cost/latency trade-offs, and combining reasoners with fast models."
+    },
+    {
+      "id": "ai-systems/synthetic-data-generation",
+      "name": "synthetic-data-generation",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/synthetic-data-generation/SKILL.md",
+      "description": "Generate synthetic data for fine-tuning, eval-set bootstrapping, RAG corpus augmentation, and rare-case coverage. Covers Self-Instruct, Evol-Instruct, persona-based generation, distillation from larger models, dataset curation (filtering, dedup, decontamination), and provenance / dataset cards."
+    },
+    {
+      "id": "ai-systems/tool-use-and-function-calling",
+      "name": "tool-use-and-function-calling",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/tool-use-and-function-calling/SKILL.md",
+      "description": "Design robust tool-use and function-calling for LLM agents. Use when defining tool schemas (JSON Schema, OpenAPI), enabling parallel tool calls, structured outputs (JSON mode / response_format), tool error handling, retries, idempotency, and tool selection prompts. Covers OpenAI tools, Anthropic tool_use, Gemini function calling, and MCP tools."
+    },
+    {
+      "id": "ai-systems/vector-databases",
+      "name": "vector-databases",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/vector-databases/SKILL.md",
+      "description": "Choose, configure, and operate vector databases for embeddings and hybrid search. Covers Azure AI Search, Pinecone, Qdrant, Weaviate, Milvus, pgvector, LanceDB, MongoDB Atlas Vector, Elasticsearch / OpenSearch kNN. Selection criteria, index types (HNSW, IVF, DiskANN), filters, hybrid (BM25 + vector), embedding model selection, sharding, cost."
+    },
+    {
+      "id": "ai-systems/voice-agents",
+      "name": "voice-agents",
+      "category": "ai-systems",
+      "path": ".github/skills/ai-systems/voice-agents/SKILL.md",
+      "description": "Build low-latency voice agents using speech-to-speech (S2S) realtime APIs and cascaded STT->LLM->TTS pipelines. Covers OpenAI Realtime / GPT Realtime, Azure Voice Live, Gemini Live, Deepgram Voice Agent, ElevenLabs Conversational AI; turn-taking, barge-in, latency budgets, tool use during speech, and telephony (Twilio, LiveKit, Pipecat)."
+    },
+    {
+      "id": "architecture/api-design",
+      "name": "api-design",
+      "category": "architecture",
+      "path": ".github/skills/architecture/api-design/SKILL.md",
+      "description": "Design robust REST APIs with proper versioning, pagination, error handling, rate limiting, and documentation. Use when creating new API endpoints, designing resource naming conventions, implementing pagination or filtering, adding rate limiting, or documenting APIs with OpenAPI/Swagger."
+    },
+    {
+      "id": "architecture/core-principles",
+      "name": "core-principles",
+      "category": "architecture",
+      "path": ".github/skills/architecture/core-principles/SKILL.md",
+      "description": "Apply fundamental coding principles (SOLID, DRY, KISS) and structure projects for maintainability with clean architecture and separation of concerns. Use when refactoring, reviewing patterns, setting up project structure, or organizing modules."
+    },
+    {
+      "id": "architecture/database",
+      "name": "database",
+      "category": "architecture",
+      "path": ".github/skills/architecture/database/SKILL.md",
+      "description": "Design database operations including migrations, indexing strategies, transactions, connection pooling, and ORM best practices. Use when creating database schemas, writing migrations, optimizing slow queries, configuring connection pools, or choosing between ORM frameworks."
+    },
+    {
+      "id": "architecture/low-code-vs-pro-code",
+      "name": "low-code-vs-pro-code",
+      "category": "architecture",
+      "path": ".github/skills/architecture/low-code-vs-pro-code/SKILL.md",
+      "description": "Evaluate and review whether a solution should be built with low-code/no-code platforms (Power Platform, Copilot Studio, Power Apps, Power Automate, Logic Apps, AppSheet, OutSystems, Mendix) or pro-code (custom code on Foundry, Agent Framework, .NET, Python, React, Azure Functions, AKS, etc.). Use when reviewing an ADR/Tech Spec that proposes one approach, when an issue could plausibly go either way, or when an existing low-code solution is hitting its ceiling and pro-code is being considered."
+    },
+    {
+      "id": "architecture/performance",
+      "name": "performance",
+      "category": "architecture",
+      "path": ".github/skills/architecture/performance/SKILL.md",
+      "description": "Optimize application performance and scalability through async patterns, caching strategies, profiling, horizontal scaling, load balancing, and resource management. Use when diagnosing slow endpoints, implementing caching, profiling bottlenecks, planning system capacity, or designing stateless services."
+    },
+    {
+      "id": "architecture/security",
+      "name": "security",
+      "category": "architecture",
+      "path": ".github/skills/architecture/security/SKILL.md",
+      "description": "Implement production security practices covering OWASP Top 10, input validation, injection prevention, and secrets management. Use when hardening applications against vulnerabilities, implementing authentication/authorization, managing secrets, configuring HTTPS/TLS, or conducting security audits."
+    },
+    {
+      "id": "data/cosmos-db",
+      "name": "cosmos-db",
+      "category": "data",
+      "path": ".github/skills/data/cosmos-db/SKILL.md",
+      "description": "Design, model, and operate Azure Cosmos DB workloads across Gremlin (Graph), NoSQL (SQL), and Mongo APIs. Use when modeling graph data with Gremlin, choosing partition keys, sizing RUs, configuring multi-region writes, securing with RBAC/managed identity, or implementing change feed and TTL. Strong focus on Gremlin Graph API patterns."
+    },
+    {
+      "id": "data/data-analysis",
+      "name": "data-analysis",
+      "category": "data",
+      "path": ".github/skills/data/data-analysis/SKILL.md",
+      "description": "Analyze structured data across CSV, JSON, SQL, and DataFrame workflows with exploration, transformation, and visualization. Use when exploring datasets with pandas/polars, running SQL queries on files with DuckDB, transforming data pipelines, or generating data visualizations."
+    },
+    {
+      "id": "data/databricks",
+      "name": "databricks",
+      "category": "data",
+      "path": ".github/skills/data/databricks/SKILL.md",
+      "description": "Build data engineering, analytics, and ML/AI solutions on the Databricks Lakehouse Platform. Use when creating Delta Lake tables, writing PySpark notebooks, building DLT pipelines, managing Unity Catalog, orchestrating Databricks Workflows, tracking experiments with MLflow, or deploying using Databricks Asset Bundles."
+    },
+    {
+      "id": "data/fabric-analytics",
+      "name": "fabric-analytics",
+      "category": "data",
+      "path": ".github/skills/data/fabric-analytics/SKILL.md",
+      "description": "Build data engineering and analytics solutions on Microsoft Fabric - Lakehouse, Warehouse, Spark notebooks, data pipelines, and semantic models. Use when creating Fabric Lakehouses, writing PySpark notebooks, building data pipelines, designing semantic models, or querying OneLake storage."
+    },
+    {
+      "id": "data/fabric-data-agent",
+      "name": "fabric-data-agent",
+      "category": "data",
+      "path": ".github/skills/data/fabric-data-agent/SKILL.md",
+      "description": "Build, configure, and validate conversational data agents on Microsoft Fabric Lakehouses using the Data Agent SDK. Use when creating Fabric data agents, configuring few-shot examples, managing Livy sessions, or validating agent responses against Lakehouse data."
+    },
+    {
+      "id": "data/fabric-forecasting",
+      "name": "fabric-forecasting",
+      "category": "data",
+      "path": ".github/skills/data/fabric-forecasting/SKILL.md",
+      "description": "Build time-series forecasting pipelines on Microsoft Fabric - data preparation, profiling, clustering, feature engineering, and model training. Use when implementing demand forecasting, training LightGBM/Prophet models, engineering time-series features, or deploying prediction pipelines on Fabric."
+    },
+    {
+      "id": "data/powerbi",
+      "name": "powerbi",
+      "category": "data",
+      "path": ".github/skills/data/powerbi/SKILL.md",
+      "description": "Build Power BI reports, semantic models, DAX measures, and data visualizations. Use when designing star schemas, authoring DAX calculations, creating Power Query (M) transformations, optimizing report performance, or deploying Power BI content."
+    },
+    {
+      "id": "design/accessibility",
+      "name": "accessibility",
+      "category": "design",
+      "path": ".github/skills/design/accessibility/SKILL.md",
+      "description": "Enforce WCAG 2.1 AA conformance on UX prototypes and shipped UI. Use when reviewing or building any user-facing surface that must pass an a11y audit -- prototypes in docs/ux/prototypes/, production components, or third-party-embedded views. Provides a mechanical checklist split by POUR principle plus reduced-motion, screen-reader, and keyboard-shortcut rules."
+    },
+    {
+      "id": "design/anti-slop",
+      "name": "anti-slop",
+      "category": "design",
+      "path": ".github/skills/design/anti-slop/SKILL.md",
+      "description": "Identify and prevent AI design slop in generated UI -- forbidden visual tells (purple/teal gradients, generic system emoji, soft pastel everything, fake metrics, hand-drawn cartoon humans, rounded-2xl-everywhere) and enforce honest placeholders. Use after generating any HTML/CSS prototype, marketing surface, or product screen, and as a hard gate inside the prototype-audit Pass 9 (self-critique)."
+    },
+    {
+      "id": "design/brand-spec-extraction",
+      "name": "brand-spec-extraction",
+      "category": "design",
+      "path": ".github/skills/design/brand-spec-extraction/SKILL.md",
+      "description": "Extract and codify a brand specification from user-provided sources (URL, screenshot, PDF, existing app) into a deterministic brand-spec.md artifact. Captures palette, typography, voice, motion, and prohibited patterns so downstream design decisions can be defended against the real brand instead of invented from scratch."
+    },
+    {
+      "id": "design/content-design",
+      "name": "content-design",
+      "category": "design",
+      "path": ".github/skills/design/content-design/SKILL.md",
+      "description": "Write UI copy that survives review -- microcopy, empty states, error messages, onboarding, confirmations, and tone. Use when authoring or reviewing any user-facing string in a prototype or shipped app. Provides patterns by surface type, a 5-line voice rubric, and mechanical anti-patterns reviewers can grep for."
+    },
+    {
+      "id": "design/design-system-reasoning",
+      "name": "design-system-reasoning",
+      "category": "design",
+      "path": ".github/skills/design/design-system-reasoning/SKILL.md",
+      "description": "Synthesize product context into a coherent UI direction with page archetypes, visual language, token guidance, anti-pattern filters, and stack-aware translation. Use when choosing a design style, defining a design brief, aligning UI choices to industry expectations, or reviewing whether a UI direction fits the product before implementation."
+    },
+    {
+      "id": "design/frontend-ui",
+      "name": "frontend-ui",
+      "category": "design",
+      "path": ".github/skills/design/frontend-ui/SKILL.md",
+      "description": "Build frontend UIs with HTML5, CSS3, and Tailwind CSS following accessibility and performance best practices. Use when creating responsive layouts, styling with Tailwind CSS, implementing accessible forms, optimizing frontend performance, or building common UI patterns."
+    },
+    {
+      "id": "design/prototype-audit",
+      "name": "prototype-audit",
+      "category": "design",
+      "path": ".github/skills/design/prototype-audit/SKILL.md",
+      "description": "Mechanically audit a UX prototype or front-end build through six self-healing passes -- accessibility, performance, content, responsive layout, routes, and build hygiene. Use before declaring any prototype review-ready, or whenever the prototype-auditor sub-agent is invoked. Each pass follows check -> diagnose -> fix -> verify with a maximum of three fix cycles per pass before escalating."
+    },
+    {
+      "id": "design/prototype-craft",
+      "name": "prototype-craft",
+      "category": "design",
+      "path": ".github/skills/design/prototype-craft/SKILL.md",
+      "description": "Craft visually polished, production-quality HTML/CSS prototypes with modern styling, typography, color theory, and micro-interactions. Use when building UX deliverables that need visual polish beyond wireframes, implementing color systems, typography scales, elevation shadows, or smooth transitions for interactive prototypes."
+    },
+    {
+      "id": "design/usability-heuristics",
+      "name": "usability-heuristics",
+      "category": "design",
+      "path": ".github/skills/design/usability-heuristics/SKILL.md",
+      "description": "Score a UX prototype or shipped UI against Nielsen-10 heuristics with a severity rubric. Use when reviewing a design, running prototype-auditor Pass 7, or producing a heuristic evaluation report. Mechanically maps each heuristic to inspection prompts, severity (0-4), and fix patterns so two reviewers reach the same score."
+    },
+    {
+      "id": "design/ux-ui-design",
+      "name": "ux-ui-design",
+      "category": "design",
+      "path": ".github/skills/design/ux-ui-design/SKILL.md",
+      "description": "Design user experiences with wireframing, prototyping, user flows, accessibility, and production-ready HTML prototypes. Use when creating wireframes, building interactive prototypes, designing user flows, implementing accessibility standards, or producing HTML/CSS design deliverables."
+    },
+    {
+      "id": "design/visual-regression",
+      "name": "visual-regression",
+      "category": "design",
+      "path": ".github/skills/design/visual-regression/SKILL.md",
+      "description": "Catch unintended visual drift between prototype iterations with deterministic screenshot diffs. Use when iterating on a prototype, before review handoff, or before promoting an SPA prototype to a real build. Default engine is Playwright `toHaveScreenshot` with masking, threshold, and per-OS baselines. Includes Chromatic / Percy guidance for hosted alternatives."
+    },
+    {
+      "id": "design/working-prototype-app",
+      "name": "working-prototype-app",
+      "category": "design",
+      "path": ".github/skills/design/working-prototype-app/SKILL.md",
+      "description": "Build a runnable, multi-page UX prototype as a real SPA when static HTML is insufficient. Use when the prototype must demonstrate routing, state persistence, dynamic data, or interactive flows that exceed what plain HTML/CSS can convey. Provides a Vite + React + Tailwind + Framer Motion + Lucide scaffold, data-driven page layout, debounced localStorage state, and a clean file structure for `src/`."
+    },
+    {
+      "id": "development/browser-automation",
+      "name": "browser-automation",
+      "category": "development",
+      "path": ".github/skills/development/browser-automation/SKILL.md",
+      "description": "Drive a real browser from an AgentX agent for prototype validation, web research, HTML output verification, and accessibility audits. Use when an agent needs to render JavaScript, click/type/screenshot a page, run an axe-core a11y audit, or read a JS-rendered page. Backed by Microsoft's Playwright MCP server (transport decided in ADR-342). Local-first, opt-in install."
+    },
+    {
+      "id": "development/code-hygiene",
+      "name": "code-hygiene",
+      "category": "development",
+      "path": ".github/skills/development/code-hygiene/SKILL.md",
+      "description": "Three-pass quality sweep detecting over-engineering, stale comments, and generic UI patterns produced during AI-assisted coding sessions. Reports findings with severity and optional safe auto-fix."
+    },
+    {
+      "id": "development/code-review",
+      "name": "code-review",
+      "category": "development",
+      "path": ".github/skills/development/code-review/SKILL.md",
+      "description": "Conduct systematic code reviews and audits including automated checks, security audits, compliance verification, and review checklists. Use when reviewing pull requests, performing security audits, verifying coding standards compliance, or setting up automated code review workflows."
+    },
+    {
+      "id": "development/configuration",
+      "name": "configuration",
+      "category": "development",
+      "path": ".github/skills/development/configuration/SKILL.md",
+      "description": "Implement configuration management patterns including environment variables, secrets, feature flags, and validation strategies. Use when setting up app configuration, managing environment-specific settings, implementing feature flags, storing secrets securely, or validating configuration at startup."
+    },
+    {
+      "id": "development/dependency-management",
+      "name": "dependency-management",
+      "category": "development",
+      "path": ".github/skills/development/dependency-management/SKILL.md",
+      "description": "Manage dependencies with version pinning, lock files, vulnerability scanning, and update strategies. Use when adding new packages, pinning dependency versions, scanning for vulnerabilities, updating outdated dependencies, or managing monorepo dependency graphs."
+    },
+    {
+      "id": "development/dispatching-parallel-agents",
+      "name": "dispatching-parallel-agents",
+      "category": "development",
+      "path": ".github/skills/development/dispatching-parallel-agents/SKILL.md",
+      "description": "Fan out independent work to multiple subagents with context isolation. Covers when to parallelize (independent reads, multi-file searches, parallel analysis), when not to (writes, dependent steps, shared mutable state), bounded concurrency limits, and the anti-patterns that turn parallel dispatch into corruption. Use whenever the active agent is tempted to run more than one subagent at the same time."
+    },
+    {
+      "id": "development/documentation",
+      "name": "documentation",
+      "category": "development",
+      "path": ".github/skills/development/documentation/SKILL.md",
+      "description": "Write effective documentation including inline docs, README structure, API documentation, and code comments. Use when writing README files, documenting APIs, creating architecture decision records, adding inline code documentation, or setting up documentation tooling."
+    },
+    {
+      "id": "development/error-handling",
+      "name": "error-handling",
+      "category": "development",
+      "path": ".github/skills/development/error-handling/SKILL.md",
+      "description": "Implement robust error handling with exceptions, retry logic, circuit breakers, and graceful degradation. Use when designing error handling strategies, implementing retry policies, adding circuit breakers, configuring timeouts, or building health check endpoints."
+    },
+    {
+      "id": "development/experimentation-loop",
+      "name": "experimentation-loop",
+      "category": "development",
+      "path": ".github/skills/development/experimentation-loop/SKILL.md",
+      "description": "Run a metric-driven autonomous experimentation loop on an isolated branch. Use when a task has a measurable target (latency, bundle size, test pass-rate, build time, memory, score, accuracy) and the agent should propose changes, measure each attempt against a baseline, keep wins and revert losses, and produce a durable audit trail. Distinct from iterative-loop, which is correctness-driven."
+    },
+    {
+      "id": "development/finishing-a-development-branch",
+      "name": "finishing-a-development-branch",
+      "category": "development",
+      "path": ".github/skills/development/finishing-a-development-branch/SKILL.md",
+      "description": "Decide what to do with a feature branch once the work itself is complete. Covers the merge / open PR / keep open / discard decision, the pre-disposition checklist (loop complete, tests green, compound capture resolved), and cleanup commands for branches and worktrees. Use whenever an agent says \"tests pass, now what?\"."
+    },
+    {
+      "id": "development/git-worktrees",
+      "name": "git-worktrees",
+      "category": "development",
+      "path": ".github/skills/development/git-worktrees/SKILL.md",
+      "description": "Run parallel agent sessions on the same repo using git worktrees without corrupting the primary checkout. Use when an agent needs an isolated working directory for a prototype, a long-running experiment, a parallel branch, or a deploy artifact, especially when AgentX is being driven from a single primary clone."
+    },
+    {
+      "id": "development/iterative-loop",
+      "name": "iterative-loop",
+      "category": "development",
+      "path": ".github/skills/development/iterative-loop/SKILL.md",
+      "description": "Implement Ralph Loop iterative refinement for AI agent tasks. Use when a task needs multiple passes to reach quality: TDD red-green-refactor cycles, incremental feature building, self-correcting code generation, or any work with verifiable completion criteria. Covers loop setup, completion promises, progress tracking, and escape hatches."
+    },
+    {
+      "id": "development/karpathy-guidelines",
+      "name": "karpathy-guidelines",
+      "category": "development",
+      "path": ".github/skills/development/karpathy-guidelines/SKILL.md",
+      "description": "Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria. Adapted from Andrej Karpathy's observations on LLM coding pitfalls."
+    },
+    {
+      "id": "development/logging-monitoring",
+      "name": "logging-monitoring",
+      "category": "development",
+      "path": ".github/skills/development/logging-monitoring/SKILL.md",
+      "description": "Implement observability patterns including structured logging, log levels, correlation IDs, metrics, and distributed tracing. Use when adding structured logging, implementing correlation IDs for request tracing, configuring metrics collection, setting up distributed tracing, or designing alerting rules."
+    },
+    {
+      "id": "development/scrub",
+      "name": "scrub",
+      "category": "development",
+      "path": ".github/skills/development/scrub/SKILL.md",
+      "description": "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, and design tells -- and optionally apply safe automated fixes. Use after a code-generation or refactor pass to remove the visible signs of machine authorship before review."
+    },
+    {
+      "id": "development/skill-creator",
+      "name": "skill-creator",
+      "category": "development",
+      "path": ".github/skills/development/skill-creator/SKILL.md",
+      "description": "Create, validate, and maintain AgentX skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill."
+    },
+    {
+      "id": "development/strategic-compaction",
+      "name": "strategic-compaction",
+      "category": "development",
+      "path": ".github/skills/development/strategic-compaction/SKILL.md",
+      "description": "Decide when to compact, reset, or continue a long-running agent session. Use when context pressure rises, when a checkpoint boundary is reached, or when a clean handoff to a different agent is needed. Encodes the rule that compaction is safe between phases but dangerous mid-implementation, and that reset beats compaction once durable artifacts diverge from the chat transcript."
+    },
+    {
+      "id": "development/systematic-debugging",
+      "name": "systematic-debugging",
+      "category": "development",
+      "path": ".github/skills/development/systematic-debugging/SKILL.md",
+      "description": "Disciplined debugging for stalled bug fixes. Use when an Engineer or Reviewer has tried two or more fixes that did not work, when symptoms keep moving, or when the same test keeps failing for different reasons. Forces root-cause investigation, pattern analysis, hypothesis testing, and a final implementation, in that order."
+    },
+    {
+      "id": "development/testing",
+      "name": "testing",
+      "category": "development",
+      "path": ".github/skills/development/testing/SKILL.md",
+      "description": "Apply testing strategies including test pyramid, unit/integration/e2e testing, and coverage requirements. Use when writing unit tests, designing integration test suites, implementing end-to-end tests, measuring test coverage, or setting up continuous testing pipelines."
+    },
+    {
+      "id": "development/token-optimizer",
+      "name": "token-optimizer",
+      "category": "development",
+      "path": ".github/skills/development/token-optimizer/SKILL.md",
+      "description": ">-"
+    },
+    {
+      "id": "development/type-safety",
+      "name": "type-safety",
+      "category": "development",
+      "path": ".github/skills/development/type-safety/SKILL.md",
+      "description": "Apply type safety patterns including nullable types, validation, static analysis, and strong typing. Use when adding type annotations, implementing nullable reference types, validating inputs with value objects, configuring static analysis tools, or designing type-safe APIs."
+    },
+    {
+      "id": "development/verification-before-completion",
+      "name": "verification-before-completion",
+      "category": "development",
+      "path": ".github/skills/development/verification-before-completion/SKILL.md",
+      "description": "Block false completion claims. Force the agent to identify the claim, run the exact verification command, read the actual output, compare against the claim, and only then report. Use whenever an agent is about to say \"done\", \"fixed\", \"tests pass\", \"deployed\", \"loop complete\", or close an issue."
+    },
+    {
+      "id": "diagrams/diagram-as-code",
+      "name": "diagram-as-code",
+      "category": "diagrams",
+      "path": ".github/skills/diagrams/diagram-as-code/SKILL.md",
+      "description": "Author, review, and maintain diagrams as code across Mermaid, PlantUML, Structurizr DSL, Graphviz DOT, and draw.io XML. Covers swimlane/cross-functional workflows, C4 architecture, sequence, state, ER, dependency, and network diagrams. Use when any agent needs to create or update a diagram in a PRD, ADR, spec, UX flow, or architecture doc."
+    },
+    {
+      "id": "domain/audit-assurance",
+      "name": "audit-assurance",
+      "category": "domain",
+      "path": ".github/skills/domain/audit-assurance/SKILL.md",
+      "description": "Audit and assurance advisory skill for consulting engagements. Use when preparing audit readiness assessments, control environment evaluations, SOC reporting guidance, ESG assurance readiness, or stakeholder materials for audit partners, audit committees, CFOs, and internal audit directors."
+    },
+    {
+      "id": "domain/clm",
+      "name": "clm",
+      "category": "domain",
+      "path": ".github/skills/domain/clm/SKILL.md",
+      "description": "Contract lifecycle management advisory skill for consulting engagements. Use when shaping CLM operating models, contract intake and approval workflows, playbooks, negotiation governance, obligation tracking, renewal controls, or CLM platform assessments."
+    },
+    {
+      "id": "domain/corporate-governance",
+      "name": "corporate-governance",
+      "category": "domain",
+      "path": ".github/skills/domain/corporate-governance/SKILL.md",
+      "description": "Corporate governance advisory skill for consulting engagements. Use when shaping entity governance models, board and committee processes, delegated authority, minute-book controls, statutory filing calendars, or governance operating-model improvements."
+    },
+    {
+      "id": "domain/financial-services",
+      "name": "financial-services",
+      "category": "domain",
+      "path": ".github/skills/domain/financial-services/SKILL.md",
+      "description": "Financial services advisory skill for consulting engagements. Use when preparing research briefs on banking, insurance, capital markets, or wealth management, building performance benchmarking frameworks, regulatory impact assessments, or stakeholder materials for CFOs, CROs, and technology leaders."
+    },
+    {
+      "id": "domain/legal",
+      "name": "legal",
+      "category": "domain",
+      "path": ".github/skills/domain/legal/SKILL.md",
+      "description": "Legal advisory skill for consulting engagements. Use when preparing legal department research briefs, contract review frameworks, compliance gap assessments, legal technology comparisons, or stakeholder materials for GCs, CLOs, and legal ops leaders."
+    },
+    {
+      "id": "domain/oil-and-gas",
+      "name": "oil-and-gas",
+      "category": "domain",
+      "path": ".github/skills/domain/oil-and-gas/SKILL.md",
+      "description": "Oil and gas advisory skill for consulting engagements. Use when preparing operations benchmarking, energy transition readiness assessments, production economics analysis, digital oilfield strategy, or stakeholder materials for E&P executives, midstream operators, and sustainability leaders."
+    },
+    {
+      "id": "domain/tax",
+      "name": "tax",
+      "category": "domain",
+      "path": ".github/skills/domain/tax/SKILL.md",
+      "description": "Tax advisory skill for consulting engagements. Use when preparing tax position analyses, transfer pricing assessments, Pillar Two readiness evaluations, tax function transformation roadmaps, or stakeholder materials for tax directors, CFOs, and treasury leaders."
+    },
+    {
+      "id": "infrastructure/azure",
+      "name": "azure",
+      "category": "infrastructure",
+      "path": ".github/skills/infrastructure/azure/SKILL.md",
+      "description": "Build scalable, secure, and reliable applications on Microsoft Azure cloud services. Use when deploying to Azure, configuring Azure compute/storage/database services, setting up Azure networking, implementing Azure security, or managing Azure costs and monitoring."
+    },
+    {
+      "id": "infrastructure/bicep",
+      "name": "bicep",
+      "category": "infrastructure",
+      "path": ".github/skills/infrastructure/bicep/SKILL.md",
+      "description": "Deploy Azure infrastructure declaratively using Bicep and ARM templates. Use when writing .bicep or .bicepparam files, creating reusable modules, defining user-defined types, securing parameters, or validating deployments with what-if and PSRule."
+    },
+    {
+      "id": "infrastructure/containerization",
+      "name": "containerization",
+      "category": "infrastructure",
+      "path": ".github/skills/infrastructure/containerization/SKILL.md",
+      "description": "Apply container and orchestration best practices with Docker, Docker Compose, and Kubernetes. Use when writing Dockerfiles, creating docker-compose configurations, deploying to Kubernetes, optimizing container images, or troubleshooting container networking."
+    },
+    {
+      "id": "infrastructure/terraform",
+      "name": "terraform",
+      "category": "infrastructure",
+      "path": ".github/skills/infrastructure/terraform/SKILL.md",
+      "description": "Provision cloud infrastructure safely and consistently using Terraform and Infrastructure as Code patterns. Use when writing .tf or .tfvars files, creating reusable modules, managing remote state, securing infrastructure, or running Terratest integration tests."
+    },
+    {
+      "id": "languages/blazor",
+      "name": "blazor",
+      "category": "languages",
+      "path": ".github/skills/languages/blazor/SKILL.md",
+      "description": "Build Blazor applications with Razor components, lifecycle management, and C# web patterns. Use when creating Blazor Server or WebAssembly apps, building Razor components, implementing state management, adding JavaScript interop, or optimizing Blazor performance."
+    },
+    {
+      "id": "languages/c",
+      "name": "c",
+      "category": "languages",
+      "path": ".github/skills/languages/c/SKILL.md",
+      "description": "Write safe, portable, and efficient C code using modern C23-era practices. Use when building systems software, embedded components, native libraries, POSIX tooling, or FFI boundaries where precise control over memory, layout, and runtime cost matters."
+    },
+    {
+      "id": "languages/cpp",
+      "name": "cpp",
+      "category": "languages",
+      "path": ".github/skills/languages/cpp/SKILL.md",
+      "description": "Write modern, maintainable C++ using C++23-era practices. Use when building native libraries, performance-sensitive services, desktop applications, game/engine components, or systems software that benefits from RAII, strong types, templates, and zero-cost abstractions."
+    },
+    {
+      "id": "languages/csharp",
+      "name": "csharp",
+      "category": "languages",
+      "path": ".github/skills/languages/csharp/SKILL.md",
+      "description": "Write production-ready C# and .NET code following modern best practices. Use when building .NET applications, writing async/await code, using Entity Framework Core, implementing dependency injection, configuring nullable reference types, or optimizing C# performance."
+    },
+    {
+      "id": "languages/go",
+      "name": "go",
+      "category": "languages",
+      "path": ".github/skills/languages/go/SKILL.md",
+      "description": "Write reliable, efficient Go code following idiomatic patterns and best practices. Use when building Go applications, implementing error handling with error wrapping, writing concurrent code with goroutines, designing Go interfaces, or structuring Go project layouts."
+    },
+    {
+      "id": "languages/postgresql",
+      "name": "postgresql",
+      "category": "languages",
+      "path": ".github/skills/languages/postgresql/SKILL.md",
+      "description": "Develop PostgreSQL databases with JSONB, arrays, full-text search, and performance optimization. Use when writing PostgreSQL queries, using JSONB operations, implementing full-text search, optimizing query performance with indexes, or configuring row-level security."
+    },
+    {
+      "id": "languages/python",
+      "name": "python",
+      "category": "languages",
+      "path": ".github/skills/languages/python/SKILL.md",
+      "description": "Write production-ready Python code following modern best practices. Use when building Python applications, adding type hints, writing async code, implementing error handling, testing with pytest, or structuring Python project layouts."
+    },
+    {
+      "id": "languages/react",
+      "name": "react",
+      "category": "languages",
+      "path": ".github/skills/languages/react/SKILL.md",
+      "description": "Build React applications with modern hooks, TypeScript, and performance best practices. Use when creating React components, implementing custom hooks, optimizing React rendering performance, managing application state, or testing React components."
+    },
+    {
+      "id": "languages/rust",
+      "name": "rust",
+      "category": "languages",
+      "path": ".github/skills/languages/rust/SKILL.md",
+      "description": "Build safe, concurrent, and performant systems with Rust. Use when writing Rust applications, implementing ownership and borrowing patterns, building concurrent code with threads/async, designing trait-based abstractions, or optimizing Rust performance."
+    },
+    {
+      "id": "languages/sql-server",
+      "name": "sql-server",
+      "category": "languages",
+      "path": ".github/skills/languages/sql-server/SKILL.md",
+      "description": "Develop SQL Server databases with T-SQL, stored procedures, indexing, and performance optimization. Use when writing T-SQL queries, creating stored procedures/functions, designing index strategies, optimizing query execution plans, or troubleshooting SQL Server performance."
+    },
+    {
+      "id": "operations/github-actions-workflows",
+      "name": "github-actions-workflows",
+      "category": "operations",
+      "path": ".github/skills/operations/github-actions-workflows/SKILL.md",
+      "description": "Create GitHub Actions workflows, reusable workflows, custom actions, and workflow automation. Use when setting up CI/CD with GitHub Actions, creating reusable workflow templates, configuring workflow triggers, implementing matrix builds, or securing GitHub Actions secrets."
+    },
+    {
+      "id": "operations/release-management",
+      "name": "release-management",
+      "category": "operations",
+      "path": ".github/skills/operations/release-management/SKILL.md",
+      "description": "Implement release management with versioning strategies, deployment strategies, rollback procedures, and release automation. Use when planning release pipelines, choosing deployment strategies (blue-green, canary, rolling), automating releases, or designing rollback procedures."
+    },
+    {
+      "id": "operations/remote-git-operations",
+      "name": "remote-git-operations",
+      "category": "operations",
+      "path": ".github/skills/operations/remote-git-operations/SKILL.md",
+      "description": "Manage remote Git operations including GitHub, Azure DevOps, pull requests, CI/CD integration, and branch protection. Use when configuring remote repositories, setting up authentication, managing pull request workflows, integrating with CI/CD pipelines, or troubleshooting Git remote issues."
+    },
+    {
+      "id": "operations/version-control",
+      "name": "version-control",
+      "category": "operations",
+      "path": ".github/skills/operations/version-control/SKILL.md",
+      "description": "Apply effective Git workflows including commit conventions, branching strategies, and pull request best practices. Use when writing commit messages, choosing branching strategies, configuring git hooks, resolving merge conflicts, or implementing semantic versioning."
+    },
+    {
+      "id": "operations/yaml-pipelines",
+      "name": "yaml-pipelines",
+      "category": "operations",
+      "path": ".github/skills/operations/yaml-pipelines/SKILL.md",
+      "description": "Build YAML-based CI/CD pipelines across Azure Pipelines and GitLab CI with progressive disclosure. Use when creating Azure DevOps YAML pipelines, configuring GitLab CI/CD, designing multi-stage pipelines, implementing pipeline templates, or managing pipeline secrets and variables."
+    },
+    {
+      "id": "product/prd",
+      "name": "prd",
+      "category": "product",
+      "path": ".github/skills/product/prd/SKILL.md",
+      "description": "Produce production-grade Product Requirements Documents (PRDs) that bridge business vision and technical execution. Use when writing, reading, reviewing, or extending a PRD -- by Product Manager agents authoring one, or by Architect/UX/Engineer/Agent-X agents that need to consume or fact-check PRD conventions without loading the full PM agent contract."
+    },
+    {
+      "id": "testing/e2e-testing",
+      "name": "e2e-testing",
+      "category": "testing",
+      "path": ".github/skills/testing/e2e-testing/SKILL.md",
+      "description": "Design and implement end-to-end tests that validate complete user workflows across the full stack. Use when building browser automation, testing user journeys, cross-browser validation, visual regression testing, or verifying system behavior from the user perspective."
+    },
+    {
+      "id": "testing/integration-testing",
+      "name": "integration-testing",
+      "category": "testing",
+      "path": ".github/skills/testing/integration-testing/SKILL.md",
+      "description": "Design and implement integration tests that verify component interactions, API contracts, database operations, and service boundaries. Use when testing how modules, services, or systems work together."
+    },
+    {
+      "id": "testing/performance-testing",
+      "name": "performance-testing",
+      "category": "testing",
+      "path": ".github/skills/testing/performance-testing/SKILL.md",
+      "description": "Design and execute performance tests including load testing, stress testing, latency benchmarking, and capacity planning. Use when validating system throughput, response times, resource utilization, and scalability under load."
+    },
+    {
+      "id": "testing/production-readiness",
+      "name": "production-readiness",
+      "category": "testing",
+      "path": ".github/skills/testing/production-readiness/SKILL.md",
+      "description": "Comprehensive production readiness certification covering quality gates, release checklists, chaos/resilience testing, rollback validation, observability verification, and go/no-go decision frameworks. Use before any production deployment."
+    },
+    {
+      "id": "testing/security-testing",
+      "name": "security-testing",
+      "category": "testing",
+      "path": ".github/skills/testing/security-testing/SKILL.md",
+      "description": "Implement security testing across the SDLC including SAST, DAST, dependency scanning, secrets detection, penetration testing, and OWASP Top 10 validation. Use when verifying application security posture before release."
+    },
+    {
+      "id": "testing/test-automation",
+      "name": "test-automation",
+      "category": "testing",
+      "path": ".github/skills/testing/test-automation/SKILL.md",
+      "description": "Build and maintain automated test infrastructure for continuous testing. Use when setting up test frameworks, configuring CI test pipelines, implementing parallel test execution, test data management, reporting dashboards, or test environment provisioning."
+    }
+  ]
+}

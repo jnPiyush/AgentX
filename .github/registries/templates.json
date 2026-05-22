@@ -1,0 +1,374 @@
+{
+  "$schemaVersion": 1,
+  "generated": "2026-05-22T03:30:56Z",
+  "source": ".github/templates/*.md",
+  "totalCount": 14,
+  "templates": [
+    {
+      "name": "ADR",
+      "path": ".github/templates/ADR-TEMPLATE.md",
+      "declaredInputs": [],
+      "titlePlaceholders": [
+        "decision_id",
+        "decision_title"
+      ],
+      "sections": [
+        "Table of Contents",
+        "Context",
+        "Decision",
+        "Options Considered",
+        "Rationale",
+        "Consequences",
+        "Implementation",
+        "AI/ML Architecture (if applicable)",
+        "References",
+        "Review History",
+        "Appendix A: MADR 4.0 Alignment and Decision Diagrams (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "ARCH-REVIEW",
+      "path": ".github/templates/ARCH-REVIEW-TEMPLATE.md",
+      "declaredInputs": [],
+      "titlePlaceholders": [
+        "artifact_title"
+      ],
+      "sections": [
+        "Summary",
+        "Pre-Review Gates",
+        "Dimension Coverage Matrix",
+        "Platform Approach (Pro-Code vs Low-Code vs Hybrid)",
+        "Findings",
+        "Severity Rubric",
+        "STRIDE Threat Model Coverage (Dimension 4)",
+        "NFR Traceability (Dimensions 1, 2, 3)",
+        "Trade-offs and Sensitivity Points (Dimension 12)",
+        "Open Questions for Architect",
+        "Decision Rationale",
+        "Self-Review Checklist (Reviewer)",
+        "Appendix A: ATAM, WAF, Fitness Functions, and Sustainability (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "BACKLOG",
+      "path": ".github/templates/BACKLOG-TEMPLATE.md",
+      "declaredInputs": [
+        "project_name",
+        "owner",
+        "date",
+        "planning_horizon"
+      ],
+      "titlePlaceholders": [
+        "project_name"
+      ],
+      "sections": [
+        "1. Vision and North Star",
+        "2. Backlog Hierarchy",
+        "3. Prioritization Framework",
+        "4. INVEST Quality Gate (per Story)",
+        "5. Definition of Ready (DoR)",
+        "6. Definition of Done (DoD)",
+        "7. Active Backlog",
+        "8. Capacity and Velocity",
+        "9. Dependency Graph",
+        "10. Release Plan",
+        "11. Flow Metrics (sankey)",
+        "12. Workflow State Machine",
+        "13. Refinement Cadence",
+        "14. Local Mode Wiring (AgentX)",
+        "15. Self-Review Checklist (before sharing)"
+      ]
+    },
+    {
+      "name": "CONTRACT",
+      "path": ".github/templates/CONTRACT-TEMPLATE.md",
+      "declaredInputs": [
+        "issue_number",
+        "slice_name",
+        "author",
+        "date"
+      ],
+      "titlePlaceholders": [
+        "slice_name"
+      ],
+      "sections": [
+        "Purpose",
+        "Scope",
+        "Not In Scope",
+        "Acceptance Criteria",
+        "Verification Method",
+        "Runtime Evidence Expectations",
+        "Risks",
+        "Recovery Path",
+        "Dependencies",
+        "Evaluator Notes",
+        "Evidence Links",
+        "Appendix A: Contract Diagrams (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "DESIGN-SYSTEM",
+      "path": ".github/templates/DESIGN-SYSTEM-TEMPLATE.md",
+      "declaredInputs": [
+        "project_name",
+        "issue_number",
+        "date",
+        "primary_direction"
+      ],
+      "titlePlaceholders": [
+        "project_name"
+      ],
+      "sections": [
+        "1. Brand",
+        "2. Color",
+        "3. Typography",
+        "4. Spacing",
+        "5. Layout",
+        "6. Components",
+        "7. Motion",
+        "8. Voice and Content",
+        "9. Anti-Patterns (Project-Specific)",
+        "Change Log"
+      ]
+    },
+    {
+      "name": "EVIDENCE-SUMMARY",
+      "path": ".github/templates/EVIDENCE-SUMMARY-TEMPLATE.md",
+      "declaredInputs": [
+        "issue_number",
+        "slice_name",
+        "author",
+        "date"
+      ],
+      "titlePlaceholders": [
+        "slice_name"
+      ],
+      "sections": [
+        "Implementation Evidence",
+        "Verification Evidence",
+        "Runtime Evidence",
+        "Evaluator Findings",
+        "Review References",
+        "Notes",
+        "Appendix A: Evidence Diagrams (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "EXEC-PLAN",
+      "path": ".github/templates/EXEC-PLAN-TEMPLATE.md",
+      "declaredInputs": [
+        "issue_number",
+        "title",
+        "date",
+        "author",
+        "agent"
+      ],
+      "titlePlaceholders": [
+        "title"
+      ],
+      "sections": [
+        "Purpose / Big Picture",
+        "Progress",
+        "Surprises & Discoveries",
+        "Decision Log",
+        "Context and Orientation",
+        "Pre-Conditions",
+        "Plan of Work",
+        "Steps",
+        "Concrete Steps",
+        "Blockers",
+        "Validation and Acceptance",
+        "Idempotence and Recovery",
+        "Rollback Plan",
+        "Artifacts and Notes",
+        "Outcomes & Retrospective",
+        "Appendix A: Plan Diagrams (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "PRD",
+      "path": ".github/templates/PRD-TEMPLATE.md",
+      "declaredInputs": [],
+      "titlePlaceholders": [
+        "epic_title"
+      ],
+      "sections": [
+        "Table of Contents",
+        "1. Problem Statement",
+        "2. Target Users",
+        "3. Goals & Success Metrics",
+        "4. Requirements",
+        "5. User Stories & Features",
+        "6. User Flows",
+        "7. Dependencies & Constraints",
+        "8. Risks & Mitigations",
+        "9. Timeline & Milestones",
+        "10. Out of Scope",
+        "11. Open Questions",
+        "12. Appendix",
+        "Review & Approval",
+        "Appendix A: Industry Best-Practice Diagrams (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "PROGRESS",
+      "path": ".github/templates/PROGRESS-TEMPLATE.md",
+      "declaredInputs": [],
+      "titlePlaceholders": [
+        "issue_number",
+        "issue_title"
+      ],
+      "sections": [
+        "Status",
+        "Checkpoint Log",
+        "Session 1 - ${agent_role} (${session_date})",
+        "Session 2 - ${agent_role} (${current_date})",
+        "Completion Summary",
+        "Appendix A: Progress Diagrams (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "REVIEW",
+      "path": ".github/templates/REVIEW-TEMPLATE.md",
+      "declaredInputs": [],
+      "titlePlaceholders": [
+        "story_title"
+      ],
+      "sections": [
+        "Table of Contents",
+        "1. Executive Summary",
+        "1a. Two-Pass Review Protocol",
+        "2. Code Quality",
+        "3. Architecture & Design",
+        "4. Testing",
+        "5. Security Review",
+        "6. Performance Review",
+        "7. Documentation Review",
+        "8. Acceptance Criteria Verification",
+        "9. GenAI Review (if applicable)",
+        "10. MCP Review (if applicable)",
+        "11. Technical Debt",
+        "12. Compliance & Standards",
+        "13. Recommendations",
+        "14. Decision",
+        "15. Next Steps",
+        "16. Related Issues & PRs",
+        "17. Reviewer Notes",
+        "Appendix",
+        "Appendix A: Conventional Comments and Review Diagrams (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "ROADMAP",
+      "path": ".github/templates/ROADMAP-TEMPLATE.md",
+      "declaredInputs": [],
+      "titlePlaceholders": [
+        "portfolio_title"
+      ],
+      "sections": [
+        "1. Purpose",
+        "2. Portfolio Planning Rules",
+        "3. Dated MVP Sprint Calendar",
+        "4. Dated Release Plan",
+        "5. Capability Waves and Planning Logic",
+        "6. One-Year Roadmap by Milestone",
+        "7. Visual Timeline",
+        "8. Quality Gates",
+        "9. Workstream Mapping",
+        "10. Notes for the Product Manager",
+        "Appendix A: Roadmap Diagrams (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "SECURITY-PLAN",
+      "path": ".github/templates/SECURITY-PLAN-TEMPLATE.md",
+      "declaredInputs": [],
+      "titlePlaceholders": [
+        "project_name"
+      ],
+      "sections": [
+        "Table of Contents",
+        "1. Security Overview",
+        "2. Threat Model",
+        "3. Authentication & Authorization",
+        "4. Data Protection",
+        "5. Network Security",
+        "6. Secrets Management",
+        "7. Monitoring & Incident Response",
+        "8. GenAI & LLM Security (if applicable)",
+        "9. MCP Security (if applicable)",
+        "10. Compliance",
+        "11. Security Checklist",
+        "Appendix A: OWASP Threat Modeling, MITRE ATT&CK, and NIST CSF (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "SPEC",
+      "path": ".github/templates/SPEC-TEMPLATE.md",
+      "declaredInputs": [],
+      "titlePlaceholders": [
+        "feature_name"
+      ],
+      "sections": [
+        "Table of Contents",
+        "1. Overview",
+        "2. Architecture Diagrams",
+        "3. API Design",
+        "4. Data Model Diagrams",
+        "5. Service Layer Diagrams",
+        "6. Security Diagrams",
+        "7. Performance",
+        "8. Testing Strategy",
+        "9. Implementation Notes",
+        "10. Rollout Plan",
+        "11. Risks & Mitigations",
+        "12. Monitoring & Observability",
+        "13. AI/ML Specification (if applicable)",
+        "14. MCP Server Specification (if applicable)",
+        "15. MCP App Specification (if applicable)",
+        "Cross-Cutting Concerns Diagram",
+        "Appendix A: C4 Model Diagrams and Data Design (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "UX",
+      "path": ".github/templates/UX-TEMPLATE.md",
+      "declaredInputs": [],
+      "titlePlaceholders": [
+        "feature_name"
+      ],
+      "sections": [
+        "Table of Contents",
+        "1. Overview",
+        "2. Design Research & Posture",
+        "3. User Research",
+        "4. User Flows",
+        "5. Wireframes",
+        "6. Component Specifications",
+        "7. Design System",
+        "8. Interactions & Animations",
+        "9. Accessibility (WCAG 2.1 AA)",
+        "10. Responsive Design",
+        "11. AI & Conversational UX (if applicable)",
+        "12. MCP App UI Design (if applicable)",
+        "13. Interactive Prototypes",
+        "14. Implementation Notes",
+        "15. Open Questions",
+        "16. References",
+        "Appendix A: NN/g Journey Map, Service Blueprint, IA, and Heuristics (v8.4.43+)",
+        "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    }
+  ]
+}
