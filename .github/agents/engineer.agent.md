@@ -56,11 +56,6 @@ agents:
   - AgentX RAG Specialist
   - AgentX Reviewer
   - AgentX Diagram Specialist
-handoffs:
-  - label: "Hand off to Reviewer"
-    agent: AgentX Reviewer
-    prompt: "Query backlog for highest priority issue with Status=In Review. Review the implementation."
-    send: false
 ---
 
 # Software Engineer Agent

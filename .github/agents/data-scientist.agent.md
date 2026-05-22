@@ -57,11 +57,6 @@ agents:
   - AgentX Ops Monitor
   - AgentX RAG Specialist
   - AgentX Diagram Specialist
-handoffs:
-  - label: "Hand off to Reviewer"
-    agent: AgentX Reviewer
-    prompt: "Query backlog for highest priority issue with Status=In Review. Review the AI implementation."
-    send: false
 ---
 
 # Data Scientist Agent

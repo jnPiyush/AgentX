@@ -1,4 +1,4 @@
-<!-- Inputs: {project_name}, {issue_number}, {date}, {primary_direction} -->
+<!-- Inputs: {project_name}, {date}, {primary_direction} -->
 <!--
 Source: Nine-section DESIGN.md schema adapted from
   VoltAgent/awesome-design-md (https://github.com/VoltAgent/awesome-design-md)
@@ -12,7 +12,6 @@ Source: Nine-section DESIGN.md schema adapted from
 > prototypes, production UI, and design hand-offs. Consumed by UX Designer,
 > Engineer, Reviewer, and prototype-auditor agents.
 
-Issue: #{issue_number}
 Date: {date}
 Primary direction: {primary_direction}  <!-- one of the five visual directions -->
 
@@ -27,7 +26,7 @@ State the brand posture in three lines. No marketing copy.
 - Constraints: <e.g. "must read serious; no playful illustration; WCAG AA">
 
 If a brand-spec is extracted from an external source, link it:
-`docs/ux/brand-spec-{issue_number}.md` (see brand-spec-extraction skill).
+`docs/ux/brand-spec-{id}.md` (see brand-spec-extraction skill).
 
 ## 2. Color
 
@@ -130,4 +129,4 @@ anti-slop checklist in `.github/skills/design/anti-slop/SKILL.md`.
 
 | Date       | Author | Change                                         |
 |------------|--------|------------------------------------------------|
-| {date}     | {who}  | Initial design system for #{issue_number}      |
+| {date}     | {who}  | Initial design system                          |

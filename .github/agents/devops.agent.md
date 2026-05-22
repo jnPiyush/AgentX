@@ -45,11 +45,6 @@ agents:
   - AgentX Engineer
   - AgentX Ops Monitor
   - AgentX Diagram Specialist
-handoffs:
-  - label: "Pipelines Ready -> Engineer or Reviewer"
-    agent: AgentX Engineer
-    prompt: "CI/CD pipelines are ready. Query backlog for next Ready issue."
-    send: false
 ---
 
 # DevOps Engineer Agent

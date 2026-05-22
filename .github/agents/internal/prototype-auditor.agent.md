@@ -36,8 +36,10 @@ tools:
   - changes
   - runCommands
   - problems
+  - usages
   - fetch
   - think
+  - github/*
   - browser-automation
 ---
 

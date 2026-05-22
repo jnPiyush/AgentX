@@ -25,7 +25,6 @@ import {
 export type {
   AgentBoundaries,
   AgentDefinition,
-  AgentHandoff,
   PendingClarificationState,
   PendingSetupState,
 } from './agentxContextTypes';

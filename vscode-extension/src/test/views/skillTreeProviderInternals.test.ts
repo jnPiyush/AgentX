@@ -8,6 +8,7 @@ import {
   groupSkillsByCategory,
   SkillTreeItem,
 } from '../../views/skillTreeProviderInternals';
+import { clearRegistryCache } from '../../utils/registryLoader';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -108,6 +109,71 @@ describe('collectSkillEntries', () => {
     assert.equal(result[0].name, 'Api Design', 'api-design before security alphabetically');
     assert.equal(result[1].name, 'Security');
     assert.equal(result[2].category, 'testing');
+  });
+
+  describe('JSON registry path', () => {
+    beforeEach(() => clearRegistryCache());
+    afterEach(() => clearRegistryCache());
+
+    it('prefers registry over filesystem scan when skills.json is present', () => {
+      // Write the SKILL.md file so resolveRegistryAssetPath finds it
+      makeSkillDir(skillsBase, 'architecture', 'security', 'Filesystem description');
+
+      // Write a registry with a different description to distinguish the two paths
+      const registryDir = path.join(tmpRoot, '.github', 'registries');
+      fs.mkdirSync(registryDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(registryDir, 'skills.json'),
+        JSON.stringify({
+          $schemaVersion: 1,
+          totalCount: 1,
+          skills: [{
+            id: 'architecture/security',
+            name: 'security',
+            category: 'architecture',
+            path: '.github/skills/architecture/security/SKILL.md',
+            description: 'Registry description for security',
+          }],
+        }, null, 2),
+        'utf-8',
+      );
+
+      const result = collectSkillEntries(tmpRoot, '/nonexistent-ext');
+
+      assert.equal(result.length, 1, 'should return exactly one entry from the registry');
+      assert.equal(result[0].name, 'Security');
+      assert.equal(result[0].description, 'Registry description for security',
+        'description should come from the registry, not the SKILL.md frontmatter');
+    });
+
+    it('falls back to filesystem scan when skills.json is absent', () => {
+      makeSkillDir(skillsBase, 'architecture', 'security', 'Filesystem description');
+      // No registry file written
+
+      const result = collectSkillEntries(tmpRoot, '/nonexistent-ext');
+
+      assert.equal(result.length, 1);
+      assert.ok(result[0].description.includes('Filesystem description'),
+        'should fall back to parsing the SKILL.md when no registry is present');
+    });
+
+    it('falls back to filesystem scan when skills.json is malformed', () => {
+      makeSkillDir(skillsBase, 'architecture', 'security', 'Filesystem description');
+
+      const registryDir = path.join(tmpRoot, '.github', 'registries');
+      fs.mkdirSync(registryDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(registryDir, 'skills.json'),
+        '{ this is not valid json }',
+        'utf-8',
+      );
+
+      const result = collectSkillEntries(tmpRoot, '/nonexistent-ext');
+
+      assert.equal(result.length, 1);
+      assert.ok(result[0].description.includes('Filesystem description'),
+        'should fall back when registry JSON is malformed');
+    });
   });
 });
 

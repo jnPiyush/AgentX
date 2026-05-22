@@ -1,26 +1,21 @@
 ---
 inputs:
- project_name:
- description: "Name of the project or system"
- required: true
- default: ""
- issue_number:
- description: "GitHub issue number"
- required: true
- default: ""
- author:
- description: "Document author"
- required: false
- default: "Security Architect"
- date:
- description: "Creation date (YYYY-MM-DD)"
- required: false
- default: "${current_date}"
+  project_name:
+    description: "Name of the project or system"
+    required: true
+    default: ""
+  author:
+    description: "Document author"
+    required: false
+    default: "Security Architect"
+  date:
+    description: "Creation date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
 ---
 
 # Security Plan: ${project_name}
 
-**Issue**: #${issue_number}
 **Status**: Draft | Review | Approved
 **Author**: ${author}
 **Date**: ${date}

@@ -1,35 +1,25 @@
 ---
 inputs:
- feature_name:
- description: "Name of the feature being designed"
- required: true
- default: ""
- issue_number:
- description: "GitHub issue number for this feature"
- required: true
- default: ""
- epic_id:
- description: "Parent Epic issue number"
- required: false
- default: ""
- designer:
- description: "Designer name (agent or person)"
- required: false
- default: "UX Designer Agent"
- date:
- description: "Design date (YYYY-MM-DD)"
- required: false
- default: "${current_date}"
+  feature_name:
+    description: "Name of the feature being designed"
+    required: true
+    default: ""
+  designer:
+    description: "Designer name (agent or person)"
+    required: false
+    default: "UX Designer Agent"
+  date:
+    description: "Design date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
 ---
 
 # UX Design: ${feature_name}
 
-**Feature**: #${issue_number} 
-**Epic**: #${epic_id} 
 **Status**: Draft | Review | Approved 
 **Designer**: ${designer} 
 **Date**: ${date} 
-**Related PRD**: [PRD-${epic_id}.md](../prd/PRD-${epic_id}.md)
+**Related PRD**: `docs/artifacts/prd/PRD-{id}.md`
 
 ---
 
@@ -192,7 +182,7 @@ flowchart TD
 | |
 | Email Address |
 | [_______________________________] |
-| [PASS] Valid email format |
+| `[PASS]` Valid email format |
 | |
 | Password |
 | [_______________________________] [] |
@@ -429,9 +419,9 @@ flowchart TD
 - UI Components: 3:1
 
 **Tested Combinations**:
-- Primary Blue (#007bff) on White: 4.68:1 [PASS]
-- Text Primary (#212529) on White: 16.07:1 [PASS]
-- Text Secondary (#6c757d) on White: 4.67:1 [PASS]
+- Primary Blue (#007bff) on White: 4.68:1 `[PASS]`
+- Text Primary (#212529) on White: 16.07:1 `[PASS]`
+- Text Secondary (#6c757d) on White: 4.67:1 `[PASS]`
 
 ### 8.4 Other Considerations
 - **Focus Management**: Auto-focus on modal open, return focus on close
@@ -678,20 +668,20 @@ graph TD
 
 ## 13. Interactive Prototypes
 
-> **[WARN] MANDATORY**: HTML/CSS prototypes are REQUIRED per AGENTS.md. Output to `docs/ux/prototypes/`.
+> **`[WARN]` MANDATORY**: HTML/CSS prototypes are REQUIRED per AGENTS.md. Output to `docs/ux/prototypes/`.
 > Prototypes must be production-ready HTML/CSS that engineers can reference for implementation.
 
 ### Prototype Links
-- [HTML/CSS Prototype](../prototypes/{feature-name}/index.html) **(MANDATORY)**
+- HTML/CSS Prototype: `docs/ux/prototypes/{feature-name}/index.html` **(MANDATORY)**
 - [Figma Prototype](https://figma.com/...) _(optional)_
 - [Interactive Demo](https://demo.example.com/feature-name) _(optional)_
 
 ### Prototype Scope
-- [PASS] Primary user flow (happy path)
-- [PASS] Error states and validation
-- [PASS] Loading states
-- [WARN] Edge cases (documented, not prototyped)
-- [FAIL] Backend integration (simulated data)
+- `[PASS]` Primary user flow (happy path)
+- `[PASS]` Error states and validation
+- `[PASS]` Loading states
+- `[WARN]` Edge cases (documented, not prototyped)
+- `[FAIL]` Backend integration (simulated data)
 
 ---
 

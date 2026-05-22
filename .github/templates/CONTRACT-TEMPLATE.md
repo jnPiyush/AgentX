@@ -1,8 +1,7 @@
-<!-- Inputs: {issue_number}, {slice_name}, {author}, {date} -->
+<!-- Inputs: {slice_name}, {author}, {date} -->
 
 # Work Contract: ${slice_name}
 
-**Issue**: #${issue_number}
 **Checkpoint**: Work
 **Status**: Proposed | Active | Blocked | Complete | Superseded
 **Author**: ${author}

@@ -37,7 +37,6 @@ tools:
   - think
   - github/*
 agents: []
-handoffs: []
 ---
 
 # Eval Specialist (Invisible Sub-Agent)

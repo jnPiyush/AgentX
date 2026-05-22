@@ -101,7 +101,7 @@
       "name": "azure-foundry",
       "category": "ai-systems",
       "path": ".github/skills/ai-systems/azure-foundry/SKILL.md",
-      "description": ">-"
+      "description": "Design and architect AI agents on Azure AI Foundry -- lifecycle planning, model selection strategy, evaluation frameworks, guardrail design, and deployment patterns. Use when designing agent architecture on Foundry, choosing models, planning evaluation strategy, or defining guardrails. For step-by-step operational workflows (create, deploy, invoke, trace, troubleshoot), install the Azure MCP Extension (ms-azuretools.vscode-azure-mcp-server), which also brings in the Azure Skills plugin and Foundry MCP support in VS Code."
     },
     {
       "id": "ai-systems/cognitive-architecture",
@@ -577,7 +577,7 @@
       "name": "token-optimizer",
       "category": "development",
       "path": ".github/skills/development/token-optimizer/SKILL.md",
-      "description": ">-"
+      "description": "Manage token budgets for instruction files, skills, and agent definitions to prevent context window waste. Use when creating or editing SKILL.md, .instructions.md, .agent.md, or copilot-instructions.md files, or when context loading feels slow or agents fail to load expected context. Enforce limits, measure usage, and optimize content density."
     },
     {
       "id": "development/type-safety",

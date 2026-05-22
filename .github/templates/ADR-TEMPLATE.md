@@ -1,44 +1,34 @@
 ---
 inputs:
- decision_id:
- description: "ADR sequential ID number"
- required: true
- default: ""
- decision_title:
- description: "Short title of the architectural decision"
- required: true
- default: ""
- issue_number:
- description: "GitHub issue number for this decision"
- required: true
- default: ""
- epic_id:
- description: "Parent Epic issue number"
- required: false
- default: ""
- date:
- description: "Decision date (YYYY-MM-DD)"
- required: false
- default: "${current_date}"
- status:
- description: "Decision status"
- required: false
- default: "Accepted"
- author:
- description: "Author of this architectural decision"
- required: false
- default: ""
+  decision_id:
+    description: "ADR sequential ID number"
+    required: true
+    default: ""
+  decision_title:
+    description: "Short title of the architectural decision"
+    required: true
+    default: ""
+  date:
+    description: "Decision date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
+  status:
+    description: "Decision status"
+    required: false
+    default: "Accepted"
+  author:
+    description: "Author of this architectural decision"
+    required: false
+    default: "agentx"
 ---
 
-# ADR-${decision_id}: ${decision_title}
+# ADR: ${decision_title}
 
 **Status**: ${status}
 **Date**: ${date} 
 **Author**: ${author} 
-**Epic**: #${epic_id} 
-**Issue**: #${issue_number} 
-**PRD**: [PRD-${epic_id}.md](../prd/PRD-${epic_id}.md) 
-**UX**: [UX-${issue_number}.md](../ux/UX-${issue_number}.md)
+**PRD**: `docs/artifacts/prd/PRD-{id}.md`
+**UX**: `docs/ux/UX-{id}.md`
 
 ---
 
@@ -182,7 +172,7 @@ We chose **Option X** because:
 
 ## Implementation
 
-**Detailed technical specification**: [SPEC-{issue}.md](../specs/SPEC-{issue}.md)
+**Detailed technical specification**: `docs/artifacts/specs/SPEC-{id}.md`
 
 **High-level implementation plan:**
 1. {Step 1}
@@ -204,9 +194,9 @@ We chose **Option X** because:
 
 | Model | Provider | Context Window | Cost (per 1M tokens) | Latency | Selected? |
 |-------|----------|---------------|----------------------|---------|-----------|
-| {Model 1} | {Provider} | {window} | {cost} | {latency} | [PASS] / [FAIL] |
-| {Model 2} | {Provider} | {window} | {cost} | {latency} | [PASS] / [FAIL] |
-| {Model 3} | {Provider} | {window} | {cost} | {latency} | [PASS] / [FAIL] |
+| {Model 1} | {Provider} | {window} | {cost} | {latency} | `[PASS]` / `[FAIL]` |
+| {Model 2} | {Provider} | {window} | {cost} | {latency} | `[PASS]` / `[FAIL]` |
+| {Model 3} | {Provider} | {window} | {cost} | {latency} | `[PASS]` / `[FAIL]` |
 
 ### Agent Architecture Pattern
 
@@ -347,8 +337,8 @@ graph LR
 
 ### Internal
 - Related ADR (replace with the actual ADR filename)
-- [PRD](../prd/PRD-{epic-id}.md)
-- [UX Design](../ux/UX-{feature-id}.md)
+- PRD: `docs/artifacts/prd/PRD-{epic-id}.md`
+- UX Design: `docs/ux/UX-{feature-id}.md`
 
 ### External
 - [Technology documentation](https://...)

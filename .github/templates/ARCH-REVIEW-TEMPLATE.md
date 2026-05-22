@@ -1,9 +1,5 @@
 ---
 inputs:
-  issue_number:
-    description: "GitHub/ADO issue number (required in 'agentx' mode; leave empty in 'standalone' mode)"
-    required: false
-    default: ""
   artifact_title:
     description: "Title of the ADR, document, or feature being reviewed"
     required: true
@@ -11,15 +7,15 @@ inputs:
   adr_path:
     description: "Path to the ADR being reviewed (agentx mode)"
     required: false
-    default: "docs/artifacts/adr/ADR-${issue_number}.md"
+    default: "docs/artifacts/adr/ADR-{id}.md"
   spec_path:
     description: "Path to the Tech Spec being reviewed (agentx mode)"
     required: false
-    default: "docs/artifacts/specs/SPEC-${issue_number}.md"
+    default: "docs/artifacts/specs/SPEC-{id}.md"
   prd_path:
     description: "Path to the parent PRD (for traceability; agentx mode)"
     required: false
-    default: "docs/artifacts/prd/PRD-${issue_number}.md"
+    default: "docs/artifacts/prd/PRD-{id}.md"
   document_paths:
     description: "Comma-separated paths to human-written document(s) under review (standalone mode). Supports .md, .txt, .docx, .doc, .pptx, .ppt, .pdf, .html, images (.png/.jpg/.svg), diagrams (.drawio/.vsdx/.puml/.mmd)"
     required: false
@@ -53,7 +49,6 @@ inputs:
 # Architecture Review: ${artifact_title}
 
 - **Mode**: `${mode}`
-- **Issue**: #${issue_number} (omit in standalone mode)
 - **Documents under review** (standalone mode): `${document_paths}` (formats: `${document_formats}`)
 - **ADR** (agentx mode): [${adr_path}](../../${adr_path})
 - **Tech Spec** (agentx mode): [${spec_path}](../../${spec_path})
@@ -267,7 +262,7 @@ ATAM-style summary of explicit trade-offs in the ADR Decision.
 - [ ] Severity levels match the rubric (no inflated Highs)
 - [ ] Findings ordered Critical -> High -> Medium -> Low
 - [ ] Decision (`APPROVED` / `CHANGES REQUESTED` / `BLOCKED`) is consistent with finding severity
-- [ ] Report saved to `docs/artifacts/reviews/ARCH-REVIEW-${issue_number}.md`
+- [ ] Report saved to `docs/artifacts/reviews/ARCH-REVIEW-{id}.md`
 ---
 
 ## Appendix A: ATAM, WAF, Fitness Functions, and Sustainability (v8.4.43+)

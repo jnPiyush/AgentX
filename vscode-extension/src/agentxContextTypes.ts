@@ -19,14 +19,6 @@ export interface PendingSetupState {
   detectedValue?: string;
 }
 
-export interface AgentHandoff {
-  readonly agent: string;
-  readonly label: string;
-  readonly prompt: string;
-  readonly context: string;
-  readonly send: boolean;
-}
-
 export interface AgentBoundaries {
   readonly canModify: string[];
   readonly cannotModify: string[];
@@ -40,7 +32,6 @@ export interface AgentDefinition {
   constraints?: string[];
   boundaries?: AgentBoundaries;
   fileName: string;
-  handoffs?: AgentHandoff[];
   tools?: string[];
   agents?: string[];
 }

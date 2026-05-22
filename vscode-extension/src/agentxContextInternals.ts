@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AgentBoundaries, AgentDefinition, AgentHandoff } from './agentxContextTypes';
+import { AgentBoundaries, AgentDefinition } from './agentxContextTypes';
 import { collectAssetFiles, resolveAssetPath } from './utils/runtimeAssets';
 
 interface McpConfig {
@@ -200,26 +200,6 @@ export function parseAgentDefinition(content: string, agentFile: string): AgentD
       .filter((line) => line.length > 0);
   };
 
-  const parseHandoffs = (): AgentHandoff[] => {
-    const handoffRe = /^handoffs:\s*\n((?:\s+-\s+[\s\S]*?)(?=\n\w|$))/m;
-    const handoffMatch = frontmatter.match(handoffRe);
-    if (!handoffMatch) { return []; }
-
-    const entries: AgentHandoff[] = [];
-    const blocks = handoffMatch[1].split(/\n\s+-\s+/).filter(Boolean);
-    for (const block of blocks) {
-      const agent = block.match(/agent:\s*(.+)/)?.[1]?.trim().replace(/^['"]|['"]$/g, '') ?? '';
-      const label = block.match(/label:\s*(.+)/)?.[1]?.trim().replace(/^['"]|['"]$/g, '') ?? '';
-      const prompt = block.match(/prompt:\s*(.+)/)?.[1]?.trim().replace(/^['"]|['"]$/g, '') ?? '';
-      const context = block.match(/context:\s*(.+)/)?.[1]?.trim().replace(/^['"]|['"]$/g, '') ?? '';
-      const sendStr = block.match(/send:\s*(\w+)/)?.[1]?.trim() ?? 'false';
-      if (agent) {
-        entries.push({ agent, label, prompt, context, send: sendStr === 'true' });
-      }
-    }
-    return entries;
-  };
-
   const parseTools = (): string[] => {
     const bracketMatch = frontmatter.match(/^tools:\s*\[([^\]]+)\]/m);
     if (bracketMatch) {
@@ -261,7 +241,6 @@ export function parseAgentDefinition(content: string, agentFile: string): AgentD
     constraints: getList('constraints'),
     boundaries: parseBoundaries(),
     fileName: agentFile,
-    handoffs: parseHandoffs(),
     tools: parseTools(),
     agents: getList('agents'),
   };

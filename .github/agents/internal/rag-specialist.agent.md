@@ -36,7 +36,6 @@ tools:
   - think
   - github/*
 agents: []
-handoffs: []
 ---
 
 # RAG Specialist (Invisible Sub-Agent)

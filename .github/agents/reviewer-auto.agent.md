@@ -43,15 +43,6 @@ tools:
   - github/*
 agents:
   - AgentX Engineer
-handoffs:
-  - label: "Approve (with fixes) -> DevOps + Tester"
-    agent: AgentX DevOps Engineer
-    prompt: "Query backlog for highest priority issue with Status=Validating. Validate CI/CD and deployment readiness."
-    send: false
-  - label: "Request Changes -> Engineer"
-    agent: AgentX Engineer
-    prompt: "Query backlog for highest priority issue with Status=In Progress and needs:changes label. Address review feedback."
-    send: false
 ---
 
 # Auto-Fix Reviewer Agent

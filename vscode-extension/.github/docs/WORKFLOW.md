@@ -451,7 +451,7 @@ These checks are the target validation model. Where automation is not yet presen
 | Mode | How It Works | Platform |
 |------|-------------|----------|
 | **Mode 1: Agent X Autonomous** | Agent X classifies work and executes it end to end in one session, applying PM -> [Architect, UX, Data Scientist] -> Engineer -> Reviewer -> [DevOps, Tester] as internal phases when needed while preserving each specialist agent's own rules and gates | VS Code, Claude Code |
-| **Mode 2: Human-Orchestrated** | User picks agent from Copilot agent picker; `handoffs:` frontmatter renders "Hand off to X" buttons | VS Code |
+| **Mode 2: Human-Orchestrated** | User picks the next agent from the Copilot agent picker and hands off manually between specialist roles | VS Code |
 | **CLI Standalone** | `agentx.ps1 run <agent> <task>` runs agent via GitHub Models API; no sub-agent chaining | CLI |
 
 ### Agent-to-Agent Communication

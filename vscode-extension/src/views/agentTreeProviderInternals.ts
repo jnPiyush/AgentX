@@ -199,7 +199,6 @@ function createAgentChildren(agent: AgentDefinition, agentx: AgentXContext): Age
  const children: AgentTreeItem[] = [];
  const constraints = agent.constraints ?? [];
  const delegates = agent.agents ?? [];
- const handoffs = agent.handoffs ?? [];
  const tools = agent.tools ?? [];
 
  if (agent.description) {
@@ -231,15 +230,6 @@ function createAgentChildren(agent: AgentDefinition, agentx: AgentXContext): Age
  );
  if (agentsGroup) {
   children.push(agentsGroup);
- }
-
- const handoffsGroup = createGroup(
-    `Handoffs (${handoffs.length})`,
-  'arrow-right',
-    handoffs.map((entry) => AgentTreeItem.detail('arrow-right', `${entry.label} -> ${entry.agent}`)),
- );
- if (handoffsGroup) {
-  children.push(handoffsGroup);
  }
 
  const toolsGroup = createGroup(

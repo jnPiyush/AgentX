@@ -17,7 +17,7 @@
 
 ---
 
-## Component Scores (v8.4.54)
+## Component Scores (v8.4.55)
 
 ### Agent Definitions (.github/agents/)
 
@@ -51,7 +51,7 @@
 | Category | Count | Grade | Notes |
 |----------|-------|-------|-------|
 | Architecture | 6 | A | Core principles, security, performance, database, API design, low-code vs pro-code |
-| Development | 20 | A | Testing, error handling, iterative loop, code review, token optimizer, verification, debugging, git worktrees, strategic compaction, and related engineering workflow skills |
+| Development | 22 | A | Testing, error handling, iterative loop, code review, token optimizer, verification, debugging, git worktrees, strategic compaction, finishing-a-development-branch, dispatching-parallel-agents, and related engineering workflow skills |
 | Languages | 10 | A | C, C++, C#, Python, Go, Rust, React, Blazor, PostgreSQL, SQL Server |
 | Operations | 5 | A | Git, GitHub Actions, YAML pipelines, release mgmt, version control |
 | Infrastructure | 4 | A | Azure, Bicep, Terraform, containerization |
@@ -109,7 +109,7 @@
 
 | Document | Grade | Notes |
 |----------|-------|-------|
-| AGENTS.md | A | Slim TOC/map (v8.4.54) |
+| AGENTS.md | A | Slim TOC/map (v8.4.55) |
 | WORKFLOW.md | A- | Complete workflow reference with harness-oriented policy additions; enforcement is still partial |
 | Skills.md | A | Compressed index, Quick Reference table |
 | GUIDE.md | B | Quickstart solid, troubleshooting section could expand |
@@ -167,4 +167,4 @@
 
 ---
 
-**Last updated**: v8.4.54
+**Last updated**: v8.4.55

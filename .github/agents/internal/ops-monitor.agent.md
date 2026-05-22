@@ -38,7 +38,6 @@ tools:
   - think
   - github/*
 agents: []
-handoffs: []
 ---
 
 # Ops Monitor (Invisible Sub-Agent)

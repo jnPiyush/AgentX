@@ -53,12 +53,6 @@ tools:
 agents:
   - AgentX Product Manager
   - AgentX Diagram Specialist
-handoffs:
-  - label: "Hand off to Architect"
-    agent: AgentX Architect
-    prompt: "Query backlog for highest priority issue with Status=Ready and PRD complete. Design architecture for that issue."
-    send: false
-    context: "Architect can work in parallel with UX"
 ---
 
 # UX Designer Agent

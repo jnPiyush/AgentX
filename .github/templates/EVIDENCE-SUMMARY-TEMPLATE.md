@@ -1,8 +1,7 @@
-<!-- Inputs: {issue_number}, {slice_name}, {author}, {date} -->
+<!-- Inputs: {slice_name}, {author}, {date} -->
 
 # Evidence Summary: ${slice_name}
 
-**Issue**: #${issue_number}
 **Checkpoint**: Work | Review
 **Status**: Draft | Current | Superseded
 **Author**: ${author}

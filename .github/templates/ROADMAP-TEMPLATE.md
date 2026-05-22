@@ -1,37 +1,37 @@
 ---
 inputs:
- portfolio_title:
- description: "Portfolio or program title"
- required: true
- default: ""
- portfolio_scope:
- description: "Short description of the workstreams or product scope covered by the roadmap"
- required: true
- default: ""
- status:
- description: "Roadmap status"
- required: false
- default: "Draft"
- author:
- description: "Document author (agent or person name)"
- required: false
- default: "Product Manager Agent"
- date:
- description: "Creation date (YYYY-MM-DD)"
- required: false
- default: "${current_date}"
- portfolio_start_date:
- description: "Planned start date for the roadmap horizon"
- required: false
- default: "{YYYY-MM-DD}"
- portfolio_horizon:
- description: "Overall roadmap horizon"
- required: false
- default: "{YYYY-MM-DD to YYYY-MM-DD}"
- related_prds:
- description: "Bullet list of related PRD paths"
- required: false
- default: "- docs/artifacts/prd/PRD-{workstream}.md"
+  portfolio_title:
+    description: "Portfolio or program title"
+    required: true
+    default: ""
+  portfolio_scope:
+    description: "Short description of the workstreams or product scope covered by the roadmap"
+    required: true
+    default: ""
+  status:
+    description: "Roadmap status"
+    required: false
+    default: "Draft"
+  author:
+    description: "Document author (agent or person name)"
+    required: false
+    default: "Product Manager Agent"
+  date:
+    description: "Creation date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
+  portfolio_start_date:
+    description: "Planned start date for the roadmap horizon"
+    required: false
+    default: "{YYYY-MM-DD}"
+  portfolio_horizon:
+    description: "Overall roadmap horizon"
+    required: false
+    default: "{YYYY-MM-DD to YYYY-MM-DD}"
+  related_prds:
+    description: "Bullet list of related PRD paths"
+    required: false
+    default: "- docs/artifacts/prd/PRD-{workstream}.md"
 ---
 
 # Portfolio Roadmap and Release Plan: ${portfolio_title}

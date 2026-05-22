@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { TemplateTreeProvider, TemplateTreeItem } from '../../views/templateTreeProvider';
+import { clearRegistryCache } from '../../utils/registryLoader';
 
 // Minimal AgentXContext stub
 function createStubContext(workspaceRoot: string | undefined) {
@@ -196,6 +197,69 @@ describe('TemplateTreeProvider', () => {
    const item = TemplateTreeItem.info('Some message');
    assert.equal(item.label, 'Some message');
    assert.equal(item.contextValue, 'infoItem');
+  });
+ });
+
+ describe('JSON registry path', () => {
+  beforeEach(() => clearRegistryCache());
+  afterEach(() => clearRegistryCache());
+
+  it('should prefer templates.json registry over filesystem scan when registry is present', async () => {
+   // Create the actual template file so resolveRegistryAssetPath can find it
+   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-tmpl-reg-'));
+   const templateDir = path.join(root, '.github', 'templates');
+   fs.mkdirSync(templateDir, { recursive: true });
+   fs.writeFileSync(
+    path.join(templateDir, 'PRD-TEMPLATE.md'),
+    '---\ninputs:\n a:\n  description: "x"\n  required: true\n---\n# PRD',
+    'utf-8',
+   );
+
+   // Also put an ADR template on disk that the registry intentionally omits
+   fs.writeFileSync(
+    path.join(templateDir, 'ADR-TEMPLATE.md'),
+    '---\ninputs:\n a:\n  description: "y"\n  required: true\n---\n# ADR',
+    'utf-8',
+   );
+
+   // Write a registry that lists only PRD
+   const registryDir = path.join(root, '.github', 'registries');
+   fs.mkdirSync(registryDir, { recursive: true });
+   fs.writeFileSync(
+    path.join(registryDir, 'templates.json'),
+    JSON.stringify({
+     $schemaVersion: 1,
+     totalCount: 1,
+     templates: [{ name: 'PRD', path: '.github/templates/PRD-TEMPLATE.md' }],
+    }, null, 2),
+    'utf-8',
+   );
+
+   const provider = new TemplateTreeProvider(createStubContext(root));
+   const items = await provider.getChildren();
+
+   // Registry lists only PRD, so the provider must not return ADR
+   const labels = items.map((i) => i.label as string);
+   assert.ok(labels.includes('PRD'), 'registry-listed template should appear');
+   assert.ok(!labels.includes('ADR'), 'template absent from registry should be excluded when registry is present');
+
+   fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('should fall back to filesystem scan when templates.json is absent', async () => {
+   const root = createTemplatesDir({
+    'PRD-TEMPLATE.md': '---\ninputs:\n a:\n  description: "x"\n  required: true\n---\n# PRD',
+    'ADR-TEMPLATE.md': '---\ninputs:\n a:\n  description: "y"\n  required: true\n---\n# ADR',
+   });
+
+   const provider = new TemplateTreeProvider(createStubContext(root));
+   const items = await provider.getChildren();
+
+   const labels = items.map((i) => i.label as string);
+   assert.ok(labels.includes('PRD'), 'PRD should appear via filesystem scan');
+   assert.ok(labels.includes('ADR'), 'ADR should appear via filesystem scan when no registry exists');
+
+   fs.rmSync(root, { recursive: true, force: true });
   });
  });
 

@@ -48,37 +48,6 @@ tools:
 agents:
   - AgentX
   - AzDO PRD to WIT
-handoffs:
-  - label: "Discover"
-    agent: ADO Backlog Manager
-    prompt: /ado-discover-work-items
-  - label: "Triage"
-    agent: ADO Backlog Manager
-    prompt: /ado-triage-work-items
-  - label: "Sprint"
-    agent: ADO Backlog Manager
-    prompt: /ado-sprint-plan
-  - label: "Execute"
-    agent: ADO Backlog Manager
-    prompt: /ado-update-wit-items
-  - label: "Add"
-    agent: ADO Backlog Manager
-    prompt: /ado-add-work-item
-  - label: "Plan"
-    agent: ADO Backlog Manager
-    prompt: /ado-process-my-work-items-for-task-planning
-  - label: "PRD"
-    agent: AzDO PRD to WIT
-    prompt: "Analyze the current PRD inputs and plan Azure DevOps work item hierarchies."
-  - label: "Build"
-    agent: ADO Backlog Manager
-    prompt: /ado-get-build-info
-  - label: "PR"
-    agent: ADO Backlog Manager
-    prompt: /ado-create-pull-request
-  - label: "Route to Agent X"
-    agent: AgentX
-    prompt: "Work item is ready for agent routing. Classify complexity and dispatch to the appropriate specialist agent."
 ---
 
 # ADO Backlog Manager

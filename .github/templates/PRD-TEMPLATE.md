@@ -1,30 +1,25 @@
 ---
 inputs:
- epic_title:
- description: "Title of the Epic"
- required: true
- default: ""
- issue_number:
- description: "GitHub issue number for this Epic"
- required: true
- default: ""
- priority:
- description: "Priority level"
- required: false
- default: "p2"
- author:
- description: "Document author (agent or person name)"
- required: false
- default: "Product Manager Agent"
- date:
- description: "Creation date (YYYY-MM-DD)"
- required: false
- default: "${current_date}"
+  epic_title:
+    description: "Title of the Epic"
+    required: true
+    default: ""
+  priority:
+    description: "Priority level"
+    required: false
+    default: "p2"
+  author:
+    description: "Document author (agent or person name)"
+    required: false
+    default: "Product Manager Agent"
+  date:
+    description: "Creation date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
 ---
 
 # PRD: ${epic_title}
 
-**Epic**: #${issue_number} 
 **Status**: Draft | Review | Approved 
 **Author**: ${author} 
 **Date**: ${date} 
@@ -146,7 +141,7 @@ inputs:
 - [ ] **Rule-based / statistical** - no model needed (deterministic logic only)
 - [ ] **Hybrid** - rule-based foundation with AI/ML enhancement
 
-> [WARN] **Intent Preservation**: If the user explicitly requested AI/ML capabilities (e.g., "build an AI agent"), do NOT classify as rule-based without explicit user confirmation. Do NOT add constraints like "no external API required" that contradict AI intent.
+> `[WARN]` **Intent Preservation**: If the user explicitly requested AI/ML capabilities (e.g., "build an AI agent"), do NOT classify as rule-based without explicit user confirmation. Do NOT add constraints like "no external API required" that contradict AI intent.
 
 #### Model Requirements (if AI/ML powered)
 | Requirement | Specification |
@@ -454,9 +449,9 @@ graph TD
 - **{Term}**: {Definition}
 
 ### Related Documents
-- [Technical Specification](../specs/SPEC-{feature-id}.md)
-- [UX Design](../ux/UX-{feature-id}.md)
-- [Architecture Decision Record](../adr/ADR-{epic-id}.md)
+- Technical Specification: `docs/artifacts/specs/SPEC-{feature-id}.md`
+- UX Design: `docs/ux/UX-{feature-id}.md`
+- Architecture Decision Record: `docs/artifacts/adr/ADR-{epic-id}.md`
 
 ---
 

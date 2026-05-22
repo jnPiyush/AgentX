@@ -2,11 +2,10 @@
 description: 'Execution plan template for complex multi-step work.'
 ---
 
-<!-- Inputs: {issue_number}, {title}, {date}, {author}, {agent} -->
+<!-- Inputs: {title}, {date}, {author}, {agent} -->
 
 # Execution Plan: {title}
 
-**Issue**: #{issue_number}
 **Author**: {agent}
 **Date**: {date}
 **Status**: Draft | In Progress | Complete

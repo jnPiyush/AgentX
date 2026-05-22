@@ -1,24 +1,20 @@
 ---
 inputs:
- issue_number:
- description: "GitHub issue number"
- required: true
- default: ""
- issue_title:
- description: "Issue title"
- required: true
- default: ""
- agent_role:
- description: "Agent role (PM, UX, Architect, Engineer, Reviewer)"
- required: true
- default: ""
- session_date:
- description: "Session date"
- required: false
- default: "${current_date}"
+  issue_title:
+    description: "Issue title"
+    required: true
+    default: ""
+  agent_role:
+    description: "Agent role (PM, UX, Architect, Engineer, Reviewer)"
+    required: true
+    default: ""
+  session_date:
+    description: "Session date"
+    required: false
+    default: "${current_date}"
 ---
 
-# Progress Log: #${issue_number} - ${issue_title}
+# Progress Log: ${issue_title}
 
 > **Purpose**: Track agent sessions, decisions, and continuity across context windows. 
 > **Pattern**: Each agent appends session notes before handoff or context refresh. 
@@ -30,7 +26,6 @@ inputs:
 
 | Field | Value |
 |-------|-------|
-| Issue | #${issue_number} |
 | Type | <!-- type:story / type:bug / type:feature --> |
 | Agent | ${agent_role} |
 | Status | <!-- In Progress / In Review / Done --> |
@@ -72,7 +67,7 @@ inputs:
 
 | Field | Value |
 |-------|-------|
-| Status | Pending <!-- Pending / [PASS] Completed --> |
+| Status | Pending <!-- Pending / `[PASS]` Completed --> |
 | Phase | <!-- e.g., Implementation --> |
 | Skill | <!-- e.g., react, testing --> |
 | Files Changed | <!-- count --> |

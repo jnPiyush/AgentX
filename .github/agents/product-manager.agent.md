@@ -48,17 +48,6 @@ agents:
   - AgentX GitHub Ops
   - AgentX ADO Ops
   - AgentX Diagram Specialist
-handoffs:
-  - label: "Hand off to UX"
-    agent: AgentX UX Designer
-    prompt: "Query backlog for highest priority issue with Status=Ready and needs:ux label. Design UI and flows for that issue."
-    send: false
-    context: "After PRD complete, if UI/UX work needed"
-  - label: "Hand off to Architect"
-    agent: AgentX Architect
-    prompt: "Query backlog for highest priority issue with Status=Ready and PRD complete. Design architecture for that issue."
-    send: false
-    context: "After PRD complete"
 ---
 
 # Product Manager Agent

@@ -1,38 +1,28 @@
 ---
 inputs:
- feature_name:
- description: "Name of the feature being specified"
- required: true
- default: ""
- issue_number:
- description: "GitHub issue number for this feature"
- required: true
- default: ""
- epic_id:
- description: "Parent Epic issue number"
- required: false
- default: ""
- author:
- description: "Spec author (agent or person)"
- required: false
- default: "Solution Architect Agent"
- date:
- description: "Specification date (YYYY-MM-DD)"
- required: false
- default: "${current_date}"
+  feature_name:
+    description: "Name of the feature being specified"
+    required: true
+    default: ""
+  author:
+    description: "Spec author (agent or person)"
+    required: false
+    default: "Solution Architect Agent"
+  date:
+    description: "Specification date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
 ---
 
 # Technical Specification: ${feature_name}
 
-**Issue**: #${issue_number}
-**Epic**: #${epic_id}
 **Status**: Draft | Review | Approved
 **Author**: ${author}
 **Date**: ${date}
-**Related ADR**: [ADR-${epic_id}.md](../adr/ADR-${epic_id}.md)
-**Related UX**: [UX-${issue_number}.md](../ux/UX-${issue_number}.md)
+**Related ADR**: `docs/artifacts/adr/ADR-{id}.md`
+**Related UX**: `docs/ux/UX-{id}.md`
 
-> **Acceptance Criteria**: Defined in the PRD user stories - see [PRD-${epic_id}.md](../prd/PRD-${epic_id}.md#5-user-stories--features). Engineers should track AC completion against the originating Story issue.
+> **Acceptance Criteria**: Defined in the PRD user stories - see `docs/artifacts/prd/PRD-${epic_id}.md` section 5 (User Stories & Features). Engineers should track AC completion against the originating Story issue.
 
 ---
 
@@ -1454,8 +1444,8 @@ flowchart LR
 
 | Design choice | ADR | Why this design follows the ADR |
 |---------------|-----|----------------------------------|
-| {choice} | [ADR-NNNN](../artifacts/adr/ADR-NNNN.md) | {rationale} |
-| {choice} | [ADR-NNNN](../artifacts/adr/ADR-NNNN.md) | {rationale} |
+| {choice} | `docs/artifacts/adr/ADR-{id}.md` | {rationale} |
+| {choice} | `docs/artifacts/adr/ADR-{id}.md` | {rationale} |
 
 ### A.9 Error Taxonomy and Idempotency / Retry Matrix
 

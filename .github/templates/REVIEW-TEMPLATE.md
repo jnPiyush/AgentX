@@ -1,44 +1,29 @@
 ---
 inputs:
- story_title:
- description: "Title of the story being reviewed"
- required: true
- default: ""
- issue_number:
- description: "GitHub issue number for this story"
- required: true
- default: ""
- feature_id:
- description: "Parent Feature issue number"
- required: false
- default: ""
- epic_id:
- description: "Parent Epic issue number"
- required: false
- default: ""
- engineer:
- description: "Engineer GitHub username"
- required: true
- default: ""
- reviewer:
- description: "Reviewer name (agent or person)"
- required: false
- default: "Code Reviewer Agent"
- commit_sha:
- description: "Full commit SHA being reviewed"
- required: true
- default: ""
- date:
- description: "Review date (YYYY-MM-DD)"
- required: false
- default: "${current_date}"
+  story_title:
+    description: "Title of the story being reviewed"
+    required: true
+    default: ""
+  engineer:
+    description: "Engineer GitHub username"
+    required: true
+    default: ""
+  reviewer:
+    description: "Reviewer name (agent or person)"
+    required: false
+    default: "Code Reviewer Agent"
+  commit_sha:
+    description: "Full commit SHA being reviewed"
+    required: true
+    default: ""
+  date:
+    description: "Review date (YYYY-MM-DD)"
+    required: false
+    default: "${current_date}"
 ---
 
 # Code Review: ${story_title}
 
-**Story**: #${issue_number} 
-**Feature**: #${feature_id} (if applicable) 
-**Epic**: #${epic_id} (if applicable) 
 **Engineer**: ${engineer} 
 **Reviewer**: ${reviewer} 
 **Commit SHA**: ${commit_sha} 
@@ -86,7 +71,7 @@ inputs:
 - **Test Files**: {count}
 
 ### Verdict
-**Status**: [PASS] APPROVED | [WARN] CHANGES REQUESTED | [FAIL] REJECTED
+**Status**: `[PASS]` APPROVED | `[WARN]` CHANGES REQUESTED | `[FAIL]` REJECTED
 
 **Confidence Level**: High | Medium | Low 
 **Recommendation**: {Merge | Request Changes | Reject}
@@ -103,16 +88,16 @@ Complete this pass first. If any row is `[FAIL]`, stop the review, return `CHANG
 
 | Check | Status | Evidence |
 |-------|--------|----------|
-| PRD acceptance criteria all addressed (see Section 8) | [PASS] / [FAIL] / [N/A] | {link or note} |
-| ADR decision honored (no silent deviation) | [PASS] / [FAIL] / [N/A] | {ADR-### link} |
-| Tech Spec contract honored (interfaces, schemas, error model) | [PASS] / [FAIL] / [N/A] | {SPEC-### link} |
-| UX prototype intent honored for UI-bearing change | [PASS] / [FAIL] / [N/A] | {UX-### link} |
-| Scope matches issue (no scope creep, no scope cut) | [PASS] / [FAIL] | {issue link} |
-| Non-goals from PRD respected | [PASS] / [FAIL] / [N/A] | {note} |
-| Quality loop completed (`loop status` = complete) | [PASS] / [FAIL] | {iteration count} |
-| Fresh verification evidence present (tests run on current commit) | [PASS] / [FAIL] | {commit SHA + run log} |
+| PRD acceptance criteria all addressed (see Section 8) | `[PASS]` / `[FAIL]` / `[N/A]` | {link or note} |
+| ADR decision honored (no silent deviation) | `[PASS]` / `[FAIL]` / `[N/A]` | {ADR-### link} |
+| Tech Spec contract honored (interfaces, schemas, error model) | `[PASS]` / `[FAIL]` / `[N/A]` | {SPEC-### link} |
+| UX prototype intent honored for UI-bearing change | `[PASS]` / `[FAIL]` / `[N/A]` | {UX-### link} |
+| Scope matches issue (no scope creep, no scope cut) | `[PASS]` / `[FAIL]` | {issue link} |
+| Non-goals from PRD respected | `[PASS]` / `[FAIL]` / `[N/A]` | {note} |
+| Quality loop completed (`loop status` = complete) | `[PASS]` / `[FAIL]` | {iteration count} |
+| Fresh verification evidence present (tests run on current commit) | `[PASS]` / `[FAIL]` | {commit SHA + run log} |
 
-**Pass A verdict**: [PASS] proceed to Pass B | [FAIL] return CHANGES REQUESTED with the failing rows above as required fixes.
+**Pass A verdict**: `[PASS]` proceed to Pass B | `[FAIL]` return CHANGES REQUESTED with the failing rows above as required fixes.
 
 ### Pass B: Code Quality & Craft
 
@@ -122,7 +107,7 @@ Only run when Pass A is `[PASS]`. Covers sections 2-7 and 9-12 below. Pass B can
 
 ## 2. Code Quality
 
-### [PASS] Strengths
+### `[PASS]` Strengths
 1. **{Strength 1}**: {Description with file reference}
  - Example: Well-structured service layer with clear separation of concerns ([ServiceName.cs](path/to/ServiceName.cs#L20-L45))
 
@@ -132,7 +117,7 @@ Only run when Pass A is `[PASS]`. Covers sections 2-7 and 9-12 below. Pass B can
 3. **{Strength 3}**: {Description}
  - Example: Excellent use of async/await patterns
 
-### [WARN] Issues Found
+### `[WARN]` Issues Found
 
 | Severity | Issue | File:Line | Recommendation |
 |----------|-------|-----------|----------------|
@@ -192,17 +177,17 @@ public async Task<User> GetUserAsync(string userId)
 - [ ] Observer Pattern (not needed)
 
 ### SOLID Principles
-- **Single Responsibility**: [PASS] Pass - Each class has one clear purpose
-- **Open/Closed**: [PASS] Pass - Extensions possible without modification
-- **Liskov Substitution**: [PASS] Pass - Interfaces properly implemented
-- **Interface Segregation**: [WARN] Warning - `IEntityService` has too many methods (consider splitting)
-- **Dependency Inversion**: [PASS] Pass - Depends on abstractions, not concretions
+- **Single Responsibility**: `[PASS]` Pass - Each class has one clear purpose
+- **Open/Closed**: `[PASS]` Pass - Extensions possible without modification
+- **Liskov Substitution**: `[PASS]` Pass - Interfaces properly implemented
+- **Interface Segregation**: `[WARN]` Warning - `IEntityService` has too many methods (consider splitting)
+- **Dependency Inversion**: `[PASS]` Pass - Depends on abstractions, not concretions
 
 ### Code Organization
-- **Folder Structure**: [PASS] Follows standard conventions
-- **Naming**: [PASS] Clear, descriptive names
-- **File Size**: [WARN] `EntityService.cs` is 450 lines (consider splitting)
-- **Complexity**: [PASS] Methods are small and focused (avg 15 lines)
+- **Folder Structure**: `[PASS]` Follows standard conventions
+- **Naming**: `[PASS]` Clear, descriptive names
+- **File Size**: `[WARN]` `EntityService.cs` is 450 lines (consider splitting)
+- **Complexity**: `[PASS]` Methods are small and focused (avg 15 lines)
 
 ---
 
@@ -224,17 +209,17 @@ public async Task<User> GetUserAsync(string userId)
 
 ### Test Quality Assessment
 
-#### [PASS] Well-Tested
+#### `[PASS]` Well-Tested
 - `EntityService.CreateAsync()` - Comprehensive unit tests with edge cases
 - `EntityController.Post()` - Integration tests cover happy + error paths
 - Authorization logic - All permission scenarios tested
 
-#### [WARN] Needs More Tests
+#### `[WARN]` Needs More Tests
 - `EntityService.UpdateAsync()` - Missing null input test
 - `EntityValidator.Validate()` - Missing edge case tests
 - Error handling - Need tests for network failures
 
-#### [FAIL] Not Tested
+#### `[FAIL]` Not Tested
 - `EntityMapper.ToDto()` - No tests found
 - Retry logic in `EntityRepository` - Not covered
 
@@ -261,7 +246,7 @@ public async Task CreateAsync_ValidDto_ReturnsEntity()
  mockRepo.Verify(r => r.AddAsync(It.IsAny<Entity>()), Times.Once);
 }
 ```
-[PASS] **Good**: AAA pattern, clear naming, verifies behavior, uses FluentAssertions
+`[PASS]` **Good**: AAA pattern, clear naming, verifies behavior, uses FluentAssertions
 
 **Example Test Needing Improvement**:
 ```csharp
@@ -272,21 +257,21 @@ public async Task Test1()
  Assert.NotNull(result);
 }
 ```
-[FAIL] **Issues**: Vague name, unclear intent, doesn't test meaningful scenario
+`[FAIL]` **Issues**: Vague name, unclear intent, doesn't test meaningful scenario
 
 ---
 
 ## 5. Security Review
 
 ### Security Checklist
-- [x] **No Hardcoded Secrets**: Checked all files, secrets in Key Vault [PASS]
-- [x] **SQL Parameterization**: All queries use parameters [PASS]
-- [x] **Input Validation**: FluentValidation applied to all DTOs [PASS]
-- [x] **Authentication**: JWT tokens validated correctly [PASS]
-- [x] **Authorization**: Role checks present on sensitive endpoints [PASS]
-- [ ] **HTTPS Only**: [WARN] Missing HTTPS redirect middleware
-- [x] **CORS Configuration**: Properly restricted origins [PASS]
-- [x] **Dependency Scan**: No known vulnerabilities [PASS]
+- [x] **No Hardcoded Secrets**: Checked all files, secrets in Key Vault `[PASS]`
+- [x] **SQL Parameterization**: All queries use parameters `[PASS]`
+- [x] **Input Validation**: FluentValidation applied to all DTOs `[PASS]`
+- [x] **Authentication**: JWT tokens validated correctly `[PASS]`
+- [x] **Authorization**: Role checks present on sensitive endpoints `[PASS]`
+- [ ] **HTTPS Only**: `[WARN]` Missing HTTPS redirect middleware
+- [x] **CORS Configuration**: Properly restricted origins `[PASS]`
+- [x] **Dependency Scan**: No known vulnerabilities `[PASS]`
 
 ### Vulnerabilities Found
 **None** | **{count} found**
@@ -329,16 +314,16 @@ app.Use(async (context, next) =>
 ## 6. Performance Review
 
 ### Performance Checklist
-- [x] **Async/Await**: Used correctly for all I/O operations [PASS]
-- [ ] **N+1 Queries**: [WARN] Found in `GetEntitiesWithRelated()` method
-- [x] **Database Indexes**: Added indexes on frequently queried fields [PASS]
-- [x] **Caching**: Redis caching implemented for read-heavy operations [PASS]
-- [x] **Pagination**: Implemented on list endpoints [PASS]
-- [ ] **Connection Pooling**: [WARN] Not configured in `DbContext`
+- [x] **Async/Await**: Used correctly for all I/O operations `[PASS]`
+- [ ] **N+1 Queries**: `[WARN]` Found in `GetEntitiesWithRelated()` method
+- [x] **Database Indexes**: Added indexes on frequently queried fields `[PASS]`
+- [x] **Caching**: Redis caching implemented for read-heavy operations `[PASS]`
+- [x] **Pagination**: Implemented on list endpoints `[PASS]`
+- [ ] **Connection Pooling**: `[WARN]` Not configured in `DbContext`
 
 ### Performance Issues
 
-#### [WARN] N+1 Query Problem
+#### `[WARN]` N+1 Query Problem
 **Location**: [EntityService.cs](path/to/EntityService.cs#L120)
 
 **Problem**:
@@ -377,11 +362,11 @@ public async Task<IEnumerable<EntityDto>> GetAllWithRelatedAsync()
 ## 7. Documentation Review
 
 ### Documentation Checklist
-- [x] **XML Documentation**: All public APIs documented [PASS]
-- [x] **Inline Comments**: Complex logic explained [PASS]
-- [ ] **README Updated**: [WARN] New feature not mentioned in README
-- [x] **API Documentation**: OpenAPI/Swagger updated [PASS]
-- [ ] **Migration Guide**: [WARN] Breaking changes need migration guide
+- [x] **XML Documentation**: All public APIs documented `[PASS]`
+- [x] **Inline Comments**: Complex logic explained `[PASS]`
+- [ ] **README Updated**: `[WARN]` New feature not mentioned in README
+- [x] **API Documentation**: OpenAPI/Swagger updated `[PASS]`
+- [ ] **Migration Guide**: `[WARN]` Breaking changes need migration guide
 
 ### Documentation Quality
 
@@ -395,14 +380,14 @@ public async Task<IEnumerable<EntityDto>> GetAllWithRelatedAsync()
 /// <exception cref="ValidationException">Thrown when dto validation fails.</exception>
 public async Task<Entity> CreateAsync(CreateEntityDto dto)
 ```
-[PASS] **Good**: Describes parameters, return value, and exceptions
+`[PASS]` **Good**: Describes parameters, return value, and exceptions
 
 **Needs Improvement**:
 ```csharp
 // Process the entity
 public async Task<Entity> ProcessAsync(Entity entity)
 ```
-[FAIL] **Issues**: Vague XML doc, unclear what "process" means
+`[FAIL]` **Issues**: Vague XML doc, unclear what "process" means
 
 ---
 
@@ -411,22 +396,22 @@ public async Task<Entity> ProcessAsync(Entity entity)
 ### Story Acceptance Criteria
 From Issue #{story-id}:
 
-- [x] **AC1**: User can create entity via API [PASS]
+- [x] **AC1**: User can create entity via API `[PASS]`
  - **Verified**: POST /api/v1/entities returns 201 with entity
 
-- [x] **AC2**: Validation prevents invalid data [PASS]
+- [x] **AC2**: Validation prevents invalid data `[PASS]`
  - **Verified**: Returns 400 with error details for invalid input
 
-- [ ] **AC3**: Email notification sent on creation [WARN]
+- [ ] **AC3**: Email notification sent on creation `[WARN]`
  - **Issue**: Email service integration missing
 
-- [x] **AC4**: All operations logged [PASS]
+- [x] **AC4**: All operations logged `[PASS]`
  - **Verified**: Structured logging with correlation IDs
 
 ### Regression Testing
-- [x] Existing features still work [PASS]
-- [x] No breaking changes to public APIs [PASS]
-- [x] Backward compatibility maintained [PASS]
+- [x] Existing features still work `[PASS]`
+- [x] No breaking changes to public APIs `[PASS]`
+- [x] Backward compatibility maintained `[PASS]`
 
 ---
 
@@ -477,22 +462,22 @@ graph TD
 
 | Category | Check | Status | Notes |
 |----------|-------|--------|-------|
-| **Prompt Engineering** | System prompt externalized (not inline strings) | [PASS] / [FAIL] | |
-| **Prompt Engineering** | Prompt injection defenses present | [PASS] / [FAIL] | |
-| **Prompt Engineering** | Structured output schema enforced | [PASS] / [FAIL] | |
-| **Model Governance** | Model version pinned with date suffix | [PASS] / [FAIL] | |
-| **Model Governance** | Fallback model from different provider configured | [PASS] / [FAIL] | |
-| **Model Governance** | Token budget enforced per request | [PASS] / [FAIL] | |
-| **Evaluation** | Evaluation dataset exists with {N}+ test cases | [PASS] / [FAIL] | |
-| **Evaluation** | Quality thresholds defined (coherence, relevance, etc.) | [PASS] / [FAIL] | |
-| **Evaluation** | LLM-as-judge uses different model than agent | [PASS] / [FAIL] | |
-| **Safety** | Input/output guardrails configured | [PASS] / [FAIL] | |
-| **Safety** | PII detection on model outputs | [PASS] / [FAIL] | |
-| **Safety** | Human-in-the-loop for high-risk actions | [PASS] / [FAIL] | |
-| **Observability** | All LLM calls traced (OpenTelemetry / equivalent) | [PASS] / [FAIL] | |
-| **Observability** | Token usage and cost tracked per request | [PASS] / [FAIL] | |
-| **Error Handling** | Graceful fallback when model unavailable | [PASS] / [FAIL] | |
-| **Error Handling** | Timeout configured with fallback response | [PASS] / [FAIL] | |
+| **Prompt Engineering** | System prompt externalized (not inline strings) | `[PASS]` / `[FAIL]` | |
+| **Prompt Engineering** | Prompt injection defenses present | `[PASS]` / `[FAIL]` | |
+| **Prompt Engineering** | Structured output schema enforced | `[PASS]` / `[FAIL]` | |
+| **Model Governance** | Model version pinned with date suffix | `[PASS]` / `[FAIL]` | |
+| **Model Governance** | Fallback model from different provider configured | `[PASS]` / `[FAIL]` | |
+| **Model Governance** | Token budget enforced per request | `[PASS]` / `[FAIL]` | |
+| **Evaluation** | Evaluation dataset exists with {N}+ test cases | `[PASS]` / `[FAIL]` | |
+| **Evaluation** | Quality thresholds defined (coherence, relevance, etc.) | `[PASS]` / `[FAIL]` | |
+| **Evaluation** | LLM-as-judge uses different model than agent | `[PASS]` / `[FAIL]` | |
+| **Safety** | Input/output guardrails configured | `[PASS]` / `[FAIL]` | |
+| **Safety** | PII detection on model outputs | `[PASS]` / `[FAIL]` | |
+| **Safety** | Human-in-the-loop for high-risk actions | `[PASS]` / `[FAIL]` | |
+| **Observability** | All LLM calls traced (OpenTelemetry / equivalent) | `[PASS]` / `[FAIL]` | |
+| **Observability** | Token usage and cost tracked per request | `[PASS]` / `[FAIL]` | |
+| **Error Handling** | Graceful fallback when model unavailable | `[PASS]` / `[FAIL]` | |
+| **Error Handling** | Timeout configured with fallback response | `[PASS]` / `[FAIL]` | |
 
 ### GenAI Issues Found
 
@@ -511,27 +496,27 @@ graph TD
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Tool input parameters validated with JSON Schema | [PASS] / [FAIL] | |
-| One action per tool (no multi-mode mega-tools) | [PASS] / [FAIL] | |
-| Tool names use `verb_noun` convention | [PASS] / [FAIL] | |
-| Resource URIs follow consistent naming scheme | [PASS] / [FAIL] | |
-| Path traversal prevention on file-access tools | [PASS] / [FAIL] | |
-| SSRF prevention on URL-accepting tools | [PASS] / [FAIL] | |
-| Error responses are structured MCP errors (not raw exceptions) | [PASS] / [FAIL] | |
-| Destructive tools require confirmation | [PASS] / [FAIL] | |
-| Transport security (TLS for SSE/HTTP) | [PASS] / [FAIL] | |
-| All tool calls logged with context | [PASS] / [FAIL] | |
+| Tool input parameters validated with JSON Schema | `[PASS]` / `[FAIL]` | |
+| One action per tool (no multi-mode mega-tools) | `[PASS]` / `[FAIL]` | |
+| Tool names use `verb_noun` convention | `[PASS]` / `[FAIL]` | |
+| Resource URIs follow consistent naming scheme | `[PASS]` / `[FAIL]` | |
+| Path traversal prevention on file-access tools | `[PASS]` / `[FAIL]` | |
+| SSRF prevention on URL-accepting tools | `[PASS]` / `[FAIL]` | |
+| Error responses are structured MCP errors (not raw exceptions) | `[PASS]` / `[FAIL]` | |
+| Destructive tools require confirmation | `[PASS]` / `[FAIL]` | |
+| Transport security (TLS for SSE/HTTP) | `[PASS]` / `[FAIL]` | |
+| All tool calls logged with context | `[PASS]` / `[FAIL]` | |
 
 ### MCP App Checklist (if applicable)
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| registerAppTool() calls have clear descriptions | [PASS] / [FAIL] | |
-| Views render correctly in target host widths | [PASS] / [FAIL] | |
-| WCAG 2.1 AA accessibility in iframe content | [PASS] / [FAIL] | |
-| Dark/light theme support | [PASS] / [FAIL] | |
-| State management handles host disconnection gracefully | [PASS] / [FAIL] | |
-| Event cleanup on view unmount | [PASS] / [FAIL] | |
+| registerAppTool() calls have clear descriptions | `[PASS]` / `[FAIL]` | |
+| Views render correctly in target host widths | `[PASS]` / `[FAIL]` | |
+| WCAG 2.1 AA accessibility in iframe content | `[PASS]` / `[FAIL]` | |
+| Dark/light theme support | `[PASS]` / `[FAIL]` | |
+| State management handles host disconnection gracefully | `[PASS]` / `[FAIL]` | |
+| Event cleanup on view unmount | `[PASS]` / `[FAIL]` | |
 
 ### MCP Issues Found
 
@@ -562,18 +547,18 @@ graph TD
 ## 12. Compliance & Standards
 
 ### Coding Standards
-- [x] Follows C# naming conventions [PASS]
-- [x] Follows project code style (EditorConfig) [PASS]
-- [x] No compiler warnings [PASS]
-- [x] No linter errors [PASS]
-- [x] Follows Skills.md guidelines [PASS]
+- [x] Follows C# naming conventions `[PASS]`
+- [x] Follows project code style (EditorConfig) `[PASS]`
+- [x] No compiler warnings `[PASS]`
+- [x] No linter errors `[PASS]`
+- [x] Follows Skills.md guidelines `[PASS]`
 
 ### Production Requirements (Skills.md)
-- [x] 80% test coverage [PASS]
-- [x] Security checklist completed [PASS]
-- [x] Performance considerations addressed [PASS]
-- [x] Documentation complete [PASS]
-- [x] Error handling implemented [PASS]
+- [x] 80% test coverage `[PASS]`
+- [x] Security checklist completed `[PASS]`
+- [x] Performance considerations addressed `[PASS]`
+- [x] Documentation complete `[PASS]`
+- [x] Error handling implemented `[PASS]`
 
 ---
 
@@ -601,7 +586,7 @@ graph TD
 ## 14. Decision
 
 ### Verdict
-**Status**: [PASS] APPROVED | [WARN] CHANGES REQUESTED | [FAIL] REJECTED
+**Status**: `[PASS]` APPROVED | `[WARN]` CHANGES REQUESTED | `[FAIL]` REJECTED
 
 ### Weighted Score (optional for non-UI reviews; MANDATORY for UI-bearing reviews)
 
@@ -717,11 +702,11 @@ tests/
 [Link to coverage report](path/to/coverage.html)
 
 ### CI/CD Pipeline Results
-- [PASS] Build: Passed
-- [PASS] Unit Tests: Passed (all 45 tests)
-- [PASS] Integration Tests: Passed (all 12 tests)
-- [PASS] Security Scan: No vulnerabilities
-- [PASS] Linting: No errors
+- `[PASS]` Build: Passed
+- `[PASS]` Unit Tests: Passed (all 45 tests)
+- `[PASS]` Integration Tests: Passed (all 12 tests)
+- `[PASS]` Security Scan: No vulnerabilities
+- `[PASS]` Linting: No errors
 
 ---
 

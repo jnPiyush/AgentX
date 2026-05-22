@@ -36,7 +36,6 @@ tools:
   - think
   - github/*
 agents: []
-handoffs: []
 ---
 
 # Prompt Engineer (Invisible Sub-Agent)

@@ -471,11 +471,6 @@ describe('AgentXContext', () => {
         "description: 'Agent with extended fields'",
         'model: Claude Opus',
         "tools: ['read', 'edit', 'search']",
-        'handoffs:',
-        '  - agent: engineer',
-        '    label: Hand off to Engineer',
-        '    prompt: Implement the spec',
-        '    send: true',
         '---',
         '',
         '## Role',
@@ -492,9 +487,6 @@ describe('AgentXContext', () => {
       assert.ok(def!.tools!.includes('read'));
       assert.ok(def!.tools!.includes('edit'));
       assert.ok(def!.tools!.includes('search'));
-      assert.ok(Array.isArray(def!.handoffs), 'handoffs should be an array');
-      assert.ok(def!.handoffs!.length > 0, 'handoffs should not be empty');
-      assert.equal(def!.handoffs![0].agent, 'engineer');
     });
 
     it('should parse multiline list fields from frontmatter', async () => {

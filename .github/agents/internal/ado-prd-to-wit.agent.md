@@ -39,10 +39,6 @@ tools:
   - agent
 agents:
   - ADO Backlog Manager
-handoffs:
-  - label: "Execute"
-    agent: ADO Backlog Manager
-    prompt: "Process the handoff file and create or update work items in Azure DevOps."
 ---
 
 # PRD to Work Item Planning

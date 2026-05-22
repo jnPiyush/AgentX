@@ -46,16 +46,6 @@ agents:
   - AgentX Eval Specialist
   - AgentX GitHub Ops
   - AgentX ADO Ops
-handoffs:
-  - label: "Approve -> DevOps + Tester"
-    agent: AgentX DevOps Engineer
-    prompt: "Query backlog for highest priority issue with Status=Validating. Validate CI/CD and deployment readiness."
-    send: false
-    context: "DevOps and Tester validate in parallel after approval"
-  - label: "Request Changes -> Engineer"
-    agent: AgentX Engineer
-    prompt: "Query backlog for highest priority issue with Status=In Progress and needs:changes label. Address review feedback."
-    send: false
 ---
 
 # Code Reviewer Agent

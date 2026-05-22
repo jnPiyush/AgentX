@@ -43,7 +43,6 @@ tools:
   - fetch
   - github/*
 agents: []
-handoffs: []
 ---
 
 # Diagram Specialist (Invisible Sub-Agent)

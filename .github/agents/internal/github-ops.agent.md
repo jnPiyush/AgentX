@@ -40,32 +40,6 @@ tools:
   - github/*
 agents:
   - AgentX
-handoffs:
-  - label: "Triage Backlog"
-    agent: AgentX GitHub Ops
-    prompt: "Scan open issues, classify by type and priority, apply labels, and identify stale or duplicate items."
-    send: false
-    context: "Self-referencing workflow transition for triage mode"
-  - label: "Discover Work"
-    agent: AgentX GitHub Ops
-    prompt: "Search issues and PRs matching the given criteria. Summarize findings with counts and priority breakdown."
-    send: false
-    context: "Self-referencing workflow transition for discovery mode"
-  - label: "Plan Sprint"
-    agent: AgentX GitHub Ops
-    prompt: "Select issues for the next sprint based on priority, dependencies, and team capacity."
-    send: false
-    context: "Self-referencing workflow transition for sprint planning mode"
-  - label: "Execute Work Item"
-    agent: AgentX GitHub Ops
-    prompt: "Process a single issue: update status, assign, add context, or transition through workflow."
-    send: false
-    context: "Self-referencing workflow transition for execution mode"
-  - label: "Route to Agent X"
-    agent: AgentX
-    prompt: "Issue is ready for agent routing. Classify complexity and dispatch to the appropriate specialist agent."
-    send: false
-    context: "Hand off issues that need specialist agent work"
 ---
 
 # GitHub Operations Agent

@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 109 skills across 12 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 111 skills across 12 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 109 skills across 12 categor
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 109 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 111 skills. Use Quick Reference below.
 
 ---
 
@@ -40,6 +40,8 @@ description: 'Compressed skill index for AI agents. 109 skills across 12 categor
 | **Subagent Retrieval / Scoped Reads** | [Iterative Retrieval](agentx/skills/ai-systems/iterative-retrieval/SKILL.md), [Context Mgmt](agentx/skills/ai-systems/context-management/SKILL.md), [Token Optimizer](agentx/skills/development/token-optimizer/SKILL.md) |
 | **Strategic Compaction / When to /compact or reset** | [Strategic Compaction](agentx/skills/development/strategic-compaction/SKILL.md), [Context Mgmt](agentx/skills/ai-systems/context-management/SKILL.md), [Iterative Loop](agentx/skills/development/iterative-loop/SKILL.md) |
 | **Parallel Agent Sessions / Isolated Sandbox** | [Git Worktrees](agentx/skills/development/git-worktrees/SKILL.md), [Version Control](agentx/skills/operations/version-control/SKILL.md), [Experimentation Loop](agentx/skills/development/experimentation-loop/SKILL.md) |
+| **Fan-out to Parallel Subagents** | [Dispatching Parallel Agents](agentx/skills/development/dispatching-parallel-agents/SKILL.md), [Iterative Retrieval](agentx/skills/ai-systems/iterative-retrieval/SKILL.md), [Git Worktrees](agentx/skills/development/git-worktrees/SKILL.md) |
+| **Finishing a Feature Branch (merge / PR / discard)** | [Finishing a Development Branch](agentx/skills/development/finishing-a-development-branch/SKILL.md), [Version Control](agentx/skills/operations/version-control/SKILL.md), [Git Worktrees](agentx/skills/development/git-worktrees/SKILL.md) |
 | **Metric-Driven Experimentation** | [Experimentation Loop](agentx/skills/development/experimentation-loop/SKILL.md), [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md), [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Token Budget / Context** | [Token Optimizer](agentx/skills/development/token-optimizer/SKILL.md), [Context Mgmt](agentx/skills/ai-systems/context-management/SKILL.md) |
 | **Azure AI Foundry Agent** | [Azure Foundry](agentx/skills/ai-systems/azure-foundry/SKILL.md), [AI Agent Dev](agentx/skills/ai-systems/ai-agent-development/SKILL.md), [AI Evaluation](agentx/skills/ai-systems/ai-evaluation/SKILL.md). For operational workflows (create, deploy, trace), install companion: GitHub Copilot for Azure |
@@ -125,6 +127,8 @@ dev|verification-before-completion|agentx/skills/development/verification-before
 dev|systematic-debugging|agentx/skills/development/systematic-debugging/SKILL.md|debugging,root-cause,hypothesis-testing,stalled-fixes,three-failed-fixes,architecture-question,bug-investigation
 dev|git-worktrees|agentx/skills/development/git-worktrees/SKILL.md|git-worktree,parallel-sessions,isolated-checkout,sandbox,submodule-guard,detection,deploy-prototype
 dev|strategic-compaction|agentx/skills/development/strategic-compaction/SKILL.md|compaction,reset,checkpoint,context-budget
+dev|finishing-a-development-branch|agentx/skills/development/finishing-a-development-branch/SKILL.md|branch-disposition,merge,PR,discard,keep-open,worktree-cleanup,CI,done-criteria
+dev|dispatching-parallel-agents|agentx/skills/development/dispatching-parallel-agents/SKILL.md|subagents,fan-out,parallel-dispatch,context-isolation,bounded-concurrency,council,anti-patterns
 lang|csharp|agentx/skills/languages/csharp/SKILL.md|C#,.NET,EF-Core,DI,async/await,xUnit
 lang|c|agentx/skills/languages/c/SKILL.md|C,C23,pointers,embedded,systems,FFI,ABI,memory
 lang|cpp|agentx/skills/languages/cpp/SKILL.md|C++,C++23,RAII,templates,span,string_view,native
@@ -321,5 +325,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 109 skills (arch:6, dev:20, lang:10, ops:5, infra:4, data:7, ai:30, design:12, test:6, domain:7, product:1, diagrams:1)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 111 skills (arch:6, dev:22, lang:10, ops:5, infra:4, data:7, ai:30, design:12, test:6, domain:7, product:1, diagrams:1)
 
