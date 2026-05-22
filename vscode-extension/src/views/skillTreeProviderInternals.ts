@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { loadSkillsRegistry, resolveRegistryAssetPath } from '../utils/registryLoader';
 
 export interface SkillEntry {
   readonly name: string;
@@ -112,6 +113,11 @@ export function collectSkillEntries(
   workspaceRoot: string | undefined,
   extensionPath: string,
 ): SkillEntry[] {
+  const registryEntries = collectSkillEntriesFromRegistry(workspaceRoot, extensionPath);
+  if (registryEntries.length > 0) {
+    return registryEntries;
+  }
+
   const entries: SkillEntry[] = [];
   const seen = new Set<string>();
 
@@ -183,4 +189,37 @@ export function groupSkillsByCategory(entries: SkillEntry[]): SkillTreeItem[] {
 
 export function createSkillTreeItem(entry: SkillEntry): SkillTreeItem {
   return SkillTreeItem.skill(entry);
+}
+
+function collectSkillEntriesFromRegistry(
+  workspaceRoot: string | undefined,
+  extensionPath: string,
+): SkillEntry[] {
+  const registry = loadSkillsRegistry(workspaceRoot, extensionPath);
+  if (!registry) {
+    return [];
+  }
+
+  const entries: SkillEntry[] = [];
+  const seen = new Set<string>();
+
+  for (const skill of registry.skills) {
+    if (!skill?.path || !skill.name || !skill.category) { continue; }
+    const key = `${skill.category}/${skill.name}`;
+    if (seen.has(key)) { continue; }
+
+    const absolutePath = resolveRegistryAssetPath(workspaceRoot, extensionPath, skill.path);
+    if (!absolutePath) { continue; }
+
+    seen.add(key);
+    entries.push({
+      name: toTitleCase(skill.name),
+      category: skill.category,
+      description: skill.description ?? '',
+      filePath: absolutePath,
+      relativePath: skill.path.replace(/\\/g, '/'),
+    });
+  }
+
+  return entries.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
 }

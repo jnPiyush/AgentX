@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AgentXContext } from '../agentxContext';
 import { collectAssetFiles } from '../utils/runtimeAssets';
+import { loadTemplatesRegistry, resolveRegistryAssetPath } from '../utils/registryLoader';
 
 interface TemplateInput {
  name: string;
@@ -46,9 +47,28 @@ export class TemplateTreeItem extends vscode.TreeItem {
 }
 
 export function resolveTemplateFiles(agentx: AgentXContext): string[] {
+ const workspaceRoot = agentx.workspaceRoot;
+ const extensionPath = agentx.extensionContext?.extensionPath;
+
+ const registry = loadTemplatesRegistry(workspaceRoot, extensionPath);
+ if (registry && registry.templates.length > 0) {
+  const resolved: string[] = [];
+  const seen = new Set<string>();
+  for (const tmpl of registry.templates) {
+   if (!tmpl?.path) { continue; }
+   const absolute = resolveRegistryAssetPath(workspaceRoot, extensionPath, tmpl.path);
+   if (!absolute || seen.has(absolute)) { continue; }
+   seen.add(absolute);
+   resolved.push(absolute);
+  }
+  if (resolved.length > 0) {
+   return resolved.sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
+  }
+ }
+
  return collectAssetFiles(
-  agentx.workspaceRoot,
-  agentx.extensionContext?.extensionPath,
+  workspaceRoot,
+  extensionPath,
   '.github/templates',
   (entry) => entry.endsWith('.md'),
  );
