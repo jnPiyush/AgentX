@@ -7267,6 +7267,7 @@ function Invoke-ScriptWrapper {
 }
 
 function Invoke-ScrubCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scrub.ps1'             -Label 'scrub' }
+function Invoke-DreamCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/dream.ps1'             -Label 'dream' }
 function Invoke-ResearchCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/research.ps1'          -Label 'research' }
 function Invoke-ShipCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ship.ps1'            -Label 'ship' }
 function Invoke-ManifestCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/install-manifest.ps1' -Label 'install-manifest' }
@@ -7305,6 +7306,7 @@ switch ($Script:Command) {
     'graduate' { Invoke-GraduateCmd }
     'sprint'   { Invoke-SprintCmd }
     'scrub'    { Invoke-ScrubCmd }
+    'dream'    { Invoke-DreamCmd }
     'research' { Invoke-ResearchCmd }
     'ship'     { Invoke-ShipCmd }
     'manifest' { Invoke-ManifestCmd }
