@@ -4787,6 +4787,15 @@ function Invoke-LoopComplete {
 
     $summary = Get-Flag @('-s', '--summary') 'Criteria met'
     $state.active = $false; $state.status = 'complete'; $state.lastIterationAt = Get-Timestamp
+    # Explicitly mark as not yet consumed so the pre-commit gate can reliably
+    # detect the completed-but-not-consumed state without relying on field absence.
+    # The pre-commit hook (or post-commit hook as a fallback) will flip this to
+    # true when a code commit actually consumes the loop.
+    if ($state.PSObject.Properties.Name -contains 'loopConsumed') {
+        $state.loopConsumed = $false
+    } else {
+        $state | Add-Member -NotePropertyName loopConsumed -NotePropertyValue $false -Force
+    }
     $completionEntry = [PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = $summary; status = 'complete'; outcome = 'pass' }
     if ($finalArchivedPath) {
         $completionEntry | Add-Member -NotePropertyName evidence -NotePropertyValue $finalArchivedPath

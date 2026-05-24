@@ -112,6 +112,61 @@ fi
 # Summary
 echo ""
 
+# Eagerly marks the quality loop as consumed so the same completed loop cannot
+# silently re-pass the pre-commit gate on subsequent commits when the post-commit
+# hook fails to run (common on Windows or when hooks are not installed).
+# Called from Check 8 when the loop gate passes for a code commit.
+mark_loop_consumed_pre_commit() {
+  [ -f "$LOOP_STATE" ] || return 0
+  grep -q '"loopConsumed"[[:space:]]*:[[:space:]]*true' "$LOOP_STATE" 2>/dev/null && return 0
+  if command -v node >/dev/null 2>&1; then
+    node -e "
+var fs=require('fs');
+var f=process.argv[1];
+var s=JSON.parse(fs.readFileSync(f,'utf8'));
+if(s.status==='complete'){s.loopConsumed=true;fs.writeFileSync(f,JSON.stringify(s,null,2)+'\\n');}
+" "$LOOP_STATE" 2>/dev/null && return 0
+  fi
+  local PY=""
+  command -v python3 >/dev/null 2>&1 && PY=python3
+  [ -z "$PY" ] && command -v python >/dev/null 2>&1 && PY=python
+  if [ -n "$PY" ]; then
+    "$PY" -c "
+import json,sys
+f=sys.argv[1]
+with open(f,'r',encoding='utf-8') as fh: s=json.load(fh)
+if s.get('status')=='complete':
+    s['loopConsumed']=True
+    with open(f,'w',encoding='utf-8') as fh: json.dump(s,fh,indent=2); fh.write('\\n')
+" "$LOOP_STATE" 2>/dev/null && return 0
+  fi
+  if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoProfile -Command "
+\$f = '$LOOP_STATE'
+\$s = Get-Content -Raw -LiteralPath \$f | ConvertFrom-Json
+if (\$s.status -eq 'complete') {
+    if (\$s.PSObject.Properties.Name -contains 'loopConsumed') { \$s.loopConsumed = \$true }
+    else { Add-Member -InputObject \$s -NotePropertyName loopConsumed -NotePropertyValue \$true -Force }
+    \$s | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath \$f -Encoding utf8
+}
+" 2>/dev/null && return 0
+  fi
+  if grep -q '"loopConsumed"[[:space:]]*:[[:space:]]*false' "$LOOP_STATE" 2>/dev/null; then
+    sed -i.bak 's/"loopConsumed"[[:space:]]*:[[:space:]]*false/"loopConsumed": true/' "$LOOP_STATE" 2>/dev/null
+    rm -f "${LOOP_STATE}.bak"
+  else
+    awk '
+      { lines[NR]=$0 }
+      END {
+        last=0
+        for(i=NR;i>=1;i--){ if(lines[i]~/^[[:space:]]*}[[:space:]]*$/){ last=i; break } }
+        for(i=1;i<=NR;i++){ if(i==last) print "  ,\"loopConsumed\": true"; print lines[i] }
+      }
+    ' "$LOOP_STATE" > "${LOOP_STATE}.tmp" && mv "${LOOP_STATE}.tmp" "$LOOP_STATE"
+  fi
+  return 0
+}
+
 # ---------------------------------------------------------------
 # Check 8: Quality loop enforcement
 # All source code commits require a completed, non-consumed loop.
@@ -190,6 +245,11 @@ if [ -n "$CODE_FILES_STAGED" ] && [ -z "$LOOP_ACTIVE" ]; then
     else
       echo -e "${YELLOW}[WARN] Loop gate bypassed (AGENTX_SKIP_LOOP_GATE -- emergency use only)${NC}"
     fi
+  else
+    # Gate passed: eagerly mark the loop as consumed so the same completed loop
+    # cannot silently re-pass the gate on a subsequent commit if the post-commit
+    # hook fails to run (common on Windows or when hooks are not installed).
+    mark_loop_consumed_pre_commit
   fi
 fi
 
