@@ -115,9 +115,7 @@ var users = await _context.Users
 // appsettings.json
 {
  "ConnectionStrings": {
- "DefaultConnection": "Host=localhost;Database=mydb;Username=user;Password=pass"
- },
- "EmailSettings": {
+  "DefaultConnection": "Host=localhost;Database=mydb;Username=user;Password=<password>"
  "SmtpHost": "smtp.example.com",
  "SmtpPort": 587
  }

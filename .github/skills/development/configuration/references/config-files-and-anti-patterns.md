@@ -77,8 +77,8 @@ Environment Detection:
 
 ```
 # NEVER DO THIS
-API_KEY = "sk_live_abc123"
-DATABASE_PASSWORD = "admin123"
+API_KEY = "<hardcoded-api-key>"
+DATABASE_PASSWORD = "<hardcoded-password>"
 
 # ALWAYS DO THIS
 API_KEY = getEnv("API_KEY")

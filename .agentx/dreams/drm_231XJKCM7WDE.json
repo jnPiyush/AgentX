@@ -1,0 +1,56 @@
+{
+  "type": "dream",
+  "id": "drm_231XJKCM7WDE",
+  "status": "completed",
+  "inputs": [
+    {
+      "type": "memory_store",
+      "memory_store_path": "C:\\Piyush - Personal\\GenAI\\AgentX\\memories"
+    },
+    {
+      "type": "sessions",
+      "session_ids": [
+        "engineer-20260328101016-ayc2",
+        "engineer-20260328101051-tavn",
+        "engineer-20260328101214-d2oo",
+        "engineer-20260328101227-2iaw",
+        "engineer-20260328101247-atws",
+        "engineer-20260328101403-0cur",
+        "engineer-20260328101851-1mdu",
+        "engineer-20260328102039-qmiz",
+        "engineer-20260328102157-ytcd",
+        "engineer-20260328102404-r5l0",
+        "engineer-20260328102502-hlhz",
+        "engineer-20260329203546-bzkp",
+        "engineer-20260403183616-1n0a",
+        "engineer-20260501171015-hsox",
+        "engineer-20260501173234-4lwh",
+        "engineer-20260510213309-0dfb",
+        "engineer-20260510213410-oydq",
+        "engineer-20260510213539-xv4n",
+        "engineer-20260510213727-vzqq",
+        "engineer-20260510213927-d45g"
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "type": "memory_store",
+      "memory_store_path": "C:\\Piyush - Personal\\GenAI\\AgentX\\.agentx\\dreams\\drm_231XJKCM7WDE\\memory"
+    }
+  ],
+  "model": {
+    "id": "deterministic-v1"
+  },
+  "instructions": null,
+  "session_id": null,
+  "created_at": "2026-05-23T19:42:13Z",
+  "ended_at": "2026-05-23T19:42:13Z",
+  "archived_at": "2026-05-23T19:42:23Z",
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  },
+  "error": null,
+  "backend": "deterministic"
+}

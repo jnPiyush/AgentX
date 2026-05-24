@@ -9,7 +9,7 @@
 [HttpGet("users/{userId}")]
 public IActionResult GetUser(int userId)
 {
- using var conn = new NpgsqlConnection("Host=localhost;Database=mydb;Username=user;Password=pass");
+ using var conn = new NpgsqlConnection("Host=localhost;Database=mydb;Username=user;Password=<password>");
  conn.Open();
  var cmd = new NpgsqlCommand("SELECT * FROM Users WHERE Id = @id", conn);
  cmd.Parameters.AddWithValue("id", userId);
@@ -21,8 +21,8 @@ public IActionResult GetUser(int userId)
  var user = new { /* map reader */ };
  
  // Send email
- var smtp = new SmtpClient("smtp.gmail.com");
- smtp.Send("from@example.com", user.Email, "Subject", "Body");
+ var smtp = new SmtpClient("smtp.example.com");
+ smtp.Send("sender@example.com", user.Email, "Subject", "Body");
  
  return Ok(user);
 }
