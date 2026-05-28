@@ -1,0 +1,6 @@
+node_modules/
+out/*.mp4
+out/*.png
+out/*.webp
+.remotion-cache/
+*.log

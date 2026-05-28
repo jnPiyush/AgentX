@@ -1,0 +1,26 @@
+{
+  "name": "agentx-video-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Programmatic persona demo videos for the AgentX landing page (Remotion).",
+  "scripts": {
+    "studio": "remotion studio",
+    "render:pm": "remotion render PMDemo out/pm.mp4",
+    "render:architect": "remotion render ArchitectDemo out/architect.mp4",
+    "render:ux": "remotion render UXDemo out/ux.mp4",
+    "render:all": "npm run render:pm && npm run render:architect && npm run render:ux",
+    "render:posters": "remotion still PMDemo out/pm-poster.png --frame=30 && remotion still ArchitectDemo out/architect-poster.png --frame=30 && remotion still UXDemo out/ux-poster.png --frame=30",
+    "captions": "node scripts/emit-captions.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.4.0"
+  }
+}

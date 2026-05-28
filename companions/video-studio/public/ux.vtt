@@ -1,0 +1,19 @@
+WEBVTT
+
+00:00:01.000 --> 00:00:04.500
+UX Designer prompt: Design the UX for the feedback widget.
+
+00:00:05.000 --> 00:00:08.500
+AgentX sketches a low fidelity wireframe.
+
+00:00:09.000 --> 00:00:27.000
+The wireframe shows a dismissible widget with three sentiment options, optional comment, and a screenshot toggle.
+
+00:00:28.000 --> 00:00:48.000
+The wireframe transitions into a live H T M L prototype, validated by axe-core. Zero accessibility violations. W C A G 2.1 A A pass.
+
+00:00:48.000 --> 00:00:53.500
+Wireframe to prototype in fifty eight seconds. Mobile and desktop variants. Audit report committed.
+
+00:00:54.000 --> 00:01:00.000
+From prompt to accessible prototype. Powered by ux-designer dot agent dot m d.

@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AgentX -- See it work: PM, Architect, UX in 60 seconds each</title>
+  <meta name="description" content="Watch how AgentX turns a single prompt into a PRD, an ADR, or an accessible prototype. Three persona demos, one quality loop." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+          colors: {
+            ink: { 950: '#070912', 900: '#0b0f1c', 800: '#111728', 700: '#1a2237' },
+            edge: { DEFAULT: '#1f2a44', strong: '#2a3656' },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background: #070912; color: #e6e9f2; }
+    .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+    .mesh {
+      background:
+        radial-gradient(60% 60% at 12% 8%, rgba(34,211,238,0.18) 0%, transparent 60%),
+        radial-gradient(50% 50% at 88% 12%, rgba(168,85,247,0.18) 0%, transparent 60%),
+        radial-gradient(40% 40% at 50% 100%, rgba(56,189,248,0.10) 0%, transparent 60%),
+        #070912;
+    }
+    .grid-overlay {
+      background-image:
+        linear-gradient(rgba(148,163,184,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148,163,184,0.06) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%);
+    }
+    .text-gradient {
+      background: linear-gradient(120deg, #67e8f9 0%, #a78bfa 50%, #f0abfc 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(17,23,40,0.85) 0%, rgba(11,15,28,0.85) 100%);
+      border: 1px solid rgba(148,163,184,0.10);
+      backdrop-filter: blur(8px);
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .35rem .7rem; border-radius: 9999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(148,163,184,0.14);
+      color: #cbd5e1; font-size: .8rem; font-weight: 500;
+    }
+    .chip .dot { width: 6px; height: 6px; border-radius: 999px; box-shadow: 0 0 12px currentColor; }
+
+    /* Tab styles */
+    .persona-tab {
+      position: relative;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+      padding: 18px 22px;
+      background: rgba(11,15,28,0.6);
+      border: 1px solid rgba(148,163,184,0.10);
+      border-radius: 14px;
+      color: #cbd5e1;
+      transition: border-color .18s ease, background .18s ease, transform .18s ease;
+      text-align: left;
+      cursor: pointer;
+    }
+    .persona-tab:hover { border-color: rgba(148,163,184,0.22); }
+    .persona-tab:focus-visible { outline: 2px solid #67e8f9; outline-offset: 3px; }
+    .persona-tab[aria-selected="true"] {
+      background: linear-gradient(180deg, rgba(17,23,40,0.95) 0%, rgba(11,15,28,0.95) 100%);
+      border-color: rgba(34,211,238,0.45);
+      box-shadow: 0 14px 40px -22px rgba(34,211,238,0.45);
+    }
+    .persona-tab .label { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: #94a3b8; font-weight: 600; }
+    .persona-tab[aria-selected="true"] .label { color: var(--accent, #67e8f9); }
+    .persona-tab .name { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; }
+    .persona-tab .blurb { font-size: .85rem; color: #94a3b8; line-height: 1.45; }
+
+    .panel { display: none; }
+    .panel[data-active="true"] { display: grid; }
+
+    .video-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: linear-gradient(180deg, #0b0f1c 0%, #070912 100%);
+      border: 1px solid rgba(148,163,184,0.14);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px -40px rgba(34,211,238,0.30);
+    }
+    .video-frame video { width: 100%; height: 100%; display: block; }
+
+    /* Honest poster fallback (used until videos are rendered) */
+    .poster-fallback {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px;
+      background:
+        radial-gradient(800px 500px at 50% 40%, var(--accent-glow, rgba(34,211,238,0.18)), transparent 70%),
+        #0b0f1c;
+      color: #cbd5e1;
+      text-align: center;
+      padding: 40px;
+    }
+    .poster-fallback .badge { font-family: 'JetBrains Mono', monospace; font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent, #67e8f9); }
+    .poster-fallback h3 { font-size: 1.5rem; font-weight: 700; color: #e2e8f0; }
+    .poster-fallback p { font-size: .9rem; color: #94a3b8; max-width: 420px; line-height: 1.55; }
+    .poster-fallback .play-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 12px 22px;
+      background: linear-gradient(135deg, #22d3ee 0%, #a855f7 100%);
+      color: #0a0c1a;
+      border-radius: 999px;
+      font-weight: 600; font-size: .9rem;
+      cursor: pointer;
+      border: 0;
+    }
+    .poster-fallback .play-btn:focus-visible { outline: 2px solid #f0abfc; outline-offset: 3px; }
+
+    .prompt-card {
+      background: rgba(11,15,28,0.7);
+      border: 1px solid rgba(148,163,184,0.12);
+      border-radius: 16px;
+      padding: 22px 26px;
+    }
+    .prompt-card .prompt-label { font-family: 'JetBrains Mono', monospace; font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent, #67e8f9); font-weight: 600; margin-bottom: 12px; }
+    .prompt-card .prompt-text { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #e2e8f0; line-height: 1.55; }
+
+    .outcome { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 18px; }
+    .outcome-row { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.08); border-radius: 10px; }
+    .outcome-row .k { font-size: .8rem; color: #94a3b8; }
+    .outcome-row .v { font-size: .9rem; color: #e2e8f0; font-family: 'JetBrains Mono', monospace; }
+
+    .link-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .link-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      background: rgba(34,211,238,0.06);
+      border: 1px solid rgba(34,211,238,0.22);
+      border-radius: 999px;
+      font-size: .8rem;
+      color: #67e8f9;
+      text-decoration: none;
+      transition: background .18s ease, border-color .18s ease;
+    }
+    .link-chip:hover { background: rgba(34,211,238,0.12); border-color: rgba(34,211,238,0.45); }
+    .link-chip:focus-visible { outline: 2px solid #67e8f9; outline-offset: 2px; }
+
+    /* Reduced motion: no autoplay shimmer, no transform animations */
+    @media (prefers-reduced-motion: reduce) {
+      .persona-tab { transition: none; }
+      .persona-tab[aria-selected="true"] { box-shadow: none; }
+    }
+
+    @media (max-width: 900px) {
+      .panel[data-active="true"] { grid-template-columns: 1fr !important; }
+      .video-frame { order: -1; }
+    }
+  </style>
+</head>
+<body class="mesh min-h-screen">
+  <div class="grid-overlay absolute inset-0 pointer-events-none"></div>
+
+  <main class="relative max-w-7xl mx-auto px-6 lg:px-10 py-16 lg:py-24">
+    <header class="mb-12 lg:mb-16">
+      <div class="chip mb-5"><span class="dot" style="background:#22d3ee;color:#22d3ee"></span><span>See it work</span></div>
+      <h1 class="text-4xl lg:text-5xl font-extrabold tracking-tight mb-4">
+        One prompt. <span class="text-gradient">A reviewed deliverable.</span>
+      </h1>
+      <p class="text-slate-400 text-lg max-w-2xl leading-relaxed">
+        Three persona demos. Each one shows the same loop: read context, propose, self-review, hand off.
+        Pick a tab to watch the agent at work.
+      </p>
+    </header>
+
+    <div role="tablist" aria-label="AgentX persona demos" class="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 mb-8">
+      <button
+        type="button"
+        role="tab"
+        id="tab-pm"
+        aria-controls="panel-pm"
+        aria-selected="true"
+        tabindex="0"
+        class="persona-tab"
+        style="--accent:#22d3ee;--accent-glow:rgba(34,211,238,0.20)"
+        data-persona="pm"
+      >
+        <span class="label">@product-manager</span>
+        <span class="name">From prompt to PRD</span>
+        <span class="blurb">Watch a feedback-widget brief turn into a structured PRD with 8 sections and 12 user stories.</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-architect"
+        aria-controls="panel-architect"
+        aria-selected="false"
+        tabindex="-1"
+        class="persona-tab"
+        style="--accent:#a78bfa;--accent-glow:rgba(167,139,250,0.20)"
+        data-persona="architect"
+      >
+        <span class="label">@architect</span>
+        <span class="name">From prompt to ADR</span>
+        <span class="blurb">Three architecture options, scored on the same axes, with a sequence diagram in the Tech Spec.</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-ux"
+        aria-controls="panel-ux"
+        aria-selected="false"
+        tabindex="-1"
+        class="persona-tab"
+        style="--accent:#34d399;--accent-glow:rgba(52,211,153,0.20)"
+        data-persona="ux"
+      >
+        <span class="label">@ux-designer</span>
+        <span class="name">From prompt to prototype</span>
+        <span class="blurb">Lo-fi wireframe transitions into a working HTML prototype with a clean axe-core report.</span>
+      </button>
+    </div>
+
+    <!-- PM Panel -->
+    <section
+      id="panel-pm"
+      role="tabpanel"
+      aria-labelledby="tab-pm"
+      class="panel grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-8 lg:gap-10"
+      data-active="true"
+    >
+      <div class="prompt-card" style="--accent:#22d3ee">
+        <div class="prompt-label">Prompt</div>
+        <div class="prompt-text">Create a PRD for a customer feedback widget</div>
+        <div class="outcome" aria-label="Outcome of the demo">
+          <div class="outcome-row"><span class="k">Deliverable</span><span class="v">PRD-42.md</span></div>
+          <div class="outcome-row"><span class="k">Time on screen</span><span class="v">47s</span></div>
+          <div class="outcome-row"><span class="k">Sections</span><span class="v">8</span></div>
+          <div class="outcome-row"><span class="k">User stories</span><span class="v">12</span></div>
+        </div>
+        <div class="link-chips">
+          <a class="link-chip" href="../../../.github/agents/product-manager.agent.md">product-manager.agent.md &rarr;</a>
+          <a class="link-chip" href="../../../.github/templates/PRD-TEMPLATE.md">PRD template &rarr;</a>
+        </div>
+      </div>
+      <div class="video-frame" style="--accent:#22d3ee;--accent-glow:rgba(34,211,238,0.18)">
+        <video controls preload="none" poster="" aria-label="Product Manager demo: prompt to PRD in 60 seconds">
+          <source src="videos/pm.mp4" type="video/mp4" />
+          <track kind="captions" srclang="en" label="English" src="videos/pm.vtt" default />
+        </video>
+        <div class="poster-fallback" data-poster-for="pm">
+          <span class="badge">@product-manager</span>
+          <h3>Demo not rendered yet</h3>
+          <p>Run <span class="font-mono text-cyan-300">npm run render:pm</span> in <span class="font-mono">companions/video-studio</span> to produce <span class="font-mono">videos/pm.mp4</span>. This panel will then auto-play the 60-second walkthrough.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architect Panel -->
+    <section
+      id="panel-architect"
+      role="tabpanel"
+      aria-labelledby="tab-architect"
+      class="panel grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-8 lg:gap-10"
+      data-active="false"
+    >
+      <div class="prompt-card" style="--accent:#a78bfa">
+        <div class="prompt-label">Prompt</div>
+        <div class="prompt-text">Design the architecture for the feedback widget</div>
+        <div class="outcome" aria-label="Outcome of the demo">
+          <div class="outcome-row"><span class="k">Deliverables</span><span class="v">ADR-42.md + SPEC-42.md</span></div>
+          <div class="outcome-row"><span class="k">Time on screen</span><span class="v">1m 04s</span></div>
+          <div class="outcome-row"><span class="k">Options scored</span><span class="v">3</span></div>
+          <div class="outcome-row"><span class="k">Code in spec</span><span class="v">0 examples</span></div>
+        </div>
+        <div class="link-chips">
+          <a class="link-chip" style="background:rgba(167,139,250,0.06);border-color:rgba(167,139,250,0.22);color:#c4b5fd" href="../../../.github/agents/architect.agent.md">architect.agent.md &rarr;</a>
+          <a class="link-chip" style="background:rgba(167,139,250,0.06);border-color:rgba(167,139,250,0.22);color:#c4b5fd" href="../../../.github/templates/ADR-TEMPLATE.md">ADR template &rarr;</a>
+        </div>
+      </div>
+      <div class="video-frame" style="--accent:#a78bfa;--accent-glow:rgba(167,139,250,0.18)">
+        <video controls preload="none" poster="" aria-label="Architect demo: prompt to ADR in 60 seconds">
+          <source src="videos/architect.mp4" type="video/mp4" />
+          <track kind="captions" srclang="en" label="English" src="videos/architect.vtt" default />
+        </video>
+        <div class="poster-fallback" data-poster-for="architect">
+          <span class="badge">@architect</span>
+          <h3>Demo not rendered yet</h3>
+          <p>Run <span class="font-mono" style="color:#c4b5fd">npm run render:architect</span> in <span class="font-mono">companions/video-studio</span> to produce <span class="font-mono">videos/architect.mp4</span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- UX Panel -->
+    <section
+      id="panel-ux"
+      role="tabpanel"
+      aria-labelledby="tab-ux"
+      class="panel grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-8 lg:gap-10"
+      data-active="false"
+    >
+      <div class="prompt-card" style="--accent:#34d399">
+        <div class="prompt-label">Prompt</div>
+        <div class="prompt-text">Design the UX for the feedback widget</div>
+        <div class="outcome" aria-label="Outcome of the demo">
+          <div class="outcome-row"><span class="k">Deliverable</span><span class="v">UX-42.md + prototype</span></div>
+          <div class="outcome-row"><span class="k">Time on screen</span><span class="v">58s</span></div>
+          <div class="outcome-row"><span class="k">A11y</span><span class="v">WCAG 2.1 AA, 0 axe violations</span></div>
+          <div class="outcome-row"><span class="k">Variants</span><span class="v">mobile + desktop</span></div>
+        </div>
+        <div class="link-chips">
+          <a class="link-chip" style="background:rgba(52,211,153,0.06);border-color:rgba(52,211,153,0.22);color:#6ee7b7" href="../../../.github/agents/ux-designer.agent.md">ux-designer.agent.md &rarr;</a>
+          <a class="link-chip" style="background:rgba(52,211,153,0.06);border-color:rgba(52,211,153,0.22);color:#6ee7b7" href="../../../.github/templates/UX-TEMPLATE.md">UX template &rarr;</a>
+        </div>
+      </div>
+      <div class="video-frame" style="--accent:#34d399;--accent-glow:rgba(52,211,153,0.18)">
+        <video controls preload="none" poster="" aria-label="UX Designer demo: prompt to accessible prototype in 60 seconds">
+          <source src="videos/ux.mp4" type="video/mp4" />
+          <track kind="captions" srclang="en" label="English" src="videos/ux.vtt" default />
+        </video>
+        <div class="poster-fallback" data-poster-for="ux">
+          <span class="badge">@ux-designer</span>
+          <h3>Demo not rendered yet</h3>
+          <p>Run <span class="font-mono" style="color:#6ee7b7">npm run render:ux</span> in <span class="font-mono">companions/video-studio</span> to produce <span class="font-mono">videos/ux.mp4</span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-16 text-sm text-slate-500 max-w-3xl leading-relaxed">
+      <p>
+        These are scripted explainer videos that mirror what AgentX actually produces. The artifact bodies (PRD,
+        ADR, prototype) match the live templates in this repo; the timings on screen are paced for clarity, not
+        benchmarking.
+      </p>
+      <p class="mt-3">
+        Source: <span class="font-mono text-slate-400">companions/video-studio/</span> (Remotion).
+        Captions ship as WebVTT alongside every clip.
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+      const panels = new Map(tabs.map(t => [t.id, document.getElementById(t.getAttribute('aria-controls'))]));
+
+      function activate(tab, focus) {
+        tabs.forEach(t => {
+          const isActive = t === tab;
+          t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          t.setAttribute('tabindex', isActive ? '0' : '-1');
+          const panel = panels.get(t.id);
+          if (panel) panel.dataset.active = isActive ? 'true' : 'false';
+          // Pause any video in the panel we're leaving
+          if (!isActive && panel) {
+            const v = panel.querySelector('video');
+            if (v && !v.paused) v.pause();
+          }
+        });
+        if (focus) tab.focus();
+      }
+
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => activate(tab, true));
+        tab.addEventListener('keydown', (e) => {
+          let nextIndex = null;
+          if (e.key === 'ArrowRight') nextIndex = (i + 1) % tabs.length;
+          else if (e.key === 'ArrowLeft') nextIndex = (i - 1 + tabs.length) % tabs.length;
+          else if (e.key === 'Home') nextIndex = 0;
+          else if (e.key === 'End') nextIndex = tabs.length - 1;
+          if (nextIndex !== null) {
+            e.preventDefault();
+            activate(tabs[nextIndex], true);
+          }
+        });
+      });
+
+      // Detect missing video sources and surface honest poster fallback
+      document.querySelectorAll('video').forEach((video) => {
+        const source = video.querySelector('source');
+        const frame = video.parentElement;
+        const fallback = frame.querySelector('.poster-fallback');
+        if (!source || !fallback) return;
+
+        // Try a HEAD request; if it 404s, keep the fallback visible. Otherwise hide it.
+        fetch(source.src, { method: 'HEAD' })
+          .then((res) => {
+            if (res.ok) {
+              fallback.style.display = 'none';
+            } else {
+              video.style.display = 'none';
+            }
+          })
+          .catch(() => {
+            video.style.display = 'none';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

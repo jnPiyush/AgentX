@@ -1,0 +1,19 @@
+WEBVTT
+
+00:00:01.000 --> 00:00:04.500
+Architect prompt: Design the architecture for the feedback widget.
+
+00:00:05.000 --> 00:00:08.500
+AgentX evaluates three architecture options.
+
+00:00:09.000 --> 00:00:30.000
+Option A: REST API with Postgres. Option B: Serverless with DynamoDB streams. Option C: Edge functions with key value store.
+
+00:00:30.000 --> 00:00:48.000
+Decision: Option B. Consequences and a sequence diagram are recorded in the Tech Spec.
+
+00:00:48.000 --> 00:00:53.500
+ADR and Spec ready in one minute and four seconds. Three options scored. Zero code examples in spec.
+
+00:00:54.000 --> 00:01:00.000
+From prompt to defensible architecture. Powered by architect dot agent dot m d.
