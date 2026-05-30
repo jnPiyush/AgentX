@@ -6,7 +6,7 @@ reasoning:
   mode: adaptive
   level: medium
 constraints:
-  - "MUST read PRD-LOWCODE and the four low-code skills (solution-anatomy, dataverse-schema, power-automate-flow-json, pac-cli) before generating"
+  - "MUST read PRD-LOWCODE and the relevant low-code skills before generating: always solution-anatomy, dataverse-schema, and pac-cli; plus the skills matching the requested components (power-automate-flow-json, canvas-app-yaml, model-driven-app, power-pages, pcf-controls, power-automate-desktop, dataverse-plugins, security-roles, environment-variables, copilot-studio-agents)"
   - "MUST emit a deterministic UNMANAGED source tree under solutions/<solution-name>/src/ -- never under .github/ and never under packs/"
   - "MUST keep one publisher prefix per solution and apply it to every table, column, choice, flow, connection reference, and bot"
   - "MUST generate connectionreferences.json whenever a flow is present and reference it from each flow"
@@ -61,11 +61,21 @@ You consume a PRD-LOWCODE describing tables, flows, agents, and roles, and emit 
 ### 1. Read Context & Load Skills
 
 - Read the PRD-LOWCODE end-to-end
-- Read all four low-code skills:
+- Always load the core low-code skills:
   - `.github/skills/low-code/solution-anatomy/SKILL.md`
   - `.github/skills/low-code/dataverse-schema/SKILL.md`
-  - `.github/skills/low-code/power-automate-flow-json/SKILL.md`
   - `.github/skills/low-code/pac-cli/SKILL.md`
+- Load the component skills that match what the PRD requests:
+  - Cloud flows -> `.github/skills/low-code/power-automate-flow-json/SKILL.md`
+  - Canvas apps -> `.github/skills/low-code/canvas-app-yaml/SKILL.md`
+  - Model-driven apps -> `.github/skills/low-code/model-driven-app/SKILL.md`
+  - Power Pages portals -> `.github/skills/low-code/power-pages/SKILL.md`
+  - PCF code components -> `.github/skills/low-code/pcf-controls/SKILL.md`
+  - Desktop/RPA flows -> `.github/skills/low-code/power-automate-desktop/SKILL.md`
+  - Server-side plugins -> `.github/skills/low-code/dataverse-plugins/SKILL.md`
+  - Security roles -> `.github/skills/low-code/security-roles/SKILL.md`
+  - Environment variables / connection references -> `.github/skills/low-code/environment-variables/SKILL.md`
+  - Copilot Studio agents -> `.github/skills/low-code/copilot-studio-agents/SKILL.md`
 - Read `.github/skills/architecture/low-code-vs-pro-code/SKILL.md` if the platform fit was not previously decided
 
 ### 2. Pick Publisher, Prefix, Solution Name
