@@ -23,8 +23,8 @@ export function getWindowsPowerShellCorePathCandidates(
   ].filter((value): value is string => Boolean(value));
 
   return [...new Set(baseDirs)].flatMap((baseDir) => [
-    path.join(baseDir, 'PowerShell', '7', 'pwsh.exe'),
-    path.join(baseDir, 'PowerShell', '7-preview', 'pwsh.exe'),
+    path.win32.join(baseDir, 'PowerShell', '7', 'pwsh.exe'),
+    path.win32.join(baseDir, 'PowerShell', '7-preview', 'pwsh.exe'),
   ]);
 }
 
