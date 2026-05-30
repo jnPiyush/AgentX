@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Entity Name="agx_issue">
+  <EntityInfo>
+    <entity Name="agx_issue" ObjectTypeCode="10100" PrimaryIdAttribute="agx_issueid" PrimaryNameAttribute="agx_name" OwnershipType="UserOwned" IsActivity="0" IsAuditEnabled="1" IsDuplicateDetectionEnabled="0" IsCustomEntity="1">
+      <EntitySetName>agx_issues</EntitySetName>
+      <LocalizedNames>
+        <LocalizedName description="Issue" languagecode="1033" />
+      </LocalizedNames>
+      <LocalizedCollectionNames>
+        <LocalizedCollectionName description="Issues" languagecode="1033" />
+      </LocalizedCollectionNames>
+      <Descriptions>
+        <Description description="Issue tracker row" languagecode="1033" />
+      </Descriptions>
+      <attributes>
+        <attribute PhysicalName="agx_issueid">
+          <Type>primarykey</Type>
+          <Name>agx_issueid</Name>
+          <LogicalName>agx_issueid</LogicalName>
+          <RequiredLevel>systemrequired</RequiredLevel>
+          <displaynames><displayname description="Issue" languagecode="1033" /></displaynames>
+        </attribute>
+        <attribute PhysicalName="agx_name" PrimaryName="1">
+          <Type>nvarchar</Type>
+          <Name>agx_name</Name>
+          <LogicalName>agx_name</LogicalName>
+          <RequiredLevel>applicationrequired</RequiredLevel>
+          <MaxLength>200</MaxLength>
+          <Format>text</Format>
+          <ImeMode>auto</ImeMode>
+          <displaynames><displayname description="Title" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="Issue title" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="agx_description">
+          <Type>ntext</Type>
+          <Name>agx_description</Name>
+          <LogicalName>agx_description</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <MaxLength>4000</MaxLength>
+          <Format>textarea</Format>
+          <ImeMode>auto</ImeMode>
+          <displaynames><displayname description="Description" languagecode="1033" /></displaynames>
+        </attribute>
+        <attribute PhysicalName="agx_status">
+          <Type>picklist</Type>
+          <Name>agx_status</Name>
+          <LogicalName>agx_status</LogicalName>
+          <RequiredLevel>applicationrequired</RequiredLevel>
+          <displaynames><displayname description="Status" languagecode="1033" /></displaynames>
+          <optionset Name="agx_issue_agx_status" localizedName="Status">
+            <options>
+              <option value="10001"><labels><label description="Open" languagecode="1033" /></labels></option>
+              <option value="10002"><labels><label description="In Progress" languagecode="1033" /></labels></option>
+              <option value="10003"><labels><label description="Closed" languagecode="1033" /></labels></option>
+            </options>
+          </optionset>
+        </attribute>
+        <attribute PhysicalName="agx_priority">
+          <Type>picklist</Type>
+          <Name>agx_priority</Name>
+          <LogicalName>agx_priority</LogicalName>
+          <RequiredLevel>recommended</RequiredLevel>
+          <displaynames><displayname description="Priority" languagecode="1033" /></displaynames>
+          <optionset Name="agx_issue_agx_priority" localizedName="Priority">
+            <options>
+              <option value="10010"><labels><label description="Low" languagecode="1033" /></labels></option>
+              <option value="10011"><labels><label description="Medium" languagecode="1033" /></labels></option>
+              <option value="10012"><labels><label description="High" languagecode="1033" /></labels></option>
+            </options>
+          </optionset>
+        </attribute>
+        <attribute PhysicalName="agx_assignedto">
+          <Type>lookup</Type>
+          <Name>agx_assignedto</Name>
+          <LogicalName>agx_assignedto</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <LookupTypes><LookupType>systemuser</LookupType></LookupTypes>
+          <displaynames><displayname description="Assigned To" languagecode="1033" /></displaynames>
+        </attribute>
+        <attribute PhysicalName="agx_duedate">
+          <Type>datetime</Type>
+          <Name>agx_duedate</Name>
+          <LogicalName>agx_duedate</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <Format>dateonly</Format>
+          <DateTimeBehavior>DateOnly</DateTimeBehavior>
+          <displaynames><displayname description="Due Date" languagecode="1033" /></displaynames>
+        </attribute>
+      </attributes>
+    </entity>
+  </EntityInfo>
+</Entity>

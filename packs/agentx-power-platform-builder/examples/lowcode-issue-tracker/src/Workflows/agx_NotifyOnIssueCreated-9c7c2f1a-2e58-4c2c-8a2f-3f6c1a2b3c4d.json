@@ -1,0 +1,86 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connection": { "connectionReferenceLogicalName": "agx_sharedcommondataserviceforapps" },
+        "api": { "name": "shared_commondataserviceforapps" },
+        "runtimeSource": "embedded"
+      },
+      "shared_office365": {
+        "connection": { "connectionReferenceLogicalName": "agx_sharedoffice365" },
+        "api": { "name": "shared_office365" },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "connections": { "defaultValue": {}, "type": "Object" },
+        "authentication": { "defaultValue": {}, "type": "SecureObject" },
+        "agx_NotificationFromAddress": {
+          "defaultValue": "noreply@example.com",
+          "type": "String",
+          "metadata": { "schemaName": "agx_NotificationFromAddress" }
+        }
+      },
+      "triggers": {
+        "When_an_issue_is_created": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "agx_issue",
+              "subscriptionRequest/scope": 4
+            }
+          }
+        }
+      },
+      "actions": {
+        "Get_Issue_Row": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "agx_issues",
+              "recordId": "@triggerOutputs()?[body/agx_issueid]"
+            }
+          }
+        },
+        "Send_Notification_Email": {
+          "runAfter": { "Get_Issue_Row": ["Succeeded"] },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage/To": "@parameters(agx_NotificationFromAddress)",
+              "emailMessage/Subject": "@concat(New issue: , outputs(Get_Issue_Row)?[body/agx_name])",
+              "emailMessage/Body": "A new issue was created.",
+              "emailMessage/Importance": "Normal"
+            }
+          }
+        },
+        "Handle_Email_Failure": {
+          "runAfter": { "Send_Notification_Email": ["Failed", "TimedOut", "Skipped"] },
+          "type": "Terminate",
+          "inputs": { "runStatus": "Failed", "runError": { "code": "EMAIL_FAILED", "message": "Notification email failed to send." } }
+        }
+      }
+    },
+    "schemaVersion": "1.0.0.0"
+  }
+}

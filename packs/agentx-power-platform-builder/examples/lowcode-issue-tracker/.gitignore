@@ -1,0 +1,5 @@
+build/
+*.zip
+.pac/
+bin/
+obj/
