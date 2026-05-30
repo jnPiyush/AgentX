@@ -1,0 +1,22 @@
+{
+  "name": "@agentx/mcp-server",
+  "version": "8.4.60",
+  "description": "MCP stdio server that exposes AgentX CLI commands (loop, ready, state, workflow, validate, ship, ...) as Model Context Protocol tools so GitHub Copilot CLI, Claude Desktop, or any MCP host can drive AgentX quality gates from chat.",
+  "private": true,
+  "type": "commonjs",
+  "bin": {
+    "agentx-mcp": "./index.js"
+  },
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": ["mcp", "agentx", "copilot-cli", "quality-gate"],
+  "license": "MIT"
+}
