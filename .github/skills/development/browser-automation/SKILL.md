@@ -7,6 +7,15 @@ description: Drive a real browser from an AgentX agent for prototype validation,
 
 > **When to load**: An AgentX agent needs to render a page in a real browser, interact with it, capture a screenshot, run an accessibility audit, or read JavaScript-rendered content. Most commonly: UX Designer validating prototypes, Consulting Research reading SPAs, Engineer doing quick end-to-end smoke checks.
 
+> **DEFAULT test surface for UI-bearing changes**: Per the always-on rule in
+> `.github/instructions/project-conventions.instructions.md`, the agent browser
+> is the DEFAULT testing surface whenever a change renders UI or HTML. The
+> expected pass: render the running build, capture a snapshot/screenshot per
+> primary route, run an axe-core a11y scan, and drive at least one scripted
+> interaction per primary user task. Fall back to non-browser testing only when
+> no UI surface exists or the Playwright MCP server is unavailable -- and report
+> the missing prerequisite rather than silently skipping.
+
 ## When NOT to load
 
 - Static HTTP fetches (use the agent's normal fetch tool).

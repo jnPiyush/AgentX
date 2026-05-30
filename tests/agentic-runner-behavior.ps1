@@ -726,10 +726,10 @@ try {
     $bugLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $bugResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully for standard bug work'
-    Assert-Equal $script:selfReviewCalls 3 'Invoke-AgenticLoop requires only three self-review passes for standard work such as bugs'
-    Assert-Equal $bugResult.iterations 3 'Invoke-AgenticLoop finishes after the standard minimum review passes are met'
-    Assert-True ($bugResult.finalText -match '\[SELF-REVIEW SUMMARY\] Completed 3/3 required review iterations') 'Invoke-AgenticLoop records the standard three-pass summary for bug work'
-    Assert-Equal ([int]$bugLoopState.iteration) 3 'Invoke-AgenticLoop syncs standard bug loops to the three-iteration minimum'
+    Assert-Equal $script:selfReviewCalls 5 'Invoke-AgenticLoop clamps stale standard loop minimums up to five self-review passes'
+    Assert-Equal $bugResult.iterations 5 'Invoke-AgenticLoop finishes after the mandatory five review passes are met'
+    Assert-True ($bugResult.finalText -match '\[SELF-REVIEW SUMMARY\] Completed 5/5 required review iterations') 'Invoke-AgenticLoop records the mandatory five-pass summary for bug work'
+    Assert-Equal ([int]$bugLoopState.iteration) 5 'Invoke-AgenticLoop syncs standard bug loops to the enforced five-iteration minimum'
 
     @{
         active = $true

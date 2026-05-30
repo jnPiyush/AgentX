@@ -1,0 +1,65 @@
+{
+  "parallel_id": "parallel-20260530-145540655-b0b28c",
+  "title": "Bounded parallel delivery",
+  "priority": "p1",
+  "mode": "opt-in",
+  "parent_context": {
+    "issue_number": 1,
+    "issue_title": "Merge all branches into unified repository",
+    "plan_reference": "",
+    "thread_id": "",
+    "source": "explicit-issue"
+  },
+  "assessment": {
+    "scope_independence": "independent",
+    "dependency_coupling": "low",
+    "artifact_overlap": "low",
+    "review_complexity": "bounded",
+    "recovery_complexity": "recoverable",
+    "decision": "eligible",
+    "required_review_level": "tightened"
+  },
+  "units": [
+    {
+      "unit_id": "unit-01",
+      "title": "Unit A",
+      "scope_boundary": "docs only",
+      "owner": "engineer",
+      "isolation_mode": "logical",
+      "status": "Ready",
+      "merge_readiness": "Ready For Reconciliation",
+      "recovery_guidance": "retry sequentially",
+      "summary_signal": "Unit A"
+    },
+    {
+      "unit_id": "unit-02",
+      "title": "Unit B",
+      "scope_boundary": "tests only",
+      "owner": "engineer",
+      "isolation_mode": "logical",
+      "status": "Ready",
+      "merge_readiness": "Do Not Merge",
+      "recovery_guidance": "retry sequentially",
+      "summary_signal": "blocked"
+    }
+  ],
+  "reconciliation": {
+    "state": "blocked",
+    "overlap_review": "pass",
+    "conflict_review": "pass",
+    "acceptance_evidence": "pass",
+    "owner_approval": "approved",
+    "follow_up_disposition": "none",
+    "follow_up_references": [],
+    "final_decision": "blocked"
+  },
+  "created_at": "2026-05-30T14:55:40.681Z",
+  "updated_at": "2026-05-30T14:55:43.564Z",
+  "parent_summary": {
+    "unit_count": 2,
+    "blocked_count": 1,
+    "ready_for_reconciliation_count": 1,
+    "summary_state": "blocked",
+    "closeout_ready": false
+  }
+}

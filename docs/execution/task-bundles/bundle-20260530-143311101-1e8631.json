@@ -1,0 +1,23 @@
+{
+  "bundle_id": "bundle-20260530-143311101-1e8631",
+  "title": "Track slice",
+  "summary": "Bundle summary",
+  "parent_context": {
+    "issue_number": 1,
+    "issue_title": "Merge all branches into unified repository",
+    "plan_reference": "",
+    "thread_id": "",
+    "source": "explicit-issue"
+  },
+  "priority": "p1",
+  "state": "Archived",
+  "owner": "engineer",
+  "evidence_links": [
+    "issue:#1"
+  ],
+  "promotion_mode": "story_candidate",
+  "created_at": "2026-05-30T14:33:11.134Z",
+  "updated_at": "2026-05-30T14:33:17.565Z",
+  "tags": [],
+  "archive_reason": "Merged into parent"
+}

@@ -47,7 +47,7 @@ function makeCompleteState(overrides?: Partial<LoopState>): Record<string, unkno
       { iteration: 2, timestamp: isoMinutesAgo(30), summary: 'Fix tests', status: 'iterated' },
       { iteration: 3, timestamp: isoMinutesAgo(15), summary: 'Refine edge cases', status: 'iterated' },
       { iteration: 4, timestamp: isoMinutesAgo(10), summary: 'Tighten validation', status: 'iterated' },
-      { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'All green', status: 'complete' },
+      { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review: all green', status: 'complete' },
     ],
     ...overrides,
   };
@@ -219,7 +219,31 @@ describe('checkHandoffGate', () => {
     const gate = checkHandoffGate(wsRoot);
     assert.equal(gate.allowed, false);
     assert.ok(gate.reason.includes('completed too early'));
-    assert.ok(gate.reason.includes('1/3'));
+    assert.ok(gate.reason.includes('1/5'));
+  });
+
+  it('blocks when a completed loop was already consumed', () => {
+    writeLoopState(wsRoot, makeCompleteState({ loopConsumed: true }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('already consumed'));
+  });
+
+  it('blocks when a completed loop is missing a subagent review pass', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 1, timestamp: isoMinutesAgo(60), summary: 'Initial impl', status: 'iterated' },
+        { iteration: 2, timestamp: isoMinutesAgo(30), summary: 'Fix tests', status: 'iterated' },
+        { iteration: 3, timestamp: isoMinutesAgo(15), summary: 'Refine edge cases', status: 'iterated' },
+        { iteration: 4, timestamp: isoMinutesAgo(10), summary: 'Tighten validation', status: 'iterated' },
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'All green', status: 'complete' },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('subagent reviewer pass'));
   });
 
   it('uses the complex-task five-iteration default when minIterations is missing', () => {
@@ -359,7 +383,7 @@ describe('getLoopStatusDisplay', () => {
     });
 
     const display = getLoopStatusDisplay(wsRoot);
-    assert.ok(display.includes('1/3'));
+    assert.ok(display.includes('1/5'));
   });
 
   it('defaults complex delivery loops to five iterations when minIterations is missing', () => {
@@ -393,7 +417,7 @@ describe('getLoopStatusDisplay', () => {
   });
 
   it('shows when minimum iterations are met for an active loop', () => {
-    writeLoopState(wsRoot, makeActiveState({ iteration: 3, minIterations: 3 }));
+    writeLoopState(wsRoot, makeActiveState({ iteration: 5, minIterations: 3 }));
 
     const display = getLoopStatusDisplay(wsRoot);
     assert.ok(display.includes('minimum iterations met'));

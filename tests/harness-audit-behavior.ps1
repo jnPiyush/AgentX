@@ -48,6 +48,7 @@ function Invoke-AgentX([string]$root, [string[]]$arguments) {
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
+    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
     $stdout = $process.StandardOutput.ReadToEnd()
@@ -70,7 +71,15 @@ function Set-WorkspaceHarnessState([string]$root) {
         completionCriteria = 'TASK_COMPLETE'
         startedAt = $timestamp
         lastIterationAt = $timestamp
-        history = @()
+        history = @(
+            @{
+                iteration = 5
+                timestamp = $timestamp
+                summary = 'Subagent Review: harness audit passed'
+                status = 'complete'
+                outcome = 'pass'
+            }
+        )
     } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $root '.agentx\state\loop-state.json') -Encoding utf8
 
     @{

@@ -217,8 +217,8 @@ Local dry-run with Claude Code (Phase 6):
 ## Artifacts and Notes
 
 - Reference: [hyperspaceai/agi changelog](https://github.com/hyperspaceai/agi) -- "CLI v5.19.0: Full Hyperspace CLI exposed as MCP tools for Claude Code"
-- Reference skill: [.github/skills/ai-systems/mcp-server-development/SKILL.md](../../.github/skills/ai-systems/mcp-server-development/SKILL.md)
-- Reference skill: [.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md](../../.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md)
+- Reference skill: [.github/skills/ai-systems/mcp-server-development/SKILL.md](../../../.github/skills/ai-systems/mcp-server-development/SKILL.md)
+- Reference skill: [.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md](../../../.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md)
 - Adjacent package precedent: `companions/whatsapp/` (separate Node package shipping under AgentX umbrella)
 
 ## Outcomes & Retrospective
@@ -227,4 +227,4 @@ Local dry-run with Claude Code (Phase 6):
 
 ---
 
-**Template**: [EXEC-PLAN-TEMPLATE.md](../../.github/templates/EXEC-PLAN-TEMPLATE.md)
+**Template**: [EXEC-PLAN-TEMPLATE.md](../../../.github/templates/EXEC-PLAN-TEMPLATE.md)

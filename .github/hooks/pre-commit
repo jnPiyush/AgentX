@@ -173,7 +173,7 @@ if (\$s.status -eq 'complete') {
 # - Active loop: block immediately (iteration in progress).
 # - No loop or non-complete: block when code files are staged.
 # - Consumed loop (committed without renewal): block for code changes.
-# - Emergency bypass: AGENTX_SKIP_LOOP_GATE=1 (hotfixes only).
+# - MANDATORY, NO SKIP: the loop iteration gate cannot be bypassed.
 # ---------------------------------------------------------------
 LOOP_STATE=".agentx/state/loop-state.json"
 LOOP_ACTIVE=""
@@ -193,6 +193,9 @@ if [ -f "$LOOP_STATE" ]; then
   LOOP_HAS_REVIEW_ITERATION=$(grep -iE '"summary":[[:space:]]*"[^"]*\b(reviewer|sub-?agent[^"]*review|subagent[^"]*review|review[^"]*pass|review[^"]*loop)' "$LOOP_STATE" 2>/dev/null | head -1)
   : "${LOOP_ITERATION:=0}"
   : "${LOOP_MIN_ITERATIONS:=0}"
+  if [ "${LOOP_MIN_ITERATIONS:-0}" -lt 5 ]; then
+    LOOP_MIN_ITERATIONS=5
+  fi
 fi
 
 # Block active loops first (regardless of file type)
@@ -233,18 +236,15 @@ if [ -n "$CODE_FILES_STAGED" ] && [ -z "$LOOP_ACTIVE" ]; then
     LOOP_GATE_MSG="Quality loop missing subagent reviewer pass -- at least one iteration summary MUST contain 'review' (e.g. 'Iter N (Subagent Review): ...')"
   fi
   if [ $LOOP_GATE_FAIL -eq 1 ]; then
-    if [ -z "$AGENTX_SKIP_LOOP_GATE" ]; then
-      echo -e "${RED}[FAIL] $LOOP_GATE_MSG${NC}"
-      echo "  ALL code changes MUST be wrapped in a completed quality loop with subagent review:"
-      echo "    agentx loop start -p \"<task description>\""
-      echo "    agentx loop iterate -s \"<progress summary>\" -e <evidence-file>   # repeat >= minIterations"
-      echo "    agentx loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence>"
-      echo "    agentx loop complete -s \"All gates passed\" -e <final-gate-evidence>"
-      echo "  Emergency hotfix bypass: AGENTX_SKIP_LOOP_GATE=1 git commit"
-      FAILED=1
-    else
-      echo -e "${YELLOW}[WARN] Loop gate bypassed (AGENTX_SKIP_LOOP_GATE -- emergency use only)${NC}"
-    fi
+    # MANDATORY, NO SKIP: the quality-loop iteration gate has no bypass token.
+    echo -e "${RED}[FAIL] $LOOP_GATE_MSG${NC}"
+    echo "  ALL code changes MUST be wrapped in a completed quality loop with subagent review:"
+    echo "    agentx loop start -p \"<task description>\""
+    echo "    agentx loop iterate -s \"<progress summary>\" -e <evidence-file>   # repeat >= minIterations"
+    echo "    agentx loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence>"
+    echo "    agentx loop complete -s \"All gates passed\" -e <final-gate-evidence>"
+    echo "  This gate is mandatory and has no skip token."
+    FAILED=1
   else
     # Gate passed: eagerly mark the loop as consumed so the same completed loop
     # cannot silently re-pass the gate on a subsequent commit if the post-commit
@@ -408,9 +408,9 @@ if [ -n "$UX_SPEC_FILES" ]; then
 fi
 
 # ---------------------------------------------------------------
-# Check 13: Model Council gate (HARD FAIL)
-# New ADR staged -> matching COUNCIL-*.md MUST also be staged,
-# OR commit message includes [skip-council] token.
+# Check 13: Model Council gate (HARD FAIL, NO SKIP)
+# New ADR staged -> matching COUNCIL-*.md MUST also be staged.
+# Mandatory for PM, Architect, and complex work; there is no skip token.
 # The COUNCIL file must capture 3 diverse-model perspectives and a Synthesis section.
 # ---------------------------------------------------------------
 STAGED_ADRS=$(git diff --cached --name-only --diff-filter=A | grep '^docs/artifacts/adr/ADR-.*\.md$')
@@ -421,18 +421,14 @@ if [ -n "$STAGED_ADRS" ]; then
     COUNCIL_PATH="docs/artifacts/adr/COUNCIL-${ADR_ID}.md"
     COUNCIL_STAGED=$(git diff --cached --name-only | grep -F "$COUNCIL_PATH")
     if [ -z "$COUNCIL_STAGED" ]; then
-      if echo "$COMMIT_MSG_CONTENT" | grep -qF '[skip-council]'; then
-        echo -e "${YELLOW}[WARN] Model Council bypassed via [skip-council]: $ADR_FILE${NC}"
-        echo "  Ensure the skip rationale is documented inside the ADR's Decision section."
-      else
-        echo -e "${RED}[FAIL] New ADR staged without matching Model Council: $ADR_FILE${NC}"
-        echo "  Architect/PM/Data Scientist/Reviewer MUST convene a Model Council before landing a new ADR:"
-        echo "    Mandatory: stage $COUNCIL_PATH with 3 diverse-model perspectives + Synthesis section"
-        echo "    Helper:    pwsh scripts/model-council.ps1 -AdrId $ADR_ID"
-        echo "    Bypass:    add [skip-council] to commit message AND document rationale in ADR Decision"
-        echo "  See docs/WORKFLOW.md#model-council for the full contract."
-        FAILED=1
-      fi
+      # MANDATORY, NO SKIP: Model Council is required for PM, Architect, and complex work.
+      echo -e "${RED}[FAIL] New ADR staged without matching Model Council: $ADR_FILE${NC}"
+      echo "  Architect/PM/Data Scientist/Reviewer MUST convene a Model Council before landing a new ADR:"
+      echo "    Mandatory: stage $COUNCIL_PATH with 3 diverse-model perspectives + Synthesis section"
+      echo "    Helper:    pwsh scripts/model-council.ps1 -AdrId $ADR_ID"
+      echo "  This gate is mandatory and has no skip token."
+      echo "  See docs/WORKFLOW.md#model-council for the full contract."
+      FAILED=1
     else
       if [ -f "$COUNCIL_PATH" ]; then
         if ! grep -qiE '^##+ *(Synthesis|Consensus|Conclusion)' "$COUNCIL_PATH" 2>/dev/null; then
@@ -478,6 +474,44 @@ if [ "$CODE_FILES_CHANGED" -ge 8 ] 2>/dev/null; then
   else
     echo -e "${GREEN}[PASS] Execution plan staged for complex commit ($CODE_FILES_CHANGED code files): $PLAN_STAGED${NC}"
   fi
+fi
+
+# ---------------------------------------------------------------
+# Check 15: Deslop scrub gate (HARD FAIL, NO SKIP)
+# Every file-changing commit MUST pass the deslop scrub. HIGH-severity
+# findings (comment-rot, obvious-restate, stale-byline) block the commit.
+# This gate is mandatory and has no skip token.
+# ---------------------------------------------------------------
+SCRUB_TARGETS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|ps1|psm1|cs|py|go|rs|java|kt|rb|cpp|c|h|swift|md|mdx|css|scss|html)$')
+if [ -n "$SCRUB_TARGETS" ]; then
+ echo -n "Running deslop scrub gate... "
+ if command -v pwsh >/dev/null 2>&1; then
+  SCRUB_FAIL=0
+  SCRUB_OUTPUT=""
+  while IFS= read -r SCRUB_FILE; do
+   [ -f "$SCRUB_FILE" ] || continue
+   if ! pwsh -NoProfile -File scripts/scrub.ps1 -Path "$SCRUB_FILE" -Quiet >/dev/null 2>&1; then
+    SCRUB_FAIL=1
+    SCRUB_OUTPUT="$SCRUB_OUTPUT
+  $SCRUB_FILE"
+   fi
+  done <<< "$SCRUB_TARGETS"
+  if [ $SCRUB_FAIL -eq 1 ]; then
+   echo -e "${RED}[FAIL]${NC}"
+   echo -e "${RED}[FAIL] Deslop scrub found HIGH-severity findings (mandatory, no skip):${NC}"
+   echo "$SCRUB_OUTPUT"
+   echo "  Fix with: pwsh scripts/scrub.ps1 -Path <file> -Fix"
+   echo "  Then re-stage and commit. This gate is mandatory and has no skip token."
+   FAILED=1
+  else
+   echo -e "${GREEN}[PASS] PASSED${NC}"
+  fi
+ else
+  echo -e "${RED}[FAIL]${NC}"
+  echo -e "${RED}[FAIL] PowerShell 7+ (pwsh) is required for the mandatory scrub gate${NC}"
+  echo "  Install PowerShell 7+ so the deslop scrub can run. This gate has no skip token."
+  FAILED=1
+ fi
 fi
 
 if [ $FAILED -eq 1 ]; then

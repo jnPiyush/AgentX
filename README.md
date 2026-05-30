@@ -22,7 +22,7 @@ Zero-shot AI generation is unpredictable for complex software engineering. Agent
 
 ## The AI Development Team
 
-AgentX acts as an autonomous orchestrator, routing tasks to **21 specialized agents** based on required skills.
+AgentX acts as an autonomous orchestrator, routing tasks to **24 specialized agents** based on required skills.
 
 | Domain | Agents | Deliverables |
 |:-------|:-------|:-------------|
@@ -36,7 +36,7 @@ AgentX acts as an autonomous orchestrator, routing tasks to **21 specialized age
 
 ## Domain Skills Library
 
-AgentX is powered by a rich knowledge layer of **107 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
+AgentX is powered by a rich knowledge layer of **111 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
 
 | Category | Example Skills | Purpose |
 |:---------|:---------------|:--------|
@@ -131,7 +131,7 @@ flowchart LR
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
 - **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 107 skills, 21 agents, 7 instructions, 11 templates, 21 prompts -- all Markdown-defined
+- **Knowledge Layer:** 111 skills, 24 agents, 7 instructions, 15 templates, 21 prompts -- all Markdown-defined
 - **Control Layer:** Execution plans, repo-local state, automated validation gates
 
 ---

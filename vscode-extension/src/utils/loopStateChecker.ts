@@ -35,6 +35,8 @@ export interface LoopState {
   readonly lastIterationAt: string;
   /** Optional time budget in minutes set at loop start. */
   readonly budgetMinutes?: number;
+  /** False after loop complete; set true by pre-commit after the completed loop is consumed. */
+  readonly loopConsumed?: boolean;
   readonly history: ReadonlyArray<{
     readonly iteration: number;
     readonly timestamp: string;
@@ -64,7 +66,7 @@ const LOOP_STUCK_AFTER_MS = 90 * 60 * 1000;
 // Per-task-class minimum iterations. Must mirror agentx-cli.ps1
 // ($Script:LOOP_*_MIN_ITERATIONS).
 const DEFAULT_COMPLEX_MIN_ITERATIONS = 5;
-const DEFAULT_STANDARD_MIN_ITERATIONS = 3;
+const DEFAULT_STANDARD_MIN_ITERATIONS = 5;
 const DEFAULT_AUTO_FIX_MIN_ITERATIONS = 5;
 const DEFAULT_AGENT_X_MIN_ITERATIONS = 5;
 
@@ -121,11 +123,16 @@ function getDefaultMinIterations(state: LoopState): number {
 }
 
 function getEffectiveMinIterations(state: LoopState): number {
-  if (typeof state.minIterations === 'number' && state.minIterations > 0) {
-    return Math.min(state.minIterations, state.maxIterations);
-  }
+  const defaultMinimum = getDefaultMinIterations(state);
+  const storedMinimum = typeof state.minIterations === 'number' && state.minIterations > 0 ? state.minIterations : 0;
+  return Math.min(Math.max(storedMinimum, defaultMinimum), state.maxIterations);
+}
 
-  return getDefaultMinIterations(state);
+function hasSubagentReviewIteration(state: LoopState): boolean {
+  return state.history.some((entry) => {
+    const summary = entry?.summary ?? '';
+    return /\b(reviewer|sub-?agent.*review|subagent.*review|review.*pass|review.*loop)\b/i.test(summary);
+  });
 }
 
 function getLoopLastTouchedMs(state: LoopState): number | null {
@@ -366,6 +373,22 @@ export function checkHandoffGate(workspaceRoot: string, expectedIssue?: number |
         allowed: false,
         reason: `Quality loop completed too early (${state.iteration}/${minIterations} minimum review iterations). `
           + 'Run additional `agentx loop iterate` passes and complete the loop again.',
+        state,
+      };
+    }
+
+    if (state.loopConsumed === true) {
+      return {
+        allowed: false,
+        reason: 'Quality loop was already consumed by a prior commit. Start and complete a fresh loop for this handoff.',
+        state,
+      };
+    }
+
+    if (!hasSubagentReviewIteration(state)) {
+      return {
+        allowed: false,
+        reason: 'Quality loop missing subagent reviewer pass. At least one iteration summary must contain `review` before handoff.',
         state,
       };
     }

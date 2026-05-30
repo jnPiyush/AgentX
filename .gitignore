@@ -63,6 +63,7 @@ build/
 .agentx/handoffs/
 .agentx/signals/
 .agentx/patterns/
+.agentx/dreams/
 
 # Cross-process file lock files (created by JsonFileLock / Lock-JsonFile)
 *.lock

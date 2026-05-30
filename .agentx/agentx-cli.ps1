@@ -46,7 +46,7 @@ $Script:LOOP_STATE_FILE = Join-Path $AGENTX_DIR 'state' 'loop-state.json'
 $Script:LOOP_STALE_AFTER_HOURS = 8
 $Script:LOOP_STUCK_AFTER_MINUTES = 90
 $Script:LOOP_COMPLEX_MIN_ITERATIONS  = 5
-$Script:LOOP_STANDARD_MIN_ITERATIONS = 3
+$Script:LOOP_STANDARD_MIN_ITERATIONS = 5
 $Script:LOOP_AUTO_FIX_MIN_ITERATIONS  = 5
 $Script:LOOP_AGENT_X_MIN_ITERATIONS   = 5
 $Script:ISSUES_DIR = Join-Path $AGENTX_DIR 'issues'
@@ -4130,6 +4130,21 @@ function Get-LoopDefaultMinIterations {
     return [Math]::Min($defaultMin, $maxIterations)
 }
 
+function Get-LoopEffectiveMinIterations {
+    param($State)
+
+    if (-not $State) { return 0 }
+    $maxIterations = if ($State.PSObject.Properties.Name -contains 'maxIterations') { [int]$State.maxIterations } else { 0 }
+    $defaultMin = Get-LoopDefaultMinIterations $State
+    $storedMin = 0
+    if ($State.PSObject.Properties.Name -contains 'minIterations' -and $State.minIterations) {
+        try { $storedMin = [int]$State.minIterations } catch { $storedMin = 0 }
+    }
+    $effectiveMin = [Math]::Max($storedMin, $defaultMin)
+    if ($maxIterations -gt 0) { return [Math]::Min($effectiveMin, $maxIterations) }
+    return $effectiveMin
+}
+
 function Get-LoopIterationGuidance {
     # Returns an ordered array of [n, focus, gate] objects for a given task class.
     # Used by 'loop start' (print the full table) and 'loop status' (show current-iteration focus).
@@ -4163,7 +4178,17 @@ function Get-LoopIterationGuidance {
                 [PSCustomObject]@{ n=5; focus='Final Sweep: quality + security + Compound Capture resolution';           gate='All done criteria pass; Compound Capture resolved; if FAIL: rollback -n 2 (re-execute phase) / -n 3 (re-validate)' }
             )
         }
-        default { return @() }   # standard tasks: no fixed per-iteration table
+        default {
+            # standard tasks (PM, Architect, Reviewer, UX, docs, research, ...): generic 5-iteration table.
+            # Mirrors the Cross-Cutting Agent Protocol (.github/AGENT-PROTOCOL.md).
+            return @(
+                [PSCustomObject]@{ n=1; focus='Draft: produce the required deliverable/change covering the stated scope';        gate='Deliverable exists; scope addressed' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: correctness, completeness, required template sections, conventions'; gate='Required sections present; conventions satisfied' }
+                [PSCustomObject]@{ n=3; focus='Cross-Cutting Gates: Karpathy self-check + Scrub + Model Council (ADR/PRD/eval) + Brainstorm/Plan/Research confirmed'; gate='Council convened if required; scrub clean; Karpathy checklist done' }
+                [PSCustomObject]@{ n=4; focus='Evidence + Live-Surface: verify claims against real artifacts/outputs; attach evidence file'; gate='Evidence attached; claims verified, not asserted' }
+                [PSCustomObject]@{ n=5; focus='Subagent Review: spawn a same-role reviewer sub-agent on the deliverable only';   gate='Zero HIGH/MEDIUM; if FAIL: rollback and refine' }
+            )
+        }
     }
 }
 
@@ -4700,9 +4725,8 @@ function Invoke-LoopComplete {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
     if (-not $state -or -not $state.active) { Write-CliOutput 'No active loop.'; return }
     $baseline = Read-LoopBaseline
-    if (-not ($state.PSObject.Properties.Name -contains 'minIterations') -or -not $state.minIterations) {
-        $state | Add-Member -NotePropertyName minIterations -NotePropertyValue (Get-LoopDefaultMinIterations $state) -Force
-    }
+    $effectiveMinIterations = Get-LoopEffectiveMinIterations $state
+    $state | Add-Member -NotePropertyName minIterations -NotePropertyValue $effectiveMinIterations -Force
     if ([int]$state.iteration -lt [int]$state.minIterations) {
         Write-CliOutput "$($C.y)  Minimum review iterations not yet met: $($state.iteration)/$($state.minIterations). Use 'agentx loop iterate' before completing.$($C.n)"
         return
@@ -5636,14 +5660,104 @@ function Invoke-LessonsShow {
 }
 
 function Invoke-LessonsPromote {
-    $id = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '' }
-    if (-not $id) {
-        Write-CliOutput "Usage: agentx lessons promote <lesson-id>"
+    # Auto-promote LEARNING-*.md artifacts whose frontmatter shows
+    # confidence >= threshold and observations >= minObservations.
+    #
+    # Usage:
+    #   agentx lessons promote                      # scan + report; promote >= 0.8 with >= 3 obs
+    #   agentx lessons promote --dry-run            # report only
+    #   agentx lessons promote --threshold 0.7      # custom threshold
+    #   agentx lessons promote <id>                 # promote a single LEARNING-<id> regardless of threshold
+
+    $singleId = if ($Script:SubArgs.Count -gt 0 -and $Script:SubArgs[0] -notmatch '^-') { $Script:SubArgs[0] } else { $null }
+    $dryRun   = Test-Flag @('--dry-run','-d')
+    $thresh   = [double](Get-Flag @('--threshold') | ForEach-Object { if ($_) { $_ } else { '0.8' } } | Select-Object -First 1)
+    if (-not $thresh) { $thresh = 0.8 }
+    $minObs   = [int](Get-Flag @('--min-observations') | ForEach-Object { if ($_) { $_ } else { '3' } } | Select-Object -First 1)
+    if (-not $minObs) { $minObs = 3 }
+
+    $learningDir = Join-Path (Resolve-Path .).Path 'docs/artifacts/learnings'
+    if (-not (Test-Path $learningDir)) {
+        Write-CliOutput "$($C.y)No docs/artifacts/learnings directory found.$($C.n)"
         return
     }
-    
-    Write-CliOutput "$($C.y)Promote functionality uses /memories/*.md files in v8.0.0.$($C.n)"
-    Write-CliOutput "$($C.d)Promote lessons by editing /memories/conventions.md or project-conventions.instructions.md.$($C.n)"
+
+    $files = Get-ChildItem -Path $learningDir -Filter 'LEARNING-*.md' -ErrorAction SilentlyContinue
+    if ($singleId) {
+        $files = $files | Where-Object { $_.Name -match "LEARNING-$([regex]::Escape($singleId))\.md$" }
+        if (-not $files) {
+            Write-CliOutput "$($C.r)No file matches LEARNING-$singleId.md$($C.n)"
+            return
+        }
+    }
+
+    $conventionsFile = Join-Path (Resolve-Path .).Path 'memories/conventions.md'
+    $promoted = New-Object 'System.Collections.Generic.List[object]'
+    $skipped  = New-Object 'System.Collections.Generic.List[object]'
+
+    foreach ($f in $files) {
+        $raw = Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue
+        if (-not $raw) { continue }
+        # Parse frontmatter
+        $fm = @{}
+        if ($raw -match '^---\s*\r?\n(.*?)\r?\n---' ) {
+            $block = $Matches[1]
+            foreach ($line in ($block -split "`n")) {
+                if ($line -match '^\s*([A-Za-z_]+)\s*:\s*(.+?)\s*$') {
+                    $fm[$Matches[1]] = $Matches[2].Trim().Trim("'").Trim('"')
+                }
+            }
+        }
+        $confidence  = if ($fm.ContainsKey('confidence'))  { [double]$fm['confidence']  } else { 0.0 }
+        $observations= if ($fm.ContainsKey('observations')){ [int]$fm['observations']    } else { 1   }
+        $status      = if ($fm.ContainsKey('status'))      { $fm['status']               } else { 'draft' }
+
+        $eligible = $singleId -or ( $confidence -ge $thresh -and $observations -ge $minObs -and $status -ne 'promoted' -and $status -ne 'archived' )
+        if (-not $eligible) {
+            $skipped.Add([PSCustomObject]@{ file=$f.Name; confidence=$confidence; observations=$observations; status=$status }) | Out-Null
+            continue
+        }
+
+        # Extract title (first H1) and Learning section
+        $title = ($raw -split "`n" | Where-Object { $_ -match '^#\s+' } | Select-Object -First 1) -replace '^#\s+',''
+        $learningBlock = ''
+        if ($raw -match '##\s+Learning\s*\r?\n(.+?)(\r?\n##\s+|\Z)') {
+            $learningBlock = $Matches[1].Trim()
+        }
+        $bullet = "- {0:yyyy-MM-dd}: {1} (LEARNING [{2}], conf={3:N2}, obs={4})" -f (Get-Date), $title, $f.BaseName, $confidence, $observations
+
+        if ($dryRun) {
+            Write-CliOutput "$($C.y)[dry-run] would promote $($f.Name) -> memories/conventions.md$($C.n)"
+            Write-CliOutput "  $bullet"
+            $promoted.Add([PSCustomObject]@{ file=$f.Name; confidence=$confidence; observations=$observations }) | Out-Null
+            continue
+        }
+
+        # Append to conventions.md (creating section if needed)
+        $convDir = Split-Path $conventionsFile -Parent
+        if (-not (Test-Path $convDir)) { New-Item -ItemType Directory -Path $convDir -Force | Out-Null }
+        if (-not (Test-Path $conventionsFile)) {
+            "# Conventions`n`nPromoted learnings (auto-graduated by agentx lessons promote).`n" | Set-Content -Encoding utf8 $conventionsFile
+        }
+        Add-Content -Path $conventionsFile -Value $bullet -Encoding utf8
+
+        # Update frontmatter status -> promoted
+        $updated = $raw -replace '(status\s*:\s*)\S+', '${1}promoted'
+        if ($updated -eq $raw) {
+            # Frontmatter had no status field; inject it
+            $updated = $raw -replace '(^---\s*\r?\n)', "`$1status: promoted`n"
+        }
+        Set-Content -Path $f.FullName -Value $updated -Encoding utf8
+
+        Write-CliOutput "$($C.g)[promoted]$($C.n) $($f.Name) (conf=$confidence, obs=$observations) -> memories/conventions.md"
+        $promoted.Add([PSCustomObject]@{ file=$f.Name; confidence=$confidence; observations=$observations }) | Out-Null
+    }
+
+    Write-CliOutput ""
+    Write-CliOutput "$($C.c)Summary:$($C.n) promoted=$($promoted.Count) skipped=$($skipped.Count) (threshold=$thresh, min-observations=$minObs)"
+    if ($skipped.Count -gt 0 -and $skipped.Count -le 10) {
+        foreach ($s in $skipped) { Write-CliOutput "  $($C.d)skip$($C.n) $($s.file) (conf=$($s.confidence), obs=$($s.observations), status=$($s.status))" }
+    }
 }
 
 function Invoke-LessonsArchive {
@@ -7279,6 +7393,9 @@ function Invoke-ScrubCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/s
 function Invoke-DreamCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/dream.ps1'             -Label 'dream' }
 function Invoke-ResearchCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/research.ps1'          -Label 'research' }
 function Invoke-ShipCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ship.ps1'            -Label 'ship' }
+function Invoke-TakeoffCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/takeoff.ps1'          -Label 'takeoff' }
+function Invoke-LandCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/land.ps1'             -Label 'land' }
+function Invoke-GhcpReviewResolveCmd { Invoke-ScriptWrapper -ScriptRelPath 'scripts/ghcp-review-resolve.ps1' -Label 'ghcp-review-resolve' }
 function Invoke-ManifestCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/install-manifest.ps1' -Label 'install-manifest' }
 function Invoke-ScanCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scan.ps1'             -Label 'scan' }
 function Invoke-StocktakeCmd     { Invoke-ScriptWrapper -ScriptRelPath 'scripts/stocktake.ps1'        -Label 'stocktake' }
@@ -7318,6 +7435,9 @@ switch ($Script:Command) {
     'dream'    { Invoke-DreamCmd }
     'research' { Invoke-ResearchCmd }
     'ship'     { Invoke-ShipCmd }
+    'takeoff'  { Invoke-TakeoffCmd }
+    'land'     { Invoke-LandCmd }
+    'ghcp-review-resolve' { Invoke-GhcpReviewResolveCmd }
     'manifest' { Invoke-ManifestCmd }
     'scan'        { Invoke-ScanCmd }
     'stocktake'   { Invoke-StocktakeCmd }

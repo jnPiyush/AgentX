@@ -79,6 +79,8 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 > HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. Minimum 5 iterations means at least 5 loop passes before completion is allowed; the loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds. No exceptions. The pre-commit hook blocks review artifacts when no completed loop exists.
 
+> Cross-cutting concerns shared by all agents (quality loop + minimum 5 iterations, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are defined ONCE in [.github/AGENT-PROTOCOL.md](.github/AGENT-PROTOCOL.md). Agent definition files keep only the front-loaded Pre-edit gate + Honesty rule stubs and point there; they MUST NOT restate the full prose.
+
 ### Compound Engineering Hard Rule
 
 > HARD RULE: Every agent MUST resolve Compound Capture before declaring work Done. After delivery and review are complete, classify the capture decision:
@@ -110,9 +112,9 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 ---
 
-## Agents (21 total)
+## Agents (24 total)
 
-Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/agents/internal/*.agent.md` (8 internal sub-agents). Each file contains the role's constraints, boundaries, deliverables, and self-review checklist.
+Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/agents/internal/*.agent.md` (11 internal sub-agents). Each file contains the role's constraints, boundaries, deliverables, and self-review checklist.
 
 | Agent | File | Deliverable |
 |-------|------|-------------|
@@ -131,7 +133,7 @@ Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/
 | Agile Coach | `agile-coach.agent.md` | Stories at `docs/coaching/` |
 
 **Internal sub-agents** (spawned by parent agents, not user-invokable):
-GitHub Ops, ADO Ops, AzDO PRD to WIT, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist.
+GitHub Ops, ADO Ops, AzDO PRD to WIT, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist, Diagram Specialist, Prototype Auditor.
 
 ---
 
@@ -162,16 +164,16 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | Document | Purpose |
 |----------|---------|
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | Workflow, routing, handoff, status transitions, architecture |
-| [Skills.md](Skills.md) | 75 production code skills index (load max 3-4 per task) |
+| [Skills.md](Skills.md) | 111 production code skills index (load max 3-4 per task) |
 | [docs/GUIDE.md](docs/GUIDE.md) | Quickstart, setup, troubleshooting, local mode |
 | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) | Graded quality assessment of every component |
 | [docs/GOLDEN_PRINCIPLES.md](docs/GOLDEN_PRINCIPLES.md) | Mechanical rules enforced by linters and agents |
 | [docs/tech-debt-tracker.md](docs/tech-debt-tracker.md) | Known gaps and deferred work |
 | `.github/agents/` | 21 agent definition files |
-| `.github/skills/` | 75 skill files across 10 categories |
+| `.github/skills/` | 111 skill files across 12 categories |
 | `.github/instructions/` | 7 instruction files (auto-loaded by file pattern) |
 | `.github/schemas/` | Handoff message JSON Schema + communication protocol |
-| `.github/templates/` | 13 templates (PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog) |
+| `.github/templates/` | 15 templates (PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning) |
 | `.github/prompts/` | 21 reusable prompt templates |
 | `.agentx/` | CLI utilities (agentx.ps1, agentx.sh, agentic-runner.ps1) |
 | `scripts/modules/` | Shared PowerShell modules |

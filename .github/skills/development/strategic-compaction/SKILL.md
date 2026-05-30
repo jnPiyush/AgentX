@@ -120,7 +120,7 @@ Do not hardcode behavior for one model family. Reason from available context bud
 
 ## Integration With AgentX
 
-- The Reset-vs-Compaction policy in [docs/WORKFLOW.md](../../../docs/WORKFLOW.md#reset-vs-compaction-policy) is the source of truth; this skill is the day-to-day operational distillation.
+- The Reset-vs-Compaction policy in [docs/WORKFLOW.md](../../../../docs/WORKFLOW.md#reset-vs-compaction-policy) is the source of truth; this skill is the day-to-day operational distillation.
 - Pair with the `context-management` skill for token-budget arithmetic.
 - Pair with the `iterative-loop` skill: never compact inside an unverified iteration; verify, record evidence, then compact.
 - The `verification-before-completion` skill applies here too: do not declare "compaction complete" without checking that the durable artifacts cover the state that was compressed.
@@ -135,5 +135,5 @@ Do not hardcode behavior for one model family. Reason from available context bud
 
 ---
 
-**See Also**: [context-management](../../ai-systems/context-management/SKILL.md) | [iterative-loop](../iterative-loop/SKILL.md) | [verification-before-completion](../verification-before-completion/SKILL.md) | [docs/guides/RESET-VS-COMPACTION-POLICY.md](../../../docs/guides/RESET-VS-COMPACTION-POLICY.md)
+**See Also**: [context-management](../../ai-systems/context-management/SKILL.md) | [iterative-loop](../iterative-loop/SKILL.md) | [verification-before-completion](../verification-before-completion/SKILL.md) | [docs/guides/RESET-VS-COMPACTION-POLICY.md](../../../../docs/guides/RESET-VS-COMPACTION-POLICY.md)
 

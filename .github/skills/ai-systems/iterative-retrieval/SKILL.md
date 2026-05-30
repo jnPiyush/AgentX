@@ -64,8 +64,8 @@ Budget: 6 turns, 30 KB of file reads.
 Run one cheap, high-recall search to map the territory. Read filenames and one-line previews only.
 
 ```
-Tool: grep_search "authenticate|authorize|login|session|token"
-Tool: file_search "**/auth/**", "**/*auth*.ts"
+Text search (regex): "authenticate|authorize|login|session|token"
+File-name search (glob): "**/auth/**", "**/*auth*.ts"
 ```
 
 Return: a ranked list of candidate files with one-line evidence each. Do NOT read full files yet.

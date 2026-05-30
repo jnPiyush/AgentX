@@ -45,6 +45,7 @@ function Invoke-AgentX([string]$root, [string[]]$arguments) {
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
+    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
     $stdout = $process.StandardOutput.ReadToEnd()

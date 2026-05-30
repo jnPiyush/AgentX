@@ -15,6 +15,13 @@ compatibility:
 > **Purpose**: Detect and remove the visible tells of AI-generated code without changing behavior.
 > **Scope**: Comment rot, over-abstracted code, generic design defaults, AI filler phrasing.
 
+> **MANDATORY in AgentX**: A deslop scrub runs on EVERY AgentX run that changes
+> files, as a required step in the canonical workflow
+> (`... -> implement -> scrub -> test -> review -> ship`). It is not opt-in.
+> `ship.ps1` runs scrub unconditionally; the deprecated `-SkipScrub` switch is
+> ignored. See the always-on rule in
+> `.github/instructions/project-conventions.instructions.md`.
+
 ---
 
 ## When to Use This Skill

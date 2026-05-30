@@ -8,6 +8,7 @@ constraints:
   - "MUST follow pipeline phases in prescribed sequence: Read Context -> Write Tests -> Execute Suite -> Report Defects -> Certification Report; MUST NOT issue a certification report before running the full test suite; MUST report all defects before closing the testing phase"
   - "MUST write executable test code -- never just test plans or checklists"
   - "MUST use Playwright as default E2E framework unless project specifies otherwise"
+  - "MUST use the agent browser (Playwright MCP, see browser-automation skill) as the DEFAULT test surface for any UI-bearing or HTML-rendering change: render the running build, capture a snapshot/screenshot per primary route, run an axe-core a11y scan, and drive at least one scripted interaction per primary user task. Fall back to non-browser testing ONLY when no UI surface exists or the Playwright MCP server is unavailable, and report the missing prerequisite rather than silently skipping"
   - "MUST achieve: 100% unit/integration pass, >= 80% coverage, >= 95% E2E pass"
   - "MUST include security testing (OWASP Top 10) and accessibility validation (WCAG 2.1 AA)"
   - "MUST report defects as issues routed back to Engineer -- not fix code directly"

@@ -124,7 +124,7 @@ Covered in section 4 Non-Goals.
 
 ## 12. Appendix
 
-- Eval dataset: [`evaluation/datasets/docs-search.jsonl`](../../../../../evaluation/datasets/docs-search.jsonl) (to be created).
+- Eval dataset: `evaluation/datasets/docs-search.jsonl` (to be created).
 - Model pin: `<provider>/<model>@<version>` -- exact value resolved by Architect/Data Scientist alignment checkpoint.
 
 ---

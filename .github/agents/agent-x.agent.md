@@ -253,6 +253,9 @@ Before completing any routing decision, verify:
 - [ ] Domain labels applied (needs:ai, needs:ux, needs:realtime, etc.)
 - [ ] Dependencies checked via `.agentx/agentx.ps1 deps <issue>`
 - [ ] Required role-specific artifacts and checklists were completed for the active phase
+- [ ] Karpathy guidelines applied across every executed phase (MANDATORY, not optional)
+- [ ] Mandatory deslop scrub run on changed files (`pwsh scripts/scrub.ps1 -Path <changed-path>`); safe fixes applied
+- [ ] UI-bearing changes tested through the agent browser (Playwright MCP) by default, or the missing-prerequisite fallback reported
 - [ ] Progress, status, and artifacts reflect the active phase accurately
 - [ ] Manual switching was used only when truly required
 

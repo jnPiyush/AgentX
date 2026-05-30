@@ -55,7 +55,29 @@ function Test-IsInsideFencedCode {
 }
 
 $mdFiles = Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch 'node_modules|\.git[/\\]|vendor|[/\\]archive[/\\]' }
+    Where-Object { $_.FullName -notmatch 'node_modules|\.git[/\\]|vendor|[/\\]archive[/\\]|vscode-extension[/\\]\.github[/\\]' }
+
+# Scope to git-tracked files when available so generated/untracked mirrors
+# (e.g. vscode-extension/.github/agentx) do not produce false positives.
+$trackedSet = $null
+try {
+    Push-Location $ROOT
+    $trackedRaw = git ls-files '*.md' 2>$null
+    Pop-Location
+    if ($LASTEXITCODE -eq 0 -and $trackedRaw) {
+        $trackedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($rel in $trackedRaw) {
+            if ([string]::IsNullOrWhiteSpace($rel)) { continue }
+            [void]$trackedSet.Add([System.IO.Path]::GetFullPath((Join-Path $ROOT $rel)))
+        }
+    }
+} catch {
+    $trackedSet = $null
+}
+
+if ($trackedSet -and $trackedSet.Count -gt 0) {
+    $mdFiles = $mdFiles | Where-Object { $trackedSet.Contains($_.FullName) }
+}
 
 foreach ($file in $mdFiles) {
     $content = Get-Content $file.FullName -Raw -Encoding utf8

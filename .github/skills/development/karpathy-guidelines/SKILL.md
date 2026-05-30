@@ -10,8 +10,14 @@ Behavioral guidelines to reduce common LLM coding mistakes. Adapted from
 on LLM coding pitfalls and the upstream MIT-licensed
 [karpathy-guidelines skill](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/skills/karpathy-guidelines/SKILL.md).
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial
-tasks (typo fix, one-line config tweak), use judgment.
+> **MANDATORY in AgentX**: These four guidelines are NON-optional for every
+> AgentX execution (coding, refactor, review, pipeline). Complete the
+> "Self-Check Before Handoff" checklist before any handoff. See the always-on
+> rule in `.github/instructions/project-conventions.instructions.md`.
+
+**Tradeoff:** These guidelines bias toward caution over speed. The only
+exemption is a genuinely trivial change (single-line typo, obvious config
+rename) whose success criteria are self-evident.
 
 ## When to Use
 
@@ -23,8 +29,9 @@ Load this skill when:
 - Debugging when the cause is not obvious
 - Producing pipelines, IaC, or any artifact that ships to production
 
-Skip when the task is trivial (single-line typo, obvious config rename) and
-the success criteria are self-evident.
+Apply on every execution. The only exemption is a genuinely trivial change
+(single-line typo, obvious config rename) whose success criteria are
+self-evident.
 
 ## Rationalization Table
 

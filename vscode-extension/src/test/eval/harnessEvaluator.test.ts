@@ -49,7 +49,7 @@ describe('harness evaluator', () => {
       completionCriteria: 'TASK_COMPLETE',
       startedAt: recentTimestamp,
       lastIterationAt: recentTimestamp,
-      history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'All green', status: 'complete', outcome: 'pass' }],
+      history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass' }],
     }), 'utf-8');
     fs.writeFileSync(path.join(root, '.agentx', 'state', 'harness-state.json'), JSON.stringify({
       version: 1,
@@ -113,7 +113,7 @@ describe('harness evaluator', () => {
       completionCriteria: 'TASK_COMPLETE',
       startedAt: recentTimestamp,
       lastIterationAt: recentTimestamp,
-      history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'All green', status: 'complete', outcome: 'pass' }],
+      history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass' }],
     }), 'utf-8');
     fs.writeFileSync(path.join(root, '.agentx', 'state', 'harness-state.json'), JSON.stringify({
       version: 1,

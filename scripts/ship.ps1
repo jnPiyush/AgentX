@@ -23,8 +23,9 @@
   Ending step (inclusive). Defaults to 'compound'.
 
 .PARAMETER SkipScrub
-  Skip the presentation pass. Useful when changes are obviously machine-clean
-  or the diff was already passed through scrub.
+  DEPRECATED and IGNORED. Scrub is mandatory on every run. This switch is kept
+  only for backward compatibility with existing callers; passing it logs a
+  warning and scrub still runs.
 
 .PARAMETER DryRun
   Print the plan without executing.
@@ -42,7 +43,8 @@ param(
     [ValidateSet('plan','work','review','scrub','test','compound')] [string]$From = 'plan',
     [ValidateSet('plan','work','review','scrub','test','compound')] [string]$To = 'compound',
     [switch]$SkipScrub,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$Parallel
 )
 
 $ErrorActionPreference = 'Continue'
@@ -110,8 +112,8 @@ $steps = @(
     },
     @{
         name = 'scrub'; agent = 'engineer';
-        run  = { if ($SkipScrub) { Write-Host "[ship] Scrub: skipped" -ForegroundColor DarkYellow; return 0 }
-                  Write-Host "[ship] Scrub: scanning workspace" -ForegroundColor Cyan
+        run  = { if ($SkipScrub) { Write-Host "[ship] Scrub: -SkipScrub is deprecated and ignored; scrub is mandatory on every run" -ForegroundColor DarkYellow }
+                  Write-Host "[ship] Scrub: scanning workspace (mandatory deslop pass)" -ForegroundColor Cyan
                   $scrubScript = Join-Path (Resolve-Path .).Path 'scripts/scrub.ps1'
                   & pwsh -NoProfile -File $scrubScript -Path . -Quiet
                   return 0 }
@@ -119,7 +121,7 @@ $steps = @(
     },
     @{
         name = 'test'; agent = 'tester';
-        run  = { Write-Host "[ship] Test: invoking tester agent gate" -ForegroundColor Cyan
+        run  = { Write-Host "[ship] Test: invoking tester agent gate (agent-browser is the default surface for UI-bearing changes; see browser-automation skill)" -ForegroundColor Cyan
                   $code = Invoke-AgentX -Args @('validate',[string]$Issue,'tester')
                   return ($code -eq 0 ? 0 : 1) }
         gate = { $true }
@@ -141,25 +143,129 @@ if ($DryRun) {
 }
 
 $failures = New-Object 'System.Collections.Generic.List[string]'
-for ($i = $fromIdx; $i -le $toIdx; $i++) {
-    $step = $steps[$i]
-    if ($step.name -eq 'scrub' -and $SkipScrub) { continue }
 
-    Set-Phase -Agent $step.agent
-    Write-Host ""; Write-Host ("==== [ship] step: {0} ====" -f $step.name) -ForegroundColor Magenta
+if ($Parallel) {
+    Write-Host "[ship] -Parallel: running review/scrub/test concurrently after sequential plan/work" -ForegroundColor Magenta
+    # Sequential phases that must precede parallel pool
+    $sequentialBefore = @('plan','work')
+    $parallelGroup    = @('review','scrub','test')
+    $sequentialAfter  = @('compound')
 
-    $code = & $step.run
-    if ($code -ne 0) {
-        Write-Host ("[ship] {0} failed; retrying once..." -f $step.name) -ForegroundColor Yellow
+    foreach ($name in $sequentialBefore) {
+        $idx = [array]::IndexOf($Order, $name)
+        if ($idx -lt $fromIdx -or $idx -gt $toIdx) { continue }
+        $step = $steps[$idx]
+        Set-Phase -Agent $step.agent
+        Write-Host ""; Write-Host ("==== [ship] sequential: {0} ====" -f $name) -ForegroundColor Magenta
         $code = & $step.run
+        if ($code -ne 0 -or -not (& $step.gate)) { $failures.Add($name); break }
+        Write-Host ("[ship] {0} passed." -f $name) -ForegroundColor Green
     }
-    $passed = ($code -eq 0) -and (& $step.gate)
-    if (-not $passed) {
-        $failures.Add($step.name)
-        Write-Host ("[ship] {0} did not pass its gate. Stopping." -f $step.name) -ForegroundColor Red
-        break
+
+    if ($failures.Count -eq 0) {
+        $activeParallel = $parallelGroup | Where-Object {
+            $idx = [array]::IndexOf($Order, $_)
+            $idx -ge $fromIdx -and $idx -le $toIdx
+        }
+        if ($activeParallel.Count -gt 0) {
+            Write-Host ""; Write-Host ("==== [ship] parallel: {0} ====" -f ($activeParallel -join ', ')) -ForegroundColor Magenta
+            $jobs = @()
+            foreach ($name in $activeParallel) {
+                $idx = [array]::IndexOf($Order, $name)
+                $step = $steps[$idx]
+                $jobs += Start-ThreadJob -Name "ship-$name" -ScriptBlock {
+                    param($stepName, $issue, $skipScrub, $agentXCliPath, $cwd)
+                    Set-Location $cwd
+
+                    function Invoke-ShipAgentX {
+                        param([string[]]$Args)
+                        & pwsh -NoProfile -File $agentXCliPath @Args
+                        return $LASTEXITCODE
+                    }
+
+                    function Test-ShipReviewArtifact {
+                        param([int]$IssueNumber)
+                        $cands = @(
+                            Get-ChildItem -Path 'docs/artifacts/reviews' -Filter "*REVIEW*$IssueNumber*" -ErrorAction SilentlyContinue
+                        ) + @(
+                            Get-ChildItem -Path 'docs/artifacts/reviews' -Filter "REVIEW-$IssueNumber*" -ErrorAction SilentlyContinue
+                        )
+                        return (($cands | Sort-Object FullName -Unique).Count -gt 0)
+                    }
+
+                    switch ($stepName) {
+                        'review' {
+                            Write-Host "[ship] Review: looking for review artifact for issue #$issue" -ForegroundColor Cyan
+                            $gateOk = Test-ShipReviewArtifact -IssueNumber $issue
+                            $code = if ($gateOk) { 0 } else { Write-Host '  No review artifact under docs/artifacts/reviews/.' -ForegroundColor Yellow; 1 }
+                        }
+                        'scrub' {
+                            if ($skipScrub) { Write-Host '[ship] Scrub: -SkipScrub is deprecated and ignored; scrub is mandatory on every run' -ForegroundColor DarkYellow }
+                            Write-Host '[ship] Scrub: scanning workspace (mandatory deslop pass)' -ForegroundColor Cyan
+                            $scrubScript = Join-Path $cwd 'scripts/scrub.ps1'
+                            & pwsh -NoProfile -File $scrubScript -Path . -Quiet
+                            $code = $LASTEXITCODE
+                            $gateOk = ($code -eq 0)
+                        }
+                        'test' {
+                            Write-Host '[ship] Test: invoking tester agent gate (agent-browser is the default surface for UI-bearing changes; see browser-automation skill)' -ForegroundColor Cyan
+                            $code = Invoke-ShipAgentX -Args @('validate', [string]$issue, 'tester')
+                            $gateOk = ($code -eq 0)
+                        }
+                        default {
+                            $code = 1
+                            $gateOk = $false
+                        }
+                    }
+                    [PSCustomObject]@{ name = $stepName; code = $code; gateOk = $gateOk }
+                } -ArgumentList $name, $Issue, [bool]$SkipScrub, $AgentXCli, (Resolve-Path .).Path
+            }
+            $results = $jobs | Wait-Job | Receive-Job
+            $jobs | Remove-Job -Force
+            foreach ($r in $results) {
+                if ($r.code -ne 0 -or -not $r.gateOk) {
+                    $failures.Add($r.name)
+                    Write-Host ("[ship] {0} did not pass." -f $r.name) -ForegroundColor Red
+                } else {
+                    Write-Host ("[ship] {0} passed." -f $r.name) -ForegroundColor Green
+                }
+            }
+        }
     }
-    Write-Host ("[ship] {0} passed gate." -f $step.name) -ForegroundColor Green
+
+    if ($failures.Count -eq 0) {
+        foreach ($name in $sequentialAfter) {
+            $idx = [array]::IndexOf($Order, $name)
+            if ($idx -lt $fromIdx -or $idx -gt $toIdx) { continue }
+            $step = $steps[$idx]
+            Set-Phase -Agent $step.agent
+            Write-Host ""; Write-Host ("==== [ship] sequential: {0} ====" -f $name) -ForegroundColor Magenta
+            $code = & $step.run
+            if ($code -ne 0 -or -not (& $step.gate)) { $failures.Add($name); break }
+            Write-Host ("[ship] {0} passed." -f $name) -ForegroundColor Green
+        }
+    }
+} else {
+    for ($i = $fromIdx; $i -le $toIdx; $i++) {
+        $step = $steps[$i]
+        # Scrub is mandatory on every run; -SkipScrub no longer skips it.
+
+        Set-Phase -Agent $step.agent
+        Write-Host ""; Write-Host ("==== [ship] step: {0} ====" -f $step.name) -ForegroundColor Magenta
+
+        $code = & $step.run
+        if ($code -ne 0) {
+            Write-Host ("[ship] {0} failed; retrying once..." -f $step.name) -ForegroundColor Yellow
+            $code = & $step.run
+        }
+        $passed = ($code -eq 0) -and (& $step.gate)
+        if (-not $passed) {
+            $failures.Add($step.name)
+            Write-Host ("[ship] {0} did not pass its gate. Stopping." -f $step.name) -ForegroundColor Red
+            break
+        }
+        Write-Host ("[ship] {0} passed gate." -f $step.name) -ForegroundColor Green
+    }
 }
 
 if ($failures.Count -gt 0) {

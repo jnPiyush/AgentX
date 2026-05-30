@@ -1,0 +1,42 @@
+{
+  "parallel_id": "parallel-20260530-143425404-f2e322",
+  "title": "Bounded parallel delivery",
+  "priority": "p1",
+  "mode": "opt-in",
+  "parent_context": {
+    "issue_number": 1,
+    "issue_title": "Merge all branches into unified repository",
+    "plan_reference": "",
+    "thread_id": "",
+    "source": "explicit-issue"
+  },
+  "assessment": {
+    "scope_independence": "independent",
+    "dependency_coupling": "low",
+    "artifact_overlap": "low",
+    "review_complexity": "bounded",
+    "recovery_complexity": "recoverable",
+    "decision": "eligible",
+    "required_review_level": "tightened"
+  },
+  "units": [],
+  "reconciliation": {
+    "state": "pending",
+    "overlap_review": "pending",
+    "conflict_review": "pending",
+    "acceptance_evidence": "pending",
+    "owner_approval": "pending",
+    "follow_up_disposition": "none",
+    "follow_up_references": [],
+    "final_decision": "blocked"
+  },
+  "created_at": "2026-05-30T14:34:25.429Z",
+  "updated_at": "2026-05-30T14:34:25.430Z",
+  "parent_summary": {
+    "unit_count": 0,
+    "blocked_count": 0,
+    "ready_for_reconciliation_count": 0,
+    "summary_state": "assessed",
+    "closeout_ready": false
+  }
+}

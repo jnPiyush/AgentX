@@ -55,7 +55,7 @@ $Script:RunnerConfig = @{}
 $Script:DEFAULT_SESSION_SUMMARY_MAX_CHARS = 1600
 $Script:RESEARCH_FIRST_MIN_STEPS = 2
 $Script:DEFAULT_COMPLEX_SELF_REVIEW_MIN_ITERATIONS = 5
-$Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS = 3
+$Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS = 5
 
 # Self-review & clarification defaults (configurable per invocation)
 $Script:SELF_REVIEW_MAX_ITERATIONS = 15
@@ -903,18 +903,6 @@ function Get-EffectiveLoopMinIterationCount {
         $maxIterations = 0
     }
 
-    if (($State.PSObject.Properties.Name -contains 'minIterations') -and $State.minIterations) {
-        $minIterations = 0
-        try {
-            $minIterations = [int]$State.minIterations
-            if ($minIterations -gt 0) {
-                return [Math]::Min($minIterations, $maxIterations)
-            }
-        } catch {
-            $minIterations = 0
-        }
-    }
-
     $taskClass = Get-LoopTaskClassFromState -State $State
     $defaultMin = if ($taskClass -eq 'complex-delivery') {
         $Script:DEFAULT_COMPLEX_SELF_REVIEW_MIN_ITERATIONS
@@ -922,7 +910,14 @@ function Get-EffectiveLoopMinIterationCount {
         $Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS
     }
 
-    return [Math]::Min($defaultMin, $maxIterations)
+    $storedMin = 0
+    if (($State.PSObject.Properties.Name -contains 'minIterations') -and $State.minIterations) {
+        try { $storedMin = [int]$State.minIterations } catch { $storedMin = 0 }
+    }
+
+    $effectiveMin = [Math]::Max($storedMin, $defaultMin)
+    if ($maxIterations -gt 0) { return [Math]::Min($effectiveMin, $maxIterations) }
+    return $effectiveMin
 }
 
 function Get-LoopTaskClassFromState {

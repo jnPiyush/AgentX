@@ -438,10 +438,10 @@ echo ""
 echo " Files copied  : $TOTAL_COPIED"
 echo -e " Files skipped : $TOTAL_SKIPPED ${GRAY}(already exist, use -f to overwrite)${NC}"
 echo ""
-echo " Agents        : 20 (13 external + 7 internal)"
-echo " Skills        : 64 across 10 categories"
+echo " Agents        : 24 (13 external + 11 internal)"
+echo " Skills        : 111 across 12 categories"
 echo " Instructions  : 7 (auto-applied by file pattern)"
-echo " Prompts       : 12 reusable templates"
+echo " Prompts       : 21 reusable templates"
 if [ "$INCLUDE_CLI" = true ]; then
   echo " CLI utilities : 4 wrappers (.agentx/) + bundled runtime (.github/agentx/.agentx)"
 fi

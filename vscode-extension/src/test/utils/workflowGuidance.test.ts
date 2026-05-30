@@ -51,14 +51,16 @@ describe('workflow guidance utility', () => {
       active: false,
       status: 'complete',
       prompt: 'done',
-      iteration: 3,
-      minIterations: 3,
+      iteration: 5,
+      minIterations: 5,
       maxIterations: 10,
       completionCriteria: 'TASK_COMPLETE',
       issueNumber: 219,
       startedAt: isoMinutesAgo(30),
       lastIterationAt: isoMinutesAgo(5),
-      history: [],
+      history: [
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass' },
+      ],
     }));
     writeFile(tmpDir, 'docs/execution/plans/ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md', '# Plan\n');
     writeFile(tmpDir, 'docs/execution/progress/ROLLOUT-SCORECARD-IMPLEMENTATION-PROGRESS.md', '# Progress\n');

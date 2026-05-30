@@ -18,7 +18,7 @@ Before editing any agent definition, prompt, workflow, or LLM-integration file, 
 Four additional rules carry the same weight as the Quality Loop and are hard-failed by the pre-commit hook:
 
 - **Compound Capture**: APPROVED review staged -> matching `docs/artifacts/learnings/LEARNING-<issue>.md` MUST also be staged, or commit msg tagged `[skip-capture]`.
-- **Model Council**: New `docs/artifacts/adr/ADR-*.md` staged -> matching `docs/artifacts/adr/COUNCIL-*.md` MUST also be staged (3 diverse models + Synthesis), or commit msg tagged `[skip-council]`. Required for PM (prd-scope), Architect (adr-options), Data Scientist (ai-design), Reviewer (code-review), Consulting Research.
+- **Model Council (MANDATORY, NO SKIP)**: New `docs/artifacts/adr/ADR-*.md` staged -> matching `docs/artifacts/adr/COUNCIL-*.md` MUST also be staged (3 diverse models + Synthesis). Mandatory for Product Manager (prd-scope), Architect (adr-options), and any complex task; also Data Scientist (ai-design), Reviewer (code-review), Consulting Research. The pre-commit hook hard-fails when the COUNCIL file is missing; there is no skip token.
 - **Execution Plan**: Commits changing >= 8 code files MUST stage a matching `docs/execution/plans/EXEC-PLAN-*.md`, or commit msg tagged `[skip-plan]`.
 - **Brainstorm (Engineer)**: `Research -> Brainstorm -> Plan -> ...` pipeline is mandatory; Brainstorm step is satisfied by a `brainstorm` ledger entry or `## Alternatives Considered` in the execution plan **before** Plan.
 

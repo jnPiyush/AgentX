@@ -131,13 +131,43 @@ function Resolve-Sessions {
     param([int]$Max)
     # Read session summaries from memories/session/
     $sessionDir = Join-Path $script:ROOT 'memories' 'session'
-    if (-not (Test-Path $sessionDir)) { return @() }
-    $files = Get-ChildItem -Path $sessionDir -Filter '*.md' -ErrorAction SilentlyContinue |
-             Sort-Object LastWriteTime -Descending |
-             Select-Object -First $Max
     $result = @()
-    foreach ($f in $files) {
-        $result += @{ file = $f.FullName; content = (Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue) }
+    if (Test-Path $sessionDir) {
+        $files = Get-ChildItem -Path $sessionDir -Filter '*.md' -ErrorAction SilentlyContinue |
+                 Sort-Object LastWriteTime -Descending |
+                 Select-Object -First $Max
+        foreach ($f in $files) {
+            $result += @{ file = $f.FullName; content = (Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue) }
+        }
+    }
+
+    # Also harvest observer signals (.agentx/signals/sessions.jsonl)
+    # See .github/hooks/scripts/signal-capture.js for writer
+    $signalFile = Join-Path $script:ROOT '.agentx/signals/sessions.jsonl'
+    if (Test-Path $signalFile) {
+        try {
+            $lines = Get-Content $signalFile -Tail ([Math]::Max(50, $Max * 10)) -ErrorAction SilentlyContinue
+            $bullets = New-Object 'System.Collections.Generic.List[string]'
+            foreach ($line in $lines) {
+                if (-not $line) { continue }
+                try {
+                    $j = $line | ConvertFrom-Json -ErrorAction Stop
+                    $event = if ($j.event) { $j.event } else { 'signal' }
+                    $detail = if ($j.prompt) { $j.prompt }
+                              elseif ($j.tool) { "tool=$($j.tool)" }
+                              elseif ($j.error) { "error: $($j.error)" }
+                              else { ($j | ConvertTo-Json -Compress -Depth 2) }
+                    if ($detail.Length -gt 200) { $detail = $detail.Substring(0,200) + '...' }
+                    $bullets.Add("- [signal:$event] $detail") | Out-Null
+                } catch { }
+            }
+            if ($bullets.Count -gt 0) {
+                $result += @{
+                    file    = $signalFile
+                    content = "# Observer signals (last $($bullets.Count) entries)`n`n" + ($bullets -join "`n")
+                }
+            }
+        } catch { }
     }
     return $result
 }
