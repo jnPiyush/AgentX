@@ -170,7 +170,7 @@ Each `.github/agents/*.agent.md` keeps ONLY:
    unique to that role.
 4. A pointer: "Cross-cutting rules (loop minimums, subagent review, per-iteration
    reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are
-   defined once in [.github/AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md)."
+   defined once in [.github/AGENT-PROTOCOL.md](AGENT-PROTOCOL.md)."
 
 Agents MUST NOT restate the full cross-cutting prose. Keeping the front-loaded
 stubs (1 and 2) in body prose is required because models routinely skip rules that
