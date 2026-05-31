@@ -266,10 +266,10 @@ function ConvertTo-StringArray($value) {
         }
 
         return @(
-            $trimmed -split '[,;\r\n]+'
-            | ForEach-Object { $_.Trim() }
-            | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-            | Select-Object -Unique
+            ($trimmed -split '[,;\r\n]+') |
+                ForEach-Object { $_.Trim() } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                Select-Object -Unique
         )
     }
 
@@ -329,11 +329,11 @@ function Get-HarnessDisabledChecks($cfg, [string[]]$overrides = @()) {
     }
 
     return @(
-        $rawValues
-        | ForEach-Object { ([string]$_).Trim().ToLowerInvariant() }
-        | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-        | Select-Object -Unique
-        | Sort-Object
+        $rawValues |
+            ForEach-Object { ([string]$_).Trim().ToLowerInvariant() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            Select-Object -Unique |
+            Sort-Object
     )
 }
 
@@ -5035,9 +5035,9 @@ function Get-HarnessMarkdownFiles([string]$dirPath, [string]$prefix) {
     if (-not (Test-Path $dirPath)) { return @() }
 
     return @(
-        Get-ChildItem -Path $dirPath -Filter '*.md' -File -ErrorAction SilentlyContinue
-        | Sort-Object Name
-        | ForEach-Object { "$prefix/$($_.Name)" }
+        Get-ChildItem -Path $dirPath -Filter '*.md' -File -ErrorAction SilentlyContinue |
+            Sort-Object Name |
+            ForEach-Object { "$prefix/$($_.Name)" }
     )
 }
 

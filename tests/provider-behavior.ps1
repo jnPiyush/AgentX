@@ -22,6 +22,7 @@ function New-TestWorkspace([string]$name) {
     New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.agentx\local-issue-manager.ps1') (Join-Path $root '.agentx\local-issue-manager.ps1') -Force
     return $root
 }
 
@@ -55,6 +56,84 @@ function Invoke-AgentX([string]$root, [string[]]$arguments, [hashtable]$environm
     return [PSCustomObject]@{
         Output = ($stdout + $stderr)
         ExitCode = $process.ExitCode
+    }
+}
+
+function Invoke-AgentXWindowsPowerShell([string]$root, [string[]]$arguments, [hashtable]$environment = @{}) {
+    $powershellCommand = Get-Command powershell -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $powershellCommand) {
+        return [PSCustomObject]@{
+            Output = 'SKIP: Windows PowerShell is unavailable on this host.'
+            ExitCode = 0
+            Skipped = $true
+        }
+    }
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $powershellCommand.Source
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.UseShellExecute = $false
+    $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-ExecutionPolicy')
+    $startInfo.ArgumentList.Add('Bypass')
+    $startInfo.ArgumentList.Add('-File')
+    $startInfo.ArgumentList.Add((Join-Path $root '.agentx\agentx.ps1'))
+    foreach ($argument in $arguments) {
+        $startInfo.ArgumentList.Add($argument)
+    }
+    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
+    foreach ($entry in $environment.GetEnumerator()) {
+        $startInfo.Environment[$entry.Key] = [string]$entry.Value
+    }
+
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    $stdout = $process.StandardOutput.ReadToEnd()
+    $stderr = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+    return [PSCustomObject]@{
+        Output = ($stdout + $stderr)
+        ExitCode = $process.ExitCode
+        Skipped = $false
+    }
+}
+
+function Invoke-LocalIssueManagerWindowsPowerShell([string]$root, [string[]]$arguments, [hashtable]$environment = @{}) {
+    $powershellCommand = Get-Command powershell -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $powershellCommand) {
+        return [PSCustomObject]@{
+            Output = 'SKIP: Windows PowerShell is unavailable on this host.'
+            ExitCode = 0
+            Skipped = $true
+        }
+    }
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $powershellCommand.Source
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.UseShellExecute = $false
+    $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-ExecutionPolicy')
+    $startInfo.ArgumentList.Add('Bypass')
+    $startInfo.ArgumentList.Add('-File')
+    $startInfo.ArgumentList.Add((Join-Path $root '.agentx\local-issue-manager.ps1'))
+    foreach ($argument in $arguments) {
+        $startInfo.ArgumentList.Add($argument)
+    }
+    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
+    foreach ($entry in $environment.GetEnumerator()) {
+        $startInfo.Environment[$entry.Key] = [string]$entry.Value
+    }
+
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    $stdout = $process.StandardOutput.ReadToEnd()
+    $stderr = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+    return [PSCustomObject]@{
+        Output = ($stdout + $stderr)
+        ExitCode = $process.ExitCode
+        Skipped = $false
     }
 }
 
@@ -481,6 +560,7 @@ $inferredRoot = $null
 $remoteDetectedRoot = $null
 $workflowRoot = $null
 $workspaceOverrideRoot = $null
+$localIssueManagerOverrideRoot = $null
 
 try {
     $localRoot = New-TestWorkspace 'local'
@@ -513,6 +593,28 @@ try {
     $localIssue = Get-Content $issueFile -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($close.ExitCode -eq 0) 'Local issue close exits successfully'
     Assert-True ($localIssue.state -eq 'closed' -and $localIssue.status -eq 'Done') 'Local issue close updates state and status'
+
+    $localIssueManagerOverrideRoot = New-TestWorkspace 'local-issue-manager-override'
+    New-Item -ItemType Directory -Path (Join-Path $localIssueManagerOverrideRoot '.agentx\issues') -Force | Out-Null
+    Write-Utf8File (Join-Path $localIssueManagerOverrideRoot '.agentx\config.json') (@{
+        provider = 'local'
+        mode = 'local'
+        created = '2026-03-08T00:00:00Z'
+        enforceIssues = $false
+        nextIssueNumber = 9
+    } | ConvertTo-Json -Depth 5)
+
+    $localIssueManagerCreate = Invoke-LocalIssueManagerWindowsPowerShell $localRoot @('-Action', 'create', '-Title', '[Story] Local Wrapper', '-Body', 'Wrapper body', '-Labels', 'type:story') @{ AGENTX_WORKSPACE_ROOT = $localIssueManagerOverrideRoot }
+    if ($localIssueManagerCreate.Skipped) {
+        Assert-True $true 'Windows PowerShell local-issue-manager handoff test skipped because powershell.exe is unavailable'
+    } else {
+        $localWrapperIssue = Get-Content (Join-Path $localRoot '.agentx\issues\2.json') -Raw | ConvertFrom-Json -Depth 10
+        $overrideIssueFiles = @(Get-ChildItem (Join-Path $localIssueManagerOverrideRoot '.agentx\issues') -Filter '*.json' -ErrorAction SilentlyContinue)
+        Assert-True ($localIssueManagerCreate.ExitCode -eq 0) 'Local issue manager exits successfully when invoked from Windows PowerShell'
+        Assert-True ($localWrapperIssue.title -eq '[Story] Local Wrapper') 'Local issue manager writes issues to its own workspace root even when AGENTX_WORKSPACE_ROOT is overridden'
+        Assert-True (@($overrideIssueFiles).Count -eq 0) 'Local issue manager does not mutate foreign issue storage from leaked environment overrides'
+        Assert-True ($localIssueManagerCreate.Output -notmatch 'requires PowerShell 7') 'Local issue manager does not surface the CLI PowerShell 7 requires error under Windows PowerShell'
+    }
 
     $localBacklogRoot = New-TestWorkspace 'local-backlog'
     New-Item -ItemType Directory -Path (Join-Path $localBacklogRoot 'backlog\tasks') -Force | Out-Null
@@ -616,6 +718,15 @@ task_prefix: 'task'
     Assert-True ($loopStart.ExitCode -eq 0) 'Workspace launcher loop start exits successfully even when AGENTX_WORKSPACE_ROOT points elsewhere'
     Assert-True ($workflowLoopState.active -and $workflowLoopState.prompt -eq 'Local launcher loop') 'Workspace launcher writes loop state to its own workspace root'
     Assert-True ($overrideLoopState.active -and $overrideLoopState.prompt -eq 'Foreign active loop') 'Workspace launcher does not mutate foreign loop state from leaked environment overrides'
+
+    $windowsLoopStatus = Invoke-AgentXWindowsPowerShell $workflowRoot @('loop', 'status')
+    if ($windowsLoopStatus.Skipped) {
+        Assert-True $true 'Windows PowerShell launcher handoff test skipped because powershell.exe is unavailable'
+    } else {
+        Assert-True ($windowsLoopStatus.ExitCode -eq 0) 'Workspace launcher loop status exits successfully when invoked from Windows PowerShell'
+        Assert-True ($windowsLoopStatus.Output -match 'Iterative Loop Status') 'Windows PowerShell launcher handoff reaches the CLI status output'
+        Assert-True ($windowsLoopStatus.Output -notmatch 'requires PowerShell 7') 'Windows PowerShell launcher handoff does not surface the CLI PowerShell 7 requires error'
+    }
 
     $loopBaseline = Invoke-AgentX $workflowRoot @('loop', 'baseline', '--count', '5')
     $baselineState = Get-Content (Join-Path $workflowRoot '.agentx\state\tests-baseline.json') -Raw | ConvertFrom-Json -Depth 10
@@ -932,6 +1043,7 @@ finally {
     Remove-TestWorkspace $remoteDetectedRoot
     Remove-TestWorkspace $workflowRoot
     Remove-TestWorkspace $workspaceOverrideRoot
+    Remove-TestWorkspace $localIssueManagerOverrideRoot
 }
 
 Write-Host ''

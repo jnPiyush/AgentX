@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.61"><img src="https://img.shields.io/badge/Version-8.4.61-0EA5E9?style=for-the-badge" alt="Version 8.4.61"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.62"><img src="https://img.shields.io/badge/Version-8.4.62-0EA5E9?style=for-the-badge" alt="Version 8.4.62"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -36,7 +36,7 @@ AgentX acts as an autonomous orchestrator, routing tasks to **24 specialized age
 
 ## Domain Skills Library
 
-AgentX is powered by a rich knowledge layer of **111 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
+AgentX is powered by a rich knowledge layer of **127 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
 
 | Category | Example Skills | Purpose |
 |:---------|:---------------|:--------|
@@ -132,7 +132,7 @@ flowchart LR
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
 - **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 111 skills, 24 agents, 7 instructions, 15 templates, 21 prompts -- all Markdown-defined
+- **Knowledge Layer:** 127 skills, 24 agents, 7 instructions, 15 templates, 21 prompts -- all Markdown-defined
 - **Control Layer:** Execution plans, repo-local state, automated validation gates
 
 ---
@@ -299,7 +299,7 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.61
+## New In 8.4.62
 
 - Power Platform Builder pack (`packs/agentx-power-platform-builder/`) now spans Tier-1 through Tier-3: a `low-code-builder` specialist agent plus 12 low-code skills covering Dataverse schema, canvas + model-driven apps, Power Automate (cloud + desktop/RPA), Power Pages, PCF controls, Dataverse plugins, security roles, environment variables, **Copilot Studio agents**, and the `pac` CLI -- emits unpacked solution source ready for `pac solution pack` + `pac solution import`
 - New `convert-slides` plugin (`.agentx/plugins/convert-slides/`) renders slide-ready Markdown storyboards into Microsoft PowerPoint (`.pptx`) via Pandoc, with PowerShell and Bash entry points and registry integration alongside the existing `convert-docs` plugin
