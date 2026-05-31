@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "AgentX - Multi-Agent Orchestration",
   "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
-  "version": "8.4.60",
+  "version": "8.4.61",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -989,6 +989,45 @@
       },
       {
         "path": "./.github/agentx/skills/languages/sql-server/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/canvas-app-yaml/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/copilot-studio-agents/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/dataverse-plugins/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/dataverse-schema/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/environment-variables/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/model-driven-app/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/pac-cli/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/pcf-controls/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/power-automate-desktop/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/power-automate-flow-json/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/power-pages/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/security-roles/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/low-code/solution-anatomy/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/operations/github-actions-workflows/SKILL.md"
