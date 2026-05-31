@@ -5,7 +5,7 @@ metadata:
   author: "AgentX"
   version: "1.0.0"
   created: "2026-05-17"
-  updated: "2026-05-17"
+  updated: "2026-05-30"
 compatibility:
   frameworks: ["agentx", "copilot", "claude-code"]
 ---
@@ -109,7 +109,7 @@ If the parent rejects the answer or asks a follow-up, the subagent does NOT re-r
 ## Budget Rules
 
 - **Turn budget**: parent SHOULD set a max turn count when delegating. Default 6.
-- **Read budget**: subagent MUST stop reading and synthesize when it has used 70% of its read budget. The last 30% is reserved for one requery if needed.
+- **Read budget**: subagent MUST stop reading and synthesize when it has used 70% of its read budget. The last 30% is reserved for one requery if needed. This reserve applies to read size (bytes/KB), not to the turn count.
 - **Citation budget**: target 1 citation per significant claim. If a claim has no citation, drop the claim or mark it `unverified`.
 
 ## Parent Agent Contract
