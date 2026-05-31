@@ -19,6 +19,12 @@ interface CheckContext {
  readonly handoffReason: string;
  readonly harnessThreadCount: number;
  readonly harnessEvidenceCount: number;
+ readonly harnessEvidenceClassCount: number;
+ readonly latestStopGatePassed: boolean;
+ readonly contextBudgetHealthy: boolean;
+ readonly noteCount: number;
+ readonly checkpointCount: number;
+ readonly teamTaskCount: number;
  readonly coveragePercent: number;
  readonly loopHistoryCount: number;
 }
@@ -92,6 +98,12 @@ function buildObservations(
  input: HarnessEvaluationInput,
  harnessThreadCount: number,
  harnessEvidenceCount: number,
+ harnessEvidenceClassCount: number,
+ latestStopGatePassed: boolean,
+ contextBudgetHealthy: boolean,
+ noteCount: number,
+ checkpointCount: number,
+ teamTaskCount: number,
  loopHistoryCount: number,
 ): {
  readonly observations: ReadonlyArray<ArtifactObservation>;
@@ -154,6 +166,60 @@ function buildObservations(
    detail: harnessEvidenceCount > 0
     ? `${formatCount('evidence item', harnessEvidenceCount)} recorded in harness state`
     : 'No captured evidence recorded',
+  },
+  {
+   id: 'evidence-classes',
+   label: 'Evidence classes',
+   mode: harnessEvidenceClassCount >= 3 ? 'observed' : 'inferred',
+   present: harnessEvidenceClassCount >= 3,
+   detail: harnessEvidenceClassCount >= 3
+    ? `${formatCount('evidence class', harnessEvidenceClassCount)} represented`
+    : `${formatCount('evidence class', harnessEvidenceClassCount)} represented; implementation, verification, and review are the minimum`,
+  },
+  {
+   id: 'stop-gate',
+   label: 'Stop gate',
+   mode: latestStopGatePassed ? 'observed' : 'inferred',
+   present: latestStopGatePassed,
+   detail: latestStopGatePassed
+    ? 'Latest deterministic stop gate passed'
+    : 'No passing stop gate recorded',
+  },
+  {
+   id: 'context-budget',
+   label: 'Context budget',
+   mode: contextBudgetHealthy ? 'observed' : 'inferred',
+   present: contextBudgetHealthy,
+   detail: contextBudgetHealthy
+    ? 'Latest context budget snapshot is within the configured limit'
+    : 'No healthy context budget snapshot recorded',
+  },
+  {
+   id: 'working-notes',
+   label: 'Working notes',
+   mode: noteCount > 0 ? 'observed' : 'inferred',
+   present: noteCount > 0,
+   detail: noteCount > 0
+    ? `${formatCount('note', noteCount)} recorded for long-horizon continuity`
+    : 'No working notes recorded',
+  },
+  {
+   id: 'checkpoints',
+   label: 'Checkpoints',
+   mode: checkpointCount > 0 ? 'observed' : 'inferred',
+   present: checkpointCount > 0,
+   detail: checkpointCount > 0
+    ? `${formatCount('checkpoint', checkpointCount)} available for rewind/recovery`
+    : 'No checkpoint snapshot recorded',
+  },
+  {
+   id: 'agent-team-tasks',
+   label: 'Agent team tasks',
+   mode: teamTaskCount > 0 ? 'observed' : 'inferred',
+   present: teamTaskCount > 0,
+   detail: teamTaskCount > 0
+    ? `${formatCount('team task', teamTaskCount)} recorded for coordinated work`
+    : 'No agent-team task records found',
   },
   {
    id: 'loop-history',
@@ -238,6 +304,8 @@ function buildWorkflowChecks(context: CheckContext): ReadonlyArray<EvaluationChe
 
 function buildEvidenceChecks(context: CheckContext): ReadonlyArray<EvaluationCheckResult> {
  const coverageScore = context.coveragePercent >= 67 ? 30 : context.coveragePercent >= 34 ? 15 : 0;
+ const classScore = context.harnessEvidenceClassCount >= 3 ? 20 : context.harnessEvidenceClassCount >= 2 ? 10 : 0;
+ const runtimeScore = context.latestStopGatePassed ? 20 : 0;
 
  return [
   {
@@ -254,13 +322,39 @@ function buildEvidenceChecks(context: CheckContext): ReadonlyArray<EvaluationChe
     : 'Harness state has no recorded evidence',
   },
   {
+   id: 'evidence-class-breadth',
+   dimension: 'evidenceStrength',
+   pillar: 'evidence',
+   label: 'Evidence classes cover the work',
+   passed: context.harnessEvidenceClassCount >= 3,
+   score: classScore,
+   maxScore: 20,
+   attribution: context.harnessEvidenceClassCount >= 3 ? 'clear' : 'harness',
+   summary: context.harnessEvidenceClassCount >= 3
+    ? 'Implementation, verification, and review evidence are represented'
+    : `${context.harnessEvidenceClassCount}/3 minimum evidence classes are represented`,
+  },
+  {
+   id: 'stop-gate-passed',
+   dimension: 'evidenceStrength',
+   pillar: 'execution',
+   label: 'Deterministic stop gate passed',
+   passed: context.latestStopGatePassed,
+   score: runtimeScore,
+   maxScore: 20,
+   attribution: context.latestStopGatePassed ? 'clear' : 'policy',
+   summary: context.latestStopGatePassed
+    ? 'Latest stop gate allows completion'
+    : 'No passing stop gate supports completion yet',
+  },
+  {
    id: 'observation-coverage',
    dimension: 'evidenceStrength',
    pillar: 'evidence',
    label: 'Observed artifact coverage',
    passed: context.coveragePercent >= 67,
-   score: coverageScore,
-   maxScore: 30,
+   score: Math.round(coverageScore * 0.67),
+   maxScore: 20,
    attribution: context.coveragePercent >= 67 ? 'clear' : 'harness',
    summary: context.coveragePercent >= 67
     ? `${context.coveragePercent}% of tracked artifacts were observed directly`
@@ -272,8 +366,8 @@ function buildEvidenceChecks(context: CheckContext): ReadonlyArray<EvaluationChe
    pillar: 'evidence',
    label: 'Loop history recorded',
    passed: context.loopHistoryCount > 0,
-   score: context.loopHistoryCount > 0 ? 30 : 0,
-   maxScore: 30,
+   score: context.loopHistoryCount > 0 ? 20 : 0,
+   maxScore: 20,
    attribution: context.loopHistoryCount > 0 ? 'clear' : 'harness',
    summary: context.loopHistoryCount > 0
     ? `${formatCount('iteration entry', context.loopHistoryCount)} recorded in loop history`
@@ -290,6 +384,7 @@ function buildConfidenceChecks(
  const workflowAlignmentScore = workflowScore.percent >= 75 ? 35 : workflowScore.percent >= 50 ? 20 : 0;
  const evidenceAlignmentScore = evidenceScore.percent >= 70 ? 35 : evidenceScore.percent >= 40 ? 20 : 0;
  const coverageAlignmentScore = context.coveragePercent >= 67 ? 30 : context.coveragePercent >= 34 ? 15 : 0;
+ const runtimeReadinessScore = context.latestStopGatePassed && context.contextBudgetHealthy ? 20 : 0;
 
  return [
   {
@@ -324,12 +419,25 @@ function buildConfidenceChecks(
    pillar: 'evidence',
    label: 'Observed coverage supports confidence',
    passed: context.coveragePercent >= 67,
-   score: coverageAlignmentScore,
-   maxScore: 30,
+   score: Math.round(coverageAlignmentScore * 0.67),
+   maxScore: 20,
    attribution: context.coveragePercent >= 67 ? 'clear' : 'harness',
    summary: context.coveragePercent >= 67
     ? `${context.coveragePercent}% observed coverage supports the reported state`
     : `${context.coveragePercent}% observed coverage is too low for high confidence`,
+  },
+  {
+   id: 'runtime-readiness-supports-confidence',
+   dimension: 'outputConfidence',
+   pillar: 'execution',
+   label: 'Runtime readiness supports confidence',
+   passed: context.latestStopGatePassed && context.contextBudgetHealthy,
+   score: runtimeReadinessScore,
+   maxScore: 20,
+   attribution: context.latestStopGatePassed && context.contextBudgetHealthy ? 'clear' : 'harness',
+   summary: context.latestStopGatePassed && context.contextBudgetHealthy
+    ? 'Stop-gate and context-budget signals are both healthy'
+    : 'Runtime readiness is missing a passing stop gate or healthy context budget',
   },
  ];
 }
@@ -357,10 +465,21 @@ export function evaluateHarnessQualityFromInput(
  const harnessState = readHarnessState(input.root);
  const loopState = readLoopState(input.root);
  const loopHistoryCount = loopState?.history.length ?? 0;
+ const evidenceClassCount = new Set(
+  harnessState.evidence.map((entry) => entry.evidenceClass).filter(Boolean),
+ ).size;
+ const latestStopGate = [...harnessState.stopGates].reverse()[0];
+ const latestContextBudget = [...harnessState.contextBudgets].reverse()[0];
  const { observations, progressFiles } = buildObservations(
   input,
   harnessState.threads.length,
   harnessState.evidence.length,
+  evidenceClassCount,
+  latestStopGate?.status === 'passed',
+  !!latestContextBudget && latestContextBudget.percentUsed <= 80,
+  harnessState.notes.length,
+  harnessState.checkpoints.length,
+  harnessState.teamTasks.length,
   loopHistoryCount,
  );
  const policy = readHarnessPolicy(input.root);
@@ -380,6 +499,12 @@ export function evaluateHarnessQualityFromInput(
   handoffReason: handoff.reason,
   harnessThreadCount: harnessState.threads.length,
   harnessEvidenceCount: harnessState.evidence.length,
+  harnessEvidenceClassCount: evidenceClassCount,
+  latestStopGatePassed: latestStopGate?.status === 'passed',
+  contextBudgetHealthy: !!latestContextBudget && latestContextBudget.percentUsed <= 80,
+  noteCount: harnessState.notes.length,
+  checkpointCount: harnessState.checkpoints.length,
+  teamTaskCount: harnessState.teamTasks.length,
   coveragePercent: coverage.percent,
   loopHistoryCount,
  };

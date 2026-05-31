@@ -5,15 +5,22 @@ import * as path from 'path';
 import {
   addHarnessContractFinding,
   completeHarnessThread,
+  createHarnessCheckpoint,
+  evaluateHarnessStopGate,
   findDefaultExecutionPlanPath,
   getActiveHarnessContract,
   getHarnessContractFindings,
   getHarnessStatusDisplay,
   readHarnessState,
+  recordHarnessContextBudget,
+  recordHarnessEvidence,
   recordHarnessIteration,
+  recordHarnessPermission,
   recordHarnessStatusCheck,
   setHarnessContractState,
   startHarnessThread,
+  upsertHarnessNote,
+  upsertHarnessTeamTask,
 } from '../../utils/harnessState';
 
 function makeWorkspace(): string {
@@ -38,6 +45,12 @@ describe('harnessState', () => {
     assert.equal(state.version, 1);
     assert.equal(state.threads.length, 0);
     assert.equal(state.turns.length, 0);
+    assert.equal(state.stopGates.length, 0);
+    assert.equal(state.contextBudgets.length, 0);
+    assert.equal(state.notes.length, 0);
+    assert.equal(state.checkpoints.length, 0);
+    assert.equal(state.permissionRecords.length, 0);
+    assert.equal(state.teamTasks.length, 0);
   });
 
   it('finds a default execution plan under docs/plans', () => {
@@ -171,5 +184,105 @@ describe('harnessState', () => {
     assert.equal(findings.length, 1);
     assert.equal(findings[0].severity, 'high');
     assert.equal(findings[0].nextAction, 'Run the real-surface verification before advancing to review');
+  });
+
+  it('records typed evidence and passes a deterministic stop gate', () => {
+    startHarnessThread(wsRoot, {
+      taskType: 'story',
+      title: 'Implement runtime primitives',
+      prompt: 'Add production-grade evidence tracking',
+    });
+
+    recordHarnessEvidence(wsRoot, {
+      evidenceType: 'implementation',
+      summary: 'Implemented runtime primitives',
+      artifactPath: 'vscode-extension/src/utils/harnessStateEngine.ts',
+      status: 'pass',
+    });
+    recordHarnessEvidence(wsRoot, {
+      evidenceType: 'verification',
+      summary: 'Compile passed',
+      command: 'npm run compile',
+      exitCode: 0,
+      status: 'pass',
+    });
+    recordHarnessEvidence(wsRoot, {
+      evidenceType: 'review',
+      summary: 'Self-review found no high or medium issues',
+      status: 'pass',
+    });
+    recordHarnessContextBudget(wsRoot, { maxTokens: 1_000_000 });
+
+    const gate = evaluateHarnessStopGate(wsRoot, { maxContextPercent: 80 });
+    const state = readHarnessState(wsRoot);
+
+    assert.equal(gate.status, 'passed');
+    assert.equal(gate.blockers.length, 0);
+    assert.equal(state.evidence.filter((entry) => entry.evidenceClass).length, 3);
+    assert.equal(state.stopGates.length, 1);
+  });
+
+  it('blocks stop gates when required evidence is missing', () => {
+    startHarnessThread(wsRoot, {
+      taskType: 'story',
+      title: 'Implement runtime primitives',
+      prompt: 'Add production-grade evidence tracking',
+    });
+
+    recordHarnessEvidence(wsRoot, {
+      evidenceType: 'implementation',
+      summary: 'Implementation recorded',
+    });
+
+    const gate = evaluateHarnessStopGate(wsRoot);
+    assert.equal(gate.status, 'blocked');
+    assert.ok(gate.blockers.some((blocker) => blocker.includes('verification')));
+  });
+
+  it('records continuity notes, checkpoints, and coordinated team tasks', () => {
+    startHarnessThread(wsRoot, {
+      taskType: 'feature',
+      title: 'Coordinate harness team',
+      prompt: 'Track work across agents',
+    });
+
+    upsertHarnessNote(wsRoot, {
+      scope: 'active-slice',
+      content: 'Continue from the runtime evidence helpers.',
+    });
+    createHarnessCheckpoint(wsRoot, {
+      title: 'Runtime model ready',
+      summary: 'Types and engine helpers are available for evaluator wiring.',
+      filePaths: ['vscode-extension/src/utils/harnessStateEngine.ts'],
+      restoreHint: 'Run tests before extending UI surfaces.',
+    });
+    const task = upsertHarnessTeamTask(wsRoot, {
+      teamId: 'runtime-quality',
+      title: 'Wire evaluator checks',
+      assignee: 'Reviewer',
+      status: 'review',
+      scope: 'harness evaluator',
+    });
+    upsertHarnessTeamTask(wsRoot, {
+      ...task,
+      status: 'complete',
+      evidencePath: 'vscode-extension/src/eval/harnessEvaluatorInternals.ts',
+    });
+
+    const state = readHarnessState(wsRoot);
+    assert.equal(state.notes.length, 1);
+    assert.equal(state.checkpoints.length, 1);
+    assert.equal(state.teamTasks.length, 1);
+    assert.equal(state.teamTasks[0].status, 'complete');
+  });
+
+  it('classifies permission-sensitive commands before execution', () => {
+    const safe = recordHarnessPermission(wsRoot, { command: 'npm run compile' });
+    const publish = recordHarnessPermission(wsRoot, { command: 'vsce publish --packagePath agentx.vsix' });
+    const destructive = recordHarnessPermission(wsRoot, { command: 'git reset --hard HEAD' });
+
+    assert.equal(safe.decision, 'allow');
+    assert.equal(publish.decision, 'confirm');
+    assert.equal(destructive.decision, 'block');
   });
 });

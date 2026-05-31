@@ -18,6 +18,12 @@ export function createDefaultState(): HarnessState {
     evidence: [],
     contracts: [],
     contractFindings: [],
+    stopGates: [],
+    contextBudgets: [],
+    notes: [],
+    checkpoints: [],
+    permissionRecords: [],
+    teamTasks: [],
   };
 }
 

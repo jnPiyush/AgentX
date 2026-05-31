@@ -66,9 +66,68 @@ describe('harness evaluator', () => {
       evidence: [{
         id: 'evidence-1',
         threadId: 'thread-1',
-        evidenceType: 'completion',
-        summary: 'Completed evaluator',
+        evidenceType: 'implementation',
+        evidenceClass: 'implementation',
+        summary: 'Implemented evaluator',
         createdAt: recentTimestamp,
+      }, {
+        id: 'evidence-2',
+        threadId: 'thread-1',
+        evidenceType: 'verification',
+        evidenceClass: 'verification',
+        summary: 'Verified evaluator',
+        createdAt: recentTimestamp,
+      }, {
+        id: 'evidence-3',
+        threadId: 'thread-1',
+        evidenceType: 'review',
+        evidenceClass: 'review',
+        summary: 'Reviewed evaluator',
+        createdAt: recentTimestamp,
+      }],
+      stopGates: [{
+        id: 'stop-gate-1',
+        threadId: 'thread-1',
+        status: 'passed',
+        checks: [],
+        blockers: [],
+        createdAt: recentTimestamp,
+      }],
+      contextBudgets: [{
+        id: 'context-budget-1',
+        threadId: 'thread-1',
+        maxTokens: 200000,
+        estimatedTokens: 1000,
+        percentUsed: 1,
+        summary: 'Healthy budget',
+        createdAt: recentTimestamp,
+      }],
+      notes: [{
+        id: 'note-1',
+        threadId: 'thread-1',
+        scope: 'handoff',
+        content: 'Continue from compiled evaluator.',
+        createdAt: recentTimestamp,
+        updatedAt: recentTimestamp,
+      }],
+      checkpoints: [{
+        id: 'checkpoint-1',
+        threadId: 'thread-1',
+        title: 'Evaluator ready',
+        summary: 'Evaluator artifacts complete.',
+        filePaths: ['vscode-extension/src/eval/harnessEvaluatorInternals.ts'],
+        createdAt: recentTimestamp,
+      }],
+      permissionRecords: [],
+      teamTasks: [{
+        id: 'team-task-1',
+        teamId: 'eval-team',
+        title: 'Review evaluator',
+        assignee: 'Reviewer',
+        status: 'complete',
+        scope: 'harness evaluator',
+        createdAt: recentTimestamp,
+        updatedAt: recentTimestamp,
       }],
     }), 'utf-8');
 
@@ -80,7 +139,7 @@ describe('harness evaluator', () => {
     assert.equal(report?.scores.outputConfidence.percent, 100);
     assert.equal(report?.coverage.percent, 100);
     assert.equal(report?.dominantAttribution, 'clear');
-    assert.equal(report?.checks.filter((check) => check.passed).length, 10);
+    assert.equal(report?.checks.filter((check) => check.passed).length, 13);
   });
 
   it('should attribute missing artifacts to harness gaps', () => {
@@ -130,16 +189,75 @@ describe('harness evaluator', () => {
       evidence: [{
         id: 'evidence-1',
         threadId: 'thread-1',
-        evidenceType: 'completion',
-        summary: 'Completed evaluator',
+        evidenceType: 'implementation',
+        evidenceClass: 'implementation',
+        summary: 'Implemented evaluator',
         createdAt: recentTimestamp,
+      }, {
+        id: 'evidence-2',
+        threadId: 'thread-1',
+        evidenceType: 'verification',
+        evidenceClass: 'verification',
+        summary: 'Verified evaluator',
+        createdAt: recentTimestamp,
+      }, {
+        id: 'evidence-3',
+        threadId: 'thread-1',
+        evidenceType: 'review',
+        evidenceClass: 'review',
+        summary: 'Reviewed evaluator',
+        createdAt: recentTimestamp,
+      }],
+      stopGates: [{
+        id: 'stop-gate-1',
+        threadId: 'thread-1',
+        status: 'passed',
+        checks: [],
+        blockers: [],
+        createdAt: recentTimestamp,
+      }],
+      contextBudgets: [{
+        id: 'context-budget-1',
+        threadId: 'thread-1',
+        maxTokens: 200000,
+        estimatedTokens: 1000,
+        percentUsed: 1,
+        summary: 'Healthy budget',
+        createdAt: recentTimestamp,
+      }],
+      notes: [{
+        id: 'note-1',
+        threadId: 'thread-1',
+        scope: 'handoff',
+        content: 'Continue from compiled evaluator.',
+        createdAt: recentTimestamp,
+        updatedAt: recentTimestamp,
+      }],
+      checkpoints: [{
+        id: 'checkpoint-1',
+        threadId: 'thread-1',
+        title: 'Evaluator ready',
+        summary: 'Evaluator artifacts complete.',
+        filePaths: ['vscode-extension/src/eval/harnessEvaluatorInternals.ts'],
+        createdAt: recentTimestamp,
+      }],
+      permissionRecords: [],
+      teamTasks: [{
+        id: 'team-task-1',
+        teamId: 'eval-team',
+        title: 'Review evaluator',
+        assignee: 'Reviewer',
+        status: 'complete',
+        scope: 'harness evaluator',
+        createdAt: recentTimestamp,
+        updatedAt: recentTimestamp,
       }],
     }), 'utf-8');
 
     const report = evaluateHarnessQuality(createAgentxStub(root));
 
     assert.ok(report);
-    assert.equal(report?.checks.length, 8);
+    assert.equal(report?.checks.length, 11);
     assert.ok(report?.checks.every((check) => check.id !== 'execution-plan-present'));
     assert.ok(report?.checks.every((check) => check.id !== 'progress-log-present'));
     assert.equal(report?.scores.workflowCompliance.percent, 100);

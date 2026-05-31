@@ -14,17 +14,37 @@ import {
 } from './harnessStateInternals';
 import type {
  AddHarnessContractFindingOptions,
+ CreateHarnessCheckpointOptions,
  CompleteHarnessThreadOptions,
+ EvaluateHarnessStopGateOptions,
  HarnessContract,
  HarnessContractFinding,
+ HarnessContextBudgetSnapshot,
  HarnessEvidence,
+ HarnessEvidenceClass,
  HarnessItem,
+ HarnessPermissionRecord,
  HarnessState,
+ HarnessStopGate,
+ HarnessStopGateCheck,
+ HarnessTeamTask,
  HarnessThread,
  HarnessTurn,
+ RecordHarnessContextBudgetOptions,
+ RecordHarnessEvidenceOptions,
+ RecordHarnessPermissionOptions,
  SetHarnessContractStateOptions,
  StartHarnessThreadOptions,
+ UpsertHarnessNoteOptions,
+ UpsertHarnessTeamTaskOptions,
 } from './harnessStateTypes';
+
+const DEFAULT_CONTEXT_WINDOW_TOKENS = 200_000;
+const DEFAULT_STOP_GATE_CLASSES: readonly HarnessEvidenceClass[] = [
+ 'implementation',
+ 'verification',
+ 'review',
+];
 
 export function readHarnessState(workspaceRoot: string): HarnessState {
  const filePath = path.join(workspaceRoot, '.agentx', 'state', 'harness-state.json');
@@ -43,10 +63,63 @@ export function readHarnessState(workspaceRoot: string): HarnessState {
    evidence: parsed.evidence ?? [],
    contracts: parsed.contracts ?? [],
    contractFindings: parsed.contractFindings ?? [],
+  stopGates: parsed.stopGates ?? [],
+  contextBudgets: parsed.contextBudgets ?? [],
+  notes: parsed.notes ?? [],
+  checkpoints: parsed.checkpoints ?? [],
+  permissionRecords: parsed.permissionRecords ?? [],
+  teamTasks: parsed.teamTasks ?? [],
   };
  } catch {
   return createDefaultState();
  }
+}
+
+function getCurrentThreadAndTurn(state: HarnessState): {
+ readonly thread?: HarnessThread;
+ readonly turn?: HarnessTurn;
+} {
+ const thread = getActiveThread(state) ?? [...state.threads].reverse()[0];
+ const turn = thread ? getActiveTurn(state, thread.id) : undefined;
+ return { thread, turn };
+}
+
+function toEvidenceClass(type: RecordHarnessEvidenceOptions['evidenceType']): HarnessEvidenceClass | undefined {
+ if (type === 'implementation' || type === 'verification' || type === 'runtime' || type === 'security' || type === 'review') {
+  return type;
+ }
+ return undefined;
+}
+
+function estimateTokens(text: string): number {
+ return Math.ceil(text.length / 4);
+}
+
+function readLoopComplete(workspaceRoot: string): boolean {
+ const loopStatePath = path.join(workspaceRoot, '.agentx', 'state', 'loop-state.json');
+ try {
+  if (!fs.existsSync(loopStatePath)) {
+  return false;
+  }
+  const parsed = JSON.parse(fs.readFileSync(loopStatePath, 'utf-8')) as { active?: boolean; status?: string };
+  return parsed.active === false && parsed.status === 'complete';
+ } catch {
+  return false;
+ }
+}
+
+function classifyCommand(command: string): Pick<HarnessPermissionRecord, 'risk' | 'decision' | 'reason'> {
+ const normalized = command.trim().toLowerCase();
+ if (/\b(git\s+reset\s+--hard|git\s+push\s+--force|rm\s+-rf\s+\/|drop\s+database|drop\s+table|truncate\s+table)\b/.test(normalized)) {
+  return { risk: 'critical', decision: 'block', reason: 'Command matches a destructive operation.' };
+ }
+ if (/\b(vsce\s+publish|npm\s+publish|az\s+deployment|terraform\s+apply|kubectl\s+apply|docker\s+push)\b/.test(normalized)) {
+  return { risk: 'high', decision: 'confirm', reason: 'Command can publish, deploy, or mutate external infrastructure.' };
+ }
+ if (/\b(git\s+commit|git\s+push|npm\s+install|pnpm\s+install|yarn\s+install)\b/.test(normalized)) {
+  return { risk: 'medium', decision: 'confirm', reason: 'Command mutates repository or dependencies.' };
+ }
+ return { risk: 'low', decision: 'allow', reason: 'Command is not known to be destructive.' };
 }
 
 export function getActiveHarnessContract(workspaceRoot: string): HarnessContract | undefined {
@@ -403,6 +476,286 @@ export function addHarnessContractFinding(
  });
 
  return finding;
+}
+
+export function recordHarnessEvidence(
+ workspaceRoot: string,
+ options: RecordHarnessEvidenceOptions,
+): HarnessEvidence {
+ const state = readHarnessState(workspaceRoot);
+ const { thread, turn } = getCurrentThreadAndTurn(state);
+ const createdAt = nowIso();
+ const evidenceClass = options.evidenceClass ?? toEvidenceClass(options.evidenceType);
+ const evidence: HarnessEvidence = {
+  id: makeId('evidence', state.evidence.length),
+  threadId: thread?.id ?? 'workspace',
+  turnId: turn?.id,
+  evidenceType: options.evidenceType,
+  evidenceClass,
+  summary: options.summary,
+  artifactPath: options.artifactPath,
+  command: options.command,
+  exitCode: options.exitCode,
+  status: options.status,
+  metadata: options.metadata,
+  createdAt,
+ };
+
+ writeHarnessState(workspaceRoot, {
+  ...state,
+  evidence: [...state.evidence, evidence],
+  items: [
+   ...state.items,
+   {
+    id: makeId('item', state.items.length),
+    threadId: evidence.threadId,
+    turnId: evidence.turnId,
+    itemType: 'status',
+    summary: `Evidence recorded: ${options.summary}`,
+    createdAt,
+    metadata: {
+     evidenceClass: evidenceClass ?? null,
+     artifactPath: options.artifactPath ?? null,
+    },
+   },
+  ],
+ });
+
+ return evidence;
+}
+
+export function recordHarnessContextBudget(
+ workspaceRoot: string,
+ options: RecordHarnessContextBudgetOptions = {},
+): HarnessContextBudgetSnapshot {
+ const state = readHarnessState(workspaceRoot);
+ const { thread, turn } = getCurrentThreadAndTurn(state);
+ const maxTokens = options.maxTokens ?? DEFAULT_CONTEXT_WINDOW_TOKENS;
+ const estimatedTokens = estimateTokens(JSON.stringify(state));
+ const percentUsed = Math.min(100, Math.round((estimatedTokens / maxTokens) * 100));
+ const createdAt = nowIso();
+ const snapshot: HarnessContextBudgetSnapshot = {
+  id: makeId('context-budget', state.contextBudgets.length),
+  threadId: thread?.id,
+  turnId: turn?.id,
+  maxTokens,
+  estimatedTokens,
+  percentUsed,
+  summary: options.summary ?? `${percentUsed}% of ${maxTokens} token context budget estimated`,
+  createdAt,
+ };
+
+ writeHarnessState(workspaceRoot, {
+  ...state,
+  contextBudgets: [...state.contextBudgets, snapshot],
+  items: [
+   ...state.items,
+   {
+    id: makeId('item', state.items.length),
+    threadId: thread?.id ?? 'workspace',
+    turnId: turn?.id,
+    itemType: 'status',
+    summary: `Context budget: ${snapshot.summary}`,
+    createdAt,
+    metadata: { percentUsed, estimatedTokens, maxTokens },
+   },
+  ],
+ });
+
+ return snapshot;
+}
+
+export function evaluateHarnessStopGate(
+ workspaceRoot: string,
+ options: EvaluateHarnessStopGateOptions = {},
+): HarnessStopGate {
+ const state = readHarnessState(workspaceRoot);
+ const { thread, turn } = getCurrentThreadAndTurn(state);
+ const requiredClasses = options.requiredEvidenceClasses ?? DEFAULT_STOP_GATE_CLASSES;
+ const evidenceClasses = new Set(state.evidence.map((entry) => entry.evidenceClass).filter(Boolean));
+ const latestBudget = [...state.contextBudgets].reverse()[0];
+ const checks: HarnessStopGateCheck[] = [];
+
+ for (const requiredClass of requiredClasses) {
+  checks.push({
+   id: `evidence-${requiredClass}`,
+   label: `${requiredClass} evidence`,
+   passed: evidenceClasses.has(requiredClass),
+   summary: evidenceClasses.has(requiredClass)
+    ? `${requiredClass} evidence is recorded`
+    : `${requiredClass} evidence is missing`,
+  });
+ }
+
+ if (options.requireLoopComplete) {
+  const loopComplete = readLoopComplete(workspaceRoot);
+  checks.push({
+   id: 'loop-complete',
+   label: 'Loop complete',
+   passed: loopComplete,
+   summary: loopComplete ? 'Quality loop is complete' : 'Quality loop is not complete',
+  });
+ }
+
+ if (typeof options.maxContextPercent === 'number') {
+  checks.push({
+   id: 'context-budget',
+   label: 'Context budget',
+   passed: !!latestBudget && latestBudget.percentUsed <= options.maxContextPercent,
+   summary: latestBudget
+    ? `Context budget is ${latestBudget.percentUsed}% used`
+    : 'No context budget snapshot is recorded',
+  });
+ }
+
+ const blockers = checks.filter((check) => !check.passed).map((check) => check.summary);
+ const createdAt = nowIso();
+ const gate: HarnessStopGate = {
+  id: makeId('stop-gate', state.stopGates.length),
+  threadId: thread?.id,
+  turnId: turn?.id,
+  status: blockers.length === 0 ? 'passed' : 'blocked',
+  checks,
+  blockers,
+  createdAt,
+ };
+
+ writeHarnessState(workspaceRoot, {
+  ...state,
+  stopGates: [...state.stopGates, gate],
+  items: [
+   ...state.items,
+   {
+    id: makeId('item', state.items.length),
+    threadId: thread?.id ?? 'workspace',
+    turnId: turn?.id,
+    itemType: 'gate',
+    summary: `Stop gate ${gate.status}`,
+    createdAt,
+    metadata: { blockerCount: blockers.length },
+   },
+  ],
+ });
+
+ return gate;
+}
+
+export function upsertHarnessNote(workspaceRoot: string, options: UpsertHarnessNoteOptions): void {
+ const state = readHarnessState(workspaceRoot);
+ const { thread } = getCurrentThreadAndTurn(state);
+ const createdAt = nowIso();
+ const existing = state.notes.find((note) => note.threadId === thread?.id && note.scope === options.scope);
+ const note = existing
+  ? { ...existing, content: options.content, updatedAt: createdAt }
+  : {
+   id: makeId('note', state.notes.length),
+   threadId: thread?.id,
+   scope: options.scope,
+   content: options.content,
+   createdAt,
+   updatedAt: createdAt,
+  };
+
+ writeHarnessState(workspaceRoot, {
+  ...state,
+  notes: existing ? state.notes.map((candidate) => candidate.id === existing.id ? note : candidate) : [...state.notes, note],
+  items: [
+   ...state.items,
+   {
+    id: makeId('item', state.items.length),
+    threadId: thread?.id ?? 'workspace',
+    itemType: 'note',
+    summary: `Note updated: ${options.scope}`,
+    createdAt,
+   },
+  ],
+ });
+}
+
+export function createHarnessCheckpoint(
+ workspaceRoot: string,
+ options: CreateHarnessCheckpointOptions,
+): void {
+ const state = readHarnessState(workspaceRoot);
+ const { thread, turn } = getCurrentThreadAndTurn(state);
+ const createdAt = nowIso();
+ const checkpoint = {
+  id: makeId('checkpoint', state.checkpoints.length),
+  threadId: thread?.id,
+  turnId: turn?.id,
+  title: options.title,
+  summary: options.summary,
+  filePaths: options.filePaths,
+  restoreHint: options.restoreHint,
+  createdAt,
+ };
+
+ writeHarnessState(workspaceRoot, {
+  ...state,
+  checkpoints: [...state.checkpoints, checkpoint],
+  items: [
+   ...state.items,
+   {
+    id: makeId('item', state.items.length),
+    threadId: thread?.id ?? 'workspace',
+    turnId: turn?.id,
+    itemType: 'checkpoint',
+    summary: `Checkpoint created: ${options.title}`,
+    createdAt,
+   },
+  ],
+ });
+}
+
+export function recordHarnessPermission(
+ workspaceRoot: string,
+ options: RecordHarnessPermissionOptions,
+): HarnessPermissionRecord {
+ const state = readHarnessState(workspaceRoot);
+ const createdAt = nowIso();
+ const classification = classifyCommand(options.command);
+ const record: HarnessPermissionRecord = {
+  id: makeId('permission', state.permissionRecords.length),
+  command: options.command,
+  ...classification,
+  createdAt,
+ };
+
+ writeHarnessState(workspaceRoot, {
+  ...state,
+  permissionRecords: [...state.permissionRecords, record],
+ });
+
+ return record;
+}
+
+export function upsertHarnessTeamTask(
+ workspaceRoot: string,
+ options: UpsertHarnessTeamTaskOptions,
+): HarnessTeamTask {
+ const state = readHarnessState(workspaceRoot);
+ const createdAt = nowIso();
+ const existing = options.id ? state.teamTasks.find((task) => task.id === options.id) : undefined;
+ const task: HarnessTeamTask = existing
+  ? { ...existing, ...options, updatedAt: createdAt }
+  : {
+   id: options.id ?? makeId('team-task', state.teamTasks.length),
+   teamId: options.teamId,
+   title: options.title,
+   assignee: options.assignee,
+   status: options.status,
+   scope: options.scope,
+   evidencePath: options.evidencePath,
+   createdAt,
+   updatedAt: createdAt,
+  };
+
+ writeHarnessState(workspaceRoot, {
+  ...state,
+  teamTasks: existing ? state.teamTasks.map((candidate) => candidate.id === existing.id ? task : candidate) : [...state.teamTasks, task],
+ });
+
+ return task;
 }
 
 export function completeHarnessThread(
