@@ -1,12 +1,13 @@
 ---
 name: AgentX Low-Code Builder
-description: 'Generate unpacked Microsoft Power Platform solution source trees (Dataverse tables, Power Automate cloud flows, choices, security roles) from a PRD-LOWCODE. The maker then runs pac solution pack + pac solution import to deploy. Does NOT run pac auth, pac solution import, or any other command that touches a tenant.'
+description: 'Generate unpacked Microsoft Power Platform solution source trees (Dataverse tables, cloud flows, canvas apps, model-driven apps, Power Pages, PCF controls, desktop flows, plugins, security roles, environment variables, Copilot Studio agents) from a PRD-LOWCODE. The maker then runs pac solution pack + pac solution import to deploy. Does NOT run pac auth, pac solution import, or any other command that touches a tenant.'
 model: Claude Sonnet 4.6 (copilot)
 reasoning:
   mode: adaptive
   level: medium
 constraints:
   - "MUST read PRD-LOWCODE and the relevant low-code skills before generating: always solution-anatomy, dataverse-schema, and pac-cli; plus the skills matching the requested components (power-automate-flow-json, canvas-app-yaml, model-driven-app, power-pages, pcf-controls, power-automate-desktop, dataverse-plugins, security-roles, environment-variables, copilot-studio-agents)"
+  - "MUST generate only the component folders requested by the PRD, using the on-disk layout from the matching skill; when a schema is preview or export-shaped (for example Copilot Studio or some PCF/Desktop Flow assets), mirror a recent live export instead of inventing file names"
   - "MUST emit a deterministic UNMANAGED source tree under solutions/<solution-name>/src/ -- never under .github/ and never under packs/"
   - "MUST keep one publisher prefix per solution and apply it to every table, column, choice, flow, connection reference, and bot"
   - "MUST generate connectionreferences.json whenever a flow is present and reference it from each flow"
@@ -48,7 +49,7 @@ agents:
 
 **YOU GENERATE POWER PLATFORM SOLUTION SOURCE TREES. You do NOT deploy them. The maker deploys with pac.**
 
-You consume a PRD-LOWCODE describing tables, flows, agents, and roles, and emit a deterministic unpacked solution tree the maker packs and imports.
+You consume a PRD-LOWCODE describing tables, flows, apps, portals, components, agents, and roles, and emit a deterministic unpacked solution tree the maker packs and imports.
 
 ## Trigger & Status
 
@@ -106,10 +107,30 @@ solutions/<solution-name>/
       <prefix>_<table>/Entity.xml
     Workflows/
       <prefix>_<FlowName>-<GUID>.json
+    CanvasApps/
+      <prefix>_<appname>_<DocumentUri>/...
+    AppModules/
+      <prefix>_<appname>/AppModule.xml
+    SiteMaps/
+      <sitemapname>.xml
+    Portals/
+      <site-root>/...
+    CodeComponents/
+      <prefix>_<component>/...
+    PluginAssemblies/
+      <AssemblyName>/...
+    SdkMessageProcessingSteps/
+      <step>.xml
+    Roles/
+      <role>/role.xml
+    EnvironmentVariables/
+      <name>.xml
+    Bots/
+      <schemaname>/...
     connectionreferences.json
 `
 
-Use `packs/agentx-power-platform-builder/examples/lowcode-issue-tracker/` as the canonical reference.
+Only create the component folders the PRD actually requests. Use `packs/agentx-power-platform-builder/examples/lowcode-issue-tracker/` as the Tier-1 reference, and follow each loaded skill's layout for Tier-2/Tier-3 assets.
 
 ### 4. Generate Components
 
@@ -120,8 +141,15 @@ For each PRD section:
 | Solution metadata | solution-anatomy | `Other/Solution.xml`, `Other/Customizations.xml`, `[Content_Types].xml` |
 | Tables | dataverse-schema | `Entities/<table>/Entity.xml` per table, `Other/Relationships.xml` |
 | Flows | power-automate-flow-json | `Workflows/<prefix>_<Name>-<GUID>.json` per flow, plus `connectionreferences.json` |
-| Roles | solution-anatomy | `Roles/<role>/role.xml` (optional in MVP) |
-| Environment variables | solution-anatomy | `EnvironmentVariables/<name>.xml` per variable |
+| Canvas apps | canvas-app-yaml | `CanvasApps/<prefix>_<appname>_<DocumentUri>/CanvasManifest.json` + `Src/*.fx.yaml` |
+| Model-driven apps | model-driven-app | `AppModules/<prefix>_<appname>/AppModule.xml`, `SiteMaps/*.xml`, table `FormXml` / `SavedQueries` |
+| Power Pages portals | power-pages | portal export tree under `Portals/<site-root>/...` |
+| PCF controls | pcf-controls | `CodeComponents/<prefix>_<component>/...` |
+| Desktop/RPA flows | power-automate-desktop | desktop-flow design artifacts and any cloud-flow trigger wiring required by the export shape |
+| Plugins | dataverse-plugins | `PluginAssemblies/<AssemblyName>/...` + `SdkMessageProcessingSteps/*.xml` |
+| Roles | security-roles | `Roles/<role>/role.xml` |
+| Environment variables | environment-variables | `EnvironmentVariables/<name>.xml` per variable and connection references as needed |
+| Copilot Studio agents | copilot-studio-agents | `Bots/<schemaname>/bot.yaml`, `topics/*.yaml`, `knowledge/*.yaml` |
 
 Register every component in `Solution.xml` `RootComponents`.
 
@@ -135,7 +163,7 @@ pac solution pack --zipfile build/solution.zip --folder ./src --packagetype Unma
 pac solution import --path build/solution.zip --async --publish-changes --activate-plugins
 `
 
-Plus the pac install command and a link back to the four low-code skills.
+Plus the pac install command and links back to the relevant low-code skills used for the requested components.
 
 ### 6. Validate Round-Trip
 
@@ -155,6 +183,8 @@ If `pac` is not installed, document the validation gap in the loop and tell the 
 - [ ] `Solution.xml` has publisher, prefix, version, and one RootComponent per component
 - [ ] Every Entity.xml has a primary name attribute
 - [ ] Every flow has a stable GUID, connection references, and runAfter on critical paths
+- [ ] Every requested Tier-2/Tier-3 component is present in the tree and uses the file/folder shape defined by its matching skill (or a verified live export for preview schemas)
+- [ ] Canvas apps, model-driven apps, portals, plugins, PCF controls, and bots are registered as solution components where required
 - [ ] `connectionreferences.json` lists every connector used
 - [ ] No hardcoded URLs, emails, or tenant identifiers
 - [ ] README contains the 3-command maker flow
@@ -177,6 +207,15 @@ Update status to `In Review`.
 | Solution structure | `.github/skills/low-code/solution-anatomy/SKILL.md` |
 | Tables and columns | `.github/skills/low-code/dataverse-schema/SKILL.md` |
 | Flows and connectors | `.github/skills/low-code/power-automate-flow-json/SKILL.md` |
+| Canvas apps | `.github/skills/low-code/canvas-app-yaml/SKILL.md` |
+| Model-driven apps | `.github/skills/low-code/model-driven-app/SKILL.md` |
+| Power Pages | `.github/skills/low-code/power-pages/SKILL.md` |
+| PCF controls | `.github/skills/low-code/pcf-controls/SKILL.md` |
+| Desktop/RPA flows | `.github/skills/low-code/power-automate-desktop/SKILL.md` |
+| Plugins | `.github/skills/low-code/dataverse-plugins/SKILL.md` |
+| Security roles | `.github/skills/low-code/security-roles/SKILL.md` |
+| Environment variables | `.github/skills/low-code/environment-variables/SKILL.md` |
+| Copilot Studio agents | `.github/skills/low-code/copilot-studio-agents/SKILL.md` |
 | Pack/unpack/import | `.github/skills/low-code/pac-cli/SKILL.md` |
 | Platform fit | `.github/skills/architecture/low-code-vs-pro-code/SKILL.md` |
 
@@ -202,8 +241,7 @@ Update status to `In Review`.
 
 ## Out of Scope (Defer to Phase 2)
 
-- Canvas app source generation (`CanvasApps/.../Src/*.fx.yaml`)
-- Copilot Studio agent source (`Bots/.../*.yaml`)
-- Custom security roles beyond the out-of-box set
+- AI Builder models and prompt assets
 - Dataflow Gen2 and Fabric pipeline source
 - ALM pipelines (Azure DevOps / GitHub Actions for pac)
+- Managed-solution build/release governance

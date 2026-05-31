@@ -1,6 +1,6 @@
 # AgentX Power Platform Builder Pack
 
-Pack that lets AgentX generate **unpacked Microsoft Power Platform solution source trees** from a PRD-LOWCODE. The maker then runs `pac solution pack` and `pac solution import` to deploy into a Dataverse environment. Coverage spans Tier-1 (data + flows), Tier-2 (apps, RPA, portals, PCF, plugins, security, ALM), and Tier-3 (Copilot Studio agents).
+Pack that lets AgentX generate **unpacked Microsoft Power Platform solution source trees** from a PRD-LOWCODE. The maker then runs `pac solution pack` and `pac solution import` to deploy into a Dataverse environment. Coverage spans Tier-1 (data + flows), Tier-2 (apps, RPA, portals, PCF, plugins, security, environment variables), and Tier-3 (Copilot Studio agents).
 
 ## What This Pack Contains
 
