@@ -1,5 +1,5 @@
 ---
-description: 'Compressed skill index for AI agents. 111 skills across 12 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 114 skills across 13 categories. Load max 3-4 per task.'
 ---
 
 # Production Code Skills Index
@@ -12,7 +12,7 @@ description: 'Compressed skill index for AI agents. 111 skills across 12 categor
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 111 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 114 skills. Use Quick Reference below.
 
 ---
 
@@ -69,6 +69,9 @@ description: 'Compressed skill index for AI agents. 111 skills across 12 categor
 | **Data Analysis** | [Data Analysis](.github/skills/data/data-analysis/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Cosmos DB / Graph (Gremlin)** | [Cosmos DB](.github/skills/data/cosmos-db/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Azure](.github/skills/infrastructure/azure/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md) |
 | **Power BI Report / Dashboard** | [Power BI](.github/skills/data/powerbi/SKILL.md), [Fabric Analytics](.github/skills/data/fabric-analytics/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
+| **PDF Processing (extract / merge / generate / OCR)** | [PDF](.github/skills/document/pdf/SKILL.md), [Data Analysis](.github/skills/data/data-analysis/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md) |
+| **Word Documents (.docx) (read / generate / template)** | [DOCX](.github/skills/document/docx/SKILL.md), [Documentation](.github/skills/development/documentation/SKILL.md), [Content Design](.github/skills/design/content-design/SKILL.md) |
+| **PowerPoint (.pptx) (decks from data / extract notes)** | [PPTX](.github/skills/document/pptx/SKILL.md), [Data Analysis](.github/skills/data/data-analysis/SKILL.md), [Design System Reasoning](.github/skills/design/design-system-reasoning/SKILL.md) |
 | **C / Systems Programming** | [C](.github/skills/languages/c/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **C++ / Native Applications** | [C++](.github/skills/languages/cpp/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md), [Code Review](.github/skills/development/code-review/SKILL.md) |
 | **UX/UI Design** | [Design System Reasoning](.github/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](.github/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](.github/skills/design/prototype-craft/SKILL.md), [Frontend/UI](.github/skills/design/frontend-ui/SKILL.md) |
@@ -95,7 +98,7 @@ description: 'Compressed skill index for AI agents. 111 skills across 12 categor
 
 ---
 
-## Skills Directory (94 skills -- pipe-delimited)
+## Skills Directory (97 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -155,6 +158,9 @@ data|fabric-forecast|.github/skills/data/fabric-forecasting/SKILL.md|time-series
 data|databricks|.github/skills/data/databricks/SKILL.md|Unity-Catalog,Delta-Lake,DLT,MLflow,Photon,DAB,AutoLoader,Spark,medallion,Vector-Search
 data|powerbi|.github/skills/data/powerbi/SKILL.md|Power-BI,DAX,semantic-model,star-schema,DirectLake,Power-Query,M,RLS,PBIP,report,dashboard
 data|cosmos-db|.github/skills/data/cosmos-db/SKILL.md|Cosmos-DB,Gremlin,Graph,NoSQL,partition-key,RU,RBAC,change-feed,TTL
+document|pdf|.github/skills/document/pdf/SKILL.md|PDF,pypdf,pdfplumber,reportlab,qpdf,poppler,OCR,merge,split,forms,encrypt,watermark
+document|docx|.github/skills/document/docx/SKILL.md|Word,docx,python-docx,docxtpl,mammoth,pandoc,tables,styles,headers,template
+document|pptx|.github/skills/document/pptx/SKILL.md|PowerPoint,pptx,python-pptx,pandoc,slides,charts,layouts,placeholders,speaker-notes
 ai|ai-agent-dev|.github/skills/ai-systems/ai-agent-development/SKILL.md|Foundry,Agent-Framework,tracing
 ai|langgraph|.github/skills/ai-systems/langgraph/SKILL.md|LangGraph,stateful-agents,durable-execution,interrupts,subgraphs,LangSmith
 ai|foundry-sdk|.github/skills/ai-systems/foundry-sdk/SKILL.md|Foundry-SDK,azure-ai-projects,AIProjectClient,agents,evals,datasets,indexes
@@ -325,5 +331,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 111 skills (arch:6, dev:22, lang:10, ops:5, infra:4, data:7, ai:30, design:12, test:6, domain:7, product:1, diagrams:1)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 114 skills (arch:6, dev:22, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:12, test:6, domain:7, product:1, diagrams:1)
 
