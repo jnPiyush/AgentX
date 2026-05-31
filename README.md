@@ -46,6 +46,7 @@ AgentX is powered by a rich knowledge layer of **111 production skills** distrib
 | **Languages & UI** | `c`, `cpp`, `react` | Native systems work, application stacks, and frontend visuals |
 | **Ops & Infra** | `github-actions`, `terraform`, `azure` | CI/CD pipelines, containerization, and IaC |
 | **Data & Testing** | `databricks`, `fabric-analytics`, `e2e-testing` | Analytics pipelines, AI data platforms, and verification |
+| **Low-Code (Power Platform)** | `dataverse-schema`, `canvas-app-yaml`, `power-automate-flow-json`, `copilot-studio-agents`, `pac-cli` | Generate unpacked Power Platform solution source -- Dataverse tables, Power Apps (canvas + model-driven), Power Automate (cloud + desktop/RPA), Power Pages, PCF controls, Dataverse plugins, security roles, environment variables, and Copilot Studio agents -- ready for `pac solution pack` and import |
 
 ---
 
@@ -300,6 +301,7 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ## New In 8.4.61
 
+- Power Platform Builder pack (`packs/agentx-power-platform-builder/`) now spans Tier-1 through Tier-3: a `low-code-builder` specialist agent plus 12 low-code skills covering Dataverse schema, canvas + model-driven apps, Power Automate (cloud + desktop/RPA), Power Pages, PCF controls, Dataverse plugins, security roles, environment variables, **Copilot Studio agents**, and the `pac` CLI -- emits unpacked solution source ready for `pac solution pack` + `pac solution import`
 - New `convert-slides` plugin (`.agentx/plugins/convert-slides/`) renders slide-ready Markdown storyboards into Microsoft PowerPoint (`.pptx`) via Pandoc, with PowerShell and Bash entry points and registry integration alongside the existing `convert-docs` plugin
 - AgentX Auto agent gains a new `Plugins (Optional Capabilities)` section documenting both `convert-docs` (MD->DOCX) and `convert-slides` (MD->PPTX) with trigger conditions, entry paths, and invocation rules (PATH precheck, no shell concatenation, regenerate-from-Markdown discipline)
 - Consulting Research agent replaces its absolute "do not generate `.pptx`" rule with a Markdown-first plugin-bridge workflow: storyboard Markdown remains the source of truth and is rendered via `convert-slides` only when the user explicitly asks for a deck file
@@ -314,6 +316,7 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 - `.github/skills/` - Reusable implementation knowledge
 - `vscode-extension/` - VS Code extension source
 - `.agentx/` - workspace launchers and local workflow state
+- `packs/` - optional capability bundles (e.g. [Power Platform Builder Pack](packs/agentx-power-platform-builder/README.md) -- low-code-builder agent + 12 Power Platform / Copilot Studio skills)
 
 ## Read More
 
