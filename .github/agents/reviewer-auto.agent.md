@@ -2,6 +2,8 @@
 name: AgentX Auto-Fix Reviewer
 description: 'Review code AND auto-apply safe fixes (formatting, imports, naming, null checks, docs). Suggest complex changes for human approval.'
 model: GPT-5.4 (copilot)
+user-invocable: true
+disable-model-invocation: true
 reasoning:
   mode: adaptive
   level: high
@@ -41,6 +43,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX Engineer
 ---

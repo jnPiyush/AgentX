@@ -1,7 +1,10 @@
 ---
+name: AgentX Functional Reviewer
 description: 'Pre-PR branch diff analysis for functional correctness. Evaluates logic, edge cases, error handling, concurrency, and contract compliance.'
 visibility: internal
+user-invocable: false
 model: GPT-5.4 (copilot)
+disable-model-invocation: true
 reasoning:
   level: medium
 constraints:

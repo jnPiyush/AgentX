@@ -1,7 +1,10 @@
 ---
+name: AgentX GitHub Ops
 description: 'Orchestrate GitHub Issues and Pull Requests. Triage, discover, plan sprints, execute work items, and manage backlog operations.'
 visibility: internal
+user-invocable: false
 model: GPT-5.4 (copilot)
+disable-model-invocation: true
 reasoning:
   level: low
 constraints:
@@ -38,6 +41,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX
 ---

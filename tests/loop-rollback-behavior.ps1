@@ -105,7 +105,8 @@ Assert-Equal $gx.Count 5 'agent-x guidance has 5 entries'
 Assert-Match $gx[4].gate 'rollback' 'agent-x iter 5 gate references rollback'
 
 $gs = @(Get-LoopIterationGuidance 'standard')
-Assert-Equal $gs.Count 0 'standard guidance returns empty array'
+Assert-Equal $gs.Count 5 'standard guidance has 5 entries'
+Assert-Match $gs[4].focus 'Subagent Review' 'standard iter 5 focus references subagent review'
 
 # ---------------------------------------------------------------------------
 # 5. loop rollback - happy path via CLI (requires a live active loop state)

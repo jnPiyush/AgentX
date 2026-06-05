@@ -124,6 +124,7 @@ Assert-FileExists "tests/bounded-parallel-behavior.ps1" "Bounded parallel behavi
 Assert-FileExists "tests/harness-audit-behavior.ps1" "Harness audit behavior test script"
 Assert-FileExists "tests/agentic-runner-behavior.ps1" "Agentic runner behavior test script"
 Assert-FileExists "tests/sprint-discover-behavior.ps1" "Sprint/discover behavior test script"
+Assert-FileExists "tests/loop-parity-behavior.ps1" "Loop parity behavior test script"
 
 $providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -163,6 +164,12 @@ if ($LASTEXITCODE -ne 0) {
  Write-Host $sprintDiscoverBehaviorResult
 }
 Assert-True ($LASTEXITCODE -eq 0) "Sprint/discover CLI behavior tests pass"
+
+$loopParityBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/loop-parity-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $loopParityBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Loop parity behavior tests pass"
 
 # --- 6. Skills --------------------------------------------------------------------------
 Write-Host ""

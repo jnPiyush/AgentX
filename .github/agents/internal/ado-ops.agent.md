@@ -1,6 +1,8 @@
 ---
+name: AgentX ADO Ops
 description: 'ADO Backlog Manager -- orchestrates Azure DevOps backlog management workflows including triage, discovery, sprint planning, execution, PRD planning, and pull requests.'
 visibility: internal
+user-invocable: false
 model: GPT-5.4 (copilot)
 reasoning:
   level: low

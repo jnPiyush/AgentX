@@ -2,6 +2,7 @@
 name: AgentX DevOps Engineer
 description: 'Create and manage CI/CD pipelines, GitHub Actions workflows, deployment automation, and release pipelines.'
 model: Claude Sonnet 4.6 (copilot)
+user-invocable: true
 reasoning:
   level: medium
 constraints:
@@ -41,6 +42,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX Engineer
   - AgentX Ops Monitor

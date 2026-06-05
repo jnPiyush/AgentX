@@ -2,6 +2,7 @@
 name: AgentX Architect
 description: 'AI-first system architecture -- evaluate GenAI/Agentic AI solutions as the default lens, create ADRs with 3+ evaluated options, and technical specifications with diagrams -- NO CODE EXAMPLES.'
 model: Claude Opus 4.7 (copilot)
+user-invocable: true
 reasoning:
   level: high
 constraints:
@@ -47,6 +48,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX Product Manager
   - AgentX Data Scientist

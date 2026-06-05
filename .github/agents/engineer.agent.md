@@ -2,6 +2,7 @@
 name: AgentX Engineer
 description: 'Implement features, fix bugs, and write tests through Compound Engineering -- a structured pipeline of Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Review, with gate-checked phase transitions, full artifact chain consumption, mandatory Karpathy guidelines, and a minimum 5-iteration quality loop.'
 model: Claude Sonnet 4.6 (copilot)
+user-invocable: true
 reasoning:
   level: medium
 constraints:
@@ -47,6 +48,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX Architect
   - AgentX UX Designer

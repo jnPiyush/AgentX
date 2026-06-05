@@ -66,6 +66,40 @@ function Get-Frontmatter([string]$FilePath) {
  return $null
 }
 
+function Get-FrontmatterText([string]$FilePath) {
+ $content = Get-Content $FilePath -Raw
+ if ($content -match '(?s)^---\s*\n(.*?)\n---') {
+ return $Matches[1]
+ }
+ return $null
+}
+
+function Get-YamlListItems([string]$Yaml, [string]$Key) {
+ $items = @()
+ if (-not $Yaml) { return $items }
+
+ $lines = @($Yaml -split "`n")
+ for ($i = 0; $i -lt $lines.Count; $i++) {
+ $line = $lines[$i].TrimEnd("`r")
+ if ($line -match "^$([regex]::Escape($Key)):\s*(.*)$") {
+ $inline = $Matches[1].Trim()
+ if ($inline -eq '[]') { return $items }
+
+ for ($j = $i + 1; $j -lt $lines.Count; $j++) {
+ $next = $lines[$j].TrimEnd("`r")
+ # Stop at the next key (a non-indented line that is not itself a list
+ # item). Column-0 block sequences ('- item' at the margin) are still
+ # part of this list and must not terminate it.
+ if ($next -match '^\S' -and $next -notmatch '^-\s') { break }
+ if ($next -match '^\s*-\s*(.+)$') { $items += $Matches[1].Trim().Trim("'").Trim('"') }
+ }
+ return $items
+ }
+ }
+
+ return $items
+}
+
 function Test-InstructionFile([string]$FilePath) {
  $name = Split-Path $FilePath -Leaf
  $fm = Get-Frontmatter $FilePath
@@ -122,6 +156,68 @@ function Test-AgentFile([string]$FilePath) {
  Write-Fail "$name : name too short (min 2 chars). FIX: Use a descriptive display name like 'name: Engineer' or remove the field entirely (filename is used by default)."
  } elseif ($fm.ContainsKey("name")) {
  Write-Pass "$name : name OK ($($fm['name']))"
+ }
+}
+
+function Test-AgentWindowContract([string]$FilePath) {
+ $name = Split-Path $FilePath -Leaf
+ $fm = Get-Frontmatter $FilePath
+ $yaml = Get-FrontmatterText $FilePath
+
+ if (-not $fm) { return }
+
+ $isInternal = $FilePath -match '[\\/]internal[\\/]' -or $fm['visibility'] -eq 'internal'
+ $isAutoFixReviewer = $name -eq 'reviewer-auto.agent.md'
+ $userInvocable = $fm['user-invocable']
+ $disableModelInvocation = $fm['disable-model-invocation']
+ $tools = @(Get-YamlListItems -Yaml $yaml -Key 'tools')
+ $agents = @(Get-YamlListItems -Yaml $yaml -Key 'agents')
+
+ if (-not $fm['name']) {
+ Write-Fail "$name : Missing required Agents Window field 'name'. FIX: Add a human-readable 'name:' field to the YAML frontmatter."
+ }
+
+ if (-not $userInvocable) {
+ Write-Fail "$name : Missing required Agents Window field 'user-invocable'. FIX: Use 'true' for visible agents and 'false' for internal sub-agents."
+ } elseif ($isInternal -and $userInvocable -ne 'false') {
+ Write-Fail "$name : Internal agent must declare user-invocable: false."
+ } elseif (-not $isInternal -and $userInvocable -ne 'true') {
+ Write-Fail "$name : Visible agent must declare user-invocable: true."
+ } else {
+ Write-Pass "$name : user-invocable OK ($userInvocable)"
+ }
+
+ if (($isInternal -or $isAutoFixReviewer) -and $disableModelInvocation -ne 'true') {
+ Write-Fail "$name : Must declare disable-model-invocation: true for internal agents and Auto-Fix Reviewer."
+ } elseif ($isInternal -or $isAutoFixReviewer) {
+ Write-Pass "$name : disable-model-invocation OK"
+ }
+
+ if ($agents.Count -gt 0 -and $tools -notcontains 'agent') {
+ Write-Fail "$name : Agents Window coordinator with non-empty agents list must include 'agent' in tools."
+ } elseif ($agents.Count -gt 0) {
+ Write-Pass "$name : agent tool OK for $($agents.Count) delegated agent(s)"
+ }
+}
+
+function Test-HookBundle([string]$RootPath) {
+ $hooksDir = Join-Path $RootPath '.agentx/hooks'
+ $events = @('session-start', 'pre-tool', 'post-tool', 'session-end')
+
+ foreach ($event in $events) {
+ $ps1 = Join-Path $hooksDir "$event.ps1"
+ $sh = Join-Path $hooksDir "$event.sh"
+ if (-not (Test-Path $ps1)) {
+ Write-Fail "hooks/$event.ps1 : Missing required Agents Window hook pair file."
+ } else {
+ Write-Pass "hooks/$event.ps1 : present"
+ }
+
+ if (-not (Test-Path $sh)) {
+ Write-Fail "hooks/$event.sh : Missing required Agents Window hook pair file."
+ } else {
+ Write-Pass "hooks/$event.sh : present"
+ }
  }
 }
 
@@ -213,9 +309,14 @@ if (Test-Path $copilotInstructions) { Test-InstructionFile $copilotInstructions 
 Write-Host ""
 Write-Host " Agents:" -ForegroundColor White
 $agents = Get-ChildItem -Path "$Path/.github/agents" -Filter "*.agent.md" -ErrorAction SilentlyContinue
-foreach ($f in $agents) { Test-AgentFile $f.FullName }
+foreach ($f in $agents) { Test-AgentFile $f.FullName; Test-AgentWindowContract $f.FullName }
 $internalAgents = Get-ChildItem -Path "$Path/.github/agents/internal" -Filter "*.agent.md" -ErrorAction SilentlyContinue
-foreach ($f in $internalAgents) { Test-AgentFile $f.FullName }
+foreach ($f in $internalAgents) { Test-AgentFile $f.FullName; Test-AgentWindowContract $f.FullName }
+
+# Agents Window hooks
+Write-Host ""
+Write-Host " Agents Window Hooks:" -ForegroundColor White
+Test-HookBundle $Path
 
 # Prompts
 Write-Host ""

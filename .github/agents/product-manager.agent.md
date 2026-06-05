@@ -2,6 +2,7 @@
 name: AgentX Product Manager
 description: 'Define product vision, create PRD, break Epics into Features and Stories with acceptance criteria.'
 model: Claude Opus 4.7 (copilot)
+user-invocable: true
 reasoning:
   level: high
 constraints:
@@ -43,6 +44,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX Architect
   - AgentX GitHub Ops

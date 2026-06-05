@@ -5,8 +5,30 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$workspaceRoot = Split-Path $PSScriptRoot -Parent
+
 function Get-ChangedFiles {
     param([string]$Base)
+
+    $isGitWorkspace = @(git -C $workspaceRoot rev-parse --is-inside-work-tree 2>$null)
+    if ($isGitWorkspace.Count -eq 0 -or [string]$isGitWorkspace[0] -ne 'true') { return @() }
+
+    $gitTopLevel = @(git -C $workspaceRoot rev-parse --show-toplevel 2>$null)
+    if ($gitTopLevel.Count -eq 0) { return @() }
+    $resolvedWorkspaceRoot = [System.IO.Path]::GetFullPath($workspaceRoot).TrimEnd('\', '/')
+    $resolvedGitTopLevel = [System.IO.Path]::GetFullPath([string]$gitTopLevel[0]).TrimEnd('\', '/')
+    if (-not $resolvedWorkspaceRoot.Equals($resolvedGitTopLevel, [System.StringComparison]::OrdinalIgnoreCase)) { return @() }
+
+    function Add-UntrackedFiles {
+        param([string[]]$Files)
+
+        $untracked = @(git -C $workspaceRoot status --short 2>$null |
+            Where-Object { $_.StartsWith('?? ') } |
+            ForEach-Object { $_.Substring(3).Trim() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+        return @($Files + $untracked | Select-Object -Unique)
+    }
 
     $normalizedBase = $Base
     if (-not [string]::IsNullOrWhiteSpace($normalizedBase)) {
@@ -16,13 +38,15 @@ function Get-ChangedFiles {
 
     if (-not [string]::IsNullOrWhiteSpace($normalizedBase)) {
         $range = "origin/$normalizedBase..HEAD"
-        return @(git diff --name-only $range 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        $files = @(git -C $workspaceRoot diff --name-only $range 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        return Add-UntrackedFiles -Files $files
     }
 
-    $headRange = @(git diff --name-only HEAD~1..HEAD 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-    if ($headRange.Count -gt 0) { return $headRange }
+    $headRange = @(git -C $workspaceRoot diff --name-only HEAD~1..HEAD 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    if ($headRange.Count -gt 0) { return Add-UntrackedFiles -Files $headRange }
 
-    return @(git diff --name-only 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    $files = @(git -C $workspaceRoot diff --name-only 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    return Add-UntrackedFiles -Files $files
 }
 
 function Get-Domain {

@@ -2,6 +2,7 @@
 name: AgentX Tester
 description: 'Validate software quality through automated testing, performance testing, security testing, and production readiness certification.'
 model: GPT-5.4 (copilot)
+user-invocable: true
 reasoning:
   level: medium
 constraints:
@@ -41,6 +42,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX Engineer
   - AgentX GitHub Ops

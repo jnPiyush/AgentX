@@ -28,7 +28,7 @@
  },
  "chat.mcp.assisted.nuget.enabled": true,
  "chat.mcp.discovery.enabled": {
-    "claude-desktop": true
+   "claude-desktop": true
 },
  "chat.mcp.gallery.enabled": true,
  "chat.tools.terminal.autoReplyToPrompts": true,
@@ -36,6 +36,9 @@
  "chat.useNestedAgentsMdFiles": true,
  "chat.viewProgressBadge.enabled": true,
  "inlineChat.enableV2": true,
-"inlineChat.notebookAgent": true,
-"agentx.mode": "github"
+ "inlineChat.notebookAgent": true,
+ "agentx.mode": "github",
+ "extensions.supportAgentsWindow": {
+    "jnPiyush.agentx": true
+ }
 }

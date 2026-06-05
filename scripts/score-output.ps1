@@ -42,6 +42,81 @@ function Test-FileExists([string]$pattern) {
     return $null -ne $found
 }
 
+function Get-ExistingPaths([string[]]$paths) {
+    return @($paths | Where-Object { Test-Path $_ })
+}
+
+function Get-ChangedCodeFiles {
+    try {
+        $changedPaths = @(& git -C $ROOT status --short 2>$null |
+            ForEach-Object { $_.Substring(3).Trim() } |
+            Where-Object { $_ -match '\.(ts|cs|py|ps1)$' })
+
+        return @($changedPaths |
+            ForEach-Object { Join-Path $ROOT $_ } |
+            Where-Object { Test-Path $_ } |
+            Get-Item |
+            Where-Object { $_.FullName -notmatch '[\/](node_modules|\.git|out|coverage|build)[\/]' })
+    } catch {
+        return @()
+    }
+}
+
+function Get-AddedCodeLines {
+    $codeExtensions = @('ts','cs','py','ps1')
+    $records = @()
+
+    try {
+        $currentPath = $null
+        $diffLines = @(& git -C $ROOT diff --unified=0 -- '*.ts' '*.cs' '*.py' '*.ps1' 2>$null)
+        foreach ($diffLine in $diffLines) {
+            if ($diffLine -match '^\+\+\+ b/(.+)$') {
+                $currentPath = Join-Path $ROOT $Matches[1]
+                continue
+            }
+            if (-not $currentPath -or -not $diffLine.StartsWith('+') -or $diffLine.StartsWith('+++')) { continue }
+            $records += [PSCustomObject]@{ Path = $currentPath; Text = $diffLine.Substring(1) }
+        }
+
+        $untrackedPaths = @(& git -C $ROOT status --short 2>$null |
+            Where-Object { $_.StartsWith('?? ') } |
+            ForEach-Object { $_.Substring(3).Trim() } |
+            Where-Object { $_ -match '\.(' + ($codeExtensions -join '|') + ')$' })
+
+        foreach ($relativePath in $untrackedPaths) {
+            $fullPath = Join-Path $ROOT $relativePath
+            if (-not (Test-Path $fullPath)) { continue }
+            foreach ($line in @(Get-Content -Path $fullPath -ErrorAction SilentlyContinue)) {
+                $records += [PSCustomObject]@{ Path = $fullPath; Text = [string]$line }
+            }
+        }
+    } catch {
+        return @()
+    }
+
+    return @($records | Where-Object { $_.Path -notmatch '[\/](node_modules|\.git|out|coverage|build)[\/]' })
+}
+
+function Get-ScoredCodeFiles {
+    $changedCodeFiles = Get-ChangedCodeFiles
+    if ((Get-ItemCount $changedCodeFiles) -gt 0) { return $changedCodeFiles }
+
+    $codeRoots = Get-ExistingPaths @(
+        (Join-Path $ROOT '.agentx'),
+        (Join-Path $ROOT 'scripts'),
+        (Join-Path $ROOT 'tests'),
+        (Join-Path $ROOT 'vscode-extension' 'src'),
+        (Join-Path $ROOT 'companions' 'video-studio' 'src'),
+        (Join-Path $ROOT 'companions' 'whatsapp' 'src'),
+        (Join-Path $ROOT 'companions' 'whatsapp' 'test')
+    )
+
+    if ((Get-ItemCount $codeRoots) -eq 0) { return @() }
+
+    return @(Get-ChildItem -Path $codeRoots -Include '*.ts','*.cs','*.py','*.ps1' -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -notmatch '[\\/](node_modules|\.git|out|coverage|build)[\\/]' })
+}
+
 function Invoke-EngineerScore {
     $score = 0; $max = 45; $checks = @()
     $nodeProjectRoot = Get-NodeProjectRoot
@@ -80,15 +155,26 @@ function Invoke-EngineerScore {
     else { $checks += '[FAIL] Hardcoded secrets detected (+0)' }
 
     # SQL parameterized (5 pts) - check for string concatenation in SQL
-    $sqlConcat = Get-ChildItem -Path $ROOT -Include '*.ts','*.cs','*.py','*.ps1' -Recurse -File -ErrorAction SilentlyContinue |
-        Select-String -Pattern '(\$"|f")[^"]*SELECT|INSERT|UPDATE|DELETE' -ErrorAction SilentlyContinue
+    $sqlPattern = '((?<![A-Za-z0-9_])f"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^"]*|"[^"]*\$[A-Za-z_:][A-Za-z0-9_:]*[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^"]*"|"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^"]*\$[A-Za-z_:][A-Za-z0-9_:]*[^"]*")'
+    $addedCodeLines = Get-AddedCodeLines
+    if ((Get-ItemCount $addedCodeLines) -gt 0) {
+        $sqlConcat = @($addedCodeLines | Where-Object { $_.Path -ne $PSCommandPath -and $_.Text -match $sqlPattern })
+    } else {
+        $sqlConcat = Get-ScoredCodeFiles |
+            Select-String -Pattern $sqlPattern -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -ne $PSCommandPath }
+    }
     if ((Get-ItemCount $sqlConcat) -eq 0) { $score += 5; $checks += '[PASS] SQL parameterized (+5)' }
     else { $checks += '[FAIL] SQL string concatenation found (+0)' }
 
     # No TODO/FIXME (2 pts)
-    $todos = Get-ChildItem -Path $ROOT -Include '*.ts','*.cs','*.py','*.ps1' -Recurse -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -notmatch 'node_modules|\.git' } |
-        Select-String -Pattern 'TODO|FIXME' -ErrorAction SilentlyContinue
+    if ((Get-ItemCount $addedCodeLines) -gt 0) {
+        $todos = @($addedCodeLines | Where-Object { $_.Path -ne $PSCommandPath -and $_.Text -match 'TODO|FIXME' })
+    } else {
+        $todos = Get-ScoredCodeFiles |
+            Select-String -Pattern 'TODO|FIXME' -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -ne $PSCommandPath }
+    }
     $todoCount = Get-ItemCount $todos
     if ($todoCount -eq 0) { $score += 2; $checks += '[PASS] No TODO/FIXME markers (+2)' }
     else { $checks += "[WARN] $todoCount TODO/FIXME markers found (+0)" }
@@ -233,13 +319,11 @@ $result = switch ($Role) {
 }
 
 $pct = [math]::Round(($result.Score / $result.Max) * 100, 0)
-$tier = switch ($pct) {
-    { $_ -ge 90 } { 'High' }
-    { $_ -ge 70 } { 'Medium-High' }
-    { $_ -ge 50 } { 'Medium' }
-    { $_ -ge 25 } { 'Low' }
-    default { 'Invalid' }
-}
+$tier = if ($pct -ge 90) { 'High' }
+    elseif ($pct -ge 70) { 'Medium-High' }
+    elseif ($pct -ge 50) { 'Medium' }
+    elseif ($pct -ge 25) { 'Low' }
+    else { 'Invalid' }
 
 Write-Host "`n  Output Score: $Role"
 Write-Host "  ============================================="

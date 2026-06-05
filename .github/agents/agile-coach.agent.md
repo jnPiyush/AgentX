@@ -2,6 +2,7 @@
 name: AgentX Agile Coach
 description: 'Conversational story creation and refinement coach. Guides users through writing well-structured user stories with quality acceptance criteria.'
 model: Claude Sonnet 4.6 (copilot)
+user-invocable: true
 reasoning:
   mode: adaptive
   level: low

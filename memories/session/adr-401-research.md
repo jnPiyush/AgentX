@@ -1,0 +1,14 @@
+# ADR-401 Research (session note)
+- Request: decide CLI runtime (PowerShell vs TypeScript/Node vs Go) for execution + enforcement, prereq to Agents Window (ADR-400).
+- VERIFIED FACTS:
+  - agentx-cli.ps1 header: "Replaces cli.mjs" => already migrated Node->PowerShell once. Porting to TS = re-migration.
+  - Scope: 182 .ps1 / 40,127 LOC. Core: agentx-cli.ps1 7,458 + agentic-runner.ps1 4,427 = ~11.9K LOC enforcement-critical. scripts/ = 4,299 LOC long-tail tooling.
+  - Enforcement already spans 3 langs around loop-state.json contract:
+    - writer = PowerShell (agentx-cli.ps1 loop start/iterate/complete)
+    - editor-time reader/gate = TypeScript (loopStateChecker.ts, harnessState*.ts, harnessEvaluator.ts)
+    - commit-time gate = bash (.github/hooks/pre-commit)
+  - ADR-341 precedent: "will not introduce a third runtime stack"; chose Node host for daemon; MCP SDK Node/Python-first; PS MCP parity = permanent tax; plans shared TS runtime (packages/runtime or vscode-extension/src/runtime).
+  - agentic-runner.ps1 = real agent engine (GitHub Models/Copilot/OpenAI/Anthropic API calls, tool exec, loop detection, sessions).
+- OPTIONS for ADR-401: A keep PowerShell+harden; B port core to TS shared runtime (align ADR-341); C port to Go static binary; D hybrid = port enforcement core to TS, keep long-tail .ps1 optional, Go deferred endgame.
+- LEANING: D/B (TypeScript shared runtime) consensus; Go rejected on third-stack + MCP tax + re-migration risk; PS retained for long-tail tooling.
+- TODO: ADR-401.md, COUNCIL-401.md (3 roles + Synthesis, mandatory), SPEC-401.md; score-output >=70%; loop complete #401.

@@ -10,6 +10,7 @@ import {
   isBudgetExceeded,
   LoopState,
 } from '../../utils/loopStateChecker';
+import { getLoopHealth, hasSubagentReviewIteration } from '../../runtime';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -624,3 +625,85 @@ describe('LoopState history fields', () => {
     assert.equal(state!.budgetMinutes, undefined);
   });
 });
+
+// ---------------------------------------------------------------------------
+// getLoopHealth (runtime) -- regression guards for SPEC-401 / REVIEW-400
+// ---------------------------------------------------------------------------
+
+describe('getLoopHealth', () => {
+  function makeFreshState(overrides?: Partial<LoopState>): LoopState {
+    const base = {
+      active: true,
+      status: 'active' as const,
+      prompt: 'Fix the findings and re-review',
+      iteration: 0,
+      minIterations: 5,
+      maxIterations: 10,
+      completionCriteria: 'all checks pass',
+      startedAt: isoMinutesAgo(2),
+      lastIterationAt: isoMinutesAgo(2),
+      history: [
+        { iteration: 0, timestamp: isoMinutesAgo(2), summary: 'Loop started', status: 'started' },
+      ],
+    };
+    return { ...base, ...(overrides as object) } as LoopState;
+  }
+
+  it('treats a freshly started loop (iteration 0) as healthy', () => {
+    // HIGH-1 regression: a fresh loop has iteration 0 set at loop start and must
+    // not be reported as stuck. Mirrors Get-LoopStateHealth ($iteration -lt 0).
+    const health = getLoopHealth(makeFreshState());
+    assert.equal(health.kind, 'healthy', `Expected healthy, got '${health.kind}': ${health.reason}`);
+  });
+
+  it('flags a negative iteration as stuck', () => {
+    const health = getLoopHealth(makeFreshState({ iteration: -1 }));
+    assert.equal(health.kind, 'stuck');
+  });
+
+  it('flags a non-positive maxIterations as stuck', () => {
+    const health = getLoopHealth(makeFreshState({ maxIterations: 0 }));
+    assert.equal(health.kind, 'stuck');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// hasSubagentReviewIteration (runtime) -- MEDIUM-1 contract alignment
+// ---------------------------------------------------------------------------
+
+describe('hasSubagentReviewIteration', () => {
+  function makeState(summaries: string[]): LoopState {
+    return {
+      active: false,
+      status: 'complete',
+      prompt: 'Implement feature X',
+      iteration: summaries.length,
+      minIterations: 5,
+      maxIterations: 10,
+      completionCriteria: 'all checks pass',
+      startedAt: isoMinutesAgo(30),
+      lastIterationAt: isoMinutesAgo(5),
+      history: summaries.map((summary, idx) => ({
+        iteration: idx + 1,
+        timestamp: isoMinutesAgo(30 - idx),
+        summary,
+        status: 'iterated',
+      })),
+    } as LoopState;
+  }
+
+  it('returns true when any iteration summary contains the word "review"', () => {
+    // MEDIUM-1: the documented contract is "summary contains review". A plain
+    // "Final review pass" must satisfy the gate.
+    assert.equal(hasSubagentReviewIteration(makeState(['Init', 'Final review pass'])), true);
+  });
+
+  it('returns true for the canonical "Subagent Review:" prefix', () => {
+    assert.equal(hasSubagentReviewIteration(makeState(['Subagent Review: all green'])), true);
+  });
+
+  it('returns false when no summary contains "review"', () => {
+    assert.equal(hasSubagentReviewIteration(makeState(['Init', 'Fix bug', 'Verify'])), false);
+  });
+});
+

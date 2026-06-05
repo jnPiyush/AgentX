@@ -1,7 +1,10 @@
 ---
+name: AgentX Diagram Specialist
 description: 'Design, author, and review diagrams-as-code including swimlane/cross-functional workflows, C4 architecture, sequence, state, ER, and network diagrams. Invisible sub-agent spawned by Architect, UX Designer, Product Manager, Engineer, DevOps Engineer, and Data Scientist.'
 visibility: internal
+user-invocable: false
 model: GPT-5.4 (copilot)
+disable-model-invocation: true
 reasoning:
   level: medium
 constraints:

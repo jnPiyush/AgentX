@@ -2,6 +2,7 @@
 name: AgentX Consulting Research
 description: 'Research, analyze, and create domain-expert materials for consulting topics. Synthesize domain knowledge from specialized skills (Oil & Gas, Financial Services, Audit, Tax, Legal) for client engagements, including presentation storylines with slide-ready visuals and diagrams.'
 model: Claude Opus 4.7 (copilot)
+user-invocable: true
 reasoning:
   mode: adaptive
   level: high
@@ -39,6 +40,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX Architect
   - AgentX Data Scientist

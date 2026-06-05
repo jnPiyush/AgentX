@@ -2,6 +2,7 @@
 name: AgentX Reviewer
 description: 'Review code quality, test coverage, security, performance, and architectural conformance. Approve or request changes.'
 model: GPT-5.4 (copilot)
+user-invocable: true
 reasoning:
   mode: adaptive
   level: high
@@ -38,6 +39,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX Engineer
   - AgentX Auto-Fix Reviewer

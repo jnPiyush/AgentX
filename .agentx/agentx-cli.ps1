@@ -4145,6 +4145,27 @@ function Get-LoopEffectiveMinIterations {
     return $effectiveMin
 }
 
+function Test-LoopHasSubagentReviewIteration {
+    param($State)
+
+    if (-not $State -or -not ($State.PSObject.Properties.Name -contains 'history')) {
+        return $false
+    }
+
+    foreach ($historyEntry in @($State.history)) {
+        if (-not $historyEntry) { continue }
+        if (-not ($historyEntry.PSObject.Properties.Name -contains 'summary')) { continue }
+        $summary = [string]$historyEntry.summary
+        # Documented contract: at least one iteration summary must contain the
+        # word 'review'. Mirrors hasSubagentReviewIteration in runtime/loopState.ts.
+        if ($summary -match '\breview\b') {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function Get-LoopIterationGuidance {
     # Returns an ordered array of [n, focus, gate] objects for a given task class.
     # Used by 'loop start' (print the full table) and 'loop status' (show current-iteration focus).
@@ -4209,7 +4230,7 @@ function Get-LoopStateHealth {
 
     $maxIterations = if ($State.PSObject.Properties.Name -contains 'maxIterations') { [int]$State.maxIterations } else { 0 }
     $iteration = if ($State.PSObject.Properties.Name -contains 'iteration') { [int]$State.iteration } else { 0 }
-    if ($maxIterations -le 0 -or $iteration -le 0) {
+    if ($maxIterations -le 0 -or $iteration -lt 0) {
         return [PSCustomObject]@{ kind = 'stuck'; reason = 'loop counters are missing or invalid' }
     }
 
@@ -4503,7 +4524,7 @@ function Invoke-LoopStatus {
             $isRolledBack = $lastEntry `
                 -and ($lastEntry.PSObject.Properties.Name -contains 'status') `
                 -and ($lastEntry.status -eq 'rollback')
-            if ($isRolledBack) { $iter = $iter + 1 }
+            if ($isRolledBack -or $iter -eq 0) { $iter = $iter + 1 }
             $currentFocus = $guidanceStatus | Where-Object { $_.n -eq $iter } | Select-Object -First 1
             if (-not $currentFocus) { $currentFocus = $guidanceStatus[-1] }  # past last defined -> show final gate
             Write-CliOutput "$($C.w)  Current focus (iteration $iter):$($C.n) $($currentFocus.focus)"
@@ -4729,6 +4750,11 @@ function Invoke-LoopComplete {
     $state | Add-Member -NotePropertyName minIterations -NotePropertyValue $effectiveMinIterations -Force
     if ([int]$state.iteration -lt [int]$state.minIterations) {
         Write-CliOutput "$($C.y)  Minimum review iterations not yet met: $($state.iteration)/$($state.minIterations). Use 'agentx loop iterate' before completing.$($C.n)"
+        return
+    }
+    if (-not (Test-LoopHasSubagentReviewIteration $state)) {
+        Write-CliOutput "$($C.r)  [FAIL] loop complete requires a subagent review iteration before completion.$($C.n)"
+        Write-CliOutput "$($C.d)    Record the review pass with: agentx loop iterate -s 'Subagent Review: <findings>' -e <review-evidence>$($C.n)"
         return
     }
     $currentPassing = Get-LoopPassingCount 'loop complete'

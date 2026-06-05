@@ -2,6 +2,7 @@
 name: AgentX Data Scientist
 description: 'Design and implement GenAI pipelines, LLM-as-judge evaluations, drift monitoring, RAG systems, agent orchestration, and fine-tuning workflows.'
 model: Claude Opus 4.7 (copilot)
+user-invocable: true
 reasoning:
   level: high
 constraints:
@@ -49,6 +50,7 @@ tools:
   - fetch
   - think
   - github/*
+  - agent
 agents:
   - AgentX Architect
   - AgentX Product Manager

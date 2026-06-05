@@ -1,7 +1,10 @@
 ---
+name: AgentX Prompt Engineer
 description: 'Design, evaluate, test, and iterate prompts across the full prompt lifecycle. Invisible sub-agent spawned by Data Scientist and Engineer.'
 visibility: internal
+user-invocable: false
 model: GPT-5.4 (copilot)
+disable-model-invocation: true
 reasoning:
   level: high
 constraints:
