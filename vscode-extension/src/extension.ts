@@ -13,6 +13,10 @@ import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from './commands/ad
 import { readCliAssetState, refreshCopilotCliSymlinks } from './commands/initializeInternals';
 import { silentVersionSync } from './utils/versionChecker';
 import { checkCompanionExtensions } from './utils/companionExtensions';
+import {
+ enableInAgentsWindow,
+ maybePromptForAgentsWindow,
+} from './utils/agentsWindowOptIn';
 import { getQualityStateDisplay } from './utils/loopStateChecker';
 import { readHarnessState } from './utils/harnessState';
 
@@ -83,6 +87,31 @@ export function activate(context: vscode.ExtensionContext) {
   })
  );
 
+ // Manual opt-in into the VS Code Agents Window. Power-user command that
+ // performs the same idempotent merge as the activation prompt, with no
+ // questions asked. See utils/agentsWindowOptIn.ts and
+ // docs/execution/contracts/CONTRACT-400-agents-window-slice2.md.
+ context.subscriptions.push(
+  vscode.commands.registerCommand('agentx.enableInAgentsWindow', async () => {
+   try {
+    await enableInAgentsWindow();
+    const reload = 'Reload Window';
+    const later = 'Later';
+    const choice = await vscode.window.showInformationMessage(
+     'AgentX is now enabled in the Agents Window. Reload the window to apply?',
+     reload,
+     later,
+    );
+    if (choice === reload) {
+     await vscode.commands.executeCommand('workbench.action.reloadWindow');
+    }
+   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`AgentX: failed to enable in Agents Window: ${message}`);
+   }
+  }),
+ );
+
  // Register chat participant (Copilot Chat integration -- only when API available)
  if (typeof vscode.chat?.createChatParticipant === 'function') {
   registerChatParticipant(context, agentxContext);
@@ -137,6 +166,13 @@ export function activate(context: vscode.ExtensionContext) {
 
  // Check companion extensions are installed (non-blocking)
  checkCompanionExtensions(agentxContext.workspaceRoot).catch(() => { /* ignore */ });
+
+ // One-time prompt: opt every install/upgrade into the VS Code Agents
+ // Window. Self-gates on globalState; safe to call on every activation.
+ void maybePromptForAgentsWindow(
+  context,
+  context.extension.packageJSON.version,
+ ).catch(() => { /* ignore */ });
 
  // Refresh CLI symlinks if the workspace was initialized in symlink mode.
  // The extension version folder changes on upgrade, so any stale junctions

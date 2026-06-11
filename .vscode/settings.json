@@ -1,44 +1,10 @@
+// AgentX Agents Window opt-in (Phase 2, CONTRACT-400-agents-window-slice2).
+// Enables AgentX in the VS Code Agents Window for anyone who clones this repo
+// and opens it in VS Code. The AgentX extension itself prompts every
+// install/upgrade to set this globally; this entry is a courtesy for repo
+// cloners so it works in the workspace without waiting for the prompt.
 {
- "markdownlint.config": {
- "MD041": false
- },
- "markdown.validate.enabled": true,
- "markdown.validate.ignoredLinks": [
- "**/agents/*.agent.md",
- "../specs/SPEC-*.md",
- "ADR-*.md",
- "docs/artifacts/adr/ADR-*.md",
- "docs/artifacts/specs/**",
- "docs/architecture/**",
- "../../docs/artifacts/specs/SPEC-*.md"
- ],
- "files.associations": {
- "*.agent.md": "markdown",
- "vscode-extension/.github/agentx/.agentx/*.ps1": "plaintext"
- },
- "markdown.validate.fileLinks.enabled": "warning",
- "[markdown]": {
- "editor.wordWrap": "on"
- },
- "github-actions.workflows.pinned.refresh.enabled": false,
- "github-actions.expression-validation.enabled": false,
- "yaml.validate": true,
- "yaml.schemas": {
- "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml"
- },
- "chat.mcp.assisted.nuget.enabled": true,
- "chat.mcp.discovery.enabled": {
-   "claude-desktop": true
-},
- "chat.mcp.gallery.enabled": true,
- "chat.tools.terminal.autoReplyToPrompts": true,
- "chat.unifiedAgentsBar.enabled": true,
- "chat.useNestedAgentsMdFiles": true,
- "chat.viewProgressBadge.enabled": true,
- "inlineChat.enableV2": true,
- "inlineChat.notebookAgent": true,
- "agentx.mode": "github",
- "extensions.supportAgentsWindow": {
+  "extensions.supportAgentsWindow": {
     "jnPiyush.agentx": true
- }
+  }
 }

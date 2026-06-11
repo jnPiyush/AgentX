@@ -137,6 +137,24 @@ The extension now keeps LLM setup conversational. Non-secret values are collecte
 
 Available workspace LLM adapters include GitHub Copilot, Claude Subscription, Claude Code + LiteLLM + Ollama, Claude API, and OpenAI API. The local Claude option keeps `claude-code` as the execution transport while injecting Anthropic-compatible LiteLLM gateway settings and pinning the runner to the configured local coding model.
 
+### Use AgentX in the Agents Window
+
+VS Code's [Agents Window](https://code.visualstudio.com/docs/copilot/agents/agents-window) (Preview) lets supported chat participants run as first-class agents. AgentX opts in **per user**, not per workspace, because the underlying VS Code setting (`extensions.supportAgentsWindow`) lives in your user `settings.json`.
+
+You have three ways to enable it:
+
+1. **Automatic prompt (recommended).** The first time you install AgentX -- and again after each major-version upgrade -- the extension shows a one-time information message offering to enable AgentX in the Agents Window. Choose **Enable in Agents Window**, then reload the window when prompted. Choose **Don't ask again** to silence the prompt permanently.
+2. **Manual command.** Run **AgentX: Enable in Agents Window** from the Command Palette at any time. The command is idempotent and preserves any other entries already in `extensions.supportAgentsWindow`.
+3. **Power users.** Add the following to your user `settings.json` directly:
+
+   ```jsonc
+   "extensions.supportAgentsWindow": {
+     "jnPiyush.agentx": true
+   }
+   ```
+
+After enabling, reload the VS Code window. AgentX will appear in the Agents Window agent picker alongside other opted-in extensions. To opt back out, remove the `jnPiyush.agentx` entry (or set it to `false`) in user `settings.json` and reload.
+
 ## Build Software With AgentX
 
 Once a workspace is initialized, you can use AgentX inside VS Code to move an app from planning through review.
@@ -225,6 +243,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | Command | Description |
 |:--------|:------------|
 | Initialize Local Runtime | Prepare local runtime for the current workspace |
+| Enable in Agents Window | Opt AgentX into the VS Code Agents Window (Preview) for the current user |
 | Add Remote Adapter | Connect GitHub or Azure DevOps for backlog integration |
 | Add LLM Adapter | Switch the workspace LLM adapter (Copilot, Claude, OpenAI) |
 | Add Plugin | Extend the workspace with additional capabilities |

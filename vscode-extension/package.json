@@ -138,6 +138,12 @@
         "icon": "$(beaker)"
       },
       {
+        "command": "agentx.enableInAgentsWindow",
+        "title": "Enable in Agents Window",
+        "category": "AgentX",
+        "icon": "$(comment-discussion)"
+      },
+      {
         "command": "agentx.loop",
         "title": "Iterative Loop",
         "category": "AgentX",
