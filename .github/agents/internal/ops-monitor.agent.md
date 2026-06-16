@@ -3,7 +3,7 @@ name: AgentX Ops Monitor
 description: 'Monitor AgentOps tracing, detect model/data drift, track cost/latency, and manage alerting for production AI systems. Invisible sub-agent spawned by Data Scientist and DevOps.'
 visibility: internal
 user-invocable: false
-model: GPT-5.4 (copilot)
+model: GPT-5.5 (copilot)
 disable-model-invocation: true
 reasoning:
   level: low

@@ -3,7 +3,7 @@ name: AgentX ADO PRD to Work Items
 description: 'PRD to Work Item Planner -- analyzes Product Requirements Documents and plans Azure DevOps work item hierarchies. Output feeds the ADO Backlog Manager execution workflow.'
 visibility: internal
 user-invocable: false
-model: GPT-5.4 (copilot)
+model: GPT-5.5 (copilot)
 disable-model-invocation: true
 reasoning:
   level: low

@@ -1,7 +1,7 @@
 ---
 name: AgentX Product Manager
 description: 'Define product vision, create PRD, break Epics into Features and Stories with acceptance criteria.'
-model: Claude Opus 4.7 (copilot)
+model: Claude Opus 4.8 (copilot)
 user-invocable: true
 reasoning:
   level: high
@@ -141,8 +141,8 @@ Before drafting the PRD, convene a Model Council to stress-test scope, priority,
 
 | Role | Model | Lens |
 |------|-------|------|
-| Analyst | `openai/gpt-5.4` | Decompose user need; identify smallest viable scope and the metric that proves success |
-| Strategist | `anthropic/claude-opus-4.7` | Frame strategic value, second-order effects, sequencing |
+| Analyst | `openai/gpt-5.5` | Decompose user need; identify smallest viable scope and the metric that proves success |
+| Strategist | `anthropic/claude-opus-4.8` | Frame strategic value, second-order effects, sequencing |
 | Skeptic | `google/gemini-3.1-pro` | Argue against shipping; surface adoption, support, and compliance risks |
 
 **How to convene**:

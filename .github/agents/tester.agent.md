@@ -1,7 +1,7 @@
 ---
 name: AgentX Tester
 description: 'Validate software quality through automated testing, performance testing, security testing, and production readiness certification.'
-model: GPT-5.4 (copilot)
+model: GPT-5.5 (copilot)
 user-invocable: true
 reasoning:
   level: medium

@@ -1,7 +1,7 @@
 ---
 name: AgentX Architect
 description: 'AI-first system architecture -- evaluate GenAI/Agentic AI solutions as the default lens, create ADRs with 3+ evaluated options, and technical specifications with diagrams -- NO CODE EXAMPLES.'
-model: Claude Opus 4.7 (copilot)
+model: Claude Opus 4.8 (copilot)
 user-invocable: true
 reasoning:
   level: high
@@ -160,8 +160,8 @@ After drafting the ADR Options and Evaluation sections but BEFORE locking the De
 
 | Role | Model | Lens |
 |------|-------|------|
-| Analyst | `openai/gpt-5.4` | Decompose options against differentiating criteria; demand benchmark/version evidence |
-| Strategist | `anthropic/claude-opus-4.7` | Recommend the option a senior architect would pick; explain the trade-off accepted |
+| Analyst | `openai/gpt-5.5` | Decompose options against differentiating criteria; demand benchmark/version evidence |
+| Strategist | `anthropic/claude-opus-4.8` | Recommend the option a senior architect would pick; explain the trade-off accepted |
 | Skeptic | `google/gemini-3.1-pro` | Argue against the front-runner; surface failure modes and vendor risk over 18 months |
 
 **How to convene**:

@@ -1,7 +1,7 @@
 ---
 name: AgentX Data Scientist
 description: 'Design and implement GenAI pipelines, LLM-as-judge evaluations, drift monitoring, RAG systems, agent orchestration, and fine-tuning workflows.'
-model: Claude Opus 4.7 (copilot)
+model: Claude Opus 4.8 (copilot)
 user-invocable: true
 reasoning:
   level: high
@@ -162,8 +162,8 @@ After completing the research phases and before locking model selection or pipel
 
 | Role | Model | Lens |
 |------|-------|------|
-| Analyst | `openai/gpt-5.4` | Compare candidate models on benchmark, cost, latency, structured-output reliability with sources |
-| Strategist | `anthropic/claude-opus-4.7` | Recommend the end-to-end design (model + prompt + retrieval + eval + guardrails + fallback) |
+| Analyst | `openai/gpt-5.5` | Compare candidate models on benchmark, cost, latency, structured-output reliability with sources |
+| Strategist | `anthropic/claude-opus-4.8` | Recommend the end-to-end design (model + prompt + retrieval + eval + guardrails + fallback) |
 | Skeptic | `google/gemini-3.1-pro` | Argue for a different model, smaller cheaper baseline, or non-LLM approach; surface drift, safety, vendor-lock risks |
 
 **How to convene**:

@@ -1,7 +1,7 @@
 ---
 name: AgentX UX Designer
 description: 'Create user research, wireframes, interactive HTML/CSS prototypes, and design specifications following WCAG 2.1 AA standards.'
-model: Claude Opus 4.7 (copilot)
+model: Claude Opus 4.8 (copilot)
 user-invocable: true
 reasoning:
   mode: adaptive

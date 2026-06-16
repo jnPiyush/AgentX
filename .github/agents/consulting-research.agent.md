@@ -1,7 +1,7 @@
 ---
 name: AgentX Consulting Research
 description: 'Research, analyze, and create domain-expert materials for consulting topics. Synthesize domain knowledge from specialized skills (Oil & Gas, Financial Services, Audit, Tax, Legal) for client engagements, including presentation storylines with slide-ready visuals and diagrams.'
-model: Claude Opus 4.7 (copilot)
+model: Claude Opus 4.8 (copilot)
 user-invocable: true
 reasoning:
   mode: adaptive
@@ -207,8 +207,8 @@ After the research log is complete and before audience calibration, convene a **
 
 | Role | Model | Lens |
 |------|-------|------|
-| Analyst | `openai/gpt-5.4` | Decompose the question, demand evidence, flag weak claims |
-| Strategist | `anthropic/claude-opus-4.7` | Step back, frame the strategic recommendation |
+| Analyst | `openai/gpt-5.5` | Decompose the question, demand evidence, flag weak claims |
+| Strategist | `anthropic/claude-opus-4.8` | Step back, frame the strategic recommendation |
 | Skeptic | `google/gemini-3.1-pro` | Argue the contrarian position, surface failure modes |
 
 Substitute models when the default is unavailable, but preserve the three-role structure (Analyst, Strategist, Skeptic) and use at least two distinct vendors.
@@ -291,7 +291,7 @@ Validate the analysis before handoff.
 ### Example: Model Council Deliberation
 
 - User: "Build me a brief on whether mid-market FS clients should adopt sovereign AI in EMEA."
-- Agent: "I will run the seven research phases first. Before drafting, I will convene a Model Council with three members -- Analyst (`openai/gpt-5.4`), Strategist (`anthropic/claude-opus-4.7`), and Skeptic (`google/gemini-3.1-pro`) -- and ask them to independently respond to: 'What is the strongest case for and against EMEA mid-market FS adoption of sovereign AI in the next 18 months?' I will record their responses in `docs/coaching/COUNCIL-sovereign-ai-emea-fs.md`, synthesize consensus and divergences, then write the brief reflecting that synthesis. Contrarian arguments raised by the Skeptic that the research log missed will become explicit risk callouts in the executive summary."
+- Agent: "I will run the seven research phases first. Before drafting, I will convene a Model Council with three members -- Analyst (`openai/gpt-5.5`), Strategist (`anthropic/claude-opus-4.8`), and Skeptic (`google/gemini-3.1-pro`) -- and ask them to independently respond to: 'What is the strongest case for and against EMEA mid-market FS adoption of sovereign AI in the next 18 months?' I will record their responses in `docs/coaching/COUNCIL-sovereign-ai-emea-fs.md`, synthesize consensus and divergences, then write the brief reflecting that synthesis. Contrarian arguments raised by the Skeptic that the research log missed will become explicit risk callouts in the executive summary."
 
 ## Skills to Load
 
