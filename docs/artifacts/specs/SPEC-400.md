@@ -38,7 +38,7 @@ This spec describes how AgentX delivers its 24 agents, 127 skills, quality-loop 
 - Packaging AgentX as a Customizations bundle (Agents, Skills, Instructions, Hooks, MCP, Plugins) that the Agents Window picks up natively.
 - Wiring the quality-loop CLI into VS Code Hooks (`session-start`, `pre-tool`, `post-tool`, `session-end`).
 - Slimming the existing VS Code extension to a thin editor-window adapter.
-- Opt-in surface for Agents Window via `extensions.supportAgentsWindow`.
+- Per-user opt-in into the Agents Window via the user-side `extensions.supportAgentsWindow` setting (see Erratum E-1).
 
 **Scope (out):**
 
@@ -65,7 +65,7 @@ This spec describes how AgentX delivers its 24 agents, 127 skills, quality-loop 
 | Sub-agent orchestration | `tools: ['agent']` + `agents:` allowlist | Per VS Code Subagents doc | https://code.visualstudio.com/docs/copilot/agents/subagents, 2026-05-29 | Documented Coordinator + Worker pattern; matches AgentX Hub-and-Spoke | Custom in-extension router (rejected -- duplicates platform feature) |
 | Lifecycle gates | VS Code Hooks | Per Hooks doc | https://code.visualstudio.com/docs/copilot/customization/hooks, 2026-05-29 | First-class platform surface for `session-start`, `pre-tool`, `post-tool`, `session-end` | Pre-commit-only enforcement (rejected -- bypassable inside Agents Window) |
 | Runtime / CLI | AgentX CLI (`.agentx/agentx.ps1` + `.agentx/agentx.sh`) | v8.x (existing) | Repository state, 2026-05-29 | Already CLI-shaped; works for Copilot CLI sessions | Long-running extension host process (rejected -- not compatible with Cloud agent runtime) |
-| Extension activation in Agents Window | `extensions.supportAgentsWindow` opt-in | Per Agents Window doc | https://code.visualstudio.com/docs/copilot/agents/agents-window, 2026-05-29 | Documented opt-in switch; off-by-default model is correct for least-privilege | Auto-activate everywhere (rejected -- not how VS Code allows it) |
+| Per-user Agents Window opt-in | `extensions.supportAgentsWindow` (user-side `settings.json` map; see Erratum E-1) | Per Agents Window doc | https://code.visualstudio.com/docs/copilot/agents/agents-window, re-verified 2026-06-10 | Documented user-side opt-in; off-by-default model is correct for least-privilege; extension prompts the user to set it | Auto-activate everywhere (rejected -- not how VS Code allows it); author-side manifest field (rejected -- no such field exists) |
 | Plugin packaging | VS Code Customizations Plugin bundle | Preview API | https://code.visualstudio.com/docs/copilot/customization/overview, 2026-05-29 | Single-install entry point for Agents + Skills + Hooks + MCP + Instructions | MCP-only delivery (rejected -- per ADR-400 Option D) |
 | Marketplace distribution | VS Code Marketplace (existing `publisher: jnPiyush`) | n/a | `vscode-extension/package.json` lines 5-6, 2026-05-29 | Discoverability; existing channel | New marketplace identity (rejected -- breaks user upgrade path) |
 | Hook script runtimes | PowerShell 7.4+ and POSIX shell (bash 4+) | Existing | AgentX repo, 2026-05-29 | Already shipped; required for cross-platform parity | PowerShell-only (rejected -- breaks mac/Linux Hooks) |
@@ -75,6 +75,8 @@ This spec describes how AgentX delivers its 24 agents, 127 skills, quality-loop 
 - The selected stack is consistent with ADR-400 Option C.
 - All Preview-era surfaces are flagged as such; manual install path via `.agentx/plugins/` is the always-works fallback.
 - Each row's version source is re-verified at the start of the Engineer phase (Preview APIs may move).
+
+> **Erratum E-1 (2026-06-10, Engineer phase re-verification):** This spec originally implied `extensions.supportAgentsWindow` was an author-side opt-in declared by the extension (e.g. a `package.json` manifest field). Re-verifying the live VS Code Agents Window docs at implementation time showed it is a **user-side `settings.json` setting** -- an object map keyed by extension id (`{ "jnPiyush.agentx": true }`), set with `ConfigurationTarget.Global`. There is no author-side manifest field. AgentX therefore opts in **per user**, not per workspace, at runtime: on first install and on each major-version upgrade the extension shows a one-time prompt that merges its id into the global map (preserving every other publisher), plus a manual `AgentX: Enable in Agents Window` command and a repo-cloner `.vscode/settings.json` courtesy entry. Implemented in `vscode-extension/src/utils/agentsWindowOptIn.ts` under CONTRACT-400-agents-window-slice2. Wherever this spec says "the extension opts in", read "the extension prompts the user to opt in".
 
 ---
 
@@ -113,7 +115,7 @@ flowchart TB
   AW -->|reads Customizations panel| BUNDLE
   EW -->|reads chat agent picker| AGENTS
   EW -->|hosts| EXTSURF
-  AW -->|opt-in supportAgentsWindow| INIT
+  AW -->|user-side supportAgentsWindow opt-in| INIT
 
   BUNDLE -->|hook scripts call| CLI
   EXTSURF -->|invokes| CLI
@@ -378,7 +380,7 @@ These are guidance for Engineer-phase planning, not implementation prescriptions
 | Phase | Outcome | Gate to advance |
 |-------|---------|-----------------|
 | Phase 1 -- Frontmatter + Hooks | All 24 `.agent.md` files have the right frontmatter; Hooks bundle ships with PS1+SH pairs | Validation script green; Agents Window dropdown shows Agent X + 12 specialists |
-| Phase 2 -- Extension slim-down | Extension opts in via `extensions.supportAgentsWindow`; tree views/status/chat participant flagged editor-window-only | Existing extension test suite green; Agents Window opt-in does not regress editor-window UX |
+| Phase 2 -- Extension slim-down | Extension prompts the user to opt in via the user-side `extensions.supportAgentsWindow` setting (see Erratum E-1); tree views/status/chat participant flagged editor-window-only | Existing extension test suite green; Agents Window opt-in does not regress editor-window UX |
 | Phase 3 -- Customizations bundle | Plugin bundle installable from Customizations panel; manual fallback documented | Bundle install <= 5s; end-to-end Agents Window simulation test green |
 | Phase 4 -- Docs migration | AGENTS.md / WORKFLOW.md / GUIDE.md / copilot-instructions.md describe both surfaces | Docs review approved; chat-participant-only paths marked deprecated |
 

@@ -28,7 +28,13 @@ describe('shell - resolveWindowsShell', () => {
   });
 });
 
-describe('shell - execShell', () => {
+describe('shell - execShell', function () {
+  // These cases spawn real pwsh/bash processes. Under c8 coverage
+  // instrumentation during a full-suite run, a cold shell start can exceed
+  // the 10s default mocha timeout and flake -- and starve the next,
+  // synchronous test that runs immediately after (the versionChecker case).
+  // Give the real-process cases generous headroom.
+  this.timeout(30000);
 
   it('should resolve with stdout for a simple command', async () => {
     // Use pwsh on Windows when supported, bash elsewhere

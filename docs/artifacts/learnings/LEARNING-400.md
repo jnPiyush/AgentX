@@ -41,3 +41,36 @@ This avoids two failure modes: (1) reimplementing enforcement in extension TypeS
 - `docs/artifacts/adr/COUNCIL-400.md` (3-model deliberation, Synthesis converged Option C, Skeptic risks promoted to SPEC §11)
 - `docs/artifacts/specs/SPEC-400.md` (13 sections, hybrid surfaces in §4, hooks in §5, NFRs in §7, rollout in §10, observability in §12)
 - `docs/artifacts/reviews/ARCH-REVIEW-400.md` (APPROVED WITH MINOR FINDINGS: 0 Critical / 0 High / 3 Medium / 4 Low)
+
+---
+
+## Addendum (2026-06-10): Phase 2 implementation -- re-verify Preview APIs at edit time
+
+**Date**: 2026-06-10
+**Slice**: CONTRACT-400-agents-window-slice2 (extension opt-in)
+**Trigger**: Engineer-phase re-verification of the `extensions.supportAgentsWindow` opt-in before writing code.
+
+### What happened
+
+SPEC-400 section 1.1 and section 10 described `extensions.supportAgentsWindow` as an author-side opt-in the AgentX extension would declare (implying a `package.json` manifest field). At implementation time, the bounded work contract's mandatory pre-edit re-verification step checked the live VS Code Agents Window docs and found it is actually a **user-side `settings.json` setting** -- an object map keyed by extension id, written with `ConfigurationTarget.Global`. There is no author-side manifest field. The contract's Recovery Path fired: code edits were blocked, the discrepancy was logged, and three remediation options were surfaced before any code was touched.
+
+### Learnings
+
+- **Re-verify Preview/external API names against live docs at the moment of implementation, not just at spec time.** A spec written even ~2 weeks earlier can misstate a fast-moving Preview surface. The "version source / verified on" column in the spec's tech-stack table is necessary but not sufficient -- the Engineer must re-open the cited URL before touching code, exactly as the spec's own precondition demanded.
+- **User-side vs author-side opt-in is a load-bearing distinction.** "The extension opts in" and "the extension prompts the user to opt in" are different contracts with different surfaces (manifest field vs `settings.json` write), different scopes (per-extension vs per-user), and different reversibility. Name the side explicitly in specs.
+- **Prompt-on-first-run + per-major-upgrade is the right pattern for a user-side capability opt-in.** Modeled on Copilot/Pylance: a one-time `showInformationMessage` with Enable / Not now / Don't ask again, gated on `globalState` (permanent decline + last-prompted-major), recording the major *before* awaiting the prompt to avoid concurrent duplicate prompts, and an idempotent spread-merge that preserves other publishers in the shared global map. A manual command and a repo `.vscode/settings.json` courtesy entry round out the three enablement paths.
+- **A bounded work contract's Recovery Path is the mechanism that converts a discovery into a controlled pause.** Because the contract pre-declared what to do when the opt-in mechanism differed from the spec, the Engineer paused and re-confirmed scope instead of silently coding against a wrong assumption.
+
+### Reuse guidance
+
+- When a spec cites a Preview API field name, add a Recovery Path clause to the implementation contract: "if the live docs reveal a different mechanism, pause, update the contract, re-confirm before coding."
+- When opting into a host capability, determine the *side* (author manifest vs user setting) first; it dictates whether you ship a manifest change or a runtime prompt + idempotent settings merge.
+- For user-side settings merges, always read-modify-write the existing map and spread it; never overwrite the whole object.
+
+### Supporting artifacts
+
+- `docs/execution/contracts/CONTRACT-400-agents-window-slice2.md` (bounded contract + Recovery Path that fired)
+- `vscode-extension/src/utils/agentsWindowOptIn.ts` (A2 prompt + idempotent merge)
+- `vscode-extension/src/test/utils/agentsWindowOptIn.test.ts` (9 regression cases incl. concurrent-prompt guard)
+- `docs/artifacts/specs/SPEC-400.md` Erratum E-1 (correction recorded inline)
+
