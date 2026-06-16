@@ -177,6 +177,17 @@ pwsh scripts/model-council.ps1 `
     -Purpose ai-design
 ```
 
+A council is **not limited to one topic** -- put several decisions to it in one run with `-Questions`:
+
+```pwsh
+pwsh scripts/model-council.ps1 `
+    -Topic "ai-{issue}-{short-slug}" `
+    -Questions "Which model best meets the cost/quality/latency targets?","What evaluation rubric and drift thresholds should gate it?","Is a smaller or non-LLM baseline the safer choice?" `
+    -Context "<paste candidate models with benchmark data, cost/latency targets, key failure modes from research>" `
+    -OutputDir "docs/data-science" `
+    -Purpose ai-design
+```
+
 **This is an internal agent mechanism. After running the script, YOU (the Data Scientist agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final Model Card + Eval Plan, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
 
 **Synthesis (MUST complete before Pipeline Design)**:

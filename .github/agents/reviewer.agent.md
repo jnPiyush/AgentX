@@ -227,6 +227,17 @@ pwsh scripts/model-council.ps1 `
     -Purpose code-review
 ```
 
+A council is **not limited to one topic** -- put several review questions to it in one run with `-Questions`:
+
+```pwsh
+pwsh scripts/model-council.ps1 `
+    -Topic "review-{issue}" `
+    -Questions "What is the correct Approve / Request Changes decision?","Which findings are blocking vs. advisory, and at what severity?","Which leaning findings are likely false positives or hide a deeper production risk?" `
+    -Context "<paste leaning decision, per-category verdicts, top 5 findings with file:line, test results, coverage delta, spec sections in scope>" `
+    -OutputDir "docs/artifacts/reviews" `
+    -Purpose code-review
+```
+
 **This is an internal agent mechanism. After running the script, YOU (the Reviewer agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final review document, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
 
 **Synthesis (MUST complete before Write Review Document)**:

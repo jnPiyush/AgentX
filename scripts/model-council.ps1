@@ -10,8 +10,8 @@
   the calling agent synthesizes consensus, contradictions, and blind spots.
 
   Default council (mix of vendors and reasoning styles for diversity):
-    - Analyst   : openai/gpt-5.4    (structured, critical, decomposition)
-    - Strategist: anthropic/claude-opus-4.7 (broad context, balanced synthesis)
+    - Analyst   : openai/gpt-5.5    (structured, critical, decomposition)
+    - Strategist: anthropic/claude-opus-4.8 (broad context, balanced synthesis)
     - Skeptic   : google/gemini-3.1-pro   (contrarian, adversarial critique)
 
   Purpose packs tune the per-member instructions and synthesis sections for
@@ -21,6 +21,11 @@
     - adr-options : ADR option selection, criteria weighting, contrarian recommendation
     - ai-design   : AI/ML model selection, evaluation strategy, drift/cost/safety risks
     - code-review : Code review decision, finding severity, and false-positive / missed-risk stress test
+
+  MULTIPLE TOPICS. A council is not limited to one topic. Pass several decisions
+  in a single run with -Questions (optionally plus a primary -Question); every
+  member addresses each topic in turn and the Synthesis attributes findings to
+  each topic.
 
   INTERNAL AGENT MECHANISM. The Model Council is run BY the calling agent,
   not by the user. The script generates a Council Brief containing the
@@ -37,14 +42,21 @@
   Short slug for the deliberation (used in the output filename).
 
 .PARAMETER Question
-  The research question or prompt to put before the council.
+  A single research question or prompt to put before the council. Optional when
+  -Questions is supplied. Provide -Question, -Questions, or both.
+
+.PARAMETER Questions
+  One or more topics for the council to deliberate on in a SINGLE run. A council
+  is NOT limited to one topic: every member addresses each topic in turn and the
+  Synthesis attributes findings to each topic. Combine with -Question to add a
+  primary topic plus several secondary ones.
 
 .PARAMETER Context
   Optional supporting context (research log excerpts, key claims to stress-test).
 
 .PARAMETER Members
   Optional override of council membership. Each entry is "Role:model-id".
-  Default: Analyst:openai/gpt-5.4,Strategist:anthropic/claude-opus-4.7,Skeptic:google/gemini-3.1-pro
+  Default: Analyst:openai/gpt-5.5,Strategist:anthropic/claude-opus-4.8,Skeptic:google/gemini-3.1-pro
 
 .PARAMETER OutputDir
   Where to write the council file. Default: docs/coaching
@@ -62,14 +74,22 @@
   pwsh scripts/model-council.ps1 -Topic sovereign-ai `
     -Question "What are the strongest contrarian arguments against sovereign AI for FS clients in EMEA?" `
     -Context "Phase 6 triangulation log shows consensus on regulatory pressure but weak evidence on operating-cost claims."
+
+.EXAMPLE
+  # Multi-topic: deliberate on several contested decisions in one council run.
+  pwsh scripts/model-council.ps1 -Topic adr-412-payments -Purpose adr-options `
+    -Questions "Which of the distinct solution approaches (build vs. buy vs. managed) should we recommend?","What is the 18-month failure mode of the front-runner?","Was a simpler architecture unfairly excluded?" `
+    -Context "Options summary and evaluation matrix from the draft ADR." `
+    -OutputDir docs/artifacts/adr
 #>
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)] [string] $Topic,
-    [Parameter(Mandatory)] [string] $Question,
+    [string] $Question = "",
+    [string[]] $Questions = @(),
     [string] $Context = "",
-    [string] $Members = "Analyst:openai/gpt-5.4,Strategist:anthropic/claude-opus-4.7,Skeptic:google/gemini-3.1-pro",
+    [string] $Members = "Analyst:openai/gpt-5.5,Strategist:anthropic/claude-opus-4.8,Skeptic:google/gemini-3.1-pro",
     [string] $OutputDir = "docs/coaching",
     [ValidateSet('research','prd-scope','adr-options','ai-design','code-review')]
     [string] $Purpose = 'research',
@@ -108,35 +128,35 @@ function Get-RolePack {
     switch ($Purpose) {
         'prd-scope' {
             return @{
-                Analyst    = "Decompose the user need. Identify the smallest scope that delivers value, the must-have requirements vs. nice-to-haves, and the success metric that would prove the feature worked. Flag any vague or unmeasurable claims."
-                Strategist = "Frame the strategic value. What user job is really being done? What second-order effects (engagement, support cost, retention, regulatory exposure) does this feature create? What is the right priority and sequencing for a senior PM?"
-                Skeptic    = "Argue against shipping this feature. What is the strongest case for cutting it, deprioritizing it, or solving the underlying problem differently (docs, support, automation, partner integration)? What adoption, security, support, or compliance risks would block real users?"
+                Analyst    = "Grill the PRD contents. State exactly what MUST appear in this PRD: the concrete in-scope requirement list, the explicit non-goals, the smallest MVP slice that delivers value vs. what defers to a later release, the single measurable success metric (with target and how it is instrumented) that would prove the feature worked, the key user journeys / edge cases / data states that need acceptance criteria, and the assumptions that must be validated. For every requirement demand that it is specific and testable; reject vague, unmeasurable, or scope-creeping claims and name exactly what to cut."
+                Strategist = "Frame the approach and sequencing. Name the real user job-to-be-done, the recommended build approach, and the release sequencing (what ships first, what is fast-follow, what is explicitly deferred), including dependency ordering. Call out second-order effects (engagement, support cost, retention, regulatory exposure), recommend the priority tiering a senior PM would defend, and say which requirements to include now vs. later and why."
+                Skeptic    = "Argue against shipping as framed. Make the strongest case to cut, defer, or solve the underlying problem a different way (docs, support, automation, partner/integration, manual workaround). Attack the riskiest assumption, the gameable or vanity success metric, and the adoption, security, privacy, support, or compliance blockers that would stop real users. Name the single change that would most de-risk the PRD."
                 Sections   = @(
-                    @{ Title = 'Consensus on Scope and Priority'; Hint = 'Requirements at least two members agree should be in scope and at the same priority tier.' },
+                    @{ Title = 'Consensus on Scope, Approach, and Priority'; Hint = 'Requirements and the build/sequencing approach at least two members agree on, at the same priority tier; promote into PRD requirements.' },
                     @{ Title = 'Divergences on Scope, Priority, or Success Metric'; Hint = 'Material disagreements that must be resolved or recorded as open questions in the PRD.' },
                     @{ Title = 'Risks and Adoption Blockers Surfaced'; Hint = 'Skeptic-raised risks the original research missed; promote into PRD Risks section.' },
-                    @{ Title = 'Net Adjustment to PRD'; Hint = 'How the council changed scope cuts, priority labels, success metrics, or open questions. If no change, state why.' }
+                    @{ Title = 'Net Adjustment to PRD'; Hint = 'How the council changed what to include, scope cuts, priority labels, success metrics, sequencing, or open questions. If no change, state why.' }
                 )
             }
         }
         'adr-options' {
             return @{
-                Analyst    = "Decompose the decision. List the candidate options with the criteria that actually differentiate them (cost, risk, time-to-deliver, operational burden, vendor lock-in). Demand evidence for any claimed advantage and flag missing benchmarks or version-verification gaps."
-                Strategist = "Step back. Which option fits the long-term direction of the system, the team's operating model, and the cost-of-change profile? Recommend the option a senior architect would pick and explain the trade-off they would accept."
-                Skeptic    = "Argue against the front-runner. What is the strongest case for the option most likely to be dismissed? Identify the failure mode, post-mortem, or vendor risk that would make the recommended option look wrong in 18 months."
+                Analyst    = "Enumerate the genuinely DIFFERENT ways to solve the same problem -- distinct approaches, not variants of one idea (e.g. build vs. buy, monolith vs. service-split, synchronous vs. event-driven, managed vs. self-hosted, relational vs. document) -- and lay each out against the criteria that actually differentiate them: cost, delivery time, operational burden, scalability, reversibility / cost-of-change, vendor lock-in, team fit, and security blast radius. Demand benchmark or version evidence for every claimed advantage and flag unverified or stale assumptions."
+                Strategist = "Recommend the architecture approach. Name which of the distinct solution approaches fits the long-term system direction, the team's operating model, and the cost-of-change profile; state explicitly why each REJECTED approach was rejected, not just why the winner won. Recommend the option a senior architect would pick, the trade-off they would knowingly accept, and the conditions under which that recommendation would flip."
+                Skeptic    = "Argue for the approach most likely to be dismissed and against the front-runner. Identify the 18-month failure mode, the post-mortem headline, the scaling cliff, and the vendor / lock-in or migration risk that would make the recommended architecture look wrong. Challenge whether a simpler or a more radically different architecture was unfairly excluded, and name the evidence that would settle the disagreement."
                 Sections   = @(
-                    @{ Title = 'Consensus on the Recommended Option'; Hint = 'Option(s) that at least two members would pick; treat as higher-confidence ADR Decision input.' },
-                    @{ Title = 'Divergences on Option Ranking or Criteria Weighting'; Hint = 'Material disagreements; record as ADR Consequences or open architecture questions.' },
+                    @{ Title = 'Consensus on the Recommended Approach'; Hint = 'Approach/option at least two members would pick; treat as higher-confidence ADR Decision input.' },
+                    @{ Title = 'Divergences on Approach Ranking or Criteria Weighting'; Hint = 'Material disagreements; record as ADR Consequences or open architecture questions, including why rejected approaches were rejected.' },
                     @{ Title = 'Failure Modes and Vendor Risks Surfaced'; Hint = 'Skeptic-raised risks the original landscape scan missed; promote into ADR Consequences and Tech Spec risk register.' },
-                    @{ Title = 'Net Adjustment to ADR'; Hint = 'How the council changed the chosen option, criteria weighting, or recorded consequences. If no change, state why.' }
+                    @{ Title = 'Net Adjustment to ADR'; Hint = 'How the council changed the chosen approach, criteria weighting, or recorded consequences. If no change, state why.' }
                 )
             }
         }
         'ai-design' {
             return @{
-                Analyst    = "Decompose the AI/ML task. Compare candidate models on benchmark evidence, cost-per-task, latency, structured-output reliability, and known failure modes. Demand sources for any benchmark claim and flag stale or unverified assumptions."
-                Strategist = "Step back. What is the right end-to-end design (model + prompt strategy + retrieval + evaluation + guardrails + fallback) for this workload? Recommend the approach a senior ML lead would choose and explain the cost/quality/risk trade-off they would accept."
-                Skeptic    = "Argue against the recommended model and approach. What is the strongest case for a different model family, a smaller cheaper model, a non-LLM baseline, or a different evaluation strategy? Surface drift, safety, hallucination, vendor-lock, and regulatory risks the design must mitigate."
+                Analyst    = "Decompose the AI/ML task and compare the candidate models AND the candidate approaches (single LLM call, smaller fine-tuned model, retrieval-augmented, agentic, or a non-LLM baseline) on benchmark evidence, cost-per-task, latency, structured-output reliability, and known failure modes. Demand a source for every benchmark claim and flag stale or unverified assumptions."
+                Strategist = "Recommend the end-to-end design (model + prompt strategy + retrieval + evaluation + guardrails + fallback) a senior ML lead would choose; state why each rejected approach was rejected and the cost / quality / risk trade-off they would accept."
+                Skeptic    = "Argue against the recommended model and approach. Make the case for a different model family, a smaller cheaper model, a non-LLM baseline, or a different evaluation strategy, and surface the drift, safety, hallucination, vendor-lock, and regulatory risks the design must mitigate."
                 Sections   = @(
                     @{ Title = 'Consensus on Model Selection and Pipeline Shape'; Hint = 'Choices at least two members agree on; treat as higher-confidence Model Card and pipeline inputs.' },
                     @{ Title = 'Divergences on Model, Eval Strategy, or Guardrails'; Hint = 'Material disagreements; record as Model Card limitations or open evaluation questions.' },
@@ -179,19 +199,13 @@ function Invoke-CouncilMember {
         [string] $Model,
         [string] $Role,
         [string] $Prompt,
-        [hashtable] $Pack
+        [hashtable] $Pack,
+        [string] $ResponseFormat = ''
     )
 
     $roleInstruction = if ($Pack.ContainsKey($Role)) { $Pack[$Role] } else { "Speak from your assigned role." }
-
-    $body = @"
-You are sitting on a Model Council as the **$Role**. Three council members
-with different reasoning styles are independently answering the same question.
-Do NOT try to be balanced -- speak from your assigned role.
-
-Your role-specific instruction:
-$roleInstruction
-
+    $format = if ($ResponseFormat) { $ResponseFormat } else {
+@"
 Respond in this structure:
   ## Position
   (2-4 sentences -- your top-line answer from your role)
@@ -201,6 +215,18 @@ Respond in this structure:
 
   ## What Could Make Me Wrong
   (2-3 bullets -- concrete evidence that would change your view)
+"@
+    }
+
+    $body = @"
+You are sitting on a Model Council as the **$Role**. Three council members
+with different reasoning styles are independently answering the same question(s).
+Do NOT try to be balanced -- speak from your assigned role.
+
+Your role-specific instruction:
+$roleInstruction
+
+$format
 
 Question:
 $Prompt
@@ -228,7 +254,42 @@ $outPath = Join-Path $outDir "COUNCIL-$slug.md"
 $roster  = Get-CouncilRoster -Spec $Members
 $pack    = Get-RolePack -Purpose $Purpose
 
-$prompt = if ($Context) { "$Question`n`nSupporting context:`n$Context" } else { $Question }
+# Normalize topics: a council is NOT limited to one. -Question adds a primary
+# topic; -Questions adds one or more. Blank entries are dropped.
+$topicList = @()
+if ($Question -and $Question.Trim()) { $topicList += $Question.Trim() }
+foreach ($q in $Questions) { if ($q -and $q.Trim()) { $topicList += $q.Trim() } }
+if ($topicList.Count -eq 0) {
+    throw "Provide at least one topic via -Question or -Questions."
+}
+$multiTopic = $topicList.Count -gt 1
+
+if ($multiTopic) {
+    $qb = [System.Text.StringBuilder]::new()
+    [void]$qb.AppendLine("This council deliberates on $($topicList.Count) related topics. Address EACH topic explicitly and keep them distinct.")
+    [void]$qb.AppendLine("")
+    for ($i = 0; $i -lt $topicList.Count; $i++) {
+        [void]$qb.AppendLine("Topic $($i + 1): $($topicList[$i])")
+    }
+    $questionBlock = $qb.ToString().TrimEnd()
+    $responseFormat = @"
+For EACH topic (Topic 1..$($topicList.Count)) respond in this structure:
+  ### Topic <n>
+  **Position** (2-4 sentences from your role)
+  **Key Reasoning** (3-6 bullets)
+  **What Could Make Me Wrong** (2-3 bullets)
+Then close with:
+  ### Cross-Topic Take
+  (2-3 bullets on tensions, dependencies, or sequencing across the topics)
+"@
+    $responseFormatHint = "For EACH of the $($topicList.Count) topics: '### Topic <n>' with Position / Key Reasoning / What Could Make Me Wrong; then a '### Cross-Topic Take'."
+} else {
+    $questionBlock      = $topicList[0]
+    $responseFormat     = ''
+    $responseFormatHint = "## Position (2-4 sentences) / ## Key Reasoning (3-6 bullets) / ## What Could Make Me Wrong (2-3 bullets)"
+}
+
+$prompt = if ($Context) { "$questionBlock`n`nSupporting context:`n$Context" } else { $questionBlock }
 
 # Brief mode is the default (provider-agnostic). -AutoInvoke opts into gh models automation.
 $useGh = $false
@@ -250,7 +311,7 @@ $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("## Question")
 [void]$sb.AppendLine("")
-[void]$sb.AppendLine($Question)
+[void]$sb.AppendLine($questionBlock)
 [void]$sb.AppendLine("")
 if ($Context) {
     [void]$sb.AppendLine("## Supporting Context")
@@ -274,7 +335,7 @@ foreach ($m in $roster) {
     [void]$sb.AppendLine("")
     if ($useGh) {
         Write-Host "Consulting $($m.Role) ($($m.Model))..."
-        $resp = Invoke-CouncilMember -Model $m.Model -Role $m.Role -Prompt $prompt -Pack $pack
+        $resp = Invoke-CouncilMember -Model $m.Model -Role $m.Role -Prompt $prompt -Pack $pack -ResponseFormat $responseFormat
         [void]$sb.AppendLine($resp)
     } else {
         [void]$sb.AppendLine("[AGENT-TODO] Calling agent: adopt the role below, generate the response in this file (replacing this block), then move to the next role. Do NOT ask the user to do this -- run it yourself as part of the active workflow phase.")
@@ -285,7 +346,7 @@ foreach ($m in $roster) {
         $roleInstr = if ($pack.ContainsKey($m.Role)) { $pack[$m.Role] } else { 'Speak from your assigned role.' }
         [void]$sb.AppendLine("Role instruction: $roleInstr")
         [void]$sb.AppendLine("Prompt: see top of file (Question + Supporting Context)")
-        [void]$sb.AppendLine("Response format: ## Position (2-4 sentences) / ## Key Reasoning (3-6 bullets) / ## What Could Make Me Wrong (2-3 bullets)")
+        [void]$sb.AppendLine("Response format: $responseFormatHint")
         [void]$sb.AppendLine('```')
     }
     [void]$sb.AppendLine("")
@@ -295,6 +356,10 @@ foreach ($m in $roster) {
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("**To be completed by the calling agent after writing all three Member Responses above. The user is not in the loop.**")
 [void]$sb.AppendLine("")
+if ($multiTopic) {
+    [void]$sb.AppendLine("This council covered $($topicList.Count) topics. In each section below, attribute findings to the relevant Topic <n> so the deliverable can trace each decision back to its topic.")
+    [void]$sb.AppendLine("")
+}
 foreach ($section in $pack.Sections) {
     [void]$sb.AppendLine("### $($section.Title)")
     [void]$sb.AppendLine("($($section.Hint))")

@@ -124,7 +124,7 @@ Scan the user's request for technology signals:
 
 ### 2.5 Model Council Deliberation (MANDATORY for non-trivial PRDs)
 
-Before drafting the PRD, convene a Model Council to stress-test scope, priority, success metrics, and assumptions surfaced during research. The council is the model-side analogue of the Architect requirement-fit checkpoint: three diverse models independently challenge the framing so the PRD reflects more than one model's prior.
+Before drafting the PRD, convene a Model Council to stress-test scope, priority, success metrics, and assumptions surfaced during research. The council is the model-side analogue of the Architect requirement-fit checkpoint: three diverse models independently challenge the framing so the PRD reflects more than one model's prior. The PM council is specifically tuned to two questions a PRD lives or dies on: **what should be in the PRD** (the in-scope requirement list, explicit non-goals, and the single measurable success metric) and **how the work should be approached** (build sequencing, MVP slice vs. fast-follow vs. deferred, and the riskiest assumption to validate first). A council is **not limited to one topic** -- when an Epic raises several contested decisions (scope boundary, metric choice, build-vs-buy, rollout sequencing), put them all to the council in a single run with `-Questions`.
 
 **When to convene (mandatory)**:
 - any Epic
@@ -141,9 +141,9 @@ Before drafting the PRD, convene a Model Council to stress-test scope, priority,
 
 | Role | Model | Lens |
 |------|-------|------|
-| Analyst | `openai/gpt-5.5` | Decompose user need; identify smallest viable scope and the metric that proves success |
-| Strategist | `anthropic/claude-opus-4.8` | Frame strategic value, second-order effects, sequencing |
-| Skeptic | `google/gemini-3.1-pro` | Argue against shipping; surface adoption, support, and compliance risks |
+| Analyst | `openai/gpt-5.5` | Grill the PRD contents: state exactly what MUST appear -- in-scope requirement list, explicit non-goals, smallest MVP slice vs. defer, single measurable success metric (target + how instrumented), edge/data states for acceptance criteria; reject vague, unmeasurable, or scope-creeping claims and name what to cut |
+| Strategist | `anthropic/claude-opus-4.8` | Frame the build approach and sequencing: the real user job-to-be-done, the recommended build approach, release sequencing (now / fast-follow / deferred), dependency ordering, and why each item is included now vs. later |
+| Skeptic | `google/gemini-3.1-pro` | Argue against shipping as framed: attack the riskiest assumption and any gameable or vanity metric; surface adoption, support, privacy, security, and compliance blockers; name the single change that most de-risks the PRD |
 
 **How to convene**:
 
@@ -151,6 +151,17 @@ Before drafting the PRD, convene a Model Council to stress-test scope, priority,
 pwsh scripts/model-council.ps1 `
     -Topic "prd-{epic-id}-{short-slug}" `
     -Question "Given the Phase 1-5 research, what should be in scope, what should be cut, what is the right success metric, and what is the strongest case AGAINST shipping this?" `
+    -Context "<paste the key tensions, contested scope items, and assumptions from the research log>" `
+    -OutputDir "docs/artifacts/prd" `
+    -Purpose prd-scope
+```
+
+**Multiple topics in one council** (use when an Epic raises several contested decisions):
+
+```pwsh
+pwsh scripts/model-council.ps1 `
+    -Topic "prd-{epic-id}-{short-slug}" `
+    -Questions "What MUST be in scope for the MVP and what should be explicit non-goals?","What is the single success metric and how is it instrumented?","What is the right build sequencing (now / fast-follow / deferred)?" `
     -Context "<paste the key tensions, contested scope items, and assumptions from the research log>" `
     -OutputDir "docs/artifacts/prd" `
     -Purpose prd-scope

@@ -142,7 +142,7 @@ Create `docs/artifacts/adr/ADR-{issue}.md` from template at `.github/templates/A
 
 ### 2.5 Model Council Deliberation (MANDATORY for non-trivial ADRs)
 
-After drafting the ADR Options and Evaluation sections but BEFORE locking the Decision, convene a Model Council to stress-test option ranking, criteria weighting, and the contrarian case against the front-runner. Single-model architecture recommendations carry the model's training-data prior; the council exposes that prior so the recorded Decision reflects more than one perspective.
+After drafting the ADR Options and Evaluation sections but BEFORE locking the Decision, convene a Model Council to stress-test option ranking, criteria weighting, and the contrarian case against the front-runner. Single-model architecture recommendations carry the model's training-data prior; the council exposes that prior so the recorded Decision reflects more than one perspective. The Architect council is specifically tuned to two questions: **what are the genuinely different ways to solve the same problem** (distinct approaches such as build vs. buy, monolith vs. service-split, sync vs. event-driven, managed vs. self-hosted -- not minor variants of one idea) and **which architecture approach should be recommended** (the option a senior architect would defend, why each rejected approach was rejected, and the conditions that would flip the recommendation). A council is **not limited to one topic** -- when the decision raises several axes (approach choice, failure mode, vendor risk, whether a simpler design was excluded), put them all to the council in a single run with `-Questions`.
 
 **When to convene (mandatory)**:
 - any new system architecture
@@ -160,9 +160,9 @@ After drafting the ADR Options and Evaluation sections but BEFORE locking the De
 
 | Role | Model | Lens |
 |------|-------|------|
-| Analyst | `openai/gpt-5.5` | Decompose options against differentiating criteria; demand benchmark/version evidence |
-| Strategist | `anthropic/claude-opus-4.8` | Recommend the option a senior architect would pick; explain the trade-off accepted |
-| Skeptic | `google/gemini-3.1-pro` | Argue against the front-runner; surface failure modes and vendor risk over 18 months |
+| Analyst | `openai/gpt-5.5` | Enumerate the genuinely DIFFERENT solution approaches (distinct approaches, not variants) and score each against differentiating criteria -- cost, delivery time, operational burden, scalability, reversibility / cost-of-change, vendor lock-in, team fit, security blast radius; demand benchmark/version evidence |
+| Strategist | `anthropic/claude-opus-4.8` | Recommend the architecture approach: which distinct approach fits the long-term direction and cost-of-change profile, why each REJECTED approach was rejected, the trade-off knowingly accepted, and the conditions that would flip it |
+| Skeptic | `google/gemini-3.1-pro` | Argue for the dismissed approach and against the front-runner; surface the 18-month failure mode, scaling cliff, and vendor / lock-in / migration risk; challenge whether a simpler or radically different architecture was unfairly excluded |
 
 **How to convene**:
 
@@ -170,6 +170,17 @@ After drafting the ADR Options and Evaluation sections but BEFORE locking the De
 pwsh scripts/model-council.ps1 `
     -Topic "adr-{issue}-{short-slug}" `
     -Question "Given these N options and the evaluation criteria, which option is the right choice and what is the strongest case AGAINST the recommended option?" `
+    -Context "<paste the Options summary, Evaluation matrix, and any constraints from the PRD>" `
+    -OutputDir "docs/artifacts/adr" `
+    -Purpose adr-options
+```
+
+**Multiple topics in one council** (use when the decision raises several distinct axes):
+
+```pwsh
+pwsh scripts/model-council.ps1 `
+    -Topic "adr-{issue}-{short-slug}" `
+    -Questions "Which of the distinct solution approaches should we recommend and why?","What is the 18-month failure mode of the front-runner?","Was a simpler or radically different architecture unfairly excluded?" `
     -Context "<paste the Options summary, Evaluation matrix, and any constraints from the PRD>" `
     -OutputDir "docs/artifacts/adr" `
     -Purpose adr-options

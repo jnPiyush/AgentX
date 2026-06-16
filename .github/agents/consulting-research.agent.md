@@ -222,6 +222,15 @@ pwsh scripts/model-council.ps1 `
   -Context "{key claims to stress-test, drawn from the research log}"
 ```
 
+A council is **not limited to one topic** -- put several framing questions to it in one run with `-Questions`:
+
+```pwsh
+pwsh scripts/model-council.ps1 `
+  -Topic "{topic-slug}" `
+  -Questions "{first framing question}","{second framing question}","{third framing question}" `
+  -Context "{key claims to stress-test, drawn from the research log}"
+```
+
 **This is an internal agent mechanism. After running the script, YOU (the Consulting Research agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final research deliverable, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
 
 **Synthesis requirements** (the agent fills in the Synthesis section):
