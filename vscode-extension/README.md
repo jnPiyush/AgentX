@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.4.62-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-8.4.64-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -344,6 +344,13 @@ The extension registers 13 declarative chat agents, each mapped to an AgentX rol
 ---
 
 ## Recent Changes
+
+### 8.4.63
+
+- Model Council deepened into persona+purpose-specific deliberation (PRD scope, ADR options, AI design, code review, research) with multi-topic support in a single run
+- Council persona model defaults refreshed to the current frontier tier (Opus 4.7 -> 4.8, GPT 5.4 -> 5.5); model names remain advisory diversity slots
+- Extension opts into the VS Code Agents Window on activation as a user-side setting (SPEC-400) so AgentX surfaces in the agent-first window without leaving the editor experience
+- Runtime hardening: resolved review-400 findings, restored quality-loop parity, and fixed a shell test flake
 
 ### 8.4.52
 

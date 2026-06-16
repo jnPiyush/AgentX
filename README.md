@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.62"><img src="https://img.shields.io/badge/Version-8.4.62-0EA5E9?style=for-the-badge" alt="Version 8.4.62"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.64"><img src="https://img.shields.io/badge/Version-8.4.64-0EA5E9?style=for-the-badge" alt="Version 8.4.64"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -299,13 +299,12 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.62
+## New In 8.4.64
 
-- Power Platform Builder pack (`packs/agentx-power-platform-builder/`) now spans Tier-1 through Tier-3: a `low-code-builder` specialist agent plus 12 low-code skills covering Dataverse schema, canvas + model-driven apps, Power Automate (cloud + desktop/RPA), Power Pages, PCF controls, Dataverse plugins, security roles, environment variables, **Copilot Studio agents**, and the `pac` CLI -- emits unpacked solution source ready for `pac solution pack` + `pac solution import`
-- New `convert-slides` plugin (`.agentx/plugins/convert-slides/`) renders slide-ready Markdown storyboards into Microsoft PowerPoint (`.pptx`) via Pandoc, with PowerShell and Bash entry points and registry integration alongside the existing `convert-docs` plugin
-- AgentX Auto agent gains a new `Plugins (Optional Capabilities)` section documenting both `convert-docs` (MD->DOCX) and `convert-slides` (MD->PPTX) with trigger conditions, entry paths, and invocation rules (PATH precheck, no shell concatenation, regenerate-from-Markdown discipline)
-- Consulting Research agent replaces its absolute "do not generate `.pptx`" rule with a Markdown-first plugin-bridge workflow: storyboard Markdown remains the source of truth and is rendered via `convert-slides` only when the user explicitly asks for a deck file
-- Zero-copy asset rewrite regression fix in the VS Code extension: agent context loader, runtime asset utilities, and agent-native review surface now correctly resolve canonical template references through the bundled extension path again (16/16 tests green)
+- Model Council deepened from a flat three-perspective brief into persona+purpose-specific deliberation: each council member now reasons from a distinct persona lens calibrated to the deliberation purpose (PRD scope, ADR options, AI design, code review, research), with multi-topic support so a single council run can weigh several decision points before synthesis
+- Council persona model defaults refreshed to the current frontier tier (Opus 4.7 -> 4.8, GPT 5.4 -> 5.5); model names remain advisory diversity slots, not hard requirements
+- VS Code extension now opts into the new VS Code Agents Window on activation as a user-side setting (SPEC-400), so AgentX's agents, skills, and quality-loop surfaces show up in the agent-first window without abandoning the editor-window experience
+- Runtime hardening: resolved the review-400 findings and restored loop parity across the extension runtime, plus a shell test flake fix
 
 ## Main Repo Areas
 

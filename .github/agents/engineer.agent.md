@@ -21,6 +21,9 @@ constraints:
   - "MUST verify quality loop reached 'complete' status before moving to In Review"
   - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix); the commit-msg hook rejects fix: commits without test changes"
   - "MUST store all AI/LLM prompts as separate files in prompts/; MUST NOT embed multi-line prompts as inline strings in code"
+  - "MUST run 'pwsh scripts/scrub.ps1 -Path <changed-path>' (AI-slop deslop pass) on EVERY modified file and apply safe fixes BEFORE the Test phase and again at the Pre-Handoff gate -- this is a non-skippable gate; behavior MUST NOT change; HIGH-severity findings block handoff"
+  - "MUST reuse existing shared code before writing new code: search the codebase for an existing API endpoint, service, module, function, utility, stored procedure, query, or component that already provides the needed behavior or data, and extend/parameterize it instead of creating a near-duplicate"
+  - "MUST extract shared logic when two or more call sites (screens, features, jobs) need the same behavior or data access into a single shared module/endpoint/stored procedure rather than duplicating it per screen or per feature; record the reuse decision (reused existing vs newly shared vs justified new) in the Phase 3 plan"
   - "MUST NOT modify PRD, ADR, UX docs, or CI/CD workflows"
   - "MUST NOT make architectural decisions not covered by the Spec/ADR -- escalate to Architect"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
@@ -82,11 +85,12 @@ Every implementation task follows `Research -> Brainstorm -> Plan -> Design -> I
 
 | Phase | MUST Load Skill | MUST Produce |
 |-------|----------------|--------------|
-| 1. Research | `iterative-loop`, `core-principles`, language instruction | Artifact summary + ambiguity list |
+| 1. Research | `iterative-loop`, `core-principles`, language instruction | Artifact summary + ambiguity list + reuse inventory |
 | 2. Brainstorm | `core-principles` | Chosen approach + rationale |
-| 3. Plan | `api-design`, `database` if applicable | File inventory + test plan |
-| 4. Design | `core-principles` | Interfaces + SOLID check |
+| 3. Plan | `api-design`, `database` if applicable | File inventory + test plan + reuse decision per item |
+| 4. Design | `core-principles` | Interfaces + SOLID + DRY/reuse check |
 | 5. Implement | Language instruction, `ai-agent-development` if `needs:ai`, `systematic-debugging` if 2+ fixes failed | Committed code + loop started |
+| 5b. Scrub | `scrub` | Deslop pass run on every changed file; safe fixes applied; behavior unchanged |
 | 6. Test | `testing`, `ai-evaluation` if `needs:ai`, `verification-before-completion` before loop complete | Coverage >=80% + ACs covered + verification gate passed |
 | 7. Review | `code-review`, `security` | Self-review complete + score >=70% |
 
@@ -140,11 +144,22 @@ Read every artifact for this issue.
 | UX Spec | `docs/ux/UX-{issue}.md` (if exists) | User flow state machines, component hierarchy, WCAG 2.1 AA constraints, breakpoints, empty/error/loading states |
 | Data Science | `docs/data-science/` or Spec AI/ML section (if exists) | ML integration points, input/output contracts, eval requirements, drift monitoring hooks |
 
-### 1.3 Scan the Existing Codebase
+### 1.3 Scan the Existing Codebase (Reuse Inventory -- MANDATORY)
 
 - `semantic_search` for patterns in the feature area
-- `grep_search` for existing implementations of similar patterns (auth, DB access, API endpoints)
+- `grep_search` for existing implementations of similar patterns (auth, DB access, API endpoints, queries, stored procedures, UI components)
 - Identify reusable patterns, naming conventions, and file-placement rules
+
+Before planning any new code, build a **reuse inventory**: actively look for code that already does what this issue needs, so you extend or share it instead of duplicating it.
+
+| Need | Search for existing | Reuse decision |
+|------|--------------------|----------------|
+| API behavior / data shape | Existing endpoint or service returning the same data or doing the same mutation | Reuse / extend / new (justified) |
+| Business / domain logic | Existing service, use case, or utility with the same rule | Reuse / extend / new (justified) |
+| Data access (read/write) | Existing repository method, query, or stored procedure fetching/inserting/updating the same entity | Reuse / extend / new (justified) |
+| UI behavior | Existing component, hook, or screen with the same interaction | Reuse / extend / new (justified) |
+
+Default to reuse. Create new shared code only when no existing module fits; create a per-feature duplicate only when reuse is impossible AND the divergence is documented. If two or more call sites (screens, features, jobs) need the same behavior or data, plan a single shared module/endpoint/stored procedure -- not one copy per caller.
 
 ### 1.5 Research Phase Gate -- Ambiguity Survey
 
@@ -158,7 +173,7 @@ Ambiguity checklist:
 - [ ] Every performance target is measurable (specific numbers, not "make it fast")
 - [ ] AI/ML integration points have defined input/output contracts
 
-**Phase 1 Gate**: All artifacts read + all critical ambiguities clarified + assumptions documented.
+**Phase 1 Gate**: All artifacts read + all critical ambiguities clarified + assumptions documented + reuse inventory built (existing shared code identified for each need).
 
 ---
 
@@ -194,15 +209,18 @@ Document your choice in 2-3 sentences: which approach, why it fits the ADR + Spe
 
 ### 3.1 File Inventory
 
-List every file to create or modify:
+List every file to create or modify. For each item, record the reuse decision from the Phase 1 inventory (reuse existing, extend/share existing, or justified new).
 
-| Action | File Path | What Changes |
-|--------|-----------|-------------|
-| Create | `src/...` | New class/function |
-| Modify | `src/...` | Add endpoint/method |
-| Create | `tests/unit/...` | Unit tests |
-| Create | `tests/integration/...` | Integration tests |
-| Create | `prompts/...` | System prompt (AI features only) |
+| Action | File Path | What Changes | Reuse Decision |
+|--------|-----------|-------------|----------------|
+| Reuse | `src/...` | Call existing shared service/endpoint/stored procedure | Reuse existing |
+| Modify | `src/...` | Extend existing module so a second caller can share it | Extend/share |
+| Create | `src/...` | New shared module (>=2 callers need it) | New shared |
+| Create | `src/...` | New code (no existing fit; divergence justified) | Justified new |
+| Create | `tests/unit/...` | Unit tests | - |
+| Create | `prompts/...` | System prompt (AI features only) | - |
+
+**Reuse gate**: Any `Justified new` row that duplicates behavior or data access already provided elsewhere MUST carry a one-line justification of why reuse was not possible. When the same data fetch/insert/update or the same API behavior is needed by more than one screen or feature, the plan MUST consolidate it into one shared module/endpoint/stored procedure.
 
 ### 3.2 Interface Definitions (Pre-Code)
 
@@ -257,6 +275,20 @@ This ensures testability: each concrete class can be replaced with a mock in tes
 | ISP | Are interfaces lean -- no method is forced on classes that do not need it? | `[ ]` |
 | DIP | Does the code depend on abstractions, not concretions? | `[ ]` |
 
+### 4.2a Reuse / DRY Check (MANDATORY)
+
+Confirm the design favors shared code over duplication before writing implementation logic:
+
+| Check | Question | Check |
+|-------|----------|-------|
+| Shared API | Is each data shape / mutation served by ONE endpoint reused across screens and features, not a near-duplicate per screen? | `[ ]` |
+| Shared data access | Is each read/insert/update for an entity served by ONE shared query, repository method, or stored procedure, not separate ones doing the same thing? | `[ ]` |
+| Shared logic | Is repeated business/domain logic extracted into a single shared module/function instead of copied per caller? | `[ ]` |
+| Shared UI | Are repeated UI behaviors served by a single shared component/hook, not re-implemented per screen? | `[ ]` |
+| Justified new | For any new (non-shared) code that resembles existing code, is the reason it cannot reuse/share documented? | `[ ]` |
+
+Reuse-first does not mean over-abstraction: share when two or more concrete call sites need the same thing (YAGNI still applies to single-use code).
+
 ### 4.3 Clean Architecture Layer Check
 
 Verify layer assignments match the Spec's service layer design:
@@ -287,7 +319,7 @@ Run this checkpoint after the design is concrete but before writing implementati
 
 This is a lightweight alignment checkpoint, not a universal second approval loop for every story.
 
-**Phase 4 Gate**: Interfaces defined + SOLID check passed + Clean Architecture layers verified + required specialist alignment completed.
+**Phase 4 Gate**: Interfaces defined + SOLID check passed + Reuse/DRY check passed + Clean Architecture layers verified + required specialist alignment completed.
 
 ---
 
@@ -310,6 +342,7 @@ Implement in this order (bottom-up per spec, inner-to-outer per architecture):
 - Commit incrementally with semantic messages: `feat: add <X> service (#<issue>)`
 - MUST NOT implement features not in the spec (YAGNI)
 - MUST NOT create new abstractions unless at least two concrete cases need them (YAGNI)
+- MUST reuse the shared endpoint/service/module/stored procedure identified in the reuse inventory instead of writing a near-duplicate; when a second caller needs existing logic or data access, extend the shared unit rather than copying it
 
 ### 5.3 GenAI Implementation Rules (applies when `needs:ai` label present)
 
@@ -329,6 +362,32 @@ git add -A && git commit -m "feat: implement <description> (#<issue>)"
 ```
 
 **Phase 5 Gate**: Core implementation committed + quality loop started.
+
+---
+
+## Phase 5b: Scrub (Deslop) -- MANDATORY, NO SKIP
+
+> **Goal**: Remove AI-slop from changed files before tests and review. This gate is non-skippable and runs on every implementation task that changes files.
+
+### 5b.1 Load Scrub Skill
+
+Load `.github/skills/development/scrub/SKILL.md`.
+
+### 5b.2 Run the Deslop Pass
+
+Run the scrubber on every file you modified (one `-Path` per run) and apply safe fixes:
+
+```bash
+pwsh scripts/scrub.ps1 -Path <changed-path> -Fix
+```
+
+The scrubber flags comment-rot, obvious restatement comments, AI filler, stale bylines, generic gradients, empty catch blocks, and over-abstraction. Safe fixes (comment-rot, obvious-restate, stale-byline) are auto-applied with `-Fix`; flag-only findings (ai-filler, generic-gradient, over-abstraction, empty-catch) MUST be resolved by hand.
+
+### 5b.3 Verify Behavior Unchanged
+
+The scrub pass MUST NOT change behavior. After applying fixes, re-run the relevant tests to confirm nothing regressed.
+
+**Phase 5b Gate**: `scripts/scrub.ps1` run on every changed file; safe fixes applied; flag-only findings resolved; no HIGH-severity findings remain; behavior unchanged. This is a hard gate -- do not advance to Test with unresolved HIGH findings.
 
 ---
 
@@ -406,6 +465,11 @@ Load `code-review` and `security` skills.
 - [ ] No unresolved TODO/FIXME markers (resolve now or raise a follow-up issue)
 - [ ] Naming clear and consistent with codebase conventions
 - [ ] Required Architect/Data Scientist design alignment checkpoints were completed where the implementation crossed those boundaries
+
+**Reuse / DRY**:
+- [ ] No near-duplicate API endpoint, service, module, query, stored procedure, or component was created when an existing one could be reused or extended
+- [ ] Logic or data access needed by 2+ screens/features is served by a single shared unit (shared API/module/stored procedure), not duplicated per caller
+- [ ] Any new code that resembles existing code carries a documented justification for not reusing
 
 **Documentation**:
 - [ ] Public APIs documented where behavior is non-obvious
@@ -585,6 +649,8 @@ verified manually and what remains untestable in the review output.
 - No unresolved TODO/FIXME markers
 - All PRD acceptance criteria covered by tests
 - Spec compliance verified (Spec, ADR, and PRD ACs)
+- Reuse-first satisfied (no duplicated API/module/query/stored procedure/component; shared logic extracted)
+- Scrub (deslop) pass run on every changed file with no HIGH-severity findings
 - Self-review checklist complete
 
 ### Pre-Handoff Gate
@@ -596,6 +662,7 @@ Before yielding back to the user or handing off:
 - [ ] Large block replacements were verified by searching for removed identifiers and the new declaration
 - [ ] Karpathy guidelines applied across all phases (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) -- MANDATORY, not optional
 - [ ] `pwsh scripts/scrub.ps1 -Path <changed-path>` run on every file you modified and safe fixes applied (MANDATORY deslop pass; behavior unchanged)
+- [ ] Reuse-first verified: no near-duplicate API/module/query/stored procedure/component created; shared logic extracted where 2+ call sites need it (DRY)
 - [ ] UI-bearing changes verified through the agent browser (Playwright MCP, browser-automation skill) as the default test surface, or the missing-prerequisite fallback reported
 - [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
 

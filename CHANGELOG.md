@@ -1,5 +1,27 @@
 # Changelog
 
+## 8.4.64
+
+### Engineer Agent: Mandatory Scrub + Reuse-First Enforcement
+
+- **AI-slop scrub is now mandatory** in the Engineer pipeline. A dedicated Phase 5b runs `scripts/scrub.ps1` over the changed area before review/handoff, with matching entries in the frontmatter checklist, Quick Phase table, self-review, Done Criteria, and Pre-Handoff gate. Behavior must not change; the scrub only removes machine-authorship tells.
+- **Reuse-first / DRY is now an explicit gate.** The Engineer must take a reuse inventory of existing shared modules, APIs, and stored procedures before writing new code, record a reuse decision during planning, and confirm no duplication during implementation and self-review. New duplicated helpers require a documented justification.
+
+### Model Council: Persona + Purpose Deliberation
+
+- **Model Council deepened** from a flat three-perspective brief (Analyst, Strategist, Skeptic) into persona+purpose-specific deliberation. Each council member now reasons from a distinct persona lens calibrated to the deliberation purpose -- PRD scope, ADR options, AI design, code review, and research -- producing sharper, less redundant perspectives before synthesis.
+- **Multi-topic support**: a single council run can weigh several decision points in one pass and synthesize across them, instead of being limited to one topic per invocation.
+- **Persona model defaults refreshed** to the current frontier tier (Opus 4.7 -> 4.8, GPT 5.4 -> 5.5). Model names remain advisory diversity slots, not hard requirements; substitute any 3 diverse, capable models.
+
+### VS Code Agents Window Opt-In (SPEC-400)
+
+- The extension now **opts into the VS Code Agents Window on activation** as a user-side setting, so AgentX's 24 agents, 127 skills, workflow gates, and quality-loop CLI surface inside the new agent-first window without forcing users to abandon the editor-window experience.
+- Corrected SPEC-400 to document the opt-in as a user-side setting and hardened a shell test flake.
+
+### Runtime Hardening
+
+- Resolved the review-400 findings and restored quality-loop parity across the extension runtime.
+
 ## 8.4.54
 
 ### Loop Start Auto-Reset (Agent Confusion Fix)
