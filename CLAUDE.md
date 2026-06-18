@@ -39,7 +39,7 @@ These four rules carry the same weight as the Quality Loop. The pre-commit hook 
 
 1. **[AGENTS.md](AGENTS.md)** - Map of all resources, quick-reference rules, pointers to detailed docs. Read for ANY coding or workflow task.
 2. **[docs/WORKFLOW.md](docs/WORKFLOW.md)** - Workflow, routing, handoff, status transitions, architecture. Read for multi-agent coordination.
-3. **[Skills.md](Skills.md)** - Production code standards index (111 skills across 12 categories). Use the Quick Reference table to pick 3-4 relevant skills per task, then read those SKILL.md files.
+3. **[Skills.md](Skills.md)** - Production code standards index. Use the Quick Reference table to pick only the skills relevant to the task and active phase, then read those SKILL.md files.
 
 **When to skip AGENTS.md**: Answering questions, research, debugging only.
 
@@ -60,13 +60,13 @@ Load context on-demand, not upfront. Match the task to the right documents:
 
 | Task | Load | Skip |
 |------|------|------|
-| Writing/editing code | AGENTS.md + matching instruction file + relevant skills (max 3-4) | Skills not matching task |
+| Writing/editing code | AGENTS.md + matching instruction file + relevant skills | Skills not matching task |
 | Creating new files, features, issues | AGENTS.md (workflow + classification) | Unrelated skills |
 | Multi-agent coordination, handoffs | AGENTS.md + [docs/WORKFLOW.md](docs/WORKFLOW.md) | Unrelated skills |
 | Answering questions, research | Nothing extra | AGENTS.md, Skills.md |
 | Debugging | Matching instruction file + error handling skill | AGENTS.md |
 
-**Token budget**: Max 3-4 skills per task (~20K tokens). More = noise.
+**Token budget**: Load only the skills relevant to the task and active phase. Prefer progressive disclosure over broad context loading.
 
 ---
 

@@ -96,31 +96,9 @@ Every implementation task follows `Research -> Brainstorm -> Plan -> Design -> I
 
 ---
 
-## Quality Loop (MANDATORY)
+## Quality Loop
 
-The quality loop is mandatory for every implementation task.
-
-| Command | When |
-|---------|------|
-| `.agentx/agentx.ps1 loop start -p "Implementing #<issue>: <title>" -i <issue>` | After first implementation commit |
-| `.agentx/agentx.ps1 loop baseline -c <passing-tests>` | After the first full suite run establishes the non-regression baseline |
-| `.agentx/agentx.ps1 loop iterate -s "Iteration summary" -e <artifact> --passing <count>` | After each fix/improvement cycle |
-| `.agentx/agentx.ps1 loop complete -s "All quality gates passed" -e <final-artifact> --passing <count>` | When ALL quality gates pass |
-| `.agentx/agentx.ps1 loop status` | Check current loop state |
-
-**Minimum 5 iterations with a defined focus per iteration. Each iteration MUST attach an evidence file via `loop iterate -e <path>`:**
-
-| Iteration | Focus | Required Evidence | Gate to Advance |
-|-----------|-------|-------------------|----------------|
-| 1 - Make it Work | Core functionality; failing tests turn green | test report (junit/trx/pytest junit) | Tests passing; feature functional |
-| 2 - Make it Right | Refactor; edge cases; lint clean; coverage >=80% on changed lines | coverage xml + lint output | Diff coverage gate + lint clean |
-| 3 - Make it Secure | SAST + secrets + SCA scans; dependency audit | semgrep json + gitleaks json + audit log | Zero high/critical findings |
-| 4 - Adversarial (Break it) | Property-based tests; mutation testing on changed lines; fuzz parsers/LLM output; 3+ negative tests per endpoint | mutation report + property test report + negative-test list | Mutation score >= 60% on changed lines; surviving mutants killed |
-| 5 - Subagent Review | Separate reviewer pass with only diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings reset to relevant earlier iteration | reviewer findings json/md | Zero HIGH, zero MEDIUM findings |
-
-**Baseline lock**: `loop start` creates the baseline file and clears the prior loop's evidence cache. Record the actual passing-test count with `loop baseline -c <count>`. Once recorded, any later `loop iterate` or `loop complete` whose `--passing <count>` is below baseline MUST NOT advance -- roll back the diff or fix forward.
-
-**Hard gate**: CLI blocks `hook finish` with exit 1 if loop state is not `complete`. Cancelled or skipped does NOT bypass the gate.
+Use the shared loop contract in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). The phase table above identifies when Engineer work starts, iterates, verifies, and hands off; this file intentionally does not restate the full loop mechanics.
 
 ---
 
@@ -600,132 +578,20 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation. Do NOT wait for the pre-commit hook to catch this -- start the loop now.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
 
-After completing initial work, keep iterating until all done criteria pass. Reaching the minimum iteration count is only a gate; the loop is not done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds. Copilot runs this loop natively within its agentic session.
+Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 
-### Loop Steps (repeat minimum 5 times)
+## Role-Specific Done Criteria
 
-1. **Run verification** -- execute the full test suite, linter, and type-checker
-2. **Evaluate results** -- if any check fails, identify the root cause before fixing
-3. **Fix** -- address the failure with targeted, minimal changes
-4. **Re-run verification** -- confirm the fix works and did not regress anything
-5. **Self-review** -- once all checks pass, spawn a same-role reviewer sub-agent:
-   - Sub-reviewer evaluates with structured findings: HIGH, MEDIUM, LOW
-   - APPROVED: true when no HIGH or MEDIUM findings remain
-   - APPROVED: false when any HIGH or MEDIUM findings remain
-6. **Address findings** -- fix all HIGH and MEDIUM findings, then re-run from Step 1
-7. **Spec compliance check** -- verify implementation against Spec, ADR, and PRD ACs
-8. **Repeat** until APPROVED, all Done Criteria pass, and minimum 5 iterations complete
+Implementation satisfies PRD/ADR/Spec acceptance criteria; tests, lint/type checks, coverage, scrub, and security checks pass for the changed surface; no unresolved HIGH/MEDIUM review findings remain; reuse-first and live-surface verification are addressed where applicable.
 
-### Iteration Focus Table
+## Delivery Report (MANDATORY)
 
-| Iteration # | Focus | Gate to Advance |
-|------------|-------|----------------|
-| 1 | Make it Work: core functionality complete; tests passing | Tests green; feature functional |
-| 2 | Make it Right: refactored; edge cases added; lint clean | Coverage >= 80%; lint clean |
-| 3 | Make it Production-Ready: security clean; performance verified; docs done; live-surface check | Score >= 70%; self-review checklist done; live-surface verification complete |
-
-### Live-Surface Verification (Iteration 3)
-
-In iteration 3, verify the actual output surface -- not just that tests pass:
-
-- **CLI tools**: Run the command and confirm expected output format, exit codes, and error messages
-- **API endpoints**: Confirm response shapes match spec (status codes, headers, body schema)
-- **UI components**: Verify the component renders correctly with representative data
-- **Scripts**: Execute the script and confirm file outputs, stdout, and side effects match expectations
-- **Configuration files**: Verify the file parses correctly and is consumed by the target tool
-
-If live-surface verification is not feasible (e.g., requires external services), document what was
-verified manually and what remains untestable in the review output.
-
-### Done Criteria
-
-- All tests pass
-- Coverage >= 80%
-- Lint clean (no warnings, no errors)
-- No unresolved TODO/FIXME markers
-- All PRD acceptance criteria covered by tests
-- Spec compliance verified (Spec, ADR, and PRD ACs)
-- Reuse-first satisfied (no duplicated API/module/query/stored procedure/component; shared logic extracted)
-- Scrub (deslop) pass run on every changed file with no HIGH-severity findings
-- Self-review checklist complete
-
-### Pre-Handoff Gate
-
-Before yielding back to the user or handing off:
-
-- [ ] Tests pass
-- [ ] No HIGH or MEDIUM self-review findings remain unresolved
-- [ ] Large block replacements were verified by searching for removed identifiers and the new declaration
-- [ ] Karpathy guidelines applied across all phases (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) -- MANDATORY, not optional
-- [ ] `pwsh scripts/scrub.ps1 -Path <changed-path>` run on every file you modified and safe fixes applied (MANDATORY deslop pass; behavior unchanged)
-- [ ] Reuse-first verified: no near-duplicate API/module/query/stored procedure/component created; shared logic extracted where 2+ call sites need it (DRY)
-- [ ] UI-bearing changes verified through the agent browser (Playwright MCP, browser-automation skill) as the default test surface, or the missing-prerequisite fallback reported
-- [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
-
-### Delivery Report (MANDATORY)
-
-Before handing off, print a one-line outcome summary then this table populated with actual values:
-
-> Example: "Feature #42 complete: 47 tests passed, 83% coverage, lint clean, zero HIGH/MEDIUM findings."
-
-| Check | Result |
-|-------|--------|
-| Tests | N passed / N failed |
-| Coverage gate (>=80%) | N% |
-| Lint / type-check | Clean / N warnings |
-| Self-review findings (HIGH) | 0 / N remaining |
-| Self-review findings (MEDIUM) | 0 / N remaining |
-| Output scorer tier | Medium-High (N%) / Below threshold |
-| Acceptance criteria covered | N/N |
-| AgentX quality loop | Complete (N/20 iterations) |
-
-### Compound Capture (Capture Phase)
-
-When resolving Compound Capture, in addition to the LEARNING file or skip rationale:
-
-- Run `.agentx/agentx.ps1 learn` to fold session observations into the patterns store
-- If you noticed a reusable pattern emerge, run `.agentx/agentx.ps1 patterns` to inspect graduation candidates; nominate stable ones for `promote` (see Agent X)
-
-### Quantitative Scoring Gate
-
-After all done criteria pass, run the output scorer:
-
-```powershell
-.\scripts\score-output.ps1 -Role engineer -IssueNumber <issue>
-```
-
-Tier must be **Medium-High** (70%+) to proceed. Read individual check results, fix the highest-point failure, re-run until threshold is met.
-See [IMPROVEMENT-LOOP.md](../skills/development/skill-creator/references/IMPROVEMENT-LOOP.md) for the full 12-step loop.
-
-### Hard Gate (CLI)
-
-Before handing off to Reviewer:
-
-```
-.agentx/agentx.ps1 loop complete -s "All quality gates passed"
-```
-
-The CLI blocks handoff with exit 1 if the loop state is not `complete`.
+Before handoff, report: tests passed/failed; coverage; lint/type-check status; HIGH/MEDIUM findings; output scorer tier when run; acceptance criteria covered; and AgentX quality-loop state.
 
 ## Plugins (Optional Capabilities)
 
-This agent MAY invoke workspace plugins from `.agentx/plugins/` when the active phase needs a capability beyond core tooling. Plugins are inspected via [.agentx/plugins/registry.json](../../.agentx/plugins/registry.json). Always prefer canonical Markdown deliverables as the source of truth and use plugins only as conversion bridges -- inbound (binary -> Markdown so the agent can review and cite text) or outbound (Markdown -> binary when the user explicitly asks for a `.docx` or `.pptx`).
-
-| Plugin | Direction | Capability | When to use |
-|--------|-----------|------------|-------------|
-| [convert-docs](../../.agentx/plugins/convert-docs/) | Out | Markdown -> Microsoft Word (`.docx`) via Pandoc | User explicitly asks for a `.docx` of a PRD, ADR, spec, brief, or review |
-| [convert-slides](../../.agentx/plugins/convert-slides/) | Out | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User explicitly asks for a `.pptx` of a storyboard, presentation, or pitch deck |
-| [read-docs](../../.agentx/plugins/read-docs/) | In | Word / OpenDocument / RTF / HTML / EPUB -> Markdown via Pandoc | User attaches or references `.docx`/`.odt`/`.rtf`/`.html`/`.epub` for review, ingestion, or citation |
-| [read-slides](../../.agentx/plugins/read-slides/) | In | PowerPoint (`.pptx`) -> Markdown via python-pptx | User attaches or references a `.pptx` deck and the agent needs to cite slide content |
-| [read-pdf](../../.agentx/plugins/read-pdf/) | In | PDF -> Markdown with per-page anchors via pdftotext or pypdf | User attaches or references a `.pdf` and the agent needs to cite by `p.N` |
-
-Plugin invocation rules:
-
-- Confirm the dependency declared in `plugin.json` (`requires`) is on `PATH` before invoking; if missing, surface the install link from the plugin and stop.
-- Pass user inputs through plugin parameters; never concatenate paths into shell strings.
-- For inbound plugins: persist the generated `.md` under `docs/extracted/` (or a phase-specific folder) and cite findings against the extracted Markdown so they remain reviewable.
-- For outbound plugins: report the generated artifact path and size after a successful run; never edit generated binaries directly -- regenerate from the Markdown source if changes are needed.
+Follow the shared plugin rules in [../AGENT-PROTOCOL.md#9-plugins-optional-capabilities](../AGENT-PROTOCOL.md#9-plugins-optional-capabilities). Use plugins only as conversion bridges around canonical Markdown deliverables; do not duplicate the shared plugin table or invocation rules in this agent file.

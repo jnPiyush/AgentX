@@ -42,7 +42,7 @@ Agents read peer-reviewed patterns **before** writing code.
 - Ops: GitHub Actions, Terraform, Azure, containers
 - Testing: unit, integration, e2e, security, performance
 
-94 skills. Max 3-4 loaded per task. No bloat.
+94 skills. Only relevant skills loaded per task. No bloat.
 
 ## The Agentic Loop
 

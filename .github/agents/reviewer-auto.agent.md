@@ -191,80 +191,20 @@ Use the shared guide for the artifact-first clarification flow, agent-switch wor
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation. Do NOT wait for the pre-commit hook to catch this -- start the loop now.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
 
-After completing initial work, keep iterating until all done criteria pass. Reaching the minimum iteration count is only a gate; the loop is not done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds.
-Copilot runs this loop natively within its agentic session.
+Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 
-### Loop Steps (repeat until all criteria met)
+## Role-Specific Done Criteria
 
-1. **Run verification** -- execute the relevant checks for this role (see Done Criteria)
-2. **Evaluate results** -- if any check fails, identify root cause
-3. **Fix** -- address the failure
-4. **Re-run verification** -- confirm the fix works
-5. **Self-review** -- once all checks pass, spawn a same-role reviewer sub-agent:
-   - Reviewer evaluates with structured findings: HIGH, MEDIUM, LOW
-   - APPROVED: true when no HIGH or MEDIUM findings remain
-   - APPROVED: false when any HIGH or MEDIUM findings exist
-6. **Address findings** -- fix all HIGH and MEDIUM findings, then re-run from Step 1
-7. **Repeat** until APPROVED, all Done Criteria pass, the minimum iteration gate is satisfied, and the loop is explicitly completed at the end
+Review document is complete; safe auto-fixes are limited to allowed categories, applied without behavior drift, and verified; tests still pass after fixes; and approval or changes-requested decision is explicit.
 
-### Done Criteria
+## Delivery Report (MANDATORY)
 
-Review document complete; all safe auto-fixes applied and verified; tests still pass after fixes; approval/rejection decision stated.
-
-### Pre-Handoff Gate
-
-Before yielding back to the user or handing off:
-
-- [ ] Tests pass
-- [ ] No HIGH or MEDIUM findings remain unresolved
-- [ ] Large block replacements were verified by searching for removed identifiers and the new declaration
-- [ ] `.agentx/agentx.ps1 loop complete -s "All quality gates passed"` has been run successfully
-
-### Delivery Report (MANDATORY)
-
-Before handing off, print a one-line outcome summary then this table populated with actual values:
-
-> Example: "Auto-review of #42 complete: APPROVED. 0 HIGH, 1 MEDIUM resolved via auto-fix, 2 safe fixes applied, tests still green."
-
-| Check | Result |
-|-------|--------|
-| Decision | APPROVED / CHANGES REQUESTED |
-| HIGH findings | 0 / N remaining |
-| MEDIUM findings | 0 / N (N auto-fixed) |
-| LOW findings | N |
-| Safe auto-fixes applied | N |
-| Tests after auto-fixes | PASS / FAIL |
-| AgentX quality loop | Complete (N/20 iterations) |
-
-### Hard Gate (CLI)
-
-Before handing off, mark the loop complete:
-
-`.agentx/agentx.ps1 loop complete -s "All quality gates passed"`
-
-The CLI blocks handoff with exit 1 if the loop state is not `complete`.
-
-
+Before handoff, report: decision; remaining HIGH findings; MEDIUM findings auto-fixed or remaining; LOW findings; safe auto-fix count; tests after fixes; and AgentX quality-loop state.
 
 ## Plugins (Optional Capabilities)
 
-This agent MAY invoke workspace plugins from `.agentx/plugins/` when the active phase needs a capability beyond core tooling. Plugins are inspected via [.agentx/plugins/registry.json](../../.agentx/plugins/registry.json). Always prefer canonical Markdown deliverables as the source of truth and use plugins only as conversion bridges -- inbound (binary -> Markdown so the agent can review and cite text) or outbound (Markdown -> binary when the user explicitly asks for a `.docx` or `.pptx`).
-
-| Plugin | Direction | Capability | When to use |
-|--------|-----------|------------|-------------|
-| [convert-docs](../../.agentx/plugins/convert-docs/) | Out | Markdown -> Microsoft Word (`.docx`) via Pandoc | User explicitly asks for a `.docx` of a PRD, ADR, spec, brief, or review |
-| [convert-slides](../../.agentx/plugins/convert-slides/) | Out | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User explicitly asks for a `.pptx` of a storyboard, presentation, or pitch deck |
-| [read-docs](../../.agentx/plugins/read-docs/) | In | Word / OpenDocument / RTF / HTML / EPUB -> Markdown via Pandoc | User attaches or references `.docx`/`.odt`/`.rtf`/`.html`/`.epub` for review, ingestion, or citation |
-| [read-slides](../../.agentx/plugins/read-slides/) | In | PowerPoint (`.pptx`) -> Markdown via python-pptx | User attaches or references a `.pptx` deck and the agent needs to cite slide content |
-| [read-pdf](../../.agentx/plugins/read-pdf/) | In | PDF -> Markdown with per-page anchors via pdftotext or pypdf | User attaches or references a `.pdf` and the agent needs to cite by `p.N` |
-
-Plugin invocation rules:
-
-- Confirm the dependency declared in `plugin.json` (`requires`) is on `PATH` before invoking; if missing, surface the install link from the plugin and stop.
-- Pass user inputs through plugin parameters; never concatenate paths into shell strings.
-- For inbound plugins: persist the generated `.md` under `docs/extracted/` (or a phase-specific folder) and cite findings against the extracted Markdown so they remain reviewable.
-- For outbound plugins: report the generated artifact path and size after a successful run; never edit generated binaries directly -- regenerate from the Markdown source if changes are needed.
+Follow the shared plugin rules in [../AGENT-PROTOCOL.md#9-plugins-optional-capabilities](../AGENT-PROTOCOL.md#9-plugins-optional-capabilities). Use plugins only as conversion bridges around canonical Markdown deliverables; do not duplicate the shared plugin table or invocation rules in this agent file.

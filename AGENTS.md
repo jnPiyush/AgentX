@@ -164,7 +164,7 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | Document | Purpose |
 |----------|---------|
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | Workflow, routing, handoff, status transitions, architecture |
-| [Skills.md](Skills.md) | 111 production code skills index (load max 3-4 per task) |
+| [Skills.md](Skills.md) | 111 production code skills index (load only relevant skills per task) |
 | [docs/GUIDE.md](docs/GUIDE.md) | Quickstart, setup, troubleshooting, local mode |
 | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) | Graded quality assessment of every component |
 | [docs/GOLDEN_PRINCIPLES.md](docs/GOLDEN_PRINCIPLES.md) | Mechanical rules enforced by linters and agents |

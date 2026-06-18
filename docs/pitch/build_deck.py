@@ -898,7 +898,7 @@ def slide_skills(n, total):
         Inches(6.65),
         Inches(11.6),
         Inches(0.5),
-        "Max 3-4 skills per task (~20K tokens). Agents read, not guess.",
+        "Only relevant skills loaded per task. Agents read, not guess.",
         size=14,
         color=CYAN,
         bold=True,

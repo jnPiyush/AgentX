@@ -1,5 +1,20 @@
 # Changelog
 
+## 8.4.65
+
+### Cross-Cutting Agent Protocol Centralization
+
+- **Shared agent rules consolidated into a single source of truth** at `.github/AGENT-PROTOCOL.md`. The quality loop, minimum-5-iterations rule, subagent review, per-iteration reporting, Karpathy guidelines, Model Council, Scrub, Brainstorm, Plan, and Research concerns are now documented once. Every `.github/agents/*.agent.md` definition keeps only the front-loaded Pre-edit gate and Honesty rule stubs and points to the protocol doc, eliminating drift across 24 agent files.
+- Router surfaces (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `Skills.md`, `.github/instructions/project-conventions.instructions.md`) updated to reference the centralized protocol.
+
+### Documentation Cleanup
+
+- Replaced the stale "max 3-4 skills (~20K tokens)" guidance with progressive-disclosure wording ("load only the skills relevant to the task and active phase") across the skill index, pitch deck generator (`docs/pitch/build_deck.py`), and the landing prototype.
+
+### Version
+
+- Bumped to 8.4.65 and synced bundled VS Code extension assets.
+
 ## 8.4.64
 
 ### Engineer Agent: Mandatory Scrub + Reuse-First Enforcement

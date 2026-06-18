@@ -122,3 +122,11 @@ Before handing off, print a one-line outcome summary then this table populated w
 - `design/working-prototype-app/SKILL.md` (when auditing a working app)
 - `design/prototype-craft/SKILL.md` (when fixing visual issues)
 - `development/browser-automation/SKILL.md` (for axe, Lighthouse, and Playwright snapshots)
+
+## Iterative Quality Loop (MANDATORY)
+
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+
+**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
+
+Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../../AGENT-PROTOCOL.md](../../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.

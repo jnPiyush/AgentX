@@ -151,6 +151,18 @@ Before handing off, print a one-line outcome summary then this table populated w
 | Visio export produced (if needs:visio tag set) | Yes / No / N/A |
 | AgentX quality loop | Complete (N/20 iterations) |
 
+## Iterative Quality Loop (MANDATORY)
+
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+
+**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
+
+Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../../AGENT-PROTOCOL.md](../../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
+
+## Role-Specific Done Criteria
+
+Diagram syntax validates; the selected diagram type fits the artifact purpose; labels are readable; accessibility text or fallback description is present when needed; and optional exports are produced only when requested.
+
 ## Anti-Patterns
 
 | Anti-Pattern | Why It Fails |
@@ -164,19 +176,4 @@ Before handing off, print a one-line outcome summary then this table populated w
 
 ## Plugins (Optional Capabilities)
 
-This agent MAY invoke workspace plugins from `.agentx/plugins/` when the active phase needs a capability beyond core tooling. Plugins are inspected via [.agentx/plugins/registry.json](../../../.agentx/plugins/registry.json). Always prefer canonical Markdown deliverables as the source of truth and use plugins only as conversion bridges -- inbound (binary -> Markdown so the agent can review and cite text) or outbound (Markdown -> binary when the user explicitly asks for a `.docx` or `.pptx`).
-
-| Plugin | Direction | Capability | When to use |
-|--------|-----------|------------|-------------|
-| [convert-docs](../../../.agentx/plugins/convert-docs/) | Out | Markdown -> Microsoft Word (`.docx`) via Pandoc | User explicitly asks for a `.docx` of a PRD, ADR, spec, brief, or review |
-| [convert-slides](../../../.agentx/plugins/convert-slides/) | Out | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User explicitly asks for a `.pptx` of a storyboard, presentation, or pitch deck |
-| [read-docs](../../../.agentx/plugins/read-docs/) | In | Word / OpenDocument / RTF / HTML / EPUB -> Markdown via Pandoc | User attaches or references `.docx`/`.odt`/`.rtf`/`.html`/`.epub` for review, ingestion, or citation |
-| [read-slides](../../../.agentx/plugins/read-slides/) | In | PowerPoint (`.pptx`) -> Markdown via python-pptx | User attaches or references a `.pptx` deck and the agent needs to cite slide content |
-| [read-pdf](../../../.agentx/plugins/read-pdf/) | In | PDF -> Markdown with per-page anchors via pdftotext or pypdf | User attaches or references a `.pdf` and the agent needs to cite by `p.N` |
-
-Plugin invocation rules:
-
-- Confirm the dependency declared in `plugin.json` (`requires`) is on `PATH` before invoking; if missing, surface the install link from the plugin and stop.
-- Pass user inputs through plugin parameters; never concatenate paths into shell strings.
-- For inbound plugins: persist the generated `.md` under `docs/extracted/` (or a phase-specific folder) and cite findings against the extracted Markdown so they remain reviewable.
-- For outbound plugins: report the generated artifact path and size after a successful run; never edit generated binaries directly -- regenerate from the Markdown source if changes are needed.
+Follow the shared plugin rules in [../../AGENT-PROTOCOL.md#9-plugins-optional-capabilities](../../AGENT-PROTOCOL.md#9-plugins-optional-capabilities). Use plugins only as conversion bridges around canonical Markdown deliverables; do not duplicate the shared plugin table or invocation rules in this agent file.

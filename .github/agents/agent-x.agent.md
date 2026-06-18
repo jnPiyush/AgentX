@@ -196,22 +196,7 @@ ALL workflows include iteration by default (`iterate = true` in TOML). Default l
 
 ## Plugins (Optional Capabilities)
 
-AgentX Auto MAY invoke workspace plugins from `.agentx/plugins/` when the active phase needs a capability beyond core tooling. Plugins are inspected via [.agentx/plugins/registry.json](../../.agentx/plugins/registry.json). Always prefer the canonical Markdown deliverable as the source of truth and use plugins only as conversion bridges -- inbound (binary -> Markdown so the agent can review and cite text) or outbound (Markdown -> binary when the user explicitly asks for a `.docx` or `.pptx`).
-
-| Plugin | Direction | Capability | When to use |
-|--------|-----------|------------|-------------|
-| [convert-docs](../../.agentx/plugins/convert-docs/) | Out | Markdown -> Microsoft Word (`.docx`) via Pandoc | User explicitly asks for a `.docx` of a PRD, ADR, spec, brief, or review |
-| [convert-slides](../../.agentx/plugins/convert-slides/) | Out | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User explicitly asks for a `.pptx` of a storyboard, presentation, or pitch deck |
-| [read-docs](../../.agentx/plugins/read-docs/) | In | Word / OpenDocument / RTF / HTML / EPUB -> Markdown via Pandoc | User attaches or references `.docx`/`.odt`/`.rtf`/`.html`/`.epub` for review, ingestion, or citation |
-| [read-slides](../../.agentx/plugins/read-slides/) | In | PowerPoint (`.pptx`) -> Markdown via python-pptx | User attaches or references a `.pptx` deck and the agent needs to cite slide content |
-| [read-pdf](../../.agentx/plugins/read-pdf/) | In | PDF -> Markdown with per-page anchors via pdftotext or pypdf | User attaches or references a `.pdf` and the agent needs to cite by `p.N` |
-
-Plugin invocation rules:
-
-- Confirm the dependency declared in `plugin.json` (`requires`) is on `PATH` before invoking; if missing, surface the install link from the plugin and stop.
-- Pass user inputs through plugin parameters; never concatenate paths into shell strings.
-- For inbound plugins: persist the generated `.md` under `docs/extracted/` (or a phase-specific folder) and cite findings against the extracted Markdown so they remain reviewable.
-- For outbound plugins: report the generated artifact path and size after a successful run; never edit generated binaries directly -- regenerate from the Markdown source if changes are needed.
+Follow the shared plugin rules in [../AGENT-PROTOCOL.md#9-plugins-optional-capabilities](../AGENT-PROTOCOL.md#9-plugins-optional-capabilities). Use plugins only as conversion bridges around canonical Markdown deliverables; do not duplicate the shared plugin table or invocation rules in this agent file.
 
 ## Phase Validation
 
@@ -219,20 +204,20 @@ Before advancing to the next internal phase, MUST verify:
 
 1. The active specialist agent definition was read and its required templates, skills, and prerequisite artifacts were loaded.
 2. The phase respected the specialist agent's boundaries and non-skippable checklist items.
-3. Run `scripts/validate-handoff.ps1 -IssueNumber <n> -FromAgent <role> -ToAgent <role>` to generate and validate a structured handoff message (schema: `.github/schemas/handoff-message.schema.json`)
-4. CLI validates deliverables exist: `.agentx/agentx.ps1 validate <issue-number> <role>`
-5. Deliverables were committed with issue reference
-6. Handoff message saved to `.agentx/handoffs/handoff-<n>-<from>-to-<to>.json`
+3. Run `scripts/validate-handoff.ps1 -IssueNumber <n> -FromAgent <role> -ToAgent <role>` to generate and validate a structured handoff message (schema: `.github/schemas/handoff-message.schema.json`).
+4. CLI validates deliverables exist: `.agentx/agentx.ps1 validate <issue-number> <role>`.
+5. Deliverables were committed with issue reference.
+6. Handoff message saved to `.agentx/handoffs/handoff-<n>-<from>-to-<to>.json`.
 
-**If any step fails**: Block the transition and resolve the gap before continuing.
+If any step fails, block the transition and resolve the gap before continuing.
 
 ## PRD Intent Validation
 
 After PM creates PRD for `needs:ai` issues, verify:
 
-- PRD contains GenAI Requirements section (LLM selection, evaluation strategy, model pinning, guardrails)
-- No constraints contradict the user's stated AI intent (e.g., "rule-based only" when user said "AI agent")
-- If contradictions found, post `[WARN]` comment and require PM to resolve before Architect proceeds
+- PRD contains GenAI Requirements section (LLM selection, evaluation strategy, model pinning, guardrails).
+- No constraints contradict the user's stated AI intent (for example, `rule-based only` when the user asked for an AI agent).
+- If contradictions are found, post a `[WARN]` comment and require PM to resolve before Architect proceeds.
 
 ## Mid-Stream Escalation
 
@@ -252,12 +237,11 @@ Before completing any routing decision, verify:
 - [ ] Complexity correctly assessed (direct execution vs full internal workflow)
 - [ ] Active specialist phase loaded its own agent definition, templates, skills, and prerequisites
 - [ ] All prerequisites validated for the next phase
-- [ ] Domain labels applied (needs:ai, needs:ux, needs:realtime, etc.)
+- [ ] Domain labels applied (`needs:ai`, `needs:ux`, `needs:realtime`, etc.)
 - [ ] Dependencies checked via `.agentx/agentx.ps1 deps <issue>`
 - [ ] Required role-specific artifacts and checklists were completed for the active phase
-- [ ] Karpathy guidelines applied across every executed phase (MANDATORY, not optional)
-- [ ] Mandatory deslop scrub run on changed files (`pwsh scripts/scrub.ps1 -Path <changed-path>`); safe fixes applied
-- [ ] UI-bearing changes tested through the agent browser (Playwright MCP) by default, or the missing-prerequisite fallback reported
+- [ ] Shared protocol gates in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) were satisfied
+- [ ] UI-bearing changes tested through the agent browser by default, or the missing-prerequisite fallback reported
 - [ ] Progress, status, and artifacts reflect the active phase accurately
 - [ ] Manual switching was used only when truly required
 
@@ -299,13 +283,13 @@ Before completing any routing decision, verify:
 
 If execution is ambiguous, context is missing, or a specialist phase is blocked:
 
-1. **Clarify first**: Use the clarification loop (`clarificationLoop.ts`) to request missing info from the originating agent
-2. **Escalate with label**: Add `needs:help` label and post a comment describing the blocker
-3. **Never guess**: Do not continue implementation without sufficient context -- ask the upstream phase for clarification
-4. **Timeout rule**: If no response within 15 minutes, escalate to human with `needs:resolution` label
+1. Clarify first: use the clarification loop to request missing info from the originating agent.
+2. Escalate with label: add `needs:help` and post a comment describing the blocker.
+3. Never guess: do not continue implementation without sufficient context; ask the upstream phase for clarification.
+4. Timeout rule: if no response within 15 minutes, escalate to a human with `needs:resolution`.
 
-> **Local Mode**: See [GUIDE.md](../../docs/GUIDE.md#local-mode-no-github) for local issue management.
-> **Shared Protocols**: All agents follow [WORKFLOW.md](../../docs/WORKFLOW.md#handoff-flow) for handoff, memory compaction, and communication protocols.
+Local Mode: see [GUIDE.md](../../docs/GUIDE.md#local-mode-no-github) for local issue management.
+Shared Protocols: all agents follow [WORKFLOW.md](../../docs/WORKFLOW.md#handoff-flow) for handoff, memory compaction, and communication protocols.
 
 ## Inter-Agent Clarification Protocol
 
@@ -315,53 +299,16 @@ Use the shared guide for the artifact-first clarification flow, internal special
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation. Do NOT wait for the pre-commit hook to catch this -- start the loop now.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
 **Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
 
-After completing initial work, keep iterating until all done criteria pass. Reaching the minimum iteration count is only a gate; the loop is not done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds.
-Copilot runs this loop natively within its agentic session.
+Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 
-### Loop Steps (repeat until all criteria met)
+## Role-Specific Done Criteria
 
-1. **Run verification** -- execute the relevant checks for this role (see Done Criteria)
-2. **Evaluate results** -- if any check fails, identify root cause
-3. **Fix** -- address the failure
-4. **Re-run verification** -- confirm the fix works
-5. **Self-review** -- once all checks pass, spawn a same-role reviewer sub-agent:
-  - Reviewer evaluates with structured findings: HIGH, MEDIUM, LOW
-   - APPROVED: true when no HIGH or MEDIUM findings remain
-   - APPROVED: false when any HIGH or MEDIUM findings exist
-6. **Address findings** -- fix all HIGH and MEDIUM findings, then re-run from Step 1
-7. **Repeat** until APPROVED, all Done Criteria pass, the minimum iteration gate is satisfied, and the loop is explicitly completed at the end
+Agent X is complete when the requested work is classified, routed or executed through the required specialist lenses, phase gates are validated, blockers are surfaced, and all required artifacts/status transitions are accurate. Complex work must preserve each specialist role contract instead of collapsing phases into generic execution.
 
-### Done Criteria
+## Delivery Report (MANDATORY)
 
-Agent X is complete when the requested work, required artifacts, validation, and self-review all pass within the current session.
-If a complex task required multiple internal phases, the loop only passes when every required phase has either been completed or explicitly shown to be unnecessary.
-
-### Delivery Report (MANDATORY)
-
-Before handing off, print a one-line outcome summary then this table populated with actual values:
-
-> Example: "Autonomous session for #42 complete: PM -> Architect -> Engineer -> Reviewer phases executed, 3 issues created, approved and closed."
-
-| Check | Result |
-|-------|--------|
-| Phases executed | list: PM / Architect / UX / Engineer / Reviewer / ... |
-| Issues created or updated | N issues |
-| Status transitions made | N transitions |
-| Handoffs executed | N |
-| Blocked items | None / N (list) |
-| All phase gates passed | Yes / N phases with open findings |
-| AgentX quality loop | Complete (N/20 iterations) |
-
-### Hard Gate (CLI)
-
-Before handing off, mark the loop complete:
-
-`.agentx/agentx.ps1 loop complete -s "All quality gates passed"`
-
-The CLI blocks handoff with exit 1 if the loop state is not `complete`.
-
-
+Before handoff, report: phases executed; issues created or updated; status transitions made; handoffs executed; blocked items; phase gates passed or open findings; and AgentX quality-loop state.

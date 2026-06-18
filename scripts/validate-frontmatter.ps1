@@ -200,6 +200,63 @@ function Test-AgentWindowContract([string]$FilePath) {
  }
 }
 
+function Test-AgentProtocolContract([string]$FilePath) {
+ $name = Split-Path $FilePath -Leaf
+ $content = Get-Content $FilePath -Raw
+
+ if ($content -notmatch 'AGENT-PROTOCOL\.md') {
+ Write-Fail "$name : Missing AGENT-PROTOCOL.md reference. FIX: Keep only the front-loaded Pre-edit gate + Honesty rule stubs in the agent body and point to AGENT-PROTOCOL.md for shared loop, review, scrub, Model Council, and plugin rules."
+ } else {
+ Write-Pass "$name : AGENT-PROTOCOL.md reference OK"
+ }
+
+ if ($content -notmatch 'Pre-edit gate \(NON-SKIPPABLE\)') {
+ Write-Fail "$name : Missing Pre-edit gate stub. FIX: Add the short Pre-edit gate stub and do not restate full loop mechanics."
+ } else {
+ Write-Pass "$name : Pre-edit gate stub OK"
+ }
+
+ if ($content -notmatch 'Honesty rule') {
+ Write-Fail "$name : Missing Honesty rule stub. FIX: Add the short Honesty rule stub and point to AGENT-PROTOCOL.md."
+ } else {
+ Write-Pass "$name : Honesty rule stub OK"
+ }
+
+ if ($content -notmatch '(?m)^## (Role-Specific )?Done Criteria\s*$') {
+ Write-Fail "$name : Missing local role-specific done criteria. FIX: Keep shared loop mechanics in AGENT-PROTOCOL.md, but preserve this agent's role-specific completion criteria in the agent body."
+ } else {
+ Write-Pass "$name : role-specific done criteria OK"
+ }
+
+ if ($content -notmatch '(?m)^## Delivery Report \(MANDATORY\)\s*$') {
+ Write-Fail "$name : Missing local Delivery Report section. FIX: Keep the role-specific handoff/report fields in the agent body while centralizing shared loop mechanics."
+ } else {
+ Write-Pass "$name : role-specific delivery report OK"
+ }
+
+ $forbiddenSharedLoopMarkers = @(
+ '### Loop Steps',
+ '### Iteration Focus Table',
+ 'Minimum 5 iterations with a defined focus per iteration',
+ 'Baseline lock',
+ 'loop baseline -c <passing-tests>'
+ )
+
+ foreach ($marker in $forbiddenSharedLoopMarkers) {
+ if ($content.Contains($marker)) {
+ Write-Fail "$name : Duplicates shared loop prose ('$marker'). FIX: Remove the full loop procedure from the agent and rely on AGENT-PROTOCOL.md plus iterative-loop skill."
+ }
+ }
+
+ if ($content -match '## Iterative Quality Loop\s*(\r?\n)' -and $content -notmatch '## Iterative Quality Loop \(MANDATORY\)') {
+ Write-Fail "$name : Non-standard loop heading. FIX: Use '## Iterative Quality Loop (MANDATORY)' with only the two required stubs and protocol pointer."
+ }
+
+ if ($content -match '## Plugins Available' -or $content -match '(?s)## Plugins \(Optional Capabilities\).*?\| Plugin \|') {
+ Write-Fail "$name : Duplicates shared plugin table. FIX: Replace plugin details with a pointer to AGENT-PROTOCOL.md#9-plugins-optional-capabilities."
+ }
+}
+
 function Test-HookBundle([string]$RootPath) {
  $hooksDir = Join-Path $RootPath '.agentx/hooks'
  $events = @('session-start', 'pre-tool', 'post-tool', 'session-end')
@@ -309,9 +366,9 @@ if (Test-Path $copilotInstructions) { Test-InstructionFile $copilotInstructions 
 Write-Host ""
 Write-Host " Agents:" -ForegroundColor White
 $agents = Get-ChildItem -Path "$Path/.github/agents" -Filter "*.agent.md" -ErrorAction SilentlyContinue
-foreach ($f in $agents) { Test-AgentFile $f.FullName; Test-AgentWindowContract $f.FullName }
+foreach ($f in $agents) { Test-AgentFile $f.FullName; Test-AgentWindowContract $f.FullName; Test-AgentProtocolContract $f.FullName }
 $internalAgents = Get-ChildItem -Path "$Path/.github/agents/internal" -Filter "*.agent.md" -ErrorAction SilentlyContinue
-foreach ($f in $internalAgents) { Test-AgentFile $f.FullName; Test-AgentWindowContract $f.FullName }
+foreach ($f in $internalAgents) { Test-AgentFile $f.FullName; Test-AgentWindowContract $f.FullName; Test-AgentProtocolContract $f.FullName }
 
 # Agents Window hooks
 Write-Host ""

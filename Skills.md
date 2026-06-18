@@ -1,4 +1,4 @@
-description: 'Compressed skill index for AI agents. 127 skills across 14 categories. Load max 3-4 per task.'
+description: 'Compressed skill index for AI agents. 127 skills across 14 categories. Load only relevant skills per task.'
 
 # Production Code Skills Index
 
@@ -6,7 +6,7 @@ description: 'Compressed skill index for AI agents. 127 skills across 14 categor
 > When a skill applies, **read the SKILL.md file** rather than relying on training data.
 > This index points to retrievable skill files -- load them on demand, do not guess.
 
-**Rule**: Load **max 3-4 skills** per task (~20K tokens). More = noise.
+**Rule**: Load only the skills that are relevant to the current task. Prefer progressive disclosure over broad context loading.
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
@@ -16,7 +16,7 @@ description: 'Compressed skill index for AI agents. 127 skills across 14 categor
 
 ## Quick Reference by Task Type
 
-> Match your task, load only the listed skills (max 3-4 per task).
+> Match your task, load only the listed skills that are relevant to the current work.
 
 | Task | Load These Skills |
 |------|-------------------|
@@ -265,7 +265,7 @@ These rules are always active. They are embedded here so agents never skip them.
 
 ## Workflow Chains (pipe-delimited)
 
-> Format: `scenario|skill1->skill2->...` Load max 3-4 at a time.
+> Format: `scenario|skill1->skill2->...` Load only the skills needed for the active phase.
 
 ```
 React Component|ux-ui->react->frontend-ui->testing->code-review

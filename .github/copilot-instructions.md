@@ -60,7 +60,7 @@ If a skill, spec, or doc exists in the workspace, read it first; generate second
 | Answering questions, research | Nothing extra - use tools | AGENTS.md, Skills.md |
 | Debugging | Language instruction + error handling skill | AGENTS.md |
 
-**Token budget**: Load max **3-4 skills** per task (~20K tokens). Use [Skills.md Quick Reference](../Skills.md) to pick the right ones.
+**Token budget**: Load only the skills relevant to the task and active phase. Use [Skills.md Quick Reference](../Skills.md) to pick the right ones.
 
 ---
 

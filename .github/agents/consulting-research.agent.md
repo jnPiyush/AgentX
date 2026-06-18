@@ -316,24 +316,21 @@ Validate the analysis before handoff.
 | Brief structure and formatting | [Documentation](../skills/development/documentation/SKILL.md) |
 | Final-pass refinement against evidence and formatting criteria | [Iterative Loop](../skills/development/iterative-loop/SKILL.md) |
 
-## Plugins Available
+## Iterative Quality Loop (MANDATORY)
 
-| Plugin | Purpose | When to Use |
-|--------|---------|-------------|
-| [convert-slides](../../.agentx/plugins/convert-slides/) | Render slide-ready Markdown to `.pptx` via Pandoc | User explicitly requests a PowerPoint file from a storyboard |
-| [convert-docs](../../.agentx/plugins/convert-docs/) | Render brief Markdown to `.docx` via Pandoc | User explicitly requests a Word file from a brief or executive summary |
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-## Iterative Quality Loop
+**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
 
-Before concluding, run a short refinement loop focused on output quality.
+Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 
-1. Review the deliverable for evidence strength, audience fit, formatting clarity, and visual usefulness.
-2. Identify the weakest parts: unsupported claims, unclear structure, weak recommendations, or visuals that do not help comprehension.
-3. Improve those parts.
-4. Re-check the full deliverable.
-5. Repeat until the output is clear, well-structured, well-evidenced, and presentation-ready.
+## Role-Specific Done Criteria
 
-Use this loop to improve quality, not to endlessly polish. Stop when the output meets the session-complete criteria.
+Research deliverable is complete for the requested audience; key claims are sourced and triangulated; recommendations are explicit; visuals or storylines support comprehension; and no fabricated statistics, quotes, or unsupported claims remain.
+
+## Delivery Report (MANDATORY)
+
+Before handoff, report: deliverable sections complete; cited claims versus unsourced claims; fabricated-statistic/quote check; Model Council status when required; audience calibration; and AgentX quality-loop state.
 
 ## When Blocked
 
@@ -368,57 +365,7 @@ Use the shared guide for artifact-first clarification, follow-up limits, and esc
 git add docs/coaching/ docs/presentations/
 git commit -m "docs: add research brief for {topic}"
 ```
-5. **Self-review** -- once all checks pass, spawn a same-role reviewer sub-agent:
-   - Reviewer evaluates with structured findings: HIGH, MEDIUM, LOW
-   - APPROVED: true when no HIGH or MEDIUM findings remain
-   - APPROVED: false when any HIGH or MEDIUM findings exist
-6. **Address findings** -- fix all HIGH and MEDIUM findings, then re-run from Step 1
-7. **Repeat** until APPROVED, all Done Criteria pass, the minimum iteration gate is satisfied, and the loop is explicitly completed at the end
-
-### Done Criteria
-
-Research brief complete; all claims sourced with references; no fabricated statistics or quotes.
-
-### Delivery Report (MANDATORY)
-
-Before handing off, print a one-line outcome summary then this table populated with actual values:
-
-> Example: "Research brief for 'AI in banking' complete: 12 claims sourced, 3 frameworks applied, Model Council convened."
-
-| Check | Result |
-|-------|--------|
-| Brief sections complete | N/N required |
-| Claims with citations | N/N (0 unsourced) |
-| Fabricated statistics/quotes | None found / N flagged |
-| Model Council convened | Yes / Skipped (reason) |
-| Audience calibration applied | Yes / No |
-| AgentX quality loop | Complete (N/20 iterations) |
-
-### Hard Gate (CLI)
-
-Before handing off, mark the loop complete:
-
-`.agentx/agentx.ps1 loop complete -s "All quality gates passed"`
-
-The CLI blocks handoff with exit 1 if the loop state is not `complete`.
-
-
 
 ## Plugins (Optional Capabilities)
 
-This agent MAY invoke workspace plugins from `.agentx/plugins/` when the active phase needs a capability beyond core tooling. Plugins are inspected via [.agentx/plugins/registry.json](../../.agentx/plugins/registry.json). Always prefer canonical Markdown deliverables as the source of truth and use plugins only as conversion bridges -- inbound (binary -> Markdown so the agent can review and cite text) or outbound (Markdown -> binary when the user explicitly asks for a `.docx` or `.pptx`).
-
-| Plugin | Direction | Capability | When to use |
-|--------|-----------|------------|-------------|
-| [convert-docs](../../.agentx/plugins/convert-docs/) | Out | Markdown -> Microsoft Word (`.docx`) via Pandoc | User explicitly asks for a `.docx` of a PRD, ADR, spec, brief, or review |
-| [convert-slides](../../.agentx/plugins/convert-slides/) | Out | Markdown -> Microsoft PowerPoint (`.pptx`) via Pandoc | User explicitly asks for a `.pptx` of a storyboard, presentation, or pitch deck |
-| [read-docs](../../.agentx/plugins/read-docs/) | In | Word / OpenDocument / RTF / HTML / EPUB -> Markdown via Pandoc | User attaches or references `.docx`/`.odt`/`.rtf`/`.html`/`.epub` for review, ingestion, or citation |
-| [read-slides](../../.agentx/plugins/read-slides/) | In | PowerPoint (`.pptx`) -> Markdown via python-pptx | User attaches or references a `.pptx` deck and the agent needs to cite slide content |
-| [read-pdf](../../.agentx/plugins/read-pdf/) | In | PDF -> Markdown with per-page anchors via pdftotext or pypdf | User attaches or references a `.pdf` and the agent needs to cite by `p.N` |
-
-Plugin invocation rules:
-
-- Confirm the dependency declared in `plugin.json` (`requires`) is on `PATH` before invoking; if missing, surface the install link from the plugin and stop.
-- Pass user inputs through plugin parameters; never concatenate paths into shell strings.
-- For inbound plugins: persist the generated `.md` under `docs/extracted/` (or a phase-specific folder) and cite findings against the extracted Markdown so they remain reviewable.
-- For outbound plugins: report the generated artifact path and size after a successful run; never edit generated binaries directly -- regenerate from the Markdown source if changes are needed.
+Follow the shared plugin rules in [../AGENT-PROTOCOL.md#9-plugins-optional-capabilities](../AGENT-PROTOCOL.md#9-plugins-optional-capabilities). Use plugins only as conversion bridges around canonical Markdown deliverables; do not duplicate the shared plugin table or invocation rules in this agent file.

@@ -114,7 +114,7 @@ inputs:
 - **Artifact**: ADR -- "Decision" section (5 architectural choices) and SPEC -- s.1.1 "Selected Tech Stack"
 - **Framework**: ISO/IEC 25010 (maintainability, portability)
 - **Evidence of harm**: The design is genuinely hybrid: ``.agent.md`` / ``.skill.md`` / ``hooks.json`` are declarative Markdown-or-JSON surfaces consumed by Agents Window, while ``agentx.ps1``, the hook scripts, and the thin TypeScript extension are pro-code. The Low-Code vs Pro-Code skill rubric was not run against this split, even though pre-review gate 9 marks it required for AI-bearing solutions and recommended otherwise. Without the rubric, the hybrid boundary risk surfaces during the Engineer phase rather than being acknowledged in the ADR (e.g., who owns ``.agent.md`` schema drift -- AgentX or VS Code? What is the contract test that prevents an AgentX-internal ``.agent.md`` extension field from breaking the dropdown?). The COUNCIL Skeptic flagged ``.agent.md`` schema churn as a Medium failure mode (council file, Skeptic row 2); the rubric would have made the boundary explicit.
-- **Recommendation**: Append a one-page section to ADR-400 titled "Platform Approach" running the [Low-Code vs Pro-Code skill](../../.github/skills/architecture/low-code-vs-pro-code/SKILL.md) 12-dimension rubric across the hybrid boundary; or, if the Architect judges this disproportionate for an internal tooling ADR, explicitly mark pre-review gate 9 as accepted-risk in the ADR Consequences and reference this review's finding.
+- **Recommendation**: Append a one-page section to ADR-400 titled "Platform Approach" running the [Low-Code vs Pro-Code skill](../../../.github/skills/architecture/low-code-vs-pro-code/SKILL.md) 12-dimension rubric across the hybrid boundary; or, if the Architect judges this disproportionate for an internal tooling ADR, explicitly mark pre-review gate 9 as accepted-risk in the ADR Consequences and reference this review's finding.
 
 ### LOW: Open Questions in SPEC have no owner or target resolution date
 
@@ -146,7 +146,7 @@ inputs:
 - **Artifact**: ADR -- "Consequences (Negative)" section vs COUNCIL -- "Synthesis -- Divergences"
 - **Framework**: ATAM (sensitivity points)
 - **Evidence of harm**: The COUNCIL records a real divergence: Analyst/Strategist would fall back to Option A, Skeptic would fall back to Option B, with the Synthesis resolving in favor of Option A. The ADR Consequences mention "Preview-API dependency" as a negative but do not state the fallback plan. If Option C has to be abandoned mid-rollout (e.g., Customizations API changes shape), an Engineer reading only the ADR will not know that the council pre-decided "fall back to A".
-- **Recommendation**: Add one bullet to ADR-400 "Consequences (Neutral)" of the form: "Pre-decided fallback if Option C becomes unviable: Option A (Customizations-only, no extension). See [COUNCIL-400](./COUNCIL-400.md) Synthesis."
+- **Recommendation**: Add one bullet to ADR-400 "Consequences (Neutral)" of the form: "Pre-decided fallback if Option C becomes unviable: Option A (Customizations-only, no extension). See [COUNCIL-400](../adr/COUNCIL-400.md) Synthesis."
 
 ---
 

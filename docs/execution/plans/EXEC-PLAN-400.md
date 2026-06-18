@@ -127,4 +127,4 @@ Phase 1 implementation and validation are complete. Remaining work is quality-lo
 
 ---
 
-**Template**: [.github/templates/EXEC-PLAN-TEMPLATE.md](../../.github/templates/EXEC-PLAN-TEMPLATE.md)
+**Template**: [.github/templates/EXEC-PLAN-TEMPLATE.md](../../../.github/templates/EXEC-PLAN-TEMPLATE.md)
