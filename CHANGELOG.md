@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.4.66
+
+### Fixes
+
+- **Marketplace publish unblocked**: bumped the `undici` override in `vscode-extension/package.json` from `7.24.4` to `7.28.0` and regenerated the lockfile. This clears the high-severity advisories (GHSA-vmh5-mc38-953g, GHSA-pr7r-676h-xcf6; vulnerable range 7.0.0 - 7.27.2) that were failing the `npm audit --audit-level=high` quality gate in the marketplace publish workflow.
+
 ## 8.4.65
 
 ### Cross-Cutting Agent Protocol Centralization
