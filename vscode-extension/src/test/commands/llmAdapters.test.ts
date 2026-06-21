@@ -69,7 +69,7 @@ describe('runAddLlmAdapterCommand', () => {
     sandbox.stub(initializeInternals, 'promptWorkspaceRoot').resolves(tempRoot);
     sandbox.stub(vscode.window, 'showQuickPick')
       .onFirstCall().resolves({
-        label: 'gpt-5.4',
+        label: 'gpt-5.5',
         description: 'Default highest-capability GPT model',
       })
       .onSecondCall().resolves(undefined);
@@ -95,7 +95,7 @@ describe('runAddLlmAdapterCommand', () => {
 
     const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf-8'));
     assert.equal(config.llmProvider, 'openai-api');
-    assert.equal(config.llmProviders['openai-api'].defaultModel, 'gpt-5.4');
+    assert.equal(config.llmProviders['openai-api'].defaultModel, 'gpt-5.5');
     assert.equal(config.llmProviders['openai-api'].baseUrl, 'https://api.openai.com/v1');
     assert.equal(storedSecrets.get('openai-api'), 'sk-test-openai-key');
   });

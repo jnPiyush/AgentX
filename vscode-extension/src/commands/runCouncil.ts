@@ -110,7 +110,7 @@ async function pickModel(
   if (unusedModels.length > 0) {
     // Within Tier 2, prefer a different family over a different version of
     // an already-used family. Different family typically implies a wider
-    // prior gap (e.g. gpt-5 vs gpt-4 > gpt-5.4 vs gpt-5.5).
+    // prior gap (e.g. gpt-5 vs gpt-4 > gpt-5.1 vs gpt-5.5).
     const differentFamily = unusedModels.filter(
       (m) => !blockedFamilies.has((m.family ?? '').trim().toLowerCase()),
     );

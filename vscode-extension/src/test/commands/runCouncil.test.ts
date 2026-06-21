@@ -40,31 +40,31 @@ const SAMPLE_BRIEF = [
   '',
   '| Role | Model |',
   '|------|-------|',
-  '| Analyst | `openai/gpt-5.4` |',
-  '| Strategist | `anthropic/claude-opus-4.7` |',
+  '| Analyst | `openai/gpt-5.5` |',
+  '| Strategist | `anthropic/claude-opus-4.8` |',
   '| Skeptic | `google/gemini-3.1-pro` |',
   '',
   '## Member Responses',
   '',
-  '### Analyst -- `openai/gpt-5.4`',
+  '### Analyst -- `openai/gpt-5.5`',
   '',
   '[AGENT-TODO] Calling agent: adopt the role below...',
   '',
   '```',
   'Role: Analyst',
-  'Suggested model bias: openai/gpt-5.4',
+  'Suggested model bias: openai/gpt-5.5',
   'Role instruction: Decompose the decision. List candidate options with criteria that differentiate them.',
   'Prompt: see top of file',
   'Response format: ## Position / ## Key Reasoning / ## What Could Make Me Wrong',
   '```',
   '',
-  '### Strategist -- `anthropic/claude-opus-4.7`',
+  '### Strategist -- `anthropic/claude-opus-4.8`',
   '',
   '[AGENT-TODO] Calling agent: adopt the role below...',
   '',
   '```',
   'Role: Strategist',
-  'Suggested model bias: anthropic/claude-opus-4.7',
+  'Suggested model bias: anthropic/claude-opus-4.8',
   'Role instruction: Step back. Recommend the option a senior architect would pick.',
   '```',
   '',
@@ -94,7 +94,7 @@ describe('parseCouncilBrief', () => {
     assert.equal(brief.context, '10K writes/day, 1M reads/day, 50 internal users.');
     assert.equal(brief.roster.length, 3);
     assert.equal(brief.roster[0].role, 'Analyst');
-    assert.equal(brief.roster[0].model, 'openai/gpt-5.4');
+    assert.equal(brief.roster[0].model, 'openai/gpt-5.5');
     assert.equal(brief.roster[2].role, 'Skeptic');
     assert.equal(brief.roster[2].model, 'google/gemini-3.1-pro');
     assert.equal(brief.hasPendingRoles, true);
@@ -162,34 +162,34 @@ describe('parseCouncilBrief', () => {
 
 describe('modelSelectorCandidates', () => {
   it('emits family then vendor then empty fallback for vendor/family ids by default', () => {
-    const candidates = modelSelectorCandidates('openai/gpt-5.4');
+    const candidates = modelSelectorCandidates('openai/gpt-5.5');
     assert.deepEqual(candidates, [
-      { family: 'gpt-5.4' },
+      { family: 'gpt-5.5' },
       { vendor: 'openai' },
       {},
     ]);
   });
 
   it('omits the empty fallback when allowAnyFallback is false', () => {
-    const candidates = modelSelectorCandidates('openai/gpt-5.4', { allowAnyFallback: false });
+    const candidates = modelSelectorCandidates('openai/gpt-5.5', { allowAnyFallback: false });
     assert.deepEqual(candidates, [
-      { family: 'gpt-5.4' },
+      { family: 'gpt-5.5' },
       { vendor: 'openai' },
     ]);
   });
 
   it('handles family-only ids without a slash', () => {
-    const candidates = modelSelectorCandidates('claude-opus-4.7');
+    const candidates = modelSelectorCandidates('claude-opus-4.8');
     assert.deepEqual(candidates, [
-      { family: 'claude-opus-4.7' },
+      { family: 'claude-opus-4.8' },
       {},
     ]);
   });
 
   it('handles family-only ids with allowAnyFallback false (no empty selector)', () => {
-    const candidates = modelSelectorCandidates('claude-opus-4.7', { allowAnyFallback: false });
+    const candidates = modelSelectorCandidates('claude-opus-4.8', { allowAnyFallback: false });
     assert.deepEqual(candidates, [
-      { family: 'claude-opus-4.7' },
+      { family: 'claude-opus-4.8' },
     ]);
   });
 });
@@ -329,8 +329,8 @@ describe('summarizeVendorDiversity', () => {
 describe('modelKey', () => {
   it('joins vendor|family|name lowercased', () => {
     assert.equal(
-      modelKey({ vendor: 'OpenAI', family: 'GPT-5.4', name: 'GPT-5.4' }),
-      'openai|gpt-5.4|gpt-5.4',
+      modelKey({ vendor: 'OpenAI', family: 'GPT-5.5', name: 'GPT-5.5' }),
+      'openai|gpt-5.5|gpt-5.5',
     );
   });
 
@@ -339,8 +339,8 @@ describe('modelKey', () => {
     assert.equal(modelKey({ vendor: 'openai' }), 'openai||');
   });
 
-  it('distinguishes same family different version (e.g. gpt-5.4 vs gpt-5.5)', () => {
-    const a = modelKey({ vendor: 'openai', family: 'gpt-5', name: 'gpt-5.4' });
+  it('distinguishes same family different version (e.g. gpt-5.1 vs gpt-5.5)', () => {
+    const a = modelKey({ vendor: 'openai', family: 'gpt-5', name: 'gpt-5.1' });
     const b = modelKey({ vendor: 'openai', family: 'gpt-5', name: 'gpt-5.5' });
     assert.notEqual(a, b);
   });
@@ -365,7 +365,7 @@ describe('replaceRoleBlock', () => {
 
   it('preserves the role heading line itself', () => {
     const updated = replaceRoleBlock(SAMPLE_BRIEF, 'Analyst', 'A');
-    assert.ok(updated.includes('### Analyst -- `openai/gpt-5.4`'));
+    assert.ok(updated.includes('### Analyst -- `openai/gpt-5.5`'));
   });
 
   // ------------------------------------------------------------------
@@ -549,8 +549,8 @@ describe('registerRunCouncilCommand - orchestration', () => {
   it('invokes three distinct vendors and writes purpose-pack instructions into prompts', async () => {
     const captured: CapturedRequest[] = [];
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', captured, 'Analyst answer body.'),
-      makeMockModel('anthropic', 'claude-opus-4.7', captured, 'Strategist answer body.'),
+      makeMockModel('openai', 'gpt-5.5', captured, 'Analyst answer body.'),
+      makeMockModel('anthropic', 'claude-opus-4.8', captured, 'Strategist answer body.'),
       makeMockModel('google', 'gemini-3.1-pro', captured, 'Skeptic answer body.'),
     ]);
 
@@ -613,7 +613,7 @@ describe('registerRunCouncilCommand - orchestration', () => {
     // Only one vendor available -> all three roles must collapse onto it.
     // 3 distinct families => Tier 2 'model' (model-diverse mode), not Tier 3.
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', captured, 'one'),
+      makeMockModel('openai', 'gpt-5.5', captured, 'one'),
       makeMockModel('openai', 'gpt-4', captured, 'two'),
       makeMockModel('openai', 'gpt-3.5', captured, 'three'),
     ]);
@@ -669,7 +669,7 @@ describe('registerRunCouncilCommand - orchestration', () => {
   it('uses Tier 1B vendor sweep to recover diversity in mixed-availability environments', async () => {
     const captured: CapturedRequest[] = [];
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', captured, 'analyst body'),
+      makeMockModel('openai', 'gpt-5.5', captured, 'analyst body'),
       makeMockModel('openai', 'gpt-4', captured, 'fallback body'),
       makeMockModel('google', 'gemini-3.1-pro', captured, 'google body'),
     ]);
@@ -714,7 +714,7 @@ describe('registerRunCouncilCommand - orchestration', () => {
   it('falls back to role-diverse-only mode when only one model is available', async () => {
     const captured: CapturedRequest[] = [];
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', captured, 'shared body'),
+      makeMockModel('openai', 'gpt-5.5', captured, 'shared body'),
     ]);
 
     sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined);
@@ -758,8 +758,8 @@ describe('registerRunCouncilCommand - orchestration', () => {
   // source tag when 3 distinct vendors are available.
   it('tags every role with tier=vendor when 3 distinct vendors are available', async () => {
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', [], 'a'),
-      makeMockModel('anthropic', 'claude-opus-4.7', [], 'b'),
+      makeMockModel('openai', 'gpt-5.5', [], 'a'),
+      makeMockModel('anthropic', 'claude-opus-4.8', [], 'b'),
       makeMockModel('google', 'gemini-3.1-pro', [], 'c'),
     ]);
     sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined);
@@ -778,8 +778,8 @@ describe('registerRunCouncilCommand - orchestration', () => {
 
   it('aborts without writing when the brief is dirty in an open editor and user declines', async () => {
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', [], 'x'),
-      makeMockModel('anthropic', 'claude-opus-4.7', [], 'y'),
+      makeMockModel('openai', 'gpt-5.5', [], 'x'),
+      makeMockModel('anthropic', 'claude-opus-4.8', [], 'y'),
       makeMockModel('google', 'gemini-3.1-pro', [], 'z'),
     ]);
 
@@ -807,8 +807,8 @@ describe('registerRunCouncilCommand - orchestration', () => {
   it('proceeds and writes when the user accepts the dirty-edit discard prompt', async () => {
     const captured: CapturedRequest[] = [];
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', captured, 'A1'),
-      makeMockModel('anthropic', 'claude-opus-4.7', captured, 'S1'),
+      makeMockModel('openai', 'gpt-5.5', captured, 'A1'),
+      makeMockModel('anthropic', 'claude-opus-4.8', captured, 'S1'),
       makeMockModel('google', 'gemini-3.1-pro', captured, 'K1'),
     ]);
 
@@ -834,8 +834,8 @@ describe('registerRunCouncilCommand - orchestration', () => {
   it('only reverts the editor when the council brief is the active editor', async () => {
     const captured: CapturedRequest[] = [];
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', captured, 'a'),
-      makeMockModel('anthropic', 'claude-opus-4.7', captured, 'b'),
+      makeMockModel('openai', 'gpt-5.5', captured, 'a'),
+      makeMockModel('anthropic', 'claude-opus-4.8', captured, 'b'),
       makeMockModel('google', 'gemini-3.1-pro', captured, 'c'),
     ]);
 
@@ -876,7 +876,7 @@ describe('registerRunCouncilCommand - orchestration', () => {
   it('shows error and bails when the brief lacks Question or Roster', async () => {
     fs.writeFileSync(tmpFile, '# Empty council brief\n', 'utf8');
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', [], 'x'),
+      makeMockModel('openai', 'gpt-5.5', [], 'x'),
     ]);
     const errStub = sandbox.stub(vscode.window, 'showErrorMessage').resolves(undefined);
 
@@ -894,8 +894,8 @@ describe('registerRunCouncilCommand - orchestration', () => {
     // Pass 1: fill the brief end-to-end.
     const firstCaptured: CapturedRequest[] = [];
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', firstCaptured, 'pass1-analyst'),
-      makeMockModel('anthropic', 'claude-opus-4.7', firstCaptured, 'pass1-strategist'),
+      makeMockModel('openai', 'gpt-5.5', firstCaptured, 'pass1-analyst'),
+      makeMockModel('anthropic', 'claude-opus-4.8', firstCaptured, 'pass1-strategist'),
       makeMockModel('google', 'gemini-3.1-pro', firstCaptured, 'pass1-skeptic'),
     ]);
     sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined);
@@ -921,8 +921,8 @@ describe('registerRunCouncilCommand - orchestration', () => {
     __clearMockModels();
     const secondCaptured: CapturedRequest[] = [];
     __setMockModels([
-      makeMockModel('openai', 'gpt-5.4', secondCaptured, 'pass2-analyst'),
-      makeMockModel('anthropic', 'claude-opus-4.7', secondCaptured, 'pass2-strategist'),
+      makeMockModel('openai', 'gpt-5.5', secondCaptured, 'pass2-analyst'),
+      makeMockModel('anthropic', 'claude-opus-4.8', secondCaptured, 'pass2-strategist'),
       makeMockModel('google', 'gemini-3.1-pro', secondCaptured, 'pass2-skeptic'),
     ]);
 

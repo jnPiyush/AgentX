@@ -51,13 +51,13 @@ Existing tests cover: happy path, missing target_url, ftp scheme rejected, custo
 
 | Role | Model |
 |------|-------|
-| Analyst | `openai/gpt-5.4` |
-| Strategist | `anthropic/claude-opus-4.7` |
+| Analyst | `openai/gpt-5.5` |
+| Strategist | `anthropic/claude-opus-4.8` |
 | Skeptic | `google/gemini-3.1-pro` |
 
 ## Member Responses
 
-### Analyst -- `openai/gpt-5.4`
+### Analyst -- `openai/gpt-5.5`
 
 ## Position
 
@@ -78,7 +78,7 @@ The diff has two genuine blockers (audit-log omission against an explicit spec r
 - If the gateway strips/normalizes `custom_slug` before the request reaches the app, the slug-validation blocker drops to Minor. Reviewer should confirm gateway behavior, not assume.
 - If a separate logging middleware (not in this diff) reads `X-User-Id` and emits the audit event, the audit blocker is moot. Need a pointer to that middleware to confirm.
 
-### Strategist -- `anthropic/claude-opus-4.7`
+### Strategist -- `anthropic/claude-opus-4.8`
 
 ## Position
 

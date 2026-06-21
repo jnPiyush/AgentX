@@ -526,7 +526,7 @@ describe('chatParticipant', () => {
 
       const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
       assert.equal(config.llmProvider, 'openai-api');
-      assert.equal(config.llmProviders['openai-api'].defaultModel, 'gpt-5.4');
+      assert.equal(config.llmProviders['openai-api'].defaultModel, 'gpt-5.5');
       assert.equal(storedSecrets.get('openai-api'), 'sk-test-openai-key');
       assert.equal(pending, undefined);
       assert.ok(applyResponse.getMarkdown().includes('Configured **OpenAI API**'));

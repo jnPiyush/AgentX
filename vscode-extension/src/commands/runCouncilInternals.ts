@@ -3,7 +3,7 @@
 
 export interface CouncilRosterEntry {
   readonly role: string;
-  readonly model: string; // e.g. "openai/gpt-5.4"
+  readonly model: string; // e.g. "openai/gpt-5.5"
   /**
    * Per-role instruction parsed from the brief's fenced [AGENT-TODO] block.
    * The script writes this as `Role instruction: <text>` and varies it by
@@ -57,7 +57,7 @@ export interface CouncilRoleResult {
 /**
  * Stable identity key for a language model used to detect Tier-2 reuse
  * (same model picked for two roles). Combines vendor, family, and name so
- * `gpt-5.4` and `gpt-5.5` count as different even though they share a vendor
+ * `gpt-5.1` and `gpt-5.5` count as different even though they share a vendor
  * and family family.
  */
 export function modelKey(m: { vendor?: string; family?: string; name?: string }): string {
@@ -129,7 +129,7 @@ export function parseCouncilBrief(content: string): ParsedCouncilBrief {
   // Step 1: parse the roster table (role + model).
   const baseRoster: Array<{ role: string; model: string }> = [];
   for (const line of rosterBlock.split(/\r?\n/)) {
-    // Match table rows: | Analyst | `openai/gpt-5.4` |
+    // Match table rows: | Analyst | `openai/gpt-5.5` |
     const m = /^\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|\s*$/.exec(line);
     if (!m) { continue; }
     const role = m[1].trim();
@@ -212,7 +212,7 @@ function extractRoleInstruction(responsesBlock: string, role: string): string | 
 }
 
 /**
- * Map a Council member model identifier (e.g. "openai/gpt-5.4") to a list of
+ * Map a Council member model identifier (e.g. "openai/gpt-5.5") to a list of
  * vscode.lm.selectChatModels selectors to try in order. Vendor and family
  * selectors come first; the empty (any-model) selector is included only when
  * `allowAnyFallback` is true. Diversity-sensitive callers should pass

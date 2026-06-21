@@ -74,7 +74,7 @@ $Script:MODEL_CAPABILITIES = @{
     'claude-sonnet-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
     'claude-sonnet-4' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
     'claude-haiku-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
-    'gpt-5.4' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
+    'gpt-5.5' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
     'gpt-5.2-codex' = @{ contextWindow = 272000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
     'gpt-5.1' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
     'gpt-5-mini' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
@@ -285,7 +285,7 @@ function Get-RunnerDefaultModel([string]$ProviderId) {
     switch ($ProviderId) {
         'claude-code' { return 'claude-sonnet-4.6' }
         'anthropic-api' { return 'claude-sonnet-4.6' }
-        'openai-api' { return 'gpt-5.4' }
+        'openai-api' { return 'gpt-5.5' }
         'copilot' { return $Script:DEFAULT_MODEL }
         'github-models' { return $Script:DEFAULT_MODEL }
         default { return $Script:DEFAULT_MODEL }
@@ -1102,11 +1102,11 @@ $Script:MODEL_MAP_COPILOT = @{
     'claude sonnet 4.5' = 'claude-sonnet-4.5'
     'claude sonnet 4'   = 'claude-sonnet-4'
     'claude haiku'      = 'claude-haiku-4.5'
-    'gpt-5.4'          = 'gpt-5.4'
+    'gpt-5.5'          = 'gpt-5.5'
     'gpt-5.3-codex'    = 'gpt-5.2-codex'
     'gpt-5.2-codex'    = 'gpt-5.2-codex'
     'gpt-5.1'          = 'gpt-5.1'
-    'gpt-5'            = 'gpt-5.1'
+    'gpt-5'            = 'gpt-5.5'
     'gpt-5-mini'       = 'gpt-5-mini'
     'gpt-4o'           = 'gpt-4o'
     'gpt-4.1'          = 'gpt-4.1'
@@ -1128,7 +1128,7 @@ $Script:MODEL_MAP_GHMODELS = @{
     'claude sonnet 4.6' = 'gpt-4.1'
     'claude sonnet 4'   = 'gpt-4.1'
     'claude haiku'      = 'gpt-4.1-mini'
-    'gpt-5.4'          = 'gpt-4.1'
+    'gpt-5.5'          = 'gpt-4.1'
     'gpt-5.3-codex'    = 'gpt-4.1'
     'gpt-5'            = 'gpt-4.1'
     'gpt-4o'           = 'gpt-4o'
@@ -1173,11 +1173,11 @@ $Script:MODEL_MAP_ANTHROPIC_API = @{
 }
 
 $Script:MODEL_MAP_OPENAI_API = @{
-    'gpt-5.4'       = 'gpt-5.4'
+    'gpt-5.5'       = 'gpt-5.5'
     'gpt-5.3-codex' = 'gpt-5.2-codex'
     'gpt-5.2-codex' = 'gpt-5.2-codex'
     'gpt-5.1'       = 'gpt-5.1'
-    'gpt-5'         = 'gpt-5.1'
+    'gpt-5'         = 'gpt-5.5'
     'gpt-5-mini'    = 'gpt-5-mini'
     'gpt-4o'        = 'gpt-4o'
     'gpt-4.1'       = 'gpt-4.1'
@@ -3837,6 +3837,81 @@ function Invoke-ClarificationLoop {
 }
 
 # ---------------------------------------------------------------------------
+# Curated-learning retrieval (learning loop)
+# Reads curated learnings from memories/*.md and ranks them by keyword
+# overlap with the active task prompt so the most relevant prior learnings
+# can be injected into the system prompt. Pure + file-local to the runner.
+# ---------------------------------------------------------------------------
+
+function Get-RunnerLearningStopWords {
+    return @(
+        'the','and','for','with','that','this','from','have','has','was','were','are',
+        'you','your','our','out','use','using','used','into','not','but','all','any',
+        'can','via','per','its','it','of','to','in','on','is','as','by','or','be','at','a','an'
+    )
+}
+
+function ConvertTo-RunnerLearningTokens {
+    param([string]$Text)
+    if ([string]::IsNullOrWhiteSpace($Text)) { return @() }
+    $stop = Get-RunnerLearningStopWords
+    $lower = $Text.ToLowerInvariant()
+    $parts = [regex]::Split($lower, '[^a-z0-9]+') | Where-Object { $_.Length -ge 3 -and ($stop -notcontains $_) }
+    return @($parts | Select-Object -Unique)
+}
+
+function Get-RunnerCuratedLearnings {
+    param([string]$WorkspaceRoot)
+    $entries = New-Object 'System.Collections.Generic.List[object]'
+    $memDir = Join-Path $WorkspaceRoot 'memories'
+    foreach ($name in @('conventions.md', 'decisions.md', 'pitfalls.md')) {
+        $path = Join-Path $memDir $name
+        if (-not (Test-Path $path)) { continue }
+        $category = [System.IO.Path]::GetFileNameWithoutExtension($name)
+        $lines = Get-Content $path -ErrorAction SilentlyContinue
+        foreach ($line in $lines) {
+            if ($line -match '^\s*-\s+(.+?)\s*$') {
+                $text = $Matches[1].Trim()
+                if ([string]::IsNullOrWhiteSpace($text)) { continue }
+                $date = ''
+                if ($text -match '^(\d{4}-\d{2}-\d{2})\s*:\s*(.+)$') {
+                    $date = $Matches[1]
+                    $text = $Matches[2].Trim()
+                }
+                $entries.Add([PSCustomObject]@{ text = $text; category = $category; date = $date }) | Out-Null
+            }
+        }
+    }
+    return $entries.ToArray()
+}
+
+function Get-RunnerRelevantLearnings {
+    param(
+        [string]$WorkspaceRoot,
+        [string]$Query,
+        [int]$Limit = 5
+    )
+    $queryTokens = @(ConvertTo-RunnerLearningTokens $Query)
+    if ($queryTokens.Count -eq 0) { return @() }
+    $entries = @(Get-RunnerCuratedLearnings -WorkspaceRoot $WorkspaceRoot)
+    if ($entries.Count -eq 0) { return @() }
+    $scored = foreach ($e in $entries) {
+        $tokens = @(ConvertTo-RunnerLearningTokens $e.text)
+        $lowerText = $e.text.ToLowerInvariant()
+        $score = 0
+        foreach ($qt in $queryTokens) {
+            if ($tokens -contains $qt) { $score += 2 }
+            elseif ($lowerText.Contains($qt)) { $score += 1 }
+        }
+        [PSCustomObject]@{ text = $e.text; category = $e.category; date = $e.date; score = $score }
+    }
+    $ranked = $scored |
+        Where-Object { $_.score -gt 0 } |
+        Sort-Object -Property @{ Expression = { $_.score }; Descending = $true }, @{ Expression = { $_.date }; Descending = $true }
+    return @($ranked | Select-Object -First $Limit)
+}
+
+# ---------------------------------------------------------------------------
 # Main agentic loop
 # ---------------------------------------------------------------------------
 
@@ -3944,6 +4019,24 @@ function Invoke-AgenticLoop {
     $systemPrompt = Build-SystemPrompt -agentDef $agentDef -agentName $Agent
     if ($researchFirstMode -ne 'off') {
         $systemPrompt += "`n`n[Research-First Mode] Start by using read-only workspace tools to inspect the relevant files and gather context before making edits."
+    }
+
+    # Auto-inject relevant curated learnings (learning loop). Best-effort only:
+    # any failure here must never block the agentic loop.
+    try {
+        $relevantLearnings = @(Get-RunnerRelevantLearnings -WorkspaceRoot $WorkspaceRoot -Query $Prompt -Limit 5)
+        if ($relevantLearnings.Count -gt 0) {
+            $learningLines = foreach ($rl in $relevantLearnings) {
+                $prefix = if ($rl.category) { "[$($rl.category)] " } else { '' }
+                "- $prefix$($rl.text)"
+            }
+            $systemPrompt += "`n`n## Relevant Prior Learnings`n" +
+                "These curated learnings from past sessions may apply to this task. Treat them as guidance, not absolute rules:`n" +
+                ($learningLines -join "`n")
+            Write-RunnerConsole "`e[90m  Injected $($relevantLearnings.Count) relevant prior learning(s) into the system prompt.`e[0m"
+        }
+    } catch {
+        Write-RunnerConsole "`e[90m  [WARN] Curated-learning injection skipped: $($_.Exception.Message)`e[0m"
     }
 
     # Parse can_clarify targets from frontmatter collaborators first, then fall back to body hints.

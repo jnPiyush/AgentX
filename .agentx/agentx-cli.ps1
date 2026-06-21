@@ -5647,30 +5647,165 @@ function Invoke-LessonsList {
     Write-CliOutput "$($C.d)Use 'agentx lessons query' for specific searches or 'agentx lessons show <id>' for details.$($C.n)"
 }
 
+# ---------------------------------------------------------------------------
+# Curated-learning retrieval helpers (pure; file-local to the CLI)
+# Source of truth: memories/conventions.md, decisions.md, pitfalls.md
+# Bullet format: '- YYYY-MM-DD: <text>' (date optional)
+# ---------------------------------------------------------------------------
+
+function Get-CliLearningStopWords {
+    return @(
+        'the','and','for','with','that','this','from','have','has','was','were','are',
+        'you','your','our','out','use','using','used','into','not','but','all','any',
+        'can','via','per','its','it','of','to','in','on','is','as','by','or','be','at','a','an'
+    )
+}
+
+function ConvertTo-CliLearningTokens {
+    param([string]$Text)
+    if ([string]::IsNullOrWhiteSpace($Text)) { return @() }
+    $stop = Get-CliLearningStopWords
+    $lower = $Text.ToLowerInvariant()
+    $parts = [regex]::Split($lower, '[^a-z0-9]+') | Where-Object { $_.Length -ge 3 -and ($stop -notcontains $_) }
+    return @($parts | Select-Object -Unique)
+}
+
+function Get-CliCuratedLearnings {
+    param([string]$Root)
+    $entries = New-Object 'System.Collections.Generic.List[object]'
+    $memDir = Join-Path $Root 'memories'
+    foreach ($name in @('conventions.md', 'decisions.md', 'pitfalls.md')) {
+        $path = Join-Path $memDir $name
+        if (-not (Test-Path $path)) { continue }
+        $category = [System.IO.Path]::GetFileNameWithoutExtension($name)
+        $lines = Get-Content $path -ErrorAction SilentlyContinue
+        foreach ($line in $lines) {
+            if ($line -match '^\s*-\s+(.+?)\s*$') {
+                $text = $Matches[1].Trim()
+                if ([string]::IsNullOrWhiteSpace($text)) { continue }
+                $date = ''
+                if ($text -match '^(\d{4}-\d{2}-\d{2})\s*:\s*(.+)$') {
+                    $date = $Matches[1]
+                    $text = $Matches[2].Trim()
+                }
+                $entries.Add([PSCustomObject]@{
+                    text     = $text
+                    category = $category
+                    date     = $date
+                    source   = "memories/$name"
+                }) | Out-Null
+            }
+        }
+    }
+    return $entries.ToArray()
+}
+
+function Select-CliRankedLearnings {
+    param(
+        [object[]]$Entries,
+        [string]$Query,
+        [int]$Limit = 10
+    )
+    if (-not $Entries -or $Entries.Count -eq 0) { return @() }
+    $queryTokens = @(ConvertTo-CliLearningTokens $Query)
+    $scored = foreach ($e in $Entries) {
+        $score = 0
+        if ($queryTokens.Count -gt 0) {
+            $tokens = @(ConvertTo-CliLearningTokens $e.text)
+            $lowerText = $e.text.ToLowerInvariant()
+            foreach ($qt in $queryTokens) {
+                if ($tokens -contains $qt) { $score += 2 }
+                elseif ($lowerText.Contains($qt)) { $score += 1 }
+            }
+        }
+        [PSCustomObject]@{
+            text = $e.text; category = $e.category; date = $e.date; source = $e.source; score = $score
+        }
+    }
+    if ($queryTokens.Count -eq 0) {
+        $ranked = $scored | Sort-Object -Property @{ Expression = { $_.date }; Descending = $true }
+    } else {
+        $ranked = $scored |
+            Where-Object { $_.score -gt 0 } |
+            Sort-Object -Property @{ Expression = { $_.score }; Descending = $true }, @{ Expression = { $_.date }; Descending = $true }
+    }
+    return @($ranked | Select-Object -First $Limit)
+}
+
 function Invoke-LessonsQuery {
     $category = Get-Flag @('-c', '--category')
-    $confidence = Get-Flag @('--confidence')
-    $tag = Get-Flag @('-t', '--tag')
-    $pattern = Get-Flag @('-p', '--pattern')
-    
-    if (-not $category -and -not $confidence -and -not $tag -and -not $pattern) {
-        Write-CliOutput "`n$($C.c)  Query Lessons$($C.n)"
+    $pattern  = Get-Flag @('-p', '--pattern')
+    # Accepted for backward compatibility (advisory only in the curated-learning model)
+    $null = Get-Flag @('--confidence')
+    $null = Get-Flag @('-t', '--tag')
+    $limitRaw = Get-Flag @('-l', '--limit')
+    $limit = 10
+    if ($limitRaw) { [void][int]::TryParse($limitRaw, [ref]$limit) }
+    if ($limit -le 0) { $limit = 10 }
+
+    # Collect positional query terms (anything that is not a known flag or its value)
+    $valueFlags = @('-c', '--category', '-p', '--pattern', '-l', '--limit', '-t', '--tag', '--confidence')
+    $positional = New-Object 'System.Collections.Generic.List[string]'
+    for ($i = 0; $i -lt $Script:SubArgs.Count; $i++) {
+        $tok = $Script:SubArgs[$i]
+        if ($tok -match '^-') {
+            if ($valueFlags -contains $tok) { $i++ }
+            continue
+        }
+        $positional.Add($tok) | Out-Null
+    }
+
+    $queryParts = New-Object 'System.Collections.Generic.List[string]'
+    if ($pattern) { $queryParts.Add($pattern) | Out-Null }
+    foreach ($p in $positional) { $queryParts.Add($p) | Out-Null }
+    $query = ($queryParts -join ' ').Trim()
+
+    if (-not $query -and -not $category) {
+        Write-CliOutput "`n$($C.c)  Query Curated Learnings$($C.n)"
         Write-CliOutput "$($C.w)  Usage:$($C.n)"
-        Write-CliOutput "    agentx lessons query -c error-pattern"
-        Write-CliOutput "    agentx lessons query -t typescript --confidence high"
-        Write-CliOutput "    agentx lessons query -p \"timeout\" -l 5"
-        Write-CliOutput "`n$($C.w)  Categories:$($C.n)"
-        Write-CliOutput "    error-pattern, success-pattern, tool-usage, security"
-        Write-CliOutput "    performance, configuration, integration, workflow, testing"
-        Write-CliOutput "`n$($C.w)  Confidence:$($C.n)"
-        Write-CliOutput "    high, medium, low"
+        Write-CliOutput "    agentx lessons query <terms>"
+        Write-CliOutput "    agentx lessons query -p 'loop gate' -l 5"
+        Write-CliOutput "    agentx lessons query timeout -c pitfalls"
+        Write-CliOutput "`n$($C.w)  Sources:$($C.n)"
+        Write-CliOutput "    memories/conventions.md, memories/decisions.md, memories/pitfalls.md"
+        Write-CliOutput "`n$($C.w)  Categories (-c):$($C.n)"
+        Write-CliOutput "    conventions, decisions, pitfalls"
         Write-CliOutput ""
         return
     }
-    
-    # Query is handled by memory.instructions.md in the declarative architecture
-    Write-CliOutput "$($C.y)Query functionality uses /memories/*.md files in v8.0.0.$($C.n)"
-    Write-CliOutput "$($C.d)Use 'agentx lessons list' for the local JSONL overview, or check /memories/ for cross-session facts.$($C.n)"
+
+    $entries = @(Get-CliCuratedLearnings -Root $Script:ROOT)
+    if ($category) {
+        $entries = @($entries | Where-Object { $_.category -ieq $category })
+    }
+    $results = @(Select-CliRankedLearnings -Entries $entries -Query $query -Limit $limit)
+
+    if ($Script:JsonOutput) {
+        $payload = [PSCustomObject]@{
+            query    = $query
+            category = $category
+            count    = $results.Count
+            results  = @($results)
+        }
+        Write-CliOutput ($payload | ConvertTo-Json -Depth 5)
+        return
+    }
+
+    if ($results.Count -eq 0) {
+        $label = if ($query) { "'$query'" } else { "category '$category'" }
+        Write-CliOutput "$($C.y)No curated learnings matched $label.$($C.n)"
+        Write-CliOutput "$($C.d)Sources scanned: memories/conventions.md, memories/decisions.md, memories/pitfalls.md$($C.n)"
+        return
+    }
+
+    $header = if ($query) { "query: $query" } else { "category: $category" }
+    Write-CliOutput "`n$($C.c)  Curated Learnings$($C.n) $($C.d)($header, top $($results.Count))$($C.n)"
+    foreach ($r in $results) {
+        $datePart = if ($r.date) { "$($C.d)$($r.date)$($C.n) " } else { '' }
+        $catTag = "$($C.b)[$($r.category)]$($C.n)"
+        Write-CliOutput "  $catTag $datePart$($r.text)"
+    }
+    Write-CliOutput ""
 }
 
 function Invoke-LessonsShow {

@@ -113,7 +113,7 @@ const CLAUDE_LOCAL_MODEL_ITEMS: readonly LlmModelPick[] = [
 ];
 
 const OPENAI_MODEL_ITEMS: readonly LlmModelPick[] = [
-  { label: 'gpt-5.4', value: 'gpt-5.4', description: 'Default highest-capability GPT model' },
+  { label: 'gpt-5.5', value: 'gpt-5.5', description: 'Default highest-capability GPT model' },
   { label: 'gpt-5.1', value: 'gpt-5.1', description: 'Stable GPT-5 generation' },
   { label: 'gpt-5-mini', value: 'gpt-5-mini', description: 'Lower-cost GPT-5 tier' },
   { label: 'gpt-4.1', value: 'gpt-4.1', description: 'High-compatibility GPT model' },
@@ -160,7 +160,7 @@ function sanitizeProviderRecord(providerId: LlmAdapterMode, settings: ProviderPr
     case 'openai-api':
       return {
         enabled: true,
-        defaultModel: settings.defaultModel ?? 'gpt-5.4',
+        defaultModel: settings.defaultModel ?? 'gpt-5.5',
         baseUrl: settings.baseUrl ?? '',
       };
     default:

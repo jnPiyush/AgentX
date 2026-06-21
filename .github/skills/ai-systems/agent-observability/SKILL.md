@@ -48,7 +48,7 @@ Key span attributes:
 | Attribute | Example |
 |-----------|---------|
 | `gen_ai.system` | `openai`, `anthropic`, `azure_ai_inference` |
-| `gen_ai.request.model` | `gpt-5`, `claude-opus-4.7` |
+| `gen_ai.request.model` | `gpt-5`, `claude-opus-4.8` |
 | `gen_ai.response.model` | actual served model |
 | `gen_ai.usage.input_tokens` | 1234 |
 | `gen_ai.usage.output_tokens` | 456 |

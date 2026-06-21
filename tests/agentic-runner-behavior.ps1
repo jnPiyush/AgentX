@@ -59,14 +59,14 @@ try {
     Assert-Equal (Get-RunnerReadinessMode -Config ([PSCustomObject]@{ }) -PreferredProviderId 'auto') 'advisory' 'Get-RunnerReadinessMode keeps auto selection advisory by default'
     Assert-Equal (Get-RunnerDefaultModel 'claude-code') 'claude-sonnet-4.6' 'Get-RunnerDefaultModel returns Claude default for claude-code provider'
     Assert-Equal (Get-RunnerDefaultModel 'anthropic-api') 'claude-sonnet-4.6' 'Get-RunnerDefaultModel returns Claude default for anthropic-api provider'
-    Assert-Equal (Get-RunnerDefaultModel 'openai-api') 'gpt-5.4' 'Get-RunnerDefaultModel returns GPT default for openai-api provider'
+    Assert-Equal (Get-RunnerDefaultModel 'openai-api') 'gpt-5.5' 'Get-RunnerDefaultModel returns GPT default for openai-api provider'
     $claudeCapability = Get-RunnerModelCapability 'claude-sonnet-4.6'
     Assert-Equal $claudeCapability.contextWindow 200000 'Get-RunnerModelCapability returns Claude context window metadata'
     Assert-Equal $claudeCapability.reasoningMode 'claude-thinking' 'Get-RunnerModelCapability returns Claude reasoning metadata'
     Assert-True (Test-RunnerModelSupportedByProvider -ProviderId 'claude-code' -ModelId 'claude-sonnet-4.6') 'Test-RunnerModelSupportedByProvider accepts Claude model ids for claude-code'
     Assert-True (-not (Test-RunnerModelSupportedByProvider -ProviderId 'claude-code' -ModelId 'gpt-4o')) 'Test-RunnerModelSupportedByProvider rejects GPT models for claude-code'
     Assert-True (Test-RunnerModelSupportedByProvider -ProviderId 'anthropic-api' -ModelId 'claude-sonnet-4.6') 'Test-RunnerModelSupportedByProvider accepts Claude model ids for anthropic-api'
-    Assert-True (Test-RunnerModelSupportedByProvider -ProviderId 'openai-api' -ModelId 'gpt-5.4') 'Test-RunnerModelSupportedByProvider accepts GPT model ids for openai-api'
+    Assert-True (Test-RunnerModelSupportedByProvider -ProviderId 'openai-api' -ModelId 'gpt-5.5') 'Test-RunnerModelSupportedByProvider accepts GPT model ids for openai-api'
 
     $providerRegistry = @{
         'copilot' = [PSCustomObject]@{ id = 'copilot'; displayName = 'Copilot API'; enabled = $true; ready = $true; reason = 'ready'; transport = 'copilot'; selectionSource = 'default'; authSource = 'gh' }
@@ -168,8 +168,8 @@ $claudeModelCandidates = @(Get-ModelCandidateList -preferredModel 'Claude Sonnet
 Assert-Equal $claudeModelCandidates[0] 'claude-sonnet-4.6' 'Get-ModelCandidateList resolves Claude aliases for claude-code provider'
 Assert-Equal $claudeModelCandidates[-1] 'claude-sonnet-4.6' 'Get-ModelCandidateList appends Claude default model for claude-code provider'
 $Script:ActiveProvider = [PSCustomObject]@{ id = 'openai-api' }
-$openAiModelCandidates = @(Get-ModelCandidateList -preferredModel 'GPT-5.4' -modelFallback 'gpt-4o')
-Assert-Equal $openAiModelCandidates[0] 'gpt-5.4' 'Get-ModelCandidateList resolves GPT aliases for openai-api provider'
+$openAiModelCandidates = @(Get-ModelCandidateList -preferredModel 'GPT-5.5' -modelFallback 'gpt-4o')
+Assert-Equal $openAiModelCandidates[0] 'gpt-5.5' 'Get-ModelCandidateList resolves GPT aliases for openai-api provider'
 Assert-Equal $openAiModelCandidates[-1] 'gpt-4o' 'Get-ModelCandidateList preserves configured fallback for openai-api provider'
 $Script:ActiveProvider = $null
 
@@ -228,7 +228,7 @@ Assert-Equal (Get-ModelContextWindow 'gpt-4o') 128000 'Get-ModelContextWindow re
 Assert-Equal (Get-ModelContextWindow 'claude-sonnet-4.6') 200000 'Get-ModelContextWindow returns Claude context size'
 
 $Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
-$gptReasoning = Get-ReasoningRequestConfig -agentDef @{ reasoningLevel = 'high' } -modelId 'gpt-5.4'
+$gptReasoning = Get-ReasoningRequestConfig -agentDef @{ reasoningLevel = 'high' } -modelId 'gpt-5.5'
 Assert-Equal $gptReasoning.reasoning.effort 'high' 'Get-ReasoningRequestConfig uses metadata-driven GPT reasoning support'
 
 $Script:ActiveProvider = [PSCustomObject]@{ id = 'claude-code' }
@@ -268,6 +268,43 @@ try {
 $claudeReasoning = Get-ReasoningRequestConfig -agentDef @{ reasoningLevel = 'medium' } -modelId 'claude-sonnet-4.6'
 Assert-Equal $claudeReasoning.thinking.type 'adaptive' 'Get-ReasoningRequestConfig uses metadata-driven Claude reasoning support'
 $Script:ActiveProvider = $null
+
+$learningRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-learning-$([System.IO.Path]::GetRandomFileName())")
+try {
+    New-Item -ItemType Directory -Path (Join-Path $learningRoot 'memories') -Force | Out-Null
+    Set-Content -Path (Join-Path $learningRoot 'memories\conventions.md') -Encoding ascii -Value @(
+        '- 2026-06-20: Use model version sweeps to update live defaults and bundled extension assets.'
+        '- 2026-05-17: Sync bundled extension assets after root docs change.'
+        'This prose is not a bullet and should not be loaded.'
+    )
+    Set-Content -Path (Join-Path $learningRoot 'memories\pitfalls.md') -Encoding ascii -Value @(
+        '- 2026-04-30: Loop gate mistakes happen when agents edit before starting the quality loop.'
+        '- Ranking unrelated note should not match deployment terms.'
+    )
+    Set-Content -Path (Join-Path $learningRoot 'memories\decisions.md') -Encoding ascii -Value @(
+        '- 2026-01-01: Prefer billing schema evidence before rollout.'
+    )
+
+    $curatedLearnings = @(Get-RunnerCuratedLearnings -WorkspaceRoot $learningRoot)
+    Assert-Equal $curatedLearnings.Count 5 'Get-RunnerCuratedLearnings loads only bullet memories from curated files'
+    Assert-Equal $curatedLearnings[0].category 'conventions' 'Get-RunnerCuratedLearnings preserves memory category'
+    Assert-Equal $curatedLearnings[0].date '2026-06-20' 'Get-RunnerCuratedLearnings extracts leading dates'
+    Assert-True (-not ($curatedLearnings.text -contains 'This prose is not a bullet and should not be loaded.')) 'Get-RunnerCuratedLearnings skips non-bullet prose'
+
+    $modelMatches = @(Get-RunnerRelevantLearnings -WorkspaceRoot $learningRoot -Query 'model version bundled assets' -Limit 2)
+    Assert-Equal $modelMatches.Count 2 'Get-RunnerRelevantLearnings respects the requested result limit'
+    Assert-True ($modelMatches[0].text -match 'model version sweeps') 'Get-RunnerRelevantLearnings ranks strongest keyword overlap first'
+    Assert-True ($modelMatches[1].text -match 'bundled extension assets') 'Get-RunnerRelevantLearnings includes lower-scoring relevant memories'
+
+    $billingMatches = @(Get-RunnerRelevantLearnings -WorkspaceRoot $learningRoot -Query 'billing schema evidence' -Limit 5)
+    Assert-Equal $billingMatches.Count 1 'Get-RunnerRelevantLearnings filters out non-matching memories'
+    Assert-Equal $billingMatches[0].category 'decisions' 'Get-RunnerRelevantLearnings returns category metadata with matches'
+
+    $noMatches = @(Get-RunnerRelevantLearnings -WorkspaceRoot $learningRoot -Query 'nonexistent orchid topic' -Limit 5)
+    Assert-Equal $noMatches.Count 0 'Get-RunnerRelevantLearnings returns no results for unrelated queries'
+} finally {
+    Remove-Item -Path $learningRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 $largeMessages = @(
     @{ role = 'system'; content = 'system prompt' }
