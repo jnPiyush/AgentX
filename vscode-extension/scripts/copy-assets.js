@@ -20,6 +20,27 @@ const rootDirs = [
     { src: path.join(repoRoot, 'packs'), dest: 'packs' },
 ];
 
+// Workflow scripts the bundled CLI dispatches to, plus direct helper scripts used
+// by those wrappers. Keep this list explicit so development-only scripts are not
+// published to the VSIX by accident.
+const runtimeScriptFiles = [
+    'scrub.ps1',
+    'dream.ps1',
+    'research.ps1',
+    'ship.ps1',
+    'takeoff.ps1',
+    'land.ps1',
+    'ghcp-review-resolve.ps1',
+    'install-manifest.ps1',
+    'scan.ps1',
+    'stocktake.ps1',
+    'model-route.ps1',
+    'check-harness-compliance.ps1',
+    'validate-frontmatter.ps1',
+    'validate-references.ps1',
+    'score-skill.ps1',
+];
+
 // Standalone files from .github/ to bundle
 const standaloneFiles = ['agent-delegation.md', 'agentx-security.yml', 'CODEOWNERS', 'PULL_REQUEST_TEMPLATE.md', 'copilot-instructions.md'];
 
@@ -159,6 +180,27 @@ for (const entry of rootDirs) {
     } else {
         console.log('  [WARN] Source not found: ' + entry.dest + '/');
     }
+}
+
+let runtimeScriptCount = 0;
+const missingRuntimeScripts = [];
+for (const file of runtimeScriptFiles) {
+    const src = path.join(repoRoot, 'scripts', file);
+    if (fs.existsSync(src)) {
+        const dest = path.join(destRoot, 'scripts', file);
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.copyFileSync(src, dest);
+        totalFiles++;
+        runtimeScriptCount++;
+    } else {
+        missingRuntimeScripts.push('scripts/' + file);
+    }
+}
+if (missingRuntimeScripts.length > 0) {
+    throw new Error('Missing runtime scripts: ' + missingRuntimeScripts.join(', '));
+}
+if (runtimeScriptCount > 0) {
+    console.log('  Copied scripts/ (' + runtimeScriptCount + ' runtime files)');
 }
 
 // Copy standalone files

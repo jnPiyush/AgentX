@@ -19,7 +19,7 @@
 #>
 
 param(
- [string]$Path = (Split-Path $PSScriptRoot -Parent),
+ [string]$Path = $(if ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) { $env:AGENTX_WORKSPACE_ROOT } else { Split-Path $PSScriptRoot -Parent }),
  [switch]$Fix
 )
 

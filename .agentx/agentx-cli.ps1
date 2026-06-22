@@ -7539,7 +7539,15 @@ function Invoke-SprintCmd {
 
 function Invoke-ScriptWrapper {
     param([string]$ScriptRelPath, [string]$Label)
+    # Prefer the workspace copy (repo dev / packs install). Fall back to the
+    # bundled extension runtime so these commands still work after an
+    # extension-only "Initialize Local Runtime", which does not seed scripts/
+    # into the workspace (zero-copy runtime).
     $full = Join-Path $Script:ROOT $ScriptRelPath
+    if (-not (Test-Path $full)) {
+        $bundled = Join-Path $Script:INSTALL_ROOT $ScriptRelPath
+        if (Test-Path $bundled) { $full = $bundled }
+    }
     if (-not (Test-Path $full)) {
         Write-CliOutput "$($C.r)[FAIL]$($C.n) $Label script missing at $ScriptRelPath"
         exit 1

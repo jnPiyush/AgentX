@@ -39,7 +39,7 @@
 
 [CmdletBinding()]
 param(
-  [string]$Path = (Split-Path $PSScriptRoot -Parent),
+  [string]$Path = $(if ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) { $env:AGENTX_WORKSPACE_ROOT } else { Split-Path $PSScriptRoot -Parent }),
   [switch]$Json,
   [string]$OutFile = '',
   [switch]$Strict
@@ -49,6 +49,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ROOT = (Resolve-Path $Path).Path
+$INSTALL_ROOT = (Resolve-Path (Split-Path $PSScriptRoot -Parent)).Path
 $findings = New-Object System.Collections.Generic.List[object]
 
 function Add-Finding {
@@ -72,6 +73,9 @@ function Invoke-Validator {
   param([string]$ScriptRel, [string]$Category, [string]$Severity = 'HIGH')
   $full = Join-Path $ROOT $ScriptRel
   if (-not (Test-Path $full)) {
+    $full = Join-Path $INSTALL_ROOT $ScriptRel
+  }
+  if (-not (Test-Path $full)) {
     Add-Finding -Category $Category -Severity 'LOW' -Message "Validator missing: $ScriptRel"
     return
   }
@@ -89,6 +93,9 @@ Invoke-Validator -ScriptRel 'scripts/validate-frontmatter.ps1' -Category 'frontm
 
 # 2. Harness compliance (report-only mode never throws; treat non-empty output as MEDIUM signal)
 $harnessScript = Join-Path $ROOT 'scripts/check-harness-compliance.ps1'
+if (-not (Test-Path $harnessScript)) {
+  $harnessScript = Join-Path $INSTALL_ROOT 'scripts/check-harness-compliance.ps1'
+}
 if (Test-Path $harnessScript) {
   $harnessOut = & pwsh -NoProfile -File $harnessScript -ReportOnly 2>&1
   if ($LASTEXITCODE -ne 0) {
@@ -100,6 +107,9 @@ if (Test-Path $harnessScript) {
 
 # 3. Reference / link integrity (if available)
 $refsScript = Join-Path $ROOT 'scripts/validate-references.ps1'
+if (-not (Test-Path $refsScript)) {
+  $refsScript = Join-Path $INSTALL_ROOT 'scripts/validate-references.ps1'
+}
 if (Test-Path $refsScript) {
   $refsOut = & pwsh -NoProfile -File $refsScript 2>&1
   if ($LASTEXITCODE -ne 0) {

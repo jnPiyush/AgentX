@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.66"><img src="https://img.shields.io/badge/Version-8.4.66-0EA5E9?style=for-the-badge" alt="Version 8.4.66"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.67"><img src="https://img.shields.io/badge/Version-8.4.67-0EA5E9?style=for-the-badge" alt="Version 8.4.67"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -299,12 +299,12 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.66
+## New In 8.4.67
 
-- Model Council deepened from a flat three-perspective brief into persona+purpose-specific deliberation: each council member now reasons from a distinct persona lens calibrated to the deliberation purpose (PRD scope, ADR options, AI design, code review, research), with multi-topic support so a single council run can weigh several decision points before synthesis
-- Council persona model defaults refreshed to the current frontier tier (Opus 4.7 -> 4.8, GPT 5.4 -> 5.5); model names remain advisory diversity slots, not hard requirements
-- VS Code extension now opts into the new VS Code Agents Window on activation as a user-side setting (SPEC-400), so AgentX's agents, skills, and quality-loop surfaces show up in the agent-first window without abandoning the editor-window experience
-- Runtime hardening: resolved the review-400 findings and restored loop parity across the extension runtime, plus a shell test flake fix
+- Extension-only local runtime now supports `agentx scrub` and sibling script-wrapper commands without copying `scripts/` into the user workspace
+- The bundled CLI resolves wrapper scripts from the extension bundle when the workspace has no local `scripts/` folder, preserving the zero-copy runtime model
+- `agentx scrub` now scans the user's workspace instead of the read-only extension bundle when launched from an extension-only initialized workspace
+- VS Code extension assets now bundle the workflow scripts used by `scrub`, `dream`, `research`, `ship`, `takeoff`, `land`, `ghcp-review-resolve`, `install-manifest`, `scan`, `stocktake`, and `route`
 
 ## Main Repo Areas
 

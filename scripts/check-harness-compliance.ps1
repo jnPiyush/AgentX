@@ -5,7 +5,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$workspaceRoot = Split-Path $PSScriptRoot -Parent
+$workspaceRoot = if ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) {
+    (Resolve-Path $env:AGENTX_WORKSPACE_ROOT).Path
+}
+else {
+    Split-Path $PSScriptRoot -Parent
+}
 
 function Get-ChangedFiles {
     param([string]$Base)

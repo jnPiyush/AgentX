@@ -15,7 +15,12 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$ROOT = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$ROOT = if ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) {
+    (Resolve-Path $env:AGENTX_WORKSPACE_ROOT).Path
+}
+else {
+    (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+}
 $ScanDir = Join-Path $ROOT $Path
 
 $broken = @()
@@ -54,8 +59,9 @@ function Test-IsInsideFencedCode {
     return $false
 }
 
-$mdFiles = Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue |
+$mdFiles = @(Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch 'node_modules|\.git[/\\]|vendor|[/\\]archive[/\\]|vscode-extension[/\\]\.github[/\\]' }
+)
 
 # Scope to git-tracked files when available so generated/untracked mirrors
 # (e.g. vscode-extension/.github/agentx) do not produce false positives.

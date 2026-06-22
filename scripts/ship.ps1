@@ -114,9 +114,8 @@ $steps = @(
         name = 'scrub'; agent = 'engineer';
         run  = { if ($SkipScrub) { Write-Host "[ship] Scrub: -SkipScrub is deprecated and ignored; scrub is mandatory on every run" -ForegroundColor DarkYellow }
                   Write-Host "[ship] Scrub: scanning workspace (mandatory deslop pass)" -ForegroundColor Cyan
-                  $scrubScript = Join-Path (Resolve-Path .).Path 'scripts/scrub.ps1'
-                  & pwsh -NoProfile -File $scrubScript -Path . -Quiet
-                  return 0 }
+                  & pwsh -NoProfile -File $AgentXCli scrub -Path . -Quiet | Out-Host
+                  return $LASTEXITCODE }
         gate = { $true }
     },
     @{
@@ -202,8 +201,7 @@ if ($Parallel) {
                         'scrub' {
                             if ($skipScrub) { Write-Host '[ship] Scrub: -SkipScrub is deprecated and ignored; scrub is mandatory on every run' -ForegroundColor DarkYellow }
                             Write-Host '[ship] Scrub: scanning workspace (mandatory deslop pass)' -ForegroundColor Cyan
-                            $scrubScript = Join-Path $cwd 'scripts/scrub.ps1'
-                            & pwsh -NoProfile -File $scrubScript -Path . -Quiet
+                            & pwsh -NoProfile -File $agentXCliPath scrub -Path . -Quiet | Out-Host
                             $code = $LASTEXITCODE
                             $gateOk = ($code -eq 0)
                         }
