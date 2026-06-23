@@ -46,7 +46,7 @@ compatibility:
 |----------|----------|--------|
 | Comment rot | `// This function handles the logic for X`, `// Helper to do thing`, naked `// TODO` | Delete |
 | Restating the obvious | `// Increment counter` above `counter++` | Delete |
-| AI filler phrasing | "It is important to note that", "In order to", "We will now" in docs | Rewrite or delete |
+| AI filler phrasing | Phrases like "Note that", "To", or "Next" when they add no meaning | Rewrite or delete |
 | Over-abstraction | Single-use interface, factory wrapping one constructor, getter-only class | Inline manually (flag only) |
 | Generic UI defaults | `bg-gradient-to-r from-purple-500 to-blue-500`, placeholder lorem ipsum | Replace with brand palette (flag only) |
 | Stale boilerplate | `Created by ... on ...`, `Last modified by ...` | Delete |

@@ -79,9 +79,8 @@ const LLM_PROVIDER_ITEMS: readonly LlmProviderPick[] = [
 const DEFAULT_LITELLM_BASE_URL = 'http://127.0.0.1:4000';
 
 const CLAUDE_MODEL_ITEMS: readonly LlmModelPick[] = [
-  { label: 'claude-sonnet-4.6', value: 'claude-sonnet-4.6', description: 'Default balanced Claude model' },
-  { label: 'claude-opus-4.6', value: 'claude-opus-4.6', description: 'Higher capability Claude model' },
-  { label: 'claude-sonnet-4.5', value: 'claude-sonnet-4.5', description: 'Previous Sonnet generation' },
+  { label: 'claude-opus-4.8', value: 'claude-opus-4.8', description: 'Default highest-capability Claude model' },
+  { label: 'claude-opus-4.6', value: 'claude-opus-4.6', description: 'Previous Opus generation' },
   { label: 'claude-haiku-4.5', value: 'claude-haiku-4.5', description: 'Lower-cost Claude model' },
 ];
 
@@ -142,7 +141,7 @@ function sanitizeProviderRecord(providerId: LlmAdapterMode, settings: ProviderPr
     case 'claude-code':
       return {
         enabled: true,
-        defaultModel: settings.defaultModel ?? 'claude-sonnet-4.6',
+        defaultModel: settings.defaultModel ?? 'claude-opus-4.8',
         profile: settings.profile ?? 'subscription',
         baseUrl: sanitizeOptionalString(settings.baseUrl),
         modelRouting: settings.modelRouting ?? 'mapped',
@@ -153,7 +152,7 @@ function sanitizeProviderRecord(providerId: LlmAdapterMode, settings: ProviderPr
     case 'anthropic-api':
       return {
         enabled: true,
-        defaultModel: settings.defaultModel ?? 'claude-sonnet-4.6',
+        defaultModel: settings.defaultModel ?? 'claude-opus-4.8',
         baseUrl: settings.baseUrl ?? '',
         anthropicVersion: settings.anthropicVersion ?? '2023-06-01',
       };

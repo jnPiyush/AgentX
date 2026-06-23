@@ -1,7 +1,7 @@
 ---
 name: AgentX Low-Code Builder
 description: 'Generate unpacked Microsoft Power Platform solution source trees (Dataverse tables, cloud flows, canvas apps, model-driven apps, Power Pages, PCF controls, desktop flows, plugins, security roles, environment variables, Copilot Studio agents) from a PRD-LOWCODE. The maker then runs pac solution pack + pac solution import to deploy. Does NOT run pac auth, pac solution import, or any other command that touches a tenant.'
-model: Claude Sonnet 4.6 (copilot)
+model: Claude Opus 4.8 (copilot)
 reasoning:
   mode: adaptive
   level: medium

@@ -12,7 +12,7 @@
     "deny": "See .github/security/allowed-commands.json for blocked commands"
   },
   "settings": {
-    "model": "claude-sonnet-4-20250514",
+    "model": "claude-opus-4-8",
     "maxTokens": 16384
   }
 }

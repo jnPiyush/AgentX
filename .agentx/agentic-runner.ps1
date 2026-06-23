@@ -69,10 +69,7 @@ function Write-RunnerConsole([string]$Message) {
 }
 
 $Script:MODEL_CAPABILITIES = @{
-    'claude-opus-4.6' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
-    'claude-sonnet-4.6' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
-    'claude-sonnet-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
-    'claude-sonnet-4' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
+    'claude-opus-4.8' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-haiku-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
     'gpt-5.5' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
     'gpt-5.2-codex' = @{ contextWindow = 272000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
@@ -283,8 +280,8 @@ function Get-RunnerDefaultModel([string]$ProviderId) {
     }
 
     switch ($ProviderId) {
-        'claude-code' { return 'claude-sonnet-4.6' }
-        'anthropic-api' { return 'claude-sonnet-4.6' }
+        'claude-code' { return 'claude-opus-4.8' }
+        'anthropic-api' { return 'claude-opus-4.8' }
         'openai-api' { return 'gpt-5.5' }
         'copilot' { return $Script:DEFAULT_MODEL }
         'github-models' { return $Script:DEFAULT_MODEL }
@@ -543,10 +540,10 @@ function Test-RunnerModelSupportedByProvider([string]$ProviderId, [string]$Model
 
     switch ($normalizedProviderId) {
         'claude-code' {
-            return $normalizedModelId -match '^claude-(opus|sonnet|haiku)-'
+            return $normalizedModelId -match '^claude-(opus|haiku)-'
         }
         'anthropic-api' {
-            return $normalizedModelId -match '^claude-(opus|sonnet|haiku)-'
+            return $normalizedModelId -match '^claude-(opus|haiku)-'
         }
         'openai-api' {
             return $normalizedModelId -match '^gpt-'
@@ -1094,13 +1091,10 @@ function Test-ResearchFirstToolUse {
 # All models mapped: agent frontmatter name -> Copilot API model ID
 # Copilot API has the full catalog; GitHub Models has limited GPT-only.
 $Script:MODEL_MAP_COPILOT = @{
-    'opus 4.6'          = 'claude-opus-4.6'
-    'opus 4'            = 'claude-opus-4.6'
-    'claude opus 4.6'   = 'claude-opus-4.6'
-    'claude opus 4'     = 'claude-opus-4.6'
-    'claude sonnet 4.6' = 'claude-sonnet-4.6'
-    'claude sonnet 4.5' = 'claude-sonnet-4.5'
-    'claude sonnet 4'   = 'claude-sonnet-4'
+    'opus 4.8'          = 'claude-opus-4.8'
+    'opus 4'            = 'claude-opus-4.8'
+    'claude opus 4.8'   = 'claude-opus-4.8'
+    'claude opus 4'     = 'claude-opus-4.8'
     'claude haiku'      = 'claude-haiku-4.5'
     'gpt-5.5'          = 'gpt-5.5'
     'gpt-5.3-codex'    = 'gpt-5.2-codex'
@@ -1120,13 +1114,10 @@ $Script:MODEL_MAP_COPILOT = @{
 }
 
 $Script:MODEL_MAP_GHMODELS = @{
-    'opus 4.6'          = 'gpt-4.1'
+    'opus 4.8'          = 'gpt-4.1'
     'opus 4'            = 'gpt-4.1'
     'claude opus 4'     = 'gpt-4.1'
-    'claude opus 4.6'   = 'gpt-4.1'
-    'claude sonnet 4.5' = 'gpt-4.1'
-    'claude sonnet 4.6' = 'gpt-4.1'
-    'claude sonnet 4'   = 'gpt-4.1'
+    'claude opus 4.8'   = 'gpt-4.1'
     'claude haiku'      = 'gpt-4.1-mini'
     'gpt-5.5'          = 'gpt-4.1'
     'gpt-5.3-codex'    = 'gpt-4.1'
@@ -1145,30 +1136,22 @@ $Script:MODEL_MAP_GHMODELS = @{
 }
 
 $Script:MODEL_MAP_CLAUDE_CODE = @{
-    'opus 4.6'          = 'claude-opus-4.6'
-    'opus 4'            = 'claude-opus-4.6'
-    'claude opus 4.6'   = 'claude-opus-4.6'
-    'claude opus 4'     = 'claude-opus-4.6'
-    'claude sonnet 4.6' = 'claude-sonnet-4.6'
-    'claude sonnet 4.5' = 'claude-sonnet-4.5'
-    'claude sonnet 4'   = 'claude-sonnet-4'
+    'opus 4.8'          = 'claude-opus-4.8'
+    'opus 4'            = 'claude-opus-4.8'
+    'claude opus 4.8'   = 'claude-opus-4.8'
+    'claude opus 4'     = 'claude-opus-4.8'
     'claude haiku'      = 'claude-haiku-4.5'
-    'sonnet'            = 'claude-sonnet-4.6'
-    'opus'              = 'claude-opus-4.6'
+    'opus'              = 'claude-opus-4.8'
     'haiku'             = 'claude-haiku-4.5'
 }
 
 $Script:MODEL_MAP_ANTHROPIC_API = @{
-    'opus 4.6'          = 'claude-opus-4.6'
-    'opus 4'            = 'claude-opus-4.6'
-    'claude opus 4.6'   = 'claude-opus-4.6'
-    'claude opus 4'     = 'claude-opus-4.6'
-    'claude sonnet 4.6' = 'claude-sonnet-4.6'
-    'claude sonnet 4.5' = 'claude-sonnet-4.5'
-    'claude sonnet 4'   = 'claude-sonnet-4'
+    'opus 4.8'          = 'claude-opus-4.8'
+    'opus 4'            = 'claude-opus-4.8'
+    'claude opus 4.8'   = 'claude-opus-4.8'
+    'claude opus 4'     = 'claude-opus-4.8'
     'claude haiku'      = 'claude-haiku-4.5'
-    'sonnet'            = 'claude-sonnet-4.6'
-    'opus'              = 'claude-opus-4.6'
+    'opus'              = 'claude-opus-4.8'
     'haiku'             = 'claude-haiku-4.5'
 }
 
@@ -1993,11 +1976,11 @@ function ConvertFrom-AnthropicResponse($Response) {
 
 function ConvertTo-ClaudeCodeModelId([string]$ModelId) {
     if ([string]::IsNullOrWhiteSpace($ModelId)) {
-        return 'claude-sonnet-4-6'
+        return 'claude-opus-4-8'
     }
 
     $normalized = $ModelId.Trim().ToLowerInvariant()
-    if ($normalized -match '^claude-(opus|sonnet|haiku)-') {
+    if ($normalized -match '^claude-(opus|haiku)-') {
         return $normalized -replace '\.', '-'
     }
 

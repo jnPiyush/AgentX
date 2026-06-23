@@ -12,7 +12,7 @@ export interface AgentDetails {
 
 const MODEL_OPTIONS = [
   { label: 'GPT-4.1', value: 'gpt-4.1' },
-  { label: 'Claude Sonnet 4', value: 'claude-sonnet-4' },
+  { label: 'Claude Opus 4.8', value: 'claude-opus-4.8' },
   { label: 'Claude Opus 4', value: 'claude-opus-4' },
   { label: 'o4-mini', value: 'o4-mini' },
   { label: 'GPT-4o', value: 'gpt-4o' },

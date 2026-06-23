@@ -55,7 +55,7 @@ compatibility:
 
 ## Parallel Tool Calls
 
-Modern models (GPT-5+, Claude Sonnet/Opus 4+, Gemini 2.5+) emit multiple tool calls in one turn.
+Modern models (GPT-5+, Claude Opus 4.8+, Gemini 2.5+) emit multiple tool calls in one turn.
 
 - MUST run independent calls concurrently (asyncio / Promise.all / Task.WhenAll)
 - MUST preserve `tool_call_id` -> result mapping

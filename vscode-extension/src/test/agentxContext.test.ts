@@ -392,7 +392,7 @@ describe('AgentXContext', () => {
       fs.writeFileSync(path.join(root, '.github', 'agents', 'test.agent.md'), [
         '---',
         "description: 'A test agent for unit tests'",
-        'model: Claude Sonnet',
+        'model: Claude Opus 4.8',
         '---',
         '',
         '## Role',

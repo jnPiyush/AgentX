@@ -44,7 +44,7 @@ Need Claude in production?
 ## Core Rules
 
 1. Always send a `system` prompt separately from the `messages` array -- Claude separates system instruction from the turn history.
-2. Pin model IDs explicitly (for example `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5`). Do not rely on aliases in production.
+2. Pin model IDs explicitly (for example `claude-opus-4.5`, `claude-opus-4.8`, `claude-haiku-4.5`). Do not rely on aliases in production.
 3. Reserve output tokens deliberately. Claude context is 200K total; treat `max_tokens` as a required cost and latency lever.
 4. Use prompt caching for any prompt prefix reused across turns -- system prompt, tool schemas, long docs, few-shot examples.
 5. Prefer structured tool use over freeform JSON in prose. Let Claude emit tool_use blocks and validate on the server side.
@@ -53,9 +53,9 @@ Need Claude in production?
 
 | Model | Best For | Context / Output | Notes |
 |---|---|---|---|
-| `claude-opus-4-5` | Deep reasoning, coding, computer use, complex agents | 200K / 64K | Highest quality, highest cost |
-| `claude-sonnet-4-5` | Balanced agents, production workloads, coding | 200K / 64K | Default for most production use |
-| `claude-haiku-4-5` | High-volume, low-latency, simple classification | 200K / 8K | Cheapest, fastest |
+| `claude-opus-4.8` | Deep reasoning, coding, computer use, complex agents | 200K / 64K | AgentX default Claude model |
+| `claude-opus-4.5` | Prior high-capability Opus generation | 200K / 64K | Use when pinned deployments require the prior Opus line |
+| `claude-haiku-4.5` | High-volume, low-latency, simple classification | 200K / 8K | Cheapest, fastest |
 
 ## Minimal Pattern (Python)
 
@@ -65,7 +65,7 @@ import anthropic
 client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
 
 response = client.messages.create(
-    model="claude-sonnet-4-5",
+    model="claude-opus-4.8",
     max_tokens=1024,
     system="You are a concise technical assistant.",
     messages=[
@@ -92,7 +92,7 @@ tools = [
 ]
 
 response = client.messages.create(
-    model="claude-sonnet-4-5",
+    model="claude-opus-4.8",
     max_tokens=1024,
     tools=tools,
     messages=[{"role": "user", "content": "Weather in Seattle?"}],
@@ -107,7 +107,7 @@ Cache static prefix content (system prompts, tool schemas, long docs) with `cach
 
 ```python
 response = client.messages.create(
-    model="claude-sonnet-4-5",
+    model="claude-opus-4.8",
     max_tokens=1024,
     system=[
         {"type": "text", "text": LONG_SYSTEM_PROMPT,
@@ -123,7 +123,7 @@ response = client.messages.create(
 
 ## Extended Thinking
 
-Claude Opus 4.5 and Sonnet 4.5 support extended thinking (visible reasoning budget). Enable only when the task benefits from longer deliberation (hard coding, math, multi-step planning):
+Claude Opus 4.5 and Opus 4.8 support extended thinking (visible reasoning budget). Enable only when the task benefits from longer deliberation (hard coding, math, multi-step planning):
 
 ```python
 response = client.messages.create(
@@ -169,7 +169,7 @@ Model IDs and feature parity differ per target. Check feature availability (cach
 ## Anti-Patterns
 
 - **Role Confusion**: Embedding system instructions inside `messages` -> Use the separate `system` parameter.
-- **Unpinned Models**: Depending on `claude-sonnet-latest` style aliases in production -> Pin dated model IDs.
+- **Unpinned Models**: Depending on provider aliases in production -> Pin explicit model IDs such as `claude-opus-4.8`.
 - **Uncached Prefixes**: Sending the same 20K-token system prompt every turn -> Use prompt caching.
 - **Prose JSON**: Asking Claude to "respond with JSON" -> Use tool_use with an input schema.
 - **Always-On Thinking**: Enabling extended thinking for every call -> Enable only for tasks that benefit; it increases latency and cost.

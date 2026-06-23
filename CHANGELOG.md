@@ -1,5 +1,20 @@
 # Changelog
 
+## 8.4.68
+
+### Changes
+
+- **Claude defaults moved to Opus 4.8**: AgentX runtime defaults, provider model maps, VS Code adapter setup, agent frontmatter, model pickers, and runner behavior tests now use Claude Opus 4.8 instead of Sonnet.
+- **Workspace launcher isolation restored**: `.agentx/agentx.ps1` now writes loop state to the workspace-local launcher root even when a leaked `AGENTX_WORKSPACE_ROOT` points elsewhere, while preserving extension-bundle runtime support for explicit workspace roots.
+- **Release hygiene**: scrub HIGH/MEDIUM findings in the changed skill assets were cleaned up and bundled VS Code extension assets were regenerated.
+
+### Validation
+
+- VS Code extension tests: 913 passing.
+- Provider behavior tests: 97/97 passing.
+- Framework self-tests: 134/134 passing.
+- Agentic runner behavior tests: 163/163 passing.
+
 ## 8.4.67
 
 ### Fixes

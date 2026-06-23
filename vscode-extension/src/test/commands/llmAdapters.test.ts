@@ -106,7 +106,7 @@ describe('runAddLlmAdapterCommand', () => {
 
     sandbox.stub(initializeInternals, 'promptWorkspaceRoot').resolves(tempRoot);
     sandbox.stub(vscode.window, 'showQuickPick').resolves({
-      label: 'claude-sonnet-4.6',
+      label: 'claude-opus-4.8',
       description: 'Default balanced Claude model',
     });
     sandbox.stub(setupWizard, 'runCriticalPreCheck').resolves({ passed: true, report: { healthy: true } as never });
@@ -125,7 +125,7 @@ describe('runAddLlmAdapterCommand', () => {
 
     const config = JSON.parse(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf-8'));
     assert.equal(config.llmProvider, 'claude-code');
-    assert.equal(config.llmProviders['claude-code'].defaultModel, 'claude-sonnet-4.6');
+    assert.equal(config.llmProviders['claude-code'].defaultModel, 'claude-opus-4.8');
   });
 
   it('stores Claude Code local gateway config and secret storage', async () => {

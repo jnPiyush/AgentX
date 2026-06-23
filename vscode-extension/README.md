@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.4.67-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-8.4.68-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -344,6 +344,13 @@ The extension registers 13 declarative chat agents, each mapped to an AgentX rol
 ---
 
 ## Recent Changes
+
+### 8.4.68
+
+- Claude-backed AgentX defaults now use Claude Opus 4.8 across runtime model maps, VS Code adapter setup, agent creation pickers, and bundled agent definitions.
+- Workspace-local launchers now keep loop state in their own workspace even when `AGENTX_WORKSPACE_ROOT` leaks from another process, while extension-bundled runtimes still support explicit workspace roots.
+- Bundled AgentX assets were regenerated for 8.4.68, including pack manifests, installers, docs, skills, and runtime scripts.
+- Release validation passed: extension tests 913 passing, provider behavior 97/97, framework self-tests 134/134, and runner behavior 163/163.
 
 ### 8.4.63
 

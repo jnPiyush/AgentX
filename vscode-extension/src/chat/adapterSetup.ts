@@ -15,11 +15,11 @@ import {
   applyLlmAdapterConfiguration,
 } from '../commands/llmAdaptersCommandInternals';
 
-const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4.6';
+const DEFAULT_CLAUDE_MODEL = 'claude-opus-4.8';
 const DEFAULT_CLAUDE_LOCAL_MODEL = 'qwen2.5-coder:14b';
 const DEFAULT_CLAUDE_LOCAL_BASE_URL = 'http://127.0.0.1:4000';
 const DEFAULT_OPENAI_MODEL = 'gpt-5.5';
-const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4.6';
+const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4.8';
 
 export type PendingSetup = NonNullable<Awaited<ReturnType<AgentXContext['getPendingSetup']>>>;
 

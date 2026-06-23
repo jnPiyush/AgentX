@@ -6420,7 +6420,7 @@ function Invoke-HireCmd {
         $inputRole = (Read-Host).Trim()
         if ($inputRole) { $role = $inputRole }
 
-        Write-CliOutput "$($C.w)  Model$($C.n) $($C.d)[gpt-4.1 / claude-sonnet-4 / o4-mini / gpt-4.1-mini]$($C.n) $($C.d)(default: gpt-4.1)$($C.n): " -NoNewline
+        Write-CliOutput "$($C.w)  Model$($C.n) $($C.d)[gpt-4.1 / claude-opus-4.8 / o4-mini / gpt-4.1-mini]$($C.n) $($C.d)(default: gpt-4.1)$($C.n): " -NoNewline
         $inputModel = (Read-Host).Trim()
         if ($inputModel) { $model = $inputModel }
 

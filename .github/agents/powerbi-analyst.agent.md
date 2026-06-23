@@ -1,7 +1,7 @@
 ---
 name: AgentX Power BI Analyst
 description: 'Design and build Power BI reports, dashboards, semantic models, and DAX measures for data-driven insights.'
-model: Claude Sonnet 4.6 (copilot)
+model: Claude Opus 4.8 (copilot)
 user-invocable: true
 reasoning:
   mode: adaptive

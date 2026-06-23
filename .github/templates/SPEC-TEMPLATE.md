@@ -869,7 +869,7 @@ graph LR
 
 | Parameter | Value |
 |-----------|-------|
-| **Primary Model** | {e.g., gpt-5.2-2026-01-15, claude-sonnet-4-2026-02-10, o3-2026-01-31} |
+| **Primary Model** | {e.g., gpt-5.2-2026-01-15, claude-opus-4.8, o3-2026-01-31} |
 | **Fallback Model** | {different provider/model when applicable} |
 | **Provider** | {Microsoft Foundry / OpenAI / Anthropic / Google / Local} |
 | **Endpoint** | {URL or environment variable name} |

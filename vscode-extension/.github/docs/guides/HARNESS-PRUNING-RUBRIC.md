@@ -111,7 +111,7 @@ Record all pruning decisions here for traceability.
 
 > From the Anthropic harness-design article: every component in a harness encodes an assumption about what the model can't do on its own; those assumptions can go stale quickly as models improve.
 
-When the active provider model changes (new Sonnet / Opus / GPT / Gemini family release, or an in-family bump that the vendor advertises as improving long-context, planning, or self-review), the operator SHOULD walk this rubric within the first few real tasks on the new model.
+When the active provider model changes (new Opus 4.8 / GPT / Gemini family release, or an in-family bump that the vendor advertises as improving long-context, planning, or self-review), the operator SHOULD walk this rubric within the first few real tasks on the new model.
 
 Suggested operator routine on a model upgrade:
 

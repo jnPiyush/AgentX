@@ -38,7 +38,7 @@ compatibility:
 ```
 Is the task hard? (multi-step reasoning, math, planning, code refactor across files,
                    ambiguous spec, agent strategy)
-+- No  -> Fast model (gpt-5, claude-sonnet-4.7, gemini-2.5-flash)
++- No  -> Fast model (gpt-5, claude-haiku-4.5, gemini-2.5-flash)
 +- Yes -> Reasoning model
         +- Need fast feedback loop?  -> Reasoning effort = low / medium
         +- Quality > latency?         -> Reasoning effort = high

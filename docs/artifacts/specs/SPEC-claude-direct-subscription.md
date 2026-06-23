@@ -203,7 +203,7 @@ Provider selection is only part of the design. The runtime also needs a structur
 | Metadata Element | Purpose | Requirement | Confidence |
 |------------------|---------|-------------|------------|
 | Canonical model id | Stable provider-native execution id | Must be stored separately from user-facing alias | HIGH |
-| Aliases | Friendly names like `sonnet` or `opus` | Must resolve deterministically to canonical ids | HIGH |
+| Aliases | Friendly names like `opus 4.8` or `opus` | Must resolve deterministically to canonical ids | HIGH |
 | Capability flags | Features like streaming, reasoning settings, thinking-token support, tool support, system-prompt support | Must drive request shaping and validation | HIGH |
 | Model companions | Optional weak or editor model pairings | Must be explicit metadata, not hidden fallback behavior | MEDIUM |
 | Context and token limits | Compaction, summarization, and request budgeting | Should be available from metadata or cached provider info | HIGH |
@@ -307,7 +307,7 @@ If secure local auth state participates in provider resolution, diagnostics shou
 
 | User-Facing Label | Allowed Providers | Blocking Behavior When Provider Missing |
 |-------------------|------------------|----------------------------------------|
-| Claude Sonnet family | `copilot`, `claude-code`, `anthropic-api` | Must block with provider-specific readiness guidance |
+| Claude Opus 4.8 family | `copilot`, `claude-code`, `anthropic-api` | Must block with provider-specific readiness guidance |
 | Claude Opus family | `copilot`, `claude-code`, `anthropic-api` | Must block with provider-specific readiness guidance |
 | GPT family | `copilot`, `github-models`, `openai-api`, other future providers as configured | Existing behavior retained |
 | Codex family | `openai-api`, `codex-subscription` when officially supported | Must distinguish API-key usage from subscription-backed runtime availability |

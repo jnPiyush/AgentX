@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.67"><img src="https://img.shields.io/badge/Version-8.4.67-0EA5E9?style=for-the-badge" alt="Version 8.4.67"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.68"><img src="https://img.shields.io/badge/Version-8.4.68-0EA5E9?style=for-the-badge" alt="Version 8.4.68"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -299,12 +299,12 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.67
+## New In 8.4.68
 
-- Extension-only local runtime now supports `agentx scrub` and sibling script-wrapper commands without copying `scripts/` into the user workspace
-- The bundled CLI resolves wrapper scripts from the extension bundle when the workspace has no local `scripts/` folder, preserving the zero-copy runtime model
-- `agentx scrub` now scans the user's workspace instead of the read-only extension bundle when launched from an extension-only initialized workspace
-- VS Code extension assets now bundle the workflow scripts used by `scrub`, `dream`, `research`, `ship`, `takeoff`, `land`, `ghcp-review-resolve`, `install-manifest`, `scan`, `stocktake`, and `route`
+- Claude-backed AgentX agents and runtime defaults now target Claude Opus 4.8 instead of Sonnet across the CLI runner, VS Code extension setup, model pickers, docs, and tests
+- Workspace-local launchers now ignore leaked `AGENTX_WORKSPACE_ROOT` values when writing loop state, while bundled extension runtimes still honor explicit workspace roots
+- Release assets were regenerated for 8.4.68, including pack manifests, installers, package metadata, bundled VS Code assets, and the VSIX package
+- Scrub cleanup removed blocking HIGH/MEDIUM findings from changed skill assets before release
 
 ## Main Repo Areas
 

@@ -100,7 +100,7 @@ Evaluation uses a DIFFERENT model than the one being tested (avoid self-evaluati
 Every prompt MUST be tested against at least 2 models:
 
 ```
-Primary Model (e.g., Claude Sonnet 4) -> Evaluate all dimensions
+Primary Model (e.g., Claude Opus 4.8) -> Evaluate all dimensions
 Fallback Model (e.g., GPT-4.1)        -> Evaluate all dimensions
                                         -> Compare scores
                                         -> Flag regressions

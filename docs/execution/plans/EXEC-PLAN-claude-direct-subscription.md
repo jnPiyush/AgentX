@@ -37,7 +37,7 @@ This execution plan is a living document. Keep `Progress`, `Surprises & Discover
 - Observation: The current runner is built around a two-mode auth path only: GitHub Copilot API or GitHub Models.
 	Evidence: `.agentx/agentic-runner.ps1` defines `ApiMode` as `copilot` or `models`, with `Get-GitHubToken`, `Initialize-ApiMode`, and `Invoke-LlmChat` routing only to GitHub-hosted endpoints.
 - Observation: AgentX already exposes Claude model names in agent frontmatter and the hire-agent UX, but those names currently resolve through Copilot-backed model mappings rather than a direct Anthropic transport.
-	Evidence: `.agentx/agentic-runner.ps1` includes `MODEL_MAP_COPILOT` Claude mappings, and `vscode-extension/src/commands/hireAgentInternals.ts` offers Claude Sonnet/Opus choices.
+	Evidence: `.agentx/agentic-runner.ps1` includes `MODEL_MAP_COPILOT` Claude mappings, and `vscode-extension/src/commands/hireAgentInternals.ts` offers Claude Opus 4.8 choices.
 - Observation: "Claude Pro/Max subscription directly" is not automatically equivalent to "Anthropic API access".
 	Evidence: The current repo has no Anthropic auth path, no Anthropic endpoint wiring, and no runtime contract for non-GitHub token acquisition.
 - Observation: Anthropic's official API documentation requires an Anthropic Console account and API key for direct API usage.
