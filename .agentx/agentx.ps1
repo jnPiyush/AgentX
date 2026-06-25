@@ -3,8 +3,13 @@
 # Usage: .\.agentx\agentx.ps1 ready
 $global:LASTEXITCODE = 0
 $launcherWorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$extensionBundleMarker = Join-Path $launcherWorkspaceRoot '.github' 'agentx'
-if ((Split-Path -Leaf $launcherWorkspaceRoot) -eq 'agentx' -and (Test-Path -LiteralPath $extensionBundleMarker -PathType Container)) {
+# Detect the bundled launcher that ships inside the extension at
+# <ext>/.github/agentx/.agentx/agentx.ps1 (its parent dir is '.github/agentx').
+# Only in that case do we honor an AGENTX_WORKSPACE_ROOT supplied by the thin
+# workspace wrapper; otherwise the launcher's own parent is the workspace root.
+$launcherParentDir = Split-Path -Parent $launcherWorkspaceRoot
+$isBundledLauncher = ((Split-Path -Leaf $launcherWorkspaceRoot) -eq 'agentx') -and $launcherParentDir -and ((Split-Path -Leaf $launcherParentDir) -eq '.github')
+if ($isBundledLauncher) {
     if (-not $env:AGENTX_WORKSPACE_ROOT -or -not (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) {
         $env:AGENTX_WORKSPACE_ROOT = $launcherWorkspaceRoot
     }
