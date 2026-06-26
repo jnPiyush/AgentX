@@ -18,10 +18,20 @@ if [ -z "$TARGET" ]; then
 fi
 
 SCRUB="$ROOT/scripts/scrub.ps1"
-if [ ! -f "$SCRUB" ]; then
-  trace skipped "scrub.ps1 not found."
+if [ -f "$SCRUB" ]; then
+  pwsh "$SCRUB" -Path "$TARGET"
+  trace invoked "Scrub passed for $TARGET."
   exit 0
 fi
 
-pwsh "$SCRUB" -Path "$TARGET"
-trace invoked "Scrub passed for $TARGET."
+# Zero-copy runtime: the workspace has no scripts/ tree. Delegate to the agentx
+# CLI launcher, which resolves the bundled scrub.ps1 from the installed extension.
+CLI="$ROOT/.agentx/agentx.sh"
+if [ -f "$CLI" ]; then
+  sh "$CLI" scrub -Path "$TARGET"
+  trace invoked "Scrub passed for $TARGET (via agentx CLI)."
+  exit 0
+fi
+
+trace skipped "scrub.ps1 not found (no workspace copy or agentx CLI launcher)."
+exit 0

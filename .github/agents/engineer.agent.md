@@ -21,7 +21,7 @@ constraints:
   - "MUST verify quality loop reached 'complete' status before moving to In Review"
   - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix); the commit-msg hook rejects fix: commits without test changes"
   - "MUST store all AI/LLM prompts as separate files in prompts/; MUST NOT embed multi-line prompts as inline strings in code"
-  - "MUST run 'pwsh scripts/scrub.ps1 -Path <changed-path>' (AI-slop deslop pass) on EVERY modified file and apply safe fixes BEFORE the Test phase and again at the Pre-Handoff gate -- this is a non-skippable gate; behavior MUST NOT change; HIGH-severity findings block handoff"
+  - "MUST run 'pwsh .agentx/agentx.ps1 scrub -Path <changed-path>' (AI-slop deslop pass, via the agentx CLI so it resolves the bundled scanner in zero-copy workspaces) on EVERY modified file and apply safe fixes BEFORE the Test phase and again at the Pre-Handoff gate -- this is a non-skippable gate; behavior MUST NOT change; HIGH-severity findings block handoff"
   - "MUST reuse existing shared code before writing new code: search the codebase for an existing API endpoint, service, module, function, utility, stored procedure, query, or component that already provides the needed behavior or data, and extend/parameterize it instead of creating a near-duplicate"
   - "MUST extract shared logic when two or more call sites (screens, features, jobs) need the same behavior or data access into a single shared module/endpoint/stored procedure rather than duplicating it per screen or per feature; record the reuse decision (reused existing vs newly shared vs justified new) in the Phase 3 plan"
   - "MUST NOT modify PRD, ADR, UX docs, or CI/CD workflows"
@@ -353,10 +353,10 @@ Load `.github/skills/development/scrub/SKILL.md`.
 
 ### 5b.2 Run the Deslop Pass
 
-Run the scrubber on every file you modified (one `-Path` per run) and apply safe fixes:
+Run the scrubber on every file you modified (one `-Path` per run) and apply safe fixes. Invoke it through the agentx CLI so it resolves the bundled scanner in zero-copy workspaces:
 
 ```bash
-pwsh scripts/scrub.ps1 -Path <changed-path> -Fix
+pwsh .agentx/agentx.ps1 scrub -Path <changed-path> -Fix
 ```
 
 The scrubber flags comment-rot, obvious restatement comments, AI filler, stale bylines, generic gradients, empty catch blocks, and over-abstraction. Safe fixes (comment-rot, obvious-restate, stale-byline) are auto-applied with `-Fix`; flag-only findings (ai-filler, generic-gradient, over-abstraction, empty-catch) MUST be resolved by hand.
@@ -365,7 +365,7 @@ The scrubber flags comment-rot, obvious restatement comments, AI filler, stale b
 
 The scrub pass MUST NOT change behavior. After applying fixes, re-run the relevant tests to confirm nothing regressed.
 
-**Phase 5b Gate**: `scripts/scrub.ps1` run on every changed file; safe fixes applied; flag-only findings resolved; no HIGH-severity findings remain; behavior unchanged. This is a hard gate -- do not advance to Test with unresolved HIGH findings.
+**Phase 5b Gate**: `pwsh .agentx/agentx.ps1 scrub` run on every changed file; safe fixes applied; flag-only findings resolved; no HIGH-severity findings remain; behavior unchanged. This is a hard gate -- do not advance to Test with unresolved HIGH findings.
 
 ---
 

@@ -124,9 +124,11 @@ council Synthesis (or document an override rationale).
 ## 4. Scrub / Deslop (MANDATORY, NO SKIP)
 
 Every run that changes files MUST pass a deslop scrub before review/handoff:
-`pwsh scripts/scrub.ps1 -Path <changed-area>`. Apply safe fixes; behavior MUST NOT
-change. The pre-commit hook hard-fails on HIGH-severity scrub findings in staged
-files; there is no skip token. `ship.ps1` runs scrub unconditionally.
+`pwsh .agentx/agentx.ps1 scrub -Path <changed-area>`. Run scrub through the agentx
+CLI (not a literal `scripts/scrub.ps1` path) so it resolves the bundled scanner in
+zero-copy workspaces. Apply safe fixes; behavior MUST NOT change. The pre-commit
+hook hard-fails on HIGH-severity scrub findings in staged files; there is no skip
+token. `ship.ps1` runs scrub unconditionally.
 
 ---
 

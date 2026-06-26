@@ -73,10 +73,10 @@ Recent diff contains machine-generated text?
 
 ### 1. Scan
 
-Run the scanner over the directory or files that changed:
+Run the scanner over the directory or files that changed. Invoke it through the agentx CLI so it resolves the bundled scanner in zero-copy workspaces (a literal `scripts/scrub.ps1` path does not exist there):
 
 ```pwsh
-pwsh scripts/scrub.ps1 -Path src/components
+pwsh .agentx/agentx.ps1 scrub -Path src/components
 ```
 
 The scanner walks the path, parses comments and content by file extension, and prints findings grouped by category and severity. It does not modify any file in scan mode.
@@ -100,10 +100,10 @@ Findings come in three severities:
 
 ### 3. Apply Safe Fixes
 
-Only after reading the report, run with `--fix` to apply the auto-safe categories:
+Only after reading the report, run with `-Fix` to apply the auto-safe categories:
 
 ```pwsh
-pwsh scripts/scrub.ps1 -Path src/components -Fix
+pwsh .agentx/agentx.ps1 scrub -Path src/components -Fix
 ```
 
 Safe-fix categories (v1):

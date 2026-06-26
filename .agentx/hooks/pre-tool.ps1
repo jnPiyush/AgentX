@@ -24,11 +24,22 @@ if ([string]::IsNullOrWhiteSpace($Path)) {
 }
 
 $scrub = Join-Path $root 'scripts/scrub.ps1'
-if (-not (Test-Path $scrub)) {
-    Write-HookTrace -Status 'skipped' -Detail 'scrub.ps1 not found.'
+if (Test-Path $scrub) {
+    & pwsh -NoProfile -File $scrub -Path $Path
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Write-HookTrace -Status 'invoked' -Detail "Scrub passed for $Path."
     exit 0
 }
 
-& pwsh $scrub -Path $Path
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-Write-HookTrace -Status 'invoked' -Detail "Scrub passed for $Path."
+# Zero-copy runtime: the workspace has no scripts/ tree. Delegate to the agentx
+# CLI launcher, which resolves the bundled scrub.ps1 from the installed extension.
+$cli = Join-Path $root '.agentx/agentx.ps1'
+if (Test-Path $cli) {
+    & pwsh -NoProfile -File $cli scrub -Path $Path
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Write-HookTrace -Status 'invoked' -Detail "Scrub passed for $Path (via agentx CLI)."
+    exit 0
+}
+
+Write-HookTrace -Status 'skipped' -Detail 'scrub.ps1 not found (no workspace copy or agentx CLI launcher).'
+exit 0
