@@ -1,5 +1,18 @@
 # Changelog
 
+## 8.4.70
+
+### Fixes
+
+- **Scrub works in zero-copy workspaces**: `agentx scrub` is now routed through the agentx CLI so it resolves the bundled scanner when a workspace was initialized only through **AgentX: Initialize Local Runtime**. Agent definitions, the AGENT-PROTOCOL, the engineer agent, and project-convention guidance were updated to invoke `pwsh .agentx/agentx.ps1 scrub` instead of a literal `scripts/scrub.ps1` path that does not exist in zero-copy workspaces.
+- **Model Council works in zero-copy workspaces**: added `council` / `model-council` CLI commands and made `model-council.ps1` honor `AGENTX_WORKSPACE_ROOT` so COUNCIL files land in the user's workspace instead of the read-only extension bundle. The script is now included in the bundled extension asset list, and 11 documentation references were normalized from `pwsh scripts/model-council.ps1` to `pwsh .agentx/agentx.ps1 council`.
+
+### Validation
+
+- Scrub clean (0 findings) across all changed areas for both fixes.
+- `agentx council` validated as dispatching into `model-council.ps1`.
+- Both fixes delivered under completed 5-iteration quality loops with subagent review passes.
+
 ## 8.4.69
 
 ### Fixes
