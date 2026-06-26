@@ -257,7 +257,7 @@ if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "8.4.70" ]; then
   ok "User data backed up"
 
   # Remove all AgentX-managed directories (full uninstall)
-  AGENTX_DIRS=(".agentx" ".github" ".claude" "scripts" "packs")
+  AGENTX_DIRS=(".agentx" ".github" ".claude" ".cursor" "scripts" "packs")
   for d in "${AGENTX_DIRS[@]}"; do
    [ -d "$d" ] && rm -rf "$d"
   done
@@ -291,6 +291,7 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/.agentx" \
  "$PREFIX/.github" \
  "$PREFIX/.claude" \
+ "$PREFIX/.cursor" \
  "$PREFIX/.vscode" \
  "$PREFIX/scripts" \
  "$PREFIX/packs" \
@@ -388,6 +389,7 @@ AGENTX_BLOCK="$MARKER_START
 .github/CODEOWNERS
 .github/copilot-instructions.md
 .claude/
+.cursor/
 scripts/
 packs/
 $MARKER_END"

@@ -1,0 +1,14 @@
+---
+description: TypeScript / Node backend standards (AgentX)
+globs: **/*.ts
+alwaysApply: false
+---
+
+# TypeScript / Node (AgentX)
+
+Canonical: `.github/instructions/typescript.instructions.md` -- read for full
+standards.
+
+- Strict mode; no `any`; ESM imports; Zod for runtime input validation.
+- Parameterized queries only; validate inputs at boundaries.
+- Catch specific errors; structured logging with context.

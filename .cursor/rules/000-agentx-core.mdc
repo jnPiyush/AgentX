@@ -1,0 +1,48 @@
+---
+description: AgentX core operating contract for Cursor. Always applied.
+alwaysApply: true
+---
+
+# AgentX Core Contract (Cursor)
+
+This workspace runs AgentX. Cursor operates in CLI-backed mode: agent
+definitions, skills, and templates are read in place from the repo. Prefer
+retrieval-led reasoning -- read the canonical file before generating.
+
+## Canonical Sources (read these, do not duplicate)
+
+- Routing + rules map: `AGENTS.md`
+- Cross-cutting agent protocol: `.github/AGENT-PROTOCOL.md`
+- Workflow + handoffs: `docs/WORKFLOW.md`
+- Skills index (load on demand): `Skills.md`
+- Agent role contracts: `.github/agents/*.agent.md`
+
+## Quality Loop (NON-SKIPPABLE)
+
+Before editing, creating, or deleting any file for a code or docs change, run
+`.agentx/agentx.ps1 loop start -p "<task>"` as the FIRST action. The loop is not
+done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, with at
+least 5 iterations and one iteration summary containing the word "review". When
+the AgentX MCP server is registered (`.cursor/mcp.json`), use the `agentx_loop_*`
+tools instead of typing the CLI. The pre-commit hook blocks commits that violate
+the loop gate.
+
+## Workflow Gates
+
+- Compound Capture, Model Council (ADR/PRD/eval), Execution Plan (>= 8 code
+  files), and Brainstorm gates apply per `.github/AGENT-PROTOCOL.md`.
+- Scrub before handoff: `.agentx/agentx.ps1 scrub -Path <changed-area>`.
+- Karpathy guidelines apply to every change.
+
+## Conventions
+
+- Commit format: `type: description (#issue)` -- feat, fix, docs, test,
+  refactor, perf, chore.
+- ASCII-only: use `->` not arrows, `-` not em-dashes, `[PASS]`/`[FAIL]`.
+- Create deliverables locally; never push files straight to the remote.
+
+## Commands
+
+Role workflows are available as `.cursor/commands/*.md`, each a thin wrapper over
+`.github/agents/<role>.agent.md`. Invoke the matching command, then read that
+canonical agent file before acting.

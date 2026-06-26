@@ -369,7 +369,7 @@ if ($previousVersion -and $previousVersion -ne "8.4.70") {
   Write-OK "User data backed up"
 
   # Remove all AgentX-managed directories (full uninstall)
-  $agentxDirs = @(".agentx", ".github", ".claude", "scripts", "packs")
+  $agentxDirs = @(".agentx", ".github", ".claude", ".cursor", "scripts", "packs")
   foreach ($d in $agentxDirs) {
    if (Test-Path $d) { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
   }
@@ -417,7 +417,7 @@ $root = (Get-ChildItem $TMPRAW -Directory | Select-Object -First 1).FullName
 
 # Copy only essential paths (skip vscode-extension, tests, and large docs content)
 New-Item -ItemType Directory -Path $TMP -Force | Out-Null
-$neededDirs = @(".agentx", ".github", ".claude", ".vscode", "scripts", "packs")
+$neededDirs = @(".agentx", ".github", ".claude", ".cursor", ".vscode", "scripts", "packs")
 $neededFiles = @(
  ".gitignore",
  "AGENTS.md",
@@ -597,6 +597,7 @@ $agentxBlock = @(
  ".github/CODEOWNERS"
  ".github/copilot-instructions.md"
  ".claude/"
+ ".cursor/"
  "scripts/"
  "packs/"
  $MARKER_END

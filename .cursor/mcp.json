@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "agentx": {
+      "command": "node",
+      "args": [".agentx/mcp-server/index.js"],
+      "env": {
+        "AGENTX_REPO_ROOT": "."
+      }
+    }
+  }
+}
