@@ -1,6 +1,6 @@
 # Changelog
 
-## 8.5.0
+## 8.5.1
 
 ### Changes
 
@@ -13,7 +13,7 @@
 
 ### Validation
 
-- Packaged `vscode-extension/agentx-8.5.0.vsix` successfully.
+- Packaged `vscode-extension/agentx-8.5.1.vsix` successfully.
 - VS Code extension prepublish completed: asset sync, chat contribution generation, clean build, and TypeScript compilation.
 
 ## 8.4.70

@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX v8.5.0 - Download, copy, configure.
+ Install AgentX v8.5.1 - Download, copy, configure.
 
 .PARAMETER Mode
  github - Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
@@ -31,13 +31,13 @@
  .\install.ps1 -Azure # Force Azure Skills companion install
 
  # One-liner install (local mode, no prompts - pinned to a release tag)
- irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.5.0/install.ps1 | iex
+ irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.5.1/install.ps1 | iex
 
  # One-liner for GitHub mode
- $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.5.0/install.ps1 | iex
+ $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.5.1/install.ps1 | iex
 
  # One-liner to include Azure companion support
- $env:AGENTX_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.5.0/install.ps1 | iex
+ $env:AGENTX_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.5.1/install.ps1 | iex
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='Interactive installer output is intentionally written directly to the host.')]
@@ -201,7 +201,7 @@ if ($PSVersionTable.PSVersion -lt $MinimumPowerShellVersion) {
 $isPiped = -not $MyInvocation.MyCommand.Path
 
 $ErrorActionPreference = "Stop"
-$BRANCH = "v8.5.0"
+$BRANCH = "v8.5.1"
 $TMP = ".agentx-install-tmp"
 $TMPRAW = ".agentx-install-raw"
 $ZIPFILE = ".agentx-install.zip"
@@ -306,7 +306,7 @@ try {
 # -- Banner ----------------------------------------------
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Cyan
-Write-Host "| AgentX v8.5.0 - AI Agent Orchestration |" -ForegroundColor Cyan
+Write-Host "| AgentX v8.5.1 - AI Agent Orchestration |" -ForegroundColor Cyan
 Write-Host "+===================================================+" -ForegroundColor Cyan
 Write-Host ""
 
@@ -339,12 +339,12 @@ if (Test-Path ".agentx/version.json") {
  }
 }
 
-if ($previousVersion -and $previousVersion -ne "8.5.0") {
+if ($previousVersion -and $previousVersion -ne "8.5.1") {
  $majorVersion = 0
  try { $majorVersion = [int]($previousVersion -split '\.')[0] } catch { Write-Verbose "Could not parse major version from '$previousVersion'." }
 
  if ($majorVersion -lt 8) {
-    Write-Host "[!] Detected AgentX v$previousVersion - upgrading to v8.5.0..." -ForegroundColor Yellow
+    Write-Host "[!] Detected AgentX v$previousVersion - upgrading to v8.5.1..." -ForegroundColor Yellow
   Write-Host "  Uninstalling v$previousVersion and performing clean install." -ForegroundColor DarkGray
 
   # Back up user data that must survive the upgrade
@@ -568,12 +568,12 @@ if (Test-Path $memoryTemplateSource) {
 # Version tracking
 $versionFile = ".agentx/version.json"
 @{
-  version = "8.5.0"
+  version = "8.5.1"
  mode = $Mode
  installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 8.5.0 recorded"
+Write-OK "Version 8.5.1 recorded"
 
 # Merge AgentX entries into user's .gitignore
 $MARKER_START = "# --- AgentX (auto-generated, do not edit this block) ---"
@@ -836,7 +836,7 @@ if (-not $azureCompanionRequested) {
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
-Write-Host " AgentX v8.5.0 installed! [$displayMode]" -ForegroundColor Green
+Write-Host " AgentX v8.5.1 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White
