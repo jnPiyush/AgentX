@@ -257,7 +257,7 @@ if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "8.4.70" ]; then
   ok "User data backed up"
 
   # Remove all AgentX-managed directories (full uninstall)
-  AGENTX_DIRS=(".agentx" ".github" ".claude" ".cursor" "scripts" "packs")
+  AGENTX_DIRS=(".agentx" ".github" ".claude" "scripts" "packs")
   for d in "${AGENTX_DIRS[@]}"; do
    [ -d "$d" ] && rm -rf "$d"
   done
@@ -389,7 +389,29 @@ AGENTX_BLOCK="$MARKER_START
 .github/CODEOWNERS
 .github/copilot-instructions.md
 .claude/
-.cursor/
+.cursor/mcp.json
+.cursor/commands/ado-ops.md
+.cursor/commands/ado-prd-to-wit.md
+.cursor/commands/agent-x.md
+.cursor/commands/agile-coach.md
+.cursor/commands/architect.md
+.cursor/commands/consulting-research.md
+.cursor/commands/data-scientist.md
+.cursor/commands/devops.md
+.cursor/commands/engineer.md
+.cursor/commands/github-ops.md
+.cursor/commands/powerbi-analyst.md
+.cursor/commands/product-manager.md
+.cursor/commands/reviewer-auto.md
+.cursor/commands/reviewer.md
+.cursor/commands/tester.md
+.cursor/commands/ux-designer.md
+.cursor/rules/000-agentx-core.mdc
+.cursor/rules/ai.mdc
+.cursor/rules/csharp.mdc
+.cursor/rules/python.mdc
+.cursor/rules/react.mdc
+.cursor/rules/typescript.mdc
 scripts/
 packs/
 $MARKER_END"

@@ -369,7 +369,7 @@ if ($previousVersion -and $previousVersion -ne "8.4.70") {
   Write-OK "User data backed up"
 
   # Remove all AgentX-managed directories (full uninstall)
-  $agentxDirs = @(".agentx", ".github", ".claude", ".cursor", "scripts", "packs")
+  $agentxDirs = @(".agentx", ".github", ".claude", "scripts", "packs")
   foreach ($d in $agentxDirs) {
    if (Test-Path $d) { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
   }
@@ -597,7 +597,29 @@ $agentxBlock = @(
  ".github/CODEOWNERS"
  ".github/copilot-instructions.md"
  ".claude/"
- ".cursor/"
+ ".cursor/mcp.json"
+ ".cursor/commands/ado-ops.md"
+ ".cursor/commands/ado-prd-to-wit.md"
+ ".cursor/commands/agent-x.md"
+ ".cursor/commands/agile-coach.md"
+ ".cursor/commands/architect.md"
+ ".cursor/commands/consulting-research.md"
+ ".cursor/commands/data-scientist.md"
+ ".cursor/commands/devops.md"
+ ".cursor/commands/engineer.md"
+ ".cursor/commands/github-ops.md"
+ ".cursor/commands/powerbi-analyst.md"
+ ".cursor/commands/product-manager.md"
+ ".cursor/commands/reviewer-auto.md"
+ ".cursor/commands/reviewer.md"
+ ".cursor/commands/tester.md"
+ ".cursor/commands/ux-designer.md"
+ ".cursor/rules/000-agentx-core.mdc"
+ ".cursor/rules/ai.mdc"
+ ".cursor/rules/csharp.mdc"
+ ".cursor/rules/python.mdc"
+ ".cursor/rules/react.mdc"
+ ".cursor/rules/typescript.mdc"
  "scripts/"
  "packs/"
  $MARKER_END
