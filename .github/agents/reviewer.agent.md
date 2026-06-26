@@ -219,7 +219,7 @@ After running tests and forming a leaning decision, but before drafting the revi
 **How to convene**:
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
     -Topic "review-{issue}" `
     -Question "Given the diff, the spec, the test results, and the per-category verdicts so far, what is the correct Approve / Request Changes decision, what is the correct severity for each finding, and what is the strongest case AGAINST the leaning decision?" `
     -Context "<paste leaning decision, per-category verdicts, top 5 findings with file:line, test results, coverage delta, spec sections in scope>" `
@@ -230,7 +230,7 @@ pwsh scripts/model-council.ps1 `
 A council is **not limited to one topic** -- put several review questions to it in one run with `-Questions`:
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
     -Topic "review-{issue}" `
     -Questions "What is the correct Approve / Request Changes decision?","Which findings are blocking vs. advisory, and at what severity?","Which leaning findings are likely false positives or hide a deeper production risk?" `
     -Context "<paste leaning decision, per-category verdicts, top 5 findings with file:line, test results, coverage delta, spec sections in scope>" `

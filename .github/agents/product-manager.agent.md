@@ -148,7 +148,7 @@ Before drafting the PRD, convene a Model Council to stress-test scope, priority,
 **How to convene**:
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
     -Topic "prd-{epic-id}-{short-slug}" `
     -Question "Given the Phase 1-5 research, what should be in scope, what should be cut, what is the right success metric, and what is the strongest case AGAINST shipping this?" `
     -Context "<paste the key tensions, contested scope items, and assumptions from the research log>" `
@@ -159,7 +159,7 @@ pwsh scripts/model-council.ps1 `
 **Multiple topics in one council** (use when an Epic raises several contested decisions):
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
     -Topic "prd-{epic-id}-{short-slug}" `
     -Questions "What MUST be in scope for the MVP and what should be explicit non-goals?","What is the single success metric and how is it instrumented?","What is the right build sequencing (now / fast-follow / deferred)?" `
     -Context "<paste the key tensions, contested scope items, and assumptions from the research log>" `

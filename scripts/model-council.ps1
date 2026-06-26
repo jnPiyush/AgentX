@@ -245,7 +245,14 @@ $Prompt
 
 # --- Main ---
 
-$repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
+# Honor the workspace root the agentx CLI exports so council files land in the
+# user's workspace, not the bundled extension dir, after a zero-copy
+# "Initialize Local Runtime". Fall back to the repo layout when run directly.
+if ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path $env:AGENTX_WORKSPACE_ROOT)) {
+    $repoRoot = (Resolve-Path $env:AGENTX_WORKSPACE_ROOT).Path
+} else {
+    $repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
+}
 $outDir   = Join-Path $repoRoot $OutputDir
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
 

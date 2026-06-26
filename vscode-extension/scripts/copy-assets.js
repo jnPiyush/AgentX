@@ -35,6 +35,7 @@ const runtimeScriptFiles = [
     'scan.ps1',
     'stocktake.ps1',
     'model-route.ps1',
+    'model-council.ps1',
     'check-harness-compliance.ps1',
     'validate-frontmatter.ps1',
     'validate-references.ps1',

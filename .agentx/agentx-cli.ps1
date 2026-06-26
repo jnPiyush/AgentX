@@ -7569,6 +7569,7 @@ function Invoke-ManifestCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/
 function Invoke-ScanCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/scan.ps1'             -Label 'scan' }
 function Invoke-StocktakeCmd     { Invoke-ScriptWrapper -ScriptRelPath 'scripts/stocktake.ps1'        -Label 'stocktake' }
 function Invoke-RouteCmd         { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-route.ps1'      -Label 'route' }
+function Invoke-CouncilCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-council.ps1'    -Label 'council' }
 
 # ---------------------------------------------------------------------------
 # Main router
@@ -7612,6 +7613,8 @@ switch ($Script:Command) {
     'stocktake'   { Invoke-StocktakeCmd }
     'route'       { Invoke-RouteCmd }
     'model-route' { Invoke-RouteCmd }
+    'council'        { Invoke-CouncilCmd }
+    'model-council'  { Invoke-CouncilCmd }
     'learn'    { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-DiscoverCmd }
     'promote'  { $Script:SubArgs = @('run')    + @($Script:SubArgs); Invoke-GraduateCmd }
     'patterns' { $Script:SubArgs = @('status') + @($Script:SubArgs); Invoke-DiscoverCmd }

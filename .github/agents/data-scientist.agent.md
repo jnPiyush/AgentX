@@ -169,7 +169,7 @@ After completing the research phases and before locking model selection or pipel
 **How to convene**:
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
     -Topic "ai-{issue}-{short-slug}" `
     -Question "Given the SOTA survey and the task requirements, which model + pipeline + eval strategy minimizes risk while meeting cost and quality targets, and what is the strongest case AGAINST the recommended approach?" `
     -Context "<paste candidate models with benchmark data, cost/latency targets, key failure modes from research>" `
@@ -180,7 +180,7 @@ pwsh scripts/model-council.ps1 `
 A council is **not limited to one topic** -- put several decisions to it in one run with `-Questions`:
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
     -Topic "ai-{issue}-{short-slug}" `
     -Questions "Which model best meets the cost/quality/latency targets?","What evaluation rubric and drift thresholds should gate it?","Is a smaller or non-LLM baseline the safer choice?" `
     -Context "<paste candidate models with benchmark data, cost/latency targets, key failure modes from research>" `

@@ -167,7 +167,7 @@ After drafting the ADR Options and Evaluation sections but BEFORE locking the De
 **How to convene**:
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
     -Topic "adr-{issue}-{short-slug}" `
     -Question "Given these N options and the evaluation criteria, which option is the right choice and what is the strongest case AGAINST the recommended option?" `
     -Context "<paste the Options summary, Evaluation matrix, and any constraints from the PRD>" `
@@ -178,7 +178,7 @@ pwsh scripts/model-council.ps1 `
 **Multiple topics in one council** (use when the decision raises several distinct axes):
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
     -Topic "adr-{issue}-{short-slug}" `
     -Questions "Which of the distinct solution approaches should we recommend and why?","What is the 18-month failure mode of the front-runner?","Was a simpler or radically different architecture unfairly excluded?" `
     -Context "<paste the Options summary, Evaluation matrix, and any constraints from the PRD>" `

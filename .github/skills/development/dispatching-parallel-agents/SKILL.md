@@ -77,8 +77,8 @@ Output contract: each subagent emits one JSON object on stdout. The dispatcher c
 Goal: ask 3 different models (or 3 different framings) to evaluate the same document, then synthesize.
 
 ```pwsh
-# scripts/model-council.ps1 is the canonical AgentX implementation
-pwsh scripts/model-council.ps1 `
+# Convene via the agentx CLI (scripts/model-council.ps1 is the canonical implementation)
+pwsh .agentx/agentx.ps1 council `
     -Topic "review-42" `
     -Question "What is the correct Approve / Request Changes decision?" `
     -Context "<diff + spec + test results>" `

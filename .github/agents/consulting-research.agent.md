@@ -216,7 +216,7 @@ Substitute models when the default is unavailable, but preserve the three-role s
 **How to convene**:
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
   -Topic "{topic-slug}" `
   -Question "{the framing question the council must answer}" `
   -Context "{key claims to stress-test, drawn from the research log}"
@@ -225,7 +225,7 @@ pwsh scripts/model-council.ps1 `
 A council is **not limited to one topic** -- put several framing questions to it in one run with `-Questions`:
 
 ```pwsh
-pwsh scripts/model-council.ps1 `
+pwsh .agentx/agentx.ps1 council `
   -Topic "{topic-slug}" `
   -Questions "{first framing question}","{second framing question}","{third framing question}" `
   -Context "{key claims to stress-test, drawn from the research log}"
