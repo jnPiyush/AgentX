@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.4.70"><img src="https://img.shields.io/badge/Version-8.4.70-0EA5E9?style=for-the-badge" alt="Version 8.4.70"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.5.0"><img src="https://img.shields.io/badge/Version-8.5.0-0EA5E9?style=for-the-badge" alt="Version 8.5.0"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -299,8 +299,10 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.4.70
+## New In 8.5.0
 
+- Cursor-native workspace support now ships with AgentX-owned `.cursor/rules/*.mdc`, `.cursor/mcp.json`, and `.cursor/commands/*.md` wrappers over the canonical AgentX agent definitions
+- Installers preserve user-owned Cursor files by managing only the AgentX-owned Cursor adapter paths
 - `agentx scrub` is now routed through the agentx CLI so it resolves the bundled scanner in zero-copy workspaces initialized via **AgentX: Initialize Local Runtime**
 - Added `council` / `model-council` CLI commands; `model-council.ps1` now honors `AGENTX_WORKSPACE_ROOT` so COUNCIL files land in the user workspace, not the extension bundle
 - Normalized 11 documentation references from `pwsh scripts/model-council.ps1` to `pwsh .agentx/agentx.ps1 council`, and bundled `model-council.ps1` into the extension asset list

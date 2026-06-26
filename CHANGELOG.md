@@ -1,5 +1,21 @@
 # Changelog
 
+## 8.5.0
+
+### Changes
+
+- **Cursor adapter added**: AgentX now ships Cursor-native workspace files, including `.cursor/rules/*.mdc`, `.cursor/mcp.json`, and `.cursor/commands/*.md` thin wrappers over the canonical AgentX agent definitions.
+
+### Fixes
+
+- **Cursor installs preserve user configuration**: installers now avoid treating the whole `.cursor/` directory as AgentX-managed, so user-owned Cursor rules, commands, and MCP settings are not removed during upgrades or hidden by the managed `.gitignore` block.
+- **Zero-copy runtime hardening**: includes the scrub and Model Council zero-copy fixes from the 8.4.70 release line so extension-only initialized workspaces can route scrub and council operations through the AgentX CLI.
+
+### Validation
+
+- Packaged `vscode-extension/agentx-8.5.0.vsix` successfully.
+- VS Code extension prepublish completed: asset sync, chat contribution generation, clean build, and TypeScript compilation.
+
 ## 8.4.70
 
 ### Fixes
@@ -115,11 +131,3 @@
 
 - Shipped `iterative-retrieval` and `strategic-compaction` skills.
 - Added `scan`, `stocktake`, and `model-route` CLI subcommands plus dashboard webview.
-
-## [8.5.0](https://github.com/jnPiyush/AgentX/compare/v8.4.36...v8.5.0) (2026-04-24)
-
-
-### Features
-
-* enhance cosmos-db skill with correctness fixes and index entry … ([b2dda19](https://github.com/jnPiyush/AgentX/commit/b2dda190a0d7c97ab0f93d38bfa9e1c7c0a7e6b5))
-* enhance cosmos-db skill with correctness fixes and index entry [skip-issue] ([df039b4](https://github.com/jnPiyush/AgentX/commit/df039b4b067484f20c158f0e7051eff706b5e3da))
