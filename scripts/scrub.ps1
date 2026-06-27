@@ -12,8 +12,10 @@
     - comment-rot       (HIGH, safe-fix)
     - obvious-restate   (HIGH, safe-fix)
     - stale-byline      (HIGH, safe-fix)
+    - dead-code         (HIGH, safe-fix for commented-out code blocks)
     - ai-filler         (MEDIUM, flag-only in v1)
     - generic-gradient  (MEDIUM, flag-only)
+    - duplicate-logic   (MEDIUM, flag-only)
     - over-abstraction  (LOW, flag-only)
     - empty-catch       (LOW, flag-only)
 
@@ -67,6 +69,8 @@ function Get-CodeCommentPattern {
     switch ($Ext) {
         '.py'   { return @{ line = '^\s*#\s*(.*)$'; block = $null } }
         '.rb'   { return @{ line = '^\s*#\s*(.*)$'; block = $null } }
+        '.ps1'  { return @{ line = '^\s*#\s*(.*)$'; block = '<#([\s\S]*?)#>' } }
+        '.psm1' { return @{ line = '^\s*#\s*(.*)$'; block = '<#([\s\S]*?)#>' } }
         default { return @{ line = '^\s*//\s*(.*)$'; block = '/\*([\s\S]*?)\*/' } }
     }
 }
@@ -132,6 +136,9 @@ $GenericGradientPatterns = @(
 # Empty catch blocks: TS/JS/C#/Java patterns. Flag only.
 $EmptyCatchPattern = '\bcatch\s*\([^)]*\)\s*\{\s*(/\*[^*]*\*/|//[^\n]*)?\s*\}'
 
+$DeadCodeLineThreshold = 4
+$DuplicateLogicWindowSize = 5
+
 # Findings collector
 $Findings = New-Object 'System.Collections.Generic.List[object]'
 
@@ -189,6 +196,191 @@ function Test-HasGenericGradient {
     return $false
 }
 
+function Test-IsCodeLikeComment {
+    param([string]$Text)
+    $t = $Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($t)) { return $false }
+
+    $patterns = @(
+        '^\s*(if|else|for|foreach|while|switch|try|catch|finally)\b',
+        '^\s*(return|throw|break|continue)\b',
+        '^\s*(const|let|var|function|class|interface|type|export|import)\b',
+        '^\s*(public|private|protected|internal|static|async|using|namespace)\b',
+        '^\s*(param|begin|process|end)\b',
+        '^\s*\$[A-Za-z_][\w:.-]*\s*=',
+        '^\s*[A-Za-z_][\w.]*\s*=',
+        '^\s*</?\w+',
+        '^\s*[{}\]\)]+;?\s*$'
+    )
+
+    foreach ($p in $patterns) { if ($t -match $p) { return $true } }
+    return $false
+}
+
+function Get-BlockCommentParts {
+    param(
+        [string]$RawLine,
+        [string]$BlockPattern
+    )
+
+    if ([string]::IsNullOrWhiteSpace($BlockPattern)) { return $null }
+
+    if ($BlockPattern -like '<#*') {
+        $start = '<#'
+        $end = '#>'
+        $startPattern = '^\s*<#'
+        $prefixPattern = '^\s*<#\s?'
+        $linePrefixPattern = '^\s*#?\s?'
+    } else {
+        $start = '/*'
+        $end = '*/'
+        $startPattern = '^\s*/\*'
+        $prefixPattern = '^\s*/\*\s?'
+        $linePrefixPattern = '^\s*\*\s?'
+    }
+
+    $hasStart = $RawLine -match $startPattern
+    $hasEnd = $RawLine.Contains($end)
+    $text = $RawLine -replace $prefixPattern, ''
+    $text = $text -replace [regex]::Escape($end) + '\s*$', ''
+    $text = $text -replace $linePrefixPattern, ''
+
+    return [pscustomobject]@{
+        hasStart = $hasStart
+        hasEnd = $hasEnd
+        text = $text
+    }
+}
+
+function Add-DeadCodeFindings {
+    param(
+        [System.IO.FileInfo]$File,
+        [string[]]$Content,
+        [hashtable]$PatternSet
+    )
+
+    if (-not $PatternSet) { return }
+
+    $currentRun = New-Object 'System.Collections.Generic.List[object]'
+    $currentBlock = New-Object 'System.Collections.Generic.List[object]'
+    $inBlockComment = $false
+
+    function Flush-DeadCodeRun {
+        if ($currentRun.Count -lt $DeadCodeLineThreshold) {
+            $currentRun.Clear()
+            return
+        }
+
+        foreach ($entry in $currentRun) {
+            Add-Finding -File $File.FullName -Line $entry.line -Category 'dead-code' -Severity 'HIGH' -Snippet $entry.raw -SafeFix $true
+        }
+        $currentRun.Clear()
+    }
+
+    function Flush-DeadCodeBlock {
+        if ($currentBlock.Count -eq 0) { return }
+
+        $codeLikeCount = ($currentBlock | Where-Object { $_.codeLike }).Count
+        if ($codeLikeCount -ge $DeadCodeLineThreshold) {
+            foreach ($entry in $currentBlock) {
+                Add-Finding -File $File.FullName -Line $entry.line -Category 'dead-code' -Severity 'HIGH' -Snippet $entry.raw -SafeFix $true
+            }
+        }
+
+        $currentBlock.Clear()
+    }
+
+    for ($i = 0; $i -lt $Content.Length; $i++) {
+        $rawLine = $Content[$i]
+
+        if ($PatternSet.block) {
+            $blockParts = Get-BlockCommentParts -RawLine $rawLine -BlockPattern $PatternSet.block
+            if ($inBlockComment -or $blockParts.hasStart) {
+                Flush-DeadCodeRun
+
+                $inBlockComment = $true
+                $currentBlock.Add([pscustomobject]@{
+                    line = $i + 1
+                    raw = $rawLine
+                    codeLike = Test-IsCodeLikeComment -Text $blockParts.text
+                })
+
+                if ($blockParts.hasEnd) {
+                    $inBlockComment = $false
+                    Flush-DeadCodeBlock
+                }
+
+                continue
+            }
+        }
+
+        if ($rawLine -match $PatternSet.line) {
+            $commentText = $Matches[1]
+            if (Test-IsCodeLikeComment -Text $commentText) {
+                $currentRun.Add([pscustomobject]@{ line = $i + 1; raw = $rawLine })
+                continue
+            }
+        }
+
+        Flush-DeadCodeRun
+    }
+
+    Flush-DeadCodeRun
+    Flush-DeadCodeBlock
+}
+
+function ConvertTo-NormalizedCodeLine {
+    param([string]$RawLine)
+
+    $line = $RawLine.Trim()
+    if ([string]::IsNullOrWhiteSpace($line)) { return $null }
+    if ($line -match '^\s*(//|#|/\*|\*)') { return $null }
+    if ($line -match '^\s*(import|using|namespace)\b') { return $null }
+    if ($line -match '^["''][^"'']+["''],?$') { return $null }
+    if ($line -match '^\s*[\$A-Za-z_][\w:.-]*\s*=\s*["''][^"'']*["'']\s*;?$') { return $null }
+    if ($line -match '^[{}\]\)]+;?$') { return $null }
+
+    $line = $line -replace '"(?:\\.|[^"])*"', '""'
+    $line = $line -replace "'(?:\\.|[^'])*'", "''"
+    $line = $line -replace '\b\d+(\.\d+)?\b', '0'
+    $line = $line -replace '\s+', ' '
+    return $line.ToLowerInvariant()
+}
+
+function Add-DuplicateLogicFindings {
+    param(
+        [System.IO.FileInfo]$File,
+        [string[]]$Content
+    )
+
+    $normalizedLines = New-Object 'System.Collections.Generic.List[object]'
+    for ($i = 0; $i -lt $Content.Length; $i++) {
+        $normalized = ConvertTo-NormalizedCodeLine -RawLine $Content[$i]
+        if ($null -ne $normalized) {
+            $normalizedLines.Add([pscustomobject]@{ line = $i + 1; text = $normalized; raw = $Content[$i] })
+        }
+    }
+
+    if ($normalizedLines.Count -lt ($DuplicateLogicWindowSize * 2)) { return }
+
+    $seen = @{}
+    $reported = New-Object 'System.Collections.Generic.HashSet[string]'
+    for ($i = 0; $i -le ($normalizedLines.Count - $DuplicateLogicWindowSize); $i++) {
+        $window = $normalizedLines[$i..($i + $DuplicateLogicWindowSize - 1)]
+        $key = ($window | ForEach-Object { $_.text }) -join "`n"
+        if ($seen.ContainsKey($key)) {
+            if ($reported.Add($key)) {
+                $firstLine = $seen[$key]
+                $line = $window[0].line
+                Add-Finding -File $File.FullName -Line $line -Category 'duplicate-logic' -Severity 'MEDIUM' -Snippet "Repeated $DuplicateLogicWindowSize-line logic block; first occurrence starts at line $firstLine" -SafeFix $false
+            }
+            continue
+        }
+
+        $seen[$key] = $window[0].line
+    }
+}
+
 function Invoke-FileScan {
     param([System.IO.FileInfo]$File)
     $ext = $File.Extension.ToLowerInvariant()
@@ -240,6 +432,9 @@ function Invoke-FileScan {
     }
 
     if ($isCode) {
+        Add-DeadCodeFindings -File $File -Content $content -PatternSet $patternSet
+        Add-DuplicateLogicFindings -File $File -Content $content
+
         $joined = ($content -join "`n")
         $regex = [regex]$EmptyCatchPattern
         foreach ($m in $regex.Matches($joined)) {

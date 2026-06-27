@@ -46,7 +46,9 @@ compatibility:
 |----------|----------|--------|
 | Comment rot | `// This function handles the logic for X`, `// Helper to do thing`, naked `// TODO` | Delete |
 | Restating the obvious | `// Increment counter` above `counter++` | Delete |
+| Dead code | Commented-out code blocks of 4+ code-like lines | Delete |
 | AI filler phrasing | Phrases like "Note that", "To", or "Next" when they add no meaning | Rewrite or delete |
+| Duplicate logic | Repeated normalized code blocks within one file | Consolidate manually (flag only) |
 | Over-abstraction | Single-use interface, factory wrapping one constructor, getter-only class | Inline manually (flag only) |
 | Generic UI defaults | `bg-gradient-to-r from-purple-500 to-blue-500`, placeholder lorem ipsum | Replace with brand palette (flag only) |
 | Stale boilerplate | `Created by ... on ...`, `Last modified by ...` | Delete |
@@ -111,9 +113,11 @@ Safe-fix categories (v1):
 - Comment rot in code files
 - Restating the obvious
 - Stale `Created by` / `Last modified by` headers
+- Commented-out code blocks
 
 Unsafe categories require manual edits and are flag-only:
 
+- Duplicate logic (requires refactor judgment)
 - Over-abstraction (refactor judgment)
 - Generic UI defaults (brand decisions)
 - Empty try/catch (might be intentional in narrow cases)
