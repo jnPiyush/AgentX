@@ -3,7 +3,7 @@ name: AgentX GitHub Ops
 description: 'Orchestrate GitHub Issues and Pull Requests. Triage, discover, plan sprints, execute work items, and manage backlog operations.'
 visibility: internal
 user-invocable: false
-model: GPT-5.5 (copilot)
+model: Claude Sonnet 5 (copilot)
 disable-model-invocation: true
 reasoning:
   level: low

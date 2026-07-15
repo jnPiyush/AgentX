@@ -34,7 +34,8 @@ Non-PM agents load this skill to understand **what a "good" PRD looks like** wit
 2. [`.github/templates/PRD-TEMPLATE.md`](../../../templates/PRD-TEMPLATE.md) (structure)
 3. [`.github/agents/product-manager.agent.md`](../../../agents/product-manager.agent.md) (full authoring contract, PM role only)
 4. [`references/requirements-quality.md`](references/requirements-quality.md) (vague vs concrete, anti-patterns)
-5. [`references/worked-example.md`](references/worked-example.md) (end-to-end filled example)
+5. [`references/pbi-examples.md`](references/pbi-examples.md) (Product Backlog Item examples and issue-body patterns)
+6. [`references/worked-example.md`](references/worked-example.md) (end-to-end filled example)
 
 ---
 
@@ -79,6 +80,12 @@ Every functional and non-functional requirement must be rewritable as a test. If
 ```
 
 Full anti-pattern catalogue: [references/requirements-quality.md](references/requirements-quality.md).
+
+## Product Backlog Item Quality Rule
+
+When the Product Manager decomposes a PRD into Epics, Features, Stories, or Scrum Product Backlog Items, each item MUST carry enough context for downstream agents to act without reconstructing the PRD. A good PBI names the persona, problem, user-visible outcome, scope, explicit non-goals, Given/When/Then acceptance criteria, verification evidence, dependencies, and priority rationale.
+
+Use [references/pbi-examples.md](references/pbi-examples.md) before creating backlog items. Reject PBIs that only say "build X", "add Y", or "make Z better" without measurable acceptance criteria and completion evidence.
 
 ## AI/ML PRDs -- Product-Facing Contract
 

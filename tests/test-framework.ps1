@@ -251,7 +251,7 @@ Assert-FileExists "docs/GUIDE.md" "Consolidated Guide (quickstart + setup)"
 Assert-FileContains "AGENTS.md" "GUIDE" "AGENTS.md links to Guide"
 Assert-FileContains ".github/copilot-instructions.md" "RFC 2119" "Router has RFC 2119 directive language"
 Assert-FileContains "README.md" "OpenSSF" "README has OpenSSF Scorecard badge"
-Assert-FileContains "vscode-extension/package.json" '"vscode:prepublish": "npm run sync:version && npm run copy:assets' "VS Code extension prepublish refreshes bundled assets before packaging"
+Assert-FileContains "vscode-extension/package.json" '"vscode:prepublish": "npm run sync:version && npm run prepare:chat && npm run clean && tsc -p ./"' "VS Code extension prepublish stamps bundled assets once before packaging"
 
 # --- Results ----------------------------------------------------------------------------
 Write-Host ""

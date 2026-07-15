@@ -288,6 +288,8 @@ graph TD
 
 ## 5. User Stories & Features
 
+> **PBI quality reference**: When turning this section into backlog items, apply `.github/skills/product/prd/references/pbi-examples.md` so each Epic, Feature, Story, or Scrum Product Backlog Item includes persona, problem, outcome, scope, non-goals, testable acceptance criteria, evidence, dependencies, and priority rationale.
+
 ### Feature 1: {Feature Name}
 **Description**: {Brief description of feature} 
 **Priority**: P0 | P1 | P2 

@@ -200,7 +200,11 @@ If the epic spans multiple workstreams, multiple PRDs, a shared release train, o
 
 ### 4. Create GitHub Issues
 
+Before creating Epic, Feature, Story, or Scrum Product Backlog Item records, read and apply the PBI examples in `.github/skills/product/prd/references/pbi-examples.md`. Each backlog item MUST include persona, problem, user-visible outcome, scope, explicit non-goals, Given/When/Then acceptance criteria, verification evidence, dependencies, and priority rationale. Do not create thin PBIs that only say "build X" or "add Y".
+
 **Issue Hierarchy**:
+
+Note: Epic, Feature, and Story records are all Product Backlog Items for quality purposes. Apply the PBI quality standards to every hierarchy level, even when the tracker uses a more specific work item type name.
 
 | Level | Title Format | Labels | Body Must Include |
 |-------|-------------|--------|-------------------|
@@ -248,6 +252,7 @@ Before handoff, verify with fresh eyes:
 - [ ] **No contradictions**: constraints do not conflict with user's technology intent
 - [ ] **Model Council convened** (or skip rationale recorded in Research Summary); `COUNCIL-{epic-id}.md` Synthesis section is complete and the PRD's scope, priority, success metrics, risks, and open questions reflect Consensus / Divergences / Risks captured by the council
 - [ ] **Roadmap coverage**: if the epic needs shared portfolio planning, a companion roadmap exists and is linked to the related PRDs
+- [ ] **PBI completeness**: each Epic, Feature, Story, or Scrum Product Backlog Item includes persona, problem, outcome, scope, non-goals, Given/When/Then acceptance criteria, verification evidence, dependencies, and priority rationale per `.github/skills/product/prd/references/pbi-examples.md`
 
 ### 6. Commit & Handoff
 
@@ -272,7 +277,7 @@ Update Epic Status to `Ready` in GitHub Projects.
 
 | Task | Skill |
 |------|-------|
-| PRD conventions, requirements quality, worked examples | [PRD](../skills/product/prd/SKILL.md) |
+| PRD conventions, requirements quality, PBI examples, worked examples | [PRD](../skills/product/prd/SKILL.md) |
 | Product requirements documentation | [Documentation](../skills/development/documentation/SKILL.md) |
 | GenAI requirement framing | [AI Agent Development](../skills/ai-systems/ai-agent-development/SKILL.md) |
 | Prioritization and decomposition quality checks | [Code Review](../skills/development/code-review/SKILL.md) |

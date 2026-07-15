@@ -1,0 +1,21 @@
+{
+  "reasoning": "fallback concatenation",
+  "edits": [
+    {
+      "op": "append",
+      "target": "",
+      "content": "- Guard duplicate-logic findings against string-only declarative lists so repeated configuration/data arrays do not become duplicate-logic false positives.",
+      "source_type": "failure",
+      "support_count": 1,
+      "merge_level": 1
+    },
+    {
+      "op": "append",
+      "target": "",
+      "content": "- Call out PowerShell block comments (`<# ... #>`) as a dead-code surface, not only C-style block comments.",
+      "source_type": "failure",
+      "support_count": 1,
+      "merge_level": 1
+    }
+  ]
+}

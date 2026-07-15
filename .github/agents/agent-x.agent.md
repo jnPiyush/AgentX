@@ -4,7 +4,7 @@ description: 'Autonomous execution mode for AgentX. Completes simple and complex
 model: Claude Opus 4.8 (copilot)
 user-invocable: true
 reasoning:
-  level: medium
+  level: high
 constraints:
   - "MUST follow specialist workflow phases IN SEQUENCE: Classify -> Route -> Execute specialist phases -> Validate handoffs; MUST apply each specialist agent's phase gates internally when executing autonomously; MUST NOT advance to the next specialist phase before the current phase gate passes"
   - "MUST complete work autonomously in the current session whenever feasible; manual agent switching is a fallback, not the default."

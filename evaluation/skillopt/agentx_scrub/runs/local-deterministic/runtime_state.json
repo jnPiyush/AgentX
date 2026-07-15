@@ -1,0 +1,10 @@
+{
+  "last_completed_step": 1,
+  "current_skill_path": "C:\\Piyush - Personal\\GenAI\\AgentX\\evaluation\\skillopt\\agentx_scrub\\runs\\local-deterministic\\skills\\skill_v0001.md",
+  "current_score": 1.0,
+  "current_origin": "step_0001",
+  "best_skill_path": "C:\\Piyush - Personal\\GenAI\\AgentX\\evaluation\\skillopt\\agentx_scrub\\runs\\local-deterministic\\best_skill.md",
+  "best_score": 1.0,
+  "best_step": 1,
+  "best_origin": "step_0001"
+}

@@ -1,0 +1,38 @@
+model:
+  backend: azure_openai
+  optimizer: deterministic-local
+  target: deterministic-local
+  optimizer_backend: openai_chat
+  target_backend: openai_chat
+  reasoning_effort: ""
+train:
+  num_epochs: 1
+  batch_size: 2
+  accumulation: 1
+  seed: 42
+gradient:
+  minibatch_size: 2
+  merge_batch_size: 2
+  analyst_workers: 1
+  failure_only: true
+  max_analyst_rounds: 1
+optimizer:
+  learning_rate: 2
+  min_learning_rate: 1
+  lr_scheduler: constant
+  lr_control_mode: fixed
+  skill_update_mode: patch
+  use_slow_update: false
+  use_meta_skill: false
+evaluation:
+  use_gate: true
+  gate_metric: hard
+  sel_env_num: 0
+  test_env_num: 0
+  eval_test: true
+env:
+  name: agentx_scrub
+  skill_init: .github/skills/development/scrub/SKILL.md
+  split_mode: split_dir
+  split_dir: evaluation/skillopt/agentx_scrub/data
+  out_root: evaluation/skillopt/agentx_scrub/runs/local-deterministic

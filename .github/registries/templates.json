@@ -1,15 +1,14 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-05-22T03:30:56Z",
+  "generated": "2026-07-15T07:56:43Z",
   "source": ".github/templates/*.md",
-  "totalCount": 14,
+  "totalCount": 15,
   "templates": [
     {
       "name": "ADR",
       "path": ".github/templates/ADR-TEMPLATE.md",
       "declaredInputs": [],
       "titlePlaceholders": [
-        "decision_id",
         "decision_title"
       ],
       "sections": [
@@ -85,7 +84,6 @@
       "name": "CONTRACT",
       "path": ".github/templates/CONTRACT-TEMPLATE.md",
       "declaredInputs": [
-        "issue_number",
         "slice_name",
         "author",
         "date"
@@ -114,7 +112,6 @@
       "path": ".github/templates/DESIGN-SYSTEM-TEMPLATE.md",
       "declaredInputs": [
         "project_name",
-        "issue_number",
         "date",
         "primary_direction"
       ],
@@ -138,7 +135,6 @@
       "name": "EVIDENCE-SUMMARY",
       "path": ".github/templates/EVIDENCE-SUMMARY-TEMPLATE.md",
       "declaredInputs": [
-        "issue_number",
         "slice_name",
         "author",
         "date"
@@ -161,7 +157,6 @@
       "name": "EXEC-PLAN",
       "path": ".github/templates/EXEC-PLAN-TEMPLATE.md",
       "declaredInputs": [
-        "issue_number",
         "title",
         "date",
         "author",
@@ -188,6 +183,28 @@
         "Outcomes & Retrospective",
         "Appendix A: Plan Diagrams (v8.4.43+)",
         "Appendix B: Rich Visual Diagrams (v8.4.43+)"
+      ]
+    },
+    {
+      "name": "LEARNING",
+      "path": ".github/templates/LEARNING-TEMPLATE.md",
+      "declaredInputs": [
+        "id",
+        "issue",
+        "date",
+        "category"
+      ],
+      "titlePlaceholders": [
+        "id",
+        "Title"
+      ],
+      "sections": [
+        "Context",
+        "Learning",
+        "Evidence",
+        "Why It Matters",
+        "Promotion Path",
+        "Related"
       ]
     },
     {
@@ -221,7 +238,6 @@
       "path": ".github/templates/PROGRESS-TEMPLATE.md",
       "declaredInputs": [],
       "titlePlaceholders": [
-        "issue_number",
         "issue_title"
       ],
       "sections": [

@@ -1,8 +1,8 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-05-22T03:30:56Z",
+  "generated": "2026-07-15T07:56:43Z",
   "source": ".github/skills/**/SKILL.md",
-  "totalCount": 111,
+  "totalCount": 128,
   "countsByCategory": [
     {
       "category": "ai-systems",
@@ -22,11 +22,15 @@
     },
     {
       "category": "development",
-      "count": 22
+      "count": 23
     },
     {
       "category": "diagrams",
       "count": 1
+    },
+    {
+      "category": "document",
+      "count": 3
     },
     {
       "category": "domain",
@@ -39,6 +43,10 @@
     {
       "category": "languages",
       "count": 10
+    },
+    {
+      "category": "low-code",
+      "count": 13
     },
     {
       "category": "operations",
@@ -101,7 +109,7 @@
       "name": "azure-foundry",
       "category": "ai-systems",
       "path": ".github/skills/ai-systems/azure-foundry/SKILL.md",
-      "description": "Design and architect AI agents on Azure AI Foundry -- lifecycle planning, model selection strategy, evaluation frameworks, guardrail design, and deployment patterns. Use when designing agent architecture on Foundry, choosing models, planning evaluation strategy, or defining guardrails. For step-by-step operational workflows (create, deploy, invoke, trace, troubleshoot), install the Azure MCP Extension (ms-azuretools.vscode-azure-mcp-server), which also brings in the Azure Skills plugin and Foundry MCP support in VS Code."
+      "description": ">-"
     },
     {
       "id": "ai-systems/cognitive-architecture",
@@ -454,6 +462,13 @@
       "description": "Three-pass quality sweep detecting over-engineering, stale comments, and generic UI patterns produced during AI-assisted coding sessions. Reports findings with severity and optional safe auto-fix."
     },
     {
+      "id": "development/code-optimization",
+      "name": "code-optimization",
+      "category": "development",
+      "path": ".github/skills/development/code-optimization/SKILL.md",
+      "description": "Rewrite working code into its minimal, elegant form -- lower cyclomatic complexity, fewer lines, no dead code, no needless abstractions -- using a Draft -> Optimize -> Verify loop. Use when asked to compress, minimize, simplify, or make code more elegant WITHOUT sacrificing correctness, boundary validation, or readability."
+    },
+    {
       "id": "development/code-review",
       "name": "code-review",
       "category": "development",
@@ -577,7 +592,7 @@
       "name": "token-optimizer",
       "category": "development",
       "path": ".github/skills/development/token-optimizer/SKILL.md",
-      "description": "Manage token budgets for instruction files, skills, and agent definitions to prevent context window waste. Use when creating or editing SKILL.md, .instructions.md, .agent.md, or copilot-instructions.md files, or when context loading feels slow or agents fail to load expected context. Enforce limits, measure usage, and optimize content density."
+      "description": ">-"
     },
     {
       "id": "development/type-safety",
@@ -599,6 +614,27 @@
       "category": "diagrams",
       "path": ".github/skills/diagrams/diagram-as-code/SKILL.md",
       "description": "Author, review, and maintain diagrams as code across Mermaid, PlantUML, Structurizr DSL, Graphviz DOT, and draw.io XML. Covers swimlane/cross-functional workflows, C4 architecture, sequence, state, ER, dependency, and network diagrams. Use when any agent needs to create or update a diagram in a PRD, ADR, spec, UX flow, or architecture doc."
+    },
+    {
+      "id": "document/docx",
+      "name": "docx",
+      "category": "document",
+      "path": ".github/skills/document/docx/SKILL.md",
+      "description": "Read, write, and transform Microsoft Word .docx files. Use when extracting text or tables from Word documents, generating reports from templates, applying styles, inserting images, building tables, or converting Markdown/HTML to Word."
+    },
+    {
+      "id": "document/pdf",
+      "name": "pdf",
+      "category": "document",
+      "path": ".github/skills/document/pdf/SKILL.md",
+      "description": "Read, write, and transform PDF files. Use when extracting text or tables from PDFs, merging or splitting documents, rotating pages, adding watermarks, generating new PDFs programmatically, filling AcroForm fields, encrypting/decrypting files, or running OCR on scanned pages."
+    },
+    {
+      "id": "document/pptx",
+      "name": "pptx",
+      "category": "document",
+      "path": ".github/skills/document/pptx/SKILL.md",
+      "description": "Read, write, and transform Microsoft PowerPoint .pptx files. Use when generating decks from data, extracting slide text or speaker notes, building tables and charts on slides, applying templates, or converting Markdown to PowerPoint."
     },
     {
       "id": "domain/audit-assurance",
@@ -746,6 +782,97 @@
       "category": "languages",
       "path": ".github/skills/languages/sql-server/SKILL.md",
       "description": "Develop SQL Server databases with T-SQL, stored procedures, indexing, and performance optimization. Use when writing T-SQL queries, creating stored procedures/functions, designing index strategies, optimizing query execution plans, or troubleshooting SQL Server performance."
+    },
+    {
+      "id": "low-code/canvas-app-yaml",
+      "name": "canvas-app-yaml",
+      "category": "low-code",
+      "path": ".github/skills/low-code/canvas-app-yaml/SKILL.md",
+      "description": "Author Microsoft Power Apps canvas app source as unpacked *.fx.yaml + CanvasManifest.json so an agent can generate Power Fx screens that pac canvas pack and pac solution pack will accept. Covers the Src/ YAML control tree, Power Fx formula syntax, App OnStart, screens, data sources, components, and the round-trip with pac canvas unpack/pack."
+    },
+    {
+      "id": "low-code/copilot-studio-agents",
+      "name": "copilot-studio-agents",
+      "category": "low-code",
+      "path": ".github/skills/low-code/copilot-studio-agents/SKILL.md",
+      "description": "Design Microsoft Copilot Studio agents (formerly Power Virtual Agents) -- topics, trigger phrases, generative answers, knowledge sources, connector and MCP actions, authentication, channels, and agent flows -- so an agent can author the conversational logic that ships as a Bot component inside a Power Platform solution. Covers the topic/node dialog model and the generative-orchestration option."
+    },
+    {
+      "id": "low-code/dataverse-plugins",
+      "name": "dataverse-plugins",
+      "category": "low-code",
+      "path": ".github/skills/low-code/dataverse-plugins/SKILL.md",
+      "description": "Build Microsoft Dataverse server-side extensions in C# (.NET) -- plugins implementing IPlugin and custom workflow activities -- and register them via SdkMessageProcessingStep so an agent can add transactional business logic that runs inside the Dataverse event pipeline. Covers the execution context, pipeline stages, registration metadata, and pro-code-vs-low-code boundaries."
+    },
+    {
+      "id": "low-code/dataverse-schema",
+      "name": "dataverse-schema",
+      "category": "low-code",
+      "path": ".github/skills/low-code/dataverse-schema/SKILL.md",
+      "description": "Author Dataverse table schema (Entity.xml) for unpacked Power Platform solutions. Covers tables, columns, choices, relationships, primary name attribute, ownership, and Solution.xml RootComponent registration."
+    },
+    {
+      "id": "low-code/environment-variables",
+      "name": "environment-variables",
+      "category": "low-code",
+      "path": ".github/skills/low-code/environment-variables/SKILL.md",
+      "description": "Author Microsoft Power Platform environment variables and connection references inside an unpacked solution so an agent can parameterize apps, flows, and plugins across dev/test/prod without hardcoding -- definitions, current values, data types (string/number/JSON/secret/Data Source), and Key Vault-backed secrets. Covers the ALM mechanism that makes a solution portable."
+    },
+    {
+      "id": "low-code/model-driven-app",
+      "name": "model-driven-app",
+      "category": "low-code",
+      "path": ".github/skills/low-code/model-driven-app/SKILL.md",
+      "description": "Author Microsoft Power Apps model-driven app source (AppModule, SiteMap, FormXml, SavedQuery views) inside an unpacked Power Platform solution so an agent can generate the navigation, forms, and views that pac solution pack will accept and Dataverse will render. Covers the component-driven UI metadata model that sits on top of Dataverse tables."
+    },
+    {
+      "id": "low-code/pac-cli",
+      "name": "pac-cli",
+      "category": "low-code",
+      "path": ".github/skills/low-code/pac-cli/SKILL.md",
+      "description": "Operate the Microsoft Power Platform CLI (pac) for solution pack/unpack, environment auth, and import. Use after an agent emits an unpacked solution tree to validate it, pack it into a zip, and import it into a Dataverse environment."
+    },
+    {
+      "id": "low-code/pcf-controls",
+      "name": "pcf-controls",
+      "category": "low-code",
+      "path": ".github/skills/low-code/pcf-controls/SKILL.md",
+      "description": "Build Microsoft Power Apps Component Framework (PCF) code components in TypeScript so an agent can generate a pro-code control that drops into canvas and model-driven apps. Covers ControlManifest.Input.xml, the index.ts lifecycle (init/updateView/getOutputs/destroy), property types, dataset vs field controls, pcfproj/npm build, and solution packaging."
+    },
+    {
+      "id": "low-code/power-automate-desktop",
+      "name": "power-automate-desktop",
+      "category": "low-code",
+      "path": ".github/skills/low-code/power-automate-desktop/SKILL.md",
+      "description": "Author Microsoft Power Automate desktop (RPA) flows -- attended and unattended robotic process automation that drives UI, browsers, files, and Excel -- so an agent can design the action sequence, variables, error handling, and cloud-flow trigger wiring. Covers when RPA is appropriate versus API/connector automation and the desktop-flow execution model."
+    },
+    {
+      "id": "low-code/power-automate-flow-json",
+      "name": "power-automate-flow-json",
+      "category": "low-code",
+      "path": ".github/skills/low-code/power-automate-flow-json/SKILL.md",
+      "description": "Author Power Automate cloud flow source (Workflows/<name>-FLOW.json) for unpacked Power Platform solutions. Covers triggers, actions, connection references, expressions, runAfter error handling, and the flow GUID convention."
+    },
+    {
+      "id": "low-code/power-pages",
+      "name": "power-pages",
+      "category": "low-code",
+      "path": ".github/skills/low-code/power-pages/SKILL.md",
+      "description": "Author Microsoft Power Pages site source (web pages, templates, content snippets, web roles, table permissions, Liquid templating, basic forms and lists) so an agent can generate an external-facing Dataverse-backed website that pac pages download/upload round-trips. Covers the website-as-data model where pages and styling are Dataverse rows."
+    },
+    {
+      "id": "low-code/security-roles",
+      "name": "security-roles",
+      "category": "low-code",
+      "path": ".github/skills/low-code/security-roles/SKILL.md",
+      "description": "Author Microsoft Dataverse security roles and related access control -- privilege depth (User/BU/Parent/Org), table-level CRUD privileges, field security profiles, business units, and teams -- inside an unpacked solution so an agent can generate least-privilege access that pac solution pack accepts. Covers the Dataverse authorization model that every app, flow, and portal honors."
+    },
+    {
+      "id": "low-code/solution-anatomy",
+      "name": "solution-anatomy",
+      "category": "low-code",
+      "path": ".github/skills/low-code/solution-anatomy/SKILL.md",
+      "description": "Author and structure unpacked Microsoft Power Platform solutions on disk so an agent can generate source that pac solution pack will accept and Power Apps will import. Covers Solution.xml, publisher, prefixes, versioning, dependencies, component folders, managed vs unmanaged, and the round-trip with pac solution unpack/pack."
     },
     {
       "id": "operations/github-actions-workflows",

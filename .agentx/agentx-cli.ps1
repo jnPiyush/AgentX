@@ -1864,7 +1864,6 @@ function Write-GitFiles([array]$entries, [string]$message) {
             if ($parent) { $parentArgs = @('-p', $parent) }
         } catch { Write-Verbose "No existing data branch parent: $_" }
 
-        # Create commit
         $commitHash = (& git -C $Script:ROOT commit-tree $treeHash @parentArgs -m $message 2>$null).Trim()
 
         # Update branch ref
@@ -6318,7 +6317,9 @@ $($C.d)  ---------------------------------------------$($C.n)
 $($C.w)  Commands:$($C.n)
   ready                            Show unblocked work, sorted by priority
   ship <issue>                     One-command pipeline: plan->work->review->scrub->test->compound
-  scrub [path] [-Fix]              Presentation-layer scan for filler/comment-rot; -Fix applies safe deletions
+  scrub [path] [-Fix] [-Production]  Presentation-layer scan for filler/comment-rot; -Fix applies safe deletions
+  deslop [path] [-Production]      Alias of scrub for production code hygiene gates
+  antislop [path] [-Production]    Alias of scrub for AI-slop release gates
   research <action>                Metric-driven experimentation loop (start/attempt/end/status)
   learn                            Capture observations from current session (alias of 'discover run')
   promote                          Graduate stable patterns into skills (alias of 'graduate run')
@@ -6635,7 +6636,6 @@ function Invoke-WatchCmd {
 
             Write-JsonFile $watchStateFile $watchState
 
-            # Check timeout
             if ($timeoutMinutes -gt 0) {
                 $elapsed = ([datetime]::UtcNow - $startTime).TotalMinutes
                 if ($elapsed -ge $timeoutMinutes) {
@@ -7602,6 +7602,8 @@ switch ($Script:Command) {
     'graduate' { Invoke-GraduateCmd }
     'sprint'   { Invoke-SprintCmd }
     'scrub'    { Invoke-ScrubCmd }
+    'deslop'   { Invoke-ScrubCmd }
+    'antislop' { Invoke-ScrubCmd }
     'dream'    { Invoke-DreamCmd }
     'research' { Invoke-ResearchCmd }
     'ship'     { Invoke-ShipCmd }
@@ -7627,4 +7629,3 @@ switch ($Script:Command) {
         exit 1
     }
 }
-

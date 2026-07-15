@@ -1,0 +1,28 @@
+[
+  {
+    "id": "val-powershell-block-comments",
+    "task_type": "scrub-guidance",
+    "hard": 0,
+    "soft": 0.0,
+    "missing_terms": [
+      "PowerShell block comments",
+      "<#"
+    ],
+    "expected_guidance": "- Call out PowerShell block comments (`<# ... #>`) as a dead-code surface, not only C-style block comments.",
+    "question": "Selection gate: PowerShell block comments should be represented in scrub guidance.",
+    "fail_reason": "missing guidance terms: PowerShell block comments, <#"
+  },
+  {
+    "id": "val-duplicate-false-positive-guard",
+    "task_type": "scrub-guidance",
+    "hard": 0,
+    "soft": 0.0,
+    "missing_terms": [
+      "string-only declarative lists",
+      "duplicate-logic false positives"
+    ],
+    "expected_guidance": "- Guard duplicate-logic findings against string-only declarative lists so repeated configuration/data arrays do not become duplicate-logic false positives.",
+    "question": "Selection gate: duplicate logic guidance should mention declarative data false-positive controls.",
+    "fail_reason": "missing guidance terms: string-only declarative lists, duplicate-logic false positives"
+  }
+]

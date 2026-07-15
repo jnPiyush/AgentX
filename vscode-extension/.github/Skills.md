@@ -1,4 +1,4 @@
-description: 'Compressed skill index for AI agents. 127 skills across 14 categories. Load only relevant skills per task.'
+description: 'Compressed skill index for AI agents. 128 skills across 14 categories. Load only relevant skills per task.'
 
 # Production Code Skills Index
 
@@ -10,7 +10,7 @@ description: 'Compressed skill index for AI agents. 127 skills across 14 categor
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 127 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 128 skills. Use Quick Reference below.
 
 ---
 
@@ -26,6 +26,7 @@ description: 'Compressed skill index for AI agents. 127 skills across 14 categor
 | **Security Feature** | [Security](agentx/skills/architecture/security/SKILL.md), [Configuration](agentx/skills/development/configuration/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Type Safety](agentx/skills/development/type-safety/SKILL.md) |
 | **Bug Fix** | [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Error Handling](agentx/skills/development/error-handling/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Logging](agentx/skills/development/logging-monitoring/SKILL.md) |
 | **Performance / Scaling** | [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md), [Database](agentx/skills/architecture/database/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
+| **Code Optimization / Minimize LOC / Make Elegant** | [Code Optimization](agentx/skills/development/code-optimization/SKILL.md), [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Core Principles](agentx/skills/architecture/core-principles/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Documentation** | [Documentation](agentx/skills/development/documentation/SKILL.md) |
 | **DevOps / CI/CD** | [GitHub Actions](agentx/skills/operations/github-actions-workflows/SKILL.md), [YAML Pipelines](agentx/skills/operations/yaml-pipelines/SKILL.md), [Release Mgmt](agentx/skills/operations/release-management/SKILL.md) |
 | **Code Review** | [Code Review](agentx/skills/development/code-review/SKILL.md), [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Security](agentx/skills/architecture/security/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
@@ -96,7 +97,7 @@ description: 'Compressed skill index for AI agents. 127 skills across 14 categor
 
 ---
 
-## Skills Directory (127 skills -- pipe-delimited)
+## Skills Directory (128 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -122,6 +123,7 @@ dev|skill-creator|agentx/skills/development/skill-creator/SKILL.md|scaffold,vali
 dev|scrub|agentx/skills/development/scrub/SKILL.md|comment-rot,obvious-restate,ai-filler,stale-byline,generic-gradient,empty-catch,presentation-cleanup
 dev|token-optimizer|agentx/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
 dev|code-hygiene|agentx/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
+dev|code-optimization|agentx/skills/development/code-optimization/SKILL.md|minimal-code,elegant,reduce-LOC,cyclomatic-complexity,compress,simplify,draft-optimize-verify,anti-code-golf
 dev|karpathy-guidelines|agentx/skills/development/karpathy-guidelines/SKILL.md|think-before-coding,simplicity,surgical-changes,goal-driven,LLM-pitfalls,assumptions
 dev|browser-automation|agentx/skills/development/browser-automation/SKILL.md|playwright,browser,a11y,axe,prototype-validation,web-research,screenshot,wcag
 dev|verification-before-completion|agentx/skills/development/verification-before-completion/SKILL.md|verification,gate,completion-claims,loop-complete,tests-pass,deploy,evidence,no-false-done
@@ -312,6 +314,7 @@ RAG Pipeline|rag-pipelines->context-mgmt->cognitive-arch->evaluation->testing->c
 Model Fine-Tuning|fine-tuning->evaluation->feedback-loops->testing->code-review
 Drift Monitoring|model-drift->data-drift->evaluation->logging->testing->code-review
 AI Feedback System|feedback-loops->evaluation->fine-tuning->testing->code-review
+Code Optimization|scrub->code-hygiene->code-optimization->testing->code-review
 New Skill|skill-creator->documentation->testing->code-review
 Security Audit|security->configuration->logging->testing->code-review
 E2E Test Suite|e2e-testing->test-automation->integration-testing->code-review
@@ -329,5 +332,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 127 skills (arch:6, dev:22, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:12, test:6, domain:7, product:1, diagrams:1, low-code:13)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 128 skills (arch:6, dev:23, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:12, test:6, domain:7, product:1, diagrams:1, low-code:13)
 

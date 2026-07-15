@@ -1,0 +1,16 @@
+[
+  {
+    "id": "train-powershell-block-comments",
+    "task_type": "scrub-guidance",
+    "question": "Does the scrub skill explicitly cover PowerShell block-comment dead code syntax?",
+    "required_terms": ["PowerShell block comments", "<#"],
+    "expected_guidance": "- Call out PowerShell block comments (`<# ... #>`) as a dead-code surface, not only C-style block comments."
+  },
+  {
+    "id": "train-duplicate-false-positive-guard",
+    "task_type": "scrub-guidance",
+    "question": "Does the scrub skill explain how duplicate-logic checks avoid declarative data false positives?",
+    "required_terms": ["string-only declarative lists", "duplicate-logic false positives"],
+    "expected_guidance": "- Guard duplicate-logic findings against string-only declarative lists so repeated configuration/data arrays do not become duplicate-logic false positives."
+  }
+]

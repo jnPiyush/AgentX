@@ -1,7 +1,7 @@
 ---
 name: AgentX Reviewer
 description: 'Review code quality, test coverage, security, performance, and architectural conformance. Approve or request changes.'
-model: GPT-5.5 (copilot)
+model: GPT-5.6 Sol (copilot)
 user-invocable: true
 reasoning:
   mode: adaptive

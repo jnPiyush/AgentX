@@ -17,9 +17,24 @@ function Assert-True($condition, $message) {
 }
 
 function Invoke-ScrubJson {
-    param([string]$Path)
+    param([string]$Path, [switch]$Production, [switch]$Fix)
 
-    $output = & pwsh -NoProfile -File (Join-Path $script:root 'scripts/scrub.ps1') -Path $Path -Json 2>&1
+    $args = @('-NoProfile', '-File', (Join-Path $script:root 'scripts/scrub.ps1'), '-Path', $Path, '-Json')
+    if ($Production) { $args += '-Production' }
+    if ($Fix) { $args += @('-Fix', '-Quiet') }
+    $output = & pwsh @args 2>&1
+    $exitCode = $LASTEXITCODE
+    $json = ($output | Out-String).Trim()
+    $findings = if ([string]::IsNullOrWhiteSpace($json)) { @() } else { @($json | ConvertFrom-Json) }
+    return [pscustomobject]@{ exitCode = $exitCode; findings = $findings; raw = $json }
+}
+
+function Invoke-AgentXScrubJson {
+    param([string]$Command, [string]$Path, [switch]$Production)
+
+    $args = @('-NoProfile', '-File', (Join-Path $script:root '.agentx/agentx.ps1'), $Command, '-Path', $Path, '-Json')
+    if ($Production) { $args += '-Production' }
+    $output = & pwsh @args 2>&1
     $exitCode = $LASTEXITCODE
     $json = ($output | Out-String).Trim()
     $findings = if ([string]::IsNullOrWhiteSpace($json)) { @() } else { @($json | ConvertFrom-Json) }
@@ -101,6 +116,39 @@ export function secondTotal(subtotal: number): number {
     Assert-True ($duplicateResult.exitCode -eq 0) 'Duplicate-logic findings are advisory and do not fail the scrub gate'
     Assert-True ($duplicateFindings.Count -ge 1) 'Repeated normalized code block reports duplicate logic'
     Assert-True (($duplicateFindings | Where-Object { $_.severity -ne 'MEDIUM' -or $_.safeFix }).Count -eq 0) 'Duplicate-logic findings are MEDIUM flag-only findings'
+
+    $duplicateProductionResult = Invoke-ScrubJson -Path $duplicateFile -Production
+    $duplicateProductionFindings = @($duplicateProductionResult.findings | Where-Object { $_.category -eq 'duplicate-logic' })
+    Assert-True ($duplicateProductionResult.exitCode -eq 1) 'Duplicate-logic findings fail the production scrub gate'
+    Assert-True (($duplicateProductionFindings | Where-Object { -not $_.productionBlocker }).Count -eq 0) 'Duplicate-logic findings are marked as production blockers'
+
+    $duplicateProductionFixResult = Invoke-ScrubJson -Path $duplicateFile -Production -Fix
+    Assert-True ($duplicateProductionFixResult.exitCode -eq 1) 'Production scrub with safe fixes still fails when flag-only blockers remain'
+
+    $deslopAliasResult = Invoke-AgentXScrubJson -Command 'deslop' -Path $duplicateFile -Production
+    $antislopAliasResult = Invoke-AgentXScrubJson -Command 'antislop' -Path $duplicateFile -Production
+    Assert-True ($deslopAliasResult.exitCode -eq 1) 'AgentX deslop alias routes to the production scrub gate'
+    Assert-True ($antislopAliasResult.exitCode -eq 1) 'AgentX antislop alias routes to the production scrub gate'
+
+    $emptyCatchFile = Join-Path $tempRoot 'empty-catch.ts'
+    @'
+export function parseValue(raw: string): number {
+    try {
+        return Number.parseInt(raw, 10);
+    } catch (error) { }
+    return 0;
+}
+'@ | Set-Content -LiteralPath $emptyCatchFile -Encoding utf8
+
+    $emptyCatchResult = Invoke-ScrubJson -Path $emptyCatchFile
+    $emptyCatchFindings = @($emptyCatchResult.findings | Where-Object { $_.category -eq 'empty-catch' })
+    Assert-True ($emptyCatchResult.exitCode -eq 0) 'Empty-catch findings are advisory in normal scrub mode'
+    Assert-True ($emptyCatchFindings.Count -eq 1) 'Empty-catch scanner reports swallowed exception blocks'
+
+    $emptyCatchProductionResult = Invoke-ScrubJson -Path $emptyCatchFile -Production
+    $emptyCatchProductionFindings = @($emptyCatchProductionResult.findings | Where-Object { $_.category -eq 'empty-catch' })
+    Assert-True ($emptyCatchProductionResult.exitCode -eq 1) 'Empty-catch findings fail the production scrub gate'
+    Assert-True (($emptyCatchProductionFindings | Where-Object { -not $_.productionBlocker }).Count -eq 0) 'Empty-catch findings are marked as production blockers'
 
     $declarativeFile = Join-Path $tempRoot 'declarative.ps1'
     @'

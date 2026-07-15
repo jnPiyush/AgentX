@@ -3,7 +3,7 @@ name: AgentX ADO Ops
 description: 'ADO Backlog Manager -- orchestrates Azure DevOps backlog management workflows including triage, discovery, sprint planning, execution, PRD planning, and pull requests.'
 visibility: internal
 user-invocable: false
-model: GPT-5.5 (copilot)
+model: Claude Sonnet 5 (copilot)
 reasoning:
   level: low
 disable-model-invocation: true
@@ -199,6 +199,8 @@ Before creating work items, detect the project process template:
 
 Adapt work item type names to match the detected process template.
 
+When creating Epic, Feature, User Story, Requirement, Issue, or Scrum Product Backlog Item records from product-management context, apply the quality standards in `.github/skills/product/prd/references/pbi-examples.md`: persona, problem, outcome, scope, non-goals, Given/When/Then acceptance criteria, verification evidence, dependencies, and priority rationale.
+
 ## Self-Review
 
 - [ ] Intent correctly classified
@@ -206,6 +208,7 @@ Adapt work item type names to match the detected process template.
 - [ ] No duplicate items created
 - [ ] Content sanitized before API calls
 - [ ] Work item types match project process template
+- [ ] Product backlog items satisfy `.github/skills/product/prd/references/pbi-examples.md` when created from PM/PRD context
 - [ ] Parent-child hierarchy is correct
 - [ ] State persisted for resumability
 - [ ] handoff.md written with action counts
@@ -215,6 +218,7 @@ Adapt work item type names to match the detected process template.
 | Task | Skill |
 |------|-------|
 | Work item quality and structure | [Documentation](../../skills/development/documentation/SKILL.md) |
+| Product Backlog Item examples | [PRD](../../skills/product/prd/SKILL.md) |
 | Backlog patterns | [Core Principles](../../skills/architecture/core-principles/SKILL.md) |
 
 ## Enforcement Gates

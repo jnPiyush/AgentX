@@ -81,6 +81,19 @@ Run the scanner over the directory or files that changed. Invoke it through the 
 pwsh .agentx/agentx.ps1 scrub -Path src/components
 ```
 
+For production-release readiness, use the stricter production gate. It keeps
+normal scrub behavior advisory for MEDIUM/LOW findings, but blocks release on
+categories that commonly turn generated code into production maintenance risk:
+
+```pwsh
+pwsh .agentx/agentx.ps1 deslop -Path src/components -Production
+pwsh .agentx/agentx.ps1 antislop -Path src/components -Production
+```
+
+`deslop` and `antislop` are CLI aliases for the same scanner. Use `deslop` when
+the main concern is production code hygiene, and `antislop` when the main concern
+is AI-generated UI or product-surface tells.
+
 The scanner walks the path, parses comments and content by file extension, and prints findings grouped by category and severity. It does not modify any file in scan mode.
 
 ### 2. Triage
@@ -99,6 +112,16 @@ Findings come in three severities:
 | HIGH | Almost certainly slop. Auto-fix is safe in supported categories. |
 | MEDIUM | Likely slop. Auto-fix is opinionated; review the diff. |
 | LOW | Possible slop. Manual review only. |
+
+In `-Production` mode, the release gate fails on HIGH findings plus these
+production-blocking advisory categories:
+
+| Category | Why It Blocks Production |
+|----------|--------------------------|
+| `duplicate-logic` | Repeated validation, mapping, parsing, or error handling can drift after release. |
+| `empty-catch` | Swallowed failures hide production incidents and make support harder. |
+| `generic-gradient` | AI-default UI styling is not release-ready without product/design intent. |
+| `ai-filler` | Filler copy in release docs or product surfaces weakens operator trust. |
 
 ### 3. Apply Safe Fixes
 
@@ -128,6 +151,7 @@ After fixes:
 
 - Run the test suite. Behavior must not change.
 - Re-run the scanner. The remaining findings are the manual-triage list.
+- For release candidates, re-run with `-Production` and clear or justify every production blocker.
 - Commit fixes as a single change with `chore: scrub <area>`.
 
 ---
@@ -135,6 +159,7 @@ After fixes:
 ## Done Criteria
 
 - Scanner reports zero HIGH findings, or every HIGH finding has been addressed or explicitly justified
+- Production-release runs report zero production blockers, or every blocker has a documented release-owner waiver
 - Tests still pass after fixes
 - Diff from `--fix` is small, mechanical, and reviewable line-by-line
 - No behavior change introduced

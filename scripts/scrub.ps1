@@ -28,6 +28,11 @@
 .PARAMETER Json
   Emit findings as JSON to stdout. Useful for tooling and CI.
 
+.PARAMETER Production
+    Treat production-release risk categories as blocking, not advisory. This keeps
+    the normal scrub pass conservative while allowing release gates to fail on
+    duplicate logic, empty catches, generic UI defaults, and AI filler text.
+
 .PARAMETER Quiet
   Suppress non-finding output.
 
@@ -43,6 +48,7 @@ param(
     [string]$Path = '.',
     [switch]$Fix,
     [switch]$Json,
+    [switch]$Production,
     [switch]$Quiet
 )
 
@@ -138,6 +144,7 @@ $EmptyCatchPattern = '\bcatch\s*\([^)]*\)\s*\{\s*(/\*[^*]*\*/|//[^\n]*)?\s*\}'
 
 $DeadCodeLineThreshold = 4
 $DuplicateLogicWindowSize = 5
+$ProductionBlockingCategories = @('duplicate-logic','empty-catch','generic-gradient','ai-filler')
 
 # Findings collector
 $Findings = New-Object 'System.Collections.Generic.List[object]'
@@ -152,13 +159,22 @@ function Add-Finding {
         [bool]$SafeFix
     )
     $Findings.Add([pscustomobject]@{
-        file     = $File
-        line     = $Line
-        category = $Category
-        severity = $Severity
-        snippet  = ($Snippet -replace '\s+',' ').Trim()
-        safeFix  = $SafeFix
+        file              = $File
+        line              = $Line
+        category          = $Category
+        severity          = $Severity
+        snippet           = ($Snippet -replace '\s+',' ').Trim()
+        safeFix           = $SafeFix
+        productionBlocker = (($Severity -eq 'HIGH') -or ($ProductionBlockingCategories -contains $Category))
     })
+}
+
+function Get-BlockingFindings {
+    if ($Production) {
+        return @($Findings | Where-Object { $_.productionBlocker })
+    }
+
+    return @($Findings | Where-Object { $_.severity -eq 'HIGH' })
 }
 
 function Test-IsCommentRot {
@@ -471,6 +487,11 @@ function Invoke-SafeFix {
     return $changedFiles
 }
 
+function Invoke-ScanPath {
+    $Findings.Clear()
+    foreach ($f in $files) { Invoke-FileScan -File $f }
+}
+
 # --- main ---
 $root = (Resolve-Path $Path).Path
 if (Test-Path -LiteralPath $root -PathType Container) {
@@ -480,10 +501,13 @@ if (Test-Path -LiteralPath $root -PathType Container) {
     $files = @(Get-Item -LiteralPath $root)
 }
 
-foreach ($f in $files) { Invoke-FileScan -File $f }
+Invoke-ScanPath
 
 if ($Fix) {
     $changed = Invoke-SafeFix
+    if ($Production) {
+        Invoke-ScanPath
+    }
     if (-not $Quiet) {
         Write-Host ""
         Write-Host "[scrub] Fix applied to $($changed.Count) file(s)." -ForegroundColor Green
@@ -493,7 +517,7 @@ if ($Fix) {
 
 if ($Json) {
     $Findings | ConvertTo-Json -Depth 4
-    exit ($Findings | Where-Object { $_.severity -eq 'HIGH' } | Measure-Object).Count -gt 0 ? 1 : 0
+    exit ((Get-BlockingFindings).Count -gt 0 ? 1 : 0)
 }
 
 if (-not $Quiet) {
@@ -522,8 +546,14 @@ if (-not $Quiet) {
                 Write-Host "[scrub] $safeCount finding(s) are safe-fix. Re-run with -Fix to apply." -ForegroundColor Yellow
             }
         }
+        if ($Production) {
+            $blockerCount = (Get-BlockingFindings).Count
+            Write-Host ""
+            Write-Host "[scrub] Production gate: $blockerCount blocking finding(s)." -ForegroundColor $(if ($blockerCount -gt 0) { 'Red' } else { 'Green' })
+        }
     }
 }
 
-$highCount = ($Findings | Where-Object { $_.severity -eq 'HIGH' }).Count
-if ($Fix) { exit 0 } else { exit ($highCount -gt 0 ? 1 : 0) }
+$blockingCount = (Get-BlockingFindings).Count
+if ($Fix -and -not $Production) { exit 0 }
+exit ($blockingCount -gt 0 ? 1 : 0)

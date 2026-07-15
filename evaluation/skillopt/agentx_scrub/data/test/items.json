@@ -1,0 +1,16 @@
+[
+  {
+    "id": "test-powershell-block-comments",
+    "task_type": "scrub-guidance",
+    "question": "Held-out test: scrub guidance should distinguish PowerShell block-comment syntax from C-style syntax.",
+    "required_terms": ["dead-code surface", "not only C-style block comments"],
+    "expected_guidance": "- Call out PowerShell block comments (`<# ... #>`) as a dead-code surface, not only C-style block comments."
+  },
+  {
+    "id": "test-duplicate-false-positive-guard",
+    "task_type": "scrub-guidance",
+    "question": "Held-out test: scrub guidance should explain why repeated declarative data arrays are not duplicate logic.",
+    "required_terms": ["configuration/data arrays", "duplicate-logic false positives"],
+    "expected_guidance": "- Guard duplicate-logic findings against string-only declarative lists so repeated configuration/data arrays do not become duplicate-logic false positives."
+  }
+]

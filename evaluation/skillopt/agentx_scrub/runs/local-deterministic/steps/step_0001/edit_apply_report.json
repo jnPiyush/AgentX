@@ -1,0 +1,16 @@
+[
+  {
+    "op": "append",
+    "target": "",
+    "content_preview": "- Guard duplicate-logic findings against string-only declarative lists so repeated configuration/data arrays do not become duplicate-logic false positives.",
+    "status": "applied_append",
+    "index": 1
+  },
+  {
+    "op": "append",
+    "target": "",
+    "content_preview": "- Call out PowerShell block comments (`<# ... #>`) as a dead-code surface, not only C-style block comments.",
+    "status": "applied_append",
+    "index": 2
+  }
+]
