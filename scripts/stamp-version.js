@@ -342,6 +342,16 @@ function main() {
 
   updateTextFile('install.ps1', [
     {
+      pattern: /raw\.githubusercontent\.com\/jnPiyush\/AgentX\/v\d+\.\d+\.\d+\/install\.ps1/g,
+      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.ps1`,
+      label: 'installer usage URLs',
+    },
+    {
+      pattern: /\$BRANCH = "v\d+\.\d+\.\d+"/,
+      replacement: `$BRANCH = "v${targetVersion}"`,
+      label: 'installer branch constant',
+    },
+    {
       pattern: /Install AgentX v\d+\.\d+\.\d+ - Download, copy, configure\./,
       replacement: `Install AgentX v${targetVersion} - Download, copy, configure.`,
       label: 'installer synopsis',
@@ -379,6 +389,16 @@ function main() {
   ]);
 
   updateTextFile('install.sh', [
+    {
+      pattern: /raw\.githubusercontent\.com\/jnPiyush\/AgentX\/v\d+\.\d+\.\d+\/install\.sh/g,
+      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.sh`,
+      label: 'bash installer usage URL',
+    },
+    {
+      pattern: /BRANCH="v\d+\.\d+\.\d+"/,
+      replacement: `BRANCH="v${targetVersion}"`,
+      label: 'bash installer branch constant',
+    },
     {
       pattern: /AgentX v\d+\.\d+\.\d+ Installer - Download, copy, configure\./,
       replacement: `AgentX v${targetVersion} Installer - Download, copy, configure.`,
@@ -431,6 +451,11 @@ function main() {
       pattern: /version = "\d+\.\d+\.\d+"/,
       replacement: `version = "${targetVersion}"`,
       label: 'CLI plugin version payload',
+    },
+    {
+      pattern: /version = '\d+\.\d+\.\d+'/,
+      replacement: `version = '${targetVersion}'`,
+      label: 'CLI plugin single-quoted version payload',
     },
     {
       pattern: /AgentX Copilot CLI Plugin v\d+\.\d+\.\d+ installed/,

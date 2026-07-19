@@ -36,3 +36,39 @@ export {
   parseLoopState,
   readLoopStateFromFile,
 } from './loopStateStore';
+
+export {
+  VerificationCheckKind,
+  VerificationCheck,
+  CommandExecution,
+  VerificationFailureDetail,
+  VerificationCheckResult,
+  VerificationRunResult,
+  RunVerificationOptions,
+  CommandRunner,
+  VerificationEvidence,
+  parseVerificationFailures,
+  evaluateVerificationCheck,
+  summarizeVerificationRun,
+  formatVerificationFeedback,
+  toVerificationEvidence,
+  runVerificationLoop,
+} from './verificationLoop';
+
+export {
+  BenchmarkTask,
+  BenchmarkTaskSet,
+  BenchmarkTaskExecution,
+  BenchmarkTaskResult,
+  BenchmarkReport,
+  RunBenchmarkOptions,
+  BenchmarkExecutor,
+  BenchmarkEvidence,
+  validateBenchmarkTask,
+  parseTaskSet,
+  scoreBenchmarkResult,
+  aggregateBenchmarkReport,
+  formatBenchmarkReport,
+  toBenchmarkEvidence,
+  runBenchmarkBatch,
+} from './benchmarkHarness';

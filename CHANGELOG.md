@@ -1,5 +1,22 @@
 # Changelog
 
+## 8.6.0
+
+### Changes
+
+- Added framework-free TypeScript cores for sequential verification checks and batch benchmark scoring, with injectable execution boundaries and structured evidence conversion.
+- Added unit coverage for verification parsing, aggregation, feedback, evidence conversion, benchmark task validation, scoring, filtering, and short-circuit behavior.
+- Extended the version stamper to keep installer URLs, installer branch constants, and single-quoted Copilot CLI version payloads synchronized.
+
+### Limitations
+
+- The verification and benchmark cores are library foundations only in this release. Production edit triggers, secure command execution, agent feedback delivery, benchmark command surfaces, and harness-ledger persistence are not yet wired.
+
+### Validation
+
+- Version stamping completed across package metadata, installers, pack manifests, badges, and bundled extension metadata.
+- VS Code extension compilation, 961 tests, targeted lint, and scrub checks passed during release review.
+
 ## 8.5.1
 
 ### Changes
