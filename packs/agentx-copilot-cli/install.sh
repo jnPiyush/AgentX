@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AgentX Copilot CLI Plugin v8.6.0 - Installer (Bash)
+# AgentX Copilot CLI Plugin v8.6.1 - Installer (Bash)
 # Standalone plugin for GitHub Copilot CLI.
 # Does NOT require the AgentX VS Code extension or the core install.
 #
@@ -15,7 +15,7 @@
 #   -h, --help             Show this help
 set -euo pipefail
 
-VERSION="8.6.0"
+VERSION="8.6.1"
 TARGET="$(pwd)"
 SOURCE=""
 INCLUDE_CLI=false
@@ -439,7 +439,7 @@ echo " Files copied  : $TOTAL_COPIED"
 echo -e " Files skipped : $TOTAL_SKIPPED ${GRAY}(already exist, use -f to overwrite)${NC}"
 echo ""
 echo " Agents        : 24 (13 external + 11 internal)"
-echo " Skills        : 111 across 12 categories"
+echo " Skills        : 128 across 14 categories"
 echo " Instructions  : 7 (auto-applied by file pattern)"
 echo " Prompts       : 21 reusable templates"
 if [ "$INCLUDE_CLI" = true ]; then

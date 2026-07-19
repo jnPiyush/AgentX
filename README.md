@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.6.0"><img src="https://img.shields.io/badge/Version-8.6.0-0EA5E9?style=for-the-badge" alt="Version 8.6.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.6.1"><img src="https://img.shields.io/badge/Version-8.6.1-0EA5E9?style=for-the-badge" alt="Version 8.6.1"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -299,10 +299,10 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.6.0
+## New In 8.6.1
 
-- Added test-backed runtime foundations for sequential verification checks and batch benchmark scoring; production orchestration and evidence persistence remain follow-up work
-- Version stamping now synchronizes pinned installer URLs, installer branches, and Copilot CLI version payloads across release surfaces
+- Added an atomic target rubric library covering completeness, constraints, evidence, safety, clarity, efficiency, and conditional originality
+- Added anchored target scoring, task-profile weights, blocking floors, failure tags, and judge reliability guidance while preserving the current deterministic runner contract
 
 ## Main Repo Areas
 

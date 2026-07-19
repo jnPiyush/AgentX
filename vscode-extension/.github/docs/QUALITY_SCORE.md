@@ -17,7 +17,7 @@
 
 ---
 
-## Component Scores (v8.6.0)
+## Component Scores (v8.6.1)
 
 ### Agent Definitions (.github/agents/)
 
@@ -51,15 +51,19 @@
 | Category | Count | Grade | Notes |
 |----------|-------|-------|-------|
 | Architecture | 6 | A | Core principles, security, performance, database, API design, low-code vs pro-code |
-| Development | 22 | A | Testing, error handling, iterative loop, code review, token optimizer, verification, debugging, git worktrees, strategic compaction, finishing-a-development-branch, dispatching-parallel-agents, and related engineering workflow skills |
+| Development | 23 | A | Testing, error handling, iterative loop, code review, code optimization, token optimizer, verification, debugging, git worktrees, strategic compaction, finishing-a-development-branch, dispatching-parallel-agents, and related engineering workflow skills |
 | Languages | 10 | A | C, C++, C#, Python, Go, Rust, React, Blazor, PostgreSQL, SQL Server |
 | Operations | 5 | A | Git, GitHub Actions, YAML pipelines, release mgmt, version control |
 | Infrastructure | 4 | A | Azure, Bicep, Terraform, containerization |
 | Data | 7 | A | Data analysis, Fabric, Databricks, Power BI, and Cosmos DB |
+| Document | 3 | A | PDF, Word, and PowerPoint processing and generation |
 | AI Systems | 30 | A | Agent dev, LangGraph, Foundry SDK, GenAIOps, prompt versioning, RAG, drift, evaluation, MCP, Azure Foundry, Anthropic Claude, multi-agent orchestration, tool use, agent observability, reasoning models, AI safety, vector DBs, computer use, LLM gateway, voice agents, synthetic data, agent memory, iterative retrieval |
 | Design | 12 | A | design-system reasoning, anti-slop, brand extraction, UX/UI design, prototype craft, frontend/UI, accessibility, working prototypes, audits, heuristics, content design, and visual regression |
 | Testing | 6 | A | E2E, integration, performance, security, production readiness |
 | Domain | 7 | B | Oil & gas, financial services, audit, tax, legal, CLM, and corporate governance coverage is now present; more verticals could still be added |
+| Product | 1 | A | Production-grade PRD authoring and review |
+| Diagrams | 1 | A | Diagrams as code across Mermaid, PlantUML, Structurizr, Graphviz, and draw.io |
+| Low-Code | 13 | A | Power Platform solution, app, flow, schema, security, and Copilot Studio capabilities |
 
 ### Instructions (.github/instructions/)
 
@@ -109,7 +113,7 @@
 
 | Document | Grade | Notes |
 |----------|-------|-------|
-| AGENTS.md | A | Slim TOC/map (v8.6.0) |
+| AGENTS.md | A | Slim TOC/map (v8.6.1) |
 | WORKFLOW.md | A- | Complete workflow reference with harness-oriented policy additions; enforcement is still partial |
 | Skills.md | A | Compressed index, Quick Reference table |
 | GUIDE.md | B | Quickstart solid, troubleshooting section could expand |
@@ -167,4 +171,4 @@
 
 ---
 
-**Last updated**: v8.6.0
+**Last updated**: v8.6.1

@@ -17,7 +17,7 @@ datasets:
     path: evaluation/datasets/regression.jsonl
     purpose: benchmark
     coverageType: regression
-    rowCount: 5
+    rowCount: 15
     dataFormat: jsonl
 metrics:
   - correctness
@@ -39,6 +39,44 @@ rubrics:
     path: evaluation/rubrics/task-completion.md
     judgeType: llm-as-judge
     scoringScale: 0-1
+    calibrationRule: human-check-5
+  # Target rubric library: declared for a model-backed judge. These are not gated
+  # by the deterministic sample runner (which emits only the two metrics above).
+  # See evaluation/rubrics/README.md for weights, profiles, and floors.
+  - metric: completeness
+    path: evaluation/rubrics/completeness.md
+    judgeType: llm-as-judge
+    scoringScale: 0-4-normalized
+    calibrationRule: human-check-5
+  - metric: constraint-adherence
+    path: evaluation/rubrics/constraint-adherence.md
+    judgeType: llm-as-judge
+    scoringScale: 0-4-normalized
+    calibrationRule: human-check-5
+  - metric: evidence-verification
+    path: evaluation/rubrics/evidence-verification.md
+    judgeType: llm-as-judge
+    scoringScale: 0-4-normalized
+    calibrationRule: human-check-5
+  - metric: safety-security
+    path: evaluation/rubrics/safety-security.md
+    judgeType: llm-as-judge
+    scoringScale: 0-4-normalized
+    calibrationRule: human-check-5
+  - metric: clarity
+    path: evaluation/rubrics/clarity.md
+    judgeType: llm-as-judge
+    scoringScale: 0-4-normalized
+    calibrationRule: human-check-5
+  - metric: efficiency
+    path: evaluation/rubrics/efficiency.md
+    judgeType: llm-as-judge
+    scoringScale: 0-4-normalized
+    calibrationRule: human-check-5
+  - metric: originality
+    path: evaluation/rubrics/originality.md
+    judgeType: llm-as-judge
+    scoringScale: 0-4-normalized
     calibrationRule: human-check-5
 execution:
   command: './scripts/run-ai-eval-sample.ps1 -DatasetPath "evaluation/datasets/regression.jsonl" -PromptPath "prompts/assistant-v1.md"'

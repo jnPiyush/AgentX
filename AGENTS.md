@@ -164,13 +164,13 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | Document | Purpose |
 |----------|---------|
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | Workflow, routing, handoff, status transitions, architecture |
-| [Skills.md](Skills.md) | 111 production code skills index (load only relevant skills per task) |
+| [Skills.md](Skills.md) | 128 production code skills index (load only relevant skills per task) |
 | [docs/GUIDE.md](docs/GUIDE.md) | Quickstart, setup, troubleshooting, local mode |
 | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) | Graded quality assessment of every component |
 | [docs/GOLDEN_PRINCIPLES.md](docs/GOLDEN_PRINCIPLES.md) | Mechanical rules enforced by linters and agents |
 | [docs/tech-debt-tracker.md](docs/tech-debt-tracker.md) | Known gaps and deferred work |
 | `.github/agents/` | 21 agent definition files |
-| `.github/skills/` | 111 skill files across 12 categories |
+| `.github/skills/` | 128 skill files across 14 categories |
 | `.github/instructions/` | 7 instruction files (auto-loaded by file pattern) |
 | `.github/schemas/` | Handoff message JSON Schema + communication protocol |
 | `.github/templates/` | 15 templates (PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning) |

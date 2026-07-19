@@ -1,5 +1,28 @@
 # Changelog
 
+## 8.6.1
+
+### Changes
+
+- Added an atomic target rubric library for completeness, constraint adherence, evidence verification, safety and security, clarity, efficiency, and conditional originality.
+- Added anchored target scoring, explicit task-profile weights, blocking and advisory floors, failure tags, and judge reliability guidance.
+- Kept the executable sample contract limited to the two metrics its deterministic runner currently emits, with continuous `0-1` scoring and existing `0.8` blocking thresholds.
+
+### Fixes
+
+- Corrected evaluation dataset metadata from 5 rows to the actual 15 rows.
+- Clarified the boundary between current deterministic evaluation behavior and future model-backed rubric judging.
+
+### Limitations
+
+- The seven new atomic dimensions are target rubrics only until a model-backed runner emits them.
+- The accepted `1.0` baseline is not reproducible with the current deterministic classifier, which scores `0.47`; this known evaluator debt is not silently accepted in this release.
+
+### Validation
+
+- VS Code extension compilation and 961 tests passed after the rubric changes.
+- Rubric scrub, YAML diagnostics, and ASCII validation passed.
+
 ## 8.6.0
 
 ### Changes
