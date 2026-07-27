@@ -173,6 +173,55 @@ Assert-Equal $openAiModelCandidates[0] 'gpt-5.5' 'Get-ModelCandidateList resolve
 Assert-Equal $openAiModelCandidates[-1] 'gpt-4o' 'Get-ModelCandidateList preserves configured fallback for openai-api provider'
 $Script:ActiveProvider = $null
 
+# Opus 5 is the declared frontmatter label for 9 agents. Without an explicit alias
+# key it would fall through to the provider default, so pin the resolution per
+# provider and assert the older Opus aliases still win their own longest match.
+$opus5Capability = Get-RunnerModelCapability 'claude-opus-5'
+Assert-True ($null -ne $opus5Capability) 'Get-RunnerModelCapability exposes claude-opus-5'
+Assert-Equal $opus5Capability.reasoningMode 'claude-thinking' 'claude-opus-5 advertises Claude thinking reasoning metadata'
+
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
+Assert-Equal (Resolve-ModelId 'Claude Opus 5 (copilot)') 'claude-opus-5' 'Resolve-ModelId maps the Opus 5 frontmatter label for copilot'
+Assert-Equal (Resolve-ModelId 'Claude Opus 4.8 (copilot)') 'claude-opus-4.8' 'Opus 5 aliases do not shadow the Opus 4.8 label'
+Assert-Equal (Resolve-ModelId 'GPT-5.5 (copilot)') 'gpt-5.5' 'Opus 5 aliases do not shadow GPT labels'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'anthropic-api' }
+Assert-Equal (Resolve-ModelId 'Claude Opus 5 (copilot)') 'claude-opus-5' 'Resolve-ModelId maps the Opus 5 label for anthropic-api'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'github-models' }
+Assert-Equal (Resolve-ModelId 'Claude Opus 5 (copilot)') 'gpt-4.1' 'GitHub Models downgrades the Opus 5 label to a supported GPT model'
+$Script:ActiveProvider = $null
+
+# Sonnet 5 is the declared frontmatter label for 7 agents. Pin its provider
+# resolution and ensure the generic Sonnet alias cannot shadow it.
+$sonnet5Capability = Get-RunnerModelCapability 'claude-sonnet-5'
+Assert-True ($null -ne $sonnet5Capability) 'Get-RunnerModelCapability exposes claude-sonnet-5'
+Assert-Equal $sonnet5Capability.contextWindow 1000000 'claude-sonnet-5 advertises its 1M token context window'
+Assert-Equal $sonnet5Capability.reasoningMode 'claude-thinking' 'claude-sonnet-5 advertises Claude thinking reasoning metadata'
+
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
+Assert-Equal (Resolve-ModelId 'Claude Sonnet 5 (copilot)') 'claude-sonnet-5' 'Resolve-ModelId maps the Sonnet 5 frontmatter label for copilot'
+Assert-Equal (Resolve-ModelId 'Claude Sonnet 4.5 (copilot)') 'claude-sonnet-4.5' 'Sonnet 5 aliases do not shadow the Sonnet 4.5 label'
+$sonnet45Capability = Get-RunnerModelCapability 'claude-sonnet-4.5'
+Assert-True ($sonnet45Capability.providers -contains 'copilot') 'claude-sonnet-4.5 capability supports copilot'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'claude-code' }
+Assert-Equal (Resolve-ModelId 'Claude Sonnet 5 (copilot)') 'claude-sonnet-5' 'Resolve-ModelId maps the Sonnet 5 label for claude-code'
+Assert-Equal (Resolve-ModelId 'Claude Sonnet 4.5 (copilot)') 'claude-sonnet-4.5' 'Resolve-ModelId maps the Sonnet 4.5 label for claude-code'
+Assert-True ($sonnet45Capability.providers -contains 'claude-code') 'claude-sonnet-4.5 capability supports claude-code'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'anthropic-api' }
+Assert-Equal (Resolve-ModelId 'Claude Sonnet 5 (copilot)') 'claude-sonnet-5' 'Resolve-ModelId maps the Sonnet 5 label for anthropic-api'
+Assert-Equal (Resolve-ModelId 'Claude Sonnet 4.5 (copilot)') 'claude-sonnet-4.5' 'Resolve-ModelId maps the Sonnet 4.5 label for anthropic-api'
+Assert-True ($sonnet45Capability.providers -contains 'anthropic-api') 'claude-sonnet-4.5 capability supports anthropic-api'
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'github-models' }
+Assert-Equal (Resolve-ModelId 'Claude Sonnet 5 (copilot)') 'gpt-4.1' 'GitHub Models downgrades the Sonnet 5 label to a supported GPT model'
+$Script:ActiveProvider = $null
+
+$pickerPath = Join-Path $repoRoot 'vscode-extension\src\commands\addAgentInternals.ts'
+$pickerContent = Get-Content $pickerPath -Raw
+Assert-True ($pickerContent -match 'Claude Sonnet 5 \(copilot\)') 'custom-agent model picker exposes Claude Sonnet 5'
+
+$freshUtcDate = [datetime]::SpecifyKind([datetime]'2026-06-11T12:34:56', [System.DateTimeKind]::Utc)
+$parsedUtcDate = Get-LoopStateLastTouchedUtc ([PSCustomObject]@{ lastIterationAt = $freshUtcDate })
+Assert-Equal $parsedUtcDate.UtcDateTime $freshUtcDate 'runner loop-state parser preserves the UTC instant of materialized JSON timestamps'
+
 $anthropicResponse = ConvertFrom-AnthropicResponse ([PSCustomObject]@{
     stop_reason = 'tool_use'
     content = @(

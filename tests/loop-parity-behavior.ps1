@@ -272,6 +272,16 @@ try {
     $statusResult = Invoke-IsolatedAgentx -WorkspaceRoot $healthWorkspace -Arguments @('loop', 'status')
     Assert-Match $statusResult.Output 'Staleness:|Health: STUCK' 'loop status reports stale or stuck health fixture'
 
+    $freshUtc = [datetime]::UtcNow.ToString('o', [cultureinfo]::InvariantCulture)
+    $freshState = $oldState.PSObject.Copy()
+    $freshState.startedAt = $freshUtc
+    $freshState.lastIterationAt = $freshUtc
+    $freshState | ConvertTo-Json -Depth 10 | Set-Content -Path $statePath -Encoding utf8
+    $freshStatusResult = Invoke-IsolatedAgentx -WorkspaceRoot $healthWorkspace -Arguments @('loop', 'status')
+    Assert-True ($freshStatusResult.Output -notmatch 'Staleness: loop last updated') 'fresh UTC timestamp is not reinterpreted as stale local time'
+
+    $oldState | ConvertTo-Json -Depth 10 | Set-Content -Path $statePath -Encoding utf8
+
     $startResult = Invoke-IsolatedAgentx -WorkspaceRoot $healthWorkspace -Arguments @(
         'loop', 'start', '-p', 'Implementing parity fresh start', '-i', '999', '-r', 'engineer'
     )

@@ -2,8 +2,8 @@
 name: AgentX RAG Specialist
 description: 'Design, build, optimize, and troubleshoot RAG pipelines including chunking, embedding, retrieval, reranking, and hybrid search. Invisible sub-agent spawned by Data Scientist and Engineer.'
 visibility: internal
-user-invocable: false
 model: GPT-5.5 (copilot)
+user-invocable: false
 disable-model-invocation: true
 reasoning:
   level: high

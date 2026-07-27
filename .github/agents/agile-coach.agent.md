@@ -1,7 +1,7 @@
 ---
 name: AgentX Agile Coach
 description: 'Conversational story creation and refinement coach. Guides users through writing well-structured user stories with quality acceptance criteria.'
-model: Claude Opus 4.8 (copilot)
+model: Claude Opus 5 (copilot)
 user-invocable: true
 reasoning:
   mode: adaptive

@@ -1,9 +1,10 @@
 ---
 name: AgentX Architect
 description: 'AI-first system architecture -- evaluate GenAI/Agentic AI solutions as the default lens, create ADRs with 3+ evaluated options, and technical specifications with diagrams -- NO CODE EXAMPLES.'
-model: Claude Opus 4.8 (copilot)
+model: Claude Opus 5 (copilot)
 user-invocable: true
 reasoning:
+  mode: adaptive
   level: high
 constraints:
   - "MUST follow pipeline phases in prescribed sequence: Research (6 phases) -> ADR (3+ options) -> Model Council Deliberation -> Tech Spec -> PM Fit Validation -> GenAI Assessment -> Self-Review; MUST NOT write the ADR before completing all research phases; MUST NOT write the Tech Spec before the Model Council deliberation has settled the chosen ADR option"
@@ -161,7 +162,7 @@ After drafting the ADR Options and Evaluation sections but BEFORE locking the De
 | Role | Model | Lens |
 |------|-------|------|
 | Analyst | `openai/gpt-5.5` | Enumerate the genuinely DIFFERENT solution approaches (distinct approaches, not variants) and score each against differentiating criteria -- cost, delivery time, operational burden, scalability, reversibility / cost-of-change, vendor lock-in, team fit, security blast radius; demand benchmark/version evidence |
-| Strategist | `anthropic/claude-opus-4.8` | Recommend the architecture approach: which distinct approach fits the long-term direction and cost-of-change profile, why each REJECTED approach was rejected, the trade-off knowingly accepted, and the conditions that would flip it |
+| Strategist | `anthropic/claude-opus-5` | Recommend the architecture approach: which distinct approach fits the long-term direction and cost-of-change profile, why each REJECTED approach was rejected, the trade-off knowingly accepted, and the conditions that would flip it |
 | Skeptic | `google/gemini-3.1-pro` | Argue for the dismissed approach and against the front-runner; surface the 18-month failure mode, scaling cliff, and vendor / lock-in / migration risk; challenge whether a simpler or radically different architecture was unfairly excluded |
 
 **How to convene**:

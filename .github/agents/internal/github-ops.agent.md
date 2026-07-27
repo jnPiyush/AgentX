@@ -2,10 +2,11 @@
 name: AgentX GitHub Ops
 description: 'Orchestrate GitHub Issues and Pull Requests. Triage, discover, plan sprints, execute work items, and manage backlog operations.'
 visibility: internal
-user-invocable: false
 model: Claude Sonnet 5 (copilot)
+user-invocable: false
 disable-model-invocation: true
 reasoning:
+  mode: adaptive
   level: low
 constraints:
   - "MUST classify user intent before dispatching any workflow"

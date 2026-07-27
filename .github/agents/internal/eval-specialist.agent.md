@@ -2,8 +2,8 @@
 name: AgentX Eval Specialist
 description: 'Design and execute AI evaluation pipelines including LLM-as-judge, benchmarks, quality gates, and model comparison. Invisible sub-agent spawned by Data Scientist and Reviewer.'
 visibility: internal
-user-invocable: false
 model: GPT-5.6 Sol (copilot)
+user-invocable: false
 disable-model-invocation: true
 reasoning:
   level: high

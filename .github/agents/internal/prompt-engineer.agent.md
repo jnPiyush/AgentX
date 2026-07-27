@@ -2,8 +2,8 @@
 name: AgentX Prompt Engineer
 description: 'Design, evaluate, test, and iterate prompts across the full prompt lifecycle. Invisible sub-agent spawned by Data Scientist and Engineer.'
 visibility: internal
-user-invocable: false
 model: GPT-5.5 (copilot)
+user-invocable: false
 disable-model-invocation: true
 reasoning:
   level: high
@@ -100,7 +100,7 @@ Evaluation uses a DIFFERENT model than the one being tested (avoid self-evaluati
 Every prompt MUST be tested against at least 2 models:
 
 ```
-Primary Model (e.g., Claude Opus 4.8) -> Evaluate all dimensions
+Primary Model (e.g., Claude Opus 5) -> Evaluate all dimensions
 Fallback Model (e.g., GPT-4.1)        -> Evaluate all dimensions
                                         -> Compare scores
                                         -> Flag regressions

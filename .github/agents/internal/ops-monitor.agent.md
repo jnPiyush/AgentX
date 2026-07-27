@@ -2,10 +2,11 @@
 name: AgentX Ops Monitor
 description: 'Monitor AgentOps tracing, detect model/data drift, track cost/latency, and manage alerting for production AI systems. Invisible sub-agent spawned by Data Scientist and DevOps.'
 visibility: internal
-user-invocable: false
 model: Claude Sonnet 5 (copilot)
+user-invocable: false
 disable-model-invocation: true
 reasoning:
+  mode: adaptive
   level: low
 constraints:
   - "MUST establish baselines before configuring drift alerts"

@@ -4,6 +4,7 @@ description: 'Implement features, fix bugs, and write tests through Compound Eng
 model: Claude Sonnet 5 (copilot)
 user-invocable: true
 reasoning:
+  mode: adaptive
   level: medium
 constraints:
   - "MUST follow Compound Engineering: complete each phase gate before advancing to the next phase"

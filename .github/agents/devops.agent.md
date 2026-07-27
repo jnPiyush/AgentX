@@ -4,6 +4,7 @@ description: 'Create and manage CI/CD pipelines, GitHub Actions workflows, deplo
 model: Claude Sonnet 5 (copilot)
 user-invocable: true
 reasoning:
+  mode: adaptive
   level: medium
 constraints:
   - "MUST follow pipeline phases in prescribed sequence: Read Context -> Design Pipeline -> Implement Workflows -> Validate -> Self-Review; MUST NOT implement pipelines before the design phase is complete; MUST NOT handoff before all pipeline runs pass validation"

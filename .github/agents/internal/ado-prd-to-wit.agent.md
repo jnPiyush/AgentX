@@ -2,10 +2,11 @@
 name: AgentX ADO PRD to Work Items
 description: 'PRD to Work Item Planner -- analyzes Product Requirements Documents and plans Azure DevOps work item hierarchies. Output feeds the ADO Backlog Manager execution workflow.'
 visibility: internal
-user-invocable: false
 model: Claude Sonnet 5 (copilot)
+user-invocable: false
 disable-model-invocation: true
 reasoning:
+  mode: adaptive
   level: low
 constraints:
   - "MUST analyze PRD artifacts before planning work items"

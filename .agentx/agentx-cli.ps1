@@ -4018,7 +4018,23 @@ function Get-LoopStateLastTouchedUtc {
         if (-not $rawValue) { continue }
 
         try {
-            return ([datetimeoffset]::Parse([string]$rawValue)).ToUniversalTime()
+            # ConvertFrom-Json materializes ISO-8601 'Z' timestamps as [datetime] with
+            # Kind=Utc. Casting those back to [string] drops the UTC designator, and
+            # re-parsing an offset-less string reinterprets it as local time -- which
+            # inflates the computed age by the local UTC offset and permanently trips
+            # the stuck threshold east of UTC+1:30.
+            if ($rawValue -is [datetime]) {
+                $parsedDate = [datetime]$rawValue
+                if ($parsedDate.Kind -eq [System.DateTimeKind]::Unspecified) {
+                    $parsedDate = [datetime]::SpecifyKind($parsedDate, [System.DateTimeKind]::Utc)
+                }
+                return ([datetimeoffset]$parsedDate).ToUniversalTime()
+            }
+
+            return ([datetimeoffset]::Parse(
+                [string]$rawValue,
+                [cultureinfo]::InvariantCulture,
+                [System.Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime()
         } catch {
             continue
         }

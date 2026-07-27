@@ -1,9 +1,10 @@
 ---
 name: AgentX Product Manager
 description: 'Define product vision, create PRD, break Epics into Features and Stories with acceptance criteria.'
-model: Claude Opus 4.8 (copilot)
+model: Claude Opus 5 (copilot)
 user-invocable: true
 reasoning:
+  mode: adaptive
   level: high
 constraints:
   - "MUST follow pipeline phases in prescribed sequence: Research (5 phases) -> Classify Intent -> Model Council Deliberation -> PRD -> Backlog (Epic, Feature, User Stories) -> Self-Review; MUST NOT write the PRD before completing all research phases and the Model Council deliberation; MUST NOT create Backlog items before the PRD is complete"
@@ -142,7 +143,7 @@ Before drafting the PRD, convene a Model Council to stress-test scope, priority,
 | Role | Model | Lens |
 |------|-------|------|
 | Analyst | `openai/gpt-5.5` | Grill the PRD contents: state exactly what MUST appear -- in-scope requirement list, explicit non-goals, smallest MVP slice vs. defer, single measurable success metric (target + how instrumented), edge/data states for acceptance criteria; reject vague, unmeasurable, or scope-creeping claims and name what to cut |
-| Strategist | `anthropic/claude-opus-4.8` | Frame the build approach and sequencing: the real user job-to-be-done, the recommended build approach, release sequencing (now / fast-follow / deferred), dependency ordering, and why each item is included now vs. later |
+| Strategist | `anthropic/claude-opus-5` | Frame the build approach and sequencing: the real user job-to-be-done, the recommended build approach, release sequencing (now / fast-follow / deferred), dependency ordering, and why each item is included now vs. later |
 | Skeptic | `google/gemini-3.1-pro` | Argue against shipping as framed: attack the riskiest assumption and any gameable or vanity metric; surface adoption, support, privacy, security, and compliance blockers; name the single change that most de-risks the PRD |
 
 **How to convene**:

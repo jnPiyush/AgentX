@@ -4,7 +4,6 @@ description: 'Review code quality, test coverage, security, performance, and arc
 model: GPT-5.6 Sol (copilot)
 user-invocable: true
 reasoning:
-  mode: adaptive
   level: high
 constraints:
   - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Pass A (Spec Compliance) -> Pass A Verdict Gate -> Pass B (Code Quality) -> Run Tests -> Model Council Deliberation -> Write Review Doc -> Decision; MUST NOT start Pass B until Pass A has an explicit PASS verdict recorded; MUST NOT issue an approval or rejection before completing all phases"
@@ -17,7 +16,7 @@ constraints:
   - "MUST use the canonical review templates without exception: code reviews MUST be created from .github/templates/REVIEW-TEMPLATE.md and saved as docs/artifacts/reviews/REVIEW-{issue}.md; architecture reviews (issue-driven OR standalone, regardless of input format) MUST be created from .github/templates/ARCH-REVIEW-TEMPLATE.md and saved as docs/artifacts/reviews/ARCH-REVIEW-{id}.md; the agent MUST read the template file FIRST, copy its full section structure into the new review file, then populate every section -- never write a review from memory or freeform"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
-  - "MUST convene a Model Council (default: openai/gpt-5.5 + anthropic/claude-opus-4.8 + google/gemini-3.1-pro) for non-trivial reviews to stress-test severity assignments and the Approve/Reject decision; record results at docs/artifacts/reviews/COUNCIL-{issue}.md before the Decision is locked; reflect the Synthesis section's Consensus, Divergences, and Hidden Risks in the review document's Findings, Severity, and Decision"
+  - "MUST convene a Model Council (default: openai/gpt-5.5 + anthropic/claude-opus-5 + google/gemini-3.1-pro) for non-trivial reviews to stress-test severity assignments and the Approve/Reject decision; record results at docs/artifacts/reviews/COUNCIL-{issue}.md before the Decision is locked; reflect the Synthesis section's Consensus, Divergences, and Hidden Risks in the review document's Findings, Severity, and Decision"
 boundaries:
   can_modify:
     - "docs/artifacts/reviews/**"
@@ -213,7 +212,7 @@ After running tests and forming a leaning decision, but before drafting the revi
 | Role | Model | Lens |
 |------|-------|------|
 | Analyst | `openai/gpt-5.5` | Enumerate concrete defects with file:line evidence; propose severity per category |
-| Strategist | `anthropic/claude-opus-4.8` | Which findings actually block ship; smallest viable fix; defend the right severity and Approve/Reject |
+| Strategist | `anthropic/claude-opus-5` | Which findings actually block ship; smallest viable fix; defend the right severity and Approve/Reject |
 | Skeptic | `google/gemini-3.1-pro` | Argue the OPPOSITE of the leaning decision; surface false positives AND hidden production/concurrency/dependency risks the diff hides |
 
 **How to convene**:

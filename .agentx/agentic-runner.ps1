@@ -69,7 +69,10 @@ function Write-RunnerConsole([string]$Message) {
 }
 
 $Script:MODEL_CAPABILITIES = @{
+    'claude-opus-5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
+    'claude-sonnet-5' = @{ contextWindow = 1000000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-opus-4.8' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
+    'claude-sonnet-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-haiku-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
     'gpt-5.5' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
     'gpt-5.2-codex' = @{ contextWindow = 272000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
@@ -848,7 +851,18 @@ function Get-LoopStateLastTouchedUtc {
         if (-not $rawValue) { continue }
 
         try {
-            return ([datetimeoffset]::Parse([string]$rawValue)).ToUniversalTime()
+            if ($rawValue -is [datetime]) {
+                $parsedDate = [datetime]$rawValue
+                if ($parsedDate.Kind -eq [System.DateTimeKind]::Unspecified) {
+                    $parsedDate = [datetime]::SpecifyKind($parsedDate, [System.DateTimeKind]::Utc)
+                }
+                return ([datetimeoffset]$parsedDate).ToUniversalTime()
+            }
+
+            return ([datetimeoffset]::Parse(
+                [string]$rawValue,
+                [cultureinfo]::InvariantCulture,
+                [System.Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime()
         } catch {
             continue
         }
@@ -1091,6 +1105,12 @@ function Test-ResearchFirstToolUse {
 # All models mapped: agent frontmatter name -> Copilot API model ID
 # Copilot API has the full catalog; GitHub Models has limited GPT-only.
 $Script:MODEL_MAP_COPILOT = @{
+    'claude opus 5'     = 'claude-opus-5'
+    'opus 5'            = 'claude-opus-5'
+    'claude sonnet 5'   = 'claude-sonnet-5'
+    'sonnet 5'          = 'claude-sonnet-5'
+    'claude sonnet 4.5' = 'claude-sonnet-4.5'
+    'sonnet 4.5'        = 'claude-sonnet-4.5'
     'opus 4.8'          = 'claude-opus-4.8'
     'opus 4'            = 'claude-opus-4.8'
     'claude opus 4.8'   = 'claude-opus-4.8'
@@ -1114,6 +1134,12 @@ $Script:MODEL_MAP_COPILOT = @{
 }
 
 $Script:MODEL_MAP_GHMODELS = @{
+    'claude opus 5'     = 'gpt-4.1'
+    'opus 5'            = 'gpt-4.1'
+    'claude sonnet 5'   = 'gpt-4.1'
+    'sonnet 5'          = 'gpt-4.1'
+    'claude sonnet 4.5' = 'gpt-4.1'
+    'sonnet 4.5'        = 'gpt-4.1'
     'opus 4.8'          = 'gpt-4.1'
     'opus 4'            = 'gpt-4.1'
     'claude opus 4'     = 'gpt-4.1'
@@ -1136,6 +1162,12 @@ $Script:MODEL_MAP_GHMODELS = @{
 }
 
 $Script:MODEL_MAP_CLAUDE_CODE = @{
+    'claude opus 5'     = 'claude-opus-5'
+    'opus 5'            = 'claude-opus-5'
+    'claude sonnet 5'   = 'claude-sonnet-5'
+    'sonnet 5'          = 'claude-sonnet-5'
+    'claude sonnet 4.5' = 'claude-sonnet-4.5'
+    'sonnet 4.5'        = 'claude-sonnet-4.5'
     'opus 4.8'          = 'claude-opus-4.8'
     'opus 4'            = 'claude-opus-4.8'
     'claude opus 4.8'   = 'claude-opus-4.8'
@@ -1146,6 +1178,12 @@ $Script:MODEL_MAP_CLAUDE_CODE = @{
 }
 
 $Script:MODEL_MAP_ANTHROPIC_API = @{
+    'claude opus 5'     = 'claude-opus-5'
+    'opus 5'            = 'claude-opus-5'
+    'claude sonnet 5'   = 'claude-sonnet-5'
+    'sonnet 5'          = 'claude-sonnet-5'
+    'claude sonnet 4.5' = 'claude-sonnet-4.5'
+    'sonnet 4.5'        = 'claude-sonnet-4.5'
     'opus 4.8'          = 'claude-opus-4.8'
     'opus 4'            = 'claude-opus-4.8'
     'claude opus 4.8'   = 'claude-opus-4.8'
@@ -4025,7 +4063,6 @@ function Invoke-AgenticLoop {
     # Parse can_clarify targets from frontmatter collaborators first, then fall back to body hints.
     $canClarify = @(Resolve-ClarificationTargetList -agentDef $agentDef)
 
-    # Initialize session
     $sessionId = if ($isResume) { $ResumeSessionId } else { "$Agent-$(Get-Date -Format 'yyyyMMddHHmmss')-$([System.IO.Path]::GetRandomFileName().Substring(0,4))" }
     $tools = Get-ToolSchemaList
     $loopDetector = Get-LoopDetector

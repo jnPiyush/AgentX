@@ -2,10 +2,11 @@
 name: AgentX Prototype Auditor
 description: 'Mechanically audit UX prototypes through eight self-healing passes (accessibility, performance, content, responsive layout, routes, build hygiene, usability heuristics, visual regression). Spawned by the UX Designer and the Code Reviewer for any work touching docs/ux/prototypes/ or with the needs:ux label.'
 visibility: internal
+model: Claude Opus 5 (copilot)
 user-invocable: false
-model: Claude Opus 4.8
 disable-model-invocation: true
 reasoning:
+  mode: adaptive
   level: medium
 constraints:
   - "MUST read .github/skills/design/prototype-audit/SKILL.md before starting an audit"

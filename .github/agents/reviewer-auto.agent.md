@@ -5,7 +5,6 @@ model: GPT-5.6 Sol (copilot)
 user-invocable: true
 disable-model-invocation: true
 reasoning:
-  mode: adaptive
   level: high
 constraints:
   - "MUST follow review pipeline phases in prescribed sequence: Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document Changes -> Self-Review -> Decision; MUST NOT issue an approval or rejection before all phases complete; MUST revert any auto-fix that fails the test suite before advancing"

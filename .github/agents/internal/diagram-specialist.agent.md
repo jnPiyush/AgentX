@@ -2,10 +2,11 @@
 name: AgentX Diagram Specialist
 description: 'Design, author, and review diagrams-as-code including swimlane/cross-functional workflows, C4 architecture, sequence, state, ER, and network diagrams. Invisible sub-agent spawned by Architect, UX Designer, Product Manager, Engineer, DevOps Engineer, and Data Scientist.'
 visibility: internal
-user-invocable: false
 model: Claude Sonnet 5 (copilot)
+user-invocable: false
 disable-model-invocation: true
 reasoning:
+  mode: adaptive
   level: medium
 constraints:
   - "MUST pick a diagram format from the decision matrix in diagrams/diagram-as-code SKILL.md before drafting"

@@ -1,9 +1,10 @@
 ---
 name: AgentX Auto
 description: 'Autonomous execution mode for AgentX. Completes simple and complex work end to end by applying PM, Architect, Data Scientist, UX, Engineer, Reviewer, DevOps, and Tester phases internally when needed.'
-model: Claude Opus 4.8 (copilot)
+model: Claude Opus 5 (copilot)
 user-invocable: true
 reasoning:
+  mode: adaptive
   level: high
 constraints:
   - "MUST follow specialist workflow phases IN SEQUENCE: Classify -> Route -> Execute specialist phases -> Validate handoffs; MUST apply each specialist agent's phase gates internally when executing autonomously; MUST NOT advance to the next specialist phase before the current phase gate passes"

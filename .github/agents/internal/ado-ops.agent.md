@@ -2,11 +2,12 @@
 name: AgentX ADO Ops
 description: 'ADO Backlog Manager -- orchestrates Azure DevOps backlog management workflows including triage, discovery, sprint planning, execution, PRD planning, and pull requests.'
 visibility: internal
-user-invocable: false
 model: Claude Sonnet 5 (copilot)
-reasoning:
-  level: low
+user-invocable: false
 disable-model-invocation: true
+reasoning:
+  mode: adaptive
+  level: low
 constraints:
   - "MUST classify user intent before dispatching any workflow"
   - "MUST persist workflow state to .copilot-tracking/workitems/ for resumability"

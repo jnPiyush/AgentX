@@ -2,8 +2,8 @@
 name: AgentX Architecture Reviewer
 description: 'Deep architecture review of ADRs and Tech Specs across 12 dimensions: business fit, scalability, reliability, security, data, integration, observability, deployment, cost, maintainability, compliance, and risks. Aligned with Azure/AWS Well-Architected frameworks, ATAM, STRIDE, and ISO/IEC 25010.'
 visibility: internal
-user-invocable: false
 model: GPT-5.6 Sol (copilot)
+user-invocable: false
 disable-model-invocation: true
 reasoning:
   level: high
