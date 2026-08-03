@@ -36,12 +36,6 @@ export type {
 export { BLOCKED_PATTERNS, DEFAULT_ALLOWLIST } from './commandValidatorPolicy';
 export { classifyReversibility, splitCompoundCommand } from './commandValidatorHelpers';
 
-function programName(command: string): string {
-  const first = normaliseCommand(command).split(' ')[0] ?? '';
-  // Strip path prefixes like ./node or /usr/bin/python3
-  return first.replace(/^.*[/\\]/, '');
-}
-
 /**
  * Validate a single (non-compound) command string.
  * @internal Use validateCommand() for the public API.
@@ -51,7 +45,6 @@ function validateSingle(
   effectiveAllowlist: readonly string[],
 ): CommandValidationResult {
   const norm = normaliseCommand(command);
-  const prog = programName(command);
 
   // Layer 1: hard-block dangerous patterns
   for (const pattern of BLOCKED_PATTERNS) {

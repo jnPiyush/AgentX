@@ -15,8 +15,15 @@
     "@modelcontextprotocol/sdk": "^1.0.4"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node smoke-test.js",
+    "audit:runtime": "npm audit --omit=dev --audit-level=high"
   },
-  "keywords": ["mcp", "agentx", "copilot-cli", "quality-gate"],
+  "keywords": [
+    "mcp",
+    "agentx",
+    "copilot-cli",
+    "quality-gate"
+  ],
   "license": "MIT"
 }

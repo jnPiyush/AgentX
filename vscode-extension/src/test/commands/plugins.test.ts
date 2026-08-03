@@ -11,6 +11,7 @@ import {
   getLocalPluginPicks,
   getRegistryPluginPicks,
   resolvePluginDirectoryFromArtifact,
+  resolvePluginTarget,
   runAddPluginCommand,
   selectCatalogPicks,
 } from '../../commands/pluginsCommandInternals';
@@ -53,6 +54,37 @@ describe('registerAddPluginCommand', () => {
     assert.ok(
       (vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.addPlugin'),
     );
+  });
+});
+
+describe('resolvePluginTarget', () => {
+  const root = path.resolve(os.tmpdir(), 'agentx-plugin-target-root');
+
+  it('resolves a normal plugin id inside .agentx/plugins', () => {
+    const result = resolvePluginTarget(root, 'review-tools');
+    assert.equal(result, path.join(root, '.agentx', 'plugins', 'review-tools'));
+  });
+
+  for (const pluginId of ['../escape', '..\\escape', 'nested/plugin', 'nested\\plugin', '.env', 'my-secret']) {
+    it(`rejects unsafe target id: ${pluginId}`, () => {
+      assert.throws(() => resolvePluginTarget(root, pluginId), /plugin target|blocked|unsafe/i);
+    });
+  }
+
+  it('rejects a plugin root junction or symlink that resolves outside the workspace', () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-plugin-link-root-'));
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-plugin-link-outside-'));
+    const agentxDir = path.join(workspace, '.agentx');
+    const pluginsDir = path.join(agentxDir, 'plugins');
+    fs.mkdirSync(agentxDir, { recursive: true });
+
+    try {
+      fs.symlinkSync(outside, pluginsDir, process.platform === 'win32' ? 'junction' : 'dir');
+      assert.throws(() => resolvePluginTarget(workspace, 'review-tools'), /linked|outside/i);
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
   });
 });
 

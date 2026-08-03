@@ -124,7 +124,7 @@ describe('dependencyChecker', () => {
     let report: EnvironmentReport;
 
     before(async function () {
-      this.timeout(30_000); // exec calls may be slow
+      this.timeout(90_000); // spawns five real subprocesses; missing tools cost a full exec timeout
       report = await checkAllDependencies();
     });
 
@@ -150,8 +150,12 @@ describe('dependencyChecker', () => {
     });
 
     it('should adjust GitHub CLI severity based on integrations', async function () {
-      this.timeout(30_000);
-      const localReport = await checkAllDependencies();
+      // Each checkAllDependencies() spawns five real subprocesses, and a missing
+      // tool costs the full tryExec timeout. On a slow host one call can take
+      // ~20s, so reuse the no-integration report the before hook already built
+      // and leave headroom for the two calls that genuinely need new options.
+      this.timeout(90_000);
+      const localReport = report;
       const ghLocal = localReport.results.find((r) => r.name === 'GitHub CLI (gh)');
       assert.ok(ghLocal, 'GitHub CLI entry should exist');
       assert.strictEqual(ghLocal.severity, 'optional', 'gh should be optional with no integrations');

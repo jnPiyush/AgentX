@@ -2,8 +2,8 @@
 # Publish to VS Code Marketplace (Manual)
 # ------------------------------------------------------------------
 # Triggered manually from GitHub Actions UI.
-# Checks out the selected release tag, rebuilds the VSIX through the
-# canonical version stamper, and publishes it to the VS Code Marketplace.
+# Downloads the selected release's attested VSIX, verifies its provenance,
+# and publishes those exact bytes to the VS Code Marketplace.
 #
 # Required secret: VSCE_PAT (Azure DevOps PAT with Marketplace > Manage scope)
 #
@@ -23,6 +23,7 @@ on:
         type: string
 
 permissions:
+  attestations: read
   contents: read
 
 jobs:
@@ -36,7 +37,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         working-directory: vscode-extension
@@ -46,10 +47,18 @@ jobs:
         working-directory: vscode-extension
         run: |
           npm run test:coverage
-          npm audit --audit-level=high
+          npm audit --omit=dev --audit-level=high
 
-      - name: Package VSIX via release stamper
-        run: node scripts/stamp-version.js --package-vsix
+      - name: Download attested release VSIX
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.inputs.tag }}
+        working-directory: vscode-extension
+        run: gh release download "$RELEASE_TAG" --pattern 'agentx-*.vsix'
+
+      - name: Verify release provenance
+        working-directory: vscode-extension
+        run: gh attestation verify agentx-*.vsix --repo "$GITHUB_REPOSITORY"
 
       - name: Publish to VS Code Marketplace
         working-directory: vscode-extension

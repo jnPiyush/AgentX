@@ -145,59 +145,16 @@ Read the SKILL.md file before starting the specialized task. Apply the skill's p
 
 ### 1.6 Model Council Deliberation (MANDATORY for non-trivial AI/ML work)
 
-After completing the research phases and before locking model selection or pipeline shape, convene a Model Council to stress-test the candidate model, evaluation strategy, and risk surface. Single-model AI/ML recommendations carry the recommending model's prior; the council exposes that prior and surfaces drift, safety, hallucination, and cost risks the SOTA survey can miss.
+Follow [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) before locking a model or
+pipeline. Use `-Purpose ai-design` for new pipelines, model/fine-tune/prompt-strategy
+changes, evaluation thresholds, RAG decisions, and `[Council]` work. Unchanged
+baseline runs and config-only tuning may skip with a Model Card rationale.
 
-**When to convene (mandatory)**:
-- any new GenAI or ML pipeline
-- any model swap, fine-tune decision, or major prompt-strategy change
-- any new evaluation rubric or quality-gate threshold
-- any RAG architecture decision (chunking strategy, embedding model, retrieval mode)
-- any decision explicitly tagged `[Council]`
-
-**When to skip (allowed)**:
-- routine evaluation runs against an unchanged baseline
-- a config-only change (e.g., temperature, top_p) where the model and pipeline shape are unchanged
-- in either case, record a one-line skip rationale in the Model Card and proceed
-
-**Default council composition** (mix of vendors and reasoning styles):
-
-| Role | Model | Lens |
-|------|-------|------|
-| Analyst | `openai/gpt-5.5` | Compare candidate models on benchmark, cost, latency, structured-output reliability with sources |
-| Strategist | `anthropic/claude-opus-5` | Recommend the end-to-end design (model + prompt + retrieval + eval + guardrails + fallback) |
-| Skeptic | `google/gemini-3.1-pro` | Argue for a different model, smaller cheaper baseline, or non-LLM approach; surface drift, safety, vendor-lock risks |
-
-**How to convene**:
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-    -Topic "ai-{issue}-{short-slug}" `
-    -Question "Given the SOTA survey and the task requirements, which model + pipeline + eval strategy minimizes risk while meeting cost and quality targets, and what is the strongest case AGAINST the recommended approach?" `
-    -Context "<paste candidate models with benchmark data, cost/latency targets, key failure modes from research>" `
-    -OutputDir "docs/data-science" `
-    -Purpose ai-design
-```
-
-A council is **not limited to one topic** -- put several decisions to it in one run with `-Questions`:
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-    -Topic "ai-{issue}-{short-slug}" `
-    -Questions "Which model best meets the cost/quality/latency targets?","What evaluation rubric and drift thresholds should gate it?","Is a smaller or non-LLM baseline the safer choice?" `
-    -Context "<paste candidate models with benchmark data, cost/latency targets, key failure modes from research>" `
-    -OutputDir "docs/data-science" `
-    -Purpose ai-design
-```
-
-**This is an internal agent mechanism. After running the script, YOU (the Data Scientist agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final Model Card + Eval Plan, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
-
-**Synthesis (MUST complete before Pipeline Design)**:
-- **Consensus on Model Selection and Pipeline Shape** -- choices at least two members agree on; treat as higher-confidence inputs to the Model Card and pipeline design
-- **Divergences on Model, Eval Strategy, or Guardrails** -- material disagreements; record as Model Card limitations or open evaluation questions
-- **Drift, Safety, and Cost Risks Surfaced** -- Skeptic-raised risks the SOTA survey missed; promote into the Drift Monitoring Plan and Model Card limitations
-- **Net Adjustment to Pipeline and Eval Plan** -- explicit list of changes to model choice, eval rubric, drift thresholds, or fallback strategy; if no change, state why
-
-The Model Card MUST cite the council file path. The Drift Monitoring Plan MUST inherit the Skeptic-raised drift/safety/cost risks.
+Ask the council to compare quality, cost, latency, structured output, retrieval,
+evaluation, guardrails, fallback, drift, safety, and a smaller or non-LLM baseline.
+Complete all perspectives and synthesis without user work. Cite the council from the
+Model Card; record divergences as limitations/open eval questions, and carry surfaced
+drift, safety, and cost risks into monitoring and fallback plans.
 
 ### 2. Design GenAI Pipeline
 

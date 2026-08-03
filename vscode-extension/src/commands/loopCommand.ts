@@ -46,9 +46,9 @@ export function registerLoopCommand(
 
  const loopStatusCmd = vscode.commands.registerCommand('agentx.loopStatus', async () => {
   if (!await ensureInitialized()) {
-   return;
+  return false;
   }
-  await loopStatus(agentx);
+  return loopStatus(agentx);
  });
 
  const loopIterateCmd = vscode.commands.registerCommand('agentx.loopIterate', async () => {

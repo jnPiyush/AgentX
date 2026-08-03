@@ -1,77 +1,66 @@
 param(
     [string]$DatasetPath = "evaluation/datasets/regression.jsonl",
-    [string]$PromptPath = "prompts/assistant-v1.md"
+    [string]$ClassifierPath = "scripts/classify-issue.js",
+    [string]$ManifestPath = "evaluation/agentx.eval.yaml"
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-function Test-RequiredPromptText {
+function Get-IssueTypePrediction {
     param(
-        [AllowNull()]
-        [string]$Text
+        [Parameter(Mandatory)][string]$Text,
+        [Parameter(Mandatory)][string]$Path
     )
 
-    if ([string]::IsNullOrWhiteSpace($Text)) {
-        return $false
+    $raw = & node $Path --title $Text 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Issue classifier failed with exit code $LASTEXITCODE`: $($raw -join ' ')"
+    }
+    $result = ($raw -join "`n") | ConvertFrom-Json
+    if (-not $result.type) {
+        throw "Issue classifier returned no type for input: $Text"
+    }
+    return [string]$result.type
+}
+
+function Get-BlockingThresholds {
+    param([Parameter(Mandatory)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "Evaluation manifest not found: $Path"
     }
 
-    $requiredPhrases = @(
-        'type:bug',
-        'type:docs',
-        'type:story',
-        'type:spike',
-        'type:devops',
-        'Return only the matching label'
-    )
-
-    foreach ($phrase in $requiredPhrases) {
-        if ($Text -notmatch [regex]::Escape($phrase)) {
-            return $false
+    $thresholds = @{}
+    $currentMetric = $null
+    foreach ($line in Get-Content -LiteralPath $Path) {
+        if ($line -match '^\s*-\s+metric:\s*([^\s#]+)') {
+            $currentMetric = $Matches[1]
+            continue
+        }
+        if ($currentMetric -and $line -match '^\s+blocking:\s*([0-9]+(?:\.[0-9]+)?)') {
+            $thresholds[$currentMetric] = [double]::Parse(
+                $Matches[1],
+                [cultureinfo]::InvariantCulture)
+            $currentMetric = $null
         }
     }
 
-    return $true
-}
-
-function Get-IssueTypePrediction {
-    param(
-        [AllowNull()]
-        [string]$Text
-    )
-
-    if ([string]::IsNullOrWhiteSpace($Text)) {
-        return 'type:story'
+    if ($thresholds.Count -eq 0) {
+        throw "Evaluation manifest declares no blocking thresholds: $Path"
     }
-
-    $normalized = $Text.ToLowerInvariant()
-
-    if ($normalized -match '\b(readme|guide|document|documentation|docs?)\b') {
-        return 'type:docs'
-    }
-
-    if ($normalized -match '\b(fix|bug|broken|error|fail|failing|regression|crash|timeout)\b') {
-        return 'type:bug'
-    }
-
-    if ($normalized -match '\b(research|investigate|spike|assess|evaluate|explore|analysis)\b') {
-        return 'type:spike'
-    }
-
-    if ($normalized -match '\b(workflow|pipeline|release|deployment|deploy|github actions|azure pipelines|ci/cd|ci)\b') {
-        return 'type:devops'
-    }
-
-    return 'type:story'
+    return $thresholds
 }
 
 if (-not (Test-Path -LiteralPath $DatasetPath)) {
     throw "Dataset file not found: $DatasetPath"
 }
 
-if (-not (Test-Path -LiteralPath $PromptPath)) {
-    throw "Prompt file not found: $PromptPath"
+if (-not (Test-Path -LiteralPath $ClassifierPath)) {
+    throw "Issue classifier not found: $ClassifierPath"
 }
+
+$blockingThresholds = Get-BlockingThresholds -Path $ManifestPath
 
 $datasetRows = @()
 Get-Content -LiteralPath $DatasetPath |
@@ -81,21 +70,11 @@ Get-Content -LiteralPath $DatasetPath |
         $datasetRows += ($_ | ConvertFrom-Json)
     }
 
-$promptText = Get-Content -LiteralPath $PromptPath -Raw
 $failureSlices = @()
 $correctCount = 0
 
-if (-not (Test-RequiredPromptText -Text $promptText)) {
-    $failureSlices += [pscustomobject]@{
-        label = 'prompt-contract'
-        severity = 'high'
-        summary = 'The prompt is missing one or more required issue labels or the output constraint.'
-        dataset = 'prompt'
-    }
-}
-
 foreach ($row in $datasetRows) {
-    $predicted = Get-IssueTypePrediction -Text ([string]$row.input)
+    $predicted = Get-IssueTypePrediction -Text ([string]$row.input) -Path $ClassifierPath
     $expected = [string]$row.expected
 
     if ($predicted -eq $expected) {
@@ -122,23 +101,34 @@ $reviewerNote = if ($failureSlices.Count -gt 0) {
     'The issue classification baseline matched every regression row.'
 }
 
+$metrics = @(
+    [pscustomobject]@{ metric = 'correctness'; score = $score },
+    [pscustomobject]@{ metric = 'task-completion'; score = $score }
+)
+$thresholdViolations = @()
+foreach ($metric in $metrics) {
+    if ($blockingThresholds.ContainsKey($metric.metric) -and $metric.score -lt $blockingThresholds[$metric.metric]) {
+        $thresholdViolations += [pscustomobject]@{
+            metric = $metric.metric
+            score = $metric.score
+            blocking = $blockingThresholds[$metric.metric]
+        }
+    }
+}
+
+$gateStatus = if ($thresholdViolations.Count -gt 0) { 'fail' } else { 'pass' }
+
 $output = [pscustomobject]@{
     runId = "sample-$(Get-Date -Format 'yyyyMMddHHmmss')"
     generatedAt = (Get-Date).ToUniversalTime().ToString('o')
-    models = @('agentx-issue-classifier-baseline')
+    models = @('agentx-production-issue-classifier')
     datasetCount = $datasetRows.Count
-    aggregateMetrics = @(
-        [pscustomobject]@{
-            metric = 'correctness'
-            score = $score
-        },
-        [pscustomobject]@{
-            metric = 'task-completion'
-            score = $score
-        }
-    )
+    gateStatus = $gateStatus
+    aggregateMetrics = $metrics
+    thresholdViolations = @($thresholdViolations)
     failureSlices = @($failureSlices)
     reviewerNote = $reviewerNote
 }
 
 $output | ConvertTo-Json -Depth 6
+exit $(if ($gateStatus -eq 'pass') { 0 } else { 1 })

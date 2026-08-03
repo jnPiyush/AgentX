@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { validateCommand } from './commandValidator';
 import type { DependencyResult } from './dependencyCheckerTypes';
 
 const MIN_POWERSHELL_VERSION = '7.4.0';
@@ -48,6 +49,15 @@ export function resolvePowerShellCoreExecutable(
 
 export function tryExec(command: string, timeoutMs = 5_000): Promise<string> {
   return new Promise((resolve) => {
+    // Apply the same blocked-command policy as shell.ts. Every current caller
+    // passes a literal (`git --version`, `gh auth token`), but this is an
+    // exported function taking a string, so the guard belongs at the sink
+    // rather than relying on every future caller to be careful.
+    if (validateCommand(command).classification === 'blocked') {
+      resolve('');
+      return;
+    }
+
     // Use the platform default shell (cmd.exe on Windows, /bin/sh on Unix).
     // Overriding with powershell.exe causes Node.js to pass CMD-style /d /s /c flags
     // that powershell.exe does not understand, making every exec silently fail.

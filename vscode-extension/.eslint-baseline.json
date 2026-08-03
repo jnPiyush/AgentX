@@ -1,0 +1,15 @@
+{
+  "updatedAt": "2026-07-27T11:45:09.391Z",
+  "note": "Ratchet baseline. Regenerate with: node scripts/lint-ratchet.js --update",
+  "total": 364,
+  "errors": 362,
+  "warnings": 2,
+  "rules": {
+    "@typescript-eslint/no-explicit-any": 328,
+    "@typescript-eslint/no-require-imports": 5,
+    "@typescript-eslint/no-unused-vars": 20,
+    "curly": 2,
+    "no-control-regex": 4,
+    "no-useless-escape": 5
+  }
+}

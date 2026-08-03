@@ -87,43 +87,16 @@ Architecture decisions are expensive to reverse. Invest heavily in research to m
 
 **Phase 2: Technology Landscape Scan (AI + Traditional)**
 
-- Use `fetch` to research the current state of relevant technologies being considered
-- For every candidate framework, runtime, library family, or managed platform that may appear in the selected stack, verify the current stable GA/LTS version from an official vendor source, release notes page, or product documentation page
-- For each candidate technology, assess: maturity level, community size and activity, release cadence, documentation quality, and ecosystem richness
-- **AI landscape (MANDATORY)**: Research current GenAI capabilities relevant to the problem domain -- available models, agent frameworks (Foundry, AutoGen, Semantic Kernel, LangGraph), MCP tools, and AI-powered alternatives to traditional approaches
-- Check for recent major version changes, roadmap shifts, or deprecation announcements
-- Identify the market leaders and their relative strengths for the specific problem domain
-- Record the version source and verification date for each shortlisted technology in the ADR Context and in the Tech Spec selected stack section
+Research both AI and traditional candidates with `fetch` and official/current sources.
+Capture these evidence lanes before selecting an option:
 
-**Phase 3: Architecture Pattern Research**
-
-- Use `fetch` to research proven architecture patterns from industry leaders who have solved similar problems at scale
-- Study published case studies, architecture blog posts, and conference talks from relevant companies
-- Research how the pattern performs at the expected scale (current and projected)
-- Document which patterns were considered and the evidence supporting each
-
-**Phase 4: Failure Mode and Anti-Pattern Analysis**
-
-- Research known failure modes and post-mortems related to the candidate technologies and patterns
-- Use `fetch` to find common pitfalls, migration horror stories, and operational challenges reported by teams using these technologies
-- Check GitHub Issues, Stack Overflow threads, and incident reports for recurring problems
-- Document identified risks and how the proposed architecture mitigates them
-
-**Phase 5: Benchmark and Performance Research**
-
-- Find published benchmarks relevant to the performance requirements (throughput, latency, memory, scalability)
-- Research real-world performance data from teams running similar workloads
-- For database choices: research benchmark comparisons for the specific query patterns and data volumes expected
-- For API designs: research rate limiting, concurrency, and latency data from comparable systems
-- Document performance evidence supporting the chosen option
-
-**Phase 6: Security and Long-term Viability**
-
-- Research CVEs, security advisories, and known vulnerabilities for candidate technologies
-- Check dependency health: maintenance status, bus factor, corporate backing, and funding
-- Assess long-term viability: is the technology growing, stable, or declining? What is the 3-5 year outlook?
-- Research license compatibility and any licensing risks
-- Document security posture and viability assessment for each option in the ADR
+| Lane | Required evidence |
+|------|-------------------|
+| Technology | Stable GA/LTS version, source and verification date, maturity, maintenance, ecosystem, roadmap/deprecations; include relevant models, agent frameworks, MCP, and non-AI alternatives |
+| Patterns | Comparable production case studies, expected-scale fit, and evidence for each considered pattern |
+| Failure modes | Post-mortems, recurring operational/migration failures, and concrete mitigations |
+| Performance | Workload-relevant throughput/latency/capacity benchmarks and database/API limits |
+| Security/viability | CVEs, dependency health, licensing, backing, and 3-5 year outlook |
 
 **Research Output**: Document findings in the **Context** section of the ADR. The Context section MUST include: technologies researched with sources, version verification evidence for shortlisted stack components, benchmark data cited, failure modes identified, and security assessment. Each ADR option MUST reference specific research evidence, not just abstract reasoning.
 
@@ -143,59 +116,19 @@ Create `docs/artifacts/adr/ADR-{issue}.md` from template at `.github/templates/A
 
 ### 2.5 Model Council Deliberation (MANDATORY for non-trivial ADRs)
 
-After drafting the ADR Options and Evaluation sections but BEFORE locking the Decision, convene a Model Council to stress-test option ranking, criteria weighting, and the contrarian case against the front-runner. Single-model architecture recommendations carry the model's training-data prior; the council exposes that prior so the recorded Decision reflects more than one perspective. The Architect council is specifically tuned to two questions: **what are the genuinely different ways to solve the same problem** (distinct approaches such as build vs. buy, monolith vs. service-split, sync vs. event-driven, managed vs. self-hosted -- not minor variants of one idea) and **which architecture approach should be recommended** (the option a senior architect would defend, why each rejected approach was rejected, and the conditions that would flip the recommendation). A council is **not limited to one topic** -- when the decision raises several axes (approach choice, failure mode, vendor risk, whether a simpler design was excluded), put them all to the council in a single run with `-Questions`.
+Follow the Model Council mechanics in [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md)
+after drafting Options/Evaluation and before locking the Decision. A council is
+required for new architectures, stack/framework changes, AI designs,
+vendor-lock-bearing decisions, and `[Council]` work. A version-pin-only amendment or
+research-only Spike may skip with a rationale in ADR Context.
 
-**When to convene (mandatory)**:
-- any new system architecture
-- any selected tech stack swap or major framework change
-- any AI/ML architecture or `needs:ai` design
-- any vendor-lock-bearing decision (managed service, proprietary API, paid platform)
-- any decision explicitly tagged `[Council]`
-
-**When to skip (allowed)**:
-- a routine ADR amendment that only updates a verified version pin
-- a Spike whose Decision is "continue researching"
-- in either case, record a one-line skip rationale in the ADR Context and proceed
-
-**Default council composition** (mix of vendors and reasoning styles):
-
-| Role | Model | Lens |
-|------|-------|------|
-| Analyst | `openai/gpt-5.5` | Enumerate the genuinely DIFFERENT solution approaches (distinct approaches, not variants) and score each against differentiating criteria -- cost, delivery time, operational burden, scalability, reversibility / cost-of-change, vendor lock-in, team fit, security blast radius; demand benchmark/version evidence |
-| Strategist | `anthropic/claude-opus-5` | Recommend the architecture approach: which distinct approach fits the long-term direction and cost-of-change profile, why each REJECTED approach was rejected, the trade-off knowingly accepted, and the conditions that would flip it |
-| Skeptic | `google/gemini-3.1-pro` | Argue for the dismissed approach and against the front-runner; surface the 18-month failure mode, scaling cliff, and vendor / lock-in / migration risk; challenge whether a simpler or radically different architecture was unfairly excluded |
-
-**How to convene**:
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-    -Topic "adr-{issue}-{short-slug}" `
-    -Question "Given these N options and the evaluation criteria, which option is the right choice and what is the strongest case AGAINST the recommended option?" `
-    -Context "<paste the Options summary, Evaluation matrix, and any constraints from the PRD>" `
-    -OutputDir "docs/artifacts/adr" `
-    -Purpose adr-options
-```
-
-**Multiple topics in one council** (use when the decision raises several distinct axes):
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-    -Topic "adr-{issue}-{short-slug}" `
-    -Questions "Which of the distinct solution approaches should we recommend and why?","What is the 18-month failure mode of the front-runner?","Was a simpler or radically different architecture unfairly excluded?" `
-    -Context "<paste the Options summary, Evaluation matrix, and any constraints from the PRD>" `
-    -OutputDir "docs/artifacts/adr" `
-    -Purpose adr-options
-```
-
-**This is an internal agent mechanism. After running the script, YOU (the Architect agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final ADR + Spec, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
-
-**Synthesis (MUST complete before locking ADR Decision)**:
-- **Consensus on the Recommended Option** -- option(s) at least two members would pick; the ADR Decision MUST be one of these unless the Architect documents a strong override rationale
-- **Divergences on Option Ranking or Criteria Weighting** -- record in ADR Consequences as accepted trade-offs or open architecture questions
-- **Failure Modes and Vendor Risks Surfaced** -- Skeptic-raised risks the landscape scan missed; promote into ADR Consequences and the Tech Spec risk register
-- **Net Adjustment to ADR** -- explicit list of changes to chosen option, criteria weighting, or recorded consequences; if no change, state why
-
-The ADR Decision section MUST cite the council file path. The Tech Spec MUST inherit the Failure Modes / Vendor Risks into its risk register.
+Use `-Purpose adr-options` and ask the council to compare genuinely distinct
+approaches, recommend one, argue the strongest contrarian case, identify the
+18-month failure mode, and state conditions that would change the recommendation.
+The Architect completes all perspectives and synthesis without delegating work to
+the user. The ADR MUST cite the council file; record ranking divergences and accepted
+trade-offs in Consequences, and carry surfaced failure/vendor risks into the Tech
+Spec risk register.
 
 ### 3. Create Tech Spec
 
@@ -287,26 +220,15 @@ Apply to: technology choices, pattern selections, trade-off conclusions, risk as
 
 ### 8. Self-Review
 
-- [ ] ADR evaluates 3+ options with clear criteria
-- [ ] Tech Spec covers all required template sections
-- [ ] Selected tech stack is explicit, versioned where relevant, and aligned with the ADR decision
-- [ ] Each named stack version or SKU is verified against an official source, with the source and verification date captured in the ADR or Tech Spec
-- [ ] All architecture communicated via diagrams, not code
-- [ ] Security considerations documented (auth, data protection, input validation)
-- [ ] Performance targets specified with measurable thresholds
-- [ ] Migration plan covers backward compatibility
-- [ ] **Research depth**: ADR Context section documents technology landscape, benchmarks, failure modes, and security assessment with sources
-- [ ] **Evidence-based options**: Each ADR option references specific research findings, not abstract reasoning
-- [ ] **Failure modes documented**: Known risks, anti-patterns, and post-mortems researched and addressed in design
-- [ ] **Long-term viability assessed**: Technology maturity, community health, and 3-5 year outlook documented
-- [ ] **AI-first assessment documented**: GenAI/Agentic AI alternatives evaluated for the problem; decision to use or not use AI is justified with evidence
-- [ ] **AI implementation depth captured**: when AI/ML is in scope, the Spec defines implementation-facing contracts for model selection, prompts, schemas, evaluation hooks, fallback behavior, guardrails, and observability
-- [ ] **Data Scientist alignment completed**: when AI/ML is in scope, AgentX Data Scientist reviewed the AI implementation-facing sections and the result is captured in the spec or clarification record
-- [ ] PM requirement-fit validation completed and any scope mismatch resolved or explicitly recorded
-- [ ] An engineer can implement without ambiguity
-- [ ] **No over-specification**: Spec defines WHAT and WHY, not HOW at the implementation level; no dictated variable names, loop structures, or internal algorithms that the Engineer should decide
-- [ ] **Architecture Reviewer pass**: AgentX Architecture Reviewer was spawned against the ADR + Tech Spec; resulting `docs/artifacts/reviews/ARCH-REVIEW-<issue>.md` exists with decision APPROVED or all CHANGES REQUESTED findings addressed and re-reviewed
-- [ ] **Model Council convened** (or skip rationale recorded in ADR Context); `COUNCIL-{issue}.md` Synthesis section is complete and the ADR Decision matches a council-consensus option (or the override rationale is documented); ADR Consequences and Tech Spec risk register reflect Skeptic-raised failure modes
+- ADR has 3+ evidence-backed options, criteria, decision, consequences, and council
+  synthesis (or valid skip/override rationale).
+- Spec follows the complete template, names verified stack versions/sources/dates,
+  uses diagrams and zero code, and is implementable without dictating internals.
+- Security, measurable performance, migration compatibility, researched failure modes,
+  and long-term viability are explicit.
+- AI-first assessment is recorded; AI specs include model/prompt/schema/eval/fallback/
+  guardrail/observability contracts and Data Scientist alignment.
+- PM fit is resolved and Architecture Reviewer is APPROVED after any re-review.
 
 ### Over-Specification Guardrails
 
@@ -321,9 +243,7 @@ The Tech Spec MUST constrain the solution boundary without dictating implementat
 | Integration contracts (input/output schemas) | Internal error codes or retry timing values |
 | Quality attributes (availability, durability) | Specific test file names or test structure |
 
-**Why this matters**: Over-specified specs create false failures in review when the Engineer
-makes a sound implementation choice that differs from the spec's unnecessary detail. Specs
-should be verifiable by checking contracts and outcomes, not by diffing source code line by line.
+Specs are verified by contracts and outcomes, not source-level implementation choices.
 
 ### 9. Commit & Handoff
 

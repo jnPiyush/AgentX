@@ -17,6 +17,16 @@ Store AI system prompts and reusable prompt templates here.
 
 ## Current Example
 
-`assistant-v1.md` is currently a concrete AgentX issue-classification prompt used by the lightweight evaluation starter pack.
+`assistant-v1.md` is a reference prompt that documents the AgentX issue-classification
+task in natural language. It is an illustrative asset only.
 
-The files in `.github/prompts/` are repo automation prompts for AgentX itself. This directory is for product or application prompts under evaluation.
+The regression evaluation does **not** execute this prompt. It runs the deterministic
+production classifier in [scripts/classify-issue.js](../scripts/classify-issue.js) --
+the same module `.github/workflows/issue-triage.yml` uses -- so the evaluation scores
+the shipped code path rather than a parallel copy. If you change the label taxonomy,
+update the classifier first; this prompt is documentation that should follow it.
+
+The files in `.github/prompts/` are repo automation prompts for AgentX itself. This
+directory holds product and application prompts under evaluation, alongside a small
+number of AgentX runtime prompts such as `dream-consolidation.md`, which
+[scripts/dream.ps1](../scripts/dream.ps1) reads at run time.

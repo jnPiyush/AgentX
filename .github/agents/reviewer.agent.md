@@ -193,59 +193,17 @@ Before drafting the review, run `.agentx/agentx.ps1 patterns` to surface any in-
 
 ### 5.5 Model Council Deliberation (MANDATORY for non-trivial reviews)
 
-After running tests and forming a leaning decision, but before drafting the review document, convene a Model Council to stress-test severity assignments and the Approve/Reject call. Single-model reviews carry the reviewing model's prior; the council exposes that prior, surfaces false positives, and catches risks the diff alone hides.
+Follow [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) after tests and a preliminary
+verdict, before writing the review. Use `-Purpose code-review` for Critical/Major
+findings, close decisions, `needs:ai`, security/auth/payments/persistence/migrations,
+or `[Council]` work. Pure text changes and fully covered mechanical refactors may
+skip with a rationale in the review.
 
-**When to convene (mandatory)**:
-- any review with at least one Critical or Major finding
-- any review where the leaning decision is close (mixed verdicts across the 8 categories)
-- any `needs:ai` review (model pinning, prompt files, evaluation, drift)
-- any review touching security, auth, payments, data persistence, or migrations
-- any review tagged `[Council]` by the Engineer or PM
-
-**When to skip (allowed)**:
-- pure docs / typo / comment-only diffs
-- mechanical refactors with no behavior change AND full coverage AND no Critical/Major findings
-- in either case, record a one-line skip rationale in the review document and proceed
-
-**Default council composition** (mix of vendors and reasoning styles):
-
-| Role | Model | Lens |
-|------|-------|------|
-| Analyst | `openai/gpt-5.5` | Enumerate concrete defects with file:line evidence; propose severity per category |
-| Strategist | `anthropic/claude-opus-5` | Which findings actually block ship; smallest viable fix; defend the right severity and Approve/Reject |
-| Skeptic | `google/gemini-3.1-pro` | Argue the OPPOSITE of the leaning decision; surface false positives AND hidden production/concurrency/dependency risks the diff hides |
-
-**How to convene**:
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-    -Topic "review-{issue}" `
-    -Question "Given the diff, the spec, the test results, and the per-category verdicts so far, what is the correct Approve / Request Changes decision, what is the correct severity for each finding, and what is the strongest case AGAINST the leaning decision?" `
-    -Context "<paste leaning decision, per-category verdicts, top 5 findings with file:line, test results, coverage delta, spec sections in scope>" `
-    -OutputDir "docs/artifacts/reviews" `
-    -Purpose code-review
-```
-
-A council is **not limited to one topic** -- put several review questions to it in one run with `-Questions`:
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-    -Topic "review-{issue}" `
-    -Questions "What is the correct Approve / Request Changes decision?","Which findings are blocking vs. advisory, and at what severity?","Which leaning findings are likely false positives or hide a deeper production risk?" `
-    -Context "<paste leaning decision, per-category verdicts, top 5 findings with file:line, test results, coverage delta, spec sections in scope>" `
-    -OutputDir "docs/artifacts/reviews" `
-    -Purpose code-review
-```
-
-**This is an internal agent mechanism. After running the script, YOU (the Reviewer agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final review document, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
-
-**Synthesis (MUST complete before Write Review Document)**:
-- **Consensus on Blocking Defects** -- findings at least two members agree must block approval; lock at the proposed severity and carry into the review document Findings section
-- **Divergences on Severity or Decision** -- findings where members disagree on severity or Approve vs. Request Changes; resolve explicitly or record as open questions in the review document
-- **Hidden Risks and False Positives Surfaced** -- Skeptic-raised risks the diff scan missed AND findings the Skeptic argues are false positives; promote both classes into the review document with explicit rationale (downgrade or escalate as appropriate)
-- **Net Adjustment to Review Decision** -- explicit list of changes to the Approve/Reject decision, severity assignments, or recommended changes; if no change, state why
-
-The review document MUST cite the council file path. Severity assignments and the final Decision MUST reflect the council Consensus and resolved Divergences (or document an explicit override rationale).
+Give the council the diff/spec scope, test and coverage evidence, preliminary verdict,
+and cited top findings. Require an evidence-based severity/ship decision, the opposite
+case, hidden risks, and likely false positives. Complete synthesis without user work.
+The review MUST cite the council and either reflect consensus/divergences or document
+an explicit override rationale.
 
 ### 6. Write Review Document
 

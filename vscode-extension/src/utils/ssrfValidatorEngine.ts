@@ -4,12 +4,14 @@ import {
  BLOCKED_METADATA_HOSTS,
  getAllowedHostsSnapshot,
  isAllowedHost,
- lookupAddress,
+ lookupAddresses,
  PRIVATE_IPV4_PATTERNS,
  PRIVATE_IPV6_PATTERNS,
  removeAllowedHostInternal,
 } from './ssrfValidatorInternals';
 import type { SsrfValidationResult } from './ssrfValidatorTypes';
+
+type AddressResolver = (hostname: string) => Promise<readonly { address: string; family: number }[]>;
 
 export function addAllowedHost(hostname: string): void {
  addAllowedHostInternal(hostname);
@@ -87,7 +89,10 @@ export function validateUrl(rawUrl: string): SsrfValidationResult {
  return { allowed: true, url };
 }
 
-export async function resolveAndValidate(rawUrl: string): Promise<SsrfValidationResult> {
+export async function resolveAndValidate(
+ rawUrl: string,
+ resolveAddresses: AddressResolver = lookupAddresses,
+): Promise<SsrfValidationResult> {
  const staticResult = validateUrl(rawUrl);
  if (!staticResult.allowed) {
   return staticResult;
@@ -105,25 +110,42 @@ export async function resolveAndValidate(rawUrl: string): Promise<SsrfValidation
   return staticResult;
  }
 
- const address = await lookupAddress(hostname);
- if (address) {
-  if (isPrivateIp(address)) {
+ let addresses;
+ try {
+   addresses = await resolveAddresses(hostname);
+ } catch {
+    return {
+     allowed: false,
+     url: staticResult.url,
+     reason: `Hostname "${hostname}" could not be resolved safely`,
+    };
+ }
+ if (addresses.length === 0) {
+    return {
+     allowed: false,
+     url: staticResult.url,
+     reason: `Hostname "${hostname}" returned no addresses`,
+    };
+ }
+
+ for (const resolved of addresses) {
+    if (isPrivateIp(resolved.address)) {
    return {
     allowed: false,
     url: staticResult.url,
-    reason: `Hostname "${hostname}" resolves to private IP "${address}" (DNS rebinding attack)`,
+        reason: `Hostname "${hostname}" resolves to private IP "${resolved.address}" (DNS rebinding attack)`,
    };
   }
-  if (BLOCKED_METADATA_HOSTS.has(address)) {
+    if (BLOCKED_METADATA_HOSTS.has(resolved.address)) {
    return {
     allowed: false,
     url: staticResult.url,
-    reason: `Hostname "${hostname}" resolves to blocked metadata IP "${address}"`,
+        reason: `Hostname "${hostname}" resolves to blocked metadata IP "${resolved.address}"`,
    };
   }
  }
 
- return staticResult;
+ return { ...staticResult, resolvedAddresses: addresses };
 }
 
 export function validateToolUrlParams(params: Record<string, unknown>): SsrfValidationResult {

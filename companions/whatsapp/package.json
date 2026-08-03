@@ -7,16 +7,17 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/bot.js",
-    "start:debug": "cross-env DEBUG=agentx:* node src/bot.js"
+    "start:debug": "cross-env DEBUG=agentx:* node src/bot.js",
+    "test": "node --test test/*.test.js"
   },
   "engines": {
     "node": ">=18.17.0"
   },
   "dependencies": {
-    "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "^1.23.0"
+    "qrcode-terminal": "0.12.0",
+    "whatsapp-web.js": "1.34.7"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3"
+    "cross-env": "7.0.3"
   }
 }

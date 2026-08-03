@@ -1,14 +1,14 @@
 version: 1
 intent:
   workflow: prompt
-  description: Lightweight repo-local evaluation contract for an AgentX issue classification prompt.
+  description: Regression contract for the production AgentX issue classifier used by GitHub triage.
 runner:
   preferred: custom
   alternates: []
   mode: local
 modelMatrix:
   primary:
-    name: agentx-issue-classifier-baseline
+    name: agentx-production-issue-classifier
     provider: agentx-local
   fallback: []
   comparisons: []
@@ -79,7 +79,7 @@ rubrics:
     scoringScale: 0-4-normalized
     calibrationRule: human-check-5
 execution:
-  command: './scripts/run-ai-eval-sample.ps1 -DatasetPath "evaluation/datasets/regression.jsonl" -PromptPath "prompts/assistant-v1.md"'
+  command: './scripts/run-ai-eval-sample.ps1 -DatasetPath "evaluation/datasets/regression.jsonl" -ClassifierPath "scripts/classify-issue.js"'
   shell: pwsh
 reporting:
   outputDirectory: .copilot-tracking/eval-reports

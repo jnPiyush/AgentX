@@ -64,41 +64,17 @@ This agent reviews **decisions and designs**, not code. Code-level functional re
 
 ### Standalone Mode (Human-Written Document Review)
 
-When the spawning agent is the Reviewer in standalone mode (no AgentX issue), apply these adaptations:
+Treat supplied documents as one logical artifact. Load the matching document skill for
+Word, PowerPoint, or PDF; read text directly; use vision for image diagrams; convert
+diagram sources when needed. Cite Markdown by line, Word/PDF by page or heading,
+slides by number/title, and diagrams by named region/component. Extraction failure is
+`BLOCKED`; never issue an uncited finding.
 
-- **Inputs**: one or more document paths. PRD/ADR/Spec/issue may all be absent.
-- **Supported document formats**:
-  | Format | Extension(s) | Extraction approach |
-  |--------|--------------|---------------------|
-  | Markdown / text | `.md`, `.txt`, `.rst`, `.adoc` | Read directly |
-  | Word | `.docx`, `.doc` | Extract text + embedded image list (use `pandoc`, `python-docx`, or `mammoth`); flag if no converter available |
-  | PowerPoint | `.pptx`, `.ppt` | Extract slide text, speaker notes, and slide image list per slide (use `python-pptx`, `pandoc`, or unzip + parse XML); cite findings as `Slide <N> - <slide title>` |
-  | PDF | `.pdf` | Extract text + page-level image list (use `pdftotext`, `pdfminer`, or equivalent); cite findings as `Page <N>` |
-  | Diagrams (image) | `.png`, `.jpg`, `.jpeg`, `.svg`, `.webp` | Use a vision-capable model to describe components, flows, trust boundaries, and data stores; cite as `Diagram: <filename>` |
-  | Diagrams (source) | `.drawio`, `.vsdx`, `.puml`, `.mmd` | Open the source if possible; otherwise export to PNG/SVG and treat as image |
-  | Visio | `.vsd`, `.vsdx` | Convert to PDF/PNG (Visio export, `vsdx-py`, Lucid); treat as PDF or image |
-  | HTML | `.html`, `.htm` | Strip to text + image list |
-- **Multi-file inputs**: when several files are supplied (e.g. a docx narrative plus 3 diagram images), treat them as one logical artifact. Cross-cite (e.g. "docx Section 3.2 references the deployment topology in `topology.png` but the diagram shows no auth boundary -- contradicts STRIDE Spoofing requirement").
-- **Extraction failure**: if a format cannot be extracted (no converter, password-protected, corrupted), record `BLOCKED` with reason `extraction_failure` and ask the user to re-supply in a parseable form (e.g. "please export `.vsd` to PDF or PNG").
-- **Citation rules**:
-  - Markdown / text: file path + line range
-  - Word / PDF: file path + page or heading number
-  - PowerPoint: file path + slide number + slide title
-  - Diagrams: file path + named region or component label observed in the image
-  Findings without a concrete citation MUST NOT be issued.
-- **Pre-review gates 1-5 (AgentX-workflow gates) MUST be relaxed** to the standalone gate set:
-  | # | Standalone Gate | Status | Notes |
-  |---|------------------|--------|-------|
-  | S1 | All supplied document(s) present and extractable | PASS / FAIL | |
-  | S2 | Document states a Decision or recommended approach | PASS / FAIL | |
-  | S3 | Document records rationale (why this, not why something else) | PASS / FAIL | |
-  | S4 | Document considers at least one alternative (or explicitly states none was viable, with reason) | PASS / FAIL | |
-  | S5 | Document states non-functional requirements or quality attributes | PASS / FAIL | |
-  | S6 | Document includes at least one diagram OR a clear component model in prose | PASS / FAIL | |
-- **All 12 dimensions still apply**. The bar for evidence-of-harm, citations, severity, and STRIDE coverage at trust boundaries is unchanged. Standalone mode is NOT "lighter review" -- it is the same review with relaxed *upstream* gates and broader input formats.
-- **Identifier**: the report filename uses `<id>` chosen as (in order): user-provided id, primary document filename stem, or `standalone-<YYYYMMDD-HHmm>`.
-- **Output path**: default to `docs/artifacts/reviews/ARCH-REVIEW-<id>.md` unless the user specified otherwise. The report is always Markdown regardless of input format.
-- **Decision**: same rubric -- `APPROVED` / `CHANGES REQUESTED` / `BLOCKED`. `BLOCKED` covers both "document too incomplete to evaluate" and "extraction failure -- input not parseable".
+Standalone gates replace AgentX lifecycle gates: documents are extractable; a decision
+and rationale exist; at least one alternative is considered (or excluded with reason);
+NFRs/quality attributes are stated; and a diagram or clear prose component model exists.
+All 12 dimensions and normal severity/evidence rules still apply. Save Markdown to
+`ARCH-REVIEW-<id>.md`, using user id, filename stem, or timestamp in that order.
 
 ## Frameworks Applied
 
@@ -135,116 +111,23 @@ If any gate fails, return `BLOCKED` with the specific gap rather than proceeding
 
 ## The 12-Dimension Review
 
-For each dimension, evaluate the artifacts and produce 0..N findings. Mark `N/A` with one-sentence rationale only when the dimension genuinely does not apply (e.g., cost for an internal-only proof-of-concept).
+Evaluate every row; `N/A` requires one-sentence rationale. Load the named skills below
+for detailed checks.
 
-### 1. Business and Requirements Alignment
-
-- Architecture solves the actual problem stated in the PRD (no scope drift, no gold-plating)
-- Functional and non-functional requirements traced to specific components or sections
-- Success metrics and SLAs are defined and measurable
-- Scope and out-of-scope explicit
-- Assumptions listed and validated against PRD constraints
-
-### 2. Scalability and Performance
-
-- Expected load (peak, average, growth projection) stated with units
-- Horizontal vs. vertical scaling strategy chosen with reasoning
-- Caching layers identified, with invalidation strategy (not just "we will cache")
-- Database scaling: sharding, replication, read replicas, partition keys
-- Latency budgets allocated per component (sum within end-to-end SLA)
-- Bottleneck candidates identified with measurement plan
-
-### 3. Reliability and Resilience
-
-- Single points of failure (SPOFs) enumerated and either mitigated or accepted with rationale
-- RTO and RPO targets stated and consistent with backup/restore plan
-- Circuit breakers, retries with backoff, timeouts, and backpressure specified at integration points
-- Graceful degradation paths described per critical user journey
-- Backup and restore procedures defined and explicitly tested
-- Multi-region or multi-AZ strategy stated, with failover triggers
-
-### 4. Security
-
-- AuthN and AuthZ model defined; Zero Trust principles applied where applicable
-- Encryption in transit (TLS 1.2+ or stronger) and at rest specified per data store
-- Secrets management uses Key Vault / Secrets Manager / equivalent -- never hardcoded
-- Network segmentation, private endpoints, firewall rules specified
-- **STRIDE** threat model present for every trust boundary crossing
-- Compliance requirements mapped (GDPR, HIPAA, SOC2, PCI-DSS, etc.)
-- Audit logging and SIEM integration defined
-- Supply chain risks (dependencies, base images) acknowledged
-- For `needs:ai`: prompt injection, data exfiltration, model misuse threats addressed
-
-### 5. Data Architecture
-
-- Data flow diagrams cover happy path, failure path, and replay path
-- Source of truth defined per entity (no ambiguous ownership)
-- Data classification (public, internal, confidential, regulated) and retention policies stated
-- PII handling, data residency, and cross-border transfer rules satisfied
-- Schema evolution and migration strategy (backwards compatibility window)
-- Consistency model declared per dataset (strong vs. eventual vs. causal) with justification
-
-### 6. Integration and APIs
-
-- API contracts specified via OpenAPI (sync) or AsyncAPI (events)
-- Versioning strategy (URI, header, or content negotiation) chosen
-- Synchronous vs. asynchronous boundaries justified per call
-- Idempotency keys, exactly-once or at-least-once semantics specified where needed
-- Third-party dependencies enumerated with failure-mode plan and rate limits
-- Contract testing plan referenced (Pact, schema registry, or equivalent)
-
-### 7. Observability
-
-- Logging: structured, centralized, with correlation IDs and PII scrubbing
-- Metrics: RED (Requests, Errors, Duration) for services, USE (Utilization, Saturation, Errors) for resources
-- Distributed tracing (OpenTelemetry) across all service hops
-- Alerting thresholds tied to SLOs, not arbitrary numbers
-- Dashboards specified for key business KPIs and technical KPIs
-- Cost of telemetry estimated (high-cardinality log explosion is a real risk)
-
-### 8. Deployment and Operations
-
-- CI/CD pipeline maturity defined (build, test, scan, deploy stages)
-- Infrastructure as Code chosen (Terraform, Bicep, ARM, CDK) and committed to repo
-- Environment parity (dev/test/staging/prod) and seeded test data strategy
-- Deployment strategy (blue-green, canary, rolling) chosen with rollback criteria
-- Rollback procedures explicit (not "redeploy previous build")
-- Configuration management (env vars, feature flags, central config) defined
-- Disaster recovery runbook referenced
-
-### 9. Cost and Efficiency
-
-- Cost model and projections present (per environment, per region)
-- Reserved vs. on-demand vs. spot capacity decisions justified
-- Unit economics: cost per transaction, per user, per inference (for AI)
-- Auto-scaling policies tuned for cost (not only for headroom)
-- Unused resource cleanup automation defined
-- For `needs:ai`: model choice cost-vs-quality tradeoff documented; token budgets enforced
-
-### 10. Maintainability and Evolution
-
-- Modularity and separation of concerns visible in component diagrams
-- Tech debt acknowledged, including any debt this design introduces
-- Architecture Decision Record (ADR) follows AgentX template
-- Team ownership boundaries align with module boundaries (Conway's Law)
-- Skills required vs. team capability gap stated honestly
-- Vendor lock-in risks named, with exit strategies or accepted-risk rationale
-
-### 11. Compliance and Governance
-
-- Regulatory requirements mapped to specific controls in the design
-- Data sovereignty requirements (region pinning, encryption keys) addressed
-- Change management process referenced (CAB, lightweight ARB, or auto-approval scope)
-- Architecture review board sign-off path identified (if required)
-- Licensing of all third-party components reviewed (GPL, AGPL caution)
-
-### 12. Risks and Trade-offs
-
-- Top 5 risks documented with likelihood, impact, and mitigation
-- Trade-offs explicitly stated (CAP triangle, latency vs. consistency, cost vs. resilience)
-- Assumptions listed and validated (or marked as "to validate before implementation")
-- Rejected alternatives documented in the ADR with reason for rejection
-- Open questions queued for the Architect with owner and target date
+| # | Dimension | Minimum evidence |
+|---|-----------|------------------|
+| 1 | Business/requirements | Scope, traceability, measurable outcomes, assumptions |
+| 2 | Scalability/performance | Loads, budgets, bottlenecks, data/cache scaling |
+| 3 | Reliability/resilience | SPOFs, RTO/RPO, timeouts/retries, degradation, restore/failover |
+| 4 | Security | Auth, encryption/secrets/network, STRIDE, audit, supply chain, AI threats |
+| 5 | Data | Flows/ownership, classification/retention/residency, evolution/consistency |
+| 6 | Integration/APIs | Contracts/versioning, sync/async, idempotency, dependency failures/tests |
+| 7 | Observability | Structured logs, RED/USE metrics, tracing, SLO alerts, dashboards/cost |
+| 8 | Deployment/operations | CI/CD, IaC, environments, rollout/rollback, config, DR runbook |
+| 9 | Cost/efficiency | Projections, unit economics, capacity/scaling/cleanup, AI cost-quality |
+| 10 | Maintainability | Modularity/debt/ownership/skills, lock-in and exit strategy |
+| 11 | Compliance/governance | Controls, sovereignty, change/sign-off, licenses |
+| 12 | Risks/trade-offs | Top risks, explicit trade-offs, assumptions, alternatives, owned questions |
 
 ## Severity Definitions
 
@@ -268,70 +151,11 @@ Before reporting any finding, run these 6 filters:
 
 ## Output Format
 
-Use the canonical template at [.github/templates/ARCH-REVIEW-TEMPLATE.md](../../templates/ARCH-REVIEW-TEMPLATE.md). Save the populated review to `docs/artifacts/reviews/ARCH-REVIEW-<issue>.md`.
-
-The template enforces this structure:
-
-```markdown
-# Architecture Review: Issue #<issue>
-
-- **ADR**: docs/artifacts/adr/ADR-<issue>.md
-- **Spec**: docs/artifacts/specs/SPEC-<issue>.md
-- **PRD**: docs/artifacts/prd/PRD-<issue>.md
-- **Reviewer**: Architecture Reviewer (internal sub-agent)
-- **Date**: <YYYY-MM-DD>
-- **Decision**: APPROVED | CHANGES REQUESTED | BLOCKED
-
-## Summary
-
-- Pre-review gates: PASS | FAIL (<which gate>)
-- Findings: <c> Critical, <h> High, <m> Medium, <l> Low
-- Frameworks cited: <list>
-
-## Pre-Review Gates
-
-| Gate | Status | Notes |
-|------|--------|-------|
-| ADR present | PASS/FAIL | |
-| Spec present | PASS/FAIL | |
-| 3+ options in ADR | PASS/FAIL | |
-| Decision + Consequences | PASS/FAIL | |
-| Diagrams in Spec | PASS/FAIL | |
-| Zero code examples in Spec | PASS/FAIL | |
-| Data Scientist alignment (needs:ai only) | PASS/FAIL/N/A | |
-
-## Findings
-
-### CRITICAL: <Title>
-- **Dimension**: <1..12>
-- **Artifact**: <ADR|Spec> section "<heading>" (lines <a>-<b>)
-- **Framework**: <Azure WAF / STRIDE / ATAM / ...>
-- **Evidence of harm**: <concrete failure scenario or compliance citation>
-- **Recommendation**: <what to change, not how to code it>
-
-### HIGH: <Title>
-...
-
-## Dimension Coverage Matrix
-
-| # | Dimension | Status | Findings |
-|---|-----------|--------|----------|
-| 1 | Business & Requirements Alignment | OK / Issues / N/A | |
-| 2 | Scalability & Performance | | |
-| ... | ... | | |
-| 12 | Risks & Trade-offs | | |
-
-## Decision Rationale
-
-<2-4 sentences summarizing why APPROVED / CHANGES REQUESTED / BLOCKED>
-
-## Open Questions for Architect
-
-- <question 1>
-- <question 2>
-```
-
-The full template also includes a STRIDE coverage table per trust boundary, an NFR traceability matrix, and an ATAM-style trade-offs table. All three MUST be populated for non-trivial architectures.
+Read and populate
+[ARCH-REVIEW-TEMPLATE.md](../../templates/ARCH-REVIEW-TEMPLATE.md) exactly; do not
+duplicate or improvise its structure. For non-trivial designs, populate every
+dimension plus its STRIDE, NFR traceability, and ATAM trade-off tables. Save to the
+authorized review path only.
 
 ## Self-Review
 

@@ -126,11 +126,13 @@ jobs:
       - name: Check for Node.js projects
         id: detect
         run: |
-          PKG_DIR=$(find . -name 'package.json' -not -path '*/node_modules/*' -printf '%h\n' | head -1)
-          if [ -n "$PKG_DIR" ]; then
+          # Enumerate EVERY package.json tree, not just the first match.
+          find . -name 'package.json' -not -path '*/node_modules/*' -printf '%h\n' | sort -u > pkg-dirs.txt
+          COUNT=$(wc -l < pkg-dirs.txt)
+          if [ "$COUNT" -gt 0 ]; then
             echo "found=true" >> $GITHUB_OUTPUT
-            echo "pkg_dir=$PKG_DIR" >> $GITHUB_OUTPUT
-            echo "Found Node.js project in $PKG_DIR"
+            echo "Found $COUNT Node.js project(s):"
+            cat pkg-dirs.txt
           else
             echo "found=false" >> $GITHUB_OUTPUT
             echo "No Node.js projects found - skipping scan"
@@ -140,29 +142,52 @@ jobs:
         if: steps.detect.outputs.found == 'true'
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Install dependencies
-        if: steps.detect.outputs.found == 'true'
-        working-directory: ${{ steps.detect.outputs.pkg_dir }}
-        run: npm ci
-
-      - name: Run npm audit
+      - name: Run npm audit across all projects
         if: steps.detect.outputs.found == 'true'
         id: audit
-        working-directory: ${{ steps.detect.outputs.pkg_dir }}
         run: |
-          echo "Scanning for vulnerable Node.js packages..."
-          npm audit --json > npm-vulnerabilities.json || true
+          mkdir -p audit-reports
+          TOTAL_HIGH=0
+          TOTAL_CRITICAL=0
 
-          HIGH_VULNS=$(jq '.metadata.vulnerabilities.high // 0' npm-vulnerabilities.json 2>/dev/null || echo 0)
-          CRITICAL_VULNS=$(jq '.metadata.vulnerabilities.critical // 0' npm-vulnerabilities.json 2>/dev/null || echo 0)
+          while IFS= read -r dir; do
+            echo "::group::Auditing $dir"
+            SLUG=$(echo "$dir" | sed 's#^\./##; s#[/.]#_#g')
+            [ -z "$SLUG" ] && SLUG=root
 
-          echo "High: $HIGH_VULNS, Critical: $CRITICAL_VULNS"
+            if [ ! -f "$dir/package-lock.json" ]; then
+              echo "::error::No package-lock.json in $dir; refusing an incomplete dependency scan"
+              exit 1
+            fi
+            if ! (cd "$dir" && npm ci --ignore-scripts --omit=dev --omit=optional); then
+              echo "::error::npm ci failed in $dir"
+              exit 1
+            fi
 
-          if [ "$HIGH_VULNS" -gt 0 ] || [ "$CRITICAL_VULNS" -gt 0 ]; then
+            AUDIT_EXIT=0
+            (cd "$dir" && npm audit --omit=dev --omit=optional --json) > "audit-reports/$SLUG.json" 2>/dev/null || AUDIT_EXIT=$?
+            if ! jq -e '.metadata.vulnerabilities | type == "object"' "audit-reports/$SLUG.json" >/dev/null 2>&1; then
+              echo "::error::npm audit did not produce valid vulnerability metadata for $dir (exit $AUDIT_EXIT)"
+              cat "audit-reports/$SLUG.json"
+              exit 1
+            fi
+
+            HIGH=$(jq '.metadata.vulnerabilities.high // 0' "audit-reports/$SLUG.json")
+            CRIT=$(jq '.metadata.vulnerabilities.critical // 0' "audit-reports/$SLUG.json")
+            echo "$dir -> high: $HIGH, critical: $CRIT"
+
+            TOTAL_HIGH=$((TOTAL_HIGH + HIGH))
+            TOTAL_CRITICAL=$((TOTAL_CRITICAL + CRIT))
+            echo "::endgroup::"
+          done < pkg-dirs.txt
+
+          echo "Totals -> high: $TOTAL_HIGH, critical: $TOTAL_CRITICAL"
+
+          if [ "$TOTAL_HIGH" -gt 0 ] || [ "$TOTAL_CRITICAL" -gt 0 ]; then
             echo "HAS_VULNERABILITIES=true" >> $GITHUB_OUTPUT
-            echo "::warning::Found $HIGH_VULNS high and $CRITICAL_VULNS critical vulnerabilities in Node.js dependencies"
+            echo "::error::Found $TOTAL_HIGH high and $TOTAL_CRITICAL critical vulnerabilities across Node.js projects"
             exit 1
           else
             echo "HAS_VULNERABILITIES=false" >> $GITHUB_OUTPUT
@@ -170,11 +195,11 @@ jobs:
           fi
 
       - name: Upload vulnerability report
-        if: steps.audit.outputs.HAS_VULNERABILITIES == 'true'
+        if: always() && steps.audit.outputs.HAS_VULNERABILITIES == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: npm-vulnerabilities
-          path: ${{ steps.detect.outputs.pkg_dir }}/npm-vulnerabilities.json
+          path: audit-reports/
 
   summary:
     name: Dependency Scan Summary

@@ -277,6 +277,27 @@ describe('SsrfValidator', () => {
       const result = await resolveAndValidate('https://example.com');
       // example.com is a public IP, so should be allowed if DNS resolves
       assert.equal(typeof result.allowed, 'boolean');
+      if (result.allowed) {
+        assert.ok((result.resolvedAddresses?.length ?? 0) > 0, 'allowed hostname must carry pinned addresses');
+      }
+    });
+
+    it('should fail closed when DNS resolution fails', async () => {
+      const result = await resolveAndValidate('https://agentx-does-not-exist.invalid/path');
+      assert.equal(result.allowed, false);
+      assert.match(result.reason ?? '', /could not be resolved safely/i);
+    });
+
+    it('should reject a hostname when any DNS answer is private', async () => {
+      const result = await resolveAndValidate(
+        'https://mixed.example/path',
+        async () => [
+          { address: '8.8.8.8', family: 4 },
+          { address: '127.0.0.1', family: 4 },
+        ],
+      );
+      assert.equal(result.allowed, false);
+      assert.match(result.reason ?? '', /127\.0\.0\.1|private/i);
     });
   });
 

@@ -6,7 +6,10 @@ export function normaliseCommand(command: string): string {
 }
 
 export function splitCompoundCommand(command: string): readonly string[] {
-  const parts = command.split(/;|&&|\|\||(?<!\|)\|(?!\|)/);
+  // Separators that start a new statement in pwsh or bash. Newline and a
+  // single `&` are included: without them, `npm test\n<anything>` collapses to
+  // one part whose allowlist prefix launders the second statement.
+  const parts = command.split(/;|&&|\|\||(?<!\|)\|(?!\|)|\r?\n|(?<!&)&(?!&)/);
   return parts
     .map((part) => part.trim())
     .filter((part) => part.length > 0);

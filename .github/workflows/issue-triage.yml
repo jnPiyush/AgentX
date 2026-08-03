@@ -18,51 +18,7 @@ jobs:
         env:
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
-        run: |
-          TITLE_LOWER=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]')
-
-          # Type detection
-          if echo "$TITLE_LOWER" | grep -qE '\[bug\]|bug:|broken|crash|error'; then
-            echo "type=type:bug" >> "$GITHUB_OUTPUT"
-            echo "route=Engineer" >> "$GITHUB_OUTPUT"
-          elif echo "$TITLE_LOWER" | grep -qE '\[epic\]|epic:'; then
-            echo "type=type:epic" >> "$GITHUB_OUTPUT"
-            echo "route=Product Manager" >> "$GITHUB_OUTPUT"
-          elif echo "$TITLE_LOWER" | grep -qE '\[feature\]|feature:'; then
-            echo "type=type:feature" >> "$GITHUB_OUTPUT"
-            echo "route=Architect" >> "$GITHUB_OUTPUT"
-          elif echo "$TITLE_LOWER" | grep -qE '\[spike\]|spike:|research'; then
-            echo "type=type:spike" >> "$GITHUB_OUTPUT"
-            echo "route=Architect" >> "$GITHUB_OUTPUT"
-          elif echo "$TITLE_LOWER" | grep -qE '\[docs\]|docs:|documentation'; then
-            echo "type=type:docs" >> "$GITHUB_OUTPUT"
-            echo "route=Engineer" >> "$GITHUB_OUTPUT"
-          elif echo "$TITLE_LOWER" | grep -qE '\[devops\]|devops:|pipeline|deploy|ci/cd'; then
-            echo "type=type:devops" >> "$GITHUB_OUTPUT"
-            echo "route=DevOps Engineer" >> "$GITHUB_OUTPUT"
-          elif echo "$TITLE_LOWER" | grep -qE '\[test\]|testing:|certification'; then
-            echo "type=type:testing" >> "$GITHUB_OUTPUT"
-            echo "route=Tester" >> "$GITHUB_OUTPUT"
-          elif echo "$TITLE_LOWER" | grep -qE 'power.bi|report|dashboard|dax'; then
-            echo "type=type:powerbi" >> "$GITHUB_OUTPUT"
-            echo "route=Power BI Analyst" >> "$GITHUB_OUTPUT"
-          elif echo "$TITLE_LOWER" | grep -qE 'ml|ai|llm|model|genai|data.science'; then
-            echo "type=type:data-science" >> "$GITHUB_OUTPUT"
-            echo "route=Data Scientist" >> "$GITHUB_OUTPUT"
-          else
-            echo "type=type:story" >> "$GITHUB_OUTPUT"
-            echo "route=Engineer" >> "$GITHUB_OUTPUT"
-          fi
-
-          # Domain detection
-          DOMAINS=""
-          if echo "$TITLE_LOWER $ISSUE_BODY" | grep -qiE 'ai|llm|genai|agent|rag|embedding'; then
-            DOMAINS="needs:ai"
-          fi
-          if echo "$TITLE_LOWER $ISSUE_BODY" | grep -qiE 'ux|wireframe|prototype|design'; then
-            DOMAINS="$DOMAINS needs:ux"
-          fi
-          echo "domains=$DOMAINS" >> "$GITHUB_OUTPUT"
+        run: node scripts/classify-issue.js --title "$ISSUE_TITLE" --body "$ISSUE_BODY" --github-output >> "$GITHUB_OUTPUT"
 
       - name: Apply Labels
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b

@@ -133,6 +133,133 @@ foreach ($planFile in $planFiles) {
     }
 }
 
+# ---------------------------------------------------------------------------
+# CI parity gates
+#
+# These mirror gates that .github/hooks/pre-commit enforces locally. The hook
+# only protects developers who installed it and is bypassed by
+# `git commit --no-verify`, so the same rules are re-checked server-side.
+#
+# ADDED-ONLY SEMANTICS. The Council and Capture gates key on files ADDED in
+# this change set, not files modified. Keying on "changed" would mean a
+# one-character typo fix in an existing ADR hard-fails CI because that ADR
+# predates the gate -- an unescapable trap, since the Council gate has no
+# skip token. The rule is "a NEW ADR needs a council file", not "every ADR
+# ever written must be retrofitted".
+#
+# NOT checkable in CI: the quality-loop iteration gate.
+# `.agentx/state/loop-state.json` is untracked by design (per-developer
+# working state), so CI has nothing to inspect. That gate remains hook-only.
+# ---------------------------------------------------------------------------
+
+function Get-AddedFiles {
+    param([string]$Base)
+
+    $normalized = $Base
+    if (-not [string]::IsNullOrWhiteSpace($normalized)) {
+        $normalized = $normalized -replace '^refs/heads/', ''
+        $normalized = $normalized -replace '^origin/', ''
+    }
+
+    $added = @()
+    if (-not [string]::IsNullOrWhiteSpace($normalized)) {
+        $added = @(git -C $workspaceRoot diff --name-only --diff-filter=A "origin/$normalized..HEAD" 2>$null)
+    }
+    if ($added.Count -eq 0) {
+        $added = @(git -C $workspaceRoot diff --name-only --diff-filter=A HEAD~1..HEAD 2>$null)
+    }
+    # Untracked files are additions by definition.
+    $untracked = @(git -C $workspaceRoot status --short 2>$null |
+        Where-Object { $_.StartsWith('?? ') } |
+        ForEach-Object { $_.Substring(3).Trim() })
+
+    return @(@($added + $untracked) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+}
+
+$addedFiles = @(Get-AddedFiles -Base $BaseRef)
+
+# Commit messages: fall back to the tip commit when no base ref is available.
+# `git log ..HEAD` (empty base) returns nothing, which silently disabled the
+# [skip-capture] bypass on push builds -- exactly the runs that need it.
+$commitMessages = ''
+try {
+    if (-not [string]::IsNullOrWhiteSpace($BaseRef)) {
+        $commitMessages = (git -C $workspaceRoot log "$BaseRef..HEAD" --format=%B 2>$null) -join "`n"
+    }
+    if ([string]::IsNullOrWhiteSpace($commitMessages)) {
+        $commitMessages = (git -C $workspaceRoot log -1 --format=%B 2>$null) -join "`n"
+    }
+} catch { $commitMessages = '' }
+
+# --- Model Council: a NEW ADR requires a matching COUNCIL file (no skip token)
+$adrFiles = @($addedFiles | Where-Object { $_ -match '^docs/artifacts/adr/ADR-.+\.md$' })
+foreach ($adr in $adrFiles) {
+    if (-not (Test-Path -LiteralPath $adr)) { continue }
+    $slug = [System.IO.Path]::GetFileNameWithoutExtension($adr) -replace '^ADR-', ''
+    $councilPath = "docs/artifacts/adr/COUNCIL-$slug.md"
+    if (-not (Test-Path -LiteralPath $councilPath)) {
+        $failures += "Model Council gate: new ADR '$adr' has no matching '$councilPath'. This gate has no skip token."
+        continue
+    }
+    $councilContent = Get-Content -LiteralPath $councilPath -Raw
+    if (-not (Test-RequiredSection -Content $councilContent -Section '## Synthesis')) {
+        $failures += "Model Council file '$councilPath' is missing the required '## Synthesis' section."
+    }
+}
+
+# --- Compound Capture: a NEW approved review requires a matching LEARNING file
+#
+# The decision must be an explicit verdict line. A bare `-match 'APPROVED'`
+# also fired on "NOT APPROVED", on "APPROVED: false", and on the rubric line
+# that every review inherits from REVIEW-TEMPLATE.md
+# ("APPROVED | CHANGES REQUESTED | REJECTED"), which matched 8 of 9 existing
+# reviews.
+$approvedPattern = '(?im)^\s*(?:[*_`\[\]\s]*)(?:\*\*)?(?:Decision|Status|Verdict|Outcome)(?:\*\*)?\s*[:=]\s*(?:\[PASS\]\s*)?(?:\*\*)?APPROVED(?:\*\*)?\s*$'
+$reviewFiles = @($addedFiles | Where-Object { $_ -match '^docs/artifacts/reviews/REVIEW-.+\.md$' })
+foreach ($review in $reviewFiles) {
+    if (-not (Test-Path -LiteralPath $review)) { continue }
+    $reviewContent = Get-Content -LiteralPath $review -Raw
+    if ($reviewContent -notmatch $approvedPattern) { continue }
+    if ($commitMessages -match '\[skip-capture\]') {
+        Write-Host "[WARN] Compound Capture bypassed via [skip-capture] for '$review'."
+        continue
+    }
+    $issue = ([System.IO.Path]::GetFileNameWithoutExtension($review)) -replace '^REVIEW-', ''
+    $learningPath = "docs/artifacts/learnings/LEARNING-$issue.md"
+    if (-not (Test-Path -LiteralPath $learningPath)) {
+        $failures += "Compound Capture gate: approved review '$review' has no matching '$learningPath' (bypass: [skip-capture] in the commit message)."
+    }
+}
+
+# --- Deslop scrub: HIGH-severity findings in changed files block the build
+$scrubTargets = @($changedFiles | Where-Object { $_ -match '\.(ts|tsx|js|jsx|ps1|psm1|md)$' -and (Test-Path -LiteralPath $_) })
+if ($scrubTargets.Count -gt 0 -and (Test-Path -LiteralPath 'scripts/scrub.ps1')) {
+    $highFindings = @()
+    $scrubErrors = @()
+    foreach ($target in $scrubTargets) {
+        $output = & pwsh -NoProfile -File 'scripts/scrub.ps1' -Path $target 2>&1
+        $scrubExit = $LASTEXITCODE
+        $high = @($output | Where-Object { $_ -match '\[HIGH/' })
+        $highFindings += $high
+        # Fail closed: a crash (missing module, parse error, bad path) must not
+        # be indistinguishable from "no findings".
+        if ($scrubExit -ne 0 -and $high.Count -eq 0) {
+            $scrubErrors += "  $target -> scrub exited $scrubExit without reporting findings"
+        }
+    }
+    if ($highFindings.Count -gt 0) {
+        $failures += "Deslop scrub gate: $($highFindings.Count) HIGH-severity finding(s) in changed files. This gate has no skip token."
+        foreach ($h in ($highFindings | Select-Object -First 10)) { Write-Host "  $h" }
+    }
+    if ($scrubErrors.Count -gt 0) {
+        $failures += "Deslop scrub gate: $($scrubErrors.Count) file(s) could not be scanned. Treating as failure rather than success."
+        foreach ($e in ($scrubErrors | Select-Object -First 10)) { Write-Host $e }
+    }
+    if ($highFindings.Count -eq 0 -and $scrubErrors.Count -eq 0) {
+        Write-Host "[PASS] Scrub gate: no HIGH findings across $($scrubTargets.Count) changed file(s)."
+    }
+}
+
 if ($env:GITHUB_OUTPUT) {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "changed_files=$changedCount"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "code_files=$codeFileCount"

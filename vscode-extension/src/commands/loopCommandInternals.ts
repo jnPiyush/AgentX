@@ -100,14 +100,16 @@ export async function loopStart(agentx: AgentXContext): Promise<void> {
   }
 }
 
-export async function loopStatus(agentx: AgentXContext): Promise<void> {
+export async function loopStatus(agentx: AgentXContext): Promise<boolean> {
   try {
     const output = await agentx.runCli('loop', ['status']);
     syncHarnessStatus(agentx);
     showLoopOutput('Loop Status', output, getHarnessDisplay(agentx));
+    return true;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     vscode.window.showErrorMessage(`Loop status failed: ${message}`);
+    return false;
   }
 }
 

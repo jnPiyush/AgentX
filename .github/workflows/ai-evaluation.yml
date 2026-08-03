@@ -1,0 +1,47 @@
+name: AI Evaluation Gate
+
+on:
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'evaluation/**'
+      - 'scripts/classify-issue.js'
+      - 'scripts/run-ai-eval-sample.ps1'
+      - 'tests/ai-eval-gate-behavior.ps1'
+      - '.github/workflows/ai-evaluation.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'evaluation/**'
+      - 'scripts/classify-issue.js'
+      - 'scripts/run-ai-eval-sample.ps1'
+      - 'tests/ai-eval-gate-behavior.ps1'
+      - '.github/workflows/ai-evaluation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    name: Issue Routing Evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Verify threshold gate behavior
+        shell: pwsh
+        run: ./tests/ai-eval-gate-behavior.ps1
+
+      - name: Run blocking evaluation
+        shell: pwsh
+        run: |
+          ./scripts/run-ai-eval-sample.ps1 `
+            -DatasetPath 'evaluation/datasets/regression.jsonl' `
+            -ClassifierPath 'scripts/classify-issue.js' `
+            -ManifestPath 'evaluation/agentx.eval.yaml'

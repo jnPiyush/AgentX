@@ -4290,6 +4290,75 @@ function Get-LoopEvidenceRoot {
     return (Join-Path (Get-LoopStateDirectory) 'loop-evidence')
 }
 
+<#
+.SYNOPSIS
+  Convert a loop-state timestamp to a UTC DateTimeOffset.
+
+.DESCRIPTION
+  ConvertFrom-Json returns Kind=Utc for the 'Z'-suffixed values Get-Timestamp
+  writes, but Kind=Local for offset-bearing values and Kind=Unspecified for
+  bare ones. Blanket SpecifyKind(Utc) is wrong for the Local case -- it
+  relabels 16:31+05:30 as 16:31Z, pushing the instant 5.5 hours into the
+  future and rejecting genuinely fresh artifacts. Only an Unspecified value
+  needs labelling; everything else converts.
+#>
+function ConvertTo-LoopUtcOffset([object]$Value) {
+    if ($null -eq $Value) { return $null }
+    try {
+        if ($Value -is [datetime]) {
+            if ($Value.Kind -eq [System.DateTimeKind]::Unspecified) {
+                return [datetimeoffset]::new([datetime]::SpecifyKind($Value, [System.DateTimeKind]::Utc))
+            }
+            return ([datetimeoffset]$Value).ToUniversalTime()
+        }
+        return [datetimeoffset]::Parse(
+            [string]$Value,
+            [cultureinfo]::InvariantCulture,
+            [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal)
+    } catch {
+        return $null
+    }
+}
+
+<#
+.SYNOPSIS
+  Reject an evidence artifact written before the previous iteration.
+
+.DESCRIPTION
+  Complements the SHA-256 identity guard. Touching a stale file defeats the
+  hash check but not this one; regenerating byte-identical output defeats
+  this check but not the hash. Applied to BOTH 'loop iterate' and
+  'loop complete' -- omitting it from complete left the exact bypass of
+  generating a final gate log up front and submitting it at the end.
+
+.OUTPUTS
+  $true when the artifact is acceptable, $false when it is stale.
+#>
+function Test-LoopEvidenceFreshness {
+    param(
+        [Parameter(Mandatory)][string]$EvidencePath,
+        [object]$State,
+        [string]$ContextLabel = 'loop iterate'
+    )
+
+    $item = Get-Item -LiteralPath $EvidencePath -ErrorAction SilentlyContinue
+    if (-not $item) { return $true }
+    if (-not $State -or ($State.PSObject.Properties.Name -notcontains 'lastIterationAt')) { return $true }
+
+    $lastIterationAt = ConvertTo-LoopUtcOffset $State.lastIterationAt
+    if (-not $lastIterationAt) { return $true }
+
+    $writtenAt = ([datetimeoffset]$item.LastWriteTimeUtc).ToUniversalTime()
+    if ($writtenAt -lt $lastIterationAt) {
+        Write-CliOutput "$($C.r)  [FAIL] $ContextLabel evidence artifact is older than the previous iteration.$($C.n)"
+        Write-CliOutput "$($C.d)    Written:        $($writtenAt.ToString('o'))$($C.n)"
+        Write-CliOutput "$($C.d)    Last iteration: $($lastIterationAt.ToString('o'))$($C.n)"
+        Write-CliOutput "$($C.d)    Regenerate the artifact so it reflects the current state, then retry.$($C.n)"
+        return $false
+    }
+    return $true
+}
+
 function Read-LoopBaseline {
     return (Read-JsonFile (Get-LoopBaselineFilePath))
 }
@@ -4298,6 +4367,63 @@ function Reset-LoopEvidenceArtifacts {
     $evidenceRoot = Get-LoopEvidenceRoot
     if (Test-Path -LiteralPath $evidenceRoot) {
         Remove-Item -LiteralPath $evidenceRoot -Recurse -Force
+    }
+}
+
+<#
+.SYNOPSIS
+  Prune long-abandoned ad-hoc directories under .agentx/state.
+
+.DESCRIPTION
+  Sessions accumulate one-off evidence folders (cursor-evidence,
+  ver-evidence, release-evidence, ...). Nothing removed them, so the directory
+  grew without bound and several sat empty for months.
+
+  AGE IS REQUIRED IN EVERY CASE. An earlier version deleted empty directories
+  immediately, with no time component, which destroyed a directory created
+  moments earlier for an operation that had not yet written its first file.
+  A directory is removed only when its own timestamp AND every file beneath it
+  are older than the retention window.
+
+  Deletions are unrecoverable -- .agentx/state is gitignored -- so the
+  protected list covers every directory the loop and review flows write to,
+  and any failure is swallowed rather than allowed to break the loop.
+#>
+function Remove-StaleStateDirectories {
+    param([int]$RetentionDays = 30)
+
+    # Every directory the loop, review, or release flows write to.
+    $protected = @(
+        'loop-evidence', 'loop-history', 'review-evidence',
+        'evidence', 'final-evidence', 'session-evidence', 'cursor-evidence'
+    )
+    $stateDir = Get-LoopStateDirectory
+    if (-not (Test-Path -LiteralPath $stateDir)) { return }
+
+    $cutoff = (Get-Date).AddDays(-$RetentionDays)
+    $removed = 0
+
+    foreach ($dir in @(Get-ChildItem -LiteralPath $stateDir -Directory -ErrorAction SilentlyContinue)) {
+        if ($dir.Name -in $protected) { continue }
+
+        try {
+            # The directory's own timestamp gates the empty case, so a freshly
+            # created placeholder is never a candidate.
+            if ($dir.LastWriteTime -ge $cutoff) { continue }
+
+            $files = @(Get-ChildItem -LiteralPath $dir.FullName -Recurse -File -ErrorAction SilentlyContinue)
+            $newestFile = if ($files.Count -gt 0) { ($files | Measure-Object -Property LastWriteTime -Maximum).Maximum } else { $null }
+            if ($newestFile -and $newestFile -ge $cutoff) { continue }
+
+            Remove-Item -LiteralPath $dir.FullName -Recurse -Force -ErrorAction Stop
+            $removed++
+        } catch {
+            Write-Verbose "State cleanup skipped '$($dir.Name)': $_"
+        }
+    }
+
+    if ($removed -gt 0) {
+        Write-CliOutput "$($C.d)  Pruned $removed state director$(if ($removed -eq 1) { 'y' } else { 'ies' }) untouched for over $RetentionDays days.$($C.n)"
     }
 }
 
@@ -4434,6 +4560,7 @@ function Invoke-LoopStart {
     # Fresh loop means fresh evidence workspace: remove archived artifacts from the
     # prior loop so a new task cannot accidentally reason over stale evidence.
     try { Reset-LoopEvidenceArtifacts } catch { Write-Verbose "Loop evidence cleanup failed: $_" }
+    try { Remove-StaleStateDirectories } catch { Write-Verbose "State directory cleanup failed: $_" }
 
     $state = [PSCustomObject]@{
         active             = $true
@@ -4619,7 +4746,7 @@ function Invoke-LoopIterate {
         if (Test-Path -LiteralPath $evidenceAbs -PathType Leaf) { $evidenceOk = $true }
     }
     if (-not $evidenceOk) {
-        if (-not $env:AGENTX_SKIP_EVIDENCE_GATE) {
+        if ($env:AGENTX_SKIP_EVIDENCE_GATE -ne '1') {
             Write-CliOutput "$($C.r)  [FAIL] loop iterate requires --evidence <path-to-existing-file>$($C.n)"
             Write-CliOutput "$($C.d)    Acceptable artifacts: test report (junit/trx), coverage xml, semgrep/gitleaks json, build log.$($C.n)"
             Write-CliOutput "$($C.d)    Example: agentx loop iterate -s 'fixed null deref' -e .agentx/state/loop-evidence/iter-2/test-report.xml$($C.n)"
@@ -4630,22 +4757,54 @@ function Invoke-LoopIterate {
         }
     }
 
-    # Archive the accepted artifact into a per-iteration folder so the source path
-    # no longer exists after acceptance. This forces a fresh file to be generated
-    # for the next iteration and avoids stale evidence reuse.
+    # Archive the accepted artifact into a per-iteration folder. The artifact is
+    # COPIED, never moved: callers routinely pass a deliverable, source file, or
+    # build output that must survive the call.
+    #
+    # Two independent staleness checks, because neither is sufficient alone:
+    #   1. FRESHNESS  -- the file must have been written after the previous
+    #      iteration was recorded. Catches re-submitting an old report.
+    #   2. IDENTITY   -- the SHA-256 must not match an already-accepted
+    #      artifact. Catches regenerating a file whose contents did not change.
+    # Touching a stale file defeats (2) but not (1); regenerating identical
+    # output defeats (1) but not (2).
     $archivedPath = $null
     if ($evidenceOk) {
+        if (-not (Test-LoopEvidenceFreshness -EvidencePath $evidenceAbs -State $state -ContextLabel 'loop iterate')) { return }
+
+        $evidenceHash = $null
+        try { $evidenceHash = (Get-FileHash -LiteralPath $evidenceAbs -Algorithm SHA256).Hash } catch { $evidenceHash = $null }
+        if (-not $evidenceHash) {
+            # Fail closed: without a digest the reuse guard cannot function, so
+            # accepting the artifact would silently disable the control.
+            Write-CliOutput "$($C.r)  [FAIL] Could not hash the evidence artifact; refusing to accept it.$($C.n)"
+            return
+        }
+
+        $acceptedHashes = @()
+        if (($state.PSObject.Properties.Name -contains 'acceptedEvidenceHashes') -and $state.acceptedEvidenceHashes) {
+            $acceptedHashes = @($state.acceptedEvidenceHashes)
+        }
+        if ($evidenceHash -and ($acceptedHashes -contains $evidenceHash)) {
+            Write-CliOutput "$($C.r)  [FAIL] This evidence artifact was already accepted in an earlier iteration (identical SHA-256).$($C.n)"
+            Write-CliOutput "$($C.d)    Regenerate the artifact so it reflects the current iteration, then retry.$($C.n)"
+            return
+        }
+
         $loopDir = Get-LoopStateDirectory
         $archDir = Join-Path $loopDir "loop-evidence/iter-$next"
         if (-not (Test-Path -LiteralPath $archDir)) { New-Item -ItemType Directory -Path $archDir -Force | Out-Null }
-        $stamp = (Get-Date -Format 'yyyyMMddTHHmmss')
+        $stamp = (Get-Date -Format 'yyyyMMddTHHmmssfff')
         $leaf = [System.IO.Path]::GetFileName($evidenceAbs)
         $archivedPath = Join-Path $archDir "$stamp-$leaf"
         try {
-            Move-Item -LiteralPath $evidenceAbs -Destination $archivedPath -Force
+            Copy-Item -LiteralPath $evidenceAbs -Destination $archivedPath -Force
         } catch {
-            Write-CliOutput "$($C.r)  [FAIL] Could not archive evidence (move): $_$($C.n)"
+            Write-CliOutput "$($C.r)  [FAIL] Could not archive evidence (copy): $_$($C.n)"
             return
+        }
+        if ($evidenceHash) {
+            $state | Add-Member -NotePropertyName acceptedEvidenceHashes -NotePropertyValue (@($acceptedHashes) + @($evidenceHash)) -Force
         }
     }
 
@@ -4777,7 +4936,7 @@ function Invoke-LoopComplete {
     if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop complete')) { return }
 
     # Gate: every iteration entry after #1 must carry an evidence file path that still exists.
-    if (-not $env:AGENTX_SKIP_EVIDENCE_GATE) {
+    if ($env:AGENTX_SKIP_EVIDENCE_GATE -ne '1') {
         $stale = @()
         foreach ($h in @($state.history)) {
             if ($null -eq $h) { continue }
@@ -4805,26 +4964,12 @@ function Invoke-LoopComplete {
         $finalEvidenceAbs = if ([System.IO.Path]::IsPathRooted($finalEvidence)) { $finalEvidence } else { Join-Path (Get-Location) $finalEvidence }
         if (-not (Test-Path -LiteralPath $finalEvidenceAbs -PathType Leaf)) { $finalEvidenceAbs = $null }
     }
-    if (-not $finalEvidenceAbs -and -not $env:AGENTX_SKIP_EVIDENCE_GATE) {
+    if (-not $finalEvidenceAbs -and $env:AGENTX_SKIP_EVIDENCE_GATE -ne '1') {
         if ($finalEvidence) {
-            # Detect the common mistake: the same file was passed to 'loop iterate' first,
-            # which consumed it (Move-Item to archive) so it no longer exists at the source path.
-            $loopDir = Get-LoopStateDirectory
-            $leaf = [System.IO.Path]::GetFileName($finalEvidence)
-            $consumed = Get-ChildItem -LiteralPath (Join-Path $loopDir 'loop-evidence') -Recurse -Filter "*$leaf" -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($consumed) {
-                Write-CliOutput "$($C.r)  [FAIL] Evidence file was already consumed (moved) by 'loop iterate':$($C.n)"
-                Write-CliOutput "$($C.d)         $($consumed.FullName)$($C.n)"
-                Write-CliOutput "$($C.y)  'loop complete' requires a FRESH final artifact -- regenerate it, then retry:$($C.n)"
-                Write-CliOutput "$($C.d)    e.g. (Node): npx mocha --reporter tap > .agentx/state/final-gate.log$($C.n)"
-                Write-CliOutput "$($C.d)         (pwsh): Invoke-Pester -PassThru | Export-NUnitReport .agentx/state/final-gate.xml$($C.n)"
-                Write-CliOutput "$($C.d)         then:   agentx loop complete -s '<summary>' -e .agentx/state/final-gate.log --passing <N>$($C.n)"
-            } else {
-                Write-CliOutput "$($C.r)  [FAIL] Evidence file not found: $finalEvidence$($C.n)"
-                Write-CliOutput "$($C.d)  Provide a fresh final gate artifact (e.g., test suite output, coverage report, quality-gate.log):$($C.n)"
-                Write-CliOutput "$($C.d)    e.g. (Node): npx mocha --reporter tap > .agentx/state/final-gate.log$($C.n)"
-                Write-CliOutput "$($C.d)         then:   agentx loop complete -s '<summary>' -e .agentx/state/final-gate.log --passing <N>$($C.n)"
-            }
+            Write-CliOutput "$($C.r)  [FAIL] Evidence file not found: $finalEvidence$($C.n)"
+            Write-CliOutput "$($C.d)  Provide a fresh final gate artifact (e.g., test suite output, coverage report, quality-gate.log):$($C.n)"
+            Write-CliOutput "$($C.d)    e.g. (Node): npx mocha --reporter tap > .agentx/state/final-gate.log$($C.n)"
+            Write-CliOutput "$($C.d)         then:   agentx loop complete -s '<summary>' -e .agentx/state/final-gate.log --passing <N>$($C.n)"
         } else {
             Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., quality-gate.log, full-suite-report.xml).$($C.n)"
         }
@@ -4832,22 +4977,47 @@ function Invoke-LoopComplete {
         return
     }
 
-    # Archive the final evidence. It MUST be a fresh final artifact, but it does
-    # not need to differ byte-for-byte from earlier reports if it was regenerated.
+    # Archive the final evidence. Copied, never moved -- the caller's artifact must
+    # survive loop completion. The same SHA-256 reuse guard as 'loop iterate'
+    # applies here: 'loop complete' is the gate the pre-commit hook keys on, so
+    # recycling an already-accepted artifact must not satisfy it.
     $finalArchivedPath = $null
     if ($finalEvidenceAbs) {
+        # Same freshness bar as 'loop iterate'. Without it, a final gate log
+        # generated at session start could be held back and submitted here --
+        # the identity guard would pass because it was never submitted before.
+        if (-not (Test-LoopEvidenceFreshness -EvidencePath $finalEvidenceAbs -State $state -ContextLabel 'loop complete')) { return }
+
+        $finalHash = $null
+        try { $finalHash = (Get-FileHash -LiteralPath $finalEvidenceAbs -Algorithm SHA256).Hash } catch { $finalHash = $null }
+        if (-not $finalHash) {
+            Write-CliOutput "$($C.r)  [FAIL] Could not hash the final evidence artifact; refusing to accept it.$($C.n)"
+            return
+        }
+
+        $acceptedHashes = @()
+        if (($state.PSObject.Properties.Name -contains 'acceptedEvidenceHashes') -and $state.acceptedEvidenceHashes) {
+            $acceptedHashes = @($state.acceptedEvidenceHashes)
+        }
+        if ($acceptedHashes -contains $finalHash) {
+            Write-CliOutput "$($C.r)  [FAIL] This final artifact was already accepted in an earlier iteration (identical SHA-256).$($C.n)"
+            Write-CliOutput "$($C.d)    'loop complete' requires a FRESH final artifact -- regenerate it, then retry.$($C.n)"
+            return
+        }
+
         $loopDir = Get-LoopStateDirectory
         $archDir = Join-Path $loopDir "loop-evidence/complete"
         if (-not (Test-Path -LiteralPath $archDir)) { New-Item -ItemType Directory -Path $archDir -Force | Out-Null }
-        $stamp = (Get-Date -Format 'yyyyMMddTHHmmss')
+        $stamp = (Get-Date -Format 'yyyyMMddTHHmmssfff')
         $leaf = [System.IO.Path]::GetFileName($finalEvidenceAbs)
         $finalArchivedPath = Join-Path $archDir "$stamp-$leaf"
         try {
-            Move-Item -LiteralPath $finalEvidenceAbs -Destination $finalArchivedPath -Force
+            Copy-Item -LiteralPath $finalEvidenceAbs -Destination $finalArchivedPath -Force
         } catch {
-            Write-CliOutput "$($C.r)  [FAIL] Could not archive final evidence (move): $_$($C.n)"
+            Write-CliOutput "$($C.r)  [FAIL] Could not archive final evidence (copy): $_$($C.n)"
             return
         }
+        $state | Add-Member -NotePropertyName acceptedEvidenceHashes -NotePropertyValue (@($acceptedHashes) + @($finalHash)) -Force
     }
 
     $summary = Get-Flag @('-s', '--summary') 'Criteria met'

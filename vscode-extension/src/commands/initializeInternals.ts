@@ -4,9 +4,28 @@ import * as https from 'https';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { resolveWindowsShell } from '../utils/shell';
+import { resolveAndValidate } from '../utils/ssrfValidator';
+import type { SsrfResolvedAddress } from '../utils/ssrfValidatorTypes';
 
 export const BRANCH = 'master';
 export const ARCHIVE_URL = `https://github.com/jnPiyush/AgentX/archive/refs/heads/${BRANCH}.zip`;
+
+export function createPinnedLookup(
+  approvedAddresses: readonly SsrfResolvedAddress[],
+): http.RequestOptions['lookup'] {
+  const pinned = approvedAddresses.find((address) => address.family === 4) ?? approvedAddresses[0];
+  if (!pinned) {
+    return undefined;
+  }
+
+  return (_hostname, options, callback) => {
+    if (typeof options === 'object' && options.all) {
+      callback(null, [{ address: pinned.address, family: pinned.family }]);
+      return;
+    }
+    callback(null, pinned.address, pinned.family);
+  };
+}
 
 export const ESSENTIAL_DIRS: string[] = [];
 
@@ -509,29 +528,42 @@ export function writeWorkspaceRuntimeWrappers(extensionRoot: string, workspaceRo
   }
 }
 
-export function downloadFile(url: string, dest: string, timeoutMs = 60_000): Promise<void> {
+export async function downloadFile(url: string, dest: string, timeoutMs = 60_000): Promise<void> {
+  const initialValidation = await resolveAndValidate(url);
+  if (!initialValidation.allowed) {
+    throw new Error(`Download URL blocked by SSRF policy: ${initialValidation.reason ?? url}`);
+  }
+
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     let done = false;
 
-    const timer = setTimeout(() => {
+    const fail = (error: Error) => {
       if (done) { return; }
       done = true;
+      clearTimeout(timer);
       file.destroy();
-      fs.unlink(dest, () => {});
-      reject(new Error(`Download timed out after ${timeoutMs / 1000}s`));
+      fs.unlink(dest, () => reject(error));
+    };
+
+    const timer = setTimeout(() => {
+      if (done) { return; }
+      fail(new Error(`Download timed out after ${timeoutMs / 1000}s`));
     }, timeoutMs);
 
-    const request = (requestUrl: string, redirectCount = 0) => {
+    const request = (
+      requestUrl: string,
+      redirectCount = 0,
+      approvedAddresses: readonly SsrfResolvedAddress[] = [],
+    ) => {
       if (redirectCount > 5) {
-        clearTimeout(timer);
-        done = true;
-        reject(new Error('Too many redirects'));
+        fail(new Error('Too many redirects'));
         return;
       }
 
       const transport = requestUrl.startsWith('https') ? https : http;
-      transport.get(requestUrl, (response: {
+      const lookup = createPinnedLookup(approvedAddresses);
+      transport.get(requestUrl, { lookup }, (response: {
         statusCode?: number;
         headers: { location?: string };
         pipe: (stream: fs.WriteStream) => void;
@@ -544,14 +576,28 @@ export function downloadFile(url: string, dest: string, timeoutMs = 60_000): Pro
           && response.headers.location
         ) {
           response.resume();
-          request(response.headers.location, redirectCount + 1);
+          let redirectUrl: string;
+          try {
+            redirectUrl = new URL(response.headers.location, requestUrl).toString();
+          } catch {
+            fail(new Error(`Invalid redirect URL: ${response.headers.location}`));
+            return;
+          }
+
+          resolveAndValidate(redirectUrl)
+            .then((validation) => {
+              if (!validation.allowed) {
+                fail(new Error(`Download redirect blocked by SSRF policy: ${validation.reason ?? redirectUrl}`));
+                return;
+              }
+              request(validation.url, redirectCount + 1, validation.resolvedAddresses);
+            })
+            .catch((error: Error) => fail(error));
           return;
         }
 
         if (response.statusCode && response.statusCode !== 200) {
-          clearTimeout(timer);
-          done = true;
-          reject(new Error(`Download failed with status ${response.statusCode}`));
+          fail(new Error(`Download failed with status ${response.statusCode}`));
           return;
         }
 
@@ -563,14 +609,11 @@ export function downloadFile(url: string, dest: string, timeoutMs = 60_000): Pro
           resolve();
         });
       }).on('error', (err: Error) => {
-        clearTimeout(timer);
-        done = true;
-        fs.unlink(dest, () => {});
-        reject(err);
+        fail(err);
       });
     };
 
-    request(url);
+    request(initialValidation.url, 0, initialValidation.resolvedAddresses);
   });
 }
 

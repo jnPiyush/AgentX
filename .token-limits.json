@@ -4,8 +4,8 @@
     ".github/skills/**/SKILL.md": 1500,
     ".github/skills/**/references/**/*.md": 2000,
     ".github/instructions/*.md": 1500,
-    ".github/agents/*.agent.md": 5000,
-    ".github/agents/internal/*.agent.md": 3000,
+    ".github/agents/*.agent.md": 6000,
+    ".github/agents/internal/*.agent.md": 4000,
     ".github/templates/*-TEMPLATE.md": 10000,
     "docs/**/*.md": 8000
   },
@@ -15,8 +15,13 @@
     "docs/artifacts/prd/PRD-AgentX.md": 50000,
     "docs/artifacts/specs/SPEC-AgentX.md": 45000,
     ".github/agents/engineer.agent.md": 7000,
-    ".github/agents/internal/ado-ops.agent.md": 3500,
-    "docs/WORKFLOW.md": 10000,
+    ".github/templates/SPEC-TEMPLATE.md": 12000,
+    "docs/WORKFLOW.md": 11000,
     "docs/GUIDE.md": 9500
+  },
+  "overrideRationales": {
+    ".github/agents/engineer.agent.md": "Core implementation orchestrator retains phase-specific artifact, test, and handoff contracts; shared mechanics are already delegated to AGENT-PROTOCOL.md and skills.",
+    ".github/templates/SPEC-TEMPLATE.md": "Complete architecture-spec schema and validation checklist; loaded only when authoring a spec.",
+    "docs/WORKFLOW.md": "Canonical workflow reference; agent definitions link to it instead of duplicating its content."
   }
 }

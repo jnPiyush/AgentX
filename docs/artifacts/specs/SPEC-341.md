@@ -293,7 +293,7 @@ The profile is read from `.agentx/config.json -> security.profile` (companion is
 |------|------------|--------|------------|
 | Two writers (extension + daemon) corrupt loop state | Medium | High | File-locking on `.agentx/state/loop-state.json` writes; CI test simulating concurrent writers. |
 | Node runtime not present on user machine | Medium | Medium | Install scripts gated on Node >=20 detection; clear error message if missing. |
-| Bearer token committed to git | Low | High | `.gitignore` already excludes `.agentx/config.json`; CI gitleaks scan verifies; ACL hardening on file. |
+| Bearer token committed to git | Low | High | `.gitignore` already excludes `.agentx/config.json`; ACL hardening on file. NOTE: no gitleaks/secret-scanning job exists in CI today -- this mitigation is manual until one is added. |
 | OpenAI compatibility drift | Medium | Medium | Pin to a documented OpenAI API version in headers; contract tests against current SDK majors. |
 | Memory growth from long-lived process | Medium | Medium | Pino log rotation; periodic loop-state pruning; surface RSS in `/agentx/metrics`. |
 

@@ -1,0 +1,16 @@
+category,check,baseline_native,baseline_score,local_native,local_score,projected_remote_score
+Runtime correctness,Extension regression suite,"1000 passing",100,"1013 passing",100,100
+Runtime correctness,Coverage gate,"82.16 lines / 75.26 branches",100,"82.36 statements+lines / 75.18 branches / 80.86 functions",100,100
+Runtime correctness,Real VS Code Extension Host E2E,"not run",0,"1 in-host test passing with result marker",100,100
+Evaluation quality,Issue-classifier accuracy,"7/15 = 0.47",47,"15/15 = 1.00 using production classifier",100,100
+Evaluation quality,Threshold enforcement,"non-blocking",0,"10/10 positive and negative gate checks",100,100
+Evaluation quality,Live intent-router evaluation,"disconnected",0,"GitHub triage and evaluator share scripts/classify-issue.js",100,100
+Security and tool containment,Path sandbox boundary wiring,"dormant",0,"canonical containment + real junction/symlink rejection",100,100
+Security and tool containment,SSRF/redirect boundary wiring,"dormant",0,"all-address fail-closed validation + per-hop pinned lookup",100,100
+Delivery governance,Required status checks,"none",0,"none",0,100
+Delivery governance,Recent quality workflow health,"0/10 successful",0,"not remotely run",0,100
+Delivery governance,Recent dependency workflow health,"0/10 successful",0,"not remotely run",0,100
+Delivery governance,Remote SAST enforcement,"absent",0,"configured and locally validated; not remotely run",0,100
+Supply chain,MCP server high runtime advisories,"2 high",0,"0 high/critical; isolated 19-tool stdio smoke",100,100
+Supply chain,Build provenance/attestation,"absent",0,"configured for final VSIX and MCP subjects; unexecuted",0,100
+Supply chain,Artifact signing enforcement,"absent",0,"Marketplace verification configured; unexecuted",0,100

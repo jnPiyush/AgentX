@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup Environment
         run: |
@@ -65,6 +65,8 @@ jobs:
           echo "[PASS] Commit message validation passed"
 
       - name: Check Documentation
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           echo "Checking documentation..."
 
@@ -79,8 +81,8 @@ jobs:
           fi
 
           # Check for README updates (if new feature)
-          if [ "${{ github.event.pull_request.title }}" ]; then
-            if echo "${{ github.event.pull_request.title }}" | grep -qi "feat:"; then
+          if [ -n "$PR_TITLE" ]; then
+            if printf '%s' "$PR_TITLE" | grep -qi "feat:"; then
               if ! git diff origin/${{ github.base_ref }}..HEAD --name-only | grep -q "README.md"; then
                 echo "[INFO] INFO: New feature added. Consider updating README.md"
               fi
@@ -274,24 +276,27 @@ jobs:
           echo "Running extension test gate and lint advisory..."
           npm ci
           npm run test:coverage
-          npm audit --audit-level=high
+          xvfb-run -a npm run test:e2e
+          npm audit --omit=dev --audit-level=high
           npm run lint || echo "[WARN] Lint warnings/errors present (advisory mode)"
-          echo "[PASS] Extension coverage and audit gates passed"
+          echo "[PASS] Extension unit, Extension Host, coverage, and audit gates passed"
 
       - name: Agent Deliverable Validation
         if: github.event_name == 'pull_request'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           echo "Validating agent deliverables..."
 
           # Extract issue number from PR title or branch
-          ISSUE_NUM=$(echo "${{ github.event.pull_request.title }}" | grep -oP '#\K\d+' | head -1)
+          ISSUE_NUM=$(printf '%s' "$PR_TITLE" | grep -oP '#\K\d+' | head -1)
 
           if [ -z "$ISSUE_NUM" ]; then
-            # Try to get from branch name (e.g., feature/123-description)
-            ISSUE_NUM=$(echo "${{ github.head_ref }}" | grep -oP '^\w+/\K\d+' | head -1)
+            # Try to get from branch name (e.g. feature/123-description)
+            ISSUE_NUM=$(printf '%s' "$HEAD_REF" | grep -oP '^\w+/\K\d+' | head -1)
           fi
 
           if [ -z "$ISSUE_NUM" ]; then

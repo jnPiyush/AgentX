@@ -6,7 +6,8 @@
 const fs = require('fs');
 const path = require('path');
 const qrcode = require('qrcode-terminal');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const Client = require('whatsapp-web.js/src/Client');
+const LocalAuth = require('whatsapp-web.js/src/authStrategies/LocalAuth');
 
 const { loadConfig } = require('./config');
 const { routeCommand, helpText } = require('./commandRouter');

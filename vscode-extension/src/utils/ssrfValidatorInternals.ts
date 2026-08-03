@@ -1,7 +1,4 @@
 import * as dns from 'dns';
-import { promisify } from 'util';
-
-const dnsLookup = promisify(dns.lookup);
 
 export const ALLOWED_SCHEMES: readonly string[] = ['http:', 'https:'];
 
@@ -46,11 +43,6 @@ export function isAllowedHost(hostname: string): boolean {
   return INTERNAL_ALLOWLIST.has(hostname.toLowerCase());
 }
 
-export async function lookupAddress(hostname: string): Promise<string | undefined> {
-  try {
-    const { address } = await dnsLookup(hostname);
-    return address;
-  } catch {
-    return undefined;
-  }
+export async function lookupAddresses(hostname: string): Promise<readonly dns.LookupAddress[]> {
+  return dns.promises.lookup(hostname, { all: true, verbatim: true });
 }

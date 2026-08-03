@@ -9,6 +9,8 @@ type RefreshableProvider = {
  refresh(): void;
 };
 
+const registeredSidebarViewIds = new Set<string>();
+
 export interface SidebarProviders {
  readonly workTreeProvider: WorkTreeProvider;
  readonly statusTreeProvider: StatusTreeProvider;
@@ -26,10 +28,20 @@ export function createSidebarProviders(agentx: AgentXContext): SidebarProviders 
 }
 
 export function registerSidebarProviders(providers: SidebarProviders): void {
- vscode.window.registerTreeDataProvider('agentx-work', providers.workTreeProvider);
- vscode.window.registerTreeDataProvider('agentx-status', providers.statusTreeProvider);
- vscode.window.registerTreeDataProvider('agentx-templates', providers.templateProvider);
- vscode.window.registerTreeDataProvider('agentx-skills', providers.skillProvider);
+ const registrations = [
+  ['agentx-work', providers.workTreeProvider],
+  ['agentx-status', providers.statusTreeProvider],
+  ['agentx-templates', providers.templateProvider],
+  ['agentx-skills', providers.skillProvider],
+ ] as const;
+ for (const [viewId, provider] of registrations) {
+  vscode.window.registerTreeDataProvider(viewId, provider);
+  registeredSidebarViewIds.add(viewId);
+ }
+}
+
+export function getRegisteredSidebarViewIds(): readonly string[] {
+ return [...registeredSidebarViewIds];
 }
 
 export function refreshSidebarProviders(providers: SidebarProviders): void {

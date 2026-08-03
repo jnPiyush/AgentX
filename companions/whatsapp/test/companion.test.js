@@ -13,6 +13,14 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+test('LocalAuth runtime loads without RemoteAuth optional dependencies', () => {
+  const Client = require('whatsapp-web.js/src/Client');
+  const LocalAuth = require('whatsapp-web.js/src/authStrategies/LocalAuth');
+
+  assert.equal(typeof Client, 'function');
+  assert.equal(typeof LocalAuth, 'function');
+});
+
 test('routeCommand routes common WhatsApp commands to the AgentX CLI', async () => {
   const runnerPath = path.resolve(__dirname, '..', 'src', 'agentxRunner.js');
   const routerPath = path.resolve(__dirname, '..', 'src', 'commandRouter.js');

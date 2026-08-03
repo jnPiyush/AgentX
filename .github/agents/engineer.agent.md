@@ -80,7 +80,7 @@ You implement through Compound Engineering: read the full artifact chain, choose
 
 ## Compound Engineering Pipeline
 
-Every implementation task follows `Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Review`, and each phase gate must pass before the next phase begins. The four Karpathy guidelines (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) are MANDATORY across every phase, and a deslop scrub is a required step before Test -- neither is optional.
+Follow the ordered phases below; each gate must pass before the next phase.
 
 ### Quick Phase Reference
 
@@ -113,15 +113,9 @@ Load `iterative-loop`, `core-principles`, and `testing`. When the issue has `nee
 
 ### 1.2 Read the Full Artifact Chain
 
-Read every artifact for this issue.
-
-| Artifact | Path | Key items to extract |
-|----------|------|----------------------|
-| PRD | `docs/artifacts/prd/PRD-{epic_id}.md` | Problem statement, target users, acceptance criteria |
-| ADR | `docs/artifacts/adr/ADR-{epic_id}.md` | Chosen option, rejected paths, consequences |
-| Tech Spec | `docs/artifacts/specs/SPEC-{issue}.md` | API contracts, data model, service layer design, security requirements, performance targets, testing strategy, AI/ML spec section |
-| UX Spec | `docs/ux/UX-{issue}.md` (if exists) | User flow state machines, component hierarchy, WCAG 2.1 AA constraints, breakpoints, empty/error/loading states |
-| Data Science | `docs/data-science/` or Spec AI/ML section (if exists) | ML integration points, input/output contracts, eval requirements, drift monitoring hooks |
+Read the PRD (problem/users/ACs), ADR (decision/rejected options/consequences), Tech
+Spec (contracts/data/security/performance/tests), and applicable UX/Data Science
+artifacts (flows, accessibility, AI I/O/evals/drift). Record conflicts and assumptions.
 
 ### 1.3 Scan the Existing Codebase (Reuse Inventory -- MANDATORY)
 
@@ -129,28 +123,17 @@ Read every artifact for this issue.
 - `grep_search` for existing implementations of similar patterns (auth, DB access, API endpoints, queries, stored procedures, UI components)
 - Identify reusable patterns, naming conventions, and file-placement rules
 
-Before planning any new code, build a **reuse inventory**: actively look for code that already does what this issue needs, so you extend or share it instead of duplicating it.
-
-| Need | Search for existing | Reuse decision |
-|------|--------------------|----------------|
-| API behavior / data shape | Existing endpoint or service returning the same data or doing the same mutation | Reuse / extend / new (justified) |
-| Business / domain logic | Existing service, use case, or utility with the same rule | Reuse / extend / new (justified) |
-| Data access (read/write) | Existing repository method, query, or stored procedure fetching/inserting/updating the same entity | Reuse / extend / new (justified) |
-| UI behavior | Existing component, hook, or screen with the same interaction | Reuse / extend / new (justified) |
-
-Default to reuse. Create new shared code only when no existing module fits; create a per-feature duplicate only when reuse is impossible AND the divergence is documented. If two or more call sites (screens, features, jobs) need the same behavior or data, plan a single shared module/endpoint/stored procedure -- not one copy per caller.
+Build a reuse inventory for API/data shapes, domain logic, data access, and UI
+behavior. Mark each need `reuse`, `extend/share`, or `new (justified)`. Two or more
+callers use one shared unit; per-feature duplication requires documented incompatibility.
 
 ### 1.5 Research Phase Gate -- Ambiguity Survey
 
 Survey every artifact before advancing. For each ambiguity found, follow the Inter-Agent Clarification Protocol below BEFORE coding.
 
-Ambiguity checklist:
-- [ ] Every API endpoint has a defined request schema, response schema, and error codes
-- [ ] Every data model field has a defined type, nullable status, and validation rule
-- [ ] Every user flow step has a clear trigger and outcome (from UX Spec or PRD)
-- [ ] Every security requirement is specific enough to implement (not vague)
-- [ ] Every performance target is measurable (specific numbers, not "make it fast")
-- [ ] AI/ML integration points have defined input/output contracts
+Clarify undefined API schemas/errors, data types/nullability/validation, user-flow
+triggers/outcomes, security controls, measurable performance targets, and AI I/O
+contracts before advancing.
 
 **Phase 1 Gate**: All artifacts read + all critical ambiguities clarified + assumptions documented + reuse inventory built (existing shared code identified for each need).
 
@@ -221,11 +204,8 @@ Map each Acceptance Criterion to at least one test:
 
 ### 3.4 Issue-Specific Verification Criteria
 
-Beyond the generic quality loop gates, define measurable completion criteria for this issue:
-- [ ] All acceptance criteria from PRD Story #{issue} verified by tests
-- [ ] API contract matches Spec exactly (request/response schema validation test exists)
-- [ ] Performance target met: {specific target from Spec}
-- [ ] Security: {specific security requirement from Spec implemented and tested}
+Define measurable completion criteria beyond shared gates: mapped acceptance tests,
+Spec contract validation, the named performance target, and tested security controls.
 
 **Phase 3 Gate**: Plan is complete -- file inventory, interface definitions, test plan, verification criteria. Nothing is TBD.
 
@@ -244,39 +224,13 @@ Write interfaces/types/schemas BEFORE any implementation:
 
 This ensures testability: each concrete class can be replaced with a mock in tests.
 
-### 4.2 SOLID Compliance Check
+### 4.2 Design Quality and Reuse Check
 
-| Principle | Question | Check |
-|-----------|----------|-------|
-| SRP | Does each class/module have exactly one reason to change? | `[ ]` |
-| OCP | Can behavior be extended without modifying existing classes? | `[ ]` |
-| LSP | Are subtypes fully substitutable for base types? | `[ ]` |
-| ISP | Are interfaces lean -- no method is forced on classes that do not need it? | `[ ]` |
-| DIP | Does the code depend on abstractions, not concretions? | `[ ]` |
-
-### 4.2a Reuse / DRY Check (MANDATORY)
-
-Confirm the design favors shared code over duplication before writing implementation logic:
-
-| Check | Question | Check |
-|-------|----------|-------|
-| Shared API | Is each data shape / mutation served by ONE endpoint reused across screens and features, not a near-duplicate per screen? | `[ ]` |
-| Shared data access | Is each read/insert/update for an entity served by ONE shared query, repository method, or stored procedure, not separate ones doing the same thing? | `[ ]` |
-| Shared logic | Is repeated business/domain logic extracted into a single shared module/function instead of copied per caller? | `[ ]` |
-| Shared UI | Are repeated UI behaviors served by a single shared component/hook, not re-implemented per screen? | `[ ]` |
-| Justified new | For any new (non-shared) code that resembles existing code, is the reason it cannot reuse/share documented? | `[ ]` |
-
-Reuse-first does not mean over-abstraction: share when two or more concrete call sites need the same thing (YAGNI still applies to single-use code).
-
-### 4.3 Clean Architecture Layer Check
-
-Verify layer assignments match the Spec's service layer design:
-
-| Layer | Responsibility | What MUST NOT be here |
-|-------|---------------|----------------------|
-| API/Presentation | Request parsing + response serialization + route registration | Business logic |
-| Core/Domain | Business rules + validation + use cases; zero framework/I/O imports | DB calls, HTTP calls |
-| Infrastructure | DB access + external API calls + file I/O | Business logic |
+Load `core-principles` and verify SRP/OCP/LSP/ISP/DIP, dependency direction, and
+the Spec's layer boundaries. Reuse existing endpoints, repositories, queries,
+services, components, and domain logic where contracts match. Extract shared code
+when at least two concrete callers need it; do not abstract a single use in anticipation.
+Document why similar existing code cannot serve any intentionally separate path.
 
 ### 4.4 Conditional Design Alignment Checkpoint
 
@@ -287,14 +241,9 @@ Run this checkpoint after the design is concrete but before writing implementati
 | Implementation crosses architecture boundaries or introduces a new pattern not explicit in ADR/Spec | AgentX Architect | The chosen implementation still fits the selected architecture and does not create hidden architecture drift |
 | `needs:ai` work changes model behavior, prompt flow, evals, RAG, or ML contracts | AgentX Data Scientist | Input/output contracts, eval hooks, operating assumptions, and ML/AI behavior remain aligned with the spec |
 
-**Minimum output**:
-- a short validation note, clarification record, or explicit confirmation captured in the task context before coding proceeds
-
-**Live execution rule**:
-- When this checkpoint needs specialist input during an AgentX run, trigger it through the clarification loop so the discussion stays visible to the user in chat/CLI.
-- Use the exact runtime agent ids in the prompt, for example:
-  - `I need clarification from architect about service boundary alignment for the auth token flow`
-  - `I need clarification from data-scientist about prompt and eval contract changes for the retrieval flow`
+Capture a short validation/clarification in task context before coding. Use the live
+clarification loop with runtime ids `architect` or `data-scientist` so the exchange
+remains visible.
 
 This is a lightweight alignment checkpoint, not a universal second approval loop for every story.
 
@@ -333,38 +282,20 @@ Store all system prompts as separate files in `prompts/`; do not embed multi-lin
 
 ### 5.4 Start Quality Loop
 
-After the first commit that completes a meaningful chunk of functionality:
+The loop MUST already be active from the pre-edit gate in
+[AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). Record the focused implementation check
+as an evidenced iteration; never defer `loop start` until after an edit or commit.
 
-```bash
-git add -A && git commit -m "feat: implement <description> (#<issue>)"
-.agentx/agentx.ps1 loop start -p "Implementing #<issue>: <description>" -i <issue>
-```
-
-**Phase 5 Gate**: Core implementation committed + quality loop started.
+**Phase 5 Gate**: Core implementation complete and focused validation recorded.
 
 ---
 
 ## Phase 5b: Scrub (Deslop) -- MANDATORY, NO SKIP
 
-> **Goal**: Remove AI-slop from changed files before tests and review. This gate is non-skippable and runs on every implementation task that changes files.
-
-### 5b.1 Load Scrub Skill
-
-Load `.github/skills/development/scrub/SKILL.md`.
-
-### 5b.2 Run the Deslop Pass
-
-Run the scrubber on every file you modified (one `-Path` per run) and apply safe fixes. Invoke it through the agentx CLI so it resolves the bundled scanner in zero-copy workspaces:
-
-```bash
-pwsh .agentx/agentx.ps1 scrub -Path <changed-path> -Fix
-```
-
-The scrubber flags comment-rot, obvious restatement comments, AI filler, stale bylines, generic gradients, empty catch blocks, and over-abstraction. Safe fixes (comment-rot, obvious-restate, stale-byline) are auto-applied with `-Fix`; flag-only findings (ai-filler, generic-gradient, over-abstraction, empty-catch) MUST be resolved by hand.
-
-### 5b.3 Verify Behavior Unchanged
-
-The scrub pass MUST NOT change behavior. After applying fixes, re-run the relevant tests to confirm nothing regressed.
+Load the `scrub` skill, run
+`pwsh .agentx/agentx.ps1 scrub -Path <changed-path> -Fix` for every changed area,
+resolve all HIGH and flag-only findings, then rerun focused tests. Scrub changes MUST
+remain behavior-neutral.
 
 **Phase 5b Gate**: `pwsh .agentx/agentx.ps1 scrub` run on every changed file; safe fixes applied; flag-only findings resolved; no HIGH-severity findings remain; behavior unchanged. This is a hard gate -- do not advance to Test with unresolved HIGH findings.
 
@@ -374,30 +305,11 @@ The scrub pass MUST NOT change behavior. After applying fixes, re-run the releva
 
 > **Goal**: Full test pyramid coverage aligned with the Spec's testing strategy. Every acceptance criterion verified by a test.
 
-### 6.1 Load Testing Skill
+### 6.1 Test Strategy and Acceptance Coverage
 
-Load `testing` skill and, when `needs:ai`, also load `ai-evaluation` skill. Follow the test pyramid decision tree from these skills.
-
-### 6.2 Test Pyramid
-
-| Type | Proportion | What to Test |
-|------|-----------|-------------|
-| Unit | 70% | Individual functions, classes, pure logic; mock all I/O |
-| Integration | 20% | Module interactions, DB calls, API contracts, external service calls |
-| E2E | 10% | Critical user flows end-to-end (aligned with PRD User Stories) |
-
-Target: coverage >= 80%.
-
-### 6.3 Acceptance Criteria Coverage
-
-For each AC in the PRD User Stories covered by this issue, the test plan from Phase 3 is the source of truth:
-
-```
-PRD Story #{issue} AC#1 -> test must verify this criterion exactly
-PRD Story #{issue} AC#2 -> test must verify this criterion exactly
-```
-
-All planned tests must exist and pass.
+Load `testing` and, for `needs:ai`, `ai-evaluation`. Scale unit, integration, and
+E2E coverage to risk; target at least 80% coverage where the repository enforces it.
+Map every in-scope PRD acceptance criterion to a passing test from the Phase 3 plan.
 
 ### 6.4 Regression Test First (Bugs Only)
 
@@ -426,37 +338,15 @@ Load `code-review` and `security` skills.
 
 ### 7.2 Self-Review Checklist
 
-**Spec Compliance**:
-- [ ] Every API endpoint matches Spec exactly (request schema, response schema, status codes)
-- [ ] Every data model matches Spec (field types, nullable, validation rules)
-- [ ] Every security requirement implemented (auth, input validation, SQL parameterization, secrets in env vars)
-- [ ] Performance targets verified (latency, throughput, caching as specified)
-- [ ] All PRD User Story acceptance criteria covered by passing tests
+Verify against the loaded `code-review` and `security` skills:
 
-**Code Quality**:
-- [ ] All tests pass with coverage >= 80%
-- [ ] No lint/format errors
-- [ ] No hardcoded secrets, credentials, or API keys
-- [ ] No SQL string concatenation (parameterized queries only)
-- [ ] No unvalidated user inputs at API boundary
-- [ ] Error handling covers edge cases with useful messages
-- [ ] No unnecessary complexity or dead code (YAGNI)
-- [ ] No unresolved TODO/FIXME markers (resolve now or raise a follow-up issue)
-- [ ] Naming clear and consistent with codebase conventions
-- [ ] Required Architect/Data Scientist design alignment checkpoints were completed where the implementation crossed those boundaries
-
-**Reuse / DRY**:
-- [ ] No near-duplicate API endpoint, service, module, query, stored procedure, or component was created when an existing one could be reused or extended
-- [ ] Logic or data access needed by 2+ screens/features is served by a single shared unit (shared API/module/stored procedure), not duplicated per caller
-- [ ] Any new code that resembles existing code carries a documented justification for not reusing
-
-**Documentation**:
-- [ ] Public APIs documented where behavior is non-obvious
-- [ ] README updated if new setup or configuration is required
-- [ ] Prompts directory up to date (AI features)
-
-**GenAI-Specific** (when `needs:ai` present): models pinned + env-var loaded, prompts as files, OpenTelemetry before client, backoff+timeouts, structured outputs validated, LLM calls mocked in tests, evaluation baseline saved.
-- [ ] Guardrails implemented (input sanitization, output filtering, token limits)
+- Spec contracts, NFRs, and every in-scope acceptance criterion match passing evidence.
+- Tests, coverage, lint, formatting, error paths, and boundary validation pass.
+- No secrets, injection paths, unsafe data access, dead code, unjustified TODOs, or
+  near-duplicate endpoints/services/queries/components remain.
+- Required design checkpoints and setup/public API documentation are complete.
+- For GenAI: pinned/configured models, file prompts, telemetry, retries/timeouts,
+  schemas, guardrails, mocked unit calls, and evaluation baseline are present.
 
 ### 7.3 Run Output Scorer
 

@@ -1,0 +1,8 @@
+dimension,baseline_score,local_score,projected_remote_score,evidence
+Loop architecture,3,3,3,"Bounded loops and evidence remain explicit; no full replay trace"
+Model routing,3,3,3,"Production issue classification is shared/evaluated; broader adaptive model routing unchanged"
+Context engineering,3,3,3,"68/68 token budgets pass; no outcome-driven reranking/cache optimization"
+Memory architecture,2,2,2,"Durable memory exists; lifecycle and correction semantics remain informal"
+Evaluation architecture,2,3,4,"Production classifier gate is live and blocking locally; remote continuous run pending"
+Orchestration,3,3,3,"Permission-separated agents preserved; no topology merge"
+Governance,2,3,4,"Local SAST/release/security gates pass; remote required enforcement pending"

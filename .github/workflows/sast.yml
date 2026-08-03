@@ -1,0 +1,76 @@
+name: SAST
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  schedule:
+    # Weekly, so newly published CodeQL queries surface without a code change.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL (TypeScript)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@5c8a8a642e79153f5d047b10ec1cba1d1cc65699
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Build extension
+        working-directory: vscode-extension
+        run: |
+          npm ci
+          npm run compile
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@5c8a8a642e79153f5d047b10ec1cba1d1cc65699
+        with:
+          category: /language:javascript-typescript
+
+  psscriptanalyzer:
+    name: PSScriptAnalyzer (PowerShell)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Run static analysis
+        shell: pwsh
+        run: ./scripts/run-psscriptanalyzer.ps1
+
+  eslint:
+    name: ESLint (ratchet)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Lint ratchet
+        working-directory: vscode-extension
+        run: |
+          npm ci
+          # quality-gates.yml previously ran `npm run lint || echo`, so lint
+          # errors never failed a build. The extension carries pre-existing
+          # debt (328 no-explicit-any), so this compares against a committed
+          # baseline and fails only on an increase.
+          node scripts/lint-ratchet.js

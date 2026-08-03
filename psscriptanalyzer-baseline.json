@@ -1,0 +1,23 @@
+{
+  "updatedAt": "2026-07-27T11:43:43.3670102Z",
+  "analyzerVersion": "1.25.0",
+  "note": "Ratchet baseline. Regenerate with: pwsh scripts/run-psscriptanalyzer.ps1 -UpdateBaseline",
+  "paths": [
+    ".agentx",
+    "scripts",
+    "tests",
+    ".github",
+    "packs",
+    "install.ps1"
+  ],
+  "total": 80.0,
+  "rules": {
+    "PSAvoidAssignmentToAutomaticVariable": 26,
+    "PSAvoidGlobalVars": 13,
+    "PSAvoidUsingEmptyCatchBlock": 15,
+    "PSAvoidUsingInvokeExpression": 1,
+    "PSPossibleIncorrectComparisonWithNull": 8,
+    "PSUseDeclaredVarsMoreThanAssignments": 9,
+    "PSUseUsingScopeModifierInNewRunspaces": 8
+  }
+}

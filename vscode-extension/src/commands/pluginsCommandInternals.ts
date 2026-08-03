@@ -12,6 +12,7 @@ import {
   type PluginRegistryEntry,
 } from '../utils/pluginCatalog';
 import { verifyFileChecksum } from '../utils/pluginIntegrity';
+import { validatePath } from '../utils/pathSandbox';
 import {
   appendPluginInstallRecord,
   buildPermissionFingerprint,
@@ -55,9 +56,63 @@ interface RegistryPluginPick extends BasePluginPick {
 
 type PluginPick = LocalPluginPick | RegistryPluginPick;
 
+const SAFE_PLUGIN_DIR_RE = /^[a-z0-9][a-z0-9._-]{0,127}$/i;
+
 interface CatalogSelection {
  readonly source: 'archive' | 'registry';
  readonly picks: PluginPick[];
+}
+
+function assertCanonicalPluginTarget(workspaceRoot: string, targetPath: string): void {
+  const lexicalRoot = path.resolve(workspaceRoot);
+  let current = path.resolve(targetPath);
+  let nearestExisting = lexicalRoot;
+
+  while (current !== lexicalRoot) {
+    const relative = path.relative(lexicalRoot, current);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error(`Plugin target is outside the workspace: ${targetPath}`);
+    }
+    if (fs.existsSync(current)) {
+      const stat = fs.lstatSync(current);
+      if (stat.isSymbolicLink()) {
+        throw new Error(`Plugin target contains a linked directory: ${current}`);
+      }
+      nearestExisting = current;
+      break;
+    }
+    current = path.dirname(current);
+  }
+
+  if (!fs.existsSync(lexicalRoot)) {
+    return;
+  }
+  const canonicalRoot = fs.realpathSync.native(lexicalRoot);
+  const canonicalExisting = fs.realpathSync.native(nearestExisting);
+  const canonicalRelative = path.relative(canonicalRoot, canonicalExisting);
+  if (canonicalRelative.startsWith('..') || path.isAbsolute(canonicalRelative)) {
+    throw new Error(`Plugin target resolves outside the workspace: ${targetPath}`);
+  }
+}
+
+export function resolvePluginTarget(root: string, targetDirName: string): string {
+  if (!SAFE_PLUGIN_DIR_RE.test(targetDirName)) {
+    throw new Error(`Unsafe plugin target directory: ${targetDirName}`);
+  }
+
+  const pluginsRoot = path.resolve(root, '.agentx', 'plugins');
+  const validation = validatePath(path.join(pluginsRoot, targetDirName), root);
+  if (!validation.allowed) {
+    throw new Error(`Plugin target blocked by path policy: ${validation.reason ?? targetDirName}`);
+  }
+
+  const relative = path.relative(pluginsRoot, validation.resolvedPath);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`Plugin target is outside the plugin directory: ${targetDirName}`);
+  }
+
+  assertCanonicalPluginTarget(root, validation.resolvedPath);
+  return validation.resolvedPath;
 }
 
 function buildPluginDescription(summary: PluginCatalogSummary, source: 'archive' | 'registry'): string {
@@ -447,7 +502,7 @@ async function installRegistryPlugin(
     const summary = getPublishedPluginSummaryOrThrow(manifest, pick);
     const trustDecision = await confirmPublishedPluginTrust(root, pick, summary, manifest);
 
-    const pluginTarget = path.join(root, '.agentx', 'plugins', pick.targetDirName);
+    const pluginTarget = resolvePluginTarget(root, pick.targetDirName);
     fs.mkdirSync(path.dirname(pluginTarget), { recursive: true });
     copyDirRecursive(pluginSource, pluginTarget, true);
     writePluginInstallAuditRecord(
@@ -520,7 +575,7 @@ export async function runAddPluginCommand(
    return;
   }
 
-  const pluginTarget = path.join(root, '.agentx', 'plugins', pick.targetDirName);
+  const pluginTarget = resolvePluginTarget(root, pick.targetDirName);
   if (fs.existsSync(pluginTarget)) {
    const overwrite = await vscode.window.showWarningMessage(
     `AgentX plugin \"${pick.label}\" is already installed. Reinstall?`,

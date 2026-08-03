@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "acceptedRunId": "issue-classifier-baseline",
-  "updatedAt": "2026-03-20T00:00:00.000Z",
+  "acceptedRunId": "issue-classifier-v2-20260728",
+  "updatedAt": "2026-07-28T00:00:00.000Z",
   "runner": "custom",
-  "model": "agentx-issue-classifier-baseline",
+  "model": "agentx-production-issue-classifier",
   "aggregateScores": {
     "correctness": 1,
     "task-completion": 1
