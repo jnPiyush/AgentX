@@ -190,8 +190,12 @@ function Get-HclPropertyExpression {
     param([string]$BlockText, [string[]]$PropertyNames)
     $blockLines = @($BlockText -split "`r?`n")
     $namePattern = ($PropertyNames | ForEach-Object { [regex]::Escape($_) }) -join '|'
+    $propertyPattern = '^(?<indent>\s*)(?:' + $namePattern + ')\s*[:=]\s*(?<value>.*)$'
     for ($i = 0; $i -lt $blockLines.Count; $i++) {
-        $match = [regex]::Match($blockLines[$i], "^(?<indent>\s*)(?:$namePattern)\s*[:=]\s*(?<value>.*)$", 'IgnoreCase')
+        $match = [regex]::Match(
+            $blockLines[$i],
+            $propertyPattern,
+            [Text.RegularExpressions.RegexOptions]::IgnoreCase)
         if (-not $match.Success) { continue }
         $indent = $match.Groups['indent'].Value.Length
         $parts = [System.Collections.Generic.List[string]]::new()
