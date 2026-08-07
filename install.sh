@@ -399,7 +399,9 @@ AGENTX_BLOCK="$MARKER_START
 .cursor/commands/data-scientist.md
 .cursor/commands/devops.md
 .cursor/commands/engineer.md
+.cursor/commands/fabric-engineer.md
 .cursor/commands/github-ops.md
+.cursor/commands/power-platform-builder.md
 .cursor/commands/powerbi-analyst.md
 .cursor/commands/product-manager.md
 .cursor/commands/reviewer-auto.md
@@ -447,6 +449,8 @@ if [ ! -f "$STATUS" ] || [ "$FORCE" = "true" ]; then
  "auto-fix-reviewer": { "status": "idle", "issue": null, "lastActivity": null },
  "data-scientist": { "status": "idle", "issue": null, "lastActivity": null },
  "tester": { "status": "idle", "issue": null, "lastActivity": null },
+ "fabric-engineer": { "status": "idle", "issue": null, "lastActivity": null },
+ "power-platform-builder": { "status": "idle", "issue": null, "lastActivity": null },
  "consulting-research": { "status": "idle", "issue": null, "lastActivity": null },
  "powerbi-analyst": { "status": "idle", "issue": null, "lastActivity": null }
 }

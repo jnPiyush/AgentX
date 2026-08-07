@@ -139,6 +139,8 @@ git commit -m "fix: resolve login timeout (#1)"
 | Docs only? | `type:docs` | Engineer |
 | Pipeline/deploy? | `type:devops` | DevOps Engineer |
 | Testing/certification? | `type:testing` | Tester |
+| Fabric data platform? | `type:fabric` | Fabric Engineer |
+| Power Platform solution? | `type:lowcode` | Power Platform Builder |
 | Large/vague? | `type:epic` | Product Manager |
 | Single capability? | `type:feature` | Architect |
 | Otherwise | `type:story` | Engineer |
@@ -205,6 +207,8 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 | DevOps Engineer | [.github/agents/devops.agent.md](.github/agents/devops.agent.md) |
 | Data Scientist | [.github/agents/data-scientist.agent.md](.github/agents/data-scientist.agent.md) |
 | Tester | [.github/agents/tester.agent.md](.github/agents/tester.agent.md) |
+| Fabric Engineer | [.github/agents/fabric-engineer.agent.md](.github/agents/fabric-engineer.agent.md) |
+| Power Platform Builder | [.github/agents/power-platform-builder.agent.md](.github/agents/power-platform-builder.agent.md) |
 | Power BI Analyst | [.github/agents/powerbi-analyst.agent.md](.github/agents/powerbi-analyst.agent.md) |
 | Consulting Research | [.github/agents/consulting-research.agent.md](.github/agents/consulting-research.agent.md) |
 | GitHub Ops | [.github/agents/internal/github-ops.agent.md](.github/agents/internal/github-ops.agent.md) |
@@ -222,7 +226,7 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 
 ## Claude Code Commands
 
-All 21 agents are available as `/project:` slash commands in Claude Code via `.claude/commands/` (invisible sub-agents do not have commands):
+All 18 command-backed agents are available as `/project:` slash commands in Claude Code via `.claude/commands/` (other internal sub-agents remain invisible):
 
 | Command | Agent | Purpose |
 |---------|-------|---------|
@@ -236,6 +240,8 @@ All 21 agents are available as `/project:` slash commands in Claude Code via `.c
 | `/project:devops` | DevOps Engineer | GitHub Actions pipelines, deployment automation |
 | `/project:data-scientist` | Data Scientist | ML pipelines, evaluations, drift monitoring |
 | `/project:tester` | Tester | Automated testing, certification reports |
+| `/project:fabric-engineer` | Fabric Engineer | Fabric Lakehouse, Warehouse, notebooks, pipelines, and data quality |
+| `/project:power-platform-builder` | Power Platform Builder | Unpacked Power Platform solution source and package validation |
 | `/project:powerbi-analyst` | Power BI Analyst | Power BI reports, DAX measures, semantic models |
 | `/project:consulting-research` | Consulting Research | Domain-expert consulting research, client-ready materials |
 | `/project:github-ops` | GitHub Ops | GitHub issue triage, sprint planning, backlog management |

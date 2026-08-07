@@ -1,7 +1,7 @@
 {
   "name": "agentx",
   "displayName": "AgentX - Multi-Agent Orchestration",
-  "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
+  "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Fabric Engineer, Power Platform Builder, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
   "version": "8.6.1",
   "publisher": "jnPiyush",
   "extensionKind": [
@@ -586,6 +586,12 @@
         "path": "./.github/agentx/agents/engineer.agent.md"
       },
       {
+        "path": "./.github/agentx/agents/fabric-engineer.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/power-platform-builder.agent.md"
+      },
+      {
         "path": "./.github/agentx/agents/powerbi-analyst.agent.md"
       },
       {
@@ -1090,6 +1096,9 @@
         "path": "./.github/agentx/skills/testing/test-automation/SKILL.md"
       }
     ],
+    "configurationDefaults": {
+      "chat.useCustomAgentHooks": true
+    },
     "configuration": {
       "title": "AgentX",
       "properties": {

@@ -21,7 +21,7 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 
 | Feature | Description |
 |:--------|:------------|
-| **13 Declarative Chat Agents** | Role-specific agents (PM, UX, Architect, Engineer, Reviewer, DevOps, Tester, Data Scientist, Power BI, Consulting Research, Agile Coach, Auto-Fix Reviewer) plus AgentX Auto for end-to-end orchestration. |
+| **15 Declarative Chat Agents** | Role-specific agents (PM, UX, Architect, Engineer, Reviewer, DevOps, Tester, Data Scientist, Fabric Engineer, Power Platform Builder, Power BI, Consulting Research, Agile Coach, Auto-Fix Reviewer) plus AgentX Auto for end-to-end orchestration. |
 | **Model Council (core)** | Multi-model deliberation on high-stakes decisions -- **Analyst + Strategist + Skeptic** debate PRD scope, ADR options, AI design, code reviews, and deep research before they ship. Agent-internal by default; optional `gh models` multi-vendor auto-invoke. Mandatory gate for PM, Architect, Reviewer, Data Scientist, and Consulting Research on high-stakes work. |
 | **Copilot Chat Participant** | Native `@agentx` chat participant for triggering routines, brainstorm, learnings, and compound-loop inspection. |
 | **Karpathy Guidelines (built-in)** | The `karpathy-guidelines` skill is auto-loaded for Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist -- enforcing *think before coding*, surgical diffs, assumption audits, and goal-driven execution to block common LLM coding pitfalls at authoring and review time. |
@@ -323,7 +323,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 
 ## Chat Agents
 
-The extension registers 13 declarative chat agents, each mapped to an AgentX role:
+The extension registers 15 declarative chat agents, each mapped to an AgentX role:
 
 | Agent | Role | Use For |
 |:------|:-----|:--------|
@@ -337,6 +337,8 @@ The extension registers 13 declarative chat agents, each mapped to an AgentX rol
 | **DevOps** | CI/CD | Pipelines, deployment automation |
 | **Data Scientist** | ML/AI | ML pipelines, evaluation, drift |
 | **Tester** | Testing | Test suites, certification |
+| **Fabric Engineer** | Data platform | Fabric Lakehouse, Warehouse, notebooks, pipelines, data quality |
+| **Power Platform Builder** | Low-code solutions | Dataverse, apps, flows, Pages, PCF, Copilot Studio source |
 | **Power BI Analyst** | Reports | Power BI, DAX, semantic models |
 | **Consulting Research** | Research | Domain research, client materials |
 | **Agile Coach** | Stories | Story creation, INVEST refinement |

@@ -99,6 +99,8 @@ export async function runInitializeLocalRuntimeCommand(
       'auto-fix-reviewer',
       'data-scientist',
       'tester',
+      'fabric-engineer',
+      'power-platform-builder',
       'consulting-research',
       'powerbi-analyst',
      ]) {

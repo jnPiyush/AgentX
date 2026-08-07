@@ -6,7 +6,7 @@
 
 | Artifact | Count | Description |
 |----------|-------|-------------|
-| Agents | 24 | 13 external + 11 internal sub-agents |
+| Agents | 26 | 15 external + 11 internal sub-agents |
 | Skills | 130 | Complete production code standards across 14 categories |
 | Instructions | 7 | Auto-applied coding guidelines by file pattern |
 | Prompts | 21 | Reusable prompt templates |
@@ -66,7 +66,7 @@ After installation, your workspace will contain:
 ```
 your-project/
   .github/
-    agents/                    # 24 agent definitions
+    agents/                    # 26 agent definitions
       agent-x.agent.md
       engineer.agent.md
       ...

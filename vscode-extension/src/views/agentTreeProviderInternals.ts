@@ -42,6 +42,18 @@ const AGENT_SKILL_MAP: Record<string, SkillLink[]> = {
   { label: 'Core Principles', relativePath: '.github/skills/architecture/core-principles/SKILL.md' },
   { label: 'Documentation', relativePath: '.github/skills/development/documentation/SKILL.md' },
  ],
+ 'fabric-engineer.agent.md': [
+  { label: 'Fabric Analytics', relativePath: '.github/skills/data/fabric-analytics/SKILL.md' },
+  { label: 'Fabric Data Agent', relativePath: '.github/skills/data/fabric-data-agent/SKILL.md' },
+  { label: 'Fabric Forecasting', relativePath: '.github/skills/data/fabric-forecasting/SKILL.md' },
+  { label: 'Database', relativePath: '.github/skills/architecture/database/SKILL.md' },
+ ],
+ 'power-platform-builder.agent.md': [
+  { label: 'Solution Anatomy', relativePath: '.github/skills/low-code/solution-anatomy/SKILL.md' },
+  { label: 'Dataverse Schema', relativePath: '.github/skills/low-code/dataverse-schema/SKILL.md' },
+  { label: 'Power Platform CLI', relativePath: '.github/skills/low-code/pac-cli/SKILL.md' },
+  { label: 'Low-Code vs Pro-Code', relativePath: '.github/skills/architecture/low-code-vs-pro-code/SKILL.md' },
+ ],
  'powerbi-analyst.agent.md': [
   { label: 'Power BI', relativePath: '.github/skills/data/powerbi/SKILL.md' },
   { label: 'Fabric Analytics', relativePath: '.github/skills/data/fabric-analytics/SKILL.md' },

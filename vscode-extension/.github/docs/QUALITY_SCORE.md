@@ -33,6 +33,8 @@
 | DevOps Engineer | A | Pipeline creation, deployment docs |
 | Data Scientist | A | ML pipeline, evaluation, drift monitoring |
 | Tester | A | Full test pyramid, certification reports |
+| Fabric Engineer | A | Lakehouse/Warehouse, notebooks, pipelines, data quality, lineage, and recovery contract |
+| Power Platform Builder | A | Unpacked solution source, component skills, package validation, and tenant-safety boundary |
 | Power BI Analyst | A | Star schema, DAX, DirectLake patterns |
 | Consulting Research | A | Research briefs, domain skill wiring, standalone workflow |
 | Agile Coach | B | Story creation solid, INVEST evaluation could be expanded |

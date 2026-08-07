@@ -19,9 +19,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ROOT = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
-$VALID_AGENTS = @('agent-x','pm','ux','architect','data-scientist','engineer','reviewer','reviewer-auto','devops','tester','powerbi','consulting-research','agile-coach','github-ops','ado-ops')
+$VALID_AGENTS = @('agent-x','pm','ux','architect','data-scientist','engineer','reviewer','reviewer-auto','devops','tester','fabric-engineer','power-platform-builder','powerbi','consulting-research','agile-coach','github-ops','ado-ops')
 $VALID_STATUSES = @('Backlog','Ready','In Progress','In Review','Validating','Done')
-$ARTIFACT_TYPES = @('prd','adr','spec','ux','code','test','review','pipeline','certification','report','other')
+$ARTIFACT_TYPES = @('prd','adr','spec','ux','code','test','review','pipeline','certification','fabric-data-product','power-platform-solution','report','other')
 
 # Agent -> expected deliverable paths
 $AGENT_DELIVERABLES = @{
@@ -32,6 +32,8 @@ $AGENT_DELIVERABLES = @{
     'reviewer'  = @{ pattern = 'docs/artifacts/reviews/REVIEW-{0}.md'; type = 'review' }
     'devops'    = @{ pattern = '.github/workflows/**'; type = 'pipeline' }
     'tester'    = @{ pattern = 'docs/testing/**'; type = 'certification' }
+    'fabric-engineer' = @{ pattern = 'fabric/**'; type = 'fabric-data-product' }
+    'power-platform-builder' = @{ pattern = 'solutions/**'; type = 'power-platform-solution' }
 }
 
 # Agent -> status after handoff
@@ -43,6 +45,8 @@ $HANDOFF_STATUS = @{
     'reviewer'  = 'Validating'
     'devops'    = 'In Review'
     'tester'    = 'In Review'
+    'fabric-engineer' = 'In Review'
+    'power-platform-builder' = 'In Review'
 }
 
 function Test-HandoffMessage([hashtable]$msg) {
@@ -88,10 +92,22 @@ function New-HandoffMessage {
     if ($AGENT_DELIVERABLES.ContainsKey($FromAgent)) {
         $info = $AGENT_DELIVERABLES[$FromAgent]
         $expectedPath = $info.pattern -f $IssueNumber
-        # Check if file exists (for non-glob paths)
-        if ($expectedPath -notmatch '\*') {
+        if ($expectedPath -match '\*') {
+            $wildcardIndex = $expectedPath.IndexOf('*')
+            $baseRelativePath = $expectedPath.Substring(0, $wildcardIndex).TrimEnd('/', '\')
+            $basePath = Join-Path $ROOT $baseRelativePath
+            $matchingFiles = if (Test-Path -LiteralPath $basePath -PathType Container) {
+                @(Get-ChildItem -LiteralPath $basePath -File -Recurse -ErrorAction SilentlyContinue)
+            } else {
+                @()
+            }
+            foreach ($matchingFile in $matchingFiles) {
+                $relativePath = [IO.Path]::GetRelativePath($ROOT, $matchingFile.FullName).Replace('\', '/')
+                $artifacts += @{ path = $relativePath; type = $info.type; description = "Deliverable from $FromAgent" }
+            }
+        } else {
             $fullPath = Join-Path $ROOT $expectedPath
-            if (Test-Path $fullPath) {
+            if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
                 $artifacts += @{ path = $expectedPath; type = $info.type; description = "Deliverable from $FromAgent" }
             }
         }
@@ -101,10 +117,11 @@ function New-HandoffMessage {
 
     # Check loop state
     $loopCompleted = $false
-    $loopFile = Join-Path $ROOT ".agentx/state/loop-$IssueNumber.json"
-    if (Test-Path $loopFile) {
+    $loopFile = Join-Path $ROOT '.agentx/state/loop-state.json'
+    if (Test-Path -LiteralPath $loopFile -PathType Leaf) {
         $loopState = Get-Content $loopFile -Raw | ConvertFrom-Json
-        $loopCompleted = ($loopState.status -eq 'complete')
+        $stateIssue = if ($loopState.PSObject.Properties.Name -contains 'issueNumber') { [int]$loopState.issueNumber } else { 0 }
+        $loopCompleted = ($loopState.status -eq 'complete') -and ($stateIssue -eq $IssueNumber)
     }
 
     $handoff = @{

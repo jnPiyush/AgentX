@@ -46,7 +46,7 @@ This ensures traceability, validates prerequisites, and prevents incomplete tran
 
 ---
 
-## Agent Roles (15 valid slugs)
+## Agent Roles (17 valid slugs)
 
 | Slug | Agent |
 |------|-------|
@@ -60,6 +60,8 @@ This ensures traceability, validates prerequisites, and prevents incomplete tran
 | `reviewer-auto` | Auto-Fix Reviewer |
 | `devops` | DevOps Engineer |
 | `tester` | Tester |
+| `fabric-engineer` | Fabric Engineer |
+| `power-platform-builder` | Power Platform Builder |
 | `powerbi` | Power BI Analyst |
 | `consulting-research` | Consulting Research |
 | `agile-coach` | Agile Coach |
@@ -121,6 +123,8 @@ scripts/validate-handoff.ps1 -Validate .agentx/handoffs/handoff-42-pm-to-archite
 | `review` | Reviewer |
 | `pipeline` | DevOps Engineer |
 | `certification` | Tester |
+| `fabric-data-product` | Fabric Engineer |
+| `power-platform-solution` | Power Platform Builder |
 | `report` | Power BI Analyst |
 | `other` | Any agent |
 

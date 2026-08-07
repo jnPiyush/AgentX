@@ -30,17 +30,22 @@
       ".github/agents/devops.agent.md",
       ".github/agents/data-scientist.agent.md",
       ".github/agents/tester.agent.md",
+      ".github/agents/fabric-engineer.agent.md",
+      ".github/agents/power-platform-builder.agent.md",
       ".github/agents/consulting-research.agent.md",
       ".github/agents/powerbi-analyst.agent.md",
       ".github/agents/agile-coach.agent.md",
       ".github/agents/internal/github-ops.agent.md",
       ".github/agents/internal/ado-ops.agent.md",
       ".github/agents/internal/functional-reviewer.agent.md",
+      ".github/agents/internal/architecture-reviewer.agent.md",
+      ".github/agents/internal/diagram-specialist.agent.md",
       ".github/agents/internal/prompt-engineer.agent.md",
       ".github/agents/internal/eval-specialist.agent.md",
       ".github/agents/internal/ops-monitor.agent.md",
       ".github/agents/internal/rag-specialist.agent.md",
-      ".github/agents/internal/ado-prd-to-wit.agent.md"
+      ".github/agents/internal/ado-prd-to-wit.agent.md",
+      ".github/agents/internal/prototype-auditor.agent.md"
     ],
     "instructions": [
       ".github/instructions/ai.instructions.md",

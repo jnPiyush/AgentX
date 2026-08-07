@@ -8,6 +8,14 @@
 {"id":"bug-2","input":"The SSRF validator incorrectly allows IPv4-mapped IPv6 addresses like ::ffff:127.0.0.1 to bypass private IP checks.","expected":"type:bug","tags":["edge","security","bug"]}
 {"id":"story-2","input":"Update the ASCII-only validation script to scan CONTRIBUTING.md and agent definition files.","expected":"type:story","tags":["happy","story"]}
 {"id":"testing-1","input":"Write end-to-end Playwright tests for the AgentX sidebar tree views and command palette interactions.","expected":"type:testing","tags":["edge","testing"]}
+{"id":"fabric-1","input":"Build a Microsoft Fabric Lakehouse medallion pipeline with parameterized notebooks and data quality checks.","expected":"type:fabric","tags":["edge","fabric"]}
+{"id":"fabric-2","input":"Create a new capability for a Microsoft Fabric Lakehouse pipeline.","expected":"type:fabric","tags":["edge","fabric","precedence"]}
+{"id":"fabric-4","input":"[Feature] Build a Microsoft Fabric Lakehouse pipeline.","expected":"type:fabric","tags":["edge","fabric","feature-prefix"]}
+{"id":"fabric-3","input":"Create a Fabric Data Agent with known-answer validation.","expected":"type:fabric","tags":["edge","fabric","data-agent"]}
+{"id":"fabric-ds-1","input":"Build a Fabric forecasting pipeline and model evaluation.","expected":"type:data-science","tags":["edge","fabric","data-science","handoff"]}
+{"id":"fabric-powerbi-1","input":"Build a Microsoft Fabric semantic model and Power BI dashboard.","expected":"type:powerbi","tags":["edge","fabric","powerbi","handoff"]}
+{"id":"lowcode-1","input":"Create an unpacked Power Platform solution with Dataverse tables, Power Automate flows, and a canvas app.","expected":"type:lowcode","tags":["edge","lowcode"]}
+{"id":"lowcode-2","input":"Feature: Create a Power Platform Dataverse solution.","expected":"type:lowcode","tags":["edge","lowcode","feature-prefix"]}
 {"id":"powerbi-1","input":"Create a Power BI report that tracks agent task completion rates and quality loop iteration counts over time.","expected":"type:powerbi","tags":["edge","powerbi"]}
 {"id":"data-science-1","input":"Train a classifier to predict whether an issue will require architecture review based on title and label patterns.","expected":"type:data-science","tags":["edge","data-science"]}
 {"id":"bug-3","input":"The command validator does not block base64-encoded PowerShell payloads passed through pwsh -EncodedCommand.","expected":"type:bug","tags":["edge","security","bug"]}

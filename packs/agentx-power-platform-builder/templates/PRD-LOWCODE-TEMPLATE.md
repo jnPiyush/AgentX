@@ -25,7 +25,7 @@ inputs:
 **Date**: ${date}
 **Publisher Prefix**: ${publisher_prefix}
 
-> This is the LOW-CODE PRD variant. Use it when the Architect has chosen Power Platform (Dataverse + Power Automate + optionally Power Apps / Copilot Studio) over pro-code. The low-code-builder agent reads this PRD and emits a deterministic unpacked solution tree.
+> This is the LOW-CODE PRD variant. Use it when the Architect has chosen Power Platform (Dataverse + Power Automate + optionally Power Apps / Copilot Studio) over pro-code. The Power Platform Builder reads this PRD and emits a deterministic unpacked solution tree.
 
 ---
 

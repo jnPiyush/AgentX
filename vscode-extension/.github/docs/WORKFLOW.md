@@ -405,6 +405,8 @@ Spike + Backlog -> Architect
 type:devops + Backlog -> DevOps Engineer (skip PM/Architect for infrastructure work)
 type:data-science + Backlog -> Data Scientist (skip PM/Architect for ML/AI work)
 type:testing + Backlog -> Tester (skip PM/Architect for testing/certification work)
+type:fabric + Backlog -> Fabric Engineer (skip PM/Architect when platform scope is already clear)
+type:lowcode + Backlog -> Power Platform Builder (skip PM/Architect when platform fit is already decided)
 type:powerbi + Backlog -> Power BI Analyst (skip PM/Architect for report/dashboard work)
 In Review + needs:testing -> Tester (pre-release certification)
 ```
@@ -434,6 +436,8 @@ In Review + needs:testing -> Tester (pre-release certification)
 - Reviewer: Review document complete, approval decision present
 - DevOps: CI/CD pipelines validated, deployment docs present
 - Tester: Test suites pass, certification report complete
+- Fabric Engineer: data product artifacts, quality checks, lineage, recovery, and runtime-evidence status documented
+- Power Platform Builder: unpacked unmanaged source complete, package validation recorded, zero tenant mutations
 - Power BI Analyst: Semantic model validated, DAX measures tested, report spec documented
 
 **Harness-oriented validation additions:**
@@ -474,7 +478,7 @@ For complex tasks, self-review also checks that the execution plan and progress 
 ## Handoff Flow
 
 ```
-Discover/Plan -> [Architect, Data Scientist, UX] -> Architect/Data Scientist AI alignment (if `needs:ai`) -> Architect/PM fit check -> Engineer -> conditional Architect/Data Scientist alignment -> Reviewer -> [DevOps, Tester] -> Engineer (bug fixes if needed)
+Discover/Plan -> [Architect, Data Scientist, UX] -> [Fabric Engineer / Power Platform Builder when routed] -> Architect/Data Scientist AI alignment (if `needs:ai`) -> Architect/PM fit check -> Engineer -> conditional Architect/Data Scientist alignment -> Reviewer -> [DevOps, Tester] -> Engineer (bug fixes if needed)
 ```
 
 **Design Phase**: Architect, Data Scientist, and UX inputs are applied before implementation when complexity requires them.
@@ -550,6 +554,8 @@ Agents query the backlog for the next priority item instead of receiving explici
 | **DevOps** | `type:devops` + Status=`Ready`, sorted by priority |
 | **Data Scientist** | `type:data-science` + Status=`Ready`, sorted by priority |
 | **Tester** | `type:testing` + Status=`Ready` or `In Review` + `needs:testing`, sorted by priority |
+| **Fabric Engineer** | `type:fabric` + Status=`Ready`, sorted by priority |
+| **Power Platform Builder** | `type:lowcode` + Status=`Ready`, sorted by priority |
 | **Power BI Analyst** | `type:powerbi` + Status=`Ready`, sorted by priority |
 
 **Priority Order**: `priority:p0` > `priority:p1` > `priority:p2` > `priority:p3` > (no label)
@@ -610,7 +616,7 @@ In live AgentX execution, run these checkpoints through the existing clarificati
 
 ## Labels
 
-**Type Labels**: `type:epic`, `type:feature`, `type:story`, `type:bug`, `type:spike`, `type:docs`, `type:data-science`, `type:testing`, `type:powerbi`
+**Type Labels**: `type:epic`, `type:feature`, `type:story`, `type:bug`, `type:spike`, `type:docs`, `type:data-science`, `type:testing`, `type:fabric`, `type:lowcode`, `type:powerbi`
 
 **Priority Labels**: `priority:p0`, `priority:p1`, `priority:p2`, `priority:p3`
 
@@ -649,7 +655,7 @@ Only continue to a clarification step if the question remains unresolved after r
 
 ## Specialist Agent Mode
 
-Use this mode for specialist agents such as Product Manager, Architect, UX Designer, Engineer, Reviewer, DevOps Engineer, Tester, Power BI Analyst, Data Scientist, and Consulting Research.
+Use this mode for specialist agents such as Product Manager, Architect, UX Designer, Engineer, Reviewer, DevOps Engineer, Tester, Fabric Engineer, Power Platform Builder, Power BI Analyst, Data Scientist, and Consulting Research.
 
 1. Read the artifacts first.
 2. Ask the user for cross-agent help when another role must answer the question.

@@ -50,6 +50,8 @@ agents:
   - AgentX Auto-Fix Reviewer
   - AgentX DevOps Engineer
   - AgentX Tester
+  - AgentX Fabric Engineer
+  - AgentX Power Platform Builder
   - AgentX Power BI Analyst
   - AgentX Consulting Research
   - AgentX GitHub Ops
@@ -65,7 +67,7 @@ AgentX Auto is the autonomous top-level execution mode for AgentX. It analyzes e
 
 ## Role Compliance Contract
 
-When AgentX Auto acts as PM, Architect, UX Designer, Data Scientist, Engineer, Reviewer, DevOps Engineer, Tester, Power BI Analyst, GitHub Ops, ADO Ops, or Agile Coach, it is acting under that agent's contract, not merely borrowing the role name.
+When AgentX Auto acts as PM, Architect, UX Designer, Data Scientist, Engineer, Reviewer, DevOps Engineer, Tester, Fabric Engineer, Power Platform Builder, Power BI Analyst, GitHub Ops, ADO Ops, or Agile Coach, it is acting under that agent's contract, not merely borrowing the role name.
 
 **Mandatory rule**: AgentX Auto may execute phases internally, but it cannot skip any required role constraints, templates, skills, entry gates, or exit gates for the phase it is acting as.
 
@@ -91,6 +93,8 @@ If a specialist phase cannot satisfy its required contract in the current sessio
 | Reviewer | `reviewer.agent.md` | review document, loop verification, approval/reject gates |
 | DevOps | `devops.agent.md` | pipeline/deployment validation artifacts and DevOps gates |
 | Tester | `tester.agent.md` | test/certification artifacts and tester gates |
+| Fabric | `fabric-engineer.agent.md` | governed Fabric data-product artifacts and runtime-evidence gates |
+| Power Platform | `power-platform-builder.agent.md` | unpacked solution source, package validation, and no-tenant-mutation gates |
 | Power BI | `powerbi-analyst.agent.md` | report/model artifacts and Power BI gates |
 | Ops / Coaching | corresponding agent file | role-specific artifacts, labels, and workflow gates |
 
@@ -138,6 +142,8 @@ AgentX ships as a VS Code extension with a **zero-copy runtime**: agent definiti
 | `type:devops` | DevOps Engineer | PM, Architect |
 | `type:data-science` | Data Scientist | PM, Architect |
 | `type:testing` | Tester | PM, Architect |
+| `type:fabric` | Fabric Engineer | PM, Architect when platform scope is already clear |
+| `type:lowcode` | Power Platform Builder | PM, Architect when platform fit is already decided |
 | `type:powerbi` | Power BI Analyst | PM, Architect |
 
 ### Backlog Operations Mode
@@ -275,6 +281,8 @@ Before completing any routing decision, verify:
 | Reviewer | In Review | Review at `docs/artifacts/reviews/REVIEW-{id}.md` | -> Validating or Done |
 | DevOps | `type:devops` or Validating | Pipelines at `.github/workflows/` | -> In Review |
 | Tester | `type:testing` or Validating | Test suites + certification at `docs/testing/` | -> In Review |
+| Fabric Engineer | `type:fabric` | Fabric artifacts at `fabric/`, `docs/fabric/`, `tests/fabric/` | -> In Review |
+| Power Platform Builder | `type:lowcode` | Unpacked solutions at `solutions/` and `docs/power-platform/` | -> In Review |
 | Power BI Analyst | `type:powerbi` | Reports + models at `reports/`, `datasets/`, `docs/powerbi/` | -> In Review |
 | GitHub Ops | Backlog management (GitHub) | Triage report, sprint plan at `.copilot-tracking/github-issues/` | Standalone |
 | ADO Ops | Backlog management (ADO) | Triage report, sprint plan at `.copilot-tracking/ado-items/` | Standalone |

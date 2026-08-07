@@ -22,6 +22,8 @@
       ".github/agents/devops.agent.md",
       ".github/agents/data-scientist.agent.md",
       ".github/agents/tester.agent.md",
+      ".github/agents/fabric-engineer.agent.md",
+      ".github/agents/power-platform-builder.agent.md",
       ".github/agents/consulting-research.agent.md",
       ".github/agents/powerbi-analyst.agent.md",
       ".github/agents/agile-coach.agent.md"

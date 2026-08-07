@@ -22,15 +22,15 @@ Zero-shot AI generation is unpredictable for complex software engineering. Agent
 
 ## The AI Development Team
 
-AgentX acts as an autonomous orchestrator, routing tasks to **24 specialized agents** based on required skills.
+AgentX acts as an autonomous orchestrator, routing tasks to **26 specialized agents** based on required skills.
 
 | Domain | Agents | Deliverables |
 |:-------|:-------|:-------------|
 | **Product & Design** | Product Manager, UX Designer | PRDs, Wireframes, Prototypes |
-| **Architecture** | Architect, Data Scientist | ADRs, Tech Specs, ML Pipelines |
+| **Architecture & Data** | Architect, Data Scientist, Fabric Engineer | ADRs, Tech Specs, ML Pipelines, Fabric Data Products |
 | **Engineering** | Engineer, DevOps | Code, CI/CD, Containerization |
 | **Quality & Review** | Reviewer, Tester, Auto-Fix | Code Reviews, Tests, Quality Gates |
-| **Analytics & Gov.** | Power BI Analyst, Research | Datasets, M metrics, Industry Briefs |
+| **Low-Code & Analytics** | Power Platform Builder, Power BI Analyst, Research | Solutions, Datasets, M metrics, Industry Briefs |
 
 ---
 
@@ -132,7 +132,7 @@ flowchart LR
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
 - **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 130 skills, 24 agents, 7 instructions, 15 templates, 21 prompts -- all Markdown-defined
+- **Knowledge Layer:** 130 skills, 26 agents, 7 instructions, 15 templates, 21 prompts -- all Markdown-defined
 - **Control Layer:** Execution plans, repo-local state, automated validation gates
 
 ---
@@ -313,7 +313,7 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 - `.github/skills/` - Reusable implementation knowledge
 - `vscode-extension/` - VS Code extension source
 - `.agentx/` - workspace launchers and local workflow state
-- `packs/` - optional capability bundles (e.g. [Power Platform Builder Pack](packs/agentx-power-platform-builder/README.md) -- low-code-builder agent + 12 Power Platform / Copilot Studio skills)
+- `packs/` - optional capability bundles (e.g. [Power Platform Builder Pack](packs/agentx-power-platform-builder/README.md) -- compatibility assets and examples for the core Power Platform Builder plus 13 Power Platform / Copilot Studio skills)
 
 ## Read More
 

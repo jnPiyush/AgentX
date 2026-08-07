@@ -236,6 +236,8 @@ initialize_workspace_cli_state() {
   "auto-fix-reviewer": { "status": "idle", "issue": null, "lastActivity": null },
   "data-scientist": { "status": "idle", "issue": null, "lastActivity": null },
   "tester": { "status": "idle", "issue": null, "lastActivity": null },
+  "fabric-engineer": { "status": "idle", "issue": null, "lastActivity": null },
+  "power-platform-builder": { "status": "idle", "issue": null, "lastActivity": null },
   "consulting-research": { "status": "idle", "issue": null, "lastActivity": null },
   "powerbi-analyst": { "status": "idle", "issue": null, "lastActivity": null }
 }
@@ -438,7 +440,7 @@ echo ""
 echo " Files copied  : $TOTAL_COPIED"
 echo -e " Files skipped : $TOTAL_SKIPPED ${GRAY}(already exist, use -f to overwrite)${NC}"
 echo ""
-echo " Agents        : 24 (13 external + 11 internal)"
+echo " Agents        : 26 (15 external + 11 internal)"
 echo " Skills        : 130 across 14 categories"
 echo " Instructions  : 7 (auto-applied by file pattern)"
 echo " Prompts       : 21 reusable templates"

@@ -66,7 +66,7 @@ Assert-FileExists ".agentx/templates/memories/decisions.md" "Starter memory: dec
 Write-Host ""
 Write-Host " 2. Agent Definitions" -ForegroundColor White
 
-$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "ux-designer", "devops", "reviewer-auto", "data-scientist", "tester", "consulting-research", "powerbi-analyst")
+$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "ux-designer", "devops", "reviewer-auto", "data-scientist", "tester", "fabric-engineer", "power-platform-builder", "consulting-research", "powerbi-analyst")
 foreach ($agent in $agents) {
  Assert-FileExists ".github/agents/$agent.agent.md" "Agent: $agent"
 }
@@ -89,7 +89,7 @@ Assert-FileContains ".github/templates/SPEC-TEMPLATE.md" "AI/ML Specification" "
 Write-Host ""
 Write-Host " 4. Agent Definitions" -ForegroundColor White
 
-$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "reviewer-auto", "ux-designer", "devops", "data-scientist", "tester", "powerbi-analyst", "consulting-research")
+$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "reviewer-auto", "ux-designer", "devops", "data-scientist", "tester", "fabric-engineer", "power-platform-builder", "powerbi-analyst", "consulting-research")
 foreach ($ag in $agents) {
  Assert-FileExists ".github/agents/$ag.agent.md" "Agent: $ag"
 }
@@ -97,6 +97,10 @@ foreach ($ag in $agents) {
 # Verify agent frontmatter structure
 Assert-FileContains ".github/agents/engineer.agent.md" "description:" "engineer.agent.md has description"
 Assert-FileContains ".github/agents/engineer.agent.md" "model:" "engineer.agent.md has model"
+Assert-FileContains ".github/agents/fabric-engineer.agent.md" "type:fabric" "Fabric Engineer declares type:fabric trigger"
+Assert-FileContains ".github/agents/fabric-engineer.agent.md" "AgentX Power BI Analyst" "Fabric Engineer preserves Power BI handoff"
+Assert-FileContains ".github/agents/power-platform-builder.agent.md" "type:lowcode" "Power Platform Builder declares type:lowcode trigger"
+Assert-FileContains ".github/agents/power-platform-builder.agent.md" "MUST NOT call pac auth" "Power Platform Builder forbids tenant authentication"
 
 # --- 5. CLI -----------------------------------------------------------------------------
 Write-Host ""
