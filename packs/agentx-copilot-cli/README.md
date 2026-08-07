@@ -7,7 +7,7 @@
 | Artifact | Count | Description |
 |----------|-------|-------------|
 | Agents | 24 | 13 external + 11 internal sub-agents |
-| Skills | 128 | Production code standards across 14 categories |
+| Skills | 130 | Complete production code standards across 14 categories |
 | Instructions | 7 | Auto-applied coding guidelines by file pattern |
 | Prompts | 21 | Reusable prompt templates |
 | Templates | 15 | PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning |
@@ -73,7 +73,7 @@ your-project/
       internal/
         github-ops.agent.md
         ...
-    skills/                    # 128 skills across 14 categories
+    skills/                    # 130 skills across 14 categories
       architecture/
       development/
       languages/

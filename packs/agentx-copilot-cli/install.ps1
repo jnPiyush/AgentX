@@ -132,10 +132,12 @@ function Copy-Tree {
  foreach ($f in $files) {
   $relPath = $f.FullName.Substring($SrcDir.Length).TrimStart('\', '/')
   $destPath = Join-Path $DestDir $relPath
-  $destDir = Split-Path $destPath -Parent
-  if (-not (Test-Path $destDir)) {
-   if ($PSCmdlet.ShouldProcess($destDir, "Create directory")) {
-    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+  # PowerShell variables are case-insensitive: assigning $destDir would overwrite the
+  # $DestDir parameter and recursively nest subsequent files under the previous parent.
+  $destinationParent = Split-Path $destPath -Parent
+  if (-not (Test-Path $destinationParent)) {
+   if ($PSCmdlet.ShouldProcess($destinationParent, "Create directory")) {
+    New-Item -ItemType Directory -Path $destinationParent -Force | Out-Null
    }
   }
   if ((Test-Path $destPath) -and -not $Overwrite) {
@@ -534,7 +536,7 @@ Write-Host " Files copied  : $totalCopied" -ForegroundColor White
 Write-Host " Files skipped : $totalSkipped (already exist, use -Force to overwrite)" -ForegroundColor DarkGray
 Write-Host ""
  Write-Host " Agents        : 24 (13 external + 11 internal)" -ForegroundColor White
- Write-Host " Skills        : 128 across 14 categories" -ForegroundColor White
+ Write-Host " Skills        : 130 across 14 categories" -ForegroundColor White
  Write-Host " Instructions  : 7 (auto-applied by file pattern)" -ForegroundColor White
  Write-Host " Prompts       : 21 reusable templates" -ForegroundColor White
 if ($IncludeCli) {

@@ -15,7 +15,7 @@
   ],
   "prerequisites": {
     "copilotCli": ">=1.0.0",
-    "powershell": ">=7.0",
+    "powershell": ">=7.4",
     "note": "This plugin does NOT require the AgentX VS Code extension. It is a standalone CLI distribution that can seed a bundled local CLI runtime into the target workspace."
   },
   "artifacts": {
@@ -97,6 +97,9 @@
       ".github/templates/BACKLOG-TEMPLATE.md"
     ],
     "skills": [
+      ".github/skills"
+    ],
+    "featuredSkills": [
       ".github/skills/ai-systems/ai-agent-development/SKILL.md",
       ".github/skills/ai-systems/ai-evaluation/SKILL.md",
       ".github/skills/ai-systems/azure-foundry/SKILL.md",
@@ -112,7 +115,9 @@
       ".github/skills/ai-systems/rag-pipelines/SKILL.md",
       ".github/skills/architecture/api-design/SKILL.md",
       ".github/skills/architecture/core-principles/SKILL.md",
+      ".github/skills/architecture/cost-analysis/SKILL.md",
       ".github/skills/architecture/database/SKILL.md",
+      ".github/skills/architecture/infra-governance/SKILL.md",
       ".github/skills/architecture/performance/SKILL.md",
       ".github/skills/architecture/security/SKILL.md",
       ".github/skills/data/data-analysis/SKILL.md",
@@ -197,7 +202,7 @@
   },
   "capabilities": {
     "agentOrchestration": "Copilot CLI agent definitions with handoffs and body instructions",
-    "skillLibrary": "69 production code skills across 10 categories",
+    "skillLibrary": "130 production code skills across 14 categories",
     "instructionFiles": "7 auto-applied instruction files for language-specific patterns",
     "promptTemplates": "21 reusable prompt templates for common workflows",
     "cliUtilities": "Workspace wrapper scripts plus a bundled hidden runtime for issue tracking, loop management, and workflow",

@@ -36,7 +36,7 @@ AgentX acts as an autonomous orchestrator, routing tasks to **24 specialized age
 
 ## Domain Skills Library
 
-AgentX is powered by a rich knowledge layer of **128 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
+AgentX is powered by a rich knowledge layer of **130 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
 
 | Category | Example Skills | Purpose |
 |:---------|:---------------|:--------|
@@ -132,7 +132,7 @@ flowchart LR
 
 - **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
 - **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 128 skills, 24 agents, 7 instructions, 15 templates, 21 prompts -- all Markdown-defined
+- **Knowledge Layer:** 130 skills, 24 agents, 7 instructions, 15 templates, 21 prompts -- all Markdown-defined
 - **Control Layer:** Execution plans, repo-local state, automated validation gates
 
 ---

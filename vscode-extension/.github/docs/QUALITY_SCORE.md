@@ -50,7 +50,7 @@
 
 | Category | Count | Grade | Notes |
 |----------|-------|-------|-------|
-| Architecture | 6 | A | Core principles, security, performance, database, API design, low-code vs pro-code |
+| Architecture | 8 | A | Core principles, security, performance, database, API design, cost analysis, infrastructure governance, low-code vs pro-code |
 | Development | 23 | A | Testing, error handling, iterative loop, code review, code optimization, token optimizer, verification, debugging, git worktrees, strategic compaction, finishing-a-development-branch, dispatching-parallel-agents, and related engineering workflow skills |
 | Languages | 10 | A | C, C++, C#, Python, Go, Rust, React, Blazor, PostgreSQL, SQL Server |
 | Operations | 5 | A | Git, GitHub Actions, YAML pipelines, release mgmt, version control |

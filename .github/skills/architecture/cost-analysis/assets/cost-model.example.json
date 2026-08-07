@@ -1,0 +1,77 @@
+{
+  "$comment": "AgentX cost model. Copy to docs/artifacts/costs/cost-model.json and edit. Rates are illustrative placeholders - replace with rates you sourced yourself and record the source below.",
+  "currency": "USD",
+  "region": "REPLACE-ME",
+  "ratesSourcedOn": "YYYY-MM-DD",
+  "rateSource": "REPLACE-ME - link to the pricing page or calculator you used",
+  "excludes": [
+    "network egress",
+    "backup retention",
+    "support plan",
+    "third-party licences"
+  ],
+  "envelopes": {
+    "pilot": {
+      "activeHoursPerDay": 2,
+      "daysPerMonth": 20,
+      "assumptions": "Demo and stakeholder review only; idle outside working sessions"
+    },
+    "team": {
+      "activeHoursPerDay": 8,
+      "daysPerMonth": 22,
+      "assumptions": "Internal business-hours usage on weekdays"
+    },
+    "org": {
+      "activeHoursPerDay": 24,
+      "daysPerMonth": 30,
+      "assumptions": "Continuous load; sanity check for scale-out headroom"
+    }
+  },
+  "components": [
+    {
+      "name": "api",
+      "service": "managed container runtime",
+      "billing": "consumption",
+      "activeRatePerHour": 0.052,
+      "idleRatePerHour": 0,
+      "fixedMonthly": 0,
+      "attribution": "ADR-000 Option B - managed container runtime"
+    },
+    {
+      "name": "database",
+      "service": "serverless SQL with auto-pause",
+      "billing": "auto-pause",
+      "activeRatePerHour": 0.18,
+      "idleRatePerHour": 0.006,
+      "fixedMonthly": 0,
+      "attribution": "ADR-000 Option B - relational store"
+    },
+    {
+      "name": "gateway",
+      "service": "API gateway (developer tier)",
+      "billing": "always-on",
+      "activeRatePerHour": 0.07,
+      "idleRatePerHour": 0.07,
+      "fixedMonthly": 0,
+      "attribution": "ADR-000 Option B - managed ingress"
+    },
+    {
+      "name": "blob-storage",
+      "service": "object storage",
+      "billing": "fixed",
+      "activeRatePerHour": 0,
+      "idleRatePerHour": 0,
+      "fixedMonthly": 2.3,
+      "attribution": "shared across all options"
+    },
+    {
+      "name": "secrets",
+      "service": "key vault",
+      "billing": "fixed",
+      "activeRatePerHour": 0,
+      "idleRatePerHour": 0,
+      "fixedMonthly": "UNKNOWN",
+      "attribution": "ADR-000 - required by IG-02"
+    }
+  ]
+}

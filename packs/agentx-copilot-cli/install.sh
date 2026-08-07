@@ -439,7 +439,7 @@ echo " Files copied  : $TOTAL_COPIED"
 echo -e " Files skipped : $TOTAL_SKIPPED ${GRAY}(already exist, use -f to overwrite)${NC}"
 echo ""
 echo " Agents        : 24 (13 external + 11 internal)"
-echo " Skills        : 128 across 14 categories"
+echo " Skills        : 130 across 14 categories"
 echo " Instructions  : 7 (auto-applied by file pattern)"
 echo " Prompts       : 21 reusable templates"
 if [ "$INCLUDE_CLI" = true ]; then

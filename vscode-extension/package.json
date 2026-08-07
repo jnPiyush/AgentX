@@ -796,7 +796,13 @@
         "path": "./.github/agentx/skills/architecture/core-principles/SKILL.md"
       },
       {
+        "path": "./.github/agentx/skills/architecture/cost-analysis/SKILL.md"
+      },
+      {
         "path": "./.github/agentx/skills/architecture/database/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/architecture/infra-governance/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/architecture/low-code-vs-pro-code/SKILL.md"

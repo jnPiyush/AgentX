@@ -1,4 +1,4 @@
-description: 'Compressed skill index for AI agents. 128 skills across 14 categories. Load only relevant skills per task.'
+description: 'Compressed skill index for AI agents. 130 skills across 14 categories. Load only relevant skills per task.'
 
 # Production Code Skills Index
 
@@ -10,7 +10,7 @@ description: 'Compressed skill index for AI agents. 128 skills across 14 categor
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 128 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 130 skills. Use Quick Reference below.
 
 ---
 
@@ -28,6 +28,9 @@ description: 'Compressed skill index for AI agents. 128 skills across 14 categor
 | **Performance / Scaling** | [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Code Optimization / Minimize LOC / Make Elegant** | [Code Optimization](.github/skills/development/code-optimization/SKILL.md), [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Core Principles](.github/skills/architecture/core-principles/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Documentation** | [Documentation](.github/skills/development/documentation/SKILL.md) |
+| **Cost Estimation / "what will this cost to run"** | [Cost Analysis](.github/skills/architecture/cost-analysis/SKILL.md), [Infra Governance](.github/skills/architecture/infra-governance/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md) |
+| **IaC Review / Infra Policy Gate** | [Infra Governance](.github/skills/architecture/infra-governance/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Terraform](.github/skills/infrastructure/terraform/SKILL.md), [Bicep](.github/skills/infrastructure/bicep/SKILL.md) |
+| **Prototype Topology / Resource Naming** | [Infra Governance](.github/skills/architecture/infra-governance/SKILL.md), [Cost Analysis](.github/skills/architecture/cost-analysis/SKILL.md), [Azure](.github/skills/infrastructure/azure/SKILL.md) |
 | **DevOps / CI/CD** | [GitHub Actions](.github/skills/operations/github-actions-workflows/SKILL.md), [YAML Pipelines](.github/skills/operations/yaml-pipelines/SKILL.md), [Release Mgmt](.github/skills/operations/release-management/SKILL.md) |
 | **Code Review** | [Code Review](.github/skills/development/code-review/SKILL.md), [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Security](.github/skills/architecture/security/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **AI Agent Development** | [AI Agent Dev](.github/skills/ai-systems/ai-agent-development/SKILL.md), [Cognitive Arch](.github/skills/ai-systems/cognitive-architecture/SKILL.md), [MCP Server](.github/skills/ai-systems/mcp-server-development/SKILL.md), [Prompt Eng](.github/skills/ai-systems/prompt-engineering/SKILL.md) |
@@ -97,7 +100,7 @@ description: 'Compressed skill index for AI agents. 128 skills across 14 categor
 
 ---
 
-## Skills Directory (128 skills -- pipe-delimited)
+## Skills Directory (130 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -108,6 +111,8 @@ arch|security|.github/skills/architecture/security/SKILL.md|validation,SQL-injec
 arch|performance|.github/skills/architecture/performance/SKILL.md|async,caching,profiling,scaling,load-balancing
 arch|database|.github/skills/architecture/database/SKILL.md|migrations,indexing,transactions,pooling
 arch|api-design|.github/skills/architecture/api-design/SKILL.md|REST,versioning,rate-limiting,OpenAPI
+arch|cost-analysis|.github/skills/architecture/cost-analysis/SKILL.md|cost,estimate,pricing,idle-vs-active,load-envelope,run-rate,ADR-cost-column,budget
+arch|infra-governance|.github/skills/architecture/infra-governance/SKILL.md|IaC-policy,capability-invariant,companion-resource,naming-resolver,workload-topology,terraform,bicep,governance-gate
 arch|low-code-vs-pro-code|.github/skills/architecture/low-code-vs-pro-code/SKILL.md|low-code,no-code,pro-code,Copilot-Studio,Power-Platform,Power-Apps,Power-Automate,Logic-Apps,citizen-developer,platform-selection,hybrid,Foundry,Agent-Framework
 dev|testing|.github/skills/development/testing/SKILL.md|unit,integration,e2e,coverage-80%,pyramid-70/20/10
 dev|error-handling|.github/skills/development/error-handling/SKILL.md|exceptions,retry,circuit-breaker
@@ -285,6 +290,9 @@ Full Feature|ux-ui->core-principles->database->api-design->csharp/python->react/
 Performance|performance->database->testing->code-review
 CI/CD|github-actions->yaml-pipelines->containers->configuration->release-mgmt
 Cloud Deploy|azure->containers->configuration->github-actions->logging
+Cost-Aware Architecture|cost-analysis->infra-governance->core-principles->documentation
+IaC Governance Gate|infra-governance->security->terraform/bicep->code-review
+Prototype Topology Selection|infra-governance->cost-analysis->api-design->testing
 Fabric ETL|fabric-analytics->database->testing->code-review
 Fabric Agent|fabric-analytics->fabric-data-agent->prompt-eng->code-review
 Forecasting|fabric-analytics->fabric-forecast->testing->code-review
@@ -332,5 +340,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 128 skills (arch:6, dev:23, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:12, test:6, domain:7, product:1, diagrams:1, low-code:13)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 130 skills (arch:8, dev:23, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:12, test:6, domain:7, product:1, diagrams:1, low-code:13)
 
