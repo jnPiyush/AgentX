@@ -749,7 +749,7 @@ task_prefix: 'task'
     $iter2Archive = Get-ChildItem (Join-Path $workflowRoot ('.agentx\state\loop-evidence\iter-{0}' -f [int]$workflowLoopState.iteration)) -File | Select-Object -First 1
     Assert-True ($loopIterate.ExitCode -eq 0) 'loop iterate exits successfully with fresh evidence and passing count'
     Assert-True ([int]$workflowLoopState.iteration -eq ([int]$loopBeforeRegression.iteration + 1)) 'loop iterate advances the loop when baseline and evidence gates pass'
-    Assert-True (-not (Test-Path $iter2Evidence)) 'loop iterate moves the accepted source evidence away so the old path cannot be reused'
+    Assert-True (Test-Path $iter2Evidence) 'loop iterate preserves the accepted source evidence after archiving a copy'
     Assert-True ($null -ne $iter2Archive -and (Test-Path $iter2Archive.FullName)) 'loop iterate archives accepted evidence into the per-iteration folder'
 
     $iter3Evidence = Join-Path $workflowRoot '.agentx\state\iter-3-pass.txt'
@@ -757,12 +757,12 @@ task_prefix: 'task'
     $iter5Evidence = Join-Path $workflowRoot '.agentx\state\iter-5-pass.txt'
     $iter6Evidence = Join-Path $workflowRoot '.agentx\state\subagent-review.json'
     Write-Utf8File $iter3Evidence 'iteration 3 fresh artifact'
-    Write-Utf8File $iter4Evidence 'iteration 4 fresh artifact'
-    Write-Utf8File $iter5Evidence 'iteration 5 fresh artifact'
-    Write-Utf8File $iter6Evidence '{"findings":[]}'
     [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Secure pass', '--evidence', $iter3Evidence, '--passing', '5'))
+    Write-Utf8File $iter4Evidence 'iteration 4 fresh artifact'
     [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Adversarial pass', '--evidence', $iter4Evidence, '--passing', '5'))
+    Write-Utf8File $iter5Evidence 'iteration 5 fresh artifact'
     [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Evidence pass', '--evidence', $iter5Evidence, '--passing', '5'))
+    Write-Utf8File $iter6Evidence '{"findings":[]}'
     [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Subagent review pass', '--evidence', $iter6Evidence, '--passing', '5'))
     $finalEvidence = Join-Path $workflowRoot '.agentx\state\final-gate.json'
     Write-Utf8File $finalEvidence '{"status":"pass","source":"final gate"}'
@@ -771,7 +771,7 @@ task_prefix: 'task'
     $completeArchive = Get-ChildItem (Join-Path $workflowRoot '.agentx\state\loop-evidence\complete') -File | Select-Object -First 1
     Assert-True ($loopComplete.ExitCode -eq 0) 'loop complete exits successfully with a fresh final artifact distinct from iteration 5 input'
     Assert-True ($workflowLoopState.status -eq 'complete' -and -not $workflowLoopState.active) 'loop complete marks the loop complete after passing the final gate'
-    Assert-True (-not (Test-Path $finalEvidence)) 'loop complete moves the accepted final artifact away from the source path'
+    Assert-True (Test-Path $finalEvidence) 'loop complete preserves the accepted final artifact after archiving a copy'
     Assert-True ($null -ne $completeArchive -and (Test-Path $completeArchive.FullName)) 'loop complete archives the final artifact'
 
     $restartLoop = Invoke-AgentX $workflowRoot @('loop', 'start', '--prompt', 'Second loop after cleanup', '--max', '5')

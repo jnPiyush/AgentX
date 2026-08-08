@@ -220,6 +220,14 @@ function syncBundledAssets(version) {
   info(`Synced bundled extension assets for ${version}`);
 }
 
+function stampMcpPackage(version) {
+  runCommand(
+    process.execPath,
+    [path.join(root, 'scripts', 'stamp-package-version.js'), '.agentx/mcp-server', version],
+    root,
+  );
+}
+
 function packageVsix(version, vsixOutput) {
   const defaultOutput = path.join(extensionDir, `agentx-${version}.vsix`);
   const resolvedOutput = vsixOutput
@@ -319,6 +327,19 @@ function main() {
       pattern: /## New In \d+\.\d+\.\d+/,
       replacement: `## New In ${targetVersion}`,
       label: 'README current release heading',
+    },
+  ]);
+
+  updateTextFile('docs/GUIDE.md', [
+    {
+      pattern: /raw\.githubusercontent\.com\/jnPiyush\/AgentX\/v\d+\.\d+\.\d+\/install\.ps1/g,
+      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.ps1`,
+      label: 'guide PowerShell installer URLs',
+    },
+    {
+      pattern: /raw\.githubusercontent\.com\/jnPiyush\/AgentX\/v\d+\.\d+\.\d+\/install\.sh/g,
+      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.sh`,
+      label: 'guide bash installer URLs',
     },
   ]);
 
@@ -477,6 +498,22 @@ function main() {
     },
   ]);
 
+  updateTextFile('packs/agentx-copilot-cli/install-user.ps1', [
+    {
+      pattern: /version\s+= '\d+\.\d+\.\d+'$/m,
+      replacement: `version     = '${targetVersion}'`,
+      label: 'user-level CLI plugin version payload',
+    },
+  ]);
+
+  updateTextFile('packs/agentx-copilot-cli/install-user.sh', [
+    {
+      pattern: /"version": "\d+\.\d+\.\d+"/,
+      replacement: `"version": "${targetVersion}"`,
+      label: 'user-level CLI plugin bash version payload',
+    },
+  ]);
+
   updateTextFile('packs/agentx-copilot-cli/README.md', [
     {
       pattern: /- Version: `\d+\.\d+\.\d+`/,
@@ -493,6 +530,7 @@ function main() {
     },
   ]);
 
+  stampMcpPackage(targetVersion);
   syncBundledAssets(targetVersion);
   info(`Stamped repo version ${targetVersion}`);
 

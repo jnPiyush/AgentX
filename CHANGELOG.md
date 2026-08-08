@@ -1,5 +1,45 @@
 # Changelog
 
+## 8.7.0
+
+### Changes
+
+- Migrated agent defaults and provider routing to Claude Opus 5 and Sonnet 5.
+- Added cost optimization and infrastructure governance skills with executable checks for Terraform, Bicep, ARM, credentials, naming, diagnostic settings, and cost controls.
+- Added `AgentX Fabric Engineer` as a visible agent that owns Microsoft Fabric data-platform delivery: Lakehouse and Warehouse schemas, OneLake shortcuts, Spark notebooks, Data Pipelines, medallion data products, data quality, and lineage.
+- Promoted the packaged Low-Code Builder into core AgentX as `AgentX Power Platform Builder`, which generates unpacked Power Platform solution source for Dataverse, Power Apps, Power Automate, Power Pages, PCF, plugins, security roles, environment variables, and Copilot Studio.
+- Raised the agent inventory to 26 total: 15 visible plus 11 internal sub-agents.
+- Added `type:fabric` and `type:lowcode` classification, routing, backlog pickup, status transitions, and 7-phase pipeline contracts for both roles.
+- Added canonical handoff identities and the `fabric-data-product` and `power-platform-solution` artifact types to the handoff schema and protocol.
+- Registered both agents across pack manifests, VS Code chat contributions, installers, Claude and Cursor command wrappers, and the agent tree view.
+
+### Security
+
+- Hardened supply-chain checks, SSRF defenses, and evaluation gates across the extension and MCP runtime.
+- Power Platform Builder is fail-closed for terminal access. A fixed-command allowlist in the agentic runner permits only direct local `pac` version/help and `solution init/unpack/pack/check` invocations with literal arguments; everything else is blocked.
+- Mirrored the same policy as an agent-scoped `PreToolUse` hook so VS Code and the Agents Window enforce the boundary, with `chat.useCustomAgentHooks` enabled by default.
+- Removed `terminal_exec` from the Power Platform Builder tool schema on the `claude-code` provider; the restriction is scoped to that role only.
+- The agent cannot authenticate to, import into, export from, publish to, or delete from a tenant.
+
+### Fixes
+
+- Prevented the `hooks` frontmatter block from leaking a spurious entry into parsed agent `tools`, `agents`, and `boundaries` lists.
+- Reordered issue-classifier precedence so feature prefixes no longer capture domain work, and mixed Fabric plus Power BI requests still route to Power BI Analyst.
+- Corrected handoff validation to resolve glob deliverables recursively and to accept loop evidence only when the recorded issue matches exactly.
+
+### Validation
+
+- Domain agent routing, safety, and handoff suite: 114 assertions passed.
+- Terminal policy and `PreToolUse` hook agreed on 15 of 15 adversarial commands, covering quote concatenation, command substitution, backticks, alias construction, nested shells, and CR/LF/tab separators.
+- Frontmatter validation 623 of 623; classifier evaluation 23 of 23; VS Code extension compiled with 1013 tests passing.
+- Installer regression passed across local and GitHub install modes.
+
+### Limitations
+
+- Agent-scoped hooks depend on the VS Code preview setting `chat.useCustomAgentHooks`; keep terminal tool approval enabled as defense in depth.
+- Fabric and Power Platform agents generate and validate local source only. Environment deployment and ALM automation remain with the DevOps Engineer.
+- The stdio-only MCP server retains three moderate Hono HTTP-middleware advisories that are not reachable through its transport or tool surface. The release gate remains zero HIGH/CRITICAL runtime vulnerabilities; update when patched transitive versions become available.
+
 ## 8.6.1
 
 ### Changes
@@ -161,10 +201,10 @@
 - **Quality Loop Hard Rule** front-loaded as body prose into `.github/copilot-instructions.md`, `CLAUDE.md`, `.github/instructions/ai.instructions.md`, and `.github/instructions/project-conventions.instructions.md`. Frontmatter-only enforcement was being routinely ignored by runtime models; body prose carries decisively more weight.
 - **Pre-edit gate** (`loop start` as ABSOLUTE FIRST tool call before any file edit) and **Honesty rule** (run `loop status` before claiming completion) added near the top of every agent definition's Iterative Quality Loop section.
 - **Four Mandatory Workflow Gates** added to router surfaces with matching mechanical enforcement in `.github/hooks/pre-commit`:
-  - **Compound Capture (Check 11)** — APPROVED review staged -> matching `LEARNING-<issue>.md` required, or `[skip-capture]` token in commit message.
-  - **Model Council (Check 13)** — New `ADR-*.md` staged -> matching `COUNCIL-*.md` required (3 diverse models + Synthesis), or `[skip-council]` token.
-  - **Execution Plan (Check 14)** — Commits changing >= 8 code files require a matching `EXEC-PLAN-*.md` under `docs/execution/plans/`, or `[skip-plan]` token.
-  - **Brainstorm (reviewer-enforced)** — Engineer pipeline requires a `brainstorm` ledger entry or `## Alternatives Considered` block in the execution plan before Plan is written.
+  - **Compound Capture (Check 11)** - APPROVED review staged -> matching `LEARNING-<issue>.md` required, or `[skip-capture]` token in commit message.
+  - **Model Council (Check 13)** - New `ADR-*.md` staged -> matching `COUNCIL-*.md` required (3 diverse models + Synthesis), or `[skip-council]` token.
+  - **Execution Plan (Check 14)** - Commits changing >= 8 code files require a matching `EXEC-PLAN-*.md` under `docs/execution/plans/`, or `[skip-plan]` token.
+  - **Brainstorm (reviewer-enforced)** - Engineer pipeline requires a `brainstorm` ledger entry or `## Alternatives Considered` block in the execution plan before Plan is written.
 - New project convention: loop-honesty pitfall captured in `memories/conventions.md` and `docs/artifacts/learnings/LEARNING-loop-honesty.md`.
 
 ### ECC Adoption

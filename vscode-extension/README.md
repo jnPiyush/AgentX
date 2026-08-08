@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.6.1-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-8.7.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -346,6 +346,14 @@ The extension registers 15 declarative chat agents, each mapped to an AgentX rol
 ---
 
 ## Recent Changes
+
+### 8.7.0
+
+- Migrated agent defaults and provider routing to Claude Opus 5 and Sonnet 5.
+- Added cost optimization and infrastructure governance skills with supply-chain, SSRF, and evaluation hardening.
+- Added Fabric Engineer and promoted Power Platform Builder into core AgentX, bringing the inventory to 26 agents (15 visible, 11 internal).
+- Added fail-closed Power Platform terminal enforcement, domain routing, canonical handoffs, installer parity, and adversarial regression coverage.
+- Release validation passed: extension coverage and 1013 tests, framework 142/142, provider 97/97, installer 138/138, frontmatter 623/623, and zero HIGH/CRITICAL production dependency findings.
 
 ### 8.4.68
 

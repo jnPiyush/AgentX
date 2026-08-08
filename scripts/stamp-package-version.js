@@ -18,6 +18,7 @@ function updateJson(filePath, update) {
 
 const packagePath = path.resolve(packageDirectory, 'package.json');
 const lockPath = path.resolve(packageDirectory, 'package-lock.json');
+const serverPath = path.resolve(packageDirectory, 'index.js');
 updateJson(packagePath, (manifest) => {
   manifest.version = version;
 });
@@ -27,5 +28,14 @@ updateJson(lockPath, (lock) => {
     lock.packages[''].version = version;
   }
 });
+
+if (fs.existsSync(serverPath)) {
+  const serverSource = fs.readFileSync(serverPath, 'utf8');
+  const serverPattern = /({ name: 'agentx', version: ')\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(' })/;
+  if (!serverPattern.test(serverSource)) {
+    throw new Error(`AgentX server version declaration not found in ${serverPath}`);
+  }
+  fs.writeFileSync(serverPath, serverSource.replace(serverPattern, `$1${version}$2`));
+}
 
 process.stdout.write(`[PASS] Stamped ${packageDirectory} to ${version}\n`);

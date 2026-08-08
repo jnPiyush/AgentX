@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Digital Force for Software Delivery</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.6.1"><img src="https://img.shields.io/badge/Version-8.6.1-0EA5E9?style=for-the-badge" alt="Version 8.6.1"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.7.0"><img src="https://img.shields.io/badge/Version-8.7.0-0EA5E9?style=for-the-badge" alt="Version 8.7.0"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
@@ -299,10 +299,14 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 
 ---
 
-## New In 8.6.1
+## New In 8.7.0
 
-- Added an atomic target rubric library covering completeness, constraints, evidence, safety, clarity, efficiency, and conditional originality
-- Added anchored target scoring, task-profile weights, blocking floors, failure tags, and judge reliability guidance while preserving the current deterministic runner contract
+- Migrated agent defaults and provider routing to Claude Opus 5 and Sonnet 5
+- Added cost optimization and infrastructure governance skills, plus supply-chain, SSRF, and evaluation hardening
+- Added **AgentX Fabric Engineer**, a visible agent that owns Microsoft Fabric data-platform delivery: Lakehouse and Warehouse schemas, OneLake shortcuts, Spark notebooks, Data Pipelines, medallion data products, data quality, and lineage
+- Promoted the Low-Code Builder into core as **AgentX Power Platform Builder**, which generates unpacked Power Platform solution source for Dataverse, Power Apps, Power Automate, Power Pages, PCF, plugins, security roles, and Copilot Studio
+- Raised the inventory to 26 agents (15 visible, 11 internal) with `type:fabric` and `type:lowcode` routing, backlog pickup, and full pipeline contracts
+- Made Power Platform Builder fail-closed for terminal access: a fixed `pac` command allowlist in the runner plus a mirrored agent-scoped `PreToolUse` hook, so the agent can never authenticate to, import into, or publish to a tenant
 
 ## Main Repo Areas
 
