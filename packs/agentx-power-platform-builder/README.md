@@ -6,7 +6,8 @@ Pack that lets AgentX generate **unpacked Microsoft Power Platform solution sour
 
 | Asset | Location | Purpose |
 |-------|----------|---------|
-| Agent | `agents/low-code-builder.agent.md` | Specialist agent that emits the source tree |
+| Core agent | `.github/agents/power-platform-builder.agent.md` | Canonical visible specialist that emits and validates solution source |
+| Compatibility entry | `agents/low-code-builder.agent.md` | Redirects the former Low-Code Builder name to the core agent |
 | Skill (T1) | `.github/skills/low-code/solution-anatomy/SKILL.md` | Solution.xml, publisher, prefix, RootComponents |
 | Skill (T1) | `.github/skills/low-code/dataverse-schema/SKILL.md` | Entity.xml, columns, choices, relationships |
 | Skill (T1) | `.github/skills/low-code/power-automate-flow-json/SKILL.md` | Workflows/*-FLOW.json triggers, actions, connections |
@@ -27,7 +28,7 @@ Pack that lets AgentX generate **unpacked Microsoft Power Platform solution sour
 ## How to Use
 
 1. Draft a PRD-LOWCODE in `docs/artifacts/prd/` (use the template).
-2. Invoke the low-code-builder agent and point it at the PRD.
+2. Invoke the AgentX Power Platform Builder and point it at the PRD.
 3. The agent writes `solutions/<solution-name>/` with the unpacked source tree.
 4. Install pac if needed: `dotnet tool install --global Microsoft.PowerApps.CLI.Tool`
 5. Pack + import:

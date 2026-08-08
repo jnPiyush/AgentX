@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentX v8.6.1 Installer - Download, copy, configure.
+# AgentX v8.7.0 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -11,7 +11,7 @@
 # ./install.sh --azure # Force Azure Skills companion install
 #
 # # One-liner install (local mode, no prompts, pinned to a release tag)
-# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v8.6.1/install.sh | bash
+# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v8.7.0/install.sh | bash
 #
 # # One-liner for GitHub mode
 # MODE=github curl -fsSL ... | bash
@@ -32,7 +32,7 @@ FORCE="${FORCE:-false}"
 NO_SETUP="${NO_SETUP:-false}"
 INSTALL_PATH="${AGENTX_PATH:-}"
 AZURE="${AGENTX_AZURE:-false}"
-BRANCH="v8.6.1"
+BRANCH="v8.7.0"
 TMP=".agentx-install-tmp"
 TMPARCHIVE="$TMP.tar.gz"
 ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.tar.gz"
@@ -195,7 +195,7 @@ ensure_dependency() {
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| AgentX v8.6.1 - AI Agent Orchestration |${N}"
+echo -e "${C}| AgentX v8.7.0 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -229,11 +229,11 @@ if [ -f ".agentx/version.json" ]; then
  PREVIOUS_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' .agentx/version.json 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)"/\1/')
 fi
 
-if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "8.6.1" ]; then
+if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "8.7.0" ]; then
  MAJOR_VERSION=$(echo "$PREVIOUS_VERSION" | cut -d. -f1)
 
  if [ "$MAJOR_VERSION" -lt 8 ] 2>/dev/null; then
-  echo -e "${Y}[!] Detected AgentX v$PREVIOUS_VERSION - upgrading to v8.6.1...${N}"
+  echo -e "${Y}[!] Detected AgentX v$PREVIOUS_VERSION - upgrading to v8.7.0...${N}"
   echo -e "${D}  Uninstalling v$PREVIOUS_VERSION and performing clean install.${N}"
 
   # Back up user data that must survive the upgrade
@@ -365,8 +365,8 @@ fi
 
 # Version tracking
 VERSION_FILE=".agentx/version.json"
-echo "{ \"version\": \"8.6.1\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 8.6.1 recorded"
+echo "{ \"version\": \"8.7.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 8.7.0 recorded"
 
 # Merge AgentX entries into user's .gitignore
 MARKER_START="# --- AgentX (auto-generated, do not edit this block) ---"
@@ -399,7 +399,9 @@ AGENTX_BLOCK="$MARKER_START
 .cursor/commands/data-scientist.md
 .cursor/commands/devops.md
 .cursor/commands/engineer.md
+.cursor/commands/fabric-engineer.md
 .cursor/commands/github-ops.md
+.cursor/commands/power-platform-builder.md
 .cursor/commands/powerbi-analyst.md
 .cursor/commands/product-manager.md
 .cursor/commands/reviewer-auto.md
@@ -447,6 +449,8 @@ if [ ! -f "$STATUS" ] || [ "$FORCE" = "true" ]; then
  "auto-fix-reviewer": { "status": "idle", "issue": null, "lastActivity": null },
  "data-scientist": { "status": "idle", "issue": null, "lastActivity": null },
  "tester": { "status": "idle", "issue": null, "lastActivity": null },
+ "fabric-engineer": { "status": "idle", "issue": null, "lastActivity": null },
+ "power-platform-builder": { "status": "idle", "issue": null, "lastActivity": null },
  "consulting-research": { "status": "idle", "issue": null, "lastActivity": null },
  "powerbi-analyst": { "status": "idle", "issue": null, "lastActivity": null }
 }
@@ -612,7 +616,7 @@ fi
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} AgentX v8.6.1 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} AgentX v8.7.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.agentx/agentx.sh help"

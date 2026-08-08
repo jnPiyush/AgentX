@@ -74,6 +74,20 @@
       "deliverable": "docs/testing/ test suites + certification report"
     },
     {
+      "role": "fabric-engineer",
+      "displayName": "Fabric Engineer",
+      "phases": ["Read Context", "Discover Sources", "Design Data Product", "Implement", "Validate Data Quality", "Document", "Self-Review"],
+      "deliveryGate": "Fabric artifacts are parameterized and idempotent; quality, reconciliation, lineage, recovery, and runtime-evidence gates pass",
+      "deliverable": "fabric/ + docs/fabric/ + tests/fabric/"
+    },
+    {
+      "role": "power-platform-builder",
+      "displayName": "Power Platform Builder",
+      "phases": ["Read Context", "Select Components", "Scaffold Solution", "Generate Components", "Validate Package", "Document", "Self-Review"],
+      "deliveryGate": "Unpacked unmanaged source is portable; pac solution pack passes when available; no tenant-mutating command ran",
+      "deliverable": "solutions/ + docs/power-platform/ + tests/power-platform/"
+    },
+    {
       "role": "powerbi-analyst",
       "displayName": "Power BI Analyst",
       "phases": ["Read Context", "Semantic Model", "DAX Measures", "Power Query", "Report Layout", "Optimize", "Docs", "Self-Review", "Commit"],

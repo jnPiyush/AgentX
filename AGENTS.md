@@ -48,6 +48,8 @@ Toggle enforcement: `.agentx/agentx.ps1 config set enforceIssues true`
 | Pipeline/deploy? | `type:devops` | DevOps Engineer |
 | ML/AI/eval? | `type:data-science` | Data Scientist |
 | Testing/cert? | `type:testing` | Tester |
+| Fabric data platform? | `type:fabric` | Fabric Engineer |
+| Power Platform solution? | `type:lowcode` | Power Platform Builder |
 | Power BI? | `type:powerbi` | Power BI Analyst |
 | Large/vague? | `type:epic` | Product Manager |
 | Single capability? | `type:feature` | Architect |
@@ -112,9 +114,9 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 ---
 
-## Agents (24 total)
+## Agents (26 total)
 
-Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/agents/internal/*.agent.md` (11 internal sub-agents). Each file contains the role's constraints, boundaries, deliverables, and self-review checklist.
+Agent definitions live in `.github/agents/*.agent.md` (15 visible) and `.github/agents/internal/*.agent.md` (11 internal sub-agents). Each file contains the role's constraints, boundaries, deliverables, and self-review checklist.
 
 | Agent | File | Deliverable |
 |-------|------|-------------|
@@ -128,6 +130,8 @@ Agent definitions live in `.github/agents/*.agent.md` (13 visible) and `.github/
 | DevOps Engineer | `devops.agent.md` | Pipelines at `.github/workflows/` |
 | Data Scientist | `data-scientist.agent.md` | ML pipelines + evals at `docs/data-science/` |
 | Tester | `tester.agent.md` | Test suites + certification at `docs/testing/` |
+| Fabric Engineer | `fabric-engineer.agent.md` | Fabric data products at `fabric/`, `docs/fabric/`, `tests/fabric/` |
+| Power Platform Builder | `power-platform-builder.agent.md` | Unpacked solutions at `solutions/`, `docs/power-platform/` |
 | Power BI Analyst | `powerbi-analyst.agent.md` | Reports at `reports/`, `datasets/` |
 | Consulting Research | `consulting-research.agent.md` | Research briefs at `docs/coaching/` |
 | Agile Coach | `agile-coach.agent.md` | Stories at `docs/coaching/` |
@@ -153,6 +157,8 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | **DevOps Engineer** | Read Context -> Design Pipeline -> Implement Workflows -> Validate -> Self-Review -> Commit | Pipelines pass lint + execution; deployment docs updated |
 | **Data Scientist** | Research (6 phases) -> Model Council (ai-design) -> Pipeline Design -> Eval Plan -> Implementation -> Drift Monitoring -> Self-Review -> Commit | Eval baseline + model card exist; Model Council convened or skip rationale recorded |
 | **Tester** | Read Context -> Write Tests -> Execute Suite -> Report Defects -> Certification Report -> Commit | Test pyramid complete; certification report signed off |
+| **Fabric Engineer** | Read Context -> Discover Sources -> Design Data Product -> Implement -> Validate Data Quality -> Document -> Self-Review | Fabric artifacts are parameterized and idempotent; quality, reconciliation, lineage, recovery, and runtime-evidence gates pass |
+| **Power Platform Builder** | Read Context -> Select Components -> Scaffold Solution -> Generate Components -> Validate Package -> Document -> Self-Review | Unpacked unmanaged source is portable; package validation passes when available; no tenant-mutating command ran |
 | **Power BI Analyst** | Read Context -> Semantic Model -> DAX Measures -> Power Query -> Report Layout -> Optimize -> Docs -> Self-Review -> Commit | Semantic model validated; DAX measures tested |
 | **Consulting Research** | Understand Request -> Research (7 phases) -> Model Council (research) -> Calibrate Audience -> Create Deliverable | All key claims sourced + triangulated; deliverable complete; Model Council convened or skip rationale recorded |
 | **Agile Coach** | Mode Selection -> Create/Refine/Decompose Story -> Confirm -> Output | INVEST criteria met; ACs in Given/When/Then format |
@@ -164,13 +170,13 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | Document | Purpose |
 |----------|---------|
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | Workflow, routing, handoff, status transitions, architecture |
-| [Skills.md](Skills.md) | 128 production code skills index (load only relevant skills per task) |
+| [Skills.md](Skills.md) | 130 production code skills index (load only relevant skills per task) |
 | [docs/GUIDE.md](docs/GUIDE.md) | Quickstart, setup, troubleshooting, local mode |
 | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) | Graded quality assessment of every component |
 | [docs/GOLDEN_PRINCIPLES.md](docs/GOLDEN_PRINCIPLES.md) | Mechanical rules enforced by linters and agents |
 | [docs/tech-debt-tracker.md](docs/tech-debt-tracker.md) | Known gaps and deferred work |
-| `.github/agents/` | 21 agent definition files |
-| `.github/skills/` | 128 skill files across 14 categories |
+| `.github/agents/` | 26 agent definition files |
+| `.github/skills/` | 130 skill files across 14 categories |
 | `.github/instructions/` | 7 instruction files (auto-loaded by file pattern) |
 | `.github/schemas/` | Handoff message JSON Schema + communication protocol |
 | `.github/templates/` | 15 templates (PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning) |

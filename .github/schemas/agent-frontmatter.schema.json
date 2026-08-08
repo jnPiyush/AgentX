@@ -15,6 +15,30 @@
    "type": "string",
    "description": "Preferred LLM model identifier"
   },
+    "name": {
+     "type": "string",
+     "description": "Visible AgentX agent display name"
+    },
+    "user-invocable": {
+     "type": "boolean",
+     "description": "Whether the agent appears in the agent picker"
+    },
+    "disable-model-invocation": {
+     "type": "boolean",
+     "description": "Whether model-driven subagent invocation is disabled"
+    },
+    "reasoning": {
+     "type": "object",
+     "additionalProperties": true
+    },
+    "constraints": {
+     "type": "array",
+     "items": { "type": "string" }
+    },
+    "boundaries": {
+     "type": "object",
+     "additionalProperties": true
+    },
   "tools": {
    "type": "array",
    "items": { "type": "string" },
@@ -38,6 +62,11 @@
     }
    },
    "description": "Agent-to-agent handoff declarations"
+    },
+    "hooks": {
+     "type": "object",
+     "description": "Lifecycle hooks scoped to this agent",
+     "additionalProperties": true
   }
  },
  "additionalProperties": false

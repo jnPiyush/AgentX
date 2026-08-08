@@ -1,0 +1,33 @@
+{
+  "allowedNumbers": ["14155550123"],
+  "repoPath": "C:/path/to/AgentX",
+  "cliRelativePath": ".agentx/agentx.ps1",
+  "defaultAgent": "engineer",
+  "commandTimeoutMs": 600000,
+  "maxOutputChars": 6000,
+  "maxInputChars": 2000,
+  "maxQueueDepth": 5,
+  "confirmationTtlMs": 120000,
+  "capabilities": {
+    "ship": false,
+    "run": false,
+    "loopMutation": false,
+    "raw": false
+  },
+  "browser": {
+    "headless": true
+  },
+  "whisperModel": "whisper-1",
+  "whisperLanguage": "en",
+  "voiceAutoExecuteReadOnly": false,
+  "voiceMaxBytes": 10485760,
+  "voiceTimeoutMs": 60000,
+  "logMessageContent": false,
+  "notifications": {
+    "enabled": true,
+    "targets": ["14155550123"],
+    "events": ["started", "iteration", "complete", "status"],
+    "debounceMs": 750,
+    "pollMs": 5000
+  }
+}

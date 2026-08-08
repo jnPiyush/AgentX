@@ -17,7 +17,7 @@
 
 ---
 
-## Component Scores (v8.6.1)
+## Component Scores (v8.7.0)
 
 ### Agent Definitions (.github/agents/)
 
@@ -33,6 +33,8 @@
 | DevOps Engineer | A | Pipeline creation, deployment docs |
 | Data Scientist | A | ML pipeline, evaluation, drift monitoring |
 | Tester | A | Full test pyramid, certification reports |
+| Fabric Engineer | A | Lakehouse/Warehouse, notebooks, pipelines, data quality, lineage, and recovery contract |
+| Power Platform Builder | A | Unpacked solution source, component skills, package validation, and tenant-safety boundary |
 | Power BI Analyst | A | Star schema, DAX, DirectLake patterns |
 | Consulting Research | A | Research briefs, domain skill wiring, standalone workflow |
 | Agile Coach | B | Story creation solid, INVEST evaluation could be expanded |
@@ -50,7 +52,7 @@
 
 | Category | Count | Grade | Notes |
 |----------|-------|-------|-------|
-| Architecture | 6 | A | Core principles, security, performance, database, API design, low-code vs pro-code |
+| Architecture | 8 | A | Core principles, security, performance, database, API design, cost analysis, infrastructure governance, low-code vs pro-code |
 | Development | 23 | A | Testing, error handling, iterative loop, code review, code optimization, token optimizer, verification, debugging, git worktrees, strategic compaction, finishing-a-development-branch, dispatching-parallel-agents, and related engineering workflow skills |
 | Languages | 10 | A | C, C++, C#, Python, Go, Rust, React, Blazor, PostgreSQL, SQL Server |
 | Operations | 5 | A | Git, GitHub Actions, YAML pipelines, release mgmt, version control |
@@ -113,7 +115,7 @@
 
 | Document | Grade | Notes |
 |----------|-------|-------|
-| AGENTS.md | A | Slim TOC/map (v8.6.1) |
+| AGENTS.md | A | Slim TOC/map (v8.7.0) |
 | WORKFLOW.md | A- | Complete workflow reference with harness-oriented policy additions; enforcement is still partial |
 | Skills.md | A | Compressed index, Quick Reference table |
 | GUIDE.md | B | Quickstart solid, troubleshooting section could expand |
@@ -143,10 +145,10 @@
 | validate-frontmatter.ps1 | B | Validates well, error messages now include remediation |
 | validate-references.ps1 | A | Scans all markdown links, reports broken references with severity |
 | token-counter.ps1 | A | Count/check/report with configurable limits from .token-limits.json |
-| score-skill.ps1 | A | 7-category skill scoring (40 pts max), batch mode |
+| score-skill.ps1 | A | 7-dimension skill-quality rubric (100 points), blocking floors, JSON evidence, batch mode |
 | score-output.ps1 | A | Agent output scoring for Engineer/Architect/PM roles |
 | validate-handoff.ps1 | A | Generate + validate structured handoff messages against JSON Schema |
-| validate-skill.ps1 | A | Unified skill validation pipeline (frontmatter + tokens + scoring + structure + references) |
+| validate-skill.ps1 | A | Unified skill validation pipeline consuming the canonical 100-point rubric and blockers |
 | eval-harness.ps1 | A | Skill eval framework (Phil Schmid pattern): 15 deterministic checks across trigger/instruction/convention dimensions, prompt-set testing, JSON output |
 | test-framework.ps1 | B | Basic test runner, could add parallel execution |
 | memory-scale-test.ps1 | A | Validates JsonObservationStore pattern at 1500+ observations (11 tests, performance thresholds) |
@@ -171,4 +173,4 @@
 
 ---
 
-**Last updated**: v8.6.1
+**Last updated**: v8.7.0

@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX Copilot CLI Plugin v8.6.1 into a workspace.
+ Install AgentX Copilot CLI Plugin v8.7.0 into a workspace.
 
 .DESCRIPTION
  Copies AgentX agents, skills, instructions, and prompts into a target workspace
@@ -111,6 +111,8 @@ $StarterAgentStatus = @{
  'auto-fix-reviewer' = @{ status = 'idle'; issue = $null; lastActivity = $null }
  'data-scientist' = @{ status = 'idle'; issue = $null; lastActivity = $null }
  'tester' = @{ status = 'idle'; issue = $null; lastActivity = $null }
+ 'fabric-engineer' = @{ status = 'idle'; issue = $null; lastActivity = $null }
+ 'power-platform-builder' = @{ status = 'idle'; issue = $null; lastActivity = $null }
  'consulting-research' = @{ status = 'idle'; issue = $null; lastActivity = $null }
  'powerbi-analyst' = @{ status = 'idle'; issue = $null; lastActivity = $null }
 }
@@ -132,10 +134,12 @@ function Copy-Tree {
  foreach ($f in $files) {
   $relPath = $f.FullName.Substring($SrcDir.Length).TrimStart('\', '/')
   $destPath = Join-Path $DestDir $relPath
-  $destDir = Split-Path $destPath -Parent
-  if (-not (Test-Path $destDir)) {
-   if ($PSCmdlet.ShouldProcess($destDir, "Create directory")) {
-    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+  # PowerShell variables are case-insensitive: assigning $destDir would overwrite the
+  # $DestDir parameter and recursively nest subsequent files under the previous parent.
+  $destinationParent = Split-Path $destPath -Parent
+  if (-not (Test-Path $destinationParent)) {
+   if ($PSCmdlet.ShouldProcess($destinationParent, "Create directory")) {
+    New-Item -ItemType Directory -Path $destinationParent -Force | Out-Null
    }
   }
   if ((Test-Path $destPath) -and -not $Overwrite) {
@@ -195,8 +199,7 @@ function Get-PackInstallPlan {
   @{ Key = 'instructions'; Label = 'Instructions'; RelativePath = '.github/instructions' },
   @{ Key = 'prompts'; Label = 'Prompts'; RelativePath = '.github/prompts' },
   @{ Key = 'templates'; Label = 'Templates'; RelativePath = '.github/templates' },
-  @{ Key = 'schemas'; Label = 'Schemas'; RelativePath = '.github/schemas' },
-  @{ Key = 'scripts'; Label = 'Scripts'; RelativePath = 'scripts' }
+    @{ Key = 'schemas'; Label = 'Schemas'; RelativePath = '.github/schemas' }
  )
 
  $entries = @()
@@ -208,6 +211,14 @@ function Get-PackInstallPlan {
     Type = 'tree'
     RelativePath = ($group.RelativePath -replace '\\', '/')
    }
+  }
+ }
+
+ foreach ($filePath in (Get-ManifestArray -Object $manifest.artifacts -PropertyName 'scripts')) {
+  $entries += [pscustomobject]@{
+   Label = 'Scripts'
+   Type = 'file'
+   RelativePath = ($filePath -replace '\\', '/')
   }
  }
 
@@ -375,7 +386,7 @@ function Initialize-WorkspaceCliState {
  }
 
  $version = [ordered]@{
-  version = '8.6.1'
+  version = '8.7.0'
   provider = 'local'
   mode = 'local'
   integration = 'local'
@@ -444,7 +455,7 @@ $Target = [System.IO.Path]::GetFullPath($Target)
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "| AgentX Copilot CLI Plugin v8.6.1        |" -ForegroundColor Cyan
+Write-Host "| AgentX Copilot CLI Plugin v8.7.0        |" -ForegroundColor Cyan
 Write-Host "| Standalone plugin for GitHub Copilot CLI |" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
@@ -515,7 +526,7 @@ if (-not (Test-Path $versionDir)) {
 if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
  @{
   plugin = "agentx-copilot-cli"
-    version = "8.6.1"
+    version = "8.7.0"
   installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
   source = $Source
   includeCli = [bool]$IncludeCli
@@ -527,14 +538,14 @@ if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
-Write-Host " AgentX Copilot CLI Plugin v8.6.1 installed" -ForegroundColor Green
+Write-Host " AgentX Copilot CLI Plugin v8.7.0 installed" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " Files copied  : $totalCopied" -ForegroundColor White
 Write-Host " Files skipped : $totalSkipped (already exist, use -Force to overwrite)" -ForegroundColor DarkGray
 Write-Host ""
- Write-Host " Agents        : 24 (13 external + 11 internal)" -ForegroundColor White
- Write-Host " Skills        : 128 across 14 categories" -ForegroundColor White
+ Write-Host " Agents        : 26 (15 external + 11 internal)" -ForegroundColor White
+ Write-Host " Skills        : 130 across 14 categories" -ForegroundColor White
  Write-Host " Instructions  : 7 (auto-applied by file pattern)" -ForegroundColor White
  Write-Host " Prompts       : 21 reusable templates" -ForegroundColor White
 if ($IncludeCli) {

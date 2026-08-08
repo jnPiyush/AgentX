@@ -1,5 +1,9 @@
 # Evaluation Rubrics
 
+## Artifact Rubrics
+
+- [Skill Quality](skill-quality.md) - deterministic 100-point AgentX skill rubric with blocking floors and CI semantics
+
 Keep one rubric file per judged metric.
 
 ## Rubric Rules

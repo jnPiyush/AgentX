@@ -226,6 +226,10 @@ jobs:
                 agent = 'data-scientist';
               } else if (labels.includes('type:testing') || labels.includes('needs:testing')) {
                 agent = 'tester';
+              } else if (labels.includes('type:fabric')) {
+                agent = 'fabric-engineer';
+              } else if (labels.includes('type:lowcode')) {
+                agent = 'power-platform-builder';
               } else if (hasArchitecture) {
                 agent = 'engineer';
               } else if (labels.includes('type:feature') || labels.includes('type:spike') || labels.includes('type:story')) {
@@ -238,6 +242,10 @@ jobs:
                 agent = 'data-scientist';
               } else if (labels.includes('type:testing') || labels.includes('needs:testing')) {
                 agent = 'tester';
+              } else if (labels.includes('type:fabric')) {
+                agent = 'fabric-engineer';
+              } else if (labels.includes('type:lowcode')) {
+                agent = 'power-platform-builder';
               } else {
                 agent = 'engineer';
               }
@@ -261,6 +269,10 @@ jobs:
               agent = 'data-scientist';
             } else if (!agent && (labels.includes('type:testing') || labels.includes('needs:testing'))) {
               agent = 'tester';
+            } else if (!agent && labels.includes('type:fabric')) {
+              agent = 'fabric-engineer';
+            } else if (!agent && labels.includes('type:lowcode')) {
+              agent = 'power-platform-builder';
             } else if (!agent && (labels.includes('type:feature') || labels.includes('type:spike'))) {
               agent = 'architect';
             } else if (!agent && (labels.includes('type:story') || labels.includes('type:docs'))) {
@@ -533,3 +545,29 @@ jobs:
         run: |
           ISSUE="${{ needs.route.outputs.issue_number }}"
           gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "**Tester Agent**: Ready to validate test coverage, regression safety, and certification criteria."
+
+  fabric-engineer:
+    name: Fabric Engineer
+    needs: route
+    if: needs.route.outputs.agent == 'fabric-engineer'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acknowledge Assignment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "**Fabric Engineer Agent**: Ready to build the governed Fabric data product. Confirm target workspace/capacity before any live operation; local artifact generation can proceed without mutation."
+
+  power-platform-builder:
+    name: Power Platform Builder
+    needs: route
+    if: needs.route.outputs.agent == 'power-platform-builder'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acknowledge Assignment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "**Power Platform Builder Agent**: Ready to generate unpacked solution source. Tenant authentication, import, publish, export, and delete operations remain maker or deployment-pipeline responsibilities."

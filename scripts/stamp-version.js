@@ -104,6 +104,13 @@ function replaceStrict(content, relativePath, pattern, replacement, label) {
   return content.replace(pattern, replacement);
 }
 
+function replaceStrictLiteral(content, relativePath, search, replacement, label) {
+  if (!content.includes(search)) {
+    fail(`Literal not found in ${relativePath}: ${label}`);
+  }
+  return content.split(search).join(replacement);
+}
+
 function updateJsonVersionFile(version) {
   const raw = readText(sourceVersionPath);
   const json = JSON.parse(raw);
@@ -140,6 +147,23 @@ function updateTextFile(relativePath, edits) {
     content = replaceStrict(content, relativePath, edit.pattern, edit.replacement, edit.label);
   }
   writeText(relativePath, content);
+}
+
+function updateLiteralFile(relativePath, edits) {
+  let content = readText(relativePath);
+  for (const edit of edits) {
+    content = replaceStrictLiteral(content, relativePath, edit.search, edit.replacement, edit.label);
+  }
+  writeText(relativePath, content);
+}
+
+function preflightLiteralFile(relativePath, edits) {
+  const content = readText(relativePath);
+  for (const edit of edits) {
+    if (!content.includes(edit.search)) {
+      fail(`Literal not found in ${relativePath}: ${edit.label}`);
+    }
+  }
 }
 
 function runCommand(command, args, cwd) {
@@ -220,6 +244,14 @@ function syncBundledAssets(version) {
   info(`Synced bundled extension assets for ${version}`);
 }
 
+function stampMcpPackage(version) {
+  runCommand(
+    process.execPath,
+    [path.join(root, 'scripts', 'stamp-package-version.js'), '.agentx/mcp-server', version],
+    root,
+  );
+}
+
 function packageVsix(version, vsixOutput) {
   const defaultOutput = path.join(extensionDir, `agentx-${version}.vsix`);
   const resolvedOutput = vsixOutput
@@ -260,7 +292,9 @@ function packageVsix(version, vsixOutput) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const currentVersionJson = JSON.parse(readText(sourceVersionPath));
-  let targetVersion = currentVersionJson.version;
+  const currentVersion = currentVersionJson.version;
+  validateVersion(currentVersion);
+  let targetVersion = currentVersion;
   const isBumpCommand = Boolean(args.bumpType);
 
   if (args.setVersion) {
@@ -271,6 +305,37 @@ function main() {
   }
 
   validateVersion(targetVersion);
+  const guideInstallerUrlEdits = [
+    {
+      search: `raw.githubusercontent.com/jnPiyush/AgentX/v${currentVersion}/install.ps1`,
+      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.ps1`,
+      label: 'guide PowerShell installer URLs',
+    },
+    {
+      search: `raw.githubusercontent.com/jnPiyush/AgentX/v${currentVersion}/install.sh`,
+      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.sh`,
+      label: 'guide bash installer URLs',
+    },
+  ];
+  const powershellInstallerUrlEdits = [
+    {
+      search: `raw.githubusercontent.com/jnPiyush/AgentX/v${currentVersion}/install.ps1`,
+      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.ps1`,
+      label: 'installer usage URLs',
+    },
+  ];
+  const bashInstallerUrlEdits = [
+    {
+      search: `raw.githubusercontent.com/jnPiyush/AgentX/v${currentVersion}/install.sh`,
+      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.sh`,
+      label: 'bash installer usage URL',
+    },
+  ];
+
+  // Fail before changing any file if the trusted installer URL shapes have drifted.
+  preflightLiteralFile('docs/GUIDE.md', guideInstallerUrlEdits);
+  preflightLiteralFile('install.ps1', powershellInstallerUrlEdits);
+  preflightLiteralFile('install.sh', bashInstallerUrlEdits);
   updateJsonVersionFile(targetVersion);
 
   updateTextFile('vscode-extension/package.json', [
@@ -322,6 +387,16 @@ function main() {
     },
   ]);
 
+  updateTextFile('docs/ux/prototypes/landing/index.html', [
+    {
+      pattern: /AgentX \d+\.\d+\.\d+/g,
+      replacement: `AgentX ${targetVersion}`,
+      label: 'landing page release version',
+    },
+  ]);
+
+  updateLiteralFile('docs/GUIDE.md', guideInstallerUrlEdits);
+
   updateTextFile('docs/QUALITY_SCORE.md', [
     {
       pattern: /## Component Scores \(v\d+\.\d+\.\d+\)/,
@@ -340,12 +415,9 @@ function main() {
     },
   ]);
 
+  updateLiteralFile('install.ps1', powershellInstallerUrlEdits);
+
   updateTextFile('install.ps1', [
-    {
-      pattern: /raw\.githubusercontent\.com\/jnPiyush\/AgentX\/v\d+\.\d+\.\d+\/install\.ps1/g,
-      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.ps1`,
-      label: 'installer usage URLs',
-    },
     {
       pattern: /\$BRANCH = "v\d+\.\d+\.\d+"/,
       replacement: `$BRANCH = "v${targetVersion}"`,
@@ -388,12 +460,9 @@ function main() {
     },
   ]);
 
+  updateLiteralFile('install.sh', bashInstallerUrlEdits);
+
   updateTextFile('install.sh', [
-    {
-      pattern: /raw\.githubusercontent\.com\/jnPiyush\/AgentX\/v\d+\.\d+\.\d+\/install\.sh/g,
-      replacement: `raw.githubusercontent.com/jnPiyush/AgentX/v${targetVersion}/install.sh`,
-      label: 'bash installer usage URL',
-    },
     {
       pattern: /BRANCH="v\d+\.\d+\.\d+"/,
       replacement: `BRANCH="v${targetVersion}"`,
@@ -477,6 +546,22 @@ function main() {
     },
   ]);
 
+  updateTextFile('packs/agentx-copilot-cli/install-user.ps1', [
+    {
+      pattern: /version\s+= '\d+\.\d+\.\d+'$/m,
+      replacement: `version     = '${targetVersion}'`,
+      label: 'user-level CLI plugin version payload',
+    },
+  ]);
+
+  updateTextFile('packs/agentx-copilot-cli/install-user.sh', [
+    {
+      pattern: /"version": "\d+\.\d+\.\d+"/,
+      replacement: `"version": "${targetVersion}"`,
+      label: 'user-level CLI plugin bash version payload',
+    },
+  ]);
+
   updateTextFile('packs/agentx-copilot-cli/README.md', [
     {
       pattern: /- Version: `\d+\.\d+\.\d+`/,
@@ -493,6 +578,7 @@ function main() {
     },
   ]);
 
+  stampMcpPackage(targetVersion);
   syncBundledAssets(targetVersion);
   info(`Stamped repo version ${targetVersion}`);
 

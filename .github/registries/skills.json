@@ -1,8 +1,8 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-07-15T07:56:43Z",
+  "generated": "2026-08-07T10:16:57Z",
   "source": ".github/skills/**/SKILL.md",
-  "totalCount": 128,
+  "totalCount": 130,
   "countsByCategory": [
     {
       "category": "ai-systems",
@@ -10,7 +10,7 @@
     },
     {
       "category": "architecture",
-      "count": 6
+      "count": 8
     },
     {
       "category": "data",
@@ -287,11 +287,25 @@
       "description": "Apply fundamental coding principles (SOLID, DRY, KISS) and structure projects for maintainability with clean architecture and separation of concerns. Use when refactoring, reviewing patterns, setting up project structure, or organizing modules."
     },
     {
+      "id": "architecture/cost-analysis",
+      "name": "cost-analysis",
+      "category": "architecture",
+      "path": ".github/skills/architecture/cost-analysis/SKILL.md",
+      "description": "Estimate and attribute cloud running cost for a proposed architecture before it is built. Use when writing an ADR options table, sizing a prototype, comparing managed versus self-hosted services, or answering \"what will this cost to leave running\". Produces a load-enveloped estimate with an idle-versus-active split and per-option attribution."
+    },
+    {
       "id": "architecture/database",
       "name": "database",
       "category": "architecture",
       "path": ".github/skills/architecture/database/SKILL.md",
       "description": "Design database operations including migrations, indexing strategies, transactions, connection pooling, and ORM best practices. Use when creating database schemas, writing migrations, optimizing slow queries, configuring connection pools, or choosing between ORM frameworks."
+    },
+    {
+      "id": "architecture/infra-governance",
+      "name": "infra-governance",
+      "category": "architecture",
+      "path": ".github/skills/architecture/infra-governance/SKILL.md",
+      "description": "Enforce infrastructure invariants at generation time, before any IaC is applied. Use when writing or reviewing Terraform, Bicep, or ARM, when a generated stack disables authentication or encryption, when resource names drift, or when a reviewer needs a mechanical pass over infrastructure code. Provides a rule catalog, a scanner, and a deterministic naming resolver."
     },
     {
       "id": "architecture/low-code-vs-pro-code",

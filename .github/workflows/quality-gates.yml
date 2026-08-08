@@ -29,6 +29,11 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install validation dependencies
+        run: |
+          npm ci --ignore-scripts --prefix vscode-extension
+          npm ci --ignore-scripts --prefix companions/whatsapp
+
       - name: Setup Environment
         run: |
           echo "ISSUE_NUMBER=${{ github.event.pull_request.number || github.event.inputs.issue_number }}" >> $GITHUB_ENV
@@ -112,91 +117,27 @@ jobs:
           ./scripts/check-harness-compliance.ps1 -BaseRef "${{ github.base_ref }}"
 
       - name: Token Budget Check
-        run: |
-          echo "Checking token budgets..."
-          VIOLATIONS=0
-
-          check_tokens() {
-            local f="$1" limit="$2"
-            CHARS=$(wc -m < "$f")
-            TOKENS=$(((CHARS + 1) / 2))
-            if [ "$TOKENS" -gt "$limit" ]; then
-              echo "[FAIL] $f: $TOKENS tokens (limit: $limit)"
-              VIOLATIONS=$((VIOLATIONS + 1))
-            fi
-          }
-
-          while IFS= read -r f; do check_tokens "$f" 5000; done \
-            < <(find .github/skills -name 'SKILL.md' 2>/dev/null || true)
-
-          while IFS= read -r f; do check_tokens "$f" 3000; done \
-            < <(find .github/instructions -name '*.instructions.md' 2>/dev/null || true)
-
-          while IFS= read -r f; do check_tokens "$f" 5000; done \
-            < <(find .github/agents -maxdepth 1 -name '*.agent.md' 2>/dev/null || true)
-
-          while IFS= read -r f; do check_tokens "$f" 3000; done \
-            < <(find .github/agents/internal -name '*.agent.md' 2>/dev/null || true)
-
-          while IFS= read -r f; do check_tokens "$f" 8000; done \
-            < <(find docs -maxdepth 1 -name '*.md' 2>/dev/null || true)
-
-          if [ "$VIOLATIONS" -gt 0 ]; then
-            echo "[FAIL] $VIOLATIONS file(s) exceed token budget"
-            exit 1
-          fi
-          echo "[PASS] All files within token budget"
+        shell: pwsh
+        run: ./scripts/token-counter.ps1 -Action check
 
       - name: Skill Validation Pipeline
+        shell: pwsh
         run: |
-          echo "Running skill validation pipeline..."
-          FAIL=0
-          for skill_dir in .github/skills/*/; do
-            for sub_dir in "$skill_dir"*/; do
-              if [ -f "$sub_dir/SKILL.md" ]; then
-                SKILL_NAME=$(basename "$sub_dir")
-                CONTENT=$(cat "$sub_dir/SKILL.md")
+          ./scripts/validate-skill.ps1
+          $base = if ("${{ github.event.pull_request.base.sha }}") { "${{ github.event.pull_request.base.sha }}" } else { 'origin/master' }
+          $head = if ("${{ github.event.pull_request.head.sha }}") { "${{ github.event.pull_request.head.sha }}" } else { 'HEAD' }
+          ./scripts/validate-changed-skills.ps1 -BaseRef $base -HeadRef $head -MinScore 70
 
-                # Check frontmatter exists
-                if ! echo "$CONTENT" | head -1 | grep -q '^---'; then
-                  echo "[FAIL] $SKILL_NAME: missing YAML frontmatter"
-                  FAIL=$((FAIL + 1))
-                  continue
-                fi
+      - name: Skill Rubric Behavior
+        shell: pwsh
+        run: ./tests/skill-rubric-behavior.ps1
 
-                # Check name field
-                if ! echo "$CONTENT" | grep -q 'name:'; then
-                  echo "[FAIL] $SKILL_NAME: missing name field in frontmatter"
-                  FAIL=$((FAIL + 1))
-                fi
-
-                # Check description field
-                if ! echo "$CONTENT" | grep -q 'description:'; then
-                  echo "[FAIL] $SKILL_NAME: missing description field in frontmatter"
-                  FAIL=$((FAIL + 1))
-                fi
-
-                # Check token budget with a conservative character-to-token estimate.
-                CHARS=$(wc -m < "$sub_dir/SKILL.md")
-                TOKENS=$(((CHARS + 1) / 2))
-                if [ "$TOKENS" -gt 5000 ]; then
-                  echo "[FAIL] $SKILL_NAME: $TOKENS tokens (limit: 5000)"
-                  FAIL=$((FAIL + 1))
-                fi
-
-                # Check directory name is kebab-case
-                if ! echo "$SKILL_NAME" | grep -qE '^[a-z][a-z0-9-]*$'; then
-                  echo "[FAIL] $SKILL_NAME: directory name not kebab-case"
-                  FAIL=$((FAIL + 1))
-                fi
-              fi
-            done
-          done
-          if [ "$FAIL" -gt 0 ]; then
-            echo "[FAIL] $FAIL skill validation error(s) found"
-            exit 1
-          fi
-          echo "[PASS] All skills passed validation pipeline"
+      - name: WhatsApp Companion Quality Gate
+        working-directory: companions/whatsapp
+        run: |
+          npm test
+          npm run test:coverage
+          npm run audit:runtime
 
       - name: Reference Link Validation
         run: |
@@ -255,8 +196,8 @@ jobs:
           check_count "AGENTS.md" '\b[0-9]* instruction files' "$INSTRUCTION_COUNT instruction files" "instruction count"
           check_count "AGENTS.md" '\b[0-9]* templates' "$TEMPLATE_COUNT templates" "template count"
           check_count "AGENTS.md" '\b[0-9]* reusable prompt templates' "$PROMPT_COUNT reusable prompt templates" "prompt count"
-          check_count "README.md" '\*\*[0-9]+ specialized agents\*\*' "**$AGENT_COUNT specialized agents**" "agent count"
-          check_count "README.md" '75 skills, [0-9]+ agents, [0-9]+ instructions, [0-9]+ templates, [0-9]+ prompts' "75 skills, $AGENT_COUNT agents, $INSTRUCTION_COUNT instructions, $TEMPLATE_COUNT templates, $PROMPT_COUNT prompts" "knowledge-layer counts"
+          check_count "README.md" '\*\*[0-9]+ total\*\*' "**$AGENT_COUNT total**" "agent count"
+          check_count "README.md" '\*\*[0-9]+ skills\*\*' "**$SKILL_COUNT skills**" "skill count"
 
           if [ -f "vscode-extension/.github/AGENTS.md" ]; then
             check_count "vscode-extension/.github/AGENTS.md" '\b[0-9]* agent definition files' "$AGENT_COUNT agent definition files" "bundled agent count"

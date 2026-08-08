@@ -13,9 +13,19 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-test('LocalAuth runtime loads without RemoteAuth optional dependencies', () => {
-  const Client = require('whatsapp-web.js/src/Client');
-  const LocalAuth = require('whatsapp-web.js/src/authStrategies/LocalAuth');
+function loopState(status, active, iteration) {
+  return {
+    status,
+    active,
+    iteration,
+    maxIterations: 20,
+    history: iteration ? [{ summary: 'Initial review pass' }] : [],
+    prompt: iteration ? 'Test prompt' : 'initial',
+  };
+}
+
+test('public whatsapp-web.js runtime loads without RemoteAuth optional dependencies', () => {
+  const { Client, LocalAuth } = require('whatsapp-web.js');
 
   assert.equal(typeof Client, 'function');
   assert.equal(typeof LocalAuth, 'function');
@@ -33,7 +43,10 @@ test('routeCommand routes common WhatsApp commands to the AgentX CLI', async () 
   };
 
   const { routeCommand } = freshRequire(routerPath);
-  const config = { defaultAgent: 'engineer' };
+  const config = {
+    defaultAgent: 'engineer',
+    capabilities: { ship: false, run: true, loopMutation: true, raw: false },
+  };
 
   await routeCommand('ready', config);
   await routeCommand('loop start "Fix login bug"', config);
@@ -75,19 +88,22 @@ test('loadConfig prefers environment overrides for allowlist and repo path', () 
   const originalConfig = hadConfig ? fs.readFileSync(configPath, 'utf8') : undefined;
   const originalAllowed = process.env.AGENTX_WA_ALLOWED;
   const originalRepo = process.env.AGENTX_REPO;
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-config-'));
+  fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, '.agentx', 'agentx.ps1'), '', 'utf8');
 
   try {
     if (hadConfig) {
       fs.rmSync(configPath, { force: true });
     }
     process.env.AGENTX_WA_ALLOWED = '14155550100, 14155550101';
-    process.env.AGENTX_REPO = 'C:/temp/agentx-test-root';
+    process.env.AGENTX_REPO = tempRoot;
 
     const { loadConfig } = freshRequire(path.resolve(__dirname, '..', 'src', 'config.js'));
     const config = loadConfig();
 
     assert.deepEqual(config.allowedNumbers, ['14155550100', '14155550101']);
-    assert.equal(config.repoPath, 'C:/temp/agentx-test-root');
+    assert.equal(config.repoPath, path.resolve(tempRoot));
   } finally {
     if (originalAllowed === undefined) {
       delete process.env.AGENTX_WA_ALLOWED;
@@ -105,6 +121,7 @@ test('loadConfig prefers environment overrides for allowlist and repo path', () 
     } else {
       fs.rmSync(configPath, { force: true });
     }
+    fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
 
@@ -145,14 +162,7 @@ test('startLoopWatcher pushes WhatsApp notifications for loop state transitions'
   const stateDir = path.join(repoRoot, '.agentx', 'state');
   const statePath = path.join(stateDir, 'loop-state.json');
   fs.mkdirSync(stateDir, { recursive: true });
-  fs.writeFileSync(statePath, JSON.stringify({
-    status: 'idle',
-    active: false,
-    iteration: 0,
-    maxIterations: 20,
-    history: [],
-    prompt: 'initial',
-  }), 'utf8');
+  fs.writeFileSync(statePath, JSON.stringify(loopState('idle', false, 0)), 'utf8');
 
   const messages = [];
   const client = {
@@ -169,30 +179,18 @@ test('startLoopWatcher pushes WhatsApp notifications for loop state transitions'
         enabled: true,
         targets: ['14155550123'],
         events: ['started', 'iteration', 'complete', 'status'],
+        debounceMs: 50,
+        pollMs: 100,
       },
     },
     client,
   });
 
   try {
-    fs.writeFileSync(statePath, JSON.stringify({
-      status: 'running',
-      active: true,
-      iteration: 1,
-      maxIterations: 20,
-      history: [{ summary: 'Initial review pass' }],
-      prompt: 'Test prompt',
-    }), 'utf8');
+    fs.writeFileSync(statePath, JSON.stringify(loopState('running', true, 1)), 'utf8');
     await wait(1200);
 
-    fs.writeFileSync(statePath, JSON.stringify({
-      status: 'complete',
-      active: true,
-      iteration: 1,
-      maxIterations: 20,
-      history: [{ summary: 'Initial review pass' }],
-      prompt: 'Test prompt',
-    }), 'utf8');
+    fs.writeFileSync(statePath, JSON.stringify(loopState('complete', true, 1)), 'utf8');
     await wait(1200);
   } finally {
     if (watcher && typeof watcher.stop === 'function') {

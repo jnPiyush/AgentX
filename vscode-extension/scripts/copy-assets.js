@@ -41,6 +41,9 @@ const runtimeScriptFiles = [
     'validate-frontmatter.ps1',
     'validate-references.ps1',
     'score-skill.ps1',
+    'validate-skill.ps1',
+    'validate-changed-skills.ps1',
+    'parse-yaml.js',
 ];
 
 // Standalone files from .github/ to bundle
@@ -67,6 +70,10 @@ const docFiles = ['WORKFLOW.md', 'GUIDE.md', 'GOLDEN_PRINCIPLES.md', 'QUALITY_SC
 const docGuideDir = path.join(repoRoot, 'docs', 'guides');
 
 const artifactDocFiles = [
+    {
+        src: path.join(repoRoot, 'evaluation', 'rubrics', 'skill-quality.md'),
+        dest: path.join('evaluation', 'rubrics', 'skill-quality.md'),
+    },
     {
         src: path.join(repoRoot, 'docs', 'artifacts', 'adr', 'ADR-Harness-Engineering.md'),
         dest: path.join('docs', 'artifacts', 'adr', 'ADR-Harness-Engineering.md'),
@@ -112,6 +119,12 @@ const bundledMarkdownRewrites = [
         replacements: [
             ['(../../../../.github/agents/', '(../../../agents/'],
             ['(../../../../.github/instructions/', '(../../../instructions/'],
+        ],
+    },
+    {
+        relativePath: path.join('skills', 'development', 'skill-creator', 'SKILL.md'),
+        replacements: [
+            ['(../../../../evaluation/rubrics/skill-quality.md)', '(../../../evaluation/rubrics/skill-quality.md)'],
         ],
     },
     {
@@ -204,6 +217,15 @@ if (missingRuntimeScripts.length > 0) {
 if (runtimeScriptCount > 0) {
     console.log('  Copied scripts/ (' + runtimeScriptCount + ' runtime files)');
 }
+
+const yamlModuleSource = path.join(repoRoot, 'vscode-extension', 'node_modules', 'yaml');
+if (!fs.existsSync(yamlModuleSource)) {
+    throw new Error('Missing YAML runtime dependency. Run npm ci in vscode-extension.');
+}
+const yamlModuleDest = path.join(destRoot, 'scripts', 'node_modules', 'yaml');
+fs.cpSync(yamlModuleSource, yamlModuleDest, { recursive: true });
+totalFiles += countFiles(yamlModuleDest);
+console.log('  Copied scripts/node_modules/yaml runtime dependency');
 
 // Copy standalone files
 for (const file of standaloneFiles) {

@@ -681,7 +681,8 @@ function Get-AgentXProviderResolution {
         while ([DateTime]::UtcNow -lt $deadline) {
             if ($proc.HasExited) {
                 $stderr = ''
-                try { $stderr = $proc.StandardError.ReadToEnd() } catch {}
+                try { $stderr = $proc.StandardError.ReadToEnd() }
+                catch { Write-Verbose "Unable to read ADO MCP stderr: $_" }
                 throw "ADO MCP server exited unexpectedly. stderr: $stderr"
             }
 
@@ -3798,7 +3799,7 @@ function Invoke-StateCmd {
 
     Write-CliOutput "`n$($C.c)  Agent Status:$($C.n)"
     Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
-    $agents = @('product-manager', 'ux-designer', 'architect', 'engineer', 'reviewer', 'auto-fix-reviewer', 'devops-engineer', 'data-scientist', 'tester', 'consulting-research')
+    $agents = @('product-manager', 'ux-designer', 'architect', 'engineer', 'reviewer', 'auto-fix-reviewer', 'devops-engineer', 'data-scientist', 'tester', 'fabric-engineer', 'power-platform-builder', 'powerbi-analyst', 'consulting-research', 'agile-coach')
     foreach ($a in $agents) {
         $prop = $data.PSObject.Properties[$a]
         $info = if ($prop) { $prop.Value } else { $null }
@@ -3935,6 +3936,9 @@ function Invoke-WorkflowCmd {
         'docs' = 'engineer'
         'epic' = 'product-manager'
         'feature' = 'architect'
+        'fabric' = 'fabric-engineer'
+        'lowcode' = 'power-platform-builder'
+        'power-platform' = 'power-platform-builder'
         'powerbi' = 'powerbi-analyst'
         'spike' = 'architect'
         'story' = 'engineer'
@@ -4260,7 +4264,7 @@ function Get-LoopStateHealth {
 
     if ($history.Count -gt 0) {
         $latest = $history[-1]
-        # A rollback intentionally resets the counter below prior history — not a STUCK state.
+        # A rollback intentionally resets the counter below prior history - not a STUCK state.
         $isRolledBack = ($latest.PSObject.Properties.Name -contains 'status') -and ($latest.status -eq 'rollback')
         if (-not $isRolledBack -and $latest.iteration -gt $iteration) {
             return [PSCustomObject]@{ kind = 'stuck'; reason = "history iteration $($latest.iteration) is ahead of loop iteration $iteration" }
@@ -5106,6 +5110,13 @@ function Invoke-ValidateCmd {
         'data-scientist' {
             Test-Check (Test-Path (Join-Path $Script:ROOT 'docs/data-science')) 'Data science docs directory exists'
         }
+        'fabric-engineer' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'fabric')) 'Fabric artifacts directory exists'
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'docs/fabric')) 'Fabric documentation directory exists'
+        }
+        'power-platform-builder' {
+            Test-Check (Test-Path (Join-Path $Script:ROOT 'solutions')) 'Power Platform solutions directory exists'
+        }
         'tester' {
             Test-Check (Test-Path (Join-Path $Script:ROOT 'tests')) 'Tests directory exists'
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/testing/TEST-$num.md")) "TEST-$num.md exists"
@@ -5589,7 +5600,7 @@ function Invoke-AgentHookCmd {
         # Applies to: engineer, reviewer, auto-fix-reviewer, and all other
         # roles that run the iterative quality loop.
         # -----------------------------------------------------------------
-        $loopGatedRoles = @('engineer', 'reviewer', 'auto-fix-reviewer', 'architect', 'data-scientist', 'tester', 'devops-engineer', 'product-manager', 'ux-designer', 'consulting-research', 'powerbi-analyst', 'agile-coach')
+        $loopGatedRoles = @('engineer', 'reviewer', 'auto-fix-reviewer', 'architect', 'data-scientist', 'tester', 'devops-engineer', 'product-manager', 'ux-designer', 'consulting-research', 'fabric-engineer', 'power-platform-builder', 'powerbi-analyst', 'agile-coach')
         if ($agent -in $loopGatedRoles) {
             $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
             if ($loopState -and $loopState.active -eq $true) {
@@ -6064,12 +6075,8 @@ function Invoke-LessonsPromote {
             continue
         }
 
-        # Extract title (first H1) and Learning section
+        # Extract title (first H1)
         $title = ($raw -split "`n" | Where-Object { $_ -match '^#\s+' } | Select-Object -First 1) -replace '^#\s+',''
-        $learningBlock = ''
-        if ($raw -match '##\s+Learning\s*\r?\n(.+?)(\r?\n##\s+|\Z)') {
-            $learningBlock = $Matches[1].Trim()
-        }
         $bullet = "- {0:yyyy-MM-dd}: {1} (LEARNING [{2}], conf={3:N2}, obs={4})" -f (Get-Date), $title, $f.BaseName, $confidence, $observations
 
         if ($dryRun) {
@@ -6412,9 +6419,8 @@ function Invoke-DiagnoseCmd {
         $diskCount = @(Get-ChildItem -Path (Join-Path $Script:ROOT '.github/skills') -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue).Count
         $idxText = Get-Content $skillsIndex -Raw -Encoding utf8
         # Match count claims like "82 skills" but not "3-4 skills" / "max N skills" guidance.
-        $matches = [regex]::Matches($idxText, '(?<![\d\-])(\d{2,})\s+skills')
-        $declared = @($matches | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique)
-        $expected = @($diskCount)
+        $countMatches = [regex]::Matches($idxText, '(?<![\d\-])(\d{2,})\s+skills')
+        $declared = @($countMatches | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Unique)
         $idxOk = ($declared.Count -eq 1) -and ($declared[0] -eq $diskCount)
         $idxSummary = if ($idxOk) {
             "Skills.md declares $diskCount, disk has $diskCount"
@@ -6789,6 +6795,8 @@ function Invoke-WatchCmd {
                         'devops'        { 'devops' }
                         'data-science'  { 'data-scientist' }
                         'testing'       { 'tester' }
+                        'fabric'        { 'fabric-engineer' }
+                        'lowcode'       { 'power-platform-builder' }
                         'powerbi'       { 'powerbi-analyst' }
                         default         { 'engineer' }
                     }
@@ -6914,10 +6922,12 @@ function Invoke-DiscoverRun {
 
             # Skip signals already processed in a previous run (DateTime comparison handles mixed formats)
             if ($lastWatermark -and $sigTimestamp) {
-                $wmDate = $null; $sigDate = $null
-                try { $wmDate = [DateTime]::Parse($lastWatermark, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal) } catch { }
-                try { $sigDate = [DateTime]::Parse($sigTimestamp, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal) } catch { }
-                if ($wmDate -and $sigDate) {
+                [DateTime]$wmDate = [DateTime]::MinValue
+                [DateTime]$sigDate = [DateTime]::MinValue
+                $dateStyles = [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal
+                $wmParsed = [DateTime]::TryParse($lastWatermark, [System.Globalization.CultureInfo]::InvariantCulture, $dateStyles, [ref]$wmDate)
+                $sigParsed = [DateTime]::TryParse($sigTimestamp, [System.Globalization.CultureInfo]::InvariantCulture, $dateStyles, [ref]$sigDate)
+                if ($wmParsed -and $sigParsed) {
                     if ($sigDate -le $wmDate) { continue }
                 } elseif ($sigTimestamp -le $lastWatermark) {
                     # Fallback to string comparison when parsing fails

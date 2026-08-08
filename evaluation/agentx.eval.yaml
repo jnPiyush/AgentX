@@ -17,7 +17,7 @@ datasets:
     path: evaluation/datasets/regression.jsonl
     purpose: benchmark
     coverageType: regression
-    rowCount: 15
+    rowCount: 23
     dataFormat: jsonl
 metrics:
   - correctness

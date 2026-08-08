@@ -982,7 +982,7 @@ function Get-RunnerSelfReviewMinIteration {
     $syntheticState = [PSCustomObject]@{
         prompt = $Prompt
         completionCriteria = 'TASK_COMPLETE'
-        taskClass = if ($AgentName -in @('ux-designer', 'data-scientist')) { 'complex-delivery' } else { $null }
+        taskClass = if ($AgentName -in @('ux-designer', 'data-scientist', 'fabric-engineer', 'power-platform-builder')) { 'complex-delivery' } else { $null }
         maxIterations = $MaxReviewerIterations
     }
 
@@ -1711,7 +1711,31 @@ function Get-ToolSchemaList {
 # Tool execution
 # ---------------------------------------------------------------------------
 
-function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot) {
+function Test-AgentTerminalCommandAllowed {
+    param(
+        [string]$AgentName,
+        [string]$Command
+    )
+
+    $normalizedAgent = Resolve-AgentReference $AgentName
+    if ($normalizedAgent -ne 'power-platform-builder') {
+        return [PSCustomObject]@{ allowed = $true; reason = $null }
+    }
+
+    $commandText = [string]$Command
+    $safeCharacters = '\A[A-Za-z0-9_./\\:=,\- ]+\z'
+    $safePacCommand = '\A(?i:pac(?:\.exe)? +(?:(?:--version|--help|help)|solution +(?:init|unpack|pack|check)(?: +.*)?))\z'
+    if ($commandText -match $safeCharacters -and $commandText -match $safePacCommand) {
+        return [PSCustomObject]@{ allowed = $true; reason = $null }
+    }
+
+    return [PSCustomObject]@{
+        allowed = $false
+        reason = 'Power Platform Builder terminal access is fail-closed. Only direct local pac version/help and solution init/unpack/pack/check commands with literal arguments are allowed.'
+    }
+}
+
+function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, [string]$agentName = '') {
     $blocked = @('rm -rf /', 'format c:', 'drop database', 'git reset --hard', 'git push --force')
 
     switch ($name) {
@@ -1801,6 +1825,10 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot) 
         }
         'terminal_exec' {
             $cmd = $params.command
+            $agentCommandPolicy = Test-AgentTerminalCommandAllowed -AgentName $agentName -Command $cmd
+            if (-not $agentCommandPolicy.allowed) {
+                return @{ error = $true; text = "[AGENT POLICY BLOCKED] $($agentCommandPolicy.reason)" }
+            }
             foreach ($b in $blocked) {
                 if ($cmd.ToLower().Contains($b)) {
                     return @{ error = $true; text = "Blocked dangerous command: $b" }
@@ -2061,6 +2089,20 @@ function Get-ClaudeCodeAllowedTool([array]$Tools) {
     }
 
     return ($mapped.ToArray() -join ',')
+}
+
+function Get-AgentProviderToolSchema {
+    param(
+        [string]$AgentName,
+        [array]$Tools
+    )
+
+    if ((Resolve-AgentReference $AgentName) -eq 'power-platform-builder' -and
+        (Get-ActiveProviderId) -eq 'claude-code') {
+        return @($Tools | Where-Object { $_.function.name -ne 'terminal_exec' })
+    }
+
+    return @($Tools)
 }
 
 function ConvertTo-ClaudeCodeSystemPrompt([array]$Messages) {
@@ -2545,6 +2587,8 @@ function Resolve-AgentReference([string]$value) {
         '^data-scientist$' { return 'data-scientist' }
         '^tester$' { return 'tester' }
         '^consulting-research$' { return 'consulting-research' }
+        '^fabric-engineer$' { return 'fabric-engineer' }
+        '^(power-platform-builder|low-code-builder)$' { return 'power-platform-builder' }
         '^powerbi-analyst$' { return 'powerbi-analyst' }
         '^github-ops$' { return 'github-ops' }
         '^ado-ops$' { return 'ado-ops' }
@@ -2606,7 +2650,7 @@ function Resolve-ClarificationTargetList([hashtable]$agentDef) {
     }
 
     if ($handoffSection) {
-        $agentPattern = '\b(product-manager|architect|ux-designer|engineer|reviewer|devops-engineer|devops|data-scientist|tester|consulting-research|agent-x|github-ops|ado-ops|powerbi-analyst|reviewer-auto|prompt-engineer|rag-specialist|eval-specialist|ops-monitor|functional-reviewer)\b'
+        $agentPattern = '\b(product-manager|architect|ux-designer|engineer|reviewer|devops-engineer|devops|data-scientist|tester|consulting-research|fabric-engineer|power-platform-builder|low-code-builder|agent-x|github-ops|ado-ops|powerbi-analyst|reviewer-auto|prompt-engineer|rag-specialist|eval-specialist|ops-monitor|functional-reviewer)\b'
         foreach ($match in [regex]::Matches($handoffSection, $agentPattern, 'IgnoreCase')) {
             $normalized = Resolve-AgentReference $match.Value
             if ($normalized -and -not $targets.Contains($normalized)) {
@@ -4064,7 +4108,7 @@ function Invoke-AgenticLoop {
     $canClarify = @(Resolve-ClarificationTargetList -agentDef $agentDef)
 
     $sessionId = if ($isResume) { $ResumeSessionId } else { "$Agent-$(Get-Date -Format 'yyyyMMddHHmmss')-$([System.IO.Path]::GetRandomFileName().Substring(0,4))" }
-    $tools = Get-ToolSchemaList
+    $tools = Get-AgentProviderToolSchema -AgentName $Agent -Tools (Get-ToolSchemaList)
     $loopDetector = Get-LoopDetector
     Push-ExecutionSummaryScope
     if ($researchFirstMode -ne 'off') {
@@ -4432,7 +4476,7 @@ State your PIVOT or REFINE decision and rationale before making changes.
             }
 
             if (-not $boundaryBlocked -and -not $researchBlocked) {
-                $result = Invoke-Tool -name $toolName -params $toolArgs -workspaceRoot $WorkspaceRoot
+                $result = Invoke-Tool -name $toolName -params $toolArgs -workspaceRoot $WorkspaceRoot -agentName $Agent
                 if (-not $result.error -and $researchCheck.explorationDelta -gt 0) {
                     $researchExplorationCount += $researchCheck.explorationDelta
                     Add-ExecutionSummaryEvent -Type 'RESEARCH' -Message "Completed $researchExplorationCount read-only exploration step(s)." -ReplaceExisting

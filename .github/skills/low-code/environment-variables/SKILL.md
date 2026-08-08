@@ -6,7 +6,7 @@ metadata:
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:
-  surfaces: ["low-code-builder", "agent-x", "engineer"]
+  surfaces: ["power-platform-builder", "low-code-builder", "agent-x", "engineer"]
   platforms: ["power-platform", "dataverse", "alm"]
 ---
 

@@ -16,12 +16,12 @@
         "fromAgent": {
           "type": "string",
           "description": "Agent role handing off.",
-          "enum": ["agent-x", "pm", "ux", "architect", "data-scientist", "engineer", "reviewer", "reviewer-auto", "devops", "tester", "powerbi", "consulting-research", "agile-coach", "github-ops", "ado-ops"]
+          "enum": ["agent-x", "pm", "ux", "architect", "data-scientist", "engineer", "reviewer", "reviewer-auto", "devops", "tester", "fabric-engineer", "power-platform-builder", "powerbi", "consulting-research", "agile-coach", "github-ops", "ado-ops"]
         },
         "toAgent": {
           "type": "string",
           "description": "Target agent role receiving the handoff.",
-          "enum": ["agent-x", "pm", "ux", "architect", "data-scientist", "engineer", "reviewer", "reviewer-auto", "devops", "tester", "powerbi", "consulting-research", "agile-coach", "github-ops", "ado-ops"]
+          "enum": ["agent-x", "pm", "ux", "architect", "data-scientist", "engineer", "reviewer", "reviewer-auto", "devops", "tester", "fabric-engineer", "power-platform-builder", "powerbi", "consulting-research", "agile-coach", "github-ops", "ado-ops"]
         },
         "issueNumber": {
           "type": "integer",
@@ -60,7 +60,7 @@
                   },
                   "type": {
                     "type": "string",
-                    "enum": ["prd", "adr", "spec", "ux", "code", "test", "review", "pipeline", "certification", "report", "other"],
+                    "enum": ["prd", "adr", "spec", "ux", "code", "test", "review", "pipeline", "certification", "fabric-data-product", "power-platform-solution", "report", "other"],
                     "description": "Artifact type."
                   },
                   "description": {

@@ -1,6 +1,6 @@
 {
   "name": "agentx-copilot-cli",
-  "version": "8.6.1",
+  "version": "8.7.0",
   "description": "AgentX Copilot CLI plugin -- installs agents, skills, instructions, and prompts into any workspace for GitHub Copilot CLI usage. Separate from the core AgentX VS Code extension.",
   "maturity": "stable",
   "platform": "copilot-cli",
@@ -15,7 +15,7 @@
   ],
   "prerequisites": {
     "copilotCli": ">=1.0.0",
-    "powershell": ">=7.0",
+    "powershell": ">=7.4",
     "note": "This plugin does NOT require the AgentX VS Code extension. It is a standalone CLI distribution that can seed a bundled local CLI runtime into the target workspace."
   },
   "artifacts": {
@@ -30,17 +30,22 @@
       ".github/agents/devops.agent.md",
       ".github/agents/data-scientist.agent.md",
       ".github/agents/tester.agent.md",
+      ".github/agents/fabric-engineer.agent.md",
+      ".github/agents/power-platform-builder.agent.md",
       ".github/agents/consulting-research.agent.md",
       ".github/agents/powerbi-analyst.agent.md",
       ".github/agents/agile-coach.agent.md",
       ".github/agents/internal/github-ops.agent.md",
       ".github/agents/internal/ado-ops.agent.md",
       ".github/agents/internal/functional-reviewer.agent.md",
+      ".github/agents/internal/architecture-reviewer.agent.md",
+      ".github/agents/internal/diagram-specialist.agent.md",
       ".github/agents/internal/prompt-engineer.agent.md",
       ".github/agents/internal/eval-specialist.agent.md",
       ".github/agents/internal/ops-monitor.agent.md",
       ".github/agents/internal/rag-specialist.agent.md",
-      ".github/agents/internal/ado-prd-to-wit.agent.md"
+      ".github/agents/internal/ado-prd-to-wit.agent.md",
+      ".github/agents/internal/prototype-auditor.agent.md"
     ],
     "instructions": [
       ".github/instructions/ai.instructions.md",
@@ -79,7 +84,13 @@
     ],
     "scripts": [
       "scripts/score-output.ps1",
-      "scripts/validate-handoff.ps1"
+      "scripts/validate-handoff.ps1",
+      "scripts/score-skill.ps1",
+      "scripts/validate-skill.ps1",
+      "scripts/validate-changed-skills.ps1",
+      "scripts/stocktake.ps1",
+      "scripts/parse-yaml.js",
+      "evaluation/rubrics/skill-quality.md"
     ],
     "templates": [
       ".github/templates/ADR-TEMPLATE.md",
@@ -97,6 +108,9 @@
       ".github/templates/BACKLOG-TEMPLATE.md"
     ],
     "skills": [
+      ".github/skills"
+    ],
+    "featuredSkills": [
       ".github/skills/ai-systems/ai-agent-development/SKILL.md",
       ".github/skills/ai-systems/ai-evaluation/SKILL.md",
       ".github/skills/ai-systems/azure-foundry/SKILL.md",
@@ -112,7 +126,9 @@
       ".github/skills/ai-systems/rag-pipelines/SKILL.md",
       ".github/skills/architecture/api-design/SKILL.md",
       ".github/skills/architecture/core-principles/SKILL.md",
+      ".github/skills/architecture/cost-analysis/SKILL.md",
       ".github/skills/architecture/database/SKILL.md",
+      ".github/skills/architecture/infra-governance/SKILL.md",
       ".github/skills/architecture/performance/SKILL.md",
       ".github/skills/architecture/security/SKILL.md",
       ".github/skills/data/data-analysis/SKILL.md",
@@ -197,7 +213,7 @@
   },
   "capabilities": {
     "agentOrchestration": "Copilot CLI agent definitions with handoffs and body instructions",
-    "skillLibrary": "69 production code skills across 10 categories",
+    "skillLibrary": "130 production code skills across 14 categories",
     "instructionFiles": "7 auto-applied instruction files for language-specific patterns",
     "promptTemplates": "21 reusable prompt templates for common workflows",
     "cliUtilities": "Workspace wrapper scripts plus a bundled hidden runtime for issue tracking, loop management, and workflow",

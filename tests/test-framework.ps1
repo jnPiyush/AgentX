@@ -33,6 +33,16 @@ function Assert-FileContains($path, $pattern, $label) {
  }
 }
 
+function Assert-FileNotContains($path, $pattern, $label) {
+ $fullPath = Join-Path $script:root $path
+ if (Test-Path $fullPath) {
+ $content = Get-Content $fullPath -Raw
+ Assert-True ($content -notmatch $pattern) "$label"
+ } else {
+ Assert-True $false "$label (file not found: $path)"
+ }
+}
+
 Write-Host ""
 Write-Host " AgentX Framework Self-Tests" -ForegroundColor Cyan
 Write-Host " ================================================" -ForegroundColor DarkGray
@@ -58,6 +68,29 @@ Assert-FileContains "install.sh" "templates/memories" "install.sh seeds starter 
 Assert-FileContains "packs/agentx-copilot-cli/install.ps1" "Get-PackInstallPlan" "Copilot CLI installer builds an install plan from the pack manifest"
 Assert-FileContains "packs/agentx-copilot-cli/install.ps1" "Loaded install plan from manifest\.json" "Copilot CLI installer reports manifest-driven planning"
 Assert-FileContains "packs/agentx-copilot-cli/manifest.json" '"schemas"' "Copilot CLI manifest declares schema artifacts"
+Assert-FileContains "scripts/stamp-version.js" "docs/GUIDE\.md" "version stamper updates published installation guide"
+Assert-FileContains "scripts/stamp-version.js" "preflightLiteralFile\('docs/GUIDE\.md', guideInstallerUrlEdits\)" "version stamper preflights guide installer URLs"
+Assert-FileContains "scripts/stamp-version.js" "preflightLiteralFile\('install\.ps1', powershellInstallerUrlEdits\)" "version stamper preflights PowerShell installer URLs"
+Assert-FileContains "scripts/stamp-version.js" "preflightLiteralFile\('install\.sh', bashInstallerUrlEdits\)" "version stamper preflights bash installer URLs"
+Assert-FileContains "scripts/stamp-version.js" "updateLiteralFile\('docs/GUIDE\.md', guideInstallerUrlEdits\)" "version stamper rewrites guide installer URLs as exact literals"
+Assert-FileContains "scripts/stamp-version.js" "updateLiteralFile\('install\.ps1', powershellInstallerUrlEdits\)" "version stamper rewrites PowerShell installer URLs as exact literals"
+Assert-FileContains "scripts/stamp-version.js" "updateLiteralFile\('install\.sh', bashInstallerUrlEdits\)" "version stamper rewrites bash installer URLs as exact literals"
+Assert-FileNotContains "scripts/stamp-version.js" "pattern:\s*/raw\\\.githubusercontent" "version stamper has no unanchored installer URL regex"
+Assert-FileContains "scripts/stamp-version.js" "stampMcpPackage\(targetVersion\)" "version stamper updates MCP package and server metadata"
+Assert-FileContains "scripts/stamp-version.js" "landing page release version" "version stamper updates the public landing page"
+Assert-FileContains "scripts/stamp-version.js" "install-user\.ps1" "version stamper updates user-level PowerShell installer"
+Assert-FileContains "scripts/stamp-version.js" "install-user\.sh" "version stamper updates user-level bash installer"
+Assert-FileContains "scripts/stamp-package-version.js" "serverPattern" "MCP version stamper updates reported server identity"
+Assert-FileContains "scripts/stamp-package-version.js" "' },\)" "MCP version stamper matches the server declaration comma"
+Assert-FileContains ".github/workflows/weekly-status.yml" "steps\.tokens\.outcome" "weekly status reports canonical token-check outcome"
+Assert-FileContains ".github/workflows/weekly-status.yml" "continue-on-error: true" "weekly status continues after token violations to generate the report"
+Assert-FileContains "packs/agentx-power-platform-builder/templates/SOLUTION-MANIFEST-TEMPLATE.md" '```xml' "Power Platform solution manifest uses a fenced XML block"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-skill.ps1" "extension bundles canonical skill validator"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-changed-skills.ps1" "extension bundles changed-skill no-regression validator"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "skill-quality.md" "extension bundles skill-quality rubric"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "scripts/node_modules/yaml" "extension bundles skill rubric YAML runtime"
+Assert-FileContains "scripts/stocktake.ps1" "-Json" "stocktake consumes canonical rubric JSON"
+Assert-FileContains "scripts/stocktake.ps1" "/100" "stocktake reports 100-point skill scores"
 Assert-FileExists ".agentx/templates/memories/conventions.md" "Starter memory: conventions"
 Assert-FileExists ".agentx/templates/memories/pitfalls.md" "Starter memory: pitfalls"
 Assert-FileExists ".agentx/templates/memories/decisions.md" "Starter memory: decisions"
@@ -66,7 +99,7 @@ Assert-FileExists ".agentx/templates/memories/decisions.md" "Starter memory: dec
 Write-Host ""
 Write-Host " 2. Agent Definitions" -ForegroundColor White
 
-$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "ux-designer", "devops", "reviewer-auto", "data-scientist", "tester", "consulting-research", "powerbi-analyst")
+$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "ux-designer", "devops", "reviewer-auto", "data-scientist", "tester", "fabric-engineer", "power-platform-builder", "consulting-research", "powerbi-analyst")
 foreach ($agent in $agents) {
  Assert-FileExists ".github/agents/$agent.agent.md" "Agent: $agent"
 }
@@ -89,7 +122,7 @@ Assert-FileContains ".github/templates/SPEC-TEMPLATE.md" "AI/ML Specification" "
 Write-Host ""
 Write-Host " 4. Agent Definitions" -ForegroundColor White
 
-$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "reviewer-auto", "ux-designer", "devops", "data-scientist", "tester", "powerbi-analyst", "consulting-research")
+$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "reviewer-auto", "ux-designer", "devops", "data-scientist", "tester", "fabric-engineer", "power-platform-builder", "powerbi-analyst", "consulting-research")
 foreach ($ag in $agents) {
  Assert-FileExists ".github/agents/$ag.agent.md" "Agent: $ag"
 }
@@ -97,6 +130,10 @@ foreach ($ag in $agents) {
 # Verify agent frontmatter structure
 Assert-FileContains ".github/agents/engineer.agent.md" "description:" "engineer.agent.md has description"
 Assert-FileContains ".github/agents/engineer.agent.md" "model:" "engineer.agent.md has model"
+Assert-FileContains ".github/agents/fabric-engineer.agent.md" "type:fabric" "Fabric Engineer declares type:fabric trigger"
+Assert-FileContains ".github/agents/fabric-engineer.agent.md" "AgentX Power BI Analyst" "Fabric Engineer preserves Power BI handoff"
+Assert-FileContains ".github/agents/power-platform-builder.agent.md" "type:lowcode" "Power Platform Builder declares type:lowcode trigger"
+Assert-FileContains ".github/agents/power-platform-builder.agent.md" "MUST NOT call pac auth" "Power Platform Builder forbids tenant authentication"
 
 # --- 5. CLI -----------------------------------------------------------------------------
 Write-Host ""
@@ -125,6 +162,7 @@ Assert-FileExists "tests/harness-audit-behavior.ps1" "Harness audit behavior tes
 Assert-FileExists "tests/agentic-runner-behavior.ps1" "Agentic runner behavior test script"
 Assert-FileExists "tests/sprint-discover-behavior.ps1" "Sprint/discover behavior test script"
 Assert-FileExists "tests/loop-parity-behavior.ps1" "Loop parity behavior test script"
+Assert-FileExists "tests/skill-rubric-behavior.ps1" "Skill rubric behavior test script"
 
 $providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -170,6 +208,12 @@ if ($LASTEXITCODE -ne 0) {
  Write-Host $loopParityBehaviorResult
 }
 Assert-True ($LASTEXITCODE -eq 0) "Loop parity behavior tests pass"
+
+$skillRubricBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/skill-rubric-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $skillRubricBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Skill rubric behavior tests pass"
 
 # --- 6. Skills --------------------------------------------------------------------------
 Write-Host ""

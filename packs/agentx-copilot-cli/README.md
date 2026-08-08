@@ -6,8 +6,8 @@
 
 | Artifact | Count | Description |
 |----------|-------|-------------|
-| Agents | 24 | 13 external + 11 internal sub-agents |
-| Skills | 128 | Production code standards across 14 categories |
+| Agents | 26 | 15 external + 11 internal sub-agents |
+| Skills | 130 | Complete production code standards across 14 categories |
 | Instructions | 7 | Auto-applied coding guidelines by file pattern |
 | Prompts | 21 | Reusable prompt templates |
 | Templates | 15 | PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning |
@@ -66,14 +66,14 @@ After installation, your workspace will contain:
 ```
 your-project/
   .github/
-    agents/                    # 24 agent definitions
+    agents/                    # 26 agent definitions
       agent-x.agent.md
       engineer.agent.md
       ...
       internal/
         github-ops.agent.md
         ...
-    skills/                    # 128 skills across 14 categories
+    skills/                    # 130 skills across 14 categories
       architecture/
       development/
       languages/
@@ -175,7 +175,7 @@ rm -rf memories  # if starter memories were installed with CLI utilities
 ## Version
 
 - Plugin: `agentx-copilot-cli`
-- Version: `8.6.1`
+- Version: `8.7.0`
 - Publisher: jnPiyush
 - License: MIT
 

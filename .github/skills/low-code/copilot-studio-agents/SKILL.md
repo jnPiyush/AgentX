@@ -6,7 +6,7 @@ metadata:
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:
-  surfaces: ["low-code-builder", "copilot-studio-builder", "agent-x"]
+  surfaces: ["power-platform-builder", "low-code-builder", "agent-x"]
   platforms: ["power-platform", "copilot-studio", "power-virtual-agents", "dataverse"]
 ---
 

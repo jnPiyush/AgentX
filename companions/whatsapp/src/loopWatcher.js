@@ -1,103 +1,121 @@
-// Watches .agentx/state/loop-state.json and pushes WhatsApp notifications
-// when meaningful state transitions occur (start, complete, status change,
-// stall, iteration milestones).
-
 const fs = require('fs');
 const path = require('path');
 
-function readJsonSafe(p) {
-    try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (_) { return null; }
+function readJsonSafe(file) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { return null; }
 }
 
 function summarize(state) {
-    if (!state) return '(no state)';
-    const parts = [
-        `status=${state.status}`,
-        `active=${state.active}`,
-        `iter=${state.iteration}/${state.maxIterations}`,
-        state.role ? `role=${state.role}` : null,
-        state.issueNumber ? `issue=#${state.issueNumber}` : null
-    ].filter(Boolean);
-    return parts.join(' | ');
+  if (!state) return '(no state)';
+  return [
+    `status=${state.status}`,
+    `active=${state.active}`,
+    `iter=${state.iteration}/${state.maxIterations}`,
+    state.role ? `role=${state.role}` : null,
+    state.issueNumber ? `issue=#${state.issueNumber}` : null,
+  ].filter(Boolean).join(' | ');
 }
 
-function diffEvents(prev, curr) {
-    const events = [];
-    if (!prev && curr) {
-        events.push({ kind: 'init', text: `[AgentX] Loop state initialized\n${summarize(curr)}` });
-        return events;
-    }
-    if (!curr) return events;
-
-    if (prev.status !== curr.status) {
-        events.push({ kind: 'status', text: `[AgentX] Loop status: ${prev.status} -> ${curr.status}\n${summarize(curr)}\nPrompt: ${curr.prompt || '(none)'}` });
-    }
-    if (prev.active !== curr.active && curr.active === true) {
-        events.push({ kind: 'started', text: `[AgentX] Loop STARTED\n${summarize(curr)}\nPrompt: ${curr.prompt || '(none)'}` });
-    }
-    if (prev.iteration !== curr.iteration && curr.iteration > prev.iteration) {
-        const last = (curr.history && curr.history.length) ? curr.history[curr.history.length - 1] : null;
-        const summary = last && last.summary ? last.summary.slice(0, 400) : '';
-        events.push({ kind: 'iteration', text: `[AgentX] Iteration ${curr.iteration}\n${summary}` });
-    }
-    if (curr.status === 'complete' && prev.status !== 'complete') {
-        events.push({ kind: 'complete', text: `[AgentX] LOOP COMPLETE\n${summarize(curr)}` });
-    }
-    return events;
+function diffEvents(previous, current) {
+  const events = [];
+  if (!previous && current) return [{ kind: 'init', text: `[AgentX] Loop state initialized\n${summarize(current)}` }];
+  if (!current) return events;
+  if (previous.status !== current.status) {
+    events.push({ kind: 'status', text: `[AgentX] Loop status: ${previous.status} -> ${current.status}\n${summarize(current)}\nPrompt: ${current.prompt || '(none)'}` });
+  }
+  if (previous.active !== current.active && current.active === true) {
+    events.push({ kind: 'started', text: `[AgentX] Loop STARTED\n${summarize(current)}\nPrompt: ${current.prompt || '(none)'}` });
+  }
+  if (previous.iteration !== current.iteration && current.iteration > previous.iteration) {
+    const last = current.history && current.history.length ? current.history[current.history.length - 1] : null;
+    events.push({ kind: 'iteration', text: `[AgentX] Iteration ${current.iteration}\n${last && last.summary ? last.summary.slice(0, 400) : ''}` });
+  }
+  if (current.status === 'complete' && previous.status !== 'complete') {
+    events.push({ kind: 'complete', text: `[AgentX] LOOP COMPLETE\n${summarize(current)}` });
+  }
+  return events;
 }
 
-function startLoopWatcher({ config, client }) {
-    if (!config.notifications || !config.notifications.enabled) {
-        console.log('[AgentX WhatsApp] Push notifications disabled.');
-        return null;
-    }
-    const targets = (config.notifications.targets || config.allowedNumbers || []);
-    if (targets.length === 0) {
-        console.warn('[AgentX WhatsApp] Notifications enabled but no targets.');
-        return null;
-    }
-    const file = path.resolve(config.repoPath, '.agentx', 'state', 'loop-state.json');
-    if (!fs.existsSync(file)) {
-        console.warn(`[AgentX WhatsApp] Loop state not found at ${file}; watcher idle until file appears.`);
-    }
+function startLoopWatcher({ config, client, fsImpl = fs }) {
+  if (!config.notifications || !config.notifications.enabled) return null;
+  const targets = config.notifications.targets || [];
+  if (!targets.length) return null;
 
-    const include = new Set(config.notifications.events || ['started', 'iteration', 'complete', 'status']);
-    let last = readJsonSafe(file);
+  const file = path.resolve(config.repoPath, '.agentx', 'state', 'loop-state.json');
+  const include = new Set(config.notifications.events);
+  let last = readJsonSafe(file);
+  let stopped = false;
+  let watcher = null;
+  let poll = null;
+  let debounce = null;
+  let retry = null;
+  let lastEventKeys = new Set();
+  let emissionQueue = Promise.resolve();
 
-    let debounce = null;
-    const handler = () => {
-        clearTimeout(debounce);
-        debounce = setTimeout(async () => {
-            const curr = readJsonSafe(file);
-            const events = diffEvents(last, curr);
-            last = curr;
-            for (const ev of events) {
-                if (!include.has(ev.kind)) continue;
-                for (const num of targets) {
-                    const jid = `${num.replace(/\D/g, '')}@c.us`;
-                    try {
-                        await client.sendMessage(jid, ev.text);
-                        console.log(`[AgentX WhatsApp] Pushed ${ev.kind} -> ${num}`);
-                    } catch (err) {
-                        console.warn(`[AgentX WhatsApp] Push failed to ${num}: ${err.message}`);
-                    }
-                }
-            }
-        }, 750);
-    };
-
-    let watcher = null;
-    try {
-        watcher = fs.watch(path.dirname(file), { persistent: false }, (evt, fname) => {
-            if (fname === 'loop-state.json') handler();
-        });
-        console.log(`[AgentX WhatsApp] Watching loop state for ${targets.length} target(s).`);
-    } catch (err) {
-        console.warn('[AgentX WhatsApp] fs.watch failed, falling back to polling:', err.message);
-        const interval = setInterval(handler, 5000);
-        return { stop: () => clearInterval(interval) };
+  const sendEvents = async (current) => {
+    const events = diffEvents(last, current);
+    last = current;
+    const nextKeys = new Set();
+    for (const event of events) {
+      const key = `${event.kind}:${current.lastIterationAt || current.updatedAt || current.iteration || ''}:${event.text}`;
+      nextKeys.add(key);
+      if (!include.has(event.kind) || lastEventKeys.has(key)) continue;
+      for (const number of targets) {
+        try { await client.sendMessage(`${number}@c.us`, event.text); } catch (error) {
+          console.warn(`[AgentX WhatsApp] Push failed: ${error.message}`);
+        }
+      }
     }
-    return { stop: () => watcher && watcher.close() };
+    lastEventKeys = nextKeys;
+  };
+
+  const readAndEmit = () => {
+    if (stopped) return;
+    const current = readJsonSafe(file);
+    if (!current) {
+      clearTimeout(retry);
+      retry = setTimeout(readAndEmit, 200);
+      return;
+    }
+    emissionQueue = emissionQueue.then(() => sendEvents(current)).catch((error) => {
+      console.warn(`[AgentX WhatsApp] Loop event processing failed: ${error.message}`);
+    });
+  };
+
+  const schedule = () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(readAndEmit, config.notifications.debounceMs);
+  };
+
+  const startPolling = () => {
+    if (!poll) poll = setInterval(readAndEmit, config.notifications.pollMs);
+  };
+
+  try {
+    watcher = fsImpl.watch(path.dirname(file), { persistent: false }, (_event, filename) => {
+      if (!filename || filename === 'loop-state.json') schedule();
+    });
+    watcher.on && watcher.on('error', (error) => {
+      console.warn(`[AgentX WhatsApp] Loop watcher error; switching to polling: ${error.message}`);
+      watcher.close();
+      watcher = null;
+      startPolling();
+    });
+  } catch (error) {
+    console.warn(`[AgentX WhatsApp] fs.watch unavailable; polling: ${error.message}`);
+    startPolling();
+  }
+
+  return {
+    stop() {
+      stopped = true;
+      clearTimeout(debounce);
+      clearTimeout(retry);
+      if (watcher) watcher.close();
+      if (poll) clearInterval(poll);
+      return emissionQueue;
+    },
+  };
 }
 
-module.exports = { startLoopWatcher };
+module.exports = { diffEvents, readJsonSafe, startLoopWatcher, summarize };

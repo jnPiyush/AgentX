@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AgentX Copilot CLI Plugin v8.6.1 - Installer (Bash)
+# AgentX Copilot CLI Plugin v8.7.0 - Installer (Bash)
 # Standalone plugin for GitHub Copilot CLI.
 # Does NOT require the AgentX VS Code extension or the core install.
 #
@@ -15,7 +15,7 @@
 #   -h, --help             Show this help
 set -euo pipefail
 
-VERSION="8.6.1"
+VERSION="8.7.0"
 TARGET="$(pwd)"
 SOURCE=""
 INCLUDE_CLI=false
@@ -236,6 +236,8 @@ initialize_workspace_cli_state() {
   "auto-fix-reviewer": { "status": "idle", "issue": null, "lastActivity": null },
   "data-scientist": { "status": "idle", "issue": null, "lastActivity": null },
   "tester": { "status": "idle", "issue": null, "lastActivity": null },
+  "fabric-engineer": { "status": "idle", "issue": null, "lastActivity": null },
+  "power-platform-builder": { "status": "idle", "issue": null, "lastActivity": null },
   "consulting-research": { "status": "idle", "issue": null, "lastActivity": null },
   "powerbi-analyst": { "status": "idle", "issue": null, "lastActivity": null }
 }
@@ -386,7 +388,13 @@ copy_tree "$SOURCE/.github/schemas" "$TARGET/.github/schemas" "Schemas"
 info "Installing scripts..."
 copy_file "scripts/score-output.ps1" "scripts/score-output.ps1"
 copy_file "scripts/validate-handoff.ps1" "scripts/validate-handoff.ps1"
-ok "Scripts: copied supporting scorer files"
+copy_file "scripts/score-skill.ps1" "scripts/score-skill.ps1"
+copy_file "scripts/validate-skill.ps1" "scripts/validate-skill.ps1"
+copy_file "scripts/validate-changed-skills.ps1" "scripts/validate-changed-skills.ps1"
+copy_file "scripts/stocktake.ps1" "scripts/stocktake.ps1"
+copy_file "scripts/parse-yaml.js" "scripts/parse-yaml.js"
+copy_file "evaluation/rubrics/skill-quality.md" "evaluation/rubrics/skill-quality.md"
+ok "Scripts: copied scoring and validation runtime files"
 
 info "Installing reference docs..."
 copy_file "AGENTS.md" "AGENTS.md"
@@ -438,8 +446,8 @@ echo ""
 echo " Files copied  : $TOTAL_COPIED"
 echo -e " Files skipped : $TOTAL_SKIPPED ${GRAY}(already exist, use -f to overwrite)${NC}"
 echo ""
-echo " Agents        : 24 (13 external + 11 internal)"
-echo " Skills        : 128 across 14 categories"
+echo " Agents        : 26 (15 external + 11 internal)"
+echo " Skills        : 130 across 14 categories"
 echo " Instructions  : 7 (auto-applied by file pattern)"
 echo " Prompts       : 21 reusable templates"
 if [ "$INCLUDE_CLI" = true ]; then

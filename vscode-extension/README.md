@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.6.1-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-8.7.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -21,12 +21,12 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 
 | Feature | Description |
 |:--------|:------------|
-| **13 Declarative Chat Agents** | Role-specific agents (PM, UX, Architect, Engineer, Reviewer, DevOps, Tester, Data Scientist, Power BI, Consulting Research, Agile Coach, Auto-Fix Reviewer) plus AgentX Auto for end-to-end orchestration. |
+| **15 Declarative Chat Agents** | Role-specific agents (PM, UX, Architect, Engineer, Reviewer, DevOps, Tester, Data Scientist, Fabric Engineer, Power Platform Builder, Power BI, Consulting Research, Agile Coach, Auto-Fix Reviewer) plus AgentX Auto for end-to-end orchestration. |
 | **Model Council (core)** | Multi-model deliberation on high-stakes decisions -- **Analyst + Strategist + Skeptic** debate PRD scope, ADR options, AI design, code reviews, and deep research before they ship. Agent-internal by default; optional `gh models` multi-vendor auto-invoke. Mandatory gate for PM, Architect, Reviewer, Data Scientist, and Consulting Research on high-stakes work. |
 | **Copilot Chat Participant** | Native `@agentx` chat participant for triggering routines, brainstorm, learnings, and compound-loop inspection. |
 | **Karpathy Guidelines (built-in)** | The `karpathy-guidelines` skill is auto-loaded for Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist -- enforcing *think before coding*, surgical diffs, assumption audits, and goal-driven execution to block common LLM coding pitfalls at authoring and review time. |
 | **Workspace Setup Wizard** | Local-runtime-first setup with optional remote adapters for GitHub or Azure DevOps and configurable LLM adapters. |
-| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (128 production skills). |
+| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (130 production skills). |
 | **50 Commands** | Workflow, loop management, knowledge compounding, AI evaluation, task bundles, bounded parallel delivery, and plugin management from the Command Palette. |
 | **Knowledge Compounding** | Ranked learnings, compound-loop visibility, learning-capture scaffolds, durable review-finding promotion, and agent-native review parity checks. |
 | **AI Evaluation** | Scaffold, run, and inspect AI evaluation contracts with rubric-based quality gates. |
@@ -232,7 +232,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | **Work** | Workflow next step, brainstorm guidance, planning and review learnings, compound loop, learning capture, ready queue, and workflow rollout surfaces. |
 | **Status** | Agent status, loop state, dependency checks, AI evaluation, review findings, task bundles, bounded parallel runs, and digests. |
 | **Templates** | All output templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence). |
-| **Skills** | 128 production skills across 14 categories (architecture, development, languages, operations, infrastructure, data, documents, AI systems, design, testing, domain, product, diagrams, low-code). |
+| **Skills** | 130 production skills across 14 categories (architecture, development, languages, operations, infrastructure, data, documents, AI systems, design, testing, domain, product, diagrams, low-code). |
 
 ---
 
@@ -323,7 +323,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 
 ## Chat Agents
 
-The extension registers 13 declarative chat agents, each mapped to an AgentX role:
+The extension registers 15 declarative chat agents, each mapped to an AgentX role:
 
 | Agent | Role | Use For |
 |:------|:-----|:--------|
@@ -337,6 +337,8 @@ The extension registers 13 declarative chat agents, each mapped to an AgentX rol
 | **DevOps** | CI/CD | Pipelines, deployment automation |
 | **Data Scientist** | ML/AI | ML pipelines, evaluation, drift |
 | **Tester** | Testing | Test suites, certification |
+| **Fabric Engineer** | Data platform | Fabric Lakehouse, Warehouse, notebooks, pipelines, data quality |
+| **Power Platform Builder** | Low-code solutions | Dataverse, apps, flows, Pages, PCF, Copilot Studio source |
 | **Power BI Analyst** | Reports | Power BI, DAX, semantic models |
 | **Consulting Research** | Research | Domain research, client materials |
 | **Agile Coach** | Stories | Story creation, INVEST refinement |
@@ -344,6 +346,16 @@ The extension registers 13 declarative chat agents, each mapped to an AgentX rol
 ---
 
 ## Recent Changes
+
+### 8.7.0
+
+- Migrated agent defaults and provider routing to Claude Opus 5 and Sonnet 5.
+- Added cost optimization and infrastructure governance skills with supply-chain, SSRF, and evaluation hardening.
+- Added Fabric Engineer and promoted Power Platform Builder into core AgentX, bringing the inventory to 26 agents (15 visible, 11 internal).
+- Added fail-closed Power Platform terminal enforcement, domain routing, canonical handoffs, installer parity, and adversarial regression coverage.
+- Hardened the local WhatsApp companion with read-only defaults, confirmation-gated mutation, replay and voice safeguards, bounded CLI execution, sandboxed Chromium, and zero production audit findings.
+- Added a deterministic 100-point skill-quality rubric with strict YAML, stable JSON evidence, blocking floors, trusted-base changed-skill enforcement, and Windows/POSIX installer parity.
+- Release validation passed: extension coverage and 1013 tests, WhatsApp 23/23 with 90%+ line coverage, skill rubric behavior and 130-skill inventory validation, frontmatter 623/623, and zero HIGH/CRITICAL production dependency findings.
 
 ### 8.4.68
 

@@ -1,0 +1,88 @@
+{
+  "$comment": "AgentX reference topologies. Each shape is DESIGNED TO ALIGN WITH the blocking governance rules (IG-01..IG-05); these are design descriptions rather than IaC, so run the governance gate against the code you generate from them. Provider services are named generically so the shape ports across clouds.",
+  "version": "1.0.0",
+  "topologies": [
+    {
+      "id": "request-response-api",
+      "intent": "Stateless HTTP API with a relational store. The default shape for a CRUD prototype.",
+      "components": [
+        { "role": "compute", "shape": "scale-to-zero container runtime", "billing": "consumption" },
+        { "role": "database", "shape": "serverless relational with auto-pause", "billing": "auto-pause" },
+        { "role": "secrets", "shape": "managed secret store", "billing": "fixed" },
+        { "role": "observability", "shape": "log workspace + app telemetry", "billing": "consumption" }
+      ],
+      "governanceNotes": [
+        "Compute authenticates to database via managed identity (IG-01), no connection string literal (IG-02).",
+        "No gateway by default - add one only when you need routing, quotas, or key management.",
+        "Idle cost is near zero, which is what makes this the safest prototype default."
+      ],
+      "whenNotToUse": "Long-running jobs, streaming workloads, or anything needing sub-second cold-start guarantees."
+    },
+    {
+      "id": "event-pipeline",
+      "intent": "Ingest, transform, and land events. Use when the workload is asynchronous.",
+      "components": [
+        { "role": "ingress", "shape": "event broker or queue", "billing": "consumption" },
+        { "role": "compute", "shape": "event-triggered functions", "billing": "consumption" },
+        { "role": "store", "shape": "document or object store", "billing": "fixed" },
+        { "role": "observability", "shape": "log workspace + dead-letter monitoring", "billing": "consumption" }
+      ],
+      "governanceNotes": [
+        "Dead-letter path is mandatory; silent message loss is the defining failure of this shape.",
+        "Function identity is granted least-privilege on the store (IG-01).",
+        "Cost scales with message volume - declare the volume assumption in the cost envelope (IG-09)."
+      ],
+      "whenNotToUse": "Synchronous user-facing requests that need an immediate response."
+    },
+    {
+      "id": "retrieval-augmented-app",
+      "intent": "Application grounded on an indexed corpus, backed by a model endpoint.",
+      "components": [
+        { "role": "compute", "shape": "scale-to-zero container runtime", "billing": "consumption" },
+        { "role": "index", "shape": "vector or hybrid search index", "billing": "always-on" },
+        { "role": "model", "shape": "hosted model endpoint", "billing": "consumption" },
+        { "role": "store", "shape": "object store for source documents", "billing": "fixed" },
+        { "role": "observability", "shape": "trace + eval telemetry", "billing": "consumption" }
+      ],
+      "governanceNotes": [
+        "The search index is usually an always-on floor - price it first, it often dominates.",
+        "Model endpoint keys must come from the secret store, never inline (IG-02).",
+        "Pair with the rag-pipelines and ai-evaluation skills for retrieval quality gates."
+      ],
+      "whenNotToUse": "Corpora small enough to fit in a prompt, where an index adds cost and no accuracy."
+    },
+    {
+      "id": "static-frontend-with-api",
+      "intent": "Browser UI plus a thin backend. The cheapest shape for a demo that needs a real UI.",
+      "components": [
+        { "role": "frontend", "shape": "static site hosting with CDN", "billing": "fixed" },
+        { "role": "api", "shape": "serverless functions", "billing": "consumption" },
+        { "role": "store", "shape": "document store", "billing": "consumption" },
+        { "role": "observability", "shape": "client + server telemetry", "billing": "consumption" }
+      ],
+      "governanceNotes": [
+        "No always-on component - typically the lowest idle cost of any shape here.",
+        "Enforce auth at the API, never in client-side code alone.",
+        "Pairs with the working-prototype-app skill for the frontend build."
+      ],
+      "whenNotToUse": "Server-rendered apps needing per-request server state or long-lived connections."
+    },
+    {
+      "id": "internal-tool-with-gateway",
+      "intent": "Multi-service internal tool where a gateway genuinely earns its cost.",
+      "components": [
+        { "role": "gateway", "shape": "managed API gateway", "billing": "always-on" },
+        { "role": "services", "shape": "two or more container services", "billing": "consumption" },
+        { "role": "database", "shape": "serverless relational", "billing": "auto-pause" },
+        { "role": "secrets", "shape": "managed secret store", "billing": "fixed" },
+        { "role": "observability", "shape": "centralised logs + tracing", "billing": "consumption" }
+      ],
+      "governanceNotes": [
+        "The gateway is an always-on floor and will dominate a low-traffic bill - justify it explicitly.",
+        "Adopt only when you need central auth, rate limiting, or a stable external contract.",
+        "For a single service, request-response-api is materially cheaper."
+      ],
+      "whenNotToUse": "Single-service prototypes, where the gateway is pure overhead."
+    }
+  ]
+}
