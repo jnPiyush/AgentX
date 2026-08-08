@@ -34,16 +34,10 @@ jobs:
 
       - name: Token Budget Check
         id: tokens
+        shell: pwsh
         run: |
-          VIOLATIONS=0
-          while IFS= read -r f; do
-            CHARS=$(wc -c < "$f")
-            TOKENS=$((CHARS / 4))
-            if [ "$TOKENS" -gt 5000 ]; then
-              VIOLATIONS=$((VIOLATIONS + 1))
-            fi
-          done < <(find .github/skills -name 'SKILL.md')
-          echo "violations=$VIOLATIONS" >> "$GITHUB_OUTPUT"
+          ./scripts/token-counter.ps1 -Action check
+          "violations=0" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Broken Links Check
         id: links

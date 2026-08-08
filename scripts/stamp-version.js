@@ -330,6 +330,14 @@ function main() {
     },
   ]);
 
+  updateTextFile('docs/ux/prototypes/landing/index.html', [
+    {
+      pattern: /AgentX \d+\.\d+\.\d+/g,
+      replacement: `AgentX ${targetVersion}`,
+      label: 'landing page release version',
+    },
+  ]);
+
   updateTextFile('docs/GUIDE.md', [
     {
       pattern: /raw\.githubusercontent\.com\/jnPiyush\/AgentX\/v\d+\.\d+\.\d+\/install\.ps1/g,

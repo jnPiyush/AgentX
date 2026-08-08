@@ -353,7 +353,9 @@ The extension registers 15 declarative chat agents, each mapped to an AgentX rol
 - Added cost optimization and infrastructure governance skills with supply-chain, SSRF, and evaluation hardening.
 - Added Fabric Engineer and promoted Power Platform Builder into core AgentX, bringing the inventory to 26 agents (15 visible, 11 internal).
 - Added fail-closed Power Platform terminal enforcement, domain routing, canonical handoffs, installer parity, and adversarial regression coverage.
-- Release validation passed: extension coverage and 1013 tests, framework 142/142, provider 97/97, installer 138/138, frontmatter 623/623, and zero HIGH/CRITICAL production dependency findings.
+- Hardened the local WhatsApp companion with read-only defaults, confirmation-gated mutation, replay and voice safeguards, bounded CLI execution, sandboxed Chromium, and zero production audit findings.
+- Added a deterministic 100-point skill-quality rubric with strict YAML, stable JSON evidence, blocking floors, trusted-base changed-skill enforcement, and Windows/POSIX installer parity.
+- Release validation passed: extension coverage and 1013 tests, WhatsApp 23/23 with 90%+ line coverage, skill rubric behavior and 130-skill inventory validation, frontmatter 623/623, and zero HIGH/CRITICAL production dependency findings.
 
 ### 8.4.68
 

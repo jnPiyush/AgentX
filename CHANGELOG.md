@@ -12,6 +12,10 @@
 - Added `type:fabric` and `type:lowcode` classification, routing, backlog pickup, status transitions, and 7-phase pipeline contracts for both roles.
 - Added canonical handoff identities and the `fabric-data-product` and `power-platform-solution` artifact types to the handoff schema and protocol.
 - Registered both agents across pack manifests, VS Code chat contributions, installers, Claude and Cursor command wrappers, and the agent tree view.
+- Hardened the local WhatsApp companion with read-only defaults, sender-bound single-use confirmation nonces for mutation, replay protection, transcript-first voice handling, bounded serialized CLI execution, fail-closed configuration, and resilient loop notifications.
+- Replaced the legacy 40-point skill score with a deterministic 100-point rubric, stable JSON evidence, strict YAML parsing, universal blockers, and trusted-base no-regression enforcement for changed skills.
+- Reorganized the main README around product evaluation, operating checkpoints, specialist roles, platform adapters, security controls, installation, and repository navigation.
+- Replaced the stale Vercel landing page with a self-contained, responsive, accessible release surface using verified 8.7.0 features and no invented adoption metrics.
 
 ### Security
 
@@ -20,6 +24,7 @@
 - Mirrored the same policy as an agent-scoped `PreToolUse` hook so VS Code and the Agents Window enforce the boundary, with `chat.useCustomAgentHooks` enabled by default.
 - Removed `terminal_exec` from the Power Platform Builder tool schema on the `claude-code` provider; the restriction is scoped to that role only.
 - The agent cannot authenticate to, import into, export from, publish to, or delete from a tenant.
+- The WhatsApp companion rejects unknown configuration, keeps Chromium sandboxing enabled, strips secrets from AgentX child environments, and disables remote loop evidence mutation.
 
 ### Fixes
 
@@ -33,6 +38,9 @@
 - Terminal policy and `PreToolUse` hook agreed on 15 of 15 adversarial commands, covering quote concatenation, command substitution, backticks, alias construction, nested shells, and CR/LF/tab separators.
 - Frontmatter validation 623 of 623; classifier evaluation 23 of 23; VS Code extension compiled with 1013 tests passing.
 - Installer regression passed across local and GitHub install modes.
+- WhatsApp companion 23 of 23 tests; line, branch, and function coverage gates passed; production runtime audit found 0 vulnerabilities.
+- Skill rubric behavior suite passed; 130 of 130 skills validated; Windows and POSIX clean-install scorer parity passed.
+- Public landing validation includes desktop/mobile browser checks, keyboard interaction, accessibility scanning, and local route/link verification. Production Vercel smoke testing remains a release closeout gate.
 
 ### Limitations
 

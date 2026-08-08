@@ -67,6 +67,20 @@ try {
     Assert-True (@($installedSkills | Where-Object { $_.FullName -match '\\.github\\skills\\.*\\.github\\skills\\' }).Count -eq 0) 'PowerShell pack installer does not recursively nest destination paths'
     Assert-True (Test-Path (Join-Path $installTarget '.github/skills/architecture/cost-analysis/scripts/estimate-cost.ps1')) 'PowerShell pack installer preserves nested skill scripts'
     Assert-True (Test-Path (Join-Path $installTarget '.github/skills/architecture/infra-governance/assets/workload-topologies.json')) 'PowerShell pack installer preserves nested skill assets'
+    Assert-True (Test-Path (Join-Path $installTarget 'evaluation/rubrics/skill-quality.md')) 'PowerShell pack installer preserves the skill rubric path'
+    Assert-True (Test-Path (Join-Path $installTarget 'scripts/parse-yaml.js')) 'PowerShell pack installer preserves the standalone YAML parser'
+    Assert-True (Test-Path (Join-Path $installTarget 'scripts/validate-changed-skills.ps1')) 'PowerShell pack installer preserves the changed-skill validator'
+    Push-Location $installTarget
+    try {
+        $installedScoreJson = & pwsh -NoProfile -File 'scripts/score-skill.ps1' -SkillPath '.github/skills/development/skill-creator/SKILL.md' -Json 2>$null | Out-String
+        $installedScoreExit = $LASTEXITCODE
+        $installedScore = $installedScoreJson | ConvertFrom-Json -Depth 20
+        Assert-True ($installedScoreExit -eq 0 -and @($installedScore.skills)[0].blockers.Count -eq 0) 'PowerShell pack installed scorer resolves its bundled rubric references'
+        Assert-True (Test-Path 'scripts/validate-changed-skills.ps1') 'PowerShell pack installed changed-skill gate is available'
+    }
+    finally {
+        Pop-Location
+    }
 }
 finally {
     Remove-Item -LiteralPath $installTarget -Recurse -Force -ErrorAction SilentlyContinue

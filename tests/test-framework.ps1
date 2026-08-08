@@ -60,9 +60,16 @@ Assert-FileContains "packs/agentx-copilot-cli/install.ps1" "Loaded install plan 
 Assert-FileContains "packs/agentx-copilot-cli/manifest.json" '"schemas"' "Copilot CLI manifest declares schema artifacts"
 Assert-FileContains "scripts/stamp-version.js" "docs/GUIDE\.md" "version stamper updates published installation guide"
 Assert-FileContains "scripts/stamp-version.js" "stampMcpPackage\(targetVersion\)" "version stamper updates MCP package and server metadata"
+Assert-FileContains "scripts/stamp-version.js" "landing page release version" "version stamper updates the public landing page"
 Assert-FileContains "scripts/stamp-version.js" "install-user\.ps1" "version stamper updates user-level PowerShell installer"
 Assert-FileContains "scripts/stamp-version.js" "install-user\.sh" "version stamper updates user-level bash installer"
 Assert-FileContains "scripts/stamp-package-version.js" "serverPattern" "MCP version stamper updates reported server identity"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-skill.ps1" "extension bundles canonical skill validator"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-changed-skills.ps1" "extension bundles changed-skill no-regression validator"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "skill-quality.md" "extension bundles skill-quality rubric"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "scripts/node_modules/yaml" "extension bundles skill rubric YAML runtime"
+Assert-FileContains "scripts/stocktake.ps1" "-Json" "stocktake consumes canonical rubric JSON"
+Assert-FileContains "scripts/stocktake.ps1" "/100" "stocktake reports 100-point skill scores"
 Assert-FileExists ".agentx/templates/memories/conventions.md" "Starter memory: conventions"
 Assert-FileExists ".agentx/templates/memories/pitfalls.md" "Starter memory: pitfalls"
 Assert-FileExists ".agentx/templates/memories/decisions.md" "Starter memory: decisions"
@@ -134,6 +141,7 @@ Assert-FileExists "tests/harness-audit-behavior.ps1" "Harness audit behavior tes
 Assert-FileExists "tests/agentic-runner-behavior.ps1" "Agentic runner behavior test script"
 Assert-FileExists "tests/sprint-discover-behavior.ps1" "Sprint/discover behavior test script"
 Assert-FileExists "tests/loop-parity-behavior.ps1" "Loop parity behavior test script"
+Assert-FileExists "tests/skill-rubric-behavior.ps1" "Skill rubric behavior test script"
 
 $providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -179,6 +187,12 @@ if ($LASTEXITCODE -ne 0) {
  Write-Host $loopParityBehaviorResult
 }
 Assert-True ($LASTEXITCODE -eq 0) "Loop parity behavior tests pass"
+
+$skillRubricBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/skill-rubric-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $skillRubricBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Skill rubric behavior tests pass"
 
 # --- 6. Skills --------------------------------------------------------------------------
 Write-Host ""

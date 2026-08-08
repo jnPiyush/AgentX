@@ -5,11 +5,11 @@
 
 .DESCRIPTION
   Iterates over every SKILL.md under .github/skills, invokes
-  scripts/score-skill.ps1 to compute a 0-40 quality score, and emits a
+  scripts/score-skill.ps1 to compute a 0-100 quality score, and emits a
   ranked stocktake report.
 
 .PARAMETER Threshold
-  Minimum acceptable score. Skills below this are flagged. Default 20.
+  Minimum acceptable score. Skills below this are flagged. Default 70.
 
 .PARAMETER OutFile
   Optional Markdown report path. Defaults to
@@ -23,14 +23,14 @@
 
 .EXAMPLE
   pwsh scripts/stocktake.ps1
-  pwsh scripts/stocktake.ps1 -Threshold 25 -WriteReport
+  pwsh scripts/stocktake.ps1 -Threshold 70 -WriteReport
 #>
 
 #Requires -Version 7.0
 
 [CmdletBinding()]
 param(
-  [int]$Threshold = 20,
+  [ValidateRange(0, 100)][int]$Threshold = 70,
   [string]$OutFile = '',
   [switch]$WriteReport,
   [switch]$Json
@@ -46,40 +46,19 @@ if (-not (Test-Path $scoreScript)) {
   exit 1
 }
 
-$skillFiles = Get-ChildItem -Path (Join-Path $ROOT '.github/skills') -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue
-if (-not $skillFiles -or $skillFiles.Count -eq 0) {
-  Write-Error "No skills found under .github/skills"
-  exit 1
-}
-
 $results = New-Object System.Collections.Generic.List[object]
 
-function Get-ScoreLine([string]$skillDir) {
-  $out = & pwsh -NoProfile -File $scoreScript -SkillPath $skillDir 2>&1
-  # Look for a line like "Score: 32/40" or "Tier: High"
-  $score = $null
-  $tier  = ''
-  foreach ($line in $out) {
-    $text = "$line"
-    if ($text -match 'Score:\s*(\d+)') { $score = [int]$Matches[1] }
-    if ($text -match 'Tier:\s*([A-Za-z\-]+)') { $tier = $Matches[1] }
-  }
-  if ($null -eq $score) { $score = -1 }
-  return @{ score = $score; tier = $tier; raw = ($out -join "`n") }
-}
-
-foreach ($f in $skillFiles) {
-  $skillDir = Split-Path -Parent $f.FullName
-  $name = Split-Path -Leaf $skillDir
-  $category = Split-Path -Leaf (Split-Path -Parent $skillDir)
-  $r = Get-ScoreLine -skillDir $skillDir
+$rubricJson = & pwsh -NoProfile -File $scoreScript -All -MinScore $Threshold -Json 2>$null | Out-String
+$rubric = $rubricJson | ConvertFrom-Json -Depth 20
+foreach ($r in @($rubric.skills)) {
   $results.Add([pscustomobject]@{
-    name     = $name
-    category = $category
+    name     = $r.name
+    category = $r.category
     score    = $r.score
     tier     = $r.tier
-    flagged  = ($r.score -lt $Threshold)
-    path     = $skillDir.Substring($ROOT.Length).TrimStart('\','/')
+    blockers = @($r.blockers)
+    flagged  = ($r.score -lt $Threshold -or @($r.blockers).Count -gt 0)
+    path     = $r.path
   }) | Out-Null
 }
 
@@ -103,18 +82,18 @@ if ($Json) {
 else {
   Write-Host ""
   Write-Host "AgentX skill stocktake" -ForegroundColor Cyan
-  Write-Host ("Scanned: {0}   Average: {1}/40   Threshold: {2}   Flagged: {3}" -f $total, $avg, $Threshold, $flagged.Count)
+  Write-Host ("Scanned: {0}   Average: {1}/100   Threshold: {2}   Flagged: {3}" -f $total, $avg, $Threshold, $flagged.Count)
   Write-Host ""
   if ($flagged.Count -gt 0) {
     Write-Host "Below threshold:" -ForegroundColor Yellow
     foreach ($item in $flagged) {
-      Write-Host ("  [{0}/40] {1} ({2})  -> {3}" -f $item.score, $item.name, $item.category, $item.path) -ForegroundColor Yellow
+      Write-Host ("  [{0}/100] {1} ({2}) blockers={3} -> {4}" -f $item.score, $item.name, $item.category, ($item.blockers -join ','), $item.path) -ForegroundColor Yellow
     }
     Write-Host ""
   }
   Write-Host "Top 5:"
   foreach ($item in ($sorted | Sort-Object -Property score -Descending | Select-Object -First 5)) {
-    Write-Host ("  [{0}/40] {1} ({2})" -f $item.score, $item.name, $item.category) -ForegroundColor Green
+    Write-Host ("  [{0}/100] {1} ({2})" -f $item.score, $item.name, $item.category) -ForegroundColor Green
   }
   Write-Host ""
 }
@@ -129,7 +108,7 @@ if ($WriteReport) {
   $md = @()
   $md += "# Skill Stocktake -- $date"
   $md += ""
-  $md += "Scanned **$total** skills. Average score **$avg/40**. Threshold **$Threshold**. Flagged **$($flagged.Count)**."
+  $md += "Scanned **$total** skills. Average score **$avg/100**. Threshold **$Threshold**. Flagged **$($flagged.Count)**."
   $md += ""
   if ($flagged.Count -gt 0) {
     $md += "## Below Threshold"
@@ -137,7 +116,7 @@ if ($WriteReport) {
     $md += "| Score | Skill | Category | Path |"
     $md += "|-------|-------|----------|------|"
     foreach ($item in $flagged) {
-      $md += "| $($item.score)/40 | $($item.name) | $($item.category) | $($item.path) |"
+      $md += "| $($item.score)/100 | $($item.name) | $($item.category) | $($item.path) |"
     }
     $md += ""
   }
@@ -146,7 +125,7 @@ if ($WriteReport) {
   $md += "| Score | Tier | Skill | Category |"
   $md += "|-------|------|-------|----------|"
   foreach ($item in $sorted) {
-    $md += "| $($item.score)/40 | $($item.tier) | $($item.name) | $($item.category) |"
+    $md += "| $($item.score)/100 | $($item.tier) | $($item.name) | $($item.category) |"
   }
   $md += ""
   $md += "_Generated by_ `scripts/stocktake.ps1`."

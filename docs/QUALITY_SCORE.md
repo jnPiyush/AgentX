@@ -145,10 +145,10 @@
 | validate-frontmatter.ps1 | B | Validates well, error messages now include remediation |
 | validate-references.ps1 | A | Scans all markdown links, reports broken references with severity |
 | token-counter.ps1 | A | Count/check/report with configurable limits from .token-limits.json |
-| score-skill.ps1 | A | 7-category skill scoring (40 pts max), batch mode |
+| score-skill.ps1 | A | 7-dimension skill-quality rubric (100 points), blocking floors, JSON evidence, batch mode |
 | score-output.ps1 | A | Agent output scoring for Engineer/Architect/PM roles |
 | validate-handoff.ps1 | A | Generate + validate structured handoff messages against JSON Schema |
-| validate-skill.ps1 | A | Unified skill validation pipeline (frontmatter + tokens + scoring + structure + references) |
+| validate-skill.ps1 | A | Unified skill validation pipeline consuming the canonical 100-point rubric and blockers |
 | eval-harness.ps1 | A | Skill eval framework (Phil Schmid pattern): 15 deterministic checks across trigger/instruction/convention dimensions, prompt-set testing, JSON output |
 | test-framework.ps1 | B | Basic test runner, could add parallel execution |
 | memory-scale-test.ps1 | A | Validates JsonObservationStore pattern at 1500+ observations (11 tests, performance thresholds) |

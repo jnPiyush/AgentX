@@ -40,3 +40,23 @@ stages:
     - script: npm test
       displayName: Run extension tests
       workingDirectory: vscode-extension
+
+    - task: PowerShell@2
+      displayName: Validate skill rubric and inventory
+      inputs:
+        pwsh: true
+        targetType: inline
+        script: |
+          ./tests/skill-rubric-behavior.ps1
+          ./scripts/validate-skill.ps1
+          $targetBranch = "$env:SYSTEM_PULLREQUEST_TARGETBRANCH" -replace '^refs/heads/', ''
+          $base = if ($targetBranch) { "origin/$targetBranch" } else { 'origin/master' }
+          ./scripts/validate-changed-skills.ps1 -BaseRef $base -HeadRef HEAD -MinScore 70
+
+    - script: |
+        npm ci --ignore-scripts
+        npm test
+        npm run test:coverage
+        npm run audit:runtime
+      displayName: Validate WhatsApp companion
+      workingDirectory: companions/whatsapp

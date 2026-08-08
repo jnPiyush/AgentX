@@ -4264,7 +4264,7 @@ function Get-LoopStateHealth {
 
     if ($history.Count -gt 0) {
         $latest = $history[-1]
-        # A rollback intentionally resets the counter below prior history — not a STUCK state.
+        # A rollback intentionally resets the counter below prior history - not a STUCK state.
         $isRolledBack = ($latest.PSObject.Properties.Name -contains 'status') -and ($latest.status -eq 'rollback')
         if (-not $isRolledBack -and $latest.iteration -gt $iteration) {
             return [PSCustomObject]@{ kind = 'stuck'; reason = "history iteration $($latest.iteration) is ahead of loop iteration $iteration" }

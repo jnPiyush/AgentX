@@ -157,6 +157,12 @@ Skills load in 3 tiers to manage context window tokens:
 
 ## Skill Quality Checklist
 
+The executable quality gate is `scripts/score-skill.ps1`, using the deterministic
+[Skill Quality Rubric](../../../../evaluation/rubrics/skill-quality.md). It emits
+seven weighted dimensions, blocking findings, a 0-100 score, a tier, and JSON
+evidence. Use `-Enforce` for new or changed skills; all-inventory mode reports
+existing score debt while always failing universal blockers.
+
 - [ ] Frontmatter has `name` and `description` (required)
 - [ ] Frontmatter has `metadata.version` (recommended)
 - [ ] SKILL.md is under 500 lines

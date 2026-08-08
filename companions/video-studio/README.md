@@ -56,4 +56,4 @@ Tokens in `src/brand.ts` mirror `docs/ux/prototypes/landing/index.html`: cyan `#
 
 ## Where outputs are consumed
 
-The landing page preview at `docs/ux/prototypes/landing/v2.html` references the MP4 paths above directly. Once rendered, drop the files into `docs/ux/prototypes/landing/videos/` (or host on Mux / Cloudflare Stream) and update the `<source>` paths in `v2.html` accordingly.
+The current public landing page is intentionally static and does not load these optional videos. Rendered clips can be published separately or added to a future reviewed media surface; do not copy them into the landing output without updating its performance, accessibility, and CSP evidence.

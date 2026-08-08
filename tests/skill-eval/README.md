@@ -103,7 +103,7 @@ tests/skill-eval/
 
 ## Related
 
-- `scripts/score-skill.ps1` - Structural quality scoring (7 categories, 40 pts)
+- `scripts/score-skill.ps1` - Deterministic skill-quality rubric (7 dimensions, 100 points, blocking floors)
 - `scripts/validate-skill.ps1` - Validation pipeline (frontmatter + tokens + scoring)
 - [Phil Schmid: Testing Skills](https://www.philschmid.de/testing-skills)
 - [SkillsBench](https://arxiv.org/html/2602.12670v1)

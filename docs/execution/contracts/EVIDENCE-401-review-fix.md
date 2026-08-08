@@ -1,6 +1,6 @@
 # Evidence Summary: Issue 401 Review Fix
 
-Completed - 
+Completed -
 2026-08-07T15:08:57.8142826-05:00
 
 ## Implementation evidence

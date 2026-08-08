@@ -29,13 +29,17 @@ updateJson(lockPath, (lock) => {
   }
 });
 
-if (fs.existsSync(serverPath)) {
+try {
   const serverSource = fs.readFileSync(serverPath, 'utf8');
   const serverPattern = /({ name: 'agentx', version: ')\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(' })/;
   if (!serverPattern.test(serverSource)) {
     throw new Error(`AgentX server version declaration not found in ${serverPath}`);
   }
   fs.writeFileSync(serverPath, serverSource.replace(serverPattern, `$1${version}$2`));
+} catch (error) {
+  if (error.code !== 'ENOENT') {
+    throw error;
+  }
 }
 
 process.stdout.write(`[PASS] Stamped ${packageDirectory} to ${version}\n`);

@@ -29,6 +29,29 @@ compatibility:
 
 ---
 
+## Prerequisites
+
+Use PowerShell 7 and provide a local directory containing Terraform, Bicep, or ARM source.
+The scanner does not authenticate to a cloud or inspect deployed resources. Reviewers must
+have enough architecture context to distinguish an intentional exception from a missing
+companion control.
+
+---
+
+## Core Rules
+
+1. Treat every disabled capability as an obligation that must be satisfied in the same
+  deployment unit or documented with a bounded exception.
+2. Never place credentials, connection strings, or secret values in source, parameters,
+  outputs, examples, or generated defaults.
+3. Cross module boundaries through declared outputs rather than copied resource IDs.
+4. Resolve names mechanically and preserve provider, module, encryption, monitoring, and
+  cost constraints as reviewable source.
+5. Use scanner findings as evidence for review, not as proof that an infrastructure design
+  is complete or secure.
+
+---
+
 ## Core Idea: Capability Invariants
 
 Most infrastructure defects are not a single bad line. They are a **missing companion** --
@@ -93,6 +116,10 @@ Exit codes: `0` clean or advisory-only, `1` blocking findings, `2` bad invocatio
 
 ## Decision Tree
 
+Start with the changed deployment unit and identify each capability it provides or disables.
+Choose the matching branch below, add the companion control before moving to the next branch,
+then run the scanner over the complete unit so cross-file obligations are visible.
+
 ```
 Writing or reviewing IaC?
 +- Disabling a capability? -> add the companion resource in the same unit (IG-01)
@@ -101,6 +128,29 @@ Writing or reviewing IaC?
 +- Naming a resource? -> resolve-resource-name.ps1 (IG-07)
 +- Genuine exception? -> record "# governance-exception" with reason and exit condition
 ```
+
+---
+
+## Workflow
+
+1. Read the architecture decision, deployment boundaries, and provider constraints.
+2. Generate or update the IaC while applying the core rules and deterministic naming.
+3. Run the governance scanner across every file in the deployment unit.
+4. Triage each blocking and advisory finding against the rule catalog.
+5. Fix defects or record a narrow exception with owner, reason, and exit condition.
+6. Re-run with `-FailOnBlocking`, review the diff, and attach the clean result to handoff.
+
+---
+
+## Anti-Patterns
+
+- Do not suppress a rule merely to make CI green; correct the obligation or document a
+  bounded exception.
+- Do not scan one file when identity, role assignment, network, or diagnostics live in
+  another file in the same deployment unit.
+- Do not treat a clean heuristic scan as cloud compliance or deployment authorization.
+- Do not copy resolved names or resource IDs into another module when an output contract is
+  available.
 
 ---
 

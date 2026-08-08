@@ -199,8 +199,7 @@ function Get-PackInstallPlan {
   @{ Key = 'instructions'; Label = 'Instructions'; RelativePath = '.github/instructions' },
   @{ Key = 'prompts'; Label = 'Prompts'; RelativePath = '.github/prompts' },
   @{ Key = 'templates'; Label = 'Templates'; RelativePath = '.github/templates' },
-  @{ Key = 'schemas'; Label = 'Schemas'; RelativePath = '.github/schemas' },
-  @{ Key = 'scripts'; Label = 'Scripts'; RelativePath = 'scripts' }
+    @{ Key = 'schemas'; Label = 'Schemas'; RelativePath = '.github/schemas' }
  )
 
  $entries = @()
@@ -212,6 +211,14 @@ function Get-PackInstallPlan {
     Type = 'tree'
     RelativePath = ($group.RelativePath -replace '\\', '/')
    }
+  }
+ }
+
+ foreach ($filePath in (Get-ManifestArray -Object $manifest.artifacts -PropertyName 'scripts')) {
+  $entries += [pscustomobject]@{
+   Label = 'Scripts'
+   Type = 'file'
+   RelativePath = ($filePath -replace '\\', '/')
   }
  }
 

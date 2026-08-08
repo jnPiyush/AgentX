@@ -1,336 +1,313 @@
 <div align="center">
-  <img src="docs/assets/agentx-logo.svg" width="200" alt="AgentX Logo">
+  <img src="docs/assets/agentx-logo.svg" width="240" alt="AgentX - Multi-Agent Framework">
   <h1>AgentX</h1>
-  <p><strong>Digital Force for Software Delivery</strong></p>
+  <p><strong>Structured AI software delivery for GitHub Copilot, Claude, OpenAI, local models, and the CLI.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.7.0"><img src="https://img.shields.io/badge/Version-8.7.0-0EA5E9?style=for-the-badge" alt="Version 8.7.0"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge" alt="Apache 2.0 License"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.7.0"><img src="https://img.shields.io/badge/Version-8.7.0-b11f4b?style=for-the-badge" alt="Version 8.7.0"></a>
+    <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
-  <p><em>Turn AI coding agents into a structured, highly capable development team with routing, domain skills, execution templates, long-term memory, multi-model deliberation, and validation.</em></p>
 </div>
 
----
+AgentX turns coding agents into a structured delivery team. Specialist roles plan, design, build, review, test, deploy, and capture what they learned while repo-local state and mechanical gates keep the work auditable.
 
-## Why AgentX?
+> Code generation is one step. AgentX supplies the operating system around it.
 
-Zero-shot AI generation is unpredictable for complex software engineering. AgentX introduces a **Harness-Oriented Architecture** that forces AI models to plan, execute, iterate, review, and validate -- just like a high-performing engineering team. Critical decisions are pressure-tested by a **Model Council** of diverse models that debate the call before it ships.
-
-> **"Stop passively generating code. Start autonomously delivering software."**
+[Install](#install-in-vs-code) | [See the workflow](#the-operating-loop) | [Meet the team](#the-agent-team) | [Explore skills](Skills.md) | [Read the guide](docs/GUIDE.md) | [Security](SECURITY.md)
 
 ---
 
-## The AI Development Team
+## AgentX in 60 Seconds
 
-AgentX acts as an autonomous orchestrator, routing tasks to **26 specialized agents** based on required skills.
+| What you get | Current release |
+|:-------------|:----------------|
+| Specialist agents | **26 total**: 15 visible roles and 11 internal sub-agents |
+| Production knowledge | **130 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
+| Quality discipline | At least **5 evidenced iterations**, fresh verification, independent review, scrub, and completion gates |
+| Durable artifacts | PRDs, ADRs, specs, UX prototypes, plans, reviews, learnings, issue state, and memory stored in the repository |
+| Runtime surfaces | VS Code, GitHub Copilot Chat, GitHub Copilot CLI, Claude Code, Cursor, PowerShell, and Bash |
+| Work tracking | Local mode, GitHub, or Azure DevOps |
+| Model adapters | GitHub Copilot, Claude Subscription/API, OpenAI API, and Claude Code through LiteLLM + Ollama |
 
-| Domain | Agents | Deliverables |
-|:-------|:-------|:-------------|
-| **Product & Design** | Product Manager, UX Designer | PRDs, Wireframes, Prototypes |
-| **Architecture & Data** | Architect, Data Scientist, Fabric Engineer | ADRs, Tech Specs, ML Pipelines, Fabric Data Products |
-| **Engineering** | Engineer, DevOps | Code, CI/CD, Containerization |
-| **Quality & Review** | Reviewer, Tester, Auto-Fix | Code Reviews, Tests, Quality Gates |
-| **Low-Code & Analytics** | Power Platform Builder, Power BI Analyst, Research | Solutions, Datasets, M metrics, Industry Briefs |
-
----
-
-## Domain Skills Library
-
-AgentX is powered by a rich knowledge layer of **130 production skills** distributed across key categories. Agents read peer-reviewed patterns before writing code, ensuring repo-driven accuracy instead of model-memory guesses.
-
-| Category | Example Skills | Purpose |
-|:---------|:---------------|:--------|
-| **Architecture** | `api-design`, `security`, `database` | System design, performance, and scaling |
-| **AI Systems** | `langgraph`, `foundry-sdk`, `genaiops` | Agent orchestration, Foundry implementation, release gates, and evaluations |
-| **Development** | `testing`, `error-handling`, `karpathy-guidelines` | Code robustness, linting, and Karpathy-style behavioral guardrails (think-before-coding, surgical changes, assumption audits) against common LLM coding pitfalls |
-| **Languages & UI** | `c`, `cpp`, `react` | Native systems work, application stacks, and frontend visuals |
-| **Ops & Infra** | `github-actions`, `terraform`, `azure` | CI/CD pipelines, containerization, and IaC |
-| **Data & Testing** | `databricks`, `fabric-analytics`, `e2e-testing` | Analytics pipelines, AI data platforms, and verification |
-| **Low-Code (Power Platform)** | `dataverse-schema`, `canvas-app-yaml`, `power-automate-flow-json`, `copilot-studio-agents`, `pac-cli` | Generate unpacked Power Platform solution source -- Dataverse tables, Power Apps (canvas + model-driven), Power Automate (cloud + desktop/RPA), Power Pages, PCF controls, Dataverse plugins, security roles, environment variables, and Copilot Studio agents -- ready for `pac solution pack` and import |
-
----
-
-## Core Capabilities
-
-### 1. The Agentic Loop
-
-```mermaid
-stateDiagram-v2
-    direction LR
-
-    [*] --> Generate
-    Generate --> Verify
-    Verify --> SelfReview
-    SelfReview --> Generate : Fix Gaps
-    SelfReview --> Done : Approved
-```
-AgentX leverages a robust, iterative execution model. The agent researches the repo, classifies the task, writes code against clear criteria, verifies the result, and loops until the task is definitively "Done."
-
-### 2. Model Council -- Multi-Model Deliberation
-
-**Single-model reasoning is a blind spot. Stress-test the decision, not just the code.**
-
-High-stakes decisions -- PRD scope, ADR options, AI design, code review, and deep research -- are pressure-tested by a three-member council of diverse models that independently debate the call before it ships.
+### The core idea
 
 ```mermaid
 flowchart LR
-    Q(["Decision / Artifact"]) --> Analyst["Analyst<br/>Decompose + Evidence"]
-    Q --> Strategist["Strategist<br/>Frame + Second-Order"]
-    Q --> Skeptic["Skeptic<br/>Contrarian + Failure Modes"]
-    Analyst --> Synth{Synthesis}
-    Strategist --> Synth
-    Skeptic --> Synth
-    Synth -->|"Consensus, Divergences,<br/>Blind Spots, Net Adjustment"| Out(["Hardened Deliverable"])
+    Intent[User intent] --> Route{AgentX Auto}
+    Route --> Plan[Plan and design]
+    Plan --> Build[Implement]
+    Build --> Verify[Verify and review]
+    Verify -->|findings| Build
+    Verify --> Capture[Capture learning]
+    Capture --> Done[Done with evidence]
 ```
 
-- Three roles by design: **Analyst** (evidence), **Strategist** (framing), **Skeptic** (contrarian risk surfacing).
-- Five purpose packs: `prd-scope`, `adr-options`, `ai-design`, `code-review`, `research`.
-- Agent-internal by default -- the calling agent runs the council and synthesizes silently; the user sees only the hardened output, with the council file available as supporting evidence.
-- Optional `-AutoInvoke` for genuine multi-vendor diversity via `gh models`.
-- Mandatory for PM, Architect, Reviewer, Data Scientist, and Consulting Research phases on high-stakes work; skip reasons must be recorded.
-
-### 3. Deep Domain Skills
-**Repo-driven knowledge, not model-memory guesses.**
-AgentX is powered by the explicit knowledge layer defined above. Agents read exact, peer-reviewed technical standards before writing a single line of code. The `karpathy-guidelines` skill is wired into Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist to enforce Andrej Karpathy's *think-before-coding, surgical-change, goal-driven* discipline and block the most common LLM coding pitfalls at authoring time.
-
-### 4. Context Compaction
-**Long sessions without context amnesia.**
-Long-running AI tasks often break token limits. AgentX compacts conversational history once estimated prompt usage crosses 70% of the active model context window, preserving system rules, keeping recent turns verbatim, and replacing older history with a structured continuation summary so the agent remains stable and focused.
-
-### 5. Self Review & Validation Gates
-**Trust, but mechanically verify.**
-Before any handoff, the active agent rigorously reviews its own work against the Karpathy-guideline checks (assumption audit, minimal-diff, no speculative generality) as well as domain criteria. Complex tasks require evidence-backed execution plans, and HIGH/MEDIUM severity issues block the workflow from advancing until resolved.
-
-### 6. Standardized Templates
-Every deliverable -- from PRDs to Tech Specs to Security Plans -- is written into predictable, structured templates. This makes inter-agent handoffs seamless and ensures a consistent paper trail.
-
-### 7. Harness Engineering
-Make AI execution durable and resumable. AgentX treats the workspace as the state, utilizing tracked progress files, memory files, and formal architecture decisions to keep execution grounded in reality.
-
-### 8. Knowledge Compounding And Review Intelligence
-AgentX now adds explicit brainstorm and compound-loop entry points, ranked planning and review learnings, learning-capture scaffolds tied to the active issue context, advisory agent-native review parity checks, durable review-finding records, and one-step promotion of important findings into the normal backlog workflow.
+AgentX Auto can run that path in one session. For tighter control, select a specialist role for only the phase you need.
 
 ---
 
-## Architecture at a Glance
+## Why AgentX
 
-```mermaid
-flowchart LR
-  UI(["User Intent"]) --> Hub{"AgentX Hub"}
+### Repository context before generation
 
-  subgraph SpecialistRouting["Specialist Routing"]
-    direction LR
-    D["Discover and Plan"] --> I["Implement"] --> V["Validate"]
-  end
+Agents retrieve project instructions, approved product and architecture artifacts, relevant skills, prior decisions, and known pitfalls before they write. The repository is the system of record, not the model's memory.
 
-  Hub --> SpecialistRouting
+### Evidence before completion
 
-  D -.->|"PM, UX, Architect"| Assets[("Repo Assets")]
-  I -.->|"Engineer and Skills"| Assets
-  V -.->|"Reviewer, Tester"| Assets
-```
+A passing-sounding response is not a gate. AgentX records test output, coverage, security scans, browser checks, artifact freshness, and independent review findings. HIGH and MEDIUM findings block handoff.
 
-- **User Surface:** VS Code extension, Copilot Chat, sidebar views, and CLI
-- **Execution Layer:** AgentX Auto orchestrator, specialist phases, iterative loops
-- **Knowledge Layer:** 130 skills, 26 agents, 7 instructions, 15 templates, 21 prompts -- all Markdown-defined
-- **Control Layer:** Execution plans, repo-local state, automated validation gates
+### Role contracts instead of generic personas
+
+Each role has a defined pipeline, deliverables, boundaries, templates, and done criteria. Product Manager produces requirements. Architect evaluates options. Engineer implements. Reviewer verifies. The roles do not collapse into one unconstrained prompt.
+
+### Learning that survives the chat window
+
+Plans, progress, review findings, decisions, and promoted learnings remain in the workspace. Long-running work can compact or reset without losing the durable execution contract.
 
 ---
 
-## Quick Start
+## The Operating Loop
 
-For script-based repo setup and contributor bootstrap steps, see [CONTRIBUTING.md](CONTRIBUTING.md).
+AgentX uses six shared checkpoints across chat, CLI, issues, plans, reviews, and VS Code sidebars:
 
-If you want to use AgentX from VS Code, the setup flow below covers Marketplace installation, per-workspace initialization, and the basic delivery workflow.
+| Checkpoint | Purpose | Durable evidence |
+|:-----------|:--------|:-----------------|
+| **Brainstorm** | Frame the problem and retrieve prior learning | Issue or bounded task |
+| **Plan** | Record scope, alternatives, risks, and verification | Execution plan and optional work contract |
+| **Work** | Implement a bounded slice | Code, artifacts, progress, implementation evidence |
+| **Review** | Test the real surface and classify findings | Test output, runtime evidence, review decision |
+| **Compound Capture** | Preserve reusable outcomes or record a skip rationale | Learning artifact or closeout rationale |
+| **Done** | Close only when delivery and evidence agree | Completed loop, review, and capture state |
 
-## Setup AgentX In VS Code
+### Quality gates
 
-If you want to use AgentX from the VS Code Marketplace instead of bootstrapping from the install scripts, use the extension workflow below.
+- **Iterative loop:** minimum five evidence-backed passes for every task class
+- **Independent review:** a subagent sees the deliverable, not the author's rationale
+- **Karpathy guidelines:** think before coding, keep it simple, change surgically, verify the goal
+- **Model Council:** Analyst, Strategist, and Skeptic pressure-test high-stakes decisions
+- **Deslop scrub:** flags stale comments, over-abstraction, generic UI, and unsafe empty catches
+- **Skill quality:** deterministic 100-point rubric with blocking floors and no-regression checks
+- **Fresh evidence:** reused or stale artifacts cannot complete the loop
+- **Compound capture:** reusable decisions and pitfalls become repository knowledge
 
-### 1. Install The Extension
+---
 
-Install [AgentX on the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
+## The Agent Team
 
-Recommended prerequisites:
+### 15 visible roles
 
-- VS Code 1.85.0 or newer
-- Git available on your PATH
+| Role | Best used for | Primary output |
+|:-----|:--------------|:---------------|
+| **AgentX Auto** | End-to-end autonomous delivery | Routed specialist workflow |
+| **Product Manager** | Product scope and outcomes | PRD, roadmap, backlog |
+| **UX Designer** | User flows and accessible interfaces | UX spec and working prototype |
+| **Architect** | Options, tradeoffs, and system boundaries | ADR and technical specification |
+| **Engineer** | Production implementation | Code, tests, evidence |
+| **Reviewer** | Functional, security, and architecture review | Approval or actionable findings |
+| **Auto-Fix Reviewer** | Review plus bounded safe fixes | Review and verified corrections |
+| **DevOps Engineer** | CI/CD and release automation | Pipelines, deployment, rollback |
+| **Data Scientist** | Agent, RAG, prompt, and model quality | AI pipeline, eval plan, model card |
+| **Tester** | Test strategy and release certification | Test suites and certification report |
+| **Fabric Engineer** | Microsoft Fabric data products | Lakehouse, Warehouse, Spark, pipelines, lineage |
+| **Power Platform Builder** | Portable low-code solution source | Dataverse, apps, flows, PCF, Pages, Copilot Studio |
+| **Power BI Analyst** | Semantic models and reporting | DAX, Power Query, report specification |
+| **Consulting Research** | Sourced domain analysis | Client-ready research brief |
+| **Agile Coach** | Story creation and refinement | INVEST stories and acceptance criteria |
+
+### 11 internal specialists
+
+GitHub Ops, ADO Ops, AzDO PRD-to-WIT, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist, Diagram Specialist, and Prototype Auditor are invoked by parent roles when deeper isolation is useful.
+
+---
+
+## 130 Production Skills
+
+Skills are compact, versioned knowledge packages that load only when the task needs them. Each `SKILL.md` can include scripts, references, and assets.
+
+| Area | Examples |
+|:-----|:---------|
+| **AI systems** | Agent Framework, Foundry SDK, LangGraph, RAG, evaluation, safety, observability, memory, routing, voice agents |
+| **Architecture** | API design, security, database, performance, cost analysis, infrastructure governance, low-code vs pro-code |
+| **Development** | Testing, error handling, debugging, configuration, type safety, code review, worktrees, verification |
+| **Data and analytics** | Fabric, Databricks, Cosmos DB, Power BI, forecasting, data analysis |
+| **Design** | UX/UI, accessibility, prototype craft, anti-slop, content design, visual regression |
+| **Infrastructure** | Azure, Bicep, Terraform, containers, GitHub Actions, YAML pipelines, release management |
+| **Low-code** | Dataverse schema, canvas/model-driven apps, Power Automate, Power Pages, PCF, security roles, PAC CLI |
+| **Languages** | C, C++, C#, Python, Go, Rust, React, Blazor, PostgreSQL, SQL Server |
+| **Consulting domains** | Financial services, audit, tax, legal, oil and gas, CLM, corporate governance |
+
+The executable skill gate scores specification, discoverability, decision support, actionability, safety, maintainability, and efficiency. Existing debt remains visible; changed skills cannot regress.
+
+---
+
+## Platforms and Adapters
+
+### VS Code and GitHub Copilot
+
+The Marketplace extension provides declarative chat agents, sidebars, Command Palette workflows, workspace initialization, adapter setup, and the bundled AgentX runtime.
+
+### LLM adapters
+
+- **GitHub Copilot** for the default VS Code and CLI experience
+- **Claude Subscription** through an authenticated local Claude Code CLI
+- **Claude API** with workspace-scoped secret storage
+- **OpenAI API** with workspace-scoped secret storage
+- **Claude Code + LiteLLM + Ollama** for an Anthropic-compatible local gateway
+
+Model names are advisory. Role boundaries, evidence requirements, and tool permissions remain the contract.
+
+### Work adapters
+
+- **Local:** filesystem-backed issues and state for solo or offline work
+- **GitHub:** issues, pull requests, Projects V2 status, and Actions
+- **Azure DevOps:** work items and provider-aware delivery workflows
+
+### Editor and CLI portability
+
+AgentX also ships GitHub Copilot CLI packs, Claude Code commands, Cursor rules/commands, and PowerShell/Bash launchers.
+
+---
+
+## Featured 8.7 Capabilities
+
+### Fabric Engineer
+
+Builds Microsoft Fabric Lakehouse and Warehouse structures, OneLake shortcuts, Spark notebooks, data pipelines, medallion products, quality checks, reconciliation, lineage, and recovery documentation.
+
+### Power Platform Builder
+
+Generates unpacked unmanaged solution source for Dataverse, canvas and model-driven apps, Power Automate cloud and desktop flows, Power Pages, PCF, plugins, security roles, environment variables, and Copilot Studio. The role is fail-closed for tenant mutation: it cannot authenticate, import, publish, export, or delete in a tenant.
+
+### Cost and infrastructure governance
+
+Adds cost-envelope analysis, deterministic resource naming, and governance checks for Terraform, Bicep, and ARM. The scanner catches missing companion controls such as disabled authentication without identity and role assignment.
+
+### Secure WhatsApp companion
+
+Controls a local AgentX workspace from an allowlisted account with read-only defaults, replay protection, short-lived sender-bound confirmation nonces, transcript-first voice handling, sandboxed Chromium, and bounded secret-reduced child execution.
+
+### Deterministic skill rubric
+
+Replaces the legacy structural score with a 100-point rubric, strict YAML parsing, stable JSON evidence, blocking floors, and trusted-base no-regression enforcement for changed skills.
+
+---
+
+## Security and Release Integrity
+
+AgentX places controls outside the model prompt:
+
+- blocked destructive command patterns and confirmation for unfamiliar commands
+- workspace path sandboxing and secret redaction
+- SSRF validation with private-address and metadata-endpoint blocking
+- role-specific tool boundaries, including fail-closed Power Platform terminal policy
+- pinned GitHub Actions, dependency audits, secret scanning, and SAST
+- release SBOMs and GitHub artifact provenance attestations
+- fresh-evidence hashing for quality-loop iterations and completion
+- WCAG, browser interaction, and anti-slop gates for UI-bearing work
+
+See [SECURITY.md](SECURITY.md) for the threat model, supported versions, and reporting process.
+
+---
+
+## Install in VS Code
+
+### 1. Install the extension
+
+```powershell
+code --install-extension jnPiyush.agentx
+```
+
+Or install [AgentX from the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
+
+Requirements:
+
+- VS Code 1.85+
+- Git
 - PowerShell 7.4+ on Windows, or Bash on Linux/macOS
-- GitHub Copilot and GitHub Copilot Chat enabled in VS Code
+- GitHub Copilot and GitHub Copilot Chat
 
-### 2. Initialize Each Workspace
+### 2. Initialize the workspace
 
-AgentX initialization is workspace-scoped. After you open a repo or project folder in VS Code, run:
+Open a repository and run this Command Palette action:
 
 ```text
 AgentX: Initialize Local Runtime
 ```
 
-You can launch it from the Command Palette with `Ctrl+Shift+P` or `Cmd+Shift+P`, or start the same flow in chat with:
+Or use chat:
 
 ```text
 @agentx initialize local runtime
 ```
 
-What initialization does for the current workspace:
+AgentX uses a zero-copy runtime. Initialization creates local state, stable launchers, plans, reviews, and learning folders without copying the bundled agent/skill tree into your repository.
 
-- creates the local AgentX runtime folders and state files
-- prepares repo-local execution artifacts such as plans, progress, reviews, and learnings
-- writes stable `.agentx/*` workspace entrypoints that delegate into the bundled runtime
-- keeps the executable runtime bundled with AgentX while workspace state remains local to the repo
-
-Repeat this step for every new workspace where you want AgentX to run.
-
-### 3. Optionally Connect Remote Systems
-
-If the workspace needs GitHub or Azure DevOps issue and workflow operations, run:
+### 3. Add adapters when needed
 
 ```text
 AgentX: Add Remote Adapter
-```
-
-You can also start the same flow directly in chat. Common phrases include:
-
-- `@agentx add remote adapter`
-- `@agentx connect github`
-- `@agentx connect ado`
-- `@agentx use local`
-- `@agentx switch adapter`
-
-The extension now treats repo-adapter setup as a chat-first workflow. It asks for the next non-secret value in chat, keeps the setup pending between turns, and lets you continue or cancel the flow from follow-up suggestions.
-
-Use local runtime only when you want repo-local planning, implementation, and review without remote backlog integration.
-
-### 4. Switch LLM Adapters For The Workspace
-
-If you want to run AgentX with a different model provider than the default GitHub Copilot path, run:
-
-```text
 AgentX: Add LLM Adapter
 ```
 
-You can also start the same flow directly in chat. Common phrases include:
+Secrets are collected through secure VS Code prompts and stored in secret storage, not committed to `.agentx/config.json`.
 
-- `@agentx switch llm`
-- `@agentx connect claude`
-- `@agentx connect claude local`
-- `@agentx connect openai`
-- `@agentx use copilot`
-
-The extension now treats LLM setup as a chat-first workflow. It asks for the next non-secret value in chat, keeps the setup pending between turns, and lets you continue or cancel the flow from follow-up suggestions.
-
-Supported workspace adapters:
-
-- `GitHub Copilot` keeps the current default behavior for Copilot Chat and the AgentX CLI runner.
-- `Claude Subscription` uses the local Claude Code CLI after `claude auth login` succeeds.
-- `Claude Code + LiteLLM + Ollama` keeps Claude Code as the runner transport, but routes requests through an Anthropic-compatible LiteLLM gateway to a local Ollama coding model such as `qwen2.5-coder:14b`.
-- `Claude API` uses an Anthropic API key stored in VS Code secret storage.
-- `OpenAI API` uses an OpenAI API key stored in VS Code secret storage.
-
-What gets saved for the workspace:
-
-- the active adapter and non-secret provider settings are written to `.agentx/config.json`
-- API keys are stored in VS Code secret storage, not in repo files
-- the Status sidebar shows the active `LLM Adapter` so you can verify what the runner will use
-
-Security note:
-
-- AgentX does not ask you to paste API keys into the chat transcript.
-- When a provider needs a secret, the chat flow switches to VS Code's secure password prompt for that one step and then resumes the conversational setup.
-
-Provider notes:
-
-- `Claude Subscription` requires the Claude Code CLI to be installed and authenticated. AgentX uses Claude Code's official non-interactive print mode for execution.
-- `Claude Code + LiteLLM + Ollama` requires Claude Code, a running LiteLLM Anthropic-compatible endpoint, Ollama, and an available local coding model. AgentX stores the local gateway URL in `.agentx/config.json`, stores the optional LiteLLM auth token in VS Code secret storage, and pins runner model routing to the configured local model.
-- `Claude API` requires `ANTHROPIC_API_KEY`-equivalent credentials, but the extension stores the key for the workspace and injects it automatically when AgentX runs.
-- `OpenAI API` is handled the same way with workspace-scoped secret storage and automatic injection at runtime.
-
-## Build Software With AgentX
-
-Once a workspace is initialized, AgentX can drive delivery from planning through review.
-
-```mermaid
-flowchart LR
-    I[Install Extension] --> W[Open Workspace]
-    W --> R[Initialize Local Runtime]
-    R --> B[Brainstorm Or Create Work]
-    B --> E[Implement With AgentX]
-    E --> V[Review And Validate]
-    V --> C[Capture Learnings]
-```
-
-### Recommended Flow
-
-One practical way to use AgentX is to walk a small product idea through the same roles your team would normally use. For example, imagine you want to build a simple task-tracker app with user sign-in, a task list, and a status dashboard.
-
-In VS Code, select the role in chat first, then send a prompt like the ones below.
-
-| Step | Role | What To Ask AgentX | Sample Prompt |
-|:-----|:-----|:-------------------|:--------------|
-| **1. Define the product** | **Product Manager** | Start with the user problem, goals, and acceptance criteria | `Create a PRD for a task-tracker app for small teams with email login, task CRUD, due dates, and a dashboard for overdue work.` |
-| **2. Shape the UX** | **UX Designer** | Turn the PRD into flows, screens, and interaction patterns | `Create the user flow and prototype plan for the task-tracker app, covering sign-in, task creation, task filtering, and dashboard views.` |
-| **3. Design the architecture** | **Architect** | Define the technical approach, tradeoffs, and implementation boundaries | `Create an ADR and tech spec for the task-tracker app using a web frontend, backend API, persistence, and role-based access.` |
-| **4. Implement the app** | **Engineer** | Build the code and tests from the approved scope and spec | `Implement the task-tracker app from the PRD and spec, including authentication, task CRUD APIs, dashboard data, and automated tests.` |
-| **5. Review and verify** | **Reviewer** | Run the review workflow and call out risks before completion | `Review the task-tracker implementation for correctness, security, regressions, and missing tests.` |
-| **6. Capture reusable learning** | **AgentX Auto** | Save the outcome if the workflow, architecture, or review produced reusable guidance | `Create a learning capture for the task-tracker delivery workflow and major implementation lessons.` |
-
-If you prefer a single orchestrated session, select **AgentX Auto** in chat and use one prompt that lets it route internally:
+### 4. Start with one prompt
 
 ```text
-Build a task-tracker app for small teams. Start by creating the PRD, then produce UX and architecture guidance, implement the app, review it, and capture reusable learnings.
+[AgentX Auto selected]
+Build a task tracker for small teams. Define the product, design the UX and architecture,
+implement it, review the result, and capture reusable learning.
 ```
 
-### Typical Chat Prompts
+Or select a specialist and request one phase:
 
 ```text
-[Product Manager selected] Create a PRD for a task-tracker app for small teams
-[UX Designer selected] Create the primary flows and screen plan for the task-tracker app
-[Architect selected] Create an ADR and implementation spec for the task-tracker app
-[Engineer selected] Implement the task-tracker app and its tests from the approved artifacts
-[Reviewer selected] Review the task-tracker app implementation before sign-off
-[AgentX Auto selected] Create a learning capture
+[Architect selected]
+Evaluate three deployment options for this service and create an ADR with the tradeoffs.
 ```
 
-### When To Use Which Mode
+---
 
-- Use **AgentX Auto** when you want end-to-end orchestration in one session.
-- Use a specialist role such as **Engineer**, **Architect**, or **Reviewer** when you want tighter control over one phase.
-- Use the Command Palette and sidebars when you want a more guided, visual workflow inside VS Code.
+## Repository Map
+
+| Path | Purpose |
+|:-----|:--------|
+| [AGENTS.md](AGENTS.md) | Workflow map, classifications, role pipelines, hard gates |
+| [Skills.md](Skills.md) | Complete skill index and task-to-skill router |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | Checkpoints, status transitions, handoffs, evidence model |
+| [docs/GUIDE.md](docs/GUIDE.md) | Setup, adapters, local mode, troubleshooting |
+| [.github/agents/](.github/agents/) | Canonical agent role contracts |
+| [.github/skills/](.github/skills/) | Canonical production skills |
+| [.agentx/](.agentx/) | CLI, plugins, hooks, and workspace runtime state |
+| [docs/artifacts/](docs/artifacts/) | PRDs, ADRs, specs, reviews, learnings |
+| [docs/execution/](docs/execution/) | Living plans, progress, contracts, evidence |
+| [vscode-extension/](vscode-extension/) | Extension source, tests, package, bundled runtime |
+| [packs/](packs/) | Optional distribution packs |
+| [evaluation/](evaluation/) | Datasets, rubrics, baselines, SkillOpt artifacts |
 
 ---
 
 ## New In 8.7.0
 
-- Migrated agent defaults and provider routing to Claude Opus 5 and Sonnet 5
-- Added cost optimization and infrastructure governance skills, plus supply-chain, SSRF, and evaluation hardening
-- Added **AgentX Fabric Engineer**, a visible agent that owns Microsoft Fabric data-platform delivery: Lakehouse and Warehouse schemas, OneLake shortcuts, Spark notebooks, Data Pipelines, medallion data products, data quality, and lineage
-- Promoted the Low-Code Builder into core as **AgentX Power Platform Builder**, which generates unpacked Power Platform solution source for Dataverse, Power Apps, Power Automate, Power Pages, PCF, plugins, security roles, and Copilot Studio
-- Raised the inventory to 26 agents (15 visible, 11 internal) with `type:fabric` and `type:lowcode` routing, backlog pickup, and full pipeline contracts
-- Made Power Platform Builder fail-closed for terminal access: a fixed `pac` command allowlist in the runner plus a mirrored agent-scoped `PreToolUse` hook, so the agent can never authenticate to, import into, or publish to a tenant
+This release combines the work from issues [#400](https://github.com/jnPiyush/AgentX/issues/400), [#401](https://github.com/jnPiyush/AgentX/issues/401), [#402](https://github.com/jnPiyush/AgentX/issues/402), and [#403](https://github.com/jnPiyush/AgentX/issues/403):
 
-## Main Repo Areas
+- Fabric Engineer and Power Platform Builder become core visible agents
+- 26-agent / 130-skill inventory with refreshed routing and distribution parity
+- cost-aware infrastructure governance and deterministic naming
+- hardened WhatsApp companion
+- deterministic 100-point skill-quality rubric
+- provider, supply-chain, SSRF, and evaluation hardening
+- reorganized product README and current public landing page
 
-- `AGENTS.md` - Top-level guidance and routing rules
-- `docs/WORKFLOW.md` - Workflow and handoffs
-- `Skills.md` - Complete skill index
-- `.github/agents/` - Individual agent definitions
-- `.github/skills/` - Reusable implementation knowledge
-- `vscode-extension/` - VS Code extension source
-- `.agentx/` - workspace launchers and local workflow state
-- `packs/` - optional capability bundles (e.g. [Power Platform Builder Pack](packs/agentx-power-platform-builder/README.md) -- compatibility assets and examples for the core Power Platform Builder plus 13 Power Platform / Copilot Studio skills)
+Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 
-## Read More
+---
 
-- [AGENTS.md](AGENTS.md)
-- [docs/WORKFLOW.md](docs/WORKFLOW.md)
-- [docs/GUIDE.md](docs/GUIDE.md)
-- [Skills.md](Skills.md)
+## Contributing
 
-## Related Work
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). Contributions should begin with an issue, keep changes reviewable, add or update tests, and preserve the quality-loop and evidence contracts.
 
-AgentX is developed independently and predates this comparison. During a recent review we read [obra/superpowers](https://github.com/obra/superpowers) (a Claude-Code-shaped TDD methodology with strong verification, debugging, and worktree skills) and used it as a benchmark for a few specific AgentX subsystems. We did not vendor Superpowers code and we deliberately did not adopt its single-spec folder, "iron-law" absolutism, or step-level plan format, because those conflict with AgentX's multi-agent, multi-domain, multi-provider design. Concrete adoption decisions (verification-before-completion skill, systematic-debugging skill, first-class worktree workflow, two-pass review separation) are tracked in the repo rather than claimed here.
+## License
 
-
-
-
-
+AgentX is licensed under [Apache License 2.0](LICENSE). Third-party notices are in [NOTICE](NOTICE).
