@@ -34,10 +34,9 @@ jobs:
 
       - name: Token Budget Check
         id: tokens
+        continue-on-error: true
         shell: pwsh
-        run: |
-          ./scripts/token-counter.ps1 -Action check
-          "violations=0" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        run: ./scripts/token-counter.ps1 -Action check
 
       - name: Broken Links Check
         id: links
@@ -122,10 +121,10 @@ jobs:
           echo "| Check | Status |" >> /tmp/status.md
           echo "|-------|--------|" >> /tmp/status.md
 
-          if [ "${{ steps.tokens.outputs.violations }}" -eq 0 ]; then
+          if [ "${{ steps.tokens.outcome }}" == "success" ]; then
             echo "| Token Budget | [PASS] All within limits |" >> /tmp/status.md
           else
-            echo "| Token Budget | [FAIL] ${{ steps.tokens.outputs.violations }} violation(s) |" >> /tmp/status.md
+            echo "| Token Budget | [FAIL] One or more violations |" >> /tmp/status.md
           fi
 
           if [ "${{ steps.links.outputs.broken }}" -eq 0 ]; then

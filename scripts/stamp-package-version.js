@@ -31,7 +31,7 @@ updateJson(lockPath, (lock) => {
 
 try {
   const serverSource = fs.readFileSync(serverPath, 'utf8');
-  const serverPattern = /({ name: 'agentx', version: ')\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(' })/;
+  const serverPattern = /({ name: 'agentx', version: ')\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(' },)/;
   if (!serverPattern.test(serverSource)) {
     throw new Error(`AgentX server version declaration not found in ${serverPath}`);
   }

@@ -43,9 +43,7 @@ try {
         git -C $root rev-parse --verify "$BaseRef^{commit}" *> $null
         if ($LASTEXITCODE -ne 0) { throw "BaseRef is not a valid commit: $BaseRef" }
         $baseRoot = Join-Path ([IO.Path]::GetTempPath()) ('agentx-skill-base-' + [guid]::NewGuid().ToString('N'))
-        New-Item -ItemType Directory -Path (Join-Path $baseRoot 'scripts') -Force | Out-Null
-        Copy-Item -LiteralPath $scorer -Destination (Join-Path $baseRoot 'scripts/score-skill.ps1')
-        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'parse-yaml.js') -Destination (Join-Path $baseRoot 'scripts/parse-yaml.js')
+        New-Item -ItemType Directory -Path $baseRoot -Force | Out-Null
     }
 
     $results = @()

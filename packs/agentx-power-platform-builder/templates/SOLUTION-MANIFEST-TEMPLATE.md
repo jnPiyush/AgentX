@@ -2,7 +2,7 @@
 
 The Power Platform Builder emits `src/Other/Solution.xml` shaped like the block below. Substitute the bracketed values.
 
-`xml
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <ImportExportXml version="9.2.0.0" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="agentx-power-platform-builder" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <SolutionManifest>
@@ -40,7 +40,7 @@ The Power Platform Builder emits `src/Other/Solution.xml` shaped like the block 
     <MissingDependencies />
   </SolutionManifest>
 </ImportExportXml>
-`
+```
 
 ## RootComponent type reference (most common)
 
