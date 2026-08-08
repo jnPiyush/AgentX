@@ -134,14 +134,14 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
       - name: Stamp repo version across release surfaces
         run: |
           node scripts/stamp-version.js --set "${{ env.RELEASE_VERSION }}"
           node scripts/stamp-package-version.js .agentx/mcp-server "${{ env.RELEASE_VERSION }}"
-
-      - name: Install dependencies
-        working-directory: vscode-extension
-        run: npm ci
 
       - name: Validate extension quality gates
         working-directory: vscode-extension

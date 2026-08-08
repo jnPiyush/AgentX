@@ -1,0 +1,232 @@
+name: Recover Existing Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing SemVer release tag (for example, v8.7.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+      commit: ${{ steps.resolve.outputs.commit }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve immutable release source
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          if [[ ! "$REQUESTED_TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::tag must match vMAJOR.MINOR.PATCH"
+            exit 1
+          fi
+
+          VERSION="${BASH_REMATCH[1]}"
+          git fetch --force origin "refs/tags/${REQUESTED_TAG}:refs/tags/${REQUESTED_TAG}"
+          COMMIT="$(git rev-list -n 1 "refs/tags/${REQUESTED_TAG}^{commit}")"
+          RELEASE_TARGET="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${REQUESTED_TAG}" --jq '.target_commitish')"
+
+          if [[ -z "$COMMIT" || -z "$RELEASE_TARGET" ]]; then
+            echo "::error::release tag or release does not exist"
+            exit 1
+          fi
+
+          if RELEASE_TARGET_COMMIT="$(git rev-parse "${RELEASE_TARGET}^{commit}" 2>/dev/null)"; then
+            if [[ "$RELEASE_TARGET_COMMIT" != "$COMMIT" ]]; then
+              echo "::error::release target does not match the release tag commit"
+              exit 1
+            fi
+          elif [[ "$RELEASE_TARGET" != "$COMMIT" ]]; then
+            echo "::error::release target is neither the tag commit nor a ref resolving to it"
+            exit 1
+          fi
+
+          SOURCE_VERSION="$(git show "${COMMIT}:version.json" | node -e "let data='';process.stdin.on('data',c=>data+=c);process.stdin.on('end',()=>process.stdout.write(JSON.parse(data).version))")"
+          if [[ "$SOURCE_VERSION" != "$VERSION" ]]; then
+            echo "::error::tag version ${VERSION} does not match source version ${SOURCE_VERSION}"
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "$COMMIT" origin/master; then
+            echo "::error::release tag commit is not reachable from origin/master"
+            exit 1
+          fi
+
+          {
+            echo "tag=${REQUESTED_TAG}"
+            echo "version=${VERSION}"
+            echo "commit=${COMMIT}"
+          } >> "$GITHUB_OUTPUT"
+
+  package:
+    needs: resolve
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      contents: write
+      id-token: write
+    env:
+      RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+      RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ needs.resolve.outputs.commit }}
+
+      - name: Verify checked-out source
+        shell: bash
+        run: |
+          if [[ "$(git rev-parse HEAD)" != "$RELEASE_COMMIT" ]]; then
+            echo "::error::checked-out commit does not match resolved release commit"
+            exit 1
+          fi
+          if [[ "$(node -p "require('./version.json').version")" != "$RELEASE_VERSION" ]]; then
+            echo "::error::checked-out source version does not match release version"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Install extension dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Stamp release surfaces
+        run: |
+          node scripts/stamp-version.js --set "$RELEASE_VERSION"
+          node scripts/stamp-package-version.js .agentx/mcp-server "$RELEASE_VERSION"
+
+      - name: Validate extension quality gates
+        working-directory: vscode-extension
+        run: |
+          npm run test:coverage
+          npm audit --omit=dev --audit-level=high
+
+      - name: Validate MCP runtime
+        working-directory: .agentx/mcp-server
+        run: |
+          npm ci
+          npm test
+          npm run audit:runtime
+
+      - name: Package VSIX from release source
+        run: node scripts/stamp-version.js --package-vsix
+
+      - name: Build release subjects and source predicate
+        run: |
+          mkdir -p release-evidence release-staging/vsix release-staging/mcp
+          unzip -q "vscode-extension/agentx-${RELEASE_VERSION}.vsix" -d release-staging/vsix
+          tar -czf "release-evidence/agentx-${RELEASE_VERSION}-mcp.tar.gz" \
+            --exclude=node_modules \
+            -C .agentx/mcp-server .
+          tar -xzf "release-evidence/agentx-${RELEASE_VERSION}-mcp.tar.gz" \
+            -C release-staging/mcp
+          printf '{"releaseTag":"%s","releaseVersion":"%s","sourceCommit":"%s"}\n' \
+            "$RELEASE_TAG" "$RELEASE_VERSION" "$RELEASE_COMMIT" \
+            > release-evidence/recovery-source.json
+
+      - name: Generate extension SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: release-staging/vsix
+          format: cyclonedx-json
+          output-file: release-evidence/agentx-${{ env.RELEASE_VERSION }}-vsix.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Generate MCP SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: release-staging/mcp
+          format: cyclonedx-json
+          output-file: release-evidence/agentx-${{ env.RELEASE_VERSION }}-mcp.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Attest VSIX recovery source
+        id: vsix-source
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: vscode-extension/agentx-${{ env.RELEASE_VERSION }}.vsix
+          predicate-type: https://agentx.dev/attestations/recovery-source/v1
+          predicate-path: release-evidence/recovery-source.json
+
+      - name: Attest VSIX provenance
+        id: vsix-provenance
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: vscode-extension/agentx-${{ env.RELEASE_VERSION }}.vsix
+
+      - name: Attest VSIX SBOM
+        id: vsix-sbom
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: vscode-extension/agentx-${{ env.RELEASE_VERSION }}.vsix
+          sbom-path: release-evidence/agentx-${{ env.RELEASE_VERSION }}-vsix.cdx.json
+
+      - name: Attest MCP recovery source
+        id: mcp-source
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: release-evidence/agentx-${{ env.RELEASE_VERSION }}-mcp.tar.gz
+          predicate-type: https://agentx.dev/attestations/recovery-source/v1
+          predicate-path: release-evidence/recovery-source.json
+
+      - name: Attest MCP provenance
+        id: mcp-provenance
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: release-evidence/agentx-${{ env.RELEASE_VERSION }}-mcp.tar.gz
+
+      - name: Attest MCP SBOM
+        id: mcp-sbom
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: release-evidence/agentx-${{ env.RELEASE_VERSION }}-mcp.tar.gz
+          sbom-path: release-evidence/agentx-${{ env.RELEASE_VERSION }}-mcp.cdx.json
+
+      - name: Collect attestation bundles
+        env:
+          VSIX_SOURCE_BUNDLE: ${{ steps.vsix-source.outputs.bundle-path }}
+          VSIX_PROVENANCE_BUNDLE: ${{ steps.vsix-provenance.outputs.bundle-path }}
+          VSIX_SBOM_BUNDLE: ${{ steps.vsix-sbom.outputs.bundle-path }}
+          MCP_SOURCE_BUNDLE: ${{ steps.mcp-source.outputs.bundle-path }}
+          MCP_PROVENANCE_BUNDLE: ${{ steps.mcp-provenance.outputs.bundle-path }}
+          MCP_SBOM_BUNDLE: ${{ steps.mcp-sbom.outputs.bundle-path }}
+        run: |
+          cp "$VSIX_SOURCE_BUNDLE" "release-evidence/agentx-${RELEASE_VERSION}-vsix-recovery-source.sigstore.json"
+          cp "$VSIX_PROVENANCE_BUNDLE" "release-evidence/agentx-${RELEASE_VERSION}-vsix-provenance.sigstore.json"
+          cp "$VSIX_SBOM_BUNDLE" "release-evidence/agentx-${RELEASE_VERSION}-vsix-sbom.sigstore.json"
+          cp "$MCP_SOURCE_BUNDLE" "release-evidence/agentx-${RELEASE_VERSION}-mcp-recovery-source.sigstore.json"
+          cp "$MCP_PROVENANCE_BUNDLE" "release-evidence/agentx-${RELEASE_VERSION}-mcp-provenance.sigstore.json"
+          cp "$MCP_SBOM_BUNDLE" "release-evidence/agentx-${RELEASE_VERSION}-mcp-sbom.sigstore.json"
+
+      - name: Upload release artifacts and evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            "vscode-extension/agentx-${RELEASE_VERSION}.vsix" \
+            release-evidence/* \
+            --clobber
