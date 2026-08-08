@@ -33,6 +33,16 @@ function Assert-FileContains($path, $pattern, $label) {
  }
 }
 
+function Assert-FileNotContains($path, $pattern, $label) {
+ $fullPath = Join-Path $script:root $path
+ if (Test-Path $fullPath) {
+ $content = Get-Content $fullPath -Raw
+ Assert-True ($content -notmatch $pattern) "$label"
+ } else {
+ Assert-True $false "$label (file not found: $path)"
+ }
+}
+
 Write-Host ""
 Write-Host " AgentX Framework Self-Tests" -ForegroundColor Cyan
 Write-Host " ================================================" -ForegroundColor DarkGray
@@ -59,6 +69,13 @@ Assert-FileContains "packs/agentx-copilot-cli/install.ps1" "Get-PackInstallPlan"
 Assert-FileContains "packs/agentx-copilot-cli/install.ps1" "Loaded install plan from manifest\.json" "Copilot CLI installer reports manifest-driven planning"
 Assert-FileContains "packs/agentx-copilot-cli/manifest.json" '"schemas"' "Copilot CLI manifest declares schema artifacts"
 Assert-FileContains "scripts/stamp-version.js" "docs/GUIDE\.md" "version stamper updates published installation guide"
+Assert-FileContains "scripts/stamp-version.js" "preflightLiteralFile\('docs/GUIDE\.md', guideInstallerUrlEdits\)" "version stamper preflights guide installer URLs"
+Assert-FileContains "scripts/stamp-version.js" "preflightLiteralFile\('install\.ps1', powershellInstallerUrlEdits\)" "version stamper preflights PowerShell installer URLs"
+Assert-FileContains "scripts/stamp-version.js" "preflightLiteralFile\('install\.sh', bashInstallerUrlEdits\)" "version stamper preflights bash installer URLs"
+Assert-FileContains "scripts/stamp-version.js" "updateLiteralFile\('docs/GUIDE\.md', guideInstallerUrlEdits\)" "version stamper rewrites guide installer URLs as exact literals"
+Assert-FileContains "scripts/stamp-version.js" "updateLiteralFile\('install\.ps1', powershellInstallerUrlEdits\)" "version stamper rewrites PowerShell installer URLs as exact literals"
+Assert-FileContains "scripts/stamp-version.js" "updateLiteralFile\('install\.sh', bashInstallerUrlEdits\)" "version stamper rewrites bash installer URLs as exact literals"
+Assert-FileNotContains "scripts/stamp-version.js" "pattern:\s*/raw\\\.githubusercontent" "version stamper has no unanchored installer URL regex"
 Assert-FileContains "scripts/stamp-version.js" "stampMcpPackage\(targetVersion\)" "version stamper updates MCP package and server metadata"
 Assert-FileContains "scripts/stamp-version.js" "landing page release version" "version stamper updates the public landing page"
 Assert-FileContains "scripts/stamp-version.js" "install-user\.ps1" "version stamper updates user-level PowerShell installer"
