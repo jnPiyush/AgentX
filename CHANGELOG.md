@@ -1,5 +1,22 @@
 # Changelog
 
+## 8.7.1
+
+### Fixes
+
+- Added a fixed-source release recovery workflow that validates the semantic tag, release target, source version, master reachability, and checkout SHA before executing repository lifecycle scripts.
+- Added release artifact SBOMs, SLSA provenance, recovery-source attestations, and convergent release-asset uploads for recovered releases.
+- Authenticated Marketplace provenance verification with the workflow-scoped GitHub token while keeping the Marketplace PAT isolated to the publish step.
+- Required Marketplace publication to select the exact versioned VSIX and verify its embedded publisher, extension name, and version against the requested release tag.
+- Installed extension dependencies before release stamping so bundled YAML runtime synchronization succeeds in clean CI environments.
+- Made stamped-version release detection work for both linear and merge commits.
+- Made package-lock version stamping work with both LF and CRLF files and added a regression test for both line-ending forms.
+
+### Validation
+
+- Release candidates are packaged from the stamped source and must pass extension coverage, runtime dependency audit, MCP tests, MCP runtime audit, manifest inspection, and provenance verification.
+- Marketplace publication consumes the exact attested GitHub release VSIX rather than rebuilding the extension.
+
 ## 8.7.0
 
 ### Changes

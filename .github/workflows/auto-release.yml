@@ -51,7 +51,7 @@ jobs:
           VERSION="$(node -p "require('./version.json').version")"
           TAG_NAME="v${VERSION}"
 
-          if git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" | grep -qx "version.json"; then
+          if git diff-tree --root --no-commit-id --name-only -r -m "$GITHUB_SHA" | grep -qx "version.json"; then
             VERSION_CHANGED=true
           else
             VERSION_CHANGED=false

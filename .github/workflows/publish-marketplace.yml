@@ -54,18 +54,43 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.inputs.tag }}
         working-directory: vscode-extension
-        run: gh release download "$RELEASE_TAG" --pattern 'agentx-*.vsix'
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "[FAIL] Release tag must match vMAJOR.MINOR.PATCH."
+            exit 1
+          fi
+
+          EXPECTED_VERSION="${BASH_REMATCH[1]}"
+          VSIX_FILE="agentx-${EXPECTED_VERSION}.vsix"
+          gh release download "$RELEASE_TAG" --pattern "$VSIX_FILE"
+
+          if [[ ! -f "$VSIX_FILE" ]]; then
+            echo "[FAIL] Expected release asset not found: $VSIX_FILE"
+            exit 1
+          fi
+
+          unzip -p "$VSIX_FILE" extension/package.json > "$RUNNER_TEMP/agentx-package.json"
+          node - "$RUNNER_TEMP/agentx-package.json" "$EXPECTED_VERSION" <<'NODE'
+          const fs = require('fs');
+          const [manifestPath, expectedVersion] = process.argv.slice(2);
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          if (manifest.publisher !== 'jnPiyush' || manifest.name !== 'agentx' || manifest.version !== expectedVersion) {
+            throw new Error(`VSIX identity mismatch: ${manifest.publisher}.${manifest.name}@${manifest.version}`);
+          }
+          console.log(`[PASS] Verified VSIX identity jnPiyush.agentx@${expectedVersion}`);
+          NODE
+
+          echo "VSIX_FILE=$VSIX_FILE" >> "$GITHUB_ENV"
 
       - name: Verify release provenance
         working-directory: vscode-extension
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh attestation verify agentx-*.vsix --repo "$GITHUB_REPOSITORY"
+        run: gh attestation verify "$VSIX_FILE" --repo "$GITHUB_REPOSITORY"
 
       - name: Publish to VS Code Marketplace
         working-directory: vscode-extension
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: |
-          VSIX_FILE=$(ls agentx-*.vsix)
-          npx @vscode/vsce publish --pat "$VSCE_PAT" --packagePath "$VSIX_FILE"
+        run: npx @vscode/vsce publish --pat "$VSCE_PAT" --packagePath "$VSIX_FILE"

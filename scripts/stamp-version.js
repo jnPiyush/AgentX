@@ -122,21 +122,28 @@ function updateJsonVersionFile(version) {
   writeText(sourceVersionPath, `${JSON.stringify(json, null, 2)}\n`);
 }
 
-function updatePackageLock(version) {
-  let content = readText('vscode-extension/package-lock.json');
+function updatePackageLockContent(content, version) {
   content = replaceStrict(
     content,
     'vscode-extension/package-lock.json',
-    /("name": "agentx",\n  "version": ")\d+\.\d+\.\d+(")/,
+    /("name": "agentx",\r?\n  "version": ")\d+\.\d+\.\d+(")/,
     `$1${version}$2`,
     'top-level package-lock version',
   );
   content = replaceStrict(
     content,
     'vscode-extension/package-lock.json',
-    /("": \{\n      "name": "agentx",\n      "version": ")\d+\.\d+\.\d+(")/,
+    /("": \{\r?\n      "name": "agentx",\r?\n      "version": ")\d+\.\d+\.\d+(")/,
     `$1${version}$2`,
     'root package entry version',
+  );
+  return content;
+}
+
+function updatePackageLock(version) {
+  const content = updatePackageLockContent(
+    readText('vscode-extension/package-lock.json'),
+    version,
   );
   writeText('vscode-extension/package-lock.json', content);
 }
@@ -591,4 +598,8 @@ function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { updatePackageLockContent };
