@@ -60,7 +60,7 @@ function Test-IsInsideFencedCode {
 }
 
 $mdFiles = @(Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch 'node_modules|\.git[/\\]|vendor|[/\\]archive[/\\]|vscode-extension[/\\]\.github[/\\]' }
+    Where-Object { $_.FullName -notmatch 'node_modules|\.git[/\\]|vendor|[/\\]archive[/\\]|vscode-extension[/\\]\.github[/\\]|evaluation[/\\]skillopt[/\\].*[/\\]runs[/\\]' }
 )
 
 # Scope to git-tracked files when available so generated/untracked mirrors

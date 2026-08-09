@@ -49,7 +49,6 @@ New-Item -ItemType Directory -Path $MemDir -Force | Out-Null
 $DreamScript = Join-Path $PSScriptRoot '..' 'scripts' 'dream.ps1'
 $DreamScript = (Resolve-Path $DreamScript).Path
 
-# Helper to call dream.ps1 in the isolated workspace
 function Invoke-Dream {
     param([string[]]$DreamArgs)
     $env:AGENTX_WORKSPACE_ROOT = $TestRoot

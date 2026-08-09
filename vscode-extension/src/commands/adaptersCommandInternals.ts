@@ -229,10 +229,7 @@ export async function applyRemoteAdapterConfiguration(
     ? switchToLocalAdapterConfig(root)
     : await upsertRemoteAdapter(root, mode, settings as GitHubAdapterSettings | AdoAdapterSettings);
 
-  agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
+  await refreshAdapterContext(agentx);
 
   let preCheckPassed = true;
   if ((options?.runPreCheck ?? true) && mode !== 'local') {
@@ -260,78 +257,60 @@ async function upsertRemoteAdapter(
   return mcpChanged || configChanged;
 }
 
-export async function syncDetectedGitHubAdapter(
-  agentx: AgentXContext,
-  options?: { readonly notify?: boolean },
-): Promise<boolean> {
-  const root = agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
-  if (!root) {
-    return false;
-  }
-
-  const configFile = path.join(root, '.agentx', 'config.json');
-  if (!fs.existsSync(configFile)) {
-    return false;
-  }
-
-  const repoSlug = await detectGitHubOriginRepo(root);
-  if (!repoSlug) {
-    return false;
-  }
-
-  const changed = await upsertRemoteAdapter(root, 'github', { repoSlug });
-  if (!changed) {
-    return false;
-  }
-
+async function refreshAdapterContext(agentx: AgentXContext): Promise<void> {
   agentx.invalidateCache();
   await vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
   await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
   await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
+}
 
-  if (options?.notify) {
-    vscode.window.showInformationMessage(`AgentX: GitHub remote detected. Active mode switched to GitHub (${repoSlug}).`);
+async function syncDetectedRemoteAdapter(
+  agentx: AgentXContext,
+  mode: Exclude<AdapterMode, 'local'>,
+  options?: { readonly notify?: boolean },
+): Promise<boolean> {
+  const root = agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
+  if (!root || !fs.existsSync(path.join(root, '.agentx', 'config.json'))) {
+    return false;
   }
 
+  const settings = mode === 'github'
+    ? await detectGitHubOriginRepo(root).then((repoSlug) => repoSlug ? { repoSlug } : undefined)
+    : await detectAdoOrigin(root);
+  if (!settings || !await upsertRemoteAdapter(root, mode, settings)) {
+    return false;
+  }
+
+  await refreshAdapterContext(agentx);
+  if (options?.notify) {
+    const message = mode === 'github'
+      ? `AgentX: GitHub remote detected. Active mode switched to GitHub (${(settings as GitHubAdapterSettings).repoSlug}).`
+      : `AgentX: Azure DevOps remote detected. Active mode switched to Azure DevOps (${(settings as AdoAdapterSettings).organization}/${(settings as AdoAdapterSettings).project}).`;
+    vscode.window.showInformationMessage(message);
+  }
   return true;
+}
+
+export async function syncDetectedGitHubAdapter(
+  agentx: AgentXContext,
+  options?: { readonly notify?: boolean },
+): Promise<boolean> {
+  return syncDetectedRemoteAdapter(
+    agentx,
+    'github',
+    options,
+  );
 }
 
 export async function syncDetectedAdoAdapter(
   agentx: AgentXContext,
   options?: { readonly notify?: boolean },
 ): Promise<boolean> {
-  const root = agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
-  if (!root) {
-    return false;
-  }
-
-  const configFile = path.join(root, '.agentx', 'config.json');
-  if (!fs.existsSync(configFile)) {
-    return false;
-  }
-
-  const adoSettings = await detectAdoOrigin(root);
-  if (!adoSettings) {
-    return false;
-  }
-
-  const changed = await upsertRemoteAdapter(root, 'ado', adoSettings);
-  if (!changed) {
-    return false;
-  }
-
-  agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
-
-  if (options?.notify) {
-    vscode.window.showInformationMessage(
-      `AgentX: Azure DevOps remote detected. Active mode switched to Azure DevOps (${adoSettings.organization}/${adoSettings.project}).`,
-    );
-  }
-
-  return true;
+  return syncDetectedRemoteAdapter(
+    agentx,
+    'ado',
+    options,
+  );
 }
 
 async function promptGitHubSettings(root: string): Promise<{ repoSlug?: string; projectNum?: number } | undefined> {

@@ -868,6 +868,17 @@ task_prefix: 'task'
         Assert-True ($ready.ExitCode -eq 0) 'GitHub ready exits successfully with mocked gh'
         Assert-True (@($readyIssues).Count -eq 1 -and [int]$readyIssues[0].number -eq 202) 'GitHub ready returns only issues with project status Ready'
 
+        $state = Get-GitHubMockState $toolsDir
+        $readyIssue = @($state.issues | Where-Object { [int]$_.number -eq 202 })[0]
+        $readyIssue.body = "Ready item`n`n## Dependencies`n- Blocked by: #203"
+        $readyProjectItem = @($state.project.items | Where-Object { [int]$_.content.number -eq 202 })[0]
+        $readyProjectItem.content.body = $readyIssue.body
+        Write-Utf8File (Join-Path $toolsDir 'gh-state.json') ($state | ConvertTo-Json -Depth 20)
+        $blockedReady = Invoke-AgentX $githubRoot @('ready', '--json')
+        $blockedReadyIssues = if ($blockedReady.Output.Trim()) { @($blockedReady.Output | ConvertFrom-Json -Depth 10) } else { @() }
+        Assert-True ($blockedReady.ExitCode -eq 0) 'GitHub ready exits successfully when a Ready issue has blockers'
+        Assert-True ($blockedReadyIssues.Count -eq 0) 'GitHub ready excludes Ready issues blocked by an open issue'
+
         $ghCreate = Invoke-AgentX $githubRoot @('issue', 'create', '--title', '[Story] GitHub Create', '--body', 'GitHub body', '--labels', 'type:story,priority:p2')
         $state = Get-GitHubMockState $toolsDir
         $createdIssue = @($state.issues | Where-Object { $_.title -eq '[Story] GitHub Create' } | Select-Object -First 1)[0]

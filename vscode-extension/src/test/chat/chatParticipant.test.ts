@@ -10,6 +10,7 @@ import {
   handleAgentXChatRequest,
   resetChatParticipantStateForTests,
 } from '../../chat/chatParticipant';
+import { AgentXContext } from '../../agentxContext';
 
 describe('chatParticipant', () => {
   let tmpDir: string;
@@ -640,9 +641,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'run engineer implement the login fix' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'run engineer implement the login fix' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -871,9 +872,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'run engineer implement the login fix' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'run engineer implement the login fix' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     assert.deepEqual(pending, {
@@ -885,6 +886,48 @@ describe('chatParticipant', () => {
     assert.ok(response.getMarkdown().includes('Clarification Discussion'));
     assert.ok(response.getMarkdown().includes('Escalated for human input: Clarification not resolved after 6 iterations.'));
     assert.ok(response.getMarkdown().includes('@agentx continue'));
+  });
+
+  it('renders an AgentX error when pending clarification persistence fails', async () => {
+    const response = createMockResponseStream();
+    const agentx = {
+      checkInitialized: async () => true,
+      runCliStreaming: async (
+        _subcommand: string,
+        _cliArgs: string[],
+        onLine?: (line: string, source: 'stdout' | 'stderr') => void,
+      ) => {
+        onLine?.('  [HUMAN REQUIRED SESSION] engineer-20260309120000-abcd', 'stdout');
+        return 'Need your guidance.';
+      },
+      setPendingClarification: async () => { throw new Error('persistence failed'); },
+      clearPendingClarification: async () => undefined,
+    };
+
+    await handleAgentXChatRequest(
+      { prompt: 'run engineer implement the login fix' } as any,
+      response as any,
+      agentx as any,
+    );
+
+    assert.ok(response.getMarkdown().includes('**AgentX error:** persistence failed'));
+  });
+
+  it('renders an AgentX error when pending clarification clearing fails', async () => {
+    const response = createMockResponseStream();
+    const agentx = {
+      checkInitialized: async () => true,
+      runCliStreaming: async () => 'Final answer from AgentX',
+      clearPendingClarification: async () => { throw new Error('clear failed'); },
+    };
+
+    await handleAgentXChatRequest(
+      { prompt: 'run engineer implement the login fix' } as any,
+      response as any,
+      agentx as any,
+    );
+
+    assert.ok(response.getMarkdown().includes('**AgentX error:** clear failed'));
   });
 
   it('summarizes large output in chat and writes the full transcript to the output channel', async () => {
