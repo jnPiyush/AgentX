@@ -209,7 +209,7 @@ foreach ($routerFile in @('AGENTS.md', 'CLAUDE.md', 'Skills.md')) {
 # Version stamp
 $stamp = [ordered]@{
   plugin      = 'agentx-copilot-cli-user'
-  version     = '8.7.0'
+  version     = '8.7.1'
   installedAt = (Get-Date).ToUniversalTime().ToString('o')
   source      = $Source
   mcpRegistered = [bool]$RegisterMcp

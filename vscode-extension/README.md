@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.7.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-8.7.1-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -346,6 +346,15 @@ The extension registers 15 declarative chat agents, each mapped to an AgentX rol
 ---
 
 ## Recent Changes
+
+### 8.7.1
+
+- Hardened fixed-source release recovery with tag, release-target, source-version, master-reachability, and checkout-SHA validation before repository scripts execute.
+- Added SBOMs, SLSA provenance, and recovery-source attestations to recovered VSIX and MCP artifacts.
+- Required Marketplace publication to verify provenance and the exact embedded publisher, extension name, and version while isolating the publish-only PAT to the final upload step.
+- Fixed clean release packaging by installing extension dependencies before bundled asset synchronization.
+- Made stamped-version release detection work for both linear and merge commits.
+- Made version stamping portable across LF and CRLF package locks.
 
 ### 8.7.0
 

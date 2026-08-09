@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Structured AI software delivery for GitHub Copilot, Claude, OpenAI, local models, and the CLI.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.7.0"><img src="https://img.shields.io/badge/Version-8.7.0-b11f4b?style=for-the-badge" alt="Version 8.7.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.7.1"><img src="https://img.shields.io/badge/Version-8.7.1-b11f4b?style=for-the-badge" alt="Version 8.7.1"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -288,17 +288,16 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 8.7.0
+## New In 8.7.1
 
-This release combines the work from issues [#400](https://github.com/jnPiyush/AgentX/issues/400), [#401](https://github.com/jnPiyush/AgentX/issues/401), [#402](https://github.com/jnPiyush/AgentX/issues/402), and [#403](https://github.com/jnPiyush/AgentX/issues/403):
+This patch release hardens the release path added after `8.7.0`:
 
-- Fabric Engineer and Power Platform Builder become core visible agents
-- 26-agent / 130-skill inventory with refreshed routing and distribution parity
-- cost-aware infrastructure governance and deterministic naming
-- hardened WhatsApp companion
-- deterministic 100-point skill-quality rubric
-- provider, supply-chain, SSRF, and evaluation hardening
-- reorganized product README and current public landing page
+- fixed-source recovery validates tag, release target, source version, master reachability, and checkout SHA before executing repository scripts
+- recovered VSIX and MCP artifacts include SBOMs, SLSA provenance, and recovery-source attestations
+- Marketplace publication verifies provenance plus the exact embedded publisher, extension name, and version without exposing the publish-only PAT to earlier steps
+- clean release jobs install extension dependencies before synchronizing bundled runtime assets
+- stamped-version detection works for both linear and merge commits
+- version stamping supports both LF and CRLF package locks
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

@@ -80,8 +80,17 @@ Assert-FileContains "scripts/stamp-version.js" "stampMcpPackage\(targetVersion\)
 Assert-FileContains "scripts/stamp-version.js" "landing page release version" "version stamper updates the public landing page"
 Assert-FileContains "scripts/stamp-version.js" "install-user\.ps1" "version stamper updates user-level PowerShell installer"
 Assert-FileContains "scripts/stamp-version.js" "install-user\.sh" "version stamper updates user-level bash installer"
+$stampVersionOutput = & node (Join-Path $script:root "tests/stamp-version-behavior.js") 2>&1
+Assert-True ($LASTEXITCODE -eq 0) "version stamper supports LF and CRLF package locks"
+if ($LASTEXITCODE -ne 0) {
+ $stampVersionOutput | ForEach-Object { Write-Host "   $_" -ForegroundColor DarkGray }
+}
 Assert-FileContains "scripts/stamp-package-version.js" "serverPattern" "MCP version stamper updates reported server identity"
 Assert-FileContains "scripts/stamp-package-version.js" "' },\)" "MCP version stamper matches the server declaration comma"
+Assert-FileContains ".github/workflows/auto-release.yml" "diff-tree --root --no-commit-id --name-only -r -m" "auto-release detects stamped versions in merge commits"
+Assert-FileContains ".github/workflows/publish-marketplace.yml" "VSIX identity mismatch" "Marketplace publish validates VSIX manifest identity"
+Assert-FileContains ".github/workflows/publish-marketplace.yml" 'VSIX_FILE="agentx-\$\{EXPECTED_VERSION\}\.vsix"' "Marketplace publish selects the exact versioned VSIX"
+Assert-FileContains ".github/workflows/quality-gates.yml" "node tests/stamp-version-behavior.js" "PR quality gates run version stamper regression coverage"
 Assert-FileContains ".github/workflows/weekly-status.yml" "steps\.tokens\.outcome" "weekly status reports canonical token-check outcome"
 Assert-FileContains ".github/workflows/weekly-status.yml" "continue-on-error: true" "weekly status continues after token violations to generate the report"
 Assert-FileContains "packs/agentx-power-platform-builder/templates/SOLUTION-MANIFEST-TEMPLATE.md" '```xml' "Power Platform solution manifest uses a fenced XML block"

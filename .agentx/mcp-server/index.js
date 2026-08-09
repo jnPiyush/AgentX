@@ -330,7 +330,7 @@ const TOOL_BY_NAME = Object.fromEntries(TOOLS.map((t) => [t.name, t]));
 // ---------- MCP wiring ----------
 
 const server = new Server(
-  { name: 'agentx', version: '8.7.0' },
+  { name: 'agentx', version: '8.7.1' },
   { capabilities: { tools: {} } }
 );
 

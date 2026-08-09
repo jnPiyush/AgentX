@@ -132,6 +132,9 @@ jobs:
         shell: pwsh
         run: ./tests/skill-rubric-behavior.ps1
 
+      - name: Version Stamper Behavior
+        run: node tests/stamp-version-behavior.js
+
       - name: WhatsApp Companion Quality Gate
         working-directory: companions/whatsapp
         run: |
