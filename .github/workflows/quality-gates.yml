@@ -135,6 +135,18 @@ jobs:
       - name: Version Stamper Behavior
         run: node tests/stamp-version-behavior.js
 
+      - name: Source Syntax Behavior
+        shell: pwsh
+        run: ./tests/source-syntax-behavior.ps1
+
+      - name: Restored Generator Smoke
+        shell: pwsh
+        run: ./tests/restored-generator-smoke.ps1
+
+      - name: Scrub Behavior
+        shell: pwsh
+        run: ./tests/scrub-behavior.ps1
+
       - name: WhatsApp Companion Quality Gate
         working-directory: companions/whatsapp
         run: |

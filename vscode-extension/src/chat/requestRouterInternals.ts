@@ -85,6 +85,100 @@ function renderPlainTextMarkdown(title: string, body: string, followup?: Readonl
   return lines.join('\n');
 }
 
+interface StreamingAgentRun {
+  readonly output: string;
+  readonly pendingSessionId: string;
+  readonly visibleDiscussionLines: string[];
+}
+
+async function executeStreamingAgentRun(
+  response: vscode.ChatResponseStream,
+  agentx: AgentXContext,
+  progressMessage: string,
+  cliArgs: readonly string[],
+  outputTitle: string,
+): Promise<StreamingAgentRun> {
+  response.progress(progressMessage);
+  let pendingSessionId = '';
+  const visibleDiscussionLines: string[] = [];
+  const output = await agentx.runCliStreaming(
+    'run',
+    [...cliArgs],
+    (line) => {
+      const normalized = normalizeCliLine(line);
+      const sessionMatch = normalized.match(HUMAN_REQUIRED_SESSION_PATTERN);
+      if (sessionMatch) {
+        pendingSessionId = sessionMatch[1].trim();
+      }
+      if (normalized && shouldSurfaceCliLine(normalized)) {
+        response.progress(normalized);
+      }
+      if (normalized && shouldKeepDiscussionLineInChat(normalized)) {
+        visibleDiscussionLines.push(normalized);
+      }
+    },
+    { AGENTX_NONINTERACTIVE_HUMAN: '1' },
+  );
+
+  writeOutputToChannel(outputTitle, output);
+  return { output, pendingSessionId, visibleDiscussionLines };
+}
+
+async function finishStreamingAgentRun(
+  response: vscode.ChatResponseStream,
+  agentx: AgentXContext,
+  run: StreamingAgentRun,
+  agentName: string,
+  prompt: string,
+): Promise<vscode.ChatResult> {
+  if (run.pendingSessionId) {
+    await updatePendingClarification(agentx, {
+      sessionId: run.pendingSessionId,
+      agentName,
+      prompt,
+      humanPrompt: stripAnsi(run.output),
+    });
+    response.markdown(
+      `${formatChatVisibleOutput(run.output, run.visibleDiscussionLines)}\n\n${buildContinueGuidance(agentName)}`,
+    );
+    return {};
+  }
+
+  await clearPendingClarification(agentx);
+  response.markdown(formatChatVisibleOutput(run.output, run.visibleDiscussionLines));
+  return {};
+}
+
+async function runStreamingAgentCommand(
+  response: vscode.ChatResponseStream,
+  agentx: AgentXContext,
+  agentName: string,
+  prompt: string,
+  progressMessage: string,
+  cliArgs: readonly string[],
+  outputTitle: string,
+): Promise<vscode.ChatResult> {
+  if (!hasWorkspaceCliRuntime(agentx)) {
+    response.markdown(renderMissingRuntimeMessage());
+    return {};
+  }
+
+  try {
+    const run = await executeStreamingAgentRun(
+      response,
+      agentx,
+      progressMessage,
+      cliArgs,
+      outputTitle,
+    );
+    return await finishStreamingAgentRun(response, agentx, run, agentName, prompt);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    response.markdown(`**AgentX error:** ${msg}`);
+    return {};
+  }
+}
+
 export function resetChatRouterInternalStateForTests(): void {
   chatOutputChannel = undefined;
 }
@@ -95,55 +189,15 @@ export async function runAgentCommand(
   agentName: string,
   task: string,
 ): Promise<vscode.ChatResult> {
-  if (!hasWorkspaceCliRuntime(agentx)) {
-    response.markdown(renderMissingRuntimeMessage());
-    return {};
-  }
-
-  try {
-    response.progress(`Running ${agentName} agent...`);
-    let pendingSessionId = '';
-    const visibleDiscussionLines: string[] = [];
-    const output = await agentx.runCliStreaming(
-      'run',
-      [agentName, task],
-      (line) => {
-        const normalized = normalizeCliLine(line);
-        const sessionMatch = normalized.match(HUMAN_REQUIRED_SESSION_PATTERN);
-        if (sessionMatch) {
-          pendingSessionId = sessionMatch[1].trim();
-        }
-        if (normalized && shouldSurfaceCliLine(normalized)) {
-          response.progress(normalized);
-        }
-        if (normalized && shouldKeepDiscussionLineInChat(normalized)) {
-          visibleDiscussionLines.push(normalized);
-        }
-      },
-      { AGENTX_NONINTERACTIVE_HUMAN: '1' },
-    );
-
-    writeOutputToChannel(`AgentX Chat Run: ${agentName}`, output);
-
-    if (pendingSessionId) {
-      await updatePendingClarification(agentx, {
-        sessionId: pendingSessionId,
-        agentName,
-        prompt: task,
-        humanPrompt: stripAnsi(output),
-      });
-      response.markdown(`${formatChatVisibleOutput(output, visibleDiscussionLines)}\n\n${buildContinueGuidance(agentName)}`);
-      return {};
-    }
-
-    await clearPendingClarification(agentx);
-    response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    response.markdown(`**AgentX error:** ${msg}`);
-  }
-
-  return {};
+  return runStreamingAgentCommand(
+    response,
+    agentx,
+    agentName,
+    task,
+    `Running ${agentName} agent...`,
+    [agentName, task],
+    `AgentX Chat Run: ${agentName}`,
+  );
 }
 
 export async function resumePendingClarification(
@@ -152,58 +206,18 @@ export async function resumePendingClarification(
   pending: PendingClarification,
   guidance: string,
 ): Promise<vscode.ChatResult> {
-  if (!hasWorkspaceCliRuntime(agentx)) {
-    response.markdown(renderMissingRuntimeMessage());
-    return {};
-  }
-
-  try {
-    response.progress(`Resuming ${pending.agentName} agent...`);
-    let nextPendingSessionId = '';
-    const visibleDiscussionLines: string[] = [];
-    const output = await agentx.runCliStreaming(
-      'run',
-      [
-        '--resume-session', pending.sessionId,
-        '--clarification-response', guidance,
-      ],
-      (line) => {
-        const normalized = normalizeCliLine(line);
-        const sessionMatch = normalized.match(HUMAN_REQUIRED_SESSION_PATTERN);
-        if (sessionMatch) {
-          nextPendingSessionId = sessionMatch[1].trim();
-        }
-        if (normalized && shouldSurfaceCliLine(normalized)) {
-          response.progress(normalized);
-        }
-        if (normalized && shouldKeepDiscussionLineInChat(normalized)) {
-          visibleDiscussionLines.push(normalized);
-        }
-      },
-      { AGENTX_NONINTERACTIVE_HUMAN: '1' },
-    );
-
-    writeOutputToChannel(`AgentX Chat Resume: ${pending.agentName}`, output);
-
-    if (nextPendingSessionId) {
-      await updatePendingClarification(agentx, {
-        sessionId: nextPendingSessionId,
-        agentName: pending.agentName,
-        prompt: pending.prompt,
-        humanPrompt: stripAnsi(output),
-      });
-      response.markdown(`${formatChatVisibleOutput(output, visibleDiscussionLines)}\n\n${buildContinueGuidance(pending.agentName)}`);
-      return {};
-    }
-
-    await clearPendingClarification(agentx);
-    response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    response.markdown(`**AgentX error:** ${msg}`);
-  }
-
-  return {};
+  return runStreamingAgentCommand(
+    response,
+    agentx,
+    pending.agentName,
+    pending.prompt,
+    `Resuming ${pending.agentName} agent...`,
+    [
+      '--resume-session', pending.sessionId,
+      '--clarification-response', guidance,
+    ],
+    `AgentX Chat Resume: ${pending.agentName}`,
+  );
 }
 
 export async function getPendingClarification(

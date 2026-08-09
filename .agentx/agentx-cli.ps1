@@ -3738,25 +3738,30 @@ function Get-IssueType($issue) {
     return 'story'
 }
 
-function Invoke-ReadyCmd {
-    $all = Get-AllIssues
+function Get-ReadyIssues([array]$allIssues) {
     $providerInfo = Get-AgentXProviderInfo
-    $usesExplicitReadyState = $providerInfo.readyUsesExplicitReadyState -or ($providerInfo.name -eq 'github' -and (Test-GitHubProjectConfigured))
-    $open = if ($usesExplicitReadyState) {
-        @($all | Where-Object { $_.state -eq 'open' -and $_.status -eq 'Ready' })
+    $usesExplicitReadyState = $providerInfo.readyUsesExplicitReadyState -or
+        ($providerInfo.name -eq 'github' -and (Test-GitHubProjectConfigured))
+    $openIssues = if ($usesExplicitReadyState) {
+        @($allIssues | Where-Object { $_.state -eq 'open' -and $_.status -eq 'Ready' })
     } else {
-        @($all | Where-Object { $_.state -eq 'open' })
+        @($allIssues | Where-Object { $_.state -eq 'open' })
     }
 
-    $ready = @($open | Where-Object {
+    $openIssueIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($issue in $allIssues) {
+        if ($issue.state -eq 'open') { [void]$openIssueIds.Add([string]$issue.number) }
+    }
+
+    return @($openIssues | Where-Object {
         $deps = Get-IssueDeps $_
-        $blocked = $false
-        foreach ($bid in $deps.blocked_by) {
-            $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
-            if ($b -and $b.state -eq 'open') { $blocked = $true }
-        }
-        -not $blocked
+        -not @($deps.blocked_by | Where-Object { $openIssueIds.Contains([string]$_) }).Count
     } | Sort-Object { Get-IssuePriority $_ })
+}
+
+function Invoke-ReadyCmd {
+    $all = Get-AllIssues
+    $ready = Get-ReadyIssues $all
 
     if ($Script:JsonOutput) { $ready | ConvertTo-Json -Depth 5; return }
     if ($ready.Count -eq 0) { Write-CliOutput 'No ready work found.'; return }
@@ -6762,25 +6767,8 @@ function Invoke-WatchCmd {
             $watchState.cycles++
             $watchState.lastPoll = Get-Timestamp
 
-            # Poll for ready items
             $all = Get-AllIssues
-            $providerInfo = Get-AgentXProviderInfo
-            $usesExplicitReadyState = $providerInfo.readyUsesExplicitReadyState -or ($providerInfo.name -eq 'github' -and (Test-GitHubProjectConfigured))
-            $open = if ($usesExplicitReadyState) {
-                @($all | Where-Object { $_.state -eq 'open' -and $_.status -eq 'Ready' })
-            } else {
-                @($all | Where-Object { $_.state -eq 'open' })
-            }
-
-            $ready = @($open | Where-Object {
-                $deps = Get-IssueDeps $_
-                $blocked = $false
-                foreach ($bid in $deps.blocked_by) {
-                    $b = $all | Where-Object { $_.number -eq $bid } | Select-Object -First 1
-                    if ($b -and $b.state -eq 'open') { $blocked = $true }
-                }
-                -not $blocked
-            } | Sort-Object { Get-IssuePriority $_ })
+            $ready = Get-ReadyIssues $all
 
             if ($ready.Count -gt 0) {
                 Write-CliOutput "$($C.c)  [$((Get-Date).ToString('HH:mm:ss'))] Found $($ready.Count) ready item(s):$($C.n)"
