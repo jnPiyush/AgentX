@@ -87,12 +87,13 @@ finally {
 }
 
 $currentDocs = @(
-    'AGENTS.md', 'README.md', 'docs/QUALITY_SCORE.md', 'vscode-extension/README.md'
+    'AGENTS.md', 'README.md', 'docs/QUALITY_SCORE.md', 'vscode-extension/README.md',
+    'packs/agentx-copilot-cli/install.ps1'
 )
 $staleCurrentDocs = @($currentDocs | Where-Object {
-        (Get-Content (Join-Path $repoRoot $_) -Raw) -match '128 skills|128 production|Architecture \| 6'
+        (Get-Content (Join-Path $repoRoot $_) -Raw) -match '128 skills|128 production|Skills\s+: 130 across|Architecture \| 6'
     })
-Assert-True ($staleCurrentDocs.Count -eq 0) 'current source documentation contains no stale 128/architecture-6 inventory'
+Assert-True ($staleCurrentDocs.Count -eq 0) 'current source documentation and installer contain no stale skill inventory counts'
 
 Write-Host "Results: $passed passed, $failed failed"
 exit $(if ($failed -eq 0) { 0 } else { 1 })

@@ -545,7 +545,7 @@ Write-Host " Files copied  : $totalCopied" -ForegroundColor White
 Write-Host " Files skipped : $totalSkipped (already exist, use -Force to overwrite)" -ForegroundColor DarkGray
 Write-Host ""
  Write-Host " Agents        : 26 (15 external + 11 internal)" -ForegroundColor White
- Write-Host " Skills        : 130 across 14 categories" -ForegroundColor White
+ Write-Host " Skills        : 131 across 14 categories" -ForegroundColor White
  Write-Host " Instructions  : 7 (auto-applied by file pattern)" -ForegroundColor White
  Write-Host " Prompts       : 22 reusable templates" -ForegroundColor White
 if ($IncludeCli) {
