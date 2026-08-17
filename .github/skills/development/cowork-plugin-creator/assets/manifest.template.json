@@ -1,0 +1,47 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.28/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.28",
+  "version": "1.0.0",
+  "id": "REPLACE-WITH-A-STABLE-GUID",
+  "developer": {
+    "name": "Replace with the owning team",
+    "websiteUrl": "https://replace.example.com",
+    "privacyUrl": "https://replace.example.com/privacy",
+    "termsOfUseUrl": "https://replace.example.com/terms"
+  },
+  "name": {
+    "short": "Replace with a short plugin name",
+    "full": "Replace with the full plugin name for Copilot Cowork"
+  },
+  "description": {
+    "short": "Replace with a one-line capability summary",
+    "full": "Replace with a description of the business capability and the skills this plugin provides."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#2B579A",
+  "agentSkills": [
+    { "folder": "./skills/replace-with-skill-folder" }
+  ],
+  "agentConnectors": [
+    {
+      "id": "replace-with-connector-id",
+      "displayName": "Replace with the connector display name",
+      "description": "Replace with what the connector provides access to",
+      "toolSource": {
+        "remoteMcpServer": {
+          "mcpServerUrl": "https://replace.example.com/mcp",
+          "mcpToolDescription": {
+            "file": "./tools/replace-with-tool-description.json"
+          },
+          "authorization": {
+            "type": "OAuthPluginVault",
+            "referenceId": "REPLACE-WITH-OAUTH-REGISTRATION-ID"
+          }
+        }
+      }
+    }
+  ]
+}

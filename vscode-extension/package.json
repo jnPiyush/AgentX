@@ -677,6 +677,9 @@
         "path": "./.github/agentx/prompts/code-review.prompt.md"
       },
       {
+        "path": "./.github/agentx/prompts/cowork-plugin-create.prompt.md"
+      },
+      {
         "path": "./.github/agentx/prompts/cowork-skill-create.prompt.md"
       },
       {
@@ -893,6 +896,9 @@
       },
       {
         "path": "./.github/agentx/skills/development/configuration/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/cowork-plugin-creator/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/development/cowork-skill-creator/SKILL.md"

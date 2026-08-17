@@ -26,7 +26,7 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 | **Copilot Chat Participant** | Native `@agentx` chat participant for triggering routines, brainstorm, learnings, and compound-loop inspection. |
 | **Karpathy Guidelines (built-in)** | The `karpathy-guidelines` skill is auto-loaded for Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist -- enforcing *think before coding*, surgical diffs, assumption audits, and goal-driven execution to block common LLM coding pitfalls at authoring and review time. |
 | **Workspace Setup Wizard** | Local-runtime-first setup with optional remote adapters for GitHub or Azure DevOps and configurable LLM adapters. |
-| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (131 production skills). |
+| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (132 production skills). |
 | **50 Commands** | Workflow, loop management, knowledge compounding, AI evaluation, task bundles, bounded parallel delivery, and plugin management from the Command Palette. |
 | **Knowledge Compounding** | Ranked learnings, compound-loop visibility, learning-capture scaffolds, durable review-finding promotion, and agent-native review parity checks. |
 | **AI Evaluation** | Scaffold, run, and inspect AI evaluation contracts with rubric-based quality gates. |
@@ -232,7 +232,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | **Work** | Workflow next step, brainstorm guidance, planning and review learnings, compound loop, learning capture, ready queue, and workflow rollout surfaces. |
 | **Status** | Agent status, loop state, dependency checks, AI evaluation, review findings, task bundles, bounded parallel runs, and digests. |
 | **Templates** | All output templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence). |
-| **Skills** | 131 production skills across 14 categories (architecture, development, languages, operations, infrastructure, data, documents, AI systems, design, testing, domain, product, diagrams, low-code). |
+| **Skills** | 132 production skills across 14 categories (architecture, development, languages, operations, infrastructure, data, documents, AI systems, design, testing, domain, product, diagrams, low-code). |
 
 ---
 
@@ -364,7 +364,7 @@ The extension registers 15 declarative chat agents, each mapped to an AgentX rol
 - Added fail-closed Power Platform terminal enforcement, domain routing, canonical handoffs, installer parity, and adversarial regression coverage.
 - Hardened the local WhatsApp companion with read-only defaults, confirmation-gated mutation, replay and voice safeguards, bounded CLI execution, sandboxed Chromium, and zero production audit findings.
 - Added a deterministic 100-point skill-quality rubric with strict YAML, stable JSON evidence, blocking floors, trusted-base changed-skill enforcement, and Windows/POSIX installer parity.
-- Release validation passed: extension coverage and 1013 tests, WhatsApp 23/23 with 90%+ line coverage, skill rubric behavior and 130-skill inventory validation, frontmatter 623/623, and zero HIGH/CRITICAL production dependency findings.
+- Release validation passed at the time of that release: extension coverage and 1013 tests, WhatsApp 23/23 with 90%+ line coverage, skill rubric behavior and 130-skill inventory validation, frontmatter 623/623, and zero HIGH/CRITICAL production dependency findings.
 
 ### 8.4.68
 

@@ -213,9 +213,9 @@
   },
   "capabilities": {
     "agentOrchestration": "Copilot CLI agent definitions with handoffs and body instructions",
-    "skillLibrary": "131 production code skills across 14 categories",
+    "skillLibrary": "132 production code skills across 14 categories",
     "instructionFiles": "7 auto-applied instruction files for language-specific patterns",
-    "promptTemplates": "22 reusable prompt templates for common workflows",
+    "promptTemplates": "23 reusable prompt templates for common workflows",
     "cliUtilities": "Workspace wrapper scripts plus a bundled hidden runtime for issue tracking, loop management, and workflow",
     "iterativeLoop": "Quality loop enforcement via CLI hard gate (Layer 3)"
   },
