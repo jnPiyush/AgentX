@@ -23,7 +23,7 @@ AgentX turns coding agents into a structured delivery team. Specialist roles pla
 | What you get | Current release |
 |:-------------|:----------------|
 | Specialist agents | **26 total**: 15 visible roles and 11 internal sub-agents |
-| Production knowledge | **130 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
+| Production knowledge | **132 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
 | Quality discipline | At least **5 evidenced iterations**, fresh verification, independent review, scrub, and completion gates |
 | Durable artifacts | PRDs, ADRs, specs, UX prototypes, plans, reviews, learnings, issue state, and memory stored in the repository |
 | Runtime surfaces | VS Code, GitHub Copilot Chat, GitHub Copilot CLI, Claude Code, Cursor, PowerShell, and Bash |
@@ -121,7 +121,7 @@ GitHub Ops, ADO Ops, AzDO PRD-to-WIT, Functional Reviewer, Architecture Reviewer
 
 ---
 
-## 130 Production Skills
+## 132 Production Skills
 
 Skills are compact, versioned knowledge packages that load only when the task needs them. Each `SKILL.md` can include scripts, references, and assets.
 
