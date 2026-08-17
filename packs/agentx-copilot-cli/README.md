@@ -73,7 +73,7 @@ your-project/
       internal/
         github-ops.agent.md
         ...
-    skills/                    # 130 skills across 14 categories
+    skills/                    # 131 skills across 14 categories
       architecture/
       development/
       languages/
@@ -82,7 +82,7 @@ your-project/
       ai.instructions.md
       python.instructions.md
       ...
-    prompts/                   # 21 prompt templates
+    prompts/                   # 22 prompt templates
       prd-gen.prompt.md
       code-review.prompt.md
       ...

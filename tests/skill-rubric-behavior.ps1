@@ -207,13 +207,13 @@ Use this fixture for deterministic development-category validation.
 
     $allJson = & $scorer -All -Json 2>$null | Out-String
     $all = $allJson | ConvertFrom-Json -Depth 20
-    Assert-True ($all.total -eq 130) 'all-skills mode scores the complete 130-skill inventory'
+    Assert-True ($all.total -eq 131) 'all-skills mode scores the complete 131-skill inventory'
     Assert-True ($all.blocked -eq 0) 'current inventory has no universal blockers'
     Assert-True ($all.belowMinimum -gt 0) 'current inventory debt remains visible'
 
     $stocktakeJson = & $stocktake -Threshold 0 -Json 2>$null | Out-String
     $stocktakeResult = $stocktakeJson | ConvertFrom-Json -Depth 20
-    Assert-True ($stocktakeResult.total -eq 130) 'stocktake consumes all rubric results'
+    Assert-True ($stocktakeResult.total -eq 131) 'stocktake consumes all rubric results'
     Assert-True ($stocktakeResult.average -gt 0) 'stocktake reports real 100-point scores'
     Assert-True (@($stocktakeResult.ranked | Where-Object score -lt 0).Count -eq 0) 'stocktake has no legacy -1 scores'
 

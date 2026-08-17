@@ -1,4 +1,4 @@
-description: 'Compressed skill index for AI agents. 130 skills across 14 categories. Load only relevant skills per task.'
+description: 'Compressed skill index for AI agents. 131 skills across 14 categories. Load only relevant skills per task.'
 
 # Production Code Skills Index
 
@@ -10,7 +10,7 @@ description: 'Compressed skill index for AI agents. 130 skills across 14 categor
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 130 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 131 skills. Use Quick Reference below.
 
 ---
 
@@ -28,6 +28,7 @@ description: 'Compressed skill index for AI agents. 130 skills across 14 categor
 | **Performance / Scaling** | [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md), [Database](agentx/skills/architecture/database/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Code Optimization / Minimize LOC / Make Elegant** | [Code Optimization](agentx/skills/development/code-optimization/SKILL.md), [Karpathy Guidelines](agentx/skills/development/karpathy-guidelines/SKILL.md), [Core Principles](agentx/skills/architecture/core-principles/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md) |
 | **Documentation** | [Documentation](agentx/skills/development/documentation/SKILL.md) |
+| **Microsoft 365 Copilot Cowork Skill Package** | [Cowork Skill Creator](agentx/skills/development/cowork-skill-creator/SKILL.md), [Skill Creator](agentx/skills/development/skill-creator/SKILL.md) |
 | **Cost Estimation / "what will this cost to run"** | [Cost Analysis](agentx/skills/architecture/cost-analysis/SKILL.md), [Infra Governance](agentx/skills/architecture/infra-governance/SKILL.md), [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md) |
 | **IaC Review / Infra Policy Gate** | [Infra Governance](agentx/skills/architecture/infra-governance/SKILL.md), [Security](agentx/skills/architecture/security/SKILL.md), [Terraform](agentx/skills/infrastructure/terraform/SKILL.md), [Bicep](agentx/skills/infrastructure/bicep/SKILL.md) |
 | **Prototype Topology / Resource Naming** | [Infra Governance](agentx/skills/architecture/infra-governance/SKILL.md), [Cost Analysis](agentx/skills/architecture/cost-analysis/SKILL.md), [Azure](agentx/skills/infrastructure/azure/SKILL.md) |
@@ -100,7 +101,7 @@ description: 'Compressed skill index for AI agents. 130 skills across 14 categor
 
 ---
 
-## Skills Directory (130 skills -- pipe-delimited)
+## Skills Directory (131 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -125,6 +126,7 @@ dev|code-review|agentx/skills/development/code-review/SKILL.md|checklists,automa
 dev|iterative-loop|agentx/skills/development/iterative-loop/SKILL.md|quality-loop,refinement,completion-criteria
 dev|experimentation-loop|agentx/skills/development/experimentation-loop/SKILL.md|metric-driven,benchmark,keep-or-revert,attempt-log,branch-isolation,hill-climb
 dev|skill-creator|agentx/skills/development/skill-creator/SKILL.md|scaffold,validate,maintain-skills
+dev|cowork-skill-creator|agentx/skills/development/cowork-skill-creator/SKILL.md|Microsoft-365-Copilot,Cowork,co-work,coworker-skill,SKILL.md,zip,package
 dev|scrub|agentx/skills/development/scrub/SKILL.md|comment-rot,obvious-restate,ai-filler,stale-byline,generic-gradient,empty-catch,presentation-cleanup
 dev|token-optimizer|agentx/skills/development/token-optimizer/SKILL.md|token-budget,context-window,file-limits,progressive-disclosure
 dev|code-hygiene|agentx/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
@@ -340,5 +342,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 130 skills (arch:8, dev:23, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:12, test:6, domain:7, product:1, diagrams:1, low-code:13)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 131 skills (arch:8, dev:24, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:12, test:6, domain:7, product:1, diagrams:1, low-code:13)
 

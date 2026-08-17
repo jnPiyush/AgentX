@@ -40,7 +40,7 @@ $bundledSkills = @(Get-ChildItem $bundleRoot -Recurse -Filter SKILL.md -File |
         '.github/skills/' + $_.FullName.Substring($bundleRoot.Length + 1).Replace('\', '/')
     } | Sort-Object)
 
-Assert-True ($sourceSkills.Count -eq 130) 'canonical source contains 130 skills'
+Assert-True ($sourceSkills.Count -eq 131) 'canonical source contains 131 skills'
 Assert-True ($registry.totalCount -eq $sourceSkills.Count) 'registry total matches canonical source'
 Assert-True (@(Compare-Object $sourceSkills $registrySkills).Count -eq 0) 'registry paths exactly match canonical source'
 Assert-True (@(Compare-Object $sourceSkills $chatSkills).Count -eq 0) 'VS Code chat contributions exactly match canonical source'
@@ -63,7 +63,7 @@ try {
     New-Item -ItemType Directory -Path $installTarget -Force | Out-Null
     & pwsh -NoProfile -File (Join-Path $repoRoot 'packs/agentx-copilot-cli/install.ps1') -Target $installTarget -Source $repoRoot *> $null
     $installedSkills = @(Get-ChildItem (Join-Path $installTarget '.github/skills') -Recurse -Filter SKILL.md -File)
-    Assert-True ($LASTEXITCODE -eq 0 -and $installedSkills.Count -eq 130) 'PowerShell pack installer installs exactly 130 skills'
+    Assert-True ($LASTEXITCODE -eq 0 -and $installedSkills.Count -eq 131) 'PowerShell pack installer installs exactly 131 skills'
     Assert-True (@($installedSkills | Where-Object { $_.FullName -match '\\.github\\skills\\.*\\.github\\skills\\' }).Count -eq 0) 'PowerShell pack installer does not recursively nest destination paths'
     Assert-True (Test-Path (Join-Path $installTarget '.github/skills/architecture/cost-analysis/scripts/estimate-cost.ps1')) 'PowerShell pack installer preserves nested skill scripts'
     Assert-True (Test-Path (Join-Path $installTarget '.github/skills/architecture/infra-governance/assets/workload-topologies.json')) 'PowerShell pack installer preserves nested skill assets'
