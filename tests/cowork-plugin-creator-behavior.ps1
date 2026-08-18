@@ -407,6 +407,86 @@ if ((Test-Path $PackageScript) -and (Test-Path $PromptPath)) {
         Remove-Item -LiteralPath $DcrRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 
+    $HygieneRoot = New-TempRoot
+    try {
+        $HygienePlugin = New-PluginFixture -Root $HygieneRoot
+        $HygieneSkill = Join-Path $HygienePlugin 'skills/contract-analysis'
+        '' | Set-Content -LiteralPath (Join-Path $HygienePlugin '.gitkeep') -Encoding utf8
+        '' | Set-Content -LiteralPath (Join-Path $HygieneSkill 'references/.gitkeep') -Encoding utf8
+        'ignored' | Set-Content -LiteralPath (Join-Path $HygienePlugin '.gitignore') -Encoding utf8
+        '* text=auto' | Set-Content -LiteralPath (Join-Path $HygienePlugin '.gitattributes') -Encoding utf8
+        'finder' | Set-Content -LiteralPath (Join-Path $HygieneSkill '.DS_Store') -Encoding utf8
+        'explorer' | Set-Content -LiteralPath (Join-Path $HygieneSkill 'Thumbs.db') -Encoding utf8
+        New-Item -ItemType Directory -Path (Join-Path $HygienePlugin 'node_modules/left-pad') -Force | Out-Null
+        'module' | Set-Content -LiteralPath (Join-Path $HygienePlugin 'node_modules/left-pad/index.js') -Encoding utf8
+        New-Item -ItemType Directory -Path (Join-Path $HygienePlugin '.venv/lib') -Force | Out-Null
+        'venv' | Set-Content -LiteralPath (Join-Path $HygienePlugin '.venv/lib/site.py') -Encoding utf8
+        New-Item -ItemType Directory -Path (Join-Path $HygieneSkill 'references/__pycache__') -Force | Out-Null
+        'cached' | Set-Content -LiteralPath (Join-Path $HygieneSkill 'references/__pycache__/loader.pyc') -Encoding utf8
+
+        $HygieneOutput = Join-Path $HygieneRoot 'hygiene-plugin.zip'
+        & $PackageScript -PluginPath $HygienePlugin -OutputPath $HygieneOutput | Out-Null
+        Assert-True (Test-Path $HygieneOutput) 'scaffolding placeholders do not block packaging'
+
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $HygieneArchive = [IO.Compression.ZipFile]::OpenRead($HygieneOutput)
+        try {
+            $HygieneEntries = @($HygieneArchive.Entries | ForEach-Object { $_.FullName -replace '\\', '/' })
+        }
+        finally {
+            $HygieneArchive.Dispose()
+        }
+
+        Assert-True (-not ($HygieneEntries | Where-Object { $_ -like '*.gitkeep' })) 'archive excludes .gitkeep placeholders'
+        Assert-True (-not ($HygieneEntries | Where-Object { $_ -like '*.gitignore' })) 'archive excludes version-control metadata files'
+        Assert-True (-not ($HygieneEntries | Where-Object { $_ -like '*.gitattributes' })) 'archive excludes git attribute files'
+        Assert-True (-not ($HygieneEntries | Where-Object { $_ -like '*.DS_Store' -or $_ -like '*Thumbs.db' })) 'archive excludes operating system metadata files'
+        Assert-True (-not ($HygieneEntries | Where-Object { $_ -like 'node_modules/*' -or $_ -like '.venv/*' })) 'archive excludes dependency and virtual environment directories'
+        Assert-True (-not ($HygieneEntries | Where-Object { $_ -like '*__pycache__*' })) 'archive excludes build cache directories'
+        Assert-True ($HygieneEntries -contains 'skills/contract-analysis/references/clause-taxonomy.md') 'archive keeps real companion files'
+    }
+    finally {
+        Remove-Item -LiteralPath $HygieneRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    $CompanionRoot = New-TempRoot
+    try {
+        $CompanionPlugin = New-PluginFixture -Root $CompanionRoot
+        $CompanionDir = Join-Path $CompanionPlugin 'skills/contract-analysis/references'
+        2..20 | ForEach-Object {
+            "Reference $_." | Set-Content -LiteralPath (Join-Path $CompanionDir "reference-$_.md") -Encoding utf8
+        }
+        '' | Set-Content -LiteralPath (Join-Path $CompanionDir '.gitkeep') -Encoding utf8
+
+        $AtLimitOutput = Join-Path $CompanionRoot 'at-limit.zip'
+        & $PackageScript -PluginPath $CompanionPlugin -OutputPath $AtLimitOutput | Out-Null
+        Assert-True (Test-Path $AtLimitOutput) 'excluded placeholders do not count toward the companion limit'
+
+        'Reference 21.' | Set-Content -LiteralPath (Join-Path $CompanionDir 'reference-21.md') -Encoding utf8
+        $OverLimitOutput = Join-Path $CompanionRoot 'over-limit.zip'
+        $OverLimitRejected = $false
+        try { & $PackageScript -PluginPath $CompanionPlugin -OutputPath $OverLimitOutput *> $null }
+        catch { $OverLimitRejected = $true }
+        Assert-True ($OverLimitRejected -and -not (Test-Path $OverLimitOutput)) 'companion file limit is still enforced for real files'
+    }
+    finally {
+        Remove-Item -LiteralPath $CompanionRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    Assert-Rejected {
+        param($PluginDir)
+        $Duplicate = Join-Path $PluginDir 'skills/legacy/contract-analysis'
+        New-Item -ItemType Directory -Path $Duplicate -Force | Out-Null
+        Set-PluginSkillFile (Join-Path $Duplicate 'SKILL.md') 'contract-analysis' 'Legacy copy of the contract clause analysis skill.'
+        Edit-PluginManifest $PluginDir {
+            param($M)
+            $M.agentSkills = @(
+                [pscustomobject]@{ folder = './skills/contract-analysis' },
+                [pscustomobject]@{ folder = './skills/legacy/contract-analysis' }
+            )
+        }
+    } 'duplicate skill name across folders is rejected'
+
     $LinkRoot = New-TempRoot
     try {
         $LinkPlugin = New-PluginFixture -Root $LinkRoot
@@ -437,6 +517,47 @@ if ((Test-Path $PackageScript) -and (Test-Path $PromptPath)) {
     }
     finally {
         Remove-Item -LiteralPath $LinkRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    $ExcludedLinkRoot = New-TempRoot
+    try {
+        $ExcludedLinkPlugin = New-PluginFixture -Root $ExcludedLinkRoot
+        $ExcludedTarget = Join-Path $ExcludedLinkRoot 'outside'
+        New-Item -ItemType Directory -Path $ExcludedTarget -Force | Out-Null
+        'secret material' | Set-Content -LiteralPath (Join-Path $ExcludedTarget 'secret.txt') -Encoding utf8
+
+        $ExcludedJunction = Join-Path $ExcludedLinkPlugin 'node_modules'
+        $ExcludedLinkCreated = $false
+        try {
+            New-Item -ItemType Junction -Path $ExcludedJunction -Target $ExcludedTarget -ErrorAction Stop | Out-Null
+            $ExcludedLinkCreated = $true
+        }
+        catch {
+            $null = $_
+        }
+
+        if ($ExcludedLinkCreated) {
+            $ExcludedLinkOutput = Join-Path $ExcludedLinkRoot 'excluded-link-plugin.zip'
+            & $PackageScript -PluginPath $ExcludedLinkPlugin -OutputPath $ExcludedLinkOutput | Out-Null
+            Assert-True (Test-Path $ExcludedLinkOutput) 'junction named after an excluded directory is skipped rather than rejected'
+
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $ExcludedLinkArchive = [IO.Compression.ZipFile]::OpenRead($ExcludedLinkOutput)
+            try {
+                $ExcludedLinkEntries = @($ExcludedLinkArchive.Entries | ForEach-Object { $_.FullName -replace '\\', '/' })
+            }
+            finally {
+                $ExcludedLinkArchive.Dispose()
+            }
+
+            Assert-True (-not ($ExcludedLinkEntries | Where-Object { $_ -like '*secret.txt' })) 'excluded junction target is never followed into the archive'
+        }
+        else {
+            Write-Host '[SKIP] junction named after an excluded directory (link creation unavailable)'
+        }
+    }
+    finally {
+        Remove-Item -LiteralPath $ExcludedLinkRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     $BoundaryRoot = New-TempRoot

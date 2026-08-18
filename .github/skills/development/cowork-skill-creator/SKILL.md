@@ -64,7 +64,7 @@ Cowork skill requested?
 
 1. Define the skill name, purpose, activation phrases, authorized inputs, ordered process, fixed output, boundaries, and final quality checks.
 2. Create `SKILL.md`, `assets/`, `references/`, and `scripts/`; every companion directory must contain at least one workflow-specific file.
-3. Keep `SKILL.md` concise. Put output templates in `assets/`, test cases and extended guidance in `references/`, and deterministic checks in `scripts/`.
+3. Keep `SKILL.md` concise and never exceed the maximum of 20000 characters. Put output templates in `assets/`, test cases and extended guidance in `references/`, and deterministic checks in `scripts/`.
 4. Never invent owners, dates, metrics, status, commitments, or sources. Require links or citations when source traceability matters.
 5. Require user review before sending, publishing, deleting, approving, or otherwise taking consequential action.
 
@@ -100,10 +100,14 @@ scripts/
 
 `SKILL.md` must be at the archive root. Do not wrap these entries in an additional parent directory.
 
+The packager excludes `.gitkeep` placeholders, so a directory that holds nothing else is not packaged. Every companion directory needs a real file, not a placeholder.
+
 ## Error Handling
 
 * Missing essential workflow details: ask for the smallest set of missing fields
 * Missing or empty companion directory: add an appropriate file before packaging
+* Symbolic link or junction inside the skill directory: replace it with real files before packaging
+* `SKILL.md` over 20000 characters: move examples, templates, and extended guidance into `assets/`, `references/`, or `scripts/` until it fits
 * Existing output archive: replace it only after validation succeeds
 * Sensitive information: remove it and request a sanitized substitute
 * Unsupported automation: document the manual or human-reviewed step instead of pretending it can run
@@ -122,6 +126,7 @@ scripts/
 
 * [ ] Name is lowercase kebab-case and description clearly states when to activate
 * [ ] Purpose, trigger, inputs, ordered process, output, boundaries, and validation are explicit
+* [ ] `SKILL.md` does not exceed the maximum of 20000 characters
 * [ ] Missing and conflicting information are handled without fabrication
 * [ ] `assets/`, `references/`, and `scripts/` contain appropriate files
 * [ ] Consequential actions require human review

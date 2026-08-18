@@ -46,6 +46,10 @@ Use [Cowork Skill Creator](../cowork-skill-creator/SKILL.md) instead when the de
 | "The connector tool list lives on the server." | Every `remoteMcpServer` requires `mcpToolDescription.file`, and that file must ship inside the zip. |
 | "Zipping the plugin folder is enough." | A wrapper directory breaks upload. `manifest.json` must sit at the archive root. |
 | "Credentials in the skill make testing easier." | Secrets never belong in the package; use `agentConnectors` authorization with a vault `referenceId`. |
+| "Every skill folder in the tree gets picked up." | Only folders listed in `agentSkills` ship as skills. Unregistered stage folders are dead weight in the archive. |
+| "The folder name from the source pipeline is fine as-is." | Names must be lowercase kebab-case. `BE-sow-generator` fails; `sow-generator` passes. |
+| "The skill can install what it needs at runtime." | Author for a managed container: assume no terminal and no package installation. Ship instructions and templates, not setup steps. |
+| "Placeholder and repo files must be cleaned up by hand." | The packager drops `.gitkeep`, version-control metadata, and build caches from both the archive and the companion count. |
 
 ## Decision Tree
 
@@ -68,6 +72,19 @@ Cowork plugin requested?
 4. Keep each `SKILL.md` lean. Move deep guidance to `references/` and executable helpers to `scripts/` inside the skill folder.
 5. Never embed passwords, API keys, client secrets, personal data, or unapproved customer data. Route credentials through connector authorization.
 6. Require user review before sending, publishing, deleting, approving, or otherwise taking consequential action.
+7. Author for a managed container: assume no terminal, no package installation, and no outbound calls except through a declared connector. A skill that needs external data gets an `agentConnectors` entry, not a setup script. Treat this as the authoring floor even where a host is more permissive.
+
+## Multi-Stage Pipeline Plugins
+
+When the capability is a sequential pipeline rather than a set of independent tasks, model it as one orchestrator skill plus one skill per stage.
+
+* The orchestrator owns the stage order, the shared task list, and the handoff between stages. It never performs stage work itself.
+* Each stage skill states the artifact it requires from the previous stage and the artifact it produces for the next one.
+* Each stage ends at a gate: the orchestrator confirms the expected artifact exists before advancing, and stops with a named blocker when it does not.
+* Every stage folder, including the orchestrator, is registered in `agentSkills`. A stage that is present but unregistered never runs.
+* Shared templates and prompts live inside the skill folder that owns them. Copying the same asset into every stage folder burns the 20-file companion budget for no benefit.
+
+Split a stage into its own skill when it has a distinct trigger, a distinct output artifact, or a reviewer gate. Keep it inline when it is a step of the same output.
 
 ## Authoring Workflow
 
@@ -104,15 +121,21 @@ tools/            (required only when a connector declares mcpToolDescription)
 
 `manifest.json` must be at the archive root. Do not wrap these entries in an additional parent directory.
 
+The packager excludes `.gitkeep`, `.gitignore`, `.gitattributes`, `.DS_Store`, `Thumbs.db`, and the `.git`, `.svn`, `.hg`, `__pycache__`, `node_modules`, and `.venv` directories from the archive and from the companion-file count, so a scaffolded, source-controlled plugin tree packages without manual cleanup. Every other file under the plugin directory ships as-is.
+
 ## Error Handling
 
 * Missing capability or skill inventory: ask for the smallest set of missing fields
 * Skill name and folder mismatch: rename the folder or correct the frontmatter before packaging
 * Missing icons or wrong dimensions: regenerate the icons rather than shipping placeholders
 * Connector without a packaged tool-description file: add the file under `tools/` or remove the connector
+* Duplicate skill name across two `agentSkills` folders: rename one folder and its frontmatter `name`; identically named skills make routing ambiguous
+* Skill folder present but not in `agentSkills`: register it or delete it rather than shipping an inert folder
+* Uppercase or underscored folder name carried over from a source pipeline: rename to lowercase kebab-case and update the frontmatter `name` to match
+* Companion count above 20: move the overflow into the stage skill that actually uses it, or consolidate several thin reference files into one
 * Sensitive information: remove it and request a sanitized substitute
 * Packaging failure: report the exact validation error and preserve the source directory for repair
-* Symbolic link or junction inside the source tree: replace it with real files; the packager rejects links, and on Windows it also identity-checks each archived file through its open handle, while on Linux and macOS the check is path-based only, so package from a tree no other user can modify concurrently
+* Symbolic link or junction inside the source tree: replace it with real files; the packager rejects links everywhere it traverses, skipping excluded noise names before that check, and on Windows it also identity-checks each archived file through its open handle, while on Linux and macOS the check is path-based only, so package from a tree no other user can modify concurrently
 
 ## Anti-Patterns
 
@@ -121,12 +144,17 @@ tools/            (required only when a connector declares mcpToolDescription)
 * Adding manifest fields outside the supported schema
 * Reusing vague or duplicate connector tool names that make routing ambiguous
 * Referencing skill folders that are not present in the package
+* Shipping stage folders that no `agentSkills` entry registers
+* Duplicating the same template into every stage folder until the companion limit trips
 * Embedding credentials instead of using connector authorization
 
 ## Checklist
 
 * [ ] Business capability and skill inventory are explicit and non-overlapping
 * [ ] Every skill folder has `SKILL.md` with a kebab-case `name` matching the folder leaf
+* [ ] Skill names are unique across every `agentSkills` entry
+* [ ] Every skill folder in the tree is registered in `agentSkills`
+* [ ] Pipeline stages declare their input artifact, output artifact, and gate
 * [ ] Every skill description contains realistic trigger phrases
 * [ ] `manifest.json` carries identity, developer, icons, and at least one `agentSkills` or `agentConnectors` entry
 * [ ] `color.png` is 192x192 and `outline.png` is 32x32

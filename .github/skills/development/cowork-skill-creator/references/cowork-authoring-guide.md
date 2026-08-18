@@ -16,13 +16,13 @@ Capture these fields before writing the package:
 | Process | Numbered and unambiguous execution steps |
 | Output | Exact sections, fields, format, and expected level of detail |
 | Boundaries | Prohibited sources, unsupported assumptions, and disallowed actions |
-| Validation | Checks for support, completeness, contradictions, safety, and format |
+| Validation | Checks for support, completeness, contradictions, safety, format, and the 20000-character `SKILL.md` maximum |
 
 ## Package Files
 
 Use each package area for a distinct purpose:
 
-* `SKILL.md`: activation, workflow, boundaries, output contract, and quality checks
+* `SKILL.md`: activation, workflow, boundaries, output contract, and quality checks, within a maximum of 20000 characters
 * `assets/`: reusable output templates, sample structures, or approved starter content
 * `references/`: detailed examples, domain rules, and test cases loaded only when needed
 * `scripts/`: deterministic local validation or transformation helpers
