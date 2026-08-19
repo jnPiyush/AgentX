@@ -5,14 +5,20 @@
 .DESCRIPTION
   Enforces the documented Cowork plugin package rules: manifest.json at the package root,
   required identity fields, PNG icons at the required dimensions, agentSkills folders that
-  contain a matching SKILL.md, connector tool-description files that ship inside the
-  package, and companion-file limits. Produces a zip with the package contents at the
-  archive root.
+  contain a matching SKILL.md and a skill name unique across the manifest, connector
+  tool-description files that ship inside the package, and companion-file limits. Produces
+  a zip with the package contents at the archive root.
 
-  Symbolic links and junctions are rejected across the whole source tree. On Windows each
-  archived file is additionally identity-checked through its open handle, which also closes
-  path-swap races. On Linux and macOS the link rejection is path-based only, so run the
-  packager against a source tree that no other user can modify concurrently.
+  Placeholder files and build or version-control noise are excluded from both the
+  companion-file count and the archive, so scaffolded and source-controlled plugin trees
+  package without manual cleanup.
+
+  Symbolic links and junctions are rejected everywhere the packager traverses. Excluded
+  names are skipped before that check, so a link named after excluded noise is ignored
+  rather than followed. On Windows each archived file is additionally identity-checked
+  through its open handle, which also closes path-swap races. On Linux and macOS the link
+  rejection is path-based only, so run the packager against a source tree that no other
+  user can modify concurrently.
 .PARAMETER PluginPath
   Path to the Cowork plugin source directory.
 .PARAMETER OutputPath
@@ -41,6 +47,8 @@ $MaxConnectors = 10
 $MaxCompanionFiles = 20
 $MaxCompanionFileBytes = 5MB
 $MaxCompanionTotalBytes = 10MB
+$ExcludedFileNames = @('.gitkeep', '.gitignore', '.gitattributes', '.DS_Store', 'Thumbs.db')
+$ExcludedDirectoryNames = @('.git', '.svn', '.hg', '__pycache__', 'node_modules', '.venv')
 $ReservedNames = @('CON', 'PRN', 'AUX', 'NUL') +
     (1..9 | ForEach-Object { "COM$_" }) +
     (1..9 | ForEach-Object { "LPT$_" })
@@ -272,8 +280,8 @@ function Test-SkillCompanionFile {
     param([string]$SkillDirectory, [string]$Label)
 
     $SkillFile = Join-Path $SkillDirectory 'SKILL.md'
-    $Companions = @(Get-ChildItem -LiteralPath $SkillDirectory -File -Recurse -Force |
-        Where-Object { $_.FullName -ne $SkillFile })
+    $SkillFiles = Get-PackageFile -Root $SkillDirectory
+    $Companions = @($SkillFiles | Where-Object { $_.FullName -ne $SkillFile })
 
     if ($Companions.Count -gt $MaxCompanionFiles) {
         throw "Skill '$Label' has $($Companions.Count) companion files; the limit is $MaxCompanionFiles."
@@ -414,6 +422,7 @@ function Test-PluginSkill {
     }
 
     $SeenFolders = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $SeenNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($Skill in $Skills) {
         Assert-KnownProperty -Object $Skill -Schema 'agentSkills' -Label 'agentSkills entry'
         $Folder = [string](Get-JsonValue -Object $Skill -Name 'folder')
@@ -458,6 +467,9 @@ function Test-PluginSkill {
         $LeafName = Split-Path $FolderPath -Leaf
         if ($Name -cne $LeafName) {
             throw "Skill name '$Name' must match its folder name '$LeafName'."
+        }
+        if (-not $SeenNames.Add($Name)) {
+            throw "Duplicate skill name across agentSkills folders: '$Name'."
         }
 
         Test-SkillCompanionFile -SkillDirectory $FolderPath -Label $Name
@@ -635,6 +647,13 @@ function Get-PackageFile {
     while ($Pending.Count -gt 0) {
         $Current = $Pending.Pop()
         foreach ($Entry in @(Get-ChildItem -LiteralPath $Current -Force)) {
+            if ($Entry.PSIsContainer) {
+                if ($ExcludedDirectoryNames -contains $Entry.Name) { continue }
+            }
+            elseif ($ExcludedFileNames -contains $Entry.Name) {
+                continue
+            }
+
             $Relative = ([IO.Path]::GetRelativePath($Root, $Entry.FullName)) -replace '\\', '/'
             if (($Entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
                 throw "Package contents must not contain symbolic links or junctions: $Relative"

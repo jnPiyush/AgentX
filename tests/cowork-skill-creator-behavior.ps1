@@ -59,6 +59,7 @@ if ((Test-Path $PackageScript) -and (Test-Path $PromptPath)) {
         'assets/.*exact reusable output template' = 'prompt requires a tailored output asset'
         'references/.*normal.*missing-input.*conflicting-input.*non-trigger.*consequential-action' = 'prompt requires five workflow test scenarios'
         'scripts/.*deterministic validator or helper' = 'prompt requires an appropriate deterministic script'
+        'maximum of 20000 characters' = 'prompt states the SKILL.md character maximum'
         'final deliverable must be the zip file' = 'prompt cannot stop at source files or Markdown'
         'Require human review before sending, publishing, deleting, approving' = 'prompt requires human review for consequential actions'
     }
@@ -97,6 +98,39 @@ if ((Test-Path $PackageScript) -and (Test-Path $PromptPath)) {
             $Archive.Dispose()
         }
 
+        $PlaceholderDirectory = Join-Path $ValidSkill 'assets/samples'
+        New-Item -ItemType Directory -Path $PlaceholderDirectory -Force | Out-Null
+        '' | Set-Content -LiteralPath (Join-Path $PlaceholderDirectory '.gitkeep') -NoNewline -Encoding utf8
+        '' | Set-Content -LiteralPath (Join-Path $ValidSkill 'references/.gitkeep') -NoNewline -Encoding utf8
+        & $PackageScript -SkillPath $ValidSkill -OutputPath $OutputZip
+        $PlaceholderArchive = [IO.Compression.ZipFile]::OpenRead($OutputZip)
+        try {
+            $PlaceholderEntries = @($PlaceholderArchive.Entries.FullName -replace '\\', '/')
+            Assert-True (-not ($PlaceholderEntries | Where-Object { $_ -like '*.gitkeep' })) 'archive excludes .gitkeep placeholders'
+            Assert-True (-not ($PlaceholderEntries | Where-Object { $_ -like 'assets/samples*' })) 'folder holding only .gitkeep is not packaged'
+            Assert-True ($PlaceholderEntries -contains 'references/test-cases.md') 'folders with real files are still packaged'
+        }
+        finally {
+            $PlaceholderArchive.Dispose()
+        }
+        Remove-Item -LiteralPath $PlaceholderDirectory -Recurse -Force
+        Remove-Item -LiteralPath (Join-Path $ValidSkill 'references/.gitkeep') -Force
+
+        $GitKeepOnlyDirectory = Join-Path $ValidSkill 'scripts'
+        Remove-Item -LiteralPath (Join-Path $GitKeepOnlyDirectory 'validate-output.ps1') -Force
+        '' | Set-Content -LiteralPath (Join-Path $GitKeepOnlyDirectory '.gitkeep') -NoNewline -Encoding utf8
+        $GitKeepOnlyRejected = $false
+        try {
+            & $PackageScript -SkillPath $ValidSkill -OutputPath $OutputZip 2>$null
+        }
+        catch {
+            $GitKeepOnlyRejected = $true
+        }
+        Assert-True $GitKeepOnlyRejected 'required directory holding only .gitkeep fails validation'
+        Remove-Item -LiteralPath (Join-Path $GitKeepOnlyDirectory '.gitkeep') -Force
+        'param()' | Set-Content -LiteralPath (Join-Path $GitKeepOnlyDirectory 'validate-output.ps1') -Encoding utf8
+        & $PackageScript -SkillPath $ValidSkill -OutputPath $OutputZip
+
         $ArchiveHashBeforeReplacementFailure = (Get-FileHash -LiteralPath $OutputZip -Algorithm SHA256).Hash
         $LockedArchive = [IO.File]::Open($OutputZip, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
         $ReplacementFailureCaught = $false
@@ -134,6 +168,28 @@ if ((Test-Path $PackageScript) -and (Test-Path $PromptPath)) {
             $InvalidFrontmatterRejected = $true
         }
         Assert-True $InvalidFrontmatterRejected 'package with invalid SKILL.md frontmatter is rejected'
+
+        $SizeFrontmatter = @(
+            '---',
+            'name: weekly-project-update',
+            'description: Creates a sourced weekly project update from authorized project materials.',
+            '---',
+            ''
+        ) -join "`n"
+        $MaximumSkillContent = $SizeFrontmatter + ('x' * (20000 - $SizeFrontmatter.Length))
+        Set-Content -LiteralPath (Join-Path $ValidSkill 'SKILL.md') -Value $MaximumSkillContent -NoNewline -Encoding utf8
+        & $PackageScript -SkillPath $ValidSkill -OutputPath $OutputZip
+        Assert-True (Test-Path -LiteralPath $OutputZip) 'SKILL.md of exactly 20000 characters is accepted'
+
+        Set-Content -LiteralPath (Join-Path $ValidSkill 'SKILL.md') -Value ($MaximumSkillContent + 'x') -NoNewline -Encoding utf8
+        $OversizedSkillRejected = $false
+        try {
+            & $PackageScript -SkillPath $ValidSkill -OutputPath $OutputZip 2>$null
+        }
+        catch {
+            $OversizedSkillRejected = $true
+        }
+        Assert-True $OversizedSkillRejected 'SKILL.md of 20001 characters is rejected'
 
         $ReorderedFrontmatter = @(
             '---',
@@ -228,6 +284,23 @@ metadata:
             $LinkedSkillRejected = $true
         }
         Assert-True $LinkedSkillRejected 'skill source through a junction or symbolic link is rejected'
+
+        $NestedLinkPath = Join-Path $ValidSkill 'assets/linked-content'
+        if ($IsWindows) {
+            New-Item -ItemType Junction -Path $NestedLinkPath -Target $TempRoot | Out-Null
+        }
+        else {
+            New-Item -ItemType SymbolicLink -Path $NestedLinkPath -Target $TempRoot | Out-Null
+        }
+        $NestedLinkRejected = $false
+        try {
+            & $PackageScript -SkillPath $ValidSkill -OutputPath $OutputZip 2>$null
+        }
+        catch {
+            $NestedLinkRejected = $true
+        }
+        Assert-True $NestedLinkRejected 'link inside the skill directory is rejected before packaging'
+        Remove-Item -LiteralPath $NestedLinkPath -Force -Recurse
 
         $DirectoryOutputRejected = $false
         try {

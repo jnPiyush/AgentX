@@ -35,7 +35,7 @@ inputs:
 
 1. Read `.github/skills/development/cowork-skill-creator/SKILL.md` in full before authoring files.
 2. Convert the request and attached context into a clear purpose, trigger, inputs, ordered process, fixed output format, boundaries, and quality checks.
-3. Create `{{outputDir}}/<skill-name>/SKILL.md` with valid `name` and `description` frontmatter.
+3. Create `{{outputDir}}/<skill-name>/SKILL.md` with valid `name` and `description` frontmatter, and keep it within the maximum of 20000 characters.
 4. Create and populate all companion directories with workflow-specific content:
    * `assets/` with the exact reusable output template or sample structure
    * `references/` with normal, missing-input, conflicting-input, non-trigger, and consequential-action test cases
@@ -64,6 +64,7 @@ inputs:
 ### Validation
 
 * Package validation: [PASS]
+* `SKILL.md` size (max 20000 characters): [PASS]
 * Sensitive-content review: [PASS]
 * Human-review boundary: [PASS]
 ```

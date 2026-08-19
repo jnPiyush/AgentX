@@ -23,6 +23,7 @@ Do not use this skill for:
 
 * Replace with a scenario owned by another skill in this plugin
 * Replace with a scenario that belongs to a built-in Cowork skill
+* Replace with the next pipeline stage, or delete this line when the skill is standalone
 
 ## Workflow
 
@@ -42,6 +43,9 @@ Replace with the exact structure the user receives, for example:
 ## Boundaries
 
 * Required inputs: replace with what the skill needs before it can run
+* Upstream artifact: replace with what the previous stage must have produced, or delete when the skill is standalone
+* Downstream artifact: replace with what this skill hands to the next stage, or delete when the skill is standalone
+* Stop condition: replace with the condition that makes this skill report a blocker instead of proceeding
 * Must not assume: replace with the facts the skill must never invent
 * Human review: required before sending, publishing, deleting, or approving anything
 

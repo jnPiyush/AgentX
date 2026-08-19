@@ -4,7 +4,8 @@
   Validates and packages a Microsoft 365 Copilot Cowork skill.
 .DESCRIPTION
   Requires SKILL.md and populated assets, references, and scripts directories,
-  then creates a zip with the skill files at the archive root.
+  then creates a zip with the skill files at the archive root. `.gitkeep` placeholders
+  are excluded, so directories that hold nothing else are left out of the archive.
 .PARAMETER SkillPath
   Path to the Cowork skill source directory.
 .PARAMETER OutputPath
@@ -47,6 +48,11 @@ function Test-CoworkSkillPackage {
     }
 
     $Content = Get-Content -LiteralPath $SkillFile -Raw -Encoding utf8
+    $MaximumSkillCharacters = 20000
+    if ($Content.Length -gt $MaximumSkillCharacters) {
+        throw "SKILL.md must not exceed $MaximumSkillCharacters characters. Actual: $($Content.Length). Move examples, templates, and extended guidance into assets, references, or scripts."
+    }
+
     $FrontmatterMatch = [regex]::Match($Content, '(?s)^---\r?\n(?<content>.*?)\r?\n---(?:\r?\n|$)')
     if (-not $FrontmatterMatch.Success) {
         throw 'SKILL.md frontmatter must contain a lowercase kebab-case name and a meaningful description.'
@@ -71,7 +77,7 @@ function Test-CoworkSkillPackage {
             throw "Required directory is missing: $DirectoryName"
         }
 
-        $Files = @(Get-ChildItem -LiteralPath $DirectoryPath -File -Recurse)
+        $Files = @(Get-ChildItem -LiteralPath $DirectoryPath -File -Recurse | Where-Object { $_.Name -ne '.gitkeep' })
         if ($Files.Count -eq 0 -or @($Files | Where-Object { $_.Length -gt 0 }).Count -eq 0) {
             throw "Required directory must contain at least one non-empty file: $DirectoryName"
         }
@@ -136,10 +142,39 @@ if (-not (Test-Path -LiteralPath $OutputDirectory)) {
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 }
 
-$PackageEntries = Get-ChildItem -LiteralPath $ValidatedSkill.FullName
+$PackageEntries = @(Get-ChildItem -LiteralPath $ValidatedSkill.FullName -Recurse -Force |
+    Where-Object { ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 })
+if ($PackageEntries.Count -gt 0) {
+    throw 'SkillPath must not contain symbolic links or junctions.'
+}
+
+$PackageFiles = [Collections.Generic.List[object]]@(Get-ChildItem -LiteralPath $ValidatedSkill.FullName -File -Recurse |
+    Where-Object { $_.Name -ne '.gitkeep' } |
+    ForEach-Object {
+        [pscustomobject]@{
+            FullName  = $_.FullName
+            EntryName = [IO.Path]::GetRelativePath($ValidatedSkill.FullName, $_.FullName).Replace([IO.Path]::DirectorySeparatorChar, '/')
+        }
+    })
+$PackageFiles.Sort([Comparison[object]] { param($Left, $Right) [string]::CompareOrdinal($Left.EntryName, $Right.EntryName) })
+foreach ($PackageFile in $PackageFiles) {
+    $Segments = $PackageFile.EntryName.Split('/')
+    if ($PackageFile.EntryName.Contains('\') -or [IO.Path]::IsPathRooted($PackageFile.EntryName) -or ($Segments -contains '..') -or ($Segments -contains '.')) {
+        throw "Skill file name produces an unsafe archive entry: $($PackageFile.EntryName)"
+    }
+}
+
 $TemporaryArchive = Join-Path $OutputDirectory ".$([IO.Path]::GetFileName($OutputFullPath)).$([guid]::NewGuid().ToString('N')).tmp.zip"
 try {
-    Compress-Archive -Path $PackageEntries.FullName -DestinationPath $TemporaryArchive -CompressionLevel Optimal
+    $Archive = [IO.Compression.ZipFile]::Open($TemporaryArchive, [IO.Compression.ZipArchiveMode]::Create)
+    try {
+        foreach ($PackageFile in $PackageFiles) {
+            [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($Archive, $PackageFile.FullName, $PackageFile.EntryName, [IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        }
+    }
+    finally {
+        $Archive.Dispose()
+    }
     Move-Item -LiteralPath $TemporaryArchive -Destination $OutputFullPath -Force
 }
 finally {
