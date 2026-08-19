@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.8.0](https://github.com/jnPiyush/AgentX/compare/v8.7.1...v8.8.0) (2026-08-19)
+
+
+### Features
+
+* add Cowork skill creator and plugin creator skills ([#413](https://github.com/jnPiyush/AgentX/issues/413)) ([0c261f2](https://github.com/jnPiyush/AgentX/commit/0c261f26d648486c019faae6550a33d35deddc81))
+* Cowork skill and plugin creator skills ([#416](https://github.com/jnPiyush/AgentX/issues/416)) ([3e6a3a2](https://github.com/jnPiyush/AgentX/commit/3e6a3a2dd209ba74031b929431c0c5d345737443))
+
 ## 8.7.1
 
 ### Fixes
