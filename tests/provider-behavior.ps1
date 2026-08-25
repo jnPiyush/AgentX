@@ -763,7 +763,7 @@ task_prefix: 'task'
     Write-Utf8File $iter5Evidence 'iteration 5 fresh artifact'
     [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Evidence pass', '--evidence', $iter5Evidence, '--passing', '5'))
     Write-Utf8File $iter6Evidence '{"findings":[]}'
-    [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Subagent review pass', '--evidence', $iter6Evidence, '--passing', '5'))
+    [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Subagent review pass', '--evidence', $iter6Evidence, '--passing', '5', '--verdict', 'approved', '--reviewer', 'provider-suite', '--high', '0', '--medium', '0'))
     $finalEvidence = Join-Path $workflowRoot '.agentx\state\final-gate.json'
     Write-Utf8File $finalEvidence '{"status":"pass","source":"final gate"}'
     $loopComplete = Invoke-AgentX $workflowRoot @('loop', 'complete', '--summary', 'All gates passed', '--evidence', $finalEvidence, '--passing', '5')

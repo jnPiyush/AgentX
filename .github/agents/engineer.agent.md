@@ -364,7 +364,13 @@ Minimum prompt to the subagent reviewer:
 
 > You are a code reviewer. Read SPEC-{issue}.md and the staged diff. Do NOT read any chat history or rationale. Find HIGH (security/correctness), MEDIUM (design/maintainability), LOW (style) findings. Output JSON: { findings: [{ severity, file, line, issue, suggested_fix }] }.
 
-Write the response to a fresh file such as `.agentx/state/subagent-review.json` and use it as the evidence for iteration 5. The CLI archives that file on acceptance, so generate a separate fresh final artifact for `loop complete` (for example `.agentx/state/final-gate.json`). If any HIGH or MEDIUM finding remains, fix it and reset to the relevant earlier iteration (do NOT call `loop complete`).
+Write the response to a fresh file such as `.agentx/state/subagent-review.json` and use it as the evidence for iteration 5, then record the reviewer's structured verdict on that same iteration:
+
+```
+.agentx/agentx.ps1 loop iterate -s "Subagent Review: <outcome>" -e .agentx/state/subagent-review.json --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
+```
+
+`--verdict`, `--reviewer`, `--high`, and `--medium` are all required together, and `loop complete` fails unless the latest verdict is `approved` with zero HIGH and zero MEDIUM on the final work iteration. The CLI archives the evidence file on acceptance, so generate a separate fresh final artifact for `loop complete` (for example `.agentx/state/final-gate.json`). If any HIGH or MEDIUM finding remains, record `--verdict changes-requested` with the real counts, fix the findings, and reset to the relevant earlier iteration (do NOT call `loop complete`).
 
 ### 7.5 Complete the Loop and Hand Off
 

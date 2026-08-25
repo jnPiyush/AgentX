@@ -146,6 +146,9 @@ $files = Get-ChildItem -Path $ROOT -Recurse -File -ErrorAction SilentlyContinue 
   Where-Object {
     $excludeDirs -notcontains $_.Directory.Name -and
     -not ($_.FullName -match '[\\/](\.git|node_modules|out|dist|coverage|build|\.vscode-test)[\\/]') -and
+    # Runtime state is gitignored and may contain captured test/lint output with
+    # intentional secret-shaped fixtures. Published source never includes it.
+    -not $_.FullName.StartsWith((Join-Path $ROOT '.agentx\state') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -and
     $extensions -contains $_.Extension.ToLowerInvariant() -and
     $_.Length -lt 1MB
   }

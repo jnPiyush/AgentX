@@ -9,8 +9,8 @@
 #
 # Features:
 #   - Calls GitHub Models API (Claude, GPT, Gemini) with tool schemas
-#   - Executes workspace tools (file_read, file_write, file_edit, grep_search,
-#     list_dir, terminal_exec)
+#   - Executes guarded workspace file tools (file_read, file_write, file_edit,
+#     grep_search, list_dir); terminal_exec is fail-closed until externally sandboxed
 #   - Loop detection (repeated-call circuit breaker)
 #   - Agent-to-agent clarification via shared JSON ledger
 #   - Session persistence in .agentx/sessions/
@@ -907,13 +907,6 @@ function Get-EffectiveLoopMinIterationCount {
 
     if (-not $State) { return 0 }
 
-    $maxIterations = 0
-    try {
-        $maxIterations = [int]$State.maxIterations
-    } catch {
-        $maxIterations = 0
-    }
-
     $taskClass = Get-LoopTaskClassFromState -State $State
     $defaultMin = if ($taskClass -eq 'complex-delivery') {
         $Script:DEFAULT_COMPLEX_SELF_REVIEW_MIN_ITERATIONS
@@ -926,9 +919,7 @@ function Get-EffectiveLoopMinIterationCount {
         try { $storedMin = [int]$State.minIterations } catch { $storedMin = 0 }
     }
 
-    $effectiveMin = [Math]::Max($storedMin, $defaultMin)
-    if ($maxIterations -gt 0) { return [Math]::Min($effectiveMin, $maxIterations) }
-    return $effectiveMin
+    return [Math]::Max($storedMin, $defaultMin)
 }
 
 function Get-LoopTaskClassFromState {
@@ -972,11 +963,11 @@ function Get-RunnerSelfReviewMinIteration {
     )
 
     if ($LoopState) {
-        return [Math]::Min((Get-EffectiveLoopMinIterationCount -State $LoopState), $MaxReviewerIterations)
+        return Get-EffectiveLoopMinIterationCount -State $LoopState
     }
 
     if ($null -ne $ConfiguredMinimum -and [int]$ConfiguredMinimum -gt 0) {
-        return [Math]::Min([int]$ConfiguredMinimum, $MaxReviewerIterations)
+        return [Math]::Max([int]$ConfiguredMinimum, $Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS)
     }
 
     $syntheticState = [PSCustomObject]@{
@@ -986,7 +977,7 @@ function Get-RunnerSelfReviewMinIteration {
         maxIterations = $MaxReviewerIterations
     }
 
-    return [Math]::Min((Get-EffectiveLoopMinIterationCount -State $syntheticState), $MaxReviewerIterations)
+    return Get-EffectiveLoopMinIterationCount -State $syntheticState
 }
 
 function Sync-AgenticLoopState {
@@ -996,6 +987,7 @@ function Sync-AgenticLoopState {
         [int]$Iterations,
         [string]$ExitReason,
         [string]$FinalText,
+        $SelfReview,
         [switch]$SkipLoopStateSync
     )
 
@@ -1018,19 +1010,34 @@ function Sync-AgenticLoopState {
         'text_response' {
             $minimumIterations = Get-EffectiveLoopMinIterationCount -State $state
             if ($effectiveIterations -lt $minimumIterations) {
-                $effectiveIterations = $minimumIterations
-            }
-
-            $state.iteration = $effectiveIterations
-            $state.active = $false
-            $state.status = 'complete'
-            $state.lastIterationAt = $timestamp
-            $historyStatus = 'complete'
-            $historyOutcome = 'pass'
-            $summary = if ($summaryPreview) {
-                "Agentic run completed successfully. $summaryPreview"
+                # Preserve the actual number of passes. Inflating the counter here
+                # let a low self-review maximum fabricate the mandatory five
+                # quality iterations in durable state.
+                $state.iteration = $effectiveIterations
+                $state.active = $true
+                $state.status = 'active'
+                $state.lastIterationAt = $timestamp
+                $historyStatus = 'in-progress'
+                $historyOutcome = 'partial'
+                $summary = "Agentic run produced a response before the minimum quality iterations were met ($effectiveIterations/$minimumIterations)."
             } else {
-                'Agentic run completed successfully.'
+                $state.iteration = $effectiveIterations
+                # The runner's self-review is evidence, not the independent
+                # verdict required by loop complete. Keep the loop active so an
+                # attributable reviewer can append that verdict through the CLI.
+                $state.active = $true
+                $state.status = 'active'
+                if ([int]$state.maxIterations -le $effectiveIterations) {
+                    $state.maxIterations = $effectiveIterations + 1
+                }
+                $state.lastIterationAt = $timestamp
+                $historyStatus = 'iterated'
+                $historyOutcome = 'pass'
+                $summary = if ($summaryPreview) {
+                    "Agentic run completed its work and self-review; independent review is required. $summaryPreview"
+                } else {
+                    'Agentic run completed its work and self-review; independent review is required.'
+                }
             }
         }
         'human_required' {
@@ -1052,13 +1059,29 @@ function Sync-AgenticLoopState {
         @()
     }
     $updatedHistory = @($history)
-    $updatedHistory += [PSCustomObject]@{
+    $historyRecord = [PSCustomObject]@{
         iteration = $state.iteration
         timestamp = $timestamp
         summary   = $summary
         status    = $historyStatus
         outcome   = $historyOutcome
     }
+    if ($historyOutcome -eq 'pass' -and $SelfReview) {
+        # Recorded under 'selfReview', deliberately NOT 'review': a self-review is
+        # evidence, not an approval. Writing it as a review record would either
+        # mint the verdict the gate exists to demand from an independent reviewer,
+        # or (with a non-approving verdict) permanently trap the loop in a state
+        # only hand-editing could clear.
+        $historyRecord | Add-Member -NotePropertyName selfReview -NotePropertyValue ([PSCustomObject]@{
+            approved   = [bool]$SelfReview.approved
+            reviewer   = 'agentic-runner-self-review'
+            high       = [int]$SelfReview.high
+            medium     = [int]$SelfReview.medium
+            low        = [int]$SelfReview.low
+            recordedAt = $timestamp
+        }) -Force
+    }
+    $updatedHistory += $historyRecord
     $state.history = $updatedHistory
 
     Write-LoopState -WorkspaceRoot $WorkspaceRoot -State $state
@@ -1070,6 +1093,10 @@ function Test-IsResearchReadOnlyTool([string]$ToolName) {
 
 function Test-IsResearchMutationTool([string]$ToolName) {
     return $ToolName -in @('file_write', 'file_edit')
+}
+
+function Test-AgenticLoopResultSucceeded($Result) {
+    return $null -ne $Result -and ([string]$Result.exitReason -ceq 'text_response')
 }
 
 function Test-ResearchFirstToolUse {
@@ -1693,7 +1720,7 @@ function Get-ToolSchemaList {
             type = 'function'
             function = @{
                 name = 'terminal_exec'
-                description = 'Run a shell command in the workspace and return stdout/stderr.'
+                description = 'Reserved. Autonomous shell execution is disabled until an externally sandboxed adapter is available.'
                 parameters = @{
                     type = 'object'
                     properties = @{
@@ -1717,33 +1744,240 @@ function Test-AgentTerminalCommandAllowed {
         [string]$Command
     )
 
-    $normalizedAgent = Resolve-AgentReference $AgentName
-    if ($normalizedAgent -ne 'power-platform-builder') {
-        return [PSCustomObject]@{ allowed = $true; reason = $null }
-    }
-
-    $commandText = [string]$Command
-    $safeCharacters = '\A[A-Za-z0-9_./\\:=,\- ]+\z'
-    $safePacCommand = '\A(?i:pac(?:\.exe)? +(?:(?:--version|--help|help)|solution +(?:init|unpack|pack|check)(?: +.*)?))\z'
-    if ($commandText -match $safeCharacters -and $commandText -match $safePacCommand) {
-        return [PSCustomObject]@{ allowed = $true; reason = $null }
-    }
-
     return [PSCustomObject]@{
         allowed = $false
-        reason = 'Power Platform Builder terminal access is fail-closed. Only direct local pac version/help and solution init/unpack/pack/check commands with literal arguments are allowed.'
+        reason = 'Autonomous terminal execution is disabled. Shell commands cannot be confined by the AgentX file-path sandbox and can rewrite loop state, git metadata, or gate implementations. Use an externally sandboxed operator/DevOps surface instead.'
     }
 }
 
-function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, [string]$agentName = '') {
-    $blocked = @('rm -rf /', 'format c:', 'drop database', 'git reset --hard', 'git push --force')
+# ---------------------------------------------------------------------------
+# Workspace path sandbox
+# ---------------------------------------------------------------------------
+# Shares its rule set with vscode-extension/src/utils/pathSandbox.ts: reject raw
+# traversal, confine every resolved path to the workspace root, and deny
+# credential directories and credential file shapes.
+#
+# SCOPE: this governs the FILE tools (file_read/file_write/file_edit/list_dir/
+# grep_search). terminal_exec is disabled because a shell cannot be contained by
+# these path checks. Do not read this as process-level isolation.
+#
+# The TypeScript sandbox additionally denies any basename merely CONTAINING
+# 'secret' or 'password'. That heuristic suits the narrow callers it guards, but
+# it would block ordinary source files here (secretRedactor.ts among them), so
+# the runner deliberately matches credential file shapes instead.
+# ---------------------------------------------------------------------------
 
+# '.git' is blocked because the enforcement surface lives there: an agent that can
+# rewrite .git/hooks/pre-commit or .git/config (core.hooksPath, core.sshCommand)
+# disables the very gates that constrain it.
+$Script:SANDBOX_BLOCKED_DIR_SEGMENTS = @('.ssh', '.aws', '.gnupg', '.azure', '.kube', '.docker', '.git')
+
+# Relative locations inside the workspace that the tools must not touch. Loop
+# state is gate-bearing, and so are the gate IMPLEMENTATIONS: an agent that can
+# rewrite agentx-cli.ps1 or the hook disables the gate without ever touching the
+# state file.
+$Script:SANDBOX_BLOCKED_RELATIVE_PATHS = @(
+    '.config/gh',
+    '.agentx/state',
+    '.agentx/agentx-cli.ps1',
+    '.agentx/agentic-runner.ps1',
+    '.agentx/agentx.ps1',
+    '.github/hooks'
+)
+
+function Test-SandboxDeniedFileName([string]$Name) {
+    $leaf = $Name.ToLowerInvariant()
+    if ($leaf -eq '.env' -or $leaf.StartsWith('.env.')) { return $true }
+    if ($leaf -in @('.netrc', '_netrc', '.npmrc', '.git-credentials', '.gitconfig', '.envrc', '.pgpass', '.pypirc', 'kubeconfig', 'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519', 'credentials')) { return $true }
+    foreach ($extension in @('.pem', '.key', '.pfx', '.p12', '.p8', '.jks', '.ppk', '.asc')) {
+        if ($leaf.EndsWith($extension)) { return $true }
+    }
+    return $false
+}
+
+<#
+.SYNOPSIS
+  Validate an agent-supplied path against the workspace sandbox.
+
+.OUTPUTS
+  Hashtable with allowed (bool), resolvedPath (string), and reason (string).
+#>
+function Test-SandboxPath {
+    param(
+        [string]$Path,
+        [string]$WorkspaceRoot
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return @{ allowed = $false; resolvedPath = ''; reason = 'Path is required.' }
+    }
+    if ([string]::IsNullOrWhiteSpace($WorkspaceRoot)) {
+        return @{ allowed = $false; resolvedPath = ''; reason = 'Workspace root is not configured.' }
+    }
+
+    # Wildcards would glob past the validated string onto other files, so they are
+    # rejected here and every consumer uses -LiteralPath.
+    if ($Path -match '[*?]' -or $Path -match '\[[^\]]*\]') {
+        return @{ allowed = $false; resolvedPath = ''; reason = 'Wildcard characters are not allowed in a path' }
+    }
+    # NTFS alternate data streams address hidden content behind an allowed leaf.
+    # Any colon other than the drive-letter colon at index 1 is stream syntax.
+    $streamProbe = if ($Path -match '^[A-Za-z]:') { $Path.Substring(2) } else { $Path }
+    if ($streamProbe.Contains(':')) {
+        return @{ allowed = $false; resolvedPath = ''; reason = 'Alternate data stream syntax is not allowed' }
+    }
+
+    # Traversal is checked on the RAW input: resolution would normalize it away.
+    if ($Path -match '(^|[\\/])\.\.([\\/]|$)') {
+        return @{ allowed = $false; resolvedPath = ''; reason = 'Path traversal attempt detected' }
+    }
+
+    $rootFull = [IO.Path]::GetFullPath($WorkspaceRoot).TrimEnd([IO.Path]::DirectorySeparatorChar)
+    $resolved = if ([IO.Path]::IsPathRooted($Path)) {
+        [IO.Path]::GetFullPath($Path)
+    } else {
+        [IO.Path]::GetFullPath((Join-Path $rootFull $Path))
+    }
+
+    $containment = Test-SandboxContainment -Resolved $resolved -RootFull $rootFull
+    if (-not $containment.allowed) { return $containment }
+
+    # A symlink or junction passes the lexical check while pointing elsewhere.
+    # EVERY component is followed, not just the leaf: an intermediate junction
+    # would otherwise carry an allowed-looking relative path outside the root.
+    $linkCheck = Test-SandboxLinkChain -Resolved $resolved -RootFull $rootFull
+    if (-not $linkCheck.allowed) { return $linkCheck }
+
+    return @{ allowed = $true; resolvedPath = $resolved; reason = '' }
+}
+
+<#
+.SYNOPSIS
+  Walk every existing component of a resolved path and reject links whose target
+  escapes the workspace root, or 8.3 aliases that spell a blocked location
+  differently.
+#>
+function Test-SandboxLinkChain {
+    param(
+        [string]$Resolved,
+        [string]$RootFull
+    )
+
+    $relative = [IO.Path]::GetRelativePath($RootFull, $Resolved)
+    if ($relative -eq '.') { return @{ allowed = $true; resolvedPath = $Resolved; reason = '' } }
+
+    $current = $RootFull
+    $rebased = $false
+    foreach ($segment in @(($relative -replace '\\', '/') -split '/' | Where-Object { $_ -and $_ -ne '.' })) {
+        $parent = $current
+        $current = Join-Path $parent $segment
+        $item = $null
+        try { $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue } catch { $item = $null }
+        # Nothing exists from here down, so there is no link or alias left to
+        # follow -- but keep building the path so the final containment re-check
+        # still sees the full rebased location.
+        if (-not $item) { continue }
+
+        # A hardlink has no ResolveLinkTarget result: it is another name for the
+        # same file identity. Validating only the alias spelling would let an
+        # allowed path read or overwrite protected loop state through that inode.
+        if (-not $item.PSIsContainer -and [string]$item.LinkType -eq 'HardLink') {
+            return @{ allowed = $false; resolvedPath = $Resolved; reason = 'Hardlinked files are not allowed in autonomous file tools' }
+        }
+
+        # An NTFS 8.3 alias resolves to a real entry that the directory listing
+        # reports under its long name, so a component that resolves but is absent
+        # from its parent's listing is an alias spelling ('GIT~1' for '.git').
+        # Checking existence rather than name shape keeps ordinary files such as
+        # 'notes~1.md' reachable.
+        if ($segment -like '*~*') {
+            $siblingNames = @()
+            try { $siblingNames = @(Get-ChildItem -LiteralPath $parent -Force -Name -ErrorAction SilentlyContinue) } catch { $siblingNames = @() }
+            # Fail CLOSED on an empty listing: the child already resolved, so an
+            # empty result means enumeration failed (for example a traverse-only
+            # ACL), not that the directory is genuinely empty.
+            if ($siblingNames -notcontains $segment) {
+                return @{ allowed = $false; resolvedPath = $Resolved; reason = 'Short (8.3) path aliases are not allowed' }
+            }
+        }
+
+        $target = $null
+        try {
+            $resolvedLink = $item.ResolveLinkTarget($true)
+            if ($resolvedLink) { $target = $resolvedLink.FullName }
+        } catch { $target = $null }
+        if (-not $target) { continue }
+
+        $targetFull = [IO.Path]::GetFullPath($target)
+        $targetContainment = Test-SandboxContainment -Resolved $targetFull -RootFull $RootFull
+        if (-not $targetContainment.allowed) {
+            return @{ allowed = $false; resolvedPath = $Resolved; reason = 'Path resolves through a link to outside the workspace' }
+        }
+        # Keep walking from the real location so later segments are checked there.
+        $current = $targetFull
+        $rebased = $true
+    }
+
+    # A link can point at the PARENT of a protected location, so the lexical
+    # containment check on the original spelling is not enough: re-check the
+    # rebased path against the denylist.
+    if ($rebased) {
+        $rebasedContainment = Test-SandboxContainment -Resolved $current -RootFull $RootFull
+        if (-not $rebasedContainment.allowed) {
+            return @{ allowed = $false; resolvedPath = $Resolved; reason = $rebasedContainment.reason }
+        }
+    }
+
+    return @{ allowed = $true; resolvedPath = $Resolved; reason = '' }
+}
+
+<#
+.SYNOPSIS
+  Containment and sensitive-location checks for an already-resolved path.
+#>
+function Test-SandboxContainment {
+    param(
+        [string]$Resolved,
+        [string]$RootFull
+    )
+
+    $relative = [IO.Path]::GetRelativePath($RootFull, $Resolved)
+    if ($relative -eq '..' -or $relative.StartsWith('..' + [IO.Path]::DirectorySeparatorChar) -or [IO.Path]::IsPathRooted($relative)) {
+        return @{ allowed = $false; resolvedPath = $Resolved; reason = 'Path is outside workspace root' }
+    }
+
+    foreach ($segment in @(($relative -replace '\\', '/') -split '/' | Where-Object { $_ -and $_ -ne '.' })) {
+        if ($Script:SANDBOX_BLOCKED_DIR_SEGMENTS -contains $segment.ToLowerInvariant()) {
+            return @{ allowed = $false; resolvedPath = $Resolved; reason = "Access to sensitive directory is blocked: $segment" }
+        }
+    }
+
+    $posixRelative = ($relative -replace '\\', '/').ToLowerInvariant()
+    foreach ($blocked in $Script:SANDBOX_BLOCKED_RELATIVE_PATHS) {
+        if ($posixRelative -eq $blocked -or $posixRelative -like "$blocked/*" -or $posixRelative -like "*/$blocked" -or $posixRelative -like "*/$blocked/*") {
+            return @{ allowed = $false; resolvedPath = $Resolved; reason = "Access to protected location is blocked: $blocked" }
+        }
+    }
+
+    $leaf = [IO.Path]::GetFileName($Resolved)
+    if ($leaf -and (Test-SandboxDeniedFileName -Name $leaf)) {
+        return @{ allowed = $false; resolvedPath = $Resolved; reason = "Access to sensitive file pattern is blocked: $leaf" }
+    }
+
+    return @{ allowed = $true; resolvedPath = $Resolved; reason = '' }
+}
+
+function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, [string]$agentName = '') {
     switch ($name) {
         'file_read' {
-            $fp = Join-Path $workspaceRoot $params.filePath
-            if (-not (Test-Path $fp)) { return @{ error = $true; text = "File not found: $($params.filePath)" } }
+            $guard = Test-SandboxPath -Path ([string]$params.filePath) -WorkspaceRoot $workspaceRoot
+            if (-not $guard.allowed) { return @{ error = $true; text = "[PATH BLOCKED] $($guard.reason): $($params.filePath)" } }
+            $fp = $guard.resolvedPath
+            if (-not (Test-Path -LiteralPath $fp)) { return @{ error = $true; text = "File not found: $($params.filePath)" } }
             try {
-                $lines = Get-Content $fp -Encoding utf8
+                # Wrapped: Get-Content returns a bare string for a single-line file,
+                # and .Count on a string throws under Set-StrictMode.
+                $lines = @(Get-Content -LiteralPath $fp -Encoding utf8)
                 $start = if ($params.ContainsKey('startLine') -and $params.startLine) { [Math]::Max(0, [int]$params.startLine - 1) } else { 0 }
                 $end   = if ($params.ContainsKey('endLine') -and $params.endLine) { [Math]::Min($lines.Count, [int]$params.endLine) } else { $lines.Count }
                 $slice = $lines[$start..($end - 1)]
@@ -1758,27 +1992,31 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, 
             }
         }
         'file_write' {
-            $fp = Join-Path $workspaceRoot $params.filePath
+            $guard = Test-SandboxPath -Path ([string]$params.filePath) -WorkspaceRoot $workspaceRoot
+            if (-not $guard.allowed) { return @{ error = $true; text = "[PATH BLOCKED] $($guard.reason): $($params.filePath)" } }
+            $fp = $guard.resolvedPath
             try {
                 $dir = Split-Path $fp -Parent
-                if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-                Set-Content $fp -Value $params.content -Encoding utf8 -NoNewline
+                if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -LiteralPath $dir -Force | Out-Null }
+                Set-Content -LiteralPath $fp -Value $params.content -Encoding utf8 -NoNewline
                 return @{ error = $false; text = "File written: $($params.filePath) ($($params.content.Length) chars)" }
             } catch {
                 return @{ error = $true; text = "Error writing file: $_" }
             }
         }
         'file_edit' {
-            $fp = Join-Path $workspaceRoot $params.filePath
-            if (-not (Test-Path $fp)) { return @{ error = $true; text = "File not found: $($params.filePath)" } }
+            $guard = Test-SandboxPath -Path ([string]$params.filePath) -WorkspaceRoot $workspaceRoot
+            if (-not $guard.allowed) { return @{ error = $true; text = "[PATH BLOCKED] $($guard.reason): $($params.filePath)" } }
+            $fp = $guard.resolvedPath
+            if (-not (Test-Path -LiteralPath $fp)) { return @{ error = $true; text = "File not found: $($params.filePath)" } }
             try {
-                $raw = Get-Content $fp -Raw -Encoding utf8
+                $raw = Get-Content -LiteralPath $fp -Raw -Encoding utf8
                 $idx = $raw.IndexOf($params.oldString)
                 if ($idx -eq -1) { return @{ error = $true; text = "oldString not found in $($params.filePath)" } }
                 $secondIdx = $raw.IndexOf($params.oldString, $idx + 1)
                 if ($secondIdx -ne -1) { return @{ error = $true; text = "oldString matches multiple locations. Add more context." } }
                 $updated = $raw.Substring(0, $idx) + $params.newString + $raw.Substring($idx + $params.oldString.Length)
-                Set-Content $fp -Value $updated -Encoding utf8 -NoNewline
+                Set-Content -LiteralPath $fp -Value $updated -Encoding utf8 -NoNewline
                 return @{ error = $false; text = "Edited $($params.filePath): replaced $($params.oldString.Length) chars" }
             } catch {
                 return @{ error = $true; text = "Error editing file: $_" }
@@ -1789,12 +2027,22 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, 
             $include = if ($params.ContainsKey('includePattern') -and $params.includePattern) { $params.includePattern } else { '*' }
             try {
                 $results = @()
-                $files = Get-ChildItem $workspaceRoot -Recurse -File -Filter $include -ErrorAction SilentlyContinue |
-                    Where-Object { $_.FullName -notmatch 'node_modules|\.git[/\\]|out[/\\]|dist[/\\]' }
+                # Enumerated results are checked for containment only. The wildcard
+                # and 8.3 rules exist to constrain AGENT-SUPPLIED input; applying
+                # them to real filenames here would silently drop legitimate files
+                # (and every file when the workspace itself sits under a short-name
+                # path such as C:\Users\PIYUSH~1).
+                $searchRootFull = [IO.Path]::GetFullPath($workspaceRoot).TrimEnd([IO.Path]::DirectorySeparatorChar)
+                $files = Get-ChildItem -LiteralPath $workspaceRoot -Recurse -File -Filter $include -ErrorAction SilentlyContinue |
+                    Where-Object { $_.FullName -notmatch 'node_modules|\.git[/\\]|out[/\\]|dist[/\\]' } |
+                    Where-Object {
+                        (Test-SandboxContainment -Resolved $_.FullName -RootFull $searchRootFull).allowed -and
+                        (Test-SandboxLinkChain -Resolved $_.FullName -RootFull $searchRootFull).allowed
+                    }
                 foreach ($f in $files) {
                     if ($results.Count -ge $maxResults) { break }
                     $lineNum = 0
-                    foreach ($line in (Get-Content $f.FullName -Encoding utf8 -ErrorAction SilentlyContinue)) {
+                    foreach ($line in (Get-Content -LiteralPath $f.FullName -Encoding utf8 -ErrorAction SilentlyContinue)) {
                         $lineNum++
                         if ($line -match $params.pattern) {
                             $rel = [System.IO.Path]::GetRelativePath($workspaceRoot, $f.FullName)
@@ -1814,46 +2062,23 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, 
             }
         }
         'list_dir' {
-            $dp = if ($params.ContainsKey('dirPath') -and $params.dirPath) { Join-Path $workspaceRoot $params.dirPath } else { $workspaceRoot }
-            if (-not (Test-Path $dp)) { return @{ error = $true; text = "Directory not found: $($params.dirPath)" } }
+            $dp = $workspaceRoot
+            if ($params.ContainsKey('dirPath') -and $params.dirPath) {
+                $guard = Test-SandboxPath -Path ([string]$params.dirPath) -WorkspaceRoot $workspaceRoot
+                if (-not $guard.allowed) { return @{ error = $true; text = "[PATH BLOCKED] $($guard.reason): $($params.dirPath)" } }
+                $dp = $guard.resolvedPath
+            }
+            if (-not (Test-Path -LiteralPath $dp)) { return @{ error = $true; text = "Directory not found: $($params.dirPath)" } }
             try {
-                $entries = Get-ChildItem $dp | ForEach-Object { if ($_.PSIsContainer) { "$($_.Name)/" } else { $_.Name } }
+                $entries = Get-ChildItem -LiteralPath $dp | ForEach-Object { if ($_.PSIsContainer) { "$($_.Name)/" } else { $_.Name } }
                 return @{ error = $false; text = ($entries -join "`n") }
             } catch {
                 return @{ error = $true; text = "Error listing dir: $_" }
             }
         }
         'terminal_exec' {
-            $cmd = $params.command
-            $agentCommandPolicy = Test-AgentTerminalCommandAllowed -AgentName $agentName -Command $cmd
-            if (-not $agentCommandPolicy.allowed) {
-                return @{ error = $true; text = "[AGENT POLICY BLOCKED] $($agentCommandPolicy.reason)" }
-            }
-            foreach ($b in $blocked) {
-                if ($cmd.ToLower().Contains($b)) {
-                    return @{ error = $true; text = "Blocked dangerous command: $b" }
-                }
-            }
-            try {
-                $timeoutSec = if ($params.ContainsKey('timeoutMs') -and $params.timeoutMs) { [Math]::Ceiling([int]$params.timeoutMs / 1000) } else { 30 }
-                $job = Start-Job -ScriptBlock {
-                    Set-Location $using:workspaceRoot
-                    $commandBlock = [scriptblock]::Create($using:cmd)
-                    & $commandBlock 2>&1
-                }
-                $completed = Wait-Job $job -Timeout $timeoutSec
-                if (-not $completed) { Stop-Job $job; Remove-Job $job -Force; return @{ error = $true; text = "Command timed out after ${timeoutSec}s" } }
-                $output = Receive-Job $job | Out-String
-                Remove-Job $job -Force
-                $text = $output.Trim()
-                if (-not $text) { $text = '(no output)' }
-                if ($text.Length -gt $Script:MAX_TOOL_RESULT_CHARS) {
-                    $text = $text.Substring(0, $Script:MAX_TOOL_RESULT_CHARS) + "`n[... truncated]"
-                }
-                return @{ error = $false; text = $text }
-            } catch {
-                return @{ error = $true; text = "Command error: $_" }
-            }
+            $agentCommandPolicy = Test-AgentTerminalCommandAllowed -AgentName $agentName -Command ([string]$params.command)
+            return @{ error = $true; text = "[AGENT POLICY BLOCKED] $($agentCommandPolicy.reason)" }
         }
         default {
             return @{ error = $true; text = "Unknown tool: $name" }
@@ -2054,41 +2279,11 @@ function ConvertTo-ClaudeCodeModelId([string]$ModelId) {
 }
 
 function Get-ClaudeCodeAllowedTool([array]$Tools) {
-    $mapped = New-Object System.Collections.Generic.List[string]
-
-    foreach ($tool in @($Tools)) {
-        $toolName = ''
-        if ($tool -and $tool.function) {
-            $toolName = [string]$tool.function.name
-        }
-
-        switch ($toolName) {
-            'file_read' {
-                if (-not $mapped.Contains('Read')) { $mapped.Add('Read') }
-            }
-            'file_write' {
-                if (-not $mapped.Contains('Write')) { $mapped.Add('Write') }
-            }
-            'file_edit' {
-                if (-not $mapped.Contains('Edit')) { $mapped.Add('Edit') }
-            }
-            'grep_search' {
-                if (-not $mapped.Contains('Grep')) { $mapped.Add('Grep') }
-            }
-            'list_dir' {
-                if (-not $mapped.Contains('Glob')) { $mapped.Add('Glob') }
-            }
-            'terminal_exec' {
-                if (-not $mapped.Contains('Bash')) { $mapped.Add('Bash') }
-            }
-        }
-    }
-
-    if ($mapped.Count -eq 0) {
-        return '""'
-    }
-
-    return ($mapped.ToArray() -join ',')
+    # Claude's native Read/Write/Edit/Grep/Glob/Bash execute inside the Claude
+    # process and never pass through Invoke-Tool, Test-SandboxPath, boundary
+    # rules, or the terminal allowlist. Keep the bridge text-only until those
+    # tools can be exposed through a guarded MCP adapter.
+    return '""'
 }
 
 function Get-AgentProviderToolSchema {
@@ -2097,12 +2292,23 @@ function Get-AgentProviderToolSchema {
         [array]$Tools
     )
 
-    if ((Resolve-AgentReference $AgentName) -eq 'power-platform-builder' -and
-        (Get-ActiveProviderId) -eq 'claude-code') {
-        return @($Tools | Where-Object { $_.function.name -ne 'terminal_exec' })
-    }
-
-    return @($Tools)
+    return @($Tools | Where-Object {
+        $toolName = ''
+        if ($_ -is [System.Collections.IDictionary]) {
+            $functionNode = $_['function']
+            if ($functionNode -is [System.Collections.IDictionary]) {
+                $toolName = [string]$functionNode['name']
+            } elseif ($functionNode -and $functionNode.PSObject.Properties['name']) {
+                $toolName = [string]$functionNode.name
+            }
+        } elseif ($_ -and $_.PSObject.Properties['function']) {
+            $functionNode = $_.function
+            if ($functionNode -and $functionNode.PSObject.Properties['name']) {
+                $toolName = [string]$functionNode.name
+            }
+        }
+        $toolName -ne 'terminal_exec'
+    })
 }
 
 function ConvertTo-ClaudeCodeSystemPrompt([array]$Messages) {
@@ -2123,12 +2329,12 @@ function ConvertTo-ClaudeCodeSystemPrompt([array]$Messages) {
     if ($systemParts.Count -eq 0) {
         return @"
 You are continuing an AgentX session inside the current workspace.
-Use Claude Code's built-in tools only when needed.
+This bridge is text-only. Do not claim to inspect, edit, or run commands; Claude Code's native tools are disabled because they cannot pass through AgentX workspace and command guards.
 Return only the next assistant response for the conversation.
 "@
     }
 
-    $systemParts.Add('Return only the next assistant response for the conversation. Do not wrap your answer in JSON unless explicitly asked by the user.')
+    $systemParts.Add("This Claude Code bridge is text-only. Do not claim to inspect, edit, or run commands; native tools are disabled because they cannot pass through AgentX guards.`n`nReturn only the next assistant response for the conversation. Do not wrap your answer in JSON unless explicitly asked by the user.")
     return ($systemParts -join "`n`n")
 }
 
@@ -2180,8 +2386,7 @@ function ConvertTo-ClaudeCodePrompt([array]$Messages) {
     $parts.Add(@"
 [INSTRUCTION]
 Continue this AgentX conversation from the transcript above.
-You may inspect, edit, and run commands in the current workspace using Claude Code's built-in tools when needed.
-Return only the next assistant response for the conversation after completing any work you decide is necessary.
+This bridge is text-only: do not inspect, edit, run commands, or claim that you did. Return the next assistant response using only the transcript content above.
 "@)
 
     return ($parts -join "`n`n")
@@ -2300,7 +2505,7 @@ function Invoke-ClaudeCodePrintMode(
             '--input-format', 'text'
             '--append-system-prompt-file', $systemPromptFile
             '--model', (ConvertTo-ClaudeCodeModelId -ModelId $ModelId)
-            '--permission-mode', 'bypassPermissions'
+            '--permission-mode', 'dontAsk'
             '--tools', (Get-ClaudeCodeAllowedTool -Tools $Tools)
             '--max-turns', [string]$Script:CLAUDE_CODE_MAX_TURNS
             '--no-session-persistence'
@@ -2733,7 +2938,7 @@ function Build-SystemPrompt([hashtable]$agentDef, [string]$agentName) {
     }
 
     $parts += "## Tool Usage"
-    $parts += "You have workspace tools: file_read, file_write, file_edit, grep_search, list_dir, terminal_exec."
+    $parts += "You have guarded workspace tools: file_read, file_write, file_edit, grep_search, list_dir. Autonomous terminal execution is disabled."
     $parts += "Use them to explore the codebase and complete tasks."
     $parts += "If the task implies a deliverable artifact, create or update the appropriate file in the workspace before you finish."
     $parts += "After completing any required file changes, provide a concise text summary of what you created or changed."
@@ -3503,7 +3708,9 @@ Produce a structured review with per-category verdicts, APPROVED status, and FIN
     }
 
     # Parse the review response
-    $approved = $true
+    # Fail closed: approval must be explicitly present in the reviewer response.
+    # Empty output (including tool-turn exhaustion) is never an approval.
+    $approved = $false
     $findings = @()
     $categoryVerdicts = @{}
     $failedCategories = @()
@@ -3512,8 +3719,8 @@ Produce a structured review with per-category verdicts, APPROVED status, and FIN
     $reviewBlock = [regex]::Match($reviewText, '(?s)```review\s*\n(.*?)```')
     if ($reviewBlock.Success) {
         $block = $reviewBlock.Groups[1].Value
-        if ($block -match 'APPROVED:\s*(false|no)', 'IgnoreCase') {
-            $approved = $false
+        if ([regex]::IsMatch($block, 'APPROVED:\s*(true|yes)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+            $approved = $true
         }
 
         # Parse per-category verdicts (hard threshold enforcement)
@@ -3535,10 +3742,12 @@ Produce a structured review with per-category verdicts, APPROVED status, and FIN
             $findings += @{ impact = $impact; category = $fm.Groups[2].Value.Trim(); description = $fm.Groups[3].Value.Trim() }
         }
     } else {
-        # Freeform fallback: check for rejection signals
-        if ($reviewText -match 'not approved|needs changes|must fix|critical issue|fail', 'IgnoreCase') {
-            $approved = $false
-        }
+        # Legacy/freeform output may approve only with an explicit positive
+        # verdict. Rejection signals and empty output remain fail-closed.
+        $approved = [regex]::IsMatch(
+            $reviewText,
+            '^\s*APPROVED\s*:\s*(true|yes)\s*$',
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [System.Text.RegularExpressions.RegexOptions]::Multiline)
     }
 
     # Build feedback from non-low findings and failed category verdicts
@@ -4168,6 +4377,10 @@ function Invoke-AgenticLoop {
 
     # Self-review state (tracks review iterations across the main loop)
     $selfReviewIteration = 0
+    # Last self-review outcome, recorded onto loop state as evidence only. It does
+    # NOT satisfy the structured-review gate: that still requires an independent
+    # reviewer verdict recorded through 'agentx loop iterate --verdict'.
+    $lastSelfReview = $null
     $convertSelfReviewBoolean = {
         param($Value, [bool]$Default)
 
@@ -4208,11 +4421,11 @@ function Invoke-AgenticLoop {
     if (-not [int]::TryParse([string]$selfReviewMaxRaw, [ref]$selfReviewMaxParsed)) {
         $selfReviewMaxParsed = $Script:SELF_REVIEW_MAX_ITERATIONS
     }
-    $selfReviewMaxParsed = [Math]::Min([Math]::Max($selfReviewMaxParsed, 1), 50)
+    $selfReviewMaxParsed = [Math]::Min([Math]::Max($selfReviewMaxParsed, $Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS), 50)
     $selfReviewMinParsed = 0
     $selfReviewMinValue = $null
     if ($null -ne $selfReviewMinRaw -and [int]::TryParse([string]$selfReviewMinRaw, [ref]$selfReviewMinParsed) -and $selfReviewMinParsed -gt 0) {
-        $selfReviewMinValue = [Math]::Min($selfReviewMinParsed, $selfReviewMaxParsed)
+        $selfReviewMinValue = [Math]::Min([Math]::Max($selfReviewMinParsed, $Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS), $selfReviewMaxParsed)
     }
     $selfReviewStallParsed = 0
     if (-not [int]::TryParse([string]$selfReviewStallRaw, [ref]$selfReviewStallParsed)) {
@@ -4230,6 +4443,9 @@ function Invoke-AgenticLoop {
     $selfReviewMax = $selfReviewConfig.maxIterations
     $activeLoopState = Read-LoopState -WorkspaceRoot $WorkspaceRoot
     $selfReviewMin = Get-RunnerSelfReviewMinIteration -AgentName $Agent -Prompt $Prompt -LoopState $activeLoopState -MaxReviewerIterations $selfReviewMax -ConfiguredMinimum $selfReviewConfig.minIterations
+    if ($selfReviewMax -lt $selfReviewMin) {
+        $selfReviewMax = $selfReviewMin
+    }
     $selfReviewHistory = @()
     $finalSelfReviewSummary = ''
 
@@ -4371,6 +4587,14 @@ function Invoke-AgenticLoop {
                     minimumNotYetMet = $false
                 }
                 $selfReviewHistory += $historyEntry
+                $lastSelfReview = [PSCustomObject]@{
+                    approved = [bool]$reviewResult.approved
+                    # Severities are bucketed rather than matched literally: a model
+                    # emitting 'critical' or 'blocker' must not record as zero HIGH.
+                    high     = @($reviewFindings | Where-Object { [string]$_.impact -in @('high', 'critical', 'blocker') }).Count
+                    medium   = @($reviewFindings | Where-Object { [string]$_.impact -in @('medium', 'moderate') }).Count
+                    low      = @($reviewFindings | Where-Object { [string]$_.impact -in @('low', 'minor', 'nit', 'info') }).Count
+                }
 
                 if (-not $reviewResult.approved) {
                     # --- Stall detection: pivot-vs-refine decision ---
@@ -4435,6 +4659,16 @@ State your PIVOT or REFINE decision and rationale before making changes.
                 if ($selfReviewSummary -and -not $SuppressUserSummary) {
                     $finalSelfReviewSummary = $selfReviewSummary
                 }
+            }
+
+            if ($selfReviewIteration -ge $selfReviewMax -and $lastSelfReview -and -not [bool]$lastSelfReview.approved) {
+                # The final candidate response after self-review exhaustion has
+                # not been approved. Falling through to text_response would mark
+                # rejected work complete and durable state as pass.
+                $finalText = "Self-review exhausted $selfReviewMax attempts without approval. Resolve the remaining findings before completion."
+                $exitReason = 'self_review_failed'
+                Add-ExecutionSummaryEvent -Type 'SELF-REVIEW FAILED' -Message $finalText -ReplaceExisting
+                break
             }
 
             $exitReason = 'text_response'
@@ -4543,7 +4777,7 @@ State your PIVOT or REFINE decision and rationale before making changes.
     # Save session
     $duration = ((Get-Date) - $startTime).TotalMilliseconds
     $sessionSummary = Build-BoundedSessionSummary -Messages $messages -FinalText $finalText -ExecutionSummaryEvents $executionSummaryEvents -PendingHumanClarification $pendingHumanClarification -MaxChars $sessionSummaryMaxChars
-    Sync-AgenticLoopState -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -Iterations $iterations -ExitReason $exitReason -FinalText $finalText -SkipLoopStateSync:$SkipLoopStateSync
+    Sync-AgenticLoopState -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -Iterations $iterations -ExitReason $exitReason -FinalText $finalText -SelfReview $lastSelfReview -SkipLoopStateSync:$SkipLoopStateSync
     $meta = @{
         sessionId = $sessionId
         agentName = $Agent

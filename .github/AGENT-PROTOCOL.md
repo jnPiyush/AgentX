@@ -51,8 +51,24 @@ allowed. This is enforced mechanically, not by per-agent prose:
 | agent-x | 5 | same |
 
 Reaching 5 is a floor, not the finish line. The loop is done only when
-`loop complete` succeeds AND at least one history iteration summary contains the
-word "review" (the subagent review pass).
+`loop complete` succeeds AND the subagent review pass was recorded as a
+structured reviewer verdict on the FINAL iteration:
+
+```
+.agentx/agentx.ps1 loop iterate -s "Subagent Review: <outcome>" -e <evidence> \
+  --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
+```
+
+`--verdict`, `--reviewer`, `--high`, and `--medium` are all required together.
+`loop complete` fails when the latest verdict is not `approved`, when HIGH or
+MEDIUM is non-zero, or when further iterations were recorded after the approval
+(the approval must cover the final state of the work).
+
+There is no free-text fallback. An earlier design let loops predating the gate
+satisfy it with a summary containing the word "review", keyed on a `reviewGate`
+marker inside `loop-state.json` -- but that file is workspace-writable, so
+deleting one property restored the weaker contract. A loop that predates the gate
+simply records one reviewer verdict before completing.
 
 ### 1.4 Loop Steps (repeat until all criteria met AND >= 5 iterations done)
 
@@ -91,8 +107,10 @@ shown by `loop status`. For standard tasks the canonical focus sequence is:
 ### 1.6 Hard Gate
 
 The pre-commit hook blocks commits unless: status = complete, loopConsumed = false,
-iteration >= the class minimum (5), and >= 1 history iteration summary contains
-"review". There is no skip token for the iteration gate.
+iteration >= the class minimum (5), and the latest recorded reviewer verdict is
+`approved` with zero HIGH and zero MEDIUM findings, attributed to a reviewer id,
+and recorded on the final work iteration. There is no skip token for the
+iteration gate.
 
 ---
 

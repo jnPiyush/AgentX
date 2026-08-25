@@ -24,6 +24,7 @@ export {
   getDefaultMinIterations,
   getEffectiveMinIterations,
   hasSubagentReviewIteration,
+  getLatestReviewRecord,
   getLoopHealth,
   getBudgetRemainingMs,
   evaluateHandoffGate,

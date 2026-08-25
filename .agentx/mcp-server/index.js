@@ -99,20 +99,44 @@ const TOOLS = [
   },
   {
     name: 'agentx_loop_iterate',
-    description: 'Record a quality-loop iteration with summary and evidence path.',
+    description:
+      'Record a quality-loop iteration. For the subagent review pass, also pass verdict, reviewer, high and medium -- a loop cannot complete without one.',
     inputSchema: {
       type: 'object',
       properties: {
         summary: { type: 'string' },
         evidence: { type: 'string', description: 'Path to test report, coverage, or scan artifact' },
+        outcome: { type: 'string', enum: ['pass', 'fail', 'partial'] },
+        verdict: {
+          type: 'string',
+          enum: ['approved', 'changes-requested'],
+          description: 'Reviewer verdict. Requires reviewer, high and medium.',
+        },
+        reviewer: { type: 'string', description: 'Reviewer id, required with verdict' },
+        high: { type: 'number', description: 'HIGH finding count, required with verdict' },
+        medium: { type: 'number', description: 'MEDIUM finding count, required with verdict' },
+        low: { type: 'number', description: 'LOW finding count' },
       },
       required: ['summary'],
     },
-    build: (a) => ['loop', 'iterate', '-s', a.summary, ...(a.evidence ? ['-e', a.evidence] : [])],
+    build: (a) => [
+      'loop',
+      'iterate',
+      '-s',
+      a.summary,
+      ...(a.evidence ? ['-e', a.evidence] : []),
+      ...(a.outcome ? ['-o', a.outcome] : []),
+      ...(a.verdict ? ['--verdict', a.verdict] : []),
+      ...(a.reviewer ? ['--reviewer', a.reviewer] : []),
+      ...(a.high != null ? ['--high', String(a.high)] : []),
+      ...(a.medium != null ? ['--medium', String(a.medium)] : []),
+      ...(a.low != null ? ['--low', String(a.low)] : []),
+    ],
   },
   {
     name: 'agentx_loop_complete',
-    description: 'Mark the AgentX quality loop complete. Requires 5+ iterations and a subagent review pass.',
+    description:
+      'Mark the AgentX quality loop complete. Requires 5+ iterations and an approved reviewer verdict with zero HIGH and MEDIUM findings on the final work iteration.',
     inputSchema: {
       type: 'object',
       properties: {

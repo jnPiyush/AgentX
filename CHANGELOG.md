@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- Replaced free-text review claims with attributable structured verdicts, explicit HIGH/MEDIUM counts, final-work binding, stale-state rejection, and an absolute five-iteration floor.
+- Unified commit-time review enforcement through `agentx loop gate`, installed post-commit loop consumption, and rejected staged/worktree divergence before validating commit bytes.
+- Hardened autonomous workspace tools against traversal, alternate streams, credentials, protected gate paths, links, aliases, and hardlinks. Autonomous shell execution and Claude-native tools are disabled until an externally sandboxed adapter is available.
+
+### Validation
+
+- Added executable regression suites for the review gate, hook lifecycle, path controls, runner review exhaustion, staged/untracked harness enforcement, and VS Code evidence forwarding.
+
 ## 8.7.1
 
 ### Fixes

@@ -34,13 +34,13 @@ AgentX turns coding agents into a structured delivery team. Specialist roles pla
 
 ```mermaid
 flowchart LR
-    Intent[User intent] --> Route{AgentX Auto}
-    Route --> Plan[Plan and design]
-    Plan --> Build[Implement]
-    Build --> Verify[Verify and review]
-    Verify -->|findings| Build
-    Verify --> Capture[Capture learning]
-    Capture --> Done[Done with evidence]
+    Intent["User intent"] --> Route{"AgentX Auto"}
+    Route --> Plan["Plan and design"]
+    Plan --> Build["Implement"]
+    Build --> Verify["Verify and review"]
+    Verify -->|"findings"| Build
+    Verify --> Capture["Capture learning"]
+    Capture --> Done["Done with evidence"]
 ```
 
 AgentX Auto can run that path in one session. For tighter control, select a specialist role for only the phase you need.

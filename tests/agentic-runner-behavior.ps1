@@ -27,6 +27,12 @@ Write-Host ' ================================================' -ForegroundColor 
 
 $Script:ApiMode = 'models'
 
+Assert-True (Test-AgenticLoopResultSucceeded ([PSCustomObject]@{ exitReason = 'text_response' })) 'agentic result helper accepts completed text responses'
+foreach ($failedExitReason in @('self_review_failed', 'error', 'empty_response', 'human_required', 'circuit_breaker', 'max_iterations')) {
+    Assert-True (-not (Test-AgenticLoopResultSucceeded ([PSCustomObject]@{ exitReason = $failedExitReason }))) "agentic result helper rejects $failedExitReason"
+}
+Assert-True (-not (Test-AgenticLoopResultSucceeded $null)) 'agentic result helper rejects missing results'
+
 $originalLlmProviderEnv = $env:AGENTX_LLM_PROVIDER
 $originalReadinessModeEnv = $env:AGENTX_LLM_READINESS_MODE
 
@@ -115,7 +121,14 @@ ${function:Get-ToolSchemaList} = {
         [PSCustomObject]@{ function = [PSCustomObject]@{ name = 'list_dir' } }
     )
 }
-${function:Get-LoopDetector} = { [PSCustomObject]@{} }
+${function:Get-LoopDetector} = {
+    @{
+        history = [System.Collections.ArrayList]::new()
+        windowSize = 30
+        warningThreshold = 10
+        circuitBreakerThreshold = 20
+    }
+}
 ${function:Get-ReasoningRequestConfig} = { param($agentDef, $modelId) return @{} }
 try {
     function Test-RunnerCommandAvailable {
@@ -142,6 +155,47 @@ try {
     $reviewFailure = Invoke-SelfReviewLoop -AgentName 'engineer' -WorkOutput 'done' -Token 't' -ModelId 'gpt-4o' -WorkspaceRoot $script:repoRoot
     Assert-Equal ([bool]$reviewFailure.approved) $false 'Invoke-SelfReviewLoop fails closed when reviewer LLM execution fails'
     Assert-True (([string]$reviewFailure.feedback) -match 'Quality gate not satisfied') 'Invoke-SelfReviewLoop returns actionable failure feedback on reviewer errors'
+
+    ${function:Invoke-LlmChat} = {
+        param($token, $modelId, $messages, $tools, $RequestOptions, $maxTokens)
+        return [PSCustomObject]@{
+            choices = @([PSCustomObject]@{
+                message = [PSCustomObject]@{
+                    content = ''
+                    tool_calls = @([PSCustomObject]@{
+                        id = 'review-tool-1'
+                        function = [PSCustomObject]@{ name = 'list_dir'; arguments = '{"dirPath":"."}' }
+                    })
+                }
+            })
+        }
+    }
+    $reviewExhausted = Invoke-SelfReviewLoop -AgentName 'engineer' -WorkOutput 'done' -Token 't' -ModelId 'gpt-4o' -WorkspaceRoot $script:repoRoot -MaxReviewerIterations 1
+    Assert-Equal ([bool]$reviewExhausted.approved) $false 'Invoke-SelfReviewLoop fails closed when reviewer tool turns exhaust without a verdict'
+    Assert-True (([string]$reviewExhausted.feedback) -match 'did not approve') 'Reviewer exhaustion returns non-approval feedback'
+
+    ${function:Invoke-LlmChat} = {
+        param($token, $modelId, $messages, $tools, $RequestOptions, $maxTokens)
+        return [PSCustomObject]@{
+            choices = @([PSCustomObject]@{
+                message = [PSCustomObject]@{
+                    content = (@(
+                        '```review'
+                        'APPROVED: true'
+                        '- Correctness: PASS'
+                        '- Security: PASS'
+                        '- Testing: PASS'
+                        'FINDINGS:'
+                        '```'
+                    ) -join "`n")
+                    tool_calls = @()
+                }
+            })
+        }
+    }
+    $reviewApproved = Invoke-SelfReviewLoop -AgentName 'engineer' -WorkOutput 'done' -Token 't' -ModelId 'gpt-4o' -WorkspaceRoot $script:repoRoot -MaxReviewerIterations 1
+    Assert-Equal ([bool]$reviewApproved.approved) $true 'Invoke-SelfReviewLoop accepts an explicit positive structured verdict'
+    Assert-Equal @($reviewApproved.findings).Count 0 'Explicit clean review records zero findings'
 } finally {
     ${function:Test-RunnerCommandAvailable} = $originalTestRunnerCommandAvailable
     ${function:Invoke-RunnerCommand} = $originalInvokeRunnerCommand
@@ -240,7 +294,14 @@ $claudeToolList = Get-ClaudeCodeAllowedTool @(
     @{ function = @{ name = 'terminal_exec' } },
     @{ function = @{ name = 'list_dir' } }
 )
-Assert-Equal $claudeToolList 'Read,Edit,Bash,Glob' 'Get-ClaudeCodeAllowedTool maps AgentX tools to Claude Code built-ins'
+Assert-Equal $claudeToolList '""' 'Claude Code native tools stay disabled until they route through AgentX guards'
+
+$providerTools = Get-AgentProviderToolSchema -AgentName 'engineer' -Tools @(
+    @{ function = @{ name = 'file_read' } },
+    @{ function = @{ name = 'terminal_exec' } }
+)
+Assert-Equal @($providerTools).Count 1 'autonomous provider schema removes terminal_exec for normal agents'
+Assert-Equal ([string]$providerTools.function.name) 'file_read' 'autonomous provider schema preserves guarded file tools'
 
 $claudeNormalized = ConvertFrom-ClaudeCodeResponse '{"result":"Updated the auth flow and added tests.","session_id":"abc"}'
 Assert-Equal $claudeNormalized.choices[0].message.content 'Updated the auth flow and added tests.' 'ConvertFrom-ClaudeCodeResponse normalizes json result payloads'
@@ -250,8 +311,10 @@ Assert-Equal $claudeRawText.choices[0].message.content 'Plain text response from
 
 $originalInvokeRunnerCommandWithInput = ${function:Invoke-RunnerCommandWithInput}
 try {
+    $script:capturedClaudeArguments = @()
     function Invoke-RunnerCommandWithInput {
         param([string]$FileName, [string[]]$Arguments = @(), [string]$InputText = '')
+        $script:capturedClaudeArguments = @($Arguments)
         return [PSCustomObject]@{
             output = '{"result":"Claude bridge executed successfully."}'
             exitCode = 0
@@ -266,6 +329,10 @@ try {
         @{ function = @{ name = 'grep_search' } }
     ) -RequestOptions @{ effort = 'medium' }
     Assert-Equal $claudeResponse.choices[0].message.content 'Claude bridge executed successfully.' 'Invoke-ClaudeCodePrintMode returns normalized Claude Code output'
+    $permissionIndex = [Array]::IndexOf($script:capturedClaudeArguments, '--permission-mode')
+    $toolsIndex = [Array]::IndexOf($script:capturedClaudeArguments, '--tools')
+    Assert-Equal $script:capturedClaudeArguments[$permissionIndex + 1] 'dontAsk' 'Claude bridge does not bypass native permissions'
+    Assert-Equal $script:capturedClaudeArguments[$toolsIndex + 1] '""' 'Claude bridge passes an empty native-tool list'
 } finally {
     ${function:Invoke-RunnerCommandWithInput} = $originalInvokeRunnerCommandWithInput
 }
@@ -708,6 +775,7 @@ try {
     $script:runnerMessages = [System.Collections.Generic.List[object]]::new()
     $script:runnerLlmCalls = 0
     $script:selfReviewCalls = 0
+    $script:selfReviewApproved = $true
     $script:lastSavedSessionMeta = $null
 
     function Get-GitHubToken { return 'fake-token' }
@@ -741,7 +809,14 @@ try {
     function Invoke-SelfReviewLoop {
         param($AgentName, $WorkOutput, $Token, $ModelId, $WorkspaceRoot, $MaxReviewerIterations)
         $script:selfReviewCalls++
-        return @{ approved = $true; findings = @(); feedback = 'Looks good' }
+        if ($script:selfReviewApproved) {
+            return @{ approved = $true; findings = @(); feedback = 'Looks good' }
+        }
+        return @{
+            approved = $false
+            findings = @(@{ impact = 'high'; category = 'correctness'; description = 'Still broken' })
+            feedback = 'Address the remaining HIGH finding.'
+        }
     }
 
     @{
@@ -773,8 +848,8 @@ try {
     Assert-Equal $result.iterations 5 'Invoke-AgenticLoop continues the main loop until the minimum self-review passes are complete'
     Assert-True ($result.finalText -match '\[SELF-REVIEW SUMMARY\] Completed 5/5 required review iterations') 'Invoke-AgenticLoop appends a final self-review summary once the minimum passes are met'
     Assert-True ($result.finalText -match '\[SELF-REVIEW SUMMARY\] Iteration 5: APPROVED') 'Invoke-AgenticLoop records the final approved review iteration in the summary'
-    Assert-Equal $syncedLoopState.status 'complete' 'Invoke-AgenticLoop marks the active loop complete after a successful run'
-    Assert-True (-not $syncedLoopState.active) 'Invoke-AgenticLoop clears the active loop flag after a successful run'
+    Assert-Equal $syncedLoopState.status 'active' 'Invoke-AgenticLoop leaves the loop active for independent review after a successful run'
+    Assert-True ([bool]$syncedLoopState.active) 'Invoke-AgenticLoop preserves the active loop flag until independent review'
     Assert-Equal ([int]$syncedLoopState.iteration) 5 'Invoke-AgenticLoop syncs the loop iteration count to the enforced minimum review passes'
     $minimumReminderSeen = @($script:runnerMessages | Where-Object {
         $_ -match '^\[Self-Review MINIMUM NOT YET MET - Iteration 1/5\]' -and $_ -match 'every role must complete at least 5 self-review passes before finishing'
@@ -855,8 +930,33 @@ try {
     $configuredResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
 
     Assert-Equal $configuredResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully with self-review config overrides'
-    Assert-Equal $script:selfReviewCalls 2 'Invoke-AgenticLoop respects configured minimum self-review iterations when no active loop override exists'
-    Assert-Equal $configuredResult.iterations 2 'Invoke-AgenticLoop finishes at the configured self-review minimum for this workspace'
+    Assert-Equal $script:selfReviewCalls 5 'Invoke-AgenticLoop clamps configured self-review minimums up to five'
+    Assert-Equal $configuredResult.iterations 5 'Invoke-AgenticLoop finishes only after the mandatory five self-review passes'
+
+    @{
+        active = $true
+        status = 'active'
+        issueNumber = 0
+        iteration = 0
+        minIterations = 5
+        maxIterations = 20
+        completionCriteria = 'TASK_COMPLETE'
+        startedAt = $currentLoopTimestamp
+        lastIterationAt = $currentLoopTimestamp
+        history = @()
+    } | ConvertTo-Json -Depth 6 | Set-Content -Path $loopStatePath -Encoding UTF8
+    $script:runnerMessages.Clear()
+    $script:selfReviewCalls = 0
+    $script:selfReviewApproved = $false
+    $failedReviewResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement a still-broken change' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
+    $failedReviewState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
+
+    Assert-Equal $failedReviewResult.exitReason 'self_review_failed' 'self-review exhaustion exits as failure rather than text_response'
+    Assert-Equal $script:selfReviewCalls 5 'self-review exhaustion performs the configured five attempts'
+    Assert-True ([bool]$failedReviewState.active) 'failed self-review leaves the quality loop active'
+    Assert-Equal ([string]$failedReviewState.status) 'active' 'failed self-review does not mark durable state complete'
+    Assert-True ($failedReviewResult.finalText -match 'without approval') 'self-review exhaustion reports the unresolved approval blocker'
+    $script:selfReviewApproved = $true
 } finally {
     Remove-Item Function:Get-GitHubToken -ErrorAction SilentlyContinue
     Remove-Item Function:Initialize-ApiMode -ErrorAction SilentlyContinue
@@ -871,6 +971,277 @@ try {
     Remove-Item Function:Invoke-LlmChat -ErrorAction SilentlyContinue
     Remove-Item Function:Invoke-SelfReviewLoop -ErrorAction SilentlyContinue
     Remove-Item $runnerTestRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host ''
+Write-Host ' Workspace path sandbox' -ForegroundColor White
+
+$sandboxRoot = Join-Path ([IO.Path]::GetTempPath()) ("agentx-sandbox-{0}" -f [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path (Join-Path $sandboxRoot 'src') -Force | Out-Null
+# The 8.3 alias checks need the real directories to exist, because an alias only
+# resolves when its target does.
+New-Item -ItemType Directory -Path (Join-Path $sandboxRoot '.git\hooks') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $sandboxRoot '.agentx\state') -Force | Out-Null
+try {
+    Assert-True (Test-SandboxPath -Path 'src/app.ts' -WorkspaceRoot $sandboxRoot).allowed 'workspace-relative path is allowed'
+    Assert-True (Test-SandboxPath -Path 'src/secretRedactor.ts' -WorkspaceRoot $sandboxRoot).allowed 'source file naming a secret is not blocked'
+
+    $traversal = Test-SandboxPath -Path '../outside.txt' -WorkspaceRoot $sandboxRoot
+    Assert-True (-not $traversal.allowed) 'parent traversal is blocked'
+    Assert-Equal $traversal.reason 'Path traversal attempt detected' 'traversal reports the traversal reason'
+
+    $nested = Test-SandboxPath -Path 'src/../../outside.txt' -WorkspaceRoot $sandboxRoot
+    Assert-True (-not $nested.allowed) 'embedded traversal is blocked'
+
+    $absolute = Test-SandboxPath -Path ([IO.Path]::GetTempPath()) -WorkspaceRoot $sandboxRoot
+    Assert-True (-not $absolute.allowed) 'absolute path outside the workspace is blocked'
+    Assert-Equal $absolute.reason 'Path is outside workspace root' 'outside path reports the containment reason'
+
+    Assert-True (-not (Test-SandboxPath -Path '.env' -WorkspaceRoot $sandboxRoot).allowed) 'dotenv file is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.env.production' -WorkspaceRoot $sandboxRoot).allowed) 'dotenv variant is blocked'
+    Assert-True (-not (Test-SandboxPath -Path 'certs/server.pem' -WorkspaceRoot $sandboxRoot).allowed) 'pem certificate is blocked'
+    Assert-True (-not (Test-SandboxPath -Path 'certs/server.KEY' -WorkspaceRoot $sandboxRoot).allowed) 'private key is blocked case-insensitively'
+    Assert-True (-not (Test-SandboxPath -Path '.ssh/id_rsa' -WorkspaceRoot $sandboxRoot).allowed) 'ssh directory is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.aws/credentials' -WorkspaceRoot $sandboxRoot).allowed) 'aws directory is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.config/gh/hosts.yml' -WorkspaceRoot $sandboxRoot).allowed) 'gh config directory is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '' -WorkspaceRoot $sandboxRoot).allowed) 'empty path is rejected'
+
+    $readBlocked = Invoke-Tool 'file_read' @{ filePath = '../escape.txt' } $sandboxRoot
+    Assert-True $readBlocked.error 'file_read rejects a traversal path'
+    Assert-True ($readBlocked.text -like '*PATH BLOCKED*') 'file_read reports the sandbox block'
+
+    $writeBlocked = Invoke-Tool 'file_write' @{ filePath = '../escape.txt'; content = 'nope' } $sandboxRoot
+    Assert-True $writeBlocked.error 'file_write rejects a traversal path'
+    Assert-True (-not (Test-Path (Join-Path (Split-Path $sandboxRoot -Parent) 'escape.txt'))) 'blocked file_write creates nothing outside the workspace'
+
+    $editBlocked = Invoke-Tool 'file_edit' @{ filePath = '.env'; oldString = 'a'; newString = 'b' } $sandboxRoot
+    Assert-True $editBlocked.error 'file_edit rejects a sensitive file'
+
+    $listBlocked = Invoke-Tool 'list_dir' @{ dirPath = '../' } $sandboxRoot
+    Assert-True $listBlocked.error 'list_dir rejects a traversal path'
+
+    # Wildcards would glob past the validated string onto other files.
+    Assert-True (-not (Test-SandboxPath -Path '.en?' -WorkspaceRoot $sandboxRoot).allowed) 'single-character wildcard is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.[e]nv' -WorkspaceRoot $sandboxRoot).allowed) 'character-class wildcard is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '*' -WorkspaceRoot $sandboxRoot).allowed) 'star wildcard is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.env::$DATA' -WorkspaceRoot $sandboxRoot).allowed) 'alternate data stream syntax is blocked'
+    Assert-True (-not (Test-SandboxPath -Path 'src/app.ts' -WorkspaceRoot '').allowed) 'missing workspace root is rejected rather than throwing'
+    Assert-True (-not (Test-SandboxPath -Path '.netrc' -WorkspaceRoot $sandboxRoot).allowed) 'netrc credential file is blocked'
+    Assert-True (-not (Test-SandboxPath -Path 'keys/service.p8' -WorkspaceRoot $sandboxRoot).allowed) 'p8 private key is blocked'
+
+    # Single-stream ADS syntax hides content behind an otherwise allowed leaf.
+    Assert-True (-not (Test-SandboxPath -Path 'notes.txt:hidden' -WorkspaceRoot $sandboxRoot).allowed) 'single-colon alternate data stream is blocked'
+    Assert-True (Test-SandboxPath -Path (Join-Path $sandboxRoot 'src/app.ts') -WorkspaceRoot $sandboxRoot).allowed 'a drive-letter colon is not mistaken for a stream'
+
+    # The enforcement surfaces themselves must be out of reach.
+    Assert-True (-not (Test-SandboxPath -Path '.git/hooks/pre-commit' -WorkspaceRoot $sandboxRoot).allowed) 'git hooks directory is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.git/config' -WorkspaceRoot $sandboxRoot).allowed) 'git config is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.agentx/state/loop-state.json' -WorkspaceRoot $sandboxRoot).allowed) 'gate-bearing loop state is blocked'
+    # The gate implementations are protected by the same rationale as the state.
+    Assert-True (-not (Test-SandboxPath -Path '.agentx/agentx-cli.ps1' -WorkspaceRoot $sandboxRoot).allowed) 'the CLI that implements the gate is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.github/hooks/pre-commit' -WorkspaceRoot $sandboxRoot).allowed) 'the installed hook source is blocked'
+    Assert-True (Test-SandboxPath -Path '.github/workflows/ci.yml' -WorkspaceRoot $sandboxRoot).allowed 'the .github directory is not confused with .git'
+    Assert-True (Test-SandboxPath -Path '.agentx/plugins/readme.md' -WorkspaceRoot $sandboxRoot).allowed 'only gate-bearing paths under .agentx are blocked'
+
+    # 8.3 aliases reach a blocked location under a different spelling. They only
+    # exist on volumes with short-name generation enabled, so the check is skipped
+    # where the alias does not resolve.
+    if (Test-Path -LiteralPath (Join-Path $sandboxRoot 'GIT~1')) {
+        Assert-True (-not (Test-SandboxPath -Path 'GIT~1/hooks/pre-commit' -WorkspaceRoot $sandboxRoot).allowed) 'short-name alias for .git is blocked'
+        $shortNameWrite = Invoke-Tool 'file_write' @{ filePath = 'GIT~1/hooks/pre-commit'; content = 'exit 0' } $sandboxRoot
+        Assert-True $shortNameWrite.error 'file_write rejects a short-name alias path'
+    } else {
+        Assert-True $true 'short-name alias tests skipped (8.3 generation disabled on this volume)'
+        Assert-True $true 'short-name alias write test skipped (8.3 generation disabled on this volume)'
+    }
+    if (Test-Path -LiteralPath (Join-Path $sandboxRoot 'AGENTX~1')) {
+        Assert-True (-not (Test-SandboxPath -Path 'AGENTX~1/state/loop-state.json' -WorkspaceRoot $sandboxRoot).allowed) 'short-name alias for .agentx is blocked'
+    } else {
+        Assert-True $true 'agentx short-name alias test skipped (8.3 generation disabled on this volume)'
+    }
+
+    # The alias rule keys on whether the component really exists under that name,
+    # so ordinary files containing a tilde stay reachable.
+    Set-Content -LiteralPath (Join-Path $sandboxRoot 'notes~1.md') -Value 'tilde file' -Encoding utf8
+    Assert-True (Test-SandboxPath -Path 'notes~1.md' -WorkspaceRoot $sandboxRoot).allowed 'a real file containing a tilde is not mistaken for an 8.3 alias'
+    $tildeRead = Invoke-Tool 'file_read' @{ filePath = 'notes~1.md' } $sandboxRoot
+    Assert-True (-not $tildeRead.error) "file_read can still read a real tilde-named file (text: $($tildeRead.text))"
+
+    $hardlinkAlias = Join-Path $sandboxRoot 'loop-state-alias.json'
+    $hardlinkCreated = $false
+    try {
+        Set-Content -LiteralPath (Join-Path $sandboxRoot '.agentx\state\loop-state.json') -Value '{"protected":true}' -Encoding utf8
+        New-Item -ItemType HardLink -Path $hardlinkAlias -Target (Join-Path $sandboxRoot '.agentx\state\loop-state.json') -ErrorAction Stop | Out-Null
+        $hardlinkCreated = $true
+    } catch { $hardlinkCreated = $false }
+    if ($hardlinkCreated) {
+        $hardlinkRead = Invoke-Tool 'file_read' @{ filePath = 'loop-state-alias.json' } $sandboxRoot
+        $hardlinkWrite = Invoke-Tool 'file_write' @{ filePath = 'loop-state-alias.json'; content = '{"protected":false}' } $sandboxRoot
+        $hardlinkGrep = Invoke-Tool 'grep_search' @{ pattern = 'protected'; includePattern = '*.json'; maxResults = 20 } $sandboxRoot
+        Assert-True $hardlinkRead.error 'file_read rejects a hardlink alias to protected state'
+        Assert-True $hardlinkWrite.error 'file_write rejects a hardlink alias to protected state'
+        Assert-True ($hardlinkGrep.text -notmatch 'loop-state-alias\.json') 'grep_search excludes hardlink aliases'
+        Assert-True ((Get-Content -LiteralPath (Join-Path $sandboxRoot '.agentx\state\loop-state.json') -Raw) -match 'true') 'blocked hardlink write preserves protected content'
+    } else {
+        Assert-True $true 'hardlink alias tests skipped (hardlink creation not permitted)'
+        Assert-True $true 'hardlink write test skipped (hardlink creation not permitted)'
+        Assert-True $true 'hardlink grep test skipped (hardlink creation not permitted)'
+        Assert-True $true 'hardlink preservation test skipped (hardlink creation not permitted)'
+    }
+
+    # Widened credential deny-list.
+    Assert-True (-not (Test-SandboxPath -Path '.envrc' -WorkspaceRoot $sandboxRoot).allowed) 'envrc is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.pgpass' -WorkspaceRoot $sandboxRoot).allowed) 'pgpass is blocked'
+    Assert-True (-not (Test-SandboxPath -Path 'deploy/kubeconfig' -WorkspaceRoot $sandboxRoot).allowed) 'kubeconfig is blocked outside the .kube directory'
+    Assert-True (-not (Test-SandboxPath -Path 'keys/putty.ppk' -WorkspaceRoot $sandboxRoot).allowed) 'ppk private key is blocked'
+    Assert-True (-not (Test-SandboxPath -Path '.gitconfig' -WorkspaceRoot $sandboxRoot).allowed) 'gitconfig is blocked'
+
+    $stateWrite = Invoke-Tool 'file_write' @{ filePath = '.agentx/state/loop-state.json'; content = '{"reviewGate":null}' } $sandboxRoot
+    Assert-True $stateWrite.error 'file_write cannot rewrite the gate-bearing loop state'
+    $hookWrite = Invoke-Tool 'file_write' @{ filePath = '.git/hooks/pre-commit'; content = 'exit 0' } $sandboxRoot
+    Assert-True $hookWrite.error 'file_write cannot replace the pre-commit hook'
+    $terminalWrite = Invoke-Tool 'terminal_exec' @{ command = "Set-Content -LiteralPath '.agentx/state/loop-state.json' -Value '{}'" } $sandboxRoot 'engineer'
+    Assert-True $terminalWrite.error 'terminal_exec is fail-closed for autonomous agents'
+    Assert-True ($terminalWrite.text -match 'Autonomous terminal execution is disabled') 'terminal_exec explains the external-sandbox requirement'
+
+    Set-Content -LiteralPath (Join-Path $sandboxRoot 'realfile.txt') -Value 'real' -Encoding utf8
+    $globWrite = Invoke-Tool 'file_write' @{ filePath = '*'; content = 'clobbered' } $sandboxRoot
+    Assert-True $globWrite.error 'file_write rejects a bare wildcard path'
+    Assert-Equal (Get-Content -LiteralPath (Join-Path $sandboxRoot 'realfile.txt') -Raw).Trim() 'real' 'wildcard write did not clobber existing files'
+
+    # Symlink escape: skipped where the platform denies link creation.
+    $linkOutside = Join-Path ([IO.Path]::GetTempPath()) ("agentx-sandbox-outside-{0}" -f [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $linkOutside -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $linkOutside 'loot.txt') -Value 'loot' -Encoding utf8
+    $linkPath = Join-Path $sandboxRoot 'escape-link'
+    $linkCreated = $false
+    try {
+        New-Item -ItemType SymbolicLink -Path $linkPath -Target $linkOutside -ErrorAction Stop | Out-Null
+        $linkCreated = $true
+    } catch { $linkCreated = $false }
+    if ($linkCreated) {
+        $linkGuard = Test-SandboxPath -Path 'escape-link' -WorkspaceRoot $sandboxRoot
+        Assert-True (-not $linkGuard.allowed) 'symlink pointing outside the workspace is blocked'
+        # An intermediate link carries an allowed-looking relative path outside
+        # the root, so every component must be followed, not just the leaf.
+        $viaLink = Test-SandboxPath -Path 'escape-link/loot.txt' -WorkspaceRoot $sandboxRoot
+        Assert-True (-not $viaLink.allowed) 'a path traversing an escaping link is blocked'
+        $viaLinkNew = Test-SandboxPath -Path 'escape-link/newfile.txt' -WorkspaceRoot $sandboxRoot
+        Assert-True (-not $viaLinkNew.allowed) 'writing a new file through an escaping link is blocked'
+        $readThroughLink = Invoke-Tool 'file_read' @{ filePath = 'escape-link/loot.txt' } $sandboxRoot
+        Assert-True $readThroughLink.error 'file_read cannot read through an escaping link'
+
+        $fileLinkPath = Join-Path $sandboxRoot 'escape-file.txt'
+        $fileLinkCreated = $false
+        try {
+            New-Item -ItemType SymbolicLink -Path $fileLinkPath -Target (Join-Path $linkOutside 'loot.txt') -ErrorAction Stop | Out-Null
+            $fileLinkCreated = $true
+        } catch { $fileLinkCreated = $false }
+        if ($fileLinkCreated) {
+            $grepThroughLink = Invoke-Tool 'grep_search' @{ pattern = 'loot'; includePattern = '*.txt'; maxResults = 20 } $sandboxRoot
+            Assert-True ($grepThroughLink.text -notmatch 'escape-file\.txt') 'grep_search excludes file symlinks that escape the workspace'
+        } else {
+            Assert-True $true 'grep file-symlink test skipped (file symlink creation not permitted)'
+        }
+    } else {
+        Assert-True $true 'symlink escape test skipped (link creation not permitted on this host)'
+    }
+    Remove-Item $linkOutside -Recurse -Force -ErrorAction SilentlyContinue
+} finally {
+    Remove-Item $sandboxRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host ''
+Write-Host ' Runner self-review record' -ForegroundColor White
+$selfReviewRoot = Join-Path ([IO.Path]::GetTempPath()) ("agentx-runner-selfreview-{0}" -f [guid]::NewGuid().ToString('N'))
+try {
+    New-Item -ItemType Directory -Path (Join-Path $selfReviewRoot '.agentx\state') -Force | Out-Null
+    $nowStamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+    ([ordered]@{
+        active          = $true
+        status          = 'active'
+        iteration       = 5
+        maxIterations   = 5
+        minIterations   = 5
+        reviewGate      = 'structured'
+        startedAt       = $nowStamp
+        lastIterationAt = $nowStamp
+        history         = @()
+    } | ConvertTo-Json -Depth 10) |
+        Set-Content -LiteralPath (Join-Path $selfReviewRoot '.agentx\state\loop-state.json') -Encoding utf8
+
+    Sync-AgenticLoopState -WorkspaceRoot $selfReviewRoot -IssueNumber 0 -Iterations 5 -ExitReason 'text_response' `
+        -FinalText 'Autonomous run finished' -SelfReview ([PSCustomObject]@{ approved = $true; high = 0; medium = 0; low = 0 })
+
+    $syncedState = Get-Content -LiteralPath (Join-Path $selfReviewRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json
+    $lastEntry = @($syncedState.history)[-1]
+    Assert-True ($null -ne $lastEntry) 'runner appends a history entry when its work completes'
+    Assert-True ([bool]$syncedState.active) 'runner keeps the loop active for independent review'
+    Assert-Equal ([string]$syncedState.status) 'active' 'runner does not claim loop completion before independent review'
+    Assert-Equal ([int]$syncedState.maxIterations) 6 'runner reserves a final independent-review slot at the configured maximum'
+    # A self-review is evidence, not an approval. Writing it as a 'review' record
+    # would either mint the verdict the gate demands from an independent reviewer,
+    # or trap the loop behind a verdict no command can clear.
+    Assert-True ($lastEntry.PSObject.Properties.Name -contains 'selfReview') 'runner records its self-review under selfReview'
+    Assert-True ($lastEntry.PSObject.Properties.Name -notcontains 'review') 'runner does not write a structured review record'
+    Assert-True ($lastEntry.selfReview.PSObject.Properties.Name -notcontains 'verdict') 'runner self-review carries no verdict'
+    Assert-Equal ([string]$lastEntry.selfReview.reviewer) 'agentic-runner-self-review' 'runner self-review is attributed to the runner'
+
+    $evidencePath = Join-Path $selfReviewRoot 'independent-review.txt'
+    Set-Content -LiteralPath $evidencePath -Value 'Independent review approved with zero blocking findings.' -Encoding utf8
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = (Get-Command pwsh -ErrorAction Stop).Source
+    $startInfo.WorkingDirectory = $selfReviewRoot
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.UseShellExecute = $false
+    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $selfReviewRoot
+    foreach ($argument in @('-NoProfile', '-File', (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1'), 'loop', 'iterate', '-s', 'Independent review approved', '-e', $evidencePath, '--verdict', 'approved', '--reviewer', 'runner-test-reviewer', '--high', '0', '--medium', '0', '--low', '0')) {
+        $startInfo.ArgumentList.Add($argument)
+    }
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    [void]$process.StandardOutput.ReadToEnd()
+    [void]$process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+    Assert-Equal $process.ExitCode 0 'independent verdict can be appended after autonomous work completes'
+    $reviewedState = Get-Content -LiteralPath (Join-Path $selfReviewRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json
+    $reviewEntry = @($reviewedState.history)[-1]
+    Assert-Equal ([string]$reviewEntry.review.verdict) 'approved' 'appended verdict is stored as the final structured review'
+} finally {
+    Remove-Item $selfReviewRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host ''
+Write-Host ' Runner quality-iteration floor' -ForegroundColor White
+$minimumReviewState = [PSCustomObject]@{
+    active = $true
+    status = 'active'
+    prompt = 'Implement secure iteration floor'
+    completionCriteria = 'TASK_COMPLETE'
+    taskClass = 'complex-delivery'
+    iteration = 0
+    minIterations = 5
+    maxIterations = 20
+}
+Assert-Equal (Get-RunnerSelfReviewMinIteration -AgentName 'engineer' -Prompt 'test' -LoopState $minimumReviewState -MaxReviewerIterations 1) 5 'self-review maximum cannot clamp the required five passes'
+
+$minimumSyncRoot = Join-Path ([IO.Path]::GetTempPath()) ("agentx-runner-minimum-{0}" -f [guid]::NewGuid().ToString('N'))
+try {
+    New-Item -ItemType Directory -Path (Join-Path $minimumSyncRoot '.agentx\state') -Force | Out-Null
+    $minimumReviewState | Add-Member -NotePropertyName startedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
+    $minimumReviewState | Add-Member -NotePropertyName lastIterationAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
+    $minimumReviewState | Add-Member -NotePropertyName history -NotePropertyValue @() -Force
+    $minimumReviewState | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $minimumSyncRoot '.agentx\state\loop-state.json') -Encoding utf8
+
+    Sync-AgenticLoopState -WorkspaceRoot $minimumSyncRoot -IssueNumber 0 -Iterations 1 -ExitReason 'text_response' `
+        -FinalText 'Premature final response' -SelfReview ([PSCustomObject]@{ approved = $true; high = 0; medium = 0; low = 0 })
+
+    $minimumSynced = Get-Content -LiteralPath (Join-Path $minimumSyncRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json
+    Assert-Equal ([int]$minimumSynced.iteration) 1 'state synchronization preserves the actual quality-iteration count'
+    Assert-True ([bool]$minimumSynced.active) 'state remains active when actual passes are below the minimum'
+    Assert-Equal ([string]$minimumSynced.status) 'active' 'premature runner response does not mark the loop complete'
+} finally {
+    Remove-Item $minimumSyncRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host ''

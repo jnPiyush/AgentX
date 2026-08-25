@@ -4007,6 +4007,7 @@ function Invoke-LoopCmd {
         'complete'  { Invoke-LoopComplete }
         'cancel'    { Invoke-LoopCancel }
         'rollback'  { Invoke-LoopRollback }
+        'gate'      { Invoke-LoopGateCheck }
         default     { Write-CliOutput "Unknown loop action: $action" }
     }
 }
@@ -4138,7 +4139,6 @@ function Get-LoopDefaultMinIterations {
     param($State)
 
     if (-not $State) { return 0 }
-    $maxIterations = if ($State.PSObject.Properties.Name -contains 'maxIterations') { [int]$State.maxIterations } else { 0 }
     $defaultMin = switch (Get-LoopTaskClass $State) {
         'complex-delivery' { $Script:LOOP_COMPLEX_MIN_ITERATIONS  }
         'auto-fix-review'  { $Script:LOOP_AUTO_FIX_MIN_ITERATIONS  }
@@ -4146,24 +4146,88 @@ function Get-LoopDefaultMinIterations {
         default            { $Script:LOOP_STANDARD_MIN_ITERATIONS  }
     }
 
-    return [Math]::Min($defaultMin, $maxIterations)
+    return $defaultMin
 }
 
 function Get-LoopEffectiveMinIterations {
     param($State)
 
     if (-not $State) { return 0 }
-    $maxIterations = if ($State.PSObject.Properties.Name -contains 'maxIterations') { [int]$State.maxIterations } else { 0 }
     $defaultMin = Get-LoopDefaultMinIterations $State
     $storedMin = 0
     if ($State.PSObject.Properties.Name -contains 'minIterations' -and $State.minIterations) {
         try { $storedMin = [int]$State.minIterations } catch { $storedMin = 0 }
     }
-    $effectiveMin = [Math]::Max($storedMin, $defaultMin)
-    if ($maxIterations -gt 0) { return [Math]::Min($effectiveMin, $maxIterations) }
-    return $effectiveMin
+    return [Math]::Max($storedMin, $defaultMin)
 }
 
+<#
+.SYNOPSIS
+  Return the structured reviewer record on a history entry, or $null.
+
+.DESCRIPTION
+  A reviewer pass recorded with --verdict carries machine-checkable evidence
+  (verdict plus HIGH/MEDIUM/LOW counts) rather than a free-text claim that the
+  review happened. A summary alone cannot prove a reviewer ever ran.
+#>
+function Get-LoopReviewRecord {
+    param($HistoryEntry)
+
+    if (-not $HistoryEntry) { return $null }
+    if (-not ($HistoryEntry.PSObject.Properties.Name -contains 'review')) { return $null }
+    $review = $HistoryEntry.review
+    if (-not $review) { return $null }
+    if (-not ($review.PSObject.Properties.Name -contains 'verdict')) { return $null }
+    if ([string]::IsNullOrWhiteSpace([string]$review.verdict)) { return $null }
+    return $review
+}
+
+<#
+.SYNOPSIS
+  True when a history entry is the record 'loop complete' appends, rather than a
+  work entry.
+
+.DESCRIPTION
+  Keyed on an explicit 'kind' marker, NOT on status: the agentic runner writes
+  status='complete' for genuine work, so a status-based test would silently skip
+  post-approval work and defeat the approval binding.
+#>
+function Test-LoopCompletionEntry {
+    param($HistoryEntry)
+
+    if (-not $HistoryEntry) { return $false }
+    if (-not ($HistoryEntry.PSObject.Properties.Name -contains 'kind')) { return $false }
+    return ([string]$HistoryEntry.kind -ceq 'completion')
+}
+
+<#
+.SYNOPSIS
+  Return the most recent history entry carrying a structured reviewer record.
+#>
+function Get-LoopLatestReviewEntry {
+    param($State)
+
+    if (-not $State -or -not ($State.PSObject.Properties.Name -contains 'history')) { return $null }
+    $latest = $null
+    foreach ($historyEntry in @($State.history)) {
+        if (Get-LoopReviewRecord $historyEntry) { $latest = $historyEntry }
+    }
+    return $latest
+}
+
+<#
+.SYNOPSIS
+  True when a structured reviewer record is present in loop history.
+
+.DESCRIPTION
+  There is no free-text fallback. An earlier design kept one for loops started
+  before the gate shipped, keyed on a `reviewGate` marker in loop-state.json --
+  but that file is workspace-writable, so deleting one property downgraded the
+  loop to the weaker contract and defeated all three implementations at once.
+  No marker stored beside the thing it protects can be trusted, so the weaker
+  contract was removed rather than guarded. A loop predating the gate simply
+  records one reviewer verdict before completing.
+#>
 function Test-LoopHasSubagentReviewIteration {
     param($State)
 
@@ -4173,13 +4237,7 @@ function Test-LoopHasSubagentReviewIteration {
 
     foreach ($historyEntry in @($State.history)) {
         if (-not $historyEntry) { continue }
-        if (-not ($historyEntry.PSObject.Properties.Name -contains 'summary')) { continue }
-        $summary = [string]$historyEntry.summary
-        # Documented contract: at least one iteration summary must contain the
-        # word 'review'. Mirrors hasSubagentReviewIteration in runtime/loopState.ts.
-        if ($summary -match '\breview\b') {
-            return $true
-        }
+        if (Get-LoopReviewRecord $historyEntry) { return $true }
     }
 
     return $false
@@ -4512,6 +4570,10 @@ function Invoke-LoopStart {
     $prompt = Get-Flag @('-p', '--prompt')
     if (-not $prompt) { Write-CliOutput 'Error: --prompt required'; exit 1 }
     $max = [int](Get-Flag @('-m', '--max') '20')
+    if ($max -lt 5) {
+        Write-CliOutput "$($C.r)Error: --max must be at least 5 because every quality loop requires five iterations.$($C.n)"
+        exit 1
+    }
     $criteria = Get-Flag @('-c', '--criteria') 'TASK_COMPLETE'
     $issue = [int](Get-Flag @('-i', '--issue') '0')
     if (-not $issue) { $issue = $null }
@@ -4524,7 +4586,7 @@ function Invoke-LoopStart {
         $parsed = 0
         if (-not [int]::TryParse($budgetRaw, [ref]$parsed) -or $parsed -le 0) {
             Write-CliOutput "$($C.r)Error: --budget must be a positive integer (got '$budgetRaw').$($C.n)"
-            return
+            exit 1
         }
         $budget = $parsed
     }
@@ -4572,6 +4634,10 @@ function Invoke-LoopStart {
         prompt             = $prompt
         role               = $role
         taskClass          = $taskClass
+        # Provenance only. No gate reads this: it was once the key for a free-text
+        # fallback, and keying enforcement on a field inside the file being
+        # enforced is what made that fallback trivially restorable.
+        reviewGate         = 'structured'
         iteration          = 0
         minIterations      = $min
         maxIterations      = $max
@@ -4717,10 +4783,99 @@ function Invoke-LoopStatus {
     Write-CliOutput ''
 }
 
+<#
+.SYNOPSIS
+  Build a structured reviewer record from --verdict / --reviewer / severity flags.
+
+.OUTPUTS
+  $null when no reviewer flags were supplied, '__INVALID__' on a bad value, or
+  the reviewer record object to attach to the iteration.
+#>
+function Get-LoopReviewFlagRecord {
+    $verdictRaw = Get-Flag @('--verdict') ''
+    $reviewer = Get-Flag @('--reviewer') ''
+    # A trailing '--verdict' with no value would otherwise read as "no reviewer
+    # flags at all" and silently drop the review pass with exit code 0.
+    if ([string]::IsNullOrWhiteSpace($verdictRaw) -and ($Script:SubArgs -contains '--verdict')) {
+        Write-CliOutput "$($C.r)  [FAIL] --verdict requires a value: 'approved' or 'changes-requested'.$($C.n)"
+        return '__INVALID__'
+    }
+    $counts = @{}
+    $supplied = @{}
+    foreach ($severity in @('high', 'medium', 'low')) {
+        $raw = Get-Flag @("--$severity") ''
+        # Presence is decided on the STRING, not truthiness: a numeric 0 arriving
+        # from a launcher that coerced the argument would otherwise look omitted,
+        # and zero findings is exactly the value a clean review must record.
+        $rawText = [string]$raw
+        $supplied[$severity] = -not [string]::IsNullOrWhiteSpace($rawText)
+        if (-not $supplied[$severity]) { $counts[$severity] = 0; continue }
+        $parsed = 0
+        if (-not [int]::TryParse($rawText, [ref]$parsed) -or $parsed -lt 0) {
+            Write-CliOutput "$($C.r)  [FAIL] --$severity requires a non-negative integer.$($C.n)"
+            return '__INVALID__'
+        }
+        $counts[$severity] = $parsed
+    }
+
+    $hasFindings = @($counts.Values | Where-Object { $_ -gt 0 }).Count -gt 0
+    if (-not $verdictRaw) {
+        if ($reviewer -or $hasFindings) {
+            Write-CliOutput "$($C.r)  [FAIL] --verdict <approved|changes-requested> is required when recording reviewer findings.$($C.n)"
+            return '__INVALID__'
+        }
+        return $null
+    }
+
+    $verdict = switch ($verdictRaw.Trim().ToLowerInvariant()) {
+        'approved' { 'approved' }
+        'changes-requested' { 'changes-requested' }
+        'changes_requested' { 'changes-requested' }
+        default { '' }
+    }
+    if (-not $verdict) {
+        Write-CliOutput "$($C.r)  [FAIL] --verdict must be 'approved' or 'changes-requested'.$($C.n)"
+        return '__INVALID__'
+    }
+
+    # An omitted count would otherwise record a zero-findings claim the reviewer
+    # never made, so both blocking severities must be stated explicitly.
+    foreach ($severity in @('high', 'medium')) {
+        if (-not $supplied[$severity]) {
+            Write-CliOutput "$($C.r)  [FAIL] --$severity is required with --verdict so the finding count is stated, not assumed.$($C.n)"
+            return '__INVALID__'
+        }
+    }
+
+    # An attributable reviewer is part of the evidence: an anonymous verdict
+    # cannot be traced back to who or what produced it.
+    if ([string]::IsNullOrWhiteSpace($reviewer)) {
+        Write-CliOutput "$($C.r)  [FAIL] --reviewer <id> is required with --verdict so the review is attributable.$($C.n)"
+        return '__INVALID__'
+    }
+
+    return [PSCustomObject]@{
+        verdict = $verdict
+        reviewer = $reviewer.Trim()
+        high = $counts['high']
+        medium = $counts['medium']
+        low = $counts['low']
+        recordedAt = Get-Timestamp
+    }
+}
+
 function Invoke-LoopIterate {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
-    if (-not $state) { Write-CliOutput 'No loop state found.'; return }
-    if (-not $state.active) { $state.active = $true; $state.status = 'active' }
+    if (-not $state) { Write-CliOutput 'No loop state found.'; exit 1 }
+    $consumed = ($state.PSObject.Properties.Name -contains 'loopConsumed') -and [bool]$state.loopConsumed
+    if ($consumed) {
+        Write-CliOutput "$($C.r)  [FAIL] Quality loop was consumed by a prior commit. Start a fresh loop before iterating.$($C.n)"
+        exit 1
+    }
+    if (-not $state.active) {
+        Write-CliOutput "$($C.r)  [FAIL] Quality loop is not active (status: $($state.status)). Start a fresh loop before iterating.$($C.n)"
+        exit 1
+    }
     $baseline = Read-LoopBaseline
 
     $next = $state.iteration + 1
@@ -4729,15 +4884,19 @@ function Invoke-LoopIterate {
         $state.history = @($state.history) + @([PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = 'Max iterations reached'; status = 'stopped'; outcome = 'fail' })
         Write-JsonFile $Script:LOOP_STATE_FILE $state
         Write-CliOutput "$($C.r)  Max iterations ($($state.maxIterations)) reached. Loop stopped.$($C.n)"
-        return
+        exit 1
     }
 
     $summary = Get-Flag @('-s', '--summary') "Iteration $next"
     $outcomeRaw = Get-Flag @('-o', '--outcome') 'partial'
     $outcome = if ($outcomeRaw -in @('pass', 'fail', 'partial')) { $outcomeRaw } else { 'partial' }
+    $reviewRecord = Get-LoopReviewFlagRecord
+    # Exit non-zero: a caller that only checks $LASTEXITCODE would otherwise treat
+    # a rejected reviewer pass as recorded and discover the loss at loop complete.
+    if ($reviewRecord -is [string] -and $reviewRecord -eq '__INVALID__') { exit 1 }
     $currentPassing = Get-LoopPassingCount 'loop iterate'
-    if ($currentPassing -eq '__INVALID__') { return }
-    if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop iterate')) { return }
+    if ($currentPassing -eq '__INVALID__') { exit 1 }
+    if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop iterate')) { exit 1 }
 
     # Evidence requirement: every iterate call must point to a real artifact
     # (test report, coverage file, lint output, scan json, etc.). Bypass only via
@@ -4755,7 +4914,7 @@ function Invoke-LoopIterate {
             Write-CliOutput "$($C.d)    Acceptable artifacts: test report (junit/trx), coverage xml, semgrep/gitleaks json, build log.$($C.n)"
             Write-CliOutput "$($C.d)    Example: agentx loop iterate -s 'fixed null deref' -e .agentx/state/loop-evidence/iter-2/test-report.xml$($C.n)"
             Write-CliOutput "$($C.d)    Bypass: `$env:AGENTX_SKIP_EVIDENCE_GATE = '1' (legacy flows only).$($C.n)"
-            return
+            exit 1
         } else {
             Write-CliOutput "$($C.y)  [WARN] Evidence gate bypassed (AGENTX_SKIP_EVIDENCE_GATE).$($C.n)"
         }
@@ -4774,7 +4933,7 @@ function Invoke-LoopIterate {
     # output defeats (1) but not (2).
     $archivedPath = $null
     if ($evidenceOk) {
-        if (-not (Test-LoopEvidenceFreshness -EvidencePath $evidenceAbs -State $state -ContextLabel 'loop iterate')) { return }
+        if (-not (Test-LoopEvidenceFreshness -EvidencePath $evidenceAbs -State $state -ContextLabel 'loop iterate')) { exit 1 }
 
         $evidenceHash = $null
         try { $evidenceHash = (Get-FileHash -LiteralPath $evidenceAbs -Algorithm SHA256).Hash } catch { $evidenceHash = $null }
@@ -4782,7 +4941,7 @@ function Invoke-LoopIterate {
             # Fail closed: without a digest the reuse guard cannot function, so
             # accepting the artifact would silently disable the control.
             Write-CliOutput "$($C.r)  [FAIL] Could not hash the evidence artifact; refusing to accept it.$($C.n)"
-            return
+            exit 1
         }
 
         $acceptedHashes = @()
@@ -4792,7 +4951,7 @@ function Invoke-LoopIterate {
         if ($evidenceHash -and ($acceptedHashes -contains $evidenceHash)) {
             Write-CliOutput "$($C.r)  [FAIL] This evidence artifact was already accepted in an earlier iteration (identical SHA-256).$($C.n)"
             Write-CliOutput "$($C.d)    Regenerate the artifact so it reflects the current iteration, then retry.$($C.n)"
-            return
+            exit 1
         }
 
         $loopDir = Get-LoopStateDirectory
@@ -4805,7 +4964,7 @@ function Invoke-LoopIterate {
             Copy-Item -LiteralPath $evidenceAbs -Destination $archivedPath -Force
         } catch {
             Write-CliOutput "$($C.r)  [FAIL] Could not archive evidence (copy): $_$($C.n)"
-            return
+            exit 1
         }
         if ($evidenceHash) {
             $state | Add-Member -NotePropertyName acceptedEvidenceHashes -NotePropertyValue (@($acceptedHashes) + @($evidenceHash)) -Force
@@ -4825,6 +4984,7 @@ function Invoke-LoopIterate {
     $state.lastIterationAt = Get-Timestamp
     $entry = [PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = $summary; status = 'in-progress'; outcome = $outcome }
     if ($null -ne $harnessScore) { $entry | Add-Member -NotePropertyName harnessScore -NotePropertyValue $harnessScore }
+    if ($reviewRecord) { $entry | Add-Member -NotePropertyName review -NotePropertyValue $reviewRecord }
     if ($archivedPath) {
         $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $archivedPath
         $entry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $evidenceAbs
@@ -4847,6 +5007,9 @@ function Invoke-LoopIterate {
 
     Write-CliOutput "`n$($C.c)  Iteration $next/$($state.maxIterations)$($C.n)"
     Write-CliOutput "$($C.d)  Summary: $summary  |  Outcome: $outcome$($C.n)"
+    if ($reviewRecord) {
+        Write-CliOutput "$($C.d)  Review: verdict=$($reviewRecord.verdict) reviewer=$($reviewRecord.reviewer) high=$($reviewRecord.high) medium=$($reviewRecord.medium) low=$($reviewRecord.low)$($C.n)"
+    }
     if ($archivedPath) { Write-CliOutput "$($C.d)  Evidence archived to: $archivedPath$($C.n)" }
     if ($null -ne $harnessScore) { Write-CliOutput "$($C.d)  Harness score: $harnessScore$($C.n)" }
 
@@ -4922,22 +5085,90 @@ function Invoke-LoopRollback {
 
 function Invoke-LoopComplete {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
-    if (-not $state -or -not $state.active) { Write-CliOutput 'No active loop.'; return }
+    if (-not $state -or -not $state.active) { Write-CliOutput 'No active loop.'; exit 1 }
+    $loopHealth = Get-LoopStateHealth -State $state
+    if ($loopHealth.kind -ne 'healthy') {
+        Write-CliOutput "$($C.r)  [FAIL] Quality loop is $($loopHealth.kind): $($loopHealth.reason). Start a fresh loop before completion.$($C.n)"
+        exit 1
+    }
     $baseline = Read-LoopBaseline
     $effectiveMinIterations = Get-LoopEffectiveMinIterations $state
     $state | Add-Member -NotePropertyName minIterations -NotePropertyValue $effectiveMinIterations -Force
     if ([int]$state.iteration -lt [int]$state.minIterations) {
         Write-CliOutput "$($C.y)  Minimum review iterations not yet met: $($state.iteration)/$($state.minIterations). Use 'agentx loop iterate' before completing.$($C.n)"
-        return
+        exit 1
     }
     if (-not (Test-LoopHasSubagentReviewIteration $state)) {
         Write-CliOutput "$($C.r)  [FAIL] loop complete requires a subagent review iteration before completion.$($C.n)"
-        Write-CliOutput "$($C.d)    Record the review pass with: agentx loop iterate -s 'Subagent Review: <findings>' -e <review-evidence>$($C.n)"
-        return
+        Write-CliOutput "$($C.d)    Record the review pass with: agentx loop iterate -s 'Subagent Review: <findings>' -e <review-evidence> --verdict approved --reviewer <id> --high 0 --medium 0$($C.n)"
+        exit 1
+    }
+    # Enforce the documented "zero HIGH, zero MEDIUM" bar against the recorded
+    # verdict rather than the summary text.
+    $latestReviewEntry = Get-LoopLatestReviewEntry $state
+    $latestReview = if ($latestReviewEntry) { Get-LoopReviewRecord $latestReviewEntry } else { $null }
+    if ($latestReview) {
+        # Case-sensitive so the CLI, the extension runtime, and the bash hook all
+        # accept exactly the same token.
+        if ([string]$latestReview.verdict -cne 'approved') {
+            Write-CliOutput "$($C.r)  [FAIL] Latest reviewer verdict is '$($latestReview.verdict)'. Address the findings, then record an approved review.$($C.n)"
+            exit 1
+        }
+        # Fail CLOSED: a record whose counts are absent, null, or non-numeric is
+        # not a zero-findings review -- [int]$null would silently coerce to 0 --
+        # and an unattributable verdict is not evidence of who reviewed what.
+        $reviewHigh = 0
+        $reviewMedium = 0
+        $countsValid = $true
+        foreach ($severity in @('high', 'medium')) {
+            if ($latestReview.PSObject.Properties.Name -notcontains $severity) { $countsValid = $false; break }
+            $rawCount = $latestReview.$severity
+            # Reject strings as well as null: the runtime requires a JSON number
+            # and the hook's digit regex rejects a quoted count, so accepting
+            # "0" here would make the three implementations disagree.
+            if ($null -eq $rawCount -or $rawCount -is [string]) { $countsValid = $false; break }
+            $parsedCount = 0
+            if (-not [int]::TryParse([string]$rawCount, [ref]$parsedCount) -or $parsedCount -lt 0) {
+                $countsValid = $false
+                break
+            }
+            if ($severity -eq 'high') { $reviewHigh = $parsedCount } else { $reviewMedium = $parsedCount }
+        }
+        if ((-not $countsValid) -or
+            ($latestReview.PSObject.Properties.Name -notcontains 'reviewer') -or
+            [string]::IsNullOrWhiteSpace([string]$latestReview.reviewer)) {
+            Write-CliOutput "$($C.r)  [FAIL] Reviewer record is missing HIGH/MEDIUM counts or a reviewer id. Re-record with --verdict <v> --reviewer <id> --high <n> --medium <n>.$($C.n)"
+            exit 1
+        }
+        if ($reviewHigh -gt 0 -or $reviewMedium -gt 0) {
+            Write-CliOutput "$($C.r)  [FAIL] Reviewer recorded $reviewHigh HIGH and $reviewMedium MEDIUM finding(s); both must be zero before completion.$($C.n)"
+            exit 1
+        }
+        # An approval only covers what existed when it was given, so it must sit on
+        # the last recorded work entry. Position is used rather than the iteration
+        # NUMBER because 'loop rollback' deliberately re-uses numbers: rolling back
+        # and re-iterating would otherwise let a stale approval match the current
+        # iteration again. Trailing completion entries are ignored because
+        # 'loop complete' appends one after this check runs.
+        $historyEntries = @($state.history)
+        $lastWorkIndex = $historyEntries.Count - 1
+        while ($lastWorkIndex -ge 0 -and
+               (Test-LoopCompletionEntry $historyEntries[$lastWorkIndex]) -and
+               (-not (Get-LoopReviewRecord $historyEntries[$lastWorkIndex]))) {
+            $lastWorkIndex--
+        }
+        $reviewIndex = -1
+        for ($index = 0; $index -lt $historyEntries.Count; $index++) {
+            if ([object]::ReferenceEquals($historyEntries[$index], $latestReviewEntry)) { $reviewIndex = $index }
+        }
+        if ($reviewIndex -ne $lastWorkIndex) {
+            Write-CliOutput "$($C.r)  [FAIL] Work was recorded after the approved review. The approval must cover the final state; re-review before completing.$($C.n)"
+            exit 1
+        }
     }
     $currentPassing = Get-LoopPassingCount 'loop complete'
-    if ($currentPassing -eq '__INVALID__') { return }
-    if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop complete')) { return }
+    if ($currentPassing -eq '__INVALID__') { exit 1 }
+    if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop complete')) { exit 1 }
 
     # Gate: every iteration entry after #1 must carry an evidence file path that still exists.
     if ($env:AGENTX_SKIP_EVIDENCE_GATE -ne '1') {
@@ -4957,7 +5188,7 @@ function Invoke-LoopComplete {
         if ($stale.Count -gt 0) {
             Write-CliOutput "$($C.r)  [FAIL] Cannot complete loop: stale evidence paths for iterations: $($stale -join ', ').$($C.n)"
             Write-CliOutput "$($C.d)    Re-run those iterations with: agentx loop iterate -s '<summary>' -e <evidence-file>$($C.n)"
-            return
+            exit 1
         }
     }
 
@@ -4978,7 +5209,7 @@ function Invoke-LoopComplete {
             Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., quality-gate.log, full-suite-report.xml).$($C.n)"
         }
         Write-CliOutput "$($C.d)    Bypass: `$env:AGENTX_SKIP_EVIDENCE_GATE = '1' (legacy flows only).$($C.n)"
-        return
+        exit 1
     }
 
     # Archive the final evidence. Copied, never moved -- the caller's artifact must
@@ -4990,13 +5221,13 @@ function Invoke-LoopComplete {
         # Same freshness bar as 'loop iterate'. Without it, a final gate log
         # generated at session start could be held back and submitted here --
         # the identity guard would pass because it was never submitted before.
-        if (-not (Test-LoopEvidenceFreshness -EvidencePath $finalEvidenceAbs -State $state -ContextLabel 'loop complete')) { return }
+        if (-not (Test-LoopEvidenceFreshness -EvidencePath $finalEvidenceAbs -State $state -ContextLabel 'loop complete')) { exit 1 }
 
         $finalHash = $null
         try { $finalHash = (Get-FileHash -LiteralPath $finalEvidenceAbs -Algorithm SHA256).Hash } catch { $finalHash = $null }
         if (-not $finalHash) {
             Write-CliOutput "$($C.r)  [FAIL] Could not hash the final evidence artifact; refusing to accept it.$($C.n)"
-            return
+            exit 1
         }
 
         $acceptedHashes = @()
@@ -5006,7 +5237,7 @@ function Invoke-LoopComplete {
         if ($acceptedHashes -contains $finalHash) {
             Write-CliOutput "$($C.r)  [FAIL] This final artifact was already accepted in an earlier iteration (identical SHA-256).$($C.n)"
             Write-CliOutput "$($C.d)    'loop complete' requires a FRESH final artifact -- regenerate it, then retry.$($C.n)"
-            return
+            exit 1
         }
 
         $loopDir = Get-LoopStateDirectory
@@ -5019,7 +5250,7 @@ function Invoke-LoopComplete {
             Copy-Item -LiteralPath $finalEvidenceAbs -Destination $finalArchivedPath -Force
         } catch {
             Write-CliOutput "$($C.r)  [FAIL] Could not archive final evidence (copy): $_$($C.n)"
-            return
+            exit 1
         }
         $state | Add-Member -NotePropertyName acceptedEvidenceHashes -NotePropertyValue (@($acceptedHashes) + @($finalHash)) -Force
     }
@@ -5035,7 +5266,10 @@ function Invoke-LoopComplete {
     } else {
         $state | Add-Member -NotePropertyName loopConsumed -NotePropertyValue $false -Force
     }
-    $completionEntry = [PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = $summary; status = 'complete'; outcome = 'pass' }
+    # 'kind' distinguishes this record from a WORK entry. The agentic runner also
+    # writes status='complete' entries for real work, so the approval-binding
+    # check below cannot use status to decide what is safe to skip.
+    $completionEntry = [PSCustomObject]@{ iteration = $state.iteration; timestamp = Get-Timestamp; summary = $summary; status = 'complete'; outcome = 'pass'; kind = 'completion' }
     if ($finalArchivedPath) {
         $completionEntry | Add-Member -NotePropertyName evidence -NotePropertyValue $finalArchivedPath
         $completionEntry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $finalEvidenceAbs
@@ -5046,6 +5280,113 @@ function Invoke-LoopComplete {
     Write-CliOutput "`n$($C.g)  [PASS] Loop Complete! Iterations: $($state.iteration)/$($state.maxIterations) (minimum $($state.minIterations))$($C.n)"
     if ($finalArchivedPath) { Write-CliOutput "$($C.d)  Final evidence archived to: $finalArchivedPath$($C.n)" }
     Write-CliOutput ''
+}
+
+<#
+.SYNOPSIS
+  Evaluate the commit-time loop gate and exit 0 (pass) or 1 (block).
+
+.DESCRIPTION
+  The pre-commit hook delegates here instead of parsing loop-state.json with
+  grep and sed. Text scanning cannot tell a review record inside a history entry
+  from one appended anywhere else in the file, and it depends on JSON key order;
+  both made the hook strictly weaker than the CLI and the extension runtime even
+  though all three are documented as equivalent. Evaluating the gate once, here,
+  removes that divergence by construction.
+#>
+function Invoke-LoopGateCheck {
+    $state = Read-JsonFile $Script:LOOP_STATE_FILE
+    if (-not $state) {
+        Write-CliOutput 'BLOCK: no quality loop found'
+        exit 1
+    }
+
+    $status = if ($state.PSObject.Properties.Name -contains 'status') { [string]$state.status } else { '' }
+    $consumed = ($state.PSObject.Properties.Name -contains 'loopConsumed') -and [bool]$state.loopConsumed
+    if ($status -cne 'complete') {
+        Write-CliOutput "BLOCK: quality loop status is '$status', not 'complete'"
+        exit 1
+    }
+    if ($consumed) {
+        Write-CliOutput 'BLOCK: quality loop was already consumed by a prior commit'
+        exit 1
+    }
+
+    $loopHealth = Get-LoopStateHealth -State $state
+    if ($loopHealth.kind -ne 'healthy') {
+        Write-CliOutput "BLOCK: quality loop is $($loopHealth.kind) ($($loopHealth.reason))"
+        exit 1
+    }
+
+    # Floor of 5 is absolute. Externally-written state still passes through this
+    # guard even though loop start now rejects --max values below five.
+    $minIterations = [Math]::Max([int](Get-LoopEffectiveMinIterations $state), 5)
+    $iteration = if ($state.PSObject.Properties.Name -contains 'iteration') { [int]$state.iteration } else { 0 }
+    if ($iteration -lt $minIterations) {
+        Write-CliOutput "BLOCK: quality loop completed below minimum iterations ($iteration/$minIterations)"
+        exit 1
+    }
+
+    if (-not (Test-LoopHasSubagentReviewIteration $state)) {
+        Write-CliOutput 'BLOCK: quality loop is missing a subagent reviewer pass'
+        exit 1
+    }
+
+    $latestReviewEntry = Get-LoopLatestReviewEntry $state
+    $latestReview = if ($latestReviewEntry) { Get-LoopReviewRecord $latestReviewEntry } else { $null }
+    if (-not $latestReview) {
+        Write-CliOutput 'BLOCK: quality loop is missing a subagent reviewer pass'
+        exit 1
+    }
+    if ([string]$latestReview.verdict -cne 'approved') {
+        Write-CliOutput "BLOCK: latest reviewer verdict is '$($latestReview.verdict)'"
+        exit 1
+    }
+
+    $reviewHigh = 0
+    $reviewMedium = 0
+    foreach ($severity in @('high', 'medium')) {
+        if ($latestReview.PSObject.Properties.Name -notcontains $severity) {
+            Write-CliOutput 'BLOCK: reviewer record is missing HIGH/MEDIUM counts'
+            exit 1
+        }
+        $rawCount = $latestReview.$severity
+        $parsedCount = 0
+        if ($null -eq $rawCount -or $rawCount -is [string] -or
+            -not [int]::TryParse([string]$rawCount, [ref]$parsedCount) -or $parsedCount -lt 0) {
+            Write-CliOutput 'BLOCK: reviewer record is missing HIGH/MEDIUM counts'
+            exit 1
+        }
+        if ($severity -eq 'high') { $reviewHigh = $parsedCount } else { $reviewMedium = $parsedCount }
+    }
+    if (($latestReview.PSObject.Properties.Name -notcontains 'reviewer') -or
+        [string]::IsNullOrWhiteSpace([string]$latestReview.reviewer)) {
+        Write-CliOutput 'BLOCK: reviewer record is missing a reviewer id'
+        exit 1
+    }
+    if ($reviewHigh -gt 0 -or $reviewMedium -gt 0) {
+        Write-CliOutput "BLOCK: reviewer recorded $reviewHigh HIGH and $reviewMedium MEDIUM finding(s)"
+        exit 1
+    }
+
+    $historyEntries = @($state.history)
+    $lastWorkIndex = $historyEntries.Count - 1
+    while ($lastWorkIndex -ge 0 -and
+           (Test-LoopCompletionEntry $historyEntries[$lastWorkIndex]) -and
+           (-not (Get-LoopReviewRecord $historyEntries[$lastWorkIndex]))) {
+        $lastWorkIndex--
+    }
+    $reviewIndex = -1
+    for ($index = 0; $index -lt $historyEntries.Count; $index++) {
+        if ([object]::ReferenceEquals($historyEntries[$index], $latestReviewEntry)) { $reviewIndex = $index }
+    }
+    if ($reviewIndex -ne $lastWorkIndex) {
+        Write-CliOutput 'BLOCK: work was recorded after the approved review'
+        exit 1
+    }
+
+    Write-CliOutput "PASS: quality loop complete, approved by $($latestReview.reviewer) with zero HIGH and MEDIUM findings"
+    exit 0
 }
 
 function Invoke-LoopCancel {
@@ -5142,19 +5483,77 @@ function Invoke-ValidateCmd {
 # HOOKS: Install git hooks
 # ---------------------------------------------------------------------------
 
+function Get-ActiveGitHooksDirectory {
+    $git = Get-Command git -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $git) { return $null }
+
+    $output = @(& $git.Source -C $Script:ROOT rev-parse --git-path hooks 2>$null)
+    if ($LASTEXITCODE -ne 0 -or $output.Count -eq 0) { return $null }
+    $rawPath = ([string]$output[-1]).Trim()
+    if ([string]::IsNullOrWhiteSpace($rawPath)) { return $null }
+
+    if ([System.IO.Path]::IsPathRooted($rawPath)) {
+        return [System.IO.Path]::GetFullPath($rawPath)
+    }
+    return [System.IO.Path]::GetFullPath((Join-Path $Script:ROOT $rawPath))
+}
+
+function Get-AgentXHookSource([string]$HookName) {
+    foreach ($basePath in @($Script:ROOT, $Script:INSTALL_ROOT) | Select-Object -Unique) {
+        $candidate = Join-Path $basePath '.github' 'hooks' $HookName
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    return $null
+}
+
 function Invoke-HooksCmd {
     $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'install' }
-    $gitHooksDir = Join-Path $Script:ROOT '.git' 'hooks'
-    if (-not (Test-Path (Join-Path $Script:ROOT '.git'))) { Write-CliOutput 'Not a git repo. Run git init first.'; return }
-    if (-not (Test-Path $gitHooksDir)) { New-Item -ItemType Directory -Path $gitHooksDir -Force | Out-Null }
 
     if ($action -eq 'install') {
-        foreach ($hook in @('pre-commit', 'commit-msg')) {
-            $src = Join-Path $Script:ROOT '.github' 'hooks' $hook
-            if (Test-Path $src) {
-                Copy-Item $src (Join-Path $gitHooksDir $hook) -Force
-                Write-CliOutput "$($C.g)  Installed: $hook$($C.n)"
+        $gitHooksDir = Get-ActiveGitHooksDirectory
+        if (-not $gitHooksDir) {
+            Write-CliOutput "$($C.r)  [FAIL] Not a git repository or unable to resolve its active hooks path.$($C.n)"
+            exit 1
+        }
+
+        $hookSources = @{}
+        foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
+            $source = Get-AgentXHookSource -HookName $hook
+            if (-not $source) {
+                Write-CliOutput "$($C.r)  [FAIL] Required hook source is missing: $hook$($C.n)"
+                exit 1
             }
+            $hookSources[$hook] = $source
+        }
+
+        New-Item -ItemType Directory -Path $gitHooksDir -Force | Out-Null
+        foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
+            $source = $hookSources[$hook]
+            $destination = Join-Path $gitHooksDir $hook
+            $sourceFullPath = [System.IO.Path]::GetFullPath($source)
+            $destinationFullPath = [System.IO.Path]::GetFullPath($destination)
+            $pathComparison = if ($IsWindows) { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+            if (-not $sourceFullPath.Equals($destinationFullPath, $pathComparison)) {
+                Copy-Item -LiteralPath $source -Destination $destination -Force
+            }
+            if (-not (Test-Path -LiteralPath $destination -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -cne (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash) {
+                Write-CliOutput "$($C.r)  [FAIL] Hook installation verification failed: $hook$($C.n)"
+                exit 1
+            }
+            if (-not $IsWindows) {
+                $executableMode = [System.IO.UnixFileMode]::UserRead -bor [System.IO.UnixFileMode]::UserWrite -bor [System.IO.UnixFileMode]::UserExecute -bor
+                    [System.IO.UnixFileMode]::GroupRead -bor [System.IO.UnixFileMode]::GroupExecute -bor
+                    [System.IO.UnixFileMode]::OtherRead -bor [System.IO.UnixFileMode]::OtherExecute
+                [System.IO.File]::SetUnixFileMode($destination, $executableMode)
+                $installedMode = [System.IO.File]::GetUnixFileMode($destination)
+                $executeMask = [System.IO.UnixFileMode]::UserExecute -bor [System.IO.UnixFileMode]::GroupExecute -bor [System.IO.UnixFileMode]::OtherExecute
+                if (($installedMode -band $executeMask) -ne $executeMask) {
+                    Write-CliOutput "$($C.r)  [FAIL] Hook is not executable after installation: $hook$($C.n)"
+                    exit 1
+                }
+            }
+            Write-CliOutput "$($C.g)  Installed: $hook -> $gitHooksDir$($C.n)"
         }
         Write-CliOutput "$($C.g)  Git hooks installed.$($C.n)"
     }
@@ -5264,67 +5663,28 @@ function Get-HarnessMarkdownFiles([string]$dirPath, [string]$prefix) {
 }
 
 function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
-    $statePath = Join-Path $workspaceRoot '.agentx' 'state' 'loop-state.json'
-    $state = Read-JsonFile $statePath
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = 'pwsh'
+    $startInfo.WorkingDirectory = $workspaceRoot
+    $startInfo.RedirectStandardInput = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.UseShellExecute = $false
+    $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-File')
+    $startInfo.ArgumentList.Add((Join-Path $Script:INSTALL_AGENTX_DIR 'agentx-cli.ps1'))
+    $startInfo.ArgumentList.Add('loop')
+    $startInfo.ArgumentList.Add('gate')
+    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $workspaceRoot
 
-    if (-not $state) {
-        return [PSCustomObject]@{
-            passed = $false
-            attribution = 'policy'
-            summary = 'No quality loop was started. Run `agentx loop start` before review handoff.'
-        }
-    }
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    $process.StandardInput.Close()
+    $stdout = $process.StandardOutput.ReadToEnd()
+    $stderr = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+    $output = ($stdout + $stderr).Trim()
 
-    $maxIterations = if ($state.PSObject.Properties['maxIterations']) { [int]$state.maxIterations } else { 0 }
-    $hasMinIterations = $null -ne $state.PSObject.Properties['minIterations']
-    $minIterations = if ($hasMinIterations -and [int]$state.minIterations -gt 0) {
-        [Math]::Min([int]$state.minIterations, $maxIterations)
-    } else {
-        Get-LoopDefaultMinIterations $state
-    }
-    $loopHealth = Get-LoopStateHealth -State $state
-
-    if ($state.active) {
-        if ($loopHealth.kind -eq 'stuck') {
-            return [PSCustomObject]@{
-                passed = $false
-                attribution = 'policy'
-                summary = "Quality loop is stuck ($($loopHealth.reason)). Reset it before handoff."
-            }
-        }
-
-        return [PSCustomObject]@{
-            passed = $false
-            attribution = 'policy'
-            summary = "Quality loop still active (iteration $($state.iteration)/$($state.maxIterations))."
-        }
-    }
-
-    if ([string]$state.status -eq 'cancelled') {
-        return [PSCustomObject]@{
-            passed = $false
-            attribution = 'policy'
-            summary = 'Quality loop was cancelled. Start a new loop and complete it.'
-        }
-    }
-
-    if ($loopHealth.kind -eq 'stale') {
-        return [PSCustomObject]@{
-            passed = $false
-            attribution = 'policy'
-            summary = 'Quality loop is stale. Start a new loop for the current task.'
-        }
-    }
-
-    if ([string]$state.status -eq 'complete' -and [int]$state.iteration -lt $minIterations) {
-        return [PSCustomObject]@{
-            passed = $false
-            attribution = 'policy'
-            summary = "Quality loop completed too early ($($state.iteration)/$minIterations minimum review iterations)."
-        }
-    }
-
-    if ([string]$state.status -eq 'complete') {
+    if ($process.ExitCode -eq 0) {
         return [PSCustomObject]@{
             passed = $true
             attribution = 'clear'
@@ -5332,10 +5692,11 @@ function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
         }
     }
 
+    $summary = if ($output -match 'BLOCK:\s*(.+)') { $Matches[1].Trim() } else { 'Quality loop gate rejected the current state.' }
     return [PSCustomObject]@{
         passed = $false
         attribution = 'policy'
-        summary = "Unexpected loop status '$($state.status)'."
+        summary = $summary
     }
 }
 
@@ -5355,6 +5716,7 @@ function Invoke-HarnessComplianceReport([string]$baseRef = '') {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'pwsh'
     $startInfo.WorkingDirectory = $Script:ROOT
+    $startInfo.RedirectStandardInput = $true
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
@@ -5368,6 +5730,7 @@ function Invoke-HarnessComplianceReport([string]$baseRef = '') {
     $startInfo.ArgumentList.Add('-ReportOnly')
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
+    $process.StandardInput.Close()
     $stdout = $process.StandardOutput.ReadToEnd()
     $stderr = $process.StandardError.ReadToEnd()
     $process.WaitForExit()
@@ -5727,12 +6090,10 @@ function Invoke-RunCmd {
 
     $result = Invoke-AgenticLoop @params
 
-    if ($result) {
-        $global:LASTEXITCODE = switch ([string]$result.exitReason) {
-            'text_response' { 0 }
-            'human_required' { 2 }
-            default { 1 }
-        }
+    if (Test-AgenticLoopResultSucceeded -Result $result) {
+        $global:LASTEXITCODE = 0
+    } elseif ($result -and ([string]$result.exitReason -ceq 'human_required')) {
+        $global:LASTEXITCODE = 2
     } else {
         $global:LASTEXITCODE = 1
     }
@@ -6525,10 +6886,10 @@ $($C.w)  Commands:$($C.n)
   loop <start|status|iterate|complete|cancel|rollback>  Iterative refinement
   run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
   hire <name>                      Scaffold a new custom agent definition
-  watch                            Background daemon - polls backlog and auto-routes work
+    watch [--execute] [--once]       Poll backlog; --once runs one deterministic cycle
   validate <issue> <role>          Pre-handoff validation
   hook <start|finish> <agent> [#]  Agent lifecycle hooks
-  hooks install                    Install git hooks
+    hooks install                    Install and verify hooks at Git's active hooks path
   config [show|get|set]            View/update configuration
   issue <create|list|get|update|close|comment>  Issue management
     bundle <create|list|get|resolve|promote>  Task bundle management
@@ -6716,6 +7077,7 @@ function Invoke-WatchCmd {
     $timeoutMinutes = [int](Get-Flag @('--timeout', '-t') '0')
     $dryRun = Test-Flag @('--dry-run', '-n')
     $execute = Test-Flag @('--execute', '-x')
+    $runOnce = Test-Flag @('--once')
     $statusOnly = Test-Flag @('--status', '-s')
 
     if ($statusOnly) {
@@ -6815,9 +7177,12 @@ function Invoke-WatchCmd {
                                 IssueNumber = [int]$item.number
                             }
                             $result = Invoke-AgenticLoop @params
-                            if ($result) {
+                            if (Test-AgenticLoopResultSucceeded -Result $result) {
                                 $watchState.itemsExecuted++
                                 Write-CliOutput "$($C.g)    [PASS] #$($item.number) completed ($($result.exitReason))$($C.n)"
+                            } else {
+                                $exitReason = if ($result) { [string]$result.exitReason } else { 'no-result' }
+                                Write-CliOutput "$($C.r)    [FAIL] #$($item.number) did not complete ($exitReason)$($C.n)"
                             }
                         } catch {
                             Write-CliOutput "$($C.r)    [FAIL] #$($item.number) error: $($_.Exception.Message)$($C.n)"
@@ -6829,6 +7194,8 @@ function Invoke-WatchCmd {
             }
 
             Write-JsonFile $watchStateFile $watchState
+
+            if ($runOnce) { break }
 
             if ($timeoutMinutes -gt 0) {
                 $elapsed = ([datetime]::UtcNow - $startTime).TotalMinutes
@@ -7661,14 +8028,18 @@ function Invoke-SprintCmd {
                     }
                     if ($issueNumber) { $params.IssueNumber = [int]$issueNumber }
                     $result = Invoke-AgenticLoop @params
-                    if ($result) {
+                    if (Test-AgenticLoopResultSucceeded -Result $result) {
                         Write-CliOutput "    $($C.g)[PASS]$($C.n) Build completed ($($result.exitReason))"
                     } else {
-                        Write-CliOutput "    $($C.r)[FAIL]$($C.n) Build did not complete"
+                        $exitReason = if ($result) { [string]$result.exitReason } else { 'no-result' }
+                        Write-CliOutput "    $($C.r)[FAIL]$($C.n) Build did not complete ($exitReason)"
+                        $global:LASTEXITCODE = 1
                         return
                     }
                 } catch {
-                    Write-CliOutput "    $($C.y)[WARN]$($C.n) Build encountered error: $($_.Exception.Message)"
+                    Write-CliOutput "    $($C.r)[FAIL]$($C.n) Build encountered error: $($_.Exception.Message)"
+                    $global:LASTEXITCODE = 1
+                    return
                 }
             }
             'Review' {
@@ -7684,11 +8055,18 @@ function Invoke-SprintCmd {
                     }
                     if ($issueNumber) { $reviewParams.IssueNumber = [int]$issueNumber }
                     $reviewResult = Invoke-AgenticLoop @reviewParams
-                    if ($reviewResult) {
+                    if (Test-AgenticLoopResultSucceeded -Result $reviewResult) {
                         Write-CliOutput "    $($C.g)[PASS]$($C.n) Review completed ($($reviewResult.exitReason))"
+                    } else {
+                        $exitReason = if ($reviewResult) { [string]$reviewResult.exitReason } else { 'no-result' }
+                        Write-CliOutput "    $($C.r)[FAIL]$($C.n) Review did not complete ($exitReason)"
+                        $global:LASTEXITCODE = 1
+                        return
                     }
                 } catch {
-                    Write-CliOutput "    $($C.y)[WARN]$($C.n) Review encountered error: $($_.Exception.Message)"
+                    Write-CliOutput "    $($C.r)[FAIL]$($C.n) Review encountered error: $($_.Exception.Message)"
+                    $global:LASTEXITCODE = 1
+                    return
                 }
             }
             'Hygiene' {

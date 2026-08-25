@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import type { AgentXContext } from '../../agentxContext';
 import { evaluateHarnessQuality } from '../../eval/harnessEvaluator';
 
 function createWorkspaceRoot(): string {
@@ -31,7 +32,7 @@ function createAgentxStub(root: string) {
         .sort();
     },
     getStatePath: (fileName: string) => path.join(root, '.agentx', 'state', fileName),
-  } as any;
+  } as unknown as AgentXContext;
 }
 
 describe('harness evaluator', () => {
@@ -49,7 +50,7 @@ describe('harness evaluator', () => {
       completionCriteria: 'TASK_COMPLETE',
       startedAt: recentTimestamp,
       lastIterationAt: recentTimestamp,
-      history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass' }],
+      history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass', review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } }],
     }), 'utf-8');
     fs.writeFileSync(path.join(root, '.agentx', 'state', 'harness-state.json'), JSON.stringify({
       version: 1,
@@ -172,7 +173,7 @@ describe('harness evaluator', () => {
       completionCriteria: 'TASK_COMPLETE',
       startedAt: recentTimestamp,
       lastIterationAt: recentTimestamp,
-      history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass' }],
+      history: [{ iteration: 5, timestamp: recentTimestamp, summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass', review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } }],
     }), 'utf-8');
     fs.writeFileSync(path.join(root, '.agentx', 'state', 'harness-state.json'), JSON.stringify({
       version: 1,

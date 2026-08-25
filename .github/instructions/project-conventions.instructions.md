@@ -12,8 +12,10 @@ instead of repeating it.
 ## Required Rules
 
 - Before any code/docs mutation, start the quality loop as the first tool call.
-	Minimum: five evidenced iterations, including a subagent review summary containing
-	`review`, then `loop complete`. Check `loop status` before reporting gate state.
+	Minimum: five evidenced iterations, ending with a structured subagent review
+	verdict (`loop iterate ... --verdict approved --reviewer <id> --high 0
+	--medium 0`), then `loop complete`. Check `loop status` before reporting gate
+	state.
 - Load and follow the Karpathy guidelines for implementation/review. Run
 	`.agentx/agentx.ps1 scrub -Path <changed-area>` before review or handoff.
 - Engineer work follows `Research -> Brainstorm -> Plan -> Design -> Implement ->

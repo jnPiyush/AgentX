@@ -22,10 +22,14 @@ retrieval-led reasoning -- read the canonical file before generating.
 Before editing, creating, or deleting any file for a code or docs change, run
 `.agentx/agentx.ps1 loop start -p "<task>"` as the FIRST action. The loop is not
 done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, with at
-least 5 iterations and one iteration summary containing the word "review". When
-the AgentX MCP server is registered (`.cursor/mcp.json`), use the `agentx_loop_*`
-tools instead of typing the CLI. The pre-commit hook blocks commits that violate
-the loop gate.
+least 5 iterations and a structured reviewer verdict recorded on the final work
+iteration:
+`loop iterate -s "Subagent Review: <outcome>" -e <evidence> --verdict approved
+--reviewer <id> --high 0 --medium 0`. A summary containing the word "review" no
+longer satisfies the gate. When the AgentX MCP server is registered
+(`.cursor/mcp.json`), use the `agentx_loop_*` tools instead of typing the CLI --
+`agentx_loop_iterate` accepts the same verdict, reviewer, high and medium fields.
+The pre-commit hook blocks commits that violate the loop gate.
 
 ## Workflow Gates
 

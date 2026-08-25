@@ -245,7 +245,7 @@ AgentX now resolves runtime behavior from `.agentx/config.json` in this order:
 
 Use `provider` for new workspaces. Older fields are still read so existing repos continue to work.
 
-When the `claude-code` provider is used through `.agentx/agentic-runner.ps1`, AgentX invokes the Claude Code CLI with `--permission-mode bypassPermissions` so loop-driven execution can use tools without interactive prompts. Use that provider only in trusted workspaces where full tool autonomy is acceptable.
+When the `claude-code` provider is used through `.agentx/agentic-runner.ps1`, the bridge runs in text-only mode with `--permission-mode dontAsk` and no Claude-native tools. Native Read/Write/Edit/Grep/Glob/Bash execute inside the Claude process and cannot pass through AgentX workspace-path, boundary, or command guards, so they remain disabled until a guarded MCP adapter is available. Use the Copilot or direct API adapters when an AgentX run requires tool execution.
 
 ---
 
@@ -941,7 +941,7 @@ go install github.com/github/github-mcp-server@latest
 
 | Problem | Solution |
 |---------|----------|
-| Pre-commit hooks not working | `cp .github/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit` |
+| Git hooks not working | Run `agentx hooks install`; it resolves Git's active `core.hooksPath`, installs all three hook sources, and verifies their bytes. |
 | Permission denied on scripts | Linux/Mac: `chmod +x .github/scripts/*.sh`; Windows: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | GitHub CLI not authenticated | `gh auth login` (install first: `winget install GitHub.cli` / `brew install gh`) |
 

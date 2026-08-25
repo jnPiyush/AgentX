@@ -61,6 +61,10 @@ function Initialize-StubRunner([string]$root) {
     $stubPath = Join-Path $root '.agentx\agentic-runner.ps1'
     $recordPath = Join-Path $root '.agentx\runner-prompts.log'
     @"
+    function Test-AgenticLoopResultSucceeded(`$Result) {
+        return `$null -ne `$Result -and ([string]`$Result.exitReason -ceq 'text_response')
+    }
+
 function Invoke-AgenticLoop {
     param(
         [string]`$Agent,
@@ -71,10 +75,30 @@ function Invoke-AgenticLoop {
     )
 
     Add-Content -Path '$recordPath' -Value ("{0}|{1}|{2}" -f `$Agent, `$Prompt, `$IssueNumber)
-    return [PSCustomObject]@{ exitReason = 'completed' }
+    return [PSCustomObject]@{ exitReason = 'text_response' }
 }
 "@ | Set-Content $stubPath -Encoding utf8
     return $recordPath
+}
+
+function Initialize-FailedRunner([string]$root) {
+    $stubPath = Join-Path $root '.agentx\agentic-runner.ps1'
+    @'
+function Test-AgenticLoopResultSucceeded($Result) {
+    return $null -ne $Result -and ([string]$Result.exitReason -ceq 'text_response')
+}
+
+function Invoke-AgenticLoop {
+    param(
+        [string]$Agent,
+        [string]$Prompt,
+        [int]$MaxIterations,
+        [string]$WorkspaceRoot,
+        [int]$IssueNumber = 0
+    )
+    return [PSCustomObject]@{ exitReason = 'self_review_failed' }
+}
+'@ | Set-Content $stubPath -Encoding utf8
 }
 
 function Test-SprintDryRunIssueOnly {
@@ -120,6 +144,49 @@ function Test-SprintPassesIssueContextToBuildAndReview {
         Assert-True ($result.ExitCode -eq 0) 'sprint run with an existing issue exits successfully with the stub runner'
         Assert-True (($records | Where-Object { $_ -match '^engineer\|Implement issue #1\|1$' }).Count -eq 1) 'sprint build stage receives issue context even without description text'
         Assert-True (($records | Where-Object { $_ -match '^reviewer\|Review changes for issue #1\|1$' }).Count -eq 1) 'sprint review stage receives issue context even without description text'
+    } finally {
+        Remove-TestWorkspace $root
+    }
+}
+
+function Test-SprintStopsOnFailedSelfReview {
+    $root = New-TestWorkspace 'sprint-review-failure'
+    try {
+        Initialize-FailedRunner $root
+        $result = Invoke-AgentX $root @('sprint', 'Exercise failed runner result')
+        Assert-True ($result.ExitCode -ne 0) 'sprint exits nonzero when build self-review fails'
+        Assert-True ($result.Output -match '\[FAIL\].*Build did not complete \(self_review_failed\)') 'sprint reports failed self-review as a failed build'
+        Assert-True ($result.Output -notmatch '\[PASS\].*Build completed') 'sprint never labels failed self-review as completed'
+        Assert-True ($result.Output -notmatch 'Running self-review') 'sprint stops before review after the build fails'
+    } finally {
+        Remove-TestWorkspace $root
+    }
+}
+
+function Test-WatchDoesNotCountFailedSelfReview {
+    $root = New-TestWorkspace 'watch-review-failure'
+    try {
+        Initialize-FailedRunner $root
+        @{
+            number = 1
+            title = '[Bug] Failed watch item'
+            body = ''
+            labels = @('type:bug')
+            status = 'Ready'
+            state = 'open'
+            created = '2026-04-15T00:00:00Z'
+            comments = @()
+        } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root '.agentx\issues\1.json') -Encoding utf8
+
+        $result = Invoke-AgentX $root @('watch', '--execute', '--once')
+        $watchState = Get-Content (Join-Path $root '.agentx\state\watch-state.json') -Raw | ConvertFrom-Json
+        if ($result.Output -notmatch '\[FAIL\].*#1 did not complete \(self_review_failed\)') {
+            Write-Host '--- watch output ---' -ForegroundColor DarkGray
+            Write-Host $result.Output
+        }
+        Assert-True ($result.Output -match '\[FAIL\].*#1 did not complete \(self_review_failed\)') 'watch reports failed self-review as a failed item'
+        Assert-True ($result.Output -notmatch '\[PASS\].*#1 completed') 'watch never labels failed self-review as completed'
+        Assert-True ([int]$watchState.itemsExecuted -eq 0) 'watch does not increment executed count for failed self-review'
     } finally {
         Remove-TestWorkspace $root
     }
@@ -234,6 +301,8 @@ function Test-DiscoverRunIsIdempotent {
 
 Test-SprintDryRunIssueOnly
 Test-SprintPassesIssueContextToBuildAndReview
+Test-SprintStopsOnFailedSelfReview
+Test-WatchDoesNotCountFailedSelfReview
 Test-DiscoverEscapesQuotedSignals
 Test-DiscoverRunIsIdempotent
 Test-GraduateWritesSkillsUnderDevelopmentCategory

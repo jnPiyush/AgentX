@@ -20,6 +20,39 @@ echo -e "${BLUE}Security & Quality Checks${NC}"
 echo -e "${BLUE}-------------------------------------------------------${NC}"
 echo ""
 
+# The hook validates worktree files (scrub, delegated CLI, size checks) while Git
+# commits index blobs. Reject partial staging so an attacker cannot stage unsafe
+# bytes and replace the worktree copy with a clean version before validation.
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
+UNSTAGED_FILES=$(git diff --name-only --diff-filter=ACMR)
+STAGED_WORKTREE_MISMATCH=$(comm -12 <(printf '%s\n' "$STAGED_FILES" | sed '/^$/d' | sort) <(printf '%s\n' "$UNSTAGED_FILES" | sed '/^$/d' | sort))
+# A staged add/modify whose worktree path was deleted has no unstaged path in the
+# diff-filter above, but Git would still commit the index blob. Treat it as a
+# mismatch so staged bytes cannot escape worktree-based validation.
+while IFS= read -r STAGED_FILE; do
+ [ -z "$STAGED_FILE" ] && continue
+ [ -e "$STAGED_FILE" ] || STAGED_WORKTREE_MISMATCH="$STAGED_WORKTREE_MISMATCH
+$STAGED_FILE"
+done <<< "$STAGED_FILES"
+STAGED_WORKTREE_MISMATCH=$(printf '%s\n' "$STAGED_WORKTREE_MISMATCH" | sed '/^$/d' | sort -u)
+if [ -n "$STAGED_WORKTREE_MISMATCH" ]; then
+ echo -e "${RED}[FAIL] Staged files differ from their worktree copies${NC}"
+ echo "$STAGED_WORKTREE_MISMATCH" | sed 's/^/  /'
+ echo "  Stage the final worktree bytes before committing; partial staging is not allowed for validated files."
+ FAILED=1
+fi
+
+# The loop and scrub decisions below execute through the workspace launcher.
+# Reject unstaged edits to any implementation in that call chain; otherwise an
+# unrelated staged change could be approved by permissive worktree-only code.
+UNSTAGED_VALIDATORS=$(git diff --name-only -- .agentx/agentx.ps1 .agentx/agentx-cli.ps1 scripts/scrub.ps1)
+if [ -n "$UNSTAGED_VALIDATORS" ]; then
+ echo -e "${RED}[FAIL] Quality-gate validators have unstaged changes${NC}"
+ echo "$UNSTAGED_VALIDATORS" | sed 's/^/  /'
+ echo "  Stage the final validator bytes or restore them before committing."
+ FAILED=1
+fi
+
 # Check 1: No secrets in staged files (exclude .md docs - they contain example patterns)
 echo -n "Checking for secrets... "
 if git diff --cached --name-only | grep -v '\.md$' | xargs grep -E '(password|api[_-]?key|secret|token|private[_-]?key)\s*=\s*["\x27][^"\x27]+["\x27]' -i 2>/dev/null; then
@@ -112,61 +145,6 @@ fi
 # Summary
 echo ""
 
-# Eagerly marks the quality loop as consumed so the same completed loop cannot
-# silently re-pass the pre-commit gate on subsequent commits when the post-commit
-# hook fails to run (common on Windows or when hooks are not installed).
-# Called from Check 8 when the loop gate passes for a code commit.
-mark_loop_consumed_pre_commit() {
-  [ -f "$LOOP_STATE" ] || return 0
-  grep -q '"loopConsumed"[[:space:]]*:[[:space:]]*true' "$LOOP_STATE" 2>/dev/null && return 0
-  if command -v node >/dev/null 2>&1; then
-    node -e "
-var fs=require('fs');
-var f=process.argv[1];
-var s=JSON.parse(fs.readFileSync(f,'utf8'));
-if(s.status==='complete'){s.loopConsumed=true;fs.writeFileSync(f,JSON.stringify(s,null,2)+'\\n');}
-" "$LOOP_STATE" 2>/dev/null && return 0
-  fi
-  local PY=""
-  command -v python3 >/dev/null 2>&1 && PY=python3
-  [ -z "$PY" ] && command -v python >/dev/null 2>&1 && PY=python
-  if [ -n "$PY" ]; then
-    "$PY" -c "
-import json,sys
-f=sys.argv[1]
-with open(f,'r',encoding='utf-8') as fh: s=json.load(fh)
-if s.get('status')=='complete':
-    s['loopConsumed']=True
-    with open(f,'w',encoding='utf-8') as fh: json.dump(s,fh,indent=2); fh.write('\\n')
-" "$LOOP_STATE" 2>/dev/null && return 0
-  fi
-  if command -v pwsh >/dev/null 2>&1; then
-    pwsh -NoProfile -Command "
-\$f = '$LOOP_STATE'
-\$s = Get-Content -Raw -LiteralPath \$f | ConvertFrom-Json
-if (\$s.status -eq 'complete') {
-    if (\$s.PSObject.Properties.Name -contains 'loopConsumed') { \$s.loopConsumed = \$true }
-    else { Add-Member -InputObject \$s -NotePropertyName loopConsumed -NotePropertyValue \$true -Force }
-    \$s | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath \$f -Encoding utf8
-}
-" 2>/dev/null && return 0
-  fi
-  if grep -q '"loopConsumed"[[:space:]]*:[[:space:]]*false' "$LOOP_STATE" 2>/dev/null; then
-    sed -i.bak 's/"loopConsumed"[[:space:]]*:[[:space:]]*false/"loopConsumed": true/' "$LOOP_STATE" 2>/dev/null
-    rm -f "${LOOP_STATE}.bak"
-  else
-    awk '
-      { lines[NR]=$0 }
-      END {
-        last=0
-        for(i=NR;i>=1;i--){ if(lines[i]~/^[[:space:]]*}[[:space:]]*$/){ last=i; break } }
-        for(i=1;i<=NR;i++){ if(i==last) print "  ,\"loopConsumed\": true"; print lines[i] }
-      }
-    ' "$LOOP_STATE" > "${LOOP_STATE}.tmp" && mv "${LOOP_STATE}.tmp" "$LOOP_STATE"
-  fi
-  return 0
-}
-
 # ---------------------------------------------------------------
 # Check 8: Quality loop enforcement
 # All source code commits require a completed, non-consumed loop.
@@ -179,23 +157,15 @@ LOOP_STATE=".agentx/state/loop-state.json"
 LOOP_ACTIVE=""
 LOOP_STATUS=""
 LOOP_CONSUMED=""
-LOOP_ITERATION=0
-LOOP_MIN_ITERATIONS=0
-LOOP_HAS_REVIEW_ITERATION=""
 if [ -f "$LOOP_STATE" ]; then
+  # Only the coarse reporting fields are read here. The GATE itself is evaluated
+  # by 'agentx loop gate' below: text scanning cannot tell a review record inside
+  # a history entry from one appended elsewhere in the file, and it depends on
+  # JSON key order, which made this hook strictly weaker than the CLI and the
+  # extension runtime even though all three are documented as equivalent.
   LOOP_ACTIVE=$(grep -o '"active":[[:space:]]*true' "$LOOP_STATE" 2>/dev/null || true)
   LOOP_STATUS=$(grep -o '"status":[[:space:]]*"[^"]*"' "$LOOP_STATE" 2>/dev/null | head -1 | sed 's/"status":[[:space:]]*"//' | sed 's/"//')
   LOOP_CONSUMED=$(grep -o '"loopConsumed":[[:space:]]*true' "$LOOP_STATE" 2>/dev/null || true)
-  # Top-level iteration counter (first match -- nested history entries follow it)
-  LOOP_ITERATION=$(grep -oE '"iteration":[[:space:]]*[0-9]+' "$LOOP_STATE" 2>/dev/null | head -1 | grep -oE '[0-9]+')
-  LOOP_MIN_ITERATIONS=$(grep -oE '"minIterations":[[:space:]]*[0-9]+' "$LOOP_STATE" 2>/dev/null | head -1 | grep -oE '[0-9]+')
-  # Subagent review marker: any history summary mentioning "review" (case-insensitive)
-  LOOP_HAS_REVIEW_ITERATION=$(grep -iE '"summary":[[:space:]]*"[^"]*\b(reviewer|sub-?agent[^"]*review|subagent[^"]*review|review[^"]*pass|review[^"]*loop)' "$LOOP_STATE" 2>/dev/null | head -1)
-  : "${LOOP_ITERATION:=0}"
-  : "${LOOP_MIN_ITERATIONS:=0}"
-  if [ "${LOOP_MIN_ITERATIONS:-0}" -lt 5 ]; then
-    LOOP_MIN_ITERATIONS=5
-  fi
 fi
 
 # Block active loops first (regardless of file type)
@@ -218,38 +188,50 @@ fi
 #   1. Code changes committed with no loop started at all.
 #   2. Code changes committed using a stale "complete" loop from a prior task.
 # Active-loop failures are already reported above, so skip re-reporting.
-CODE_FILES_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|mjs|cjs|ps1|psm1|psd1|py|pyx|cs|csx|go|rs|sh|bash|tf|tfvars|bicep|sql)$' | head -1)
-if [ -n "$CODE_FILES_STAGED" ] && [ -z "$LOOP_ACTIVE" ]; then
-  LOOP_GATE_FAIL=0
-  LOOP_GATE_MSG=""
-  if [ "$LOOP_STATUS" != "complete" ]; then
+# Include deletions, and disable rename collapsing so a source -> non-source
+# rename still exposes the deleted source path to the quality gate.
+CODE_FILES_STAGED=$(git diff --cached --name-only --no-renames --diff-filter=ACMRD | grep -E '(\.(ts|tsx|js|mjs|cjs|ps1|psm1|psd1|py|pyx|cs|csx|go|rs|sh|bash|tf|tfvars|bicep|sql)$|^\.github/hooks/(pre-commit|commit-msg|post-commit)$)' | head -1)
+REVIEW_DOCS=$(git diff --cached --name-only | grep '^docs/artifacts/reviews/.*\.md$')
+
+# Evaluate the gate ONCE and share the verdict. Checks 8 and 9 both need it, and
+# check 8 marks the loop consumed -- re-evaluating afterwards would make every
+# commit that carries both a code file and a review artifact fail on its own
+# consumption marker.
+LOOP_GATE_FAIL=0
+LOOP_GATE_MSG=""
+LOOP_GATE_EVALUATED=0
+if { [ -n "$CODE_FILES_STAGED" ] || [ -n "$REVIEW_DOCS" ]; } && [ -z "$LOOP_ACTIVE" ]; then
+  LOOP_GATE_EVALUATED=1
+  # Delegate to the CLI so this hook, 'loop complete', and the extension runtime
+  # evaluate one implementation instead of three. pwsh is already a hard
+  # requirement of the scrub gate below, so a missing pwsh fails closed here too.
+  if ! command -v pwsh >/dev/null 2>&1; then
     LOOP_GATE_FAIL=1
-    LOOP_GATE_MSG="Code files staged but no completed quality loop found"
-  elif [ -n "$LOOP_CONSUMED" ]; then
-    LOOP_GATE_FAIL=1
-    LOOP_GATE_MSG="Quality loop was already consumed by a prior commit -- start a fresh loop"
-  elif [ "${LOOP_MIN_ITERATIONS:-0}" -gt 0 ] && [ "${LOOP_ITERATION:-0}" -lt "${LOOP_MIN_ITERATIONS:-0}" ]; then
-    LOOP_GATE_FAIL=1
-    LOOP_GATE_MSG="Quality loop completed below minimum iterations: $LOOP_ITERATION/$LOOP_MIN_ITERATIONS -- run more 'agentx loop iterate' passes"
-  elif [ -z "$LOOP_HAS_REVIEW_ITERATION" ]; then
-    LOOP_GATE_FAIL=1
-    LOOP_GATE_MSG="Quality loop missing subagent reviewer pass -- at least one iteration summary MUST contain 'review' (e.g. 'Iter N (Subagent Review): ...')"
+    LOOP_GATE_MSG="PowerShell 7+ (pwsh) is required to evaluate the quality-loop gate"
+  else
+    # Pin the workspace root: the CLI must evaluate THIS repo's loop state, not
+    # whatever root it would infer from the hook's working directory.
+    LOOP_REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "$PWD")
+    LOOP_GATE_OUTPUT=$(AGENTX_WORKSPACE_ROOT="$LOOP_REPO_ROOT" pwsh -NoProfile -File .agentx/agentx.ps1 loop gate 2>&1)
+    if [ $? -ne 0 ]; then
+      LOOP_GATE_FAIL=1
+      LOOP_GATE_MSG=$(printf '%s' "$LOOP_GATE_OUTPUT" | grep -oE 'BLOCK:.*' | head -1)
+      : "${LOOP_GATE_MSG:=Quality loop gate rejected this commit}"
+    fi
   fi
+fi
+
+if [ -n "$CODE_FILES_STAGED" ] && [ -z "$LOOP_ACTIVE" ]; then
   if [ $LOOP_GATE_FAIL -eq 1 ]; then
     # MANDATORY, NO SKIP: the quality-loop iteration gate has no bypass token.
     echo -e "${RED}[FAIL] $LOOP_GATE_MSG${NC}"
     echo "  ALL code changes MUST be wrapped in a completed quality loop with subagent review:"
     echo "    agentx loop start -p \"<task description>\""
     echo "    agentx loop iterate -s \"<progress summary>\" -e <evidence-file>   # repeat >= minIterations"
-    echo "    agentx loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence>"
+    echo "    agentx loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence> --verdict approved --reviewer <id> --high 0 --medium 0"
     echo "    agentx loop complete -s \"All gates passed\" -e <final-gate-evidence>"
     echo "  This gate is mandatory and has no skip token."
     FAILED=1
-  else
-    # Gate passed: eagerly mark the loop as consumed so the same completed loop
-    # cannot silently re-pass the gate on a subsequent commit if the post-commit
-    # hook fails to run (common on Windows or when hooks are not installed).
-    mark_loop_consumed_pre_commit
   fi
 fi
 
@@ -258,20 +240,16 @@ fi
 # Block commits of review artifacts when no completed loop exists.
 # Catches agents that skip loop start entirely.
 # ---------------------------------------------------------------
-REVIEW_DOCS=$(git diff --cached --name-only | grep '^docs/artifacts/reviews/.*\.md$')
+# REVIEW_DOCS is resolved above, alongside CODE_FILES_STAGED.
 if [ -n "$REVIEW_DOCS" ]; then
-  LOOP_COMPLETE=0
-  if [ -f "$LOOP_STATE" ]; then
-    LOOP_STATUS_CHECK=$(grep -o '"status":[[:space:]]*"[^"]*"' "$LOOP_STATE" 2>/dev/null | head -1 | sed 's/"status":[[:space:]]*"//' | sed 's/"//')
-    if [ "$LOOP_STATUS_CHECK" = "complete" ]; then
-      LOOP_COMPLETE=1
-    fi
-  fi
-  if [ $LOOP_COMPLETE -eq 0 ]; then
-    echo -e "${RED}[FAIL] Review document staged but quality loop not completed${NC}"
+  # Reuses the single gate evaluation above rather than re-running it, so the
+  # consumption marker written for the code-file check cannot block this one.
+  if [ $LOOP_GATE_FAIL -ne 0 ] || [ $LOOP_GATE_EVALUATED -eq 0 ]; then
+    echo -e "${RED}[FAIL] Review document staged but the quality loop gate did not pass${NC}"
     echo "  Review agents MUST run the quality loop before committing:"
     echo "    agentx loop start -p \"Reviewing: <description>\""
     echo "    ... (verify, self-review, iterate)"
+    echo "    agentx loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence> --verdict approved --reviewer <id> --high 0 --medium 0"
     echo "    agentx loop complete -s \"All quality gates passed\""
     FAILED=1
   else
@@ -490,7 +468,7 @@ if [ -n "$SCRUB_TARGETS" ]; then
   SCRUB_OUTPUT=""
   while IFS= read -r SCRUB_FILE; do
    [ -f "$SCRUB_FILE" ] || continue
-   if ! pwsh -NoProfile -File scripts/scrub.ps1 -Path "$SCRUB_FILE" -Quiet >/dev/null 2>&1; then
+  if ! pwsh -NoProfile -File .agentx/agentx.ps1 scrub -Path "$SCRUB_FILE" -Quiet >/dev/null 2>&1; then
     SCRUB_FAIL=1
     SCRUB_OUTPUT="$SCRUB_OUTPUT
   $SCRUB_FILE"
@@ -518,6 +496,8 @@ if [ $FAILED -eq 1 ]; then
  echo -e "${RED}[FAIL] Pre-commit checks FAILED${NC}"
  exit 1
 else
+ # loopConsumed is written by post-commit only, after Git has created the commit.
+ # pre-commit cannot know whether prepare-commit-msg or commit-msg will reject.
  echo -e "${GREEN}[PASS] Security checks passed${NC}"
  exit 0
 fi

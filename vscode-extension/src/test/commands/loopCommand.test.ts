@@ -77,7 +77,7 @@ describe('registerLoopCommand', () => {
 
     it('should run loop status action', async () => {
       fakeAgentx.checkInitialized.resolves(true);
-      sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'status', description: '' } as any);
+      sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'status', description: '' } as vscode.QuickPickItem);
       fakeAgentx.runCli.resolves('Loop active: iteration 2/10');
 
       await registeredCallbacks['agentx.loop']!();
@@ -86,7 +86,7 @@ describe('registerLoopCommand', () => {
 
     it('should run loop cancel action', async () => {
       fakeAgentx.checkInitialized.resolves(true);
-      sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'cancel', description: '' } as any);
+      sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'cancel', description: '' } as vscode.QuickPickItem);
       fakeAgentx.runCli.resolves('Loop cancelled');
 
       await registeredCallbacks['agentx.loop']!();
@@ -107,6 +107,20 @@ describe('registerLoopCommand', () => {
         'start', '-p', 'Implement harness', '-m', '10', '-c', 'ALL_TESTS_PASSING', '-i', '42',
       ])));
       assert.ok(infoSpy.calledWith('Iterative loop started with a default minimum of 5 review iterations.'));
+    });
+
+    it('should pass required evidence to the direct loopIterate command', async () => {
+      fakeAgentx.checkInitialized.resolves(true);
+      sandbox.stub(vscode.window, 'showInputBox')
+        .onFirstCall().resolves('Verified the gate')
+        .onSecondCall().resolves('.agentx/state/gate.log');
+      sandbox.stub(vscode.window, 'showQuickPick').resolves('No' as never);
+      fakeAgentx.runCli.resolves('Iteration recorded');
+
+      await registeredCallbacks['agentx.loopIterate']!();
+      assert.ok(fakeAgentx.runCli.calledWith('loop', sinon.match.array.deepEquals([
+        'iterate', '-s', 'Verified the gate', '-e', '.agentx/state/gate.log',
+      ])));
     });
   });
 

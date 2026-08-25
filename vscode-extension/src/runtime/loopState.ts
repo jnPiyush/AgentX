@@ -25,6 +25,13 @@ export interface LoopState {
   readonly prompt: string;
   readonly taskType?: string;
   readonly taskClass?: 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x';
+  /** 'structured' when this loop requires a recorded reviewer verdict. */
+  /**
+   * Provenance only -- no gate reads this. It was once the key for a free-text
+   * fallback, and keying enforcement on a field inside the file being enforced
+   * is what made that fallback trivially restorable.
+   */
+  readonly reviewGate?: 'structured';
   readonly iteration: number;
   readonly minIterations?: number;
   readonly maxIterations: number;
@@ -34,18 +41,36 @@ export interface LoopState {
   readonly lastIterationAt: string;
   /** Optional time budget in minutes set at loop start. */
   readonly budgetMinutes?: number;
-  /** False after loop complete; set true by pre-commit after the completed loop is consumed. */
+  /** False after loop complete; set true by post-commit after Git creates the consuming commit. */
   readonly loopConsumed?: boolean;
   readonly history: ReadonlyArray<{
     readonly iteration: number;
     readonly timestamp: string;
     readonly summary: string;
     readonly status: string;
+    /**
+     * `completion` marks the record `loop complete` appends. Work entries never
+     * carry it, which is what lets the approval binding skip the completion
+     * record without also skipping runner-written `status: 'complete'` work.
+     */
+    readonly kind?: string;
     /** Structured outcome of this iteration: pass, fail, or partial. */
     readonly outcome?: 'pass' | 'fail' | 'partial';
     /** Harness audit score snapshot recorded during this iteration. */
     readonly harnessScore?: number;
+    /** Machine-checkable reviewer evidence recorded via `loop iterate --verdict`. */
+    readonly review?: LoopReviewRecord;
   }>;
+}
+
+/** Structured reviewer evidence attached to a loop iteration. */
+export interface LoopReviewRecord {
+  readonly verdict: 'approved' | 'changes-requested';
+  readonly reviewer?: string;
+  readonly high?: number;
+  readonly medium?: number;
+  readonly low?: number;
+  readonly recordedAt?: string;
 }
 
 /** Result of the loop gate check. */
@@ -126,22 +151,46 @@ export function getDefaultMinIterations(state: LoopState): number {
     case 'agent-x': baseMinimum = DEFAULT_AGENT_X_MIN_ITERATIONS; break;
     default: baseMinimum = DEFAULT_STANDARD_MIN_ITERATIONS;
   }
-  return Math.min(baseMinimum, state.maxIterations);
+  return baseMinimum;
 }
 
 export function getEffectiveMinIterations(state: LoopState): number {
   const defaultMinimum = getDefaultMinIterations(state);
   const storedMinimum = typeof state.minIterations === 'number' && state.minIterations > 0 ? state.minIterations : 0;
-  return Math.min(Math.max(storedMinimum, defaultMinimum), state.maxIterations);
+  return Math.max(storedMinimum, defaultMinimum);
 }
 
+/** The most recent history entry carrying a structured reviewer record. */
+export function getLatestReviewEntry(state: LoopState): LoopState['history'][number] | null {
+  let latest: LoopState['history'][number] | null = null;
+  for (const entry of state.history) {
+    const review = entry?.review;
+    if (review && typeof review.verdict === 'string' && review.verdict.trim()) {
+      latest = entry;
+    }
+  }
+  return latest;
+}
+
+/** The most recent structured reviewer record in loop history, if any. */
+export function getLatestReviewRecord(state: LoopState): LoopReviewRecord | null {
+  return getLatestReviewEntry(state)?.review ?? null;
+}
+
+/**
+ * True when a structured reviewer record is present in loop history.
+ *
+ * There is no free-text fallback. An earlier design kept one for loops started
+ * before the gate shipped, keyed on a `reviewGate` marker in loop-state.json --
+ * but that file is workspace-writable, so deleting one property downgraded the
+ * loop to the weaker contract and defeated all three implementations at once.
+ * No marker stored beside the thing it protects can be trusted, so the weaker
+ * contract was removed rather than guarded.
+ */
 export function hasSubagentReviewIteration(state: LoopState): boolean {
   return state.history.some((entry) => {
-    const summary = entry?.summary ?? '';
-    // Documented contract (copilot-instructions.md / AGENT-PROTOCOL.md): at least
-    // one iteration summary must contain the word `review`. Mirrors
-    // Test-LoopHasSubagentReviewIteration in agentx-cli.ps1.
-    return /\breview\b/i.test(summary);
+    const review = entry?.review;
+    return Boolean(review && typeof review.verdict === 'string' && review.verdict.trim());
   });
 }
 
@@ -391,9 +440,66 @@ export function evaluateHandoffGate(
     if (!hasSubagentReviewIteration(state)) {
       return {
         allowed: false,
-        reason: 'Quality loop missing subagent reviewer pass. At least one iteration summary must contain `review` before handoff.',
+        reason: 'Quality loop missing subagent reviewer pass. Record one with `agentx loop iterate --verdict approved` before handoff.',
         state,
       };
+    }
+
+    const latestReviewEntry = getLatestReviewEntry(state);
+    const latestReview = latestReviewEntry?.review ?? null;
+    if (latestReviewEntry && latestReview) {
+      if (latestReview.verdict !== 'approved') {
+        return {
+          allowed: false,
+          reason: `Latest reviewer verdict is \`${latestReview.verdict}\`. Address the findings and record an approved review before handoff.`,
+          state,
+        };
+      }
+      // Fail CLOSED: counts must be real non-negative integers, not merely
+      // present. `null` and string values are not `undefined`, and `null > 0` is
+      // false, so a presence-only check would accept counts that were never
+      // actually stated. An unattributable verdict is likewise not evidence.
+      const isCount = (value: unknown): value is number =>
+        typeof value === 'number' && Number.isInteger(value) && value >= 0;
+      if (!isCount(latestReview.high) || !isCount(latestReview.medium) || !latestReview.reviewer?.trim()) {
+        return {
+          allowed: false,
+          reason:
+            'Reviewer record is missing HIGH/MEDIUM counts or a reviewer id. Re-record with --verdict <v> --reviewer <id> --high <n> --medium <n>.',
+          state,
+        };
+      }
+      const high = latestReview.high;
+      const medium = latestReview.medium;
+      if (high > 0 || medium > 0) {
+        return {
+          allowed: false,
+          reason: `Reviewer recorded ${high} HIGH and ${medium} MEDIUM finding(s); both must be zero before handoff.`,
+          state,
+        };
+      }
+      // An approval only covers what existed when it was given, so it must sit on
+      // the last recorded work entry. Trailing entries are skipped only when they
+      // carry the explicit `completion` marker that `loop complete` writes -- the
+      // agentic runner also writes `status: 'complete'` for genuine work, so a
+      // status-based test would silently skip post-approval work. Position is used
+      // rather than the iteration NUMBER because `loop rollback` re-uses numbers.
+      let lastWorkIndex = state.history.length - 1;
+      while (
+        lastWorkIndex >= 0 &&
+        state.history[lastWorkIndex].kind === 'completion' &&
+        !state.history[lastWorkIndex].review
+      ) {
+        lastWorkIndex--;
+      }
+      if (state.history.indexOf(latestReviewEntry) !== lastWorkIndex) {
+        return {
+          allowed: false,
+          reason:
+            'Work was recorded after the approved review. The approval must cover the final state; re-review before handoff.',
+          state,
+        };
+      }
     }
 
     return {

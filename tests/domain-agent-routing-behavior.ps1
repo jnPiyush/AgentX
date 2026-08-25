@@ -148,10 +148,10 @@ foreach ($allowedCommand in @(
     'pac solution check --path build/solution.zip'
 )) {
     $policy = Test-AgentTerminalCommandAllowed -AgentName 'power-platform-builder' -Command $allowedCommand
-    Assert-True $policy.allowed "Power Platform command policy allows: $allowedCommand"
+    Assert-True (-not $policy.allowed) "Autonomous terminal policy blocks even previously allowlisted pac command: $allowedCommand"
 }
 $otherAgentPolicy = Test-AgentTerminalCommandAllowed -AgentName 'devops' -Command 'pac solution import --path build/solution.zip'
-Assert-True $otherAgentPolicy.allowed 'Power Platform pac policy is role-scoped'
+Assert-True (-not $otherAgentPolicy.allowed) 'Autonomous terminal policy is fail-closed for every role'
 
 $script:ActiveProvider = [PSCustomObject]@{ id = 'claude-code' }
 $claudeTools = @(Get-AgentProviderToolSchema -AgentName 'power-platform-builder' -Tools (Get-ToolSchemaList))
@@ -159,7 +159,7 @@ $claudeToolNames = @($claudeTools | ForEach-Object { $_.function.name })
 Assert-True ('terminal_exec' -notin $claudeToolNames) 'Claude Code bridge removes terminal execution from Power Platform Builder'
 $engineerClaudeTools = @(Get-AgentProviderToolSchema -AgentName 'engineer' -Tools (Get-ToolSchemaList))
 $engineerClaudeToolNames = @($engineerClaudeTools | ForEach-Object { $_.function.name })
-Assert-True ('terminal_exec' -in $engineerClaudeToolNames) 'Claude Code terminal restriction is role-scoped'
+Assert-True ('terminal_exec' -notin $engineerClaudeToolNames) 'Claude Code terminal restriction applies to every role'
 $script:ActiveProvider = $null
 
 $handoffSchema = Get-Content -LiteralPath (Join-Path $repoRoot '.github/schemas/handoff-message.schema.json') -Raw -Encoding utf8 | ConvertFrom-Json

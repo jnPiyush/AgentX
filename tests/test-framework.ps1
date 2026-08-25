@@ -98,6 +98,9 @@ Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-skill.ps
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-changed-skills.ps1" "extension bundles changed-skill no-regression validator"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "skill-quality.md" "extension bundles skill-quality rubric"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "scripts/node_modules/yaml" "extension bundles skill rubric YAML runtime"
+Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/pre-commit" "extension bundles pre-commit hook source"
+Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/commit-msg" "extension bundles commit-msg hook source"
+Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/post-commit" "extension bundles post-commit hook source"
 Assert-FileContains "scripts/stocktake.ps1" "-Json" "stocktake consumes canonical rubric JSON"
 Assert-FileContains "scripts/stocktake.ps1" "/100" "stocktake reports 100-point skill scores"
 Assert-FileExists ".agentx/templates/memories/conventions.md" "Starter memory: conventions"
@@ -162,7 +165,10 @@ foreach ($cmd in $cliCommands) {
 # Agentic runner has tool definitions
 Assert-FileContains ".agentx/agentic-runner.ps1" "Invoke-AgenticLoop" "Agentic runner has main loop function"
 Assert-FileContains ".agentx/agentic-runner.ps1" "file_read" "Agentic runner has file_read tool"
-Assert-FileContains ".agentx/agentic-runner.ps1" "terminal_exec" "Agentic runner has terminal_exec tool"
+Assert-FileContains ".agentx/agentic-runner.ps1" "Autonomous terminal execution is disabled" "Agentic runner blocks autonomous terminal execution"
+Assert-FileContains ".agentx/agentx-cli.ps1" "SetUnixFileMode" "Hook installer sets POSIX executable permissions"
+Assert-FileContains ".agentx/agentx-cli.ps1" "GroupExecute" "Hook installer verifies group executable permission"
+Assert-FileContains ".agentx/agentx-cli.ps1" "OtherExecute" "Hook installer verifies other executable permission"
 Assert-FileContains ".agentx/agentic-runner.ps1" "Copilot" "Agentic runner supports Copilot API"
 Assert-FileExists "tests/provider-behavior.ps1" "Provider behavior test script"
 Assert-FileExists "tests/task-bundle-behavior.ps1" "Task bundle behavior test script"
@@ -171,6 +177,7 @@ Assert-FileExists "tests/harness-audit-behavior.ps1" "Harness audit behavior tes
 Assert-FileExists "tests/agentic-runner-behavior.ps1" "Agentic runner behavior test script"
 Assert-FileExists "tests/sprint-discover-behavior.ps1" "Sprint/discover behavior test script"
 Assert-FileExists "tests/loop-parity-behavior.ps1" "Loop parity behavior test script"
+Assert-FileExists "tests/pre-commit-gate-behavior.ps1" "Pre-commit gate behavior test script"
 Assert-FileExists "tests/skill-rubric-behavior.ps1" "Skill rubric behavior test script"
 
 $providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
@@ -217,6 +224,12 @@ if ($LASTEXITCODE -ne 0) {
  Write-Host $loopParityBehaviorResult
 }
 Assert-True ($LASTEXITCODE -eq 0) "Loop parity behavior tests pass"
+
+$preCommitGateBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/pre-commit-gate-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $preCommitGateBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Pre-commit gate behavior tests pass"
 
 $skillRubricBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/skill-rubric-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -292,6 +305,7 @@ Write-Host " 9. Hooks & Scripts" -ForegroundColor White
 
 Assert-FileExists ".github/hooks/pre-commit" "pre-commit hook"
 Assert-FileExists ".github/hooks/commit-msg" "commit-msg hook"
+Assert-FileExists ".github/hooks/post-commit" "post-commit hook"
 
 # --- 10. Documentation Consistency ------------------------------------------------------
 Write-Host ""

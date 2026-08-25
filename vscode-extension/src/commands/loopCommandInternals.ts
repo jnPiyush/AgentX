@@ -121,8 +121,55 @@ export async function loopIterate(agentx: AgentXContext): Promise<void> {
   });
   if (!summary) { return; }
 
+  const evidence = await vscode.window.showInputBox({
+    prompt: 'Iteration evidence file (required by quality gate)',
+    placeHolder: 'e.g., .agentx/state/test-report.log',
+    ignoreFocusOut: true,
+  });
+  if (!evidence?.trim()) { return; }
+
+  // The reviewer pass must be recordable from this surface too: a loop cannot
+  // complete without a structured verdict, so without these flags a loop driven
+  // entirely through the VS Code commands could never be finished.
+  const args = ['iterate', '-s', summary, '-e', evidence.trim()];
+  const isReviewPass = await vscode.window.showQuickPick(['No', 'Yes'], {
+    placeHolder: 'Is this the subagent review pass?',
+    ignoreFocusOut: true,
+  });
+  if (!isReviewPass) { return; }
+  if (isReviewPass === 'Yes') {
+    const verdict = await vscode.window.showQuickPick(['approved', 'changes-requested'], {
+      placeHolder: 'Reviewer verdict',
+      ignoreFocusOut: true,
+    });
+    if (!verdict) { return; }
+    const reviewer = await vscode.window.showInputBox({
+      prompt: 'Reviewer id (required with a verdict)',
+      placeHolder: 'e.g., engineer-subagent',
+      ignoreFocusOut: true,
+    });
+    if (!reviewer?.trim()) { return; }
+    const counts: Array<{ flag: string; label: string }> = [
+      { flag: '--high', label: 'HIGH finding count' },
+      { flag: '--medium', label: 'MEDIUM finding count' },
+      { flag: '--low', label: 'LOW finding count' },
+    ];
+    const countArgs: string[] = [];
+    for (const { flag, label } of counts) {
+      const value = await vscode.window.showInputBox({
+        prompt: label,
+        value: '0',
+        ignoreFocusOut: true,
+        validateInput: (input) => (/^\d+$/.test(input.trim()) ? null : 'Enter a non-negative integer'),
+      });
+      if (value === undefined) { return; }
+      countArgs.push(flag, value.trim());
+    }
+    args.push('--verdict', verdict, '--reviewer', reviewer.trim(), ...countArgs);
+  }
+
   try {
-    const output = await agentx.runCli('loop', ['iterate', '-s', summary]);
+    const output = await agentx.runCli('loop', args);
     syncHarnessIteration(agentx, summary);
     showLoopOutput('Loop Iteration', output, getHarnessDisplay(agentx));
   } catch (err: unknown) {

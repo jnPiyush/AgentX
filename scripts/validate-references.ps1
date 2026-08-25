@@ -60,7 +60,13 @@ function Test-IsInsideFencedCode {
 }
 
 $mdFiles = @(Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch 'node_modules|\.git[/\\]|vendor|[/\\]archive[/\\]|vscode-extension[/\\]\.github[/\\]' }
+    Where-Object {
+        $_.FullName -notmatch 'node_modules|\.git[/\\]|vendor|[/\\]archive[/\\]|vscode-extension[/\\]\.github[/\\]' -and
+        # SkillOpt run snapshots preserve generated candidate text for evaluation;
+        # their relative links are not repository navigation and intentionally do
+        # not resolve outside the run directory.
+        $_.FullName -notmatch 'evaluation[/\\]skillopt[/\\].*[/\\]runs[/\\]'
+    }
 )
 
 # Scope to git-tracked files when available so generated/untracked mirrors

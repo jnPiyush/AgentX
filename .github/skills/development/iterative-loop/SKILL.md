@@ -80,7 +80,7 @@ Need iterative refinement?
 | **Phased Loop** | 10-50 | Large features | All phases complete |
 | **Review Loop** | 2-5 | Self-review | No issues found |
 | **Adversarial Loop** | 1 (mandatory pass) | Bug-finding before ship | Mutation score met + zero HIGH findings |
-| **Subagent Review Loop** | 1 (mandatory pass) | Blind-spot detection | Zero HIGH/MEDIUM findings from clean reviewer |
+| **Subagent Review Loop** | 1 (mandatory pass) | Blind-spot detection | Zero HIGH/MEDIUM findings from a clean reviewer, recorded as `loop iterate ... --verdict approved --reviewer <id> --high 0 --medium 0` on the final work iteration |
 
 ---
 
@@ -90,13 +90,13 @@ The Engineer's quality loop is gated by the CLI, not by judgment:
 
 1. `loop start` initializes `.agentx/state/tests-baseline.json` as a placeholder and cleans the prior loop's archived evidence workspace. Record the actual baseline with `loop baseline -c <passing-test-count>` before iterating.
 2. `loop iterate -e <path>` REQUIRES an existing evidence file (test report, coverage xml, scan json, mutation report). On accept, the CLI:
-   - **moves the original file** into a sealed archive at `.agentx/state/loop-evidence/iter-<N>/<timestamp>-<filename>` (the source path no longer exists, so the next iterate cannot point at the same path),
+  - **copies the original file** into an archive at `.agentx/state/loop-evidence/iter-<N>/<timestamp>-<filename>` while preserving the source,
   - records `{ evidence, evidenceOriginal }` in loop history.
 3. If a tests baseline has been recorded, both `loop iterate` and `loop complete` REQUIRE `--passing <count>` and reject any count below baseline.
-4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact (for example, `final-gate.json` or a full-suite report) AND every iteration after #1 must already carry a still-existing archived evidence file. The final artifact is moved to `.agentx/state/loop-evidence/complete/`.
+4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact (for example, `final-gate.json` or a full-suite report) AND every iteration after #1 must already carry a still-existing archived evidence file. The final artifact is copied to `.agentx/state/loop-evidence/complete/`.
 5. The commit-msg hook rejects `fix:` commits that change production code under `.agentx/`, `scripts/`, `vscode-extension/src/`, or the standard app roots without adding a regression test in the same diff.
 
-Practical consequence: **generate a fresh file per iteration**. Re-running the same `npm test` into a newly written report is fine. The accepted source file is moved away, so the next iteration must produce a new file rather than reuse the old accepted path.
+Practical consequence: **generate a fresh file per iteration**. The source remains available, but freshness and SHA-256 reuse guards reject an old or identical artifact on the next iteration.
 
 Bypass envs (use only for legacy/manual flows): `AGENTX_SKIP_EVIDENCE_GATE=1` skips evidence-file requirements only; it does not disable baseline pass-count enforcement. `AGENTX_SKIP_FIX_TEST_GATE=1` bypasses the fix-commit regression-test hook.
 

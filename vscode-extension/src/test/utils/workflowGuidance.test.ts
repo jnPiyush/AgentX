@@ -59,7 +59,7 @@ describe('workflow guidance utility', () => {
       startedAt: isoMinutesAgo(30),
       lastIterationAt: isoMinutesAgo(5),
       history: [
-        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass' },
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review: all green', status: 'complete', outcome: 'pass', review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } },
       ],
     }));
     writeFile(tmpDir, 'docs/execution/plans/ROLLOUT-SCORECARD-IMPLEMENTATION-PLAN.md', '# Plan\n');

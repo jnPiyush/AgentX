@@ -48,7 +48,7 @@ function makeCompleteState(overrides?: Partial<LoopState>): Record<string, unkno
       { iteration: 2, timestamp: isoMinutesAgo(30), summary: 'Fix tests', status: 'iterated' },
       { iteration: 3, timestamp: isoMinutesAgo(15), summary: 'Refine edge cases', status: 'iterated' },
       { iteration: 4, timestamp: isoMinutesAgo(10), summary: 'Tighten validation', status: 'iterated' },
-      { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review: all green', status: 'complete' },
+      { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review: all green', status: 'complete', review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } },
     ],
     ...overrides,
   };
@@ -247,6 +247,161 @@ describe('checkHandoffGate', () => {
     assert.ok(gate.reason.includes('subagent reviewer pass'));
   });
 
+  it('blocks when the latest reviewer verdict requests changes', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review', status: 'complete',
+          review: { verdict: 'changes-requested', reviewer: 'test-reviewer', high: 1, medium: 0, low: 0 } },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('changes-requested'));
+  });
+
+  it('blocks when an approved review still carries HIGH or MEDIUM findings', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review', status: 'complete',
+          review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 2, low: 4 } },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('MEDIUM'));
+  });
+
+  it('blocks when an approved review omits its HIGH or MEDIUM counts', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review', status: 'complete',
+          review: { verdict: 'approved', reviewer: 'test-reviewer', low: 1 } },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('missing HIGH/MEDIUM counts'));
+  });
+
+  it('blocks when review counts are null rather than numbers', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review', status: 'complete',
+          review: { verdict: 'approved', reviewer: 'test-reviewer', high: null, medium: null, low: 0 } as never },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('missing HIGH/MEDIUM counts'));
+  });
+
+  it('blocks when an approved review has no reviewer attribution', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review', status: 'complete',
+          review: { verdict: 'approved', high: 0, medium: 0, low: 0 } },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('reviewer id'));
+  });
+
+  it('blocks a marker-less loop whose review records were also removed', () => {
+    // The exploit shape the earlier marker-based design missed: strip reviewGate
+    // AND every review record, leaving only free-text summaries.
+    const state = makeCompleteState({
+      history: [
+        { iteration: 4, timestamp: isoMinutesAgo(20), summary: 'Progress', status: 'iterated' },
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Iteration 5 review of the diff', status: 'complete' },
+      ],
+    }) as Record<string, unknown>;
+    delete state.reviewGate;
+    writeLoopState(wsRoot, state as never);
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('subagent reviewer pass'));
+  });
+
+  it('allows when the latest review is approved with zero HIGH and MEDIUM findings', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 4, timestamp: isoMinutesAgo(20), summary: 'Subagent Review', status: 'iterated',
+          review: { verdict: 'changes-requested', reviewer: 'test-reviewer', high: 2, medium: 1, low: 0 } },
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Subagent Review', status: 'complete',
+          review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 3 } },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, true);
+  });
+
+  it('blocks when iterations were recorded after the approval', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 4, timestamp: isoMinutesAgo(20), summary: 'Subagent Review', status: 'iterated',
+          review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } },
+        { iteration: 5, timestamp: isoMinutesAgo(6), summary: 'More unreviewed changes', status: 'iterated' },
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'All gates passed', status: 'complete', kind: 'completion' },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('after the approved review'));
+  });
+
+  it('blocks runner-written complete work recorded after the approval', () => {
+    // Sync-AgenticLoopState writes status 'complete' for genuine work, so the
+    // trailing-entry skip must key on the completion marker instead.
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 4, timestamp: isoMinutesAgo(20), summary: 'Subagent Review', status: 'iterated',
+          review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } },
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Agentic run completed successfully.', status: 'complete' },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('after the approved review'));
+  });
+
+  it('allows an approval followed only by the completion entry', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 5, timestamp: isoMinutesAgo(6), summary: 'Subagent Review', status: 'iterated',
+          review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } },
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'All gates passed', status: 'complete', kind: 'completion' },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, true);
+  });
+
+  it('blocks a stale approval replayed at the same iteration number after rollback', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      history: [
+        { iteration: 5, timestamp: isoMinutesAgo(30), summary: 'Subagent Review', status: 'iterated',
+          review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } },
+        { iteration: 4, timestamp: isoMinutesAgo(20), summary: 'Rolled back', status: 'rolled-back' },
+        { iteration: 5, timestamp: isoMinutesAgo(5), summary: 'Different unreviewed work', status: 'iterated' },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('after the approved review'));
+  });
+
   it('uses the complex-task five-iteration default when minIterations is missing', () => {
     const state = makeCompleteState({
       iteration: 4,
@@ -258,6 +413,22 @@ describe('checkHandoffGate', () => {
     const gate = checkHandoffGate(wsRoot);
     assert.equal(gate.allowed, false);
     assert.ok(gate.reason.includes('4/5'));
+  });
+
+  it('does not let maxIterations lower the mandatory five-iteration floor', () => {
+    writeLoopState(wsRoot, makeCompleteState({
+      iteration: 1,
+      maxIterations: 1,
+      minIterations: 1,
+      history: [
+        { iteration: 1, timestamp: isoMinutesAgo(5), summary: 'Subagent Review', status: 'complete',
+          review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } },
+      ],
+    }));
+
+    const gate = checkHandoffGate(wsRoot);
+    assert.equal(gate.allowed, false);
+    assert.ok(gate.reason.includes('1/5'));
   });
 
   it('blocks when a completed loop is stale', () => {
@@ -273,7 +444,7 @@ describe('checkHandoffGate', () => {
   });
 
   it('blocks for unexpected status values', () => {
-    writeLoopState(wsRoot, makeCompleteState({ status: 'unknown' as any, active: false }));
+    writeLoopState(wsRoot, makeCompleteState({ status: 'unknown' as unknown as LoopState['status'], active: false }));
 
     const gate = checkHandoffGate(wsRoot);
     assert.equal(gate.allowed, false);
@@ -692,18 +863,45 @@ describe('hasSubagentReviewIteration', () => {
     } as LoopState;
   }
 
-  it('returns true when any iteration summary contains the word "review"', () => {
-    // MEDIUM-1: the documented contract is "summary contains review". A plain
-    // "Final review pass" must satisfy the gate.
-    assert.equal(hasSubagentReviewIteration(makeState(['Init', 'Final review pass'])), true);
+  it('returns false for a summary that merely contains the word "review"', () => {
+    // The free-text contract was removed: it was keyed on a marker inside the
+    // workspace-writable state file, so it could always be restored by deleting
+    // one property. Only a structured verdict satisfies the gate now.
+    assert.equal(hasSubagentReviewIteration(makeState(['Init', 'Final review pass'])), false);
   });
 
-  it('returns true for the canonical "Subagent Review:" prefix', () => {
-    assert.equal(hasSubagentReviewIteration(makeState(['Subagent Review: all green'])), true);
+  it('returns false for the canonical "Subagent Review:" prefix without a verdict', () => {
+    assert.equal(hasSubagentReviewIteration(makeState(['Subagent Review: all green'])), false);
   });
 
   it('returns false when no summary contains "review"', () => {
     assert.equal(hasSubagentReviewIteration(makeState(['Init', 'Fix bug', 'Verify'])), false);
+  });
+
+  it('is not restored by removing the reviewGate marker', () => {
+    const state = makeState(['Iteration 4 review of the diff']) as unknown as Record<string, unknown>;
+    delete state.reviewGate;
+    assert.equal(hasSubagentReviewIteration(state as never), false);
+  });
+
+  it('rejects a claimed review when no verdict was recorded', () => {
+    const state = { ...makeState(['Subagent Review: no findings']), reviewGate: 'structured' } as LoopState;
+    assert.equal(hasSubagentReviewIteration(state), false);
+  });
+
+  it('returns true from a structured verdict even when the summary omits the word', () => {
+    const state = {
+      ...makeState(['Iteration 5']),
+      reviewGate: 'structured',
+      history: [{
+        iteration: 5,
+        timestamp: isoMinutesAgo(5),
+        summary: 'Iteration 5',
+        status: 'complete',
+        review: { verdict: 'approved' as const, reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 },
+      }],
+    } as LoopState;
+    assert.equal(hasSubagentReviewIteration(state), true);
   });
 });
 

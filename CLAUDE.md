@@ -7,7 +7,7 @@
 
 ## Quality Loop Hard Rule (NON-SKIPPABLE)
 
-> **HARD RULE**: Before editing, creating, or deleting any file for a code or docs change, run `.agentx/agentx.ps1 loop start -p "<task>"` as your ABSOLUTE FIRST tool call. Reading files and running `loop status` are allowed; mutating the workspace before `loop start` succeeds is a contract violation. The loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, and at least one history iteration summary must contain the word "review" (subagent review pass). The pre-commit hook blocks commits when these conditions are unmet.
+> **HARD RULE**: Before editing, creating, or deleting any file for a code or docs change, run `.agentx/agentx.ps1 loop start -p "<task>"` as your ABSOLUTE FIRST tool call. Reading files and running `loop status` are allowed; mutating the workspace before `loop start` succeeds is a contract violation. The loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, and the subagent review pass must be recorded as a structured verdict on the FINAL iteration (`loop iterate ... --verdict approved --reviewer <id> --high 0 --medium 0`). `loop complete` fails on a non-approved verdict, on non-zero HIGH/MEDIUM, or when iterations were recorded after the approval. The pre-commit hook blocks commits when these conditions are unmet.
 >
 > **Honesty rule**: If asked whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state. Do not claim completion unless `loop complete` succeeded in the current session.
 >

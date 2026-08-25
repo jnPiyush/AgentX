@@ -24,15 +24,21 @@ function Get-ChangedFiles {
     $resolvedGitTopLevel = [System.IO.Path]::GetFullPath([string]$gitTopLevel[0]).TrimEnd('\', '/')
     if (-not $resolvedWorkspaceRoot.Equals($resolvedGitTopLevel, [System.StringComparison]::OrdinalIgnoreCase)) { return @() }
 
-    function Add-UntrackedFiles {
+    function Add-WorkingTreeFiles {
         param([string[]]$Files)
 
-        $untracked = @(git -C $workspaceRoot status --short 2>$null |
-            Where-Object { $_.StartsWith('?? ') } |
-            ForEach-Object { $_.Substring(3).Trim() } |
+        $unstaged = @(git -C $workspaceRoot diff --name-only 2>$null |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        $staged = @(git -C $workspaceRoot diff --cached --name-only 2>$null |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        # `git status --short` may collapse a wholly untracked directory into one
+        # entry. `git ls-files --others` enumerates the actual files so code and
+        # plan thresholds cannot be bypassed by placing them under a new folder.
+        $untracked = @(git -C $workspaceRoot ls-files --others --exclude-standard 2>$null |
+            ForEach-Object { $_.Trim() } |
             Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 
-        return @($Files + $untracked | Select-Object -Unique)
+        return @($Files + $unstaged + $staged + $untracked | Select-Object -Unique)
     }
 
     $normalizedBase = $Base
@@ -44,14 +50,15 @@ function Get-ChangedFiles {
     if (-not [string]::IsNullOrWhiteSpace($normalizedBase)) {
         $range = "origin/$normalizedBase..HEAD"
         $files = @(git -C $workspaceRoot diff --name-only $range 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-        return Add-UntrackedFiles -Files $files
+        return Add-WorkingTreeFiles -Files $files
     }
 
-    $headRange = @(git -C $workspaceRoot diff --name-only HEAD~1..HEAD 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-    if ($headRange.Count -gt 0) { return Add-UntrackedFiles -Files $headRange }
-
     $files = @(git -C $workspaceRoot diff --name-only 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-    return Add-UntrackedFiles -Files $files
+    $currentChanges = @(Add-WorkingTreeFiles -Files $files)
+    if ($currentChanges.Count -gt 0) { return $currentChanges }
+
+    $headRange = @(git -C $workspaceRoot diff --name-only HEAD~1..HEAD 2>$null) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    return Add-WorkingTreeFiles -Files $headRange
 }
 
 function Get-Domain {
@@ -116,12 +123,12 @@ $requiredSections = @(
 )
 
 foreach ($planFile in $planFiles) {
-    if (-not (Test-Path $planFile)) {
+    if (-not (Test-Path -LiteralPath $planFile -PathType Leaf)) {
         $failures += "Execution plan file '$planFile' was referenced by the diff but does not exist on disk."
         continue
     }
 
-    $content = Get-Content -Path $planFile -Raw
+    $content = Get-Content -LiteralPath $planFile -Raw
     foreach ($section in $requiredSections) {
         if (-not (Test-RequiredSection -Content $content -Section $section)) {
             $failures += "Execution plan '$planFile' is missing required section '$section'."
@@ -168,12 +175,12 @@ function Get-AddedFiles {
     if ($added.Count -eq 0) {
         $added = @(git -C $workspaceRoot diff --name-only --diff-filter=A HEAD~1..HEAD 2>$null)
     }
+    $staged = @(git -C $workspaceRoot diff --cached --name-only --diff-filter=A 2>$null)
     # Untracked files are additions by definition.
-    $untracked = @(git -C $workspaceRoot status --short 2>$null |
-        Where-Object { $_.StartsWith('?? ') } |
-        ForEach-Object { $_.Substring(3).Trim() })
+    $untracked = @(git -C $workspaceRoot ls-files --others --exclude-standard 2>$null |
+        ForEach-Object { $_.Trim() })
 
-    return @(@($added + $untracked) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    return @(@($added + $staged + $untracked) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
 }
 
 $addedFiles = @(Get-AddedFiles -Base $BaseRef)

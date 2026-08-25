@@ -1,6 +1,6 @@
 # SPEC-401: CLI Runtime Migration to Shared TypeScript Runtime
 
-**Status**: Draft
+**Status**: Implemented (Phase 1 gate extraction and hardening complete)
 **Date**: 2026-05-29
 **Author**: AgentX Architect
 **Issue**: #401
@@ -20,7 +20,7 @@ This spec defines the implementation-facing contract for migrating AgentX's **en
 |-------|---------|---------------|----------------------------|
 | Enforcement core (`loop` commands + gate) | Node.js / TypeScript (shared runtime) | Node LTS 20.x floor (align with `vscode-extension` engines) | `vscode-extension/package.json` engines, 2026-05-29 |
 | Agent engine (provider calls, tools, sessions) | Node.js / TypeScript (shared runtime) | Node LTS 20.x | same |
-| Commit-time gate | bash (kept independent for defense-in-depth) | bash 4+ | `.github/hooks/pre-commit`, 2026-05-29 |
+| Commit-time gate | bash wrapper that delegates the gate decision to `agentx loop gate` (pwsh) | bash 4+, PowerShell 7+ | `.github/hooks/pre-commit`, 2026-05-29 |
 | Long-tail dev/CI tooling | PowerShell 7 (optional, non-gating) | pwsh 7.4+ | retained as-is |
 | Durable state contract | JSON files under `.agentx/state/` | n/a (language-agnostic) | `loop-state.json`, `agent-status.json` |
 
@@ -71,8 +71,10 @@ The TypeScript implementation MUST produce `loop-state.json` and `agent-status.j
 | Contract field/behavior | Requirement |
 |-------------------------|-------------|
 | Minimum iteration count | 5 (unchanged across all task classes) |
-| Subagent-review history check | At least one history iteration summary contains "review" (case-insensitive) |
-| `loopConsumed` semantics | False until handoff; same lifecycle as today |
+| Subagent-review history check | A history entry MUST carry a `review` record with a non-empty `verdict`. There is no free-text fallback. The latest such entry MUST have `verdict = "approved"`, `high = 0`, `medium = 0` (both real non-negative integers, not null or strings), a non-empty `reviewer`, and MUST be the last recorded work entry (only trailing entries marked `kind: "completion"` and carrying no review are ignored) |
+| `loopConsumed` semantics | `false` through loop completion and all pre-commit/commit-msg validation; only the installed `post-commit` hook sets `true` after Git creates the consuming commit |
+| Autonomous runner handoff | A successful runner self-review records `selfReview` evidence but leaves the loop active and reserves a final iteration when needed. Only a separately attributable `loop iterate --verdict approved` record may satisfy the independent-review gate. |
+| Hook installation | `agentx hooks install` MUST resolve Git's active hooks path (including `core.hooksPath`), resolve hook sources from the workspace or bundled install root, copy all three lifecycle hooks, verify their SHA-256 bytes, and fail nonzero if any step is incomplete. |
 | Stale / stuck detection | Same thresholds and transitions as the PowerShell writer |
 | Concurrent-write safety | Extension and CLI may both write; locking/last-writer behavior preserved |
 | State file locations | `.agentx/state/loop-state.json`, `.agentx/state/agent-status.json` (unchanged) |
@@ -83,11 +85,11 @@ The externally-observable command surface MUST be preserved so all callers (hook
 
 | Command | Behavior preserved |
 |---------|--------------------|
-| `agentx loop start -p <task> -i <issue>` | Initializes state; same focus sequence |
+| `agentx loop start -p <task> -i <issue>` | Initializes state; rejects `--max < 5`; same focus sequence |
 | `agentx loop iterate -s <summary> -e <evidence>` | Appends history; evidence gate unchanged |
 | `agentx loop complete -s <summary> -e <evidence>` | Min-5 + review-history gate; sets complete |
 | `agentx loop status` | Same status/health/gate output contract |
-| `agentic-runner` invocation surface | Provider/tool/session behavior preserved |
+| `agentic-runner` invocation surface | Provider/tool/session behavior preserved; only `text_response` is a successful orchestration result, and self-review failure cannot be reported as completion by direct run, watch, or sprint surfaces |
 
 ## 7. Gating Prerequisites (MUST exist before any port begins)
 
@@ -112,7 +114,7 @@ A test suite that runs the existing PowerShell writer and the new TypeScript wri
 |--------------------------|
 | `loop start` -> `iterate` x5 -> `complete` happy path |
 | Min-iteration gate rejection (complete attempted at <5) |
-| Review-history check (complete blocked until a "review" summary exists) |
+| Structured-review check (complete blocked until a final-work history entry carries an approved reviewer record with zero HIGH/MEDIUM findings) |
 | Stale/stuck transitions |
 | Concurrent `iterate` from CLI + extension |
 | Partial-write / crash-recovery edge cases |
@@ -124,7 +126,7 @@ A test suite that runs the existing PowerShell writer and the new TypeScript wri
 | Provider credentials | Read from env vars / secret store only; never persisted to session JSON in plaintext |
 | Tool execution sandbox | Preserve the existing command allowlist (`.github/security/allowed-commands.json`) and blocked-command list |
 | State file integrity | Writes are atomic (temp + rename) to avoid partial-state acceptance by the gate |
-| Defense-in-depth | bash commit-time gate remains independent of the TS runtime so a single-runtime bug cannot disable both writer and gate |
+| Single gate implementation | The commit-time hook delegates to `agentx loop gate` rather than re-deriving the decision. Three parallel implementations diverged repeatedly, and the text-scanning one was always the weakest; equivalence is now structural instead of asserted |
 | Dependency surface | Node dependency tree scanned (`npm audit`) in CI; pin direct deps |
 
 ## 9. Performance Targets
@@ -164,7 +166,7 @@ The parity suite (s.7.2) is the primary regression guard. In addition:
 | Unit | TS loop core mirrors existing `loopStateChecker.test.ts` / `harnessEvaluator.test.ts` |
 | Integration | CLI invocation through `node` produces identical state to pwsh baseline |
 | Cross-platform | Gate runs on Windows, macOS, Linux, and Copilot Cloud without pwsh |
-| Defense-in-depth | bash commit-time gate validated against TS-written state |
+| Single gate implementation | commit-time hook delegates to `agentx loop gate` and is validated against CLI-written state |
 
 ## 13. Migration Sequencing
 
@@ -195,7 +197,7 @@ sequenceDiagram
     Node->>Core: gate check (min 5 + review)
     Core-->>Surface: pass / block
     Surface->>Hook: git commit
-    Hook->>State: independent read (defense-in-depth)
+    Hook->>CLI: agentx loop gate (single gate implementation)
     Hook-->>Surface: allow / hard-fail
 ```
 
@@ -213,7 +215,7 @@ This is infrastructure for the agentic loop rather than an AI feature itself, bu
 | Gate behavior drift during port | Prerequisite 7.2 golden-file parity suite | [Confidence: MEDIUM-HIGH] |
 | Node version skew across surfaces | Pin Node LTS 20.x floor + preflight check | [Confidence: HIGH] |
 | Core/tooling boundary creep | Section 4 enumeration; amendments required to expand | [Confidence: HIGH] |
-| Loss of 3-language defense-in-depth | Keep bash commit-time gate independent of TS runtime | [Confidence: HIGH] |
+| Gate divergence across surfaces | Hook delegates to `agentx loop gate`; the extension runtime mirrors the same structural checks | [Confidence: HIGH] |
 
 ## 16. Open Questions
 
@@ -230,7 +232,7 @@ This is infrastructure for the agentic loop rather than an AI feature itself, bu
 - [ ] Quality-loop gate executes on Agents Window / Copilot CLI / Cloud without a PowerShell install.
 - [ ] `loop-state.json` output is parity-identical between PowerShell and TypeScript writers.
 - [ ] Min-5-iteration and review-history gates behave identically.
-- [ ] bash commit-time gate remains independent of the TS runtime.
+- [ ] commit-time hook delegates to `agentx loop gate` and fails closed when pwsh is absent.
 - [ ] PowerShell long-tail tooling continues to work, non-gating, off the hot path.
 - [ ] SPEC-400 s.1.1 + s.5 amended to Node/TypeScript CLI bridge runtime.
 

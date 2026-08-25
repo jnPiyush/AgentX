@@ -10,7 +10,7 @@ Instead of asking the model to type `pwsh .agentx/agentx-cli.ps1 loop start ...`
 |------|-------|---------|
 | `agentx_loop_start` | `loop start -p "<task>" [-i <issue>]` | Open the mandatory quality loop before any edit |
 | `agentx_loop_iterate` | `loop iterate -s "..." [-e <evidence>]` | Record an iteration |
-| `agentx_loop_complete` | `loop complete -s "..." [-e <evidence>]` | Close the loop (>=5 iterations + review pass) |
+| `agentx_loop_complete` | `loop complete -s "..." [-e <evidence>]` | Close the loop (>=5 iterations + an approved reviewer verdict with zero HIGH/MEDIUM on the final work iteration) |
 | `agentx_loop_status` | `loop status` | Report current loop state |
 | `agentx_ready` | `ready` | Priority-sorted ready queue |
 | `agentx_state` | `state [-a <agent>] [-s <status>] [-i <issue>]` | Show or update agent state |

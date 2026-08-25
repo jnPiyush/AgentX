@@ -63,7 +63,7 @@ describe('shell - execShell', function () {
     try {
       await execShell(cmd, process.cwd(), shell);
       assert.fail('should have rejected');
-    } catch (err: any) {
+    } catch (err: unknown) {
       assert.ok(err instanceof Error, 'should throw an Error');
       assert.ok(err.message.includes('Command failed'), 'should contain failure message');
     }
@@ -225,7 +225,7 @@ describe('shell - secret redaction in errors', function () {
       return;
     }
 
-    const secret = 'ghp_abcdefghijklmnopqrstuvwxyz0123456789';
+    const secret = 'ghp_EXAMPLEabcdefghijklmnopqrstuvwxyz0123456789';
     const cmd = process.platform === 'win32'
       ? `Write-Error "leaked ${secret}"; exit 1`
       : `echo "leaked ${secret}" >&2; exit 1`;
@@ -233,7 +233,8 @@ describe('shell - secret redaction in errors', function () {
     try {
       await execShell(cmd, process.cwd(), shell);
       assert.fail('should have rejected');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      assert.ok(err instanceof Error, 'should throw an Error');
       assert.ok(
         !err.message.includes(secret),
         `error message must not contain the raw secret: ${err.message}`,
