@@ -4,7 +4,7 @@
 **Date**: 2026-07-28
 **Status**: Local Implementation Complete - Remote Validation Pending
 **Issue**: #377
-**Baseline evaluation**: [SOLUTION-EVALUATION-agentx-coding-harness-20260728.md](../../artifacts/reviews/SOLUTION-EVALUATION-agentx-coding-harness-20260728.md)
+**Baseline evaluation**: `SOLUTION-EVALUATION-agentx-coding-harness-20260728.md` (historical local artifact; not committed)
 
 ---
 
@@ -238,6 +238,6 @@ and missing final-artifact SBOM/provenance wiring. Independent review found and 
 additional fixes for junction escape, DNS rebinding, dependency-scan fail-open behavior,
 MCP clean-checkout behavior, E2E false-green behavior, and SBOM subject mismatch.
 
-See
-[SOLUTION-EVALUATION-agentx-coding-harness-20260729.md](../../artifacts/reviews/SOLUTION-EVALUATION-agentx-coding-harness-20260729.md)
-for the arithmetic and delta ledgers. Do not report 80+ until the remote evidence exists.
+The arithmetic and delta ledgers were recorded in the historical local artifact
+`SOLUTION-EVALUATION-agentx-coding-harness-20260729.md`, which was not committed.
+Do not report 80+ until the remote evidence exists.

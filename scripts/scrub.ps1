@@ -144,6 +144,7 @@ $EmptyCatchPattern = '\bcatch\s*\([^)]*\)\s*\{\s*(/\*[^*]*\*/|//[^\n]*)?\s*\}'
 
 $DeadCodeLineThreshold = 4
 $DuplicateLogicWindowSize = 5
+$DuplicateLogicMaxSourceSpan = $DuplicateLogicWindowSize + 3
 $ProductionBlockingCategories = @('duplicate-logic','empty-catch','generic-gradient','ai-filler')
 
 # Findings collector
@@ -156,8 +157,14 @@ function Add-Finding {
         [string]$Category,
         [string]$Severity,
         [string]$Snippet,
-        [bool]$SafeFix
+        [bool]$SafeFix,
+        [object]$ProductionBlocker = $null
     )
+    $isProductionBlocker = if ($null -ne $ProductionBlocker) {
+        [bool]$ProductionBlocker
+    } else {
+        ($Severity -eq 'HIGH') -or ($ProductionBlockingCategories -contains $Category)
+    }
     $Findings.Add([pscustomobject]@{
         file              = $File
         line              = $Line
@@ -165,7 +172,7 @@ function Add-Finding {
         severity          = $Severity
         snippet           = ($Snippet -replace '\s+',' ').Trim()
         safeFix           = $SafeFix
-        productionBlocker = (($Severity -eq 'HIGH') -or ($ProductionBlockingCategories -contains $Category))
+        productionBlocker = $isProductionBlocker
     })
 }
 
@@ -356,11 +363,224 @@ function ConvertTo-NormalizedCodeLine {
     if ($line -match '^\s*[\$A-Za-z_][\w:.-]*\s*=\s*["''][^"'']*["'']\s*;?$') { return $null }
     if ($line -match '^[{}\]\)]+;?$') { return $null }
 
-    $line = $line -replace '"(?:\\.|[^"])*"', '""'
-    $line = $line -replace "'(?:\\.|[^'])*'", "''"
-    $line = $line -replace '\b\d+(\.\d+)?\b', '0'
     $line = $line -replace '\s+', ' '
     return $line.ToLowerInvariant()
+}
+
+function Find-UnescapedToken {
+    param(
+        [string]$Text,
+        [string]$Token,
+        [int]$StartIndex = 0
+    )
+
+    $index = $Text.IndexOf($Token, $StartIndex, [StringComparison]::Ordinal)
+    while ($index -ge 0) {
+        $backslashes = 0
+        for ($cursor = $index - 1; $cursor -ge 0 -and $Text[$cursor] -eq '\'; $cursor--) {
+            $backslashes++
+        }
+        if (($backslashes % 2) -eq 0) { return $index }
+        $index = $Text.IndexOf($Token, $index + $Token.Length, [StringComparison]::Ordinal)
+    }
+    return -1
+}
+
+function Test-PythonMultilineStart {
+    param([string]$RawLine)
+
+    for ($index = 0; $index -lt $RawLine.Length; $index++) {
+        $char = $RawLine[$index]
+        if ($char -eq '#') { return $null }
+        if ($char -notin @("'", '"')) { continue }
+
+        $quote = [string]$char
+        $triple = $quote * 3
+        if ($index + 2 -lt $RawLine.Length -and $RawLine.Substring($index, 3) -eq $triple) {
+            $closing = Find-UnescapedToken -Text $RawLine -Token $triple -StartIndex ($index + 3)
+            if ($closing -lt 0) { return $triple }
+            $index = $closing + 2
+            continue
+        }
+
+        for ($index++; $index -lt $RawLine.Length; $index++) {
+            if ($RawLine[$index] -eq '\') { $index++; continue }
+            if ($RawLine[$index] -eq $char) { break }
+        }
+    }
+    return $null
+}
+
+function Test-PowerShellMultilineStart {
+    param(
+        [string]$RawLine,
+        [ref]$InBlockComment
+    )
+
+    for ($index = 0; $index -lt $RawLine.Length; $index++) {
+        if ($InBlockComment.Value) {
+            $endComment = $RawLine.IndexOf('#>', $index, [StringComparison]::Ordinal)
+            if ($endComment -lt 0) { return $null }
+            $InBlockComment.Value = $false
+            $index = $endComment + 1
+            continue
+        }
+
+        if ($index + 1 -lt $RawLine.Length -and $RawLine.Substring($index, 2) -eq '<#') {
+            $InBlockComment.Value = $true
+            $index++
+            continue
+        }
+
+        $char = $RawLine[$index]
+        if ($char -eq '#') { return $null }
+        if ($char -eq '@' -and $index + 1 -lt $RawLine.Length) {
+            $quote = $RawLine[$index + 1]
+            if ($quote -in @("'", '"') -and
+                [string]::IsNullOrWhiteSpace($RawLine.Substring($index + 2))) {
+                return "$quote@"
+            }
+        }
+        if ($char -notin @("'", '"')) { continue }
+
+        for ($index++; $index -lt $RawLine.Length; $index++) {
+            if ($char -eq '"' -and $RawLine[$index] -eq '`') {
+                $index++
+                continue
+            }
+            if ($RawLine[$index] -ne $char) { continue }
+            if ($char -eq "'" -and $index + 1 -lt $RawLine.Length -and $RawLine[$index + 1] -eq "'") {
+                $index++
+                continue
+            }
+            break
+        }
+    }
+    return $null
+}
+
+function Test-JavaScriptMultilineTemplateStart {
+    param(
+        [string]$RawLine,
+        [ref]$InBlockComment
+    )
+
+    for ($index = 0; $index -lt $RawLine.Length; $index++) {
+        if ($InBlockComment.Value) {
+            $endComment = $RawLine.IndexOf('*/', $index, [StringComparison]::Ordinal)
+            if ($endComment -lt 0) { return $false }
+            $InBlockComment.Value = $false
+            $index = $endComment + 1
+            continue
+        }
+
+        if ($index + 1 -lt $RawLine.Length) {
+            $pair = $RawLine.Substring($index, 2)
+            if ($pair -eq '//') { return $false }
+            if ($pair -eq '/*') {
+                $InBlockComment.Value = $true
+                $index++
+                continue
+            }
+        }
+
+        $char = $RawLine[$index]
+        if ($char -in @("'", '"')) {
+            for ($index++; $index -lt $RawLine.Length; $index++) {
+                if ($RawLine[$index] -eq '\') { $index++; continue }
+                if ($RawLine[$index] -eq $char) { break }
+            }
+            continue
+        }
+
+        if ($char -eq '`') {
+            $closing = Find-UnescapedToken -Text $RawLine -Token '`' -StartIndex ($index + 1)
+            if ($closing -lt 0) { return $true }
+            $index = $closing
+        }
+    }
+    return $false
+}
+
+function Get-CodeAnalysisContent {
+    param(
+        [System.IO.FileInfo]$File,
+        [string[]]$Content
+    )
+
+    $extension = $File.Extension.ToLowerInvariant()
+    $result = New-Object 'System.Collections.Generic.List[string]'
+    $inMultilineLiteral = $false
+    $powerShellTerminator = ''
+    $powerShellBlockComment = $false
+    $pythonTerminator = ''
+    $javaScriptBlockComment = $false
+
+    foreach ($rawLine in $Content) {
+        if ($extension -in @('.ps1', '.psm1')) {
+            if ($inMultilineLiteral) {
+                $result.Add('')
+                if ($rawLine -match "^\s*$([regex]::Escape($powerShellTerminator))\s*$") {
+                    $inMultilineLiteral = $false
+                    $powerShellTerminator = ''
+                }
+                continue
+            }
+
+            $powerShellStart = Test-PowerShellMultilineStart -RawLine $rawLine -InBlockComment ([ref]$powerShellBlockComment)
+            if ($powerShellStart) {
+                $inMultilineLiteral = $true
+                $powerShellTerminator = $powerShellStart
+                $result.Add('')
+                continue
+            }
+        }
+
+        if ($extension -in @('.py', '.pyx')) {
+            if ($inMultilineLiteral) {
+                $result.Add('')
+                if ((Find-UnescapedToken -Text $rawLine -Token $pythonTerminator) -ge 0) {
+                    $inMultilineLiteral = $false
+                    $pythonTerminator = ''
+                }
+                continue
+            }
+            $pythonStart = Test-PythonMultilineStart -RawLine $rawLine
+            if ($pythonStart) {
+                $inMultilineLiteral = $true
+                $pythonTerminator = $pythonStart
+                $result.Add('')
+                continue
+            }
+        }
+
+        if ($extension -in @('.js', '.jsx', '.ts', '.tsx')) {
+            if ($inMultilineLiteral) {
+                $result.Add('')
+                if ((Find-UnescapedToken -Text $rawLine -Token '`') -ge 0) {
+                    $inMultilineLiteral = $false
+                }
+                continue
+            }
+            if (Test-JavaScriptMultilineTemplateStart -RawLine $rawLine -InBlockComment ([ref]$javaScriptBlockComment)) {
+                $inMultilineLiteral = $true
+                $result.Add('')
+                continue
+            }
+        }
+
+        $result.Add($rawLine)
+    }
+
+    return ,$result.ToArray()
+}
+
+function Test-IsTestCodeFile {
+    param([System.IO.FileInfo]$File)
+
+    $normalizedPath = $File.FullName -replace '\\', '/'
+    return $normalizedPath -match '/(test|tests|__tests__)/' -or
+           $File.Name -match '\.(test|spec)\.[^.]+$'
 }
 
 function Add-DuplicateLogicFindings {
@@ -379,21 +599,53 @@ function Add-DuplicateLogicFindings {
 
     if ($normalizedLines.Count -lt ($DuplicateLogicWindowSize * 2)) { return }
 
+    $isTestCode = Test-IsTestCodeFile -File $File
     $seen = @{}
     $reported = New-Object 'System.Collections.Generic.HashSet[string]'
+    $reportedRanges = New-Object 'System.Collections.Generic.List[object]'
     for ($i = 0; $i -le ($normalizedLines.Count - $DuplicateLogicWindowSize); $i++) {
         $window = $normalizedLines[$i..($i + $DuplicateLogicWindowSize - 1)]
+        $sourceSpan = $window[-1].line - $window[0].line + 1
+        if ($sourceSpan -gt $DuplicateLogicMaxSourceSpan) { continue }
+
         $key = ($window | ForEach-Object { $_.text }) -join "`n"
         if ($seen.ContainsKey($key)) {
+            $first = $seen[$key]
+            if (($i - $first.index) -lt $DuplicateLogicWindowSize) { continue }
+
+            $belongsToReportedRun = @($reportedRanges | Where-Object {
+                ($i - $first.index) -eq ($_.repeatStart - $_.firstStart) -and
+                $first.index -ge $_.firstStart -and $first.index -le $_.firstLastWindow -and
+                $i -ge $_.repeatStart -and $i -le $_.repeatLastWindow
+            }).Count -gt 0
+            if ($belongsToReportedRun) { continue }
+
             if ($reported.Add($key)) {
-                $firstLine = $seen[$key]
+                $firstEnd = $first.index + $DuplicateLogicWindowSize - 1
+                $repeatEnd = $i + $DuplicateLogicWindowSize - 1
+                while ($firstEnd + 1 -lt $i -and
+                       $repeatEnd + 1 -lt $normalizedLines.Count -and
+                       $normalizedLines[$firstEnd + 1].text -eq $normalizedLines[$repeatEnd + 1].text) {
+                    $firstEnd++
+                    $repeatEnd++
+                }
                 $line = $window[0].line
-                Add-Finding -File $File.FullName -Line $line -Category 'duplicate-logic' -Severity 'MEDIUM' -Snippet "Repeated $DuplicateLogicWindowSize-line logic block; first occurrence starts at line $firstLine" -SafeFix $false
+                $runLength = $firstEnd - $first.index + 1
+                $firstEndLine = $normalizedLines[$firstEnd].line
+                $repeatEndLine = $normalizedLines[$repeatEnd].line
+                $snippet = "Repeated $runLength-line logic run spans lines $line-$repeatEndLine; first occurrence spans lines $($first.line)-$firstEndLine"
+                Add-Finding -File $File.FullName -Line $line -Category 'duplicate-logic' -Severity 'MEDIUM' -Snippet $snippet -SafeFix $false -ProductionBlocker (-not $isTestCode)
+                $reportedRanges.Add([pscustomobject]@{
+                    firstStart = $first.index
+                    firstLastWindow = $firstEnd - $DuplicateLogicWindowSize + 1
+                    repeatStart = $i
+                    repeatLastWindow = $repeatEnd - $DuplicateLogicWindowSize + 1
+                })
             }
             continue
         }
 
-        $seen[$key] = $window[0].line
+        $seen[$key] = [pscustomobject]@{ index = $i; line = $window[0].line }
     }
 }
 
@@ -410,14 +662,16 @@ function Invoke-FileScan {
     $isStyle = $StyleExtensions -contains $ext
 
     $patternSet = if ($isCode) { Get-CodeCommentPattern -Ext $ext } else { $null }
+    $analysisContent = if ($isCode) { Get-CodeAnalysisContent -File $File -Content $content } else { $content }
 
     for ($i = 0; $i -lt $content.Length; $i++) {
         $rawLine = $content[$i]
+        $analysisLine = $analysisContent[$i]
         $lineNum = $i + 1
 
         if ($isCode -and $patternSet) {
             $linePattern = $patternSet.line
-            if ($rawLine -match $linePattern) {
+            if ($analysisLine -match $linePattern) {
                 $commentText = $Matches[1]
                 if (Test-IsStaleByline -RawLine $rawLine) {
                     Add-Finding -File $File.FullName -Line $lineNum -Category 'stale-byline' -Severity 'HIGH' -Snippet $rawLine -SafeFix $true
@@ -448,15 +702,16 @@ function Invoke-FileScan {
     }
 
     if ($isCode) {
-        Add-DeadCodeFindings -File $File -Content $content -PatternSet $patternSet
-        Add-DuplicateLogicFindings -File $File -Content $content
+        Add-DeadCodeFindings -File $File -Content $analysisContent -PatternSet $patternSet
+        Add-DuplicateLogicFindings -File $File -Content $analysisContent
 
-        $joined = ($content -join "`n")
+        $joined = ($analysisContent -join "`n")
         $regex = [regex]$EmptyCatchPattern
         foreach ($m in $regex.Matches($joined)) {
             $upTo = $joined.Substring(0, $m.Index)
             $line = ($upTo.Split("`n").Length)
-            Add-Finding -File $File.FullName -Line $line -Category 'empty-catch' -Severity 'LOW' -Snippet $m.Value -SafeFix $false
+            $hasFailOpenRationale = $m.Value -match '(?i)\b(non-fatal|must never block|best[- ]effort)\b'
+            Add-Finding -File $File.FullName -Line $line -Category 'empty-catch' -Severity 'LOW' -Snippet $m.Value -SafeFix $false -ProductionBlocker (-not $hasFailOpenRationale)
         }
     }
 }
@@ -516,7 +771,8 @@ if ($Fix) {
 }
 
 if ($Json) {
-    $Findings | ConvertTo-Json -Depth 4
+    $jsonFindings = @($Findings | ForEach-Object { $_ })
+    ConvertTo-Json -InputObject $jsonFindings -Depth 4
     exit ((Get-BlockingFindings).Count -gt 0 ? 1 : 0)
 }
 

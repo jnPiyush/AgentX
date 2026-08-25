@@ -138,7 +138,6 @@ foreach ($svc in $Services) {
  }
 }
 
-# Add volumes
 $compose += "`n`nvolumes:"
 foreach ($svc in $Services) {
  $compose += "`n ${svc}_data:"

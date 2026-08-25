@@ -61,7 +61,7 @@ describe('syncDetectedGitHubAdapter', () => {
     sandbox.restore();
   });
 
-  it('adds a GitHub adapter from the detected origin remote and switches active mode to GitHub', async () => {
+  it('adds a GitHub adapter, refreshes contexts, and optionally notifies', async () => {
     const shell = await import('../../utils/shell');
     sandbox.stub(shell, 'execShell').resolves('https://github.com/octo-org/octo-repo.git');
 
@@ -73,7 +73,7 @@ describe('syncDetectedGitHubAdapter', () => {
       adoConnected: false,
     } as unknown as AgentXContext;
 
-    const changed = await syncDetectedGitHubAdapter(fakeAgentx);
+    const changed = await syncDetectedGitHubAdapter(fakeAgentx, { notify: true });
 
     assert.equal(changed, true);
 
@@ -89,6 +89,18 @@ describe('syncDetectedGitHubAdapter', () => {
       type: 'http',
       url: 'https://api.githubcopilot.com/mcp/',
     });
+    assert.equal((fakeAgentx.invalidateCache as sinon.SinonStub).callCount, 1);
+    assert.deepEqual(
+      (vscode.commands.executeCommand as sinon.SinonStub).getCalls().map((call) => call.args),
+      [
+        ['setContext', 'agentx.initialized', true],
+        ['setContext', 'agentx.githubConnected', true],
+        ['setContext', 'agentx.adoConnected', false],
+      ],
+    );
+    assert.ok((vscode.window.showInformationMessage as sinon.SinonStub).calledOnceWith(
+      'AgentX: GitHub remote detected. Active mode switched to GitHub (octo-org/octo-repo).',
+    ));
   });
 
   it('does nothing when the workspace has no GitHub origin remote', async () => {
@@ -132,7 +144,7 @@ describe('syncDetectedAdoAdapter', () => {
     sandbox.restore();
   });
 
-  it('adds an Azure DevOps adapter from a detected dev.azure.com origin and switches active mode to ADO', async () => {
+  it('adds an Azure DevOps adapter, refreshes contexts, and optionally notifies', async () => {
     const shell = await import('../../utils/shell');
     sandbox.stub(shell, 'execShell').resolves('https://dev.azure.com/octo-org/OctoProject/_git/OctoRepo');
 
@@ -144,7 +156,7 @@ describe('syncDetectedAdoAdapter', () => {
       adoConnected: true,
     } as unknown as AgentXContext;
 
-    const changed = await syncDetectedAdoAdapter(fakeAgentx);
+    const changed = await syncDetectedAdoAdapter(fakeAgentx, { notify: true });
 
     assert.equal(changed, true);
 
@@ -157,6 +169,18 @@ describe('syncDetectedAdoAdapter', () => {
     assert.equal(config.adapters.ado.organization, 'octo-org');
     assert.equal(config.adapters.ado.project, 'OctoProject');
     assert.equal(fs.existsSync(path.join(tempRoot, '.vscode', 'mcp.json')), false);
+    assert.equal((fakeAgentx.invalidateCache as sinon.SinonStub).callCount, 1);
+    assert.deepEqual(
+      (vscode.commands.executeCommand as sinon.SinonStub).getCalls().map((call) => call.args),
+      [
+        ['setContext', 'agentx.initialized', true],
+        ['setContext', 'agentx.githubConnected', false],
+        ['setContext', 'agentx.adoConnected', true],
+      ],
+    );
+    assert.ok((vscode.window.showInformationMessage as sinon.SinonStub).calledOnceWith(
+      'AgentX: Azure DevOps remote detected. Active mode switched to Azure DevOps (octo-org/OctoProject).',
+    ));
   });
 
   it('adds an Azure DevOps adapter from a detected ssh.dev.azure.com origin', async () => {

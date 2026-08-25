@@ -45,7 +45,6 @@ Write-Host "=== Changelog Generator ===" -ForegroundColor Cyan
 Write-Host " From: $From"
 Write-Host " To: $To"
 
-# Get commits
 $logFormat = "%H|%s|%an|%ai"
 $rawCommits = git log "$From..$To" --pretty=format:$logFormat --no-merges 2>$null
 
