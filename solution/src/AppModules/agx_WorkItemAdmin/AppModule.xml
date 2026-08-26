@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppModule name="agx_WorkItemAdmin" uniquename="agx_WorkItemAdmin">
+  <LocalizedNames>
+    <LocalizedName description="Work Item Admin" languagecode="1033" />
+  </LocalizedNames>
+  <Components>
+    <AppComponent type="1" schemaName="agx_workitem" />
+    <AppComponent type="62" schemaName="agx_workitem_sitemap" />
+  </Components>
+</AppModule>

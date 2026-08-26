@@ -1,0 +1,16 @@
+{
+  "connectionReferences": [
+    {
+      "connectionReferenceLogicalName": "agx_sharedoffice365",
+      "connectionReferenceDisplayName": "AgentX Outlook",
+      "description": "Bind to an Outlook connection for notifications.",
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+    },
+    {
+      "connectionReferenceLogicalName": "agx_sharedcommondataserviceforapps",
+      "connectionReferenceDisplayName": "AgentX Dataverse",
+      "description": "Bind to the Dataverse environment hosting agx_workitem.",
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+    }
+  ]
+}

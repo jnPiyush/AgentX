@@ -1,0 +1,11 @@
+App:
+  Properties:
+    Name: agx_WorkItemApp_template
+HomeScreen:
+  Properties:
+    Fill: RGBA(255, 255, 255, 1)
+  Children:
+    - HeaderLabel:
+        Control: Label
+        Properties:
+          Text: "Work Item Tracker"

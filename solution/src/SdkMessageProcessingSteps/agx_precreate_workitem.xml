@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SdkMessageProcessingStep Name="agx_precreate_workitem" Stage="PreOperation" Mode="Synchronous">
+  <MessageName>Create</MessageName>
+  <PrimaryEntity>agx_workitem</PrimaryEntity>
+  <FilteringAttributes>agx_name,agx_status</FilteringAttributes>
+</SdkMessageProcessingStep>

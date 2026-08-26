@@ -1,0 +1,5 @@
+name: triage_work_item
+triggerPhrases:
+  - "triage work item"
+responses:
+  - "I can help you triage a work item."

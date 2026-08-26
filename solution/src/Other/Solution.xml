@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml version="9.2.0.0" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="agentx-low-code-builder" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SolutionManifest>
+    <UniqueName>agx_workitemsolution</UniqueName>
+    <LocalizedNames>
+      <LocalizedName description="AgentX Work Item Solution" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="Skill-mapped solution scaffold covering Tier-1, Tier-2, and Tier-3 components." languagecode="1033" />
+    </Descriptions>
+    <Version>1.0.0.0</Version>
+    <Managed>0</Managed>
+    <Publisher>
+      <UniqueName>agentx</UniqueName>
+      <LocalizedNames>
+        <LocalizedName description="AgentX" languagecode="1033" />
+      </LocalizedNames>
+      <Descriptions>
+        <Description description="AgentX publisher for low-code solutions" languagecode="1033" />
+      </Descriptions>
+      <EMailAddress xsi:nil="true" />
+      <SupportingWebsiteUrl xsi:nil="true" />
+      <CustomizationPrefix>agx</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>10000</CustomizationOptionValuePrefix>
+      <Addresses />
+    </Publisher>
+    <RootComponents>
+      <RootComponent type="1" schemaName="agx_workitem" behavior="0" />
+      <RootComponent type="2" schemaName="agx_workitem.agx_name" behavior="0" />
+      <RootComponent type="2" schemaName="agx_workitem.agx_status" behavior="0" />
+      <RootComponent type="29" schemaName="11111111-2222-3333-4444-555555555555" behavior="0" />
+      <RootComponent type="80" schemaName="agx_sharedoffice365" behavior="0" />
+      <RootComponent type="300" schemaName="agx_WorkItemApp_template" behavior="0" />
+      <RootComponent type="20" schemaName="agx_WorkItemReporter" behavior="0" />
+      <RootComponent type="371" schemaName="agx_NotificationFromAddress" behavior="0" />
+    </RootComponents>
+    <MissingDependencies />
+  </SolutionManifest>
+</ImportExportXml>

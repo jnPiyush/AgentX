@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EnvironmentVariableDefinition schemaName="agx_NotificationFromAddress">
+  <DisplayName>Notification From Address</DisplayName>
+  <Type>String</Type>
+  <DefaultValue></DefaultValue>
+</EnvironmentVariableDefinition>

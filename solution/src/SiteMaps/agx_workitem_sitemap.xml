@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SiteMap>
+  <Area Id="agx_workitems" ResourceId="Area_AgxWorkItems" DescriptionResourceId="Area_AgxWorkItems_Description">
+    <Group Id="agx_group_main" ResourceId="Group_Main" DescriptionResourceId="Group_Main_Description">
+      <SubArea Id="agx_subarea_workitems" Entity="agx_workitem" />
+    </Group>
+  </Area>
+</SiteMap>

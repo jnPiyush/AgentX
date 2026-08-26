@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest>
+  <control namespace="AgentX" constructor="RatingControl" version="1.0.0" display-name-key="RatingControl" description-key="Rating control component" control-type="standard">
+    <property name="value" display-name-key="Value" description-key="Input value" of-type="Whole.None" usage="bound" required="false" />
+  </control>
+</manifest>

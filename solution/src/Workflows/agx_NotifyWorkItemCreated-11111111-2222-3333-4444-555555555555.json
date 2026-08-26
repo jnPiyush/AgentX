@@ -1,0 +1,66 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connection": { "connectionReferenceLogicalName": "agx_sharedcommondataserviceforapps" },
+        "api": { "name": "shared_commondataserviceforapps" },
+        "runtimeSource": "embedded"
+      },
+      "shared_office365": {
+        "connection": { "connectionReferenceLogicalName": "agx_sharedoffice365" },
+        "api": { "name": "shared_office365" },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "agx_NotificationFromAddress": {
+          "type": "String",
+          "defaultValue": "",
+          "metadata": {
+            "schemaName": "agx_NotificationFromAddress"
+          }
+        }
+      },
+      "triggers": {
+        "When_a_work_item_is_created": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "agx_workitem",
+              "subscriptionRequest/scope": 4
+            }
+          }
+        }
+      },
+      "actions": {
+        "Send_notification_email": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage/To": "@parameters('agx_NotificationFromAddress')",
+              "emailMessage/Subject": "New work item created",
+              "emailMessage/Body": "A new work item was created in Dataverse.",
+              "emailMessage/Importance": "Normal"
+            }
+          }
+        }
+      }
+    },
+    "schemaVersion": "1.0.0.0"
+  }
+}
