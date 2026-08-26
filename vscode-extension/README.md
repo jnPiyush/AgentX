@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-8.7.1-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.0.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -346,6 +346,14 @@ The extension registers 15 declarative chat agents, each mapped to an AgentX rol
 ---
 
 ## Recent Changes
+
+### 9.0.0
+
+- Quality-loop approval now requires an attributable structured reviewer verdict with zero HIGH/MEDIUM findings on the final work iteration.
+- Commit-time gates enforce an absolute five-iteration floor, staged/worktree agreement, and post-commit loop consumption.
+- Autonomous workspace tools reject traversal, alternate streams, credentials, protected gate paths, links, aliases, and hardlinks.
+- Autonomous shell execution and Claude-native tools remain disabled until an externally sandboxed adapter is available.
+- Regression suites cover review exhaustion, hook lifecycle, path controls, staged and untracked harness enforcement, and VS Code evidence forwarding.
 
 ### 8.7.1
 

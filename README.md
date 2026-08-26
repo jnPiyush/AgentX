@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Structured AI software delivery for GitHub Copilot, Claude, OpenAI, local models, and the CLI.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v8.7.1"><img src="https://img.shields.io/badge/Version-8.7.1-b11f4b?style=for-the-badge" alt="Version 8.7.1"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.0.0"><img src="https://img.shields.io/badge/Version-9.0.0-b11f4b?style=for-the-badge" alt="Version 9.0.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -288,16 +288,15 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 8.7.1
+## New In 9.0.0
 
-This patch release hardens the release path added after `8.7.0`:
+This major release makes AgentX completion and autonomous execution fail closed:
 
-- fixed-source recovery validates tag, release target, source version, master reachability, and checkout SHA before executing repository scripts
-- recovered VSIX and MCP artifacts include SBOMs, SLSA provenance, and recovery-source attestations
-- Marketplace publication verifies provenance plus the exact embedded publisher, extension name, and version without exposing the publish-only PAT to earlier steps
-- clean release jobs install extension dependencies before synchronizing bundled runtime assets
-- stamped-version detection works for both linear and merge commits
-- version stamping supports both LF and CRLF package locks
+- quality-loop approval now requires an attributable structured reviewer verdict with zero HIGH/MEDIUM findings on the final work iteration
+- commit-time gates enforce an absolute five-iteration floor, staged/worktree agreement, and post-commit loop consumption
+- autonomous workspace tools reject traversal, alternate streams, credentials, protected gate paths, links, aliases, and hardlinks
+- autonomous shell execution and Claude-native tools remain disabled until an externally sandboxed adapter is available
+- regression suites cover review exhaustion, hook lifecycle, path controls, staged and untracked harness enforcement, and VS Code evidence forwarding
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

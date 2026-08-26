@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 9.0.0
+
+### Breaking Changes
+
+- Loop completion now fails closed. `loop complete` is rejected unless the final work iteration carries an attributable reviewer verdict of `approved` with zero HIGH and zero MEDIUM findings, so existing flows that closed loops with free-text review claims must record a structured verdict instead.
+- The minimum iteration floor is absolute at five for every task class, with no skip token.
+- Autonomous shell execution and Claude-native tools are disabled, so workflows that depended on autonomous terminal execution must supply an externally sandboxed adapter.
+- Upgrading from any 8.x install now performs a backup and clean install rather than an in-place overwrite.
 
 ### Security
 
@@ -11,6 +18,11 @@
 ### Validation
 
 - Added executable regression suites for the review gate, hook lifecycle, path controls, runner review exhaustion, staged/untracked harness enforcement, and VS Code evidence forwarding.
+
+### Limitations
+
+- Autonomous shell execution and Claude-native tools remain unavailable until an externally sandboxed adapter ships.
+- Scrub still reports pre-existing MEDIUM `duplicate-logic` findings in the installers and the MCP server entry point. They are outside this release's change surface and are tracked as existing debt.
 
 ## 8.7.1
 
