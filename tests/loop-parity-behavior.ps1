@@ -169,8 +169,6 @@ try {
     $iterationSummaries = @(
         'Make it Work: parity fixture functional',
         'Make it Right: parity fixture normalized',
-        'Make it Secure: parity fixture scanned',
-        'Adversarial: parity fixture negative checks',
         'Subagent Review: parity reviewer approved'
     )
 
@@ -201,8 +199,8 @@ try {
         role = 'engineer'
         taskClass = 'complex-delivery'
         reviewGate = 'structured'
-        iteration = 5
-        minIterations = 5
+        iteration = 3
+        minIterations = 3
         maxIterations = 20
         completionCriteria = 'TASK_COMPLETE'
         issueNumber = 401
@@ -211,10 +209,8 @@ try {
             [ordered]@{ iteration = 0; summary = 'Loop started'; status = 'in-progress'; outcome = 'partial' }
             [ordered]@{ iteration = 1; summary = $iterationSummaries[0]; status = 'in-progress'; outcome = 'pass'; hasEvidence = $true; hasEvidenceOriginal = $true; passingTests = 10 }
             [ordered]@{ iteration = 2; summary = $iterationSummaries[1]; status = 'in-progress'; outcome = 'pass'; hasEvidence = $true; hasEvidenceOriginal = $true; passingTests = 10 }
-            [ordered]@{ iteration = 3; summary = $iterationSummaries[2]; status = 'in-progress'; outcome = 'pass'; hasEvidence = $true; hasEvidenceOriginal = $true; passingTests = 10 }
-            [ordered]@{ iteration = 4; summary = $iterationSummaries[3]; status = 'in-progress'; outcome = 'pass'; hasEvidence = $true; hasEvidenceOriginal = $true; passingTests = 10 }
-            [ordered]@{ iteration = 5; summary = $iterationSummaries[4]; status = 'in-progress'; outcome = 'pass'; hasEvidence = $true; hasEvidenceOriginal = $true; passingTests = 10; reviewVerdict = 'approved'; reviewHigh = 0; reviewMedium = 0 }
-            [ordered]@{ iteration = 5; summary = 'Parity happy path complete'; status = 'complete'; outcome = 'pass'; hasEvidence = $true; hasEvidenceOriginal = $true; passingTests = 10 }
+            [ordered]@{ iteration = 3; summary = $iterationSummaries[2]; status = 'in-progress'; outcome = 'pass'; hasEvidence = $true; hasEvidenceOriginal = $true; passingTests = 10; reviewVerdict = 'approved'; reviewHigh = 0; reviewMedium = 0 }
+            [ordered]@{ iteration = 3; summary = 'Parity happy path complete'; status = 'complete'; outcome = 'pass'; hasEvidence = $true; hasEvidenceOriginal = $true; passingTests = 10 }
         )
     } | ConvertTo-Json -Depth 10 -Compress)
     Assert-Equal $normalizedState $expectedState 'normalized happy path loop-state matches golden fixture'
@@ -251,7 +247,7 @@ try {
     Write-Host ''
     Write-Host ' 3. Subagent review gate fixture' -ForegroundColor White
     Start-ParityLoop -WorkspaceRoot $reviewWorkspace -Prompt 'Implementing parity review gate'
-    foreach ($iterationNumber in 1..5) {
+    foreach ($iterationNumber in 1..3) {
         $evidencePath = New-EvidenceFile -WorkspaceRoot $reviewWorkspace -Name "reviewless-$iterationNumber.txt" -Content "reviewless $iterationNumber"
         $iterateResult = Invoke-IsolatedAgentx -WorkspaceRoot $reviewWorkspace -Arguments @(
             'loop', 'iterate', '-s', "Iteration $iterationNumber without approval", '-e', $evidencePath, '--passing', '10', '-o', 'pass'
@@ -267,7 +263,7 @@ try {
     Assert-True ($completeResult.ExitCode -ne 0) 'reviewless loop complete exits non-zero'
     $state = Read-LoopState $reviewWorkspace
     Assert-Equal ([string]$state.status) 'active' 'reviewless complete keeps loop active'
-    Assert-Equal ([int]$state.iteration) 5 'reviewless complete preserves completed iteration count for rollback/fix'
+    Assert-Equal ([int]$state.iteration) 3 'reviewless complete preserves completed iteration count for rollback/fix'
 } finally {
     Remove-Item -LiteralPath $reviewWorkspace -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -531,13 +527,45 @@ try {
 $lowMaxWorkspace = New-IsolatedWorkspace
 try {
     Write-Host ''
-    Write-Host ' 8. Maximum iterations cannot lower the mandatory floor' -ForegroundColor White
+    Write-Host ' 8. Maximum iterations follow the risk-based floor' -ForegroundColor White
     $lowMaxStart = Invoke-IsolatedAgentx -WorkspaceRoot $lowMaxWorkspace -Arguments @(
         'loop', 'start', '-p', 'Attempt a one-iteration loop', '--max', '1'
     )
-    Assert-True ($lowMaxStart.ExitCode -ne 0) 'loop start rejects --max below the mandatory five-iteration floor'
-    Assert-Match $lowMaxStart.Output '--max must be at least 5' 'low --max rejection explains the five-iteration requirement'
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $lowMaxWorkspace '.agentx\state\loop-state.json'))) 'rejected low-max loop writes no state file'
+    Assert-Equal $lowMaxStart.ExitCode 0 'standard work accepts a one-iteration maximum'
+    Assert-Equal ([int](Read-LoopState $lowMaxWorkspace).minIterations) 1 'standard work stores a one-iteration minimum'
+    Remove-Item -LiteralPath (Join-Path $lowMaxWorkspace '.agentx\state\loop-state.json') -Force
+
+    foreach ($highRiskPrompt in @(
+        'Deploy a production authentication migration',
+        'Migrate payments data',
+        'Rotate secrets before release',
+        'Review cryptographic permissions',
+        'Implement password reset',
+        'Validate JWT claims',
+        'Add OAuth login',
+        'Rotate API keys',
+        'Encrypt customer records',
+        'Update session handling'
+    )) {
+        $highRiskStart = Invoke-IsolatedAgentx -WorkspaceRoot $lowMaxWorkspace -Arguments @(
+            'loop', 'start', '-p', $highRiskPrompt, '--max', '4'
+        )
+        Assert-True ($highRiskStart.ExitCode -ne 0) "high-risk work rejects a maximum below five: $highRiskPrompt"
+        Assert-Match $highRiskStart.Output "--max must be at least 5 for task class 'high-risk'" "high-risk rejection explains the floor: $highRiskPrompt"
+        Assert-True (-not (Test-Path -LiteralPath (Join-Path $lowMaxWorkspace '.agentx\state\loop-state.json'))) "rejected high-risk loop writes no state: $highRiskPrompt"
+    }
+
+    $engineerRoleStart = Invoke-IsolatedAgentx -WorkspaceRoot $lowMaxWorkspace -Arguments @(
+        'loop', 'start', '-p', 'Fix bug in rendering', '-r', 'engineer', '--max', '2'
+    )
+    Assert-True ($engineerRoleStart.ExitCode -ne 0) 'engineer role preserves the complex three-iteration floor'
+    Assert-Match $engineerRoleStart.Output "--max must be at least 3 for task class 'complex-delivery'" 'engineer role classification matches the runtime floor'
+
+    $agentTokenStart = Invoke-IsolatedAgentx -WorkspaceRoot $lowMaxWorkspace -Arguments @(
+        'loop', 'start', '-p', 'Refine the agent prompt handling', '--max', '2'
+    )
+    Assert-True ($agentTokenStart.ExitCode -ne 0) 'agent-related work classifies as complex delivery in the CLI'
+    Assert-Match $agentTokenStart.Output "--max must be at least 3 for task class 'complex-delivery'" 'CLI agent vocabulary matches the runner and TypeScript classifiers'
 
     $badBudget = Invoke-IsolatedAgentx -WorkspaceRoot $lowMaxWorkspace -Arguments @(
         'loop', 'start', '-p', 'Attempt invalid budget', '--budget', 'zero'
@@ -546,6 +574,38 @@ try {
     Assert-Match $badBudget.Output '--budget must be a positive integer' 'invalid budget rejection is actionable'
 } finally {
     Remove-Item -LiteralPath $lowMaxWorkspace -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+$statusMinimumWorkspace = New-IsolatedWorkspace
+try {
+    Write-Host ''
+    Write-Host ' 8b. Status reports the recomputed effective minimum' -ForegroundColor White
+    Start-ParityLoop -WorkspaceRoot $statusMinimumWorkspace -Prompt 'Implement a standard utility'
+    $statePath = Join-Path $statusMinimumWorkspace '.agentx\state\loop-state.json'
+    $downgradedState = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
+    $downgradedState.prompt = 'Rotate API keys'
+    $downgradedState.taskClass = 'standard'
+    $downgradedState.minIterations = 1
+    $downgradedState.iteration = 1
+    $downgradedState.history = @([PSCustomObject]@{
+        iteration = 1
+        timestamp = (Get-Date).ToUniversalTime().ToString('o')
+        summary = 'Initial risk validation'
+        status = 'in-progress'
+        outcome = 'pass'
+    })
+    $downgradedState.lastIterationAt = (Get-Date).ToUniversalTime().ToString('o')
+    $downgradedState | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $statePath -Encoding utf8
+
+    $textStatus = Invoke-IsolatedAgentx -WorkspaceRoot $statusMinimumWorkspace -Arguments @('loop', 'status')
+    Assert-Match $textStatus.Output 'Minimum review iterations: 5' 'text status reports the recomputed high-risk minimum'
+    Assert-Match $textStatus.Output '1/5' 'text status readiness uses the recomputed high-risk minimum'
+
+    $jsonStatus = Invoke-IsolatedAgentx -WorkspaceRoot $statusMinimumWorkspace -Arguments @('loop', 'status', '--json')
+    $jsonState = $jsonStatus.Stdout | ConvertFrom-Json
+    Assert-Equal ([int]$jsonState.minIterations) 5 'JSON status reports the recomputed high-risk minimum'
+} finally {
+    Remove-Item -LiteralPath $statusMinimumWorkspace -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 $rollbackBypassWorkspace = New-IsolatedWorkspace

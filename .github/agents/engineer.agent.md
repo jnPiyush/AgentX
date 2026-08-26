@@ -1,6 +1,6 @@
 ---
 name: AgentX Engineer
-description: 'Implement features, fix bugs, and write tests through Compound Engineering -- a structured pipeline of Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Review, with gate-checked phase transitions, full artifact chain consumption, mandatory Karpathy guidelines, and a minimum 5-iteration quality loop.'
+description: 'Implement features, fix bugs, and write tests through Compound Engineering -- a structured pipeline of Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Review, with gate-checked phase transitions, full artifact chain consumption, mandatory Karpathy guidelines, and a risk-based quality loop.'
 model: Claude Sonnet 5 (copilot)
 user-invocable: true
 reasoning:
@@ -14,15 +14,15 @@ constraints:
   - "MUST perform a design-alignment checkpoint with Data Scientist before coding when `needs:ai` work changes model behavior, prompt flow, eval logic, RAG design, or ML input/output contracts"
   - "MUST load and read the skills prescribed for each phase before performing that phase's work"
   - "MUST run '.agentx/agentx.ps1 loop start -p <prompt-text> -i <issue>' as the ABSOLUTE FIRST action before any file edit (--prompt flag is REQUIRED; omitting it causes exit 1 -- see iterative-loop skill for full syntax)"
-  - "MUST complete a minimum of 5 quality loop iterations before declaring implementation done"
+  - "MUST meet the risk-based quality-loop minimum from AGENT-PROTOCOL.md before declaring implementation done"
   - "MUST attach a real evidence file to EVERY `loop iterate` and to `loop complete` (--evidence <path>); the CLI rejects iterations without it"
-  - "MUST execute Iteration 4 (Adversarial) -- property-based tests, mutation testing on changed lines, fuzzing of any parser/deserializer/LLM-output handler, and at least 3 negative tests per public endpoint -- before declaring production-ready"
-  - "MUST execute Iteration 5 (Subagent Review) -- spawn a separate reviewer pass with only the diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings reset the loop"
-  - "MUST run the full test suite at the end of EVERY loop iteration; passing-test count MUST NOT decrease vs the loop-start baseline (.agentx/state/tests-baseline.json)"
+  - "MUST run adversarial checks only for applicable high-risk surfaces: property tests for changed pure logic, mutation tests for security/correctness-critical branches, fuzzing for changed parsers/deserializers, and negative tests for changed public endpoints"
+  - "MUST run an independent reviewer on the final iteration with only the diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings reset the loop"
+  - "MUST run focused changed-surface checks during implementation and run the full required suite once after the final code change, before independent review"
   - "MUST verify quality loop reached 'complete' status before moving to In Review"
   - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix); the commit-msg hook rejects fix: commits without test changes"
   - "MUST store all AI/LLM prompts as separate files in prompts/; MUST NOT embed multi-line prompts as inline strings in code"
-  - "MUST run 'pwsh .agentx/agentx.ps1 scrub -Path <changed-path>' (AI-slop deslop pass, via the agentx CLI so it resolves the bundled scanner in zero-copy workspaces) on EVERY modified file and apply safe fixes BEFORE the Test phase and again at the Pre-Handoff gate -- this is a non-skippable gate; behavior MUST NOT change; HIGH-severity findings block handoff"
+  - "MUST run 'pwsh .agentx/agentx.ps1 scrub -Path <changed-path>' on every modified area before independent review; if scrub changes files, rerun focused checks; HIGH-severity findings block handoff"
   - "MUST reuse existing shared code before writing new code: search the codebase for an existing API endpoint, service, module, function, utility, stored procedure, query, or component that already provides the needed behavior or data, and extend/parameterize it instead of creating a near-duplicate"
   - "MUST extract shared logic when two or more call sites (screens, features, jobs) need the same behavior or data access into a single shared module/endpoint/stored procedure rather than duplicating it per screen or per feature; record the reuse decision (reused existing vs newly shared vs justified new) in the Phase 3 plan"
   - "MUST NOT modify PRD, ADR, UX docs, or CI/CD workflows"
@@ -145,21 +145,13 @@ contracts before advancing.
 
 ### 2.1 Generate Implementation Approaches
 
-Think through 2-3 distinct ways to implement the required functionality within the boundaries set by the ADR and Spec. For each approach, evaluate:
-- Does it align with the ADR's chosen option and implementation notes?
-- Does it follow codebase patterns identified in Phase 1?
-- How does it handle the security requirements from the Spec?
-- How testable is it (can each component be unit-tested independently)?
-- Does it minimize surface area while meeting all requirements (YAGNI)?
+Compare 2-3 approaches against the ADR, existing patterns, security requirements,
+testability, and implementation surface area.
 
 ### 2.2 Select and Justify the Approach
 
-Preference order for selection:
-1. Approach that directly aligns with ADR implementation notes -> choose it
-2. Multiple equally spec-aligned approaches -> choose the one requiring fewer new abstractions (KISS)
-3. No approach fits the spec well -> raise a clarification with Architect BEFORE coding
-
-Document your choice in 2-3 sentences: which approach, why it fits the ADR + Spec, what alternatives were considered.
+Prefer direct ADR alignment, then fewer new abstractions. If no approach fits,
+clarify with Architect. Record the choice and rejected alternatives briefly.
 
 **Phase 2 Gate**: One implementation approach chosen with written justification referencing ADR and Spec.
 
@@ -171,36 +163,18 @@ Document your choice in 2-3 sentences: which approach, why it fits the ADR + Spe
 
 ### 3.1 File Inventory
 
-List every file to create or modify. For each item, record the reuse decision from the Phase 1 inventory (reuse existing, extend/share existing, or justified new).
-
-| Action | File Path | What Changes | Reuse Decision |
-|--------|-----------|-------------|----------------|
-| Reuse | `src/...` | Call existing shared service/endpoint/stored procedure | Reuse existing |
-| Modify | `src/...` | Extend existing module so a second caller can share it | Extend/share |
-| Create | `src/...` | New shared module (>=2 callers need it) | New shared |
-| Create | `src/...` | New code (no existing fit; divergence justified) | Justified new |
-| Create | `tests/unit/...` | Unit tests | - |
-| Create | `prompts/...` | System prompt (AI features only) | - |
-
-**Reuse gate**: Any `Justified new` row that duplicates behavior or data access already provided elsewhere MUST carry a one-line justification of why reuse was not possible. When the same data fetch/insert/update or the same API behavior is needed by more than one screen or feature, the plan MUST consolidate it into one shared module/endpoint/stored procedure.
+List every file to create or modify and mark its decision `reuse`, `extend/share`, or
+`justified new`. Justify any new behavior similar to existing code. Consolidate data
+access or API behavior needed by multiple callers into one shared unit.
 
 ### 3.2 Interface Definitions (Pre-Code)
 
-For new code, define these BEFORE writing any implementation:
-- Function signatures (parameter types + return types)
-- Interface/type definitions for new data structures
-- Database schema changes (migration file needed?)
-- API request/response types (aligned exactly with Spec schemas)
+Before implementation, define changed function signatures, data types, database
+schema/migration needs, and API request/response contracts.
 
 ### 3.3 Test Plan
 
-Map each Acceptance Criterion to at least one test:
-
-| Test Name | Type | What It Verifies | AC Reference |
-|-----------|------|-----------------|-------------|
-| `test_<ac1>` | Unit | ... | PRD Story #{id} AC#1 |
-| `test_<ac2>` | Integration | ... | PRD Story #{id} AC#2 |
-| `test_<ac3>` | E2E | ... | PRD Story #{id} AC#3 |
+Map every acceptance criterion to a named unit, integration, or E2E test.
 
 ### 3.4 Issue-Specific Verification Criteria
 
@@ -217,12 +191,8 @@ Spec contract validation, the named performance target, and tested security cont
 
 ### 4.1 Define Interfaces Before Implementation
 
-Write interfaces/types/schemas BEFORE any implementation:
-- Data contract types (input shapes, output shapes, error shapes)
-- Service interfaces (abstractions injected as dependencies)
-- Repository/storage interfaces (abstracted from concrete DB or API)
-
-This ensures testability: each concrete class can be replaced with a mock in tests.
+Define required contracts and dependency boundaries before implementation. Introduce
+interfaces only for real substitution, testing, or established architecture seams.
 
 ### 4.2 Design Quality and Reuse Check
 
@@ -257,11 +227,8 @@ This is a lightweight alignment checkpoint, not a universal second approval loop
 
 ### 5.1 Build Order
 
-Implement in this order (bottom-up per spec, inner-to-outer per architecture):
-1. Data layer first (models, schemas, DB migrations)
-2. Service/domain layer second (business logic using interfaces from Phase 4)
-3. API layer third (controllers, routes, request/response mapping)
-4. UI layer last (if applicable, following UX Spec user flows exactly)
+Implement inner layers before their callers: data, domain/service, API, then UI when
+applicable. Follow the Spec when it requires a different dependency order.
 
 ### 5.2 Coding Standards
 
@@ -310,6 +277,10 @@ remain behavior-neutral.
 Load `testing` and, for `needs:ai`, `ai-evaluation`. Scale unit, integration, and
 E2E coverage to risk; target at least 80% coverage where the repository enforces it.
 Map every in-scope PRD acceptance criterion to a passing test from the Phase 3 plan.
+Run the narrowest changed-surface tests while implementing. After the final code
+change, run the full suite required by the repository once and use that fresh result
+as completion evidence. If the active runtime cannot execute commands, require the
+host or operator to supply that evidence; never claim a suite ran when it did not.
 
 ### 6.4 Regression Test First (Bugs Only)
 
@@ -356,7 +327,7 @@ Verify against the loaded `code-review` and `security` skills:
 
 Score must be >= 70% (Medium-High tier). If below threshold, read individual check results, fix highest-point failure, re-run.
 
-### 7.4 Subagent Review (Iteration 5)
+### 7.4 Independent Review (Final Iteration)
 
 Before completing the loop, run a fresh reviewer pass that ONLY sees the diff, the Spec, and the tests -- not your implementation rationale. This catches blind spots the original implementer cannot see.
 
@@ -364,7 +335,7 @@ Minimum prompt to the subagent reviewer:
 
 > You are a code reviewer. Read SPEC-{issue}.md and the staged diff. Do NOT read any chat history or rationale. Find HIGH (security/correctness), MEDIUM (design/maintainability), LOW (style) findings. Output JSON: { findings: [{ severity, file, line, issue, suggested_fix }] }.
 
-Write the response to a fresh file such as `.agentx/state/subagent-review.json` and use it as the evidence for iteration 5, then record the reviewer's structured verdict on that same iteration:
+Write the response to a fresh file such as `.agentx/state/subagent-review.json` and use it as evidence for the final iteration, then record the reviewer's structured verdict on that same iteration:
 
 ```
 .agentx/agentx.ps1 loop iterate -s "Subagent Review: <outcome>" -e .agentx/state/subagent-review.json --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>

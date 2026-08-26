@@ -198,7 +198,7 @@ if [ $DRY_RUN -ne 1 ]; then
   cat > "$COPILOT_DIR/.agentx-version.json" <<JSON
 {
   "plugin": "agentx-copilot-cli-user",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "installedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "source": "$SOURCE",
   "mcpRegistered": $([ $REGISTER_MCP -eq 1 ] && echo true || echo false)

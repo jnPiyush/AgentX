@@ -23,8 +23,9 @@ export interface LoopState {
   readonly active: boolean;
   readonly status: 'active' | 'complete' | 'cancelled';
   readonly prompt: string;
+  readonly role?: string;
   readonly taskType?: string;
-  readonly taskClass?: 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x';
+  readonly taskClass?: 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x' | 'high-risk';
   /** 'structured' when this loop requires a recorded reviewer verdict. */
   /**
    * Provenance only -- no gate reads this. It was once the key for a free-text
@@ -83,7 +84,7 @@ export interface LoopGateResult {
   readonly state: LoopState | null;
 }
 
-export type LoopTaskClass = 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x';
+export type LoopTaskClass = 'complex-delivery' | 'standard' | 'auto-fix-review' | 'agent-x' | 'high-risk';
 export type LoopHealthKind = 'healthy' | 'stale' | 'stuck';
 
 export interface LoopHealth {
@@ -101,23 +102,35 @@ export const LOOP_STALE_AFTER_MS = 8 * 60 * 60 * 1000;
 export const LOOP_STUCK_AFTER_MS = 90 * 60 * 1000;
 // Per-task-class minimum iterations. Must mirror agentx-cli.ps1
 // ($Script:LOOP_*_MIN_ITERATIONS).
-export const DEFAULT_COMPLEX_MIN_ITERATIONS = 5;
-export const DEFAULT_STANDARD_MIN_ITERATIONS = 5;
-export const DEFAULT_AUTO_FIX_MIN_ITERATIONS = 5;
-export const DEFAULT_AGENT_X_MIN_ITERATIONS = 5;
+export const DEFAULT_STANDARD_MIN_ITERATIONS = 1;
+export const DEFAULT_AUTO_FIX_MIN_ITERATIONS = 2;
+export const DEFAULT_COMPLEX_MIN_ITERATIONS = 3;
+export const DEFAULT_AGENT_X_MIN_ITERATIONS = 3;
+export const DEFAULT_HIGH_RISK_MIN_ITERATIONS = 5;
 
 // ---------------------------------------------------------------------------
 // Task-class & iteration helpers
 // ---------------------------------------------------------------------------
 
-export function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completionCriteria' | 'taskType' | 'taskClass'>): LoopTaskClass {
+export function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completionCriteria' | 'role' | 'taskType' | 'taskClass'>): LoopTaskClass {
   const explicitTaskClass = (state.taskClass ?? '').trim().toLowerCase();
+  if (explicitTaskClass === 'high-risk') { return 'high-risk'; }
+
+  const fingerprint = `${state.taskType ?? ''}\n${state.prompt ?? ''}\n${state.completionCriteria ?? ''}`.toLowerCase();
+
+  if (/\b(secur(?:ity|e|ed|ing)?|auth(?:entication|enticate(?:d|s)?|enticating|orization|orize(?:d|s)?|orizing)?|credential(?:s)?|password(?:s)?|passphrase(?:s)?|secret(?:s)?|jwt|oauth|oidc|api[- ]?key(?:s)?|cryptograph(?:y|ic|ically)?|encrypt(?:s|ed|ing|ion)?|decrypt(?:s|ed|ing|ion)?|cipher(?:s)?|payment(?:s)?|billing|financial|migrat(?:e|es|ed|ing|ion|ions)|database schema|production|releas(?:e|es|ed|ing)?|deploy(?:s|ed|ing|ment|ments)?|rollback(?:s)?|infrastructure|rbac|permission(?:s)?|compliance|privacy|pii|breaking change|hotfix(?:es)?)\b|\bsession[- ]?(handling|management|token|cookie|auth(?:entication|orization)?)\b/.test(fingerprint)) {
+    return 'high-risk';
+  }
+
   if (explicitTaskClass === 'complex-delivery') { return 'complex-delivery'; }
   if (explicitTaskClass === 'standard') { return 'standard'; }
   if (explicitTaskClass === 'auto-fix-review') { return 'auto-fix-review'; }
   if (explicitTaskClass === 'agent-x') { return 'agent-x'; }
 
-  const fingerprint = `${state.taskType ?? ''}\n${state.prompt ?? ''}\n${state.completionCriteria ?? ''}`.toLowerCase();
+  const role = (state.role ?? '').trim().toLowerCase();
+  if (/^(auto-fix-reviewer|auto-fix|reviewer-auto)$/.test(role)) { return 'auto-fix-review'; }
+  if (/^(agent-x|agent x|agentx|agentx-auto|autonomous)$/.test(role)) { return 'agent-x'; }
+  if (/^(engineer|implementation)$/.test(role)) { return 'complex-delivery'; }
 
   // Auto-fix and agent-x checks before the generic 'review' keyword so a prompt
   // like 'Review code and apply safe fixes' resolves to auto-fix-review, not standard.
@@ -146,6 +159,7 @@ export function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completion
 export function getDefaultMinIterations(state: LoopState): number {
   let baseMinimum: number;
   switch (inferLoopTaskClass(state)) {
+    case 'high-risk': baseMinimum = DEFAULT_HIGH_RISK_MIN_ITERATIONS; break;
     case 'complex-delivery': baseMinimum = DEFAULT_COMPLEX_MIN_ITERATIONS; break;
     case 'auto-fix-review': baseMinimum = DEFAULT_AUTO_FIX_MIN_ITERATIONS; break;
     case 'agent-x': baseMinimum = DEFAULT_AGENT_X_MIN_ITERATIONS; break;

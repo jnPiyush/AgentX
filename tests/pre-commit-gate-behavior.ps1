@@ -350,15 +350,16 @@ if (-not $bashPath) {
     ))
     Assert-True ($runnerWork.Output -match 'after the approved review') 'a runner-written complete entry after the approval is not mistaken for the completion record'
 
-    # The floor of 5 is absolute: a state file claiming a lower minimum (which
-    # 'loop start --max 1' produces) must not lower the gate.
+    # A workspace-written state cannot lower the minimum inferred for its risk class.
     $lowMin = New-HookLoopState -Iteration 1 -History @(
         (New-HookHistoryEntry -Iteration 1 -Summary 'Subagent Review: approved' -Review $approved)
     )
+    $lowMin['prompt'] = 'Deploy a production authentication migration'
+    $lowMin['taskClass'] = 'standard'
     $lowMin['minIterations'] = 1
     $lowMin['maxIterations'] = 1
     $lowMinRun = Invoke-HookGate -BashPath $bashPath -LoopState $lowMin
-    Assert-True ($lowMinRun.Output -match 'below minimum iterations') 'a state claiming a lower minimum cannot lower the five-iteration floor'
+    Assert-True ($lowMinRun.Output -match 'below minimum iterations') 'a state claiming a lower minimum cannot lower the high-risk floor'
 
     # One commit carrying both a code file and a review artifact must not fail on
     # its own consumption marker.

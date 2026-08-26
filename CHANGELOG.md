@@ -1,5 +1,35 @@
 # Changelog
 
+## 9.1.0
+
+### Changed
+
+- Replaced the absolute five-iteration floor introduced in 9.0.0 with risk-based minimums: standard `1`, auto-fix `2`, complex delivery and AgentX `3`, high-risk `5`. High-risk classification covers security, authentication, credentials, cryptography, payments, migrations, production, releases, deployments, infrastructure, RBAC, compliance, and privacy work. The structured reviewer verdict on the final work iteration remains mandatory for every class, and a stored higher minimum is never lowered.
+- Reduced the agentic runner's internal self-review from a 5-iteration minimum and 15-iteration ceiling to a 1-iteration minimum and 3-iteration ceiling. Internal self-review is recorded under `selfReview` and still does not satisfy the independent review gate.
+- Scoped the adversarial review loop in the iterative-loop skill to high-risk work, with a changed-surface table replacing the blanket requirement.
+
+### Performance
+
+- Cut the dominant cost of a typical AgentX run. Repeated LLM review passes, not repository size or script execution, drove end-to-end latency: a generated Engineer prompt measures roughly 1,700 tokens and builds in 34 ms, and `loop status` runs in 42-68 ms warm, while a single zero-tool refusal consumed 57.1 s across three forced review iterations.
+
+### Fixes
+
+- Restored task-class parity across the CLI, the agentic runner, and the TypeScript runtime. All three now share a byte-identical high-risk pattern and a 25-token complex-delivery vocabulary, so agent-related work no longer classifies as `standard` in the CLI while classifying as `complex-delivery` elsewhere.
+- Corrected `loop status` and the commit gate to recompute the effective minimum from the inferred task class instead of trusting a stale persisted value.
+- Fixed agent frontmatter list parsing, which used a greedy dot-all pattern that ran past the intended block and failed on CRLF input.
+- Isolated durable retry accounting so an agentic run's internal retries advance the external iteration counter by at most one.
+- Added `AGENT-PROTOCOL.md` to the bundled extension assets; bundled agent definitions linked to a file that was not shipped.
+- Exported `DEFAULT_HIGH_RISK_MIN_ITERATIONS` from the extension runtime barrel, the only tier constant previously omitted.
+
+### Validation
+
+- Added regression coverage for three-way classifier parity, effective-minimum recomputation, tier constant exports, CRLF frontmatter parsing, retry isolation, and stage telemetry.
+- Added per-stage runner telemetry (`compactionMs`, `modelMs`, `selfReviewMs`) to the result object and session metadata.
+
+### Limitations
+
+- `hotfix` now matches the high-risk pattern before the standard pattern, so hotfix work routes to the 5-iteration tier. The token is effectively unreachable in the standard vocabulary and needs an explicit policy decision.
+
 ## 9.0.0
 
 ### Breaking Changes

@@ -101,6 +101,8 @@ Assert-FileContains "vscode-extension/scripts/copy-assets.js" "scripts/node_modu
 Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/pre-commit" "extension bundles pre-commit hook source"
 Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/commit-msg" "extension bundles commit-msg hook source"
 Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/post-commit" "extension bundles post-commit hook source"
+Assert-FileExists "vscode-extension/.github/agentx/AGENT-PROTOCOL.md" "extension bundles the canonical protocol referenced by bundled agents"
+Assert-FileContains "vscode-extension/src/runtime/index.ts" "DEFAULT_HIGH_RISK_MIN_ITERATIONS" "runtime barrel exports every task-class minimum constant"
 Assert-FileContains "scripts/stocktake.ps1" "-Json" "stocktake consumes canonical rubric JSON"
 Assert-FileContains "scripts/stocktake.ps1" "/100" "stocktake reports 100-point skill scores"
 Assert-FileExists ".agentx/templates/memories/conventions.md" "Starter memory: conventions"

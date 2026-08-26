@@ -24,7 +24,7 @@ constraints:
   - "MUST NOT commit packed zip files or generated build output"
   - "MUST hand ALM and environment deployment automation to AgentX DevOps Engineer"
   - "MUST create files locally and MUST NOT push files directly through remote repository tools"
-  - "MUST iterate until all done criteria pass; five iterations is only the minimum and loop complete must succeed before handoff"
+  - "MUST iterate until all done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; loop complete must succeed before handoff"
   - "MUST resolve Compound Capture before declaring Done"
 boundaries:
   can_modify:

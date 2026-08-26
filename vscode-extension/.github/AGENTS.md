@@ -79,9 +79,9 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 ### Quality Loop Hard Rule
 
-> HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. Minimum 5 iterations means at least 5 loop passes before completion is allowed; the loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, and the final iteration MUST carry a structured subagent review verdict (`--verdict approved --reviewer <id> --high 0 --medium 0`). No exceptions. The pre-commit hook blocks review artifacts when no completed loop exists.
+> HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. The CLI enforces risk-based minimums (standard `1`, auto-fix `2`, complex/AgentX `3`, high-risk `5`); the loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, and the final iteration MUST carry a structured subagent review verdict (`--verdict approved --reviewer <id> --high 0 --medium 0`). The pre-commit hook blocks review artifacts when no completed loop exists.
 
-> Cross-cutting concerns shared by all agents (quality loop + minimum 5 iterations, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are defined ONCE in [.github/AGENT-PROTOCOL.md](.github/AGENT-PROTOCOL.md). Agent definition files keep only the front-loaded Pre-edit gate + Honesty rule stubs and point there; they MUST NOT restate the full prose.
+> Cross-cutting concerns shared by all agents (quality loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are defined ONCE in [.github/AGENT-PROTOCOL.md](.github/AGENT-PROTOCOL.md). Agent definition files keep only the front-loaded Pre-edit gate + Honesty rule stubs and point there; they MUST NOT restate the full prose.
 
 ### Compound Engineering Hard Rule
 

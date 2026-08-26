@@ -15,7 +15,7 @@ constraints:
   - "MUST test across at least 2 models for comparison"
   - "MUST NOT fabricate metrics, benchmarks, or evaluation results"
   - "MUST NOT approve model deployment without all quality gates passing"
-  - "MUST iterate until ALL done criteria pass; minimum iterations = 5 is only the earliest point at which completion is allowed, and the loop is NOT done until '.agentx/agentx.ps1 loop complete -s <summary>' succeeds"
+  - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.agentx/agentx.ps1 loop complete -s <summary>' succeeds"
   - "MUST verify agentic loop completion before declaring implementation complete"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:

@@ -48,7 +48,7 @@ const runtimeScriptFiles = [
 ];
 
 // Standalone files from .github/ to bundle
-const standaloneFiles = ['agent-delegation.md', 'agentx-security.yml', 'CODEOWNERS', 'PULL_REQUEST_TEMPLATE.md', 'copilot-instructions.md'];
+const standaloneFiles = ['AGENT-PROTOCOL.md', 'agent-delegation.md', 'agentx-security.yml', 'CODEOWNERS', 'PULL_REQUEST_TEMPLATE.md', 'copilot-instructions.md'];
 
 // Root-level reference documents to bundle alongside .github/ assets
 const rootDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE'];

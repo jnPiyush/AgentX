@@ -12,7 +12,7 @@ instead of repeating it.
 ## Required Rules
 
 - Before any code/docs mutation, start the quality loop as the first tool call.
-	Minimum: five evidenced iterations, ending with a structured subagent review
+	Meet the CLI's risk-based minimum and end with a structured subagent review
 	verdict (`loop iterate ... --verdict approved --reviewer <id> --high 0
 	--medium 0`), then `loop complete`. Check `loop status` before reporting gate
 	state.

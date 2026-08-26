@@ -18,7 +18,7 @@ constraints:
   - "MUST NOT create, update, delete, or execute resources in a live Fabric workspace unless the user supplies the target workspace/capacity and explicitly approves the operation"
   - "MUST report local-only validation honestly when no live Fabric runtime is available"
   - "MUST create files locally and MUST NOT push files directly through remote repository tools"
-  - "MUST iterate until all done criteria pass; five iterations is only the minimum and loop complete must succeed before handoff"
+  - "MUST iterate until all done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; loop complete must succeed before handoff"
   - "MUST resolve Compound Capture before declaring Done"
 boundaries:
   can_modify:

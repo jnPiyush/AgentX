@@ -106,7 +106,7 @@ describe('registerLoopCommand', () => {
       assert.ok(fakeAgentx.runCli.calledWith('loop', sinon.match.array.deepEquals([
         'start', '-p', 'Implement harness', '-m', '10', '-c', 'ALL_TESTS_PASSING', '-i', '42',
       ])));
-      assert.ok(infoSpy.calledWith('Iterative loop started with a default minimum of 5 review iterations.'));
+      assert.ok(infoSpy.calledWith('Iterative loop started with a risk-based minimum of 1 to 5 iterations.'));
     });
 
     it('should pass required evidence to the direct loopIterate command', async () => {

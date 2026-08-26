@@ -20,6 +20,7 @@ export {
   DEFAULT_STANDARD_MIN_ITERATIONS,
   DEFAULT_AUTO_FIX_MIN_ITERATIONS,
   DEFAULT_AGENT_X_MIN_ITERATIONS,
+  DEFAULT_HIGH_RISK_MIN_ITERATIONS,
   inferLoopTaskClass,
   getDefaultMinIterations,
   getEffectiveMinIterations,

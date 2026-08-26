@@ -10,8 +10,8 @@ applyTo: '**'
 > re-document these rules in full. They keep only the two front-loaded stubs the
 > empirical pitfall log requires (Pre-edit gate + Honesty rule) and point here.
 >
-> **Why this exists**: Duplicating these rules across 21 agent files caused drift
-> (e.g. docs said "minimum 5" while a runtime still enforced 3). The discipline is
+> **Why this exists**: Duplicating these rules across agent files caused drift
+> between documentation and runtime behavior. The discipline is
 > now carried by two common layers that need ZERO per-agent text:
 >
 > 1. **Mechanical enforcement** -- the loop CLI, the agentic runner, the VS Code
@@ -38,19 +38,21 @@ If asked whether the loop ran, run `.agentx/agentx.ps1 loop status` and report t
 actual state verbatim. Never claim completion unless
 `.agentx/agentx.ps1 loop complete` succeeded in the current session.
 
-### 1.3 Minimum 5 Iterations -- For EVERY Agent
+### 1.3 Risk-Based Minimum Iterations
 
-Every task class requires **at least 5 quality iterations** before completion is
-allowed. This is enforced mechanically, not by per-agent prose:
+The loop scales its minimum to the task's blast radius. This is enforced
+mechanically, not by per-agent prose:
 
 | Task class | Min iterations | Enforced in |
 |------------|----------------|-------------|
-| complex-delivery | 5 | `agentx-cli.ps1`, `agentic-runner.ps1`, `loopStateChecker.ts`, pre-commit hook |
-| standard (PM, Architect, Reviewer, UX, docs, research, ops, coaching) | 5 | same |
-| auto-fix-review | 5 | same |
-| agent-x | 5 | same |
+| standard (simple bug/docs/review/research/coaching) | 1 | `agentx-cli.ps1`, `loopState.ts`, pre-commit hook |
+| auto-fix-review | 2 | same |
+| complex-delivery | 3 | same |
+| agent-x | 3 | same |
+| high-risk (security, auth, secrets, payments, migrations, production, release, infrastructure, compliance, privacy) | 5 | same |
 
-Reaching 5 is a floor, not the finish line. The loop is done only when
+The inferred minimum is a floor, not the finish line. A stored higher minimum is
+never lowered. The loop is done only when
 `loop complete` succeeds AND the subagent review pass was recorded as a
 structured reviewer verdict on the FINAL iteration:
 
@@ -70,7 +72,7 @@ marker inside `loop-state.json` -- but that file is workspace-writable, so
 deleting one property restored the weaker contract. A loop that predates the gate
 simply records one reviewer verdict before completing.
 
-### 1.4 Loop Steps (repeat until all criteria met AND >= 5 iterations done)
+### 1.4 Loop Steps
 
 1. **Run verification** -- execute the checks relevant to this role.
 2. **Evaluate** -- on any failure, find the root cause.
@@ -81,18 +83,17 @@ simply records one reviewer verdict before completing.
    rationale. It returns structured findings: HIGH / MEDIUM / LOW.
    - APPROVED = true only when zero HIGH and zero MEDIUM remain.
 6. **Address findings** -- fix all HIGH/MEDIUM, then re-run from Step 1.
-7. **Repeat** until APPROVED, all Done Criteria pass, and >= 5 iterations complete.
+7. **Repeat** until APPROVED, all Done Criteria pass, and the risk-based minimum is met.
 
 The per-iteration focus table is printed by `loop start` and the current focus is
-shown by `loop status`. For standard tasks the canonical focus sequence is:
+shown by `loop status`. The canonical tiers are:
 
-| Iteration | Focus | Gate to advance |
-|-----------|-------|-----------------|
-| 1 | Draft the required deliverable/change covering the stated scope | Deliverable exists; scope addressed |
-| 2 | Make it right: correctness, completeness, required template sections, conventions | Sections present; conventions satisfied |
-| 3 | Cross-cutting gates: Karpathy + Scrub + Model Council (if ADR/PRD/eval) + Brainstorm/Plan/Research confirmed | Council convened if required; scrub clean; Karpathy checklist done |
-| 4 | Evidence + live-surface: verify claims against real artifacts/outputs; attach evidence | Evidence attached; claims verified, not asserted |
-| 5 | Subagent review on the deliverable only | Zero HIGH/MEDIUM; if FAIL, roll back and refine |
+| Tier | Focus |
+|------|-------|
+| standard | Deliver, verify, and independently review in one bounded pass |
+| auto-fix | Review/fix with focused checks, then independent decision with final evidence |
+| complex / AgentX | Implement, validate changed surfaces, then independent review with final evidence |
+| high-risk | Implement, harden, run security and applicable adversarial checks, then independently review |
 
 ### 1.5 Per-Iteration Reporting + Final Summary (MANDATORY)
 
@@ -107,7 +108,7 @@ shown by `loop status`. For standard tasks the canonical focus sequence is:
 ### 1.6 Hard Gate
 
 The pre-commit hook blocks commits unless: status = complete, loopConsumed = false,
-iteration >= the class minimum (5), and the latest recorded reviewer verdict is
+iteration >= the effective class minimum, and the latest recorded reviewer verdict is
 `approved` with zero HIGH and zero MEDIUM findings, attributed to a reviewer id,
 and recorded on the final work iteration. There is no skip token for the
 iteration gate.

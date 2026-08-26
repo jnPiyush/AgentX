@@ -24,7 +24,7 @@ constraints:
   - "MUST use the AgentX Eval Specialist for evaluation framework design and execution"
   - "MUST use the AgentX Ops Monitor for monitoring and drift detection"
   - "MUST use the AgentX RAG Specialist for retrieval-augmented generation pipeline design and implementation"
-  - "MUST use the iterative quality loop and output scorer to ensure high-quality implementation, minimum iterations = 5"
+  - "MUST use the iterative quality loop and output scorer and meet the risk-based minimum from AGENT-PROTOCOL.md"
   - "MUST verify agentic loop completion before declaring implementation complete"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:

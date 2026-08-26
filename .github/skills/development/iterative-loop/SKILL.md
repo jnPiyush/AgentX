@@ -220,31 +220,38 @@ When zero errors reported, output: <promise>ZERO_ERRORS</promise>
 
 ### 2b. Adversarial Loop (Break-it-Before-Ship)
 
-Mandatory bug-finding pass before declaring code production-ready. The goal is NOT to demonstrate correctness -- it is to actively try to break the change. Use after iteration 3 (security) and before iteration 5 (subagent review).
+Mandatory only for work classified `high-risk`. The goal is NOT to demonstrate
+correctness -- it is to actively try to break security-, data-, release-, and
+production-critical changes before independent review.
 
-**Required artifacts (any iteration calling itself "Adversarial" MUST produce all of these as evidence):**
+Select checks from the changed surface; do not run an inapplicable technique merely
+to satisfy a checklist:
 
-1. **Property-based tests** for every pure function added or changed -- Hypothesis (Python), fast-check (TS), FsCheck (.NET), QuickCheck (Rust/Haskell). Run for at least 100 examples.
-2. **Mutation testing** on changed lines only -- Stryker (TS/.NET), mutmut (Python), pitest (Java). Surviving mutants on changed lines MUST be killed by new tests. Target >= 60% mutation score on the diff.
-3. **Fuzzing** of every parser, deserializer, schema validator, or LLM-output handler in the diff -- minimum 60s per target with random + structured inputs.
-4. **Negative tests** -- at least 3 per public endpoint or exported function: malformed input, boundary value, concurrent access / race condition.
-5. **Chaos pass** for stateful flows -- random latency, dependency timeout, partial failure injection. The system must degrade gracefully or fail fast with clear errors.
+| Changed surface | Required adversarial check |
+|-----------------|----------------------------|
+| Pure security/correctness-critical logic | Property tests for stated invariants |
+| Security/correctness-critical branches | Mutation testing on changed lines |
+| Parser, deserializer, schema, or LLM-output handler | Fuzzing with structured and random inputs |
+| Public endpoint or exported boundary | Malformed, boundary, and authorization/error-path tests |
+| Stateful external dependency flow | Timeout and partial-failure injection |
+
+Record `not applicable` with the changed-surface reason for rows that do not apply.
 
 **Prompt template:**
 ```
-Iteration 4: ADVERSARIAL.
+HIGH-RISK ADVERSARIAL PASS.
 Your only goal is to find bugs in the diff for {{issue}}.
 
-For each public function in the diff:
+For each applicable high-risk function in the diff:
   1. Write a property-based test that asserts an invariant (idempotence,
      monotonicity, round-trip equality, no panic on bounded input).
   2. Run mutation testing on changed lines. List every surviving mutant.
   3. Write at least 3 negative tests (malformed/boundary/concurrent).
 
-For each parser/deserializer/LLM-output handler:
+For each changed parser/deserializer/LLM-output handler:
   4. Run a 60s fuzzing pass with seed corpus + random bytes.
 
-For stateful flows:
+For changed stateful external-dependency flows:
   5. Inject latency, timeouts, partial failures. Confirm graceful degradation.
 
 Report:
@@ -257,7 +264,8 @@ When mutation score >= 60% on diff AND zero surviving mutants AND zero
 unhandled fuzz crashes, output: <promise>ADVERSARIAL_PASSED</promise>
 ```
 
-**Evidence to attach to `loop iterate -e`**: mutation report, property test report, fuzz log -- combined into a single summary file at `.agentx/state/loop-evidence/iter-4/adversarial.md` linking to each artifact.
+**Evidence to attach to `loop iterate -e`**: one summary linking the applicable
+reports and recording why skipped techniques were not relevant.
 
 ### 3. Phased Loop (Multi-Phase Implementation)
 

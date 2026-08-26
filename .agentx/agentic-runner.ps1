@@ -54,12 +54,16 @@ $Script:ProviderRegistry = @{}
 $Script:RunnerConfig = @{}
 $Script:DEFAULT_SESSION_SUMMARY_MAX_CHARS = 1600
 $Script:RESEARCH_FIRST_MIN_STEPS = 2
-$Script:DEFAULT_COMPLEX_SELF_REVIEW_MIN_ITERATIONS = 5
-$Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS = 5
+$Script:DEFAULT_STANDARD_LOOP_MIN_ITERATIONS = 1
+$Script:DEFAULT_AUTO_FIX_LOOP_MIN_ITERATIONS = 2
+$Script:DEFAULT_COMPLEX_LOOP_MIN_ITERATIONS = 3
+$Script:DEFAULT_AGENT_X_LOOP_MIN_ITERATIONS = 3
+$Script:DEFAULT_HIGH_RISK_LOOP_MIN_ITERATIONS = 5
+$Script:DEFAULT_SELF_REVIEW_MIN_ITERATIONS = 1
 
 # Self-review & clarification defaults (configurable per invocation)
-$Script:SELF_REVIEW_MAX_ITERATIONS = 15
-$Script:SELF_REVIEW_MIN_ITERATIONS = 5
+$Script:SELF_REVIEW_MAX_ITERATIONS = 3
+$Script:SELF_REVIEW_MIN_ITERATIONS = 1
 $Script:SELF_REVIEW_REVIEWER_MAX_ITERATIONS = 8
 $Script:CLARIFICATION_MAX_ITERATIONS = 6
 $Script:CLARIFICATION_RESPONDER_MAX_ITERATIONS = 5
@@ -908,10 +912,12 @@ function Get-EffectiveLoopMinIterationCount {
     if (-not $State) { return 0 }
 
     $taskClass = Get-LoopTaskClassFromState -State $State
-    $defaultMin = if ($taskClass -eq 'complex-delivery') {
-        $Script:DEFAULT_COMPLEX_SELF_REVIEW_MIN_ITERATIONS
-    } else {
-        $Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS
+    $defaultMin = switch ($taskClass) {
+        'high-risk'        { $Script:DEFAULT_HIGH_RISK_LOOP_MIN_ITERATIONS }
+        'complex-delivery' { $Script:DEFAULT_COMPLEX_LOOP_MIN_ITERATIONS }
+        'auto-fix-review'  { $Script:DEFAULT_AUTO_FIX_LOOP_MIN_ITERATIONS }
+        'agent-x'          { $Script:DEFAULT_AGENT_X_LOOP_MIN_ITERATIONS }
+        default            { $Script:DEFAULT_STANDARD_LOOP_MIN_ITERATIONS }
     }
 
     $storedMin = 0
@@ -932,8 +938,7 @@ function Get-LoopTaskClassFromState {
         $explicitTaskClass = ([string]$State.taskClass).Trim().ToLowerInvariant()
     }
 
-    if ($explicitTaskClass -eq 'complex-delivery') { return 'complex-delivery' }
-    if ($explicitTaskClass -eq 'standard') { return 'standard' }
+    if ($explicitTaskClass -eq 'high-risk') { return 'high-risk' }
 
     $fingerprint = @(
         if ($State.PSObject.Properties.Name -contains 'taskType') { [string]$State.taskType } else { '' }
@@ -941,6 +946,30 @@ function Get-LoopTaskClassFromState {
         if ($State.PSObject.Properties.Name -contains 'completionCriteria') { [string]$State.completionCriteria } else { '' }
     ) -join "`n"
     $normalized = $fingerprint.ToLowerInvariant()
+
+    if ($normalized -match '\b(secur(?:ity|e|ed|ing)?|auth(?:entication|enticate(?:d|s)?|enticating|orization|orize(?:d|s)?|orizing)?|credential(?:s)?|password(?:s)?|passphrase(?:s)?|secret(?:s)?|jwt|oauth|oidc|api[- ]?key(?:s)?|cryptograph(?:y|ic|ically)?|encrypt(?:s|ed|ing|ion)?|decrypt(?:s|ed|ing|ion)?|cipher(?:s)?|payment(?:s)?|billing|financial|migrat(?:e|es|ed|ing|ion|ions)|database schema|production|releas(?:e|es|ed|ing)?|deploy(?:s|ed|ing|ment|ments)?|rollback(?:s)?|infrastructure|rbac|permission(?:s)?|compliance|privacy|pii|breaking change|hotfix(?:es)?)\b|\bsession[- ]?(handling|management|token|cookie|auth(?:entication|orization)?)\b') {
+        return 'high-risk'
+    }
+
+    if ($explicitTaskClass -eq 'complex-delivery') { return 'complex-delivery' }
+    if ($explicitTaskClass -eq 'standard') { return 'standard' }
+    if ($explicitTaskClass -eq 'auto-fix-review') { return 'auto-fix-review' }
+    if ($explicitTaskClass -eq 'agent-x') { return 'agent-x' }
+
+    $role = if ($State.PSObject.Properties.Name -contains 'role') { ([string]$State.role).Trim().ToLowerInvariant() } else { '' }
+    switch -Regex ($role) {
+        '^(auto-fix-reviewer|auto-fix|reviewer-auto)$' { return 'auto-fix-review' }
+        '^(agent-x|agent x|agentx|agentx-auto|autonomous)$' { return 'agent-x' }
+        '^(engineer|implementation)$' { return 'complex-delivery' }
+    }
+
+    if ($normalized -match '\b(auto-fix|auto fix|apply safe fix|apply.*fixes|reviewer.*fix|fix.*review)\b') {
+        return 'auto-fix-review'
+    }
+
+    if ($normalized -match '\b(autonomous|orchestrat|classify.*route|agent.x|agent x)\b') {
+        return 'agent-x'
+    }
 
     if ($normalized -match '\b(bug|hotfix|regression|prd|product requirement|tech spec|technical spec|specification|adr|architecture doc|review|brainstorm|clarification|docs|documentation)\b') {
         return 'standard'
@@ -962,22 +991,13 @@ function Get-RunnerSelfReviewMinIteration {
         $ConfiguredMinimum = $null
     )
 
-    if ($LoopState) {
-        return Get-EffectiveLoopMinIterationCount -State $LoopState
-    }
-
     if ($null -ne $ConfiguredMinimum -and [int]$ConfiguredMinimum -gt 0) {
-        return [Math]::Max([int]$ConfiguredMinimum, $Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS)
+        return [Math]::Min(
+            [Math]::Max([int]$ConfiguredMinimum, $Script:DEFAULT_SELF_REVIEW_MIN_ITERATIONS),
+            [Math]::Max($MaxReviewerIterations, $Script:DEFAULT_SELF_REVIEW_MIN_ITERATIONS))
     }
 
-    $syntheticState = [PSCustomObject]@{
-        prompt = $Prompt
-        completionCriteria = 'TASK_COMPLETE'
-        taskClass = if ($AgentName -in @('ux-designer', 'data-scientist', 'fabric-engineer', 'power-platform-builder')) { 'complex-delivery' } else { $null }
-        maxIterations = $MaxReviewerIterations
-    }
-
-    return Get-EffectiveLoopMinIterationCount -State $syntheticState
+    return $Script:DEFAULT_SELF_REVIEW_MIN_ITERATIONS
 }
 
 function Sync-AgenticLoopState {
@@ -2699,10 +2719,10 @@ function Read-AgentDef([string]$agentName, [string]$root) {
         param([string]$key)
 
         $items = New-Object System.Collections.Generic.List[string]
-        $multiline = [regex]::Match($fm, "(?ms)^${key}:\s*\r?\n((?:\s+-\s+.*\r?\n?)*)")
+        $multiline = [regex]::Match($fm, "(?m)^${key}:\s*\r?\n((?:[ \t]+-[ \t]+[^\r\n]*(?:\r?\n|$))*)")
         if ($multiline.Success) {
             $block = $multiline.Groups[1].Value
-            foreach ($lineMatch in [regex]::Matches($block, "(?m)^\s+-\s+(.+)$")) {
+            foreach ($lineMatch in [regex]::Matches($block, "(?m)^[ \t]+-[ \t]+([^\r\n]+)\r?$")) {
                 $value = $lineMatch.Groups[1].Value.Trim().Trim(@([char]39, [char]34))
                 if ($value) { $items.Add($value) }
             }
@@ -2725,14 +2745,14 @@ function Read-AgentDef([string]$agentName, [string]$root) {
         param([string]$parentKey, [string]$childKey)
 
         $items = New-Object System.Collections.Generic.List[string]
-        $parentMatch = [regex]::Match($fm, "(?ms)^${parentKey}:\s*\r?\n((?:\s{2,}.+\r?\n?)*)")
+        $parentMatch = [regex]::Match($fm, "(?m)^${parentKey}:\s*\r?\n((?:[ \t]+[^\r\n]*(?:\r?\n|$))*)")
         if (-not $parentMatch.Success) { return @($items) }
 
         $parentBlock = $parentMatch.Groups[1].Value
-        $childMatch = [regex]::Match($parentBlock, "(?ms)^\s{2,}${childKey}:\s*\r?\n((?:\s{4,}-\s+.*\r?\n?)*)")
+        $childMatch = [regex]::Match($parentBlock, "(?m)^[ \t]+${childKey}:\s*\r?\n((?:[ \t]+-[ \t]+[^\r\n]*(?:\r?\n|$))*)")
         if (-not $childMatch.Success) { return @($items) }
 
-        foreach ($lineMatch in [regex]::Matches($childMatch.Groups[1].Value, "(?m)^\s{4,}-\s+(.+)$")) {
+        foreach ($lineMatch in [regex]::Matches($childMatch.Groups[1].Value, "(?m)^[ \t]+-[ \t]+([^\r\n]+)\r?$")) {
             $value = $lineMatch.Groups[1].Value.Trim().Trim(@([char]39, [char]34))
             if ($value) { $items.Add($value) }
         }
@@ -2743,7 +2763,7 @@ function Read-AgentDef([string]$agentName, [string]$root) {
     $getNested = {
         param([string]$parentKey, [string]$childKey)
 
-        $parentMatch = [regex]::Match($fm, "(?ms)^${parentKey}:\s*\r?\n((?:\s{2,}.+\r?\n?)*)")
+        $parentMatch = [regex]::Match($fm, "(?m)^${parentKey}:\s*\r?\n((?:[ \t]+[^\r\n]*(?:\r?\n|$))*)")
         if (-not $parentMatch.Success) { return '' }
 
         $parentBlock = $parentMatch.Groups[1].Value
@@ -4374,6 +4394,11 @@ function Invoke-AgenticLoop {
     $totalToolCalls = 0
     $finalText = ''
     $exitReason = 'text_response'
+    $stageTimings = [ordered]@{
+        compactionMs = 0
+        modelMs = 0
+        selfReviewMs = 0
+    }
 
     # Self-review state (tracks review iterations across the main loop)
     $selfReviewIteration = 0
@@ -4421,11 +4446,11 @@ function Invoke-AgenticLoop {
     if (-not [int]::TryParse([string]$selfReviewMaxRaw, [ref]$selfReviewMaxParsed)) {
         $selfReviewMaxParsed = $Script:SELF_REVIEW_MAX_ITERATIONS
     }
-    $selfReviewMaxParsed = [Math]::Min([Math]::Max($selfReviewMaxParsed, $Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS), 50)
+    $selfReviewMaxParsed = [Math]::Min([Math]::Max($selfReviewMaxParsed, $Script:DEFAULT_SELF_REVIEW_MIN_ITERATIONS), 50)
     $selfReviewMinParsed = 0
     $selfReviewMinValue = $null
     if ($null -ne $selfReviewMinRaw -and [int]::TryParse([string]$selfReviewMinRaw, [ref]$selfReviewMinParsed) -and $selfReviewMinParsed -gt 0) {
-        $selfReviewMinValue = [Math]::Min([Math]::Max($selfReviewMinParsed, $Script:DEFAULT_STANDARD_SELF_REVIEW_MIN_ITERATIONS), $selfReviewMaxParsed)
+        $selfReviewMinValue = [Math]::Min([Math]::Max($selfReviewMinParsed, $Script:DEFAULT_SELF_REVIEW_MIN_ITERATIONS), $selfReviewMaxParsed)
     }
     $selfReviewStallParsed = 0
     if (-not [int]::TryParse([string]$selfReviewStallRaw, [ref]$selfReviewStallParsed)) {
@@ -4472,6 +4497,7 @@ function Invoke-AgenticLoop {
         sessionSummary = $initialSessionSummary
         sessionSummaryMaxChars = $sessionSummaryMaxChars
         sessionSummaryUpdatedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+        stageTimings = $stageTimings
     }
     Save-Session -sessionId $sessionId -messages $messages -meta $initialMeta -root $WorkspaceRoot
 
@@ -4483,13 +4509,21 @@ function Invoke-AgenticLoop {
         Write-RunnerConsole "`e[90m  Iteration $iterations/$MaxIterations...`e[0m"
 
         # Context compaction: compact before each LLM call based on token budget
+        $compactionWatch = [System.Diagnostics.Stopwatch]::StartNew()
         $messages = @(Invoke-ContextCompaction -Messages $messages -Token $token -ModelId $modelId -KeepRecent 40 -MinRecent 10 -ThresholdPercent $Script:COMPACTION_THRESHOLD_PERCENT)
+        $compactionWatch.Stop()
+        $stageTimings.compactionMs += $compactionWatch.Elapsed.TotalMilliseconds
 
         # Call LLM
+        $modelWatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             $requestOptions = Get-ReasoningRequestConfig -agentDef $agentDef -modelId $modelId
             $response = Invoke-LlmChat -token $token -modelId $modelId -messages $messages -tools $tools -RequestOptions $requestOptions
+            $modelWatch.Stop()
+            $stageTimings.modelMs += $modelWatch.Elapsed.TotalMilliseconds
         } catch {
+            $modelWatch.Stop()
+            $stageTimings.modelMs += $modelWatch.Elapsed.TotalMilliseconds
             $errorText = "$_"
             $currentModelIndex = [array]::IndexOf($modelCandidates, $modelId)
             $hasNextModel = $currentModelIndex -ge 0 -and $currentModelIndex -lt ($modelCandidates.Count - 1)
@@ -4568,6 +4602,7 @@ function Invoke-AgenticLoop {
                 $selfReviewIteration++
                 Write-RunnerConsole "`e[36m  [SELF-REVIEW] Iteration $selfReviewIteration/$selfReviewMax...`e[0m"
 
+                $reviewWatch = [System.Diagnostics.Stopwatch]::StartNew()
                 $reviewResult = Invoke-SelfReviewLoop `
                     -AgentName $Agent `
                     -WorkOutput $finalText `
@@ -4576,6 +4611,8 @@ function Invoke-AgenticLoop {
                     -WorkspaceRoot $WorkspaceRoot `
                     -EnableCategoryVerdicts $selfReviewConfig.enableCategoryVerdicts `
                     -EnableCalibrationExamples $selfReviewConfig.enableCalibrationExamples
+                $reviewWatch.Stop()
+                $stageTimings.selfReviewMs += $reviewWatch.Elapsed.TotalMilliseconds
 
                 $reviewFindings = if ($reviewResult.findings) { @($reviewResult.findings) } else { @() }
                 $reviewActionable = @($reviewFindings | Where-Object { $_.impact -ne 'low' })
@@ -4777,7 +4814,7 @@ State your PIVOT or REFINE decision and rationale before making changes.
     # Save session
     $duration = ((Get-Date) - $startTime).TotalMilliseconds
     $sessionSummary = Build-BoundedSessionSummary -Messages $messages -FinalText $finalText -ExecutionSummaryEvents $executionSummaryEvents -PendingHumanClarification $pendingHumanClarification -MaxChars $sessionSummaryMaxChars
-    Sync-AgenticLoopState -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -Iterations $iterations -ExitReason $exitReason -FinalText $finalText -SelfReview $lastSelfReview -SkipLoopStateSync:$SkipLoopStateSync
+    Sync-AgenticLoopState -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -Iterations 1 -ExitReason $exitReason -FinalText $finalText -SelfReview $lastSelfReview -SkipLoopStateSync:$SkipLoopStateSync
     $meta = @{
         sessionId = $sessionId
         agentName = $Agent
@@ -4795,11 +4832,13 @@ State your PIVOT or REFINE decision and rationale before making changes.
         sessionSummary = $sessionSummary
         sessionSummaryMaxChars = $sessionSummaryMaxChars
         sessionSummaryUpdatedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+        stageTimings = $stageTimings
     }
     Save-Session -sessionId $sessionId -messages $messages -meta $meta -root $WorkspaceRoot
 
     Write-RunnerConsole "`e[90m  -----------------------------------------------`e[0m"
     Write-RunnerConsole "`e[36m  Loop: $iterations iterations, $totalToolCalls tool calls, exit: $exitReason ($([int]$duration)ms)`e[0m"
+    Write-RunnerConsole ("`e[90m  Timing: model={0:N1}ms self-review={1:N1}ms compaction={2:N1}ms`e[0m" -f $stageTimings.modelMs, $stageTimings.selfReviewMs, $stageTimings.compactionMs)
 
     if ($finalText) {
         Write-RunnerConsole "`n$finalText`n"
@@ -4812,6 +4851,7 @@ State your PIVOT or REFINE decision and rationale before making changes.
         finalText  = $finalText
         exitReason = $exitReason
         durationMs = [int]$duration
+        stageTimings = [PSCustomObject]$stageTimings
         pendingHumanClarification = ($null -ne $pendingHumanClarification)
     }
 }

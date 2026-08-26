@@ -237,7 +237,7 @@ function Test-AgentProtocolContract([string]$FilePath) {
  $forbiddenSharedLoopMarkers = @(
  '### Loop Steps',
  '### Iteration Focus Table',
- 'Minimum 5 iterations with a defined focus per iteration',
+ 'Risk-based minimum table copied from AGENT-PROTOCOL.md',
  'Baseline lock',
  'loop baseline -c <passing-tests>'
  )

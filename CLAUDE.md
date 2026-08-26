@@ -11,7 +11,7 @@
 >
 > **Honesty rule**: If asked whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state. Do not claim completion unless `loop complete` succeeded in the current session.
 >
-> **Minimum 5 iterations**: EVERY agent and task class requires at least 5 quality iterations before `loop complete` is allowed (enforced by the loop CLI, agentic runner, extension runtime, and pre-commit hook). Report each iteration with `loop iterate -s "..."`, then summarize before completing.
+> **Risk-based iterations**: The CLI enforces minimums of standard `1`, auto-fix `2`, complex/AgentX `3`, and high-risk `5`. A structured independent reviewer verdict is still required on the final iteration. Report each iteration with `loop iterate -s "..."`, then summarize before completing.
 >
 > **Cross-Cutting Agent Protocol**: The shared rules (quality loop, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are defined ONCE in [.github/AGENT-PROTOCOL.md](.github/AGENT-PROTOCOL.md). Agent files keep only the front-loaded Pre-edit gate + Honesty rule stubs and point there.
 >

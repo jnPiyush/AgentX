@@ -609,6 +609,12 @@ $architectClarifyTargets = @(Resolve-ClarificationTargetList -agentDef $architec
 Assert-True ($architectClarifyTargets -contains 'product-manager') 'Resolve-ClarificationTargetList maps Architect collaborators to runtime agent IDs'
 
 $engineerDef = Read-AgentDef -agentName 'engineer' -root $script:repoRoot
+Assert-Equal $engineerDef.constraints.Count 22 'Read-AgentDef stops constraints at the next top-level key'
+Assert-Equal $engineerDef.tools.Count 11 'Read-AgentDef stops tools at the next top-level key'
+Assert-Equal $engineerDef.agents.Count 8 'Read-AgentDef parses only collaborator entries as agents'
+Assert-Equal $engineerDef.canModify.Count 5 'Read-AgentDef parses only can_modify boundary entries'
+Assert-Equal $engineerDef.cannotModify.Count 4 'Read-AgentDef parses only cannot_modify boundary entries'
+Assert-True (-not ($engineerDef.constraints -contains 'AgentX Architect')) 'Read-AgentDef does not inject collaborators as constraints'
 $engineerClarifyTargets = @(Resolve-ClarificationTargetList -agentDef $engineerDef)
 Assert-True ($engineerClarifyTargets -contains 'architect') 'Resolve-ClarificationTargetList keeps direct runtime agent IDs available for Engineer'
 Assert-True ($engineerClarifyTargets -contains 'data-scientist') 'Resolve-ClarificationTargetList includes Data Scientist for Engineer alignment checkpoints'
@@ -793,6 +799,8 @@ try {
     function Test-LoopDetection { param($detector) return @{ severity = 'none'; message = '' } }
     function Invoke-LlmChat {
         param($token, $modelId, $messages, $tools, $maxTokens)
+        $latencyWatch = [System.Diagnostics.Stopwatch]::StartNew()
+        while ($latencyWatch.ElapsedMilliseconds -lt 2) { }
         $script:runnerLlmCalls++
         $script:runnerMessages.Add(($messages[-1]).content) | Out-Null
         return [PSCustomObject]@{
@@ -808,6 +816,8 @@ try {
     }
     function Invoke-SelfReviewLoop {
         param($AgentName, $WorkOutput, $Token, $ModelId, $WorkspaceRoot, $MaxReviewerIterations)
+        $latencyWatch = [System.Diagnostics.Stopwatch]::StartNew()
+        while ($latencyWatch.ElapsedMilliseconds -lt 2) { }
         $script:selfReviewCalls++
         if ($script:selfReviewApproved) {
             return @{ approved = $true; findings = @(); feedback = 'Looks good' }
@@ -843,18 +853,21 @@ try {
     $result = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
     $syncedLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
-    Assert-Equal $result.exitReason 'text_response' 'Invoke-AgenticLoop still exits normally after minimum self-review passes are met'
-    Assert-Equal $script:selfReviewCalls 5 'Invoke-AgenticLoop requires five approved self-review passes before finishing'
-    Assert-Equal $result.iterations 5 'Invoke-AgenticLoop continues the main loop until the minimum self-review passes are complete'
-    Assert-True ($result.finalText -match '\[SELF-REVIEW SUMMARY\] Completed 5/5 required review iterations') 'Invoke-AgenticLoop appends a final self-review summary once the minimum passes are met'
-    Assert-True ($result.finalText -match '\[SELF-REVIEW SUMMARY\] Iteration 5: APPROVED') 'Invoke-AgenticLoop records the final approved review iteration in the summary'
+    Assert-Equal $result.exitReason 'text_response' 'Invoke-AgenticLoop exits normally after one approved internal self-review'
+    Assert-Equal $script:selfReviewCalls 1 'Invoke-AgenticLoop performs one approved internal self-review by default'
+    Assert-Equal $result.iterations 1 'Invoke-AgenticLoop does not add duplicate main-model passes after approval'
+    Assert-True ($result.finalText -match '\[SELF-REVIEW SUMMARY\] Completed 1/1 required review iterations') 'Invoke-AgenticLoop appends the single internal-review summary'
+    Assert-True ($result.finalText -match '\[SELF-REVIEW SUMMARY\] Iteration 1: APPROVED') 'Invoke-AgenticLoop records the approved internal review'
+    Assert-True ([int]$result.stageTimings.modelMs -gt 0) 'Invoke-AgenticLoop returns measured model latency'
+    Assert-True ([int]$result.stageTimings.selfReviewMs -gt 0) 'Invoke-AgenticLoop returns measured self-review latency'
+    Assert-True ([int]$result.stageTimings.compactionMs -ge 0) 'Invoke-AgenticLoop returns cumulative compaction latency'
     Assert-Equal $syncedLoopState.status 'active' 'Invoke-AgenticLoop leaves the loop active for independent review after a successful run'
     Assert-True ([bool]$syncedLoopState.active) 'Invoke-AgenticLoop preserves the active loop flag until independent review'
-    Assert-Equal ([int]$syncedLoopState.iteration) 5 'Invoke-AgenticLoop syncs the loop iteration count to the enforced minimum review passes'
+    Assert-Equal ([int]$syncedLoopState.iteration) 1 'Invoke-AgenticLoop preserves the external loop minimum for independent review'
     $minimumReminderSeen = @($script:runnerMessages | Where-Object {
-        $_ -match '^\[Self-Review MINIMUM NOT YET MET - Iteration 1/5\]' -and $_ -match 'every role must complete at least 5 self-review passes before finishing'
+        $_ -match '^\[Self-Review MINIMUM NOT YET MET'
     }).Count -gt 0
-    Assert-True $minimumReminderSeen 'Invoke-AgenticLoop injects a minimum-self-review reminder after the first approved pass'
+    Assert-True (-not $minimumReminderSeen) 'Invoke-AgenticLoop does not inject duplicate-review reminders after approval'
     Assert-True ($null -ne $script:lastSavedSessionMeta.sessionSummary) 'Invoke-AgenticLoop saves a bounded session summary in session metadata'
     Assert-True ([string]$script:lastSavedSessionMeta.sessionSummary).Length -le 1600 'Invoke-AgenticLoop bounds the saved session summary length'
 
@@ -887,10 +900,10 @@ try {
     $bugLoopState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $bugResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully for standard bug work'
-    Assert-Equal $script:selfReviewCalls 5 'Invoke-AgenticLoop clamps stale standard loop minimums up to five self-review passes'
-    Assert-Equal $bugResult.iterations 5 'Invoke-AgenticLoop finishes after the mandatory five review passes are met'
-    Assert-True ($bugResult.finalText -match '\[SELF-REVIEW SUMMARY\] Completed 5/5 required review iterations') 'Invoke-AgenticLoop records the mandatory five-pass summary for bug work'
-    Assert-Equal ([int]$bugLoopState.iteration) 5 'Invoke-AgenticLoop syncs standard bug loops to the enforced five-iteration minimum'
+    Assert-Equal $script:selfReviewCalls 1 'Invoke-AgenticLoop does not copy the external loop minimum into internal self-review'
+    Assert-Equal $bugResult.iterations 1 'Invoke-AgenticLoop finishes standard work after one approved internal review'
+    Assert-True ($bugResult.finalText -match '\[SELF-REVIEW SUMMARY\] Completed 1/1 required review iterations') 'Invoke-AgenticLoop records the single internal review for bug work'
+    Assert-Equal ([int]$bugLoopState.iteration) 1 'Invoke-AgenticLoop leaves remaining external iterations to the quality loop'
 
     @{
         active = $true
@@ -930,8 +943,9 @@ try {
     $configuredResult = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Implement the login fix' -MaxIterations 10 -WorkspaceRoot $runnerTestRoot
 
     Assert-Equal $configuredResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully with self-review config overrides'
-    Assert-Equal $script:selfReviewCalls 5 'Invoke-AgenticLoop clamps configured self-review minimums up to five'
-    Assert-Equal $configuredResult.iterations 5 'Invoke-AgenticLoop finishes only after the mandatory five self-review passes'
+    Assert-Equal $script:selfReviewCalls 2 'Invoke-AgenticLoop honors an explicit higher internal-review minimum'
+    Assert-Equal $configuredResult.iterations 2 'Invoke-AgenticLoop stops after the configured internal-review minimum'
+    Remove-Item -LiteralPath (Join-Path $runnerTestRoot '.agentx\config.json') -Force
 
     @{
         active = $true
@@ -952,10 +966,13 @@ try {
     $failedReviewState = Get-Content -Path $loopStatePath -Raw | ConvertFrom-Json
 
     Assert-Equal $failedReviewResult.exitReason 'self_review_failed' 'self-review exhaustion exits as failure rather than text_response'
-    Assert-Equal $script:selfReviewCalls 5 'self-review exhaustion performs the configured five attempts'
+    Assert-Equal $script:selfReviewCalls 3 'self-review exhaustion uses the bounded default retry budget'
     Assert-True ([bool]$failedReviewState.active) 'failed self-review leaves the quality loop active'
     Assert-Equal ([string]$failedReviewState.status) 'active' 'failed self-review does not mark durable state complete'
+    Assert-Equal ([int]$failedReviewState.iteration) 1 'internal self-review retries count as one durable work cycle'
     Assert-True ($failedReviewResult.finalText -match 'without approval') 'self-review exhaustion reports the unresolved approval blocker'
+    Assert-True ([double]$failedReviewResult.stageTimings.modelMs -ge 8) 'model telemetry accumulates across four retry-path turns'
+    Assert-True ([double]$failedReviewResult.stageTimings.selfReviewMs -ge 6) 'self-review telemetry accumulates across three failed reviews'
     $script:selfReviewApproved = $true
 } finally {
     Remove-Item Function:Get-GitHubToken -ErrorAction SilentlyContinue
@@ -1223,7 +1240,12 @@ $minimumReviewState = [PSCustomObject]@{
     minIterations = 5
     maxIterations = 20
 }
-Assert-Equal (Get-RunnerSelfReviewMinIteration -AgentName 'engineer' -Prompt 'test' -LoopState $minimumReviewState -MaxReviewerIterations 1) 5 'self-review maximum cannot clamp the required five passes'
+Assert-Equal (Get-RunnerSelfReviewMinIteration -AgentName 'engineer' -Prompt 'test' -LoopState $minimumReviewState -MaxReviewerIterations 1) 1 'internal self-review stays independent from the external loop minimum'
+Assert-Equal (Get-LoopTaskClassFromState ([PSCustomObject]@{ role = 'engineer'; prompt = 'Fix bug in rendering'; completionCriteria = 'TASK_COMPLETE' })) 'complex-delivery' 'runner role-only legacy classification matches CLI and TypeScript'
+Assert-Equal (Get-LoopTaskClassFromState ([PSCustomObject]@{ prompt = 'Refine the agent prompt handling'; completionCriteria = 'TASK_COMPLETE' })) 'complex-delivery' 'runner agent vocabulary matches CLI and TypeScript'
+foreach ($highRiskPrompt in @('Implement password reset', 'Validate JWT claims', 'Add OAuth login', 'Rotate API keys', 'Encrypt customer records', 'Update session handling')) {
+    Assert-Equal (Get-LoopTaskClassFromState ([PSCustomObject]@{ taskClass = 'standard'; prompt = $highRiskPrompt; completionCriteria = 'TASK_COMPLETE' })) 'high-risk' "runner recognizes high-risk prompt variant: $highRiskPrompt"
+}
 
 $minimumSyncRoot = Join-Path ([IO.Path]::GetTempPath()) ("agentx-runner-minimum-{0}" -f [guid]::NewGuid().ToString('N'))
 try {

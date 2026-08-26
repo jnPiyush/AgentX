@@ -13,7 +13,7 @@ This file is the **thin router** - it tells you what to load and when. It loads 
 
 > **HARD RULE**: Before editing, creating, or deleting any file for a code or docs change, run `.agentx/agentx.ps1 loop start -p "<task>"` as your ABSOLUTE FIRST tool call. Reading files and running `loop status` are allowed; mutating the workspace before `loop start` succeeds is a contract violation. The loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, and the subagent review pass must be recorded as a structured verdict on the FINAL iteration (`loop iterate ... --verdict approved --reviewer <id> --high 0 --medium 0`). `loop complete` fails on a non-approved verdict, on non-zero HIGH/MEDIUM, or when iterations were recorded after the approval. The pre-commit hook blocks commits when these conditions are unmet.
 >
-> **Minimum 5 iterations**: EVERY agent and task class requires at least 5 quality iterations before `loop complete` is allowed (enforced by the loop CLI, agentic runner, extension runtime, and pre-commit hook). Report each iteration with `loop iterate -s "..."`, then summarize before completing.
+> **Risk-based iterations**: The CLI enforces minimums of standard `1`, auto-fix `2`, complex/AgentX `3`, and high-risk `5`. A structured independent reviewer verdict is still required on the final iteration. Report each iteration with `loop iterate -s "..."`, then summarize before completing.
 >
 > **Cross-Cutting Agent Protocol**: The shared rules (quality loop, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are defined ONCE in [.github/AGENT-PROTOCOL.md](AGENT-PROTOCOL.md). Agent files keep only the front-loaded Pre-edit gate + Honesty rule stubs and point there.
 >

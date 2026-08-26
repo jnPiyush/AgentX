@@ -220,7 +220,7 @@ describe('checkHandoffGate', () => {
     const gate = checkHandoffGate(wsRoot);
     assert.equal(gate.allowed, false);
     assert.ok(gate.reason.includes('completed too early'));
-    assert.ok(gate.reason.includes('1/5'));
+    assert.ok(gate.reason.includes('1/3'));
   });
 
   it('blocks when a completed loop was already consumed', () => {
@@ -402,20 +402,21 @@ describe('checkHandoffGate', () => {
     assert.ok(gate.reason.includes('after the approved review'));
   });
 
-  it('uses the complex-task five-iteration default when minIterations is missing', () => {
+  it('uses the complex-task three-iteration default when minIterations is missing', () => {
     const state = makeCompleteState({
-      iteration: 4,
-      history: [{ iteration: 4, timestamp: isoMinutesAgo(5), summary: 'Review pass four', status: 'complete' }],
+      iteration: 2,
+      history: [{ iteration: 2, timestamp: isoMinutesAgo(5), summary: 'Subagent Review', status: 'complete',
+        review: { verdict: 'approved', reviewer: 'test-reviewer', high: 0, medium: 0, low: 0 } }],
     }) as Record<string, unknown>;
     delete state.minIterations;
     writeLoopState(wsRoot, state);
 
     const gate = checkHandoffGate(wsRoot);
     assert.equal(gate.allowed, false);
-    assert.ok(gate.reason.includes('4/5'));
+    assert.ok(gate.reason.includes('2/3'));
   });
 
-  it('does not let maxIterations lower the mandatory five-iteration floor', () => {
+  it('does not let maxIterations lower the inferred risk-based floor', () => {
     writeLoopState(wsRoot, makeCompleteState({
       iteration: 1,
       maxIterations: 1,
@@ -428,7 +429,7 @@ describe('checkHandoffGate', () => {
 
     const gate = checkHandoffGate(wsRoot);
     assert.equal(gate.allowed, false);
-    assert.ok(gate.reason.includes('1/5'));
+    assert.ok(gate.reason.includes('1/3'));
   });
 
   it('blocks when a completed loop is stale', () => {
@@ -555,10 +556,10 @@ describe('getLoopStatusDisplay', () => {
     });
 
     const display = getLoopStatusDisplay(wsRoot);
-    assert.ok(display.includes('1/5'));
+    assert.ok(display.includes('minimum iterations met'));
   });
 
-  it('defaults complex delivery loops to five iterations when minIterations is missing', () => {
+  it('defaults complex delivery loops to three iterations when minIterations is missing', () => {
     writeLoopState(wsRoot, {
       active: true,
       status: 'active',
@@ -573,7 +574,111 @@ describe('getLoopStatusDisplay', () => {
     });
 
     const display = getLoopStatusDisplay(wsRoot);
-    assert.ok(display.includes('2/5'));
+    assert.ok(display.includes('2/3'));
+  });
+
+  it('defaults high-risk loops to five iterations when minIterations is missing', () => {
+    writeLoopState(wsRoot, {
+      active: true,
+      status: 'active',
+      prompt: 'Deploy a production authentication migration',
+      iteration: 4,
+      maxIterations: 10,
+      completionCriteria: 'ALL_TESTS_PASSING',
+      issueNumber: null,
+      startedAt: isoMinutesAgo(20),
+      lastIterationAt: isoMinutesAgo(5),
+      history: [{ iteration: 4, timestamp: isoMinutesAgo(5), summary: 'Security validation', status: 'iterated' }],
+    });
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(display.includes('4/5'));
+  });
+
+  it('does not allow an explicit standard class to downgrade a high-risk prompt', () => {
+    writeLoopState(wsRoot, {
+      active: true,
+      status: 'active',
+      taskClass: 'standard',
+      prompt: 'Deploy a production authentication migration',
+      iteration: 4,
+      minIterations: 1,
+      maxIterations: 10,
+      completionCriteria: 'ALL_TESTS_PASSING',
+      issueNumber: null,
+      startedAt: isoMinutesAgo(20),
+      lastIterationAt: isoMinutesAgo(5),
+      history: [{ iteration: 4, timestamp: isoMinutesAgo(5), summary: 'Security validation', status: 'iterated' }],
+    });
+
+    const display = getLoopStatusDisplay(wsRoot);
+    assert.ok(display.includes('4/5'));
+  });
+
+  for (const prompt of [
+    'Migrate payments data',
+    'Rotate secrets before release',
+    'Review cryptographic permissions',
+    'Implement password reset',
+    'Validate JWT claims',
+    'Add OAuth login',
+    'Rotate API keys',
+    'Encrypt customer records',
+    'Update session handling',
+  ]) {
+    it(`recognizes high-risk prompt variants: ${prompt}`, () => {
+      writeLoopState(wsRoot, {
+        active: true,
+        status: 'active',
+        taskClass: 'standard',
+        prompt,
+        iteration: 4,
+        minIterations: 1,
+        maxIterations: 10,
+        completionCriteria: 'ALL_TESTS_PASSING',
+        issueNumber: null,
+        startedAt: isoMinutesAgo(20),
+        lastIterationAt: isoMinutesAgo(5),
+        history: [{ iteration: 4, timestamp: isoMinutesAgo(5), summary: 'Risk validation', status: 'iterated' }],
+      });
+
+      assert.ok(getLoopStatusDisplay(wsRoot).includes('4/5'));
+    });
+  }
+
+  it('uses role parity when a legacy state has no task class', () => {
+    writeLoopState(wsRoot, {
+      active: true,
+      status: 'active',
+      role: 'engineer',
+      prompt: 'Fix bug in rendering',
+      iteration: 2,
+      maxIterations: 10,
+      completionCriteria: 'ALL_TESTS_PASSING',
+      issueNumber: null,
+      startedAt: isoMinutesAgo(20),
+      lastIterationAt: isoMinutesAgo(5),
+      history: [{ iteration: 2, timestamp: isoMinutesAgo(5), summary: 'Implementation validation', status: 'iterated' }],
+    });
+
+    assert.ok(getLoopStatusDisplay(wsRoot).includes('2/3'));
+  });
+
+  it('classifies agent-related work as complex delivery for CLI parity', () => {
+    writeLoopState(wsRoot, {
+      active: true,
+      status: 'active',
+      prompt: 'Refine the agent prompt handling',
+      iteration: 2,
+      maxIterations: 10,
+      completionCriteria: 'ALL_TESTS_PASSING',
+      issueNumber: null,
+      startedAt: isoMinutesAgo(20),
+      lastIterationAt: isoMinutesAgo(5),
+      history: [{ iteration: 2, timestamp: isoMinutesAgo(5), summary: 'Implementation validation', status: 'iterated' }],
+    });
+
+    assert.ok(getLoopStatusDisplay(wsRoot).includes('2/3'));
   });
 
   it('shows stuck loops clearly when an active loop has not progressed recently', () => {

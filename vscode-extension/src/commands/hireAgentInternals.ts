@@ -117,7 +117,7 @@ ${details.constraints.map((c) => `- ${c}`).join('\n')}
 ## Deliverables
 
 - Produce artifacts relevant to the ${details.role} role
-- Follow the AgentX quality loop (minimum 5 iterations)
+- Follow the AgentX quality loop and its runtime-computed risk minimum
 - Self-review before handoff
 
 ## Self-Review Checklist

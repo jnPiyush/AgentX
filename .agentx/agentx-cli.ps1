@@ -45,10 +45,11 @@ $Script:STATE_FILE = Join-Path $AGENTX_DIR 'state' 'agent-status.json'
 $Script:LOOP_STATE_FILE = Join-Path $AGENTX_DIR 'state' 'loop-state.json'
 $Script:LOOP_STALE_AFTER_HOURS = 8
 $Script:LOOP_STUCK_AFTER_MINUTES = 90
-$Script:LOOP_COMPLEX_MIN_ITERATIONS  = 5
-$Script:LOOP_STANDARD_MIN_ITERATIONS = 5
-$Script:LOOP_AUTO_FIX_MIN_ITERATIONS  = 5
-$Script:LOOP_AGENT_X_MIN_ITERATIONS   = 5
+$Script:LOOP_STANDARD_MIN_ITERATIONS  = 1
+$Script:LOOP_AUTO_FIX_MIN_ITERATIONS  = 2
+$Script:LOOP_COMPLEX_MIN_ITERATIONS   = 3
+$Script:LOOP_AGENT_X_MIN_ITERATIONS   = 3
+$Script:LOOP_HIGH_RISK_MIN_ITERATIONS = 5
 $Script:ISSUES_DIR = Join-Path $AGENTX_DIR 'issues'
 $Script:TASK_BUNDLES_DIR = Join-Path $ROOT 'docs' 'execution' 'task-bundles'
 $Script:BOUNDED_PARALLEL_DIR = Join-Path $ROOT 'docs' 'execution' 'bounded-parallel'
@@ -4089,6 +4090,19 @@ function Get-LoopTaskClass {
         $explicitTaskClass = ([string]$State.taskClass).Trim().ToLowerInvariant()
     }
 
+    if ($explicitTaskClass -eq 'high-risk')         { return 'high-risk' }
+
+    $fingerprint = @(
+        if ($State.PSObject.Properties.Name -contains 'taskType') { [string]$State.taskType } else { '' }
+        if ($State.PSObject.Properties.Name -contains 'prompt') { [string]$State.prompt } else { '' }
+        if ($State.PSObject.Properties.Name -contains 'completionCriteria') { [string]$State.completionCriteria } else { '' }
+    ) -join "`n"
+    $normalized = $fingerprint.ToLowerInvariant()
+
+    if ($normalized -match '\b(secur(?:ity|e|ed|ing)?|auth(?:entication|enticate(?:d|s)?|enticating|orization|orize(?:d|s)?|orizing)?|credential(?:s)?|password(?:s)?|passphrase(?:s)?|secret(?:s)?|jwt|oauth|oidc|api[- ]?key(?:s)?|cryptograph(?:y|ic|ically)?|encrypt(?:s|ed|ing|ion)?|decrypt(?:s|ed|ing|ion)?|cipher(?:s)?|payment(?:s)?|billing|financial|migrat(?:e|es|ed|ing|ion|ions)|database schema|production|releas(?:e|es|ed|ing)?|deploy(?:s|ed|ing|ment|ments)?|rollback(?:s)?|infrastructure|rbac|permission(?:s)?|compliance|privacy|pii|breaking change|hotfix(?:es)?)\b|\bsession[- ]?(handling|management|token|cookie|auth(?:entication|orization)?)\b') {
+        return 'high-risk'
+    }
+
     if ($explicitTaskClass -eq 'complex-delivery') { return 'complex-delivery' }
     if ($explicitTaskClass -eq 'standard')          { return 'standard' }
     if ($explicitTaskClass -eq 'auto-fix-review')   { return 'auto-fix-review' }
@@ -4104,13 +4118,6 @@ function Get-LoopTaskClass {
         }
     }
 
-    $fingerprint = @(
-        if ($State.PSObject.Properties.Name -contains 'taskType') { [string]$State.taskType } else { '' }
-        if ($State.PSObject.Properties.Name -contains 'prompt') { [string]$State.prompt } else { '' }
-        if ($State.PSObject.Properties.Name -contains 'completionCriteria') { [string]$State.completionCriteria } else { '' }
-    ) -join "`n"
-    $normalized = $fingerprint.ToLowerInvariant()
-
     # Auto-fix and agent-x checks before the generic 'review' keyword so a prompt
     # like 'Review code and apply safe fixes' resolves to auto-fix-review, not standard.
     if ($normalized -match '\b(auto-fix|auto fix|apply safe fix|apply.*fixes|reviewer.*fix|fix.*review)\b') {
@@ -4125,7 +4132,7 @@ function Get-LoopTaskClass {
         return 'standard'
     }
 
-    if ($normalized -match '\b(implement|implementation|build|create|ship|refactor|feature|endpoint|component|screen|prototype|wireframe|ux|ui|frontend|backend|model|training|data science|evaluation pipeline|notebook|workflow|all_tests_passing|coverage)\b') {
+    if ($normalized -match '\b(implement|implementation|build|create|ship|refactor|feature|endpoint|component|screen|prototype|wireframe|ux|ui|frontend|backend|model|training|data science|evaluation pipeline|notebook|agent|workflow|all_tests_passing|coverage)\b') {
         return 'complex-delivery'
     }
 
@@ -4140,6 +4147,7 @@ function Get-LoopDefaultMinIterations {
 
     if (-not $State) { return 0 }
     $defaultMin = switch (Get-LoopTaskClass $State) {
+        'high-risk'        { $Script:LOOP_HIGH_RISK_MIN_ITERATIONS }
         'complex-delivery' { $Script:LOOP_COMPLEX_MIN_ITERATIONS  }
         'auto-fix-review'  { $Script:LOOP_AUTO_FIX_MIN_ITERATIONS  }
         'agent-x'          { $Script:LOOP_AGENT_X_MIN_ITERATIONS   }
@@ -4249,42 +4257,38 @@ function Get-LoopIterationGuidance {
     param([string]$TaskClass)
 
     switch ($TaskClass) {
+        'high-risk' {
+            return @(
+                [PSCustomObject]@{ n=1; focus='Make it Work: core functionality + focused failing tests turn green';     gate='Focused tests passing; feature functional' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface coverage';             gate='Changed-surface checks and coverage pass' }
+                [PSCustomObject]@{ n=3; focus='Make it Secure: SAST + secrets + dependencies + applicable threat checks'; gate='Zero high/critical findings' }
+                [PSCustomObject]@{ n=4; focus='Adversarial: applicable mutation/property/fuzz/negative checks';          gate='Risk-specific adversarial checks pass' }
+                [PSCustomObject]@{ n=5; focus='Independent Review + final full-suite evidence';                          gate='Zero HIGH/MEDIUM; final suite passes' }
+            )
+        }
         'complex-delivery' {
             return @(
-                [PSCustomObject]@{ n=1; focus='Make it Work: core functionality + failing tests turn green';              gate='Tests passing; feature functional' }
-                [PSCustomObject]@{ n=2; focus='Make it Right: refactor + edge cases + lint clean + coverage >= 80%';     gate='Diff coverage gate + lint clean' }
-                [PSCustomObject]@{ n=3; focus='Make it Secure: SAST + secrets scan + SCA + dependency audit';            gate='Zero high/critical findings' }
-                [PSCustomObject]@{ n=4; focus='Adversarial (Break it): mutation/property/fuzz + 3+ negative tests';      gate='Mutation score >= 60%; surviving mutants killed' }
-                [PSCustomObject]@{ n=5; focus='Subagent Review: diff + Spec + tests only (no implementation rationale)'; gate='Zero HIGH, zero MEDIUM; if FAIL: rollback -n 3 (security/adversarial) / -n 2 (design) / -n 1 (correctness)' }
+                [PSCustomObject]@{ n=1; focus='Make it Work: core functionality + focused failing tests turn green'; gate='Focused tests passing; feature functional' }
+                [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface security checks';   gate='Changed-surface checks pass' }
+                [PSCustomObject]@{ n=3; focus='Independent Review + final full-suite evidence';                      gate='Zero HIGH/MEDIUM; final suite passes' }
             )
         }
         'auto-fix-review' {
             return @(
-                [PSCustomObject]@{ n=1; focus='Read Context + Verify Engineer Loop Complete + Load Spec/PRD';            gate='Specs read; Engineer loop status = complete' }
-                [PSCustomObject]@{ n=2; focus='Review Code (8 categories) + Categorize: safe / risky / critical';       gate='All findings filed; zero unfiled items' }
-                [PSCustomObject]@{ n=3; focus='Apply Safe Auto-Fixes + Run Full Test Suite';                             gate='Fixes applied; tests still pass; reverted any failures' }
-                [PSCustomObject]@{ n=4; focus='Document Changes + List Risky Suggestions in review doc';                gate='Review doc updated; risky items annotated for Engineer' }
-                [PSCustomObject]@{ n=5; focus='Self-Review + Decision (Approve / RequestChanges / Reject)';              gate='Zero HIGH/MEDIUM; decision recorded; if findings: rollback -n 3 (re-fix) / -n 2 (re-review)' }
+                [PSCustomObject]@{ n=1; focus='Review findings + apply safe fixes + run focused checks'; gate='Safe fixes pass changed-surface checks' }
+                [PSCustomObject]@{ n=2; focus='Independent decision + final full-suite evidence';      gate='Zero HIGH/MEDIUM; final suite passes' }
             )
         }
         'agent-x' {
             return @(
-                [PSCustomObject]@{ n=1; focus='Classify Issue + Assess Complexity + Run deps/ready';                    gate='Issue type confirmed; specialist phases planned' }
-                [PSCustomObject]@{ n=2; focus='Execute Specialist Phase(s) Internally (follow role contract)';           gate='Phase deliverables match specialist agent contract' }
-                [PSCustomObject]@{ n=3; focus='Cross-Role Validation Checkpoints (Architect/DS/PM/UX alignment)';       gate='Required alignments complete; no boundary drift' }
-                [PSCustomObject]@{ n=4; focus='Handoff Validation: pre-transition exit gates for each specialist phase'; gate='All role-specific exit gates satisfied' }
-                [PSCustomObject]@{ n=5; focus='Final Sweep: quality + security + Compound Capture resolution';           gate='All done criteria pass; Compound Capture resolved; if FAIL: rollback -n 2 (re-execute phase) / -n 3 (re-validate)' }
+                [PSCustomObject]@{ n=1; focus='Classify + execute the bounded specialist phase';        gate='Scope and specialist deliverables addressed' }
+                [PSCustomObject]@{ n=2; focus='Validate role boundaries, handoffs, and changed surfaces'; gate='Required checks and alignments pass' }
+                [PSCustomObject]@{ n=3; focus='Independent Review + final evidence + Compound Capture';  gate='Zero HIGH/MEDIUM; completion evidence present' }
             )
         }
         default {
-            # standard tasks (PM, Architect, Reviewer, UX, docs, research, ...): generic 5-iteration table.
-            # Mirrors the Cross-Cutting Agent Protocol (.github/AGENT-PROTOCOL.md).
             return @(
-                [PSCustomObject]@{ n=1; focus='Draft: produce the required deliverable/change covering the stated scope';        gate='Deliverable exists; scope addressed' }
-                [PSCustomObject]@{ n=2; focus='Make it Right: correctness, completeness, required template sections, conventions'; gate='Required sections present; conventions satisfied' }
-                [PSCustomObject]@{ n=3; focus='Cross-Cutting Gates: Karpathy self-check + Scrub + Model Council (ADR/PRD/eval) + Brainstorm/Plan/Research confirmed'; gate='Council convened if required; scrub clean; Karpathy checklist done' }
-                [PSCustomObject]@{ n=4; focus='Evidence + Live-Surface: verify claims against real artifacts/outputs; attach evidence file'; gate='Evidence attached; claims verified, not asserted' }
-                [PSCustomObject]@{ n=5; focus='Subagent Review: spawn a same-role reviewer sub-agent on the deliverable only';   gate='Zero HIGH/MEDIUM; if FAIL: rollback and refine' }
+                [PSCustomObject]@{ n=1; focus='Deliver + verify + independent review'; gate='Scope addressed; evidence present; zero HIGH/MEDIUM' }
             )
         }
     }
@@ -4570,16 +4574,16 @@ function Invoke-LoopStart {
     $prompt = Get-Flag @('-p', '--prompt')
     if (-not $prompt) { Write-CliOutput 'Error: --prompt required'; exit 1 }
     $max = [int](Get-Flag @('-m', '--max') '20')
-    if ($max -lt 5) {
-        Write-CliOutput "$($C.r)Error: --max must be at least 5 because every quality loop requires five iterations.$($C.n)"
-        exit 1
-    }
     $criteria = Get-Flag @('-c', '--criteria') 'TASK_COMPLETE'
     $issue = [int](Get-Flag @('-i', '--issue') '0')
     if (-not $issue) { $issue = $null }
     $role = Get-Flag @('-r', '--role') ''
     $taskClass = Get-LoopTaskClass ([PSCustomObject]@{ prompt = $prompt; completionCriteria = $criteria; maxIterations = $max; role = $role })
     $min = Get-LoopDefaultMinIterations ([PSCustomObject]@{ prompt = $prompt; completionCriteria = $criteria; taskClass = $taskClass; maxIterations = $max })
+    if ($max -lt $min) {
+        Write-CliOutput "$($C.r)Error: --max must be at least $min for task class '$taskClass'.$($C.n)"
+        exit 1
+    }
     $budgetRaw = Get-Flag @('-b', '--budget') ''
     $budget = $null
     if ($budgetRaw) {
@@ -4685,9 +4689,8 @@ function Invoke-LoopStatus {
         if ($Script:JsonOutput) { Write-CliOutput '{"active":false}' } else { Write-CliOutput '  No active loop.' }
         return
     }
-    if (-not ($state.PSObject.Properties.Name -contains 'minIterations') -or -not $state.minIterations) {
-        $state | Add-Member -NotePropertyName minIterations -NotePropertyValue (Get-LoopDefaultMinIterations $state) -Force
-    }
+    $effectiveMinIterations = Get-LoopEffectiveMinIterations $state
+    $state | Add-Member -NotePropertyName minIterations -NotePropertyValue $effectiveMinIterations -Force
     if ($Script:JsonOutput) { $state | ConvertTo-Json -Depth 5; return }
 
     Write-CliOutput "`n$($C.c)  Iterative Loop Status$($C.n)"
@@ -4760,8 +4763,8 @@ function Invoke-LoopStatus {
     elseif ($state.status -eq 'complete') {
         Write-CliOutput "$($C.g)  Completion gate: SATISFIED (loop already completed).$($C.n)"
     }
-    elseif ($state.active -and ([int]$state.iteration -lt [int]$state.minIterations)) {
-        Write-CliOutput "$($C.y)  Completion gate: BLOCKED until minimum iterations are met ($($state.iteration)/$($state.minIterations)).$($C.n)"
+    elseif ($state.active -and ([int]$state.iteration -lt $effectiveMinIterations)) {
+        Write-CliOutput "$($C.y)  Completion gate: BLOCKED until minimum iterations are met ($($state.iteration)/$effectiveMinIterations).$($C.n)"
     }
     elseif ($state.active) {
         Write-CliOutput "$($C.y)  Completion gate: Minimum iterations met. Run 'agentx loop complete -s <summary>' only after all quality gates pass.$($C.n)"
@@ -5318,9 +5321,7 @@ function Invoke-LoopGateCheck {
         exit 1
     }
 
-    # Floor of 5 is absolute. Externally-written state still passes through this
-    # guard even though loop start now rejects --max values below five.
-    $minIterations = [Math]::Max([int](Get-LoopEffectiveMinIterations $state), 5)
+    $minIterations = [int](Get-LoopEffectiveMinIterations $state)
     $iteration = if ($state.PSObject.Properties.Name -contains 'iteration') { [int]$state.iteration } else { 0 }
     if ($iteration -lt $minIterations) {
         Write-CliOutput "BLOCK: quality loop completed below minimum iterations ($iteration/$minIterations)"

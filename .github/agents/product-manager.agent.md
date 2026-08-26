@@ -22,7 +22,7 @@ constraints:
   - "MUST document research findings with sources in a Research Summary section within the PRD"
   - "MUST participate in the Architect requirement-fit checkpoint when requested and verify PRD alignment, scope boundaries, and business outcomes without taking over technical design approval"
   - "MUST create PRD files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
-  - "MUST use the iterative quality loop and output scorer to ensure high-quality requirements, minimum iterations = 5"
+  - "MUST use the iterative quality loop and output scorer and meet the risk-based minimum from AGENT-PROTOCOL.md"
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
