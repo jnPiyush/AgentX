@@ -60,7 +60,7 @@
 | Data | 7 | A | Data analysis, Fabric, Databricks, Power BI, and Cosmos DB |
 | Document | 3 | A | PDF, Word, and PowerPoint processing and generation |
 | AI Systems | 30 | A | Agent dev, LangGraph, Foundry SDK, GenAIOps, prompt versioning, RAG, drift, evaluation, MCP, Azure Foundry, Anthropic Claude, multi-agent orchestration, tool use, agent observability, reasoning models, AI safety, vector DBs, computer use, LLM gateway, voice agents, synthetic data, agent memory, iterative retrieval |
-| Design | 12 | A | design-system reasoning, anti-slop, brand extraction, UX/UI design, prototype craft, frontend/UI, accessibility, working prototypes, audits, heuristics, content design, and visual regression |
+| Design | 13 | A | impeccable design language, design-system reasoning, anti-slop, brand extraction, UX/UI design, prototype craft, frontend/UI, accessibility, working prototypes, audits, heuristics, content design, and visual regression |
 | Testing | 6 | A | E2E, integration, performance, security, production readiness |
 | Domain | 7 | B | Oil & gas, financial services, audit, tax, legal, CLM, and corporate governance coverage is now present; more verticals could still be added |
 | Product | 1 | A | Production-grade PRD authoring and review |

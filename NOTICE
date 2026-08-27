@@ -43,6 +43,19 @@ Portions of the AgentX design skill set are derived from or inspired by:
        Skill-catalog patterns that informed the design-skill directory
        structure under .github/skills/design/.
 
+2. pbakaus/impeccable (Apache-2.0)
+   https://github.com/pbakaus/impeccable
+   - The Impeccable design language, its 23-command intervention
+     vocabulary, the PRODUCT.md and DESIGN.md artifact model, and the
+     deterministic detector rule catalogue referenced by
+    .github/skills/design/impeccable-integration/SKILL.md
+
+   AgentX orchestrates Impeccable as an external, project-local tool
+   installed into a target app. No Impeccable code is vendored, forked,
+   or redistributed in this repository or in the AgentX extension
+   bundle. The reference above is descriptive interoperability
+   material, not a derivative work of the upstream source.
+
 Files in this repository that adapt material from the sources above
 carry a "Source:" header citing the upstream repository. Per
 Apache-2.0 Section 4, no modification has been made to the licensed

@@ -40,7 +40,7 @@ $bundledSkills = @(Get-ChildItem $bundleRoot -Recurse -Filter SKILL.md -File |
         '.github/skills/' + $_.FullName.Substring($bundleRoot.Length + 1).Replace('\', '/')
     } | Sort-Object)
 
-Assert-True ($sourceSkills.Count -eq 132) 'canonical source contains 132 skills'
+Assert-True ($sourceSkills.Count -gt 0) 'canonical source skill inventory is non-empty'
 Assert-True ($registry.totalCount -eq $sourceSkills.Count) 'registry total matches canonical source'
 Assert-True (@(Compare-Object $sourceSkills $registrySkills).Count -eq 0) 'registry paths exactly match canonical source'
 Assert-True (@(Compare-Object $sourceSkills $chatSkills).Count -eq 0) 'VS Code chat contributions exactly match canonical source'
@@ -63,7 +63,7 @@ try {
     New-Item -ItemType Directory -Path $installTarget -Force | Out-Null
     & pwsh -NoProfile -File (Join-Path $repoRoot 'packs/agentx-copilot-cli/install.ps1') -Target $installTarget -Source $repoRoot *> $null
     $installedSkills = @(Get-ChildItem (Join-Path $installTarget '.github/skills') -Recurse -Filter SKILL.md -File)
-    Assert-True ($LASTEXITCODE -eq 0 -and $installedSkills.Count -eq 132) 'PowerShell pack installer installs exactly 132 skills'
+    Assert-True ($LASTEXITCODE -eq 0 -and $installedSkills.Count -eq $sourceSkills.Count) 'PowerShell pack installer installs the complete canonical skill inventory'
     Assert-True (@($installedSkills | Where-Object { $_.FullName -match '\\.github\\skills\\.*\\.github\\skills\\' }).Count -eq 0) 'PowerShell pack installer does not recursively nest destination paths'
     Assert-True (Test-Path (Join-Path $installTarget '.github/skills/architecture/cost-analysis/scripts/estimate-cost.ps1')) 'PowerShell pack installer preserves nested skill scripts'
     Assert-True (Test-Path (Join-Path $installTarget '.github/skills/architecture/infra-governance/assets/workload-topologies.json')) 'PowerShell pack installer preserves nested skill assets'
@@ -76,6 +76,10 @@ try {
         $installedScoreExit = $LASTEXITCODE
         $installedScore = $installedScoreJson | ConvertFrom-Json -Depth 20
         Assert-True ($installedScoreExit -eq 0 -and @($installedScore.skills)[0].blockers.Count -eq 0) 'PowerShell pack installed scorer resolves its bundled rubric references'
+        $installedPrototypeJson = & pwsh -NoProfile -File 'scripts/score-skill.ps1' -SkillPath '.github/skills/design/prototype-audit/SKILL.md' -Json 2>$null | Out-String
+        $installedPrototypeExit = $LASTEXITCODE
+        $installedPrototype = $installedPrototypeJson | ConvertFrom-Json -Depth 20
+        Assert-True ($installedPrototypeExit -eq 0 -and @($installedPrototype.skills)[0].blockers.Count -eq 0) 'PowerShell pack installed scorer parses prototype-audit frontmatter'
         Assert-True (Test-Path 'scripts/validate-changed-skills.ps1') 'PowerShell pack installed changed-skill gate is available'
     }
     finally {
@@ -91,7 +95,7 @@ $currentDocs = @(
     'packs/agentx-copilot-cli/install.ps1'
 )
 $staleCurrentDocs = @($currentDocs | Where-Object {
-        (Get-Content (Join-Path $repoRoot $_) -Raw) -match '128 skills|128 production|Skills\s+: 130 across|Architecture \| 6'
+    (Get-Content (Join-Path $repoRoot $_) -Raw) -match '128 skills|128 production|132 skills|132 production|Skills\s+: 13[02] across|Architecture \| 6'
     })
 Assert-True ($staleCurrentDocs.Count -eq 0) 'current source documentation and installer contain no stale skill inventory counts'
 

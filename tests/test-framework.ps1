@@ -252,6 +252,31 @@ Assert-FileExists ".github/skills/ai-systems/ai-agent-development/SKILL.md" "AI 
 # Verify Skills.md count matches
 Assert-FileContains "Skills.md" "$skillCount skills across" "Skills.md skill count matches actual ($skillCount)"
 
+# Verify Impeccable integration contract
+Assert-FileExists ".github/skills/design/impeccable-integration/SKILL.md" "Impeccable integration skill"
+Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" 'name: "impeccable-integration"' "Impeccable bridge does not collide with upstream skill name"
+Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" "npm exec --offline -- impeccable detect --json" "Impeccable detector uses the pinned project-local binary"
+Assert-FileNotContains ".github/skills/design/impeccable-integration/SKILL.md" '(?m)^\s*(?:\$\s*)?npx\s+impeccable' "Impeccable integration has no executable bare npx command"
+Assert-FileContains ".github/agents/ux-designer.agent.md" "Read PRD -> Design Language -> Design Research" "UX Designer runs design language before design research"
+Assert-FileContains ".github/skills/design/prototype-audit/SKILL.md" "Pass 0: Design-language conformance" "Prototype audit runs deterministic design-language pass first"
+Assert-FileContains ".github/skills/design/prototype-audit/SKILL.md" '(?s)## Output.*?- Status: PASS \| FIXED \| BLOCKED \| DEGRADED.*?## Loop contract' "Prototype audit output supports the DEGRADED state"
+Assert-FileNotContains ".github/skills/design/prototype-audit/SKILL.md" "See the impeccable skill" "Prototype audit references the renamed integration explicitly"
+Assert-FileContains ".github/skills/design/anti-slop/SKILL.md" "T2, T3, T8, T10" "Anti-slop retains AgentX-only fabrication and emoji tells"
+Assert-FileContains "NOTICE" "\.github/skills/design/impeccable-integration/SKILL\.md" "NOTICE points to the Impeccable integration skill"
+Assert-FileNotContains "NOTICE" "\.github/skills/design/impeccable/SKILL\.md" "NOTICE has no stale Impeccable skill path"
+Assert-FileContains "Skills.md" "Prototype Build\|impeccable-integration->" "Prototype workflow uses the non-colliding Impeccable integration id"
+Assert-FileContains "vscode-extension/.github/Skills.md" "Prototype Build\|impeccable-integration->" "Bundled prototype workflow uses the non-colliding integration id"
+Assert-FileContains ".github/templates/UX-TEMPLATE.md" "## 0\. Design Language" "UX template records design language before design work"
+Assert-FileContains ".github/templates/UX-TEMPLATE.md" "Detector Status.*PASS \| BLOCKED \| DEGRADED" "UX template records detector or fallback status"
+Assert-FileContains ".github/templates/UX-TEMPLATE.md" "Ran: T1-T10 \+ Honest Placeholders \+ axe \+ Pass 9 critique" "UX template records the complete DEGRADED fallback"
+Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" "Ran: T1-T10 \+ Honest Placeholders \+ axe \+ Pass 9 critique" "Impeccable integration records the complete DEGRADED fallback"
+Assert-FileContains ".github/agents/ux-designer.agent.md" "PRODUCT.md and DESIGN.md are cited" "UX exit gate requires design-language evidence"
+Assert-FileExists "vscode-extension/.github/agentx/skills/design/impeccable-integration/SKILL.md" "Bundled Impeccable integration skill"
+Assert-FileContains "vscode-extension/package.json" "\.github/agentx/skills/design/impeccable-integration/SKILL\.md" "VS Code contributes the Impeccable integration skill"
+$prototypeAuditScoreJson = & pwsh -NoProfile -File (Join-Path $script:root "scripts/score-skill.ps1") -SkillPath (Join-Path $script:root ".github/skills/design/prototype-audit/SKILL.md") -Json 2>$null | Out-String
+$prototypeAuditScore = $prototypeAuditScoreJson | ConvertFrom-Json -Depth 20
+Assert-True ($LASTEXITCODE -eq 0 -and @($prototypeAuditScore.skills)[0].blockers.Count -eq 0) "Prototype audit frontmatter passes the real YAML-backed skill scorer"
+
 # Verify new skills and instructions
 Assert-FileExists ".github/skills/ai-systems/cognitive-architecture/SKILL.md" "Cognitive Architecture skill"
 Assert-FileExists ".github/skills/ai-systems/cognitive-architecture/scripts/scaffold-cognitive.py" "Cognitive scaffold script"

@@ -213,7 +213,7 @@
   },
   "capabilities": {
     "agentOrchestration": "Copilot CLI agent definitions with handoffs and body instructions",
-    "skillLibrary": "132 production code skills across 14 categories",
+    "skillLibrary": "133 production code skills across 14 categories",
     "instructionFiles": "7 auto-applied instruction files for language-specific patterns",
     "promptTemplates": "23 reusable prompt templates for common workflows",
     "cliUtilities": "Workspace wrapper scripts plus a bundled hidden runtime for issue tracking, loop management, and workflow",

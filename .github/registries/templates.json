@@ -1,6 +1,6 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-07-15T07:56:43Z",
+  "generated": "2026-08-27T18:09:23Z",
   "source": ".github/templates/*.md",
   "totalCount": 15,
   "templates": [
@@ -366,6 +366,7 @@
       ],
       "sections": [
         "Table of Contents",
+        "0. Design Language",
         "1. Overview",
         "2. Design Research & Posture",
         "3. User Research",

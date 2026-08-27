@@ -1,4 +1,4 @@
-description: 'Compressed skill index for AI agents. 132 skills across 14 categories. Load only relevant skills per task.'
+description: 'Compressed skill index for AI agents. 133 skills across 14 categories. Load only relevant skills per task.'
 
 # Production Code Skills Index
 
@@ -10,7 +10,7 @@ description: 'Compressed skill index for AI agents. 132 skills across 14 categor
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 132 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 133 skills. Use Quick Reference below.
 
 ---
 
@@ -79,7 +79,8 @@ description: 'Compressed skill index for AI agents. 132 skills across 14 categor
 | **C / Systems Programming** | [C](agentx/skills/languages/c/SKILL.md), [Security](agentx/skills/architecture/security/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Code Review](agentx/skills/development/code-review/SKILL.md) |
 | **C++ / Native Applications** | [C++](agentx/skills/languages/cpp/SKILL.md), [Performance & Scalability](agentx/skills/architecture/performance/SKILL.md), [Testing](agentx/skills/development/testing/SKILL.md), [Code Review](agentx/skills/development/code-review/SKILL.md) |
 | **UX/UI Design** | [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](agentx/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Frontend/UI](agentx/skills/design/frontend-ui/SKILL.md) |
-| **UI Slop Prevention (before emitting any UI)** | [Anti-Slop](agentx/skills/design/anti-slop/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md) |
+| **Design Language for a Target App** | [Impeccable Integration](agentx/skills/design/impeccable-integration/SKILL.md), [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [Brand Spec Extraction](agentx/skills/design/brand-spec-extraction/SKILL.md), [Anti-Slop](agentx/skills/design/anti-slop/SKILL.md) |
+| **UI Slop Prevention (before emitting any UI)** | [Impeccable Integration](agentx/skills/design/impeccable-integration/SKILL.md), [Anti-Slop](agentx/skills/design/anti-slop/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md) |
 | **Brand Spec from URL / Screenshot** | [Brand Spec Extraction](agentx/skills/design/brand-spec-extraction/SKILL.md), [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [Anti-Slop](agentx/skills/design/anti-slop/SKILL.md), [Accessibility](agentx/skills/design/accessibility/SKILL.md) |
 | **UX Working Prototype** | [Design System Reasoning](agentx/skills/design/design-system-reasoning/SKILL.md), [UX/UI Design](agentx/skills/design/ux-ui-design/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md), [Working Prototype App](agentx/skills/design/working-prototype-app/SKILL.md) |
 | **UX Prototype Validation (a11y, axe, WCAG)** | [Accessibility](agentx/skills/design/accessibility/SKILL.md), [Prototype Audit](agentx/skills/design/prototype-audit/SKILL.md), [Browser Automation](agentx/skills/development/browser-automation/SKILL.md), [Prototype Craft](agentx/skills/design/prototype-craft/SKILL.md) |
@@ -102,7 +103,7 @@ description: 'Compressed skill index for AI agents. 132 skills across 14 categor
 
 ---
 
-## Skills Directory (132 skills -- pipe-delimited)
+## Skills Directory (133 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -202,6 +203,7 @@ ai|agent-memory|agentx/skills/ai-systems/agent-memory-systems/SKILL.md|mem0,Zep,
 ai|iterative-retrieval|agentx/skills/ai-systems/iterative-retrieval/SKILL.md|subagent,scoped-reads,progressive-context,citation
 design|design-system-reasoning|agentx/skills/design/design-system-reasoning/SKILL.md|design-system,art-direction,tokens,visual-language,anti-patterns,ui-direction,theme-presets,scaffold-theme
 design|anti-slop|agentx/skills/design/anti-slop/SKILL.md|anti-slop,AI-slop,purple-gradients,honest-placeholders,forbidden-tells,T1-T10,placeholder-policy
+design|impeccable-integration|agentx/skills/design/impeccable-integration/SKILL.md|impeccable,design-language,DESIGN.md,PRODUCT.md,detector,59-rules,slop-detection,three-state-gate,DEGRADED,waivers
 design|brand-spec-extraction|agentx/skills/design/brand-spec-extraction/SKILL.md|brand-spec,brand-extraction,5-step-protocol,palette-extraction,voice-extraction,brand-from-url,brand-from-screenshot
 design|ux-ui|agentx/skills/design/ux-ui-design/SKILL.md|wireframes,user-flows,HTML/CSS,a11y
 design|prototype-craft|agentx/skills/design/prototype-craft/SKILL.md|visual-polish,color-palette,typography,CSS-craft,Tailwind,transitions,elevation,animation-recipes,framer-motion
@@ -281,7 +283,7 @@ These rules are always active. They are embedded here so agents never skip them.
 ```
 React Component|ux-ui->react->frontend-ui->testing->code-review
 Design System|design-system-reasoning->ux-ui->prototype-craft->frontend-ui
-Prototype Build|design-system-reasoning->ux-ui->prototype-craft->working-prototype-app->accessibility->prototype-audit
+Prototype Build|impeccable-integration->design-system-reasoning->ux-ui->prototype-craft->working-prototype-app->accessibility->prototype-audit
 Prototype Validation|accessibility->prototype-audit->usability-heuristics->visual-regression->browser-automation
 Heuristic Eval|usability-heuristics->content-design->prototype-audit->browser-automation
 Visual Regression Setup|visual-regression->browser-automation->e2e-testing->prototype-audit
@@ -344,5 +346,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 132 skills (arch:8, dev:25, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:12, test:6, domain:7, product:1, diagrams:1, low-code:13)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 133 skills (arch:8, dev:25, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:13, test:6, domain:7, product:1, diagrams:1, low-code:13)
 

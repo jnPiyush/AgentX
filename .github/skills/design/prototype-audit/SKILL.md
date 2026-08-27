@@ -1,11 +1,11 @@
 ---
 name: "prototype-audit"
-description: 'Mechanically audit a UX prototype or front-end build through six self-healing passes -- accessibility, performance, content, responsive layout, routes, and build hygiene. Use before declaring any prototype review-ready, or whenever the prototype-auditor sub-agent is invoked. Each pass follows check -> diagnose -> fix -> verify with a maximum of three fix cycles per pass before escalating.'
+description: 'Mechanically audit a UX prototype or front-end build through ten self-healing passes -- deterministic design-language conformance, accessibility, performance, content, responsive layout, routes, build hygiene, usability heuristics, visual regression, and anti-slop critique. Use before declaring any prototype review-ready, or whenever the prototype-auditor sub-agent is invoked. Each pass follows check -> diagnose -> fix -> verify with a maximum of three fix cycles per pass before escalating.'
 metadata:
-  author: "AgentX"
-  version: "1.0.0"
-  created: "2026-05-12"
-  updated: "2026-05-12"
+   author: "AgentX"
+   version: "1.0.0"
+   created: "2026-05-12"
+   updated: "2026-08-27"
 compatibility:
   agents: ["ux-designer", "reviewer", "prototype-auditor", "engineer"]
   frameworks: ["html-css", "react", "vue", "tailwind"]
@@ -19,9 +19,11 @@ compatibility:
 ## Inputs
 
 - Prototype root directory (static HTML folder or SPA `dist/`).
-- A live preview URL or `npx serve` over the build output.
+- A live preview URL or a pinned project-local preview server over the build
+   output (for example, `npm exec --offline -- serve`).
 - Issue number for the report filename.
 - The `accessibility/SKILL.md` checklist as ground truth for Pass 1.
+- `DESIGN.md` and the project-local Impeccable detector for Pass 0, when present.
 
 ## Output
 
@@ -29,7 +31,7 @@ compatibility:
 
 ```markdown
 ## Pass <N>: <Name>
-- Status: PASS | FIXED | BLOCKED
+- Status: PASS | FIXED | BLOCKED | DEGRADED
 - Cycles used: 0..3
 - Findings:
   - <finding> -- <fix applied or escalation reason>
@@ -46,6 +48,36 @@ Each pass runs at most three fix cycles:
 4. **Verify** -- re-run the check. Stop on PASS. If still failing after three cycles, mark BLOCKED and continue to the next pass.
 
 A BLOCKED finding does not stop the audit; it surfaces in the report and blocks the eventual review approval.
+
+## Pass 0: Design-language conformance (deterministic)
+
+Reference: `design/impeccable-integration/SKILL.md`.
+
+Runs first, before any LLM judgement, so later passes critique a surface that
+already conforms to its own design language.
+
+Tool: the project-local Impeccable detector (pinned devDependency, not bare
+`npx`).
+
+```bash
+npm exec --offline -- impeccable detect --json <prototype-root>
+```
+
+Status for this pass is `PASS`, `FIXED`, `BLOCKED`, or `DEGRADED`:
+
+- Exit `0`, or all findings waived -> `PASS`
+- Exit `2`, findings fixed within three cycles -> `FIXED`
+- Exit `2`, findings unresolved and unwaived -> `BLOCKED`
+- Detector could not run -> `DEGRADED`, and the audit continues on AgentX-only
+  checks with the reason recorded verbatim
+
+`DEGRADED` is not a pass. It records that 59 deterministic rules and the 4
+design-system conformance rules did not run, so a reader can tell which bar
+this prototype was actually held to.
+
+Waivers go through the `anti-slop` Waiver Protocol, never through
+`impeccable ignores` alone. See
+[Impeccable Integration](../impeccable-integration/SKILL.md) for the rule.
 
 ## Pass 1: Accessibility
 
@@ -224,7 +256,7 @@ on any axis is a P0 hard-gate finding and the prototype must be revised
 before Pass 9 is re-run. Anything at 3/5 is a P1 (should-fix). 4/5 and 5/5
 are passing.
 
-**Severity convention** (applies to all 9 passes):
+**Severity convention** (applies to all 10 passes):
 
 - **P0** -- hard gate. Prototype is not review-ready until resolved.
 - **P1** -- should-fix before review unless explicitly waived in the audit
@@ -244,15 +276,20 @@ are passing.
 4. **Specificity** -- Does the prototype use real (or honestly-placeholder)
    content and product-specific concepts? Lorem ipsum + stock metrics = 1.
    Product-true content with cited placeholders = 5.
-5. **Restraint** -- Did the build avoid forbidden tells (purple-teal-pink
-   gradients, generic emoji icons, glassmorphism on body text, AI-voiced
-   microcopy, aurora blobs, fake trust badges)? See `anti-slop` skill for
-   the full T1-T10 list. Any T-violation present unwaived = 1. None
-   present = 5.
+5. **Restraint** -- Did the build avoid the tells Pass 0 cannot see? Scope
+   this to the AgentX-retained set: emoji as iconography (T2), fabricated
+   metrics and testimonials (T3), unearned trust badges (T8), and
+   emoji-prefixed headings (T10), plus judgement-only glassmorphism,
+   hierarchy, and composition concerns. Visual tells with a deterministic
+   rule, including extreme radius and hand-drawn SVG, are Pass 0's job -- do
+   not re-litigate them here. Any retained violation present unwaived = 1.
+   None present = 5.
 
 ### Procedure
 
-1. Run anti-slop detection (T1-T10) and honest-placeholders check.
+1. Confirm Pass 0 status. Run the AgentX-retained tell check (T2, T3, T8,
+   T10) and the honest-placeholders check. If Pass 0 was `DEGRADED`, also
+   run the full T1-T10 list, since no deterministic rule covered them.
 2. Score each of the five dimensions 1-5 with a one-line justification
    each.
 3. If a brand-spec exists for the issue, score against the brand-spec
@@ -265,51 +302,14 @@ Maximum three revision cycles before escalating to the user.
 
 ## Reporting template
 
-The auditor writes `docs/artifacts/reviews/PROTOTYPE-AUDIT-<issue>.md` using this skeleton:
-
-```markdown
-# Prototype Audit -- Issue <issue>
-
-Prototype: <path or URL>
-Auditor: prototype-auditor
-Date: <yyyy-mm-dd>
-
-## Summary
-- Passes: <n>/9
-- Fixed automatically: <count>
-- Blocked: <count>
-
-## Pass 1: Accessibility
-...
-## Pass 2: Performance
-...
-## Pass 3: Content
-...
-## Pass 4: Responsive
-...
-## Pass 5: Routes
-...
-## Pass 6: Build hygiene
-...
-## Pass 7: Usability heuristics
-...
-## Pass 8: Visual regression
-...
-## Pass 9: Anti-slop self-critique
-- Philosophy: <score>/5 -- <one-line justification>
-- Hierarchy: <score>/5 -- <one-line justification>
-- Execution: <score>/5 -- <one-line justification>
-- Specificity: <score>/5 -- <one-line justification>
-- Restraint: <score>/5 -- <one-line justification>
-- Forbidden tells found: <T-numbers or none>
-
-## Blocked findings (escalate)
-- <finding> -- owner: <agent> -- next action: <text>
-```
+Write `docs/artifacts/reviews/PROTOTYPE-AUDIT-<issue>.md` using the
+[prototype audit report template](references/report-template.md).
 
 ## Done Criteria
 
-- All passes have a status of PASS or FIXED, or the BLOCKED findings are explicitly accepted in the review document.
+- All passes have a status of PASS or FIXED; Pass 0 may be DEGRADED only when
+   the report records the reason and the full AgentX fallback checks, and any
+   BLOCKED findings must be explicitly accepted in the review document.
 - No severity 3 or 4 usability finding (Pass 7) remains open without a documented waiver.
 - Auto-fix recipes were applied through the prototype source, not by patching the build output.
 - Verification step recorded for every fix.

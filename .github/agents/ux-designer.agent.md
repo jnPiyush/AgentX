@@ -7,7 +7,8 @@ reasoning:
   mode: adaptive
   level: high
 constraints:
-  - "MUST follow pipeline phases in prescribed sequence: Read PRD -> Design Research -> UX Spec -> HTML/CSS Prototypes -> Self-Review; MUST NOT start prototyping before the UX Spec is documented; MUST NOT handoff before prototypes exist at docs/ux/prototypes/ and are WCAG 2.1 AA compliant"
+  - "MUST establish the design language BEFORE any other design work: read `.github/skills/design/impeccable-integration/SKILL.md`, ensure the target app has PRODUCT.md and DESIGN.md, and cite them in the UX Spec; MUST NOT emit wireframes, prototypes, or HTML while the design language is undefined"
+  - "MUST follow pipeline phases in prescribed sequence: Read PRD -> Design Language -> Design Research -> UX Spec -> HTML/CSS Prototypes -> Self-Review; MUST NOT start prototyping before the UX Spec is documented; MUST NOT handoff before prototypes exist at docs/ux/prototypes/ and are WCAG 2.1 AA compliant"
   - "MUST read the PRD before starting any design work"
   - "MUST read `.github/skills/design/ux-ui-design/SKILL.md` before designing"
   - "MUST read `.github/skills/design/prototype-craft/SKILL.md` for visual polish, color, typography, and CSS techniques"
@@ -32,6 +33,8 @@ constraints:
   - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
+    - "PRODUCT.md"
+    - "DESIGN.md"
     - "docs/ux/**"
     - "docs/assets/**"
     - "GitHub Projects Status (move to Ready)"
@@ -77,10 +80,11 @@ Design user interfaces using the AgentX UX methodology: Empathize, Define, Ideat
 - Identify all stories with `needs:ux` label
 - Understand user flows and requirements
 
-### 1a. Brand & Direction Clarification (MANDATORY before any UI work)
+### 1a. Design Language (MANDATORY -- first phase, before any UI work)
 
-UX MUST NOT emit wireframes, prototypes, or HTML in turn 1 when brand or
-visual direction is undefined. Two branches:
+The design language is the UX Designer's first responsibility. UX MUST NOT
+emit wireframes, prototypes, or HTML in turn 1 when brand or visual direction
+is undefined. Two branches:
 
 **Branch A: User supplied a reference (URL, screenshot, deck, existing
 product).** Follow the [Brand Spec Extraction](../skills/design/brand-spec-extraction/SKILL.md)
@@ -107,6 +111,18 @@ Reference the five starter directions in
 D5 Soft Warm) and offer them as picks. Use the 5-axis selection rubric to
 recommend one. Only proceed to step 2 once the user has answered the form
 or accepted a recommended direction.
+
+**Both branches converge on the same durable artifacts.** Whichever branch
+ran, codify the result into the target app's `PRODUCT.md` (audience, mode,
+voice, anti-references) and `DESIGN.md` (palette, type ramp, radii,
+components) via `/impeccable init`, then cite both from the UX Spec. Without
+this step a chosen direction exists only in chat and cannot be conformed to
+or checked later. See [Impeccable Integration](../skills/design/impeccable-integration/SKILL.md) for
+install scope, the three-state detector gate, and the waiver rule.
+
+If the detector cannot run, continue on AgentX-only checks and record the
+`DEGRADED` block in the UX Spec. A recorded fallback is acceptable; a silent
+one is not.
 
 ### 2. Deep Design Research (MANDATORY -- research before designing)
 
@@ -174,6 +190,7 @@ Create interactive prototypes at `docs/ux/prototypes/`:
 
 Before handoff, verify with fresh eyes:
 
+- [ ] **Design language evidence (MANDATORY, FIRST)**: PRODUCT.md and DESIGN.md are cited in the UX Spec; detector status is recorded as PASS, BLOCKED, or DEGRADED; BLOCKED prevents handoff and DEGRADED includes the AgentX-only fallback record
 - [ ] All user stories with `needs:ux` have designs
 - [ ] All user flows complete (happy path + error states)
 - [ ] Mobile, tablet, desktop variants specified
@@ -211,8 +228,9 @@ Update Status to `Ready` in GitHub Projects.
 
 | Task | Skill |
 |------|-------|
+| Design language for the target app: PRODUCT.md, DESIGN.md, detector gate (MANDATORY, FIRST) | [Impeccable Integration](../skills/design/impeccable-integration/SKILL.md) |
 | Brand clarification form, extracting brand from URL/screenshot | [Brand Spec Extraction](../skills/design/brand-spec-extraction/SKILL.md) |
-| Forbidden visual tells T1-T10, honest placeholders (MANDATORY before any UI emission) | [Anti-Slop](../skills/design/anti-slop/SKILL.md) |
+| Retained tells T2/T3/T8/T10, honest placeholders, waiver protocol (MANDATORY before any UI emission) | [Anti-Slop](../skills/design/anti-slop/SKILL.md) |
 | Defining posture, archetype, trust cues; visual directions D1-D5 | [Design System Reasoning](../skills/design/design-system-reasoning/SKILL.md) |
 | Wireframing, prototyping, methodology | [UX/UI Design](../skills/design/ux-ui-design/SKILL.md) |
 | Visual polish, color, typography, CSS craft | [Prototype Craft](../skills/design/prototype-craft/SKILL.md) |
@@ -234,6 +252,7 @@ Update Status to `Ready` in GitHub Projects.
 
 ### Exit
 
+- PASS PRODUCT.md and DESIGN.md are cited in the UX Spec; detector status and evidence are recorded; BLOCKED prevents handoff and DEGRADED includes the AgentX-only fallback record
 - PASS UX specs created for all stories with `needs:ux`
 - PASS HTML/CSS prototypes exist at `docs/ux/prototypes/`
 - PASS Prototypes are interactive, responsive, WCAG 2.1 AA compliant
@@ -272,7 +291,7 @@ Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Ka
 
 ## Role-Specific Done Criteria
 
-Wireframes/user flows cover key journeys; prototype renders the primary experience; WCAG 2.1 AA checks are addressed; component inventory and content states are documented; and visual/runtime evidence is captured when UI is built.
+PRODUCT.md and DESIGN.md are cited with detector or recorded DEGRADED evidence; wireframes/user flows cover key journeys; prototype renders the primary experience; WCAG 2.1 AA checks are addressed; component inventory and content states are documented; and visual/runtime evidence is captured when UI is built.
 
 ## Delivery Report (MANDATORY)
 

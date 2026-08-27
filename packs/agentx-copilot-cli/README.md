@@ -73,7 +73,7 @@ your-project/
       internal/
         github-ops.agent.md
         ...
-    skills/                    # 132 skills across 14 categories
+    skills/                    # 133 skills across 14 categories
       architecture/
       development/
       languages/

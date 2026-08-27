@@ -5,7 +5,7 @@ metadata:
   author: "AgentX"
   version: "1.0.0"
   created: "2026-02-04"
-  updated: "2026-02-04"
+  updated: "2026-08-27"
 compatibility:
   agents: ["ux-designer", "engineer", "reviewer", "prototype-auditor"]
   frameworks: ["html-css", "tailwind", "react", "vue"]
@@ -37,6 +37,30 @@ Source: Anti-AI-slop blacklist and honest-placeholders rule adapted from
 These are the patterns that mark a UI as AI-generated. Each is treated as a
 P0 finding -- the audit BLOCKS until the tell is removed or an explicit
 waiver is recorded with rationale.
+
+### Ownership: delegated vs retained
+
+Five tells now have a deterministic rule in the Impeccable detector, which runs
+as Pass 0 of `prototype-audit` before any LLM judgement. T6 is delegated to
+Impeccable's judgement-based critique. Four tells stay AgentX-owned because
+they concern fabrication and emoji rather than visual style.
+
+| Tell | Owner | Deterministic rule |
+|------|-------|--------------------|
+| T1 purple-teal-pink gradient | delegated | AI color palette |
+| T4 hand-drawn cartoon humans | delegated | Amateurish hand-drawn SVG, Shape-assembled illustration |
+| T5 rounded-2xl everything | delegated | Extreme border-radius, Radius outside DESIGN.md |
+| T6 glassmorphism on text | delegated judgement | Glassmorphism everywhere |
+| T7 aurora background blobs | delegated | Radial halo, Decorative spotlight glow |
+| T9 AI-voiced microcopy | delegated | Buzzword, Aphoristic cadence, Em-dash overuse, Theater framing |
+| **T2 generic system emoji** | **AgentX** | none upstream |
+| **T3 fake metrics and testimonials** | **AgentX** | none upstream |
+| **T8 unearned trust badges** | **AgentX** | none upstream |
+| **T10 emoji-prefixed headings** | **AgentX** | none upstream |
+
+The delegated descriptions below are retained deliberately. When Pass 0 is
+`DEGRADED` the detector did not run, and the full T1-T10 list is the fallback
+check. Do not delete them.
 
 ### T1. Purple-teal-pink gradient hero
 
@@ -169,7 +193,9 @@ the next step (find the real number) instead of skipping it.
 For each emitted UI surface, scan in this order:
 
 1. Open the page. Take a screenshot.
-2. Run the forbidden-tells list T1-T10. Each hit is one finding.
+2. Check Pass 0 status. If it passed, run only the AgentX-retained tells
+   (T2, T3, T8, T10). If it was `DEGRADED`, run the full T1-T10 list --
+   nothing deterministic covered them. Each hit is one finding.
 3. Run the honest-placeholders check: list every number, name, logo,
    testimonial, avatar, and metric on the page. For each, classify as
    real-and-cited, em-dash, labeled-grey-block, or invented. Each
@@ -180,24 +206,45 @@ Record findings under Pass 9 of the prototype-audit report.
 
 ## Waiver Protocol
 
+This protocol is the authoritative waiver path for design findings, including
+findings raised by the Impeccable detector. `impeccable ignores` and inline
+`impeccable-disable` comments MUST NOT be used as the primary record -- a rule
+silenced upstream never reaches the audit report or the reviewer.
+
 A forbidden tell may be retained only when:
 
 - The brand-spec extracted from a real source explicitly mandates it
   (e.g. the company's actual brand uses a purple-pink gradient logo).
 - An accessibility check still passes.
-- The waiver is written into the project DESIGN.md Section 9
-  (Anti-Patterns) as an explicit allow with a citation.
+- The waiver is recorded in the prototype-audit report with the rule id,
+  the rationale, and the citation that authorizes it.
 
 Without those three conditions, the finding stands.
+
+**Where waivers live.** Record them in
+`docs/artifacts/reviews/PROTOTYPE-AUDIT-<issue>.md`, not in the target app's
+root `DESIGN.md`. Impeccable regenerates that file from code on
+`/impeccable document`, so hand-written waivers placed there are silently
+lost. The AgentX design-system document from
+`.github/templates/DESIGN-SYSTEM-TEMPLATE.md` Section 9 remains the right home
+for durable project-level anti-pattern decisions; the two files are distinct
+despite the similar name.
+
+An Impeccable ignore may mirror an existing AgentX waiver so repeat scans stay
+quiet. When it does, cite the AgentX waiver in its `--reason` string. A rule
+that is always waived is a `DESIGN.md` bug -- fix the design language rather
+than accumulating ignores.
 
 ## Self-Review
 
 Before declaring an anti-slop pass complete:
 
-- [ ] All ten tells were checked, not just the ones the eye caught.
+- [ ] Pass 0 status was checked before deciding which tells to run.
+- [ ] The AgentX-retained tells (T2, T3, T8, T10) were checked explicitly.
 - [ ] Every number, name, and logo on the page was classified.
 - [ ] Findings are recorded with the visible symptom and the replacement.
-- [ ] Waivers cite the DESIGN.md section that authorizes them.
+- [ ] Waivers live in the audit report and cite what authorizes them.
+- [ ] No Impeccable ignore exists without a matching AgentX waiver.
 
 ## References
 
@@ -205,4 +252,5 @@ Before declaring an anti-slop pass complete:
 - `.github/skills/design/design-system-reasoning/references/visual-directions.md` -- concrete direction palettes to replace defaults.
 - `.github/skills/design/content-design/SKILL.md` -- microcopy rules referenced by T9.
 - `.github/skills/design/prototype-audit/SKILL.md` -- Pass 9 invokes this skill.
+- `.github/skills/design/impeccable-integration/SKILL.md` -- Pass 0 detector that covers the delegated tells.
 - `.github/templates/DESIGN-SYSTEM-TEMPLATE.md` Section 9 -- project-specific anti-patterns.

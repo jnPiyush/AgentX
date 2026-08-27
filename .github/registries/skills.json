@@ -1,8 +1,8 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-08-17T09:23:33Z",
+  "generated": "2026-08-27T18:09:23Z",
   "source": ".github/skills/**/SKILL.md",
-  "totalCount": 132,
+  "totalCount": 133,
   "countsByCategory": [
     {
       "category": "ai-systems",
@@ -18,7 +18,7 @@
     },
     {
       "category": "design",
-      "count": 12
+      "count": 13
     },
     {
       "category": "development",
@@ -420,11 +420,18 @@
       "description": "Build frontend UIs with HTML5, CSS3, and Tailwind CSS following accessibility and performance best practices. Use when creating responsive layouts, styling with Tailwind CSS, implementing accessible forms, optimizing frontend performance, or building common UI patterns."
     },
     {
+      "id": "design/impeccable-integration",
+      "name": "impeccable-integration",
+      "category": "design",
+      "path": ".github/skills/design/impeccable-integration/SKILL.md",
+      "description": "Drive the Impeccable design language for a target app -- PRODUCT.md and DESIGN.md authoring, the 23-command intervention vocabulary, and the 59-rule deterministic detector wired as a three-state gate (PASS / BLOCKED / DEGRADED). Use when defining the design language for a target app, or when running design-language conformance on a prototype or shipped UI."
+    },
+    {
       "id": "design/prototype-audit",
       "name": "prototype-audit",
       "category": "design",
       "path": ".github/skills/design/prototype-audit/SKILL.md",
-      "description": "Mechanically audit a UX prototype or front-end build through six self-healing passes -- accessibility, performance, content, responsive layout, routes, and build hygiene. Use before declaring any prototype review-ready, or whenever the prototype-auditor sub-agent is invoked. Each pass follows check -> diagnose -> fix -> verify with a maximum of three fix cycles per pass before escalating."
+      "description": "Mechanically audit a UX prototype or front-end build through ten self-healing passes -- deterministic design-language conformance, accessibility, performance, content, responsive layout, routes, build hygiene, usability heuristics, visual regression, and anti-slop critique. Use before declaring any prototype review-ready, or whenever the prototype-auditor sub-agent is invoked. Each pass follows check -> diagnose -> fix -> verify with a maximum of three fix cycles per pass before escalating."
     },
     {
       "id": "design/prototype-craft",

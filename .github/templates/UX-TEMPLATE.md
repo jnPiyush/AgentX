@@ -25,6 +25,7 @@ inputs:
 
 ## Table of Contents
 
+0. [Design Language](#0-design-language)
 1. [Overview](#1-overview)
 2. [Design Research & Posture](#2-design-research--posture)
 3. [User Research](#3-user-research)
@@ -45,6 +46,28 @@ inputs:
 ---
 
 > **Diagram policy**: Mermaid is the default format for all diagrams in this UX design (user flows, state diagrams, journey maps). Use PlantUML, draw.io, Structurizr, or Graphviz only when Mermaid cannot express the intent, a Visio (.vsdx) round-trip is required, or the user explicitly requests another format. See the [diagram-as-code skill](../skills/diagrams/diagram-as-code/SKILL.md). When falling back, record the reason in a header comment.
+
+---
+
+## 0. Design Language
+
+- **Product Context**: `PRODUCT.md`
+- **Visual System**: `DESIGN.md`
+- **Detector Status**: PASS | BLOCKED | DEGRADED
+- **Detector Evidence**: {Command, exit code, and audit report link}
+- **Waivers**: {None, or links to accepted AgentX waivers}
+
+`BLOCKED` prevents prototype handoff. If the detector cannot run, record the
+fallback below; `DEGRADED` is not equivalent to `PASS`.
+
+### DEGRADED Record (if applicable)
+
+```text
+Design language check: DEGRADED (AgentX-only)
+Reason: <no network | binary unresolved | node <22.18 | other>
+Ran: T1-T10 + Honest Placeholders + axe + Pass 9 critique
+Not run: 59 deterministic rules, 4 design-system conformance rules
+```
 
 ---
 
