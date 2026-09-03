@@ -609,9 +609,9 @@ $architectClarifyTargets = @(Resolve-ClarificationTargetList -agentDef $architec
 Assert-True ($architectClarifyTargets -contains 'product-manager') 'Resolve-ClarificationTargetList maps Architect collaborators to runtime agent IDs'
 
 $engineerDef = Read-AgentDef -agentName 'engineer' -root $script:repoRoot
-Assert-Equal $engineerDef.constraints.Count 22 'Read-AgentDef stops constraints at the next top-level key'
-Assert-Equal $engineerDef.tools.Count 11 'Read-AgentDef stops tools at the next top-level key'
-Assert-Equal $engineerDef.agents.Count 8 'Read-AgentDef parses only collaborator entries as agents'
+Assert-Equal $engineerDef.constraints.Count 23 'Read-AgentDef stops constraints at the next top-level key'
+Assert-Equal $engineerDef.tools.Count 10 'Read-AgentDef stops tools at the next top-level key'
+Assert-Equal $engineerDef.agents.Count 9 'Read-AgentDef parses only collaborator entries as agents'
 Assert-Equal $engineerDef.canModify.Count 5 'Read-AgentDef parses only can_modify boundary entries'
 Assert-Equal $engineerDef.cannotModify.Count 4 'Read-AgentDef parses only cannot_modify boundary entries'
 Assert-True (-not ($engineerDef.constraints -contains 'AgentX Architect')) 'Read-AgentDef does not inject collaborators as constraints'

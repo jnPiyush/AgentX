@@ -1,8 +1,8 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-08-27T18:09:23Z",
+  "generated": "2026-08-30T20:51:04Z",
   "source": ".github/skills/**/SKILL.md",
-  "totalCount": 133,
+  "totalCount": 134,
   "countsByCategory": [
     {
       "category": "ai-systems",
@@ -22,7 +22,7 @@
     },
     {
       "category": "development",
-      "count": 25
+      "count": 26
     },
     {
       "category": "diagrams",
@@ -586,6 +586,13 @@
       "category": "development",
       "path": ".github/skills/development/logging-monitoring/SKILL.md",
       "description": "Implement observability patterns including structured logging, log levels, correlation IDs, metrics, and distributed tracing. Use when adding structured logging, implementing correlation IDs for request tracing, configuring metrics collection, setting up distributed tracing, or designing alerting rules."
+    },
+    {
+      "id": "development/no-ai-slop",
+      "name": "no-ai-slop",
+      "category": "development",
+      "path": ".github/skills/development/no-ai-slop/SKILL.md",
+      "description": "Edit prose into clearer, more human writing while preserving the writer's voice, or detect named AI-slop patterns without rewriting. Use when a user asks to remove AI-sounding phrasing, audit prose for formulaic writing, sharpen a draft, or preserve voice during an edit."
     },
     {
       "id": "development/scrub",

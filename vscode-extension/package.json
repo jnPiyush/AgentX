@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "AgentX - Multi-Agent Orchestration",
   "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Fabric Engineer, Power Platform Builder, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
-  "version": "9.1.0",
+  "version": "9.2.0",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -589,6 +589,39 @@
         "path": "./.github/agentx/agents/fabric-engineer.agent.md"
       },
       {
+        "path": "./.github/agentx/agents/internal/ado-ops.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/ado-prd-to-wit.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/architecture-reviewer.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/diagram-specialist.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/eval-specialist.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/functional-reviewer.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/github-ops.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/ops-monitor.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/prompt-engineer.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/prototype-auditor.agent.md"
+      },
+      {
+        "path": "./.github/agentx/agents/internal/rag-specialist.agent.md"
+      },
+      {
         "path": "./.github/agentx/agents/power-platform-builder.agent.md"
       },
       {
@@ -935,6 +968,9 @@
       },
       {
         "path": "./.github/agentx/skills/development/logging-monitoring/SKILL.md"
+      },
+      {
+        "path": "./.github/agentx/skills/development/no-ai-slop/SKILL.md"
       },
       {
         "path": "./.github/agentx/skills/development/scrub/SKILL.md"

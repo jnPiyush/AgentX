@@ -4,6 +4,22 @@ description: 'Review code AND auto-apply safe fixes (formatting, imports, naming
 model: GPT-5.6 Sol (copilot)
 user-invocable: true
 disable-model-invocation: true
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   level: high
 constraints:
@@ -41,10 +57,10 @@ tools:
   - usages
   - fetch
   - think
-  - github/*
   - agent
 agents:
   - AgentX Engineer
+  - AgentX GitHub Ops
 ---
 
 # Auto-Fix Reviewer Agent

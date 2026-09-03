@@ -169,12 +169,15 @@ Assert-True ('power-platform-builder' -in $fromAgentIds) 'Handoff schema accepts
 Assert-True ('fabric' -notin $fromAgentIds) 'Handoff schema does not use shortened Fabric alias'
 Assert-True ('power-platform' -notin $fromAgentIds) 'Handoff schema does not use shortened Power Platform alias'
 
-$hookMatch = [regex]::Match(
+$hookMatches = [regex]::Matches(
     $powerPlatformAgent,
     '(?ms)^\s{6}command: >-\r?\n\s{8}(.+?)\r?\n\s{6}timeout:')
-Assert-True $hookMatch.Success 'Power Platform agent declares a PreToolUse command hook'
-if ($hookMatch.Success) {
-    $hookCommand = $hookMatch.Groups[1].Value.Trim()
+$pacHookMatch = @($hookMatches | Where-Object {
+        $_.Groups[1].Value -match 'Power Platform Builder terminal access'
+    } | Select-Object -First 1)
+Assert-True ($pacHookMatch.Count -eq 1) 'Power Platform agent declares its PAC-specific PreToolUse command hook'
+if ($pacHookMatch.Count -eq 1) {
+    $hookCommand = $pacHookMatch[0].Groups[1].Value.Trim()
     $hookInputFile = Join-Path ([IO.Path]::GetTempPath()) "agentx-hook-input-$([guid]::NewGuid().ToString('N')).json"
     try {
         foreach ($blockedCommand in @(

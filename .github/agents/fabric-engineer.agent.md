@@ -3,6 +3,22 @@ name: AgentX Fabric Engineer
 description: 'Build Microsoft Fabric data-platform deliverables: Lakehouse and Warehouse schemas, OneLake shortcuts, Spark notebooks, Data Pipelines, Dataflow Gen2 specifications, medallion data products, data quality, lineage, and operational documentation. Use for type:fabric work. Hands Power BI reports and semantic models to Power BI Analyst, and model or evaluation decisions to Data Scientist.'
 model: Claude Opus 5 (copilot)
 user-invocable: true
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   mode: adaptive
   level: high
@@ -46,7 +62,6 @@ tools:
   - usages
   - fetch
   - think
-  - github/*
   - agent
 agents:
   - AgentX Architect
@@ -54,6 +69,7 @@ agents:
   - AgentX Power BI Analyst
   - AgentX DevOps Engineer
   - AgentX Reviewer
+  - AgentX GitHub Ops
 ---
 
 # Fabric Engineer Agent

@@ -4,12 +4,28 @@ description: 'Deep architecture review of ADRs and Tech Specs across 12 dimensio
 visibility: internal
 model: GPT-5.6 Sol (copilot)
 user-invocable: false
-disable-model-invocation: true
+disable-model-invocation: false
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   level: high
 constraints:
   - "MUST review only ADRs (docs/artifacts/adr/) and Tech Specs (docs/artifacts/specs/) for the issue under review"
-  - "MUST use the canonical template at .github/templates/ARCH-REVIEW-TEMPLATE.md and save the populated report to docs/artifacts/reviews/ARCH-REVIEW-<issue>.md"
+  - "MUST use the canonical template at .github/templates/ARCH-REVIEW-TEMPLATE.md and return a complete populated review to the spawning Architect or Reviewer for persistence"
   - "MUST evaluate every dimension in the 12-point checklist and explicitly mark any dimension as N/A with rationale"
   - "MUST require evidence-of-harm for every finding -- no speculative warnings"
   - "MUST cite the specific ADR/Spec section and line range for every finding"
@@ -22,11 +38,8 @@ constraints:
   - "MUST NOT modify ADRs or Tech Specs -- report findings only"
   - "MUST NOT review code, tests, or implementation files"
   - "MUST NOT propose new architecture options -- only critique existing decisions"
-  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
-  can_modify:
-    - "docs/artifacts/reviews/ARCH-REVIEW-*.md (architecture review reports)"
-    - ".copilot-tracking/reviews/** (working notes)"
+  can_modify: []
   cannot_modify:
     - "docs/artifacts/adr/** (ADRs)"
     - "docs/artifacts/specs/** (Tech Specs)"
@@ -36,15 +49,12 @@ boundaries:
     - ".github/workflows/** (CI/CD pipelines)"
 tools:
   - codebase
-  - editFiles
   - search
   - changes
-  - runCommands
   - problems
   - usages
   - fetch
   - think
-  - github/*
 ---
 
 # Architecture Reviewer Agent
@@ -73,8 +83,9 @@ slides by number/title, and diagrams by named region/component. Extraction failu
 Standalone gates replace AgentX lifecycle gates: documents are extractable; a decision
 and rationale exist; at least one alternative is considered (or excluded with reason);
 NFRs/quality attributes are stated; and a diagram or clear prose component model exists.
-All 12 dimensions and normal severity/evidence rules still apply. Save Markdown to
-`ARCH-REVIEW-<id>.md`, using user id, filename stem, or timestamp in that order.
+All 12 dimensions and normal severity/evidence rules still apply. Return complete
+Markdown for `ARCH-REVIEW-<id>.md`, using user id, filename stem, or timestamp in
+that order; the spawning agent persists it.
 
 ## Frameworks Applied
 
@@ -154,8 +165,8 @@ Before reporting any finding, run these 6 filters:
 Read and populate
 [ARCH-REVIEW-TEMPLATE.md](../../templates/ARCH-REVIEW-TEMPLATE.md) exactly; do not
 duplicate or improvise its structure. For non-trivial designs, populate every
-dimension plus its STRIDE, NFR traceability, and ATAM trade-off tables. Save to the
-authorized review path only.
+dimension plus its STRIDE, NFR traceability, and ATAM trade-off tables. Return the
+complete populated content and intended path to the spawning agent.
 
 ## Self-Review
 
@@ -171,7 +182,7 @@ Before returning findings to the spawning agent:
 - [ ] STRIDE applied to every trust-boundary crossing
 - [ ] Findings ordered Critical -> High -> Medium -> Low
 - [ ] Decision (APPROVED / CHANGES REQUESTED / BLOCKED) is consistent with finding severity
-- [ ] Report saved to `docs/artifacts/reviews/ARCH-REVIEW-<issue>.md`
+- [ ] Complete report content and intended path returned to the spawning agent
 
 ## Skills to Load
 
@@ -188,7 +199,9 @@ Before returning findings to the spawning agent:
 
 ## State Persistence
 
-Save the review report to `docs/artifacts/reviews/ARCH-REVIEW-<issue>.md` for cross-session reference and audit trail. Working notes may live under `.copilot-tracking/reviews/`.
+The spawning Architect or Reviewer saves the returned report to
+`docs/artifacts/reviews/ARCH-REVIEW-<issue>.md` for cross-session reference and
+audit trail.
 
 ## When Blocked
 
@@ -209,7 +222,7 @@ Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Ka
 
 ## Role-Specific Done Criteria
 
-Pre-review gates are evaluated; all 12 architecture dimensions have status; every finding has citation and evidence-of-harm; STRIDE is applied at trust boundaries; severity rubric is followed; and the APPROVED/CHANGES REQUESTED/BLOCKED decision is consistent with findings.
+Pre-review gates are evaluated; all 12 architecture dimensions have status; every finding has citation and evidence-of-harm; STRIDE is applied at trust boundaries; severity rubric is followed; the decision is consistent with findings; and complete report content is returned to the spawning agent.
 
 ## Delivery Report (MANDATORY)
 

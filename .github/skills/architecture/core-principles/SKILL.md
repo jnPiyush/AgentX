@@ -1,6 +1,7 @@
 ---
 name: "core-principles"
 description: 'Apply fundamental coding principles (SOLID, DRY, KISS) and structure projects for maintainability with clean architecture and separation of concerns. Use when refactoring, reviewing patterns, setting up project structure, or organizing modules.'
+user-invocable: false
 metadata:
  author: "AgentX"
  version: "2.0.0"

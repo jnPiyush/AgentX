@@ -3,6 +3,22 @@ name: AgentX Architect
 description: 'AI-first system architecture -- evaluate GenAI/Agentic AI solutions as the default lens, create ADRs with 3+ evaluated options, and technical specifications with diagrams -- NO CODE EXAMPLES.'
 model: Claude Opus 5 (copilot)
 user-invocable: true
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   mode: adaptive
   level: high
@@ -48,13 +64,18 @@ tools:
   - usages
   - fetch
   - think
-  - github/*
   - agent
 agents:
   - AgentX Product Manager
   - AgentX Data Scientist
   - AgentX UX Designer
   - AgentX Diagram Specialist
+  - AgentX GitHub Ops
+handoffs:
+  - label: Continue to Implementation
+    agent: AgentX Engineer
+    prompt: Implement this issue from the approved PRD, ADR, technical specification, UX, and AI artifacts.
+    send: false
 ---
 
 # Solution Architect Agent

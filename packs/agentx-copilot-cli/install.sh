@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AgentX Copilot CLI Plugin v9.1.0 - Installer (Bash)
+# AgentX Copilot CLI Plugin v9.2.0 - Installer (Bash)
 # Standalone plugin for GitHub Copilot CLI.
 # Does NOT require the AgentX VS Code extension or the core install.
 #
@@ -15,7 +15,7 @@
 #   -h, --help             Show this help
 set -euo pipefail
 
-VERSION="9.1.0"
+VERSION="9.2.0"
 TARGET="$(pwd)"
 SOURCE=""
 INCLUDE_CLI=false
@@ -202,6 +202,8 @@ install_cli_runtime_bundle() {
   for file_name in "${RUNTIME_BUNDLE_FILES[@]}"; do
     copy_file ".agentx/$file_name" "$RUNTIME_BUNDLE_ROOT/$file_name"
   done
+  copy_file "scripts/score-code-quality.ps1" ".github/agentx/scripts/score-code-quality.ps1"
+  copy_file "evaluation/rubrics/code-quality.md" ".github/agentx/evaluation/rubrics/code-quality.md"
 
   ok "CLI runtime: $((TOTAL_COPIED - copied_before)) copied, $((TOTAL_SKIPPED - skipped_before)) skipped"
 }
@@ -387,6 +389,7 @@ copy_tree "$SOURCE/.github/schemas" "$TARGET/.github/schemas" "Schemas"
 
 info "Installing scripts..."
 copy_file "scripts/score-output.ps1" "scripts/score-output.ps1"
+copy_file "scripts/score-code-quality.ps1" "scripts/score-code-quality.ps1"
 copy_file "scripts/validate-handoff.ps1" "scripts/validate-handoff.ps1"
 copy_file "scripts/score-skill.ps1" "scripts/score-skill.ps1"
 copy_file "scripts/validate-skill.ps1" "scripts/validate-skill.ps1"
@@ -394,10 +397,13 @@ copy_file "scripts/validate-changed-skills.ps1" "scripts/validate-changed-skills
 copy_file "scripts/stocktake.ps1" "scripts/stocktake.ps1"
 copy_file "scripts/parse-yaml.js" "scripts/parse-yaml.js"
 copy_file "evaluation/rubrics/skill-quality.md" "evaluation/rubrics/skill-quality.md"
+copy_file "evaluation/rubrics/code-quality.md" "evaluation/rubrics/code-quality.md"
 ok "Scripts: copied scoring and validation runtime files"
 
 info "Installing reference docs..."
 copy_file "AGENTS.md" "AGENTS.md"
+copy_file "LICENSE" ".agentx/legal/LICENSE"
+copy_file "NOTICE" ".agentx/legal/NOTICE"
 copy_file "Skills.md" "Skills.md"
 copy_file "docs/WORKFLOW.md" "docs/WORKFLOW.md"
 copy_file "docs/GUIDE.md" "docs/GUIDE.md"
@@ -447,9 +453,9 @@ echo " Files copied  : $TOTAL_COPIED"
 echo -e " Files skipped : $TOTAL_SKIPPED ${GRAY}(already exist, use -f to overwrite)${NC}"
 echo ""
 echo " Agents        : 26 (15 external + 11 internal)"
-echo " Skills        : 130 across 14 categories"
+echo " Skills        : 134 across 14 categories"
 echo " Instructions  : 7 (auto-applied by file pattern)"
-echo " Prompts       : 21 reusable templates"
+echo " Prompts       : 23 reusable templates"
 if [ "$INCLUDE_CLI" = true ]; then
   echo " CLI utilities : 4 wrappers (.agentx/) + bundled runtime (.github/agentx/.agentx)"
 fi

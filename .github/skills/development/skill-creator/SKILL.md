@@ -107,6 +107,10 @@ This creates:
 | `compatibility.platforms` | OS scope | `["windows", "linux"]` |
 | `prerequisites` | Required tools, MCP servers, env | `["Node.js 24+", "Docker"]` |
 | `allowed-tools` | Space-delimited tool names | `"read_file run_in_terminal"` |
+| `argument-hint` | Slash-command input hint | `"[target] [options]"` |
+| `user-invocable` | Show in slash-command menu | `false` for background knowledge |
+| `disable-model-invocation` | Disable automatic activation | `true` for manual-only workflows |
+| `context` | Inline or forked execution | `fork` for read-heavy focused reports |
 
 ### Frontmatter Template
 
@@ -159,7 +163,7 @@ Skills load in 3 tiers to manage context window tokens:
 
 The executable quality gate is `scripts/score-skill.ps1`, using the deterministic
 [Skill Quality Rubric](../../../../evaluation/rubrics/skill-quality.md). It emits
-seven weighted dimensions, blocking findings, a 0-100 score, a tier, and JSON
+eight weighted dimensions, blocking findings, a 0-100 score, a tier, and JSON
 evidence. Use `-Enforce` for new or changed skills; all-inventory mode reports
 existing score debt while always failing universal blockers.
 

@@ -7,9 +7,9 @@
 | Artifact | Count | Description |
 |----------|-------|-------------|
 | Agents | 26 | 15 external + 11 internal sub-agents |
-| Skills | 130 | Complete production code standards across 14 categories |
+| Skills | 134 | Complete production code standards across 14 categories |
 | Instructions | 7 | Auto-applied coding guidelines by file pattern |
-| Prompts | 21 | Reusable prompt templates |
+| Prompts | 23 | Reusable prompt templates |
 | Templates | 15 | PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning |
 | CLI Utilities | 4 | Optional `.agentx/` wrappers backed by a bundled hidden runtime |
 
@@ -73,7 +73,7 @@ your-project/
       internal/
         github-ops.agent.md
         ...
-    skills/                    # 133 skills across 14 categories
+    skills/                    # 134 skills across 14 categories
       architecture/
       development/
       languages/
@@ -175,9 +175,13 @@ rm -rf memories  # if starter memories were installed with CLI utilities
 ## Version
 
 - Plugin: `agentx-copilot-cli`
-- Version: `9.1.0`
+- Version: `9.2.0`
 - Publisher: jnPiyush
-- License: MIT
+- License: Apache-2.0
+- Third-party notices: See `NOTICE`, including the MIT-licensed
+  `petergyang/no-ai-slop` adaptation.
+- User-level installs place AgentX legal files under
+  `~/.copilot/agentx-legal` so they do not replace unrelated legal files.
 
 ---
 

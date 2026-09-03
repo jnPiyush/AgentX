@@ -4352,6 +4352,69 @@ function Get-LoopBaselineFilePath {
     return (Join-Path (Get-LoopStateDirectory) 'tests-baseline.json')
 }
 
+function Get-CodeQualityBaselineFilePath {
+    return (Join-Path (Get-LoopStateDirectory) 'code-quality-baseline.json')
+}
+
+function Invoke-CodeQualityEvaluator {
+    param(
+        [ValidateSet('Snapshot', 'Validate')][string]$Mode,
+        [string]$ReportPath = '',
+        [string]$BaselineSha256 = '',
+        [switch]$IncludeExistingChanges
+    )
+
+    $scriptPath = $null
+    $candidateRoots = if ($Script:ROOT -ne $Script:INSTALL_ROOT) { @($Script:INSTALL_ROOT) } else { @($Script:ROOT) }
+    foreach ($basePath in $candidateRoots) {
+        $candidate = Join-Path $basePath 'scripts/score-code-quality.ps1'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { $scriptPath = $candidate; break }
+    }
+    if (-not $scriptPath) {
+        return [PSCustomObject]@{
+            available = $false
+            exitCode = 1
+            output = @('Code-quality evaluator is missing from both workspace and installed runtime.')
+        }
+    }
+
+    $arguments = @(
+        '-NoProfile', '-File', $scriptPath,
+        '-Mode', $Mode,
+        '-WorkspaceRoot', $Script:ROOT,
+        '-BaselinePath', (Get-CodeQualityBaselineFilePath),
+        '-Json'
+    )
+    if ($ReportPath) { $arguments += @('-ReportPath', $ReportPath) }
+    if ($BaselineSha256) { $arguments += @('-BaselineSha256', $BaselineSha256) }
+    if ($IncludeExistingChanges) { $arguments += '--IncludeExistingChanges' }
+    $output = @(& pwsh @arguments 2>&1)
+    $exitCode = $LASTEXITCODE
+    $result = $null
+    foreach ($line in @($output)) {
+        try {
+            $candidateResult = ([string]$line) | ConvertFrom-Json -Depth 20 -ErrorAction Stop
+            if ($candidateResult.PSObject.Properties.Name -contains 'status') { $result = $candidateResult }
+        } catch { continue }
+    }
+    $expectedStatuses = if ($Mode -eq 'Snapshot') { @('snapshotted') } else { @('passed', 'skipped') }
+    if ($exitCode -eq 0 -and (-not $result -or [string]$result.status -notin $expectedStatuses)) {
+        $exitCode = 1
+        $output += 'Code-quality evaluator returned no valid structured result.'
+    }
+    if ($Mode -eq 'Snapshot' -and $exitCode -eq 0) {
+        $baselinePath = Get-CodeQualityBaselineFilePath
+        $actualHash = if (Test-Path -LiteralPath $baselinePath -PathType Leaf) {
+            (Get-FileHash -LiteralPath $baselinePath -Algorithm SHA256).Hash
+        } else { '' }
+        if (-not $actualHash -or [string]$result.baselineSha256 -cne $actualHash) {
+            $exitCode = 1
+            $output += 'Code-quality evaluator did not create the expected hashed baseline.'
+        }
+    }
+    return [PSCustomObject]@{ available = $true; exitCode = $exitCode; output = $output; result = $result }
+}
+
 function Get-LoopEvidenceRoot {
     return (Join-Path (Get-LoopStateDirectory) 'loop-evidence')
 }
@@ -4578,6 +4641,7 @@ function Invoke-LoopStart {
     $issue = [int](Get-Flag @('-i', '--issue') '0')
     if (-not $issue) { $issue = $null }
     $role = Get-Flag @('-r', '--role') ''
+    $includeExistingChanges = Test-Flag @('--include-existing-changes')
     $taskClass = Get-LoopTaskClass ([PSCustomObject]@{ prompt = $prompt; completionCriteria = $criteria; maxIterations = $max; role = $role })
     $min = Get-LoopDefaultMinIterations ([PSCustomObject]@{ prompt = $prompt; completionCriteria = $criteria; taskClass = $taskClass; maxIterations = $max })
     if ($max -lt $min) {
@@ -4632,6 +4696,13 @@ function Invoke-LoopStart {
     try { Reset-LoopEvidenceArtifacts } catch { Write-Verbose "Loop evidence cleanup failed: $_" }
     try { Remove-StaleStateDirectories } catch { Write-Verbose "State directory cleanup failed: $_" }
 
+    $codeQualitySnapshot = Invoke-CodeQualityEvaluator -Mode Snapshot -IncludeExistingChanges:$includeExistingChanges
+    if (-not $codeQualitySnapshot.available -or $codeQualitySnapshot.exitCode -ne 0) {
+        $codeQualitySnapshot.output | ForEach-Object { Write-CliOutput ([string]$_) }
+        Write-CliOutput "$($C.r)  [FAIL] Could not capture the implementation baseline for the code-quality gate.$($C.n)"
+        exit 1
+    }
+
     $state = [PSCustomObject]@{
         active             = $true
         status             = 'active'
@@ -4650,6 +4721,8 @@ function Invoke-LoopStart {
         budgetMinutes      = $budget
         startedAt          = Get-Timestamp
         lastIterationAt    = Get-Timestamp
+        codeQualityBaselineSha256 = [string]$codeQualitySnapshot.result.baselineSha256
+        codeQualityScopeMode = if ($includeExistingChanges) { 'include-existing-changes' } else { 'new-changes-only' }
         history            = @([PSCustomObject]@{ iteration = 0; timestamp = Get-Timestamp; summary = 'Loop started'; status = 'in-progress'; outcome = 'partial' })
     }
     Write-JsonFile $Script:LOOP_STATE_FILE $state
@@ -4991,6 +5064,7 @@ function Invoke-LoopIterate {
     if ($archivedPath) {
         $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $archivedPath
         $entry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $evidenceAbs
+        $entry | Add-Member -NotePropertyName evidenceSha256 -NotePropertyValue $evidenceHash
     }
     if ($null -ne $currentPassing) { $entry | Add-Member -NotePropertyName passingTests -NotePropertyValue ([int]$currentPassing) }
     $state.history = @($state.history) + @($entry)
@@ -5168,6 +5242,59 @@ function Invoke-LoopComplete {
             Write-CliOutput "$($C.r)  [FAIL] Work was recorded after the approved review. The approval must cover the final state; re-review before completing.$($C.n)"
             exit 1
         }
+    }
+
+    $baselineDigest = if ($state.PSObject.Properties.Name -contains 'codeQualityBaselineSha256') { [string]$state.codeQualityBaselineSha256 } else { '' }
+    $baselinePath = Get-CodeQualityBaselineFilePath
+    $actualBaselineDigest = if (Test-Path -LiteralPath $baselinePath -PathType Leaf) {
+        try { (Get-FileHash -LiteralPath $baselinePath -Algorithm SHA256).Hash } catch { '' }
+    } else { '' }
+    if (-not $baselineDigest -or $actualBaselineDigest -cne $baselineDigest) {
+        Write-CliOutput "$($C.r)  [FAIL] Code-quality baseline SHA-256 does not match the digest recorded at loop start. Start a fresh loop.$($C.n)"
+        exit 1
+    }
+
+    foreach ($historyEntry in @($state.history)) {
+        if (-not $historyEntry -or
+            $historyEntry.PSObject.Properties.Name -notcontains 'iteration' -or
+            [int]$historyEntry.iteration -lt 1 -or
+            $historyEntry.PSObject.Properties.Name -notcontains 'evidence' -or
+            -not $historyEntry.evidence) { continue }
+        $recordedHash = if ($historyEntry.PSObject.Properties.Name -contains 'evidenceSha256') { [string]$historyEntry.evidenceSha256 } else { '' }
+        $archivedHash = if (Test-Path -LiteralPath $historyEntry.evidence -PathType Leaf) {
+            try { (Get-FileHash -LiteralPath $historyEntry.evidence -Algorithm SHA256).Hash } catch { '' }
+        } else { '' }
+        if (-not $recordedHash -or $archivedHash -cne $recordedHash) {
+            Write-CliOutput "$($C.r)  [FAIL] Archived iteration $($historyEntry.iteration) evidence SHA-256 does not match its recorded digest. Re-run verification and review.$($C.n)"
+            exit 1
+        }
+    }
+
+    $reviewEvidencePath = ''
+    if ($latestReviewEntry) {
+        if (($latestReviewEntry.PSObject.Properties.Name -contains 'evidence') -and $latestReviewEntry.evidence) {
+            $reviewEvidencePath = [string]$latestReviewEntry.evidence
+        } elseif (($latestReviewEntry.PSObject.Properties.Name -contains 'evidenceOriginal') -and $latestReviewEntry.evidenceOriginal) {
+            $reviewEvidencePath = [string]$latestReviewEntry.evidenceOriginal
+        }
+    }
+    $expectedReviewHash = if ($latestReviewEntry -and
+        ($latestReviewEntry.PSObject.Properties.Name -contains 'evidenceSha256')) {
+        [string]$latestReviewEntry.evidenceSha256
+    } else { '' }
+    $actualReviewHash = ''
+    if ($reviewEvidencePath -and (Test-Path -LiteralPath $reviewEvidencePath -PathType Leaf)) {
+        try { $actualReviewHash = (Get-FileHash -LiteralPath $reviewEvidencePath -Algorithm SHA256).Hash } catch { $actualReviewHash = '' }
+    }
+    if (-not $expectedReviewHash -or $actualReviewHash -cne $expectedReviewHash) {
+        Write-CliOutput "$($C.r)  [FAIL] Archived review evidence SHA-256 does not match the digest recorded at approval. Re-run independent review.$($C.n)"
+        exit 1
+    }
+    $codeQualityGate = Invoke-CodeQualityEvaluator -Mode Validate -ReportPath $reviewEvidencePath -BaselineSha256 $baselineDigest
+    $codeQualityGate.output | ForEach-Object { Write-CliOutput ([string]$_) }
+    if (-not $codeQualityGate.available -or $codeQualityGate.exitCode -ne 0) {
+        Write-CliOutput "$($C.r)  [FAIL] Code-quality rubric gate failed. Re-run the final independent review with evaluation/rubrics/code-quality.md.$($C.n)"
+        exit 1
     }
     $currentPassing = Get-LoopPassingCount 'loop complete'
     if ($currentPassing -eq '__INVALID__') { exit 1 }
@@ -5927,6 +6054,456 @@ function Invoke-VersionCmd {
     $provider = Get-AgentXProvider
     Write-CliOutput "`n$($C.c)  AgentX $($ver.version)$($C.n)"
     Write-CliOutput "$($C.d)  Provider: $provider  |  Installed: $installed$($C.n)`n"
+}
+
+
+# ---------------------------------------------------------------------------
+# POLICY-HOOK: Copilot lifecycle policy bridge
+# ---------------------------------------------------------------------------
+
+function Get-HookInputValue($InputObject, [string]$Name) {
+    if (-not $InputObject) { return $null }
+    $property = $InputObject.PSObject.Properties[$Name]
+    if ($property) { return $property.Value }
+    return $null
+}
+
+function Write-HookResponse([string]$Message) {
+    $response = [ordered]@{
+        continue = $true
+        systemMessage = $Message
+    } | ConvertTo-Json -Compress
+    [Console]::Out.WriteLine($response)
+}
+
+function Stop-HookToolCall([string]$Message) {
+    [Console]::Error.WriteLine($Message)
+    exit 2
+}
+
+function Test-WildcardPathPrefixMatch([string]$Pattern, [string]$Target) {
+    $patternSegments = @(($Pattern.Replace('\', '/') -split '/') | Where-Object { $_ })
+    $targetSegments = @(($Target.Replace('\', '/') -split '/') | Where-Object { $_ })
+    if ($patternSegments.Count -gt $targetSegments.Count) { return $false }
+    for ($index = 0; $index -lt $patternSegments.Count; $index++) {
+        try {
+            $wildcard = [WildcardPattern]::new($patternSegments[$index], [Management.Automation.WildcardOptions]::IgnoreCase)
+        } catch {
+            return $true
+        }
+        if (-not $wildcard.IsMatch($targetSegments[$index])) { return $false }
+    }
+    return $true
+}
+
+function ConvertTo-HookPathCandidate([string]$Candidate) {
+    if (-not $Candidate) { return $null }
+    $normalized = $Candidate.Trim()
+    $normalized = [regex]::Replace($normalized, '`(.)', '$1')
+    $normalized = $normalized -replace '(?i)^(?:Microsoft\.PowerShell\.Core\\)?FileSystem::', ''
+    $canonicalRoot = [IO.Path]::GetFullPath($Script:ROOT).TrimEnd('\', '/')
+    foreach ($workspaceToken in @('${env:AGENTX_WORKSPACE_ROOT}', '$env:AGENTX_WORKSPACE_ROOT', '${PWD}', '$PWD')) {
+        $normalized = $normalized.Replace($workspaceToken, $canonicalRoot, [StringComparison]::OrdinalIgnoreCase)
+    }
+    if ($normalized -match '\$' -and $normalized -match '(?i)(?:^|[\\/])\.agentx(?:[\\/]|$)') {
+        throw 'Protected-state path contains an unsupported dynamic expression.'
+    }
+    if ($normalized -match '\[' -and $normalized -notmatch '\]') {
+        if ($normalized -match '(?i)(?:^|[\\/])\.agentx(?:[\\/]|$)') {
+            throw 'Protected-state path contains an invalid wildcard expression.'
+        }
+    }
+    return $normalized
+}
+
+function Resolve-HookPathComponents([string]$Path) {
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    $pathRoot = [IO.Path]::GetPathRoot($fullPath)
+    $segments = @(($fullPath.Substring($pathRoot.Length) -split '[\\/]') | Where-Object { $_ })
+    $currentPath = $pathRoot
+    for ($index = 0; $index -lt $segments.Count; $index++) {
+        $segment = $segments[$index]
+        if ([WildcardPattern]::ContainsWildcardCharacters($segment)) {
+            for ($remaining = $index; $remaining -lt $segments.Count; $remaining++) {
+                $currentPath = Join-Path $currentPath $segments[$remaining]
+            }
+            return $currentPath
+        }
+        $nextPath = Join-Path $currentPath $segment
+        $item = Get-Item -LiteralPath $nextPath -Force -ErrorAction SilentlyContinue
+        if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            $target = $item.ResolveLinkTarget($true)
+            if (-not $target) { throw "Cannot resolve reparse point: $nextPath" }
+            $currentPath = $target.FullName
+        } else {
+            $currentPath = $nextPath
+        }
+    }
+    return $currentPath
+}
+
+function Get-StructuredHookPathCandidates($InputObject) {
+    $pathCandidates = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    if (-not $InputObject) { return @() }
+    $pendingValues = [Collections.Generic.Stack[object]]::new()
+    $pendingValues.Push($InputObject)
+    while ($pendingValues.Count -gt 0) {
+        $value = $pendingValues.Pop()
+        if ($null -eq $value -or $value -is [string]) { continue }
+        if ($value -is [Collections.IEnumerable] -and $value -isnot [Management.Automation.PSCustomObject]) {
+            foreach ($item in $value) { $pendingValues.Push($item) }
+            continue
+        }
+        foreach ($property in $value.PSObject.Properties) {
+            $propertyName = $property.Name.ToLowerInvariant()
+            if ($property.Value -is [string] -and $propertyName -in @('path', 'filepath', 'file_path', 'source', 'target', 'destination')) {
+                [void]$pathCandidates.Add([string]$property.Value)
+            } else {
+                $pendingValues.Push($property.Value)
+            }
+        }
+    }
+    return @($pathCandidates)
+}
+
+function ConvertFrom-HookPathExpression($Expression) {
+    if ($Expression -is [Management.Automation.Language.StringConstantExpressionAst]) {
+        return [PSCustomObject]@{ Safe = $true; Value = [string]$Expression.Value }
+    }
+    if ($Expression -is [Management.Automation.Language.ExpandableStringExpressionAst]) {
+        foreach ($nestedExpression in @($Expression.NestedExpressions)) {
+            if ($nestedExpression -isnot [Management.Automation.Language.VariableExpressionAst]) {
+                return [PSCustomObject]@{ Safe = $false; Value = $null }
+            }
+            if ([string]$nestedExpression.VariablePath.UserPath -notin @('PWD', 'env:AGENTX_WORKSPACE_ROOT')) {
+                return [PSCustomObject]@{ Safe = $false; Value = $null }
+            }
+        }
+        return [PSCustomObject]@{ Safe = $true; Value = (ConvertTo-HookPathCandidate $Expression.Extent.Text.Trim('"', "'")) }
+    }
+    if ($Expression -is [Management.Automation.Language.VariableExpressionAst] -and [string]$Expression.VariablePath.UserPath -in @('PWD', 'env:AGENTX_WORKSPACE_ROOT')) {
+        return [PSCustomObject]@{ Safe = $true; Value = [IO.Path]::GetFullPath($Script:ROOT) }
+    }
+    return [PSCustomObject]@{ Safe = $false; Value = $null }
+}
+
+function Add-OpaqueHookPathCandidates($CommandAst, [Collections.Generic.List[string]]$PathCandidates) {
+    foreach ($element in @($CommandAst.CommandElements | Select-Object -Skip 1)) {
+        $unsupportedDynamic = @($element.FindAll({
+            param($node)
+            ($node -is [Management.Automation.Language.VariableExpressionAst] -and
+                [string]$node.VariablePath.UserPath -notin @('PWD', 'env:AGENTX_WORKSPACE_ROOT')) -or
+            $node -is [Management.Automation.Language.SubExpressionAst]
+        }, $true)).Count -gt 0
+        if ($unsupportedDynamic) { return $false }
+
+        $resolved = ConvertFrom-HookPathExpression $element
+        $values = [Collections.Generic.List[string]]::new()
+        if ($resolved.Safe) {
+            $values.Add([string]$resolved.Value)
+        } elseif ($element -is [Management.Automation.Language.StringConstantExpressionAst]) {
+            $values.Add([string]$element.Value)
+        } else {
+            $values.Add([string]$element.Extent.Text)
+        }
+        foreach ($value in @($values)) {
+            if (-not $value) { continue }
+            $trimmed = $value.Trim().Trim('"', "'")
+            $optionValue = [regex]::Match($trimmed, '^(?:--?|/)[^:=\s]+[:=](.+)$')
+            if ($optionValue.Success) {
+                $PathCandidates.Add($optionValue.Groups[1].Value.Trim().Trim('"', "'"))
+            } elseif ($trimmed -and -not $trimmed.StartsWith('-')) {
+                $PathCandidates.Add($trimmed)
+            }
+            foreach ($match in [regex]::Matches($value, '["'']([^"'']+)["'']')) {
+                $PathCandidates.Add([string]$match.Groups[1].Value)
+            }
+        }
+    }
+    return $true
+}
+
+function Test-TrustedLoopStartCommand([string]$Command) {
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseInput($Command, [ref]$tokens, [ref]$parseErrors)
+    if (@($parseErrors).Count -gt 0) { return $false }
+    $commands = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true))
+    if ($commands.Count -ne 1 -or @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FileRedirectionAst] }, $true)).Count -gt 0) {
+        return $false
+    }
+    $commandAst = $commands[0]
+    if (@($commandAst.CommandElements | Where-Object {
+        @($_.FindAll({
+            param($node)
+            $node -is [Management.Automation.Language.VariableExpressionAst] -or
+            $node -is [Management.Automation.Language.SubExpressionAst]
+        }, $true)).Count -gt 0
+    }).Count -gt 0) { return $false }
+
+    $elements = @($commandAst.CommandElements | ForEach-Object {
+        if ($_ -is [Management.Automation.Language.StringConstantExpressionAst]) { [string]$_.Value }
+        else { [string]$_.Extent.Text.Trim('"', "'") }
+    })
+    $commandName = [string]$commandAst.GetCommandName()
+    $launcherIndex = 0
+    if (($commandName -split '\\')[-1] -match '(?i)^pwsh(?:\.exe)?$') {
+        $fileIndexes = @(for ($index = 1; $index -lt $elements.Count; $index++) {
+            if ($elements[$index] -match '(?i)^-File$') { $index }
+        })
+        if ($fileIndexes.Count -ne 1) { return $false }
+        $fileIndex = $fileIndexes[0]
+        if ($fileIndex -lt 0 -or $fileIndex + 3 -ge $elements.Count) { return $false }
+        $safeWrapperSwitches = @('-NoProfile', '-NonInteractive', '-NoLogo')
+        if ($fileIndex -gt 1 -and @($elements[1..($fileIndex - 1)] | Where-Object { $_ -notin $safeWrapperSwitches }).Count -gt 0) { return $false }
+        $launcherIndex = $fileIndex + 1
+    }
+    if ($launcherIndex + 2 -ge $elements.Count) { return $false }
+    try {
+        $launcher = if ([IO.Path]::IsPathRooted($elements[$launcherIndex])) {
+            [IO.Path]::GetFullPath($elements[$launcherIndex])
+        } else {
+            [IO.Path]::GetFullPath((Join-Path $Script:ROOT $elements[$launcherIndex]))
+        }
+        $trustedLauncher = [IO.Path]::GetFullPath((Join-Path $Script:ROOT '.agentx/agentx.ps1'))
+    } catch {
+        return $false
+    }
+    return $launcher.Equals($trustedLauncher, [StringComparison]::OrdinalIgnoreCase) -and
+        $elements[$launcherIndex + 1] -ceq 'loop' -and
+        $elements[$launcherIndex + 2] -ceq 'start'
+}
+
+function Get-TerminalHookPathAnalysis([string]$Command) {
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseInput($Command, [ref]$tokens, [ref]$parseErrors)
+    if (@($parseErrors).Count -gt 0) { return [PSCustomObject]@{ Safe = $false; Candidates = @() } }
+    $commandAliases = @{
+        'cat' = 'Get-Content'; 'type' = 'Get-Content'; 'gc' = 'Get-Content'
+        'sc' = 'Set-Content'; 'ac' = 'Add-Content'; 'clc' = 'Clear-Content'
+        'rm' = 'Remove-Item'; 'del' = 'Remove-Item'; 'erase' = 'Remove-Item'; 'rd' = 'Remove-Item'; 'ri' = 'Remove-Item'; 'rmdir' = 'Remove-Item'
+        'cp' = 'Copy-Item'; 'copy' = 'Copy-Item'; 'cpi' = 'Copy-Item'
+        'mv' = 'Move-Item'; 'move' = 'Move-Item'; 'mi' = 'Move-Item'
+        'ren' = 'Rename-Item'; 'rni' = 'Rename-Item'; 'ni' = 'New-Item'
+    }
+    $trustedCommands = @('Get-Content', 'Set-Content', 'Add-Content', 'Clear-Content', 'Remove-Item', 'Out-File', 'Move-Item', 'Copy-Item', 'Rename-Item', 'New-Item')
+    $pathParameters = @('path', 'literalpath', 'filepath', 'destination')
+    $pathCandidates = [Collections.Generic.List[string]]::new()
+    foreach ($redirection in @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FileRedirectionAst] }, $true))) {
+        $resolved = ConvertFrom-HookPathExpression $redirection.Location
+        if (-not $resolved.Safe) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+        $pathCandidates.Add([string]$resolved.Value)
+    }
+    foreach ($commandAst in @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true))) {
+        $commandName = [string]$commandAst.GetCommandName()
+        if (-not $commandName) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+        if ($commandName -match '(?i)^cmd(?:\.exe)?/(?:c|k)') {
+            return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) }
+        }
+        $commandLeaf = ($commandName -split '[\\/]')[-1]
+        $canonicalName = if ($commandAliases.ContainsKey($commandLeaf.ToLowerInvariant())) { $commandAliases[$commandLeaf.ToLowerInvariant()] } else { $commandLeaf }
+        if ($canonicalName -notin $trustedCommands) {
+            $arguments = (@($commandAst.CommandElements | Select-Object -Skip 1 | ForEach-Object { $_.Extent.Text }) -join ' ')
+            $opaqueRuntimeExecution = switch -Regex ($commandLeaf.ToLowerInvariant()) {
+                '^(node|node\.exe|python|python3|py|python\.exe|python3\.exe|py\.exe)$' { $arguments -notmatch '^\s*--version\s*$'; break }
+                '^(pwsh|powershell|pwsh\.exe|powershell\.exe)$' { $arguments -notmatch '^\s*--version\s*$'; break }
+                '^(bash|sh)$' { $true; break }
+                '^cmd(?:\.exe)?$' { $arguments -match '(?i)(^|\s)/(?:c|k)'; break }
+                '^dotnet(?:\.exe)?$' { $arguments -notmatch '^\s*--version\s*$'; break }
+                default { $false }
+            }
+            if ($opaqueRuntimeExecution) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+            if (-not (Add-OpaqueHookPathCandidates $commandAst $pathCandidates)) {
+                return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) }
+            }
+            continue
+        }
+        $trustedCommand = Get-Command "Microsoft.PowerShell.Management\$canonicalName" -CommandType Cmdlet -ErrorAction SilentlyContinue
+        if (-not $trustedCommand) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+        $metadata = [Management.Automation.CommandMetadata]::new($trustedCommand)
+        $parameters = @($metadata.Parameters.Values)
+        $boundPathCount = 0
+        $elements = @($commandAst.CommandElements)
+        $positionalIndex = 0
+        for ($index = 1; $index -lt $elements.Count; $index++) {
+            $element = $elements[$index]
+            if ($element -is [Management.Automation.Language.CommandParameterAst]) {
+                $parameterToken = $element.ParameterName
+                $parameterMatches = @($parameters | Where-Object {
+                    $_.Name.StartsWith($parameterToken, [StringComparison]::OrdinalIgnoreCase) -or
+                    @($_.Aliases | Where-Object { $_.StartsWith($parameterToken, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+                } | Sort-Object Name -Unique)
+                if ($parameterMatches.Count -ne 1) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+                $parameter = $parameterMatches[0]
+                $argument = $element.Argument
+                $isSwitch = $parameter.ParameterType -eq [Management.Automation.SwitchParameter]
+                if (-not $argument -and -not $isSwitch -and $index + 1 -lt $elements.Count -and $elements[$index + 1] -isnot [Management.Automation.Language.CommandParameterAst]) {
+                    $index++
+                    $argument = $elements[$index]
+                }
+                if ($parameter.Name.ToLowerInvariant() -in $pathParameters) {
+                    if (-not $argument) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+                    $resolved = ConvertFrom-HookPathExpression $argument
+                    if (-not $resolved.Safe) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+                    $pathCandidates.Add([string]$resolved.Value)
+                    $boundPathCount++
+                }
+                continue
+            }
+            $positionMatches = @($parameters | Where-Object {
+                @($_.Attributes | Where-Object { $_ -is [Management.Automation.ParameterAttribute] -and $_.Position -eq $positionalIndex }).Count -gt 0
+            } | Sort-Object Name -Unique)
+            if ($positionMatches.Count -ne 1) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+            $positionParameter = $positionMatches[0]
+            if ($positionParameter.Name.ToLowerInvariant() -in $pathParameters) {
+                $resolved = ConvertFrom-HookPathExpression $element
+                if (-not $resolved.Safe) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+                $pathCandidates.Add([string]$resolved.Value)
+                $boundPathCount++
+            }
+            $positionalIndex++
+        }
+        if ($boundPathCount -eq 0) { return [PSCustomObject]@{ Safe = $false; Candidates = @($pathCandidates) } }
+    }
+    return [PSCustomObject]@{ Safe = $true; Candidates = @($pathCandidates) }
+}
+
+function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) {
+    if (@($PathCandidates).Count -eq 0) { return $false }
+    $protectedRelativePaths = @(
+        '.agentx/state/loop-state.json',
+        '.agentx/state/tests-baseline.json',
+        '.agentx/state/code-quality-baseline.json'
+    )
+
+    foreach ($relativePath in $protectedRelativePaths) {
+        $protectedPath = Join-Path $Script:ROOT $relativePath
+
+        $aliases = @($protectedPath)
+        if ($IsWindows -and (Test-Path -LiteralPath $protectedPath -PathType Leaf)) {
+            $volume = Split-Path -Qualifier $protectedPath
+            foreach ($listedPath in @(& fsutil hardlink list $protectedPath 2>$null)) {
+                $aliasPath = [string]$listedPath
+                if ($aliasPath.StartsWith('\')) { $aliasPath = "$volume$aliasPath" }
+                $aliases += $aliasPath
+            }
+        }
+
+        foreach ($aliasPath in @($aliases | Select-Object -Unique)) {
+            if (-not $aliasPath) { continue }
+            $fullAlias = [IO.Path]::GetFullPath((Resolve-HookPathComponents ([string]$aliasPath)))
+            $normalizedAlias = $fullAlias.Replace('\', '/').ToLowerInvariant()
+            $workspaceAlias = $null
+            $rootPrefix = [IO.Path]::GetFullPath($Script:ROOT).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+            if ($fullAlias.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+                $workspaceAlias = $fullAlias.Substring($rootPrefix.Length).Replace('\', '/').ToLowerInvariant()
+            }
+            foreach ($candidate in $PathCandidates) {
+                try {
+                    $normalizedCandidate = ConvertTo-HookPathCandidate $candidate
+                    if (-not $normalizedCandidate) { continue }
+                    $candidatePath = if ([IO.Path]::IsPathRooted($normalizedCandidate)) { $normalizedCandidate } else { Join-Path $Script:ROOT $normalizedCandidate }
+                    $resolvedCandidatePath = Resolve-HookPathComponents $candidatePath
+                    if ([WildcardPattern]::ContainsWildcardCharacters($resolvedCandidatePath)) {
+                        if ($workspaceAlias -and (Test-WildcardPathPrefixMatch $normalizedCandidate $workspaceAlias)) { return $true }
+                        $fullCandidatePattern = [IO.Path]::GetFullPath($resolvedCandidatePath).Replace('\', '/')
+                        if (Test-WildcardPathPrefixMatch $fullCandidatePattern $normalizedAlias) { return $true }
+                        continue
+                    }
+                    $fullCandidate = [IO.Path]::GetFullPath($resolvedCandidatePath)
+                    if ($fullCandidate.Equals($fullAlias, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                    $candidatePrefix = $fullCandidate.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+                    if ($fullAlias.StartsWith($candidatePrefix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                    $candidateItem = Get-Item -LiteralPath $candidatePath -Force -ErrorAction SilentlyContinue
+                    if ($candidateItem -and $candidateItem.LinkType -eq 'SymbolicLink') {
+                        $resolvedTarget = $candidateItem.ResolveLinkTarget($true)
+                        if ($resolvedTarget) {
+                            $fullTarget = [IO.Path]::GetFullPath($resolvedTarget.FullName)
+                            if ($fullTarget.Equals($fullAlias, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                            $targetPrefix = $fullTarget.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+                            if ($fullAlias.StartsWith($targetPrefix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+                        }
+                    }
+                    if (-not $IsWindows -and $candidateItem) {
+                        $findCommand = Get-Command find -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+                        if ($findCommand -and @(& $findCommand.Source $candidatePath -samefile $protectedPath -print 2>$null).Count -gt 0) { return $true }
+                    }
+                } catch {
+                    if ($candidate -match '(?i)(?:^|[\\/])\.agentx(?:[\\/]|$)') { return $true }
+                    continue
+                }
+            }
+        }
+    }
+    return $false
+}
+
+function Invoke-PolicyHookCmd {
+    $rawInput = [Console]::In.ReadToEnd()
+    try {
+        $hookInput = $rawInput | ConvertFrom-Json -Depth 30 -ErrorAction Stop
+    } catch {
+        Stop-HookToolCall 'AgentX policy hook received malformed JSON input.'
+    }
+    $eventName = [string](Get-HookInputValue $hookInput 'hook_event_name')
+    if (-not $eventName) { Stop-HookToolCall 'AgentX policy hook input is missing hook_event_name.' }
+    $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
+    if ($eventName -eq 'PreToolUse') {
+        $toolName = [string](Get-HookInputValue $hookInput 'tool_name')
+        if (-not $toolName) { Stop-HookToolCall 'AgentX PreToolUse input is missing tool_name.' }
+        if ($toolName -match '(?i)(mcp_github|github).*(create_or_update_file|push_files|delete_file)$') {
+            Stop-HookToolCall 'AgentX local-files-first policy blocks direct remote file mutation. Edit local files and let the user review them before commit or push.'
+        }
+        $isFileMutation = $toolName -match '(?i)(^|[/._-])(apply_patch|create_file|replace_string_in_file|multi_replace_string_in_file|editfiles|edit_notebook_file|createfile)$'
+        $isTerminalTool = $toolName -match '(?i)(runcommands|run_in_terminal|terminal_exec)$'
+        $toolInput = Get-HookInputValue $hookInput 'tool_input'
+        if ($isFileMutation) {
+            if (Test-HookPathCandidatesTargetProtectedState @(Get-StructuredHookPathCandidates $toolInput)) {
+                Stop-HookToolCall 'AgentX policy blocks direct access to gate-bearing loop state. Use agentx loop commands instead.'
+            }
+        }
+        if ($isTerminalTool) {
+            $command = [string](Get-HookInputValue $toolInput 'command')
+            $isTrustedLoopStart = Test-TrustedLoopStartCommand $command
+            $pathAnalysis = Get-TerminalHookPathAnalysis $command
+            if ((-not $isTrustedLoopStart -and -not $pathAnalysis.Safe) -or (Test-HookPathCandidatesTargetProtectedState @($pathAnalysis.Candidates))) {
+                Stop-HookToolCall 'AgentX policy blocks direct access to gate-bearing loop state. Use agentx loop commands instead.'
+            }
+            $readOnlyCommandPattern = '(?i)^\s*(Get-(Content|ChildItem|Item|Location|FileHash|Command)(\s+.*)?|Test-Path(\s+.*)?|Select-String(\s+.*)?|Resolve-Path(\s+.*)?|rg(\s+.*)?|cat(\s+.*)?|ls(\s+.*)?|head(\s+.*)?|tail(\s+.*)?|pwd\s*|stat(\s+.*)?|node\s+--version|npm\s+--version|python(?:3)?\s+--version|py\s+--version|dotnet\s+--version|pwsh\s+--version)\s*$'
+            $hasShellComposition = $command -match '[;&|<>`\r\n]' -or
+                $command -match '(\$\(|@\()' -or
+                $command -match '(?i)(^|\s)--output(?:=|\s)' -or
+                $command -match '(?i)(^|\s)--(?:pre|hostname-bin)(?:=|\s|$)' -or
+                $command -match '(?i)^\s*git\s+(?:diff|log|show)\b.*(?:^|\s)--(?:no-)?(?:ext|textc)[a-z-]*(?:=|\s|$)'
+            $isFileMutation = $hasShellComposition -or $command -notmatch $readOnlyCommandPattern
+        }
+        if (-not $isFileMutation) { return }
+        if (-not $loopState) {
+            if (Test-Path -LiteralPath $Script:CONFIG_FILE -PathType Leaf) {
+                Stop-HookToolCall 'AgentX quality-loop state is missing or invalid. Run agentx loop start before editing files.'
+            }
+            Write-HookResponse 'AgentX local runtime is not initialized, so quality-loop enforcement is degraded. Run AgentX: Initialize Local Runtime before formal delivery work.'
+            return
+        }
+        $isActive = (Get-HookInputValue $loopState 'active') -eq $true
+        $status = [string](Get-HookInputValue $loopState 'status')
+        if (-not $isActive -or $status -ne 'active') {
+            if ($isTerminalTool -and $isTrustedLoopStart) { return }
+            Stop-HookToolCall "AgentX quality loop is not active (status: $status). Run agentx loop start for the current task before editing files."
+        }
+        return
+    }
+    if ($eventName -eq 'SessionStart') {
+        if ($loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
+            $issue = Get-HookInputValue $loopState 'issueNumber'
+            Write-HookResponse "AgentX resumed with an active quality loop$(if ($issue) { " for issue #$issue" } else { '' })."
+        }
+        return
+    }
+    if ($eventName -eq 'Stop' -and $loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
+        Write-HookResponse 'AgentX quality loop is still active. Record evidence and complete or cancel it before claiming the task is done.'
+    }
 }
 
 
@@ -8161,6 +8738,7 @@ switch ($Script:Command) {
     'validate'  { Invoke-ValidateCmd }
     'hook'     { Invoke-AgentHookCmd }
     'hooks'    { Invoke-HooksCmd }
+    'policy-hook' { Invoke-PolicyHookCmd }
     'config'   { Invoke-ConfigCmd }
     'issue'    { Invoke-IssueCmd }
     'bundle'   { Invoke-BundleCmd }

@@ -1,4 +1,4 @@
-description: 'Compressed skill index for AI agents. 133 skills across 14 categories. Load only relevant skills per task.'
+description: 'Compressed skill index for AI agents. 134 skills across 14 categories. Load only relevant skills per task.'
 
 # Production Code Skills Index
 
@@ -10,7 +10,11 @@ description: 'Compressed skill index for AI agents. 133 skills across 14 categor
 
 **Loading order**: Router -> instruction (auto) -> this index -> pick skills -> `read_file` them.
 
-**Anti-pattern**: Never load all 133 skills. Use Quick Reference below.
+**Anti-pattern**: Never load all 134 skills. Use Quick Reference below.
+
+**Visibility**: Background policy and role-support skills remain indexed and
+automatically loadable but set `user-invocable: false` so they do not compete
+with public prompts and agents in the slash-command menu.
 
 ---
 
@@ -28,6 +32,7 @@ description: 'Compressed skill index for AI agents. 133 skills across 14 categor
 | **Performance / Scaling** | [Performance & Scalability](.github/skills/architecture/performance/SKILL.md), [Database](.github/skills/architecture/database/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Code Optimization / Minimize LOC / Make Elegant** | [Code Optimization](.github/skills/development/code-optimization/SKILL.md), [Karpathy Guidelines](.github/skills/development/karpathy-guidelines/SKILL.md), [Core Principles](.github/skills/architecture/core-principles/SKILL.md), [Testing](.github/skills/development/testing/SKILL.md) |
 | **Documentation** | [Documentation](.github/skills/development/documentation/SKILL.md) |
+| **Prose Editing / AI Slop Audit** | [No AI Slop](.github/skills/development/no-ai-slop/SKILL.md) |
 | **Microsoft 365 Copilot Cowork Skill Package** | [Cowork Skill Creator](.github/skills/development/cowork-skill-creator/SKILL.md), [Skill Creator](.github/skills/development/skill-creator/SKILL.md) |
 | **Microsoft 365 Copilot Cowork Plugin Package** | [Cowork Plugin Creator](.github/skills/development/cowork-plugin-creator/SKILL.md), [Cowork Skill Creator](.github/skills/development/cowork-skill-creator/SKILL.md) |
 | **Cost Estimation / "what will this cost to run"** | [Cost Analysis](.github/skills/architecture/cost-analysis/SKILL.md), [Infra Governance](.github/skills/architecture/infra-governance/SKILL.md), [Performance & Scalability](.github/skills/architecture/performance/SKILL.md) |
@@ -103,7 +108,7 @@ description: 'Compressed skill index for AI agents. 133 skills across 14 categor
 
 ---
 
-## Skills Directory (133 skills -- pipe-delimited)
+## Skills Directory (134 skills -- pipe-delimited)
 
 > Format: `category|skill|path|keywords`
 > Read the SKILL.md at the path when the task matches keywords.
@@ -135,6 +140,7 @@ dev|token-optimizer|.github/skills/development/token-optimizer/SKILL.md|token-bu
 dev|code-hygiene|.github/skills/development/code-hygiene/SKILL.md|quality-sweep,over-engineering,stale-comments,generic-ui
 dev|code-optimization|.github/skills/development/code-optimization/SKILL.md|minimal-code,elegant,reduce-LOC,cyclomatic-complexity,compress,simplify,draft-optimize-verify,anti-code-golf
 dev|karpathy-guidelines|.github/skills/development/karpathy-guidelines/SKILL.md|think-before-coding,simplicity,surgical-changes,goal-driven,LLM-pitfalls,assumptions
+dev|no-ai-slop|.github/skills/development/no-ai-slop/SKILL.md|prose-editing,AI-slop,voice-preservation,writing-audit,formulaic-writing,detect
 dev|browser-automation|.github/skills/development/browser-automation/SKILL.md|playwright,browser,a11y,axe,prototype-validation,web-research,screenshot,wcag
 dev|verification-before-completion|.github/skills/development/verification-before-completion/SKILL.md|verification,gate,completion-claims,loop-complete,tests-pass,deploy,evidence,no-false-done
 dev|systematic-debugging|.github/skills/development/systematic-debugging/SKILL.md|debugging,root-cause,hypothesis-testing,stalled-fixes,three-failed-fixes,architecture-question,bug-investigation
@@ -330,6 +336,7 @@ Drift Monitoring|model-drift->data-drift->evaluation->logging->testing->code-rev
 AI Feedback System|feedback-loops->evaluation->fine-tuning->testing->code-review
 Code Optimization|scrub->code-hygiene->code-optimization->testing->code-review
 New Skill|skill-creator->documentation->testing->code-review
+General Prose Edit|no-ai-slop
 Security Audit|security->configuration->logging->testing->code-review
 E2E Test Suite|e2e-testing->test-automation->integration-testing->code-review
 Performance Validation|performance-testing->test-automation->testing->code-review
@@ -346,5 +353,5 @@ Legal Research Brief|legal->documentation
 
 ---
 
-**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 133 skills (arch:8, dev:25, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:13, test:6, domain:7, product:1, diagrams:1, low-code:13)
+**See Also**: [AGENTS.md](AGENTS.md) | [agentskills.io](https://agentskills.io/specification) | 134 skills (arch:8, dev:26, lang:10, ops:5, infra:4, data:7, document:3, ai:30, design:13, test:6, domain:7, product:1, diagrams:1, low-code:13)
 

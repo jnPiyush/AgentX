@@ -136,7 +136,7 @@ const TOOLS = [
   {
     name: 'agentx_loop_complete',
     description:
-      'Mark the AgentX quality loop complete. Requires 5+ iterations and an approved reviewer verdict with zero HIGH and MEDIUM findings on the final work iteration.',
+      'Mark the AgentX quality loop complete. Requires the risk-based 1/2/3/5 iteration minimum and an approved reviewer verdict with zero HIGH and MEDIUM findings on the final work iteration.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -354,7 +354,7 @@ const TOOL_BY_NAME = Object.fromEntries(TOOLS.map((t) => [t.name, t]));
 // ---------- MCP wiring ----------
 
 const server = new Server(
-  { name: 'agentx', version: '9.1.0' },
+  { name: 'agentx', version: '9.2.0' },
   { capabilities: { tools: {} } }
 );
 

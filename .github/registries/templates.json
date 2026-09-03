@@ -1,6 +1,6 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-08-27T18:09:23Z",
+  "generated": "2026-08-30T20:51:04Z",
   "source": ".github/templates/*.md",
   "totalCount": 15,
   "templates": [

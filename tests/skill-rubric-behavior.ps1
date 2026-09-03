@@ -58,6 +58,8 @@ metadata:
 > WHEN: Designing or reviewing a widget implementation with operational constraints.
 ## When to Use
 Use this skill for new widgets, widget reviews, and reliability changes that affect production behavior.
+## Why This Is a Skill
+Widget release checks require a repeatable evidence contract and reusable fixtures that are not supplied by general model knowledge.
 ## Prerequisites
 No external prerequisites are required beyond access to the current repository and its tests.
 ## Decision Tree
@@ -77,11 +79,21 @@ Stop on invalid input, preserve the original error context, and use a bounded re
 ## Anti-Patterns
 Do not hide missing evidence, invent unsupported APIs, or add speculative extension points.
 '@
+    New-Item -ItemType Directory -Path (Join-Path $strong 'references') | Out-Null
+    Set-Content -LiteralPath (Join-Path $strong 'references/widget-contract.md') -Value '# Widget Contract' -Encoding ascii
+    New-Item -ItemType Directory -Path (Join-Path $strong 'assets') | Out-Null
+    Set-Content -LiteralPath (Join-Path $strong 'assets/widget-fixture.json') -Value '{"widget":"sample"}' -Encoding ascii
     $strongResult = Score $strong
     $strongSkill = @($strongResult.skills)[0]
     Assert-True ($strongSkill.score -ge 80) 'strong fixture scores at least Strong'
     Assert-True ($strongSkill.blockers.Count -eq 0) 'strong fixture has no blockers'
-    Assert-True ($strongSkill.dimensions.Count -eq 7) 'rubric emits seven dimensions'
+    Assert-True ($strongSkill.dimensions.Count -eq 8) 'rubric emits eight dimensions'
+    Assert-True ((($strongSkill.dimensions | Measure-Object maxScore -Sum).Sum) -eq 100) 'rubric dimension maximums total exactly 100'
+    $differentiation = @($strongSkill.dimensions | Where-Object name -eq 'Differentiation')
+    Assert-True ($differentiation.Count -eq 1) 'rubric emits one Differentiation dimension'
+    if ($differentiation.Count -eq 1) {
+        Assert-True ($differentiation[0].score -eq $differentiation[0].maxScore) 'strong fixture demonstrates differentiated utility'
+    }
 
     $weak = New-SkillFixture $temp 'weak-skill' @'
 ---
@@ -96,6 +108,24 @@ Use this for a demonstration only.
     $weakSkill = @($weakResult.skills)[0]
     Assert-True ($weakSkill.score -lt 70) 'weak fixture exposes score debt'
     Assert-True ($weakSkill.blockers.Count -eq 0) 'weak fixture is reportable without universal blockers'
+
+    $emptyResources = New-SkillFixture $temp 'empty-resources' @'
+---
+name: empty-resources
+description: 'Use when validating that empty reference and asset placeholders cannot earn differentiated skill-quality credit.'
+---
+# Empty Resources
+## When to Use
+Use this fixture only to verify resource-content scoring.
+'@
+    New-Item -ItemType Directory -Path (Join-Path $emptyResources 'references') | Out-Null
+    New-Item -ItemType File -Path (Join-Path $emptyResources 'references/empty.md') | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $emptyResources 'assets') | Out-Null
+    New-Item -ItemType File -Path (Join-Path $emptyResources 'assets/empty.json') | Out-Null
+    $emptyResourceResult = Score $emptyResources
+    $emptyResourceFindings = @($emptyResourceResult.skills)[0].findings
+    Assert-True (-not @($emptyResourceFindings | Where-Object id -eq 'supporting-references')[0].pass) 'zero-byte references earn no differentiation credit'
+    Assert-True (-not @($emptyResourceFindings | Where-Object id -eq 'reusable-resources')[0].pass) 'zero-byte assets earn no differentiation credit'
 
     $mismatch = New-SkillFixture $temp 'mismatch-skill' @'
 ---
@@ -219,7 +249,8 @@ Use this fixture for deterministic development-category validation.
 
     $validationOutput = & $validator -SkillPath $strong -MinScore 70 -EnforceScore -Json 2>&1 | Out-String
     Assert-True ($LASTEXITCODE -eq 0) 'validator consumes rubric score for strong skill'
-    Assert-True ($validationOutput -match '"Score"\s*:\s*100') 'validator emits 100-point score in JSON'
+    $validationResult = $validationOutput | ConvertFrom-Json -Depth 20
+    Assert-True (@($validationResult.skills)[0].Score -ge 80) 'validator emits a Strong-or-better score in JSON'
     $failedValidationOutput = & $validator -SkillPath $mismatch -Json 2>&1 | Out-String
     $failedValidationExit = $LASTEXITCODE
     $failedValidation = $failedValidationOutput | ConvertFrom-Json -Depth 20

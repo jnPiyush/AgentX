@@ -1,5 +1,8 @@
 # AgentX MCP Server
 
+License: Apache-2.0. Release archives include the repository `LICENSE` and
+`NOTICE` files alongside the MCP runtime.
+
 A Model Context Protocol (MCP) stdio server that exposes the AgentX CLI as first-class tools to any MCP host: GitHub Copilot CLI, Claude Desktop, Cursor, VS Code MCP, Continue, etc.
 
 Instead of asking the model to type `pwsh .agentx/agentx-cli.ps1 loop start ...` into a terminal, the host calls `agentx_loop_start({ prompt: "..." })` as a structured tool. This makes the AgentX quality loop, ready queue, workflow phases, and ship pipeline reachable from chat in any compatible client.
@@ -10,7 +13,7 @@ Instead of asking the model to type `pwsh .agentx/agentx-cli.ps1 loop start ...`
 |------|-------|---------|
 | `agentx_loop_start` | `loop start -p "<task>" [-i <issue>]` | Open the mandatory quality loop before any edit |
 | `agentx_loop_iterate` | `loop iterate -s "..." [-e <evidence>]` | Record an iteration |
-| `agentx_loop_complete` | `loop complete -s "..." [-e <evidence>]` | Close the loop (>=5 iterations + an approved reviewer verdict with zero HIGH/MEDIUM on the final work iteration) |
+| `agentx_loop_complete` | `loop complete -s "..." [-e <evidence>]` | Close the loop after the risk-based `1/2/3/5` minimum and an approved reviewer verdict with zero HIGH/MEDIUM on the final work iteration |
 | `agentx_loop_status` | `loop status` | Report current loop state |
 | `agentx_ready` | `ready` | Priority-sorted ready queue |
 | `agentx_state` | `state [-a <agent>] [-s <status>] [-i <issue>]` | Show or update agent state |

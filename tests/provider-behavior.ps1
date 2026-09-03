@@ -20,9 +20,11 @@ function New-TestWorkspace([string]$name) {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-provider-test-{0}-{1}" -f $name, [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root 'scripts') -Force | Out-Null
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.agentx\local-issue-manager.ps1') (Join-Path $root '.agentx\local-issue-manager.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot 'scripts\score-code-quality.ps1') (Join-Path $root 'scripts\score-code-quality.ps1') -Force
     return $root
 }
 

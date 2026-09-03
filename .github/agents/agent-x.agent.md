@@ -3,6 +3,22 @@ name: AgentX Auto
 description: 'Autonomous execution mode for AgentX. Completes simple and complex work end to end by applying PM, Architect, Data Scientist, UX, Engineer, Reviewer, DevOps, and Tester phases internally when needed.'
 model: Claude Opus 5 (copilot)
 user-invocable: true
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   mode: adaptive
   level: high

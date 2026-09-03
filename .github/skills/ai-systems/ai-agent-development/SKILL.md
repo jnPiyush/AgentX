@@ -32,36 +32,35 @@ Need an AI agent?
 
 ## Prerequisites
 
-- Python 3.14+ or .NET 10+
-- agent-framework-azure-ai package
+- A runtime version supported by the target repository
+- A current stable Agent Framework SDK version verified against official docs
 - Microsoft Foundry workspace with deployed model
 
 ## Quick Start
 
 ### Installation
 
-**Python** (Recommended):
-```bash
-pip install agent-framework-azure-ai --pre # --pre required during preview
-```
-
-**.NET**:
-```bash
-dotnet add package Microsoft.Agents.AI.AzureAI --prerelease
-dotnet add package Microsoft.Agents.AI.Workflows --prerelease
-```
+Resolve current SDK package names and stable versions from the official Agent
+Framework documentation at implementation time. Pin the selected package version
+in the target repository lock file. Do not copy preview flags or version numbers
+from this skill into production setup.
 
 ### Model Selection
 
-**Top Production Models** (Microsoft Foundry):
+Select a **Capability Class** before selecting a concrete provider model:
 
-| Model | Best For | Context | Cost/1M |
-|-------|----------|---------|---------|
-| **gpt-5.2** | Enterprise agents, structured outputs | 200K/100K | TBD |
-| **gpt-5.1-codex-max** | Agentic coding workflows | 272K/128K | $3.44 |
-| **claude-opus-4-5** | Complex agents, coding, computer use | 200K/64K | $10 |
-| **gpt-5.1** | Multi-step reasoning | 200K/100K | $3.44 |
-| **o3** | Advanced reasoning | 200K/100K | $3.5 |
+| Capability Class | Use When | Required Evidence |
+|------------------|----------|-------------------|
+| Fast | Classification, extraction, or short tool turns | Meets latency and minimum quality thresholds |
+| Balanced | General agent work with moderate reasoning | Best quality/cost result on the representative eval set |
+| Deep reasoning | Architecture, hard debugging, or complex planning | Material measured gain over Balanced justifies latency and cost |
+| Coding agent | Long-running repository edits and test loops | Tool accuracy, patch quality, and completion rate meet thresholds |
+| Multimodal | Screenshots, diagrams, audio, or video are required inputs | Target modalities and formats are verified in the active host |
+
+Use the active Copilot/provider catalog or provider API to discover concrete
+models, availability, context limits, and current prices. Record the discovery
+date and source in the model decision. Never keep mutable price or model-ranking
+tables in durable skill prose.
 
 **Deploy Model**: `Ctrl+Shift+P` -> `AI Toolkit: Deploy Model`
 
@@ -79,7 +78,7 @@ from agent_framework.openai import OpenAIChatClient
 prompt = Path("prompts/assistant.md").read_text(encoding="utf-8")
 
 client = OpenAIChatClient(
- model="gpt-5.1",
+ model=os.environ["FOUNDRY_MODEL_ID"],
  api_key=os.getenv("FOUNDRY_API_KEY"),
  endpoint=os.getenv("FOUNDRY_ENDPOINT")
 )
@@ -240,7 +239,7 @@ prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
 - [ ] All output templates stored in `templates/` (not inline in code)
 
 **Model Change Management (MANDATORY)**
-- [ ] Model version pinned explicitly (e.g., `gpt-5.1-2026-01-15`)
+- [ ] Deployed model ID/version pinned explicitly in configuration
 - [ ] Model version configurable via environment variable
 - [ ] Evaluation baseline saved for current model
 - [ ] A/B evaluation run before any model switch
@@ -295,7 +294,7 @@ prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
 ## Anti-Patterns
 
 - **Inline prompt strings**: Embedding prompts as multi-line strings in code -> Store in `prompts/` directory as separate files
-- **Unpinned model versions**: Using `gpt-4o` without date suffix -> Pin explicitly (e.g., `gpt-5.1-2026-01-15`)
+- **Unpinned model versions**: Relying on a mutable provider alias without an evaluated deployment version -> Pin the deployed ID in configuration and retain the eval result
 - **No evaluation before deploy**: Shipping agents without running eval datasets -> Gate deployment on quality thresholds
 - **Monolithic agent**: One agent handling all domains and tasks -> Split into specialized agents with clear handoffs
 - **Ignoring token costs**: No monitoring of per-request token usage -> Track tokens per component and set budgets

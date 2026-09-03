@@ -4,7 +4,23 @@ description: 'Monitor AgentOps tracing, detect model/data drift, track cost/late
 visibility: internal
 model: Claude Sonnet 5 (copilot)
 user-invocable: false
-disable-model-invocation: true
+disable-model-invocation: false
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   mode: adaptive
   level: low
@@ -18,7 +34,6 @@ constraints:
   - "MUST NOT disable alerting without documenting the reason"
   - "MUST iterate until ALL done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; the loop is NOT done until '.agentx/agentx.ps1 loop complete -s <summary>' succeeds"
   - "MUST verify agentic loop completion before declaring implementation complete"
-  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - ".copilot-tracking/ops-monitor/** (monitoring configuration and reports)"
@@ -40,7 +55,6 @@ tools:
   - usages
   - fetch
   - think
-  - github/*
 agents: []
 ---
 

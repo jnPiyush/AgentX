@@ -72,14 +72,21 @@ Total Context Window: N tokens
   = 100% allocated (MUST NOT exceed window)
 ```
 
-### Budget by Model
+### Resolve Limits at Runtime
 
-| Model | Context Window | Practical Budget | Notes |
-|-------|---------------|-----------------|-------|
-| GPT-4o | 128K | ~100K input | Reserve 28K for output |
-| Claude 3.5/4 | 200K | ~160K input | Reserve 32K for output |
-| Llama 3.1 70B | 128K | ~100K input | Quality degrades past 64K |
-| Gemini 2.0 | 1M+ | ~800K input | Use selectively; cost scales |
+Do not keep a model-to-context table in this skill. Model aliases, host limits,
+token accounting, prices, and output caps change independently. At startup or
+deployment validation:
+
+1. Resolve the configured deployment to a concrete model/version.
+2. Read context and output limits from the active provider or host catalog.
+3. Select the matching tokenizer or provider token-count API.
+4. Apply an application-specific safety margin based on eval evidence.
+5. Fail fast when the configured input plus reserved output exceeds the resolved
+  limit.
+
+Persist the resolved limits and verification date with deployment configuration,
+not in portable skill instructions.
 
 ### Important: "Lost in the Middle"
 
@@ -283,7 +290,7 @@ Agent B (receives compressed context)
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `scaffold-context-manager.py` | Generate context management module | `python scaffold-context-manager.py --strategy progressive-summary --model gpt-4o` |
+| `scaffold-context-manager.py` | Generate context management module | `python scaffold-context-manager.py --strategy progressive-summary --model <configured-model-id>` |
 
 ---
 

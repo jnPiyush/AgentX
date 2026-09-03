@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX Copilot CLI Plugin v9.1.0 into a workspace.
+ Install AgentX Copilot CLI Plugin v9.2.0 into a workspace.
 
 .DESCRIPTION
  Copies AgentX agents, skills, instructions, and prompts into a target workspace
@@ -339,6 +339,15 @@ function Install-CliRuntimeBundle {
   $copied += $result.Copied
   $skipped += $result.Skipped
  }
+ $trustedFiles = @(
+  @{ Source = 'scripts/score-code-quality.ps1'; Destination = '.github/agentx/scripts/score-code-quality.ps1' },
+  @{ Source = 'evaluation/rubrics/code-quality.md'; Destination = '.github/agentx/evaluation/rubrics/code-quality.md' }
+ )
+ foreach ($trustedFile in $trustedFiles) {
+  $result = Copy-FileIfNeeded -SrcPath (Join-Path $SourceRoot $trustedFile.Source) -DestPath (Join-Path $TargetRoot $trustedFile.Destination) -Overwrite:$Force
+  $copied += $result.Copied
+  $skipped += $result.Skipped
+ }
 
  return @{ Copied = $copied; Skipped = $skipped }
 }
@@ -386,7 +395,7 @@ function Initialize-WorkspaceCliState {
  }
 
  $version = [ordered]@{
-  version = '9.1.0'
+  version = '9.2.0'
   provider = 'local'
   mode = 'local'
   integration = 'local'
@@ -455,7 +464,7 @@ $Target = [System.IO.Path]::GetFullPath($Target)
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "| AgentX Copilot CLI Plugin v9.1.0        |" -ForegroundColor Cyan
+Write-Host "| AgentX Copilot CLI Plugin v9.2.0        |" -ForegroundColor Cyan
 Write-Host "| Standalone plugin for GitHub Copilot CLI |" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
@@ -480,12 +489,14 @@ foreach ($group in @($installPlan.Entries | Group-Object Label)) {
 
  foreach ($entry in $group.Group) {
   $srcPath = Join-Path $Source $entry.RelativePath
-  $destPath = Join-Path $Target $entry.RelativePath
+  $isLegalFile = $entry.Type -eq 'file' -and $entry.RelativePath -in @('LICENSE', 'NOTICE')
+  $destinationRelativePath = if ($isLegalFile) { ".agentx/legal/$($entry.RelativePath)" } else { $entry.RelativePath }
+  $destPath = Join-Path $Target $destinationRelativePath
 
   if ($entry.Type -eq 'tree') {
    $result = Copy-Tree -SrcDir $srcPath -DestDir $destPath -Overwrite:$Force
   } else {
-   $result = Copy-FileIfNeeded -SrcPath $srcPath -DestPath $destPath -Overwrite:$Force
+   $result = Copy-FileIfNeeded -SrcPath $srcPath -DestPath $destPath -Overwrite:($Force -or $isLegalFile)
   }
 
   $groupCopied += $result.Copied
@@ -526,7 +537,7 @@ if (-not (Test-Path $versionDir)) {
 if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
  @{
   plugin = "agentx-copilot-cli"
-    version = "9.1.0"
+    version = "9.2.0"
   installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
   source = $Source
   includeCli = [bool]$IncludeCli
@@ -538,14 +549,14 @@ if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
-Write-Host " AgentX Copilot CLI Plugin v9.1.0 installed" -ForegroundColor Green
+Write-Host " AgentX Copilot CLI Plugin v9.2.0 installed" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " Files copied  : $totalCopied" -ForegroundColor White
 Write-Host " Files skipped : $totalSkipped (already exist, use -Force to overwrite)" -ForegroundColor DarkGray
 Write-Host ""
  Write-Host " Agents        : 26 (15 external + 11 internal)" -ForegroundColor White
- Write-Host " Skills        : 133 across 14 categories" -ForegroundColor White
+ Write-Host " Skills        : 134 across 14 categories" -ForegroundColor White
  Write-Host " Instructions  : 7 (auto-applied by file pattern)" -ForegroundColor White
  Write-Host " Prompts       : 23 reusable templates" -ForegroundColor White
 if ($IncludeCli) {

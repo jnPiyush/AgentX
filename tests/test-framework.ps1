@@ -57,6 +57,13 @@ Assert-FileExists "README.md" "README.md"
 Assert-FileExists "install.ps1" "install.ps1"
 Assert-FileExists "install.sh" "install.sh"
 Assert-FileExists "LICENSE" "LICENSE"
+Assert-FileContains "install.ps1" '"LICENSE"' "PowerShell installer extracts the AgentX license"
+Assert-FileContains "install.ps1" '"NOTICE"' "PowerShell installer extracts repository notices"
+Assert-FileContains "install.sh" '\$PREFIX/LICENSE' "Bash installer extracts the AgentX license"
+Assert-FileContains "install.sh" '\$PREFIX/NOTICE' "Bash installer extracts repository notices"
+Assert-FileContains ".agentx/mcp-server/package.json" '"license": "Apache-2\.0"' "MCP package declares the AgentX Apache license"
+Assert-FileContains ".github/workflows/auto-release.yml" 'cp LICENSE NOTICE release-staging/mcp/' "Auto release stages MCP legal files"
+Assert-FileContains ".github/workflows/recover-release.yml" 'cp LICENSE NOTICE release-staging/mcp/' "Recovery release stages MCP legal files"
 Assert-FileContains "install.ps1" "docs/WORKFLOW\.md" "install.ps1 bundles WORKFLOW reference doc"
 Assert-FileContains "install.ps1" "docs/GUIDE\.md" "install.ps1 bundles GUIDE reference doc"
 Assert-FileContains "install.sh" "docs/WORKFLOW\.md" "install.sh bundles WORKFLOW reference doc"
@@ -68,6 +75,12 @@ Assert-FileContains "install.sh" "templates/memories" "install.sh seeds starter 
 Assert-FileContains "packs/agentx-copilot-cli/install.ps1" "Get-PackInstallPlan" "Copilot CLI installer builds an install plan from the pack manifest"
 Assert-FileContains "packs/agentx-copilot-cli/install.ps1" "Loaded install plan from manifest\.json" "Copilot CLI installer reports manifest-driven planning"
 Assert-FileContains "packs/agentx-copilot-cli/manifest.json" '"schemas"' "Copilot CLI manifest declares schema artifacts"
+Assert-FileContains "packs/agentx-core/manifest.json" "scripts/score-code-quality.ps1" "Core pack declares code-quality evaluator"
+Assert-FileContains "packs/agentx-core/manifest.json" "evaluation/rubrics/code-quality.md" "Core pack declares code-quality rubric"
+Assert-FileContains ".agentx/mcp-server/package.json" "412e40abd4eb8beabfb952d80abf949a2baf27a3" "MCP runtime pins the patched fast-uri commit"
+Assert-FileContains ".agentx/mcp-server/package-lock.json" '"version": "3\.1\.7"' "MCP lock resolves the patched fast-uri version"
+Assert-FileNotContains ".agentx/mcp-server/package-lock.json" "pkgs\.visualstudio\.com|ms-feed-" "MCP lock contains no private registry URLs"
+Assert-FileContains ".agentx/mcp-server/index.js" "risk-based 1/2/3/5 iteration minimum" "MCP completion metadata describes risk-based iteration floors"
 Assert-FileContains "scripts/stamp-version.js" "docs/GUIDE\.md" "version stamper updates published installation guide"
 Assert-FileContains "scripts/stamp-version.js" "preflightLiteralFile\('docs/GUIDE\.md', guideInstallerUrlEdits\)" "version stamper preflights guide installer URLs"
 Assert-FileContains "scripts/stamp-version.js" "preflightLiteralFile\('install\.ps1', powershellInstallerUrlEdits\)" "version stamper preflights PowerShell installer URLs"
@@ -88,6 +101,13 @@ if ($LASTEXITCODE -ne 0) {
 Assert-FileContains "scripts/stamp-package-version.js" "serverPattern" "MCP version stamper updates reported server identity"
 Assert-FileContains "scripts/stamp-package-version.js" "' },\)" "MCP version stamper matches the server declaration comma"
 Assert-FileContains ".github/workflows/auto-release.yml" "diff-tree --root --no-commit-id --name-only -r -m" "auto-release detects stamped versions in merge commits"
+Assert-FileContains ".github/workflows/auto-release.yml" "release-preflight:" "auto-release defines a pre-release validation job"
+Assert-FileContains ".github/workflows/auto-release.yml" "create-release:\r?\n\s+needs: \[detect-version-bump, release-preflight\]" "auto-release gates release creation on preflight"
+Assert-FileContains ".github/workflows/auto-release.yml" "needs\.detect-version-bump\.result == 'success'" "auto-release fails closed when version detection fails"
+Assert-FileContains ".github/workflows/auto-release.yml" "Validate extension before release creation" "auto-release validates extension before tagging"
+Assert-FileContains ".github/workflows/auto-release.yml" "npm run test:coverage" "auto-release preflight enforces extension coverage"
+Assert-FileContains ".github/workflows/auto-release.yml" "Validate MCP before release creation" "auto-release validates MCP before tagging"
+Assert-FileContains ".github/workflows/auto-release.yml" "npm run audit:runtime" "auto-release preflight enforces the MCP audit"
 Assert-FileContains ".github/workflows/publish-marketplace.yml" "VSIX identity mismatch" "Marketplace publish validates VSIX manifest identity"
 Assert-FileContains ".github/workflows/publish-marketplace.yml" 'VSIX_FILE="agentx-\$\{EXPECTED_VERSION\}\.vsix"' "Marketplace publish selects the exact versioned VSIX"
 Assert-FileContains ".github/workflows/quality-gates.yml" "node tests/stamp-version-behavior.js" "PR quality gates run version stamper regression coverage"
@@ -97,6 +117,8 @@ Assert-FileContains "packs/agentx-power-platform-builder/templates/SOLUTION-MANI
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-skill.ps1" "extension bundles canonical skill validator"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-changed-skills.ps1" "extension bundles changed-skill no-regression validator"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "skill-quality.md" "extension bundles skill-quality rubric"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "score-code-quality.ps1" "extension bundles code-quality evaluator"
+Assert-FileContains "vscode-extension/scripts/copy-assets.js" "code-quality.md" "extension bundles code-quality rubric"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "scripts/node_modules/yaml" "extension bundles skill rubric YAML runtime"
 Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/pre-commit" "extension bundles pre-commit hook source"
 Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/commit-msg" "extension bundles commit-msg hook source"
@@ -159,7 +181,7 @@ Assert-FileExists ".agentx/agentx.sh" "Bash CLI launcher exists"
 Assert-FileExists ".agentx/agentic-runner.ps1" "CLI agentic loop runner exists"
 
 # Test CLI commands exist in the implementation file
-$cliCommands = @("ready", "state", "deps", "digest", "workflow", "hook", "version", "run", "loop", "validate", "config", "issue", "bundle", "parallel", "backlog-sync", "hire", "watch")
+$cliCommands = @("ready", "state", "deps", "digest", "workflow", "hook", "policy-hook", "version", "run", "loop", "validate", "config", "issue", "bundle", "parallel", "backlog-sync", "hire", "watch")
 foreach ($cmd in $cliCommands) {
  Assert-FileContains ".agentx/agentx-cli.ps1" "'$cmd'" "CLI supports: $cmd"
 }
@@ -181,6 +203,11 @@ Assert-FileExists "tests/sprint-discover-behavior.ps1" "Sprint/discover behavior
 Assert-FileExists "tests/loop-parity-behavior.ps1" "Loop parity behavior test script"
 Assert-FileExists "tests/pre-commit-gate-behavior.ps1" "Pre-commit gate behavior test script"
 Assert-FileExists "tests/skill-rubric-behavior.ps1" "Skill rubric behavior test script"
+Assert-FileExists "tests/code-quality-rubric-behavior.ps1" "Code-quality rubric behavior test script"
+Assert-FileExists "tests/ai-agent-scaffold-behavior.ps1" "AI agent scaffold behavior test script"
+Assert-FileExists "tests/customization-modernization-behavior.ps1" "Customization modernization behavior test script"
+Assert-FileExists "tests/policy-hook-behavior.ps1" "Policy hook behavior test script"
+Assert-FileExists "tests/installer-license-behavior.ps1" "Installer license behavior test script"
 
 $providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -238,6 +265,42 @@ if ($LASTEXITCODE -ne 0) {
  Write-Host $skillRubricBehaviorResult
 }
 Assert-True ($LASTEXITCODE -eq 0) "Skill rubric behavior tests pass"
+
+$codeQualityRubricResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/code-quality-rubric-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $codeQualityRubricResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Code-quality rubric behavior tests pass"
+
+$noAiSlopResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/no-ai-slop-skill-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $noAiSlopResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "No AI Slop skill behavior tests pass"
+
+$aiAgentScaffoldResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/ai-agent-scaffold-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $aiAgentScaffoldResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "AI agent scaffold behavior tests pass"
+
+$customizationModernizationResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/customization-modernization-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $customizationModernizationResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Customization modernization behavior tests pass"
+
+$policyHookBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/policy-hook-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $policyHookBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Policy hook behavior tests pass"
+
+$installerLicenseResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/installer-license-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $installerLicenseResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Installer license behavior tests pass"
 
 # --- 6. Skills --------------------------------------------------------------------------
 Write-Host ""

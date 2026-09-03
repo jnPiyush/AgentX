@@ -41,6 +41,7 @@ const runtimeScriptFiles = [
     'check-harness-compliance.ps1',
     'validate-frontmatter.ps1',
     'validate-references.ps1',
+    'score-code-quality.ps1',
     'score-skill.ps1',
     'validate-skill.ps1',
     'validate-changed-skills.ps1',
@@ -51,10 +52,10 @@ const runtimeScriptFiles = [
 const standaloneFiles = ['AGENT-PROTOCOL.md', 'agent-delegation.md', 'agentx-security.yml', 'CODEOWNERS', 'PULL_REQUEST_TEMPLATE.md', 'copilot-instructions.md'];
 
 // Root-level reference documents to bundle alongside .github/ assets
-const rootDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE'];
+const rootDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE', 'NOTICE'];
 
 // Root-level compatibility docs referenced by bundled markdown via relative paths
-const compatibilityDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE'];
+const compatibilityDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE', 'NOTICE'];
 
 // Root-level runtime files that extension-installed workspaces rely on
 const rootRuntimeFiles = [
@@ -71,6 +72,10 @@ const docFiles = ['WORKFLOW.md', 'GUIDE.md', 'GOLDEN_PRINCIPLES.md', 'QUALITY_SC
 const docGuideDir = path.join(repoRoot, 'docs', 'guides');
 
 const artifactDocFiles = [
+    {
+        src: path.join(repoRoot, 'evaluation', 'rubrics', 'code-quality.md'),
+        dest: path.join('evaluation', 'rubrics', 'code-quality.md'),
+    },
     {
         src: path.join(repoRoot, 'evaluation', 'rubrics', 'skill-quality.md'),
         dest: path.join('evaluation', 'rubrics', 'skill-quality.md'),

@@ -1,6 +1,7 @@
 ---
 name: code-review
 description: 'Conduct systematic code reviews and audits including automated checks, security audits, compliance verification, and review checklists. Use when reviewing pull requests, performing security audits, verifying coding standards compliance, or setting up automated code review workflows.'
+user-invocable: false
 ---
 
 # Code Review & Audit

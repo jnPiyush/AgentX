@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentX v9.1.0 Installer - Download, copy, configure.
+# AgentX v9.2.0 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -11,7 +11,7 @@
 # ./install.sh --azure # Force Azure Skills companion install
 #
 # # One-liner install (local mode, no prompts, pinned to a release tag)
-# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.1.0/install.sh | bash
+# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.sh | bash
 #
 # # One-liner for GitHub mode
 # MODE=github curl -fsSL ... | bash
@@ -32,7 +32,7 @@ FORCE="${FORCE:-false}"
 NO_SETUP="${NO_SETUP:-false}"
 INSTALL_PATH="${AGENTX_PATH:-}"
 AZURE="${AGENTX_AZURE:-false}"
-BRANCH="v9.1.0"
+BRANCH="v9.2.0"
 TMP=".agentx-install-tmp"
 TMPARCHIVE="$TMP.tar.gz"
 ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.tar.gz"
@@ -195,7 +195,7 @@ ensure_dependency() {
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| AgentX v9.1.0 - AI Agent Orchestration |${N}"
+echo -e "${C}| AgentX v9.2.0 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -209,6 +209,19 @@ DISPLAY_MODE="GitHub"; [ "$LOCAL" = "true" ] && DISPLAY_MODE="Local"
 echo ""
 echo -e "${G} Mode: $DISPLAY_MODE${N}"
 echo ""
+
+PREVIOUS_VERSION=""
+if [ -f ".agentx/version.json" ]; then
+ PREVIOUS_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' .agentx/version.json 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)"/\1/')
+fi
+if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.2.0" ] && [ "$FORCE" != "true" ]; then
+ PREVIOUS_MAJOR_VERSION=$(echo "$PREVIOUS_VERSION" | cut -d. -f1)
+ if [ "$PREVIOUS_MAJOR_VERSION" -ge 9 ] 2>/dev/null; then
+  trap - EXIT ERR
+  echo "AgentX v$PREVIOUS_VERSION is already installed. Re-run with --force to replace managed files with v9.2.0; no files were changed." >&2
+  exit 1
+ fi
+fi
 
 # -- Prerequisites ---------------------------------------
 # curl/wget + tar for download; install Git and PowerShell up front when missing
@@ -224,16 +237,11 @@ ensure_dependency git git Git || { echo "Git is required for AgentX install."; e
 ensure_dependency pwsh powershell "PowerShell 7.4+ (pwsh)" || { echo "PowerShell 7.4+ (pwsh) is required for AgentX install."; exit 1; }
 
 # -- Upgrade detection: uninstall old version, preserve user data --
-PREVIOUS_VERSION=""
-if [ -f ".agentx/version.json" ]; then
- PREVIOUS_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' .agentx/version.json 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)"/\1/')
-fi
-
-if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.1.0" ]; then
+if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.2.0" ]; then
  MAJOR_VERSION=$(echo "$PREVIOUS_VERSION" | cut -d. -f1)
 
  if [ "$MAJOR_VERSION" -lt 9 ] 2>/dev/null; then
-  echo -e "${Y}[!] Detected AgentX v$PREVIOUS_VERSION - upgrading to v9.1.0...${N}"
+  echo -e "${Y}[!] Detected AgentX v$PREVIOUS_VERSION - upgrading to v9.2.0...${N}"
   echo -e "${D}  Uninstalling v$PREVIOUS_VERSION and performing clean install.${N}"
 
   # Back up user data that must survive the upgrade
@@ -298,6 +306,8 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/.gitignore" \
  "$PREFIX/AGENTS.md" \
  "$PREFIX/Skills.md" \
+ "$PREFIX/LICENSE" \
+ "$PREFIX/NOTICE" \
  "$PREFIX/docs/WORKFLOW.md" \
  "$PREFIX/docs/GUIDE.md" \
  "$PREFIX/docs/GOLDEN_PRINCIPLES.md" \
@@ -314,13 +324,16 @@ copied=0; skipped=0
 while IFS= read -r src; do
  rel="${src#$TMP/}"
  case "$rel" in
-  .agentx/config.json|.agentx/version.json|.agentx/issues/*|.agentx/digests/*|.agentx/sessions/*|.agentx/memory/*|.agentx/state/*|.vscode/mcp.json)
+  .agentx/config.json|.agentx/version.json|.agentx/issues/*|.agentx/digests/*|.agentx/sessions/*|.agentx/memory/*|.agentx/state/*|.vscode/mcp.json|.vscode/settings.json)
    continue
    ;;
  esac
- dest="./$rel"
+ case "$rel" in
+  LICENSE|NOTICE) dest="./.agentx/legal/$rel" ;;
+  *) dest="./$rel" ;;
+ esac
  mkdir -p "$(dirname "$dest")"
- if [ "$FORCE" = "true" ] || [ ! -f "$dest" ]; then
+ if [ "$rel" = "LICENSE" ] || [ "$rel" = "NOTICE" ] || [ "$FORCE" = "true" ] || [ ! -f "$dest" ]; then
  cp "$src" "$dest"
  ((copied++)) || true
  else
@@ -365,8 +378,8 @@ fi
 
 # Version tracking
 VERSION_FILE=".agentx/version.json"
-echo "{ \"version\": \"9.1.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 9.1.0 recorded"
+echo "{ \"version\": \"9.2.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 9.2.0 recorded"
 
 # Merge AgentX entries into user's .gitignore
 MARKER_START="# --- AgentX (auto-generated, do not edit this block) ---"
@@ -616,7 +629,7 @@ fi
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} AgentX v9.1.0 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} AgentX v9.2.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.agentx/agentx.sh help"

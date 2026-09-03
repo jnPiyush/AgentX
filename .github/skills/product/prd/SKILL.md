@@ -1,6 +1,7 @@
 ---
 name: "prd"
 description: "Produce production-grade Product Requirements Documents (PRDs) that bridge business vision and technical execution. Use when writing, reading, reviewing, or extending a PRD -- by Product Manager agents authoring one, or by Architect/UX/Engineer/Agent-X agents that need to consume or fact-check PRD conventions without loading the full PM agent contract."
+user-invocable: false
 metadata:
   author: "AgentX"
   version: "1.0.0"

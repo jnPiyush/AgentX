@@ -1,7 +1,7 @@
 # Model Change Test Automation
 
 > Every AI agent should prove it works on more than one model before going to production.
-> If your agent only works on GPT-5.1, you don't have a product - you have a dependency.
+> If your agent only works on one concrete deployment, you don't have a product - you have a dependency.
 
 ---
 
@@ -24,11 +24,11 @@ Most teams build and test against exactly one model. This creates hidden risks:
 ```
  WRONG: "Test on one model, deploy"
  
- Build Agent -> Test on GPT-5.1 -> Deploy -> Hope it works
+ Build Agent -> Test on one deployment -> Deploy -> Hope it works
 
  RIGHT: "Test on multiple, deploy the best"
 
- Build Agent -> Test on [GPT-5.1, Claude Opus, O3, GPT-5.1-mini]
+ Build Agent -> Test on [primary, challenger, fallback, budget]
  -> Compare scores
  -> Pick primary + designate fallback
  -> Deploy with confidence
@@ -56,11 +56,11 @@ Choose models that cover your risk surface:
 
 | Slot | Purpose | Example | Why |
 |------|---------|---------|-----|
-| **Primary** | Production model | gpt-5.1-2026-01-15 | Current production choice |
-| **Challenger** | Next candidate | gpt-5.2-2026-02-01 | Newer version to evaluate |
-| **Fallback** | Backup if primary fails | claude-opus-4-5 | Different provider for resilience |
-| **Budget** | Cost-optimized option | gpt-5.1-mini | Can cheaper model pass the bar? |
-| **Reasoning** | Complex task specialist | o3 | Worth the cost for hard tasks? |
+| **Primary** | Production deployment | `<primary-model-id>` | Current evaluated choice |
+| **Challenger** | Next candidate | `<challenger-model-id>` | Candidate discovered from the active provider catalog |
+| **Fallback** | Backup if primary fails | `<fallback-model-id>` | Different provider for resilience |
+| **Budget** | Cost-optimized option | `<budget-model-id>` | Can a cheaper deployment pass the bar? |
+| **Reasoning** | Complex task specialist | `<reasoning-model-id>` | Is added latency and cost justified for hard tasks? |
 
 **Minimum viable matrix**: Primary + one alternative from a different provider.
 
@@ -103,7 +103,7 @@ Every model comparison run should produce a standardized report:
  "dataset_size": 75,
  "models": [
  {
- "name": "gpt-5.1-2026-01-15",
+ "name": "<primary-model-id>",
  "role": "primary",
  "scores": {
  "task_completion": 0.92,
@@ -113,11 +113,11 @@ Every model comparison run should produce a standardized report:
  "tool_accuracy": 0.95,
  "avg_latency_ms": 1200,
  "avg_tokens": 850,
- "estimated_cost_per_1k": 2.89
+ "estimated_cost_per_1k": "<calculated-from-current-provider-price>"
  }
  },
  {
- "name": "claude-opus-4-5",
+ "name": "<challenger-model-id>",
  "role": "challenger",
  "scores": {
  "task_completion": 0.89,
@@ -127,21 +127,21 @@ Every model comparison run should produce a standardized report:
  "tool_accuracy": 0.91,
  "avg_latency_ms": 1800,
  "avg_tokens": 920,
- "estimated_cost_per_1k": 9.20
+ "estimated_cost_per_1k": "<calculated-from-current-provider-price>"
  }
  }
  ],
  "comparison": {
  "winner_by_metric": {
- "task_completion": "gpt-5.1-2026-01-15",
- "coherence": "claude-opus-4-5",
- "relevance": "gpt-5.1-2026-01-15",
- "format_compliance": "gpt-5.1-2026-01-15",
- "cost_efficiency": "gpt-5.1-2026-01-15"
+ "task_completion": "<winning-model-id>",
+ "coherence": "<winning-model-id>",
+ "relevance": "<winning-model-id>",
+ "format_compliance": "<winning-model-id>",
+ "cost_efficiency": "<winning-model-id>"
  },
- "recommendation": "Keep gpt-5.1 as primary. Claude wins on coherence but costs 3.2x more.",
+ "recommendation": "Keep the primary deployment because the challenger does not justify its measured cost and latency delta.",
  "alerts": [
- "claude-opus-4-5 format_compliance dropped below 0.95 threshold"
+ "<challenger-model-id> format_compliance dropped below the configured threshold"
  ]
  },
  "thresholds": {
@@ -156,14 +156,14 @@ Every model comparison run should produce a standardized report:
 
 ```
 +======================================================================+
-| Metric | GPT-5.1 | Claude Opus | O3 | Threshold |
+| Metric | Primary | Challenger | Reasoning | Threshold |
 ======================================================================
 | Task Completion | 0.92 [PASS] | 0.89 [PASS] | 0.94 [PASS] | 0.85 |
 | Coherence | 4.3 [PASS] | 4.5 [PASS] | 4.1 [PASS] | 3.5 |
 | Format Compliance | 0.97 [PASS] | 0.93 [WARN] | 0.98 [PASS] | 0.95 |
 | Tool Accuracy | 0.95 [PASS] | 0.91 [WARN] | 0.96 [PASS] | 0.90 |
 | Avg Latency (ms) | 1200 | 1800 | 3500 | 5000 |
-| Cost per 1K queries | $2.89 | $9.20 | $3.50 | $15 |
+| Cost per 1K queries | resolved | resolved | resolved | configured budget |
 ======================================================================
 | RECOMMENDATION | PRIMARY [PASS]| FALLBACK [WARN] | REASONING | |
 +======================================================================+
@@ -227,7 +227,7 @@ jobs:
  runs-on: ubuntu-latest
  strategy:
  matrix:
- model: [gpt-5.1-2026-01-15, claude-opus-4-5, gpt-5.1-mini, o3]
+ model: [primary-model-id, challenger-model-id, fallback-model-id, budget-model-id]
  fail-fast: false # Run ALL models even if one fails
  
  steps:
@@ -293,26 +293,26 @@ jobs:
 # config/models.yaml - Single source of truth for model test matrix
 models:
  primary:
- name: gpt-5.1-2026-01-15
- deployment: gpt51-prod
+ name: <primary-model-id>
+ deployment: <primary-deployment-name>
  provider: azure
  role: primary
  
  challenger:
- name: gpt-5.2-2026-02-01
- deployment: gpt52-staging
+ name: <challenger-model-id>
+ deployment: <challenger-deployment-name>
  provider: azure
  role: challenger
  
  fallback:
- name: claude-opus-4-5
- deployment: claude-fallback
+ name: <fallback-model-id>
+ deployment: <fallback-deployment-name>
  provider: azure # via Foundry model catalog
  role: fallback
  
  budget:
- name: gpt-5.1-mini
- deployment: gpt51-mini-prod
+ name: <budget-model-id>
+ deployment: <budget-deployment-name>
  provider: azure
  role: budget
 
@@ -382,8 +382,8 @@ class ModelConfig:
  def from_env(cls, prefix: str = "AGENT") -> "ModelConfig":
  """Load model config from environment variables."""
  return cls(
- name=os.getenv(f"{prefix}_MODEL", "gpt-5.1"),
- deployment=os.getenv(f"{prefix}_DEPLOYMENT", "gpt51-prod"),
+ name=os.environ[f"{prefix}_MODEL"],
+ deployment=os.environ[f"{prefix}_DEPLOYMENT"],
  endpoint=os.getenv(f"{prefix}_ENDPOINT", ""),
  api_key=os.getenv(f"{prefix}_API_KEY", ""),
  temperature=float(os.getenv(f"{prefix}_TEMPERATURE", "0.7")),
@@ -596,16 +596,11 @@ Running evals across 4+ models on 100+ test cases gets expensive. Manage costs:
 ### Cost Estimation Formula
 
 ```
-Cost per run = (model_cost_per_1M_tokens avg_tokens_per_query dataset_size) / 1,000,000
+Cost per run = (current provider price per 1M tokens * average tokens per query * dataset size) / 1,000,000
 
-Example:
- GPT-5.1: $3.44/1M 850 tokens 100 queries = $0.29
- Claude Opus: $10/1M 920 tokens 100 queries = $0.92
- O3: $3.5/1M 1100 tokens 100 queries = $0.39
- GPT-5.1-mini: $0.30/1M 700 tokens 100 queries = $0.02
- 
- Total per weekly run: ~$1.62
- Monthly: ~$6.50
+Resolve the price for each concrete deployment immediately before the run, store
+the source and verification timestamp with the report, and calculate totals from
+observed token usage. Do not carry example prices forward as planning inputs.
 ```
 
 ---
@@ -660,7 +655,7 @@ CANDIDATE -> TESTING -> QUALIFIED -> CANARY -> PRIMARY -> DEPRECATED -> RETIRED
 
 | Anti-Pattern | Why It Fails | Fix |
 |-------------|-------------|-----|
-| "We tested on GPT-5.1 so we're good" | Single point of failure | Test on 2+ models minimum |
+| "We tested one deployment so we're good" | Single point of failure | Test on 2+ provider-diverse deployments minimum |
 | Testing models sequentially by hand | Inconsistent, slow, error-prone | Automate with CI pipeline |
 | Different prompts per model | Can't compare fairly | Same prompt, same dataset |
 | Ignoring cost in comparison | Cheapest model might pass the bar | Include cost as a metric |

@@ -17,7 +17,7 @@
 
 ---
 
-## Component Scores (v9.1.0)
+## Component Scores (v9.2.0)
 
 ### Agent Definitions (.github/agents/)
 
@@ -53,7 +53,7 @@
 | Category | Count | Grade | Notes |
 |----------|-------|-------|-------|
 | Architecture | 8 | A | Core principles, security, performance, database, API design, cost analysis, infrastructure governance, low-code vs pro-code |
-| Development | 23 | A | Testing, error handling, iterative loop, code review, code optimization, token optimizer, verification, debugging, git worktrees, strategic compaction, finishing-a-development-branch, dispatching-parallel-agents, and related engineering workflow skills |
+| Development | 26 | A | Testing, error handling, iterative loop, code review, code optimization, prose anti-slop editing, token optimizer, verification, debugging, git worktrees, strategic compaction, finishing-a-development-branch, dispatching-parallel-agents, and related engineering workflow skills |
 | Languages | 10 | A | C, C++, C#, Python, Go, Rust, React, Blazor, PostgreSQL, SQL Server |
 | Operations | 5 | A | Git, GitHub Actions, YAML pipelines, release mgmt, version control |
 | Infrastructure | 4 | A | Azure, Bicep, Terraform, containerization |
@@ -115,7 +115,7 @@
 
 | Document | Grade | Notes |
 |----------|-------|-------|
-| AGENTS.md | A | Slim TOC/map (v9.1.0) |
+| AGENTS.md | A | Slim TOC/map (v9.2.0) |
 | WORKFLOW.md | A- | Complete workflow reference with harness-oriented policy additions; enforcement is still partial |
 | Skills.md | A | Compressed index, Quick Reference table |
 | GUIDE.md | B | Quickstart solid, troubleshooting section could expand |
@@ -145,8 +145,9 @@
 | validate-frontmatter.ps1 | B | Validates well, error messages now include remediation |
 | validate-references.ps1 | A | Scans all markdown links, reports broken references with severity |
 | token-counter.ps1 | A | Count/check/report with configurable limits from .token-limits.json |
-| score-skill.ps1 | A | 7-dimension skill-quality rubric (100 points), blocking floors, JSON evidence, batch mode |
+| score-skill.ps1 | A | 8-dimension skill-quality rubric (100 points), blocking floors, JSON evidence, batch mode |
 | score-output.ps1 | A | Agent output scoring for Engineer/Architect/PM roles |
+| score-code-quality.ps1 | A | Exact-scope 100-point implementation rubric gate with SHA-256 review binding |
 | validate-handoff.ps1 | A | Generate + validate structured handoff messages against JSON Schema |
 | validate-skill.ps1 | A | Unified skill validation pipeline consuming the canonical 100-point rubric and blockers |
 | eval-harness.ps1 | A | Skill eval framework (Phil Schmid pattern): 15 deterministic checks across trigger/instruction/convention dimensions, prompt-set testing, JSON output |
@@ -173,4 +174,4 @@
 
 ---
 
-**Last updated**: v9.1.0
+**Last updated**: v9.2.0

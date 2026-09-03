@@ -6,5 +6,8 @@
 {
   "extensions.supportAgentsWindow": {
     "jnPiyush.agentx": true
+  },
+  "chat.agentFilesLocations": {
+    ".github/agents": false
   }
 }

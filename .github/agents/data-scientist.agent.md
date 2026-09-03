@@ -3,6 +3,22 @@ name: AgentX Data Scientist
 description: 'Design and implement GenAI pipelines, LLM-as-judge evaluations, drift monitoring, RAG systems, agent orchestration, and fine-tuning workflows.'
 model: Claude Opus 5 (copilot)
 user-invocable: true
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   mode: adaptive
   level: high
@@ -50,7 +66,6 @@ tools:
   - usages
   - fetch
   - think
-  - github/*
   - agent
 agents:
   - AgentX Architect
@@ -60,6 +75,12 @@ agents:
   - AgentX Ops Monitor
   - AgentX RAG Specialist
   - AgentX Diagram Specialist
+  - AgentX GitHub Ops
+handoffs:
+  - label: Continue to Implementation
+    agent: AgentX Engineer
+    prompt: Implement this issue using the approved architecture and the completed AI contracts, evaluation plan, and model card.
+    send: false
 ---
 
 # Data Scientist Agent

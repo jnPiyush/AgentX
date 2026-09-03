@@ -1,20 +1,22 @@
 # Skill Quality Rubric
 
-Use this deterministic rubric for every AgentX `SKILL.md`. It measures whether a skill is discoverable, actionable, safe, maintainable, and efficient without requiring a model judge.
+Use this deterministic rubric for every AgentX `SKILL.md`. It measures whether a skill is discoverable, differentiated, actionable, safe, maintainable, and efficient without requiring a model judge.
 
 ## Scoring
 
 | Dimension | Weight | Deterministic evidence |
 |-----------|-------:|------------------------|
 | Specification | 20 | Valid kebab-case directory and matching frontmatter name; description is 50-1024 characters; standard skill root structure |
-| Discoverability | 15 | Description contains positive trigger language; `When to Use` or `WHEN:` section exists with substantive text; description avoids negative trigger contamination |
-| Decision Support | 15 | Substantive decision tree/routing guidance; prerequisites or explicit none statement; anti-patterns/pitfalls/rationalization guidance |
+| Discoverability | 10 | Description contains positive trigger language; `When to Use` or `WHEN:` section exists with substantive text; description avoids negative trigger contamination |
+| Decision Support | 10 | Substantive decision tree/routing guidance; prerequisites or explicit none statement; anti-patterns/pitfalls/rationalization guidance |
+| Differentiation | 10 | Explains why a skill is needed beyond general model or harness capability; provides non-empty focused references; bundles non-empty scripts or reusable assets |
 | Actionability | 20 | Substantive core rules; workflow/steps/quick-start guidance; verification checklist; executable scripts when automation is promised |
 | Safety and Reliability | 15 | Error handling/failure guidance; local links resolve; external requirements are declared; development skills contain a rationalization table |
 | Maintainability | 10 | Main file stays within 500 lines; detailed examples are progressively disclosed when large; metadata version is present; no unexpected root files/directories |
 | Efficiency | 5 | Main file is within the 5,000-token hard limit and earns more points below 3,000/1,500 tokens |
 
-Total: 100 points.
+Total: 100 points. Differentiation is intentionally non-blocking during the
+compatibility migration, but it exposes generic prose-only skills as score debt.
 
 ## Tiers
 
@@ -45,7 +47,7 @@ A blocking finding always makes the result fail regardless of score.
 - All-skills mode always fails on blockers.
 - All-skills aggregate score enforcement is opt-in with `-Enforce`; this exposes current inventory debt without silently breaking every existing pipeline.
 - Changed skills use `validate-changed-skills.ps1`: skills that exist at the trusted base revision may not lose points or add blockers; newly added skills must score at least 70 with no blockers.
-- `-Json` emits stable objects with score, tier, pass state, dimensions, findings, tokens, and blockers. `validate-skill.ps1` consumes this JSON directly.
+- `-Json` emits stable objects with rubric version, score, tier, pass state, dimensions, findings, tokens, and blockers. `validate-skill.ps1` consumes this JSON directly.
 - Frontmatter is parsed with the bundled `yaml` package in strict mode; regex matching is not accepted as YAML validation.
 
 ## Model-Backed Evaluation

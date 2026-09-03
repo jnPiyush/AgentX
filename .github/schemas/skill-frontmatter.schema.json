@@ -18,6 +18,23 @@
  "maxLength": 1024,
  "description": "WHAT + WHEN + KEYWORDS format description"
  },
+ "argument-hint": {
+ "type": "string",
+ "description": "Optional input hint shown for user-invocable skills"
+ },
+ "user-invocable": {
+ "type": "boolean",
+ "description": "Whether the skill appears in the slash-command menu"
+ },
+ "disable-model-invocation": {
+ "type": "boolean",
+ "description": "Whether automatic model activation is disabled"
+ },
+ "context": {
+ "type": "string",
+ "enum": ["inline", "fork"],
+ "description": "Whether skill instructions load inline or execute in a forked context"
+ },
  "metadata": {
  "type": "object",
  "properties": {

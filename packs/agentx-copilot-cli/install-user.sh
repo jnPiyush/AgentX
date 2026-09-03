@@ -8,6 +8,7 @@
 #   ~/.copilot/instructions/  <- .github/instructions/
 #   ~/.copilot/prompts/       <- .github/prompts/
 #   ~/.copilot/templates/     <- .github/templates/  (with --templates)
+#   ~/.copilot/agentx-legal/   <- LICENSE and NOTICE
 #   ~/.copilot/AGENTS.md      <- AGENTS.md
 #
 # Optionally registers AgentX MCP server in ~/.copilot/mcp-config.json (--mcp).
@@ -194,11 +195,22 @@ for router in AGENTS.md CLAUDE.md Skills.md; do
   total_copied=$((total_copied+c)); total_skipped=$((total_skipped+s))
 done
 
+for legal_file in LICENSE NOTICE; do
+  legal_target="$COPILOT_DIR/agentx-legal/$legal_file"
+  if [ $DRY_RUN -eq 1 ]; then
+    printf '  [DRY] copy %s -> %s\n' "$SOURCE/$legal_file" "$legal_target" >&2
+  else
+    mkdir -p "$(dirname "$legal_target")"
+    cp -f "$SOURCE/$legal_file" "$legal_target"
+  fi
+  total_copied=$((total_copied+1))
+done
+
 if [ $DRY_RUN -ne 1 ]; then
   cat > "$COPILOT_DIR/.agentx-version.json" <<JSON
 {
   "plugin": "agentx-copilot-cli-user",
-  "version": "9.1.0",
+  "version": "9.2.0",
   "installedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "source": "$SOURCE",
   "mcpRegistered": $([ $REGISTER_MCP -eq 1 ] && echo true || echo false)

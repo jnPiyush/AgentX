@@ -35,7 +35,7 @@
       "role": "engineer",
       "displayName": "Engineer",
       "phases": ["Research", "Brainstorm", "Plan", "Design", "Conditional Design Alignment", "Implement", "Test", "Review"],
-      "deliveryGate": "Loop complete + coverage >=80% + score >=70% + required Architect/Data Scientist alignment captured",
+      "deliveryGate": "Loop complete + coverage >=80% + output score >=70% + code-quality rubric >=80% + required Architect/Data Scientist alignment captured",
       "deliverable": "Code + Tests + Docs"
     },
     {

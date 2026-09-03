@@ -151,7 +151,7 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | **Product Manager** | Research (5 phases) -> Classify Intent -> Model Council (prd-scope) -> PRD -> Backlog (Epic, Feature, User Stories) -> Self-Review -> Commit | PRD has all required sections; Backlog items (Epic, Features, User Stories) linked to PRD; Model Council convened or skip rationale recorded |
 | **UX Designer** | Read PRD -> Design Research -> UX Spec -> HTML/CSS Prototypes -> Self-Review -> Commit | WCAG 2.1 AA prototypes exist at `docs/ux/prototypes/` |
 | **Architect** | Research (6 phases) -> ADR (3+ options) -> Model Council (adr-options) -> Tech Spec -> AI Spec Alignment (if `needs:ai`) -> PM Fit Validation -> GenAI Assessment -> Self-Review -> Commit | ADR + Spec exist; ADR Decision matches a council-consensus option (or override rationale documented); AI-bearing specs include Data Scientist implementation-depth alignment; PM requirement-fit validation complete; zero code examples in Spec |
-| **Engineer** | Research -> Brainstorm -> Plan -> Design -> Conditional Design Alignment -> Implement -> Test -> Review | Loop complete + coverage >=80% + score >=70% + required Architect/Data Scientist alignment captured |
+| **Engineer** | Research -> Brainstorm -> Plan -> Design -> Conditional Design Alignment -> Implement -> Test -> Review | Loop complete + coverage >=80% + output score >=70% + code-quality rubric >=80% + required Architect/Data Scientist alignment captured |
 | **Reviewer** | Read Context -> Verify Loop -> Functional Review -> Code Review -> Run Tests -> Model Council (code-review) -> Write Review -> Decision | Review doc complete; approval/rejection explicitly stated; Model Council convened or skip rationale recorded; Findings/Severity/Decision reflect council Synthesis (or override rationale documented) |
 | **Auto-Fix Reviewer** | Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document -> Self-Review -> Decision | All auto-fixes pass full test suite; review doc complete |
 | **DevOps Engineer** | Read Context -> Design Pipeline -> Implement Workflows -> Validate -> Self-Review -> Commit | Pipelines pass lint + execution; deployment docs updated |
@@ -170,13 +170,13 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 | Document | Purpose |
 |----------|---------|
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | Workflow, routing, handoff, status transitions, architecture |
-| [Skills.md](Skills.md) | 133 production code skills index (load only relevant skills per task) |
+| [Skills.md](Skills.md) | 134 production code skills index (load only relevant skills per task) |
 | [docs/GUIDE.md](docs/GUIDE.md) | Quickstart, setup, troubleshooting, local mode |
 | [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) | Graded quality assessment of every component |
 | [docs/GOLDEN_PRINCIPLES.md](docs/GOLDEN_PRINCIPLES.md) | Mechanical rules enforced by linters and agents |
 | [docs/tech-debt-tracker.md](docs/tech-debt-tracker.md) | Known gaps and deferred work |
 | `.github/agents/` | 26 agent definition files |
-| `.github/skills/` | 133 skill files across 14 categories |
+| `.github/skills/` | 134 skill files across 14 categories |
 | `.github/instructions/` | 7 instruction files (auto-loaded by file pattern) |
 | `.github/schemas/` | Handoff message JSON Schema + communication protocol |
 | `.github/templates/` | 15 templates (PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning) |

@@ -28,15 +28,12 @@ interface AgentCheckResult {
 
 export const REQUIRED_AGENT_TOOLS = [
   'codebase',
-  'editFiles',
   'search',
   'changes',
-  'runCommands',
   'problems',
   'usages',
   'fetch',
   'think',
-  'github/*',
 ] as const;
 
 /**
@@ -156,7 +153,7 @@ export function validateAgentXAutonomous(agents: AgentDef[]): AgentCheckResult[]
 }
 
 /**
- * Verify that every agent definition includes the standard minimum tool baseline.
+ * Verify that every agent definition includes the safe common tool baseline.
  */
 export function validateMinimumTooling(
   agents: AgentDef[],

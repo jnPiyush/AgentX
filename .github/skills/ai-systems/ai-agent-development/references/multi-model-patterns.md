@@ -11,12 +11,12 @@ Use a `.env` file for local development (always add to `.gitignore`):
 # Required
 FOUNDRY_ENDPOINT=https://your-resource.services.ai.azure.com
 FOUNDRY_API_KEY=your-api-key-here
-MODEL_DEPLOYMENT_NAME=gpt-4o
+MODEL_DEPLOYMENT_NAME=<balanced-deployment-id>
 
 # Optional: Multi-model setup
-MODEL_FAST=gpt-4o-mini
-MODEL_REASONING=o3
-MODEL_EMBEDDING=text-embedding-3-large
+MODEL_FAST=<fast-deployment-id>
+MODEL_REASONING=<reasoning-deployment-id>
+MODEL_EMBEDDING=<embedding-deployment-id>
 
 # Optional: Observability
 APPLICATIONINSIGHTS_CONNECTION_STRING=
@@ -30,9 +30,9 @@ Route requests to different models based on task complexity:
 import os
 
 MODELS = {
- "fast": os.environ.get("MODEL_FAST", "gpt-4o-mini"), # Simple tasks, low latency
- "standard": os.environ.get("MODEL_DEPLOYMENT_NAME", "gpt-4o"), # General purpose
- "reasoning": os.environ.get("MODEL_REASONING", "o3"), # Complex analysis
+ "fast": os.environ["MODEL_FAST"], # Simple tasks, low latency
+ "standard": os.environ["MODEL_DEPLOYMENT_NAME"], # General purpose
+ "reasoning": os.environ["MODEL_REASONING"], # Complex analysis
 }
 
 def select_model(task_type: str) -> str:
@@ -63,16 +63,16 @@ async def call_with_fallback(prompt: str, models: list[str]) -> str:
  raise AllModelsUnavailableError("All models in fallback chain failed")
 
 # Usage: prefer fast, fall back to standard
-result = await call_with_fallback(prompt, ["gpt-4o-mini", "gpt-4o"])
+result = await call_with_fallback(prompt, [MODELS["fast"], MODELS["standard"]])
 ```
 
 ### Cost Optimization
 
-| Tier | Model | Use Case | Relative Cost |
-|------|-------|----------|---------------|
-| Fast | gpt-4o-mini | Classification, routing, simple Q&A | $ |
-| Standard | gpt-4o | Code generation, summarization | $$ |
-| Reasoning | o3 | Complex analysis, multi-step reasoning | $$$$ |
+| Capability | Deployment Source | Use Case | Cost Rule |
+|------------|-------------------|----------|-----------|
+| Fast | `MODEL_FAST` | Classification, routing, simple Q&A | Must satisfy the configured low-cost budget |
+| Standard | `MODEL_DEPLOYMENT_NAME` | Code generation, summarization | Best measured quality/cost balance |
+| Reasoning | `MODEL_REASONING` | Complex analysis, multi-step reasoning | Use only when eval gains justify added cost |
 
 **Guidelines**:
 - Default to the **fast** tier; escalate only when quality requires it

@@ -18,6 +18,7 @@
     ~/.copilot/instructions/  <- .github/instructions/
     ~/.copilot/prompts/       <- .github/prompts/
     ~/.copilot/templates/     <- .github/templates/        (optional)
+    ~/.copilot/agentx-legal/   <- LICENSE and NOTICE
     ~/.copilot/AGENTS.md      <- AGENTS.md                  (router)
 
   Also optionally registers the AgentX MCP server in ~/.copilot/mcp-config.json
@@ -206,10 +207,15 @@ foreach ($routerFile in @('AGENTS.md', 'CLAUDE.md', 'Skills.md')) {
   $totalCopied += $r.Copied; $totalSkipped += $r.Skipped
 }
 
+foreach ($legalFile in @('LICENSE', 'NOTICE')) {
+  $r = Copy-OneFile -Src (Join-Path $Source $legalFile) -Dest (Join-Path $copilotDir "agentx-legal/$legalFile") -Overwrite
+  $totalCopied += $r.Copied; $totalSkipped += $r.Skipped
+}
+
 # Version stamp
 $stamp = [ordered]@{
   plugin      = 'agentx-copilot-cli-user'
-  version     = '9.1.0'
+  version     = '9.2.0'
   installedAt = (Get-Date).ToUniversalTime().ToString('o')
   source      = $Source
   mcpRegistered = [bool]$RegisterMcp

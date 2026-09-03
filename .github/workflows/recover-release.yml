@@ -137,11 +137,10 @@ jobs:
         run: |
           mkdir -p release-evidence release-staging/vsix release-staging/mcp
           unzip -q "vscode-extension/agentx-${RELEASE_VERSION}.vsix" -d release-staging/vsix
+          cp LICENSE NOTICE release-staging/mcp/
+          tar --exclude=node_modules -C .agentx/mcp-server -cf - . | tar -xf - -C release-staging/mcp
           tar -czf "release-evidence/agentx-${RELEASE_VERSION}-mcp.tar.gz" \
-            --exclude=node_modules \
-            -C .agentx/mcp-server .
-          tar -xzf "release-evidence/agentx-${RELEASE_VERSION}-mcp.tar.gz" \
-            -C release-staging/mcp
+            -C release-staging/mcp .
           printf '{"releaseTag":"%s","releaseVersion":"%s","sourceCommit":"%s"}\n' \
             "$RELEASE_TAG" "$RELEASE_VERSION" "$RELEASE_COMMIT" \
             > release-evidence/recovery-source.json

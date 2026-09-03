@@ -4,7 +4,23 @@ description: 'Design, build, optimize, and troubleshoot RAG pipelines including 
 visibility: internal
 model: GPT-5.5 (copilot)
 user-invocable: false
-disable-model-invocation: true
+disable-model-invocation: false
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   level: high
 constraints:
@@ -15,7 +31,6 @@ constraints:
   - "MUST design for citation and source attribution in generated responses"
   - "MUST NOT hardcode embedding model choices without comparison testing"
   - "MUST NOT skip retrieval quality evaluation"
-  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - ".copilot-tracking/rag-pipeline/** (RAG pipeline configuration and reports)"
@@ -37,7 +52,6 @@ tools:
   - usages
   - fetch
   - think
-  - github/*
 agents: []
 ---
 

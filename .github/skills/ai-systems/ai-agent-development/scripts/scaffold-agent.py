@@ -93,7 +93,7 @@ testpaths = ["tests"]
 # Microsoft Foundry / Azure OpenAI
 FOUNDRY_ENDPOINT=https://your-project.services.ai.azure.com
 FOUNDRY_API_KEY=your-api-key-here
-FOUNDRY_MODEL=gpt-5.1
+FOUNDRY_MODEL=<evaluated-deployment-id>
 
 # OpenTelemetry (optional - for tracing)
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
@@ -159,26 +159,26 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from agent_framework.openai import AIInferenceInstrumentor
 
 def setup_tracing() -> None:
- \"\"\"Initialize OpenTelemetry tracing with Agent Framework instrumentation.
+    \"\"\"Initialize OpenTelemetry tracing with Agent Framework instrumentation.
 
- Call this BEFORE creating any agent or client instances.
- \"\"\"
- provider = TracerProvider()
+    Call this BEFORE creating any agent or client instances.
+    \"\"\"
+    provider = TracerProvider()
 
- # Configure exporter based on environment
- endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
- if endpoint:
- from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    # Configure exporter based on environment
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if endpoint:
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
- exporter = OTLPSpanExporter(endpoint=endpoint)
- provider.add_span_processor(SimpleSpanProcessor(exporter))
+        exporter = OTLPSpanExporter(endpoint=endpoint)
+        provider.add_span_processor(SimpleSpanProcessor(exporter))
 
- trace.set_tracer_provider(provider)
+    trace.set_tracer_provider(provider)
 
- # Instrument Agent Framework (auto-captures LLM calls)
- AIInferenceInstrumentor().instrument()
+    # Instrument Agent Framework (auto-captures LLM calls)
+    AIInferenceInstrumentor().instrument()
 
- print(f"Tracing initialized for {{os.getenv('OTEL_SERVICE_NAME', '{name}')}}")
+    print(f"Tracing initialized for {{os.getenv('OTEL_SERVICE_NAME', '{name}')}}")
 """,
     )
 
@@ -249,30 +249,29 @@ from azure.ai.evaluation import (
 )
 
 def run_evaluation():
- \"\"\"Run evaluation against test dataset.\"\"\"
- # Load test dataset
- dataset_path = Path(__file__).parent / "test_dataset.jsonl"
- if not dataset_path.exists():
- print("Create evaluation/test_dataset.jsonl with test cases first.")
- print("Format: {{\\"query\\": \\"...\\"," "\\"expected\\": \\"...\\"," "\\"context\\": \\"...\\"}}")
- return
+    \"\"\"Run evaluation against test dataset.\"\"\"
+    dataset_path = Path(__file__).parent / "test_dataset.jsonl"
+    if not dataset_path.exists():
+        print("Create evaluation/test_dataset.jsonl with test cases first.")
+        print("Format: {{\\"query\\": \\"...\\"," "\\"expected\\": \\"...\\"," "\\"context\\": \\"...\\"}}")
+        return
 
- results = evaluate(
- data=str(dataset_path),
- evaluators={{
- "coherence": CoherenceEvaluator(),
- "fluency": FluencyEvaluator(),
- "groundedness": GroundednessEvaluator(),
- "relevance": RelevanceEvaluator(),
- }},
- output_path="evaluation/results.json",
- )
+    results = evaluate(
+        data=str(dataset_path),
+        evaluators={{
+            "coherence": CoherenceEvaluator(),
+            "fluency": FluencyEvaluator(),
+            "groundedness": GroundednessEvaluator(),
+            "relevance": RelevanceEvaluator(),
+        }},
+        output_path="evaluation/results.json",
+    )
 
- print("Evaluation Results:")
- print(json.dumps(results, indent=2))
+    print("Evaluation Results:")
+    print(json.dumps(results, indent=2))
 
 if __name__ == "__main__":
- run_evaluation()
+    run_evaluation()
 """,
         )
 
@@ -292,18 +291,19 @@ if __name__ == "__main__":
 from agent_framework.mcp import MCPServer, tool
 
 class {name.replace("-", "").title()}Tools(MCPServer):
- \"\"\"MCP tools exposed by this agent.\"\"\"
+    \"\"\"MCP tools exposed by this agent.\"\"\"
 
- @tool(description="Example tool that echoes input")
- async def echo(self, message: str) -> str:
- \"\"\"Echo the input message back.\"\"\"
- return f"Echo: {{message}}"
+    @tool(description="Example tool that echoes input")
+    async def echo(self, message: str) -> str:
+        \"\"\"Echo the input message back.\"\"\"
+        return f"Echo: {{message}}"
 
- @tool(description="Get current timestamp")
- async def get_timestamp(self) -> str:
- \"\"\"Return current UTC timestamp.\"\"\"
- from datetime import datetime, timezone
- return datetime.now(timezone.utc).isoformat()
+    @tool(description="Get current timestamp")
+    async def get_timestamp(self) -> str:
+        \"\"\"Return current UTC timestamp.\"\"\"
+        from datetime import datetime, timezone
+
+        return datetime.now(timezone.utc).isoformat()
 """,
         )
 
@@ -368,7 +368,7 @@ from agent_framework.openai import OpenAIChatClient
 async def run_agent(query: str) -> str:
  \"\"\"Run the agent with a single query.\"\"\"
  client = OpenAIChatClient(
- model=os.getenv("FOUNDRY_MODEL", "gpt-5.1"),
+ model=os.environ["FOUNDRY_MODEL"],
  api_key=os.getenv("FOUNDRY_API_KEY"),
  endpoint=os.getenv("FOUNDRY_ENDPOINT"),
  )
@@ -408,7 +408,7 @@ from agent_framework.workflows import GroupChatWorkflow
 async def run_agent(query: str) -> str:
  \"\"\"Run multi-agent workflow with group chat orchestration.\"\"\"
  client = OpenAIChatClient(
- model=os.getenv("FOUNDRY_MODEL", "gpt-5.1"),
+ model=os.environ["FOUNDRY_MODEL"],
  api_key=os.getenv("FOUNDRY_API_KEY"),
  endpoint=os.getenv("FOUNDRY_ENDPOINT"),
  )
@@ -455,7 +455,7 @@ from agent_framework.workflows import SequentialWorkflow
 async def run_agent(query: str) -> str:
  \"\"\"Run agents in sequence: research -> analyze -> summarize.\"\"\"
  client = OpenAIChatClient(
- model=os.getenv("FOUNDRY_MODEL", "gpt-5.1"),
+ model=os.environ["FOUNDRY_MODEL"],
  api_key=os.getenv("FOUNDRY_API_KEY"),
  endpoint=os.getenv("FOUNDRY_ENDPOINT"),
  )
@@ -531,8 +531,11 @@ using var tracerProvider = Sdk.CreateTracerProviderBuilder()
  .Build();
 
 // Configure client
+var model = Environment.GetEnvironmentVariable("FOUNDRY_MODEL")
+ ?? throw new InvalidOperationException("FOUNDRY_MODEL must name an evaluated deployment.");
+
 var client = new OpenAIChatClient(
- model: Environment.GetEnvironmentVariable("FOUNDRY_MODEL") ?? "gpt-5.1",
+ model: model,
  apiKey: Environment.GetEnvironmentVariable("FOUNDRY_API_KEY")!,
  endpoint: new Uri(Environment.GetEnvironmentVariable("FOUNDRY_ENDPOINT")!)
 );
@@ -558,7 +561,7 @@ Console.WriteLine($"Response: {{response.Content}}");
         """{
  "Foundry": {
  "Endpoint": "",
- "Model": "gpt-5.1"
+ "Model": ""
  },
  "Logging": {
  "LogLevel": {
@@ -592,7 +595,7 @@ AI Agent built with [Microsoft Agent Framework](https://github.com/microsoft/age
 
 ```bash
 dotnet restore
-# Set environment variables or edit appsettings.json
+# Set FOUNDRY_ENDPOINT, FOUNDRY_API_KEY, and FOUNDRY_MODEL
 ```
 
 ## Run
@@ -668,7 +671,7 @@ def main():
     else:
         print(f" cd {args.name}")
         print(f" dotnet restore")
-        print(f" # Set FOUNDRY_ENDPOINT and FOUNDRY_API_KEY env vars")
+        print(f" # Set FOUNDRY_ENDPOINT, FOUNDRY_API_KEY, and FOUNDRY_MODEL env vars")
         print(f" dotnet run")
 
 

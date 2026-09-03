@@ -7,7 +7,21 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+    - type: command
+      command: >-
         node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{let x={};try{x=JSON.parse(d)}catch{};const c=String((x.tool_input||{}).command||'');if(!c)return;if(/^[A-Za-z0-9_.\/\\:=,\- ]+$/.test(c)&&/^pac(?:\.exe)? +(?:(?:--version|--help|help)|solution +(?:init|unpack|pack|check)(?: +.*)?)$/i.test(c))return;console.error('Power Platform Builder terminal access is fail-closed; only direct local pac version/help and solution init/unpack/pack/check commands with literal arguments are allowed.');process.exit(2)})"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   mode: adaptive
@@ -49,13 +63,13 @@ tools:
   - usages
   - fetch
   - think
-  - github/*
   - agent
 agents:
   - AgentX Product Manager
   - AgentX Architect
   - AgentX DevOps Engineer
   - AgentX Reviewer
+  - AgentX GitHub Ops
 ---
 
 # Power Platform Builder Agent

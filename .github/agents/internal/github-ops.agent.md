@@ -4,7 +4,23 @@ description: 'Orchestrate GitHub Issues and Pull Requests. Triage, discover, pla
 visibility: internal
 model: Claude Sonnet 5 (copilot)
 user-invocable: false
-disable-model-invocation: true
+disable-model-invocation: false
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   mode: adaptive
   level: low
@@ -17,7 +33,6 @@ constraints:
   - "MUST NOT create issues without validating against existing backlog for duplicates"
   - "MUST NOT close issues without verifying acceptance criteria are met"
   - "MUST create all files locally using editFiles -- MUST NOT use mcp_github_create_or_update_file or mcp_github_push_files to push files directly to GitHub"
-  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - "GitHub Issues (create, update, close, label, assign, comment)"
@@ -44,7 +59,7 @@ tools:
   - github/*
   - agent
 agents:
-  - AgentX
+  - AgentX Auto
 ---
 
 # GitHub Operations Agent

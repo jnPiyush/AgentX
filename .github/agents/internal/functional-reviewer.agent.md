@@ -4,7 +4,23 @@ description: 'Pre-PR branch diff analysis for functional correctness. Evaluates 
 visibility: internal
 model: GPT-5.6 Sol (copilot)
 user-invocable: false
-disable-model-invocation: true
+disable-model-invocation: false
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   level: medium
 constraints:
@@ -15,10 +31,8 @@ constraints:
   - "MUST NOT modify source code -- report findings only"
   - "MUST NOT flag style or formatting issues (those belong to linters)"
   - "MUST NOT report findings outside the scope of changed files"
-  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
-  can_modify:
-    - ".copilot-tracking/reviews/** (review reports)"
+  can_modify: []
   cannot_modify:
     - "src/** (source code)"
     - "tests/** (test code)"
@@ -26,15 +40,12 @@ boundaries:
     - ".github/workflows/** (CI/CD pipelines)"
 tools:
   - codebase
-  - editFiles
   - search
   - changes
-  - runCommands
   - problems
   - usages
   - fetch
   - think
-  - github/*
 ---
 
 # Functional Reviewer Agent
@@ -162,7 +173,7 @@ Before returning findings to the Reviewer:
 - [ ] False positive filters applied to every finding
 - [ ] Severity levels are accurate (not inflated)
 - [ ] Findings ordered by severity (Critical first)
-- [ ] Report saved to .copilot-tracking/reviews/
+- [ ] Complete findings returned to the spawning Reviewer
 
 ## Skills to Load
 
@@ -174,7 +185,8 @@ Before returning findings to the Reviewer:
 
 ## State Persistence
 
-Save review report to .copilot-tracking/reviews/{date}-{branch}.md for cross-session reference.
+Return the complete findings to the spawning Reviewer. The parent decides whether
+they need persistence in its canonical review artifact.
 
 ## When Blocked
 
@@ -194,7 +206,7 @@ Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Ka
 
 ## Role-Specific Done Criteria
 
-Changed files are analyzed; findings are categorized Critical/High/Medium/Low; false-positive mitigation is applied; each finding includes evidence of harm; speculative warnings are excluded; and review output is saved when required.
+Changed files are analyzed; findings are categorized Critical/High/Medium/Low; false-positive mitigation is applied; each finding includes evidence of harm; speculative warnings are excluded; and complete findings are returned to the spawning Reviewer.
 
 ## Delivery Report (MANDATORY)
 

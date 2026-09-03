@@ -96,18 +96,28 @@ function Get-SkillRubric([string]$SkillDirectory) {
     Add-Finding $findings 'Specification' 'root-structure' ($unexpected.Count -eq 0) 4 4 "Unexpected root items=$($unexpected.Count)." $true
 
     $positiveTrigger = $description -match '(?i)\buse when\b|\bwhen\b|\bfor\s+(creating|designing|implementing|reviewing|debugging|building|managing|evaluating|deploying)\b'
-    Add-Finding $findings 'Discoverability' 'description-trigger' $positiveTrigger 6 6 'Description should contain positive trigger language.'
+    Add-Finding $findings 'Discoverability' 'description-trigger' $positiveTrigger 4 4 'Description should contain positive trigger language.'
     $whenBody = Get-SectionBody $content 'When to Use(?: This Skill)?'
     $whenSubstantive = $whenBody.Length -ge 40 -or [regex]::IsMatch($content, '(?m)^>\s*WHEN:.{30,}$')
-    Add-Finding $findings 'Discoverability' 'when-section' $whenSubstantive 6 6 "When guidance length=$($whenBody.Length)."
+    Add-Finding $findings 'Discoverability' 'when-section' $whenSubstantive 4 4 "When guidance length=$($whenBody.Length)."
     $cleanDescription = $description -notmatch '(?i)\bDO NOT USE\b|\bNEVER USE\b'
-    Add-Finding $findings 'Discoverability' 'trigger-contamination' $cleanDescription 3 3 'Description avoids negative trigger contamination.'
+    Add-Finding $findings 'Discoverability' 'trigger-contamination' $cleanDescription 2 2 'Description avoids negative trigger contamination.'
 
-    Add-Finding $findings 'Decision Support' 'decision-tree' (Test-SubstantiveSection $content 'Decision(?: Tree| Guide| Matrix|s)?') 7 7 'Substantive decision routing guidance.'
+    Add-Finding $findings 'Decision Support' 'decision-tree' (Test-SubstantiveSection $content 'Decision(?: Tree| Guide| Matrix|s)?') 5 5 'Substantive decision routing guidance.'
     $hasPrerequisites = [regex]::IsMatch($content, '(?im)^##\s+Prerequisites') -or $content -match '(?i)\bno prerequisites\b'
-    Add-Finding $findings 'Decision Support' 'prerequisites' $hasPrerequisites 3 3 'Prerequisites are declared or explicitly absent.'
+    Add-Finding $findings 'Decision Support' 'prerequisites' $hasPrerequisites 2 2 'Prerequisites are declared or explicitly absent.'
     $hasPitfalls = Test-SubstantiveSection $content '(?:Anti-Patterns?|Pitfalls?|Common Mistakes?|Rationalization Table)' 10
-    Add-Finding $findings 'Decision Support' 'pitfalls' $hasPitfalls 5 5 'Anti-pattern, pitfall, or rationalization guidance.'
+    Add-Finding $findings 'Decision Support' 'pitfalls' $hasPitfalls 3 3 'Anti-pattern, pitfall, or rationalization guidance.'
+
+    $hasDifferentiationRationale = Test-SubstantiveSection $content '(?:Why This Is a Skill|Differentiation|Unique Value|Agent Value)' 40
+    Add-Finding $findings 'Differentiation' 'skill-rationale' $hasDifferentiationRationale 4 4 'Explains why a skill is needed beyond general model or harness capability.'
+    $hasReferences = @(Get-ChildItem -LiteralPath (Join-Path $skillDirectory 'references') -File -Recurse -ErrorAction SilentlyContinue | Where-Object Length -gt 0).Count -gt 0
+    Add-Finding $findings 'Differentiation' 'supporting-references' $hasReferences 2 2 'Provides focused reference material for progressive disclosure.'
+    $hasReusableResources = @(
+        @(Get-ChildItem -LiteralPath (Join-Path $skillDirectory 'scripts') -File -Recurse -ErrorAction SilentlyContinue | Where-Object Length -gt 0)
+        @(Get-ChildItem -LiteralPath (Join-Path $skillDirectory 'assets') -File -Recurse -ErrorAction SilentlyContinue | Where-Object Length -gt 0)
+    ).Count -gt 0
+    Add-Finding $findings 'Differentiation' 'reusable-resources' $hasReusableResources 4 4 'Bundles executable automation or reusable assets.'
 
     Add-Finding $findings 'Actionability' 'core-rules' (Test-SubstantiveSection $content 'Core Rules?' 80) 8 8 'Substantive core rules.'
     $hasWorkflow = Test-SubstantiveSection $content '(?:Workflow|Steps|Execution|Lifecycle|Pipeline|Quick Start)' 60
@@ -146,6 +156,8 @@ function Get-SkillRubric([string]$SkillDirectory) {
             maxScore = [int](($_.Group | Measure-Object maxPoints -Sum).Sum)
         }
     })
+    $maximumScore = [int](($dimensions | Measure-Object maxScore -Sum).Sum)
+    if ($maximumScore -ne 100) { throw "Skill rubric maximum must equal 100; found $maximumScore." }
     $maturityFloorFailures = @()
     if ($Enforce) {
         if ($rationalizationRequired -and -not $hasRationalization) { $maturityFloorFailures += 'rationalization' }
@@ -197,7 +209,7 @@ $results = @($skillDirectories | ForEach-Object { Get-SkillRubric $_ })
 $blocked = @($results | Where-Object { $_.blockers.Count -gt 0 })
 $belowMinimum = @($results | Where-Object { $_.score -lt $MinScore })
 $summary = [PSCustomObject]@{
-    rubricVersion = '1.0.0'
+    rubricVersion = '2.0.0'
     minimumScore = $MinScore
     total = $results.Count
     average = [math]::Round(($results | Measure-Object score -Average).Average, 1)

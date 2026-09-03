@@ -9,7 +9,7 @@
 
 ### The Problem
 
-When you switch models (e.g., `gpt-4o` -> `gpt-5.1`) or the provider updates a model version silently, agent behavior changes **without any code change**. Your tests pass, your CI is green, but:
+When you switch concrete deployments or the provider updates a mutable alias silently, agent behavior changes **without any code change**. Your tests pass, your CI is green, but:
 
 - Output format shifts (JSON keys reordered, casing changes)
 - Tone and verbosity change
@@ -39,7 +39,7 @@ Model change detected?
 
 ### Model Change Checklist
 
-- [ ] **Pin model versions** - Use `gpt-5.1-2026-01-15`, not just `gpt-5.1`
+- [ ] **Pin model versions** - Resolve and record a concrete provider deployment/version, not a mutable alias
 - [ ] **Maintain evaluation baseline** - Store scores from current model as `baseline.json`
 - [ ] **Run A/B evaluation** - Compare new model against baseline before switching
 - [ ] **Test structured outputs** - Verify JSON schema compliance didn't break
@@ -52,16 +52,16 @@ Model change detected?
 
 ```python
 # [FAIL] Bad: Implicit model, no version pinning
-client = OpenAIChatClient(model="gpt-5.1")
+client = OpenAIChatClient(model=os.environ["AGENT_MODEL"])
 
 # [PASS] Good: Explicit version, configurable, documented
 MODEL_CONFIG = {
- "model": os.getenv("AGENT_MODEL", "gpt-5.1-2026-01-15"),
+ "model": os.environ["AGENT_MODEL"],
  "temperature": 0.7,
  "max_tokens": 4096,
  "model_version_pinned": True, # Document intent
- "last_evaluated": "2026-02-01", # When was this model last evaluated?
- "baseline_scores": "evaluation/baseline-gpt51.json", # Where are baseline scores?
+ "last_evaluated": "<YYYY-MM-DD>", # When was this deployment last evaluated?
+ "baseline_scores": "evaluation/baseline-current.json", # Where are baseline scores?
 }
 ```
 
@@ -312,9 +312,9 @@ For critical evaluations, use multiple judges:
 """Judge ensemble: majority vote from 3 independent judges."""
 
 JUDGE_MODELS = [
- {"model": "gpt-5.1", "role": "primary"},
- {"model": "claude-opus-4-5", "role": "secondary"},
- {"model": "gpt-5.1", "role": "tiebreaker", "temperature": 0.3},
+ {"model": os.environ["JUDGE_PRIMARY_MODEL"], "role": "primary"},
+ {"model": os.environ["JUDGE_SECONDARY_MODEL"], "role": "secondary"},
+ {"model": os.environ["JUDGE_TIEBREAKER_MODEL"], "role": "tiebreaker", "temperature": 0.3},
 ]
 
 async def ensemble_judge(query: str, response: str) -> dict:

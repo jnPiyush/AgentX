@@ -70,7 +70,34 @@ jobs:
             echo "tag_exists=${TAG_EXISTS}"
           } >> "$GITHUB_OUTPUT"
 
+  release-preflight:
+    needs: detect-version-bump
+    if: needs.detect-version-bump.outputs.version_changed == 'true' && needs.detect-version-bump.outputs.tag_exists != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Validate extension before release creation
+        working-directory: vscode-extension
+        run: |
+          npm ci
+          npm run test:coverage
+          npm audit --omit=dev --audit-level=high
+
+      - name: Validate MCP before release creation
+        working-directory: .agentx/mcp-server
+        run: |
+          npm ci
+          npm test
+          npm run audit:runtime
+
   create-release:
+    needs: [detect-version-bump, release-preflight]
+    if: always() && needs.detect-version-bump.result == 'success' && (needs.release-preflight.result == 'success' || needs.release-preflight.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
@@ -84,8 +111,8 @@ jobs:
           release-type: simple
 
   create-version-bump-release:
-    needs: [detect-version-bump, create-release]
-    if: needs.create-release.outputs.release_created != 'true' && needs.detect-version-bump.outputs.version_changed == 'true' && needs.detect-version-bump.outputs.tag_exists != 'true'
+    needs: [detect-version-bump, release-preflight, create-release]
+    if: needs.release-preflight.result == 'success' && needs.create-release.outputs.release_created != 'true' && needs.detect-version-bump.outputs.version_changed == 'true' && needs.detect-version-bump.outputs.tag_exists != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -113,7 +140,7 @@ jobs:
             echo "version=${{ needs.detect-version-bump.outputs.version }}"
           } >> "$GITHUB_OUTPUT"
 
-  # Package VSIX after a release is created
+  # Package and attest the VSIX after preflight and release creation
   package-vsix:
     needs: [create-release, create-version-bump-release]
     if: always() && (needs.create-release.outputs.release_created == 'true' || needs.create-version-bump-release.outputs.release_created == 'true')
@@ -163,11 +190,10 @@ jobs:
         run: |
           mkdir -p release-evidence release-staging/vsix release-staging/mcp
           unzip -q "vscode-extension/agentx-${RELEASE_VERSION}.vsix" -d release-staging/vsix
+          cp LICENSE NOTICE release-staging/mcp/
+          tar --exclude=node_modules -C .agentx/mcp-server -cf - . | tar -xf - -C release-staging/mcp
           tar -czf "release-evidence/agentx-${RELEASE_VERSION}-mcp.tar.gz" \
-            --exclude=node_modules \
-            -C .agentx/mcp-server .
-          tar -xzf "release-evidence/agentx-${RELEASE_VERSION}-mcp.tar.gz" \
-            -C release-staging/mcp
+            -C release-staging/mcp .
 
       - name: Generate extension SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0

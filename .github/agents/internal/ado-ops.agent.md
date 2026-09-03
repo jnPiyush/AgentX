@@ -4,7 +4,23 @@ description: 'ADO Backlog Manager -- orchestrates Azure DevOps backlog managemen
 visibility: internal
 model: Claude Sonnet 5 (copilot)
 user-invocable: false
-disable-model-invocation: true
+disable-model-invocation: false
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   mode: adaptive
   level: low
@@ -17,7 +33,6 @@ constraints:
   - "MUST NOT modify source code, PRD, ADR, UX, or architecture documents"
   - "MUST NOT create work items without checking for duplicates in the backlog"
   - "MUST NOT close work items without verifying acceptance criteria"
-  - "MUST resolve Compound Capture before declaring work Done"
 boundaries:
   can_modify:
     - "Azure DevOps Work Items (create, update, close, assign, tag)"
@@ -41,7 +56,6 @@ tools:
   - usages
   - fetch
   - think
-  - github/*
   - read
   - edit/createFile
   - edit/createDirectory
@@ -49,8 +63,8 @@ tools:
   - web
   - agent
 agents:
-  - AgentX
-  - AzDO PRD to WIT
+  - AgentX Auto
+  - AgentX ADO PRD to Work Items
 ---
 
 # ADO Backlog Manager

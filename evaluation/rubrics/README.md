@@ -3,6 +3,7 @@
 ## Artifact Rubrics
 
 - [Skill Quality](skill-quality.md) - deterministic 100-point AgentX skill rubric with blocking floors and CI semantics
+- [Implementation Code Quality](code-quality.md) - 100-point independent-review rubric enforced for code-bearing quality loops
 
 Keep one rubric file per judged metric.
 

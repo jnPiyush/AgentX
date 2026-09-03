@@ -3,6 +3,22 @@ name: AgentX Engineer
 description: 'Implement features, fix bugs, and write tests through Compound Engineering -- a structured pipeline of Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Review, with gate-checked phase transitions, full artifact chain consumption, mandatory Karpathy guidelines, and a risk-based quality loop.'
 model: Claude Sonnet 5 (copilot)
 user-invocable: true
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   mode: adaptive
   level: medium
@@ -18,6 +34,7 @@ constraints:
   - "MUST attach a real evidence file to EVERY `loop iterate` and to `loop complete` (--evidence <path>); the CLI rejects iterations without it"
   - "MUST run adversarial checks only for applicable high-risk surfaces: property tests for changed pure logic, mutation tests for security/correctness-critical branches, fuzzing for changed parsers/deserializers, and negative tests for changed public endpoints"
   - "MUST run an independent reviewer on the final iteration with only the diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings reset the loop"
+  - "MUST evaluate every implementation change with evaluation/rubrics/code-quality.md; the final review evidence must pass scripts/score-code-quality.ps1 at 80 or higher before loop completion"
   - "MUST run focused changed-surface checks during implementation and run the full required suite once after the final code change, before independent review"
   - "MUST verify quality loop reached 'complete' status before moving to In Review"
   - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix); the commit-msg hook rejects fix: commits without test changes"
@@ -51,7 +68,6 @@ tools:
   - usages
   - fetch
   - think
-  - github/*
   - agent
 agents:
   - AgentX Architect
@@ -62,6 +78,12 @@ agents:
   - AgentX RAG Specialist
   - AgentX Reviewer
   - AgentX Diagram Specialist
+  - AgentX GitHub Ops
+handoffs:
+  - label: Start Review
+    agent: AgentX Reviewer
+    prompt: Review the completed implementation for this issue against its artifacts, tests, and quality-loop evidence.
+    send: false
 ---
 
 # Software Engineer Agent
@@ -93,7 +115,7 @@ Follow the ordered phases below; each gate must pass before the next phase.
 | 5. Implement | Language instruction, `ai-agent-development` if `needs:ai`, `systematic-debugging` if 2+ fixes failed | Committed code + loop started |
 | 5b. Scrub | `scrub` | Deslop pass run on every changed file; safe fixes applied; behavior unchanged |
 | 6. Test | `testing`, `ai-evaluation` if `needs:ai`, `verification-before-completion` before loop complete | Coverage >=80% + ACs covered + verification gate passed |
-| 7. Review | `code-review`, `security` | Self-review complete + score >=70% |
+| 7. Review | `code-review`, `security` | Output score >=70% + code-quality rubric >=80% |
 
 ---
 
@@ -301,7 +323,7 @@ Follow `ai-evaluation/SKILL.md`: mock all LLM calls in unit tests, use replay/re
 
 ## Phase 7: Review
 
-> **Goal**: Self-audit the implementation against spec, security, performance, code quality, and readiness for Reviewer handoff.
+> **Goal**: Verify implementation readiness for Reviewer handoff.
 
 ### 7.1 Load Review Skills
 
@@ -309,13 +331,13 @@ Load `code-review` and `security` skills.
 
 ### 7.2 Self-Review Checklist
 
-Verify against the loaded `code-review` and `security` skills:
+Verify:
 
 - Spec contracts, NFRs, and every in-scope acceptance criterion match passing evidence.
 - Tests, coverage, lint, formatting, error paths, and boundary validation pass.
 - No secrets, injection paths, unsafe data access, dead code, unjustified TODOs, or
   near-duplicate endpoints/services/queries/components remain.
-- Required design checkpoints and setup/public API documentation are complete.
+- Required design checkpoints and public documentation are complete.
 - For GenAI: pinned/configured models, file prompts, telemetry, retries/timeouts,
   schemas, guardrails, mocked unit calls, and evaluation baseline are present.
 
@@ -325,25 +347,47 @@ Verify against the loaded `code-review` and `security` skills:
 .\scripts\score-output.ps1 -Role engineer -IssueNumber <issue>
 ```
 
-Score must be >= 70% (Medium-High tier). If below threshold, read individual check results, fix highest-point failure, re-run.
+Score must be >= 70%. Fix failed checks and rerun when below threshold.
 
-### 7.4 Independent Review (Final Iteration)
+### 7.4 Code-Quality Rubric
 
-Before completing the loop, run a fresh reviewer pass that ONLY sees the diff, the Spec, and the tests -- not your implementation rationale. This catches blind spots the original implementer cannot see.
+After the final code edit:
 
-Minimum prompt to the subagent reviewer:
+```powershell
+pwsh scripts/score-code-quality.ps1 -Mode Scope -Json
+```
 
-> You are a code reviewer. Read SPEC-{issue}.md and the staged diff. Do NOT read any chat history or rationale. Find HIGH (security/correctness), MEDIUM (design/maintainability), LOW (style) findings. Output JSON: { findings: [{ severity, file, line, issue, suggested_fix }] }.
+Give the scope, diff, Spec, tests, and command evidence to the independent
+reviewer. Require all ten dimensions from
+`evaluation/rubrics/code-quality.md`, then validate the JSON report:
 
-Write the response to a fresh file such as `.agentx/state/subagent-review.json` and use it as evidence for the final iteration, then record the reviewer's structured verdict on that same iteration:
+```powershell
+pwsh scripts/score-code-quality.ps1 -Mode Validate -ReportPath .agentx/state/code-quality-review.json
+```
+
+Require score >=80, every blocking floor, zero HIGH/MEDIUM, and matching hashes.
+The evaluator skips docs-only and test-only changes.
+
+### 7.5 Independent Review (Final Iteration)
+
+Run a fresh reviewer that sees the rubric, scope, diff, Spec, tests, and evidence,
+but not implementation rationale.
+
+Reviewer prompt:
+
+> You are a code reviewer. Read SPEC-{issue}.md, `evaluation/rubrics/code-quality.md`, the staged diff, tests, and verification evidence. Do NOT read chat history or implementation rationale. Score all ten rubric dimensions and include the exact scope paths and SHA-256 values. Report HIGH, MEDIUM, and LOW findings using the rubric's required JSON shape.
+
+Write JSON evidence and record its verdict on the final iteration:
 
 ```
 .agentx/agentx.ps1 loop iterate -s "Subagent Review: <outcome>" -e .agentx/state/subagent-review.json --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
 ```
 
-`--verdict`, `--reviewer`, `--high`, and `--medium` are all required together, and `loop complete` fails unless the latest verdict is `approved` with zero HIGH and zero MEDIUM on the final work iteration. The CLI archives the evidence file on acceptance, so generate a separate fresh final artifact for `loop complete` (for example `.agentx/state/final-gate.json`). If any HIGH or MEDIUM finding remains, record `--verdict changes-requested` with the real counts, fix the findings, and reset to the relevant earlier iteration (do NOT call `loop complete`).
+All verdict flags shown above are required. HIGH/MEDIUM findings require
+`changes-requested`, fixes, and re-review. Generate separate fresh evidence for
+`loop complete`; the CLI archives each accepted artifact.
 
-### 7.5 Complete the Loop and Hand Off
+### 7.6 Complete the Loop and Hand Off
 
 ```bash
 git add -A && git commit -m "feat: complete <description> (#<issue>)"
@@ -352,7 +396,7 @@ git add -A && git commit -m "feat: complete <description> (#<issue>)"
 
 Update GitHub Projects Status to `In Review`.
 
-**Phase 7 Gate**: Self-review checklist complete + score >= 70% + subagent review zero HIGH/MEDIUM + loop status = `complete` (CLI enforces evidence on every iteration).
+**Phase 7 Gate**: Self-review checklist complete + output score >= 70% + code-quality rubric >= 80% + subagent review zero HIGH/MEDIUM + loop status = `complete` (CLI enforces evidence on every iteration).
 
 ---
 
@@ -429,7 +473,7 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 - PASS: All tests pass with coverage >= 80%
 - PASS: Lint/format clean
 - PASS: Self-review checklist complete
-- PASS: Score-output result >= Medium-High (70%)
+- PASS: Score-output result >= Medium-High (70%) and code-quality rubric >= 80%
 - PASS: Validation: `.agentx/agentx.ps1 validate <issue> engineer`
 
 ---

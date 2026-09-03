@@ -3,6 +3,7 @@
 src/**
 scripts/**
 out/test/**
+out/e2e/**
 coverage/**
 .nyc_output/**
 coverage-output.txt

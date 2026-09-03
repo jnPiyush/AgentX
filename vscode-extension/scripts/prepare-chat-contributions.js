@@ -17,14 +17,24 @@ const githubDir = path.resolve(repoRoot, '.github');
 // copies .github/ content there for VSIX bundling.
 const PREFIX = './.github/agentx';
 
-// --- Discover chatAgents (visible only, not internal/) ---
+// --- Discover chatAgents (visibility is controlled by agent frontmatter) ---
 function discoverAgents() {
     const agentsDir = path.join(githubDir, 'agents');
     if (!fs.existsSync(agentsDir)) { return []; }
-    return fs.readdirSync(agentsDir)
-        .filter(f => f.endsWith('.agent.md') && fs.statSync(path.join(agentsDir, f)).isFile())
-        .sort()
-        .map(f => ({ path: PREFIX + '/agents/' + f }));
+    const results = [];
+    function walk(dir) {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                walk(fullPath);
+            } else if (entry.name.endsWith('.agent.md')) {
+                const rel = path.relative(agentsDir, fullPath).replace(/\\/g, '/');
+                results.push({ path: PREFIX + '/agents/' + rel });
+            }
+        }
+    }
+    walk(agentsDir);
+    return results.sort((a, b) => a.path.localeCompare(b.path));
 }
 
 // --- Discover chatInstructions ---

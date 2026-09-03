@@ -4,7 +4,23 @@ description: 'Design, author, and review diagrams-as-code including swimlane/cro
 visibility: internal
 model: Claude Sonnet 5 (copilot)
 user-invocable: false
-disable-model-invocation: true
+disable-model-invocation: false
+hooks:
+  PreToolUse:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+      timeout: 10
+  SessionStart:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
+  Stop:
+    - type: command
+      command: >-
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+      timeout: 10
 reasoning:
   mode: adaptive
   level: medium
@@ -19,7 +35,6 @@ constraints:
   - "MUST NOT embed binary images when a text format renders natively in the target surface"
   - "MUST NOT create lane-spanning shapes in swimlane diagrams; every activity belongs to exactly one lane"
   - "MUST keep lane count <= 7 per diagram; split larger processes into sub-process diagrams"
-  - "MUST resolve Compound Capture before declaring work Done: classify as mandatory/optional/skip, then either create docs/artifacts/learnings/LEARNING-<issue>.md or record explicit skip rationale in the issue close comment"
 boundaries:
   can_modify:
     - "docs/artifacts/adr/**/diagrams/** (architecture diagrams)"
@@ -45,7 +60,6 @@ tools:
   - usages
   - think
   - fetch
-  - github/*
 agents: []
 ---
 

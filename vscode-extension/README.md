@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-9.1.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.2.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -21,12 +21,12 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 
 | Feature | Description |
 |:--------|:------------|
-| **15 Declarative Chat Agents** | Role-specific agents (PM, UX, Architect, Engineer, Reviewer, DevOps, Tester, Data Scientist, Fabric Engineer, Power Platform Builder, Power BI, Consulting Research, Agile Coach, Auto-Fix Reviewer) plus AgentX Auto for end-to-end orchestration. |
+| **26 Declarative Chat Agents** | 15 visible lifecycle agents, including AgentX Auto for end-to-end orchestration, plus 11 hidden specialists that remain parent-invocable. |
 | **Model Council (core)** | Multi-model deliberation on high-stakes decisions -- **Analyst + Strategist + Skeptic** debate PRD scope, ADR options, AI design, code reviews, and deep research before they ship. Agent-internal by default; optional `gh models` multi-vendor auto-invoke. Mandatory gate for PM, Architect, Reviewer, Data Scientist, and Consulting Research on high-stakes work. |
 | **Copilot Chat Participant** | Native `@agentx` chat participant for triggering routines, brainstorm, learnings, and compound-loop inspection. |
 | **Karpathy Guidelines (built-in)** | The `karpathy-guidelines` skill is auto-loaded for Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist -- enforcing *think before coding*, surgical diffs, assumption audits, and goal-driven execution to block common LLM coding pitfalls at authoring and review time. |
 | **Workspace Setup Wizard** | Local-runtime-first setup with optional remote adapters for GitHub or Azure DevOps and configurable LLM adapters. |
-| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (133 production skills). |
+| **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (134 production skills). |
 | **50 Commands** | Workflow, loop management, knowledge compounding, AI evaluation, task bundles, bounded parallel delivery, and plugin management from the Command Palette. |
 | **Knowledge Compounding** | Ranked learnings, compound-loop visibility, learning-capture scaffolds, durable review-finding promotion, and agent-native review parity checks. |
 | **AI Evaluation** | Scaffold, run, and inspect AI evaluation contracts with rubric-based quality gates. |
@@ -232,7 +232,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | **Work** | Workflow next step, brainstorm guidance, planning and review learnings, compound loop, learning capture, ready queue, and workflow rollout surfaces. |
 | **Status** | Agent status, loop state, dependency checks, AI evaluation, review findings, task bundles, bounded parallel runs, and digests. |
 | **Templates** | All output templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence). |
-| **Skills** | 133 production skills across 14 categories (architecture, development, languages, operations, infrastructure, data, documents, AI systems, design, testing, domain, product, diagrams, low-code). |
+| **Skills** | 134 production skills across 14 categories (architecture, development, languages, operations, infrastructure, data, documents, AI systems, design, testing, domain, product, diagrams, low-code). |
 
 ---
 
@@ -323,7 +323,8 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 
 ## Chat Agents
 
-The extension registers 15 declarative chat agents, each mapped to an AgentX role:
+The extension registers 26 declarative chat agents: 15 visible lifecycle agents
+listed below and 11 hidden specialists that remain parent-invocable.
 
 | Agent | Role | Use For |
 |:------|:-----|:--------|
@@ -350,7 +351,7 @@ The extension registers 15 declarative chat agents, each mapped to an AgentX rol
 ### 9.0.0
 
 - Quality-loop approval now requires an attributable structured reviewer verdict with zero HIGH/MEDIUM findings on the final work iteration.
-- Commit-time gates enforce an absolute five-iteration floor, staged/worktree agreement, and post-commit loop consumption.
+- Commit-time gates enforce risk-based `1/2/3/5` iteration minimums, staged/worktree agreement, and post-commit loop consumption.
 - Autonomous workspace tools reject traversal, alternate streams, credentials, protected gate paths, links, aliases, and hardlinks.
 - Autonomous shell execution and Claude-native tools remain disabled until an externally sandboxed adapter is available.
 - Regression suites cover review exhaustion, hook lifecycle, path controls, staged and untracked harness enforcement, and VS Code evidence forwarding.

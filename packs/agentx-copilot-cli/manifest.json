@@ -1,9 +1,10 @@
 {
   "name": "agentx-copilot-cli",
-  "version": "9.1.0",
+  "version": "9.2.0",
   "description": "AgentX Copilot CLI plugin -- installs agents, skills, instructions, and prompts into any workspace for GitHub Copilot CLI usage. Separate from the core AgentX VS Code extension.",
   "maturity": "stable",
   "platform": "copilot-cli",
+  "license": "Apache-2.0",
   "tags": [
     "copilot-cli",
     "agents",
@@ -84,13 +85,15 @@
     ],
     "scripts": [
       "scripts/score-output.ps1",
+      "scripts/score-code-quality.ps1",
       "scripts/validate-handoff.ps1",
       "scripts/score-skill.ps1",
       "scripts/validate-skill.ps1",
       "scripts/validate-changed-skills.ps1",
       "scripts/stocktake.ps1",
       "scripts/parse-yaml.js",
-      "evaluation/rubrics/skill-quality.md"
+      "evaluation/rubrics/skill-quality.md",
+      "evaluation/rubrics/code-quality.md"
     ],
     "templates": [
       ".github/templates/ADR-TEMPLATE.md",
@@ -148,6 +151,7 @@
       ".github/skills/development/error-handling/SKILL.md",
       ".github/skills/development/iterative-loop/SKILL.md",
       ".github/skills/development/logging-monitoring/SKILL.md",
+      ".github/skills/development/no-ai-slop/SKILL.md",
       ".github/skills/development/skill-creator/SKILL.md",
       ".github/skills/development/testing/SKILL.md",
       ".github/skills/development/token-optimizer/SKILL.md",
@@ -202,6 +206,8 @@
       ".github/agent-delegation.md",
       ".github/schemas/agent-frontmatter.schema.json",
       "AGENTS.md",
+      "LICENSE",
+      "NOTICE",
       "Skills.md",
       "docs/WORKFLOW.md",
       "docs/GUIDE.md",
@@ -213,7 +219,7 @@
   },
   "capabilities": {
     "agentOrchestration": "Copilot CLI agent definitions with handoffs and body instructions",
-    "skillLibrary": "133 production code skills across 14 categories",
+    "skillLibrary": "134 production code skills across 14 categories",
     "instructionFiles": "7 auto-applied instruction files for language-specific patterns",
     "promptTemplates": "23 reusable prompt templates for common workflows",
     "cliUtilities": "Workspace wrapper scripts plus a bundled hidden runtime for issue tracking, loop management, and workflow",

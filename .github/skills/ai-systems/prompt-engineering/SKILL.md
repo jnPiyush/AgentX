@@ -1,6 +1,7 @@
 ---
 name: "prompt-engineering"
 description: 'Write effective prompts for AI coding agents. Use when crafting system prompts, implementing chain-of-thought reasoning, building few-shot examples, adding guardrails, configuring tool use, or designing agentic prompt patterns. Covers CoT, few-shot, guardrails, and function calling.'
+user-invocable: false
 metadata:
  author: "AgentX"
  version: "1.0.0"

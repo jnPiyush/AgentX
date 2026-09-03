@@ -1,9 +1,15 @@
 # Changelog
 
-## 9.1.0
+## 9.2.0
 
 ### Changed
 
+- Added the MIT-licensed `no-ai-slop` skill for editing or auditing general prose without flattening the writer's voice. The skill is distinct from visual anti-slop and code scrub workflows, includes a pinned upstream attribution and bundled license, and is distributed through AgentX packs and the VS Code extension.
+- Modernized AgentX customizations around native Copilot capabilities without removing public paths: internal specialists remain hidden but are parent-invocable, primary lifecycle agents expose user-controlled handoffs, and background policy skills no longer compete with prompts in the slash menu.
+- Replaced universal internal-agent tools with least-privilege profiles. GitHub Ops retains remote GitHub tools; other internal specialists do not, and analytical reviewers return findings to their parent instead of writing artifacts directly.
+- Rebalanced the skill-quality rubric to reserve 10 points for differentiated value through skill rationale, progressive references, and reusable scripts or assets. Existing hard blockers and trusted-base no-regression behavior remain unchanged.
+- Replaced fixed model, price, context-window, and preview-package tables in core AI guidance with capability-class selection and runtime provider discovery.
+- Added a mandatory 100-point implementation rubric with explicit blocking scores for requirement fit, design conformance, logic, tests, security, and reliability. Code-bearing loops snapshot pre-existing dirty files, bind independent review to final SHA-256 values, and require an 80+ score with all blocking floors met before `loop complete`; docs-only and test-only work skips the gate.
 - Replaced the absolute five-iteration floor introduced in 9.0.0 with risk-based minimums: standard `1`, auto-fix `2`, complex delivery and AgentX `3`, high-risk `5`. High-risk classification covers security, authentication, credentials, cryptography, payments, migrations, production, releases, deployments, infrastructure, RBAC, compliance, and privacy work. The structured reviewer verdict on the final work iteration remains mandatory for every class, and a stored higher minimum is never lowered.
 - Reduced the agentic runner's internal self-review from a 5-iteration minimum and 15-iteration ceiling to a 1-iteration minimum and 3-iteration ceiling. Internal self-review is recorded under `selfReview` and still does not satisfy the independent review gate.
 - Scoped the adversarial review loop in the iterative-loop skill to high-risk work, with a changed-surface table replacing the blanket requirement.
@@ -14,17 +20,33 @@
 
 ### Fixes
 
+- Corrected internal-agent frontmatter that combined `user-invocable: false` with `disable-model-invocation: true`, making documented specialist subagents unreachable to parent agents.
+- Added a zero-copy `policy-hook` bridge and agent-scoped `PreToolUse` hooks that block direct remote file mutation and require an active AgentX loop for edits when runtime state exists, without replacing CLI or git-hook enforcement.
 - Restored task-class parity across the CLI, the agentic runner, and the TypeScript runtime. All three now share a byte-identical high-risk pattern and a 25-token complex-delivery vocabulary, so agent-related work no longer classifies as `standard` in the CLI while classifying as `complex-delivery` elsewhere.
 - Corrected `loop status` and the commit gate to recompute the effective minimum from the inferred task class instead of trusting a stale persisted value.
 - Fixed agent frontmatter list parsing, which used a greedy dot-all pattern that ran past the intended block and failed on CRLF input.
 - Isolated durable retry accounting so an agentic run's internal retries advance the external iteration counter by at most one.
 - Added `AGENT-PROTOCOL.md` to the bundled extension assets; bundled agent definitions linked to a file that was not shipped.
 - Exported `DEFAULT_HIGH_RISK_MIN_ITERATIONS` from the extension runtime barrel, the only tier constant previously omitted.
+- Fixed zero-copy implementation-rubric lookup, generated Python scaffold indentation, placeholder model-identity detection, POSIX read-only policy commands, and generated .NET model setup guidance.
+- Bound loop baselines and every archived iteration artifact to trusted SHA-256 values, blocked workspace scorer shadowing and external Git diff helpers, pruned non-Git traversal, and added explicit resumed-task scope recovery.
+- Protected gate state against hardlink aliases, removed ambient Git from direct terminal read allowances, and installed rubric assets under the standalone pack's trusted hidden runtime.
+- Prevented duplicate AgentX entries in the source workspace's native agent picker by disabling repository-agent discovery there while retaining all 26 extension contributions and portable Copilot CLI assets.
+- Blocked active-loop protected-state writes through opaque runtimes, including inline code, option-assigned paths, and unresolved dynamic arguments, while preserving normal Node, Python, and .NET commands.
+- Blocked direct opaque runtime execution during active-loop terminal authorization because script files cannot prove their write set. Harmless runtime version probes remain available, and the exact trusted `agentx loop start` lifecycle command is allowed to open the next loop from completed state.
+- Blocked Windows command-shell `/c` and `/k` execution during active-loop terminal authorization so nested redirections cannot overwrite gate-bearing state.
+- Pinned `fast-uri` to patched upstream commit `412e40a` through HTTPS and added extension coverage/audit plus MCP clean-install, smoke, and audit preflights before automated release creation.
+- Added root `LICENSE` and `NOTICE` to both primary installers and to MCP release archives; the MCP package now declares Apache-2.0 consistently with AgentX.
+- Added `LICENSE` and `NOTICE` to primary installers, standalone workspace packs, user-level Copilot CLI installs, and MCP release archives. Workspace installs place AgentX legal files under `.agentx/legal`, global installs use `~/.copilot/agentx-legal`, host-project root legal files remain untouched, and the MCP package declares Apache-2.0 consistently with AgentX.
+- Excluded source-workspace `.vscode/settings.json` from portable installs so repositories without the extension retain native `.github/agents` discovery.
+- Made same-major version upgrades fail before dependency setup or file mutation unless `-Force` or `--force` is explicit, preventing mixed runtime bytes from being stamped as 9.2.0.
 
 ### Validation
 
+- Added regression coverage for customization path compatibility, hidden-but-callable subagents, least-privilege tools, native handoffs, hook behavior, curated skill visibility, differentiation scoring, and runtime-resolved model guidance.
 - Added regression coverage for three-way classifier parity, effective-minimum recomputation, tier constant exports, CRLF frontmatter parsing, retry isolation, and stage telemetry.
 - Added per-stage runner telemetry (`compactionMs`, `modelMs`, `selfReviewMs`) to the result object and session metadata.
+- Added a registration-ownership regression that preserves all 26 contributed agents while suppressing the duplicate source-workspace registration path.
 
 ### Limitations
 

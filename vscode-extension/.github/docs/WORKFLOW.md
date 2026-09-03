@@ -374,7 +374,7 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
 1. **Centralized Coordination** - Agent X is the top-level autonomous executor. It SHOULD complete work in one session whenever feasible and use specialist stages as internal workflow phases. Manual agent switching is a fallback for isolation or platform limitations.
 2. **Role-Contract Preservation** - When Agent X executes a specialist phase internally, it MUST follow that specialist agent's constraints, boundaries, required templates, required skills, entry gates, exit gates, and deliverable rules. Internal execution is not permission to weaken the role contract.
 3. **Strict Role Separation** - Each agent produces one deliverable type (PRD, ADR, Code, Review)
-4. **Universal Tool Access** - All agents have access to all tools for maximum flexibility
+4. **Least-Privilege Tool Access** - Each agent receives only the tools needed for its role; parent agents own remote mutations and durable lifecycle closeout unless explicitly delegated
 5. **Status-Driven** - GitHub Projects V2 Status field is the source of truth
 6. **Pre-Handoff Validation** - Artifacts validated before status transitions
 7. **Post-Review Validation** - DevOps and Tester validate in parallel after Reviewer approves
@@ -433,6 +433,7 @@ In Review + needs:testing -> Tester (pre-release certification)
 - Architect: ADR + Tech Spec exist, NO CODE EXAMPLES compliance, PM requirement-fit validation captured, and AI-bearing specs capture Data Scientist implementation-depth alignment
 - Data Scientist: ML pipeline design, evaluation plan, model card present
 - Engineer: Code committed, tests 80% coverage, docs updated, and required Architect/Data Scientist design alignment captured when the issue crosses those boundaries
+- Code-bearing implementation: final independent-review evidence passes `evaluation/rubrics/code-quality.md` at 80+ with exact changed-file hashes and no blocking findings
 - Reviewer: Review document complete, approval decision present
 - DevOps: CI/CD pipelines validated, deployment docs present
 - Tester: Test suites pass, certification report complete

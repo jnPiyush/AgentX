@@ -61,13 +61,17 @@ Assert-True ([version]($pack.prerequisites.powershell -replace '[^0-9.]','') -ge
 $installTarget = Join-Path ([IO.Path]::GetTempPath()) "agentx-pack-install-$([guid]::NewGuid().ToString('N'))"
 try {
     New-Item -ItemType Directory -Path $installTarget -Force | Out-Null
-    & pwsh -NoProfile -File (Join-Path $repoRoot 'packs/agentx-copilot-cli/install.ps1') -Target $installTarget -Source $repoRoot *> $null
+    & pwsh -NoProfile -File (Join-Path $repoRoot 'packs/agentx-copilot-cli/install.ps1') -Target $installTarget -Source $repoRoot -IncludeCli *> $null
     $installedSkills = @(Get-ChildItem (Join-Path $installTarget '.github/skills') -Recurse -Filter SKILL.md -File)
     Assert-True ($LASTEXITCODE -eq 0 -and $installedSkills.Count -eq $sourceSkills.Count) 'PowerShell pack installer installs the complete canonical skill inventory'
     Assert-True (@($installedSkills | Where-Object { $_.FullName -match '\\.github\\skills\\.*\\.github\\skills\\' }).Count -eq 0) 'PowerShell pack installer does not recursively nest destination paths'
     Assert-True (Test-Path (Join-Path $installTarget '.github/skills/architecture/cost-analysis/scripts/estimate-cost.ps1')) 'PowerShell pack installer preserves nested skill scripts'
     Assert-True (Test-Path (Join-Path $installTarget '.github/skills/architecture/infra-governance/assets/workload-topologies.json')) 'PowerShell pack installer preserves nested skill assets'
     Assert-True (Test-Path (Join-Path $installTarget 'evaluation/rubrics/skill-quality.md')) 'PowerShell pack installer preserves the skill rubric path'
+    Assert-True (Test-Path (Join-Path $installTarget 'evaluation/rubrics/code-quality.md')) 'PowerShell pack installer preserves the code-quality rubric path'
+    Assert-True (Test-Path (Join-Path $installTarget 'scripts/score-code-quality.ps1')) 'PowerShell pack installer preserves the code-quality evaluator'
+    Assert-True (Test-Path (Join-Path $installTarget '.github/agentx/scripts/score-code-quality.ps1')) 'PowerShell pack installer preserves the trusted hidden code-quality evaluator'
+    Assert-True (Test-Path (Join-Path $installTarget '.github/agentx/evaluation/rubrics/code-quality.md')) 'PowerShell pack installer preserves the trusted hidden code-quality rubric'
     Assert-True (Test-Path (Join-Path $installTarget 'scripts/parse-yaml.js')) 'PowerShell pack installer preserves the standalone YAML parser'
     Assert-True (Test-Path (Join-Path $installTarget 'scripts/validate-changed-skills.ps1')) 'PowerShell pack installer preserves the changed-skill validator'
     Push-Location $installTarget
@@ -81,6 +85,8 @@ try {
         $installedPrototype = $installedPrototypeJson | ConvertFrom-Json -Depth 20
         Assert-True ($installedPrototypeExit -eq 0 -and @($installedPrototype.skills)[0].blockers.Count -eq 0) 'PowerShell pack installed scorer parses prototype-audit frontmatter'
         Assert-True (Test-Path 'scripts/validate-changed-skills.ps1') 'PowerShell pack installed changed-skill gate is available'
+        & pwsh -NoProfile -File '.agentx/agentx.ps1' loop start -p 'Validate installed rubric runtime' -m 1 *> $null
+        Assert-True ($LASTEXITCODE -eq 0 -and (Test-Path '.agentx/state/code-quality-baseline.json')) 'PowerShell pack installed CLI starts with its trusted rubric runtime'
     }
     finally {
         Pop-Location

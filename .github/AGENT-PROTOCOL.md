@@ -82,6 +82,11 @@ simply records one reviewer verdict before completing.
    that sees only the deliverable (diff / artifact / spec), not the author's
    rationale. It returns structured findings: HIGH / MEDIUM / LOW.
    - APPROVED = true only when zero HIGH and zero MEDIUM remain.
+  - When implementation code changed, the evidence MUST follow
+    [`evaluation/rubrics/code-quality.md`](../evaluation/rubrics/code-quality.md).
+    Run `pwsh scripts/score-code-quality.ps1 -Mode Scope -Json` after the final
+    code edit, score all ten dimensions, and use that JSON report as the
+    final review iteration evidence.
 6. **Address findings** -- fix all HIGH/MEDIUM, then re-run from Step 1.
 7. **Repeat** until APPROVED, all Done Criteria pass, and the risk-based minimum is met.
 
@@ -112,6 +117,14 @@ iteration >= the effective class minimum, and the latest recorded reviewer verdi
 `approved` with zero HIGH and zero MEDIUM findings, attributed to a reviewer id,
 and recorded on the final work iteration. There is no skip token for the
 iteration gate.
+
+For code-bearing loops, `loop start` snapshots pre-existing dirty implementation
+files and `loop complete` runs `scripts/score-code-quality.ps1`. Completion is
+blocked unless the final review report scores at least 80, meets every blocking
+floor, has no HIGH/MEDIUM findings, and matches the final file SHA-256 values.
+The baseline and every archived iteration artifact are digest-bound. After a
+stale-session reset, use `--include-existing-changes` only when the dirty code
+belongs to the resumed task. Docs-only and test-only loops skip this gate.
 
 ---
 

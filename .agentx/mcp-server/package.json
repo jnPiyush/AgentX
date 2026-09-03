@@ -1,6 +1,6 @@
 {
   "name": "@agentx/mcp-server",
-  "version": "9.1.0",
+  "version": "9.2.0",
   "description": "MCP stdio server that exposes AgentX CLI commands (loop, ready, state, workflow, validate, ship, ...) as Model Context Protocol tools so GitHub Copilot CLI, Claude Desktop, or any MCP host can drive AgentX quality gates from chat.",
   "private": true,
   "type": "commonjs",
@@ -14,6 +14,9 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4"
   },
+  "overrides": {
+    "fast-uri": "https://codeload.github.com/fastify/fast-uri/tar.gz/412e40abd4eb8beabfb952d80abf949a2baf27a3"
+  },
   "scripts": {
     "start": "node index.js",
     "test": "node smoke-test.js",
@@ -25,5 +28,5 @@
     "copilot-cli",
     "quality-gate"
   ],
-  "license": "MIT"
+  "license": "Apache-2.0"
 }

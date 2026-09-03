@@ -1,6 +1,7 @@
 ---
 name: "scrub"
 description: "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, and design tells -- and optionally apply safe automated fixes. Use after a code-generation or refactor pass to remove the visible signs of machine authorship before review."
+user-invocable: false
 metadata:
   author: "AgentX"
   version: "1.0.0"

@@ -187,10 +187,12 @@ function Test-AgentWindowContract([string]$FilePath) {
  Write-Pass "$name : user-invocable OK ($userInvocable)"
  }
 
- if (($isInternal -or $isAutoFixReviewer) -and $disableModelInvocation -ne 'true') {
- Write-Fail "$name : Must declare disable-model-invocation: true for internal agents and Auto-Fix Reviewer."
+ if ($isInternal -and $disableModelInvocation -ne 'false') {
+ Write-Fail "$name : Internal agents must declare disable-model-invocation: false so parent agents can invoke them while user-invocable: false keeps them hidden."
+ } elseif ($isAutoFixReviewer -and $disableModelInvocation -ne 'true') {
+ Write-Fail "$name : Auto-Fix Reviewer must declare disable-model-invocation: true so only the user can start source-modifying review."
  } elseif ($isInternal -or $isAutoFixReviewer) {
- Write-Pass "$name : disable-model-invocation OK"
+ Write-Pass "$name : disable-model-invocation OK ($disableModelInvocation)"
  }
 
  if ($agents.Count -gt 0 -and $tools -notcontains 'agent') {

@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Structured AI software delivery for GitHub Copilot, Claude, OpenAI, local models, and the CLI.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.1.0"><img src="https://img.shields.io/badge/Version-9.1.0-b11f4b?style=for-the-badge" alt="Version 9.1.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.2.0"><img src="https://img.shields.io/badge/Version-9.2.0-b11f4b?style=for-the-badge" alt="Version 9.2.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -23,8 +23,8 @@ AgentX turns coding agents into a structured delivery team. Specialist roles pla
 | What you get | Current release |
 |:-------------|:----------------|
 | Specialist agents | **26 total**: 15 visible roles and 11 internal sub-agents |
-| Production knowledge | **133 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
-| Quality discipline | At least **5 evidenced iterations**, fresh verification, independent review, scrub, and completion gates |
+| Production knowledge | **134 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
+| Quality discipline | **Risk-based evidenced iterations** (`1/2/3/5`), fresh verification, independent review, scrub, and completion gates |
 | Durable artifacts | PRDs, ADRs, specs, UX prototypes, plans, reviews, learnings, issue state, and memory stored in the repository |
 | Runtime surfaces | VS Code, GitHub Copilot Chat, GitHub Copilot CLI, Claude Code, Cursor, PowerShell, and Bash |
 | Work tracking | Local mode, GitHub, or Azure DevOps |
@@ -82,7 +82,7 @@ AgentX uses six shared checkpoints across chat, CLI, issues, plans, reviews, and
 
 ### Quality gates
 
-- **Iterative loop:** minimum five evidence-backed passes for every task class
+- **Iterative loop:** evidence-backed minimums scale by risk: standard `1`, auto-fix `2`, complex delivery `3`, and high-risk `5`
 - **Independent review:** a subagent sees the deliverable, not the author's rationale
 - **Karpathy guidelines:** think before coding, keep it simple, change surgically, verify the goal
 - **Model Council:** Analyst, Strategist, and Skeptic pressure-test high-stakes decisions
@@ -121,7 +121,7 @@ GitHub Ops, ADO Ops, AzDO PRD-to-WIT, Functional Reviewer, Architecture Reviewer
 
 ---
 
-## 133 Production Skills
+## 134 Production Skills
 
 Skills are compact, versioned knowledge packages that load only when the task needs them. Each `SKILL.md` can include scripts, references, and assets.
 
@@ -129,7 +129,7 @@ Skills are compact, versioned knowledge packages that load only when the task ne
 |:-----|:---------|
 | **AI systems** | Agent Framework, Foundry SDK, LangGraph, RAG, evaluation, safety, observability, memory, routing, voice agents |
 | **Architecture** | API design, security, database, performance, cost analysis, infrastructure governance, low-code vs pro-code |
-| **Development** | Testing, error handling, debugging, configuration, type safety, code review, worktrees, verification |
+| **Development** | Testing, error handling, debugging, configuration, type safety, code review, prose anti-slop editing, worktrees, verification |
 | **Data and analytics** | Fabric, Databricks, Cosmos DB, Power BI, forecasting, data analysis |
 | **Design** | UX/UI, accessibility, prototype craft, anti-slop, content design, visual regression |
 | **Infrastructure** | Azure, Bicep, Terraform, containers, GitHub Actions, YAML pipelines, release management |
@@ -252,6 +252,8 @@ AgentX: Add LLM Adapter
 
 Secrets are collected through secure VS Code prompts and stored in secret storage, not committed to `.agentx/config.json`.
 
+Standalone workspace installers keep AgentX legal material under `.agentx/legal` and never replace the repository's root `LICENSE` or `NOTICE`. When upgrading an existing 9.x workspace installation to a different version, rerun with explicit `-Force` or `--force` so the installer cannot report a new version while retaining older managed files.
+
 ### 4. Start with one prompt
 
 ```text
@@ -288,12 +290,12 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.1.0
+## New In 9.2.0
 
 This major release makes AgentX completion and autonomous execution fail closed:
 
 - quality-loop approval now requires an attributable structured reviewer verdict with zero HIGH/MEDIUM findings on the final work iteration
-- commit-time gates enforce an absolute five-iteration floor, staged/worktree agreement, and post-commit loop consumption
+- commit-time gates enforce risk-based iteration minimums, staged/worktree agreement, and post-commit loop consumption
 - autonomous workspace tools reject traversal, alternate streams, credentials, protected gate paths, links, aliases, and hardlinks
 - autonomous shell execution and Claude-native tools remain disabled until an externally sandboxed adapter is available
 - regression suites cover review exhaustion, hook lifecycle, path controls, staged and untracked harness enforcement, and VS Code evidence forwarding

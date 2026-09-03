@@ -1,6 +1,7 @@
 ---
 name: verification-before-completion
 description: Block false completion claims. Force the agent to identify the claim, run the exact verification command, read the actual output, compare against the claim, and only then report. Use whenever an agent is about to say "done", "fixed", "tests pass", "deployed", "loop complete", or close an issue.
+user-invocable: false
 ---
 
 # Verification Before Completion

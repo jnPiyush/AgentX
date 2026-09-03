@@ -4,7 +4,7 @@
 
 .DESCRIPTION
  Checks an AI agent project for the three most common production blind spots:
- 1. Model Change Management - pinned versions, baselines, migration plans
+ 1. Model Change Management - externalized deployments, recorded identities, baselines, migration plans
  2. Data Drift Detection - input logging, distribution tracking, eval freshness
  3. Judge LLM Quality - rubric presence, validation data, consistency checks
 
@@ -79,34 +79,42 @@ Write-Host "============================================================" -Foreg
 Write-Host ""
 Write-Host "--- 1. Model Change Management ---" -ForegroundColor White
 
-# Check: Model version pinned (not just generic name)
-$hasPinnedVersion = $false
-$hasGenericModel = $false
-$genericModelFiles = @()
+# Check: Concrete provider identity is recorded without assuming a naming scheme
+$hasDeploymentIdentity = $false
+$hasHardcodedModel = $false
+$hardcodedModelFiles = @()
 
 foreach ($file in $allSource + $configFiles) {
  $content = Get-Content $file.FullName -Raw -ErrorAction SilentlyContinue
  if (-not $content) { continue }
 
- # Pinned: model name with date suffix like gpt-5.1-2026-01-15
- if ($content -match '(gpt-\d[\w.-]+-\d{4}-\d{2}-\d{2}|claude-[\w.]+-\d{8}|model_version.*pinned)') {
- $hasPinnedVersion = $true
+ $identityMatches = [regex]::Matches(
+  $content,
+  '(?im)^\s*["'']?(?:model[_-]?version|model[_-]?revision|model[_-]?snapshot|resolved[_-]?model[_-]?id|deployment[_-]?(?:id|version))["'']?\s*[:=]\s*["'']?([^"''#\r\n]+)'
+ )
+ foreach ($identityMatch in $identityMatches) {
+  $identityValue = $identityMatch.Groups[1].Value.Trim()
+  $isPlaceholder = -not $identityValue -or
+   $identityValue -match '[<>]' -or
+   $identityValue -match '(?i)\b(placeholder|example|sample|unknown|none|null|todo|tbd)\b|your[-_]' -or
+    $identityValue -match '(?i)(\$env:|os\.getenv|Environment\.GetEnvironmentVariable)' -or
+    $identityValue -match '(?i)(\$\{?[A-Z_][A-Z0-9_]*\}?|%[A-Z_][A-Z0-9_]*%|\{\{[^}]+\}\})'
+  if (-not $isPlaceholder) { $hasDeploymentIdentity = $true; break }
  }
- # Generic: just "gpt-5.1" or "gpt-4o" without date pin
- if ($content -match 'model["\s:=]+["'']?(gpt-\d[\w.]*|claude-[\w.-]+|o\d+(-\w+)?)["'']?' -and
- $content -notmatch '(gpt-\d[\w.-]+-\d{4}-\d{2}-\d{2})') {
- $hasGenericModel = $true
- $genericModelFiles += $file.Name
+ if ($file.Extension -in @('.py', '.cs') -and
+ $content -match '(?i)model\s*[:=]\s*["''][A-Za-z0-9][A-Za-z0-9._-]+["'']') {
+ $hasHardcodedModel = $true
+ $hardcodedModelFiles += $file.Name
  }
 }
 
-if ($hasPinnedVersion) {
- Write-Check "Model version pinned (date-stamped)" "PASS"
-} elseif ($hasGenericModel) {
- $fileList = ($genericModelFiles | Select-Object -Unique) -join ", "
- Write-Check "Model version pinned" "WARN" "Generic model names found in: $fileList. Pin with date suffix (e.g., gpt-5.1-2026-01-15)"
+if ($hasDeploymentIdentity) {
+ Write-Check "Concrete provider model identity recorded" "PASS"
+} elseif ($hasHardcodedModel) {
+ $fileList = ($hardcodedModelFiles | Select-Object -Unique) -join ", "
+ Write-Check "Concrete provider model identity recorded" "WARN" "Hardcoded model values found in: $fileList. Externalize the deployment and record its resolved provider ID or revision with the evaluation baseline."
 } else {
- Write-Check "Model version pinned" "WARN" "No model references found to validate"
+ Write-Check "Concrete provider model identity recorded" "WARN" "No provider-neutral model ID, revision, snapshot, or deployment version metadata found"
 }
 
 # Check: Model config is externalized (env var or config file)
@@ -121,7 +129,7 @@ foreach ($file in $allSource) {
 }
 if ($modelExternalized) {
  Write-Check "Model config externalized (env/config)" "PASS"
-} elseif ($hasGenericModel) {
+} elseif ($hasHardcodedModel) {
  Write-Check "Model config externalized" "FAIL" "Model name appears hardcoded. Use env vars (AGENT_MODEL, FOUNDRY_MODEL)"
 } else {
  Write-Check "Model config externalized" "WARN" "Could not determine model configuration approach"
