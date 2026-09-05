@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.3.0](https://github.com/jnPiyush/AgentX/compare/v9.2.0...v9.3.0) (2026-09-05)
+
+
+### Features
+
+* improve Copilot workspace compatibility and coding harness ([586498e](https://github.com/jnPiyush/AgentX/commit/586498ec8766150470c97c89488e36e032c46abf))
+
 ## 9.2.0
 
 ### Changed
