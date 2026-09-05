@@ -26,7 +26,7 @@
   },
   "homepage": "https://github.com/jnPiyush/AgentX#readme",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.134.0"
   },
   "categories": [
     "AI",
@@ -645,6 +645,30 @@
     ],
     "chatInstructions": [
       {
+        "path": "./.github/agentx/instructions/ado/ado-backlog-sprint.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/ado/ado-backlog-triage.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/ado/ado-create-pull-request.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/ado/ado-get-build-info.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/ado/ado-interaction-templates.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/ado/ado-update-wit-items.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/ado/ado-wit-discovery.instructions.md"
+      },
+      {
+        "path": "./.github/agentx/instructions/ado/ado-wit-planning.instructions.md"
+      },
+      {
         "path": "./.github/agentx/instructions/ai.instructions.md"
       },
       {
@@ -1237,7 +1261,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.11.0",
     "@types/sinon": "^21.0.0",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.134.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "@vscode/test-electron": "3.1.0",

@@ -19,11 +19,17 @@ import {
 } from './utils/agentsWindowOptIn';
 import { getQualityStateDisplay } from './utils/loopStateChecker';
 import { readHarnessState } from './utils/harnessState';
+import { warnIfHostUnsupported } from './utils/hostCapability';
 
 let agentxContext: AgentXContext;
 
 export function activate(context: vscode.ExtensionContext) {
  console.log('AgentX extension activating...');
+
+ // Defence in depth for hosts that bypass the Marketplace engine check: a host
+ // older than the agent contribution points ignores every agent and skill
+ // silently, so surface it once instead of failing invisibly.
+ void warnIfHostUnsupported(context);
 
  agentxContext = new AgentXContext(context);
  const sidebarProviders = createSidebarProviders(agentxContext);

@@ -1,6 +1,6 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-08-30T20:51:04Z",
+  "generated": "2026-09-05T13:57:37Z",
   "source": ".github/skills/**/SKILL.md",
   "totalCount": 134,
   "countsByCategory": [
@@ -88,7 +88,7 @@
       "name": "ai-evaluation",
       "category": "ai-systems",
       "path": ".github/skills/ai-systems/ai-evaluation/SKILL.md",
-      "description": "Evaluate AI/ML model quality, safety, and reliability. Use when designing evaluation frameworks, implementing automated evals, running benchmarks, measuring RAG quality (RAGAS), or establishing quality gates for model deployment."
+      "description": "Use when evaluating AI quality, safety, completeness and cost with held-out tasks, executable graders, calibrated judges and explicit release criteria."
     },
     {
       "id": "ai-systems/ai-safety-and-red-teaming",
@@ -221,7 +221,7 @@
       "name": "prompt-engineering",
       "category": "ai-systems",
       "path": ".github/skills/ai-systems/prompt-engineering/SKILL.md",
-      "description": "Write effective prompts for AI coding agents. Use when crafting system prompts, implementing chain-of-thought reasoning, building few-shot examples, adding guardrails, configuring tool use, or designing agentic prompt patterns. Covers CoT, few-shot, guardrails, and function calling."
+      "description": "Use when designing coding-agent prompts, tool contracts, structured outputs and model-adaptive context, or evaluating prompt changes."
     },
     {
       "id": "ai-systems/prompt-versioning",
@@ -494,7 +494,7 @@
       "name": "code-review",
       "category": "development",
       "path": ".github/skills/development/code-review/SKILL.md",
-      "description": "Conduct systematic code reviews and audits including automated checks, security audits, compliance verification, and review checklists. Use when reviewing pull requests, performing security audits, verifying coding standards compliance, or setting up automated code review workflows."
+      "description": "Use when reviewing implementation changes for correctness, evidence and release risk with the repository exact-scope rubric and native verification commands."
     },
     {
       "id": "development/configuration",
@@ -599,7 +599,7 @@
       "name": "scrub",
       "category": "development",
       "path": ".github/skills/development/scrub/SKILL.md",
-      "description": "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, and design tells -- and optionally apply safe automated fixes. Use after a code-generation or refactor pass to remove the visible signs of machine authorship before review."
+      "description": "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, duplicate logic, and design tells -- and optionally apply safe fixes. Use when reviewing a code-generation or refactor pass, before a commit, PR, or merge."
     },
     {
       "id": "development/skill-creator",
@@ -634,7 +634,7 @@
       "name": "token-optimizer",
       "category": "development",
       "path": ".github/skills/development/token-optimizer/SKILL.md",
-      "description": ">-"
+      "description": "Use when managing instruction/context budgets, cache-aware tokenomics and cost estimates while preserving acceptance criteria, safety and verified quality."
     },
     {
       "id": "development/type-safety",

@@ -1,6 +1,6 @@
 ---
 description: 'React and TypeScript specific coding instructions for frontend development.'
-applyTo: '**.tsx, **.jsx, **/components/**, **/hooks/**'
+applyTo: '**/*.tsx, **/*.jsx, **/components/**, **/hooks/**'
 ---
 
 # React / TypeScript Instructions

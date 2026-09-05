@@ -53,7 +53,7 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.sh |
 Open VS Code with Copilot Chat. Type:
 
 ```
-@agent-x Create a story to add a /health endpoint to our API
+@agentx Create a story to add a /health endpoint to our API
 ```
 
 **Or via CLI** (GitHub mode):
@@ -124,7 +124,7 @@ AgentX enforced:
 For larger work, use the **full pipeline**:
 
 ```
-@agent-x Create an epic for user authentication with OAuth
+@agentx Create an epic for user authentication with OAuth
 ```
 
 This triggers the full flow:
@@ -199,6 +199,81 @@ PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2
 4. **Configure** -- Generates `agent-status.json`, `config.json`, output directories
 5. **Setup** -- Interactive: git init, hooks install, username config (skip with `-NoSetup`)
 6. **Companion Extensions** -- Installs Azure companion capabilities when AgentX detects an Azure-oriented workspace (or when you force it with `-Azure` / `--azure`)
+
+---
+
+## Using AgentX with GitHub Copilot CLI and the Agents Window
+
+AgentX supports three host surfaces. Pick the one that matches how you work.
+
+### 1. VS Code extension (default)
+
+Install the AgentX extension. It contributes all 26 agents, 134 skills and the
+instruction files directly to the host -- nothing is copied into your
+workspace. This is the zero-copy path.
+
+To use AgentX in the **Agents window** (VS Code's dedicated agent surface),
+opt the extension in:
+
+```jsonc
+// .vscode/settings.json
+{
+  "extensions.supportAgentsWindow": { "jnPiyush.agentx": true }
+}
+```
+
+> **Agent Host limitation**: prompt files (`.prompt.md`) do **not** execute in
+> Agents-window Agent Host sessions. AgentX ships prompts for the editor chat
+> view; use **agents** or **skills** when you need behaviour that runs in the
+> Agents window.
+
+### 2. GitHub Copilot CLI -- native plugin
+
+The repository root ships a `plugin.json`, so Copilot CLI can register AgentX's
+agents, skills and lifecycle hooks without copying anything:
+
+```bash
+copilot plugin install jnPiyush/AgentX
+copilot plugin list
+copilot --agent engineer -p "Implement the health endpoint"
+```
+
+### 3. GitHub Copilot CLI -- workspace seeding
+
+Use `AgentX: Initialize CLI` from the Command Palette when you want AgentX
+assets present in the workspace itself (for teammates without the extension, or
+for CI). It seeds `.github/agents`, `.github/skills`, `.github/instructions`,
+`.github/prompts`, `.github/templates`, `.github/schemas`, `.github/registries`
+and `.github/hooks`, plus the workflow docs, rubrics and gate scripts the agents
+reference.
+
+Two modes are available via the `agentx.cliAssetMode` setting:
+
+| Mode | Behaviour | Use when |
+|------|-----------|----------|
+| `copy` (default) | Duplicates bundled assets into the workspace | You want the assets committed and shared with a team |
+| `symlink` | Creates directory junctions into the installed extension bundle | Single-user, zero-copy; entries are added to `.gitignore` and refreshed on upgrade |
+
+Seeding never overwrites existing files, and never writes host-owned files such
+as `.github/workflows`, `.github/ISSUE_TEMPLATE`, `CODEOWNERS` or `LICENSE`.
+
+If you run both the extension and workspace seeding, suppress duplicate agent
+registrations so each agent appears once in the picker:
+
+```jsonc
+// .vscode/settings.json
+{
+  "chat.agentFilesLocations": { ".github/agents": false }
+}
+```
+
+### Standalone install (no VS Code extension)
+
+```powershell
+pwsh packs/agentx-copilot-cli/install.ps1 -Target /path/to/project -IncludeCli
+```
+
+See [packs/agentx-copilot-cli/README.md](../packs/agentx-copilot-cli/README.md).
 
 ---
 

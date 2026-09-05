@@ -11,29 +11,37 @@ This file is the **thin router** - it tells you what to load and when. It loads 
 
 ## Quality Loop Hard Rule (NON-SKIPPABLE)
 
-> **HARD RULE**: Before editing, creating, or deleting any file for a code or docs change, run `.agentx/agentx.ps1 loop start -p "<task>"` as your ABSOLUTE FIRST tool call. Reading files and running `loop status` are allowed; mutating the workspace before `loop start` succeeds is a contract violation. The loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, and the subagent review pass must be recorded as a structured verdict on the FINAL iteration (`loop iterate ... --verdict approved --reviewer <id> --high 0 --medium 0`). `loop complete` fails on a non-approved verdict, on non-zero HIGH/MEDIUM, or when iterations were recorded after the approval. The pre-commit hook blocks commits when these conditions are unmet.
->
-> **Risk-based iterations**: The CLI enforces minimums of standard `1`, auto-fix `2`, complex/AgentX `3`, and high-risk `5`. A structured independent reviewer verdict is still required on the final iteration. Report each iteration with `loop iterate -s "..."`, then summarize before completing.
->
-> **Cross-Cutting Agent Protocol**: The shared rules (quality loop, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are defined ONCE in [.github/AGENT-PROTOCOL.md](AGENT-PROTOCOL.md). Agent files keep only the front-loaded Pre-edit gate + Honesty rule stubs and point there.
->
-> **Honesty rule**: If asked whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state. Do not claim completion unless `loop complete` succeeded in the current session.
->
-> Frontmatter-only enforcement is insufficient -- this rule lives here in body prose because models routinely skip rules placed only in deeper docs.
+Before code/docs mutation, run `.agentx/agentx.ps1 loop start -p "<task>"` as the
+first tool call. Reads and `loop status` are allowed before mutation.
+Meet minimum iterations: standard 1, auto-fix 2, complex/AgentX 3, high-risk 5.
+Record each iteration with real evidence. The FINAL iteration requires
+`--verdict approved --reviewer <id> --high 0 --medium 0`; later edits require
+fresh review. Work is incomplete until `loop complete -s "<summary>"` succeeds.
+
+**Honesty rule**: inspect `loop status` before reporting completion. Do not
+retimestamp old evidence or invent scores. Shared mechanics, Karpathy, research,
+scrub, council and capture are defined once in
+[AGENT-PROTOCOL.md](AGENT-PROTOCOL.md); retain this pre-edit/honesty stub in body
+prose and load the protocol for implementation.
 
 ---
 
 ## Mandatory Workflow Gates (NON-SKIPPABLE)
 
-These four rules carry the same weight as the Quality Loop. The pre-commit hook hard-fails commits that violate them. Bypass tokens exist for genuine emergencies only.
+These gates retain the [protocol](AGENT-PROTOCOL.md) contract:
 
-> **Compound Capture (Done gate)**: Any commit that stages an APPROVED review under `docs/artifacts/reviews/REVIEW-*.md` MUST also stage the matching `docs/artifacts/learnings/LEARNING-<issue>.md`, OR record a skip rationale in the issue close comment and tag the commit message with `[skip-capture]`. Work is NOT Done until Compound Capture is resolved. See [AGENTS.md#compound-engineering-hard-rule](../AGENTS.md#compound-engineering-hard-rule).
->
-> **Model Council (ADR/PRD/Eval gate -- MANDATORY, NO SKIP)**: Any commit that stages a new `docs/artifacts/adr/ADR-*.md` MUST also stage a matching `docs/artifacts/adr/COUNCIL-*.md` capturing 3 diverse-model perspectives and a Synthesis section. Mandatory for Product Manager (prd-scope), Architect (adr-options), and any complex task; also Data Scientist (ai-design), Reviewer (code-review), and Consulting Research. There is no skip token -- the pre-commit hook hard-fails when the COUNCIL file is missing. See [AGENTS.md#role-pipeline-reference](../AGENTS.md#role-pipeline-reference).
->
-> **Execution Plan (complex-work gate)**: Any commit changing **8 or more** code files (`.ts/.tsx/.js/.ps1/.py/.cs/.go/.rs/.tf/.bicep/.sql`) MUST stage a corresponding `docs/execution/plans/EXEC-PLAN-*.md` derived from [.github/templates/EXEC-PLAN-TEMPLATE.md](../.github/templates/EXEC-PLAN-TEMPLATE.md), OR tag the commit message with `[skip-plan]`. Plans are living documents and MUST be updated, not only authored. See [docs/WORKFLOW.md#execution-plans-for-complex-work](../docs/WORKFLOW.md#execution-plans-for-complex-work).
->
-> **Brainstorm (Engineer pre-Plan gate)**: When acting in the Engineer phase on non-trivial work, the `Research -> Brainstorm -> Plan -> Design -> Implement -> Test -> Review` pipeline is mandatory. The Brainstorm step is satisfied by recording at least one entry of type `brainstorm` in the clarification ledger OR an `## Alternatives Considered` block inside the execution plan **before** Plan is written. This step has no missing-file hook gate; reviewers MUST verify it during the review phase. See [AGENTS.md#pipeline-phase-compliance-hard-rule](../AGENTS.md#pipeline-phase-compliance-hard-rule).
+- **Compound Capture**: stage matching `LEARNING-<issue>.md` with an APPROVED
+  review, or record the issue-close rationale and `[skip-capture]` commit tag.
+  Resolve capture before Done.
+- **Model Council**: new ADRs require matching `COUNCIL-*.md` with three
+  diverse-model perspectives and Synthesis; no skip token. Required for PM,
+  Architect, Data Scientist, Reviewer, Consulting Research and complex tasks.
+- **Execution Plan**: changes to 8+ code files require a maintained
+  `docs/execution/plans/EXEC-PLAN-*.md` from the
+  [template](templates/EXEC-PLAN-TEMPLATE.md), or `[skip-plan]`.
+- **Brainstorm**: Engineer phases stay ordered: Research -> Brainstorm -> Plan
+  -> Design -> Implement -> Scrub -> Test -> Review. Record a `brainstorm`
+  ledger entry or `## Alternatives Considered` before Plan; reviewers verify it.
 
 **Honesty rule**: If asked whether any of these gates ran, inspect the staged files and commit message and report the actual state. Never claim a gate was satisfied without the artifact or skip token.
 

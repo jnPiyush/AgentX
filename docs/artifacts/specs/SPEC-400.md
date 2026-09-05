@@ -30,7 +30,7 @@
 
 ## 1. Overview
 
-This spec describes how AgentX delivers its 24 agents, 127 skills, quality-loop CLI, hooks, MCP servers, and instructions into the **VS Code Agents Window** (Preview, May 2026) while preserving the current editor-window experience. It implements ADR-400 Option C: Agents-Window-Native Customizations + CLI Bridge + Thin Extension.
+This spec describes how AgentX delivers its 26 agents, 134 skills, quality-loop CLI, hooks, MCP servers, and instructions into the **VS Code Agents Window** (Preview, May 2026) while preserving the current editor-window experience. It implements ADR-400 Option C: Agents-Window-Native Customizations + CLI Bridge + Thin Extension.
 
 **Scope (in):**
 
@@ -92,8 +92,8 @@ flowchart TB
   end
 
   subgraph BUNDLE["AgentX Customizations bundle"]
-    AGENTS[".agent.md files<br/>24 agents"]
-    SKILLS["SKILL.md files<br/>127 skills"]
+    AGENTS[".agent.md files<br/>26 agents"]
+    SKILLS["SKILL.md files<br/>134 skills"]
     INSTR[".instructions.md files"]
     HOOKS["Hooks bundle<br/>session-start / pre-tool / post-tool / session-end"]
     MCP["MCP servers"]
@@ -240,8 +240,8 @@ sequenceDiagram
 
 | AgentX surface | Customizations category | File pattern | Notes |
 |----------------|--------------------------|--------------|-------|
-| 24 agents | Agents | `.github/agents/*.agent.md`, `.github/agents/internal/*.agent.md` | Agent X is the only top-level coordinator |
-| 127 skills | Skills | `.github/skills/**/SKILL.md` | Already conform to agentskills.io |
+| 26 agents | Agents | `.github/agents/*.agent.md`, `.github/agents/internal/*.agent.md` | Agent X is the only top-level coordinator |
+| 134 skills | Skills | `.github/skills/**/SKILL.md` | Already conform to agentskills.io |
 | 7 instructions | Instructions | `.github/instructions/*.instructions.md` | Includes always-on `memory` and `project-conventions` |
 | Hooks bundle | Hooks | `.agentx/hooks/*.{ps1,sh}` (new) | Pairs of PS1+SH per hook event |
 | MCP servers | MCP | Existing `.vscode/mcp.json` plus optional `.agentx/mcp/` (new) | No new servers required by this spec |

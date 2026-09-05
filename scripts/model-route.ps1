@@ -42,8 +42,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-if ($File -and (Test-Path $File)) {
-  $Task = (Get-Content -Path $File -Raw).Trim()
+if ($File) {
+  $Task = (Get-Content -LiteralPath $File -Raw -ErrorAction Stop).Trim()
 }
 if (-not $Task) {
   $piped = $input | Out-String
@@ -120,7 +120,15 @@ if ($taskLower -match 'do not rush|take your time|carefully|think step by step')
   $rationaleParts.Add('caller asked for deliberate reasoning') | Out-Null
 }
 
+$highRisk = $taskLower -match '\b(auth(?:entication|orization)?|secrets?|payments?|privacy|production|migration|security|credentials?|encryption|compliance)\b'
+if ($highRisk) {
+  $tier = 'reasoning'
+  $rationaleParts.Add('high-risk work requires deliberate verification; urgency cannot lower the tier') | Out-Null
+}
+
 $result = [pscustomobject]@{
+  advisory       = $true
+  highRisk       = $highRisk
   task           = $Task
   tier           = $tier
   word_count     = $wordCount
@@ -155,4 +163,3 @@ else {
 }
 
 exit 0
-

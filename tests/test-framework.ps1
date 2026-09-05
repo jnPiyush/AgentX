@@ -207,6 +207,12 @@ Assert-FileExists "tests/code-quality-rubric-behavior.ps1" "Code-quality rubric 
 Assert-FileExists "tests/ai-agent-scaffold-behavior.ps1" "AI agent scaffold behavior test script"
 Assert-FileExists "tests/customization-modernization-behavior.ps1" "Customization modernization behavior test script"
 Assert-FileExists "tests/policy-hook-behavior.ps1" "Policy hook behavior test script"
+Assert-FileExists "tests/token-budget-behavior.ps1" "Token budget behavior test script"
+Assert-FileExists "tests/token-budget-ci-behavior.ps1" "Token budget CI execution test script"
+Assert-FileExists "tests/model-route-behavior.ps1" "Model route behavior test script"
+Assert-FileExists "tests/budget-behavior.ps1" "Budget behavior test script"
+Assert-FileExists "tests/copilot-host-compatibility-behavior.ps1" "Copilot host compatibility behavior test script"
+Assert-FileExists "tests/harness-distribution-behavior.ps1" "Harness distribution behavior test script"
 Assert-FileExists "tests/installer-license-behavior.ps1" "Installer license behavior test script"
 
 $providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
@@ -260,6 +266,28 @@ if ($LASTEXITCODE -ne 0) {
 }
 Assert-True ($LASTEXITCODE -eq 0) "Pre-commit gate behavior tests pass"
 
+$tokenBudgetBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/token-budget-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $tokenBudgetBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Token budget behavior tests pass"
+
+$tokenCiResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/token-budget-ci-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) { Write-Host $tokenCiResult }
+Assert-True ($LASTEXITCODE -eq 0) "Token budget CI execution tests pass"
+
+$modelRouteBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/model-route-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $modelRouteBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Model route behavior tests pass"
+
+$budgetBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/budget-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $budgetBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Budget behavior tests pass"
+
 $skillRubricBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/skill-rubric-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {
  Write-Host $skillRubricBehaviorResult
@@ -295,6 +323,18 @@ if ($LASTEXITCODE -ne 0) {
  Write-Host $policyHookBehaviorResult
 }
 Assert-True ($LASTEXITCODE -eq 0) "Policy hook behavior tests pass"
+
+$copilotHostCompatibilityResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/copilot-host-compatibility-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $copilotHostCompatibilityResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Copilot host compatibility behavior tests pass"
+
+$harnessDistributionResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/harness-distribution-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $harnessDistributionResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Harness distribution behavior tests pass"
 
 $installerLicenseResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/installer-license-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {

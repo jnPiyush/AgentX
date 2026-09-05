@@ -32,6 +32,8 @@
 |----|------|-------------|--------|-------|
 | TD-009 | Domain Skills | Only 5 domain verticals (oil & gas, financial, audit, tax, legal) | Limited domain coverage for consulting agents | v8.0.0 |
 | TD-011 | README | Missing badges (CI status, coverage, version) and screenshots | Less professional first impression | v8.0.0 |
+| TD-017 | Agent Tool IDs | Agent frontmatter uses legacy unnamespaced tool identifiers (`codebase`, `editFiles`, `runCommands`) rather than the namespaced forms (`search/codebase`, `edit/editFiles`) | None today -- both forms were verified working against Copilot CLI 1.0.83. Migration is deferred because unrecognized tool names are silently ignored, so an unverified per-tool mapping would disable tools without an error | v9.2.0 |
+| TD-018 | Initialize CLI (symlink mode) | Workspace-root support assets (`docs/`, `scripts/`, `evaluation/`, `packs/`, `AGENTS.md`, `Skills.md`) are copied, not linked, and the activation refresh deliberately never overwrites them | Files already present keep older bundle content after an extension upgrade. Fixing this needs a hash-aware refresh (overwrite only when the on-disk hash still matches the previously shipped hash), because an unconditional overwrite on the every-activation path would destroy user-authored files in those shared namespaces | v9.2.0 |
 
 ---
 

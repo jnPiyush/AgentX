@@ -65,6 +65,67 @@ foreach ($chk in $obj.checks) {
 # Exit-code contract: exit 0 iff ok==true.
 Assert-True (($exit -eq 0) -eq ($obj.ok -eq $true)) "exit code matches ok flag (exit=$exit ok=$($obj.ok))"
 
+# Zero-copy workspaces keep runtime scripts in the extension bundle and only
+# persist state in the workspace.
+$zeroCopyRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-diagnose-" + [guid]::NewGuid().ToString('N'))
+$previousWorkspaceRoot = $env:AGENTX_WORKSPACE_ROOT
+try {
+    New-Item -ItemType Directory -Path (Join-Path $zeroCopyRoot '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $zeroCopyRoot '.github') -Force | Out-Null
+    Set-Content -Path (Join-Path $zeroCopyRoot '.agentx/config.json') -Value '{"provider":"local"}' -Encoding utf8
+    $env:AGENTX_WORKSPACE_ROOT = $zeroCopyRoot
+
+    $zeroCopyRaw = & pwsh -NoProfile -File $cli diagnose --json 2>&1
+    $zeroCopyExit = $LASTEXITCODE
+    $zeroCopy = (($zeroCopyRaw | Out-String).Trim() | ConvertFrom-Json)
+    foreach ($id in @('cli', 'frontmatter', 'references', 'tokens')) {
+        $check = $zeroCopy.checks | Where-Object { $_.id -eq $id } | Select-Object -First 1
+        Assert-True ($null -ne $check -and $check.passed) "zero-copy diagnose passes '$id'"
+    }
+    Assert-True ($zeroCopyExit -eq 0) 'zero-copy diagnose exits successfully'
+
+    $tokenOutput = & pwsh -NoProfile -File $cli tokens check 2>&1
+    Assert-True ($LASTEXITCODE -eq 0) 'tokens check resolves its bundled runtime dependency'
+    Assert-True (($tokenOutput | Out-String) -notmatch 'not found') 'tokens check does not report a missing script'
+
+    foreach ($helpFlag in @('-Help', '--help', '-h')) {
+        $helpOutput = & pwsh -NoProfile -File $cli $helpFlag 2>&1
+        Assert-True ($LASTEXITCODE -eq 0) "$helpFlag exits successfully"
+        Assert-True (($helpOutput | Out-String) -match 'AgentX CLI') "$helpFlag renders CLI help"
+    }
+} finally {
+    if ($null -eq $previousWorkspaceRoot) {
+        Remove-Item Env:AGENTX_WORKSPACE_ROOT -ErrorAction SilentlyContinue
+    } else {
+        $env:AGENTX_WORKSPACE_ROOT = $previousWorkspaceRoot
+    }
+    Remove-Item -LiteralPath $zeroCopyRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+$copyAssets = Join-Path $root 'vscode-extension/scripts/copy-assets.js'
+$copyOutput = & node $copyAssets 2>&1
+Assert-True ($LASTEXITCODE -eq 0) 'extension bundle generation succeeds'
+if ($LASTEXITCODE -ne 0) {
+    $copyOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+}
+
+$isolatedExtension = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-extension-" + [guid]::NewGuid().ToString('N'))
+try {
+    New-Item -ItemType Directory -Path $isolatedExtension -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $root 'vscode-extension/.github') `
+        -Destination (Join-Path $isolatedExtension '.github') -Recurse
+    $bundledValidator = Join-Path $isolatedExtension '.github/agentx/scripts/validate-references.ps1'
+    $bundleOutput = & pwsh -NoProfile -File $bundledValidator -Quiet 2>&1
+    Assert-True ($LASTEXITCODE -eq 0) 'generated extension bundle has no broken references'
+    if ($LASTEXITCODE -ne 0) {
+        $bundleOutput | Select-Object -Last 20 | ForEach-Object {
+            Write-Host "    $_" -ForegroundColor DarkGray
+        }
+    }
+} finally {
+    Remove-Item -LiteralPath $isolatedExtension -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 Write-Host ""
 Write-Host "  Tests: $pass passed, $fail failed" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 Write-Host ""

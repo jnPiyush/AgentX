@@ -387,7 +387,20 @@ copy_tree "$SOURCE/.github/templates" "$TARGET/.github/templates" "Templates"
 info "Installing schemas..."
 copy_tree "$SOURCE/.github/schemas" "$TARGET/.github/schemas" "Schemas"
 
+info "Installing registries..."
+copy_tree "$SOURCE/.github/registries" "$TARGET/.github/registries" "Registries"
+
+info "Installing hooks..."
+copy_tree "$SOURCE/.github/hooks" "$TARGET/.github/hooks" "Hooks"
+
+info "Installing plugins..."
+copy_tree "$SOURCE/.agentx/plugins" "$TARGET/.agentx/plugins" "Plugins"
+
+info "Installing guides..."
+copy_tree "$SOURCE/docs/guides" "$TARGET/docs/guides" "Guides"
+
 info "Installing scripts..."
+copy_file "scripts/budget.ps1" "scripts/budget.ps1"
 copy_file "scripts/score-output.ps1" "scripts/score-output.ps1"
 copy_file "scripts/score-code-quality.ps1" "scripts/score-code-quality.ps1"
 copy_file "scripts/validate-handoff.ps1" "scripts/validate-handoff.ps1"
@@ -396,11 +409,21 @@ copy_file "scripts/validate-skill.ps1" "scripts/validate-skill.ps1"
 copy_file "scripts/validate-changed-skills.ps1" "scripts/validate-changed-skills.ps1"
 copy_file "scripts/stocktake.ps1" "scripts/stocktake.ps1"
 copy_file "scripts/parse-yaml.js" "scripts/parse-yaml.js"
+# Scripts the bundled CLI dispatches to. Without these, `agentx scrub`,
+# `agentx scan`, `agentx research` and the model council fail in installed
+# workspaces.
+for dispatched in scrub dream research ship takeoff land ghcp-review-resolve \
+  install-manifest scan model-route model-council check-harness-compliance \
+  validate-frontmatter validate-references generate-registries token-counter; do
+  copy_file "scripts/${dispatched}.ps1" "scripts/${dispatched}.ps1"
+done
 copy_file "evaluation/rubrics/skill-quality.md" "evaluation/rubrics/skill-quality.md"
 copy_file "evaluation/rubrics/code-quality.md" "evaluation/rubrics/code-quality.md"
-ok "Scripts: copied scoring and validation runtime files"
+copy_file "evaluation/baseline.json" "evaluation/baseline.json"
+ok "Scripts: copied scoring, validation and workflow runtime files"
 
 info "Installing reference docs..."
+copy_file ".token-limits.json" ".token-limits.json"
 copy_file "AGENTS.md" "AGENTS.md"
 copy_file "LICENSE" ".agentx/legal/LICENSE"
 copy_file "NOTICE" ".agentx/legal/NOTICE"
@@ -412,6 +435,14 @@ copy_file "docs/QUALITY_SCORE.md" "docs/QUALITY_SCORE.md"
 copy_file "docs/tech-debt-tracker.md" "docs/tech-debt-tracker.md"
 copy_file "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md" "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md"
 copy_file ".github/agent-delegation.md" ".github/agent-delegation.md"
+copy_file ".github/AGENT-PROTOCOL.md" ".github/AGENT-PROTOCOL.md"
+copy_file ".github/copilot-instructions.md" ".github/copilot-instructions.md"
+copy_file "CONTRIBUTING.md" "CONTRIBUTING.md"
+copy_file "docs/artifacts/adr/ADR-341.md" "docs/artifacts/adr/ADR-341.md"
+copy_file "docs/artifacts/adr/ADR-342.md" "docs/artifacts/adr/ADR-342.md"
+copy_file "docs/artifacts/specs/SPEC-341.md" "docs/artifacts/specs/SPEC-341.md"
+copy_file "docs/execution/plans/EXEC-PLAN-341-self-hosted-runtime.md" "docs/execution/plans/EXEC-PLAN-341-self-hosted-runtime.md"
+copy_file "docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md" "docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md"
 ok "Docs: copied reference files"
 
 if [ "$INCLUDE_CLI" = true ]; then
@@ -454,14 +485,14 @@ echo -e " Files skipped : $TOTAL_SKIPPED ${GRAY}(already exist, use -f to overwr
 echo ""
 echo " Agents        : 26 (15 external + 11 internal)"
 echo " Skills        : 134 across 14 categories"
-echo " Instructions  : 7 (auto-applied by file pattern)"
-echo " Prompts       : 23 reusable templates"
+echo " Instructions  : 15 (auto-applied by file pattern)"
+echo " Prompts       : 23 reference templates"
 if [ "$INCLUDE_CLI" = true ]; then
   echo " CLI utilities : 4 wrappers (.agentx/) + bundled runtime (.github/agentx/.agentx)"
 fi
 echo ""
-echo -e "${YELLOW} Limitations (Copilot CLI vs VS Code):${NC}"
-echo -e "${GRAY}  - No runSubagent: agents run standalone, no agent chaining${NC}"
-echo -e "${GRAY}  - No Mode 1 hub: Agent X cannot orchestrate sub-agents${NC}"
-echo -e "${GRAY}  - Quality loop: Layer 2 (body instructions) + Layer 3 (CLI gate)${NC}"
+echo -e "${YELLOW} Notes (Copilot CLI vs VS Code):${NC}"
+echo -e "${GRAY}  - Prompt files are reference templates; Copilot CLI does not execute them${NC}"
+echo -e "${GRAY}  - No sidebar or tree views -- those surfaces are VS Code only${NC}"
+echo -e "${GRAY}  - Quality loop: Layer 2 (body instructions) + Layer 3 (CLI gate) + lifecycle hooks${NC}"
 echo ""

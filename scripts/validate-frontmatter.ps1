@@ -105,7 +105,7 @@ function Test-InstructionFile([string]$FilePath) {
  $fm = Get-Frontmatter $FilePath
 
  if (-not $fm) {
- Write-Fail "$name : Missing frontmatter (no --- delimiters). FIX: Add YAML frontmatter at the top of the file between --- delimiters. Example: --- description: 'Your description here' applyTo: '**.py' --- See .github/instructions/python.instructions.md for a working example."
+ Write-Fail "$name : Missing frontmatter (no --- delimiters). FIX: Add YAML frontmatter at the top of the file between --- delimiters. Example: --- description: 'Your description here' applyTo: '**/*.py' --- See .github/instructions/python.instructions.md for a working example."
  return
  }
 
@@ -120,9 +120,22 @@ function Test-InstructionFile([string]$FilePath) {
 
  # Required: applyTo
  if (-not $fm["applyTo"]) {
- Write-Fail "$name : Missing required field 'applyTo'. FIX: Add an 'applyTo:' field with a glob pattern specifying which files trigger this instruction. Example: applyTo: '**.py, **.pyx'"
+ Write-Fail "$name : Missing required field 'applyTo'. FIX: Add an 'applyTo:' field with a glob pattern specifying which files trigger this instruction. Example: applyTo: '**/*.py, **/*.pyx'"
+ } else {
+ # '**' is only a wildcard when it occupies a WHOLE path segment. Patterns like
+ # '**.py' or 'src**' silently degrade to '*.py' / 'src*' and match only
+ # repository-root files, so the instruction never auto-applies to nested
+ # sources in Copilot CLI or VS Code.
+ $patterns = @($fm["applyTo"] -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+ $degraded = @($patterns | Where-Object {
+ $segments = $_ -split '[/\\]'
+ @($segments | Where-Object { $_ -match '\*\*' -and $_ -ne '**' }).Count -gt 0
+ })
+ if ($degraded.Count -gt 0) {
+ Write-Fail "$name : applyTo pattern(s) '$($degraded -join ', ')' use '**' inside a path segment, which matches only root-level files. FIX: Use a whole-segment wildcard instead, for example '**/*.py' rather than '**.py'."
  } else {
  Write-Pass "$name : applyTo OK ($($fm['applyTo']))"
+ }
  }
 }
 

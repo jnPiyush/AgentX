@@ -9,20 +9,11 @@ applyTo: '**/*agent*, **/*llm*, **/*model*, **/*workflow*, **/agents/**, **/*ai*
 
 **Skill**: [.github/skills/ai-systems/ai-agent-development/SKILL.md](../skills/ai-systems/ai-agent-development/SKILL.md)
 
-## Quality Loop Gate (read before editing)
+## Pre-edit gate
 
-Before editing any agent definition, prompt, workflow, or LLM-integration file, run `.agentx/agentx.ps1 loop start -p "<task>"` as your ABSOLUTE FIRST tool call. Close with `.agentx/agentx.ps1 loop complete -s "<summary>"` once a subagent review iteration has passed. The pre-commit hook blocks commits when the loop is missing or incomplete. See [.github/copilot-instructions.md](../copilot-instructions.md#quality-loop-hard-rule-non-skippable) for the full rule.
-
-## Mandatory Workflow Gates (read before editing)
-
-Four additional rules carry the same weight as the Quality Loop and are hard-failed by the pre-commit hook:
-
-- **Compound Capture**: APPROVED review staged -> matching `docs/artifacts/learnings/LEARNING-<issue>.md` MUST also be staged, or commit msg tagged `[skip-capture]`.
-- **Model Council (MANDATORY, NO SKIP)**: New `docs/artifacts/adr/ADR-*.md` staged -> matching `docs/artifacts/adr/COUNCIL-*.md` MUST also be staged (3 diverse models + Synthesis). Mandatory for Product Manager (prd-scope), Architect (adr-options), and any complex task; also Data Scientist (ai-design), Reviewer (code-review), Consulting Research. The pre-commit hook hard-fails when the COUNCIL file is missing; there is no skip token.
-- **Execution Plan**: Commits changing >= 8 code files MUST stage a matching `docs/execution/plans/EXEC-PLAN-*.md`, or commit msg tagged `[skip-plan]`.
-- **Brainstorm (Engineer)**: `Research -> Brainstorm -> Plan -> ...` pipeline is mandatory; Brainstorm step is satisfied by a `brainstorm` ledger entry or `## Alternatives Considered` in the execution plan **before** Plan.
-
-See [.github/copilot-instructions.md](../copilot-instructions.md#mandatory-workflow-gates-non-skippable) for the canonical block.
+Start `.agentx/agentx.ps1 loop start -p "<task>"` before mutation. Follow
+[AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) for the loop, council, plan, capture
+and final independent-review gates; inspect real state before claiming completion.
 
 ## Key Rules
 
@@ -36,9 +27,16 @@ See [.github/copilot-instructions.md](../copilot-instructions.md#mandatory-workf
 - Log: prompt tokens, completion tokens, latency, model name
 - Keep system prompts in separate files, not inline strings
 - Version control all prompts alongside code
-- **MUST** pin model versions explicitly (e.g., `gpt-5.1-2026-01-15`, not `gpt-5.1`)
-- **MUST** test against minimum 2 models (primary + fallback from different provider)
+- Resolve available models, tool support and context/output limits from the active
+  host. Pin a provider-supported snapshot when available; otherwise record the
+  alias, resolved model and host version. Never invent a dated model identifier.
+- Evaluate primary and configured fallback models on representative held-out tasks;
+  document unavailable providers rather than claiming unexecuted comparisons.
 - **MUST** run evaluation baselines before any model change
 - Mock model calls in unit tests -- never call live APIs in CI
 - Validate and sanitize all user inputs before sending to models
 - Review OWASP AI Top 10 for threat modeling
+- Quality precedes cost: reserve output/tool headroom, account for retries and
+  delegation, and keep unknown prices/usage distinct from zero. Use
+  [token-optimizer](../skills/development/token-optimizer/SKILL.md) on demand.
+- Request concise evidence and conclusions, not hidden reasoning transcripts.

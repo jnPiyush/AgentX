@@ -264,12 +264,65 @@ if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.2.0" ]; then
   done
   ok "User data backed up"
 
-  # Remove all AgentX-managed directories (full uninstall)
-  AGENTX_DIRS=(".agentx" ".github" ".claude" "scripts" "packs")
-  for d in "${AGENTX_DIRS[@]}"; do
-   [ -d "$d" ] && rm -rf "$d"
+  # Read the previous install manifest BEFORE removing .agentx/ so files AgentX
+  # installed into shared directories can be removed individually.
+  TRACKED_PATHS=""
+  if [ -f ".agentx/install-manifest.json" ]; then
+   TRACKED_PATHS=$(grep -o '"path"[[:space:]]*:[[:space:]]*"[^"]*"' .agentx/install-manifest.json 2>/dev/null \
+    | sed 's/.*"\([^"]*\)"$/\1/' || true)
+  fi
+
+  # region agentx-upgrade-removal
+  # Remove AgentX-owned paths only.
+  #
+  # SAFETY: ".agentx/" is the only directory AgentX owns outright (user data in it
+  # was backed up above). Every other location is a host-standard shared namespace
+  # where users legitimately keep their own files -- ".github/instructions",
+  # ".github/skills", ".github/prompts", ".claude/commands", "scripts/", "packs/".
+  # Those are cleaned per-file from the previous install manifest so that any
+  # untracked, user-authored file always survives the upgrade.
+  AGENTX_OWNED_PATHS=(
+   ".agentx"
+   ".github/AGENT-PROTOCOL.md"
+   ".github/agent-delegation.md"
+   ".github/agentx-security.yml"
+   ".github/copilot-instructions.md"
+   ".cursor/mcp.json"
+  )
+  for d in "${AGENTX_OWNED_PATHS[@]}"; do
+   [ -e "$d" ] && rm -rf "$d"
   done
-  ok "AgentX v$PREVIOUS_VERSION uninstalled"
+
+  # Remove manifest-tracked files, leaving every untracked (user-authored) file
+  # intact. Manifest paths come from the target workspace and are therefore
+  # untrusted: reject absolute paths and any traversal segment before deleting.
+  if [ -n "$TRACKED_PATHS" ]; then
+   while IFS= read -r tracked; do
+    [ -z "$tracked" ] && continue
+    case "$tracked" in
+     /*|\\*|*:*) continue ;;
+     ..|../*|*/../*|*/..) continue ;;
+    esac
+    [ -f "$tracked" ] && rm -f "$tracked"
+   done <<< "$TRACKED_PATHS"
+  fi
+
+  # Prune AgentX customization directories that the per-file cleanup emptied.
+  PRUNABLE_DIRS=(
+   ".github/agents" ".github/instructions" ".github/prompts" ".github/skills"
+   ".github/templates" ".github/schemas" ".github/registries" ".github/hooks"
+   ".github/scripts" ".claude/agents" ".claude/commands" ".claude/skills"
+   ".cursor/commands" ".cursor/rules"
+  )
+  for d in "${PRUNABLE_DIRS[@]}"; do
+   [ -d "$d" ] || continue
+   if [ -z "$(find "$d" -type f -print -quit 2>/dev/null)" ]; then
+    rm -rf "$d"
+   fi
+  done
+  # endregion agentx-upgrade-removal
+
+  ok "AgentX v$PREVIOUS_VERSION files removed (user-owned files preserved)"
 
   # Restore user data after removal
   for up in "${USER_PATHS[@]}"; do

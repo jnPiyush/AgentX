@@ -37,25 +37,79 @@ export const RUNTIME_ASSET_DIRS: Array<{ source: string; destination: string }> 
 ];
 
 /**
- * Asset trees copied from the extension bundle into the user workspace `.github/`
- * so external tools (notably GitHub Copilot CLI) that only read the workspace's
- * `.github/` folder can discover AgentX agents, skills, instructions, prompts,
- * templates, and schemas. The VS Code extension itself still resolves these
- * via `runtimeAssets.resolveAssetPath` -- this copy is purely for surfaces
- * that have no extension-context awareness.
+ * Root of the pristine seed tree inside the extension bundle.
+ */
+const SEED_ROOT = path.join('.github', 'agentx', 'seed');
+
+/**
+ * Asset trees linked or copied from the extension bundle into the user
+ * workspace so external tools (notably GitHub Copilot CLI) that only read the
+ * workspace can discover AgentX agents, skills, instructions, and prompts.
  *
- * NOTE: scripts/ (score-output.ps1, validate-handoff.ps1) are referenced by bundled agents but
- * are NOT seeded here because they are not included in the extension bundle's .github/agentx/ tree.
- * Users who need those scripts can install them via packs/agentx-copilot-cli/install.ps1 -Force.
- * Adding scripts/ seeding requires a separate bundle-packaging change.
+ * All sources live under the bundle's `seed/` tree, which `copy-assets.js`
+ * builds as a pristine, unrewritten mirror of the canonical repository layout
+ * rooted at the workspace root. The mapping is therefore trivial:
+ *   `<ext>/.github/agentx/seed/<path>` -> `<workspace>/<path>`
+ * Because the canonical layout is the layout the agents were authored against,
+ * every relative reference resolves after seeding.
+ *
+ * Do NOT seed from the rest of the bundle: those copies are link-rewritten for
+ * the extension's nested layout and produce dangling references in a workspace.
+ * `tests/copilot-host-compatibility-behavior.ps1` guards this.
+ *
+ * Host-owned files (workflows, ISSUE_TEMPLATE, CODEOWNERS, PULL_REQUEST_TEMPLATE,
+ * LICENSE, NOTICE) are intentionally never seeded: they would collide with
+ * repository configuration and legal files the user owns.
  */
 export const COPILOT_CLI_ASSET_DIRS: Array<{ source: string; destination: string }> = [
-  { source: path.join('.github', 'agentx', 'agents'), destination: path.join('.github', 'agents') },
-  { source: path.join('.github', 'agentx', 'skills'), destination: path.join('.github', 'skills') },
-  { source: path.join('.github', 'agentx', 'instructions'), destination: path.join('.github', 'instructions') },
-  { source: path.join('.github', 'agentx', 'prompts'), destination: path.join('.github', 'prompts') },
-  { source: path.join('.github', 'agentx', 'templates'), destination: path.join('.github', 'templates') },
-  { source: path.join('.github', 'agentx', 'schemas'), destination: path.join('.github', 'schemas') },
+  { source: path.join(SEED_ROOT, '.github', 'agents'), destination: path.join('.github', 'agents') },
+  { source: path.join(SEED_ROOT, '.github', 'skills'), destination: path.join('.github', 'skills') },
+  { source: path.join(SEED_ROOT, '.github', 'instructions'), destination: path.join('.github', 'instructions') },
+  { source: path.join(SEED_ROOT, '.github', 'prompts'), destination: path.join('.github', 'prompts') },
+  { source: path.join(SEED_ROOT, '.github', 'templates'), destination: path.join('.github', 'templates') },
+  { source: path.join(SEED_ROOT, '.github', 'schemas'), destination: path.join('.github', 'schemas') },
+  { source: path.join(SEED_ROOT, '.github', 'registries'), destination: path.join('.github', 'registries') },
+  { source: path.join(SEED_ROOT, '.github', 'hooks'), destination: path.join('.github', 'hooks') },
+];
+
+/**
+ * Workspace-root support trees the seeded agents reference by repository-relative
+ * path (gate scripts, rubrics, workflow docs, packs, plugins). These are always
+ * copied rather than symlinked: a junction at the workspace root would take over
+ * a directory the user also writes to.
+ */
+export const COPILOT_CLI_SUPPORT_DIRS: Array<{ source: string; destination: string }> = [
+  { source: path.join(SEED_ROOT, 'docs'), destination: 'docs' },
+  { source: path.join(SEED_ROOT, 'scripts'), destination: 'scripts' },
+  { source: path.join(SEED_ROOT, 'evaluation'), destination: 'evaluation' },
+  { source: path.join(SEED_ROOT, 'packs'), destination: 'packs' },
+  {
+    source: path.join(SEED_ROOT, '.agentx', 'plugins'),
+    destination: path.join('.agentx', 'plugins'),
+  },
+];
+
+/**
+ * Standalone seeded documents. `AGENT-PROTOCOL.md` is the most-referenced file in
+ * the whole agent set, and `AGENTS.md` / `Skills.md` are the entry points every
+ * agent links back to. Copilot CLI also discovers root `AGENTS.md` natively.
+ */
+export const COPILOT_CLI_ASSET_FILES: Array<{ source: string; destination: string }> = [
+  {
+    source: path.join(SEED_ROOT, '.github', 'AGENT-PROTOCOL.md'),
+    destination: path.join('.github', 'AGENT-PROTOCOL.md'),
+  },
+  {
+    source: path.join(SEED_ROOT, '.github', 'agent-delegation.md'),
+    destination: path.join('.github', 'agent-delegation.md'),
+  },
+  {
+    source: path.join(SEED_ROOT, '.github', 'copilot-instructions.md'),
+    destination: path.join('.github', 'copilot-instructions.md'),
+  },
+  { source: path.join(SEED_ROOT, 'AGENTS.md'), destination: 'AGENTS.md' },
+  { source: path.join(SEED_ROOT, 'Skills.md'), destination: 'Skills.md' },
+  { source: path.join(SEED_ROOT, '.token-limits.json'), destination: '.token-limits.json' },
 ];
 
 const WORKSPACE_WRAPPER_FILES = [
@@ -197,12 +251,50 @@ export function copyCopilotCliAssets(
   workspaceRoot: string,
   overwrite = false,
 ): void {
-  for (const asset of COPILOT_CLI_ASSET_DIRS) {
+  for (const asset of [...COPILOT_CLI_ASSET_DIRS, ...COPILOT_CLI_SUPPORT_DIRS]) {
     copyDirRecursive(
       path.join(extensionRoot, asset.source),
       path.join(workspaceRoot, asset.destination),
       overwrite,
     );
+  }
+  copyCopilotCliAssetFiles(extensionRoot, workspaceRoot, overwrite);
+}
+
+/**
+ * Copy the workspace-root support trees and standalone reference documents the
+ * seeded agent set links to. Always copies (never symlinks) so the same helper
+ * serves both `copy` and `symlink` CLI asset modes.
+ */
+export function copyCopilotCliSupportAssets(
+  extensionRoot: string,
+  workspaceRoot: string,
+  overwrite = false,
+): void {
+  for (const asset of COPILOT_CLI_SUPPORT_DIRS) {
+    copyDirRecursive(
+      path.join(extensionRoot, asset.source),
+      path.join(workspaceRoot, asset.destination),
+      overwrite,
+    );
+  }
+  copyCopilotCliAssetFiles(extensionRoot, workspaceRoot, overwrite);
+}
+
+export function copyCopilotCliAssetFiles(
+  extensionRoot: string,
+  workspaceRoot: string,
+  overwrite = false,
+): void {
+  for (const asset of COPILOT_CLI_ASSET_FILES) {
+    const src = path.join(extensionRoot, asset.source);
+    if (!fs.existsSync(src)) { continue; }
+
+    const dest = path.join(workspaceRoot, asset.destination);
+    if (!overwrite && fs.existsSync(dest)) { continue; }
+
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
   }
 }
 
@@ -283,7 +375,6 @@ export function createCopilotCliSymlinks(
       skipped.push(asset.destination);
       continue;
     }
-
     const linkExists = fs.existsSync(linkPath) || isSymlink(linkPath);
     if (linkExists) {
       if (!isSymlink(linkPath)) {
@@ -316,6 +407,11 @@ export function createCopilotCliSymlinks(
     }
   }
 
+  // Workspace-root support trees and standalone reference documents cannot be
+  // junctioned safely, so they are always copied. Without them the linked agent
+  // trees resolve none of their protocol, rubric, doc, or gate-script references.
+  copyCopilotCliSupportAssets(extensionRoot, workspaceRoot, false);
+
   return { linked, refreshed, skipped };
 }
 
@@ -328,8 +424,7 @@ export function refreshCopilotCliSymlinks(
   extensionRoot: string,
   workspaceRoot: string,
 ): { refreshed: string[]; stillValid: string[]; skipped: string[] } {
-  const refreshed: string[] = [];
-  const stillValid: string[] = [];
+  const refreshed: string[] = [];  const stillValid: string[] = [];
   const skipped: string[] = [];
 
   for (const asset of COPILOT_CLI_ASSET_DIRS) {
@@ -360,6 +455,16 @@ export function refreshCopilotCliSymlinks(
       skipped.push(asset.destination);
     }
   }
+
+  // Support trees are copied, not linked, so they can go stale after an
+  // extension upgrade. Refresh is deliberately NON-destructive: this runs on
+  // every activation, and these destinations (docs/, scripts/, evaluation/,
+  // AGENTS.md, Skills.md) are shared namespaces the user also authors in.
+  // Overwriting here would silently destroy user content on every window open,
+  // which is the exact failure this change set exists to eliminate. Missing
+  // files are added; existing files are always preserved. Staleness of already
+  // present files is tracked as TD-018.
+  copyCopilotCliSupportAssets(extensionRoot, workspaceRoot, false);
 
   return { refreshed, stillValid, skipped };
 }
@@ -421,13 +526,11 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
     "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path",
     '',
     'function Resolve-AgentXExtensionRoot {',
-    '  $candidatePaths = @(',
-    '    $env:AGENTX_EXTENSION_ROOT',
-    `    '${preferredExtensionRoot}'`,
-    '  ) | Where-Object { $_ -and (Test-Path $_) }',
-    '',
-    '  foreach ($candidate in $candidatePaths) {',
-    '    return (Resolve-Path $candidate).Path',
+    '  if ($env:AGENTX_EXTENSION_ROOT) {',
+    `    $runtimeEntry = Join-Path $env:AGENTX_EXTENSION_ROOT '${runtimeRelativePath}'`,
+    '    if (Test-Path -LiteralPath $runtimeEntry -PathType Leaf) {',
+    '      return (Resolve-Path $env:AGENTX_EXTENSION_ROOT).Path',
+    '    }',
     '  }',
     '',
     '  $searchRoots = @(',
@@ -435,19 +538,31 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
     "    (Join-Path $HOME '.vscode-insiders\\extensions')",
     '  )',
     '',
-    '  foreach ($searchRoot in $searchRoots) {',
-    '    if (-not (Test-Path $searchRoot)) { continue }',
-    '    $matches = @(',
-    "      Get-ChildItem -Path $searchRoot -Directory -Filter 'jnpiyush.agentx-*' -ErrorAction SilentlyContinue",
-    '      | Sort-Object Name -Descending',
-    '    )',
-    '',
-    '    foreach ($match in $matches) {',
-    `      $runtimeEntry = Join-Path $match.FullName '${runtimeRelativePath}'`,
-    '      if (Test-Path $runtimeEntry) {',
-    '        return $match.FullName',
+    '  $matches = @(',
+    '    foreach ($searchRoot in $searchRoots) {',
+    '      if (-not (Test-Path $searchRoot)) { continue }',
+    "      foreach ($match in Get-ChildItem -Path $searchRoot -Directory -Filter 'jnpiyush.agentx-*' -ErrorAction SilentlyContinue) {",
+    "        if ($match.Name -match '^jnpiyush\\.agentx-(?<version>\\d+\\.\\d+\\.\\d+)') {",
+    '          [pscustomobject]@{',
+    '            Path = $match.FullName',
+    "            Version = [version]$Matches['version']",
+    '          }',
+    '        }',
     '      }',
     '    }',
+    '  ) | Sort-Object Version -Descending',
+    '',
+    '  foreach ($match in $matches) {',
+    `    $runtimeEntry = Join-Path $match.Path '${runtimeRelativePath}'`,
+    '    if (Test-Path -LiteralPath $runtimeEntry -PathType Leaf) {',
+    '      return $match.Path',
+    '    }',
+    '  }',
+    '',
+    `  $preferredExtensionRoot = '${preferredExtensionRoot}'`,
+    `  $preferredRuntimeEntry = Join-Path $preferredExtensionRoot '${runtimeRelativePath}'`,
+    '  if (Test-Path -LiteralPath $preferredRuntimeEntry -PathType Leaf) {',
+    '    return (Resolve-Path $preferredExtensionRoot).Path',
     '  }',
     '',
     "  throw 'AgentX extension runtime not found. Reinstall the AgentX extension or set AGENTX_EXTENSION_ROOT.'",
@@ -487,23 +602,34 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
     '    return 0',
     '  fi',
     '',
+    '  local match=""',
+    '  while IFS=$\'\\t\' read -r _ match; do',
+    '    [[ -n "$match" ]] || continue',
+    '    if [[ -f "${match}/${runtime_relative}" ]]; then',
+    "      printf '%s\\n' \"$match\"",
+    '      return 0',
+    '    fi',
+    '  done < <(',
+    '    local search_root=""',
+    '    local version=""',
+    '    local version_key=""',
+    '    for search_root in "$HOME/.vscode/extensions" "$HOME/.vscode-insiders/extensions"; do',
+    '      [[ -d "$search_root" ]] || continue',
+    '      while IFS= read -r match; do',
+    '        version="${match##*/jnpiyush.agentx-}"',
+    '        if [[ "$version" =~ ^([0-9]+)\\.([0-9]+)\\.([0-9]+) ]]; then',
+    "          printf -v version_key '%010d.%010d.%010d' \"${BASH_REMATCH[1]}\" \"${BASH_REMATCH[2]}\" \"${BASH_REMATCH[3]}\"",
+    "          printf '%s\\t%s\\n' \"$version_key\" \"$match\"",
+    '        fi',
+    "      done < <(find \"$search_root\" -maxdepth 1 -mindepth 1 -type d -name 'jnpiyush.agentx-*')",
+    "    done | sort -t $'\\t' -k1,1r",
+    '  )',
+    '',
     `  candidate='${preferredExtensionRoot}'`,
     '  if [[ -f "${candidate}/${runtime_relative}" ]]; then',
     "    printf '%s\\n' \"$candidate\"",
     '    return 0',
     '  fi',
-    '',
-    '  local search_root=""',
-    '  local match=""',
-    '  for search_root in "$HOME/.vscode/extensions" "$HOME/.vscode-insiders/extensions"; do',
-    '    [[ -d "$search_root" ]] || continue',
-    '    while IFS= read -r match; do',
-    '      if [[ -f "${match}/${runtime_relative}" ]]; then',
-    "        printf '%s\\n' \"$match\"",
-    '        return 0',
-    '      fi',
-    "    done < <(find \"$search_root\" -maxdepth 1 -mindepth 1 -type d -name 'jnpiyush.agentx-*' | sort -r)",
-    '  done',
     '',
     "  echo 'AgentX extension runtime not found. Reinstall the AgentX extension or set AGENTX_EXTENSION_ROOT.' >&2",
     '  return 1',

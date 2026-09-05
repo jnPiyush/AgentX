@@ -192,6 +192,22 @@ artifacts (`docs/artifacts/prd/`, `docs/artifacts/adr/`, `docs/artifacts/specs/`
 instruction, or spec before generating. Limit clarification loops to 3 exchanges per
 topic, then escalate to the user.
 
+### Model-adaptive, cost-aware execution
+
+- Load the active phase's artifact sections and skills; keep pointers to the
+  rest. Do not weaken requirements or review gates to save context.
+- Resolve model, tool and context/output capabilities through the active host.
+  Model names and reasoning settings are advisory until the host confirms them.
+- Use [token-optimizer](skills/development/token-optimizer/SKILL.md) for file
+  budgets and offline tokenomics. Unknown prices or usage are not zero.
+- Bound delegation, retries and output. Choose quality-qualified models first;
+  urgency alone MUST NOT lower the tier for high-risk work.
+- Include failed attempts and delegated work in economics. Cost per verified
+  success is undefined if there are no verified successes.
+- Evidence MUST describe the actual executed checks and final state. Never
+  retimestamp, copy or relabel an old report to satisfy freshness. Regenerate
+  evidence through execution; independent reviewers own their scores.
+
 ---
 
 ## 8. How Agents Reference This Protocol

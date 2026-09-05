@@ -10,7 +10,7 @@ const destRoot = path.resolve(__dirname, '..', '.github', 'agentx');
 const compatibilityRoot = path.resolve(destRoot, '..');
 
 // Directories from .github/ to bundle
-const githubDirs = ['agents', 'instructions', 'prompts', 'skills', 'templates', 'schemas', 'security', 'ISSUE_TEMPLATE', 'workflows'];
+const githubDirs = ['agents', 'instructions', 'prompts', 'skills', 'templates', 'schemas', 'registries', 'security', 'ISSUE_TEMPLATE', 'workflows'];
 
 // Directories from repo root to bundle
 const rootDirs = [
@@ -26,6 +26,7 @@ const rootDirs = [
 // by those wrappers. Keep this list explicit so development-only scripts are not
 // published to the VSIX by accident.
 const runtimeScriptFiles = [
+    'budget.ps1',
     'scrub.ps1',
     'dream.ps1',
     'research.ps1',
@@ -41,6 +42,10 @@ const runtimeScriptFiles = [
     'check-harness-compliance.ps1',
     'validate-frontmatter.ps1',
     'validate-references.ps1',
+    'validate-handoff.ps1',
+    'score-output.ps1',
+    'generate-registries.ps1',
+    'token-counter.ps1',
     'score-code-quality.ps1',
     'score-skill.ps1',
     'validate-skill.ps1',
@@ -81,6 +86,30 @@ const artifactDocFiles = [
         dest: path.join('evaluation', 'rubrics', 'skill-quality.md'),
     },
     {
+        src: path.join(repoRoot, 'evaluation', 'baseline.json'),
+        dest: path.join('evaluation', 'baseline.json'),
+    },
+    {
+        src: path.join(repoRoot, 'docs', 'artifacts', 'adr', 'ADR-342.md'),
+        dest: path.join('docs', 'artifacts', 'adr', 'ADR-342.md'),
+    },
+    {
+        src: path.join(repoRoot, 'docs', 'artifacts', 'adr', 'ADR-341.md'),
+        dest: path.join('docs', 'artifacts', 'adr', 'ADR-341.md'),
+    },
+    {
+        src: path.join(repoRoot, 'docs', 'artifacts', 'specs', 'SPEC-341.md'),
+        dest: path.join('docs', 'artifacts', 'specs', 'SPEC-341.md'),
+    },
+    {
+        src: path.join(repoRoot, 'docs', 'execution', 'plans', 'EXEC-PLAN-341-self-hosted-runtime.md'),
+        dest: path.join('docs', 'execution', 'plans', 'EXEC-PLAN-341-self-hosted-runtime.md'),
+    },
+    {
+        src: path.join(repoRoot, 'docs', 'execution', 'plans', 'EXEC-PLAN-342-browser-automation-skill.md'),
+        dest: path.join('docs', 'execution', 'plans', 'EXEC-PLAN-342-browser-automation-skill.md'),
+    },
+    {
         src: path.join(repoRoot, 'docs', 'artifacts', 'adr', 'ADR-Harness-Engineering.md'),
         dest: path.join('docs', 'artifacts', 'adr', 'ADR-Harness-Engineering.md'),
     },
@@ -91,6 +120,27 @@ const artifactDocFiles = [
 ];
 
 const bundledMarkdownRewrites = [
+    {
+        relativePath: 'AGENT-PROTOCOL.md',
+        replacements: [
+            ['(../evaluation/', '(evaluation/'],
+            ['(../.agentx/', '(.agentx/'],
+            ['(../AGENTS.md', '(AGENTS.md'],
+            ['(../docs/', '(docs/'],
+        ],
+    },
+    {
+        relativePath: 'AGENTS.md',
+        replacements: [
+            ['(.github/AGENT-PROTOCOL.md)', '(AGENT-PROTOCOL.md)'],
+        ],
+    },
+    {
+        relativePath: 'copilot-instructions.md',
+        replacements: [
+            ['(../.github/templates/', '(templates/'],
+        ],
+    },
     {
         relativePath: 'Skills.md',
         replacements: [
@@ -131,6 +181,84 @@ const bundledMarkdownRewrites = [
         relativePath: path.join('skills', 'development', 'skill-creator', 'SKILL.md'),
         replacements: [
             ['(../../../../evaluation/rubrics/skill-quality.md)', '(../../../evaluation/rubrics/skill-quality.md)'],
+        ],
+    },
+    {
+        relativePath: path.join('skills', 'development', 'code-review', 'SKILL.md'),
+        replacements: [
+            ['(../../../../evaluation/', '(../../../evaluation/'],
+        ],
+    },
+    {
+        relativePath: path.join('skills', 'ai-systems', 'ai-evaluation', 'SKILL.md'),
+        replacements: [
+            ['(../../../../evaluation/', '(../../../evaluation/'],
+        ],
+    },
+    {
+        relativePath: path.join('skills', 'development', 'token-optimizer', 'references', 'tokenomics.md'),
+        replacements: [
+            ['(../../../../../scripts/', '(../../../../scripts/'],
+        ],
+    },
+    {
+        relativePath: path.join('docs', 'guides', 'CODING-HARNESS.md'),
+        replacements: [
+            ['(../../.github/skills/', '(../../skills/'],
+        ],
+    },
+    {
+        relativePath: path.join('agents', 'consulting-research.agent.md'),
+        replacements: [
+            ['(../../.agentx/', '(../.agentx/'],
+        ],
+    },
+    {
+        relativePath: path.join('agents', 'power-platform-builder.agent.md'),
+        replacements: [
+            ['(../../packs/', '(../packs/'],
+        ],
+    },
+    {
+        relativePath: path.join('agents', 'reviewer.agent.md'),
+        replacements: [
+            ['(../../evaluation/', '(../evaluation/'],
+        ],
+    },
+    {
+        relativePath: path.join('docs', 'artifacts', 'adr', 'ADR-342.md'),
+        replacements: [
+            ['(../../../.github/skills/', '(../../../skills/'],
+        ],
+    },
+    {
+        relativePath: path.join('docs', 'artifacts', 'specs', 'SPEC-341.md'),
+        replacements: [
+            ['(../../../.github/templates/', '(../../../templates/'],
+        ],
+    },
+    {
+        relativePath: path.join('docs', 'execution', 'plans', 'EXEC-PLAN-341-self-hosted-runtime.md'),
+        replacements: [
+            ['(../../../.github/templates/', '(../../../templates/'],
+        ],
+    },
+    {
+        relativePath: path.join('docs', 'execution', 'plans', 'EXEC-PLAN-342-browser-automation-skill.md'),
+        replacements: [
+            ['(../../../.github/templates/', '(../../../templates/'],
+        ],
+    },
+    {
+        relativePath: path.join('skills', 'development', 'browser-automation', 'SKILL.md'),
+        replacements: [
+            ['(../../../../docs/', '(../../../docs/'],
+        ],
+    },
+    {
+        relativePath: path.join('skills', 'development', 'browser-automation', 'references', 'wcag-validation.md'),
+        replacements: [
+            ['(../../../../../docs/', '(../../../../docs/'],
         ],
     },
     {
@@ -334,6 +462,8 @@ if (artifactDocFileCount > 0) {
     console.log('  Copied ' + artifactDocFileCount + ' artifact docs');
 }
 
+buildCopilotCliSeedTree();
+
 applyBundledMarkdownRewrites();
 syncCompatibilityRootDocs();
 rewriteCompatibilityDocs();
@@ -350,6 +480,113 @@ function countFiles(dir) {
         }
     }
     return count;
+}
+
+/**
+ * Build `.github/agentx/seed/` -- a pristine, UNREWRITTEN mirror of the canonical
+ * repository layout, rooted at the workspace root.
+ *
+ * The rest of the bundle is rewritten so links resolve inside the extension's
+ * nested `.github/agentx/` layout. Those rewritten copies are wrong for a user
+ * workspace. `AgentX: Initialize CLI` therefore seeds from this tree instead,
+ * using a single trivial mapping: `seed/<path>` -> `<workspace>/<path>`.
+ *
+ * Because the canonical repository layout is exactly the layout the agents were
+ * authored against, every relative reference resolves after seeding.
+ */
+function buildCopilotCliSeedTree() {
+    const seedRoot = path.join(destRoot, 'seed');
+
+    const copyTree = (src, relDest) => {
+        if (!fs.existsSync(src)) { return; }
+        const dest = path.join(seedRoot, relDest);
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.cpSync(src, dest, { recursive: true });
+    };
+
+    const copyFile = (src, relDest) => {
+        if (!fs.existsSync(src)) { return; }
+        const dest = path.join(seedRoot, relDest);
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.copyFileSync(src, dest);
+    };
+
+    // Workspace `.github/` customization trees.
+    for (const dir of ['agents', 'instructions', 'prompts', 'skills', 'templates', 'schemas', 'registries', 'hooks']) {
+        copyTree(path.join(srcRoot, dir), path.join('.github', dir));
+    }
+
+    // Workspace `.github/` standalone documents.
+    for (const file of ['AGENT-PROTOCOL.md', 'agent-delegation.md', 'copilot-instructions.md']) {
+        copyFile(path.join(srcRoot, file), path.join('.github', file));
+    }
+
+    // Workspace root reference documents.
+    for (const file of ['AGENTS.md', 'Skills.md', '.token-limits.json']) {
+        copyFile(path.join(repoRoot, file), file);
+    }
+    for (const file of docFiles) {
+        copyFile(path.join(repoRoot, 'docs', file), path.join('docs', file));
+    }
+    copyTree(docGuideDir, path.join('docs', 'guides'));
+
+    // Evaluation rubrics referenced by the reviewer and engineer gates.
+    for (const file of artifactDocFiles) {
+        copyFile(file.src, file.dest);
+    }
+
+    // Gate scripts the agents invoke by repository-relative path.
+    for (const file of [...runtimeScriptFiles, 'validate-handoff.ps1', 'score-output.ps1']) {
+        copyFile(path.join(repoRoot, 'scripts', file), path.join('scripts', file));
+    }
+
+    // Trees referenced by individual agents.
+    copyTree(path.join(repoRoot, 'packs'), 'packs');
+    copyTree(path.join(repoRoot, '.agentx', 'plugins'), path.join('.agentx', 'plugins'));
+
+    applySeedRewrites(seedRoot);
+
+    const seedCount = countFiles(seedRoot);
+    totalFiles += seedCount;
+    console.log('  Built seed/ workspace tree (' + seedCount + ' files)');
+}
+
+/**
+ * Repoint links that only make sense inside the AgentX repository at their public
+ * URLs. A seeded user workspace has no AgentX CONTRIBUTING.md, so the relative
+ * link would dangle; the canonical document lives on GitHub.
+ */
+function applySeedRewrites(seedRoot) {
+    const rewrites = [
+        {
+            relativePath: path.join('docs', 'GUIDE.md'),
+            replacements: [
+                ['](../CONTRIBUTING.md)', '](https://github.com/jnPiyush/AgentX/blob/master/CONTRIBUTING.md)'],
+            ],
+        },
+        {
+            // The zero-copy runtime is deliberately never seeded, so drop the link
+            // and keep the path as plain text.
+            relativePath: path.join('docs', 'artifacts', 'adr', 'ADR-341.md'),
+            replacements: [
+                ['[`.agentx/agentic-runner.ps1`](../../../.agentx/agentic-runner.ps1)', '`.agentx/agentic-runner.ps1`'],
+            ],
+        },
+    ];
+
+    for (const entry of rewrites) {
+        const targetPath = path.join(seedRoot, entry.relativePath);
+        if (!fs.existsSync(targetPath)) { continue; }
+
+        const original = fs.readFileSync(targetPath, 'utf8');
+        let updated = original;
+        for (const [from, to] of entry.replacements) {
+            updated = updated.split(from).join(to);
+        }
+        if (updated !== original) {
+            fs.writeFileSync(targetPath, updated, 'utf8');
+        }
+    }
 }
 
 function applyBundledMarkdownRewrites() {
@@ -436,14 +673,23 @@ function rewriteCompatibilityDocs() {
         }
     }
 
-    const evaluatorCalibrationPath = path.join(compatibilityRoot, 'docs', 'guides', 'EVALUATOR-CALIBRATION.md');
-    if (fs.existsSync(evaluatorCalibrationPath)) {
-        const original = fs.readFileSync(evaluatorCalibrationPath, 'utf8');
-        const updated = original
-            .split('(../../.github/agents/').join('(../../agentx/agents/');
-
+    const guideRewrites = [
+        ['EVALUATOR-CALIBRATION.md', [['(../../.github/agents/', '(../../agentx/agents/']]],
+        ['CODING-HARNESS.md', [
+            ['(../../.github/skills/', '(../../agentx/skills/'],
+            ['(../../evaluation/', '(../../agentx/evaluation/'],
+        ]],
+    ];
+    for (const [name, replacements] of guideRewrites) {
+        const guidePath = path.join(compatibilityRoot, 'docs', 'guides', name);
+        if (!fs.existsSync(guidePath)) { continue; }
+        const original = fs.readFileSync(guidePath, 'utf8');
+        let updated = original;
+        for (const [from, to] of replacements) {
+            updated = updated.split(from).join(to);
+        }
         if (updated !== original) {
-            fs.writeFileSync(evaluatorCalibrationPath, updated, 'utf8');
+            fs.writeFileSync(guidePath, updated, 'utf8');
         }
     }
 }

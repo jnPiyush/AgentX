@@ -1,19 +1,44 @@
-# AgentX Copilot CLI Plugin
+# AgentX Copilot CLI Pack
 
-> **Standalone plugin** for GitHub Copilot CLI. Separate from the VS Code extension and the core AgentX installation.
+> **Standalone distribution** for GitHub Copilot CLI. Separate from the VS Code extension and the core AgentX installation.
 
-## What This Plugin Provides
+## What This Pack Provides
 
 | Artifact | Count | Description |
 |----------|-------|-------------|
 | Agents | 26 | 15 external + 11 internal sub-agents |
 | Skills | 134 | Complete production code standards across 14 categories |
-| Instructions | 7 | Auto-applied coding guidelines by file pattern |
+| Instructions | 15 | Auto-applied coding guidelines by file pattern (7 top-level + 8 nested ADO) |
 | Prompts | 23 | Reusable prompt templates |
 | Templates | 15 | PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning |
+| Schemas | 7 | Frontmatter, handoff, pack and plugin manifest schemas |
+| Hooks | 1 | Copilot CLI lifecycle hook configuration plus its handler |
 | CLI Utilities | 4 | Optional `.agentx/` wrappers backed by a bundled hidden runtime |
 
-## Installation
+## Installation Options
+
+AgentX supports two Copilot CLI installation paths.
+
+### Option 1 -- Native Copilot CLI plugin (recommended)
+
+The repository root ships a `plugin.json`, so Copilot CLI can install AgentX's
+agents, skills and hooks directly:
+
+```bash
+copilot plugin install jnPiyush/AgentX
+copilot plugin list
+```
+
+This registers all 26 agents and 134 skills for every session without copying
+anything into your workspace.
+
+> Direct repository, URL and local-path installs are deprecated by GitHub in
+> favour of marketplace installs. Use Option 2 for a workspace-local copy.
+
+### Option 2 -- Workspace install script
+
+Use this when you want AgentX committed to (or vendored in) a specific
+workspace.
 
 ### PowerShell (Windows / macOS / Linux)
 
@@ -121,31 +146,40 @@ When you install with `--include-cli` or `-c`, the plugin seeds a complete local
 Once installed, agent definitions and skills are available in your Copilot CLI sessions:
 
 ```bash
-# Copilot CLI automatically reads .github/ for context
-gh copilot suggest "implement a health endpoint following the engineer agent guidelines"
+# Run a specific AgentX agent
+copilot --agent engineer -p "Implement a health endpoint following the engineer guidelines"
 
-# Use prompts as templates
-gh copilot suggest "review this PR using the code-review prompt template"
+# Pick an agent interactively
+copilot
+/agent
+
+# List the skills Copilot discovered
+copilot
+/skills list
 ```
 
 ## How This Differs from the VS Code Extension
 
-| Capability | VS Code Extension | CLI Plugin |
-|------------|-------------------|------------|
-| Agent orchestration (Mode 1) | Hub-and-spoke via runSubagent | Not available -- agents run standalone |
+| Capability | VS Code Extension | Copilot CLI |
+|------------|-------------------|-------------|
+| Agent orchestration | Hub-and-spoke via subagents | Supported via Copilot CLI subagents (`/agent`, delegation) |
 | Agent sidebar | Tree view with status | Not available |
-| Interactive chat | Chat participant (@agentx) | Not available -- use gh copilot |
-| Quality loop | Layer 1 (sidebar) + Layer 2 (body) + Layer 3 (CLI) | Layer 2 (body) + Layer 3 (CLI) |
+| Interactive chat | Chat participant (`@agentx`) | Not available -- use `copilot` sessions |
+| Quality loop | Layer 1 (sidebar) + Layer 2 (body) + Layer 3 (CLI) | Layer 2 (body) + Layer 3 (CLI) + lifecycle hooks |
 | Skills & Instructions | Auto-loaded by file pattern | Auto-loaded by file pattern |
-| Prompt templates | Available in chat | Available as copilot context |
+| Prompt templates | Available in chat | Not executed by Copilot CLI -- use skills or agents |
 | CLI utilities | Built-in commands | Optional wrappers + bundled runtime (--include-cli) |
 | Memory system | Git-backed observation store | Not available |
 
-### Known Limitations (GAP-19)
+### Known Limitations
 
-- **No `runSubagent`**: Copilot CLI does not support agent-to-agent delegation. Agent X acts as a reference document, not an orchestrator.
-- **No Mode 1**: The hub-and-spoke pattern only works in VS Code with Copilot Chat's `runSubagent` capability.
-- **Standalone agents**: Each agent runs independently. Multi-agent workflows require manual handoffs.
+- **No sidebar or tree views**: those surfaces are VS Code only.
+- **Prompt files are not executed**: Copilot CLI has no prompt-file mechanism.
+  The prompts are installed as reference templates; use agents or skills when
+  you need executable behaviour.
+- **Layer 1 enforcement differs**: the CLI relies on lifecycle hooks
+  (`.github/hooks/copilot-hooks.json`) plus the loop CLI gate rather than
+  sidebar prompts.
 
 ## Updating
 

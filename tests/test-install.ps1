@@ -7,10 +7,17 @@
 
 $ErrorActionPreference = "Continue"
 $ProgressPreference = "SilentlyContinue" # Suppress progress bars from Remove-Item/Copy-Item
-$SCRIPT_PATH = "C:\Piyush - Personal\GenAI\AgentX\install.ps1"
-$SCRIPT_ROOT = Split-Path $SCRIPT_PATH -Parent
+# Resolve the installer from this test file's location so the suite exercises the
+# checkout it lives in. A hardcoded absolute path silently tested a different
+# repository (or hung) when run from a worktree or CI runner.
+$SCRIPT_ROOT = Split-Path $PSScriptRoot -Parent
+$SCRIPT_PATH = Join-Path $SCRIPT_ROOT 'install.ps1'
+if (-not (Test-Path -LiteralPath $SCRIPT_PATH)) {
+ Write-Host "[FAIL] install.ps1 not found at $SCRIPT_PATH" -ForegroundColor Red
+ exit 1
+}
 $TEST_BASE = "$env:TEMP\agentx-test-suite-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-$EXPECTED_VERSION = (Get-Content (Join-Path (Split-Path $SCRIPT_PATH -Parent) 'version.json') -Raw | ConvertFrom-Json).version
+$EXPECTED_VERSION = (Get-Content (Join-Path $SCRIPT_ROOT 'version.json') -Raw | ConvertFrom-Json).version
 $LOCAL_ARCHIVE = Join-Path $TEST_BASE 'agentx-local.zip'
 
 # Tracking

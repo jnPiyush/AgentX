@@ -4,6 +4,8 @@ import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
 import {
   COPILOT_CLI_ASSET_DIRS,
+  COPILOT_CLI_ASSET_FILES,
+  COPILOT_CLI_SUPPORT_DIRS,
   CliAssetMode,
   appendCliSymlinksToGitignore,
   copyCopilotCliAssets,
@@ -101,7 +103,7 @@ export async function runInitializeCliCommand(
           writeCliAssetState(root, {
             mode: 'symlink',
             extensionRoot: context.extensionUri.fsPath,
-            destinations: COPILOT_CLI_ASSET_DIRS.map((a) => a.destination),
+            destinations: [...COPILOT_CLI_ASSET_DIRS, ...COPILOT_CLI_SUPPORT_DIRS, ...COPILOT_CLI_ASSET_FILES].map((a) => a.destination),
             updatedAt: new Date().toISOString(),
           });
           progress.report({ message: 'Finalizing...', increment: 10 });
@@ -113,15 +115,15 @@ export async function runInitializeCliCommand(
             result.skipped.length > 0 ? `Skipped (already exists): ${result.skipped.join(', ')}` : '',
           ].filter(Boolean).join('; ');
           vscode.window.showInformationMessage(
-            `AgentX: CLI assets symlinked into .github/. ${summary}`,
+            `AgentX: CLI assets symlinked into .github/; workflow docs, gate scripts and rubrics copied to the workspace root. ${summary}`,
           );
           return;
         }
 
-        progress.report({ message: 'Copying agents, skills, instructions, prompts, templates, schemas...', increment: 80 });
+        progress.report({ message: 'Copying agents, skills, instructions, prompts, templates, schemas, docs, gate scripts and rubrics...', increment: 80 });
         const created: string[] = [];
         const existing: string[] = [];
-        for (const entry of COPILOT_CLI_ASSET_DIRS) {
+        for (const entry of [...COPILOT_CLI_ASSET_DIRS, ...COPILOT_CLI_SUPPORT_DIRS]) {
           const dest = path.join(root, entry.destination);
           (fs.existsSync(dest) ? existing : created).push(entry.destination);
         }
@@ -129,7 +131,7 @@ export async function runInitializeCliCommand(
         writeCliAssetState(root, {
           mode: 'copy',
           extensionRoot: context.extensionUri.fsPath,
-          destinations: COPILOT_CLI_ASSET_DIRS.map((a) => a.destination),
+          destinations: [...COPILOT_CLI_ASSET_DIRS, ...COPILOT_CLI_SUPPORT_DIRS, ...COPILOT_CLI_ASSET_FILES].map((a) => a.destination),
           updatedAt: new Date().toISOString(),
         });
         progress.report({ message: 'Finalizing...', increment: 20 });
@@ -140,7 +142,7 @@ export async function runInitializeCliCommand(
           existing.length > 0 ? `Preserved existing: ${existing.join(', ')}` : '',
         ].filter(Boolean).join('; ');
         vscode.window.showInformationMessage(
-          `AgentX: CLI assets copied into .github/. ${summary}`,
+          `AgentX: CLI assets copied into .github/ plus workspace-root docs, gate scripts and rubrics. ${summary}`,
         );
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);

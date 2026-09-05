@@ -3,6 +3,8 @@
 > **Complete workflow, routing, handoff, and status management for AgentX agents.**
 > This file is the deep reference for how work flows through the system.
 > For a quick map of all resources, see [AGENTS.md](../AGENTS.md).
+> For model-adaptive context, tokenomics and evidence gates, load
+> [Quality-first coding harness](guides/CODING-HARNESS.md) only for that phase.
 
 ---
 

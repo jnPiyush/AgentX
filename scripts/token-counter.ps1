@@ -1,142 +1,182 @@
 #!/usr/bin/env pwsh
-# Token Counter - Count and validate tokens against .token-limits.json
-# Usage:
-#   .\scripts\token-counter.ps1 -Action count [-Path .github/skills/]
-#   .\scripts\token-counter.ps1 -Action check
-#   .\scripts\token-counter.ps1 -Action report
 #Requires -Version 7.0
+[CmdletBinding()]
 param(
-    [ValidateSet('count','check','report')]
+    [ValidateSet('count', 'check', 'report')]
     [string]$Action = 'report',
-    [string]$Path = ''
+    [string]$Path = '',
+    [string]$BaselineRef = '',
+    [switch]$Json
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$ROOT = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$LIMITS_FILE = Join-Path $ROOT '.token-limits.json'
-
-function Get-TokenCount([string]$filePath) {
-    if (-not (Test-Path $filePath)) { return 0 }
-    $chars = (Get-Content $filePath -Raw -Encoding utf8).Length
-    return [math]::Ceiling($chars / 4)
+function ConvertTo-GlobRegex([string]$Pattern) {
+    $escaped = [regex]::Escape($Pattern.Replace('\', '/'))
+    return '^' + $escaped.Replace('\*\*/', '(?:.*/)?').Replace('\*\*', '.*').
+        Replace('\*', '[^/]*').Replace('\?', '[^/]') + '$'
 }
 
-function Get-TokenLimits {
-    if (-not (Test-Path $LIMITS_FILE)) {
-        Write-Warning "No .token-limits.json found at $LIMITS_FILE"
-        return @{}
+function Get-BaselineTokenCount([string]$Root, [string]$Commit, [string]$Relative) {
+    $entry = @(& git -C $Root ls-tree $Commit -- $Relative 2>$null)
+    if ($LASTEXITCODE -ne 0) { throw "Cannot inspect baseline file '$Relative'." }
+    if ($entry.Count -eq 0) { return 0 }
+    $info = [Diagnostics.ProcessStartInfo]::new('git')
+    $info.UseShellExecute = $false
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $info.StandardOutputEncoding = [Text.Encoding]::UTF8
+    foreach ($argument in @('-C', $Root, 'show', "${Commit}:$Relative")) { $info.ArgumentList.Add($argument) }
+    $process = [Diagnostics.Process]::Start($info)
+    try {
+        $errorTask = $process.StandardError.ReadToEndAsync()
+        $text = $process.StandardOutput.ReadToEnd()
+        $process.WaitForExit()
+        if ($process.ExitCode -ne 0) { throw "Cannot read baseline file '$Relative': $($errorTask.Result)" }
+        return [long][math]::Ceiling($text.Replace("`r`n", "`n").Length / 4.0)
+    } finally { $process.Dispose() }
+}
+
+function Get-MarkdownFiles([string]$Target, [string]$Root) {
+    $item = Get-Item -LiteralPath $Target -ErrorAction Stop
+    if (-not $item.PSIsContainer) {
+        if ($item.Extension -eq '.md') { $item }
+        return
     }
-    $cfg = Get-Content $LIMITS_FILE -Raw -Encoding utf8 | ConvertFrom-Json
-    return $cfg
-}
-
-function Resolve-LimitForFile([string]$relPath, $limits) {
-    $normalized = $relPath -replace '\\', '/'
-    # Check overrides first (exact path match)
-    if ($limits.overrides) {
-        foreach ($prop in $limits.overrides.PSObject.Properties) {
-            $overridePath = $prop.Name -replace '\\', '/'
-            if ($normalized -eq $overridePath) {
-                return [int]$prop.Value
+    $excludedNames = @('.git', 'node_modules', 'vendor', 'out', 'dist', 'build', 'coverage', '.venv', '__pycache__')
+    $pending = [Collections.Generic.Stack[string]]::new()
+    $pending.Push($item.FullName)
+    while ($pending.Count) {
+        $directory = $pending.Pop()
+        foreach ($child in Get-ChildItem -LiteralPath $directory -Force -ErrorAction Stop) {
+            if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+            $relative = [IO.Path]::GetRelativePath($Root, $child.FullName).Replace('\', '/')
+            if ($child.PSIsContainer) {
+                if ($child.Name -in $excludedNames -or
+                    $relative -match '^(vscode-extension/\.github|\.agentx/(state|sessions|digests|issues))(/|$)') { continue }
+                $pending.Push($child.FullName)
+            } elseif ($child.Extension -eq '.md') {
+                $child
             }
         }
     }
-    # Fall back to glob defaults
-    $defaults = $limits.defaults
-    if (-not $defaults) { return 0 }
-    $best = 0
-    $bestLen = 0
-    foreach ($prop in $defaults.PSObject.Properties) {
-        $pattern = $prop.Name
-        $limit = [int]$prop.Value
-        $regex = '^' + (($pattern -replace '\*\*/', '(.*/)?') -replace '\*', '[^/]*') + '$'
-        if ($normalized -match $regex -and $pattern.Length -gt $bestLen) {
-            $best = $limit
-            $bestLen = $pattern.Length
-        }
-    }
-    return $best
 }
 
-function Invoke-Count {
-    $target = if ($Path) { Resolve-Path $Path } else { $ROOT }
-    $files = Get-ChildItem -Path $target -Filter '*.md' -Recurse -File
-    $total = 0
-    foreach ($f in $files) {
-        $tokens = Get-TokenCount $f.FullName
-        $total += $tokens
-        Write-Host ("  {0,6} tokens  {1}" -f $tokens, $f.FullName.Replace($ROOT, '.'))
-    }
-    Write-Host "`n  Total: $total tokens across $($files.Count) files"
-}
-
-function Invoke-Check {
-    $limits = Get-TokenLimits
-    if (-not $limits.defaults) { Write-Host "No limits configured."; return }
-    $violations = @()
-    $checked = 0
-    $mdFiles = Get-ChildItem -Path $ROOT -Filter '*.md' -Recurse -File |
-        Where-Object { $_.FullName -notmatch '[\\/]node_modules[\\/]|[\\/]\.git[\\/]' }
-
-    foreach ($f in $mdFiles) {
-        $rel = $f.FullName.Replace($ROOT, '').TrimStart('\', '/')
-        $limit = Resolve-LimitForFile $rel $limits
-        if ($limit -le 0) { continue }
-        $checked++
-        $tokens = Get-TokenCount $f.FullName
-        if ($tokens -gt $limit) {
-            $violations += [PSCustomObject]@{
-                File = $rel
-                Tokens = $tokens
-                Limit = $limit
-                Over = $tokens - $limit
-            }
-        }
-    }
-    if ($violations.Count -eq 0) {
-        Write-Host "`n  [PASS] All $checked files within token limits.`n"
+try {
+    $root = if ($env:AGENTX_WORKSPACE_ROOT) {
+        (Resolve-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -ErrorAction Stop).Path
     } else {
-        Write-Host "`n  [FAIL] $($violations.Count) file(s) exceed token limits:`n"
-        foreach ($v in $violations) {
-            Write-Host ("  {0}: {1} tokens (limit: {2}, over by {3})" -f $v.File, $v.Tokens, $v.Limit, $v.Over)
-        }
-        Write-Host ''
-        exit 1
+        (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
     }
-}
-
-function Invoke-Report {
-    $limits = Get-TokenLimits
-    Write-Host "`n  Token Budget Report"
-    Write-Host "  ============================================="
-    $categories = @(
-        @{ Label = 'Skills (SKILL.md)'; Pattern = '.github/skills/**/SKILL.md'; Dir = '.github/skills' ; Filter = 'SKILL.md' },
-        @{ Label = 'Instructions'; Pattern = '.github/instructions/*.md'; Dir = '.github/instructions' ; Filter = '*.md' },
-        @{ Label = 'Agents (external)'; Pattern = '.github/agents/*.agent.md'; Dir = '.github/agents' ; Filter = '*.agent.md' },
-        @{ Label = 'Templates'; Pattern = '.github/templates/*-TEMPLATE.md'; Dir = '.github/templates' ; Filter = '*-TEMPLATE.md' }
+    $target = if ($Path) {
+        if ([IO.Path]::IsPathRooted($Path)) { $Path } else { Join-Path $root $Path }
+    } else { $root }
+    $policyPath = Join-Path $root '.token-limits.json'
+    $configured = Test-Path -LiteralPath $policyPath -PathType Leaf
+    $rules = [Collections.Generic.List[object]]::new()
+    if ($configured) {
+        $policy = Get-Content -LiteralPath $policyPath -Raw | ConvertFrom-Json -Depth 10
+        foreach ($group in @('defaults', 'overrides')) {
+            if (-not $policy.PSObject.Properties[$group]) { continue }
+            $values = $policy.$group
+            if ($values -isnot [pscustomobject]) { throw "$group must be an object of path budgets." }
+            foreach ($property in $values.PSObject.Properties) {
+                if ($property.Value -isnot [long] -and $property.Value -isnot [int]) {
+                    throw "Token limit '$($property.Name)' must be a positive integer."
+                }
+                if ($property.Value -le 0) { throw "Token limit '$($property.Name)' must be positive." }
+                $pattern = $property.Name.Replace('\', '/')
+                $rules.Add([pscustomobject]@{
+                    pattern = $pattern
+                    regex = ConvertTo-GlobRegex $pattern
+                    limit = [long]$property.Value
+                    exact = $group -eq 'overrides'
+                })
+            }
+        }
+    }
+    $files = @(Get-MarkdownFiles $target $root | Sort-Object FullName)
+    $baselineCommit = ''
+    if ($BaselineRef) {
+        $revision = @(& git -C $root rev-parse --verify --end-of-options "${BaselineRef}^{commit}" 2>$null)
+        if ($LASTEXITCODE -ne 0 -or $revision.Count -ne 1) { throw 'BaselineRef must resolve to a Git commit.' }
+        $baselineCommit = [string]$revision[0]
+    }
+    $rows = @(
+        foreach ($file in $files) {
+            $relative = [IO.Path]::GetRelativePath($root, $file.FullName).Replace('\', '/')
+            $match = $rules | Where-Object {
+                if ($_.exact) { $_.pattern -ceq $relative } else { $relative -cmatch $_.regex }
+            } | Sort-Object @{ Expression = 'exact'; Descending = $true },
+                @{ Expression = { $_.pattern.Length }; Descending = $true }, pattern | Select-Object -First 1
+            $content = [IO.File]::ReadAllText($file.FullName).Replace("`r`n", "`n")
+            $tokens = [long][math]::Ceiling($content.Length / 4.0)
+            $limit = if ($match) { $match.limit } else { $null }
+            [pscustomobject]@{
+                path = $relative
+                estimatedTokens = $tokens
+                limit = $limit
+                over = if ($null -ne $limit) { [math]::Max(0, $tokens - $limit) } else { $null }
+            }
+        }
     )
-    foreach ($cat in $categories) {
-        $dir = Join-Path $ROOT $cat.Dir
-        if (-not (Test-Path $dir)) { continue }
-        $files = Get-ChildItem -Path $dir -Filter $cat.Filter -Recurse -File
-        $totalTokens = 0; $overCount = 0
-        foreach ($f in $files) {
-            $tokens = Get-TokenCount $f.FullName
-            $totalTokens += $tokens
-            $rel = $f.FullName.Replace($ROOT, '').TrimStart('\', '/')
-            $limit = Resolve-LimitForFile $rel $limits
-            if ($limit -gt 0 -and $tokens -gt $limit) { $overCount++ }
+    $covered = @($rows | Where-Object { $null -ne $_.limit })
+    $violations = @($covered | Where-Object { $_.over -gt 0 })
+    $uncovered = @($rows | Where-Object { $null -eq $_.limit } | ForEach-Object { $_.path })
+    $regressions = @(
+        foreach ($row in $violations) {
+            if (-not $baselineCommit) { $row; continue }
+            # Use the same policy and estimator for both revisions. Do not hide
+            # inherited overages when a caller requests a no-regression gate.
+            $oldTokens = Get-BaselineTokenCount $root $baselineCommit $row.path
+            if ($row.estimatedTokens -gt $oldTokens) { $row }
         }
-        $status = if ($overCount -gt 0) { "[WARN] $overCount over" } else { '[PASS]' }
-        Write-Host ("  {0,-25} {1,5} files  {2,7} tokens  {3}" -f $cat.Label, $files.Count, $totalTokens, $status)
+    )
+    $sum = [long]0
+    foreach ($row in $rows) { $sum += $row.estimatedTokens }
+    $result = [ordered]@{
+        status = if (-not $configured -or $rules.Count -eq 0) { 'unconfigured' }
+            elseif ($violations.Count) { 'exceeded' } elseif ($covered.Count -eq 0) { 'uncovered' } else { 'within' }
+        estimator = 'characters/4'
+        newlineNormalization = 'LF'
+        exact = $false
+        scannedFiles = $rows.Count
+        checkedFiles = $covered.Count
+        totalEstimatedTokens = $sum
+        violations = $violations
+        regressions = $regressions
+        baselineCommit = if ($baselineCommit) { $baselineCommit } else { $null }
+        uncoveredFiles = $uncovered
+        files = $rows
     }
-    Write-Host "  =============================================`n"
-}
-
-switch ($Action) {
-    'count'  { Invoke-Count }
-    'check'  { Invoke-Check }
-    'report' { Invoke-Report }
+    if ($Json) {
+        Write-Output ($result | ConvertTo-Json -Depth 8 -Compress)
+    } else {
+        Write-Host 'Token Budget Report (approximate: characters/4, not provider billing)'
+        if ($Action -eq 'count') {
+            foreach ($row in $rows) { Write-Host ("  {0,7} estimated tokens  {1}" -f $row.estimatedTokens, $row.path) }
+        }
+        Write-Host "Scanned: $($rows.Count); budgeted: $($covered.Count); uncovered: $($uncovered.Count)"
+        Write-Host "Total estimated tokens: $($result.totalEstimatedTokens); status: $($result.status)"
+        if ($result.status -in @('unconfigured', 'uncovered')) {
+            Write-Host '[WARN] No applicable limits; this is not a verified budget pass.'
+        } elseif ($violations.Count -eq 0) {
+            Write-Host "[PASS] All $($covered.Count) covered files within token limits."
+        }
+        foreach ($row in $violations) {
+            Write-Host "[FAIL] $($row.path): $($row.estimatedTokens) estimated tokens (limit: $($row.limit), over: $($row.over))"
+        }
+        if ($baselineCommit) {
+            Write-Host "No-regression gate: $($regressions.Count) increased/new overages; $($violations.Count) total overages remain."
+        }
+    }
+    exit $(if ($Action -eq 'check' -and $regressions.Count) { 1 } else { 0 })
+} catch {
+    if ($Json) {
+        Write-Output (@{ status = 'invalid'; message = $_.Exception.Message } | ConvertTo-Json -Compress)
+    } else {
+        [Console]::Error.WriteLine("[FAIL] Token budget: $($_.Exception.Message)")
+    }
+    exit 2
 }

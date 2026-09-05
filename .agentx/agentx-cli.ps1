@@ -27,7 +27,10 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Scope = 'Function', Target = '*')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Scope = 'Function', Target = '*')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Scope = 'Function', Target = 'Write-CliOutput')]
-param()
+param(
+    [Alias('h')]
+    [switch]$Help
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -86,6 +89,16 @@ function Write-JsonFile([string]$p, $data) {
     $data | ConvertTo-Json -Depth 10 | Set-Content $p -Encoding utf8 -NoNewline
     # Ensure trailing newline
     Add-Content $p -Value '' -NoNewline:$false
+}
+
+function Resolve-AgentXRuntimeScript([string]$RelativePath) {
+    foreach ($basePath in @($Script:ROOT, $Script:INSTALL_ROOT) | Select-Object -Unique) {
+        $candidate = Join-Path $basePath $RelativePath
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return $candidate
+        }
+    }
+    return $null
 }
 
 # ---------------------------------------------------------------------------
@@ -2021,8 +2034,9 @@ if ($env:NO_COLOR) {
 # Parse CLI args
 # ---------------------------------------------------------------------------
 
-$Script:CliArgs = @($args)
-$Script:Command = if ($CliArgs.Count -gt 0) { $CliArgs[0] } else { 'help' }
+$Script:CliArgs = @(if ($Help) { 'help' } else { $args })
+$requestedCommand = if ($CliArgs.Count -gt 0) { $CliArgs[0] } else { 'help' }
+$Script:Command = if ($requestedCommand -in @('-h', '--help', '/?')) { 'help' } else { $requestedCommand }
 $Script:SubArgs = @(if ($CliArgs.Count -gt 1) { $CliArgs[1..($CliArgs.Count - 1)] } else { @() })
 
 function Get-Flag([string[]]$flags, [string]$default = '') {
@@ -7156,12 +7170,14 @@ function Invoke-LessonsHelp {
 
 function Invoke-TokensCmd {
     $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'check' }
-    $scriptPath = Join-Path $Script:ROOT 'scripts/token-counter.ps1'
-    if (-not (Test-Path $scriptPath)) {
-        Write-CliOutput "$($C.r)  Error: scripts/token-counter.ps1 not found.$($C.n)"
+    $scriptPath = Resolve-AgentXRuntimeScript 'scripts/token-counter.ps1'
+    if (-not $scriptPath) {
+        Write-CliOutput "$($C.r)  Error: scripts/token-counter.ps1 not found in the workspace or AgentX runtime.$($C.n)"
         exit 1
     }
-    & $scriptPath -Action $action
+    $extra = if ($Script:SubArgs.Count -gt 1) { @($Script:SubArgs[1..($Script:SubArgs.Count - 1)]) } else { @() }
+    & pwsh -NoProfile -File $scriptPath -Action $action @extra
+    exit $LASTEXITCODE
 }
 
 # ---------------------------------------------------------------------------
@@ -7215,14 +7231,22 @@ function Invoke-DiagnoseCmd {
 
     # 1. Required workspace files
     $required = @(
-        @{ path = (Join-Path $Script:AGENTX_DIR 'config.json'); id = 'config'; label = 'Workspace config (.agentx/config.json)' },
-        @{ path = (Join-Path $Script:AGENTX_DIR 'agentx-cli.ps1'); id = 'cli';    label = 'CLI script (.agentx/agentx-cli.ps1)' },
-        @{ path = (Join-Path $Script:ROOT '.github'); id = 'github-dir'; label = 'AgentX assets directory (.github/)' }
+        @{ path = (Join-Path $Script:AGENTX_DIR 'config.json'); id = 'config'; label = 'Workspace config (.agentx/config.json)'; hint = 'Run: AgentX: Initialize Local Runtime' },
+        @{ path = (Join-Path $Script:ROOT '.github'); id = 'github-dir'; label = 'AgentX assets directory (.github/)'; hint = 'Create .github/ or run AgentX: Initialize CLI' }
     )
     foreach ($r in $required) {
         $exists = Test-Path $r.path
-        Add-DiagnoseCheck -List $checks -Id $r.id -Label $r.label -Passed $exists -Summary $(if ($exists) { 'present' } else { 'missing' })
+        Add-DiagnoseCheck -List $checks -Id $r.id -Label $r.label -Passed $exists `
+            -Summary $(if ($exists) { 'present' } else { 'missing' }) -Hint $r.hint
     }
+    $workspaceCli = Join-Path $Script:AGENTX_DIR 'agentx-cli.ps1'
+    $installedCli = Join-Path $Script:INSTALL_AGENTX_DIR 'agentx-cli.ps1'
+    $cliPath = @($workspaceCli, $installedCli) | Where-Object {
+        Test-Path -LiteralPath $_ -PathType Leaf
+    } | Select-Object -First 1
+    Add-DiagnoseCheck -List $checks -Id 'cli' -Label 'CLI runtime' -Passed ($null -ne $cliPath) `
+        -Summary $(if ($cliPath) { "resolved: $cliPath" } else { 'workspace and bundled CLI missing' }) `
+        -Hint 'Reinstall the AgentX extension, then run AgentX: Initialize Local Runtime'
 
     # 2. Git hooks installed
     $gitDir = Join-Path $Script:ROOT '.git'
@@ -7237,21 +7261,29 @@ function Invoke-DiagnoseCmd {
     }
 
     # 3. Frontmatter validation
-    $fmScript = Join-Path $Script:ROOT 'scripts/validate-frontmatter.ps1'
-    if (Test-Path $fmScript) {
-        $fmOutput = & pwsh -NoProfile -File $fmScript 2>&1
+    $workspaceFrontmatterScript = Join-Path $Script:ROOT 'scripts/validate-frontmatter.ps1'
+    $fmScript = Resolve-AgentXRuntimeScript 'scripts/validate-frontmatter.ps1'
+    if ($fmScript) {
+        $fmTargetRoot = if (Test-Path -LiteralPath $workspaceFrontmatterScript -PathType Leaf) {
+            $Script:ROOT
+        } else {
+            $Script:INSTALL_ROOT
+        }
+        $fmOutput = & pwsh -NoProfile -File $fmScript -Path $fmTargetRoot 2>&1
         $fmExit = $LASTEXITCODE
         $fmTailMatch = $fmOutput | Select-String -Pattern '^\s*Results:' | Select-Object -Last 1
         $fmTail = if ($fmTailMatch) { $fmTailMatch.ToString().Trim() } else { 'no summary line' }
         Add-DiagnoseCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter (skills, agents, instructions, prompts)' `
             -Passed ($fmExit -eq 0) -Summary $fmTail -Hint 'Run: pwsh scripts/validate-frontmatter.ps1'
     } else {
-        Add-DiagnoseCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter validator' -Passed $false -Summary 'scripts/validate-frontmatter.ps1 missing'
+        Add-DiagnoseCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter validator' -Passed $false `
+            -Summary 'scripts/validate-frontmatter.ps1 missing from workspace and AgentX runtime' `
+            -Hint 'Reinstall the AgentX extension'
     }
 
     # 4. Reference / link validation
-    $refScript = Join-Path $Script:ROOT 'scripts/validate-references.ps1'
-    if (Test-Path $refScript) {
+    $refScript = Resolve-AgentXRuntimeScript 'scripts/validate-references.ps1'
+    if ($refScript) {
         $refOutput = & pwsh -NoProfile -File $refScript -Quiet 2>&1
         $refExit = $LASTEXITCODE
         $refSummary = if ($refExit -eq 0) { 'all internal links resolve' } else { 'broken links detected' }
@@ -7260,12 +7292,14 @@ function Invoke-DiagnoseCmd {
             -Passed ($refExit -eq 0) -Summary $refSummary -Hint 'Run: pwsh scripts/validate-references.ps1' `
             -VerboseTail $refTail
     } else {
-        Add-DiagnoseCheck -List $checks -Id 'references' -Label 'Reference validator' -Passed $false -Summary 'scripts/validate-references.ps1 missing'
+        Add-DiagnoseCheck -List $checks -Id 'references' -Label 'Reference validator' -Passed $false `
+            -Summary 'scripts/validate-references.ps1 missing from workspace and AgentX runtime' `
+            -Hint 'Reinstall the AgentX extension'
     }
 
     # 5. Token budget check
-    $tokScript = Join-Path $Script:ROOT 'scripts/token-counter.ps1'
-    if (Test-Path $tokScript) {
+    $tokScript = Resolve-AgentXRuntimeScript 'scripts/token-counter.ps1'
+    if ($tokScript) {
         $tokOutput = & pwsh -NoProfile -File $tokScript -Action check 2>&1
         $tokExit = $LASTEXITCODE
         $tokSummary = if ($tokExit -eq 0) { 'all files within token limits' } else { 'one or more files exceed token limits' }
@@ -7274,7 +7308,9 @@ function Invoke-DiagnoseCmd {
             -Passed ($tokExit -eq 0) -Summary $tokSummary -Hint 'Run: agentx tokens report' `
             -VerboseTail $tokTail
     } else {
-        Add-DiagnoseCheck -List $checks -Id 'tokens' -Label 'Token budget check' -Passed $false -Summary 'scripts/token-counter.ps1 missing'
+        Add-DiagnoseCheck -List $checks -Id 'tokens' -Label 'Token budget check' -Passed $false `
+            -Summary 'scripts/token-counter.ps1 missing from workspace and AgentX runtime' `
+            -Hint 'Reinstall the AgentX extension'
     }
 
     # 6. Loop state schema sanity
@@ -7475,6 +7511,7 @@ $($C.w)  Commands:$($C.n)
     backlog-sync [github] [--force]  Force sync local backlog to GitHub on demand
   lessons [list|query|show|stats|promote|archive|clean]  Learning pipeline management
   tokens [count|check|report]      Token budget management
+  budget -File <request.json>     Offline context and token-cost preflight (no provider calls)
   score <engineer|architect|pm> [issue]  Score agent output quality
   discover [run|status|reset]      Analyze signals + git history for patterns
   graduate [run|list|preview]      Promote high-confidence patterns to skills
@@ -8722,6 +8759,7 @@ function Invoke-ScanCmd          { Invoke-ScriptWrapper -ScriptRelPath 'scripts/
 function Invoke-StocktakeCmd     { Invoke-ScriptWrapper -ScriptRelPath 'scripts/stocktake.ps1'        -Label 'stocktake' }
 function Invoke-RouteCmd         { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-route.ps1'      -Label 'route' }
 function Invoke-CouncilCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-council.ps1'    -Label 'council' }
+function Invoke-BudgetCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/budget.ps1'          -Label 'budget' }
 
 # ---------------------------------------------------------------------------
 # Main router
@@ -8750,6 +8788,7 @@ switch ($Script:Command) {
     'hire'     { Invoke-HireCmd }
     'watch'    { Invoke-WatchCmd }
     'tokens'   { Invoke-TokensCmd }
+    'budget'   { Invoke-BudgetCmd }
     'score'    { Invoke-ScoreCmd }
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }

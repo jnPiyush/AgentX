@@ -199,7 +199,11 @@ function Get-PackInstallPlan {
   @{ Key = 'instructions'; Label = 'Instructions'; RelativePath = '.github/instructions' },
   @{ Key = 'prompts'; Label = 'Prompts'; RelativePath = '.github/prompts' },
   @{ Key = 'templates'; Label = 'Templates'; RelativePath = '.github/templates' },
-    @{ Key = 'schemas'; Label = 'Schemas'; RelativePath = '.github/schemas' }
+    @{ Key = 'schemas'; Label = 'Schemas'; RelativePath = '.github/schemas' },
+    @{ Key = 'registries'; Label = 'Registries'; RelativePath = '.github/registries' },
+    @{ Key = 'hooks'; Label = 'Hooks'; RelativePath = '.github/hooks' },
+    @{ Key = 'plugins'; Label = 'Plugins'; RelativePath = '.agentx/plugins' },
+    @{ Key = 'guides'; Label = 'Guides'; RelativePath = 'docs/guides' }
  )
 
  $entries = @()
@@ -557,14 +561,14 @@ Write-Host " Files skipped : $totalSkipped (already exist, use -Force to overwri
 Write-Host ""
  Write-Host " Agents        : 26 (15 external + 11 internal)" -ForegroundColor White
  Write-Host " Skills        : 134 across 14 categories" -ForegroundColor White
- Write-Host " Instructions  : 7 (auto-applied by file pattern)" -ForegroundColor White
- Write-Host " Prompts       : 23 reusable templates" -ForegroundColor White
+ Write-Host " Instructions  : 15 (auto-applied by file pattern)" -ForegroundColor White
+ Write-Host " Prompts       : 23 reference templates" -ForegroundColor White
 if ($IncludeCli) {
  Write-Host " CLI utilities : 4 wrappers (.agentx/) + bundled runtime (.github/agentx/.agentx)" -ForegroundColor White
 }
 Write-Host ""
-Write-Host " Limitations (Copilot CLI vs VS Code):" -ForegroundColor Yellow
-Write-Host "  - No runSubagent: agents run standalone, no agent chaining" -ForegroundColor DarkGray
-Write-Host "  - No Mode 1 hub: Agent X cannot orchestrate sub-agents" -ForegroundColor DarkGray
-Write-Host "  - Quality loop: Layer 2 (body instructions) + Layer 3 (CLI gate)" -ForegroundColor DarkGray
+Write-Host " Notes (Copilot CLI vs VS Code):" -ForegroundColor Yellow
+Write-Host "  - Prompt files are reference templates; Copilot CLI does not execute them" -ForegroundColor DarkGray
+Write-Host "  - No sidebar or tree views -- those surfaces are VS Code only" -ForegroundColor DarkGray
+Write-Host "  - Quality loop: Layer 2 (body instructions) + Layer 3 (CLI gate) + lifecycle hooks" -ForegroundColor DarkGray
 Write-Host ""

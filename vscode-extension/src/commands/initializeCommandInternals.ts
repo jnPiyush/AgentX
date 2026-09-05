@@ -79,9 +79,6 @@ export async function runInitializeLocalRuntimeCommand(
     const currentExtVersion = context.extension?.packageJSON?.version ?? '8.0.0';
     fs.writeFileSync(versionFile, JSON.stringify({
      version: currentExtVersion,
-     provider: 'local',
-     mode: 'local',
-     integration: 'local',
      installedAt: previousVersion?.installedAt || new Date().toISOString(),
      updatedAt: new Date().toISOString(),
     }, null, 2));

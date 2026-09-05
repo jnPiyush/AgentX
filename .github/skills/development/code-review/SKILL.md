@@ -1,254 +1,94 @@
 ---
 name: code-review
-description: 'Conduct systematic code reviews and audits including automated checks, security audits, compliance verification, and review checklists. Use when reviewing pull requests, performing security audits, verifying coding standards compliance, or setting up automated code review workflows.'
+description: 'Use when reviewing implementation changes for correctness, evidence and release risk with the repository exact-scope rubric and native verification commands.'
 user-invocable: false
+metadata:
+  version: '2.1.0'
 ---
 
-# Code Review & Audit
+# Code Review
 
-> **Purpose**: Systematic validation of implementations against production guardrails. 
-> **Focus**: Self-review automation, manual review checklists, security audits, compliance verification.
+## When to Use
 
----
-
-## When to Use This Skill
-
-- Reviewing pull requests for code quality
-- Performing security audits on codebases
-- Verifying coding standards compliance
-- Setting up automated code review pipelines
-- Conducting pre-merge quality gates
+Use this after code, config, infra, migration, or automation changes that can
+change shipped behavior. Review after the author has run the relevant checks.
+For docs-only work verify claims, links and instruction behavior without
+inventing a code score. For exploit hunting, use the security-review specialist.
 
 ## Prerequisites
 
-- Git and GitHub/Azure DevOps familiarity
-- Code analysis tools (ESLint, Roslyn Analyzers, etc.)
+No blanket language checklist is universal. Gather the issue or requirement,
+accepted design, changed files, and the repository's real build, test, lint, and
+security commands before scoring anything.
 
 ## Rationalization Table
 
-Common excuses reviewers use to ship work that should have been returned. Push back against each.
+| Excuse | Response |
+|--------|----------|
+| "CI passed, so approval is safe." | Passing automation is evidence, not a substitute for reading the change. |
+| "I need at least three findings." | Verified issues beat quotas. Zero findings is valid when the evidence is strong. |
+| "It is only config, test, or script work." | Those surfaces can ship outages; review the whole executed path. |
+| "I can refresh the timestamp and reuse the old score." | Fresh hashes and fresh evidence are required after every code change. |
 
-| Rationalization | Reality |
-|-----------------|---------|
-| "The author is senior, the code is probably fine." | Seniority is not evidence. Read the diff, run the tests, check the spec. |
-| "It passed CI, I'll skim and approve." | CI proves nothing failed, not that the right thing was built. Pass A (spec compliance) is on the reviewer, not CI. |
-| "The diff is huge, I'll trust the high-signal parts." | Large diffs hide the dangerous changes in the noise. Ask for a smaller PR or block out time to read it all. |
-| "It's only test code / docs / config." | Test code that does not actually exercise the change is worse than no tests. Config and infra diffs cause most production incidents. |
-| "The author already addressed it once, requesting changes again is rude." | Reviewer politeness is not a quality gate. If the rework still does not meet the bar, say so. |
-| "We can fix it in a follow-up." | Almost never happens. Either it blocks merge or it becomes durable tech debt; pick consciously and record the debt item. |
-| "Pass A and Pass B both look fine, I'll write 'LGTM'." | A review with no findings and no evidence of having run the code reads as a rubber stamp. Cite at least the verification steps you performed. |
+## Agent Value
 
-## Decision Tree
+This skill turns review into an evidence-first release gate. It routes the
+reviewer to exact scope, requires executed verification, and anchors approval to
+the repository rubric instead of style-only comments or model-brand prestige.
 
-```
-Review request received?
-+-- PR size?
-|   +-- > 400 lines -> Ask author to split into smaller PRs
-|   +-- 100-400 lines -> Full review with checklist
-|   +-- < 100 lines -> Quick review (focus: correctness + tests)
-+-- Review type?
-|   +-- Security audit -> Use OWASP checklist, run SAST tools
-|   +-- Architecture review -> Check SOLID, patterns, ADR compliance
-|   +-- Bug fix review -> Verify regression test exists first
-|   +-- Feature review -> Full checklist (quality + security + tests)
-+-- Automated checks passing?
-|   +-- No -> Send back before manual review
-|   +-- Yes -> Proceed with manual review
-+-- Approval decision?
-    +-- No issues -> Approve
-    +-- Minor issues -> Approve with comments
-    +-- Major issues -> Request changes with clear guidance
-```
+## Decision Guide
 
-## Code Review Checklist
+- If only prose changes, verify claims and references. Prompts/instructions
+  also require task-evaluation evidence and token measurements when changed.
+- If the request is to find exploitable security flaws, use the security review
+  path first.
+- If behavior changed, review the implementation, tests, config, and operator
+  surfaces together.
+- If hashes changed after review, restart from scope capture and rescore.
 
-### Architecture & Design (AGENTS.md Alignment)
+## Workflow
 
-- [ ] **Research -> Design -> Implement** workflow followed
-- [ ] Architecture documented (ADRs for significant decisions)
-- [ ] SOLID principles adhered to (especially SRP, DIP)
-- [ ] Design patterns used appropriately (not over-engineered)
-- [ ] No premature optimization (YAGNI principle)
+1. Verify the issue, acceptance criteria, and approved design.
+2. Read the full relevant surface, not just a line quota: implementation, tests,
+   config, migrations, scripts, and docs that define the behavior.
+3. Run the repository's native checks. Use
+   [run-checklist.ps1](scripts/run-checklist.ps1) only when it matches the stack.
+4. Capture exact scope with `pwsh scripts/score-code-quality.ps1 -Mode Scope -Json`.
+5. Score the change against
+   [evaluation/rubrics/code-quality.md](../../../../evaluation/rubrics/code-quality.md).
+6. Approve only when the report still matches current hashes and no HIGH or
+   MEDIUM findings remain.
 
-### Code Quality
+## Checklist
 
-- [ ] **Single Responsibility** - Each class/method does one thing
-- [ ] **DRY** - No code duplication (extracted to methods/classes)
-- [ ] **KISS** - Simple solution, not over-complicated
-- [ ] **Meaningful names** - Self-documenting code
-- [ ] **Functions < 50 lines** - Long methods refactored
-- [ ] **No magic numbers** - Constants with clear names
-- [ ] **No dead code** - Unused code removed
-- [ ] **No commented code** - Remove or document why kept
-
-### Type Safety & Documentation
-
-- [ ] **Type annotations** on all parameters and return values
-- [ ] **Nullable reference types** handled correctly
-- [ ] **XML documentation** on all public APIs
-- [ ] **Inline comments** explain "why", not "what"
-- [ ] **README updated** with new features/changes
-- [ ] **API documentation** generated and accurate
-
-### Error Handling
-
-- [ ] **Specific exceptions** caught (not generic `Exception`)
-- [ ] **No empty catch blocks** - Log or handle properly
-- [ ] **Errors logged** with context (correlation IDs)
-- [ ] **Retry logic** for transient failures (Polly)
-- [ ] **Circuit breakers** for external dependencies
-- [ ] **Timeouts configured** on all external calls
-- [ ] **Graceful degradation** implemented where needed
-- [ ] **No sensitive data** in error messages
-
-### Security (OWASP Top 10)
-
-- [ ] **Input validation** - All user inputs sanitized
-- [ ] **SQL parameterized** - NEVER string concatenation
-- [ ] **No hardcoded secrets** - Use Key Vault/env vars
-- [ ] **Authentication implemented** - JWT/OAuth
-- [ ] **Authorization checks** - Proper role/claim validation
-- [ ] **HTTPS enforced** in production
-- [ ] **CORS configured** correctly (not AllowAnyOrigin)
-- [ ] **Rate limiting** enabled on public APIs
-- [ ] **Security headers** added (CSP, X-Frame-Options, etc.)
-- [ ] **Passwords hashed** with BCrypt/Argon2 (work factor 12)
-- [ ] **Dependencies audited** - No known vulnerabilities
-
-### Testing (80%+ Coverage)
-
-- [ ] **Test pyramid** followed (70% unit, 20% integration, 10% e2e)
-- [ ] **Unit tests** for all business logic
-- [ ] **Integration tests** for API endpoints
-- [ ] **E2E tests** for critical user journeys
-- [ ] **Edge cases tested** (null, empty, boundary values)
-- [ ] **Error paths tested** (exceptions, timeouts)
-- [ ] **Mocks used properly** - Isolate unit tests
-- [ ] **Tests are fast** (< 1s per unit test)
-- [ ] **Tests are deterministic** - No flaky tests
-- [ ] **Code coverage 80%** - Verified
-
-### Performance
-
-- [ ] **Async/await** used for I/O operations
-- [ ] **No blocking calls** (Task.Result, .Wait())
-- [ ] **Database queries optimized** (indexes, projections)
-- [ ] **N+1 queries prevented** (Include() or projections)
-- [ ] **Caching implemented** where appropriate
-- [ ] **Connection pooling** enabled
-- [ ] **Large collections paginated**
-- [ ] **Response compression** enabled
-
-### Database (EF Core)
-
-- [ ] **Migrations created** and tested
-- [ ] **Indexes defined** on foreign keys and query filters
-- [ ] **Transactions used** for multi-step operations
-- [ ] **AsNoTracking** for read-only queries
-- [ ] **Soft deletes** implemented (not hard deletes)
-- [ ] **Audit fields** present (CreatedAt, UpdatedAt, etc.)
-
-### Configuration & Deployment
-
-- [ ] **Config externalized** - No hardcoded values
-- [ ] **Environment-specific settings** in appsettings.{env}.json
-- [ ] **Feature flags** for toggleable features
-- [ ] **Health checks** implemented (liveness + readiness)
-- [ ] **Structured logging** with correlation IDs
-- [ ] **Metrics/monitoring** configured
-- [ ] **Graceful shutdown** handling
-- [ ] **Dependencies version-pinned** in lock files
-
-### Version Control
-
-- [ ] **Atomic commits** - One logical change per commit
-- [ ] **Conventional commits** format followed
-- [ ] **No merge commits** in feature branch (use rebase)
-- [ ] **PR description** clear and complete
-- [ ] **Tests passing** in CI/CD pipeline
-- [ ] **No merge conflicts** with main branch
-
----
+- Every in-scope acceptance criterion is accounted for.
+- Bug fixes include reproduction or a precise failing case.
+- Negative, boundary, and regression checks cover changed behavior.
+- No broad swallow, default-allow, or default-success path hides failure.
+- Duplicate logic, AI slop, and decorative abstraction are called out.
+- Performance or model-cost changes use cost per verified outcome when relevant.
 
 ## Core Rules
 
-### [PASS] DO
-
-- **Automate checks** - Pre-commit hooks, CI/CD
-- **Review incrementally** - Small, focused PRs
-- **Use checklists** - Ensure nothing missed
-- **Run security scans** - Before every release
-- **Document decisions** - ADRs for architecture
-- **Test audit scripts** - Verify they catch issues
-- **Update checklists** - As standards evolve
-
-### [FAIL] DON'T
-
-- **Skip automated checks** - Always run before PR
-- **Large PRs** - > 400 lines hard to review
-- **Review own code only** - Get peer review
-- **Ignore warnings** - Fix or document exceptions
-- **Manual-only audits** - Automate what you can
-- **Deploy without audit** - Security scans mandatory
-
----
-
-## Anti-Patterns
-
-- **Rubber Stamping**: Approving without reading the code -> Read every changed line, check tests and edge cases
-- **Nitpick Avalanche**: Blocking PRs over style issues that linters can catch -> Automate formatting checks, focus manual review on logic
-- **Ghost Reviewer**: Assigned but never responds within SLA -> Set 24-hour review SLA, use auto-reassignment on timeout
-- **Scope Creep Review**: Requesting unrelated improvements in the PR -> File separate issues for out-of-scope work
-- **Gatekeeper Bottleneck**: Single reviewer blocks all merges -> Require any 1-of-N reviewers, rotate review assignments
-- **Feedback Without Context**: Saying "this is wrong" with no explanation -> Provide rationale, link to docs or examples
-- **Review-Then-Rewrite**: Reviewer rewrites the author's code entirely -> Suggest changes, let the author implement
-
----
-
-## Quick Reference
-
-**Pre-Review Command**:
-```bash
-dotnet format --verify-no-changes && \
-dotnet build && \
-dotnet test --collect:"XPlat Code Coverage" && \
-dotnet list package --vulnerable --include-transitive
-```
-
-**Security Scan**:
-```bash
-grep -rn "password.*=.*\"" . --include=*.cs
-dotnet list package --vulnerable
-```
-
-**Coverage Check**:
-```bash
-dotnet test --collect:"XPlat Code Coverage"
-reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"coverage"
-```
-
----
-
-**See Also**: [AGENTS.md](../../../../AGENTS.md) - [Testing](../testing/SKILL.md) - [Security](../../architecture/security/SKILL.md) - [Remote Git Ops](../../operations/remote-git-operations/SKILL.md)
-
-**Last Updated**: January 13, 2026
-
-## Scripts
-
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| [`run-checklist.ps1`](scripts/run-checklist.ps1) | Automated code review checklist (large files, TODOs, secrets, tests) | `./scripts/run-checklist.ps1 [-Path ./src]` |
+- Review exact final hashes, not memory.
+- Evidence comes from executed commands, tests, or inspected code paths.
+- Read the whole relevant surface before approving.
+- Use stack-specific rules; do not paste a generic C# checklist onto unrelated
+  Python, TypeScript, PowerShell, or infra changes.
+- A single verified HIGH or MEDIUM issue blocks approval regardless of score.
+- Do not fabricate approval, score, reviewer strength, or timestamp freshness.
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| False positives from linters | Configure rule exclusions in .eslintrc or .editorconfig |
-| Review backlog growing | Set SLA for review turnaround, use auto-assignment for reviewers |
-| Security scan too slow | Run SAST incrementally on changed files only in CI pipeline |
+- Hash mismatch -> recapture scope and rerun the review.
+- Placeholder evidence such as `TODO` or `untested` -> replace with real test,
+  command, or code references.
+- Future timestamp -> fix the review record, not the clock story.
+- Too many comments about style only -> convert them to automation or drop them.
 
 ## References
 
-- [Pre Review Automation](references/pre-review-automation.md)
-- [Security Audit Compliance](references/security-audit-compliance.md)
-- [Review Tools Workflow](references/review-tools-workflow.md)
+- [Implementation rubric](../../../../evaluation/rubrics/code-quality.md)
+- [Pre-review automation](references/pre-review-automation.md)
+- [Review workflow](references/review-tools-workflow.md)
+- [Security audit reference](references/security-audit-compliance.md)

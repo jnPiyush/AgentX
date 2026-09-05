@@ -1,9 +1,10 @@
 {
   "description": "Token budget limits for AgentX skill and documentation files. ~4 chars = 1 token.",
   "defaults": {
+    ".github/copilot-instructions.md": 2000,
     ".github/skills/**/SKILL.md": 1500,
     ".github/skills/**/references/**/*.md": 2000,
-    ".github/instructions/*.md": 1500,
+    ".github/instructions/**/*.md": 1500,
     ".github/agents/*.agent.md": 6000,
     ".github/agents/internal/*.agent.md": 4000,
     ".github/templates/*-TEMPLATE.md": 10000,

@@ -1,6 +1,6 @@
 ---
 description: 'Python specific coding instructions for production code.'
-applyTo: '**.py, **.pyx'
+applyTo: '**/*.py, **/*.pyx'
 ---
 
 # Python Instructions

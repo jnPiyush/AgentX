@@ -1,11 +1,11 @@
 ---
 description: 'TypeScript and Node.js backend specific coding instructions for server-side development.'
-applyTo: '**.ts'
+applyTo: '**/*.ts'
 ---
 
 # TypeScript / Node.js Backend Instructions
 
-> **Note**: For React/TSX frontend code, see `react.instructions.md` which applies to `**.tsx` and `**.jsx` files.
+> **Note**: For React/TSX frontend code, see `react.instructions.md` which applies to `**/*.tsx` and `**/*.jsx` files.
 
 ## Code Style
 

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { execFileSync } from 'child_process';
 import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
@@ -10,6 +11,8 @@ import {
   copyBundledRuntimeAssets,
   copyCopilotCliAssets,
   COPILOT_CLI_ASSET_DIRS,
+  COPILOT_CLI_ASSET_FILES,
+  COPILOT_CLI_SUPPORT_DIRS,
   ESSENTIAL_DIRS,
   ESSENTIAL_FILES,
   RUNTIME_ASSET_DIRS,
@@ -157,10 +160,15 @@ describe('runInitializeLocalRuntimeCommand', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
 
     try {
-      for (const asset of COPILOT_CLI_ASSET_DIRS) {
+      for (const asset of [...COPILOT_CLI_ASSET_DIRS, ...COPILOT_CLI_SUPPORT_DIRS]) {
         const sourceDir = path.join(extensionRoot, asset.source);
         fs.mkdirSync(sourceDir, { recursive: true });
         fs.writeFileSync(path.join(sourceDir, 'marker.md'), `bundled ${asset.destination}\n`, 'utf8');
+      }
+      for (const asset of COPILOT_CLI_ASSET_FILES) {
+        const sourceFile = path.join(extensionRoot, asset.source);
+        fs.mkdirSync(path.dirname(sourceFile), { recursive: true });
+        fs.writeFileSync(sourceFile, `bundled ${asset.destination}\n`, 'utf8');
       }
 
       const customAgentsDir = path.join(workspaceRoot, '.github', 'agents');
@@ -174,14 +182,55 @@ describe('runInitializeLocalRuntimeCommand', () => {
         'user override\n',
       );
 
-      for (const asset of COPILOT_CLI_ASSET_DIRS.filter((a) => a.destination !== path.join('.github', 'agents'))) {
+      const seededDirs = [...COPILOT_CLI_ASSET_DIRS, ...COPILOT_CLI_SUPPORT_DIRS]
+        .filter((a) => a.destination !== path.join('.github', 'agents'));
+      for (const asset of seededDirs) {
         const seeded = path.join(workspaceRoot, asset.destination, 'marker.md');
         assert.ok(fs.existsSync(seeded), `expected ${asset.destination}/marker.md to exist`);
+        assert.strictEqual(fs.readFileSync(seeded, 'utf8'), `bundled ${asset.destination}\n`);
+      }
+
+      for (const asset of COPILOT_CLI_ASSET_FILES) {
+        const seeded = path.join(workspaceRoot, asset.destination);
+        assert.ok(fs.existsSync(seeded), `expected ${asset.destination} to exist`);
         assert.strictEqual(fs.readFileSync(seeded, 'utf8'), `bundled ${asset.destination}\n`);
       }
     } finally {
       fs.rmSync(extensionRoot, { recursive: true, force: true });
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('should seed every CLI asset from the pristine bundle seed tree', () => {
+    const seedPrefix = path.join('.github', 'agentx', 'seed');
+    const allAssets = [
+      ...COPILOT_CLI_ASSET_DIRS,
+      ...COPILOT_CLI_SUPPORT_DIRS,
+      ...COPILOT_CLI_ASSET_FILES,
+    ];
+
+    assert.ok(allAssets.length > 0);
+    for (const asset of allAssets) {
+      assert.ok(
+        asset.source.startsWith(seedPrefix),
+        `${asset.source} must be seeded from the pristine seed tree, not the link-rewritten bundle`,
+      );
+    }
+  });
+
+  it('should never seed host-owned repository files', () => {
+    const forbidden = ['workflows', 'ISSUE_TEMPLATE', 'CODEOWNERS', 'PULL_REQUEST_TEMPLATE', 'LICENSE', 'NOTICE'];
+    const destinations = [
+      ...COPILOT_CLI_ASSET_DIRS,
+      ...COPILOT_CLI_SUPPORT_DIRS,
+      ...COPILOT_CLI_ASSET_FILES,
+    ].map((a) => a.destination);
+
+    for (const name of forbidden) {
+      assert.ok(
+        !destinations.some((d) => d.split(/[\\/]/).includes(name)),
+        `${name} must not be seeded into a user workspace`,
+      );
     }
   });
 
@@ -215,7 +264,10 @@ describe('runInitializeLocalRuntimeCommand', () => {
     }
   });
 
-  it('should write local runtime wrappers that delegate to the installed extension runtime', () => {
+  it('should write local runtime wrappers that delegate to the installed extension runtime', function () {
+    // Spawns bash for syntax validation; process startup on Windows regularly
+    // exceeds the default 10s mocha budget.
+    this.timeout(120000);
     const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
 
@@ -230,16 +282,92 @@ describe('runInitializeLocalRuntimeCommand', () => {
       assert.ok(powerShellLauncher.includes('$env:AGENTX_WORKSPACE_ROOT = $workspaceRoot'));
       assert.ok(powerShellLauncher.includes(extensionRoot));
       assert.ok(powerShellLauncher.includes(path.join('.github', 'agentx', '.agentx', 'agentx.ps1')));
+      assert.ok(
+        powerShellLauncher.indexOf("Get-ChildItem -Path $searchRoot") <
+          powerShellLauncher.indexOf(`'${extensionRoot.replace(/'/g, "''")}'`),
+      );
+      assert.ok(powerShellLauncher.includes('| Sort-Object Version -Descending'));
 
       assert.ok(issuePowerShellLauncher.includes(path.join('.github', 'agentx', '.agentx', 'local-issue-manager.ps1')));
 
       assert.ok(bashLauncher.includes('export AGENTX_WORKSPACE_ROOT="$workspace_root"'));
       assert.ok(bashLauncher.includes(extensionRoot.replace(/\\/g, '/')));
       assert.ok(bashLauncher.includes('.github/agentx/.agentx/agentx.sh'));
+      assert.ok(
+        bashLauncher.indexOf("find \"$search_root\"") <
+          bashLauncher.indexOf(`candidate='${extensionRoot.replace(/\\/g, '/').replace(/'/g, `'"'"'`)}'`),
+      );
+      assert.ok(bashLauncher.includes("sort -t $'\\t' -k1,1r"));
+      execFileSync('bash', ['-n'], { input: bashLauncher });
 
       assert.ok(issueBashLauncher.includes('.github/agentx/.agentx/local-issue-manager.sh'));
     } finally {
       fs.rmSync(extensionRoot, { recursive: true, force: true });
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('should execute the newest installed runtime across VS Code channels', function () {
+    // Spawns pwsh/bash twice; process startup on Windows regularly exceeds the
+    // default 10s mocha budget.
+    this.timeout(120000);
+    const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-home-'));
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
+    const preferredExtensionRoot = path.join(homeRoot, 'preferred', 'jnpiyush.agentx-9.8.0');
+    const overrideExtensionRoot = path.join(homeRoot, 'override', 'jnpiyush.agentx-9.7.0');
+    const outputPath = path.join(homeRoot, 'selected-runtime.txt');
+
+    const createRuntime = (extensionRoot: string, version: string): void => {
+      const runtimeDirectory = path.join(extensionRoot, '.github', 'agentx', '.agentx');
+      fs.mkdirSync(runtimeDirectory, { recursive: true });
+      fs.writeFileSync(
+        path.join(runtimeDirectory, 'agentx.ps1'),
+        `param([string]$OutputPath)\nSet-Content -LiteralPath $OutputPath -Value '${version}' -NoNewline\n`,
+        'utf8',
+      );
+      fs.writeFileSync(
+        path.join(runtimeDirectory, 'agentx.sh'),
+        `#!/usr/bin/env bash\nprintf '%s' '${version}' > "$1"\n`,
+        { encoding: 'utf8', mode: 0o755 },
+      );
+    };
+
+    try {
+      createRuntime(path.join(homeRoot, '.vscode', 'extensions', 'jnpiyush.agentx-9.9.0'), '9.9.0');
+      createRuntime(path.join(homeRoot, '.vscode-insiders', 'extensions', 'jnpiyush.agentx-9.10.0'), '9.10.0');
+      createRuntime(preferredExtensionRoot, '9.8.0');
+      createRuntime(overrideExtensionRoot, '9.7.0');
+      writeWorkspaceRuntimeWrappers(preferredExtensionRoot, workspaceRoot);
+
+      const baseEnvironment = {
+        ...process.env,
+        HOME: homeRoot,
+        USERPROFILE: homeRoot,
+      };
+      const launcherPath = path.join(
+        workspaceRoot,
+        '.agentx',
+        process.platform === 'win32' ? 'agentx.ps1' : 'agentx.sh',
+      );
+      const command = process.platform === 'win32' ? 'pwsh' : 'bash';
+      const commandArguments = process.platform === 'win32'
+        ? ['-NoProfile', '-File', launcherPath, outputPath]
+        : [launcherPath, outputPath];
+
+      execFileSync(command, commandArguments, {
+        env: baseEnvironment,
+      });
+      assert.equal(fs.readFileSync(outputPath, 'utf8'), '9.10.0');
+
+      execFileSync(command, commandArguments, {
+        env: {
+          ...baseEnvironment,
+          AGENTX_EXTENSION_ROOT: overrideExtensionRoot,
+        },
+      });
+      assert.equal(fs.readFileSync(outputPath, 'utf8'), '9.7.0');
+    } finally {
+      fs.rmSync(homeRoot, { recursive: true, force: true });
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
   });
@@ -277,6 +405,11 @@ describe('runInitializeLocalRuntimeCommand', () => {
       assert.ok(fs.existsSync(path.join(workspaceRoot, '.agentx', 'local-issue-manager.ps1')));
       assert.ok(fs.existsSync(path.join(workspaceRoot, '.agentx', 'agentx.sh')));
       assert.ok(fs.existsSync(path.join(workspaceRoot, '.agentx', 'local-issue-manager.sh')));
+      const versionStamp = JSON.parse(
+        fs.readFileSync(path.join(workspaceRoot, '.agentx', 'version.json'), 'utf8'),
+      ) as Record<string, unknown>;
+      assert.deepEqual(Object.keys(versionStamp).sort(), ['installedAt', 'updatedAt', 'version']);
+      assert.equal(versionStamp.version, '8.4.7');
       sinon.assert.calledWith(infoStub, 'AgentX: Local runtime initialized.');
       assert.ok(executeCommandStub.calledWith('agentx.refresh'));
     } finally {

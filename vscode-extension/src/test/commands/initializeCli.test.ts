@@ -10,6 +10,8 @@ import {
   appendCliSymlinksToGitignore,
   CLI_ASSET_STATE_FILE,
   COPILOT_CLI_ASSET_DIRS,
+  COPILOT_CLI_ASSET_FILES,
+  COPILOT_CLI_SUPPORT_DIRS,
   createCopilotCliSymlinks,
   readCliAssetState,
   refreshCopilotCliSymlinks,
@@ -74,6 +76,46 @@ describe('Initialize CLI symlink helpers', () => {
     } finally {
       fs.rmSync(originalRoot, { recursive: true, force: true });
       fs.rmSync(replacementRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('never overwrites user-authored files when refreshing support assets', () => {
+    // refreshCopilotCliSymlinks runs on EVERY activation. The support trees and
+    // standalone files land in shared namespaces (docs/, scripts/, evaluation/,
+    // AGENTS.md, Skills.md) that users also author in, so a refresh must add
+    // missing files and never clobber existing content.
+    const bundleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-cli-bundle-'));
+
+    try {
+      const supportDir = COPILOT_CLI_SUPPORT_DIRS[0];
+      const bundledSupport = path.join(bundleRoot, supportDir.source);
+      fs.mkdirSync(bundledSupport, { recursive: true });
+      fs.writeFileSync(path.join(bundledSupport, 'shipped.md'), 'AGENTX SHIPPED', 'utf8');
+      fs.writeFileSync(path.join(bundledSupport, 'collision.md'), 'AGENTX SHIPPED', 'utf8');
+
+      const assetFile = COPILOT_CLI_ASSET_FILES[0];
+      const bundledFile = path.join(bundleRoot, assetFile.source);
+      fs.mkdirSync(path.dirname(bundledFile), { recursive: true });
+      fs.writeFileSync(bundledFile, 'AGENTX SHIPPED', 'utf8');
+
+      const userSupportFile = path.join(workspaceRoot, supportDir.destination, 'collision.md');
+      fs.mkdirSync(path.dirname(userSupportFile), { recursive: true });
+      fs.writeFileSync(userSupportFile, 'USER AUTHORED', 'utf8');
+
+      const userAssetFile = path.join(workspaceRoot, assetFile.destination);
+      fs.mkdirSync(path.dirname(userAssetFile), { recursive: true });
+      fs.writeFileSync(userAssetFile, 'USER AUTHORED', 'utf8');
+
+      refreshCopilotCliSymlinks(bundleRoot, workspaceRoot);
+
+      assert.equal(fs.readFileSync(userSupportFile, 'utf8'), 'USER AUTHORED');
+      assert.equal(fs.readFileSync(userAssetFile, 'utf8'), 'USER AUTHORED');
+      assert.equal(
+        fs.readFileSync(path.join(workspaceRoot, supportDir.destination, 'shipped.md'), 'utf8'),
+        'AGENTX SHIPPED',
+      );
+    } finally {
+      fs.rmSync(bundleRoot, { recursive: true, force: true });
     }
   });
 
@@ -154,7 +196,10 @@ describe('runInitializeCliCommand', () => {
     assert.ok(state);
     assert.equal(state?.mode, 'symlink');
     assert.equal(state?.extensionRoot, '/test/extension');
-    assert.deepEqual(state?.destinations, COPILOT_CLI_ASSET_DIRS.map((asset) => asset.destination));
+    assert.deepEqual(
+      state?.destinations,
+      [...COPILOT_CLI_ASSET_DIRS, ...COPILOT_CLI_SUPPORT_DIRS, ...COPILOT_CLI_ASSET_FILES].map((asset) => asset.destination),
+    );
     assert.ok(fs.existsSync(path.join(tempRoot, CLI_ASSET_STATE_FILE)));
   });
 

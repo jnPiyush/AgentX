@@ -375,12 +375,73 @@ if ($previousVersion -and $previousVersion -ne "9.2.0") {
   }
   Write-OK "User data backed up"
 
-  # Remove all AgentX-managed directories (full uninstall)
-  $agentxDirs = @(".agentx", ".github", ".claude", "scripts", "packs")
-  foreach ($d in $agentxDirs) {
+  # Read the previous install manifest BEFORE removing .agentx/ so files AgentX
+  # installed into shared directories can be removed individually.
+  $trackedPaths = @()
+  $manifestPath = ".agentx/install-manifest.json"
+  if (Test-Path $manifestPath) {
+   try {
+    $trackedPaths = @((Get-Content $manifestPath -Raw -Encoding utf8 | ConvertFrom-Json).files.path)
+   } catch {
+    Write-Verbose "Could not read install manifest: $($_.Exception.Message)"
+   }
+  }
+
+  # region agentx-upgrade-removal
+  # Remove AgentX-owned paths only.
+  #
+  # SAFETY: `.agentx/` is the only directory AgentX owns outright (user data in it
+  # was backed up above). Every other location is a host-standard shared namespace
+  # where users legitimately keep their own files -- `.github/instructions`,
+  # `.github/skills`, `.github/prompts`, `.claude/commands`, `scripts/`, `packs/`.
+  # Those are cleaned per-file from the previous install manifest so that any
+  # untracked, user-authored file always survives the upgrade.
+  $agentxOwnedPaths = @(
+   ".agentx",
+   ".github/AGENT-PROTOCOL.md",
+   ".github/agent-delegation.md",
+   ".github/agentx-security.yml",
+   ".github/copilot-instructions.md",
+   ".cursor/mcp.json"
+  )
+  foreach ($d in $agentxOwnedPaths) {
    if (Test-Path $d) { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
   }
-  Write-OK "AgentX v$previousVersion uninstalled"
+
+  # Remove manifest-tracked files, leaving every untracked (user-authored) file
+  # intact. Manifest paths come from the target workspace and are therefore
+  # untrusted: reject rooted paths and any traversal segment before deleting.
+  $workspaceRoot = (Resolve-Path .).Path
+  foreach ($tracked in $trackedPaths) {
+   if ([string]::IsNullOrWhiteSpace($tracked)) { continue }
+   $normalized = ($tracked -replace '\\', '/').Trim()
+   if ([System.IO.Path]::IsPathRooted($normalized)) { continue }
+   if (($normalized -split '/') -contains '..') { continue }
+
+   $candidate = [System.IO.Path]::GetFullPath((Join-Path $workspaceRoot $normalized))
+   $containmentRoot = $workspaceRoot.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+   if (-not $candidate.StartsWith($containmentRoot, [StringComparison]::OrdinalIgnoreCase)) { continue }
+   if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+    Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
+   }
+  }
+
+  # Prune AgentX customization directories that the per-file cleanup emptied.
+  $prunableDirs = @(
+   ".github/agents", ".github/instructions", ".github/prompts", ".github/skills",
+   ".github/templates", ".github/schemas", ".github/registries", ".github/hooks",
+   ".github/scripts", ".claude/agents", ".claude/commands", ".claude/skills",
+   ".cursor/commands", ".cursor/rules"
+  )
+  foreach ($d in $prunableDirs) {
+   if (-not (Test-Path $d -PathType Container)) { continue }
+   if (-not (Get-ChildItem -LiteralPath $d -Recurse -File -Force -ErrorAction SilentlyContinue)) {
+    Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+   }
+  }
+  # endregion agentx-upgrade-removal
+
+  Write-OK "AgentX v$previousVersion files removed (user-owned files preserved)"
 
   # Restore user data after removal
   foreach ($up in $userPaths) {

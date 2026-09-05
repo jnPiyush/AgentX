@@ -37,13 +37,27 @@ function discoverAgents() {
     return results.sort((a, b) => a.path.localeCompare(b.path));
 }
 
-// --- Discover chatInstructions ---
+// --- Discover chatInstructions (recursive: nested domain instructions such as
+// instructions/ado/*.instructions.md must be contributed too, otherwise they
+// ship inside the VSIX but are never registered with the host) ---
 function discoverInstructions() {
     const dir = path.join(githubDir, 'instructions');
     const results = [];
     if (fs.existsSync(dir)) {
-        for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.instructions.md')).sort()) {
-            results.push({ path: PREFIX + '/instructions/' + f });
+        const found = [];
+        function walk(current) {
+            for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+                const fullPath = path.join(current, entry.name);
+                if (entry.isDirectory()) {
+                    walk(fullPath);
+                } else if (entry.name.endsWith('.instructions.md')) {
+                    found.push(path.relative(dir, fullPath).replace(/\\/g, '/'));
+                }
+            }
+        }
+        walk(dir);
+        for (const rel of found.sort()) {
+            results.push({ path: PREFIX + '/instructions/' + rel });
         }
     }
     // Global instruction files outside instructions/ directory

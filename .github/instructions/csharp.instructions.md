@@ -1,6 +1,6 @@
 ---
 description: 'C# and .NET specific coding instructions for production code.'
-applyTo: '**.cs, **.csx'
+applyTo: '**/*.cs, **/*.csx'
 ---
 
 # C# / .NET Instructions

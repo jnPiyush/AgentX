@@ -1,38 +1,60 @@
 {
+  "version": 1,
   "hooks": {
-    "copilot-agent:sessionStart": [
+    "sessionStart": [
       {
-        "command": "node",
-        "args": [".github/hooks/scripts/signal-capture.js"],
-        "description": "Record session start marker for AgentX signal capture"
+        "powershell": "node .github/hooks/scripts/signal-capture.js sessionStart",
+        "bash": "node .github/hooks/scripts/signal-capture.js sessionStart",
+        "type": "command",
+        "timeoutSec": 10
       }
     ],
-    "copilot-agent:sessionEnd": [
+    "UserPromptSubmit": [
       {
-        "command": "node",
-        "args": [".github/hooks/scripts/signal-capture.js"],
-        "description": "Record session end marker and finalize signal capture"
+        "powershell": "node .github/hooks/scripts/signal-capture.js UserPromptSubmit",
+        "bash": "node .github/hooks/scripts/signal-capture.js UserPromptSubmit",
+        "type": "command",
+        "timeoutSec": 10
       }
     ],
-    "copilot-agent:postToolUse": [
+    "preToolUse": [
       {
-        "command": "node",
-        "args": [".github/hooks/scripts/signal-capture.js"],
-        "description": "Capture tool usage data for pattern discovery"
+        "powershell": "node .github/hooks/scripts/signal-capture.js preToolUse",
+        "bash": "node .github/hooks/scripts/signal-capture.js preToolUse",
+        "type": "command",
+        "timeoutSec": 10
       }
     ],
-    "copilot-agent:userPromptSubmitted": [
+    "postToolUse": [
       {
-        "command": "node",
-        "args": [".github/hooks/scripts/signal-capture.js"],
-        "description": "Capture user prompt context for session correlation"
+        "powershell": "node .github/hooks/scripts/signal-capture.js postToolUse",
+        "bash": "node .github/hooks/scripts/signal-capture.js postToolUse",
+        "type": "command",
+        "timeoutSec": 10
       }
     ],
-    "copilot-agent:errorOccurred": [
+    "agentStop": [
       {
-        "command": "node",
-        "args": [".github/hooks/scripts/signal-capture.js"],
-        "description": "Capture error patterns for automated discovery"
+        "powershell": "node .github/hooks/scripts/signal-capture.js agentStop",
+        "bash": "node .github/hooks/scripts/signal-capture.js agentStop",
+        "type": "command",
+        "timeoutSec": 10
+      }
+    ],
+    "sessionEnd": [
+      {
+        "powershell": "node .github/hooks/scripts/signal-capture.js sessionEnd",
+        "bash": "node .github/hooks/scripts/signal-capture.js sessionEnd",
+        "type": "command",
+        "timeoutSec": 10
+      }
+    ],
+    "errorOccurred": [
+      {
+        "powershell": "node .github/hooks/scripts/signal-capture.js errorOccurred",
+        "bash": "node .github/hooks/scripts/signal-capture.js errorOccurred",
+        "type": "command",
+        "timeoutSec": 10
       }
     ]
   }

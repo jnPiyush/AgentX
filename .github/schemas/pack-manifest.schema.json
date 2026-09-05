@@ -32,7 +32,7 @@
     },
     "artifacts": {
       "type": "object",
-      "description": "Artifact paths grouped by type.",
+      "description": "Artifact paths grouped by type. Each value is a list of repository-relative paths; directory entries are installed as whole trees.",
       "properties": {
         "agents": {
           "type": "array",
@@ -49,10 +49,45 @@
           "items": { "type": "string" },
           "description": "Relative paths to skill SKILL.md directories."
         },
+        "featuredSkills": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Highlighted subset of skills surfaced in pack documentation."
+        },
+        "prompts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to .prompt.md files."
+        },
         "templates": {
           "type": "array",
           "items": { "type": "string" },
           "description": "Relative paths to template .md files."
+        },
+        "schemas": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to JSON Schema files."
+        },
+        "registries": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to generated registry files or their directory."
+        },
+        "hooks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to lifecycle hook configuration or its directory."
+        },
+        "plugins": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to bundled CLI plugin directories."
+        },
+        "guides": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to guide documentation directories."
         },
         "workflows": {
           "type": "array",
@@ -63,9 +98,53 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Relative paths to executable scripts."
+        },
+        "cli": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to workspace CLI wrapper entry points."
+        },
+        "runtime": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to the bundled hidden CLI runtime files."
+        },
+        "supporting": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to supporting reference documents."
         }
       },
       "additionalProperties": false
+    },
+    "platform": {
+      "type": "string",
+      "description": "Target host platform for this pack.",
+      "enum": ["copilot-cli", "vscode", "power-platform", "any"]
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier."
+    },
+    "prerequisites": {
+      "type": "object",
+      "description": "Host and tooling versions required before installing.",
+      "additionalProperties": { "type": "string" }
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "Human-readable summary of what the pack enables.",
+      "additionalProperties": { "type": "string" }
+    },
+    "limitations": {
+      "type": "object",
+      "description": "Human-readable summary of what the pack does not provide.",
+      "additionalProperties": { "type": "string" }
+    },
+    "install": {
+      "type": "object",
+      "description": "Documented install entry points.",
+      "additionalProperties": { "type": "string" }
     },
     "dependencies": {
       "type": "array",

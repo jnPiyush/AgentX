@@ -34,7 +34,11 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)] [ValidateSet('generate','verify','list')] [string]$Action,
-    [string]$ManifestPath = '.agentx/install-manifest.json'
+    [string]$ManifestPath = '.agentx/install-manifest.json',
+    # Release gate: also fail when the manifest version is stale or tracked files
+    # have drifted. Plain `verify` stays advisory because drift in an installed
+    # workspace is expected -- it is how user-modified files are detected.
+    [switch]$Strict
 )
 
 $ErrorActionPreference = 'Stop'
@@ -58,6 +62,10 @@ function Get-ManifestEntries {
                                 ($_.FullName -replace '\\','/') -notlike '*/.git/*' -and
                                 ($_.FullName -replace '\\','/') -notlike '*/dist/*' -and
                                 ($_.FullName -replace '\\','/') -notlike '*/out/*' -and
+                                # The VS Code extension bundle is a build artifact, not part of
+                                # an installed workspace. Including it double-counts every agent,
+                                # skill, prompt and template.
+                                ($_.FullName -replace '\\','/') -notlike '*/vscode-extension/*' -and
                                 ($_.FullName -replace '\\','/') -notlike '*/coverage/*' }
         $rootPath = (Resolve-Path .).Path
         foreach ($f in $files) {
@@ -81,6 +89,24 @@ function Get-ManifestEntries {
     Add-Group -Pattern '.github/templates/*.md' -Category 'template'
     Add-Group -Pattern '.github/prompts/*.prompt.md' -Category 'prompt'
     Add-Group -Pattern '.github/instructions/*.instructions.md' -Category 'instruction'
+    Add-Group -Pattern '.github/schemas/*.json' -Category 'schema'
+    Add-Group -Pattern '.github/registries/*.json' -Category 'registry'
+    Add-Group -Pattern '.github/hooks/*.json' -Category 'hook'
+    Add-Group -Pattern '.github/hooks/scripts/*.js' -Category 'hook'
+    # Shared directories: tracking these is load-bearing. The installer's upgrade
+    # path removes AgentX files from scripts/ and packs/ by manifest entry so
+    # user-authored files in the same directories are never deleted.
+    Add-Group -Pattern 'scripts/*.ps1' -Category 'script'
+    Add-Group -Pattern 'scripts/*.js' -Category 'script'
+    Add-Group -Pattern 'scripts/modules/*.psm1' -Category 'script'
+    Add-Group -Pattern 'packs/*/manifest.json' -Category 'pack'
+    Add-Group -Pattern 'packs/*/install.ps1' -Category 'pack'
+    Add-Group -Pattern 'packs/*/install-user.ps1' -Category 'pack'
+    Add-Group -Pattern 'packs/*/install.sh' -Category 'pack'
+    Add-Group -Pattern 'packs/*/README.md' -Category 'pack'
+    Add-Group -Pattern 'packs/*/agents/*.agent.md' -Category 'pack'
+    Add-Group -Pattern 'packs/*/templates/*.md' -Category 'pack'
+    Add-Group -Pattern '.github/security/*.json' -Category 'config'
 
     $singletons = @(
         @{ path = '.agentx/agentx.ps1';        category = 'cli' },
@@ -126,6 +152,11 @@ switch ($Action) {
             if ($h -ne $e.sha256) { $modified.Add($e.path) }
         }
         Write-Host ("[manifest] Version: {0}  Files: {1}" -f $manifest.version, $manifest.files.Count) -ForegroundColor Cyan
+        $currentVersion = Get-AgentXVersion
+        $versionStale = ($currentVersion -ne 'unknown' -and $manifest.version -ne $currentVersion)
+        if ($versionStale) {
+            Write-Host ("  [WARN] Manifest version {0} does not match workspace version {1}. Run -Action generate." -f $manifest.version, $currentVersion) -ForegroundColor Yellow
+        }
         Write-Host ("  Missing:       {0}" -f $missing.Count)
         Write-Host ("  User-modified: {0}" -f $modified.Count)
         if ($missing.Count) {
@@ -138,7 +169,15 @@ switch ($Action) {
             foreach ($m in ($modified | Select-Object -First 20)) { Write-Host "  $m" }
             if ($modified.Count -gt 20) { Write-Host ("  ... ({0} more)" -f ($modified.Count - 20)) }
         }
-        if ($missing.Count -eq 0 -and $modified.Count -eq 0) { Write-Host "  Status: clean" -ForegroundColor Green }
+        if ($missing.Count -eq 0 -and $modified.Count -eq 0 -and -not $versionStale) { Write-Host "  Status: clean" -ForegroundColor Green }
+
+        if ($Strict) {
+            $strictFailed = ($missing.Count -gt 0) -or ($modified.Count -gt 0) -or $versionStale
+            if ($strictFailed) {
+                Write-Host "[manifest] Strict verification failed: regenerate the manifest before release." -ForegroundColor Red
+            }
+            exit ($strictFailed ? 1 : 0)
+        }
         exit ($missing.Count -gt 0 ? 1 : 0)
     }
 

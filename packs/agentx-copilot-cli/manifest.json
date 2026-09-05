@@ -1,7 +1,7 @@
 {
   "name": "agentx-copilot-cli",
   "version": "9.2.0",
-  "description": "AgentX Copilot CLI plugin -- installs agents, skills, instructions, and prompts into any workspace for GitHub Copilot CLI usage. Separate from the core AgentX VS Code extension.",
+  "description": "AgentX Copilot CLI pack -- installs agents, skills, instructions, prompts, templates, schemas and hooks into any workspace for GitHub Copilot CLI usage. Separate from the core AgentX VS Code extension.",
   "maturity": "stable",
   "platform": "copilot-cli",
   "license": "Apache-2.0",
@@ -49,28 +49,23 @@
       ".github/agents/internal/prototype-auditor.agent.md"
     ],
     "instructions": [
+      ".github/instructions/ado/ado-backlog-sprint.instructions.md",
+      ".github/instructions/ado/ado-backlog-triage.instructions.md",
+      ".github/instructions/ado/ado-create-pull-request.instructions.md",
+      ".github/instructions/ado/ado-get-build-info.instructions.md",
+      ".github/instructions/ado/ado-interaction-templates.instructions.md",
+      ".github/instructions/ado/ado-update-wit-items.instructions.md",
+      ".github/instructions/ado/ado-wit-discovery.instructions.md",
+      ".github/instructions/ado/ado-wit-planning.instructions.md",
       ".github/instructions/ai.instructions.md",
       ".github/instructions/csharp.instructions.md",
-      ".github/instructions/python.instructions.md",
-      ".github/instructions/typescript.instructions.md",
-      ".github/instructions/react.instructions.md",
       ".github/instructions/memory.instructions.md",
-      ".github/instructions/project-conventions.instructions.md"
+      ".github/instructions/project-conventions.instructions.md",
+      ".github/instructions/python.instructions.md",
+      ".github/instructions/react.instructions.md",
+      ".github/instructions/typescript.instructions.md"
     ],
     "prompts": [
-      ".github/prompts/ai-agent.prompt.md",
-      ".github/prompts/architecture.prompt.md",
-      ".github/prompts/bug-triage.prompt.md",
-      ".github/prompts/code-review.prompt.md",
-      ".github/prompts/devops.prompt.md",
-      ".github/prompts/doc-gardener.prompt.md",
-      ".github/prompts/evaluation.prompt.md",
-      ".github/prompts/prd-gen.prompt.md",
-      ".github/prompts/roadmap-gen.prompt.md",
-      ".github/prompts/refactor.prompt.md",
-      ".github/prompts/security-review.prompt.md",
-      ".github/prompts/test-gen.prompt.md",
-      ".github/prompts/ux-design.prompt.md",
       ".github/prompts/ado-add-work-item.prompt.md",
       ".github/prompts/ado-create-pull-request.prompt.md",
       ".github/prompts/ado-discover-work-items.prompt.md",
@@ -78,37 +73,77 @@
       ".github/prompts/ado-process-my-work-items-for-task-planning.prompt.md",
       ".github/prompts/ado-sprint-plan.prompt.md",
       ".github/prompts/ado-triage-work-items.prompt.md",
-      ".github/prompts/ado-update-wit-items.prompt.md"
+      ".github/prompts/ado-update-wit-items.prompt.md",
+      ".github/prompts/ai-agent.prompt.md",
+      ".github/prompts/architecture.prompt.md",
+      ".github/prompts/bug-triage.prompt.md",
+      ".github/prompts/code-review.prompt.md",
+      ".github/prompts/cowork-plugin-create.prompt.md",
+      ".github/prompts/cowork-skill-create.prompt.md",
+      ".github/prompts/devops.prompt.md",
+      ".github/prompts/doc-gardener.prompt.md",
+      ".github/prompts/evaluation.prompt.md",
+      ".github/prompts/prd-gen.prompt.md",
+      ".github/prompts/refactor.prompt.md",
+      ".github/prompts/roadmap-gen.prompt.md",
+      ".github/prompts/security-review.prompt.md",
+      ".github/prompts/test-gen.prompt.md",
+      ".github/prompts/ux-design.prompt.md"
     ],
     "schemas": [
-      ".github/schemas/handoff-message.schema.json"
+      ".github/schemas/agent-frontmatter.schema.json",
+      ".github/schemas/clarification-ledger.schema.json",
+      ".github/schemas/handoff-message.schema.json",
+      ".github/schemas/instruction-frontmatter.schema.json",
+      ".github/schemas/pack-manifest.schema.json",
+      ".github/schemas/plugin-manifest.schema.json",
+      ".github/schemas/skill-frontmatter.schema.json"
     ],
     "scripts": [
-      "scripts/score-output.ps1",
-      "scripts/score-code-quality.ps1",
+      "scripts/budget.ps1",
+      "scripts/scrub.ps1",
+      "scripts/dream.ps1",
+      "scripts/research.ps1",
+      "scripts/ship.ps1",
+      "scripts/takeoff.ps1",
+      "scripts/land.ps1",
+      "scripts/ghcp-review-resolve.ps1",
+      "scripts/install-manifest.ps1",
+      "scripts/scan.ps1",
+      "scripts/stocktake.ps1",
+      "scripts/model-route.ps1",
+      "scripts/model-council.ps1",
+      "scripts/check-harness-compliance.ps1",
+      "scripts/validate-frontmatter.ps1",
+      "scripts/validate-references.ps1",
       "scripts/validate-handoff.ps1",
+      "scripts/score-output.ps1",
+      "scripts/generate-registries.ps1",
+      "scripts/token-counter.ps1",
+      "scripts/score-code-quality.ps1",
       "scripts/score-skill.ps1",
       "scripts/validate-skill.ps1",
       "scripts/validate-changed-skills.ps1",
-      "scripts/stocktake.ps1",
       "scripts/parse-yaml.js",
       "evaluation/rubrics/skill-quality.md",
       "evaluation/rubrics/code-quality.md"
     ],
     "templates": [
       ".github/templates/ADR-TEMPLATE.md",
+      ".github/templates/ARCH-REVIEW-TEMPLATE.md",
+      ".github/templates/BACKLOG-TEMPLATE.md",
+      ".github/templates/CONTRACT-TEMPLATE.md",
+      ".github/templates/DESIGN-SYSTEM-TEMPLATE.md",
+      ".github/templates/EVIDENCE-SUMMARY-TEMPLATE.md",
       ".github/templates/EXEC-PLAN-TEMPLATE.md",
+      ".github/templates/LEARNING-TEMPLATE.md",
       ".github/templates/PRD-TEMPLATE.md",
       ".github/templates/PROGRESS-TEMPLATE.md",
-      ".github/templates/ROADMAP-TEMPLATE.md",
       ".github/templates/REVIEW-TEMPLATE.md",
-      ".github/templates/ARCH-REVIEW-TEMPLATE.md",
+      ".github/templates/ROADMAP-TEMPLATE.md",
       ".github/templates/SECURITY-PLAN-TEMPLATE.md",
       ".github/templates/SPEC-TEMPLATE.md",
-      ".github/templates/UX-TEMPLATE.md",
-      ".github/templates/CONTRACT-TEMPLATE.md",
-      ".github/templates/EVIDENCE-SUMMARY-TEMPLATE.md",
-      ".github/templates/BACKLOG-TEMPLATE.md"
+      ".github/templates/UX-TEMPLATE.md"
     ],
     "skills": [
       ".github/skills"
@@ -202,6 +237,8 @@
       ".github/agentx/.agentx/local-issue-manager.sh"
     ],
     "supporting": [
+      ".token-limits.json",
+      ".github/AGENT-PROTOCOL.md",
       ".github/copilot-instructions.md",
       ".github/agent-delegation.md",
       ".github/schemas/agent-frontmatter.schema.json",
@@ -214,27 +251,48 @@
       "docs/GOLDEN_PRINCIPLES.md",
       "docs/QUALITY_SCORE.md",
       "docs/tech-debt-tracker.md",
-      "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md"
+      "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md",
+      "docs/artifacts/adr/ADR-342.md",
+      "docs/artifacts/adr/ADR-341.md",
+      "docs/artifacts/specs/SPEC-341.md",
+      "docs/execution/plans/EXEC-PLAN-341-self-hosted-runtime.md",
+      "docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md",
+      "CONTRIBUTING.md",
+      "evaluation/baseline.json"
+    ],
+    "hooks": [
+      ".github/hooks"
+    ],
+    "registries": [
+      ".github/registries"
+    ],
+    "plugins": [
+      ".agentx/plugins"
+    ],
+    "guides": [
+      "docs/guides"
     ]
   },
   "capabilities": {
     "agentOrchestration": "Copilot CLI agent definitions with handoffs and body instructions",
     "skillLibrary": "134 production code skills across 14 categories",
-    "instructionFiles": "7 auto-applied instruction files for language-specific patterns",
-    "promptTemplates": "23 reusable prompt templates for common workflows",
+    "instructionFiles": "15 auto-applied instruction files for language-specific and domain patterns",
+    "promptTemplates": "23 reference prompt templates (Copilot CLI does not execute prompt files)",
     "cliUtilities": "Workspace wrapper scripts plus a bundled hidden runtime for issue tracking, loop management, and workflow",
-    "iterativeLoop": "Quality loop enforcement via CLI hard gate (Layer 3)"
+    "iterativeLoop": "Quality loop enforcement via CLI hard gate (Layer 3)",
+    "nativePlugin": "Installable as a native Copilot CLI plugin via the repository-root plugin.json",
+    "hooks": "Copilot CLI lifecycle hooks for signal capture and workflow enforcement"
   },
   "limitations": {
-    "noRunSubagent": "Copilot CLI does not support runSubagent -- agents run standalone, no agent chaining",
-    "noMode1": "Mode 1 (Agent X hub orchestration) is not available -- agents operate independently",
     "noSidebar": "No VS Code sidebar views -- use CLI commands directly",
-    "layerCoverage": "Quality enforcement: Layer 2 (body instructions) + Layer 3 (CLI gate). Layer 1 (Copilot native loop) depends on CLI version."
+    "layerCoverage": "Quality enforcement: Layer 2 (body instructions) + Layer 3 (CLI gate) + lifecycle hooks",
+    "noPromptExecution": "Copilot CLI does not execute prompt files -- prompts install as reference templates; use agents or skills for executable behaviour"
   },
   "install": {
     "powershell": "pwsh packs/agentx-copilot-cli/install.ps1",
     "bash": "bash packs/agentx-copilot-cli/install.sh",
-    "note": "Installer copies agents, skills, instructions, prompts, and optional wrapper-backed CLI runtime assets into the target workspace."
+    "note": "Installer copies agents, skills, instructions, prompts, and optional wrapper-backed CLI runtime assets into the target workspace.",
+    "plugin": "copilot plugin install jnPiyush/AgentX"
   },
   "dependencies": []
 }

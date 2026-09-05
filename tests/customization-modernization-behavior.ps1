@@ -56,10 +56,22 @@ Assert-True (
 foreach ($file in $agentFiles) {
     $relative = [IO.Path]::GetRelativePath($agentRoot, $file.FullName)
     $bundled = Join-Path $bundleAgentRoot $relative
-    $sameHash = (Test-Path -LiteralPath $bundled -PathType Leaf) -and
-        ((Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash -ceq
-            (Get-FileHash -LiteralPath $bundled -Algorithm SHA256).Hash)
-    Assert-True $sameHash "$relative matches the extension bundle"
+
+    # The bundle intentionally rewrites a few repository-relative links so they
+    # resolve inside the extension's nested layout (see bundledMarkdownRewrites in
+    # vscode-extension/scripts/copy-assets.js). Compare normalized content so the
+    # test verifies semantic equivalence instead of failing on those rewrites.
+    $matchesBundle = $false
+    if (Test-Path -LiteralPath $bundled -PathType Leaf) {
+        $canonicalText = (Get-Content -LiteralPath $file.FullName -Raw -Encoding utf8) -replace "`r`n", "`n"
+        $bundledText = (Get-Content -LiteralPath $bundled -Raw -Encoding utf8) -replace "`r`n", "`n"
+        $normalizedCanonical = $canonicalText.
+            Replace('(../../.agentx/', '(../.agentx/').
+            Replace('(../../packs/', '(../packs/').
+            Replace('(../../evaluation/', '(../evaluation/')
+        $matchesBundle = $normalizedCanonical -ceq $bundledText
+    }
+    Assert-True $matchesBundle "$relative matches the extension bundle"
     $contributedPath = './.github/agentx/agents/' + $relative.Replace('\', '/')
     Assert-True ($contributedPath -in $contributedAgentPaths) "$relative is contributed to the host"
 }

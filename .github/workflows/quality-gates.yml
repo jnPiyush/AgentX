@@ -116,9 +116,85 @@ jobs:
         run: |
           ./scripts/check-harness-compliance.ps1 -BaseRef "${{ github.base_ref }}"
 
+      - name: Token Budget Report
+        shell: pwsh
+        env:
+          TOKEN_EVENT_NAME: ${{ github.event_name }}
+          TOKEN_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          $eventName = $env:TOKEN_EVENT_NAME
+          $baselineRef = $env:TOKEN_BASE_SHA
+          $reportArgs = @('-Action', 'report', '-Json')
+          $mode = 'full-check'
+          if ($eventName -eq 'pull_request' -and $baselineRef) {
+            $mode = 'no-regression'
+            $reportArgs += @('-BaselineRef', $baselineRef)
+          } elseif ($eventName -eq 'pull_request') {
+            Write-Host '::warning::No trusted PR base SHA was provided; falling back to the full token budget report.'
+          }
+          Write-Host "Token budget report mode: $mode"
+          if ($baselineRef) {
+            Write-Host "Trusted PR base SHA: $baselineRef"
+          }
+          $rawReport = & pwsh -NoProfile -NonInteractive -File ./scripts/token-counter.ps1 @reportArgs
+          $reportExitCode = $LASTEXITCODE
+          $reportPath = Join-Path $env:RUNNER_TEMP 'token-budget-report.json'
+          $serializedReport = ($rawReport | Out-String).Trim()
+          [System.IO.File]::WriteAllText($reportPath, $serializedReport, [System.Text.UTF8Encoding]::new($false))
+          if ([string]::IsNullOrWhiteSpace($serializedReport)) {
+            throw 'Token budget report produced no JSON output.'
+          }
+          $report = $serializedReport | ConvertFrom-Json -Depth 10
+          Write-Host "Full token report saved to $reportPath"
+          Write-Host "Coverage: $($report.checkedFiles)/$($report.scannedFiles); total overages: $(@($report.violations).Count); new/growing: $(@($report.regressions).Count)"
+          $summary = @(
+            '## Token Budget',
+            '',
+            "- Mode: $mode",
+            $(if ($baselineRef) { '- Trusted baseline: ' + $baselineRef } else { '- Trusted baseline: _none_' }),
+            "- Status: $($report.status)",
+            "- Total overages (all): $(@($report.violations).Count)",
+            "- Regressions (new/grown only): $(@($report.regressions).Count)",
+            "- Scanned files: $($report.scannedFiles)",
+            "- Checked files: $($report.checkedFiles)"
+          )
+          if ($mode -eq 'no-regression' -and @($report.violations).Count -gt 0 -and @($report.regressions).Count -eq 0) {
+            $summary += '- Inherited overages remain visible; the PR gate enforces no regression against the trusted base SHA.'
+          }
+          Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value ($summary -join "`n")
+          if ($reportExitCode -ne 0) {
+            exit $reportExitCode
+          }
+
+      - name: Upload Token Budget Report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: token-budget-report
+          path: ${{ runner.temp }}/token-budget-report.json
+          if-no-files-found: error
+
       - name: Token Budget Check
         shell: pwsh
-        run: ./scripts/token-counter.ps1 -Action check
+        env:
+          TOKEN_EVENT_NAME: ${{ github.event_name }}
+          TOKEN_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          $eventName = $env:TOKEN_EVENT_NAME
+          $baselineRef = $env:TOKEN_BASE_SHA
+          $checkArgs = @('-Action', 'check')
+          if ($eventName -eq 'pull_request' -and $baselineRef) {
+            Write-Host 'Token budget gate mode: no-regression'
+            Write-Host "Trusted PR base SHA: $baselineRef"
+            $checkArgs += @('-BaselineRef', $baselineRef)
+          } elseif ($eventName -eq 'pull_request') {
+            Write-Host '::warning::No trusted PR base SHA was provided; falling back to the full token budget gate.'
+            Write-Host 'Token budget gate mode: full-check'
+          } else {
+            Write-Host 'Token budget gate mode: full-check'
+          }
+          & pwsh -NoProfile -NonInteractive -File ./scripts/token-counter.ps1 @checkArgs
+          exit $LASTEXITCODE
 
       - name: Skill Validation Pipeline
         shell: pwsh
@@ -131,6 +207,61 @@ jobs:
       - name: Skill Rubric Behavior
         shell: pwsh
         run: ./tests/skill-rubric-behavior.ps1
+
+      - name: Deterministic Regression Suite
+        shell: pwsh
+        run: |
+          $regressionSuites = @(
+            'tests/token-budget-behavior.ps1',
+            'tests/token-budget-ci-behavior.ps1',
+            'tests/model-route-behavior.ps1',
+            'tests/budget-behavior.ps1',
+            'tests/scrub-behavior.ps1',
+            'tests/code-quality-rubric-behavior.ps1'
+          )
+          foreach ($suite in $regressionSuites) {
+            if (-not (Test-Path -LiteralPath $suite)) {
+              throw "Required regression suite script not found: $suite"
+            }
+            Write-Host "Running $suite"
+            & pwsh -NoProfile -File $suite
+            $suiteExitCode = $LASTEXITCODE
+            if ($suiteExitCode -ne 0) {
+              exit $suiteExitCode
+            }
+          }
+
+      - name: Copilot Host Compatibility
+        shell: pwsh
+        run: |
+          # Build the extension asset bundle first: the seed-provenance and
+          # bundle-completeness assertions validate generated output that is
+          # gitignored, so without this step they would silently skip.
+          Push-Location vscode-extension
+          try {
+            npm ci --no-audit --no-fund
+            $npmCiExitCode = $LASTEXITCODE
+            if ($npmCiExitCode -ne 0) {
+              exit $npmCiExitCode
+            }
+            node scripts/copy-assets.js
+            $copyAssetsExitCode = $LASTEXITCODE
+            if ($copyAssetsExitCode -ne 0) {
+              exit $copyAssetsExitCode
+            }
+          } finally {
+            Pop-Location
+          }
+          & pwsh -NoProfile -File ./tests/copilot-host-compatibility-behavior.ps1
+          $copilotHostCompatibilityExitCode = $LASTEXITCODE
+          if ($copilotHostCompatibilityExitCode -ne 0) {
+            exit $copilotHostCompatibilityExitCode
+          }
+          & pwsh -NoProfile -File ./tests/harness-distribution-behavior.ps1
+          $harnessDistributionExitCode = $LASTEXITCODE
+          if ($harnessDistributionExitCode -ne 0) {
+            exit $harnessDistributionExitCode
+          }
 
       - name: Version Stamper Behavior
         run: node tests/stamp-version-behavior.js

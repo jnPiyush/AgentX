@@ -231,6 +231,33 @@ function syncBundledAssets(version) {
       relativePath: 'vscode-extension/.github/agentx/packs/agentx-copilot-cli/install.sh',
       label: 'bundled Copilot CLI bash installer',
     },
+    // The seed tree is what `AgentX: Initialize CLI` copies into user
+    // workspaces. A silently empty or partial seed would still package, so
+    // assert its load-bearing entry points here.
+    {
+      relativePath: 'vscode-extension/.github/agentx/seed/.github/AGENT-PROTOCOL.md',
+      label: 'seeded cross-cutting protocol',
+    },
+    {
+      relativePath: 'vscode-extension/.github/agentx/seed/.github/agents/engineer.agent.md',
+      label: 'seeded agent definition',
+    },
+    {
+      relativePath: 'vscode-extension/.github/agentx/seed/.github/hooks/copilot-hooks.json',
+      label: 'seeded Copilot CLI hook configuration',
+    },
+    {
+      relativePath: 'vscode-extension/.github/agentx/seed/scripts/validate-handoff.ps1',
+      label: 'seeded handoff gate script',
+    },
+    {
+      relativePath: 'vscode-extension/.github/agentx/seed/scripts/score-output.ps1',
+      label: 'seeded output scoring gate script',
+    },
+    {
+      relativePath: 'vscode-extension/.github/agentx/seed/AGENTS.md',
+      label: 'seeded workspace entry point',
+    },
   ];
 
   for (const file of requiredFiles) {

@@ -1,6 +1,11 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
 
+[CmdletBinding()]
+param(
+    [switch]$SkipLoopIntegration
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -9,6 +14,16 @@ $rubricPath = Join-Path $repoRoot 'evaluation/rubrics/code-quality.md'
 $cliPath = Join-Path $repoRoot '.agentx/agentx-cli.ps1'
 $script:passed = 0
 $script:failed = 0
+$script:convertFromJsonSupportsDateKind = (Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind')
+$script:runRoot = Join-Path (Join-Path $repoRoot 'tests') (Join-Path '.scratch' "code-quality-rubric-$([guid]::NewGuid().ToString('N'))")
+New-Item -ItemType Directory -Path $script:runRoot -Force | Out-Null
+
+trap {
+    if (Test-Path -LiteralPath $script:runRoot) {
+        Remove-Item -LiteralPath $script:runRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    throw
+}
 
 function Assert-True([bool]$Condition, [string]$Name) {
     if ($Condition) { $script:passed++; Write-Host "[PASS] $Name" }
@@ -50,6 +65,27 @@ function Invoke-Agentx([string]$WorkspaceRoot, [string[]]$Arguments) {
     return [PSCustomObject]@{ ExitCode = $process.ExitCode; Output = $output }
 }
 
+function New-TestWorkspace([string]$Name) {
+    $path = Join-Path $script:runRoot $Name
+    if (Test-Path -LiteralPath $path) {
+        Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Path $path -Force | Out-Null
+    return $path
+}
+
+function Read-JsonFile([string]$Path) {
+    $content = Get-Content -LiteralPath $Path -Raw -Encoding utf8
+    if ($script:convertFromJsonSupportsDateKind) {
+        return $content | ConvertFrom-Json -Depth 20 -NoEnumerate -DateKind String
+    }
+    return $content | ConvertFrom-Json -Depth 20 -NoEnumerate
+}
+
+function Save-JsonFile([string]$Path, $Value) {
+    $Value | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $Path -Encoding utf8
+}
+
 function Write-Report([string]$Path, $Scope, [hashtable]$Scores = @{}) {
     $dimensionIds = @(
         'requirements-fit',
@@ -72,13 +108,13 @@ function Write-Report([string]$Path, $Scope, [hashtable]$Scores = @{}) {
             findings = @()
         }
     }
-    [ordered]@{
+    Save-JsonFile $Path ([ordered]@{
         rubricVersion = '2.0.0'
         reviewer = 'code-quality-test-reviewer'
         reviewedAt = [datetimeoffset]::UtcNow.ToString('o')
         files = @($Scope.files)
         dimensions = @($dimensions)
-    } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $Path -Encoding utf8
+    })
 }
 
 Write-Host 'AgentX Code Quality Rubric Tests'
@@ -90,7 +126,7 @@ $weightTotal = ($weightMatches | ForEach-Object { [int]$_.Groups[1].Value } | Me
 Assert-True ($weightMatches.Count -eq 10 -and $weightTotal -eq 100) 'Rubric defines ten dimensions totaling exactly 100 points'
 Assert-True ($rubricContent -match '`requirements-fit`.+yes.+\| 3 \|' -and $rubricContent -match '`design-conformance`.+yes.+\| 3 \|') 'Requirements and design are explicit blocking rubric dimensions'
 
-$workspace = Join-Path ([IO.Path]::GetTempPath()) "agentx-code-quality-$([guid]::NewGuid().ToString('N'))"
+$workspace = New-TestWorkspace 'main'
 New-Item -ItemType Directory -Path (Join-Path $workspace 'src') -Force | Out-Null
 try {
     & git -C $workspace init --quiet
@@ -131,9 +167,9 @@ try {
     Assert-True ($scopeResult.ExitCode -eq 0 -and @($scopeFiles).Count -eq 1) 'Scope mode finds code changed after the baseline'
     Assert-True (@($scopeFiles).Count -eq 1 -and $scopeFiles[0].path -eq 'src/app.ts' -and $scopeFiles[0].sha256 -match '^[A-F0-9]{64}$') 'Scope binds the changed path to its SHA-256'
 
-    $tamperedBaseline = Get-Content -LiteralPath $baselinePath -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
+    $tamperedBaseline = Read-JsonFile $baselinePath
     $tamperedBaseline.files = @($scopeFiles)
-    $tamperedBaseline | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $baselinePath -Encoding utf8
+    Save-JsonFile $baselinePath $tamperedBaseline
     $baselineBypass = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-BaselineSha256', $baselineHash, '-Json')
     Assert-True ($baselineBypass.ExitCode -ne 0 -and $baselineBypass.Output -match 'baseline.*SHA-256|digest') 'Baseline tampering cannot suppress required rubric scope'
     Set-Content -LiteralPath $baselinePath -Value $trustedBaselineBytes -NoNewline -Encoding utf8
@@ -147,19 +183,106 @@ try {
     $passingResult = if ($passing.ExitCode -eq 0) { $passing.Output | ConvertFrom-Json } else { $null }
     Assert-True ($passing.ExitCode -eq 0 -and $passingResult.score -eq 100 -and $passingResult.status -eq 'passed') 'Complete rubric report passes with a calculated 100 score'
 
+    foreach ($missingField in @('rubricVersion', 'reviewer', 'reviewedAt', 'files', 'dimensions')) {
+        Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+        $incomplete = Read-JsonFile $reportPath
+        $incomplete.PSObject.Properties.Remove($missingField)
+        Save-JsonFile $reportPath $incomplete
+        $invalid = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+        $invalidResult = $invalid.Output | ConvertFrom-Json
+        Assert-True ($invalid.ExitCode -ne 0 -and $invalidResult.status -eq 'failed') "Missing $missingField produces structured failure, not an unhandled strict-mode error"
+    }
+    Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+    $incomplete = Read-JsonFile $reportPath
+    $incomplete.dimensions[0].PSObject.Properties.Remove('findings')
+    Save-JsonFile $reportPath $incomplete
+    $invalid = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+    $invalidResult = $invalid.Output | ConvertFrom-Json
+    Assert-True ($invalid.ExitCode -ne 0 -and $invalidResult.status -eq 'failed') 'Missing findings produces structured failure'
+
+    Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+    $reviewerObjectReport = Read-JsonFile $reportPath
+    $reviewerObjectReport.reviewer = [PSCustomObject]@{ id = 'not-a-string' }
+    Save-JsonFile $reportPath $reviewerObjectReport
+    $reviewerObject = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+    Assert-True ($reviewerObject.ExitCode -ne 0 -and $reviewerObject.Output -match 'reviewer.*non-empty string') 'Reviewer must remain a real string field'
+
+    Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+    $filesObjectReport = Read-JsonFile $reportPath
+    $filesObjectReport.files = [PSCustomObject]@{
+        path = $scopeFiles[0].path
+        sha256 = $scopeFiles[0].sha256
+    }
+    Save-JsonFile $reportPath $filesObjectReport
+    $filesObject = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+    $filesObjectResult = if ($filesObject.Output.Trim()) { $filesObject.Output | ConvertFrom-Json } else { $null }
+    Assert-True ($filesObject.ExitCode -ne 0 -and $filesObjectResult -and @($filesObjectResult.failures) -contains 'files must be a JSON array.') 'Report files must be a JSON array, not an object'
+
+    Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+    $dimensionsObjectReport = Read-JsonFile $reportPath
+    $dimensionsObjectReport.dimensions = [PSCustomObject]@{
+        id = 'requirements-fit'
+        score = 4
+        evidence = 'Reviewed requirements-fit against the changed implementation and tests.'
+        findings = @()
+    }
+    Save-JsonFile $reportPath $dimensionsObjectReport
+    $dimensionsObject = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+    Assert-True ($dimensionsObject.ExitCode -ne 0 -and $dimensionsObject.Output -match 'dimensions must be a JSON array') 'Report dimensions must be a JSON array, not an object'
+
+    Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+    $nullFindingsReport = Read-JsonFile $reportPath
+    $nullFindingsReport.dimensions[0].findings = $null
+    Save-JsonFile $reportPath $nullFindingsReport
+    $nullFindings = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+    Assert-True ($nullFindings.ExitCode -ne 0 -and $nullFindings.Output -match 'findings as a JSON array') 'Null findings cannot pass as review evidence'
+
+    Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+    $findingsObjectReport = Read-JsonFile $reportPath
+    $findingsObjectReport.dimensions[0].findings = [PSCustomObject]@{
+        severity = 'low'
+        file = 'src/app.ts'
+        issue = 'Findings must remain arrays.'
+        suggestedFix = 'Wrap the finding in an array.'
+    }
+    Save-JsonFile $reportPath $findingsObjectReport
+    $findingsObject = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+    Assert-True ($findingsObject.ExitCode -ne 0 -and $findingsObject.Output -match 'findings as a JSON array') 'Findings must be a JSON array, not an object'
+
+    Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+    $evidenceObjectReport = Read-JsonFile $reportPath
+    $evidenceObjectReport.dimensions[0].evidence = [PSCustomObject]@{ note = 'Reviewed' }
+    Save-JsonFile $reportPath $evidenceObjectReport
+    $evidenceObject = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+    Assert-True ($evidenceObject.ExitCode -ne 0 -and $evidenceObject.Output -match 'evidence as a non-empty string') 'Evidence must remain a real string field'
+
+    Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+    $futureTimestampReport = Read-JsonFile $reportPath
+    $futureTimestampReport.reviewedAt = [datetimeoffset]::UtcNow.AddMinutes(10).ToString('o')
+    Save-JsonFile $reportPath $futureTimestampReport
+    $futureTimestamp = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+    Assert-True ($futureTimestamp.ExitCode -ne 0 -and $futureTimestamp.Output -match 'future') 'Future review timestamps beyond clock skew fail closed'
+
+    Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
+    $placeholderReport = Read-JsonFile $reportPath
+    $placeholderReport.dimensions[0].evidence = 'TODO'
+    Save-JsonFile $reportPath $placeholderReport
+    $placeholderEvidence = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
+    Assert-True ($placeholderEvidence.ExitCode -ne 0 -and $placeholderEvidence.Output -match 'TODO|placeholder|no evidence|untested') 'Exact placeholder evidence cannot pass validation'
+
     Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles }) @{ 'security-privacy' = 2 }
     $blocking = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
     Assert-True ($blocking.ExitCode -ne 0 -and $blocking.Output -match 'security-privacy') 'Blocking dimension below its floor fails regardless of aggregate score'
 
     Write-Report $reportPath ([PSCustomObject]@{ files = $scopeFiles })
-    $findingReport = Get-Content -LiteralPath $reportPath -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
+    $findingReport = Read-JsonFile $reportPath
     $findingReport.dimensions[0].findings = @([PSCustomObject]@{
         severity = 'medium'
         file = 'src/app.ts'
         issue = 'Contract behavior is not fully verified.'
         suggestedFix = 'Add the missing boundary assertion.'
     })
-    $findingReport | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $reportPath -Encoding utf8
+    Save-JsonFile $reportPath $findingReport
     $openFinding = Invoke-Evaluator $workspace @('-Mode', 'Validate', '-WorkspaceRoot', $workspace, '-BaselinePath', $baselinePath, '-ReportPath', $reportPath, '-Json')
     Assert-True ($openFinding.ExitCode -ne 0 -and $openFinding.Output -match 'MEDIUM|medium') 'Unresolved MEDIUM findings block the rubric report'
 
@@ -175,7 +298,7 @@ $cliContent = Get-Content -LiteralPath (Join-Path $repoRoot '.agentx/agentx-cli.
 Assert-True ($cliContent -match 'score-code-quality\.ps1') 'Loop CLI dispatches the code-quality evaluator'
 Assert-True ($cliContent -match '(?s)function Invoke-LoopComplete.+Invoke-CodeQualityEvaluator -Mode Validate') 'Loop completion explicitly enforces rubric validation'
 
-$emptyWorkspace = Join-Path ([IO.Path]::GetTempPath()) "agentx-code-quality-empty-$([guid]::NewGuid().ToString('N'))"
+$emptyWorkspace = New-TestWorkspace 'empty'
 New-Item -ItemType Directory -Path $emptyWorkspace -Force | Out-Null
 try {
     $emptyBaseline = Join-Path $emptyWorkspace 'baseline.json'
@@ -187,19 +310,7 @@ try {
     Remove-Item -LiteralPath $emptyWorkspace -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-$zeroCopyWorkspace = Join-Path ([IO.Path]::GetTempPath()) "agentx-code-quality-zero-copy-$([guid]::NewGuid().ToString('N'))"
-New-Item -ItemType Directory -Path (Join-Path $zeroCopyWorkspace 'src') -Force | Out-Null
-try {
-    Set-Content -LiteralPath (Join-Path $zeroCopyWorkspace 'src/app.ts') -Value 'export const value = 1;' -Encoding utf8
-    New-Item -ItemType Directory -Path (Join-Path $zeroCopyWorkspace 'scripts') -Force | Out-Null
-    Set-Content -LiteralPath (Join-Path $zeroCopyWorkspace 'scripts/score-code-quality.ps1') -Value 'param(); exit 0' -Encoding utf8
-    $zeroCopyStart = Invoke-Agentx $zeroCopyWorkspace @('loop', 'start', '-p', 'Review zero-copy implementation', '-i', '420')
-    Assert-True ($zeroCopyStart.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $zeroCopyWorkspace '.agentx/state/code-quality-baseline.json'))) 'Zero-copy loop start ignores a workspace-shadow scorer and resolves the installed evaluator'
-} finally {
-    Remove-Item -LiteralPath $zeroCopyWorkspace -Recurse -Force -ErrorAction SilentlyContinue
-}
-
-$dotPathWorkspace = Join-Path ([IO.Path]::GetTempPath()) "agentx-code-quality-dotpath-$([guid]::NewGuid().ToString('N'))"
+$dotPathWorkspace = New-TestWorkspace 'dot-path'
 New-Item -ItemType Directory -Path (Join-Path $dotPathWorkspace '.agentx') -Force | Out-Null
 try {
     & git -C $dotPathWorkspace init --quiet
@@ -216,7 +327,7 @@ try {
     Remove-Item -LiteralPath $dotPathWorkspace -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-$localWorkspace = Join-Path ([IO.Path]::GetTempPath()) "agentx-code-quality-local-$([guid]::NewGuid().ToString('N'))"
+$localWorkspace = New-TestWorkspace 'local'
 New-Item -ItemType Directory -Path (Join-Path $localWorkspace 'src') -Force | Out-Null
 try {
     Set-Content -LiteralPath (Join-Path $localWorkspace 'src/app.py') -Value 'VALUE = 1' -Encoding utf8
@@ -237,87 +348,107 @@ try {
     Remove-Item -LiteralPath $localWorkspace -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-$loopWorkspace = Join-Path ([IO.Path]::GetTempPath()) "agentx-code-quality-loop-$([guid]::NewGuid().ToString('N'))"
-New-Item -ItemType Directory -Path (Join-Path $loopWorkspace 'src') -Force | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $loopWorkspace 'scripts') -Force | Out-Null
-try {
-    Copy-Item -LiteralPath $evaluatorPath -Destination (Join-Path $loopWorkspace 'scripts/score-code-quality.ps1')
-    & git -C $loopWorkspace init --quiet
-    & git -C $loopWorkspace config user.email 'agentx-tests@example.invalid'
-    & git -C $loopWorkspace config user.name 'AgentX Tests'
-    Set-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const value = 1;' -Encoding utf8
-    & git -C $loopWorkspace add .
-    & git -C $loopWorkspace commit --quiet -m 'test: establish loop fixture'
+if (-not $SkipLoopIntegration) {
+    $zeroCopyWorkspace = New-TestWorkspace 'zero-copy'
+    New-Item -ItemType Directory -Path (Join-Path $zeroCopyWorkspace 'src') -Force | Out-Null
+    try {
+        Set-Content -LiteralPath (Join-Path $zeroCopyWorkspace 'src/app.ts') -Value 'export const value = 1;' -Encoding utf8
+        New-Item -ItemType Directory -Path (Join-Path $zeroCopyWorkspace 'scripts') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $zeroCopyWorkspace 'scripts/score-code-quality.ps1') -Value 'param(); exit 0' -Encoding utf8
+        $zeroCopyStart = Invoke-Agentx $zeroCopyWorkspace @('loop', 'start', '-p', 'Review zero-copy implementation', '-i', '420')
+        Assert-True ($zeroCopyStart.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $zeroCopyWorkspace '.agentx/state/code-quality-baseline.json'))) 'Zero-copy loop start ignores a workspace-shadow scorer and resolves the installed evaluator'
+    } finally {
+        Remove-Item -LiteralPath $zeroCopyWorkspace -Recurse -Force -ErrorAction SilentlyContinue
+    }
 
-    $start = Invoke-Agentx $loopWorkspace @('loop', 'start', '-p', 'Correct utility defect', '-i', '420')
-    Assert-True ($start.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $loopWorkspace '.agentx/state/code-quality-baseline.json'))) 'Loop start captures the code-quality baseline automatically'
+    $loopWorkspace = New-TestWorkspace 'loop'
+    New-Item -ItemType Directory -Path (Join-Path $loopWorkspace 'src') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $loopWorkspace 'scripts') -Force | Out-Null
+    try {
+        Copy-Item -LiteralPath $evaluatorPath -Destination (Join-Path $loopWorkspace 'scripts/score-code-quality.ps1')
+        & git -C $loopWorkspace init --quiet
+        & git -C $loopWorkspace config user.email 'agentx-tests@example.invalid'
+        & git -C $loopWorkspace config user.name 'AgentX Tests'
+        Set-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const value = 1;' -Encoding utf8
+        & git -C $loopWorkspace add .
+        & git -C $loopWorkspace commit --quiet -m 'test: establish loop fixture'
 
-    $preReviewEvidence = Join-Path $loopWorkspace 'focused.txt'
-    Set-Content -LiteralPath $preReviewEvidence -Value 'focused checks passed' -Encoding utf8
-    $preReview = Invoke-Agentx $loopWorkspace @('loop', 'iterate', '-s', 'Focused checks', '-e', $preReviewEvidence)
-    Assert-True ($preReview.ExitCode -eq 0) 'Loop records pre-review evidence with its own digest'
-    Add-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const corrected = true;' -Encoding utf8
-    $loopScopeResult = Invoke-Evaluator $loopWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $loopWorkspace, '-BaselinePath', (Join-Path $loopWorkspace '.agentx/state/code-quality-baseline.json'), '-Json')
-    $loopScope = $loopScopeResult.Output | ConvertFrom-Json
-    $reviewPath = Join-Path $loopWorkspace 'code-quality-review.json'
-    Write-Report $reviewPath $loopScope
-    $iterate = Invoke-Agentx $loopWorkspace @(
-        'loop', 'iterate', '-s', 'Subagent Review: code quality approved', '-e', $reviewPath,
-        '--verdict', 'approved', '--reviewer', 'code-quality-test-reviewer', '--high', '0', '--medium', '0'
-    )
-    Assert-True ($iterate.ExitCode -eq 0) 'Final review iteration accepts the rubric report as evidence'
+        $start = Invoke-Agentx $loopWorkspace @('loop', 'start', '-p', 'Correct utility defect', '-i', '420')
+        Assert-True ($start.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $loopWorkspace '.agentx/state/code-quality-baseline.json'))) 'Loop start captures the code-quality baseline automatically'
 
-    $reviewedState = Get-Content -LiteralPath (Join-Path $loopWorkspace '.agentx/state/loop-state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
-    $earlyArchive = [string]$reviewedState.history[1].evidence
-    Add-Content -LiteralPath $earlyArchive -Value 'rewritten after approval' -Encoding utf8
-    $earlyTamperEvidence = Join-Path $loopWorkspace 'early-tamper-final.txt'
-    Set-Content -LiteralPath $earlyTamperEvidence -Value 'early archive tamper attempt' -Encoding utf8
-    $earlyTamperComplete = Invoke-Agentx $loopWorkspace @('loop', 'complete', '-s', 'Attempt with rewritten early evidence', '-e', $earlyTamperEvidence)
-    Assert-True ($earlyTamperComplete.ExitCode -ne 0 -and $earlyTamperComplete.Output -match 'SHA-256|digest') 'Loop completion rejects rewritten non-review history evidence'
-    Copy-Item -LiteralPath $preReviewEvidence -Destination $earlyArchive -Force
+        $preReviewEvidence = Join-Path $loopWorkspace 'focused.txt'
+        Set-Content -LiteralPath $preReviewEvidence -Value 'focused checks passed' -Encoding utf8
+        $preReview = Invoke-Agentx $loopWorkspace @('loop', 'iterate', '-s', 'Focused checks', '-e', $preReviewEvidence)
+        Assert-True ($preReview.ExitCode -eq 0) 'Loop records pre-review evidence with its own digest'
+        Add-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const corrected = true;' -Encoding utf8
+        $loopScopeResult = Invoke-Evaluator $loopWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $loopWorkspace, '-BaselinePath', (Join-Path $loopWorkspace '.agentx/state/code-quality-baseline.json'), '-Json')
+        $loopScope = $loopScopeResult.Output | ConvertFrom-Json
+        $reviewPath = Join-Path $loopWorkspace 'code-quality-review.json'
+        Write-Report $reviewPath $loopScope
+        $iterate = Invoke-Agentx $loopWorkspace @(
+            'loop', 'iterate', '-s', 'Subagent Review: code quality approved', '-e', $reviewPath,
+            '--verdict', 'approved', '--reviewer', 'code-quality-test-reviewer', '--high', '0', '--medium', '0'
+        )
+        Assert-True ($iterate.ExitCode -eq 0) 'Final review iteration accepts the rubric report as evidence'
 
-    Add-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const afterApproval = true;' -Encoding utf8
-    $tamperedScopeResult = Invoke-Evaluator $loopWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $loopWorkspace, '-BaselinePath', (Join-Path $loopWorkspace '.agentx/state/code-quality-baseline.json'), '-Json')
-    $tamperedScope = $tamperedScopeResult.Output | ConvertFrom-Json
-    Write-Report $reviewPath $tamperedScope
-    $approvedState = Get-Content -LiteralPath (Join-Path $loopWorkspace '.agentx/state/loop-state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
-    $archivedReviewPath = [string]$approvedState.history[-1].evidence
-    $trustedReviewBytes = Get-Content -LiteralPath $archivedReviewPath -Raw -Encoding utf8
-    Copy-Item -LiteralPath $reviewPath -Destination $archivedReviewPath -Force
-    $finalEvidence = Join-Path $loopWorkspace 'final-gate.txt'
-    Set-Content -LiteralPath $finalEvidence -Value 'tampered archived review attempt' -Encoding utf8
-    $tamperedComplete = Invoke-Agentx $loopWorkspace @('loop', 'complete', '-s', 'Attempt with rewritten review', '-e', $finalEvidence)
-    Assert-True ($tamperedComplete.ExitCode -ne 0 -and $tamperedComplete.Output -match 'SHA-256|hash|digest') 'Loop completion rejects a rewritten archived review'
-    Set-Content -LiteralPath $archivedReviewPath -Value $trustedReviewBytes -NoNewline -Encoding utf8
+        $reviewedState = Get-Content -LiteralPath (Join-Path $loopWorkspace '.agentx/state/loop-state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
+        $earlyArchive = [string]$reviewedState.history[1].evidence
+        Add-Content -LiteralPath $earlyArchive -Value 'rewritten after approval' -Encoding utf8
+        $earlyTamperEvidence = Join-Path $loopWorkspace 'early-tamper-final.txt'
+        Set-Content -LiteralPath $earlyTamperEvidence -Value 'early archive tamper attempt' -Encoding utf8
+        $earlyTamperComplete = Invoke-Agentx $loopWorkspace @('loop', 'complete', '-s', 'Attempt with rewritten early evidence', '-e', $earlyTamperEvidence)
+        Assert-True ($earlyTamperComplete.ExitCode -ne 0 -and $earlyTamperComplete.Output -match 'SHA-256|digest') 'Loop completion rejects rewritten non-review history evidence'
+        Copy-Item -LiteralPath $preReviewEvidence -Destination $earlyArchive -Force
 
-    $reReview = Invoke-Agentx $loopWorkspace @(
-        'loop', 'iterate', '-s', 'Subagent Review: changed code re-approved', '-e', $reviewPath,
-        '--verdict', 'approved', '--reviewer', 'code-quality-test-reviewer', '--high', '0', '--medium', '0'
-    )
-    Assert-True ($reReview.ExitCode -eq 0) 'Changed code can complete after a fresh rubric review'
-    Set-Content -LiteralPath $finalEvidence -Value 'focused tests passed after re-review' -Encoding utf8
-    $complete = Invoke-Agentx $loopWorkspace @('loop', 'complete', '-s', 'Code-quality fixture complete', '-e', $finalEvidence)
-    Assert-True ($complete.ExitCode -eq 0 -and $complete.Output -match 'Code-quality rubric passed at 100/100') 'Loop completion runs and passes the code-quality rubric automatically'
-} finally {
-    Remove-Item -LiteralPath $loopWorkspace -Recurse -Force -ErrorAction SilentlyContinue
+        Add-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const afterApproval = true;' -Encoding utf8
+        $tamperedScopeResult = Invoke-Evaluator $loopWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $loopWorkspace, '-BaselinePath', (Join-Path $loopWorkspace '.agentx/state/code-quality-baseline.json'), '-Json')
+        $tamperedScope = $tamperedScopeResult.Output | ConvertFrom-Json
+        Write-Report $reviewPath $tamperedScope
+        $approvedState = Get-Content -LiteralPath (Join-Path $loopWorkspace '.agentx/state/loop-state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
+        $archivedReviewPath = [string]$approvedState.history[-1].evidence
+        $trustedReviewBytes = Get-Content -LiteralPath $archivedReviewPath -Raw -Encoding utf8
+        Copy-Item -LiteralPath $reviewPath -Destination $archivedReviewPath -Force
+        $finalEvidence = Join-Path $loopWorkspace 'final-gate.txt'
+        Set-Content -LiteralPath $finalEvidence -Value 'tampered archived review attempt' -Encoding utf8
+        $tamperedComplete = Invoke-Agentx $loopWorkspace @('loop', 'complete', '-s', 'Attempt with rewritten review', '-e', $finalEvidence)
+        Assert-True ($tamperedComplete.ExitCode -ne 0 -and $tamperedComplete.Output -match 'SHA-256|hash|digest') 'Loop completion rejects a rewritten archived review'
+        Set-Content -LiteralPath $archivedReviewPath -Value $trustedReviewBytes -NoNewline -Encoding utf8
+
+        $reReview = Invoke-Agentx $loopWorkspace @(
+            'loop', 'iterate', '-s', 'Subagent Review: changed code re-approved', '-e', $reviewPath,
+            '--verdict', 'approved', '--reviewer', 'code-quality-test-reviewer', '--high', '0', '--medium', '0'
+        )
+        Assert-True ($reReview.ExitCode -eq 0) 'Changed code can complete after a fresh rubric review'
+        Set-Content -LiteralPath $finalEvidence -Value 'focused tests passed after re-review' -Encoding utf8
+        $complete = Invoke-Agentx $loopWorkspace @('loop', 'complete', '-s', 'Code-quality fixture complete', '-e', $finalEvidence)
+        Assert-True ($complete.ExitCode -eq 0 -and $complete.Output -match 'Code-quality rubric passed at 100/100') 'Loop completion runs and passes the code-quality rubric automatically'
+    } finally {
+        Remove-Item -LiteralPath $loopWorkspace -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    $resumeWorkspace = New-TestWorkspace 'resume'
+    New-Item -ItemType Directory -Path (Join-Path $resumeWorkspace 'src') -Force | Out-Null
+    try {
+        & git -C $resumeWorkspace init --quiet
+        & git -C $resumeWorkspace config user.email 'agentx-tests@example.invalid'
+        & git -C $resumeWorkspace config user.name 'AgentX Tests'
+        Set-Content -LiteralPath (Join-Path $resumeWorkspace 'src/app.ts') -Value 'export const initial = true;' -Encoding utf8
+        & git -C $resumeWorkspace add .
+        & git -C $resumeWorkspace commit --quiet -m 'test: establish resume fixture'
+        Add-Content -LiteralPath (Join-Path $resumeWorkspace 'src/app.ts') -Value 'export const existingTaskChange = true;' -Encoding utf8
+        $resumeStart = Invoke-Agentx $resumeWorkspace @('loop', 'start', '-p', 'Resume implementation review', '--include-existing-changes')
+        $resumeScope = Invoke-Evaluator $resumeWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $resumeWorkspace, '-BaselinePath', (Join-Path $resumeWorkspace '.agentx/state/code-quality-baseline.json'), '-Json')
+        $resumeResult = if ($resumeScope.ExitCode -eq 0) { $resumeScope.Output | ConvertFrom-Json } else { $null }
+        Assert-True ($resumeStart.ExitCode -eq 0 -and @($resumeResult.files).Count -eq 1) 'Explicit resumed loop includes existing dirty implementation in review scope'
+    } finally {
+        Remove-Item -LiteralPath $resumeWorkspace -Recurse -Force -ErrorAction SilentlyContinue
+    }
+} else {
+    Write-Host '[INFO] Loop-backed integration cases skipped by request.'
 }
 
-$resumeWorkspace = Join-Path ([IO.Path]::GetTempPath()) "agentx-code-quality-resume-$([guid]::NewGuid().ToString('N'))"
-New-Item -ItemType Directory -Path (Join-Path $resumeWorkspace 'src') -Force | Out-Null
-try {
-    & git -C $resumeWorkspace init --quiet
-    & git -C $resumeWorkspace config user.email 'agentx-tests@example.invalid'
-    & git -C $resumeWorkspace config user.name 'AgentX Tests'
-    Set-Content -LiteralPath (Join-Path $resumeWorkspace 'src/app.ts') -Value 'export const initial = true;' -Encoding utf8
-    & git -C $resumeWorkspace add .
-    & git -C $resumeWorkspace commit --quiet -m 'test: establish resume fixture'
-    Add-Content -LiteralPath (Join-Path $resumeWorkspace 'src/app.ts') -Value 'export const existingTaskChange = true;' -Encoding utf8
-    $resumeStart = Invoke-Agentx $resumeWorkspace @('loop', 'start', '-p', 'Resume implementation review', '--include-existing-changes')
-    $resumeScope = Invoke-Evaluator $resumeWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $resumeWorkspace, '-BaselinePath', (Join-Path $resumeWorkspace '.agentx/state/code-quality-baseline.json'), '-Json')
-    $resumeResult = if ($resumeScope.ExitCode -eq 0) { $resumeScope.Output | ConvertFrom-Json } else { $null }
-    Assert-True ($resumeStart.ExitCode -eq 0 -and @($resumeResult.files).Count -eq 1) 'Explicit resumed loop includes existing dirty implementation in review scope'
-} finally {
-    Remove-Item -LiteralPath $resumeWorkspace -Recurse -Force -ErrorAction SilentlyContinue
+if (Test-Path -LiteralPath $script:runRoot) {
+    Remove-Item -LiteralPath $script:runRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host "Results: $passed passed, $failed failed"

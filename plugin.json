@@ -1,0 +1,11 @@
+{
+  "name": "agentx",
+  "version": "9.2.0",
+  "description": "AgentX -- 26 SDLC agents and 134 production skills for GitHub Copilot CLI, with quality-loop gates, handoff contracts, and lifecycle hooks.",
+  "author": "jnPiyush",
+  "homepage": "https://github.com/jnPiyush/AgentX",
+  "license": "Apache-2.0",
+  "agents": ".github/agents",
+  "skills": ".github/skills",
+  "hooks": ".github/hooks/copilot-hooks.json"
+}
