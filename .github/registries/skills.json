@@ -1,6 +1,6 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-09-05T13:57:37Z",
+  "generated": "2026-09-06T02:27:13Z",
   "source": ".github/skills/**/SKILL.md",
   "totalCount": 134,
   "countsByCategory": [
@@ -109,7 +109,7 @@
       "name": "azure-foundry",
       "category": "ai-systems",
       "path": ".github/skills/ai-systems/azure-foundry/SKILL.md",
-      "description": ">-"
+      "description": "Design and architect AI agents on Azure AI Foundry -- lifecycle planning, model selection strategy, evaluation frameworks, guardrail design, and deployment patterns. Use when designing agent architecture on Foundry, choosing models, planning evaluation strategy, or defining guardrails. For step-by-step operational workflows (create, deploy, invoke, trace, troubleshoot), install the Azure MCP Extension (ms-azuretools.vscode-azure-mcp-server), which also brings in the Azure Skills plugin and Foundry MCP support in VS Code."
     },
     {
       "id": "ai-systems/cognitive-architecture",
@@ -536,7 +536,7 @@
       "name": "documentation",
       "category": "development",
       "path": ".github/skills/development/documentation/SKILL.md",
-      "description": "Write effective documentation including inline docs, README structure, API documentation, and code comments. Use when writing README files, documenting APIs, creating architecture decision records, adding inline code documentation, or setting up documentation tooling."
+      "description": "Use when writing or updating documentation, reviewing drift after feature/story/bug implementation, or consolidating superseded guides and execution notes."
     },
     {
       "id": "development/error-handling",

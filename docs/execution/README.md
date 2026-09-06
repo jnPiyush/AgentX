@@ -7,6 +7,12 @@ This directory holds the living artifacts for complex work that is still being e
 - `plans/` contains the execution plan for a complex task.
 - `progress/` contains the matching progress log for that task.
 - `contracts/` contains bounded work contracts and their matching evidence summaries used inside the `Work` checkpoint for complex tasks.
+- `task-bundles/` and `bounded-parallel/` hold CLI-generated JSON snapshots from
+  the `agentx bundle` and `agentx parallel` commands, backing the "Task bundles"
+  and "Bounded parallel delivery" pilot slices in `docs/guides/WORKFLOW-PILOT-ORDER.md`.
+  These are runtime state, not authored documentation: prune them once a
+  bundle/parallel run is archived or reconciled and no longer needed for
+  reference, the same way stale `plans/`+`progress/` pairs are pruned.
 
 ## Naming Guidance
 
@@ -22,3 +28,7 @@ This directory holds the living artifacts for complex work that is still being e
 - Execution artifacts are living state, not the final long-term source of product or architecture truth.
 - Work contracts are nested execution artifacts: they bound the active slice inside `Work`, but they do not create a second workflow lifecycle.
 - Evidence summaries are the matching proof layer for those contracts, distinguishing what changed, what was checked, and what was observed on the real surface.
+- See [docs/README.md](../README.md) for the canonical navigation hub and the
+  retention rule for completed plan/progress pairs, and
+  [docs/guides/DOCUMENTATION-MAINTENANCE.md](../guides/DOCUMENTATION-MAINTENANCE.md)
+  for the full retention/consolidation classification.

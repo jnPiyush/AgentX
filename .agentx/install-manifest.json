@@ -1,6 +1,6 @@
 {
   "version": "9.2.0",
-  "createdAt": "2026-09-05T15:06:38Z",
+  "createdAt": "2026-09-06T02:28:14Z",
   "files": [
     {
       "path": ".agentx/agentic-runner.ps1",
@@ -9,7 +9,7 @@
     },
     {
       "path": ".agentx/agentx-cli.ps1",
-      "sha256": "6e8e7086e6d1d319456341054e480921c6e1ec0fd219a4f3e800ad04db9b521c",
+      "sha256": "eeb948b8df142c85dbc9cfd1f0ab14fe8cb3024049319b29f4789ea3ae70113a",
       "category": "cli"
     },
     {
@@ -39,7 +39,7 @@
     },
     {
       "path": ".github/agents/consulting-research.agent.md",
-      "sha256": "eb5f42d4dd88a4347ea35d3615d115f7f2925fbd811313b7fd6f53823d6a3cb5",
+      "sha256": "542404e5a4549429b7f4316dd5ed74b79555f6a9d85c22472a304c1993b77de5",
       "category": "agent"
     },
     {
@@ -49,17 +49,17 @@
     },
     {
       "path": ".github/agents/devops.agent.md",
-      "sha256": "1d3558e3be1e2a390ed5e14bb33f73bc2fb16a62a5953dc482e31740c7659776",
+      "sha256": "1571fabf997f2301a29e86c2d3013444d6b0692099ed284769b3fe7a54caca68",
       "category": "agent"
     },
     {
       "path": ".github/agents/engineer.agent.md",
-      "sha256": "4a6bea0479e8bf3787a8a6b36eaa15bb75776c19646adec84648a3547dc14f64",
+      "sha256": "5235c3f8700e574d8108a31865a2eb3dda60e5e42db86ada7fc8997e200d5525",
       "category": "agent"
     },
     {
       "path": ".github/agents/fabric-engineer.agent.md",
-      "sha256": "b19e1396bd4fee3176223e5502e0fbd4b46556791701e6c2e854b0a059bc9526",
+      "sha256": "ffe12e60eb9f73ae933e766ae7f10f57a4ab1b32f0262eb04b9bfd99b9758d1b",
       "category": "agent"
     },
     {
@@ -119,17 +119,17 @@
     },
     {
       "path": ".github/agents/power-platform-builder.agent.md",
-      "sha256": "1dd7ebbe712b44e11caadca902c2d1077774cbe1b953ea92400315da88ba2286",
+      "sha256": "dfdcc9c4f27980c72539a728cc19cf4087c3d4f1935315fce959872c4be57229",
       "category": "agent"
     },
     {
       "path": ".github/agents/powerbi-analyst.agent.md",
-      "sha256": "4308feb225379443dab8fc9cb994040cc75b019dd8b655ec79fdb23813e3024d",
+      "sha256": "444e00d8a8e56d4483f861076484a7b189b2155e5e33f00ec028643376955682",
       "category": "agent"
     },
     {
       "path": ".github/agents/product-manager.agent.md",
-      "sha256": "42721f2451d50a601accf6f7afebb92f6f20e5925e1f5aaa992bc2d01d848445",
+      "sha256": "47c4b675cb545e71d372d15bdc9d517eeb9211c3ff22e5589e9ec2ba08e7a9f5",
       "category": "agent"
     },
     {
@@ -139,12 +139,12 @@
     },
     {
       "path": ".github/agents/reviewer.agent.md",
-      "sha256": "d85136dedb46b8648f212e7519be3bf01e24616be78747a9390e3fbabf723903",
+      "sha256": "8d99741ea4bddcb90733e9b0fe6095f277335dbce2c5692aa891ace4bdeb6a92",
       "category": "agent"
     },
     {
       "path": ".github/agents/tester.agent.md",
-      "sha256": "f8741dcd9383cf2704b8222d5fc125169b9203a4bf3d0717ecdaf3532f524af5",
+      "sha256": "96d74fc19b94db173ca68b1adaf7d8891bb2aeda2646a2b21982aec68ded4958",
       "category": "agent"
     },
     {
@@ -289,12 +289,12 @@
     },
     {
       "path": ".github/prompts/bug-triage.prompt.md",
-      "sha256": "deccc6d65d6db554e9108712507ed2f664d246193f5f350b16508934de3746ce",
+      "sha256": "3bb261caceeb9ae402fbf7b0a3ca2014bcde895313a26f65e6b54f0009c8efe6",
       "category": "prompt"
     },
     {
       "path": ".github/prompts/code-review.prompt.md",
-      "sha256": "74621361e32a9c927e45cbddad9ba263986890ed3c5b6a9208521e4dc58c6ff9",
+      "sha256": "ea30305fdfbff5e6db4824078fe7708673690ccfa57ca19c8a885e1468d8623f",
       "category": "prompt"
     },
     {
@@ -314,7 +314,7 @@
     },
     {
       "path": ".github/prompts/doc-gardener.prompt.md",
-      "sha256": "ef03667560826bebab5b862632a7e6e93f1474782225ebbc80a4e306c3fefb6c",
+      "sha256": "3da55a1f93671002cd7a78b902f6cba075429c60d5f544bbc234727928b77c70",
       "category": "prompt"
     },
     {
@@ -329,7 +329,7 @@
     },
     {
       "path": ".github/prompts/refactor.prompt.md",
-      "sha256": "f66adaf0368293f4efbf201d80d59fcf1e419ac6111a05154a397e041f671cb0",
+      "sha256": "5c761b1e85ccb62a149ea0b5f2662644703861eff2590f9ec213cbfd4cf5b627",
       "category": "prompt"
     },
     {
@@ -354,7 +354,7 @@
     },
     {
       "path": ".github/registries/pipelines.json",
-      "sha256": "5457433cbef7506f81bbe897e75b4fa2f4bac2d5c6cb00a32f6a8e4cd962d9a5",
+      "sha256": "01f79da5932d00e290229095d6cddbf407bdf2e8a390fb9a708ac19de3fb78f4",
       "category": "registry"
     },
     {
@@ -364,12 +364,12 @@
     },
     {
       "path": ".github/registries/skills.json",
-      "sha256": "4396c14506b2d7a881a1417a08cd8408ef76e099d02fe374dd21bb5e4fad73a6",
+      "sha256": "a637ff916642a7556434ba58f744a7e2b5f9faf20124837928482dfc7697d1fd",
       "category": "registry"
     },
     {
       "path": ".github/registries/templates.json",
-      "sha256": "0919f4c495c8a6296e4e6f0961fac03e30ee200a2a8bb757c782ded508c5fb74",
+      "sha256": "694861306849481f88125fdd95d3337da16112f3d8ef11dfaa226017bec43643",
       "category": "registry"
     },
     {
@@ -394,7 +394,7 @@
     },
     {
       "path": ".github/schemas/pack-manifest.schema.json",
-      "sha256": "e63ec7d976d20a5675aeb65005b0948744b7b8ef1cab4399fd2acce2f1f11f55",
+      "sha256": "bf356bccdd3e47fb3e910dead55bb51584b3cbd26b6ea87524b731ccf92d86ab",
       "category": "schema"
     },
     {
@@ -434,7 +434,7 @@
     },
     {
       "path": ".github/skills/ai-systems/ai-agent-development/SKILL.md",
-      "sha256": "d48c1b9a6ed3f9832eae32e45fe9255bd6dec805c4040c4ed5216ce128e2df63",
+      "sha256": "12e941c55395c525e7f5566c9807a3e35242d27bbbfcd76886c39e49783d7b9f",
       "category": "skill"
     },
     {
@@ -474,7 +474,7 @@
     },
     {
       "path": ".github/skills/ai-systems/data-drift-strategy/SKILL.md",
-      "sha256": "6de039529a067ff3db11225d6039add958390a08ea4be2959bd741af9cf33444",
+      "sha256": "d0e8c2ed2f96f245dd074d10d0b23189fbfc5ffcb2c0c361e83d0c27d8be7f3e",
       "category": "skill"
     },
     {
@@ -519,7 +519,7 @@
     },
     {
       "path": ".github/skills/ai-systems/model-drift-management/SKILL.md",
-      "sha256": "80f3ccb6a33da2d365f4c9d38ffd1500a8a946df292f98d69397906d30d38d81",
+      "sha256": "238fc578b9ba3d282500b893ef98e03b5cca269ff51f802b8efec771b9140d67",
       "category": "skill"
     },
     {
@@ -814,7 +814,7 @@
     },
     {
       "path": ".github/skills/development/documentation/SKILL.md",
-      "sha256": "2c8419bd0137b42a77787f2511c0481c9b34e2d4ba2cdb61c9f69efea8e6b6c8",
+      "sha256": "38a149b331ea59c6926a109202545dcc91f81c4123ee418b8b3ce0808f93370b",
       "category": "skill"
     },
     {
@@ -839,7 +839,7 @@
     },
     {
       "path": ".github/skills/development/iterative-loop/SKILL.md",
-      "sha256": "3bbdaad98de737f2c2573c2afc3d3a8fbb35d76f6da6240649f4dd498c7c1462",
+      "sha256": "d109a7f8795a2de01391001d6a1ad9efb3a76a40e97ffbcf970a4f55673b857e",
       "category": "skill"
     },
     {
@@ -1139,7 +1139,7 @@
     },
     {
       "path": ".github/skills/operations/release-management/SKILL.md",
-      "sha256": "c96ecc1f9685821de6630dbb728784ae29a0f9063237cbb7b71900d5bb3e4a44",
+      "sha256": "4c81eebcef3abf241dd6273655b970947e46c121dc6087be438abe2f580ec7f9",
       "category": "skill"
     },
     {
@@ -1184,7 +1184,7 @@
     },
     {
       "path": ".github/skills/testing/production-readiness/SKILL.md",
-      "sha256": "afa6abfff6bebd92068a535228df567ff9e94e89b8480eeb6df5da1163fa2102",
+      "sha256": "9953c629383af2b1419ad104b869ae8311e8aa465ced8fc112961057f9e80123",
       "category": "skill"
     },
     {
@@ -1229,7 +1229,7 @@
     },
     {
       "path": ".github/templates/EXEC-PLAN-TEMPLATE.md",
-      "sha256": "79408f203169d2a0669b3f13e31a8d431f9cee56e5db9afb10a89c9695ff759e",
+      "sha256": "63804ba3b4e5daa67d3e27cf82aaebcedddadd406b15685eff1b36f238063f15",
       "category": "template"
     },
     {
@@ -1249,7 +1249,7 @@
     },
     {
       "path": ".github/templates/REVIEW-TEMPLATE.md",
-      "sha256": "447abc4216d72a298bccdc8f82883f961757353319c81ca4467e9a6f3cd9ac26",
+      "sha256": "184ec47ac11e923ccf8ff775e7fa47c62c4bed11e0cf2e2c66547151a232c8dc",
       "category": "template"
     },
     {
@@ -1274,12 +1274,12 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "6b36c8dc5f696485736dc789f99937c41e32d010c523c754b9c6f4e0ae1639d8",
+      "sha256": "a78925a2066c1fd063e08dccd11b91ecbfbc9458a2c1339a05cba8df1db43355",
       "category": "doc"
     },
     {
       "path": "CLAUDE.md",
-      "sha256": "16ce8e90a2d072c47e95e116c424f6cd4bdb2584fd34f2015f9baed133bc8cc7",
+      "sha256": "845a53e98d484503b442806d057cf9747118eb74b75a58632d6032ba6e5e6958",
       "category": "doc"
     },
     {
@@ -1294,22 +1294,22 @@
     },
     {
       "path": "packs/agentx-copilot-cli/install.ps1",
-      "sha256": "883622f37759b8bea713c071ae9abd91b49e68a6475dedaa6d7efe7a556206c7",
+      "sha256": "a4743fc1a1e1443955667a43651e745337f1439510298b52b240b6275665e8ec",
       "category": "pack"
     },
     {
       "path": "packs/agentx-copilot-cli/install.sh",
-      "sha256": "7dd5d4d38b97d3ad594dcc458483249b95797d372e9a48d494a8c87594e96f9f",
+      "sha256": "a590b21b142ec597c7aef2f82d64fecb4d807ea4a98fb244ab9749a2c99ade46",
       "category": "pack"
     },
     {
       "path": "packs/agentx-copilot-cli/manifest.json",
-      "sha256": "31787642e71559009f2f0831a30bfeb57a8b86b8d78530303e59a4238f36299a",
+      "sha256": "bbd419afa93d512b7496e1a42b993f374d1589c845f3bedb01d8a3bd47386e5d",
       "category": "pack"
     },
     {
       "path": "packs/agentx-copilot-cli/README.md",
-      "sha256": "f9dc40cbb577c5a5e9ccca9db7c1248c50e1a0f86ba1a6040504932f08d526ef",
+      "sha256": "0f4bad0ce4b5fd3fa808b7d15664ccb2a4568cc6cd5a2233282b03bf874fd009",
       "category": "pack"
     },
     {
@@ -1363,6 +1363,11 @@
       "category": "script"
     },
     {
+      "path": "scripts/check-doc-drift.ps1",
+      "sha256": "ffaaade7e6f7a29489ea718413361006117eb0ea2683e5f0dc17c020cab1145b",
+      "category": "script"
+    },
+    {
       "path": "scripts/check-harness-compliance.ps1",
       "sha256": "903b10800287b4a32e84a7d819d4a3f95d68670981da17879e8e9b96a1a74d31",
       "category": "script"
@@ -1384,7 +1389,7 @@
     },
     {
       "path": "scripts/generate-registries.ps1",
-      "sha256": "e1ba921400ce7df9d1b9082fa016ffbbc26791d5852824d3a3c2febc9047e5a1",
+      "sha256": "900e5c0c82f51f3feeef9e73276b2f65c1dae323cecd980650f43f71de5dd533",
       "category": "script"
     },
     {
@@ -1404,7 +1409,7 @@
     },
     {
       "path": "scripts/model-council.ps1",
-      "sha256": "79b12ed60f98b27c2c88150bb361efa469e8d8f0addad34dd5ba271db098e798",
+      "sha256": "594fdfeb55c819f3067feced1694d3fb23e33c9787bd6b21748b9cbad5bbebc2",
       "category": "script"
     },
     {
@@ -1424,7 +1429,7 @@
     },
     {
       "path": "scripts/parse-yaml.js",
-      "sha256": "025bcc06fc0d7193c68eae508f94446c631f7c4410872ad282b62be30f7293ef",
+      "sha256": "f2159aa3285a97663cc891e29c1e94e0c677db36111a1f1f0ff5a7d64a70b118",
       "category": "script"
     },
     {
@@ -1449,7 +1454,7 @@
     },
     {
       "path": "scripts/score-code-quality.ps1",
-      "sha256": "a3e51d6540079eca2b528c1042035f190be81e79afc0eaceb0cf0593336bd26d",
+      "sha256": "dc5731f646211930327a0d4ba28d8627828eaffe0f3a113e161cac767f57c309",
       "category": "script"
     },
     {
@@ -1514,7 +1519,7 @@
     },
     {
       "path": "scripts/validate-references.ps1",
-      "sha256": "7a657b7536329efefa7969ed869a10ec902467bf9edc7c8dc5db0ebe5a40b692",
+      "sha256": "382406f19fb9aa801da9bc5b10b46002b85bc59d801ef17197b198ef250ee29e",
       "category": "script"
     },
     {

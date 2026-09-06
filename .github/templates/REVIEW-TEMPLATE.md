@@ -361,6 +361,12 @@ public async Task<IEnumerable<EntityDto>> GetAllWithRelatedAsync()
 
 ## 7. Documentation Review
 
+For every feature, story or bug (including config-only work), verify
+`agentx doc-drift check` and the final report's `documentationReview` assessment.
+Require a specific updated/no-impact rationale and current reviewed-doc hashes.
+Check semantic agreement with the implemented behavior; counts/links alone do
+not prove freshness. See [shared protocol](../AGENT-PROTOCOL.md).
+
 ### Documentation Checklist
 - [x] **XML Documentation**: All public APIs documented `[PASS]`
 - [x] **Inline Comments**: Complex logic explained `[PASS]`

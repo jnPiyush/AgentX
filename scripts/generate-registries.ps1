@@ -7,7 +7,8 @@
     Writes .github/registries/skills.json and .github/registries/templates.json.
     Hand-authored registries (routing.json, pipelines.json) are NOT touched.
 
-    Additive only -- does not modify any Markdown source.
+    Does not modify any Markdown source. Uses Node.js and the shared
+    parse-yaml.js frontmatter parser, as does the skill quality evaluator.
 
 .EXAMPLE
     pwsh -File scripts/generate-registries.ps1
@@ -35,35 +36,34 @@ $timestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
 # ---------------- skills.json ----------------
 Write-Info "Scanning skills under $skillsDir"
-$skillFiles = Get-ChildItem -Path $skillsDir -Recurse -Filter 'SKILL.md' -File
+$skillFiles = @(Get-ChildItem -Path $skillsDir -Recurse -Filter 'SKILL.md' -File)
 
-function Get-Frontmatter([string] $path) {
-    $lines = Get-Content -LiteralPath $path -Encoding UTF8
-    if ($lines.Count -lt 1 -or $lines[0].Trim() -ne '---') { return @{} }
+$parser = Join-Path $PSScriptRoot 'parse-yaml.js'
+$pathsJson = ConvertTo-Json -InputObject @($skillFiles | ForEach-Object { $_.FullName }) -Compress
+$output = $pathsJson | & node $parser --frontmatter-files 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0) { throw "Invalid skill frontmatter: $($output.Trim())" }
+$frontmatterByPath = @{}
+foreach ($entry in ($output | ConvertFrom-Json)) {
     $fm = @{}
-    for ($i = 1; $i -lt $lines.Count; $i++) {
-        $line = $lines[$i]
-        if ($line.Trim() -eq '---') { break }
-        if ($line -match "^([A-Za-z0-9_-]+):\s*(.*)$") {
-            $key = $matches[1]
-            $val = $matches[2].Trim()
-            # Strip surrounding quotes if present
-            if ($val.Length -ge 2 -and (($val.StartsWith("'") -and $val.EndsWith("'")) -or ($val.StartsWith('"') -and $val.EndsWith('"')))) {
-                $val = $val.Substring(1, $val.Length - 2)
-            }
-            $fm[$key] = $val
+    foreach ($property in $entry.frontmatter.PSObject.Properties) { $fm[$property.Name] = $property.Value }
+    foreach ($key in @('name', 'description')) {
+        if ($fm.ContainsKey($key) -and $null -ne $fm[$key] -and $fm[$key] -isnot [string]) {
+            throw "Frontmatter '$key' must be a string in '$($entry.path)'."
         }
     }
-    return $fm
+    if ($fm.ContainsKey('name') -and [string]::IsNullOrWhiteSpace($fm['name'])) {
+        throw "Frontmatter 'name' must not be empty in '$($entry.path)'."
+    }
+    $frontmatterByPath[$entry.path] = $fm
 }
 
-$skills = foreach ($f in $skillFiles) {
+$skills = @(foreach ($f in $skillFiles) {
     $relPath = $f.FullName.Substring($RepoRoot.Length + 1) -replace '\\','/'
     $segments = $relPath -split '/'
     # .github/skills/<category>/<skill>/SKILL.md
     $category = $segments[2]
     $name     = $segments[3]
-    $fm       = Get-Frontmatter $f.FullName
+    $fm       = $frontmatterByPath[$f.FullName]
     [PSCustomObject]@{
         id          = "$category/$name"
         name        = if ($fm.ContainsKey('name')) { $fm['name'] } else { $name }
@@ -71,11 +71,11 @@ $skills = foreach ($f in $skillFiles) {
         path        = $relPath
         description = if ($fm.ContainsKey('description')) { $fm['description'] } else { $null }
     }
-}
+})
 
-$skillsByCategory = $skills | Group-Object category | Sort-Object Name | ForEach-Object {
+$skillsByCategory = @($skills | Group-Object category | Sort-Object Name | ForEach-Object {
     [PSCustomObject]@{ category = $_.Name; count = $_.Count }
-}
+})
 
 $skillsRegistry = [ordered]@{
     '$schemaVersion' = 1
@@ -83,7 +83,7 @@ $skillsRegistry = [ordered]@{
     source           = '.github/skills/**/SKILL.md'
     totalCount       = $skills.Count
     countsByCategory = $skillsByCategory
-    skills           = $skills | Sort-Object id
+    skills           = @($skills | Sort-Object id)
 }
 
 $skillsRegistry | ConvertTo-Json -Depth 6 | Set-Content -Path (Join-Path $outDir 'skills.json') -Encoding utf8
@@ -91,9 +91,9 @@ Write-Info "Wrote skills.json -- $($skills.Count) skills across $($skillsByCateg
 
 # ---------------- templates.json ----------------
 Write-Info "Scanning templates under $templatesDir"
-$templateFiles = Get-ChildItem -Path $templatesDir -Filter '*.md' -File | Sort-Object Name
+$templateFiles = @(Get-ChildItem -Path $templatesDir -Filter '*.md' -File | Sort-Object Name)
 
-$templates = foreach ($f in $templateFiles) {
+$templates = @(foreach ($f in $templateFiles) {
     $relPath = $f.FullName.Substring($RepoRoot.Length + 1) -replace '\\','/'
     $content = Get-Content -LiteralPath $f.FullName -Encoding UTF8
 
@@ -103,7 +103,7 @@ $templates = foreach ($f in $templateFiles) {
     foreach ($line in $head) {
         if ($line -match '<!--\s*Inputs:\s*(.*?)\s*-->') {
             $raw = $matches[1]
-            $declaredInputs = $raw -split ',' | ForEach-Object { ($_ -replace '[{}$]', '').Trim() } | Where-Object { $_ }
+            $declaredInputs = @($raw -split ',' | ForEach-Object { ($_ -replace '[{}$]', '').Trim() } | Where-Object { $_ })
             break
         }
     }
@@ -137,7 +137,7 @@ $templates = foreach ($f in $templateFiles) {
         titlePlaceholders = $titlePlaceholders
         sections          = $sections
     }
-}
+})
 
 $templatesRegistry = [ordered]@{
     '$schemaVersion' = 1

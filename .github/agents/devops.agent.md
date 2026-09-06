@@ -158,6 +158,10 @@ actionlint .github/workflows/*.yml
 - [ ] If `needs:ai`: prompt asset changes gated by eval pipeline; model config not hardcoded in workflow
 - [ ] If `needs:ai`: Ops Monitor sub-agent invocation planned for post-deploy observability setup
 
+### 6.5 Mandatory Documentation Drift
+
+Before handoff, run `.agentx/agentx.ps1 doc-drift check -Json` (including config-only work). Include `documentationReview` (`updated` or `no-impact`) with rationale and reviewed-doc hashes alongside the deployment documentation. Follow [maintenance](../../docs/guides/DOCUMENTATION-MAINTENANCE.md).
+
 ### 7. Commit & Handoff
 
 ```bash

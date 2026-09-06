@@ -195,16 +195,27 @@ bash AgentX/packs/agentx-copilot-cli/install.sh -f
 
 ## Uninstalling
 
-Remove the installed directories from your workspace:
+For native plugin installation, use the host's uninstall command:
 
 ```bash
-rm -rf .github/agents .github/skills .github/instructions .github/prompts
-rm -rf .github/templates .github/schemas .github/.agentx-cli-plugin.json
-rm -rf .github/agentx
-rm -f AGENTS.md Skills.md docs/WORKFLOW.md
-rm -rf .agentx  # if CLI utilities were installed
-rm -rf memories  # if starter memories were installed with CLI utilities
+copilot plugin uninstall agentx
 ```
+
+For workspace copies, review the installed files against your source-control
+baseline before removing them. Shared `.github/`, `scripts/`, `docs/`, `packs/`,
+`AGENTS.md` and memories may contain user-authored content. Never delete these
+directories wholesale, and preserve modified files and project legal documents.
+
+Older packs may have copied repository-only `CONTRIBUTING.md` into the workspace.
+Inspect it before removal; do not remove your project's own contribution guide.
+
+## Documentation drift
+
+Every implemented feature, story and bug runs
+`pwsh .agentx/agentx.ps1 doc-drift check` before independent review. The existing
+quality report requires an updated/no-impact assessment, rationale and hashes
+of reviewed docs. The standalone runtime includes the checker and reference
+validator beside the trusted quality evaluator.
 
 ## Version
 

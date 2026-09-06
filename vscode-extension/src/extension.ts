@@ -10,7 +10,10 @@ import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
 import { runSetupWizard } from './commands/setupWizard';
 import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from './commands/adaptersCommandInternals';
-import { readCliAssetState, refreshCopilotCliSymlinks } from './commands/initializeInternals';
+import {
+ readCliAssetState,
+ refreshCopilotCliSymlinks,
+} from './commands/initializeRuntimeAssets';
 import { silentVersionSync } from './utils/versionChecker';
 import { checkCompanionExtensions } from './utils/companionExtensions';
 import {

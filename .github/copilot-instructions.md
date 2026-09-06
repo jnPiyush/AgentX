@@ -40,8 +40,11 @@ These gates retain the [protocol](AGENT-PROTOCOL.md) contract:
   `docs/execution/plans/EXEC-PLAN-*.md` from the
   [template](templates/EXEC-PLAN-TEMPLATE.md), or `[skip-plan]`.
 - **Brainstorm**: Engineer phases stay ordered: Research -> Brainstorm -> Plan
-  -> Design -> Implement -> Scrub -> Test -> Review. Record a `brainstorm`
+  -> Design -> Implement -> Scrub -> Test -> Documentation Drift -> Review. Record a `brainstorm`
   ledger entry or `## Alternatives Considered` before Plan; reviewers verify it.
+- **Documentation drift**: every feature, story and bug MUST run `doc-drift check`
+  before review, including config-only changes. Update docs or record justified
+  no impact; bind reviewed docs to current hashes in `documentationReview`.
 
 **Honesty rule**: If asked whether any of these gates ran, inspect the staged files and commit message and report the actual state. Never claim a gate was satisfied without the artifact or skip token.
 

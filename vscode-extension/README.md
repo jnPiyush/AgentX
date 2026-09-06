@@ -60,7 +60,7 @@ To run AgentX successfully within VS Code:
 
 - **VS Code:** 1.85.0 or newer
 - **System:** Git configured on your PATH
-- **Runtime:** PowerShell 7.4+ (`pwsh`) on Windows, or Bash on Linux/macOS
+- **Runtime:** PowerShell 7.4+ (`pwsh`) on every platform; the Bash launcher delegates to it
 - **Integrations:** gh (GitHub CLI) optional for extended GitHub mode operations
 
 ---
@@ -262,6 +262,11 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | Show Operator Enablement Checklist | View the operator enablement checklist |
 
 ### Quality Loop
+
+Every feature, story and bug runs `agentx doc-drift check` before review, including
+configuration-only work. The final quality report requires `documentationReview`
+with impact rationale and current reviewed-document hashes. See the
+[maintenance policy](../docs/guides/DOCUMENTATION-MAINTENANCE.md).
 
 | Command | Description |
 |:--------|:------------|

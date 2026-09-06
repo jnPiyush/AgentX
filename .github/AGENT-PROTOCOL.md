@@ -78,7 +78,13 @@ simply records one reviewer verdict before completing.
 2. **Evaluate** -- on any failure, find the root cause.
 3. **Fix** -- address the failure.
 4. **Re-verify** -- confirm the fix.
-5. **Subagent review** -- once checks pass, spawn a same-role reviewer sub-agent
+5. **Documentation drift (MANDATORY)** -- for every feature, user story and bug,
+   including config/workflow-only changes, run `agentx doc-drift check` after
+   validation. Reconcile public behavior, examples, configuration, operational
+   guidance, counts and links; update docs or document no impact. The final
+   quality report requires `documentationReview` with rationale and current
+   reviewed-document hashes. Structural checks do not replace semantic review.
+6. **Subagent review** -- once checks pass, spawn a same-role reviewer sub-agent
    that sees only the deliverable (diff / artifact / spec), not the author's
    rationale. It returns structured findings: HIGH / MEDIUM / LOW.
    - APPROVED = true only when zero HIGH and zero MEDIUM remain.
@@ -87,8 +93,8 @@ simply records one reviewer verdict before completing.
     Run `pwsh scripts/score-code-quality.ps1 -Mode Scope -Json` after the final
     code edit, score all ten dimensions, and use that JSON report as the
     final review iteration evidence.
-6. **Address findings** -- fix all HIGH/MEDIUM, then re-run from Step 1.
-7. **Repeat** until APPROVED, all Done Criteria pass, and the risk-based minimum is met.
+7. **Address findings** -- fix all HIGH/MEDIUM, then re-run from Step 1.
+8. **Repeat** until APPROVED, all Done Criteria pass, and the risk-based minimum is met.
 
 The per-iteration focus table is printed by `loop start` and the current focus is
 shown by `loop status`. The canonical tiers are:
@@ -150,6 +156,24 @@ missing; there is no skip token. Mandatory for Product Manager (prd-scope),
 Architect (adr-options), and any complex task; also Data Scientist (ai-design),
 Reviewer (code-review), and Consulting Research. Findings/decision MUST reflect the
 council Synthesis (or document an override rationale).
+
+Council execution:
+
+- Give three independently invoked, diverse models the same questions and bounded
+  evidence, with role-specific lenses. Use host-native agents or authorized model
+  calls; record requested and resolved identities, source, failures and responses.
+  Model names in role tables are preferences, not proof of execution.
+- `agentx council -Topic <slug> -Question <question> -Context <evidence>` creates
+  a brief; use `-Questions` for several decisions, `-Purpose` for the role's pack
+  and `-OutputDir` for its artifact directory. Brief generation is not a completed
+  council. Optional `-AutoInvoke` uses configured GitHub Models access; it does
+  not grant new credentials, spending authority or permission to install tools.
+- Replace `[AGENT-TODO]` only with actual attributed responses, then synthesize
+  consensus, disagreements, risks and resulting changes. Do not have one model
+  impersonate all members or claim independent consensus from role-play.
+- Missing models, failed calls or a host's role-only fallback remain incomplete
+  evidence for the diverse-model gate. Report the limitation rather than invent
+  results. The agent coordinates this work; the user need not copy/paste prompts.
 
 ---
 

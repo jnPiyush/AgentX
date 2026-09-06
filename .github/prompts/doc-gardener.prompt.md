@@ -1,92 +1,39 @@
 ---
 name: 'Doc Gardener'
-description: 'Automated documentation freshness checker. Verifies counts, cross-references, and consistency.'
+description: 'Check documentation drift, reconcile current claims and links, and consolidate superseded material without erasing useful history.'
 agent: 'AgentX Auto'
 ---
 
 # Doc Gardener
 
-You are a documentation freshness checker for the AgentX repository.
+## Mandatory trigger
 
-## Task
+Run after implementing every feature, user story or bug, including config-only
+changes, and before independent review. Also run before releases and after
+changing agents, skills, instructions, templates or prompts.
 
-Audit all documentation files for accuracy by counting actual files and comparing to documented claims.
+## Workflow
 
-## Steps
+1. Run `.agentx/agentx.ps1 doc-drift check -Json`. Use the same deterministic
+   checker as CI; do not maintain a second count script. Instructions are counted
+   recursively, including nested domain rules.
+2. Review the change against owning README/API/CLI/configuration/operations docs,
+   examples, inventories, navigation and plan/progress status.
+3. Update affected docs or explain why no reader-facing contract changed.
+   Passing counts and links does not prove semantic correctness.
+4. Classify stale documents before removal: current guidance, durable decisions,
+   completed execution state, generated mirrors or accidental runtime snapshots.
+   Preserve historical ADR/PRD/spec/review evidence. Remove transient duplicates
+   only after checking incoming links and packaging/test dependencies.
+5. Regenerate extension mirrors from their sources and re-run the checker.
+6. Include `documentationReview` in the existing quality report: updated/no-impact
+   status, specific rationale and current hashes of the documents reviewed.
 
-### 1. Count Actual Files
+## Output
 
-Run these commands and record the actual counts:
+- Structural check result and actual count/version mismatches
+- Documentation-impact decision with file/section evidence
+- Exact updated, retained and removed paths with retention rationale
+- Unresolved drift or unavailable checks, never a fabricated PASS
 
-```powershell
-# Agents (visible + internal)
-(Get-ChildItem -Path ".github/agents" -Recurse -Filter "*.agent.md").Count
-
-# Skills
-(Get-ChildItem -Path ".github/skills" -Recurse -Filter "SKILL.md").Count
-
-# Instructions
-(Get-ChildItem -Path ".github/instructions" -Filter "*.instructions.md").Count
-
-# Templates
-(Get-ChildItem -Path ".github/templates" -Filter "*-TEMPLATE.md").Count
-
-# Prompts
-(Get-ChildItem -Path ".github/prompts" -Filter "*.prompt.md").Count
-
-# Claude Commands
-(Get-ChildItem -Path ".claude/commands" -Filter "*.md").Count
-```
-
-### 2. Extract Documented Counts
-
-Search these files for numeric claims about agents, skills, instructions, templates, and prompts:
-
-- `AGENTS.md`
-- `README.md`
-- `Skills.md`
-- `CLAUDE.md`
-- `docs/GUIDE.md`
-- `vscode-extension/README.md`
-
-### 3. Compare and Report
-
-For each count type, report:
-
-```
-| Item | Actual | AGENTS.md | README.md | Skills.md | CLAUDE.md | Match? |
-|------|--------|-----------|-----------|-----------|-----------|--------|
-```
-
-### 4. Check Cross-References
-
-Verify that every `[text](path)` link in these files points to an existing file:
-
-- `AGENTS.md`
-- `docs/WORKFLOW.md`
-- `docs/QUALITY_SCORE.md`
-- `docs/GOLDEN_PRINCIPLES.md`
-- `CLAUDE.md`
-- `Skills.md`
-
-Report any broken links.
-
-### 5. Check Agent Table Completeness
-
-Verify the agent table in `AGENTS.md` lists every `.agent.md` file found in Step 1.
-Report any agents that exist on disk but are missing from the table.
-
-### 6. Output
-
-Produce a summary with:
-
-- PASS items where documented counts match actual counts
-- FAIL items where counts are mismatched (with actual vs documented)
-- WARN broken cross-reference links
-- Recommended fixes (exact file, line, old value -> new value)
-
-## When to Run
-
-- Before every release
-- After adding or removing agents, skills, instructions, templates, or prompts
-- As part of the review checklist
+Follow [documentation maintenance](../../docs/guides/DOCUMENTATION-MAINTENANCE.md).

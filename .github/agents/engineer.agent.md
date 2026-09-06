@@ -1,6 +1,6 @@
 ---
 name: AgentX Engineer
-description: 'Implement features, fix bugs, and write tests through Compound Engineering -- a structured pipeline of Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Review, with gate-checked phase transitions, full artifact chain consumption, mandatory Karpathy guidelines, and a risk-based quality loop.'
+description: 'Implement features, fix bugs, and write tests through Compound Engineering -- Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Documentation Drift -> Review, with gate-checked transitions, artifact consumption, Karpathy guidelines, and a risk-based quality loop.'
 model: Claude Sonnet 5 (copilot)
 user-invocable: true
 hooks:
@@ -106,16 +106,17 @@ Follow the ordered phases below; each gate must pass before the next phase.
 
 ### Quick Phase Reference
 
-| Phase | MUST Load Skill | MUST Produce |
+| Phase | Skills to Load | MUST Produce |
 |-------|----------------|--------------|
-| 1. Research | `iterative-loop`, `core-principles`, language instruction | Artifact summary + ambiguity list + reuse inventory |
-| 2. Brainstorm | `core-principles` | Chosen approach + rationale |
-| 3. Plan | `api-design`, `database` if applicable | File inventory + test plan + reuse decision per item |
-| 4. Design | `core-principles` | Interfaces + SOLID + DRY/reuse check |
-| 5. Implement | Language instruction, `ai-agent-development` if `needs:ai`, `systematic-debugging` if 2+ fixes failed | Committed code + loop started |
-| 5b. Scrub | `scrub` | Deslop pass run on every changed file; safe fixes applied; behavior unchanged |
-| 6. Test | `testing`, `ai-evaluation` if `needs:ai`, `verification-before-completion` before loop complete | Coverage >=80% + ACs covered + verification gate passed |
-| 7. Review | `code-review`, `security` | Output score >=70% + code-quality rubric >=80% |
+| 1. Research | `.github/skills/development/karpathy-guidelines/SKILL.md` (think before coding, simplicity, surgical changes, goal-driven loops), `.github/skills/development/iterative-loop/SKILL.md`, `.github/skills/architecture/core-principles/SKILL.md`, `.github/skills/development/testing/SKILL.md`, language instruction, `.github/skills/development/git-worktrees/SKILL.md` (if parallel branches or isolated experiments are likely) | Artifact summary + ambiguity list + reuse inventory |
+| 2. Brainstorm | `.github/skills/architecture/core-principles/SKILL.md` | Chosen approach + rationale |
+| 3. Plan | `.github/skills/architecture/api-design/SKILL.md` (if API work), `.github/skills/architecture/database/SKILL.md` (if DB work) | File inventory + test plan + reuse decision per item |
+| 4. Design | `.github/skills/architecture/core-principles/SKILL.md`, `.github/skills/architecture/api-design/SKILL.md` (if API work), `.github/skills/architecture/database/SKILL.md` (if DB work) | Interfaces + SOLID + DRY/reuse check |
+| 5. Implement | Language instruction, `.github/skills/ai-systems/ai-agent-development/SKILL.md` (if `needs:ai`), `.github/skills/ai-systems/prompt-engineering/SKILL.md` (if `needs:ai`), `.github/skills/development/systematic-debugging/SKILL.md` (when 2+ fixes have already failed for the same symptom) | Committed code + loop started |
+| 5b. Scrub | `.github/skills/development/scrub/SKILL.md` | Deslop pass run on every changed file; safe fixes applied; behavior unchanged |
+| 6. Test | `.github/skills/development/testing/SKILL.md`, `.github/skills/ai-systems/ai-evaluation/SKILL.md` (if `needs:ai`), `.github/skills/development/verification-before-completion/SKILL.md` (MUST run before claiming tests pass or marking the loop complete) | Coverage >=80% + ACs covered + verification gate passed |
+| 6b. Documentation Drift | `.github/skills/development/documentation/SKILL.md` | Drift check passed + affected docs updated or justified no-impact assessment + reviewed document hashes |
+| 7. Review | `.github/skills/development/code-review/SKILL.md`, `.github/skills/architecture/security/SKILL.md` | Output score >=70% + code-quality rubric >=80% |
 
 ---
 
@@ -319,6 +320,16 @@ Follow `ai-evaluation/SKILL.md`: mock all LLM calls in unit tests, use replay/re
 
 **Phase 6 Gate**: Coverage >= 80% + all planned tests exist + all ACs covered.
 
+### 6.6 Mandatory Documentation Drift
+
+After EVERY feature, user story or bug (including config-only work), run
+`.agentx/agentx.ps1 doc-drift check -Json`. Reconcile usage, examples,
+configuration and operational docs with the implementation.
+Include `documentationReview` in the final report: `updated` or `no-impact`,
+specific rationale and reviewed-doc hashes. Independent semantic review remains
+required; missing/stale evidence blocks Done. Follow
+[maintenance](../../docs/guides/DOCUMENTATION-MAINTENANCE.md).
+
 ---
 
 ## Phase 7: Review
@@ -337,7 +348,7 @@ Verify:
 - Tests, coverage, lint, formatting, error paths, and boundary validation pass.
 - No secrets, injection paths, unsafe data access, dead code, unjustified TODOs, or
   near-duplicate endpoints/services/queries/components remain.
-- Required design checkpoints and public documentation are complete.
+- Required design checkpoints and documentation-drift verification are complete.
 - For GenAI: pinned/configured models, file prompts, telemetry, retries/timeouts,
   schemas, guardrails, mocked unit calls, and evaluation baseline are present.
 
@@ -375,7 +386,7 @@ but not implementation rationale.
 
 Reviewer prompt:
 
-> You are a code reviewer. Read SPEC-{issue}.md, `evaluation/rubrics/code-quality.md`, the staged diff, tests, and verification evidence. Do NOT read chat history or implementation rationale. Score all ten rubric dimensions and include the exact scope paths and SHA-256 values. Report HIGH, MEDIUM, and LOW findings using the rubric's required JSON shape.
+> Review the Spec, final scope/diff, tests and evidence against `evaluation/rubrics/code-quality.md`. Return all dimensions and exact hashes with HIGH/MEDIUM/LOW findings; exclude chat history and author rationale.
 
 Write JSON evidence and record its verdict on the final iteration:
 
@@ -416,9 +427,11 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 | Complex prompt design needed | AgentX Prompt Engineer | Delegate: "Design system prompt for {purpose} per ai-agent-development/SKILL.md rules." |
 | RAG pipeline needed | AgentX RAG Specialist | Delegate: "Design retrieval pipeline for {corpus/goal} with latency target {L}ms." |
 
-**Protocol limits**:
-- Max 3 exchanges per topic
-- If unresolved after 3 exchanges: document assumption with `// ASSUMPTION: <what> -- flagged via #<issue> <date>`, add `needs:help` label, continue
+Escalation limits (max exchanges, when to bring in the user) are canonical in
+[WORKFLOW.md](../../docs/WORKFLOW.md#specialist-agent-mode); this table adds only
+the Engineer-specific contact routing above. If unresolved once that limit is
+reached, document the assumption in code as
+`// ASSUMPTION: <what> -- flagged via #<issue> <date>`, add `needs:help`, and continue.
 
 > **Shared Protocols**: Follow [WORKFLOW.md](../../docs/WORKFLOW.md#handoff-flow) for handoff workflow and agent communication.
 > **Local Mode**: See [GUIDE.md](../../docs/GUIDE.md#local-mode-no-github) for local issue management.
@@ -435,27 +448,6 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 | E2E tests | `tests/e2e/**` or `e2e/**` |
 | AI prompts (if `needs:ai`) | `prompts/**` |
 | Updated README | `docs/README.md` |
-
----
-
-## Skills to Load (by phase)
-
-| Phase | Skill to Load |
-|-------|--------------|
-| Phase 1 Research | `.github/skills/development/karpathy-guidelines/SKILL.md` (think before coding, simplicity, surgical changes, goal-driven loops) |
-| Phase 1 Research | `.github/skills/development/iterative-loop/SKILL.md` |
-| Phase 1 Research | `.github/skills/architecture/core-principles/SKILL.md` |
-| Phase 1 Research | `.github/skills/development/testing/SKILL.md` |
-| Phase 1 Research | `.github/skills/development/git-worktrees/SKILL.md` (if parallel branches or isolated experiments are likely) |
-| Phase 3-4 Plan/Design | `.github/skills/architecture/api-design/SKILL.md` (if API work) |
-| Phase 3-4 Plan/Design | `.github/skills/architecture/database/SKILL.md` (if DB work) |
-| Phase 5 Implement | `.github/skills/ai-systems/ai-agent-development/SKILL.md` (if `needs:ai`) |
-| Phase 5 Implement | `.github/skills/ai-systems/prompt-engineering/SKILL.md` (if `needs:ai`) |
-| Phase 5 Implement | `.github/skills/development/systematic-debugging/SKILL.md` (when 2+ fixes have already failed for the same symptom) |
-| Phase 6 Test | `.github/skills/ai-systems/ai-evaluation/SKILL.md` (if `needs:ai`) |
-| Phase 6 Test | `.github/skills/development/verification-before-completion/SKILL.md` (MUST run before claiming tests pass or marking the loop complete) |
-| Phase 7 Review | `.github/skills/development/code-review/SKILL.md` |
-| Phase 7 Review | `.github/skills/architecture/security/SKILL.md` |
 
 ---
 

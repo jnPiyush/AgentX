@@ -4003,6 +4003,7 @@ function Invoke-WorkflowCmd {
             $n++
         }
     }
+    Write-CliOutput "  Implementation gate (feature/story/bug): agentx doc-drift check; include documentationReview in the final review."
     Write-CliOutput ''
 }
 
@@ -7512,6 +7513,7 @@ $($C.w)  Commands:$($C.n)
   lessons [list|query|show|stats|promote|archive|clean]  Learning pipeline management
   tokens [count|check|report]      Token budget management
   budget -File <request.json>     Offline context and token-cost preflight (no provider calls)
+  doc-drift [check] [-Json]       Verify documentation links and current facts before review
   score <engineer|architect|pm> [issue]  Score agent output quality
   discover [run|status|reset]      Analyze signals + git history for patterns
   graduate [run|list|preview]      Promote high-confidence patterns to skills
@@ -8760,6 +8762,7 @@ function Invoke-StocktakeCmd     { Invoke-ScriptWrapper -ScriptRelPath 'scripts/
 function Invoke-RouteCmd         { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-route.ps1'      -Label 'route' }
 function Invoke-CouncilCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-council.ps1'    -Label 'council' }
 function Invoke-BudgetCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/budget.ps1'          -Label 'budget' }
+function Invoke-DocDriftCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/check-doc-drift.ps1' -Label 'doc-drift' }
 
 # ---------------------------------------------------------------------------
 # Main router
@@ -8789,6 +8792,7 @@ switch ($Script:Command) {
     'watch'    { Invoke-WatchCmd }
     'tokens'   { Invoke-TokensCmd }
     'budget'   { Invoke-BudgetCmd }
+    'doc-drift' { Invoke-DocDriftCmd }
     'score'    { Invoke-ScoreCmd }
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }

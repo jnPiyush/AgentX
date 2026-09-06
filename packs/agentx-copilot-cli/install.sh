@@ -171,7 +171,12 @@ copy_file() {
   fi
 
   mkdir -p "$(dirname "$dest")"
-  cp "$src" "$dest"
+  # This historical reference targets repository source, not the workspace launcher.
+  if [ "$1" = "docs/artifacts/adr/ADR-341.md" ]; then
+    sed 's|(../../../.agentx/agentic-runner.ps1)|(https://github.com/jnPiyush/AgentX/blob/master/.agentx/agentic-runner.ps1)|g' "$src" > "$dest"
+  else
+    cp "$src" "$dest"
+  fi
   TOTAL_COPIED=$((TOTAL_COPIED + 1))
 }
 
@@ -204,6 +209,8 @@ install_cli_runtime_bundle() {
   done
   copy_file "scripts/score-code-quality.ps1" ".github/agentx/scripts/score-code-quality.ps1"
   copy_file "evaluation/rubrics/code-quality.md" ".github/agentx/evaluation/rubrics/code-quality.md"
+  copy_file "scripts/check-doc-drift.ps1" ".github/agentx/scripts/check-doc-drift.ps1"
+  copy_file "scripts/validate-references.ps1" ".github/agentx/scripts/validate-references.ps1"
 
   ok "CLI runtime: $((TOTAL_COPIED - copied_before)) copied, $((TOTAL_SKIPPED - skipped_before)) skipped"
 }
@@ -399,8 +406,12 @@ copy_tree "$SOURCE/.agentx/plugins" "$TARGET/.agentx/plugins" "Plugins"
 info "Installing guides..."
 copy_tree "$SOURCE/docs/guides" "$TARGET/docs/guides" "Guides"
 
+info "Installing packs..."
+copy_tree "$SOURCE/packs" "$TARGET/packs" "Packs"
+
 info "Installing scripts..."
 copy_file "scripts/budget.ps1" "scripts/budget.ps1"
+copy_file "scripts/check-doc-drift.ps1" "scripts/check-doc-drift.ps1"
 copy_file "scripts/score-output.ps1" "scripts/score-output.ps1"
 copy_file "scripts/score-code-quality.ps1" "scripts/score-code-quality.ps1"
 copy_file "scripts/validate-handoff.ps1" "scripts/validate-handoff.ps1"
@@ -437,7 +448,6 @@ copy_file "docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md" "docs/guides/KNOWLEDGE-REV
 copy_file ".github/agent-delegation.md" ".github/agent-delegation.md"
 copy_file ".github/AGENT-PROTOCOL.md" ".github/AGENT-PROTOCOL.md"
 copy_file ".github/copilot-instructions.md" ".github/copilot-instructions.md"
-copy_file "CONTRIBUTING.md" "CONTRIBUTING.md"
 copy_file "docs/artifacts/adr/ADR-341.md" "docs/artifacts/adr/ADR-341.md"
 copy_file "docs/artifacts/adr/ADR-342.md" "docs/artifacts/adr/ADR-342.md"
 copy_file "docs/artifacts/specs/SPEC-341.md" "docs/artifacts/specs/SPEC-341.md"

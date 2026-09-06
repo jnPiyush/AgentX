@@ -37,6 +37,11 @@ These four rules carry the same weight as the Quality Loop. The pre-commit hook 
 
 ## Core Documents (Read Before Coding)
 
+For every feature, user story and bug (including config-only implementation),
+run `.agentx/agentx.ps1 doc-drift check` before review. Follow the
+[Documentation Drift Hard Rule](AGENTS.md#documentation-drift-hard-rule);
+the final review requires an impact decision, rationale and reviewed-doc hashes.
+
 1. **[AGENTS.md](AGENTS.md)** - Map of all resources, quick-reference rules, pointers to detailed docs. Read for ANY coding or workflow task.
 2. **[docs/WORKFLOW.md](docs/WORKFLOW.md)** - Workflow, routing, handoff, status transitions, architecture. Read for multi-agent coordination.
 3. **[Skills.md](Skills.md)** - Production code standards index. Use the Quick Reference table to pick only the skills relevant to the task and active phase, then read those SKILL.md files.

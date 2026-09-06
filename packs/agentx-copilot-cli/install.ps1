@@ -203,6 +203,7 @@ function Get-PackInstallPlan {
     @{ Key = 'registries'; Label = 'Registries'; RelativePath = '.github/registries' },
     @{ Key = 'hooks'; Label = 'Hooks'; RelativePath = '.github/hooks' },
     @{ Key = 'plugins'; Label = 'Plugins'; RelativePath = '.agentx/plugins' },
+    @{ Key = 'packs'; Label = 'Packs'; RelativePath = 'packs' },
     @{ Key = 'guides'; Label = 'Guides'; RelativePath = 'docs/guides' }
  )
 
@@ -266,6 +267,13 @@ function Copy-FileIfNeeded {
 
  if ($PSCmdlet.ShouldProcess($DestPath, 'Copy file')) {
   Copy-Item -Path $SrcPath -Destination $DestPath -Force
+  # Keep the historical source reference valid without inventing a workspace runtime file.
+  if ($SrcPath -match '[\\/]docs[\\/]artifacts[\\/]adr[\\/]ADR-341\.md$') {
+   $content = [IO.File]::ReadAllText($DestPath).Replace(
+    '(../../../.agentx/agentic-runner.ps1)',
+    '(https://github.com/jnPiyush/AgentX/blob/master/.agentx/agentic-runner.ps1)')
+   [IO.File]::WriteAllText($DestPath, $content)
+  }
  }
 
  return @{ Copied = 1; Skipped = 0 }
@@ -345,6 +353,8 @@ function Install-CliRuntimeBundle {
  }
  $trustedFiles = @(
   @{ Source = 'scripts/score-code-quality.ps1'; Destination = '.github/agentx/scripts/score-code-quality.ps1' },
+  @{ Source = 'scripts/check-doc-drift.ps1'; Destination = '.github/agentx/scripts/check-doc-drift.ps1' },
+  @{ Source = 'scripts/validate-references.ps1'; Destination = '.github/agentx/scripts/validate-references.ps1' },
   @{ Source = 'evaluation/rubrics/code-quality.md'; Destination = '.github/agentx/evaluation/rubrics/code-quality.md' }
  )
  foreach ($trustedFile in $trustedFiles) {

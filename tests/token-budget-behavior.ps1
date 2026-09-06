@@ -77,6 +77,19 @@ try {
     New-Item -ItemType Directory -Path $emptyDir | Out-Null
     $emptyResult = Invoke-Counter @('-Action', 'check', '-Path', 'empty')
     Assert-True ($emptyResult.code -eq 0 -and $emptyResult.data.scannedFiles -eq 0) 'Empty unconfigured workspace is reported without a strict-mode crash'
+    Copy-Item -LiteralPath (Join-Path $repoRoot '.token-limits.json') -Destination (Join-Path $workspace '.token-limits.json')
+    $policy = Get-Content -LiteralPath (Join-Path $workspace '.token-limits.json') -Raw | ConvertFrom-Json
+    $promptLimit = $policy.defaults.'.github/prompts/**/*.prompt.md'
+    Assert-True ($promptLimit -eq 1500) 'Canonical reusable prompts have an explicit 1500-token budget'
+    $promptDirectory = Join-Path $workspace '.github/prompts/nested'
+    New-Item -ItemType Directory -Path $promptDirectory -Force | Out-Null
+    $promptFile = Join-Path $promptDirectory 'check.prompt.md'
+    Set-Content -LiteralPath $promptFile -Value ('x' * ($promptLimit * 4)) -NoNewline
+    $promptCheck = Invoke-Counter @('-Action', 'check', '-Path', '.github/prompts')
+    Assert-True ($promptCheck.code -eq 0 -and $promptCheck.data.checkedFiles -eq 1 -and $promptCheck.data.uncoveredFiles.Count -eq 0) 'Reusable prompt policy covers nested files and accepts its exact boundary'
+    Add-Content -LiteralPath $promptFile -Value 'x' -NoNewline
+    $promptOverage = Invoke-Counter @('-Action', 'check', '-Path', '.github/prompts')
+    Assert-True ($promptOverage.code -eq 1 -and $promptOverage.data.violations.Count -eq 1) 'Reusable prompt growth beyond the budget fails'
     Write-Host "Results: $passed passed"
 } finally {
     $env:AGENTX_WORKSPACE_ROOT = $previousRoot

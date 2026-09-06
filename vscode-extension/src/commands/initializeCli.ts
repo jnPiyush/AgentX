@@ -10,9 +10,9 @@ import {
   appendCliSymlinksToGitignore,
   copyCopilotCliAssets,
   createCopilotCliSymlinks,
-  promptWorkspaceRoot,
   writeCliAssetState,
-} from './initializeInternals';
+} from './initializeRuntimeAssets';
+import { promptWorkspaceRoot } from './initializeWorkspaceHelpers';
 
 /**
  * AgentX: Initialize CLI

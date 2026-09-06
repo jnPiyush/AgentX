@@ -89,6 +89,9 @@ AgentX uses six shared checkpoints across chat, CLI, issues, plans, reviews, and
 - **Deslop scrub:** flags stale comments, over-abstraction, generic UI, and unsafe empty catches
 - **Skill quality:** deterministic 100-point rubric with blocking floors and no-regression checks
 - **Fresh evidence:** reused or stale artifacts cannot complete the loop
+- **Documentation drift:** every feature, story and bug checks current docs before
+  review; the final report binds the impact decision to reviewed-document hashes
+  ([maintenance policy](docs/guides/DOCUMENTATION-MAINTENANCE.md))
 - **Compound capture:** reusable decisions and pitfalls become repository knowledge
 
 ---
@@ -224,7 +227,7 @@ Requirements:
 
 - VS Code 1.85+
 - Git
-- PowerShell 7.4+ on Windows, or Bash on Linux/macOS
+- PowerShell 7.4+ (`pwsh`) on every platform; the Bash launcher delegates to it
 - GitHub Copilot and GitHub Copilot Chat
 
 ### 2. Initialize the workspace

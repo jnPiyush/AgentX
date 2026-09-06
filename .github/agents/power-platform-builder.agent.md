@@ -195,6 +195,10 @@ Power Platform product surfaces remain skills inside this workflow. Do not split
 - [ ] Preview component limitations are explicit
 - [ ] No packed artifact is staged
 
+## Mandatory Documentation Drift
+
+Before handoff, run `.agentx/agentx.ps1 doc-drift check -Json` (including config-only work). Include `documentationReview` (`updated` or `no-impact`) with rationale and reviewed-doc hashes alongside the solution documentation in `docs/power-platform/**`. Follow [maintenance](../../docs/guides/DOCUMENTATION-MAINTENANCE.md).
+
 ## Deliverables
 
 | Artifact | Location |

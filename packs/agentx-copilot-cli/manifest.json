@@ -101,6 +101,7 @@
     ],
     "scripts": [
       "scripts/budget.ps1",
+      "scripts/check-doc-drift.ps1",
       "scripts/scrub.ps1",
       "scripts/dream.ps1",
       "scripts/research.ps1",
@@ -257,7 +258,6 @@
       "docs/artifacts/specs/SPEC-341.md",
       "docs/execution/plans/EXEC-PLAN-341-self-hosted-runtime.md",
       "docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md",
-      "CONTRIBUTING.md",
       "evaluation/baseline.json"
     ],
     "hooks": [
@@ -268,6 +268,9 @@
     ],
     "plugins": [
       ".agentx/plugins"
+    ],
+    "packs": [
+      "packs"
     ],
     "guides": [
       "docs/guides"

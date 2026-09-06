@@ -69,33 +69,73 @@ jobs:
 
           echo "[PASS] Commit message validation passed"
 
-      - name: Check Documentation
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
+      - name: Documentation Drift Gate
+        shell: pwsh
         run: |
-          echo "Checking documentation..."
+          $workspaceRoot = (Resolve-Path -LiteralPath '.').Path
+          $rawDocDrift = & pwsh -NoProfile -NonInteractive -File ./scripts/check-doc-drift.ps1 -Action check -WorkspaceRoot $workspaceRoot -PolicyPath .github/documentation-facts.json -Json
+          $docDriftExitCode = $LASTEXITCODE
+          $serializedDocDrift = ($rawDocDrift | Out-String).Trim()
+          if ([string]::IsNullOrWhiteSpace($serializedDocDrift)) {
+            throw 'Documentation drift checker produced no JSON output.'
+          }
+          $docDrift = $serializedDocDrift | ConvertFrom-Json -Depth 12
+          $claimIssues = if ($docDrift.PSObject.Properties['issues']) { @($docDrift.issues).Count } else { 0 }
+          $brokenLinks = if ($docDrift.PSObject.Properties['references'] -and $docDrift.references.PSObject.Properties['broken']) { @($docDrift.references.broken).Count } else { 0 }
+          Write-Host 'Documentation drift check is mandatory for feature/story/bug and documentation-consolidation changes.'
+          Write-Host "Documentation drift status: $($docDrift.status)"
+          Write-Host 'Facts policy: .github/documentation-facts.json (required)'
+          if ($docDrift.PSObject.Properties['factsStatus']) {
+            Write-Host "Facts status: $($docDrift.factsStatus)"
+          }
+          if ($docDrift.PSObject.Properties['checkedClaims']) {
+            Write-Host "Claims checked: $($docDrift.checkedClaims)"
+          }
+          Write-Host "Claim issues: $claimIssues"
+          Write-Host "Broken links: $brokenLinks"
+          if ($docDrift.PSObject.Properties['message']) {
+            Write-Host "Documentation drift message: $($docDrift.message)"
+          }
+          Write-Host "Semantic review required: $($docDrift.semanticReviewRequired)"
+          $summary = @(
+            '## Documentation Drift',
+            '',
+            "- Status: $($docDrift.status)",
+            '- Policy: `.github/documentation-facts.json` (required)',
+            "- Facts status: $($docDrift.factsStatus)",
+            "- Claims checked: $($docDrift.checkedClaims)",
+            "- Claim issues: $claimIssues",
+            "- Broken links: $brokenLinks",
+            "- Semantic review required: $($docDrift.semanticReviewRequired)"
+          )
+          if ($docDrift.PSObject.Properties['message']) {
+            $summary += "- Message: $($docDrift.message)"
+          }
+          Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value ($summary -join "`n")
+          if ($docDriftExitCode -ne 0) {
+            exit $docDriftExitCode
+          }
 
-          # Check for C# XML docs
-          if find . -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" | head -1 | grep -q "."; then
-            UNDOCUMENTED=$(find . -name "*.cs" -not -path "*/obj/*" -not -path "*/bin/*" -exec grep -l "public " {} \; | \
-              xargs grep -L "///" | wc -l)
-            if [ "$UNDOCUMENTED" -gt 0 ]; then
-              echo "[WARN] WARNING: $UNDOCUMENTED C# files with public APIs missing XML docs"
-              echo "All public APIs should have XML documentation"
-            fi
-          fi
+          $csharpFiles = @(Get-ChildItem -LiteralPath $workspaceRoot -Recurse -Filter '*.cs' -File | Where-Object {
+            $_.FullName -notmatch '[/\\](obj|bin)[/\\]'
+          })
+          if ($csharpFiles.Count -eq 0) {
+            Write-Host '[PASS] No C# files found for XML documentation advisory check'
+          } else {
+            $undocumented = 0
+            foreach ($file in $csharpFiles) {
+              $content = Get-Content -LiteralPath $file.FullName -Raw
+              if ($content -match '\bpublic\b' -and $content -notmatch '///') {
+                $undocumented++
+              }
+            }
 
-          # Check for README updates (if new feature)
-          if [ -n "$PR_TITLE" ]; then
-            if printf '%s' "$PR_TITLE" | grep -qi "feat:"; then
-              if ! git diff origin/${{ github.base_ref }}..HEAD --name-only | grep -q "README.md"; then
-                echo "[INFO] INFO: New feature added. Consider updating README.md"
-              fi
-            fi
-          fi
-
-          echo "[PASS] Documentation check complete"
-
+            if ($undocumented -gt 0) {
+              Write-Host "::warning::$undocumented C# files with public APIs missing XML docs."
+            } else {
+              Write-Host '[PASS] C# XML documentation advisory check passed'
+            }
+          }
       - name: Validate File Structure
         run: |
           echo "Validating file structure..."
@@ -217,14 +257,16 @@ jobs:
             'tests/model-route-behavior.ps1',
             'tests/budget-behavior.ps1',
             'tests/scrub-behavior.ps1',
-            'tests/code-quality-rubric-behavior.ps1'
+            'tests/code-quality-rubric-behavior.ps1',
+            'tests/doc-drift-behavior.ps1',
+            'tests/doc-drift-ci-behavior.ps1'
           )
           foreach ($suite in $regressionSuites) {
             if (-not (Test-Path -LiteralPath $suite)) {
               throw "Required regression suite script not found: $suite"
             }
             Write-Host "Running $suite"
-            & pwsh -NoProfile -File $suite
+            & pwsh -NoProfile -NonInteractive -File $suite
             $suiteExitCode = $LASTEXITCODE
             if ($suiteExitCode -ne 0) {
               exit $suiteExitCode
@@ -272,77 +314,6 @@ jobs:
           npm test
           npm run test:coverage
           npm run audit:runtime
-
-      - name: Reference Link Validation
-        run: |
-          echo "Validating cross-references in key docs..."
-          BROKEN=0
-          for doc in AGENTS.md Skills.md docs/WORKFLOW.md README.md; do
-            if [ ! -f "$doc" ]; then continue; fi
-            while IFS= read -r link; do
-              TARGET=$(echo "$link" | grep -oP '(?<=\]\()[^)#]+' | head -1)
-              if [ -z "$TARGET" ]; then continue; fi
-              if echo "$TARGET" | grep -qE '^https?://|^mailto:'; then continue; fi
-              DIR=$(dirname "$doc")
-              RESOLVED="$DIR/$TARGET"
-              if [ ! -e "$RESOLVED" ]; then
-                echo "[FAIL] $doc: broken link -> $TARGET"
-                BROKEN=$((BROKEN + 1))
-              fi
-            done < <(grep -oP '\[[^\]]+\]\([^)]+\)' "$doc" 2>/dev/null || true)
-          done
-          if [ "$BROKEN" -gt 0 ]; then
-            echo "[FAIL] $BROKEN broken link(s) found"
-            exit 1
-          else
-            echo "[PASS] All references valid"
-          fi
-
-      - name: Doc Count Validation
-        run: |
-          echo "Validating documented counts match actual file counts..."
-          ERRORS=0
-
-          AGENT_COUNT=$(find .github/agents -name '*.agent.md' | wc -l | tr -d ' ')
-          SKILL_COUNT=$(find .github/skills -name 'SKILL.md' | wc -l | tr -d ' ')
-          TEMPLATE_COUNT=$(find .github/templates -name '*-TEMPLATE.md' | wc -l | tr -d ' ')
-          PROMPT_COUNT=$(find .github/prompts -name '*.prompt.md' | wc -l | tr -d ' ')
-          INSTRUCTION_COUNT=$(find .github/instructions -maxdepth 1 -name '*.instructions.md' | wc -l | tr -d ' ')
-
-          echo "Actual: agents=$AGENT_COUNT skills=$SKILL_COUNT templates=$TEMPLATE_COUNT prompts=$PROMPT_COUNT instructions=$INSTRUCTION_COUNT"
-
-          check_count() {
-            local FILE=$1 PATTERN=$2 EXPECTED=$3 LABEL=$4
-            if ! grep -qP "$PATTERN" "$FILE" 2>/dev/null; then
-              echo "[FAIL] $FILE: pattern not found for $LABEL"
-              ERRORS=$((ERRORS + 1))
-            else
-              FOUND=$(grep -oP "$PATTERN" "$FILE" | head -1)
-              if [ "$FOUND" != "$EXPECTED" ]; then
-                echo "[FAIL] $FILE: $LABEL says '$FOUND' but actual is '$EXPECTED'"
-                ERRORS=$((ERRORS + 1))
-              fi
-            fi
-          }
-
-          check_count "AGENTS.md" '\b[0-9]* agent definition files' "$AGENT_COUNT agent definition files" "agent count"
-          check_count "AGENTS.md" '\b[0-9]* skill files' "$SKILL_COUNT skill files" "skill count"
-          check_count "AGENTS.md" '\b[0-9]* instruction files' "$INSTRUCTION_COUNT instruction files" "instruction count"
-          check_count "AGENTS.md" '\b[0-9]* templates' "$TEMPLATE_COUNT templates" "template count"
-          check_count "AGENTS.md" '\b[0-9]* reusable prompt templates' "$PROMPT_COUNT reusable prompt templates" "prompt count"
-          check_count "README.md" '\*\*[0-9]+ total\*\*' "**$AGENT_COUNT total**" "agent count"
-          check_count "README.md" '\*\*[0-9]+ skills\*\*' "**$SKILL_COUNT skills**" "skill count"
-
-          if [ -f "vscode-extension/.github/AGENTS.md" ]; then
-            check_count "vscode-extension/.github/AGENTS.md" '\b[0-9]* agent definition files' "$AGENT_COUNT agent definition files" "bundled agent count"
-          fi
-
-          if [ "$ERRORS" -gt 0 ]; then
-            echo "[FAIL] $ERRORS doc-count mismatch(es) found"
-            exit 1
-          else
-            echo "[PASS] All documented counts match actual file counts"
-          fi
 
       - name: Extension Lint and Test
         if: hashFiles('vscode-extension/package.json') != ''
@@ -450,7 +421,7 @@ jobs:
             |-------|--------|
             | Secret Detection | ${status} |
             | Commit Message Format | ${status} |
-            | Documentation | ${status} |
+            | Documentation Drift | ${status} |
             | File Structure | ${status} |
 
             ${status === '[PASS]' ? '[PASS] All quality gates passed!' : '[FAIL] Quality gates failed. Please fix the issues above.'}

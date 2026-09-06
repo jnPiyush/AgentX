@@ -1,7 +1,7 @@
 # AgentX Guide
 
 > **Everything you need to get started and set up AgentX.**
-> For core workflow and agent roles, see [AGENTS.md](../AGENTS.md). For skills index, see [Skills.md](../Skills.md).
+> For workflow and roles, see [AGENTS.md](../AGENTS.md); for skills, [Skills.md](../Skills.md). The [repository docs hub](https://github.com/jnPiyush/AgentX/blob/master/docs/README.md) includes history not copied into user workspaces.
 
 ---
 
@@ -160,36 +160,22 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.sh |
 PowerShell install path note:
 `install.ps1` requires PowerShell 7.4+ (`pwsh`). If you are on older Windows PowerShell, install PowerShell 7 and rerun with `pwsh -File .\install.ps1`.
 
-### Install Profiles
+The AgentX Bash launcher also delegates to `pwsh`; install PowerShell on
+Linux/macOS when using the CLI runtime.
 
-Control what gets installed with the `-Profile` flag:
+### Installation Scope
 
-| Profile | Skills | Instructions | Prompts | Hooks | VS Code |
-|---------|--------|-------------|---------|-------|---------|
-| **full** (default) | All 107 | All 7 | Yes | Yes | Yes |
-| **minimal** | None | None | No | No | No |
-| **python** | Python, testing, data, architecture | python, api | Yes | Yes | Yes |
-| **dotnet** | C#, Blazor, Azure, SQL, architecture | csharp, blazor, api | Yes | Yes | Yes |
-| **react** | React, TypeScript, UI, design, architecture | react, api | Yes | Yes | Yes |
-
-**All profiles always include**: agents, templates, CLI, instructions, issue templates, documentation.
+The installer deploys the framework; language-specific `-Profile`/`--profile`
+options are not implemented. Use the zero-copy extension for extension-hosted
+assets, or the standalone CLI pack for workspace-local assets.
 
 ```powershell
-# PowerShell examples
-.\install.ps1 -Profile python          # Python stack
-.\install.ps1 -Profile minimal -Local  # Core only, local mode
-.\install.ps1 -Force                   # Reinstall (overwrite existing)
-.\install.ps1 -NoSetup                 # Skip interactive prompts (CI/scripts)
-
-# Bash examples
-./install.sh --profile python
-./install.sh --profile minimal --local
-./install.sh --force
-./install.sh --no-setup
-
-# One-liner with profile (env vars)
-PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.sh | bash
+pwsh .\install.ps1 -Mode local -NoSetup
+pwsh .\install.ps1 -Mode github -NoSetup
 ```
+
+Existing files are preserved unless you explicitly use `-Force`; review local
+customizations before choosing an overwrite.
 
 ### What the Installer Does
 
@@ -1073,6 +1059,7 @@ DEBUG=1 ./validate-handoff.sh 123 engineer  # Debug mode
 
 | Resource | Description |
 |----------|-------------|
+| [Repository docs hub](https://github.com/jnPiyush/AgentX/blob/master/docs/README.md) | Guides and retained project history |
 | [AGENTS.md](../AGENTS.md) | Agent roles, workflow, classification rules |
-| [Skills.md](../Skills.md) | 62 production skills index + workflow scenarios |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | How to contribute to AgentX |
+| [Skills.md](../Skills.md) | 134 production skills index + workflow scenarios |
+| [CONTRIBUTING.md](https://github.com/jnPiyush/AgentX/blob/master/CONTRIBUTING.md) | How to contribute to AgentX |

@@ -27,12 +27,11 @@
   member addresses each topic in turn and the Synthesis attributes findings to
   each topic.
 
-  INTERNAL AGENT MECHANISM. The Model Council is run BY the calling agent,
-  not by the user. The script generates a Council Brief containing the
-  role-specific prompts; the calling agent (Copilot, Claude Code, Cursor,
-  local model) then internally adopts each role in turn, generates the three
-  responses, writes them into the Member Responses section of the brief, and
-  completes the Synthesis. The user is NEVER asked to copy/paste prompts.
+  BRIEF MODE. The script prepares role-specific prompts. The calling agent
+  invokes independent models using authorized host capabilities, records their
+  actual responses and identities, then synthesizes them. A generated brief is
+  not a completed council, and one model role-playing three members does not
+  satisfy model diversity. The user need not copy/paste prompts.
 
   OPTIONAL AUTOMATION. Pass -AutoInvoke to drive the council via the GitHub
   Models CLI extension (`gh extension install github/gh-models`). This is one
@@ -67,8 +66,8 @@
 .PARAMETER AutoInvoke
   Optional. When set, attempts to drive the council automatically via the
   GitHub Models CLI (`gh models run`). Falls back to brief mode with a warning
-  if the extension is not installed. Without this flag the calling agent runs
-  the council internally by adopting each role -- the user is not involved.
+  if the extension is not installed. Without this flag no model calls are made;
+  the calling agent must collect actual independent responses before synthesis.
 
 .EXAMPLE
   pwsh scripts/model-council.ps1 -Topic sovereign-ai `
@@ -307,14 +306,15 @@ if ($AutoInvoke) {
         Write-Warning "-AutoInvoke requested but 'gh models' extension is not installed. Falling back to brief mode. Install with: gh extension install github/gh-models"
     }
 }
-$timestamp   = Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'
+$timestamp   = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
 $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine("# Model Council: $Topic")
 [void]$sb.AppendLine("")
-[void]$sb.AppendLine("**Convened:** $timestamp")
-[void]$sb.AppendLine("**Mode:** $(if ($useGh) { 'automated (gh models)' } else { 'agent-internal (calling agent adopts each role and writes responses below)' })")
+[void]$sb.AppendLine("**Prepared:** $timestamp")
+[void]$sb.AppendLine("**Mode:** $(if ($useGh) { 'automated (gh models)' } else { 'brief (independent model calls pending)' })")
 [void]$sb.AppendLine("**Purpose pack:** $Purpose")
+[void]$sb.AppendLine("**Status:** Requires attributed independent responses and synthesis; failed or unavailable members are not approvals.")
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("## Question")
 [void]$sb.AppendLine("")
@@ -327,6 +327,8 @@ if ($Context) {
     [void]$sb.AppendLine("")
 }
 [void]$sb.AppendLine("## Council Roster")
+[void]$sb.AppendLine("")
+[void]$sb.AppendLine("Models below are requested identities. Record the actual responding model and provider with each response; role-only fallback does not satisfy model diversity.")
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("| Role | Model |")
 [void]$sb.AppendLine("|------|-------|")
@@ -345,7 +347,7 @@ foreach ($m in $roster) {
         $resp = Invoke-CouncilMember -Model $m.Model -Role $m.Role -Prompt $prompt -Pack $pack -ResponseFormat $responseFormat
         [void]$sb.AppendLine($resp)
     } else {
-        [void]$sb.AppendLine("[AGENT-TODO] Calling agent: adopt the role below, generate the response in this file (replacing this block), then move to the next role. Do NOT ask the user to do this -- run it yourself as part of the active workflow phase.")
+        [void]$sb.AppendLine("[AGENT-TODO] Calling agent: invoke an independent model for this role and replace this block with its actual response and resolved identity. Do not impersonate all members in one model. If unavailable, record the limitation and leave this council incomplete.")
         [void]$sb.AppendLine("")
         [void]$sb.AppendLine('```')
         [void]$sb.AppendLine("Role: $($m.Role)")
@@ -361,7 +363,7 @@ foreach ($m in $roster) {
 
 [void]$sb.AppendLine("## Synthesis")
 [void]$sb.AppendLine("")
-[void]$sb.AppendLine("**To be completed by the calling agent after writing all three Member Responses above. The user is not in the loop.**")
+[void]$sb.AppendLine("**The calling agent synthesizes only after collecting the actual Member Responses above. A brief, failed calls, or role-play alone is not independent consensus.**")
 [void]$sb.AppendLine("")
 if ($multiTopic) {
     [void]$sb.AppendLine("This council covered $($topicList.Count) topics. In each section below, attribute findings to the relevant Topic <n> so the deliverable can trace each decision back to its topic.")
@@ -376,5 +378,5 @@ foreach ($section in $pack.Sections) {
 Set-Content -Path $outPath -Value $sb.ToString() -Encoding UTF8
 Write-Host "[OK] Council file written: $outPath"
 if (-not $useGh) {
-    Write-Host "[INFO] Agent-internal mode (default). The CALLING AGENT now adopts each role in turn, writes the response into the file in place of each [AGENT-TODO] block, then completes the Synthesis section. Do not surface this prompt-running step to the user. Optional gh-models automation: gh extension install github/gh-models  &&  re-run with -AutoInvoke"
+    Write-Host "[INFO] Brief mode: no models invoked. Collect actual independent responses using authorized host capabilities, record resolved identities, then synthesize. Missing members remain incomplete; do not replace them with role-play. Optional configured automation: re-run with -AutoInvoke."
 }

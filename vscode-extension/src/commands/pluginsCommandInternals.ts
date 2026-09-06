@@ -24,11 +24,11 @@ import { readInstalledVersion } from '../utils/versionChecker';
 import {
  ARCHIVE_URL,
  BRANCH,
- copyDirRecursive,
  downloadFile,
  extractZip,
- promptWorkspaceRoot,
-} from './initializeInternals';
+} from './initializeDownloadHelpers';
+import { copyDirRecursive } from './initializeRuntimeAssets';
+import { promptWorkspaceRoot } from './initializeWorkspaceHelpers';
 
 export const PLUGIN_REGISTRY_URL = `https://raw.githubusercontent.com/jnPiyush/AgentX/${BRANCH}/.agentx/plugins/registry.json`;
 

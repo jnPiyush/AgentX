@@ -3,7 +3,12 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as os from 'os';
 import * as path from 'path';
-import { createPinnedLookup, downloadFile } from '../../commands/initializeInternals';
+import * as sinon from 'sinon';
+import {
+  createPinnedLookup,
+  downloadFile,
+  extractZip,
+} from '../../commands/initializeDownloadHelpers';
 import { addAllowedHost, removeAllowedHost } from '../../utils/ssrfValidator';
 
 describe('downloadFile SSRF boundary', function () {
@@ -49,7 +54,9 @@ describe('downloadFile SSRF boundary', function () {
       );
       assert.equal(fs.existsSync(dest), false, 'blocked redirect must not leave a file');
     } finally {
-      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => error ? reject(error) : resolve()),
+      );
     }
   });
 
@@ -74,5 +81,52 @@ describe('downloadFile SSRF boundary', function () {
       });
     });
     assert.deepEqual(resolved, { address: '203.0.113.10', family: 4 });
+  });
+});
+
+describe('initializeDownloadHelpers', () => {
+  let sandbox: sinon.SinonSandbox;
+  let tempDir: string;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-extract-zip-'));
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('dispatches extractZip through the platform shell helper', async () => {
+    const shell = await import('../../utils/shell');
+    const execStub = sandbox.stub(shell, 'execShell').resolves('');
+    if (process.platform === 'win32') {
+      sandbox.stub(shell, 'resolveWindowsShell').returns('pwsh');
+    }
+
+    const zipPath = path.join(tempDir, 'plugin.zip');
+    const destDir = path.join(tempDir, 'expanded');
+    fs.writeFileSync(zipPath, 'zip', 'utf-8');
+
+    await extractZip(zipPath, destDir);
+
+    assert.ok(fs.existsSync(destDir));
+    if (process.platform === 'win32') {
+      sinon.assert.calledOnceWithExactly(
+        execStub,
+        `Expand-Archive -Path "${zipPath}" -DestinationPath "${destDir}" -Force`,
+        path.dirname(zipPath),
+        'pwsh',
+      );
+      return;
+    }
+
+    sinon.assert.calledOnceWithExactly(
+      execStub,
+      `unzip -qo "${zipPath}" -d "${destDir}"`,
+      path.dirname(zipPath),
+      'bash',
+    );
   });
 });

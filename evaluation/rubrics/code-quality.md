@@ -1,9 +1,11 @@
 # AgentX Implementation Quality Rubric
 
-Use this rubric for every quality-loop review that changes implementation code.
+Use this rubric for every quality-loop review that changes implementation files.
 The independent reviewer scores the exact final scope, and
 `scripts/score-code-quality.ps1` validates the report before `loop complete`.
-Docs-only, test-only, and generated-file changes do not activate this rubric.
+Config-only implementation changes (`.json`, `.yaml`, `.yml`, `.toml`,
+`Dockerfile`) DO activate this rubric. Docs-only, test-only, lockfile, state,
+and generated-file changes do not.
 
 ## Gate
 
@@ -11,7 +13,17 @@ Docs-only, test-only, and generated-file changes do not activate this rubric.
 - Every blocking dimension MUST meet its hard floor.
 - Every dimension MUST include concrete evidence tied to the changed code, tests,
   or executed commands.
-- `files`, `dimensions`, and every `findings` field MUST be JSON arrays.
+- The report MUST include `documentationReview` with `status`, `rationale`, and
+  reviewed documentation file hashes.
+- `documentationReview.status = "updated"` requires at least one reviewed
+  document.
+- `documentationReview.status = "no-impact"` still requires a substantive
+  rationale, and reviewed docs when a root `README*.md` or `docs/**/*.md`
+  surface exists.
+- Every reviewed document path MUST stay inside the workspace, resolve to an
+  existing documentation file, and match its current SHA-256.
+- `files`, `dimensions`, `documentationReview.documents`, and every `findings`
+  field MUST be JSON arrays.
 - Required string fields MUST be real non-empty strings, not objects coerced to
   text.
 - `reviewedAt` MUST be valid and MUST NOT be more than 5 minutes ahead of the
@@ -21,6 +33,8 @@ Docs-only, test-only, and generated-file changes do not activate this rubric.
 - HIGH or MEDIUM findings block approval even if the numeric score is `80+`.
 - The report file list and SHA-256 values MUST match the final implementation.
 - Baseline or archived-evidence hash mismatches fail closed.
+- After structural and scoring checks pass, `scripts/check-doc-drift.ps1`
+  validates the reviewed documents before approval.
 
 Scores use an anchored `0-4` scale:
 
@@ -68,18 +82,30 @@ Weights total exactly `100`.
 - `performance-resources`: measure cost, latency, or token use per verified
   outcome when the change affects those surfaces; raw totals without outcomes are
   weak evidence.
-- `documentation-operability`: concise evidence is acceptable; semantic proof or
-  long prose is not required.
+- `documentation-operability`: cite the implemented behavior and owning document
+  sections. Keep evidence concise; automated links/counts do not replace the
+  reviewer's semantic comparison.
 
 ## Required report
+
+Version 2.1.0 adds mandatory documentation-impact evidence. Historical 2.0.0
+reports remain records of their original review; generate a fresh 2.1.0 report
+for new implementation rather than editing an old record to claim compliance.
 
 The independent review evidence is JSON with this shape:
 
 ```json
 {
-  "rubricVersion": "2.0.0",
+  "rubricVersion": "2.1.0",
   "reviewer": "independent-reviewer-id",
   "reviewedAt": "2026-08-29T12:00:00Z",
+  "documentationReview": {
+    "status": "updated",
+    "rationale": "Updated README.md to describe the new config flag.",
+    "documents": [
+      { "path": "README.md", "sha256": "<64 uppercase hex characters>" }
+    ]
+  },
   "files": [
     { "path": "src/example.ts", "sha256": "<64 uppercase hex characters>" }
   ],
@@ -97,6 +123,8 @@ The independent review evidence is JSON with this shape:
 Include all ten dimensions exactly once. A finding uses `severity`, `file`,
 `issue`, and `suggestedFix`; severity is `high`, `medium`, or `low`. The
 evaluator calculates the weighted score and ignores any claimed total.
+`documentationReview.documents` paths must be unique, workspace-relative, and
+bound to current documentation file hashes.
 
 ## Review rules
 
@@ -106,9 +134,11 @@ evaluator calculates the weighted score and ignores any claimed total.
    produced evidence for the changed surfaces.
 3. Read the whole relevant execution surface: changed code, related tests,
    config, scripts, migrations, and operator-facing contract updates.
-4. The reviewer MUST be independent of the implementation role. No specific
+4. Review documentation impact for every feature, story, bug, and config-only
+   implementation. `no-impact` is allowed only after real document review.
+5. The reviewer MUST be independent of the implementation role. No specific
    model or brand is required; independence and evidence are.
-5. Do not fabricate approval, inflate a score, or refresh `reviewedAt` to make a
+6. Do not fabricate approval, inflate a score, or refresh `reviewedAt` to make a
    stale report look current. Any later code edit requires a fresh review.
 
 ## Failure taxonomy

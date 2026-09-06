@@ -5,347 +5,103 @@ description: 'Build production-ready AI agents with Microsoft Foundry and Agent 
 
 # AI Agent Development
 
-> **Purpose**: Build production-ready AI agents with Microsoft Foundry and Agent Framework. 
-> **Scope**: Agent architecture, model selection, orchestration, observability, evaluation.
-
----
-
 ## When to Use This Skill
 
-- Building AI agents with Microsoft Foundry or Agent Framework
-- Selecting LLM models for agent scenarios
-- Implementing multi-agent orchestration workflows
-- Adding tracing and observability to AI agents
-- Evaluating agent quality and response accuracy
-
-## Decision Tree
-
-```
-Need an AI agent?
-+-- Simple request-response? -> Single agent with tools
-+-- Multi-step reasoning? -> Chain-of-thought agent with planner
-+-- Multiple specialized domains? -> Multi-agent orchestration
-+-- Human approval needed? -> Human-in-the-loop workflow
-+-- High reliability required? -> Reflection + self-correction loop
-+-- Real-time streaming? -> Async event-driven agent architecture
-```
+Use this skill when you are building or changing an AI agent, choosing a model or
+deployment, wiring tools or orchestration, adding tracing, or preparing release
+evidence for prompts, models, or evaluators.
 
 ## Prerequisites
 
-- A runtime version supported by the target repository
-- A current stable Agent Framework SDK version verified against official docs
-- Microsoft Foundry workspace with deployed model
+- Read the repository contract, safety requirements, and host/tool limits first.
+- Confirm reusable prompts can live in `prompts/` and runtime settings can be
+  resolved from environment or config instead of code literals.
+- Have a representative evaluation dataset or an explicit plan to create one
+  before production rollout or model change.
 
-## Quick Start
+## Decision Guide
 
-### Installation
+Choose the smallest agent surface that fits the job. Use a single agent for one
+role with a short tool loop and a clear schema. Add workflow or specialist
+agents only when the task needs separate capabilities, approvals, or bounded
+contexts. Add human approval for irreversible, security-sensitive, or
+compliance-sensitive actions. Treat prompt changes, model changes, tool changes,
+and retrieval changes as behavior changes that require verification. Resolve the
+actual deployment or capability from the active host before making claims about
+which model ran.
 
-Resolve current SDK package names and stable versions from the official Agent
-Framework documentation at implementation time. Pin the selected package version
-in the target repository lock file. Do not copy preview flags or version numbers
-from this skill into production setup.
-
-### Model Selection
-
-Select a **Capability Class** before selecting a concrete provider model:
-
-| Capability Class | Use When | Required Evidence |
+| Capability class | Use when | Required evidence |
 |------------------|----------|-------------------|
-| Fast | Classification, extraction, or short tool turns | Meets latency and minimum quality thresholds |
-| Balanced | General agent work with moderate reasoning | Best quality/cost result on the representative eval set |
-| Deep reasoning | Architecture, hard debugging, or complex planning | Material measured gain over Balanced justifies latency and cost |
-| Coding agent | Long-running repository edits and test loops | Tool accuracy, patch quality, and completion rate meet thresholds |
-| Multimodal | Screenshots, diagrams, audio, or video are required inputs | Target modalities and formats are verified in the active host |
+| Fast | Bounded classification or extraction | Required accuracy, schema and latency checks |
+| Balanced | General tool workflows | Representative end-to-end task and tool success |
+| Deep reasoning | Difficult planning or analysis | Quality gain that justifies total attempt cost |
+| Coding agent | Repository edits and verification | Passing behavioral, tool and review contracts |
+| Multimodal | Image, audio or mixed inputs | Modality-specific task and safety evaluations |
 
-Use the active Copilot/provider catalog or provider API to discover concrete
-models, availability, context limits, and current prices. Record the discovery
-date and source in the model decision. Never keep mutable price or model-ranking
-tables in durable skill prose.
+Discover candidates from the active catalog; record discovery date and source.
+Do not keep mutable price or model-ranking tables in durable instructions.
 
-**Deploy Model**: `Ctrl+Shift+P` -> `AI Toolkit: Deploy Model`
+## Why This Is a Skill
 
----
+General prompt advice does not cover the production seams where agents fail:
+prompt-file ownership, tool contracts, tracing order, migration evidence,
+fallback behavior, and evaluator fit. This skill keeps those contracts in the
+root and routes longer framework patterns to local references and existing
+helpers in this directory.
 
-## Agent Patterns
+## Workflow
 
-### Single Agent
-
-```python
-from pathlib import Path
-from agent_framework.openai import OpenAIChatClient
-
-# Load prompt from file - NEVER embed prompts as inline strings
-prompt = Path("prompts/assistant.md").read_text(encoding="utf-8")
-
-client = OpenAIChatClient(
- model=os.environ["FOUNDRY_MODEL_ID"],
- api_key=os.getenv("FOUNDRY_API_KEY"),
- endpoint=os.getenv("FOUNDRY_ENDPOINT")
-)
-
-agent = {
- "name": "Assistant",
- "instructions": prompt, # Loaded from prompts/assistant.md
- "tools": [] # Add tools as needed
-}
-
-response = await client.chat(
- messages=[{"role": "user", "content": "Hello"}],
- agent=agent
-)
-```
-
-### Multi-Agent Orchestration
-
-```python
-from pathlib import Path
-from agent_framework.workflows import SequentialWorkflow
-
-# Each agent loads its prompt from a dedicated file
-researcher = {
- "name": "Researcher",
- "instructions": Path("prompts/researcher.md").read_text(encoding="utf-8")
-}
-writer = {
- "name": "Writer",
- "instructions": Path("prompts/writer.md").read_text(encoding="utf-8")
-}
-
-workflow = SequentialWorkflow(
- agents=[researcher, writer],
- handoff_strategy="on_completion"
-)
-
-result = await workflow.run(query="Write about AI agents")
-```
-
-**Advanced Patterns**: Search [github.com/microsoft/agent-framework](https://github.com/microsoft/agent-framework) for:
-- Group Chat, Concurrent, Conditional, Loop
-- Human-in-the-Loop, Reflection, Fan-out/Fan-in
-- MCP, Multimodal, Custom Executors
-
----
+1. Define the task boundary, stop conditions, safety policy, and output schema.
+2. Store reusable prompts and templates as files; inject only small runtime
+   variables.
+3. Resolve actual host capabilities, externalize model selection and fallback
+   settings, and record the concrete deployment or revision with the change.
+4. Initialize tracing before any model client or agent instance so latency,
+   tokens, tool calls, and failures are observable.
+5. Validate objective contracts first, then run held-out evaluations before
+   release or before promoting a new prompt or model.
+6. Keep rollback or fallback evidence for production paths that would otherwise
+   strand users.
 
 ## Core Rules
 
-### Prompt & Template File Management
+- Keep long prompts in `prompts/` and reusable output scaffolds in dedicated
+  files; do not bury them as multi-line code strings.
+- Externalize secrets, endpoints, model identifiers, and safety settings. Record
+  the resolved provider deployment or revision with the evaluation evidence you
+  actually ran; do not fabricate snapshot names from marketing aliases.
+- Prefer code-checked constraints for schemas, tool arguments, and guardrails;
+  use LLM judges only for qualities code cannot score directly.
+- Initialize OpenTelemetry or equivalent tracing before creating LLM clients.
+  Log only approved content, redact secrets and personal data, and follow the
+  host's retention and governance policy.
+- Treat schema breaks, tool regressions, judge drift, or approved latency/cost
+  threshold breaches as stop signals. Thresholds belong to the service baseline,
+  not to this document.
 
-> **RULE**: NEVER embed prompts or output templates as inline strings in code. Always store them as separate files.
+## Error Handling
 
-**Why**: Prompts are content, not code. Separating them enables:
-- Version control diffs that show exactly what changed in a prompt
-- Non-developer editing (PMs, prompt engineers) without touching code
-- A/B testing different prompts without code changes
-- Reuse across agents, languages, and test harnesses
-- Clear separation of concerns (logic vs. content)
+If the host cannot resolve a required model, tool, evaluator, or tracing path,
+report the unsupported capability and stop instead of guessing. If structured
+outputs drift, tool calls regress, or live cost or latency exceed the approved
+envelope, block promotion, compare with the last accepted baseline, and use the
+documented fallback or rollback path until the cause is understood.
 
-**Directory Convention**:
-```
-project/
- prompts/ # All system/agent prompts
- assistant.md # One file per agent role
- researcher.md
- writer.md
- reviewer.md
- templates/ # Output templates used by agents
- report-template.md # Structured output templates
- email-template.md
- summary-template.md
- config/
- models.yaml # Model configuration
-```
+## Checklist
 
-**Loading Pattern**:
-```python
-from pathlib import Path
-
-# Load prompt
-prompt = Path("prompts/assistant.md").read_text(encoding="utf-8")
-
-# Load output template and inject into prompt
-template = Path("templates/report-template.md").read_text(encoding="utf-8")
-prompt_with_template = f"{prompt}\n\n## Output Format\n{template}"
-```
-
-**Rules**:
-- MUST store all system prompts in `prompts/` directory as `.md` or `.txt` files
-- MUST store output format templates in `templates/` directory
-- MUST NOT embed prompt text longer than one sentence directly in code
-- SHOULD use Markdown format for prompts (readable, supports structure)
-- SHOULD name files after the agent role: `prompts/{agent-name}.md`
-- SHOULD include a brief comment header in each prompt file (purpose, version, model target)
-- MAY use template variables (`{variable}`) for dynamic content injected at runtime
-
-### Development
-
-[PASS] **DO**:
-- Plan agent architecture before coding (Research -> Design -> Implement)
-- Use Microsoft Foundry models for production
-- Implement tracing from day one
-- Test with evaluation datasets before deployment
-- Use structured outputs for reliable agent responses
-- Implement error handling and retry logic
-- Version your agents and track changes
-- **Store all prompts as separate files in `prompts/` directory**
-- **Store output templates as separate files in `templates/` directory**
-
-[FAIL] **DON'T**:
-- Hardcode API keys or endpoints
-- Embed prompts or output templates as multi-line strings in code
-- Skip tracing setup (critical for debugging)
-- Deploy without evaluation
-- Use GitHub models in production (free tier has limits)
-- Ignore token limits and context windows
-- Mix agent logic with business logic
-
-### Security
-
-- Store credentials in environment variables or Azure Key Vault
-- Validate all tool inputs and outputs
-- Implement rate limiting for agent APIs
-- Log agent actions for audit trails
-- Use role-based access control (RBAC) for Foundry resources
-- Review OWASP Top 10 for AI: [owasp.org/AI-Security-and-Privacy-Guide](https://owasp.org/www-project-ai-security-and-privacy-guide/)
-
-### Performance
-
-- Cache model responses when appropriate
-- Use batch processing for multiple requests
-- Monitor token usage and costs
-- Implement timeout handling
-- Use async/await for I/O operations
-- Consider model size vs. latency tradeoffs
-
-### Monitoring
-
-- Track key metrics: latency, success rate, token usage, cost
-- Set up alerts for failures and anomalies
-- Use structured logging with context
-- Integrate with Azure Monitor / Application Insights
-- Review traces regularly for optimization opportunities
-
----
-
-## Production Checklist
-
-**Development**
-- [ ] Agent architecture documented
-- [ ] Model selected and deployed
-- [ ] Tools/plugins implemented and tested
-- [ ] Error handling with retries
-- [ ] Structured outputs configured
-- [ ] No hardcoded secrets
-- [ ] All prompts stored as separate files in `prompts/` (not inline in code)
-- [ ] All output templates stored in `templates/` (not inline in code)
-
-**Model Change Management (MANDATORY)**
-- [ ] Deployed model ID/version pinned explicitly in configuration
-- [ ] Model version configurable via environment variable
-- [ ] Evaluation baseline saved for current model
-- [ ] A/B evaluation run before any model switch
-- [ ] Structured output schema verified after model change
-- [ ] Tool/function-calling accuracy verified after model change
-- [ ] Model change documented in changelog with eval results
-- [ ] Weekly evaluation monitoring configured for drift detection
-- [ ] Alert threshold set for score drops > 10% from baseline
-
-**Model Change Test Automation (MANDATORY)**
-- [ ] Agent designed as model-agnostic (model injected via config)
-- [ ] `config/models.yaml` defines model test matrix with thresholds
-- [ ] Tested against 2 models (primary + fallback from different provider)
-- [ ] Multi-model comparison pipeline in CI/CD (weekly + on model config change)
-- [ ] Deployment gated on threshold checks (CI fails on regression)
-- [ ] Validated fallback model designated and documented
-- [ ] Comparison report generated per run (JSON + human-readable)
-- [ ] Cost and latency evaluators included alongside quality metrics
-
-**Observability**
-- [ ] OpenTelemetry tracing enabled
-- [ ] Trace viewer tested
-- [ ] Structured logging implemented
-- [ ] Metrics collection configured
-
-**Evaluation**
-- [ ] Evaluation dataset created
-- [ ] Evaluators defined (built-in + custom)
-- [ ] Evaluation runs passing
-- [ ] Results meet quality thresholds
-- [ ] Multi-model comparison run (2+ models tested)
-- [ ] Fallback model validated and documented
-- [ ] Model comparison baseline saved
-
-**Security & Compliance**
-- [ ] Credentials in Key Vault/env vars
-- [ ] Input validation implemented
-- [ ] RBAC configured
-- [ ] Audit logging enabled
-- [ ] OWASP AI Top 10 reviewed
-
-**Operations**
-- [ ] Health checks implemented
-- [ ] Rate limiting configured
-- [ ] Monitoring alerts set up
-- [ ] Deployment strategy defined
-- [ ] Rollback plan documented
-- [ ] Cost monitoring enabled
-
----
-
-## Anti-Patterns
-
-- **Inline prompt strings**: Embedding prompts as multi-line strings in code -> Store in `prompts/` directory as separate files
-- **Unpinned model versions**: Relying on a mutable provider alias without an evaluated deployment version -> Pin the deployed ID in configuration and retain the eval result
-- **No evaluation before deploy**: Shipping agents without running eval datasets -> Gate deployment on quality thresholds
-- **Monolithic agent**: One agent handling all domains and tasks -> Split into specialized agents with clear handoffs
-- **Ignoring token costs**: No monitoring of per-request token usage -> Track tokens per component and set budgets
-- **Missing error recovery**: No retry or fallback on LLM failures -> Implement retries with backoff and fallback models
-- **Skipping tracing setup**: Deploying without observability -> Enable OpenTelemetry tracing from day one
-
----
-
-## Resources
-
-**Official Documentation**:
-- Agent Framework: [github.com/microsoft/agent-framework](https://github.com/microsoft/agent-framework)
-- Microsoft Foundry: [ai.azure.com](https://ai.azure.com)
-- Azure AI Projects SDK: [learn.microsoft.com/python/api/overview/azure/ai-projects](https://learn.microsoft.com/python/api/overview/azure/ai-projects)
-- OpenTelemetry: [opentelemetry.io](https://opentelemetry.io)
-
-**AI Toolkit**:
-- Model Catalog: `Ctrl+Shift+P` -> `AI Toolkit: Model Catalog`
-- Trace Viewer: `Ctrl+Shift+P` -> `AI Toolkit: Open Trace Viewer`
-- Playground: `Ctrl+Shift+P` -> `AI Toolkit: Model Playground`
-
-**Security**:
-- OWASP AI Security: [owasp.org/AI-Security-and-Privacy-Guide](https://owasp.org/www-project-ai-security-and-privacy-guide/)
-- Azure Security Best Practices: [learn.microsoft.com/azure/security](https://learn.microsoft.com/azure/security)
-
----
-
-**Related**: [AGENTS.md](../../../../AGENTS.md) for agent behavior guidelines - [Skills.md](../../../../Skills.md) for general production practices
-
-**Last Updated**: January 17, 2026
-
-## Scripts
-
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| [`scaffold-agent.py`](scripts/scaffold-agent.py) | Scaffold AI agent project (Python/.NET) with tracing & eval | `python scripts/scaffold-agent.py --name my-agent [--pattern multi-agent] [--with-eval]` |
-| [`validate-agent-checklist.ps1`](scripts/validate-agent-checklist.ps1) | Validate agent project against production checklist | `./scripts/validate-agent-checklist.ps1 [-Path ./my-agent] [-Strict]` |
-| [`check-model-drift.ps1`](scripts/check-model-drift.ps1) | Validate model pinning, data drift signals, and judge LLM readiness | `./scripts/check-model-drift.ps1 [-Path ./my-agent] [-Strict]` |
-| [`run-model-comparison.py`](scripts/run-model-comparison.py) | Run eval suite against multiple models and generate comparison report | `python scripts/run-model-comparison.py --config config/models.yaml --dataset evaluation/core.jsonl` |
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Model not found | Verify model deployment in Foundry portal and check endpoint URL |
-| Tracing not appearing | Ensure AIInferenceInstrumentor().instrument() called before agent creation |
-| Agent loops indefinitely | Set max_turns limit and add termination conditions |
+Before handoff, confirm prompt files and config are externalized, tracing starts
+before client creation, schema and tool checks exist, secrets stay out of code,
+evaluation evidence is saved, and any prompt or model change includes a real
+comparison or rollback decision appropriate to the risk.
 
 ## References
 
-- [Tracing And Evaluation](references/tracing-and-evaluation.md)
-- [Multi Model Patterns](references/multi-model-patterns.md)
-- [Model Drift And Judge Patterns](references/model-drift-judge-patterns.md)
-- [Model Change Test Automation](references/model-change-test-automation.md)
+- [Orchestration patterns](references/orchestration-patterns.md)
+- [Multi-model and fallback patterns](references/multi-model-patterns.md)
+- [Tracing and evaluation](references/tracing-and-evaluation.md)
+- [Model change automation contracts](references/model-change-test-automation.md)
+- [Model drift and judge patterns](references/model-drift-judge-patterns.md)
+- [Evaluation guide](references/evaluation-guide.md)
+- [Prompt engineering](../prompt-engineering/SKILL.md)
+- [AI evaluation](../ai-evaluation/SKILL.md)
+- [AI safety and red teaming](../ai-safety-and-red-teaming/SKILL.md)

@@ -63,10 +63,10 @@ describe('runAddLlmAdapterCommand', () => {
   });
 
   it('stores OpenAI API settings in workspace config and secret storage', async () => {
-    const initializeInternals = await import('../../commands/initializeInternals');
+    const workspaceHelpers = await import('../../commands/initializeWorkspaceHelpers');
     const setupWizard = await import('../../commands/setupWizard');
 
-    sandbox.stub(initializeInternals, 'promptWorkspaceRoot').resolves(tempRoot);
+    sandbox.stub(workspaceHelpers, 'promptWorkspaceRoot').resolves(tempRoot);
     sandbox.stub(vscode.window, 'showQuickPick')
       .onFirstCall().resolves({
         label: 'gpt-5.5',
@@ -101,10 +101,10 @@ describe('runAddLlmAdapterCommand', () => {
   });
 
   it('stores Claude subscription config without requiring secrets', async () => {
-    const initializeInternals = await import('../../commands/initializeInternals');
+    const workspaceHelpers = await import('../../commands/initializeWorkspaceHelpers');
     const setupWizard = await import('../../commands/setupWizard');
 
-    sandbox.stub(initializeInternals, 'promptWorkspaceRoot').resolves(tempRoot);
+    sandbox.stub(workspaceHelpers, 'promptWorkspaceRoot').resolves(tempRoot);
     sandbox.stub(vscode.window, 'showQuickPick').resolves({
       label: 'claude-opus-4.8',
       description: 'Default balanced Claude model',
@@ -129,10 +129,10 @@ describe('runAddLlmAdapterCommand', () => {
   });
 
   it('stores Claude Code local gateway config and secret storage', async () => {
-    const initializeInternals = await import('../../commands/initializeInternals');
+    const workspaceHelpers = await import('../../commands/initializeWorkspaceHelpers');
     const setupWizard = await import('../../commands/setupWizard');
 
-    sandbox.stub(initializeInternals, 'promptWorkspaceRoot').resolves(tempRoot);
+    sandbox.stub(workspaceHelpers, 'promptWorkspaceRoot').resolves(tempRoot);
     sandbox.stub(vscode.window, 'showQuickPick')
       .onFirstCall().resolves({
         label: 'qwen2.5-coder:14b',

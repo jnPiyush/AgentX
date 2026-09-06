@@ -1,7 +1,10 @@
 # Quality Score - AgentX Component Assessment
 
-> Graded quality assessment of every AgentX component.
-> Updated per release. Grades reflect completeness, test coverage, documentation, and reliability.
+> Component inventory with retained qualitative assessments, not a fresh
+> production certification. Existing grades are historical judgements; updated
+> capability notes do not imply every component was re-tested or re-scored.
+> Use the [current quality rubric](../evaluation/rubrics/code-quality.md) and
+> scope-bound verification evidence for delivery decisions.
 
 ---
 
@@ -14,6 +17,7 @@
 | C | Works but has notable gaps -- missing tests, stale docs, or partial features |
 | D | Partially implemented or has known reliability issues |
 | F | Placeholder or non-functional |
+| Unrated | Current capability documented; no fresh component-wide grade assigned |
 
 ---
 
@@ -28,7 +32,7 @@
 | UX Designer | A | Wireframes + mandatory HTML/CSS prototypes |
 | Architect | A | ADR + Tech Spec, NO CODE EXAMPLES rule |
 | Engineer | A | Quality loop, 80% coverage gate, boundary enforcement |
-| Reviewer | A | 8-category review, structured findings |
+| Reviewer | A | Ten-dimensional exact-scope review with documentation-impact evidence |
 | Auto-Fix Reviewer | B | Preview maturity -- safe fix categories well-defined, needs more field testing |
 | DevOps Engineer | A | Pipeline creation, deployment docs |
 | Data Scientist | A | ML pipeline, evaluation, drift monitoring |
@@ -47,6 +51,8 @@
 | Eval Specialist | B | Preview maturity -- RAGAS integration works, judge validation threshold tuning needed |
 | Ops Monitor | B | Preview maturity -- OpenTelemetry setup solid, drift baseline automation incomplete |
 | RAG Specialist | B | Preview maturity -- hybrid search default good, corpus analysis automation incomplete |
+| Diagram Specialist | B | Preview maturity -- swimlane/C4/sequence/state/ER/network diagram authoring solid, spawned by five parent agents; needs broader field testing |
+| Prototype Auditor | B | Preview maturity -- eight-pass self-healing audit (a11y, performance, content, responsive, routes, build hygiene, heuristics, visual regression) functional, needs more real-prototype coverage |
 
 ### Skills (.github/skills/)
 
@@ -78,14 +84,15 @@
 | react.instructions.md | A | React 19+, hooks, server components |
 | memory.instructions.md | A | Cross-session memory protocol |
 | project-conventions.instructions.md | A | Learned patterns and pitfalls |
+| ado/*.instructions.md (8 files) | Unrated | Nested ADO work-item and pull-request workflow guidance |
 
 ### CLI Utilities (.agentx/)
 
 | Script | Grade | Notes |
 |--------|-------|-------|
-| agentx.ps1 | A | Main CLI with 14 commands |
-| agentx.sh | B | Bash wrapper -- covers core commands, missing some PS1-only features |
-| agentic-runner.ps1 | B | Standalone loop works, no sub-agent chaining by design |
+| agentx.ps1 | A | CLI wrapper; use `agentx help` for the current command surface |
+| agentx.sh | B | Bash launcher delegates to the same PowerShell CLI; `pwsh` is required |
+| agentic-runner.ps1 | B | Provider-backed standalone execution; available tools depend on the active adapter |
 | local-issue-manager.ps1 | A | Full CRUD for local issues |
 
 ### VS Code Extension (vscode-extension/)
@@ -106,9 +113,9 @@
 |-----------|-------|-------|
 | Repo knowledge as system of record | A- | Strong AGENTS, WORKFLOW, skills, templates, and ADR/spec patterns in-repo |
 | Execution plan discipline | B | Policy and template strengthened; mechanical enforcement still partial |
-| Validation evidence model | C | Evidence-backed validation now documented; repo-wide evidence capture and gates not yet implemented |
+| Validation evidence model | Unrated | Exact implementation/configuration hashes and documentation-review evidence are validated by the quality gate |
 | Runtime harness primitives | C | Loop state and command safety exist; explicit thread/turn/item/evidence model not yet implemented in visible runtime |
-| Drift cleanup automation | C | Weekly reporting exists, but doc-gardening and entropy remediation are not yet automated |
+| Drift cleanup automation | Unrated | Mandatory structural doc-drift checker plus independent semantic review; pruning remains evidence-driven, not age-driven |
 | Documentation/runtime consistency | B- | Improved with current ADR/spec work, but some architecture claims still describe target-state behavior |
 
 ### Documentation

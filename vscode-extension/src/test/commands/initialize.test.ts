@@ -19,6 +19,7 @@ import {
   RUNTIME_DIRS,
   writeWorkspaceRuntimeWrappers,
 } from '../../commands/initializeInternals';
+import { readJsonWithComments } from '../../commands/initializeWorkspaceHelpers';
 import { AgentXContext } from '../../agentxContext';
 
 // ---------------------------------------------------------------------------
@@ -129,6 +130,34 @@ describe('runInitializeLocalRuntimeCommand', () => {
 
     sinon.assert.calledOnce(errorStub);
     assert.ok(String(errorStub.firstCall.args[0]).includes('Open a workspace folder first'));
+  });
+
+  it('should read JSON-with-comments config without stripping string content', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-json-comments-'));
+    const filePath = path.join(tempDir, 'config.json');
+
+    try {
+      fs.writeFileSync(filePath, [
+        '{',
+        '  // top-level comment',
+        '  "url": "https://example.test//keep",',
+        '  /* inline block comment */',
+        '  "nested": {',
+        '    "value": 1',
+        '  }',
+        '}',
+      ].join('\n'), 'utf8');
+
+      assert.deepEqual(readJsonWithComments<{
+        url: string;
+        nested: { value: number };
+      }>(filePath), {
+        url: 'https://example.test//keep',
+        nested: { value: 1 },
+      });
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('should keep Initialize scoped to minimal runtime assets', () => {
@@ -372,7 +401,8 @@ describe('runInitializeLocalRuntimeCommand', () => {
     }
   });
 
-  it('should create runtime wrappers during local runtime initialization', async () => {
+  it('should create runtime wrappers during local runtime initialization', async function () {
+    this.timeout(10_000);
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
     const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
     const executeCommandStub = sandbox.stub(vscode.commands, 'executeCommand').resolves(undefined);

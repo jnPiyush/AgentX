@@ -27,6 +27,7 @@ const rootDirs = [
 // published to the VSIX by accident.
 const runtimeScriptFiles = [
     'budget.ps1',
+    'check-doc-drift.ps1',
     'scrub.ps1',
     'dream.ps1',
     'research.ps1',

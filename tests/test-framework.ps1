@@ -111,6 +111,11 @@ Assert-FileContains ".github/workflows/auto-release.yml" "npm run audit:runtime"
 Assert-FileContains ".github/workflows/publish-marketplace.yml" "VSIX identity mismatch" "Marketplace publish validates VSIX manifest identity"
 Assert-FileContains ".github/workflows/publish-marketplace.yml" 'VSIX_FILE="agentx-\$\{EXPECTED_VERSION\}\.vsix"' "Marketplace publish selects the exact versioned VSIX"
 Assert-FileContains ".github/workflows/quality-gates.yml" "node tests/stamp-version-behavior.js" "PR quality gates run version stamper regression coverage"
+Assert-FileContains ".github/workflows/quality-gates.yml" "Documentation Drift Gate" "PR quality gates run the consolidated documentation drift gate"
+Assert-FileContains ".github/workflows/quality-gates.yml" "pwsh -NoProfile -NonInteractive -File \./scripts/check-doc-drift\.ps1" "PR quality gates launch the documentation drift checker in a native child PowerShell process"
+Assert-FileContains ".github/workflows/quality-gates.yml" "PolicyPath \.github/documentation-facts\.json" "PR quality gates require the explicit documentation facts policy"
+Assert-FileContains ".github/workflows/quality-gates.yml" "tests/doc-drift-behavior\.ps1" "PR quality gates run documentation drift regression coverage"
+Assert-FileNotContains ".github/workflows/quality-gates.yml" "(?m)^\s*-\s+name:\s+(Check Documentation|Reference Link Validation|Doc Count Validation)\s*$" "PR quality gates removed legacy duplicated documentation steps"
 Assert-FileContains ".github/workflows/weekly-status.yml" "steps\.tokens\.outcome" "weekly status reports canonical token-check outcome"
 Assert-FileContains ".github/workflows/weekly-status.yml" "continue-on-error: true" "weekly status continues after token violations to generate the report"
 Assert-FileContains "packs/agentx-power-platform-builder/templates/SOLUTION-MANIFEST-TEMPLATE.md" '```xml' "Power Platform solution manifest uses a fenced XML block"
@@ -203,6 +208,9 @@ Assert-FileExists "tests/sprint-discover-behavior.ps1" "Sprint/discover behavior
 Assert-FileExists "tests/loop-parity-behavior.ps1" "Loop parity behavior test script"
 Assert-FileExists "tests/pre-commit-gate-behavior.ps1" "Pre-commit gate behavior test script"
 Assert-FileExists "tests/skill-rubric-behavior.ps1" "Skill rubric behavior test script"
+Assert-FileExists "tests/registry-generation-behavior.ps1" "Registry generation behavior test script"
+Assert-FileExists "tests/prompt-contract-behavior.ps1" "Reusable prompt contract test script"
+Assert-FileExists "tests/council-brief-behavior.ps1" "Council brief contract test script"
 Assert-FileExists "tests/code-quality-rubric-behavior.ps1" "Code-quality rubric behavior test script"
 Assert-FileExists "tests/ai-agent-scaffold-behavior.ps1" "AI agent scaffold behavior test script"
 Assert-FileExists "tests/customization-modernization-behavior.ps1" "Customization modernization behavior test script"
@@ -214,6 +222,8 @@ Assert-FileExists "tests/budget-behavior.ps1" "Budget behavior test script"
 Assert-FileExists "tests/copilot-host-compatibility-behavior.ps1" "Copilot host compatibility behavior test script"
 Assert-FileExists "tests/harness-distribution-behavior.ps1" "Harness distribution behavior test script"
 Assert-FileExists "tests/installer-license-behavior.ps1" "Installer license behavior test script"
+Assert-FileExists "tests/doc-drift-behavior.ps1" "Documentation drift behavior test script"
+Assert-FileExists "tests/doc-drift-ci-behavior.ps1" "Documentation drift CI execution test script"
 
 $providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -294,11 +304,33 @@ if ($LASTEXITCODE -ne 0) {
 }
 Assert-True ($LASTEXITCODE -eq 0) "Skill rubric behavior tests pass"
 
+$registryGenerationResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/registry-generation-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) { Write-Host $registryGenerationResult }
+Assert-True ($LASTEXITCODE -eq 0) "Registry generation behavior tests pass"
+
+$promptContractResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/prompt-contract-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) { Write-Host $promptContractResult }
+Assert-True ($LASTEXITCODE -eq 0) "Reusable prompt contract tests pass"
+
+$councilBriefResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/council-brief-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) { Write-Host $councilBriefResult }
+Assert-True ($LASTEXITCODE -eq 0) "Council brief contract tests pass"
+
 $codeQualityRubricResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/code-quality-rubric-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {
  Write-Host $codeQualityRubricResult
 }
 Assert-True ($LASTEXITCODE -eq 0) "Code-quality rubric behavior tests pass"
+
+$docDriftBehaviorResult = & pwsh -NoProfile -NonInteractive -File (Join-Path $script:root "tests/doc-drift-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+ Write-Host $docDriftBehaviorResult
+}
+Assert-True ($LASTEXITCODE -eq 0) "Documentation drift behavior tests pass"
+
+$docCiResult = & pwsh -NoProfile -NonInteractive -File (Join-Path $script:root "tests/doc-drift-ci-behavior.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) { Write-Host $docCiResult }
+Assert-True ($LASTEXITCODE -eq 0) "Documentation drift CI execution tests pass"
 
 $noAiSlopResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/no-ai-slop-skill-behavior.ps1") 2>&1
 if ($LASTEXITCODE -ne 0) {

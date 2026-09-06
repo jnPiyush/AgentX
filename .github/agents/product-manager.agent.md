@@ -153,7 +153,10 @@ Scan the user's request for technology signals:
 
 ### 2.5 Model Council Deliberation (MANDATORY for non-trivial PRDs)
 
-Before drafting the PRD, convene a Model Council to stress-test scope, priority, success metrics, and assumptions surfaced during research. The council is the model-side analogue of the Architect requirement-fit checkpoint: three diverse models independently challenge the framing so the PRD reflects more than one model's prior. The PM council is specifically tuned to two questions a PRD lives or dies on: **what should be in the PRD** (the in-scope requirement list, explicit non-goals, and the single measurable success metric) and **how the work should be approached** (build sequencing, MVP slice vs. fast-follow vs. deferred, and the riskiest assumption to validate first). A council is **not limited to one topic** -- when an Epic raises several contested decisions (scope boundary, metric choice, build-vs-buy, rollout sequencing), put them all to the council in a single run with `-Questions`.
+Before drafting the PRD, follow the [Model Council execution contract](../AGENT-PROTOCOL.md#3-model-council-mandatory-for-adrprdeval----no-skip).
+Stress-test scope/non-goals, the measurable success metric, priority, MVP versus
+fast-follow sequencing, build-vs-buy and the riskiest research assumption.
+Use `-Questions` to address several contested decisions in one council.
 
 **When to convene (mandatory)**:
 - any Epic
@@ -174,29 +177,9 @@ Before drafting the PRD, convene a Model Council to stress-test scope, priority,
 | Strategist | `anthropic/claude-opus-5` | Frame the build approach and sequencing: the real user job-to-be-done, the recommended build approach, release sequencing (now / fast-follow / deferred), dependency ordering, and why each item is included now vs. later |
 | Skeptic | `google/gemini-3.1-pro` | Argue against shipping as framed: attack the riskiest assumption and any gameable or vanity metric; surface adoption, support, privacy, security, and compliance blockers; name the single change that most de-risks the PRD |
 
-**How to convene**:
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-    -Topic "prd-{epic-id}-{short-slug}" `
-    -Question "Given the Phase 1-5 research, what should be in scope, what should be cut, what is the right success metric, and what is the strongest case AGAINST shipping this?" `
-    -Context "<paste the key tensions, contested scope items, and assumptions from the research log>" `
-    -OutputDir "docs/artifacts/prd" `
-    -Purpose prd-scope
-```
-
-**Multiple topics in one council** (use when an Epic raises several contested decisions):
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-    -Topic "prd-{epic-id}-{short-slug}" `
-    -Questions "What MUST be in scope for the MVP and what should be explicit non-goals?","What is the single success metric and how is it instrumented?","What is the right build sequencing (now / fast-follow / deferred)?" `
-    -Context "<paste the key tensions, contested scope items, and assumptions from the research log>" `
-    -OutputDir "docs/artifacts/prd" `
-    -Purpose prd-scope
-```
-
-**This is an internal agent mechanism. After running the script, YOU (the PM agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final PRD, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
+Use `-Purpose prd-scope`, `-Topic "prd-{epic-id}-{short-slug}"` and
+`-OutputDir "docs/artifacts/prd"`; supply the research log's key tensions through
+`-Context`. Collect actual independent responses before completing Synthesis.
 
 **Synthesis (MUST complete before drafting PRD)**:
 - **Consensus on Scope and Priority** -- requirements at least two members agree on; promote into PRD requirements at the agreed priority

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "claims": [
+    { "document": "AGENTS.md", "fact": "agents", "pattern": "(?<value>\\d+) agent definition files" },
+    { "document": "AGENTS.md", "fact": "skills", "pattern": "(?<value>\\d+) skill files" },
+    { "document": "AGENTS.md", "fact": "instructions", "pattern": "(?<value>\\d+) instruction files" },
+    { "document": "AGENTS.md", "fact": "templates", "pattern": "(?<value>\\d+) templates \\(PRD" },
+    { "document": "AGENTS.md", "fact": "prompts", "pattern": "(?<value>\\d+) reusable prompt templates" },
+    { "document": "README.md", "fact": "agents", "pattern": "\\*\\*(?<value>\\d+) total\\*\\*" },
+    { "document": "README.md", "fact": "skills", "pattern": "\\*\\*(?<value>\\d+) skills\\*\\*" },
+    { "document": "README.md", "fact": "version", "pattern": "Version[- ](?<value>\\d+\\.\\d+\\.\\d+)" },
+    { "document": "Skills.md", "fact": "skills", "pattern": "^## Skills Directory \\((?<value>\\d+) skills" },
+    { "document": "CLAUDE.md", "fact": "claudeCommands", "pattern": "All (?<value>\\d+) command-backed agents" },
+    { "document": "vscode-extension/README.md", "fact": "agents", "pattern": "\\*\\*(?<value>\\d+) Declarative Chat Agents\\*\\*" },
+    { "document": "vscode-extension/README.md", "fact": "version", "pattern": "badge/Version-(?<value>\\d+\\.\\d+\\.\\d+)" }
+  ]
+}

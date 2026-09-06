@@ -261,6 +261,34 @@ try {
     Remove-Item -LiteralPath $handoffFixture -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# Body-stub gate: every canonical agent's body (post-frontmatter) must retain the mandatory
+# Pre-edit gate and Honesty rule stubs required by AGENT-PROTOCOL.md.
+foreach ($agentPath in $canonicalAgentPaths) {
+    $agentContent = Get-Content -LiteralPath (Join-Path $repoRoot $agentPath) -Raw -Encoding utf8
+    $bodyMatch = [regex]::Match($agentContent, '(?s)^---\r?\n.*?\r?\n---\r?\n(?<body>.*)$')
+    Assert-True $bodyMatch.Success "$agentPath has a parsable frontmatter/body split"
+    if ($bodyMatch.Success) {
+        $body = $bodyMatch.Groups['body'].Value
+        Assert-True ($body -match 'Pre-edit gate \(NON-SKIPPABLE\)') "$agentPath body retains the Pre-edit gate stub"
+        Assert-True ($body -match 'Honesty rule') "$agentPath body retains the Honesty rule stub"
+    }
+}
+
+# Shipping-role documentation-drift gate: Engineer and the five other shipping roles must
+# surface the mandatory doc-drift check near their validation/handoff/done section.
+foreach ($shippingAgent in @(
+    'engineer.agent.md',
+    'tester.agent.md',
+    'devops.agent.md',
+    'fabric-engineer.agent.md',
+    'power-platform-builder.agent.md',
+    'powerbi-analyst.agent.md'
+)) {
+    $shippingContent = Get-Content -LiteralPath (Join-Path $repoRoot ".github/agents/$shippingAgent") -Raw -Encoding utf8
+    Assert-True ($shippingContent -match 'doc-drift') "$shippingAgent surfaces the mandatory doc-drift check"
+    Assert-True ($shippingContent -match 'documentationReview') "$shippingAgent surfaces documentationReview evidence"
+}
+
 Write-Host ""
 Write-Host "Domain agent routing behavior: $script:passed passed, $script:failed failed"
 if ($script:failed -gt 0) { exit 1 }

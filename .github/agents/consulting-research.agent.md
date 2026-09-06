@@ -205,7 +205,10 @@ Before proceeding, compile a concise research log with sources consulted, key fi
 
 ### Phase 2.5: Model Council Deliberation
 
-After the research log is complete and before audience calibration, convene a **Model Council**: three council members with diverse training, vendors, and reasoning styles independently respond to the same framing question. Treat this as the model-side analogue of source triangulation.
+After research and before audience calibration, follow the
+[Model Council execution contract](../AGENT-PROTOCOL.md#3-model-council-mandatory-for-adrprdeval----no-skip).
+Have diverse models independently challenge the same framing and research claims;
+this complements source triangulation rather than replacing it.
 
 **When to convene** (mandatory for any of these):
 
@@ -229,25 +232,10 @@ After the research log is complete and before audience calibration, convene a **
 
 Substitute models when the default is unavailable, but preserve the three-role structure (Analyst, Strategist, Skeptic) and use at least two distinct vendors.
 
-**How to convene**:
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-  -Topic "{topic-slug}" `
-  -Question "{the framing question the council must answer}" `
-  -Context "{key claims to stress-test, drawn from the research log}"
-```
-
-A council is **not limited to one topic** -- put several framing questions to it in one run with `-Questions`:
-
-```pwsh
-pwsh .agentx/agentx.ps1 council `
-  -Topic "{topic-slug}" `
-  -Questions "{first framing question}","{second framing question}","{third framing question}" `
-  -Context "{key claims to stress-test, drawn from the research log}"
-```
-
-**This is an internal agent mechanism. After running the script, YOU (the Consulting Research agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final research deliverable, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
+Use `-Purpose research`, `-Topic "{topic-slug}"` and `-OutputDir "docs/coaching"`.
+Supply the research claims through `-Context` and use `-Question` or `-Questions`
+for one or several contested topics. Collect actual independent responses before
+completing Synthesis; the council file supports the final research deliverable.
 
 **Synthesis requirements** (the agent fills in the Synthesis section):
 

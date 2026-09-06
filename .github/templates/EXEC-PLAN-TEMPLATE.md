@@ -76,6 +76,7 @@ This execution plan is a living document. Keep `Progress`, `Surprises & Discover
 
 ## Validation and Acceptance
 
+- [ ] Mandatory documentation-drift check passed; updated/no-impact review and current document hashes recorded
 - [ ] Criterion 1
 - [ ] Criterion 2
 - [ ] Criterion 3

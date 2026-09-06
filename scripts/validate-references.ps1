@@ -10,7 +10,9 @@
 param(
     [string]$Path = '.',
     [switch]$Fix,
-    [switch]$Quiet
+    [switch]$Quiet,
+    [switch]$IncludeUntracked,
+    [switch]$Json
 )
 
 Set-StrictMode -Version Latest
@@ -22,6 +24,11 @@ else {
     (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
 $ScanDir = Join-Path $ROOT $Path
+if (-not (Test-Path -LiteralPath $ScanDir)) {
+    if ($Json) { Write-Output (@{ status = 'invalid'; message = "Scan path does not exist: $Path" } | ConvertTo-Json -Compress) }
+    else { Write-Error "Scan path does not exist: $Path" }
+    exit 2
+}
 
 $broken = @()
 $total = 0
@@ -59,7 +66,7 @@ function Test-IsInsideFencedCode {
     return $false
 }
 
-$mdFiles = @(Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue |
+$mdFiles = @(Get-ChildItem -LiteralPath $ScanDir -Filter '*.md' -Recurse -File -ErrorAction Stop |
     Where-Object {
         $_.FullName -notmatch 'node_modules|\.git[/\\]|vendor|[/\\]archive[/\\]|vscode-extension[/\\]\.github[/\\]' -and
         # SkillOpt run snapshots preserve generated candidate text for evaluation;
@@ -74,7 +81,11 @@ $mdFiles = @(Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAc
 $trackedSet = $null
 try {
     Push-Location $ROOT
-    $trackedRaw = git ls-files '*.md' 2>$null
+    $trackedRaw = if ($IncludeUntracked) {
+        git ls-files --cached --others --exclude-standard '*.md' 2>$null
+    } else {
+        git ls-files '*.md' 2>$null
+    }
     Pop-Location
     if ($LASTEXITCODE -eq 0 -and $trackedRaw) {
         $trackedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -88,7 +99,7 @@ try {
 }
 
 if ($trackedSet -and $trackedSet.Count -gt 0) {
-    $mdFiles = $mdFiles | Where-Object { $trackedSet.Contains($_.FullName) }
+    $mdFiles = @($mdFiles | Where-Object { $trackedSet.Contains($_.FullName) })
 }
 
 foreach ($file in $mdFiles) {
@@ -151,6 +162,17 @@ foreach ($file in $mdFiles) {
 }
 
 # Report
+if ($Json) {
+    [ordered]@{
+        status = if ($broken.Count) { 'failed' } else { 'passed' }
+        filesScanned = @($mdFiles).Count
+        linksFound = $total
+        localChecked = $checked
+        broken = @($broken)
+        includesUntracked = [bool]$IncludeUntracked
+    } | ConvertTo-Json -Depth 6 -Compress | Write-Output
+    exit $(if ($broken.Count) { 1 } else { 0 })
+}
 if (-not $Quiet) {
     Write-Host "`n  Reference Validation Report"
     Write-Host "  ============================================="

@@ -32,7 +32,6 @@ function parseScalar(value, lineNumber) {
   if (/^(true|false)$/i.test(value)) return value.toLowerCase() === 'true';
   if (/^(null|~)$/i.test(value)) return null;
   if (/^-?\d+(?:\.\d+)?$/.test(value)) return Number(value);
-  if (/['"]/.test(value)) throw new Error(`Unexpected quote in plain scalar at line ${lineNumber}.`);
   return value.replace(/\s+#.*$/, '').trim();
 }
 
@@ -72,7 +71,7 @@ function parseAgentxFrontmatter(input) {
         continue;
       }
 
-      const match = /^([A-Za-z][A-Za-z0-9-]*):(?:\s*(.*))?$/.exec(text);
+      const match = /^([A-Za-z_][A-Za-z0-9_-]*):(?:\s*(.*))?$/.exec(text);
       if (!match) throw new Error(`Invalid mapping entry at line ${index + 1}.`);
       const [, key, raw = ''] = match;
       if (Object.prototype.hasOwnProperty.call(value, key)) throw new Error(`Duplicate key '${key}'.`);
@@ -107,13 +106,41 @@ function parseAgentxFrontmatter(input) {
   return parseBlock(first, 0).value;
 }
 
-try {
-  const input = fs.readFileSync(0, 'utf8');
+function parseYaml(input) {
   const parsed = yaml
     ? yaml.parse(input, { prettyErrors: true, strict: true, uniqueKeys: true })
     : parseAgentxFrontmatter(input);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('Frontmatter must be a YAML mapping.');
+  }
+  return parsed;
+}
+
+function readFrontmatter(file) {
+  try {
+    const lines = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/);
+    if (lines[0].trim() !== '---') return {};
+    const end = lines.findIndex((line, index) => index > 0 && line.trim() === '---');
+    if (end < 0) throw new Error('Unterminated frontmatter.');
+    return end === 1 ? {} : parseYaml(lines.slice(1, end).join('\n'));
+  } catch (error) {
+    throw new Error(`${file}: ${error.message}`);
+  }
+}
+
+try {
+  const input = fs.readFileSync(0, 'utf8');
+  let parsed;
+  if (process.argv.length === 2) {
+    parsed = parseYaml(input);
+  } else if (process.argv.length === 3 && process.argv[2] === '--frontmatter-files') {
+    const files = JSON.parse(input);
+    if (!Array.isArray(files) || files.some((file) => typeof file !== 'string' || !file.trim())) {
+      throw new Error('Frontmatter files must be an array of non-empty paths.');
+    }
+    parsed = files.map((file) => ({ path: file, frontmatter: readFrontmatter(file) }));
+  } else {
+    throw new Error('Usage: parse-yaml.js [--frontmatter-files], reading YAML or a JSON path array from stdin.');
   }
   process.stdout.write(JSON.stringify(parsed));
 } catch (error) {

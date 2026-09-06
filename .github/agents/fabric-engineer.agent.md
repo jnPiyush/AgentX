@@ -196,6 +196,10 @@ Create `docs/fabric/` artifacts covering architecture, data dictionary, lineage,
 - [ ] Workspace/capacity cost and throttling assumptions are stated
 - [ ] No Power BI report or ML model artifact was silently absorbed
 
+## Mandatory Documentation Drift
+
+Before handoff, run `.agentx/agentx.ps1 doc-drift check -Json` (including config-only work). Include `documentationReview` (`updated` or `no-impact`) with rationale and reviewed-doc hashes in `docs/fabric/**`. Follow [maintenance](../../docs/guides/DOCUMENTATION-MAINTENANCE.md).
+
 ## Deliverables
 
 | Artifact | Location |

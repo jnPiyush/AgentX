@@ -122,6 +122,11 @@ If a format cannot be extracted (e.g. password-protected `.vsd`, missing convert
 
 ### 1. Read Context
 
+For features, user stories and bugs, verify the mandatory documentation-drift
+step, including config-only changes. Check the implemented contract against the
+reviewed docs; require `documentationReview` rationale and current doc hashes in
+the quality report. A structural link/count pass is not semantic approval.
+
 - Read Tech Spec at `docs/artifacts/specs/SPEC-{issue}.md`
 - Read PRD at `docs/artifacts/prd/PRD-{epic-id}.md` for original intent
 - Read ADR at `docs/artifacts/adr/ADR-{issue}.md` for design decisions

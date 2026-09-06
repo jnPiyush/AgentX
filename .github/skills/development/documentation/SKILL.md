@@ -1,154 +1,90 @@
 ---
-name: "documentation"
-description: 'Write effective documentation including inline docs, README structure, API documentation, and code comments. Use when writing README files, documenting APIs, creating architecture decision records, adding inline code documentation, or setting up documentation tooling.'
+name: documentation
+description: 'Use when writing or updating documentation, reviewing drift after feature/story/bug implementation, or consolidating superseded guides and execution notes.'
 metadata:
- author: "AgentX"
- version: "1.0.0"
- created: "2025-01-15"
- updated: "2025-01-15"
+  version: '1.1.0'
 ---
 
 # Documentation
 
-> **Purpose**: Write clear, maintainable documentation for code and APIs. 
-> **Goal**: Self-documenting code, useful comments, comprehensive READMEs. 
-> **Note**: For implementation, see [C# Development](../../languages/csharp/SKILL.md) or [Python Development](../../languages/python/SKILL.md).
+## When to Use
 
----
-
-## When to Use This Skill
-
-- Writing or updating README files
-- Documenting APIs with OpenAPI/Swagger
-- Creating architecture decision records (ADRs)
-- Adding inline code documentation
-- Setting up documentation tooling
+Use after every implemented feature, user story or bug, including internal fixes
+and config-only changes; before review/release; and when pruning duplicate or
+stale documentation. This skill turns documentation impact into explicit
+review evidence rather than an optional cleanup task.
 
 ## Prerequisites
 
-- Markdown formatting knowledge
+Read the requirement, implemented behavior and owning docs. Local checks use
+the existing AgentX CLI and PowerShell; no external AI service is required.
 
-## Decision Tree
+## Decision Guide
 
-```
-Documenting something?
-+- New project/repo? -> README.md (setup, usage, contributing)
-+- Public API?
-| +- REST API -> OpenAPI/Swagger spec
-| - Library -> XML docs / docstrings on all public members
-+- Architecture decision? -> ADR (docs/artifacts/adr/ADR-NNN.md)
-+- Complex logic?
-| +- WHY it works this way -> Code comment
-| - HOW to use it -> Doc comment / docstring
-+- Code self-explanatory?
-| - Yes -> No comment needed (good naming > comments)
-- Inline comment?
- +- Explains WHY (business rule, workaround) -> Keep it
- - Explains WHAT (obvious from code) -> Remove it
-```
-
-## Documentation Hierarchy
-
-```
-Documentation Pyramid:
-
- /\
- /API\ External API docs (OpenAPI/Swagger)
- /------\
- / README \ Project documentation
- /----------\
- / Inline Docs\ Function/class documentation
- /--------------\
- / Code Quality \ Self-documenting code (naming, structure)
-/------------------\
-
-Best Code = Minimal comments needed
-```
-
----
-
-## Self-Documenting Code
-
-### Code Should Explain WHAT
-
-```
-[FAIL] Bad: Needs comment to understand
- # Check if user can access
- if u.r == 1 or u.r == 2:
- return True
-
-[PASS] Good: Self-explanatory
- if user.role == Role.ADMIN or user.role == Role.MODERATOR:
- return True
-
-[PASS] Better: Extract to function
- if user.hasModeratorPermissions():
- return True
-```
-
-### Names Should Be Descriptive
-
-```
-Variables:
- [FAIL] d, tmp, data, x
- [PASS] daysSinceLastLogin, userCount, orderTotal
-
-Functions:
- [FAIL] process(), handle(), do()
- [PASS] calculateShippingCost(), validateEmailFormat(), sendWelcomeEmail()
-
-Classes:
- [FAIL] Manager, Handler, Processor, Helper
- [PASS] OrderRepository, EmailValidator, PaymentGateway
-```
-
----
+| Change | Owning documentation |
+|--------|----------------------|
+| Public API/CLI/configuration | Contract, examples and compatibility notes |
+| Installation/recovery | Getting started and operator runbook |
+| Agent/skill/workflow | Canonical instructions, registry and workflow reference |
+| Internal fix with unchanged contract | Review owning docs; record justified no impact |
+| Redundant completed execution state | Check references and unique evidence before pruning |
+| Historical architectural decision | Retain original context; mark supersession, not fake recency |
 
 ## Core Rules
 
-| Practice | Description |
-|----------|-------------|
-| **Code first** | Write self-documenting code before adding comments |
-| **Document why** | Explain intent, not mechanics |
-| **Keep updated** | Wrong docs are worse than no docs |
-| **Examples** | Show, don't just tell |
-| **Audience** | Write for the reader, not yourself |
-| **Minimal** | Document what's needed, no more |
-| **Accessible** | Store docs near the code |
-| **Versioned** | Docs in repo, not external wikis |
+- Source code explains what; comments explain non-obvious intent or constraints.
+- Update documentation in the same change as the contract it describes.
+- Keep one canonical owner per topic; link rather than duplicate instructions.
+- Never edit generated mirrors by hand. Regenerate and validate their layout.
+- Dates alone do not prove staleness. Current assertions must match current
+  behavior; historical assertions retain their original context.
+- Do not invent test results, compatibility claims, ownership or completion.
 
----
+## Workflow
 
-## Anti-Patterns
+1. Identify docs affected by the requirement and diff: API/CLI/schema,
+   configuration, examples, operations, workflows, inventories and navigation.
+2. Run `.agentx/agentx.ps1 doc-drift check -Json`. It checks current facts and
+   links, including new untracked docs. It does not prove semantic correctness.
+3. Fix drift or explain no impact; an internal bug need not manufacture a doc edit.
+4. Consolidate superseded material only after checking incoming links, packaging,
+   tests and unique evidence. Preserve durable lessons and decision records.
+5. Regenerate packaged documentation and re-run checks.
+6. Include `documentationReview` in the existing quality report: `updated` or
+   `no-impact`, a specific rationale, and current reviewed-document hashes.
+   Independent review verifies the decision; missing/stale evidence blocks Done.
 
-- **Stale Docs**: Documentation that contradicts current code behavior -> Tie doc updates to code changes in the same PR; add doc review to checklist
-- **Comment Parrot**: Comments that restate the code (`i += 1 // increment i`) -> Only comment WHY, never WHAT; delete comments that repeat the code
-- **README Novel**: Putting all documentation in a single massive README -> Split into focused docs/ files (CONTRIBUTING.md, ARCHITECTURE.md) and link from README
-- **Tribal Knowledge**: Critical setup or deployment steps live only in someone's head -> Write runbooks and onboarding guides; if you explained it twice, document it
-- **API Doc Drift**: Hand-written API docs that diverge from actual endpoints -> Generate API docs from code annotations (OpenAPI/Swagger) and validate in CI
-- **TODO Graveyard**: Scattering TODO comments that never get addressed -> Create issues for TODOs with deadlines; remove or resolve stale TODOs regularly
-- **Screenshot Docs**: Using images where text would be searchable and maintainable -> Use code blocks, ASCII diagrams, or Mermaid for diagrams; reserve images for UX mockups
+## Checklist
 
----
+- Current claims and runnable examples match implemented behavior.
+- Every feature/story/bug has a documented impact decision.
+- Counts include nested instructions and other recursively discovered assets.
+- Links from new and retained docs resolve after pruning.
+- Plans/progress headers agree with their actual state.
+- Historical records are not misrepresented as current operations guidance.
+- Source and generated/installed documentation remain consistent.
 
-**See Also**: [API Design](../../architecture/api-design/SKILL.md) - [C# Development](../../languages/csharp/SKILL.md) - [Python Development](../../languages/python/SKILL.md)
+## Rationalization Table
 
-## Scripts
+| Temptation | Response |
+|------------|----------|
+| "Only a bug fix" | Documentation impact is still reviewed, even if unchanged |
+| "Links pass, so docs are current" | Semantic comparison with the diff is still required |
+| "It is old, delete it" | Verify supersession, references and unique evidence first |
+| "Copy the instructions here" | Link the canonical owner and fix that source |
 
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| [`generate-readme.py`](scripts/generate-readme.py) | Auto-generate README.md from project metadata | `python scripts/generate-readme.py [--output README.md]` |
+## Error Handling
 
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Documentation out of sync with code | Generate API docs from code annotations, add doc validation to CI |
-| README too long | Split into separate docs/ files, link from README |
-| Missing API documentation | Add doc comments to all public APIs, generate with Swagger/Redoc |
+Drift or missing evidence stops handoff. Fix a broken link, stale fact or invalid
+policy rather than disabling the check. If a prerequisite cannot run, report
+the unavailable check and do not mark it passed.
 
 ## References
 
-- [Inline Docs Comments](references/inline-docs-comments.md)
-- [Readme Templates](references/readme-templates.md)
-- [Api Architecture Docs](references/api-architecture-docs.md)
+- [Maintenance policy](../../../../docs/guides/DOCUMENTATION-MAINTENANCE.md)
+- [API and architecture docs](references/api-architecture-docs.md)
+- [Inline comments](references/inline-docs-comments.md)
+- [README patterns](references/readme-templates.md)
+
+`scripts/generate-readme.py` is an optional scaffold, not evidence that its
+generated claims are true. Review output against the implemented contract.

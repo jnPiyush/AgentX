@@ -6,11 +6,13 @@ import {
   copyBundledRuntimeAssets,
   copyCopilotCliAssets,
   mergeGitignore,
-  promptWorkspaceRoot,
-  readJsonWithComments,
   RUNTIME_DIRS,
   writeWorkspaceRuntimeWrappers,
-} from './initializeInternals';
+} from './initializeRuntimeAssets';
+import {
+  promptWorkspaceRoot,
+  readJsonWithComments,
+} from './initializeWorkspaceHelpers';
 import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from './adaptersCommandInternals';
 import { checkAllDependencies } from '../utils/dependencyChecker';
 

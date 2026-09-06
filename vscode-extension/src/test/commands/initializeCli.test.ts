@@ -170,15 +170,16 @@ describe('runInitializeCliCommand', () => {
   });
 
   it('writes CLI state and runs symlink initialization when Symlink is selected', async () => {
-    const initializeInternals = await import('../../commands/initializeInternals');
+    const runtimeAssets = await import('../../commands/initializeRuntimeAssets');
+    const workspaceHelpers = await import('../../commands/initializeWorkspaceHelpers');
 
-    sandbox.stub(initializeInternals, 'promptWorkspaceRoot').resolves(tempRoot);
-    sandbox.stub(initializeInternals, 'createCopilotCliSymlinks').returns({
+    sandbox.stub(workspaceHelpers, 'promptWorkspaceRoot').resolves(tempRoot);
+    sandbox.stub(runtimeAssets, 'createCopilotCliSymlinks').returns({
       linked: ['.github/agents'],
       refreshed: [],
       skipped: [],
     });
-    const gitignoreStub = sandbox.stub(initializeInternals, 'appendCliSymlinksToGitignore');
+    const gitignoreStub = sandbox.stub(runtimeAssets, 'appendCliSymlinksToGitignore');
     sandbox.stub(vscode.workspace, 'getConfiguration').returns({
       get: () => 'copy',
     } as unknown as vscode.WorkspaceConfiguration);
@@ -204,10 +205,11 @@ describe('runInitializeCliCommand', () => {
   });
 
   it('writes CLI state and runs copy initialization when Copy is selected', async () => {
-    const initializeInternals = await import('../../commands/initializeInternals');
+    const runtimeAssets = await import('../../commands/initializeRuntimeAssets');
+    const workspaceHelpers = await import('../../commands/initializeWorkspaceHelpers');
 
-    sandbox.stub(initializeInternals, 'promptWorkspaceRoot').resolves(tempRoot);
-    const copyStub = sandbox.stub(initializeInternals, 'copyCopilotCliAssets');
+    sandbox.stub(workspaceHelpers, 'promptWorkspaceRoot').resolves(tempRoot);
+    const copyStub = sandbox.stub(runtimeAssets, 'copyCopilotCliAssets');
     sandbox.stub(vscode.workspace, 'getConfiguration').returns({
       get: () => 'copy',
     } as unknown as vscode.WorkspaceConfiguration);

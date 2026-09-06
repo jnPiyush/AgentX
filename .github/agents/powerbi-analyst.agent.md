@@ -167,6 +167,10 @@ Create documentation at `docs/powerbi/`:
 - [ ] Documentation complete -- data dictionary, measure reference, report spec
 - [ ] No copyrighted visuals, templates, or third-party assets without license
 
+### 8.5 Mandatory Documentation Drift
+
+Before commit, run `.agentx/agentx.ps1 doc-drift check -Json` (including config-only work). Include `documentationReview` (`updated` or `no-impact`) with rationale and reviewed-doc hashes in `docs/powerbi/**`. Follow [maintenance](../../docs/guides/DOCUMENTATION-MAINTENANCE.md).
+
 ### 9. Commit & Handoff
 
 ```bash

@@ -2,7 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AgentXContext } from '../agentxContext';
-import { promptWorkspaceRoot, readJsonWithComments } from './initializeInternals';
+import {
+  promptWorkspaceRoot,
+  readJsonWithComments,
+} from './initializeWorkspaceHelpers';
 import { runCriticalPreCheck } from './setupWizard';
 
 export type AdapterMode = 'github' | 'ado' | 'local';

@@ -58,6 +58,8 @@ build/
 .agentx/issues/
 .agentx/digests/
 .agentx/state/
+/docs/execution/task-bundles/*.json
+/docs/execution/bounded-parallel/*.json
 .agentx/sessions/
 .agentx/memory/
 .agentx/handoffs/

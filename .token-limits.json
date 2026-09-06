@@ -5,6 +5,7 @@
     ".github/skills/**/SKILL.md": 1500,
     ".github/skills/**/references/**/*.md": 2000,
     ".github/instructions/**/*.md": 1500,
+    ".github/prompts/**/*.prompt.md": 1500,
     ".github/agents/*.agent.md": 6000,
     ".github/agents/internal/*.agent.md": 4000,
     ".github/templates/*-TEMPLATE.md": 10000,

@@ -189,6 +189,10 @@ Before committing, verify with fresh eyes:
 - [ ] GenAI (when applicable): guardrail tests include adversarial / jailbreak inputs
 - [ ] GenAI (when applicable): evaluation baseline snapshot saved for drift monitoring
 
+### 6.2 Mandatory Documentation Drift
+
+Before the certification report is final, run `.agentx/agentx.ps1 doc-drift check -Json` (including config-only work). Include `documentationReview` (`updated` or `no-impact`) with rationale and reviewed-doc hashes in the certification report. Follow [maintenance](../../docs/guides/DOCUMENTATION-MAINTENANCE.md).
+
 ## Skills to Load
 
 | Task | Skill |

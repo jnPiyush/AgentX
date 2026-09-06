@@ -84,6 +84,11 @@
           "items": { "type": "string" },
           "description": "Relative paths to bundled CLI plugin directories."
         },
+        "packs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Namespaced pack documentation, installers and examples."
+        },
         "guides": {
           "type": "array",
           "items": { "type": "string" },
