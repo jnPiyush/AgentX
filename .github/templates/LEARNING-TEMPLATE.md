@@ -29,7 +29,14 @@ What was the situation? What problem were we solving?
 
 ## Learning
 
-The reusable insight. State it as a rule or pattern that another agent could apply.
+The reusable insight. State it as a rule or pattern another agent could apply.
+
+```mermaid
+flowchart LR
+    Event[Observed event] --> Insight[Candidate learning]
+    Insight --> Validate[Validated by evidence]
+    Validate --> Reuse[Reusable rule]
+```
 
 ## Evidence
 
@@ -42,9 +49,10 @@ When does this apply? What does it prevent?
 
 ## Promotion Path
 
-When confidence reaches >= 0.8 with at least 3 observations, this learning is
-auto-promoted to `memories/conventions.md` and may be referenced in
-`.github/instructions/project-conventions.instructions.md`.
+At confidence >= 0.8 with at least 3 independent observations, assess promotion
+through the configured learning workflow. Record the actual promotion result
+before claiming it reached `memories/conventions.md` or the conventions router;
+thresholds alone are not proof that automation ran.
 
 ## Related
 

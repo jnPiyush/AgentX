@@ -50,64 +50,6 @@ Observability concern?
  - Avoid alert fatigue: page only for actionable issues
 ```
 
-## Structured Logging
-
-### Concept
-
-Log structured data (key-value pairs) instead of plain text for better searchability and analysis.
-
-```
-[FAIL] Unstructured (hard to parse):
- "User john@example.com logged in from 192.168.1.1 at 2024-01-15 10:30:00"
-
-[PASS] Structured (machine-readable):
- {
- "event": "user_login",
- "user_email": "john@example.com",
- "ip_address": "192.168.1.1",
- "timestamp": "2024-01-15T10:30:00Z",
- "level": "INFO"
- }
-```
-
-### Benefits
-
-- **Searchable**: Query by any field
-- **Filterable**: Show only errors, specific users, etc.
-- **Aggregatable**: Count events, calculate averages
-- **Parseable**: Tools can process automatically
-
----
-
-## Log Levels
-
-### Standard Levels
-
-| Level | When to Use | Example |
-|-------|-------------|---------|
-| **TRACE** | Very detailed debugging | "Entering function with params: {x: 1, y: 2}" |
-| **DEBUG** | Debugging information | "Cache hit for key: user_123" |
-| **INFO** | Normal operations | "User logged in", "Order created" |
-| **WARN** | Unexpected but recoverable | "Retry attempt 2 of 3", "Rate limit approaching" |
-| **ERROR** | Failures requiring attention | "Payment failed", "Database connection lost" |
-| **FATAL** | Application cannot continue | "Out of memory", "Configuration invalid" |
-
-### Level Configuration by Environment
-
-```
-Development: DEBUG or TRACE
- - See detailed information for debugging
-
-Staging: INFO
- - Normal operations plus warnings/errors
-
-Production: INFO (or WARN)
- - Reduce noise, focus on significant events
- - Keep ERROR/FATAL always enabled
-```
-
----
-
 ## Core Rules
 
 | Practice | Description |
@@ -135,19 +77,6 @@ Production: INFO (or WARN)
 
 ---
 
-## Observability Tools
-
-| Category | Tools |
-|----------|-------|
-| **Logging** | ELK Stack, Splunk, Datadog Logs, CloudWatch Logs |
-| **Metrics** | Prometheus + Grafana, Datadog, New Relic, CloudWatch |
-| **Tracing** | Jaeger, Zipkin, Datadog APM, Application Insights |
-| **All-in-One** | Datadog, New Relic, Dynatrace, Elastic Observability |
-
----
-
-**See Also**: [Error Handling](../error-handling/SKILL.md) - [C# Development](../../languages/csharp/SKILL.md) - [Python Development](../../languages/python/SKILL.md)
-
 ## Troubleshooting
 
 | Issue | Solution |
@@ -156,7 +85,34 @@ Production: INFO (or WARN)
 | Correlation IDs missing across services | Propagate W3C trace context headers in all HTTP calls |
 | Alert fatigue from too many notifications | Set meaningful thresholds, group related alerts, add alert suppression windows |
 
-## References
+## Workflow
 
-- [Logging Correlation Metrics](references/logging-correlation-metrics.md)
-- [Tracing Health Alerting](references/tracing-health-alerting.md)
+1. Map user-visible objectives to signals.
+2. Instrument boundaries with correlation and duration.
+3. Create actionable thresholds and ownership.
+4. Exercise failure paths and confirm telemetry reaches the backend.
+
+## Verification Checklist
+
+- [ ] Logs are structured and redacted.
+- [ ] Metrics have bounded dimensions.
+- [ ] Traces connect required boundaries.
+- [ ] Alerts name an owner and response.
+
+## Rationalization Table
+
+| Temptation | Why reject it |
+|------------|---------------|
+| log entire request bodies by default. | Use structured fields and stable event names. |
+| create alerts without an actionable runbook condition. | Use logs for discrete context, metrics for aggregates and alerts, and traces for cross-boundary causality; combine them through stable correlation fields. |
+
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Structured Logging, Log Levels, Observability Tools](references/details-structured-logging-and-observability-tools.md) - MUST read before work involving structured logging, log levels, observability tools.
+
+Existing focused references are reused, not duplicated:
+
+- [Log Messages, Correlation IDs & Metrics](references/logging-correlation-metrics.md) - MUST read before applying the focused log messages, correlation ids & metrics guidance.
+- [Distributed Tracing, Health Checks & Alerting](references/tracing-health-alerting.md) - MUST read before applying the focused distributed tracing, health checks & alerting guidance.

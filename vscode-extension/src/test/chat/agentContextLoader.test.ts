@@ -2,18 +2,19 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { AgentXContext } from '../../agentxContext';
 import { loadAgentInstructions, clearInstructionCache } from '../../chat/agentContextLoader';
 
 /**
  * Creates a minimal AgentXContext-like object whose workspaceRoot
  * points to a temporary directory we control.
  */
-function createFakeAgentx(root: string, extensionPath?: string) {
+function createFakeAgentx(root: string | undefined, extensionPath?: string): AgentXContext {
   return {
     workspaceRoot: root,
     extensionContext: extensionPath ? { extensionPath } : undefined,
     // Other properties are not used by agentContextLoader
-  } as any;
+  } as unknown as AgentXContext;
 }
 
 describe('agentContextLoader', () => {
@@ -36,9 +37,7 @@ describe('agentContextLoader', () => {
   });
 
   it('should return undefined when workspace root is not set', async () => {
-    const agentx = createFakeAgentx(undefined as any);
-    // workspaceRoot is undefined
-    (agentx as any).workspaceRoot = undefined;
+    const agentx = createFakeAgentx(undefined);
     const result = await loadAgentInstructions(agentx, 'engineer.agent.md');
     assert.equal(result, undefined);
   });
@@ -165,11 +164,11 @@ describe('agentContextLoader', () => {
         'body should reference resolved bundled skill path',
       );
       assert.ok(
-        !/(?:^|[^\/])\.github\/templates\/ARCH-REVIEW-TEMPLATE\.md/.test(result!),
+        !/(?:^|[^/])\.github\/templates\/ARCH-REVIEW-TEMPLATE\.md/.test(result!),
         'unresolved canonical ARCH template reference must be rewritten',
       );
       assert.ok(
-        !/(?:^|[^\/])\.github\/skills\/development\/testing\/SKILL\.md/.test(result!),
+        !/(?:^|[^/])\.github\/skills\/development\/testing\/SKILL\.md/.test(result!),
         'unresolved canonical skill reference must be rewritten',
       );
     } finally {

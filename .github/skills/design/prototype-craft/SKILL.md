@@ -2,263 +2,114 @@
 name: prototype-craft
 description: 'Craft visually polished, production-quality HTML/CSS prototypes with modern styling, typography, color theory, and micro-interactions. Use when building UX deliverables that need visual polish beyond wireframes, implementing color systems, typography scales, elevation shadows, or smooth transitions for interactive prototypes.'
 ---
-
 # Prototype Craft
 
-Build beautiful, interactive HTML/CSS prototypes that look and feel like real products -- not wireframes.
+> WHEN: A prototype must look product-grade, not skeletal. Use this skill when
+> the concept is clear and the surface needs a coherent visual system,
+> component polish, and believable interaction quality.
 
 ## When to Use This Skill
 
-- Building HTML/CSS prototypes that need production-quality visual polish
-- Implementing color palettes, typography scales, and spacing systems
-- Adding micro-interactions, transitions, and elevation shadows
-- Crafting responsive layouts with modern CSS (Grid, Flexbox, custom properties)
-- Polishing UX deliverables beyond skeletal wireframes
+- Polishing HTML/CSS prototypes beyond wireframe fidelity
+- Building color, type, spacing, elevation, and motion systems for a prototype
+- Turning a solid flow into a surface that feels review-ready and product-real
+- Choosing visual treatments, component states, and responsive presentation
+
+## Prerequisites
+
+Know the product direction, content honesty rules, and which styling layer owns
+the prototype: Tailwind, custom CSS, or both with a clear boundary. Have the
+token asset, browser devtools, and accessibility guardrails available before
+adding polish.
+
+## Decision Guide
+
+If the work is still wireframing, use `ux-ui-design` first. If the challenge is
+semantic structure, accessibility, or raw layout mechanics, compose with
+`frontend-ui` and `accessibility`. Use this skill when the structure is sound
+but the prototype still needs a coherent visual language, believable component
+states, or motion restraint. If a brand reference exists, run
+`brand-spec-extraction` before inventing a palette. If the request is review,
+hand off to `prototype-audit` or `anti-slop`.
 
 ## Core Rules
 
-1. **Visual polish first** -- prototypes MUST look production-quality, not skeletal
-2. **Modern CSS** -- use CSS Grid, Flexbox, custom properties, clamp(), container queries
-3. **Typography** -- use font pairing (max 2-3 families), proper scale (1.25-1.333 ratio), line-height 1.5-1.75
-4. **Color system** -- define palette with CSS custom properties: primary, secondary, neutral, success, warning, error + tints/shades
-5. **Spacing rhythm** -- use consistent 4px/8px base grid; spacing scale: 4, 8, 12, 16, 24, 32, 48, 64, 96
-6. **Depth and shadow** -- layered box-shadows for elevation (sm, md, lg, xl); subtle borders for separation
-7. **Transitions** -- all interactive elements have smooth transitions (150-300ms ease); no jarring state changes
-8. **Accessibility** -- WCAG 2.1 AA minimum; 4.5:1 contrast; focus-visible; skip-to-content; aria labels
+- Build one coherent visual system before styling isolated components.
+- Keep color, type, spacing, radius, and shadow on a shared token scale.
+- Use modern CSS deliberately: Grid, Flexbox, custom properties, and fluid
+  sizing where they simplify the prototype.
+- Design hover, active, focus, loading, empty, error, and success states as
+  first-class surfaces.
+- Motion should clarify hierarchy, not create noise; short transitions and
+  reduced-motion safety are the default.
+- Polish must not break accessibility, responsiveness, or content honesty.
 
-## Visual Techniques
+## Workflow
 
-### Color Palette Construction
+1. Establish the visual direction, honest sample content, and token baseline.
+2. Define palette, typography, spacing, radius, and elevation before touching
+   component one-offs.
+3. Choose the page archetype and map its primary components, states, and
+   responsive behavior.
+4. Implement the surface with either Tailwind utilities or a clean CSS token
+   stack; avoid framework drift.
+5. Add restrained motion, hover, active, and focus behavior.
+6. Validate contrast, responsiveness, state coverage, and composition quality;
+   then hand off to `prototype-audit`.
 
-```css
-:root {
-  /* Primary with tints and shades */
-  --color-primary-50: hsl(220, 90%, 96%);
-  --color-primary-100: hsl(220, 85%, 90%);
-  --color-primary-500: hsl(220, 80%, 50%);
-  --color-primary-700: hsl(220, 75%, 35%);
-  --color-primary-900: hsl(220, 70%, 20%);
+## Pitfalls
 
-  /* Neutral scale */
-  --color-neutral-50: hsl(220, 10%, 97%);
-  --color-neutral-100: hsl(220, 10%, 93%);
-  --color-neutral-200: hsl(220, 10%, 85%);
-  --color-neutral-500: hsl(220, 10%, 50%);
-  --color-neutral-800: hsl(220, 10%, 20%);
-  --color-neutral-900: hsl(220, 10%, 10%);
+Common failures are placeholder-heavy screens, missing states, flashy effects
+without hierarchy, fixed widths, weak contrast, and controls that look static
+until hovered. Review the detailed anti-patterns and motion recipes before
+patching symptoms.
 
-  /* Semantic colors */
-  --color-success: hsl(145, 65%, 42%);
-  --color-warning: hsl(38, 95%, 50%);
-  --color-error: hsl(0, 75%, 55%);
-}
-```
+## Error Handling
 
-### Typography Scale
+If the prototype looks generic, revisit the design system before adding more
+effects. If contrast fails, fix the tokens first. If Tailwind CDN setup is not
+appropriate, fall back to CSS custom properties instead of mixing approaches.
+If animation makes the surface feel noisy, reduce motion or disable it under
+`prefers-reduced-motion`.
 
-```css
-:root {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Plus Jakarta Sans', var(--font-sans);
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+## Checklist
 
-  /* Type scale (1.25 major third) */
-  --text-xs: clamp(0.64rem, 0.6vw, 0.75rem);
-  --text-sm: clamp(0.8rem, 0.75vw, 0.875rem);
-  --text-base: clamp(1rem, 1vw, 1.125rem);
-  --text-lg: clamp(1.25rem, 1.25vw, 1.375rem);
-  --text-xl: clamp(1.563rem, 1.5vw, 1.75rem);
-  --text-2xl: clamp(1.953rem, 2vw, 2.25rem);
-  --text-3xl: clamp(2.441rem, 2.5vw, 3rem);
-}
-```
+- A clear visual direction or brand reference exists.
+- Tokens for color, type, spacing, and elevation are defined or imported.
+- Primary components include hover, active, focus, loading, empty, error, and
+  success states.
+- Motion is purposeful and safe under reduced-motion settings.
+- Responsive behavior holds across the target breakpoints.
+- The result is ready for `prototype-audit`, not just visually attractive.
 
-### Elevation System
+## Why This Is a Skill
 
-```css
-:root {
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
-}
-```
-
-### Smooth Transitions
-
-```css
-:root {
-  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 350ms;
-}
-
-/* Apply to all interactive elements */
-button, a, input, select, textarea, [role="button"] {
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-button:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
-button:active { transform: translateY(0); }
-```
-
-### Glass and Gradient Effects
-
-```css
-/* Frosted glass card */
-.card-glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 16px;
-}
-
-/* Gradient backgrounds */
-.bg-gradient-primary {
-  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
-}
-
-/* Mesh gradient hero */
-.hero-mesh {
-  background-color: var(--color-primary-50);
-  background-image:
-    radial-gradient(at 40% 20%, hsla(220, 80%, 70%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, hsla(189, 80%, 60%, 0.2) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, hsla(260, 80%, 60%, 0.15) 0px, transparent 50%);
-}
-```
-
-## Component Patterns
-
-### Card Component
-
-- Rounded corners (12-16px)
-- Subtle border OR shadow (not both)
-- Consistent padding (24px body, 16px compact)
-- Image container with aspect-ratio and object-fit
-- Hover: lift with shadow increase
-
-### Data Table
-
-- Alternating row backgrounds (neutral-50/white)
-- Sticky header with subtle bottom border
-- Cell padding 12px 16px
-- Sortable columns with icon indicators
-- Row hover highlight
-
-### Form Inputs
-
-- Border-radius 8px
-- Focus ring: 2px offset, primary color
-- Error state: red border + inline message
-- Label above input (not placeholder-as-label)
-- Helper text below in neutral-500
-
-### Navigation
-
-- Fixed/sticky header with blur backdrop
-- Active state: bold + underline or pill background
-- Mobile: hamburger with slide-in panel or bottom sheet
-- Breadcrumbs for deep hierarchy
-
-### Dashboard Stats
-
-- Icon + metric + label + trend indicator
-- Grid layout (2 cols mobile, 4 cols desktop)
-- Subtle background color coding per stat type
-- Compact sparkline or progress bar
-
-## CSS Framework Guidance
-
-### Tailwind CSS (Preferred)
-
-When using Tailwind, include via CDN for prototypes:
-```html
-<script src="https://cdn.tailwindcss.com"></script>
-```
-
-Use Tailwind's utility classes for rapid prototyping. Custom config for brand colors:
-```html
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: { primary: { 500: '#3b82f6', 700: '#1d4ed8' } },
-      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
-    }
-  }
-}
-</script>
-```
-
-### Pure CSS (Fallback)
-
-When Tailwind is not appropriate, use CSS custom properties for theming and BEM naming for structure. Single CSS file, organized: reset -> variables -> base -> layout -> components -> utilities.
-
-## Responsive Strategy
-
-| Breakpoint | Target | Columns | Approach |
-|-----------|--------|---------|----------|
-| < 640px | Mobile | 1-2 | Stack, bottom nav, touch targets 44px+ |
-| 640-1024px | Tablet | 2-3 | Sidebar collapses, grid adapts |
-| > 1024px | Desktop | 3-4+ | Full layout, fixed sidebar |
-
-Use `clamp()` for fluid typography and spacing. Prefer CSS Grid with `auto-fit` / `minmax()` for responsive cards.
-
-## Prototype File Structure
-
-```
-docs/ux/prototypes/
-  index.html          # Main entry point
-  styles/
-    variables.css     # Design tokens
-    base.css          # Reset + base styles
-    components.css    # Component styles
-    layout.css        # Grid/layout
-    utilities.css     # Helper classes
-  scripts/
-    main.js           # Interactions (modals, tabs, forms)
-  assets/
-    icons/            # SVG icons (inline preferred)
-```
-
-For quick prototypes, a single HTML file with embedded styles is acceptable.
-
-## Decision Tree
-
-```
-Need a prototype?
-|
-+-- Dashboard/data-heavy -> Use grid layout, stat cards, data tables
-|
-+-- Form/wizard -> Multi-step with progress, validation states, success feedback
-|
-+-- Landing/marketing -> Hero with gradient, feature grid, testimonials, CTA
-|
-+-- Settings/admin -> Sidebar nav, tabbed panels, toggle switches
-|
-+-- Mobile-first app -> Bottom nav, card-based content, swipe patterns
-```
-
-## Anti-Patterns
-
-- Placeholder-only content ("Lorem ipsum" everywhere) -- use realistic sample data
-- Missing states: always design empty, loading, error, success states
-- Flat/unstyled buttons without hover/active/focus states
-- Fixed pixel widths that break on resize
-- Color contrast below 4.5:1 for text
-- Missing focus indicators on interactive elements
+General UI generation often produces either generic SaaS chrome or decorative
+noise with no system underneath. This skill forces agents to make explicit
+craft decisions about tokens, hierarchy, component states, and motion so the
+prototype feels intentional, believable, and ready for audit.
 
 ## Assets
 
-- `assets/prototype-tokens.css` - Production-ready CSS custom properties for spacing, typography scale, Apple-style elevation, and Stripe-style precision. Use this file as a foundation for HTML prototypes to ensure consistency.
+- [assets/prototype-tokens.css](assets/prototype-tokens.css) - Production-ready CSS custom properties for spacing, typography scale, Apple-style elevation, and Stripe-style precision. Use this file as a foundation for HTML prototypes to ensure consistency.
 
-## References
+## Related Links
 
 - [Anti-Slop Skill](../anti-slop/SKILL.md) -- forbidden visual tells (T1-T10) and honest-placeholder rules. Load alongside this skill when crafting prototypes.
 - [Brand Spec Extraction](../brand-spec-extraction/SKILL.md) -- protocol for extracting a brand spec from a referenced site or screenshot before crafting.
 - [Design System Reasoning](../design-system-reasoning/SKILL.md) -- posture and archetype framework
 - [UX/UI Design Skill](../ux-ui-design/SKILL.md) -- methodology and research
 - [Frontend/UI Skill](../frontend-ui/SKILL.md) -- semantic HTML, accessibility patterns
+- [Accessibility](../accessibility/SKILL.md) -- WCAG AA release gates
+- [Prototype Audit](../prototype-audit/SKILL.md) -- final multi-pass review
+
+## References
+
+- [details-visual-foundations.md](references/details-visual-foundations.md):
+  read for the original craft rules, color, type, shadow, transition, and CSS.
+- [details-layout-and-patterns.md](references/details-layout-and-patterns.md):
+  read for the original responsive strategy, file structure, decision tree,
+  component patterns, and anti-patterns.
+- [animation-recipes.md](references/animation-recipes.md): read when tuning
+  motion patterns and interaction choreography.
+- `assets/prototype-tokens.css`: read when you need a ready-made token base.

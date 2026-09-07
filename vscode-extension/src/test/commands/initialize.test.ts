@@ -21,6 +21,7 @@ import {
 } from '../../commands/initializeInternals';
 import { readJsonWithComments } from '../../commands/initializeWorkspaceHelpers';
 import { AgentXContext } from '../../agentxContext';
+import { __setWorkspaceFoldersRaw } from '../mocks/vscode';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -60,7 +61,7 @@ describe('registerInitializeLocalRuntimeCommand', () => {
 
   afterEach(() => {
     // Restore workspace folders
-    (vscode.workspace as any).workspaceFolders = originalWorkspaceFolders;
+    __setWorkspaceFoldersRaw(originalWorkspaceFolders);
     sandbox.restore();
   });
 
@@ -75,7 +76,7 @@ describe('registerInitializeLocalRuntimeCommand', () => {
   });
 
   it('should show error when no workspace folders (default mode)', async () => {
-    (vscode.workspace as any).workspaceFolders = undefined;
+    __setWorkspaceFoldersRaw(undefined);
     const errSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
     await registeredCallback();
@@ -84,7 +85,7 @@ describe('registerInitializeLocalRuntimeCommand', () => {
   });
 
   it('should show error when no workspace folders (legacy mode)', async () => {
-    (vscode.workspace as any).workspaceFolders = undefined;
+    __setWorkspaceFoldersRaw(undefined);
     const errSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
     await registeredCallback({ legacy: true });
@@ -92,7 +93,7 @@ describe('registerInitializeLocalRuntimeCommand', () => {
   });
 
   it('should show error for empty workspace folders array', async () => {
-    (vscode.workspace as any).workspaceFolders = [];
+    __setWorkspaceFoldersRaw([]);
     const errSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
     await registeredCallback();
@@ -118,12 +119,12 @@ describe('runInitializeLocalRuntimeCommand', () => {
   });
 
   afterEach(() => {
-    (vscode.workspace as any).workspaceFolders = originalWorkspaceFolders;
+    __setWorkspaceFoldersRaw(originalWorkspaceFolders);
     sandbox.restore();
   });
 
   it('should show an error and return when no workspace folders are open', async () => {
-    (vscode.workspace as any).workspaceFolders = undefined;
+    __setWorkspaceFoldersRaw(undefined);
     const errorStub = sandbox.stub(vscode.window, 'showErrorMessage');
 
     await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
@@ -417,9 +418,9 @@ describe('runInitializeLocalRuntimeCommand', () => {
       firstWorkspaceFolder: undefined,
     } as unknown as AgentXContext;
 
-    (vscode.workspace as any).workspaceFolders = [
+    __setWorkspaceFoldersRaw([
       { name: 'workspace', uri: vscode.Uri.file(workspaceRoot), index: 0 },
-    ];
+    ]);
 
     try {
       await runInitializeLocalRuntimeCommand(

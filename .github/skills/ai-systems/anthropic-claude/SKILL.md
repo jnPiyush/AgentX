@@ -27,19 +27,7 @@ prerequisites: ["Anthropic API key OR Bedrock/Vertex access", "anthropic SDK 0.3
 
 ## Decision Tree
 
-```
-Need Claude in production?
-+- Direct Anthropic API?
-|  - Use anthropic SDK (python or typescript)
-+- AWS-hosted workload?
-|  - Use Claude on Amazon Bedrock via boto3 / AWS SDK
-+- GCP-hosted workload?
-|  - Use Claude on Vertex AI via google-cloud-aiplatform
-+- Agentic loop with tools, files, shell?
-|  - Use Claude Agent SDK
-+- Framework already chosen (LangChain, MAF, LangGraph)?
-   - Use the provider adapter rather than raw SDK
-```
+MUST read first: [Decision Tree](references/details-decision-tree-model-selection-april-2026.md#decision-tree).
 
 ## Core Rules
 
@@ -51,120 +39,39 @@ Need Claude in production?
 
 ## Model Selection (April 2026)
 
-| Model | Best For | Context / Output | Notes |
-|---|---|---|---|
-| `claude-opus-4.8` | Deep reasoning, coding, computer use, complex agents | 200K / 64K | AgentX default Claude model |
-| `claude-opus-4.5` | Prior high-capability Opus generation | 200K / 64K | Use when pinned deployments require the prior Opus line |
-| `claude-haiku-4.5` | High-volume, low-latency, simple classification | 200K / 8K | Cheapest, fastest |
+MUST read before selection: [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md#model-selection-april-2026).
 
 ## Minimal Pattern (Python)
 
-```python
-import anthropic
-
-client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
-
-response = client.messages.create(
-    model="claude-opus-4.8",
-    max_tokens=1024,
-    system="You are a concise technical assistant.",
-    messages=[
-        {"role": "user", "content": "Summarize the AgentX workflow in 3 bullets."}
-    ],
-)
-
-print(response.content[0].text)
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md#minimal-pattern-python).
 
 ## Tool Use Pattern
 
-```python
-tools = [
-    {
-        "name": "get_weather",
-        "description": "Get current weather for a city.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"city": {"type": "string"}},
-            "required": ["city"],
-        },
-    }
-]
-
-response = client.messages.create(
-    model="claude-opus-4.8",
-    max_tokens=1024,
-    tools=tools,
-    messages=[{"role": "user", "content": "Weather in Seattle?"}],
-)
-
-# Loop: if stop_reason == "tool_use", execute tool and feed tool_result back.
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md#tool-use-pattern).
 
 ## Prompt Caching
 
-Cache static prefix content (system prompts, tool schemas, long docs) with `cache_control`:
-
-```python
-response = client.messages.create(
-    model="claude-opus-4.8",
-    max_tokens=1024,
-    system=[
-        {"type": "text", "text": LONG_SYSTEM_PROMPT,
-         "cache_control": {"type": "ephemeral"}}
-    ],
-    messages=[{"role": "user", "content": "Apply the policy above to case X."}],
-)
-```
-
-- Cached tokens cost ~10% of standard input on cache hit.
-- Cache TTL is 5 minutes by default, extendable.
-- Minimum cacheable length applies -- short prefixes will not cache.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md#prompt-caching).
 
 ## Extended Thinking
 
-Claude Opus 4.5 and Opus 4.8 support extended thinking (visible reasoning budget). Enable only when the task benefits from longer deliberation (hard coding, math, multi-step planning):
-
-```python
-response = client.messages.create(
-    model="claude-opus-4-5",
-    max_tokens=16000,
-    thinking={"type": "enabled", "budget_tokens": 8000},
-    messages=[{"role": "user", "content": "Design a sharded counter service."}],
-)
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md#extended-thinking).
 
 ## Deployment Targets
 
-| Target | SDK / Client | When |
-|---|---|---|
-| Anthropic API | `anthropic` (python/ts) | Default -- simplest path |
-| Amazon Bedrock | `boto3` with `bedrock-runtime` | AWS-resident workload, IAM-based auth |
-| GCP Vertex AI | `anthropic[vertex]` or Vertex SDK | GCP-resident workload, service-account auth |
-
-Model IDs and feature parity differ per target. Check feature availability (caching, extended thinking, computer use) per cloud before committing.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md#deployment-targets).
 
 ## Migrating To Claude
 
-- Map `system` role messages from OpenAI-style to Claude's separate `system` parameter.
-- Replace function calling JSON with Claude `tool_use` blocks and `tool_result` turn responses.
-- Re-tune few-shot examples. Claude responds well to XML-tagged structure in prompts.
-- Re-evaluate token budgets. Claude output limits (`max_tokens`) are explicit and required.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md#migrating-to-claude).
 
 ## Design Guidance
 
-- Put durable task instructions in `system`. Keep `messages` focused on the current user turn plus tool/result loop.
-- Use XML tags (`<context>`, `<instructions>`, `<examples>`) in large prompts -- Claude follows tagged structure reliably.
-- Prefer structured output via tool_use with a schema over "respond in JSON" prose.
-- Stream long responses to reduce perceived latency and enable early cancellation.
-- Always record model ID, prompt version, and cache status in traces.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md#design-guidance).
 
 ## Safety And Guardrails
 
-- Claude has strong native refusal behavior; do not double-stack safety instructions unnecessarily -- it hurts quality.
-- For regulated domains, use `system` to scope the assistant's role and allowed outputs precisely.
-- Validate tool inputs on the server before execution. Claude can and will call tools with unexpected parameters.
-- Log refusals with enough metadata to tune the system prompt without leaking user data.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md#safety-and-guardrails).
 
 ## Anti-Patterns
 
@@ -186,17 +93,6 @@ Model IDs and feature parity differ per target. Check feature availability (cach
 - [ ] Deployment target (API / Bedrock / Vertex) is documented per environment
 - [ ] Traces capture model ID, prompt version, cache-hit status, and stop_reason
 
-## References
-
-- [Anthropic API Reference](https://docs.anthropic.com/en/api/overview)
-- [Claude Models Overview](https://docs.anthropic.com/en/docs/about-claude/models/overview)
-- [Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)
-- [Tool Use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview)
-- [Extended Thinking](https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking)
-- [Claude on Amazon Bedrock](https://docs.anthropic.com/en/api/claude-on-amazon-bedrock)
-- [Claude on Vertex AI](https://docs.anthropic.com/en/api/claude-on-vertex-ai)
-- [Claude Agent SDK](https://docs.anthropic.com/en/docs/agents-and-tools/claude-agent-sdk)
-
 ## Troubleshooting
 
 | Symptom | Resolution |
@@ -207,3 +103,12 @@ Model IDs and feature parity differ per target. Check feature availability (cach
 | Cache miss every turn | Prefix is below minimum cache length or drifts across turns -- stabilize the prefix |
 | Feature missing on Bedrock/Vertex | Not all API features ship on every cloud -- fall back to direct Anthropic API or accept gap |
 | Extended thinking latency too high | Lower `budget_tokens` or disable for non-critical paths |
+
+## References
+
+- [Decision Tree details](references/details-decision-tree-model-selection-april-2026.md) - must read before selection.
+- [Prompt Engineering skill](../prompt-engineering/SKILL.md)
+- [Tool Use And Function Calling skill](../tool-use-and-function-calling/SKILL.md)
+
+
+- [Source and related-reading index](references/details-source-reference-index.md)

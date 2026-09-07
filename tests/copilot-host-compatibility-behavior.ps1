@@ -331,17 +331,28 @@ try {
         $installPs1,
         '#\s*region agentx-upgrade-removal(?<body>.*?)#\s*endregion agentx-upgrade-removal',
         'Singleline')
-    Assert-True $regionMatch.Success 'PowerShell installer exposes its upgrade removal block for execution'
+    Assert-True $regionMatch.Success 'PowerShell installer exposes its upgrade removal function for direct invocation'
 
     if ($regionMatch.Success) {
+        # Dot-source the installer's own Invoke-AgentXUpgradeRemoval function from
+        # a real script file on disk (not a dynamically evaluated string) so the
+        # exact production source is what executes here. Renaming, deleting, or
+        # reshaping that function in install.ps1 fails this test instead of
+        # silently drifting from the code path real upgrades run.
+        $functionScript = Join-Path $upgradeRoot 'agentx-upgrade-removal.ps1'
+        Set-Content -LiteralPath $functionScript -Value $regionMatch.Groups['body'].Value -Encoding utf8
+        . $functionScript
+        Assert-True ([bool](Get-Command Invoke-AgentXUpgradeRemoval -ErrorAction SilentlyContinue)) `
+            'Installer defines a directly invokable Invoke-AgentXUpgradeRemoval function'
+
         Push-Location $upgradeRoot
         try {
             $trackedPaths = @((Get-Content '.agentx/install-manifest.json' -Raw | ConvertFrom-Json).files.path)
-            # Executes the installer's own code, so deleting it fails this test.
-            Invoke-Expression $regionMatch.Groups['body'].Value
+            Invoke-AgentXUpgradeRemoval -TrackedPaths $trackedPaths -WorkspaceRoot $upgradeRoot
         }
         finally {
             Pop-Location
+            Remove-Item -LiteralPath $functionScript -Force -ErrorAction SilentlyContinue
         }
 
         $survivors = @($userOwned | Where-Object {
@@ -469,9 +480,12 @@ Assert-True ($manifestScript -match '\[switch\]\$Strict') `
 
 $seedTree = Join-Path $repoRoot 'vscode-extension/.github/agentx/seed'
 if (Test-Path $seedTree) {
-    $initSource = Get-Content (Join-Path $repoRoot 'vscode-extension/src/commands/initializeInternals.ts') -Raw
+    $initSource = Get-Content (Join-Path $repoRoot 'vscode-extension/src/commands/initializeRuntimeAssets.ts') -Raw
     Assert-True ($initSource -match "SEED_ROOT\s*=\s*path\.join\('\.github',\s*'agentx',\s*'seed'\)") `
         'initializer seeds from the pristine bundle seed tree'
+    $initFacade = Get-Content (Join-Path $repoRoot 'vscode-extension/src/commands/initializeInternals.ts') -Raw
+    Assert-True ($initFacade -match "export \* from '\./initializeRuntimeAssets'") `
+        'initializer compatibility facade retains runtime asset exports'
 
     foreach ($required in @('.github/agents', '.github/skills', '.github/AGENT-PROTOCOL.md', 'AGENTS.md', 'scripts', 'docs', 'evaluation')) {
         Assert-True (Test-Path (Join-Path $seedTree $required)) "seed tree contains $required"

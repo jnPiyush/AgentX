@@ -1,4 +1,5 @@
 import { strict as assert } from 'assert';
+import { createRequire } from 'module';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
@@ -6,6 +7,9 @@ import { AgentXContext } from '../../agentxContext';
 import { registerAddSkillCommand } from '../../commands/addSkill';
 import { resolveSkillOutputDir } from '../../commands/addSkillInternals';
 import { buildSkillContentFallback } from '../../commands/scaffoldGeneration';
+
+// Stub the live fs module, not TypeScript's separate namespace wrapper.
+const nodeRequire = createRequire(__filename);
 
 describe('buildSkillContentFallback', () => {
   it('produces a complete SKILL.md structure', () => {
@@ -34,13 +38,15 @@ describe('resolveSkillOutputDir', () => {
 describe('registerAddSkillCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
+  let fakeAgentxData: { workspaceRoot: string | undefined };
   let fakeAgentx: AgentXContext;
   let commandCallback: () => Promise<void>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     fakeContext = { subscriptions: [], extensionUri: { fsPath: '/ext' } } as unknown as vscode.ExtensionContext;
-    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as AgentXContext;
+    fakeAgentxData = { workspaceRoot: '/tmp/workspace' };
+    fakeAgentx = fakeAgentxData as unknown as AgentXContext;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, cb: (...args: unknown[]) => unknown) => {
@@ -68,7 +74,8 @@ describe('registerAddSkillCommand', () => {
   });
 
   it('delegates to agentx.addPlugin when registry option is selected', async () => {
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'Install from Plugin Registry', value: 'registry' } as any);
+    const registryPickItem = { label: 'Install from Plugin Registry', value: 'registry' };
+    sandbox.stub(vscode.window, 'showQuickPick').resolves(registryPickItem);
     const execStub = sandbox.stub(vscode.commands, 'executeCommand').resolves();
 
     await commandCallback();
@@ -77,8 +84,9 @@ describe('registerAddSkillCommand', () => {
   });
 
   it('shows warning when scaffold is selected but no workspace is open', async () => {
-    (fakeAgentx as any).workspaceRoot = undefined;
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'Scaffold Custom Skill', value: 'scaffold' } as any);
+    fakeAgentxData.workspaceRoot = undefined;
+    const scaffoldPickItem = { label: 'Scaffold Custom Skill', value: 'scaffold' };
+    sandbox.stub(vscode.window, 'showQuickPick').resolves(scaffoldPickItem);
     const warnStub = sandbox.stub(vscode.window, 'showWarningMessage').resolves(undefined);
 
     await commandCallback();
@@ -88,21 +96,23 @@ describe('registerAddSkillCommand', () => {
 
   it('opens a terminal and runs the skill scaffold script when scaffold is selected', async () => {
     const pickStub = sandbox.stub(vscode.window, 'showQuickPick');
-    pickStub.onCall(0).resolves({ label: 'Scaffold Custom Skill', value: 'scaffold' } as any);
+    const scaffoldPickItem = { label: 'Scaffold Custom Skill', value: 'scaffold' };
+    const categoryPickItem: vscode.QuickPickItem = { label: 'development' };
+    pickStub.onCall(0).resolves(scaffoldPickItem);
     // Skill details prompts: name -> category pick -> description.
     const inputStub = sandbox.stub(vscode.window, 'showInputBox');
     inputStub.onCall(0).resolves('Test Skill');
     inputStub.onCall(1).resolves('Guides validation of the skill scaffold flow end to end');
-    pickStub.onCall(1).resolves({ label: 'development' } as any);
+    pickStub.onCall(1).resolves(categoryPickItem);
 
     sandbox.stub(vscode.window, 'withProgress').callsFake(
-      async (_opts: any, task: any) => task({ report: () => undefined }, { isCancellationRequested: false }),
+      async (_options, task) => task({ report: () => undefined }, {} as never),
     );
-    sandbox.stub(vscode.workspace, 'openTextDocument').resolves({} as any);
-    sandbox.stub(vscode.window, 'showTextDocument').resolves({} as any);
-    sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined as any);
+    sandbox.stub(vscode.workspace, 'openTextDocument').resolves({} as unknown as vscode.TextDocument);
+    sandbox.stub(vscode.window, 'showTextDocument').resolves({} as unknown as vscode.TextEditor);
+    sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined);
 
-    const fs = require('fs');
+    const fs = nodeRequire('fs') as unknown as typeof import('fs');
     sandbox.stub(fs, 'existsSync').returns(false);
     const mkdirStub = sandbox.stub(fs, 'mkdirSync');
     const writeStub = sandbox.stub(fs, 'writeFileSync');

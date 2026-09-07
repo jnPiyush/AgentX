@@ -1,6 +1,8 @@
 import { strict as assert } from 'assert';
+import * as vscode from 'vscode';
 import { createMockResponseStream } from '../mocks/vscode';
 import { __setMockModels, __clearMockModels, MockLanguageModelChat } from '../mocks/vscode';
+import { AgentXContext } from '../../agentxContext';
 import {
   resetIntentRouterStateForTests,
   setNowFnForTests,
@@ -109,7 +111,7 @@ describe('intentRouter', () => {
       it(`runs read-only verb for "${c.phrase}"`, async () => {
         const response = createMockResponseStream();
         const agentx = makeAgentX('done');
-        const result = await tryHandleNaturalLanguageIntent(c.phrase, response as any, agentx as any);
+        const result = await tryHandleNaturalLanguageIntent(c.phrase, response as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
         assert.ok(result, `expected match for "${c.phrase}"`);
         assert.equal(agentx.cliCalls.length, 1, `expected exactly one CLI call for "${c.phrase}"`);
         assert.equal(agentx.cliCalls[0].subcommand, c.subcommand);
@@ -124,8 +126,8 @@ describe('intentRouter', () => {
       const agentx = makeAgentX();
       const result = await tryHandleNaturalLanguageIntent(
         'change adapter to ado',
-        response as any,
-        agentx as any,
+        response as unknown as vscode.ChatResponseStream,
+        agentx as unknown as AgentXContext,
       );
       assert.ok(result);
       assert.equal(agentx.cliCalls.length, 0, 'must not run before confirmation');
@@ -136,11 +138,11 @@ describe('intentRouter', () => {
     it('executes after explicit confirmation', async () => {
       const response1 = createMockResponseStream();
       const agentx = makeAgentX('switched');
-      await tryHandleNaturalLanguageIntent('switch to github', response1 as any, agentx as any);
+      await tryHandleNaturalLanguageIntent('switch to github', response1 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.equal(agentx.cliCalls.length, 0);
 
       const response2 = createMockResponseStream();
-      const result = await tryHandleNaturalLanguageIntent('yes', response2 as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('yes', response2 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.ok(result);
       assert.equal(agentx.cliCalls.length, 1);
       assert.equal(agentx.cliCalls[0].subcommand, 'config');
@@ -150,10 +152,10 @@ describe('intentRouter', () => {
     it('cancels pending intent on "no"', async () => {
       const r1 = createMockResponseStream();
       const agentx = makeAgentX();
-      await tryHandleNaturalLanguageIntent('switch to local', r1 as any, agentx as any);
+      await tryHandleNaturalLanguageIntent('switch to local', r1 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
 
       const r2 = createMockResponseStream();
-      const result = await tryHandleNaturalLanguageIntent('cancel', r2 as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('cancel', r2 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.ok(result);
       assert.equal(agentx.cliCalls.length, 0);
       assert.ok(r2.getMarkdown().toLowerCase().includes('cancelled'));
@@ -170,11 +172,11 @@ describe('intentRouter', () => {
         resetIntentRouterStateForTests();
         const r1 = createMockResponseStream();
         const agentx = makeAgentX();
-        const proposed = await tryHandleNaturalLanguageIntent(p.text, r1 as any, agentx as any);
+        const proposed = await tryHandleNaturalLanguageIntent(p.text, r1 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
         assert.ok(proposed, `should propose for "${p.text}"`);
 
         const r2 = createMockResponseStream();
-        await tryHandleNaturalLanguageIntent('yes', r2 as any, agentx as any);
+        await tryHandleNaturalLanguageIntent('yes', r2 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
         assert.equal(agentx.cliCalls.length, 1);
         assert.deepEqual(
           agentx.cliCalls[0].args,
@@ -242,13 +244,13 @@ describe('intentRouter', () => {
         resetIntentRouterStateForTests();
         const r1 = createMockResponseStream();
         const agentx = makeAgentX();
-        const proposed = await tryHandleNaturalLanguageIntent(c.phrase, r1 as any, agentx as any);
+        const proposed = await tryHandleNaturalLanguageIntent(c.phrase, r1 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
         assert.ok(proposed, `expected proposal for "${c.phrase}"`);
         assert.equal(agentx.cliCalls.length, 0, 'must not run before confirmation');
         assert.ok(r1.getMarkdown().includes('Proposed:'));
 
         const r2 = createMockResponseStream();
-        await tryHandleNaturalLanguageIntent('yes', r2 as any, agentx as any);
+        await tryHandleNaturalLanguageIntent('yes', r2 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
         assert.equal(agentx.cliCalls.length, 1, `expected one CLI call after confirm for "${c.phrase}"`);
         assert.equal(agentx.cliCalls[0].subcommand, c.subcommand);
         assert.deepEqual(agentx.cliCalls[0].args, c.args);
@@ -262,8 +264,8 @@ describe('intentRouter', () => {
       const agentx = makeAgentX();
       const result = await tryHandleNaturalLanguageIntent(
         'tell me a joke about ducks',
-        response as any,
-        agentx as any,
+        response as unknown as vscode.ChatResponseStream,
+        agentx as unknown as AgentXContext,
       );
       assert.equal(result, undefined);
       assert.equal(agentx.cliCalls.length, 0);
@@ -272,7 +274,7 @@ describe('intentRouter', () => {
     it('returns undefined for empty input', async () => {
       const response = createMockResponseStream();
       const agentx = makeAgentX();
-      const result = await tryHandleNaturalLanguageIntent('   ', response as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('   ', response as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.equal(result, undefined);
     });
 
@@ -281,8 +283,8 @@ describe('intentRouter', () => {
       const agentx = makeAgentX();
       const result = await tryHandleNaturalLanguageIntent(
         'switch to bitbucket',
-        response as any,
-        agentx as any,
+        response as unknown as vscode.ChatResponseStream,
+        agentx as unknown as AgentXContext,
       );
       assert.equal(result, undefined);
       assert.equal(agentx.cliCalls.length, 0);
@@ -300,7 +302,7 @@ describe('intentRouter', () => {
       it(`rejects ambiguous/unsupported backlog-sync phrase: "${phrase}"`, async () => {
         const response = createMockResponseStream();
         const agentx = makeAgentX();
-        const result = await tryHandleNaturalLanguageIntent(phrase, response as any, agentx as any);
+        const result = await tryHandleNaturalLanguageIntent(phrase, response as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
         assert.equal(result, undefined, `"${phrase}" must not match any rule`);
         assert.equal(agentx.cliCalls.length, 0);
       });
@@ -313,7 +315,7 @@ describe('intentRouter', () => {
       setNowFnForTests(() => BASE_TIME);
       const r1 = createMockResponseStream();
       const agentx = makeAgentX();
-      await tryHandleNaturalLanguageIntent('sync backlog to github', r1 as any, agentx as any);
+      await tryHandleNaturalLanguageIntent('sync backlog to github', r1 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.ok(r1.getMarkdown().includes('Proposed:'));
       assert.equal(agentx.cliCalls.length, 0);
 
@@ -321,7 +323,7 @@ describe('intentRouter', () => {
       setNowFnForTests(() => BASE_TIME + 6 * 60 * 1000);
 
       const r2 = createMockResponseStream();
-      await tryHandleNaturalLanguageIntent('yes', r2 as any, agentx as any);
+      await tryHandleNaturalLanguageIntent('yes', r2 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.equal(agentx.cliCalls.length, 0, 'must NOT execute expired command');
       assert.ok(
         r2.getMarkdown().toLowerCase().includes('expired'),
@@ -332,7 +334,7 @@ describe('intentRouter', () => {
     it('backlog-sync without explicit target returns no match (no provider assumption)', async () => {
       const agentx = makeAgentX();
       const r = createMockResponseStream();
-      const result = await tryHandleNaturalLanguageIntent('sync backlog', r as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('sync backlog', r as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.equal(result, undefined, '"sync backlog" without target should not match');
       assert.equal(agentx.cliCalls.length, 0);
     });
@@ -340,7 +342,7 @@ describe('intentRouter', () => {
     it('force-sync backlog without explicit target returns no match', async () => {
       const agentx = makeAgentX();
       const r = createMockResponseStream();
-      const result = await tryHandleNaturalLanguageIntent('force-sync backlog', r as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('force-sync backlog', r as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.equal(result, undefined, '"force-sync backlog" without target should not match');
       assert.equal(agentx.cliCalls.length, 0);
     });
@@ -351,8 +353,8 @@ describe('intentRouter', () => {
       const r = createMockResponseStream();
       const result = await tryHandleNaturalLanguageIntent(
         'sync backlog to github',
-        r as any,
-        agentx as any,
+        r as unknown as vscode.ChatResponseStream,
+        agentx as unknown as AgentXContext,
       );
       assert.ok(result, 'should return a result (not undefined)');
       assert.ok(
@@ -363,7 +365,7 @@ describe('intentRouter', () => {
 
       // Confirm should NOT run anything either (no pending was stored).
       const r2 = createMockResponseStream();
-      const result2 = await tryHandleNaturalLanguageIntent('yes', r2 as any, agentx as any);
+      const result2 = await tryHandleNaturalLanguageIntent('yes', r2 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.equal(agentx.cliCalls.length, 0, 'yes after no-workspace must still run nothing');
       assert.equal(result2, undefined, 'yes with no pending should return undefined');
     });
@@ -385,7 +387,7 @@ describe('intentRouter', () => {
       __setMockModels([makeMockModel('{"id":"ready-queue","args":[],"confidence":"high","reason":"user wants today work"}')]);
       const agentx = makeAgentX();
       const r = createMockResponseStream();
-      const result = await tryHandleNaturalLanguageIntent('what work am I supposed to do today', r as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('what work am I supposed to do today', r as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.deepEqual(result, {});
       assert.equal(agentx.cliCalls.length, 1);
       assert.equal(agentx.cliCalls[0].subcommand, 'ready');
@@ -396,12 +398,12 @@ describe('intentRouter', () => {
       __setMockModels([makeMockModel('{"id":"ready-queue","args":[],"confidence":"low","reason":"ambiguous"}')]);
       const agentx = makeAgentX();
       const r = createMockResponseStream();
-      const result = await tryHandleNaturalLanguageIntent('what now', r as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('what now', r as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.deepEqual(result, {});
       assert.equal(agentx.cliCalls.length, 0, 'low-confidence must not auto-execute');
       // Confirm via follow-up turn.
       const r2 = createMockResponseStream();
-      const result2 = await tryHandleNaturalLanguageIntent('yes', r2 as any, agentx as any);
+      const result2 = await tryHandleNaturalLanguageIntent('yes', r2 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.deepEqual(result2, {});
       assert.equal(agentx.cliCalls.length, 1);
       assert.equal(agentx.cliCalls[0].subcommand, 'ready');
@@ -412,7 +414,7 @@ describe('intentRouter', () => {
       const agentx = makeAgentX();
       const r = createMockResponseStream();
       // Use a regex-matchable phrase so we can prove fallback fired.
-      const result = await tryHandleNaturalLanguageIntent('show ready', r as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('show ready', r as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.deepEqual(result, {});
       assert.equal(agentx.cliCalls.length, 1);
       assert.equal(agentx.cliCalls[0].subcommand, 'ready');
@@ -422,7 +424,7 @@ describe('intentRouter', () => {
       __setMockModels([makeMockModel('this is not json at all')]);
       const agentx = makeAgentX();
       const r = createMockResponseStream();
-      const result = await tryHandleNaturalLanguageIntent('show config', r as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('show config', r as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.deepEqual(result, {});
       assert.equal(agentx.cliCalls.length, 1);
       assert.equal(agentx.cliCalls[0].subcommand, 'config');
@@ -433,7 +435,7 @@ describe('intentRouter', () => {
       __clearMockModels();
       const agentx = makeAgentX();
       const r = createMockResponseStream();
-      const result = await tryHandleNaturalLanguageIntent('show ready', r as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('show ready', r as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.deepEqual(result, {});
       assert.equal(agentx.cliCalls.length, 1);
       assert.equal(agentx.cliCalls[0].subcommand, 'ready');
@@ -443,11 +445,11 @@ describe('intentRouter', () => {
       __setMockModels([makeMockModel('{"id":"issue-close","args":["42"],"confidence":"high","reason":"user wants to close 42"}')]);
       const agentx = makeAgentX();
       const r = createMockResponseStream();
-      const result = await tryHandleNaturalLanguageIntent('please wrap up issue forty-two', r as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('please wrap up issue forty-two', r as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.deepEqual(result, {});
       assert.equal(agentx.cliCalls.length, 0, 'destructive LM intent must not auto-execute');
       const r2 = createMockResponseStream();
-      const result2 = await tryHandleNaturalLanguageIntent('yes', r2 as any, agentx as any);
+      const result2 = await tryHandleNaturalLanguageIntent('yes', r2 as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.deepEqual(result2, {});
       assert.equal(agentx.cliCalls.length, 1);
       assert.equal(agentx.cliCalls[0].subcommand, 'issue');
@@ -460,7 +462,7 @@ describe('intentRouter', () => {
       const agentx = makeAgentX();
       const r = createMockResponseStream();
       // Phrase has no regex match, so we expect undefined (no fallthrough run).
-      const result = await tryHandleNaturalLanguageIntent('???', r as any, agentx as any);
+      const result = await tryHandleNaturalLanguageIntent('???', r as unknown as vscode.ChatResponseStream, agentx as unknown as AgentXContext);
       assert.equal(result, undefined);
       assert.equal(agentx.cliCalls.length, 0);
     });

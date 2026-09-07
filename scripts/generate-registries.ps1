@@ -37,11 +37,14 @@ $timestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 # ---------------- skills.json ----------------
 Write-Info "Scanning skills under $skillsDir"
 $skillFiles = @(Get-ChildItem -Path $skillsDir -Recurse -Filter 'SKILL.md' -File)
+$templateFiles = @(Get-ChildItem -Path $templatesDir -Filter '*.md' -File | Sort-Object Name)
 
 $parser = Join-Path $PSScriptRoot 'parse-yaml.js'
-$pathsJson = ConvertTo-Json -InputObject @($skillFiles | ForEach-Object { $_.FullName }) -Compress
+$pathsJson = ConvertTo-Json -InputObject @(
+    @($skillFiles) + @($templateFiles) | ForEach-Object { $_.FullName }
+) -Compress
 $output = $pathsJson | & node $parser --frontmatter-files 2>&1 | Out-String
-if ($LASTEXITCODE -ne 0) { throw "Invalid skill frontmatter: $($output.Trim())" }
+if ($LASTEXITCODE -ne 0) { throw "Invalid asset frontmatter: $($output.Trim())" }
 $frontmatterByPath = @{}
 foreach ($entry in ($output | ConvertFrom-Json)) {
     $fm = @{}
@@ -86,31 +89,88 @@ $skillsRegistry = [ordered]@{
     skills           = @($skills | Sort-Object id)
 }
 
-$skillsRegistry | ConvertTo-Json -Depth 6 | Set-Content -Path (Join-Path $outDir 'skills.json') -Encoding utf8
-Write-Info "Wrote skills.json -- $($skills.Count) skills across $($skillsByCategory.Count) categories"
+function Get-TemplateBodyLines([string[]]$Lines) {
+    $start = 0
+    if ($Lines.Count -gt 0 -and $Lines[0].Trim() -eq '---') {
+        $start = 1
+        while ($start -lt $Lines.Count -and $Lines[$start].Trim() -ne '---') { $start++ }
+        $start++
+    }
+    $fence = ''
+    for ($lineIndex = $start; $lineIndex -lt $Lines.Count; $lineIndex++) {
+        $line = $Lines[$lineIndex]
+        $delimiter = [regex]::Match($line, '^ {0,3}(`{3,}|~{3,})(.*)$')
+        if ($delimiter.Success) {
+            $marker = $delimiter.Groups[1].Value
+            if (-not $fence) { $fence = $marker }
+            elseif ($marker[0] -eq $fence[0] -and $marker.Length -ge $fence.Length -and -not $delimiter.Groups[2].Value.Trim()) {
+                $fence = ''
+            }
+            continue
+        }
+        if (-not $fence) { $line }
+    }
+}
+
+function Get-TemplateInputNames([hashtable]$Frontmatter, [string[]]$BodyLines, [string]$FilePath) {
+    $names = [Collections.Generic.List[string]]::new()
+    if ($Frontmatter.ContainsKey('inputs')) {
+        $definitions = $Frontmatter['inputs']
+        if ($definitions -isnot [PSCustomObject]) { throw "Inputs must be a mapping in '$FilePath'." }
+        foreach ($property in $definitions.PSObject.Properties) {
+            if ($property.Name -notmatch '^[A-Za-z0-9_][A-Za-z0-9_-]*$') {
+                throw "Invalid input name '$($property.Name)' in '$FilePath'."
+            }
+            $definition = $property.Value
+            if ($definition -isnot [PSCustomObject]) {
+                throw "Input '$($property.Name)' must be a mapping in '$FilePath'."
+            }
+            $description = $definition.PSObject.Properties['description']
+            $required = $definition.PSObject.Properties['required']
+            $default = $definition.PSObject.Properties['default']
+            if ($description -and $description.Value -isnot [string]) {
+                throw "Input '$($property.Name)' description must be a string in '$FilePath'."
+            }
+            if ($required -and $required.Value -isnot [bool]) {
+                throw "Input '$($property.Name)' required must be a boolean in '$FilePath'."
+            }
+            if ($default -and ($default.Value -is [array] -or $default.Value -is [PSCustomObject])) {
+                throw "Input '$($property.Name)' default must be a scalar in '$FilePath'."
+            }
+            $names.Add($property.Name)
+        }
+    }
+    $headerLines = @()
+    foreach ($line in $BodyLines) {
+        if ($line -match '^#\s') { break }
+        $headerLines += $line
+    }
+    $declaration = [regex]::Match(($headerLines -join "`n"), '(?s)<!--\s*Inputs:\s*(.*?)\s*-->')
+    if ($declaration.Success) {
+        foreach ($value in ($declaration.Groups[1].Value -split ',')) {
+            $name = ($value -replace '[{}$]', '').Trim()
+            if (-not $name) { continue }
+            if ($name -notmatch '^[A-Za-z0-9_][A-Za-z0-9_-]*$') {
+                throw "Invalid input name '$name' in '$FilePath'."
+            }
+            if (-not $names.Contains($name)) { $names.Add($name) }
+        }
+    }
+    return $names.ToArray()
+}
 
 # ---------------- templates.json ----------------
 Write-Info "Scanning templates under $templatesDir"
-$templateFiles = @(Get-ChildItem -Path $templatesDir -Filter '*.md' -File | Sort-Object Name)
 
 $templates = @(foreach ($f in $templateFiles) {
     $relPath = $f.FullName.Substring($RepoRoot.Length + 1) -replace '\\','/'
-    $content = Get-Content -LiteralPath $f.FullName -Encoding UTF8
-
-    # Inputs from "<!-- Inputs: ... -->" comment (anywhere in first 10 lines)
-    $declaredInputs = @()
-    $head = $content | Select-Object -First 10
-    foreach ($line in $head) {
-        if ($line -match '<!--\s*Inputs:\s*(.*?)\s*-->') {
-            $raw = $matches[1]
-            $declaredInputs = @($raw -split ',' | ForEach-Object { ($_ -replace '[{}$]', '').Trim() } | Where-Object { $_ })
-            break
-        }
-    }
+    $content = @(Get-Content -LiteralPath $f.FullName -Encoding UTF8)
+    $bodyLines = @(Get-TemplateBodyLines $content)
+    $declaredInputs = @(Get-TemplateInputNames $frontmatterByPath[$f.FullName] $bodyLines $f.FullName)
 
     # Title placeholders -- variables in the first H1
     $titlePlaceholders = @()
-    foreach ($line in $content) {
+    foreach ($line in $bodyLines) {
         if ($line -match '^#\s+') {
             $regex = [regex]'\$\{([A-Za-z0-9_]+)\}|\{([A-Za-z0-9_]+)\}'
             foreach ($m in $regex.Matches($line)) {
@@ -123,7 +183,7 @@ $templates = @(foreach ($f in $templateFiles) {
 
     # Required H2 sections (top-level numbered headings excluding boilerplate)
     $sections = @()
-    foreach ($line in $content) {
+    foreach ($line in $bodyLines) {
         if ($line -match '^##\s+(.+?)\s*$') {
             $sec = $matches[1].Trim()
             if ($sections -notcontains $sec) { $sections += $sec }
@@ -147,6 +207,8 @@ $templatesRegistry = [ordered]@{
     templates        = $templates
 }
 
+$skillsRegistry | ConvertTo-Json -Depth 6 | Set-Content -Path (Join-Path $outDir 'skills.json') -Encoding utf8
+Write-Info "Wrote skills.json -- $($skills.Count) skills across $($skillsByCategory.Count) categories"
 $templatesRegistry | ConvertTo-Json -Depth 6 | Set-Content -Path (Join-Path $outDir 'templates.json') -Encoding utf8
 Write-Info "Wrote templates.json -- $($templates.Count) templates"
 

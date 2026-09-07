@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { WorkflowGuidanceSnapshot } from '../../utils/workflowGuidance';
 import {
   buildActionChildren,
   buildActiveAgentChildren,
@@ -161,7 +162,7 @@ describe('workTreeProviderInternals', () => {
       planDeepening: { allowed: true },
       reviewKickoff: { allowed: true },
       blockers: ['Waiting on review evidence'],
-    } as any);
+    } as unknown as WorkflowGuidanceSnapshot);
 
     assert.equal(populatedChildren[0].label, 'Kick off review');
     assert.ok(populatedChildren.some((item) => item.label === 'Deepen plan'));

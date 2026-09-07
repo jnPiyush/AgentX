@@ -150,6 +150,27 @@ export function __setWorkspaceFolders(
   }));
 }
 
+/**
+ * Test helper: write a raw `WorkspaceFolder[]`-shaped value directly onto this mock's
+ * mutable `workspace.workspaceFolders` property.
+ *
+ * Callers `import * as vscode from 'vscode'` for compile-time typing, which resolves to
+ * the real `@types/vscode` declarations (where `workspaceFolders` is `readonly`), while
+ * the mocha `--require` hook redirects the runtime `require('vscode')` to this module.
+ * That split is why test files cannot assign `vscode.workspace.workspaceFolders` directly.
+ * This helper is the single, precisely-typed place that bridges the two: it accepts the
+ * same structural shape as the real `vscode.WorkspaceFolder[]` (readonly `uri`/`name`/
+ * `index`) and reuses it both to capture-then-restore an original value and to install a
+ * custom scenario value (`undefined`, `[]`, or a populated array).
+ */
+export function __setWorkspaceFoldersRaw(
+  folders:
+    | ReadonlyArray<{ readonly uri: { readonly fsPath: string }; readonly name: string; readonly index: number }>
+    | undefined
+): void {
+  workspace.workspaceFolders = folders as unknown as typeof workspace.workspaceFolders;
+}
+
 // --- Window stubs --------------------------------------------------------
 
 export const window = {

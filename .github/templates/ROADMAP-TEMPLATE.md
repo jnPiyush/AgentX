@@ -45,412 +45,204 @@ inputs:
 **Related PRDs**:
 ${related_prds}
 
----
-
-> **Diagram policy**: Mermaid is the default format for all diagrams in this roadmap (gantt charts, dependency graphs, release timelines). Use PlantUML, draw.io, Structurizr, or Graphviz only when Mermaid cannot express the intent, a Visio (.vsdx) round-trip is required, or the user explicitly requests another format. See the [diagram-as-code skill](../skills/diagrams/diagram-as-code/SKILL.md). When falling back, record the reason in a header comment.
-
----
-
 ## 1. Purpose
 
-This document provides the dated portfolio roadmap and release plan for the workstreams in scope. It complements the roadmap sections embedded in each PRD by giving one shared calendar, one milestone model, and one visual planning view.
+This roadmap gives one dated release view across the portfolio so workstreams share milestone logic, release gates, and a common planning cadence.
 
-This plan assumes:
-- Sprint 1 starts on {YYYY-MM-DD}.
-- Sprint length is {N} weeks.
-- MVP is capped at {N} sprints.
-- Quality and stability take precedence over speed.
-- Planning workshops are used at the start of major delivery waves so each workshop shapes multiple sprints or a full release wave.
-- Production releases include explicit stabilization windows before the next expansion wave.
-
----
+```mermaid
+flowchart LR
+    Discover[Scope and planning] --> MVP[MVP delivery]
+    MVP --> Pilot[Pilot release]
+    Pilot --> Expand[Controlled expansion]
+    Expand --> Stabilize[Stabilization and next horizon]
+```
 
 ## 2. Portfolio Planning Rules
 
-- The first {N} sprints are reserved for MVP only.
-- Sprint 1 is technical foundation only.
-- Early sprints focus on intake, drafting, review, and core operational flows.
-- UAT is a formal release phase with entry and exit criteria.
-- Pilot production is narrow by design and must prove stability before expansion.
-- Scope should be cut before quality is compromised.
-- New breadth should only be added after the prior release wave is operationally stable.
-- Workshops should gather enough detail for the next 2-3 sprints or release wave, not act as a recurring checkpoint after every milestone.
-
----
+- Define the MVP boundary and time-box from evidence, not a fixed sprint count.
+- Prioritize the riskiest assumption and a useful vertical slice; reserve a
+  foundation-only sprint only when dependencies justify it.
+- Breadth is added only after the prior release wave is stable.
+- Scope is reduced before quality is compromised.
+- Workshops shape waves, not every individual milestone.
+- Pilot production must include explicit rollback and hypercare.
 
 ## 3. Dated MVP Sprint Calendar
 
 | Sprint | Dates | Focus | Primary Outcome |
-|--------|-------|-------|-----------------|
-| Sprint 1 | {YYYY-MM-DD to YYYY-MM-DD} | Technical foundation | {Environment, CI/CD, telemetry, audit/event model, shared workspace baseline} |
-| Sprint 2 | {YYYY-MM-DD to YYYY-MM-DD} | Intake | {Standardized intake, validation, routing, decomposition foundations} |
-| Sprint 3 | {YYYY-MM-DD to YYYY-MM-DD} | Drafting | {Template-driven generation and editing workflow maturity} |
-| Sprint 4 | {YYYY-MM-DD to YYYY-MM-DD} | Review and negotiation | {Reviewer workflow, findings, tracked changes, release candidate readiness} |
+|---|---|---|---|
+| {Sprint} | {YYYY-MM-DD to YYYY-MM-DD} | {Highest-risk assumption or capability} | {Observable outcome} |
+| {Sprint} | {YYYY-MM-DD to YYYY-MM-DD} | {Next dependency-ready slice} | {Observable outcome} |
+| {Sprint} | {YYYY-MM-DD to YYYY-MM-DD} | {Validation and release preparation} | {Exit evidence} |
 
 ### MVP Gate Dates
 
 | Gate | Target Date | Meaning |
-|------|-------------|---------|
-| Foundation Baseline Complete | {YYYY-MM-DD} | Technical foundation passed and reusable across workstreams |
-| Intake Gate Complete | {YYYY-MM-DD} | Intake flows stable enough for ongoing MVP build |
-| Drafting Gate Complete | {YYYY-MM-DD} | Draft generation and fidelity acceptable for pilot workflows |
-| MVP Build Complete | {YYYY-MM-DD} | MVP complete and ready for formal QA/UAT preparation |
-
----
+|---|---|---|
+| {Dependency or readiness gate} | {YYYY-MM-DD} | {Required proof} |
+| {Capability acceptance gate} | {YYYY-MM-DD} | {Required proof} |
+| MVP Build Complete | {YYYY-MM-DD} | MVP is ready for formal validation |
 
 ## 4. Dated Release Plan
 
 | Release or Milestone | Dates | Scope | Exit Standard |
-|----------------------|-------|-------|---------------|
-| Release 0: Foundation Baseline | {YYYY-MM-DD to YYYY-MM-DD} | Technical foundation only | {Environment, security, telemetry, and deployment readiness signed off} |
-| Release 1 RC: MVP Candidate | {YYYY-MM-DD to YYYY-MM-DD} | Final MVP sprint and release candidate hardening | {Core workflows pass regression and SME review} |
-| Release 1 UAT | {YYYY-MM-DD to YYYY-MM-DD} | Controlled UAT for MVP | {UAT sign-off with no unresolved critical blockers} |
-| Milestone 4: Pilot Production Go-Live | {YYYY-MM-DD} | First controlled production release | {Go-live approval, rollback readiness, monitoring live} |
-| Release 2: Operational Maturity | {YYYY-MM-DD to YYYY-MM-DD} | Execution maturity, archive/search maturity, and operational resilience | {Production defect trend acceptable and support load stable} |
-| Release 3: Controlled Expansion | {YYYY-MM-DD to YYYY-MM-DD} | Broader workflow coverage, governance growth, and bounded breadth expansion | {Prior wave stable and approved for breadth expansion} |
-| Release 4: Stabilization | {YYYY-MM-DD to YYYY-MM-DD} | Hardening, reporting maturity, lifecycle foundations, and next-phase readiness | {Stability targets met and runbooks complete} |
+|---|---|---|---|
+| Release 0: Foundation Baseline | {YYYY-MM-DD to YYYY-MM-DD} | Shared platform baseline | {Security, telemetry, delivery path approved} |
+| Release 1 RC: MVP Candidate | {YYYY-MM-DD to YYYY-MM-DD} | Final MVP build and hardening | {Core workflows pass review} |
+| Release 1 UAT | {YYYY-MM-DD to YYYY-MM-DD} | Controlled UAT | {No unresolved critical blockers} |
+| Milestone 4: Pilot Production Go-Live | {YYYY-MM-DD} | First controlled production release | {Rollback and monitoring ready} |
+| Release 2: Operational Maturity | {YYYY-MM-DD to YYYY-MM-DD} | Dependability and supportability | {Defect trend and support load acceptable} |
+| Release 3: Controlled Expansion | {YYYY-MM-DD to YYYY-MM-DD} | Bounded breadth increase | {Prior wave stable and approved} |
+| Release 4: Stabilization | {YYYY-MM-DD to YYYY-MM-DD} | Hardening and next-phase readiness | {Runbooks and stability targets complete} |
 
 ### 4.1 Release Objectives and Primary Owners
 
 | Release or Milestone | Primary Objective | Primary Owner | Supporting Owners |
-|----------------------|-------------------|---------------|-------------------|
-| Release 0: Foundation Baseline | {Establish one secure, observable, repeatable delivery baseline} | {Product Manager} | {Engineering Lead, Platform Lead} |
-| Release 1 RC: MVP Candidate | {Prove the MVP is internally testable end to end} | {Engineering Lead} | {Product Manager, Workstream Leads} |
-| Release 1 UAT | {Validate pilot users can execute the MVP on real scenarios with acceptable quality} | {UAT Lead} | {Product Manager, Business SMEs, Support Lead} |
-| Milestone 4: Pilot Production Go-Live | {Launch a narrow production cohort with safe rollback and live monitoring} | {Operations Lead} | {Product Manager, Engineering Lead, Support Lead} |
-| Release 2: Operational Maturity | {Make the workflow operationally dependable before adding breadth} | {Workstream Leads} | {Operations Lead, Engineering Lead, Support Lead} |
-| Release 3: Controlled Expansion | {Add bounded breadth only after proving readiness and supportability} | {Product Manager} | {Workstream Leads, Engineering Lead, Training Lead} |
-| Release 4: Stabilization | {Hardening, reporting maturity, and next-phase readiness planning} | {Product Manager} | {Operations Lead, Engineering Lead, Support Lead} |
+|---|---|---|---|
+| Release 0: Foundation Baseline | {Establish the delivery baseline} | {Product Manager} | {Engineering Lead, Platform Lead} |
+| Release 1 RC: MVP Candidate | {Prove the MVP works end to end} | {Engineering Lead} | {Product Manager, Workstream Leads} |
+| Release 1 UAT | {Validate pilot users can complete target flows} | {UAT Lead} | {Product Manager, SMEs} |
+| Milestone 4: Pilot Production Go-Live | {Launch a safe pilot cohort} | {Operations Lead} | {Product Manager, Support Lead} |
+| Release 2: Operational Maturity | {Harden operations before breadth} | {Workstream Leads} | {Operations Lead, Engineering Lead} |
+| Release 3: Controlled Expansion | {Expand only after readiness proof} | {Product Manager} | {Workstream Leads, Training Lead} |
+| Release 4: Stabilization | {Close the horizon in a stable state} | {Product Manager} | {Operations Lead, Engineering Lead} |
 
 ### 4.2 Release Readiness Status Model
 
-| Status | Meaning |
-|--------|---------|
-| Drafted | Release intent exists, but scope and dates are still being refined |
-| Scope Locked | In-scope capabilities, pilot cohort, and success criteria are approved |
-| In Build | Delivery is active and the release scope is being implemented |
-| QA Ready | Core regression evidence exists and the release candidate is suitable for formal validation |
-| UAT Ready | Training, pilot scripts, environments, and support path are ready for structured user testing |
-| Go-Live Ready | Quality gates, communications, monitoring, rollback, and support ownership are all confirmed |
-| Live | Release is in production for the approved cohort |
-| Hypercare | Release is live but under elevated monitoring, support, and change restraint |
-| Stable | Hypercare exit criteria are met and the next breadth wave can be considered |
+```mermaid
+stateDiagram-v2
+    [*] --> Drafted
+    Drafted --> ScopeLocked
+    ScopeLocked --> InBuild
+    InBuild --> QAReady
+    QAReady --> UATReady
+    UATReady --> GoLiveReady
+    GoLiveReady --> Live
+    Live --> Hypercare
+    Hypercare --> Stable
+```
 
----
+| Status | Meaning |
+|---|---|
+| Drafted | Release intent exists but dates or scope are still changing |
+| Scope Locked | In-scope capabilities and success criteria are approved |
+| In Build | Delivery is active |
+| QA Ready | Core regression evidence exists |
+| UAT Ready | Validation assets and pilot readiness are complete |
+| Go-Live Ready | Monitoring, rollback, support, and communications are confirmed |
+| Live | Release is active for the approved cohort |
+| Hypercare | Elevated monitoring and support window |
+| Stable | Hypercare exit criteria are met |
 
 ## 5. Capability Waves and Planning Logic
 
-### 5.1 Functional Decomposition by Wave
-
 | Wave | Dates | Planning Logic | Workstream A Scope | Workstream B Scope |
-|------|-------|----------------|--------------------|--------------------|
-| Wave 1: MVP | {YYYY-MM-DD to YYYY-MM-DD} | {One discovery shape-up feeds tightly bounded MVP sprints} | {Foundation, intake, drafting, review, and a bounded operational slice} | {Foundation, intake, drafting, review, and a bounded operational slice} |
-| Wave 2: Pilot and Operational Maturity | {YYYY-MM-DD to YYYY-MM-DD} | {One planning workshop after MVP shapes UAT, pilot production, and the next maturity wave} | {UAT, pilot release, execution maturity, archive/search maturity, resilience} | {UAT, pilot release, execution maturity, filing/archive quality, resilience} |
-| Wave 3: Controlled Expansion | {YYYY-MM-DD to YYYY-MM-DD} | {One expansion workshop shapes the next controlled breadth wave} | {Broader workflow support, approvals maturity, analytics or intelligence refinement} | {Governance foundations, dashboards, and broader coverage} |
-| Wave 4: Stabilization and Next-Phase Readiness | {YYYY-MM-DD to YYYY-MM-DD} | {A midpoint workshop validates stabilization progress and shapes the next planning horizon} | {Post-release hardening, reporting, resilience} | {Lifecycle foundations, reporting, resilience} |
+|---|---|---|---|---|
+| Wave 1: MVP | {YYYY-MM-DD to YYYY-MM-DD} | {Validated discovery feeds MVP delivery} | {Minimum valuable capabilities} | {Minimum valuable capabilities} |
+| Wave 2: Pilot and Operational Maturity | {YYYY-MM-DD to YYYY-MM-DD} | {Use MVP evidence to plan pilot and maturity work} | {UAT, pilot, operational hardening} | {UAT, pilot, operational hardening} |
+| Wave 3: Controlled Expansion | {YYYY-MM-DD to YYYY-MM-DD} | {Expansion starts only after stability proof} | {Broader workflow coverage} | {Broader governance and reporting} |
+| Wave 4: Stabilization and Next-Phase Readiness | {YYYY-MM-DD to YYYY-MM-DD} | {End-horizon hardening and next-horizon shaping} | {Reporting and resilience} | {Lifecycle and resilience} |
 
 ### 5.2 Planning Workshops
 
 | Workshop | Dates | Purpose | Feeds |
-|----------|-------|---------|-------|
-| Workshop 1: MVP Discovery and Scope Lock | {YYYY-MM-DD to YYYY-MM-DD} | {Confirm MVP boundaries, pilot personas, initial scope, and quality gates before Sprint 1 starts} | Wave 1 |
-| Workshop 2: UAT, Pilot, and Release 2 Planning | {YYYY-MM-DD to YYYY-MM-DD} | {Use MVP outputs to plan UAT, pilot release, and the next operational-maturity wave} | Wave 2 |
-| Workshop 3: Expansion Planning | {YYYY-MM-DD to YYYY-MM-DD} | {Review pilot and Release 2 evidence, then define the next controlled breadth expansion} | Wave 3 |
-| Workshop 4: Stabilization and Next-Phase Strategy | {YYYY-MM-DD to YYYY-MM-DD} | {Review stabilization progress, confirm remaining priorities, and shape the next delivery horizon} | Wave 4 and next-phase planning |
+|---|---|---|---|
+| Workshop 1: MVP Discovery and Scope Lock | {YYYY-MM-DD to YYYY-MM-DD} | {Confirm MVP boundaries and quality gates} | Wave 1 |
+| Workshop 2: UAT, Pilot, and Release 2 Planning | {YYYY-MM-DD to YYYY-MM-DD} | {Translate MVP evidence into pilot and maturity planning} | Wave 2 |
+| Workshop 3: Expansion Planning | {YYYY-MM-DD to YYYY-MM-DD} | {Define the next bounded breadth wave} | Wave 3 |
+| Workshop 4: Stabilization and Next-Phase Strategy | {YYYY-MM-DD to YYYY-MM-DD} | {Close the current horizon and prepare the next} | Wave 4 |
 
 ### 5.3 Cross-Workstream Dependencies
 
 | Dependency | Why It Matters | Dependent Waves |
-|------------|----------------|-----------------|
-| Shared authoring or workflow surface | {Both workstreams depend on the same governed user-facing delivery surface} | Waves 1-4 |
-| Shared identity, RBAC, and audit/event model | {Pilot rollout, approvals, and production governance fail without common access and traceability controls} | Waves 1-4 |
-| Shared telemetry, monitoring, and release controls | {UAT exit and production expansion require one operational evidence model across workstreams} | Waves 1-4 |
-| Template and playbook governance | {Workstream-specific rules need approved change control before expansion} | Waves 1-4 |
-| Support, training, and communications readiness | {Pilot adoption and broader rollout depend on business-facing enablement, not just engineering completion} | Waves 2-4 |
+|---|---|---|
+| Shared user-facing delivery surface | {Both workstreams depend on the same governed experience} | Waves 1-4 |
+| Shared identity, RBAC, and audit model | {Pilot rollout and approvals fail without common controls} | Waves 1-4 |
+| Shared telemetry and release controls | {UAT and go-live require one operational evidence model} | Waves 1-4 |
+| Template and playbook governance | {Breadth expansion depends on approved change control} | Waves 1-4 |
+| Support and training readiness | {Adoption depends on business enablement, not only code complete} | Waves 2-4 |
 
----
+## 6. Roadmap by Milestone
 
-## 6. One-Year Roadmap by Milestone
+```mermaid
+flowchart LR
+    M1[Milestone 1<br/>Foundation baseline] --> M2[Milestone 2<br/>MVP complete]
+    M2 --> M3[Milestone 3<br/>UAT exit]
+    M3 --> M4[Milestone 4<br/>Pilot go-live]
+    M4 --> M5[Milestone 5<br/>Operational maturity]
+    M5 --> M6[Milestone 6<br/>Controlled expansion]
+    M6 --> M7[Milestone 7<br/>Stabilization]
+```
 
 | Milestone | Date | Portfolio Meaning | Workstream A Focus | Workstream B Focus | Planning Input |
-|-----------|------|-------------------|--------------------|--------------------|----------------|
-| Milestone 1: Foundation Baseline | {YYYY-MM-DD} | {Shared delivery and platform foundation complete} | {Workspace, telemetry, audit, release controls} | {Workspace, telemetry, lineage, release controls} | {Execute Wave 1 plan from Workshop 1} |
-| Milestone 2: MVP Build Complete | {YYYY-MM-DD} | {MVP build complete} | {Intake, drafting, review, bounded negotiation or execution slice} | {Intake, drafting, review, bounded change-handling or execution slice} | {Workshop 2 prepares UAT, pilot, and Release 2} |
-| Milestone 3: UAT Exit | {YYYY-MM-DD} | {Controlled UAT signed off} | {MVP accepted for pilot production} | {MVP accepted for pilot production} | {Execute Workshop 2 outputs} |
-| Milestone 4: Pilot Production Go-Live | {YYYY-MM-DD} | {Narrow production cohort live} | {Initial pilot cohort live} | {Initial pilot cohort live} | {Continue Wave 2 without a new workshop} |
-| Milestone 5: Release 2 Operational Maturity | {YYYY-MM-DD} | {First operational maturity wave complete} | {Execution, archive/search, resilience} | {Execution, filing/archive, resilience} | {Workshop 3 prepares controlled expansion} |
-| Milestone 6: Release 3 Controlled Expansion | {YYYY-MM-DD} | {Controlled breadth expansion complete} | {Broader support and approvals maturity} | {Governance foundations and broader coverage} | {Execute Workshop 3 outputs} |
-| Milestone 7: Release 4 Stabilization | {YYYY-MM-DD} | {End-of-horizon hardening complete} | {Reporting, resilience, post-release maturity} | {Reporting, resilience, lifecycle maturity} | {Workshop 4 prepares the next horizon} |
-
----
+|---|---|---|---|---|---|
+| Milestone 1: Foundation Baseline | {YYYY-MM-DD} | {Shared delivery baseline complete} | {Workspace, telemetry, controls} | {Workspace, telemetry, lineage} | {Execute Workshop 1 outputs} |
+| Milestone 2: MVP Build Complete | {YYYY-MM-DD} | {MVP build complete} | {Accepted MVP capabilities} | {Accepted MVP capabilities} | {Evidence prepares the next wave} |
+| Milestone 3: UAT Exit | {YYYY-MM-DD} | {Controlled UAT signed off} | {MVP accepted for pilot} | {MVP accepted for pilot} | {Execute Workshop 2 outputs} |
+| Milestone 4: Pilot Production Go-Live | {YYYY-MM-DD} | {Narrow production cohort live} | {Pilot cohort live} | {Pilot cohort live} | {Continue Wave 2} |
+| Milestone 5: Release 2 Operational Maturity | {YYYY-MM-DD} | {First maturity wave complete} | {Execution and resilience} | {Execution and resilience} | {Workshop 3 prepares expansion} |
+| Milestone 6: Release 3 Controlled Expansion | {YYYY-MM-DD} | {Controlled breadth complete} | {Broader support and approvals} | {Governance and broader coverage} | {Execute Workshop 3 outputs} |
+| Milestone 7: Release 4 Stabilization | {YYYY-MM-DD} | {End-of-horizon hardening complete} | {Reporting and post-release maturity} | {Reporting and lifecycle maturity} | {Workshop 4 prepares next horizon} |
 
 ## 7. Visual Timeline
 
-### 7.1 Portfolio Gantt
-
-Replace the sample dates below with real values so the Mermaid diagram renders correctly.
-
-```mermaid
-gantt
-    title Portfolio Roadmap
-    dateFormat  YYYY-MM-DD
-    axisFormat  %d-%b
-
-    section MVP
-    Sprint 1 Foundation                  :s1, 2026-01-05, 2026-01-16
-    Sprint 2 Intake                      :s2, 2026-01-19, 2026-01-30
-    Sprint 3 Drafting                    :s3, 2026-02-02, 2026-02-13
-    Sprint 4 Review and Negotiation      :s4, 2026-02-16, 2026-02-27
-
-    section Validation and Release
-    UAT                                  :uat, 2026-03-02, 2026-03-27
-    Pilot Go-Live                        :milestone, m4, 2026-04-06, 1d
-    Release 2 Maturity                   :r2, 2026-04-13, 2026-06-05
-    Release 3 Expansion                  :r3, 2026-06-15, 2026-08-14
-    Release 4 Stabilization              :r4, 2026-08-24, 2026-12-18
-
-    section Workshops
-    Workshop 1                           :w1, 2025-12-29, 3d
-    Workshop 2                           :w2, 2026-03-02, 4d
-    Workshop 3                           :w3, 2026-06-08, 4d
-    Workshop 4                           :w4, 2026-10-12, 4d
-```
-
-### 7.2 Milestone Sequence
-
-```mermaid
-flowchart LR
-    M1[Milestone 1<br/>Foundation Baseline<br/>{YYYY-MM-DD}] --> M2[Milestone 2<br/>MVP Build Complete<br/>{YYYY-MM-DD}]
-    M2 --> M3[Milestone 3<br/>UAT Exit<br/>{YYYY-MM-DD}]
-    M3 --> M4[Milestone 4<br/>Pilot Production Go-Live<br/>{YYYY-MM-DD}]
-    M4 --> M5[Milestone 5<br/>Release 2 Operational Maturity<br/>{YYYY-MM-DD}]
-    M5 --> M6[Milestone 6<br/>Release 3 Controlled Expansion<br/>{YYYY-MM-DD}]
-    M6 --> M7[Milestone 7<br/>Release 4 Stabilization<br/>{YYYY-MM-DD}]
-```
-
-### 7.3 MVP Release Shape
-
-```mermaid
-flowchart LR
-    S1[Sprint 1<br/>Technical Foundation<br/>{YYYY-MM-DD to YYYY-MM-DD}] --> S2[Sprint 2<br/>Intake<br/>{YYYY-MM-DD to YYYY-MM-DD}]
-    S2 --> S3[Sprint 3<br/>Drafting<br/>{YYYY-MM-DD to YYYY-MM-DD}]
-    S3 --> S4[Sprint 4<br/>Review and Negotiation<br/>{YYYY-MM-DD to YYYY-MM-DD}]
-    S4 --> UAT[UAT<br/>{YYYY-MM-DD to YYYY-MM-DD}]
-    UAT --> PROD[Pilot Production<br/>{YYYY-MM-DD}]
-```
-
----
+Use the selected portfolio horizon, milestone diagram and dated tables in
+Sections 3, 4 and 6. Remove unused example waves; do not force a one-year horizon.
+Replace placeholders with justified dates before approval.
 
 ## 8. Quality Gates
 
 ### 8.1 Sprint Gates
 
 | Sprint | Entry Gate | Exit Gate |
-|--------|------------|-----------|
-| Sprint 1 | {ADR, spec, UX, and scope baseline approved} | {CI/CD, observability, audit trail, and workspace foundation validated} |
-| Sprint 2 | {Foundation exit achieved and intake scope frozen for MVP} | {Intake flows stable, validation rules working, routing demos accepted} |
-| Sprint 3 | {Intake exit achieved and templates or rules approved} | {Draft fidelity acceptable, SME review passed, no blocking defects} |
-| Sprint 4 | {Drafting exit achieved and review scope frozen for MVP} | {Review and negotiation stable, release candidate ready for UAT} |
+|---|---|---|
+| {Sprint} | {Scope, prerequisites and decisions approved} | {Slice acceptance criteria and review evidence pass} |
+| {Sprint} | {Dependencies verified} | {Integration, quality and operational evidence pass} |
+| {Release preparation} | {Candidate scope frozen} | {Candidate ready for user acceptance} |
 
 ### 8.2 UAT and Production Gates
 
 | Gate | Minimum Standard |
-|------|------------------|
+|---|---|
 | UAT Start | {Release candidate deployed, pilot scenarios approved, training material ready} |
-| UAT Exit | {No unresolved critical defects; high-severity issues resolved or explicitly approved for deferment} |
+| UAT Exit | {Acceptance criteria met; no unresolved High/Medium implementation-review findings; permitted residual risks explicitly recorded} |
 | Pilot Production Go-Live | {Monitoring active, rollback tested, support ownership named, communications ready} |
-| Release 2 and beyond | {Prior wave stable, support load acceptable, no unresolved severity trend that threatens adoption} |
+| Release 2 and beyond | {Prior wave stable and support load acceptable} |
 
 ### 8.3 Cross-Functional Release Readiness Checklist
 
 | Readiness Area | Minimum Expectation Before Go-Live |
-|----------------|------------------------------------|
-| Business owner sign-off | {Pilot cohort, business goals, and success metrics approved} |
-| Training readiness | {Role-based training material and pilot walkthroughs complete} |
-| Support readiness | {Named support owner, triage path, escalation contacts, and coverage window confirmed} |
-| Communications readiness | {Release notes, pilot communications, and issue-reporting path distributed} |
-| Operational readiness | {Monitoring dashboards, alert thresholds, and incident channels active} |
-| Data and reporting readiness | {Core KPIs and adoption evidence visible for the active cohort} |
-| Security and compliance readiness | {Access, auditability, retention, and approval evidence reviewed} |
+|---|---|
+| Business owner sign-off | {Pilot cohort, goals, and success metrics approved} |
+| Training readiness | {Role-based training and walkthroughs complete} |
+| Support readiness | {Named support owner, triage path, and escalation contacts confirmed} |
+| Communications readiness | {Release notes and reporting path distributed} |
+| Operational readiness | {Dashboards, alert thresholds, and incident channels active} |
+| Data and reporting readiness | {Core KPIs visible for the active cohort} |
+| Security and compliance readiness | {Access, auditability, retention, and approvals reviewed} |
 
 ### 8.4 Rollback and Hypercare Expectations
 
-- Every production release must define a rollback decision owner, rollback trigger conditions, and the last known good build or configuration state.
-- Pilot production and broader releases enter Hypercare immediately after go-live and remain there until support load, defect trend, and user adoption evidence meet the exit threshold.
-- Hypercare should include daily triage for the active cohort, restricted change volume, explicit defect prioritization, and business-owner review of release health.
-- No new breadth wave should start until the current release exits Hypercare and is marked Stable in the readiness model.
-
----
+- Every production release names a rollback owner and trigger conditions.
+- Hypercare begins immediately after go-live.
+- No new breadth wave starts until the active release is stable.
 
 ## 9. Workstream Mapping
 
 ### 9.1 Workstream A
-
-- MVP: {core MVP capabilities for the first workstream}
+- MVP: {core MVP capabilities}
 - Release 2: {operational maturity capabilities}
 - Release 3: {controlled expansion capabilities}
-- Release 4: {hardening, reporting, and scale maturity}
+- Release 4: {hardening and reporting capabilities}
 
 ### 9.2 Workstream B
-
-- MVP: {core MVP capabilities for the second workstream}
+- MVP: {core MVP capabilities}
 - Release 2: {operational maturity capabilities}
 - Release 3: {controlled expansion capabilities}
-- Release 4: {hardening, reporting, and scale maturity}
-
----
+- Release 4: {hardening and reporting capabilities}
 
 ## 10. Notes for the Product Manager
 
-- Keep this roadmap synchronized with related PRDs, ADRs, UX artifacts, and release-readiness evidence.
-- Use one roadmap for shared platform or portfolio planning; avoid duplicating milestone dates across multiple PRDs unless each PRD needs a local summary.
-- Update dates and readiness status when major scope, release sequencing, or operational assumptions change.
----
-
-## Appendix A: Roadmap Diagrams (v8.4.43+)
-
-> Additive section. References: Janna Bastow / ProdPad Now/Next/Later, OKR alignment patterns.
-
-### A.1 Now / Next / Later
-
-```mermaid
-flowchart LR
-    subgraph Now["Now (this quarter)"]
-        N1["{Theme A - outcome}"]
-        N2["{Theme B - outcome}"]
-    end
-    subgraph Next["Next (next quarter)"]
-        X1["{Theme C - outcome}"]
-        X2["{Theme D - outcome}"]
-    end
-    subgraph Later["Later (beyond)"]
-        L1["{Theme E - outcome}"]
-        L2["{Theme F - outcome}"]
-    end
-    Now --> Next --> Later
-```
-
-### A.2 Theme -> Initiative -> Release
-
-```mermaid
-flowchart TD
-    Th1["Theme: {north-star sub-goal}"]
-    I1["Initiative: {capability}"]
-    I2["Initiative: {capability}"]
-    R1["Release v{x}.{y}<br/>{date}"]
-    R2["Release v{x}.{y+1}<br/>{date}"]
-    F1["Feature {a}"]
-    F2["Feature {b}"]
-    F3["Feature {c}"]
-    Th1 --> I1
-    Th1 --> I2
-    I1 --> F1
-    I1 --> F2
-    I2 --> F3
-    F1 --> R1
-    F2 --> R1
-    F3 --> R2
-```
-
-### A.3 Inter-Release Dependency
-
-```mermaid
-flowchart LR
-    R1["Release A"] --> R2["Release B"]
-    R1 --> R3["Release C"]
-    R2 --> R4["Release D"]
-    R3 --> R4
-```
-
-### A.4 OKR Alignment
-
-| Objective | Key Result | Tied initiatives | Confidence (0-1) | Owner |
-|-----------|------------|-------------------|------------------|-------|
-| {Objective 1} | KR-1.1 | {init list} | {value} | {owner} |
-| {Objective 1} | KR-1.2 | {init list} | {value} | {owner} |
-| {Objective 2} | KR-2.1 | {init list} | {value} | {owner} |
-
-### A.5 Release Train Gantt (optional)
-
-```mermaid
-gantt
-    title Release plan
-    dateFormat YYYY-MM-DD
-    section v1.x
-      Initiative A         :a1, 2026-05-01, 30d
-      Initiative B         :a2, after a1, 20d
-    section v2.x
-      Initiative C         :b1, 2026-07-01, 25d
-      Initiative D         :b2, after b1, 15d
-```
-
-
-## Appendix B: Rich Visual Diagrams (v8.4.43+)
-
-### B.1 Release Timeline
-
-```mermaid
-timeline
-  title Release timeline
-  Q1 : v1.0 Foundation
-  Q2 : v1.1 Activation : v1.2 Retention
-  Q3 : v2.0 Platform : v2.1 Mobile
-  Q4 : v2.2 Enterprise : v3.0 GA
-```
-
-### B.2 Theme Allocation (pie)
-
-```mermaid
-pie showData
-  title Capacity allocation by theme
-  "Growth" : 35
-  "Reliability" : 25
-  "Platform" : 20
-  "Compliance" : 10
-  "Discovery" : 10
-```
-
-### B.3 Release Branch Strategy (gitGraph)
-
-```mermaid
-gitGraph
-  commit id: "v1.0"
-  branch release/1.x
-  commit id: "1.1.0"
-  commit id: "1.2.0"
-  checkout main
-  branch release/2.x
-  commit id: "2.0.0-beta"
-  commit id: "2.0.0"
-  checkout main
-  merge release/2.x tag: "v2.0"
-```
-
-### B.4 OKR Trajectory (xychart)
-
-```mermaid
-xychart-beta
-  title "OKR progress (KR1, KR2, KR3)"
-  x-axis [Q1, Q2, Q3, Q4]
-  y-axis "% to target" 0 --> 100
-  line [25, 50, 75, 100]
-  bar [20, 45, 65, 90]
-```
-
-### B.5 Initiative Roll-up (styled)
-
-```mermaid
-flowchart LR
-  V[Vision]:::v --> O1[Outcome 1]:::o
-  V --> O2[Outcome 2]:::o
-  O1 --> I1[Initiative A]:::i
-  O1 --> I2[Initiative B]:::i
-  O2 --> I3[Initiative C]:::i
-  I1 --> R1[Release 1.x]:::r
-  I2 --> R2[Release 1.x]:::r
-  I3 --> R3[Release 2.x]:::r
-  classDef v fill:#fce4ec,stroke:#c2185b,color:#880e4f
-  classDef o fill:#e3f2fd,stroke:#1976d2
-  classDef i fill:#fff3e0,stroke:#f57c00
-  classDef r fill:#e8f5e9,stroke:#388e3c
-```
+- Keep this roadmap synchronized with related PRDs, ADRs, UX artifacts, and release evidence.
+- Use one roadmap for shared portfolio planning rather than duplicating milestone dates across PRDs.
+- Update dates and readiness status when major scope or sequencing assumptions change.

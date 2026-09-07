@@ -26,69 +26,33 @@ compatibility:
 
 ---
 
-## Core Definitions
+## Decision Guide
 
-| Term | Meaning |
-|------|---------|
-| Low-code | Declarative or visual authoring with vendor-managed runtime. Examples: Microsoft Copilot Studio, Power Apps, Power Automate, Logic Apps, AppSheet, OutSystems, Mendix, Retool, Make. |
-| No-code | Subset of low-code with no scripting surface at all. Same review rubric applies. |
-| Pro-code | Source code in a general-purpose language with self-managed lifecycle. Examples: .NET/C#, Python, TypeScript, Rust, Foundry SDK, Microsoft Agent Framework, LangGraph. |
-| Hybrid | Low-code shell calling pro-code components (custom connectors, Functions, MCP tools, plugins, custom skills). The most common production answer. |
+Choose low-code when the workflow is form, approval, notification, or standard connector driven and a business-owned platform can operate it safely. Choose pro-code when latency, custom orchestration, extensibility, or compliance boundaries exceed platform limits. Choose hybrid when low-code should own the human flow and pro-code should own the hard technical parts.
 
-Hybrid is usually the right answer for non-trivial systems. Treat "pure low-code" and "pure pro-code" as endpoints on a spectrum, not as defaults.
+## Prerequisites
 
----
+Capture users, workflow, integrations, data classification, scale, licensing
+and the team accountable for operating the solution.
 
-## Decision Rubric (Score Each Dimension 1-5)
+<a id="core-definitions"></a>
+<a id="decision-rubric-score-each-dimension-1-5"></a>
+<a id="when-low-code-is-the-right-answer"></a>
+<a id="when-pro-code-is-the-right-answer"></a>
+<a id="when-hybrid-is-the-right-answer-most-common"></a>
 
-Score the **proposed approach** against each dimension. 1 = poor fit, 5 = excellent fit. Score both approaches if the ADR did not. Pick the higher total. Tie -> prefer the option with the lower long-term risk.
+## Workflow
 
-| # | Dimension | Favors Low-Code | Favors Pro-Code |
-|---|-----------|-----------------|-----------------|
-| 1 | Problem complexity | Linear workflow, form-driven, CRUD, approvals, simple routing | Branching logic, complex state, custom algorithms, real-time control |
-| 2 | Throughput and latency | <100 req/min, soft latency SLA, batch friendly | Sustained >100 req/sec, hard p99 latency, real-time, streaming |
-| 3 | Integration surface | First-party SaaS connectors exist (M365, Dynamics, SAP, ServiceNow) | Custom protocols, on-prem TCP, kernel APIs, specialized SDKs |
-| 4 | Data sensitivity / compliance | Standard tenant boundary is acceptable | Customer-managed keys, sovereign cloud, FedRAMP High, custom DLP |
-| 5 | Team capability | Citizen developers, business analysts, fusion team | Software engineers, DevOps, SRE |
-| 6 | Total cost of ownership | Per-user/per-flow pricing acceptable, low maintenance burden | High call volume makes per-call pricing painful; engineering capacity exists |
-| 7 | Lifecycle and governance | ALM via solutions, environments, makers; vendor SLA fits | Source-controlled, CI/CD, blue/green, custom release gates |
-| 8 | Extensibility ceiling | Vendor primitives cover the use case for the next 18-24 months | Need to escape the primitives within 12 months (perf, custom UI, model control) |
-| 9 | Vendor lock-in tolerance | Lock-in to one platform is acceptable for this domain | Multi-cloud, portability, exit plan required |
-| 10 | Time-to-first-value | Days to weeks acceptable | Months acceptable in exchange for control |
-| 11 | Testability / observability | Built-in test runner and telemetry are sufficient | Need custom traces, OpenTelemetry, eval harness, A/B at code level |
-| 12 | Security model | Vendor RBAC + DLP policies are sufficient | Custom auth, mTLS, fine-grained ABAC, threat-modeled per service |
+1. MUST read the [definitions and decision rubric](references/details-core-definitions-decision-rubric-score-each-dimension-1-5.md).
+2. Score each applicable dimension using workload evidence, not staffing preference.
+3. Compare low-code, pro-code and hybrid against hard platform and governance limits.
+4. Record the recommendation, rejected options, ownership, costs and exit path.
 
-A clean low-code case usually scores >= 48 on the low-code column with no dimension below 3. A clean pro-code case mirrors that. Anything between is a hybrid candidate.
+## Core Rules
 
----
-
-## When Low-Code Is the Right Answer
-
-- Form-, approval-, or notification-driven workflows over M365/Dynamics/SAP/ServiceNow
-- Internal tools owned by a business team, not engineering
-- Conversational agent over enterprise knowledge with first-party connectors and no custom orchestration -> Copilot Studio
-- Iteration speed matters more than micro-optimized cost or latency
-- The 18-24 month roadmap fits inside the vendor's primitives
-
-## When Pro-Code Is the Right Answer
-
-- Agent needs custom orchestration, fine-grained tool routing, eval harness, or model-level control -> Foundry SDK / Agent Framework / LangGraph
-- Hard latency or throughput SLAs (real-time, streaming, hot path)
-- Custom domain algorithms, simulations, ML pipelines, vector retrieval optimization
-- Compliance regime that vendor-managed runtime cannot meet
-- Strategic IP that must remain portable across clouds
-- Existing low-code solution has hit a ceiling on perf, complexity, or governance
-
-## When Hybrid Is the Right Answer (Most Common)
-
-- Low-code orchestrates the human-facing flow; pro-code handles the hard parts via custom connectors, Functions, MCP tools, plugins, or APIs
-- Copilot Studio agent calls a Foundry-hosted skill or an Agent Framework backend for specialized reasoning
-- Power Automate kicks off an Azure Function or container job for heavy work
-- Logic Apps orchestrates; AKS or Functions performs
-
-The reviewer should treat a missing hybrid analysis as a finding when the ADR picks one extreme and the rubric is borderline.
-
----
+Platform limits and compliance boundaries are gates, not scores to average away.
+A hybrid choice needs explicit API, data, authorization and failure contracts.
+Include expected per-call or per-flow cost and an accountable ALM owner.
 
 ## Anti-Patterns to Flag
 
@@ -107,73 +71,40 @@ The reviewer should treat a missing hybrid analysis as a finding when the ADR pi
 
 ## Review Checklist (For the Architecture Reviewer)
 
-Apply this checklist when an ADR proposes either approach.
-
-- [ ] ADR explicitly considered both low-code and pro-code (or explains why one was rejected without scoring)
-- [ ] Hybrid was considered, not only the two endpoints
-- [ ] Decision rubric was scored, or the reviewer scored it during review
-- [ ] Throughput, latency, and concurrency targets are stated in numbers, not adjectives
-- [ ] Integration surface is named (connectors, custom APIs, on-prem hops)
-- [ ] Compliance posture is named (data residency, key management, sovereignty)
-- [ ] Team ownership model is stated (engineering team vs business team vs fusion team)
-- [ ] TCO includes per-user/per-flow/per-call projections at 1x and 5x expected scale
-- [ ] Extensibility ceiling is acknowledged and the next-step plan exists for when it is hit
-- [ ] Vendor lock-in is named and accepted, or an exit plan exists
-- [ ] Testability and observability story is stated for the chosen platform
-- [ ] Security model is stated (RBAC, DLP, auth, secret management)
-- [ ] If hybrid: the contract between layers is specified (schema, error model, idempotency, retries)
-- [ ] If migrating from low-code to pro-code: business case, success metric, and rollback plan are stated
-
-Any unchecked item that is material to the decision MUST be raised as a finding with severity High or Medium.
-
----
+MUST read before design or implementation: [Core Definitions details](references/details-core-definitions-decision-rubric-score-each-dimension-1-5.md#review-checklist-for-the-architecture-reviewer).
 
 ## Severity Guidance for Findings
 
-- **Critical** - Decision conflicts with a non-negotiable constraint (compliance regime, hard SLA, regulatory mandate)
-- **High** - Decision will hit a known ceiling within the next 12-18 months without a stated mitigation
-- **Medium** - Decision is defensible but rubric dimensions were not scored, or hybrid was not considered
-- **Low** - Wording, clarity, or missing rationale that does not change the outcome
-
----
+MUST read before design or implementation: [Core Definitions details](references/details-core-definitions-decision-rubric-score-each-dimension-1-5.md#severity-guidance-for-findings).
 
 ## Specialty Notes
 
-### AI Agents (`needs:ai`)
+MUST read before design or implementation: [Specialty Notes details](references/details-specialty-notes-decision-output.md#specialty-notes).
 
-- **Copilot Studio** is the low-code default for conversational agents over enterprise data with first-party connectors. Suitable when the agent does not need custom tool orchestration, fine-grained eval, or model-level control.
-- **Foundry SDK + Agent Framework / LangGraph** is the pro-code default when the agent needs custom orchestration, multi-model routing, custom evals, prompt versioning, or tool ecosystems beyond connectors.
-- **Hybrid pattern**: Copilot Studio fronts the user-facing conversation and calls a pro-code backend (Foundry-hosted agent, Azure Function, MCP server) for specialized reasoning or tools.
-- See also: [Azure Foundry](../../ai-systems/azure-foundry/SKILL.md), [AI Agent Development](../../ai-systems/ai-agent-development/SKILL.md), [GenAIOps](../../ai-systems/genaiops/SKILL.md).
+<a id="ai-agents-needsai"></a>
 
-### Workflow Automation
+<a id="workflow-automation"></a>
 
-- **Power Automate / Logic Apps** for SaaS-to-SaaS orchestration, approvals, notifications.
-- Move to pro-code (Functions, Durable Functions, container jobs) when latency, payload size, or complexity exceeds platform limits, or when per-call cost dominates.
-
-### Internal Tools and Line-of-Business Apps
-
-- **Power Apps / AppSheet / Retool** for forms, dashboards, lookups, simple CRUD owned by a business team.
-- Move to pro-code when UX complexity, performance, or extensibility exceeds the canvas.
-
----
+<a id="internal-tools-and-line-of-business-apps"></a>
 
 ## Decision Output
 
-The reviewer's verdict on a low-code-vs-pro-code question MUST be one of:
+MUST read before design or implementation: [Specialty Notes details](references/details-specialty-notes-decision-output.md#decision-output).
 
-- **APPROVED** - Decision fits the rubric; checklist items are covered.
-- **CHANGES REQUESTED** - Decision is plausible but checklist items are missing; list them.
-- **BLOCKED** - Decision conflicts with a Critical-severity finding (compliance, hard SLA, or known ceiling within 6 months).
+## Error Handling
 
-Record the verdict in the architecture review report at `docs/artifacts/reviews/ARCH-REVIEW-<issue>.md` using the canonical template.
+If limits, license terms or operational ownership cannot be verified, block the
+decision and obtain evidence. Escalate conflicting hard constraints before implementation.
 
----
+## Checklist
+
+Confirm the rubric, platform limits, lifecycle owner, realistic cost model,
+hybrid boundary and migration/exit plan support the recorded recommendation.
 
 ## References
 
-- Microsoft Power Platform documentation: <https://learn.microsoft.com/power-platform/>
-- Microsoft Copilot Studio: <https://learn.microsoft.com/microsoft-copilot-studio/>
-- Microsoft skills for Copilot Studio (advisor patterns): <https://github.com/microsoft/skills-for-copilot-studio>
-- Microsoft Foundry / Agent Framework: <https://learn.microsoft.com/azure/ai-foundry/>
-- Azure Well-Architected Framework: <https://learn.microsoft.com/azure/well-architected/>
+- [Core Definitions details](references/details-core-definitions-decision-rubric-score-each-dimension-1-5.md) - must read before design or implementation.
+- [Specialty Notes details](references/details-specialty-notes-decision-output.md) - must read before design or implementation.
+
+
+- [Source and related-reading index](references/details-source-reference-index.md)

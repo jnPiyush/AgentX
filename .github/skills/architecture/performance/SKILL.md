@@ -34,38 +34,28 @@ metadata:
 - Application running in a profiling-capable environment
 - Access to monitoring tools
 
+## Decision Guide
+
+Measure first. Fix the dominant bottleneck before chasing secondary ones. Use caching, indexing, async IO, or scaling changes only when evidence shows they move the budget that matters.
+
+## Why This Is a Skill
+
+Performance work fails when teams optimize by instinct, not evidence. This skill keeps budgets, profiling, and scalability choices attached to measured bottlenecks and user-visible impact.
+
+## Workflow
+
+1. Define the latency, throughput, or cost budget.
+2. Profile or measure the dominant bottleneck under realistic load.
+3. Apply the smallest change that improves the measured bottleneck.
+4. Re-measure before moving on to the next layer or scaling strategy.
+
 ## Decision Tree
 
-```
-Performance concern?
-+- Not yet measured? -> Profile FIRST (don't guess)
-| +- .NET -> dotnet-trace / BenchmarkDotNet
-| +- Python -> cProfile / py-spy
-| - Node.js -> clinic.js / --prof
-+- Slow API response?
-| +- Database query? -> EXPLAIN ANALYZE -> add index
-| +- External service? -> Add caching + async calls
-| - Computation? -> Optimize algorithm or add memoization
-+- High memory usage?
-| +- Large collections? -> Stream/paginate instead of loading all
-| - Memory leaks? -> Profile allocations, check dispose patterns
-+- Concurrency bottleneck?
-| +- I/O bound? -> async/await (don't block threads)
-| - CPU bound? -> Parallel processing / background workers
-- Quick wins? -> See Quick Wins table below
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-wins.md#decision-tree).
 
 ## Quick Wins
 
-| Optimization | Impact | Effort |
-|--------------|--------|--------|
-| **Enable Response Compression** | 70-90% size reduction | Low |
-| **Add Database Indexes** | 10-100x query speed | Low |
-| **Implement Caching** | 50-99% latency reduction | Medium |
-| **Use Async I/O** | 5-10x throughput | Medium |
-| **Fix N+1 Queries** | 10-1000x DB performance | Medium |
-
----
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-wins.md#quick-wins).
 
 ## Core Rules
 
@@ -96,50 +86,15 @@ Performance concern?
 
 ## Optimization Checklist
 
-**Before Production:**
-- [ ] Profile application under realistic load
-- [ ] Add database indexes on frequently queried columns
-- [ ] Implement caching for expensive operations
-- [ ] Enable response compression
-- [ ] Fix N+1 query problems
-- [ ] Use connection pooling
-- [ ] Implement async I/O where applicable
-- [ ] Paginate large result sets
-- [ ] Set up monitoring and alerts
-- [ ] Conduct load testing
-- [ ] Set performance budgets
-- [ ] Optimize static asset delivery
-
----
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-wins.md#optimization-checklist).
 
 ## Resources
 
-**Profiling Tools:**
-- **.NET**: BenchmarkDotNet, dotTrace, PerfView
-- **Python**: cProfile, py-spy, Scalene
-- **Node.js**: clinic.js, 0x, Chrome DevTools
-- **Java**: JProfiler, VisualVM
-
-**Load Testing:**
-- [k6](https://k6.io) - Modern load testing
-- [Apache JMeter](https://jmeter.apache.org) - Industry standard
-- [Gatling](https://gatling.io) - Scala-based testing
-
-**Guides:**
-- [Web Performance Working Group](https://www.w3.org/webperf/)
-- [High Performance Browser Networking](https://hpbn.co)
-
----
-
-**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
-
-**Last Updated**: January 27, 2026
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-wins.md#resources).
 
 ## Scripts
 
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| [`run-benchmark.ps1`](scripts/run-benchmark.ps1) | Run benchmarks (.NET/Python/Node) with baseline comparison | `./scripts/run-benchmark.ps1 [-Baseline baseline.json]` |
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-wins.md#scripts).
 
 ## Troubleshooting
 
@@ -149,160 +104,29 @@ Performance concern?
 | Memory leak in production | Profile with dotMemory/py-spy, check for unbounded collections |
 | High latency spikes | Check GC pauses, database connection pool, and external service timeouts |
 
-## References
-
-- [Profiling Caching Db](references/profiling-caching-db.md)
-- [Optimization Techniques](references/optimization-techniques.md)
-
----
-
 ## Scalability
 
-> Merged from scalability skill. Design systems that handle growth in users, data, and traffic.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-wins.md#scalability).
 
-### Scaling Decision Tree
+<a id="scaling-decision-tree"></a>
 
-```
-Scaling concern?
-+- Current bottleneck?
-| +- Single server at capacity? -> Horizontal scaling (add instances)
-| +- Database overloaded? -> Read replicas + connection pooling
-| +- Too many synchronous calls? -> Message queue (async processing)
-| - Repeated expensive queries? -> Caching layer (Redis/CDN)
-+- Architecture decision?
-| +- Stateful servers? -> Make stateless (externalize session/state)
-| +- Monolith too large? -> Extract bounded contexts to services
-| - Need global reach? -> CDN + multi-region deployment
-- Data scaling?
-  +- Read-heavy? -> Read replicas + cache
-  +- Write-heavy? -> Sharding or partitioning
-  - Both? -> CQRS pattern (separate read/write models)
-```
+<a id="horizontal-vs-vertical-scaling"></a>
 
-### Horizontal vs Vertical Scaling
+<a id="stateless-services"></a>
 
-| Approach | Description | When to Use |
-|----------|-------------|-------------|
-| **Vertical** | Bigger server (more CPU/RAM) | Quick fix, limited by hardware |
-| **Horizontal** | More servers | Long-term, unlimited growth |
+<a id="load-balancing"></a>
 
-**Prefer horizontal scaling** - Add more instances rather than bigger servers.
+<a id="message-queues-async-processing"></a>
 
-### Stateless Services
+<a id="autoscaling-kubernetes-hpa"></a>
 
-```csharp
-// [FAIL] Stateful (doesn't scale)
-public class OrderController : ControllerBase
-{
-    private static Dictionary<int, Order> _orders = new(); // Shared state!
+<a id="scalability-checklist"></a>
 
-    [HttpPost]
-    public IActionResult CreateOrder(Order order)
-    {
-        _orders[order.Id] = order; // Lost on restart or different instance
-        return Ok();
-    }
-}
+## References
 
-// [PASS] Stateless (scales horizontally)
-public class OrderController : ControllerBase
-{
-    private readonly IOrderRepository _repository;
+- [Decision Tree details](references/details-decision-tree-quick-wins.md) - must read before selection.
+- [optimization-techniques](references/optimization-techniques.md)
+- [profiling-caching-db](references/profiling-caching-db.md)
 
-    [HttpPost]
-    public async Task<IActionResult> CreateOrder(Order order)
-    {
-        await _repository.SaveAsync(order); // Persisted to database
-        return Ok();
-    }
-}
-```
 
-### Load Balancing
-
-```yaml
-# NGINX load balancer config
-upstream api_servers {
-    least_conn;
-    server api1:5000;
-    server api2:5000;
-    server api3:5000;
-}
-
-server {
-    listen 80;
-    location / {
-        proxy_pass http://api_servers;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-### Message Queues (Async Processing)
-
-```csharp
-// Producer - Queue heavy operations
-public class OrderService
-{
-    public async Task<Order> CreateOrderAsync(OrderDto orderDto)
-    {
-        var order = await _repository.CreateAsync(orderDto);
-        await _queue.PublishAsync("order.created", new
-        {
-            OrderId = order.Id,
-            CustomerEmail = order.CustomerEmail
-        });
-        return order;
-    }
-}
-
-// Consumer - Process in background
-public class OrderProcessor : BackgroundService
-{
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        await _queue.SubscribeAsync("order.created", async message =>
-        {
-            await _emailService.SendOrderConfirmationAsync(message.OrderId);
-            await _inventoryService.UpdateStockAsync(message.OrderId);
-        });
-    }
-}
-```
-
-### Autoscaling (Kubernetes HPA)
-
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-    name: api-autoscaler
-spec:
-    scaleTargetRef:
-        apiVersion: apps/v1
-        kind: Deployment
-        name: api
-    minReplicas: 2
-    maxReplicas: 10
-    metrics:
-    - type: Resource
-      resource:
-          name: cpu
-          target:
-              type: Utilization
-              averageUtilization: 70
-```
-
-### Scalability Checklist
-
-- [ ] Services are stateless
-- [ ] Load balancer configured
-- [ ] Caching implemented (Redis/Memory)
-- [ ] Message queue for async processing
-- [ ] Database read replicas configured
-- [ ] CDN for static assets
-- [ ] Rate limiting enabled
-- [ ] Autoscaling configured
-- [ ] Connection pooling enabled
-- [ ] Monitoring and alerting set up
+- [Source and related-reading index](references/details-source-reference-index.md)

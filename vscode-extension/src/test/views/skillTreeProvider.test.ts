@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { AgentXContext } from '../../agentxContext';
 import { SkillTreeProvider } from '../../views/skillTreeProvider';
 import { SkillTreeItem } from '../../views/skillTreeProviderInternals';
 
@@ -24,7 +25,7 @@ function makeContext(root: string, extensionPath = root) {
     extensionContext: { extensionPath },
     // minimal EventEmitter shim used by the provider
     _eventListeners: listeners,
-  } as any;
+  } as unknown as AgentXContext;
 }
 
 describe('SkillTreeProvider', () => {

@@ -1,4 +1,5 @@
 import { strict as assert } from 'assert';
+import { createRequire } from 'module';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
@@ -6,6 +7,9 @@ import { AgentXContext } from '../../agentxContext';
 import { registerAddAgentCommand } from '../../commands/addAgent';
 import { resolveAgentOutputDir } from '../../commands/addAgentInternals';
 import { buildAgentContentFallback } from '../../commands/scaffoldGeneration';
+
+// Stub the live fs module, not TypeScript's separate namespace wrapper.
+const nodeRequire = createRequire(__filename);
 
 describe('buildAgentContentFallback', () => {
   it('produces valid frontmatter with role-specific sections', () => {
@@ -59,6 +63,7 @@ describe('registerAddAgentCommand', () => {
 describe('addAgent command - execution', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
+  let fakeAgentxData: { workspaceRoot: string | undefined };
   let fakeAgentx: AgentXContext;
   let commandCallback: () => Promise<void>;
 
@@ -66,7 +71,8 @@ describe('addAgent command - execution', () => {
     sandbox = sinon.createSandbox();
 
     fakeContext = { subscriptions: [], extensionUri: { fsPath: '/ext' } } as unknown as vscode.ExtensionContext;
-    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as AgentXContext;
+    fakeAgentxData = { workspaceRoot: '/tmp/workspace' };
+    fakeAgentx = fakeAgentxData as unknown as AgentXContext;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, cb: (...args: unknown[]) => unknown) => {
@@ -81,7 +87,7 @@ describe('addAgent command - execution', () => {
   afterEach(() => { sandbox.restore(); });
 
   it('shows warning when no workspace is open', async () => {
-    (fakeAgentx as any).workspaceRoot = undefined;
+    fakeAgentxData.workspaceRoot = undefined;
     const warnStub = sandbox.stub(vscode.window, 'showWarningMessage').resolves(undefined);
 
     await commandCallback();
@@ -95,17 +101,19 @@ describe('addAgent command - execution', () => {
     inputStub.onCall(1).resolves('Validates scaffolded agent definitions end to end');
 
     const pickStub = sandbox.stub(vscode.window, 'showQuickPick');
-    pickStub.onCall(0).resolves({ label: 'Engineer' } as any);
-    pickStub.onCall(1).resolves({ label: 'GPT-4.1', value: 'gpt-4.1' } as any);
+    const rolePickItem: vscode.QuickPickItem = { label: 'Engineer' };
+    const modelPickItem = { label: 'GPT-4.1', value: 'gpt-4.1' };
+    pickStub.onCall(0).resolves(rolePickItem);
+    pickStub.onCall(1).resolves(modelPickItem);
 
     sandbox.stub(vscode.window, 'withProgress').callsFake(
-      async (_opts: any, task: any) => task({ report: () => undefined }, { isCancellationRequested: false }),
+      async (_options, task) => task({ report: () => undefined }, {} as never),
     );
-    sandbox.stub(vscode.workspace, 'openTextDocument').resolves({} as any);
-    sandbox.stub(vscode.window, 'showTextDocument').resolves({} as any);
-    sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined as any);
+    sandbox.stub(vscode.workspace, 'openTextDocument').resolves({} as unknown as vscode.TextDocument);
+    sandbox.stub(vscode.window, 'showTextDocument').resolves({} as unknown as vscode.TextEditor);
+    sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined);
 
-    const fs = require('fs');
+    const fs = nodeRequire('fs') as unknown as typeof import('fs');
     sandbox.stub(fs, 'existsSync').returns(false);
     const mkdirStub = sandbox.stub(fs, 'mkdirSync');
     const writeStub = sandbox.stub(fs, 'writeFileSync');

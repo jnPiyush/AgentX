@@ -1,0 +1,143 @@
+[
+  {
+    "file": "ADR-TEMPLATE.md",
+    "inputs": [
+      "decision_id",
+      "decision_title",
+      "date",
+      "status",
+      "author"
+    ]
+  },
+  {
+    "file": "ARCH-REVIEW-TEMPLATE.md",
+    "inputs": [
+      "artifact_title",
+      "adr_path",
+      "spec_path",
+      "prd_path",
+      "document_paths",
+      "document_formats",
+      "architect",
+      "reviewer",
+      "date",
+      "domain_labels",
+      "mode"
+    ]
+  },
+  {
+    "file": "BACKLOG-TEMPLATE.md",
+    "inputs": [
+      "project_name",
+      "owner",
+      "date",
+      "planning_horizon"
+    ]
+  },
+  {
+    "file": "CONTRACT-TEMPLATE.md",
+    "inputs": [
+      "slice_name",
+      "author",
+      "date"
+    ]
+  },
+  {
+    "file": "DESIGN-SYSTEM-TEMPLATE.md",
+    "inputs": [
+      "project_name",
+      "date",
+      "primary_direction"
+    ]
+  },
+  {
+    "file": "EVIDENCE-SUMMARY-TEMPLATE.md",
+    "inputs": [
+      "slice_name",
+      "author",
+      "date"
+    ]
+  },
+  {
+    "file": "EXEC-PLAN-TEMPLATE.md",
+    "inputs": [
+      "title",
+      "date",
+      "author",
+      "agent"
+    ]
+  },
+  {
+    "file": "LEARNING-TEMPLATE.md",
+    "inputs": [
+      "id",
+      "issue",
+      "date",
+      "category"
+    ]
+  },
+  {
+    "file": "PRD-TEMPLATE.md",
+    "inputs": [
+      "epic_title",
+      "priority",
+      "author",
+      "date"
+    ]
+  },
+  {
+    "file": "PROGRESS-TEMPLATE.md",
+    "inputs": [
+      "issue_title",
+      "agent_role",
+      "session_date"
+    ]
+  },
+  {
+    "file": "REVIEW-TEMPLATE.md",
+    "inputs": [
+      "story_title",
+      "engineer",
+      "reviewer",
+      "commit_sha",
+      "date"
+    ]
+  },
+  {
+    "file": "ROADMAP-TEMPLATE.md",
+    "inputs": [
+      "portfolio_title",
+      "portfolio_scope",
+      "status",
+      "author",
+      "date",
+      "portfolio_start_date",
+      "portfolio_horizon",
+      "related_prds"
+    ]
+  },
+  {
+    "file": "SECURITY-PLAN-TEMPLATE.md",
+    "inputs": [
+      "project_name",
+      "author",
+      "date"
+    ]
+  },
+  {
+    "file": "SPEC-TEMPLATE.md",
+    "inputs": [
+      "feature_name",
+      "author",
+      "date"
+    ]
+  },
+  {
+    "file": "UX-TEMPLATE.md",
+    "inputs": [
+      "feature_name",
+      "designer",
+      "date"
+    ]
+  }
+]

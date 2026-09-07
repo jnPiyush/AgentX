@@ -1,0 +1,240 @@
+# Context Management Details
+
+This required-read reference preserves complete sections moved from SKILL.md during budget remediation.
+
+## Decision Tree
+
+```
+Context getting too long?
++- Single conversation overflow?
+|  +- Recent messages most important? -> Sliding window
+|  +- Full history needed? -> Progressive summarization
+|  +- Mixed importance? -> Hybrid (summary + recent window)
++- Multiple data sources competing for tokens?
+|  +- Prioritize by relevance -> Dynamic token budgeting
+|  +- All required? -> Compress each source independently
++- System prompt consuming too many tokens?
+|  +- Load instructions on demand (progressive disclosure)
+|  +- Split into core (always) + situational (on-demand)
++- Multi-agent context?
+|  +- Full context transfer? -> Summarize before handoff
+|  +- Selective transfer? -> Extract relevant artifacts only
++- Cost optimization?
+   +- Reduce input tokens -> Compaction + caching
+   +- Reduce output tokens -> Constrain response format
+```
+
+---
+
+## Context Window Budgeting
+
+### Token Budget Template
+
+```
+Total Context Window: N tokens
+  |
+  +-- System Prompt:         10-15% (instructions, role, constraints)
+  +-- Retrieved Context:     30-40% (RAG chunks, documents)
+  +-- Conversation History:  20-30% (recent messages + summary)
+  +-- Current User Message:   5-10% (the actual request)
+  +-- Reserved for Output:   15-20% (model's response tokens)
+  |
+  = 100% allocated (MUST NOT exceed window)
+```
+
+### Resolve Limits at Runtime
+
+Do not keep a model-to-context table in this skill. Model aliases, host limits,
+token accounting, prices, and output caps change independently. At startup or
+deployment validation:
+
+1. Resolve the configured deployment to a concrete model/version.
+2. Read context and output limits from the active provider or host catalog.
+3. Select the matching tokenizer or provider token-count API.
+4. Apply an application-specific safety margin based on eval evidence.
+5. Fail fast when the configured input plus reserved output exceeds the resolved
+  limit.
+
+Persist the resolved limits and verification date with deployment configuration,
+not in portable skill instructions.
+
+### Important: "Lost in the Middle"
+
+Models pay less attention to information in the middle of long contexts.
+
+**Placement strategy:**
+- **Put critical info at the START** (system prompt, key instructions)
+- **Put important context at the END** (most recent, most relevant)
+- **Middle is for supporting detail** (less critical context)
+
+---
+
+## Compaction Strategies
+
+### 1. Sliding Window
+
+Keep only the last N messages. Simple but loses early context.
+
+```
+Strategy: Keep last K messages (e.g., K=20)
+Pros: Simple, predictable token usage
+Cons: Loses early conversation context
+Best for: Stateless interactions, customer support
+```
+
+### 2. Progressive Summarization
+
+Summarize older messages, keep recent ones verbatim.
+
+```
+Conversation Messages:
+[M1, M2, M3, M4, ..., M20, M21, M22, M23, M24, M25]
+  |______________|          |________________________|
+  Summarized into   +       Kept verbatim (recent window)
+  1-2 paragraphs
+
+Result: [Summary of M1-M20] + [M21, M22, M23, M24, M25]
+```
+
+**Implementation rules:**
+- **MUST** preserve key decisions, facts, and user preferences in summaries
+- **MUST** trigger summarization before hitting 80% of token budget
+- **SHOULD** use a cheaper/faster model for summarization
+- **SHOULD** include action items and unresolved questions in summaries
+- **MAY** use hierarchical summarization (summary of summaries)
+
+### 3. Hierarchical Summarization
+
+For very long sessions, create a tree of summaries.
+
+```
+Level 0: Raw messages (most recent 10)
+Level 1: Summary of messages 11-50 (paragraph)
+Level 2: Summary of messages 51-200 (sentence)
+Level 3: Summary of messages 201+ (key facts only)
+
+Context = Level 3 + Level 2 + Level 1 + Level 0
+```
+
+### 4. Selective Extraction
+
+Extract only relevant information based on the current query.
+
+```
+Current Query: "What did we decide about the database?"
+     |
+     v
+[Scan History] -> Extract messages mentioning: database, schema, migration, PostgreSQL
+     |
+     v
+[Compact Context] = Extracted relevant messages + recent window
+```
+
+### 5. Entity-Based Compaction
+
+Track entities and their latest state instead of full history.
+
+```
+Entity Store:
+  user_name: "Alice"
+  project: "AgentX"
+  decision_db: "PostgreSQL with pgvector"
+  decision_auth: "Entra ID + MSAL"
+  pending_question: "How to handle migration rollbacks?"
+
+Context = Entity state snapshot + recent messages
+```
+
+---
+
+## Multi-Agent Context Transfer
+
+### Handoff Compaction
+
+When transferring context between agents:
+
+```
+Agent A (completed work)
+     |
+     v
+[Context Compactor]
+     |
+     +-- Extract: Key decisions, artifacts, requirements
+     +-- Remove: Internal reasoning, rejected alternatives, debugging
+     +-- Format: Structured handoff document
+     |
+     v
+Agent B (receives compressed context)
+```
+
+### Handoff Document Template
+
+```
+## Handoff: [Source Agent] -> [Target Agent]
+
+### Context
+- Issue: #{issue_number} - {title}
+- Status: {current_status}
+
+### Key Decisions
+1. {decision_1}
+2. {decision_2}
+
+### Artifacts Created
+- {file_path_1}: {description}
+- {file_path_2}: {description}
+
+### Requirements for Next Agent
+- {requirement_1}
+- {requirement_2}
+
+### Open Questions
+- {question_1}
+```
+
+---
+
+## Token Counting and Monitoring
+
+### Implementation Pattern
+
+```
+1. Count tokens in each context component
+2. Check against budget allocations
+3. If over budget:
+   a. Compress conversation history first (summarize)
+   b. Reduce retrieved context (fewer/shorter chunks)
+   c. Trim system prompt (progressive disclosure)
+4. Log token usage for monitoring
+5. Alert if consistently near limits
+```
+
+### Token Counting Rules
+
+- **MUST** count tokens before every LLM call
+- **MUST** reserve output tokens (never use 100% for input)
+- **MUST** account for message formatting overhead (~4 tokens per message)
+- **SHOULD** use model-specific tokenizer (tiktoken for OpenAI, etc.)
+- **SHOULD** log token usage per component for optimization
+- **MAY** implement a token budget middleware that auto-compacts
+
+---
+
+## Caching Strategies
+
+| Cache Type | What | When | Benefit |
+|------------|------|------|---------|
+| **Prompt Caching** | System prompt + static context | Same prefix across calls | Reduced latency + cost |
+| **Semantic Cache** | Answers for similar queries | Repeated/similar questions | Major cost savings |
+| **Summary Cache** | Conversation summaries | Between summarization triggers | Avoid re-summarizing |
+| **Entity Cache** | Extracted entity states | Updated incrementally | Fast context reconstruction |
+
+---
+
+## Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `scaffold-context-manager.py` | Generate context management module | `python scaffold-context-manager.py --strategy progressive-summary --model <configured-model-id>` |
+
+---

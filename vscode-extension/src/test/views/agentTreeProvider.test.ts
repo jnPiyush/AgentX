@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { AgentXContext } from '../../agentxContext';
 import { AgentTreeProvider } from '../../views/agentTreeProvider';
 
 function createWorkspaceRoot(): string {
@@ -33,7 +34,7 @@ describe('AgentTreeProvider', () => {
           boundaries: { canModify: [], cannotModify: [] },
         },
       ],
-    } as any);
+    } as unknown as AgentXContext);
 
     const items = await provider.getChildren();
     assert.equal(items.length, 1);

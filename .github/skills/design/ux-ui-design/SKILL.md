@@ -34,132 +34,63 @@ compatibility:
 
 ## Decision Tree
 
-Use this to pick the right UX approach for your task:
-
-```
-Start: What is the deliverable?
-|
-+- New feature / epic?
-| - 1. User Research -> 2. IA -> 3. Wireframes -> 4. User Flows
-| -> 5. Hi-Fi Mockups -> 6. HTML Prototype -> 7. Usability Test
-|
-+- Bug fix / small change?
-| - Skip to step 5 (Hi-Fi) or 6 (HTML Prototype)
-|
-+- Design system update?
-| - Jump to Design Systems - update tokens + components
-|
-+- Accessibility audit?
-| - Jump to Accessibility - run checklist + fix
-|
-- Responsive issue?
- - Jump to Responsive Design - breakpoint check + fix
-```
-
----
-
-## Table of Contents
-
-1. [User Research & Analysis](#user-research--analysis)
-2. [Information Architecture](#information-architecture)
-3. [Wireframing](#wireframing)
-4. [User Flows](#user-flows)
-5. [High-Fidelity Mockups](#high-fidelity-mockups)
-6. [Interactive Prototypes](#interactive-prototypes)
-7. [HTML/CSS Prototypes](#htmlcss-prototypes)
-8. [Design Systems](#design-systems)
-9. [Accessibility (A11y)](#accessibility-a11y)
-10. [Responsive Design](#responsive-design)
-11. [Usability Testing](#usability-testing)
-12. [Best Practices](#best-practices)
-13. [Tools & Resources](#tools--resources)
-
----
+Use the full discovery-to-prototype path for net-new features. Collapse to
+hi-fi or HTML prototype only for scoped bug fixes. Route design-system work to
+tokens and component updates first, and route a11y or responsive issues to the
+dedicated validation passes before polishing visuals.
 
 ## Core Rules
 
-### [PASS] DO
-
-**Research & Wireframing:**
-- Define Product Posture & Archetype BEFORE sketching any screens
-- Start with lo-fi sketches; iterate on paper first
-- Use real content, never lorem ipsum in final designs
-- Annotate interactions on every wireframe
-- Test with diverse user demographics
-
-**Design & Prototyping:**
-- Follow the 8px spacing grid
-- Design for ALL states: empty, loading, error, success, partial
-- Build production-ready HTML/CSS prototypes (mandatory)
-- Use semantic HTML5 + ARIA attributes from the start
-- Use CSS custom properties for all design tokens (see `prototype-craft` asset)
-- Validate HTML & CSS
-
-**Collaboration:**
-- Document every design decision
-- Share prototypes early and gather developer feedback
-- Version-control design files
-- Hand off with detailed specifications
-
-### [FAIL] DON'T
-
-- Skip user research or design in isolation
-- Leave placeholder content in final deliverables
-- Ignore edge cases and error states
-- Forget mobile/tablet breakpoints
-- Neglect accessibility until the end
-- Hardcode values instead of using design tokens
-- Use large unoptimized images
-- Inline all styles (use external stylesheets)
-- Block rendering with synchronous scripts
+- Start from user goals, posture, and real content before layout details.
+- Design every required state, breakpoint, and accessibility behavior before
+  handoff.
+- Build production-ready HTML/CSS prototypes with semantic markup, tokens, and
+  implementation-ready notes instead of static mockups alone.
+- Record design decisions early enough that engineering can implement without
+  reverse-engineering intent.
 
 ## Anti-Patterns
 
-- **Skipping user research**: Designing based on assumptions -> conduct interviews or surveys with 5+ users before wireframing
-- **Lorem ipsum in deliverables**: Placeholder text hides content layout problems -> use realistic content from the actual domain
-- **Desktop-first design**: Retrofitting mobile after desktop -> design mobile breakpoints first, then enhance upward
-- **Ignoring error states**: Only designing the happy path -> design empty, loading, error, partial, and success states for every screen
-- **Pixel-perfect handoff without tokens**: Hardcoded colors and sizes -> define a design token system (CSS custom properties) and reference tokens in specs
-- **Accessibility as afterthought**: Running audits only at the end -> integrate WCAG checks from wireframe stage, not after prototyping
-- **Overly complex user flows**: 10+ step flows without progress indicators -> limit critical paths to 3-5 steps with clear progress feedback
-- **No version control on designs**: Overwriting files with no history -> use Git for HTML prototypes and Figma version history for mockups
+Do not skip research, rely on placeholder content, retrofit mobile late, or
+treat accessibility as a final cleanup pass. The full anti-pattern catalog and
+the original do/don't lists are in the detail reference.
 
----
+## Workflow
 
-## Tools & Resources
+1. Classify the design task: new feature, small change, design-system update,
+   accessibility audit, or responsive fix.
+2. Start from posture, user goals, and real content before choosing fidelity.
+3. Produce the right artifact sequence for the task: research -> IA ->
+   wireframes -> flows -> hi-fi -> HTML prototype, skipping only the stages
+   that the decision tree explicitly allows you to collapse.
+4. Validate states, accessibility, responsiveness, and implementation realism
+   before handoff.
+5. Route to the linked reference files for code patterns, templates, and test
+   assets before declaring the UX deliverable complete.
 
-### Design & Wireframing
+## Checklist
 
-| Tool | Use Case | Link |
-|------|----------|------|
-| Figma | Collaborative design | [figma.com](https://figma.com) |
-| Sketch | Mac design | [sketch.com](https://sketch.com) |
-| Penpot | Open-source design | [penpot.app](https://penpot.app) |
-| Balsamiq | Quick wireframes | [balsamiq.com](https://balsamiq.com) |
-| Whimsical | Flowcharts + wireframes | [whimsical.com](https://whimsical.com) |
-| Excalidraw | Hand-drawn diagrams | [excalidraw.com](https://excalidraw.com) |
+- Product posture, archetype, and target users are defined before screen work.
+- The deliverable covers empty, loading, error, success, and partial states.
+- The prototype uses semantic HTML, ARIA where needed, and responsive tokens.
+- The chosen reference files are attached for research, prototype code, a11y,
+  responsive rules, and usability testing as needed.
+- Handoff notes explain the design decisions and how engineers should build the
+  result without guessing.
 
-### Prototyping
+## Error Handling
 
-| Tool | Use Case | Link |
-|------|----------|------|
-| CodePen | Quick HTML/CSS/JS | [codepen.io](https://codepen.io) |
-| Tailwind CSS | Utility-first CSS | [tailwindcss.com](https://tailwindcss.com) |
-| Bootstrap | Component framework | [getbootstrap.com](https://getbootstrap.com) |
+If the problem statement is under-specified, pause screen work and clarify the
+user goal, posture, and success metric first. If implementation constraints
+invalidate the design, capture the constraint and revise the prototype instead
+of handing off a knowingly unbuildable screen. If accessibility or responsive
+checks fail, route to the linked reference before declaring the work done.
 
-### Accessibility
+## Why This Is a Skill
 
-| Tool | Use Case | Link |
-|------|----------|------|
-| WAVE | Accessibility checker | [wave.webaim.org](https://wave.webaim.org) |
-| axe DevTools | Browser extension | [deque.com/axe](https://www.deque.com/axe) |
-| WCAG Quick Ref | Guidelines | [w3.org/WAI](https://www.w3.org/WAI/WCAG21/quickref/) |
-
-### Inspiration
-
-[Dribbble](https://dribbble.com) - [Behance](https://behance.net) - [awwwards](https://awwwards.com)
-
----
+General design advice rarely specifies the next artifact or readiness gate.
+This skill connects research, accessibility, prototyping, and handoff through
+explicit decisions and phase-specific references.
 
 ## Reference Files
 
@@ -180,18 +111,6 @@ Detailed code blocks and templates are extracted into dedicated reference files:
 - [React Framework](../../languages/react/SKILL.md)
 - [E2E Testing (A11y validation)](../../testing/e2e-testing/SKILL.md)
 
----
-
-**Version**: 2.0.0 - **Last Updated**: February 10, 2026
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Prototype not accessible | Run WAVE or axe-core audit, ensure ARIA labels and keyboard navigation |
-| Inconsistent design across pages | Create a design token system with shared colors, spacing, typography |
-| User flow too complex | Reduce steps to 3-5 maximum, add progress indicators |
-
 ## References
 
 - [Prototype Tokens Asset](../prototype-craft/assets/prototype-tokens.css) - Production-ready CSS variables
@@ -199,3 +118,7 @@ Detailed code blocks and templates are extracted into dedicated reference files:
 - [Research Ia Wireframing](references/research-ia-wireframing.md)
 - [Flows Mockups Prototypes](references/flows-mockups-prototypes.md)
 - [Design Systems A11y](references/design-systems-a11y.md)
+
+Read Prototype Tokens Asset when you need ready-made design tokens; Design System Reasoning when choosing a posture or component archetype; Research Ia Wireframing for user research, IA, or wireframing; Flows Mockups Prototypes for user-flow, mockup, or interactive-prototype work; and Design Systems A11y for design-system, accessibility, or responsive-layout rules.
+
+- [details-ux-delivery-guide.md](references/details-ux-delivery-guide.md): read for the relocated original decision tree, full do/don't rules, anti-pattern catalog, table of contents, tool catalog, version note, and troubleshooting guide from the previous root.

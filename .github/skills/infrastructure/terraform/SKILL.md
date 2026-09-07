@@ -19,134 +19,60 @@ compatibility:
 
 ## When to Use This Skill
 
-- Writing or editing `.tf` or `.tfvars` files
-- Creating reusable Terraform modules
-- Managing remote state backends
-- Securing infrastructure definitions
-- Running Terratest or `terraform validate` / `terraform plan`
+Use this skill when Terraform module, state, provider, or security choices affect deployment safety and long-term maintainability.
 
----
+## Prerequisites
+
+- The target cloud scope and workspace boundary are known.
+- Remote state and locking strategy are defined.
+- Provider versions and secret sources can be pinned before apply.
+
+## Decision Guide
+
+Use Terraform when cross-resource composition and reusable module contracts are part of the delivery model. Prefer remote state with locking, pinned provider versions, and modular boundaries that reflect the real deployment unit.
+
+## Why This Is a Skill
+
+Terraform failures usually come from mutable state, unpinned providers, weak variable contracts, or module boundaries that do not match ownership. This skill makes those operating constraints explicit.
+
+## Workflow
+
+1. Define providers, backends, modules, and variable contracts.
+2. Encode secure defaults and externalize sensitive values.
+3. Validate, plan, and review drift before apply.
+4. Keep module ownership and state boundaries aligned with the deployment model.
+
+## Error Handling
+
+If state location, provider versions, or variable sources are ambiguous, stop before plan or apply. Treat state-locking gaps, secret leakage, or unexplained destructive changes as blockers to execution.
+
+## Checklist
+
+Before handoff, confirm providers are pinned, remote state and locking are configured, sensitive values are externalized, modules reflect ownership boundaries, and `validate` plus `plan` have been reviewed.
 
 ## Decision Tree
 
-```
-Terraform Decision
-+-- New infrastructure project?
-|   +-- Azure only? -> Consider Bicep as alternative
-|   +-- Multi-cloud or AWS/GCP? -> Use Terraform
-|   +-- Existing Terraform codebase? -> Use Terraform
-+-- Structuring code?
-|   +-- Single environment? -> One root module with terraform.tfvars
-|   +-- Multiple environments? -> Workspaces or separate root dirs per env
-|   +-- Shared patterns? -> Extract reusable modules/ with versioning
-+-- Managing state?
-|   +-- Team project? -> Remote backend with locking (S3/Azure Storage/GCS)
-|   +-- Solo developer? -> Remote backend still recommended
-|   +-- Never -> Local .tfstate in production
-+-- Validating changes?
-|   +-- Syntax? -> terraform validate
-|   +-- Drift detection? -> terraform plan
-|   +-- Integration tests? -> Terratest (Go)
-```
-
----
+MUST read before implementation: [Structure and module patterns](references/details-structure-and-module-patterns.md#decision-tree).
 
 ## Code Style
 
-- Use Terraform 1.5+ features (import blocks, `check` blocks, `moved` blocks)
-- Maximum line length: 120 characters
-- Use `terraform fmt` for formatting (enforced via pre-commit)
-- Use `tflint` for linting
-
----
+MUST read before implementation: [Structure and module patterns](references/details-structure-and-module-patterns.md#code-style).
 
 ## File Organization
 
-```
-infra/
-+-- main.tf            # Provider config, data sources
-+-- variables.tf       # Input variable declarations
-+-- outputs.tf         # Output value declarations
-+-- terraform.tfvars   # Variable values (gitignored in prod)
-+-- locals.tf          # Local values and computed expressions
-+-- versions.tf        # Required providers and versions
--- modules/
-    -- networking/     # Reusable module
-        +-- main.tf
-        +-- variables.tf
-        -- outputs.tf
-```
-
----
+MUST read before implementation: [Structure and module patterns](references/details-structure-and-module-patterns.md#file-organization).
 
 ## Naming Conventions
 
-| Resource | Convention | Example |
-|----------|-----------|---------|
-| Resource names | snake_case | `azurerm_resource_group.main` |
-| Variable names | snake_case | `var.resource_group_name` |
-| Output names | snake_case | `output.storage_account_id` |
-| Module names | kebab-case dirs | `modules/app-service/` |
-| Tags | PascalCase keys | `Environment = "Production"` |
-
----
+MUST read before implementation: [Structure and module patterns](references/details-structure-and-module-patterns.md#naming-conventions).
 
 ## Resource Definitions
 
-```hcl
-# MUST: Use descriptive resource names (not generic "this" or "main")
-resource "azurerm_resource_group" "app_rg" {
-  name     = "${var.project_name}-${var.environment}-rg"
-  location = var.location
-
-  tags = local.common_tags
-}
-
-# MUST: Pin provider versions
-terraform {
-  required_version = ">= 1.5.0"
-
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.0"
-    }
-  }
-}
-```
-
----
+MUST read before implementation: [Structure and module patterns](references/details-structure-and-module-patterns.md#resource-definitions).
 
 ## Variables
 
-```hcl
-# MUST: Add description, type, and validation to all variables
-variable "environment" {
-  description = "Deployment environment (dev, staging, prod)"
-  type        = string
-
-  validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "Environment must be dev, staging, or prod."
-  }
-}
-
-# MUST: Use sensitive = true for secrets
-variable "db_password" {
-  description = "Database administrator password"
-  type        = string
-  sensitive   = true
-}
-
-# SHOULD: Provide defaults where safe
-variable "location" {
-  description = "Azure region for resources"
-  type        = string
-  default     = "eastus2"
-}
-```
-
----
+MUST read before implementation: [Structure and module patterns](references/details-structure-and-module-patterns.md#variables).
 
 ## State Management
 
@@ -168,24 +94,7 @@ backend "azurerm" {
 
 ## Modules
 
-- SHOULD create reusable modules for repeated patterns
-- MUST version-pin module sources
-- MUST document every module input/output
-
-```hcl
-module "app_service" {
-  source = "./modules/app-service"
-
-  name                = "${var.project_name}-${var.environment}"
-  resource_group_name = azurerm_resource_group.app_rg.name
-  location            = var.location
-  sku_name            = var.environment == "prod" ? "P1v3" : "B1"
-
-  tags = local.common_tags
-}
-```
-
----
+MUST read before implementation: [Structure and module patterns](references/details-structure-and-module-patterns.md#modules).
 
 ## Security
 
@@ -221,9 +130,8 @@ module "app_service" {
 
 ## Anti-Patterns
 
-- **Local State in Production**: Using local `.tfstate` for team projects -> Use remote backend with locking
-- **Hardcoded Secrets**: Passwords or keys in `.tf` / `.tfvars` files -> Use Key Vault references or `sensitive` variables
-- **Unpinned Providers**: No version constraint on providers -> Pin with `~>` operator to major version
-- **No Validation Blocks**: Accepting any input without checks -> Add `validation {}` blocks to variables
-- **Monolithic Root Module**: All resources in one `main.tf` -> Split into logical files and extract modules
-- **Apply Without Plan**: Running `terraform apply` without reviewing plan output -> Always plan first, review diff
+MUST read before implementation: [Structure and module patterns](references/details-structure-and-module-patterns.md#anti-patterns).
+
+## References
+
+- [Structure and module patterns](references/details-structure-and-module-patterns.md) - must read before implementation.

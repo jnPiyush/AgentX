@@ -29,19 +29,6 @@ metadata:
 - Understanding of exception hierarchies in target language
 - Resilience library available
 
-## Rationalization Table
-
-Error handling is where shortcuts hide. Push back against these.
-
-| Rationalization | Reality |
-|-----------------|---------|
-| "I'll catch `Exception` / `except:` here, narrower types take too long." | Bare catches swallow the bugs you most need to see, including programmer errors. Catch the specific exception types you can actually handle. |
-| "This error can't happen in practice." | Then the right move is to fail loudly when it does, not to silently swallow it. Log + re-raise, do not return a default. |
-| "I'll log and continue so the request still succeeds." | A partially-completed request that returns 200 is harder to debug than a clean 500. Decide explicitly whether to fail the request or to degrade. |
-| "Retries will paper over the transient failure." | Retries without backoff or budget make outages worse. Always pair retries with exponential backoff, jitter, and a circuit breaker. |
-| "Adding context to the error is noise." | The agent or operator reading the log has no other context. Include the operation, the identifiers, and the upstream cause. |
-| "The framework already handles this." | Frameworks handle transport errors. They do not handle your domain invariants. Domain errors need explicit types and explicit handling. |
-
 ## Decision Tree
 
 ```
@@ -63,92 +50,6 @@ Handling an error?
  - Always include: correlation ID, exception type, stack trace, context
 ```
 
-## Exception Handling
-
-### Custom Exception Types
-
-**Define Specific Exceptions:**
-```
-Exception Hierarchy:
- AppException (base)
- +- ValidationException
- +- NotFoundException 
- +- UnauthorizedException
- +- ForbiddenException
- - ExternalServiceException
-```
-
-**Benefits:**
-- Catch specific errors
-- Provide context in exception
-- Different handling per type
-- Clear error messages
-
-### Try-Catch-Finally Pattern
-
-```
-function processPayment(amount, paymentMethod):
- try:
- # Attempt operation
- validatePaymentMethod(paymentMethod)
- chargeResult = paymentGateway.charge(amount, paymentMethod)
- 
- # Log success
- logger.info("Payment processed", {amount, paymentMethod})
- 
- return chargeResult
- 
- catch ValidationException as error:
- # Handle validation errors
- logger.warn("Invalid payment method", {error, paymentMethod})
- throw error
- 
- catch NetworkException as error:
- # Handle network errors with retry
- logger.error("Payment gateway unavailable", {error})
- throw ExternalServiceException("Payment service temporarily unavailable")
- 
- finally:
- # Always execute (cleanup resources)
- releasePaymentLock(paymentMethod)
-```
-
-### Global Error Handler
-
-**Centralized Error Handling:**
-```
-# HTTP API Error Handler
-function handleHttpError(error, request, response):
- # Log error with context
- logger.error("Request failed", {
- error: error.message,
- stack: error.stack,
- requestId: request.id,
- path: request.path,
- method: request.method
- })
- 
- # Map exception to HTTP status
- statusCode = mapExceptionToStatusCode(error)
- 
- # Return user-friendly response
- return response.status(statusCode).json({
- error: error.userMessage,
- requestId: request.id,
- timestamp: currentTime()
- })
-
-function mapExceptionToStatusCode(error):
- if error is NotFoundException: return 404
- if error is ValidationException: return 400
- if error is UnauthorizedException: return 401
- if error is ForbiddenException: return 403
- if error is ExternalServiceException: return 503
- return 500 # Internal Server Error
-```
-
----
-
 ## Core Rules
 
 1. **Fail Fast** - Detect errors at the earliest point and surface them immediately; do not let invalid state propagate
@@ -161,19 +62,6 @@ function mapExceptionToStatusCode(error):
 8. **Validate Inputs at Boundaries** - Check all external input at API/service boundaries; return 400-level errors for bad input, not 500
 9. **Design for Partial Failure** - Distributed systems fail partially; use fallbacks, bulkheads, and graceful degradation
 10. **Test Error Paths** - Write tests for failure scenarios, not just happy paths; verify retry, timeout, and fallback behavior
-
----
-
-## Resilience Patterns
-
-| Pattern | Use Case | Example |
-|---------|----------|---------|
-| **Retry** | Transient failures | Network timeouts, rate limits |
-| **Circuit Breaker** | Prevent cascading failures | External service calls |
-| **Fallback** | Provide alternative | Default values, cached data |
-| **Timeout** | Prevent hanging | Long-running operations |
-| **Bulkhead** | Isolate resources | Separate thread pools per service |
-| **Rate Limiting** | Protect from overload | API throttling |
 
 ---
 
@@ -218,54 +106,6 @@ catch DatabaseException as error:
 
 ---
 
-## Resilience Patterns Summary
-
-```
-Resilience Stack (Apply Multiple Patterns):
-
- -------------------------------------
- | Rate Limiting (Protect your service)|
- -------------------------------------
- (down)
- -------------------------------------
- | Timeout (Prevent hanging) |
- -------------------------------------
- (down)
- -------------------------------------
- | Circuit Breaker (Fail fast) |
- -------------------------------------
- (down)
- -------------------------------------
- | Retry (Handle transient failures) |
- -------------------------------------
- (down)
- -------------------------------------
- | Fallback (Provide alternative) |
- -------------------------------------
-```
-
----
-
-## Resources
-
-**Resilience Libraries:**
-- **.NET**: Polly, Microsoft.Extensions.Resilience
-- **Python**: tenacity, resilience4py
-- **Node.js**: opossum (circuit breaker), async-retry
-- **Java**: Resilience4j, Hystrix (deprecated)
-- **Go**: go-resilience, go-retry
-
-**Patterns:**
-- [Microsoft Cloud Design Patterns](https://learn.microsoft.com/azure/architecture/patterns/)
-- [AWS Well-Architected Framework](https://aws.amazon.com/architecture/well-architected/)
-- [Release It! by Michael Nygard](https://pragprog.com/titles/mnee2/release-it-second-edition/)
-
----
-
-**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
-
-**Last Updated**: January 27, 2026
-
 ## Troubleshooting
 
 | Issue | Solution |
@@ -274,7 +114,33 @@ Resilience Stack (Apply Multiple Patterns):
 | Circuit breaker stuck open | Check half-open state configuration, verify health endpoint responds |
 | Swallowed exceptions hiding bugs | Always log exceptions before fallback, use structured logging with stack traces |
 
-## References
+## Workflow
 
-- [Retry Circuit Breaker](references/retry-circuit-breaker.md)
-- [Fallback Logging Timeouts](references/fallback-logging-timeouts.md)
+1. Classify each failure as validation, expected domain, transient dependency, or defect.
+2. Choose the matching return, throw, retry, or compensation behavior.
+3. Test the failure path and confirm logs and caller-visible output.
+
+## Verification Checklist
+
+- [ ] Failure categories have distinct behavior.
+- [ ] Retries are bounded and idempotent.
+- [ ] Logs contain context but no secrets.
+- [ ] Tests cover recovery and terminal failure.
+
+## Rationalization Table
+
+| Temptation | Why reject it |
+|------------|---------------|
+| catch Exception merely to continue. | Never swallow exceptions or log and rethrow the same fault at every layer. |
+| use retries to hide deterministic validation or programming errors. | Validate at ingress, use typed expected failures, throw for exceptional faults, and retry only transient idempotent operations with a bound. |
+
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Rationalization Table through Resilience Patterns Summary](references/details-rationalization-table-and-resilience-patterns-summary.md) - MUST read before work involving rationalization table through resilience patterns summary.
+
+Existing focused references are reused, not duplicated:
+
+- [Fallback Strategies, Error Logging & Health Checks](references/fallback-logging-timeouts.md) - MUST read before applying the focused fallback strategies, error logging & health checks guidance.
+- [Retry Logic & Circuit Breaker Patterns](references/retry-circuit-breaker.md) - MUST read before applying the focused retry logic & circuit breaker patterns guidance.

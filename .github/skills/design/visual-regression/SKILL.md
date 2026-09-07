@@ -25,207 +25,55 @@ compatibility:
 
 Visual regression complements axe (a11y) and Lighthouse (performance). It does not replace either.
 
-## Authoritative Sources
+## Prerequisites
 
-| Source | What it covers |
-|--------|----------------|
-| Playwright Test, Visual comparisons | `toHaveScreenshot`, masking, threshold |
-| Storybook + Chromatic docs | Component-level visual review |
-| BrowserStack Percy docs | Hosted DOM snapshot + diff |
-| Applitools Eyes docs | AI-driven layout-aware diff |
-| Microsoft accessibility-insights and reflect.run | Adjacent tooling |
+You need a runnable prototype, stable routes or stories to snapshot, a pinned
+browser and OS for baseline generation, and a place to commit screenshot
+artifacts next to the prototype. If Playwright is not installed yet, use the
+install steps in [details-playwright-visual-baselines.md](references/details-playwright-visual-baselines.md).
 
-## Default Engine: Playwright
+## Decision Guide
 
-Reasoning:
+Use Playwright for route-level prototypes and local CI-friendly screenshot
+diffs. Use Chromatic when the surface already lives in Storybook and the team
+wants component-level review queues. Use Percy or Applitools only when hosted
+multi-browser review is worth the service cost. Skip this skill when the
+change is non-visual or when no stable baseline can be defined yet.
 
-- Already required by `development/browser-automation` for the axe pass.
-- Free and runs locally and in CI.
-- Deterministic with explicit threshold and animation handling.
+## Core Rules
 
-### Install (per prototype)
+- Visual diffs are only valid when the run is deterministic: animations off,
+  fonts settled, random data seeded, and volatile regions masked.
+- Capture the same primary routes at mobile, tablet, and desktop breakpoints.
+- Use `toHaveScreenshot`, not serializer snapshot APIs.
+- Pin one baseline OS for the main gate and review every baseline update like
+  code, never as an auto-accepted artifact refresh.
+- Treat unexplained drift as a release blocker until expected, actual, and
+  diff images confirm intent.
 
-```bash
-npm install --save-dev @playwright/test
-npx playwright install --with-deps chromium
-```
+## Workflow
 
-### Project layout
+1. Choose the primary routes or stories whose layout must stay stable.
+2. Prepare a deterministic Playwright run with fixed viewports, disabled
+   animation, masked volatile content, and font readiness checks.
+3. Capture or update the approved baseline intentionally on the pinned OS.
+4. Run the suite after each UI change and inspect every failing diff image.
+5. Fix unintended drift or review and accept the new baseline with explicit
+   rationale before handoff.
 
-```
-docs/ux/prototypes/<feature>/
-  __screenshots__/
-    chromium-darwin/         # baseline images, committed to git
-  tests/
-    visual.spec.ts
-  playwright.config.ts
-```
+## Pitfalls
 
-Baselines live next to the prototype, not in `tests/` at the repo root, because they are tied to the prototype version.
+Most false positives come from live data, mixed OS baselines, missing motion
+guards, or a single viewport strategy. See the Anti-Patterns table in the
+detail reference before widening thresholds.
 
-### Minimal config
+## Error Handling
 
-`playwright.config.ts`:
-
-```ts
-import { defineConfig } from "@playwright/test";
-
-export default defineConfig({
-  testDir: "./tests",
-  use: {
-    baseURL: "http://localhost:4173",
-    screenshot: "only-on-failure",
-    trace: "retain-on-failure",
-  },
-  expect: {
-    toHaveScreenshot: {
-      maxDiffPixelRatio: 0.01,
-      animations: "disabled",
-      caret: "hide",
-      scale: "css",
-    },
-  },
-  projects: [
-    { name: "mobile",  use: { viewport: { width: 360,  height: 800  } } },
-    { name: "tablet",  use: { viewport: { width: 768,  height: 1024 } } },
-    { name: "desktop", use: { viewport: { width: 1440, height: 900  } } },
-  ],
-});
-```
-
-### Minimal test
-
-`tests/visual.spec.ts`:
-
-```ts
-import { test, expect } from "@playwright/test";
-
-const ROUTES = [
-  { name: "home",      path: "/" },
-  { name: "dashboard", path: "/dashboard" },
-  { name: "settings",  path: "/settings" },
-];
-
-for (const route of ROUTES) {
-  test(`route: ${route.name}`, async ({ page }) => {
-    await page.goto(route.path);
-    await page.waitForLoadState("networkidle");
-    await page.evaluate(() => document.fonts.ready);
-    await expect(page).toHaveScreenshot(`${route.name}.png`, {
-      mask: [
-        page.locator("[data-vr-mask]"),
-        page.locator("time"),
-      ],
-      fullPage: true,
-    });
-  });
-}
-```
-
-### Run locally
-
-```bash
-npm run build && npx vite preview --port 4173 &
-npx playwright test --update-snapshots   # first run, accept baseline
-npx playwright test                      # subsequent runs, fail on drift
-```
-
-Commit the generated baselines in `__screenshots__/<browser-os>/`. They are part of the prototype.
-
-## Determinism Rules
-
-Visual regression is only useful if the only signal is intent. Eliminate noise mechanically:
-
-1. **Disable animation** at the test level via `animations: "disabled"` and a CSS guard:
-   ```css
-   .vr-mode *, .vr-mode *::before, .vr-mode *::after {
-     animation: none !important;
-     transition: none !important;
-   }
-   ```
-   Add `vr-mode` class via Playwright `addInitScript`.
-2. **Mask volatile content**: timestamps, user avatars, live data. Use `data-vr-mask` attributes.
-3. **Stabilize fonts**: wait on `document.fonts.ready` and prefer locally hosted WOFF2 over network fonts.
-4. **Fix the viewport per project**: do not rely on default sizes.
-5. **Fix the OS in CI**: Playwright generates per-OS baselines. Pin to one OS (usually Linux in CI) and commit only those.
-6. **Use `scale: "css"`** so HiDPI machines do not produce different baselines.
-7. **Seed any randomness** in the prototype's data layer when the SPA renders sample data.
-
-## CI Integration
-
-GitHub Actions example:
-
-```yaml
-- run: npm ci
-- run: npx playwright install --with-deps chromium
-- run: npm run build
-- run: npx vite preview --port 4173 &
-- run: npx wait-on http://localhost:4173
-- run: npx playwright test
-- if: failure()
-  uses: actions/upload-artifact@v4
-  with:
-    name: visual-diff-report
-    path: |
-      playwright-report
-      test-results
-```
-
-On failure, the agent or developer downloads the artifact, inspects the diff PNGs (expected, actual, diff), and either fixes the source or accepts the new baseline with `--update-snapshots`. Baseline updates must be reviewed in the PR diff.
-
-## Updating Baselines
-
-- Always update intentionally, with a commit message that names which screens shifted and why.
-- One PR, one baseline update batch. Mixed code + baseline PRs lose review value.
-- Reject baseline updates that include unrelated drift; fix the root cause first.
-
-## Acceptance Thresholds
-
-| Mode | `maxDiffPixelRatio` | When |
-|------|---------------------|------|
-| Strict | 0 | Component / Storybook level |
-| Default | 0.01 | Route-level prototype |
-| Tolerant | 0.05 | Cross-OS smoke (avoid using as a primary gate) |
-
-Stay at default. Increasing tolerance hides bugs.
-
-## Alternatives (hosted)
-
-Use when the team prefers a managed review queue:
-
-| Tool | Strength | Caveat |
-|------|----------|--------|
-| Chromatic | Tight Storybook integration, baseline review UI | Component-level, requires Storybook |
-| Percy (BrowserStack) | DOM snapshot, multi-browser hosting | Per-snapshot pricing |
-| Applitools Eyes | Layout-aware diff, ignores antialiasing automatically | Highest cost; vendor lock-in |
-
-When using a hosted service, keep the same determinism rules and document the service choice in the prototype's `README.md`.
-
-## Anti-Patterns
-
-| Pattern | Why | Fix |
-|---------|-----|-----|
-| Snapshotting full pages with live data | Diffs every run | Mask or seed data |
-| Mixing OS baselines in one folder | Renders differ per OS | One OS, one folder |
-| Using `toMatchSnapshot` for visual diffs | That is for serializers, not images | Use `toHaveScreenshot` |
-| Updating baselines without review | Hides real regressions | Treat baselines like code |
-| Skipping the animation guard | Random flakes | Apply `vr-mode` class + Playwright option |
-| Snapshotting one viewport only | Misses responsive bugs | Run mobile / tablet / desktop projects |
-
-## Reporting
-
-The prototype-audit pass that consumes this skill writes to `docs/artifacts/reviews/PROTOTYPE-AUDIT-<issue>.md`:
-
-```markdown
-## Pass 8: Visual Regression
-- Status: PASS | FIXED | BLOCKED
-- Routes covered: <list>
-- Diff results: <n routes>/<n total> within threshold
-- Baseline updates: <count> (link to commit)
-- Findings:
-  - <route> @ <viewport>: <maxDiffPixelRatio>; cause: <text>; resolution: <text or escalation>
-- Verification: replay run after fixes
-```
+If snapshots flap, remove noise before changing thresholds: disable motion,
+mask volatile nodes, wait for fonts, and pin the execution OS. If CI and local
+machines disagree, regenerate on the canonical OS instead of mixing baselines.
+If a diff cannot be explained, inspect the expected, actual, and diff PNGs and
+hold the release gate until the cause is understood.
 
 ## Done Criteria
 
@@ -234,9 +82,24 @@ The prototype-audit pass that consumes this skill writes to `docs/artifacts/revi
 - Determinism rules applied (animations off, fonts ready, volatile content masked).
 - CI runs the suite on every PR that touches the prototype.
 
+## Why This Is a Skill
+
+General model review notices obvious visual changes but misses systematic drift
+control: deterministic capture, baseline governance, and threshold discipline.
+This skill turns screenshot testing into a repeatable release gate so layout
+changes are judged from reproducible evidence instead of memory.
+
 ## Skills to Compose With
 
-- `development/browser-automation` -- shares the Playwright runtime
-- `design/accessibility` -- complementary: axe covers a11y, visual covers layout
-- `design/prototype-audit` -- this skill is the visual regression pass
-- `testing/e2e-testing` -- broader Playwright patterns
+- [development/browser-automation](../../development/browser-automation/SKILL.md) -- shares the Playwright runtime
+- [design/accessibility](../accessibility/SKILL.md) -- complementary: axe covers a11y, visual covers layout
+- [design/prototype-audit](../prototype-audit/SKILL.md) -- this skill is the visual regression pass
+- [testing/e2e-testing](../../testing/e2e-testing/SKILL.md) -- broader Playwright patterns
+
+## References
+
+- [details-playwright-visual-baselines.md](references/details-playwright-visual-baselines.md):
+  read for the original source table, Playwright install and config examples,
+  determinism rules, CI YAML, threshold table, hosted alternatives,
+  anti-patterns, and reporting template relocated verbatim from the prior
+  root.

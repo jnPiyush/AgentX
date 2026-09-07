@@ -13,6 +13,10 @@ for (const candidate of candidates) {
   }
 }
 function parseScalar(value, lineNumber) {
+  if (!/^[\[{'"]/.test(value)) value = value.replace(/\s+#.*$/, '').trim();
+  if (/^[+-]?\.(?:inf|nan)$/i.test(value)) {
+    throw new Error(`Non-finite YAML numbers are not supported at line ${lineNumber}.`);
+  }
   if (value.startsWith('[')) {
     if (!value.endsWith(']')) throw new Error(`Unterminated inline sequence at line ${lineNumber}.`);
     const body = value.slice(1, -1).trim();
@@ -32,7 +36,7 @@ function parseScalar(value, lineNumber) {
   if (/^(true|false)$/i.test(value)) return value.toLowerCase() === 'true';
   if (/^(null|~)$/i.test(value)) return null;
   if (/^-?\d+(?:\.\d+)?$/.test(value)) return Number(value);
-  return value.replace(/\s+#.*$/, '').trim();
+  return value;
 }
 
 function parseAgentxFrontmatter(input) {
@@ -142,7 +146,12 @@ try {
   } else {
     throw new Error('Usage: parse-yaml.js [--frontmatter-files], reading YAML or a JSON path array from stdin.');
   }
-  process.stdout.write(JSON.stringify(parsed));
+  process.stdout.write(JSON.stringify(parsed, (_key, value) => {
+    if (typeof value === 'number' && !Number.isFinite(value)) {
+      throw new Error('Non-finite YAML numbers cannot be represented as JSON.');
+    }
+    return value;
+  }));
 } catch (error) {
   console.error(`[FAIL] Invalid YAML: ${error.message}`);
   process.exit(1);

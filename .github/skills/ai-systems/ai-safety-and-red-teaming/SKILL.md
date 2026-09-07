@@ -27,42 +27,43 @@ compatibility:
 
 ---
 
+## Decision Guide
+
+Start with user input, retrieved content, tools, then grounded output. Pair with
+[application security](../../architecture/security/SKILL.md) for auth/secrets and
+[RAG pipelines](../rag-pipelines/SKILL.md) for retrieval-specific controls.
+
+## Why This Is a Skill
+
+LLM safety failures usually happen at the seams between prompts, retrieval, tool policy, and release approval. This skill keeps those failure boundaries explicit so a single moderation setting is not mistaken for a complete control plan.
+
+## Workflow
+
+1. Threat-model inputs, retrieved content, tools, and output channels.
+2. Define input guards, IPI controls, tool policy, and output validation.
+3. Run red-team scenarios against the real workflow.
+4. Record blockers, mitigations, and residual risk before ship.
+
 ## Threat Model (Top Risks, 2026)
 
-| Risk | Description | Likelihood | Impact |
-|------|-------------|------------|--------|
-| Direct prompt injection | User overrides instructions | High | High |
-| **Indirect prompt injection** | Hostile content in retrieved doc, email, web page, image alt-text, OCR'd PDF | **Very High** | High |
-| Jailbreak / persuasion | Multi-turn coercion to bypass policy | High | Medium |
-| Data exfiltration | Tool used to leak secrets via DNS / URLs / images | Medium | Critical |
-| Tool / RBAC abuse | Agent calls tools beyond user's actual permissions | Medium | Critical |
-| Output harm | Toxic, biased, or illegal content | Medium | High |
-| Hallucinated grounding | Fabricated citations or facts presented confidently | High | Medium |
-| Model supply chain | Tampered open-weights model or fine-tune | Low | Critical |
+MUST assess the [retained threat catalog](references/details-threat-model-catalog.md)
+against actual actors, data paths and permissions before choosing controls.
+
+## Prerequisites
+
+Identify trust boundaries, authorized tool actions, approved test data and the
+owner who can block release. Establish a governed path for red-team evidence.
+
+## Core Rules
+
+Moderation is not authorization: enforce tool allowlists, business limits and
+approval gates independently of model output. Unresolved leakage or unsafe actions block release.
 
 ---
 
 ## Defense in Depth
 
-```
-[User input] -> [Input guardrails] -> [System prompt + RAG]
-                                              |
-                                              v
-                              [Indirect-injection scrubber on retrieved content]
-                                              |
-                                              v
-                                       [Model inference]
-                                              |
-                                              v
-                          [Tool-call policy gate (allowlist + arg validation)]
-                                              |
-                                              v
-                              [Output guardrails] -> [User]
-```
-
-No single layer is sufficient. Each layer must fail closed.
-
----
+MUST read before design or implementation: [Defense in Depth details](references/details-defense-in-depth-red-teaming.md#defense-in-depth).
 
 ## Input Guardrails
 
@@ -111,19 +112,7 @@ The most under-defended risk. Required controls:
 
 ## Red-Teaming
 
-Continuous, not one-off. Run before release and on a schedule.
-
-| Tool | Use For |
-|------|---------|
-| **Microsoft PyRIT** | Automated multi-turn attacks, framework |
-| **Garak** | Probes for known LLM vulnerabilities (DAN, prompt leaks, encoding tricks) |
-| **promptfoo redteam** | CI-runnable adversarial test suites |
-| **Stanford HELM Safety**, **HarmBench** | Benchmarks |
-| Manual red team | Domain-specific harms regulators care about |
-
-Required release artifact: red-team report covering each row of the threat model with pass/fail and evidence.
-
----
+MUST read before design or implementation: [Defense in Depth details](references/details-defense-in-depth-red-teaming.md#red-teaming).
 
 ## Responsible AI Controls
 
@@ -137,18 +126,24 @@ Required release artifact: red-team report covering each row of the threat model
 
 ## Skills to Load Alongside
 
-| Need | Skill |
-|------|-------|
-| Quality measurement (incl. safety scores) | `ai-evaluation` |
-| Prompt-level guardrail wording | `prompt-engineering` |
-| Tool argument hardening | `tool-use-and-function-calling` |
-| RAG-specific injection points | `rag-pipelines` |
-| Tracing blocks and reasons | `agent-observability` |
+MUST read before design or implementation: [Defense in Depth details](references/details-defense-in-depth-red-teaming.md#skills-to-load-alongside).
+
+## Error Handling
+
+If a guard or evaluation is unavailable, restrict capability or escalate; never
+declare safety from missing checks. Reproduce, mitigate and retest successful attacks.
+
+## Checklist
+
+Verify IPI defenses, tool authorization, output validation, privacy-safe logs and
+current red-team evidence before handoff. Record unresolved risks and owners.
 
 ## References
 
-- OWASP Top 10 for LLM Applications (2025)
-- NIST AI Risk Management Framework
-- Microsoft PyRIT, Garak, promptfoo redteam
-- Azure AI Content Safety, Prompt Shields, Bedrock Guardrails
-- LlamaGuard 3, ShieldGemma model cards
+- [Defense in Depth details](references/details-defense-in-depth-red-teaming.md) - must read before design or implementation.
+- [Security skill](../../architecture/security/SKILL.md)
+- [Rag Pipelines skill](../rag-pipelines/SKILL.md)
+- [Ai Evaluation skill](../ai-evaluation/SKILL.md)
+
+
+- [Source and related-reading index](references/details-source-reference-index.md)

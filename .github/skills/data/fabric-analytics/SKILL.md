@@ -31,239 +31,65 @@ prerequisites:
 
 ## Decision Tree
 
-```
-Working with Microsoft Fabric?
-+- Need storage layer?
-| +- Semi-structured / schema evolution -> Lakehouse
-| +- Full T-SQL / stored procs / DML -> Warehouse
-| - Unsure -> Start with Lakehouse (more flexible)
-+- Need data transformation?
-| +- Simple data copy -> Pipeline Copy Activity
-| +- Light transforms (300+ built-in) -> Dataflow Gen2
-| - Complex logic / ML / custom code -> Spark Notebook
-+- Need orchestration?
-| - Pipeline with activities + dependencies
-+- Need reporting layer?
-| - Semantic Model with DirectLake mode
-- Need conversational analytics?
- - See: fabric-data-agent skill
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-core-concepts.md#decision-tree).
 
 ## Core Concepts
 
-### OneLake & Delta Format
+MUST read before selection: [Decision Tree details](references/details-decision-tree-core-concepts.md#core-concepts).
 
-All Fabric workloads share **OneLake** - a single logical data lake built on Delta format:
+<a id="onelake-delta-format"></a>
 
-| Principle | Details |
-|-----------|---------|
-| **Single copy** | No data silos - all items reference the same storage |
-| **Delta format** | ACID transactions, time travel, schema evolution |
-| **Open format** | Parquet-based, readable by any Spark engine |
-| **Shortcuts** | Reference external storage (ADLS, S3) without copying |
+<a id="medallion-architecture"></a>
 
-### Medallion Architecture
-
-| Layer | Purpose | Example Tables | Format |
-|-------|---------|----------------|--------|
-| **Bronze** | Raw ingestion, as-is from source | `raw_orders`, `raw_customers` | Delta (append-only) |
-| **Silver** | Cleaned, deduplicated, typed | `clean_orders`, `clean_customers` | Delta (merge/upsert) |
-| **Gold** | Business-ready aggregates | `fact_sales`, `dim_product` | Delta (star schema) |
-
-**Anti-pattern**: Skipping Silver layer - leads to unreliable Gold data.
-
-### Workspaces
-
-Workspaces are logical containers for governance and collaboration:
-
-- **Dev/Test/Prod** separation via deployment pipelines
-- **Capacity binding** - workspaces run on assigned Fabric capacity
-- **Security** - role-based access at workspace level
+<a id="workspaces"></a>
 
 ## Lakehouse
 
-Combines data lake flexibility with warehouse-like structure using Delta tables.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-core-concepts.md#lakehouse).
 
-### Storage Layout
+<a id="storage-layout"></a>
 
-```
-Lakehouse/
-+-- Tables/ # Managed Delta tables (structured, queryable)
-+-- Files/ # Unmanaged files (raw CSV, Parquet, JSON staging)
--- SQL endpoint # Auto-generated read-only T-SQL access to Tables/
-```
+<a id="when-lakehouse-vs-warehouse"></a>
 
-### When Lakehouse vs Warehouse
+<a id="sql-endpoint-queries"></a>
 
-| Factor | Lakehouse | Warehouse |
-|--------|-----------|-----------|
-| Query language | Spark SQL + T-SQL (read-only) | Full T-SQL (read/write) |
-| Write access | Spark only (notebooks, jobs) | T-SQL DML (INSERT/UPDATE/DELETE) |
-| Schema evolution | Natively supported | Schema-on-write |
-| Best for | Data engineering, ML, flexible ETL | BI reporting, enterprise SQL analytics |
-| Stored procedures | No | Yes |
-| Transactions | Single-table Delta | Multi-table T-SQL |
-
-### SQL Endpoint Queries
-
-Every Lakehouse auto-exposes a **read-only SQL endpoint** for T-SQL access:
-
-```sql
--- Query via SQL endpoint (read-only - SELECT, SHOW, DESCRIBE)
-SELECT COUNT(*) AS total_events
-FROM raw_events
-WHERE event_date >= '2025-01-01';
-
--- Schema discovery
-SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = 'raw_events';
-```
-
-### Delta Table Operations (Spark)
-
-Write operations require Spark context (notebooks or Livy sessions):
-
-```python
-# Write Delta table
-df.write.format("delta").mode("overwrite").saveAsTable("bronze.raw_events")
-
-# Merge / upsert pattern (Silver layer)
-from delta.tables import DeltaTable
-target = DeltaTable.forName(spark, "silver.customers")
-target.alias("t").merge(
- source_df.alias("s"), "t.customer_id = s.customer_id"
-).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
-
-# Time travel
-spark.read.format("delta").option("versionAsOf", 5).table("bronze.raw_events")
-```
+<a id="delta-table-operations-spark"></a>
 
 ## Warehouse
 
-Full T-SQL warehouse with stored procedures, views, and multi-table transactions.
-
-```sql
--- Create fact table
-CREATE TABLE fact_sales (
- sale_id BIGINT IDENTITY(1,1),
- product_key INT NOT NULL,
- customer_key INT NOT NULL,
- sale_date DATE NOT NULL,
- amount DECIMAL(18,2) NOT NULL
-);
-
--- Stored procedure for incremental load
-CREATE PROCEDURE usp_load_daily_sales @run_date DATE
-AS
-BEGIN
- INSERT INTO fact_sales (product_key, customer_key, sale_date, amount)
- SELECT p.product_key, c.customer_key, s.sale_date, s.amount
- FROM staging.raw_sales s
- JOIN dim_product p ON s.product_id = p.product_id
- JOIN dim_customer c ON s.customer_id = c.customer_id
- WHERE s.sale_date = @run_date;
-END;
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-core-concepts.md#warehouse).
 
 ## Spark Notebooks
 
-### Execution Modes
+MUST read before selection: [Decision Tree details](references/details-decision-tree-core-concepts.md#spark-notebooks).
 
-| Mode | Use Case | Cold Start |
-|------|----------|------------|
-| **Batch job** | Scheduled ETL, production runs | 1-2 min |
-| **Interactive (Livy)** | Exploration, debugging | 3-6+ min |
-| **High Concurrency** | Dev/test, shared Spark session (up to 5 notebooks) | ~30s after first |
+<a id="execution-modes"></a>
 
-### Notebook Best Practices
+<a id="notebook-best-practices"></a>
 
-- **Markdown before code**: Every code cell preceded by explanatory markdown
-- **Parameterize**: Use notebook parameters for environment-specific values
-- **Idempotent**: Notebooks should be safe to re-run (use MERGE, overwrite modes)
-- **Validate early**: Check schema and row counts before heavy transforms
-- **Minimize shuffles**: Use broadcast joins for small dimension tables
-
-### Livy Session Management
-
-```
-1. Check for existing sessions FIRST (reuse idle sessions)
-2. Create only if none exist (cold start: 3-6+ minutes)
-3. State machine: not_started -> starting -> idle (ready) -> busy -> dead
-4. Never close sessions unless explicitly requested (reuse saves time)
-5. Use timestamped session names for traceability
-```
+<a id="livy-session-management"></a>
 
 ## Data Pipelines
 
-Pipelines orchestrate data movement and transformation with dependency chains.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-core-concepts.md#data-pipelines).
 
-### Activity Selection
+<a id="activity-selection"></a>
 
-| Need | Activity | Latency | Complexity |
-|------|----------|---------|------------|
-| Data copy (source -> destination) | Copy Activity | Fast | Low |
-| Light transforms (built-in 300+) | Dataflow Gen2 | Medium | Low |
-| Complex logic, ML, custom code | Notebook Activity | Slow | High |
-| Wait / conditional / loop | Control Activities | N/A | Low |
-
-### Pipeline Pattern: Medallion ETL
-
-```
-------------- --------------- --------------
-| Copy (ADLS |----->| Notebook |----->| Notebook |
-| -> Bronze LH) | | (Bronze->Silver)| | (Silver->Gold)|
-------------- --------------- --------------
- depends_on depends_on
-```
+<a id="pipeline-pattern-medallion-etl"></a>
 
 ## Semantic Models
 
-### DirectLake Mode
+MUST read before design or implementation: [Semantic Models details](references/details-semantic-models-capacity-limits.md#semantic-models).
 
-Queries Delta tables directly - no data import, always fresh:
+<a id="directlake-mode"></a>
 
-| Benefit | Limitation |
-|---------|-----------|
-| Near-realtime (no refresh delay) | Requires Gold-layer Delta tables |
-| No storage duplication | Falls back to DirectQuery if too complex |
-| Sub-second query at scale | Limited DAX function support |
+<a id="best-practices"></a>
 
-### Best Practices
-
-| Do | Don't |
-|----|-------|
-| Use **measures** for calculations | Use calculated columns (slow) |
-| Pre-aggregate in Spark/SQL | Calculate at query time |
-| Define explicit relationships | Rely on implicit joins |
-| Use star schema (fact + dims) | Use wide denormalized tables |
-
-### DAX Patterns
-
-```dax
--- Year-over-year growth
-YoY Growth % =
-VAR CurrentYear = [Total Sales]
-VAR PriorYear = CALCULATE([Total Sales], SAMEPERIODLASTYEAR('Date'[Date]))
-RETURN DIVIDE(CurrentYear - PriorYear, PriorYear, 0)
-
--- Running total
-Running Total = CALCULATE([Total Sales], FILTER(ALL('Date'), 'Date'[Date] <= MAX('Date'[Date])))
-```
+<a id="dax-patterns"></a>
 
 ## Capacity & Limits
 
-| Resource | Cold Start | Warm Start |
-|----------|------------|------------|
-| Livy session | 3-6+ min | ~30s |
-| Notebook job | 1-2 min | ~15s |
-| Pipeline run | ~30s | ~10s |
-
-| Limit | Value | Mitigation |
-|-------|-------|------------|
-| Livy session idle timeout | 20 min default | Keep alive or recreate |
-| Notebook job max duration | 24 hours | Split into stages |
-| Capacity states | Active / Paused / Throttled | Monitor in Azure Portal |
+MUST read before design or implementation: [Semantic Models details](references/details-semantic-models-capacity-limits.md#capacity-limits).
 
 ## Core Rules
 
@@ -290,24 +116,20 @@ Running Total = CALCULATE([Total Sales], FILTER(ALL('Date'), 'Date'[Date] <= MAX
 
 ## Anti-Patterns
 
-- **Skip Silver layer**: Raw data straight to Gold - unreliable analytics
-- **Overuse interactive sessions**: Expensive for production - use batch jobs
-- **Ignore Delta maintenance**: No VACUUM/OPTIMIZE - storage bloat, slow queries
-- **Wide tables in semantic models**: Denormalized tables - poor DirectLake performance
-- **Hardcoded workspace/lakehouse names**: Use parameters for environment portability
+MUST read before design or implementation: [Semantic Models details](references/details-semantic-models-capacity-limits.md#anti-patterns).
 
 ## Reference Index
 
-| Document | Description |
-|----------|-------------|
-| [references/spark-patterns.md](references/spark-patterns.md) | PySpark transformation patterns and optimization |
-| [references/pipeline-patterns.md](references/pipeline-patterns.md) | Pipeline activity configurations and dependency chains |
-| [references/semantic-model-guide.md](references/semantic-model-guide.md) | Semantic model creation, DAX measures, DirectLake setup |
+MUST read before design or implementation: [Semantic Models details](references/details-semantic-models-capacity-limits.md#reference-index).
 
 ## Asset Templates
 
-| File | Description |
-|------|-------------|
-| [assets/sql-query-patterns.sql](assets/sql-query-patterns.sql) | Common T-SQL query templates for Lakehouse/Warehouse |
-| [assets/pyspark-transforms.py](assets/pyspark-transforms.py) | PySpark transformation snippets for medallion layers |
-| [assets/dax-measures.dax](assets/dax-measures.dax) | Standard DAX measure templates for semantic models |
+MUST read before design or implementation: [Semantic Models details](references/details-semantic-models-capacity-limits.md#asset-templates).
+
+## References
+
+- [Decision Tree details](references/details-decision-tree-core-concepts.md) - must read before selection.
+- [Semantic Models details](references/details-semantic-models-capacity-limits.md) - must read before design or implementation.
+- [pipeline-patterns](references/pipeline-patterns.md)
+- [semantic-model-guide](references/semantic-model-guide.md)
+- [spark-patterns](references/spark-patterns.md)

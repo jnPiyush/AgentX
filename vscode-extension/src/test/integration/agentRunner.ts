@@ -179,7 +179,7 @@ export function validateMinimumTooling(
 
 function findAgentFiles(dir: string): string[] {
   const results: string[] = [];
-  if (!fs.existsSync(dir)) return results;
+  if (!fs.existsSync(dir)) {return results;}
 
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
@@ -197,7 +197,7 @@ function parseFrontmatter(
   content: string
 ): Record<string, unknown> | null {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!match) return null;
+  if (!match) {return null;}
 
   const yaml = match[1];
   const result: Record<string, unknown> = {};

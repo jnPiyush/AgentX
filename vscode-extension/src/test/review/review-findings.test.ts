@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { AgentXContext } from '../../agentxContext';
 import {
   buildReviewFindingIssueDraft,
   loadReviewFindingRecords,
@@ -100,7 +101,7 @@ describe('review findings', () => {
         calls.push({ subcommand, args });
         return 'Created issue #73: Resolve review finding';
       },
-    } as any;
+    } as unknown as AgentXContext;
 
     const result = await promoteReviewFinding(agentx, 'FINDING-164-001');
     const updated = loadReviewFindingRecords(tmpDir)[0];

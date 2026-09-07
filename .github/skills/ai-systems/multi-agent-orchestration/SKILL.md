@@ -33,73 +33,50 @@ compatibility:
 
 ---
 
+## Decision Guide
+
+Default to one agent first. If coordination is necessary, start with supervisor-worker and only escalate to handoff, hierarchy, or graph patterns when state, latency, or durability truly demand it.
+
+## Prerequisites
+
+Define worker capabilities, file ownership, a shared task identifier, return
+schema and bounded turn/deadline budget before spawning workers.
+
+## Core Rules
+
+The coordinator owns shared execution state. Workers must preserve that state,
+respect other workers' file boundaries and propagate these constraints to descendants.
+
+## Why This Is a Skill
+
+Multi-agent systems fail from coordination debt more often than raw model quality. This skill makes topology choice, handoff payloads, stop conditions, and observability explicit.
+
+## Workflow
+
+1. Decide whether one agent can finish the task with tools alone.
+2. If not, pick the lightest topology that matches the coordination need.
+3. Define handoff contract, stop conditions, and traces before execution.
+4. Validate each worker result before further delegation.
+
 ## Topology Decision Tree
 
-```
-What is the task structure?
-+- Linear pipeline (research -> draft -> review)?
-|  -> Sequential / Pipeline
-+- One coordinator delegates to specialists?
-|  -> Supervisor / Worker (most common)
-+- Peers swap control based on context?
-|  -> Swarm / Handoff (OpenAI Swarm pattern)
-+- Tree of sub-tasks?
-|  -> Hierarchical (manager -> sub-managers -> workers)
-+- Arbitrary directed graph with conditional edges?
-|  -> Graph (LangGraph)
-+- Independent agents across orgs?
-   -> A2A protocol with shared task object
-```
-
----
+MUST read before selection: [Topology Decision Tree details](references/details-topology-decision-tree-topology-patterns.md#topology-decision-tree).
 
 ## Topology Patterns
 
-### Supervisor / Worker (default)
+MUST read before selection: [Topology Decision Tree details](references/details-topology-decision-tree-topology-patterns.md#topology-patterns).
 
-A supervisor agent decomposes the task and routes each sub-task to a specialist worker. Worker results return to the supervisor, which decides the next step or finalizes.
+<a id="supervisor-worker-default"></a>
 
-- Pros: simple, auditable, easy to add workers
-- Cons: supervisor is a bottleneck and a single point of prompt failure
-- Frameworks: LangGraph supervisor, AutoGen GroupChat (with manager), CrewAI hierarchical
+<a id="swarm-handoff"></a>
 
-### Swarm / Handoff
+<a id="hierarchical"></a>
 
-Each agent decides when to hand control to a peer by emitting a `handoff(target_agent, context)` tool call. No central supervisor.
-
-- Pros: emergent routing, less prompt overhead per turn
-- Cons: harder to debug, risk of ping-pong loops
-- Frameworks: OpenAI Swarm / Agents SDK, Microsoft Agent Framework
-
-### Hierarchical
-
-Multi-level supervisor tree. Top-level supervisor delegates to mid-level supervisors, which manage workers.
-
-- Pros: scales to large agent counts, mirrors org charts
-- Cons: latency multiplies per level; coordination cost grows fast
-
-### Graph (Stateful)
-
-Explicit state machine of agent transitions with conditional edges and persisted state.
-
-- Pros: deterministic, durable, supports interrupts and human-in-the-loop
-- Cons: more upfront design; rigidity if requirements shift
-- Framework: LangGraph (see `langgraph` skill)
-
----
+<a id="graph-stateful"></a>
 
 ## Framework Selection
 
-| Framework | Best For | Notable |
-|-----------|----------|---------|
-| **OpenAI Agents SDK / Swarm** | Lightweight Python apps, handoff pattern | Built-in handoffs, guardrails |
-| **AutoGen v0.4+** | Research, complex group chats | Event-driven core, async |
-| **CrewAI** | Role-based teams, business workflows | Process abstraction (sequential / hierarchical) |
-| **LangGraph** | Production, durable, human-in-the-loop | Checkpointing, time-travel, interrupts |
-| **Microsoft Agent Framework** | Enterprise .NET / Python with Foundry | Workflow + agent unified API |
-| **Google ADK + A2A** | Cross-org agent communication | A2A is the agent-to-agent open protocol |
-
----
+MUST read before selection: [Topology Decision Tree details](references/details-topology-decision-tree-topology-patterns.md#framework-selection).
 
 ## Handoff Contract (MUST)
 
@@ -132,30 +109,27 @@ Anti-pattern: dumping the full conversation history into the handoff. Always sum
 
 ## Observability Requirements
 
-- Trace every handoff with `task_id`, `from`, `to`, `latency_ms`, `tokens`
-- Tag spans with role/agent name (OpenTelemetry GenAI conventions)
-- Persist intermediate state for replay
-- Alert on loop-count threshold breaches
-
-See `agent-observability` skill.
-
----
+MUST read before selection: [Topology Decision Tree details](references/details-topology-decision-tree-topology-patterns.md#observability-requirements).
 
 ## Skills to Load Alongside
 
-| Need | Skill |
-|------|-------|
-| Per-agent prompts | `prompt-engineering` |
-| Tool design and parallel calls | `tool-use-and-function-calling` |
-| Tracing across agents | `agent-observability` |
-| Stateful workflow | `langgraph` |
-| Guardrails / red-team | `ai-safety-and-red-teaming` |
-| Memory across turns | `agent-memory-systems` |
+MUST read before selection: [Topology Decision Tree details](references/details-topology-decision-tree-topology-patterns.md#skills-to-load-alongside).
+
+## Error Handling
+
+Reject incomplete or schema-invalid handoffs. Stop stalled delegation rather than
+repeat it unchanged; retain verified progress and escalate unresolved ownership conflicts.
+
+## Checklist
+
+Confirm each result meets its contract, failures are visible, ownership stayed
+bounded and no worker response is mistaken for independent verification.
 
 ## References
 
-- OpenAI Agents SDK and Swarm
-- AutoGen v0.4 architecture
-- LangGraph multi-agent guide
-- Google A2A protocol specification
-- Microsoft Agent Framework documentation
+- [Topology Decision Tree details](references/details-topology-decision-tree-topology-patterns.md) - must read before selection.
+- [Agent Observability skill](../agent-observability/SKILL.md)
+- [Tool Use And Function Calling skill](../tool-use-and-function-calling/SKILL.md)
+
+
+- [Source and related-reading index](references/details-source-reference-index.md)

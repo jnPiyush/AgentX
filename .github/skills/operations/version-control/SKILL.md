@@ -48,46 +48,6 @@ Git operation?
  - Pushed commit? -> git revert (never force-push shared branches)
 ```
 
-## Commit Messages
-
-```bash
-# Format
-type(scope): Brief description (50 chars max)
-
-Detailed explanation (wrap at 72 characters)
-
-Types:
-- feat: New feature
-- fix: Bug fix
-- docs: Documentation
-- style: Formatting
-- refactor: Code restructuring
-- test: Adding tests
-- chore: Maintenance
-- perf: Performance improvement
-- ci: CI/CD changes
-- build: Build system changes
-
-# Examples
-feat(auth): Add password reset functionality
-
-Implements password reset via email with time-limited tokens.
-Tokens expire after 1 hour.
-
-Fixes #234
-
----
-
-fix(api): Correct null reference in UserService
-
-Added null check before accessing user properties in
-GetUserProfileAsync method.
-
-Resolves #456
-```
-
----
-
 ## Git Workflow
 
 ```bash
@@ -112,41 +72,6 @@ git rebase -i HEAD~3
 
 # Force push after rebase
 git push origin feature/user-auth --force-with-lease
-```
-
----
-
-## Branching Strategy
-
-### GitFlow
-
-```bash
-# Main branches
-- main/master: Production-ready code
-- develop: Integration branch
-
-# Supporting branches
-- feature/*: New features
-- bugfix/*: Bug fixes
-- hotfix/*: Emergency production fixes
-- release/*: Release preparation
-
-# Example workflow
-git checkout develop
-git pull origin develop
-git checkout -b feature/add-payment
-
-# ... make changes ...
-git push origin feature/add-payment
-# Create PR to develop
-
-# Release
-git checkout -b release/v1.2.0 develop
-# ... version bump, final testing ...
-git checkout main
-git merge release/v1.2.0
-git tag -a v1.2.0 -m "Release version 1.2.0"
-git push origin main --tags
 ```
 
 ---
@@ -178,12 +103,6 @@ git push origin main --tags
 
 ---
 
-## Scripts
-
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| [`setup-hooks.ps1`](scripts/setup-hooks.ps1) | Install Git hooks (pre-commit, commit-msg) for quality enforcement | `./scripts/setup-hooks.ps1 [-Mode native]` |
-
 ## Troubleshooting
 
 | Issue | Solution |
@@ -192,6 +111,26 @@ git push origin main --tags
 | Git hook not running | Check executable permissions (chmod +x), verify .git/hooks/ path |
 | Detached HEAD state | Create a branch from current state: git checkout -b recovery-branch |
 
-## References
+## Workflow
 
-- [Git Config Hooks Versioning](references/git-config-hooks-versioning.md)
+1. Review working tree and classify files.
+2. Run focused validation.
+3. Stage the exact coherent set and inspect the staged diff.
+4. Commit with required references and verify status.
+
+## Verification Checklist
+
+- [ ] Staged diff contains only intended files.
+- [ ] Commit message meets policy.
+- [ ] Hooks and required checks pass.
+- [ ] Post-commit worktree state is understood.
+
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Commit Messages, Branching Strategy](references/details-commit-messages-and-branching-strategy.md) - MUST read before work involving commit messages, branching strategy.
+
+Existing focused references are reused, not duplicated:
+
+- [Git Configuration, Hooks & Semantic Versioning](references/git-config-hooks-versioning.md) - MUST read before applying the focused git configuration, hooks & semantic versioning guidance.

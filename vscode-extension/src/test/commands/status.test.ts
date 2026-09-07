@@ -35,10 +35,10 @@ describe('registerStatusCommand', () => {
     );
 
     // Stub createWebviewPanel
-    sandbox.stub(vscode.window, 'createWebviewPanel' as any).returns({
+    sandbox.stub(vscode.window, 'createWebviewPanel').returns({
       webview: { html: '' },
       dispose: () => { /* noop */ },
-    });
+    } as unknown as vscode.WebviewPanel);
 
     registerStatusCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
   });

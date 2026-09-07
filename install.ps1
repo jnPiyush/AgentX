@@ -318,6 +318,78 @@ function Invoke-InstallCleanup {
  if (Test-Path $ZIPFILE) { Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue }
 }
 
+# region agentx-upgrade-removal
+function Invoke-AgentXUpgradeRemoval {
+ <#
+ .SYNOPSIS
+  Removes AgentX-owned paths ahead of an upgrade, preserving user-owned files.
+
+ .DESCRIPTION
+  SAFETY: `.agentx/` is the only directory AgentX owns outright (user data in it
+  is backed up by the caller before this runs). Every other location is a
+  host-standard shared namespace where users legitimately keep their own files --
+  `.github/instructions`, `.github/skills`, `.github/prompts`, `.claude/commands`,
+  `scripts/`, `packs/`. Those are cleaned per-file from the previous install
+  manifest so that any untracked, user-authored file always survives the upgrade.
+
+ .PARAMETER TrackedPaths
+  Relative paths recorded in the previous install's manifest. These come from
+  the target workspace and are therefore untrusted: rooted paths and any
+  traversal segment are rejected before deletion.
+
+ .PARAMETER WorkspaceRoot
+  Absolute path used to contain manifest-tracked deletions.
+ #>
+ param(
+  [string[]]$TrackedPaths = @(),
+  [string]$WorkspaceRoot = (Resolve-Path .).Path
+ )
+
+ $agentxOwnedPaths = @(
+  ".agentx",
+  ".github/AGENT-PROTOCOL.md",
+  ".github/agent-delegation.md",
+  ".github/agentx-security.yml",
+  ".github/copilot-instructions.md",
+  ".cursor/mcp.json"
+ )
+ foreach ($d in $agentxOwnedPaths) {
+  if (Test-Path $d) { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
+ }
+
+ # Remove manifest-tracked files, leaving every untracked (user-authored) file
+ # intact. Manifest paths come from the target workspace and are therefore
+ # untrusted: reject rooted paths and any traversal segment before deleting.
+ foreach ($tracked in $TrackedPaths) {
+  if ([string]::IsNullOrWhiteSpace($tracked)) { continue }
+  $normalized = ($tracked -replace '\\', '/').Trim()
+  if ([System.IO.Path]::IsPathRooted($normalized)) { continue }
+  if (($normalized -split '/') -contains '..') { continue }
+
+  $candidate = [System.IO.Path]::GetFullPath((Join-Path $WorkspaceRoot $normalized))
+  $containmentRoot = $WorkspaceRoot.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+  if (-not $candidate.StartsWith($containmentRoot, [StringComparison]::OrdinalIgnoreCase)) { continue }
+  if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+   Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
+  }
+ }
+
+ # Prune AgentX customization directories that the per-file cleanup emptied.
+ $prunableDirs = @(
+  ".github/agents", ".github/instructions", ".github/prompts", ".github/skills",
+  ".github/templates", ".github/schemas", ".github/registries", ".github/hooks",
+  ".github/scripts", ".claude/agents", ".claude/commands", ".claude/skills",
+  ".cursor/commands", ".cursor/rules"
+ )
+ foreach ($d in $prunableDirs) {
+  if (-not (Test-Path $d -PathType Container)) { continue }
+  if (-not (Get-ChildItem -LiteralPath $d -Recurse -File -Force -ErrorAction SilentlyContinue)) {
+   Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+  }
+ }
+}
+# endregion agentx-upgrade-removal
+
 try {
 
 # -- Banner ----------------------------------------------
@@ -387,59 +459,10 @@ if ($previousVersion -and $previousVersion -ne "9.2.0") {
    }
   }
 
-  # region agentx-upgrade-removal
-  # Remove AgentX-owned paths only.
-  #
-  # SAFETY: `.agentx/` is the only directory AgentX owns outright (user data in it
-  # was backed up above). Every other location is a host-standard shared namespace
-  # where users legitimately keep their own files -- `.github/instructions`,
-  # `.github/skills`, `.github/prompts`, `.claude/commands`, `scripts/`, `packs/`.
-  # Those are cleaned per-file from the previous install manifest so that any
-  # untracked, user-authored file always survives the upgrade.
-  $agentxOwnedPaths = @(
-   ".agentx",
-   ".github/AGENT-PROTOCOL.md",
-   ".github/agent-delegation.md",
-   ".github/agentx-security.yml",
-   ".github/copilot-instructions.md",
-   ".cursor/mcp.json"
-  )
-  foreach ($d in $agentxOwnedPaths) {
-   if (Test-Path $d) { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
-  }
-
-  # Remove manifest-tracked files, leaving every untracked (user-authored) file
-  # intact. Manifest paths come from the target workspace and are therefore
-  # untrusted: reject rooted paths and any traversal segment before deleting.
-  $workspaceRoot = (Resolve-Path .).Path
-  foreach ($tracked in $trackedPaths) {
-   if ([string]::IsNullOrWhiteSpace($tracked)) { continue }
-   $normalized = ($tracked -replace '\\', '/').Trim()
-   if ([System.IO.Path]::IsPathRooted($normalized)) { continue }
-   if (($normalized -split '/') -contains '..') { continue }
-
-   $candidate = [System.IO.Path]::GetFullPath((Join-Path $workspaceRoot $normalized))
-   $containmentRoot = $workspaceRoot.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
-   if (-not $candidate.StartsWith($containmentRoot, [StringComparison]::OrdinalIgnoreCase)) { continue }
-   if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-    Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
-   }
-  }
-
-  # Prune AgentX customization directories that the per-file cleanup emptied.
-  $prunableDirs = @(
-   ".github/agents", ".github/instructions", ".github/prompts", ".github/skills",
-   ".github/templates", ".github/schemas", ".github/registries", ".github/hooks",
-   ".github/scripts", ".claude/agents", ".claude/commands", ".claude/skills",
-   ".cursor/commands", ".cursor/rules"
-  )
-  foreach ($d in $prunableDirs) {
-   if (-not (Test-Path $d -PathType Container)) { continue }
-   if (-not (Get-ChildItem -LiteralPath $d -Recurse -File -Force -ErrorAction SilentlyContinue)) {
-    Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
-   }
-  }
-  # endregion agentx-upgrade-removal
+  # Delegates to the standalone Invoke-AgentXUpgradeRemoval function (defined
+  # above, inside the `agentx-upgrade-removal` region) so the exact same
+  # source is unit-testable in isolation without re-running this whole script.
+  Invoke-AgentXUpgradeRemoval -TrackedPaths $trackedPaths -WorkspaceRoot (Resolve-Path .).Path
 
   Write-OK "AgentX v$previousVersion files removed (user-owned files preserved)"
 

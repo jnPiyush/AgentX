@@ -9,7 +9,6 @@ compatibility:
   surfaces: ["power-platform-builder", "low-code-builder", "agent-x", "engineer"]
   platforms: ["power-platform", "dataverse", "power-apps", "power-automate", "copilot-studio"]
 ---
-
 # Power Platform Solution Anatomy
 
 > Purpose: let an agent emit a deterministic source tree that round-trips through `pac solution unpack` / `pac solution pack` and imports cleanly into a Dataverse environment.
@@ -21,137 +20,70 @@ compatibility:
 - Reviewing a solution before packaging or import
 - Diffing two solutions semantically (per-component, not raw XML)
 
-## The On-Disk Layout (Canonical)
+## Prerequisites
 
-```
-<solution-root>/
-  src/
-    Other/
-      Solution.xml            # manifest: UniqueName, Version, Publisher, Managed flag, RootComponents
-      Customizations.xml      # global customizations (option sets, security roles, sitemap)
-      Relationships.xml       # cross-entity relationships
-    Entities/
-      <prefix>_<entityname>/  # one folder per Dataverse table
-        Entity.xml
-        FormXml/
-        SavedQueries/
-        Views/
-    CanvasApps/
-      <prefix>_<appname>_<DocumentUri>/
-        CanvasManifest.json
-        Src/                  # *.fx.yaml files (Power Fx source)
-        Assets/
-    Workflows/
-      <prefix>_<name>-FLOW.json   # Power Automate cloud flow
-    Bots/
-      <prefix>_<botname>/         # Copilot Studio agent
-        bot.yaml
-        topics/*.yaml
-        knowledge/*.yaml
-    Roles/                    # security roles
-    WebResources/             # static assets, JS, images
-    OptionSets/               # global choice columns
-    ConnectionReferences/     # named connection bindings
-    EnvironmentVariables/     # config that varies by environment
-```
+Have the `pac` CLI available for round-trip validation, know the publisher and
+customization prefix the solution must use, and know which component types the
+solution will contain before generating folders or manifests.
 
-All folders are optional except `src/Other/Solution.xml` and `src/Other/Customizations.xml`.
+## Decision Guide
 
-## Solution.xml -- Required Fields
+Use this skill when the work is about the solution shell itself: folder layout,
+`Solution.xml`, publisher metadata, root components, connection references,
+versioning, and pack validation. Use sub-skills for the component internals
+once the shell exists. The canonical tree, required fields, and naming tables
+are in [details-solution-structure.md](references/details-solution-structure.md).
 
-| Field | Rule |
-|-------|------|
-| `UniqueName` | Lowercase, alphanumeric, underscores. Must be globally unique within the tenant. Convention: `<publisherprefix>_<short_solution_name>`. |
-| `LocalizedName` | Display name shown in maker portal. |
-| `Description` | One-paragraph summary. |
-| `Version` | Four-part SemVer-ish `MAJOR.MINOR.BUILD.REVISION`. Bump `BUILD` per build, `REVISION` per hotfix. |
-| `Managed` | `0` for unmanaged source (the only form pac solution pack should produce from this tree). |
-| `Publisher` | Inline element with `UniqueName`, `LocalizedNames`, `CustomizationPrefix`, `CustomizationOptionValuePrefix`. |
-| `RootComponents` | One `<RootComponent>` per included component, with `type` and `schemaName`. |
-| `MissingDependencies` | Empty unless the solution layers on another solution. |
+## Core Rules
 
-## Publisher and Prefix Rules
+Generate unmanaged source only, keep one publisher prefix across every custom
+component, and route environment-specific values through environment variables
+or connection references instead of hardcoded tenant data. Every regeneration
+must update solution versioning, declare the real root components, and remain
+packable by `pac solution pack` from the unpacked `src` tree before handoff.
 
-- Pick ONE customization prefix per publisher and stick with it. Example: publisher `agentx` -> prefix `agx`.
-- Every custom Dataverse table, column, choice, flow, app, and bot MUST start with the prefix and an underscore: `agx_issue`, `agx_NotifyOnIssueCreated`.
-- The prefix is permanent. Changing it later forces every component to be recreated.
-- `CustomizationOptionValuePrefix` is a 5-digit integer (e.g. `10000`) used as the high digits for new choice option values.
+## Workflow
 
-## RootComponents Reference
+1. Gather the publisher, prefix, version intent, and component inventory.
+2. Create the canonical unpacked tree and populate `src/Other/Solution.xml`
+   plus its companion files from the structure reference.
+3. Hand off component-specific folders to the relevant Dataverse, flow, canvas,
+   or bot skills, while keeping `connectionreferences.json` ownership in this
+   solution shell and preserving the shared prefix.
+4. Run `pac solution pack`, fix naming or dependency issues, and only then mark
+   the solution shell ready for import.
 
-Common `type` values the builder will emit:
+## Pitfalls
 
-| Type | Component | schemaName format |
-|------|-----------|-------------------|
-| 1 | Entity (table) | `agx_issue` |
-| 2 | Attribute | `agx_issue.agx_severity` |
-| 9 | Option Set | `agx_priority` |
-| 20 | Security Role | role GUID |
-| 29 | Workflow / Cloud Flow | flow GUID |
-| 60 | System Form | form GUID |
-| 61 | Web Resource | `agx_/scripts/foo.js` |
-| 80 | Connection Reference | `agx_sharedoutlook365` |
-| 300 | Canvas App | app GUID |
-| 371 | Environment Variable Definition | `agx_envvar` |
+The most expensive mistakes are mixing managed and unmanaged artifacts,
+hardcoding environment URLs or GUIDs, skipping connection references, and
+changing prefixes after components exist. The full anti-pattern table is in the
+detail reference.
 
-The full enumeration is in the SDK reference; emit only what the solution actually contains.
+## Error Handling
 
-## Component Naming Discipline
+If `pac solution pack` fails, inspect the unpacked tree before changing
+component payloads: check that `src/Other/Solution.xml` exists, root components
+match the files present, names follow the prefix conventions, and required
+companion files were emitted. When an import would bind to a specific
+environment, replace hardcoded values with environment variables or connection
+references instead of retrying the same invalid package.
 
-| Component | Convention | Example |
-|-----------|------------|---------|
-| Table | `<prefix>_<noun_singular>` | `agx_issue` |
-| Column | `<prefix>_<lower_snake>` | `agx_severity` |
-| Choice | `<prefix>_<noun>` | `agx_priority` |
-| Flow | `<prefix>_<VerbObject>` | `agx_NotifyOnIssueCreated` |
-| Canvas App | `<prefix>_<NounApp>` | `agx_IssueTrackerApp` |
-| Copilot Studio bot | `<prefix>_<noun>_copilot` | `agx_issue_copilot` |
-| Connection reference | `<prefix>_<connector_lower>` | `agx_sharedoutlook365` |
+## Checklist
 
-## Managed vs Unmanaged
+- Canonical solution tree exists under `src/`
+- `Solution.xml` declares publisher, prefix, version, managed flag, and real root components
+- Connection references and environment variables are present when flows or environment-specific bindings need them
+- Version was bumped for this regeneration
+- `pac solution pack` succeeds on the emitted tree before handoff
 
-- Generate UNMANAGED source. Always.
-- The maker can export a MANAGED zip from the target environment after importing the unmanaged solution. Generating managed-only artifacts is an anti-pattern for source control.
-- Never check `*_managed.zip` files into the repo. Only the unpacked unmanaged source tree.
+## Why This Is a Skill
 
-## Versioning Rule
-
-The builder MUST bump `Solution.xml/Version` on every regeneration:
-
-- New solution: `1.0.0.0`
-- Same builder run, additive change: bump `REVISION`
-- Schema-breaking change (renamed column, removed table): bump `BUILD` and document in the solution `Description`
-
-## Required Companion Files
-
-For every generated solution the builder MUST also emit:
-
-| File | Purpose |
-|------|---------|
-| `README.md` | Pack + import instructions (the 3-command flow). |
-| `.gitignore` | Exclude `*.zip`, `bin/`, `obj/`, `.pac/`. |
-| `connectionreferences.json` (if flows present) | Symbolic bindings the importer wires up. |
-
-## Round-Trip Validation
-
-Every emitted tree MUST be verifiable with:
-
-```
-pac solution pack --zipfile build/solution.zip --folder ./src --packagetype Unmanaged
-```
-
-If `pac solution pack` fails, the tree is invalid. The builder's loop MUST run this command before declaring done.
-
-## Anti-Patterns
-
-| Anti-Pattern | Why It Fails |
-|--------------|--------------|
-| Mixing managed and unmanaged components | Import order becomes ambiguous; layer conflicts on update. |
-| Hardcoded environment URLs in flows | Breaks on import into a different environment. Use environment variables. |
-| Inline GUIDs in canvas YAML referring to a specific env | Apps won't bind on import. Use connection references. |
-| Skipping `connectionreferences.json` | Importer prompts the user for every connection; bad UX. |
-| Components named without prefix | Import succeeds but customizations cannot be exported back into the solution. |
-| Solution names with hyphens or mixed case | `pac` will sometimes accept and sometimes silently drop; lowercase + underscores only. |
+Power Platform solutions are not just a pile of XML files; they are a strict,
+packable filesystem contract with naming, versioning, dependency, and import
+rules that generic code generation often violates. This skill captures the
+round-trip-safe shell so specialized sub-skills can add components without
+breaking packaging or tenant portability.
 
 ## Skill Outputs
 
@@ -165,7 +97,11 @@ When invoked, this skill helps the calling agent produce:
 
 ## See Also
 
-- `low-code/dataverse-schema` for Entity.xml authoring
-- `low-code/power-automate-flow-json` for Workflows/*-FLOW.json
-- `low-code/pac-cli` for pack/unpack/check commands
-- `architecture/low-code-vs-pro-code` for the higher-level platform-fit decision
+- [low-code/dataverse-schema](../dataverse-schema/SKILL.md) for Entity.xml authoring
+- [low-code/power-automate-flow-json](../power-automate-flow-json/SKILL.md) for Workflows/*-FLOW.json
+- [low-code/pac-cli](../pac-cli/SKILL.md) for pack/unpack/check commands
+- [architecture/low-code-vs-pro-code](../../architecture/low-code-vs-pro-code/SKILL.md) for the higher-level platform-fit decision
+
+## References
+
+- [references/details-solution-structure.md](references/details-solution-structure.md): read when you need the canonical tree, `Solution.xml` field rules, prefix and naming tables, round-trip validation command, or the full anti-pattern table relocated verbatim from the original root.

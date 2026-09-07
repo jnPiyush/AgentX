@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerReviewFindingCommands } from '../../commands/review-findings';
+import { AgentXContext } from '../../agentxContext';
 
 function writeFile(root: string, relativePath: string, content: string): void {
   const filePath = path.join(root, ...relativePath.split('/'));
@@ -82,7 +83,7 @@ describe('registerReviewFindingCommands', () => {
       name: 'AgentX Review Findings',
     } as unknown as vscode.LogOutputChannel);
 
-    registerReviewFindingCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, { workspaceRoot: root } as any);
+    registerReviewFindingCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, { workspaceRoot: root } as unknown as AgentXContext);
 
     await callbacks['agentx.showReviewFindings']!();
 
@@ -92,7 +93,8 @@ describe('registerReviewFindingCommands', () => {
   });
 
   it('promotes a selected review finding through the AgentX issue flow', async () => {
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ findingId: 'FINDING-164-001' } as any);
+    const selectedFinding = { label: 'FINDING-164-001', findingId: 'FINDING-164-001' };
+    sandbox.stub(vscode.window, 'showQuickPick').resolves(selectedFinding);
     sandbox.stub(vscode.window, 'createOutputChannel').returns({
       appendLine: sandbox.stub(),
       clear: sandbox.stub(),
@@ -114,7 +116,7 @@ describe('registerReviewFindingCommands', () => {
     const agentx = {
       workspaceRoot: root,
       runCli: async () => 'Created issue #73: Resolve review finding',
-    } as any;
+    } as unknown as AgentXContext;
 
     registerReviewFindingCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, agentx);
 

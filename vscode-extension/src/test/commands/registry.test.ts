@@ -1,6 +1,7 @@
 import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
+import { AgentXContext } from '../../agentxContext';
 import { registerAgentXCommands } from '../../commands/registry';
 
 describe('registerAgentXCommands', () => {
@@ -18,7 +19,7 @@ describe('registerAgentXCommands', () => {
   it('registers the command surface through the shared facade', () => {
     const context = { subscriptions: [] } as unknown as vscode.ExtensionContext;
 
-    registerAgentXCommands(context, {} as any);
+    registerAgentXCommands(context, {} as unknown as AgentXContext);
 
     const registerCommand = vscode.commands.registerCommand as sinon.SinonStub;
     assert.ok(registerCommand.calledWith('agentx.initializeLocalRuntime'));

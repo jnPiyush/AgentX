@@ -10,7 +10,6 @@ import {
   runCriticalPreCheck,
   runStartupCheck,
   runSilentInstall,
-  PreCheckResult,
 } from '../../commands/setupWizard';
 
 // We need to stub checkAllDependencies at the module level
@@ -86,16 +85,16 @@ describe('setupWizard - runCriticalPreCheck', () => {
   let checkAllStub: sinon.SinonStub;
   let showWarningStub: sinon.SinonStub;
   let showInfoStub: sinon.SinonStub;
-  let showErrorStub: sinon.SinonStub;
-  let execCommandStub: sinon.SinonStub;
   let createTerminalStub: sinon.SinonStub;
 
   beforeEach(() => {
     checkAllStub = sinon.stub(depChecker, 'checkAllDependencies');
     showWarningStub = sinon.stub(vscode.window, 'showWarningMessage');
     showInfoStub = sinon.stub(vscode.window, 'showInformationMessage');
-    showErrorStub = sinon.stub(vscode.window, 'showErrorMessage');
-    execCommandStub = sinon.stub(vscode.commands, 'executeCommand');
+    // Stubbed for side effect only (prevents real error popups / command
+    // execution during the test run); no test currently asserts on these.
+    sinon.stub(vscode.window, 'showErrorMessage');
+    sinon.stub(vscode.commands, 'executeCommand');
     createTerminalStub = sinon.stub(vscode.window, 'createTerminal');
   });
 
@@ -175,31 +174,43 @@ describe('setupWizard - runCriticalPreCheck', () => {
   //   passes -> returned passed=true
   // ---------------------------------------------------------------
   it('should return passed=true after successful re-check', async () => {
-    const unhealthy = makeUnhealthyReport(['Git']);
-    const healthy = makeHealthyReport();
+    const clock = sinon.useFakeTimers({ toFake: ['setTimeout'] });
 
-    // First call: unhealthy. Second call (poll): healthy.
-    checkAllStub.onFirstCall().resolves(unhealthy);
-    checkAllStub.onSecondCall().resolves(healthy);
-    checkAllStub.resolves(healthy);
+    try {
+      const unhealthy = makeUnhealthyReport(['Git']);
+      const healthy = makeHealthyReport();
 
-    // User picks "Install All"
-    showWarningStub.resolves('Install All');
+      // First call: unhealthy. Second call (poll): healthy.
+      checkAllStub.onFirstCall().resolves(unhealthy);
+      checkAllStub.onSecondCall().resolves(healthy);
+      checkAllStub.resolves(healthy);
 
-    // Mock terminal
-    const terminalSendTextSpy = sinon.spy();
-    createTerminalStub.returns({
-      show: sinon.spy(),
-      sendText: terminalSendTextSpy,
-      dispose: sinon.spy(),
-    });
+      // User picks "Install All"
+      showWarningStub.resolves('Install All');
 
-    showInfoStub.resolves(undefined);
+      // Mock terminal
+      const terminalSendTextSpy = sinon.spy();
+      createTerminalStub.returns({
+        show: sinon.spy(),
+        sendText: terminalSendTextSpy,
+        dispose: sinon.spy(),
+      });
 
-    const result = await runCriticalPreCheck(fakeAgentx(), true);
+      showInfoStub.resolves(undefined);
 
-    assert.strictEqual(result.passed, true);
-    assert.strictEqual(result.report.healthy, true);
+      // Start the operation (don't await yet - polling will block on setTimeout)
+      const resultPromise = runCriticalPreCheck(fakeAgentx(), true);
+
+      // Advance timer to trigger the first poll interval (5s)
+      await clock.tickAsync(5_000);
+
+      const result = await resultPromise;
+
+      assert.strictEqual(result.passed, true);
+      assert.strictEqual(result.report.healthy, true);
+    } finally {
+      clock.restore();
+    }
   });
 
   // ---------------------------------------------------------------
@@ -268,7 +279,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
     const call = showWarningStub.getCall(0);
     // In blocking mode the second arg should be the modal options object
     assert.ok(
-      typeof call.args[1] === 'object' && (call.args[1] as any).modal === true,
+      typeof call.args[1] === 'object' && call.args[1].modal === true,
       'blocking mode should pass { modal: true } options'
     );
   });
@@ -402,7 +413,7 @@ describe('setupWizard - runCriticalPreCheck', () => {
 
       let showWarnCallCount = 0;
       const origShowWarning = showWarningStub;
-      origShowWarning.callsFake((...args: unknown[]) => {
+      origShowWarning.callsFake((..._args: unknown[]) => {
         showWarnCallCount++;
         // First call is the "Install All" prompt
         if (showWarnCallCount === 1) { return Promise.resolve('Install All'); }

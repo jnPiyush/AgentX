@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import * as vscode from 'vscode';
 import {
   __setWorkspaceFolders,
   __setConfig,
@@ -20,24 +21,16 @@ function createAgentXRoot(dir: string): void {
 }
 
 /**
- * Create a temporary directory that does NOT look like an AgentX root.
- */
-function createPlainDir(dir: string): void {
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'README.md'), '# Hello\n');
-}
-
-/**
  * Create a fake ExtensionContext.
  */
-function fakeExtensionContext(): any {
+function fakeExtensionContext(): vscode.ExtensionContext {
   return {
     subscriptions: [],
     extensionPath: __dirname,
     extensionUri: { fsPath: __dirname },
-    globalState: { get: () => undefined, update: async () => {} },
-    workspaceState: { get: () => undefined, update: async () => {} },
-  };
+    globalState: { get: () => undefined, update: async () => { /* noop */ } },
+    workspaceState: { get: () => undefined, update: async () => { /* noop */ } },
+  } as unknown as vscode.ExtensionContext;
 }
 
 describe('AgentXContext', () => {
@@ -207,7 +200,7 @@ describe('AgentXContext', () => {
           get: () => stored,
           update: async (_key: string, value: unknown) => { stored = value; },
         },
-      });
+      } as unknown as vscode.ExtensionContext);
 
       await ctx.setPendingClarification({
         sessionId: 'session-1',
@@ -552,7 +545,7 @@ describe('AgentXContext', () => {
       const agents = await ctx.listAgents();
 
       assert.equal(agents.length, 2);
-      const fileNames = agents.map((a: any) => a.fileName).sort();
+      const fileNames = agents.map((a) => a.fileName).sort();
       assert.deepEqual(fileNames, ['alpha.agent.md', 'beta.agent.md']);
     });
 

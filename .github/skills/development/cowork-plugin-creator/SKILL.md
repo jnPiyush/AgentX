@@ -35,35 +35,6 @@ Use [Cowork Skill Creator](../cowork-skill-creator/SKILL.md) instead when the de
 * `color.png` at 192x192 pixels and `outline.png` at 32x32 pixels
 * An HTTPS MCP endpoint and its tool-description file when a connector is required
 
-## Rationalization Table
-
-| Rationalization | Reality |
-|-----------------|---------|
-| "One large skill is simpler than several." | Cowork routes on skill descriptions; broad skills collide and misfire. Split by distinct stage, task, or domain. |
-| "The manifest can list extra fields for clarity." | The v1.28 schema sets `additionalProperties: false`; any undocumented field fails upload. |
-| "The folder name is cosmetic." | The frontmatter `name` must match the folder leaf exactly; mismatch is the most common skill failure. |
-| "Icons can be any square image." | `color.png` must be 192x192 and `outline.png` must be 32x32, and both must match the manifest references. |
-| "The connector tool list lives on the server." | Every `remoteMcpServer` requires `mcpToolDescription.file`, and that file must ship inside the zip. |
-| "Zipping the plugin folder is enough." | A wrapper directory breaks upload. `manifest.json` must sit at the archive root. |
-| "Credentials in the skill make testing easier." | Secrets never belong in the package; use `agentConnectors` authorization with a vault `referenceId`. |
-| "Every skill folder in the tree gets picked up." | Only folders listed in `agentSkills` ship as skills. Unregistered stage folders are dead weight in the archive. |
-| "The folder name from the source pipeline is fine as-is." | Names must be lowercase kebab-case. `BE-sow-generator` fails; `sow-generator` passes. |
-| "The skill can install what it needs at runtime." | Author for a managed container: assume no terminal and no package installation. Ship instructions and templates, not setup steps. |
-| "Placeholder and repo files must be cleaned up by hand." | The packager drops `.gitkeep`, version-control metadata, and build caches from both the archive and the companion count. |
-
-## Decision Tree
-
-```text
-Cowork plugin requested?
-+- Single workflow, no manifest or connector needed? -> Use cowork-skill-creator instead.
-+- Business capability with one or more skills or connectors?
-|  +- Missing capability, skills, or owner? -> Ask only for the missing essentials.
-|  +- Needs external data or actions? -> Add an MCP connector plus its tool-description file.
-|  +- Instruction-only analysis? -> Ship a skills-only package with no connector.
-|  - Validate and package -> Return the zip path.
-- Existing package supplied? -> Review, repair, validate, and repackage it.
-```
-
 ## Core Rules
 
 1. Define the business capability first, then the skill inventory. Each skill owns a distinct stage, task, or domain and defers explicitly at its boundaries.
@@ -73,80 +44,6 @@ Cowork plugin requested?
 5. Never embed passwords, API keys, client secrets, personal data, or unapproved customer data. Route credentials through connector authorization.
 6. Require user review before sending, publishing, deleting, approving, or otherwise taking consequential action.
 7. Author for a managed container: assume no terminal, no package installation, and no outbound calls except through a declared connector. A skill that needs external data gets an `agentConnectors` entry, not a setup script. Treat this as the authoring floor even where a host is more permissive.
-
-## Multi-Stage Pipeline Plugins
-
-When the capability is a sequential pipeline rather than a set of independent tasks, model it as one orchestrator skill plus one skill per stage.
-
-* The orchestrator owns the stage order, the shared task list, and the handoff between stages. It never performs stage work itself.
-* Each stage skill states the artifact it requires from the previous stage and the artifact it produces for the next one.
-* Each stage ends at a gate: the orchestrator confirms the expected artifact exists before advancing, and stops with a named blocker when it does not.
-* Every stage folder, including the orchestrator, is registered in `agentSkills`. A stage that is present but unregistered never runs.
-* Shared templates and prompts live inside the skill folder that owns them. Copying the same asset into every stage folder burns the 20-file companion budget for no benefit.
-
-Split a stage into its own skill when it has a distinct trigger, a distinct output artifact, or a reviewer gate. Keep it inline when it is a step of the same output.
-
-## Authoring Workflow
-
-1. Capture the capability, skill inventory, inputs, outputs, and connector needs using [Cowork Plugin Authoring Guide](references/cowork-plugin-authoring-guide.md).
-2. Create the package directory and one folder per skill under `skills/`.
-3. Author each `SKILL.md` from [Cowork Plugin Skill Template](assets/SKILL.template.md), replacing every placeholder with workflow-specific content.
-4. Add `manifest.json` from [Cowork Plugin Manifest Template](assets/manifest.template.json) and fill in identity, developer, icons, `agentSkills`, and any `agentConnectors`.
-5. Add `color.png` and `outline.png` at the required dimensions and match their names in `icons`.
-6. For each connector, add the tool-description file under `tools/` and reference it from `mcpToolDescription.file`.
-7. Remove secrets, personal data, customer-sensitive data, TODO markers, and unsupported claims.
-8. Package the directory:
-
-```powershell
-./.github/skills/development/cowork-plugin-creator/scripts/New-CoworkPluginPackage.ps1 `
-  -PluginPath artifacts/cowork-plugins/architecture-assistant `
-  -OutputPath artifacts/cowork-plugins/architecture-assistant.zip
-```
-
-9. Return the absolute or workspace-relative zip path. Do not stop after showing the file contents.
-
-## Package Contract
-
-```text
-manifest.json
-color.png
-outline.png
-skills/
-  <skill-name>/
-    SKILL.md
-    references/   (optional)
-    scripts/      (optional)
-tools/            (required only when a connector declares mcpToolDescription)
-```
-
-`manifest.json` must be at the archive root. Do not wrap these entries in an additional parent directory.
-
-The packager excludes `.gitkeep`, `.gitignore`, `.gitattributes`, `.DS_Store`, `Thumbs.db`, and the `.git`, `.svn`, `.hg`, `__pycache__`, `node_modules`, and `.venv` directories from the archive and from the companion-file count, so a scaffolded, source-controlled plugin tree packages without manual cleanup. Every other file under the plugin directory ships as-is.
-
-## Error Handling
-
-* Missing capability or skill inventory: ask for the smallest set of missing fields
-* Skill name and folder mismatch: rename the folder or correct the frontmatter before packaging
-* Missing icons or wrong dimensions: regenerate the icons rather than shipping placeholders
-* Connector without a packaged tool-description file: add the file under `tools/` or remove the connector
-* Duplicate skill name across two `agentSkills` folders: rename one folder and its frontmatter `name`; identically named skills make routing ambiguous
-* Skill folder present but not in `agentSkills`: register it or delete it rather than shipping an inert folder
-* Uppercase or underscored folder name carried over from a source pipeline: rename to lowercase kebab-case and update the frontmatter `name` to match
-* Companion count above 20: move the overflow into the stage skill that actually uses it, or consolidate several thin reference files into one
-* Sensitive information: remove it and request a sanitized substitute
-* Packaging failure: report the exact validation error and preserve the source directory for repair
-* Symbolic link or junction inside the source tree: replace it with real files; the packager rejects links everywhere it traverses, skipping excluded noise names before that check, and on Windows it also identity-checks each archived file through its open handle, while on Linux and macOS the check is path-based only, so package from a tree no other user can modify concurrently
-
-## Anti-Patterns
-
-* Returning only a manifest draft when the user requested an uploadable package
-* Bundling one broad skill that claims every scenario in the domain
-* Adding manifest fields outside the supported schema
-* Reusing vague or duplicate connector tool names that make routing ambiguous
-* Referencing skill folders that are not present in the package
-* Shipping stage folders that no `agentSkills` entry registers
-* Duplicating the same template into every stage folder until the companion limit trips
-* Embedding credentials instead of using connector authorization
 
 ## Checklist
 
@@ -163,3 +60,34 @@ The packager excludes `.gitkeep`, `.gitignore`, `.gitattributes`, `.DS_Store`, `
 * [ ] No secrets, credentials, personal data, or customer-sensitive data are embedded
 * [ ] Package script succeeds and the archive has `manifest.json` at its root
 * [ ] Final response links to the generated `.zip`
+## Workflow
+
+1. Confirm capability and manifest inputs.
+2. Create the canonical directory tree and components.
+3. Validate JSON, paths, icons, and connector declarations.
+4. Build the upload archive and inspect its entries.
+
+## Error Handling
+
+- Missing required input: stop before scaffolding an invalid package.
+- Manifest/path mismatch: correct the source tree, not the validator.
+- Packaging failure: retain the unpacked source and report the exact contract violation.
+
+## Rationalization Table
+
+| Temptation | Why reject it |
+|------------|---------------|
+| invent tenant IDs, endpoints, or capabilities. | Keep manifest identifiers and referenced paths consistent. |
+| treat a successfully created ZIP as package validation. | Choose skill-only, connector-only, or mixed packaging from the requested capabilities; use multi-stage definitions only when stages have distinct contracts. |
+
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Rationalization Table, Decision Tree, Multi-Stage Pipeline Plugins](references/details-rationalization-table-and-multi-stage-pipeline-plugins.md) - MUST read before work involving rationalization table, decision tree, multi-stage pipeline plugins.
+- [Authoring Workflow through Anti-Patterns](references/details-authoring-workflow-and-anti-patterns.md) - MUST read before work involving authoring workflow through anti-patterns.
+
+Existing focused references are reused, not duplicated:
+
+- [Cowork Plugin Authoring Guide](references/cowork-plugin-authoring-guide.md) - MUST read before applying the focused cowork plugin authoring guide guidance.
+- [split-cowork-plugin-review-and-release](references/split-cowork-plugin-review-and-release.md) - MUST read before applying the focused split-cowork-plugin-review-and-release guidance.

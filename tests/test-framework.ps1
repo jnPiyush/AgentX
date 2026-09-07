@@ -7,6 +7,7 @@ $ErrorActionPreference = "Continue"
 $script:pass = 0
 $script:fail = 0
 $script:root = Split-Path $PSScriptRoot -Parent
+$script:pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
 
 function Assert-True($condition, $message) {
  if ($condition) {
@@ -40,6 +41,353 @@ function Assert-FileNotContains($path, $pattern, $label) {
  Assert-True ($content -notmatch $pattern) "$label"
  } else {
  Assert-True $false "$label (file not found: $path)"
+ }
+}
+
+<#
+.SYNOPSIS
+  Start a process with individually-quoted arguments, drain stdout/stderr
+  concurrently, and bound both the exit wait and the stream drain so this
+  low-level runner cannot itself hang.
+
+.DESCRIPTION
+  ArgumentList.Add() quotes each argument independently; Start-Process
+  -ArgumentList instead joins the array with a bare space, so one argument
+  containing a space (e.g. this repo's own root under
+  "C:\Piyush - Personal\...") silently splits into two.
+
+  Draining stdout/stderr as async tasks before WaitForExit avoids the
+  sequential-read deadlock (one stream can fill its OS pipe buffer while
+  the other is still being read to completion).
+
+  WaitForExit returning true only proves the tracked process itself
+  exited: a descendant that inherited the redirected handles (common when
+  a child spawns its own child without redirecting it) can keep the pipe
+  open, so ReadToEndAsync would still block past this point. The drain
+  below is therefore bounded by what remains of the same deadline instead
+  of assumed to finish instantly.
+
+  Kill($true) tears down the tracked process's descendant tree while it is
+  still alive. After it exits, report a drain timeout without discovering
+  or killing processes by a potentially reused parent PID.
+#>
+function Invoke-BoundedChildProcess {
+ param(
+ [Parameter(Mandatory)][string]$FilePath,
+ [string[]]$ArgumentList = @(),
+ [string]$WorkingDirectory = $script:root,
+ [int]$TimeoutSeconds = 300
+ )
+
+ $psi = [System.Diagnostics.ProcessStartInfo]::new()
+ $psi.FileName = $FilePath
+ $psi.WorkingDirectory = $WorkingDirectory
+ $psi.RedirectStandardOutput = $true
+ $psi.RedirectStandardError = $true
+ $psi.UseShellExecute = $false
+ $psi.CreateNoWindow = $true
+ foreach ($argument in $ArgumentList) { $psi.ArgumentList.Add($argument) }
+
+ $deadline = [System.Diagnostics.Stopwatch]::StartNew()
+ $process = [System.Diagnostics.Process]::Start($psi)
+ try {
+ # Kick off both drains as async tasks before any blocking wait so a full
+ # pipe on either stream can never stall the child.
+ $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+ $stderrTask = $process.StandardError.ReadToEndAsync()
+ $exited = $process.WaitForExit($TimeoutSeconds * 1000)
+ if (-not $exited) {
+ $trackedProcessId = $process.Id
+ try { $process.Kill($true) } catch { Write-Warning "Failed to stop timed-out process tree (PID ${trackedProcessId}): $_" }
+ return [pscustomobject]@{
+ TimedOut  = $true
+ ProcessId = $trackedProcessId
+ ExitCode  = $null
+ StdOut    = if ($stdoutTask.IsCompleted) { $stdoutTask.Result } else { '<stdout still draining>' }
+ StdErr    = if ($stderrTask.IsCompleted) { $stderrTask.Result } else { '<stderr still draining>' }
+ }
+ }
+
+ # Bound the drain by whatever remains of the original deadline: a
+ # descendant holding the inherited handle open must not be able to
+ # block this call past the timeout it was given.
+ $trackedProcessId = $process.Id
+ $remainingMs = [Math]::Max(0, ($TimeoutSeconds * 1000) - $deadline.ElapsedMilliseconds)
+ $drained = [System.Threading.Tasks.Task]::WaitAll(@($stdoutTask, $stderrTask), $remainingMs)
+ if (-not $drained) {
+ return [pscustomobject]@{
+ TimedOut  = $true
+ ProcessId = $trackedProcessId
+ ExitCode  = $process.ExitCode
+ StdOut    = if ($stdoutTask.IsCompleted) { $stdoutTask.Result } else { '<stdout still draining: a descendant likely holds the inherited handle open>' }
+ StdErr    = if ($stderrTask.IsCompleted) { $stderrTask.Result } else { '<stderr still draining: a descendant likely holds the inherited handle open>' }
+ }
+ }
+ return [pscustomobject]@{
+ TimedOut  = $false
+ ProcessId = $trackedProcessId
+ ExitCode  = $process.ExitCode
+ StdOut    = $stdoutTask.Result
+ StdErr    = $stderrTask.Result
+ }
+ } finally {
+ $process.Dispose()
+ }
+}
+
+<#
+.SYNOPSIS
+  Run a sub-test *-behavior.ps1 script with a wall-clock bound so one hung
+  sub-test cannot stall the whole framework run.
+
+.DESCRIPTION
+  This framework chains 20+ independent sub-test scripts; a single latent
+  hang (pre-commit-gate-behavior.ps1's stdout/stderr deadlock once did this)
+  blocked the whole suite with no diagnostic. Announces the sub-test before
+  starting it, runs it via Invoke-BoundedChildProcess, and records a
+  PASS/FAIL/TIMEOUT result.
+#>
+function Invoke-BoundedSubTest {
+ param(
+ [Parameter(Mandatory)][string]$RelativeScriptPath,
+ [string]$Label,
+ [string[]]$HostArguments = @(),
+ [string[]]$ExtraArguments = @(),
+ [int]$TimeoutSeconds = 300
+ )
+
+ $scriptPath = Join-Path $script:root $RelativeScriptPath
+ Write-Host " [RUNNING] $Label..." -ForegroundColor DarkGray
+ $result = Invoke-BoundedChildProcess -FilePath $script:pwshPath `
+ -ArgumentList (@('-NoProfile') + $HostArguments + @('-File', $scriptPath) + $ExtraArguments) `
+ -TimeoutSeconds $TimeoutSeconds
+
+ if ($result.TimedOut) {
+ Write-Host ($result.StdOut + $result.StdErr)
+ Write-Host " [TIMEOUT] $Label did not finish its process and output capture within ${TimeoutSeconds}s (PID $($result.ProcessId))" -ForegroundColor Red
+ Assert-True $false $Label
+ return
+ }
+ if ($result.ExitCode -ne 0) { Write-Host ($result.StdOut + $result.StdErr) }
+ Assert-True ($result.ExitCode -eq 0) $Label
+}
+
+<#
+.SYNOPSIS
+  Regression coverage for the argument-splitting bug that used to break every
+  bounded sub-test invocation whenever the repository itself was checked out
+  under a path containing a space.
+
+.DESCRIPTION
+  Start-Process -ArgumentList joins its array with a bare space, so a single
+  argument containing a space silently splits into two; this repo's own
+  root here ("C:\Piyush - Personal\...") already contains one, so the
+  previous implementation failed every sub-test invocation with pwsh exit
+  code 64. This manufactures its own spaced script path (so the regression
+  is caught regardless of the checkout path) and also passes an argument
+  that itself contains a space, asserting the exact value received back to
+  prove ArgumentList.Add() -- not just path quoting -- keeps it intact.
+#>
+function Test-BoundedChildProcessHandlesSpacedPath {
+ $fixtureDir = Join-Path ([IO.Path]::GetTempPath()) ("agentx bounded subtest fixture {0}" -f [guid]::NewGuid().ToString('N'))
+ New-Item -ItemType Directory -Path $fixtureDir -Force | Out-Null
+ try {
+ $fixtureScript = Join-Path $fixtureDir "spaced script.ps1"
+ Set-Content -LiteralPath $fixtureScript -Value 'param([string]$Marker) Write-Output "received:$Marker"; exit 0' -Encoding utf8
+ $spacedArgument = 'value with spaces'
+ $result = Invoke-BoundedChildProcess -FilePath $script:pwshPath `
+ -ArgumentList @('-NoProfile', '-File', $fixtureScript, $spacedArgument) `
+ -TimeoutSeconds 30
+ Assert-True (-not $result.TimedOut) "bounded child process does not time out on a path containing a space"
+ Assert-True ($result.ExitCode -eq 0) "bounded child process exits zero for a script whose own path contains a space"
+ Assert-True ($result.StdOut.Trim() -eq "received:$spacedArgument") "bounded child process receives a space-containing argument intact and unsplit (expected 'received:$spacedArgument', got '$($result.StdOut.Trim())')"
+ Set-Content -LiteralPath $fixtureScript -Value @'
+param([string]$Marker)
+if ($Marker -ne 'value with spaces' -or $args.Count -ne 0) {
+    throw 'Host options leaked into script arguments or script arguments were split.'
+}
+$promptRejected = $false
+try {
+    Read-Host 'This prompt must be rejected by the noninteractive host' -ErrorAction Stop | Out-Null
+} catch [System.Management.Automation.PSInvalidOperationException] {
+    if ($_.FullyQualifiedErrorId -ne 'InvalidOperation,Microsoft.PowerShell.Commands.ReadHostCommand') { throw }
+    $promptRejected = $true
+}
+if (-not $promptRejected) { throw 'The PowerShell host was interactive.' }
+'@ -Encoding utf8
+ Invoke-BoundedSubTest -RelativeScriptPath ([IO.Path]::GetRelativePath($script:root, $fixtureScript)) `
+ -Label "bounded sub-test applies host options before the script and preserves script arguments" `
+ -HostArguments @('-NonInteractive') -ExtraArguments @($spacedArgument) -TimeoutSeconds 30
+ } finally {
+ Remove-Item -LiteralPath $fixtureDir -Recurse -Force -ErrorAction SilentlyContinue
+ }
+}
+
+<#
+.SYNOPSIS
+  Regression coverage for the stdout/stderr deadlock a sequential
+  "read stdout to end, then read stderr" implementation would hit.
+
+.DESCRIPTION
+  Spawns a real child that writes far more to BOTH stdout and stderr than a
+  single OS pipe buffer can hold. A sequential drain would deadlock as soon
+  as the stream read second fills its buffer while the child blocks on that
+  write and the parent is still blocked on the other stream.
+  Invoke-BoundedChildProcess must complete well within its bound and return
+  both streams in full, proving the concurrent drain -- not merely a
+  generous timeout -- is what prevents the hang.
+#>
+function Test-BoundedChildProcessDrainsLargeOutputConcurrently {
+ # ~1 MB on each stream, comfortably larger than any OS pipe buffer.
+ $command = '$line = "x" * 500; for ($i = 0; $i -lt 2000; $i++) { Write-Output $line; [Console]::Error.WriteLine($line) }'
+ $sw = [System.Diagnostics.Stopwatch]::StartNew()
+ try {
+ $result = Invoke-BoundedChildProcess -FilePath $script:pwshPath `
+ -ArgumentList @('-NoProfile', '-NonInteractive', '-Command', $command) `
+ -TimeoutSeconds 30
+ $sw.Stop()
+ Assert-True ($sw.Elapsed.TotalSeconds -lt 30) "bounded child process with large stdout+stderr completes without hitting the bounded timeout"
+ Assert-True (-not $result.TimedOut -and $result.ExitCode -eq 0) "bounded child process with large stdout+stderr exits zero"
+ Assert-True ($result.StdOut.Length -ge 1000000) "bounded child process stdout is fully drained, not truncated (captured $($result.StdOut.Length) bytes)"
+ Assert-True ($result.StdErr.Length -ge 1000000) "bounded child process stderr is fully drained, not truncated (captured $($result.StdErr.Length) bytes)"
+ } catch {
+ $sw.Stop()
+ Assert-True $false "bounded child process with large stdout+stderr must not hang or be killed by the bounded timeout: $_"
+ }
+}
+
+<#
+.SYNOPSIS
+  Regression coverage proving the child's real exit code is surfaced, not
+  masked by an argument-parsing failure or a fixed sentinel value.
+#>
+function Test-BoundedChildProcessSurfacesNonZeroExit {
+ $result = Invoke-BoundedChildProcess -FilePath $script:pwshPath `
+ -ArgumentList @('-NoProfile', '-NonInteractive', '-Command', 'exit 7') `
+ -TimeoutSeconds 30
+ Assert-True (-not $result.TimedOut) "bounded child process does not time out on a fast nonzero-exit script"
+ Assert-True ($result.ExitCode -eq 7) "bounded child process surfaces the child's real nonzero exit code (got $($result.ExitCode))"
+}
+
+<#
+.SYNOPSIS
+  Regression coverage for the orphaned-descendant bug a parent-PID-only kill
+  (Stop-Process -Id) would leave behind.
+
+.DESCRIPTION
+  Starts a spawner script that launches its own long-sleeping grandchild
+  process and then hangs itself, so the bounded call times out on the
+  spawner. Kill($true) must tear down the whole tree: after the timeout,
+  the grandchild process -- whose pid the spawner records to a file before
+  the spawner hangs -- must no longer exist. A kill that only stops the
+  tracked top-level pid would leave that grandchild running indefinitely.
+#>
+function Test-BoundedChildProcessKillsDescendantTreeOnTimeout {
+ $fixtureDir = Join-Path ([IO.Path]::GetTempPath()) ("agentx bounded subtest tree {0}" -f [guid]::NewGuid().ToString('N'))
+ New-Item -ItemType Directory -Path $fixtureDir -Force | Out-Null
+ try {
+ $pidFile = Join-Path $fixtureDir 'grandchild.pid'
+ $grandchildScript = Join-Path $fixtureDir 'grandchild.ps1'
+ $spawnerScript = Join-Path $fixtureDir 'spawner.ps1'
+ Set-Content -LiteralPath $grandchildScript -Value @'
+param([string]$PidFile)
+Set-Content -LiteralPath $PidFile -Value $PID
+Start-Sleep -Seconds 120
+'@ -Encoding utf8
+ Set-Content -LiteralPath $spawnerScript -Value @'
+param([string]$PidFile, [string]$GrandchildScript)
+$psi = [System.Diagnostics.ProcessStartInfo]::new()
+$psi.FileName = (Get-Process -Id $PID).Path
+$psi.ArgumentList.Add('-NoProfile')
+$psi.ArgumentList.Add('-File')
+$psi.ArgumentList.Add($GrandchildScript)
+$psi.ArgumentList.Add($PidFile)
+$psi.UseShellExecute = $false
+[void][System.Diagnostics.Process]::Start($psi)
+Start-Sleep -Seconds 120
+'@ -Encoding utf8
+
+ $result = Invoke-BoundedChildProcess -FilePath $script:pwshPath `
+ -ArgumentList @('-NoProfile', '-File', $spawnerScript, $pidFile, $grandchildScript) `
+ -TimeoutSeconds 5
+
+ Assert-True $result.TimedOut "bounded child process reports timeout for a deliberately hung spawner"
+
+ $grandchildPid = $null
+ $deadline = (Get-Date).AddSeconds(10)
+ while (-not $grandchildPid -and (Get-Date) -lt $deadline) {
+ if (Test-Path -LiteralPath $pidFile) { $grandchildPid = (Get-Content -LiteralPath $pidFile -Raw).Trim() }
+ else { Start-Sleep -Milliseconds 200 }
+ }
+ Assert-True ([bool]$grandchildPid) "spawner's grandchild recorded its pid before the spawner was killed"
+ if ($grandchildPid) {
+ $stillRunning = $null
+ $stillRunning = Get-Process -Id ([int]$grandchildPid) -ErrorAction SilentlyContinue
+ Assert-True (-not $stillRunning) "bounded timeout kill tears down the spawner's descendant tree, not only the tracked top-level pid (grandchild PID $grandchildPid)"
+ }
+ } finally {
+ # Belt-and-suspenders: if Kill($true) somehow failed the assertion above,
+ # do not leave a 120s sleeper running regardless.
+ if ($grandchildPid) { Stop-Process -Id ([int]$grandchildPid) -Force -ErrorAction SilentlyContinue }
+ Remove-Item -LiteralPath $fixtureDir -Recurse -Force -ErrorAction SilentlyContinue
+ }
+}
+
+<#
+.SYNOPSIS
+ Regression coverage proving a descendant that inherits the redirected
+ stdout/stderr handles cannot make this call hang past its own timeout.
+
+.DESCRIPTION
+ A spawner starts a grandchild without redirecting the grandchild's own
+ streams, so the grandchild inherits the spawner's (i.e. the tracked
+ process's) stdout/stderr handles, then the spawner exits immediately.
+ WaitForExit therefore returns true almost instantly, but the pipes stay
+ open -- and ReadToEndAsync would still block -- until the sleeping
+ grandchild also exits and releases its inherited copy. This proves the
+ call still reports TimedOut and returns near its own bound instead of
+ blocking for the grandchild's full sleep.
+#>
+function Test-BoundedChildProcessDetectsInheritedHandleHang {
+ $fixtureDir = Join-Path ([IO.Path]::GetTempPath()) ("agentx bounded subtest handle {0}" -f [guid]::NewGuid().ToString('N'))
+ New-Item -ItemType Directory -Path $fixtureDir -Force | Out-Null
+ $grandchildPidFile = Join-Path $fixtureDir 'grandchild.pid'
+ $grandchildPid = $null
+ try {
+ $spawnerScript = Join-Path $fixtureDir 'spawner.ps1'
+ # No redirection on the grandchild's own ProcessStartInfo: it inherits
+ # the spawner's (tracked process's) stdout/stderr handles. The spawner
+ # exits right after starting it -- no sleep of its own.
+ Set-Content -LiteralPath $spawnerScript -Value @'
+param([string]$PidFile)
+$psi = [System.Diagnostics.ProcessStartInfo]::new()
+$psi.FileName = (Get-Process -Id $PID).Path
+$psi.ArgumentList.Add('-NoProfile')
+$psi.ArgumentList.Add('-Command')
+$psi.ArgumentList.Add("Set-Content -LiteralPath '$PidFile' -Value `$PID; Start-Sleep -Seconds 60")
+$psi.UseShellExecute = $false
+[void][System.Diagnostics.Process]::Start($psi)
+'@ -Encoding utf8
+
+ $sw = [System.Diagnostics.Stopwatch]::StartNew()
+ $result = Invoke-BoundedChildProcess -FilePath $script:pwshPath `
+ -ArgumentList @('-NoProfile', '-File', $spawnerScript, $grandchildPidFile) `
+ -TimeoutSeconds 8
+ $sw.Stop()
+
+ $deadline = (Get-Date).AddSeconds(10)
+ while (-not $grandchildPid -and (Get-Date) -lt $deadline) {
+ if (Test-Path -LiteralPath $grandchildPidFile) { $grandchildPid = (Get-Content -LiteralPath $grandchildPidFile -Raw).Trim() }
+ else { Start-Sleep -Milliseconds 200 }
+ }
+
+ Assert-True ($sw.Elapsed.TotalSeconds -lt 20) "bounded child process does not block past its own timeout when a descendant inherits its stdout/stderr handles (elapsed $([Math]::Round($sw.Elapsed.TotalSeconds, 1))s, bound 8s)"
+ Assert-True $result.TimedOut "bounded child process reports TimedOut instead of hanging when a live descendant still holds the inherited stream handles open"
+ } finally {
+ if ($grandchildPid -and (Get-Process -Id ([int]$grandchildPid) -ErrorAction SilentlyContinue)) {
+ Stop-Process -Id ([int]$grandchildPid) -Force -ErrorAction SilentlyContinue
+ }
+ Remove-Item -LiteralPath $fixtureDir -Recurse -Force -ErrorAction SilentlyContinue
  }
 }
 
@@ -180,6 +528,14 @@ Assert-FileContains ".github/agents/power-platform-builder.agent.md" "MUST NOT c
 Write-Host ""
 Write-Host " 5. CLI" -ForegroundColor White
 
+# Prove the bounded sub-test process runner itself is trustworthy before
+# relying on its PASS/FAIL verdicts for the 25+ real sub-tests below.
+Test-BoundedChildProcessHandlesSpacedPath
+Test-BoundedChildProcessDrainsLargeOutputConcurrently
+Test-BoundedChildProcessSurfacesNonZeroExit
+Test-BoundedChildProcessKillsDescendantTreeOnTimeout
+Test-BoundedChildProcessDetectsInheritedHandleHang
+
 Assert-FileExists ".agentx/agentx.ps1" "CLI launcher exists"
 Assert-FileExists ".agentx/agentx-cli.ps1" "CLI implementation exists"
 Assert-FileExists ".agentx/agentx.sh" "Bash CLI launcher exists"
@@ -224,155 +580,65 @@ Assert-FileExists "tests/harness-distribution-behavior.ps1" "Harness distributio
 Assert-FileExists "tests/installer-license-behavior.ps1" "Installer license behavior test script"
 Assert-FileExists "tests/doc-drift-behavior.ps1" "Documentation drift behavior test script"
 Assert-FileExists "tests/doc-drift-ci-behavior.ps1" "Documentation drift CI execution test script"
+Assert-FileExists "tests/template-content-behavior.ps1" "Template content behavior test script"
 
-$providerBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/provider-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $providerBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Provider CLI behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/provider-behavior.ps1" -Label "Provider CLI behavior tests pass"
 
-$taskBundleBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/task-bundle-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $taskBundleBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Task bundle CLI behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/task-bundle-behavior.ps1" -Label "Task bundle CLI behavior tests pass"
 
-$boundedParallelBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/bounded-parallel-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $boundedParallelBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Bounded parallel CLI behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/bounded-parallel-behavior.ps1" -Label "Bounded parallel CLI behavior tests pass"
 
-$harnessAuditBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/harness-audit-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $harnessAuditBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Harness audit CLI behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/harness-audit-behavior.ps1" -Label "Harness audit CLI behavior tests pass"
 
-$agenticRunnerBehaviorTempFile = [System.IO.Path]::GetTempFileName()
-& pwsh -NoProfile -File (Join-Path $script:root "tests/agentic-runner-behavior.ps1") *> $agenticRunnerBehaviorTempFile
-$agenticRunnerBehaviorExitCode = $LASTEXITCODE
-if ($agenticRunnerBehaviorExitCode -ne 0) {
-    Get-Content $agenticRunnerBehaviorTempFile | Write-Host
-}
-Remove-Item $agenticRunnerBehaviorTempFile -ErrorAction SilentlyContinue
-Assert-True ($agenticRunnerBehaviorExitCode -eq 0) "Agentic runner behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/agentic-runner-behavior.ps1" -Label "Agentic runner behavior tests pass"
 
-$sprintDiscoverBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/sprint-discover-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $sprintDiscoverBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Sprint/discover CLI behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/sprint-discover-behavior.ps1" -Label "Sprint/discover CLI behavior tests pass"
 
-$loopParityBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/loop-parity-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $loopParityBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Loop parity behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/loop-parity-behavior.ps1" -Label "Loop parity behavior tests pass"
 
-$preCommitGateBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/pre-commit-gate-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $preCommitGateBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Pre-commit gate behavior tests pass"
+# This sub-test drives the real CLI through several sequential invocations
+# and spawns bash + git per fixture; it is the heaviest sub-test in the
+# framework, so it gets a wider bound than the shared default.
+# The successful standalone run spanned 903s; allow headroom without unbounding the suite.
+Invoke-BoundedSubTest -RelativeScriptPath "tests/pre-commit-gate-behavior.ps1" -Label "Pre-commit gate behavior tests pass" -TimeoutSeconds 1200
 
-$tokenBudgetBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/token-budget-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $tokenBudgetBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Token budget behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/token-budget-behavior.ps1" -Label "Token budget behavior tests pass"
 
-$tokenCiResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/token-budget-ci-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) { Write-Host $tokenCiResult }
-Assert-True ($LASTEXITCODE -eq 0) "Token budget CI execution tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/token-budget-ci-behavior.ps1" -Label "Token budget CI execution tests pass"
 
-$modelRouteBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/model-route-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $modelRouteBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Model route behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/model-route-behavior.ps1" -Label "Model route behavior tests pass"
 
-$budgetBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/budget-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $budgetBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Budget behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/budget-behavior.ps1" -Label "Budget behavior tests pass"
 
-$skillRubricBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/skill-rubric-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $skillRubricBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Skill rubric behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/skill-rubric-behavior.ps1" -Label "Skill rubric behavior tests pass"
 
-$registryGenerationResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/registry-generation-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) { Write-Host $registryGenerationResult }
-Assert-True ($LASTEXITCODE -eq 0) "Registry generation behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/registry-generation-behavior.ps1" -Label "Registry generation behavior tests pass"
 
-$promptContractResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/prompt-contract-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) { Write-Host $promptContractResult }
-Assert-True ($LASTEXITCODE -eq 0) "Reusable prompt contract tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/prompt-contract-behavior.ps1" -Label "Reusable prompt contract tests pass"
 
-$councilBriefResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/council-brief-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) { Write-Host $councilBriefResult }
-Assert-True ($LASTEXITCODE -eq 0) "Council brief contract tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/council-brief-behavior.ps1" -Label "Council brief contract tests pass"
 
-$codeQualityRubricResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/code-quality-rubric-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $codeQualityRubricResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Code-quality rubric behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/code-quality-rubric-behavior.ps1" -Label "Code-quality rubric behavior tests pass"
 
-$docDriftBehaviorResult = & pwsh -NoProfile -NonInteractive -File (Join-Path $script:root "tests/doc-drift-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $docDriftBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Documentation drift behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/doc-drift-behavior.ps1" -Label "Documentation drift behavior tests pass" -HostArguments @('-NonInteractive')
 
-$docCiResult = & pwsh -NoProfile -NonInteractive -File (Join-Path $script:root "tests/doc-drift-ci-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) { Write-Host $docCiResult }
-Assert-True ($LASTEXITCODE -eq 0) "Documentation drift CI execution tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/doc-drift-ci-behavior.ps1" -Label "Documentation drift CI execution tests pass" -HostArguments @('-NonInteractive')
 
-$noAiSlopResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/no-ai-slop-skill-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $noAiSlopResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "No AI Slop skill behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/no-ai-slop-skill-behavior.ps1" -Label "No AI Slop skill behavior tests pass"
 
-$aiAgentScaffoldResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/ai-agent-scaffold-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $aiAgentScaffoldResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "AI agent scaffold behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/ai-agent-scaffold-behavior.ps1" -Label "AI agent scaffold behavior tests pass"
 
-$customizationModernizationResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/customization-modernization-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $customizationModernizationResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Customization modernization behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/customization-modernization-behavior.ps1" -Label "Customization modernization behavior tests pass"
 
-$policyHookBehaviorResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/policy-hook-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $policyHookBehaviorResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Policy hook behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/policy-hook-behavior.ps1" -Label "Policy hook behavior tests pass"
 
-$copilotHostCompatibilityResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/copilot-host-compatibility-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $copilotHostCompatibilityResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Copilot host compatibility behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/copilot-host-compatibility-behavior.ps1" -Label "Copilot host compatibility behavior tests pass"
 
-$harnessDistributionResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/harness-distribution-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $harnessDistributionResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Harness distribution behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/harness-distribution-behavior.ps1" -Label "Harness distribution behavior tests pass"
 
-$installerLicenseResult = & pwsh -NoProfile -File (Join-Path $script:root "tests/installer-license-behavior.ps1") 2>&1
-if ($LASTEXITCODE -ne 0) {
- Write-Host $installerLicenseResult
-}
-Assert-True ($LASTEXITCODE -eq 0) "Installer license behavior tests pass"
+Invoke-BoundedSubTest -RelativeScriptPath "tests/installer-license-behavior.ps1" -Label "Installer license behavior tests pass"
+
+Invoke-BoundedSubTest -RelativeScriptPath "tests/template-content-behavior.ps1" -Label "Template content behavior tests pass"
 
 # --- 6. Skills --------------------------------------------------------------------------
 Write-Host ""
@@ -394,7 +660,9 @@ Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" "npm
 Assert-FileNotContains ".github/skills/design/impeccable-integration/SKILL.md" '(?m)^\s*(?:\$\s*)?npx\s+impeccable' "Impeccable integration has no executable bare npx command"
 Assert-FileContains ".github/agents/ux-designer.agent.md" "Read PRD -> Design Language -> Design Research" "UX Designer runs design language before design research"
 Assert-FileContains ".github/skills/design/prototype-audit/SKILL.md" "Pass 0: Design-language conformance" "Prototype audit runs deterministic design-language pass first"
-Assert-FileContains ".github/skills/design/prototype-audit/SKILL.md" '(?s)## Output.*?- Status: PASS \| FIXED \| BLOCKED \| DEGRADED.*?## Loop contract' "Prototype audit output supports the DEGRADED state"
+Assert-FileContains ".github/skills/design/prototype-audit/SKILL.md" 'references/report-template\.md' "Prototype audit routes to its output contract"
+Assert-FileContains ".github/skills/design/prototype-audit/references/report-template.md" '- Status: PASS \| FIXED \| BLOCKED \| DEGRADED' "Prototype audit output supports the DEGRADED state"
+Assert-FileContains ".github/skills/design/prototype-audit/SKILL.md" 'Each pass gets at most three fix cycles' "Prototype audit retains its bounded repair loop"
 Assert-FileNotContains ".github/skills/design/prototype-audit/SKILL.md" "See the impeccable skill" "Prototype audit references the renamed integration explicitly"
 Assert-FileContains ".github/skills/design/anti-slop/SKILL.md" "T2, T3, T8, T10" "Anti-slop retains AgentX-only fabrication and emoji tells"
 Assert-FileContains "NOTICE" "\.github/skills/design/impeccable-integration/SKILL\.md" "NOTICE points to the Impeccable integration skill"
@@ -403,8 +671,9 @@ Assert-FileContains "Skills.md" "Prototype Build\|impeccable-integration->" "Pro
 Assert-FileContains "vscode-extension/.github/Skills.md" "Prototype Build\|impeccable-integration->" "Bundled prototype workflow uses the non-colliding integration id"
 Assert-FileContains ".github/templates/UX-TEMPLATE.md" "## 0\. Design Language" "UX template records design language before design work"
 Assert-FileContains ".github/templates/UX-TEMPLATE.md" "Detector Status.*PASS \| BLOCKED \| DEGRADED" "UX template records detector or fallback status"
-Assert-FileContains ".github/templates/UX-TEMPLATE.md" "Ran: T1-T10 \+ Honest Placeholders \+ axe \+ Pass 9 critique" "UX template records the complete DEGRADED fallback"
-Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" "Ran: T1-T10 \+ Honest Placeholders \+ axe \+ Pass 9 critique" "Impeccable integration records the complete DEGRADED fallback"
+Assert-FileContains ".github/templates/UX-TEMPLATE.md" '(?s)Required fallback checks \| T1-T10 \+ Honest Placeholders \+ axe \+ Pass 9 critique.*?Actually run.*?Not run' "UX template separates required DEGRADED checks from execution evidence"
+Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" '(?s)If `DEGRADED`, require T1-T10 \+ Honest Placeholders \+ axe \+ Pass 9 critique.*?actually ran.*?did not' "Impeccable root requires complete fallback checks and honest execution evidence"
+Assert-FileContains ".github/skills/design/impeccable-integration/references/details-detector-governance.md" '(?s)Required fallback checks: T1-T10 \+ Honest Placeholders \+ axe \+ Pass 9 critique.*?Actually run:.*?Not run:' "Impeccable output contract records required, executed and unavailable checks"
 Assert-FileContains ".github/agents/ux-designer.agent.md" "PRODUCT.md and DESIGN.md are cited" "UX exit gate requires design-language evidence"
 Assert-FileExists "vscode-extension/.github/agentx/skills/design/impeccable-integration/SKILL.md" "Bundled Impeccable integration skill"
 Assert-FileContains "vscode-extension/package.json" "\.github/agentx/skills/design/impeccable-integration/SKILL\.md" "VS Code contributes the Impeccable integration skill"

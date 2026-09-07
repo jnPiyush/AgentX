@@ -23,103 +23,64 @@ compatibility:
 - Running the prototype-auditor pass 1 (Accessibility)
 - Writing a11y acceptance criteria into a Story or PRD
 
-## Authoritative Sources
+## Prerequisites
 
-| Source | What it covers |
-|--------|----------------|
-| W3C WCAG 2.1 (Web Content Accessibility Guidelines) | Normative success criteria |
-| W3C ARIA Authoring Practices Guide (APG) | Widget patterns and keyboard interaction |
-| MDN Accessibility Reference | Element and attribute behavior |
-| WebAIM Contrast Checker | Numerical contrast ratios |
-| axe-core rule catalogue | Mechanically verifiable subset |
+No install required. Read the W3C WCAG 2.1 spec and ARIA APG before judging
+conformance; never rely on training data for ARIA roles. Full source table in
+[details-pour-checklist.md](references/details-pour-checklist.md#authoritative-sources).
 
-Read the official spec before invoking judgement. Do not rely on training data for ARIA roles.
+## Decision Guide
 
-## POUR Checklist
+New surface or component -> apply the full POUR checklist below. PR diff that
+only touches interactive UI -> re-check Operable and Robust plus keyboard
+safety. Wiring CI -> use the
+[Verification Hooks](references/details-pour-checklist.md#verification-hooks).
 
-### Perceivable
+## Core Rules (Release Gate)
 
-- Every meaningful image, SVG, or canvas has descriptive `alt` text. Decorative images use `alt=""` and are removed from the accessibility tree.
-- Text contrast is at least 4.5:1 for body text and 3:1 for large text (>=24px regular or >=18.66px bold).
-- Information is never conveyed by color alone. Status uses icon + label + color, not color only.
-- Text can be resized to 200% without loss of content or function.
-- Translucent surfaces (glass, frosted overlays) still meet contrast against the worst-case background. Provide a solid fallback when `backdrop-filter` is unsupported.
-- Form fields have visible, persistent labels. Placeholders are not labels.
+Every shipped surface MUST pass all four POUR pillars before release:
 
-### Operable
+- **Perceivable**: descriptive `alt` text (decorative uses `alt=""`); >=4.5:1
+  text contrast (3:1 large text); never color-only status; 200% resize;
+  persistent visible labels, not placeholders.
+- **Operable**: full keyboard reachability; visible focus (>=3:1 contrast);
+  no positive `tabindex`; a first-focusable skip link; no keyboard traps;
+  >=44x44 CSS px touch targets; single-pointer alternatives to gestures.
+- **Understandable**: declared `lang`; consistent navigation; inline,
+  field-associated error text; required fields marked visually and via
+  `aria-required`/`required`.
+- **Robust**: semantic landmarks; `aria-label` on icon-only controls; correct
+  `aria-live` politeness; ARIA APG widget patterns only, never invented ARIA.
 
-- Every interactive element reachable by mouse is reachable by keyboard.
-- Focus indicators are visible with at least 3:1 contrast against adjacent colors and are not removed by `outline: none` without a replacement.
-- Tab order matches visual order. No positive `tabindex` values.
-- A "Skip to main content" link is the first focusable element on every page.
-- No keyboard traps. Modal dialogs trap focus only while open and restore focus on close.
-- Touch targets are at least 44x44 CSS pixels.
-- Drag, swipe, and other pointer gestures have a single-pointer or keyboard alternative.
-- Time-limited interactions can be extended, paused, or disabled.
+Full bullet-level detail, the Reduced Motion and Keyboard Shortcut Safety
+rules, and the Common Anti-Patterns table are in
+[details-pour-checklist.md](references/details-pour-checklist.md).
 
-### Understandable
+## Workflow
 
-- The page declares its primary language with `lang` on `<html>`.
-- Navigation is consistent across pages: same components in the same locations.
-- Form errors are announced inline, identify the field by name, and describe how to fix the problem.
-- Required fields are marked both visually and programmatically (`aria-required="true"` or `required`).
-- Auto-changes (selecting a list item, focusing a field) do not cause context changes without warning.
+1. Read the relevant WCAG/ARIA APG source before judging conformance.
+2. Apply the POUR checklist above to the changed surface; consult the full
+   bullet list in the reference for edge cases.
+3. Run the
+   [Screen-Reader Smoke Test](references/details-pour-checklist.md#screen-reader-smoke-test)
+   once per new or changed widget.
+4. Verify the Reduced Motion and Keyboard Shortcut Safety rules.
+5. Record the Done Criteria gate result in the UX evidence summary.
 
-### Robust
+## Pitfalls
 
-- HTML is valid and uses semantic landmarks: `header`, `nav`, `main`, `aside`, `footer`.
-- Icon-only buttons carry `aria-label`. Buttons with visible text do not need `aria-label`.
-- Live regions announce dynamic updates: `aria-live="polite"` for non-urgent, `aria-live="assertive"` only for errors.
-- Active navigation links carry `aria-current="page"`.
-- Progress indicators use `role="progressbar"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`.
-- Custom widgets follow the ARIA APG pattern for that widget. Do not invent ARIA.
+See the
+[Common Anti-Patterns table](references/details-pour-checklist.md#common-anti-patterns)
+for `<div onClick>`, unlabeled icon buttons, color-only required markers,
+`outline: none` with no replacement, and missing focus traps, each with a fix.
 
-## Reduced Motion
+## Error Handling
 
-Honor `prefers-reduced-motion: reduce`. Every animation longer than 200ms or with translation greater than ~10px must be short-circuited under reduced motion. The mitigation is mechanical: a single global CSS block that collapses animation and transition durations, plus any JS-driven animations that check the media query before running.
+If axe-core, Lighthouse, or Pa11y are unavailable, report that as a blocker;
+never mark the Done Criteria gate passed on unverified tooling. Escalate an
+ambiguous ARIA widget pattern instead of inventing a role.
 
-Acceptance: with `prefers-reduced-motion: reduce` active, no element exhibits looping motion, parallax, or auto-scrolling.
-
-## Keyboard Shortcut Safety
-
-Custom keyboard handlers must not fire when focus is inside form fields or interactive widget regions:
-
-- Ignore key events when the active element is an `input`, `textarea`, `select`, or `contenteditable`.
-- Ignore key events when the active element is inside a widget that owns the key (for example `role="option"`, `role="combobox"`, `role="menuitem"`).
-- Reserved keys (`Tab`, `Shift+Tab`, `Esc`, `Enter`, `Space` on buttons, arrow keys inside listboxes) must keep their native behavior.
-
-## Screen-Reader Smoke Test
-
-Run this exact sequence at least once before declaring a prototype "a11y complete":
-
-1. Navigate the page with screen reader on, mouse off.
-2. Confirm the page title is announced.
-3. Walk the landmarks (skip by region) and confirm `main`, `nav`, `header`, `footer` exist.
-4. Activate every primary action via Enter or Space.
-5. Trigger the most complex widget (modal, combobox, tabs) and confirm focus management.
-6. Submit a form with invalid data and confirm error association is announced.
-
-## Common Anti-Patterns
-
-| Pattern | Why it fails | Fix |
-|---------|--------------|-----|
-| `<div onClick>` | Not focusable, not announced as interactive | Use `<button>` |
-| Icon button with no label | Screen reader reads nothing | Add `aria-label` |
-| Color-only required marker | Color-blind users cannot see it | Add `*` plus `aria-required` |
-| `outline: none` with no replacement | Keyboard users lose focus | Provide visible `:focus-visible` style |
-| Modal without focus trap | Tab leaves the dialog | Trap focus while open, restore on close |
-| `tabindex="1"` | Breaks document tab order | Remove; use DOM order |
-| Skipped headings (h2 -> h4) | Outline is broken | Use sequential heading levels |
-| Placeholder as the only label | Disappears on input | Add a persistent label |
-
-## Verification Hooks
-
-- axe-core via `@axe-core/cli`, `@axe-core/playwright`, or the AgentX browser-automation skill.
-- Lighthouse Accessibility audit (target score >= 95).
-- Manual screen-reader smoke test above for any new widget.
-- Pa11y or HTML_CodeSniffer for batch CI runs.
-
-## Done Criteria
+## Done Criteria (Release Gate)
 
 - All POUR checklist items reviewed and signed off in the UX deliverable.
 - axe-core run shows zero `serious` or `critical` violations.
@@ -127,9 +88,23 @@ Run this exact sequence at least once before declaring a prototype "a11y complet
 - Keyboard-shortcut safety rule applied to every custom handler.
 - Screen-reader smoke test completed and recorded in the UX evidence summary.
 
+## Why This Is a Skill
+
+General model judgement conflates "looks fine visually" with WCAG conformance.
+This skill turns the spec into a mechanical, POUR-ordered gate so the
+prototype-auditor and every reviewer apply the identical release criteria
+instead of ad hoc visual opinion.
+
 ## Skills to Compose With
 
-- `design/ux-ui-design` for layout-level decisions
-- `design/prototype-craft` for visual polish that does not break contrast
-- `design/prototype-audit` for mechanical enforcement
-- `development/browser-automation` for axe-core automation
+- [design/ux-ui-design](../ux-ui-design/SKILL.md) for layout-level decisions
+- [design/prototype-craft](../prototype-craft/SKILL.md) for visual polish that does not break contrast
+- [design/prototype-audit](../prototype-audit/SKILL.md) for mechanical enforcement
+- [development/browser-automation](../../development/browser-automation/SKILL.md) for axe-core automation
+
+## References
+
+- [details-pour-checklist.md](references/details-pour-checklist.md): read for
+  the full POUR bullet list, Authoritative Sources table, Reduced Motion and
+  Keyboard Shortcut Safety rules, Common Anti-Patterns table, and Verification
+  Hooks (verbatim, moved from this file to stay within the root token budget).

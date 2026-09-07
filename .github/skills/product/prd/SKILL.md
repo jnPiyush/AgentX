@@ -8,14 +8,11 @@ metadata:
   created: "2026-04-21"
   updated: "2026-04-21"
 ---
-
 # Product Requirements Document (PRD)
 
 > **Purpose**: Shared PRD conventions loadable by any AgentX role.
 > **Goal**: Concrete, measurable, non-contradictory requirements that survive handoff to Architect, UX, Data Scientist, and Engineer.
-> **Scope**: This skill is the conventions layer. The PM agent contract (`.github/agents/product-manager.agent.md`) owns the full authoring workflow. The template (`.github/templates/PRD-TEMPLATE.md`) owns the section structure.
-
----
+> **Scope**: This skill is the conventions layer. The PM agent contract ([.github/agents/product-manager.agent.md](../../../agents/product-manager.agent.md)) owns the full authoring workflow. The template ([.github/templates/PRD-TEMPLATE.md](../../../templates/PRD-TEMPLATE.md)) owns the section structure.
 
 ## When to Use This Skill
 
@@ -29,6 +26,12 @@ metadata:
 
 Non-PM agents load this skill to understand **what a "good" PRD looks like** without pulling the full PM agent payload.
 
+## Prerequisites
+
+Before drafting or reviewing, collect the problem statement, target user,
+success metric, hard constraints, and known repo context. If any of those are
+missing, record `TBD` and surface an Open Question instead of inventing facts.
+
 ## Load Order
 
 1. This `SKILL.md` (conventions)
@@ -40,79 +43,51 @@ Non-PM agents load this skill to understand **what a "good" PRD looks like** wit
 
 ---
 
-## The Five Non-Negotiables
+## Decision Guide
 
-Every PRD in this repo MUST satisfy these. If any are missing, the PRD is not ready for Architect handoff.
+Use the root when you need the shared release gate for PRD quality. Use the
+template when writing or extending the document structure. Use the PM agent
+contract only for the full PM workflow. If you must judge requirement quality,
+PBI completeness, or an AI-bearing PRD contract, read
+[details-prd-quality-and-consumption.md](references/details-prd-quality-and-consumption.md)
+before approving handoff.
 
-1. **Evidence-based research** -- Research Summary section cites sources (prior art, standards, user feedback). No assumption-only requirements.
-2. **Concrete, measurable requirements** -- no "fast", "easy", "intuitive", "modern". Every requirement has a number, a rubric, or a named standard. See [references/requirements-quality.md](references/requirements-quality.md).
-3. **Intent preservation** -- constraints MUST NOT contradict the user's stated technology intent. If the user said "AI agent", do not quietly downgrade to rule-based. If the user did not specify a stack, label it `TBD`, do not invent one.
-4. **Explicit Non-Goals** -- every Feature states what it is NOT building. Global "Out of Scope" section is required.
-5. **Testable acceptance criteria** -- every User Story has concrete, verifiable AC. "Works well" is not AC; "returns HTTP 200 with schema X in <200ms for 10k records" is.
+## Core Rules
 
----
+A PRD must be evidence-based, measurable, aligned to stated user intent, and
+explicit about non-goals. Every important requirement must be testable, every
+unknown must stay visible as `TBD` or an Open Question, and every backlog item
+must carry enough scope, acceptance, and dependency context that downstream
+agents do not have to reverse-engineer the PRD.
 
-## Discovery Gate (before drafting)
+## Workflow
 
-A PRD MUST NOT be drafted cold. Before writing section 1, either:
+1. Load this root, the PRD template, and the supporting references in the order
+   above.
+2. Capture research evidence, user intent, metrics, constraints, and unknowns
+   before drafting claims as requirements.
+3. Write the PRD in the template, then enforce measurable requirements,
+   explicit non-goals, and complete acceptance criteria using the detail
+   reference.
+4. If the PRD includes AI work, specify the product-facing AI contract, then
+   decompose to PBIs and review the final draft with the checklist below before
+   handing off to Architect, UX, Data Scientist, or Engineer.
 
-- **Ask at least 2 clarifying questions** on: core problem, success metric, hard constraints, user persona, or tech stack -- and wait for answers, OR
-- **Explicitly record `TBD`** for every unknown in the Research Summary and flag it as an Open Question in section 11.
+## Pitfalls
 
-**Never hallucinate constraints.** "Must use Postgres" is a requirement only if the user or repo context stated it. Otherwise it is `TBD`.
+The fastest way to break a PRD is to use vague adjectives, invent technical
+constraints, hide open questions, or write backlog items that say only "build
+X". Those anti-patterns force downstream agents to guess.
 
-## Requirements Quality Rule (the core contribution of this skill)
+## Error Handling
 
-Every functional and non-functional requirement must be rewritable as a test. If it cannot be tested, it cannot be built, and it cannot be reviewed.
+If a claim cannot be sourced, measured, or tested, do not smooth it over.
+Replace it with `TBD`, add an Open Question, or send the draft back through the
+clarification loop. When downstream consumers cannot act without guessing, the
+handoff is blocked until the requirement becomes concrete.
 
-```diff
-# Vague (REJECTED)
-- The search should be fast and return relevant results.
-- The UI must look modern and be easy to use.
-- The system should be secure.
-- The AI must give good answers.
+## Checklist
 
-# Concrete (ACCEPTED)
-+ Search returns results within 200ms p95 for a 10k-record dataset.
-+ Search achieves >=85% Precision@10 on the eval set in `evaluation/datasets/search.jsonl`.
-+ UI conforms to the design system at `docs/ux/UX-{id}.md` and achieves a Lighthouse Accessibility score of 100.
-+ All endpoints require OAuth 2.1 bearer tokens; secrets stored in Key Vault; OWASP Top 10 tests pass in CI.
-+ AI responses achieve >=4.2/5 on the rubric at `evaluation/rubrics/correctness.md` over 50 held-out queries.
-```
-
-Full anti-pattern catalogue: [references/requirements-quality.md](references/requirements-quality.md).
-
-## Product Backlog Item Quality Rule
-
-When the Product Manager decomposes a PRD into Epics, Features, Stories, or Scrum Product Backlog Items, each item MUST carry enough context for downstream agents to act without reconstructing the PRD. A good PBI names the persona, problem, user-visible outcome, scope, explicit non-goals, Given/When/Then acceptance criteria, verification evidence, dependencies, and priority rationale.
-
-Use [references/pbi-examples.md](references/pbi-examples.md) before creating backlog items. Reject PBIs that only say "build X", "add Y", or "make Z better" without measurable acceptance criteria and completion evidence.
-
-## AI/ML PRDs -- Product-Facing Contract
-
-If the PRD carries `needs:ai`, the AI section MUST be specified at the **product-facing contract** layer (not implementation). Minimum content:
-
-| Field | What to capture |
-|-------|----------------|
-| Primary AI Job | The user-visible reasoning, generation, classification, or decision task |
-| Grounding Sources | Docs, KBs, APIs, databases, or "none / model prior only" |
-| Tool / Action Boundaries | What the AI may read, write, trigger; what it MUST NOT do autonomously |
-| Response Contract | Free-form text / structured JSON / citations / action plan |
-| Fallback Behavior | What to do when confidence is low, retrieval fails, or model is unavailable |
-| Human Review Trigger | When a human must approve, edit, or confirm before completion |
-| Quality Threshold | Numeric metric + eval dataset path |
-
-Architect and Data Scientist turn this into the implementation-level spec. The PRD MUST make them not have to guess.
-
-## Schema (delegated)
-
-The 12-section structure lives in the template. Do not restate it here; read:
-
-- [`.github/templates/PRD-TEMPLATE.md`](../../../templates/PRD-TEMPLATE.md)
-
-PM-specific workflow (Research 5-phase, Model Council, issue hierarchy, enforcement gates) lives in the PM agent file and is not duplicated here.
-
-## Consumer Checklist (non-PM agents)
 
 When a non-PM agent loads a PRD before doing its own work:
 
@@ -120,14 +95,27 @@ When a non-PM agent loads a PRD before doing its own work:
 - [ ] At least one success metric is numeric
 - [ ] Every P0 requirement has testable AC
 - [ ] Non-Goals are explicit
-- [ ] If AI-bearing, the product-facing AI contract is complete (table above)
+- [ ] If AI-bearing, the product-facing AI contract is complete (see [details-prd-quality-and-consumption.md](references/details-prd-quality-and-consumption.md))
 - [ ] No constraint contradicts the original user intent
 - [ ] Open Questions are listed rather than silently assumed
 
+
+
 If any check fails, the downstream agent MUST push back through the clarification loop rather than inventing the missing requirement.
+
+## Why This Is a Skill
+
+PRDs fail when agents treat them as prose instead of as a handoff contract.
+This skill gives every role a shared definition of requirement quality,
+backlog-item completeness, and AI contract scope so product intent survives
+handoff into architecture, UX, data science, and engineering work.
 
 ## Related
 
 - [Documentation skill](../../development/documentation/SKILL.md)
 - [AI Agent Development skill](../../ai-systems/ai-agent-development/SKILL.md)
 - [Code Review skill](../../development/code-review/SKILL.md)
+
+## References
+
+- [references/details-prd-quality-and-consumption.md](references/details-prd-quality-and-consumption.md): read when you need the full five non-negotiables, discovery gate, requirements quality rule, PBI rule, AI product-contract table, or schema delegation guidance relocated verbatim from the original root.

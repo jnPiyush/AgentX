@@ -24,862 +24,323 @@ inputs:
 
 # Code Review: ${story_title}
 
-**Engineer**: ${engineer} 
-**Reviewer**: ${reviewer} 
-**Commit SHA**: ${commit_sha} 
-**Review Date**: ${date} 
+**Engineer**: ${engineer}
+**Reviewer**: ${reviewer}
+**Commit SHA**: ${commit_sha}
+**Review Date**: ${date}
 **Review Duration**: {time spent}
-
----
-
-## Table of Contents
-
-1. [Executive Summary](#1-executive-summary)
-2. [Two-Pass Review Protocol](#1a-two-pass-review-protocol)
-3. [Code Quality](#2-code-quality)
-3. [Architecture & Design](#3-architecture--design)
-4. [Testing](#4-testing)
-5. [Security Review](#5-security-review)
-6. [Performance Review](#6-performance-review)
-7. [Documentation Review](#7-documentation-review)
-8. [Acceptance Criteria Verification](#8-acceptance-criteria-verification)
-9. [GenAI Review](#9-genai-review) *(if applicable)*
-10. [MCP Review](#10-mcp-review) *(if applicable)*
-11. [Technical Debt](#11-technical-debt)
-12. [Compliance & Standards](#12-compliance--standards)
-13. [Recommendations](#13-recommendations)
-14. [Decision](#14-decision)
-15. [Next Steps](#15-next-steps)
-16. [Related Issues & PRs](#16-related-issues--prs)
-17. [Reviewer Notes](#17-reviewer-notes)
-
----
-
-> **Diagram policy**: Mermaid is the default format for all diagrams produced or referenced in this review. Use PlantUML, draw.io, Structurizr, or Graphviz only when Mermaid cannot express the intent, a Visio (.vsdx) round-trip is required, or the user explicitly requests another format. See the [diagram-as-code skill](../skills/diagrams/diagram-as-code/SKILL.md). When falling back, record the reason in a header comment.
-
----
 
 ## 1. Executive Summary
 
 ### Overview
-{1-2 sentence summary of what was implemented}
+{1-2 sentence summary of what changed.}
 
 ### Files Changed
-- **Total Files**: {count}
-- **Lines Added**: {count}
-- **Lines Removed**: {count}
-- **Test Files**: {count}
+
+| Measure | Value |
+|---|---|
+| Total Files | {count} |
+| Lines Added | {count} |
+| Lines Removed | {count} |
+| Test Files | {count} |
+
+### Review Posture
+
+- Review the exact final scope, not an imagined rewrite.
+- Zero findings is valid; do not force a quota.
+- If a check was not executed, record `Not Run`, `Blocked`, or `Unknown` with a reason.
+- Do not prefill approval from passing structure alone.
 
 ### Verdict
-**Status**: `[PASS]` APPROVED | `[WARN]` CHANGES REQUESTED | `[FAIL]` REJECTED
-
-**Confidence Level**: High | Medium | Low 
+**Status**: `[PASS]` APPROVED | `[WARN]` CHANGES REQUESTED | `[FAIL]` REJECTED  
+**Confidence Level**: High | Medium | Low  
 **Recommendation**: {Merge | Request Changes | Reject}
-
----
 
 ## 1a. Two-Pass Review Protocol
 
-> **Hard rule**: Run Pass A to completion BEFORE starting Pass B. Pass A asks "does this build the right thing?". Pass B asks "is the thing built well?". A code-quality-perfect change that misses the PRD or ADR is still a reject.
+```mermaid
+flowchart LR
+    PassA[Pass A<br/>Spec and intent] --> Gate{All gate rows pass?}
+    Gate -->|Yes| PassB[Pass B<br/>Implementation quality]
+    Gate -->|No| Return[Return changes requested]
+    PassB --> Verdict[Independent final verdict]
+    Verdict --> Loop[Caller records loop completion after decision]
+```
 
 ### Pass A: Spec & Intent Compliance (gate)
 
-Complete this pass first. If any row is `[FAIL]`, stop the review, return `CHANGES REQUESTED`, and do not score Pass B.
-
 | Check | Status | Evidence |
-|-------|--------|----------|
-| PRD acceptance criteria all addressed (see Section 8) | `[PASS]` / `[FAIL]` / `[N/A]` | {link or note} |
-| ADR decision honored (no silent deviation) | `[PASS]` / `[FAIL]` / `[N/A]` | {ADR-### link} |
-| Tech Spec contract honored (interfaces, schemas, error model) | `[PASS]` / `[FAIL]` / `[N/A]` | {SPEC-### link} |
-| UX prototype intent honored for UI-bearing change | `[PASS]` / `[FAIL]` / `[N/A]` | {UX-### link} |
-| Scope matches issue (no scope creep, no scope cut) | `[PASS]` / `[FAIL]` | {issue link} |
-| Non-goals from PRD respected | `[PASS]` / `[FAIL]` / `[N/A]` | {note} |
-| Quality loop completed (`loop status` = complete) | `[PASS]` / `[FAIL]` | {iteration count} |
-| Fresh verification evidence present (tests run on current commit) | `[PASS]` / `[FAIL]` | {commit SHA + run log} |
+|---|---|---|
+| PRD acceptance criteria addressed | `[PASS]` / `[FAIL]` / `[N/A]` | {link or note} |
+| ADR decision honored | `[PASS]` / `[FAIL]` / `[N/A]` | {ADR link} |
+| Tech Spec contract honored | `[PASS]` / `[FAIL]` / `[N/A]` | {SPEC link} |
+| UX intent honored for UI-bearing change | `[PASS]` / `[FAIL]` / `[N/A]` | {UX link} |
+| Scope matches issue | `[PASS]` / `[FAIL]` | {issue link} |
+| PRD non-goals respected | `[PASS]` / `[FAIL]` / `[N/A]` | {note} |
+| Active loop or prior verified work record exists | `[PASS]` / `[FAIL]` | {loop state or prior evidence reference} |
+| Fresh verification evidence present for the current commit | `[PASS]` / `[FAIL]` | {commit SHA and run log} |
+| Documentation review evidence present | `[PASS]` / `[FAIL]` | {quality report path} |
+| Model Council record present when required by scope | `[PASS]` / `[FAIL]` / `[N/A]` | {council artifact path} |
 
-**Pass A verdict**: `[PASS]` proceed to Pass B | `[FAIL]` return CHANGES REQUESTED with the failing rows above as required fixes.
+**Pass A verdict**: `[PASS]` proceed to Pass B | `[FAIL]` return CHANGES REQUESTED.
+
+> Do not require caller loop completion before final review. The independent verdict and fresh review evidence become the completion gate after this decision.
 
 ### Pass B: Code Quality & Craft
 
-Only run when Pass A is `[PASS]`. Covers sections 2-7 and 9-12 below. Pass B can request changes on quality grounds even when Pass A is green; in that case the final decision is `CHANGES REQUESTED` with severity per the Pass B findings.
-
----
+Only run when Pass A is `[PASS]`.
 
 ## 2. Code Quality
 
 ### `[PASS]` Strengths
 1. **{Strength 1}**: {Description with file reference}
- - Example: Well-structured service layer with clear separation of concerns ([ServiceName.cs](path/to/ServiceName.cs#L20-L45))
-
-2. **{Strength 2}**: {Description}
- - Example: Comprehensive error handling with custom exceptions
-
-3. **{Strength 3}**: {Description}
- - Example: Excellent use of async/await patterns
+2. **{Strength 2}**: {Description with file reference}
+3. **{Strength 3}**: {Description with file reference}
 
 ### `[WARN]` Issues Found
 
-| Severity | Issue | File:Line | Recommendation |
-|----------|-------|-----------|----------------|
-| **Critical** | {Issue requiring immediate fix} | [file.cs](path#L10) | {Specific fix} |
-| **High** | {Major issue} | [file.cs](path#L25) | {Specific fix} |
-| **Medium** | {Moderate issue} | [file.cs](path#L40) | {Specific fix} |
-| **Low** | {Minor issue/suggestion} | [file.cs](path#L55) | {Specific fix} |
+| Severity | Issue | File:Line | Impact | Required Correction |
+|---|---|---|---|---|
+| high | {Major issue} | {file#line} | {Why it blocks approval} | {Concrete fix} |
+| medium | {Material issue} | {file#line} | {Why it must be resolved} | {Concrete fix} |
+| low | {Minor issue} | {file#line} | {Why it matters} | {Suggestion} |
+
+> Any unresolved `high` or `medium` finding blocks approval. `medium` is not a suggestion-only lane.
 
 ### Detailed Issues
 
-#### Critical Issue 1: {Title}
-**Location**: [file.cs](path/to/file.cs#L20-L25) 
-**Severity**: Critical 
-**Category**: Security | Performance | Correctness
-
-**Problem**:
-```csharp
-// Current problematic code
-public async Task<User> GetUserAsync(string userId)
-{
- var sql = $"SELECT * FROM users WHERE id = '{userId}'"; // SQL injection!
- return await _db.QueryAsync<User>(sql);
-}
-```
-
-**Issue**: SQL injection vulnerability - user input concatenated into query.
-
-**Recommendation**:
-```csharp
-// Fixed code
-public async Task<User> GetUserAsync(string userId)
-{
- var sql = "SELECT * FROM users WHERE id = @userId";
- return await _db.QueryFirstOrDefaultAsync<User>(sql, new { userId });
-}
-```
-
-**Reference**: [Security Skill](../skills/architecture/security/SKILL.md#sql-injection)
-
-#### High Issue 1: {Title}
-{Repeat structure}
-
-#### Medium Issue 1: {Title}
-{Repeat structure}
-
-#### Low Issue 1: {Title}
-{Repeat structure}
-
----
+| Title | Severity | Category | Problem | Recommendation | Reference |
+|---|---|---|---|---|---|
+| {Issue 1} | high | Security / Correctness / Reliability | {Why it matters} | {How to correct it} | {Link or rule} |
+| {Issue 2} | medium | Maintainability / Performance / Documentation | {Why it matters} | {How to correct it} | {Link or rule} |
 
 ## 3. Architecture & Design
 
-### Design Patterns Used
-- [x] Repository Pattern ([IEntityRepository.cs](path))
-- [x] Dependency Injection
-- [x] Factory Pattern ([EntityFactory.cs](path))
-- [ ] Observer Pattern (not needed)
-
-### SOLID Principles
-- **Single Responsibility**: `[PASS]` Pass - Each class has one clear purpose
-- **Open/Closed**: `[PASS]` Pass - Extensions possible without modification
-- **Liskov Substitution**: `[PASS]` Pass - Interfaces properly implemented
-- **Interface Segregation**: `[WARN]` Warning - `IEntityService` has too many methods (consider splitting)
-- **Dependency Inversion**: `[PASS]` Pass - Depends on abstractions, not concretions
-
-### Code Organization
-- **Folder Structure**: `[PASS]` Follows standard conventions
-- **Naming**: `[PASS]` Clear, descriptive names
-- **File Size**: `[WARN]` `EntityService.cs` is 450 lines (consider splitting)
-- **Complexity**: `[PASS]` Methods are small and focused (avg 15 lines)
-
----
+| Check | Status | Evidence / Note |
+|---|---|---|
+| Design pattern fit | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Separation of concerns | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Dependency boundaries | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Simplicity and cohesion | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Scope discipline | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
 
 ## 4. Testing
 
+```mermaid
+flowchart TB
+    Unit[Focused checks] --> Integration[Integration or contract checks]
+    Integration --> Regression[Regression or workflow checks]
+    Regression --> Evidence[Fresh evidence for current commit]
+```
+
 ### Coverage Summary
-- **Total Coverage**: {XX.X}% (Target: 80%)
-- **Line Coverage**: {XX.X}%
-- **Branch Coverage**: {XX.X}%
-- **Files with <80% coverage**: {count}
+
+| Metric | Value | Target | Notes |
+|---|---|---|---|
+| Overall coverage | {Unknown if not executed} | {target} | {tool or reason unavailable} |
+| Line coverage | {Unknown if not executed} | {target} | {tool or reason unavailable} |
+| Branch coverage | {Unknown if not executed} | {target} | {tool or reason unavailable} |
+| Files below target | {Unknown if not executed} | 0 preferred | {note} |
 
 ### Test Breakdown
-| Test Type | Count | % of Total | Target |
-|-----------|-------|------------|--------|
-| **Unit Tests** | {count} | {XX}% | 70% |
-| **Integration Tests** | {count} | {XX}% | 20% |
-| **E2E Tests** | {count} | {XX}% | 10% |
-| **Total** | {count} | 100% | - |
+
+| Test Type | Count | Scope | Status |
+|---|---|---|---|
+| Unit Tests | {count or Unknown} | {services, functions, or modules} | `[PASS]` / `[WARN]` / `[FAIL]` / `Unknown` |
+| Integration Tests | {count or Unknown} | {APIs, DB, integrations} | `[PASS]` / `[WARN]` / `[FAIL]` / `Unknown` |
+| E2E Tests | {count or Unknown} | {user journeys} | `[PASS]` / `[WARN]` / `[FAIL]` / `Unknown` |
+| Performance or resilience checks | {count or Unknown} | {critical paths} | `[PASS]` / `[WARN]` / `[FAIL]` / `Unknown` |
 
 ### Test Quality Assessment
-
-#### `[PASS]` Well-Tested
-- `EntityService.CreateAsync()` - Comprehensive unit tests with edge cases
-- `EntityController.Post()` - Integration tests cover happy + error paths
-- Authorization logic - All permission scenarios tested
-
-#### `[WARN]` Needs More Tests
-- `EntityService.UpdateAsync()` - Missing null input test
-- `EntityValidator.Validate()` - Missing edge case tests
-- Error handling - Need tests for network failures
-
-#### `[FAIL]` Not Tested
-- `EntityMapper.ToDto()` - No tests found
-- Retry logic in `EntityRepository` - Not covered
-
-### Test Code Review
-
-**Example Well-Written Test**:
-```csharp
-[Fact]
-public async Task CreateAsync_ValidDto_ReturnsEntity()
-{
- // Arrange
- var dto = new CreateEntityDto("Test Name", "Description");
- var mockRepo = new Mock<IEntityRepository>();
- mockRepo.Setup(r => r.AddAsync(It.IsAny<Entity>()))
- .ReturnsAsync(new Entity { Id = Guid.NewGuid(), Name = "Test Name" });
- var service = new EntityService(mockRepo.Object);
-
- // Act
- var result = await service.CreateAsync(dto);
-
- // Assert
- result.Should().NotBeNull();
- result.Name.Should().Be("Test Name");
- mockRepo.Verify(r => r.AddAsync(It.IsAny<Entity>()), Times.Once);
-}
-```
-`[PASS]` **Good**: AAA pattern, clear naming, verifies behavior, uses FluentAssertions
-
-**Example Test Needing Improvement**:
-```csharp
-[Fact]
-public async Task Test1()
-{
- var result = await _service.CreateAsync(new CreateEntityDto("", ""));
- Assert.NotNull(result);
-}
-```
-`[FAIL]` **Issues**: Vague name, unclear intent, doesn't test meaningful scenario
-
----
+- Well-tested areas: {list}
+- Gaps that need more tests: {list}
+- Untested or unexecuted paths: {list with reason}
 
 ## 5. Security Review
 
-### Security Checklist
-- [x] **No Hardcoded Secrets**: Checked all files, secrets in Key Vault `[PASS]`
-- [x] **SQL Parameterization**: All queries use parameters `[PASS]`
-- [x] **Input Validation**: FluentValidation applied to all DTOs `[PASS]`
-- [x] **Authentication**: JWT tokens validated correctly `[PASS]`
-- [x] **Authorization**: Role checks present on sensitive endpoints `[PASS]`
-- [ ] **HTTPS Only**: `[WARN]` Missing HTTPS redirect middleware
-- [x] **CORS Configuration**: Properly restricted origins `[PASS]`
-- [x] **Dependency Scan**: No known vulnerabilities `[PASS]`
+| Check | Status | Evidence / Note |
+|---|---|---|
+| No hardcoded secrets | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Input validation present | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Auth and authorization enforced | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Dependency scan clean | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Secure defaults and transport | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
 
 ### Vulnerabilities Found
-**None** | **{count} found**
 
-#### Vulnerability 1: {Title}
-**Severity**: Critical | High | Medium | Low 
-**CWE**: [CWE-{ID}](https://cwe.mitre.org/data/definitions/{ID}.html) 
-**OWASP**: [A01:2021](https://owasp.org/Top10/)
-
-**Location**: [file.cs](path/to/file.cs#L50)
-
-**Description**:
-{What is the vulnerability and how it can be exploited}
-
-**Impact**:
-{What an attacker could do}
-
-**Fix**:
-```csharp
-// Secure implementation
-```
-
-**Reference**: [Security Skill](../skills/architecture/security/SKILL.md)
-
-### Security Headers
-```csharp
-// Missing security headers - add to middleware
-app.Use(async (context, next) =>
-{
- context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
- context.Response.Headers.Add("X-Frame-Options", "DENY");
- context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
- context.Response.Headers.Add("Strict-Transport-Security", "max-age=31536000");
- await next();
-});
-```
-
----
+| Severity | CWE / OWASP | Location | Description | Fix |
+|---|---|---|---|---|
+| {high / medium / low} | {CWE or OWASP ref} | {file#line} | {What can go wrong} | {Required change} |
 
 ## 6. Performance Review
 
-### Performance Checklist
-- [x] **Async/Await**: Used correctly for all I/O operations `[PASS]`
-- [ ] **N+1 Queries**: `[WARN]` Found in `GetEntitiesWithRelated()` method
-- [x] **Database Indexes**: Added indexes on frequently queried fields `[PASS]`
-- [x] **Caching**: Redis caching implemented for read-heavy operations `[PASS]`
-- [x] **Pagination**: Implemented on list endpoints `[PASS]`
-- [ ] **Connection Pooling**: `[WARN]` Not configured in `DbContext`
+| Check | Status | Evidence / Note |
+|---|---|---|
+| I/O patterns appropriate | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Query shape efficient | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Caching strategy appropriate | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Pagination or batching present | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Resource limits or pooling configured | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
 
 ### Performance Issues
 
-#### `[WARN]` N+1 Query Problem
-**Location**: [EntityService.cs](path/to/EntityService.cs#L120)
-
-**Problem**:
-```csharp
-public async Task<IEnumerable<EntityDto>> GetAllWithRelatedAsync()
-{
- var entities = await _repo.GetAllAsync();
-
- foreach (var entity in entities) // N+1 query!
- {
- entity.Related = await _repo.GetRelatedAsync(entity.Id);
- }
-
- return entities.Select(e => e.ToDto());
-}
-```
-
-**Fix**:
-```csharp
-public async Task<IEnumerable<EntityDto>> GetAllWithRelatedAsync()
-{
- // Use eager loading to fetch related data in one query
- var entities = await _repo.Query()
- .Include(e => e.Related)
- .ToListAsync();
-
- return entities.Select(e => e.ToDto());
-}
-```
+| Issue | Location | Impact | Required Fix |
+|---|---|---|---|
+| {Issue} | {file#line} | {latency, memory, throughput, or scale risk} | {fix} |
 
 ### Load Testing Results
-{If applicable - include benchmark results}
-
----
+{Include benchmark summary when applicable; otherwise record `Not Run` with a reason.}
 
 ## 7. Documentation Review
 
-For every feature, story or bug (including config-only work), verify
-`agentx doc-drift check` and the final report's `documentationReview` assessment.
-Require a specific updated/no-impact rationale and current reviewed-doc hashes.
-Check semantic agreement with the implemented behavior; counts/links alone do
-not prove freshness. See [shared protocol](../AGENT-PROTOCOL.md).
+For every feature, story, bug, or config-only change, require documentation drift review tied to the final implementation, not only structural checks.
 
-### Documentation Checklist
-- [x] **XML Documentation**: All public APIs documented `[PASS]`
-- [x] **Inline Comments**: Complex logic explained `[PASS]`
-- [ ] **README Updated**: `[WARN]` New feature not mentioned in README
-- [x] **API Documentation**: OpenAPI/Swagger updated `[PASS]`
-- [ ] **Migration Guide**: `[WARN]` Breaking changes need migration guide
-
-### Documentation Quality
-
-**Well-Documented**:
-```csharp
-/// <summary>
-/// Creates a new entity with the specified details.
-/// </summary>
-/// <param name="dto">The entity creation details.</param>
-/// <returns>The created entity with generated ID.</returns>
-/// <exception cref="ValidationException">Thrown when dto validation fails.</exception>
-public async Task<Entity> CreateAsync(CreateEntityDto dto)
-```
-`[PASS]` **Good**: Describes parameters, return value, and exceptions
-
-**Needs Improvement**:
-```csharp
-// Process the entity
-public async Task<Entity> ProcessAsync(Entity entity)
-```
-`[FAIL]` **Issues**: Vague XML doc, unclear what "process" means
-
----
+| Field | Required Content |
+|---|---|
+| Quality report path | `{path to the JSON output from scripts/score-code-quality.ps1}` |
+| `documentationReview.status` | `updated` or `no-impact` |
+| `documentationReview.rationale` | Substantive explanation tied to the implemented behavior |
+| `documentationReview.documents` | Workspace-relative reviewed docs with current SHA-256 hashes |
+| Semantic comparison result | {What changed in docs, or why no doc changed} |
 
 ## 8. Acceptance Criteria Verification
 
-### Story Acceptance Criteria
-From Issue #{story-id}:
-
-- [x] **AC1**: User can create entity via API `[PASS]`
- - **Verified**: POST /api/v1/entities returns 201 with entity
-
-- [x] **AC2**: Validation prevents invalid data `[PASS]`
- - **Verified**: Returns 400 with error details for invalid input
-
-- [ ] **AC3**: Email notification sent on creation `[WARN]`
- - **Issue**: Email service integration missing
-
-- [x] **AC4**: All operations logged `[PASS]`
- - **Verified**: Structured logging with correlation IDs
+| Acceptance Criterion | Status | Verification Evidence |
+|---|---|---|
+| AC1 | `[PASS]` / `[WARN]` / `[FAIL]` | {evidence} |
+| AC2 | `[PASS]` / `[WARN]` / `[FAIL]` | {evidence} |
+| AC3 | `[PASS]` / `[WARN]` / `[FAIL]` | {evidence} |
 
 ### Regression Testing
-- [x] Existing features still work `[PASS]`
-- [x] No breaking changes to public APIs `[PASS]`
-- [x] Backward compatibility maintained `[PASS]`
-
----
+- [ ] Existing features still work
+- [ ] No breaking changes to public contracts
+- [ ] Backward compatibility maintained or migration documented
 
 ## 9. GenAI Review (if applicable)
 
-> **Trigger**: Include this section when the code involves LLM calls, AI agents, GenAI inference,
-> prompt engineering, or evaluation pipelines. Skip if no GenAI components.
-
-### GenAI Review Flow
-
-```mermaid
-graph TD
- subgraph Review["GenAI Code Review Checklist"]
- direction TB
-
- subgraph Prompts["Prompt Quality"]
- P1["System prompt\nexternalized?"]
- P2["Prompt injection\ndefenses?"]
- P3["Structured output\nenforced?"]
- end
-
- subgraph Model["Model Governance"]
- M1["Version pinned\n(with date)?"]
- M2["Fallback model\nconfigured?"]
- M3["Token budget\nenforced?"]
- end
-
- subgraph Eval["Evaluation"]
- E1["Eval dataset\nexists?"]
- E2["Quality metrics\ndefined?"]
- E3["LLM-as-judge\nuses different model?"]
- end
-
- subgraph Safety["Safety"]
- S1["Guardrails\nconfigured?"]
- S2["PII filtering\non output?"]
- S3["Human-in-loop\nfor destructive?"]
- end
- end
-
- style Prompts fill:#F3E5F5,stroke:#6A1B9A
- style Model fill:#E3F2FD,stroke:#1565C0
- style Eval fill:#E8F5E9,stroke:#2E7D32
- style Safety fill:#FFEBEE,stroke:#C62828
-```
-
-### GenAI Checklist
+> Include when the change uses LLMs, agents, prompt assets, evaluations, or other AI behavior.
 
 | Category | Check | Status | Notes |
-|----------|-------|--------|-------|
-| **Prompt Engineering** | System prompt externalized (not inline strings) | `[PASS]` / `[FAIL]` | |
-| **Prompt Engineering** | Prompt injection defenses present | `[PASS]` / `[FAIL]` | |
-| **Prompt Engineering** | Structured output schema enforced | `[PASS]` / `[FAIL]` | |
-| **Model Governance** | Model version pinned with date suffix | `[PASS]` / `[FAIL]` | |
-| **Model Governance** | Fallback model from different provider configured | `[PASS]` / `[FAIL]` | |
-| **Model Governance** | Token budget enforced per request | `[PASS]` / `[FAIL]` | |
-| **Evaluation** | Evaluation dataset exists with {N}+ test cases | `[PASS]` / `[FAIL]` | |
-| **Evaluation** | Quality thresholds defined (coherence, relevance, etc.) | `[PASS]` / `[FAIL]` | |
-| **Evaluation** | LLM-as-judge uses different model than agent | `[PASS]` / `[FAIL]` | |
-| **Safety** | Input/output guardrails configured | `[PASS]` / `[FAIL]` | |
-| **Safety** | PII detection on model outputs | `[PASS]` / `[FAIL]` | |
-| **Safety** | Human-in-the-loop for high-risk actions | `[PASS]` / `[FAIL]` | |
-| **Observability** | All LLM calls traced (OpenTelemetry / equivalent) | `[PASS]` / `[FAIL]` | |
-| **Observability** | Token usage and cost tracked per request | `[PASS]` / `[FAIL]` | |
-| **Error Handling** | Graceful fallback when model unavailable | `[PASS]` / `[FAIL]` | |
-| **Error Handling** | Timeout configured with fallback response | `[PASS]` / `[FAIL]` | |
-
-### GenAI Issues Found
-
-| Severity | Issue | Location | Recommendation |
-|----------|-------|----------|--------------|
-| {Critical/High/Medium/Low} | {description} | [file](path#L10) | {fix} |
-
----
+|---|---|---|---|
+| Prompt Engineering | Prompt assets externalized | `[PASS]` / `[FAIL]` | {note} |
+| Model Governance | Primary host or deployment identity recorded with verified source and date | `[PASS]` / `[FAIL]` | {note} |
+| Model Governance | Provider-supported snapshot pinned when available; otherwise alias and host version recorded | `[PASS]` / `[FAIL]` | {note} |
+| Model Governance | Fallback host or provider path recorded | `[PASS]` / `[FAIL]` | {note} |
+| Evaluation | Held-out dataset exists and unexecuted comparisons are called out explicitly | `[PASS]` / `[FAIL]` | {note} |
+| Safety | Guardrails and approval boundaries configured | `[PASS]` / `[FAIL]` | {note} |
+| Observability | Model calls, cost, and latency are traced | `[PASS]` / `[FAIL]` | {note} |
+| Error Handling | Fallback and failure behavior are documented and verified | `[PASS]` / `[FAIL]` | {note} |
 
 ## 10. MCP Review (if applicable)
 
-> **Trigger**: Include this section when the code implements an MCP Server or MCP App.
-> Skip if no MCP components.
-
-### MCP Server Checklist (if applicable)
+> Include when the change implements an MCP Server or MCP App.
 
 | Check | Status | Notes |
-|-------|--------|-------|
-| Tool input parameters validated with JSON Schema | `[PASS]` / `[FAIL]` | |
-| One action per tool (no multi-mode mega-tools) | `[PASS]` / `[FAIL]` | |
-| Tool names use `verb_noun` convention | `[PASS]` / `[FAIL]` | |
-| Resource URIs follow consistent naming scheme | `[PASS]` / `[FAIL]` | |
-| Path traversal prevention on file-access tools | `[PASS]` / `[FAIL]` | |
-| SSRF prevention on URL-accepting tools | `[PASS]` / `[FAIL]` | |
-| Error responses are structured MCP errors (not raw exceptions) | `[PASS]` / `[FAIL]` | |
-| Destructive tools require confirmation | `[PASS]` / `[FAIL]` | |
-| Transport security (TLS for SSE/HTTP) | `[PASS]` / `[FAIL]` | |
-| All tool calls logged with context | `[PASS]` / `[FAIL]` | |
-
-### MCP App Checklist (if applicable)
-
-| Check | Status | Notes |
-|-------|--------|-------|
-| registerAppTool() calls have clear descriptions | `[PASS]` / `[FAIL]` | |
-| Views render correctly in target host widths | `[PASS]` / `[FAIL]` | |
-| WCAG 2.1 AA accessibility in iframe content | `[PASS]` / `[FAIL]` | |
-| Dark/light theme support | `[PASS]` / `[FAIL]` | |
-| State management handles host disconnection gracefully | `[PASS]` / `[FAIL]` | |
-| Event cleanup on view unmount | `[PASS]` / `[FAIL]` | |
-
-### MCP Issues Found
-
-| Severity | Issue | Location | Recommendation |
-|----------|-------|----------|--------------|
-| {Critical/High/Medium/Low} | {description} | [file](path#L10) | {fix} |
-
----
+|---|---|---|
+| Tool inputs validated with JSON Schema | `[PASS]` / `[FAIL]` | {note} |
+| One action per tool | `[PASS]` / `[FAIL]` | {note} |
+| Resource naming consistent | `[PASS]` / `[FAIL]` | {note} |
+| Path traversal or SSRF risks handled | `[PASS]` / `[FAIL]` | {note} |
+| Destructive actions require confirmation | `[PASS]` / `[FAIL]` | {note} |
+| Host rendering and accessibility verified | `[PASS]` / `[FAIL]` | {note} |
 
 ## 11. Technical Debt
 
-### New Technical Debt Introduced
-1. **{Debt Item 1}**: {Description}
- - **Location**: [file.cs](path)
- - **Reason**: {Why it was introduced}
- - **Remediation**: {How to fix in future}
- - **Priority**: High | Medium | Low
-
-2. **{Debt Item 2}**: {Description}
-
-### Technical Debt Addressed
-1. **{Resolved Item 1}**: {What was fixed}
- - **Before**: {Old code/approach}
- - **After**: {New code/approach}
-
----
+| Item | Type | Reason | Remediation | Priority |
+|---|---|---|---|---|
+| {Debt item} | New / Resolved | {Why it exists} | {How to address it} | High / Medium / Low |
+| {Debt item} | New / Resolved | {Why it exists} | {How to address it} | High / Medium / Low |
 
 ## 12. Compliance & Standards
 
-### Coding Standards
-- [x] Follows C# naming conventions `[PASS]`
-- [x] Follows project code style (EditorConfig) `[PASS]`
-- [x] No compiler warnings `[PASS]`
-- [x] No linter errors `[PASS]`
-- [x] Follows Skills.md guidelines `[PASS]`
-
-### Production Requirements (Skills.md)
-- [x] 80% test coverage `[PASS]`
-- [x] Security checklist completed `[PASS]`
-- [x] Performance considerations addressed `[PASS]`
-- [x] Documentation complete `[PASS]`
-- [x] Error handling implemented `[PASS]`
-
----
+| Standard or Rule | Status | Evidence |
+|---|---|---|
+| Project coding standards | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Required quality gates | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Security checklist completed | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
+| Documentation and handoff requirements met | `[PASS]` / `[WARN]` / `[FAIL]` | {note} |
 
 ## 13. Recommendations
 
 ### Must Fix (Blocking)
-1. ** {Critical Issue}**: {Brief description}
- - **Impact**: Blocks deployment
- - **ETA**: {time estimate}
-
-2. ** {Critical Issue}**: {Brief description}
+1. {Blocking issue and why it blocks release}
+2. {Blocking issue and why it blocks release}
 
 ### Should Fix (High Priority)
-1. ** {High Issue}**: {Brief description}
- - **Impact**: Reduces quality/performance
- - **ETA**: {time estimate}
+1. {High-priority issue}
+2. {High-priority issue}
 
 ### Nice to Have (Low Priority)
-1. ** {Low Issue}**: {Brief description}
- - **Impact**: Code improvement
- - **Can be addressed in future PR**
-
----
+1. {Future improvement}
+2. {Future improvement}
 
 ## 14. Decision
 
 ### Verdict
 **Status**: `[PASS]` APPROVED | `[WARN]` CHANGES REQUESTED | `[FAIL]` REJECTED
 
-### Weighted Score (optional for non-UI reviews; MANDATORY for UI-bearing reviews)
+### Implementation Rubric v2.1 Reference (required for implementation reviews)
 
-> Originated from the Anthropic harness-design article (Mar 2026). Use this rubric when the verdict feels close, or when comparing iterations across a quality loop. For UI-bearing changes (see `UI-Bearing Change Review Gate` in docs/WORKFLOW.md), this section is mandatory and the Originality row MUST be graded. The narrative verdict above remains authoritative -- the score is an aid, not a substitute.
+Use `evaluation/rubrics/code-quality.md` and the JSON output from `scripts/score-code-quality.ps1`. Do not replace it with a parallel scoring system.
 
-Grade each category from 0 to 100. Multiply by the weight to get the weighted contribution.
+| Dimension ID | Weight | Blocking | Floor |
+|---|---:|---|---:|
+| `requirements-fit` | 15 | yes | 3 |
+| `design-conformance` | 10 | yes | 3 |
+| `logic-correctness` | 15 | yes | 3 |
+| `verification-tests` | 15 | yes | 3 |
+| `security-privacy` | 10 | yes | 3 |
+| `reliability-errors` | 10 | yes | 3 |
+| `maintainability-readability` | 10 | no | 2 |
+| `simplicity-scope` | 5 | no | 2 |
+| `performance-resources` | 5 | no | 2 |
+| `documentation-operability` | 5 | no | 2 |
 
-| Category | Weight | Hard Floor | Score (0-100) | Weighted |
-|----------|-------:|-----------:|--------------:|---------:|
-| Correctness (does it work? regressions?) | 25 | 70 | | |
-| Security | 20 | 80 | | |
-| Testing (coverage + meaningfulness) | 15 | 70 | | |
-| Architecture & Design fit | 10 | 60 | | |
-| Performance | 10 | 60 | | |
-| Documentation | 5 | 50 | | |
-| Acceptance criteria coverage | 10 | 80 | | |
-| Originality / non-generic output *(UI-bearing only; drop and renormalize otherwise)* | 5 | 50 | | |
-| **Total (out of 100)** | 100 | -- | | |
+### Required JSON Review Evidence
 
-Gate rules:
+| Field | Required Content |
+|---|---|
+| `rubricVersion` | `2.1.0` |
+| `reviewer` | {independent reviewer id} |
+| `reviewedAt` | {fresh timestamp for this exact final scope} |
+| `files` | Current implementation paths with current SHA-256 hashes |
+| `documentationReview.status` | `updated` or `no-impact` |
+| `documentationReview.rationale` | Substantive rationale, not a placeholder |
+| `documentationReview.documents` | Current reviewed documentation paths with current SHA-256 hashes |
+| `dimensions` | All ten rubric dimensions exactly once |
+| `report path` | `{workspace-relative JSON report path}` |
 
-- Total >= 80 AND no floor breach -> APPROVED is defensible.
-- Total 60-79 -> CHANGES REQUESTED.
-- Total < 60 -> REJECTED.
-- Floor breach in a non-blocker category (Architecture, Performance, Documentation, Originality) -> CHANGES REQUESTED.
-- Floor breach in a blocker category (Correctness, Security, Testing, Acceptance criteria) -> REJECTED, regardless of total.
-- For non-UI-bearing changes, drop the Originality row and renormalize the remaining weights to sum to 100.
+### Model Council Record (if applicable)
 
-### Rationale
-{Explain the decision. If a weighted score was computed, cite the floors that drove the verdict, not the total alone.}
+| Field | Required Content |
+|---|---|
+| Council artifact | `docs/artifacts/**/COUNCIL-*.md` or equivalent review-council record |
+| Requested and resolved identities | {actual models or hosts used, source, and gaps if any} |
+| Synthesis applied in verdict | {How consensus, divergence, and risks affected the decision} |
+| Override rationale | {Required when the verdict diverges from the council synthesis} |
 
-**If APPROVED**:
-- Code meets all acceptance criteria
-- Quality standards satisfied
-- Security/performance concerns addressed
-- Ready for production deployment
+### Approval Gate
 
-**If CHANGES REQUESTED**:
-- {count} critical issues must be fixed
-- {count} high-priority issues should be fixed
-- Engineer should address feedback and re-submit
-
-**If REJECTED**:
-- {Fundamental issues requiring redesign}
-- {Architectural changes needed}
-- {Start over with different approach}
-
----
+- Rubric score >= 80
+- Every blocking dimension meets its floor
+- Unresolved findings must be `H0M0`
+- Fresh code hashes and reviewed-doc hashes match the final scope
+- Final verdict is independent and issued before caller loop completion
+- If a check was not run, the review must not claim that coverage or behavior was proven
 
 ## 15. Next Steps
 
-### For Engineer (if changes requested)
-1. Address all Critical issues
-2. Address all High-priority issues
-3. Consider Medium and Low suggestions
-4. Re-run tests and verify coverage
-5. Update documentation if needed
-6. Comment on issue when ready for re-review
-
-### For Reviewer (if approved)
-1. Merge PR to main branch
-2. Close Story issue (move to Done in Projects)
-3. Notify team in Slack/Teams
-4. Monitor deployment to production
-
-### For PM/Architect (if applicable)
-{Any follow-up items for other roles}
-
----
+| Action | Owner | Priority | Due |
+|---|---|---|---|
+| {Action} | {Owner} | High | {Date} |
+| {Action} | {Owner} | Medium | {Date} |
 
 ## 16. Related Issues & PRs
 
-### Related Issues
-- Blocks: #{issue-id}
-- Related to: #{issue-id}
-- Depends on: #{issue-id}
-
-### Related PRs
-- [PR #{number}](link) - {Description}
-
----
+- Issue: #{story-id}
+- PR: {link}
+- ADR / SPEC / UX: {links}
 
 ## 17. Reviewer Notes
 
-### Review Process
-- **Review Method**: Line-by-line | High-level | Pair review
-- **Tools Used**: VS Code, GitHub, SonarQube, CodeQL
-- **Time Spent**: {duration}
-
-### Follow-Up
-- [ ] Schedule follow-up review after changes
-- [ ] Pair with engineer on complex sections
-- [ ] Document learnings in team wiki
-
----
-
-## Appendix
-
-### Files Reviewed
-```
-src/
- Controllers/EntityController.cs (150 lines, 85% coverage)
- Services/EntityService.cs (450 lines, 92% coverage)
- Models/Entity.cs (80 lines, 100% coverage)
- Validators/EntityValidator.cs (60 lines, 95% coverage)
-tests/
- EntityServiceTests.cs (350 lines)
- EntityControllerTests.cs (280 lines)
- EntityApiTests.cs (200 lines)
-```
-
-### Test Coverage Report
-[Link to coverage report](path/to/coverage.html)
-
-### CI/CD Pipeline Results
-- `[PASS]` Build: Passed
-- `[PASS]` Unit Tests: Passed (all 45 tests)
-- `[PASS]` Integration Tests: Passed (all 12 tests)
-- `[PASS]` Security Scan: No vulnerabilities
-- `[PASS]` Linting: No errors
-
----
-
-**Generated by AgentX Reviewer Agent** 
-**Last Updated**: {YYYY-MM-DD} 
-**Review Version**: 1.0
-
----
-
-**Signature**: 
-Reviewed by: {Reviewer Name/Agent} 
-Date: {YYYY-MM-DD} 
-Status: {APPROVED | CHANGES REQUESTED | REJECTED}
-
----
-
-## Appendix A: Conventional Comments and Review Diagrams (v8.4.43+)
-
-> Additive section. References: Conventional Comments (https://conventionalcomments.org/) v1.0 - labels and decorations, Google Code Review Developer Guide.
-
-### A.1 Conventional Comments Cheat Sheet
-
-Use this format on every code review comment:
-
-```
-<label> [decorations]: <subject>
-
-[discussion]
-```
-
-| Label | When to use |
-|-------|-------------|
-| `praise` | Highlight something good. Real praise, not a sandwich. |
-| `nitpick` | Trivial. Personal preference. Author may ignore. |
-| `suggestion` | Concrete change request that would improve the code. |
-| `issue` | A bug or concrete problem that needs fixing. |
-| `todo` | Small follow-up that can ship in a separate PR. |
-| `question` | Real question seeking information. |
-| `thought` | Explores an idea; not a request. |
-| `chore` | Process step (rebase, retitle, link issue). |
-| `note` | Permanent note for future readers. |
-
-| Decoration | Meaning |
-|------------|---------|
-| `(blocking)` | Author MUST resolve before merge. |
-| `(non-blocking)` | Author MAY merge without addressing. |
-| `(if-minor)` | Resolve if it is minor; otherwise mark resolved. |
-
-Example:
-```
-issue (blocking): SQL string is concatenated, not parameterized.
-
-This is OWASP A03:2021 Injection. Replace with a parameterized query.
-```
-
-### A.2 Review Lifecycle State Machine
-
-```mermaid
-stateDiagram-v2
-    [*] --> Requested
-    Requested --> InReview: reviewer assigned
-    InReview --> ChangesRequested: blocking findings
-    InReview --> Approved: no blockers
-    ChangesRequested --> InReview: author pushed fixes
-    Approved --> Merged: CI green + merge
-    Approved --> Stale: branch behind base
-    Stale --> InReview: rebased
-    Merged --> [*]
-```
-
-### A.3 Risk Heat Map of Findings
-
-```mermaid
-quadrantChart
-    title Findings - severity vs likelihood
-    x-axis Low likelihood --> High likelihood
-    y-axis Low impact --> High impact
-    quadrant-1 Fix now (blocking)
-    quadrant-2 Fix soon
-    quadrant-3 Note and move on
-    quadrant-4 Watch
-    Finding-1: [0.8, 0.9]
-    Finding-2: [0.3, 0.7]
-    Finding-3: [0.6, 0.2]
-    Finding-4: [0.2, 0.3]
-```
-
-### A.4 Test Pyramid (target shape per project)
-
-```mermaid
-flowchart TB
-    E2E["End-to-End - 10%<br/>UI / cross-service"]
-    Integ["Integration - 20%<br/>API / DB / contract"]
-    Unit["Unit - 70%<br/>fast, isolated"]
-    E2E --> Integ --> Unit
-    style E2E fill:#fee
-    style Integ fill:#fef
-    style Unit fill:#efe
-```
-
-### A.5 Review Decision Rubric
-
-| Decision | Required state |
-|----------|----------------|
-| APPROVED | 0 blocking issues. Tests >= 80% coverage. CI green. Self-review checklist passed. |
-| CHANGES REQUESTED | >=1 blocking issue, or >=2 non-blocking issue + suggestion combinations on the same area. |
-| BLOCKED | Cannot review (missing artifact, broken build, scope unclear). |
-
-
-## Appendix B: Rich Visual Diagrams (v8.4.43+)
-
-### B.1 Review Interaction Sequence
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Author
-  participant CI
-  participant Reviewer
-  participant Council as Model Council
-  Author->>CI: Push branch
-  CI-->>Author: Build/test results
-  Author->>Reviewer: Request review
-  Reviewer->>Reviewer: Read context + diff
-  Reviewer->>Council: Convene (if applicable)
-  Council-->>Reviewer: Synthesis
-  Reviewer-->>Author: Findings (Conventional Comments)
-  Author->>Reviewer: Address findings
-  Reviewer-->>Author: Approve / Changes Requested
-```
-
-### B.2 Finding Distribution (pie)
-
-```mermaid
-pie showData
-  title Finding distribution by severity
-  "HIGH" : 2
-  "MEDIUM" : 5
-  "LOW" : 8
-  "Nit / praise" : 6
-```
-
-### B.3 Conventional Comments Mindmap
-
-```mermaid
-mindmap
-  root((Comments))
-    praise
-    nitpick
-    suggestion
-    issue
-    question
-    todo
-    chore
-    note
-    decorations
-      blocking
-      non-blocking
-      if-minor
-```
-
-### B.4 Coverage Trend (xychart)
-
-```mermaid
-xychart-beta
-  title "Test coverage trend"
-  x-axis [Iter1, Iter2, Iter3, Iter4, Iter5]
-  y-axis "Coverage %" 60 --> 100
-  line [72, 78, 83, 88, 92]
-```
+{Anything important for the next review pass, handoff, or audit trail.}

@@ -1,7 +1,13 @@
 import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { createSidebarProviders, refreshSidebarProviders, registerSidebarProviders } from '../../views/registry';
+import { AgentXContext } from '../../agentxContext';
+import {
+  createSidebarProviders,
+  refreshSidebarProviders,
+  registerSidebarProviders,
+  SidebarProviders,
+} from '../../views/registry';
 
 describe('sidebar registry', () => {
   let sandbox: sinon.SinonSandbox;
@@ -15,7 +21,7 @@ describe('sidebar registry', () => {
   });
 
   it('creates sidebar providers backed by the shared AgentX context', () => {
-    const agentx = { workspaceRoot: 'c:/repo' } as any;
+    const agentx = { workspaceRoot: 'c:/repo' } as unknown as AgentXContext;
 
     const providers = createSidebarProviders(agentx);
 
@@ -27,12 +33,13 @@ describe('sidebar registry', () => {
 
   it('registers and refreshes all sidebar providers', () => {
     const registerSpy = sandbox.spy(vscode.window, 'registerTreeDataProvider');
-    const providers = {
+    const fakeProviders = {
       workTreeProvider: { refresh: sandbox.stub() },
       statusTreeProvider: { refresh: sandbox.stub() },
       templateProvider: { refresh: sandbox.stub() },
       skillProvider: { refresh: sandbox.stub() },
-    } as any;
+    };
+    const providers = fakeProviders as unknown as SidebarProviders;
 
     registerSidebarProviders(providers);
     refreshSidebarProviders(providers);
@@ -42,9 +49,9 @@ describe('sidebar registry', () => {
     assert.ok(registerSpy.calledWith('agentx-status', providers.statusTreeProvider));
     assert.ok(registerSpy.calledWith('agentx-templates', providers.templateProvider));
     assert.ok(registerSpy.calledWith('agentx-skills', providers.skillProvider));
-    assert.ok(providers.workTreeProvider.refresh.calledOnce);
-    assert.ok(providers.statusTreeProvider.refresh.calledOnce);
-    assert.ok(providers.templateProvider.refresh.calledOnce);
-    assert.ok(providers.skillProvider.refresh.calledOnce);
+    assert.ok(fakeProviders.workTreeProvider.refresh.calledOnce);
+    assert.ok(fakeProviders.statusTreeProvider.refresh.calledOnce);
+    assert.ok(fakeProviders.templateProvider.refresh.calledOnce);
+    assert.ok(fakeProviders.skillProvider.refresh.calledOnce);
   });
 });

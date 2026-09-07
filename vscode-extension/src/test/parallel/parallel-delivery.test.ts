@@ -4,6 +4,7 @@ import {
   reconcileBoundedParallelRun,
   startBoundedParallelDelivery,
 } from '../../parallel/parallel-delivery';
+import { AgentXContext } from '../../agentxContext';
 
 describe('bounded parallel facade', () => {
   it('parses an eligibility assessment run', async () => {
@@ -44,7 +45,7 @@ describe('bounded parallel facade', () => {
         created_at: '2026-03-13T00:00:00.000Z',
         updated_at: '2026-03-13T00:00:00.000Z',
       }),
-    } as any;
+    } as unknown as AgentXContext;
 
     const run = await assessBoundedParallelDelivery(agentx, {
       scopeIndependence: 'independent',
@@ -108,7 +109,7 @@ describe('bounded parallel facade', () => {
         created_at: '2026-03-13T00:00:00.000Z',
         updated_at: '2026-03-13T00:00:00.000Z',
       }),
-    } as any;
+    } as unknown as AgentXContext;
 
     const run = await startBoundedParallelDelivery(agentx, {
       parallelId: 'parallel-1',
@@ -157,7 +158,7 @@ describe('bounded parallel facade', () => {
         created_at: '2026-03-13T00:00:00.000Z',
         updated_at: '2026-03-13T00:00:00.000Z',
       }),
-    } as any;
+    } as unknown as AgentXContext;
 
     const run = await reconcileBoundedParallelRun(agentx, {
       parallelId: 'parallel-1',

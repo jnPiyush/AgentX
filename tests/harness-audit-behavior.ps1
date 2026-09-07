@@ -154,6 +154,66 @@ Write-Host ''
 Write-Host ' Harness Audit Behavior Tests' -ForegroundColor Cyan
 Write-Host ' ================================================' -ForegroundColor DarkGray
 
+$cliAst = [System.Management.Automation.Language.Parser]::ParseFile(
+    (Join-Path $script:repoRoot '.agentx/agentx-cli.ps1'), [ref]$null, [ref]$null)
+foreach ($definition in $cliAst.FindAll({
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+    $node.Name -in @('Invoke-HarnessAuditProcess', 'Get-HarnessLoopAuditResult', 'Invoke-HarnessComplianceReport')
+}, $false)) {
+    . ([scriptblock]::Create($definition.Extent.Text))
+}
+
+$workspace = New-TestWorkspace 'stream capture'
+try {
+    $script:ROOT = $workspace
+    $script:INSTALL_AGENTX_DIR = Join-Path $workspace '.agentx'
+    $checkPath = Join-Path $workspace 'scripts/check-harness-compliance.ps1'
+    $streamFixture = @'
+param([string]$BaseRef, [switch]$ReportOnly)
+[Console]::Error.WriteLine(('e' * 131072))
+[Console]::Out.WriteLine(('o' * 131072))
+Write-Output "BaseRef=$BaseRef"
+Write-Output '[PASS] Saturated stream fixture completed'
+exit 0
+'@
+    Set-Content -LiteralPath $checkPath -Value $streamFixture -Encoding utf8
+    Write-Host ' [RUNNING] Saturated production harness collector...'
+    $capture = Invoke-HarnessComplianceReport -baseRef 'branch with spaces'
+    Assert-True $capture.passed 'Harness collector drains large stderr and stdout without deadlock'
+    Assert-True ($capture.lines -contains 'BaseRef=branch with spaces') 'Harness collector preserves spaced arguments'
+    Assert-True (@($capture.lines | Where-Object { $_.Length -eq 131072 }).Count -eq 2) 'Harness collector preserves both complete streams'
+
+    Set-Content -LiteralPath $checkPath -Value "Write-Output 'No failure marker'; exit 7" -Encoding utf8
+    $failed = Invoke-HarnessComplianceReport
+    Assert-True (-not $failed.passed -and $failed.failureCount -gt 0) 'Nonzero compliance exit fails even without a FAIL marker'
+    Assert-True ($failed.summary -match 'exit.*7') 'Compliance failure reports the actual exit code'
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = 'pwsh'
+    $startInfo.WorkingDirectory = $workspace
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    foreach ($argument in @('-NoProfile', '-NonInteractive', '-File', $checkPath)) {
+        $startInfo.ArgumentList.Add($argument)
+    }
+    Set-Content -LiteralPath $checkPath -Value 'Start-Sleep -Seconds 60' -Encoding utf8
+    $watch = [System.Diagnostics.Stopwatch]::StartNew()
+    $timeout = Invoke-HarnessAuditProcess -StartInfo $startInfo -TimeoutSeconds 3
+    $watch.Stop()
+    Assert-True $timeout.TimedOut 'Harness process collector reports its deadline'
+    Assert-True ($watch.Elapsed.TotalSeconds -lt 10) 'Harness process collector returns within bounded headroom'
+    Assert-True ($null -eq $timeout.ExitCode) 'Timed-out process does not invent a successful exit'
+
+    Set-Content -LiteralPath (Join-Path $script:INSTALL_AGENTX_DIR 'agentx-cli.ps1') -Value $streamFixture -Encoding utf8
+    $loopCapture = Get-HarnessLoopAuditResult -workspaceRoot $workspace
+    Assert-True $loopCapture.passed 'Loop gate collector also drains saturated streams'
+} finally {
+    Remove-TestWorkspace $workspace
+    Remove-Variable -Name ROOT, INSTALL_AGENTX_DIR -Scope Script
+}
+
 $workspace = New-TestWorkspace 'profiles'
 try {
     Set-WorkspaceHarnessState $workspace
@@ -421,6 +481,62 @@ Evidence: bracket fixture.
         Set-Content -LiteralPath (Join-Path $untrackedWorkspace 'docs\execution\plans\EXEC-PLAN-a.md') -Value '# Wrong sibling' -Encoding utf8
         $literalPlanText = Invoke-HarnessCompliance $untrackedWorkspace
         Assert-True ($literalPlanText -notmatch "EXEC-PLAN-\[a\]\.md.*missing required section") 'Bracketed execution plan is read from its exact literal path'
+
+        $scrubPath = Join-Path $untrackedWorkspace 'scripts/scrub.ps1'
+        @'
+param([string]$Path)
+Add-Content -LiteralPath (Join-Path $PSScriptRoot 'scan-pids.txt') -Value "$PID|$Path"
+Write-Host '[HIGH/comment-rot] fixture finding'
+exit 1
+'@ | Set-Content -LiteralPath $scrubPath -Encoding utf8
+        $highText = Invoke-HarnessCompliance $untrackedWorkspace
+        $scans = @(Get-Content -LiteralPath (Join-Path $untrackedWorkspace 'scripts/scan-pids.txt'))
+        $scanProcesses = @($scans | ForEach-Object { ($_ -split '\|', 2)[0] } | Sort-Object -Unique)
+        Assert-True ($scans.Count -gt 2 -and $scanProcesses.Count -eq 1) 'Changed-file scrub uses one host instead of one process per file'
+        Assert-True ($highText -match 'Deslop scrub gate:.*HIGH-severity') 'In-process scrub captures Write-Host HIGH findings'
+
+        Set-Content -LiteralPath $scrubPath -Value 'exit 7' -Encoding utf8
+        $crashText = Invoke-HarnessCompliance $untrackedWorkspace
+        Assert-True ($crashText -match 'could not be scanned' -and $crashText -match 'scrub exited 7') 'Scrub exit failures without findings still fail closed'
+
+        Set-Content -LiteralPath $scrubPath -Value 'exit 0' -Encoding utf8
+        $cleanText = Invoke-HarnessCompliance $untrackedWorkspace
+        Assert-True ($cleanText -match '\[PASS\] Scrub gate:' -and $cleanText -notmatch 'could not be scanned') 'Successful scans do not inherit a previous failing exit code'
+
+        @'
+param([string]$Path)
+Add-Content -LiteralPath (Join-Path $PSScriptRoot 'scan-exceptions.txt') -Value $Path
+switch (Split-Path $Path -Leaf) {
+    'module-1.ps1' { throw [System.InvalidOperationException]::new('fixture terminating failure') }
+    'module-2.ps1' { Write-Error 'fixture stopping error' -ErrorAction Stop }
+    'module-3.ps1' { Write-Host '[HIGH/comment-rot] later target finding'; exit 1 }
+}
+exit 0
+'@ | Set-Content -LiteralPath $scrubPath -Encoding utf8
+        $githubOutputPath = Join-Path $untrackedWorkspace '.agentx/state/compliance-output.txt'
+        $scanStartInfo = [System.Diagnostics.ProcessStartInfo]::new()
+        $scanStartInfo.FileName = 'pwsh'
+        $scanStartInfo.WorkingDirectory = $untrackedWorkspace
+        $scanStartInfo.UseShellExecute = $false
+        $scanStartInfo.RedirectStandardOutput = $true
+        $scanStartInfo.RedirectStandardError = $true
+        foreach ($argument in @('-NoProfile', '-NonInteractive', '-File', (Join-Path $untrackedWorkspace 'scripts/check-harness-compliance.ps1'))) {
+            $scanStartInfo.ArgumentList.Add($argument)
+        }
+        $scanStartInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $untrackedWorkspace
+        $scanStartInfo.Environment['GITHUB_OUTPUT'] = $githubOutputPath
+        $exceptionResult = Invoke-HarnessAuditProcess -StartInfo $scanStartInfo -TimeoutSeconds 30
+        $exceptionText = $exceptionResult.StdOut + $exceptionResult.StdErr
+        $exceptionScans = @(Get-Content -LiteralPath (Join-Path $untrackedWorkspace 'scripts/scan-exceptions.txt'))
+        Assert-True (-not $exceptionResult.TimedOut -and $exceptionResult.ExitCode -eq 1) 'Terminating scrub errors fail the actual non-advisory compliance command'
+        Assert-True ($exceptionText -match 'module-1\.ps1 ->.*fixture terminating failure' -and
+            $exceptionText -match 'module-2\.ps1 ->.*fixture stopping error') 'Thrown and stopping errors report each failed target and its cause'
+        Assert-True ($exceptionScans -contains 'new-modules/module-3.ps1' -and
+            $exceptionScans -contains 'new-modules/module-4.ps1') 'Later failing and successful targets are still scanned after terminating errors'
+        Assert-True ($exceptionText -match 'later target finding' -and $exceptionText -match '\[FAIL\] Deslop scrub gate: 2 file\(s\) could not be scanned' -and
+            $exceptionText -notmatch '\[PASS\] Scrub gate:') 'Batch reporting retains later HIGH findings and both scan errors without claiming success'
+        $githubOutput = if (Test-Path -LiteralPath $githubOutputPath) { Get-Content -LiteralPath $githubOutputPath -Raw } else { '' }
+        Assert-True ($githubOutput -match '(?m)^changed_files=\d+' -and $githubOutput -match '(?m)^failure_count=[1-9]\d*') 'Terminating scan failures preserve post-batch GitHub output metadata'
     } finally {
         Remove-TestWorkspace $untrackedWorkspace
     }

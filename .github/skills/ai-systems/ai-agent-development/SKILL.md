@@ -63,6 +63,8 @@ helpers in this directory.
 6. Keep rollback or fallback evidence for production paths that would otherwise
    strand users.
 
+<a id="prompt--template-file-management"></a>
+
 ## Core Rules
 
 - Keep long prompts in `prompts/` and reusable output scaffolds in dedicated

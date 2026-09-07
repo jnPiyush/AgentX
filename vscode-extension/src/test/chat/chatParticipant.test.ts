@@ -5,6 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import { createMockResponseStream } from '../mocks/vscode';
+import { AgentXContext } from '../../agentxContext';
 import {
   getAgentXChatFollowups,
   handleAgentXChatRequest,
@@ -13,8 +14,10 @@ import {
 
 describe('chatParticipant', () => {
   let tmpDir: string;
+  let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
+    sandbox = sinon.createSandbox();
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-chat-learnings-'));
     fs.mkdirSync(path.join(tmpDir, 'docs', 'artifacts', 'learnings'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'docs', 'guides'), { recursive: true });
@@ -101,6 +104,7 @@ describe('chatParticipant', () => {
   });
 
   afterEach(() => {
+    sandbox.restore();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -125,9 +129,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'run engineer implement the login fix' } as any,
-      progressStream as any,
-      agentx as any,
+      { prompt: 'run engineer implement the login fix' } as unknown as vscode.ChatRequest,
+      progressStream as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const progressCalls = progressStream.calls
@@ -155,9 +159,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'help me route this task' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'help me route this task' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     assert.ok(response.getMarkdown().includes('During execution, live status updates'));
@@ -166,26 +170,21 @@ describe('chatParticipant', () => {
   it('launches Initialize Local Runtime directly from chat', async () => {
     const response = createMockResponseStream();
     const executed: string[] = [];
-    const originalExecuteCommand = vscode.commands.executeCommand;
-    (vscode.commands as any).executeCommand = async (command: string) => {
+    sandbox.stub(vscode.commands, 'executeCommand').callsFake(async (command: string) => {
       executed.push(command);
       return undefined;
-    };
+    });
 
     const agentx = {
       checkInitialized: async () => true,
       workspaceRoot: tmpDir,
     };
 
-    try {
-      await handleAgentXChatRequest(
-        { prompt: 'initialize local runtime' } as any,
-        response as any,
-        agentx as any,
-      );
-    } finally {
-      (vscode.commands as any).executeCommand = originalExecuteCommand;
-    }
+    await handleAgentXChatRequest(
+      { prompt: 'initialize local runtime' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
+    );
 
     assert.deepEqual(executed, ['agentx.initializeLocalRuntime']);
     assert.ok(response.getMarkdown().includes('Opened **AgentX: Initialize Local Runtime** for this workspace.'));
@@ -206,32 +205,29 @@ describe('chatParticipant', () => {
     for (const prompt of phrasings) {
       const response = createMockResponseStream();
       const executed: string[] = [];
-      const originalExecuteCommand = vscode.commands.executeCommand;
-      (vscode.commands as any).executeCommand = async (command: string) => {
+      sandbox.stub(vscode.commands, 'executeCommand').callsFake(async (command: string) => {
         executed.push(command);
         return undefined;
-      };
+      });
 
       const agentx = {
         checkInitialized: async () => true,
         workspaceRoot: tmpDir,
       };
 
-      try {
-        await handleAgentXChatRequest(
-          { prompt } as any,
-          response as any,
-          agentx as any,
-        );
-      } finally {
-        (vscode.commands as any).executeCommand = originalExecuteCommand;
-      }
+      await handleAgentXChatRequest(
+        { prompt } as unknown as vscode.ChatRequest,
+        response as unknown as vscode.ChatResponseStream,
+        agentx as unknown as AgentXContext,
+      );
 
       assert.deepEqual(executed, ['agentx.initializeLocalRuntime'], `phrasing should match: ${prompt}`);
       assert.ok(
         response.getMarkdown().includes('Opened **AgentX: Initialize Local Runtime** for this workspace.'),
         `phrasing should produce launch message: ${prompt}`,
       );
+      sandbox.restore();
+      sandbox = sinon.createSandbox();
     }
   });
 
@@ -251,9 +247,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'add remote adapter' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'add remote adapter' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     assert.deepEqual(pending, {
@@ -265,7 +261,6 @@ describe('chatParticipant', () => {
   });
 
   it('starts chat-first GitHub and Azure DevOps adapter flows for the supported aliases', async () => {
-    const sandbox = sinon.createSandbox();
     const shell = await import('../../utils/shell');
     sandbox.stub(shell, 'execShell').rejects(new Error('no remote'));
 
@@ -312,9 +307,9 @@ describe('chatParticipant', () => {
         };
 
         await handleAgentXChatRequest(
-          { prompt: testCase.prompt } as any,
-          response as any,
-          agentx as any,
+          { prompt: testCase.prompt } as unknown as vscode.ChatRequest,
+          response as unknown as vscode.ChatResponseStream,
+          agentx as unknown as AgentXContext,
         );
 
         assert.deepEqual(pending, testCase.expectedPending);
@@ -322,11 +317,13 @@ describe('chatParticipant', () => {
       }
     } finally {
       sandbox.restore();
+      sandbox = sinon.createSandbox();
     }
   });
 
   it('completes direct chat-first Copilot and Claude subscription setup for supported aliases', async () => {
-    const originalExecuteCommand = vscode.commands.executeCommand;
+    sandbox.stub(vscode.commands, 'executeCommand').resolves(undefined);
+    sandbox.stub(vscode.window, 'showInputBox').resolves(undefined);
 
     const cases = [
       {
@@ -346,46 +343,36 @@ describe('chatParticipant', () => {
       },
     ];
 
-    try {
-      for (const testCase of cases) {
-        const response = createMockResponseStream();
-        (vscode.commands as any).executeCommand = async () => undefined;
-        fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
-        fs.writeFileSync(
-          path.join(tmpDir, '.agentx', 'config.json'),
-          JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
-        );
+    for (const testCase of cases) {
+      const response = createMockResponseStream();
+      fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
+      fs.writeFileSync(
+        path.join(tmpDir, '.agentx', 'config.json'),
+        JSON.stringify({ provider: 'local', integration: 'local', mode: 'local', created: '2026-04-02T00:00:00.000Z' }, null, 2),
+      );
 
-        const agentx = {
-          checkInitialized: async () => true,
-          workspaceRoot: tmpDir,
-          githubConnected: false,
-          adoConnected: false,
-          invalidateCache: () => undefined,
-          getPendingClarification: async () => undefined,
-          getPendingSetup: async () => undefined,
-          clearPendingSetup: async () => undefined,
-          storeWorkspaceLlmSecret: async () => undefined,
-          deleteWorkspaceLlmSecret: async () => undefined,
-        };
+      const agentx = {
+        checkInitialized: async () => true,
+        workspaceRoot: tmpDir,
+        githubConnected: false,
+        adoConnected: false,
+        invalidateCache: () => undefined,
+        getPendingClarification: async () => undefined,
+        getPendingSetup: async () => undefined,
+        clearPendingSetup: async () => undefined,
+        storeWorkspaceLlmSecret: async () => undefined,
+        deleteWorkspaceLlmSecret: async () => undefined,
+      };
 
-        const originalShowInputBox = vscode.window.showInputBox;
-        (vscode.window as any).showInputBox = async () => undefined;
+      await handleAgentXChatRequest(
+        { prompt: testCase.prompt } as unknown as vscode.ChatRequest,
+        response as unknown as vscode.ChatResponseStream,
+        agentx as unknown as AgentXContext,
+      );
 
-        await handleAgentXChatRequest(
-          { prompt: testCase.prompt } as any,
-          response as any,
-          agentx as any,
-        );
-
-        (vscode.window as any).showInputBox = originalShowInputBox;
-
-        const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
-        assert.equal(config.llmProvider, testCase.expectedProvider);
-        assert.ok(response.getMarkdown().includes(testCase.expectedText));
-      }
-    } finally {
-      (vscode.commands as any).executeCommand = originalExecuteCommand;
+      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+      assert.equal(config.llmProvider, testCase.expectedProvider);
+      assert.ok(response.getMarkdown().includes(testCase.expectedText));
     }
   });
 
@@ -404,9 +391,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'switch llm' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'switch llm' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     assert.deepEqual(pending, {
@@ -422,8 +409,8 @@ describe('chatParticipant', () => {
   it('completes a chat-first Claude local setup flow using the LiteLLM gateway profile', async () => {
     const response = createMockResponseStream();
     let pending: unknown;
-    const originalExecuteCommand = vscode.commands.executeCommand;
-    const originalShowInputBox = vscode.window.showInputBox;
+    sandbox.stub(vscode.commands, 'executeCommand').resolves(undefined);
+    sandbox.stub(vscode.window, 'showInputBox').resolves('litellm-secret');
 
     fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
     fs.writeFileSync(
@@ -448,41 +435,33 @@ describe('chatParticipant', () => {
       deleteWorkspaceLlmSecret: async () => undefined,
     };
 
-    try {
-      (vscode.commands as any).executeCommand = async () => undefined;
-      (vscode.window as any).showInputBox = async () => 'litellm-secret';
+    await handleAgentXChatRequest(
+      { prompt: 'switch llm' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
+    );
 
-      await handleAgentXChatRequest(
-        { prompt: 'switch llm' } as any,
-        response as any,
-        agentx as any,
-      );
+    const applyResponse = createMockResponseStream();
+    await handleAgentXChatRequest(
+      { prompt: 'claude local' } as unknown as vscode.ChatRequest,
+      applyResponse as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
+    );
 
-      const applyResponse = createMockResponseStream();
-      await handleAgentXChatRequest(
-        { prompt: 'claude local' } as any,
-        applyResponse as any,
-        agentx as any,
-      );
-
-      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
-      assert.equal(config.llmProvider, 'claude-code');
-      assert.equal(config.llmProviders['claude-code'].profile, 'local-gateway');
-      assert.equal(config.llmProviders['claude-code'].defaultModel, 'qwen2.5-coder:14b');
-      assert.equal(storedSecrets.get('claude-code'), 'litellm-secret');
-      assert.equal(pending, undefined);
-      assert.ok(applyResponse.getMarkdown().includes('Configured **Claude Code + LiteLLM + Ollama**'));
-    } finally {
-      (vscode.commands as any).executeCommand = originalExecuteCommand;
-      (vscode.window as any).showInputBox = originalShowInputBox;
-    }
+    const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+    assert.equal(config.llmProvider, 'claude-code');
+    assert.equal(config.llmProviders['claude-code'].profile, 'local-gateway');
+    assert.equal(config.llmProviders['claude-code'].defaultModel, 'qwen2.5-coder:14b');
+    assert.equal(storedSecrets.get('claude-code'), 'litellm-secret');
+    assert.equal(pending, undefined);
+    assert.ok(applyResponse.getMarkdown().includes('Configured **Claude Code + LiteLLM + Ollama**'));
   });
 
   it('completes a chat-first OpenAI setup flow using a secure API key prompt', async () => {
     const response = createMockResponseStream();
     let pending: unknown;
-    const originalExecuteCommand = vscode.commands.executeCommand;
-    const originalShowInputBox = vscode.window.showInputBox;
+    sandbox.stub(vscode.commands, 'executeCommand').resolves(undefined);
+    sandbox.stub(vscode.window, 'showInputBox').resolves('sk-test-openai-key');
 
     fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
     fs.writeFileSync(
@@ -507,41 +486,32 @@ describe('chatParticipant', () => {
       deleteWorkspaceLlmSecret: async () => undefined,
     };
 
-    try {
-      (vscode.commands as any).executeCommand = async () => undefined;
-      (vscode.window as any).showInputBox = async () => 'sk-test-openai-key';
+    await handleAgentXChatRequest(
+      { prompt: 'switch llm' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
+    );
 
-      await handleAgentXChatRequest(
-        { prompt: 'switch llm' } as any,
-        response as any,
-        agentx as any,
-      );
+    const applyResponse = createMockResponseStream();
+    await handleAgentXChatRequest(
+      { prompt: 'openai' } as unknown as vscode.ChatRequest,
+      applyResponse as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
+    );
 
-      const applyResponse = createMockResponseStream();
-      await handleAgentXChatRequest(
-        { prompt: 'openai' } as any,
-        applyResponse as any,
-        agentx as any,
-      );
-
-      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
-      assert.equal(config.llmProvider, 'openai-api');
-      assert.equal(config.llmProviders['openai-api'].defaultModel, 'gpt-5.5');
-      assert.equal(storedSecrets.get('openai-api'), 'sk-test-openai-key');
-      assert.equal(pending, undefined);
-      assert.ok(applyResponse.getMarkdown().includes('Configured **OpenAI API**'));
-      assert.ok(applyResponse.getMarkdown().includes('secure VS Code prompt'));
-    } finally {
-      (vscode.commands as any).executeCommand = originalExecuteCommand;
-      (vscode.window as any).showInputBox = originalShowInputBox;
-    }
+    const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+    assert.equal(config.llmProvider, 'openai-api');
+    assert.equal(config.llmProviders['openai-api'].defaultModel, 'gpt-5.5');
+    assert.equal(storedSecrets.get('openai-api'), 'sk-test-openai-key');
+    assert.equal(pending, undefined);
+    assert.ok(applyResponse.getMarkdown().includes('Configured **OpenAI API**'));
+    assert.ok(applyResponse.getMarkdown().includes('secure VS Code prompt'));
   });
 
   it('completes a chat-first Azure DevOps setup flow after collecting organization and project in chat', async () => {
     const response = createMockResponseStream();
     let pending: unknown;
-    const sandbox = sinon.createSandbox();
-    const originalExecuteCommand = vscode.commands.executeCommand;
+    sandbox.stub(vscode.commands, 'executeCommand').resolves(undefined);
 
     fs.mkdirSync(path.join(tmpDir, '.agentx'), { recursive: true });
     fs.writeFileSync(
@@ -565,67 +535,55 @@ describe('chatParticipant', () => {
       clearPendingSetup: async () => { pending = undefined; },
     };
 
-    try {
-      (vscode.commands as any).executeCommand = async () => undefined;
+    await handleAgentXChatRequest(
+      { prompt: 'connect ado' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
+    );
 
-      await handleAgentXChatRequest(
-        { prompt: 'connect ado' } as any,
-        response as any,
-        agentx as any,
-      );
+    assert.deepEqual(pending, {
+      kind: 'remote-adapter',
+      step: 'enter-ado-project',
+      prompt: 'connect ado',
+      adapterMode: 'ado',
+      detectedValue: undefined,
+    });
+    assert.ok(response.getMarkdown().includes('Azure DevOps adapter setup'));
 
-      assert.deepEqual(pending, {
-        kind: 'remote-adapter',
-        step: 'enter-ado-project',
-        prompt: 'connect ado',
-        adapterMode: 'ado',
-        detectedValue: undefined,
-      });
-      assert.ok(response.getMarkdown().includes('Azure DevOps adapter setup'));
+    const applyResponse = createMockResponseStream();
+    await handleAgentXChatRequest(
+      { prompt: 'contoso/Platform' } as unknown as vscode.ChatRequest,
+      applyResponse as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
+    );
 
-      const applyResponse = createMockResponseStream();
-      await handleAgentXChatRequest(
-        { prompt: 'contoso/Platform' } as any,
-        applyResponse as any,
-        agentx as any,
-      );
-
-      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
-      assert.equal(config.provider, 'ado');
-      assert.equal(config.integration, 'ado');
-      assert.equal(config.organization, 'contoso');
-      assert.equal(config.project, 'Platform');
-      assert.equal(pending, undefined);
-      assert.ok(applyResponse.getMarkdown().includes('Configured **Azure DevOps** mode'));
-    } finally {
-      (vscode.commands as any).executeCommand = originalExecuteCommand;
-      sandbox.restore();
-    }
+    const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.agentx', 'config.json'), 'utf-8'));
+    assert.equal(config.provider, 'ado');
+    assert.equal(config.integration, 'ado');
+    assert.equal(config.organization, 'contoso');
+    assert.equal(config.project, 'Platform');
+    assert.equal(pending, undefined);
+    assert.ok(applyResponse.getMarkdown().includes('Configured **Azure DevOps** mode'));
   });
 
   it('launches Add Plugin directly from chat', async () => {
     const response = createMockResponseStream();
     const executed: string[] = [];
-    const originalExecuteCommand = vscode.commands.executeCommand;
-    (vscode.commands as any).executeCommand = async (command: string) => {
+    sandbox.stub(vscode.commands, 'executeCommand').callsFake(async (command: string) => {
       executed.push(command);
       return undefined;
-    };
+    });
 
     const agentx = {
       checkInitialized: async () => true,
       workspaceRoot: tmpDir,
     };
 
-    try {
-      await handleAgentXChatRequest(
-        { prompt: 'add plugin' } as any,
-        response as any,
-        agentx as any,
-      );
-    } finally {
-      (vscode.commands as any).executeCommand = originalExecuteCommand;
-    }
+    await handleAgentXChatRequest(
+      { prompt: 'add plugin' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
+    );
 
     assert.deepEqual(executed, ['agentx.addPlugin']);
     assert.ok(response.getMarkdown().includes('Opened **AgentX: Add Plugin** for this workspace.'));
@@ -640,9 +598,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'run engineer implement the login fix' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'run engineer implement the login fix' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -658,9 +616,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'learnings planning workflow review' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'learnings planning workflow review' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -677,9 +635,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'capture guidance' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'capture guidance' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -695,9 +653,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'brainstorm workflow capture loop' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'brainstorm workflow capture loop' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -731,9 +689,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'workflow next step' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'workflow next step' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -759,9 +717,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'kick off review' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'kick off review' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -777,9 +735,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'compound' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'compound' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -807,9 +765,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'agent-native review' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'agent-native review' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -825,9 +783,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'review findings' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'review findings' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -844,9 +802,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'promote finding FINDING-164-001' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'promote finding FINDING-164-001' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     assert.ok(response.getMarkdown().includes('Promoted FINDING-164-001 as issue #88.'));
@@ -871,9 +829,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'run engineer implement the login fix' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'run engineer implement the login fix' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     assert.deepEqual(pending, {
@@ -901,16 +859,15 @@ describe('chatParticipant', () => {
       'Final answer from AgentX',
     ].join('\n');
     const written: string[] = [];
-    const originalCreateOutputChannel = vscode.window.createOutputChannel;
     resetChatParticipantStateForTests();
-    (vscode.window as any).createOutputChannel = () => ({
+    sandbox.stub(vscode.window, 'createOutputChannel').returns({
       appendLine: (value: string) => { written.push(value); },
       append: (value: string) => { written.push(value); },
       clear: () => { written.length = 0; },
       show: () => undefined,
       hide: () => undefined,
       dispose: () => undefined,
-    });
+    } as unknown as vscode.LogOutputChannel);
 
     const agentx = {
       checkInitialized: async () => true,
@@ -918,15 +875,11 @@ describe('chatParticipant', () => {
       clearPendingClarification: async () => undefined,
     };
 
-    try {
-      await handleAgentXChatRequest(
-        { prompt: 'run engineer generate a large report' } as any,
-        response as any,
-        agentx as any,
-      );
-    } finally {
-      (vscode.window as any).createOutputChannel = originalCreateOutputChannel;
-    }
+    await handleAgentXChatRequest(
+      { prompt: 'run engineer generate a large report' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
+    );
 
     const markdown = response.getMarkdown();
     assert.ok(markdown.includes('Large output detected'));
@@ -965,9 +918,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'continue use the existing auth flow' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'continue use the existing auth flow' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     assert.deepEqual(capturedArgs, [
@@ -1002,9 +955,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'continue use the existing auth flow' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'continue use the existing auth flow' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -1028,9 +981,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'continue use the existing auth flow' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'continue use the existing auth flow' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     const markdown = response.getMarkdown();
@@ -1056,9 +1009,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'continue' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'continue' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     assert.ok(response.getMarkdown().includes('Pending clarification for engineer'));
@@ -1089,9 +1042,9 @@ describe('chatParticipant', () => {
     };
 
     await handleAgentXChatRequest(
-      { prompt: 'Use the existing auth flow and do not change token semantics.' } as any,
-      response as any,
-      agentx as any,
+      { prompt: 'Use the existing auth flow and do not change token semantics.' } as unknown as vscode.ChatRequest,
+      response as unknown as vscode.ChatResponseStream,
+      agentx as unknown as AgentXContext,
     );
 
     assert.deepEqual(capturedArgs, [
@@ -1110,7 +1063,7 @@ describe('chatParticipant', () => {
       }),
     };
 
-    const followups = await getAgentXChatFollowups(agentx as any);
+    const followups = await getAgentXChatFollowups(agentx as unknown as AgentXContext);
     assert.equal(followups.length, 2);
     assert.equal(followups[0].prompt, 'continue');
     assert.ok(followups[0].label?.includes('engineer'));
@@ -1127,7 +1080,7 @@ describe('chatParticipant', () => {
       getPendingClarification: async () => undefined,
     };
 
-    const followups = await getAgentXChatFollowups(agentx as any);
+    const followups = await getAgentXChatFollowups(agentx as unknown as AgentXContext);
     assert.equal(followups.length, 2);
     assert.equal(followups[0].prompt, 'continue');
     assert.equal(followups[1].prompt, 'cancel setup');

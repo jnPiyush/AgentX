@@ -1,0 +1,131 @@
+[
+  {
+    "name": "canonical indentation",
+    "content": "---\ninputs:\n  title:\n    description: \"Display title\"\n    required: true\n    default: \"Draft\"\n  count:\n    default: 0\n---\n# Template",
+    "inputs": [
+      { "name": "title", "description": "Display title", "required": true, "defaultValue": "Draft" },
+      { "name": "count", "description": "", "required": false, "defaultValue": "0" }
+    ]
+  },
+  {
+    "name": "legacy indentation",
+    "content": "---\ninputs:\n name:\n  description: 'Project name'\n  required: false\n  default: ''\n---\n# Template",
+    "inputs": [
+      { "name": "name", "description": "Project name", "required": false, "defaultValue": "" }
+    ]
+  },
+  {
+    "name": "comment declarations",
+    "content": "---\ndescription: 'Legacy comment metadata'\n---\n<!-- Inputs: {title}, ${date}, title -->\n# Template",
+    "inputs": [
+      { "name": "title", "description": "", "required": false, "defaultValue": "" },
+      { "name": "date", "description": "", "required": false, "defaultValue": "" }
+    ]
+  },
+  {
+    "name": "YAML metadata wins over duplicate comments",
+    "content": "---\ninputs:\n  title:\n    required: true\n    default: Draft\n---\n<!-- Inputs: {title}, {author} -->\n# Template",
+    "inputs": [
+      { "name": "title", "description": "", "required": true, "defaultValue": "Draft" },
+      { "name": "author", "description": "", "required": false, "defaultValue": "" }
+    ]
+  },
+  {
+    "name": "folded description and false default",
+    "content": "---\ninputs:\n  enabled:\n    description: >-\n      First line\n      second line\n    default: false\n---\n# Template",
+    "inputs": [
+      { "name": "enabled", "description": "First line second line", "required": false, "defaultValue": "false" }
+    ]
+  },
+  {
+    "name": "body examples are not declarations",
+    "content": "# Template\n```markdown\n<!-- Inputs: {fake} -->\n```\n",
+    "inputs": []
+  },
+  {
+    "name": "empty metadata",
+    "content": "---\n---\n# Empty",
+    "inputs": []
+  },
+  {
+    "name": "header code examples are not declarations",
+    "content": "```markdown\n<!-- Inputs: {fake} -->\n```\n<!-- Inputs: {real} -->\n# Template",
+    "inputs": [
+      { "name": "real", "description": "", "required": false, "defaultValue": "" }
+    ]
+  },
+  {
+    "name": "BOM does not hide the first heading",
+    "content": "\ufeff# Template\n<!-- Inputs: {fake} -->",
+    "inputs": []
+  },
+  {
+    "name": "header declarations are not limited to ten lines",
+    "content": "---\ndescription: 'Header metadata'\n---\n\n\n\n\n\n\n\n\n\n<!-- Inputs: {title} -->\n# Template",
+    "inputs": [
+      { "name": "title", "description": "", "required": false, "defaultValue": "" }
+    ]
+  },
+  {
+    "name": "no metadata",
+    "content": "# Plain template",
+    "inputs": []
+  },
+  {
+    "name": "malformed YAML",
+    "content": "---\ninputs: [\n---\n# Bad",
+    "error": true
+  },
+  {
+    "name": "wrong inputs shape",
+    "content": "---\ninputs: [title]\n---\n# Bad",
+    "error": true
+  },
+  {
+    "name": "required is not a string",
+    "content": "---\ninputs:\n  title:\n    required: 'true'\n---\n# Bad",
+    "error": true
+  },
+  {
+    "name": "default is scalar",
+    "content": "---\ninputs:\n  title:\n    default: [one, two]\n---\n# Bad",
+    "error": true
+  },
+  {
+    "name": "numeric defaults are finite",
+    "content": "---\ninputs:\n  count:\n    default: .nan\n---\n# Bad",
+    "error": true
+  },
+  {
+    "name": "resolved YAML aliases retain valid metadata",
+    "content": "---\nshared: &definition\n  description: Display title\n  required: true\ninputs:\n  title: *definition\n---\n# Template",
+    "inputs": [
+      { "name": "title", "description": "Display title", "required": true, "defaultValue": "" }
+    ]
+  },
+  {
+    "name": "unresolved YAML aliases report invalid metadata",
+    "content": "---\ninputs:\n  title: *missing\n---\n# Bad",
+    "error": true
+  },
+  {
+    "name": "excessive YAML aliases report invalid metadata",
+    "content": "---\na: &a [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\nb: &b [*a, *a, *a, *a, *a, *a, *a, *a, *a, *a]\nc: &c [*b, *b, *b, *b, *b, *b, *b, *b, *b, *b]\ninputs:\n  title:\n    default: *c\n---\n# Bad",
+    "error": true
+  },
+  {
+    "name": "commented numeric defaults are finite",
+    "content": "---\ninputs:\n  count:\n    default: .nan # not JSON-representable\n---\n# Bad",
+    "error": true
+  },
+  {
+    "name": "duplicate YAML keys",
+    "content": "---\ninputs:\n  title:\n    required: true\n  title:\n    required: false\n---\n# Bad",
+    "error": true
+  },
+  {
+    "name": "unterminated frontmatter",
+    "content": "---\ninputs:\n  title:\n    required: true\n# Bad",
+    "error": true
+  }
+]

@@ -29,78 +29,6 @@ compatibility:
 - Git 2.30+ installed
 - Remote repository access (GitHub, Azure DevOps, GitLab, etc.)
 
-## Decision Tree
-
-```
-What remote Git operation?
-+-- Setting up authentication?
-|   +-- Personal machine? -> SSH key
-|   +-- CI/CD pipeline? -> Deploy key or app token
-|   +-- Temporary access? -> HTTPS + credential helper
-+-- Collaborating on code?
-|   +-- Small team, single remote? -> Feature branch + PR
-|   +-- Fork-based (open source)? -> Fork + upstream remote + PR
-|   +-- Multiple remotes? -> Named remotes (origin, upstream)
-+-- Syncing with remote?
-|   +-- Linear history preferred? -> git pull --rebase
-|   +-- Merge commits acceptable? -> git pull (merge)
-|   +-- CI branch behind? -> git fetch + git rebase origin/main
-+-- Handling large files?
-|   +-- Binary assets (images, models, videos)? -> Git LFS
-|   +-- Large repo history? -> Shallow clone (--depth 1)
-```
-
----
-
-## Remote Repository Setup
-
-### Adding and Managing Remotes
-
-```bash
-# View existing remotes
-git remote -v
-
-# Add a new remote
-git remote add origin https://github.com/username/repo.git
-git remote add upstream https://github.com/original/repo.git
-
-# Change remote URL
-git remote set-url origin https://github.com/username/new-repo.git
-
-# Remove a remote
-git remote remove upstream
-
-# Rename a remote
-git remote rename origin main-repo
-
-# Fetch remote information
-git remote show origin
-```
-
-### Clone Strategies
-
-```bash
-# Standard clone
-git clone https://github.com/username/repo.git
-
-# Clone with different folder name
-git clone https://github.com/username/repo.git my-project
-
-# Clone specific branch
-git clone -b develop https://github.com/username/repo.git
-
-# Shallow clone (faster, less history)
-git clone --depth 1 https://github.com/username/repo.git
-
-# Clone with submodules
-git clone --recursive https://github.com/username/repo.git
-
-# Clone using SSH
-git clone git@github.com:username/repo.git
-```
-
----
-
 ## Troubleshooting Common Issues
 
 ### "Your branch is ahead/behind origin"
@@ -208,8 +136,28 @@ git push origin main
 - [Security](../../architecture/security/SKILL.md)
 - [Core Principles](../../architecture/core-principles/SKILL.md)
 
-## References
+## Workflow
 
-- [Auth Fetch Push Branch](references/auth-fetch-push-branch.md)
-- [Pr Conflicts Lfs](references/pr-conflicts-lfs.md)
-- [Cicd Maintenance Advanced](references/cicd-maintenance-advanced.md)
+1. Inspect status, branch, remotes, and upstream.
+2. Fetch the intended remote and compare divergence.
+3. Resolve conflicts locally and rerun checks.
+4. Push the exact ref and verify the remote result.
+
+## Verification Checklist
+
+- [ ] Remote URL and identity are intended.
+- [ ] Local branch is clean and verified.
+- [ ] Push refspec is explicit.
+- [ ] Remote branch points to the expected commit.
+
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Decision Tree, Remote Repository Setup](references/details-decision-tree-and-remote-repository-setup.md) - MUST read before work involving decision tree, remote repository setup.
+
+Existing focused references are reused, not duplicated:
+
+- [Git Authentication, Fetch, Push & Branch Management](references/auth-fetch-push-branch.md) - MUST read before applying the focused git authentication, fetch, push & branch management guidance.
+- [CI/CD Integration, Maintenance & Advanced Git Operations](references/cicd-maintenance-advanced.md) - MUST read before applying the focused ci/cd integration, maintenance & advanced git operations guidance.
+- [Pull Requests, Conflict Resolution & Git LFS](references/pr-conflicts-lfs.md) - MUST read before applying the focused pull requests, conflict resolution & git lfs guidance.

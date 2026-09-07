@@ -14,7 +14,9 @@ compatibility:
 
 # Content Design
 
-> WHEN: A prototype or shipped surface contains user-facing text -- labels, buttons, empty states, errors, tooltips, onboarding, confirmations, system messages. This skill is the AgentX canonical content guide. Heuristic H2/H9/H10 from `usability-heuristics` defers to this skill for the specific copy patterns.
+> WHEN: A prototype or shipped surface contains user-facing text -- labels,
+> buttons, empty states, errors, tooltips, onboarding, confirmations, or AI
+> disclosures -- and that copy must survive review.
 
 ## When to Use This Skill
 
@@ -24,157 +26,83 @@ compatibility:
 - Designing onboarding, empty states, or zero-data screens
 - Reviewing AI-generated UI text for clarity and safety
 
-## Authoritative Sources
+## Prerequisites
 
-| Source | Focus |
-|--------|-------|
-| GOV.UK Service Manual -- Content design | Plain language, accessibility |
-| Mailchimp Content Style Guide | Voice and tone |
-| Microsoft Writing Style Guide | Inclusive, action-first wording |
-| Shopify Polaris Content guidelines | Commerce and dashboard patterns |
-| Nielsen Norman Group articles on error and empty states | Empirical UX research |
+Know the user task, current system state, action owner, and the surface where
+the string appears. For shipped UI, know where the string lives in the message
+catalogue and which locales or accessibility rules apply before editing copy.
 
-Quote sources in PRD-level decisions; do not cite them inline in production copy.
+## Decision Guide
 
-## Voice Rubric (5 lines, applied to every string)
+Action label -> verb + object in 1-3 words. Form field -> persistent label plus
+helper text for constraints. State message -> write the state before styling the
+surface. AI output -> label it as AI, offer edit or regenerate, and avoid
+certainty language. Repeated or translated copy -> centralize it in the message
+catalogue.
 
-1. **Clear over clever.** If the user has to re-read, rewrite.
-2. **Active and direct.** "Save changes" beats "Changes can be saved."
-3. **Front-load the action or outcome.** First two words carry the meaning.
-4. **Honest about state.** Do not say "saved" before the network round-trip resolves.
-5. **Inclusive and neutral.** Avoid idioms, gendered defaults, and culture-specific jokes.
+## Core Rules
 
-## Length Budgets
+- Clear over clever; users should not need a re-read.
+- Lead with the action or outcome and keep the first words meaningful.
+- Never claim success, certainty, or availability before the system can prove
+  it.
+- Labels name fields; placeholders are not labels.
+- Error copy must say what happened, why if known, and what to do next.
+- Length budgets matter because layout, localization, and scan speed are part
+  of the design.
+- Banned placeholders and generic filler are release blockers, not TODOs.
 
-| Surface | Budget | Notes |
-|---------|--------|-------|
-| Primary button | 1-3 words, verb-first | "Save", "Send invite", "Delete project" |
-| Secondary button | 1-3 words | Pairs with primary; never both verbs that look the same |
-| Form label | 1-4 words | Persistent; never replaced by placeholder |
-| Field hint (helper text) | <=80 chars | Stays visible; explains constraint |
-| Inline error | <=120 chars | What is wrong + how to fix |
-| Toast | <=140 chars | Plus optional action link |
-| Empty state heading | <=8 words | What this surface is for |
-| Empty state body | <=160 chars | One sentence + one action |
-| Tooltip | <=120 chars | Single concept; no nesting |
-| Page title (`<title>`) | <=60 chars | "Page name -- App name" |
-| Dialog confirmation body | <=200 chars | State the consequence, name the target |
+## Workflow
 
-Hard budgets keep the UI predictable and translation-safe (most non-English languages are 20-35% longer).
+1. Identify the surface, user action, and state transition.
+2. Pick the right pattern: label or button, empty state, error, confirmation,
+   toast, onboarding, or AI output.
+3. Draft within the length budget and voice rubric.
+4. Run the anti-pattern scan and remove filler, vague errors, and placeholder
+   text.
+5. Verify catalogue placement, localization behavior, and accessibility hooks
+   before handoff.
 
-## Pattern Library
+## Pitfalls
 
-### Buttons and labels
+The full voice rubric, budgets, pattern library, anti-pattern table,
+localization hooks, and inclusive language checklist stay in the detail file
+below. The recurring mistake is cheerful but content-free copy that hides the
+real state or next action.
 
-- Verb + object: "Create project", "Invite teammate"
-- Never "Submit", "OK", or "Click here". Use the actual action.
-- Disabled buttons must explain why on hover or via inline helper text.
+## Error Handling
 
-### Form labels and hints
-
-- Labels describe the field; hints describe the constraint.
-- Required marker: visible `*` + `aria-required="true"`.
-- Use natural-language formats in hints: "Use a date like 12 May 2026", not "ISO-8601".
-
-### Empty states
-
-A good empty state has three pieces:
-
-1. Heading: what this surface holds when populated.
-2. Body: one sentence explaining the value.
-3. Action: a primary button OR a short instruction.
-
-Example:
-
-```text
-No invoices yet.
-Invoices appear here after your first paid project.
-Create your first invoice
-```
-
-### Error messages
-
-The error formula: **What happened. Why. What to do next.**
-
-- Bad: "Error 500: Internal server error."
-- Good: "We could not save your changes. The server is temporarily unavailable. Try again in a minute, or copy your draft to keep it safe."
-
-Field-level errors must reference the field name and what fix is acceptable, not just "Invalid".
-
-### Confirmations
-
-- Title states the action: "Delete this project?"
-- Body names the target and consequence: "All 23 tasks and their attachments will be permanently removed."
-- Buttons mirror the action: primary = "Delete project" (destructive style), secondary = "Cancel".
-- For high-risk operations, require typing the target name to enable the primary button.
-
-### Toasts and snackbars
-
-- One concept per toast.
-- Include an action when the user can recover ("Undo", "Retry", "View").
-- Auto-dismiss only when the message is non-blocking; persistent for errors.
-
-### Onboarding and first-run
-
-- One sentence per step.
-- Show, do not just tell: highlight the affordance the step references.
-- Always dismissible. Never trap the user.
-
-### AI-generated text
-
-- Always label AI output: "Draft from AI" or "Suggested by AI".
-- Provide a regenerate and an edit affordance.
-- Never claim the AI is certain. Use "looks like" and "based on" hedges where appropriate.
-- Include a feedback control (`thumbs-up / thumbs-down` or "Was this helpful?") to feed back into eval.
-
-## Anti-Patterns (grep-friendly)
-
-| Bad string | Why | Replace with |
-|------------|-----|--------------|
-| `Oops!`, `Whoops!` | Tone-deaf to real failure | State what happened |
-| `Something went wrong.` | No content | Specific error + next step |
-| `Click here` | Non-descriptive link | Use the destination as the link text |
-| `Please ...` | Padding | Drop it, lead with the verb |
-| `Are you sure?` (alone) | No context | Name the action and consequence |
-| `Invalid input` | No remediation | Say what shape of input is expected |
-| `Coming soon!` | Hides scope | State expected availability or remove |
-| `Lorem ipsum` / `TODO` / `xxx` | Placeholder | Block release |
-| Exclamation marks in errors | Reads as cheerful | Use neutral punctuation |
-| All-caps body | Reads as shouting | Use sentence case |
-
-The prototype-audit Pass 3 (Content) hard-fails on the bottom four entries.
-
-## Localization Hooks
-
-- Pull every visible string from a single message catalogue (`src/i18n/en.json`, etc.).
-- Do not concatenate sentences from variables; use a single ICU MessageFormat string with placeholders.
-- Allow 35% expansion in layout. Test with `<longest-translation>` fixtures.
-- Plural rules differ per locale; use `plural` in MessageFormat, not `n === 1 ? "item" : "items"`.
-
-## Inclusive Language Checklist
-
-- Avoid gendered defaults (`he`, `she`, `guys`). Use `they` or a role noun.
-- Avoid idioms that do not translate (`piece of cake`, `hit it out of the park`).
-- Avoid ableist defaults (`crazy`, `dumb`, `lame`). Replace with neutral terms.
-- Use people-first language unless community guidance differs (`person with a disability` unless community prefers identity-first).
+If the backend cannot provide a specific failure reason, say what is known and
+what the user can do next instead of inventing certainty. If the UI space is
+tight, shorten the visible label and move the constraint to helper text. If
+localization is not wired, do not scatter literals that will later fork across
+files.
 
 ## Verification
 
-- Lint: search the codebase for the anti-pattern strings above and the placeholder list.
-- Diff: every committed string change has a reviewer.
-- Browser: render in the longest supported locale to confirm budgets hold.
-- Screen-reader: confirm helper text and error association is announced (covered by `accessibility`).
+- Search for banned strings, placeholders, and uncatalogued literals
+- Render the longest supported locale
+- Confirm helper text and error association are announced
+- Check every string change has a reviewer
 
-## Done Criteria
+## Why This Is a Skill
 
-- All user-facing strings live in a message catalogue or a `labels.ts` module.
-- Empty, loading, error, success, and offline states have copy that follows the pattern library.
-- No placeholder or banned strings remain in shipped surfaces.
-- Length budgets satisfied at the longest supported locale.
+Copy bugs are product bugs: vague labels slow tasks, dishonest success states
+destroy trust, and generic filler makes even good UI feel unreviewed. This
+skill gives writers and reviewers a shared set of patterns, budgets, and
+grepable anti-patterns so wording becomes an enforceable system instead of
+personal taste.
 
 ## Skills to Compose With
 
-- `design/usability-heuristics` -- H2, H9, H10 inspections rely on this skill
-- `design/accessibility` -- label and error association rules
-- `design/ux-ui-design` -- where copy lives in the IA
-- `design/prototype-audit` -- Pass 3 (Content) enforces the anti-patterns
+- [design/usability-heuristics](../usability-heuristics/SKILL.md) -- H2, H9, H10 inspections rely on this skill
+- [design/accessibility](../accessibility/SKILL.md) -- label and error association rules
+- [design/ux-ui-design](../ux-ui-design/SKILL.md) -- where copy lives in the IA
+- [design/prototype-audit](../prototype-audit/SKILL.md) -- Pass 3 (Content) enforces the anti-patterns
+
+## References
+
+- [details-pattern-library.md](references/details-pattern-library.md) -- read
+  for the original authoritative sources table, voice rubric, budgets, pattern
+  library, anti-patterns, localization hooks, inclusive language checklist,
+  verification, and done criteria.

@@ -8,7 +8,7 @@ function Assert-True([bool]$Value, [string]$Label) {
     $script:passed++
     Write-Host "[PASS] $Label"
 }
-function Invoke-Step([string]$File, [string]$Event, [string]$Baseline) {
+function Invoke-Step([string]$File, [string]$EventName, [string]$Baseline) {
     $info = [Diagnostics.ProcessStartInfo]::new('pwsh')
     $info.UseShellExecute = $false
     $info.WorkingDirectory = $temp
@@ -17,7 +17,7 @@ function Invoke-Step([string]$File, [string]$Event, [string]$Baseline) {
     $info.Environment['AGENTX_WORKSPACE_ROOT'] = $temp
     $info.Environment['RUNNER_TEMP'] = $temp
     $info.Environment['GITHUB_STEP_SUMMARY'] = Join-Path $temp 'summary.md'
-    $info.Environment['TOKEN_EVENT_NAME'] = $Event
+    $info.Environment['TOKEN_EVENT_NAME'] = $EventName
     $info.Environment['TOKEN_BASE_SHA'] = $Baseline
     foreach ($argument in @('-NoProfile', '-NonInteractive', '-File', $File)) { $info.ArgumentList.Add($argument) }
     $process = [Diagnostics.Process]::Start($info)
@@ -48,17 +48,17 @@ try {
     & git -C $temp add README.md
     & git -C $temp -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm baseline
     $sha = & git -C $temp rev-parse HEAD
-    foreach ($event in @('push', 'pull_request')) {
-        $baseline = if ($event -eq 'pull_request') { $sha } else { '' }
-        $run = Invoke-Step $reportStep $event $baseline
-        Assert-True ($run.exit -eq 0) "Actual CI report step executes for $event ($($run.text.Trim()))"
+    foreach ($eventName in @('push', 'pull_request')) {
+        $baseline = if ($eventName -eq 'pull_request') { $sha } else { '' }
+        $run = Invoke-Step $reportStep $eventName $baseline
+        Assert-True ($run.exit -eq 0) "Actual CI report step executes for $eventName ($($run.text.Trim()))"
         $artifact = Join-Path $temp 'token-budget-report.json'
         Assert-True ((Get-Item $artifact).Length -gt 0) 'CI token report artifact is non-empty'
         $report = Get-Content $artifact -Raw | ConvertFrom-Json
         Assert-True ($report.violations.Count -eq 1) 'Inherited overage is retained in CI report'
-        $check = Invoke-Step $checkStep $event $baseline
-        $expected = if ($event -eq 'pull_request') { 0 } else { 1 }
-        Assert-True ($check.exit -eq $expected) "Actual CI check enforces correct mode for $event"
+        $check = Invoke-Step $checkStep $eventName $baseline
+        $expected = if ($eventName -eq 'pull_request') { 0 } else { 1 }
+        Assert-True ($check.exit -eq $expected) "Actual CI check enforces correct mode for $eventName"
     }
     Add-Content (Join-Path $temp 'README.md') -Value 'new overage'
     $regression = Invoke-Step $checkStep 'pull_request' $sha

@@ -29,232 +29,12 @@ compatibility:
 - Validating OWASP Top 10 compliance
 - Pre-release security verification
 
-## When NOT to Use
-
-- Functional testing (use integration/e2e testing)
-- Performance/load testing (use performance testing)
-- Infrastructure compliance auditing (use compliance tools)
-- Threat modeling (design phase, not testing)
-
 ## Prerequisites
 
 - Source code repository
 - CI/CD pipeline for automated scanning
 - Running application instance for DAST
 - Container registry for image scanning (if applicable)
-
-## Decision Tree
-
-```
-Security testing type?
-+- Code vulnerabilities? -> SAST
-|  +- Semgrep (language-agnostic, custom rules)
-|  +- CodeQL (GitHub Advanced Security)
-|  +- Bandit (Python), ESLint-security (JS)
-+- Runtime vulnerabilities? -> DAST
-|  +- ZAP (OWASP, free, comprehensive)
-|  +- Nuclei (template-based, fast)
-|  +- Burp Suite (manual + automated)
-+- Dependency vulnerabilities? -> SCA
-|  +- Snyk (broad ecosystem, fix PRs)
-|  +- Trivy (fast, container + deps)
-|  +- npm audit / pip-audit / dotnet list package --vulnerable
-+- Leaked secrets? -> Secret Scanning
-|  +- Gitleaks (git history scan)
-|  +- TruffleHog (entropy + regex)
-|  +- GitHub Secret Scanning (built-in)
-+- Container vulnerabilities? -> Image Scanning
-|  +- Trivy (comprehensive, fast)
-|  +- Grype (Anchore, SBOM-based)
-|  +- Docker Scout (Docker Desktop)
-+- API security? -> API-Specific
-|  +- OWASP ZAP API scan
-|  +- Postman security tests
-|  +- Custom auth/authz tests
-```
-
----
-
-## OWASP Top 10 Test Coverage
-
-| # | Category | Test Approach | Tools |
-|---|----------|--------------|-------|
-| A01 | Broken Access Control | Auth/authz integration tests + DAST | ZAP, custom tests |
-| A02 | Cryptographic Failures | SAST rules + config review | Semgrep, CodeQL |
-| A03 | Injection | SAST + DAST (SQLi, XSS, Command) | Semgrep, ZAP |
-| A04 | Insecure Design | Threat model review (manual) | - |
-| A05 | Security Misconfiguration | Config scanning + DAST | Trivy, ZAP |
-| A06 | Vulnerable Components | Dependency scanning (SCA) | Snyk, Trivy |
-| A07 | Auth Failures | Auth integration tests + DAST | ZAP, custom tests |
-| A08 | Software/Data Integrity | Supply chain checks, SRI | Sigstore, SBOM |
-| A09 | Logging Failures | Log review + SAST | Semgrep rules |
-| A10 | SSRF | SAST + DAST for outbound requests | Semgrep, ZAP |
-
----
-
-## SAST (Static Application Security Testing)
-
-### Semgrep Configuration
-
-```yaml
-# .semgrep.yml
-rules:
-  - id: sql-injection
-    patterns:
-      - pattern: |
-          $QUERY = f"... {$INPUT} ..."
-      - pattern: |
-          $QUERY = "..." + $INPUT + "..."
-    message: "Possible SQL injection. Use parameterized queries."
-    severity: ERROR
-    languages: [python, javascript, typescript]
-
-  - id: hardcoded-secret
-    pattern: |
-      $KEY = "..."
-    metavariable-regex:
-      $KEY: ".*(password|secret|token|api_key).*"
-    message: "Possible hardcoded secret. Use environment variables."
-    severity: WARNING
-    languages: [python, javascript, typescript, java, csharp]
-```
-
-### GitHub Actions SAST Pipeline
-
-```yaml
-name: Security - SAST
-on: [push, pull_request]
-
-jobs:
-  semgrep:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: returntocorp/semgrep-action@v1
-        with:
-          config: >-
-            p/default
-            p/owasp-top-ten
-            p/javascript
-            p/typescript
-            .semgrep.yml
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-
-  codeql:
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
-        with:
-          languages: javascript, python
-      - uses: github/codeql-action/autobuild@v3
-      - uses: github/codeql-action/analyze@v3
-```
-
----
-
-## DAST (Dynamic Application Security Testing)
-
-### OWASP ZAP Baseline Scan
-
-```yaml
-# GitHub Actions
-  zap-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - name: ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.12.0
-        with:
-          target: ${{ vars.STAGING_URL }}
-          rules_file_name: 'zap-rules.tsv'
-          fail_action: true  # Fail on WARN/FAIL
-
-      - name: Upload ZAP Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: report_html.html
-```
-
-### ZAP Rules Configuration
-
-```
-# zap-rules.tsv - Customize alert thresholds
-10010	IGNORE	# Cookie No HttpOnly Flag (handled by framework)
-10011	WARN	# Cookie Without Secure Flag
-10015	FAIL	# Incomplete or No Cache-control
-10017	FAIL	# Cross-Domain JavaScript Source
-10020	FAIL	# X-Frame-Options Header
-10021	FAIL	# X-Content-Type-Options Header
-10038	FAIL	# Content Security Policy
-40012	FAIL	# Cross Site Scripting (Reflected)
-40014	FAIL	# Cross Site Scripting (Persistent)
-90001	FAIL	# Insecure JSF ViewState
-```
-
----
-
-## Dependency Scanning (SCA)
-
-### npm Audit
-
-```bash
-# Check for vulnerabilities
-npm audit --production
-
-# Auto-fix where possible
-npm audit fix
-
-# Generate report
-npm audit --json > security-report.json
-```
-
-### Trivy for Dependencies + Containers
-
-```yaml
-  trivy-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # Filesystem scan (dependencies)
-      - name: Trivy FS Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: CRITICAL,HIGH
-          exit-code: 1
-
-      # Container image scan
-      - name: Trivy Image Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          severity: CRITICAL,HIGH
-          exit-code: 1
-```
-
-### Snyk with Auto-Fix PRs
-
-```yaml
-  snyk:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test
-          args: --severity-threshold=high
-```
-
----
 
 ## Secrets Detection
 
@@ -318,30 +98,6 @@ A complete security pipeline chains SAST, SCA, secret detection, DAST, and conta
 
 ---
 
-## Severity Classification
-
-| Severity | Response Time | Action | Gate |
-|----------|--------------|--------|------|
-| **Critical** | Immediate | Block release, hotfix | MUST fix before deploy |
-| **High** | 24 hours | Fix in current sprint | MUST fix before release |
-| **Medium** | 1 sprint | Plan remediation | SHOULD fix before release |
-| **Low** | Backlog | Track and address | MAY defer with justification |
-
----
-
-## Metrics
-
-| Metric | Target | Alert Threshold |
-|--------|--------|-----------------|
-| Critical/High CVEs | 0 in production | Any new critical/high |
-| SAST findings (high) | 0 unresolved | Any new high finding |
-| Dependency freshness | < 30 days behind | > 60 days behind |
-| Secret scan coverage | 100% of repos | Missing repo |
-| DAST scan frequency | Weekly minimum | > 2 weeks gap |
-| Mean time to remediate (critical) | < 24 hours | > 48 hours |
-
----
-
 ## Core Rules
 
 1. **Shift Left** - Run SAST and secret detection on every PR; do not defer security scanning to release time.
@@ -357,15 +113,34 @@ A complete security pipeline chains SAST, SCA, secret detection, DAST, and conta
 
 ---
 
-## Anti-Patterns
+## Workflow
 
-| Don't | Do Instead |
-|-------|------------|
-| Run security scans manually | Automate in CI pipeline |
-| Ignore medium/low findings | Track all, prioritize by risk |
-| Suppress findings without justification | Document exception with risk acceptance |
-| Scan only on release | Scan on every PR + scheduled |
-| Use outdated vulnerability databases | Update tool databases daily |
-| Test only happy paths | Test injection, bypass, and edge cases |
-| Hardcode test credentials | Use CI secrets management |
-| Skip container scanning | Scan base images and built images |
+1. Define scope, threat cases, and stop conditions.
+2. Run the least invasive relevant checks.
+3. Reproduce high-impact findings safely and collect minimal evidence.
+4. Retest remediation and document residual risk.
+
+## Error Handling
+
+- Potential destructive effect: stop the test.
+- Scanner unavailable: report the gap; do not claim coverage.
+- False positive: retain the evidence and rationale for dismissal.
+
+## Verification Checklist
+
+- [ ] Authorization and target are recorded.
+- [ ] Required scan categories ran.
+- [ ] High findings have reproducible evidence.
+- [ ] Remediations are retested and secrets are absent from artifacts.
+
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Decision Tree, OWASP Top 10 Test Coverage, SAST (Static Application Security Testing)](references/details-decision-tree-and-sast-static-application-security.md) - MUST read before work involving decision tree, owasp top 10 test coverage, sast (static application security testing).
+- [DAST (Dynamic Application Security Testing) through Anti-Patterns](references/details-dast-dynamic-application-securit-and-anti-patterns.md) - MUST read before work involving dast (dynamic application security testing) through anti-patterns.
+
+Existing focused references are reused, not duplicated:
+
+- [Security Pipeline (Full Example)](references/security-pipeline.md) - MUST read before applying the focused security pipeline (full example) guidance.
+- [Security Test Examples](references/security-test-examples.md) - MUST read before applying the focused security test examples guidance.

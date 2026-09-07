@@ -24,53 +24,36 @@ inputs:
 
 > **Acceptance Criteria**: Defined in the PRD user stories - see `docs/artifacts/prd/PRD-${epic_id}.md` section 5 (User Stories & Features). Engineers should track AC completion against the originating Story issue.
 
----
-
-## Table of Contents
-
-1. [Overview](#1-overview)
-2. [Architecture Diagrams](#2-architecture-diagrams)
-3. [API Design](#3-api-design)
-4. [Data Model Diagrams](#4-data-model-diagrams)
-5. [Service Layer Diagrams](#5-service-layer-diagrams)
-6. [Security Diagrams](#6-security-diagrams)
-7. [Performance](#7-performance)
-8. [Testing Strategy](#8-testing-strategy)
-9. [Implementation Notes](#9-implementation-notes)
-10. [Rollout Plan](#10-rollout-plan)
-11. [Risks & Mitigations](#11-risks--mitigations)
-12. [Monitoring & Observability](#12-monitoring--observability)
-13. [AI/ML Specification](#13-aiml-specification-if-applicable) *(if applicable)*
-14. [MCP Server Specification](#14-mcp-server-specification-if-applicable) *(if applicable)*
-15. [MCP App Specification](#15-mcp-app-specification-if-applicable) *(if applicable)*
-
----
-
-> **Diagram policy**: Mermaid is the default format for all diagrams in this document. Use PlantUML, draw.io, Structurizr, or Graphviz only when Mermaid cannot express the intent, a Visio (.vsdx) round-trip is required, or the user explicitly requests another format. See the [diagram-as-code skill](../skills/diagrams/diagram-as-code/SKILL.md). When falling back, record the reason in a header comment.
-
----
-
 ## 1. Overview
 
-{Brief description of what will be built - 2-3 sentences}
+{Brief description of what will be built.}
 
 **Scope:**
 - In scope: {What this spec covers}
-- Out of scope: {What this spec doesn't cover}
+- Out of scope: {What this spec does not cover}
 
 **Success Criteria:**
 - {Measurable success criterion 1}
 - {Measurable success criterion 2}
+
+### AI-first assessment
+
+| Question | Answer |
+|---|---|
+| Could GenAI or agentic AI solve this better? | {Yes/No/Partially} |
+| If yes, where does AI add value? | {User-visible reasoning, automation, retrieval, or none} |
+| If no, why is a traditional approach preferred? | {Determinism, cost, latency, safety, or regulatory reason} |
+| What risk does the chosen posture avoid? | {Hallucination, cost variability, privacy, complexity, or none} |
 
 ### 1.1 Selected Tech Stack (REQUIRED before implementation)
 
 > Engineers SHOULD NOT start implementation until this table is completed and the chosen stack is explicit.
 
 | Layer / Concern | Selected Technology | Version / SKU | Version Source / Verified On | Why This Was Chosen | Rejected Alternatives |
-|-----------------|---------------------|---------------|------------------------------|---------------------|-----------------------|
+|---|---|---|---|---|---|
 | Frontend / UI | {e.g. React, Blazor, none} | {version} | {official source, YYYY-MM-DD} | {brief rationale} | {alternatives considered} |
 | Backend / Runtime | {e.g. Node.js, .NET, Python} | {version} | {official source, YYYY-MM-DD} | {brief rationale} | {alternatives considered} |
-| API Style | {e.g. REST, GraphQL, gRPC, none} | {n/a or version} | {official source, YYYY-MM-DD or n/a} | {brief rationale} | {alternatives considered} |
+| API Style | {REST, GraphQL, gRPC, or none} | {n/a or version} | {official source, YYYY-MM-DD or n/a} | {brief rationale} | {alternatives considered} |
 | Data Store | {e.g. PostgreSQL, Cosmos DB, none} | {version / tier} | {official source, YYYY-MM-DD} | {brief rationale} | {alternatives considered} |
 | Hosting / Compute | {e.g. App Service, AKS, Functions} | {plan / SKU} | {official source, YYYY-MM-DD} | {brief rationale} | {alternatives considered} |
 | Authentication / Security | {e.g. Entra ID, Auth0, existing platform auth} | {version / tier} | {official source, YYYY-MM-DD} | {brief rationale} | {alternatives considered} |
@@ -78,1477 +61,291 @@ inputs:
 | CI/CD | {e.g. GitHub Actions, Azure Pipelines} | {version / n/a} | {official source, YYYY-MM-DD or n/a} | {brief rationale} | {alternatives considered} |
 
 **Implementation Preconditions:**
-- The selected stack above is consistent with the ADR decision.
+- The selected stack is consistent with the ADR decision.
 - Major versions, managed service tiers, and externally hosted platforms are named explicitly.
 - Each named version or SKU is verified against an official source and includes the verification date.
 - Any unresolved stack choice is captured under Open Questions and blocks implementation.
 
----
+## 2. Goals
 
-## 2. Architecture Diagrams
+| Goal | How success is measured | Out-of-scope boundary |
+|---|---|---|
+| {Goal 1} | {Metric or acceptance signal} | {Boundary} |
+| {Goal 2} | {Metric or acceptance signal} | {Boundary} |
+| {Goal 3} | {Metric or acceptance signal} | {Boundary} |
 
-### 2.1 High-Level System Architecture
+## 3. Architecture
 
 ```mermaid
-graph TD
- subgraph CL[" Client Layer"]
- C1["Web App<br/>(Browser)"]
- C2["Mobile App<br/>(iOS/Android)"]
- C3["Desktop App<br/>(Electron)"]
- C4["Third-Party<br/>Clients"]
- end
-
- subgraph GW[" API Gateway Layer"]
- G1["Load Balancing - Rate Limiting - Authentication<br/>SSL Termination - Request Routing - API Versioning"]
- end
-
- subgraph AL[" Application Layer"]
- A1["REST<br/>Controller"]
- A2["GraphQL<br/>Controller"]
- A3["WebSocket<br/>Controller"]
- end
-
- subgraph SL[" Service Layer"]
- S1["Service A<br/>(Business)"]
- S2["Service B<br/>(Domain)"]
- S3["Service C<br/>(Workflow)"]
- S4["Service D<br/>(Integration)"]
- end
-
- subgraph DL[" Data Access Layer"]
- D1["Repository<br/>(ORM)"]
- D2["Repository<br/>(Cache)"]
- D3["Repository<br/>(Search)"]
- D4["External Client<br/>(HTTP/gRPC)"]
- end
-
- subgraph IL[" Infrastructure Layer"]
- I1[("Database<br/>SQL/NoSQL")]
- I2[("Cache<br/>Redis/Memcache")]
- I3[("Search<br/>Elastic/Solr")]
- I4[("Queue<br/>Rabbit/Kafka")]
- I5["External<br/>APIs"]
- end
-
- CL -->|HTTPS| GW
- GW --> AL
- AL --> SL
- SL --> DL
- D1 --> I1
- D2 --> I2
- D3 --> I3
- D4 --> I5
+flowchart LR
+    Client[Client or caller] --> Edge[Entry point]
+    Edge --> App[Application services]
+    App --> Data[Data stores]
+    App --> Integrations[External dependencies]
+    App --> Obs[Observability and control plane]
 ```
 
-**Component Responsibilities:**
-| Layer | Responsibility | Technology Examples |
-|-------|---------------|---------------------|
-| **Client Layer** | User interface, user experience | Web (React, Vue), Mobile (Swift, Kotlin) |
-| **API Gateway** | Routing, auth, rate limiting, SSL | Kong, AWS API Gateway, NGINX |
-| **Application Layer** | Request handling, orchestration | Any web framework |
-| **Service Layer** | Business logic, domain rules | Language-agnostic services |
-| **Data Access Layer** | Data persistence, caching | ORM, Repository pattern |
-| **Infrastructure** | Storage, messaging, external APIs | Database, Cache, Queue |
+### Architecture Summary
 
----
+| Concern | Decision |
+|---|---|
+| Primary entry point | {API, UI, worker, event consumer, or other} |
+| Core runtime shape | {Monolith, modular monolith, service, pipeline, or serverless} |
+| Data ownership | {System of record and authoritative stores} |
+| Integration pattern | {Sync API, async events, batch, or hybrid} |
+| Availability posture | {SLA/SLO target or environment expectation} |
 
-### 2.2 Sequence Diagram: User Authentication
+### Request / Work Sequence
 
 ```mermaid
 sequenceDiagram
- actor User
- participant Client
- participant Gateway
- participant AuthService as Auth Service
- participant UserStore as User Store
- participant TokenStore as Token Store
-
- User->>Client: Login (credentials)
- Client->>AuthService: POST /auth/login {email, password}
- AuthService->>UserStore: Validate Credentials
- UserStore-->>AuthService: User Data
- AuthService->>TokenStore: Generate Tokens
- TokenStore-->>AuthService: Access + Refresh Tokens
- AuthService-->>Client: 200 OK {accessToken, refreshToken, expiresIn}
- Client-->>User: Success (redirect)
+    participant Caller
+    participant Entry
+    participant Service
+    participant Store
+    participant Telemetry
+    Caller->>Entry: Request or event
+    Entry->>Service: Validate and route
+    Service->>Store: Read or write
+    Store-->>Service: Result
+    Service->>Telemetry: Record outcome
+    Service-->>Caller: Response or completion signal
 ```
 
----
-
-### 2.3 Sequence Diagram: CRUD Operations
-
-```mermaid
-sequenceDiagram
- participant Client
- participant Controller
- participant Service
- participant Repository
- participant Cache
- participant Database
-
- rect rgb(230, 245, 255)
- Note over Client,Database: CREATE
- Client->>Controller: POST {data}
- Controller->>Service: create(dto)
- Service->>Repository: validate + save
- Repository->>Database: INSERT
- Database-->>Repository: Entity
- Repository->>Cache: Invalidate
- Repository-->>Service: Entity
- Service-->>Controller: 201 Created
- Controller-->>Client: Created Entity
- end
-
- rect rgb(230, 255, 230)
- Note over Client,Database: READ
- Client->>Controller: GET /{id}
- Controller->>Service: getById(id)
- Service->>Repository: get(id)
- Repository->>Cache: Check
- alt Cache Hit
- Cache-->>Repository: Entity
- else Cache Miss
- Repository->>Database: SELECT
- Database-->>Repository: Data
- Repository->>Cache: Update
- end
- Repository-->>Service: Entity
- Service-->>Controller: 200 OK
- Controller-->>Client: Entity
- end
-
- rect rgb(255, 245, 230)
- Note over Client,Database: UPDATE
- Client->>Controller: PUT {data}
- Controller->>Service: update(id, dto)
- Service->>Repository: validate + update
- Repository->>Database: UPDATE
- Database-->>Repository: Entity
- Repository->>Cache: Invalidate
- Repository-->>Service: Entity
- Service-->>Controller: 200 OK
- Controller-->>Client: Updated Entity
- end
-
- rect rgb(255, 230, 230)
- Note over Client,Database: DELETE
- Client->>Controller: DELETE /{id}
- Controller->>Service: delete(id)
- Service->>Repository: remove(id)
- Repository->>Database: DELETE
- Database-->>Repository: Success
- Repository->>Cache: Invalidate
- Repository-->>Service: Success
- Service-->>Controller: 204 No Content
- Controller-->>Client: No Content
- end
-```
-
----
-
-### 2.4 Class/Interface Diagram: Domain Model
-
-```mermaid
-classDiagram
- class BaseEntity {
- <<abstract>>
- -id: UUID
- -createdAt: DateTime
- -updatedAt: DateTime
- -version: Integer
- +getId() UUID
- +getCreatedAt() DateTime
- +getUpdatedAt() DateTime
- }
-
- class Entity {
- -name: String
- -description: String
- -status: Status
- -metadata: Map
- +validate() Boolean
- +activate() void
- +deactivate() void
- +addRelated(r) void
- +removeRelated(r) void
- }
-
- class RelatedEntity {
- -entityId: UUID
- -type: String
- -value: Any
- -order: Integer
- +getEntity() Entity
- +getValue() Any
- }
-
- class Status {
- <<enumeration>>
- DRAFT
- ACTIVE
- INACTIVE
- ARCHIVED
- }
-
- BaseEntity <|-- Entity : extends
- Entity "1" <--> "*" RelatedEntity
- Entity --> Status
-```
-
----
-
-### 2.5 Class/Interface Diagram: Service Layer
-
-```mermaid
-classDiagram
- class IEntityService {
- <<interface>>
- +getAll(filter) List~Entity~
- +getById(id) Entity
- +create(dto) Entity
- +update(id, dto) Entity
- +delete(id) Boolean
- +search(query) List~Entity~
- }
-
- class EntityService {
- -repository: IEntityRepository
- -cache: ICacheService
- -validator: IValidator
- -logger: ILogger
- +getAll(filter) List~Entity~
- +getById(id) Entity
- +create(dto) Entity
- +update(id, dto) Entity
- +delete(id) Boolean
- +search(query) List~Entity~
- -validateEntity(dto) void
- -invalidateCache(id) void
- }
-
- class IEntityRepository {
- <<interface>>
- +findAll() List
- +findById(id) Entity
- +save(entity) Entity
- +update(entity) Entity
- +delete(id) Boolean
- }
-
- class ICacheService {
- <<interface>>
- +get(key) Any
- +set(key, value, ttl) void
- +delete(key) Boolean
- +invalidate(pattern) void
- }
-
- IEntityService <|.. EntityService : implements
- EntityService --> IEntityRepository : uses
- EntityService --> ICacheService : uses
-```
-
----
-
-### 2.6 Dependency Injection Diagram
-
-```mermaid
-graph TD
- subgraph Scoped[" SCOPED - Per Request"]
- EC[EntityController] --> IES["IEntityService\ninterface"]
- IES -.->|resolves to| ES[EntityService]
- ES --> IER["IEntityRepository\ninterface"]
- IER -.->|resolves to| ER[EntityRepository]
- ER --> DC[DbContext]
- end
-
- subgraph Singleton[" SINGLETON - App Lifetime"]
- ICS["ICacheService\ninterface"] -.->|resolves to| RCS[RedisCacheService]
- RCS --> RC[RedisConnection]
- IL["ILoggerT"] -.->|resolves to| LOG["Logger\n(Structured Logging)"]
- ICfg[IConfiguration] -.->|resolves to| CR[ConfigurationRoot]
- end
-
- subgraph Transient["* TRANSIENT - New Each Time"]
- IV["IValidatorT"] -.->|resolves to| EV[EntityValidator]
- IHF[IHttpClientFactory] -.->|resolves to| HC["HttpClient\n(per external service)"]
- end
-
- ES --> ICS
- ES --> IV
-```
-
----
-
-## 3. API Design
-
-### 3.1 Endpoints
-
-| Method | Endpoint | Description | Auth | Rate Limit |
-|--------|----------|-------------|------|------------|
-| GET | `/api/v1/{resource}` | List all resources | Yes | 100/min |
-| GET | `/api/v1/{resource}/{id}` | Get single resource | Yes | 200/min |
-| POST | `/api/v1/{resource}` | Create resource | Yes | 50/min |
-| PUT | `/api/v1/{resource}/{id}` | Update resource | Yes | 50/min |
-| PATCH | `/api/v1/{resource}/{id}` | Partial update | Yes | 50/min |
-| DELETE | `/api/v1/{resource}/{id}` | Delete resource | Yes | 20/min |
-
-### 3.2 Request/Response Contracts
-
-#### POST /api/v1/{resource}
-
-**Request Headers:**
-```
-Content-Type: application/json
-Authorization: Bearer {jwt-token}
-X-Request-ID: {uuid}
-```
-
-**Request Body:**
-```json
-{
- "name": "string (required, max 255)",
- "description": "string (optional)",
- "status": "DRAFT | ACTIVE | INACTIVE",
- "metadata": {
- "key": "value"
- }
-}
-```
-
-**Response (201 Created):**
-```json
-{
- "id": "uuid",
- "name": "string",
- "description": "string",
- "status": "DRAFT",
- "createdAt": "2026-01-27T12:00:00Z",
- "updatedAt": "2026-01-27T12:00:00Z"
-}
-```
-
-### 3.3 Error Responses
-
-```
-+-----------------------------------------------------------------------------+
-| ERROR RESPONSE FORMAT |
-+-----------------------------------------------------------------------------+
-| |
-| 400 Bad Request | 401 Unauthorized |
-| +-------------------------+ | +-------------------------+ |
-| | { | | | { | |
-| | "error": "Validation",| | | "error": "Unauthorized| |
-| | "message": "...", | | | "message": "Invalid | |
-| | "details": { | | | token", | |
-| | "field": "name", | | | "requestId": "uuid" | |
-| | "reason": "required"| | | } | |
-| | }, | | +-------------------------+ |
-| | "requestId": "uuid" | | |
-| | } | | 403 Forbidden |
-| +-------------------------+ | +-------------------------+ |
-| | | { | |
-| 404 Not Found | | "error": "Forbidden", | |
-| +-------------------------+ | | "message": "Access | |
-| | { | | | denied", | |
-| | "error": "NotFound", | | | "requestId": "uuid" | |
-| | "message": "Resource | | | } | |
-| | not found", | | +-------------------------+ |
-| | "requestId": "uuid" | | |
-| | } | | 500 Internal Server Error |
-| +-------------------------+ | +-------------------------+ |
-| | | { | |
-| 429 Too Many Requests | | "error": "Internal", | |
-| +-------------------------+ | | "message": "An error | |
-| | { | | | occurred", | |
-| | "error": "RateLimit", | | | "requestId": "uuid" | |
-| | "message": "Too many | | | } | |
-| | requests", | | +-------------------------+ |
-| | "retryAfter": 60, | | |
-| | "requestId": "uuid" | | |
-| | } | | |
-| +-------------------------+ | |
-| |
-+------------------------------------------------------------------------------+
-```
-
----
-
-## 4. Data Model Diagrams
-
-### 4.1 Entity Relationship Diagram (ERD)
-
-```mermaid
-erDiagram
- entities {
- UUID id PK "NOT NULL"
- VARCHAR_255 name "NOT NULL"
- TEXT description "NULLABLE"
- VARCHAR_20 status "NOT NULL, DEFAULT 'DRAFT'"
- JSONB metadata "NULLABLE"
- TIMESTAMP created_at "NOT NULL, DEFAULT NOW()"
- TIMESTAMP updated_at "NOT NULL"
- INTEGER version "NOT NULL, DEFAULT 1"
- }
-
- related_entities {
- UUID id PK "NOT NULL"
- UUID entity_id FK "NOT NULL"
- VARCHAR_50 type "NOT NULL"
- JSONB value "NULLABLE"
- INTEGER sort_order "NULLABLE"
- TIMESTAMP created_at "NOT NULL"
- }
-
- entities ||--o{ related_entities : "has many"
-```
-
-> **Indexes**: `idx_entities_status`, `idx_entities_created_at DESC`, `idx_entities_name`, `idx_related_entity_id`
->
-> **Constraints**: `fk_related_entity FOREIGN KEY (entity_id) REFERENCES entities(id)`, `chk_status CHECK (status IN ('DRAFT','ACTIVE','INACTIVE','ARCHIVED'))`
-
-### 4.2 Database Schema Table
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | UUID | PK, NOT NULL | Unique identifier |
-| name | VARCHAR(255) | NOT NULL | Entity name |
-| description | TEXT | NULLABLE | Optional description |
-| status | VARCHAR(20) | NOT NULL, DEFAULT 'DRAFT' | Status enum |
-| metadata | JSONB | NULLABLE | Flexible metadata |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Creation timestamp |
-| updated_at | TIMESTAMP | NOT NULL | Last update timestamp |
-| version | INTEGER | NOT NULL, DEFAULT 1 | Optimistic lock version |
-
----
-
-## 5. Service Layer Diagrams
-
-### 5.1 Service Architecture
-
-```mermaid
-graph TD
- subgraph Controller[" CONTROLLER LAYER"]
- EC["EntityController<br/>Handles HTTP - Maps DTOs - Returns responses"]
- end
-
- subgraph Service[" SERVICE LAYER"]
- IS["IEntityService interface<br/>getAll() - getById() - create() - update() - delete()"]
- ES["EntityService<br/>Business logic - Validation - Caching - Error handling"]
- IS -.->|implements| ES
- end
-
- subgraph Repo[" REPOSITORY LAYER"]
- IR["IEntityRepository interface<br/>findAll() - findById() - save() - update() - delete()"]
- end
-
- DB[(" DATABASE")]
-
- EC -->|calls| IS
- ES -->|calls| IR
- IR -->|queries| DB
-```
-
----
-
-## 6. Security Diagrams
-
-### 6.1 Authentication Flow
-
-```mermaid
-sequenceDiagram
- participant Client
- participant AuthService as Auth Service
- participant DB as Database
-
- rect rgb(230, 245, 255)
- Note over Client,DB: Step 1 - Login Request
- Client->>AuthService: POST /auth/login {email, password}
- AuthService->>DB: Validate credentials
- DB-->>AuthService: User found
- AuthService-->>Client: 200 OK + JWT Token
- end
-
- rect rgb(230, 255, 230)
- Note over Client,DB: Step 2 - Authenticated Request
- Client->>AuthService: GET /api/resource (Authorization: Bearer token)
- Note right of AuthService: JWT Middleware validates token<br/>and extracts claims
- AuthService-->>Client: 200 OK (Authorized Response)
- end
-```
-
-### 6.2 Authorization Model (RBAC)
-
-```mermaid
-graph TD
- U[" User"] -->|has role| R[" Role"]
- R -->|has permissions| P[" Permissions"]
-
- subgraph Roles["Role Definitions"]
- R1["Admin -> Full access"]
- R2["User -> Read/Write own data"]
- R3["Guest -> Read only"]
- end
-
- subgraph AdminPerms["Admin Permissions"]
- AP1["entities:read"]
- AP2["entities:write"]
- AP3["entities:delete"]
- AP4["users:manage"]
- end
-
- subgraph UserPerms["User Permissions"]
- UP1["entities:read (own)"]
- UP2["entities:write (own)"]
- end
-
- subgraph GuestPerms["Guest Permissions"]
- GP1["entities:read"]
- end
-
- R --> Roles
- R1 --> AdminPerms
- R2 --> UserPerms
- R3 --> GuestPerms
-```
-
-### 6.3 Defense in Depth
-
-```mermaid
-graph TD
- L1[" Layer 1: Network Security<br/>HTTPS (TLS 1.3) - Firewall rules - DDoS protection"]
- L2[" Layer 2: Application Gateway<br/>Rate limiting - CORS policy - Security headers"]
- L3[" Layer 3: Authentication<br/>JWT validation - Token expiration - MFA (optional)"]
- L4[" Layer 4: Authorization<br/>Role-based access - Resource ownership - Permission checks"]
- L5["[PASS] Layer 5: Input Validation<br/>Schema validation - Data sanitization - Type checking"]
- L6[" Layer 6: Data Access<br/>Parameterized queries - ORM - SQL injection prevention"]
- L7[" Layer 7: Data Storage<br/>Encryption at rest - Access controls - Backup encryption"]
-
- L1 --> L2 --> L3 --> L4 --> L5 --> L6 --> L7
-
- style L1 fill:#E3F2FD,stroke:#1565C0,color:#0D47A1
- style L2 fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20
- style L3 fill:#FFF3E0,stroke:#E65100,color:#BF360C
- style L4 fill:#FCE4EC,stroke:#C62828,color:#B71C1C
- style L5 fill:#F3E5F5,stroke:#6A1B9A,color:#4A148C
- style L6 fill:#E0F7FA,stroke:#00838F,color:#006064
- style L7 fill:#EFEBE9,stroke:#4E342E,color:#3E2723
-```
-
----
-
-## 7. Performance
-
-### 7.1 Caching Strategy
-
-```mermaid
-graph LR
- subgraph CacheLayer["Distributed Cache (Redis/Memcached)"]
- SE[" Single Entity<br/>Key: type:id<br/>TTL: 1 hour<br/>Invalidate: on update/delete"]
- LQ[" List / Query<br/>Key: type:list:hash<br/>TTL: 5 minutes<br/>Invalidate: on any write"]
- SA[" Session / Auth<br/>Key: session:id<br/>TTL: 24 hours<br/>Invalidate: on logout"]
- end
-
- subgraph Patterns["Invalidation Patterns"]
- WT["Write-through<br/>Update cache on every write"]
- WB["Write-behind<br/>Async update (eventual consistency)"]
- CA["Cache-aside<br/>Check -> miss -> load -> store"]
- end
-
- Patterns -.-> CacheLayer
-```
-
-### 7.2 Performance Requirements
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| API Response Time (p50) | < 100ms | Average response time |
-| API Response Time (p95) | < 500ms | 95th percentile |
-| API Response Time (p99) | < 1000ms | 99th percentile |
-| Cache Hit Rate | > 80% | Cache hits / total requests |
-| Database Query Time | < 50ms | Average query execution |
-| Concurrent Users | 1000+ | Simultaneous connections |
-| Requests per Second | 500+ | Throughput capacity |
-
-### 7.3 Optimization Strategies
-
-- **Database**: Indexes, query optimization, connection pooling, read replicas
-- **Caching**: Distributed cache, cache headers, CDN for static assets
-- **Async**: Async I/O operations, background jobs, message queues
-- **Pagination**: Cursor-based pagination, limit results (max 100 items)
-
----
-
-## 8. Testing Strategy
-
-### 8.1 Test Pyramid
-
-```mermaid
-graph TD
- E2E[" E2E Tests - 10%<br/>Full user flows (Playwright/Selenium)"]
- INT[" Integration Tests - 20%<br/>API endpoints, DB (WebApplicationFactory)"]
- UNIT[" Unit Tests - 70%<br/>Services, Controllers (xUnit/Jest/pytest)"]
- COV[" Coverage Target: 80%"]
-
- E2E --- INT --- UNIT --- COV
-
- style E2E fill:#F44336,color:#fff,stroke:#D32F2F
- style INT fill:#FF9800,color:#fff,stroke:#F57C00
- style UNIT fill:#4CAF50,color:#fff,stroke:#388E3C
- style COV fill:#2196F3,color:#fff,stroke:#1565C0
-```
-
-### 8.2 Test Types
-
-| Test Type | Coverage | Framework | Scope |
-|-----------|----------|-----------|-------|
-| **Unit Tests** | 80%+ | Any unit test framework | Services, Controllers, Validators |
-| **Integration Tests** | Key flows | Test framework + test server | API endpoints, Database |
-| **E2E Tests** | Happy paths | Playwright/Selenium/Cypress | Full user journeys |
-| **Performance Tests** | Critical paths | k6/JMeter/Locust | Load, stress, spike tests |
-
----
-
-## 9. Implementation Notes
-
-### 9.1 Directory Structure (Language Agnostic)
-
-```
-src/
- controllers/ # HTTP request handlers
- entity_controller # API endpoints
- services/ # Business logic
- entity_service # Service implementation
- interfaces/ # Service interfaces
- models/ # Domain models
- entity # Entity model
- dtos/ # Data transfer objects
- repositories/ # Data access
- entity_repository # Repository implementation
- interfaces/ # Repository interfaces
- validators/ # Input validation
- entity_validator # Validation rules
- middleware/ # Cross-cutting concerns
- auth_middleware # Authentication
- error_handler # Global error handling
- config/ # Configuration
- database # DB connection config
- cache # Cache config
-
-tests/
- unit/ # Unit tests
- services/
- controllers/
- integration/ # Integration tests
- api/
- e2e/ # End-to-end tests
-```
-
-### 9.2 Development Workflow
-
-1. Create database migration
-2. Implement service (TDD - write tests first)
-3. Implement controller
-4. Write integration tests
-5. Add validation rules
-6. Configure caching
-7. Add rate limiting
-8. Update API documentation
-
----
-
-## 10. Rollout Plan
-
-### Phase 1: Development (Week 1-2)
-**Stories**: #{story-1}, #{story-2}
-- Database migration
-- Service implementation
-- API endpoints
-- Unit + integration tests
-
-**Deliverable**: Working API (dev environment)
-
-### Phase 2: Testing (Week 3)
-**Stories**: #{story-3}
-- E2E tests
-- Performance testing
-- Security review
-- Bug fixes
-
-**Deliverable**: Tested, stable API
-
-### Phase 3: Deployment (Week 4)
-**Stories**: #{story-4}
-- Staging deployment
-- Production deployment
-- Monitoring setup
-- Documentation
-
-**Deliverable**: Production-ready feature
-
----
-
-## 11. Risks & Mitigations
-
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Database migration fails | High | Low | Test on staging with production data copy |
-| Cache invalidation bugs | Medium | Medium | Implement cache versioning, monitor hit rates |
-| Rate limiting too restrictive | Low | Medium | Start conservative, adjust based on metrics |
-| Third-party API downtime | High | Low | Circuit breaker, fallback mechanism |
-| Performance degradation | High | Medium | Load testing, performance monitoring |
-
----
-
-## 12. Monitoring & Observability
-
-### 12.1 Metrics Dashboard
-
-```mermaid
-graph LR
- subgraph Dashboard[" Monitoring Dashboard"]
- direction TB
- subgraph Row1["Real-time Metrics"]
- direction LR
- RR[" Request Rate<br/>450 req/sec"]
- ER["[WARN] Error Rate<br/>0.5%"]
- RT[" Response Time<br/>p95: 230ms"]
- end
- subgraph Row2["System Health"]
- direction LR
- CH[" Cache Hit Rate<br/>92%"]
- DQ[" DB Query Time<br/>avg: 15ms"]
- AU[" Active Users<br/>1,250"]
- end
- end
-
- style RR fill:#E8F5E9,stroke:#2E7D32
- style ER fill:#FFEBEE,stroke:#C62828
- style RT fill:#E3F2FD,stroke:#1565C0
- style CH fill:#E8F5E9,stroke:#2E7D32
- style DQ fill:#FFF3E0,stroke:#E65100
- style AU fill:#F3E5F5,stroke:#6A1B9A
-```
-
-### 12.2 Alerts
-
-| Alert | Condition | Severity | Action |
-|-------|-----------|----------|--------|
-| High Error Rate | > 5% for 5 min | Critical | Page on-call |
-| High Latency | p95 > 1000ms for 5 min | High | Investigate |
-| Cache Miss Spike | Hit rate < 70% | Medium | Check cache health |
-| DB Connection Pool | > 80% utilization | Medium | Scale or optimize |
-
-### 12.3 Logging
-
-- Structured logging (JSON format)
-- Correlation IDs for request tracing
-- Log levels: DEBUG (dev), INFO (prod)
-- Sensitive data masking
-- Log aggregation (ELK/Datadog/CloudWatch)
-
----
-
-## 13. AI/ML Specification (if applicable)
-
-> **Trigger**: Include this section when the issue has `needs:ai` label or the ADR includes an AI/ML Architecture section. If the product does NOT involve AI/ML, skip this section entirely.
-> **Depth rule**: This section MUST be implementation-ready for Engineer. Naming a model or provider is not enough. Capture concrete AI contracts: prompt assets, schemas, retrieval behavior, evaluation hooks, fallback behavior, guardrails, observability, and failure modes.
-> **Alignment rule**: Before the spec returns to `Ready`, Architect MUST involve Data Scientist to review and deepen this section for any AI-bearing product or `needs:ai` work. Record the result below.
-
-### 13.0 AI/ML Alignment Record
+## 4. Components
+
+| Component | Responsibility | Inputs | Outputs | Dependencies |
+|---|---|---|---|---|
+| {Component 1} | {Responsibility} | {Input} | {Output} | {Dependencies} |
+| {Component 2} | {Responsibility} | {Input} | {Output} | {Dependencies} |
+| {Component 3} | {Responsibility} | {Input} | {Output} | {Dependencies} |
+
+## 5. Data Model
+
+| Entity / Record | Purpose | Key Fields | Constraints | Retention / Lifecycle |
+|---|---|---|---|---|
+| {Entity 1} | {Purpose} | {Key fields} | {Validation or uniqueness} | {Retention rule} |
+| {Entity 2} | {Purpose} | {Key fields} | {Validation or uniqueness} | {Retention rule} |
+
+### Data Relationships
+
+| Source | Relationship | Target | Notes |
+|---|---|---|---|
+| {Entity 1} | {1:N / N:1 / N:N} | {Entity 2} | {Cardinality or ownership note} |
+
+## 6. API Design
+
+| Method / Event | Path or Topic | Purpose | Request Contract | Response Contract | Auth / Caller | Idempotency / Side Effects |
+|---|---|---|---|---|---|---|
+| {Method} | {path or topic} | {Purpose} | {fields and validation summary} | {result shape and statuses} | {auth model} | {safe to retry or side effect note} |
+| {Method} | {path or topic} | {Purpose} | {fields and validation summary} | {result shape and statuses} | {auth model} | {safe to retry or side effect note} |
+
+## 7. Security
+
+| Concern | Requirement | Verification |
+|---|---|---|
+| Authentication | {Method and scope model} | {How it is validated} |
+| Authorization | {Role, policy, or ownership rule} | {How it is validated} |
+| Data protection | {Encryption, masking, or retention requirement} | {How it is validated} |
+| Secrets | {Secret storage and access path} | {How it is validated} |
+| Auditability | {What must be logged} | {How it is validated} |
+
+## 8. Performance
+
+| Metric | Target | Notes |
+|---|---|---|
+| Response time p50 | {target} | {Context} |
+| Response time p95 | {target} | {Context} |
+| Throughput / concurrency | {target} | {Context} |
+| Background completion time | {target} | {Context} |
+| Cost or resource budget | {target} | {Context} |
+
+## 9. Error Handling
+
+| Failure Mode | User-visible Behavior | System Behavior | Retry / Idempotency Rule | Escalation / Recovery |
+|---|---|---|---|---|
+| Validation failure | {What the user sees} | {What the system logs or rejects} | {Fail fast or retry rule} | {Retry or correction path} |
+| Dependency outage | {What the user sees} | {Fallback or queueing behavior} | {Retry rule and safety bound} | {Escalation path} |
+| Timeout | {What the user sees} | {Cancellation or retry behavior} | {Retry rule and safety bound} | {Escalation path} |
+| Partial write or partial completion | {What the user sees} | {Consistency or compensation behavior} | {Idempotency or compensation rule} | {Escalation path} |
+
+## 10. Monitoring & Observability
+
+| Signal | Why it matters | Threshold / SLO | Owner / Response |
+|---|---|---|---|
+| Availability | {Why it matters} | {Threshold} | {Owner and action} |
+| Latency | {Why it matters} | {Threshold} | {Owner and action} |
+| Error rate | {Why it matters} | {Threshold} | {Owner and action} |
+| Data freshness | {Why it matters} | {Threshold} | {Owner and action} |
+| Cost / token use / resource use | {Why it matters} | {Threshold} | {Owner and action} |
+
+## 11. Testing Strategy
+
+| Test Layer | Purpose | Minimum Coverage | Evidence Required |
+|---|---|---|---|
+| Unit | {Core logic validation} | {target} | {artifact or report} |
+| Integration | {Boundary and contract validation} | {target} | {artifact or report} |
+| End-to-end | {Critical user or business flow} | {target} | {artifact or report} |
+| Performance / resilience | {Load, failover, or recovery validation} | {target} | {artifact or report} |
+
+## 12. Migration
+
+| Area | Current State | Target State | Migration Notes |
+|---|---|---|---|
+| Data | {Current} | {Target} | {Backfill, dual-write, or cutover note} |
+| Interfaces | {Current} | {Target} | {Versioning or compatibility note} |
+| Operations | {Current} | {Target} | {Runbook or monitoring note} |
+
+### Rollout Plan
+- {Environment sequence}
+- {Readiness checks}
+- {Rollback trigger and owner}
+
+## 13. Open Questions
+
+| Question | Owner | Blocking? | Resolution Path |
+|---|---|---|---|
+| {Question 1} | {Owner} | Yes / No | {How it will be resolved} |
+| {Question 2} | {Owner} | Yes / No | {How it will be resolved} |
+
+## 14. AI/ML Specification (if applicable)
+
+> Include this section when the issue has `needs:ai` or the ADR selects an AI-bearing architecture. This section blocks implementation until Data Scientist alignment is reviewed or the blocker is made explicit.
+
+### 14.0 AI/ML Alignment Record
 
 | Field | Value |
-|-------|-------|
-| **Architect Owner** | {name} |
-| **Data Scientist Reviewer** | {name or clarification thread reference} |
-| **Review Status** | {Reviewed / Blocked / Follow-up required} |
-| **Review Date** | {YYYY-MM-DD} |
-| **Implementation Risks Raised** | {summary of any unresolved AI implementation risks} |
+|---|---|
+| Architect Owner | {name} |
+| Data Scientist Reviewer | {name or clarification thread reference} |
+| Review Status | {Reviewed / Blocked / Follow-up required} |
+| Review Date | {YYYY-MM-DD} |
+| Blocks implementation until Reviewed | {Yes / No} |
+| Implementation Risks Raised | {summary of unresolved AI implementation risks} |
+| Validation Note | {What the reviewer approved, or the blocker that prevented approval} |
 
-### 13.1 Model Configuration
+### 14.1 Model Configuration
 
 | Parameter | Value |
-|-----------|-------|
-| **Primary Model** | {e.g., gpt-5.2-2026-01-15, claude-opus-4.8, o3-2026-01-31} |
-| **Fallback Model** | {different provider/model when applicable} |
-| **Provider** | {Microsoft Foundry / OpenAI / Anthropic / Google / Local} |
-| **Endpoint** | {URL or environment variable name} |
-| **Authentication** | {API key env var / Managed Identity / OAuth} |
-| **Prompt File(s)** | {paths under `prompts/`} |
-| **System Prompt Contract** | {summary - role, constraints, variable inputs, expected tool usage} |
-| **Temperature** | {0.0 - 2.0} |
-| **Top-P** | {0.0 - 1.0} |
-| **Max Tokens** | {output token limit} |
-| **Structured Output** | {JSON schema reference, if applicable} |
-| **Timeout** | {seconds} |
-| **Retry Policy** | {max retries, backoff strategy} |
-| **Fallback Trigger** | {timeout, schema failure, provider outage, safety block, etc.} |
+|---|---|
+| Primary host or deployment identity | {resolved host, deployment, or runtime name} |
+| Resolved model alias | {model alias exposed by the active host} |
+| Provider-supported snapshot | {snapshot id if the provider exposes one; otherwise n/a} |
+| Host / endpoint / SDK version | {host version, endpoint API version, or SDK version} |
+| Resolution source / verified on | {official source or runtime inventory, YYYY-MM-DD} |
+| Fallback host or deployment identity | {different provider or fallback path when applicable} |
+| Endpoint | {URL or environment variable name} |
+| Authentication | {API key, Managed Identity, OAuth, or equivalent} |
+| Prompt File(s) | {paths under `prompts/`} |
+| System Prompt Contract | {Role, constraints, variables, tool expectations} |
+| Structured Output | {Schema location or format contract} |
+| Context window budget | {maximum request context allowed for this workflow} |
+| Reserved output headroom | {completion budget reserved so responses do not clip} |
+| Reserved tool or retry headroom | {budget reserved for tool calls, retries, and fallback} |
+| Timeout | {seconds} |
+| Retry Policy | {retry count and strategy} |
+| Fallback Trigger | {timeout, schema failure, outage, safety block, or other} |
 
-### 13.2 Input / Output Contract
+> Pin a provider-supported snapshot when available. Otherwise record the alias, resolved host identity, and host version. Do not invent dated model identifiers.
+
+### 14.2 Input / Output Contract
 
 | Contract Element | Value |
-|------------------|-------|
-| **Input Schema** | {request fields, required/optional inputs, validation constraints} |
-| **Context Inputs** | {conversation state, retrieved docs, tool outputs, user profile, etc.} |
-| **Output Schema** | {response shape, required fields, typed schema location} |
-| **Schema Validation Path** | {where validation happens and what blocks invalid output} |
-| **User-visible Failure Modes** | {empty result, fallback response, retry message, handoff to human, etc.} |
-| **Non-retryable Errors** | {what should fail fast instead of retrying} |
+|---|---|
+| Input Schema | {request fields and validation summary} |
+| Context Inputs | {conversation state, retrieved docs, tool outputs, profile data, or other} |
+| Context Headroom Rule | {what must be trimmed, summarized, or rejected before overflow} |
+| Output Schema | {response shape and required fields} |
+| Schema Validation Path | {where invalid outputs are blocked} |
+| User-visible Failure Modes | {fallback response, retry message, or human handoff} |
+| Non-retryable Errors | {conditions that must fail fast} |
+| Cost Headroom Rule | {how retries and fallback stay within budget} |
 
-### 13.3 Agent Tools / Functions
+### 14.3 Agent Tools / Functions
 
-| Tool Name | Purpose | Input Schema | Output Schema | Side Effects |
-|-----------|---------|-------------|---------------|--------------|
-| {tool_1} | {what it does} | {params} | {return type} | {DB write / API call / none} |
-| {tool_2} | {what it does} | {params} | {return type} | {side effects} |
+| Tool Name | Purpose | Authorization Boundary | Input Schema | Output Schema | Idempotency Rule | Failure Contract | Side Effects |
+|---|---|---|---|---|---|---|---|
+| {tool_1} | {what it does} | {who or what may call it} | {params} | {return type} | {safe retry or no} | {retryable vs fail-fast behavior} | {DB write / API call / none} |
+| {tool_2} | {what it does} | {who or what may call it} | {params} | {return type} | {safe retry or no} | {retryable vs fail-fast behavior} | {side effects} |
 
-### 13.4 Inference Pipeline
+### 14.4 Inference Pipeline
 
 ```mermaid
-graph LR
- A[" Request"] --> B[" Preprocess<br/>Validate - Sanitize - Context"]
- B --> C[" Model / Agent<br/>System prompt - Tools/RAG - Inference"]
- C --> D[" Postprocess<br/>Parse - Validate - Format"]
- D --> E["[PASS] Response"]
-
- style A fill:#E3F2FD,stroke:#1565C0
- style B fill:#FFF3E0,stroke:#E65100
- style C fill:#F3E5F5,stroke:#6A1B9A
- style D fill:#E8F5E9,stroke:#2E7D32
- style E fill:#E3F2FD,stroke:#1565C0
+flowchart LR
+    Request[Request] --> Prepare[Validate and assemble context]
+    Prepare --> Infer[Model or agent inference]
+    Infer --> Validate[Schema and safety validation]
+    Validate --> Response[Response, fallback, or handoff]
 ```
 
-**Stage Details:**
-1. **Preprocessing**: {Input validation, context assembly, RAG retrieval}
-2. **Model Invocation**: {Single call / multi-turn / agent loop}
-3. **Postprocessing**: {Output parsing, structured output validation, safety filtering}
-4. **Error Handling**: {Fallback model, cached response, graceful degradation}
-
-### 13.5 Prompt, Retrieval, and Context Assets
+### 14.5 Prompt, Retrieval, and Context Assets
 
 | Asset / Concern | Value |
-|-----------------|-------|
-| **Prompt Files** | {system/user/tool prompt paths} |
-| **Prompt Variables** | {runtime variables injected into prompts} |
-| **Few-shot / Examples** | {source and maintenance approach} |
-| **Knowledge Source** | {Documents / Database / API / Vector Store} |
-| **Embedding Model** | {model name} |
-| **Vector Store** | {Azure AI Search / Chroma / Pinecone / FAISS} |
-| **Chunk Strategy** | {size, overlap, method} |
-| **Top-K Results** | {number of chunks retrieved} |
-| **Relevance Threshold** | {minimum similarity score} |
-| **Fallback Retrieval Behavior** | {what happens when retrieval returns weak or empty context} |
+|---|---|
+| Prompt Files | {system, user, and tool prompt paths} |
+| Prompt Variables | {runtime variables injected into prompts} |
+| Few-shot / Examples | {source and maintenance approach} |
+| Knowledge Source | {Documents, database, API, vector store, or none} |
+| Embedding Model | {model name or host alias} |
+| Vector Store | {service name} |
+| Chunk Strategy | {size, overlap, method} |
+| Top-K Results | {number of chunks retrieved} |
+| Relevance Threshold | {minimum threshold} |
+| Fallback Retrieval Behavior | {what happens when retrieval is weak or empty} |
 
-### 13.6 Evaluation Strategy
+### 14.6 Evaluation Strategy
 
-| Metric | Evaluator | Threshold | Test Dataset |
-|--------|-----------|-----------|--------------|
-| **Relevance** | {Built-in / LLM-as-judge} | {score} | {dataset location} |
-| **Groundedness** | {Built-in / Custom} | {score} | {dataset location} |
-| **Coherence** | {Built-in / Custom} | {score} | {dataset location} |
-| **Latency** | {Timer} | < {ms} P95 | {N requests} |
-| **Cost** | {Token counter} | < ${amount}/req | {N requests} |
-| {Custom metric} | {Custom evaluator} | {threshold} | {dataset} |
+| Metric | Evaluator | Threshold | Test Dataset | Calibration / Rollback Condition |
+|---|---|---|---|---|
+| Relevance | {Evaluator} | {threshold} | {dataset location} | {judge calibration note and rollback trigger} |
+| Groundedness | {Evaluator} | {threshold} | {dataset location} | {judge calibration note and rollback trigger} |
+| Coherence | {Evaluator} | {threshold} | {dataset location} | {judge calibration note and rollback trigger} |
+| Latency | {Evaluator} | {threshold} | {dataset location} | {rollback trigger} |
+| Cost | {Evaluator} | {threshold} | {dataset location} | {rollback trigger} |
 
-**Evaluation Dataset**: {Location, format, number of test cases, how generated}
+| Evaluation Evidence | Requirement |
+|---|---|
+| Held-out dataset | {versioned held-out tasks with expected outcomes and negative cases} |
+| Judge or grader calibration | {labelled examples, disagreement review, and calibration owner} |
+| Run provenance | {actual deployment identity, host version, prompt/tool revision, timestamp, and usage source} |
+| Baseline comparison | {baseline artifact path and regression rule} |
+| Rollback condition | {what score, safety, latency, or cost regression triggers rollback} |
 
-**Regression Hooks:**
-- Baseline file: {e.g. `evaluation/baseline.json`}
-- Schema-validity target: {e.g. >= 95%}
-- Fallback model test expectation: {what must also pass}
-- Guardrail test coverage: {adversarial / jailbreak / out-of-domain cases}
+### 14.7 Guardrails, Observability, and Operations
 
-### 13.7 Guardrails, Observability, and Operations
+| Concern | Requirement |
+|---|---|
+| Safety Guardrails | {Prompt injection handling, moderation, out-of-domain policy} |
+| Tracing | {How model calls are traced} |
+| Token Tracking | {How prompt, completion, and cost are measured} |
+| Context Headroom | {Budget reserved before retrieval and tool expansion} |
+| Output Headroom | {Budget reserved to avoid clipped structured output} |
+| Cost Headroom | {Budget reserved for retries, fallback, and delegated work} |
+| Latency Budget | {p50 / p95 / timeout budget} |
+| Quality Monitoring | {Production evaluation and alerting} |
+| Drift Signals | {What constitutes drift and re-evaluation cadence} |
 
-- **Safety Guardrails**: {prompt injection handling, moderation, output filtering, out-of-domain policy}
-- **Tracing**: {OpenTelemetry / Azure Monitor / Custom} - trace all model calls with input/output
-- **Token Tracking**: Log prompt tokens, completion tokens, total cost per request
-- **Latency Budget**: {p50 / p95 expectations and timeout budget}
-- **Cost Budget**: {expected cost per request / per session / alert threshold}
-- **Quality Monitoring**: Log evaluation scores in production, alert on degradation
-- **Drift Signals**: {what constitutes model drift or input-distribution drift}
-- **Dashboard**: {Link to monitoring dashboard}
-
-> **Reference**: Read `.github/skills/ai-systems/ai-agent-development/SKILL.md` for implementation patterns, model guidance, and production checklist.
-
----
-
-## 14. MCP Server Specification (if applicable)
-
-> **Trigger**: Include this section when the PRD or ADR specifies an MCP Server pattern.
-> If the product does NOT expose tools/resources via MCP, skip this section entirely.
-
-### 14.1 Server Overview
+## 15. MCP Server Specification (if applicable)
 
 | Parameter | Value |
-|-----------|-------|
-| **Server Name** | {e.g., my-data-server} |
-| **Transport** | stdio / SSE / Streamable HTTP |
-| **Language** | {Python / TypeScript / C#} |
-| **SDK** | {e.g., @modelcontextprotocol/sdk, mcp-python-sdk} |
-| **Authentication** | {None (stdio) / OAuth 2.0 / API Key} |
-| **Target Hosts** | {VS Code Copilot / Claude Desktop / GitHub Copilot / Custom} |
-
-### 14.2 MCP Server Architecture
-
-```mermaid
-graph TD
- subgraph Hosts["AI Hosts"]
- H1["VS Code Copilot"]
- H2["Claude Desktop"]
- H3["Custom Agent"]
- end
-
- subgraph Transport["Transport Layer"]
- T1["stdio\n(local process)"]
- T2["SSE\n(HTTP stream)"]
- end
-
- subgraph Server["MCP Server"]
- direction TB
- INIT["Server Init\nname, version, capabilities"]
-
- subgraph Tools["Tool Handlers"]
- T_A["tool_a\n{description}"]
- T_B["tool_b\n{description}"]
- T_C["tool_c\n{description}"]
- end
-
- subgraph Resources["Resource Providers"]
- R_A["resource://type/a\n{MIME type}"]
- R_B["resource://type/b\n{MIME type}"]
- end
-
- subgraph Prompts["Prompt Templates"]
- P_A["prompt_a\n{description}"]
- end
- end
-
- subgraph Backend["Backend Services"]
- DB[("Database")]
- API["External API"]
- FS["File System"]
- CACHE["Cache"]
- end
-
- Hosts -->|"JSON-RPC 2.0"| Transport
- Transport --> INIT
- INIT --> Tools
- INIT --> Resources
- INIT --> Prompts
- Tools --> Backend
- Resources --> Backend
-
- style Hosts fill:#E3F2FD,stroke:#1565C0
- style Server fill:#F3E5F5,stroke:#6A1B9A
- style Backend fill:#E8F5E9,stroke:#2E7D32
-```
-
-### 14.3 Tool Definitions
-
-| Tool Name | Description | Parameters | Returns | Side Effects |
-|-----------|-------------|------------|---------|--------------|
-| {tool_name} | {what it does} | `{param}: {type}` (required), `{param}: {type}` (optional) | {return type/schema} | {DB write / API call / None} |
-| {tool_name} | {what it does} | `{param}: {type}` | {return type} | {side effects} |
-
-**Tool Design Rules:**
-- One action per tool (no multi-mode mega-tools)
-- Descriptive names: `verb_noun` format (e.g., `search_documents`, `create_ticket`)
-- All parameters validated with JSON Schema
-- Errors return structured MCP error responses
-- Idempotent where possible
-
-### 14.4 Resource Definitions
-
-| Resource URI | MIME Type | Description | Dynamic? |
-|-------------|-----------|-------------|----------|
-| `resource://type/{id}` | {application/json, text/markdown, etc.} | {what it provides} | {Yes/No} |
-| `resource://config/settings` | application/json | {configuration data} | No |
-
-### 14.5 Prompt Templates (if any)
-
-| Prompt Name | Description | Arguments | Output |
-|-------------|-------------|-----------|--------|
-| {prompt_name} | {when to use} | `{arg}: {type}` | {structured text} |
-
-### 14.6 MCP Server Request Flow
-
-```mermaid
-sequenceDiagram
- participant Host as AI Host
- participant LLM as LLM
- participant Server as MCP Server
- participant Backend as Backend Service
-
- Host->>Server: initialize (protocol version, capabilities)
- Server-->>Host: server info + capabilities
-
- Host->>Server: tools/list
- Server-->>Host: [{name, description, inputSchema}]
-
- Host->>LLM: User query + available tools
- LLM-->>Host: tool_call: search_documents({query})
-
- Host->>Server: tools/call {name: search_documents, args: {query}}
- Server->>Backend: Execute search
- Backend-->>Server: Results
- Server-->>Host: {content: [{type: text, text: results}]}
-
- Host->>LLM: Tool result + continue
- LLM-->>Host: Final response to user
-```
-
-### 14.7 Error Handling
-
-| Error Scenario | MCP Error Code | Response | Recovery |
-|---------------|---------------|----------|---------|
-| Invalid parameters | InvalidParams | Structured validation errors | Host retries with corrected params |
-| Backend unavailable | InternalError | Friendly error message | Host may retry or inform user |
-| Authentication failure | InvalidRequest | Auth error + instructions | User re-authenticates |
-| Rate limited | InternalError | Retry-after hint | Host backs off |
-
-### 14.8 Security
-
-- MUST validate all tool input parameters (types, ranges, patterns)
-- MUST sanitize file paths to prevent path traversal
-- MUST validate URLs to prevent SSRF
-- MUST NOT expose system internals in error messages
-- SHOULD use least-privilege access to backend services
-- SHOULD log all tool invocations with request context
-
-> **Reference**: Read `.github/skills/ai-systems/mcp-server-development/SKILL.md` for MCP Server implementation patterns.
-
----
-
-## 15. MCP App Specification (if applicable)
-
-> **Trigger**: Include this section when the PRD or ADR specifies an MCP App (interactive UI) pattern.
-> If the product does NOT render interactive UI inside an AI host, skip this section entirely.
-
-### 15.1 App Overview
-
-| Parameter | Value |
-|-----------|-------|
-| **App Name** | {e.g., data-explorer-app} |
-| **UI Framework** | {React / HTML+CSS / Vue / Svelte} |
-| **Rendering** | iframe inside AI host |
-| **State Management** | {React state / custom store} |
-| **Communication** | MCP App SDK (registerAppTool, postMessage) |
-
-### 15.2 MCP App Architecture
-
-```mermaid
-graph TD
- subgraph AIHost["AI Host (VS Code Copilot / Claude)"]
- Chat["Chat\nInterface"]
- Frame["iframe\nContainer"]
- end
-
- subgraph MCPApp["MCP App"]
- direction TB
- Entry["App Entry\nindex.html"]
-
- subgraph Views["Interactive Views"]
- V1["View 1: {name}\n{description}"]
- V2["View 2: {name}\n{description}"]
- end
-
- subgraph AppTools["App Tools"]
- AT1["registerAppTool()\n{tool description}"]
- AT2["registerAppTool()\n{tool description}"]
- end
-
- subgraph State["State Layer"]
- AS["App State"]
- EVT["Event Handlers"]
- end
- end
-
- subgraph Backend["Backend / MCP Server"]
- MCPS["MCP Server"]
- API["API Endpoints"]
- end
-
- Chat -->|"LLM triggers tool"| AppTools
- AppTools -->|"render"| Views
- Views -->|"user interaction"| State
- State -->|"result callback"| Chat
- Frame -->|"hosts"| Entry
- AppTools -->|"data fetch"| Backend
-
- style AIHost fill:#E3F2FD,stroke:#1565C0
- style MCPApp fill:#FFF3E0,stroke:#E65100
- style Backend fill:#E8F5E9,stroke:#2E7D32
-```
-
-### 15.3 View Specifications
-
-| View Name | Purpose | Trigger | Interactions |
-|-----------|---------|---------|-------------|
-| {view_name} | {what it displays} | {LLM tool call / user action} | {buttons, forms, charts, tables} |
-| {view_name} | {what it displays} | {trigger} | {interactions} |
-
-### 15.4 App Tool Registrations
-
-```
-Tool: {tool_name}
-Description: {what it does - shown to LLM}
-Parameters:
-  - {param}: {type} ({required/optional}) - {description}
-UI Behavior:
-  - Renders: {View name}
-  - User actions: {click, submit, select}
-  - Returns: {result sent back to chat}
-```
-
-### 15.5 App Interaction Flow
-
-```mermaid
-sequenceDiagram
- participant User
- participant Chat as Chat Interface
- participant LLM
- participant App as MCP App (iframe)
- participant Server as MCP Server
-
- User->>Chat: "Show me the sales dashboard"
- Chat->>LLM: User message + app tools
- LLM-->>Chat: Call: show_dashboard({period: "Q4"})
-
- Chat->>App: Render view with params
- App->>Server: Fetch dashboard data
- Server-->>App: Data response
- App->>App: Render interactive chart
-
- User->>App: Clicks "Drill into Region X"
- App->>Server: Fetch region detail
- Server-->>App: Region data
- App->>App: Update view
-
- User->>App: Clicks "Export"
- App-->>Chat: Result: "Exported Q4 report for Region X"
- Chat->>LLM: App result
- LLM-->>User: "Here is your exported Q4 report for Region X."
-```
-
-### 15.6 Responsive Design
-
-| Context | Width | Behavior |
-|---------|-------|----------|
-| VS Code Side Panel | ~400px | Compact layout, stacked components |
-| VS Code Editor Tab | ~800px | Full layout with sidebar |
-| Claude Desktop | ~600px | Medium layout |
-| Mobile Host | <400px | Single column, touch-friendly |
-
-### 15.7 Accessibility
-
-- MUST meet WCAG 2.1 AA for all interactive elements
-- MUST support keyboard navigation within iframe
-- MUST provide ARIA labels for dynamic content
-- SHOULD support screen readers for data visualizations
-- SHOULD respect host dark/light theme
-
-> **Reference**: Read `.github/skills/ai-systems/mcp-apps-development/SKILL.md` for MCP App patterns and best practices.
-
----
-
-## Cross-Cutting Concerns Diagram
-
-```mermaid
-graph TD
- subgraph Pipeline[" Middleware Pipeline"]
- direction LR
- REQ[Request] --> LOG[Logging] --> AUTH[Auth] --> RL[RateLimit] --> CTRL[Controller]
- CTRL --> EH[ErrorHandler] --> FMT[Formatting] --> RES[Response]
- end
-
- subgraph Row1[" "]
- direction LR
- L[" LOGGING<br/>Structured logs - Log levels<br/>Context data - Sensitive mask"]
- M[" MONITORING<br/>Health checks - Metrics<br/>Dashboards - Alerting"]
- T[" TRACING<br/>Correlation IDs - Distributed<br/>tracing - Request timing"]
- end
-
- subgraph Row2[" "]
- direction LR
- V["[PASS] VALIDATION<br/>Input validation - Schema check<br/>Business rules - Sanitization"]
- E["[WARN] ERROR HANDLING<br/>Global handler - Error responses<br/>Retry policies - Circuit breaker"]
- C[" CACHING<br/>Response cache - Distributed<br/>Invalidation - TTL management"]
- end
-
- Pipeline --- Row1
- Row1 --- Row2
-```
-
----
-
-**Generated by AgentX Architect Agent**
-**Last Updated**: {YYYY-MM-DD}
-**Version**: 1.0
-
----
-
-## Appendix A: C4 Model Diagrams and Data Design (v8.4.43+)
-
-> Additive section. References: C4 Model (https://c4model.com/) by Simon Brown - hierarchical Context -> Container -> Component -> Code, plus supporting Deployment and Dynamic views. All diagrams Mermaid.
-
-### A.1 C4 Level 1 - System Context
-
-```mermaid
-flowchart LR
-    User(("End User"))
-    Admin(("Admin"))
-    System["{System Name}<br/>(this product)"]
-    ExtAuth["External: Identity Provider"]
-    ExtPay["External: Payments"]
-    ExtNotif["External: Notification Service"]
-    User --> System
-    Admin --> System
-    System --> ExtAuth
-    System --> ExtPay
-    System --> ExtNotif
-```
-
-### A.2 C4 Level 2 - Containers
-
-```mermaid
-flowchart TB
-    subgraph System["{System Name}"]
-        Web["Web App<br/>(React/TS)"]
-        API["API Service<br/>(.NET/Python)"]
-        Worker["Async Worker<br/>(queue consumer)"]
-        DB[("Primary DB<br/>(PostgreSQL)")]
-        Cache[("Cache<br/>(Redis)")]
-        Queue[("Queue<br/>(Service Bus)")]
-    end
-    User(("User")) --> Web
-    Web --> API
-    API --> DB
-    API --> Cache
-    API --> Queue
-    Queue --> Worker
-    Worker --> DB
-```
-
-### A.3 C4 Level 3 - Components (one critical container)
-
-```mermaid
-flowchart TB
-    subgraph API["API Service"]
-        Ctrl["Controllers"]
-        Svc["Domain Services"]
-        Repo["Repositories"]
-        Auth["Auth Middleware"]
-        Telemetry["Telemetry"]
-    end
-    Ctrl --> Auth
-    Ctrl --> Svc
-    Svc --> Repo
-    Svc --> Telemetry
-    Repo --> DB[("Primary DB")]
-```
-
-### A.4 Deployment Topology (per environment)
-
-```mermaid
-flowchart LR
-    subgraph Prod["Production region"]
-        FE["Front Door / CDN"]
-        APIM["API Gateway"]
-        APP["App Service / Container Apps"]
-        DBP[("Primary DB - HA")]
-        KV["Key Vault"]
-        OBS["Observability stack"]
-    end
-    FE --> APIM --> APP
-    APP --> DBP
-    APP --> KV
-    APP --> OBS
-```
-
-> Repeat the subgraph per environment (Dev, Stage, Prod) and call out HA, region, and DR posture differences.
-
-### A.5 Entity-Relationship Diagram (persistent model)
-
-```mermaid
-erDiagram
-    USER ||--o{ ORDER : places
-    ORDER ||--|{ ORDER_ITEM : contains
-    PRODUCT ||--o{ ORDER_ITEM : appears_in
-    USER {
-        uuid id PK
-        string email
-        timestamp created_at
-    }
-    ORDER {
-        uuid id PK
-        uuid user_id FK
-        string status
-        decimal total
-    }
-    ORDER_ITEM {
-        uuid id PK
-        uuid order_id FK
-        uuid product_id FK
-        int quantity
-    }
-    PRODUCT {
-        uuid id PK
-        string sku
-        decimal price
-    }
-```
-
-### A.6 Domain Entity State Lifecycle
-
-```mermaid
-stateDiagram-v2
-    [*] --> Pending
-    Pending --> Paid: payment captured
-    Pending --> Cancelled: timeout / user cancel
-    Paid --> Shipped: fulfillment created
-    Shipped --> Delivered: carrier confirmed
-    Delivered --> Refunded: refund requested
-    Cancelled --> [*]
-    Delivered --> [*]
-    Refunded --> [*]
-```
-
-### A.7 Data Flow Diagram (handoff to Security Plan)
-
-```mermaid
-flowchart LR
-    User(("End User"))
-    subgraph TB1["Public trust boundary"]
-        FE["Front End"]
-    end
-    subgraph TB2["Application trust boundary"]
-        API["API"]
-        Worker["Worker"]
-    end
-    subgraph TB3["Data trust boundary"]
-        DB[("DB")]
-        KV["Key Vault"]
-    end
-    User -->|HTTPS| FE
-    FE -->|JSON| API
-    API -->|SQL| DB
-    API -->|secrets| KV
-    API -->|enqueue| Worker
-    Worker -->|SQL| DB
-```
-
-> The Security Plan turns this DFD into a STRIDE per element + privilege-boundary analysis.
-
-### A.8 ADR Back-Link Table
-
-| Design choice | ADR | Why this design follows the ADR |
-|---------------|-----|----------------------------------|
-| {choice} | `docs/artifacts/adr/ADR-{id}.md` | {rationale} |
-| {choice} | `docs/artifacts/adr/ADR-{id}.md` | {rationale} |
-
-### A.9 Error Taxonomy and Idempotency / Retry Matrix
-
-| Operation | Error class | HTTP status | Retryable | Idempotent | Backoff | Compensation |
-|-----------|-------------|-------------|-----------|------------|---------|--------------|
-| {op} | {transient/permanent/conflict} | {code} | {yes/no} | {yes/no} | {strategy} | {sagas/none} |
-| {op} | {transient/permanent/conflict} | {code} | {yes/no} | {yes/no} | {strategy} | {sagas/none} |
-
-### A.10 Capacity Targets
-
-| Metric | Target | Source of truth |
-|--------|--------|-----------------|
-| Peak RPS | {value} | {load test} |
-| p95 latency | {value} | {SLO} |
-| Concurrent users | {value} | {capacity model} |
-| Storage growth | {value/year} | {data model + retention} |
-
-
-## Appendix B: Rich Visual Diagrams (v8.4.43+)
-
-### B.1 Critical Path Sequence
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor User
-  participant UI as Web/UI
-  participant API as API Gateway
-  participant Svc as Service
-  participant DB as Datastore
-  participant Q as Queue
-  User->>UI: Action
-  UI->>API: Request (auth)
-  API->>Svc: Validate + dispatch
-  Svc->>DB: Read/write
-  DB-->>Svc: Result
-  Svc->>Q: Emit event
-  Svc-->>API: Response
-  API-->>UI: 2xx
-  UI-->>User: Render
-```
-
-### B.2 Branching Strategy (gitGraph)
-
-```mermaid
-gitGraph
-  commit id: "main"
-  branch develop
-  commit id: "feature-base"
-  branch feature/x
-  commit id: "wip-1"
-  commit id: "wip-2"
-  checkout develop
-  merge feature/x
-  checkout main
-  merge develop tag: "v1.0.0"
-```
-
-### B.3 System Block View
-
-```mermaid
-block-beta
-  columns 3
-  Web["Web/UI"] API["API Gateway"] Auth["AuthN/Z"]
-  Svc1["Service A"] Svc2["Service B"] Svc3["Service C"]
-  Cache["Cache"] DB["Primary DB"] Bus["Event Bus"]
-  style Web fill:#e3f2fd,stroke:#1976d2
-  style API fill:#fff3e0,stroke:#f57c00
-  style Auth fill:#fce4ec,stroke:#c2185b
-  style DB fill:#e8f5e9,stroke:#388e3c
-  style Bus fill:#f3e5f5,stroke:#7b1fa2
-```
-
-### B.4 Latency Budget (xychart)
-
-```mermaid
-xychart-beta
-  title "End-to-end latency budget (ms, p95)"
-  x-axis ["UI", "API", "Auth", "Service", "DB", "Net"]
-  y-axis "ms" 0 --> 200
-  bar [20, 30, 15, 60, 50, 25]
-```
-
-### B.5 Component Interaction (styled)
-
-```mermaid
-flowchart TB
-  subgraph Edge[Edge tier]
-    CDN[CDN]:::edge
-    WAF[WAF]:::edge
-  end
-  subgraph App[App tier]
-    API[API]:::app
-    Worker[Worker]:::app
-  end
-  subgraph Data[Data tier]
-    Pri[(Primary DB)]:::data
-    Cache[(Cache)]:::data
-  end
-  CDN --> WAF --> API --> Pri
-  API --> Cache
-  API --> Worker --> Pri
-  classDef edge fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
-  classDef app fill:#fff3e0,stroke:#f57c00,color:#e65100
-  classDef data fill:#e8f5e9,stroke:#388e3c,color:#1b5e20
-```
+|---|---|
+| Server Name | {server name} |
+| Transport | stdio / SSE / Streamable HTTP |
+| SDK / Runtime | {SDK and runtime} |
+| Authentication | {None, OAuth, API key, or equivalent} |
+| Target Hosts | {VS Code Copilot / Claude Desktop / GitHub Copilot / Custom} |
+| Tools | {tool list or linked contract} |
+| Resources | {resource list or linked contract} |
+| Prompt Assets | {prompt list or linked contract} |
+| Security Notes | {sandboxing, validation, rate limiting, auditability} |
+
+## 16. MCP App Specification (if applicable)
+
+| Concern | Requirement |
+|---|---|
+| Host Context | {Expected host and viewport constraints} |
+| Views | {Named views and when they appear} |
+| Theme Integration | {Dark/light and host token expectations} |
+| Accessibility | {WCAG and keyboard requirements} |
+| Chat Interaction | {How the app returns structured results to the host} |
+| Failure Handling | {Disconnected host, invalid state, retry behavior} |

@@ -11,163 +11,110 @@ compatibility:
  frameworks: ["tailwind", "bootstrap"]
  platforms: ["windows", "linux", "macos"]
 ---
-
 # Frontend/UI Development
 
-> **Purpose**: Production-ready frontend development standards for HTML, CSS, Tailwind CSS, and responsive design. 
-> **Audience**: Frontend engineers building web interfaces with modern HTML/CSS and utility-first frameworks. 
-> **Standard**: Follows [github/awesome-copilot](https://github.com/github/awesome-copilot) frontend development patterns.
-
----
+> WHEN: Build or review production HTML, CSS, and Tailwind UI where structure, responsiveness, accessibility, and performance must hold together.
 
 ## When to Use This Skill
 
-- Building responsive web layouts with HTML5 and CSS3
-- Styling with Tailwind CSS utility classes
-- Implementing accessible web forms
-- Optimizing frontend loading performance
-- Creating common UI layout patterns
+- New page, component, or layout shell in raw HTML, CSS, or Tailwind
+- Responsive, form, media, or navigation regressions
+- Choosing Grid, Flexbox, utilities, or framework defaults
+- Hardening states before the accessibility or prototype-audit gate
 
 ## Prerequisites
 
-- HTML5 and CSS3 fundamentals
-- Node.js installed for Tailwind CSS build tools
+Know which layer owns styling: Tailwind, Bootstrap, or custom CSS. Use
+browser devtools, responsive mode, and a contrast checker. Read the existing
+image/form/layout or Tailwind accessibility references only when that surface
+is in scope.
 
-## Quick Reference
+## Decision Guide
 
-| Need | Solution | Pattern |
-|------|----------|---------|
-| **Responsive layout** | Mobile-first with Tailwind | `flex md:grid grid-cols-3` |
-| **Semantic HTML** | Use proper elements | `<nav>`, `<main>`, `<article>` |
-| **Accessibility** | ARIA labels + keyboard nav | `aria-label="Close menu"` |
-| **Color contrast** | WCAG AA minimum (4.5:1) | Use color tools for validation |
-| **Typography** | Tailwind text utilities | `text-base md:text-lg` |
-| **Spacing** | Consistent Tailwind scale | `p-4 md:p-6 lg:p-8` |
-
-## Decision Tree
-
-```
-Building a frontend UI?
-+-- Need a page layout?
-|   +-- Simple landing page       -> Semantic HTML + Tailwind utilities
-|   +-- Multi-column dashboard     -> CSS Grid with responsive breakpoints
-|   +-- Sidebar + content          -> Flexbox with fixed/fluid split
-+-- Need interactive components?
-|   +-- Forms with validation      -> Semantic <form> + ARIA + native validation
-|   +-- Modals / dialogs           -> <dialog> element + focus trap
-|   +-- Navigation menus           -> <nav> + keyboard + aria-expanded
-+-- Need styling approach?
-|   +-- Utility-first, rapid dev   -> Tailwind CSS
-|   +-- Pre-built components       -> Bootstrap or component library
-|   +-- Custom design system       -> CSS custom properties + BEM
-+-- Need accessibility audit?
-|   -> Run WAVE / axe-core, fix contrast + ARIA + keyboard nav
-+-- Need performance optimization?
-    -> Defer scripts, lazy-load images, minimize CSS
-```
+Start with semantic HTML. Use Grid for page regions and Flexbox for alignment.
+Prefer native elements for forms, navigation, and dialogs before custom
+widgets. Stay inside the team's existing Tailwind or CSS system unless there is
+a clear reason to mix tools. Compose with `prototype-craft` for polish and with
+`accessibility` or `prototype-audit` for release gates.
 
 ## Core Rules
 
-1. **Mobile-first responsive design** - Start with the smallest breakpoint and progressively enhance for larger screens; never design desktop-first.
-2. **Semantic HTML over divs** - Use `<nav>`, `<main>`, `<article>`, `<section>`, `<aside>` for structure; reserve `<div>` for styling-only wrappers.
-3. **WCAG AA minimum** - Maintain 4.5:1 contrast ratio for text, provide visible focus indicators, and add `alt` on all images.
-4. **Keyboard navigable** - Every interactive element MUST be reachable and operable via keyboard alone (Tab, Enter, Escape).
-5. **No inline styles** - Use Tailwind utility classes or external CSS; inline styles break maintainability and cacheability.
-6. **Design all states** - Every component MUST handle empty, loading, error, success, and disabled states.
-7. **Consistent spacing scale** - Use the Tailwind spacing scale (4px increments) or an 8px grid; never use arbitrary pixel values.
-8. **Viewport meta required** - Every HTML page MUST include `<meta name="viewport" content="width=device-width, initial-scale=1.0">`.
+- Build mobile-first; add breakpoints only after the smallest layout is
+  correct.
+- Prefer `nav`, `main`, `section`, `article`, `button`, and `form` over
+  generic interactive `div`s.
+- Keep spacing, type, color, and radius on the established scale; avoid
+  one-off magic values.
+- Design empty, loading, success, error, disabled, and overflow states before
+  calling a component done.
+- Ship keyboard reachability, visible focus, descriptive labels, WCAG AA
+  contrast, responsive media, and lean CSS as defaults.
 
----
+## Workflow
 
-## HTML5 Semantic Elements
+1. Identify the surface, framework, breakpoints, and required states.
+2. Draft semantic structure so landmarks, headings, forms, media, and buttons
+   keep native behavior.
+3. Choose Grid, Flexbox, and the styling layer; do not mix systems without a
+   reason.
+4. Implement responsive behavior and visible states before polish.
+5. Validate forms, navigation, images, and dialogs against the linked
+   accessibility references.
+6. Test mobile, tablet, desktop, keyboard reachability, contrast, and
+   error/loading states.
+7. Hand off to `prototype-audit` or `accessibility` when the surface is review
+   or release bound.
 
-```html
-<!-- [PASS] GOOD: Semantic HTML structure -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>Page Title</title>
-</head>
-<body>
- <!-- Navigation -->
- <nav class="bg-white shadow-md">
- <ul class="flex space-x-4">
- <li><a href="#home">Home</a></li>
- <li><a href="#about">About</a></li>
- </ul>
- </nav>
+## Pitfalls
 
- <!-- Main content -->
- <main class="container mx-auto px-4 py-8">
- <article class="prose lg:prose-xl">
- <h1>Article Title</h1>
- <p>Content goes here...</p>
- </article>
- 
- <aside class="mt-8">
- <h2>Related Content</h2>
- </aside>
- </main>
+Pretty utilities cannot rescue weak structure. Check the detailed
+anti-patterns before patching div-only layouts, missing labels, fixed widths,
+or inline-style drift.
 
- <!-- Footer -->
- <footer class="bg-gray-800 text-white p-6">
- <p>&copy; 2026 Company Name</p>
- </footer>
-</body>
-</html>
+## Error Handling
 
-<!-- [FAIL] BAD: Non-semantic divs -->
-<div class="nav">
- <div class="nav-item">Home</div>
-</div>
-<div class="content">
- <div class="post">...</div>
-</div>
-```
+If a layout breaks, inspect source order, min-width assumptions, and whether
+Grid or Flexbox is overused. If Tailwind utilities conflict, collapse back to
+one source of truth. If audits fail, fix semantics, labels, contrast, and
+focus before adding more styling.
 
----
+## Checklist
 
-## Anti-Patterns
+- Landmarks and heading order are present.
+- Mobile-first layout works before larger overrides.
+- Forms, images, dialogs, and navigation follow accessible defaults.
+- Empty, loading, success, error, disabled, and overflow states are visible.
+- Spacing and type stay on the chosen scale.
+- Responsive media, lean CSS, and deferred non-critical scripts are in place.
 
-| Issue | Problem | Solution |
-|-------|---------|----------|
-| **Non-semantic HTML** | Using `<div>` for everything | Use `<nav>`, `<main>`, `<article>`, `<section>` |
-| **Missing alt text** | Images without descriptions | Always add descriptive `alt` attributes |
-| **Poor contrast** | Text hard to read | Use WCAG AA contrast ratio (4.5:1) |
-| **No focus states** | Keyboard users can't navigate | Add visible focus indicators |
-| **Fixed widths** | Not responsive | Use relative units and Tailwind breakpoints |
-| **Inline styles** | Hard to maintain | Use Tailwind utilities or CSS classes |
+## Why This Is a Skill
 
----
+General HTML and CSS knowledge does not reliably choose the right layout
+primitive, prevent framework drift, cover non-happy-path states, or protect
+accessibility and performance under delivery pressure. This skill makes those
+decisions mechanical and repeatable.
 
-## Resources
-
-- **Tailwind CSS**: [tailwindcss.com](https://tailwindcss.com)
-- **MDN Web Docs**: [developer.mozilla.org](https://developer.mozilla.org)
-- **WCAG Guidelines**: [w3.org/WAI/WCAG21](https://www.w3.org/WAI/WCAG21/)
-- **Can I Use**: [caniuse.com](https://caniuse.com)
-- **Awesome Copilot**: [github.com/github/awesome-copilot](https://github.com/github/awesome-copilot)
-
----
+## Related Links
 
 **See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
 
 **Last Updated**: January 27, 2026
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Tailwind classes not applying | Check purge/content config in tailwind.config.js includes your template files |
-| Accessibility audit failures | Add ARIA labels, ensure color contrast ratio >= 4.5:1, test keyboard navigation |
-| Layout breaks on mobile | Use mobile-first responsive design, test with browser dev tools responsive mode |
-
-## References
 
 - [UX/UI Design Skill](../ux-ui-design/SKILL.md) -- wireframes and methodology
 - [Prototype Craft](../prototype-craft/SKILL.md) -- UI visual polish and CSS variables
 - [Design System Reasoning](../design-system-reasoning/SKILL.md) -- page archetypes and visual language
 - [Tailwind A11y Css](references/tailwind-a11y-css.md)
 - [Images Forms Layouts](references/images-forms-layouts.md)
+- [Accessibility](../accessibility/SKILL.md) -- WCAG AA and keyboard gates
+- [Prototype Audit](../prototype-audit/SKILL.md) -- mechanical multi-pass review
+- [Impeccable Integration](../impeccable-integration/SKILL.md) -- design-language setup and Pass 0 checks
+
+## References
+
+- [details-frontend-foundations.md](references/details-frontend-foundations.md):
+  read for the original quick reference table, decision tree, semantic HTML
+  examples, anti-pattern table, resources, and troubleshooting.
+- [Tailwind A11y Css](references/tailwind-a11y-css.md): read when tuning focus,
+  contrast, forms, or Tailwind-specific accessibility rules.
+- [Images Forms Layouts](references/images-forms-layouts.md): read when solving
+  media handling, form structure, or reusable layout patterns.

@@ -28,100 +28,36 @@ compatibility:
 - Creating data visualizations and reports
 - Writing ETL/ELT scripts
 
+## Decision Guide
+
+Choose pandas for familiar small-to-medium tabular work, DuckDB for SQL over files and larger local analytics, and Polars when vectorized speed or lazy evaluation matters. Always inspect schema and null behavior before transformation logic.
+
+## Why This Is a Skill
+
+Data work becomes unreliable when notebooks mutate state invisibly, schemas drift unnoticed, or the wrong engine is used for the data size. This skill keeps analysis tied to grain, scale, and reproducibility.
+
+## Workflow
+
+1. Inspect shape, dtypes, keys, and null behavior first.
+2. Pick the lightest engine that can process the dataset at the required scale.
+3. Validate quality assumptions before transformations and joins.
+4. Make the analysis reproducible and explainable before handoff.
+
 ## Decision Tree
 
-```
-Working with data?
-+- Quick exploration / ad-hoc?
-| +- Small file (< 1GB)? -> Pandas / Polars
-| +- SQL-like queries? -> DuckDB (in-process)
-| - Interactive? -> Jupyter Notebook
-+- Production pipeline?
-| +- Simple transforms? -> Python script + scheduling
-| +- Large scale? -> Spark / Databricks
-| - Streaming? -> Kafka + Flink
-+- Data validation?
-| +- Schema checking? -> Pydantic / Great Expectations
-| - Quality rules? -> dbt tests / custom validators
-- Visualization?
- +- Static charts? -> Matplotlib / Seaborn
- +- Interactive? -> Plotly / Altair
- - Dashboard? -> Streamlit / Dash
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-start-pandas.md#decision-tree).
 
 ## Quick Start: Pandas
 
-```python
-import pandas as pd
-
-# Load data
-df = pd.read_csv("data.csv")
-
-# Explore
-print(df.shape) # (rows, cols)
-print(df.dtypes) # Column types
-print(df.describe()) # Summary statistics
-print(df.isnull().sum()) # Missing values per column
-
-# Transform
-df["date"] = pd.to_datetime(df["date"])
-df = df.dropna(subset=["required_field"])
-df["category"] = df["category"].str.lower().str.strip()
-
-# Aggregate
-summary = df.groupby("category").agg(
- count=("id", "count"),
- avg_value=("value", "mean"),
- total=("value", "sum")
-).reset_index()
-
-# Export
-summary.to_csv("output.csv", index=False)
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-start-pandas.md#quick-start-pandas).
 
 ## Quick Start: DuckDB (SQL on Files)
 
-```python
-import duckdb
-
-# Query CSV directly - no loading step
-result = duckdb.sql("""
- SELECT category, COUNT(*) as count, AVG(value) as avg_value
- FROM 'data.csv'
- WHERE date >= '2024-01-01'
- GROUP BY category
- ORDER BY count DESC
-""").df() # Returns pandas DataFrame
-
-# Query Parquet files (partitioned)
-result = duckdb.sql("""
- SELECT * FROM 'data/**/*.parquet'
- WHERE region = 'US'
- LIMIT 1000
-""")
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-start-pandas.md#quick-start-duckdb-sql-on-files).
 
 ## Quick Start: Polars (Fast Alternative)
 
-```python
-import polars as pl
-
-# Load and transform in one chain
-result = (
- pl.read_csv("data.csv")
- .filter(pl.col("value") > 0)
- .with_columns(
- pl.col("date").str.to_datetime(),
- pl.col("category").str.to_lowercase()
- )
- .group_by("category")
- .agg(
- pl.col("value").mean().alias("avg_value"),
- pl.col("id").count().alias("count")
- )
- .sort("count", descending=True)
-)
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-quick-start-pandas.md#quick-start-polars-fast-alternative).
 
 ## Core Rules
 
@@ -217,3 +153,7 @@ plt.savefig("chart.png", dpi=150)
 |-------|----------|
 | pandas MemoryError on large files | Use dtype optimization, chunksize parameter, or switch to polars/DuckDB |
 | DuckDB file lock error | Close other connections, use read_only=True for concurrent reads |
+
+## References
+
+- [Decision Tree details](references/details-decision-tree-quick-start-pandas.md) - must read before selection.

@@ -68,7 +68,8 @@ describe('aiEvaluationCommandInternals', () => {
   });
 
   it('scaffolds a starter AI evaluation contract tree', async () => {
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ runner: 'custom' } as any);
+    const runnerPick = { label: 'Custom shell runner', runner: 'custom' };
+    sandbox.stub(vscode.window, 'showQuickPick').resolves(runnerPick);
     sandbox.stub(vscode.window, 'showInputBox').resolves('Write-Output "{}"');
     sandbox.stub(vscode.workspace, 'openTextDocument').resolves({} as vscode.TextDocument);
     sandbox.stub(vscode.window, 'showTextDocument').resolves({} as vscode.TextEditor);

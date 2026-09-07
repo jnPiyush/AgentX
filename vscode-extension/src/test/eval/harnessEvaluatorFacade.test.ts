@@ -10,6 +10,8 @@ import {
   getEvaluationSummary,
   getEvaluationTooltip,
 } from '../../eval/harnessEvaluator';
+import { AgentXContext } from '../../agentxContext';
+import { EvaluationReport } from '../../eval/types';
 
 describe('harnessEvaluator facade', () => {
   let sandbox: sinon.SinonSandbox;
@@ -23,7 +25,7 @@ describe('harnessEvaluator facade', () => {
   });
 
   it('returns undefined and fallback strings when no workspace is open', () => {
-    const agentx = { workspaceRoot: undefined } as any;
+    const agentx = { workspaceRoot: undefined } as unknown as AgentXContext;
 
     assert.equal(evaluateHarnessQuality(agentx), undefined);
     assert.equal(getEvaluationSummary(agentx), 'No evaluation');
@@ -35,25 +37,32 @@ describe('harnessEvaluator facade', () => {
   });
 
   it('maps workspace inputs through to the evaluator internals and formats summaries', () => {
-    sandbox.stub(internals, 'evaluateHarnessQualityFromInput').returns({
+    const stubbedReport: EvaluationReport = {
       scores: {
-        workflowCompliance: { percent: 84, passedChecks: 3, totalChecks: 4 },
-        evidenceStrength: { percent: 73, passedChecks: 2, totalChecks: 3 },
-        outputConfidence: { percent: 68, passedChecks: 2, totalChecks: 3 },
+        workflowCompliance: { earned: 3, max: 4, percent: 84, passedChecks: 3, totalChecks: 4 },
+        evidenceStrength: { earned: 2, max: 3, percent: 73, passedChecks: 2, totalChecks: 3 },
+        outputConfidence: { earned: 2, max: 3, percent: 68, passedChecks: 2, totalChecks: 3 },
       },
-      coverage: { percent: 73 },
+      coverage: { observed: 73, total: 100, percent: 73 },
       dominantAttribution: 'policy',
-      observations: [{ label: 'Plans', detail: '2 observed' }],
+      observations: [{ id: 'plans', label: 'Plans', mode: 'observed', present: true, detail: '2 observed' }],
       checks: [
-        { label: 'Plans', summary: 'present', passed: true, attribution: 'clear' },
-        { label: 'Evidence', summary: 'missing', passed: false, attribution: 'policy' },
+        {
+          id: 'plans-check', dimension: 'workflowCompliance', pillar: 'planning',
+          label: 'Plans', summary: 'present', passed: true, score: 1, maxScore: 1, attribution: 'clear',
+        },
+        {
+          id: 'evidence-check', dimension: 'evidenceStrength', pillar: 'evidence',
+          label: 'Evidence', summary: 'missing', passed: false, score: 0, maxScore: 1, attribution: 'policy',
+        },
       ],
-    } as any);
+    };
+    sandbox.stub(internals, 'evaluateHarnessQualityFromInput').returns(stubbedReport);
     const agentx = {
       workspaceRoot: 'c:/repo',
       listExecutionPlanFiles: () => ['docs/execution/plans/EXEC-PLAN-1.md'],
       getStatePath: (fileName: string) => `c:/repo/.agentx/state/${fileName}`,
-    } as any;
+    } as unknown as AgentXContext;
 
     const report = evaluateHarnessQuality(agentx);
 

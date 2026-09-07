@@ -67,6 +67,16 @@ try {
     Assert-True (($parsed.frontmatter | Where-Object { $_.PSObject.Properties['name'] -and $_.name -eq 'plain' }).description -eq "User's `"quoted`" text") 'Standalone batch accepts embedded quotes in plain scalars'
     $single = "name: single`ndescription: 'Single YAML mapping contract'" | & node $standalone | Out-String
     Assert-True ($LASTEXITCODE -eq 0 -and ($single | ConvertFrom-Json).name -eq 'single') 'Existing stdin YAML interface remains unchanged'
+    foreach ($parser in @((Join-Path $repo 'scripts/parse-yaml.js'), $standalone)) {
+        foreach ($scalar in @('.nan # note', '.inf # note', '+.inf # note', '-.inf # note')) {
+            $numericError = "value: $scalar" | & node $parser 2>&1 | Out-String
+            Assert-True ($LASTEXITCODE -ne 0 -and $numericError -match 'Non-finite') 'Commented non-finite numbers fail in native and standalone parsing'
+        }
+        $scalars = "zero: 0 # count`nflag: false # disabled`nempty: null # absent`nquoted: '.nan # literal'" | & node $parser | Out-String
+        $scalarExit = $LASTEXITCODE
+        $values = $scalars | ConvertFrom-Json
+        Assert-True ($scalarExit -eq 0 -and $values.zero -ceq 0 -and $values.flag -ceq $false -and $null -eq $values.empty -and $values.quoted -ceq '.nan # literal') 'Comments preserve scalar types and quoted content in both parsers'
+    }
     foreach ($invalidBatch in @('{}', '[""]', '[42]', '["missing-skill.md"]')) {
         $batchError = $invalidBatch | & node $standalone --frontmatter-files 2>&1 | Out-String
         Assert-True ($LASTEXITCODE -ne 0 -and $batchError -match '\[FAIL\]') 'Invalid or unreadable batch input fails explicitly'
@@ -94,6 +104,35 @@ try {
     Assert-True ($skills.totalCount -eq 0 -and $skills.skills -is [array] -and $skills.skills.Count -eq 0) 'Empty skills serialize as an empty array'
     Assert-True ($skills.countsByCategory -is [array] -and $skills.countsByCategory.Count -eq 0) 'Empty categories serialize as an empty array'
     Assert-True ($templates.totalCount -eq 0 -and $templates.templates -is [array] -and $templates.templates.Count -eq 0) 'Empty templates serialize as an empty array'
+
+    $metadataCases = Get-Content -LiteralPath (Join-Path $repo 'tests/fixtures/template-metadata.json') -Raw | ConvertFrom-Json
+    foreach ($fixture in $metadataCases) {
+        Set-Content -LiteralPath (Join-Path $temp '.github/templates/CASE-TEMPLATE.md') -Value $fixture.content
+        $previousSkills = (Get-FileHash (Join-Path $temp '.github/registries/skills.json')).Hash
+        $previousTemplates = (Get-FileHash (Join-Path $temp '.github/registries/templates.json')).Hash
+        $run = Invoke-Generator
+        if ($fixture.PSObject.Properties['error'] -and $fixture.error) {
+            Assert-True ($run.code -ne 0) "Template metadata rejects $($fixture.name)"
+            Assert-True ((Get-FileHash (Join-Path $temp '.github/registries/skills.json')).Hash -eq $previousSkills) 'Invalid template does not replace skill registry'
+            Assert-True ((Get-FileHash (Join-Path $temp '.github/registries/templates.json')).Hash -eq $previousTemplates) 'Invalid template does not replace template registry'
+        } else {
+            Assert-True ($run.code -eq 0) "Template metadata accepts $($fixture.name): $($run.output)"
+            $templates = Read-Registry 'templates'
+            $expected = @($fixture.inputs | ForEach-Object name)
+            Assert-True (($templates.templates[0].declaredInputs -join ',') -ceq ($expected -join ',')) "Template input order matches $($fixture.name)"
+        }
+    }
+    Remove-Item -LiteralPath (Join-Path $temp '.github/templates/CASE-TEMPLATE.md')
+    Get-ChildItem -LiteralPath (Join-Path $repo '.github/templates') -Filter '*-TEMPLATE.md' -File |
+        Copy-Item -Destination (Join-Path $temp '.github/templates')
+    Assert-True ((Invoke-Generator).code -eq 0) 'Canonical templates generate successfully'
+    $templates = Read-Registry 'templates'
+    $contracts = Get-Content -LiteralPath (Join-Path $repo 'tests/fixtures/canonical-template-inputs.json') -Raw | ConvertFrom-Json
+    Assert-True ($templates.totalCount -eq $contracts.Count) 'Canonical template inventory matches frozen contracts'
+    foreach ($contract in $contracts) {
+        $entry = @($templates.templates | Where-Object path -eq ".github/templates/$($contract.file)")
+        Assert-True ($entry.Count -eq 1 -and ($entry[0].declaredInputs -join ',') -ceq ($contract.inputs -join ',')) "Canonical registry retains $($contract.file) inputs"
+    }
 } finally {
     Remove-Item -LiteralPath $temp -Recurse -Force
 }

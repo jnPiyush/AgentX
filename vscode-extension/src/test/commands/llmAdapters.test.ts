@@ -133,12 +133,13 @@ describe('runAddLlmAdapterCommand', () => {
     const setupWizard = await import('../../commands/setupWizard');
 
     sandbox.stub(workspaceHelpers, 'promptWorkspaceRoot').resolves(tempRoot);
+    const localModelPick = {
+      label: 'qwen2.5-coder:14b',
+      value: 'qwen2.5-coder:14b',
+      description: 'Recommended local coding model via Ollama',
+    };
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({
-        label: 'qwen2.5-coder:14b',
-        value: 'qwen2.5-coder:14b',
-        description: 'Recommended local coding model via Ollama',
-      } as any)
+      .onFirstCall().resolves(localModelPick)
       .onSecondCall().resolves(undefined);
     sandbox.stub(vscode.window, 'showInputBox')
       .onFirstCall().resolves('http://127.0.0.1:4000')

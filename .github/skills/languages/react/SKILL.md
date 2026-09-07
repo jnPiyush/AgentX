@@ -56,105 +56,6 @@ React Decision
 - TypeScript fundamentals
 - React 18+ with hooks API
 
-## Quick Reference
-
-| Need | Solution | Pattern |
-|------|----------|---------|
-| **Component** | Functional with TypeScript | `export function MyComponent({ prop }: Props) {}` |
-| **State** | useState hook | `const [count, setCount] = useState(0)` |
-| **Effects** | useEffect hook | `useEffect(() => {}, [deps])` |
-| **Custom hook** | Extract reusable logic | `function useUser() {}` |
-| **Form handling** | Controlled components | `<input value={value} onChange={handleChange} />` |
-| **Performance** | React.memo, useMemo | `const MemoComponent = React.memo(Component)` |
-
----
-
-## React Version
-
-**Current**: React 19+ 
-**Minimum**: React 18+
-
-### Modern React Features
-
-```typescript
-// React 19 - No need to import React for JSX
-import { useState, useEffect } from 'react';
-
-// Functional components (always use these)
-export function UserProfile({ userId }: { userId: number }) {
- const [user, setUser] = useState<User | null>(null);
- 
- return <div>{user?.name}</div>;
-}
-
-// React 19 - use() hook for promises
-import { use } from 'react';
-
-function UserData({ userPromise }: { userPromise: Promise<User> }) {
- const user = use(userPromise); // Suspends until resolved
- return <div>{user.name}</div>;
-}
-
-// React 19 - Actions for forms
-function ContactForm() {
- async function handleSubmit(formData: FormData) {
- 'use server'; // Server action
- await saveContact(formData);
- }
- 
- return <form action={handleSubmit}>...</form>;
-}
-```
-
----
-
-## Component Patterns
-
-### Functional Components with TypeScript
-
-```typescript
-// [PASS] GOOD: Typed functional component
-interface UserCardProps {
- user: User;
- onSelect?: (user: User) => void;
- className?: string;
-}
-
-export function UserCard({ user, onSelect, className }: UserCardProps) {
- return (
- <div 
- className={`p-4 border rounded ${className}`}
- onClick={() => onSelect?.(user)}
- >
- <h3>{user.name}</h3>
- <p>{user.email}</p>
- </div>
- );
-}
-
-// [PASS] GOOD: Component with children
-interface ContainerProps {
- children: React.ReactNode;
- title?: string;
-}
-
-export function Container({ children, title }: ContainerProps) {
- return (
- <div>
- {title && <h2>{title}</h2>}
- {children}
- </div>
- );
-}
-
-// [FAIL] BAD: Class components (legacy)
-class UserCard extends React.Component {
- // Don't use class components anymore
-}
-```
-
----
-
 ## Core Rules
 
 1. **Functional Components Only** - Use function components with hooks; never use class components for new code
@@ -181,20 +82,6 @@ class UserCard extends React.Component {
 
 ---
 
-## Resources
-
-- **React Docs**: [react.dev](https://react.dev)
-- **TypeScript**: [typescriptlang.org](https://www.typescriptlang.org)
-- **Testing Library**: [testing-library.com](https://testing-library.com/react)
-- **React DevTools**: Browser extension
-- **Awesome Copilot**: [github.com/github/awesome-copilot](https://github.com/github/awesome-copilot)
-
----
-
-**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
-
-**Last Updated**: January 27, 2026
-
 ## Troubleshooting
 
 | Issue | Solution |
@@ -203,23 +90,27 @@ class UserCard extends React.Component {
 | Stale closure in useCallback | Add all referenced variables to dependency array, or use useRef |
 | Component not updating | Ensure state is updated immutably (spread operator or structuredClone) |
 
-## Internationalization (i18n)
+## Workflow
 
-| Library | When to Use |
-|---------|-------------|
-| `react-intl` | Full ICU support, plurals, dates, mature ecosystem |
-| `next-intl` | Next.js App Router with server components |
-| `react-i18next` | Lightweight, good DX, namespace support |
+1. Define user states and component ownership.
+2. Implement semantic markup and typed data flow.
+3. Add focused component tests for primary interactions.
+4. Render in a browser and run accessibility checks.
 
-**Best Practices**:
-- Extract all user-facing strings (never hardcode in JSX)
-- Use ICU message format for plurals: `{count, plural, one {# item} other {# items}}`
-- Co-locate translations: `src/locales/{lang}/common.json`
-- Use `<FormattedMessage>` or `useIntl()` hook
-- Set `lang` attribute on `<html>` element
-- Test with pseudo-localization to catch layout issues early
+## Verification Checklist
 
-## References
+- [ ] Type check and tests pass.
+- [ ] Primary keyboard interaction works.
+- [ ] Axe reports no blocking violation.
+- [ ] No avoidable effect or render loop exists.
 
-- [Hooks Perf State](references/hooks-perf-state.md)
-- [Forms Testing Patterns](references/forms-testing-patterns.md)
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Quick Reference through Internationalization (i18n)](references/details-quick-reference-and-internationalization-i18n.md) - MUST read before work involving quick reference through internationalization (i18n).
+
+Existing focused references are reused, not duplicated:
+
+- [React Forms, Testing & Common Patterns](references/forms-testing-patterns.md) - MUST read before applying the focused react forms, testing & common patterns guidance.
+- [React Hooks, Performance & State Management](references/hooks-perf-state.md) - MUST read before applying the focused react hooks, performance & state management guidance.

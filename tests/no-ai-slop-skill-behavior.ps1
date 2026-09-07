@@ -31,7 +31,7 @@ Assert-True ($skill -match 'Never infer authorship') 'skill forbids unsupported 
 Assert-True ($skill -match 'minimum effective edit') 'skill preserves voice through bounded edits'
 Assert-True ($skill -match 'design/content-design.*product UI') 'skill distinguishes general prose from UI content design'
 Assert-True ($skill -match 'design/anti-slop.*visual design') 'skill distinguishes general prose from visual anti-slop review'
-Assert-True ($skill -match 'development/scrub.*generated code') 'skill distinguishes general prose from code scrub'
+Assert-True ($skill -match 'development/scrub`\s+for\s+generated code') 'skill distinguishes general prose from code scrub'
 Assert-True ($skill -match 'review signals, not blind replacements') 'skill treats flagged language as contextual evidence'
 Assert-True (Test-Path -LiteralPath (Join-Path $root $evalPath)) 'progressive evaluation checklist exists'
 Assert-True ($skill -match 'references/eval\.md') 'skill invokes its evaluation checklist'
@@ -72,8 +72,8 @@ try {
     Assert-True ($LASTEXITCODE -eq 0) 'Copilot CLI pack installation succeeds'
     Assert-True (Test-Path -LiteralPath (Join-Path $installTarget $skillPath)) 'installed pack contains no-ai-slop'
     Assert-True (Test-Path -LiteralPath (Join-Path $installTarget $licensePath)) 'installed pack contains the upstream MIT license'
-    Assert-True ((Get-Content -LiteralPath (Join-Path $installTarget 'LICENSE') -Raw) -match 'Apache License') 'PowerShell-installed pack contains the AgentX Apache license'
-    Assert-True (Test-Path -LiteralPath (Join-Path $installTarget 'NOTICE')) 'installed pack contains repository NOTICE'
+    Assert-True ((Get-Content -LiteralPath (Join-Path $installTarget '.agentx/legal/LICENSE') -Raw) -match 'Apache License') 'PowerShell-installed pack contains the namespaced AgentX Apache license'
+    Assert-True (Test-Path -LiteralPath (Join-Path $installTarget '.agentx/legal/NOTICE')) 'installed pack contains namespaced repository NOTICE'
 } finally {
     Remove-Item -LiteralPath $installTarget -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -108,11 +108,20 @@ if ($bash) {
         if ($bashInstallSucceeded) {
             Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget $skillPath)) 'Bash-installed pack contains no-ai-slop'
             Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget $licensePath)) 'Bash-installed pack contains the upstream MIT license'
-            Assert-True ((Get-Content -LiteralPath (Join-Path $bashInstallTarget 'LICENSE') -Raw) -match 'Apache License') 'Bash-installed pack contains the AgentX Apache license'
-            Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget 'NOTICE')) 'Bash-installed pack contains repository NOTICE'
+            Assert-True ((Get-Content -LiteralPath (Join-Path $bashInstallTarget '.agentx/legal/LICENSE') -Raw) -match 'Apache License') 'Bash-installed pack contains the namespaced AgentX Apache license'
+            Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget '.agentx/legal/NOTICE')) 'Bash-installed pack contains namespaced repository NOTICE'
+            $instructionReferences = @(Get-ChildItem (Join-Path $root '.github/instructions') -Recurse -Filter '*.md' -File |
+                Where-Object { $_.Name -notlike '*.instructions.md' })
+            foreach ($reference in $instructionReferences) {
+                $relativePath = [IO.Path]::GetRelativePath($root, $reference.FullName)
+                $installedReference = Join-Path $bashInstallTarget $relativePath
+                Assert-True ((Test-Path -LiteralPath $installedReference) -and
+                    (Get-FileHash -LiteralPath $installedReference).Hash -eq
+                    (Get-FileHash -LiteralPath $reference.FullName).Hash) "Bash-installed instruction reference matches source: $relativePath"
+            }
         }
         Assert-True ($bashOutput -match 'Skills\s+: 134 across 14 categories') 'Bash installer reports the current skill inventory'
-        Assert-True ($bashOutput -match 'Prompts\s+: 23 reusable templates') 'Bash installer reports the current prompt inventory'
+        Assert-True ($bashOutput -match 'Prompts\s+: 23 reference templates') 'Bash installer reports the current prompt inventory'
     } finally {
         Remove-Item -LiteralPath $bashInstallerCopy -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath $bashInstallTarget -Recurse -Force -ErrorAction SilentlyContinue

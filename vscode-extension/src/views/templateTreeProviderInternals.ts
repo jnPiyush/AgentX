@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AgentXContext } from '../agentxContext';
+import { parse as parseYaml, YAMLParseError } from 'yaml';
 import { collectAssetFiles } from '../utils/runtimeAssets';
 import { loadTemplatesRegistry, resolveRegistryAssetPath } from '../utils/registryLoader';
 
@@ -16,6 +16,12 @@ export interface TemplateDef {
  name: string;
  filePath: string;
  inputs: TemplateInput[];
+ error?: string;
+}
+
+export interface TemplateContext {
+ readonly workspaceRoot?: string;
+ readonly extensionContext?: { readonly extensionPath: string };
 }
 
 const TEMPLATE_ICONS: Record<string, string> = {
@@ -46,7 +52,7 @@ export class TemplateTreeItem extends vscode.TreeItem {
  }
 }
 
-export function resolveTemplateFiles(agentx: AgentXContext): string[] {
+export function resolveTemplateFiles(agentx: TemplateContext): string[] {
  const workspaceRoot = agentx.workspaceRoot;
  const extensionPath = agentx.extensionContext?.extensionPath;
 
@@ -88,73 +94,117 @@ export function createTemplateTreeItem(filePath: string, fileName: string): Temp
  item.tooltip = `Open ${name} template`;
  item.contextValue = 'templateItem';
  item.description = `${template.inputs.length} input${template.inputs.length === 1 ? '' : 's'}`;
+ if (template.error) {
+  item.iconPath = new vscode.ThemeIcon('warning');
+  item.description = 'Invalid metadata';
+  item.tooltip = `${name}: ${template.error}`;
+ }
 
  return item;
 }
 
-export function parseTemplate(filePath: string, fileName: string): TemplateDef {
- const name = fileName.replace(/-TEMPLATE\.md$/i, '').replace(/\.md$/i, '');
+class TemplateMetadataError extends Error {}
+
+function isMapping(value: unknown): value is Record<string, unknown> {
+ return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function validateInputName(name: string): void {
+ if (!/^[A-Za-z0-9_][A-Za-z0-9_-]*$/.test(name)) {
+  throw new TemplateMetadataError(`Invalid input name: ${name}`);
+ }
+}
+
+function readTemplateInputs(content: string): TemplateInput[] {
+ const normalized = content.replace(/^\uFEFF/, '');
+ const lines = normalized.split(/\r?\n/);
  const inputs: TemplateInput[] = [];
-
- try {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (fmMatch) {
-   const fm = fmMatch[1];
-   const inputsMatch = fm.match(/^inputs:\s*\r?\n([\s\S]*)/m);
-   if (inputsMatch) {
-    const block = inputsMatch[1];
-    const lines = block.split(/\r?\n/);
-    let currentInput: Partial<TemplateInput> | null = null;
-
-    for (const line of lines) {
-     const keyMatch = line.match(/^ (\w[\w-]*):\s*$/);
-     if (keyMatch) {
-      if (currentInput && currentInput.name) {
-       inputs.push({
-        name: currentInput.name,
-        description: currentInput.description || '',
-        required: currentInput.required || false,
-        defaultValue: currentInput.defaultValue || '',
-       });
-      }
-      currentInput = { name: keyMatch[1] };
-      continue;
-     }
-
-     if (currentInput) {
-      const propMatch = line.match(/^\s{2,}(\w+):\s*(.*)$/);
-      if (propMatch) {
-       const [, prop, val] = propMatch;
-       const cleanVal = val.replace(/^["']|["']$/g, '').trim();
-       switch (prop) {
-        case 'description':
-         currentInput.description = cleanVal;
-         break;
-        case 'required':
-         currentInput.required = cleanVal === 'true';
-         break;
-        case 'default':
-         currentInput.defaultValue = cleanVal;
-         break;
-       }
-      }
-     }
-    }
-
-    if (currentInput && currentInput.name) {
-     inputs.push({
-      name: currentInput.name,
-      description: currentInput.description || '',
-      required: currentInput.required || false,
-      defaultValue: currentInput.defaultValue || '',
-     });
-    }
+ let body = normalized;
+ if (lines[0].trim() === '---') {
+  const end = lines.findIndex((line, index) => index > 0 && line.trim() === '---');
+  if (end < 0) { throw new TemplateMetadataError('Unterminated frontmatter'); }
+  const yaml = lines.slice(1, end).join('\n');
+  let metadata: unknown = {};
+  if (yaml.trim()) {
+   try {
+    metadata = parseYaml(yaml, { prettyErrors: false, strict: true, uniqueKeys: true });
+   } catch (error) {
+    // YAML alias resolution and expansion limits throw ReferenceError, not YAMLParseError.
+    if (error instanceof ReferenceError) { throw new TemplateMetadataError(error.message); }
+    throw error;
    }
   }
- } catch {
-  // Ignore unreadable template files and surface zero inputs.
+  if (!isMapping(metadata)) { throw new TemplateMetadataError('Frontmatter must be a mapping'); }
+  if ('inputs' in metadata) {
+  if (!isMapping(metadata.inputs)) {
+   throw new TemplateMetadataError('Inputs must be a mapping');
+  }
+  for (const [name, definition] of Object.entries(metadata.inputs)) {
+   validateInputName(name);
+   if (!isMapping(definition)) {
+    throw new TemplateMetadataError(`Input '${name}' must be a mapping`);
+   }
+   if (definition.description !== undefined && typeof definition.description !== 'string') {
+    throw new TemplateMetadataError(`Input '${name}' description must be a string`);
+   }
+   if (definition.required !== undefined && typeof definition.required !== 'boolean') {
+    throw new TemplateMetadataError(`Input '${name}' required must be a boolean`);
+   }
+   const value = definition.default;
+   if (value !== undefined && value !== null
+     && typeof value !== 'string' && typeof value !== 'boolean'
+     && !(typeof value === 'number' && Number.isFinite(value))) {
+    throw new TemplateMetadataError(`Input '${name}' default must be a scalar`);
+   }
+   inputs.push({
+    name,
+    description: typeof definition.description === 'string' ? definition.description : '',
+    required: definition.required === true,
+    defaultValue: value === undefined || value === null ? '' : String(value),
+   });
+  }
+  }
+  body = lines.slice(end + 1).join('\n');
  }
 
- return { name, filePath, inputs };
+ const header: string[] = [];
+ let fence = '';
+ for (const line of body.split(/\r?\n/)) {
+  const delimiter = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+  if (delimiter) {
+   if (!fence) { fence = delimiter[1]; }
+   else if (delimiter[1][0] === fence[0] && delimiter[1].length >= fence.length
+     && !delimiter[2].trim()) { fence = ''; }
+   continue;
+  }
+  if (fence) { continue; }
+  if (/^#\s/.test(line)) { break; }
+  header.push(line);
+ }
+ const declaration = /<!--\s*Inputs:\s*([\s\S]*?)\s*-->/.exec(header.join('\n'));
+ if (declaration) {
+  for (const value of declaration[1].split(',')) {
+  const name = value.replace(/[{}$]/g, '').trim();
+  if (!name) { continue; }
+  validateInputName(name);
+  if (!inputs.some(input => input.name === name)) {
+   inputs.push({ name, description: '', required: false, defaultValue: '' });
+  }
+  }
+ }
+ return inputs;
+}
+
+export function parseTemplate(filePath: string, fileName: string): TemplateDef {
+ const name = fileName.replace(/-TEMPLATE\.md$/i, '').replace(/\.md$/i, '');
+ try {
+  return { name, filePath, inputs: readTemplateInputs(fs.readFileSync(filePath, 'utf8')) };
+ } catch (error) {
+  const readFailure = error instanceof Error && 'code' in error && 'syscall' in error
+  && (error.syscall === 'open' || error.syscall === 'read');
+  if (error instanceof TemplateMetadataError || error instanceof YAMLParseError || readFailure) {
+  return { name, filePath, inputs: [], error: error.message };
+  }
+  throw error;
+ }
 }

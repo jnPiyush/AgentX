@@ -338,7 +338,12 @@ PRD_FILES=$(git diff --cached --name-only | grep '^docs/artifacts/prd/PRD-.*\.md
 if [ -n "$PRD_FILES" ]; then
   for PRD in $PRD_FILES; do
     if [ -f "$PRD" ]; then
-      if ! grep -qiE '##[[:space:]]*(Problem Statement|Goals|Requirements|Acceptance Criteria|User Stories)' "$PRD" 2>/dev/null; then
+      # The canonical template (and every generated PRD, e.g. PRD-244) numbers its
+      # headings ("## 1. Problem Statement", "## 3. Goals & Success Metrics"), so
+      # the required-section keyword can be preceded by an optional "N." / "N)"
+      # ordinal. Without this the numbered heading never matches and every
+      # correctly-structured PRD is misreported as missing its sections.
+      if ! grep -qiE '##[[:space:]]*([0-9]+[.)][[:space:]]*)?(Problem Statement|Goals|Requirements|Acceptance Criteria|User Stories)' "$PRD" 2>/dev/null; then
         echo -e "${YELLOW}[WARN] PRD missing required sections: $PRD${NC}"
         echo "  PRD MUST include: Problem Statement, Goals, Requirements, or Acceptance Criteria."
         echo "  Complete the Research phase before writing the PRD."

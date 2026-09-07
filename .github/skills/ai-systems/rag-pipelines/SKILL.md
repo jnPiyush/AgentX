@@ -33,250 +33,86 @@ compatibility:
 - Vector store or search service
 - LLM for generation
 
+## Decision Guide
+
+Use RAG when the gap is knowledge access, not behavior control. Start with hybrid retrieval plus reranking for production defaults. If the main gap is behavior or formatting, fix prompts, tools, or fine-tuning instead of stuffing more documents into context.
+
+## Why This Is a Skill
+
+RAG quality depends on chunking, metadata, retrieval, reranking, and grounding discipline working together. This skill keeps those moving parts explicit so teams do not confuse "vector search exists" with a production retrieval system.
+
+## Workflow
+
+1. Define the corpus, metadata, and evaluation questions.
+2. Choose chunking, embedding, and indexing strategies that fit document shape and scale.
+3. Retrieve and rerank the smallest evidence set that can answer the query.
+4. Ground generation on that evidence and validate quality and latency before promotion.
+
 ## Decision Tree
 
-```
-Building a RAG system?
-+- What type of documents?
-|  +- Short, structured (FAQ, KB articles)?
-|     -> Small chunks (256-512 tokens), simple splitting
-|  +- Long, unstructured (reports, papers)?
-|     -> Semantic chunking, hierarchical retrieval
-|  +- Code repositories?
-|     -> AST-aware chunking, function-level
-|  +- Multi-modal (PDFs with tables/images)?
-|     -> Document intelligence + specialized parsers
-+- What query patterns?
-|  +- Exact lookups? -> Keyword search (BM25)
-|  +- Semantic similarity? -> Vector search
-|  +- Both? -> Hybrid search (recommended default)
-+- Need high precision?
-|  +- Add reranking (cross-encoder or Cohere Rerank)
-|  +- Add metadata filtering (date, source, category)
-+- Scale considerations?
-   +- <100K docs -> Single vector store, simple pipeline
-   +- 100K-10M docs -> Hybrid search + reranking + caching
-   +- >10M docs -> Distributed index, tiered retrieval, pre-filtering
-```
-
----
+MUST read before selection: [Decision Tree details](references/details-decision-tree-rag-architecture.md#decision-tree).
 
 ## RAG Architecture
 
-### Standard Pipeline
+MUST read before selection: [Decision Tree details](references/details-decision-tree-rag-architecture.md#rag-architecture).
 
-```
-[Documents] -> [Parser/Loader] -> [Chunker] -> [Embedder] -> [Vector Store]
-                                                                    |
-[User Query] -> [Embedder] -> [Retriever] -> [Reranker] -> [Top-K Contexts]
-                                                                    |
-                                    [Prompt Builder] <- [System Prompt + Template]
-                                           |
-                                    [LLM Generation]
-                                           |
-                                    [Response + Citations]
-```
+<a id="standard-pipeline"></a>
 
-### Advanced Patterns
-
-| Pattern | When to Use | Complexity |
-|---------|-------------|------------|
-| **Naive RAG** | Simple Q&A, small corpus | Low |
-| **Hybrid RAG** | Production systems, diverse queries | Medium |
-| **Multi-Index RAG** | Multiple document types/sources | Medium |
-| **Hierarchical RAG** | Long documents, nested structure | High |
-| **Agentic RAG** | Multi-step reasoning, tool use | High |
-| **Graph RAG** | Entity-relationship knowledge | High |
-| **Corrective RAG (CRAG)** | Self-correcting retrieval | High |
-| **Self-RAG** | Adaptive retrieval decisions | High |
-
----
+<a id="advanced-patterns"></a>
 
 ## Chunking Strategies
 
-### Strategy Selection
+MUST read before selection: [Decision Tree details](references/details-decision-tree-rag-architecture.md#chunking-strategies).
 
-| Strategy | Best For | Chunk Size | Overlap |
-|----------|----------|------------|---------|
-| **Fixed-size** | Uniform text, simple setup | 512-1024 tokens | 50-100 tokens |
-| **Sentence-based** | Articles, documentation | 3-5 sentences | 1 sentence |
-| **Paragraph-based** | Well-structured documents | Natural paragraphs | 0 |
-| **Semantic** | Mixed content, varying density | Dynamic (by topic boundary) | Context-aware |
-| **Recursive** | Nested structure (Markdown, HTML) | Varies by level | Level-dependent |
-| **Document-specific** | Code, tables, slides | Function/table/slide | 0 |
+<a id="strategy-selection"></a>
 
-### Chunking Rules
+<a id="chunking-rules"></a>
 
-- **MUST** preserve semantic coherence within chunks
-- **MUST** include metadata (source, page, section, timestamp)
-- **MUST** test multiple chunk sizes and measure retrieval quality
-- **SHOULD** add overlap to prevent information loss at boundaries
-- **SHOULD** use parent-child relationships for hierarchical docs
-- **SHOULD** keep chunks within the embedding model's token limit
-- **MAY** store both small chunks (retrieval) and large chunks (context)
-
-### Parent-Child Chunking
-
-```
-Document
-  |
-  +-- Parent Chunk (2000 tokens) -- stored for LLM context
-       |
-       +-- Child Chunk 1 (256 tokens) -- indexed for retrieval
-       +-- Child Chunk 2 (256 tokens) -- indexed for retrieval
-       +-- Child Chunk 3 (256 tokens) -- indexed for retrieval
-```
-
-Retrieve child chunks -> return parent chunk to LLM for more context.
-
----
+<a id="parent-child-chunking"></a>
 
 ## Embedding Models
 
-| Model | Dimensions | Max Tokens | Use Case |
-|-------|-----------|------------|----------|
-| **text-embedding-3-large** (OpenAI) | 3072 | 8191 | Highest quality, API-based |
-| **text-embedding-3-small** (OpenAI) | 1536 | 8191 | Good quality, lower cost |
-| **Cohere embed-v4** | 1024 | 512 | Multilingual, on-premise option |
-| **BGE-large-en-v1.5** | 1024 | 512 | Open-source, high quality |
-| **all-MiniLM-L6-v2** | 384 | 256 | Lightweight, fast, local |
-| **nomic-embed-text** | 768 | 8192 | Open-source, long context |
+MUST read before selection: [Decision Tree details](references/details-decision-tree-rag-architecture.md#embedding-models).
 
-### Embedding Best Practices
-
-- **MUST** use the same embedding model for indexing and querying
-- **SHOULD** normalize embeddings for cosine similarity
-- **SHOULD** benchmark embedding models on your domain data
-- **MAY** use dimensionality reduction (Matryoshka) for storage savings
-
----
+<a id="embedding-best-practices"></a>
 
 ## Retrieval Strategies
 
-### Hybrid Search (Recommended Default)
+MUST read before selection: [Decision Tree details](references/details-decision-tree-rag-architecture.md#retrieval-strategies).
 
-```
-User Query
-    |
-    +-- [Keyword Search (BM25)] --> Keyword Results
-    |
-    +-- [Vector Search (Embeddings)] --> Semantic Results
-    |
-    +-- [Reciprocal Rank Fusion (RRF)] --> Merged Results
-    |
-    +-- [Reranker (Cross-Encoder)] --> Final Top-K
-```
+<a id="hybrid-search-recommended-default"></a>
 
-### Retrieval Configuration
+<a id="retrieval-configuration"></a>
 
-| Parameter | Recommended | Notes |
-|-----------|-------------|-------|
-| **Top-K (initial)** | 20-50 | Cast wide net before reranking |
-| **Top-K (final)** | 3-5 | After reranking, for LLM context |
-| **Similarity Threshold** | 0.7+ (cosine) | Filter low-quality results |
-| **Keyword Weight** | 0.3-0.5 | In hybrid search |
-| **Semantic Weight** | 0.5-0.7 | In hybrid search |
-| **Metadata Filters** | Domain-specific | Date, source, category, access level |
-
-### Reranking
-
-| Reranker | Type | Quality | Speed |
-|----------|------|---------|-------|
-| **Cohere Rerank** | API | Excellent | Fast |
-| **BGE-Reranker** | Local cross-encoder | Very Good | Medium |
-| **FlashRank** | Local, lightweight | Good | Fast |
-| **LLM-based** | Use LLM to score relevance | Excellent | Slow |
-
----
+<a id="reranking"></a>
 
 ## Generation with Grounding
 
-### Prompt Template
+MUST read before selection: [Decision Tree details](references/details-decision-tree-rag-architecture.md#generation-with-grounding).
 
-```
-You are a helpful assistant. Answer the user's question using ONLY the provided context.
-If the context does not contain enough information, say "I don't have enough information."
+<a id="prompt-template"></a>
 
-## Context
-{retrieved_chunks}
-
-## Question
-{user_question}
-
-## Core Rules
-- Cite sources using [Source: filename, page N]
-- Do not fabricate information not in the context
-- If unsure, indicate uncertainty
-```
-
-### Grounding Rules
-
-- **MUST** instruct the model to use only provided context
-- **MUST** include citation format in the prompt
-- **MUST** handle "no relevant context" gracefully
-- **SHOULD** include source metadata in context chunks
-- **SHOULD** order chunks by relevance score
-- **MAY** include chunk relevance scores for transparency
-
----
+<a id="grounding-rules"></a>
 
 ## Production Considerations
 
-### Caching
+MUST read before design or implementation: [Production Considerations details](references/details-production-considerations-tools-and-frameworks.md#production-considerations).
 
-| Cache Layer | What to Cache | TTL |
-|-------------|---------------|-----|
-| **Query Embedding** | Embedding vector for repeated queries | 24h |
-| **Retrieval Results** | Top-K results for exact query match | 1h |
-| **Generated Answer** | Full answer for identical query + context | 30min |
-| **Semantic Cache** | Answer for semantically similar queries | 1h (with similarity threshold) |
+<a id="caching"></a>
 
-### Performance Optimization
-
-| Optimization | Impact | Effort |
-|-------------|--------|--------|
-| Pre-filter by metadata | Reduces search space | Low |
-| Approximate nearest neighbor (ANN) | Faster vector search | Built-in |
-| Embedding caching | Reduce API calls | Medium |
-| Streaming generation | Better UX | Low |
-| Async retrieval + generation | Lower latency | Medium |
-| Batch ingestion | Faster indexing | Low |
-
----
+<a id="performance-optimization"></a>
 
 ## Tools and Frameworks
 
-| Tool | Capabilities | When to Use |
-|------|-------------|-------------|
-| **LangChain** | Full RAG pipeline orchestration | Rapid prototyping, Python |
-| **LlamaIndex** | Advanced indexing and retrieval | Complex document structures |
-| **Microsoft Agent Framework** | .NET/Python/TS RAG with plugins and agents | Microsoft ecosystem |
-| **Azure AI Search** | Managed hybrid search + vector | Production Azure deployments |
-| **Qdrant** | High-performance vector DB | Self-hosted, filtering |
-| **ChromaDB** | Lightweight vector DB | Prototyping, local dev |
-| **pgvector** | PostgreSQL vector extension | Existing Postgres infra |
-
----
+MUST read before design or implementation: [Production Considerations details](references/details-production-considerations-tools-and-frameworks.md#tools-and-frameworks).
 
 ## Scripts
 
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| `scaffold-rag-pipeline.py` | Generate RAG pipeline scaffold | `python scaffold-rag-pipeline.py --store azure-ai-search --framework langchain` |
-
----
+MUST read before design or implementation: [Production Considerations details](references/details-production-considerations-tools-and-frameworks.md#scripts).
 
 ## Anti-Patterns
 
-- **No reranking**: Returning raw vector search results directly to the LLM -> Add a cross-encoder or LLM-based reranker to improve precision
-- **Giant chunks**: Using chunk sizes over 2000 tokens -> Keep chunks small (256-1024 tokens) for retrieval, use parent-child for LLM context
-- **Mismatched embeddings**: Using different embedding models for indexing and querying -> Always use the same model and version for both
-- **No metadata filtering**: Searching the entire index for every query -> Add metadata filters (date, source, category) to narrow the search space
-- **Stuffing all chunks**: Feeding all retrieved chunks into the prompt regardless of relevance -> Limit to top 3-5 after reranking
-- **No grounding instructions**: Omitting "answer only from context" instructions in the prompt -> Always instruct the model to use provided context and cite sources
-- **Static index**: Never refreshing the document index after initial ingestion -> Schedule re-ingestion as source documents change
-
----
+MUST read before design or implementation: [Production Considerations details](references/details-production-considerations-tools-and-frameworks.md#anti-patterns).
 
 ## Troubleshooting
 
@@ -293,11 +129,10 @@ If the context does not contain enough information, say "I don't have enough inf
 
 ## References
 
-- [LangChain RAG Tutorial](https://python.langchain.com/docs/tutorials/rag/)
-- [LlamaIndex Documentation](https://docs.llamaindex.ai/)
-- [Azure AI Search - RAG](https://learn.microsoft.com/azure/search/retrieval-augmented-generation-overview)
-- [RAGAS Evaluation for RAG](https://docs.ragas.io/)
+- [Decision Tree details](references/details-decision-tree-rag-architecture.md) - must read before selection.
+- [Production Considerations details](references/details-production-considerations-tools-and-frameworks.md) - must read before design or implementation.
+- [Ai Evaluation skill](../ai-evaluation/SKILL.md)
+- [Model Fine Tuning skill](../model-fine-tuning/SKILL.md)
 
----
 
-**Related**: [Cognitive Architecture](../cognitive-architecture/SKILL.md) for memory systems | [AI Evaluation](../ai-evaluation/SKILL.md) for measuring RAG quality | [Context Management](../context-management/SKILL.md) for token optimization
+- [Source and related-reading index](references/details-source-reference-index.md)

@@ -58,6 +58,14 @@ $packSkillTrees = @($pack.artifacts.skills)
 Assert-True ($packSkillTrees.Count -eq 1 -and $packSkillTrees[0] -eq '.github/skills') 'Copilot CLI manifest declares the complete skill tree'
 Assert-True ([version]($pack.prerequisites.powershell -replace '[^0-9.]','') -ge [version]'7.4') 'Copilot CLI manifest PowerShell prerequisite matches installer minimum'
 
+$instructionReferences = @(Get-ChildItem (Join-Path $repoRoot '.github/instructions') -Recurse -Filter '*.md' -File |
+    Where-Object { $_.Name -notlike '*.instructions.md' } |
+    ForEach-Object { [IO.Path]::GetRelativePath($repoRoot, $_.FullName).Replace('\', '/') })
+Assert-True ($instructionReferences.Count -gt 0) 'canonical instruction reference inventory is non-empty'
+foreach ($reference in $instructionReferences) {
+    Assert-True (@($pack.artifacts.supporting) -contains $reference) "Copilot CLI manifest includes instruction reference $reference"
+}
+
 $installTarget = Join-Path ([IO.Path]::GetTempPath()) "agentx-pack-install-$([guid]::NewGuid().ToString('N'))"
 try {
     New-Item -ItemType Directory -Path $installTarget -Force | Out-Null
@@ -74,6 +82,18 @@ try {
     Assert-True (Test-Path (Join-Path $installTarget '.github/agentx/evaluation/rubrics/code-quality.md')) 'PowerShell pack installer preserves the trusted hidden code-quality rubric'
     Assert-True (Test-Path (Join-Path $installTarget 'scripts/parse-yaml.js')) 'PowerShell pack installer preserves the standalone YAML parser'
     Assert-True (Test-Path (Join-Path $installTarget 'scripts/validate-changed-skills.ps1')) 'PowerShell pack installer preserves the changed-skill validator'
+    foreach ($reference in $instructionReferences) {
+        $sourceHash = (Get-FileHash (Join-Path $repoRoot $reference)).Hash
+        $installedReference = Join-Path $installTarget $reference
+        Assert-True ((Test-Path $installedReference) -and
+            (Get-FileHash $installedReference).Hash -eq $sourceHash) "installed instruction reference matches source: $reference"
+        foreach ($mirror in @(
+            (Join-Path $repoRoot ('vscode-extension/.github/agentx/' + $reference.Substring('.github/'.Length))),
+            (Join-Path $repoRoot ('vscode-extension/.github/agentx/seed/' + $reference)))) {
+            Assert-True ((Test-Path $mirror) -and
+                (Get-FileHash $mirror).Hash -eq $sourceHash) "bundled or seed instruction reference matches source: $reference"
+        }
+    }
     Push-Location $installTarget
     try {
         $installedScoreJson = & pwsh -NoProfile -File 'scripts/score-skill.ps1' -SkillPath '.github/skills/development/skill-creator/SKILL.md' -Json 2>$null | Out-String

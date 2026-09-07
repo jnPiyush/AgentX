@@ -70,266 +70,6 @@ Performance test type?
 
 ---
 
-## Tool Selection
-
-| Tool | Language | Best For | Cloud Option |
-|------|----------|----------|--------------|
-| **k6** | JavaScript | Developer-friendly, CI-native | Grafana Cloud k6 |
-| **Locust** | Python | Python teams, distributed | Azure Load Testing |
-| **JMeter** | Java/XML | Complex scenarios, GUI | Azure Load Testing |
-| **Artillery** | YAML/JS | Quick API tests | Artillery Cloud |
-| **Gatling** | Scala/Java | High throughput, detailed reports | Gatling Enterprise |
-| **vegeta** | Go | HTTP benchmarking, CLI | - |
-
-**Recommendation**: Use **k6** for most projects (modern, scriptable, great CI integration).
-
----
-
-## Load Testing with k6
-
-### Basic Load Test
-
-```javascript
-// tests/performance/load-test.js
-import http from 'k6/http';
-import { check, sleep } from 'k6';
-import { Rate, Trend } from 'k6/metrics';
-
-const errorRate = new Rate('errors');
-const latency = new Trend('api_latency');
-
-export const options = {
-  stages: [
-    { duration: '1m', target: 50 },   // Ramp up
-    { duration: '5m', target: 50 },   // Sustain
-    { duration: '1m', target: 0 },    // Ramp down
-  ],
-  thresholds: {
-    http_req_duration: ['p(95)<500', 'p(99)<1000'],  // ms
-    errors: ['rate<0.01'],                             // < 1% errors
-    http_req_failed: ['rate<0.01'],
-  },
-};
-
-export default function () {
-  const payload = JSON.stringify({
-    name: `user-${__VU}-${__ITER}`,
-    email: `test-${__VU}-${__ITER}@loadtest.com`,
-  });
-
-  const params = {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${__ENV.TEST_TOKEN}`,
-    },
-  };
-
-  const res = http.post(`${__ENV.BASE_URL}/api/users`, payload, params);
-
-  check(res, {
-    'status is 201': (r) => r.status === 201,
-    'response time < 500ms': (r) => r.timings.duration < 500,
-  });
-
-  errorRate.add(res.status >= 400);
-  latency.add(res.timings.duration);
-
-  sleep(1); // Think time between requests
-}
-```
-
-### Stress Test
-
-```javascript
-// tests/performance/stress-test.js
-export const options = {
-  stages: [
-    { duration: '2m', target: 100 },   // Normal load
-    { duration: '2m', target: 200 },   // High load
-    { duration: '2m', target: 500 },   // Stress
-    { duration: '2m', target: 1000 },  // Breaking point
-    { duration: '2m', target: 0 },     // Recovery
-  ],
-  thresholds: {
-    http_req_duration: ['p(95)<2000'],    // Relaxed for stress
-    http_req_failed: ['rate<0.05'],       // 5% error budget
-  },
-};
-```
-
-### Spike Test
-
-```javascript
-// tests/performance/spike-test.js
-export const options = {
-  stages: [
-    { duration: '1m', target: 10 },     // Warm up
-    { duration: '10s', target: 1000 },   // Spike!
-    { duration: '1m', target: 1000 },    // Sustain spike
-    { duration: '10s', target: 10 },     // Drop
-    { duration: '2m', target: 10 },      // Recovery
-  ],
-};
-```
-
----
-
-## Load Testing with Locust (Python)
-
-```python
-# tests/performance/locustfile.py
-from locust import HttpUser, task, between
-
-class APIUser(HttpUser):
-    wait_time = between(1, 3)
-    host = "https://api.example.com"
-
-    def on_start(self):
-        """Login and get auth token."""
-        response = self.client.post("/auth/login", json={
-            "email": "loadtest@example.com",
-            "password": "test-password",
-        })
-        self.token = response.json()["token"]
-
-    @task(3)  # Weight: 3x more common
-    def list_users(self):
-        self.client.get(
-            "/api/users",
-            headers={"Authorization": f"Bearer {self.token}"},
-        )
-
-    @task(1)
-    def create_user(self):
-        self.client.post(
-            "/api/users",
-            json={"name": "Load Test", "email": f"lt-{self.environment.runner.user_count}@test.com"},
-            headers={"Authorization": f"Bearer {self.token}"},
-        )
-```
-
----
-
-## CI Integration
-
-### k6 in GitHub Actions
-
-```yaml
-name: Performance Tests
-on:
-  schedule:
-    - cron: '0 2 * * *'  # Nightly at 2 AM
-  workflow_dispatch:
-
-jobs:
-  load-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup k6
-        uses: grafana/setup-k6-action@v1
-
-      - name: Run load test
-        uses: grafana/run-k6-action@v1
-        env:
-          BASE_URL: ${{ vars.STAGING_URL }}
-          TEST_TOKEN: ${{ secrets.LOAD_TEST_TOKEN }}
-        with:
-          path: tests/performance/load-test.js
-
-      - name: Upload results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: k6-results
-          path: k6-results/
-```
-
-### Performance Gate (PR Check)
-
-```yaml
-# Run lightweight perf check on PRs affecting critical paths
-  perf-gate:
-    runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'perf-sensitive')
-    steps:
-      - uses: grafana/run-k6-action@v1
-        with:
-          path: tests/performance/smoke-test.js
-          # Smoke test: 10 VUs, 1 minute, strict thresholds
-```
-
----
-
-## SLA Thresholds
-
-### Standard Web Application
-
-| Metric | P50 | P95 | P99 | Alert |
-|--------|-----|-----|-----|-------|
-| API response time | < 100ms | < 500ms | < 1000ms | P95 > 500ms |
-| Page load time | < 1s | < 3s | < 5s | P95 > 3s |
-| Error rate | < 0.1% | - | - | > 1% |
-| Throughput (RPS) | Baseline | -10% | -20% | Drop > 10% |
-
-### Database Queries
-
-| Query Type | Target | Alert |
-|------------|--------|-------|
-| Simple reads | < 10ms | > 50ms |
-| Complex joins | < 100ms | > 500ms |
-| Write operations | < 50ms | > 200ms |
-| Aggregations | < 500ms | > 2s |
-
----
-
-## Bottleneck Identification
-
-```
-High latency detected?
-+- Check P50 vs P95 gap
-|  +- Small gap (P95 < 2x P50) -> Uniform slowness -> check code/queries
-|  +- Large gap (P95 > 5x P50) -> Tail latency -> check contention/GC
-+- Check under load
-|  +- Linear degradation -> Resource limit (CPU/memory/connections)
-|  +- Sudden cliff -> Queue saturation or thread pool exhaustion
-|  +- Periodic spikes -> GC pauses, cron jobs, cache eviction
-+- Common bottlenecks
-   +- Database -> Slow queries, missing indexes, connection pool exhaustion
-   +- Network -> DNS, TLS handshake, cross-region calls
-   +- Application -> Synchronous I/O, N+1 queries, large payloads
-   +- Infrastructure -> CPU throttling, memory pressure, disk I/O
-```
-
----
-
-## Capacity Planning
-
-| Step | Action | Output |
-|------|--------|--------|
-| 1. Baseline | Load test at current traffic | RPS, latency, resource usage |
-| 2. Headroom | Test at 2x-3x current traffic | Degradation point |
-| 3. Breaking point | Stress test to failure | Max capacity |
-| 4. Scaling | Test with autoscaling enabled | Scale-out behavior |
-| 5. Cost model | Map capacity to infrastructure cost | Cost per 1000 users |
-
----
-
-## Metrics and Reporting
-
-| Metric | Description | Collection |
-|--------|-------------|------------|
-| **Throughput** | Requests per second (RPS) | k6/Locust built-in |
-| **Latency** | P50, P95, P99 response time | k6/Locust built-in |
-| **Error rate** | Percentage of failed requests | k6/Locust built-in |
-| **CPU utilization** | Server CPU under load | Monitoring (Azure Monitor, Prometheus) |
-| **Memory usage** | RSS/heap under load | Monitoring |
-| **Connection pool** | Active/idle connections | App metrics |
-| **Queue depth** | Pending requests | Load balancer metrics |
-
----
-
 ## Core Rules
 
 1. **Define SLAs First** - Establish P50, P95, P99 latency targets and max error rate before writing any test.
@@ -357,3 +97,29 @@ High latency detected?
 | Set thresholds without SLA | Define SLAs first, then derive thresholds |
 | Run perf tests on every PR | Run on schedule + perf-sensitive PRs only |
 | Use shared test data | Generate unique data per virtual user |
+## Workflow
+
+1. Capture baseline and resource telemetry.
+2. Run the declared workload with bounded stages.
+3. Correlate latency and errors with saturation signals.
+4. Apply one change and repeat an equivalent test.
+
+## Error Handling
+
+- Threshold breach: stop escalation and preserve diagnostics.
+- Generator saturation: invalidate the run rather than blaming the service.
+- Noisy environment: rerun under controlled conditions or report uncertainty.
+
+## Verification Checklist
+
+- [ ] Workload and environment are documented.
+- [ ] SLO thresholds pass with error rate included.
+- [ ] Generator has headroom.
+- [ ] Results are reproducible and tied to a commit.
+
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Tool Selection, Load Testing with k6, Load Testing with Locust (Python)](references/details-tool-selection-and-load-testing-with-locust-python.md) - MUST read before work involving tool selection, load testing with k6, load testing with locust (python).
+- [CI Integration through Metrics and Reporting](references/details-ci-integration-and-metrics-and-reporting.md) - MUST read before work involving ci integration through metrics and reporting.

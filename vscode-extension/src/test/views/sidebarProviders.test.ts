@@ -8,6 +8,7 @@ import {
 } from '../mocks/vscode';
 import { WorkTreeProvider } from '../../views/workTreeProvider';
 import { StatusTreeProvider } from '../../views/statusTreeProvider';
+import { AgentXContext } from '../../agentxContext';
 
 function createWorkspaceRoot(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-sidebar-'));
@@ -31,7 +32,7 @@ function createAgentxStub(root: string) {
     runCli: async () => '[]',
     listExecutionPlanFiles: () => ['docs/execution/plans/EXEC-PLAN-1.md'],
     getStatePath: (fileName: string) => path.join(root, '.agentx', 'state', fileName),
-  } as any;
+  };
 }
 
 describe('sidebar providers', () => {
@@ -99,10 +100,11 @@ describe('sidebar providers', () => {
         { number: 7, title: 'Add sidebar', state: 'open', status: 'In Progress' },
       ]),
       getPendingClarification: async () => ({
+        sessionId: 'session-1',
         agentName: 'Engineer',
         prompt: 'Need acceptance criteria',
       }),
-    });
+    } as unknown as AgentXContext);
     const items = await provider.getChildren();
 
     assert.equal(items.length, 2);
@@ -129,7 +131,7 @@ describe('sidebar providers', () => {
       runCli: async () => {
         throw new Error('gh unavailable');
       },
-    });
+    } as unknown as AgentXContext);
 
     const items = await provider.getChildren();
     const issueChildren = await provider.getChildren(items[1]);
@@ -149,7 +151,7 @@ describe('sidebar providers', () => {
     const provider = new WorkTreeProvider({
       ...createAgentxStub(root),
       runCli: async () => '[]',
-    });
+    } as unknown as AgentXContext);
 
     const items = await provider.getChildren();
     const issueChildren = await provider.getChildren(items[1]);
@@ -208,7 +210,7 @@ describe('sidebar providers', () => {
       'utf-8',
     );
 
-    const provider = new StatusTreeProvider(createAgentxStub(root));
+    const provider = new StatusTreeProvider(createAgentxStub(root) as unknown as AgentXContext);
     const items = await provider.getChildren();
 
     assert.equal(items.length, 1);
@@ -229,7 +231,7 @@ describe('sidebar providers', () => {
     );
     __setExtension('ms-azuretools.vscode-azure-mcp-server', {});
 
-    const provider = new StatusTreeProvider(createAgentxStub(root));
+    const provider = new StatusTreeProvider(createAgentxStub(root) as unknown as AgentXContext);
     const items = await provider.getChildren();
 
     const overviewChildren = await provider.getChildren(items[0]);
@@ -248,7 +250,7 @@ describe('sidebar providers', () => {
       getPendingClarification: async () => undefined,
       listExecutionPlanFiles: () => [],
       getStatePath: () => '',
-    } as any);
+    } as unknown as AgentXContext);
     const items = await provider.getChildren();
 
     assert.equal(items.length, 1);

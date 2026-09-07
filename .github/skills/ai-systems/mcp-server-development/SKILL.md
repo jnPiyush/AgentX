@@ -23,174 +23,44 @@ compatibility:
 - Creating reusable prompt templates for agent workflows
 - Providing file/resource access to agents through a standard protocol
 
+## Decision Guide
+
+Use an MCP server when an agent must call real capabilities through typed tools or resources. Pick stdio for local or workspace-scoped servers and network transports only when the server must be remote or shared. If the problem is durable guidance rather than execution, start with a skill before building a server.
+
+## Why This Is a Skill
+
+MCP servers fail at the execution boundary: transport choice, typed outputs, security filtering, host configuration, and client validation. This skill keeps those seams explicit instead of burying them in quick starts.
+
+## Workflow
+
+1. Choose the transport and trust boundary.
+2. Model narrow tools and resources with typed contracts.
+3. Register host configuration and security controls before sharing the server.
+4. Test the server through a real MCP client path.
+
 ## Decision Tree
 
-```
-Need to expose capabilities to AI agents?
-+- Read-only data access?
-| - Use MCP Resources (URI-based, typed)
-+- Execute actions / side effects?
-| - Use MCP Tools (JSON Schema input, structured output)
-+- Reusable prompt templates?
-| - Use MCP Prompts (parameterized, multi-turn)
-- Combine multiple?
- - Single MCP server with mixed capabilities
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-architecture-overview.md#decision-tree).
 
 ## Architecture Overview
 
-```
--------------- stdio/SSE --------------
-| AI Agent | ------------- | MCP Server |
-| (Copilot) | JSON-RPC 2.0 | (your code) |
--------------- ------+-------
- |
- -------------+-------------
- | | |
- Tools Resources Prompts
- (actions) (read data) (templates)
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-architecture-overview.md#architecture-overview).
 
 ## Quick Start: TypeScript
 
-```bash
-npm init -y
-npm install @modelcontextprotocol/sdk zod
-```
-
-```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
-
-const server = new McpServer({
- name: "my-server",
- version: "1.0.0",
-});
-
-// Tool: execute actions
-server.tool("greet", { name: z.string() }, async ({ name }) => ({
- content: [{ type: "text", text: `Hello, ${name}!` }],
-}));
-
-// Resource: read-only data
-server.resource("config", "config://app", async () => ({
- contents: [{ uri: "config://app", text: JSON.stringify({ env: "prod" }) }],
-}));
-
-// Start server
-const transport = new StdioServerTransport();
-await server.connect(transport);
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-architecture-overview.md#quick-start-typescript).
 
 ## Quick Start: Python
 
-```bash
-pip install mcp
-```
-
-```python
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("my-server")
-
-@mcp.tool()
-def greet(name: str) -> str:
- """Greet a user by name."""
- return f"Hello, {name}!"
-
-@mcp.resource("config://app")
-def get_config() -> str:
- """Read application configuration."""
- return '{"env": "prod"}'
-
-# Run: python server.py
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-architecture-overview.md#quick-start-python).
 
 ## Core Rules
 
-### 1. Transport Selection
-
-| Transport | Use When | Pros |
-|-----------|----------|------|
-| **stdio** | Local tools, VS Code extensions | Simple, secure, no network |
-| **SSE** | Remote servers, shared services | Network accessible, multi-client |
-| **Streamable HTTP** | Production APIs | Scalable, stateless-friendly |
-
-### 2. Tool Design
-
-- **One tool, one action**: Don't create God-tools that do everything
-- **Descriptive names**: `search-issues` not `doThing`
-- **Typed inputs**: Use JSON Schema / Zod / Pydantic for all parameters
-- **Structured output**: Return `{ content: [{ type: "text", text: "..." }] }`
-- **Error handling**: Return `isError: true` with descriptive messages, don't throw
-
-### 3. Resource Design
-
-- **URI scheme**: Use descriptive schemes (`db://`, `file://`, `config://`)
-- **Typed content**: Set `mimeType` on all resource contents
-- **Templates**: Use URI templates for parameterized resources: `db://users/{id}`
-- **Pagination**: For large collections, support cursor-based pagination
-
-### 4. Security
-
-- **Validate all inputs**: Never trust agent-provided data
-- **Least privilege**: Only expose necessary capabilities
-- **No secrets in responses**: Filter sensitive data before returning
-- **Rate limiting**: Protect against excessive tool calls
-- **Audit logging**: Log all tool invocations with parameters
-
-### 5. Configuration for VS Code
-
-Add to `.vscode/mcp.json` (or user settings):
-
-```json
-{
- "servers": {
- "my-server": {
- "command": "node",
- "args": ["./dist/server.js"],
- "env": { "API_KEY": "${input:apiKey}" }
- }
- }
-}
-```
-
-### 6. Repository-Level MCP Configuration
-
-For sharing MCP server config across a team, add `.mcp.json` at the repo root:
-
-```json
-{
- "servers": {
- "shared-tools": {
- "command": "npx",
- "args": ["-y", "@team/mcp-tools"],
- "env": { "DB_URL": "${input:dbUrl}" }
- }
- }
-}
-```
-
-- `.mcp.json` -- Repository root, shared via Git, team-wide defaults
-- `.vscode/mcp.json` -- Workspace level, can override repo-level settings
-- Use `${input:varName}` for secrets to prompt users (never hardcode)
+MUST read before selection: [Decision Tree details](references/details-decision-tree-architecture-overview.md#core-rules).
 
 ## Skill-First Pattern (Hybrid)
 
-Before building an MCP server, ask: is this a **knowledge problem** or an **execution problem**?
-
-- **Knowledge** (coding standards, workflows, conventions) -> Write a SKILL.md (200-500 tokens)
-- **Execution** (API calls, database queries, sending emails) -> Build an MCP server
-- **Hybrid** (knowledge + execution) -> Skill file orchestrates; MCP server executes
-
-The hybrid pattern keeps workflow logic in a version-controlled Markdown skill while
-MCP provides the API plumbing. The skill works standalone (produces drafts, analysis,
-recommendations) even without the MCP server connected. MCP adds auto-execution.
-
-A full MCP tool schema can consume 23,000-50,000 tokens of context window. A skill
-file encoding the same workflow knowledge uses 200-500 tokens -- a 50-100x reduction.
-Only load MCP servers when the agent genuinely needs to execute API calls.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-architecture-overview.md#skill-first-pattern-hybrid).
 
 ## Anti-Patterns
 
@@ -204,37 +74,17 @@ Only load MCP servers when the agent genuinely needs to execute API calls.
 
 ## Testing
 
-```typescript
-// Use MCP Inspector for interactive testing
-npx @modelcontextprotocol/inspector node dist/server.js
-
-// Programmatic testing
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-const client = new Client({ name: "test", version: "1.0.0" });
-// ... connect and call tools
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-architecture-overview.md#testing).
 
 ## Project Structure
 
-```
-my-mcp-server/
-+-- src/
-| +-- server.ts # Server setup + transport
-| +-- tools/ # Tool implementations
-| | +-- search.ts
-| | -- create.ts
-| +-- resources/ # Resource handlers
-| | -- config.ts
-| -- prompts/ # Prompt templates
-| -- review.ts
-+-- package.json
-+-- tsconfig.json
--- .vscode/mcp.json # Local server config
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-architecture-overview.md#project-structure).
 
 ## Further Reading
 
-- [MCP Specification](https://spec.modelcontextprotocol.io)
-- [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
-- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
-- [VS Code MCP Integration](https://code.visualstudio.com/docs/copilot/chat/mcp-servers)
+MUST read before selection: [Decision Tree details](references/details-decision-tree-architecture-overview.md#further-reading).
+
+## References
+
+- [Decision Tree details](references/details-decision-tree-architecture-overview.md) - must read before selection.
+- [Tool Use And Function Calling skill](../tool-use-and-function-calling/SKILL.md)

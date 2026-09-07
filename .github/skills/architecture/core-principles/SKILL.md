@@ -34,198 +34,50 @@ compatibility:
 
 - Basic OOP programming knowledge
 
+## Decision Guide
+
+Reach for structure only when it reduces a real maintenance cost. Use SRP and composition when responsibilities are mixed, DRY after the second real duplication, and KISS or YAGNI when the design is drifting toward speculative flexibility.
+
+## Why This Is a Skill
+
+Architecture advice becomes harmful when it turns into pattern cargo cults. This skill keeps SOLID, DRY, KISS, and organization choices tied to concrete change cost, readability, and testability.
+
+## Workflow
+
+1. Identify the maintenance pain: mixed responsibilities, duplication, hidden dependencies, or scattered feature code.
+2. Choose the smallest structural change that removes that pain.
+3. Preserve behavior with tests or equivalent verification.
+4. Stop once the code is easier to change and reason about.
+
 ## Decision Tree
 
-```
-Architecture or code quality concern?
-+-- New project setup? -> Apply Clean Architecture layers (Api/Core/Infrastructure)
-+-- Class doing too much? -> Apply SRP - split by responsibility
-+-- Need to extend behavior? -> Apply OCP - use interfaces, not if/else chains
-+-- Deep inheritance tree? -> Favor composition over inheritance
-+-- Hard to test? -> Apply DIP - inject abstractions, not concretions
-+-- Code duplicated? -> Extract shared logic (DRY), but avoid premature abstraction
-+-- Complex solution? -> Simplify (KISS) - can a junior dev understand it?
-+-- Building speculative features? -> Stop (YAGNI) - build only what is needed now
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-solid-principles.md#decision-tree).
 
 ## SOLID Principles
 
-### Single Responsibility (SRP)
-Each class has one reason to change.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-solid-principles.md#solid-principles).
 
-```csharp
-// [FAIL] Multiple responsibilities
-public class User
-{
- public string Name { get; set; }
- public void SaveToDatabase() { } // Persistence
- public void SendEmail() { } // Communication
-}
+<a id="single-responsibility-srp"></a>
 
-// [PASS] Single responsibility
-public class User
-{
- public string Name { get; set; }
-}
-public class UserRepository
-{
- public void Save(User user) { }
-}
-public class EmailService
-{
- public void SendEmail(User user) { }
-}
-```
+<a id="openclosed-ocp"></a>
 
-### Open/Closed (OCP)
-Open for extension, closed for modification.
+<a id="liskov-substitution-lsp"></a>
 
-```csharp
-// [PASS] Extend via abstraction
-public interface IPaymentProcessor
-{
- Task<PaymentResult> ProcessAsync(decimal amount);
-}
+<a id="interface-segregation-isp"></a>
 
-public class CreditCardProcessor : IPaymentProcessor { }
-public class PayPalProcessor : IPaymentProcessor { }
-
-public class PaymentService
-{
- public async Task ProcessPaymentAsync(IPaymentProcessor processor, decimal amount)
- {
- return await processor.ProcessAsync(amount);
- }
-}
-```
-
-### Liskov Substitution (LSP)
-Subtypes must be substitutable for base types.
-
-```csharp
-// [PASS] Derived classes extend, don't break behavior
-public abstract class Bird
-{
- public abstract void Move();
-}
-
-public class Sparrow : Bird
-{
- public override void Move() => Fly();
-}
-
-public class Penguin : Bird
-{
- public override void Move() => Walk(); // Different but valid
-}
-```
-
-### Interface Segregation (ISP)
-Many specific interfaces > one general interface.
-
-```csharp
-// [FAIL] Fat interface
-public interface IWorker
-{
- void Work();
- void Eat();
- void Sleep();
-}
-
-// [PASS] Segregated interfaces
-public interface IWorkable { void Work(); }
-public interface IFeedable { void Eat(); }
-public interface IRestable { void Sleep(); }
-```
-
-### Dependency Inversion (DIP)
-Depend on abstractions, not concretions.
-
-```csharp
-// [PASS] Depend on interface
-public class OrderService
-{
- private readonly IOrderRepository _repository;
- 
- public OrderService(IOrderRepository repository)
- {
- _repository = repository;
- }
-}
-```
-
----
+<a id="dependency-inversion-dip"></a>
 
 ## DRY (Don't Repeat Yourself)
 
-```csharp
-// [FAIL] Duplication
-public class UserService
-{
- public User GetUser(int id)
- {
- var conn = new SqlConnection(connectionString);
- conn.Open();
- // ... query logic
- }
- 
- public Order GetOrder(int id)
- {
- var conn = new SqlConnection(connectionString);
- conn.Open();
- // ... query logic
- }
-}
-
-// [PASS] Extract common logic
-public abstract class BaseRepository
-{
- protected SqlConnection GetConnection()
- {
- var conn = new SqlConnection(connectionString);
- conn.Open();
- return conn;
- }
-}
-```
-
----
+MUST read before selection: [Decision Tree details](references/details-decision-tree-solid-principles.md#dry-dont-repeat-yourself).
 
 ## KISS (Keep It Simple, Stupid)
 
-```csharp
-// [FAIL] Overengineered
-public class UserValidator
-{
- public bool Validate(User user)
- {
- var strategy = ValidatorStrategyFactory
- .CreateStrategy(user.UserType)
- .GetValidationChain()
- .Execute(new ValidationContext(user));
- return strategy.IsValid;
- }
-}
-
-// [PASS] Simple
-public class UserValidator
-{
- public bool Validate(User user)
- {
- return !string.IsNullOrEmpty(user.Email) &&
- user.Email.Contains("@") &&
- user.Age >= 13;
- }
-}
-```
-
----
+MUST read before selection: [Decision Tree details](references/details-decision-tree-solid-principles.md#kiss-keep-it-simple-stupid).
 
 ## YAGNI (You Aren't Gonna Need It)
 
-Don't build features "just in case". Build what's needed now.
-
----
+MUST read before selection: [Decision Tree details](references/details-decision-tree-solid-principles.md#yagni-you-arent-gonna-need-it).
 
 ## Core Rules
 
@@ -252,87 +104,17 @@ Don't build features "just in case". Build what's needed now.
 
 ## Code Organization
 
-> Merged from code-organization skill. Structure projects for clarity, maintainability, and scalability.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-solid-principles.md#code-organization).
 
-### Organization Decision Tree
+<a id="organization-decision-tree"></a>
 
-```
-Code organization concern?
-+- Starting new project? -> Use standard project structure template
-+- File getting too long? -> Extract classes per Single Responsibility
-+- Unclear naming? -> Apply naming conventions (PascalCase types, camelCase locals, _prefix privates)
-+- Deep nesting? -> Flatten with early returns, extract methods
-+- Hard to find code? -> Reorganize by namespace/feature grouping
-- Circular dependencies? -> Apply Dependency Inversion, introduce interfaces
-```
+<a id="c-project-structure"></a>
 
-### C# Project Structure
+<a id="single-responsibility-examples"></a>
 
-```
-src/
-+-- MyApp.Api/           # Entry point, controllers, middleware
-+-- MyApp.Core/          # Domain models, interfaces, business logic
-+-- MyApp.Infrastructure/ # Data access, external services
-+-- MyApp.Shared/        # Cross-cutting concerns, utilities
-tests/
-+-- MyApp.Api.Tests/
-+-- MyApp.Core.Tests/
-+-- MyApp.Infrastructure.Tests/
-```
+<a id="naming-conventions"></a>
 
-### Single Responsibility Examples
-
-```csharp
-// [FAIL] Multiple responsibilities
-public class UserService
-{
-    public User CreateUser(string email) { /* ... */ }
-    public void SendWelcomeEmail(User user) { /* ... */ }
-    public string GenerateReport() { /* ... */ }
-}
-
-// [PASS] Single responsibility each
-public class UserService
-{
-    public User CreateUser(string email) { /* ... */ }
-}
-
-public class NotificationService
-{
-    public void SendWelcomeEmail(User user) { /* ... */ }
-}
-
-public class UserReportService
-{
-    public string GenerateReport() { /* ... */ }
-}
-```
-
-### Naming Conventions
-
-| Element | Convention | Example |
-|---------|-----------|---------|
-| **Class** | PascalCase | `OrderService` |
-| **Interface** | I + PascalCase | `IOrderRepository` |
-| **Method** | PascalCase | `GetOrderById()` |
-| **Property** | PascalCase | `OrderDate` |
-| **Local variable** | camelCase | `orderCount` |
-| **Private field** | _camelCase | `_orderRepository` |
-| **Constant** | PascalCase | `MaxRetryCount` |
-
-### Code Organization Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| File over 500 lines | Split into partial classes or extract helper classes |
-| Too many constructor parameters | Apply facade pattern or restructure dependencies |
-| Feature code scattered | Reorganize by feature folders instead of technical layers |
-
----
-
-**See Also**: [Testing](../../development/testing/SKILL.md)
-
-**Last Updated**: February 27, 2026
+<a id="code-organization-troubleshooting"></a>
 
 ## Anti-Patterns
 
@@ -352,4 +134,9 @@ public class UserReportService
 
 ## References
 
-- [Design Patterns](references/design-patterns.md)
+- [Decision Tree details](references/details-decision-tree-solid-principles.md) - must read before selection.
+- [code-org-patterns](references/code-org-patterns.md)
+- [design-patterns](references/design-patterns.md)
+
+
+- [Source and related-reading index](references/details-source-reference-index.md)

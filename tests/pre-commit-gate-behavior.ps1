@@ -17,6 +17,76 @@ $script:scrubPath = Join-Path $script:repoRoot 'scripts\scrub.ps1'
 
 <#
 .SYNOPSIS
+  Start a process, drain stdout and stderr concurrently, and bound both the
+  exit wait and the stream drain so a hung child cannot stall this suite.
+
+.DESCRIPTION
+  Reading stdout to completion and then stderr (or vice versa) deadlocks
+  once the stream read second fills its OS pipe buffer, so both reads start
+  as async tasks before any blocking wait.
+
+  WaitForExit returning true only proves the tracked process itself
+  exited: a descendant that inherited the redirected handles (e.g. a child
+  it spawned without redirecting) can keep the pipe open, so the drain is
+  bounded by what remains of the same deadline rather than assumed instant.
+#>
+function Invoke-ProcessWithBoundedDrain {
+    param(
+        [Parameter(Mandatory)][string]$FilePath,
+        [string[]]$ArgumentList = @(),
+        [string]$WorkingDirectory = (Get-Location).Path,
+        [System.Collections.IDictionary]$EnvironmentVariables,
+        [int]$TimeoutSeconds = 30
+    )
+
+    $psi = [System.Diagnostics.ProcessStartInfo]::new()
+    $psi.FileName = $FilePath
+    $psi.WorkingDirectory = $WorkingDirectory
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.UseShellExecute = $false
+    foreach ($argument in $ArgumentList) { $psi.ArgumentList.Add($argument) }
+    if ($EnvironmentVariables) {
+        foreach ($key in $EnvironmentVariables.Keys) { $psi.Environment[$key] = $EnvironmentVariables[$key] }
+    }
+
+    $deadline = [System.Diagnostics.Stopwatch]::StartNew()
+    $process = [System.Diagnostics.Process]::Start($psi)
+    try {
+        # Kick off both drains as async tasks before any blocking wait so a full
+        # pipe on either stream can never stall the child.
+        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+        $stderrTask = $process.StandardError.ReadToEndAsync()
+        $exited = $process.WaitForExit($TimeoutSeconds * 1000)
+        if (-not $exited) {
+            try { $process.Kill($true) } catch { Write-Warning "Failed to kill timed-out process '$FilePath': $_" }
+            $partialOut = if ($stdoutTask.IsCompleted) { $stdoutTask.Result } else { '<stdout still draining>' }
+            $partialErr = if ($stderrTask.IsCompleted) { $stderrTask.Result } else { '<stderr still draining>' }
+            throw "Process '$FilePath $($ArgumentList -join ' ')' did not exit within $TimeoutSeconds seconds.`nStdOut: $partialOut`nStdErr: $partialErr"
+        }
+
+        # Bound the drain by whatever remains of the original deadline: a
+        # descendant holding the inherited handle open must not be able to
+        # block this call past the timeout it was given.
+        $remainingMs = [Math]::Max(0, ($TimeoutSeconds * 1000) - $deadline.ElapsedMilliseconds)
+        $drained = [System.Threading.Tasks.Task]::WaitAll(@($stdoutTask, $stderrTask), $remainingMs)
+        if (-not $drained) {
+            $partialOut = if ($stdoutTask.IsCompleted) { $stdoutTask.Result } else { '<stdout still draining: a descendant likely holds the inherited handle open>' }
+            $partialErr = if ($stderrTask.IsCompleted) { $stderrTask.Result } else { '<stderr still draining: a descendant likely holds the inherited handle open>' }
+            throw "Process '$FilePath $($ArgumentList -join ' ')' exited but a descendant kept its stdout/stderr handle open past the $TimeoutSeconds second bound.`nStdOut: $partialOut`nStdErr: $partialErr"
+        }
+        return [pscustomobject]@{
+            ExitCode = $process.ExitCode
+            StdOut   = $stdoutTask.Result
+            StdErr   = $stderrTask.Result
+        }
+    } finally {
+        $process.Dispose()
+    }
+}
+
+<#
+.SYNOPSIS
   Drive the real CLI through a full structured loop and return the loop-state.json
   it produced.
 
@@ -34,21 +104,17 @@ function New-CliProducedLoopState {
         $invoke = {
             param([string[]]$Arguments)
 
-            $psi = [System.Diagnostics.ProcessStartInfo]::new()
-            $psi.FileName = $pwshPath
-            $psi.WorkingDirectory = $workspace
-            $psi.RedirectStandardOutput = $true
-            $psi.RedirectStandardError = $true
-            $psi.UseShellExecute = $false
-            $psi.Environment['AGENTX_WORKSPACE_ROOT'] = $workspace
-            $psi.ArgumentList.Add('-NoProfile')
-            $psi.ArgumentList.Add('-File')
-            $psi.ArgumentList.Add($script:agentxCliPath)
-            foreach ($argument in $Arguments) { $psi.ArgumentList.Add($argument) }
-            $process = [System.Diagnostics.Process]::Start($psi)
-            [void]$process.StandardOutput.ReadToEnd()
-            [void]$process.StandardError.ReadToEnd()
-            $process.WaitForExit()
+            $cliArguments = @('-NoProfile', '-File', $script:agentxCliPath) + $Arguments
+            # The real CLI's own startup/module cost measured well over the
+            # default bound in this environment, so this call site uses a
+            # generous bound: wide enough to never mistake real (if slow) CLI
+            # work for a hang, while still catching a genuine deadlock.
+            $result = Invoke-ProcessWithBoundedDrain -FilePath $pwshPath -ArgumentList $cliArguments `
+                -WorkingDirectory $workspace -EnvironmentVariables @{ AGENTX_WORKSPACE_ROOT = $workspace } `
+                -TimeoutSeconds 120
+            if ($result.ExitCode -ne 0) {
+                throw "agentx-cli.ps1 $($Arguments -join ' ') exited $($result.ExitCode).`nStdErr: $($result.StdErr)`nStdOut: $($result.StdOut)"
+            }
         }
         $newEvidence = {
             param([string]$Name)
@@ -96,6 +162,105 @@ function Get-BashCommand {
 
 <#
 .SYNOPSIS
+  Regression coverage for the stdout/stderr deadlock that used to hang
+  New-CliProducedLoopState's process invocation.
+
+.DESCRIPTION
+  Spawns a real child process that writes far more to stderr than a single OS
+  pipe buffer can hold while writing almost nothing to stdout -- the exact
+  shape that deadlocks a sequential 'read stdout to end, then read stderr'
+  implementation, because the child blocks filling stderr while the parent is
+  still blocked waiting for stdout to close. Invoke-ProcessWithBoundedDrain
+  must complete well within its bound and must return the full stderr text,
+  proving the concurrent drain (not merely a timeout) is what unblocks it.
+#>
+function Test-BoundedDrainHandlesLargeStdErr {
+    $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
+    # ~1 MB of stderr output, comfortably larger than any OS pipe buffer.
+    $stderrCommand = '$line = "x" * 500; for ($i = 0; $i -lt 2000; $i++) { [Console]::Error.WriteLine($line) }'
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    try {
+        $result = Invoke-ProcessWithBoundedDrain -FilePath $pwshPath `
+            -ArgumentList @('-NoProfile', '-NonInteractive', '-Command', $stderrCommand) `
+            -TimeoutSeconds 20
+        $sw.Stop()
+        Assert-True ($sw.Elapsed.TotalSeconds -lt 20) 'large-stderr child process completes without hitting the bounded timeout'
+        Assert-True ($result.ExitCode -eq 0) 'large-stderr child process exits zero'
+        Assert-True ($result.StdErr.Length -ge 1000000) "large-stderr child stream is fully drained, not truncated (captured $($result.StdErr.Length) bytes)"
+    } catch {
+        $sw.Stop()
+        Assert-True $false "large-stderr child process must not hang or be killed by the bounded timeout: $_"
+    }
+}
+
+<#
+.SYNOPSIS
+  Regression coverage proving a descendant that inherits the redirected
+  stdout/stderr handles cannot make this call hang past its own timeout.
+
+.DESCRIPTION
+  A spawner starts a grandchild without redirecting the grandchild's own
+  streams, so the grandchild inherits the spawner's (tracked process's)
+  stdout/stderr handles, then the spawner exits immediately. WaitForExit
+  returns true almost instantly, but the pipes stay open until the sleeping
+  grandchild also exits. This proves the call still throws its timeout
+  diagnostic near the given bound instead of blocking for the grandchild's
+  full sleep.
+#>
+function Test-BoundedDrainDetectsInheritedHandleHang {
+    $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
+    $fixtureDir = Join-Path ([IO.Path]::GetTempPath()) ("agentx hook drain handle {0}" -f [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $fixtureDir -Force | Out-Null
+    $grandchildPidFile = Join-Path $fixtureDir 'grandchild.pid'
+    $grandchildPid = $null
+    try {
+        $spawnerScript = Join-Path $fixtureDir 'spawner.ps1'
+        # No redirection on the grandchild's own ProcessStartInfo: it inherits
+        # the spawner's (tracked process's) stdout/stderr handles. The spawner
+        # exits right after starting it -- no sleep of its own.
+        Set-Content -LiteralPath $spawnerScript -Value @'
+param([string]$PidFile)
+$psi = [System.Diagnostics.ProcessStartInfo]::new()
+$psi.FileName = (Get-Process -Id $PID).Path
+$psi.ArgumentList.Add('-NoProfile')
+$psi.ArgumentList.Add('-Command')
+$psi.ArgumentList.Add("Set-Content -LiteralPath '$PidFile' -Value `$PID; Start-Sleep -Seconds 60")
+$psi.UseShellExecute = $false
+[void][System.Diagnostics.Process]::Start($psi)
+'@ -Encoding utf8
+
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        $threw = $false
+        $errorMessage = $null
+        try {
+            Invoke-ProcessWithBoundedDrain -FilePath $pwshPath `
+                -ArgumentList @('-NoProfile', '-File', $spawnerScript, $grandchildPidFile) `
+                -TimeoutSeconds 8 | Out-Null
+        } catch {
+            $threw = $true
+            $errorMessage = $_.Exception.Message
+        }
+        $sw.Stop()
+
+        $deadline = (Get-Date).AddSeconds(10)
+        while (-not $grandchildPid -and (Get-Date) -lt $deadline) {
+            if (Test-Path -LiteralPath $grandchildPidFile) { $grandchildPid = (Get-Content -LiteralPath $grandchildPidFile -Raw).Trim() }
+            else { Start-Sleep -Milliseconds 200 }
+        }
+
+        Assert-True ($sw.Elapsed.TotalSeconds -lt 20) "bounded drain does not block past its own timeout when a descendant inherits its stdout/stderr handles (elapsed $([Math]::Round($sw.Elapsed.TotalSeconds, 1))s, bound 8s)"
+        Assert-True $threw "bounded drain throws a diagnostic instead of hanging when a live descendant still holds the inherited stream handles open"
+        Assert-True ($threw -and $errorMessage -match 'descendant kept its stdout/stderr handle open') "bounded drain's timeout diagnostic explains the inherited-handle cause (got: $errorMessage)"
+    } finally {
+        if ($grandchildPid -and (Get-Process -Id ([int]$grandchildPid) -ErrorAction SilentlyContinue)) {
+            Stop-Process -Id ([int]$grandchildPid) -Force -ErrorAction SilentlyContinue
+        }
+        Remove-Item -LiteralPath $fixtureDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+<#
+.SYNOPSIS
   Run the hook in a throwaway git repo with one staged code file and the supplied
   loop state, and report whether the loop gate blocked the commit.
 #>
@@ -113,7 +278,10 @@ function Invoke-HookGate {
         [switch]$StageTrackedRename,
         [switch]$StageGateHookDelete,
         [switch]$StageUnstagedValidatorDrift,
-        [switch]$RunPostCommit
+        [switch]$RunPostCommit,
+        [switch]$StagePrdFile,
+        [string]$PrdFileName = 'PRD-9001.md',
+        [string]$PrdContent
     )
 
     $repo = Join-Path ([IO.Path]::GetTempPath()) ("agentx-hook-gate-{0}" -f [guid]::NewGuid().ToString('N'))
@@ -163,6 +331,11 @@ function Invoke-HookGate {
                 New-Item -ItemType Directory -Path (Join-Path $repo 'docs\artifacts\reviews') -Force | Out-Null
                 Set-Content -LiteralPath (Join-Path $repo 'docs\artifacts\reviews\REVIEW-1.md') -Value '# Review' -Encoding utf8
                 git add docs/artifacts/reviews/REVIEW-1.md 2>&1 | Out-Null
+            }
+            if ($StagePrdFile) {
+                New-Item -ItemType Directory -Path (Join-Path $repo 'docs\artifacts\prd') -Force | Out-Null
+                Set-Content -LiteralPath (Join-Path $repo "docs\artifacts\prd\$PrdFileName") -Value $PrdContent -Encoding utf8
+                git add "docs/artifacts/prd/$PrdFileName" 2>&1 | Out-Null
             }
             if ($StageSecret) {
                 Set-Content -LiteralPath (Join-Path $repo 'secret.ps1') -Value (('api_' + 'key') + ' = "real-looking-secret-value"') -Encoding utf8
@@ -265,6 +438,9 @@ function New-HookHistoryEntry {
 Write-Host ''
 Write-Host ' Pre-commit structured review gate' -ForegroundColor White
 Write-Host ' ================================================' -ForegroundColor DarkGray
+
+Test-BoundedDrainHandlesLargeStdErr
+Test-BoundedDrainDetectsInheritedHandleHang
 
 $bashPath = Get-BashCommand
 if (-not $bashPath) {
@@ -443,6 +619,48 @@ if (-not $bashPath) {
     ))
     Assert-True ($clean2.Output -match 'Running pre-commit checks') 'the hook executed and produced output for the clean fixture'
     Assert-True ($clean2.ExitCode -eq 0) 'second clean hook fixture exits zero'
+
+    # Regression: the canonical PRD template (and every PRD it generates, e.g.
+    # PRD-244) numbers its headings ("## 1. Problem Statement", "## 3. Goals &
+    # Success Metrics"). Check 12's PRD structure grep used to require the
+    # keyword immediately after "##", so a real, fully-structured PRD was
+    # misreported as missing its required sections purely because of its
+    # heading numbering -- not because any section was actually absent.
+    $numberedPrd = Invoke-HookGate -BashPath $bashPath -StagePrdFile -PrdFileName 'PRD-9001.md' -PrdContent @'
+# PRD-9001: Sample feature
+
+## 1. Problem Statement
+
+Why this matters.
+
+## 2. Target Users
+
+Everyone affected.
+
+## 3. Goals & Success Metrics
+
+Ship it.
+'@ -LoopState (New-HookLoopState -History @(
+        (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),
+        $completionEntry
+    ))
+    Assert-True ($numberedPrd.Output -match 'PRD structure valid') 'a PRD using canonical numbered headings (## 1. Problem Statement) is recognized as structurally valid'
+    Assert-True ($numberedPrd.Output -notmatch 'PRD missing required sections') 'the numbered-heading regression no longer misreports a correctly-structured PRD as missing its sections'
+
+    # Preserve original semantic acceptance: a PRD that genuinely omits every
+    # required section (not merely numbered) must still warn. The numeric-
+    # prefix fix must not weaken detection of real incompleteness.
+    $incompletePrd = Invoke-HookGate -BashPath $bashPath -StagePrdFile -PrdFileName 'PRD-9002.md' -PrdContent @'
+# PRD-9002: Underspecified feature
+
+## Overview
+
+This document never names any of the required sections.
+'@ -LoopState (New-HookLoopState -History @(
+        (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),
+        $completionEntry
+    ))
+    Assert-True ($incompletePrd.Output -match 'PRD missing required sections') 'a PRD genuinely missing every required section still warns'
 }
 
 Write-Host ''

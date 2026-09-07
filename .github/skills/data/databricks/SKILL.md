@@ -23,175 +23,64 @@ prerequisites:
 
 ## When to Use
 
-- Building Delta Lakehouses with medallion architecture (Bronze -> Silver -> Gold)
-- Ingesting streaming or batch data with Auto Loader or Structured Streaming
-- Creating DLT (Delta Live Tables) pipelines with built-in data quality
-- Running ML experiments tracked in MLflow and serving models via Model Serving
-- Governing data assets across clouds with Unity Catalog
-- Deploying reproducible jobs and pipelines with Databricks Asset Bundles
-- Running SQL analytics on Delta tables via Databricks SQL Warehouses
-- Building AI/ML features with Vector Search and Feature Engineering
+Use this skill when Databricks architecture, Delta patterns, or platform governance choices shape the data solution.
 
-## Decision Tree
+## Prerequisites
 
-```
-Working with Databricks?
-+-- Need storage layer?
-|   +-- Semi-structured / schema-on-read / ML data -> Delta Lakehouse
-|   +-- Need ACID + time travel                    -> Delta Lake tables
-|   +-- Need governance across workspace           -> Unity Catalog
-+-- Need ingestion?
-|   +-- Cloud files (S3/ADLS/GCS) incremental      -> Auto Loader
-|   +-- Kafka/Kinesis/Event Hubs streaming          -> Structured Streaming
-|   +-- One-time bulk load                          -> COPY INTO or Spark batch
-+-- Need pipelines?
-|   +-- Declarative, built-in quality checks        -> Delta Live Tables (DLT)
-|   +-- Imperative DAG with custom logic            -> Databricks Workflows
-|   +-- Simple notebook job                         -> Workflow single-task job
-+-- Need ML/AI?
-|   +-- Experiment tracking                         -> MLflow Tracking
-|   +-- Model registry + governance                 -> MLflow Registry (UC-backed)
-|   +-- Real-time inference                         -> Model Serving endpoints
-|   +-- Semantic / vector similarity search         -> Databricks Vector Search
-+-- Need IaC / CI-CD?
-    -> Databricks Asset Bundles (DABs)
-```
+- Workspace, catalog, and environment boundaries are known.
+- Medallion layer intent is explicit.
+- The workload needs Spark, Delta, SQL Warehouses, or Databricks-native orchestration.
 
-## Core Concepts
+## Decision Guide
 
-### Lakehouse Architecture
+Use Databricks when Delta Lake, Spark-scale processing, or Unity Catalog governance are part of the real operating model. Prefer job clusters for production execution, DLT when declarative quality gates add value, and SQL Warehouses when BI access is the main requirement.
 
-Databricks combines the best of data warehouses and data lakes:
+## Workflow
 
-| Layer | Description | Format |
-|-------|-------------|--------|
-| **Storage** | Cloud object store (S3/ADLS/GCS) | Delta (Parquet + transaction log) |
-| **Compute** | Spark clusters, SQL Warehouses, Model Serving | Ephemeral, auto-scaling |
-| **Catalog** | Unity Catalog (3-level namespace) | `catalog.schema.table` |
-| **Governance** | Row/column filters, tags, lineage, audit logs | Unity Catalog |
+1. Decide the workload boundary: batch, streaming, SQL, ML, or orchestration.
+2. Place data and code into the right medallion and catalog structure.
+3. Define compute, quality gates, and permissions before scaling volume.
+4. Validate Delta, job, and governance behavior under the target environment.
 
-### Medallion Architecture
+## Error Handling
 
-| Layer | Purpose | Pattern |
-|-------|---------|---------|
-| **Bronze** | Raw ingestion, as-is from source | Append-only, full history |
-| **Silver** | Cleaned, deduped, typed, joined | Merge/upsert, schema enforced |
-| **Gold** | Business-ready aggregates, feature store | Star/wide, optimized for query |
+If catalog boundaries, compute mode, or Delta write patterns are unclear, stop and validate before scaling the design. Treat missing governance, broken lineage, or runaway cluster cost as blocking operational defects.
 
-**Anti-pattern**: Skipping Silver -- raw data directly into Gold produces unreliable analytics.
+## Checklist
 
-### Unity Catalog (3-Level Namespace)
+Before handoff, confirm catalog naming is explicit, layer ownership is clear, compute matches workload, secrets are externalized, and Delta or DLT behavior is validated for the target path.
 
-```
-metastore
-+-- catalog (e.g., prod, dev, raw)
-    +-- schema / database (e.g., sales, hr, logs)
-        +-- table / view / volume / model / function
-```
+<a id="decision-tree"></a>
 
-Always reference tables as `catalog.schema.table` (e.g., `prod.sales.fact_orders`).
+<a id="core-concepts"></a>
 
-> **Deep Dive**: See [unity-catalog.md](references/unity-catalog.md) for namespace SQL, governance, row filters, column masks, and lineage.
+<a id="lakehouse-architecture"></a>
 
-## Delta Lake
+<a id="medallion-architecture"></a>
 
-ACID-compliant table format built on Parquet + transaction log (`_delta_log/`). Key operations: `MERGE` for upserts, time travel via `versionAsOf`/`timestampAsOf`, `OPTIMIZE` + `ZORDER` for query performance, `VACUUM` for storage cleanup. Enable Change Data Feed (CDF) for incremental downstream processing.
+<a id="unity-catalog-3-level-namespace"></a>
 
-| Do | Don't |
-|----|-------|
-| Use `MERGE` for upserts | Use `overwrite` + re-insert for updates |
-| Run `OPTIMIZE`+`ZORDER` on query columns | Leave tables un-optimized |
-| Enable CDF for incremental pipelines | Poll full table scans for changes |
-| Define explicit schemas on write | Rely on schema inference in production |
+<a id="delta-lake"></a>
 
-> **Deep Dive**: See [delta-lake-operations.md](references/delta-lake-operations.md) for merge patterns, time travel, CDF, and optimization examples.
+<a id="streaming-ingestion"></a>
 
-## Streaming Ingestion
+<a id="delta-live-tables-dlt"></a>
 
-**Auto Loader**: Incrementally ingest files from cloud storage (S3/ADLS/GCS) using `cloudFiles` format with checkpoint-based tracking. Supports JSON, CSV, Parquet, Avro, and XML. Use `availableNow=True` trigger for scheduled micro-batch, or `processingTime` for continuous streaming.
+<a id="dlt-expectations-quick-reference"></a>
 
-**Structured Streaming (Kafka / Event Hubs)**: Read from Kafka/Kinesis/Event Hubs topics and write to Delta tables. Use `foreachBatch` with merge patterns for exactly-once upserts into Silver layer.
+<a id="databricks-workflows-jobs"></a>
 
-> **Deep Dive**: See [streaming-ingestion.md](references/streaming-ingestion.md) for Auto Loader and Kafka code examples with trigger modes.
+<a id="databricks-sql"></a>
 
-## Delta Live Tables (DLT)
+<a id="mlflow-experiment-tracking-model-registry"></a>
 
-Declarative ETL framework with automatic dependency resolution, data quality enforcement, and lineage. Define Bronze/Silver/Gold tables using `@dlt.table` decorators with expectations for quality gates.
+<a id="databricks-asset-bundles-dabs"></a>
 
-### DLT Expectations Quick Reference
+<a id="unity-catalog-governance"></a>
 
-| Decorator | Behavior on Violation |
-|---|---|
-| `@dlt.expect` | Warn -- record metrics, keep all rows |
-| `@dlt.expect_or_drop` | Drop invalid rows, keep pipeline running |
-| `@dlt.expect_or_fail` | Fail pipeline immediately |
-| `@dlt.expect_all_or_drop` | Drop rows failing ANY expectation |
-| `@dlt.expect_all_or_fail` | Fail if ANY expectation violated |
+<a id="vector-search-ai-rag"></a>
 
-> **Deep Dive**: See [dlt-guide.md](references/dlt-guide.md) for full DLT pipeline code and patterns.
-
-## Databricks Workflows (Jobs)
-
-Multi-task job orchestration with dependency DAGs, retries, and notifications. Define jobs in `databricks.yml` (DABs) with task dependencies, cluster configs, and Quartz cron schedules.
-
-> **Deep Dive**: See [workflows-and-sql.md](references/workflows-and-sql.md) for job YAML templates and SQL analytics.
-
-## Databricks SQL
-
-SQL Warehouses provide serverless or provisioned compute for BI and ad-hoc analytics. Supports partitioned tables, window functions, and zero-copy `SHALLOW CLONE` for dev/test snapshots.
-
-| Type | Best For | Cold Start |
-|---|---|---|
-| **Serverless** | Intermittent queries, lowest ops overhead | ~3s |
-| **Pro** | High concurrency BI, JDBC/ODBC tools | ~2 min |
-| **Classic** | Custom Spark config, specific instance types | ~3 min |
-
-> **Deep Dive**: See [workflows-and-sql.md](references/workflows-and-sql.md) for SQL examples and warehouse comparison.
-
-## MLflow (Experiment Tracking + Model Registry)
-
-Track experiments with `mlflow.start_run()`, log parameters/metrics/models, and register models in Unity Catalog-backed registry (`prod.ml.<model_name>`). Use model aliases (`champion`/`challenger`) for promotion and Model Serving endpoints for real-time inference. Always log `signature` and `input_example` -- required for Model Serving.
-
-> **Deep Dive**: See [mlflow-guide.md](references/mlflow-guide.md) for tracking code, model lifecycle, and serving patterns.
-
-## Databricks Asset Bundles (DABs)
-
-IaC for Databricks -- version-control jobs, pipelines, notebooks, and permissions. Define `databricks.yml` with targets (dev/prod), variable substitution, and resource definitions.
-
-```bash
-# DABs CLI workflow
-databricks bundle validate          # check syntax/config
-databricks bundle deploy            # deploy resources to workspace
-databricks bundle run <job_name>    # trigger a job
-databricks bundle destroy           # teardown resources
-```
-
-> **Deep Dive**: See [dab-templates.md](references/dab-templates.md) for full YAML templates and CI/CD patterns.
-
-## Unity Catalog Governance
-
-Fine-grained access control with `GRANT` statements, row-level security via row filter functions, column masking for PII, automatic lineage tracking, and tags for discoverability. Use `dbutils.secrets.get()` for all credentials -- never hardcode tokens, keys, or connection strings.
-
-> **Deep Dive**: See [unity-catalog.md](references/unity-catalog.md) for governance SQL, row filters, column masks, and security patterns.
-
-## Vector Search (AI / RAG)
-
-Create Delta Sync indexes that auto-update on table changes for semantic similarity search. Use with Model Serving embedding endpoints for RAG applications. Supports `TRIGGERED` and `CONTINUOUS` pipeline types.
-
-> **Deep Dive**: See [vector-search-and-compute.md](references/vector-search-and-compute.md) for index creation and query examples.
-
-## Cluster Configuration
-
-| Type | Use Case | Lifecycle |
-|---|---|---|
-| **All-Purpose** | Interactive notebooks, exploration | Manual start/stop |
-| **Job Cluster** | Production jobs (ephemeral) | Auto-created per run |
-| **SQL Warehouse** | SQL analytics, BI tools | Auto-suspend |
-| **Instance Pool** | Reduce cold starts across clusters | Pre-warmed nodes |
-
-Enable Photon (C++ vectorized execution) for 2-12x query speedup on SQL analytics and Delta writes. Use AQE (Adaptive Query Execution) with `spark.sql.adaptive.enabled=true` for auto-tuning.
-
-> **Deep Dive**: See [vector-search-and-compute.md](references/vector-search-and-compute.md) for Spark config tuning and Photon details.
+<a id="cluster-configuration"></a>
 
 ## Core Rules
 
@@ -206,28 +95,9 @@ Enable Photon (C++ vectorized execution) for 2-12x query speedup on SQL analytic
 9. **DLT expectations for quality** - Apply `expect_or_drop` or `expect_or_fail` on Silver layer tables to enforce data contracts.
 10. **VACUUM with retention** - Schedule VACUUM jobs with retention >= 7 days; never disable safety checks in production.
 
-## Troubleshooting
+<a id="troubleshooting"></a>
 
-| Error | Cause | Solution |
-|---|---|---|
-| `AnalysisException: Table not found` | Wrong catalog/schema or missing Unity Catalog | Use 3-level namespace; run `SHOW CATALOGS` |
-| `DeltaConcurrentModificationException` | Concurrent writers to same Delta table | Use `MERGE` not overwrite; enable optimistic concurrency |
-| Out of memory / GC overhead | Skewed data, insufficient memory | Add `SKEW HINT`, increase driver/worker memory, cache selectively |
-| Auto Loader stuck, no progress | Missing checkpoint or schema mismatch | Check checkpoint path; enable `cloudFiles.schemaEvolutionMode=addNewColumns` |
-| Job fails with `ClusterNotFound` | Job cluster config mismatch | Pin `spark_version`; avoid deprecated runtimes |
-| DLT expectation `expect_or_fail` fires | Data quality violation | Check quarantine table; fix upstream source |
-| Model Serving latency spike | Cold container start | Enable `Scale to zero = false` for latency-sensitive endpoints |
-
-## Anti-Patterns
-
-- **Reading entire Delta table for incremental loads**: Use CDF or `MERGE` with watermarks
-- **Overusing all-purpose clusters for production**: Use job clusters -- cheaper and isolated
-- **No `ZORDER` on high-cardinality filter columns**: Leads to full table scans
-- **Skipping `VACUUM`**: Storage bloat and slower Delta log reads
-- **Hardcoded workspace URLs**: Use DABs variable substitution or Databricks Secrets
-- **Using `display()` in production jobs**: Debug output -- remove before production
-- **Single large Spark job for Bronze+Silver+Gold**: Split into separate tasks for retry granularity
-- **Storing secrets in notebooks or config YAML**: Use Databricks Secret Scopes (`dbutils.secrets.get`)
+<a id="anti-patterns"></a>
 
 ## Security
 
@@ -235,25 +105,13 @@ Use `dbutils.secrets.get()` for all credentials -- never hardcode tokens, keys, 
 
 > **Deep Dive**: See [unity-catalog.md](references/unity-catalog.md) for governance, row-level security, column masking, and OAuth patterns.
 
-## Reference Index
+<a id="reference-index"></a>
 
-| Document | Description |
-|---|---|
-| [references/delta-lake-operations.md](references/delta-lake-operations.md) | Delta merge, time travel, CDF, OPTIMIZE/ZORDER patterns |
-| [references/streaming-ingestion.md](references/streaming-ingestion.md) | Auto Loader and Structured Streaming code examples |
-| [references/dlt-guide.md](references/dlt-guide.md) | DLT pipeline patterns, expectations, live tables |
-| [references/workflows-and-sql.md](references/workflows-and-sql.md) | Workflows YAML, Databricks SQL, warehouse types |
-| [references/mlflow-guide.md](references/mlflow-guide.md) | MLflow experiment tracking, model registry, Model Serving |
-| [references/dab-templates.md](references/dab-templates.md) | Databricks Asset Bundle YAML templates and CI/CD patterns |
-| [references/unity-catalog.md](references/unity-catalog.md) | Unity Catalog governance, row filters, column masks, lineage |
-| [references/vector-search-and-compute.md](references/vector-search-and-compute.md) | Vector Search, cluster types, Spark config, Photon |
+<a id="asset-templates"></a>
 
-## Asset Templates
+## References
 
-| File | Description |
-|---|---|
-| [assets/medallion_bronze.py](assets/medallion_bronze.py) | Auto Loader Bronze ingestion notebook template |
-| [assets/medallion_silver.py](assets/medallion_silver.py) | Silver merge/upsert PySpark template |
-| [assets/dlt_pipeline.py](assets/dlt_pipeline.py) | DLT pipeline with expectations scaffold |
-| [assets/databricks.yml](assets/databricks.yml) | DABs bundle template (dev/prod targets) |
-| [assets/mlflow_training.py](assets/mlflow_training.py) | MLflow experiment training loop template |
+MUST read the applicable topic reference before design, implementation or validation; root rules do not replace its detailed contract.
+
+- [Platform and lakehouse patterns](references/details-platform-and-lakehouse-patterns.md) - must read before implementation.
+- [Operations, assets, and troubleshooting](references/details-operations-assets-and-troubleshooting.md) - must read during validation.

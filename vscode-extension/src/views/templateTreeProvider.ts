@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { AgentXContext } from '../agentxContext';
 import {
  createTemplateTreeItem,
  parseTemplate,
  resolveTemplateFiles,
  TemplateDef,
+ TemplateContext,
  TemplateTreeItem,
 } from './templateTreeProviderInternals';
 
@@ -18,7 +18,7 @@ export class TemplateTreeProvider implements vscode.TreeDataProvider<TemplateTre
  private _onDidChangeTreeData = new vscode.EventEmitter<TemplateTreeItem | undefined | void>();
  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
- constructor(private agentx: AgentXContext) {}
+ constructor(private agentx: TemplateContext) {}
 
  refresh(): void {
   this._onDidChangeTreeData.fire();

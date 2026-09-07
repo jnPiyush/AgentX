@@ -7,14 +7,11 @@ metadata:
   created: "2026-04-21"
   updated: "2026-04-21"
 ---
-
 # Diagrams as Code
 
 > **Purpose**: One conventions layer for all diagrams produced across AgentX roles.
 > **Principle**: Text-first, diffable, reviewable, rendered at read-time. Binary formats (PNG, JPG, VSDX) are an export, never the source of truth.
-> **Scope**: This skill is the convention layer. The `diagram-specialist` sub-agent (`.github/agents/internal/diagram-specialist.agent.md`) owns spawn-and-execute behavior. Each reference file covers one format or quality concern.
-
----
+> **Scope**: This skill is the convention layer. The `diagram-specialist` sub-agent ([.github/agents/internal/diagram-specialist.agent.md](../../../agents/internal/diagram-specialist.agent.md)) owns spawn-and-execute behavior. Each reference file covers one format or quality concern.
 
 ## When to Use
 
@@ -29,53 +26,44 @@ Load this skill any time an agent needs to:
 - Convert a legacy Visio file into a diffable code artifact
 - Review an existing diagram for clarity and correctness
 
----
+## Prerequisites
 
-## Default Format Policy (Mermaid-First)
+No install prerequisites are implied by this root. Know the owner artifact, the
+rendering surface reviewers will use, and whether the deliverable must round-trip
+through Visio before choosing a format.
 
-**Mermaid is the default for all AgentX templates and artifacts.** It renders natively in GitHub, VS Code preview, most markdown tooling, and is the lowest-friction option for reviewers.
+## Decision Guide
 
-Use another format ONLY when one of these is true:
+Default to Mermaid for GitHub-native diagrams. For C4 context or container
+views, verify that the target surface renders Mermaid C4 before depending on it;
+otherwise use Structurizr or another exported alternative. For formal swimlane or
+cross-functional flow artifacts that must pass native-lane review, prefer
+PlantUML activity beta, draw.io CFF, or BPMN. Use the full routing table in
+[details-format-policy-and-review.md](references/details-format-policy-and-review.md#decision-matrix-pick-the-format)
+when the diagram intent is ambiguous.
 
-1. Mermaid cannot express the diagram intent (e.g. true swimlanes with role columns, native Visio `.vsdx` round-trip, complex cluster layouts).
-2. The user explicitly asks for PlantUML, draw.io, Structurizr, or Graphviz.
-3. The artifact must round-trip to Visio (`.vsdx`) -- in that case use draw.io.
+## Core Rules
 
-When falling back, record the reason in the diagram's header comment (e.g. `<!-- Format: draw.io; reason: Visio round-trip required -->`).
+Use text-first source as the artifact of record, keep the source beside any
+binary export, and make the title, legend, and owner artifact explicit. Match
+the format to the diagram intent, record fallback reasons in the header comment,
+and render the result in the target surface before handoff. Keep filenames,
+paths, ASCII-only content, and contrast choices review-friendly.
 
----
+## Workflow
 
-## Decision Matrix (pick-the-format)
-
-| Intent | Primary format | Fallback (only if Mermaid cannot express it) | Visio round-trip |
-|--------|----------------|-----------------------------------------------|------------------|
-| System context (C4 L1) / containers (C4 L2) | **Mermaid C4** | Structurizr DSL | Mermaid -> Visio web |
-| Component / class structure (C4 L3, UML) | **Mermaid class / flowchart** | PlantUML | draw.io |
-| Sequence (API, message, handoff) | **Mermaid sequence** | PlantUML sequence | Mermaid -> Visio web |
-| State machine / lifecycle | **Mermaid state** | PlantUML state | draw.io |
-| ER / data model | **Mermaid ER** | PlantUML ER | draw.io |
-| Journey map / capability map | **Mermaid flowchart (LR) or journey** | draw.io | Mermaid -> Visio web |
-| Dependency / call graph | **Mermaid flowchart** | Graphviz DOT | SVG -> draw.io -> `.vsdx` |
-| Gantt / roadmap timeline | **Mermaid gantt** | draw.io | draw.io |
-| Cross-functional workflow / swimlane / RACI | **Mermaid flowchart with subgraph lanes** | PlantUML activity beta, then draw.io CFF | draw.io -> `.vsdx` |
-| Role-phase matrix (roles as columns, phases as bands) | **Mermaid flowchart with subgraph lanes** | draw.io CFF | Native `.vsdx` export |
-| Network / infra topology with many cluster boundaries | **Mermaid flowchart with subgraphs** | draw.io | Native `.vsdx` export |
-
-Rule: Mermaid first. If the intent fits the matrix fallback column, justify it in the header comment. If the deliverable must round-trip to native Visio (`.vsdx`), draw.io is the only allowed format.
-
----
-
-## Five Non-Negotiables
-
-1. **Mermaid-first** -- use Mermaid unless the intent cannot be expressed in Mermaid, Visio round-trip is required, or the user explicitly requests another format. Record the reason in the diagram header comment when falling back.
-2. **Text-first source** -- the diagram code is committed in git; any PNG/SVG/VSDX is an export next to it, not a replacement.
-3. **Titled and legended** -- every diagram has a title, a legend for non-obvious shapes/colors, and a link back to the PRD/ADR/spec it supports.
-4. **Intent-matched format** -- if a non-Mermaid format is chosen, it must match the Decision Matrix and the justification must be recorded.
-5. **Rendered before merge** -- the author validated the render in the target surface (GitHub markdown, Visio web, draw.io, PlantUML) before handoff.
-
----
+1. Identify the artifact and the diagram intent before drawing anything.
+2. Choose Mermaid first, then confirm whether the target surface supports any
+   advanced syntax you plan to use and whether the swimlane review gate requires
+   a native-lane format before finalizing the choice.
+3. Author the source file, add header metadata, and keep exports as secondary
+   artifacts next to the source.
+4. Render the diagram in the consumer surface and run the reviewer checklist
+   before handing off the PRD, ADR, spec, or UX flow.
 
 ## Load Order
+
+Read [references/details-format-policy-and-review.md](references/details-format-policy-and-review.md) first (decision matrix, non-negotiables, authoring rules, reviewer checklist), then follow the routing order below.
 
 1. This `SKILL.md` (decision matrix + non-negotiables)
 2. Pick the relevant reference:
@@ -87,25 +75,37 @@ Rule: Mermaid first. If the intent fits the matrix fallback column, justify it i
    - [references/visio-interop.md](references/visio-interop.md) -- `.vsdx` import/export paths
 3. [references/diagram-review-checklist.md](references/diagram-review-checklist.md) -- review gate
 
----
+Renderer note: verify Mermaid C4 support before relying on it; some renderers need Structurizr DSL or draw.io instead.
 
-## Authoring Rules
+## Pitfalls
 
-- **Filename**: `<artifact>-<issue>-<short-name>.<ext>` (e.g. `ADR-42-context.mmd`, `PRD-17-contract-workflow.drawio`)
-- **Location**: under a `diagrams/` subfolder inside the parent artifact's directory
-- **Header comment**: title, owner artifact, date, AgentX issue number
-- **ASCII only** -- no emoji, no Unicode symbols (per AgentX golden principle). Use `->`, not arrow glyphs
-- **Contrast** -- avoid pastel-on-pastel; favor default theme colors over custom palettes unless the target surface requires branding
+Do not ship image-only diagrams, mix multiple C4 levels in one picture, create
+swimlanes with unlabeled handoffs, or pick draw.io / PlantUML / DOT without a
+clear format reason. The full checklist and authoring details are in the detail
+reference.
 
-## Consumer Checklist (any reviewer)
+## Error Handling
 
-Before approving a diagram-bearing artifact:
+If a renderer fails, first check the chosen syntax against the format-specific
+reference, then simplify the diagram until it renders cleanly. When Mermaid
+cannot express the layout, switch to the approved fallback and record that
+reason instead of forcing a broken diagram through review.
 
-- [ ] Source is text (Mermaid, PlantUML, DSL, DOT, or draw.io XML), not a raw image
-- [ ] Format matches intent (check against the decision matrix)
-- [ ] Title + legend + source-link present
-- [ ] Renders in the target surface
-- [ ] For swimlanes: every activity in one lane; handoffs labeled; lane count <= 7
-- [ ] For C4: one level per diagram (no mixing context with component)
-- [ ] For sequences: arrows carry action + payload, not just direction
-- [ ] Any binary export (.vsdx, .png, .svg) is co-located with its source
+## Checklist
+
+Before approval, confirm the source is text, the format matches the intent, the
+diagram has a title and legend, the target surface renders it, and any export is
+co-located with its source. For swimlanes, label handoffs and keep lane count
+bounded; for sequences, label arrows with the action and payload.
+
+## Why This Is a Skill
+
+Diagram work fails when agents treat every format as interchangeable or optimize
+for a screenshot instead of a reviewable source artifact. This skill gives every
+role one routing policy, one review gate, and one set of authoring constraints
+so diagrams stay diffable, consistent, and reusable across PRDs, ADRs, specs,
+and UX flows.
+
+## References
+
+- [references/details-format-policy-and-review.md](references/details-format-policy-and-review.md): read when you need the full default-format policy, decision matrix, non-negotiables, authoring rules, or the complete reviewer checklist relocated verbatim from the original root.

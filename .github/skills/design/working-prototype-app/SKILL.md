@@ -16,7 +16,22 @@ compatibility:
 
 > WHEN: A static HTML/CSS deliverable cannot answer the question being asked of the prototype. Typical triggers: multi-screen flow with routing, state that must persist across reloads, data-driven views, or an interactive demo for stakeholder validation. Below that bar, prefer plain HTML/CSS via `prototype-craft`.
 
-## Choosing static vs working app
+## When to Use This Skill
+
+- The prototype must demonstrate real routing across multiple screens.
+- Stakeholders need state persistence, filtering, or dynamic lists to judge the UX.
+- A static click-through stops being credible because behavior matters as much as layout.
+- The team needs a runnable SPA build, but not a real backend integration yet.
+
+## Prerequisites
+
+You need Node and npm available, a scoped prototype question that static HTML
+cannot answer, a route list or flow map, and clearly non-sensitive sample data.
+If the work requires real backend integration, stop and recast it as a product
+spike instead of a UX prototype. Use the scaffold and implementation detail in
+[details-react-prototype-implementation.md](references/details-react-prototype-implementation.md).
+
+## Decision Guide
 
 | Need | Use |
 |------|-----|
@@ -27,150 +42,43 @@ compatibility:
 
 If in doubt, start with static. Promote to a working app only after the static answer becomes hand-wavy.
 
-## Default stack (modify with reason)
+## Core Rules
 
-- Vite (build + dev server)
-- React 18 (component model)
-- React Router (routing) -- optional; can stay single-page
-- Tailwind CSS (utility styling on top of theme tokens)
-- Framer Motion (motion recipes from `prototype-craft`)
-- Lucide React (icon set, tree-shakeable)
+- Promote from static to SPA only when interaction or persistence is the real
+  design question.
+- Keep page data in `src/data/`, route logic in `pages/`, shared UI in
+  `components/`, and pure helpers in `lib/` or `hooks/`.
+- Use the default stack unless the team has a documented reason to substitute
+  frameworks.
+- Persist only low-risk demo state; localStorage is plain text and same-origin.
+- Ship every prototype with a 404 route, accessibility hooks, and basic
+  performance discipline so stakeholder feedback reflects the intended UX.
 
-Substitute Vue, Svelte, or Solid where the team is more fluent; the skill is framework-agnostic in spirit. The folder structure and rules below still apply.
+## Workflow
 
-## Scaffold
+1. Prove the prototype needs a runnable SPA instead of static HTML.
+2. Scaffold the stack, wire tokens and global styles, and lay out `src/` using
+   the reference file.
+3. Model prototype content in `src/data/` before building route components.
+4. Add routing, local persistence, and any motion or accessibility hooks needed
+   for the flow.
+5. Validate build, dev navigation, accessibility, performance, and the 404
+   fallback before handoff.
 
-```sh
-npm create vite@latest my-prototype -- --template react-ts
-cd my-prototype
-npm install
-npm install react-router-dom framer-motion lucide-react
-npm install -D tailwindcss postcss autoprefixer
-npx tailwindcss init -p
-```
+## Pitfalls
 
-Wire Tailwind to read `src/**/*.{ts,tsx,html}` in `tailwind.config.js`. Import the design tokens (from the `theme-presets.md` reference) into `src/styles/tokens.css` and load that before Tailwind's `@tailwind` directives so utilities can reference token values via `bg-[var(--surface)]`.
+Common failures are building backend behavior into a prototype, hard-coding
+lists inside components, persisting sensitive data, and forgetting the catch-
+all route. The full scaffold, code patterns, and verification checklist stay in
+the reference file.
 
-## File structure
+## Error Handling
 
-```
-src/
-  components/        # presentational, reusable, no routing
-  pages/             # route-level views; one file per route
-  hooks/             # custom hooks (useDebouncedStorage, useReducedMotionSafe, ...)
-  lib/               # pure helpers (formatters, validators, parsers)
-  data/              # static JSON / TypeScript data the prototype renders
-  styles/
-    tokens.css       # scaffolded from design-system-reasoning
-    globals.css      # @tailwind base/components/utilities + a11y resets
-  App.tsx
-  main.tsx
-```
-
-Rules:
-
-- `pages/` files render via the router and own page-level state and data fetching.
-- `components/` files must be storyboard-ready in isolation (no router hooks).
-- `data/` is the single source of truth for prototype content. Do not hard-code lists inside components.
-- `hooks/` are pure; side effects only inside `useEffect`.
-
-## Data-driven page pattern
-
-```tsx
-// src/data/courses.ts
-export type Course = { id: string; title: string; level: "intro" | "core" | "advanced"; mins: number };
-export const courses: Course[] = [
-  { id: "c1", title: "Foundations", level: "intro", mins: 25 },
-  { id: "c2", title: "Patterns", level: "core", mins: 40 },
-];
-
-// src/pages/Catalog.tsx
-import { courses } from "@/data/courses";
-export default function Catalog() {
-  return (
-    <main>
-      <h1>Catalog</h1>
-      <ul>
-        {courses.map((c) => <li key={c.id}>{c.title} -- {c.mins} min</li>)}
-      </ul>
-    </main>
-  );
-}
-```
-
-Why: changes to "what the prototype shows" never require touching components. The data file is also where stakeholders edit copy without help.
-
-## Debounced localStorage persistence
-
-```ts
-// src/hooks/useDebouncedStorage.ts
-import { useEffect, useRef, useState } from "react";
-
-export function useDebouncedStorage<T>(key: string, initial: T, delayMs = 250) {
-  const [value, setValue] = useState<T>(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? (JSON.parse(raw) as T) : initial;
-    } catch { return initial; }
-  });
-  const timer = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota */ }
-    }, delayMs);
-    return () => window.clearTimeout(timer.current);
-  }, [key, value, delayMs]);
-  return [value, setValue] as const;
-}
-```
-
-Use for: filter selections, theme preference, "completed lesson" flags. Do not use for anything sensitive -- localStorage is plain text and same-origin.
-
-## Routing pattern
-
-```tsx
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Home from "@/pages/Home";
-import Catalog from "@/pages/Catalog";
-import NotFound from "@/pages/NotFound";
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/catalog" element={<Catalog />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
-  );
-}
-```
-
-A catch-all `<Route path="*">` is mandatory. Prototypes routinely have broken links until late; a real 404 page prevents stakeholder confusion.
-
-## Performance discipline
-
-- Route-split heavy pages with `React.lazy` + `Suspense`. Show a skeleton, not a spinner.
-- Use `loading="lazy"` on every `<img>` below the fold.
-- Bundle target: under 250 KB gzip for the initial route.
-- Never import the whole `lucide-react` namespace; import the specific icons.
-
-## Accessibility hooks built in
-
-- Wrap the entire app in a `<SkipToContent />` component that targets `#main`.
-- Every page renders inside a single `<main id="main" tabIndex={-1}>`.
-- Apply the reduced-motion guard CSS from `theme-presets.md` globally; the motion hook from `prototype-craft/references/animation-recipes.md` covers JS-driven motion.
-- Add an `ErrorBoundary` at the route level; render a recoverable empty state, never a blank screen.
-
-## Verification
-
-- `npm run build` succeeds with zero TypeScript errors and zero Vite warnings.
-- `npm run dev` serves the prototype with hot reload; routes navigate correctly.
-- axe-core run on each route (use the `accessibility` skill and `prototype-audit` checklist).
-- Lighthouse on the production preview reports Performance >= 85 and Accessibility >= 95.
-- Touch every route plus an invented path to confirm the 404 page renders.
+If scaffold or build steps fail, stop and repair the toolchain before layering
+on more UI. If state complexity exceeds safe local demo data, simplify the flow
+or escalate to a product spike. If localStorage parsing or quota fails, fall
+back to defaults and keep the prototype usable rather than blank. If routing
+breaks, preserve the 404 fallback instead of hiding invalid paths.
 
 ## Done Criteria
 
@@ -179,12 +87,28 @@ A catch-all `<Route path="*">` is mandatory. Prototypes routinely have broken li
 - All prototype content lives in `src/data/`.
 - Debounced localStorage hook in place wherever state must survive a reload.
 - Routing covers every screen plus a `*` 404 fallback.
-- `prototype-audit` passes all six audit passes.
+- `prototype-audit` passes all ten audit passes (Pass 0 through Pass 9).
+
+## Why This Is a Skill
+
+A working prototype sits between static design and production software: it must
+feel real enough for UX validation without accumulating full product scope.
+This skill provides that boundary, defining when to graduate from static HTML,
+how to structure the app, and which implementation shortcuts remain acceptable
+for a prototype.
 
 ## Skills to Compose With
 
-- `design/design-system-reasoning` for tokens and theme selection.
-- `design/prototype-craft` for visual polish and motion recipes.
-- `design/accessibility` for WCAG checklist applied to each route.
-- `design/prototype-audit` to run the mechanical 6-pass audit.
-- `languages/react` and `languages/typescript` for component-level depth.
+- [design/design-system-reasoning](../design-system-reasoning/SKILL.md) for tokens and theme selection.
+- [design/prototype-craft](../prototype-craft/SKILL.md) for visual polish and motion recipes.
+- [design/accessibility](../accessibility/SKILL.md) for WCAG checklist applied to each route.
+- [design/prototype-audit](../prototype-audit/SKILL.md) to run the mechanical 10-pass audit.
+- [languages/react](../../languages/react/SKILL.md) and [TypeScript instructions](../../../instructions/typescript.instructions.md) for component-level depth.
+
+## References
+
+- [details-react-prototype-implementation.md](references/details-react-prototype-implementation.md):
+  read for the original default stack, scaffold commands, file structure, data
+  pattern, debounced localStorage hook, routing example, performance rules,
+  built-in accessibility hooks, and verification checklist relocated verbatim
+  from the prior root.

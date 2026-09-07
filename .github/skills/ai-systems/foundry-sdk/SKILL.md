@@ -25,21 +25,20 @@ prerequisites: ["Microsoft Foundry project", "Entra ID authentication", "SDK doc
 - Listing or validating model deployments and project connections
 - Enabling SDK-level tracing and Azure Monitor observability
 
+## Decision Guide
+
+Use the Foundry SDK when project-scoped agents, deployments, evals, datasets, or connections must be inspected or changed from code. Use the portal only for one-off exploration. If the work is generic provider wiring outside Foundry project semantics, use the provider or framework skill instead.
+
+## Workflow
+
+1. Resolve project identity, credentials, and concrete deployment or connection names.
+2. Initialize tracing before creating clients or agent instances.
+3. Read or update Foundry resources through typed SDK operations.
+4. Validate permissions, eval baselines, and rollout evidence before promotion.
+
 ## Decision Tree
 
-```
-Working with Microsoft Foundry?
-+- Architecture and model strategy only?
-|  - Use azure-foundry
-+- Need implementation against SDK clients and APIs?
-|  - Use foundry-sdk
-+- Building agents with Agent Framework abstraction?
-|  - Combine foundry-sdk with ai-agent-development
-+- Need evaluation jobs, datasets, indexes, or connections?
-|  - Use foundry-sdk with ai-evaluation
--- Need deployment/operational portal workflows?
-   - Use Azure MCP operational guidance alongside this skill
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-python-baseline.md#decision-tree).
 
 ## Core Rules
 
@@ -51,53 +50,23 @@ Working with Microsoft Foundry?
 
 ## Python Baseline
 
-Microsoft docs currently position `azure-ai-projects` as the Python client library for Microsoft Foundry project operations.
-
-```python
-import os
-from azure.ai.projects import AIProjectClient
-from azure.identity import DefaultAzureCredential
-
-
-with (
-    DefaultAzureCredential() as credential,
-    AIProjectClient(
-        endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
-        credential=credential,
-    ) as project_client,
-):
-    for deployment in project_client.deployments.list():
-        print(deployment.name)
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-python-baseline.md#python-baseline).
 
 ## Implementation Areas
 
-- `project_client.agents` for agent lifecycle operations
-- `project_client.get_openai_client()` for responses, conversations, evals, and fine-tuning operations
-- `project_client.deployments` to inspect available model deployments
-- `project_client.connections` for connected resource validation
-- `project_client.datasets` and `project_client.indexes` for evaluation and retrieval assets
-- tracing and Azure Monitor setup for SDK-observed runs
+MUST read before selection: [Decision Tree details](references/details-decision-tree-python-baseline.md#implementation-areas).
 
 ## Tool Wiring Guidance
 
-- Use SDK-native tool objects for Foundry-managed capabilities.
-- Keep tool selection policy in prompts and workflow design, not in random conditionals spread across handlers.
-- Record the dependency between an agent and any required project connection IDs.
-- Separate built-in tools from connection-backed tools in configuration and rollout documentation.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-python-baseline.md#tool-wiring-guidance).
 
 ## Evaluation Guidance
 
-- Treat evaluation datasets, testing criteria, and accepted baselines as repo artifacts.
-- Run SDK-created eval jobs against pinned agent/model versions.
-- Compare new runs to an accepted baseline before rollout.
-- Store evaluator selection and thresholds next to the prompt/version being promoted.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-python-baseline.md#evaluation-guidance).
 
 ## Tracing Guidance
 
-- Configure tracing before creating clients or issuing agent calls.
-- Keep content recording opt-in and review privacy impact explicitly.
-- Avoid propagating baggage automatically unless there is a real correlation requirement and sensitive data has been audited.
+MUST read before selection: [Decision Tree details](references/details-decision-tree-python-baseline.md#tracing-guidance).
 
 ## Error Handling
 
@@ -123,12 +92,6 @@ with (
 - [ ] Tracing is configured intentionally with privacy review
 - [ ] Tool wiring documents which project connections are required
 
-## References
-
-- [Microsoft Foundry SDK overview](https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/sdk-overview)
-- [Azure AI Projects client library for Python](https://learn.microsoft.com/en-us/python/api/overview/azure/ai-projects-readme?view=azure-python)
-- [Microsoft Foundry docs](https://learn.microsoft.com/en-us/azure/foundry/)
-
 ## Troubleshooting
 
 | Issue | Solution |
@@ -137,3 +100,12 @@ with (
 | Agent works in portal but not in code | Re-check deployment names, connection IDs, and prompt/tool definitions passed through the SDK |
 | Eval jobs are hard to compare over time | Version datasets, testing criteria, and accepted baseline artifacts in the repo |
 | Traces are missing or incomplete | Enable tracing before client creation and confirm the required Foundry/Azure Monitor settings |
+
+## References
+
+- [Decision Tree details](references/details-decision-tree-python-baseline.md) - must read before selection.
+- [Ai Agent Development skill](../ai-agent-development/SKILL.md)
+- [Ai Evaluation skill](../ai-evaluation/SKILL.md)
+
+
+- [Source and related-reading index](references/details-source-reference-index.md)

@@ -231,7 +231,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 |:-----|:---------|
 | **Work** | Workflow next step, brainstorm guidance, planning and review learnings, compound loop, learning capture, ready queue, and workflow rollout surfaces. |
 | **Status** | Agent status, loop state, dependency checks, AI evaluation, review findings, task bundles, bounded parallel runs, and digests. |
-| **Templates** | All output templates (PRD, ADR, Spec, UX, Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence). |
+| **Templates** | All 15 canonical output templates with validated input counts; select a template to open it. |
 | **Skills** | 134 production skills across 14 categories (architecture, development, languages, operations, infrastructure, data, documents, AI systems, design, testing, domain, product, diagrams, low-code). |
 
 ---

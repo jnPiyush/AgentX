@@ -6,6 +6,7 @@ import {
   executeAIEvaluationRun,
   planAIEvaluationRun,
 } from '../../eval/aiEvaluationRunner';
+import { AgentXContext } from '../../agentxContext';
 
 function createWorkspace(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ai-runner-facade-'));
@@ -56,12 +57,12 @@ function createWorkspace(): string {
 
 describe('aiEvaluationRunner facade', () => {
   it('returns undefined planning when no workspace is open', () => {
-    assert.equal(planAIEvaluationRun({ workspaceRoot: undefined } as any), undefined);
+    assert.equal(planAIEvaluationRun({ workspaceRoot: undefined } as unknown as AgentXContext), undefined);
   });
 
   it('executes through the facade when a workspace exists', async () => {
     const root = createWorkspace();
-    const agentx = { workspaceRoot: root } as any;
+    const agentx = { workspaceRoot: root } as unknown as AgentXContext;
 
     const planning = planAIEvaluationRun(agentx);
     assert.ok(planning?.ready);

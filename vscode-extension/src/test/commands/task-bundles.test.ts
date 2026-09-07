@@ -4,6 +4,34 @@ import * as vscode from 'vscode';
 import { registerTaskBundleCommands } from '../../commands/task-bundles';
 import { AgentXContext } from '../../agentxContext';
 import * as bundleFacade from '../../taskBundles/task-bundles';
+import { TaskBundlePromotionResult, TaskBundleRecord } from '../../taskBundles/task-bundlesTypes';
+
+/** Builds a `QuickPickItem`-shaped scope option, matching `task-bundles.ts`'s promptScope() items. */
+function scopeQuickPickItem(label: string, value: string): vscode.QuickPickItem & { value: string } {
+  return { label, value };
+}
+
+/** Builds a `QuickPickItem`-shaped bundle option, matching `task-bundles.ts`'s bundle-picker items. */
+function bundleQuickPickItem(bundleId: string, label = `${bundleId} Bundle`): vscode.QuickPickItem & { bundleId: string } {
+  return { label, bundleId };
+}
+
+function fakeBundleRecord(overrides: Partial<TaskBundleRecord> & { bundleId: string }): TaskBundleRecord {
+  return {
+    title: 'Bundle',
+    summary: '',
+    parentContext: { source: 'explicit-issue' },
+    priority: 'p1',
+    state: 'Proposed',
+    owner: 'engineer',
+    evidenceLinks: [],
+    promotionMode: 'none',
+    createdAt: '2026-03-13T00:00:00.000Z',
+    updatedAt: '2026-03-13T00:00:00.000Z',
+    tags: [],
+    ...overrides,
+  };
+}
 
 describe('registerTaskBundleCommands', () => {
   let sandbox: sinon.SinonSandbox;
@@ -79,7 +107,7 @@ describe('registerTaskBundleCommands', () => {
   });
 
   it('lists task bundles for the selected scope', async () => {
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'All bundles', value: 'all' } as any);
+    sandbox.stub(vscode.window, 'showQuickPick').resolves(scopeQuickPickItem('All bundles', 'all'));
     sandbox.stub(bundleFacade, 'listTaskBundles').resolves([]);
     const channel = createOutputChannelStub();
     sandbox.stub(vscode.window, 'createOutputChannel').returns(channel);
@@ -93,7 +121,7 @@ describe('registerTaskBundleCommands', () => {
   });
 
   it('shows an error when listing task bundles fails', async () => {
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'All bundles', value: 'all' } as any);
+    sandbox.stub(vscode.window, 'showQuickPick').resolves(scopeQuickPickItem('All bundles', 'all'));
     sandbox.stub(bundleFacade, 'listTaskBundles').rejects(new Error('list failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
@@ -109,10 +137,10 @@ describe('registerTaskBundleCommands', () => {
       .onFirstCall().resolves('Bundle title')
       .onSecondCall().resolves('Bundle summary');
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves('p1' as any)
-      .onSecondCall().resolves('story_candidate' as any)
-      .onThirdCall().resolves({ label: 'Use active context', value: 'active' } as any);
-    sandbox.stub(bundleFacade, 'createTaskBundle').resolves({ bundleId: 'BND-1' } as any);
+      .onFirstCall().resolves('p1' as never)
+      .onSecondCall().resolves('story_candidate' as never)
+      .onThirdCall().resolves(scopeQuickPickItem('Use active context', 'active'));
+    sandbox.stub(bundleFacade, 'createTaskBundle').resolves(fakeBundleRecord({ bundleId: 'BND-1' }));
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
     registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
 
@@ -136,10 +164,10 @@ describe('registerTaskBundleCommands', () => {
       .onSecondCall().resolves('Bundle summary')
       .onThirdCall().resolves('42');
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves('p2' as any)
-      .onSecondCall().resolves('feature_candidate' as any)
-      .onThirdCall().resolves({ label: 'Specific issue', value: 'issue' } as any);
-    sandbox.stub(bundleFacade, 'createTaskBundle').resolves({ bundleId: 'BND-42' } as any);
+      .onFirstCall().resolves('p2' as never)
+      .onSecondCall().resolves('feature_candidate' as never)
+      .onThirdCall().resolves(scopeQuickPickItem('Specific issue', 'issue'));
+    sandbox.stub(bundleFacade, 'createTaskBundle').resolves(fakeBundleRecord({ bundleId: 'BND-42' }));
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
     registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
@@ -162,9 +190,9 @@ describe('registerTaskBundleCommands', () => {
       .onFirstCall().resolves('Bundle title')
       .onSecondCall().resolves('Bundle summary');
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves('p1' as any)
-      .onSecondCall().resolves('story_candidate' as any)
-      .onThirdCall().resolves({ label: 'Use active context', value: 'active' } as any);
+      .onFirstCall().resolves('p1' as never)
+      .onSecondCall().resolves('story_candidate' as never)
+      .onThirdCall().resolves(scopeQuickPickItem('Use active context', 'active'));
     sandbox.stub(bundleFacade, 'createTaskBundle').rejects(new Error('create failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
@@ -177,10 +205,10 @@ describe('registerTaskBundleCommands', () => {
 
   it('resolves the selected task bundle', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'BND-1 Bundle', bundleId: 'BND-1' } as any)
-      .onSecondCall().resolves('Done' as any);
-    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([{ bundleId: 'BND-1', title: 'Bundle', priority: 'p1', state: 'Backlog', parentContext: {}, promotionMode: 'none' } as any]);
-    sandbox.stub(bundleFacade, 'resolveTaskBundle').resolves({ bundleId: 'BND-1', state: 'Done' } as any);
+      .onFirstCall().resolves(bundleQuickPickItem('BND-1'))
+      .onSecondCall().resolves('Done' as never);
+    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([fakeBundleRecord({ bundleId: 'BND-1' })]);
+    sandbox.stub(bundleFacade, 'resolveTaskBundle').resolves(fakeBundleRecord({ bundleId: 'BND-1', state: 'Done' }));
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
     registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
@@ -207,11 +235,11 @@ describe('registerTaskBundleCommands', () => {
 
   it('archives the selected task bundle with a required archive reason', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'BND-1 Bundle', bundleId: 'BND-1' } as any)
-      .onSecondCall().resolves('Archived' as any);
+      .onFirstCall().resolves(bundleQuickPickItem('BND-1'))
+      .onSecondCall().resolves('Archived' as never);
     sandbox.stub(vscode.window, 'showInputBox').resolves('No longer needed');
-    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([{ bundleId: 'BND-1', title: 'Bundle', priority: 'p1', state: 'Backlog', parentContext: {}, promotionMode: 'none' } as any]);
-    sandbox.stub(bundleFacade, 'resolveTaskBundle').resolves({ bundleId: 'BND-1', state: 'Archived' } as any);
+    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([fakeBundleRecord({ bundleId: 'BND-1' })]);
+    sandbox.stub(bundleFacade, 'resolveTaskBundle').resolves(fakeBundleRecord({ bundleId: 'BND-1', state: 'Archived' }));
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
     registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
@@ -227,11 +255,11 @@ describe('registerTaskBundleCommands', () => {
 
   it('does not resolve an archived task bundle without an archive reason', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'BND-1 Bundle', bundleId: 'BND-1' } as any)
-      .onSecondCall().resolves('Archived' as any);
+      .onFirstCall().resolves(bundleQuickPickItem('BND-1'))
+      .onSecondCall().resolves('Archived' as never);
     sandbox.stub(vscode.window, 'showInputBox').resolves(undefined);
     const resolveStub = sandbox.stub(bundleFacade, 'resolveTaskBundle');
-    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([{ bundleId: 'BND-1', title: 'Bundle', priority: 'p1', state: 'Backlog', parentContext: {}, promotionMode: 'none' } as any]);
+    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([fakeBundleRecord({ bundleId: 'BND-1' })]);
 
     registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
 
@@ -242,9 +270,9 @@ describe('registerTaskBundleCommands', () => {
 
   it('shows an error when resolving a task bundle fails', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'BND-1 Bundle', bundleId: 'BND-1' } as any)
-      .onSecondCall().resolves('Done' as any);
-    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([{ bundleId: 'BND-1', title: 'Bundle', priority: 'p1', state: 'Backlog', parentContext: {}, promotionMode: 'none' } as any]);
+      .onFirstCall().resolves(bundleQuickPickItem('BND-1'))
+      .onSecondCall().resolves('Done' as never);
+    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([fakeBundleRecord({ bundleId: 'BND-1' })]);
     sandbox.stub(bundleFacade, 'resolveTaskBundle').rejects(new Error('resolve failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
@@ -257,14 +285,15 @@ describe('registerTaskBundleCommands', () => {
 
   it('promotes the selected task bundle', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'BND-1 Bundle', bundleId: 'BND-1' } as any)
-      .onSecondCall().resolves('feature' as any);
-    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([{ bundleId: 'BND-1', title: 'Bundle', priority: 'p1', state: 'Backlog', parentContext: {}, promotionMode: 'story_candidate' } as any]);
+      .onFirstCall().resolves(bundleQuickPickItem('BND-1'))
+      .onSecondCall().resolves('feature' as never);
+    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([fakeBundleRecord({ bundleId: 'BND-1', promotionMode: 'story_candidate' })]);
     sandbox.stub(bundleFacade, 'promoteTaskBundle').resolves({
-      bundle: { bundleId: 'BND-1' },
+      bundle: fakeBundleRecord({ bundleId: 'BND-1' }),
+      targetType: 'feature',
       targetReference: 'feature #12',
       duplicateCheckResult: 'created',
-    } as any);
+    } as TaskBundlePromotionResult);
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
     registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
@@ -290,9 +319,9 @@ describe('registerTaskBundleCommands', () => {
 
   it('shows an error when promoting a task bundle fails', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'BND-1 Bundle', bundleId: 'BND-1' } as any)
-      .onSecondCall().resolves('story' as any);
-    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([{ bundleId: 'BND-1', title: 'Bundle', priority: 'p1', state: 'Backlog', parentContext: {}, promotionMode: 'story_candidate' } as any]);
+      .onFirstCall().resolves(bundleQuickPickItem('BND-1'))
+      .onSecondCall().resolves('story' as never);
+    sandbox.stub(bundleFacade, 'listTaskBundles').resolves([fakeBundleRecord({ bundleId: 'BND-1', promotionMode: 'story_candidate' })]);
     sandbox.stub(bundleFacade, 'promoteTaskBundle').rejects(new Error('promote failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 

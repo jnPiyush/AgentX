@@ -54,64 +54,6 @@ C# Project Decision
 - C# 12+ language features
 - IDE with C# support
 
-## Quick Reference
-
-| Need | Solution | Pattern |
-|------|----------|---------|
-| **Async code** | Use `async`/`await` everywhere | `async Task<T> GetDataAsync()` |
-| **Null safety** | Enable nullable reference types | `<Nullable>enable</Nullable>` |
-| **Error handling** | Use Result types or exceptions | `try-catch` with specific types |
-| **DI** | Constructor injection with interfaces | `IServiceCollection` |
-| **Testing** | xUnit, NUnit, or TUnit | `[Fact]`, `[Test]` |
-| **Logging** | `ILogger<T>` with structured logging | `_logger.LogInformation("User {UserId}", id)` |
-
----
-
-## C# Language Version
-
-**Current**: C# 14 (.NET 10+) 
-**Minimum**: C# 8 (.NET Core 3.1+)
-
-### Modern C# Features (Use These)
-
-```csharp
-// File-scoped namespaces (C# 10+)
-namespace MyApp.Services;
-
-// Primary constructors (C# 12+)
-public class UserService(ILogger<UserService> logger, IUserRepository repo)
-{
- public async Task<User> GetUserAsync(int id) => 
- await repo.GetByIdAsync(id);
-}
-
-// Required properties (C# 11+)
-public class User
-{
- public required int Id { get; init; }
- public required string Name { get; init; }
-}
-
-// Raw string literals (C# 11+)
-string json = """
- {
- "name": "John",
- "age": 30
- }
- """;
-
-// Pattern matching
-string GetStatus(Order order) => order switch
-{
- { Status: "pending", TotalAmount: > 1000 } => "High value pending",
- { Status: "shipped" } => "In transit",
- { Status: "delivered" } => "Completed",
- _ => "Unknown"
-};
-```
-
----
-
 ## Core Rules
 
 1. **Async All the Way** - Use `async`/`await` throughout the call chain; never call `.Result` or `.Wait()` on tasks
@@ -138,27 +80,6 @@ string GetStatus(Order order) => order switch
 
 ---
 
-## Resources
-
-- **Official Docs**: [learn.microsoft.com/dotnet](https://learn.microsoft.com/dotnet)
-- **C# Guide**: [learn.microsoft.com/csharp](https://learn.microsoft.com/csharp)
-- **ASP.NET Core**: [learn.microsoft.com/aspnet/core](https://learn.microsoft.com/aspnet/core)
-- **EF Core**: [learn.microsoft.com/ef/core](https://learn.microsoft.com/ef/core)
-- **Testing**: [xunit.net](https://xunit.net), [nunit.org](https://nunit.org)
-- **Awesome Copilot**: [github.com/github/awesome-copilot](https://github.com/github/awesome-copilot)
-
----
-
-**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
-
-**Last Updated**: January 27, 2026
-
-## Scripts
-
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| [`scaffold-solution.ps1`](scripts/scaffold-solution.ps1) | Create .NET solution with API/Core/Infrastructure + xUnit tests | `./scripts/scaffold-solution.ps1 -Name MyApp [-Framework net9.0]` |
-
 ## Troubleshooting
 
 | Issue | Solution |
@@ -167,8 +88,28 @@ string GetStatus(Order order) => order switch
 | EF Core migration errors | Run dotnet ef migrations list to check state, recreate if corrupted |
 | Nullable warnings everywhere | Enable Nullable in .csproj, fix warnings incrementally |
 
-## References
+## Workflow
 
-- [Async Nullable Di](references/async-nullable-di.md)
-- [Efcore Errors Testing](references/efcore-errors-testing.md)
-- [Logging Perf Security](references/logging-perf-security.md)
+1. Confirm framework and project conventions.
+2. Define typed contracts and lifetimes.
+3. Implement the narrow behavior with async and disposal correctness.
+4. Run format/analyzers, build, and focused tests.
+
+## Verification Checklist
+
+- [ ] dotnet build is warning-clean under policy.
+- [ ] Focused dotnet test selectors pass.
+- [ ] Nullable and cancellation paths are covered.
+- [ ] No resource lifetime leak remains.
+
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Quick Reference, C# Language Version](references/details-quick-reference-and-c-language-version.md) - MUST read before work involving quick reference, c# language version.
+
+Existing focused references are reused, not duplicated:
+
+- [C# Async Programming, Nullable Types & DI](references/async-nullable-di.md) - MUST read before applying the focused c# async programming, nullable types & di guidance.
+- [Entity Framework Core, Error Handling & Testing](references/efcore-errors-testing.md) - MUST read before applying the focused entity framework core, error handling & testing guidance.
+- [C# Logging, Performance & Security](references/logging-perf-security.md) - MUST read before applying the focused c# logging, performance & security guidance.

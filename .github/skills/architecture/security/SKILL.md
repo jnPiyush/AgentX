@@ -29,26 +29,24 @@ metadata:
 - OWASP Top 10 awareness
 - Understanding of HTTP security headers
 
+## Decision Guide
+
+Start from the trust boundary: who can call what, with which data, and under which policy. Prioritize access control, secret handling, injection safety, and transport protection before lower-severity polish. Pair this skill with domain-specific security review where exploitability is the explicit goal.
+
+## Why This Is a Skill
+
+Security defects compound quietly when validation, auth, secret handling, and logging are treated as separate chores. This skill keeps those controls aligned around real trust boundaries and failure impact.
+
+## Workflow
+
+1. Identify the trust boundary, sensitive data, and privileged actions.
+2. Define auth, authorization, validation, transport, and secret-handling controls.
+3. Verify logging, monitoring, and least-privilege posture around those controls.
+4. Block release on unresolved exploitable or policy-breaking gaps.
+
 ## Decision Tree
 
-```
-Security concern?
-+- User input? -> VALIDATE + SANITIZE (see Input Validation)
-| +- Goes into SQL? -> Parameterized queries ONLY
-| +- Goes into HTML? -> Encode output (XSS prevention)
-| - Goes into shell? -> Avoid; use SDK/API instead
-+- Authentication?
-| +- New system? -> Use established provider (OAuth2/OIDC)
-| - Existing? -> Verify token validation, session management
-+- Secrets/credentials?
-| +- In code? -> REMOVE -> use env vars or vault
-| - In config? -> Move to secrets manager
-| - Run: scripts/scan-secrets.ps1 to verify
-+- Dependencies?
-| - Run: scripts/scan-security.ps1 -> update vulnerable packages
-- Deployment?
- - HTTPS only, security headers, CORS configured
-```
+MUST read before selection: [Decision Tree details](references/details-decision-tree-security-checklist.md#decision-tree).
 
 ## OWASP Top 10 (2025)
 
@@ -80,24 +78,7 @@ Security concern?
 
 ## Security Checklist
 
-**Before Production:**
-- [ ] All user input validated and sanitized
-- [ ] SQL queries use parameterized statements
-- [ ] Passwords hashed with bcrypt/Argon2
-- [ ] Secrets in environment variables or vault
-- [ ] HTTPS enforced with HSTS
-- [ ] Security headers configured
-- [ ] Authentication and authorization implemented
-- [ ] Rate limiting on authentication endpoints
-- [ ] CORS configured restrictively
-- [ ] Dependencies scanned for vulnerabilities
-- [ ] Sensitive data encrypted at rest
-- [ ] Security audit logs enabled
-- [ ] Error messages don't leak sensitive info
-- [ ] File uploads validated and scanned
-- [ ] API endpoints have input size limits
-
----
+MUST read before selection: [Decision Tree details](references/details-decision-tree-security-checklist.md#security-checklist).
 
 ## Anti-Patterns
 
@@ -112,30 +93,11 @@ Security concern?
 
 ## Resources
 
-**Security Standards:**
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [OWASP Cheat Sheets](https://cheatsheetseries.owasp.org)
-- [CWE Top 25](https://cwe.mitre.org/top25/)
-
-**Tools:**
-- **Dependency Scanning**: Snyk, Dependabot, OWASP Dependency-Check
-- **SAST**: SonarQube, CodeQL, Semgrep
-- **DAST**: OWASP ZAP, Burp Suite
-- **Secrets Scanning**: GitGuardian, TruffleHog, git-secrets
-
----
-
-**See Also**: [Skills.md](../../../../Skills.md) - [AGENTS.md](../../../../AGENTS.md)
-
-**Last Updated**: January 27, 2026
+MUST read before selection: [Decision Tree details](references/details-decision-tree-security-checklist.md#resources).
 
 ## Scripts
 
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| [`scan-secrets.ps1`](scripts/scan-secrets.ps1) | Scan repo for hardcoded secrets, API keys, credentials | `./scripts/scan-secrets.ps1 [-Path ./src]` |
-| [`scan-secrets.sh`](scripts/scan-secrets.sh) | Cross-platform secrets scanner (bash) | `./scripts/scan-secrets.sh --path ./src` |
-| [`scan-security.ps1`](scripts/scan-security.ps1) | Scan dependencies for known vulnerabilities | `./scripts/scan-security.ps1 [-FailOn critical]` |
+MUST read before selection: [Decision Tree details](references/details-decision-tree-security-checklist.md#scripts).
 
 ## Troubleshooting
 
@@ -147,6 +109,10 @@ Security concern?
 
 ## References
 
-- [Input Validation Injection](references/input-validation-injection.md)
-- [Auth Patterns](references/auth-patterns.md)
-- [Secrets Tls Vulnerabilities](references/secrets-tls-vulnerabilities.md)
+- [Decision Tree details](references/details-decision-tree-security-checklist.md) - must read before selection.
+- [auth-patterns](references/auth-patterns.md)
+- [input-validation-injection](references/input-validation-injection.md)
+- [secrets-tls-vulnerabilities](references/secrets-tls-vulnerabilities.md)
+
+
+- [Source and related-reading index](references/details-source-reference-index.md)

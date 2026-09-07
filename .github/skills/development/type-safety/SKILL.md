@@ -50,115 +50,6 @@ Type safety concern?
     +-- False positive? -> Suppress with inline comment explaining why
 ```
 
-## Why Type Safety Matters
-
-```
-Runtime Error (Bad):
- function getUser(id):
- return database.find(id) # What type? Nullable?
- 
- user = getUser(123)
- print(user.email) # NullReferenceException at runtime
-
-Type-Safe (Good):
- function getUser(id: int) -> User | null:
- return database.find(id)
- 
- user = getUser(123)
- if user != null:
- print(user.email) # [PASS] Compiler ensures null check
-```
-
----
-
-## Nullable Types
-
-### Concept
-
-Explicitly declare whether a value can be null/None.
-
-```
-Type Declarations:
- 
- User - Never null (must have value)
- User? - Nullable (might be null)
- 
-Benefits:
- - Compiler/analyzer warns about potential null access
- - Forces explicit null handling
- - Self-documenting code
-```
-
-### Null Handling Patterns
-
-```
-Pattern 1: Null Check
- user = findUser(id)
- if user != null:
- return user.email
- else:
- throw NotFoundException()
-
-Pattern 2: Default Value
- user = findUser(id)
- return user?.email ?? "unknown@example.com"
-
-Pattern 3: Early Return
- user = findUser(id)
- if user == null:
- return NotFound()
- 
- # user is non-null from here
- return Ok(user)
-
-Pattern 4: Required (Fail Fast)
- user = findUser(id) ?? throw NotFoundException(id)
- return user.email # Guaranteed non-null
-```
-
----
-
-## Type Annotations
-
-### Function Signatures
-
-```
-Fully Typed Function:
-
- function calculateTotal(
- items: List<OrderItem>, # Input type
- discountPercent: decimal, # Primitive type
- taxRate: decimal? # Nullable parameter
- ) -> decimal: # Return type
- ...
-
-Benefits:
- - Clear contract
- - IDE autocomplete
- - Compile-time validation
- - Documentation
-```
-
-### Data Types
-
-```
-Primitive Types:
- int, float, decimal, string, bool, datetime
-
-Collection Types:
- List<T> # Ordered, duplicates allowed
- Set<T> # Unique values
- Map<K, V> # Key-value pairs
- Array<T> # Fixed size
-
-Custom Types:
- User # Class/struct
- OrderStatus # Enum
- Result<T, E> # Union/discriminated type
-```
-
----
-
 ## Core Rules
 
 | Practice | Description |
@@ -186,20 +77,6 @@ Custom Types:
 
 ---
 
-## Type Safety Tools
-
-| Language | Tools |
-|----------|-------|
-| **C#** | Roslyn analyzers, nullable reference types, StyleCop |
-| **Python** | mypy, pyright, pydantic |
-| **TypeScript** | tsc strict mode, ESLint |
-| **Java** | SpotBugs, Error Prone, NullAway |
-| **Go** | go vet, staticcheck |
-
----
-
-**See Also**: [Testing](../testing/SKILL.md) - [C# Development](../../languages/csharp/SKILL.md) - [Python Development](../../languages/python/SKILL.md)
-
 ## Troubleshooting
 
 | Issue | Solution |
@@ -208,7 +85,34 @@ Custom Types:
 | Generic type inference fails | Add explicit type parameters at call site, check constraint compatibility |
 | Static analysis too noisy | Configure severity levels, suppress false positives with inline comments, fix incrementally |
 
-## References
+## Workflow
 
-- [Value Objects Enums Validation](references/value-objects-enums-validation.md)
-- [Static Analysis Generics](references/static-analysis-generics.md)
+1. Locate untyped or nullable boundaries.
+2. Define the narrowest truthful type and runtime validator.
+3. Propagate types through callers without coercion.
+4. Compile and test valid plus invalid inputs.
+
+## Verification Checklist
+
+- [ ] Strict compiler checks pass.
+- [ ] No new unchecked escape hatch exists.
+- [ ] External data is validated before use.
+- [ ] Null and error paths are tested.
+
+## Rationalization Table
+
+| Temptation | Why reject it |
+|------------|---------------|
+| use a cast to silence a real mismatch. | Avoid unchecked casts, broad any-like types, and null suppression. |
+| confuse static types with runtime input validation. | Use static types for trusted internal state, runtime validation at external boundaries, and explicit nullable or result types for absence and failure. |
+
+## Required Detailed Guidance
+
+Load each reference when its named topic applies; the MUST-read routes below are part of this skill's operating contract.
+
+- [Why Type Safety Matters through Type Safety Tools](references/details-why-type-safety-matters-and-type-safety-tools.md) - MUST read before work involving why type safety matters through type safety tools.
+
+Existing focused references are reused, not duplicated:
+
+- [Static Analysis & Generics Patterns](references/static-analysis-generics.md) - MUST read before applying the focused static analysis & generics patterns guidance.
+- [Value Objects, Enums & Validation Patterns](references/value-objects-enums-validation.md) - MUST read before applying the focused value objects, enums & validation patterns guidance.

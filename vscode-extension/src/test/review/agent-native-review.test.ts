@@ -6,6 +6,7 @@ import {
   evaluateAgentNativeReview,
   renderAgentNativeReviewMarkdown,
 } from '../../review/agent-native-review';
+import { AgentXContext } from '../../agentxContext';
 
 function writeFile(root: string, relativePath: string, content: string): void {
   const filePath = path.join(root, ...relativePath.split('/'));
@@ -87,7 +88,7 @@ describe('agent-native review', () => {
   });
 
   it('scores complete action, context, and workspace parity highly', () => {
-    const report = evaluateAgentNativeReview({ workspaceRoot: tmpDir } as any);
+    const report = evaluateAgentNativeReview({ workspaceRoot: tmpDir } as unknown as AgentXContext);
 
     assert.ok(report);
     assert.equal(report?.score.percent, 100);
@@ -98,7 +99,7 @@ describe('agent-native review', () => {
   it('flags missing agent surfaces as high-severity parity gaps', () => {
     writeFile(tmpDir, 'vscode-extension/src/chat/chatParticipant.ts', 'run engineer\n');
 
-    const report = evaluateAgentNativeReview({ workspaceRoot: tmpDir } as any);
+    const report = evaluateAgentNativeReview({ workspaceRoot: tmpDir } as unknown as AgentXContext);
 
     assert.ok(report);
     assert.equal(report?.dominantSeverity, 'high');
@@ -106,7 +107,7 @@ describe('agent-native review', () => {
   });
 
   it('renders an advisory-first markdown summary', () => {
-    const report = evaluateAgentNativeReview({ workspaceRoot: tmpDir } as any);
+    const report = evaluateAgentNativeReview({ workspaceRoot: tmpDir } as unknown as AgentXContext);
     const markdown = renderAgentNativeReviewMarkdown(report!);
 
     assert.ok(markdown.includes('Agent-Native Review'));
@@ -129,7 +130,7 @@ describe('agent-native review', () => {
       const report = evaluateAgentNativeReview({
         workspaceRoot: tmpDir,
         extensionContext: { extensionPath },
-      } as any);
+      } as unknown as AgentXContext);
 
       assert.ok(report);
       assert.equal(report?.dominantSeverity, 'none');

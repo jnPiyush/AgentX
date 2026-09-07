@@ -61,6 +61,12 @@ requires another review; never retimestamp old evidence.
   the same YAML parser as skill scoring, in one batch. Invalid metadata fails
   generation instead of publishing partial or misleading skill descriptions;
   hand-authored routing and pipeline registries remain untouched.
+- Template inputs may be declared in a YAML `inputs` mapping or a legacy
+  `<!-- Inputs: {name}, {date} -->` header comment before the first H1.
+  Both registry generation and the Templates sidebar preserve declaration order;
+  YAML metadata takes precedence for duplicate names. Examples inside code fences
+  are not declarations. Malformed metadata fails generation and appears as an
+  `Invalid metadata` warning in the sidebar, not a valid zero-input template.
 - `vscode-extension/.github/**` is generated. Regenerate with
   `node vscode-extension/scripts/copy-assets.js`, never hand-edit mirrors.
 
@@ -71,6 +77,28 @@ Canonical reusable prompts under `.github/prompts` have a 1,500 estimated-token
 budget in `.token-limits.json`. Run `agentx tokens check -Path .github/prompts`
 after edits. Preserve routing metadata, required evidence and failure boundaries;
 an uncovered file is not proof that a prompt is within budget.
+
+## Prompt and template changes
+
+Optimize loaded context, not the amount of useful guidance retained:
+
+- Keep activation, safety, decisions and failure boundaries in skill roots.
+  Move detailed sections intact to reachable references with meaningful,
+  conditional MUST-read routes. Rebase paths and preserve referenced anchors.
+  Include new instruction companions in the CLI pack's supporting documents and
+  verify installed, bundled and seed paths; source links alone are insufficient.
+- Check root and reference budgets together with `agentx tokens check`.
+  A preserved source can still fail its budget; a passing score can still hide
+  lost operational content. Compare content, frontmatter and current hashes.
+- Keep canonical template inputs stable or migrate both registry and sidebar
+  consumers with tests. Run `pwsh tests/template-content-behavior.ps1` for
+  semantic contracts, then render every changed Mermaid diagram locally.
+- Diagrams should explain decisions, relationships or evidence flow. Keep
+  required sections and real approval/evidence fields; do not replace them with
+  decorative diagrams or prefilled PASS results.
+- Assign one writer per root and its references, including existing references.
+  Only the parent owns shared loop state. After interrupted-work recovery, use
+  the supported CLI and fresh checks, never edited timestamps or state JSON.
 
 ## Retention and consolidation
 

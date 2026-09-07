@@ -28,7 +28,13 @@ function stripCodeFences(value: string): string {
 }
 
 function isAscii(value: string): boolean {
-  return !/[^\x00-\x7F]/.test(value);
+  // Iterates Unicode code points directly (not a control-character regex
+  // range) so it correctly handles astral characters as a single code
+  // point and needs no `\x00` control-character literal for static
+  // analysis to flag. Verified behaviorally identical to the previous
+  // `/[^\x00-\x7F]/` regex across ASCII, control-character, high-byte,
+  // astral, and lone-surrogate inputs.
+  return Array.from(value).every((ch) => (ch.codePointAt(0) ?? 0) <= 0x7f);
 }
 
 function normalizeGeneratedMarkdown(value: string): string | undefined {
@@ -43,9 +49,16 @@ function normalizeGeneratedMarkdown(value: string): string | undefined {
 }
 
 async function tryGenerateWithCopilot(prompt: string, token?: vscode.CancellationToken): Promise<string | undefined> {
+  type MinimalChatModel = {
+    sendRequest?: (
+      messages: unknown[],
+      options: Record<string, unknown>,
+      token?: vscode.CancellationToken
+    ) => Promise<{ text?: AsyncIterable<unknown> } | undefined>;
+  };
   const api = (vscode as unknown as {
     lm?: {
-      selectChatModels?: (selector?: Record<string, unknown>) => Promise<any[]>;
+      selectChatModels?: (selector?: Record<string, unknown>) => Promise<MinimalChatModel[]>;
     };
     LanguageModelChatMessage?: {
       User?: (content: string) => unknown;

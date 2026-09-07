@@ -244,7 +244,14 @@ if ($scrubTargets.Count -gt 0 -and (Test-Path -LiteralPath 'scripts/scrub.ps1'))
     $highFindings = @()
     $scrubErrors = @()
     foreach ($target in $scrubTargets) {
-        $output = & pwsh -NoProfile -File 'scripts/scrub.ps1' -Path $target 2>&1
+        # Keep script scope and exit codes without starting one host per changed file.
+        try {
+            $output = & (Join-Path $workspaceRoot 'scripts/scrub.ps1') -Path $target 6>&1 2>&1
+        }
+        catch [System.Management.Automation.RuntimeException] {
+            $scrubErrors += "  $target -> scrub failed: $($_.Exception.Message)"
+            continue
+        }
         $scrubExit = $LASTEXITCODE
         $high = @($output | Where-Object { $_ -match '\[HIGH/' })
         $highFindings += $high

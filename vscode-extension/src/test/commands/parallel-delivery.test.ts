@@ -4,6 +4,56 @@ import * as vscode from 'vscode';
 import { registerParallelDeliveryCommands } from '../../commands/parallel-delivery';
 import { AgentXContext } from '../../agentxContext';
 import * as parallelFacade from '../../parallel/parallel-delivery';
+import { BoundedParallelRun } from '../../parallel/parallel-deliveryTypes';
+
+/** Builds a `QuickPickItem`-shaped scope option, matching parallel-delivery.ts's promptIssueOrPlan() items. */
+function scopeQuickPickItem(label: string, value: string): vscode.QuickPickItem & { value: string } {
+  return { label, value };
+}
+
+/** Builds a `QuickPickItem`-shaped run option, matching parallel-delivery.ts's run-picker items. */
+function runQuickPickItem(parallelId: string, label = `${parallelId} Run`): vscode.QuickPickItem & { parallelId: string } {
+  return { label, parallelId };
+}
+
+function fakeParallelRun(overrides: Partial<BoundedParallelRun> & { parallelId: string }): BoundedParallelRun {
+  return {
+    title: 'Run',
+    mode: 'opt-in',
+    priority: 'p1',
+    parentContext: { source: 'explicit-issue' },
+    assessment: {
+      scopeIndependence: 'independent',
+      dependencyCoupling: 'low',
+      artifactOverlap: 'low',
+      reviewComplexity: 'bounded',
+      recoveryComplexity: 'recoverable',
+      decision: 'eligible',
+      requiredReviewLevel: 'tightened',
+    },
+    units: [],
+    reconciliation: {
+      state: 'pending',
+      overlapReview: 'pending',
+      conflictReview: 'pending',
+      acceptanceEvidence: 'pending',
+      ownerApproval: 'pending',
+      followUpDisposition: 'none',
+      followUpReferences: [],
+      finalDecision: 'blocked',
+    },
+    parentSummary: {
+      unitCount: 0,
+      blockedCount: 0,
+      readyForReconciliationCount: 0,
+      summaryState: 'assessed',
+      closeoutReady: false,
+    },
+    createdAt: '2026-03-13T00:00:00.000Z',
+    updatedAt: '2026-03-13T00:00:00.000Z',
+    ...overrides,
+  };
+}
 
 describe('registerParallelDeliveryCommands', () => {
   let sandbox: sinon.SinonSandbox;
@@ -102,16 +152,16 @@ describe('registerParallelDeliveryCommands', () => {
 
   it('assesses bounded parallel delivery for a selected issue scope', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'Specific issue', value: 'issue' } as any)
-      .onSecondCall().resolves('independent' as any)
-      .onThirdCall().resolves('low' as any)
-      .onCall(3).resolves('low' as any)
-      .onCall(4).resolves('bounded' as any)
-      .onCall(5).resolves('recoverable' as any);
+      .onFirstCall().resolves(scopeQuickPickItem('Specific issue', 'issue'))
+      .onSecondCall().resolves('independent' as never)
+      .onThirdCall().resolves('low' as never)
+      .onCall(3).resolves('low' as never)
+      .onCall(4).resolves('bounded' as never)
+      .onCall(5).resolves('recoverable' as never);
     sandbox.stub(vscode.window, 'showInputBox')
       .onFirstCall().resolves('123')
       .onSecondCall().resolves('Parallel delivery');
-    sandbox.stub(parallelFacade, 'assessBoundedParallelDelivery').resolves({ parallelId: 'PAR-1' } as any);
+    sandbox.stub(parallelFacade, 'assessBoundedParallelDelivery').resolves(fakeParallelRun({ parallelId: 'PAR-1' }));
     sandbox.stub(parallelFacade, 'renderBoundedParallelRunsText').returns('assessment');
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
@@ -134,12 +184,12 @@ describe('registerParallelDeliveryCommands', () => {
 
   it('shows an error when bounded parallel assessment fails', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'Use active context', value: 'active' } as any)
-      .onSecondCall().resolves('independent' as any)
-      .onThirdCall().resolves('low' as any)
-      .onCall(3).resolves('low' as any)
-      .onCall(4).resolves('bounded' as any)
-      .onCall(5).resolves('recoverable' as any);
+      .onFirstCall().resolves(scopeQuickPickItem('Use active context', 'active'))
+      .onSecondCall().resolves('independent' as never)
+      .onThirdCall().resolves('low' as never)
+      .onCall(3).resolves('low' as never)
+      .onCall(4).resolves('bounded' as never)
+      .onCall(5).resolves('recoverable' as never);
     sandbox.stub(vscode.window, 'showInputBox').resolves('Parallel delivery');
     sandbox.stub(parallelFacade, 'assessBoundedParallelDelivery').rejects(new Error('assessment failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
@@ -152,10 +202,10 @@ describe('registerParallelDeliveryCommands', () => {
   });
 
   it('starts an eligible bounded parallel run', async () => {
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'PAR-1 Run', parallelId: 'PAR-1' } as any);
+    sandbox.stub(vscode.window, 'showQuickPick').resolves(runQuickPickItem('PAR-1'));
     sandbox.stub(vscode.window, 'showInputBox').resolves('[{"title":"Unit A","scopeBoundary":"docs only","owner":"engineer","recoveryGuidance":"retry sequentially"}]');
-    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([{ parallelId: 'PAR-1', title: 'Run', assessment: { decision: 'eligible' } } as any]);
-    sandbox.stub(parallelFacade, 'startBoundedParallelDelivery').resolves({ parallelId: 'PAR-1' } as any);
+    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([fakeParallelRun({ parallelId: 'PAR-1' })]);
+    sandbox.stub(parallelFacade, 'startBoundedParallelDelivery').resolves(fakeParallelRun({ parallelId: 'PAR-1' }));
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
     registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
@@ -178,9 +228,9 @@ describe('registerParallelDeliveryCommands', () => {
   });
 
   it('shows an error when bounded parallel start receives invalid JSON', async () => {
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'PAR-1 Run', parallelId: 'PAR-1' } as any);
+    sandbox.stub(vscode.window, 'showQuickPick').resolves(runQuickPickItem('PAR-1'));
     sandbox.stub(vscode.window, 'showInputBox').resolves('{not valid json');
-    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([{ parallelId: 'PAR-1', title: 'Run', assessment: { decision: 'eligible' } } as any]);
+    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([fakeParallelRun({ parallelId: 'PAR-1' })]);
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
     registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
@@ -192,9 +242,9 @@ describe('registerParallelDeliveryCommands', () => {
   });
 
   it('shows an error when bounded parallel start fails', async () => {
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'PAR-1 Run', parallelId: 'PAR-1' } as any);
+    sandbox.stub(vscode.window, 'showQuickPick').resolves(runQuickPickItem('PAR-1'));
     sandbox.stub(vscode.window, 'showInputBox').resolves('[{"title":"Unit A","scopeBoundary":"docs only","owner":"engineer","recoveryGuidance":"retry sequentially"}]');
-    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([{ parallelId: 'PAR-1', title: 'Run', assessment: { decision: 'eligible' } } as any]);
+    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([fakeParallelRun({ parallelId: 'PAR-1' })]);
     sandbox.stub(parallelFacade, 'startBoundedParallelDelivery').rejects(new Error('start failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
@@ -207,13 +257,13 @@ describe('registerParallelDeliveryCommands', () => {
 
   it('reconciles a bounded parallel run', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'PAR-1 Run', parallelId: 'PAR-1' } as any)
-      .onSecondCall().resolves('pass' as any)
-      .onThirdCall().resolves('pass' as any)
-      .onCall(3).resolves('pass' as any)
-      .onCall(4).resolves('approved' as any);
-    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([{ parallelId: 'PAR-1', title: 'Run' } as any]);
-    sandbox.stub(parallelFacade, 'reconcileBoundedParallelRun').resolves({ parallelId: 'PAR-1' } as any);
+      .onFirstCall().resolves(runQuickPickItem('PAR-1'))
+      .onSecondCall().resolves('pass' as never)
+      .onThirdCall().resolves('pass' as never)
+      .onCall(3).resolves('pass' as never)
+      .onCall(4).resolves('approved' as never);
+    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([fakeParallelRun({ parallelId: 'PAR-1' })]);
+    sandbox.stub(parallelFacade, 'reconcileBoundedParallelRun').resolves(fakeParallelRun({ parallelId: 'PAR-1' }));
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
     registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
@@ -231,12 +281,12 @@ describe('registerParallelDeliveryCommands', () => {
 
   it('shows an error when bounded parallel reconciliation fails', async () => {
     sandbox.stub(vscode.window, 'showQuickPick')
-      .onFirstCall().resolves({ label: 'PAR-1 Run', parallelId: 'PAR-1' } as any)
-      .onSecondCall().resolves('pass' as any)
-      .onThirdCall().resolves('pass' as any)
-      .onCall(3).resolves('pass' as any)
-      .onCall(4).resolves('approved' as any);
-    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([{ parallelId: 'PAR-1', title: 'Run' } as any]);
+      .onFirstCall().resolves(runQuickPickItem('PAR-1'))
+      .onSecondCall().resolves('pass' as never)
+      .onThirdCall().resolves('pass' as never)
+      .onCall(3).resolves('pass' as never)
+      .onCall(4).resolves('approved' as never);
+    sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([fakeParallelRun({ parallelId: 'PAR-1' })]);
     sandbox.stub(parallelFacade, 'reconcileBoundedParallelRun').rejects(new Error('reconcile failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 

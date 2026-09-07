@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import * as vscode from 'vscode';
 import { TemplateTreeProvider, TemplateTreeItem } from '../../views/templateTreeProvider';
 import { clearRegistryCache } from '../../utils/registryLoader';
 
@@ -10,7 +11,7 @@ function createStubContext(workspaceRoot: string | undefined) {
  return {
   workspaceRoot,
   checkInitialized: async () => !!workspaceRoot,
- } as any;
+ };
 }
 
 /**
@@ -59,7 +60,7 @@ describe('TemplateTreeProvider', () => {
   const items = await provider.getChildren();
   assert.equal(items.length, 1);
   assert.equal(items[0].label, 'PRD');
-  assert.ok((items[0].command!.arguments![0] as any).fsPath.includes(path.join('.agentx', 'runtime', 'templates')));
+  assert.ok((items[0].command!.arguments![0] as vscode.Uri).fsPath.includes(path.join('.agentx', 'runtime', 'templates')));
  });
 
  it('should prefer workspace template overrides over hidden runtime defaults', async () => {
@@ -73,7 +74,7 @@ describe('TemplateTreeProvider', () => {
   const provider = new TemplateTreeProvider(createStubContext(root));
   const items = await provider.getChildren();
   assert.equal(items.length, 1);
-  assert.ok((items[0].command!.arguments![0] as any).fsPath.includes(path.join('.github', 'templates')));
+  assert.ok((items[0].command!.arguments![0] as vscode.Uri).fsPath.includes(path.join('.github', 'templates')));
  });
 
  it('should show info when templates dir is empty', async () => {
@@ -108,7 +109,7 @@ describe('TemplateTreeProvider', () => {
   assert.equal(items.length, 1);
   assert.ok(items[0].command);
   assert.equal(items[0].command!.command, 'vscode.open');
-  assert.ok((items[0].command!.arguments![0] as any).fsPath.includes('PRD-TEMPLATE.md'));
+  assert.ok((items[0].command!.arguments![0] as vscode.Uri).fsPath.includes('PRD-TEMPLATE.md'));
  });
 
  it('should show input count as description', async () => {

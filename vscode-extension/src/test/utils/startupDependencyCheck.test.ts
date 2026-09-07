@@ -1,4 +1,5 @@
 import { strict as assert } from 'assert';
+import * as vscode from 'vscode';
 import {
  markStartupDependencyCheck,
  shouldRunStartupDependencyCheck,
@@ -23,7 +24,7 @@ describe('startupDependencyCheck', () => {
      state.set(key, value);
     },
    },
-  } as any;
+  } as unknown as vscode.ExtensionContext;
  }
 
  it('returns false when no workspace root is available', () => {

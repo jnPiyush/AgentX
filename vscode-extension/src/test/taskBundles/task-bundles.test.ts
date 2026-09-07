@@ -5,6 +5,7 @@ import {
   promoteTaskBundle,
   resolveTaskBundle,
 } from '../../taskBundles/task-bundles';
+import { AgentXContext } from '../../agentxContext';
 
 describe('task bundles facade', () => {
   it('builds create arguments and parses the returned bundle', async () => {
@@ -27,7 +28,7 @@ describe('task bundles facade', () => {
           tags: [],
         });
       },
-    } as any;
+    } as unknown as AgentXContext;
 
     const bundle = await createTaskBundle(agentx, {
       title: 'Slice work',
@@ -63,7 +64,7 @@ describe('task bundles facade', () => {
           tags: [],
         },
       ]),
-    } as any;
+    } as unknown as AgentXContext;
 
     const bundles = await listTaskBundles(agentx, { all: true });
     assert.equal(bundles.length, 1);
@@ -87,7 +88,7 @@ describe('task bundles facade', () => {
         archive_reason: 'Merged into parent',
         tags: [],
       }),
-    } as any;
+    } as unknown as AgentXContext;
 
     const bundle = await resolveTaskBundle(agentx, {
       bundleId: 'bundle-1',
@@ -126,7 +127,7 @@ describe('task bundles facade', () => {
         targetReference: '#73',
         duplicateCheckResult: 'linked-existing',
       }),
-    } as any;
+    } as unknown as AgentXContext;
 
     const result = await promoteTaskBundle(agentx, { bundleId: 'bundle-1', target: 'story' });
     assert.equal(result.targetReference, '#73');

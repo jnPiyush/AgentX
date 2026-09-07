@@ -7,6 +7,7 @@ import {
   getAIEvaluationContractSummary,
   getAIEvaluationContractTooltip,
 } from '../../eval/aiEvaluationContract';
+import { AgentXContext } from '../../agentxContext';
 
 function createWorkspace(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ai-facade-'));
@@ -56,15 +57,16 @@ function createWorkspace(): string {
 
 describe('aiEvaluationContract facade', () => {
   it('returns undefined when no workspace is open', () => {
-    const state = evaluateAIEvaluationContract({ workspaceRoot: undefined } as any);
+    const noWorkspaceAgentx = { workspaceRoot: undefined } as unknown as AgentXContext;
+    const state = evaluateAIEvaluationContract(noWorkspaceAgentx);
     assert.equal(state, undefined);
-    assert.equal(getAIEvaluationContractSummary({ workspaceRoot: undefined } as any), 'No AI evaluation');
-    assert.equal(getAIEvaluationContractTooltip({ workspaceRoot: undefined } as any), 'No workspace open for AI evaluation.');
+    assert.equal(getAIEvaluationContractSummary(noWorkspaceAgentx), 'No AI evaluation');
+    assert.equal(getAIEvaluationContractTooltip(noWorkspaceAgentx), 'No workspace open for AI evaluation.');
   });
 
   it('summarizes a ready contract without reports', () => {
     const root = createWorkspace();
-    const agentx = { workspaceRoot: root } as any;
+    const agentx = { workspaceRoot: root } as unknown as AgentXContext;
 
     const state = evaluateAIEvaluationContract(agentx);
 

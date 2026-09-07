@@ -16,38 +16,10 @@ inputs:
 
 # UX Design: ${feature_name}
 
-**Status**: Draft | Review | Approved 
-**Designer**: ${designer} 
-**Date**: ${date} 
+**Status**: Draft | Review | Approved
+**Designer**: ${designer}
+**Date**: ${date}
 **Related PRD**: `docs/artifacts/prd/PRD-{id}.md`
-
----
-
-## Table of Contents
-
-0. [Design Language](#0-design-language)
-1. [Overview](#1-overview)
-2. [Design Research & Posture](#2-design-research--posture)
-3. [User Research](#3-user-research)
-4. [User Flows](#4-user-flows)
-5. [Wireframes](#5-wireframes)
-6. [Component Specifications](#6-component-specifications)
-7. [Design System](#7-design-system)
-8. [Interactions & Animations](#8-interactions--animations)
-9. [Accessibility (WCAG 2.1 AA)](#9-accessibility-wcag-21-aa)
-10. [Responsive Design](#10-responsive-design)
-11. [AI & Conversational UX](#11-ai--conversational-ux) *(if applicable)*
-12. [MCP App UI Design](#12-mcp-app-ui-design) *(if applicable)*
-13. [Interactive Prototypes](#13-interactive-prototypes)
-14. [Implementation Notes](#14-implementation-notes)
-15. [Open Questions](#15-open-questions)
-16. [References](#16-references)
-
----
-
-> **Diagram policy**: Mermaid is the default format for all diagrams in this UX design (user flows, state diagrams, journey maps). Use PlantUML, draw.io, Structurizr, or Graphviz only when Mermaid cannot express the intent, a Visio (.vsdx) round-trip is required, or the user explicitly requests another format. See the [diagram-as-code skill](../skills/diagrams/diagram-as-code/SKILL.md). When falling back, record the reason in a header comment.
-
----
 
 ## 0. Design Language
 
@@ -57,962 +29,286 @@ inputs:
 - **Detector Evidence**: {Command, exit code, and audit report link}
 - **Waivers**: {None, or links to accepted AgentX waivers}
 
-`BLOCKED` prevents prototype handoff. If the detector cannot run, record the
-fallback below; `DEGRADED` is not equivalent to `PASS`.
-
 ### DEGRADED Record (if applicable)
 
-```text
-Design language check: DEGRADED (AgentX-only)
-Reason: <no network | binary unresolved | node <22.18 | other>
-Ran: T1-T10 + Honest Placeholders + axe + Pass 9 critique
-Not run: 59 deterministic rules, 4 design-system conformance rules
-```
+| Field | Value |
+|---|---|
+| Design language check | DEGRADED |
+| Reason | one of: no network / binary unresolved / node <22.18 / other |
+| Required fallback checks | T1-T10 + Honest Placeholders + axe + Pass 9 critique |
+| Actually run | {Commands, results and evidence; do not prefill success} |
+| Not run | {Unavailable checks, reason and resulting limitations} |
 
----
+```mermaid
+flowchart LR
+    Product[Product context] --> System[Design system]
+    System --> Screens[Screen patterns]
+    Screens --> Prototype[Interactive prototype]
+```
 
 ## 1. Overview
 
 ### Feature Summary
-{Brief 2-3 sentence description of what this feature does}
+{Brief description of what this feature does.}
 
 ### Design Goals
-1. {Goal 1: e.g., Simplify user onboarding process}
-2. {Goal 2: e.g., Reduce clicks to complete primary action}
-3. {Goal 3: e.g., Ensure mobile-first experience}
+1. {Goal 1}
+2. {Goal 2}
+3. {Goal 3}
 
 ### Success Criteria
-- {Measurable UX metric 1: e.g., Task completion rate > 90%}
-- {Measurable UX metric 2: e.g., Average time to complete < 30 seconds}
-- {Measurable UX metric 3: e.g., User satisfaction score > 4.5/5}
-
----
+- {Measurable UX metric 1}
+- {Measurable UX metric 2}
+- {Measurable UX metric 3}
 
 ## 2. Design Research & Posture
 
 ### Product Posture
-- **Primary Posture**: {e.g., Trust-led, Workflow-led, Emotion-led, Utility-led}
-- **Confidence Level Needed**: {e.g., High-precision auditability, Fast task throughput}
+- **Primary Posture**: {Trust-led / Workflow-led / Emotion-led / Utility-led}
+- **Confidence Level Needed**: {High precision, high clarity, high speed, or similar}
 
 ### Page Archetypes
-- **Dominant Archetype**: {e.g., Proof-led Landing, Operations Surface, Guided Utility}
-- **Rationale**: {Why this archetype fits the primary user goal}
+- **Dominant Archetype**: {Proof-led landing / operations surface / guided utility / other}
+- **Rationale**: {Why this archetype fits the user goal}
 
 ### Competitive Audit
+
 | Product | Layout Strategy | Interaction Model | Takeaways (Use/Avoid) |
-|---------|-----------------|-------------------|-----------------------|
-| {Company X} | {Notes on layout} | {Notes on interaction} | {Specific patterns to adopt or avoid} |
-| {Company Y} | {Notes on layout} | {Notes on interaction} | {Specific patterns to adopt or avoid} |
-| {Company Z} | {Notes on layout} | {Notes on interaction} | {Specific patterns to adopt or avoid} |
+|---|---|---|---|
+| {Company X} | {Notes} | {Notes} | {Adopt or avoid} |
+| {Company Y} | {Notes} | {Notes} | {Adopt or avoid} |
+| {Company Z} | {Notes} | {Notes} | {Adopt or avoid} |
 
 ### Anti-Patterns (What to Avoid)
-- **Avoid 1**: {e.g., No playful animations during secure transactions}
-- **Avoid 2**: {e.g., Do not hide critical filters in collapsed menus}
-
----
+- {Anti-pattern}
+- {Anti-pattern}
+- {Anti-pattern}
 
 ## 3. User Research
 
 ### User Personas (from PRD)
-**Primary Persona: {Name}**
-- **Goals**: {What they want to achieve}
-- **Pain Points**: {Current frustrations}
-- **Technical Skill**: Beginner | Intermediate | Advanced
-- **Device Preference**: Mobile | Desktop | Both
 
-**Secondary Persona: {Name}**
-- **Goals**: {What they want to achieve}
-- **Pain Points**: {Current frustrations}
+| Persona | Goals | Pain Points | Technical Skill | Device Preference |
+|---|---|---|---|---|
+| {Primary Persona} | {Goals} | {Pain points} | Beginner / Intermediate / Advanced | Mobile / Desktop / Both |
+| {Secondary Persona} | {Goals} | {Pain points} | Beginner / Intermediate / Advanced | Mobile / Desktop / Both |
 
 ### User Needs
 1. **{Need 1}**: {Description and why it matters}
 2. **{Need 2}**: {Description and why it matters}
 3. **{Need 3}**: {Description and why it matters}
 
----
-
 ## 4. User Flows
 
 ### 4.1 Primary Flow: {Action Name}
-**Trigger**: {What initiates this flow - e.g., User clicks "Create Account"} 
-**Goal**: {What user wants to accomplish} 
-**Preconditions**: {Required state - e.g., User is logged out}
+- **Trigger**: {What initiates this flow}
+- **Goal**: {What the user wants to accomplish}
+- **Preconditions**: {Required state before the flow}
 
-**Flow Diagram**:
 ```mermaid
 flowchart TD
- A[" Start: Landing Page"] --> B["User clicks 'Sign Up'"]
- B --> C[" Registration Form"]
- C --> D{Validation}
- D -->|Valid| E["[PASS] Success"]
- D -->|Invalid| F["[FAIL] Error Message"]
- E --> G[" Dashboard"]
- F --> H["Re-enter Data"]
- H --> C
-
- style A fill:#E3F2FD,stroke:#1565C0
- style E fill:#E8F5E9,stroke:#2E7D32
- style F fill:#FFEBEE,stroke:#C62828
- style G fill:#E8F5E9,stroke:#2E7D32
+    Start[Start] --> Step1[User action]
+    Step1 --> Step2[System response]
+    Step2 --> Decision{Success?}
+    Decision -->|Yes| Success[Success state]
+    Decision -->|No| Error[Recovery state]
+    Error --> Step1
 ```
 
-**Detailed Steps**:
-1. **User Action**: Clicks "Sign Up" button
- - **System Response**: Displays registration form modal
- - **Screen**: [Screen 1: Registration Modal](#screen-1-registration-modal)
+### Detailed Steps
 
-2. **User Action**: Fills form (name, email, password)
- - **System Response**: Real-time validation feedback
- - **Validation**: Email format, password strength indicator
+| Step | User Action | System Response | Screen / Surface | Notes |
+|---|---|---|---|---|
+| 1 | {Action} | {Response} | {Screen} | {Note} |
+| 2 | {Action} | {Response} | {Screen} | {Note} |
+| 3 | {Action} | {Response} | {Screen} | {Note} |
 
-3. **User Action**: Clicks "Create Account"
- - **System Response**: Shows loading spinner
- - **API Call**: POST /api/v1/users
+### Alternative Flows
+- **4a. Validation Error**: {Recovery path}
+- **4b. Existing State**: {Recovery path}
+- **4c. Network or dependency error**: {Recovery path}
 
-4. **Success State**: Redirect to dashboard with welcome message
- - **Screen**: [Screen 2: Dashboard](#screen-2-dashboard)
-
-**Alternative Flows**:
-- **4a. Validation Error**: Highlight invalid fields, show inline error messages
-- **4b. Email Already Exists**: Show "Email already registered" with "Login instead?" link
-- **4c. Network Error**: Show error toast with "Retry" button
-
-### 3.2 Secondary Flow: {Action Name}
-{Repeat structure for additional user flows}
-
-**Error Scenarios**:
-- **Scenario 1**: {Description and recovery path}
-- **Scenario 2**: {Description and recovery path}
-
----
+### 4.2 Secondary Flow: {Action Name}
+{Repeat only when materially different from the primary flow.}
 
 ## 5. Wireframes
 
-### Screen 1: Registration Modal
-**Purpose**: Capture user information for account creation 
-**Context**: Overlay on landing page
+### Screen 1: {Screen Name}
 
-**Layout**:
-```
-+=======================================================+
-| [ Close] |
-| |
-| Create Your Account |
-| --------------------------------------------- |
-| |
-| Full Name |
-| [_______________________________] |
-| |
-| Email Address |
-| [_______________________________] |
-| `[PASS]` Valid email format |
-| |
-| Password |
-| [_______________________________] [] |
-| Weak | Medium | Strong |
-| |
-| [ ] I agree to Terms of Service |
-| |
-| ------------------------ |
-| | Create Account -> | |
-| ------------------------ |
-| |
-| Already have an account? [Log in] |
-| |
-+=======================================================+
-```
+| Element | Purpose | Priority | States |
+|---|---|---|---|
+| Header | {Purpose} | High | {Default and alternate states} |
+| Main content | {Purpose} | High | {Default and alternate states} |
+| Primary action | {Purpose} | High | {Enabled, disabled, loading} |
+| Supporting panel | {Purpose} | Medium | {Expanded, collapsed, hidden} |
 
-**Responsive Behavior**:
-- **Desktop (>1024px)**: Modal 500px wide, centered
-- **Tablet (768-1024px)**: Modal 80% width, centered
-- **Mobile (<768px)**: Full screen with padding
+**Responsive Behavior:**
+- Desktop: {Behavior}
+- Tablet: {Behavior}
+- Mobile: {Behavior}
 
-### Screen 2: Dashboard
-**Purpose**: Landing page after successful registration 
-**Context**: Authenticated user view
+### Screen 2: {Screen Name}
 
-**Layout**:
-```
-+===========================================================+
-| Logo [Search...] [] [Profile ] |
-===========================================================
-| --------- ---------------------------------------- |
-| | | | | |
-| | Nav 1 | | Welcome, {Name}! | |
-| | | | | |
-| | Nav 2 | | Get started with these quick steps: | |
-| | | | | |
-| | Nav 3 | | 1. [ ] Complete your profile | |
-| | | | 2. [ ] Connect your first app | |
-| | Nav 4 | | 3. [ ] Invite team members | |
-| | | | | |
-| --------- | ----------------- | |
-| | | Get Started -> | | |
-| | ----------------- | |
-| | | |
-| ---------------------------------------- |
-+===========================================================+
-```
+| Element | Purpose | Priority | States |
+|---|---|---|---|
+| Header | {Purpose} | High | {States} |
+| Main content | {Purpose} | High | {States} |
+| Status region | {Purpose} | Medium | {States} |
+| Secondary action | {Purpose} | Medium | {States} |
 
 ### Screen 3: {Screen Name}
-{Repeat structure for additional screens}
-
----
+{Add only when a third screen materially clarifies the flow.}
 
 ## 6. Component Specifications
 
-### 5.1 Button: Primary CTA
-**Purpose**: Main call-to-action for forms and critical actions 
-**Usage**: Submit buttons, primary actions
-
-**States**:
-- **Default**: Solid fill, large text
-- **Hover**: Slightly darker shade, subtle lift shadow
-- **Active/Pressed**: Pressed effect (scale 0.98)
-- **Disabled**: 50% opacity, no interactions
-- **Loading**: Spinner icon, disabled state
-
-**Variants**:
-- **Primary**: Blue (#007bff), white text
-- **Secondary**: Gray (#6c757d), white text
-- **Danger**: Red (#dc3545), white text
-- **Success**: Green (#28a745), white text
-
-**Specifications**:
-```css
-.btn-primary {
- padding: 12px 24px;
- font-size: 16px;
- font-weight: 600;
- border-radius: 8px;
- border: none;
- transition: all 0.2s ease;
-}
-```
-
-### 5.2 Input Field: Text Input
-**Purpose**: Single-line text entry 
-**Usage**: Forms, search boxes
-
-**States**:
-- **Default**: Light gray border, placeholder text
-- **Focus**: Blue border, no placeholder
-- **Error**: Red border, error message below
-- **Success**: Green border, checkmark icon
-- **Disabled**: Gray background, no interactions
-
-**Specifications**:
-```css
-.input-field {
- padding: 10px 12px;
- font-size: 14px;
- border: 1px solid #ced4da;
- border-radius: 4px;
- transition: border-color 0.2s;
-}
-```
-
-### 5.3 Component: {Name}
-{Repeat for all custom components}
-
----
+| Component | Purpose | States | Variants | Usage Notes |
+|---|---|---|---|---|
+| Primary action button | {Purpose} | Default, hover, active, disabled, loading | {Variants} | {Usage notes} |
+| Input field | {Purpose} | Default, focus, error, success, disabled | {Variants} | {Usage notes} |
+| Status card | {Purpose} | Empty, loading, success, error | {Variants} | {Usage notes} |
 
 ## 7. Design System
 
-### 6.1 Layout & Grid
-- **Grid System**: 12-column responsive grid
-- **Container Max Width**: 1200px
-- **Gutter Width**: 24px
-- **Breakpoints**:
- - Mobile: 0-767px
- - Tablet: 768-1023px
- - Desktop: 1024px+
- - Large Desktop: 1440px+
-
-### 6.2 Typography
-**Font Family**: 
-- Primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
-- Monospace: 'Fira Code', 'Courier New', monospace
-
-**Scale**:
-- **H1**: 32px / 1.25 line-height / 700 weight
-- **H2**: 24px / 1.3 line-height / 600 weight
-- **H3**: 20px / 1.4 line-height / 600 weight
-- **Body**: 16px / 1.5 line-height / 400 weight
-- **Small**: 14px / 1.4 line-height / 400 weight
-- **Caption**: 12px / 1.3 line-height / 400 weight
-
-### 6.3 Color Palette
-**Primary Colors**:
-- Primary: #007bff (Blue)
-- Secondary: #6c757d (Gray)
-- Success: #28a745 (Green)
-- Warning: #ffc107 (Yellow)
-- Danger: #dc3545 (Red)
-- Info: #17a2b8 (Cyan)
-
-**Neutral Colors**:
-- Background: #ffffff
-- Surface: #f8f9fa
-- Border: #dee2e6
-- Text Primary: #212529
-- Text Secondary: #6c757d
-- Text Disabled: #adb5bd
-
-**Semantic Colors**:
-- Error Text: #721c24
-- Error Background: #f8d7da
-- Success Text: #155724
-- Success Background: #d4edda
-- Warning Text: #856404
-- Warning Background: #fff3cd
-
-### 6.4 Spacing System
-**Base Unit**: 8px
-
-**Scale**:
-- xs: 4px (0.5 base)
-- sm: 8px (1 base)
-- md: 16px (2 base)
-- lg: 24px (3 base)
-- xl: 32px (4 base)
-- xxl: 48px (6 base)
-
-### 6.5 Elevation (Shadows)
-- **Level 1**: `box-shadow: 0 1px 3px rgba(0,0,0,0.12)`
-- **Level 2**: `box-shadow: 0 3px 6px rgba(0,0,0,0.16)`
-- **Level 3**: `box-shadow: 0 10px 20px rgba(0,0,0,0.19)`
-- **Level 4**: `box-shadow: 0 14px 28px rgba(0,0,0,0.25)`
-
-### 6.6 Border Radius
-- **Small**: 4px (buttons, inputs)
-- **Medium**: 8px (cards, modals)
-- **Large**: 16px (hero sections)
-- **Circle**: 50% (avatars, icons)
-
----
+| Token Area | Rules |
+|---|---|
+| Layout & Grid | {Grid, container, breakpoint rules} |
+| Typography | {Font families, scale, emphasis rules} |
+| Color Palette | {Primary, semantic, and neutral token rules} |
+| Spacing System | {Base unit and allowed spacing tokens} |
+| Elevation | {Shadow or depth rules} |
+| Border Radius | {Radius scale and allowed usage} |
 
 ## 8. Interactions & Animations
 
-### 7.1 Transitions
-**Standard Duration**: 200ms 
-**Easing**: ease-in-out
-
-**Common Transitions**:
-- Hover effects: 200ms ease
-- Modal open/close: 300ms ease-out
-- Toast notifications: 200ms ease-in-out
-- Page transitions: 400ms ease
-
-### 7.2 Micro-Interactions
-- **Button Click**: Scale down to 0.98, return on release
-- **Form Submit**: Button shows loading spinner, form fields disabled
-- **Success Feedback**: Checkmark animation (200ms)
-- **Error Shake**: Horizontal shake animation (300ms)
-
-### 7.3 Loading States
-- **Skeleton Screens**: Show content structure while loading
-- **Progress Indicators**: For uploads/downloads with percentage
-- **Spinners**: For indeterminate waits < 3 seconds
-- **Progress Bars**: For multi-step processes
-
----
+| Interaction | Default Behavior | Reduced Motion / Accessibility Rule |
+|---|---|---|
+| Hover | {Behavior} | {Rule} |
+| Form submit | {Behavior} | {Rule} |
+| Success feedback | {Behavior} | {Rule} |
+| Error feedback | {Behavior} | {Rule} |
+| Loading state | {Behavior} | {Rule} |
 
 ## 9. Accessibility (WCAG 2.1 AA)
 
-### 8.1 Keyboard Navigation
-- **Tab Order**: Logical flow (top-to-bottom, left-to-right)
-- **Focus Indicators**: 2px solid blue outline on all focusable elements
-- **Keyboard Shortcuts**: 
- - `Escape`: Close modals/dropdowns
- - `Enter`: Submit forms, activate buttons
- - `Space`: Toggle checkboxes
- - `Arrow Keys`: Navigate lists/menus
-
-### 8.2 Screen Readers
-- **ARIA Labels**: All interactive elements labeled
-- **ARIA Live Regions**: Dynamic content updates announced
-- **Alt Text**: All images have descriptive alt text
-- **Semantic HTML**: Use `<button>`, `<nav>`, `<main>`, `<article>`
-
-### 8.3 Color Contrast
-**Minimum Ratios (WCAG AA)**:
-- Normal Text: 4.5:1
-- Large Text (18pt+): 3:1
-- UI Components: 3:1
-
-**Tested Combinations**:
-- Primary Blue (#007bff) on White: 4.68:1 `[PASS]`
-- Text Primary (#212529) on White: 16.07:1 `[PASS]`
-- Text Secondary (#6c757d) on White: 4.67:1 `[PASS]`
-
-### 8.4 Other Considerations
-- **Focus Management**: Auto-focus on modal open, return focus on close
-- **Error Identification**: Icons + text (not color alone)
-- **Resizable Text**: Layout works at 200% zoom
-- **Motion Sensitivity**: Respect `prefers-reduced-motion`
-
----
+| Area | Requirement | Evidence / Notes |
+|---|---|---|
+| Keyboard navigation | {Logical order, escape paths, visible focus} | {Evidence} |
+| Screen readers | {Labels, live regions, semantic structure} | {Evidence} |
+| Color contrast | {Minimum ratios and tested pairs} | {Evidence} |
+| Error identification | {Not color only; clear recovery text} | {Evidence} |
+| Text resizing | {Text remains usable at 200%} | {Evidence} |
+| Reflow | {Usable at 320 CSS px width, except essential two-dimensional content} | {Evidence} |
+| Motion sensitivity | {Respects reduced motion preferences} | {Evidence} |
 
 ## 10. Responsive Design
 
-### Mobile (<768px)
-- **Layout**: Single column, full width
-- **Navigation**: Hamburger menu
-- **Touch Targets**: Minimum 4444px
-- **Font Size**: Minimum 16px (prevent zoom on focus)
-
-### Tablet (768-1023px)
-- **Layout**: Two-column grid where appropriate
-- **Navigation**: Collapsed sidebar or top nav
-- **Touch Targets**: Minimum 4444px
-
-### Desktop (1024px+)
-- **Layout**: Multi-column, max 1200px container
-- **Navigation**: Full sidebar or horizontal nav
-- **Hover States**: Enabled for mouse interactions
-
----
+| Context | Layout Strategy | Navigation | Input / Accessibility Notes |
+|---|---|---|---|
+| Mobile (<768px) | {Single-column behavior} | {Menu or nav pattern} | {Touch target and font notes} |
+| Tablet (768-1023px) | {Intermediate layout behavior} | {Menu or nav pattern} | {Touch target and focus notes} |
+| Desktop (1024px+) | {Multi-column behavior} | {Menu or nav pattern} | {Hover and keyboard notes} |
 
 ## 11. AI & Conversational UX (if applicable)
 
-> **Trigger**: Include this section when the feature involves chat interfaces, AI agents,
-> LLM-powered interactions, or conversational UI. Skip for traditional web/mobile UX.
+> Include when the feature involves chat, LLM-powered interactions, AI agents, or conversational guidance.
 
-### 10.1 Conversation Flow Architecture
-
-```mermaid
-graph TD
- subgraph ConvFlow["Conversational UX Flow"]
- direction TB
-
- U["User Input"] --> IC{"Input Classification"}
-
- IC -->|"Text Query"| NL["Natural Language\nProcessing"]
- IC -->|"Button / Action"| DA["Direct Action\nHandler"]
- IC -->|"File Upload"| FH["File Handler\n+ Preview"]
-
- NL --> AI{"AI Response Type"}
-
- AI -->|"Text"| TR["Text Response\n+ Markdown"]
- AI -->|"Structured Data"| SR["Rich Card /\nTable / Chart"]
- AI -->|"Action Required"| CF["Confirmation\nDialog"]
- AI -->|"Multi-Step"| WZ["Guided Wizard\n/ Stepper"]
- AI -->|"Interactive UI"| MCP["MCP App View\n(iframe)"]
-
- TR --> FB["Feedback\n(thumbs up/down)"]
- SR --> FB
- CF -->|"Confirmed"| EX["Execute Action"]
- CF -->|"Cancelled"| U
- WZ --> EX
- MCP --> FB
- end
-
- style U fill:#E3F2FD,stroke:#1565C0
- style AI fill:#F3E5F5,stroke:#6A1B9A
- style FB fill:#E8F5E9,stroke:#2E7D32
- style CF fill:#FFF3E0,stroke:#E65100
-```
-
-### 10.2 Chat Interface Wireframe
-
-```
-+===========================================================+
-| Agent Name [Status: Online] |
-===========================================================+
-| |
-| [Agent] Hello! How can I help you today? |
-| |
-| [User] Show me the Q4 sales report |
-| |
-| [Agent] Here is the Q4 summary: |
-| +-------------------------------------------+ |
-| | Q4 Sales Report | |
-| | Total: $2.4M (+12% YoY) | |
-| | Top Region: West ($890K) | |
-| | [View Full Report] [Export CSV] | |
-| +-------------------------------------------+ |
-| |
-| [Agent] Would you like me to drill into | |
-| a specific region? | |
-| |
-| +-------+ +----------+ +--------+ |
-| | West | | Central | | East | |
-| +-------+ +----------+ +--------+ |
-| |
-+===========================================================+
-| [Attach] [ Type your message... ] [Send ->] |
-+===========================================================+
-```
-
-### 10.3 AI Response Patterns
-
-| Pattern | When to Use | UX Treatment |
-|---------|------------|-------------|
-| **Text reply** | Simple answers, explanations | Markdown with code blocks, links |
-| **Rich card** | Structured data (reports, summaries) | Card with header, body, action buttons |
-| **Confirmation** | Destructive or irreversible actions | Modal or inline confirm/cancel |
-| **Stepper** | Multi-step workflows | Progress indicator + step content |
-| **Inline edit** | Data corrections, form fill | Editable fields within chat |
-| **Streaming** | Long responses | Typing indicator + progressive render |
-| **Error** | Model failure, timeout | Friendly message + retry button |
-| **MCP App view** | Complex interactive UI | iframe rendering within chat |
-
-### 10.4 Conversation UX Guidelines
-
-- **Typing indicator**: Show when AI is generating (pulsing dots)
-- **Progressive rendering**: Stream tokens as they arrive (no waiting for full response)
-- **Feedback mechanism**: Thumbs up/down on every AI response for quality tracking
-- **Context breadcrumbs**: Show conversation topic/context in header
-- **Quick actions**: Suggest follow-up actions as buttons below responses
-- **Error recovery**: "Retry" button on failures, "Start over" for stuck conversations
-- **Transparency**: Label AI-generated content clearly ("AI-generated")
-- **Escape hatch**: Always provide a way to reach human support
-
-### 10.5 AI-Specific Accessibility
-
-- Screen reader announces new AI messages via ARIA live regions
-- Streaming text is announced progressively (not on every token)
-- Rich cards provide text alternatives for data visualizations
-- Keyboard users can navigate suggested actions with arrow keys
-- Confirmation dialogs trap focus until resolved
-
----
+| Concern | UX Contract |
+|---|---|
+| Input modes | {Text, quick actions, file upload, or structured form} |
+| Response patterns | {Text reply, rich card, confirmation, wizard, or app view} |
+| Transparency | {How AI-generated output is labeled} |
+| Feedback | {How users rate, correct, or retry responses} |
+| Escalation | {How users reach a human or non-AI path} |
+| Accessibility | {Live regions, keyboard flow, announced state changes} |
 
 ## 12. MCP App UI Design (if applicable)
 
-> **Trigger**: Include this section when the feature is an MCP App rendering interactive UI
-> inside an AI host (VS Code Copilot, Claude Desktop, etc.). Skip for standalone web apps.
-
-### 11.1 MCP App Layout Architecture
+> Include when the feature renders interactive UI inside an AI host.
 
 ```mermaid
-graph TD
- subgraph Host["AI Host Environment"]
- Chat["Chat Panel"]
- IFrame["iframe Container\n(MCP App View)"]
- end
-
- subgraph AppLayout["MCP App Views"]
- direction TB
-
- subgraph V1["View 1: {Name}"]
- H1["Header / Toolbar"]
- C1["Content Area\n(data, forms, charts)"]
- A1["Action Bar\n(buttons, submit)"]
- end
-
- subgraph V2["View 2: {Name}"]
- H2["Header"]
- C2["Content"]
- A2["Actions"]
- end
- end
-
- Chat -->|"tool call"| AppLayout
- V1 -->|"result"| Chat
- IFrame -->|"renders"| AppLayout
-
- style Host fill:#E3F2FD,stroke:#1565C0
- style V1 fill:#FFF3E0,stroke:#E65100
- style V2 fill:#F3E5F5,stroke:#6A1B9A
+flowchart LR
+    Chat[AI host chat] --> View[Embedded app view]
+    View --> Action[User action]
+    Action --> Result[Structured result returned to chat]
 ```
-
-### 11.2 Host-Adaptive Layout
 
 | Context | Width | Layout Strategy |
-|---------|-------|-----------------|
-| **VS Code Side Panel** | ~400px | Single column, compact spacing, collapsible sections |
-| **VS Code Editor Tab** | ~800px | Two-column with sidebar, full data tables |
-| **Claude Desktop** | ~600px | Medium layout, cards with fold |
-| **Mobile Host** | <400px | Single column, stacked, touch-optimized |
+|---|---|---|
+| VS Code side panel | ~400px | Single column, compact spacing, collapsible sections |
+| VS Code editor tab | ~800px | Two-column, fuller data view |
+| Claude Desktop | ~600px | Medium layout with foldable panels |
+| Mobile host | <400px | Single column, touch-optimized |
 
-### 11.3 MCP App Wireframe
+Widths are illustrative starting points. Verify the actual host viewport,
+theme and supported interaction APIs rather than assuming these dimensions.
 
-```
-+=======================================+
-| {App Name} [Refresh] [Close] |
-+=======================================+
-| |
-| +-----------------------------------+ |
-| | Filter Bar | |
-| | [Date Range v] [Status v] [Apply] | |
-| +-----------------------------------+ |
-| |
-| +-----------------------------------+ |
-| | Results (12 items) | |
-| |-----------------------------------| |
-| | Name | Status | Value | |
-| | Item A | Active | $1,200 | |
-| | Item B | Pending | $340 | |
-| | Item C | Active | $8,900 | |
-| | [Load More...] | |
-| +-----------------------------------+ |
-| |
-| +-----------------------------------+ |
-| | [Export CSV] [Send to Chat] | |
-| +-----------------------------------+ |
-| |
-+=======================================+
-```
-
-### 11.4 Theme Integration
-
-- **MUST** detect host theme (dark/light) via CSS media query or host API
-- **MUST** use CSS custom properties for theming:
-
-```css
-:root {
- --app-bg: var(--vscode-editor-background, #ffffff);
- --app-text: var(--vscode-editor-foreground, #212529);
- --app-border: var(--vscode-panel-border, #dee2e6);
- --app-accent: var(--vscode-button-background, #007bff);
-}
-
-@media (prefers-color-scheme: dark) {
- :root {
- --app-bg: #1e1e1e;
- --app-text: #cccccc;
- --app-border: #404040;
- }
-}
-```
-
-### 11.5 Interaction with Chat
+### Interaction with Chat
 
 | User Action in App | Result in Chat |
-|-------------------|---------------|
-| Clicks "Send to Chat" | Inserts formatted result as chat message |
-| Submits a form | Returns structured result to LLM |
-| Selects items | LLM receives selection context for follow-up |
-| Closes view | Chat shows summary of what was done |
-
----
+|---|---|
+| Clicks a send or confirm action | Inserts structured result as a chat message |
+| Submits a form | Returns validated output to the host |
+| Selects items | Provides selection context for follow-up prompts |
+| Closes view | Chat shows a concise summary of what was done |
 
 ## 13. Interactive Prototypes
 
 > **`[WARN]` MANDATORY**: HTML/CSS prototypes are REQUIRED per AGENTS.md. Output to `docs/ux/prototypes/`.
-> Prototypes must be production-ready HTML/CSS that engineers can reference for implementation.
 
 ### Prototype Links
 - HTML/CSS Prototype: `docs/ux/prototypes/{feature-name}/index.html` **(MANDATORY)**
-- [Figma Prototype](https://figma.com/...) _(optional)_
-- [Interactive Demo](https://demo.example.com/feature-name) _(optional)_
+- Figma Prototype: {optional link}
+- Interactive Demo: {optional link}
 
 ### Prototype Scope
-- `[PASS]` Primary user flow (happy path)
-- `[PASS]` Error states and validation
-- `[PASS]` Loading states
-- `[WARN]` Edge cases (documented, not prototyped)
-- `[FAIL]` Backend integration (simulated data)
-
----
+- [ ] Primary user flow (happy path) verified
+- [ ] Error states, validation and loading states verified
+- [ ] Edge cases documented, including unimplemented prototype behavior
+- Backend integration: {Simulated / Connected}; disclose fixtures and unavailable paths
 
 ## 14. Implementation Notes
 
-### 13.1 For Engineers
+### For Engineers
 
-**Existing Components to Reuse**:
-- `Button` component from `src/components/Button.tsx`
-- `Input` component from `src/components/Input.tsx`
-- `Modal` component from `src/components/Modal.tsx`
+| Concern | Guidance |
+|---|---|
+| Existing components to reuse | {Named reusable components or patterns} |
+| New components to create | {Only if required by the UX} |
+| Styling approach | {Token source and styling system} |
+| Responsive implementation | {Breakpoint-driven behavior to preserve} |
+| Animation implementation | {State changes and reduced-motion behavior to preserve} |
+| Assets needed | {Icons, illustrations, logo files, or none} |
 
-**New Components to Create**:
-- `RegistrationForm` in `src/components/auth/RegistrationForm.tsx`
-- `PasswordStrengthIndicator` in `src/components/auth/PasswordStrengthIndicator.tsx`
-- `WelcomeBanner` in `src/components/dashboard/WelcomeBanner.tsx`
-
-**CSS/Styling Approach**:
-- Use CSS Modules for component-scoped styles
-- Use design tokens from `src/styles/tokens.css`
-- Follow BEM naming convention
-
-**Responsive Implementation**:
-```css
-/* Mobile first */
-.container { width: 100%; }
-
-/* Tablet */
-@media (min-width: 768px) {
- .container { width: 80%; }
-}
-
-/* Desktop */
-@media (min-width: 1024px) {
- .container { max-width: 1200px; }
-}
-```
-
-**Animation Implementation**:
-```css
-.button {
- transition: transform 0.2s ease;
-}
-
-.button:active {
- transform: scale(0.98);
-}
-```
-
-### 13.2 Assets Needed
-- [ ] Icon set (from design system)
-- [ ] Illustrations (if any)
-- [ ] Logo files (SVG format)
-- [ ] Favicon (multiple sizes)
-
-### 13.3 Testing Checklist
-- [ ] Test on Chrome, Firefox, Safari, Edge
-- [ ] Test on iOS Safari, Android Chrome
-- [ ] Test with keyboard only (no mouse)
-- [ ] Test with screen reader (NVDA/JAWS)
+### Testing Checklist
+- [ ] Test on target desktop browsers
+- [ ] Test on target mobile browsers or host contexts
+- [ ] Test with keyboard only
+- [ ] Test with screen reader
 - [ ] Test at 200% zoom
-- [ ] Test with slow 3G network
-
----
+- [ ] Test reflow at 320 CSS px width and applicable layout exceptions
+- [ ] Test slow or degraded network conditions if relevant
 
 ## 15. Open Questions
 
 | Question | Owner | Status | Resolution |
-|----------|-------|--------|------------|
+|---|---|---|---|
 | {Question 1} | {Name} | Open | TBD |
 | {Question 2} | {Name} | Resolved | {Answer} |
-
----
 
 ## 16. References
 
 ### Design Inspiration
-- [Example 1](link)
-- [Example 2](link)
+- {Example 1}
+- {Example 2}
 
 ### Research
-- [User Interview Notes](link)
-- [Usability Test Results](link)
+- {User interview notes}
+- {Usability test results}
 
 ### Standards
 - [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
-- [Material Design Guidelines](https://material.io)
+- {Other standard or design guidance}
 
----
-
-**Generated by AgentX UX Designer Agent** 
-**Last Updated**: {YYYY-MM-DD} 
+**Generated by AgentX UX Designer Agent**  
+**Last Updated**: {YYYY-MM-DD}  
 **Version**: 1.0
-
-
----
-
-## Appendix A: NN/g Journey Map, Service Blueprint, IA, and Heuristics (v8.4.43+)
-
-> Additive section. References: Nielsen Norman Group "Journey Mapping 101" (Actor, Scenario, Phases, Actions+Mindsets+Emotions, Opportunities), NN/g "Service Blueprints: Definition" (frontstage / backstage / support processes), NN/g "10 Usability Heuristics for User Interface Design" (Jakob Nielsen, last updated 2024).
-
-### A.1 Customer Journey Map (NN/g 5-element model)
-
-```mermaid
-journey
-    title {Persona} - {Scenario}
-    section Discover
-      Becomes aware of need: 3: User
-      Searches for solutions: 4: User
-    section Consider
-      Compares options: 3: User
-      Reads reviews: 4: User
-    section Onboard
-      Signs up: 4: User
-      First-run setup: 2: User
-    section Use
-      Reaches first value: 5: User
-      Hits a friction point: 2: User
-    section Retain / Advocate
-      Returns regularly: 5: User
-      Recommends product: 5: User
-```
-
-| Phase | Actions | Mindset / questions | Emotion (1-5) | Touchpoint | Opportunity |
-|-------|---------|---------------------|---------------|------------|-------------|
-| Discover | {actions} | {questions} | {n} | {channel} | {idea} |
-| Consider | {actions} | {questions} | {n} | {channel} | {idea} |
-| Onboard | {actions} | {questions} | {n} | {channel} | {idea} |
-| Use | {actions} | {questions} | {n} | {channel} | {idea} |
-| Retain | {actions} | {questions} | {n} | {channel} | {idea} |
-
-### A.2 Service Blueprint (frontstage / backstage / support)
-
-```mermaid
-flowchart TD
-    subgraph Evidence["Physical evidence"]
-        E1["Email"]
-        E2["App UI"]
-        E3["Receipt"]
-    end
-    subgraph Frontstage["Frontstage actions (user-visible)"]
-        F1["Sign-up form"]
-        F2["Dashboard"]
-        F3["Confirmation screen"]
-    end
-    subgraph Backstage["Backstage actions (employee/system)"]
-        B1["Identity verification"]
-        B2["Data sync job"]
-        B3["Receipt generation"]
-    end
-    subgraph Support["Support processes"]
-        S1["Auth provider"]
-        S2["Database"]
-        S3["Email service"]
-    end
-    F1 -. line of interaction .-> B1
-    F2 -. line of interaction .-> B2
-    F3 -. line of interaction .-> B3
-    B1 -. line of internal interaction .-> S1
-    B2 -. line of internal interaction .-> S2
-    B3 -. line of internal interaction .-> S3
-    E1 --- F1
-    E2 --- F2
-    E3 --- F3
-```
-
-### A.3 Information Architecture / Sitemap
-
-```mermaid
-flowchart TD
-    Root["/ (Home)"]
-    Root --> Auth["/auth"]
-    Auth --> Login["/auth/login"]
-    Auth --> Signup["/auth/signup"]
-    Root --> Dash["/dashboard"]
-    Dash --> Reports["/dashboard/reports"]
-    Dash --> Settings["/dashboard/settings"]
-    Settings --> Profile["/dashboard/settings/profile"]
-    Settings --> Billing["/dashboard/settings/billing"]
-    Root --> Help["/help"]
-```
-
-### A.4 Per-Screen State Diagram
-
-```mermaid
-stateDiagram-v2
-    [*] --> Idle
-    Idle --> Loading: fetch
-    Loading --> Empty: zero results
-    Loading --> Success: data
-    Loading --> Error: failure
-    Error --> Loading: retry
-    Empty --> Loading: filter changed
-    Success --> Loading: refresh
-```
-
-> Repeat per critical screen. Each prototype screen MUST visually represent every state.
-
-### A.5 NN/g 10-Heuristics Self-Audit Checklist
-
-| # | Heuristic | Pass | Evidence / fix needed |
-|---|-----------|------|------------------------|
-| 1 | Visibility of system status | {Y/N} | {note} |
-| 2 | Match between system and the real world | {Y/N} | {note} |
-| 3 | User control and freedom | {Y/N} | {note} |
-| 4 | Consistency and standards | {Y/N} | {note} |
-| 5 | Error prevention | {Y/N} | {note} |
-| 6 | Recognition rather than recall | {Y/N} | {note} |
-| 7 | Flexibility and efficiency of use | {Y/N} | {note} |
-| 8 | Aesthetic and minimalist design | {Y/N} | {note} |
-| 9 | Help users recognize, diagnose, and recover from errors | {Y/N} | {note} |
-| 10 | Help and documentation | {Y/N} | {note} |
-
-### A.6 Microcopy Table
-
-| Surface | Default copy | Empty state | Error state | Success state | i18n key |
-|---------|--------------|-------------|-------------|---------------|----------|
-| {screen.section} | {copy} | {copy} | {copy} | {copy} | {key} |
-
-### A.7 State Matrix (per critical component)
-
-| Component | Idle | Loading | Empty | Error | Success | Disabled |
-|-----------|------|---------|-------|-------|---------|----------|
-| {Component} | {behavior} | {behavior} | {behavior} | {behavior} | {behavior} | {behavior} |
-
-### A.8 Dark-Mode and Theming Tokens
-
-| Token | Light | Dark | Contrast vs background |
-|-------|-------|------|------------------------|
-| color.bg.surface | #FFFFFF | #0F1115 | n/a |
-| color.fg.primary | #111827 | #E5E7EB | >= 7:1 |
-| color.fg.secondary | #4B5563 | #9CA3AF | >= 4.5:1 |
-| color.accent | #2563EB | #60A5FA | >= 4.5:1 vs surface |
-| color.danger | #DC2626 | #F87171 | >= 4.5:1 vs surface |
-
-### A.9 Accessibility Crosswalk (WCAG 2.1 AA)
-
-| WCAG criterion | How this design satisfies it | Evidence |
-|----------------|------------------------------|----------|
-| 1.4.3 Contrast (Minimum) | {note} | {token table} |
-| 2.1.1 Keyboard | {note} | {prototype} |
-| 2.4.7 Focus Visible | {note} | {prototype} |
-| 4.1.2 Name, Role, Value | {note} | {ARIA notes} |
-
-
-## Appendix B: Rich Visual Diagrams (v8.4.43+)
-
-### B.1 User Timeline
-
-```mermaid
-timeline
-  title User journey across touchpoints
-  Discover : Ad : Search : Referral
-  Consider : Landing page : Pricing : Reviews
-  Convert  : Sign up : Onboard : First value
-  Retain   : Habit loop : Notifications : Tips
-  Expand   : Upgrade : Invite teammates
-```
-
-### B.2 Funnel (sankey)
-
-```mermaid
-sankey-beta
-Visitors,Signed up,1000
-Visitors,Bounced,4000
-Signed up,Activated,700
-Signed up,Churned early,300
-Activated,Retained 30d,500
-Activated,Churned 30d,200
-Retained 30d,Power users,200
-```
-
-### B.3 Interaction Sequence
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor U as User
-  participant UI
-  participant API
-  U->>UI: Tap "Save"
-  UI->>UI: Optimistic update
-  UI->>API: PATCH /resource
-  API-->>UI: 200 OK
-  UI-->>U: Toast "Saved"
-  Note over UI,U: Error path: rollback + inline error
-```
-
-### B.4 Heuristic Coverage (pie)
-
-```mermaid
-pie showData
-  title NN/g 10 heuristics coverage
-  "Covered" : 8
-  "Partial" : 1
-  "Gap" : 1
-```
-
-### B.5 Screen Flow (styled)
-
-```mermaid
-flowchart LR
-  H[Home]:::primary --> L[List]:::primary
-  L --> D[Detail]:::primary
-  D --> E[Edit]:::action
-  E -->|save| D
-  E -->|cancel| D
-  D --> Sh[Share]:::action
-  classDef primary fill:#e3f2fd,stroke:#1976d2
-  classDef action fill:#fff3e0,stroke:#f57c00
-```

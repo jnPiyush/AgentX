@@ -16,37 +16,43 @@ inputs:
 
 # Progress Log: ${issue_title}
 
-> **Purpose**: Track agent sessions, decisions, and continuity across context windows. 
-> **Pattern**: Each agent appends session notes before handoff or context refresh. 
-> **See Also**: [Skills.md Checkpoint Protocol](../../Skills.md#checkpoint-protocol)
-
----
+> Purpose: Track sessions, checkpoints, and handoff context across agent turns.
 
 ## Status
 
 | Field | Value |
-|-------|-------|
+|---|---|
 | Type | <!-- type:story / type:bug / type:feature --> |
 | Agent | ${agent_role} |
 | Status | <!-- In Progress / In Review / Done --> |
 | Started | ${session_date} |
 | Last Updated | ${session_date} |
 
+```mermaid
+stateDiagram-v2
+    [*] --> Planned
+    Planned --> InProgress
+    InProgress --> Checkpoint
+    Checkpoint --> InProgress
+    InProgress --> ReviewReady
+    ReviewReady --> Done
+```
+
 ### Phase Checklist
 
-- [ ] Research & planning
+- [ ] Research and planning
 - [ ] Implementation
 - [ ] Testing (80% coverage)
-- [ ] Documentation
+- [ ] Documentation drift checked; impact rationale and reviewed hashes recorded
 - [ ] Review ready
 
 ### GenAI Phase Checklist (if applicable)
 
-- [ ] Prompt engineering (system prompt, structured output schema)
+- [ ] Prompt engineering documented
 - [ ] Evaluation dataset created ({N} test cases)
-- [ ] Model version pinned with evaluation baseline
+- [ ] Actual model identity recorded and compared with a held-out baseline
 - [ ] Guardrails configured and tested
-- [ ] LLM-as-judge evaluation passing thresholds
+- [ ] Required objective graders and calibrated judge checks passed, or limitations recorded
 - [ ] AgentOps tracing enabled
 
 ### MCP Phase Checklist (if applicable)
@@ -54,212 +60,92 @@ inputs:
 - [ ] Tool definitions with JSON Schema validation
 - [ ] Resource providers implemented
 - [ ] End-to-end test with target AI host
-- [ ] Security review (input validation, path traversal, SSRF)
-
----
+- [ ] Security review completed
 
 ## Checkpoint Log
 
-<!-- Record each checkpoint stop as a structured entry.
- See Skills.md Checkpoint Protocol for when to use checkpoints. -->
+```mermaid
+flowchart LR
+    Work[Current work] --> Checkpoint[Checkpoint request]
+    Checkpoint --> Decision[User or reviewer decision]
+    Decision --> Resume[Next session resumes here]
+```
 
 ### CP-001
 
 | Field | Value |
-|-------|-------|
+|---|---|
 | Status | Pending <!-- Pending / `[PASS]` Completed --> |
 | Phase | <!-- e.g., Implementation --> |
 | Skill | <!-- e.g., react, testing --> |
 | Files Changed | <!-- count --> |
 
-**Summary:**
+**Summary:**  
 > <!-- What was completed before this checkpoint -->
 
 **Decision Needed:**
 1. <!-- Question or option for user -->
 
-**User Response:**
+**User Response:**  
 <!-- Fill after user responds -->
-
----
 
 ## Session 1 - ${agent_role} (${session_date})
 
 ### What I Accomplished
-- [List key deliverables completed this session]
-- [Changes made to codebase]
-- [Documents created/updated]
+- {Key deliverable completed}
+- {Files or artifacts updated}
+- {Evidence captured}
 
 ### Testing & Verification
-- [Tests written/run]
-- [Coverage metrics]
-- [Manual verification steps]
+- {Tests or checks run}
+- {Coverage or validation notes}
+- {Manual verification summary}
+- {Exact command, scope, timestamp, result and revision-bound evidence path}
 
 ### Issues & Blockers
-- [Problems encountered]
-- [Decisions that need clarification]
-- [Dependencies on other work]
+- {Problem encountered}
+- {Decision needed}
+- {Dependency on other work}
 
 ### Next Steps
-- [What should be done in next session]
-- [Specific files/features to work on]
-- [Prerequisites needed]
+- {Next highest-value action}
+- {Specific file, flow, or artifact to continue}
+- {Prerequisite if any}
 
 ### Context for Next Agent
-[Any important context the next agent should know about this work]
+{Short continuity note for the next session.}
 
----
-
-## Session 2 - ${agent_role} (${current_date})
-
-### Previous Session Review
-- [Quick review of what was done before]
-- [Verification that previous work still functions]
-
-### What I Accomplished
-- 
-- 
-
-### Testing & Verification
-- 
-- 
-
-### Issues & Blockers
-- 
-- 
-
-### Next Steps
-- 
-- 
-
-### Context for Next Agent
-
----
+Repeat the session block for new work, recording what earlier evidence still
+holds and what was invalidated. Do not duplicate old results as new execution.
 
 ## Completion Summary
 
-**Final Status**: [In Progress / Ready for Review / Completed] 
-**Total Sessions**: [Number] 
-**Total Checkpoints**: [Number] 
-**Overall Coverage**: [Percentage] 
-**Ready for Handoff**: [Yes/No]
+| Field | Value |
+|---|---|
+| Final Status | [In Progress / Ready for Review / Completed] |
+| Total Sessions | {Number} |
+| Total Checkpoints | {Number} |
+| Overall Coverage | {Percentage} |
+| Ready for Handoff | [Yes/No] |
+
+Mark completion only after the required review and CLI loop closure succeed.
+Unmeasured coverage remains unknown with a reason.
 
 ### Key Achievements
-- 
-- 
+- {Achievement}
+- {Achievement}
 
 ### Outstanding Items
-- 
-- 
+- {Outstanding item}
+- {Outstanding item}
 
 ### Artifacts Produced
 
 | Artifact | Path | Description |
-|----------|------|-------------|
-| <!-- e.g., Component --> | <!-- src/... --> | <!-- Brief description --> |
-| <!-- e.g., Tests --> | <!-- tests/... --> | <!-- Brief description --> |
-| <!-- e.g., Docs --> | <!-- docs/... --> | <!-- Brief description --> |
+|---|---|---|
+| {Artifact} | {path} | {description} |
+| {Artifact} | {path} | {description} |
 
----
-
-**Generated by AgentX ${agent_role} Agent** 
-**Last Updated**: ${session_date} 
+**Generated by AgentX ${agent_role} Agent**  
+**Last Updated**: ${session_date}  
 **Version**: 1.0
-
----
-
-## Appendix A: Progress Diagrams (v8.4.43+)
-
-> Additive section.
-
-### A.1 Session Timeline
-
-```mermaid
-gantt
-    title Session progress
-    dateFormat YYYY-MM-DD
-    section Sessions
-      Session 1 - planning   :s1, 2026-05-01, 1d
-      Session 2 - slice 1    :s2, 2026-05-02, 2d
-      Session 3 - slice 2    :s3, 2026-05-04, 2d
-      Session 4 - review     :s4, 2026-05-06, 1d
-```
-
-### A.2 Status Flow
-
-```mermaid
-stateDiagram-v2
-    [*] --> Backlog
-    Backlog --> InProgress: pulled into work
-    InProgress --> InReview: implementation complete
-    InReview --> Validating: reviewer approved
-    InReview --> InProgress: changes requested
-    Validating --> Done: tests + devops pass
-    Validating --> InProgress: defects raised
-    Done --> [*]
-```
-
-### A.3 Checkpoint Chain
-
-```mermaid
-flowchart LR
-    B["Brainstorm"] --> P["Plan"]
-    P --> W["Work"]
-    W --> R["Review"]
-    R --> C["Compound Capture"]
-    C --> D["Done"]
-    style W fill:#e0f2fe
-    style R fill:#fef9c3
-    style D fill:#dcfce7
-```
-
-> Highlight the current checkpoint each session.
-
-### A.4 Burn-up / progress table
-
-| Slice | Planned | Actual | Drift | Status | Notes |
-|-------|---------|--------|-------|--------|-------|
-| {S1} | {effort} | {effort} | {+/-} | {state} | {note} |
-| {S2} | {effort} | {effort} | {+/-} | {state} | {note} |
-
-
-## Appendix B: Rich Visual Diagrams (v8.4.43+)
-
-### B.1 Velocity (xychart)
-
-```mermaid
-xychart-beta
-  title "Items completed per session"
-  x-axis [S1, S2, S3, S4, S5]
-  y-axis "Items" 0 --> 10
-  bar [3, 5, 4, 6, 7]
-```
-
-### B.2 Status Distribution (pie)
-
-```mermaid
-pie showData
-  title Items by status
-  "Done" : 18
-  "In progress" : 4
-  "Blocked" : 1
-  "Backlog" : 7
-```
-
-### B.3 Progress Sequence
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Loop
-  participant Work
-  participant Evidence
-  participant Review
-  Loop->>Work: Start iteration
-  Work-->>Evidence: Append evidence
-  Loop->>Review: Self-review
-  Review-->>Loop: Findings (HIGH/MED/LOW)
-  Loop->>Work: Fix
-  Loop-->>Loop: Iterate (>= min)
-  Loop-->>Review: Complete (gate passed)
-```

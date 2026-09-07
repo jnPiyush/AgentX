@@ -5805,6 +5805,37 @@ function Get-HarnessMarkdownFiles([string]$dirPath, [string]$prefix) {
     )
 }
 
+function Invoke-HarnessAuditProcess {
+    param(
+        [System.Diagnostics.ProcessStartInfo]$StartInfo,
+        [ValidateRange(1, 300)][int]$TimeoutSeconds = 120
+    )
+
+    $deadline = [System.Diagnostics.Stopwatch]::StartNew()
+    $process = [System.Diagnostics.Process]::Start($StartInfo)
+    try {
+        if ($StartInfo.RedirectStandardInput) { $process.StandardInput.Close() }
+        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+        $stderrTask = $process.StandardError.ReadToEndAsync()
+        $remainingMs = [Math]::Max(0, ($TimeoutSeconds * 1000) - $deadline.ElapsedMilliseconds)
+        $exited = $process.WaitForExit([int]$remainingMs)
+        if (-not $exited) {
+            try { $process.Kill($true) } catch { Write-Warning "Failed to stop timed-out harness process tree (PID $($process.Id)): $_" }
+        }
+        # Descendants may retain the pipes after parent exit. Capture shares the deadline.
+        $remainingMs = [Math]::Max(0, ($TimeoutSeconds * 1000) - $deadline.ElapsedMilliseconds)
+        $drained = $exited -and [System.Threading.Tasks.Task]::WaitAll(@($stdoutTask, $stderrTask), [int]$remainingMs)
+        return [PSCustomObject]@{
+            TimedOut = -not $drained
+            ExitCode = if ($exited) { $process.ExitCode } else { $null }
+            StdOut = if ($stdoutTask.IsCompletedSuccessfully) { $stdoutTask.Result } else { '<stdout capture incomplete>' }
+            StdErr = if ($stderrTask.IsCompletedSuccessfully) { $stderrTask.Result } else { '<stderr capture incomplete>' }
+        }
+    } finally {
+        $process.Dispose()
+    }
+}
+
 function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'pwsh'
@@ -5814,20 +5845,24 @@ function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-NonInteractive')
     $startInfo.ArgumentList.Add('-File')
     $startInfo.ArgumentList.Add((Join-Path $Script:INSTALL_AGENTX_DIR 'agentx-cli.ps1'))
     $startInfo.ArgumentList.Add('loop')
     $startInfo.ArgumentList.Add('gate')
     $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $workspaceRoot
 
-    $process = [System.Diagnostics.Process]::Start($startInfo)
-    $process.StandardInput.Close()
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
-    $process.WaitForExit()
-    $output = ($stdout + $stderr).Trim()
+    $result = Invoke-HarnessAuditProcess -StartInfo $startInfo
+    if ($result.TimedOut) {
+        return [PSCustomObject]@{
+            passed = $false
+            attribution = 'harness'
+            summary = 'Quality loop gate timed out during process or output capture.'
+        }
+    }
+    $output = ($result.StdOut + $result.StdErr).Trim()
 
-    if ($process.ExitCode -eq 0) {
+    if ($result.ExitCode -eq 0) {
         return [PSCustomObject]@{
             passed = $true
             attribution = 'clear'
@@ -5864,6 +5899,7 @@ function Invoke-HarnessComplianceReport([string]$baseRef = '') {
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-NonInteractive')
     $startInfo.ArgumentList.Add('-File')
     $startInfo.ArgumentList.Add($scriptPath)
     if (-not [string]::IsNullOrWhiteSpace($baseRef)) {
@@ -5872,13 +5908,13 @@ function Invoke-HarnessComplianceReport([string]$baseRef = '') {
     }
     $startInfo.ArgumentList.Add('-ReportOnly')
 
-    $process = [System.Diagnostics.Process]::Start($startInfo)
-    $process.StandardInput.Close()
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
-    $process.WaitForExit()
-
-    $lines = @((($stdout + $stderr) -split "`r?`n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $result = Invoke-HarnessAuditProcess -StartInfo $startInfo
+    $lines = @((($result.StdOut + $result.StdErr) -split "`r?`n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($result.TimedOut) {
+        $lines += '[FAIL] Harness compliance timed out during process or output capture.'
+    } elseif ($result.ExitCode -ne 0) {
+        $lines += "[FAIL] Harness compliance exited with code $($result.ExitCode)."
+    }
     $failures = @($lines | Where-Object { $_ -match '^\[FAIL\]' })
     $requiresPlan = @($lines | Where-Object { $_ -match 'Requires execution plan:\s+True' }).Count -gt 0
     $summary = if ($failures.Count -gt 0) {

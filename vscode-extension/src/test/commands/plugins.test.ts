@@ -22,6 +22,7 @@ import {
   getLatestPluginInstallRecord,
   readPluginInstallAuditState,
 } from '../../utils/pluginInstallState';
+import { __setWorkspaceFoldersRaw } from '../mocks/vscode';
 
 describe('registerAddPluginCommand', () => {
   let sandbox: sinon.SinonSandbox;
@@ -44,7 +45,7 @@ describe('registerAddPluginCommand', () => {
   });
 
   afterEach(() => {
-    (vscode.workspace as any).workspaceFolders = originalWorkspaceFolders;
+    __setWorkspaceFoldersRaw(originalWorkspaceFolders);
     sandbox.restore();
   });
 
@@ -103,12 +104,12 @@ describe('runAddPluginCommand', () => {
   });
 
   afterEach(() => {
-    (vscode.workspace as any).workspaceFolders = originalWorkspaceFolders;
+    __setWorkspaceFoldersRaw(originalWorkspaceFolders);
     sandbox.restore();
   });
 
   it('should show an error when no workspace folders are open', async () => {
-    (vscode.workspace as any).workspaceFolders = undefined;
+    __setWorkspaceFoldersRaw(undefined);
     const errorStub = sandbox.stub(vscode.window, 'showErrorMessage');
 
     await runAddPluginCommand(fakeContext, {} as AgentXContext);

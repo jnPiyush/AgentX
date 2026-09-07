@@ -69,7 +69,7 @@ describe('registerWorkflowCommand', () => {
 
   it('should run CLI with selected workflow type', async () => {
     fakeAgentx.checkInitialized.resolves(true);
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'story', description: '' } as any);
+    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'story', description: '' });
     fakeAgentx.runCli.resolves('Step 1: Engineer\nStep 2: Reviewer');
 
     await registeredCallbacks['agentx.runWorkflow']!();
@@ -86,7 +86,7 @@ describe('registerWorkflowCommand', () => {
 
   it('should show error when CLI throws', async () => {
     fakeAgentx.checkInitialized.resolves(true);
-    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'bug', description: '' } as any);
+    sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'bug', description: '' });
     fakeAgentx.runCli.rejects(new Error('workflow error'));
     const errSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
