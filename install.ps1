@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX v9.2.0 - Download, copy, configure.
+ Install AgentX v9.2.1 - Download, copy, configure.
 
 .PARAMETER Mode
  github - Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
@@ -31,13 +31,13 @@
  .\install.ps1 -Azure # Force Azure Skills companion install
 
  # One-liner install (local mode, no prompts - pinned to a release tag)
- irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.ps1 | iex
+ irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.1/install.ps1 | iex
 
  # One-liner for GitHub mode
- $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.ps1 | iex
+ $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.1/install.ps1 | iex
 
  # One-liner to include Azure companion support
- $env:AGENTX_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.ps1 | iex
+ $env:AGENTX_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.1/install.ps1 | iex
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='Interactive installer output is intentionally written directly to the host.')]
@@ -51,6 +51,7 @@ param(
 )
 
 $MinimumPowerShellVersion = [Version]'7.4.0'
+$BRANCH = "v9.2.1"
 
 function Add-PathEntryIfPresent {
  param([string]$Candidate)
@@ -172,11 +173,11 @@ if (Test-Path '.agentx/version.json') {
   Write-Verbose "Unable to read prior version metadata from .agentx/version.json: $($_.Exception.Message)"
  }
 }
-if ($previousVersion -and $previousVersion -ne '9.2.0' -and -not $Force) {
+if ($previousVersion -and $previousVersion -ne $BRANCH.Substring(1) -and -not $Force) {
  $previousMajorVersion = 0
  try { $previousMajorVersion = [int]($previousVersion -split '\.')[0] } catch { Write-Verbose "Could not parse major version from '$previousVersion'." }
  if ($previousMajorVersion -ge 9) {
-  throw "AgentX v$previousVersion is already installed. Re-run with -Force to replace managed files with v9.2.0; no files were changed."
+  throw "AgentX v$previousVersion is already installed. Re-run with -Force to replace managed files with $BRANCH; no files were changed."
  }
 }
 
@@ -218,7 +219,6 @@ if ($PSVersionTable.PSVersion -lt $MinimumPowerShellVersion) {
 $isPiped = -not $MyInvocation.MyCommand.Path
 
 $ErrorActionPreference = "Stop"
-$BRANCH = "v9.2.0"
 $TMP = ".agentx-install-tmp"
 $TMPRAW = ".agentx-install-raw"
 $ZIPFILE = ".agentx-install.zip"
@@ -395,7 +395,7 @@ try {
 # -- Banner ----------------------------------------------
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Cyan
-Write-Host "| AgentX v9.2.0 - AI Agent Orchestration |" -ForegroundColor Cyan
+Write-Host "| AgentX v9.2.1 - AI Agent Orchestration |" -ForegroundColor Cyan
 Write-Host "+===================================================+" -ForegroundColor Cyan
 Write-Host ""
 
@@ -418,12 +418,12 @@ if (-not (Invoke-GitInstallIfMissing)) {
 }
 
 # -- Upgrade detection: uninstall old version, preserve user data --
-if ($previousVersion -and $previousVersion -ne "9.2.0") {
+if ($previousVersion -and $previousVersion -ne "9.2.1") {
  $majorVersion = 0
  try { $majorVersion = [int]($previousVersion -split '\.')[0] } catch { Write-Verbose "Could not parse major version from '$previousVersion'." }
 
  if ($majorVersion -lt 9) {
-    Write-Host "[!] Detected AgentX v$previousVersion - upgrading to v9.2.0..." -ForegroundColor Yellow
+    Write-Host "[!] Detected AgentX v$previousVersion - upgrading to v9.2.1..." -ForegroundColor Yellow
   Write-Host "  Uninstalling v$previousVersion and performing clean install." -ForegroundColor DarkGray
 
   # Back up user data that must survive the upgrade
@@ -666,12 +666,12 @@ if (Test-Path $memoryTemplateSource) {
 # Version tracking
 $versionFile = ".agentx/version.json"
 @{
-  version = "9.2.0"
+  version = "9.2.1"
  mode = $Mode
  installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 9.2.0 recorded"
+Write-OK "Version 9.2.1 recorded"
 
 # Merge AgentX entries into user's .gitignore
 $MARKER_START = "# --- AgentX (auto-generated, do not edit this block) ---"
@@ -938,7 +938,7 @@ if (-not $azureCompanionRequested) {
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
-Write-Host " AgentX v9.2.0 installed! [$displayMode]" -ForegroundColor Green
+Write-Host " AgentX v9.2.1 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White
@@ -965,4 +965,3 @@ Write-Host ""
  # Pop back to original directory if -Path was used
  if ($Path) { Pop-Location }
 }
-

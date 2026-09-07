@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AgentX Copilot CLI Plugin v9.2.0 - Installer (Bash)
+# AgentX Copilot CLI Plugin v9.2.1 - Installer (Bash)
 # Standalone plugin for GitHub Copilot CLI.
 # Does NOT require the AgentX VS Code extension or the core install.
 #
@@ -15,7 +15,7 @@
 #   -h, --help             Show this help
 set -euo pipefail
 
-VERSION="9.2.0"
+VERSION="9.2.1"
 TARGET="$(pwd)"
 SOURCE=""
 INCLUDE_CLI=false

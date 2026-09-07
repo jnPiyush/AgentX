@@ -3,6 +3,7 @@
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
+$targetVersion = (Get-Content -LiteralPath (Join-Path $repoRoot 'version.json') -Raw | ConvertFrom-Json).version
 $passed = 0
 $failed = 0
 
@@ -17,7 +18,8 @@ function Assert-True($Condition, [string]$Message) {
 }
 
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('agentx-installer-license-' + [guid]::NewGuid().ToString('N'))
-$fixtureRoot = Join-Path $tempRoot 'AgentX-v9.2.0'
+$fixtureName = "AgentX-v$targetVersion"
+$fixtureRoot = Join-Path $tempRoot $fixtureName
 $archivePath = Join-Path $tempRoot 'fixture.zip'
 $installTarget = Join-Path $tempRoot 'installed'
 
@@ -73,31 +75,32 @@ try {
 
     $upgradeTarget = Join-Path $tempRoot 'powershell-upgrade'
     New-Item -ItemType Directory -Path (Join-Path $upgradeTarget '.agentx') -Force | Out-Null
-    Set-Content -LiteralPath (Join-Path $upgradeTarget '.agentx/version.json') -Value '{ "version": "9.1.0" }' -Encoding ascii
-    Set-Content -LiteralPath (Join-Path $upgradeTarget '.agentx/agentx-cli.ps1') -Value 'old-runtime' -Encoding ascii
-    $previousArchive = $env:AGENTX_INSTALL_ARCHIVE
-    $env:AGENTX_INSTALL_ARCHIVE = $archivePath
-    try {
-        & pwsh -NoProfile -File (Join-Path $repoRoot 'install.ps1') -Local -Path $upgradeTarget -NoSetup *> $null
-        $upgradeExit = $LASTEXITCODE
-    } finally {
-        if ($null -eq $previousArchive) { Remove-Item Env:AGENTX_INSTALL_ARCHIVE -ErrorAction SilentlyContinue }
-        else { $env:AGENTX_INSTALL_ARCHIVE = $previousArchive }
+    foreach ($priorVersion in @('9.1.0', '9.2.0')) {
+        Set-Content -LiteralPath (Join-Path $upgradeTarget '.agentx/version.json') -Value "{ `"version`": `"$priorVersion`" }" -Encoding ascii
+        Set-Content -LiteralPath (Join-Path $upgradeTarget '.agentx/agentx-cli.ps1') -Value 'old-runtime' -Encoding ascii
+        $previousArchive = $env:AGENTX_INSTALL_ARCHIVE
+        $env:AGENTX_INSTALL_ARCHIVE = $archivePath
+        try {
+            $upgradeOutput = & pwsh -NoProfile -File (Join-Path $repoRoot 'install.ps1') -Local -Path $upgradeTarget -NoSetup 2>&1 | Out-String
+            $upgradeExit = $LASTEXITCODE
+        } finally {
+            if ($null -eq $previousArchive) { Remove-Item Env:AGENTX_INSTALL_ARCHIVE -ErrorAction SilentlyContinue }
+            else { $env:AGENTX_INSTALL_ARCHIVE = $previousArchive }
+        }
+        Assert-True ($upgradeExit -ne 0) "PowerShell installer refuses an unforced upgrade from $priorVersion"
+        Assert-True ($upgradeOutput -match "\bv$([regex]::Escape($targetVersion));") 'PowerShell upgrade rejection identifies the current target version'
+        Assert-True ((Get-Content -LiteralPath (Join-Path $upgradeTarget '.agentx/agentx-cli.ps1') -Raw).Trim() -eq 'old-runtime') 'PowerShell refused upgrade preserves old runtime bytes'
+        Assert-True ((Get-Content -LiteralPath (Join-Path $upgradeTarget '.agentx/version.json') -Raw | ConvertFrom-Json).version -eq $priorVersion) 'PowerShell refused upgrade preserves old version metadata'
     }
-    Assert-True ($upgradeExit -ne 0) 'PowerShell installer refuses an unforced same-major upgrade'
-    Assert-True ((Get-Content -LiteralPath (Join-Path $upgradeTarget '.agentx/agentx-cli.ps1') -Raw).Trim() -eq 'old-runtime') 'PowerShell refused upgrade preserves old runtime bytes'
-    Assert-True ((Get-Content -LiteralPath (Join-Path $upgradeTarget '.agentx/version.json') -Raw | ConvertFrom-Json).version -eq '9.1.0') 'PowerShell refused upgrade preserves old version metadata'
 
     $bashInstaller = Get-Content -LiteralPath (Join-Path $repoRoot 'install.sh') -Raw
     $powerShellInstaller = Get-Content -LiteralPath (Join-Path $repoRoot 'install.ps1') -Raw
-    Assert-True (
-        $powerShellInstaller.IndexOf("if (`$previousVersion -and `$previousVersion -ne '9.2.0' -and -not `$Force)", [StringComparison]::Ordinal) -lt
-        $powerShellInstaller.IndexOf('if (-not (Invoke-GitInstallIfMissing))', [StringComparison]::Ordinal)
-    ) 'PowerShell upgrade rejection precedes dependency installation'
-    Assert-True (
-        $bashInstaller.IndexOf('if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.2.0" ] && [ "$FORCE" != "true" ]', [StringComparison]::Ordinal) -lt
-        $bashInstaller.IndexOf('ensure_dependency git git Git', [StringComparison]::Ordinal)
-    ) 'Bash upgrade rejection precedes dependency installation'
+    $powerShellGuard = $powerShellInstaller.IndexOf('if ($previousVersion -and $previousVersion -ne $BRANCH.Substring(1) -and -not $Force)', [StringComparison]::Ordinal)
+    $bashGuard = $bashInstaller.IndexOf('if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "' + $targetVersion + '" ] && [ "$FORCE" != "true" ]', [StringComparison]::Ordinal)
+    Assert-True ($powerShellGuard -ge 0 -and $powerShellGuard -lt $powerShellInstaller.IndexOf('if (-not (Invoke-GitInstallIfMissing))', [StringComparison]::Ordinal)) 'PowerShell upgrade rejection exists before dependency installation'
+    Assert-True ($bashGuard -ge 0 -and $bashGuard -lt $bashInstaller.IndexOf('ensure_dependency git git Git', [StringComparison]::Ordinal)) 'Bash upgrade rejection exists before dependency installation'
+    $bashComparisons = [regex]::Matches($bashInstaller, '\[ "\$PREVIOUS_VERSION" != "(\d+\.\d+\.\d+)" \]')
+    Assert-True ($bashComparisons.Count -eq 2 -and @($bashComparisons | Where-Object { $_.Groups[1].Value -ne $targetVersion }).Count -eq 0) 'Both Bash upgrade comparisons use the stamped target version'
     Assert-True ($bashInstaller -match '\$PREFIX/LICENSE') 'Bash installer extracts LICENSE'
     Assert-True ($bashInstaller -match '\$PREFIX/NOTICE') 'Bash installer extracts NOTICE'
 
@@ -119,7 +122,8 @@ try {
             $bashInstaller.Replace("`r`n", "`n"),
             [Text.UTF8Encoding]::new($false)
         )
-        & tar -czf $bashArchive -C $tempRoot 'AgentX-v9.2.0'
+        & tar -czf $bashArchive -C $tempRoot $fixtureName
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to create Bash installer fixture archive' }
         if ($IsWindows) {
             $archiveArg = (& wsl.exe wslpath -u $bashArchive.Replace('\', '/')).Trim()
             $targetArg = (& wsl.exe wslpath -u $bashTarget.Replace('\', '/')).Trim()
@@ -153,17 +157,20 @@ try {
         $bashUpgradeTarget = Join-Path $tempRoot 'bash-upgrade'
         New-Item -ItemType Directory -Path (Join-Path $bashUpgradeTarget '.agentx') -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $bashUpgradeTarget '.agentx-install-tmp') -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx/version.json') -Value '{ "version": "9.1.0" }' -Encoding ascii
-        Set-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx/agentx.sh') -Value 'old-runtime' -Encoding ascii
-        Set-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx-install-tmp/sentinel.txt') -Value 'consumer-data' -Encoding ascii
-        if ($IsWindows) { $bashUpgradeArg = (& wsl.exe wslpath -u $bashUpgradeTarget.Replace('\', '/')).Trim() }
-        else { $bashUpgradeArg = $bashUpgradeTarget }
-        & $bashCommand.Source -lc "PATH='${shimArg}:/usr/local/bin:/usr/bin:/bin' AGENTX_INSTALL_ARCHIVE='$archiveArg' bash '$installerArg' --local --path '$bashUpgradeArg' --no-setup" *> $null
-        $bashUpgradeExit = $LASTEXITCODE
-        Assert-True ($bashUpgradeExit -ne 0) 'Bash installer refuses an unforced same-major upgrade'
-        Assert-True ((Get-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx/agentx.sh') -Raw).Trim() -eq 'old-runtime') 'Bash refused upgrade preserves old runtime bytes'
-        Assert-True ((Get-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx/version.json') -Raw | ConvertFrom-Json).version -eq '9.1.0') 'Bash refused upgrade preserves old version metadata'
-        Assert-True (Test-Path -LiteralPath (Join-Path $bashUpgradeTarget '.agentx-install-tmp/sentinel.txt')) 'Bash refused upgrade performs no cleanup mutation'
+        foreach ($priorVersion in @('9.1.0', '9.2.0')) {
+            Set-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx/version.json') -Value "{ `"version`": `"$priorVersion`" }" -Encoding ascii
+            Set-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx/agentx.sh') -Value 'old-runtime' -Encoding ascii
+            Set-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx-install-tmp/sentinel.txt') -Value 'consumer-data' -Encoding ascii
+            if ($IsWindows) { $bashUpgradeArg = (& wsl.exe wslpath -u $bashUpgradeTarget.Replace('\', '/')).Trim() }
+            else { $bashUpgradeArg = $bashUpgradeTarget }
+            $bashUpgradeOutput = & $bashCommand.Source -lc "PATH='${shimArg}:/usr/local/bin:/usr/bin:/bin' AGENTX_INSTALL_ARCHIVE='$archiveArg' bash '$installerArg' --local --path '$bashUpgradeArg' --no-setup" 2>&1 | Out-String
+            $bashUpgradeExit = $LASTEXITCODE
+            Assert-True ($bashUpgradeExit -ne 0) "Bash installer refuses an unforced upgrade from $priorVersion"
+            Assert-True ($bashUpgradeOutput -like "*replace managed files with v${targetVersion}; no files were changed*") 'Bash upgrade rejection identifies the current target version'
+            Assert-True ((Get-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx/agentx.sh') -Raw).Trim() -eq 'old-runtime') 'Bash refused upgrade preserves old runtime bytes'
+            Assert-True ((Get-Content -LiteralPath (Join-Path $bashUpgradeTarget '.agentx/version.json') -Raw | ConvertFrom-Json).version -eq $priorVersion) 'Bash refused upgrade preserves old version metadata'
+            Assert-True (Test-Path -LiteralPath (Join-Path $bashUpgradeTarget '.agentx-install-tmp/sentinel.txt')) 'Bash refused upgrade performs no cleanup mutation'
+        }
     }
 
     Assert-True ((Get-Content -LiteralPath (Join-Path $repoRoot 'packs/agentx-copilot-cli/install-user.ps1') -Raw) -match 'agentx-legal') 'PowerShell user installer namescopes AgentX legal files'

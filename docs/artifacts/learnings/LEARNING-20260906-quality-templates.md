@@ -38,6 +38,11 @@ missing content. Record each deliberate correction separately from relocation.
 
 ## Evidence
 
+- Manual-publish preparation exposed a stale, single-quoted upgrade guard and
+  repeated Bash comparisons missed by version stamping. Derive guards and warnings
+  from the target release, update every repeated comparison, and test upgrades
+  from the immediately preceding patch as well as an older minor. Assert that
+  static guard markers exist before comparing their positions.
 - Delivery completed through the normal quality loop and commit hooks in
   `7fd090a4`. Final independent review recorded zero HIGH/MEDIUM findings and
   two nonblocking informational LOW notes. Extension lint, compilation and

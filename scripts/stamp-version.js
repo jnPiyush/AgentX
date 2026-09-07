@@ -513,7 +513,7 @@ function main() {
       label: 'bash installer banner',
     },
     {
-      pattern: /\[ "\$PREVIOUS_VERSION" != "\d+\.\d+\.\d+" \]/,
+      pattern: /\[ "\$PREVIOUS_VERSION" != "\d+\.\d+\.\d+" \]/g,
       replacement: `[ "$PREVIOUS_VERSION" != "${targetVersion}" ]`,
       label: 'bash installer upgrade comparison',
     },

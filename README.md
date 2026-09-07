@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Structured AI software delivery for GitHub Copilot, Claude, OpenAI, local models, and the CLI.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.2.0"><img src="https://img.shields.io/badge/Version-9.2.0-b11f4b?style=for-the-badge" alt="Version 9.2.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.2.1"><img src="https://img.shields.io/badge/Version-9.2.1-b11f4b?style=for-the-badge" alt="Version 9.2.1"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -293,15 +293,15 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.2.0
+## New In 9.2.1
 
-This major release makes AgentX completion and autonomous execution fail closed:
+This maintenance release improves compatibility, verification, and documentation:
 
-- quality-loop approval now requires an attributable structured reviewer verdict with zero HIGH/MEDIUM findings on the final work iteration
-- commit-time gates enforce risk-based iteration minimums, staged/worktree agreement, and post-commit loop consumption
-- autonomous workspace tools reject traversal, alternate streams, credentials, protected gate paths, links, aliases, and hardlinks
-- autonomous shell execution and Claude-native tools remain disabled until an externally sandboxed adapter is available
-- regression suites cover review exhaustion, hook lifecycle, path controls, staged and untracked harness enforcement, and VS Code evidence forwarding
+- hardened zero-copy initialization and bundled runtime compatibility for Copilot CLI and the VS Code Agents window
+- stronger harness budget controls, evidence validation, and subprocess handling
+- mandatory documentation-drift review before completion
+- focused agent prompts, skill prompts, and visual templates with required contracts preserved
+- less execution-document clutter without deleting active work or durable evidence
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

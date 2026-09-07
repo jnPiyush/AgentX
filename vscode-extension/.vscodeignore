@@ -9,6 +9,8 @@ coverage/**
 coverage-output.txt
 .mocharc.yml
 .eslintrc.cjs
+.eslint-baseline.json
+tsc-out.txt
 tsconfig.json
 **/*.ts
 **/*.map

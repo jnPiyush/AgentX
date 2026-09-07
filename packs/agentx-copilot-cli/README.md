@@ -220,7 +220,7 @@ validator beside the trusted quality evaluator.
 ## Version
 
 - Plugin: `agentx-copilot-cli`
-- Version: `9.2.0`
+- Version: `9.2.1`
 - Publisher: jnPiyush
 - License: Apache-2.0
 - Third-party notices: See `NOTICE`, including the MIT-licensed

@@ -215,7 +215,7 @@ foreach ($legalFile in @('LICENSE', 'NOTICE')) {
 # Version stamp
 $stamp = [ordered]@{
   plugin      = 'agentx-copilot-cli-user'
-  version     = '9.2.0'
+  version     = '9.2.1'
   installedAt = (Get-Date).ToUniversalTime().ToString('o')
   source      = $Source
   mcpRegistered = [bool]$RegisterMcp

@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-9.2.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.2.1-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -266,7 +266,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 Every feature, story and bug runs `agentx doc-drift check` before review, including
 configuration-only work. The final quality report requires `documentationReview`
 with impact rationale and current reviewed-document hashes. See the
-[maintenance policy](../docs/guides/DOCUMENTATION-MAINTENANCE.md).
+[maintenance policy](https://github.com/jnPiyush/AgentX/blob/main/docs/guides/DOCUMENTATION-MAINTENANCE.md).
 
 | Command | Description |
 |:--------|:------------|
@@ -352,6 +352,12 @@ listed below and 11 hidden specialists that remain parent-invocable.
 ---
 
 ## Recent Changes
+
+### 9.2.1
+
+- Hardened zero-copy initialization and runtime discovery for Copilot CLI and the VS Code Agents window.
+- Improved budget controls, evidence validation, subprocess handling, and bundled-runtime parity.
+- Added mandatory documentation-drift review and streamlined prompts, templates, and execution records.
 
 ### 9.0.0
 

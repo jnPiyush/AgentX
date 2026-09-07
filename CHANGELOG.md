@@ -1,5 +1,16 @@
 # Changelog
 
+## 9.2.1
+
+### Fixes and maintenance
+
+- Hardened zero-copy initialization, runtime discovery, bundled assets, and compatibility with GitHub Copilot CLI and the VS Code Agents window.
+- Improved harness budget controls, evidence validation, subprocess handling, YAML parsing, and installed-runtime parity.
+- Made documentation-drift review mandatory for features, stories, bugs, and configuration changes.
+- Streamlined agent and skill prompts and all 15 templates while preserving required contracts; resolved extension lint findings.
+- Retired obsolete execution records while preserving active plans, durable decisions, and historical validation outcomes.
+- Kept same-major upgrade protection correct after version bumps and excluded development-only files from the manual-publish VSIX.
+
 ## 9.2.0
 
 ### Changed
