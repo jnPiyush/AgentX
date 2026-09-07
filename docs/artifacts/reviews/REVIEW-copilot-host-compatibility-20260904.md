@@ -43,8 +43,9 @@ current installer until the Critical and High findings are fixed.
 
 > **Remediation update (2026-09-04, post-audit)**: every Critical, High and
 > Medium finding below has since been fixed and verified. See
-> [Section 12 -- Remediation Status](#12-remediation-status) and
-> [EXEC-PLAN-copilot-host-compatibility.md](../../execution/plans/EXEC-PLAN-copilot-host-compatibility.md).
+> [Section 12 -- Remediation Status](#12-remediation-status).
+> Retired execution detail:
+> `git show 7fd090a4:docs/execution/plans/EXEC-PLAN-copilot-host-compatibility.md`.
 > The verdict above is preserved as the point-in-time audit result.
 
 ### Template Adaptation

@@ -50,7 +50,9 @@ every source line or skill received a deep semantic audit.
 
 ## Evidence
 
-- [Execution plan and decision record](../../execution/plans/EXEC-PLAN-20260906-structure-prompts.md)
+- Retired execution detail:
+  `git show 7fd090a4:docs/execution/plans/EXEC-PLAN-20260906-structure-prompts.md`.
+  This learning retains the decision record and preservation results.
 - [Registry regression tests](../../../tests/registry-generation-behavior.ps1):
   array shapes, block scalars, invalid input and standalone parser compatibility.
 - [Prompt contract tests](../../../tests/prompt-contract-behavior.ps1):

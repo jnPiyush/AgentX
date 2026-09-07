@@ -35,4 +35,5 @@ The best near-term shape is:
 
 - `docs/artifacts/adr/ADR-235.md`
 - `docs/artifacts/specs/SPEC-235.md`
-- `docs/execution/plans/EXEC-PLAN-235-ai-eval-architecture.md`
+- Retired architecture execution detail:
+  `git show 7fd090a4:docs/execution/plans/EXEC-PLAN-235-ai-eval-architecture.md`

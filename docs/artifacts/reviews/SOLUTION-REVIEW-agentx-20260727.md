@@ -187,7 +187,10 @@ The reviewer was right that a denylist over command text cannot be made evasion-
 
 ## 5. Follow-Up Round: MEDIUM Findings Closed
 
-All MEDIUM findings from the first re-scoped pass have since been fixed, except one that is deliberately deferred. See [EXEC-PLAN-20260727-medium-findings.md](../../execution/plans/EXEC-PLAN-20260727-medium-findings.md).
+All MEDIUM findings from the first re-scoped pass have since been fixed, except
+one that is deliberately deferred. The outcomes and deferral rationale are retained
+below. Recover the retired execution detail with
+`git show 7fd090a4:docs/execution/plans/EXEC-PLAN-20260727-medium-findings.md`.
 
 | Finding | Severity | Status |
 |---|---|---|

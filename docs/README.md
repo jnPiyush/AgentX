@@ -34,15 +34,20 @@ workflow artifacts, and living execution state that live underneath it.
   spec, review, learning) are never pruned for being old -- they are the
   permanent decision record. Supersession is marked explicitly in the document,
   not by deletion.
-- **Prunable**: a completed execution plan/progress pair is a candidate for
-  deletion only after its unique guidance has been confirmed to already live in
-  a retained guide, template, contract, or artifact, and no other document
-  links to it. See [docs/guides/DOCUMENTATION-MAINTENANCE.md](guides/DOCUMENTATION-MAINTENANCE.md#retention-and-consolidation)
+- **Prunable**: completed plans, progress logs, and one-off evidence summaries
+  can be removed after their unique guidance and required proof are captured in
+  retained documents and active references are updated. Drafts, blockers, and
+  pending validation are not completed work. Recover retired run details from
+  Git history rather than maintaining a second archive tree.
+  See [docs/guides/DOCUMENTATION-MAINTENANCE.md](guides/DOCUMENTATION-MAINTENANCE.md#retention-and-consolidation)
   for the full retention classification and the `agentx doc-drift check` gate.
 - **Runtime state, not documentation**: `docs/execution/task-bundles/` and
   `docs/execution/bounded-parallel/` hold CLI-generated JSON snapshots of
   bundle/parallel-delivery runs, not authored prose. They are pruned once
   archived/reconciled and are not treated as durable guidance.
+- **Raw evidence**: command output, screenshots from individual runs, and loop
+  reports belong in local `.agentx/state/` or CI artifacts. Keep a concise durable
+  review or certification when the result must remain part of the decision record.
 
 ## Source vs. Mirror Ownership
 

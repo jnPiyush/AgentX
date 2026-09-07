@@ -41,7 +41,9 @@ coverage, high-risk routing or truthful cost estimates.
 ## Evidence
 
 - [Research and council](../../guides/HARNESS-RESEARCH-20260905.md)
-- [Execution plan](../../execution/plans/EXEC-PLAN-20260905-harness-quality.md)
+- Retired execution detail:
+  `git show 7fd090a4:docs/execution/plans/EXEC-PLAN-20260905-harness-quality.md`.
+  Current operations: [Coding harness](../../guides/CODING-HARNESS.md).
 - Token/routing baseline defects reproduced and covered by
   `tests/token-budget-behavior.ps1` and `tests/model-route-behavior.ps1`.
 - Budget invalid numbers, cache subsets, unknown caps and capability mismatch

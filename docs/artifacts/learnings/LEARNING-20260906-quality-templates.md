@@ -9,7 +9,8 @@ category: 'engineering-workflow'
 # LEARNING-20260906-quality-templates: Verify preservation and consumer behavior
 
 **Date**: 2026-09-07
-**Source**: [Quality and templates execution plan](../../execution/plans/EXEC-PLAN-20260906-quality-templates.md)
+**Source**: Local delivery commit `7fd090a4`; retired execution detail is available
+with `git show 7fd090a4:docs/execution/plans/EXEC-PLAN-20260906-quality-templates.md`.
 **Baseline**: `55f02840`
 
 ## Context
@@ -37,6 +38,14 @@ missing content. Record each deliberate correction separately from relocation.
 
 ## Evidence
 
+- Delivery completed through the normal quality loop and commit hooks in
+  `7fd090a4`. Final independent review recorded zero HIGH/MEDIUM findings and
+  two nonblocking informational LOW notes. Extension lint, compilation and
+  1,080 tests passed; final harness and distribution checks passed 57/57 and 43/43.
+- The 15 templates fell from 60,070 to 27,683 estimated tokens (53.9%), using
+  LF-normalized characters/4. This is not provider billing or a live-model result.
+  Live Agents-window GUI validation was not performed. The failed full-framework
+  run and corrective targeted evidence remain distinguished below.
 - An independent preservation check found deleted Azure CLI guidance despite
   passing root budgets. Restoring it produced seven complete outlier passes.
 - Template semantic review restored missing model identity, tool, evaluation and

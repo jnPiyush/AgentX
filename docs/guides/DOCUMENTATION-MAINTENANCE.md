@@ -108,7 +108,9 @@ Classify before removing:
 |-------|--------|
 | Current operations/instructions | Maintain and link from the documentation hub |
 | Durable ADR/PRD/spec/review/learning | Retain with its original date and decision context; mark supersession explicitly |
-| Completed execution plan/progress | Keep when referenced or carrying unique evidence; otherwise summarize durable lessons and prune redundant state |
+| Completed plan/progress/one-off evidence | Capture unique decisions and required proof in retained docs, update active references, then prune redundant state |
+| Draft, blocked, or pending-validation work | Retain until explicitly completed or superseded; do not infer completion from age |
+| Certification or incident decision record | Retain the original outcome and limitations, including failed or partial validation |
 | Runtime-generated snapshots | Keep in local state, not the tracked documentation corpus |
 | Generated mirror | Regenerate from the canonical source |
 
@@ -117,6 +119,13 @@ incoming links, test/packaging dependencies and unique content. Record the
 retention decision, repair navigation, run the drift checker and validate the
 installed/bundled layout. Git history remains available for deleted transient
 notes; do not replace a useful historical record with a fake current one.
+
+At closeout, keep one canonical account rather than another plan, progress log,
+and evidence recap of the same result. Raw command output belongs in local
+`.agentx/state/` or CI artifacts. Recover retired files with
+`git log -- <path>` and `git show <commit>:<path>`; do not move the clutter into a
+second tracked archive. A backticked path in an old decision may be historical,
+but an active instruction or executable consumer must still resolve.
 
 ## Facts policy
 

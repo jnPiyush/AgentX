@@ -16,11 +16,23 @@ This directory holds the living artifacts for complex work that is still being e
 
 ## Naming Guidance
 
-- Prefer `TOPIC-PLAN.md` for plans.
-- Prefer `TOPIC-PROGRESS.md` for progress logs.
+- Prefer `EXEC-PLAN-<issue>-<topic>.md` for plans.
+- Prefer `PROGRESS-<issue>-<topic>.md` for progress logs.
 - Prefer `CONTRACT-<issue>-<topic>.md` for bounded work contracts.
 - Prefer `EVIDENCE-<issue>-<topic>.md` for the matching evidence summary.
 - Keep the topic stem stable so search results and pairings remain obvious.
+
+## Keep This Directory Active
+
+- Retain draft, blocked, partially delivered, and pending-validation work.
+- Remove completed plans, progress logs, and one-off evidence only after unique
+  decisions and required proof are captured in a retained guide, spec, review,
+  learning, or certification. Update active links before removal.
+- Preserve records consumed by packaging, tests, or another active contract.
+- Store raw run output in local `.agentx/state/` or CI artifacts, not new tracked
+  Markdown reports. Do not create a parallel `archive/` tree.
+- Use `git log -- docs/execution` and `git show <commit>:<path>` to recover retired
+  execution detail. Historical results are not a current validation claim.
 
 ## Relationship To Other Docs
 

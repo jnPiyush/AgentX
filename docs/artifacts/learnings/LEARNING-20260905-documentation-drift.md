@@ -13,8 +13,8 @@ category: documentation-drift
 
 ## Context
 
-`docs/execution/plans/EXEC-PLAN-20260905-documentation-drift.md` found stale
-counts in navigation docs and a growing pile of completed plan/progress pairs
+The initial documentation-drift task found stale counts in navigation docs
+and a growing pile of completed plan/progress pairs
 and CLI-generated JSON runtime snapshots sitting alongside active documentation
 with no hub explaining which records are current, which are retained history,
 and which are prunable. The task was scoped to documentation consolidation
@@ -152,9 +152,36 @@ Keep in draft until a second consolidation pass (e.g. the parent's planned
 docs-drift policy/tool) reconfirms these patterns hold under automated
 enforcement rather than a single manual audit.
 
+## Follow-up consolidation: 2026-09-07
+
+The next user-requested cleanup retired 22 execution files without creating a
+second archive or another plan: 18 plans, two progress logs and two duplicate
+run-evidence recaps. `docs/execution/` went from 46 files to 24; `docs/` went
+from 127 to 105.
+
+| Retired cohort | Retained source of truth |
+|----------------|--------------------------|
+| Completed harness/runtime, medium-remediation and model-sweep plans | Original dated reviews, including the explicitly deferred monolith refactor and CI limitations |
+| Completed September harness, drift, structure and template plans | Matching learnings, research guide, maintenance guide and local delivery commits `55f02840` / `7fd090a4` |
+| Completed architecture plans 234/235 and delivery plans 401/402/420 | ADRs, specs, councils, learnings and canonical agent/skill contracts |
+| Completed latency, workflow, harness-control and zero-copy plans | Current protocol, workflow, coding-harness and runtime guidance |
+| Hidden copied-runtime plan/progress | Superseded by zero-copy initialization, not relabelled as completed |
+| Duplicate hook-frontmatter and PR-review run recaps | Current parser/regression contracts and original Git history |
+
+All 54 durable artifacts and three certification records remain. Drafts,
+pending external validation, package-consumed plans 341/342, contract 400,
+runtime-migration parity/postmortem evidence, and CodeQL/release/Marketplace
+incident records were retained. An unlinked completed review is still a decision
+record; its age or lack of incoming links is not a deletion rationale.
+
+Every retired path is recoverable with `git show 7fd090a4:<path>`. Active links
+now route to durable guidance or explicitly identify that historical recovery
+command. No new PASS claim replaces failed, partial or unavailable validation.
+
 ## Related
 
-- Plan: `docs/execution/plans/EXEC-PLAN-20260905-documentation-drift.md`
+- Retired original plan:
+  `git show 7fd090a4:docs/execution/plans/EXEC-PLAN-20260905-documentation-drift.md`
 - Guide: `docs/guides/DOCUMENTATION-MAINTENANCE.md` (parent-authored retention
   and consolidation policy referenced from the rebuilt `docs/README.md`)
 - Other LEARNING(s): none yet promoted for this category.
