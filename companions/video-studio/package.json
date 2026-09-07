@@ -13,7 +13,7 @@
     "captions": "node scripts/emit-captions.mjs"
   },
   "devDependencies": {
-    "@remotion/cli": "4.0.503",
+    "@remotion/cli": "4.0.506",
     "@types/react": "18.3.28",
     "@types/react-dom": "18.3.7",
     "react": "18.3.1",
