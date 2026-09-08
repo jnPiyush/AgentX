@@ -1,6 +1,6 @@
 {
   "name": "agentx-copilot-cli",
-  "version": "9.2.1",
+  "version": "9.3.0",
   "description": "AgentX Copilot CLI pack -- installs agents, skills, instructions, prompts, templates, schemas and hooks into any workspace for GitHub Copilot CLI usage. Separate from the core AgentX VS Code extension.",
   "maturity": "stable",
   "platform": "copilot-cli",
@@ -102,6 +102,8 @@
     "scripts": [
       "scripts/budget.ps1",
       "scripts/check-doc-drift.ps1",
+      "scripts/check-design-language.ps1",
+      "scripts/check-design-language.js",
       "scripts/scrub.ps1",
       "scripts/dream.ps1",
       "scripts/research.ps1",

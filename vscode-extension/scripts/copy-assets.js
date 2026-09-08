@@ -28,6 +28,8 @@ const rootDirs = [
 const runtimeScriptFiles = [
     'budget.ps1',
     'check-doc-drift.ps1',
+    'check-design-language.ps1',
+    'check-design-language.js',
     'scrub.ps1',
     'dream.ps1',
     'research.ps1',

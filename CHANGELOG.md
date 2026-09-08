@@ -1,5 +1,23 @@
 # Changelog
 
+## 9.3.0
+
+### Added
+
+- Added `agentx design-language check`, an opt-in bridge to a checksum-pinned, workspace-owned Impeccable 0.1.3 engine. It runs locally without downloads or global engine fallback.
+- Distributed the gate through the extension runtime and standalone Copilot CLI pack; connected setup and result handling to UX Designer and prototype audits.
+
+### Reliability
+
+- Distinguish PASS, BLOCKED, and DEGRADED results; preserve advisories and flag incomplete coverage, operational failures, and nested project/design boundaries instead of reporting a false PASS.
+- Bound process time, output, discovery, and input size; reject escaping paths, symlinks in scan scope, and modified engines.
+- Require explicit engine setup, PRODUCT context, and DESIGN token mappings. Deterministic scans do not replace manual visual, accessibility, or semantic review.
+
+### Validation
+
+- Passed 82 behavior/native checks, including 13 official-engine nested-boundary regressions, 47 distribution checks, and 23 targeted prompt assertions during implementation.
+- Verified actual native scans through the bundled extension runtime and Bash-installed CLI. Live Copilot/Agents-window discovery was not validated; upstream engine binaries are not bundled.
+
 ## 9.2.1
 
 ### Fixes and maintenance

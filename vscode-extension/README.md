@@ -2,7 +2,7 @@
 
 **The IDE Orchestrator for Multi-Agent Software Delivery**
 
-[![Version](https://img.shields.io/badge/Version-9.2.1-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.3.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
 *Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
@@ -352,6 +352,12 @@ listed below and 11 hidden specialists that remain parent-invocable.
 ---
 
 ## Recent Changes
+
+### 9.3.0
+
+- Added `agentx design-language check` for a target-local, checksum-pinned Impeccable native engine, without automatic downloads or installs.
+- Reports PASS, BLOCKED, or DEGRADED, with incomplete or ambiguous scan coverage requiring manual review rather than a false PASS.
+- Ships the gate through the extension runtime and standalone CLI pack; design-quality and accessibility review remain required.
 
 ### 9.2.1
 

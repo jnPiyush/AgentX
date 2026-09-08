@@ -1,10 +1,7 @@
 # Impeccable Integration - Detector Governance
 
-> Read this when the [impeccable-integration](../SKILL.md) root sends you here
-> for responsibility boundaries, detector outcomes, waivers, commands,
-> anti-patterns, troubleshooting, or the original verification checklist. The
-> sections are relocated from the original root; the degraded report distinguishes
-> required checks from execution evidence.
+> Companion to [impeccable-integration](../SKILL.md): gate outcomes, waivers
+> and honest audit evidence.
 
 ## Division of responsibility
 
@@ -13,7 +10,7 @@ similar-sounding command.
 
 | Concern | Owner | Why |
 |---------|-------|-----|
-| Visual slop tells, typography drift, layout rhythm, motion discipline | Impeccable | 59 deterministic rules |
+| Visual slop tells, typography drift, layout rhythm, motion discipline | Impeccable | Versioned deterministic rules; applicability varies by source format |
 | Design-system conformance (font / color / radius / size outside `DESIGN.md`) | Impeccable | No AgentX equivalent exists |
 | Fabricated metrics, testimonials, trust badges | **AgentX** | Impeccable has no fabrication rules |
 | Emoji as iconography, emoji-prefixed headings | **AgentX** | No Impeccable equivalent; AgentX is ASCII-only |
@@ -24,35 +21,46 @@ similar-sounding command.
 
 ## The detector as a three-state gate
 
-```bash
-npm exec --offline -- impeccable detect --json src/          # whole tree
-npm exec --offline -- impeccable detect --scope type src/    # narrow: type | layout
-npm exec --offline -- impeccable detect --json dist/index.html
+```powershell
+.\.agentx\agentx.ps1 design-language check -Path src -Json
+.\.agentx\agentx.ps1 design-language check -Path dist\index.html -Json
 ```
 
-Exit codes: `0` no findings, `2` findings, `1` command failed.
+AgentX exits: `0` PASS, `2` BLOCKED, `1` DEGRADED. Native output is a bare
+findings array, not an object. A native exit `0` may contain advisories
+(`advisory: true` or `severity: advisory`). Exit `1` overrides findings from
+partially successful scans. Unknown exits, malformed JSON, timeout, capture
+overflow or stderr diagnostics never pass.
 
 | State | Condition | Effect |
 |-------|-----------|--------|
-| `PASS` | Exit `0`, or every finding carries an AgentX waiver | Gate satisfied |
-| `BLOCKED` | Exit `2` with unwaived findings | Prototype is not review-ready |
-| `DEGRADED` | Detector could not run | Falls back to AgentX-only checks, **recorded** |
+| `PASS` | Complete scan, no primary findings or coverage limitations | Deterministic gate only; retain advisories and manual checks |
+| `BLOCKED` | Primary findings remain | Fix or request AgentX waiver review |
+| `DEGRADED` | Execution, prerequisites or coverage incomplete | Continue AgentX-only checks with explicit evidence |
+
+The executable gate does not approve waivers. It disables inline ignores;
+custom `detector`, legacy `hook`, or `projectRoots` config requires manual
+suppression/scope review and keeps the result DEGRADED. Do not delete settings
+just to make the gate green. A reviewer can record accepted waivers separately
+without changing raw detector evidence or waiving operational failures.
+
+Evidence includes engine version/path/hash, argv, exit, diagnostics, input
+hashes, primary/advisory findings, duration and coverage limitations.
+`eligibleFileCount` is discovery evidence, NOT a measured `scannedFileCount`
+(upstream does not report one). Nonempty token mappings are only a syntactic
+preflight, not proof that every design rule was active. Review token semantics.
 
 `DEGRADED` is never silently equivalent to `PASS`. When the detector cannot
-run -- no Node 22.18+, no resolved binary, no network on first use -- complete
+run -- no Node 22.18+, missing native pin, invalid design tokens -- complete
 this block with actual evidence in the audit report and the UX Spec:
 
 ```
 Design language check: DEGRADED (AgentX-only)
-Reason: <no network | binary unresolved | node <22.18 | other>
+Reason: <exact gate reason>
 Required fallback checks: T1-T10 + Honest Placeholders + axe + Pass 9 critique
 Actually run: <commands, results and evidence; do not prefill success>
-Not run: 59 deterministic rules, 4 design-system conformance rules, <any unavailable fallback checks and why>
+Not run: <detector checks unavailable or incomplete, plus unavailable fallback checks and why>
 ```
-
-Without that record, a prototype checked at the low bar is indistinguishable
-from one checked at the high bar. If `DEGRADED` appears on most runs, the
-dependency is not pinned correctly and the integration has become decorative.
 
 ## Waivers: AgentX protocol is authoritative
 
@@ -71,17 +79,9 @@ finding silenced upstream never reaches the AgentX audit report or review.
 
 ## Command vocabulary
 
-All 23 commands run through `/impeccable <command> [target]`.
-
-| Group | Commands |
-|-------|----------|
-| Setup | `init`, `document`, `extract` |
-| Plan | `shape`, `craft` (deprecated alias) |
-| Review | `critique`, `audit`, `polish` |
-| Intensity | `bolder`, `quieter`, `distill`, `overdrive`, `delight` |
-| Craft | `typeset`, `layout`, `colorize`, `animate` |
-| Robustness | `harden`, `onboard`, `clarify`, `adapt`, `optimize` |
-| Iterate | `live` |
+Use `/impeccable <command> [target]` only when the upstream skill is available.
+Confirm its installed command vocabulary; these are routing examples, not a
+duplicated upstream specification.
 
 Choosing one:
 
@@ -93,7 +93,9 @@ Choosing one:
 - Final pass before review -> `polish`
 
 `/impeccable audit` is the right call for native iOS or Android targets; the
-deterministic detector is web-only and reads HTML and CSS.
+deterministic detector is web-only. Local discovery also accepts stylesheet
+preprocessors, JS/TS/JSX/TSX, Vue, Svelte, Astro and Blade sources; that does not
+mean every rule has full framework or rendered-browser coverage.
 
 ## Anti-Patterns
 
@@ -114,12 +116,12 @@ deterministic detector is web-only and reads HTML and CSS.
 
 | Symptom | Cause | Recovery |
 |---------|-------|----------|
-| `command not found` | Not installed in this project | Install as devDependency, or record `DEGRADED` |
-| Hangs on first run | `npx` fetching over a blocked network | Use the local binary after `npm ci` |
+| Missing pin or binary | Native engine not prepared in this app | Follow target-only setup or record `DEGRADED` |
+| Launcher fetches on first run | npm offline does not constrain the shim | Use the verified native engine directly |
 | Exit `1` | Detector itself failed, not a finding | Treat as `DEGRADED`, not `PASS`; capture stderr |
 | Findings appear after an upstream bump | Unpinned version | Pin the version; review the new rules deliberately |
-| Design-system rules never fire | No `DESIGN.md`, or stale | Run `/impeccable document` to regenerate |
-| Every scan is `DEGRADED` | Dependency not pinned locally | Fix the install; the integration is otherwise decorative |
+| Design-system rules never fire | Missing/invalid token frontmatter | Review tokens; use `/impeccable document` for existing UI |
+| Every scan is `DEGRADED` | Read the exact reason and coverage limitations | Fix prerequisites/scope, not the verdict |
 | Native iOS or Android target | Detector is web-only | Use `/impeccable audit` for the native pass |
 
 ## Verification Checklist

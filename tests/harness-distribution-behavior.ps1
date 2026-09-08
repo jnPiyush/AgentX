@@ -40,6 +40,14 @@ function Assert-TreeParity([string]$Source, [string]$Destination, [string]$Label
         Assert-True ($different.Count -eq 0) "$Label preserves canonical content, including nested references"
     }
 }
+function Test-DesignLanguageCommand([string]$Entry, [string]$Workspace) {
+    $env:AGENTX_WORKSPACE_ROOT = $Workspace
+    $output = & pwsh -NoProfile -NonInteractive -File $Entry design-language check -Json
+    $code = $LASTEXITCODE
+    $report = $output | Out-String | ConvertFrom-Json
+    Assert-True ($code -eq 1 -and $report.status -eq 'DEGRADED') 'Installed design gate explicitly degrades without a target-local native pin'
+    Assert-True (-not (Test-Path (Join-Path $Workspace '.impeccable'))) 'Installed design gate never installs upstream assets'
+}
 try {
     New-Item -ItemType Directory -Path $temp -Force | Out-Null
     $bundle = Join-Path $root 'vscode-extension/.github/agentx'
@@ -52,6 +60,7 @@ try {
         Assert-TreeParity $source (Join-Path $bundle "seed/.github/$tree") "Pristine seed $tree" -ExactContent
     }
     Test-BudgetCommand (Join-Path $bundle '.agentx/agentx-cli.ps1') $temp
+    Test-DesignLanguageCommand (Join-Path $bundle '.agentx/agentx.ps1') $temp
     Assert-True (-not (Test-Path (Join-Path $temp '.agentx/state'))) 'Zero-copy budget preflight creates no runtime state'
 
     $install = Join-Path $temp 'installed'
@@ -67,6 +76,7 @@ try {
     $installedRegistry = Get-Content -LiteralPath (Join-Path $install '.github/registries/skills.json') -Raw | ConvertFrom-Json
     Assert-True (($canonicalRegistry.skills | ConvertTo-Json -Depth 8 -Compress) -ceq ($installedRegistry.skills | ConvertTo-Json -Depth 8 -Compress)) 'Installed registry metadata matches canonical semantics without timestamp coupling'
     Test-BudgetCommand (Join-Path $install '.agentx/agentx.ps1') $install
+    Test-DesignLanguageCommand (Join-Path $install '.agentx/agentx.ps1') $install
     Assert-True (Test-Path (Join-Path $install '.github/skills/development/token-optimizer/references/tokenomics.md')) 'Standalone pack ships tokenomics contract'
     Assert-True (Test-Path (Join-Path $install '.token-limits.json')) 'Standalone pack ships file-budget policy'
     Assert-True (Test-Path (Join-Path $install '.github/agentx/scripts/check-doc-drift.ps1')) 'Trusted evaluator has its documentation-drift dependency'

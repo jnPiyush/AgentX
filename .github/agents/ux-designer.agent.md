@@ -136,7 +136,9 @@ or accepted a recommended direction.
 **Both branches converge on the same durable artifacts.** Whichever branch
 ran, codify the result into the target app's `PRODUCT.md` (audience, mode,
 voice, anti-references) and `DESIGN.md` (palette, type ramp, radii,
-components) via `/impeccable init`, then cite both from the UX Spec. Without
+components). `/impeccable init` writes PRODUCT.md only; use upstream's new-work
+workflow or `/impeccable document` to establish DESIGN.md and its token
+frontmatter, then cite both from the UX Spec. Without
 this step a chosen direction exists only in chat and cannot be conformed to
 or checked later. See [Impeccable Integration](../skills/design/impeccable-integration/SKILL.md) for
 install scope, the three-state detector gate, and the waiver rule.

@@ -35,13 +35,13 @@
 ```powershell
 # PowerShell -- into an existing project directory
 cd your-project
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.1/install.ps1 | iex
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.ps1 | iex
 ```
 
 ```bash
 # Bash
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.1/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.sh | bash
 ```
 
 **What happens**: AgentX copies agents, skills, templates, and CLI into your project. Your existing code is untouched.
@@ -153,8 +153,8 @@ Each agent produces a deliverable, validates it, and hands off to the next.
 ./install.sh
 
 # One-liner (downloads and runs)
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.1/install.ps1 | iex    # PowerShell
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.1/install.sh | bash  # Bash
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.ps1 | iex    # PowerShell
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.sh | bash  # Bash
 ```
 
 PowerShell install path note:
@@ -573,6 +573,22 @@ New-Item -ItemType Directory -Path ".agentx/issues" -Force
 function issue { .\.agentx\local-issue-manager.ps1 @args }
 # Then: issue -Action create -Title "[Bug] Fix login" -Labels "type:bug"
 ```
+
+### Design-language checks
+
+For target-app UI work, use the
+[Impeccable integration](../.github/skills/design/impeccable-integration/SKILL.md).
+After its explicit target-only setup, run:
+
+```powershell
+.\.agentx\agentx.ps1 design-language check -Path src -Json
+```
+
+The gate invokes a SHA256-pinned native engine without installing or downloading
+anything. Exit `0` is deterministic PASS, `2` is BLOCKED by primary findings,
+and `1` is DEGRADED execution or coverage. Retain advisory findings and complete
+the separate accessibility, token-semantic and prototype reviews. The same
+command is available through the Bash launcher and installed extension runtime.
 
 ### Workflow
 

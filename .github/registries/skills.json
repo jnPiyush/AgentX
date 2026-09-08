@@ -1,6 +1,6 @@
 {
   "$schemaVersion": 1,
-  "generated": "2026-09-07T14:13:48Z",
+  "generated": "2026-09-07T19:52:15Z",
   "source": ".github/skills/**/SKILL.md",
   "totalCount": 134,
   "countsByCategory": [
@@ -424,7 +424,7 @@
       "name": "impeccable-integration",
       "category": "design",
       "path": ".github/skills/design/impeccable-integration/SKILL.md",
-      "description": "Drive the Impeccable design language for a target app -- PRODUCT.md and DESIGN.md authoring, the 23-command intervention vocabulary, and the 59-rule deterministic detector wired as a three-state gate (PASS / BLOCKED / DEGRADED). Use when defining the design language for a target app, or when running design-language conformance on a prototype or shipped UI."
+      "description": "Establish a target app design language and run the pinned, target-local Impeccable native detector through AgentX. Produces an evidence-backed PASS / BLOCKED / DEGRADED gate without downloading or vendoring upstream code."
     },
     {
       "id": "design/prototype-audit",

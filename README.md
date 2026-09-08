@@ -3,7 +3,7 @@
   <h1>AgentX</h1>
   <p><strong>Structured AI software delivery for GitHub Copilot, Claude, OpenAI, local models, and the CLI.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.2.1"><img src="https://img.shields.io/badge/Version-9.2.1-b11f4b?style=for-the-badge" alt="Version 9.2.1"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.3.0"><img src="https://img.shields.io/badge/Version-9.3.0-b11f4b?style=for-the-badge" alt="Version 9.3.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -293,15 +293,17 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.2.1
+## New In 9.3.0
 
-This maintenance release improves compatibility, verification, and documentation:
+This release adds an executable, opt-in Impeccable design-language gate:
 
-- hardened zero-copy initialization and bundled runtime compatibility for Copilot CLI and the VS Code Agents window
-- stronger harness budget controls, evidence validation, and subprocess handling
-- mandatory documentation-drift review before completion
-- focused agent prompts, skill prompts, and visual templates with required contracts preserved
-- less execution-document clutter without deleting active work or durable evidence
+- a checksum-pinned, workspace-owned native engine with no automatic downloads
+- `agentx design-language check` in the CLI, extension runtime, and standalone pack
+- explicit PASS, BLOCKED, and DEGRADED results with advisories and coverage limitations
+- conservative handling of nested project boundaries that can suppress inherited design checks
+- setup and review guidance wired into UX Designer and prototype audits
+
+Follow the [Impeccable setup guide](.github/skills/design/impeccable-integration/references/details-design-language-setup.md) before scanning. Manual visual, accessibility, and semantic review remains required.
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

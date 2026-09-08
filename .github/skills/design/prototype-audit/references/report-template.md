@@ -14,9 +14,13 @@ Date: <yyyy-mm-dd>
 
 ## Pass 0: Design-language conformance
 - Status: PASS | FIXED | BLOCKED | DEGRADED
-- Detector: <version> | not run
-- Findings: <count by rule id>
-- If DEGRADED, reason: <no network | binary unresolved | node <22.18 | other>
+- Detector: <native version, SHA256, command, exit, JSON evidence path> | not run
+- Findings: <primary and advisory counts by rule id; waiver review separately>
+- Coverage: <eligible files, limitations, token semantic review; scanned count unknown>
+- If DEGRADED, reason: <exact gate reason; stderr; unavailable checks>
+- Required fallback checks: T1-T10 + Honest Placeholders + axe + Pass 9 critique
+- Actually run: <commands, results and evidence>
+- Not run: <checks and reasons>
 
 ## Pass 1: Accessibility
 ...

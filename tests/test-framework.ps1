@@ -656,7 +656,7 @@ Assert-FileContains "Skills.md" "$skillCount skills across" "Skills.md skill cou
 # Verify Impeccable integration contract
 Assert-FileExists ".github/skills/design/impeccable-integration/SKILL.md" "Impeccable integration skill"
 Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" 'name: "impeccable-integration"' "Impeccable bridge does not collide with upstream skill name"
-Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" "npm exec --offline -- impeccable detect --json" "Impeccable detector uses the pinned project-local binary"
+Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" "agentx design-language check -Path src -Json" "Impeccable detector uses the verified target-local native gate"
 Assert-FileNotContains ".github/skills/design/impeccable-integration/SKILL.md" '(?m)^\s*(?:\$\s*)?npx\s+impeccable' "Impeccable integration has no executable bare npx command"
 Assert-FileContains ".github/agents/ux-designer.agent.md" "Read PRD -> Design Language -> Design Research" "UX Designer runs design language before design research"
 Assert-FileContains ".github/skills/design/prototype-audit/SKILL.md" "Pass 0: Design-language conformance" "Prototype audit runs deterministic design-language pass first"

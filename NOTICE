@@ -45,7 +45,7 @@ Portions of the AgentX design skill set are derived from or inspired by:
 
 2. pbakaus/impeccable (Apache-2.0)
    https://github.com/pbakaus/impeccable
-   - The Impeccable design language, its 23-command intervention
+   - The Impeccable design language, its intervention
      vocabulary, the PRODUCT.md and DESIGN.md artifact model, and the
      deterministic detector rule catalogue referenced by
     .github/skills/design/impeccable-integration/SKILL.md

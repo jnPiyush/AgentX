@@ -7550,6 +7550,7 @@ $($C.w)  Commands:$($C.n)
   tokens [count|check|report]      Token budget management
   budget -File <request.json>     Offline context and token-cost preflight (no provider calls)
   doc-drift [check] [-Json]       Verify documentation links and current facts before review
+  design-language check [-Path src] [-Json]  Run the target-local Impeccable gate
   score <engineer|architect|pm> [issue]  Score agent output quality
   discover [run|status|reset]      Analyze signals + git history for patterns
   graduate [run|list|preview]      Promote high-confidence patterns to skills
@@ -8799,6 +8800,7 @@ function Invoke-RouteCmd         { Invoke-ScriptWrapper -ScriptRelPath 'scripts/
 function Invoke-CouncilCmd       { Invoke-ScriptWrapper -ScriptRelPath 'scripts/model-council.ps1'    -Label 'council' }
 function Invoke-BudgetCmd        { Invoke-ScriptWrapper -ScriptRelPath 'scripts/budget.ps1'          -Label 'budget' }
 function Invoke-DocDriftCmd      { Invoke-ScriptWrapper -ScriptRelPath 'scripts/check-doc-drift.ps1' -Label 'doc-drift' }
+function Invoke-DesignLanguageCmd { Invoke-ScriptWrapper -ScriptRelPath 'scripts/check-design-language.ps1' -Label 'design-language' }
 
 # ---------------------------------------------------------------------------
 # Main router
@@ -8829,6 +8831,7 @@ switch ($Script:Command) {
     'tokens'   { Invoke-TokensCmd }
     'budget'   { Invoke-BudgetCmd }
     'doc-drift' { Invoke-DocDriftCmd }
+    'design-language' { Invoke-DesignLanguageCmd }
     'score'    { Invoke-ScoreCmd }
     'discover' { Invoke-DiscoverCmd }
     'graduate' { Invoke-GraduateCmd }

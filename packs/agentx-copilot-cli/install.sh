@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AgentX Copilot CLI Plugin v9.2.1 - Installer (Bash)
+# AgentX Copilot CLI Plugin v9.3.0 - Installer (Bash)
 # Standalone plugin for GitHub Copilot CLI.
 # Does NOT require the AgentX VS Code extension or the core install.
 #
@@ -15,7 +15,7 @@
 #   -h, --help             Show this help
 set -euo pipefail
 
-VERSION="9.2.1"
+VERSION="9.3.0"
 TARGET="$(pwd)"
 SOURCE=""
 INCLUDE_CLI=false
@@ -412,6 +412,8 @@ copy_tree "$SOURCE/packs" "$TARGET/packs" "Packs"
 info "Installing scripts..."
 copy_file "scripts/budget.ps1" "scripts/budget.ps1"
 copy_file "scripts/check-doc-drift.ps1" "scripts/check-doc-drift.ps1"
+copy_file "scripts/check-design-language.ps1" "scripts/check-design-language.ps1"
+copy_file "scripts/check-design-language.js" "scripts/check-design-language.js"
 copy_file "scripts/score-output.ps1" "scripts/score-output.ps1"
 copy_file "scripts/score-code-quality.ps1" "scripts/score-code-quality.ps1"
 copy_file "scripts/validate-handoff.ps1" "scripts/validate-handoff.ps1"

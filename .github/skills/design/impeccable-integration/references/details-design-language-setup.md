@@ -1,141 +1,103 @@
-# Impeccable Integration - Design Language Setup
+# Impeccable: Target-App Setup
 
-> Read this when the [impeccable-integration](../SKILL.md) root sends you here
-> for installation, initialization, design-language authoring, or artifact
-> detail. The sections below are preserved verbatim from the original root.
+AgentX supplies the bridge, not upstream code. Install only in the target app,
+never in AgentX or its extension assets. Upstream is Apache-2.0; see NOTICE.
 
-<!--
-Source: Impeccable design language and detector by Paul Bakaus,
-  https://github.com/pbakaus/impeccable (Apache-2.0). AgentX orchestrates
-  the upstream tool; it does not vendor or fork it. See repository NOTICE.
--->
+## Verified contract
 
-# Impeccable Integration
+Reviewed upstream commit `8b39f419497fb9eaacb12e19c059b2353a0956c3` and native
+release `engine-v0.1.3`. Repository metadata says npm `4.0.4`, but the registry
+probe on 2026-09-07 returned `3.6.0` and `4.0.4` returned 404. Do not assume
+repository metadata proves a published package. Recheck before npm onboarding.
 
-> WHEN: Defining the design language for a target app, or checking any UI
-> surface against it. Impeccable owns visual design language and slop
-> detection. AgentX owns process, compliance evidence, and lifecycle
-> integration. Read the division table before assuming which side owns a
-> check.
+The npm shim may use an override, platform dependency, user cache, or download.
+`npm exec --offline` only constrains npm; it does not constrain that shim.
+AgentX instead requires an existing, hash-pinned native engine inside the app.
+The check performs no install, update, provider call, or URL scan.
 
-## When to Use This Skill
+## Explicit onboarding
 
-- Establishing the design language for a target app (the UX Designer's first phase)
-- Running design-language conformance on a prototype (Pass 0 of `prototype-audit`)
-- Choosing an intervention command when a surface is wrong but the fix is unclear
-- Deciding whether a finding belongs to Impeccable or to an AgentX skill
+Requires user-approved network access for setup, plus PowerShell 7 and Node
+22.18+ for the AgentX bridge. Example for Windows x64, from the target app:
 
-## Prerequisites
-
-- Node 22.18 or newer in the environment that runs the detector.
-- A target app repository. Impeccable is installed there, never into AgentX.
-- `impeccable` pinned as a devDependency so the gate is reproducible offline.
-- Write access to the target app's `PRODUCT.md` and `DESIGN.md`.
-
-When any of these is missing the detector cannot run and the gate reports
-`DEGRADED`. That is a supported path, not a failure -- see Troubleshooting.
-
-## Install: target app only
-
-Impeccable installs by copying a skill tree into the project. AgentX is
-zero-copy, so it is **never** installed into the AgentX repository or its
-bundled distribution. It is installed into the **target app** being designed.
-
-```bash
-# In the target app repo, not in AgentX
-npm install --save-dev impeccable   # pin the resolved version in the lockfile
-npm exec --offline -- impeccable install --scope=project
+```powershell
+$bin = '.impeccable\bin\0.1.3'
+New-Item -ItemType Directory -Path $bin -Force | Out-Null
+gh release download engine-v0.1.3 --repo pbakaus/impeccable --dir $bin `
+  --pattern impeccable-windows-x64.exe --pattern impeccable-windows-x64.exe.sha256
+if ($LASTEXITCODE -ne 0) { throw 'Engine download failed' }
+$engine = Join-Path $bin 'impeccable-windows-x64.exe'
+$expected = ((Get-Content "$engine.sha256" -Raw).Trim() -split '\s+')[0]
+$actual = (Get-FileHash $engine -Algorithm SHA256).Hash
+if ($actual -ne $expected) { throw 'Engine checksum mismatch' }
+@{
+  enginePath = '.impeccable/bin/0.1.3/impeccable-windows-x64.exe'
+  engineVersion = '0.1.3'
+  sha256 = $expected
+} | ConvertTo-Json | Set-Content '.impeccable\agentx.json'
 ```
 
-Then, inside the AI harness, run `/impeccable init` once. It asks whether the
-surface is brand or product and writes `PRODUCT.md` plus `DESIGN.md`.
+For macOS/Linux select the matching `impeccable-{darwin|linux}-{arm64|x64}`
+asset and sidecar, and make that verified file executable. Keep the binary
+out of source control; track the pin. Restore only the pinned release asset
+and check its recorded hash on new machines. Never rewrite a pin to accept a
+checksum mismatch. Upgrades require contract review and a new pin.
 
-**Pin the version.** Bare `npx impeccable` resolves the latest release. For a
-blocking gate that is disqualifying: an upstream rule addition can fail a build
-that passed yesterday with no local change, and it executes unpinned
-third-party code at gate time. Install as a devDependency and invoke the local
-binary so the gate is reproducible and runs offline after `npm ci`.
+Optionally install the upstream AI skill and agents using that verified engine:
 
-Teams that prefer vendoring may use the upstream submodule flow
-(`git submodule add` + `impeccable link`). This is a valid alternative; the
-zero-copy rule still forbids copying it into AgentX's own asset tree.
-
-## Quick Start
-
-1. Confirm prerequisites. If the detector cannot run, record `DEGRADED` and
-   continue on AgentX-only checks rather than stopping the design work.
-2. Install into the target app and pin the version in the lockfile.
-3. Run `/impeccable init` once. Answer brand or product. This writes
-   `PRODUCT.md` and `DESIGN.md`.
-4. Cite both artifacts from the UX Spec so downstream agents inherit the
-   design language instead of re-deriving it.
-5. Build the surface against `DESIGN.md`.
-6. Run the detector as Pass 0 of `prototype-audit` before any LLM critique.
-7. Fix findings, or waive them through the AgentX protocol with rationale.
-8. Re-run until exit `0`, then continue to Pass 1.
-
-## Decision Tree
-
-Route on two questions: does a design language exist yet, and can the detector
-run here. If no design language exists, authoring it comes first and the branch
-depends only on whether the user supplied a reference. If one exists, the
-question becomes whether the problem is measurable drift, which the detector
-owns, or a judgement call about hierarchy and resonance, which `critique` owns.
-Never route a judgement question to the detector; it has no opinion on whether
-a layout communicates.
-
-```
-Design language undefined for this target app?
-|
-+-- Yes, and the user supplied a reference (URL, screenshot, deck)?
-|   -> Run brand-spec-extraction first, then codify into PRODUCT.md + DESIGN.md
-|
-+-- Yes, and no reference exists?
-|   -> Run the 6-axis clarification form, pick a direction, THEN codify
-|
-+-- No, DESIGN.md already exists but the surface drifted?
-|   -> Run the detector; design-system rules catch font/color/radius/size drift
-|
-+-- No, and the surface is wrong but you cannot name why?
-|   -> /impeccable critique for judgement, not the detector
-|
-- Detector unavailable in this environment?
-    -> Record DEGRADED with a reason, fall back to AgentX-only checks
+```powershell
+& $engine install -y --providers=github --scope=project --no-hooks
+if ($LASTEXITCODE -ne 0) { throw 'Upstream skill installation failed' }
 ```
 
-When both a drift finding and a judgement concern are open, fix the drift
-first. Conforming the surface to its own tokens often resolves the judgement
-complaint, and it costs no LLM tokens to verify.
+This separate operation downloads a signed skill bundle; record its installed
+version because it is independent of the native engine pin. The installer uses
+the nearest Git root: check monorepo placement first. Do not use `--force` to
+overwrite consumer-owned files. `github` (alias `copilot`) provides the project
+skill and native agent files for Copilot; there is no separate Agents-window
+provider. Reload/discover skills in the host and confirm availability.
+Upstream hooks are disabled here: their Bash dependency is not a portable
+Windows/Agents-window guarantee. No hook is required for AgentX's explicit gate.
 
-## Core Rules
+## Design language before UI
 
-1. **Design language before pixels** - `PRODUCT.md` and `DESIGN.md` exist and
-   are cited before any wireframe, prototype, or HTML is emitted. A direction
-   that lives only in chat cannot be conformed to or verified later.
-2. **Deterministic before judgement** - the detector runs as Pass 0, ahead of
-   any LLM critique, so reviewers spend judgement on what machines cannot see.
-3. **Never install into AgentX** - the tool is installed into the target app.
-   Copying it into AgentX's asset tree violates the zero-copy rule.
-4. **Pin the version** - bare `npx` resolves the latest release, which makes a
-   blocking gate non-reproducible and executes unpinned third-party code.
-5. **DEGRADED is not PASS** - when the detector cannot run, say so in writing
-   with the reason and the list of checks that did not execute.
-6. **One waiver system** - the AgentX waiver protocol is authoritative;
-   upstream ignores may only mirror an existing AgentX waiver.
-7. **Do not assume coverage** - AgentX retains fabrication, emoji, WCAG,
-   heuristics, and visual regression. Check the division table before
-   deleting or skipping an AgentX check.
+1. Read an existing brand reference, or clarify audience, tone and constraints.
+2. `/impeccable init` captures product context in `PRODUCT.md`, not `DESIGN.md`.
+3. For new UI follow upstream's new-work design-language workflow; for existing
+   UI use `/impeccable document`. Cite `PRODUCT.md` and `DESIGN.md` in the UX spec.
+4. Review `DESIGN.md` YAML token mappings (`colors`, `typography`, `rounded`).
+   Prose alone does not enable deterministic token checks. The optional
+   `.impeccable/design.json` or `DESIGN.json` sidecar supplements these tokens.
+5. Build against that language; run Pass 0 before judgment-based critique.
 
-## Artifacts
+If upstream skills are unavailable, author those artifacts using AgentX's
+brand/design skills and explicitly record unavailable upstream authoring.
+Do not fabricate slash-command execution.
 
-| Artifact | Contains | Tracked |
-|----------|----------|---------|
-| `PRODUCT.md` | Audience, mode, brand voice, anti-references | yes |
-| `DESIGN.md` | Visual system in Google Stitch format -- palette, type ramp, radii, components | yes |
-| `.impeccable/design.json` | Token sidecar the detector reads | yes |
-| `.impeccable/critique/*.md` | Review reports | yes |
-| `.impeccable/*.png`, `live/`, `config.local.json` | Screenshots, session state, per-dev config | no -- gitignore |
+## Run the gate
 
-`DESIGN.md` is plain Markdown. This matters: when the detector is unavailable,
-the design language still exists and is still readable by AgentX skills. Only
-automated conformance verification degrades.
+```powershell
+.\.agentx\agentx.ps1 design-language check -Path src -Json
+# Separate app root, including monorepos:
+.\.agentx\agentx.ps1 design-language check -WorkspaceRoot C:\apps\example -Path src -Json
+```
+
+The Bash AgentX launcher forwards the same command to PowerShell. Installed
+extension runtimes resolve the first-party helper without copying it into the
+consumer workspace. The gate defaults to 60 seconds, accepts `-TimeoutSeconds`
+from 1 to 300, and caps each subprocess capture at 4 MiB.
+
+Use explicit source files or directories, not URLs. Missing/empty/unsupported
+scopes degrade rather than producing a false clean scan. Directory traversal
+skips upstream's generated/hidden directories. Nested `.git`, `package.json`,
+`.impeccable`, or DESIGN documents (case variants and `docs`/`.agents/context`
+fallbacks) require app-specific `WorkspaceRoot`. Token meaning, suppressions and all
+AgentX-owned checks still require review; see
+[detector governance](details-detector-governance.md).
+
+## Upstream evidence
+
+- [Launcher resolution](https://github.com/pbakaus/impeccable/blob/8b39f419497fb9eaacb12e19c059b2353a0956c3/cli/bin/cli.js)
+- [Native detector contract](https://github.com/pbakaus/impeccable/blob/8b39f419497fb9eaacb12e19c059b2353a0956c3/crates/detect/src/cli.rs)
+- [Current init behavior](https://github.com/pbakaus/impeccable/blob/8b39f419497fb9eaacb12e19c059b2353a0956c3/skill/reference/init.md)
+- [Provider installation](https://github.com/pbakaus/impeccable/blob/8b39f419497fb9eaacb12e19c059b2353a0956c3/crates/skills/src/providers.rs)

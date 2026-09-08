@@ -47,26 +47,26 @@ A BLOCKED finding does not stop the audit; it surfaces in the report and blocks 
 Reference: `design/impeccable-integration/SKILL.md`.
 
 Runs first, before any LLM judgement, so later passes critique a surface that
-already conforms to its own design language.
+has deterministic evidence before semantic design review.
 
-Tool: the project-local Impeccable detector (pinned devDependency, not bare
-`npx`).
+Tool: AgentX's target-local, SHA256-pinned native Impeccable gate.
 
-```bash
-npm exec --offline -- impeccable detect --json <prototype-root>
+```powershell
+.\.agentx\agentx.ps1 design-language check -Path <prototype-root> -Json
 ```
 
 Status for this pass is `PASS`, `FIXED`, `BLOCKED`, or `DEGRADED`:
 
-- Exit `0`, or all findings waived -> `PASS`
-- Exit `2`, findings fixed within three cycles -> `FIXED`
+- Exit `0`, complete scan -> `PASS` for deterministic checks; retain advisories
+- Findings fixed within three cycles and a complete rerun -> `FIXED`
 - Exit `2`, findings unresolved and unwaived -> `BLOCKED`
-- Detector could not run -> `DEGRADED`, and the audit continues on AgentX-only
+- Exit `1`, or incomplete prerequisites/coverage -> `DEGRADED`, and the audit continues on AgentX-only
   checks with the reason recorded verbatim
 
-`DEGRADED` is not a pass. It records that 59 deterministic rules and the 4
-design-system conformance rules did not run, so a reader can tell which bar
-this prototype was actually held to.
+`DEGRADED` is not a pass. Record the exact reason, limitations and unavailable
+checks. Review waivers separately; never rewrite raw gate evidence or waive
+operational failures. Eligible-file counts and token-map presence do not prove
+every file/rule was evaluated. Finish semantic token and AgentX-owned reviews.
 
 ## Pass 1: Accessibility
 

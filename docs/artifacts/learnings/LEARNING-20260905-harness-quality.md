@@ -37,6 +37,15 @@ coverage, high-risk routing or truthful cost estimates.
   count must not implicitly price earlier unknown calls at zero.
 - Generate fresh evidence by re-running checks; changing a timestamp is not
   fresh verification.
+- A package manager's offline switch does not constrain a tool's own downloader.
+  For Impeccable, pin a target-local native engine by version and SHA256, verify
+  its handshake, and run bounded filesystem checks without the npm shim.
+- Separate zero primary findings from complete coverage. Preserve advisories,
+  diagnostics and unknown scanned counts; never waive an operational failure.
+  Product initialization does not imply visual-token authoring is complete.
+- Mirror every pinned engine project boundary and design-document fallback.
+  An empty nested `.impeccable` or `.git` can suppress inherited token checks
+  without a native error; regress this against the official engine, not only mocks.
 
 ## Evidence
 
@@ -50,6 +59,10 @@ coverage, high-risk routing or truthful cost estimates.
   covered by `tests/budget-behavior.ps1`.
 - Zero-copy and standalone budget wiring covered by
   `tests/harness-distribution-behavior.ps1`.
+- Impeccable native `0.1.3` produced PASS, BLOCKED and DEGRADED in an isolated
+  target fixture on 2026-09-07. Behavioral and distribution regressions cover
+  pins, output schemas, failures and installed launchers. Operational contract:
+  [target-only setup](../../../.github/skills/design/impeccable-integration/references/details-design-language-setup.md).
 
 ## Why It Matters
 

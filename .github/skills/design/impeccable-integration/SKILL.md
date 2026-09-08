@@ -1,11 +1,11 @@
 ---
 name: "impeccable-integration"
-description: 'Drive the Impeccable design language for a target app -- PRODUCT.md and DESIGN.md authoring, the 23-command intervention vocabulary, and the 59-rule deterministic detector wired as a three-state gate (PASS / BLOCKED / DEGRADED). Use when defining the design language for a target app, or when running design-language conformance on a prototype or shipped UI.'
+description: 'Establish a target app design language and run the pinned, target-local Impeccable native detector through AgentX. Produces an evidence-backed PASS / BLOCKED / DEGRADED gate without downloading or vendoring upstream code.'
 metadata:
   author: "AgentX"
-  version: "1.0.0"
+  version: "1.1.0"
   created: "2026-08-26"
-  updated: "2026-08-26"
+  updated: "2026-09-07"
 compatibility:
   agents: ["ux-designer", "engineer", "reviewer", "prototype-auditor"]
   frameworks: ["html-css", "tailwind", "react", "vue", "svelte", "astro"]
@@ -13,7 +13,7 @@ compatibility:
 ---
 # Impeccable Integration
 
-> WHEN: A target app needs a codified design language or deterministic slop detection that AgentX can cite, run, and report honestly.
+> WHEN: Establishing a target app's design language or running its detector gate.
 
 ## When to Use This Skill
 
@@ -24,21 +24,17 @@ compatibility:
 
 ## Prerequisites
 
-Have a target app repository, Node 22.18 or newer, and `impeccable`
-installed there by a supported method: pinned devDependency or upstream
-submodule/link flow. Keep write access to `PRODUCT.md` plus `DESIGN.md`. If any
-prerequisite is missing, the gate is `DEGRADED`; do not claim a pass.
+Have a target app, PowerShell 7, Node 22.18+, and a native engine pinned in
+`.impeccable/agentx.json` by target-relative path, version and SHA256.
+The supported engine contract is `0.1.3`. Missing prerequisites yield
+`DEGRADED`; the gate never installs or updates anything.
 
 ## Decision Guide
 
-If no design language exists, author `PRODUCT.md` and `DESIGN.md` first. Use
-`brand-spec-extraction` when the user supplied a brand reference; otherwise run
-a clarification pass and codify the result before generating UI. If
-`DESIGN.md` exists and the issue is measurable drift in typography, tokens,
-rhythm, or other deterministic rules, run the detector. If the surface feels
-wrong but you cannot name why, use `/impeccable critique` and human judgement.
-If detector availability is the only blocker, record `DEGRADED` and continue
-AgentX-owned checks instead of stopping or pretending coverage.
+Author `PRODUCT.md` and `DESIGN.md` before UI, using a supplied brand reference
+or clarification. Run the detector for measurable drift; use
+`/impeccable critique` for judgment. If unavailable, record `DEGRADED` and
+continue AgentX-owned checks without pretending detector coverage.
 
 ## Core Rules
 
@@ -47,8 +43,9 @@ AgentX-owned checks instead of stopping or pretending coverage.
 - Treat `PRODUCT.md` and `DESIGN.md` as required artifacts for durable UI work.
 - Run the detector before LLM critique so deterministic drift is removed
   cheaply.
-- Pin the version and run `npm exec --offline -- impeccable detect --json src/`;
-  avoid bare `npx` in gates.
+- Run `agentx design-language check -Path src -Json` through the workspace
+  launcher. It verifies the engine hash and handshake, then invokes it directly.
+  `npm exec --offline` does NOT prevent the upstream shim downloading an engine.
 - `DEGRADED` is a supported but explicit state; always record why it happened
   and which checks did not run.
 - Keep one waiver system: AgentX is authoritative, and upstream ignores only
@@ -59,9 +56,10 @@ AgentX-owned checks instead of stopping or pretending coverage.
 
 ## Workflow
 
-1. Check target-app prerequisites and pin Impeccable.
-2. Create or refresh `PRODUCT.md` and `DESIGN.md`, then cite them from the UX
-   spec or audit context.
+1. Follow the [target-only setup](references/details-design-language-setup.md).
+2. Use `/impeccable init` for `PRODUCT.md`. Establish the visual system through
+   upstream's new-work workflow or `/impeccable document` for existing UI.
+   `init` does not create `DESIGN.md`. Cite both artifacts in the UX spec.
 3. Decide whether the open issue is design-language authoring, measurable
    detector drift, or judgement critique.
 4. Run the detector as Pass 0 and classify the raw detector state as `PASS`,
@@ -69,8 +67,9 @@ AgentX-owned checks instead of stopping or pretending coverage.
    records `FIXED`.
 5. Fix findings or record waivers through AgentX; do not silence upstream
    first.
-6. Re-run; accept exit `0` or fully waived findings. Otherwise record `BLOCKED`
-   or `DEGRADED` with evidence.
+6. Re-run. Accept a complete deterministic `PASS`, retaining advisory findings.
+   The executable gate never auto-approves waivers; review them separately.
+   A timeout, malformed result or incomplete coverage cannot be waived to PASS.
 7. Continue with AgentX-owned passes such as accessibility, heuristics, and the
    rest of `prototype-audit`.
 
@@ -81,11 +80,12 @@ accessibility/fabrication review. Consult detector governance before waivers.
 
 ## Error Handling
 
-If the local binary is unresolved, Node is too old, or first-run network fetch
-fails, report `DEGRADED` and continue only the AgentX-owned checks. If the
-detector exits `1`, treat it as tool failure, capture stderr, and never map it
-to `PASS`. If the same rule is always waived, fix `DESIGN.md` instead of
-accumulating ignores.
+Missing pins, hash/version mismatch, invalid scope, tool errors, diagnostics,
+malformed JSON and incomplete coverage produce `DEGRADED` (exit `1`).
+Primary findings produce `BLOCKED` (exit `2`); a complete deterministic scan
+without primary findings produces `PASS` (exit `0`). Advisories remain visible.
+The report's eligible-file count is NOT a measured scanned-file count, and
+token mappings do not prove semantic coverage of every design-system rule.
 
 If `DEGRADED`, require T1-T10 + Honest Placeholders + axe + Pass 9 critique.
 Record what actually ran and what did not; never prefill fallback success.
@@ -101,8 +101,7 @@ Record what actually ran and what did not; never prefill fallback success.
 
 ## Why This Is a Skill
 
-General critique cannot replace a detector. This skill keeps Impeccable and
-AgentX responsibilities, waivers, and degraded-state evidence distinct.
+Keeps deterministic evidence, waivers and human judgment distinct.
 
 ## Skills to Compose With
 
@@ -115,8 +114,7 @@ AgentX responsibilities, waivers, and degraded-state evidence distinct.
 ## References
 
 - [details-design-language-setup.md](references/details-design-language-setup.md):
-  read for the original install flow, quick start, first decision tree, and
-  artifact definitions.
+  read for target-only onboarding and artifact authoring.
 - [details-detector-governance.md](references/details-detector-governance.md):
   MUST read for the responsibility split, `PASS` / `BLOCKED` / `DEGRADED` gate,
   waiver rules, command vocabulary, anti-patterns, troubleshooting, and the
