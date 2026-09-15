@@ -179,7 +179,7 @@ disclosed, not waived or silently described as green.
 
 Version 9.3.1 local candidate: `build/manual-publish/agentx-9.3.1-candidate.vsix`,
 4,240,369 bytes; SHA-256
-`1944C64B046A8F4A109CD0BEAB1C384AB50464D966D499EA5962A1D1E3E4BC9A`.
+`6479AF230D9DF3542E107DD438735C12841E035DB73D1C77862C69F4F8731C42`.
 Inspection validates all 200 contribution paths, 26 FDEs and 1,640 entries.
 Use a verified GitHub-attested asset instead when release automation produces it.
 
@@ -188,3 +188,18 @@ installer checks passed 63/63; independent version-only review approved at
 92.5/100 across seven exact implementation hashes, zero HIGH/MEDIUM findings.
 The companion source ZIP is unchanged from the historical package section.
 No Marketplace publish command or live provider activation ran.
+
+## Clean Install Correction
+
+The first 9.3.1 CI preflight failed because case-insensitive branding replacement
+had altered `HVE` and `Hve` inside four base64 integrity fields. Restore the exact
+pre-rebrand checksums for the unchanged brace-expansion and supports-color
+versions in extension and WhatsApp lockfiles. A regression in
+`tests/stamp-version-behavior.js` protects these opaque values. No dependency
+version changed. The release manifest update records these corrected contents
+and triggers the normal preflight again; no evidence timestamp was rewritten.
+
+Evidence: clean `npm ci --ignore-scripts` installs all 622 extension packages,
+and the resulting clean-build coverage run passes 1,063 tests. Full dependency
+audit includes five HIGH development-dependency advisories; runtime-only audit
+results and separate WhatsApp advisory limitations are stated above.
