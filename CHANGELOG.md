@@ -1,6 +1,9 @@
 # Changelog
 
-## 9.3.0
+## 9.3.1
+
+This release packages the Frontier changes below under a new immutable version.
+The existing remote `v9.3.0` tag identifies different source and is not replaced.
 
 ### Changed
 

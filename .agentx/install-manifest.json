@@ -1,6 +1,6 @@
 {
-  "version": "9.3.0",
-  "createdAt": "2026-09-14T19:05:39Z",
+  "version": "9.3.1",
+  "createdAt": "2026-09-15T01:05:17Z",
   "files": [
     {
       "path": ".agentx/agentic-runner.ps1",
@@ -2764,32 +2764,32 @@
     },
     {
       "path": "packs/frontier-copilot-cli/install-user.ps1",
-      "sha256": "98fc759ad13b460a42493782ce2b97fc1c8930a4d124e9d8fcbd9f5b57b141fa",
+      "sha256": "5dea56720bbc085eba94329a1feb2c008fe1fa729ebe1fc78724fa0cb0f84079",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.ps1",
-      "sha256": "7cdee74e15fe4fe48f8b695239bc8004504df550e5bc643a3ecffe8e1b19d21a",
+      "sha256": "4420dadff09219be9a94a045d8ef49608c1d16511eebf0c48feffcbb1ce337ae",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.sh",
-      "sha256": "aa04180cdd5773d07b444a06a4e82eb7674b2f3f7d63561b0c73410ca57cc996",
+      "sha256": "0d84c25481d136dd50149e1bc85673ddb7caa0253f8fa8abd80a454203e0ffa8",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/manifest.json",
-      "sha256": "aac7c9fae80ce9b0526c7871c6a82092e6172497812cd3b3d396e1aa43a7b778",
+      "sha256": "fc29dda6cd36b5d4673e97d4b2318465e2a8afee40d6de0c4abe0e5dd2c3b6bf",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/README.md",
-      "sha256": "b82dc2992ad50935a7322c8820ab0f1b725bf706504c91a0b94675c7f086d181",
+      "sha256": "db1727bf1a446c63a3b663d240c1c6f5906a387fb7ac3654bc57fee0299b106f",
       "category": "pack"
     },
     {
       "path": "packs/frontier-core/manifest.json",
-      "sha256": "652e7afc84ed9d3ed54f772938dea5899302a1c983cbe9d2ca20ac02f8c41ba7",
+      "sha256": "046b5fc49539b1f34e829a7904989aaa71db7675beca7b12e60d067e1973361b",
       "category": "pack"
     },
     {

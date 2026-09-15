@@ -24,6 +24,8 @@ will run. Pushing master can trigger the existing GitHub release workflow.
 - [x] Stamp 9.3.0 and regenerate distribution assets
 - [x] Pass release tests and independent review
 - [ ] Commit and push the validated source
+- [x] Commit and push the primary rebrand and collaboration source as f17c505d
+- [ ] Commit the immutable 9.3.1 packaging follow-up
 - [x] Prepare and inspect manual-publish packages
 - [ ] Record final hashes, commands and unresolved external prerequisites
 
@@ -121,7 +123,10 @@ automation is blocked, report the block and retain the inspected local package.
   runtime migration before creating defaults. Existing config is preserved and
   the extension watches Frontier/HVE/AgentX config changes.
 
-## Manual Package Candidates
+## Historical 9.3.0 Candidates
+
+Do not publish these VSIX bytes: the remote 9.3.0 tag identifies different source.
+The unchanged companion archive remains valid for the collaboration feature.
 
 - VSIX: `build/manual-publish/agentx-9.3.0-candidate.vsix`, 4,240,366 bytes,
   SHA-256 `DCEEE9B507124C86F37605C7A6FB7272AA683D3A88F2D19D65AFCF6A03B89ABB`.
@@ -154,3 +159,32 @@ sibling checks. Canonical hooks were installed through the CLI; no hook bypass
 was used. Hook behavior passes 43/43 and all six staged Python files pass
 `black --check` after the hook's formatting. A fresh follow-up loop and independent
 hash-bound review cover this final source. Commit and push remain pending.
+
+## Immutable Version Follow-Up
+
+Primary source commit `f17c505d1d3007b98a09446160aa55b82132787e` was pushed to
+master. Normal hooks passed. The release workflow skipped packaging because
+remote tag `v9.3.0` already points to `1c9891f122e2e4d95aa52f61a0e77436138c05b4`.
+It has no matching GitHub release. Do not move that tag or publish the local
+9.3.0 candidate under it. Version 9.3.1 was checked unused and selected for the
+manual-publish follow-up; only stamp-controlled version surfaces change.
+
+Evidence: normal commit/push succeeded; extension and collaboration runtime
+audits pass. Remote repository-wide Dependency Scanning reports five HIGH
+advisories in the separate WhatsApp companion. OpenSSF Scorecard cannot pull its
+upstream image because the upstream registry requires billing. These are
+disclosed, not waived or silently described as green.
+
+## Current Manual Handoff
+
+Version 9.3.1 local candidate: `build/manual-publish/agentx-9.3.1-candidate.vsix`,
+4,240,369 bytes; SHA-256
+`1944C64B046A8F4A109CD0BEAB1C384AB50464D966D499EA5962A1D1E3E4BC9A`.
+Inspection validates all 200 contribution paths, 26 FDEs and 1,640 entries.
+Use a verified GitHub-attested asset instead when release automation produces it.
+
+Evidence: the 9.3.1 extension rerun passed 1,063 tests with unchanged coverage;
+installer checks passed 63/63; independent version-only review approved at
+92.5/100 across seven exact implementation hashes, zero HIGH/MEDIUM findings.
+The companion source ZIP is unchanged from the historical package section.
+No Marketplace publish command or live provider activation ran.

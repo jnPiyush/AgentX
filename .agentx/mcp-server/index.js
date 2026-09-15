@@ -362,7 +362,7 @@ const LEGACY_TOOL_BY_NAME = Object.fromEntries(
 // ---------- MCP wiring ----------
 
 const server = new Server(
-  { name: 'frontier', version: '9.3.0' },
+  { name: 'frontier', version: '9.3.1' },
   { capabilities: { tools: {} } }
 );
 

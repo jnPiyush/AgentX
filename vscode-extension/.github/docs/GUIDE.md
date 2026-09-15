@@ -37,13 +37,13 @@ Hypervelocity Engineering platform, Frontier.
 ```powershell
 # PowerShell -- into an existing project directory
 cd your-project
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.ps1 | iex
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.1/install.ps1 | iex
 ```
 
 ```bash
 # Bash
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.1/install.sh | bash
 ```
 
 **What happens**: Frontier copies agents, skills, templates, and CLI into your project. Your existing code is untouched.
@@ -156,8 +156,8 @@ Each agent produces a deliverable, validates it, and hands off to the next.
 ./install.sh
 
 # One-liner (downloads and runs)
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.ps1 | iex    # PowerShell
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.sh | bash  # Bash
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.1/install.ps1 | iex    # PowerShell
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.1/install.sh | bash  # Bash
 ```
 
 PowerShell install path note:
@@ -206,7 +206,7 @@ Control what gets installed with the `-Profile` flag:
 ./install.sh --no-setup
 
 # One-liner with profile (env vars)
-PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.sh | bash
+PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.1/install.sh | bash
 ```
 
 ### What the Installer Does
