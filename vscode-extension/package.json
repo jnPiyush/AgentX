@@ -1,8 +1,8 @@
 {
   "name": "agentx",
-  "displayName": "AgentX - Multi-Agent Orchestration",
-  "description": "AI-powered multi-agent orchestration framework for GitHub Copilot. Coordinate PM, UX, Architect, Data Scientist, Fabric Engineer, Power Platform Builder, Engineer, Reviewer, DevOps, Tester, Power BI Analyst, and Consulting Research agents in a structured software development workflow.",
-  "version": "9.2.0",
+  "displayName": "Frontier - Hypervelocity Engineering",
+  "description": "Frontier Corp deploys a fleet of specialized AI Forward Deployed Engineers that plan, build, review, test, and operate software through governed, evidence-backed workflows.",
+  "version": "9.3.0",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",
@@ -44,1145 +44,1148 @@
     "architect",
     "engineer",
     "code-review",
+    "forward-deployed-engineers",
+    "hypervelocity-engineering",
+    "fde",
     "agentx"
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onChatParticipant:agentx.chat"
+    "onChatParticipant:frontier.chat"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "agentx.initializeLocalRuntime",
+        "command": "frontier.initializeLocalRuntime",
         "title": "Initialize Local Runtime",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(plug)"
       },
       {
-        "command": "agentx.initializeCli",
+        "command": "frontier.initializeCli",
         "title": "Initialize CLI",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(terminal)"
       },
       {
-        "command": "agentx.addRemoteAdapter",
+        "command": "frontier.addRemoteAdapter",
         "title": "Add Remote Adapter",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(repo)"
       },
       {
-        "command": "agentx.addLlmAdapter",
+        "command": "frontier.addLlmAdapter",
         "title": "Add LLM Adapter",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(hubot)"
       },
       {
-        "command": "agentx.addPlugin",
+        "command": "frontier.addPlugin",
         "title": "Add Plugin",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(extensions)"
       },
       {
-        "command": "agentx.showStatus",
+        "command": "frontier.showStatus",
         "title": "Show Agent Status",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(info)"
       },
       {
-        "command": "agentx.openDashboard",
+        "command": "frontier.openDashboard",
         "title": "Open Dashboard",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(dashboard)"
       },
       {
-        "command": "agentx.runWorkflow",
+        "command": "frontier.runWorkflow",
         "title": "Show Workflow Steps",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(play)"
       },
       {
-        "command": "agentx.checkDeps",
+        "command": "frontier.checkDeps",
         "title": "Check Dependencies",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(git-merge)"
       },
       {
-        "command": "agentx.generateDigest",
+        "command": "frontier.generateDigest",
         "title": "Generate Weekly Digest",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(notebook)"
       },
       {
-        "command": "agentx.refresh",
+        "command": "frontier.refresh",
         "title": "Refresh",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(refresh)"
       },
       {
-        "command": "agentx.showIssue",
+        "command": "frontier.showIssue",
         "title": "Show Issue Detail",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(eye)"
       },
       {
-        "command": "agentx.showPendingClarification",
+        "command": "frontier.showPendingClarification",
         "title": "Show Pending Clarification",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(comment-discussion)"
       },
       {
-        "command": "agentx.checkEnvironment",
+        "command": "frontier.checkEnvironment",
         "title": "Check Environment",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(beaker)"
       },
       {
-        "command": "agentx.enableInAgentsWindow",
+        "command": "frontier.enableInAgentsWindow",
         "title": "Enable in Agents Window",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(comment-discussion)"
       },
       {
-        "command": "agentx.loop",
+        "command": "frontier.loop",
         "title": "Iterative Loop",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(sync)"
       },
       {
-        "command": "agentx.loopStart",
+        "command": "frontier.loopStart",
         "title": "Loop: Start",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(play)"
       },
       {
-        "command": "agentx.loopStatus",
+        "command": "frontier.loopStatus",
         "title": "Loop: Status",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(history)"
       },
       {
-        "command": "agentx.loopIterate",
+        "command": "frontier.loopIterate",
         "title": "Loop: Iterate",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(debug-step-over)"
       },
       {
-        "command": "agentx.loopComplete",
+        "command": "frontier.loopComplete",
         "title": "Loop: Complete",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(pass)"
       },
       {
-        "command": "agentx.loopCancel",
+        "command": "frontier.loopCancel",
         "title": "Loop: Cancel",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(stop)"
       },
       {
-        "command": "agentx.loopRollback",
+        "command": "frontier.loopRollback",
         "title": "Loop: Rollback",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(discard)"
       },
       {
-        "command": "agentx.showPlanningLearnings",
+        "command": "frontier.showPlanningLearnings",
         "title": "Show Planning Learnings",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(book)"
       },
       {
-        "command": "agentx.showWorkflowNextStep",
+        "command": "frontier.showWorkflowNextStep",
         "title": "Show Workflow Next Step",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(debug-step-over)"
       },
       {
-        "command": "agentx.deepenPlan",
+        "command": "frontier.deepenPlan",
         "title": "Deepen Plan",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(notebook)"
       },
       {
-        "command": "agentx.kickoffReview",
+        "command": "frontier.kickoffReview",
         "title": "Kick Off Review",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(comment-discussion)"
       },
       {
-        "command": "agentx.showWorkflowRolloutScorecard",
+        "command": "frontier.showWorkflowRolloutScorecard",
         "title": "Show Workflow Rollout Scorecard",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(graph)"
       },
       {
-        "command": "agentx.showOperatorEnablementChecklist",
+        "command": "frontier.showOperatorEnablementChecklist",
         "title": "Show Operator Enablement Checklist",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(checklist)"
       },
       {
-        "command": "agentx.showBrainstormGuide",
+        "command": "frontier.showBrainstormGuide",
         "title": "Show Brainstorm Guide",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(lightbulb)"
       },
       {
-        "command": "agentx.showReviewLearnings",
+        "command": "frontier.showReviewLearnings",
         "title": "Show Review Learnings",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(checklist)"
       },
       {
-        "command": "agentx.showKnowledgeCaptureGuidance",
+        "command": "frontier.showKnowledgeCaptureGuidance",
         "title": "Show Knowledge Capture Guidance",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(archive)"
       },
       {
-        "command": "agentx.showCompoundLoop",
+        "command": "frontier.showCompoundLoop",
         "title": "Show Compound Loop",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(layers)"
       },
       {
-        "command": "agentx.createLearningCapture",
+        "command": "frontier.createLearningCapture",
         "title": "Create Learning Capture",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(new-file)"
       },
       {
-        "command": "agentx.showAgentNativeReview",
+        "command": "frontier.showAgentNativeReview",
         "title": "Show Agent-Native Review",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(symbol-interface)"
       },
       {
-        "command": "agentx.showAIEvaluationStatus",
+        "command": "frontier.showAIEvaluationStatus",
         "title": "Show AI Evaluation Status",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(graph-line)"
       },
       {
-        "command": "agentx.scaffoldAIEvaluationContract",
+        "command": "frontier.scaffoldAIEvaluationContract",
         "title": "Scaffold AI Evaluation Contract",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(new-file)"
       },
       {
-        "command": "agentx.runAIEvaluation",
+        "command": "frontier.runAIEvaluation",
         "title": "Run AI Evaluation",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(run)"
       },
       {
-        "command": "agentx.showReviewFindings",
+        "command": "frontier.showReviewFindings",
         "title": "Show Review Findings",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(comment-discussion)"
       },
       {
-        "command": "agentx.promoteReviewFinding",
+        "command": "frontier.promoteReviewFinding",
         "title": "Promote Review Finding",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(repo-push)"
       },
       {
-        "command": "agentx.showTaskBundles",
+        "command": "frontier.showTaskBundles",
         "title": "Show Task Bundles",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(list-tree)"
       },
       {
-        "command": "agentx.createTaskBundle",
+        "command": "frontier.createTaskBundle",
         "title": "Create Task Bundle",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(new-file)"
       },
       {
-        "command": "agentx.resolveTaskBundle",
+        "command": "frontier.resolveTaskBundle",
         "title": "Resolve Task Bundle",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(archive)"
       },
       {
-        "command": "agentx.promoteTaskBundle",
+        "command": "frontier.promoteTaskBundle",
         "title": "Promote Task Bundle",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(repo-push)"
       },
       {
-        "command": "agentx.showBoundedParallelRuns",
+        "command": "frontier.showBoundedParallelRuns",
         "title": "Show Bounded Parallel Runs",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(split-horizontal)"
       },
       {
-        "command": "agentx.assessBoundedParallelDelivery",
+        "command": "frontier.assessBoundedParallelDelivery",
         "title": "Assess Bounded Parallel Delivery",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(beaker)"
       },
       {
-        "command": "agentx.startBoundedParallelDelivery",
+        "command": "frontier.startBoundedParallelDelivery",
         "title": "Start Bounded Parallel Delivery",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(run)"
       },
       {
-        "command": "agentx.reconcileBoundedParallelRun",
+        "command": "frontier.reconcileBoundedParallelRun",
         "title": "Reconcile Bounded Parallel Run",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(git-merge)"
       },
       {
-        "command": "agentx.addSkill",
+        "command": "frontier.addSkill",
         "title": "Add Skill",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(add)"
       },
       {
-        "command": "agentx.addAgent",
+        "command": "frontier.addAgent",
         "title": "Add Agent",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(person-add)"
       },
       {
-        "command": "agentx.runCouncil",
+        "command": "frontier.runCouncil",
         "title": "Run Model Council (multi-vendor)",
-        "category": "AgentX",
+        "category": "Frontier",
         "icon": "$(organization)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "agentx-sidebar",
-          "title": "AgentX",
-          "icon": "resources/agentx-icon.svg"
+          "id": "frontier-sidebar",
+          "title": "Frontier",
+          "icon": "resources/frontier-icon.svg"
         }
       ]
     },
     "views": {
-      "agentx-sidebar": [
+      "frontier-sidebar": [
         {
-          "id": "agentx-work",
+          "id": "frontier-work",
           "name": "Work",
           "icon": "$(briefcase)",
-          "contextualTitle": "AgentX Work"
+          "contextualTitle": "Frontier Work"
         },
         {
-          "id": "agentx-status",
+          "id": "frontier-status",
           "name": "Status",
           "icon": "$(pulse)",
-          "contextualTitle": "AgentX Status"
+          "contextualTitle": "Frontier Status"
         },
         {
-          "id": "agentx-templates",
+          "id": "frontier-templates",
           "name": "Templates",
           "icon": "$(file-text)",
-          "contextualTitle": "AgentX Templates"
+          "contextualTitle": "Frontier Templates"
         },
         {
-          "id": "agentx-skills",
+          "id": "frontier-skills",
           "name": "Skills",
           "icon": "$(library)",
-          "contextualTitle": "AgentX Skills"
+          "contextualTitle": "Frontier Skills"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "agentx-work",
-        "contents": "No active work yet.\n\n[Show Workflow Steps](command:agentx.runWorkflow)\n[Show Agent Status](command:agentx.showStatus)",
-        "when": "agentx.initialized"
+        "view": "frontier-work",
+        "contents": "No active work yet.\n\n[Show Workflow Steps](command:frontier.runWorkflow)\n[Show Agent Status](command:frontier.showStatus)",
+        "when": "frontier.initialized"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "agentx.refresh",
-          "when": "view == agentx-work || view == agentx-status || view == agentx-skills",
+          "command": "frontier.refresh",
+          "when": "view == frontier-work || view == frontier-status || view == frontier-skills",
           "group": "navigation"
         },
         {
-          "command": "agentx.addSkill",
-          "when": "view == agentx-skills",
+          "command": "frontier.addSkill",
+          "when": "view == frontier-skills",
           "group": "navigation"
         },
         {
-          "command": "agentx.addAgent",
-          "when": "view == agentx-work",
+          "command": "frontier.addAgent",
+          "when": "view == frontier-work",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "agentx.showIssue",
+          "command": "frontier.showIssue",
           "when": "false",
           "group": "inline"
         }
       ],
       "commandPalette": [
         {
-          "command": "agentx.showIssue",
+          "command": "frontier.showIssue",
           "when": "false"
         },
         {
-          "command": "agentx.refresh"
+          "command": "frontier.refresh"
         },
         {
-          "command": "agentx.showStatus"
+          "command": "frontier.showStatus"
         },
         {
-          "command": "agentx.runWorkflow"
+          "command": "frontier.runWorkflow"
         },
         {
-          "command": "agentx.checkDeps"
+          "command": "frontier.checkDeps"
         },
         {
-          "command": "agentx.generateDigest"
+          "command": "frontier.generateDigest"
         },
         {
-          "command": "agentx.showWorkflowNextStep"
+          "command": "frontier.showWorkflowNextStep"
         },
         {
-          "command": "agentx.deepenPlan"
+          "command": "frontier.deepenPlan"
         },
         {
-          "command": "agentx.kickoffReview"
+          "command": "frontier.kickoffReview"
         },
         {
-          "command": "agentx.showWorkflowRolloutScorecard"
+          "command": "frontier.showWorkflowRolloutScorecard"
         },
         {
-          "command": "agentx.showOperatorEnablementChecklist"
+          "command": "frontier.showOperatorEnablementChecklist"
         },
         {
-          "command": "agentx.showBrainstormGuide"
+          "command": "frontier.showBrainstormGuide"
         },
         {
-          "command": "agentx.showPlanningLearnings"
+          "command": "frontier.showPlanningLearnings"
         },
         {
-          "command": "agentx.showReviewLearnings"
+          "command": "frontier.showReviewLearnings"
         },
         {
-          "command": "agentx.showKnowledgeCaptureGuidance"
+          "command": "frontier.showKnowledgeCaptureGuidance"
         },
         {
-          "command": "agentx.showCompoundLoop"
+          "command": "frontier.showCompoundLoop"
         },
         {
-          "command": "agentx.createLearningCapture"
+          "command": "frontier.createLearningCapture"
         },
         {
-          "command": "agentx.showAgentNativeReview"
+          "command": "frontier.showAgentNativeReview"
         },
         {
-          "command": "agentx.showReviewFindings"
+          "command": "frontier.showReviewFindings"
         },
         {
-          "command": "agentx.promoteReviewFinding"
+          "command": "frontier.promoteReviewFinding"
         },
         {
-          "command": "agentx.showTaskBundles"
+          "command": "frontier.showTaskBundles"
         },
         {
-          "command": "agentx.createTaskBundle"
+          "command": "frontier.createTaskBundle"
         },
         {
-          "command": "agentx.resolveTaskBundle"
+          "command": "frontier.resolveTaskBundle"
         },
         {
-          "command": "agentx.promoteTaskBundle"
+          "command": "frontier.promoteTaskBundle"
         },
         {
-          "command": "agentx.showBoundedParallelRuns"
+          "command": "frontier.showBoundedParallelRuns"
         },
         {
-          "command": "agentx.assessBoundedParallelDelivery"
+          "command": "frontier.assessBoundedParallelDelivery"
         },
         {
-          "command": "agentx.startBoundedParallelDelivery"
+          "command": "frontier.startBoundedParallelDelivery"
         },
         {
-          "command": "agentx.reconcileBoundedParallelRun"
+          "command": "frontier.reconcileBoundedParallelRun"
         },
         {
-          "command": "agentx.loop"
+          "command": "frontier.loop"
         },
         {
-          "command": "agentx.loopStart"
+          "command": "frontier.loopStart"
         },
         {
-          "command": "agentx.loopStatus"
+          "command": "frontier.loopStatus"
         },
         {
-          "command": "agentx.loopIterate"
+          "command": "frontier.loopIterate"
         },
         {
-          "command": "agentx.loopComplete"
+          "command": "frontier.loopComplete"
         },
         {
-          "command": "agentx.loopCancel"
+          "command": "frontier.loopCancel"
         },
         {
-          "command": "agentx.loopRollback"
+          "command": "frontier.loopRollback"
         },
         {
-          "command": "agentx.checkEnvironment"
+          "command": "frontier.checkEnvironment"
         },
         {
-          "command": "agentx.showPendingClarification"
+          "command": "frontier.showPendingClarification"
         },
         {
-          "command": "agentx.showAIEvaluationStatus"
+          "command": "frontier.showAIEvaluationStatus"
         },
         {
-          "command": "agentx.scaffoldAIEvaluationContract"
+          "command": "frontier.scaffoldAIEvaluationContract"
         },
         {
-          "command": "agentx.runAIEvaluation"
+          "command": "frontier.runAIEvaluation"
         },
         {
-          "command": "agentx.addSkill"
+          "command": "frontier.addSkill"
         },
         {
-          "command": "agentx.addAgent"
+          "command": "frontier.addAgent"
         }
       ]
     },
     "chatParticipants": [
       {
-        "id": "agentx.chat",
-        "name": "agentx",
-        "fullName": "AgentX",
-        "description": "Route work through AgentX specialist agents",
+        "id": "frontier.chat",
+        "name": "frontier",
+        "fullName": "Frontier",
+        "description": "Route work through Frontier specialist agents",
         "isSticky": true,
         "commands": []
       }
     ],
     "chatAgents": [
       {
-        "path": "./.github/agentx/agents/agent-x.agent.md"
+        "path": "./.github/frontier/agents/agile-coach.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/agile-coach.agent.md"
+        "path": "./.github/frontier/agents/architect.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/architect.agent.md"
+        "path": "./.github/frontier/agents/consulting-research.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/consulting-research.agent.md"
+        "path": "./.github/frontier/agents/data-scientist.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/data-scientist.agent.md"
+        "path": "./.github/frontier/agents/devops.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/devops.agent.md"
+        "path": "./.github/frontier/agents/engineer.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/engineer.agent.md"
+        "path": "./.github/frontier/agents/fabric-engineer.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/fabric-engineer.agent.md"
+        "path": "./.github/frontier/agents/frontier.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/ado-ops.agent.md"
+        "path": "./.github/frontier/agents/internal/ado-ops.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/ado-prd-to-wit.agent.md"
+        "path": "./.github/frontier/agents/internal/ado-prd-to-wit.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/architecture-reviewer.agent.md"
+        "path": "./.github/frontier/agents/internal/architecture-reviewer.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/diagram-specialist.agent.md"
+        "path": "./.github/frontier/agents/internal/diagram-specialist.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/eval-specialist.agent.md"
+        "path": "./.github/frontier/agents/internal/eval-specialist.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/functional-reviewer.agent.md"
+        "path": "./.github/frontier/agents/internal/functional-reviewer.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/github-ops.agent.md"
+        "path": "./.github/frontier/agents/internal/github-ops.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/ops-monitor.agent.md"
+        "path": "./.github/frontier/agents/internal/ops-monitor.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/prompt-engineer.agent.md"
+        "path": "./.github/frontier/agents/internal/prompt-engineer.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/prototype-auditor.agent.md"
+        "path": "./.github/frontier/agents/internal/prototype-auditor.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/internal/rag-specialist.agent.md"
+        "path": "./.github/frontier/agents/internal/rag-specialist.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/power-platform-builder.agent.md"
+        "path": "./.github/frontier/agents/power-platform-builder.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/powerbi-analyst.agent.md"
+        "path": "./.github/frontier/agents/powerbi-analyst.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/product-manager.agent.md"
+        "path": "./.github/frontier/agents/product-manager.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/reviewer-auto.agent.md"
+        "path": "./.github/frontier/agents/reviewer-auto.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/reviewer.agent.md"
+        "path": "./.github/frontier/agents/reviewer.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/tester.agent.md"
+        "path": "./.github/frontier/agents/tester.agent.md"
       },
       {
-        "path": "./.github/agentx/agents/ux-designer.agent.md"
+        "path": "./.github/frontier/agents/ux-designer.agent.md"
       }
     ],
     "chatInstructions": [
       {
-        "path": "./.github/agentx/instructions/ado/ado-backlog-sprint.instructions.md"
+        "path": "./.github/frontier/instructions/ado/ado-backlog-sprint.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/ado/ado-backlog-triage.instructions.md"
+        "path": "./.github/frontier/instructions/ado/ado-backlog-triage.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/ado/ado-create-pull-request.instructions.md"
+        "path": "./.github/frontier/instructions/ado/ado-create-pull-request.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/ado/ado-get-build-info.instructions.md"
+        "path": "./.github/frontier/instructions/ado/ado-get-build-info.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/ado/ado-interaction-templates.instructions.md"
+        "path": "./.github/frontier/instructions/ado/ado-interaction-templates.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/ado/ado-update-wit-items.instructions.md"
+        "path": "./.github/frontier/instructions/ado/ado-update-wit-items.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/ado/ado-wit-discovery.instructions.md"
+        "path": "./.github/frontier/instructions/ado/ado-wit-discovery.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/ado/ado-wit-planning.instructions.md"
+        "path": "./.github/frontier/instructions/ado/ado-wit-planning.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/ai.instructions.md"
+        "path": "./.github/frontier/instructions/ai.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/csharp.instructions.md"
+        "path": "./.github/frontier/instructions/csharp.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/memory.instructions.md"
+        "path": "./.github/frontier/instructions/memory.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/project-conventions.instructions.md"
+        "path": "./.github/frontier/instructions/project-conventions.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/python.instructions.md"
+        "path": "./.github/frontier/instructions/python.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/react.instructions.md"
+        "path": "./.github/frontier/instructions/react.instructions.md"
       },
       {
-        "path": "./.github/agentx/instructions/typescript.instructions.md"
+        "path": "./.github/frontier/instructions/typescript.instructions.md"
       },
       {
-        "path": "./.github/agentx/copilot-instructions.md"
+        "path": "./.github/frontier/copilot-instructions.md"
       },
       {
-        "path": "./.github/agentx/AGENTS.md"
+        "path": "./.github/frontier/AGENTS.md"
       }
     ],
     "chatPromptFiles": [
       {
-        "path": "./.github/agentx/prompts/ado-add-work-item.prompt.md"
+        "path": "./.github/frontier/prompts/ado-add-work-item.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/ado-create-pull-request.prompt.md"
+        "path": "./.github/frontier/prompts/ado-create-pull-request.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/ado-discover-work-items.prompt.md"
+        "path": "./.github/frontier/prompts/ado-discover-work-items.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/ado-get-build-info.prompt.md"
+        "path": "./.github/frontier/prompts/ado-get-build-info.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/ado-process-my-work-items-for-task-planning.prompt.md"
+        "path": "./.github/frontier/prompts/ado-process-my-work-items-for-task-planning.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/ado-sprint-plan.prompt.md"
+        "path": "./.github/frontier/prompts/ado-sprint-plan.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/ado-triage-work-items.prompt.md"
+        "path": "./.github/frontier/prompts/ado-triage-work-items.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/ado-update-wit-items.prompt.md"
+        "path": "./.github/frontier/prompts/ado-update-wit-items.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/ai-agent.prompt.md"
+        "path": "./.github/frontier/prompts/ai-agent.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/architecture.prompt.md"
+        "path": "./.github/frontier/prompts/architecture.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/bug-triage.prompt.md"
+        "path": "./.github/frontier/prompts/bug-triage.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/code-review.prompt.md"
+        "path": "./.github/frontier/prompts/code-review.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/cowork-plugin-create.prompt.md"
+        "path": "./.github/frontier/prompts/cowork-plugin-create.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/cowork-skill-create.prompt.md"
+        "path": "./.github/frontier/prompts/cowork-skill-create.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/devops.prompt.md"
+        "path": "./.github/frontier/prompts/devops.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/doc-gardener.prompt.md"
+        "path": "./.github/frontier/prompts/doc-gardener.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/evaluation.prompt.md"
+        "path": "./.github/frontier/prompts/evaluation.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/prd-gen.prompt.md"
+        "path": "./.github/frontier/prompts/prd-gen.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/refactor.prompt.md"
+        "path": "./.github/frontier/prompts/refactor.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/roadmap-gen.prompt.md"
+        "path": "./.github/frontier/prompts/roadmap-gen.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/security-review.prompt.md"
+        "path": "./.github/frontier/prompts/security-review.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/test-gen.prompt.md"
+        "path": "./.github/frontier/prompts/test-gen.prompt.md"
       },
       {
-        "path": "./.github/agentx/prompts/ux-design.prompt.md"
+        "path": "./.github/frontier/prompts/ux-design.prompt.md"
       }
     ],
     "chatSkills": [
       {
-        "path": "./.github/agentx/skills/ai-systems/agent-memory-systems/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/agent-memory-systems/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/agent-observability/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/agent-observability/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/ai-agent-development/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/ai-agent-development/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/ai-evaluation/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/ai-evaluation/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/anthropic-claude/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/anthropic-claude/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/azure-foundry/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/azure-foundry/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/cognitive-architecture/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/cognitive-architecture/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/computer-use-and-browser-agents/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/computer-use-and-browser-agents/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/context-management/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/context-management/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/data-drift-strategy/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/data-drift-strategy/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/feedback-loops/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/feedback-loops/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/foundry-sdk/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/foundry-sdk/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/genaiops/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/genaiops/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/iterative-retrieval/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/iterative-retrieval/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/langgraph/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/langgraph/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/llm-gateway-and-routing/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/llm-gateway-and-routing/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/mcp-apps-development/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/mcp-apps-development/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/mcp-server-development/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/mcp-server-development/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/model-drift-management/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/model-drift-management/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/model-fine-tuning/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/model-fine-tuning/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/multi-agent-orchestration/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/multi-agent-orchestration/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/prompt-engineering/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/prompt-engineering/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/prompt-versioning/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/prompt-versioning/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/rag-pipelines/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/rag-pipelines/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/reasoning-models/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/reasoning-models/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/synthetic-data-generation/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/synthetic-data-generation/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/tool-use-and-function-calling/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/tool-use-and-function-calling/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/vector-databases/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/vector-databases/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/ai-systems/voice-agents/SKILL.md"
+        "path": "./.github/frontier/skills/ai-systems/voice-agents/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/architecture/api-design/SKILL.md"
+        "path": "./.github/frontier/skills/architecture/api-design/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/architecture/core-principles/SKILL.md"
+        "path": "./.github/frontier/skills/architecture/core-principles/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/architecture/cost-analysis/SKILL.md"
+        "path": "./.github/frontier/skills/architecture/cost-analysis/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/architecture/database/SKILL.md"
+        "path": "./.github/frontier/skills/architecture/database/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/architecture/infra-governance/SKILL.md"
+        "path": "./.github/frontier/skills/architecture/infra-governance/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/architecture/low-code-vs-pro-code/SKILL.md"
+        "path": "./.github/frontier/skills/architecture/low-code-vs-pro-code/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/architecture/performance/SKILL.md"
+        "path": "./.github/frontier/skills/architecture/performance/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/architecture/security/SKILL.md"
+        "path": "./.github/frontier/skills/architecture/security/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/data/cosmos-db/SKILL.md"
+        "path": "./.github/frontier/skills/data/cosmos-db/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/data/data-analysis/SKILL.md"
+        "path": "./.github/frontier/skills/data/data-analysis/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/data/databricks/SKILL.md"
+        "path": "./.github/frontier/skills/data/databricks/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/data/fabric-analytics/SKILL.md"
+        "path": "./.github/frontier/skills/data/fabric-analytics/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/data/fabric-data-agent/SKILL.md"
+        "path": "./.github/frontier/skills/data/fabric-data-agent/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/data/fabric-forecasting/SKILL.md"
+        "path": "./.github/frontier/skills/data/fabric-forecasting/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/data/powerbi/SKILL.md"
+        "path": "./.github/frontier/skills/data/powerbi/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/accessibility/SKILL.md"
+        "path": "./.github/frontier/skills/design/accessibility/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/anti-slop/SKILL.md"
+        "path": "./.github/frontier/skills/design/anti-slop/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/brand-spec-extraction/SKILL.md"
+        "path": "./.github/frontier/skills/design/brand-spec-extraction/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/content-design/SKILL.md"
+        "path": "./.github/frontier/skills/design/content-design/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/design-system-reasoning/SKILL.md"
+        "path": "./.github/frontier/skills/design/design-system-reasoning/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/frontend-ui/SKILL.md"
+        "path": "./.github/frontier/skills/design/frontend-ui/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/impeccable-integration/SKILL.md"
+        "path": "./.github/frontier/skills/design/impeccable-integration/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/prototype-audit/SKILL.md"
+        "path": "./.github/frontier/skills/design/prototype-audit/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/prototype-craft/SKILL.md"
+        "path": "./.github/frontier/skills/design/prototype-craft/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/usability-heuristics/SKILL.md"
+        "path": "./.github/frontier/skills/design/usability-heuristics/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/ux-ui-design/SKILL.md"
+        "path": "./.github/frontier/skills/design/ux-ui-design/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/visual-regression/SKILL.md"
+        "path": "./.github/frontier/skills/design/visual-regression/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/design/working-prototype-app/SKILL.md"
+        "path": "./.github/frontier/skills/design/working-prototype-app/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/browser-automation/SKILL.md"
+        "path": "./.github/frontier/skills/development/browser-automation/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/code-hygiene/SKILL.md"
+        "path": "./.github/frontier/skills/development/code-hygiene/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/code-optimization/SKILL.md"
+        "path": "./.github/frontier/skills/development/code-optimization/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/code-review/SKILL.md"
+        "path": "./.github/frontier/skills/development/code-review/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/configuration/SKILL.md"
+        "path": "./.github/frontier/skills/development/configuration/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/cowork-plugin-creator/SKILL.md"
+        "path": "./.github/frontier/skills/development/cowork-plugin-creator/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/cowork-skill-creator/SKILL.md"
+        "path": "./.github/frontier/skills/development/cowork-skill-creator/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/dependency-management/SKILL.md"
+        "path": "./.github/frontier/skills/development/dependency-management/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/dispatching-parallel-agents/SKILL.md"
+        "path": "./.github/frontier/skills/development/dispatching-parallel-agents/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/documentation/SKILL.md"
+        "path": "./.github/frontier/skills/development/documentation/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/error-handling/SKILL.md"
+        "path": "./.github/frontier/skills/development/error-handling/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/experimentation-loop/SKILL.md"
+        "path": "./.github/frontier/skills/development/experimentation-loop/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/finishing-a-development-branch/SKILL.md"
+        "path": "./.github/frontier/skills/development/finishing-a-development-branch/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/git-worktrees/SKILL.md"
+        "path": "./.github/frontier/skills/development/git-worktrees/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/iterative-loop/SKILL.md"
+        "path": "./.github/frontier/skills/development/iterative-loop/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/karpathy-guidelines/SKILL.md"
+        "path": "./.github/frontier/skills/development/karpathy-guidelines/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/logging-monitoring/SKILL.md"
+        "path": "./.github/frontier/skills/development/logging-monitoring/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/no-ai-slop/SKILL.md"
+        "path": "./.github/frontier/skills/development/no-ai-slop/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/scrub/SKILL.md"
+        "path": "./.github/frontier/skills/development/scrub/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/skill-creator/SKILL.md"
+        "path": "./.github/frontier/skills/development/skill-creator/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/strategic-compaction/SKILL.md"
+        "path": "./.github/frontier/skills/development/strategic-compaction/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/systematic-debugging/SKILL.md"
+        "path": "./.github/frontier/skills/development/systematic-debugging/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/testing/SKILL.md"
+        "path": "./.github/frontier/skills/development/testing/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/token-optimizer/SKILL.md"
+        "path": "./.github/frontier/skills/development/token-optimizer/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/type-safety/SKILL.md"
+        "path": "./.github/frontier/skills/development/type-safety/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/development/verification-before-completion/SKILL.md"
+        "path": "./.github/frontier/skills/development/verification-before-completion/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/diagrams/diagram-as-code/SKILL.md"
+        "path": "./.github/frontier/skills/diagrams/diagram-as-code/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/document/docx/SKILL.md"
+        "path": "./.github/frontier/skills/document/docx/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/document/pdf/SKILL.md"
+        "path": "./.github/frontier/skills/document/pdf/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/document/pptx/SKILL.md"
+        "path": "./.github/frontier/skills/document/pptx/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/domain/audit-assurance/SKILL.md"
+        "path": "./.github/frontier/skills/domain/audit-assurance/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/domain/clm/SKILL.md"
+        "path": "./.github/frontier/skills/domain/clm/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/domain/corporate-governance/SKILL.md"
+        "path": "./.github/frontier/skills/domain/corporate-governance/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/domain/financial-services/SKILL.md"
+        "path": "./.github/frontier/skills/domain/financial-services/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/domain/legal/SKILL.md"
+        "path": "./.github/frontier/skills/domain/legal/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/domain/oil-and-gas/SKILL.md"
+        "path": "./.github/frontier/skills/domain/oil-and-gas/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/domain/tax/SKILL.md"
+        "path": "./.github/frontier/skills/domain/tax/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/infrastructure/azure/SKILL.md"
+        "path": "./.github/frontier/skills/infrastructure/azure/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/infrastructure/bicep/SKILL.md"
+        "path": "./.github/frontier/skills/infrastructure/bicep/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/infrastructure/containerization/SKILL.md"
+        "path": "./.github/frontier/skills/infrastructure/containerization/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/infrastructure/terraform/SKILL.md"
+        "path": "./.github/frontier/skills/infrastructure/terraform/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/blazor/SKILL.md"
+        "path": "./.github/frontier/skills/languages/blazor/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/c/SKILL.md"
+        "path": "./.github/frontier/skills/languages/c/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/cpp/SKILL.md"
+        "path": "./.github/frontier/skills/languages/cpp/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/csharp/SKILL.md"
+        "path": "./.github/frontier/skills/languages/csharp/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/go/SKILL.md"
+        "path": "./.github/frontier/skills/languages/go/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/postgresql/SKILL.md"
+        "path": "./.github/frontier/skills/languages/postgresql/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/python/SKILL.md"
+        "path": "./.github/frontier/skills/languages/python/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/react/SKILL.md"
+        "path": "./.github/frontier/skills/languages/react/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/rust/SKILL.md"
+        "path": "./.github/frontier/skills/languages/rust/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/languages/sql-server/SKILL.md"
+        "path": "./.github/frontier/skills/languages/sql-server/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/canvas-app-yaml/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/canvas-app-yaml/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/copilot-studio-agents/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/copilot-studio-agents/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/dataverse-plugins/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/dataverse-plugins/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/dataverse-schema/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/dataverse-schema/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/environment-variables/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/environment-variables/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/model-driven-app/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/model-driven-app/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/pac-cli/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/pac-cli/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/pcf-controls/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/pcf-controls/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/power-automate-desktop/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/power-automate-desktop/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/power-automate-flow-json/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/power-automate-flow-json/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/power-pages/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/power-pages/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/security-roles/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/security-roles/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/low-code/solution-anatomy/SKILL.md"
+        "path": "./.github/frontier/skills/low-code/solution-anatomy/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/operations/github-actions-workflows/SKILL.md"
+        "path": "./.github/frontier/skills/operations/github-actions-workflows/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/operations/release-management/SKILL.md"
+        "path": "./.github/frontier/skills/operations/release-management/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/operations/remote-git-operations/SKILL.md"
+        "path": "./.github/frontier/skills/operations/remote-git-operations/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/operations/version-control/SKILL.md"
+        "path": "./.github/frontier/skills/operations/version-control/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/operations/yaml-pipelines/SKILL.md"
+        "path": "./.github/frontier/skills/operations/yaml-pipelines/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/product/prd/SKILL.md"
+        "path": "./.github/frontier/skills/product/prd/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/testing/e2e-testing/SKILL.md"
+        "path": "./.github/frontier/skills/testing/e2e-testing/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/testing/integration-testing/SKILL.md"
+        "path": "./.github/frontier/skills/testing/integration-testing/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/testing/performance-testing/SKILL.md"
+        "path": "./.github/frontier/skills/testing/performance-testing/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/testing/production-readiness/SKILL.md"
+        "path": "./.github/frontier/skills/testing/production-readiness/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/testing/security-testing/SKILL.md"
+        "path": "./.github/frontier/skills/testing/security-testing/SKILL.md"
       },
       {
-        "path": "./.github/agentx/skills/testing/test-automation/SKILL.md"
+        "path": "./.github/frontier/skills/testing/test-automation/SKILL.md"
       }
     ],
     "configurationDefaults": {
       "chat.useCustomAgentHooks": true
     },
     "configuration": {
-      "title": "AgentX",
+      "title": "Frontier",
       "properties": {
-        "agentx.autoRefresh": {
+        "frontier.autoRefresh": {
           "type": "boolean",
           "default": true,
           "description": "Automatically refresh agent status."
         },
-        "agentx.shell": {
+        "frontier.shell": {
           "type": "string",
           "default": "auto",
           "enum": [
@@ -1190,31 +1193,31 @@
             "pwsh",
             "bash"
           ],
-          "description": "Shell to use for AgentX CLI commands."
+          "description": "Shell to use for Frontier CLI commands."
         },
-        "agentx.rootPath": {
+        "frontier.rootPath": {
           "type": "string",
           "default": "",
-          "description": "Explicit path to the AgentX project root (folder containing AGENTS.md and .agentx/). Leave empty for auto-detection. Useful when AgentX is initialized in a subfolder or non-first workspace folder."
+          "description": "Explicit path to the Frontier project root (folder containing AGENTS.md and .agentx/). Leave empty for auto-detection. Useful when Frontier is initialized in a subfolder or non-first workspace folder."
         },
-        "agentx.searchDepth": {
+        "frontier.searchDepth": {
           "type": "number",
           "default": 2,
           "minimum": 0,
           "maximum": 5,
-          "description": "How many subfolder levels to search when auto-detecting the AgentX root. Set to 0 to only check workspace folder roots."
+          "description": "How many subfolder levels to search when auto-detecting the Frontier root. Set to 0 to only check workspace folder roots."
         },
-        "agentx.skipStartupCheck": {
+        "frontier.skipStartupCheck": {
           "type": "boolean",
           "default": false,
-          "description": "Skip the automatic environment health check on extension activation. You can always run it manually via AgentX: Check Environment."
+          "description": "Skip the automatic environment health check on extension activation. You can always run it manually via Frontier: Check Environment."
         },
-        "agentx.skipUpdateCheck": {
+        "frontier.skipUpdateCheck": {
           "type": "boolean",
           "default": false,
           "description": "Skip the automatic version check that detects outdated framework files on extension activation. When enabled, you will not be prompted to update."
         },
-        "agentx.companionDismissed": {
+        "frontier.companionDismissed": {
           "type": "array",
           "items": {
             "type": "string"
@@ -1222,19 +1225,19 @@
           "default": [],
           "description": "List of companion extension IDs for which the install prompt has been permanently dismissed."
         },
-        "agentx.seedRepoLocalAssets": {
+        "frontier.seedRepoLocalAssets": {
           "type": "boolean",
           "default": false,
-          "description": "When Initialize Local Runtime runs, also copy bundled agents, skills, instructions, prompts, templates, and schemas into the workspace .github/ folder. Required only for non-VS-Code surfaces (e.g. GitHub Copilot CLI) that need repo-local discovery. VS Code chat, commands, and the AgentX runtime resolve these assets from the extension bundle and do not need this seed. Default: false (zero-copy)."
+          "description": "When Initialize Local Runtime runs, also copy bundled agents, skills, instructions, prompts, templates, and schemas into the workspace .github/ folder. Required only for non-VS-Code surfaces (e.g. GitHub Copilot CLI) that need repo-local discovery. VS Code chat, commands, and the Frontier runtime resolve these assets from the extension bundle and do not need this seed. Default: false (zero-copy)."
         },
-        "agentx.cliAssetMode": {
+        "frontier.cliAssetMode": {
           "type": "string",
           "enum": [
             "copy",
             "symlink"
           ],
           "default": "copy",
-          "description": "Default mode used by 'AgentX: Initialize CLI'. 'copy' duplicates bundled assets into .github/ (team-friendly, committable). 'symlink' creates directory junctions/symlinks pointing at the installed extension bundle (zero-copy, single-user; .gitignore'd; auto-refreshed when the bundle moves on extension upgrade)."
+          "description": "Default mode used by 'Frontier: Initialize CLI'. 'copy' duplicates bundled assets into .github/ (team-friendly, committable). 'symlink' creates directory junctions/symlinks pointing at the installed extension bundle (zero-copy, single-user; .gitignore'd; auto-refreshed when the bundle moves on extension upgrade)."
         }
       }
     }

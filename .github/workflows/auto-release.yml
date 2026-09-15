@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------
-# AgentX Release Automation
+# Frontier Release Automation
 # ------------------------------------------------------------------
 # Automates semantic version bumping, CHANGELOG generation, and
 # GitHub Release creation based on conventional commit messages.
@@ -20,7 +20,7 @@
 #   chore:    -> no release
 # ------------------------------------------------------------------
 
-name: AgentX Auto Release
+name: Frontier Orchestration FDE Release
 
 on:
   push:

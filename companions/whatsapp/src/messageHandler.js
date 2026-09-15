@@ -47,11 +47,11 @@ function createMessageHandler(config, dependencies = {}) {
   return async function handleMessage(message) {
     if (!shouldProcessMessage(message)) return;
     if (!isAllowed(message, config)) {
-      console.warn(`[AgentX WhatsApp] Rejected sender ...${senderNumber(message).slice(-4)}`);
+      console.warn(`[Frontier WhatsApp] Rejected sender ...${senderNumber(message).slice(-4)}`);
       return;
     }
     if (!remember(messageId(message))) {
-      console.warn(`[AgentX WhatsApp] Rejected duplicate or ID-less message from ...${senderNumber(message).slice(-4)}`);
+      console.warn(`[Frontier WhatsApp] Rejected duplicate or ID-less message from ...${senderNumber(message).slice(-4)}`);
       return;
     }
 

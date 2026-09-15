@@ -37,7 +37,7 @@ function assertCommandAllowed(command: string): void {
   const result = validateCommand(command);
   if (result.classification === 'blocked') {
     throw new Error(
-      `Command blocked by AgentX security policy: ${result.reason ?? 'matches a dangerous pattern.'}`,
+      `Command blocked by Frontier security policy: ${result.reason ?? 'matches a dangerous pattern.'}`,
     );
   }
 }
@@ -74,7 +74,7 @@ let _resolvedPwsh: string | null = null;
 /**
  * Detect a supported PowerShell executable on the current system.
  *
- * AgentX requires `pwsh` 7.4+ on Windows. Returns an empty string when no
+ * Frontier requires `pwsh` 7.4+ on Windows. Returns an empty string when no
  * supported `pwsh` runtime is found.
  */
 export function resolveWindowsShell(): string {

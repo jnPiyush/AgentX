@@ -6,7 +6,7 @@
 .DESCRIPTION
     Scans all TypeScript source files (excluding tests) for VS Code API usage patterns
     and compares against the mock exports to identify missing API surface.
-    Based on lessons learned from AgentX v7.6.0 - addresses "Mock Completeness Gap" theme.
+    Based on lessons learned from Frontier v7.6.0 - addresses "Mock Completeness Gap" theme.
 .EXAMPLE
     ./scripts/audit-vscode-mock.ps1
 #>

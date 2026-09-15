@@ -2,7 +2,7 @@
 name: "visual-regression"
 description: 'Catch unintended visual drift between prototype iterations with deterministic screenshot diffs. Use when iterating on a prototype, before review handoff, or before promoting an SPA prototype to a real build. Default engine is Playwright `toHaveScreenshot` with masking, threshold, and per-OS baselines. Includes Chromatic / Percy guidance for hosted alternatives.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-13"
   updated: "2026-05-13"

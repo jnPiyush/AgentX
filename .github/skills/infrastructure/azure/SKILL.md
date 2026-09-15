@@ -2,7 +2,7 @@
 name: "azure"
 description: 'Build scalable, secure, and reliable applications on Microsoft Azure cloud services. Use when deploying to Azure, configuring Azure compute/storage/database services, setting up Azure networking, implementing Azure security, or managing Azure costs and monitoring.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2026-02-11"

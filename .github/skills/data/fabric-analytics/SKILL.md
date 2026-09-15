@@ -2,7 +2,7 @@
 name: "fabric-analytics"
 description: 'Build data engineering and analytics solutions on Microsoft Fabric - Lakehouse, Warehouse, Spark notebooks, data pipelines, and semantic models. Use when creating Fabric Lakehouses, writing PySpark notebooks, building data pipelines, designing semantic models, or querying OneLake storage.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-07-13"
  updated: "2025-07-13"

@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
-# AgentX Plugin: convert-docs
+# Frontier Plugin: convert-docs
 # Convert Markdown documents to Microsoft Word (DOCX) using Pandoc.
 
 [CmdletBinding()]

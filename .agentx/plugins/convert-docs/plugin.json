@@ -6,7 +6,7 @@
   "displayName": "Convert Docs",
   "version": "1.1.0",
   "description": "Convert Markdown documents to Microsoft Word (DOCX) using Pandoc, with automatic Mermaid diagram rendering when mermaid-cli is available.",
-  "author": "AgentX",
+  "author": "Frontier",
   "license": "Apache-2.0",
   "homepage": "https://github.com/jnPiyush/agentx-plugin-convert-docs",
   "bugs": "https://github.com/jnPiyush/agentx-plugin-convert-docs/issues",

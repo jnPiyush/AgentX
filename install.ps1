@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install AgentX v9.2.0 - Download, copy, configure.
+ Install Frontier v9.3.0 - Download, copy, configure.
 
 .PARAMETER Mode
  github - Full features: GitHub Actions, PRs, Projects (asks for repo/project info)
@@ -10,7 +10,7 @@
 
 .PARAMETER Path
  Install into a subdirectory (e.g. -Path myproject/backend). The VS Code
- extension auto-detects AgentX up to 2 levels deep, or you can set
+ extension auto-detects Frontier up to 2 levels deep, or you can set
  'agentx.rootPath' in workspace settings.
 
 .PARAMETER Force
@@ -20,7 +20,7 @@
  Skip interactive setup (git init, hooks, username)
 
 .PARAMETER Azure
- Install Azure companion support when setting up AgentX. This is also auto-detected
+ Install Azure companion support when setting up Frontier. This is also auto-detected
  for existing Azure-oriented workspaces.
 
 .EXAMPLE
@@ -31,13 +31,13 @@
  .\install.ps1 -Azure # Force Azure Skills companion install
 
  # One-liner install (local mode, no prompts - pinned to a release tag)
- irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.ps1 | iex
+ irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.ps1 | iex
 
  # One-liner for GitHub mode
- $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.ps1 | iex
+ $env:AGENTX_MODE="github"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.ps1 | iex
 
  # One-liner to include Azure companion support
- $env:AGENTX_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.ps1 | iex
+ $env:AGENTX_AZURE="true"; irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.ps1 | iex
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='Interactive installer output is intentionally written directly to the host.')]
@@ -163,21 +163,15 @@ if ($Mode -and $Mode -notin @("github", "local")) {
  return
 }
 
-$previousVersion = $null
-if (Test-Path '.agentx/version.json') {
- try {
-  $versionInfo = Get-Content '.agentx/version.json' -Raw | ConvertFrom-Json
-  $previousVersion = $versionInfo.version
- } catch {
-  Write-Verbose "Unable to read prior version metadata from .agentx/version.json: $($_.Exception.Message)"
- }
+$installedVersion = $null
+foreach ($stateDirectory in @('.frontier', '.hve', '.agentx')) {
+ $metadataPath = Join-Path $stateDirectory 'version.json'
+ if (-not (Test-Path -LiteralPath $metadataPath)) { continue }
+ $installedVersion = (Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json).version
+ if ($installedVersion) { break }
 }
-if ($previousVersion -and $previousVersion -ne '9.2.0' -and -not $Force) {
- $previousMajorVersion = 0
- try { $previousMajorVersion = [int]($previousVersion -split '\.')[0] } catch { Write-Verbose "Could not parse major version from '$previousVersion'." }
- if ($previousMajorVersion -ge 9) {
-  throw "AgentX v$previousVersion is already installed. Re-run with -Force to replace managed files with v9.2.0; no files were changed."
- }
+if ($installedVersion -and $installedVersion -ne '9.3.0' -and -not $Force) {
+ throw "Frontier v$installedVersion is already installed. Re-run with -Force to replace managed files with v9.3.0; no files were changed."
 }
 
 if ($IsWindows -or $env:OS -eq 'Windows_NT') {
@@ -203,7 +197,7 @@ if ($PSVersionTable.PSVersion -lt $MinimumPowerShellVersion) {
   return
  }
 
- Write-Host "[X] AgentX requires PowerShell 7.4+ to run install.ps1. Current version: $($PSVersionTable.PSVersion)" -ForegroundColor Red
+ Write-Host "[X] Frontier requires PowerShell 7.4+ to run install.ps1. Current version: $($PSVersionTable.PSVersion)" -ForegroundColor Red
  Write-Host " Install PowerShell 7.4+ from https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell" -ForegroundColor Yellow
  if ($IsWindows -or $env:OS -eq 'Windows_NT') {
   Write-Host " Install command: winget install Microsoft.PowerShell" -ForegroundColor DarkGray
@@ -218,7 +212,7 @@ if ($PSVersionTable.PSVersion -lt $MinimumPowerShellVersion) {
 $isPiped = -not $MyInvocation.MyCommand.Path
 
 $ErrorActionPreference = "Stop"
-$BRANCH = "v9.2.0"
+$BRANCH = "v9.3.0"
 $TMP = ".agentx-install-tmp"
 $TMPRAW = ".agentx-install-raw"
 $ZIPFILE = ".agentx-install.zip"
@@ -323,7 +317,7 @@ try {
 # -- Banner ----------------------------------------------
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Cyan
-Write-Host "| AgentX v9.2.0 - AI Agent Orchestration |" -ForegroundColor Cyan
+Write-Host "| Frontier v9.3.0 - AI Agent Orchestration |" -ForegroundColor Cyan
 Write-Host "+===================================================+" -ForegroundColor Cyan
 Write-Host ""
 
@@ -341,127 +335,20 @@ Write-Host ""
 # -- Prerequisites ---------------------------------------
 # Install required CLI prerequisites up front.
 if (-not (Invoke-GitInstallIfMissing)) {
- Write-Error 'Git is required for AgentX install and could not be installed automatically.'
+ Write-Error 'Git is required for Frontier install and could not be installed automatically.'
  return
 }
 
-# -- Upgrade detection: uninstall old version, preserve user data --
-if ($previousVersion -and $previousVersion -ne "9.2.0") {
- $majorVersion = 0
- try { $majorVersion = [int]($previousVersion -split '\.')[0] } catch { Write-Verbose "Could not parse major version from '$previousVersion'." }
+# -- Upgrade detection --
+$previousVersion = $installedVersion
 
- if ($majorVersion -lt 9) {
-    Write-Host "[!] Detected AgentX v$previousVersion - upgrading to v9.2.0..." -ForegroundColor Yellow
-  Write-Host "  Uninstalling v$previousVersion and performing clean install." -ForegroundColor DarkGray
-
-  # Back up user data that must survive the upgrade
-  $backupDir = ".agentx-upgrade-backup"
-  if (Test-Path $backupDir) { Remove-Item $backupDir -Recurse -Force }
-  New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
-
-  $userPaths = @(
-   ".agentx/config.json",   # Mode, repo, project settings
-   ".agentx/issues",        # Local issue data
-   ".agentx/state",         # Agent state
-   "memories"               # Cross-session memory
-  )
-  foreach ($up in $userPaths) {
-   if (Test-Path $up) {
-    $dest = Join-Path $backupDir $up
-    $parent = Split-Path $dest -Parent
-    if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-    Copy-Item $up $dest -Recurse -Force
-   }
-  }
-  Write-OK "User data backed up"
-
-  # Read the previous install manifest BEFORE removing .agentx/ so files AgentX
-  # installed into shared directories can be removed individually.
-  $trackedPaths = @()
-  $manifestPath = ".agentx/install-manifest.json"
-  if (Test-Path $manifestPath) {
-   try {
-    $trackedPaths = @((Get-Content $manifestPath -Raw -Encoding utf8 | ConvertFrom-Json).files.path)
-   } catch {
-    Write-Verbose "Could not read install manifest: $($_.Exception.Message)"
-   }
-  }
-
-  # region agentx-upgrade-removal
-  # Remove AgentX-owned paths only.
-  #
-  # SAFETY: `.agentx/` is the only directory AgentX owns outright (user data in it
-  # was backed up above). Every other location is a host-standard shared namespace
-  # where users legitimately keep their own files -- `.github/instructions`,
-  # `.github/skills`, `.github/prompts`, `.claude/commands`, `scripts/`, `packs/`.
-  # Those are cleaned per-file from the previous install manifest so that any
-  # untracked, user-authored file always survives the upgrade.
-  $agentxOwnedPaths = @(
-   ".agentx",
-   ".github/AGENT-PROTOCOL.md",
-   ".github/agent-delegation.md",
-   ".github/agentx-security.yml",
-   ".github/copilot-instructions.md",
-   ".cursor/mcp.json"
-  )
-  foreach ($d in $agentxOwnedPaths) {
-   if (Test-Path $d) { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
-  }
-
-  # Remove manifest-tracked files, leaving every untracked (user-authored) file
-  # intact. Manifest paths come from the target workspace and are therefore
-  # untrusted: reject rooted paths and any traversal segment before deleting.
-  $workspaceRoot = (Resolve-Path .).Path
-  foreach ($tracked in $trackedPaths) {
-   if ([string]::IsNullOrWhiteSpace($tracked)) { continue }
-   $normalized = ($tracked -replace '\\', '/').Trim()
-   if ([System.IO.Path]::IsPathRooted($normalized)) { continue }
-   if (($normalized -split '/') -contains '..') { continue }
-
-   $candidate = [System.IO.Path]::GetFullPath((Join-Path $workspaceRoot $normalized))
-   $containmentRoot = $workspaceRoot.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
-   if (-not $candidate.StartsWith($containmentRoot, [StringComparison]::OrdinalIgnoreCase)) { continue }
-   if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-    Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
-   }
-  }
-
-  # Prune AgentX customization directories that the per-file cleanup emptied.
-  $prunableDirs = @(
-   ".github/agents", ".github/instructions", ".github/prompts", ".github/skills",
-   ".github/templates", ".github/schemas", ".github/registries", ".github/hooks",
-   ".github/scripts", ".claude/agents", ".claude/commands", ".claude/skills",
-   ".cursor/commands", ".cursor/rules"
-  )
-  foreach ($d in $prunableDirs) {
-   if (-not (Test-Path $d -PathType Container)) { continue }
-   if (-not (Get-ChildItem -LiteralPath $d -Recurse -File -Force -ErrorAction SilentlyContinue)) {
-    Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
-   }
-  }
-  # endregion agentx-upgrade-removal
-
-  Write-OK "AgentX v$previousVersion files removed (user-owned files preserved)"
-
-  # Restore user data after removal
-  foreach ($up in $userPaths) {
-   $src = Join-Path $backupDir $up
-   if (Test-Path $src) {
-    $parent = Split-Path $up -Parent
-    if ($parent -and -not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-    Copy-Item $src $up -Recurse -Force
-   }
-  }
-  Remove-Item $backupDir -Recurse -Force -ErrorAction SilentlyContinue
-  Write-OK "User data restored"
-
-  # Force overwrite for fresh install
-  $Force = [switch]$true
- }
+if ($previousVersion -and $previousVersion -ne "9.3.0") {
+ Write-Host "[!] Detected Frontier v$previousVersion - upgrading to v9.3.0..." -ForegroundColor Yellow
+ Write-Host "  Existing runtime data and files absent from the release are retained." -ForegroundColor DarkGray
 }
 
 # -- Step 1: Download ------------------------------------
-Write-Host "[1] Downloading AgentX..." -ForegroundColor Cyan
+Write-Host "[1] Downloading Frontier..." -ForegroundColor Cyan
 # Robust pre-cleanup - handle locked files from previous failed runs
 foreach ($p in @($TMP, $TMPRAW)) {
  if (Test-Path $p) {
@@ -492,6 +379,7 @@ $neededFiles = @(
  "Skills.md",
  "LICENSE",
  "NOTICE",
+ "docs/BRAND.md",
  "docs/WORKFLOW.md",
  "docs/GUIDE.md",
  "docs/GOLDEN_PRINCIPLES.md",
@@ -520,7 +408,7 @@ if (Test-Path $TMPRAW) {
 }
 Remove-Item $ZIPFILE -Force -ErrorAction SilentlyContinue
 if (-not (Test-Path "$TMP/.agentx")) { Write-Error "Download failed. Check network connection." }
-Write-OK "AgentX downloaded (essential files only)"
+Write-OK "Frontier downloaded (essential files only)"
 
 # -- Step 2: Copy files ----------------------------------
 Write-Host "[2] Installing files..." -ForegroundColor Cyan
@@ -552,7 +440,7 @@ Get-ChildItem $TMP -Recurse -File -Force | ForEach-Object {
  }
  $dir = Split-Path $dest -Parent
  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
- if ($normalizedRel -in @('LICENSE', 'NOTICE') -or $Force -or -not (Test-Path $dest)) {
+ if ($Force -or $normalizedRel -in @('LICENSE', 'NOTICE') -or -not (Test-Path $dest)) {
  Copy-Item $_.FullName $dest -Force
  $copied++
  } else { $skipped++ }
@@ -606,10 +494,12 @@ if ($isAdoWorkspace) {
 
 # -- Step 3: Generate runtime files ----------------------
 Write-Host "[3] Configuring runtime..." -ForegroundColor Cyan
+& pwsh -NoProfile -File '.agentx/agentx-cli.ps1' version
+if ($LASTEXITCODE -ne 0) { throw 'Frontier state migration failed; installation metadata was not updated.' }
 
 @(
- ".agentx/state",
- ".agentx/digests",
+ ".frontier/state",
+ ".frontier/digests",
  "docs/artifacts/prd",
  "docs/artifacts/adr",
  "docs/artifacts/specs",
@@ -641,21 +531,25 @@ if (Test-Path $memoryTemplateSource) {
 }
 
 # Version tracking
-$versionFile = ".agentx/version.json"
+$versionFile = ".frontier/version.json"
 @{
-  version = "9.2.0"
+  version = "9.3.0"
  mode = $Mode
  installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
  updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 } | ConvertTo-Json | Set-Content $versionFile
-Write-OK "Version 9.2.0 recorded"
+Write-OK "Version 9.3.0 recorded"
 
-# Merge AgentX entries into user's .gitignore
-$MARKER_START = "# --- AgentX (auto-generated, do not edit this block) ---"
-$MARKER_END   = "# --- /AgentX ---"
+# Merge Frontier entries into user's .gitignore
+$MARKER_START = "# --- Frontier (auto-generated, do not edit this block) ---"
+$MARKER_END   = "# --- /Frontier ---"
 $agentxBlock = @(
  $MARKER_START
- "# AgentX framework"
+ "# Frontier framework"
+ ".frontier/"
+ ".frontier-migration.lock/"
+ ".frontier.migrating-*/"
+ ".hve/"
  ".agentx/"
  ".github/agents/"
  ".github/instructions/"
@@ -716,11 +610,11 @@ if (Test-Path $giPath) {
 } else {
  Set-Content $giPath ($agentxBlock + "`n")
 }
-Write-OK "AgentX entries merged into .gitignore"
+Write-OK "Frontier entries merged into .gitignore"
 
 # Agent status
-$statusFile = ".agentx/state/agent-status.json"
-if (-not (Test-Path $statusFile) -or $Force) {
+$statusFile = ".frontier/state/agent-status.json"
+if (-not (Test-Path $statusFile)) {
  [ordered]@{
  "product-manager" = @{ status="idle"; issue=$null; lastActivity=$null }
  "ux-designer" = @{ status="idle"; issue=$null; lastActivity=$null }
@@ -740,10 +634,10 @@ if (-not (Test-Path $statusFile) -or $Force) {
 }
 
 # Mode config
-$configFile = ".agentx/config.json"
-if (-not (Test-Path $configFile) -or $Force) {
+$configFile = ".frontier/config.json"
+if (-not (Test-Path $configFile)) {
  if ($Local) {
- New-Item -ItemType Directory -Path ".agentx/issues" -Force | Out-Null
+ New-Item -ItemType Directory -Path ".frontier/issues" -Force | Out-Null
  @{ mode="local"; enforceIssues=$false; nextIssueNumber=1; created=(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ") } |
  ConvertTo-Json | Set-Content $configFile
  Write-OK "Local Mode configured (issue enforcement off by default)"
@@ -915,7 +809,7 @@ if (-not $azureCompanionRequested) {
 # -- Done --------------------------------------------
 Write-Host ""
 Write-Host "===================================================" -ForegroundColor Green
-Write-Host " AgentX v9.2.0 installed! [$displayMode]" -ForegroundColor Green
+Write-Host " Frontier v9.3.0 installed! [$displayMode]" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " CLI: .\.agentx\agentx.ps1 help" -ForegroundColor White

@@ -1,4 +1,4 @@
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   createAIEvaluationExecutionPlan,
   createShellAIEvaluationRunnerAdapter,
@@ -29,7 +29,7 @@ export {
   persistNormalizedAIEvaluationReport,
 } from './aiEvaluationRunnerInternals';
 
-export function planAIEvaluationRun(agentx: AgentXContext) {
+export function planAIEvaluationRun(agentx: FrontierContext) {
   const root = agentx.workspaceRoot;
   if (!root) {
     return undefined;
@@ -39,7 +39,7 @@ export function planAIEvaluationRun(agentx: AgentXContext) {
 }
 
 export async function executeAIEvaluationRun(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   options: Parameters<typeof executeAIEvaluationRunFromRoot>[1],
 ) {
   const root = agentx.workspaceRoot;

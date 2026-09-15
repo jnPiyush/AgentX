@@ -24,7 +24,7 @@ describe('workflow guidance utility', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workflow-guidance-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-workflow-guidance-'));
     writeFile(tmpDir, '.agentx/issues/219.json', JSON.stringify({
       number: 219,
       title: 'Create rollout scorecard',

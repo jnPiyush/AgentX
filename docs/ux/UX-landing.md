@@ -1,4 +1,4 @@
-# UX Spec: AgentX Public Landing Page
+# UX Spec: Frontier Public Landing Page
 
 > Prototype: [docs/ux/prototypes/landing/index.html](prototypes/landing/index.html)
 
@@ -19,11 +19,11 @@ The only adopted cues are:
 - keep the entry path focused
 - progressively disclose detail after the first decision
 
-All AgentX claims come from repository evidence.
+All Frontier claims come from repository evidence.
 
 ## User Jobs
 
-1. Understand what AgentX is within one viewport.
+1. Understand what Frontier is within one viewport.
 2. See how the workflow differs from ad hoc prompting.
 3. Find the relevant specialist roles and supported platforms.
 4. Understand security and evidence controls before granting autonomy.
@@ -33,7 +33,7 @@ All AgentX claims come from repository evidence.
 
 1. **Sticky navigation:** Workflow, Team, Platforms, Security, Install, GitHub.
 2. **Hero:** current version, concise promise, two actions, verified inventory.
-3. **Why AgentX:** repository context, evidence, and compounded learning.
+3. **Why Frontier:** repository context, evidence, and compounded learning.
 4. **Operating loop:** Brainstorm -> Plan -> Work -> Review -> Capture -> Done.
 5. **Specialist team:** six role families covering all visible agents.
 6. **Platforms:** VS Code/Copilot, Claude/OpenAI/local models, CLI/editors, WhatsApp.
@@ -49,7 +49,7 @@ The obsolete `/v2` page redirects permanently to `/` so the public site has one 
 - Do not claim adoption, install counts, speed, productivity multipliers, or customer logos.
 - Treat model names as adapter options, not guarantees of one provider.
 - Explain controls near autonomy claims.
-- Use direct, neutral actions: "Install AgentX", "Explore the repository", "Read the guide".
+- Use direct, neutral actions: "Install Frontier", "Explore the repository", "Read the guide".
 
 ## Design System
 
@@ -98,11 +98,11 @@ The page uses the Clawpilot theme contract required for standalone HTML artifact
 - [ ] Keyboard path covers skip link, menu, nav, CTAs, and footer links
 - [ ] axe-core reports zero serious or critical findings
 - [ ] No T1-T10 anti-slop finding or invented metric remains
-- [ ] Production Vercel URL serves AgentX 8.7.0 content
+- [ ] Production Vercel URL serves Frontier 8.7.0 content
 
 ## References
 
-- AgentX guide: [docs/GUIDE.md](../GUIDE.md)
+- Frontier guide: [docs/GUIDE.md](../GUIDE.md)
 - Workflow reference: [docs/WORKFLOW.md](../WORKFLOW.md)
 - Security policy: [SECURITY.md](../../SECURITY.md)
 - Skills index: [Skills.md](../../Skills.md)

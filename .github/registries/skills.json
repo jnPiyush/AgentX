@@ -473,7 +473,7 @@
       "name": "browser-automation",
       "category": "development",
       "path": ".github/skills/development/browser-automation/SKILL.md",
-      "description": "Drive a real browser from an AgentX agent for prototype validation, web research, HTML output verification, and accessibility audits. Use when an agent needs to render JavaScript, click/type/screenshot a page, run an axe-core a11y audit, or read a JS-rendered page. Backed by Microsoft's Playwright MCP server (transport decided in ADR-342). Local-first, opt-in install."
+      "description": "Drive a real browser from an Frontier FDE for prototype validation, web research, HTML output verification, and accessibility audits. Use when an agent needs to render JavaScript, click/type/screenshot a page, run an axe-core a11y audit, or read a JS-rendered page. Backed by Microsoft's Playwright MCP server (transport decided in ADR-342). Local-first, opt-in install."
     },
     {
       "id": "development/code-hygiene",
@@ -564,7 +564,7 @@
       "name": "git-worktrees",
       "category": "development",
       "path": ".github/skills/development/git-worktrees/SKILL.md",
-      "description": "Run parallel agent sessions on the same repo using git worktrees without corrupting the primary checkout. Use when an agent needs an isolated working directory for a prototype, a long-running experiment, a parallel branch, or a deploy artifact, especially when AgentX is being driven from a single primary clone."
+      "description": "Run parallel agent sessions on the same repo using git worktrees without corrupting the primary checkout. Use when an agent needs an isolated working directory for a prototype, a long-running experiment, a parallel branch, or a deploy artifact, especially when Frontier is being driven from a single primary clone."
     },
     {
       "id": "development/iterative-loop",
@@ -606,7 +606,7 @@
       "name": "skill-creator",
       "category": "development",
       "path": ".github/skills/development/skill-creator/SKILL.md",
-      "description": "Create, validate, and maintain AgentX skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill."
+      "description": "Create, validate, and maintain Frontier skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill."
     },
     {
       "id": "development/strategic-compaction",

@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
-# AgentX Plugin: convert-slides
+# Frontier Plugin: convert-slides
 # Convert Markdown documents to Microsoft PowerPoint (PPTX) using Pandoc.
 
 [CmdletBinding()]

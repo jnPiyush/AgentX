@@ -4,7 +4,7 @@
     Estimate monthly cloud running cost for a proposed architecture.
 
 .DESCRIPTION
-    Reads an AgentX cost model (JSON) and computes a monthly estimate for each declared
+    Reads an Frontier cost model (JSON) and computes a monthly estimate for each declared
     load envelope, splitting spend into active, idle, and fixed components.
 
     The idle split is the point of this script. A prototype is idle for most of the month,

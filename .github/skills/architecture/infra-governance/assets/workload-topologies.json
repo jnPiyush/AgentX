@@ -1,5 +1,5 @@
 {
-  "$comment": "AgentX reference topologies. Each shape is DESIGNED TO ALIGN WITH the blocking governance rules (IG-01..IG-05); these are design descriptions rather than IaC, so run the governance gate against the code you generate from them. Provider services are named generically so the shape ports across clouds.",
+  "$comment": "Frontier reference topologies. Each shape is DESIGNED TO ALIGN WITH the blocking governance rules (IG-01..IG-05); these are design descriptions rather than IaC, so run the governance gate against the code you generate from them. Provider services are named generically so the shape ports across clouds.",
   "version": "1.0.0",
   "topologies": [
     {

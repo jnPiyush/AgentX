@@ -2,7 +2,7 @@
 name: "iterative-retrieval"
 description: "Progressive context refinement for subagents and tool-using LLMs. Use when a parent agent must delegate research, code reading, or document Q&A to a subagent with a tight context budget. Replaces one-shot context dumps with a query -> retrieve -> filter -> requery loop that returns only the evidence the parent needs."
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-17"
   updated: "2026-05-30"
@@ -137,7 +137,7 @@ When the parent receives the answer, it MUST:
 | Subagent omits the open-questions list | Parent assumes coverage was complete, misses gaps. |
 | Parent re-delegates the same question without refining | Same budget, same blind spots, same failure. |
 
-## Integration With AgentX
+## Integration With Frontier
 
 - Pair with the `context-management` skill for token-budget hygiene at the parent level.
 - Pair with the `cognitive-architecture` skill when the retrieval is over a vector store rather than the filesystem.

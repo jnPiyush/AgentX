@@ -1,21 +1,23 @@
 #!/usr/bin/env node
 /**
- * AgentX MCP Server (stdio).
+ * Frontier MCP Server (stdio).
  *
- * Wraps the AgentX PowerShell CLI (.agentx/agentx-cli.ps1) and exposes its key
+ * Wraps the Frontier PowerShell CLI (.agentx/agentx-cli.ps1) and exposes its key
  * commands as Model Context Protocol tools. Any MCP-compatible host -- GitHub
  * Copilot CLI, Claude Desktop, Cursor, VS Code MCP -- can call these tools
- * directly to drive the AgentX quality loop, query the ready queue, validate
+ * directly to drive the Frontier quality loop, query the ready queue, validate
  * handoffs, and ship issues.
  *
  * Discovery:
- *   - AGENTX_REPO_ROOT env var (preferred)   -- absolute path to AgentX repo
+ *   - FRONTIER_REPO_ROOT env var (preferred)      -- absolute path to Frontier repo
+ *   - HVE_REPO_ROOT env var (transitional)   -- partial-migration fallback
+ *   - AGENTX_REPO_ROOT env var (deprecated)  -- published compatibility fallback
  *   - walks up from this file to find .agentx/agentx-cli.ps1
  *
  * Spawning:
  *   On Windows: pwsh -NoProfile -File <agentx-cli.ps1> <args>
  *   On *nix:    pwsh -NoProfile -File <agentx-cli.ps1> <args>
- *   (pwsh must be on PATH; PowerShell 7.4+ is required by AgentX.)
+ *   (pwsh must be on PATH; PowerShell 7.4+ is required by Frontier.)
  */
 
 const { spawn } = require('node:child_process');
@@ -32,8 +34,11 @@ const {
 // ---------- repo discovery ----------
 
 function discoverRepoRoot() {
-  if (process.env.AGENTX_REPO_ROOT) {
-    const p = path.resolve(process.env.AGENTX_REPO_ROOT);
+  const configuredRoot = process.env.FRONTIER_REPO_ROOT
+    || process.env.HVE_REPO_ROOT
+    || process.env.AGENTX_REPO_ROOT;
+  if (configuredRoot) {
+    const p = path.resolve(configuredRoot);
     if (fs.existsSync(path.join(p, '.agentx', 'agentx-cli.ps1'))) return p;
   }
   let cur = __dirname;
@@ -43,7 +48,7 @@ function discoverRepoRoot() {
     if (parent === cur) break;
     cur = parent;
   }
-  throw new Error('Cannot locate AgentX repo root. Set AGENTX_REPO_ROOT to the repo path.');
+  throw new Error('Cannot locate Frontier repo root. Set FRONTIER_REPO_ROOT to the repo path.');
 }
 
 const REPO_ROOT = discoverRepoRoot();
@@ -51,7 +56,7 @@ const CLI_SCRIPT = path.join(REPO_ROOT, '.agentx', 'agentx-cli.ps1');
 
 // ---------- CLI invocation ----------
 
-function runAgentX(args, env = {}) {
+function runFrontier(args, env = {}) {
   return new Promise((resolve) => {
     const child = spawn(
       'pwsh',
@@ -84,9 +89,9 @@ function toolResult({ exitCode, stdout, stderr }) {
 
 const TOOLS = [
   {
-    name: 'agentx_loop_start',
+    name: 'frontier_loop_start',
     description:
-      'Start the AgentX iterative quality loop for a task. MUST be called before any file edits. Records prompt and (optionally) issue number.',
+      'Start the Frontier iterative quality loop for a task. MUST be called before any file edits. Records prompt and (optionally) issue number.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -98,7 +103,7 @@ const TOOLS = [
     build: (a) => ['loop', 'start', '-p', a.prompt, ...(a.issue != null ? ['-i', String(a.issue)] : [])],
   },
   {
-    name: 'agentx_loop_iterate',
+    name: 'frontier_loop_iterate',
     description:
       'Record a quality-loop iteration. For the subagent review pass, also pass verdict, reviewer, high and medium -- a loop cannot complete without one.',
     inputSchema: {
@@ -134,9 +139,9 @@ const TOOLS = [
     ],
   },
   {
-    name: 'agentx_loop_complete',
+    name: 'frontier_loop_complete',
     description:
-      'Mark the AgentX quality loop complete. Requires the risk-based 1/2/3/5 iteration minimum and an approved reviewer verdict with zero HIGH and MEDIUM findings on the final work iteration.',
+      'Mark the Frontier quality loop complete. Requires the risk-based 1/2/3/5 iteration minimum and an approved reviewer verdict with zero HIGH and MEDIUM findings on the final work iteration.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -148,19 +153,19 @@ const TOOLS = [
     build: (a) => ['loop', 'complete', '-s', a.summary, ...(a.evidence ? ['-e', a.evidence] : [])],
   },
   {
-    name: 'agentx_loop_status',
+    name: 'frontier_loop_status',
     description: 'Report the current quality-loop state (iteration count, history, completion).',
     inputSchema: { type: 'object', properties: {} },
     build: () => ['loop', 'status'],
   },
   {
-    name: 'agentx_ready',
+    name: 'frontier_ready',
     description: 'Show the priority-sorted ready queue of unblocked work.',
     inputSchema: { type: 'object', properties: {} },
     build: () => ['ready'],
   },
   {
-    name: 'agentx_state',
+    name: 'frontier_state',
     description: 'Show or update agent state. Without args, prints all agent states.',
     inputSchema: {
       type: 'object',
@@ -179,7 +184,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'agentx_deps',
+    name: 'frontier_deps',
     description: 'Check dependencies/blockers for an issue.',
     inputSchema: {
       type: 'object',
@@ -189,7 +194,7 @@ const TOOLS = [
     build: (a) => ['deps', String(a.issue)],
   },
   {
-    name: 'agentx_workflow',
+    name: 'frontier_workflow',
     description: 'Print the workflow phase list for an agent role (engineer, architect, pm, ...).',
     inputSchema: {
       type: 'object',
@@ -199,7 +204,7 @@ const TOOLS = [
     build: (a) => ['workflow', a.agent],
   },
   {
-    name: 'agentx_validate',
+    name: 'frontier_validate',
     description: 'Validate handoff deliverables for an issue at the named role boundary.',
     inputSchema: {
       type: 'object',
@@ -212,13 +217,13 @@ const TOOLS = [
     build: (a) => ['validate', String(a.issue), a.role],
   },
   {
-    name: 'agentx_config_show',
-    description: 'Show the active AgentX configuration (provider, mode, enforceIssues, ...).',
+    name: 'frontier_config_show',
+    description: 'Show the active Frontier configuration (provider, mode, enforceIssues, ...).',
     inputSchema: { type: 'object', properties: {} },
     build: () => ['config', 'show'],
   },
   {
-    name: 'agentx_issue',
+    name: 'frontier_issue',
     description: 'Issue subcommand: list | get | create | update | close. Pass action plus any positional args.',
     inputSchema: {
       type: 'object',
@@ -231,7 +236,7 @@ const TOOLS = [
     build: (a) => ['issue', a.action, ...((a.args || []))],
   },
   {
-    name: 'agentx_ship',
+    name: 'frontier_ship',
     description: 'Run the autonomous fast-path (plan -> work -> review -> scrub -> test -> compound) for a single issue.',
     inputSchema: {
       type: 'object',
@@ -241,13 +246,13 @@ const TOOLS = [
     build: (a) => ['ship', '-Issue', String(a.issue)],
   },
   {
-    name: 'agentx_digest',
+    name: 'frontier_digest',
     description: 'Generate the weekly digest of closed issues into .agentx/digests/DIGEST-<year>-W<week>.md.',
     inputSchema: { type: 'object', properties: {} },
     build: () => ['digest'],
   },
   {
-    name: 'agentx_hook',
+    name: 'frontier_hook',
     description:
       'Record an agent lifecycle hook. Used by orchestrators to mark when a role starts or finishes work. Finish enforces the quality-loop gate for loop-gated roles.',
     inputSchema: {
@@ -266,7 +271,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'agentx_run',
+    name: 'frontier_run',
     description:
       'Run an agent through the agentic loop (LLM + tools). Requires a configured LLM provider (GitHub Models, Claude Code, etc.). Use this to delegate a task to a named agent role.',
     inputSchema: {
@@ -289,7 +294,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'agentx_backlog_sync',
+    name: 'frontier_backlog_sync',
     description: 'Sync the local backlog to a remote provider (currently: github). Use force=true to re-sync items already migrated.',
     inputSchema: {
       type: 'object',
@@ -305,8 +310,8 @@ const TOOLS = [
     },
   },
   {
-    name: 'agentx_config_set',
-    description: 'Set an AgentX configuration value (e.g. enforceIssues=true). Booleans and numbers are parsed automatically.',
+    name: 'frontier_config_set',
+    description: 'Set an Frontier configuration value (e.g. enforceIssues=true). Booleans and numbers are parsed automatically.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -318,7 +323,7 @@ const TOOLS = [
     build: (a) => ['config', 'set', a.key, a.value],
   },
   {
-    name: 'agentx_learn',
+    name: 'frontier_learn',
     description: 'Run the pattern-discovery (learn) pipeline over recent sessions and surface candidate patterns into .agentx/patterns/discovered.yaml.',
     inputSchema: {
       type: 'object',
@@ -333,7 +338,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'agentx_promote',
+    name: 'frontier_promote',
     description: 'Graduate stable discovered patterns into durable artifacts (skills, conventions, learnings).',
     inputSchema: {
       type: 'object',
@@ -350,11 +355,14 @@ const TOOLS = [
 ];
 
 const TOOL_BY_NAME = Object.fromEntries(TOOLS.map((t) => [t.name, t]));
+const LEGACY_TOOL_BY_NAME = Object.fromEntries(
+  TOOLS.map((tool) => [tool.name.replace(/^frontier_/, 'agentx_'), tool])
+);
 
 // ---------- MCP wiring ----------
 
 const server = new Server(
-  { name: 'agentx', version: '9.2.0' },
+  { name: 'frontier', version: '9.3.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -363,7 +371,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
-  const tool = TOOL_BY_NAME[req.params.name];
+  const tool = TOOL_BY_NAME[req.params.name] || LEGACY_TOOL_BY_NAME[req.params.name];
   if (!tool) {
     return {
       content: [{ type: 'text', text: `Unknown tool: ${req.params.name}` }],
@@ -379,7 +387,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       isError: true,
     };
   }
-  const result = await runAgentX(argv);
+  const result = await runFrontier(argv);
   return toolResult(result);
 });
 
@@ -387,10 +395,10 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // Stderr only; stdout is reserved for the MCP protocol.
-  process.stderr.write(`[agentx-mcp] ready (repo=${REPO_ROOT}, tools=${TOOLS.length})\n`);
+  process.stderr.write(`[frontier-mcp] ready (repo=${REPO_ROOT}, tools=${TOOLS.length})\n`);
 }
 
 main().catch((err) => {
-  process.stderr.write(`[agentx-mcp] fatal: ${err.stack || err.message}\n`);
+  process.stderr.write(`[frontier-mcp] fatal: ${err.stack || err.message}\n`);
   process.exit(1);
 });

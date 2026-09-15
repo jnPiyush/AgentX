@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide defines the shared workflow contract for three related AgentX concerns:
+This guide defines the shared workflow contract for three related Frontier concerns:
 
 - post-review knowledge capture
 - agent-native review parity
@@ -19,7 +19,7 @@ The canonical checkpoint names for this loop live in `docs/WORKFLOW.md`. This gu
 3. Run agent-native review to check action parity, context parity, and shared workspace expectations.
 4. Resolve whether the outcome creates reusable knowledge that should be captured.
 5. Persist durable review findings when follow-up work should survive beyond the current review cycle.
-6. Promote important findings into the normal AgentX backlog instead of creating a parallel tracker.
+6. Promote important findings into the normal Frontier backlog instead of creating a parallel tracker.
 
 ## Agent-Native Review
 
@@ -37,13 +37,13 @@ The review asks three questions:
 
 | Capability | User Surface | Agent Surface | Shared Artifacts | Why It Matters |
 |------------|--------------|---------------|------------------|----------------|
-| Brainstorm with learnings | Command palette, Work sidebar | `@agentx brainstorm ...` | this guide, `docs/artifacts/learnings/` | Planning should start from reusable lessons instead of a cold start when prior knowledge exists |
-| Workflow execution | Command palette, Work sidebar | `@agentx run ...` | issue, plan, workflow state | Review findings are weak if agents cannot trigger the same delivery flow |
-| Review learnings retrieval | Command palette, Work sidebar | `@agentx learnings review ...` | `docs/artifacts/learnings/` | Review should reuse prior solutions without user-only lookup steps |
-| Compound loop visibility | Command palette, Work and Quality sidebars | `@agentx compound` | this guide, `docs/artifacts/learnings/`, `docs/artifacts/reviews/findings/` | Operators and agents should inspect the same post-review capture and follow-up state |
-| Knowledge capture guidance | Command palette, Work sidebar | `@agentx capture guidance` | this guide, `docs/artifacts/learnings/` | Reusable outcomes should be preserved consistently after review |
-| Learning capture scaffold | Command palette, Work and Quality sidebars | `@agentx create learning capture` | `docs/artifacts/learnings/`, harness state | Capture should start from the active issue context instead of a blank file |
-| Durable review findings | Command palette, Quality sidebar | `@agentx review findings` | this guide, `docs/artifacts/reviews/findings/` | Important review outcomes should remain visible across sessions |
+| Brainstorm with learnings | Command palette, Work sidebar | `@frontier brainstorm ...` | this guide, `docs/artifacts/learnings/` | Planning should start from reusable lessons instead of a cold start when prior knowledge exists |
+| Workflow execution | Command palette, Work sidebar | `@frontier run ...` | issue, plan, workflow state | Review findings are weak if agents cannot trigger the same delivery flow |
+| Review learnings retrieval | Command palette, Work sidebar | `@frontier learnings review ...` | `docs/artifacts/learnings/` | Review should reuse prior solutions without user-only lookup steps |
+| Compound loop visibility | Command palette, Work and Quality sidebars | `@frontier compound` | this guide, `docs/artifacts/learnings/`, `docs/artifacts/reviews/findings/` | Operators and agents should inspect the same post-review capture and follow-up state |
+| Knowledge capture guidance | Command palette, Work sidebar | `@frontier capture guidance` | this guide, `docs/artifacts/learnings/` | Reusable outcomes should be preserved consistently after review |
+| Learning capture scaffold | Command palette, Work and Quality sidebars | `@frontier create learning capture` | `docs/artifacts/learnings/`, harness state | Capture should start from the active issue context instead of a blank file |
+| Durable review findings | Command palette, Quality sidebar | `@frontier review findings` | this guide, `docs/artifacts/reviews/findings/` | Important review outcomes should remain visible across sessions |
 
 ### Scoring Rubric
 
@@ -89,9 +89,9 @@ Use the brainstorm step before planning when the repo likely already contains re
 
 Operator surfaces:
 
-- Command palette: `AgentX: Show Brainstorm Guide`
+- Command palette: `Frontier: Show Brainstorm Guide`
 - Work sidebar: `Brainstorm`
-- Chat: `@agentx brainstorm <topic>`
+- Chat: `@frontier brainstorm <topic>`
 
 The brainstorm output should pull forward the highest-signal planning learnings, restate the active issue context when available, and make the next narrowing step explicit before execution begins.
 
@@ -110,16 +110,16 @@ The brainstorm output should pull forward the highest-signal planning learnings,
 2. Resolve the capture decision as mandatory, optional, or skip.
 3. Inspect the compound loop view when you need the combined picture of reusable learnings, promotable review findings, and capture readiness.
 4. When capture is produced, store it under `docs/artifacts/learnings/LEARNING-<issue>.md`.
-5. Prefer scaffolding capture from the active issue context through `AgentX: Create Learning Capture` or `@agentx create learning capture`.
+5. Prefer scaffolding capture from the active issue context through `Frontier: Create Learning Capture` or `@frontier create learning capture`.
 6. Link the learning back to the originating issue and its supporting ADR, spec, review, or validation artifacts.
 7. If capture is skipped, record a short rationale in the close-out summary or issue comment.
 
 ### Autonomous Execution Path
 
-1. AgentX finishes the same review and validation steps it would require from an operator.
-2. AgentX resolves the capture decision after review, not during initial implementation.
-3. AgentX can surface the compound loop or scaffold a learning artifact from the active harness thread before writing a final capture.
-4. When capture is required or accepted, AgentX creates the learning artifact and mentions it in the final summary.
+1. Frontier finishes the same review and validation steps it would require from an operator.
+2. Frontier resolves the capture decision after review, not during initial implementation.
+3. Frontier can surface the compound loop or scaffold a learning artifact from the active harness thread before writing a final capture.
+4. When capture is required or accepted, Frontier creates the learning artifact and mentions it in the final summary.
 5. The flow stays advisory-first until stronger automation and duplication checks are proven.
 
 ### Artifact Location
@@ -147,7 +147,7 @@ Each durable finding record should capture:
 - source review artifact
 - source issue when known
 - severity
-- workflow status using the standard AgentX status set
+- workflow status using the standard Frontier status set
 - priority using `p0` through `p3`
 - owner or suggested owner
 - dependencies
@@ -157,7 +157,7 @@ Each durable finding record should capture:
 
 ### Status Contract
 
-Durable findings reuse the normal AgentX workflow states so review follow-up does not create a second state machine.
+Durable findings reuse the normal Frontier workflow states so review follow-up does not create a second state machine.
 
 | Status | Meaning |
 |--------|---------|
@@ -195,9 +195,9 @@ Keep the finding review-only when one or more of these conditions are true:
 
 1. Capture the durable finding record during review or immediately after review.
 2. Use `Backlog` as the initial status for captured findings.
-3. Promote only into the existing AgentX issue flow. Do not create a parallel tracker.
+3. Promote only into the existing Frontier issue flow. Do not create a parallel tracker.
 4. When promoted, link the created backlog issue number back into the finding record.
-5. Let the promoted issue follow the normal AgentX workflow from `Backlog` to `Done`.
+5. Let the promoted issue follow the normal Frontier workflow from `Backlog` to `Done`.
 6. Keep dependencies and evidence links in the finding record even after promotion.
 
 ## Notes

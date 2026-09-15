@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { hasFrontierState } from '../utils/frontierPaths';
+import { FrontierContext } from '../frontierContext';
 import {
   COPILOT_CLI_ASSET_DIRS,
   COPILOT_CLI_ASSET_FILES,
@@ -15,9 +16,9 @@ import {
 } from './initializeInternals';
 
 /**
- * AgentX: Initialize CLI
+ * Frontier: Initialize CLI
  *
- * Makes AgentX agent, skill, instruction, prompt, template, and schema
+ * Makes Frontier FDE, skill, instruction, prompt, template, and schema
  * trees discoverable from the workspace `.github/` folder for non-VS-Code
  * surfaces (notably GitHub Copilot CLI). Two modes:
  *
@@ -31,30 +32,30 @@ import {
  *    near-zero disk cost. The symlink destinations are added to .gitignore.
  *    Refreshed automatically on extension activation if the bundle moves.
  *
- * VS Code chat, commands, and the AgentX runtime resolve assets from the
+ * VS Code chat, commands, and the Frontier runtime resolve assets from the
  * extension bundle directly and do NOT need either mode.
  */
 export async function runInitializeCliCommand(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<void> {
-  const root = await promptWorkspaceRoot('AgentX - Initialize CLI');
+  const root = await promptWorkspaceRoot('Frontier - Initialize CLI');
   if (!root) {
     return;
   }
 
-  const runtimeInitialized = fs.existsSync(path.join(root, '.agentx', 'config.json'));
+  const runtimeInitialized = hasFrontierState(root);
   if (!runtimeInitialized) {
     const choice = await vscode.window.showWarningMessage(
-      'AgentX local runtime is not initialized in this workspace. Run "Initialize Local Runtime" first?',
+      'Frontier local runtime is not initialized in this workspace. Run "Initialize Local Runtime" first?',
       'Initialize Local Runtime',
       'Cancel',
     );
     if (choice !== 'Initialize Local Runtime') {
       return;
     }
-    await vscode.commands.executeCommand('agentx.initializeLocalRuntime');
-    if (!fs.existsSync(path.join(root, '.agentx', 'config.json'))) {
+    await vscode.commands.executeCommand('frontier.initializeLocalRuntime');
+    if (!hasFrontierState(root)) {
       return;
     }
   }
@@ -90,7 +91,7 @@ export async function runInitializeCliCommand(
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `AgentX: Seeding repo-local CLI assets (${mode})...`,
+      title: `Frontier: Seeding repo-local CLI assets (${mode})...`,
       cancellable: false,
     },
     async (progress) => {
@@ -115,7 +116,7 @@ export async function runInitializeCliCommand(
             result.skipped.length > 0 ? `Skipped (already exists): ${result.skipped.join(', ')}` : '',
           ].filter(Boolean).join('; ');
           vscode.window.showInformationMessage(
-            `AgentX: CLI assets symlinked into .github/; workflow docs, gate scripts and rubrics copied to the workspace root. ${summary}`,
+            `Frontier: CLI assets symlinked into .github/; workflow docs, gate scripts and rubrics copied to the workspace root. ${summary}`,
           );
           return;
         }
@@ -142,24 +143,24 @@ export async function runInitializeCliCommand(
           existing.length > 0 ? `Preserved existing: ${existing.join(', ')}` : '',
         ].filter(Boolean).join('; ');
         vscode.window.showInformationMessage(
-          `AgentX: CLI assets copied into .github/ plus workspace-root docs, gate scripts and rubrics. ${summary}`,
+          `Frontier: CLI assets copied into .github/ plus workspace-root docs, gate scripts and rubrics. ${summary}`,
         );
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`AgentX: Initialize CLI failed: ${message}`);
+        vscode.window.showErrorMessage(`Frontier: Initialize CLI failed: ${message}`);
       }
     },
   );
 }
 
 /**
- * Register the AgentX: Initialize CLI command.
+ * Register the Frontier: Initialize CLI command.
  */
 export function registerInitializeCliCommand(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): void {
-  const cmd = vscode.commands.registerCommand('agentx.initializeCli', async () => {
+  const cmd = vscode.commands.registerCommand('frontier.initializeCli', async () => {
     await runInitializeCliCommand(context, agentx);
   });
   context.subscriptions.push(cmd);

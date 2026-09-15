@@ -7,11 +7,11 @@
 
 ## Quality Loop Hard Rule (NON-SKIPPABLE)
 
-> **HARD RULE**: Before editing, creating, or deleting any file for a code or docs change, run `.agentx/agentx.ps1 loop start -p "<task>"` as your ABSOLUTE FIRST tool call. Reading files and running `loop status` are allowed; mutating the workspace before `loop start` succeeds is a contract violation. The loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, and the subagent review pass must be recorded as a structured verdict on the FINAL iteration (`loop iterate ... --verdict approved --reviewer <id> --high 0 --medium 0`). `loop complete` fails on a non-approved verdict, on non-zero HIGH/MEDIUM, or when iterations were recorded after the approval. The pre-commit hook blocks commits when these conditions are unmet.
+> **HARD RULE**: Before editing, creating, or deleting any file for a code or docs change, run `.agentx/frontier.ps1 loop start -p "<task>"` as your ABSOLUTE FIRST tool call. Reading files and running `loop status` are allowed; mutating the workspace before `loop start` succeeds is a contract violation. The loop is NOT done until `.agentx/frontier.ps1 loop complete -s "<summary>"` succeeds, and the subagent review pass must be recorded as a structured verdict on the FINAL iteration (`loop iterate ... --verdict approved --reviewer <id> --high 0 --medium 0`). `loop complete` fails on a non-approved verdict, on non-zero HIGH/MEDIUM, or when iterations were recorded after the approval. The pre-commit hook blocks commits when these conditions are unmet.
 >
-> **Honesty rule**: If asked whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state. Do not claim completion unless `loop complete` succeeded in the current session.
+> **Honesty rule**: If asked whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state. Do not claim completion unless `loop complete` succeeded in the current session.
 >
-> **Risk-based iterations**: The CLI enforces minimums of standard `1`, auto-fix `2`, complex/AgentX `3`, and high-risk `5`. A structured independent reviewer verdict is still required on the final iteration. Report each iteration with `loop iterate -s "..."`, then summarize before completing.
+> **Risk-based iterations**: The CLI enforces minimums of standard `1`, auto-fix `2`, complex/Frontier `3`, and high-risk `5`. A structured independent reviewer verdict is still required on the final iteration. Report each iteration with `loop iterate -s "..."`, then summarize before completing.
 >
 > **Cross-Cutting Agent Protocol**: The shared rules (quality loop, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are defined ONCE in [.github/AGENT-PROTOCOL.md](.github/AGENT-PROTOCOL.md). Agent files keep only the front-loaded Pre-edit gate + Honesty rule stubs and point there.
 >
@@ -108,7 +108,7 @@ Read these two files at the start of EVERY session -- they apply to all tasks:
 Every piece of work SHOULD start with an issue. Issue enforcement depends on mode:
 - **GitHub Mode**: Issue references in commits are **required** (teams need traceability)
 - **Local Mode**: Issue references are **optional** by default (solo developers can commit freely)
-- Toggle: `.agentx/agentx.ps1 config set enforceIssues true` (or `false`)
+- Toggle: `.agentx/frontier.ps1 config set enforceIssues true` (or `false`)
 
 ```bash
 # GitHub Mode
@@ -197,7 +197,7 @@ Agent role files are at `.github/agents/`. Load only the active agent's definiti
 
 | Agent | Definition |
 |-------|-----------|
-| Agent X (Hub) | [.github/agents/agent-x.agent.md](.github/agents/agent-x.agent.md) |
+| Frontier (Hub) | [.github/agents/frontier.agent.md](.github/agents/frontier.agent.md) |
 | Product Manager | [.github/agents/product-manager.agent.md](.github/agents/product-manager.agent.md) |
 | UX Designer | [.github/agents/ux-designer.agent.md](.github/agents/ux-designer.agent.md) |
 | Architect | [.github/agents/architect.agent.md](.github/agents/architect.agent.md) |
@@ -230,7 +230,7 @@ All 18 command-backed agents are available as `/project:` slash commands in Clau
 
 | Command | Agent | Purpose |
 |---------|-------|---------|
-| `/project:agent-x` | Agent X (Hub) | Route work to specialist agents based on type and complexity |
+| `/project:agent-x` | Frontier (Hub) | Route work to specialist agents based on type and complexity |
 | `/project:product-manager` | Product Manager | Create PRD, break Epics into Features and Stories |
 | `/project:ux-designer` | UX Designer | Wireframes, HTML/CSS prototypes, WCAG 2.1 AA |
 | `/project:architect` | Architect | ADR with 3+ options, Tech Spec with diagrams |

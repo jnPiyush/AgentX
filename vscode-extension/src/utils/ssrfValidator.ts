@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- SSRF Validator
+// Frontier -- SSRF Validator
 // ---------------------------------------------------------------------------
 //
 // Validates outbound HTTP/HTTPS URLs to prevent Server-Side Request Forgery

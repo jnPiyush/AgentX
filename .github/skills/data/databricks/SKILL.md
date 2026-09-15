@@ -2,7 +2,7 @@
 name: "databricks"
 description: 'Build data engineering, analytics, and ML/AI solutions on the Databricks Lakehouse Platform. Use when creating Delta Lake tables, writing PySpark notebooks, building DLT pipelines, managing Unity Catalog, orchestrating Databricks Workflows, tracking experiments with MLflow, or deploying using Databricks Asset Bundles.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-02-28"
   updated: "2026-02-28"

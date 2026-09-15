@@ -2,7 +2,7 @@
 name: "agent-observability"
 description: 'Instrument LLM agents with tracing, metrics, and evaluation telemetry. Use when adding OpenTelemetry GenAI semantic conventions, integrating Langfuse / LangSmith / Arize Phoenix / Helicone / OpenLLMetry, capturing prompt/response spans, tool-call latency, token cost, eval scores, and feedback signals. Distinct from genaiops (release policy) and ai-evaluation (rubric design).'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

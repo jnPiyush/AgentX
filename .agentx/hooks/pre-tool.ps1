@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
 [CmdletBinding()]
-param([string]$Path = $env:AGENTX_CHANGED_PATH)
+param([string]$Path = $(if ($env:FRONTIER_CHANGED_PATH) { $env:FRONTIER_CHANGED_PATH } elseif ($env:HVE_CHANGED_PATH) { $env:HVE_CHANGED_PATH } else { $env:AGENTX_CHANGED_PATH }))
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..' '..')).Path
-$traceDir = Join-Path $root '.agentx/state'
+$traceDir = Join-Path $root '.frontier/state'
 $traceFile = Join-Path $traceDir 'hook-trace.jsonl'
 
 function Write-HookTrace {
@@ -19,7 +19,7 @@ function Write-HookTrace {
 }
 
 if ([string]::IsNullOrWhiteSpace($Path)) {
-    Write-HookTrace -Status 'skipped' -Detail 'AGENTX_CHANGED_PATH was not provided.'
+    Write-HookTrace -Status 'skipped' -Detail 'FRONTIER_CHANGED_PATH was not provided.'
     exit 0
 }
 
@@ -33,7 +33,7 @@ if (Test-Path $scrub) {
 
 # Zero-copy runtime: the workspace has no scripts/ tree. Delegate to the agentx
 # CLI launcher, which resolves the bundled scrub.ps1 from the installed extension.
-$cli = Join-Path $root '.agentx/agentx.ps1'
+$cli = Join-Path $root '.agentx/frontier.ps1'
 if (Test-Path $cli) {
     & pwsh -NoProfile -File $cli scrub -Path $Path
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

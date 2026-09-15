@@ -23,7 +23,7 @@ flowchart LR
 ### Chunking
 - **Fixed Size**: 512-1024 tokens (Overlap: 10-15%).
 - **Semantic**: Break by header/paragraph (Markdown/Code).
-- **AgentX Default**: Use `RecursiveCharacterTextSplitter` with 1024 chunks / 100 overlap.
+- **Frontier Default**: Use `RecursiveCharacterTextSplitter` with 1024 chunks / 100 overlap.
 
 ### Embedding
 - **Model**: `text-embedding-3-small` (or Azure OpenAI `text-embedding-ada-002`).

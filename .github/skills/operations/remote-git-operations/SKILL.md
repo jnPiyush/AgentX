@@ -2,7 +2,7 @@
 name: "remote-git-operations"
 description: 'Manage remote Git operations including GitHub, Azure DevOps, pull requests, CI/CD integration, and branch protection. Use when configuring remote repositories, setting up authentication, managing pull request workflows, integrating with CI/CD pipelines, or troubleshooting Git remote issues.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

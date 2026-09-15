@@ -2,7 +2,7 @@
 name: "postgresql"
 description: 'Develop PostgreSQL databases with JSONB, arrays, full-text search, and performance optimization. Use when writing PostgreSQL queries, using JSONB operations, implementing full-text search, optimizing query performance with indexes, or configuring row-level security.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

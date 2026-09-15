@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerLoopCommand } from '../../commands/loopCommand';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -11,7 +11,7 @@ import { AgentXContext } from '../../agentxContext';
 describe('registerLoopCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
   let registeredCallbacks: Record<string, (...args: unknown[]) => unknown>;
   let infoSpy: sinon.SinonSpy;
 
@@ -26,7 +26,7 @@ describe('registerLoopCommand', () => {
     fakeAgentx = {
       checkInitialized: sandbox.stub(),
       runCli: sandbox.stub(),
-    } as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    } as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     infoSpy = sandbox.spy(vscode.window, 'showInformationMessage');
 
@@ -37,7 +37,7 @@ describe('registerLoopCommand', () => {
       },
     );
 
-    registerLoopCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    registerLoopCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
   });
 
   afterEach(() => {
@@ -45,25 +45,25 @@ describe('registerLoopCommand', () => {
   });
 
   it('should register the loop command', () => {
-    assert.ok(registeredCallbacks['agentx.loop'], 'Missing agentx.loop');
-    assert.ok(registeredCallbacks['agentx.loopStart'], 'Missing agentx.loopStart');
-    assert.ok(registeredCallbacks['agentx.loopStatus'], 'Missing agentx.loopStatus');
-    assert.ok(registeredCallbacks['agentx.loopIterate'], 'Missing agentx.loopIterate');
-    assert.ok(registeredCallbacks['agentx.loopComplete'], 'Missing agentx.loopComplete');
-    assert.ok(registeredCallbacks['agentx.loopCancel'], 'Missing agentx.loopCancel');
-    assert.ok(registeredCallbacks['agentx.loopRollback'], 'Missing agentx.loopRollback');
+    assert.ok(registeredCallbacks['frontier.loop'], 'Missing agentx.loop');
+    assert.ok(registeredCallbacks['frontier.loopStart'], 'Missing agentx.loopStart');
+    assert.ok(registeredCallbacks['frontier.loopStatus'], 'Missing agentx.loopStatus');
+    assert.ok(registeredCallbacks['frontier.loopIterate'], 'Missing agentx.loopIterate');
+    assert.ok(registeredCallbacks['frontier.loopComplete'], 'Missing agentx.loopComplete');
+    assert.ok(registeredCallbacks['frontier.loopCancel'], 'Missing agentx.loopCancel');
+    assert.ok(registeredCallbacks['frontier.loopRollback'], 'Missing agentx.loopRollback');
   });
 
   it('should add the loop command to subscriptions', () => {
     assert.strictEqual(fakeContext.subscriptions.length, 7);
   });
 
-  describe('agentx.loop (main)', () => {
+  describe('frontier.loop (main)', () => {
     it('should warn when not initialized', async () => {
       fakeAgentx.checkInitialized.resolves(false);
       const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
 
-      await registeredCallbacks['agentx.loop']!();
+      await registeredCallbacks['frontier.loop']!();
       assert.ok(warnSpy.calledOnce);
     });
 
@@ -71,7 +71,7 @@ describe('registerLoopCommand', () => {
       fakeAgentx.checkInitialized.resolves(true);
       sandbox.stub(vscode.window, 'showQuickPick').resolves(undefined);
 
-      await registeredCallbacks['agentx.loop']!();
+      await registeredCallbacks['frontier.loop']!();
       assert.ok(fakeAgentx.runCli.notCalled);
     });
 
@@ -80,7 +80,7 @@ describe('registerLoopCommand', () => {
       sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'status', description: '' } as vscode.QuickPickItem);
       fakeAgentx.runCli.resolves('Loop active: iteration 2/10');
 
-      await registeredCallbacks['agentx.loop']!();
+      await registeredCallbacks['frontier.loop']!();
       assert.ok(fakeAgentx.runCli.calledWith('loop', ['status']));
     });
 
@@ -89,7 +89,7 @@ describe('registerLoopCommand', () => {
       sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'cancel', description: '' } as vscode.QuickPickItem);
       fakeAgentx.runCli.resolves('Loop cancelled');
 
-      await registeredCallbacks['agentx.loop']!();
+      await registeredCallbacks['frontier.loop']!();
       assert.ok(fakeAgentx.runCli.calledWith('loop', ['cancel']));
     });
 
@@ -102,7 +102,7 @@ describe('registerLoopCommand', () => {
         .onCall(3).resolves('42');
       fakeAgentx.runCli.resolves('Loop started');
 
-      await registeredCallbacks['agentx.loopStart']!();
+      await registeredCallbacks['frontier.loopStart']!();
       assert.ok(fakeAgentx.runCli.calledWith('loop', sinon.match.array.deepEquals([
         'start', '-p', 'Implement harness', '-m', '10', '-c', 'ALL_TESTS_PASSING', '-i', '42',
       ])));
@@ -117,7 +117,7 @@ describe('registerLoopCommand', () => {
       sandbox.stub(vscode.window, 'showQuickPick').resolves('No' as never);
       fakeAgentx.runCli.resolves('Iteration recorded');
 
-      await registeredCallbacks['agentx.loopIterate']!();
+      await registeredCallbacks['frontier.loopIterate']!();
       assert.ok(fakeAgentx.runCli.calledWith('loop', sinon.match.array.deepEquals([
         'iterate', '-s', 'Verified the gate', '-e', '.agentx/state/gate.log',
       ])));

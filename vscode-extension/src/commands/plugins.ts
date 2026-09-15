@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { runAddPluginCommand } from './pluginsCommandInternals';
 
 export function registerAddPluginCommand(
  context: vscode.ExtensionContext,
- agentx: AgentXContext,
+ agentx: FrontierContext,
 ): void {
- const cmd = vscode.commands.registerCommand('agentx.addPlugin', async () => {
+ const cmd = vscode.commands.registerCommand('frontier.addPlugin', async () => {
   await runAddPluginCommand(context, agentx);
  });
 

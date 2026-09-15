@@ -2,7 +2,7 @@
 name: "csharp"
 description: 'Write production-ready C# and .NET code following modern best practices. Use when building .NET applications, writing async/await code, using Entity Framework Core, implementing dependency injection, configuring nullable reference types, or optimizing C# performance.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

@@ -1,6 +1,6 @@
 # read-docs
 
-AgentX plugin that converts Microsoft Word, OpenDocument, RTF, HTML, and EPUB documents to Markdown using [Pandoc](https://pandoc.org).
+Frontier plugin that converts Microsoft Word, OpenDocument, RTF, HTML, and EPUB documents to Markdown using [Pandoc](https://pandoc.org).
 
 ## Requirements
 

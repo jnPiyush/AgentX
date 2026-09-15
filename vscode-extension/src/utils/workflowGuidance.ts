@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveFrontierStatePath } from './frontierPaths';
 import { getActiveHarnessContract, getHarnessContractFindings, readHarnessState } from './harnessState';
 import { assetExistsInWorkspaceRuntime, resolveWorkspaceRuntimeAssetPath } from './runtimeAssets';
 import { checkHandoffGate, readLoopState } from './loopStateChecker';
@@ -227,7 +228,7 @@ export function renderWorkflowGuidanceMarkdown(
   snapshot: WorkflowGuidanceSnapshot | undefined,
 ): string {
   if (!snapshot) {
-    return 'No workspace is open, so AgentX cannot resolve workflow guidance.';
+    return 'No workspace is open, so Frontier cannot resolve workflow guidance.';
   }
 
   const lines = [
@@ -294,7 +295,7 @@ export function renderWorkflowEntryPointMarkdown(
   entryPoint: 'plan-deepening' | 'review-kickoff',
 ): string {
   if (!snapshot) {
-    return 'No workspace is open, so AgentX cannot prepare this workflow entry point.';
+    return 'No workspace is open, so Frontier cannot prepare this workflow entry point.';
   }
 
   const resolved = entryPoint === 'plan-deepening'
@@ -305,7 +306,7 @@ export function renderWorkflowEntryPointMarkdown(
     '',
     `- Allowed: ${resolved.allowed ? 'yes' : 'no'}`,
     `- Command: ${resolved.command}`,
-    `- Chat prompt: @agentx ${resolved.chatPrompt}`,
+    `- Chat prompt: @frontier ${resolved.chatPrompt}`,
     `- Rationale: ${resolved.rationale}`,
   ];
 
@@ -330,7 +331,7 @@ export function renderWorkflowRolloutScorecardMarkdown(
   snapshot: WorkflowGuidanceSnapshot | undefined,
 ): string {
   if (!snapshot) {
-    return 'No workspace is open, so AgentX cannot render the rollout scorecard.';
+    return 'No workspace is open, so Frontier cannot render the rollout scorecard.';
   }
 
   const lines = [
@@ -362,7 +363,7 @@ export function renderOperatorEnablementChecklistMarkdown(
   snapshot: WorkflowGuidanceSnapshot | undefined,
 ): string {
   if (!snapshot) {
-    return 'No workspace is open, so AgentX cannot render the operator enablement checklist.';
+    return 'No workspace is open, so Frontier cannot render the operator enablement checklist.';
   }
 
   const lines = [
@@ -402,7 +403,7 @@ function buildPlanDeepeningEntryPoint(
 
   return {
     label: 'Deepen Plan',
-    command: 'agentx.deepenPlan',
+    command: 'frontier.deepenPlan',
     chatPrompt: 'deepen plan',
     allowed: blockers.length === 0,
     rationale: activePlanPath
@@ -445,7 +446,7 @@ function buildReviewKickoffEntryPoint(
 
   return {
     label: 'Kick Off Review',
-    command: 'agentx.kickoffReview',
+    command: 'frontier.kickoffReview',
     chatPrompt: 'kick off review',
     allowed: blockers.length === 0,
     rationale: reviewPath
@@ -570,11 +571,11 @@ function buildOperatorChecklist(): readonly OperatorChecklistItem[] {
 
 function renderEntryPointSummary(entryPoint: WorkflowEntryPoint): string {
   const state = entryPoint.allowed ? 'allowed' : 'blocked';
-  return `- ${entryPoint.label}: ${state} | command ${entryPoint.command} | chat @agentx ${entryPoint.chatPrompt}`;
+  return `- ${entryPoint.label}: ${state} | command ${entryPoint.command} | chat @frontier ${entryPoint.chatPrompt}`;
 }
 
 function getLocalIssues(root: string): LocalIssue[] {
-  const issuesDir = path.join(root, '.agentx', 'issues');
+  const issuesDir = resolveFrontierStatePath(root, 'issues');
   if (!fs.existsSync(issuesDir)) {
     return [];
   }

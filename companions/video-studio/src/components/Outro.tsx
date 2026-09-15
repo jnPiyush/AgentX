@@ -39,7 +39,7 @@ export const Outro: React.FC<Props> = ({ startFrame, accent, title, subtitle }) 
           fontWeight: 600,
         }}
       >
-        AgentX
+        Frontier
       </div>
       <div
         style={{

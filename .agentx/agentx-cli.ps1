@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # ---------------------------------------------------------------------------
-# AgentX CLI - Unified PowerShell 7 implementation (cross-platform)
+# Frontier CLI - Unified PowerShell 7 implementation (cross-platform)
 # ---------------------------------------------------------------------------
 # Replaces cli.mjs - runs on Windows, macOS, Linux via PowerShell 7+.
 #
@@ -38,27 +38,117 @@ $ErrorActionPreference = 'Stop'
 # Paths
 # ---------------------------------------------------------------------------
 
-$workspaceRootOverride = $env:AGENTX_WORKSPACE_ROOT
+$workspaceRootOverride = if ($env:FRONTIER_WORKSPACE_ROOT) {
+    $env:FRONTIER_WORKSPACE_ROOT
+} elseif ($env:HVE_WORKSPACE_ROOT) {
+    $env:HVE_WORKSPACE_ROOT
+} else {
+    $env:AGENTX_WORKSPACE_ROOT
+}
 $defaultWorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Script:ROOT = if ($workspaceRootOverride) { $workspaceRootOverride } else { $defaultWorkspaceRoot }
 $Script:INSTALL_ROOT = $defaultWorkspaceRoot
-$Script:INSTALL_AGENTX_DIR = $PSScriptRoot
-$Script:AGENTX_DIR = Join-Path $Script:ROOT '.agentx'
-$Script:STATE_FILE = Join-Path $AGENTX_DIR 'state' 'agent-status.json'
-$Script:LOOP_STATE_FILE = Join-Path $AGENTX_DIR 'state' 'loop-state.json'
+$Script:INSTALL_RUNTIME_DIR = $PSScriptRoot
+$frontierStateDir = Join-Path $Script:ROOT '.frontier'
+$transitionalStateDir = Join-Path $Script:ROOT '.hve'
+$legacyStateDir = Join-Path $Script:ROOT '.agentx'
+
+function Initialize-FrontierStateDirectory {
+    param(
+        [string]$FrontierDirectory,
+        [string]$TransitionalDirectory,
+        [string]$LegacyDirectory
+    )
+
+    $marker = Join-Path $FrontierDirectory 'state/frontier-migration-v1.json'
+    foreach ($candidate in @($FrontierDirectory, (Split-Path $marker -Parent), $marker)) {
+        if ((Test-Path -LiteralPath $candidate) -and
+            ((Get-Item -LiteralPath $candidate -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw 'State migration does not follow symbolic links.'
+        }
+    }
+    if (Test-Path -LiteralPath $marker -PathType Leaf) {
+        return $FrontierDirectory
+    }
+
+    $sourceDirectories = @($TransitionalDirectory, $LegacyDirectory | Where-Object { Test-Path -LiteralPath $_ -PathType Container })
+    if (-not $sourceDirectories.Count) {
+        return $FrontierDirectory
+    }
+
+    $runtimeEntries = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($entryName in @(
+        'agentic-runner.ps1', 'agentx-cli.ps1', 'agentx.ps1', 'agentx.sh',
+        'frontier.ps1', 'frontier.sh', 'local-issue-manager.ps1',
+        'local-issue-manager.sh', 'install-manifest.json', 'hooks', 'mcp-server',
+        'plugins', 'templates'
+    )) {
+        [void]$runtimeEntries.Add($entryName)
+    }
+
+    function Copy-MissingState([string]$Source, [string]$Destination, [bool]$TopLevel) {
+        foreach ($directory in @($Source, $Destination)) {
+            if ((Test-Path -LiteralPath $directory) -and
+                ((Get-Item -LiteralPath $directory -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                throw 'State migration does not follow symbolic links.'
+            }
+        }
+        [IO.Directory]::CreateDirectory($Destination) | Out-Null
+        foreach ($entry in @(Get-ChildItem -LiteralPath $Source -Force)) {
+            if (($TopLevel -and $runtimeEntries.Contains($entry.Name)) -or
+                $entry.Name -eq 'frontier-migration-v1.json' -or $entry.Name.EndsWith('.lock')) { continue }
+            if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'State migration does not follow symbolic links.' }
+            $target = Join-Path $Destination $entry.Name
+            if (Test-Path -LiteralPath $target) {
+                if ((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'State migration does not follow symbolic links.' }
+                if (-not $entry.PSIsContainer -or -not (Test-Path -LiteralPath $target -PathType Container)) { continue }
+            }
+            if ($entry.PSIsContainer) { Copy-MissingState $entry.FullName $target $false }
+            else {
+                $temporary = "$target.migrating-$PID-$([guid]::NewGuid().ToString('N'))"
+                try {
+                    [IO.File]::Copy($entry.FullName, $temporary, $false)
+                    [IO.File]::Move($temporary, $target, $false)
+                } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }
+            }
+        }
+    }
+    $migrationLock = Join-Path (Split-Path $FrontierDirectory -Parent) '.frontier-migration.lock'
+    try { New-Item -ItemType Directory -Path $migrationLock -ErrorAction Stop | Out-Null }
+    catch { throw 'State migration is busy. Retry after it finishes; recover a stale .frontier-migration.lock only after checking no migration is running.' }
+    try {
+        if (Test-Path -LiteralPath $marker) { return $FrontierDirectory }
+        foreach ($source in $sourceDirectories) { Copy-MissingState $source $FrontierDirectory $true }
+        [IO.Directory]::CreateDirectory((Split-Path $marker -Parent)) | Out-Null
+        $temporary = "$marker.migrating-$PID-$([guid]::NewGuid().ToString('N'))"
+        $markerStream = [IO.File]::Open($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        try {
+            try { $markerStream.Write([Text.Encoding]::UTF8.GetBytes('{"version":1}')) }
+            finally { $markerStream.Dispose() }
+            [IO.File]::Move($temporary, $marker, $false)
+        } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }
+    } finally { Remove-Item -LiteralPath $migrationLock -Force }
+    return $FrontierDirectory
+}
+$Script:FRONTIER_STATE_DIR = Initialize-FrontierStateDirectory `
+    -FrontierDirectory $frontierStateDir `
+    -TransitionalDirectory $transitionalStateDir `
+    -LegacyDirectory $legacyStateDir
+$Script:STATE_FILE = Join-Path $FRONTIER_STATE_DIR 'state' 'agent-status.json'
+$Script:LOOP_STATE_FILE = Join-Path $FRONTIER_STATE_DIR 'state' 'loop-state.json'
 $Script:LOOP_STALE_AFTER_HOURS = 8
 $Script:LOOP_STUCK_AFTER_MINUTES = 90
 $Script:LOOP_STANDARD_MIN_ITERATIONS  = 1
 $Script:LOOP_AUTO_FIX_MIN_ITERATIONS  = 2
 $Script:LOOP_COMPLEX_MIN_ITERATIONS   = 3
-$Script:LOOP_AGENT_X_MIN_ITERATIONS   = 3
+$Script:LOOP_FRONTIER_MIN_ITERATIONS = 3
 $Script:LOOP_HIGH_RISK_MIN_ITERATIONS = 5
-$Script:ISSUES_DIR = Join-Path $AGENTX_DIR 'issues'
+$Script:ISSUES_DIR = Join-Path $FRONTIER_STATE_DIR 'issues'
 $Script:TASK_BUNDLES_DIR = Join-Path $ROOT 'docs' 'execution' 'task-bundles'
 $Script:BOUNDED_PARALLEL_DIR = Join-Path $ROOT 'docs' 'execution' 'bounded-parallel'
-$Script:DIGESTS_DIR = Join-Path $AGENTX_DIR 'digests'
-$Script:CONFIG_FILE = Join-Path $AGENTX_DIR 'config.json'
-$Script:VERSION_FILE = Join-Path $AGENTX_DIR 'version.json'
+$Script:DIGESTS_DIR = Join-Path $FRONTIER_STATE_DIR 'digests'
+$Script:CONFIG_FILE = Join-Path $FRONTIER_STATE_DIR 'config.json'
+$Script:VERSION_FILE = Join-Path $FRONTIER_STATE_DIR 'version.json'
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -78,6 +168,14 @@ function Write-CliOutput {
     }
 }
 
+function Get-FrontierEnvironmentValue([string]$Name) {
+    $value = [string][Environment]::GetEnvironmentVariable("FRONTIER_$Name")
+    if ($value) { return $value }
+    $value = [string][Environment]::GetEnvironmentVariable("HVE_$Name")
+    if ($value) { return $value }
+    return [string][Environment]::GetEnvironmentVariable("AGENTX_$Name")
+}
+
 function Read-JsonFile([string]$p) {
     if (-not (Test-Path $p)) { return $null }
     try { return Get-Content $p -Raw -Encoding utf8 | ConvertFrom-Json } catch { return $null }
@@ -91,7 +189,7 @@ function Write-JsonFile([string]$p, $data) {
     Add-Content $p -Value '' -NoNewline:$false
 }
 
-function Resolve-AgentXRuntimeScript([string]$RelativePath) {
+function Resolve-FrontierRuntimeScript([string]$RelativePath) {
     foreach ($basePath in @($Script:ROOT, $Script:INSTALL_ROOT) | Select-Object -Unique) {
         $candidate = Join-Path $basePath $RelativePath
         if (Test-Path -LiteralPath $candidate -PathType Leaf) {
@@ -182,7 +280,7 @@ function Get-Timestamp { return (Get-Date).ToUniversalTime().ToString('yyyy-MM-d
 function Get-AgentDefinitionDirectories {
     return @(
         (Join-Path $Script:ROOT '.github' 'agents'),
-        (Join-Path $Script:AGENTX_DIR 'runtime' 'agents'),
+        (Join-Path $Script:FRONTIER_STATE_DIR 'runtime' 'agents'),
         (Join-Path $Script:INSTALL_ROOT '.github' 'agents')
     )
 }
@@ -252,7 +350,7 @@ function Set-ConfigValue($cfg, [string]$name, $value) {
     $cfg | Add-Member -NotePropertyName $name -NotePropertyValue $value -Force
 }
 
-function Get-AgentXConfig {
+function Get-FrontierConfig {
     $cfg = Read-JsonFile $Script:CONFIG_FILE
     if (-not $cfg) { return @{ provider = 'local'; mode = 'local' } }
     return $cfg
@@ -354,7 +452,7 @@ function Get-HarnessDisabledChecks($cfg, [string[]]$overrides = @()) {
 
 
 
-function Initialize-AgentXAdapters($cfg) {
+function Initialize-FrontierAdapters($cfg) {
     $adapters = Get-ConfigValue $cfg 'adapters'
     if ($adapters) { return $adapters }
 
@@ -363,7 +461,7 @@ function Initialize-AgentXAdapters($cfg) {
     return $adapters
 }
 
-function Get-AgentXAdapterValue($cfg, [string]$adapterName, [string]$name, $default = $null) {
+function Get-FrontierAdapterValue($cfg, [string]$adapterName, [string]$name, $default = $null) {
     $adapters = Get-ConfigValue $cfg 'adapters'
     if (-not $adapters) { return $default }
 
@@ -376,8 +474,8 @@ function Get-AgentXAdapterValue($cfg, [string]$adapterName, [string]$name, $defa
 
 
 
-function Set-AgentXAdapterValue($cfg, [string]$adapterName, [string]$name, $value) {
-    $adapters = Initialize-AgentXAdapters $cfg
+function Set-FrontierAdapterValue($cfg, [string]$adapterName, [string]$name, $value) {
+    $adapters = Initialize-FrontierAdapters $cfg
     $adapter = Get-ConfigValue $adapters $adapterName
     if (-not $adapter) {
         $adapter = @{}
@@ -390,11 +488,11 @@ function Set-AgentXAdapterValue($cfg, [string]$adapterName, [string]$name, $valu
 
 
 
-function Get-AgentXConfiguredAdapters {
-    $cfg = Get-AgentXConfig
+function Get-FrontierConfiguredAdapters {
+    $cfg = Get-FrontierConfig
     $configured = @()
 
-    $githubRepo = [string](Get-AgentXAdapterValue $cfg 'github' 'repo' '')
+    $githubRepo = [string](Get-FrontierAdapterValue $cfg 'github' 'repo' '')
     if ([string]::IsNullOrWhiteSpace($githubRepo)) {
         $githubRepo = [string](Get-ConfigValue $cfg 'repo' '')
     }
@@ -402,11 +500,11 @@ function Get-AgentXConfiguredAdapters {
         $configured += 'github'
     }
 
-    $adoOrg = [string](Get-AgentXAdapterValue $cfg 'ado' 'organization' '')
+    $adoOrg = [string](Get-FrontierAdapterValue $cfg 'ado' 'organization' '')
     if ([string]::IsNullOrWhiteSpace($adoOrg)) {
         $adoOrg = [string](Get-ConfigValue $cfg 'organization' '')
     }
-    $adoProject = [string](Get-AgentXAdapterValue $cfg 'ado' 'project' '')
+    $adoProject = [string](Get-FrontierAdapterValue $cfg 'ado' 'project' '')
     if ([string]::IsNullOrWhiteSpace($adoProject)) {
         $adoProject = [string](Get-ConfigValue $cfg 'project' '')
     }
@@ -417,7 +515,7 @@ function Get-AgentXConfiguredAdapters {
     return @($configured | Sort-Object -Unique)
 }
 
-function Resolve-AgentXProviderName([string]$value) {
+function Resolve-FrontierProviderName([string]$value) {
     $normalized = if ($value) { $value.Trim().ToLowerInvariant() } else { 'local' }
     switch ($normalized) {
         'github' { return 'github' }
@@ -429,17 +527,17 @@ function Resolve-AgentXProviderName([string]$value) {
     }
 }
 
-function Get-AgentXProvider {
-    return (Get-AgentXProviderResolution).name
+function Get-FrontierProvider {
+    return (Get-FrontierProviderResolution).name
 }
 
-function Get-AgentXMode { return Get-AgentXProvider }
+function Get-FrontierMode { return Get-FrontierProvider }
 
 function Get-AdoOrganizationUrl {
-    $cfg = Get-AgentXConfig
+    $cfg = Get-FrontierConfig
     $organization = [string](Get-ConfigValue $cfg 'organization' '')
     if ([string]::IsNullOrWhiteSpace($organization)) {
-        $organization = [string](Get-AgentXAdapterValue $cfg 'ado' 'organization' '')
+        $organization = [string](Get-FrontierAdapterValue $cfg 'ado' 'organization' '')
     }
     if ([string]::IsNullOrWhiteSpace($organization)) { return '' }
     if ($organization -match '^https?://') { return $organization.TrimEnd('/') }
@@ -447,10 +545,10 @@ function Get-AdoOrganizationUrl {
 }
 
 function Get-AdoProjectName {
-    $cfg = Get-AgentXConfig
+    $cfg = Get-FrontierConfig
     $project = [string](Get-ConfigValue $cfg 'project' '')
     if ([string]::IsNullOrWhiteSpace($project)) {
-        $project = [string](Get-AgentXAdapterValue $cfg 'ado' 'project' '')
+        $project = [string](Get-FrontierAdapterValue $cfg 'ado' 'project' '')
     }
     return $project
 }
@@ -491,7 +589,7 @@ function Save-InferredProvider([string]$provider, [string]$reason, [string]$repo
 
     try {
         Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
-            $cfg = Get-AgentXConfig
+            $cfg = Get-FrontierConfig
             Set-ConfigValue $cfg 'provider' $provider
             Set-ConfigValue $cfg 'integration' $provider
             Set-ConfigValue $cfg 'mode' $provider
@@ -513,14 +611,14 @@ function Save-InferredProvider([string]$provider, [string]$reason, [string]$repo
     }
 }
 
-function Get-AgentXProviderResolution {
-    $cfg = Get-AgentXConfig
+function Get-FrontierProviderResolution {
+    $cfg = Get-FrontierConfig
     $provider = Get-ConfigValue $cfg 'provider'
     $integration = Get-ConfigValue $cfg 'integration'
     $mode = Get-ConfigValue $cfg 'mode'
 
     if ($provider) {
-        $resolved = Resolve-AgentXProviderName "$provider"
+        $resolved = Resolve-FrontierProviderName "$provider"
         if ($resolved -eq 'github') {
             $repoSlug = Get-GitHubRepoSlug
             if (-not [string]::IsNullOrWhiteSpace($repoSlug) -and (Test-GitHubCliAuthenticated)) {
@@ -531,7 +629,7 @@ function Get-AgentXProviderResolution {
     }
 
     if ($integration) {
-        $resolved = Resolve-AgentXProviderName "$integration"
+        $resolved = Resolve-FrontierProviderName "$integration"
         if ($resolved -eq 'github') {
             $repoSlug = Get-GitHubRepoSlug
             if (-not [string]::IsNullOrWhiteSpace($repoSlug) -and (Test-GitHubCliAuthenticated)) {
@@ -541,12 +639,12 @@ function Get-AgentXProviderResolution {
         return [PSCustomObject]@{ name = $resolved; source = 'integration'; inferred = $false; warning = '' }
     }
 
-    $resolved = Resolve-AgentXProviderName "$mode"
+    $resolved = Resolve-FrontierProviderName "$mode"
     return [PSCustomObject]@{ name = $resolved; source = 'mode'; inferred = $false; warning = '' }
 }
 
     # --- ADO MCP transport ---------------------------------------------------------
-    # AgentX's built-in ADO work-item provider uses MCP only.
+    # Frontier's built-in ADO work-item provider uses MCP only.
     # Tool overrides: adapters.ado.mcpTools (hashtable: get/create/update/comment/query/list).
     # Server override: adapters.ado.mcpCommand (defaults to 'npx -y @azure-devops/mcp <org>').
 
@@ -555,10 +653,10 @@ function Get-AgentXProviderResolution {
     $Script:AdoMcpInitialized = $false
 
     function Get-AdoOrganizationName {
-        $cfg = Get-AgentXConfig
+        $cfg = Get-FrontierConfig
         $organization = [string](Get-ConfigValue $cfg 'organization' '')
         if ([string]::IsNullOrWhiteSpace($organization)) {
-            $organization = [string](Get-AgentXAdapterValue $cfg 'ado' 'organization' '')
+            $organization = [string](Get-FrontierAdapterValue $cfg 'ado' 'organization' '')
         }
         if ([string]::IsNullOrWhiteSpace($organization)) { return '' }
 
@@ -597,8 +695,8 @@ function Get-AgentXProviderResolution {
             query   = 'wit_query_by_wiql'
             list    = 'wit_list_backlog_work_items'
         }
-        $cfg = Get-AgentXConfig
-        $override = Get-AgentXAdapterValue $cfg 'ado' 'mcpTools' $null
+        $cfg = Get-FrontierConfig
+        $override = Get-FrontierAdapterValue $cfg 'ado' 'mcpTools' $null
         if ($override) {
             $value = Get-ConfigValue $override $operation ''
             if (-not [string]::IsNullOrWhiteSpace([string]$value)) { return [string]$value }
@@ -607,8 +705,8 @@ function Get-AgentXProviderResolution {
     }
 
     function Get-AdoMcpServerCommand {
-        $cfg = Get-AgentXConfig
-        $override = [string](Get-AgentXAdapterValue $cfg 'ado' 'mcpCommand' '')
+        $cfg = Get-FrontierConfig
+        $override = [string](Get-FrontierAdapterValue $cfg 'ado' 'mcpCommand' '')
         if (-not [string]::IsNullOrWhiteSpace($override)) {
             return $override
         }
@@ -815,10 +913,10 @@ function Get-AgentXProviderResolution {
         }
     }
 
-function Get-AgentXProviderInfo {
-    $providerResolution = Get-AgentXProviderResolution
+function Get-FrontierProviderInfo {
+    $providerResolution = Get-FrontierProviderResolution
     $provider = $providerResolution.name
-    $configuredAdapters = Get-AgentXConfiguredAdapters
+    $configuredAdapters = Get-FrontierConfiguredAdapters
     return [PSCustomObject]@{
         name = $provider
         source = $providerResolution.source
@@ -844,7 +942,7 @@ function Get-LocalBacklogIssues {
         )) {
             if (-not (Test-Path $pair.Path)) { continue }
             $records += @(Get-ChildItem $pair.Path -Filter '*.md' -File -ErrorAction SilentlyContinue |
-                ForEach-Object { Convert-BacklogTaskFileToAgentXIssue $_.FullName $pair.State } |
+                ForEach-Object { Convert-BacklogTaskFileToFrontierIssue $_.FullName $pair.State } |
                 Where-Object { $_ })
         }
         return @($records | Sort-Object -Property number)
@@ -1014,7 +1112,7 @@ function Get-BacklogLocalResolution {
 
 function Get-LocalIssueBackend {
     if ((Get-PersistenceMode) -eq 'git') { return 'json' }
-    $cfg = Get-AgentXConfig
+    $cfg = Get-FrontierConfig
     $configured = [string](Get-ConfigValue $cfg 'localBackend' '')
     if (-not [string]::IsNullOrWhiteSpace($configured)) {
         $normalized = $configured.Trim().ToLowerInvariant()
@@ -1069,7 +1167,7 @@ function Get-BacklogTaskNumber([string]$taskId) {
     return 0
 }
 
-function Convert-AgentXLabelsToBacklogPriority([string[]]$labels) {
+function Convert-FrontierLabelsToBacklogPriority([string[]]$labels) {
     foreach ($label in @($labels)) {
         switch ([string]$label) {
             'priority:p0' { return 'urgent' }
@@ -1081,7 +1179,7 @@ function Convert-AgentXLabelsToBacklogPriority([string[]]$labels) {
     return 'medium'
 }
 
-function Convert-BacklogPriorityToAgentXLabel([string]$priority) {
+function Convert-BacklogPriorityToFrontierLabel([string]$priority) {
     switch (($priority ?? '').Trim().ToLowerInvariant()) {
         'urgent' { return 'priority:p0' }
         'critical' { return 'priority:p0' }
@@ -1092,7 +1190,7 @@ function Convert-BacklogPriorityToAgentXLabel([string]$priority) {
     }
 }
 
-function Get-AgentXMetadataFromMarkdown([string]$content) {
+function Get-FrontierMetadataFromMarkdown([string]$content) {
     if ($content -match '(?ms)<!--\s*AGENTX:METADATA\s*(?<json>\{.*?\})\s*-->') {
         try { return ($Matches['json'] | ConvertFrom-Json -Depth 10) } catch { return $null }
     }
@@ -1181,7 +1279,7 @@ function Initialize-BacklogLocalStructure {
     }
 }
 
-function Convert-BacklogTaskFileToAgentXIssue([string]$path, [string]$defaultState) {
+function Convert-BacklogTaskFileToFrontierIssue([string]$path, [string]$defaultState) {
     if (-not (Test-Path $path)) { return $null }
     try {
         $content = Get-Content -LiteralPath $path -Raw -Encoding utf8
@@ -1197,7 +1295,7 @@ function Convert-BacklogTaskFileToAgentXIssue([string]$path, [string]$defaultSta
     $labels = @()
     if ($metadata.ContainsKey('labels')) { $labels = @($metadata['labels']) }
     $priorityValue = if ($metadata.ContainsKey('priority')) { [string]$metadata['priority'] } else { '' }
-    $priorityLabel = Convert-BacklogPriorityToAgentXLabel $priorityValue
+    $priorityLabel = Convert-BacklogPriorityToFrontierLabel $priorityValue
     if ($priorityLabel -and $priorityLabel -notin $labels) { $labels += $priorityLabel }
 
     $dependencies = @()
@@ -1205,7 +1303,7 @@ function Convert-BacklogTaskFileToAgentXIssue([string]$path, [string]$defaultSta
         $dependencies = @($metadata['dependencies'] | ForEach-Object { Get-BacklogTaskNumber ([string]$_) } | Where-Object { $_ -gt 0 })
     }
 
-    $agentxMetadata = Get-AgentXMetadataFromMarkdown $parts.body
+    $agentxMetadata = Get-FrontierMetadataFromMarkdown $parts.body
     $comments = if ($agentxMetadata -and $agentxMetadata.PSObject.Properties['comments']) { @($agentxMetadata.comments) } else { @() }
     $description = Get-MarkdownSectionContent $parts.body 'Description'
     $status = if ($metadata.ContainsKey('status')) { [string]$metadata['status'] } else { '' }
@@ -1240,7 +1338,7 @@ function Build-BacklogTaskContent($issue, [string]$existingContent = '') {
     if ($issue.PSObject.Properties['dependencies']) {
         $dependencies = @($issue.dependencies | ForEach-Object { [int]$_ } | Where-Object { $_ -gt 0 })
     }
-    $priority = Convert-AgentXLabelsToBacklogPriority $labels
+    $priority = Convert-FrontierLabelsToBacklogPriority $labels
 
     $frontmatterLines = @(
         '---',
@@ -1284,9 +1382,9 @@ function Build-BacklogTaskContent($issue, [string]$existingContent = '') {
     if (@($issue.comments).Count -gt 0) {
         $metadataJson = $commentPayload | ConvertTo-Json -Depth 10
         $metadataSection = "<!-- AGENTX:METADATA`n$metadataJson`n-->"
-        $bodyContent = Set-MarkdownSectionContent $bodyContent 'AgentX Metadata' $metadataSection
+        $bodyContent = Set-MarkdownSectionContent $bodyContent 'Frontier Metadata' $metadataSection
     } else {
-        $bodyContent = Remove-MarkdownSection $bodyContent 'AgentX Metadata'
+        $bodyContent = Remove-MarkdownSection $bodyContent 'Frontier Metadata'
     }
 
     return (($frontmatterLines -join "`n") + "`n`n" + $bodyContent.Trim() + "`n")
@@ -1351,7 +1449,7 @@ function Save-LocalIssue($issue) {
 }
 
 function Get-ProviderIssue([int]$num) {
-    $provider = Get-AgentXProvider
+    $provider = Get-FrontierProvider
     if ($provider -eq 'github') { return Get-GitHubIssue $num }
     if ($provider -eq 'ado') { return Get-AdoIssue $num }
     return Get-LocalIssue $num
@@ -1361,7 +1459,7 @@ function Get-ProviderIssue([int]$num) {
 
 
 function Get-ProviderIssues {
-    $provider = Get-AgentXProvider
+    $provider = Get-FrontierProvider
     if ($provider -eq 'github') {
         try {
             $json = & gh issue list --state all --json number,title,labels,body,state,url --limit 200 2>$null
@@ -1374,7 +1472,7 @@ function Get-ProviderIssues {
                     if ($statusByIssue.ContainsKey($issueNumber)) {
                         $status = [string]$statusByIssue[$issueNumber]
                     }
-                    Convert-GitHubIssueToAgentXIssue $_ $status
+                    Convert-GitHubIssueToFrontierIssue $_ $status
                 })
             }
         } catch { Write-Verbose "Provider issue fetch failed: $_" }
@@ -1417,7 +1515,7 @@ function Get-ProviderIssues {
 
 
 function Update-ProviderIssue([int]$num, [string]$title, [string]$body, [string]$status, [string]$labelStr) {
-    $provider = Get-AgentXProvider
+    $provider = Get-FrontierProvider
     $issue = Get-ProviderIssue $num
     if (-not $issue) { throw "Issue #$num not found" }
 
@@ -1469,7 +1567,7 @@ function Update-ProviderIssue([int]$num, [string]$title, [string]$body, [string]
         $mcpFields = @{}
         if ($title) { $mcpFields['System.Title'] = $title; $hasEdit = $true }
         if ($body) { $mcpFields['System.Description'] = $body; $hasEdit = $true }
-        if ($status) { $mcpFields['System.State'] = (Convert-AgentXStatusToAdoState $status); $hasEdit = $true }
+        if ($status) { $mcpFields['System.State'] = (Convert-FrontierStatusToAdoState $status); $hasEdit = $true }
         if ($labelStr) {
             $labels = ConvertTo-IssueLabels $labelStr
             $mcpFields['System.Tags'] = ($labels -join '; ')
@@ -1497,7 +1595,7 @@ function Update-ProviderIssue([int]$num, [string]$title, [string]$body, [string]
 }
 
 function Close-ProviderIssue([int]$num) {
-    $provider = Get-AgentXProvider
+    $provider = Get-FrontierProvider
 
     if ($provider -eq 'github') {
         $ghArgs = @('issue', 'close', "$num", '--reason', 'completed')
@@ -1533,7 +1631,7 @@ function Close-ProviderIssue([int]$num) {
 }
 
 function Add-ProviderIssueComment([int]$num, [string]$body) {
-    $provider = Get-AgentXProvider
+    $provider = Get-FrontierProvider
 
     if ($provider -eq 'github') {
         $ghArgs = @('issue', 'comment', "$num", '--body', $body)
@@ -1620,7 +1718,7 @@ function Sync-LocalIssueCommentsToGitHub($localIssue, $remoteIssue, [int]$remote
     }
 
     $syncStatus = Get-BacklogSyncStatus $localIssue
-    $migrationSummary = "[AgentX migration] Migrated from local issue #$($localIssue.number). Original status: $syncStatus. Original state: $($localIssue.state)."
+    $migrationSummary = "[Frontier migration] Migrated from local issue #$($localIssue.number). Original status: $syncStatus. Original state: $($localIssue.state)."
     if (-not $remoteCommentBodies.ContainsKey($migrationSummary)) {
         $null = Invoke-GitHubCli @('issue', 'comment', "$remoteIssueNumber", '--body', $migrationSummary) "Failed to write migration summary for GitHub issue #$remoteIssueNumber." -AllowEmptyOutput
         $remoteCommentBodies[$migrationSummary] = $true
@@ -1724,23 +1822,23 @@ function Sync-LocalBacklogToGitHubIfNeeded([string]$Repo, [string]$Reason, [swit
 
     $localIssues = @(Get-LocalBacklogIssues)
     Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
-        $cfg = Get-AgentXConfig
+        $cfg = Get-FrontierConfig
         $syncState = Get-GitHubBacklogSyncState $cfg $Repo
         Set-ConfigValue $cfg 'repo' $Repo
-        Set-AgentXAdapterValue $cfg 'github' 'repo' $Repo
+        Set-FrontierAdapterValue $cfg 'github' 'repo' $Repo
         if (-not $syncState.completed) {
             Save-GitHubBacklogSyncState $cfg $Repo $syncState.issueMap $false
         }
         Write-JsonFile $Script:CONFIG_FILE $cfg
     }
 
-    $cfg = Get-AgentXConfig
+    $cfg = Get-FrontierConfig
     $syncState = Get-GitHubBacklogSyncState $cfg $Repo
     if ($syncState.completed -and -not $Force) { return }
 
     if ($localIssues.Count -eq 0) {
         Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
-            $lockedCfg = Get-AgentXConfig
+            $lockedCfg = Get-FrontierConfig
             Save-GitHubBacklogSyncState $lockedCfg $Repo $syncState.issueMap $true
             Write-JsonFile $Script:CONFIG_FILE $lockedCfg
         }
@@ -1770,14 +1868,14 @@ function Sync-LocalBacklogToGitHubIfNeeded([string]$Repo, [string]$Reason, [swit
         $null = Sync-LocalIssueToGitHub $issue $remoteIssueNumber
 
         Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
-            $lockedCfg = Get-AgentXConfig
+            $lockedCfg = Get-FrontierConfig
             Save-GitHubBacklogSyncState $lockedCfg $Repo $syncState.issueMap $false
             Write-JsonFile $Script:CONFIG_FILE $lockedCfg
         }
     }
 
     Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
-        $lockedCfg = Get-AgentXConfig
+        $lockedCfg = Get-FrontierConfig
         Save-GitHubBacklogSyncState $lockedCfg $Repo $syncState.issueMap $true
         Write-JsonFile $Script:CONFIG_FILE $lockedCfg
     }
@@ -1799,7 +1897,7 @@ $Script:DATA_BRANCH = 'agentx/data'
 $Script:EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf899d15f3277a76d'
 
 function Get-PersistenceMode {
-    $cfg = Get-AgentXConfig
+    $cfg = Get-FrontierConfig
     if ($cfg -is [hashtable]) {
         if ($cfg.ContainsKey('persistence') -and $null -ne $cfg['persistence']) { return $cfg['persistence'] }
         return 'file'
@@ -2159,15 +2257,15 @@ function ConvertTo-RelativeWorkspacePath([string]$pathValue) {
     return $resolved.Replace([IO.Path]::DirectorySeparatorChar, '/')
 }
 
-function Get-AgentXIssueByNumber([int]$number) {
-    $provider = Get-AgentXProvider
+function Get-FrontierIssueByNumber([int]$number) {
+    $provider = Get-FrontierProvider
     if ($provider -eq 'github') { return Get-GitHubIssue $number }
     if ($provider -eq 'ado') { return Get-AdoIssue $number }
     return Get-Issue $number
 }
 
 function Get-TaskBundleActiveThreadContext {
-    $filePath = Join-Path $Script:AGENTX_DIR 'state' 'harness-state.json'
+    $filePath = Join-Path $Script:FRONTIER_STATE_DIR 'state' 'harness-state.json'
     $state = Read-JsonFile $filePath
     if (-not $state) { return $null }
     $activeThreads = @($state.threads | Where-Object { $_.status -eq 'active' })
@@ -2224,7 +2322,7 @@ function Resolve-TaskBundleContext([int]$issueNumber = 0, [string]$planReference
     $normalizedPlan = if ([string]::IsNullOrWhiteSpace($planReference)) { '' } else { ConvertTo-RelativeWorkspacePath $planReference }
 
     if ($issueNumber -gt 0 -or $normalizedPlan) {
-        $issue = if ($issueNumber -gt 0) { Get-AgentXIssueByNumber $issueNumber } else { $null }
+        $issue = if ($issueNumber -gt 0) { Get-FrontierIssueByNumber $issueNumber } else { $null }
         if ($issueNumber -gt 0 -and -not $issue) {
             throw "Task bundle parent issue #$issueNumber was not found."
         }
@@ -2251,7 +2349,7 @@ function Resolve-TaskBundleContext([int]$issueNumber = 0, [string]$planReference
     if ($threadContext -and ($threadContext.issueNumber -or $threadContext.planReference)) {
         $issueTitle = ''
         if ($threadContext.issueNumber) {
-            $issue = Get-AgentXIssueByNumber ([int]$threadContext.issueNumber)
+            $issue = Get-FrontierIssueByNumber ([int]$threadContext.issueNumber)
             if ($issue) { $issueTitle = [string]$issue.title }
         }
         return [PSCustomObject]@{
@@ -2650,7 +2748,7 @@ function Invoke-BundlePromote {
                     $duplicateCheckResult = 'linked-existing'
                 } else {
                     $draft = Get-TaskBundleIssueDraft $bundle 'story'
-                    $issue = New-AgentXIssue $draft.title $draft.body $draft.labels
+                    $issue = New-FrontierIssue $draft.title $draft.body $draft.labels
                     $targetReference = "#$($issue.number)"
                 }
             }
@@ -2661,7 +2759,7 @@ function Invoke-BundlePromote {
                     $duplicateCheckResult = 'linked-existing'
                 } else {
                     $draft = Get-TaskBundleIssueDraft $bundle 'feature'
-                    $issue = New-AgentXIssue $draft.title $draft.body $draft.labels
+                    $issue = New-FrontierIssue $draft.title $draft.body $draft.labels
                     $targetReference = "#$($issue.number)"
                 }
             }
@@ -3095,11 +3193,11 @@ function Invoke-ParallelReconcile {
             $followUpBody = if ($followUpSummary) { $followUpSummary } else { $followUpTitle }
             switch ($followUpTarget) {
                 'story' {
-                    $issue = New-AgentXIssue $followUpTitle $followUpBody @('type:story', 'source:bounded-parallel')
+                    $issue = New-FrontierIssue $followUpTitle $followUpBody @('type:story', 'source:bounded-parallel')
                     $reference = "#$($issue.number)"
                 }
                 'feature' {
-                    $issue = New-AgentXIssue $followUpTitle $followUpBody @('type:feature', 'source:bounded-parallel')
+                    $issue = New-FrontierIssue $followUpTitle $followUpBody @('type:feature', 'source:bounded-parallel')
                     $reference = "#$($issue.number)"
                 }
                 'review-finding' {
@@ -3130,8 +3228,8 @@ function Invoke-ParallelReconcile {
 
 
 
-function New-AgentXIssue([string]$title, [string]$body, [string[]]$labels, [string]$issueType = '') {
-    $provider = Get-AgentXProvider
+function New-FrontierIssue([string]$title, [string]$body, [string[]]$labels, [string]$issueType = '') {
+    $provider = Get-FrontierProvider
     $normalizedLabels = @($labels | Where-Object { $_ })
 
     if ($provider -eq 'github') {
@@ -3166,7 +3264,7 @@ function New-AgentXIssue([string]$title, [string]$body, [string[]]$labels, [stri
             throw 'ADO provider requires organization and project in .agentx/config.json.'
         }
 
-        $workItemType = if ($issueType) { $issueType } else { Convert-AgentXTypeToAdoWorkItemType $normalizedLabels }
+        $workItemType = if ($issueType) { $issueType } else { Convert-FrontierTypeToAdoWorkItemType $normalizedLabels }
         $tagString = if ($normalizedLabels.Count -gt 0) { $normalizedLabels -join '; ' } else { '' }
 
         $issue = Invoke-AdoOperation -OperationName 'create' -McpBlock {
@@ -3177,7 +3275,7 @@ function New-AgentXIssue([string]$title, [string]$body, [string[]]$labels, [stri
             $toolArguments = @{ project = $project; workItemType = $workItemType; fields = $fields }
             $result = Invoke-AdoMcpTool -Tool $tool -Arguments $toolArguments
             $payload = ConvertFrom-AdoMcpToolResult $result
-            if ($payload) { return Convert-AdoWorkItemToAgentXIssue $payload }
+            if ($payload) { return Convert-AdoWorkItemToFrontierIssue $payload }
             return $null
         }
 
@@ -3210,7 +3308,7 @@ function Get-NextIssueNumber {
         $result = @{ num = 1 }
         Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
             $existingNumbers = @(Get-LocalBacklogIssues | ForEach-Object { [int]$_.number } | Where-Object { $_ -gt 0 })
-            $lockedCfg = Get-AgentXConfig
+            $lockedCfg = Get-FrontierConfig
             $configuredNext = [int](Get-ConfigValue $lockedCfg 'nextIssueNumber' 1)
             $candidate = if (@($existingNumbers).Count -gt 0) { ((($existingNumbers | Measure-Object -Maximum).Maximum) + 1) } else { 1 }
             $result.num = [Math]::Max($candidate, $configuredNext)
@@ -3228,7 +3326,7 @@ function Get-NextIssueNumber {
         Write-GitJson 'state/counter.json' $newCounter "state: increment issue counter to $($num + 1)"
         return $num
     }
-    $cfg = Get-AgentXConfig
+    $cfg = Get-FrontierConfig
     $num = if ($cfg.PSObject.Properties['nextIssueNumber']) { $cfg.nextIssueNumber } else { 1 }
     $cfg | Add-Member -NotePropertyName 'nextIssueNumber' -NotePropertyValue ($num + 1) -Force
     Write-JsonFile $Script:CONFIG_FILE $cfg
@@ -3245,7 +3343,7 @@ function Convert-GitHubIssueStateToIssueState([string]$state) {
     return 'open'
 }
 
-function Convert-GitHubIssueToAgentXIssue($issue, [string]$status = '') {
+function Convert-GitHubIssueToFrontierIssue($issue, [string]$status = '') {
     $getProp = {
         param($obj, $name)
         if ($null -eq $obj) { return $null }
@@ -3283,7 +3381,7 @@ function Convert-AdoStateToIssueState([string]$state) {
     return 'open'
 }
 
-function Convert-AdoWorkItemToAgentXIssue($item) {
+function Convert-AdoWorkItemToFrontierIssue($item) {
     $fields = if ($item.fields) { $item.fields } else { [PSCustomObject]@{} }
     $tagsRaw = ''
     $tagsProp = $fields.PSObject.Properties['System.Tags']
@@ -3307,7 +3405,7 @@ function Convert-AdoWorkItemToAgentXIssue($item) {
 function Get-GitHubIssue([int]$num) {
     $json = & gh issue view $num --json number,title,body,state,url,labels,comments 2>$null
     if (-not $json) { return $null }
-    return Convert-GitHubIssueToAgentXIssue ($json | ConvertFrom-Json)
+    return Convert-GitHubIssueToFrontierIssue ($json | ConvertFrom-Json)
 }
 
 function Invoke-GitHubCli([string[]]$arguments, [string]$failureMessage, [switch]$AllowEmptyOutput) {
@@ -3335,8 +3433,8 @@ function Invoke-GitHubCli([string[]]$arguments, [string]$failureMessage, [switch
 }
 
 function Get-GitHubRepoSlug {
-    $cfg = Get-AgentXConfig
-    $adapterRepo = [string](Get-AgentXAdapterValue $cfg 'github' 'repo' '')
+    $cfg = Get-FrontierConfig
+    $adapterRepo = [string](Get-FrontierAdapterValue $cfg 'github' 'repo' '')
     if (-not [string]::IsNullOrWhiteSpace($adapterRepo)) { return $adapterRepo }
 
     $rootRepo = [string](Get-ConfigValue $cfg 'repo' '')
@@ -3353,7 +3451,7 @@ function Get-GitHubRepoSlug {
 }
 
 function Get-GitHubProjectOwner {
-    $cfg = Get-AgentXConfig
+    $cfg = Get-FrontierConfig
     $owner = [string](Get-ConfigValue $cfg 'projectOwner' '')
     if (-not [string]::IsNullOrWhiteSpace($owner)) { return $owner }
 
@@ -3363,8 +3461,8 @@ function Get-GitHubProjectOwner {
 }
 
 function Get-GitHubProjectNumber {
-    $cfg = Get-AgentXConfig
-    $project = Get-AgentXAdapterValue $cfg 'github' 'project'
+    $cfg = Get-FrontierConfig
+    $project = Get-FrontierAdapterValue $cfg 'github' 'project'
     if ($null -eq $project -or [string]::IsNullOrWhiteSpace("$project")) {
         $project = Get-ConfigValue $cfg 'project'
     }
@@ -3378,7 +3476,7 @@ function Test-GitHubProjectConfigured {
 }
 
 function Resolve-GitHubProjectStatusName([string]$status) {
-    $cfg = Get-AgentXConfig
+    $cfg = Get-FrontierConfig
     $customMap = Get-ConfigValue $cfg 'githubProjectStatusMap'
     if ($customMap) {
         if ($customMap -is [hashtable]) {
@@ -3531,7 +3629,7 @@ function Get-AdoIssue([int]$num) {
         $tool = Get-AdoMcpToolName 'get'
         $result = Invoke-AdoMcpTool -Tool $tool -Arguments @{ project = $project; id = $num }
         $payload = ConvertFrom-AdoMcpToolResult $result
-        if ($payload) { return Convert-AdoWorkItemToAgentXIssue $payload }
+        if ($payload) { return Convert-AdoWorkItemToFrontierIssue $payload }
         return $null
     }
 }
@@ -3560,7 +3658,7 @@ function Get-IssueTypeFromLabels([string[]]$labels) {
     return 'story'
 }
 
-function Convert-AgentXTypeToAdoWorkItemType([string[]]$labels) {
+function Convert-FrontierTypeToAdoWorkItemType([string[]]$labels) {
     switch (Get-IssueTypeFromLabels $labels) {
         'epic' { return 'Epic' }
         'feature' { return 'Feature' }
@@ -3570,8 +3668,8 @@ function Convert-AgentXTypeToAdoWorkItemType([string[]]$labels) {
     }
 }
 
-function Convert-AgentXStatusToAdoState([string]$status) {
-    $cfg = Get-AgentXConfig
+function Convert-FrontierStatusToAdoState([string]$status) {
+    $cfg = Get-FrontierConfig
     $customMap = Get-ConfigValue $cfg 'adoStateMap'
     if ($customMap) {
         if ($customMap -is [hashtable]) {
@@ -3606,7 +3704,7 @@ function Invoke-IssueCreate {
 
     $labels = ConvertTo-IssueLabels $labelStr
     try {
-        $issue = New-AgentXIssue $title $body $labels $issueType
+        $issue = New-FrontierIssue $title $body $labels $issueType
         Write-CliOutput "$($C.g)Created issue #$($issue.number): $($issue.title)$($C.n)"
         if ($Script:JsonOutput) { $issue | ConvertTo-Json -Depth 5 }
     } catch {
@@ -3679,7 +3777,7 @@ function Invoke-IssueList {
     if ($Script:JsonOutput) { $issues | ConvertTo-Json -Depth 5; return }
     if ($issues.Count -eq 0) { Write-CliOutput "$($C.y)No issues found.$($C.n)"; return }
 
-    Write-CliOutput "`n$($C.c)Issues [$((Get-AgentXProviderInfo).name)]:$($C.n)"
+    Write-CliOutput "`n$($C.c)Issues [$((Get-FrontierProviderInfo).name)]:$($C.n)"
     Write-CliOutput "$($C.c)===========================================================$($C.n)"
     foreach ($i in $issues) {
         $icon = if ($i.state -eq 'open') { '( )' } else { '(*)' }
@@ -3755,7 +3853,7 @@ function Get-IssueType($issue) {
 
 function Invoke-ReadyCmd {
     $all = Get-AllIssues
-    $providerInfo = Get-AgentXProviderInfo
+    $providerInfo = Get-FrontierProviderInfo
     $usesExplicitReadyState = $providerInfo.readyUsesExplicitReadyState -or ($providerInfo.name -eq 'github' -and (Test-GitHubProjectConfigured))
     $open = if ($usesExplicitReadyState) {
         @($all | Where-Object { $_.state -eq 'open' -and $_.status -eq 'Ready' })
@@ -4164,7 +4262,7 @@ function Get-LoopDefaultMinIterations {
         'high-risk'        { $Script:LOOP_HIGH_RISK_MIN_ITERATIONS }
         'complex-delivery' { $Script:LOOP_COMPLEX_MIN_ITERATIONS  }
         'auto-fix-review'  { $Script:LOOP_AUTO_FIX_MIN_ITERATIONS  }
-        'agent-x'          { $Script:LOOP_AGENT_X_MIN_ITERATIONS   }
+        'agent-x'          { $Script:LOOP_FRONTIER_MIN_ITERATIONS   }
         default            { $Script:LOOP_STANDARD_MIN_ITERATIONS  }
     }
 
@@ -4999,7 +5097,7 @@ function Invoke-LoopIterate {
         if (Test-Path -LiteralPath $evidenceAbs -PathType Leaf) { $evidenceOk = $true }
     }
     if (-not $evidenceOk) {
-        if ($env:AGENTX_SKIP_EVIDENCE_GATE -ne '1') {
+        if ((Get-FrontierEnvironmentValue 'SKIP_EVIDENCE_GATE') -ne '1') {
             Write-CliOutput "$($C.r)  [FAIL] loop iterate requires --evidence <path-to-existing-file>$($C.n)"
             Write-CliOutput "$($C.d)    Acceptable artifacts: test report (junit/trx), coverage xml, semgrep/gitleaks json, build log.$($C.n)"
             Write-CliOutput "$($C.d)    Example: agentx loop iterate -s 'fixed null deref' -e .agentx/state/loop-evidence/iter-2/test-report.xml$($C.n)"
@@ -5315,7 +5413,7 @@ function Invoke-LoopComplete {
     if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop complete')) { exit 1 }
 
     # Gate: every iteration entry after #1 must carry an evidence file path that still exists.
-    if ($env:AGENTX_SKIP_EVIDENCE_GATE -ne '1') {
+    if ((Get-FrontierEnvironmentValue 'SKIP_EVIDENCE_GATE') -ne '1') {
         $stale = @()
         foreach ($h in @($state.history)) {
             if ($null -eq $h) { continue }
@@ -5343,7 +5441,7 @@ function Invoke-LoopComplete {
         $finalEvidenceAbs = if ([System.IO.Path]::IsPathRooted($finalEvidence)) { $finalEvidence } else { Join-Path (Get-Location) $finalEvidence }
         if (-not (Test-Path -LiteralPath $finalEvidenceAbs -PathType Leaf)) { $finalEvidenceAbs = $null }
     }
-    if (-not $finalEvidenceAbs -and $env:AGENTX_SKIP_EVIDENCE_GATE -ne '1') {
+    if (-not $finalEvidenceAbs -and (Get-FrontierEnvironmentValue 'SKIP_EVIDENCE_GATE') -ne '1') {
         if ($finalEvidence) {
             Write-CliOutput "$($C.r)  [FAIL] Evidence file not found: $finalEvidence$($C.n)"
             Write-CliOutput "$($C.d)  Provide a fresh final gate artifact (e.g., test suite output, coverage report, quality-gate.log):$($C.n)"
@@ -5640,7 +5738,7 @@ function Get-ActiveGitHooksDirectory {
     return [System.IO.Path]::GetFullPath((Join-Path $Script:ROOT $rawPath))
 }
 
-function Get-AgentXHookSource([string]$HookName) {
+function Get-FrontierHookSource([string]$HookName) {
     foreach ($basePath in @($Script:ROOT, $Script:INSTALL_ROOT) | Select-Object -Unique) {
         $candidate = Join-Path $basePath '.github' 'hooks' $HookName
         if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
@@ -5660,7 +5758,7 @@ function Invoke-HooksCmd {
 
         $hookSources = @{}
         foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
-            $source = Get-AgentXHookSource -HookName $hook
+            $source = Get-FrontierHookSource -HookName $hook
             if (-not $source) {
                 Write-CliOutput "$($C.r)  [FAIL] Required hook source is missing: $hook$($C.n)"
                 exit 1
@@ -5710,8 +5808,8 @@ function Invoke-ConfigCmd {
 
     switch ($action) {
         'show' {
-            $cfg = Get-AgentXConfig
-            $providerInfo = Get-AgentXProviderInfo
+            $cfg = Get-FrontierConfig
+            $providerInfo = Get-FrontierProviderInfo
             if ($Script:JsonOutput) {
                 $json = [PSCustomObject]@{
                     config = $cfg
@@ -5723,7 +5821,7 @@ function Invoke-ConfigCmd {
                 } | ConvertTo-Json -Depth 10
                 Write-CliOutput $json
             } else {
-                Write-CliOutput "$($C.c)  AgentX Configuration$($C.n)"
+                Write-CliOutput "$($C.c)  Frontier Configuration$($C.n)"
                 Write-CliOutput "$($C.d)  -----------------------------------$($C.n)"
                 $cfgKeys = if ($cfg -is [hashtable]) { $cfg.Keys } else { $cfg.PSObject.Properties }
                 foreach ($key in $cfgKeys) {
@@ -5755,14 +5853,14 @@ function Invoke-ConfigCmd {
                 default   { $rawValue }
             }
             Invoke-WithJsonLock $Script:CONFIG_FILE 'cli' {
-                $cfg = Get-AgentXConfig
+                $cfg = Get-FrontierConfig
                 Set-ConfigValue $cfg $key $value
                 Write-JsonFile $Script:CONFIG_FILE $cfg
             }
             Write-CliOutput "$($C.g)  Set $key = $value$($C.n)"
             if ($key -in @('provider', 'integration', 'mode', 'repo')) {
                 $repoSlug = Get-GitHubRepoSlug
-                if (-not [string]::IsNullOrWhiteSpace($repoSlug) -and (Get-AgentXProvider) -eq 'github' -and (Test-GitHubCliAuthenticated)) {
+                if (-not [string]::IsNullOrWhiteSpace($repoSlug) -and (Get-FrontierProvider) -eq 'github' -and (Test-GitHubCliAuthenticated)) {
                     Sync-LocalBacklogToGitHubIfNeeded -Repo $repoSlug -Reason "config '$key' changed"
                 }
             }
@@ -5773,7 +5871,7 @@ function Invoke-ConfigCmd {
                 return
             }
             $key = $Script:SubArgs[1]
-            $cfg = Get-AgentXConfig
+            $cfg = Get-FrontierConfig
             $val = $cfg.$key
             if ($null -ne $val) {
                 Write-CliOutput $val
@@ -5814,9 +5912,11 @@ function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add('-NoProfile')
     $startInfo.ArgumentList.Add('-File')
-    $startInfo.ArgumentList.Add((Join-Path $Script:INSTALL_AGENTX_DIR 'agentx-cli.ps1'))
+    $startInfo.ArgumentList.Add((Join-Path $Script:INSTALL_RUNTIME_DIR 'agentx-cli.ps1'))
     $startInfo.ArgumentList.Add('loop')
     $startInfo.ArgumentList.Add('gate')
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $workspaceRoot
+    $startInfo.Environment['HVE_WORKSPACE_ROOT'] = $workspaceRoot
     $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $workspaceRoot
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
@@ -5905,7 +6005,7 @@ function Invoke-HarnessComplianceReport([string]$baseRef = '') {
 function Get-HarnessAuditChecks([string]$workspaceRoot, [string]$baseRef = '') {
     $planFiles = @(Get-HarnessMarkdownFiles (Join-Path $workspaceRoot 'docs' 'execution' 'plans') 'docs/execution/plans')
     $progressFiles = @(Get-HarnessMarkdownFiles (Join-Path $workspaceRoot 'docs' 'execution' 'progress') 'docs/execution/progress')
-    $harnessState = Read-JsonFile (Join-Path $workspaceRoot '.agentx' 'state' 'harness-state.json')
+    $harnessState = Read-JsonFile (Join-Path $Script:FRONTIER_STATE_DIR 'state' 'harness-state.json')
     $threadCount = if ($harnessState -and $harnessState.threads) { @($harnessState.threads).Count } else { 0 }
     $evidenceCount = if ($harnessState -and $harnessState.evidence) { @($harnessState.evidence).Count } else { 0 }
     $loopCheck = Get-HarnessLoopAuditResult -workspaceRoot $workspaceRoot
@@ -5994,7 +6094,7 @@ function Invoke-AuditCmd {
         return
     }
 
-    $cfg = Get-AgentXConfig
+    $cfg = Get-FrontierConfig
     $profileOverride = Get-Flag @('--profile') ''
     $disableOverrides = @()
     for ($i = 0; $i -lt $Script:SubArgs.Count; $i++) {
@@ -6038,7 +6138,7 @@ function Invoke-AuditCmd {
         $json = $result | ConvertTo-Json -Depth 12
         Write-CliOutput $json
     } else {
-        Write-CliOutput "$($C.c)  AgentX Harness Audit$($C.n)"
+        Write-CliOutput "$($C.c)  Frontier Harness Audit$($C.n)"
         Write-CliOutput "$($C.d)  Profile: $enforcementProfile$($C.n)"
         Write-CliOutput "$($C.d)  Disabled checks: $(if ($disabledChecks.Count -gt 0) { $disabledChecks -join ', ' } else { 'none' })$($C.n)"
         Write-CliOutput "$($C.d)  Score: $scorePercent% ($passedChecks/$totalChecks checks)$($C.n)"
@@ -6062,11 +6162,11 @@ function Invoke-AuditCmd {
 
 function Invoke-VersionCmd {
     $ver = Read-JsonFile $Script:VERSION_FILE
-    if (-not $ver) { Write-CliOutput 'AgentX version unknown.'; return }
+    if (-not $ver) { Write-CliOutput 'Frontier version unknown.'; return }
     if ($Script:JsonOutput) { $ver | ConvertTo-Json -Depth 5; return }
     $installed = if ($ver.installedAt) { "$($ver.installedAt)".Substring(0, 10) } else { '?' }
-    $provider = Get-AgentXProvider
-    Write-CliOutput "`n$($C.c)  AgentX $($ver.version)$($C.n)"
+    $provider = Get-FrontierProvider
+    Write-CliOutput "`n$($C.c)  Frontier $($ver.version)$($C.n)"
     Write-CliOutput "$($C.d)  Provider: $provider  |  Installed: $installed$($C.n)`n"
 }
 
@@ -6116,14 +6216,14 @@ function ConvertTo-HookPathCandidate([string]$Candidate) {
     $normalized = [regex]::Replace($normalized, '`(.)', '$1')
     $normalized = $normalized -replace '(?i)^(?:Microsoft\.PowerShell\.Core\\)?FileSystem::', ''
     $canonicalRoot = [IO.Path]::GetFullPath($Script:ROOT).TrimEnd('\', '/')
-    foreach ($workspaceToken in @('${env:AGENTX_WORKSPACE_ROOT}', '$env:AGENTX_WORKSPACE_ROOT', '${PWD}', '$PWD')) {
+    foreach ($workspaceToken in @('${env:FRONTIER_WORKSPACE_ROOT}', '$env:FRONTIER_WORKSPACE_ROOT', '${env:HVE_WORKSPACE_ROOT}', '$env:HVE_WORKSPACE_ROOT', '${env:AGENTX_WORKSPACE_ROOT}', '$env:AGENTX_WORKSPACE_ROOT', '${PWD}', '$PWD')) {
         $normalized = $normalized.Replace($workspaceToken, $canonicalRoot, [StringComparison]::OrdinalIgnoreCase)
     }
-    if ($normalized -match '\$' -and $normalized -match '(?i)(?:^|[\\/])\.agentx(?:[\\/]|$)') {
+    if ($normalized -match '\$' -and $normalized -match '(?i)(?:^|[\\/])\.(?:frontier|hve|agentx)(?:[\\/]|$)') {
         throw 'Protected-state path contains an unsupported dynamic expression.'
     }
     if ($normalized -match '\[' -and $normalized -notmatch '\]') {
-        if ($normalized -match '(?i)(?:^|[\\/])\.agentx(?:[\\/]|$)') {
+        if ($normalized -match '(?i)(?:^|[\\/])\.(?:frontier|hve|agentx)(?:[\\/]|$)') {
             throw 'Protected-state path contains an invalid wildcard expression.'
         }
     }
@@ -6189,13 +6289,13 @@ function ConvertFrom-HookPathExpression($Expression) {
             if ($nestedExpression -isnot [Management.Automation.Language.VariableExpressionAst]) {
                 return [PSCustomObject]@{ Safe = $false; Value = $null }
             }
-            if ([string]$nestedExpression.VariablePath.UserPath -notin @('PWD', 'env:AGENTX_WORKSPACE_ROOT')) {
+            if ([string]$nestedExpression.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) {
                 return [PSCustomObject]@{ Safe = $false; Value = $null }
             }
         }
         return [PSCustomObject]@{ Safe = $true; Value = (ConvertTo-HookPathCandidate $Expression.Extent.Text.Trim('"', "'")) }
     }
-    if ($Expression -is [Management.Automation.Language.VariableExpressionAst] -and [string]$Expression.VariablePath.UserPath -in @('PWD', 'env:AGENTX_WORKSPACE_ROOT')) {
+    if ($Expression -is [Management.Automation.Language.VariableExpressionAst] -and [string]$Expression.VariablePath.UserPath -in @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) {
         return [PSCustomObject]@{ Safe = $true; Value = [IO.Path]::GetFullPath($Script:ROOT) }
     }
     return [PSCustomObject]@{ Safe = $false; Value = $null }
@@ -6206,7 +6306,7 @@ function Add-OpaqueHookPathCandidates($CommandAst, [Collections.Generic.List[str
         $unsupportedDynamic = @($element.FindAll({
             param($node)
             ($node -is [Management.Automation.Language.VariableExpressionAst] -and
-                [string]$node.VariablePath.UserPath -notin @('PWD', 'env:AGENTX_WORKSPACE_ROOT')) -or
+                [string]$node.VariablePath.UserPath -notin @('PWD', 'env:FRONTIER_WORKSPACE_ROOT', 'env:HVE_WORKSPACE_ROOT', 'env:AGENTX_WORKSPACE_ROOT')) -or
             $node -is [Management.Automation.Language.SubExpressionAst]
         }, $true)).Count -gt 0
         if ($unsupportedDynamic) { return $false }
@@ -6279,11 +6379,14 @@ function Test-TrustedLoopStartCommand([string]$Command) {
         } else {
             [IO.Path]::GetFullPath((Join-Path $Script:ROOT $elements[$launcherIndex]))
         }
-        $trustedLauncher = [IO.Path]::GetFullPath((Join-Path $Script:ROOT '.agentx/agentx.ps1'))
+        $trustedLaunchers = @(
+            [IO.Path]::GetFullPath((Join-Path $Script:ROOT '.agentx/frontier.ps1')),
+            [IO.Path]::GetFullPath((Join-Path $Script:ROOT '.agentx/agentx.ps1'))
+        )
     } catch {
         return $false
     }
-    return $launcher.Equals($trustedLauncher, [StringComparison]::OrdinalIgnoreCase) -and
+    return @($trustedLaunchers | Where-Object { $launcher.Equals($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0 -and
         $elements[$launcherIndex + 1] -ceq 'loop' -and
         $elements[$launcherIndex + 2] -ceq 'start'
 }
@@ -6385,11 +6488,11 @@ function Get-TerminalHookPathAnalysis([string]$Command) {
 
 function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) {
     if (@($PathCandidates).Count -eq 0) { return $false }
-    $protectedRelativePaths = @(
-        '.agentx/state/loop-state.json',
-        '.agentx/state/tests-baseline.json',
-        '.agentx/state/code-quality-baseline.json'
-    )
+    $protectedRelativePaths = foreach ($stateRoot in @('.frontier', '.hve', '.agentx')) {
+        foreach ($fileName in @('loop-state.json', 'tests-baseline.json', 'code-quality-baseline.json')) {
+            "$stateRoot/state/$fileName"
+        }
+    }
 
     foreach ($relativePath in $protectedRelativePaths) {
         $protectedPath = Join-Path $Script:ROOT $relativePath
@@ -6444,7 +6547,7 @@ function Test-HookPathCandidatesTargetProtectedState([string[]]$PathCandidates) 
                         if ($findCommand -and @(& $findCommand.Source $candidatePath -samefile $protectedPath -print 2>$null).Count -gt 0) { return $true }
                     }
                 } catch {
-                    if ($candidate -match '(?i)(?:^|[\\/])\.agentx(?:[\\/]|$)') { return $true }
+                    if ($candidate -match '(?i)(?:^|[\\/])\.(?:frontier|hve|agentx)(?:[\\/]|$)') { return $true }
                     continue
                 }
             }
@@ -6458,23 +6561,23 @@ function Invoke-PolicyHookCmd {
     try {
         $hookInput = $rawInput | ConvertFrom-Json -Depth 30 -ErrorAction Stop
     } catch {
-        Stop-HookToolCall 'AgentX policy hook received malformed JSON input.'
+        Stop-HookToolCall 'Frontier policy hook received malformed JSON input.'
     }
     $eventName = [string](Get-HookInputValue $hookInput 'hook_event_name')
-    if (-not $eventName) { Stop-HookToolCall 'AgentX policy hook input is missing hook_event_name.' }
+    if (-not $eventName) { Stop-HookToolCall 'Frontier policy hook input is missing hook_event_name.' }
     $loopState = Read-JsonFile $Script:LOOP_STATE_FILE
     if ($eventName -eq 'PreToolUse') {
         $toolName = [string](Get-HookInputValue $hookInput 'tool_name')
-        if (-not $toolName) { Stop-HookToolCall 'AgentX PreToolUse input is missing tool_name.' }
+        if (-not $toolName) { Stop-HookToolCall 'Frontier PreToolUse input is missing tool_name.' }
         if ($toolName -match '(?i)(mcp_github|github).*(create_or_update_file|push_files|delete_file)$') {
-            Stop-HookToolCall 'AgentX local-files-first policy blocks direct remote file mutation. Edit local files and let the user review them before commit or push.'
+            Stop-HookToolCall 'Frontier local-files-first policy blocks direct remote file mutation. Edit local files and let the user review them before commit or push.'
         }
         $isFileMutation = $toolName -match '(?i)(^|[/._-])(apply_patch|create_file|replace_string_in_file|multi_replace_string_in_file|editfiles|edit_notebook_file|createfile)$'
         $isTerminalTool = $toolName -match '(?i)(runcommands|run_in_terminal|terminal_exec)$'
         $toolInput = Get-HookInputValue $hookInput 'tool_input'
         if ($isFileMutation) {
             if (Test-HookPathCandidatesTargetProtectedState @(Get-StructuredHookPathCandidates $toolInput)) {
-                Stop-HookToolCall 'AgentX policy blocks direct access to gate-bearing loop state. Use agentx loop commands instead.'
+                Stop-HookToolCall 'Frontier policy blocks direct access to gate-bearing loop state. Use agentx loop commands instead.'
             }
         }
         if ($isTerminalTool) {
@@ -6482,7 +6585,7 @@ function Invoke-PolicyHookCmd {
             $isTrustedLoopStart = Test-TrustedLoopStartCommand $command
             $pathAnalysis = Get-TerminalHookPathAnalysis $command
             if ((-not $isTrustedLoopStart -and -not $pathAnalysis.Safe) -or (Test-HookPathCandidatesTargetProtectedState @($pathAnalysis.Candidates))) {
-                Stop-HookToolCall 'AgentX policy blocks direct access to gate-bearing loop state. Use agentx loop commands instead.'
+                Stop-HookToolCall 'Frontier policy blocks direct access to gate-bearing loop state. Use agentx loop commands instead.'
             }
             $readOnlyCommandPattern = '(?i)^\s*(Get-(Content|ChildItem|Item|Location|FileHash|Command)(\s+.*)?|Test-Path(\s+.*)?|Select-String(\s+.*)?|Resolve-Path(\s+.*)?|rg(\s+.*)?|cat(\s+.*)?|ls(\s+.*)?|head(\s+.*)?|tail(\s+.*)?|pwd\s*|stat(\s+.*)?|node\s+--version|npm\s+--version|python(?:3)?\s+--version|py\s+--version|dotnet\s+--version|pwsh\s+--version)\s*$'
             $hasShellComposition = $command -match '[;&|<>`\r\n]' -or
@@ -6495,28 +6598,28 @@ function Invoke-PolicyHookCmd {
         if (-not $isFileMutation) { return }
         if (-not $loopState) {
             if (Test-Path -LiteralPath $Script:CONFIG_FILE -PathType Leaf) {
-                Stop-HookToolCall 'AgentX quality-loop state is missing or invalid. Run agentx loop start before editing files.'
+                Stop-HookToolCall 'Frontier quality-loop state is missing or invalid. Run agentx loop start before editing files.'
             }
-            Write-HookResponse 'AgentX local runtime is not initialized, so quality-loop enforcement is degraded. Run AgentX: Initialize Local Runtime before formal delivery work.'
+            Write-HookResponse 'Frontier local runtime is not initialized, so quality-loop enforcement is degraded. Run Frontier: Initialize Local Runtime before formal delivery work.'
             return
         }
         $isActive = (Get-HookInputValue $loopState 'active') -eq $true
         $status = [string](Get-HookInputValue $loopState 'status')
         if (-not $isActive -or $status -ne 'active') {
             if ($isTerminalTool -and $isTrustedLoopStart) { return }
-            Stop-HookToolCall "AgentX quality loop is not active (status: $status). Run agentx loop start for the current task before editing files."
+            Stop-HookToolCall "Frontier quality loop is not active (status: $status). Run agentx loop start for the current task before editing files."
         }
         return
     }
     if ($eventName -eq 'SessionStart') {
         if ($loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
             $issue = Get-HookInputValue $loopState 'issueNumber'
-            Write-HookResponse "AgentX resumed with an active quality loop$(if ($issue) { " for issue #$issue" } else { '' })."
+            Write-HookResponse "Frontier resumed with an active quality loop$(if ($issue) { " for issue #$issue" } else { '' })."
         }
         return
     }
     if ($eventName -eq 'Stop' -and $loopState -and (Get-HookInputValue $loopState 'active') -eq $true) {
-        Write-HookResponse 'AgentX quality loop is still active. Record evidence and complete or cancel it before claiming the task is done.'
+        Write-HookResponse 'Frontier quality loop is still active. Record evidence and complete or cancel it before claiming the task is done.'
     }
 }
 
@@ -6617,7 +6720,7 @@ function Invoke-RunCmd {
     }
 
     if (-not $agent -and -not $resumeSession) {
-        Write-CliOutput "`n$($C.c)  AgentX Run - Agentic Loop (LLM + Tools)$($C.n)"
+        Write-CliOutput "`n$($C.c)  Frontier Run - Agentic Loop (LLM + Tools)$($C.n)"
         Write-CliOutput "$($C.d)  Auto-detects GitHub-hosted providers by default; explicit llmProvider config can also target Claude Code readiness.$($C.n)"
         Write-CliOutput "$($C.d)  For Claude/Gemini/o-series via GitHub, run: gh auth refresh -s copilot$($C.n)"
         Write-CliOutput "$($C.d)  For Claude Code readiness, install Claude Code and run: claude auth login$($C.n)`n"
@@ -7113,7 +7216,7 @@ function Invoke-LessonsStats {
     Write-CliOutput "  Total lessons:       $($projectCount + $globalCount)"
     Write-CliOutput ""
     
-    $configFile = Join-Path $Script:AGENTX_DIR 'config.json'
+    $configFile = Join-Path $Script:FRONTIER_STATE_DIR 'config.json'
     $config = Read-JsonFile $configFile
     $learningEnabled = if ($config -and $config.PSObject.Properties['learningEnabled']) { $config.learningEnabled } else { $true }
     
@@ -7170,9 +7273,9 @@ function Invoke-LessonsHelp {
 
 function Invoke-TokensCmd {
     $action = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { 'check' }
-    $scriptPath = Resolve-AgentXRuntimeScript 'scripts/token-counter.ps1'
+    $scriptPath = Resolve-FrontierRuntimeScript 'scripts/token-counter.ps1'
     if (-not $scriptPath) {
-        Write-CliOutput "$($C.r)  Error: scripts/token-counter.ps1 not found in the workspace or AgentX runtime.$($C.n)"
+        Write-CliOutput "$($C.r)  Error: scripts/token-counter.ps1 not found in the workspace or Frontier runtime.$($C.n)"
         exit 1
     }
     $extra = if ($Script:SubArgs.Count -gt 1) { @($Script:SubArgs[1..($Script:SubArgs.Count - 1)]) } else { @() }
@@ -7231,22 +7334,22 @@ function Invoke-DiagnoseCmd {
 
     # 1. Required workspace files
     $required = @(
-        @{ path = (Join-Path $Script:AGENTX_DIR 'config.json'); id = 'config'; label = 'Workspace config (.agentx/config.json)'; hint = 'Run: AgentX: Initialize Local Runtime' },
-        @{ path = (Join-Path $Script:ROOT '.github'); id = 'github-dir'; label = 'AgentX assets directory (.github/)'; hint = 'Create .github/ or run AgentX: Initialize CLI' }
+        @{ path = (Join-Path $Script:FRONTIER_STATE_DIR 'config.json'); id = 'config'; label = 'Workspace config (.agentx/config.json)'; hint = 'Run: Frontier: Initialize Local Runtime' },
+        @{ path = (Join-Path $Script:ROOT '.github'); id = 'github-dir'; label = 'Frontier assets directory (.github/)'; hint = 'Create .github/ or run Frontier: Initialize CLI' }
     )
     foreach ($r in $required) {
         $exists = Test-Path $r.path
         Add-DiagnoseCheck -List $checks -Id $r.id -Label $r.label -Passed $exists `
             -Summary $(if ($exists) { 'present' } else { 'missing' }) -Hint $r.hint
     }
-    $workspaceCli = Join-Path $Script:AGENTX_DIR 'agentx-cli.ps1'
-    $installedCli = Join-Path $Script:INSTALL_AGENTX_DIR 'agentx-cli.ps1'
+    $workspaceCli = Join-Path $Script:FRONTIER_STATE_DIR 'agentx-cli.ps1'
+    $installedCli = Join-Path $Script:INSTALL_RUNTIME_DIR 'agentx-cli.ps1'
     $cliPath = @($workspaceCli, $installedCli) | Where-Object {
         Test-Path -LiteralPath $_ -PathType Leaf
     } | Select-Object -First 1
     Add-DiagnoseCheck -List $checks -Id 'cli' -Label 'CLI runtime' -Passed ($null -ne $cliPath) `
         -Summary $(if ($cliPath) { "resolved: $cliPath" } else { 'workspace and bundled CLI missing' }) `
-        -Hint 'Reinstall the AgentX extension, then run AgentX: Initialize Local Runtime'
+        -Hint 'Reinstall the Frontier extension, then run Frontier: Initialize Local Runtime'
 
     # 2. Git hooks installed
     $gitDir = Join-Path $Script:ROOT '.git'
@@ -7262,7 +7365,7 @@ function Invoke-DiagnoseCmd {
 
     # 3. Frontmatter validation
     $workspaceFrontmatterScript = Join-Path $Script:ROOT 'scripts/validate-frontmatter.ps1'
-    $fmScript = Resolve-AgentXRuntimeScript 'scripts/validate-frontmatter.ps1'
+    $fmScript = Resolve-FrontierRuntimeScript 'scripts/validate-frontmatter.ps1'
     if ($fmScript) {
         $fmTargetRoot = if (Test-Path -LiteralPath $workspaceFrontmatterScript -PathType Leaf) {
             $Script:ROOT
@@ -7277,12 +7380,12 @@ function Invoke-DiagnoseCmd {
             -Passed ($fmExit -eq 0) -Summary $fmTail -Hint 'Run: pwsh scripts/validate-frontmatter.ps1'
     } else {
         Add-DiagnoseCheck -List $checks -Id 'frontmatter' -Label 'Frontmatter validator' -Passed $false `
-            -Summary 'scripts/validate-frontmatter.ps1 missing from workspace and AgentX runtime' `
-            -Hint 'Reinstall the AgentX extension'
+            -Summary 'scripts/validate-frontmatter.ps1 missing from workspace and Frontier runtime' `
+            -Hint 'Reinstall the Frontier extension'
     }
 
     # 4. Reference / link validation
-    $refScript = Resolve-AgentXRuntimeScript 'scripts/validate-references.ps1'
+    $refScript = Resolve-FrontierRuntimeScript 'scripts/validate-references.ps1'
     if ($refScript) {
         $refOutput = & pwsh -NoProfile -File $refScript -Quiet 2>&1
         $refExit = $LASTEXITCODE
@@ -7293,12 +7396,12 @@ function Invoke-DiagnoseCmd {
             -VerboseTail $refTail
     } else {
         Add-DiagnoseCheck -List $checks -Id 'references' -Label 'Reference validator' -Passed $false `
-            -Summary 'scripts/validate-references.ps1 missing from workspace and AgentX runtime' `
-            -Hint 'Reinstall the AgentX extension'
+            -Summary 'scripts/validate-references.ps1 missing from workspace and Frontier runtime' `
+            -Hint 'Reinstall the Frontier extension'
     }
 
     # 5. Token budget check
-    $tokScript = Resolve-AgentXRuntimeScript 'scripts/token-counter.ps1'
+    $tokScript = Resolve-FrontierRuntimeScript 'scripts/token-counter.ps1'
     if ($tokScript) {
         $tokOutput = & pwsh -NoProfile -File $tokScript -Action check 2>&1
         $tokExit = $LASTEXITCODE
@@ -7309,8 +7412,8 @@ function Invoke-DiagnoseCmd {
             -VerboseTail $tokTail
     } else {
         Add-DiagnoseCheck -List $checks -Id 'tokens' -Label 'Token budget check' -Passed $false `
-            -Summary 'scripts/token-counter.ps1 missing from workspace and AgentX runtime' `
-            -Hint 'Reinstall the AgentX extension'
+            -Summary 'scripts/token-counter.ps1 missing from workspace and Frontier runtime' `
+            -Hint 'Reinstall the Frontier extension'
     }
 
     # 6. Loop state schema sanity
@@ -7445,7 +7548,7 @@ function Invoke-DiagnoseCmd {
     if ($Script:JsonOutput) {
         Write-CliOutput ($result | ConvertTo-Json -Depth 6)
     } else {
-        Write-CliOutput "`n$($C.c)  AgentX Diagnose$($C.n)"
+        Write-CliOutput "`n$($C.c)  Frontier Diagnose$($C.n)"
         Write-CliOutput "$($C.d)  Workspace: $Script:ROOT$($C.n)"
         Write-CliOutput "$($C.d)  Result: $passedCount/$total checks passed$($C.n)`n"
         foreach ($chk in $checks) {
@@ -7478,7 +7581,7 @@ function Invoke-DiagnoseCmd {
 function Invoke-HelpCmd {
     Write-CliOutput @"
 
-$($C.c)  AgentX CLI$($C.n)
+$($C.c)  Frontier CLI$($C.n)
 $($C.d)  ---------------------------------------------$($C.n)
 
 $($C.w)  Commands:$($C.n)
@@ -7573,7 +7676,7 @@ function Invoke-HireCmd {
     $role = Get-Flag @('-r', '--role') 'Engineer'
 
     if (-not $agentName) {
-        Write-CliOutput "`n$($C.c)  AgentX Hire - Create a Custom Agent$($C.n)"
+        Write-CliOutput "`n$($C.c)  Frontier Hire - Create a Custom Agent$($C.n)"
         Write-CliOutput "$($C.d)  Scaffold a new agent definition in .github/agents/$($C.n)`n"
 
         # Interactive prompts
@@ -7696,7 +7799,7 @@ function Invoke-WatchCmd {
     $statusOnly = Test-Flag @('--status', '-s')
 
     if ($statusOnly) {
-        $watchState = Read-JsonFile (Join-Path $AGENTX_DIR 'state' 'watch-state.json')
+        $watchState = Read-JsonFile (Join-Path $FRONTIER_STATE_DIR 'state' 'watch-state.json')
         if (-not $watchState) {
             Write-CliOutput 'No watch session active.'
             return
@@ -7711,7 +7814,7 @@ function Invoke-WatchCmd {
         return
     }
 
-    Write-CliOutput "`n$($C.c)  AgentX Watch - Continuous Backlog Monitor$($C.n)"
+    Write-CliOutput "`n$($C.c)  Frontier Watch - Continuous Backlog Monitor$($C.n)"
     Write-CliOutput "$($C.d)  Polls backlog every $intervalMinutes minutes for unblocked work.$($C.n)"
     if ($dryRun) { Write-CliOutput "$($C.y)  DRY RUN: Will report but not execute.$($C.n)" }
     if (-not $execute) {
@@ -7721,7 +7824,7 @@ function Invoke-WatchCmd {
     Write-CliOutput "$($C.d)  Press Ctrl+C to stop.$($C.n)`n"
 
     # Initialize watch state
-    $watchStateFile = Join-Path $AGENTX_DIR 'state' 'watch-state.json'
+    $watchStateFile = Join-Path $FRONTIER_STATE_DIR 'state' 'watch-state.json'
     $watchState = [PSCustomObject]@{
         started       = Get-Timestamp
         lastPoll      = $null
@@ -7741,7 +7844,7 @@ function Invoke-WatchCmd {
 
             # Poll for ready items
             $all = Get-AllIssues
-            $providerInfo = Get-AgentXProviderInfo
+            $providerInfo = Get-FrontierProviderInfo
             $usesExplicitReadyState = $providerInfo.readyUsesExplicitReadyState -or ($providerInfo.name -eq 'github' -and (Test-GitHubProjectConfigured))
             $open = if ($usesExplicitReadyState) {
                 @($all | Where-Object { $_.state -eq 'open' -and $_.status -eq 'Ready' })
@@ -7846,8 +7949,8 @@ function Invoke-DiscoverCmd {
 }
 
 function Invoke-DiscoverRun {
-    $patternsDir = Join-Path $Script:AGENTX_DIR 'patterns'
-    $signalsDir = Join-Path $Script:AGENTX_DIR 'signals'
+    $patternsDir = Join-Path $Script:FRONTIER_STATE_DIR 'patterns'
+    $signalsDir = Join-Path $Script:FRONTIER_STATE_DIR 'signals'
     $patternsFile = Join-Path $patternsDir 'discovered.yaml'
 
     if (-not (Test-Path $patternsDir)) { New-Item -ItemType Directory -Path $patternsDir -Force | Out-Null }
@@ -7967,7 +8070,7 @@ function Invoke-DiscoverRun {
     }
 
     # --- Evidence Source 3: Existing lessons ---
-    $lessonsDir = Join-Path $Script:AGENTX_DIR 'lessons'
+    $lessonsDir = Join-Path $Script:FRONTIER_STATE_DIR 'lessons'
     $lessonCount = 0
     if (Test-Path $lessonsDir) {
         foreach ($file in (Get-ChildItem $lessonsDir -Filter '*.jsonl' -ErrorAction SilentlyContinue)) {
@@ -8153,7 +8256,7 @@ function Invoke-DiscoverRun {
     }
 
     # --- Write patterns file ---
-    $yaml = "# AgentX Discovered Patterns`n"
+    $yaml = "# Frontier Discovered Patterns`n"
     $yaml += "# Auto-generated by 'agentx discover' -- do not edit manually`n"
     $yaml += "# Patterns with confidence > 0.80 can be graduated to skills via 'agentx graduate'`n"
     $yaml += "# Last updated: $now`n"
@@ -8229,8 +8332,8 @@ function Invoke-DiscoverRun {
 }
 
 function Invoke-DiscoverStatus {
-    $patternsFile = Join-Path $Script:AGENTX_DIR 'patterns' 'discovered.yaml'
-    $signalsFile = Join-Path $Script:AGENTX_DIR 'signals' 'sessions.jsonl'
+    $patternsFile = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'discovered.yaml'
+    $signalsFile = Join-Path $Script:FRONTIER_STATE_DIR 'signals' 'sessions.jsonl'
 
     Write-CliOutput "`n$($C.c)  Pattern Discovery Status$($C.n)"
     Write-CliOutput "$($C.d)  ---------------------------------------------$($C.n)"
@@ -8263,8 +8366,8 @@ function Invoke-DiscoverStatus {
 }
 
 function Invoke-DiscoverReset {
-    $patternsFile = Join-Path $Script:AGENTX_DIR 'patterns' 'discovered.yaml'
-    $archiveDir = Join-Path $Script:AGENTX_DIR 'patterns' 'archive'
+    $patternsFile = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'discovered.yaml'
+    $archiveDir = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'archive'
 
     if (-not (Test-Path $patternsFile)) {
         Write-CliOutput "$($C.y)  No patterns file to reset.$($C.n)"
@@ -8307,9 +8410,9 @@ function Invoke-GraduateCmd {
 }
 
 function Invoke-GraduateRun {
-    $patternsFile = Join-Path $Script:AGENTX_DIR 'patterns' 'discovered.yaml'
+    $patternsFile = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'discovered.yaml'
     $skillsDir = Join-Path $Script:ROOT '.github' 'skills'
-    $archiveDir = Join-Path $Script:AGENTX_DIR 'patterns' 'archive'
+    $archiveDir = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'archive'
 
     if (-not (Test-Path $patternsFile)) {
         Write-CliOutput "$($C.y)  No patterns found. Run 'agentx discover' first.$($C.n)"
@@ -8432,7 +8535,7 @@ function Invoke-GraduateRun {
 
     # Remove graduated patterns from active file
     $remainingPatterns = @($patterns | Where-Object { $_.id -notin $graduatedIds })
-    $remainingYaml = "# AgentX Discovered Patterns`n"
+    $remainingYaml = "# Frontier Discovered Patterns`n"
     $remainingYaml += "# Auto-generated by 'agentx discover' -- do not edit manually`n"
     $remainingYaml += "# Patterns with confidence > 0.80 can be graduated to skills via 'agentx graduate'`n"
     $remainingYaml += "# Last updated: $now`n`n"
@@ -8464,7 +8567,7 @@ function Invoke-GraduateRun {
 }
 
 function Invoke-GraduateList {
-    $patternsFile = Join-Path $Script:AGENTX_DIR 'patterns' 'discovered.yaml'
+    $patternsFile = Join-Path $Script:FRONTIER_STATE_DIR 'patterns' 'discovered.yaml'
 
     if (-not (Test-Path $patternsFile)) {
         Write-CliOutput "$($C.y)  No patterns found. Run 'agentx discover' first.$($C.n)"

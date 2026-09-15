@@ -2,7 +2,7 @@
 name: "data-analysis"
 description: 'Analyze structured data across CSV, JSON, SQL, and DataFrame workflows with exploration, transformation, and visualization. Use when exploring datasets with pandas/polars, running SQL queries on files with DuckDB, transforming data pipelines, or generating data visualizations.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

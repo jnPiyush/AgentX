@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerParallelDeliveryCommands } from '../../commands/parallel-delivery';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import * as parallelFacade from '../../parallel/parallel-delivery';
 
 describe('registerParallelDeliveryCommands', () => {
@@ -26,7 +26,7 @@ describe('registerParallelDeliveryCommands', () => {
       replace: sandbox.stub(),
       onDidChangeLogLevel: sandbox.stub(),
       logLevel: 1,
-      name: 'AgentX Bounded Parallel',
+      name: 'Frontier Bounded Parallel',
     } as unknown as vscode.LogOutputChannel;
   }
 
@@ -47,30 +47,30 @@ describe('registerParallelDeliveryCommands', () => {
   });
 
   it('registers bounded parallel commands', () => {
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
     const registerCommand = vscode.commands.registerCommand as sinon.SinonStub;
-    assert.ok(registerCommand.calledWith('agentx.showBoundedParallelRuns'));
-    assert.ok(registerCommand.calledWith('agentx.assessBoundedParallelDelivery'));
-    assert.ok(registerCommand.calledWith('agentx.startBoundedParallelDelivery'));
-    assert.ok(registerCommand.calledWith('agentx.reconcileBoundedParallelRun'));
+    assert.ok(registerCommand.calledWith('frontier.showBoundedParallelRuns'));
+    assert.ok(registerCommand.calledWith('frontier.assessBoundedParallelDelivery'));
+    assert.ok(registerCommand.calledWith('frontier.startBoundedParallelDelivery'));
+    assert.ok(registerCommand.calledWith('frontier.reconcileBoundedParallelRun'));
   });
 
   it('shows a warning when listing runs without a workspace', async () => {
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: undefined } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: undefined } as FrontierContext);
     const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
 
-    await registeredCallbacks['agentx.showBoundedParallelRuns']!();
+    await registeredCallbacks['frontier.showBoundedParallelRuns']!();
 
     assert.ok(warnSpy.calledOnce);
   });
 
   it('shows warnings for assess, start, and reconcile without a workspace', async () => {
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: undefined } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: undefined } as FrontierContext);
     const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
 
-    await registeredCallbacks['agentx.assessBoundedParallelDelivery']!();
-    await registeredCallbacks['agentx.startBoundedParallelDelivery']!();
-    await registeredCallbacks['agentx.reconcileBoundedParallelRun']!();
+    await registeredCallbacks['frontier.assessBoundedParallelDelivery']!();
+    await registeredCallbacks['frontier.startBoundedParallelDelivery']!();
+    await registeredCallbacks['frontier.reconcileBoundedParallelRun']!();
 
     assert.equal(warnSpy.callCount, 3);
   });
@@ -80,9 +80,9 @@ describe('registerParallelDeliveryCommands', () => {
     sandbox.stub(vscode.window, 'createOutputChannel').returns(channel);
     sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([]);
 
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.showBoundedParallelRuns']!();
+    await registeredCallbacks['frontier.showBoundedParallelRuns']!();
 
     assert.ok((channel.clear as sinon.SinonStub).calledOnce);
     assert.ok((channel.appendLine as sinon.SinonStub).calledOnce);
@@ -93,11 +93,11 @@ describe('registerParallelDeliveryCommands', () => {
     sandbox.stub(parallelFacade, 'listBoundedParallelRuns').rejects(new Error('list failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.showBoundedParallelRuns']!();
+    await registeredCallbacks['frontier.showBoundedParallelRuns']!();
 
-    assert.ok(errorSpy.calledOnceWith('AgentX failed to list bounded parallel runs: list failed'));
+    assert.ok(errorSpy.calledOnceWith('Frontier failed to list bounded parallel runs: list failed'));
   });
 
   it('assesses bounded parallel delivery for a selected issue scope', async () => {
@@ -115,9 +115,9 @@ describe('registerParallelDeliveryCommands', () => {
     sandbox.stub(parallelFacade, 'renderBoundedParallelRunsText').returns('assessment');
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.assessBoundedParallelDelivery']!();
+    await registeredCallbacks['frontier.assessBoundedParallelDelivery']!();
 
     assert.ok((parallelFacade.assessBoundedParallelDelivery as sinon.SinonStub).calledOnce);
     assert.deepEqual((parallelFacade.assessBoundedParallelDelivery as sinon.SinonStub).firstCall.args[1], {
@@ -144,11 +144,11 @@ describe('registerParallelDeliveryCommands', () => {
     sandbox.stub(parallelFacade, 'assessBoundedParallelDelivery').rejects(new Error('assessment failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.assessBoundedParallelDelivery']!();
+    await registeredCallbacks['frontier.assessBoundedParallelDelivery']!();
 
-    assert.ok(errorSpy.calledOnceWith('AgentX failed to assess bounded parallel delivery: assessment failed'));
+    assert.ok(errorSpy.calledOnceWith('Frontier failed to assess bounded parallel delivery: assessment failed'));
   });
 
   it('starts an eligible bounded parallel run', async () => {
@@ -158,9 +158,9 @@ describe('registerParallelDeliveryCommands', () => {
     sandbox.stub(parallelFacade, 'startBoundedParallelDelivery').resolves({ parallelId: 'PAR-1' } as any);
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.startBoundedParallelDelivery']!();
+    await registeredCallbacks['frontier.startBoundedParallelDelivery']!();
 
     assert.ok((parallelFacade.startBoundedParallelDelivery as sinon.SinonStub).calledWithMatch(sinon.match.any, {
       parallelId: 'PAR-1',
@@ -183,12 +183,12 @@ describe('registerParallelDeliveryCommands', () => {
     sandbox.stub(parallelFacade, 'listBoundedParallelRuns').resolves([{ parallelId: 'PAR-1', title: 'Run', assessment: { decision: 'eligible' } } as any]);
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.startBoundedParallelDelivery']!();
+    await registeredCallbacks['frontier.startBoundedParallelDelivery']!();
 
     assert.ok(errorSpy.calledOnce);
-    assert.ok(String(errorSpy.firstCall.args[0]).includes('AgentX failed to start bounded parallel delivery:'));
+    assert.ok(String(errorSpy.firstCall.args[0]).includes('Frontier failed to start bounded parallel delivery:'));
   });
 
   it('shows an error when bounded parallel start fails', async () => {
@@ -198,11 +198,11 @@ describe('registerParallelDeliveryCommands', () => {
     sandbox.stub(parallelFacade, 'startBoundedParallelDelivery').rejects(new Error('start failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.startBoundedParallelDelivery']!();
+    await registeredCallbacks['frontier.startBoundedParallelDelivery']!();
 
-    assert.ok(errorSpy.calledOnceWith('AgentX failed to start bounded parallel delivery: start failed'));
+    assert.ok(errorSpy.calledOnceWith('Frontier failed to start bounded parallel delivery: start failed'));
   });
 
   it('reconciles a bounded parallel run', async () => {
@@ -216,9 +216,9 @@ describe('registerParallelDeliveryCommands', () => {
     sandbox.stub(parallelFacade, 'reconcileBoundedParallelRun').resolves({ parallelId: 'PAR-1' } as any);
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.reconcileBoundedParallelRun']!();
+    await registeredCallbacks['frontier.reconcileBoundedParallelRun']!();
 
     assert.ok((parallelFacade.reconcileBoundedParallelRun as sinon.SinonStub).calledWithMatch(sinon.match.any, {
       parallelId: 'PAR-1',
@@ -240,10 +240,10 @@ describe('registerParallelDeliveryCommands', () => {
     sandbox.stub(parallelFacade, 'reconcileBoundedParallelRun').rejects(new Error('reconcile failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerParallelDeliveryCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.reconcileBoundedParallelRun']!();
+    await registeredCallbacks['frontier.reconcileBoundedParallelRun']!();
 
-    assert.ok(errorSpy.calledOnceWith('AgentX failed to reconcile bounded parallel output: reconcile failed'));
+    assert.ok(errorSpy.calledOnceWith('Frontier failed to reconcile bounded parallel output: reconcile failed'));
   });
 });

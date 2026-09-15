@@ -5,7 +5,7 @@
     Run test coverage analysis and check coverage thresholds
 .DESCRIPTION
     Runs test suite with line-level coverage analysis using nyc/istanbul.
-    Based on lessons learned from AgentX v7.6.0 - addresses need for line-level coverage metrics.
+    Based on lessons learned from Frontier v7.6.0 - addresses need for line-level coverage metrics.
 .EXAMPLE
     ./scripts/check-coverage.ps1
     ./scripts/check-coverage.ps1 -Html  # Generate HTML report 
@@ -23,7 +23,7 @@ param(
     [int]$MinBranches = 80
 )
 
-Write-Host "=== AgentX Coverage Analysis ===" -ForegroundColor Cyan
+Write-Host "=== Frontier Coverage Analysis ===" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if target directory exists

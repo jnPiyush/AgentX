@@ -65,11 +65,11 @@ def main() -> None:
     if str(pilot_root) not in sys.path:
         sys.path.insert(0, str(pilot_root))
 
-    from agentx_skillopt.adapter import AgentXScrubAdapter
+    from agentx_skillopt.adapter import FrontierScrubAdapter
     import scripts.train as skillopt_train
 
     _install_prompt_fallbacks()
-    skillopt_train._ENV_REGISTRY["agentx_scrub"] = AgentXScrubAdapter
+    skillopt_train._ENV_REGISTRY["agentx_scrub"] = FrontierScrubAdapter
     if not any(arg == "--config" for arg in sys.argv[1:]):
         sys.argv.extend(["--config", str(pilot_root / "config.yaml")])
     config_path = _extract_config_path(sys.argv[1:], pilot_root / "config.yaml")

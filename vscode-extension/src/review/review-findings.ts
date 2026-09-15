@@ -1,4 +1,4 @@
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { encodeBase64 } from './review-findingsInternals';
 import type {
   ReviewFindingPromotionResult,
@@ -29,12 +29,12 @@ export type {
 } from './review-findingsTypes';
 
 export async function promoteReviewFinding(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   findingId: string,
 ): Promise<ReviewFindingPromotionResult> {
   const root = agentx.workspaceRoot;
   if (!root) {
-    throw new Error('AgentX needs an open workspace to promote review findings.');
+    throw new Error('Frontier needs an open workspace to promote review findings.');
   }
 
   const finding = findReviewFindingById(root, findingId);
@@ -62,7 +62,7 @@ export async function promoteReviewFinding(
   ]);
   const match = output.match(/#(\d+)/);
   if (!match) {
-    throw new Error('AgentX created the issue, but the new issue number could not be parsed.');
+    throw new Error('Frontier created the issue, but the new issue number could not be parsed.');
   }
 
   const issueNumber = Number(match[1]);
@@ -83,18 +83,18 @@ export {
  renderReviewFindingsText,
 };
 
-export function getReviewFindingSummary(agentx: AgentXContext): string {
+export function getReviewFindingSummary(agentx: FrontierContext): string {
  return getReviewFindingSummaryForRoot(agentx.workspaceRoot);
 }
 
-export function getReviewFindingTooltip(agentx: AgentXContext): string {
+export function getReviewFindingTooltip(agentx: FrontierContext): string {
  return getReviewFindingTooltipForRoot(agentx.workspaceRoot);
 }
 
-export function getPromotableFindingSummary(agentx: AgentXContext): string {
+export function getPromotableFindingSummary(agentx: FrontierContext): string {
  return getPromotableFindingSummaryForRoot(agentx.workspaceRoot);
 }
 
-export function getPromotableFindingTooltip(agentx: AgentXContext): string {
+export function getPromotableFindingTooltip(agentx: FrontierContext): string {
  return getPromotableFindingTooltipForRoot(agentx.workspaceRoot);
 }

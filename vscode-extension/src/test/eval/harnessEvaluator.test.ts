@@ -2,11 +2,11 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import type { AgentXContext } from '../../agentxContext';
+import type { FrontierContext } from '../../frontierContext';
 import { evaluateHarnessQuality } from '../../eval/harnessEvaluator';
 
 function createWorkspaceRoot(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-eval-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-eval-'));
   fs.mkdirSync(path.join(root, '.agentx', 'state'), { recursive: true });
   fs.mkdirSync(path.join(root, 'docs', 'execution', 'plans'), { recursive: true });
   fs.mkdirSync(path.join(root, 'docs', 'execution', 'progress'), { recursive: true });
@@ -32,7 +32,7 @@ function createAgentxStub(root: string) {
         .sort();
     },
     getStatePath: (fileName: string) => path.join(root, '.agentx', 'state', fileName),
-  } as unknown as AgentXContext;
+  } as unknown as FrontierContext;
 }
 
 describe('harness evaluator', () => {

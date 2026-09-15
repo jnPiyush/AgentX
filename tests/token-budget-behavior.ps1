@@ -72,7 +72,7 @@ try {
     Assert-True ((Invoke-Counter @('-Action', 'check', '-Path', 'missing.md')).code -eq 2) 'Missing scan input fails explicitly'
     $cliOutput = & pwsh -NoProfile -File (Join-Path $repoRoot '.agentx/agentx-cli.ps1') tokens count -Path README.md -Json
     $cliResult = $cliOutput | Out-String | ConvertFrom-Json
-    Assert-True ($LASTEXITCODE -eq 0 -and $cliResult.scannedFiles -eq 1) 'AgentX CLI forwards token Path and Json options'
+    Assert-True ($LASTEXITCODE -eq 0 -and $cliResult.scannedFiles -eq 1) 'Frontier CLI forwards token Path and Json options'
     $emptyDir = Join-Path $workspace 'empty'
     New-Item -ItemType Directory -Path $emptyDir | Out-Null
     $emptyResult = Invoke-Counter @('-Action', 'check', '-Path', 'empty')

@@ -2,7 +2,7 @@
 name: "security"
 description: 'Implement production security practices covering OWASP Top 10, input validation, injection prevention, and secrets management. Use when hardening applications against vulnerabilities, implementing authentication/authorization, managing secrets, configuring HTTPS/TLS, or conducting security audits.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

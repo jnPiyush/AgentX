@@ -6,8 +6,8 @@ import * as path from 'path';
 import * as sinon from 'sinon';
 import { createMockResponseStream } from '../mocks/vscode';
 import {
-  getAgentXChatFollowups,
-  handleAgentXChatRequest,
+  getFrontierChatFollowups,
+  handleFrontierChatRequest,
   resetChatParticipantStateForTests,
 } from '../../chat/chatParticipant';
 
@@ -15,7 +15,7 @@ describe('chatParticipant', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-chat-learnings-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-chat-learnings-'));
     fs.mkdirSync(path.join(tmpDir, 'docs', 'artifacts', 'learnings'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'docs', 'guides'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'docs', 'artifacts', 'reviews', 'findings'), { recursive: true });
@@ -35,7 +35,7 @@ describe('chatParticipant', () => {
         'sources: docs/artifacts/adr/ADR-163.md,docs/artifacts/specs/SPEC-163.md',
         '---',
         '## Summary',
-        'Treat compound capture as a formal post-review phase over existing AgentX artifacts.',
+        'Treat compound capture as a formal post-review phase over existing Frontier artifacts.',
         '',
         '## Guidance',
         '- Resolve capture after review rather than during early implementation.',
@@ -89,7 +89,7 @@ describe('chatParticipant', () => {
         '',
         '## Recommended Action',
         '',
-        '- Promote the finding into the normal AgentX backlog.',
+        '- Promote the finding into the normal Frontier backlog.',
         '',
         '## Promotion Notes',
         '',
@@ -119,12 +119,12 @@ describe('chatParticipant', () => {
         onLine?.('  [SELF-REVIEW] Approved on iteration 1', 'stdout');
         onLine?.('  [SELF-REVIEW] Approved on iteration 2', 'stdout');
         onLine?.('  [SELF-REVIEW] Approved on iteration 3', 'stdout');
-        return '[SELF-REVIEW SUMMARY] Completed 3/3 required review iterations\n[SELF-REVIEW SUMMARY] Iteration 1: APPROVED (0 findings, 0 actionable, minimum not yet met)\n[SELF-REVIEW SUMMARY] Iteration 2: APPROVED (0 findings, 0 actionable, minimum not yet met)\n[SELF-REVIEW SUMMARY] Iteration 3: APPROVED (0 findings, 0 actionable)\n\nFinal answer from AgentX';
+        return '[SELF-REVIEW SUMMARY] Completed 3/3 required review iterations\n[SELF-REVIEW SUMMARY] Iteration 1: APPROVED (0 findings, 0 actionable, minimum not yet met)\n[SELF-REVIEW SUMMARY] Iteration 2: APPROVED (0 findings, 0 actionable, minimum not yet met)\n[SELF-REVIEW SUMMARY] Iteration 3: APPROVED (0 findings, 0 actionable)\n\nFinal answer from Frontier';
       },
       clearPendingClarification: async () => undefined,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'run engineer implement the login fix' } as any,
       progressStream as any,
       agentx as any,
@@ -144,7 +144,7 @@ describe('chatParticipant', () => {
     assert.ok(progressStream.getMarkdown().includes('Asked architect about auth flow.'));
     assert.ok(progressStream.getMarkdown().includes('Guidance: Use the existing auth provider and preserve refresh tokens.'));
     assert.ok(progressStream.getMarkdown().includes('[SELF-REVIEW SUMMARY] Completed 3/3 required review iterations'));
-    assert.ok(progressStream.getMarkdown().includes('Final answer from AgentX'));
+    assert.ok(progressStream.getMarkdown().includes('Final answer from Frontier'));
   });
 
   it('shows usage guidance for non-run prompts', async () => {
@@ -154,7 +154,7 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'help me route this task' } as any,
       response as any,
       agentx as any,
@@ -178,7 +178,7 @@ describe('chatParticipant', () => {
     };
 
     try {
-      await handleAgentXChatRequest(
+      await handleFrontierChatRequest(
         { prompt: 'initialize local runtime' } as any,
         response as any,
         agentx as any,
@@ -187,19 +187,19 @@ describe('chatParticipant', () => {
       (vscode.commands as any).executeCommand = originalExecuteCommand;
     }
 
-    assert.deepEqual(executed, ['agentx.initializeLocalRuntime']);
-    assert.ok(response.getMarkdown().includes('Opened **AgentX: Initialize Local Runtime** for this workspace.'));
+    assert.deepEqual(executed, ['frontier.initializeLocalRuntime']);
+    assert.ok(response.getMarkdown().includes('Opened **Frontier: Initialize Local Runtime** for this workspace.'));
   });
 
   it('launches Initialize Local Runtime for natural-language phrasings', async () => {
     const phrasings = [
       'initialize agentx',
-      'Initialize AgentX',
+      'Initialize Frontier',
       'initalize agentx',
       'init agent x',
       'setup agentx',
       'agentx initialize',
-      'Please initialize AgentX',
+      'Please initialize Frontier',
       'agentx: initialize workspace',
     ];
 
@@ -218,7 +218,7 @@ describe('chatParticipant', () => {
       };
 
       try {
-        await handleAgentXChatRequest(
+        await handleFrontierChatRequest(
           { prompt } as any,
           response as any,
           agentx as any,
@@ -227,9 +227,9 @@ describe('chatParticipant', () => {
         (vscode.commands as any).executeCommand = originalExecuteCommand;
       }
 
-      assert.deepEqual(executed, ['agentx.initializeLocalRuntime'], `phrasing should match: ${prompt}`);
+      assert.deepEqual(executed, ['frontier.initializeLocalRuntime'], `phrasing should match: ${prompt}`);
       assert.ok(
-        response.getMarkdown().includes('Opened **AgentX: Initialize Local Runtime** for this workspace.'),
+        response.getMarkdown().includes('Opened **Frontier: Initialize Local Runtime** for this workspace.'),
         `phrasing should produce launch message: ${prompt}`,
       );
     }
@@ -250,7 +250,7 @@ describe('chatParticipant', () => {
       getPendingSetup: async () => undefined,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'add remote adapter' } as any,
       response as any,
       agentx as any,
@@ -311,7 +311,7 @@ describe('chatParticipant', () => {
           clearPendingSetup: async () => undefined,
         };
 
-        await handleAgentXChatRequest(
+        await handleFrontierChatRequest(
           { prompt: testCase.prompt } as any,
           response as any,
           agentx as any,
@@ -372,7 +372,7 @@ describe('chatParticipant', () => {
         const originalShowInputBox = vscode.window.showInputBox;
         (vscode.window as any).showInputBox = async () => undefined;
 
-        await handleAgentXChatRequest(
+        await handleFrontierChatRequest(
           { prompt: testCase.prompt } as any,
           response as any,
           agentx as any,
@@ -403,7 +403,7 @@ describe('chatParticipant', () => {
       getPendingClarification: async () => undefined,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'switch llm' } as any,
       response as any,
       agentx as any,
@@ -452,14 +452,14 @@ describe('chatParticipant', () => {
       (vscode.commands as any).executeCommand = async () => undefined;
       (vscode.window as any).showInputBox = async () => 'litellm-secret';
 
-      await handleAgentXChatRequest(
+      await handleFrontierChatRequest(
         { prompt: 'switch llm' } as any,
         response as any,
         agentx as any,
       );
 
       const applyResponse = createMockResponseStream();
-      await handleAgentXChatRequest(
+      await handleFrontierChatRequest(
         { prompt: 'claude local' } as any,
         applyResponse as any,
         agentx as any,
@@ -511,14 +511,14 @@ describe('chatParticipant', () => {
       (vscode.commands as any).executeCommand = async () => undefined;
       (vscode.window as any).showInputBox = async () => 'sk-test-openai-key';
 
-      await handleAgentXChatRequest(
+      await handleFrontierChatRequest(
         { prompt: 'switch llm' } as any,
         response as any,
         agentx as any,
       );
 
       const applyResponse = createMockResponseStream();
-      await handleAgentXChatRequest(
+      await handleFrontierChatRequest(
         { prompt: 'openai' } as any,
         applyResponse as any,
         agentx as any,
@@ -568,7 +568,7 @@ describe('chatParticipant', () => {
     try {
       (vscode.commands as any).executeCommand = async () => undefined;
 
-      await handleAgentXChatRequest(
+      await handleFrontierChatRequest(
         { prompt: 'connect ado' } as any,
         response as any,
         agentx as any,
@@ -584,7 +584,7 @@ describe('chatParticipant', () => {
       assert.ok(response.getMarkdown().includes('Azure DevOps adapter setup'));
 
       const applyResponse = createMockResponseStream();
-      await handleAgentXChatRequest(
+      await handleFrontierChatRequest(
         { prompt: 'contoso/Platform' } as any,
         applyResponse as any,
         agentx as any,
@@ -618,7 +618,7 @@ describe('chatParticipant', () => {
     };
 
     try {
-      await handleAgentXChatRequest(
+      await handleFrontierChatRequest(
         { prompt: 'add plugin' } as any,
         response as any,
         agentx as any,
@@ -627,11 +627,11 @@ describe('chatParticipant', () => {
       (vscode.commands as any).executeCommand = originalExecuteCommand;
     }
 
-    assert.deepEqual(executed, ['agentx.addPlugin']);
-    assert.ok(response.getMarkdown().includes('Opened **AgentX: Add Plugin** for this workspace.'));
+    assert.deepEqual(executed, ['frontier.addPlugin']);
+    assert.ok(response.getMarkdown().includes('Opened **Frontier: Add Plugin** for this workspace.'));
   });
 
-  it('explains that formal AgentX execution needs workspace initialization', async () => {
+  it('explains that formal Frontier execution needs workspace initialization', async () => {
     const response = createMockResponseStream();
     const agentx = {
       checkInitialized: async () => true,
@@ -639,15 +639,15 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'run engineer implement the login fix' } as any,
       response as any,
       agentx as any,
     );
 
     const markdown = response.getMarkdown();
-    assert.ok(markdown.includes('AgentX workspace initialization is not available in this workspace.'));
-    assert.ok(markdown.includes('AgentX: Initialize Local Runtime'));
+    assert.ok(markdown.includes('Frontier workspace initialization is not available in this workspace.'));
+    assert.ok(markdown.includes('Frontier: Initialize Local Runtime'));
   });
 
   it('returns ranked planning learnings from chat', async () => {
@@ -657,7 +657,7 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'learnings planning workflow review' } as any,
       response as any,
       agentx as any,
@@ -676,7 +676,7 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'capture guidance' } as any,
       response as any,
       agentx as any,
@@ -694,7 +694,7 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'brainstorm workflow capture loop' } as any,
       response as any,
       agentx as any,
@@ -730,7 +730,7 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'workflow next step' } as any,
       response as any,
       agentx as any,
@@ -758,7 +758,7 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'kick off review' } as any,
       response as any,
       agentx as any,
@@ -776,7 +776,7 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'compound' } as any,
       response as any,
       agentx as any,
@@ -794,11 +794,11 @@ describe('chatParticipant', () => {
     fs.mkdirSync(path.join(tmpDir, 'vscode-extension', 'src', 'views'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'vscode-extension', 'src', 'chat'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'vscode-extension', 'src'), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'package.json'), JSON.stringify({ contributes: { commands: [{ command: 'agentx.runWorkflow' }, { command: 'agentx.showReviewLearnings' }, { command: 'agentx.showKnowledgeCaptureGuidance' }] } }), 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'package.json'), JSON.stringify({ contributes: { commands: [{ command: 'frontier.runWorkflow' }, { command: 'frontier.showReviewLearnings' }, { command: 'frontier.showKnowledgeCaptureGuidance' }] } }), 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'views', 'workTreeProvider.ts'), 'Show workflow steps\nagentx.runWorkflow\nReview learnings\nagentx.showReviewLearnings\nCapture guidance\nagentx.showKnowledgeCaptureGuidance\n', 'utf-8');
-    fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'views', 'qualityTreeProvider.ts'), 'agentx.showAgentNativeReview\n', 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'views', 'qualityTreeProvider.ts'), 'frontier.showAgentNativeReview\n', 'utf-8');
     fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'chat', 'chatParticipant.ts'), 'run engineer\nrun reviewer\nrun architect\nlearnings review\nshowReviewLearnings\ncapture guidance\nshowKnowledgeCaptureGuidance\n', 'utf-8');
-    fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'agentxContext.ts'), 'workspaceRoot\ngetPendingClarification\nlistExecutionPlanFiles\ngetStatePath\n', 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, 'vscode-extension', 'src', 'frontierContext.ts'), 'workspaceRoot\ngetPendingClarification\nlistExecutionPlanFiles\ngetStatePath\n', 'utf-8');
 
     const response = createMockResponseStream();
     const agentx = {
@@ -806,7 +806,7 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'agent-native review' } as any,
       response as any,
       agentx as any,
@@ -824,7 +824,7 @@ describe('chatParticipant', () => {
       workspaceRoot: tmpDir,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'review findings' } as any,
       response as any,
       agentx as any,
@@ -835,7 +835,7 @@ describe('chatParticipant', () => {
     assert.ok(markdown.includes('FINDING-164-001'));
   });
 
-  it('promotes a finding from chat through the AgentX issue flow', async () => {
+  it('promotes a finding from chat through the Frontier issue flow', async () => {
     const response = createMockResponseStream();
     const agentx = {
       checkInitialized: async () => true,
@@ -843,7 +843,7 @@ describe('chatParticipant', () => {
       runCli: async () => 'Created issue #88: Resolve review finding',
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'promote finding FINDING-164-001' } as any,
       response as any,
       agentx as any,
@@ -870,7 +870,7 @@ describe('chatParticipant', () => {
       clearPendingClarification: async () => undefined,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'run engineer implement the login fix' } as any,
       response as any,
       agentx as any,
@@ -884,7 +884,7 @@ describe('chatParticipant', () => {
     });
     assert.ok(response.getMarkdown().includes('Clarification Discussion'));
     assert.ok(response.getMarkdown().includes('Escalated for human input: Clarification not resolved after 6 iterations.'));
-    assert.ok(response.getMarkdown().includes('@agentx continue'));
+    assert.ok(response.getMarkdown().includes('@frontier continue'));
   });
 
   it('summarizes large output in chat and writes the full transcript to the output channel', async () => {
@@ -898,7 +898,7 @@ describe('chatParticipant', () => {
       '[SELF-REVIEW SUMMARY] Iteration 1: APPROVED (0 findings, 0 actionable, minimum not yet met)',
       '[SELF-REVIEW SUMMARY] Iteration 2: APPROVED (0 findings, 0 actionable, minimum not yet met)',
       '[SELF-REVIEW SUMMARY] Iteration 3: APPROVED (0 findings, 0 actionable)',
-      'Final answer from AgentX',
+      'Final answer from Frontier',
     ].join('\n');
     const written: string[] = [];
     const originalCreateOutputChannel = vscode.window.createOutputChannel;
@@ -919,7 +919,7 @@ describe('chatParticipant', () => {
     };
 
     try {
-      await handleAgentXChatRequest(
+      await handleFrontierChatRequest(
         { prompt: 'run engineer generate a large report' } as any,
         response as any,
         agentx as any,
@@ -930,16 +930,16 @@ describe('chatParticipant', () => {
 
     const markdown = response.getMarkdown();
     assert.ok(markdown.includes('Large output detected'));
-    assert.ok(markdown.includes('Full output was written to the **AgentX Chat** output channel'));
+    assert.ok(markdown.includes('Full output was written to the **Frontier Chat** output channel'));
     assert.ok(markdown.includes('Execution summary:'));
     assert.ok(markdown.includes('[EXECUTION SUMMARY] COMPACTION: 8 messages pruned to stay within the token threshold.'));
     assert.ok(markdown.includes('Self-review summary:'));
     assert.ok(markdown.includes('[SELF-REVIEW SUMMARY] Completed 3/3 required review iterations'));
     assert.ok(/\.\.\. \(\d+ lines omitted\) \.\.\./.test(markdown));
     assert.ok(!markdown.includes(largeOutput));
-    assert.ok(written.some((value) => value.includes('AgentX Chat Run: engineer')));
+    assert.ok(written.some((value) => value.includes('Frontier Chat Run: engineer')));
     assert.ok(written.some((value) => value.includes('line 1')));
-    assert.ok(written.some((value) => value.includes('Final answer from AgentX')));
+    assert.ok(written.some((value) => value.includes('Final answer from Frontier')));
   });
 
   it('resumes a pending clarification with continue', async () => {
@@ -964,7 +964,7 @@ describe('chatParticipant', () => {
       clearPendingClarification: async () => { cleared = true; },
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'continue use the existing auth flow' } as any,
       response as any,
       agentx as any,
@@ -1001,7 +1001,7 @@ describe('chatParticipant', () => {
       clearPendingClarification: async () => undefined,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'continue use the existing auth flow' } as any,
       response as any,
       agentx as any,
@@ -1027,15 +1027,15 @@ describe('chatParticipant', () => {
       }),
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'continue use the existing auth flow' } as any,
       response as any,
       agentx as any,
     );
 
     const markdown = response.getMarkdown();
-    assert.ok(markdown.includes('AgentX workspace initialization is not available in this workspace.'));
-    assert.ok(markdown.includes('AgentX: Initialize Local Runtime'));
+    assert.ok(markdown.includes('Frontier workspace initialization is not available in this workspace.'));
+    assert.ok(markdown.includes('Frontier: Initialize Local Runtime'));
   });
 
   it('shows pending clarification context for bare continue', async () => {
@@ -1055,7 +1055,7 @@ describe('chatParticipant', () => {
       }),
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'continue' } as any,
       response as any,
       agentx as any,
@@ -1088,7 +1088,7 @@ describe('chatParticipant', () => {
       clearPendingClarification: async () => undefined,
     };
 
-    await handleAgentXChatRequest(
+    await handleFrontierChatRequest(
       { prompt: 'Use the existing auth flow and do not change token semantics.' } as any,
       response as any,
       agentx as any,
@@ -1110,7 +1110,7 @@ describe('chatParticipant', () => {
       }),
     };
 
-    const followups = await getAgentXChatFollowups(agentx as any);
+    const followups = await getFrontierChatFollowups(agentx as any);
     assert.equal(followups.length, 2);
     assert.equal(followups[0].prompt, 'continue');
     assert.ok(followups[0].label?.includes('engineer'));
@@ -1127,7 +1127,7 @@ describe('chatParticipant', () => {
       getPendingClarification: async () => undefined,
     };
 
-    const followups = await getAgentXChatFollowups(agentx as any);
+    const followups = await getFrontierChatFollowups(agentx as any);
     assert.equal(followups.length, 2);
     assert.equal(followups[0].prompt, 'continue');
     assert.equal(followups[1].prompt, 'cancel setup');

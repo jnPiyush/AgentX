@@ -129,7 +129,7 @@ export const UXDemo: React.FC = () => {
         startFrame={fps * 5}
         durationFrames={fps * 3}
         accent={accent}
-        label="AgentX is sketching wireframes"
+        label="Frontier is sketching wireframes"
         elapsedSeconds={9}
       />
       <Wireframe startFrame={fps * 9} durationFrames={fps * 18} accent={accent} />

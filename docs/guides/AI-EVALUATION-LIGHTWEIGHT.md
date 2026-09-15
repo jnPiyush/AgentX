@@ -65,7 +65,7 @@ The current repo example uses a simple issue-classification prompt plus a determ
 ```text
 prompts/
 evaluation/
-  agentx.eval.yaml
+  frontier.eval.yaml
   baseline.json
   datasets/
   rubrics/

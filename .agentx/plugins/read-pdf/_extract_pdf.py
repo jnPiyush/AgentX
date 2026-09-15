@@ -1,4 +1,4 @@
-"""AgentX read-pdf extractor: pdf -> markdown with page anchors. Uses pypdf."""
+"""Frontier read-pdf extractor: pdf -> markdown with page anchors. Uses pypdf."""
 
 import sys, json, pathlib
 from pypdf import PdfReader

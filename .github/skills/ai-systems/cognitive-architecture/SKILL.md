@@ -2,7 +2,7 @@
 name: "cognitive-architecture"
 description: 'Design and implement the cognitive architecture of AI agents including memory systems, RAG pipelines, and state management. Use when defining agent memory strategy (short/long-term), building RAG pipelines (knowledge retrieval), designing state management systems, or selecting vector databases for semantic search.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2026-02-11"
  updated: "2026-02-11"

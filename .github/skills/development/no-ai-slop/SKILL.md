@@ -4,7 +4,7 @@ description: "Edit prose into clearer, more human writing while preserving the w
 user-invocable: true
 argument-hint: "[draft or detect: <draft>]"
 metadata:
-  author: "AgentX; adapted from Peter Yang"
+  author: "Frontier; adapted from Peter Yang"
   version: "1.0.0"
   created: "2026-08-30"
   updated: "2026-08-30"
@@ -18,7 +18,7 @@ compatibility:
 Source: https://github.com/petergyang/no-ai-slop
 Source commit: d30eddb9e04562234f2070b5ee63ca4649d9a05e (MIT).
 Copyright (c) 2026 Peter Yang. See references/LICENSE.txt and repository NOTICE.
-AgentX changes: ASCII examples, progressive disclosure, AgentX routing boundaries,
+Frontier changes: ASCII examples, progressive disclosure, Frontier routing boundaries,
 failure handling, and skill-quality rubric sections.
 -->
 
@@ -74,11 +74,11 @@ Draft supplied?
 ## Why This Is a Skill
 
 General models can improve grammar, but they often normalize every draft toward
-the same polished voice. AgentX's existing anti-slop controls govern UI design,
+the same polished voice. Frontier's existing anti-slop controls govern UI design,
 microcopy, and code. This skill adds a reusable prose-editing contract: observable
 pattern names, voice preservation, non-invention, and a repeatable eval. Those
 constraints are specific enough to retrieve on demand and too narrow to impose on
-every AgentX task.
+every Frontier task.
 
 ## Core Rules
 

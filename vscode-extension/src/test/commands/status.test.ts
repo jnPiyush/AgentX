@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerStatusCommand } from '../../commands/status';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -11,7 +11,7 @@ import { AgentXContext } from '../../agentxContext';
 describe('registerStatusCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
   let registeredCallback: (...args: unknown[]) => unknown;
 
   beforeEach(() => {
@@ -25,7 +25,7 @@ describe('registerStatusCommand', () => {
       checkInitialized: sandbox.stub(),
       runCli: sandbox.stub(),
       listVisibleAgents: sandbox.stub(),
-    } as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    } as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, cb: (...args: unknown[]) => unknown) => {
@@ -40,7 +40,7 @@ describe('registerStatusCommand', () => {
       dispose: () => { /* noop */ },
     });
 
-    registerStatusCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    registerStatusCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
   });
 
   afterEach(() => {
@@ -49,7 +49,7 @@ describe('registerStatusCommand', () => {
 
   it('should register the agentx.showStatus command', () => {
     assert.ok(
-      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.showStatus'),
+      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.showStatus'),
     );
   });
 

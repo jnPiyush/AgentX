@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { readHarnessState } from '../utils/harnessState';
 import { checkHandoffGate, readLoopState } from '../utils/loopStateChecker';
+import { resolveFrontierStatePath } from '../utils/frontierPaths';
 import {
  ArtifactObservation,
  EvaluationAttribution,
@@ -60,7 +61,7 @@ function formatCount(label: string, count: number): string {
 }
 
 function readHarnessPolicy(root: string): HarnessPolicy {
- const configPath = path.join(root, '.agentx', 'config.json');
+ const configPath = resolveFrontierStatePath(root, 'config.json');
  if (!fs.existsSync(configPath)) {
   return { disabledChecks: new Set<string>() };
  }

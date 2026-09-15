@@ -1,10 +1,10 @@
 ---
-description: Python coding standards (AgentX)
+description: Python coding standards (Frontier)
 globs: **/*.py,**/*.pyx
 alwaysApply: false
 ---
 
-# Python (AgentX)
+# Python (Frontier)
 
 Canonical: `.github/instructions/python.instructions.md` and
 `.github/skills/languages/python/SKILL.md` -- read for full standards.

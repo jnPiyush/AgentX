@@ -28,7 +28,7 @@
   "eval_test": true,
   "env": "agentx_scrub",
   "skill_init": ".github/skills/development/scrub/SKILL.md",
-  "out_root": "C:\\Piyush - Personal\\GenAI\\AgentX\\evaluation\\skillopt\\agentx_scrub\\runs\\local-deterministic",
+  "out_root": "C:\\Piyush - Personal\\GenAI\\Frontier\\evaluation\\skillopt\\agentx_scrub\\runs\\local-deterministic",
   "split_mode": "split_dir",
   "split_dir": "evaluation/skillopt/agentx_scrub/data",
   "train_size": 2,

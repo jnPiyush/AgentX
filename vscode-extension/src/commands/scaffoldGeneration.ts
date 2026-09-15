@@ -92,7 +92,7 @@ async function tryGenerateWithCopilot(prompt: string, token?: vscode.Cancellatio
 
 function buildSkillPrompt(details: SkillScaffoldDetails): string {
   return [
-    'You are AgentX Auto generating a complete SKILL.md file.',
+    'You are Frontier Orchestration FDE generating a complete SKILL.md file.',
     'Return raw markdown only. Do not use code fences. Use ASCII only.',
     'The file must start with YAML frontmatter and be valid markdown.',
     `Skill name: ${details.name}`,
@@ -104,7 +104,7 @@ function buildSkillPrompt(details: SkillScaffoldDetails): string {
     `name: "${details.slug}"`,
     `description: "${details.description}"`,
     'metadata:',
-    ' author: "AgentX Auto"',
+    ' author: "Frontier Orchestration FDE"',
     ' version: "1.0.0"',
     ` created: "${todayIsoDate()}"`,
     ` updated: "${todayIsoDate()}"`,
@@ -127,7 +127,7 @@ function buildSkillPrompt(details: SkillScaffoldDetails): string {
 
 function buildAgentPrompt(details: AgentScaffoldDetails): string {
   return [
-    'You are AgentX Auto generating a complete .agent.md file.',
+    'You are Frontier Orchestration FDE generating a complete .agent.md file.',
     'Return raw markdown only. Do not use code fences. Use ASCII only.',
     'The file must start with YAML frontmatter and be valid markdown.',
     `Agent name: ${details.name}`,
@@ -173,7 +173,7 @@ export function buildSkillContentFallback(details: SkillScaffoldDetails): string
 name: "${details.slug}"
 description: "${details.description}"
 metadata:
- author: "AgentX Auto"
+ author: "Frontier Orchestration FDE"
  version: "1.0.0"
  created: "${today}"
  updated: "${today}"

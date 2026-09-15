@@ -14,7 +14,7 @@ describe('sidebar registry', () => {
     sandbox.restore();
   });
 
-  it('creates sidebar providers backed by the shared AgentX context', () => {
+  it('creates sidebar providers backed by the shared Frontier context', () => {
     const agentx = { workspaceRoot: 'c:/repo' } as any;
 
     const providers = createSidebarProviders(agentx);
@@ -38,10 +38,10 @@ describe('sidebar registry', () => {
     refreshSidebarProviders(providers);
 
     assert.equal(registerSpy.callCount, 4);
-    assert.ok(registerSpy.calledWith('agentx-work', providers.workTreeProvider));
-    assert.ok(registerSpy.calledWith('agentx-status', providers.statusTreeProvider));
-    assert.ok(registerSpy.calledWith('agentx-templates', providers.templateProvider));
-    assert.ok(registerSpy.calledWith('agentx-skills', providers.skillProvider));
+    assert.ok(registerSpy.calledWith('frontier-work', providers.workTreeProvider));
+    assert.ok(registerSpy.calledWith('frontier-status', providers.statusTreeProvider));
+    assert.ok(registerSpy.calledWith('frontier-templates', providers.templateProvider));
+    assert.ok(registerSpy.calledWith('frontier-skills', providers.skillProvider));
     assert.ok(providers.workTreeProvider.refresh.calledOnce);
     assert.ok(providers.statusTreeProvider.refresh.calledOnce);
     assert.ok(providers.templateProvider.refresh.calledOnce);

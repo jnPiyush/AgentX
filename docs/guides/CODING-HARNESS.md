@@ -1,6 +1,6 @@
 # Quality-first coding harness
 
-AgentX separates three questions: did the task succeed, does the context fit,
+Frontier separates three questions: did the task succeed, does the context fit,
 and what does the supplied usage cost? A low token count does not answer the
 first question. A static file estimate does not answer the last.
 
@@ -22,11 +22,11 @@ first question. A static file estimate does not answer the last.
 ## Local commands
 
 ```powershell
-pwsh .agentx/agentx.ps1 route -Task "quick authentication fix" -Json
-pwsh .agentx/agentx.ps1 tokens report -Json
-pwsh .agentx/agentx.ps1 tokens check -Path .github/instructions
-pwsh .agentx/agentx.ps1 budget -File request.json -Json
-pwsh .agentx/agentx.ps1 scrub -Path src -Json
+pwsh .agentx/frontier.ps1 route -Task "quick authentication fix" -Json
+pwsh .agentx/frontier.ps1 tokens report -Json
+pwsh .agentx/frontier.ps1 tokens check -Path .github/instructions
+pwsh .agentx/frontier.ps1 budget -File request.json -Json
+pwsh .agentx/frontier.ps1 scrub -Path src -Json
 pwsh scripts/score-code-quality.ps1 -Mode Scope -Json
 pwsh scripts/score-code-quality.ps1 -Mode Validate -ReportPath review.json
 ```

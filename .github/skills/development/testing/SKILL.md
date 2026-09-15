@@ -2,7 +2,7 @@
 name: "testing"
 description: 'Apply testing strategies including test pyramid, unit/integration/e2e testing, and coverage requirements. Use when writing unit tests, designing integration test suites, implementing end-to-end tests, measuring test coverage, or setting up continuous testing pipelines.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

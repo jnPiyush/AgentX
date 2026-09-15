@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- Loop State Checker (extension-side facade)
+// Frontier -- Loop State Checker (extension-side facade)
 // ---------------------------------------------------------------------------
 //
 // Thin facade over the framework-free shared loop runtime (`../runtime`). The

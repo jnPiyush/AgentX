@@ -32,8 +32,8 @@ PowerShell 7; they require no network connection or provider credentials.
 ## File budgets
 
 ```powershell
-pwsh .agentx/agentx.ps1 tokens report -Json
-pwsh .agentx/agentx.ps1 tokens check -Path .github/instructions
+pwsh .agentx/frontier.ps1 tokens report -Json
+pwsh .agentx/frontier.ps1 tokens check -Path .github/instructions
 pwsh scripts/token-counter.ps1 -Action count -Path .github/skills/development/token-optimizer -Json
 ```
 
@@ -55,7 +55,7 @@ the active host's verified context and output limits. Missing limits are unknown
 never silently truncate acceptance criteria or increase a cap to force a pass.
 
 Use the offline [tokenomics contract](references/tokenomics.md) and
-`agentx budget -File <request.json> -Json` for explicit context/capability
+`frontier budget -File <request.json> -Json` for explicit context/capability
 preflight and rate-based accounting. It makes no model call, changes no model,
 does not enforce provider billing, and does not authorize additional spend.
 

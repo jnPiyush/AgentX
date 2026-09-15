@@ -2,7 +2,7 @@
 name: "usability-heuristics"
 description: 'Score a UX prototype or shipped UI against Nielsen-10 heuristics with a severity rubric. Use when reviewing a design, running prototype-auditor Pass 7, or producing a heuristic evaluation report. Mechanically maps each heuristic to inspection prompts, severity (0-4), and fix patterns so two reviewers reach the same score.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-13"
   updated: "2026-05-13"
@@ -14,7 +14,7 @@ compatibility:
 
 # Usability Heuristics
 
-> WHEN: A prototype, page, or flow needs an evidence-based usability check beyond accessibility and visual polish. This skill is the canonical AgentX heuristic-evaluation procedure consumed by `prototype-audit` Pass 7.
+> WHEN: A prototype, page, or flow needs an evidence-based usability check beyond accessibility and visual polish. This skill is the canonical Frontier heuristic-evaluation procedure consumed by `prototype-audit` Pass 7.
 
 ## When to Use This Skill
 

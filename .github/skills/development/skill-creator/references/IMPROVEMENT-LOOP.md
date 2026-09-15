@@ -21,7 +21,7 @@ description: 12-step Sensei-style iterative improvement loop for agent output qu
 9. **Self-review** - Agent evaluates with [HIGH]/[MEDIUM]/[LOW] findings
 10. **Address** - Fix all HIGH and MEDIUM findings
 11. **Final score** - Run score-output.ps1 one last time to confirm
-12. **Handoff** - Mark loop complete via CLI: `.agentx/agentx.ps1 loop complete -s "All quality gates passed"`
+12. **Handoff** - Mark loop complete via CLI: `.agentx/frontier.ps1 loop complete -s "All quality gates passed"`
 
 ## Integration with CLI
 
@@ -31,7 +31,7 @@ description: 12-step Sensei-style iterative improvement loop for agent output qu
 
 # Score exits 0 for Medium-High+, 1 otherwise
 # CLI blocks handoff if loop not complete
-.\.agentx\agentx.ps1 loop complete -s "All quality gates passed"
+.\.agentx\frontier.ps1 loop complete -s "All quality gates passed"
 ```
 
 ## Scoring Rubrics

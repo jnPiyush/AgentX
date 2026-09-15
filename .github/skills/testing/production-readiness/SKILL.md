@@ -2,7 +2,7 @@
 name: "production-readiness"
 description: 'Comprehensive production readiness certification covering quality gates, release checklists, chaos/resilience testing, rollback validation, observability verification, and go/no-go decision frameworks. Use before any production deployment.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-03-01"
   updated: "2026-03-01"

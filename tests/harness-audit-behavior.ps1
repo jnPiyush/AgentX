@@ -18,14 +18,16 @@ function Assert-True($condition, $message) {
 function New-TestWorkspace([string]$name) {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-harness-audit-{0}-{1}" -f $name, [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $root '.agentx' 'state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root '.frontier' 'state') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root 'scripts') -Force | Out-Null
 
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.agentx\frontier.ps1') (Join-Path $root '.agentx\frontier.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot 'scripts\check-harness-compliance.ps1') (Join-Path $root 'scripts\check-harness-compliance.ps1') -Force
 
-    @{ provider = 'local'; mode = 'local'; enforceIssues = $false } | ConvertTo-Json | Set-Content (Join-Path $root '.agentx\config.json') -Encoding utf8
+    @{ provider = 'local'; mode = 'local'; enforceIssues = $false } | ConvertTo-Json | Set-Content (Join-Path $root '.frontier\config.json') -Encoding utf8
 
     return $root
 }
@@ -36,11 +38,11 @@ function Remove-TestWorkspace([string]$root) {
     }
 }
 
-function Invoke-AgentX([string]$root, [string[]]$arguments) {
-    return Invoke-AgentXLauncher -Root $root -LauncherPath (Join-Path $root '.agentx\agentx.ps1') -Arguments $arguments
+function Invoke-Frontier([string]$root, [string[]]$arguments) {
+    return Invoke-FrontierLauncher -Root $root -LauncherPath (Join-Path $root '.agentx\agentx.ps1') -Arguments $arguments
 }
 
-function Invoke-AgentXLauncher([string]$Root, [string]$LauncherPath, [string[]]$Arguments) {
+function Invoke-FrontierLauncher([string]$Root, [string]$LauncherPath, [string[]]$Arguments) {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'pwsh'
     $startInfo.WorkingDirectory = $Root
@@ -53,7 +55,7 @@ function Invoke-AgentXLauncher([string]$Root, [string]$LauncherPath, [string[]]$
     foreach ($argument in $Arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $Root
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $Root
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
     $stdout = $process.StandardOutput.ReadToEnd()
@@ -76,7 +78,7 @@ function Invoke-HarnessCompliance([string]$root) {
     $startInfo.ArgumentList.Add('-File')
     $startInfo.ArgumentList.Add((Join-Path $root 'scripts\check-harness-compliance.ps1'))
     $startInfo.ArgumentList.Add('-ReportOnly')
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $root
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
     $stdout = $process.StandardOutput.ReadToEnd()
@@ -122,7 +124,7 @@ function Set-WorkspaceHarnessState([string]$root) {
                 kind = 'completion'
             }
         )
-    } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $root '.agentx\state\loop-state.json') -Encoding utf8
+    } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $root '.frontier\state\loop-state.json') -Encoding utf8
 
     @{
         version = 1
@@ -147,7 +149,7 @@ function Set-WorkspaceHarnessState([string]$root) {
                 createdAt = $timestamp
             }
         )
-    } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $root '.agentx\state\harness-state.json') -Encoding utf8
+    } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $root '.frontier\state\harness-state.json') -Encoding utf8
 }
 
 Write-Host ''
@@ -158,31 +160,31 @@ $workspace = New-TestWorkspace 'profiles'
 try {
     Set-WorkspaceHarnessState $workspace
 
-    $balanced = Invoke-AgentX $workspace @('audit', 'harness', '--json')
+    $balanced = Invoke-Frontier $workspace @('audit', 'harness', '--json')
     $balancedJson = $balanced.Output | ConvertFrom-Json -Depth 20
     Assert-True ($balanced.ExitCode -eq 0) 'Balanced harness audit passes when only advisory planning checks fail'
     Assert-True ($balancedJson.profile -eq 'balanced') 'Balanced harness audit reports the default profile'
     Assert-True ($balancedJson.failedRequiredChecks.Count -eq 0) 'Balanced harness audit has no failed required checks'
     Assert-True (($balancedJson.checks | Where-Object { $_.id -eq 'execution-plan-present' }).Count -eq 1) 'Balanced harness audit still reports advisory planning checks'
 
-    $reviewlessStatePath = Join-Path $workspace '.agentx\state\loop-state.json'
+    $reviewlessStatePath = Join-Path $workspace '.frontier\state\loop-state.json'
     $reviewlessState = Get-Content -LiteralPath $reviewlessStatePath -Raw | ConvertFrom-Json
     $reviewlessState.history = @($reviewlessState.history | Where-Object { -not $_.review })
     $reviewlessState | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reviewlessStatePath -Encoding utf8
-    $reviewless = Invoke-AgentX $workspace @('audit', 'harness', '--json')
+    $reviewless = Invoke-Frontier $workspace @('audit', 'harness', '--json')
     $reviewlessJson = $reviewless.Output | ConvertFrom-Json -Depth 20
     Assert-True ($reviewless.ExitCode -ne 0) 'Harness audit rejects completed state without structured reviewer approval'
     Assert-True ($reviewlessJson.failedRequiredChecks -contains 'loop-complete') 'Harness audit delegates loop completion to the structural gate'
     Set-WorkspaceHarnessState $workspace
 
-    $strict = Invoke-AgentX $workspace @('audit', 'harness', '--profile', 'strict', '--json')
+    $strict = Invoke-Frontier $workspace @('audit', 'harness', '--profile', 'strict', '--json')
     $strictJson = $strict.Output | ConvertFrom-Json -Depth 20
     Assert-True ($strict.ExitCode -ne 0) 'Strict harness audit fails when planning checks are missing'
     Assert-True ($strictJson.failedRequiredChecks -contains 'execution-plan-present') 'Strict harness audit requires execution plan check'
     Assert-True ($strictJson.failedRequiredChecks -contains 'progress-log-present') 'Strict harness audit requires progress log check'
 
-    @{ provider = 'local'; mode = 'local'; harnessEnforcementProfile = 'strict'; harnessDisabledChecks = 'execution-plan-present,progress-log-present' } | ConvertTo-Json | Set-Content (Join-Path $workspace '.agentx\config.json') -Encoding utf8
-    $disabled = Invoke-AgentX $workspace @('audit', 'harness', '--json')
+    @{ provider = 'local'; mode = 'local'; harnessEnforcementProfile = 'strict'; harnessDisabledChecks = 'execution-plan-present,progress-log-present' } | ConvertTo-Json | Set-Content (Join-Path $workspace '.frontier\config.json') -Encoding utf8
+    $disabled = Invoke-Frontier $workspace @('audit', 'harness', '--json')
     $disabledJson = $disabled.Output | ConvertFrom-Json -Depth 20
     Assert-True ($disabled.ExitCode -eq 0) 'Strict harness audit passes when the missing planning checks are disabled'
     Assert-True ($disabledJson.disabledChecks.Count -eq 2) 'Harness audit reports disabled check list from config'
@@ -198,7 +200,7 @@ try {
     foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
         Copy-Item -LiteralPath (Join-Path $script:repoRoot ".github\hooks\$hook") -Destination (Join-Path $workspace ".github\hooks\$hook") -Force
     }
-    $hookInstall = Invoke-AgentX $workspace @('hooks', 'install')
+    $hookInstall = Invoke-Frontier $workspace @('hooks', 'install')
     Assert-True ($hookInstall.ExitCode -eq 0) 'Hook installer exits successfully'
     Assert-True (Test-Path -LiteralPath (Join-Path $workspace '.git\hooks\post-commit') -PathType Leaf) 'Hook installer includes post-commit lifecycle hook'
 } finally {
@@ -209,7 +211,7 @@ $missingHookWorkspace = New-TestWorkspace 'missing-hook-source'
 try {
     Push-Location $missingHookWorkspace
     try { git init --quiet } finally { Pop-Location }
-    $missingHookInstall = Invoke-AgentX $missingHookWorkspace @('hooks', 'install')
+    $missingHookInstall = Invoke-Frontier $missingHookWorkspace @('hooks', 'install')
     Assert-True ($missingHookInstall.ExitCode -ne 0) 'Hook installer fails when required hook sources are unavailable'
     Assert-True ($missingHookInstall.Output -match 'Required hook source is missing') 'Missing hook source failure is actionable'
 } finally {
@@ -217,11 +219,12 @@ try {
 }
 
 $zeroCopyWorkspace = New-TestWorkspace 'zero-copy-hooks'
-$bundleFixture = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-hook-bundle-{0}\.github\agentx" -f [guid]::NewGuid().ToString('N'))
+$bundleFixture = Join-Path ([System.IO.Path]::GetTempPath()) ("frontier-hook-bundle-{0}\.github\frontier" -f [guid]::NewGuid().ToString('N'))
 try {
     New-Item -ItemType Directory -Path (Join-Path $bundleFixture '.agentx') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $bundleFixture '.github\hooks') -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $script:repoRoot '.agentx\agentx.ps1') -Destination (Join-Path $bundleFixture '.agentx\agentx.ps1') -Force
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.agentx\frontier.ps1') -Destination (Join-Path $bundleFixture '.agentx\frontier.ps1') -Force
     Copy-Item -LiteralPath (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') -Destination (Join-Path $bundleFixture '.agentx\agentx-cli.ps1') -Force
     New-Item -ItemType Directory -Path (Join-Path $bundleFixture 'scripts') -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $script:repoRoot 'scripts\scrub.ps1') -Destination (Join-Path $bundleFixture 'scripts\scrub.ps1') -Force
@@ -237,7 +240,7 @@ try {
     } finally {
         Pop-Location
     }
-    $zeroCopyInstall = Invoke-AgentXLauncher -Root $zeroCopyWorkspace -LauncherPath (Join-Path $bundleFixture '.agentx\agentx.ps1') -Arguments @('hooks', 'install')
+    $zeroCopyInstall = Invoke-FrontierLauncher -Root $zeroCopyWorkspace -LauncherPath (Join-Path $bundleFixture '.agentx\agentx.ps1') -Arguments @('hooks', 'install')
     Assert-True ($zeroCopyInstall.ExitCode -eq 0) 'Zero-copy hook installer exits successfully from bundled sources'
     foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
         $installedHook = Join-Path $zeroCopyWorkspace ".custom-hooks\$hook"
@@ -252,7 +255,7 @@ try {
     $escapedBundleLauncher = $bundleLauncher.Replace("'", "''")
     @(
         '#!/usr/bin/env pwsh'
-        "`$env:AGENTX_WORKSPACE_ROOT = '$escapedWorkspace'"
+        "`$env:FRONTIER_WORKSPACE_ROOT = '$escapedWorkspace'"
         "& '$escapedBundleLauncher' @args"
         'exit $LASTEXITCODE'
     ) -join "`n" | Set-Content -LiteralPath $workspaceLauncher -Encoding utf8
@@ -288,7 +291,7 @@ try {
     foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
         Copy-Item -LiteralPath (Join-Path $script:repoRoot ".github\hooks\$hook") -Destination (Join-Path $samePathWorkspace ".github\hooks\$hook") -Force
     }
-    $samePathInstall = Invoke-AgentX $samePathWorkspace @('hooks', 'install')
+    $samePathInstall = Invoke-Frontier $samePathWorkspace @('hooks', 'install')
     Assert-True ($samePathInstall.ExitCode -eq 0) 'Hook installer is idempotent when source equals active core.hooksPath'
     foreach ($hook in @('pre-commit', 'commit-msg', 'post-commit')) {
         $installedHook = Join-Path $samePathWorkspace ".github\hooks\$hook"

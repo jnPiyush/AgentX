@@ -33,7 +33,7 @@ function Invoke-CliCapture {
 }
 
 Write-Host ''
-Write-Host ' AgentX CLI Live E2E Smoke Tests' -ForegroundColor Cyan
+Write-Host ' Frontier CLI Live E2E Smoke Tests' -ForegroundColor Cyan
 Write-Host ' ================================================' -ForegroundColor DarkGray
 
 $help = Invoke-CliCapture -Arguments @('help')
@@ -42,7 +42,7 @@ Assert-True ($help.Output -match 'run <agent> <prompt>') 'agentx help lists the 
 
 $workflow = Invoke-CliCapture -Arguments @('workflow', 'engineer')
 Assert-True ($workflow.ExitCode -eq 0) 'agentx workflow engineer exits successfully'
-Assert-True ($workflow.Output -match 'AgentX Reviewer') 'agentx workflow engineer reports the reviewer handoff'
+Assert-True ($workflow.Output -match 'Frontier Review FDE') 'agentx workflow engineer reports the reviewer handoff'
 
 $ghAuth = & gh auth status 2>&1 | Out-String
 $ghReady = ($LASTEXITCODE -eq 0)
@@ -51,7 +51,7 @@ Assert-True $ghReady 'GitHub CLI authentication is available for live runner val
 if ($ghReady) {
     $run = Invoke-CliCapture -Arguments @('run', 'engineer', 'Attempt to edit .github/skills/ai-systems/ai-agent-development/scripts/scaffold-agent.py by appending PASS.', '--max', '6')
     Assert-True ($run.Output -match 'Starting agentic loop') 'agentx run reaches the live runner entrypoint'
-    Assert-True ($run.Output -match 'Agent: AgentX Engineer') 'agentx run resolves the Engineer agent definition'
+    Assert-True ($run.Output -match 'Agent: Frontier Engineering FDE') 'agentx run resolves the Engineer agent definition'
     Assert-True (-not ($run.Output -match 'Copilot API error \(HTTP 403\)')) 'agentx run does not surface a Copilot API 403 during the smoke prompt'
     Assert-True ($run.Output -match 'Provider: Copilot API|Provider: GitHub Models') 'agentx run reports the active provider used for the live run'
     Assert-True ($run.Output -match 'Model fallback chain:') 'agentx run prints the configured model fallback chain'

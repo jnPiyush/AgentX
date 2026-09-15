@@ -1,8 +1,8 @@
 ---
 name: "skill-creator"
-description: 'Create, validate, and maintain AgentX skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill.'
+description: 'Create, validate, and maintain Frontier skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"
@@ -98,7 +98,7 @@ This creates:
 
 | Field | Purpose | Example |
 |-------|---------|---------|
-| `metadata.author` | Attribution | `"AgentX"` |
+| `metadata.author` | Attribution | `"Frontier"` |
 | `metadata.version` | Skill version (SemVer) | `"1.0.0"` |
 | `metadata.created` | Creation date | `"2025-01-15"` |
 | `metadata.updated` | Last update date | `"2025-01-15"` |
@@ -117,9 +117,9 @@ This creates:
 ```yaml
 ---
 name: "skill-name"
-description: 'Create, validate, and maintain AgentX skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill.'
+description: 'Create, validate, and maintain Frontier skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "YYYY-MM-DD"
  updated: "YYYY-MM-DD"

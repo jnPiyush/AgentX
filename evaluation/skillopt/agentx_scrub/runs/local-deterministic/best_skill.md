@@ -2,7 +2,7 @@
 name: "scrub"
 description: "Scan recent changes for AI-generated slop -- redundant comments, over-abstraction, generic UI defaults, and design tells -- and optionally apply safe automated fixes. Use after a code-generation or refactor pass to remove the visible signs of machine authorship before review."
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-02"
   updated: "2026-05-02"
@@ -15,7 +15,7 @@ compatibility:
 > **Purpose**: Detect and remove the visible tells of AI-generated code without changing behavior.
 > **Scope**: Comment rot, over-abstracted code, generic design defaults, AI filler phrasing.
 
-> **MANDATORY in AgentX**: A deslop scrub runs on EVERY AgentX run that changes
+> **MANDATORY in Frontier**: A deslop scrub runs on EVERY Frontier run that changes
 > files, as a required step in the canonical workflow
 > (`... -> implement -> scrub -> test -> review -> ship`). It is not opt-in.
 > `ship.ps1` runs scrub unconditionally; the deprecated `-SkipScrub` switch is

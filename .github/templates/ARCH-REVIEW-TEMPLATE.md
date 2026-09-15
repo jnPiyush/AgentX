@@ -27,11 +27,11 @@ inputs:
   architect:
     description: "Architect responsible for the ADR/Spec"
     required: false
-    default: "AgentX Architect"
+    default: "Frontier Architecture FDE"
   reviewer:
     description: "Reviewer name (agent or person)"
     required: false
-    default: "AgentX Architecture Reviewer"
+    default: "Frontier Architecture Review FDE"
   date:
     description: "Review date (YYYY-MM-DD)"
     required: false
@@ -75,9 +75,9 @@ inputs:
 
 If any required gate is FAIL, return `BLOCKED` and do not proceed to the 12 dimensions.
 
-Use the **AgentX Workflow** gate table when the review is for an issue with PRD/ADR/Spec produced through AgentX. Use the **Standalone** gate table when the review is for a human-written architecture document, ADR, tech spec, design doc, or RFC outside the AgentX lifecycle (e.g. user asked the Reviewer to evaluate an existing document). Fill exactly one of the two tables.
+Use the **Frontier Workflow** gate table when the review is for an issue with PRD/ADR/Spec produced through Frontier. Use the **Standalone** gate table when the review is for a human-written architecture document, ADR, tech spec, design doc, or RFC outside the Frontier lifecycle (e.g. user asked the Reviewer to evaluate an existing document). Fill exactly one of the two tables.
 
-### AgentX Workflow Mode
+### Frontier Workflow Mode
 
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
@@ -93,7 +93,7 @@ Use the **AgentX Workflow** gate table when the review is for an issue with PRD/
 
 ### Standalone Document Mode (Human-Written Doc / ADR / Spec / RFC)
 
-Use these gates when the review target is a single architecture document outside the AgentX issue lifecycle. The 12-dimension review still applies in full -- only the upstream presence checks change.
+Use these gates when the review target is a single architecture document outside the Frontier issue lifecycle. The 12-dimension review still applies in full -- only the upstream presence checks change.
 
 | # | Standalone Gate | Status | Notes |
 |---|------------------|--------|-------|

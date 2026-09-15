@@ -2,7 +2,7 @@
 name: "go"
 description: 'Write reliable, efficient Go code following idiomatic patterns and best practices. Use when building Go applications, implementing error handling with error wrapping, writing concurrent code with goroutines, designing Go interfaces, or structuring Go project layouts.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

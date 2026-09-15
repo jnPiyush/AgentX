@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------
-# AgentX Shared Module: SecurityHelpers
+# Frontier Shared Module: SecurityHelpers
 # ------------------------------------------------------------------
-# Common security validation functions used across AgentX scripts.
+# Common security validation functions used across Frontier scripts.
 # Provides reusable checks for secrets detection, command blocking,
 # and dependency auditing.
 #

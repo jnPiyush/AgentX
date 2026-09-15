@@ -1,4 +1,4 @@
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   buildAssessArgs,
   buildReconcileArgs,
@@ -24,29 +24,29 @@ export type {
 export { renderBoundedParallelRunsText };
 
 export async function assessBoundedParallelDelivery(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   input: ParallelAssessInput,
 ): Promise<BoundedParallelRun> {
   return parseBoundedParallelRun(await agentx.runCli('parallel', buildAssessArgs(input)));
 }
 
 export async function startBoundedParallelDelivery(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   input: ParallelStartInput,
 ): Promise<BoundedParallelRun> {
   return parseBoundedParallelRun(await agentx.runCli('parallel', buildStartArgs(input)));
 }
 
-export async function listBoundedParallelRuns(agentx: AgentXContext): Promise<BoundedParallelRun[]> {
+export async function listBoundedParallelRuns(agentx: FrontierContext): Promise<BoundedParallelRun[]> {
   return parseBoundedParallelRuns(await agentx.runCli('parallel', ['list', '--json']));
 }
 
-export async function getBoundedParallelRun(agentx: AgentXContext, parallelId: string): Promise<BoundedParallelRun> {
+export async function getBoundedParallelRun(agentx: FrontierContext, parallelId: string): Promise<BoundedParallelRun> {
   return parseBoundedParallelRun(await agentx.runCli('parallel', ['get', '--id', parallelId, '--json']));
 }
 
 export async function reconcileBoundedParallelRun(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   input: ParallelReconcileInput,
 ): Promise<BoundedParallelRun> {
   return parseBoundedParallelRun(await agentx.runCli('parallel', buildReconcileArgs(input)));

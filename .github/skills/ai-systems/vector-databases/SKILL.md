@@ -2,7 +2,7 @@
 name: "vector-databases"
 description: 'Choose, configure, and operate vector databases for embeddings and hybrid search. Covers Azure AI Search, Pinecone, Qdrant, Weaviate, Milvus, pgvector, LanceDB, MongoDB Atlas Vector, Elasticsearch / OpenSearch kNN. Selection criteria, index types (HNSW, IVF, DiskANN), filters, hybrid (BM25 + vector), embedding model selection, sharding, cost.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

@@ -456,7 +456,7 @@ jobs:
             ${status === '[PASS]' ? '[PASS] All quality gates passed!' : '[FAIL] Quality gates failed. Please fix the issues above.'}
 
             ---
-            *AgentX Quality Gates* | [View Workflow](../../.github/workflows/quality-gates.yml)
+            *Frontier Quality Gates* | [View Workflow](../../.github/workflows/quality-gates.yml)
             `;
 
             await github.rest.issues.createComment({

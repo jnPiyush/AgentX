@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# AgentX scrub behavior tests
+# Frontier scrub behavior tests
 
 $ErrorActionPreference = 'Stop'
 $script:root = Split-Path $PSScriptRoot -Parent
@@ -41,7 +41,7 @@ function Invoke-ScrubJson {
     return [pscustomobject]@{ exitCode = $exitCode; findings = $findings; raw = $json; stderr = $stderrText }
 }
 
-function Invoke-AgentXScrubJson {
+function Invoke-FrontierScrubJson {
     param([string]$Command, [string]$Path, [switch]$Production)
 
     $args = @('-NoProfile', '-File', (Join-Path $script:root '.agentx/agentx.ps1'), $Command, '-Path', $Path, '-Json')
@@ -64,7 +64,7 @@ New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
 
 try {
     Write-Host ""
-    Write-Host " AgentX Scrub Behavior Tests" -ForegroundColor Cyan
+    Write-Host " Frontier Scrub Behavior Tests" -ForegroundColor Cyan
     Write-Host " ================================================" -ForegroundColor DarkGray
     Write-Host ""
 
@@ -152,10 +152,10 @@ export function secondTotal(subtotal: number): number {
     $duplicateProductionFixResult = Invoke-ScrubJson -Path $duplicateFile -Production -Fix
     Assert-True ($duplicateProductionFixResult.exitCode -eq 1) 'Production scrub with safe fixes still fails when flag-only blockers remain'
 
-    $deslopAliasResult = Invoke-AgentXScrubJson -Command 'deslop' -Path $duplicateFile -Production
-    $antislopAliasResult = Invoke-AgentXScrubJson -Command 'antislop' -Path $duplicateFile -Production
-    Assert-True ($deslopAliasResult.exitCode -eq 1) 'AgentX deslop alias routes to the production scrub gate'
-    Assert-True ($antislopAliasResult.exitCode -eq 1) 'AgentX antislop alias routes to the production scrub gate'
+    $deslopAliasResult = Invoke-FrontierScrubJson -Command 'deslop' -Path $duplicateFile -Production
+    $antislopAliasResult = Invoke-FrontierScrubJson -Command 'antislop' -Path $duplicateFile -Production
+    Assert-True ($deslopAliasResult.exitCode -eq 1) 'Frontier deslop alias routes to the production scrub gate'
+    Assert-True ($antislopAliasResult.exitCode -eq 1) 'Frontier antislop alias routes to the production scrub gate'
 
     $emptyCatchFile = Join-Path $tempRoot 'empty-catch.ts'
     @'

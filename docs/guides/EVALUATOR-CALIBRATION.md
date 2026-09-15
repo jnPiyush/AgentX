@@ -131,7 +131,7 @@ grep_search: "```typescript|```python" in SPEC-42.md -> 0 matches
 
 **Evaluator verification**:
 ```
-grep_search: "loop status" or ".agentx/agentx.ps1 loop" in docs/artifacts/reviews/REVIEW-42.md -> 0 matches
+grep_search: "loop status" or ".agentx/frontier.ps1 loop" in docs/artifacts/reviews/REVIEW-42.md -> 0 matches
 ```
 
 **Correct verdict**:

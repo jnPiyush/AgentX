@@ -3,7 +3,7 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
-TRACE_DIR="$ROOT/.agentx/state"
+TRACE_DIR="$ROOT/.frontier/state"
 TRACE_FILE="$TRACE_DIR/hook-trace.jsonl"
 
 trace() {
@@ -11,9 +11,9 @@ trace() {
   printf '{"timestamp":"%s","hook":"pre-tool","status":"%s","detail":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" >> "$TRACE_FILE"
 }
 
-TARGET=${AGENTX_CHANGED_PATH:-}
+TARGET=${FRONTIER_CHANGED_PATH:-${HVE_CHANGED_PATH:-${AGENTX_CHANGED_PATH:-}}}
 if [ -z "$TARGET" ]; then
-  trace skipped "AGENTX_CHANGED_PATH was not provided."
+  trace skipped "FRONTIER_CHANGED_PATH was not provided."
   exit 0
 fi
 

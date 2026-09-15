@@ -2,7 +2,7 @@
 name: "computer-use-and-browser-agents"
 description: 'Build agents that operate browsers and desktop GUIs via screenshots and actions. Covers Anthropic Computer Use, OpenAI Operator / Computer-Using Agent (CUA), browser-use, Playwright-based agents, sandboxing (containers, VM, ephemeral profiles), permissions and approvals, failure recovery, and testing patterns.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

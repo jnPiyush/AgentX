@@ -1,10 +1,10 @@
 ---
-description: C# / .NET coding standards (AgentX)
+description: C# / .NET coding standards (Frontier)
 globs: **/*.cs,**/*.csx
 alwaysApply: false
 ---
 
-# C# / .NET (AgentX)
+# C# / .NET (Frontier)
 
 Canonical: `.github/instructions/csharp.instructions.md` and
 `.github/skills/languages/csharp/SKILL.md` -- read for full standards.

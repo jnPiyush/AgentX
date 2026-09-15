@@ -6,7 +6,7 @@
   "displayName": "Read PDF",
   "version": "1.0.0",
   "description": "Convert PDF documents to Markdown with per-page anchors. Uses pdftotext (poppler) when available, falls back to pypdf.",
-  "author": "AgentX",
+  "author": "Frontier",
   "license": "Apache-2.0",
   "homepage": "https://github.com/jnPiyush/AgentX/tree/master/.agentx/plugins/read-pdf",
   "bugs": "https://github.com/jnPiyush/AgentX/issues",

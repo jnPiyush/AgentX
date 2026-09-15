@@ -17,7 +17,7 @@ description: >-
 > deploy containers, invoke endpoints, trace with App Insights, troubleshoot),
 > install **Azure MCP Extension** (`ms-azuretools.vscode-azure-mcp-server`).
 > In VS Code it also wires in the Azure Skills plugin from `microsoft/azure-skills`
-> plus Foundry MCP. AgentX recommends it when Azure files are detected and the
+> plus Foundry MCP. Frontier recommends it when Azure files are detected and the
 > installer can add it automatically for Azure-oriented workspaces.
 
 ## When to Use This Skill
@@ -115,11 +115,11 @@ trace, troubleshoot, RBAC, quota management), install:
 
 - **Azure MCP Extension** (`ms-azuretools.vscode-azure-mcp-server`)
 - It also installs the Azure Skills plugin and Foundry MCP support in VS Code
-- AgentX recommends it when Azure work is detected, or you can force it during install with `-Azure` / `--azure`
+- Frontier recommends it when Azure work is detected, or you can force it during install with `-Azure` / `--azure`
 
 The two extensions are complementary:
 
 | Layer | Extension | Covers |
 |-------|-----------|--------|
-| Design | AgentX `azure-foundry` | Architecture, model selection, eval strategy, guardrails |
+| Design | Frontier `azure-foundry` | Architecture, model selection, eval strategy, guardrails |
 | Execution | Azure Skills plugin + Azure MCP | Prepare, validate, deploy, invoke, trace, troubleshoot, RBAC, quota |

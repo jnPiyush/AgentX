@@ -125,7 +125,7 @@ export function collectSkillEntries(
   if (workspaceRoot) {
     searchDirs.push({ base: path.join(workspaceRoot, '.github', 'skills'), prefix: '.github/skills' });
   }
-  searchDirs.push({ base: path.join(extensionPath, '.github', 'agentx', 'skills'), prefix: '.github/skills' });
+  searchDirs.push({ base: path.join(extensionPath, '.github', 'frontier', 'skills'), prefix: '.github/skills' });
 
   for (const { base, prefix } of searchDirs) {
     if (!fs.existsSync(base)) { continue; }

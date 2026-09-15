@@ -1,21 +1,21 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { stripAnsi } from '../utils/stripAnsi';
 
 let issueChannel: vscode.OutputChannel | undefined;
 
 export function registerShowIssueCommand(
  context: vscode.ExtensionContext,
- agentxContext: AgentXContext
+ frontierContext: FrontierContext
 ): void {
  context.subscriptions.push(
-  vscode.commands.registerCommand('agentx.showIssue', async (issueNumber: string) => {
+  vscode.commands.registerCommand('frontier.showIssue', async (issueNumber: string) => {
    if (!issueNumber) { return; }
    try {
-    const output = await agentxContext.runCli('issue', ['get', issueNumber]);
+    const output = await frontierContext.runCli('issue', ['get', issueNumber]);
     const cleaned = stripAnsi(output);
     if (!issueChannel) {
-     issueChannel = vscode.window.createOutputChannel('AgentX Issue Detail');
+     issueChannel = vscode.window.createOutputChannel('Frontier Issue Detail');
     }
     issueChannel.clear();
     try {

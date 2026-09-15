@@ -1,6 +1,6 @@
 ---
 name: "Create Cowork Skill Package"
-agent: "AgentX Auto"
+agent: "Frontier Orchestration FDE"
 description: "Create an upload-ready Microsoft 365 Copilot Cowork skill zip with tailored instructions, assets, references, and scripts."
 argument-hint: "name=... workflow=... [sources=...] [outputDir=artifacts/cowork-skills]"
 inputs:

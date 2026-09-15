@@ -2,7 +2,7 @@
 name: "bicep"
 description: 'Deploy Azure infrastructure declaratively using Bicep and ARM templates. Use when writing .bicep or .bicepparam files, creating reusable modules, defining user-defined types, securing parameters, or validating deployments with what-if and PSRule.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-02-26"
   updated: "2026-02-26"

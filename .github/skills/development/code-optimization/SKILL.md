@@ -2,7 +2,7 @@
 name: code-optimization
 description: "Rewrite working code into its minimal, elegant form -- lower cyclomatic complexity, fewer lines, no dead code, no needless abstractions -- using a Draft -> Optimize -> Verify loop. Use when asked to compress, minimize, simplify, or make code more elegant WITHOUT sacrificing correctness, boundary validation, or readability."
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-07-08"
   updated: "2026-07-08"
@@ -54,7 +54,7 @@ Run `scrub` first to strip dead weight, then this skill to tighten what remains.
 
 ## The Optimization Loop (Draft -> Optimize -> Verify)
 
-Three stages, mapped to AgentX iterations. Do not skip Verify.
+Three stages, mapped to Frontier iterations. Do not skip Verify.
 
 ### Stage 1 -- Draft
 Have (or write) a **correct** baseline. Capture its behavior contract: inputs,
@@ -98,7 +98,7 @@ is discarded, not shipped.
 
 These are non-negotiable. Winning lines by breaking any of these is a defect.
 
-- **Boundary validation** -- validate/sanitize external inputs at system edges. This is required by AgentX security rules; it is NOT "defensive boilerplate" to strip.
+- **Boundary validation** -- validate/sanitize external inputs at system edges. This is required by Frontier security rules; it is NOT "defensive boilerplate" to strip.
 - **Correctness on edge cases** -- empty, null, boundary, and failure paths must survive the rewrite.
 - **Readability** -- a teammate must parse it at a glance. One-letter names, dense bitwise tricks, and 200-column lines are regressions.
 - **Comments that explain "why"** -- keep intent/rationale comments; only remove comments that restate the code.

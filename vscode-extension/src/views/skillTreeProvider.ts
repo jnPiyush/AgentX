@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   collectSkillEntries,
   groupSkillsByCategory,
@@ -14,7 +14,7 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<SkillTreeItem>
   private _onDidChangeTreeData = new vscode.EventEmitter<SkillTreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  constructor(private readonly agentx: AgentXContext) {}
+  constructor(private readonly agentx: FrontierContext) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();

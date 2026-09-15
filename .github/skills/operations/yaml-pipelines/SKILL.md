@@ -2,7 +2,7 @@
 name: "yaml-pipelines"
 description: 'Build YAML-based CI/CD pipelines across Azure Pipelines and GitLab CI with progressive disclosure. Use when creating Azure DevOps YAML pipelines, configuring GitLab CI/CD, designing multi-stage pipelines, implementing pipeline templates, or managing pipeline secrets and variables.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "2.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"
@@ -350,7 +350,7 @@ Multi-stage pipelines split CI and CD into discrete, gated stages.
 ---
 
 **Version**: 2.0.0
-**Author**: AgentX
+**Author**: Frontier
 **Last Updated**: February 10, 2026
 
 ## Troubleshooting

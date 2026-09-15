@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 /**
  * Runtime host-capability diagnostic.
  *
- * AgentX delivers its value through the `chatAgents`, `chatSkills`,
+ * Frontier delivers its value through the `chatAgents`, `chatSkills`,
  * `chatInstructions` and `chatPromptFiles` contribution points. A host that
  * predates those points ignores all of them **silently**: the user sees the
  * tree views and the chat participant but none of the 26 agents or 134 skills,
@@ -15,9 +15,9 @@ import * as vscode from 'vscode';
  * API surface) and turns a silent failure into a single actionable warning.
  */
 
-const STATE_KEY_LAST_WARNED = 'agentx.hostCapability.lastWarnedVersion';
+const STATE_KEY_LAST_WARNED = 'frontier.hostCapability.lastWarnedVersion';
 
-/** Minimum VS Code version that implements the AgentX agent surface. */
+/** Minimum VS Code version that implements the Frontier FDE surface. */
 export const MINIMUM_HOST_VERSION = '1.134.0';
 
 /**
@@ -44,21 +44,21 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-/** True when the host is older than the version AgentX requires. */
+/** True when the host is older than the version Frontier requires. */
 export function isHostBelowMinimum(hostVersion: string, minimum = MINIMUM_HOST_VERSION): boolean {
   return compareVersions(hostVersion, minimum) < 0;
 }
 
 export function buildUnsupportedHostMessage(hostVersion: string): string {
   return (
-    `AgentX requires VS Code ${MINIMUM_HOST_VERSION} or newer, but this host reports ${hostVersion}. ` +
-    'The AgentX agents, skills and instructions are not registered on this version. ' +
+    `Frontier requires VS Code ${MINIMUM_HOST_VERSION} or newer, but this host reports ${hostVersion}. ` +
+    'The Frontier FDEs, skills and instructions are not registered on this version. ' +
     'Update VS Code, or use the GitHub Copilot CLI distribution instead.'
   );
 }
 
 /**
- * Warn once per host version when the running host cannot register the AgentX
+ * Warn once per host version when the running host cannot register the Frontier
  * contribution points. Never throws: a diagnostic must not break activation.
  */
 export async function warnIfHostUnsupported(

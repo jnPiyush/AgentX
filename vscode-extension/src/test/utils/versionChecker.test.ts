@@ -59,7 +59,7 @@ describe('versionChecker - readInstalledVersion', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ver-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ver-'));
   });
 
   afterEach(() => {
@@ -116,7 +116,7 @@ describe('versionChecker - checkVersionMismatch', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-mis-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-mis-'));
   });
 
   afterEach(() => {
@@ -182,7 +182,7 @@ describe('versionChecker - silentVersionSync', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-sync-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-sync-'));
   });
 
   afterEach(() => {

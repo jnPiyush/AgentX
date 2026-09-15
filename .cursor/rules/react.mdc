@@ -1,10 +1,10 @@
 ---
-description: React / TSX frontend standards (AgentX)
+description: React / TSX frontend standards (Frontier)
 globs: **/*.tsx,**/*.jsx
 alwaysApply: false
 ---
 
-# React / TSX (AgentX)
+# React / TSX (Frontier)
 
 Canonical: `.github/instructions/react.instructions.md` and
 `.github/skills/languages/react/SKILL.md` -- read for full standards.

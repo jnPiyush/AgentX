@@ -3,7 +3,7 @@ name: "ux-ui-design"
 description: 'Design user experiences with wireframing, prototyping, user flows, accessibility, and production-ready HTML prototypes. Use when creating wireframes, building interactive prototypes, designing user flows, implementing accessibility standards, or producing HTML/CSS design deliverables.'
 user-invocable: false
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "2.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

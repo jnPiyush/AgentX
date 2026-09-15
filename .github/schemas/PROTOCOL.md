@@ -1,6 +1,6 @@
 # Agent Communication Protocol
 
-> Structured handoff messages for agent-to-agent communication in AgentX.
+> Structured handoff messages for agent-to-agent communication in Frontier.
 > Schema: `.github/schemas/handoff-message.schema.json`
 
 ---
@@ -149,7 +149,7 @@ Each arrow represents a validated handoff message.
 | Tool | Purpose |
 |------|---------|
 | `scripts/validate-handoff.ps1` | Generate + validate handoff JSON |
-| `.agentx/agentx.ps1 validate` | CLI deliverable validation |
+| `.agentx/frontier.ps1 validate` | CLI deliverable validation |
 | `.github/schemas/handoff-message.schema.json` | JSON Schema (draft-07) |
 | `.agentx/handoffs/` | Handoff message storage |
 | `quality-gates.yml` | CI validation of handoff artifacts |

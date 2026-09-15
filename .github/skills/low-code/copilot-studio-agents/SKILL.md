@@ -2,7 +2,7 @@
 name: "copilot-studio-agents"
 description: 'Design Microsoft Copilot Studio agents (formerly Power Virtual Agents) -- topics, trigger phrases, generative answers, knowledge sources, connector and MCP actions, authentication, channels, and agent flows -- so an agent can author the conversational logic that ships as a Bot component inside a Power Platform solution. Covers the topic/node dialog model and the generative-orchestration option.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

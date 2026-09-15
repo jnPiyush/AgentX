@@ -2,7 +2,7 @@
 name: "cosmos-db"
 description: 'Design, model, and operate Azure Cosmos DB workloads across Gremlin (Graph), NoSQL (SQL), and Mongo APIs. Use when modeling graph data with Gremlin, choosing partition keys, sizing RUs, configuring multi-region writes, securing with RBAC/managed identity, or implementing change feed and TTL. Strong focus on Gremlin Graph API patterns.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-21"
   updated: "2026-04-21"

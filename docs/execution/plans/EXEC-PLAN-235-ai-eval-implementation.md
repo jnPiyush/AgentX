@@ -43,7 +43,7 @@ This execution plan is a living document. Keep `Progress`, `Surprises & Discover
 	Evidence: `.github/agents/engineer.agent.md`, `.github/agents/data-scientist.agent.md`, `docs/artifacts/specs/SPEC-235.md`
 - Observation:
 	A starter pack is more useful when it can fail meaningfully before customization. A tiny sample runner that detects placeholder prompt and dataset content makes the scaffold runnable without pretending it is a production evaluator.
-	Evidence: `scripts/run-ai-eval-sample.ps1`, `evaluation/agentx.eval.yaml`
+	Evidence: `scripts/run-ai-eval-sample.ps1`, `evaluation/frontier.eval.yaml`
 - Observation:
 	A concrete example is easier to reason about than a generic scaffold. Converting the starter assets into an issue-classification prompt plus deterministic local baseline makes the workflow legible without depending on a live model endpoint.
 	Evidence: `prompts/assistant-v1.md`, `evaluation/datasets/regression.jsonl`, `scripts/run-ai-eval-sample.ps1`
@@ -110,7 +110,7 @@ Constraints for this slice:
 
 ## Plan of Work
 
-Add a new AI evaluation contract module under `vscode-extension/src/eval/` with a stable facade, a sibling internals module, and a types module. The internals layer will load `evaluation/agentx.eval.yaml`, `evaluation/baseline.json`, and the latest normalized report under `.copilot-tracking/eval-reports/`, validate their required sections, and resolve runner selection. Focused tests will cover valid and invalid workspaces plus facade summaries.
+Add a new AI evaluation contract module under `vscode-extension/src/eval/` with a stable facade, a sibling internals module, and a types module. The internals layer will load `evaluation/frontier.eval.yaml`, `evaluation/baseline.json`, and the latest normalized report under `.copilot-tracking/eval-reports/`, validate their required sections, and resolve runner selection. Focused tests will cover valid and invalid workspaces plus facade summaries.
 
 Extend the implementation with a sibling runner module that plans execution from the validated contract, executes injected runner adapters, normalizes raw outputs into the AgentX report shape, and persists normalized reports without touching Quality sidebar consumers.
 
@@ -152,7 +152,7 @@ Extend the implementation with a sibling runner module that plans execution from
 
 ## Validation and Acceptance
 
-- [x] Extension can load and validate `evaluation/agentx.eval.yaml`
+- [x] Extension can load and validate `evaluation/frontier.eval.yaml`
 - [x] Extension can load and validate `evaluation/baseline.json`
 - [x] Extension can validate normalized report files when present without requiring sidebar wiring
 - [x] Runner selection is resolved from manifest declarations for promptfoo-compatible and Azure-compatible paths

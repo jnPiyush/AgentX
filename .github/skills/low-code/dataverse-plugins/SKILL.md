@@ -2,7 +2,7 @@
 name: "dataverse-plugins"
 description: 'Build Microsoft Dataverse server-side extensions in C# (.NET) -- plugins implementing IPlugin and custom workflow activities -- and register them via SdkMessageProcessingStep so an agent can add transactional business logic that runs inside the Dataverse event pipeline. Covers the execution context, pipeline stages, registration metadata, and pro-code-vs-low-code boundaries.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

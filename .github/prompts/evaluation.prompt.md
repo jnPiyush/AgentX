@@ -1,6 +1,6 @@
 ---
 name: "AI Evaluation Setup"
-agent: "AgentX Engineer"
+agent: "Frontier Engineering FDE"
 description: "Set up evaluation for an AI agent or application using Azure AI Evaluation SDK."
 inputs:
  issue_number:

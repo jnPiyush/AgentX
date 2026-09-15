@@ -15,7 +15,7 @@ describe('learnings utility', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-learnings-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-learnings-'));
     fs.mkdirSync(path.join(tmpDir, 'docs', 'artifacts', 'learnings'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'docs', 'guides'), { recursive: true });
 

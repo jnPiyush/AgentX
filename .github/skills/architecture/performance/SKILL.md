@@ -2,7 +2,7 @@
 name: "performance"
 description: 'Optimize application performance and scalability through async patterns, caching strategies, profiling, horizontal scaling, load balancing, and resource management. Use when diagnosing slow endpoints, implementing caching, profiling bottlenecks, planning system capacity, or designing stateless services.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "2.0.0"
  created: "2025-01-15"
  updated: "2026-02-27"

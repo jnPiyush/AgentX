@@ -2,7 +2,7 @@
 name: "prompt-versioning"
 description: 'Version, test, promote, and roll back prompts like production artifacts. Use when managing prompt lifecycle, prompt variants, few-shot changes, rubric alignment, baseline comparisons, and safe prompt release workflows across models or environments.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2026-04-04"
  updated: "2026-04-04"

@@ -2,7 +2,7 @@
 name: "e2e-testing"
 description: 'Design and implement end-to-end tests that validate complete user workflows across the full stack. Use when building browser automation, testing user journeys, cross-browser validation, visual regression testing, or verifying system behavior from the user perspective.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-03-01"
   updated: "2026-03-01"

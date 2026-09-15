@@ -2,14 +2,16 @@
 # Post-commit hook: Mark quality loop as consumed after a successful commit.
 # This prevents a stale "complete" loop state from being silently reused
 # across multiple unrelated commits without starting a fresh loop.
-# The next code commit will require a new "agentx loop start" call.
+# The next code commit will require a new "frontier loop start" call.
 #
 # IMPORTANT: This hook MUST succeed in marking loopConsumed=true whenever a
 # complete loop is present. If it cannot (no node, no python, no pwsh), it
 # emits a [WARN] and falls back to a shell sed-based rewrite. Silent failure
 # would let the same complete loop pass the pre-commit gate on the next commit.
 
-LOOP_STATE=".agentx/state/loop-state.json"
+LOOP_STATE=".frontier/state/loop-state.json"
+[ -f "$LOOP_STATE" ] || LOOP_STATE=".hve/state/loop-state.json"
+[ -f "$LOOP_STATE" ] || LOOP_STATE=".agentx/state/loop-state.json"
 [ -f "$LOOP_STATE" ] || exit 0
 
 LOOP_STATUS=$(grep -o '"status":[[:space:]]*"[^"]*"' "$LOOP_STATE" 2>/dev/null | head -1 | sed 's/"status":[[:space:]]*"//' | sed 's/"//')
@@ -97,5 +99,5 @@ fi
 
 echo "[WARN] post-commit could not mark loopConsumed=true (no node/python/pwsh and sed fallback failed)." >&2
 echo "[WARN] The next code commit may pass the loop gate using this stale complete state." >&2
-echo "[WARN] Manually edit .agentx/state/loop-state.json to add: \"loopConsumed\": true" >&2
+echo "[WARN] Manually edit .frontier/state/loop-state.json to add: \"loopConsumed\": true" >&2
 exit 0

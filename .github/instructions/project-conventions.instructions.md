@@ -17,7 +17,7 @@ instead of repeating it.
 	--medium 0`), then `loop complete`. Check `loop status` before reporting gate
 	state.
 - Load and follow the Karpathy guidelines for implementation/review. Run
-	`.agentx/agentx.ps1 scrub -Path <changed-area>` before review or handoff.
+	`.agentx/frontier.ps1 scrub -Path <changed-area>` before review or handoff.
 - Engineer work follows `Research -> Brainstorm -> Plan -> Design -> Implement ->
 	Scrub -> Test -> Review`. Record alternatives before Plan.
 - New ADRs require a matching Model Council artifact. Approved reviews require
@@ -27,7 +27,7 @@ instead of repeating it.
 	interaction. Report unavailable browser prerequisites instead of silently skipping.
 - Agent `model:` fields and named council models are advisory. Preserve role behavior
 	across capable models and preserve each agent's tool/permission boundaries.
-- AgentX is zero-copy. Initialize through `agentx.initializeLocalRuntime`; never copy
+- Frontier is zero-copy. Initialize through `agentx.initializeLocalRuntime`; never copy
 	bundled agent, skill, instruction, template, guide, or prompt trees into a workspace.
 
 ## Working Conventions

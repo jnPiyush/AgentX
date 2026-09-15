@@ -5,15 +5,16 @@ applyTo: '**'
 
 # Global Copilot Instructions
 
+Frontier Corp is the canonical product and agent identity.
 This file is the **thin router** - it tells you what to load and when. It loads every conversation, so it stays small.
 
 ---
 
 ## Quality Loop Hard Rule (NON-SKIPPABLE)
 
-Before code/docs mutation, run `.agentx/agentx.ps1 loop start -p "<task>"` as the
+Before code/docs mutation, run `.agentx/frontier.ps1 loop start -p "<task>"` as the
 first tool call. Reads and `loop status` are allowed before mutation.
-Meet minimum iterations: standard 1, auto-fix 2, complex/AgentX 3, high-risk 5.
+Meet minimum iterations: standard 1, auto-fix 2, complex/Frontier 3, high-risk 5.
 Record each iteration with real evidence. The FINAL iteration requires
 `--verdict approved --reviewer <id> --high 0 --medium 0`; later edits require
 fresh review. Work is incomplete until `loop complete -s "<summary>"` succeeds.
@@ -87,7 +88,7 @@ When AGENTS.md applies (see above), follow the issue-first workflow:
 2. Update status: `Backlog -> In Progress -> In Review -> Done`
 3. Reference issue in commits: `type: description (#ID)`
 
-> **Note**: In Local Mode, issue enforcement is **optional** by default. Toggle with `agentx config set enforceIssues true`.
+> **Note**: In Local Mode, issue enforcement is **optional** by default. Toggle with `frontier config set enforceIssues true`.
 
 ---
 

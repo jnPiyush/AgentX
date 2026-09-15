@@ -705,7 +705,7 @@ function Invoke-ScanPath {
 }
 
 # Deterministic, pruning directory walk. Skip-listed directory trees (vendor,
-# generated output, node_modules, AgentX runtime state) are never descended
+# generated output, node_modules, Frontier runtime state) are never descended
 # into -- they are excluded before traversal, not filtered out of a completed
 # listing. Reparse points (symlinks/junctions) are never followed, for files
 # or directories, to avoid escaping the intended tree or looping forever.

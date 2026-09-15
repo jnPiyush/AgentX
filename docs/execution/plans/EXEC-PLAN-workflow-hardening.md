@@ -79,6 +79,12 @@ enforces them.
 All edits are additive to markdown/ps1. Re-running edits is safe; rollback via
 `git checkout -- <file>`.
 
+## Artifacts and Notes
+
+This historical plan is included in the Frontier terminology update. Its existing
+validation records remain historical; current release verification is recorded in
+[the 9.3.0 release plan](EXEC-PLAN-428-frontier-9.3.0-release.md).
+
 ## Outcomes & Retrospective
 
 **Delivered**:
@@ -100,7 +106,7 @@ All edits are additive to markdown/ps1. Re-running edits is safe; rollback via
   the subagent review iteration.
 
 **Files individually edited**: `project-conventions.instructions.md`,
-`scripts/ship.ps1`, `tester.agent.md`, `engineer.agent.md`, `agent-x.agent.md`,
+`scripts/ship.ps1`, `tester.agent.md`, `engineer.agent.md`, `frontier.agent.md`,
 `karpathy-guidelines/SKILL.md`, `scrub/SKILL.md`, `browser-automation/SKILL.md`.
 All other agents inherit the mandates through the always-on instruction file.
 

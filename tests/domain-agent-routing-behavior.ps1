@@ -23,14 +23,14 @@ function Assert-Equal($Actual, $Expected, [string]$Name) {
 
 $routing = Get-Content -LiteralPath (Join-Path $repoRoot '.github/registries/routing.json') -Raw -Encoding utf8 | ConvertFrom-Json
 $pipelines = Get-Content -LiteralPath (Join-Path $repoRoot '.github/registries/pipelines.json') -Raw -Encoding utf8 | ConvertFrom-Json
-$coreManifest = Get-Content -LiteralPath (Join-Path $repoRoot 'packs/agentx-core/manifest.json') -Raw -Encoding utf8 | ConvertFrom-Json
-$cliManifest = Get-Content -LiteralPath (Join-Path $repoRoot 'packs/agentx-copilot-cli/manifest.json') -Raw -Encoding utf8 | ConvertFrom-Json
+$coreManifest = Get-Content -LiteralPath (Join-Path $repoRoot 'packs/frontier-core/manifest.json') -Raw -Encoding utf8 | ConvertFrom-Json
+$cliManifest = Get-Content -LiteralPath (Join-Path $repoRoot 'packs/frontier-copilot-cli/manifest.json') -Raw -Encoding utf8 | ConvertFrom-Json
 $package = Get-Content -LiteralPath (Join-Path $repoRoot 'vscode-extension/package.json') -Raw -Encoding utf8 | ConvertFrom-Json
 $canonicalAgentPaths = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot '.github/agents') -Recurse -File -Filter '*.agent.md' |
     ForEach-Object { '.github/agents/' + $_.FullName.Substring((Join-Path $repoRoot '.github/agents').Length + 1).Replace('\', '/') } |
     Sort-Object)
 Assert-Equal $canonicalAgentPaths.Count 26 'Canonical inventory contains 26 agents'
-Assert-Equal @($coreManifest.artifacts.agents).Count 15 'agentx-core manifest contains all 15 visible agents'
+Assert-Equal @($coreManifest.artifacts.agents).Count 15 'frontier-core manifest contains all 15 visible agents'
 Assert-Equal @($cliManifest.artifacts.agents).Count 26 'Copilot CLI manifest contains all 26 agents'
 $cliManifestAgentPaths = @($cliManifest.artifacts.agents | Sort-Object)
 Assert-Equal @(Compare-Object $canonicalAgentPaths $cliManifestAgentPaths).Count 0 'Copilot CLI manifest exactly matches canonical agent inventory'
@@ -64,10 +64,10 @@ foreach ($case in @(
     Assert-True ($pipeline[0].phases.Count -ge 7) "$($case.Role) pipeline has ordered delivery phases"
 
     $relativeAgent = ".github/agents/$($case.Agent)"
-    Assert-True ($relativeAgent -in @($coreManifest.artifacts.agents)) "$($case.Role) ships in agentx-core"
+    Assert-True ($relativeAgent -in @($coreManifest.artifacts.agents)) "$($case.Role) ships in frontier-core"
     Assert-True ($relativeAgent -in @($cliManifest.artifacts.agents)) "$($case.Role) ships in Copilot CLI pack"
 
-    $chatPath = "./.github/agentx/agents/$($case.Agent)"
+    $chatPath = "./.github/frontier/agents/$($case.Agent)"
     Assert-True ($chatPath -in @($package.contributes.chatAgents.path)) "$($case.Role) is a declarative VS Code chat agent"
 }
 
@@ -95,7 +95,7 @@ Assert-Equal $powerPlatformFeaturePrefix.type 'type:lowcode' 'Feature prefix doe
 
 $powerPlatformAgent = Get-Content -LiteralPath (Join-Path $repoRoot '.github/agents/power-platform-builder.agent.md') -Raw -Encoding utf8
 $fabricAgent = Get-Content -LiteralPath (Join-Path $repoRoot '.github/agents/fabric-engineer.agent.md') -Raw -Encoding utf8
-$compatAgent = Get-Content -LiteralPath (Join-Path $repoRoot 'packs/agentx-power-platform-builder/agents/low-code-builder.agent.md') -Raw -Encoding utf8
+$compatAgent = Get-Content -LiteralPath (Join-Path $repoRoot 'packs/frontier-power-platform-builder/agents/low-code-builder.agent.md') -Raw -Encoding utf8
 Assert-True ($powerPlatformAgent -match 'MUST NOT call pac auth') 'Power Platform agent forbids pac auth'
 Assert-True ($powerPlatformAgent -match 'pac solution import') 'Power Platform agent names forbidden import boundary'
 Assert-True ($fabricAgent -match 'MUST NOT own Power BI') 'Fabric agent preserves Power BI ownership'

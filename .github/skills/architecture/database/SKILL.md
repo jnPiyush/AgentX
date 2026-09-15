@@ -2,7 +2,7 @@
 name: "database"
 description: 'Design database operations including migrations, indexing strategies, transactions, connection pooling, and ORM best practices. Use when creating database schemas, writing migrations, optimizing slow queries, configuring connection pools, or choosing between ORM frameworks.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

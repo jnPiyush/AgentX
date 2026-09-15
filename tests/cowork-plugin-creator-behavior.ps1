@@ -200,7 +200,7 @@ function Assert-Rejected([scriptblock]$Mutate, [string]$Label, [switch]$WithConn
     }
 }
 
-Write-Host 'AgentX Cowork Plugin Creator Behavior Tests'
+Write-Host 'Frontier Cowork Plugin Creator Behavior Tests'
 
 Assert-True (Test-Path $SkillRoot) 'plugin creator skill exists'
 Assert-True (Test-Path (Join-Path $SkillRoot 'assets/manifest.template.json')) 'manifest template exists'

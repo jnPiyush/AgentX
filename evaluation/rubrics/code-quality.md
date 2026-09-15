@@ -1,4 +1,4 @@
-# AgentX Implementation Quality Rubric
+# Frontier Implementation Quality Rubric
 
 Use this rubric for every quality-loop review that changes implementation code.
 The independent reviewer scores the exact final scope, and

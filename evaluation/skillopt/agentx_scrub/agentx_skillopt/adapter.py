@@ -17,12 +17,12 @@ def _load_json_items(split_path: str) -> list[dict]:
     return [dict(item) for item in payload]
 
 
-class AgentXScrubLoader(SplitDataLoader):
+class FrontierScrubLoader(SplitDataLoader):
     def load_split_items(self, split_path: str) -> list[dict]:
         return _load_json_items(split_path)
 
 
-class AgentXScrubAdapter(EnvAdapter):
+class FrontierScrubAdapter(EnvAdapter):
     def __init__(
         self,
         split_dir: str = "",
@@ -35,7 +35,7 @@ class AgentXScrubAdapter(EnvAdapter):
         limit: int = 0,
         **kwargs,
     ) -> None:
-        self.dataloader = AgentXScrubLoader(
+        self.dataloader = FrontierScrubLoader(
             split_dir=split_dir,
             data_path=data_path,
             split_mode=split_mode,

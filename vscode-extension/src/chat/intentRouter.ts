@@ -1,5 +1,5 @@
 /**
- * Natural-language intent router for the @agentx chat participant.
+ * Natural-language intent router for the @frontier chat participant.
  *
  * Two-stage classifier:
  *  1. LM-based classifier (vscode.lm) maps free-text phrases to an allowlisted
@@ -12,7 +12,7 @@
  * explicit `yes` / `cancel` confirmation turn before execution.
  */
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { classifyIntentWithLM, LmClassification } from './lmIntentClassifier';
 
 // Pending-confirmation store keyed by workspace root. In-memory only --
@@ -35,7 +35,7 @@ type SyncTarget = typeof SYNC_TARGETS[number];
 const GIT_DIRECTIONS = ['push', 'pull'] as const;
 type GitDirection = typeof GIT_DIRECTIONS[number];
 
-/** Map free-text status phrases to the canonical AgentX status values. */
+/** Map free-text status phrases to the canonical Frontier status values. */
 const STATUS_ALIASES: ReadonlyArray<{ pattern: RegExp; value: string }> = [
   { pattern: /^backlog$/i, value: 'Backlog' },
   { pattern: /^ready$/i, value: 'Ready' },
@@ -88,7 +88,7 @@ const PHRASE_RULES: ReadonlyArray<PhraseRule> = [
   // --- Configuration ---
   {
     id: 'config-show',
-    description: 'Show current AgentX configuration',
+    description: 'Show current Frontier configuration',
     destructive: false,
     subcommand: 'config',
     pattern: /^(?:show|what(?:'s| is)|display|view)\s+(?:my\s+|the\s+|current\s+)?config(?:uration)?\??$/i,
@@ -385,7 +385,7 @@ const PHRASE_RULES: ReadonlyArray<PhraseRule> = [
   },
   {
     id: 'git-sync',
-    description: 'Run git push or pull through AgentX git-sync',
+    description: 'Run git push or pull through Frontier git-sync',
     destructive: true,
     subcommand: 'git-sync',
     pattern: /^(?:run\s+)?git[\s-]?sync\s+(push|pull)\.?$|^git\s+(push|pull)\s+(?:via\s+|through\s+)?agentx\.?$/i,
@@ -497,22 +497,22 @@ function matchPhrase(userText: string): IntentMatch | undefined {
 const CONFIRM_PATTERN = /^(yes|confirm|run|ok|okay|do it|proceed|go)\.?$/i;
 const CANCEL_PATTERN = /^(no|cancel|abort|stop|nevermind|never mind)\.?$/i;
 
-function getRootKey(agentx: AgentXContext): string | undefined {
+function getRootKey(agentx: FrontierContext): string | undefined {
   return agentx.workspaceRoot;
 }
 
-function getPending(agentx: AgentXContext): PendingIntent | undefined {
+function getPending(agentx: FrontierContext): PendingIntent | undefined {
   const key = getRootKey(agentx);
   return key ? PENDING_INTENTS.get(key) : undefined;
 }
 
-function setPending(agentx: AgentXContext, intent: IntentMatch): void {
+function setPending(agentx: FrontierContext, intent: IntentMatch): void {
   const key = getRootKey(agentx);
   if (!key) { return; }
   PENDING_INTENTS.set(key, { ...intent, proposedAt: nowFn() });
 }
 
-function clearPending(agentx: AgentXContext): void {
+function clearPending(agentx: FrontierContext): void {
   const key = getRootKey(agentx);
   if (key) { PENDING_INTENTS.delete(key); }
 }
@@ -563,7 +563,7 @@ function formatCli(intent: IntentMatch): string {
 async function executeIntent(
   intent: IntentMatch,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<vscode.ChatResult> {
   try {
     response.progress(`Running ${formatCli(intent)}...`);
@@ -571,7 +571,7 @@ async function executeIntent(
     response.markdown(renderRan(intent, out));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    response.markdown(`**AgentX intent failed:** \`${formatCli(intent)}\`\n\n${msg}`);
+    response.markdown(`**Frontier intent failed:** \`${formatCli(intent)}\`\n\n${msg}`);
   }
   return {};
 }
@@ -584,7 +584,7 @@ async function executeIntent(
 export async function tryHandleNaturalLanguageIntent(
   userText: string,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<vscode.ChatResult | undefined> {
   const text = userText.trim();
   if (!text) { return undefined; }
@@ -639,7 +639,7 @@ export async function tryHandleNaturalLanguageIntent(
 
   if (match.destructive || requireConfirmFromLowConfidence) {
     if (!agentx.workspaceRoot) {
-      response.markdown('**No workspace open.** Open a folder with AgentX before running commands.');
+      response.markdown('**No workspace open.** Open a folder with Frontier before running commands.');
       return {};
     }
     setPending(agentx, match);

@@ -6,7 +6,7 @@
   "displayName": "Read Slides",
   "version": "1.0.0",
   "description": "Convert Microsoft PowerPoint (.pptx) decks to Markdown using python-pptx.",
-  "author": "AgentX",
+  "author": "Frontier",
   "license": "Apache-2.0",
   "homepage": "https://github.com/jnPiyush/AgentX/tree/master/.agentx/plugins/read-slides",
   "bugs": "https://github.com/jnPiyush/AgentX/issues",

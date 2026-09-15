@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Scan infrastructure-as-code for AgentX governance rule violations (IG-01 .. IG-10).
+    Scan infrastructure-as-code for Frontier governance rule violations (IG-01 .. IG-10).
 
 .DESCRIPTION
     Applies the rule catalog in ../references/rule-catalog.md to Terraform, Bicep, and ARM

@@ -20,8 +20,10 @@ function New-TestWorkspace([string]$name) {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-provider-test-{0}-{1}" -f $name, [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root '.frontier') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root 'scripts') -Force | Out-Null
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.agentx\frontier.ps1') (Join-Path $root '.agentx\frontier.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.agentx\local-issue-manager.ps1') (Join-Path $root '.agentx\local-issue-manager.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot 'scripts\score-code-quality.ps1') (Join-Path $root 'scripts\score-code-quality.ps1') -Force
@@ -34,7 +36,7 @@ function Remove-TestWorkspace([string]$root) {
     }
 }
 
-function Invoke-AgentX([string]$root, [string[]]$arguments, [hashtable]$environment = @{}) {
+function Invoke-Frontier([string]$root, [string[]]$arguments, [hashtable]$environment = @{}) {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'pwsh'
     $startInfo.RedirectStandardOutput = $true
@@ -46,7 +48,7 @@ function Invoke-AgentX([string]$root, [string[]]$arguments, [hashtable]$environm
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $root
     foreach ($entry in $environment.GetEnumerator()) {
         $startInfo.Environment[$entry.Key] = [string]$entry.Value
     }
@@ -61,7 +63,7 @@ function Invoke-AgentX([string]$root, [string[]]$arguments, [hashtable]$environm
     }
 }
 
-function Invoke-AgentXWindowsPowerShell([string]$root, [string[]]$arguments, [hashtable]$environment = @{}) {
+function Invoke-FrontierWindowsPowerShell([string]$root, [string[]]$arguments, [hashtable]$environment = @{}) {
     $powershellCommand = Get-Command powershell -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($null -eq $powershellCommand) {
         return [PSCustomObject]@{
@@ -84,7 +86,7 @@ function Invoke-AgentXWindowsPowerShell([string]$root, [string[]]$arguments, [ha
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $root
     foreach ($entry in $environment.GetEnumerator()) {
         $startInfo.Environment[$entry.Key] = [string]$entry.Value
     }
@@ -123,7 +125,7 @@ function Invoke-LocalIssueManagerWindowsPowerShell([string]$root, [string[]]$arg
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $root
     foreach ($entry in $environment.GetEnumerator()) {
         $startInfo.Environment[$entry.Key] = [string]$entry.Value
     }
@@ -566,8 +568,8 @@ $localIssueManagerOverrideRoot = $null
 
 try {
     $localRoot = New-TestWorkspace 'local'
-    New-Item -ItemType Directory -Path (Join-Path $localRoot '.agentx\issues') -Force | Out-Null
-    Write-Utf8File (Join-Path $localRoot '.agentx\config.json') (@{
+    New-Item -ItemType Directory -Path (Join-Path $localRoot '.frontier\issues') -Force | Out-Null
+    Write-Utf8File (Join-Path $localRoot '.frontier\config.json') (@{
         provider = 'local'
         mode = 'local'
         created = '2026-03-08T00:00:00Z'
@@ -575,30 +577,30 @@ try {
         nextIssueNumber = 1
     } | ConvertTo-Json -Depth 5)
 
-    $create = Invoke-AgentX $localRoot @('issue', 'create', '--title', '[Story] Local', '--body', 'Local body', '--labels', 'type:story,priority:p1')
-    $issueFile = Join-Path $localRoot '.agentx\issues\1.json'
+    $create = Invoke-Frontier $localRoot @('issue', 'create', '--title', '[Story] Local', '--body', 'Local body', '--labels', 'type:story,priority:p1')
+    $issueFile = Join-Path $localRoot '.frontier\issues\1.json'
     $localIssue = Get-Content $issueFile -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($create.ExitCode -eq 0) 'Local issue create exits successfully'
     Assert-True ($localIssue.title -eq '[Story] Local') 'Local issue create writes issue file'
 
-    $update = Invoke-AgentX $localRoot @('issue', 'update', '-n', '1', '-s', 'In Progress', '-b', 'Updated body', '-l', 'type:story,priority:p0')
+    $update = Invoke-Frontier $localRoot @('issue', 'update', '-n', '1', '-s', 'In Progress', '-b', 'Updated body', '-l', 'type:story,priority:p0')
     $localIssue = Get-Content $issueFile -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($update.ExitCode -eq 0) 'Local issue update exits successfully'
     Assert-True ($localIssue.status -eq 'In Progress' -and $localIssue.body -eq 'Updated body') 'Local issue update changes status and body'
 
-    $comment = Invoke-AgentX $localRoot @('issue', 'comment', '-n', '1', '-c', 'Started work')
+    $comment = Invoke-Frontier $localRoot @('issue', 'comment', '-n', '1', '-c', 'Started work')
     $localIssue = Get-Content $issueFile -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($comment.ExitCode -eq 0) 'Local issue comment exits successfully'
     Assert-True (@($localIssue.comments).Count -eq 1 -and $localIssue.comments[0].body -eq 'Started work') 'Local issue comment appends comment'
 
-    $close = Invoke-AgentX $localRoot @('issue', 'close', '-n', '1')
+    $close = Invoke-Frontier $localRoot @('issue', 'close', '-n', '1')
     $localIssue = Get-Content $issueFile -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($close.ExitCode -eq 0) 'Local issue close exits successfully'
     Assert-True ($localIssue.state -eq 'closed' -and $localIssue.status -eq 'Done') 'Local issue close updates state and status'
 
     $localIssueManagerOverrideRoot = New-TestWorkspace 'local-issue-manager-override'
-    New-Item -ItemType Directory -Path (Join-Path $localIssueManagerOverrideRoot '.agentx\issues') -Force | Out-Null
-    Write-Utf8File (Join-Path $localIssueManagerOverrideRoot '.agentx\config.json') (@{
+    New-Item -ItemType Directory -Path (Join-Path $localIssueManagerOverrideRoot '.frontier\issues') -Force | Out-Null
+    Write-Utf8File (Join-Path $localIssueManagerOverrideRoot '.frontier\config.json') (@{
         provider = 'local'
         mode = 'local'
         created = '2026-03-08T00:00:00Z'
@@ -610,8 +612,8 @@ try {
     if ($localIssueManagerCreate.Skipped) {
         Assert-True $true 'Windows PowerShell local-issue-manager handoff test skipped because powershell.exe is unavailable'
     } else {
-        $localWrapperIssue = Get-Content (Join-Path $localRoot '.agentx\issues\2.json') -Raw | ConvertFrom-Json -Depth 10
-        $overrideIssueFiles = @(Get-ChildItem (Join-Path $localIssueManagerOverrideRoot '.agentx\issues') -Filter '*.json' -ErrorAction SilentlyContinue)
+        $localWrapperIssue = Get-Content (Join-Path $localRoot '.frontier\issues\2.json') -Raw | ConvertFrom-Json -Depth 10
+        $overrideIssueFiles = @(Get-ChildItem (Join-Path $localIssueManagerOverrideRoot '.frontier\issues') -Filter '*.json' -ErrorAction SilentlyContinue)
         Assert-True ($localIssueManagerCreate.ExitCode -eq 0) 'Local issue manager exits successfully when invoked from Windows PowerShell'
         Assert-True ($localWrapperIssue.title -eq '[Story] Local Wrapper') 'Local issue manager writes issues to its own workspace root even when AGENTX_WORKSPACE_ROOT is overridden'
         Assert-True (@($overrideIssueFiles).Count -eq 0) 'Local issue manager does not mutate foreign issue storage from leaked environment overrides'
@@ -622,12 +624,12 @@ try {
     New-Item -ItemType Directory -Path (Join-Path $localBacklogRoot 'backlog\tasks') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $localBacklogRoot 'backlog\completed') -Force | Out-Null
     Write-Utf8File (Join-Path $localBacklogRoot 'backlog\config.yml') @"
-project_name: 'AgentX Provider Test'
+project_name: 'Frontier Provider Test'
 default_status: 'Backlog'
 statuses: ['Backlog', 'Ready', 'In Progress', 'In Review', 'Done']
 task_prefix: 'task'
 "@
-    Write-Utf8File (Join-Path $localBacklogRoot '.agentx\config.json') (@{
+    Write-Utf8File (Join-Path $localBacklogRoot '.frontier\config.json') (@{
         provider = 'local'
         mode = 'local'
         created = '2026-03-08T00:00:00Z'
@@ -635,49 +637,49 @@ task_prefix: 'task'
         nextIssueNumber = 1
     } | ConvertTo-Json -Depth 5)
 
-    $backlogCreate = Invoke-AgentX $localBacklogRoot @('issue', 'create', '--title', '[Story] Backlog Local', '--body', 'Backlog body', '--labels', 'type:story,priority:p1')
+    $backlogCreate = Invoke-Frontier $localBacklogRoot @('issue', 'create', '--title', '[Story] Backlog Local', '--body', 'Backlog body', '--labels', 'type:story,priority:p1')
     $backlogTaskFile = @(Get-ChildItem (Join-Path $localBacklogRoot 'backlog\tasks') -Filter '*.md' | Select-Object -First 1)[0]
     $backlogTaskContent = Get-Content $backlogTaskFile.FullName -Raw
     Assert-True ($backlogCreate.ExitCode -eq 0) 'Backlog-backed local issue create exits successfully'
     Assert-True ($backlogTaskContent -match "id: 'TASK-1'" -and $backlogTaskContent -match "status: 'Backlog'") 'Backlog-backed local issue create writes markdown task metadata'
 
-    $backlogUpdate = Invoke-AgentX $localBacklogRoot @('issue', 'update', '-n', '1', '-s', 'Ready', '-b', 'Updated backlog body')
-    $backlogReady = Invoke-AgentX $localBacklogRoot @('ready', '--json')
+    $backlogUpdate = Invoke-Frontier $localBacklogRoot @('issue', 'update', '-n', '1', '-s', 'Ready', '-b', 'Updated backlog body')
+    $backlogReady = Invoke-Frontier $localBacklogRoot @('ready', '--json')
     $backlogReadyIssues = $backlogReady.Output | ConvertFrom-Json -Depth 10
     Assert-True ($backlogUpdate.ExitCode -eq 0) 'Backlog-backed local issue update exits successfully'
     Assert-True ($backlogReady.ExitCode -eq 0 -and @($backlogReadyIssues).Count -eq 1 -and [int]$backlogReadyIssues[0].number -eq 1) 'Backlog-backed local ready returns Ready tasks from markdown storage'
 
-    $backlogComment = Invoke-AgentX $localBacklogRoot @('issue', 'comment', '-n', '1', '-c', 'Backlog comment')
-    $backlogGet = Invoke-AgentX $localBacklogRoot @('issue', 'get', '-n', '1', '--json')
+    $backlogComment = Invoke-Frontier $localBacklogRoot @('issue', 'comment', '-n', '1', '-c', 'Backlog comment')
+    $backlogGet = Invoke-Frontier $localBacklogRoot @('issue', 'get', '-n', '1', '--json')
     $backlogIssue = $backlogGet.Output | ConvertFrom-Json -Depth 10
     Assert-True ($backlogComment.ExitCode -eq 0) 'Backlog-backed local issue comment exits successfully'
     Assert-True (@($backlogIssue.comments).Count -eq 1 -and $backlogIssue.comments[0].body -eq 'Backlog comment') 'Backlog-backed local issue comment round-trips through markdown metadata'
 
-    $backlogClose = Invoke-AgentX $localBacklogRoot @('issue', 'close', '-n', '1')
+    $backlogClose = Invoke-Frontier $localBacklogRoot @('issue', 'close', '-n', '1')
     $completedTaskFile = @(Get-ChildItem (Join-Path $localBacklogRoot 'backlog\completed') -Filter '*.md' | Select-Object -First 1)[0]
     $completedTaskContent = Get-Content $completedTaskFile.FullName -Raw
     Assert-True ($backlogClose.ExitCode -eq 0) 'Backlog-backed local issue close exits successfully'
     Assert-True ($completedTaskContent -match "status: 'Done'" -and $completedTaskContent -match 'Backlog comment') 'Backlog-backed local issue close moves markdown task to completed storage and preserves metadata'
 
     # priority:p0 round-trip regression guard (FINDING-1 fix)
-    $p0Create = Invoke-AgentX $localBacklogRoot @('issue', 'create', '--title', '[Story] P0 Priority', '--body', 'P0 body', '--labels', 'type:story,priority:p0')
-    $p0Get = Invoke-AgentX $localBacklogRoot @('issue', 'get', '-n', '2', '--json')
+    $p0Create = Invoke-Frontier $localBacklogRoot @('issue', 'create', '--title', '[Story] P0 Priority', '--body', 'P0 body', '--labels', 'type:story,priority:p0')
+    $p0Get = Invoke-Frontier $localBacklogRoot @('issue', 'get', '-n', '2', '--json')
     $p0Issue = $p0Get.Output | ConvertFrom-Json -Depth 10
     Assert-True ($p0Create.ExitCode -eq 0) 'Backlog-backed local issue create with priority:p0 exits successfully'
     Assert-True (@($p0Issue.labels) -contains 'priority:p0') 'Backlog-backed priority:p0 round-trips through markdown storage without degrading to priority:p1'
 
-    $version = Invoke-AgentX $localRoot @('version')
+    $version = Invoke-Frontier $localRoot @('version')
     Assert-True ($version.ExitCode -eq 0) 'Version exits cleanly on success'
-    Assert-True ($version.Output -match 'AgentX version') 'Version prints version details'
+    Assert-True ($version.Output -match 'Frontier version') 'Version prints version details'
 
-    $config = Invoke-AgentX $localRoot @('config', 'show')
+    $config = Invoke-Frontier $localRoot @('config', 'show')
     $configOutput = [string]::Join("`n", @($config.Output))
-    $localConfigAfterShow = Get-Content (Join-Path $localRoot '.agentx\config.json') -Raw | ConvertFrom-Json -Depth 10
+    $localConfigAfterShow = Get-Content (Join-Path $localRoot '.frontier\config.json') -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($config.ExitCode -eq 0) 'Config show exits cleanly on success'
     Assert-True ($configOutput.Trim().Length -gt 0 -and $localConfigAfterShow.provider -eq 'local' -and $localConfigAfterShow.mode -eq 'local') 'Config show reports local mode'
 
     $workflowRoot = New-TestWorkspace 'workflow-type'
-    Write-Utf8File (Join-Path $workflowRoot '.agentx\config.json') (@{
+    Write-Utf8File (Join-Path $workflowRoot '.frontier\config.json') (@{
         provider = 'local'
         mode = 'local'
         created = '2026-03-08T00:00:00Z'
@@ -686,18 +688,18 @@ task_prefix: 'task'
     } | ConvertTo-Json -Depth 5)
     Copy-Item (Join-Path $script:repoRoot '.github') (Join-Path $workflowRoot '.github') -Recurse -Force
 
-    $featureWorkflow = Invoke-AgentX $workflowRoot @('workflow', 'feature')
+    $featureWorkflow = Invoke-Frontier $workflowRoot @('workflow', 'feature')
     Assert-True ($featureWorkflow.ExitCode -eq 0) 'workflow feature exits successfully'
     Assert-True ($featureWorkflow.Output -match 'Handoff Chain: architect') 'workflow feature maps to architect'
 
-    $bugWorkflow = Invoke-AgentX $workflowRoot @('workflow', 'bug')
+    $bugWorkflow = Invoke-Frontier $workflowRoot @('workflow', 'bug')
     Assert-True ($bugWorkflow.ExitCode -eq 0) 'workflow bug exits successfully'
     Assert-True ($bugWorkflow.Output -match 'Handoff Chain: engineer') 'workflow bug maps to engineer'
 
     $workspaceOverrideRoot = New-TestWorkspace 'workspace-root-override'
-    New-Item -ItemType Directory -Path (Join-Path $workflowRoot '.agentx\state') -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $workspaceOverrideRoot '.agentx\state') -Force | Out-Null
-    Write-Utf8File (Join-Path $workspaceOverrideRoot '.agentx\state\loop-state.json') (@{
+    New-Item -ItemType Directory -Path (Join-Path $workflowRoot '.frontier\state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $workspaceOverrideRoot '.frontier\state') -Force | Out-Null
+    Write-Utf8File (Join-Path $workspaceOverrideRoot '.frontier\state\loop-state.json') (@{
         active = $true
         status = 'active'
         prompt = 'Foreign active loop'
@@ -714,14 +716,14 @@ task_prefix: 'task'
         )
     } | ConvertTo-Json -Depth 10)
 
-    $loopStart = Invoke-AgentX $workflowRoot @('loop', 'start', '--prompt', 'Local launcher loop', '--max', '5') @{ AGENTX_WORKSPACE_ROOT = $workspaceOverrideRoot }
-    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    $overrideLoopState = Get-Content (Join-Path $workspaceOverrideRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $loopStart = Invoke-Frontier $workflowRoot @('loop', 'start', '--prompt', 'Local launcher loop', '--max', '5') @{ AGENTX_WORKSPACE_ROOT = $workspaceOverrideRoot }
+    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $overrideLoopState = Get-Content (Join-Path $workspaceOverrideRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($loopStart.ExitCode -eq 0) 'Workspace launcher loop start exits successfully even when AGENTX_WORKSPACE_ROOT points elsewhere'
     Assert-True ($workflowLoopState.active -and $workflowLoopState.prompt -eq 'Local launcher loop') 'Workspace launcher writes loop state to its own workspace root'
     Assert-True ($overrideLoopState.active -and $overrideLoopState.prompt -eq 'Foreign active loop') 'Workspace launcher does not mutate foreign loop state from leaked environment overrides'
 
-    $windowsLoopStatus = Invoke-AgentXWindowsPowerShell $workflowRoot @('loop', 'status')
+    $windowsLoopStatus = Invoke-FrontierWindowsPowerShell $workflowRoot @('loop', 'status')
     if ($windowsLoopStatus.Skipped) {
         Assert-True $true 'Windows PowerShell launcher handoff test skipped because powershell.exe is unavailable'
     } else {
@@ -730,91 +732,91 @@ task_prefix: 'task'
         Assert-True ($windowsLoopStatus.Output -notmatch 'requires PowerShell 7') 'Windows PowerShell launcher handoff does not surface the CLI PowerShell 7 requires error'
     }
 
-    $loopBaseline = Invoke-AgentX $workflowRoot @('loop', 'baseline', '--count', '5')
-    $baselineState = Get-Content (Join-Path $workflowRoot '.agentx\state\tests-baseline.json') -Raw | ConvertFrom-Json -Depth 10
+    $loopBaseline = Invoke-Frontier $workflowRoot @('loop', 'baseline', '--count', '5')
+    $baselineState = Get-Content (Join-Path $workflowRoot '.frontier\state\tests-baseline.json') -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($loopBaseline.ExitCode -eq 0) 'loop baseline exits successfully'
     Assert-True ([int]$baselineState.passing -eq 5) 'loop baseline records the passing-test baseline count'
 
-    $failingEvidence = Join-Path $workflowRoot '.agentx\state\iter-2-failing.txt'
+    $failingEvidence = Join-Path $workflowRoot '.frontier\state\iter-2-failing.txt'
     Write-Utf8File $failingEvidence 'iteration 2 evidence that should fail baseline gate'
-    $loopBeforeRegression = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    $loopIterateBelowBaseline = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Below baseline', '--evidence', $failingEvidence, '--passing', '4')
-    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $loopBeforeRegression = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $loopIterateBelowBaseline = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Below baseline', '--evidence', $failingEvidence, '--passing', '4')
+    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($loopIterateBelowBaseline.Output -match 'would regress passing tests') 'loop iterate reports baseline regression when passing count drops'
     Assert-True ([int]$workflowLoopState.iteration -eq [int]$loopBeforeRegression.iteration) 'loop iterate does not advance the loop on a baseline regression'
     Assert-True (Test-Path $failingEvidence) 'loop iterate leaves evidence file in place when baseline validation fails before acceptance'
 
-    $iter2Evidence = Join-Path $workflowRoot '.agentx\state\iter-2-pass.txt'
+    $iter2Evidence = Join-Path $workflowRoot '.frontier\state\iter-2-pass.txt'
     Write-Utf8File $iter2Evidence 'iteration 2 fresh artifact'
-    $loopIterate = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Fresh iteration evidence', '--evidence', $iter2Evidence, '--passing', '5')
-    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    $iter2Archive = Get-ChildItem (Join-Path $workflowRoot ('.agentx\state\loop-evidence\iter-{0}' -f [int]$workflowLoopState.iteration)) -File | Select-Object -First 1
+    $loopIterate = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Fresh iteration evidence', '--evidence', $iter2Evidence, '--passing', '5')
+    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $iter2Archive = Get-ChildItem (Join-Path $workflowRoot ('.frontier\state\loop-evidence\iter-{0}' -f [int]$workflowLoopState.iteration)) -File | Select-Object -First 1
     Assert-True ($loopIterate.ExitCode -eq 0) 'loop iterate exits successfully with fresh evidence and passing count'
     Assert-True ([int]$workflowLoopState.iteration -eq ([int]$loopBeforeRegression.iteration + 1)) 'loop iterate advances the loop when baseline and evidence gates pass'
     Assert-True (Test-Path $iter2Evidence) 'loop iterate preserves the accepted source evidence after archiving a copy'
     Assert-True ($null -ne $iter2Archive -and (Test-Path $iter2Archive.FullName)) 'loop iterate archives accepted evidence into the per-iteration folder'
 
-    $iter3Evidence = Join-Path $workflowRoot '.agentx\state\iter-3-pass.txt'
-    $iter4Evidence = Join-Path $workflowRoot '.agentx\state\iter-4-pass.txt'
-    $iter5Evidence = Join-Path $workflowRoot '.agentx\state\iter-5-pass.txt'
-    $iter6Evidence = Join-Path $workflowRoot '.agentx\state\subagent-review.json'
+    $iter3Evidence = Join-Path $workflowRoot '.frontier\state\iter-3-pass.txt'
+    $iter4Evidence = Join-Path $workflowRoot '.frontier\state\iter-4-pass.txt'
+    $iter5Evidence = Join-Path $workflowRoot '.frontier\state\iter-5-pass.txt'
+    $iter6Evidence = Join-Path $workflowRoot '.frontier\state\subagent-review.json'
     Write-Utf8File $iter3Evidence 'iteration 3 fresh artifact'
-    [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Secure pass', '--evidence', $iter3Evidence, '--passing', '5'))
+    [void](Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Secure pass', '--evidence', $iter3Evidence, '--passing', '5'))
     Write-Utf8File $iter4Evidence 'iteration 4 fresh artifact'
-    [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Adversarial pass', '--evidence', $iter4Evidence, '--passing', '5'))
+    [void](Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Adversarial pass', '--evidence', $iter4Evidence, '--passing', '5'))
     Write-Utf8File $iter5Evidence 'iteration 5 fresh artifact'
-    [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Evidence pass', '--evidence', $iter5Evidence, '--passing', '5'))
+    [void](Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Evidence pass', '--evidence', $iter5Evidence, '--passing', '5'))
     Write-Utf8File $iter6Evidence '{"findings":[]}'
-    [void](Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Subagent review pass', '--evidence', $iter6Evidence, '--passing', '5', '--verdict', 'approved', '--reviewer', 'provider-suite', '--high', '0', '--medium', '0'))
-    $finalEvidence = Join-Path $workflowRoot '.agentx\state\final-gate.json'
+    [void](Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Subagent review pass', '--evidence', $iter6Evidence, '--passing', '5', '--verdict', 'approved', '--reviewer', 'provider-suite', '--high', '0', '--medium', '0'))
+    $finalEvidence = Join-Path $workflowRoot '.frontier\state\final-gate.json'
     Write-Utf8File $finalEvidence '{"status":"pass","source":"final gate"}'
-    $loopComplete = Invoke-AgentX $workflowRoot @('loop', 'complete', '--summary', 'All gates passed', '--evidence', $finalEvidence, '--passing', '5')
-    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    $completeArchive = Get-ChildItem (Join-Path $workflowRoot '.agentx\state\loop-evidence\complete') -File | Select-Object -First 1
+    $loopComplete = Invoke-Frontier $workflowRoot @('loop', 'complete', '--summary', 'All gates passed', '--evidence', $finalEvidence, '--passing', '5')
+    $workflowLoopState = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $completeArchive = Get-ChildItem (Join-Path $workflowRoot '.frontier\state\loop-evidence\complete') -File | Select-Object -First 1
     Assert-True ($loopComplete.ExitCode -eq 0) 'loop complete exits successfully with a fresh final artifact distinct from iteration 5 input'
     Assert-True ($workflowLoopState.status -eq 'complete' -and -not $workflowLoopState.active) 'loop complete marks the loop complete after passing the final gate'
     Assert-True (Test-Path $finalEvidence) 'loop complete preserves the accepted final artifact after archiving a copy'
     Assert-True ($null -ne $completeArchive -and (Test-Path $completeArchive.FullName)) 'loop complete archives the final artifact'
 
-    $restartLoop = Invoke-AgentX $workflowRoot @('loop', 'start', '--prompt', 'Second loop after cleanup', '--max', '5')
+    $restartLoop = Invoke-Frontier $workflowRoot @('loop', 'start', '--prompt', 'Second loop after cleanup', '--max', '5')
     Assert-True ($restartLoop.ExitCode -eq 0) 'starting a new loop after completion exits successfully'
-    Assert-True (-not (Test-Path (Join-Path $workflowRoot '.agentx\state\loop-evidence'))) 'loop start cleans the prior loop evidence workspace before the new task begins'
+    Assert-True (-not (Test-Path (Join-Path $workflowRoot '.frontier\state\loop-evidence'))) 'loop start cleans the prior loop evidence workspace before the new task begins'
 
     # Loop baseline read path: no --count flag reports current baseline value
-    [void](Invoke-AgentX $workflowRoot @('loop', 'baseline', '--count', '7'))
-    $loopBaselineRead = Invoke-AgentX $workflowRoot @('loop', 'baseline')
+    [void](Invoke-Frontier $workflowRoot @('loop', 'baseline', '--count', '7'))
+    $loopBaselineRead = Invoke-Frontier $workflowRoot @('loop', 'baseline')
     Assert-True ($loopBaselineRead.ExitCode -eq 0) 'loop baseline read (no flags) exits successfully'
     Assert-True ($loopBaselineRead.Output -match 'Loop baseline passing tests:\s*7') 'loop baseline read prints the recorded baseline value'
 
     # Invalid --passing values are rejected and do not advance the loop
-    $loopBeforeInvalid = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    $invalidEvidenceA = Join-Path $workflowRoot '.agentx\state\invalid-passing-a.txt'
-    $invalidEvidenceB = Join-Path $workflowRoot '.agentx\state\invalid-passing-b.txt'
+    $loopBeforeInvalid = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $invalidEvidenceA = Join-Path $workflowRoot '.frontier\state\invalid-passing-a.txt'
+    $invalidEvidenceB = Join-Path $workflowRoot '.frontier\state\invalid-passing-b.txt'
     Write-Utf8File $invalidEvidenceA 'placeholder'
     Write-Utf8File $invalidEvidenceB 'placeholder'
-    $loopIterateNegPassing = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Negative', '--evidence', $invalidEvidenceA, '--passing', '-1')
-    $loopIterateBadPassing = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'NaN', '--evidence', $invalidEvidenceB, '--passing', 'abc')
-    $loopAfterInvalid = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $loopIterateNegPassing = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Negative', '--evidence', $invalidEvidenceA, '--passing', '-1')
+    $loopIterateBadPassing = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'NaN', '--evidence', $invalidEvidenceB, '--passing', 'abc')
+    $loopAfterInvalid = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($loopIterateNegPassing.Output -match 'requires --passing <non-negative-integer>') 'loop iterate rejects negative --passing values'
     Assert-True ($loopIterateBadPassing.Output -match 'requires --passing <non-negative-integer>') 'loop iterate rejects non-integer --passing values'
     Assert-True ([int]$loopAfterInvalid.iteration -eq [int]$loopBeforeInvalid.iteration) 'loop iterate does not advance when --passing is invalid'
     Assert-True ((Test-Path $invalidEvidenceA) -and (Test-Path $invalidEvidenceB)) 'loop iterate leaves source evidence in place when --passing validation fails'
 
     # AGENTX_SKIP_EVIDENCE_GATE=1 bypass: iterate skips evidence requirement but still enforces baseline passing count.
-    $loopAfterValid = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
-    $loopIterateBypass = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Bypass', '--passing', '7') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
-    $loopAfterBypass = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $loopAfterValid = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $loopIterateBypass = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass', '--passing', '7') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
+    $loopAfterBypass = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($loopIterateBypass.Output -notmatch '\[FAIL\]') 'loop iterate emits no [FAIL] when AGENTX_SKIP_EVIDENCE_GATE=1 and baseline passing count is provided'
     Assert-True ([int]$loopAfterBypass.iteration -eq ([int]$loopAfterValid.iteration + 1)) 'loop iterate advances under AGENTX_SKIP_EVIDENCE_GATE bypass when baseline passing count is satisfied'
 
-    $loopIterateBypassMissingPassing = Invoke-AgentX $workflowRoot @('loop', 'iterate', '--summary', 'Bypass missing passing') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
-    $loopAfterBypassMissingPassing = Get-Content (Join-Path $workflowRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
+    $loopIterateBypassMissingPassing = Invoke-Frontier $workflowRoot @('loop', 'iterate', '--summary', 'Bypass missing passing') @{ AGENTX_SKIP_EVIDENCE_GATE = '1' }
+    $loopAfterBypassMissingPassing = Get-Content (Join-Path $workflowRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($loopIterateBypassMissingPassing.Output -match 'requires --passing <count>') 'loop iterate still requires --passing when a baseline exists even if AGENTX_SKIP_EVIDENCE_GATE=1'
     Assert-True ([int]$loopAfterBypassMissingPassing.iteration -eq [int]$loopAfterBypass.iteration) 'loop iterate does not advance under evidence bypass when baseline passing count is missing'
 
     $adoRoot = New-TestWorkspace 'ado'
     $adoToolsDir = Initialize-AdoMock $adoRoot
-    Write-Utf8File (Join-Path $adoRoot '.agentx\config.json') (@{
+    Write-Utf8File (Join-Path $adoRoot '.frontier\config.json') (@{
         provider = 'ado'
         integration = 'ado'
         mode = 'ado'
@@ -824,26 +826,26 @@ task_prefix: 'task'
         created = '2026-03-08T00:00:00Z'
     } | ConvertTo-Json -Depth 5)
 
-    $adoList = Invoke-AgentX $adoRoot @('issue', 'list', '--json')
+    $adoList = Invoke-Frontier $adoRoot @('issue', 'list', '--json')
     $adoIssues = $adoList.Output | ConvertFrom-Json -Depth 10
     Assert-True ($adoList.ExitCode -eq 0) 'ADO issue list exits successfully with mocked MCP'
     Assert-True (@($adoIssues).Count -eq 2 -and @(@($adoIssues).number) -contains 501 -and @(@($adoIssues).number) -contains 502) 'ADO issue list resolves work items through MCP query plus work-item get'
 
-    $adoUpdate = Invoke-AgentX $adoRoot @('issue', 'update', '-n', '501', '-s', 'In Progress', '-b', 'Updated ADO body', '-l', 'type:story,priority:p0')
+    $adoUpdate = Invoke-Frontier $adoRoot @('issue', 'update', '-n', '501', '-s', 'In Progress', '-b', 'Updated ADO body', '-l', 'type:story,priority:p0')
     Assert-True ($adoUpdate.ExitCode -eq 0) 'ADO issue update exits successfully with mocked MCP'
-    $adoUpdatedGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
+    $adoUpdatedGet = Invoke-Frontier $adoRoot @('issue', 'get', '-n', '501', '--json')
     $adoUpdatedIssue = $adoUpdatedGet.Output | ConvertFrom-Json -Depth 10
-    Assert-True ($adoUpdatedIssue.status -eq 'Active' -and $adoUpdatedIssue.body -eq 'Updated ADO body' -and (@($adoUpdatedIssue.labels) -contains 'priority:p0')) 'ADO issue update maps AgentX edits onto Azure DevOps work-item fields'
+    Assert-True ($adoUpdatedIssue.status -eq 'Active' -and $adoUpdatedIssue.body -eq 'Updated ADO body' -and (@($adoUpdatedIssue.labels) -contains 'priority:p0')) 'ADO issue update maps Frontier edits onto Azure DevOps work-item fields'
 
-    $adoComment = Invoke-AgentX $adoRoot @('issue', 'comment', '-n', '501', '-c', 'ADO comment')
+    $adoComment = Invoke-Frontier $adoRoot @('issue', 'comment', '-n', '501', '-c', 'ADO comment')
     Assert-True ($adoComment.ExitCode -eq 0) 'ADO issue comment exits successfully with mocked MCP'
-    $adoCommentGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
+    $adoCommentGet = Invoke-Frontier $adoRoot @('issue', 'get', '-n', '501', '--json')
     $adoCommentIssue = $adoCommentGet.Output | ConvertFrom-Json -Depth 10
     Assert-True ($adoCommentIssue.number -eq 501) 'ADO issue comment keeps the work item readable after discussion updates'
 
-    $adoClose = Invoke-AgentX $adoRoot @('issue', 'close', '-n', '501')
+    $adoClose = Invoke-Frontier $adoRoot @('issue', 'close', '-n', '501')
     Assert-True ($adoClose.ExitCode -eq 0) 'ADO issue close exits successfully with mocked MCP'
-    $adoClosedGet = Invoke-AgentX $adoRoot @('issue', 'get', '-n', '501', '--json')
+    $adoClosedGet = Invoke-Frontier $adoRoot @('issue', 'get', '-n', '501', '--json')
     $adoClosedIssue = $adoClosedGet.Output | ConvertFrom-Json -Depth 10
     Assert-True ($adoClosedIssue.status -eq 'Closed' -and $adoClosedIssue.state -eq 'closed') 'ADO issue close maps to Closed state and returns a closed issue'
 
@@ -855,7 +857,7 @@ task_prefix: 'task'
 
     $githubRoot = New-TestWorkspace 'github'
     $toolsDir = Initialize-GitHubMock $githubRoot
-    Write-Utf8File (Join-Path $githubRoot '.agentx\config.json') (@{
+    Write-Utf8File (Join-Path $githubRoot '.frontier\config.json') (@{
         provider = 'github'
         repo = 'test-owner/test-repo'
         project = 4
@@ -865,12 +867,12 @@ task_prefix: 'task'
     $originalPath = $env:PATH
     $env:PATH = "$toolsDir;$originalPath"
     try {
-        $ready = Invoke-AgentX $githubRoot @('ready', '--json')
+        $ready = Invoke-Frontier $githubRoot @('ready', '--json')
         $readyIssues = $ready.Output | ConvertFrom-Json -Depth 10
         Assert-True ($ready.ExitCode -eq 0) 'GitHub ready exits successfully with mocked gh'
         Assert-True (@($readyIssues).Count -eq 1 -and [int]$readyIssues[0].number -eq 202) 'GitHub ready returns only issues with project status Ready'
 
-        $ghCreate = Invoke-AgentX $githubRoot @('issue', 'create', '--title', '[Story] GitHub Create', '--body', 'GitHub body', '--labels', 'type:story,priority:p2')
+        $ghCreate = Invoke-Frontier $githubRoot @('issue', 'create', '--title', '[Story] GitHub Create', '--body', 'GitHub body', '--labels', 'type:story,priority:p2')
         $state = Get-GitHubMockState $toolsDir
         $createdIssue = @($state.issues | Where-Object { $_.title -eq '[Story] GitHub Create' } | Select-Object -First 1)[0]
         $createdItem = @($state.project.items | Where-Object { [int]$_.content.number -eq [int]$createdIssue.number } | Select-Object -First 1)[0]
@@ -881,7 +883,7 @@ task_prefix: 'task'
         }
         Assert-True ($createdItem.status -eq 'Backlog') 'GitHub issue create adds new issue to project with Backlog status'
 
-        $ghUpdate = Invoke-AgentX $githubRoot @('issue', 'update', '-n', "$($createdIssue.number)", '-s', 'In Progress')
+        $ghUpdate = Invoke-Frontier $githubRoot @('issue', 'update', '-n', "$($createdIssue.number)", '-s', 'In Progress')
         $state = Get-GitHubMockState $toolsDir
         $createdItem = @($state.project.items | Where-Object { [int]$_.content.number -eq [int]$createdIssue.number } | Select-Object -First 1)[0]
         if (-not ($ghUpdate.ExitCode -eq 0)) { Write-Host $ghUpdate.Output }
@@ -892,7 +894,7 @@ task_prefix: 'task'
         }
         Assert-True ($createdItem.status -eq 'In progress') 'GitHub issue update syncs Project V2 status'
 
-        $ghClose = Invoke-AgentX $githubRoot @('issue', 'close', '-n', "$($createdIssue.number)")
+        $ghClose = Invoke-Frontier $githubRoot @('issue', 'close', '-n', "$($createdIssue.number)")
         $state = Get-GitHubMockState $toolsDir
         $closedIssue = @($state.issues | Where-Object { [int]$_.number -eq [int]$createdIssue.number } | Select-Object -First 1)[0]
         $closedItem = @($state.project.items | Where-Object { [int]$_.content.number -eq [int]$createdIssue.number } | Select-Object -First 1)[0]
@@ -903,7 +905,7 @@ task_prefix: 'task'
         }
         Assert-True ($closedIssue.state -eq 'CLOSED' -and $closedItem.status -eq 'Done') 'GitHub issue close updates issue state and project status in order'
 
-        $ghCloseFailure = Invoke-AgentX $githubRoot @('issue', 'close', '-n', '299')
+        $ghCloseFailure = Invoke-Frontier $githubRoot @('issue', 'close', '-n', '299')
         $state = Get-GitHubMockState $toolsDir
         $failedIssue = @($state.issues | Where-Object { [int]$_.number -eq 299 } | Select-Object -First 1)[0]
         $failedItem = @($state.project.items | Where-Object { [int]$_.content.number -eq 299 } | Select-Object -First 1)[0]
@@ -912,14 +914,14 @@ task_prefix: 'task'
         Assert-True ($failedIssue.state -eq 'OPEN' -and $failedItem.status -eq 'In review') 'GitHub project status is unchanged when gh close fails'
 
         $inferredRoot = New-TestWorkspace 'inferred-github'
-        New-Item -ItemType Directory -Path (Join-Path $inferredRoot '.agentx\issues') -Force | Out-Null
-        Write-Utf8File (Join-Path $inferredRoot '.agentx\config.json') (@{
+        New-Item -ItemType Directory -Path (Join-Path $inferredRoot '.frontier\issues') -Force | Out-Null
+        Write-Utf8File (Join-Path $inferredRoot '.frontier\config.json') (@{
             mode = 'local'
             repo = 'test-owner/test-repo'
             project = 4
             created = '2026-03-08T00:00:00Z'
         } | ConvertTo-Json -Depth 5)
-        Write-Utf8File (Join-Path $inferredRoot '.agentx\issues\1.json') (@{
+        Write-Utf8File (Join-Path $inferredRoot '.frontier\issues\1.json') (@{
             number = 1
             title = '[Story] Local Ready'
             body = 'Ready local item'
@@ -931,29 +933,29 @@ task_prefix: 'task'
             comments = @()
         } | ConvertTo-Json -Depth 10)
 
-        $inferredReady = Invoke-AgentX $inferredRoot @('ready', '--json')
+        $inferredReady = Invoke-Frontier $inferredRoot @('ready', '--json')
         $inferredReadyIssues = $inferredReady.Output | ConvertFrom-Json -Depth 10
         Assert-True ($inferredReady.ExitCode -eq 0) 'Repo-configured workspace keeps ready command available'
         Assert-True (@($inferredReadyIssues).Count -eq 1 -and [int]$inferredReadyIssues[0].number -eq 1) 'Repo-configured workspace keeps local issue source active by default'
 
-        $configShow = Invoke-AgentX $inferredRoot @('config', 'show', '--json')
+        $configShow = Invoke-Frontier $inferredRoot @('config', 'show', '--json')
         $configShowJson = $configShow.Output | ConvertFrom-Json -Depth 10
         Assert-True ($configShow.ExitCode -eq 0) 'Config show succeeds for repo-inferred provider'
         Assert-True ($configShowJson.activeProvider -eq 'local') 'Config show keeps the local provider active when only a GitHub adapter is configured'
         Assert-True (@($configShowJson.configuredAdapters) -contains 'github') 'Config show reports GitHub as a configured adapter'
-        $persistedConfig = Get-Content (Join-Path $inferredRoot '.agentx\config.json') -Raw | ConvertFrom-Json -Depth 10
+        $persistedConfig = Get-Content (Join-Path $inferredRoot '.frontier\config.json') -Raw | ConvertFrom-Json -Depth 10
         Assert-True ((-not $persistedConfig.provider -or $persistedConfig.provider -eq 'local') -and $persistedConfig.repo -eq 'test-owner/test-repo') 'Repo-configured workspace does not auto-promote GitHub into the active provider'
 
         $remoteDetectedRoot = New-TestWorkspace 'remote-detected-transition'
-        New-Item -ItemType Directory -Path (Join-Path $remoteDetectedRoot '.agentx\issues') -Force | Out-Null
-        Write-Utf8File (Join-Path $remoteDetectedRoot '.agentx\config.json') (@{
+        New-Item -ItemType Directory -Path (Join-Path $remoteDetectedRoot '.frontier\issues') -Force | Out-Null
+        Write-Utf8File (Join-Path $remoteDetectedRoot '.frontier\config.json') (@{
             mode = 'local'
             project = 4
             created = '2026-03-08T00:00:00Z'
             enforceIssues = $false
             nextIssueNumber = 3
         } | ConvertTo-Json -Depth 5)
-        Write-Utf8File (Join-Path $remoteDetectedRoot '.agentx\issues\1.json') (@{
+        Write-Utf8File (Join-Path $remoteDetectedRoot '.frontier\issues\1.json') (@{
             number = 1
             title = '[Story] Migrated Open'
             body = 'Open local backlog item'
@@ -966,7 +968,7 @@ task_prefix: 'task'
                 @{ body = 'Investigating locally'; created = '2026-03-08T00:11:00Z' }
             )
         } | ConvertTo-Json -Depth 10)
-        Write-Utf8File (Join-Path $remoteDetectedRoot '.agentx\issues\2.json') (@{
+        Write-Utf8File (Join-Path $remoteDetectedRoot '.frontier\issues\2.json') (@{
             number = 2
             title = '[Bug] Migrated Closed'
             body = 'Closed local backlog item'
@@ -983,14 +985,14 @@ task_prefix: 'task'
         $null = & git -C $remoteDetectedRoot init 2>$null
         $null = & git -C $remoteDetectedRoot remote add origin 'https://github.com/test-owner/test-repo.git' 2>$null
 
-        $transitionRun = Invoke-AgentX $remoteDetectedRoot @('config', 'show', '--json')
+        $transitionRun = Invoke-Frontier $remoteDetectedRoot @('config', 'show', '--json')
         $transitionJson = $transitionRun.Output | ConvertFrom-Json -Depth 10
-        $transitionConfig = Get-Content (Join-Path $remoteDetectedRoot '.agentx\config.json') -Raw | ConvertFrom-Json -Depth 20
+        $transitionConfig = Get-Content (Join-Path $remoteDetectedRoot '.frontier\config.json') -Raw | ConvertFrom-Json -Depth 20
         Assert-True ($transitionRun.ExitCode -eq 0) 'GitHub remote detection transition command succeeds'
         Assert-True ($transitionJson.activeProvider -eq 'local') 'GitHub remote detection leaves the local provider active'
         Assert-True ((-not $transitionConfig.provider -or $transitionConfig.provider -eq 'local') -and (-not $transitionConfig.githubBacklogSync)) 'GitHub remote detection no longer auto-syncs or persists a provider transition'
 
-        Write-Utf8File (Join-Path $remoteDetectedRoot '.agentx\issues\1.json') (@{
+        Write-Utf8File (Join-Path $remoteDetectedRoot '.frontier\issues\1.json') (@{
             number = 1
             title = '[Story] Migrated Open Updated'
             body = 'Open local backlog item updated'
@@ -1004,7 +1006,7 @@ task_prefix: 'task'
                 @{ body = 'Ready for pickup'; created = '2026-03-08T01:05:00Z' }
             )
         } | ConvertTo-Json -Depth 10)
-        Write-Utf8File (Join-Path $remoteDetectedRoot '.agentx\issues\2.json') (@{
+        Write-Utf8File (Join-Path $remoteDetectedRoot '.frontier\issues\2.json') (@{
             number = 2
             title = '[Bug] Migrated Closed Reopened'
             body = 'Closed local backlog item reopened'
@@ -1019,9 +1021,9 @@ task_prefix: 'task'
             )
         } | ConvertTo-Json -Depth 10)
 
-        $forceSync = Invoke-AgentX $remoteDetectedRoot @('backlog-sync', 'github', '--force')
+        $forceSync = Invoke-Frontier $remoteDetectedRoot @('backlog-sync', 'github', '--force')
         $state = Get-GitHubMockState $toolsDir
-        $transitionConfig = Get-Content (Join-Path $remoteDetectedRoot '.agentx\config.json') -Raw | ConvertFrom-Json -Depth 20
+        $transitionConfig = Get-Content (Join-Path $remoteDetectedRoot '.frontier\config.json') -Raw | ConvertFrom-Json -Depth 20
         $forceSyncedOpen = @($state.issues | Where-Object { [int]$_.number -eq [int]$transitionConfig.githubBacklogSync.issueMap.'1' } | Select-Object -First 1)[0]
         $forceSyncedReopened = @($state.issues | Where-Object { [int]$_.number -eq [int]$transitionConfig.githubBacklogSync.issueMap.'2' } | Select-Object -First 1)[0]
         $forceOpenItem = @($state.project.items | Where-Object { [int]$_.content.number -eq [int]$forceSyncedOpen.number } | Select-Object -First 1)[0]

@@ -29,7 +29,7 @@ Make Power Platform and Microsoft Fabric first-class AgentX delivery domains wit
 - Observation: GitHub issue 401 was previously used by an older CLI runtime initiative.
   Evidence: Existing tracked `ADR-401.md`, `COUNCIL-401.md`, `SPEC-401.md`, and `EXEC-PLAN-401-cli-runtime-migration.md` predate this issue. New artifacts use the `domain-agents` suffix to avoid overwriting history.
 - Observation: The Power Platform pack already contains a complete agent contract, but core routing and extension contributions cannot discover it.
-  Evidence: `packs/agentx-power-platform-builder/agents/low-code-builder.agent.md` exists while `.github/agents/` and `vscode-extension/package.json` omit it.
+  Evidence: `packs/frontier-power-platform-builder/agents/low-code-builder.agent.md` exists while `.github/agents/` and `vscode-extension/package.json` omit it.
 - Observation: Fabric has three substantial skills but no role owning Lakehouse, Warehouse, notebook, pipeline, quality, or lineage artifacts.
   Evidence: `.github/skills/data/fabric-*.*/SKILL.md` exist while no `fabric-engineer.agent.md` exists.
 - Observation: Prompt constraints do not mechanically prevent tenant-capable `pac` commands.

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   copyBundledRuntimeAssets,
   copyCopilotCliAssets,
@@ -13,6 +13,11 @@ import {
 } from './initializeInternals';
 import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from './adaptersCommandInternals';
 import { checkAllDependencies } from '../utils/dependencyChecker';
+import {
+  hasFrontierState,
+  migrateLegacyState,
+  resolveFrontierStatePath,
+} from '../utils/frontierPaths';
 
 interface ExistingVersionStamp {
   readonly installedAt?: string;
@@ -25,18 +30,18 @@ interface ExistingConfig {
 
 export async function runInitializeLocalRuntimeCommand(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<void> {
- const root = await promptWorkspaceRoot('AgentX - Initialize Local Runtime');
+ const root = await promptWorkspaceRoot('Frontier - Initialize Local Runtime');
  if (!root) {
   return;
  }
 
- const initialized = fs.existsSync(path.join(root, '.agentx', 'config.json'));
+ const initialized = hasFrontierState(root);
  let isUpgrade = false;
  if (initialized) {
   const overwrite = await vscode.window.showWarningMessage(
-   'AgentX local runtime is already initialized in this workspace. Reinstall?',
+   'Frontier local runtime is already initialized in this workspace. Reinstall?',
    'Reinstall',
    'Cancel',
   );
@@ -49,20 +54,21 @@ export async function runInitializeLocalRuntimeCommand(
  await vscode.window.withProgress(
   {
    location: vscode.ProgressLocation.Notification,
-    title: 'AgentX: Initializing local runtime...',
+    title: 'Frontier: Initializing local runtime...',
    cancellable: false,
   },
   async (progress) => {
    try {
     progress.report({ message: 'Creating workspace state...', increment: 40 });
+    migrateLegacyState(root);
     for (const dir of RUNTIME_DIRS) {
      fs.mkdirSync(path.join(root, dir), { recursive: true });
     }
     copyBundledRuntimeAssets(context.extensionUri.fsPath, root);
-    // Optionally seed workspace .github/ with AgentX assets for non-VS-Code
+    // Optionally seed workspace .github/ with Frontier assets for non-VS-Code
     // surfaces (e.g. GitHub Copilot CLI) that need repo-local discovery of
     // agents/skills/instructions/prompts/templates/schemas. VS Code chat,
-    // commands, and the AgentX runtime resolve these from the extension bundle
+    // commands, and the Frontier runtime resolve these from the extension bundle
     // via runtimeAssets.resolveAssetPath, so the seed is opt-in.
     // Setting: agentx.seedRepoLocalAssets (default false). Always skip-existing
     // to preserve any workspace overrides the user has committed to .github/.
@@ -74,7 +80,7 @@ export async function runInitializeLocalRuntimeCommand(
     }
     writeWorkspaceRuntimeWrappers(context.extensionUri.fsPath, root);
 
-    const versionFile = path.join(root, '.agentx', 'version.json');
+    const versionFile = resolveFrontierStatePath(root, 'version.json');
     const previousVersion = isUpgrade ? readJsonWithComments<ExistingVersionStamp>(versionFile) : undefined;
     const currentExtVersion = context.extension?.packageJSON?.version ?? '8.0.0';
     fs.writeFileSync(versionFile, JSON.stringify({
@@ -83,7 +89,7 @@ export async function runInitializeLocalRuntimeCommand(
      updatedAt: new Date().toISOString(),
     }, null, 2));
 
-    const statusFile = path.join(root, '.agentx', 'state', 'agent-status.json');
+    const statusFile = resolveFrontierStatePath(root, 'state', 'agent-status.json');
     if (!fs.existsSync(statusFile)) {
      const agentStatus: Record<string, unknown> = {};
      for (const agent of [
@@ -106,8 +112,9 @@ export async function runInitializeLocalRuntimeCommand(
      fs.writeFileSync(statusFile, JSON.stringify(agentStatus, null, 2));
     }
 
-    const existingConfig = isUpgrade ? readJsonWithComments<ExistingConfig>(path.join(root, '.agentx', 'config.json')) : undefined;
-    fs.writeFileSync(path.join(root, '.agentx', 'config.json'), JSON.stringify({
+    const configFile = resolveFrontierStatePath(root, 'config.json');
+    const existingConfig = isUpgrade ? readJsonWithComments<ExistingConfig>(configFile) : undefined;
+    fs.writeFileSync(configFile, JSON.stringify({
      provider: 'local',
      integration: 'local',
      mode: 'local',
@@ -126,11 +133,11 @@ export async function runInitializeLocalRuntimeCommand(
     progress.report({ message: 'Finalizing...', increment: 10 });
     agentx.invalidateCache();
 
-    vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
-    vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
-    vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
+    vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
+    vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
+    vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
 
-    vscode.window.showInformationMessage('AgentX: Local runtime initialized.');
+    vscode.window.showInformationMessage('Frontier: Local runtime initialized.');
 
     // Non-blocking advisory: notify if recommended tools are missing (never blocks init).
     checkAllDependencies(agentx).then((report) => {
@@ -139,20 +146,20 @@ export async function runInitializeLocalRuntimeCommand(
         .map((r) => r.name);
       if (missing.length > 0) {
         void vscode.window.showWarningMessage(
-          `AgentX: Optional tools not detected: ${missing.join(', ')}. Run "AgentX: Check Environment" to install.`,
+          `Frontier: Optional tools not detected: ${missing.join(', ')}. Run "Frontier: Check Environment" to install.`,
           'Check Environment',
         ).then((action) => {
           if (action === 'Check Environment') {
-            void vscode.commands.executeCommand('agentx.checkEnvironment');
+            void vscode.commands.executeCommand('frontier.checkEnvironment');
           }
         });
       }
     }).catch(() => { /* non-blocking - ignore errors */ });
 
-    vscode.commands.executeCommand('agentx.refresh');
+    vscode.commands.executeCommand('frontier.refresh');
    } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    vscode.window.showErrorMessage(`AgentX local runtime initialization failed: ${message}`);
+    vscode.window.showErrorMessage(`Frontier local runtime initialization failed: ${message}`);
    }
   },
  );

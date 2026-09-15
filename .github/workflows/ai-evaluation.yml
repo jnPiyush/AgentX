@@ -44,4 +44,4 @@ jobs:
           ./scripts/run-ai-eval-sample.ps1 `
             -DatasetPath 'evaluation/datasets/regression.jsonl' `
             -ClassifierPath 'scripts/classify-issue.js' `
-            -ManifestPath 'evaluation/agentx.eval.yaml'
+            -ManifestPath 'evaluation/frontier.eval.yaml'

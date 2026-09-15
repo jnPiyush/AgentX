@@ -1,16 +1,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { promptAgentDetails, resolveAgentOutputDir } from './addAgentInternals';
 import { generateAgentContent } from './scaffoldGeneration';
 
 export function registerAddAgentCommand(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('agentx.addAgent', async () => {
+    vscode.commands.registerCommand('frontier.addAgent', async () => {
       const root = agentx.workspaceRoot;
       if (!root) {
         vscode.window.showWarningMessage('Open a workspace to add an agent.');

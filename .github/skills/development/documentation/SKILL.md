@@ -2,7 +2,7 @@
 name: "documentation"
 description: 'Write effective documentation including inline docs, README structure, API documentation, and code comments. Use when writing README files, documenting APIs, creating architecture decision records, adding inline code documentation, or setting up documentation tooling.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

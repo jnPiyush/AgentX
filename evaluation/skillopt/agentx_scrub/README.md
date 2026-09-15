@@ -1,6 +1,6 @@
-# AgentX Scrub SkillOpt Pilot
+# Frontier Scrub SkillOpt Pilot
 
-This pilot runs SkillOpt against the AgentX scrub skill with a deterministic local adapter. It proves the SkillOpt training loop, validation gate, and output artifacts without requiring model credentials.
+This pilot runs SkillOpt against the Frontier scrub skill with a deterministic local adapter. It proves the SkillOpt training loop, validation gate, and output artifacts without requiring model credentials.
 
 ## What It Optimizes
 
@@ -19,4 +19,4 @@ python .\evaluation\skillopt\agentx_scrub\run_skillopt_pilot.py --config .\evalu
 
 ## Real Model-Backed Next Step
 
-For a real model-backed AgentX skill optimization run, replace the deterministic `reflect` implementation with `skillopt.gradient.reflect.run_minibatch_reflect`, keep the same split layout, and provide a configured backend such as Azure OpenAI, OpenAI-compatible, Anthropic, Qwen, Codex exec, or Claude Code exec.
+For a real model-backed Frontier skill optimization run, replace the deterministic `reflect` implementation with `skillopt.gradient.reflect.run_minibatch_reflect`, keep the same split layout, and provide a configured backend such as Azure OpenAI, OpenAI-compatible, Anthropic, Qwen, Codex exec, or Claude Code exec.

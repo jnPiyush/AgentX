@@ -1,6 +1,6 @@
 # Reset Vs Compaction Policy
 
-This guide defines when AgentX should continue in-place, compact context, or start from a clean reset for long-running work.
+This guide defines when Frontier should continue in-place, compact context, or start from a clean reset for long-running work.
 
 ## Decision Goals
 
@@ -76,7 +76,7 @@ Provider awareness does not mean hardcoding one model vendor or one model family
 
 ## Minimum Safe Rule
 
-If AgentX cannot answer these questions from durable artifacts, prefer reset over compaction:
+If Frontier cannot answer these questions from durable artifacts, prefer reset over compaction:
 
 1. What issue and bounded slice are active?
 2. What changed already?

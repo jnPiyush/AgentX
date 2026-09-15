@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   ensureLoopInitialized,
   executeLoopAction,
@@ -13,66 +13,66 @@ import {
 } from './loopCommandInternals';
 
 /**
- * Register the AgentX: Iterative Loop commands.
+ * Register the Frontier: Iterative Loop commands.
  * Manages Ralph Loop style iterative refinement cycles.
  */
 export function registerLoopCommand(
  context: vscode.ExtensionContext,
- agentx: AgentXContext
+ agentx: FrontierContext
 ) {
  const ensureInitialized = async (): Promise<boolean> => ensureLoopInitialized(agentx);
 
  // Main loop management command
- const loopCmd = vscode.commands.registerCommand('agentx.loop', async () => {
+ const loopCmd = vscode.commands.registerCommand('frontier.loop', async () => {
   if (!await ensureInitialized()) {
    return;
   }
 
   const action = await vscode.window.showQuickPick(
    LOOP_ACTION_ITEMS,
-   { placeHolder: 'Select loop action', title: 'AgentX Iterative Loop' }
+   { placeHolder: 'Select loop action', title: 'Frontier Iterative Loop' }
   );
   if (!action) { return; }
 
   await executeLoopAction(agentx, action.label);
  });
 
- const loopStartCmd = vscode.commands.registerCommand('agentx.loopStart', async () => {
+ const loopStartCmd = vscode.commands.registerCommand('frontier.loopStart', async () => {
   if (!await ensureInitialized()) {
    return;
   }
   await loopStart(agentx);
  });
 
- const loopStatusCmd = vscode.commands.registerCommand('agentx.loopStatus', async () => {
+ const loopStatusCmd = vscode.commands.registerCommand('frontier.loopStatus', async () => {
   if (!await ensureInitialized()) {
   return false;
   }
   return loopStatus(agentx);
  });
 
- const loopIterateCmd = vscode.commands.registerCommand('agentx.loopIterate', async () => {
+ const loopIterateCmd = vscode.commands.registerCommand('frontier.loopIterate', async () => {
   if (!await ensureInitialized()) {
    return;
   }
   await loopIterate(agentx);
  });
 
- const loopCompleteCmd = vscode.commands.registerCommand('agentx.loopComplete', async () => {
+ const loopCompleteCmd = vscode.commands.registerCommand('frontier.loopComplete', async () => {
   if (!await ensureInitialized()) {
    return;
   }
   await loopComplete(agentx);
  });
 
- const loopCancelCmd = vscode.commands.registerCommand('agentx.loopCancel', async () => {
+ const loopCancelCmd = vscode.commands.registerCommand('frontier.loopCancel', async () => {
   if (!await ensureInitialized()) {
    return;
   }
   await loopCancel(agentx);
  });
 
- const loopRollbackCmd = vscode.commands.registerCommand('agentx.loopRollback', async () => {
+ const loopRollbackCmd = vscode.commands.registerCommand('frontier.loopRollback', async () => {
   if (!await ensureInitialized()) {
    return;
   }

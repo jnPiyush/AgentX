@@ -1,5 +1,5 @@
 ---
-name: AgentX Functional Reviewer
+name: Frontier Functional Review FDE
 description: 'Pre-PR branch diff analysis for functional correctness. Evaluates logic, edge cases, error handling, concurrency, and contract compliance.'
 visibility: internal
 model: GPT-5.6 Sol (copilot)
@@ -9,17 +9,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   level: medium
@@ -55,7 +55,7 @@ Invisible sub-agent spawned by the Code Reviewer to perform deep functional anal
 ## Trigger
 
 - Spawned by the Reviewer agent when deep functional analysis is needed
-- Never invoked directly by users or Agent X
+- Never invoked directly by users or Frontier
 - Receives: branch name, base branch, issue number, and review context
 
 ## Review Focus Areas
@@ -198,9 +198,9 @@ If diff is too large (500+ files), codebase context is missing, or files use unf
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
+**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/frontier.ps1 loop complete` succeeded in this session.
 
 Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../../AGENT-PROTOCOL.md](../../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 
@@ -210,7 +210,7 @@ Changed files are analyzed; findings are categorized Critical/High/Medium/Low; f
 
 ## Delivery Report (MANDATORY)
 
-Before handoff, report: files analyzed; Critical/High/Medium/Low findings; false-positive check status; evidence-of-harm completeness; report path; and AgentX quality-loop state.
+Before handoff, report: files analyzed; Critical/High/Medium/Low findings; false-positive check status; evidence-of-harm completeness; report path; and Frontier quality-loop state.
 
 ## Plugins (Optional Capabilities)
 

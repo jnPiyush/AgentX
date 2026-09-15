@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- Secret Redactor
+// Frontier -- Secret Redactor
 // ---------------------------------------------------------------------------
 //
 // Strips known credential patterns from strings to prevent credential leaks

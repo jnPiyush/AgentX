@@ -27,20 +27,39 @@ function Get-PropertyValue($Object, [string]$Name) {
     return $null
 }
 
-Write-Host 'AgentX Customization Modernization Tests'
+Write-Host 'Frontier Customization Modernization Tests'
 $agentRoot = Join-Path $repoRoot '.github/agents'
 $skillRoot = Join-Path $repoRoot '.github/skills'
 $promptRoot = Join-Path $repoRoot '.github/prompts'
 $agentFiles = @(Get-ChildItem -LiteralPath $agentRoot -Filter '*.agent.md' -File -Recurse)
 $skillFiles = @(Get-ChildItem -LiteralPath $skillRoot -Filter 'SKILL.md' -File -Recurse)
 $promptFiles = @(Get-ChildItem -LiteralPath $promptRoot -Filter '*.prompt.md' -File)
-$bundleAgentRoot = Join-Path $repoRoot 'vscode-extension/.github/agentx/agents'
+$bundleAgentRoot = Join-Path $repoRoot 'vscode-extension/.github/frontier/agents'
 $bundleAgentFiles = @(Get-ChildItem -LiteralPath $bundleAgentRoot -Filter '*.agent.md' -File -Recurse)
 Assert-True ($agentFiles.Count -eq 26) 'Compatibility keeps all 26 agent paths'
 Assert-True ($skillFiles.Count -eq 134) 'Compatibility keeps all 134 skill paths'
 Assert-True ($promptFiles.Count -eq 23) 'Compatibility keeps all 23 prompt paths'
 Assert-True ($bundleAgentFiles.Count -eq $agentFiles.Count) 'Extension bundles every canonical agent'
+$agentFrontmatter = @($agentFiles | ForEach-Object { Get-Frontmatter $_.FullName })
+$agentNames = @($agentFrontmatter | ForEach-Object { $_.name })
+Assert-True (@($agentNames | Where-Object { $_ -notmatch '^Frontier(?: |$)' }).Count -eq 0) 'Every canonical agent uses the Frontier name'
+Assert-True (@($agentNames | Where-Object { $_ -match '^(?:HVE|AgentX|Agent X)(?: |$)' }).Count -eq 0) 'Canonical agent names contain no legacy branding'
+foreach ($primaryIdentityFile in @('README.md', 'AGENTS.md', '.github/copilot-instructions.md')) {
+    $identityContent = Get-Content -LiteralPath (Join-Path $repoRoot $primaryIdentityFile) -Raw -Encoding utf8
+    Assert-True ($identityContent -match '\bFrontier\b') "$primaryIdentityFile defines Frontier"
+}
 $extensionPackage = Get-Content -LiteralPath (Join-Path $repoRoot 'vscode-extension/package.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
+$extensionCommandIds = @($extensionPackage.contributes.commands.command)
+$extensionSettingIds = @($extensionPackage.contributes.configuration.properties.PSObject.Properties.Name)
+$extensionParticipant = @($extensionPackage.contributes.chatParticipants)[0]
+$extensionViewContainerIds = @($extensionPackage.contributes.viewsContainers.activitybar.id)
+Assert-True ($extensionPackage.name -eq 'agentx') 'Marketplace package coordinate remains compatible'
+Assert-True (@($extensionCommandIds | Where-Object { $_ -notmatch '^frontier\.' }).Count -eq 0) 'Contributed commands use Frontier identifiers'
+Assert-True (@($extensionSettingIds | Where-Object { $_ -notmatch '^frontier\.' }).Count -eq 0) 'Contributed settings use Frontier identifiers'
+Assert-True ($extensionParticipant.id -eq 'frontier.chat') 'Chat participant uses the Frontier identifier'
+Assert-True ($extensionParticipant.name -eq 'frontier') 'Chat participant is invoked as @frontier'
+Assert-True (@($extensionViewContainerIds | Where-Object { $_ -notmatch '^frontier-' }).Count -eq 0) 'View containers use Frontier identifiers'
+Assert-True (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'vscode-extension/.github/agentx'))) 'Legacy generated bundle is absent'
 $contributedAgentPaths = @($extensionPackage.contributes.chatAgents.path)
 Assert-True ($contributedAgentPaths.Count -eq $agentFiles.Count) 'Extension contributes visible and hidden agents'
 $workspaceSettings = Get-Content -LiteralPath (Join-Path $repoRoot '.vscode/settings.json') -Raw -Encoding utf8 | ConvertFrom-Json
@@ -54,6 +73,21 @@ Assert-True (
     $null -ne $workspaceAgentLocation -and $workspaceAgentLocation.Value -eq $false
 ) 'Source workspace suppresses duplicate repository-agent discovery'
 foreach ($file in $agentFiles) {
+    $frontmatter = Get-Frontmatter $file.FullName
+    foreach ($collaborator in @((Get-PropertyValue $frontmatter 'agents'))) {
+        if ($collaborator -match '^Frontier(?: |$)') {
+            Assert-True ($collaborator -in $agentNames) "$($file.BaseName) branded collaborator resolves to a canonical Frontier FDE"
+        }
+    }
+    $handoffs = Get-PropertyValue $frontmatter 'handoffs'
+    foreach ($handoff in @($handoffs)) {
+        if ($null -eq $handoff) { continue }
+        $handoffAgent = Get-PropertyValue $handoff 'agent'
+        if ($null -ne $handoffAgent -and $handoffAgent -match '^Frontier(?: |$)') {
+            Assert-True ($handoffAgent -in $agentNames) "$($file.BaseName) branded handoff resolves to a canonical Frontier FDE"
+        }
+    }
+
     $relative = [IO.Path]::GetRelativePath($agentRoot, $file.FullName)
     $bundled = Join-Path $bundleAgentRoot $relative
 
@@ -72,7 +106,7 @@ foreach ($file in $agentFiles) {
         $matchesBundle = $normalizedCanonical -ceq $bundledText
     }
     Assert-True $matchesBundle "$relative matches the extension bundle"
-    $contributedPath = './.github/agentx/agents/' + $relative.Replace('\', '/')
+    $contributedPath = './.github/frontier/agents/' + $relative.Replace('\', '/')
     Assert-True ($contributedPath -in $contributedAgentPaths) "$relative is contributed to the host"
 }
 
@@ -102,9 +136,9 @@ foreach ($readOnlyAgent in @('functional-reviewer.agent.md', 'architecture-revie
 }
 
 $handoffContracts = @{
-    'product-manager.agent.md' = 'AgentX Architect'; 'architect.agent.md' = 'AgentX Engineer'
-    'ux-designer.agent.md' = 'AgentX Engineer'; 'data-scientist.agent.md' = 'AgentX Engineer'
-    'engineer.agent.md' = 'AgentX Reviewer'; 'reviewer.agent.md' = 'AgentX Tester'
+    'product-manager.agent.md' = 'Frontier Architecture FDE'; 'architect.agent.md' = 'Frontier Engineering FDE'
+    'ux-designer.agent.md' = 'Frontier Engineering FDE'; 'data-scientist.agent.md' = 'Frontier Engineering FDE'
+    'engineer.agent.md' = 'Frontier Review FDE'; 'reviewer.agent.md' = 'Frontier Test FDE'
 }
 foreach ($entry in $handoffContracts.GetEnumerator()) {
     $handoffs = Get-PropertyValue (Get-Frontmatter (Join-Path $agentRoot $entry.Key)) 'handoffs'
@@ -125,22 +159,22 @@ $visibleFiles = @($agentFiles | Where-Object FullName -NotMatch '[\\/]internal[\
 foreach ($file in $visibleFiles) {
     $frontmatter = Get-Frontmatter $file.FullName
     $tools = @($frontmatter.tools)
-    if ($file.Name -eq 'agent-x.agent.md') {
-        Assert-True ('github/*' -in $tools) 'AgentX retains direct GitHub orchestration tools'
+    if ($file.Name -eq 'frontier.agent.md') {
+        Assert-True ('github/*' -in $tools) 'Frontier retains direct GitHub orchestration tools'
     } else {
         Assert-True ('github/*' -notin $tools) "$($file.BaseName) delegates remote lifecycle operations"
     }
 
     $content = Get-Content -LiteralPath $file.FullName -Raw -Encoding utf8
     $ownsGithubLifecycle = $content -match '(?m)^\s+- "GitHub (Issues|Projects)'
-    if ($ownsGithubLifecycle -and $file.Name -ne 'agent-x.agent.md') {
-        Assert-True ('AgentX GitHub Ops' -in @($frontmatter.agents)) "$($file.BaseName) can delegate GitHub lifecycle operations"
+    if ($ownsGithubLifecycle -and $file.Name -ne 'frontier.agent.md') {
+        Assert-True ('Frontier GitHub Ops FDE' -in @($frontmatter.agents)) "$($file.BaseName) can delegate GitHub lifecycle operations"
     }
 }
 
 $policyCli = Get-Content -LiteralPath (Join-Path $repoRoot '.agentx/agentx-cli.ps1') -Raw -Encoding utf8
 Assert-True ($policyCli -match "'policy-hook'") 'Zero-copy CLI exposes policy hook'
-$bundledCli = Get-Content -LiteralPath (Join-Path $repoRoot 'vscode-extension/.github/agentx/.agentx/agentx-cli.ps1') -Raw -Encoding utf8
+$bundledCli = Get-Content -LiteralPath (Join-Path $repoRoot 'vscode-extension/.github/frontier/.agentx/agentx-cli.ps1') -Raw -Encoding utf8
 Assert-True ($bundledCli -match "'policy-hook'") 'Extension bundles the zero-copy policy command'
 
 foreach ($skillName in @('code-review','core-principles','iterative-loop','karpathy-guidelines','prd','prompt-engineering','scrub','ux-ui-design','verification-before-completion')) {

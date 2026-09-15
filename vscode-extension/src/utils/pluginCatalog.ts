@@ -490,7 +490,7 @@ export function summarizePluginManifest(
   const publisher = manifest?.publisher;
   const qualifiedId = publisher ? `${publisher}.${pluginId}` : pluginId;
   const label = manifest?.displayName ?? qualifiedId;
-  const description = manifest?.description ?? 'AgentX plugin';
+  const description = manifest?.description ?? 'Frontier plugin';
 
   return {
     pluginId,
@@ -503,7 +503,7 @@ export function summarizePluginManifest(
   };
 }
 
-export function isAgentXVersionSupported(range: string | undefined, hostVersion: string): boolean {
+export function isFrontierVersionSupported(range: string | undefined, hostVersion: string): boolean {
   if (!range || range.trim().length === 0) {
     return true;
   }
@@ -588,5 +588,5 @@ export function getLatestCompatibleRelease(
 ): PluginRegistryRelease | undefined {
   return [...entry.releases]
     .sort((left, right) => compareNormalizedSemver(right.version, left.version))
-    .find((release) => isAgentXVersionSupported(release.engines?.agentx, hostVersion));
+    .find((release) => isFrontierVersionSupported(release.engines?.agentx, hostVersion));
 }

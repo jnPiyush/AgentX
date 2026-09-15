@@ -19,7 +19,7 @@ describe('review findings', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-review-findings-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-review-findings-'));
     writeFile(tmpDir, 'docs/artifacts/reviews/findings/FINDING-164-001.md', [
       '---',
       'id: FINDING-164-001',
@@ -52,7 +52,7 @@ describe('review findings', () => {
       '',
       '## Recommended Action',
       '',
-      '- Promote approved parity gaps into the AgentX backlog.',
+      '- Promote approved parity gaps into the Frontier backlog.',
       '',
       '## Promotion Notes',
       '',
@@ -92,7 +92,7 @@ describe('review findings', () => {
     assert.ok(markdown.includes('Reference guide: docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md'));
   });
 
-  it('promotes a finding into a normal AgentX issue and links it back', async () => {
+  it('promotes a finding into a normal Frontier issue and links it back', async () => {
     const calls: Array<{ readonly subcommand: string; readonly args: ReadonlyArray<string> }> = [];
     const agentx = {
       workspaceRoot: tmpDir,

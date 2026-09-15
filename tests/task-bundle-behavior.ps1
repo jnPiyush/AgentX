@@ -21,6 +21,7 @@ function New-TestWorkspace([string]$name) {
     New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root 'docs\execution\plans') -Force | Out-Null
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.agentx\frontier.ps1') (Join-Path $root '.agentx\frontier.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
     '{"provider":"local","integration":"local","mode":"local","nextIssueNumber":1}' | Set-Content (Join-Path $root '.agentx\config.json') -Encoding utf8
     '# Demo plan' | Set-Content (Join-Path $root 'docs\execution\plans\TASK-BUNDLE.md') -Encoding utf8
@@ -33,7 +34,7 @@ function Remove-TestWorkspace([string]$root) {
     }
 }
 
-function Invoke-AgentX([string]$root, [string[]]$arguments) {
+function Invoke-Frontier([string]$root, [string[]]$arguments) {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'pwsh'
     $startInfo.RedirectStandardOutput = $true
@@ -60,18 +61,18 @@ function Invoke-AgentX([string]$root, [string[]]$arguments) {
 function Test-ExplicitBundleLifecycle {
     $root = New-TestWorkspace 'explicit'
     try {
-        $null = Invoke-AgentX $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
-        $create = Invoke-AgentX $root @('bundle', 'create', '--title', 'Track slice', '--issue', '1', '--summary', 'Bundle summary', '--promotion-mode', 'story_candidate', '--json')
+        $null = Invoke-Frontier $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
+        $create = Invoke-Frontier $root @('bundle', 'create', '--title', 'Track slice', '--issue', '1', '--summary', 'Bundle summary', '--promotion-mode', 'story_candidate', '--json')
         $bundle = $create.Output | ConvertFrom-Json
         Assert-True ($create.ExitCode -eq 0) 'task bundle create succeeds with explicit issue context'
         Assert-True ($bundle.parent_context.issue_number -eq 1) 'created bundle keeps the explicit parent issue'
         Assert-True (@($bundle.evidence_links) -contains 'issue:#1') 'created bundle seeds issue evidence'
 
-        $list = Invoke-AgentX $root @('bundle', 'list', '--issue', '1', '--json')
+        $list = Invoke-Frontier $root @('bundle', 'list', '--issue', '1', '--json')
         $bundles = @($list.Output | ConvertFrom-Json)
         Assert-True ($list.ExitCode -eq 0 -and $bundles.Count -eq 1) 'bundle list filters by explicit issue context'
 
-        $resolve = Invoke-AgentX $root @('bundle', 'resolve', '--id', $bundle.bundle_id, '--state', 'Archived', '--archive-reason', 'Merged into parent', '--json')
+        $resolve = Invoke-Frontier $root @('bundle', 'resolve', '--id', $bundle.bundle_id, '--state', 'Archived', '--archive-reason', 'Merged into parent', '--json')
         $resolved = $resolve.Output | ConvertFrom-Json
         Assert-True ($resolve.ExitCode -eq 0) 'bundle resolve succeeds'
         Assert-True ($resolved.state -eq 'Archived') 'bundle resolve archives the record'
@@ -84,10 +85,10 @@ function Test-ExplicitBundleLifecycle {
 function Test-InferredAndAmbiguousContext {
     $root = New-TestWorkspace 'inferred'
     try {
-        $null = Invoke-AgentX $root @('issue', 'create', '--title', '[Story] Active issue', '--labels', 'type:story')
-        $null = Invoke-AgentX $root @('issue', 'update', '--number', '1', '--status', 'In Progress')
+        $null = Invoke-Frontier $root @('issue', 'create', '--title', '[Story] Active issue', '--labels', 'type:story')
+        $null = Invoke-Frontier $root @('issue', 'update', '--number', '1', '--status', 'In Progress')
 
-        $create = Invoke-AgentX $root @('bundle', 'create', '--title', 'Implicit bundle', '--json')
+        $create = Invoke-Frontier $root @('bundle', 'create', '--title', 'Implicit bundle', '--json')
         $bundle = $create.Output | ConvertFrom-Json
         Assert-True ($create.ExitCode -eq 0) 'bundle create infers a single active issue context'
         Assert-True ($bundle.parent_context.issue_number -eq 1) 'inferred bundle records the active issue'
@@ -97,12 +98,12 @@ function Test-InferredAndAmbiguousContext {
 
     $root = New-TestWorkspace 'ambiguous'
     try {
-        $null = Invoke-AgentX $root @('issue', 'create', '--title', '[Story] First active issue', '--labels', 'type:story')
-        $null = Invoke-AgentX $root @('issue', 'create', '--title', '[Story] Second active issue', '--labels', 'type:story')
-        $null = Invoke-AgentX $root @('issue', 'update', '--number', '1', '--status', 'In Progress')
-        $null = Invoke-AgentX $root @('issue', 'update', '--number', '2', '--status', 'In Progress')
+        $null = Invoke-Frontier $root @('issue', 'create', '--title', '[Story] First active issue', '--labels', 'type:story')
+        $null = Invoke-Frontier $root @('issue', 'create', '--title', '[Story] Second active issue', '--labels', 'type:story')
+        $null = Invoke-Frontier $root @('issue', 'update', '--number', '1', '--status', 'In Progress')
+        $null = Invoke-Frontier $root @('issue', 'update', '--number', '2', '--status', 'In Progress')
 
-        $create = Invoke-AgentX $root @('bundle', 'create', '--title', 'Ambiguous bundle')
+        $create = Invoke-Frontier $root @('bundle', 'create', '--title', 'Ambiguous bundle')
         Assert-True ($create.ExitCode -ne 0) 'bundle create fails closed when multiple active contexts exist'
         Assert-True ($create.Output -match 'Task bundle context is ambiguous') 'ambiguous bundle create returns explicit fallback guidance'
     } finally {
@@ -113,14 +114,14 @@ function Test-InferredAndAmbiguousContext {
 function Test-DuplicateAvoidance {
     $root = New-TestWorkspace 'duplicate'
     try {
-        $null = Invoke-AgentX $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
-        $first = Invoke-AgentX $root @('bundle', 'create', '--title', 'Promote me', '--issue', '1', '--promotion-mode', 'story_candidate', '--json')
-        $second = Invoke-AgentX $root @('bundle', 'create', '--title', 'Promote me', '--issue', '1', '--promotion-mode', 'story_candidate', '--json')
+        $null = Invoke-Frontier $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
+        $first = Invoke-Frontier $root @('bundle', 'create', '--title', 'Promote me', '--issue', '1', '--promotion-mode', 'story_candidate', '--json')
+        $second = Invoke-Frontier $root @('bundle', 'create', '--title', 'Promote me', '--issue', '1', '--promotion-mode', 'story_candidate', '--json')
         $firstBundle = $first.Output | ConvertFrom-Json
         $secondBundle = $second.Output | ConvertFrom-Json
 
-        $promoteFirst = Invoke-AgentX $root @('bundle', 'promote', '--id', $firstBundle.bundle_id, '--target', 'story', '--json')
-        $promoteSecond = Invoke-AgentX $root @('bundle', 'promote', '--id', $secondBundle.bundle_id, '--target', 'story', '--json')
+        $promoteFirst = Invoke-Frontier $root @('bundle', 'promote', '--id', $firstBundle.bundle_id, '--target', 'story', '--json')
+        $promoteSecond = Invoke-Frontier $root @('bundle', 'promote', '--id', $secondBundle.bundle_id, '--target', 'story', '--json')
         $firstResult = $promoteFirst.Output | ConvertFrom-Json
         $secondResult = $promoteSecond.Output | ConvertFrom-Json
 

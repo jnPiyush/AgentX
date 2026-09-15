@@ -2,7 +2,7 @@
 name: "configuration"
 description: 'Implement configuration management patterns including environment variables, secrets, feature flags, and validation strategies. Use when setting up app configuration, managing environment-specific settings, implementing feature flags, storing secrets securely, or validating configuration at startup.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

@@ -2,7 +2,7 @@
 name: "llm-gateway-and-routing"
 description: 'Front LLM calls behind a gateway: model routing, fallbacks, semantic caching, rate limits, key vaulting, cost controls, and unified APIs. Covers LiteLLM, Portkey, Azure AI Gateway / APIM, OpenRouter, AWS Bedrock proxy, and self-built gateways. Includes routing policies (cost/latency/capability/RBAC) and caching (exact + semantic).'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

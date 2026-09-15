@@ -2,7 +2,7 @@
 name: "power-automate-desktop"
 description: 'Author Microsoft Power Automate desktop (RPA) flows -- attended and unattended robotic process automation that drives UI, browsers, files, and Excel -- so an agent can design the action sequence, variables, error handling, and cloud-flow trigger wiring. Covers when RPA is appropriate versus API/connector automation and the desktop-flow execution model.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

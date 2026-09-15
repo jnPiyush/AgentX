@@ -2,7 +2,7 @@
 name: "genaiops"
 description: 'Operate generative AI systems safely in production. Use when designing GenAIOps workflows for prompt and model release management, evaluation gates, observability, drift detection, rollback, governance, and continuous improvement.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2026-04-04"
  updated: "2026-04-04"

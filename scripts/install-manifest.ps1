@@ -4,7 +4,7 @@
   Generate, verify, or repair the workspace install manifest.
 
 .DESCRIPTION
-  The install manifest records every file the AgentX scaffold installed,
+  The install manifest records every file the Frontier scaffold installed,
   along with a SHA256 hash captured at install time. Doctor uses it to
   detect missing files and user-modified files. Uninstall uses it to
   preserve user-modified files by default.
@@ -43,7 +43,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Get-AgentXVersion {
+function Get-FrontierVersion {
     $vf = Join-Path (Resolve-Path .).Path 'version.json'
     if (Test-Path $vf) {
         try { return ((Get-Content $vf -Raw -Encoding utf8 | ConvertFrom-Json).version) } catch { return 'unknown' }
@@ -94,7 +94,7 @@ function Get-ManifestEntries {
     Add-Group -Pattern '.github/hooks/*.json' -Category 'hook'
     Add-Group -Pattern '.github/hooks/scripts/*.js' -Category 'hook'
     # Shared directories: tracking these is load-bearing. The installer's upgrade
-    # path removes AgentX files from scripts/ and packs/ by manifest entry so
+    # path removes Frontier files from scripts/ and packs/ by manifest entry so
     # user-authored files in the same directories are never deleted.
     Add-Group -Pattern 'scripts/*.ps1' -Category 'script'
     Add-Group -Pattern 'scripts/*.js' -Category 'script'
@@ -131,7 +131,7 @@ switch ($Action) {
     'generate' {
         $entries = Get-ManifestEntries
         $manifest = [pscustomobject]@{
-            version   = Get-AgentXVersion
+            version   = Get-FrontierVersion
             createdAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
             files     = @($entries)
         }
@@ -152,7 +152,7 @@ switch ($Action) {
             if ($h -ne $e.sha256) { $modified.Add($e.path) }
         }
         Write-Host ("[manifest] Version: {0}  Files: {1}" -f $manifest.version, $manifest.files.Count) -ForegroundColor Cyan
-        $currentVersion = Get-AgentXVersion
+        $currentVersion = Get-FrontierVersion
         $versionStale = ($currentVersion -ne 'unknown' -and $manifest.version -ne $currentVersion)
         if ($versionStale) {
             Write-Host ("  [WARN] Manifest version {0} does not match workspace version {1}. Run -Action generate." -f $manifest.version, $currentVersion) -ForegroundColor Yellow

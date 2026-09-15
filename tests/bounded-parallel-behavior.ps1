@@ -21,6 +21,7 @@ function New-TestWorkspace([string]$name) {
     New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root 'docs\execution\plans') -Force | Out-Null
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.agentx\frontier.ps1') (Join-Path $root '.agentx\frontier.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
     '{"provider":"local","integration":"local","mode":"local","nextIssueNumber":1}' | Set-Content (Join-Path $root '.agentx\config.json') -Encoding utf8
     '# Demo plan' | Set-Content (Join-Path $root 'docs\execution\plans\PARALLEL.md') -Encoding utf8
@@ -33,7 +34,7 @@ function Remove-TestWorkspace([string]$root) {
     }
 }
 
-function Invoke-AgentX([string]$root, [string[]]$arguments) {
+function Invoke-Frontier([string]$root, [string[]]$arguments) {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'pwsh'
     $startInfo.RedirectStandardOutput = $true
@@ -64,14 +65,14 @@ function New-UnitsBase64([object[]]$units) {
 function Test-EligibilityGate {
     $root = New-TestWorkspace 'eligibility'
     try {
-        $null = Invoke-AgentX $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
-        $assess = Invoke-AgentX $root @('parallel', 'assess', '--issue', '1', '--scope-independence', 'coupled', '--dependency-coupling', 'high', '--artifact-overlap', 'high', '--review-complexity', 'high', '--recovery-complexity', 'high', '--json')
+        $null = Invoke-Frontier $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
+        $assess = Invoke-Frontier $root @('parallel', 'assess', '--issue', '1', '--scope-independence', 'coupled', '--dependency-coupling', 'high', '--artifact-overlap', 'high', '--review-complexity', 'high', '--recovery-complexity', 'high', '--json')
         $run = $assess.Output | ConvertFrom-Json
         Assert-True ($assess.ExitCode -eq 0) 'parallel assess records an ineligible assessment'
         Assert-True ($run.assessment.decision -eq 'ineligible') 'parallel assess fails closed on ineligible characteristics'
 
         $units = New-UnitsBase64 @(@{ title = 'Unit A'; scope_boundary = 'shared'; owner = 'engineer'; recovery_guidance = 'retry sequentially' })
-        $start = Invoke-AgentX $root @('parallel', 'start', '--id', $run.parallel_id, '--units-base64', $units)
+        $start = Invoke-Frontier $root @('parallel', 'start', '--id', $run.parallel_id, '--units-base64', $units)
         Assert-True ($start.ExitCode -ne 0) 'parallel start refuses ineligible runs'
         Assert-True ($start.Output -match 'must remain sequential') 'parallel start explains the sequential fallback'
     } finally {
@@ -82,15 +83,15 @@ function Test-EligibilityGate {
 function Test-ParentSummaryAndReconciliation {
     $root = New-TestWorkspace 'summary'
     try {
-        $null = Invoke-AgentX $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
-        $assess = Invoke-AgentX $root @('parallel', 'assess', '--issue', '1', '--scope-independence', 'independent', '--dependency-coupling', 'low', '--artifact-overlap', 'low', '--review-complexity', 'bounded', '--recovery-complexity', 'recoverable', '--json')
+        $null = Invoke-Frontier $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
+        $assess = Invoke-Frontier $root @('parallel', 'assess', '--issue', '1', '--scope-independence', 'independent', '--dependency-coupling', 'low', '--artifact-overlap', 'low', '--review-complexity', 'bounded', '--recovery-complexity', 'recoverable', '--json')
         $run = $assess.Output | ConvertFrom-Json
 
         $units = New-UnitsBase64 @(
             @{ title = 'Unit A'; scope_boundary = 'docs only'; owner = 'engineer'; recovery_guidance = 'retry sequentially'; merge_readiness = 'Ready For Reconciliation' },
             @{ title = 'Unit B'; scope_boundary = 'tests only'; owner = 'engineer'; recovery_guidance = 'retry sequentially'; merge_readiness = 'Do Not Merge'; summary_signal = 'blocked' }
         )
-        $start = Invoke-AgentX $root @('parallel', 'start', '--id', $run.parallel_id, '--units-base64', $units, '--json')
+        $start = Invoke-Frontier $root @('parallel', 'start', '--id', $run.parallel_id, '--units-base64', $units, '--json')
         if ($start.ExitCode -ne 0) {
             Write-Host $start.Output
         }
@@ -100,7 +101,7 @@ function Test-ParentSummaryAndReconciliation {
         Assert-True ($started.parent_summary.summary_state -eq 'blocked') 'parent summary reflects blocked unit signals'
         Assert-True ($started.parent_summary.closeout_ready -eq $false) 'closeout is blocked until reconciliation prerequisites pass'
 
-        $reconcile = Invoke-AgentX $root @('parallel', 'reconcile', '--id', $run.parallel_id, '--overlap-review', 'pass', '--conflict-review', 'pass', '--acceptance-evidence', 'pass', '--owner-approval', 'approved', '--json')
+        $reconcile = Invoke-Frontier $root @('parallel', 'reconcile', '--id', $run.parallel_id, '--overlap-review', 'pass', '--conflict-review', 'pass', '--acceptance-evidence', 'pass', '--owner-approval', 'approved', '--json')
         $reconciled = $reconcile.Output | ConvertFrom-Json
         Assert-True ($reconcile.ExitCode -eq 0) 'parallel reconcile runs even when units are not all ready'
         Assert-True ($reconciled.reconciliation.final_decision -eq 'blocked') 'reconciliation stays blocked when merge readiness is incomplete'
@@ -112,16 +113,16 @@ function Test-ParentSummaryAndReconciliation {
 function Test-FollowUpRouting {
     $root = New-TestWorkspace 'follow-up'
     try {
-        $null = Invoke-AgentX $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
-        $assess = Invoke-AgentX $root @('parallel', 'assess', '--issue', '1', '--scope-independence', 'independent', '--dependency-coupling', 'low', '--artifact-overlap', 'low', '--review-complexity', 'bounded', '--recovery-complexity', 'recoverable', '--json')
+        $null = Invoke-Frontier $root @('issue', 'create', '--title', '[Story] Parent issue', '--labels', 'type:story')
+        $assess = Invoke-Frontier $root @('parallel', 'assess', '--issue', '1', '--scope-independence', 'independent', '--dependency-coupling', 'low', '--artifact-overlap', 'low', '--review-complexity', 'bounded', '--recovery-complexity', 'recoverable', '--json')
         $run = $assess.Output | ConvertFrom-Json
 
         $units = New-UnitsBase64 @(
             @{ title = 'Unit A'; scope_boundary = 'docs only'; owner = 'engineer'; recovery_guidance = 'retry sequentially'; merge_readiness = 'Do Not Merge'; summary_signal = 'blocked' }
         )
-        $null = Invoke-AgentX $root @('parallel', 'start', '--id', $run.parallel_id, '--units-base64', $units, '--json')
+        $null = Invoke-Frontier $root @('parallel', 'start', '--id', $run.parallel_id, '--units-base64', $units, '--json')
 
-        $reconcile = Invoke-AgentX $root @('parallel', 'reconcile', '--id', $run.parallel_id, '--overlap-review', 'fail', '--conflict-review', 'pass', '--acceptance-evidence', 'pass', '--owner-approval', 'approved', '--follow-up-target', 'story', '--follow-up-title', 'Resolve overlap', '--follow-up-summary', 'Create durable follow-up for overlap', '--json')
+        $reconcile = Invoke-Frontier $root @('parallel', 'reconcile', '--id', $run.parallel_id, '--overlap-review', 'fail', '--conflict-review', 'pass', '--acceptance-evidence', 'pass', '--owner-approval', 'approved', '--follow-up-target', 'story', '--follow-up-title', 'Resolve overlap', '--follow-up-summary', 'Create durable follow-up for overlap', '--json')
         $reconciled = $reconcile.Output | ConvertFrom-Json
         Assert-True ($reconcile.ExitCode -eq 0) 'parallel reconcile can capture a blocked follow-up'
         Assert-True ($reconciled.reconciliation.follow_up_disposition -eq 'captured') 'blocked reconciliation stores follow-up disposition'

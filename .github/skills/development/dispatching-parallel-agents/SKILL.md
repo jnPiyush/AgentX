@@ -78,7 +78,7 @@ Goal: ask 3 different models (or 3 different framings) to evaluate the same docu
 
 ```pwsh
 # Convene via the agentx CLI (scripts/model-council.ps1 is the canonical implementation)
-pwsh .agentx/agentx.ps1 council `
+pwsh .agentx/frontier.ps1 council `
     -Topic "review-42" `
     -Question "What is the correct Approve / Request Changes decision?" `
     -Context "<diff + spec + test results>" `
@@ -115,7 +115,7 @@ Output contract: each slice writes to a named output file under `docs/execution/
 
 ## Reference Infrastructure In This Repo
 
-- `tests/bounded-parallel-behavior.ps1` exercises the bounded-parallel primitive used by AgentX runners; read it to understand the throttle and failure semantics.
+- `tests/bounded-parallel-behavior.ps1` exercises the bounded-parallel primitive used by Frontier runners; read it to understand the throttle and failure semantics.
 - `scripts/model-council.ps1` is the canonical council fan-out for review / ADR / eval phases; reuse it instead of rolling a bespoke parallel dispatcher.
 - `.agentx/agentic-runner.ps1` supports sequential subagent invocation; wrap it in `ForEach-Object -Parallel` only when the Safe / Unsafe rules above clear the work.
 

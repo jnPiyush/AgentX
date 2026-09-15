@@ -9,7 +9,7 @@ import {
 } from '../../eval/aiEvaluationContractInternals';
 
 function createWorkspace(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ai-contract-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ai-contract-'));
   fs.mkdirSync(path.join(root, 'evaluation', 'datasets'), { recursive: true });
   fs.mkdirSync(path.join(root, 'evaluation', 'rubrics'), { recursive: true });
   fs.mkdirSync(path.join(root, '.copilot-tracking', 'eval-reports'), { recursive: true });
@@ -62,7 +62,7 @@ function writeContractArtifacts(root: string, options?: { remote?: boolean; with
     '  retainRawOutputs: false',
     '',
   ].join('\n');
-  fs.writeFileSync(path.join(root, 'evaluation', 'agentx.eval.yaml'), manifest, 'utf-8');
+  fs.writeFileSync(path.join(root, 'evaluation', 'frontier.eval.yaml'), manifest, 'utf-8');
 
   if (!options?.missingBaseline) {
     fs.writeFileSync(path.join(root, 'evaluation', 'baseline.json'), JSON.stringify({
@@ -159,7 +159,7 @@ describe('aiEvaluationContract internals', () => {
     const root = createWorkspace();
     writeContractArtifacts(root, { remote: true });
 
-    const manifestPath = path.join(root, 'evaluation', 'agentx.eval.yaml');
+    const manifestPath = path.join(root, 'evaluation', 'frontier.eval.yaml');
     const content = fs.readFileSync(manifestPath, 'utf-8').replace('  remoteHost: https://contoso.example\n', '');
     fs.writeFileSync(manifestPath, content, 'utf-8');
 

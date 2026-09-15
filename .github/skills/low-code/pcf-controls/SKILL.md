@@ -2,7 +2,7 @@
 name: "pcf-controls"
 description: 'Build Microsoft Power Apps Component Framework (PCF) code components in TypeScript so an agent can generate a pro-code control that drops into canvas and model-driven apps. Covers ControlManifest.Input.xml, the index.ts lifecycle (init/updateView/getOutputs/destroy), property types, dataset vs field controls, pcfproj/npm build, and solution packaging.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:
@@ -35,13 +35,13 @@ compatibility:
   tsconfig.json
 ```
 
-Scaffold: `pac pcf init --namespace AgentX --name IssueRating --template field` (or `--template dataset`).
+Scaffold: `pac pcf init --namespace Frontier --name IssueRating --template field` (or `--template dataset`).
 
 ## ControlManifest.Input.xml
 
 ```xml
 <manifest>
-  <control namespace="AgentX" constructor="IssueRating" version="1.0.0"
+  <control namespace="Frontier" constructor="IssueRating" version="1.0.0"
            display-name-key="Issue Rating" control-type="standard">
     <property name="value" display-name-key="Value" of-type="Whole.None"
               usage="bound" required="true" />

@@ -1,10 +1,10 @@
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   EvaluationReport,
 } from './types';
 import { evaluateHarnessQualityFromInput } from './harnessEvaluatorInternals';
 
-export function evaluateHarnessQuality(agentx: AgentXContext): EvaluationReport | undefined {
+export function evaluateHarnessQuality(agentx: FrontierContext): EvaluationReport | undefined {
   const root = agentx.workspaceRoot;
   if (!root) {
     return undefined;
@@ -18,7 +18,7 @@ export function evaluateHarnessQuality(agentx: AgentXContext): EvaluationReport 
   });
 }
 
-export function getEvaluationSummary(agentx: AgentXContext): string {
+export function getEvaluationSummary(agentx: FrontierContext): string {
   const report = evaluateHarnessQuality(agentx);
   if (!report) {
     return 'No evaluation';
@@ -27,7 +27,7 @@ export function getEvaluationSummary(agentx: AgentXContext): string {
   return `Workflow ${report.scores.workflowCompliance.percent}% | Evidence ${report.scores.evidenceStrength.percent}% | Confidence ${report.scores.outputConfidence.percent}%`;
 }
 
-export function getEvaluationTooltip(agentx: AgentXContext): string {
+export function getEvaluationTooltip(agentx: FrontierContext): string {
   const report = evaluateHarnessQuality(agentx);
   if (!report) {
     return 'No workspace open for evaluation.';
@@ -47,7 +47,7 @@ export function getEvaluationTooltip(agentx: AgentXContext): string {
   return `${summaryLines.join('\n')}\n${failingChecks.map((check) => `${check.label}: ${check.summary}`).join('\n')}`;
 }
 
-export function getCoverageSummary(agentx: AgentXContext): string {
+export function getCoverageSummary(agentx: FrontierContext): string {
   const report = evaluateHarnessQuality(agentx);
   if (!report) {
     return '0% observed';
@@ -55,7 +55,7 @@ export function getCoverageSummary(agentx: AgentXContext): string {
   return `${report.coverage.percent}% observed`;
 }
 
-export function getCoverageTooltip(agentx: AgentXContext): string {
+export function getCoverageTooltip(agentx: FrontierContext): string {
   const report = evaluateHarnessQuality(agentx);
   if (!report) {
     return 'No workspace open for coverage analysis.';
@@ -64,7 +64,7 @@ export function getCoverageTooltip(agentx: AgentXContext): string {
   return report.observations.map((observation) => `${observation.label}: ${observation.detail}`).join('\n');
 }
 
-export function getAttributionSummary(agentx: AgentXContext): string {
+export function getAttributionSummary(agentx: FrontierContext): string {
   const report = evaluateHarnessQuality(agentx);
   if (!report) {
     return 'unknown';
@@ -72,7 +72,7 @@ export function getAttributionSummary(agentx: AgentXContext): string {
   return report.dominantAttribution;
 }
 
-export function getAttributionTooltip(agentx: AgentXContext): string {
+export function getAttributionTooltip(agentx: FrontierContext): string {
   const report = evaluateHarnessQuality(agentx);
   if (!report) {
     return 'No workspace open for attribution analysis.';

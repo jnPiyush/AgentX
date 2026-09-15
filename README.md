@@ -1,28 +1,28 @@
 <div align="center">
-  <img src="docs/assets/agentx-logo.svg" width="240" alt="AgentX - Multi-Agent Framework">
-  <h1>AgentX</h1>
-  <p><strong>Structured AI software delivery for GitHub Copilot, Claude, OpenAI, local models, and the CLI.</strong></p>
+  <img src="docs/assets/frontier-logo.svg" width="240" alt="Frontier Corp">
+  <h1>Frontier Corp</h1>
+  <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.2.0"><img src="https://img.shields.io/badge/Version-9.2.0-b11f4b?style=for-the-badge" alt="Version 9.2.0"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.3.0"><img src="https://img.shields.io/badge/Version-9.3.0-b11f4b?style=for-the-badge" alt="Version 9.3.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
   </p>
 </div>
 
-AgentX turns coding agents into a structured delivery team. Specialist roles plan, design, build, review, test, deploy, and capture what they learned while repo-local state and mechanical gates keep the work auditable.
+Frontier Corp builds and deploys specialized AI engineering teams inside the repository. Frontier, formerly AgentX, is its Hypervelocity Engineering platform. Its fleet of Forward Deployed Engineers (FDEs) plans, designs, builds, reviews, tests, deploys, and captures what it learns while repo-local state and mechanical gates keep the work auditable.
 
-> Code generation is one step. AgentX supplies the operating system around it.
+> Frontier combines specialized FDEs with the contracts and evidence required to ship dependable software.
 
-[Install](#install-in-vs-code) | [See the workflow](#the-operating-loop) | [Meet the team](#the-agent-team) | [Explore skills](Skills.md) | [Read the guide](docs/GUIDE.md) | [Security](SECURITY.md)
+[Install](#install-in-vs-code) | [See the workflow](#the-operating-loop) | [Meet the fleet](#the-frontier-fde-fleet) | [Explore skills](Skills.md) | [Read the guide](docs/GUIDE.md) | [Security](SECURITY.md)
 
 ---
 
-## AgentX in 60 Seconds
+## Frontier in 60 Seconds
 
 | What you get | Current release |
 |:-------------|:----------------|
-| Specialist agents | **26 total**: 15 visible roles and 11 internal sub-agents |
+| Frontier FDEs | **26 total**: 15 visible roles and 11 internal specialists |
 | Production knowledge | **134 skills** across architecture, AI, data, development, design, testing, infrastructure, low-code, and domain consulting |
 | Quality discipline | **Risk-based evidenced iterations** (`1/2/3/5`), fresh verification, independent review, scrub, and completion gates |
 | Durable artifacts | PRDs, ADRs, specs, UX prototypes, plans, reviews, learnings, issue state, and memory stored in the repository |
@@ -34,7 +34,7 @@ AgentX turns coding agents into a structured delivery team. Specialist roles pla
 
 ```mermaid
 flowchart LR
-    Intent["User intent"] --> Route{"AgentX Auto"}
+    Intent["User intent"] --> Route{"Frontier Orchestration FDE"}
     Route --> Plan["Plan and design"]
     Plan --> Build["Implement"]
     Build --> Verify["Verify and review"]
@@ -43,11 +43,11 @@ flowchart LR
     Capture --> Done["Done with evidence"]
 ```
 
-AgentX Auto can run that path in one session. For tighter control, select a specialist role for only the phase you need.
+Frontier Orchestration FDE can run that path in one session. For tighter control, select a specialist role for only the phase you need.
 
 ---
 
-## Why AgentX
+## Why Frontier
 
 ### Repository context before generation
 
@@ -55,7 +55,7 @@ Agents retrieve project instructions, approved product and architecture artifact
 
 ### Evidence before completion
 
-A passing-sounding response is not a gate. AgentX records test output, coverage, security scans, browser checks, artifact freshness, and independent review findings. HIGH and MEDIUM findings block handoff.
+A passing-sounding response is not a gate. Frontier records test output, coverage, security scans, browser checks, artifact freshness, and independent review findings. HIGH and MEDIUM findings block handoff.
 
 ### Role contracts instead of generic personas
 
@@ -69,7 +69,7 @@ Plans, progress, review findings, decisions, and promoted learnings remain in th
 
 ## The Operating Loop
 
-AgentX uses six shared checkpoints across chat, CLI, issues, plans, reviews, and VS Code sidebars:
+Frontier uses six shared checkpoints across chat, CLI, issues, plans, reviews, and VS Code sidebars:
 
 | Checkpoint | Purpose | Durable evidence |
 |:-----------|:--------|:-----------------|
@@ -93,31 +93,31 @@ AgentX uses six shared checkpoints across chat, CLI, issues, plans, reviews, and
 
 ---
 
-## The Agent Team
+## The Frontier FDE Fleet
 
 ### 15 visible roles
 
 | Role | Best used for | Primary output |
 |:-----|:--------------|:---------------|
-| **AgentX Auto** | End-to-end autonomous delivery | Routed specialist workflow |
-| **Product Manager** | Product scope and outcomes | PRD, roadmap, backlog |
-| **UX Designer** | User flows and accessible interfaces | UX spec and working prototype |
-| **Architect** | Options, tradeoffs, and system boundaries | ADR and technical specification |
-| **Engineer** | Production implementation | Code, tests, evidence |
-| **Reviewer** | Functional, security, and architecture review | Approval or actionable findings |
-| **Auto-Fix Reviewer** | Review plus bounded safe fixes | Review and verified corrections |
-| **DevOps Engineer** | CI/CD and release automation | Pipelines, deployment, rollback |
-| **Data Scientist** | Agent, RAG, prompt, and model quality | AI pipeline, eval plan, model card |
-| **Tester** | Test strategy and release certification | Test suites and certification report |
-| **Fabric Engineer** | Microsoft Fabric data products | Lakehouse, Warehouse, Spark, pipelines, lineage |
-| **Power Platform Builder** | Portable low-code solution source | Dataverse, apps, flows, PCF, Pages, Copilot Studio |
-| **Power BI Analyst** | Semantic models and reporting | DAX, Power Query, report specification |
-| **Consulting Research** | Sourced domain analysis | Client-ready research brief |
-| **Agile Coach** | Story creation and refinement | INVEST stories and acceptance criteria |
+| **Frontier Orchestration FDE** | End-to-end autonomous delivery | Routed specialist workflow |
+| **Frontier Product FDE** | Product scope and outcomes | PRD, roadmap, backlog |
+| **Frontier Experience FDE** | User flows and accessible interfaces | UX spec and working prototype |
+| **Frontier Architecture FDE** | Options, tradeoffs, and system boundaries | ADR and technical specification |
+| **Frontier Engineering FDE** | Production implementation | Code, tests, evidence |
+| **Frontier Review FDE** | Functional, security, and architecture review | Approval or actionable findings |
+| **Frontier Auto-Fix FDE** | Review plus bounded safe fixes | Review and verified corrections |
+| **Frontier DevOps FDE** | CI/CD and release automation | Pipelines, deployment, rollback |
+| **Frontier AI Systems FDE** | Agent, RAG, prompt, and model quality | AI pipeline, eval plan, model card |
+| **Frontier Test FDE** | Test strategy and release certification | Test suites and certification report |
+| **Frontier Fabric FDE** | Microsoft Fabric data products | Lakehouse, Warehouse, Spark, pipelines, lineage |
+| **Frontier Power Platform FDE** | Portable low-code solution source | Dataverse, apps, flows, PCF, Pages, Copilot Studio |
+| **Frontier Power BI FDE** | Semantic models and reporting | DAX, Power Query, report specification |
+| **Frontier Research FDE** | Sourced domain analysis | Client-ready research brief |
+| **Frontier Agile FDE** | Story creation and refinement | INVEST stories and acceptance criteria |
 
 ### 11 internal specialists
 
-GitHub Ops, ADO Ops, AzDO PRD-to-WIT, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist, Diagram Specialist, and Prototype Auditor are invoked by parent roles when deeper isolation is useful.
+Frontier GitHub Ops FDE, Frontier ADO Ops FDE, Frontier ADO Planning FDE, Frontier Functional Review FDE, Frontier Architecture Review FDE, Frontier Prompt FDE, Frontier Evaluation FDE, Frontier Observability FDE, Frontier RAG FDE, Frontier Diagram FDE, and Frontier Prototype Audit FDE are invoked by parent roles when deeper isolation is useful.
 
 ---
 
@@ -145,7 +145,7 @@ The executable skill gate scores specification, discoverability, decision suppor
 
 ### VS Code and GitHub Copilot
 
-The Marketplace extension provides declarative chat agents, sidebars, Command Palette workflows, workspace initialization, adapter setup, and the bundled AgentX runtime.
+The Marketplace extension provides declarative chat agents, sidebars, Command Palette workflows, workspace initialization, adapter setup, and the bundled Frontier runtime.
 
 ### LLM adapters
 
@@ -165,7 +165,7 @@ Model names are advisory. Role boundaries, evidence requirements, and tool permi
 
 ### Editor and CLI portability
 
-AgentX also ships GitHub Copilot CLI packs, Claude Code commands, Cursor rules/commands, and PowerShell/Bash launchers.
+Frontier also ships GitHub Copilot CLI packs, Claude Code commands, Cursor rules/commands, and PowerShell/Bash launchers.
 
 ---
 
@@ -185,7 +185,15 @@ Adds cost-envelope analysis, deterministic resource naming, and governance check
 
 ### Secure WhatsApp companion
 
-Controls a local AgentX workspace from an allowlisted account with read-only defaults, replay protection, short-lived sender-bound confirmation nonces, transcript-first voice handling, sandboxed Chromium, and bounded secret-reduced child execution.
+Controls a local Frontier workspace from an allowlisted account with read-only defaults, replay protection, short-lived sender-bound confirmation nonces, transcript-first voice handling, sandboxed Chromium, and bounded secret-reduced child execution.
+
+### Teams and GitHub App companion
+
+View agent job progress and send confirmed instructions from Microsoft Teams or
+GitHub issue/PR discussion comments. The [collaboration companion](companions/collaboration/README.md)
+uses authenticated provider endpoints, user allowlists and a durable serialized
+job queue. Follow-ups run as subsequent agent turns. Live use requires your bot
+registration or GitHub App installation and an HTTPS endpoint.
 
 ### Deterministic skill rubric
 
@@ -195,7 +203,7 @@ Replaces the legacy structural score with a 100-point rubric, strict YAML parsin
 
 ## Security and Release Integrity
 
-AgentX places controls outside the model prompt:
+Frontier places controls outside the model prompt:
 
 - blocked destructive command patterns and confirmation for unfamiliar commands
 - workspace path sandboxing and secret redaction
@@ -218,7 +226,7 @@ See [SECURITY.md](SECURITY.md) for the threat model, supported versions, and rep
 code --install-extension jnPiyush.agentx
 ```
 
-Or install [AgentX from the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
+Or install [Frontier from the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
 
 Requirements:
 
@@ -232,32 +240,32 @@ Requirements:
 Open a repository and run this Command Palette action:
 
 ```text
-AgentX: Initialize Local Runtime
+Frontier: Initialize Local Runtime
 ```
 
 Or use chat:
 
 ```text
-@agentx initialize local runtime
+@frontier initialize local runtime
 ```
 
-AgentX uses a zero-copy runtime. Initialization creates local state, stable launchers, plans, reviews, and learning folders without copying the bundled agent/skill tree into your repository.
+Frontier uses a zero-copy runtime. Initialization creates local state, stable launchers, plans, reviews, and learning folders without copying the bundled agent/skill tree into your repository.
 
 ### 3. Add adapters when needed
 
 ```text
-AgentX: Add Remote Adapter
-AgentX: Add LLM Adapter
+Frontier: Add Remote Adapter
+Frontier: Add LLM Adapter
 ```
 
-Secrets are collected through secure VS Code prompts and stored in secret storage, not committed to `.agentx/config.json`.
+Secrets are collected through secure VS Code prompts and stored in secret storage, not committed to `.frontier/config.json`.
 
-Standalone workspace installers keep AgentX legal material under `.agentx/legal` and never replace the repository's root `LICENSE` or `NOTICE`. When upgrading an existing 9.x workspace installation to a different version, rerun with explicit `-Force` or `--force` so the installer cannot report a new version while retaining older managed files.
+Standalone workspace installers keep Frontier legal material under `.agentx/legal` and never replace the repository's root `LICENSE` or `NOTICE`. When upgrading an existing 9.x workspace installation to a different version, rerun with explicit `-Force` or `--force` so the installer cannot report a new version while retaining older managed files.
 
 ### 4. Start with one prompt
 
 ```text
-[AgentX Auto selected]
+[Frontier Orchestration FDE selected]
 Build a task tracker for small teams. Define the product, design the UX and architecture,
 implement it, review the result, and capture reusable learning.
 ```
@@ -290,9 +298,9 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.2.0
+## New In 9.3.0
 
-This major release makes AgentX completion and autonomous execution fail closed:
+This major release makes Frontier completion and autonomous execution fail closed:
 
 - quality-loop approval now requires an attributable structured reviewer verdict with zero HIGH/MEDIUM findings on the final work iteration
 - commit-time gates enforce risk-based iteration minimums, staged/worktree agreement, and post-commit loop consumption
@@ -310,4 +318,4 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md). Contributions should begin with a
 
 ## License
 
-AgentX is licensed under [Apache License 2.0](LICENSE). Third-party notices are in [NOTICE](NOTICE).
+Frontier is licensed under [Apache License 2.0](LICENSE). Third-party notices are in [NOTICE](NOTICE).

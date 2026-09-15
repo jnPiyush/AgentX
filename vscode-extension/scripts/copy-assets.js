@@ -1,4 +1,4 @@
-// copy-assets.js - Copies AgentX .github assets into the extension for packaging.
+// copy-assets.js - Copies Frontier .github assets into the extension for packaging.
 // This ensures agents, instructions, prompts, and skills are bundled in the VSIX
 // and available across all workspaces.
 const fs = require('fs');
@@ -6,7 +6,9 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const srcRoot = path.resolve(repoRoot, '.github');
-const destRoot = path.resolve(__dirname, '..', '.github', 'agentx');
+const destRoot = path.resolve(__dirname, '..', '.github', 'frontier');
+const legacyDestRoot = path.resolve(__dirname, '..', '.github', 'agentx');
+const transientDestRoot = path.resolve(__dirname, '..', '.github', 'hve');
 const compatibilityRoot = path.resolve(destRoot, '..');
 
 // Directories from .github/ to bundle
@@ -54,7 +56,7 @@ const runtimeScriptFiles = [
 ];
 
 // Standalone files from .github/ to bundle
-const standaloneFiles = ['AGENT-PROTOCOL.md', 'agent-delegation.md', 'agentx-security.yml', 'CODEOWNERS', 'PULL_REQUEST_TEMPLATE.md', 'copilot-instructions.md'];
+const standaloneFiles = ['AGENT-PROTOCOL.md', 'agent-delegation.md', 'frontier-security.yml', 'CODEOWNERS', 'PULL_REQUEST_TEMPLATE.md', 'copilot-instructions.md'];
 
 // Root-level reference documents to bundle alongside .github/ assets
 const rootDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE', 'NOTICE'];
@@ -64,6 +66,8 @@ const compatibilityDocs = ['AGENTS.md', 'Skills.md', 'CONTRIBUTING.md', 'LICENSE
 
 // Root-level runtime files that extension-installed workspaces rely on
 const rootRuntimeFiles = [
+    { src: path.join(repoRoot, '.agentx', 'frontier.ps1'), dest: path.join('.agentx', 'frontier.ps1') },
+    { src: path.join(repoRoot, '.agentx', 'frontier.sh'), dest: path.join('.agentx', 'frontier.sh') },
     { src: path.join(repoRoot, '.agentx', 'agentx.ps1'), dest: path.join('.agentx', 'agentx.ps1') },
     { src: path.join(repoRoot, '.agentx', 'agentx-cli.ps1'), dest: path.join('.agentx', 'agentx-cli.ps1') },
     { src: path.join(repoRoot, '.agentx', 'agentic-runner.ps1'), dest: path.join('.agentx', 'agentic-runner.ps1') },
@@ -73,7 +77,7 @@ const rootRuntimeFiles = [
 ];
 
 // docs/ reference files referenced by agents (bundled to docs/ subdirectory)
-const docFiles = ['WORKFLOW.md', 'GUIDE.md', 'GOLDEN_PRINCIPLES.md', 'QUALITY_SCORE.md', 'tech-debt-tracker.md'];
+const docFiles = ['BRAND.md', 'WORKFLOW.md', 'GUIDE.md', 'GOLDEN_PRINCIPLES.md', 'QUALITY_SCORE.md', 'tech-debt-tracker.md'];
 const docGuideDir = path.join(repoRoot, 'docs', 'guides');
 
 const artifactDocFiles = [
@@ -289,6 +293,12 @@ const bundledMarkdownRewrites = [
 if (fs.existsSync(destRoot)) {
     fs.rmSync(destRoot, { recursive: true });
 }
+if (fs.existsSync(legacyDestRoot)) {
+    fs.rmSync(legacyDestRoot, { recursive: true });
+}
+if (fs.existsSync(transientDestRoot)) {
+    fs.rmSync(transientDestRoot, { recursive: true });
+}
 
 for (const file of compatibilityDocs) {
     const compatibilityPath = path.join(compatibilityRoot, file);
@@ -468,7 +478,7 @@ applyBundledMarkdownRewrites();
 syncCompatibilityRootDocs();
 rewriteCompatibilityDocs();
 
-console.log('Done: ' + totalFiles + ' files copied to .github/agentx/');
+console.log('Done: ' + totalFiles + ' files copied to .github/frontier/');
 
 function countFiles(dir) {
     let count = 0;
@@ -483,12 +493,12 @@ function countFiles(dir) {
 }
 
 /**
- * Build `.github/agentx/seed/` -- a pristine, UNREWRITTEN mirror of the canonical
+ * Build `.github/frontier/seed/` -- a pristine, UNREWRITTEN mirror of the canonical
  * repository layout, rooted at the workspace root.
  *
  * The rest of the bundle is rewritten so links resolve inside the extension's
- * nested `.github/agentx/` layout. Those rewritten copies are wrong for a user
- * workspace. `AgentX: Initialize CLI` therefore seeds from this tree instead,
+ * nested `.github/frontier/` layout. Those rewritten copies are wrong for a user
+ * workspace. `Frontier: Initialize CLI` therefore seeds from this tree instead,
  * using a single trivial mapping: `seed/<path>` -> `<workspace>/<path>`.
  *
  * Because the canonical repository layout is exactly the layout the agents were
@@ -552,8 +562,8 @@ function buildCopilotCliSeedTree() {
 }
 
 /**
- * Repoint links that only make sense inside the AgentX repository at their public
- * URLs. A seeded user workspace has no AgentX CONTRIBUTING.md, so the relative
+ * Repoint links that only make sense inside the Frontier repository at their public
+ * URLs. A seeded user workspace has no Frontier CONTRIBUTING.md, so the relative
  * link would dangle; the canonical document lives on GitHub.
  */
 function applySeedRewrites(seedRoot) {
@@ -626,8 +636,8 @@ function syncCompatibilityRootDocs() {
             if (file === 'Skills.md') {
                 const original = fs.readFileSync(compatibilityPath, 'utf8');
                 const updated = original
-                    .split('(skills/').join('(agentx/skills/')
-                    .split('|skills/').join('|agentx/skills/');
+                    .split('(skills/').join('(frontier/skills/')
+                    .split('|skills/').join('|frontier/skills/');
 
                 if (updated !== original) {
                     fs.writeFileSync(compatibilityPath, updated, 'utf8');
@@ -635,9 +645,9 @@ function syncCompatibilityRootDocs() {
             } else if (file === 'CONTRIBUTING.md') {
                 const original = fs.readFileSync(compatibilityPath, 'utf8');
                 const updated = original
-                    .split('(skills/').join('(agentx/skills/')
-                    .split('(ISSUE_TEMPLATE/').join('(agentx/ISSUE_TEMPLATE/')
-                    .split('(copilot-instructions.md)').join('(agentx/copilot-instructions.md)');
+                    .split('(skills/').join('(frontier/skills/')
+                    .split('(ISSUE_TEMPLATE/').join('(frontier/ISSUE_TEMPLATE/')
+                    .split('(copilot-instructions.md)').join('(frontier/copilot-instructions.md)');
 
                 if (updated !== original) {
                     fs.writeFileSync(compatibilityPath, updated, 'utf8');
@@ -652,9 +662,9 @@ function rewriteCompatibilityDocs() {
     if (fs.existsSync(workflowPath)) {
         const original = fs.readFileSync(workflowPath, 'utf8');
         const updated = original
-            .split('(../.github/templates/').join('(../agentx/templates/')
-            .split('(../.github/agents/').join('(../agentx/agents/')
-            .split('(../.github/skills/').join('(../agentx/skills/');
+            .split('(../.github/templates/').join('(../frontier/templates/')
+            .split('(../.github/agents/').join('(../frontier/agents/')
+            .split('(../.github/skills/').join('(../frontier/skills/');
 
         if (updated !== original) {
             fs.writeFileSync(workflowPath, updated, 'utf8');
@@ -665,8 +675,8 @@ function rewriteCompatibilityDocs() {
     if (fs.existsSync(techDebtPath)) {
         const original = fs.readFileSync(techDebtPath, 'utf8');
         const updated = original
-            .split('(artifacts/adr/').join('(../agentx/docs/artifacts/adr/')
-            .split('(artifacts/specs/').join('(../agentx/docs/artifacts/specs/');
+            .split('(artifacts/adr/').join('(../frontier/docs/artifacts/adr/')
+            .split('(artifacts/specs/').join('(../frontier/docs/artifacts/specs/');
 
         if (updated !== original) {
             fs.writeFileSync(techDebtPath, updated, 'utf8');
@@ -674,10 +684,10 @@ function rewriteCompatibilityDocs() {
     }
 
     const guideRewrites = [
-        ['EVALUATOR-CALIBRATION.md', [['(../../.github/agents/', '(../../agentx/agents/']]],
+        ['EVALUATOR-CALIBRATION.md', [['(../../.github/agents/', '(../../frontier/agents/']]],
         ['CODING-HARNESS.md', [
-            ['(../../.github/skills/', '(../../agentx/skills/'],
-            ['(../../evaluation/', '(../../agentx/evaluation/'],
+            ['(../../.github/skills/', '(../../frontier/skills/'],
+            ['(../../evaluation/', '(../../frontier/evaluation/'],
         ]],
     ];
     for (const [name, replacements] of guideRewrites) {

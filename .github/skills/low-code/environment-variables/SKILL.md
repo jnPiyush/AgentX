@@ -2,7 +2,7 @@
 name: "environment-variables"
 description: 'Author Microsoft Power Platform environment variables and connection references inside an unpacked solution so an agent can parameterize apps, flows, and plugins across dev/test/prod without hardcoding -- definitions, current values, data types (string/number/JSON/secret/Data Source), and Key Vault-backed secrets. Covers the ALM mechanism that makes a solution portable.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

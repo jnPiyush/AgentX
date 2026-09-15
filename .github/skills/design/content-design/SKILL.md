@@ -2,7 +2,7 @@
 name: "content-design"
 description: 'Write UI copy that survives review -- microcopy, empty states, error messages, onboarding, confirmations, and tone. Use when authoring or reviewing any user-facing string in a prototype or shipped app. Provides patterns by surface type, a 5-line voice rubric, and mechanical anti-patterns reviewers can grep for.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-13"
   updated: "2026-05-13"
@@ -14,7 +14,7 @@ compatibility:
 
 # Content Design
 
-> WHEN: A prototype or shipped surface contains user-facing text -- labels, buttons, empty states, errors, tooltips, onboarding, confirmations, system messages. This skill is the AgentX canonical content guide. Heuristic H2/H9/H10 from `usability-heuristics` defers to this skill for the specific copy patterns.
+> WHEN: A prototype or shipped surface contains user-facing text -- labels, buttons, empty states, errors, tooltips, onboarding, confirmations, system messages. This skill is the Frontier canonical content guide. Heuristic H2/H9/H10 from `usability-heuristics` defers to this skill for the specific copy patterns.
 
 ## When to Use This Skill
 

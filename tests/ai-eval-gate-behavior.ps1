@@ -11,7 +11,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $runner = Join-Path $repoRoot 'scripts/run-ai-eval-sample.ps1'
-$manifest = Join-Path $repoRoot 'evaluation/agentx.eval.yaml'
+$manifest = Join-Path $repoRoot 'evaluation/frontier.eval.yaml'
 $dataset = Join-Path $repoRoot 'evaluation/datasets/regression.jsonl'
 $classifier = Join-Path $repoRoot 'scripts/classify-issue.js'
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) "agentx-eval-gate-$([guid]::NewGuid())"
@@ -44,7 +44,7 @@ function Invoke-Eval([string]$DatasetPath, [string]$ClassifierPath) {
 }
 
 try {
-    Write-Host 'AgentX AI Evaluation Gate Behavior Tests'
+    Write-Host 'Frontier AI Evaluation Gate Behavior Tests'
 
     $githubOutput = & node $classifier --title '[feature] Add a review sidebar' --github-output
     Assert-True ($LASTEXITCODE -eq 0) 'production classifier CLI exits successfully'

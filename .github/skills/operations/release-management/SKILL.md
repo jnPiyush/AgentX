@@ -2,7 +2,7 @@
 name: "release-management"
 description: 'Implement release management with versioning strategies, deployment strategies, rollback procedures, and release automation. Use when planning release pipelines, choosing deployment strategies (blue-green, canary, rolling), automating releases, or designing rollback procedures.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "2.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"
@@ -407,7 +407,7 @@ Validate Tag -> Build -> Test -> Create Release -> Deploy Staging
 ---
 
 **Version**: 2.0.0
-**Author**: AgentX
+**Author**: Frontier
 **Last Updated**: February 10, 2026
 
 ## Scripts

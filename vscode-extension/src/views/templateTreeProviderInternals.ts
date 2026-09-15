@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { collectAssetFiles } from '../utils/runtimeAssets';
 import { loadTemplatesRegistry, resolveRegistryAssetPath } from '../utils/registryLoader';
 
@@ -46,7 +46,7 @@ export class TemplateTreeItem extends vscode.TreeItem {
  }
 }
 
-export function resolveTemplateFiles(agentx: AgentXContext): string[] {
+export function resolveTemplateFiles(agentx: FrontierContext): string[] {
  const workspaceRoot = agentx.workspaceRoot;
  const extensionPath = agentx.extensionContext?.extensionPath;
 

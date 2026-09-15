@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "AgentX Pack Manifest",
-  "description": "Defines a distributable pack of AgentX artifacts (agents, skills, instructions, templates).",
+  "title": "Frontier Pack Manifest",
+  "description": "Defines a distributable pack of Frontier artifacts (agents, skills, instructions, templates).",
   "type": "object",
   "required": ["name", "version", "description", "artifacts"],
   "properties": {

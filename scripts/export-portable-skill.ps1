@@ -49,7 +49,7 @@ function Convert-ToPortable([string]$content) {
     $lines = $body -split "\r?\n"
     $kept = New-Object System.Collections.Generic.List[string]
     foreach ($line in $lines) {
-        # 2. Drop lines that are purely an AgentX CLI gate or chat-participant call.
+        # 2. Drop lines that are purely an Frontier CLI gate or chat-participant call.
         if ($line -match '^\s*[`>\-\*\d\.\)\s]*\.agentx[\\/]agentx\.(ps1|sh)\b') { continue }
         if ($line -match '^\s*[`>\-\*\d\.\)\s]*@agentx\b') { continue }
         # 3. Neutralize inline host references that remain on otherwise-useful lines.
@@ -77,7 +77,7 @@ function Export-One([string]$file, [string]$outRoot) {
         '<!-- Portable skill export (SkillOpt best_skill.md format).',
         "     Source: $relSource",
         '     Host-specific coupling (model frontmatter, chat-participant syntax,',
-        '     AgentX CLI gates, VS Code commands) has been stripped. This artifact',
+        '     Frontier CLI gates, VS Code commands) has been stripped. This artifact',
         '     is natural-language guidance for any frozen LLM agent. -->',
         ''
     ) -join "`n"

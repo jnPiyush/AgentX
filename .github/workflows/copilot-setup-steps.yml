@@ -2,10 +2,10 @@
 # Copilot Coding Agent Setup Steps
 # ------------------------------------------------------------------
 # Configures the environment for GitHub Copilot Coding Agent
-# (formerly Copilot Workspace) to work with AgentX repositories.
+# (formerly Copilot Workspace) to work with Frontier repositories.
 #
 # This workflow runs during Copilot Coding Agent initialization
-# to ensure the agent has access to AgentX CLI, scripts, and
+# to ensure the agent has access to Frontier CLI, scripts, and
 # framework configuration.
 # ------------------------------------------------------------------
 
@@ -29,29 +29,29 @@ jobs:
       - name: Setup PowerShell
         shell: bash
         run: |
-          # Ensure pwsh is available for AgentX CLI
+          # Ensure pwsh is available for Frontier CLI
           if ! command -v pwsh &> /dev/null; then
             echo "PowerShell not found, installing..."
             sudo apt-get update
             sudo apt-get install -y powershell
           fi
 
-      - name: Verify AgentX installation
+      - name: Verify Frontier installation
         shell: pwsh
         run: |
-          # Check that AgentX framework files exist
+          # Check that Frontier engineering system files exist
           if (Test-Path "AGENTS.md") {
             Write-Host "[PASS] AGENTS.md found"
           } else {
-            Write-Host "[WARN] AGENTS.md not found -- AgentX may not be initialized"
+            Write-Host "[WARN] AGENTS.md not found -- Frontier may not be initialized"
           }
 
           if (Test-Path ".agentx/agentx.ps1") {
-            Write-Host "[PASS] AgentX CLI found"
+            Write-Host "[PASS] Frontier CLI found"
             # Show available commands
             ./.agentx/agentx.ps1 version
           } else {
-            Write-Host "[WARN] AgentX CLI not found"
+            Write-Host "[WARN] Frontier CLI not found"
           }
 
       - name: Install VS Code extension dependencies

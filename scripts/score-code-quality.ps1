@@ -114,7 +114,7 @@ function Test-ImplementationPath([string]$Path) {
     $normalized = Get-NormalizedPath $Path
     if ([IO.Path]::GetExtension($normalized).ToLowerInvariant() -notin $implementationExtensions) { return $false }
     if ($normalized -match '(^|/)(\.git|build|coverage|dist|node_modules|out|tests?|__tests__|vendor)(/|$)') { return $false }
-    if ($normalized -match '(^|/)vscode-extension/\.github/agentx(/|$)') { return $false }
+    if ($normalized -match '(^|/)vscode-extension/\.github/frontier(/|$)') { return $false }
     if ($normalized -match '(?i)(\.test|\.spec)\.[^.]+$') { return $false }
     return $true
 }

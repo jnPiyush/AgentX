@@ -1,13 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveFrontierStatePath } from './frontierPaths';
 
 import type {
   HarnessState,
   HarnessThread,
   HarnessTurn,
 } from './harnessStateTypes';
-
-const HARNESS_STATE_REL = '.agentx/state/harness-state.json';
 
 export function createDefaultState(): HarnessState {
   return {
@@ -28,13 +27,13 @@ export function createDefaultState(): HarnessState {
 }
 
 export function ensureStateDir(workspaceRoot: string): string {
-  const dir = path.join(workspaceRoot, '.agentx', 'state');
+  const dir = resolveFrontierStatePath(workspaceRoot, 'state');
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
 
 export function getStatePath(workspaceRoot: string): string {
-  return path.join(workspaceRoot, HARNESS_STATE_REL);
+  return resolveFrontierStatePath(workspaceRoot, 'state', 'harness-state.json');
 }
 
 export function writeHarnessState(workspaceRoot: string, state: HarnessState): void {

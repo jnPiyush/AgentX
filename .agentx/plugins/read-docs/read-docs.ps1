@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
-# AgentX Plugin: read-docs
+# Frontier Plugin: read-docs
 # Convert Word / OpenDocument / RTF / HTML / EPUB documents to Markdown using Pandoc.
 
 [CmdletBinding()]

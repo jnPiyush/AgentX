@@ -46,7 +46,7 @@ Create a concise update and flag missing information.
 '@ | Set-Content -LiteralPath $Path -Encoding utf8
 }
 
-Write-Host 'AgentX Cowork Skill Creator Behavior Tests'
+Write-Host 'Frontier Cowork Skill Creator Behavior Tests'
 
 Assert-True (Test-Path $PackageScript) 'package script exists'
 Assert-True (Test-Path $PromptPath) 'Cowork creation prompt exists'

@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  Behavior tests for the AgentX cost-analysis and infra-governance skills.
+  Behavior tests for the Frontier cost-analysis and infra-governance skills.
 #>
 
 #Requires -Version 7.0
@@ -42,7 +42,7 @@ function Get-GovernanceResult([string]$Path) {
 }
 
 try {
-    Write-Host 'AgentX Architecture Skills Behavior Tests'
+    Write-Host 'Frontier Architecture FDEure Skills Behavior Tests'
 
     # Cost estimator: baseline, locale invariance, JSON purity, and schema failures.
     $baseline = Invoke-Script $costScript @('-ModelPath', $costModel, '-Format', 'json')

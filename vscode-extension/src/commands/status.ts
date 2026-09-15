@@ -1,17 +1,17 @@
 import * as vscode from 'vscode';
-import { AgentXContext, AgentDefinition } from '../agentxContext';
+import { FrontierContext, AgentDefinition } from '../frontierContext';
 
 /**
- * Register the AgentX: Show Agent Status command.
+ * Register the Frontier: Show Agent Status command.
  * Displays a summary of all agents, their models, and current state.
  */
 export function registerStatusCommand(
  context: vscode.ExtensionContext,
- agentx: AgentXContext
+ agentx: FrontierContext
 ) {
- const cmd = vscode.commands.registerCommand('agentx.showStatus', async () => {
+ const cmd = vscode.commands.registerCommand('frontier.showStatus', async () => {
  if (!await agentx.checkInitialized()) {
- vscode.window.showWarningMessage('AgentX is not initialized. Run "AgentX: Initialize Project" first.');
+ vscode.window.showWarningMessage('Frontier is not initialized. Run "Frontier: Initialize Project" first.');
  return;
  }
 
@@ -20,7 +20,7 @@ export function registerStatusCommand(
  const output = await agentx.runCli('state');
  const panel = vscode.window.createWebviewPanel(
  'agentxStatus',
- 'AgentX - Agent Status',
+ 'Frontier - Agent Status',
  vscode.ViewColumn.One,
  { enableScripts: false }
  );
@@ -35,7 +35,7 @@ export function registerStatusCommand(
 
  const panel = vscode.window.createWebviewPanel(
  'agentxStatus',
- 'AgentX - Agent Status',
+ 'Frontier - Agent Status',
  vscode.ViewColumn.One,
  { enableScripts: false }
  );
@@ -59,7 +59,7 @@ function buildStatusHtml(cliOutput: string): string {
  </style>
 </head>
 <body>
- <h1>AgentX - Agent Status</h1>
+ <h1>Frontier - Agent Status</h1>
  <pre>${lines}</pre>
 </body>
 </html>`;
@@ -88,7 +88,7 @@ function buildAgentListHtml(agents: AgentDefinition[]): string {
  </style>
 </head>
 <body>
- <h1>AgentX - Agents (${agents.length})</h1>
+ <h1>Frontier - Agents (${agents.length})</h1>
  <table>
  <thead><tr><th>Agent</th><th>Model</th><th>Description</th></tr></thead>
  <tbody>${rows}</tbody>

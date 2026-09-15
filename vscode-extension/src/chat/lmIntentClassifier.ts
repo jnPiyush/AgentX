@@ -1,7 +1,7 @@
 /**
- * Language-model-backed intent classifier for the @agentx chat participant.
+ * Language-model-backed intent classifier for the @frontier chat participant.
  *
- * Translates conversational phrases into AgentX CLI commands using
+ * Translates conversational phrases into Frontier CLI commands using
  * `vscode.lm.selectChatModels`. Output is a structured JSON object that
  * is validated against an allowlisted catalog -- the LM cannot invent
  * subcommands or argument shapes.
@@ -90,7 +90,7 @@ export const INTENT_CATALOG: ReadonlyArray<IntentSpec> = [
     id: 'config-show',
     subcommand: 'config',
     destructive: false,
-    description: 'Show current AgentX configuration',
+    description: 'Show current Frontier configuration',
     cliShape: 'agentx config show',
     examples: ['show config', "what's my config?", 'view current configuration'],
     validate: (a) => expectNoArgs(a, ['show']),
@@ -368,7 +368,7 @@ export const INTENT_CATALOG: ReadonlyArray<IntentSpec> = [
     id: 'git-sync',
     subcommand: 'git-sync',
     destructive: true,
-    description: 'Run git push or pull through AgentX git-sync',
+    description: 'Run git push or pull through Frontier git-sync',
     cliShape: 'agentx git-sync <push|pull>',
     examples: ['git-sync push', 'git pull via agentx'],
     validate: (a) => {
@@ -448,7 +448,7 @@ export function __setLmDisabledForTests(disabled: boolean): void { lmDisabled = 
 
 function buildClassifierPrompt(userText: string): string {
   const lines: string[] = [];
-  lines.push('You translate one user phrase into AgentX CLI commands.');
+  lines.push('You translate one user phrase into Frontier CLI commands.');
   lines.push('');
   lines.push('Allowed intents (use ONLY these ids):');
   for (const spec of INTENT_CATALOG) {

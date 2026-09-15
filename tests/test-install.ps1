@@ -31,7 +31,7 @@ function New-TestDir($name) {
 
 function Initialize-LocalArchive {
  $archiveStage = Join-Path $TEST_BASE 'archive-stage'
- $archiveRoot = Join-Path $archiveStage 'AgentX-master'
+ $archiveRoot = Join-Path $archiveStage 'Frontier-master'
 
  if (Test-Path $LOCAL_ARCHIVE) {
   return
@@ -46,7 +46,7 @@ function Initialize-LocalArchive {
   Copy-Item (Join-Path $SCRIPT_ROOT $file) (Join-Path $archiveRoot $file) -Force
  }
 
- Compress-Archive -Path (Join-Path $archiveStage 'AgentX-master') -DestinationPath $LOCAL_ARCHIVE -Force
+ Compress-Archive -Path (Join-Path $archiveStage 'Frontier-master') -DestinationPath $LOCAL_ARCHIVE -Force
 }
 
 function Invoke-InstallerFile {
@@ -166,7 +166,7 @@ $TEMP_FILES = @(".agentx-install-tmp", ".agentx-install-raw", ".agentx-install.z
 # ========================================================
 Write-Host ""
 Write-Host "+===================================================+" -ForegroundColor Yellow
-Write-Host "| AgentX Install Test Suite |" -ForegroundColor Yellow
+Write-Host "| Frontier Install Test Suite |" -ForegroundColor Yellow
 Write-Host "| $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') |" -ForegroundColor Yellow
 Write-Host "+===================================================+" -ForegroundColor Yellow
 Write-Host " Test base: $TEST_BASE" -ForegroundColor DarkGray

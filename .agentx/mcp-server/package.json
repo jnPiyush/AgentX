@@ -1,10 +1,11 @@
 {
-  "name": "@agentx/mcp-server",
-  "version": "9.2.0",
-  "description": "MCP stdio server that exposes AgentX CLI commands (loop, ready, state, workflow, validate, ship, ...) as Model Context Protocol tools so GitHub Copilot CLI, Claude Desktop, or any MCP host can drive AgentX quality gates from chat.",
+  "name": "@frontier/mcp-server",
+  "version": "9.3.0",
+  "description": "MCP stdio server that exposes Frontier CLI commands (loop, ready, state, workflow, validate, ship, ...) as Model Context Protocol tools so GitHub Copilot CLI, Claude Desktop, or any MCP host can drive Frontier quality gates from chat.",
   "private": true,
   "type": "commonjs",
   "bin": {
+    "frontier-mcp": "./index.js",
     "agentx-mcp": "./index.js"
   },
   "main": "index.js",
@@ -24,7 +25,8 @@
   },
   "keywords": [
     "mcp",
-    "agentx",
+    "frontier",
+    "agentx-compatibility",
     "copilot-cli",
     "quality-gate"
   ],

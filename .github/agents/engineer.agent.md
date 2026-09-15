@@ -1,5 +1,5 @@
 ---
-name: AgentX Engineer
+name: Frontier Engineering FDE
 description: 'Implement features, fix bugs, and write tests through Compound Engineering -- a structured pipeline of Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Review, with gate-checked phase transitions, full artifact chain consumption, mandatory Karpathy guidelines, and a risk-based quality loop.'
 model: Claude Sonnet 5 (copilot)
 user-invocable: true
@@ -7,17 +7,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   mode: adaptive
@@ -29,7 +29,7 @@ constraints:
   - "MUST perform a design-alignment checkpoint with Architect before coding when the implementation crosses architecture boundaries, introduces a new pattern outside the ADR/Spec, or requires a meaningful design deviation"
   - "MUST perform a design-alignment checkpoint with Data Scientist before coding when `needs:ai` work changes model behavior, prompt flow, eval logic, RAG design, or ML input/output contracts"
   - "MUST load and read the skills prescribed for each phase before performing that phase's work"
-  - "MUST run '.agentx/agentx.ps1 loop start -p <prompt-text> -i <issue>' as the ABSOLUTE FIRST action before any file edit (--prompt flag is REQUIRED; omitting it causes exit 1 -- see iterative-loop skill for full syntax)"
+  - "MUST run '.agentx/frontier.ps1 loop start -p <prompt-text> -i <issue>' as the ABSOLUTE FIRST action before any file edit (--prompt flag is REQUIRED; omitting it causes exit 1 -- see iterative-loop skill for full syntax)"
   - "MUST meet the risk-based quality-loop minimum from AGENT-PROTOCOL.md before declaring implementation done"
   - "MUST attach a real evidence file to EVERY `loop iterate` and to `loop complete` (--evidence <path>); the CLI rejects iterations without it"
   - "MUST run adversarial checks only for applicable high-risk surfaces: property tests for changed pure logic, mutation tests for security/correctness-critical branches, fuzzing for changed parsers/deserializers, and negative tests for changed public endpoints"
@@ -39,7 +39,7 @@ constraints:
   - "MUST verify quality loop reached 'complete' status before moving to In Review"
   - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix); the commit-msg hook rejects fix: commits without test changes"
   - "MUST store all AI/LLM prompts as separate files in prompts/; MUST NOT embed multi-line prompts as inline strings in code"
-  - "MUST run 'pwsh .agentx/agentx.ps1 scrub -Path <changed-path>' on every modified area before independent review; if scrub changes files, rerun focused checks; HIGH-severity findings block handoff"
+  - "MUST run 'pwsh .agentx/frontier.ps1 scrub -Path <changed-path>' on every modified area before independent review; if scrub changes files, rerun focused checks; HIGH-severity findings block handoff"
   - "MUST reuse existing shared code before writing new code: search the codebase for an existing API endpoint, service, module, function, utility, stored procedure, query, or component that already provides the needed behavior or data, and extend/parameterize it instead of creating a near-duplicate"
   - "MUST extract shared logic when two or more call sites (screens, features, jobs) need the same behavior or data access into a single shared module/endpoint/stored procedure rather than duplicating it per screen or per feature; record the reuse decision (reused existing vs newly shared vs justified new) in the Phase 3 plan"
   - "MUST NOT modify PRD, ADR, UX docs, or CI/CD workflows"
@@ -70,18 +70,18 @@ tools:
   - think
   - agent
 agents:
-  - AgentX Architect
-  - AgentX UX Designer
-  - AgentX Data Scientist
-  - AgentX Product Manager
-  - AgentX Prompt Engineer
-  - AgentX RAG Specialist
-  - AgentX Reviewer
-  - AgentX Diagram Specialist
-  - AgentX GitHub Ops
+  - Frontier Architecture FDE
+  - Frontier Experience FDE
+  - Frontier AI Systems FDE
+  - Frontier Product FDE
+  - Frontier Prompt FDE
+  - Frontier RAG FDE
+  - Frontier Review FDE
+  - Frontier Diagram FDE
+  - Frontier GitHub Ops FDE
 handoffs:
   - label: Start Review
-    agent: AgentX Reviewer
+    agent: Frontier Review FDE
     prompt: Review the completed implementation for this issue against its artifacts, tests, and quality-loop evidence.
     send: false
 ---
@@ -230,8 +230,8 @@ Run this checkpoint after the design is concrete but before writing implementati
 
 | Trigger | Who to Consult | What to Validate |
 |---------|----------------|------------------|
-| Implementation crosses architecture boundaries or introduces a new pattern not explicit in ADR/Spec | AgentX Architect | The chosen implementation still fits the selected architecture and does not create hidden architecture drift |
-| `needs:ai` work changes model behavior, prompt flow, evals, RAG, or ML contracts | AgentX Data Scientist | Input/output contracts, eval hooks, operating assumptions, and ML/AI behavior remain aligned with the spec |
+| Implementation crosses architecture boundaries or introduces a new pattern not explicit in ADR/Spec | Frontier Architecture FDE | The chosen implementation still fits the selected architecture and does not create hidden architecture drift |
+| `needs:ai` work changes model behavior, prompt flow, evals, RAG, or ML contracts | Frontier AI Systems FDE | Input/output contracts, eval hooks, operating assumptions, and ML/AI behavior remain aligned with the spec |
 
 Capture a short validation/clarification in task context before coding. Use the live
 clarification loop with runtime ids `architect` or `data-scientist` so the exchange
@@ -265,7 +265,7 @@ applicable. Follow the Spec when it requires a different dependency order.
 
 For GenAI features, complete the AI implementation setup before writing production logic.
 
-Load `.github/skills/ai-systems/ai-agent-development/SKILL.md` and follow all GenAI implementation rules from that skill: prompts stored as files in `prompts/`, model versions pinned with date suffix and loaded from env vars, OpenTelemetry initialized before any agent/client, exponential backoff on all LLM calls, structured outputs validated against schema, guardrails on all LLM inputs/outputs, LLM calls mocked in unit tests, evaluation baseline saved to `evaluation/baseline.json`, token usage logged. Delegate complex prompt work to AgentX Prompt Engineer and RAG work to AgentX RAG Specialist.
+Load `.github/skills/ai-systems/ai-agent-development/SKILL.md` and follow all GenAI implementation rules from that skill: prompts stored as files in `prompts/`, model versions pinned with date suffix and loaded from env vars, OpenTelemetry initialized before any agent/client, exponential backoff on all LLM calls, structured outputs validated against schema, guardrails on all LLM inputs/outputs, LLM calls mocked in unit tests, evaluation baseline saved to `evaluation/baseline.json`, token usage logged. Delegate complex prompt work to Frontier Prompt FDE and RAG work to Frontier RAG FDE.
 
 Store all system prompts as separate files in `prompts/`; do not embed multi-line prompt content inline in code.
 
@@ -282,11 +282,11 @@ as an evidenced iteration; never defer `loop start` until after an edit or commi
 ## Phase 5b: Scrub (Deslop) -- MANDATORY, NO SKIP
 
 Load the `scrub` skill, run
-`pwsh .agentx/agentx.ps1 scrub -Path <changed-path> -Fix` for every changed area,
+`pwsh .agentx/frontier.ps1 scrub -Path <changed-path> -Fix` for every changed area,
 resolve all HIGH and flag-only findings, then rerun focused tests. Scrub changes MUST
 remain behavior-neutral.
 
-**Phase 5b Gate**: `pwsh .agentx/agentx.ps1 scrub` run on every changed file; safe fixes applied; flag-only findings resolved; no HIGH-severity findings remain; behavior unchanged. This is a hard gate -- do not advance to Test with unresolved HIGH findings.
+**Phase 5b Gate**: `pwsh .agentx/frontier.ps1 scrub` run on every changed file; safe fixes applied; flag-only findings resolved; no HIGH-severity findings remain; behavior unchanged. This is a hard gate -- do not advance to Test with unresolved HIGH findings.
 
 ---
 
@@ -362,7 +362,7 @@ reviewer. Require all ten dimensions from
 `evaluation/rubrics/code-quality.md`, then validate the JSON report:
 
 ```powershell
-pwsh scripts/score-code-quality.ps1 -Mode Validate -ReportPath .agentx/state/code-quality-review.json
+pwsh scripts/score-code-quality.ps1 -Mode Validate -ReportPath .frontier/state/code-quality-review.json
 ```
 
 Require score >=80, every blocking floor, zero HIGH/MEDIUM, and matching hashes.
@@ -380,7 +380,7 @@ Reviewer prompt:
 Write JSON evidence and record its verdict on the final iteration:
 
 ```
-.agentx/agentx.ps1 loop iterate -s "Subagent Review: <outcome>" -e .agentx/state/subagent-review.json --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
+.agentx/frontier.ps1 loop iterate -s "Subagent Review: <outcome>" -e .frontier/state/subagent-review.json --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
 ```
 
 All verdict flags shown above are required. HIGH/MEDIUM findings require
@@ -391,7 +391,7 @@ All verdict flags shown above are required. HIGH/MEDIUM findings require
 
 ```bash
 git add -A && git commit -m "feat: complete <description> (#<issue>)"
-.agentx/agentx.ps1 loop complete -s "All quality gates passed" -e .agentx/state/final-gate.json --passing <full-suite-pass-count>
+.agentx/frontier.ps1 loop complete -s "All quality gates passed" -e .frontier/state/final-gate.json --passing <full-suite-pass-count>
 ```
 
 Update GitHub Projects Status to `In Review`.
@@ -406,15 +406,15 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 
 | Source of Ambiguity | Contact | Prompt Pattern |
 |--------------------|---------|----------------|
-| Tech Spec section unclear | AgentX Architect | "In SPEC-{issue} section {X}, {field/behavior} is unclear. My interpretation is {Y}. Is that correct, or should I do {Z}?" |
-| ADR implementation notes unclear | AgentX Architect | "ADR-{epic} chose option {A}. The implementation note says {B} but the codebase has {C}. Which takes precedence?" |
-| Implementation approach crosses architecture boundaries | AgentX Architect | "My implementation plan adds {pattern/change} beyond ADR-{epic}/SPEC-{issue}. Does this stay within the intended architecture, or should I revise it?" |
-| UX flow step missing | AgentX UX Designer | "UX-{issue} Story #{id}: step {N} of the flow is undefined. What happens when the user does {action}?" |
-| Acceptance criteria ambiguous | AgentX Product Manager | "PRD-{epic} Story #{id} AC#{n}: '{text}' -- does this mean {X} or {Y}? My default is {X}." |
-| ML/AI integration unclear | AgentX Data Scientist | "The Spec AI/ML section says call {model} at step {X}. What is the expected input schema and fallback behavior?" |
-| AI/ML design approach changes contract or eval behavior | AgentX Data Scientist | "My implementation plan changes {prompt/eval/RAG/model contract} from the current spec. Does this preserve the intended ML behavior and validation path?" |
-| Complex prompt design needed | AgentX Prompt Engineer | Delegate: "Design system prompt for {purpose} per ai-agent-development/SKILL.md rules." |
-| RAG pipeline needed | AgentX RAG Specialist | Delegate: "Design retrieval pipeline for {corpus/goal} with latency target {L}ms." |
+| Tech Spec section unclear | Frontier Architecture FDE | "In SPEC-{issue} section {X}, {field/behavior} is unclear. My interpretation is {Y}. Is that correct, or should I do {Z}?" |
+| ADR implementation notes unclear | Frontier Architecture FDE | "ADR-{epic} chose option {A}. The implementation note says {B} but the codebase has {C}. Which takes precedence?" |
+| Implementation approach crosses architecture boundaries | Frontier Architecture FDE | "My implementation plan adds {pattern/change} beyond ADR-{epic}/SPEC-{issue}. Does this stay within the intended architecture, or should I revise it?" |
+| UX flow step missing | Frontier Experience FDE | "UX-{issue} Story #{id}: step {N} of the flow is undefined. What happens when the user does {action}?" |
+| Acceptance criteria ambiguous | Frontier Product FDE | "PRD-{epic} Story #{id} AC#{n}: '{text}' -- does this mean {X} or {Y}? My default is {X}." |
+| ML/AI integration unclear | Frontier AI Systems FDE | "The Spec AI/ML section says call {model} at step {X}. What is the expected input schema and fallback behavior?" |
+| AI/ML design approach changes contract or eval behavior | Frontier AI Systems FDE | "My implementation plan changes {prompt/eval/RAG/model contract} from the current spec. Does this preserve the intended ML behavior and validation path?" |
+| Complex prompt design needed | Frontier Prompt FDE | Delegate: "Design system prompt for {purpose} per ai-agent-development/SKILL.md rules." |
+| RAG pipeline needed | Frontier RAG FDE | Delegate: "Design retrieval pipeline for {corpus/goal} with latency target {L}ms." |
 
 **Protocol limits**:
 - Max 3 exchanges per topic
@@ -474,25 +474,25 @@ Use this protocol when an artifact leaves a requirement ambiguous. Read the arti
 - PASS: Lint/format clean
 - PASS: Self-review checklist complete
 - PASS: Score-output result >= Medium-High (70%) and code-quality rubric >= 80%
-- PASS: Validation: `.agentx/agentx.ps1 validate <issue> engineer`
+- PASS: Validation: `.agentx/frontier.ps1 validate <issue> engineer`
 
 ---
 
 ## When Blocked
 
 1. **Artifact ambiguity**: Follow Inter-Agent Clarification Protocol BEFORE coding
-2. **Architecture gap**: Escalate to AgentX Architect; do NOT make design decisions yourself
+2. **Architecture gap**: Escalate to Frontier Architecture FDE; do NOT make design decisions yourself
 3. **Missing dependency**: Add `needs:help` label, document what is missing, wait for resolution
-4. **Scope exceeds estimate**: Notify Agent X for possible story split or re-routing
+4. **Scope exceeds estimate**: Notify Frontier for possible story split or re-routing
 5. **Timeout (15 min with no response)**: Document assumption explicitly, add `needs:help` label, continue
 
 ---
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
+**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/frontier.ps1 loop complete` succeeded in this session.
 
 Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 
@@ -502,7 +502,7 @@ Implementation satisfies PRD/ADR/Spec acceptance criteria; tests, lint/type chec
 
 ## Delivery Report (MANDATORY)
 
-Before handoff, report: tests passed/failed; coverage; lint/type-check status; HIGH/MEDIUM findings; output scorer tier when run; acceptance criteria covered; and AgentX quality-loop state.
+Before handoff, report: tests passed/failed; coverage; lint/type-check status; HIGH/MEDIUM findings; output scorer tier when run; acceptance criteria covered; and Frontier quality-loop state.
 
 ## Plugins (Optional Capabilities)
 

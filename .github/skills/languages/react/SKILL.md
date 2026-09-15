@@ -2,7 +2,7 @@
 name: "react"
 description: 'Build React applications with modern hooks, TypeScript, and performance best practices. Use when creating React components, implementing custom hooks, optimizing React rendering performance, managing application state, or testing React components.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

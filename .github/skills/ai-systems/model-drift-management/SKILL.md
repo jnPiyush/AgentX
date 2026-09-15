@@ -2,7 +2,7 @@
 name: "model-drift-management"
 description: 'Detect, monitor, and manage model drift in production GenAI and ML systems. Use when monitoring LLM output quality, detecting prompt regression, managing model version changes, implementing drift detection for traditional ML, or establishing model governance policies.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "2.0.0"
   created: "2025-06-15"
   updated: "2025-07-18"

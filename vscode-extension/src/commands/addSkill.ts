@@ -1,29 +1,29 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { promptSkillDetails, resolveSkillOutputDir } from './addSkillInternals';
 import { generateSkillContent } from './scaffoldGeneration';
 
 export function registerAddSkillCommand(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('agentx.addSkill', async () => {
+    vscode.commands.registerCommand('frontier.addSkill', async () => {
       const choices = [
-        { label: 'Install from Plugin Registry', description: 'Browse and install skills from the AgentX registry', value: 'registry' },
+        { label: 'Install from Plugin Registry', description: 'Browse and install skills from the Frontier registry', value: 'registry' },
         { label: 'Scaffold Custom Skill', description: 'Create a new skill from template', value: 'scaffold' },
       ];
 
       const pick = await vscode.window.showQuickPick(choices, {
         placeHolder: 'How would you like to add a skill?',
-        title: 'AgentX: Add Skill',
+        title: 'Frontier: Add Skill',
       });
       if (!pick) { return; }
 
       if (pick.value === 'registry') {
-        await vscode.commands.executeCommand('agentx.addPlugin');
+        await vscode.commands.executeCommand('frontier.addPlugin');
         return;
       }
 

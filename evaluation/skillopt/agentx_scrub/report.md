@@ -1,8 +1,8 @@
-# AgentX Scrub SkillOpt Pilot Report
+# Frontier Scrub SkillOpt Pilot Report
 
 ## Claim
 
-SkillOpt was installed and run locally against the AgentX scrub skill through a deterministic `agentx_scrub` benchmark adapter.
+SkillOpt was installed and run locally against the Frontier scrub skill through a deterministic `agentx_scrub` benchmark adapter.
 
 ## Command
 

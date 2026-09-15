@@ -1,24 +1,24 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
-  getAgentXChatFollowups,
+  getFrontierChatFollowups,
   resetChatRouterStateForTests,
-  routeAgentXChatRequest,
+  routeFrontierChatRequest,
 } from './requestRouter';
 
-const PARTICIPANT_ID = 'agentx.chat';
+const PARTICIPANT_ID = 'frontier.chat';
 
 export function resetChatParticipantStateForTests(): void {
   resetChatRouterStateForTests();
 }
 
-export { getAgentXChatFollowups };
+export { getFrontierChatFollowups };
 
-export async function handleAgentXChatRequest(
+export async function handleFrontierChatRequest(
   request: vscode.ChatRequest,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<vscode.ChatResult> {
   const initialized = await agentx.checkInitialized();
   if (!initialized) {
@@ -27,19 +27,19 @@ export async function handleAgentXChatRequest(
 
   const userText = request.prompt.trim();
   if (!userText) {
-    response.markdown('Please describe what you need AgentX to do.');
+    response.markdown('Please describe what you need Frontier to do.');
     return {};
   }
 
-  return routeAgentXChatRequest(userText, response, agentx);
+  return routeFrontierChatRequest(userText, response, agentx);
 }
 
 /**
- * Register the @agentx chat participant in Copilot Chat.
+ * Register the @frontier chat participant in Copilot Chat.
  */
 export function registerChatParticipant(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext
+  agentx: FrontierContext
 ): void {
   const handler: vscode.ChatRequestHandler = async (
     request: vscode.ChatRequest,
@@ -47,7 +47,7 @@ export function registerChatParticipant(
     response: vscode.ChatResponseStream,
     _token: vscode.CancellationToken
   ): Promise<vscode.ChatResult> => {
-    return handleAgentXChatRequest(request, response, agentx);
+    return handleFrontierChatRequest(request, response, agentx);
   };
 
   const participant = vscode.chat.createChatParticipant(PARTICIPANT_ID, handler);
@@ -55,12 +55,12 @@ export function registerChatParticipant(
     path.join(context.extensionPath, 'resources', 'icon.png')
   );
   participant.followupProvider = {
-    provideFollowups: async () => getAgentXChatFollowups(agentx),
+    provideFollowups: async () => getFrontierChatFollowups(agentx),
   };
   context.subscriptions.push(participant);
 }
 
 function handleNotInitialized(response: vscode.ChatResponseStream): vscode.ChatResult {
-  response.markdown('**AgentX requires an open workspace folder.**\n\nOpen a folder in VS Code to get started.');
+  response.markdown('**Frontier requires an open workspace folder.**\n\nOpen a folder in VS Code to get started.');
   return {};
 }

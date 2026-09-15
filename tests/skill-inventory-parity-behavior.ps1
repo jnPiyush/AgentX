@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  Ensures every AgentX skill distribution surface stays synchronized.
+  Ensures every Frontier skill distribution surface stays synchronized.
 #>
 
 #Requires -Version 7.0
@@ -19,10 +19,10 @@ function Assert-True([bool]$Condition, [string]$Label) {
 }
 
 function Normalize-SkillPath([string]$Path) {
-    ($Path -replace '^\./', '' -replace '^\.github/agentx/skills/', '.github/skills/') -replace '\\', '/'
+    ($Path -replace '^\./', '' -replace '^\.github/frontier/skills/', '.github/skills/') -replace '\\', '/'
 }
 
-Write-Host 'AgentX Skill Inventory Parity Tests'
+Write-Host 'Frontier Skill Inventory Parity Tests'
 
 $sourceSkills = @(Get-ChildItem (Join-Path $repoRoot '.github/skills') -Recurse -Filter SKILL.md -File |
     ForEach-Object { $_.FullName.Substring($repoRoot.Length + 1).Replace('\', '/') } |
@@ -34,7 +34,7 @@ $registrySkills = @($registry.skills.path | ForEach-Object { Normalize-SkillPath
 $extensionPackage = Get-Content (Join-Path $repoRoot 'vscode-extension/package.json') -Raw | ConvertFrom-Json
 $chatSkills = @($extensionPackage.contributes.chatSkills.path | ForEach-Object { Normalize-SkillPath $_ } | Sort-Object)
 
-$bundleRoot = Join-Path $repoRoot 'vscode-extension/.github/agentx/skills'
+$bundleRoot = Join-Path $repoRoot 'vscode-extension/.github/frontier/skills'
 $bundledSkills = @(Get-ChildItem $bundleRoot -Recurse -Filter SKILL.md -File |
     ForEach-Object {
         '.github/skills/' + $_.FullName.Substring($bundleRoot.Length + 1).Replace('\', '/')
@@ -53,15 +53,15 @@ foreach ($newSkill in @(
     Assert-True ($bundledSkills -contains $newSkill) "VS Code bundles $newSkill"
 }
 
-$pack = Get-Content (Join-Path $repoRoot 'packs/agentx-copilot-cli/manifest.json') -Raw | ConvertFrom-Json
+$pack = Get-Content (Join-Path $repoRoot 'packs/frontier-copilot-cli/manifest.json') -Raw | ConvertFrom-Json
 $packSkillTrees = @($pack.artifacts.skills)
 Assert-True ($packSkillTrees.Count -eq 1 -and $packSkillTrees[0] -eq '.github/skills') 'Copilot CLI manifest declares the complete skill tree'
 Assert-True ([version]($pack.prerequisites.powershell -replace '[^0-9.]','') -ge [version]'7.4') 'Copilot CLI manifest PowerShell prerequisite matches installer minimum'
 
-$installTarget = Join-Path ([IO.Path]::GetTempPath()) "agentx-pack-install-$([guid]::NewGuid().ToString('N'))"
+$installTarget = Join-Path ([IO.Path]::GetTempPath()) "frontier-pack-install-$([guid]::NewGuid().ToString('N'))"
 try {
     New-Item -ItemType Directory -Path $installTarget -Force | Out-Null
-    & pwsh -NoProfile -File (Join-Path $repoRoot 'packs/agentx-copilot-cli/install.ps1') -Target $installTarget -Source $repoRoot -IncludeCli *> $null
+    & pwsh -NoProfile -File (Join-Path $repoRoot 'packs/frontier-copilot-cli/install.ps1') -Target $installTarget -Source $repoRoot -IncludeCli *> $null
     $installedSkills = @(Get-ChildItem (Join-Path $installTarget '.github/skills') -Recurse -Filter SKILL.md -File)
     Assert-True ($LASTEXITCODE -eq 0 -and $installedSkills.Count -eq $sourceSkills.Count) 'PowerShell pack installer installs the complete canonical skill inventory'
     Assert-True (@($installedSkills | Where-Object { $_.FullName -match '\\.github\\skills\\.*\\.github\\skills\\' }).Count -eq 0) 'PowerShell pack installer does not recursively nest destination paths'
@@ -70,8 +70,8 @@ try {
     Assert-True (Test-Path (Join-Path $installTarget 'evaluation/rubrics/skill-quality.md')) 'PowerShell pack installer preserves the skill rubric path'
     Assert-True (Test-Path (Join-Path $installTarget 'evaluation/rubrics/code-quality.md')) 'PowerShell pack installer preserves the code-quality rubric path'
     Assert-True (Test-Path (Join-Path $installTarget 'scripts/score-code-quality.ps1')) 'PowerShell pack installer preserves the code-quality evaluator'
-    Assert-True (Test-Path (Join-Path $installTarget '.github/agentx/scripts/score-code-quality.ps1')) 'PowerShell pack installer preserves the trusted hidden code-quality evaluator'
-    Assert-True (Test-Path (Join-Path $installTarget '.github/agentx/evaluation/rubrics/code-quality.md')) 'PowerShell pack installer preserves the trusted hidden code-quality rubric'
+    Assert-True (Test-Path (Join-Path $installTarget '.github/frontier/scripts/score-code-quality.ps1')) 'PowerShell pack installer preserves the trusted hidden code-quality evaluator'
+    Assert-True (Test-Path (Join-Path $installTarget '.github/frontier/evaluation/rubrics/code-quality.md')) 'PowerShell pack installer preserves the trusted hidden code-quality rubric'
     Assert-True (Test-Path (Join-Path $installTarget 'scripts/parse-yaml.js')) 'PowerShell pack installer preserves the standalone YAML parser'
     Assert-True (Test-Path (Join-Path $installTarget 'scripts/validate-changed-skills.ps1')) 'PowerShell pack installer preserves the changed-skill validator'
     Push-Location $installTarget
@@ -85,8 +85,8 @@ try {
         $installedPrototype = $installedPrototypeJson | ConvertFrom-Json -Depth 20
         Assert-True ($installedPrototypeExit -eq 0 -and @($installedPrototype.skills)[0].blockers.Count -eq 0) 'PowerShell pack installed scorer parses prototype-audit frontmatter'
         Assert-True (Test-Path 'scripts/validate-changed-skills.ps1') 'PowerShell pack installed changed-skill gate is available'
-        & pwsh -NoProfile -File '.agentx/agentx.ps1' loop start -p 'Validate installed rubric runtime' -m 1 *> $null
-        Assert-True ($LASTEXITCODE -eq 0 -and (Test-Path '.agentx/state/code-quality-baseline.json')) 'PowerShell pack installed CLI starts with its trusted rubric runtime'
+        & pwsh -NoProfile -File '.frontier/frontier.ps1' loop start -p 'Validate installed rubric runtime' -m 1 *> $null
+        Assert-True ($LASTEXITCODE -eq 0 -and (Test-Path '.frontier/state/code-quality-baseline.json')) 'PowerShell pack installed CLI starts with its trusted rubric runtime'
     }
     finally {
         Pop-Location
@@ -98,7 +98,7 @@ finally {
 
 $currentDocs = @(
     'AGENTS.md', 'README.md', 'docs/QUALITY_SCORE.md', 'vscode-extension/README.md',
-    'packs/agentx-copilot-cli/install.ps1'
+    'packs/frontier-copilot-cli/install.ps1'
 )
 $staleCurrentDocs = @($currentDocs | Where-Object {
     (Get-Content (Join-Path $repoRoot $_) -Raw) -match '128 skills|128 production|132 skills|132 production|Skills\s+: 13[02] across|Architecture \| 6'

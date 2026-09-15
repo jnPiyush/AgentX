@@ -4,7 +4,7 @@
 
 ## Why this exists
 
-The UX Designer agent is required to claim WCAG 2.1 AA compliance for prototypes at `docs/ux/prototypes/`. Without browser automation, that claim is manual and untestable in agent loops. This reference defines a concrete, repeatable audit and how to map its output to AgentX review severities.
+The UX Designer agent is required to claim WCAG 2.1 AA compliance for prototypes at `docs/ux/prototypes/`. Without browser automation, that claim is manual and untestable in agent loops. This reference defines a concrete, repeatable audit and how to map its output to Frontier review severities.
 
 ## Audit recipe
 
@@ -28,16 +28,16 @@ If `browser_evaluate` is not available, run a small one-shot Node script that us
 
 ## Severity mapping
 
-axe-core reports `impact` per violation. AgentX review findings use HIGH / MEDIUM / LOW. Map as follows:
+axe-core reports `impact` per violation. Frontier review findings use HIGH / MEDIUM / LOW. Map as follows:
 
-| axe `impact` | AgentX severity | Effect on UX handoff |
+| axe `impact` | Frontier severity | Effect on UX handoff |
 |--------------|-----------------|----------------------|
 | `critical` | HIGH | Blocks UX -> Architect handoff. Must be fixed before status moves to `Ready`. |
 | `serious` | MEDIUM | Blocks handoff. Must be fixed or explicitly waived in the UX deliverable's Open Questions section with rationale. |
 | `moderate` | LOW | Logged in the UX deliverable. Does not block handoff but must be visible in the next review pass. |
 | `minor` | LOW | Logged. Does not block. |
 
-This mapping aligns with the existing AgentX self-review rubric: HIGH and MEDIUM block, LOW informs.
+This mapping aligns with the existing Frontier self-review rubric: HIGH and MEDIUM block, LOW informs.
 
 ## Required audit output (attach to the UX deliverable)
 

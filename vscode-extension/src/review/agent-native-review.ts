@@ -1,4 +1,4 @@
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
  AgentNativeReviewReport,
  CapabilityMapEntry,
@@ -23,7 +23,7 @@ export {
  renderAgentNativeReviewText,
 };
 
-export function evaluateAgentNativeReview(agentx: AgentXContext): AgentNativeReviewReport | undefined {
+export function evaluateAgentNativeReview(agentx: FrontierContext): AgentNativeReviewReport | undefined {
   const root = agentx.workspaceRoot;
   if (!root) {
     return undefined;
@@ -32,7 +32,7 @@ export function evaluateAgentNativeReview(agentx: AgentXContext): AgentNativeRev
   return evaluateAgentNativeReviewFromRoot(root, agentx.extensionContext?.extensionPath);
 }
 
-export function getAgentNativeReviewSummary(agentx: AgentXContext): string {
+export function getAgentNativeReviewSummary(agentx: FrontierContext): string {
   const report = evaluateAgentNativeReview(agentx);
   if (!report) {
     return 'No review';
@@ -40,7 +40,7 @@ export function getAgentNativeReviewSummary(agentx: AgentXContext): string {
   return `${report.score.percent}% (${report.score.earned}/${report.score.max})`;
 }
 
-export function getAgentNativeReviewTooltip(agentx: AgentXContext): string {
+export function getAgentNativeReviewTooltip(agentx: FrontierContext): string {
   const report = evaluateAgentNativeReview(agentx);
   if (!report) {
     return 'No workspace open for agent-native review.';
@@ -49,7 +49,7 @@ export function getAgentNativeReviewTooltip(agentx: AgentXContext): string {
   return report.checks.map((check) => `${check.label}: ${check.summary}`).join('\n');
 }
 
-export function getAgentNativeGapSummary(agentx: AgentXContext): string {
+export function getAgentNativeGapSummary(agentx: FrontierContext): string {
   const report = evaluateAgentNativeReview(agentx);
   if (!report) {
     return 'unknown';
@@ -59,7 +59,7 @@ export function getAgentNativeGapSummary(agentx: AgentXContext): string {
   return failingEntries === 0 ? 'no gaps' : `${failingEntries} gap${failingEntries === 1 ? '' : 's'}`;
 }
 
-export function getAgentNativeGapTooltip(agentx: AgentXContext): string {
+export function getAgentNativeGapTooltip(agentx: FrontierContext): string {
   const report = evaluateAgentNativeReview(agentx);
   if (!report) {
     return 'No workspace open for agent-native review.';

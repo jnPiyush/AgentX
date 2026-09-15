@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
-import { registerAgentXCommands } from './commands/registry';
+import {
+ registerFrontierCommands,
+ registerLegacyCommandAliases,
+} from './commands/registry';
 import {
  createSidebarProviders,
  refreshSidebarProviders,
  registerSidebarProviders,
 } from './views/registry';
-import { AgentXContext } from './agentxContext';
+import { FrontierContext } from './frontierContext';
 import { registerChatParticipant } from './chat/chatParticipant';
 import { clearInstructionCache } from './chat/agentContextLoader';
 import { runSetupWizard } from './commands/setupWizard';
@@ -21,47 +24,47 @@ import { getQualityStateDisplay } from './utils/loopStateChecker';
 import { readHarnessState } from './utils/harnessState';
 import { warnIfHostUnsupported } from './utils/hostCapability';
 
-let agentxContext: AgentXContext;
+let frontierContext: FrontierContext;
 
 export function activate(context: vscode.ExtensionContext) {
- console.log('AgentX extension activating...');
+ console.log('Frontier extension activating...');
 
  // Defence in depth for hosts that bypass the Marketplace engine check: a host
  // older than the agent contribution points ignores every agent and skill
  // silently, so surface it once instead of failing invisibly.
  void warnIfHostUnsupported(context);
 
- agentxContext = new AgentXContext(context);
- const sidebarProviders = createSidebarProviders(agentxContext);
+ frontierContext = new FrontierContext(context);
+ const sidebarProviders = createSidebarProviders(frontierContext);
 
  const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
- statusBar.text = '$(hubot) AgentX';
- statusBar.tooltip = 'AgentX - Digital Force for Software Delivery';
- statusBar.command = 'agentx.showStatus';
+ statusBar.text = '$(hubot) Frontier';
+ statusBar.tooltip = 'Frontier - Digital Force for Software Delivery';
+ statusBar.command = 'frontier.showStatus';
  statusBar.show();
  context.subscriptions.push(statusBar);
 
  const updateUiState = async (): Promise<void> => {
-  const initialized = await agentxContext.checkInitialized();
-  const root = agentxContext.workspaceRoot;
+  const initialized = await frontierContext.checkInitialized();
+  const root = frontierContext.workspaceRoot;
   const qualityState = root ? getQualityStateDisplay(root) : 'No workspace';
   const harnessState = root ? readHarnessState(root) : undefined;
   const harnessActive = harnessState
    ? harnessState.threads.some((thread) => thread.status === 'active')
    : false;
 
-  statusBar.text = '$(hubot) AgentX';
-  statusBar.tooltip = `AgentX - Digital Force for Software Delivery\n${qualityState}`;
+  statusBar.text = '$(hubot) Frontier';
+  statusBar.tooltip = `Frontier - Digital Force for Software Delivery\n${qualityState}`;
 
-  await vscode.commands.executeCommand('setContext', 'agentx.initialized', initialized);
-  await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentxContext.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentxContext.adoConnected);
-  await vscode.commands.executeCommand('setContext', 'agentx.harnessActive', harnessActive);
+  await vscode.commands.executeCommand('setContext', 'frontier.initialized', initialized);
+  await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', frontierContext.githubConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', frontierContext.adoConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.harnessActive', harnessActive);
  };
 
  const syncAutoAdapters = async (): Promise<void> => {
-   const githubChanged = await syncDetectedGitHubAdapter(agentxContext);
-   const adoChanged = await syncDetectedAdoAdapter(agentxContext);
+   const githubChanged = await syncDetectedGitHubAdapter(frontierContext);
+   const adoChanged = await syncDetectedAdoAdapter(frontierContext);
    const changed = githubChanged || adoChanged;
   if (changed) {
    clearInstructionCache();
@@ -73,23 +76,23 @@ export function activate(context: vscode.ExtensionContext) {
  registerSidebarProviders(sidebarProviders);
 
  // Register commands
- registerAgentXCommands(context, agentxContext);
+ registerFrontierCommands(context, frontierContext);
 
  // Refresh all views
  context.subscriptions.push(
-  vscode.commands.registerCommand('agentx.refresh', () => {
-   agentxContext.invalidateCache();
+  vscode.commands.registerCommand('frontier.refresh', () => {
+   frontierContext.invalidateCache();
    refreshSidebarProviders(sidebarProviders);
    clearInstructionCache();
     void updateUiState();
-   vscode.window.showInformationMessage('AgentX: Refreshed all views.');
+   vscode.window.showInformationMessage('Frontier: Refreshed all views.');
   })
  );
 
  // Environment health check
  context.subscriptions.push(
-  vscode.commands.registerCommand('agentx.checkEnvironment', () => {
-   runSetupWizard(agentxContext);
+  vscode.commands.registerCommand('frontier.checkEnvironment', () => {
+   runSetupWizard(frontierContext);
   })
  );
 
@@ -98,13 +101,13 @@ export function activate(context: vscode.ExtensionContext) {
  // questions asked. See utils/agentsWindowOptIn.ts and
  // docs/execution/contracts/CONTRACT-400-agents-window-slice2.md.
  context.subscriptions.push(
-  vscode.commands.registerCommand('agentx.enableInAgentsWindow', async () => {
+  vscode.commands.registerCommand('frontier.enableInAgentsWindow', async () => {
    try {
     await enableInAgentsWindow();
     const reload = 'Reload Window';
     const later = 'Later';
     const choice = await vscode.window.showInformationMessage(
-     'AgentX is now enabled in the Agents Window. Reload the window to apply?',
+     'Frontier is now enabled in the Agents Window. Reload the window to apply?',
      reload,
      later,
     );
@@ -113,18 +116,22 @@ export function activate(context: vscode.ExtensionContext) {
     }
    } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    vscode.window.showErrorMessage(`AgentX: failed to enable in Agents Window: ${message}`);
+    vscode.window.showErrorMessage(`Frontier: failed to enable in Agents Window: ${message}`);
    }
   }),
  );
 
+ // Legacy command IDs remain callable for existing keybindings and automation,
+ // but are not contributed to the Command Palette.
+ registerLegacyCommandAliases(context);
+
  // Register chat participant (Copilot Chat integration -- only when API available)
  if (typeof vscode.chat?.createChatParticipant === 'function') {
-  registerChatParticipant(context, agentxContext);
+  registerChatParticipant(context, frontierContext);
  }
 
- // Auto-discover AgentX when config or MCP files change
- const configWatcher = vscode.workspace.createFileSystemWatcher('**/.agentx/config.json');
+ // Auto-discover Frontier when config or MCP files change
+ const configWatcher = vscode.workspace.createFileSystemWatcher('**/{.frontier,.hve,.agentx}/config.json');
  const mcpWatcher = vscode.workspace.createFileSystemWatcher('**/.vscode/mcp.json');
  const gitConfigWatcher = vscode.workspace.createFileSystemWatcher('**/.git/config');
 
@@ -136,10 +143,10 @@ export function activate(context: vscode.ExtensionContext) {
   if (refreshTimer) { clearTimeout(refreshTimer); }
   refreshTimer = setTimeout(() => {
    refreshTimer = undefined;
-   agentxContext.invalidateCache();
+   frontierContext.invalidateCache();
    clearInstructionCache();
    void updateUiState().then(() => {
-    if (agentxContext.workspaceRoot) {
+    if (frontierContext.workspaceRoot) {
      refreshSidebarProviders(sidebarProviders);
     }
    });
@@ -165,13 +172,13 @@ export function activate(context: vscode.ExtensionContext) {
 
  // Silently sync workspace version.json to match extension version (non-blocking)
  silentVersionSync(
-  agentxContext.workspaceRoot ?? '',
+  frontierContext.workspaceRoot ?? '',
   context.extension.packageJSON.version,
   context.extensionPath
  ).catch(() => { /* ignore */ });
 
  // Check companion extensions are installed (non-blocking)
- checkCompanionExtensions(agentxContext.workspaceRoot).catch(() => { /* ignore */ });
+ checkCompanionExtensions(frontierContext.workspaceRoot).catch(() => { /* ignore */ });
 
  // One-time prompt: opt every install/upgrade into the VS Code Agents
  // Window. Self-gates on globalState; safe to call on every activation.
@@ -184,7 +191,7 @@ export function activate(context: vscode.ExtensionContext) {
  // The extension version folder changes on upgrade, so any stale junctions
  // need to be re-pointed at the current bundle.
  try {
-  const wsRoot = agentxContext.workspaceRoot;
+  const wsRoot = frontierContext.workspaceRoot;
   if (wsRoot) {
    const cliState = readCliAssetState(wsRoot);
    if (cliState && cliState.mode === 'symlink') {
@@ -200,9 +207,9 @@ export function activate(context: vscode.ExtensionContext) {
    void updateUiState();
   });
 
- console.log('AgentX extension activated.');
+ console.log('Frontier extension activated.');
 }
 
 export function deactivate() {
- console.log('AgentX extension deactivated.');
+ console.log('Frontier extension deactivated.');
 }

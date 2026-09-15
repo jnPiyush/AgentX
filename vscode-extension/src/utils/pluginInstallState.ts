@@ -1,9 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveFrontierStatePath } from './frontierPaths';
 
 import type { PluginManifest, PluginPermissions } from './pluginCatalog';
-
-const PLUGIN_INSTALL_STATE_REL = path.join('.agentx', 'state', 'plugin-installs.json');
 
 export interface PluginTrustDecision {
   readonly kind: 'approved' | 'workspace-local';
@@ -42,7 +41,7 @@ export interface PluginInstallAuditState {
 }
 
 function getInstallStatePath(workspaceRoot: string): string {
-  return path.join(workspaceRoot, PLUGIN_INSTALL_STATE_REL);
+  return resolveFrontierStatePath(workspaceRoot, 'state', 'plugin-installs.json');
 }
 
 function normalizeArray(values: readonly string[] | undefined): readonly string[] | undefined {

@@ -2,7 +2,7 @@
 name: "api-design"
 description: 'Design robust REST APIs with proper versioning, pagination, error handling, rate limiting, and documentation. Use when creating new API endpoints, designing resource naming conventions, implementing pagination or filtering, adding rate limiting, or documenting APIs with OpenAPI/Swagger.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

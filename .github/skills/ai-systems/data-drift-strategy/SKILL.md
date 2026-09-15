@@ -2,7 +2,7 @@
 name: "data-drift-strategy"
 description: 'Design strategies to detect, monitor, and remediate data drift in GenAI applications and ML pipelines. Use when monitoring LLM input patterns, detecting query distribution shifts, tracking embedding drift, building RAG retrieval quality monitoring, or establishing data governance for model inputs.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "2.0.0"
   created: "2025-06-15"
   updated: "2025-07-18"

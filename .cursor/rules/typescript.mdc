@@ -1,10 +1,10 @@
 ---
-description: TypeScript / Node backend standards (AgentX)
+description: TypeScript / Node backend standards (Frontier)
 globs: **/*.ts
 alwaysApply: false
 ---
 
-# TypeScript / Node (AgentX)
+# TypeScript / Node (Frontier)
 
 Canonical: `.github/instructions/typescript.instructions.md` -- read for full
 standards.

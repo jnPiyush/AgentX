@@ -1,6 +1,6 @@
 ---
 name: "Create Cowork Plugin Package"
-agent: "AgentX Auto"
+agent: "Frontier Orchestration FDE"
 description: "Create an upload-ready Microsoft 365 Copilot Cowork plugin zip with manifest.json, icons, and one or more agent skills, MCP connectors, or both."
 argument-hint: "name=... capability=... skills=... [connector=none] [outputDir=artifacts/cowork-plugins]"
 inputs:

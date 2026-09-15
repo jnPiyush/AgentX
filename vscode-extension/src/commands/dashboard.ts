@@ -1,29 +1,29 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 
 /**
- * Register the AgentX: Open Dashboard command.
+ * Register the Frontier: Open Dashboard command.
  *
  * Provides a single interactive webview that surfaces loop status, the
  * ready queue, agent states, recent learnings, and quick action buttons
  * that invoke common CLI commands without leaving the editor. Acts as a
- * lightweight portal so AgentX can be driven without typing CLI commands.
+ * lightweight portal so Frontier can be driven without typing CLI commands.
  */
 export function registerDashboardCommand(
     context: vscode.ExtensionContext,
-    agentx: AgentXContext
+    agentx: FrontierContext
 ): void {
-    const cmd = vscode.commands.registerCommand('agentx.openDashboard', async () => {
+    const cmd = vscode.commands.registerCommand('frontier.openDashboard', async () => {
         if (!(await agentx.checkInitialized())) {
             vscode.window.showWarningMessage(
-                'AgentX is not initialized. Run "AgentX: Initialize Local Runtime" first.'
+                'Frontier is not initialized. Run "Frontier: Initialize Local Runtime" first.'
             );
             return;
         }
 
         const panel = vscode.window.createWebviewPanel(
             'agentxDashboard',
-            'AgentX - Dashboard',
+            'Frontier - Dashboard',
             vscode.ViewColumn.One,
             { enableScripts: true, retainContextWhenHidden: true }
         );
@@ -79,7 +79,7 @@ export function registerDashboardCommand(
 }
 
 async function safeRunCli(
-    agentx: AgentXContext,
+    agentx: FrontierContext,
     subcommand: string,
     args: string[]
 ): Promise<string> {
@@ -180,7 +180,7 @@ button.secondary {
 </style>
 </head>
 <body>
-<h1>AgentX Dashboard</h1>
+<h1>Frontier Dashboard</h1>
 
 <div class="actions">
     <button data-cmd="ready">Ready Queue</button>

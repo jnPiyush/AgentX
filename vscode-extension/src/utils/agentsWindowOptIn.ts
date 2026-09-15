@@ -24,11 +24,11 @@ import * as vscode from 'vscode';
  */
 
 const EXTENSION_ID = 'jnPiyush.agentx';
-const STATE_KEY_DECLINED = 'agentx.agentsWindowOptIn.permanentlyDeclined';
-const STATE_KEY_LAST_PROMPTED_MAJOR = 'agentx.agentsWindowOptIn.lastPromptedMajor';
+const STATE_KEY_DECLINED = 'frontier.agentsWindowOptIn.permanentlyDeclined';
+const STATE_KEY_LAST_PROMPTED_MAJOR = 'frontier.agentsWindowOptIn.lastPromptedMajor';
 
 /**
- * Read the AgentX entry from `extensions.supportAgentsWindow`. Returns the raw
+ * Read the Frontier entry from `extensions.supportAgentsWindow`. Returns the raw
  * object so callers can detect both "missing" and "explicitly false".
  */
 function readSupportMap(): Record<string, boolean> {
@@ -50,7 +50,7 @@ export async function enableInAgentsWindow(): Promise<void> {
 }
 
 /**
- * One-time prompt offering to enable AgentX in the Agents Window. Safe to call
+ * One-time prompt offering to enable Frontier in the Agents Window. Safe to call
  * unconditionally on every activation; this function self-gates on
  * `globalState` and on the major-version bump rule.
  *
@@ -92,7 +92,7 @@ export async function maybePromptForAgentsWindow(
     await context.globalState.update(STATE_KEY_LAST_PROMPTED_MAJOR, currentMajor);
 
     const choice = await vscode.window.showInformationMessage(
-      'AgentX can run inside the new VS Code Agents Window. Enable it for this user (you can change this any time in Settings)?',
+      'Frontier can run inside the new VS Code Agents Window. Enable it for this user (you can change this any time in Settings)?',
       enable,
       notNow,
       never,
@@ -103,7 +103,7 @@ export async function maybePromptForAgentsWindow(
       const reload = 'Reload Window';
       const later = 'Later';
       const reloadChoice = await vscode.window.showInformationMessage(
-        'AgentX is now enabled in the Agents Window. Reload the window to apply?',
+        'Frontier is now enabled in the Agents Window. Reload the window to apply?',
         reload,
         later,
       );

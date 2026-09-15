@@ -13,13 +13,13 @@ describe('agentRunner integration helpers', () => {
 
   it('parses multiline tools and agents arrays from agent frontmatter', () => {
     const agents = loadAgentDefinitions(agentsDir);
-    const productManager = agents.find((agent) => agent.name === 'AgentX Product Manager');
+    const productManager = agents.find((agent) => agent.name === 'Frontier Product FDE');
 
-    assert.ok(productManager, 'expected AgentX Product Manager definition');
+    assert.ok(productManager, 'expected Frontier Product FDE definition');
     assert.ok(productManager!.tools.includes('runCommands'));
     assert.ok(productManager!.tools.includes('usages'));
-    assert.ok(productManager!.agents.includes('AgentX Architect'));
-    assert.ok(productManager!.agents.includes('AgentX GitHub Ops'));
+    assert.ok(productManager!.agents.includes('Frontier Architecture FDE'));
+    assert.ok(productManager!.agents.includes('Frontier GitHub Ops FDE'));
   });
 
   it('enforces the safe common tool baseline for all agents', () => {
@@ -39,7 +39,7 @@ describe('agentRunner integration helpers', () => {
     const internalAgents = agents.filter((agent) => agent.filePath.includes('internal'));
 
     for (const agent of internalAgents) {
-      if (agent.name === 'AgentX GitHub Ops') {
+      if (agent.name === 'Frontier GitHub Ops FDE') {
         assert.ok(agent.tools.includes('github/*'), 'GitHub Ops requires GitHub tools');
       } else {
         assert.ok(!agent.tools.includes('github/*'), `${agent.name} should not receive broad GitHub tools`);
@@ -51,7 +51,7 @@ describe('agentRunner integration helpers', () => {
       assert.ok(agent.tools.includes('editFiles'), `${agent.name} should retain its owned-output edit capability`);
     }
 
-    for (const reviewerName of ['AgentX Architecture Reviewer', 'AgentX Functional Reviewer']) {
+    for (const reviewerName of ['Frontier Architecture Review FDE', 'Frontier Functional Review FDE']) {
       const reviewer = agents.find((agent) => agent.name === reviewerName);
       assert.ok(reviewer, `expected ${reviewerName} definition`);
       assert.ok(!reviewer!.tools.includes('editFiles'), `${reviewerName} should be analysis-only`);

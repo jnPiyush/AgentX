@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerPendingClarificationCommand } from '../../commands/pendingClarification';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 
 describe('registerPendingClarificationCommand', () => {
   let sandbox: sinon.SinonSandbox;
@@ -28,7 +28,7 @@ describe('registerPendingClarificationCommand', () => {
     const infoSpy = sandbox.spy(vscode.window, 'showInformationMessage');
     registerPendingClarificationCommand(fakeContext, {
       getPendingClarification: async () => undefined,
-    } as AgentXContext);
+    } as FrontierContext);
 
     await callback?.();
 
@@ -54,7 +54,7 @@ describe('registerPendingClarificationCommand', () => {
       replace: sandbox.stub(),
       onDidChangeLogLevel: sandbox.stub(),
       logLevel: 1,
-      name: 'AgentX Clarification',
+      name: 'Frontier Clarification',
     } as unknown as vscode.LogOutputChannel);
 
     registerPendingClarificationCommand(fakeContext, {
@@ -63,7 +63,7 @@ describe('registerPendingClarificationCommand', () => {
         prompt: 'Need acceptance criteria',
         humanPrompt: 'Prioritize the happy path first.',
       }),
-    } as AgentXContext);
+    } as FrontierContext);
 
     await callback?.();
 

@@ -2,7 +2,7 @@
 name: "github-actions-workflows"
 description: 'Create GitHub Actions workflows, reusable workflows, custom actions, and workflow automation. Use when setting up CI/CD with GitHub Actions, creating reusable workflow templates, configuring workflow triggers, implementing matrix builds, or securing GitHub Actions secrets.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "2.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"
@@ -376,5 +376,5 @@ actionlint .github/workflows/*.yml # local syntax validation
 ---
 
 **Version**: 2.0.0
-**Author**: AgentX
+**Author**: Frontier
 **Last Updated**: February 10, 2026

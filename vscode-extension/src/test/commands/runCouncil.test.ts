@@ -9,7 +9,7 @@ import {
   __clearMockModels,
   MockLanguageModelChat,
 } from '../mocks/vscode';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import { registerRunCouncilCommand } from '../../commands/runCouncil';
 import {
   buildRolePrompt,
@@ -480,12 +480,12 @@ function makeMockModel(
 describe('registerRunCouncilCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: AgentXContext;
+  let fakeAgentx: FrontierContext;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     fakeContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
-    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as AgentXContext;
+    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as FrontierContext;
     __clearMockModels();
   });
 
@@ -499,21 +499,21 @@ describe('registerRunCouncilCommand', () => {
       (_cmd: string, _cb: (...args: unknown[]) => unknown) => ({ dispose: () => { /* noop */ } }),
     );
     registerRunCouncilCommand(fakeContext, fakeAgentx);
-    assert.ok(stub.calledWith('agentx.runCouncil'));
+    assert.ok(stub.calledWith('frontier.runCouncil'));
   });
 });
 
 describe('registerRunCouncilCommand - orchestration', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: AgentXContext;
+  let fakeAgentx: FrontierContext;
   let commandCallback: () => Promise<void>;
   let tmpFile: string;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     fakeContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
-    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as AgentXContext;
+    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as FrontierContext;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, cb: (...args: unknown[]) => unknown) => {

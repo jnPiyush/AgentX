@@ -2,7 +2,7 @@
  * Lightweight VS Code API mock for unit tests.
  *
  * Provides stub implementations of the vscode module surface
- * used by AgentX extension code. Import this in tests rather
+ * used by Frontier extension code. Import this in tests rather
  * than depending on the real VS Code runtime.
  */
 

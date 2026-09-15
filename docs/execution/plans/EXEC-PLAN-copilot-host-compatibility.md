@@ -65,7 +65,7 @@ This execution plan is a living document. Keep `Progress`, `Surprises & Discover
   Date/Author: 2026-09-04 / AgentX Engineer
 
 - Decision: Where to put the native Copilot CLI plugin manifest.
-  Options Considered: (a) `packs/agentx-copilot-cli/plugin.json` with duplicated
+  Options Considered: (a) `packs/frontier-copilot-cli/plugin.json` with duplicated
   agent/skill trees, (b) repository-root `plugin.json` with custom asset paths,
   (c) no native plugin, document the install script only.
   Chosen: (b).
@@ -128,7 +128,7 @@ Key files:
   `chatAgents` / `chatInstructions` / `chatPromptFiles` / `chatSkills` lists
 - `vscode-extension/src/commands/initializeInternals.ts` -- CLI seeding plan
 - `.github/hooks/copilot-hooks.json`, `.github/hooks/scripts/signal-capture.js`
-- `packs/agentx-copilot-cli/` -- standalone distribution
+- `packs/frontier-copilot-cli/` -- standalone distribution
 - `scripts/install-manifest.ps1` -- install integrity, now load-bearing for the
   safe upgrade path
 

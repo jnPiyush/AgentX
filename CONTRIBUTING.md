@@ -1,4 +1,4 @@
-# Contributing to AgentX
+# Contributing to Frontier
 
 Thank you for contributing! This guide ensures all contributors follow the same workflow, **with or without GitHub Copilot**.
 
@@ -26,12 +26,12 @@ Thank you for contributing! This guide ensures all contributors follow the same 
 
 ### Script-Based Repo Setup
 
-Use the script-based flow when you are setting up a local clone of the AgentX repository for contribution work.
+Use the script-based flow when you are setting up a local clone of the Frontier repository for contribution work.
 
 ```powershell
 # Clone the repository
 git clone https://github.com/jnPiyush/AgentX.git
-cd AgentX
+cd Frontier
 
 # Run setup script
 .\install.ps1
@@ -40,7 +40,7 @@ cd AgentX
 ```bash
 # Clone the repository
 git clone https://github.com/jnPiyush/AgentX.git
-cd AgentX
+cd Frontier
 
 # Run setup script
 ./install.sh
@@ -48,7 +48,7 @@ cd AgentX
 
 Default install mode is local. GitHub and Azure DevOps modes are available for remote workflow integration.
 
-If AgentX detects Azure-oriented files such as `azure.yaml`, `.azure/`, Azure Functions config, or Bicep, it can also recommend or install the Azure MCP Extension so the Azure Skills plugin is available when the app targets Azure.
+If Frontier detects Azure-oriented files such as `azure.yaml`, `.azure/`, Azure Functions config, or Bicep, it can also recommend or install the Azure MCP Extension so the Azure Skills plugin is available when the app targets Azure.
 
 ### First Time Setup
 

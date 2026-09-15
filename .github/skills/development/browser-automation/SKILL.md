@@ -1,11 +1,11 @@
 ---
 name: browser-automation
-description: Drive a real browser from an AgentX agent for prototype validation, web research, HTML output verification, and accessibility audits. Use when an agent needs to render JavaScript, click/type/screenshot a page, run an axe-core a11y audit, or read a JS-rendered page. Backed by Microsoft's Playwright MCP server (transport decided in ADR-342). Local-first, opt-in install.
+description: Drive a real browser from an Frontier FDE for prototype validation, web research, HTML output verification, and accessibility audits. Use when an agent needs to render JavaScript, click/type/screenshot a page, run an axe-core a11y audit, or read a JS-rendered page. Backed by Microsoft's Playwright MCP server (transport decided in ADR-342). Local-first, opt-in install.
 ---
 
 # Browser Automation
 
-> **When to load**: An AgentX agent needs to render a page in a real browser, interact with it, capture a screenshot, run an accessibility audit, or read JavaScript-rendered content. Most commonly: UX Designer validating prototypes, Consulting Research reading SPAs, Engineer doing quick end-to-end smoke checks.
+> **When to load**: An Frontier FDE needs to render a page in a real browser, interact with it, capture a screenshot, run an accessibility audit, or read JavaScript-rendered content. Most commonly: UX Designer validating prototypes, Consulting Research reading SPAs, Engineer doing quick end-to-end smoke checks.
 
 > **DEFAULT test surface for UI-bearing changes**: Per the always-on rule in
 > `.github/instructions/project-conventions.instructions.md`, the agent browser
@@ -19,13 +19,13 @@ description: Drive a real browser from an AgentX agent for prototype validation,
 ## When NOT to load
 
 - Static HTTP fetches (use the agent's normal fetch tool).
-- Bulk crawling, scraping behind auth, or anything outside the AgentX security profile's URL allowlist (see Anti-Patterns).
+- Bulk crawling, scraping behind auth, or anything outside the Frontier security profile's URL allowlist (see Anti-Patterns).
 - Desktop GUI automation -- use the upstream `computer-use-and-browser-agents` skill instead.
-- Long-lived background scrapers -- AgentX agents are task-scoped, not service-shaped.
+- Long-lived background scrapers -- Frontier FDEs are task-scoped, not service-shaped.
 
 ## Prerequisites
 
-The Playwright MCP server is **not bundled** with AgentX. Install it once per workspace:
+The Playwright MCP server is **not bundled** with Frontier. Install it once per workspace:
 
 ```powershell
 # 1. Install Playwright MCP (Node-based MCP server, runs via npx)
@@ -47,11 +47,11 @@ node --version
 
 If the MCP server is not present, an agent that loads this skill MUST report the missing prerequisite and stop, not guess. See "Anti-Patterns" #4.
 
-A follow-up DevOps issue tracks wiring this into the AgentX `.vscode/mcp.json` template as an opt-in switch. Until then, install per workspace.
+A follow-up DevOps issue tracks wiring this into the Frontier `.vscode/mcp.json` template as an opt-in switch. Until then, install per workspace.
 
 ## Tool Surface
 
-The Playwright MCP server exposes a small, stable set of tools. Names below match the upstream server; AgentX does not rename them.
+The Playwright MCP server exposes a small, stable set of tools. Names below match the upstream server; Frontier does not rename them.
 
 | Tool | Purpose | Typical caller |
 |------|---------|----------------|
@@ -117,7 +117,7 @@ Goal: confirm an HTML report or dashboard the agent just generated actually rend
 |---------|--------------------|
 | open | Allowed without restriction. |
 | standard (default) | Allowed. URL allowlist not enforced. Console messages logged. |
-| controlled | Allowed. URL allowlist enforced (see `.agentx/config.json -> security.urlAllowlist`). Screenshots redacted in audit log. |
+| controlled | Allowed. URL allowlist enforced (see `.frontier/config.json -> security.urlAllowlist`). Screenshots redacted in audit log. |
 | restricted | Disabled entirely. The Playwright MCP server is not loaded; this skill returns "blocked by security profile" if invoked. |
 
 The profile gate lives in the MCP load layer, not in this skill. The skill does not implement enforcement; it documents expectations so agents do not work around the gate.
@@ -127,7 +127,7 @@ The profile gate lives in the MCP load layer, not in this skill. The skill does 
 - [ux-ui-design](../../design/ux-ui-design/SKILL.md) -- when to validate which prototype state.
 - [prototype-craft](../../design/prototype-craft/SKILL.md) -- production-quality HTML/CSS the validation runs against.
 - [security](../../architecture/security/SKILL.md) -- broader OWASP context for what to never click, type, or capture.
-- [computer-use-and-browser-agents](../../ai-systems/computer-use-and-browser-agents/SKILL.md) -- upstream coverage of computer-use, multi-agent browser flows, sandboxing strategies, and BrowserBase/Operator/CUA. Load that one when designing a *new* browser-using subsystem; load this one when an existing AgentX agent just needs to drive a browser.
+- [computer-use-and-browser-agents](../../ai-systems/computer-use-and-browser-agents/SKILL.md) -- upstream coverage of computer-use, multi-agent browser flows, sandboxing strategies, and BrowserBase/Operator/CUA. Load that one when designing a *new* browser-using subsystem; load this one when an existing Frontier FDE just needs to drive a browser.
 
 ## References
 

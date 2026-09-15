@@ -7,7 +7,7 @@
 > **Planning horizon**: {planning_horizon}
 > **Source of truth**: This file (local mode) OR GitHub Projects V2 / ADO Boards (remote mode)
 
-This template is the canonical structure for a living product backlog. In **Local Mode** this file is the source of truth and is mirrored into per-issue JSON under `.agentx/issues/`. In **GitHub/ADO Mode** this file is a human-readable rollup; the issue tracker is the source of truth.
+This template is the canonical structure for a living product backlog. In **Local Mode** this file is the source of truth and is mirrored into per-issue JSON under `.frontier/issues/`. In **GitHub/ADO Mode** this file is a human-readable rollup; the issue tracker is the source of truth.
 
 ---
 
@@ -35,7 +35,7 @@ mindmap
 
 ## 2. Backlog Hierarchy
 
-AgentX uses a 3-level hierarchy. Higher levels carry intent; lower levels carry execution detail.
+Frontier uses a 3-level hierarchy. Higher levels carry intent; lower levels carry execution detail.
 
 | Level | Purpose | Size | Owner | Lifecycle |
 |-------|---------|------|-------|-----------|
@@ -290,9 +290,9 @@ stateDiagram-v2
 
 ---
 
-## 14. Local Mode Wiring (AgentX)
+## 14. Local Mode Wiring (Frontier)
 
-When this repo runs in **Local Mode**, this file is the source of truth. The CLI keeps `.agentx/issues/*.json` in sync.
+When this repo runs in **Local Mode**, this file is the source of truth. The CLI keeps `.frontier/issues/*.json` in sync.
 
 ### Authoring flow
 
@@ -301,27 +301,27 @@ When this repo runs in **Local Mode**, this file is the source of truth. The CLI
 
 ```powershell
 # Story
-.\.agentx\agentx.ps1 issue create -t "[Story] <title>" -l "type:story,priority:p1" -b "<body or path to spec>"
+.\.agentx\frontier.ps1 issue create -t "[Story] <title>" -l "type:story,priority:p1" -b "<body or path to spec>"
 
 # Bug
-.\.agentx\agentx.ps1 issue create -t "[Bug] <title>" -l "type:bug,priority:p0"
+.\.agentx\frontier.ps1 issue create -t "[Bug] <title>" -l "type:bug,priority:p0"
 
 # Epic
-.\.agentx\agentx.ps1 issue create -t "[Epic] <title>" -l "type:epic"
+.\.agentx\frontier.ps1 issue create -t "[Epic] <title>" -l "type:epic"
 ```
 
 3. Update the row in this file with the issue number returned by the CLI.
 4. As work progresses, update the row's Status column AND run:
 
 ```powershell
-.\.agentx\agentx.ps1 issue update -n <num> -s "In Progress"
-.\.agentx\agentx.ps1 issue update -n <num> -s "In Review"
-.\.agentx\agentx.ps1 issue close  -n <num>
+.\.agentx\frontier.ps1 issue update -n <num> -s "In Progress"
+.\.agentx\frontier.ps1 issue update -n <num> -s "In Review"
+.\.agentx\frontier.ps1 issue close  -n <num>
 ```
 
 ### Migration to GitHub mode
 
-When the repo gains a GitHub remote, AgentX auto-syncs `.agentx/issues/` to GitHub Issues + Projects V2. This file remains as the human-readable rollup; the issue tracker becomes authoritative for status.
+When the repo gains a GitHub remote, Frontier auto-syncs `.frontier/issues/` to GitHub Issues + Projects V2. This file remains as the human-readable rollup; the issue tracker becomes authoritative for status.
 
 ---
 

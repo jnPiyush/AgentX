@@ -619,7 +619,7 @@ function Get-HandleFinalPath {
     if (-not $IsWindows) { return '' }
 
     $Buffer = [Text.StringBuilder]::new(32768)
-    $Length = [AgentX.NativePath]::GetFinalPathNameByHandle(
+    $Length = [Frontier.NativePath]::GetFinalPathNameByHandle(
         $Stream.SafeFileHandle.DangerousGetHandle(), $Buffer, 32767, 0)
     if ($Length -eq 0 -or $Length -gt 32767) {
         throw 'Unable to resolve the real path of an open package file handle.'
@@ -711,8 +711,8 @@ if ($PackageFiles.Count -eq 0) {
 }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-if ($IsWindows -and -not ('AgentX.NativePath' -as [type])) {
-    Add-Type -Namespace 'AgentX' -Name 'NativePath' -MemberDefinition @'
+if ($IsWindows -and -not ('Frontier.NativePath' -as [type])) {
+    Add-Type -Namespace 'Frontier' -Name 'NativePath' -MemberDefinition @'
 [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
 public static extern uint GetFinalPathNameByHandle(System.IntPtr hFile, System.Text.StringBuilder lpszFilePath, uint cchFilePath, uint dwFlags);
 '@

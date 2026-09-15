@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   completeHarnessThread,
   getHarnessStatusDisplay,
@@ -17,9 +17,9 @@ export const LOOP_ACTION_ITEMS = [
   { label: 'rollback', description: 'Roll the loop back to an earlier iteration' },
 ];
 
-export async function ensureLoopInitialized(agentx: AgentXContext): Promise<boolean> {
+export async function ensureLoopInitialized(agentx: FrontierContext): Promise<boolean> {
   if (!await agentx.checkInitialized()) {
-    vscode.window.showWarningMessage('AgentX is not initialized.');
+    vscode.window.showWarningMessage('Frontier is not initialized.');
     return false;
   }
 
@@ -27,7 +27,7 @@ export async function ensureLoopInitialized(agentx: AgentXContext): Promise<bool
 }
 
 export async function executeLoopAction(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   action: string,
 ): Promise<void> {
   switch (action) {
@@ -52,7 +52,7 @@ export async function executeLoopAction(
   }
 }
 
-export async function loopStart(agentx: AgentXContext): Promise<void> {
+export async function loopStart(agentx: FrontierContext): Promise<void> {
   const prompt = await vscode.window.showInputBox({
     prompt: 'Task description for the iterative loop',
     placeHolder: 'e.g., Fix all failing tests in src/ following TDD',
@@ -100,7 +100,7 @@ export async function loopStart(agentx: AgentXContext): Promise<void> {
   }
 }
 
-export async function loopStatus(agentx: AgentXContext): Promise<boolean> {
+export async function loopStatus(agentx: FrontierContext): Promise<boolean> {
   try {
     const output = await agentx.runCli('loop', ['status']);
     syncHarnessStatus(agentx);
@@ -113,7 +113,7 @@ export async function loopStatus(agentx: AgentXContext): Promise<boolean> {
   }
 }
 
-export async function loopIterate(agentx: AgentXContext): Promise<void> {
+export async function loopIterate(agentx: FrontierContext): Promise<void> {
   const summary = await vscode.window.showInputBox({
     prompt: 'Iteration summary (what was done/changed)',
     placeHolder: 'e.g., Fixed 3 tests, 2 remaining',
@@ -178,7 +178,7 @@ export async function loopIterate(agentx: AgentXContext): Promise<void> {
   }
 }
 
-export async function loopComplete(agentx: AgentXContext): Promise<void> {
+export async function loopComplete(agentx: FrontierContext): Promise<void> {
   const summary = await vscode.window.showInputBox({
     prompt: 'Completion summary',
     placeHolder: 'e.g., All tests passing, coverage at 85%',
@@ -212,7 +212,7 @@ export async function loopComplete(agentx: AgentXContext): Promise<void> {
   }
 }
 
-export async function loopCancel(agentx: AgentXContext): Promise<void> {
+export async function loopCancel(agentx: FrontierContext): Promise<void> {
   try {
     const output = await agentx.runCli('loop', ['cancel']);
     syncHarnessCancel(agentx);
@@ -224,7 +224,7 @@ export async function loopCancel(agentx: AgentXContext): Promise<void> {
   }
 }
 
-export async function loopRollback(agentx: AgentXContext): Promise<void> {
+export async function loopRollback(agentx: FrontierContext): Promise<void> {
   const target = await vscode.window.showInputBox({
     prompt: 'Roll back to which iteration number?',
     placeHolder: 'e.g., 3',
@@ -255,7 +255,7 @@ export async function loopRollback(agentx: AgentXContext): Promise<void> {
   }
 }
 
-function getHarnessDisplay(agentx: AgentXContext): string | undefined {
+function getHarnessDisplay(agentx: FrontierContext): string | undefined {
   const root = agentx.workspaceRoot;
   if (!root) {
     return undefined;
@@ -265,7 +265,7 @@ function getHarnessDisplay(agentx: AgentXContext): string | undefined {
 }
 
 function syncHarnessStart(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   prompt: string,
   completionCriteria: string,
   issueStr?: string,
@@ -290,7 +290,7 @@ function syncHarnessStart(
   }
 }
 
-function syncHarnessStatus(agentx: AgentXContext): void {
+function syncHarnessStatus(agentx: FrontierContext): void {
   const root = agentx.workspaceRoot;
   if (!root) {
     return;
@@ -303,7 +303,7 @@ function syncHarnessStatus(agentx: AgentXContext): void {
   }
 }
 
-function syncHarnessIteration(agentx: AgentXContext, summary: string): void {
+function syncHarnessIteration(agentx: FrontierContext, summary: string): void {
   const root = agentx.workspaceRoot;
   if (!root) {
     return;
@@ -316,7 +316,7 @@ function syncHarnessIteration(agentx: AgentXContext, summary: string): void {
   }
 }
 
-function syncHarnessComplete(agentx: AgentXContext, summary: string): void {
+function syncHarnessComplete(agentx: FrontierContext, summary: string): void {
   const root = agentx.workspaceRoot;
   if (!root) {
     return;
@@ -329,7 +329,7 @@ function syncHarnessComplete(agentx: AgentXContext, summary: string): void {
   }
 }
 
-function syncHarnessCancel(agentx: AgentXContext): void {
+function syncHarnessCancel(agentx: FrontierContext): void {
   const root = agentx.workspaceRoot;
   if (!root) {
     return;
@@ -348,9 +348,9 @@ function showHarnessWarning(err: unknown): void {
 }
 
 function showLoopOutput(title: string, output: string, harnessDisplay?: string): void {
-  const channel = vscode.window.createOutputChannel('AgentX Loop');
+  const channel = vscode.window.createOutputChannel('Frontier Loop');
   channel.clear();
-  channel.appendLine(`=== AgentX: ${title} ===\n`);
+  channel.appendLine(`=== Frontier: ${title} ===\n`);
   channel.appendLine(output);
   if (harnessDisplay) {
     channel.appendLine('');

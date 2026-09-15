@@ -1,11 +1,11 @@
 # CODEOWNERS - Layer 1: Actor Allowlist
 #
 # Defines who can approve autonomous agent changes.
-# Part of AgentX 4-layer security architecture.
+# Part of Frontier's four-layer security architecture.
 #
 # Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 #
-# IMPORTANT: Keep these owners in sync with .github/agentx-security.yml allowed_actors.
+# IMPORTANT: Keep these owners in sync with .github/frontier-security.yml allowed_actors.
 
 # Default owners for everything in the repo
 * @jnPiyush
@@ -25,4 +25,4 @@ package.json @jnPiyush
 
 # Security-sensitive files
 .github/CODEOWNERS @jnPiyush
-.github/agentx-security.yml @jnPiyush
+.github/frontier-security.yml @jnPiyush

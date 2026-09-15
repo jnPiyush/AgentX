@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
-# AgentX Plugin: read-pdf
+# Frontier Plugin: read-pdf
 # Convert PDF documents to Markdown with per-page anchors.
 # Strategy: prefer pdftotext (poppler) when available; fall back to pypdf.
 

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- Command Validator
+// Frontier -- Command Validator
 // ---------------------------------------------------------------------------
 //
 // Replaces the 4-entry denylist in toolEngine.ts with a defense-in-depth

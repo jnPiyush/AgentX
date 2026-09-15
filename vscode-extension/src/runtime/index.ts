@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- Shared Runtime barrel
+// Frontier -- Shared Runtime barrel
 // ---------------------------------------------------------------------------
 //
 // Public surface of the framework-free loop runtime extracted for SPEC-401.

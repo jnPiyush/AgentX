@@ -103,7 +103,7 @@ function classifyCommand(tokens, config) {
   if (cmd === 'loop' && ['iterate', 'complete'].includes((rest[0] || '').toLowerCase())) {
     return {
       ok: false,
-      text: 'Remote loop iterate/complete is disabled because AgentX requires fresh local evidence. Run it on the desktop.',
+      text: 'Remote loop iterate/complete is disabled because Frontier requires fresh local evidence. Run it on the desktop.',
     };
   }
 

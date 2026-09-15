@@ -3,7 +3,7 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
-TRACE_DIR="$ROOT/.agentx/state"
+TRACE_DIR="$ROOT/.frontier/state"
 TRACE_FILE="$TRACE_DIR/hook-trace.jsonl"
 
 trace() {
@@ -13,14 +13,14 @@ trace() {
 
 CLI="$ROOT/.agentx/agentx.sh"
 if [ ! -f "$CLI" ]; then
-  trace skipped "AgentX CLI wrapper not found."
+  trace skipped "Frontier CLI wrapper not found."
   exit 0
 fi
 
-ISSUE=${AGENTX_ISSUE:-}
-PROMPT=${AGENTX_TASK:-}
+ISSUE=${FRONTIER_ISSUE:-${HVE_ISSUE:-${AGENTX_ISSUE:-}}}
+PROMPT=${FRONTIER_TASK:-${HVE_TASK:-${AGENTX_TASK:-}}}
 if [ -z "$ISSUE" ] || [ -z "$PROMPT" ]; then
-  trace skipped "AGENTX_ISSUE or AGENTX_TASK was not provided."
+  trace skipped "FRONTIER_ISSUE or FRONTIER_TASK was not provided."
   exit 0
 fi
 

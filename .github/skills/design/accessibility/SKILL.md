@@ -2,7 +2,7 @@
 name: "accessibility"
 description: 'Enforce WCAG 2.1 AA conformance on UX prototypes and shipped UI. Use when reviewing or building any user-facing surface that must pass an a11y audit -- prototypes in docs/ux/prototypes/, production components, or third-party-embedded views. Provides a mechanical checklist split by POUR principle plus reduced-motion, screen-reader, and keyboard-shortcut rules.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-12"
   updated: "2026-05-12"
@@ -14,7 +14,7 @@ compatibility:
 
 # Accessibility
 
-> WHEN: A prototype, component, or page must meet WCAG 2.1 AA before review or release. This skill is the canonical AgentX a11y checklist; the prototype-audit skill consumes it mechanically.
+> WHEN: A prototype, component, or page must meet WCAG 2.1 AA before review or release. This skill is the canonical Frontier a11y checklist; the prototype-audit skill consumes it mechanically.
 
 ## When to Use This Skill
 
@@ -114,7 +114,7 @@ Run this exact sequence at least once before declaring a prototype "a11y complet
 
 ## Verification Hooks
 
-- axe-core via `@axe-core/cli`, `@axe-core/playwright`, or the AgentX browser-automation skill.
+- axe-core via `@axe-core/cli`, `@axe-core/playwright`, or the Frontier browser-automation skill.
 - Lighthouse Accessibility audit (target score >= 95).
 - Manual screen-reader smoke test above for any new widget.
 - Pa11y or HTML_CodeSniffer for batch CI runs.

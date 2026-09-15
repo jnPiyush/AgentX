@@ -34,7 +34,7 @@
 
 ## 1. Overview
 
-This specification defines how AgentX evolves from a repo-local plugin catalog into a publishable plugin platform. The design keeps `agentx-core` as the runtime host, introduces independently versioned plugin packages, adds a registry-based discovery model, and preserves workspace-local installation into `.agentx/plugins`.
+This specification defines how AgentX evolves from a repo-local plugin catalog into a publishable plugin platform. The design keeps `frontier-core` as the runtime host, introduces independently versioned plugin packages, adds a registry-based discovery model, and preserves workspace-local installation into `.agentx/plugins`.
 
 **Scope:**
 - In scope: plugin identity, packaging contract, compatibility model, discovery model, trust model, installation lifecycle, pack composition, and rollout sequencing

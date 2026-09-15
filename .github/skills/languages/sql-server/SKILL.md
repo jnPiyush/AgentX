@@ -2,7 +2,7 @@
 name: "sql-server"
 description: 'Develop SQL Server databases with T-SQL, stored procedures, indexing, and performance optimization. Use when writing T-SQL queries, creating stored procedures/functions, designing index strategies, optimizing query execution plans, or troubleshooting SQL Server performance.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

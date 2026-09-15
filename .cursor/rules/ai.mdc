@@ -1,10 +1,10 @@
 ---
-description: AI / agent / LLM workflow standards (AgentX)
+description: AI / agent / LLM workflow standards (Frontier)
 globs: **/*agent*,**/*llm*,**/*model*,**/*workflow*,**/agents/**,**/*ai*
 alwaysApply: false
 ---
 
-# AI / Agents / LLM (AgentX)
+# AI / Agents / LLM (Frontier)
 
 Canonical: `.github/instructions/ai.instructions.md` -- read for full standards.
 

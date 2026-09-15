@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- Path Sandbox
+// Frontier -- Path Sandbox
 // ---------------------------------------------------------------------------
 //
 // Validates file paths before tools access them, preventing path traversal

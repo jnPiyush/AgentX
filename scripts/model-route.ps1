@@ -152,7 +152,7 @@ else {
     default     { 'Gray' }
   }
   Write-Host ""
-  Write-Host "AgentX model route" -ForegroundColor Cyan
+  Write-Host "Frontier model route" -ForegroundColor Cyan
   Write-Host ("Tier: {0}" -f $tier) -ForegroundColor $color
   Write-Host ("Words: {0} ({1})" -f $wordCount, $lengthSignal)
   Write-Host ("Hits: reasoning={0} balanced={1} fast={2}" -f $reasoningHits, $balancedHits, $fastHits)

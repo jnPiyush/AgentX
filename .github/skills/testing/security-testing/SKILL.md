@@ -2,7 +2,7 @@
 name: "security-testing"
 description: 'Implement security testing across the SDLC including SAST, DAST, dependency scanning, secrets detection, penetration testing, and OWASP Top 10 validation. Use when verifying application security posture before release.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-03-01"
   updated: "2026-03-01"

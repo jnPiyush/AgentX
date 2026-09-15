@@ -2,7 +2,7 @@
 name: "integration-testing"
 description: 'Design and implement integration tests that verify component interactions, API contracts, database operations, and service boundaries. Use when testing how modules, services, or systems work together.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-03-01"
   updated: "2026-03-01"

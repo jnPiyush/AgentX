@@ -2,7 +2,7 @@
 name: "context-management"
 description: 'Manage LLM context windows efficiently. Use when implementing context compaction, conversation summarization, token budget management, sliding window strategies, or optimizing prompt length for cost and quality.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2025-06-15"
   updated: "2025-06-15"
@@ -167,7 +167,7 @@ Track entities and their latest state instead of full history.
 ```
 Entity Store:
   user_name: "Alice"
-  project: "AgentX"
+  project: "Frontier"
   decision_db: "PostgreSQL with pgvector"
   decision_auth: "Entra ID + MSAL"
   pending_question: "How to handle migration rollbacks?"

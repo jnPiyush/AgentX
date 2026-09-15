@@ -20,7 +20,7 @@ describe('registerReviewFindingCommands', () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     callbacks = {};
-    root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-review-findings-command-'));
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-review-findings-command-'));
     writeFile(root, 'docs/artifacts/reviews/findings/FINDING-164-001.md', [
       '---',
       'id: FINDING-164-001',
@@ -79,19 +79,19 @@ describe('registerReviewFindingCommands', () => {
       replace: sandbox.stub(),
       onDidChangeLogLevel: sandbox.stub(),
       logLevel: 1,
-      name: 'AgentX Review Findings',
+      name: 'Frontier Review Findings',
     } as unknown as vscode.LogOutputChannel);
 
     registerReviewFindingCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, { workspaceRoot: root } as any);
 
-    await callbacks['agentx.showReviewFindings']!();
+    await callbacks['frontier.showReviewFindings']!();
 
     assert.ok(clear.calledOnce);
     assert.ok(appendLine.calledOnce);
     assert.ok(show.calledWith(true));
   });
 
-  it('promotes a selected review finding through the AgentX issue flow', async () => {
+  it('promotes a selected review finding through the Frontier issue flow', async () => {
     sandbox.stub(vscode.window, 'showQuickPick').resolves({ findingId: 'FINDING-164-001' } as any);
     sandbox.stub(vscode.window, 'createOutputChannel').returns({
       appendLine: sandbox.stub(),
@@ -108,7 +108,7 @@ describe('registerReviewFindingCommands', () => {
       replace: sandbox.stub(),
       onDidChangeLogLevel: sandbox.stub(),
       logLevel: 1,
-      name: 'AgentX Review Findings',
+      name: 'Frontier Review Findings',
     } as unknown as vscode.LogOutputChannel);
     const infoSpy = sandbox.spy(vscode.window, 'showInformationMessage');
     const agentx = {
@@ -118,7 +118,7 @@ describe('registerReviewFindingCommands', () => {
 
     registerReviewFindingCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, agentx);
 
-    await callbacks['agentx.promoteReviewFinding']!();
+    await callbacks['frontier.promoteReviewFinding']!();
 
     assert.ok(infoSpy.calledOnce);
     assert.ok(String(infoSpy.firstCall.args[0]).includes('FINDING-164-001'));

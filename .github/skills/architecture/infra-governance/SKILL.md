@@ -2,7 +2,7 @@
 name: "infra-governance"
 description: 'Enforce infrastructure invariants at generation time, before any IaC is applied. Use when writing or reviewing Terraform, Bicep, or ARM, when a generated stack disables authentication or encryption, when resource names drift, or when a reviewer needs a mechanical pass over infrastructure code. Provides a rule catalog, a scanner, and a deterministic naming resolver.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-08-06"
   updated: "2026-08-06"

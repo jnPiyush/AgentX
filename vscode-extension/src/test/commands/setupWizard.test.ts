@@ -15,21 +15,21 @@ import {
 
 // We need to stub checkAllDependencies at the module level
 import * as depChecker from '../../utils/dependencyChecker';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 
 // -----------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------
 
-/** Create a minimal mock AgentXContext for testing. */
-function fakeAgentx(overrides?: { githubConnected?: boolean; adoConnected?: boolean }): AgentXContext {
+/** Create a minimal mock FrontierContext for testing. */
+function fakeAgentx(overrides?: { githubConnected?: boolean; adoConnected?: boolean }): FrontierContext {
   return {
     githubConnected: overrides?.githubConnected ?? false,
     adoConnected: overrides?.adoConnected ?? false,
     checkInitialized: async () => true,
     invalidateCache: () => {},
     workspaceRoot: '/tmp/test',
-  } as unknown as AgentXContext;
+  } as unknown as FrontierContext;
 }
 
 /** Build a healthy EnvironmentReport (all found). */

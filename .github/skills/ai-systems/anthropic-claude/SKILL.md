@@ -2,7 +2,7 @@
 name: "anthropic-claude"
 description: 'Implement production applications with Anthropic Claude models -- Messages API, tool use, prompt caching, extended thinking, vision, computer use, and the Claude Agent SDK. Use when coding directly against Anthropic APIs, Claude via AWS Bedrock, or Claude via GCP Vertex AI rather than a higher-level framework.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2026-04-22"
  updated: "2026-04-22"
@@ -53,7 +53,7 @@ Need Claude in production?
 
 | Model | Best For | Context / Output | Notes |
 |---|---|---|---|
-| `claude-opus-4.8` | Deep reasoning, coding, computer use, complex agents | 200K / 64K | AgentX default Claude model |
+| `claude-opus-4.8` | Deep reasoning, coding, computer use, complex agents | 200K / 64K | Frontier default Claude model |
 | `claude-opus-4.5` | Prior high-capability Opus generation | 200K / 64K | Use when pinned deployments require the prior Opus line |
 | `claude-haiku-4.5` | High-volume, low-latency, simple classification | 200K / 8K | Cheapest, fastest |
 
@@ -69,7 +69,7 @@ response = client.messages.create(
     max_tokens=1024,
     system="You are a concise technical assistant.",
     messages=[
-        {"role": "user", "content": "Summarize the AgentX workflow in 3 bullets."}
+        {"role": "user", "content": "Summarize the Frontier workflow in 3 bullets."}
     ],
 )
 

@@ -19,7 +19,7 @@ describe('workTreeProviderInternals', () => {
   let tempRoot: string;
 
   beforeEach(() => {
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-worktree-'));
+    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-worktree-'));
   });
 
   afterEach(() => {
@@ -113,8 +113,8 @@ describe('workTreeProviderInternals', () => {
     ]);
 
     assert.equal(populatedChildren.length, 2);
-    assert.equal(populatedChildren[0].command?.command, 'agentx.showIssue');
-    assert.equal(populatedChildren[1].command?.command, 'agentx.showStatus');
+    assert.equal(populatedChildren[0].command?.command, 'frontier.showIssue');
+    assert.equal(populatedChildren[1].command?.command, 'frontier.showStatus');
   });
 
   it('builds issue children and caps the list to five items', () => {
@@ -151,7 +151,7 @@ describe('workTreeProviderInternals', () => {
       currentCheckpoint: 'Plan',
       rationale: 'A plan exists but review evidence is missing.',
       recommendedAction: 'Kick off review',
-      recommendedCommand: 'agentx.kickoffReview',
+      recommendedCommand: 'frontier.kickoffReview',
       recommendedCommandTitle: 'Kick Off Review',
       activeContractPath: 'docs/execution/contracts/CONTRACT-253-runtime.md',
       activeContractStatus: 'Blocked',

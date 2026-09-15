@@ -28,7 +28,7 @@ function Invoke-Capture([string]$FileName, [string[]]$Arguments, [string]$Workin
     return [PSCustomObject]@{ ExitCode = $process.ExitCode; Output = $output }
 }
 
-Write-Host 'AgentX AI Agent Scaffold Tests'
+Write-Host 'Frontier AI Agent Scaffold Tests'
 $workspace = Join-Path ([IO.Path]::GetTempPath()) "agentx-scaffold-$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Path $workspace -Force | Out-Null
 try {

@@ -2,12 +2,12 @@
 
 ## Scope
 
-AgentX is a **local developer tool**: a VS Code extension, a PowerShell CLI, and a corpus of Markdown agent/skill definitions. It runs on a developer's machine with that developer's privileges. It does not host a service, store customer data, or provision cloud infrastructure.
+Frontier is a **local developer tool**: a VS Code extension, a PowerShell CLI, and a corpus of Markdown agent/skill definitions. It runs on a developer's machine with that developer's privileges. It does not host a service, store customer data, or provision cloud infrastructure.
 
 The security properties that matter for this threat model are:
 
-1. **Command execution safety** -- AgentX executes shell commands, some of them proposed by a language model that may have read untrusted content (a repository file, an issue body, a web page). A destructive command must not run just because a model emitted it.
-2. **Secret hygiene** -- agent transcripts, error messages, and loop evidence are written to `.agentx/state/` and to VS Code output channels. Credentials must not be persisted there.
+1. **Command execution safety** -- Frontier executes shell commands, some of them proposed by a language model that may have read untrusted content (a repository file, an issue body, a web page). A destructive command must not run just because a model emitted it.
+2. **Secret hygiene** -- agent transcripts, error messages, and loop evidence are written to `.frontier/state/` and to VS Code output channels. Credentials must not be persisted there.
 3. **Supply chain of the published extension** -- a compromised dependency would reach every user through the VS Code Marketplace.
 
 ## Supported Versions
@@ -41,7 +41,7 @@ Please allow a reasonable window for a fix before public disclosure.
 ## In Scope
 
 - Bypass of the blocked-command policy in `vscode-extension/src/utils/commandValidator.ts` (for example, a command shape that reaches `execShell` and performs a destructive action)
-- Secret leakage into `.agentx/state/`, loop evidence archives, log files, or output channels
+- Secret leakage into `.frontier/state/`, loop evidence archives, log files, or output channels
 - Path traversal that lets an agent read or write outside the opened workspace
 - Prompt-injection chains that lead to command execution or file exfiltration
 - Dependency vulnerabilities reachable from extension code
@@ -75,6 +75,6 @@ Please allow a reasonable window for a fix before public disclosure.
 
 Stated plainly so users can make their own risk decisions:
 
-- The blocked-command list is a **denylist of catastrophic operations**, not a full sandbox. `execShell` deliberately allows unrecognised commands through, because a coding harness must run arbitrary build and test tooling. Do not run AgentX against a repository you do not trust with your shell.
-- The quality-loop iteration state remains a local hook control because `.agentx/state/loop-state.json` is intentionally untracked. Model Council, Compound Capture, and scrub parity checks also run in CI, but development-process gates are not security boundaries.
+- The blocked-command list is a **denylist of catastrophic operations**, not a full sandbox. `execShell` deliberately allows unrecognised commands through, because a coding harness must run arbitrary build and test tooling. Do not run Frontier against a repository you do not trust with your shell.
+- The quality-loop iteration state remains a local hook control because `.frontier/state/loop-state.json` is intentionally untracked. Model Council, Compound Capture, and scrub parity checks also run in CI, but development-process gates are not security boundaries.
 - SBOM/provenance workflow wiring is locally validated; attestation generation and Marketplace verification require a successful remote release run before they are operationally proven.

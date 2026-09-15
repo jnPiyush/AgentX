@@ -45,7 +45,7 @@ fi
 # The loop and scrub decisions below execute through the workspace launcher.
 # Reject unstaged edits to any implementation in that call chain; otherwise an
 # unrelated staged change could be approved by permissive worktree-only code.
-UNSTAGED_VALIDATORS=$(git diff --name-only -- .agentx/agentx.ps1 .agentx/agentx-cli.ps1 scripts/scrub.ps1)
+UNSTAGED_VALIDATORS=$(git diff --name-only -- .agentx/frontier.ps1 .agentx/agentx.ps1 .agentx/agentx-cli.ps1 scripts/scrub.ps1)
 if [ -n "$UNSTAGED_VALIDATORS" ]; then
  echo -e "${RED}[FAIL] Quality-gate validators have unstaged changes${NC}"
  echo "$UNSTAGED_VALIDATORS" | sed 's/^/  /'
@@ -123,7 +123,7 @@ fi
 echo -n "Checking for blocked commands... "
 BLOCKED_COMMANDS=("rm -rf" "git reset --hard" "git push --force" "DROP DATABASE" "DROP TABLE" "TRUNCATE" "format c:" "del /s" "rmdir /s")
 BLOCKED_FOUND=0
-CHANGED_CODE_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -v '\.md$' | grep -v '\.test\.ts$' | grep -v '\.test\.js$' | grep -v '\.spec\.ts$' | grep -v '\.spec\.js$' | grep -v 'commandValidator' | grep -v '\.github/hooks/' | grep -v 'agentx-security\.yml' | grep -v 'agentic-runner\.ps1' | grep -v 'install\.sh')
+CHANGED_CODE_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -v '\.md$' | grep -v '\.test\.ts$' | grep -v '\.test\.js$' | grep -v '\.spec\.ts$' | grep -v '\.spec\.js$' | grep -v 'commandValidator' | grep -v '\.github/hooks/' | grep -v 'agentx-security\.yml' | grep -v -E '^\.github/(frontier-security\.yml|security/allowed-commands\.json)$' | grep -v 'agentic-runner\.ps1' | grep -v 'install\.sh')
 
 if [ -n "$CHANGED_CODE_FILES" ]; then
  for cmd in "${BLOCKED_COMMANDS[@]}"; do
@@ -153,13 +153,15 @@ echo ""
 # - Consumed loop (committed without renewal): block for code changes.
 # - MANDATORY, NO SKIP: the loop iteration gate cannot be bypassed.
 # ---------------------------------------------------------------
-LOOP_STATE=".agentx/state/loop-state.json"
+LOOP_STATE=".frontier/state/loop-state.json"
+[ -f "$LOOP_STATE" ] || LOOP_STATE=".hve/state/loop-state.json"
+[ -f "$LOOP_STATE" ] || LOOP_STATE=".agentx/state/loop-state.json"
 LOOP_ACTIVE=""
 LOOP_STATUS=""
 LOOP_CONSUMED=""
 if [ -f "$LOOP_STATE" ]; then
   # Only the coarse reporting fields are read here. The GATE itself is evaluated
-  # by 'agentx loop gate' below: text scanning cannot tell a review record inside
+  # by 'frontier loop gate' below: text scanning cannot tell a review record inside
   # a history entry from one appended elsewhere in the file, and it depends on
   # JSON key order, which made this hook strictly weaker than the CLI and the
   # extension runtime even though all three are documented as equivalent.
@@ -171,8 +173,8 @@ fi
 # Block active loops first (regardless of file type)
 if [ -n "$LOOP_ACTIVE" ]; then
   echo -e "${RED}[FAIL] Quality loop still ACTIVE (iteration in progress)${NC}"
-  echo "  Complete the loop before committing: agentx loop complete -s <summary>"
-  echo "  Or cancel if needed: agentx loop cancel"
+  echo "  Complete the loop before committing: frontier loop complete -s <summary>"
+  echo "  Or cancel if needed: frontier loop cancel"
   FAILED=1
 elif [ "$LOOP_STATUS" = "cancelled" ]; then
   echo -e "${YELLOW}[WARN] Quality loop was cancelled (does not satisfy quality gate)${NC}"
@@ -212,7 +214,7 @@ if { [ -n "$CODE_FILES_STAGED" ] || [ -n "$REVIEW_DOCS" ]; } && [ -z "$LOOP_ACTI
     # Pin the workspace root: the CLI must evaluate THIS repo's loop state, not
     # whatever root it would infer from the hook's working directory.
     LOOP_REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "$PWD")
-    LOOP_GATE_OUTPUT=$(AGENTX_WORKSPACE_ROOT="$LOOP_REPO_ROOT" pwsh -NoProfile -File .agentx/agentx.ps1 loop gate 2>&1)
+    LOOP_GATE_OUTPUT=$(FRONTIER_WORKSPACE_ROOT="$LOOP_REPO_ROOT" pwsh -NoProfile -File .agentx/frontier.ps1 loop gate 2>&1)
     if [ $? -ne 0 ]; then
       LOOP_GATE_FAIL=1
       LOOP_GATE_MSG=$(printf '%s' "$LOOP_GATE_OUTPUT" | grep -oE 'BLOCK:.*' | head -1)
@@ -226,10 +228,10 @@ if [ -n "$CODE_FILES_STAGED" ] && [ -z "$LOOP_ACTIVE" ]; then
     # MANDATORY, NO SKIP: the quality-loop iteration gate has no bypass token.
     echo -e "${RED}[FAIL] $LOOP_GATE_MSG${NC}"
     echo "  ALL code changes MUST be wrapped in a completed quality loop with subagent review:"
-    echo "    agentx loop start -p \"<task description>\""
-    echo "    agentx loop iterate -s \"<progress summary>\" -e <evidence-file>   # repeat >= minIterations"
-    echo "    agentx loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence> --verdict approved --reviewer <id> --high 0 --medium 0"
-    echo "    agentx loop complete -s \"All gates passed\" -e <final-gate-evidence>"
+    echo "    frontier loop start -p \"<task description>\""
+    echo "    frontier loop iterate -s \"<progress summary>\" -e <evidence-file>   # repeat >= minIterations"
+    echo "    frontier loop iterate -s \"Subagent Review: <findings>\" -e <review-evidence> --verdict approved --reviewer <id> --high 0 --medium 0"
+    echo "    frontier loop complete -s \"All gates passed\" -e <final-gate-evidence>"
     echo "  This gate is mandatory and has no skip token."
     FAILED=1
   fi

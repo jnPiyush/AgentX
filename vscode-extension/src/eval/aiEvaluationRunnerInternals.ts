@@ -83,7 +83,7 @@ function buildBlockers(contract: AIEvaluationWorkspaceState): ReadonlyArray<AIEv
   if (!contract.contractPresent) {
     blockers.unshift({
       code: 'contract.missing',
-      message: 'AI evaluation execution requires evaluation/agentx.eval.yaml in the workspace.',
+      message: 'AI evaluation execution requires evaluation/frontier.eval.yaml in the workspace.',
     });
   }
 
@@ -141,7 +141,7 @@ export function createAIEvaluationExecutionPlan(root: string): AIEvaluationExecu
     plan: {
       runId: createRunId(),
       root,
-      manifestPath: contract.manifestPath ?? 'evaluation/agentx.eval.yaml',
+      manifestPath: contract.manifestPath ?? 'evaluation/frontier.eval.yaml',
       workflow: manifest.intent.workflow,
       runner,
       reportDirectory: manifest.reporting.outputDirectory,

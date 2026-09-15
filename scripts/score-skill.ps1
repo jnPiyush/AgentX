@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Skill Quality Rubric - deterministic 100-point AgentX skill scoring.
+# Skill Quality Rubric - deterministic 100-point Frontier skill scoring.
 #Requires -Version 7.0
 [CmdletBinding()]
 param(

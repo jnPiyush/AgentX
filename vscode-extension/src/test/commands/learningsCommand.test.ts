@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerLearningsCommands } from '../../commands/learnings';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import * as learningsInternals from '../../commands/learningsCommandInternals';
 
 describe('registerLearningsCommands', () => {
@@ -25,16 +25,16 @@ describe('registerLearningsCommands', () => {
   });
 
   it('registers the learnings-related commands', () => {
-    registerLearningsCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, {} as AgentXContext);
+    registerLearningsCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, {} as FrontierContext);
 
-    assert.ok(Object.keys(callbacks).includes('agentx.showBrainstormGuide'));
-    assert.ok(Object.keys(callbacks).includes('agentx.showPlanningLearnings'));
-    assert.ok(Object.keys(callbacks).includes('agentx.showReviewLearnings'));
-    assert.ok(Object.keys(callbacks).includes('agentx.createLearningCapture'));
+    assert.ok(Object.keys(callbacks).includes('frontier.showBrainstormGuide'));
+    assert.ok(Object.keys(callbacks).includes('frontier.showPlanningLearnings'));
+    assert.ok(Object.keys(callbacks).includes('frontier.showReviewLearnings'));
+    assert.ok(Object.keys(callbacks).includes('frontier.createLearningCapture'));
   });
 
   it('delegates command callbacks to the learnings internals', async () => {
-    const agentx = {} as AgentXContext;
+    const agentx = {} as FrontierContext;
     const showBrainstorm = sandbox.stub(learningsInternals, 'showBrainstorm').resolves();
     const showRankedLearnings = sandbox.stub(learningsInternals, 'showRankedLearnings').resolves();
     const showCaptureGuidance = sandbox.stub(learningsInternals, 'showCaptureGuidance').resolves();
@@ -48,17 +48,17 @@ describe('registerLearningsCommands', () => {
 
     registerLearningsCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, agentx);
 
-    await callbacks['agentx.showBrainstormGuide']!('prompt');
-    await callbacks['agentx.showPlanningLearnings']!('plan');
-    await callbacks['agentx.showReviewLearnings']!('review');
-    await callbacks['agentx.showKnowledgeCaptureGuidance']!();
-    await callbacks['agentx.showCompoundLoop']!();
-    await callbacks['agentx.showWorkflowNextStep']!();
-    await callbacks['agentx.deepenPlan']!();
-    await callbacks['agentx.kickoffReview']!();
-    await callbacks['agentx.showWorkflowRolloutScorecard']!();
-    await callbacks['agentx.showOperatorEnablementChecklist']!();
-    await callbacks['agentx.createLearningCapture']!();
+    await callbacks['frontier.showBrainstormGuide']!('prompt');
+    await callbacks['frontier.showPlanningLearnings']!('plan');
+    await callbacks['frontier.showReviewLearnings']!('review');
+    await callbacks['frontier.showKnowledgeCaptureGuidance']!();
+    await callbacks['frontier.showCompoundLoop']!();
+    await callbacks['frontier.showWorkflowNextStep']!();
+    await callbacks['frontier.deepenPlan']!();
+    await callbacks['frontier.kickoffReview']!();
+    await callbacks['frontier.showWorkflowRolloutScorecard']!();
+    await callbacks['frontier.showOperatorEnablementChecklist']!();
+    await callbacks['frontier.createLearningCapture']!();
 
     assert.ok(showBrainstorm.calledWith(agentx, 'prompt'));
     assert.ok(showRankedLearnings.calledWith(agentx, 'planning', 'plan'));

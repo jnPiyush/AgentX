@@ -1,4 +1,4 @@
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   runCriticalPreCheckFlow,
   runSetupWizardFlow,
@@ -15,9 +15,9 @@ export type { PreCheckResult } from './setupWizardTypes';
 
 /**
  * Run the full environment check and present an interactive report.
- * Called by the `agentx.checkEnvironment` command.
+ * Called by the `frontier.checkEnvironment` command.
  */
-export async function runSetupWizard(agentx: AgentXContext): Promise<void> {
+export async function runSetupWizard(agentx: FrontierContext): Promise<void> {
   await runSetupWizardFlow(agentx);
 }
 
@@ -26,7 +26,7 @@ export async function runSetupWizard(agentx: AgentXContext): Promise<void> {
  * Dependency validation is now expected to happen during explicit install/setup
  * flows, so activation should not call this automatically.
  */
-export async function runStartupCheck(agentx: AgentXContext): Promise<void> {
+export async function runStartupCheck(agentx: FrontierContext): Promise<void> {
   await runStartupCheckFlow(agentx);
 }
 
@@ -37,11 +37,11 @@ export async function runStartupCheck(agentx: AgentXContext): Promise<void> {
  * via a hidden terminal. A progress notification tracks the install. If all
  * tools are already present, resolves immediately with `passed: true`.
  *
- * @param mode - The AgentX operating provider ('local', 'github', or 'ado').
+ * @param mode - The Frontier operating provider ('local', 'github', or 'ado').
  * @returns PreCheckResult - `passed` is true when all required deps
  *   are satisfied after the silent install attempt.
  */
-export async function runSilentInstall(agentx: AgentXContext): Promise<PreCheckResult> {
+export async function runSilentInstall(agentx: FrontierContext): Promise<PreCheckResult> {
   return runSilentInstallFlow(agentx);
 }
 
@@ -54,7 +54,7 @@ export async function runSilentInstall(agentx: AgentXContext): Promise<PreCheckR
  * to install them automatically. VS Code extensions are installed via the
  * Extensions API; external CLI tools are installed via a terminal.
  *
- * @param agentx  - The AgentX context for integration detection.
+ * @param agentx  - The Frontier context for integration detection.
  * @param blocking - When true (default), shows a modal dialog that demands
  *   action before the user can continue. When false, uses a
  *   non-modal warning (suitable for background startup checks).
@@ -62,7 +62,7 @@ export async function runSilentInstall(agentx: AgentXContext): Promise<PreCheckR
  *   are satisfied (either already present or successfully installed).
  */
 export async function runCriticalPreCheck(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   blocking = true,
 ): Promise<PreCheckResult> {
   return runCriticalPreCheckFlow(agentx, blocking);

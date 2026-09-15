@@ -2,7 +2,7 @@
 name: "cowork-plugin-creator"
 description: 'Create upload-ready Microsoft 365 Copilot Cowork plugin packages containing manifest.json, color and outline icons, and one or more agent skills, MCP connectors, or both. Use for Cowork plugin authoring, packaging, and validation requests.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-08-17"
   updated: "2026-08-17"

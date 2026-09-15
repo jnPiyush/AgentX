@@ -12,7 +12,7 @@ describe('downloadFile SSRF boundary', function () {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-download-security-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-download-security-'));
   });
 
   afterEach(() => {

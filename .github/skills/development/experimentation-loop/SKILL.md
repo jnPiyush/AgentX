@@ -2,7 +2,7 @@
 name: "experimentation-loop"
 description: "Run a metric-driven autonomous experimentation loop on an isolated branch. Use when a task has a measurable target (latency, bundle size, test pass-rate, build time, memory, score, accuracy) and the agent should propose changes, measure each attempt against a baseline, keep wins and revert losses, and produce a durable audit trail. Distinct from iterative-loop, which is correctness-driven."
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.1.0"
   created: "2026-04-28"
   updated: "2026-05-21"

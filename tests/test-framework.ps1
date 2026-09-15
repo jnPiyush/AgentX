@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# AgentX Framework Self-Tests
+# Frontier Framework Self-Tests
 # Verifies CLI, templates, workflows, and project structure
 # Usage: pwsh tests/test-framework.ps1
 
@@ -44,7 +44,7 @@ function Assert-FileNotContains($path, $pattern, $label) {
 }
 
 Write-Host ""
-Write-Host " AgentX Framework Self-Tests" -ForegroundColor Cyan
+Write-Host " Frontier Framework Self-Tests" -ForegroundColor Cyan
 Write-Host " ================================================" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -57,11 +57,11 @@ Assert-FileExists "README.md" "README.md"
 Assert-FileExists "install.ps1" "install.ps1"
 Assert-FileExists "install.sh" "install.sh"
 Assert-FileExists "LICENSE" "LICENSE"
-Assert-FileContains "install.ps1" '"LICENSE"' "PowerShell installer extracts the AgentX license"
+Assert-FileContains "install.ps1" '"LICENSE"' "PowerShell installer extracts the Frontier license"
 Assert-FileContains "install.ps1" '"NOTICE"' "PowerShell installer extracts repository notices"
-Assert-FileContains "install.sh" '\$PREFIX/LICENSE' "Bash installer extracts the AgentX license"
+Assert-FileContains "install.sh" '\$PREFIX/LICENSE' "Bash installer extracts the Frontier license"
 Assert-FileContains "install.sh" '\$PREFIX/NOTICE' "Bash installer extracts repository notices"
-Assert-FileContains ".agentx/mcp-server/package.json" '"license": "Apache-2\.0"' "MCP package declares the AgentX Apache license"
+Assert-FileContains ".agentx/mcp-server/package.json" '"license": "Apache-2\.0"' "MCP package declares the Frontier Apache license"
 Assert-FileContains ".github/workflows/auto-release.yml" 'cp LICENSE NOTICE release-staging/mcp/' "Auto release stages MCP legal files"
 Assert-FileContains ".github/workflows/recover-release.yml" 'cp LICENSE NOTICE release-staging/mcp/' "Recovery release stages MCP legal files"
 Assert-FileContains "install.ps1" "docs/WORKFLOW\.md" "install.ps1 bundles WORKFLOW reference doc"
@@ -72,11 +72,11 @@ Assert-FileContains "install.ps1" "runtimeStatePatterns" "install.ps1 excludes r
 Assert-FileContains "install.sh" "\.agentx/config\.json|\.agentx/issues/\*|\.agentx/state/\*" "install.sh excludes repo runtime state from fresh installs"
 Assert-FileContains "install.ps1" "templates/memories" "install.ps1 seeds starter memory templates"
 Assert-FileContains "install.sh" "templates/memories" "install.sh seeds starter memory templates"
-Assert-FileContains "packs/agentx-copilot-cli/install.ps1" "Get-PackInstallPlan" "Copilot CLI installer builds an install plan from the pack manifest"
-Assert-FileContains "packs/agentx-copilot-cli/install.ps1" "Loaded install plan from manifest\.json" "Copilot CLI installer reports manifest-driven planning"
-Assert-FileContains "packs/agentx-copilot-cli/manifest.json" '"schemas"' "Copilot CLI manifest declares schema artifacts"
-Assert-FileContains "packs/agentx-core/manifest.json" "scripts/score-code-quality.ps1" "Core pack declares code-quality evaluator"
-Assert-FileContains "packs/agentx-core/manifest.json" "evaluation/rubrics/code-quality.md" "Core pack declares code-quality rubric"
+Assert-FileContains "packs/frontier-copilot-cli/install.ps1" "Get-PackInstallPlan" "Copilot CLI installer builds an install plan from the pack manifest"
+Assert-FileContains "packs/frontier-copilot-cli/install.ps1" "Loaded install plan from manifest\.json" "Copilot CLI installer reports manifest-driven planning"
+Assert-FileContains "packs/frontier-copilot-cli/manifest.json" '"schemas"' "Copilot CLI manifest declares schema artifacts"
+Assert-FileContains "packs/frontier-core/manifest.json" "scripts/score-code-quality.ps1" "Core pack declares code-quality evaluator"
+Assert-FileContains "packs/frontier-core/manifest.json" "evaluation/rubrics/code-quality.md" "Core pack declares code-quality rubric"
 Assert-FileContains ".agentx/mcp-server/package.json" "412e40abd4eb8beabfb952d80abf949a2baf27a3" "MCP runtime pins the patched fast-uri commit"
 Assert-FileContains ".agentx/mcp-server/package-lock.json" '"version": "3\.1\.7"' "MCP lock resolves the patched fast-uri version"
 Assert-FileNotContains ".agentx/mcp-server/package-lock.json" "pkgs\.visualstudio\.com|ms-feed-" "MCP lock contains no private registry URLs"
@@ -113,17 +113,17 @@ Assert-FileContains ".github/workflows/publish-marketplace.yml" 'VSIX_FILE="agen
 Assert-FileContains ".github/workflows/quality-gates.yml" "node tests/stamp-version-behavior.js" "PR quality gates run version stamper regression coverage"
 Assert-FileContains ".github/workflows/weekly-status.yml" "steps\.tokens\.outcome" "weekly status reports canonical token-check outcome"
 Assert-FileContains ".github/workflows/weekly-status.yml" "continue-on-error: true" "weekly status continues after token violations to generate the report"
-Assert-FileContains "packs/agentx-power-platform-builder/templates/SOLUTION-MANIFEST-TEMPLATE.md" '```xml' "Power Platform solution manifest uses a fenced XML block"
+Assert-FileContains "packs/frontier-power-platform-builder/templates/SOLUTION-MANIFEST-TEMPLATE.md" '```xml' "Power Platform solution manifest uses a fenced XML block"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-skill.ps1" "extension bundles canonical skill validator"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "validate-changed-skills.ps1" "extension bundles changed-skill no-regression validator"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "skill-quality.md" "extension bundles skill-quality rubric"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "score-code-quality.ps1" "extension bundles code-quality evaluator"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "code-quality.md" "extension bundles code-quality rubric"
 Assert-FileContains "vscode-extension/scripts/copy-assets.js" "scripts/node_modules/yaml" "extension bundles skill rubric YAML runtime"
-Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/pre-commit" "extension bundles pre-commit hook source"
-Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/commit-msg" "extension bundles commit-msg hook source"
-Assert-FileExists "vscode-extension/.github/agentx/.github/hooks/post-commit" "extension bundles post-commit hook source"
-Assert-FileExists "vscode-extension/.github/agentx/AGENT-PROTOCOL.md" "extension bundles the canonical protocol referenced by bundled agents"
+Assert-FileExists "vscode-extension/.github/frontier/.github/hooks/pre-commit" "extension bundles pre-commit hook source"
+Assert-FileExists "vscode-extension/.github/frontier/.github/hooks/commit-msg" "extension bundles commit-msg hook source"
+Assert-FileExists "vscode-extension/.github/frontier/.github/hooks/post-commit" "extension bundles post-commit hook source"
+Assert-FileExists "vscode-extension/.github/frontier/AGENT-PROTOCOL.md" "extension bundles the canonical protocol referenced by bundled agents"
 Assert-FileContains "vscode-extension/src/runtime/index.ts" "DEFAULT_HIGH_RISK_MIN_ITERATIONS" "runtime barrel exports every task-class minimum constant"
 Assert-FileContains "scripts/stocktake.ps1" "-Json" "stocktake consumes canonical rubric JSON"
 Assert-FileContains "scripts/stocktake.ps1" "/100" "stocktake reports 100-point skill scores"
@@ -135,7 +135,7 @@ Assert-FileExists ".agentx/templates/memories/decisions.md" "Starter memory: dec
 Write-Host ""
 Write-Host " 2. Agent Definitions" -ForegroundColor White
 
-$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "ux-designer", "devops", "reviewer-auto", "data-scientist", "tester", "fabric-engineer", "power-platform-builder", "consulting-research", "powerbi-analyst")
+$agents = @("frontier", "product-manager", "architect", "engineer", "reviewer", "ux-designer", "devops", "reviewer-auto", "data-scientist", "tester", "fabric-engineer", "power-platform-builder", "consulting-research", "powerbi-analyst")
 foreach ($agent in $agents) {
  Assert-FileExists ".github/agents/$agent.agent.md" "Agent: $agent"
 }
@@ -158,7 +158,7 @@ Assert-FileContains ".github/templates/SPEC-TEMPLATE.md" "AI/ML Specification" "
 Write-Host ""
 Write-Host " 4. Agent Definitions" -ForegroundColor White
 
-$agents = @("agent-x", "product-manager", "architect", "engineer", "reviewer", "reviewer-auto", "ux-designer", "devops", "data-scientist", "tester", "fabric-engineer", "power-platform-builder", "powerbi-analyst", "consulting-research")
+$agents = @("frontier", "product-manager", "architect", "engineer", "reviewer", "reviewer-auto", "ux-designer", "devops", "data-scientist", "tester", "fabric-engineer", "power-platform-builder", "powerbi-analyst", "consulting-research")
 foreach ($ag in $agents) {
  Assert-FileExists ".github/agents/$ag.agent.md" "Agent: $ag"
 }
@@ -167,7 +167,7 @@ foreach ($ag in $agents) {
 Assert-FileContains ".github/agents/engineer.agent.md" "description:" "engineer.agent.md has description"
 Assert-FileContains ".github/agents/engineer.agent.md" "model:" "engineer.agent.md has model"
 Assert-FileContains ".github/agents/fabric-engineer.agent.md" "type:fabric" "Fabric Engineer declares type:fabric trigger"
-Assert-FileContains ".github/agents/fabric-engineer.agent.md" "AgentX Power BI Analyst" "Fabric Engineer preserves Power BI handoff"
+Assert-FileContains ".github/agents/fabric-engineer.agent.md" "Frontier Power BI FDE" "Fabric Engineer preserves Power BI handoff"
 Assert-FileContains ".github/agents/power-platform-builder.agent.md" "type:lowcode" "Power Platform Builder declares type:lowcode trigger"
 Assert-FileContains ".github/agents/power-platform-builder.agent.md" "MUST NOT call pac auth" "Power Platform Builder forbids tenant authentication"
 
@@ -364,7 +364,7 @@ Assert-FileContains ".github/agents/ux-designer.agent.md" "Read PRD -> Design La
 Assert-FileContains ".github/skills/design/prototype-audit/SKILL.md" "Pass 0: Design-language conformance" "Prototype audit runs deterministic design-language pass first"
 Assert-FileContains ".github/skills/design/prototype-audit/SKILL.md" '(?s)## Output.*?- Status: PASS \| FIXED \| BLOCKED \| DEGRADED.*?## Loop contract' "Prototype audit output supports the DEGRADED state"
 Assert-FileNotContains ".github/skills/design/prototype-audit/SKILL.md" "See the impeccable skill" "Prototype audit references the renamed integration explicitly"
-Assert-FileContains ".github/skills/design/anti-slop/SKILL.md" "T2, T3, T8, T10" "Anti-slop retains AgentX-only fabrication and emoji tells"
+Assert-FileContains ".github/skills/design/anti-slop/SKILL.md" "T2, T3, T8, T10" "Anti-slop retains Frontier-only fabrication and emoji tells"
 Assert-FileContains "NOTICE" "\.github/skills/design/impeccable-integration/SKILL\.md" "NOTICE points to the Impeccable integration skill"
 Assert-FileNotContains "NOTICE" "\.github/skills/design/impeccable/SKILL\.md" "NOTICE has no stale Impeccable skill path"
 Assert-FileContains "Skills.md" "Prototype Build\|impeccable-integration->" "Prototype workflow uses the non-colliding Impeccable integration id"
@@ -374,8 +374,8 @@ Assert-FileContains ".github/templates/UX-TEMPLATE.md" "Detector Status.*PASS \|
 Assert-FileContains ".github/templates/UX-TEMPLATE.md" "Ran: T1-T10 \+ Honest Placeholders \+ axe \+ Pass 9 critique" "UX template records the complete DEGRADED fallback"
 Assert-FileContains ".github/skills/design/impeccable-integration/SKILL.md" "Ran: T1-T10 \+ Honest Placeholders \+ axe \+ Pass 9 critique" "Impeccable integration records the complete DEGRADED fallback"
 Assert-FileContains ".github/agents/ux-designer.agent.md" "PRODUCT.md and DESIGN.md are cited" "UX exit gate requires design-language evidence"
-Assert-FileExists "vscode-extension/.github/agentx/skills/design/impeccable-integration/SKILL.md" "Bundled Impeccable integration skill"
-Assert-FileContains "vscode-extension/package.json" "\.github/agentx/skills/design/impeccable-integration/SKILL\.md" "VS Code contributes the Impeccable integration skill"
+Assert-FileExists "vscode-extension/.github/frontier/skills/design/impeccable-integration/SKILL.md" "Bundled Impeccable integration skill"
+Assert-FileContains "vscode-extension/package.json" "\.github/frontier/skills/design/impeccable-integration/SKILL\.md" "VS Code contributes the Impeccable integration skill"
 $prototypeAuditScoreJson = & pwsh -NoProfile -File (Join-Path $script:root "scripts/score-skill.ps1") -SkillPath (Join-Path $script:root ".github/skills/design/prototype-audit/SKILL.md") -Json 2>$null | Out-String
 $prototypeAuditScore = $prototypeAuditScoreJson | ConvertFrom-Json -Depth 20
 Assert-True ($LASTEXITCODE -eq 0 -and @($prototypeAuditScore.skills)[0].blockers.Count -eq 0) "Prototype audit frontmatter passes the real YAML-backed skill scorer"
@@ -400,10 +400,10 @@ Assert-FileContains "scripts/score-output.ps1" "\*\.test\.ts','\*\.spec\.ts','\*
 Write-Host ""
 Write-Host " 7. AI-First Intent Preservation" -ForegroundColor White
 
-# Agent X has domain classification
-Assert-FileContains ".github/agents/agent-x.agent.md" "## Domain Detection" "Agent X has domain classification"
-Assert-FileContains ".github/agents/agent-x.agent.md" "needs:ai" "Agent X detects AI domain"
-Assert-FileContains ".github/agents/agent-x.agent.md" "## PRD Intent Validation" "Agent X validates PRD intent"
+# Frontier has domain classification
+Assert-FileContains ".github/agents/frontier.agent.md" "## Domain Detection" "Frontier has domain classification"
+Assert-FileContains ".github/agents/frontier.agent.md" "needs:ai" "Frontier detects AI domain"
+Assert-FileContains ".github/agents/frontier.agent.md" "## PRD Intent Validation" "Frontier validates PRD intent"
 
 # PM has AI domain classification step
 Assert-FileContains ".github/agents/product-manager.agent.md" "Classify Domain Intent" "PM has domain classification step"
@@ -425,7 +425,7 @@ Assert-FileContains ".github/agents/reviewer.agent.md" "Reject path" "Reviewer r
 Write-Host ""
 Write-Host " 8. GitHub Actions" -ForegroundColor White
 
-Assert-FileExists ".github/workflows/agent-x.yml" "agent-x.yml workflow"
+Assert-FileExists ".github/workflows/frontier.yml" "frontier.yml workflow"
 Assert-FileExists ".github/workflows/quality-gates.yml" "quality-gates.yml workflow"
 Assert-FileExists "azure-pipelines.yml" "azure-pipelines.yml pipeline"
 
@@ -441,7 +441,7 @@ Assert-FileExists ".github/hooks/post-commit" "post-commit hook"
 Write-Host ""
 Write-Host " 10. Documentation Consistency" -ForegroundColor White
 
-Assert-FileContains "AGENTS.md" "single source of truth|system of record|Map to all AgentX resources" "AGENTS.md declares single source"
+Assert-FileContains "AGENTS.md" "single source of truth|system of record|Map to all Frontier resources" "AGENTS.md declares single source"
 Assert-FileContains "README.md" "$skillCount production skills" "README skill count heading matches ($skillCount)"
 Assert-FileContains "README.md" "$skillCount skills" "README framework totals matches ($skillCount)"
 Assert-FileExists "docs/GUIDE.md" "Consolidated Guide (quickstart + setup)"

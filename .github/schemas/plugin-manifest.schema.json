@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "AgentX Plugin Manifest",
-  "description": "Defines an installable AgentX plugin with commands, scripts, and metadata.",
+  "title": "Frontier Plugin Manifest",
+  "description": "Defines an installable Frontier plugin with commands, scripts, and metadata.",
   "type": "object",
   "required": ["name", "version", "description", "entry"],
   "properties": {
@@ -124,7 +124,7 @@
       "properties": {
         "agentx": {
           "type": "string",
-          "description": "Semver range describing compatible AgentX host versions."
+          "description": "Semver range describing compatible Frontier host versions."
         }
       },
       "additionalProperties": false

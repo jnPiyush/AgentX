@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Validate frontmatter in AgentX instruction, agent, and skill files against JSON schemas.
+ Va Validate frontmatter in Frontier instruction, agent, and skill files against JSON schemas.
 
 .DESCRIPTION
  Parses YAML frontmatter from .instructions.md, .agent.md, and SKILL.md files,
@@ -150,7 +150,7 @@ function Test-AgentFile([string]$FilePath) {
 
  # Required: description
  if (-not $fm["description"]) {
- Write-Fail "$name : Missing required field 'description'. FIX: Add a 'description:' field to the YAML frontmatter. This tells Agent X what this agent does. Example: description: 'Implements code with tests and documentation.'"
+ Write-Fail "$name : Missing required field 'description'. FIX: Add a 'description:' field to the YAML frontmatter. This tells Frontier what this agent does. Example: description: 'Implements code with tests and documentation.'"
  } elseif ($fm["description"].Length -lt 10) {
  Write-Fail "$name : description too short (min 10 chars). FIX: Expand the description to summarize the agent's purpose. Example: description: 'Implements production code with 80% test coverage.'"
  } else {
@@ -366,7 +366,7 @@ function Test-SkillFile([string]$FilePath) {
 # -- Main ------------------------------------------------
 
 Write-Host ""
-Write-Host " AgentX Frontmatter Validation" -ForegroundColor Cyan
+Write-Host " Frontier Frontmatter Validation" -ForegroundColor Cyan
 Write-Host " ============================================" -ForegroundColor DarkGray
 Write-Host ""
 

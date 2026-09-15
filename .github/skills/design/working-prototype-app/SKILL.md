@@ -2,7 +2,7 @@
 name: "working-prototype-app"
 description: 'Build a runnable, multi-page UX prototype as a real SPA when static HTML is insufficient. Use when the prototype must demonstrate routing, state persistence, dynamic data, or interactive flows that exceed what plain HTML/CSS can convey. Provides a Vite + React + Tailwind + Framer Motion + Lucide scaffold, data-driven page layout, debounced localStorage state, and a clean file structure for `src/`.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-12"
   updated: "2026-05-12"

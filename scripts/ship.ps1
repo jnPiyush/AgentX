@@ -54,18 +54,18 @@ $fromIdx = [array]::IndexOf($Order, $From)
 $toIdx   = [array]::IndexOf($Order, $To)
 if ($fromIdx -lt 0 -or $toIdx -lt 0 -or $toIdx -lt $fromIdx) { throw "Invalid step range: $From -> $To" }
 
-$AgentXCli = Join-Path (Resolve-Path .).Path '.agentx/agentx.ps1'
-if (-not (Test-Path $AgentXCli)) { throw "agentx CLI not found at $AgentXCli" }
+$FrontierCli = Join-Path (Resolve-Path .).Path '.agentx/agentx.ps1'
+if (-not (Test-Path $FrontierCli)) { throw "agentx CLI not found at $FrontierCli" }
 
-function Invoke-AgentX {
+function Invoke-Frontier {
     param([string[]]$Args)
-    & pwsh -NoProfile -File $AgentXCli @Args
+    & pwsh -NoProfile -File $FrontierCli @Args
     return $LASTEXITCODE
 }
 
 function Set-Phase {
     param([string]$Agent)
-    Invoke-AgentX -Args @('state','-a',$Agent,'-s','working','-i',[string]$Issue) | Out-Null
+    Invoke-Frontier -Args @('state','-a',$Agent,'-s','working','-i',[string]$Issue) | Out-Null
 }
 
 function Test-PlanArtifact {
@@ -99,7 +99,7 @@ $steps = @(
     @{
         name = 'work'; agent = 'engineer';
         run  = { Write-Host "[ship] Work: implementation phase. Quality loop must be active." -ForegroundColor Cyan
-                  $code = Invoke-AgentX -Args @('loop','status')
+                  $code = Invoke-Frontier -Args @('loop','status')
                   return ($code -eq 0 ? 0 : 1) }
         gate = { $true }
     },
@@ -114,14 +114,14 @@ $steps = @(
         name = 'scrub'; agent = 'engineer';
         run  = { if ($SkipScrub) { Write-Host "[ship] Scrub: -SkipScrub is deprecated and ignored; scrub is mandatory on every run" -ForegroundColor DarkYellow }
                   Write-Host "[ship] Scrub: scanning workspace (mandatory deslop pass)" -ForegroundColor Cyan
-                  & pwsh -NoProfile -File $AgentXCli scrub -Path . -Quiet | Out-Host
+                  & pwsh -NoProfile -File $FrontierCli scrub -Path . -Quiet | Out-Host
                   return $LASTEXITCODE }
         gate = { $true }
     },
     @{
         name = 'test'; agent = 'tester';
         run  = { Write-Host "[ship] Test: invoking tester agent gate (agent-browser is the default surface for UI-bearing changes; see browser-automation skill)" -ForegroundColor Cyan
-                  $code = Invoke-AgentX -Args @('validate',[string]$Issue,'tester')
+                  $code = Invoke-Frontier -Args @('validate',[string]$Issue,'tester')
                   return ($code -eq 0 ? 0 : 1) }
         gate = { $true }
     },
@@ -176,7 +176,7 @@ if ($Parallel) {
                     param($stepName, $issue, $skipScrub, $agentXCliPath, $cwd)
                     Set-Location $cwd
 
-                    function Invoke-ShipAgentX {
+                    function Invoke-ShipFrontier {
                         param([string[]]$Args)
                         & pwsh -NoProfile -File $agentXCliPath @Args
                         return $LASTEXITCODE
@@ -207,7 +207,7 @@ if ($Parallel) {
                         }
                         'test' {
                             Write-Host '[ship] Test: invoking tester agent gate (agent-browser is the default surface for UI-bearing changes; see browser-automation skill)' -ForegroundColor Cyan
-                            $code = Invoke-ShipAgentX -Args @('validate', [string]$issue, 'tester')
+                            $code = Invoke-ShipFrontier -Args @('validate', [string]$issue, 'tester')
                             $gateOk = ($code -eq 0)
                         }
                         default {
@@ -216,7 +216,7 @@ if ($Parallel) {
                         }
                     }
                     [PSCustomObject]@{ name = $stepName; code = $code; gateOk = $gateOk }
-                } -ArgumentList $name, $Issue, [bool]$SkipScrub, $AgentXCli, (Resolve-Path .).Path
+                } -ArgumentList $name, $Issue, [bool]$SkipScrub, $FrontierCli, (Resolve-Path .).Path
             }
             $results = $jobs | Wait-Job | Receive-Job
             $jobs | Remove-Job -Force

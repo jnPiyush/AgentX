@@ -1,13 +1,13 @@
 #!/usr/bin/env pwsh
 [CmdletBinding()]
 param(
-    [string]$Issue = $env:AGENTX_ISSUE,
-    [string]$Prompt = $env:AGENTX_TASK
+    [string]$Issue = $(if ($env:FRONTIER_ISSUE) { $env:FRONTIER_ISSUE } elseif ($env:HVE_ISSUE) { $env:HVE_ISSUE } else { $env:AGENTX_ISSUE }),
+    [string]$Prompt = $(if ($env:FRONTIER_TASK) { $env:FRONTIER_TASK } elseif ($env:HVE_TASK) { $env:HVE_TASK } else { $env:AGENTX_TASK })
 )
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..' '..')).Path
-$traceDir = Join-Path $root '.agentx/state'
+$traceDir = Join-Path $root '.frontier/state'
 $traceFile = Join-Path $traceDir 'hook-trace.jsonl'
 
 function Write-HookTrace {
@@ -21,14 +21,14 @@ function Write-HookTrace {
     } | ConvertTo-Json -Compress | Add-Content -Path $traceFile -Encoding utf8
 }
 
-$cli = Join-Path $root '.agentx/agentx.ps1'
+$cli = Join-Path $root '.agentx/frontier.ps1'
 if (-not (Test-Path $cli)) {
-    Write-HookTrace -Status 'skipped' -Detail 'AgentX CLI wrapper not found.'
+    Write-HookTrace -Status 'skipped' -Detail 'Frontier CLI wrapper not found.'
     exit 0
 }
 
 if ([string]::IsNullOrWhiteSpace($Issue) -or [string]::IsNullOrWhiteSpace($Prompt)) {
-    Write-HookTrace -Status 'skipped' -Detail 'AGENTX_ISSUE or AGENTX_TASK was not provided.'
+    Write-HookTrace -Status 'skipped' -Detail 'FRONTIER_ISSUE or FRONTIER_TASK was not provided.'
     exit 0
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
-# AgentX Plugin: read-slides
+# Frontier Plugin: read-slides
 # Convert Microsoft PowerPoint (.pptx) decks to Markdown using python-pptx.
 
 [CmdletBinding()]

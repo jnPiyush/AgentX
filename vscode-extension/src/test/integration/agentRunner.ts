@@ -114,9 +114,9 @@ export function validateTokenBudgets(
 }
 
 /**
- * Verify that Agent X is equipped for autonomous orchestration and direct execution.
+ * Verify that Frontier is equipped for autonomous orchestration and direct execution.
  */
-export function validateAgentXAutonomous(agents: AgentDef[]): AgentCheckResult[] {
+export function validateFrontierAutonomous(agents: AgentDef[]): AgentCheckResult[] {
   const results: AgentCheckResult[] = [];
   const agentX = agents.find((a) => {
     const normalized = a.name.toLowerCase();
@@ -128,12 +128,12 @@ export function validateAgentXAutonomous(agents: AgentDef[]): AgentCheckResult[]
       agent: 'agent-x',
       check: 'autonomous-capability',
       passed: false,
-      detail: 'AgentX Auto definition not found',
+      detail: 'Frontier Orchestration FDE definition not found',
     });
     return results;
   }
 
-  // Agent X should have the core tools required for direct execution.
+  // Frontier should have the core tools required for direct execution.
   const requiredTools = ['editFiles', 'runCommands'];
   for (const tool of requiredTools) {
     const hasTool = agentX.tools.some(
@@ -144,8 +144,8 @@ export function validateAgentXAutonomous(agents: AgentDef[]): AgentCheckResult[]
       check: 'autonomous-tools',
       passed: hasTool,
       detail: hasTool
-        ? `AgentX Auto includes required tool: ${tool}`
-        : `AgentX Auto is missing required tool: ${tool}`,
+        ? `Frontier Orchestration FDE includes required tool: ${tool}`
+        : `Frontier Orchestration FDE is missing required tool: ${tool}`,
     });
   }
 

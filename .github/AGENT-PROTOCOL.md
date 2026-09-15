@@ -1,12 +1,12 @@
 ---
-description: 'Cross-Cutting Agent Protocol -- the single source of truth for the rules every AgentX agent shares (quality loop, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research).'
+description: 'Cross-Cutting Agent Protocol -- the single source of truth for the rules every Frontier FDE shares (quality loop, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research).'
 applyTo: '**'
 ---
 
 # Cross-Cutting Agent Protocol (Single Source of Truth)
 
 > This file is the ONE canonical home for the cross-cutting concerns that apply to
-> EVERY AgentX agent. Agent definition files (`.github/agents/*.agent.md`) MUST NOT
+> EVERY Frontier FDE. Agent definition files (`.github/agents/*.agent.md`) MUST NOT
 > re-document these rules in full. They keep only the two front-loaded stubs the
 > empirical pitfall log requires (Pre-edit gate + Honesty rule) and point here.
 >
@@ -27,16 +27,16 @@ applyTo: '**'
 
 ### 1.1 Pre-Edit Gate (NON-SKIPPABLE)
 
-Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as the ABSOLUTE FIRST
+Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as the ABSOLUTE FIRST
 tool call BEFORE editing, creating, or deleting any file. Reading the task and the
 artifacts the active role is required to read is allowed; mutating the workspace
 before `loop start` succeeds is a contract violation.
 
 ### 1.2 Honesty Rule
 
-If asked whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the
+If asked whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the
 actual state verbatim. Never claim completion unless
-`.agentx/agentx.ps1 loop complete` succeeded in the current session.
+`.agentx/frontier.ps1 loop complete` succeeded in the current session.
 
 ### 1.3 Risk-Based Minimum Iterations
 
@@ -57,7 +57,7 @@ never lowered. The loop is done only when
 structured reviewer verdict on the FINAL iteration:
 
 ```
-.agentx/agentx.ps1 loop iterate -s "Subagent Review: <outcome>" -e <evidence> \
+.agentx/frontier.ps1 loop iterate -s "Subagent Review: <outcome>" -e <evidence> \
   --verdict approved --reviewer <reviewer-id> --high 0 --medium 0 --low <n>
 ```
 
@@ -97,18 +97,18 @@ shown by `loop status`. The canonical tiers are:
 |------|-------|
 | standard | Deliver, verify, and independently review in one bounded pass |
 | auto-fix | Review/fix with focused checks, then independent decision with final evidence |
-| complex / AgentX | Implement, validate changed surfaces, then independent review with final evidence |
+| complex / Frontier | Implement, validate changed surfaces, then independent review with final evidence |
 | high-risk | Implement, harden, run security and applicable adversarial checks, then independently review |
 
 ### 1.5 Per-Iteration Reporting + Final Summary (MANDATORY)
 
 - **Report each iteration as it happens**: call
-  `.agentx/agentx.ps1 loop iterate -s "<what changed + verification result>" -e <evidence>`
+  `.agentx/frontier.ps1 loop iterate -s "<what changed + verification result>" -e <evidence>`
   after every fix/verify cycle. State the iteration number, focus, what you did,
   and the gate result.
 - **Summarize at the end**: before handoff, print the role's Delivery Report table
   (a one-line outcome plus the per-row results) and run
-  `.agentx/agentx.ps1 loop complete -s "<summary>" -e <fresh-evidence>`.
+  `.agentx/frontier.ps1 loop complete -s "<summary>" -e <fresh-evidence>`.
 
 ### 1.6 Hard Gate
 
@@ -156,7 +156,7 @@ council Synthesis (or document an override rationale).
 ## 4. Scrub / Deslop (MANDATORY, NO SKIP)
 
 Every run that changes files MUST pass a deslop scrub before review/handoff:
-`pwsh .agentx/agentx.ps1 scrub -Path <changed-area>`. Run scrub through the agentx
+`pwsh .agentx/frontier.ps1 scrub -Path <changed-area>`. Run scrub through the agentx
 CLI (not a literal `scripts/scrub.ps1` path) so it resolves the bundled scanner in
 zero-copy workspaces. Apply safe fixes; behavior MUST NOT change. The pre-commit
 hook hard-fails on HIGH-severity scrub findings in staged files; there is no skip

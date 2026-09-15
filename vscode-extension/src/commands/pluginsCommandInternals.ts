@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   getLatestCompatibleRelease,
   parsePluginRegistryIndex,
@@ -21,6 +21,7 @@ import {
   type PluginTrustDecision,
 } from '../utils/pluginInstallState';
 import { readInstalledVersion } from '../utils/versionChecker';
+import { hasFrontierState, resolveFrontierStatePath } from '../utils/frontierPaths';
 import {
  ARCHIVE_URL,
  BRANCH,
@@ -100,7 +101,7 @@ export function resolvePluginTarget(root: string, targetDirName: string): string
     throw new Error(`Unsafe plugin target directory: ${targetDirName}`);
   }
 
-  const pluginsRoot = path.resolve(root, '.agentx', 'plugins');
+  const pluginsRoot = resolveFrontierStatePath(root, 'plugins');
   const validation = validatePath(path.join(pluginsRoot, targetDirName), root);
   if (!validation.allowed) {
     throw new Error(`Plugin target blocked by path policy: ${validation.reason ?? targetDirName}`);
@@ -118,7 +119,7 @@ export function resolvePluginTarget(root: string, targetDirName: string): string
 function buildPluginDescription(summary: PluginCatalogSummary, source: 'archive' | 'registry'): string {
   const versionSuffix = summary.version ? ` v${summary.version}` : '';
   const compatibilitySuffix = summary.agentxRange
-    ? ` | AgentX ${summary.agentxRange}`
+    ? ` | Frontier ${summary.agentxRange}`
     : '';
   const sourceSuffix = source === 'registry' ? ' | registry' : '';
   return `${summary.description}${versionSuffix}${compatibilitySuffix}${sourceSuffix}`;
@@ -158,7 +159,7 @@ function buildRegistrySummary(entry: PluginRegistryEntry, hostVersion: string): 
     publisher: entry.publisher,
     qualifiedId: entry.qualifiedId,
     label: entry.displayName ?? entry.qualifiedId,
-    description: entry.description ?? 'AgentX plugin',
+    description: entry.description ?? 'Frontier plugin',
     version: release.version,
     agentxRange: release.engines?.agentx,
   };
@@ -287,7 +288,7 @@ async function loadArchivePluginPicks(root: string): Promise<LocalPluginPick[]> 
 
   const pluginsRoot = path.join(resolveArchiveRoot(rawDir), '.agentx', 'plugins');
   if (!fs.existsSync(pluginsRoot)) {
-    throw new Error('No AgentX plugins were found in the source archive.');
+    throw new Error('No Frontier plugins were found in the source archive.');
   }
 
   const picks = getLocalPluginPicks(pluginsRoot);
@@ -523,16 +524,16 @@ async function installRegistryPlugin(
 
 export async function runAddPluginCommand(
  context: vscode.ExtensionContext,
- _agentx: AgentXContext,
+ _agentx: FrontierContext,
 ): Promise<void> {
- const root = await promptWorkspaceRoot('AgentX - Add Plugin');
+ const root = await promptWorkspaceRoot('Frontier - Add Plugin');
  if (!root) {
   return;
  }
 
- if (!fs.existsSync(path.join(root, '.agentx', 'config.json'))) {
+ if (!hasFrontierState(root)) {
   vscode.window.showWarningMessage(
-   'AgentX plugins require workspace initialization. Run "AgentX: Initialize Local Runtime" first.',
+   'Frontier plugins require workspace initialization. Run "Frontier: Initialize Local Runtime" first.',
   );
   return;
  }
@@ -545,7 +546,7 @@ export async function runAddPluginCommand(
   await vscode.window.withProgress(
    {
     location: vscode.ProgressLocation.Notification,
-    title: 'AgentX: Loading plugin catalog...',
+    title: 'Frontier: Loading plugin catalog...',
     cancellable: false,
    },
    async (progress) => {
@@ -562,14 +563,14 @@ export async function runAddPluginCommand(
 
   const picks = catalog?.picks ?? [];
   if (picks.length === 0) {
-   throw new Error('No AgentX plugins are available to install.');
+   throw new Error('No Frontier plugins are available to install.');
   }
 
   const pick = await vscode.window.showQuickPick(picks, {
    placeHolder: 'Select a plugin to install',
     title: catalog?.source === 'registry'
-      ? 'AgentX - Add Published Plugin'
-      : 'AgentX - Add Plugin',
+      ? 'Frontier - Add Published Plugin'
+      : 'Frontier - Add Plugin',
   });
   if (!pick) {
    return;
@@ -578,7 +579,7 @@ export async function runAddPluginCommand(
   const pluginTarget = resolvePluginTarget(root, pick.targetDirName);
   if (fs.existsSync(pluginTarget)) {
    const overwrite = await vscode.window.showWarningMessage(
-    `AgentX plugin \"${pick.label}\" is already installed. Reinstall?`,
+    `Frontier plugin \"${pick.label}\" is already installed. Reinstall?`,
     'Reinstall',
     'Cancel',
    );
@@ -590,7 +591,7 @@ export async function runAddPluginCommand(
   await vscode.window.withProgress(
    {
     location: vscode.ProgressLocation.Notification,
-    title: 'AgentX: Installing plugin...',
+    title: 'Frontier: Installing plugin...',
     cancellable: false,
    },
    async (progress) => {
@@ -623,10 +624,10 @@ export async function runAddPluginCommand(
    },
   );
 
-  vscode.window.showInformationMessage(`AgentX plugin installed: ${pick.label}`);
-  vscode.commands.executeCommand('agentx.refresh');
+  vscode.window.showInformationMessage(`Frontier plugin installed: ${pick.label}`);
+  vscode.commands.executeCommand('frontier.refresh');
  } catch (err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
-  vscode.window.showErrorMessage(`AgentX plugin install failed: ${message}`);
+  vscode.window.showErrorMessage(`Frontier plugin install failed: ${message}`);
  }
 }

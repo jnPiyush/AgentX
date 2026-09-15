@@ -1,6 +1,6 @@
 ---
 name: git-worktrees
-description: Run parallel agent sessions on the same repo using git worktrees without corrupting the primary checkout. Use when an agent needs an isolated working directory for a prototype, a long-running experiment, a parallel branch, or a deploy artifact, especially when AgentX is being driven from a single primary clone.
+description: Run parallel agent sessions on the same repo using git worktrees without corrupting the primary checkout. Use when an agent needs an isolated working directory for a prototype, a long-running experiment, a parallel branch, or a deploy artifact, especially when Frontier is being driven from a single primary clone.
 ---
 
 # Git Worktrees
@@ -125,7 +125,7 @@ If a worktree is not viable (read-only filesystem, hostile CI, repo with unmigra
 
 This is slower and loses shared object storage, but it is the safe fallback.
 
-## AgentX Wiring
+## Frontier Wiring
 
 This skill is referenced from:
 

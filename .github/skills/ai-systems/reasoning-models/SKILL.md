@@ -2,7 +2,7 @@
 name: "reasoning-models"
 description: 'Use reasoning / thinking models (OpenAI o-series, Anthropic extended thinking, DeepSeek R1, Gemini Thinking) effectively. Covers when to choose reasoning vs fast models, prompt patterns for reasoners, reasoning_effort / thinking budget controls, structured outputs with reasoning, cost/latency trade-offs, and combining reasoners with fast models.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

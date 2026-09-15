@@ -17,9 +17,26 @@ import {
   ESSENTIAL_FILES,
   RUNTIME_ASSET_DIRS,
   RUNTIME_DIRS,
+  mergeGitignore,
   writeWorkspaceRuntimeWrappers,
 } from '../../commands/initializeInternals';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
+
+describe('Frontier generated ignore rules', () => {
+  it('ignores active state and legacy migration paths without removing user rules', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ignore-'));
+    try {
+      fs.writeFileSync(path.join(root, '.gitignore'), 'custom-user-rule\n');
+      mergeGitignore(root);
+      mergeGitignore(root);
+      const content = fs.readFileSync(path.join(root, '.gitignore'), 'utf8');
+      for (const entry of ['.frontier/', '.hve/', '.agentx/', '.frontier.migrating-*/', 'custom-user-rule']) {
+        assert.ok(content.includes(entry));
+      }
+      assert.equal(content.split('.frontier/').length - 1, 1);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -28,7 +45,7 @@ import { AgentXContext } from '../../agentxContext';
 describe('registerInitializeLocalRuntimeCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
   let registeredCallback: (...args: unknown[]) => unknown;
   let originalWorkspaceFolders: typeof vscode.workspace.workspaceFolders;
 
@@ -42,7 +59,7 @@ describe('registerInitializeLocalRuntimeCommand', () => {
 
     fakeAgentx = {
       checkInitialized: sandbox.stub(),
-    } as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    } as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     // Save original
     originalWorkspaceFolders = vscode.workspace.workspaceFolders;
@@ -54,7 +71,7 @@ describe('registerInitializeLocalRuntimeCommand', () => {
       },
     );
 
-    registerInitializeLocalRuntimeCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    registerInitializeLocalRuntimeCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
   });
 
   afterEach(() => {
@@ -65,7 +82,7 @@ describe('registerInitializeLocalRuntimeCommand', () => {
 
   it('should register agentx.initializeLocalRuntime command', () => {
     assert.ok(
-      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.initializeLocalRuntime'),
+      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.initializeLocalRuntime'),
     );
   });
 
@@ -102,7 +119,7 @@ describe('registerInitializeLocalRuntimeCommand', () => {
 describe('runInitializeLocalRuntimeCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
   let originalWorkspaceFolders: typeof vscode.workspace.workspaceFolders;
 
   beforeEach(() => {
@@ -112,7 +129,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
       extensionUri: vscode.Uri.file('/test/extension'),
       extension: { packageJSON: { version: '8.4.0' } },
     } as unknown as vscode.ExtensionContext;
-    fakeAgentx = {} as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    fakeAgentx = {} as unknown as sinon.SinonStubbedInstance<FrontierContext>;
     originalWorkspaceFolders = vscode.workspace.workspaceFolders;
   });
 
@@ -125,7 +142,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
     (vscode.workspace as any).workspaceFolders = undefined;
     const errorStub = sandbox.stub(vscode.window, 'showErrorMessage');
 
-    await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    await runInitializeLocalRuntimeCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
 
     sinon.assert.calledOnce(errorStub);
     assert.ok(String(errorStub.firstCall.args[0]).includes('Open a workspace folder first'));
@@ -136,13 +153,13 @@ describe('runInitializeLocalRuntimeCommand', () => {
     assert.deepEqual(ESSENTIAL_FILES, []);
     assert.deepEqual(RUNTIME_ASSET_DIRS, [
       {
-        source: path.join('.github', 'agentx', '.agentx', 'templates', 'memories'),
+        source: path.join('.github', 'frontier', '.agentx', 'templates', 'memories'),
         destination: 'memories',
       },
     ]);
 
-    assert.ok(RUNTIME_DIRS.includes('.agentx/state'));
-    assert.ok(RUNTIME_DIRS.includes('.agentx/sessions'));
+    assert.ok(RUNTIME_DIRS.includes('.frontier/state'));
+    assert.ok(RUNTIME_DIRS.includes('.frontier/sessions'));
     assert.ok(RUNTIME_DIRS.includes('docs/execution/plans'));
     assert.ok(RUNTIME_DIRS.includes('docs/execution/progress'));
     assert.ok(RUNTIME_DIRS.includes('docs/artifacts/reviews'));
@@ -156,8 +173,8 @@ describe('runInitializeLocalRuntimeCommand', () => {
   });
 
   it('should seed Copilot-CLI-friendly .github asset trees from the extension bundle', () => {
-    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
-    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
+    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ext-'));
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-workspace-'));
 
     try {
       for (const asset of [...COPILOT_CLI_ASSET_DIRS, ...COPILOT_CLI_SUPPORT_DIRS]) {
@@ -202,7 +219,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
   });
 
   it('should seed every CLI asset from the pristine bundle seed tree', () => {
-    const seedPrefix = path.join('.github', 'agentx', 'seed');
+    const seedPrefix = path.join('.github', 'frontier', 'seed');
     const allAssets = [
       ...COPILOT_CLI_ASSET_DIRS,
       ...COPILOT_CLI_SUPPORT_DIRS,
@@ -235,8 +252,8 @@ describe('runInitializeLocalRuntimeCommand', () => {
   });
 
   it('should seed starter memory files without overwriting existing workspace memory', () => {
-    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
-    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
+    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ext-'));
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-workspace-'));
 
     try {
       const bundledMemories = path.join(extensionRoot, RUNTIME_ASSET_DIRS[0].source);
@@ -268,31 +285,35 @@ describe('runInitializeLocalRuntimeCommand', () => {
     // Spawns bash for syntax validation; process startup on Windows regularly
     // exceeds the default 10s mocha budget.
     this.timeout(120000);
-    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
-    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
+    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ext-'));
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-workspace-'));
 
     try {
       writeWorkspaceRuntimeWrappers(extensionRoot, workspaceRoot);
 
-      const powerShellLauncher = fs.readFileSync(path.join(workspaceRoot, '.agentx', 'agentx.ps1'), 'utf8');
-      const issuePowerShellLauncher = fs.readFileSync(path.join(workspaceRoot, '.agentx', 'local-issue-manager.ps1'), 'utf8');
-      const bashLauncher = fs.readFileSync(path.join(workspaceRoot, '.agentx', 'agentx.sh'), 'utf8');
-      const issueBashLauncher = fs.readFileSync(path.join(workspaceRoot, '.agentx', 'local-issue-manager.sh'), 'utf8');
+      const powerShellLauncher = fs.readFileSync(path.join(workspaceRoot, '.frontier', 'frontier.ps1'), 'utf8');
+      assert.equal(fs.readFileSync(path.join(workspaceRoot, '.agentx', 'frontier.ps1'), 'utf8'), powerShellLauncher);
+      assert.ok(fs.existsSync(path.join(workspaceRoot, '.agentx', 'frontier.sh')));
+      const issuePowerShellLauncher = fs.readFileSync(path.join(workspaceRoot, '.frontier', 'local-issue-manager.ps1'), 'utf8');
+      const bashLauncher = fs.readFileSync(path.join(workspaceRoot, '.frontier', 'frontier.sh'), 'utf8');
+      const issueBashLauncher = fs.readFileSync(path.join(workspaceRoot, '.frontier', 'local-issue-manager.sh'), 'utf8');
 
+      assert.ok(powerShellLauncher.includes('$env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot'));
       assert.ok(powerShellLauncher.includes('$env:AGENTX_WORKSPACE_ROOT = $workspaceRoot'));
       assert.ok(powerShellLauncher.includes(extensionRoot));
-      assert.ok(powerShellLauncher.includes(path.join('.github', 'agentx', '.agentx', 'agentx.ps1')));
+      assert.ok(powerShellLauncher.includes(path.join('.github', 'frontier', '.agentx', 'frontier.ps1')));
       assert.ok(
         powerShellLauncher.indexOf("Get-ChildItem -Path $searchRoot") <
           powerShellLauncher.indexOf(`'${extensionRoot.replace(/'/g, "''")}'`),
       );
       assert.ok(powerShellLauncher.includes('| Sort-Object Version -Descending'));
 
-      assert.ok(issuePowerShellLauncher.includes(path.join('.github', 'agentx', '.agentx', 'local-issue-manager.ps1')));
+      assert.ok(issuePowerShellLauncher.includes(path.join('.github', 'frontier', '.agentx', 'local-issue-manager.ps1')));
 
+      assert.ok(bashLauncher.includes('export FRONTIER_WORKSPACE_ROOT="$workspace_root"'));
       assert.ok(bashLauncher.includes('export AGENTX_WORKSPACE_ROOT="$workspace_root"'));
       assert.ok(bashLauncher.includes(extensionRoot.replace(/\\/g, '/')));
-      assert.ok(bashLauncher.includes('.github/agentx/.agentx/agentx.sh'));
+      assert.ok(bashLauncher.includes('.github/frontier/.agentx/frontier.sh'));
       assert.ok(
         bashLauncher.indexOf("find \"$search_root\"") <
           bashLauncher.indexOf(`candidate='${extensionRoot.replace(/\\/g, '/').replace(/'/g, `'"'"'`)}'`),
@@ -300,7 +321,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
       assert.ok(bashLauncher.includes("sort -t $'\\t' -k1,1r"));
       execFileSync('bash', ['-n'], { input: bashLauncher });
 
-      assert.ok(issueBashLauncher.includes('.github/agentx/.agentx/local-issue-manager.sh'));
+      assert.ok(issueBashLauncher.includes('.github/frontier/.agentx/local-issue-manager.sh'));
     } finally {
       fs.rmSync(extensionRoot, { recursive: true, force: true });
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -311,22 +332,22 @@ describe('runInitializeLocalRuntimeCommand', () => {
     // Spawns pwsh/bash twice; process startup on Windows regularly exceeds the
     // default 10s mocha budget.
     this.timeout(120000);
-    const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-home-'));
-    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
+    const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-home-'));
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-workspace-'));
     const preferredExtensionRoot = path.join(homeRoot, 'preferred', 'jnpiyush.agentx-9.8.0');
     const overrideExtensionRoot = path.join(homeRoot, 'override', 'jnpiyush.agentx-9.7.0');
     const outputPath = path.join(homeRoot, 'selected-runtime.txt');
 
     const createRuntime = (extensionRoot: string, version: string): void => {
-      const runtimeDirectory = path.join(extensionRoot, '.github', 'agentx', '.agentx');
+      const runtimeDirectory = path.join(extensionRoot, '.github', 'frontier', '.agentx');
       fs.mkdirSync(runtimeDirectory, { recursive: true });
       fs.writeFileSync(
-        path.join(runtimeDirectory, 'agentx.ps1'),
+        path.join(runtimeDirectory, 'frontier.ps1'),
         `param([string]$OutputPath)\nSet-Content -LiteralPath $OutputPath -Value '${version}' -NoNewline\n`,
         'utf8',
       );
       fs.writeFileSync(
-        path.join(runtimeDirectory, 'agentx.sh'),
+        path.join(runtimeDirectory, 'frontier.sh'),
         `#!/usr/bin/env bash\nprintf '%s' '${version}' > "$1"\n`,
         { encoding: 'utf8', mode: 0o755 },
       );
@@ -346,8 +367,8 @@ describe('runInitializeLocalRuntimeCommand', () => {
       };
       const launcherPath = path.join(
         workspaceRoot,
-        '.agentx',
-        process.platform === 'win32' ? 'agentx.ps1' : 'agentx.sh',
+        '.frontier',
+        process.platform === 'win32' ? 'frontier.ps1' : 'frontier.sh',
       );
       const command = process.platform === 'win32' ? 'pwsh' : 'bash';
       const commandArguments = process.platform === 'win32'
@@ -362,7 +383,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
       execFileSync(command, commandArguments, {
         env: {
           ...baseEnvironment,
-          AGENTX_EXTENSION_ROOT: overrideExtensionRoot,
+          FRONTIER_EXTENSION_ROOT: overrideExtensionRoot,
         },
       });
       assert.equal(fs.readFileSync(outputPath, 'utf8'), '9.7.0');
@@ -373,8 +394,8 @@ describe('runInitializeLocalRuntimeCommand', () => {
   });
 
   it('should create runtime wrappers during local runtime initialization', async () => {
-    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-workspace-'));
-    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-workspace-'));
+    const extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ext-'));
     const executeCommandStub = sandbox.stub(vscode.commands, 'executeCommand').resolves(undefined);
     const infoStub = sandbox.stub(vscode.window, 'showInformationMessage');
     sandbox.stub(vscode.window, 'withProgress').callsFake(async (_options, task) => task({ report: () => undefined }, {} as never));
@@ -385,7 +406,7 @@ describe('runInitializeLocalRuntimeCommand', () => {
       adoConnected: false,
       workspaceRoot: undefined,
       firstWorkspaceFolder: undefined,
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
 
     (vscode.workspace as any).workspaceFolders = [
       { name: 'workspace', uri: vscode.Uri.file(workspaceRoot), index: 0 },
@@ -401,17 +422,19 @@ describe('runInitializeLocalRuntimeCommand', () => {
         commandAgentx,
       );
 
+      assert.ok(fs.existsSync(path.join(workspaceRoot, '.frontier', 'frontier.ps1')));
+      assert.ok(fs.existsSync(path.join(workspaceRoot, '.frontier', 'local-issue-manager.ps1')));
+      assert.ok(fs.existsSync(path.join(workspaceRoot, '.frontier', 'frontier.sh')));
+      assert.ok(fs.existsSync(path.join(workspaceRoot, '.frontier', 'local-issue-manager.sh')));
       assert.ok(fs.existsSync(path.join(workspaceRoot, '.agentx', 'agentx.ps1')));
-      assert.ok(fs.existsSync(path.join(workspaceRoot, '.agentx', 'local-issue-manager.ps1')));
       assert.ok(fs.existsSync(path.join(workspaceRoot, '.agentx', 'agentx.sh')));
-      assert.ok(fs.existsSync(path.join(workspaceRoot, '.agentx', 'local-issue-manager.sh')));
       const versionStamp = JSON.parse(
-        fs.readFileSync(path.join(workspaceRoot, '.agentx', 'version.json'), 'utf8'),
+        fs.readFileSync(path.join(workspaceRoot, '.frontier', 'version.json'), 'utf8'),
       ) as Record<string, unknown>;
       assert.deepEqual(Object.keys(versionStamp).sort(), ['installedAt', 'updatedAt', 'version']);
       assert.equal(versionStamp.version, '8.4.7');
-      sinon.assert.calledWith(infoStub, 'AgentX: Local runtime initialized.');
-      assert.ok(executeCommandStub.calledWith('agentx.refresh'));
+      sinon.assert.calledWith(infoStub, 'Frontier: Local runtime initialized.');
+      assert.ok(executeCommandStub.calledWith('frontier.refresh'));
     } finally {
       fs.rmSync(extensionRoot, { recursive: true, force: true });
       fs.rmSync(workspaceRoot, { recursive: true, force: true });

@@ -2,7 +2,7 @@
 name: "canvas-app-yaml"
 description: 'Author Microsoft Power Apps canvas app source as unpacked *.fx.yaml + CanvasManifest.json so an agent can generate Power Fx screens that pac canvas pack and pac solution pack will accept. Covers the Src/ YAML control tree, Power Fx formula syntax, App OnStart, screens, data sources, components, and the round-trip with pac canvas unpack/pack.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

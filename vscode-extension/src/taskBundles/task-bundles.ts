@@ -1,4 +1,4 @@
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   buildTaskBundleListArgs,
   parseTaskBundle,
@@ -33,20 +33,20 @@ export type {
 export { renderTaskBundlesText };
 
 export async function listTaskBundles(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   options: TaskBundleListOptions = {},
 ): Promise<TaskBundleRecord[]> {
   const output = await agentx.runCli('bundle', buildTaskBundleListArgs(options));
   return parseTaskBundleRecords(output);
 }
 
-export async function getTaskBundle(agentx: AgentXContext, bundleId: string): Promise<TaskBundleRecord> {
+export async function getTaskBundle(agentx: FrontierContext, bundleId: string): Promise<TaskBundleRecord> {
   const output = await agentx.runCli('bundle', ['get', '--id', bundleId, '--json']);
   return parseTaskBundle(output);
 }
 
 export async function createTaskBundle(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   input: TaskBundleCreateInput,
 ): Promise<TaskBundleRecord> {
   const args = ['create', '--title-base64', encodeBase64(input.title), '--json'];
@@ -80,7 +80,7 @@ export async function createTaskBundle(
 }
 
 export async function resolveTaskBundle(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   input: TaskBundleResolveInput,
 ): Promise<TaskBundleRecord> {
   const args = ['resolve', '--id', input.bundleId, '--json'];
@@ -96,7 +96,7 @@ export async function resolveTaskBundle(
 }
 
 export async function promoteTaskBundle(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   input: TaskBundlePromoteInput,
 ): Promise<TaskBundlePromotionResult> {
   const args = ['promote', '--id', input.bundleId, '--json'];

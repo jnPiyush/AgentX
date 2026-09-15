@@ -2,7 +2,7 @@
 name: "multi-agent-orchestration"
 description: 'Design and operate multi-agent systems where several specialized LLM agents collaborate. Use when choosing between supervisor/worker, swarm/handoff, hierarchical, or graph patterns; selecting frameworks (AutoGen, CrewAI, OpenAI Swarm/Agents SDK, LangGraph, Microsoft Agent Framework, Google A2A); designing handoff contracts; preventing infinite loops, role drift, and coordination failures.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

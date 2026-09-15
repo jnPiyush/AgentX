@@ -1,4 +1,4 @@
-"""Build a visually rich AgentX pitch deck with native PowerPoint shapes."""
+"""Build a visually rich Frontier pitch deck with native PowerPoint shapes."""
 
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
@@ -9,7 +9,7 @@ from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 # --- Brand palette ---------------------------------------------------------
 NAVY = RGBColor(0x0B, 0x1F, 0x3A)  # background
 DEEP = RGBColor(0x10, 0x2A, 0x4F)  # panel
-CYAN = RGBColor(0x0E, 0xA5, 0xE9)  # accent (AgentX blue)
+CYAN = RGBColor(0x0E, 0xA5, 0xE9)  # accent (Frontier blue)
 GREEN = RGBColor(0x22, 0xC5, 0x5E)  # accent (success)
 AMBER = RGBColor(0xF5, 0x9E, 0x0B)  # accent (warn)
 ROSE = RGBColor(0xF4, 0x3F, 0x5E)  # accent (skeptic)
@@ -143,7 +143,7 @@ def page_no(slide, n, total):
         Inches(7.05),
         Inches(6),
         Inches(0.3),
-        "AgentX  -  Digital Force for Software Delivery",
+        "Frontier Corp  -  FDEs for Hypervelocity Engineering",
         size=10,
         color=MUTED,
     )
@@ -173,7 +173,7 @@ def slide_title():
         Inches(2.4),
         Inches(1.4),
         Inches(1.4),
-        "X",
+        "F",
         size=72,
         color=NAVY,
         bold=True,
@@ -187,7 +187,7 @@ def slide_title():
         Inches(2.45),
         Inches(9),
         Inches(1.2),
-        "AgentX",
+        "Frontier Corp",
         size=72,
         color=INK,
         bold=True,
@@ -198,7 +198,7 @@ def slide_title():
         Inches(3.55),
         Inches(9),
         Inches(0.5),
-        "Digital Force for Software Delivery",
+        "Forward Deployed Engineers for Hypervelocity Engineering",
         size=22,
         color=CYAN,
     )
@@ -208,7 +208,7 @@ def slide_title():
         Inches(4.15),
         Inches(10),
         Inches(1.4),
-        "Turn AI coding agents into a structured engineering team\nwith routing, skills, memory, and multi-model deliberation.",
+        "Deploy specialized AI FDEs across the software lifecycle\nwith governed workflows, durable context, and verified evidence.",
         size=16,
         color=MUTED,
     )
@@ -219,7 +219,7 @@ def slide_title():
         Inches(6.6),
         Inches(11),
         Inches(0.4),
-        "v8.4.47  -  Apache 2.0  -  github.com/jnPiyush/AgentX",
+        "v9.2.0  -  Apache 2.0  -  github.com/jnPiyush/AgentX",
         size=12,
         color=MUTED,
     )
@@ -234,9 +234,9 @@ def slide_problem(n, total):
         s, "The Problem", "Zero-shot AI coding does not scale to real engineering"
     )
     items = [
-        ("87%", "of AI-generated code\nneeds rework before merge", AMBER),
+        ("Rework", "AI-generated code needs\nreview before merge", AMBER),
         ("1 model", "single point of reasoning,\nsingle blind spot", ROSE),
-        ("0 memory", "no decisions retained\nacross sessions", CYAN),
+        ("No state", "decisions are not retained\nacross sessions", CYAN),
         ("No gate", "ships unreviewed,\nuntested, untraceable", GREEN),
     ]
     x0, y0, w, h, gap = (
@@ -291,7 +291,7 @@ def slide_problem(n, total):
 # ===========================================================================
 def slide_answer(n, total):
     s = add_slide()
-    header_bar(s, "The Answer", "AgentX is a harness, not a model")
+    header_bar(s, "The Answer", "Frontier is an FDE platform, not a model")
     # Center concept
     text_box(
         s,
@@ -299,20 +299,20 @@ def slide_answer(n, total):
         Inches(2.0),
         Inches(11.6),
         Inches(0.6),
-        "Force AI to plan, execute, iterate, review, and validate -- like a real team.",
+        "Specialized FDEs plan, build, verify, and learn through one governed workflow.",
         size=18,
         color=MUTED,
     )
     # 4 pillars
     pillars = [
         (
-            "21",
-            "Specialist Agents",
-            "PM, Architect, UX,\nEngineer, Reviewer,\nTester, DevOps...",
+            "26",
+            "Frontier FDEs",
+            "Product, architecture,\nengineering, review,\ndata, and operations",
             CYAN,
         ),
         (
-            "94",
+            "134",
             "Production Skills",
             "Retrieval-led patterns\nloaded on demand,\nnot from model memory",
             GREEN,
@@ -386,7 +386,9 @@ def slide_answer(n, total):
 def slide_team(n, total):
     s = add_slide()
     header_bar(
-        s, "The AI Development Team", "21 specialists routed by Agent X (the hub)"
+        s,
+        "The Frontier FDE Fleet",
+        "26 specialists coordinated by the Orchestration FDE",
     )
 
     # Hub
@@ -402,8 +404,8 @@ def slide_team(n, total):
         hy,
         hub_w,
         hub_h,
-        "Agent X (Hub)",
-        size=18,
+        "Orchestration FDE",
+        size=16,
         color=NAVY,
         bold=True,
         align=PP_ALIGN.CENTER,
@@ -412,11 +414,11 @@ def slide_team(n, total):
 
     # Branches
     branches = [
-        ("Product & Design", "PM  -  UX Designer", GREEN),
-        ("Architecture", "Architect  -  Data Scientist", CYAN),
-        ("Engineering", "Engineer  -  DevOps", AMBER),
-        ("Quality", "Reviewer  -  Tester  -  Auto-Fix", ROSE),
-        ("Analytics & Gov.", "Power BI  -  Research  -  Coach", GREEN),
+        ("Product & Experience", "Product  -  Experience\nAgile", GREEN),
+        ("Architecture & AI", "Architecture  -  AI Systems\nRAG", CYAN),
+        ("Engineering", "Engineering  -  DevOps\nFabric", AMBER),
+        ("Quality", "Review  -  Test\nAuto-Fix", ROSE),
+        ("Platform & Ops", "Power Platform  -  Power BI\nGitHub  -  ADO", GREEN),
     ]
     bw, bh, gap = Inches(2.35), Inches(1.7), Inches(0.2)
     total_w = bw * 5 + gap * 4
@@ -470,7 +472,7 @@ def slide_team(n, total):
         Inches(6.2),
         Inches(11.6),
         Inches(0.5),
-        "Each agent has a strict role contract: deliverable, gates, self-review.",
+        "Every FDE has a specialty, delivery boundary, evidence standard, and review contract.",
         size=14,
         color=MUTED,
         align=PP_ALIGN.CENTER,
@@ -570,8 +572,8 @@ def slide_loop(n, total):
     stats = [
         ("80%+", "coverage gate"),
         ("5", "min iterations"),
-        ("0", "blocked secrets"),
-        ("100%", "evidence-backed"),
+        ("Scan", "blocked secrets"),
+        ("Fresh", "evidence required"),
     ]
     sw_, sh_, sg = Inches(2.7), Inches(1.0), Inches(0.25)
     sx = (SW - (sw_ * 4 + sg * 3)) / 2
@@ -613,47 +615,48 @@ def slide_council(n, total):
     s = add_slide()
     header_bar(s, "Model Council", "Stress-test the decision, not just the code")
 
-    cx, cy = SW / 2, Inches(4.4)
-    r = Inches(2.0)
-
-    # Decision in center
+    cx, cy = SW / 2, Inches(3.9)
     dw, dh = Inches(2.6), Inches(0.9)
-    deci = shape(
-        s,
-        MSO_SHAPE.ROUNDED_RECTANGLE,
-        cx - dw / 2,
-        cy - dh / 2,
-        dw,
-        dh,
-        fill=NAVY,
-        line=CYAN,
-        line_w=2.0,
-    )
-    text_box(
-        s,
-        cx - dw / 2,
-        cy - dh / 2,
-        dw,
-        dh,
-        "Decision",
-        size=18,
-        color=CYAN,
-        bold=True,
-        align=PP_ALIGN.CENTER,
-        anchor=MSO_ANCHOR.MIDDLE,
-    )
-
-    # Three roles around the triangle
     roles = [
         ("Analyst", "Decompose\nevidence + facts", GREEN, (-1, -1)),
         ("Strategist", "Frame\nsecond-order effects", AMBER, (1, -1)),
         ("Skeptic", "Hunt\nfailure modes", ROSE, (0, 1)),
     ]
     rw, rh = Inches(2.6), Inches(1.4)
+    positions = []
     for label, body, col, (dx, dy) in roles:
         rx = cx + dx * Inches(3.0) - rw / 2
-        ry = cy + dy * Inches(2.2) - rh / 2
-        card = shape(
+        ry = cy + dy * Inches(1.65) - rh / 2
+        positions.append((label, body, col, rx, ry))
+
+    line_width = Emu(9000)
+    for _, _, _, rx, ry in positions:
+        role_cx = rx + rw / 2
+        role_cy = ry + rh / 2
+        shape(
+            s,
+            MSO_SHAPE.RECTANGLE,
+            role_cx - line_width / 2,
+            min(role_cy, cy),
+            line_width,
+            abs(role_cy - cy) or Emu(1),
+            fill=LINE,
+            line=LINE,
+        )
+        if role_cx != cx:
+            shape(
+                s,
+                MSO_SHAPE.RECTANGLE,
+                min(role_cx, cx),
+                cy - line_width / 2,
+                abs(role_cx - cx),
+                line_width,
+                fill=LINE,
+                line=LINE,
+            )
+
+    for label, body, col, rx, ry in positions:
+        shape(
             s,
             MSO_SHAPE.ROUNDED_RECTANGLE,
             rx,
@@ -687,26 +690,40 @@ def slide_council(n, total):
             color=INK,
             align=PP_ALIGN.CENTER,
         )
-        # connector to center
-        line = shape(
-            s,
-            MSO_SHAPE.RECTANGLE,
-            min(rx + rw / 2, cx) - Emu(4500),
-            min(ry + rh / 2, cy),
-            Emu(9000),
-            abs((ry + rh / 2) - cy) or Emu(1),
-            fill=LINE,
-            line=LINE,
-        )
+
+    shape(
+        s,
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        cx - dw / 2,
+        cy - dh / 2,
+        dw,
+        dh,
+        fill=NAVY,
+        line=CYAN,
+        line_w=2.0,
+    )
+    text_box(
+        s,
+        cx - dw / 2,
+        cy - dh / 2,
+        dw,
+        dh,
+        "Decision",
+        size=18,
+        color=CYAN,
+        bold=True,
+        align=PP_ALIGN.CENTER,
+        anchor=MSO_ANCHOR.MIDDLE,
+    )
 
     text_box(
         s,
         Inches(0.85),
-        Inches(6.7),
+        Inches(6.45),
         Inches(11.6),
-        Inches(0.5),
+        Inches(0.35),
         "Triggered for: PRD scope  -  ADR options  -  AI design  -  code review  -  research",
-        size=13,
+        size=11,
         color=MUTED,
         align=PP_ALIGN.CENTER,
     )
@@ -819,7 +836,7 @@ def slide_workflow(n, total):
         Inches(6.3),
         Inches(11.6),
         Inches(0.5),
-        "Survives context loss. Resumable by any agent. Auditable forever.",
+        "Survives context loss. Resumable by any FDE. Auditable by design.",
         size=14,
         color=CYAN,
         bold=True,
@@ -834,18 +851,23 @@ def slide_workflow(n, total):
 def slide_skills(n, total):
     s = add_slide()
     header_bar(
-        s, "Skills Library", "Retrieval over recall  -  94 skills, 12 categories"
+        s, "Skills Library", "Retrieval over recall  -  134 skills, 14 categories"
     )
 
     cats = [
-        ("Architecture", "5", "api-design, security,\ndatabase, performance", CYAN),
-        ("AI Systems", "29", "langgraph, foundry-sdk,\nrag, evaluation, safety", GREEN),
-        ("Development", "15", "testing, error-handling,\niterative-loop, scrub", AMBER),
+        ("Architecture", "8", "api-design, security,\ndatabase, performance", CYAN),
+        ("AI Systems", "30", "langgraph, foundry-sdk,\nrag, evaluation, safety", GREEN),
+        ("Development", "26", "testing, error-handling,\niterative-loop, scrub", AMBER),
         ("Languages", "10", "C#, Python, TS, React,\nC, C++, Rust, Go", ROSE),
         ("Ops & Infra", "9", "GitHub Actions, Terraform,\nAzure, containers", CYAN),
-        ("Data & Test", "13", "Databricks, Fabric,\ne2e, performance, security", GREEN),
-        ("Design", "4", "design-system, ux-ui,\nprototype-craft, frontend", AMBER),
-        ("Domain & PRD", "9", "finance, legal, oil&gas,\ntax, prd, diagrams", ROSE),
+        ("Data & Docs", "10", "Databricks, Fabric,\nPower BI, documents", GREEN),
+        (
+            "Design & Test",
+            "19",
+            "ux-ui, accessibility,\ne2e, security, performance",
+            AMBER,
+        ),
+        ("Domain + Low-Code", "22", "finance, legal, tax,\nPower Platform, PRD", ROSE),
     ]
     cols, rows = 4, 2
     cw, ch = Inches(2.85), Inches(2.0)
@@ -859,14 +881,15 @@ def slide_skills(n, total):
         y = y0 + r * (ch + gy)
         card = shape(s, MSO_SHAPE.ROUNDED_RECTANGLE, x, y, cw, ch, fill=DEEP, line=LINE)
         shape(s, MSO_SHAPE.RECTANGLE, x, y, Inches(0.08), ch, fill=col, line=col)
+        title_size = 12 if len(label) > 14 else 15
         text_box(
             s,
             x + Inches(0.25),
             y + Inches(0.15),
-            cw - Inches(0.4),
+            cw - Inches(1.0),
             Inches(0.5),
             label,
-            size=15,
+            size=title_size,
             color=INK,
             bold=True,
         )
@@ -898,7 +921,7 @@ def slide_skills(n, total):
         Inches(6.65),
         Inches(11.6),
         Inches(0.5),
-        "Only relevant skills loaded per task. Agents read, not guess.",
+        "Only relevant skills load per task. FDEs read, not guess.",
         size=14,
         color=CYAN,
         bold=True,
@@ -1045,10 +1068,10 @@ def slide_plugins(n, total):
 # ===========================================================================
 def slide_why(n, total):
     s = add_slide()
-    header_bar(s, "Why AgentX Wins", "What changes when you adopt the harness")
+    header_bar(s, "Why Frontier Wins", "What changes when you adopt the harness")
 
     rows = [
-        ("Without AgentX", "With AgentX", ROSE, GREEN),
+        ("Without Frontier", "With Frontier", ROSE, GREEN),
         (
             "Ship AI slop, clean it up later",
             "Reviewed, tested, traceable on day one",
@@ -1069,7 +1092,7 @@ def slide_why(n, total):
         ),
         (
             "Each engineer prompts differently",
-            "21 agents with strict role contracts",
+            "26 FDEs with strict role contracts",
             None,
             None,
         ),
@@ -1297,7 +1320,7 @@ def slide_cta(n, total):
         Inches(4.0),
         Inches(11.2),
         Inches(0.7),
-        "irm https://raw.githubusercontent.com/jnPiyush/AgentX/v8.4.47/install.ps1 | iex",
+        "irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.ps1 | iex",
         size=18,
         color=GREEN,
         bold=True,
@@ -1310,7 +1333,7 @@ def slide_cta(n, total):
         Inches(5.2),
         Inches(11.6),
         Inches(0.5),
-        "or install the AgentX VS Code extension and run:",
+        "or install the Frontier VS Code extension and run:",
         size=14,
         color=MUTED,
     )
@@ -1320,7 +1343,7 @@ def slide_cta(n, total):
         Inches(5.6),
         Inches(11.6),
         Inches(0.6),
-        "AgentX: Initialize Local Runtime",
+        "Frontier: Initialize Local Runtime",
         size=22,
         color=CYAN,
         bold=True,
@@ -1364,6 +1387,6 @@ for i, fn in enumerate(slides, start=1):
 
 import os
 
-out = os.path.join("docs", "pitch", "agentx-pitch.pptx")
+out = os.path.join("docs", "pitch", "frontier-corp-pitch.pptx")
 prs.save(out)
 print(f"[OK] {out}  ({TOTAL} slides)")

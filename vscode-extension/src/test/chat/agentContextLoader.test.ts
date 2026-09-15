@@ -5,7 +5,7 @@ import * as os from 'os';
 import { loadAgentInstructions, clearInstructionCache } from '../../chat/agentContextLoader';
 
 /**
- * Creates a minimal AgentXContext-like object whose workspaceRoot
+ * Creates a minimal FrontierContext-like object whose workspaceRoot
  * points to a temporary directory we control.
  */
 function createFakeAgentx(root: string, extensionPath?: string) {
@@ -21,7 +21,7 @@ describe('agentContextLoader', () => {
 
   beforeEach(() => {
     clearInstructionCache();
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-test-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-test-'));
     fs.mkdirSync(path.join(tmpDir, '.github', 'agents'), { recursive: true });
   });
 
@@ -128,9 +128,9 @@ describe('agentContextLoader', () => {
 
   it('rewrites canonical template references to bundled extension paths when zero-copy runtime is in effect', async () => {
     // Bundled extension layout (zero-copy): only the bundle holds the template
-    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
-    const bundledTemplateDir = path.join(extensionPath, '.github', 'agentx', 'templates');
-    const bundledSkillDir = path.join(extensionPath, '.github', 'agentx', 'skills', 'development', 'testing');
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ext-'));
+    const bundledTemplateDir = path.join(extensionPath, '.github', 'frontier', 'templates');
+    const bundledSkillDir = path.join(extensionPath, '.github', 'frontier', 'skills', 'development', 'testing');
     fs.mkdirSync(bundledTemplateDir, { recursive: true });
     fs.mkdirSync(bundledSkillDir, { recursive: true });
     const bundledTemplatePath = path.join(bundledTemplateDir, 'ARCH-REVIEW-TEMPLATE.md');
@@ -178,10 +178,10 @@ describe('agentContextLoader', () => {
   });
 
   it('prefers workspace runtime mirror over bundled path when both exist', async () => {
-    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ext-'));
-    fs.mkdirSync(path.join(extensionPath, '.github', 'agentx', 'templates'), { recursive: true });
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ext-'));
+    fs.mkdirSync(path.join(extensionPath, '.github', 'frontier', 'templates'), { recursive: true });
     fs.writeFileSync(
-      path.join(extensionPath, '.github', 'agentx', 'templates', 'ARCH-REVIEW-TEMPLATE.md'),
+      path.join(extensionPath, '.github', 'frontier', 'templates', 'ARCH-REVIEW-TEMPLATE.md'),
       'bundled',
     );
 

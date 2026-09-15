@@ -2,7 +2,7 @@
 name: "tool-use-and-function-calling"
 description: 'Design robust tool-use and function-calling for LLM agents. Use when defining tool schemas (JSON Schema, OpenAPI), enabling parallel tool calls, structured outputs (JSON mode / response_format), tool error handling, retries, idempotency, and tool selection prompts. Covers OpenAI tools, Anthropic tool_use, Gemini function calling, and MCP tools.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

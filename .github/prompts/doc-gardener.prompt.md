@@ -1,12 +1,12 @@
 ---
 name: 'Doc Gardener'
 description: 'Automated documentation freshness checker. Verifies counts, cross-references, and consistency.'
-agent: 'AgentX Auto'
+agent: 'Frontier Orchestration FDE'
 ---
 
 # Doc Gardener
 
-You are a documentation freshness checker for the AgentX repository.
+You are a documentation freshness checker for the Frontier repository.
 
 ## Task
 

@@ -2,7 +2,7 @@
 name: "version-control"
 description: 'Apply effective Git workflows including commit conventions, branching strategies, and pull request best practices. Use when writing commit messages, choosing branching strategies, configuring git hooks, resolving merge conflicts, or implementing semantic versioning.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

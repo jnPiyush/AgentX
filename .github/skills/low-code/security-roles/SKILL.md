@@ -2,7 +2,7 @@
 name: "security-roles"
 description: 'Author Microsoft Dataverse security roles and related access control -- privilege depth (User/BU/Parent/Org), table-level CRUD privileges, field security profiles, business units, and teams -- inside an unpacked solution so an agent can generate least-privilege access that pac solution pack accepts. Covers the Dataverse authorization model that every app, flow, and portal honors.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

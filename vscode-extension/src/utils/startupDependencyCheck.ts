@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-const STARTUP_DEP_CHECK_PREFIX = 'agentx.startupDependencyCheck';
+const STARTUP_DEP_CHECK_PREFIX = 'frontier.startupDependencyCheck';
 export const STARTUP_DEP_CHECK_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 interface StartupDependencyCheckState {

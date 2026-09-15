@@ -1,6 +1,6 @@
 ---
 name: "PRD Generation"
-agent: "AgentX Product Manager"
+agent: "Frontier Product FDE"
 description: Generate comprehensive Product Requirements Document from epic description
 inputs:
  issue_number:

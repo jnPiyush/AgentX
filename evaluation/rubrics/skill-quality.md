@@ -1,6 +1,6 @@
 # Skill Quality Rubric
 
-Use this deterministic rubric for every AgentX `SKILL.md`. It measures whether a skill is discoverable, differentiated, actionable, safe, maintainable, and efficient without requiring a model judge.
+Use this deterministic rubric for every Frontier `SKILL.md`. It measures whether a skill is discoverable, differentiated, actionable, safe, maintainable, and efficient without requiring a model judge.
 
 ## Scoring
 

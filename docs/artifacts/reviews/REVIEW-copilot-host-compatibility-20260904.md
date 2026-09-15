@@ -174,9 +174,9 @@ for both hosts.
 ### H3: Standalone CLI installation omits required protocol and runtime assets
 
 **Locations**:
-- `packs/agentx-copilot-cli/manifest.json`
-- `packs/agentx-copilot-cli/install.ps1:188-237`
-- `packs/agentx-copilot-cli/install.ps1:332-353`
+- `packs/frontier-copilot-cli/manifest.json`
+- `packs/frontier-copilot-cli/install.ps1:188-237`
+- `packs/frontier-copilot-cli/install.ps1:332-353`
 
 The standalone installer copies full customization trees, so nested
 instructions, prompts, templates, and schemas are physically installed even
@@ -262,7 +262,7 @@ uninstall behavior against the same ownership contract.
 |----|---------|----------|----------------|
 | M1 | Nested ADO instructions are bundled but not contributed by the extension | `prepare-chat-contributions.js:40-48` scans only the top-level directory; 9 contributions vs 15 files | Make instruction discovery recursive and add count/path parity tests |
 | M2 | Prompt files do not run in Agent Host sessions | 23 `chatPromptFiles` are contributed; current VS Code documentation states prompt files do not run on Agent Host | Migrate host-required prompts to skills or agents and document local-only prompts |
-| M3 | The standalone "plugin" is not a native Copilot plugin | No `packs/agentx-copilot-cli/plugin.json`; package uses a private `manifest.json` and installer | Add a native `plugin.json` or rename and document the package as an install-script distribution |
+| M3 | The standalone "plugin" is not a native Copilot plugin | No `packs/frontier-copilot-cli/plugin.json`; package uses a private `manifest.json` and installer | Add a native `plugin.json` or rename and document the package as an install-script distribution |
 | M4 | Bundle parity test is stale | `tests/customization-modernization-behavior.ps1` reports 233 pass and 3 agent-bundle hash failures; those files are also the intentional rewrite targets in `copy-assets.js` | Compare normalized semantic content or share the rewrite table with the test |
 | M5 | Bundled registries are absent | `copy-assets.js:13` omits `.github/registries`; runtime loader silently scans instead | Bundle registries and assert fallback availability |
 | M6 | Schemas are not executable contracts | Frontmatter validators reimplement a subset; pack schema rejects actual manifests and has no CI consumer | Validate with the checked-in schemas and keep schemas aligned with host fields |

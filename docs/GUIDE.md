@@ -1,6 +1,8 @@
-# AgentX Guide
+# Frontier Guide
 
-> **Everything you need to get started and set up AgentX.**
+Frontier Corp deploys AI Forward Deployed Engineers (FDEs) through its
+Hypervelocity Engineering platform, Frontier.
+
 > For core workflow and agent roles, see [AGENTS.md](../AGENTS.md). For skills index, see [Skills.md](../Skills.md).
 
 ---
@@ -19,13 +21,13 @@
 
 ## 5-Minute Quickstart
 
-> **Build your first feature with AgentX in 5 minutes.**
+> **Build a reviewed feature with Frontier in 5 minutes.**
 
 ### What You'll Do
 
-1. Install AgentX into your project
+1. Install Frontier into your project
 2. Create your first issue
-3. Run the PM -> Engineer -> Reviewer pipeline
+3. Run the Product FDE -> Engineering FDE -> Review FDE pipeline
 4. Ship a reviewed, tested feature
 
 **Time**: ~5 minutes (with an existing project)
@@ -35,16 +37,16 @@
 ```powershell
 # PowerShell -- into an existing project directory
 cd your-project
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.ps1 | iex
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.ps1 | iex
 ```
 
 ```bash
 # Bash
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.sh | bash
 ```
 
-**What happens**: AgentX copies agents, skills, templates, and CLI into your project. Your existing code is untouched.
+**What happens**: Frontier copies agents, skills, templates, and CLI into your project. Your existing code is untouched.
 
 > **No GitHub?** Add `-Local` (PowerShell) or `--local` (Bash) for offline mode.
 
@@ -53,7 +55,7 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.sh |
 Open VS Code with Copilot Chat. Type:
 
 ```
-@agentx Create a story to add a /health endpoint to our API
+@frontier Create a story to add a /health endpoint to our API
 ```
 
 **Or via CLI** (GitHub mode):
@@ -66,14 +68,15 @@ gh issue create --title "[Story] Add /health endpoint" --label "type:story"
 .\.agentx\local-issue-manager.ps1 -Action create -Title "[Story] Add /health endpoint" -Labels "type:story"
 ```
 
-Agent X classifies this as a `type:story` (simple, <=3 files) and can complete it directly in the current session, using the Engineer workflow internally.
+The Orchestration FDE classifies this as a simple `type:story` and can complete it using the Engineering FDE workflow.
 
-### Step 3: Implement with Agent X or Engineer (2 minutes)
+### Step 3: Implement with a Frontier FDE (2 minutes)
 
-Stay in **Agent X** for end-to-end execution, or switch to **Engineer** if you want strict manual role isolation:
+Stay with **Frontier Orchestration FDE** for end-to-end execution, or select
+**Frontier Engineering FDE** for strict role isolation:
 
 ```
-@Engineer Implement the health endpoint for issue #1
+Implement the health endpoint for issue #1
 ```
 
 The implementation workflow will:
@@ -113,7 +116,7 @@ The Reviewer will:
 
 ### Step 5: Done! What Just Happened?
 
-AgentX enforced:
+Frontier enforced:
 - **Code standards** via auto-loaded instruction files
 - **Test coverage** (80%+ required by Engineer constraints)
 - **Security** (blocked commands, secrets scanning)
@@ -124,7 +127,7 @@ AgentX enforced:
 For larger work, use the **full pipeline**:
 
 ```
-@agentx Create an epic for user authentication with OAuth
+@frontier Create an epic for user authentication with OAuth
 ```
 
 This triggers the full flow:
@@ -153,12 +156,27 @@ Each agent produces a deliverable, validates it, and hands off to the next.
 ./install.sh
 
 # One-liner (downloads and runs)
-irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.ps1 | iex    # PowerShell
-curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.sh | bash  # Bash
+irm https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.ps1 | iex    # PowerShell
+curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.sh | bash  # Bash
 ```
 
 PowerShell install path note:
 `install.ps1` requires PowerShell 7.4+ (`pwsh`). If you are on older Windows PowerShell, install PowerShell 7 and rerun with `pwsh -File .\install.ps1`.
+
+### Upgrading Existing Workspaces
+
+Changing an installed version requires explicit `-Force` (PowerShell) or
+`--force` (Bash), including upgrades from v8. Back up local customizations before
+using force: it replaces files supplied by the release but does not uninstall
+old trees or remove files absent from the archive. Obsolete customizations can
+therefore remain and should be reviewed manually.
+
+Configuration, issues, state, sessions, memory and digests are preserved.
+Runtime writes use `.frontier/`. The first runtime access fills missing files
+from `.hve/`, then `.agentx/`, without replacing existing Frontier files. Sources
+remain intact. Migration uses an exclusive `.frontier-migration.lock` directory,
+per-file atomic publication and a completion marker. Recover a stale lock only
+after confirming no migration process is running.
 
 ### Install Profiles
 
@@ -188,31 +206,31 @@ Control what gets installed with the `-Profile` flag:
 ./install.sh --no-setup
 
 # One-liner with profile (env vars)
-PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.sh | bash
+PROFILE=python curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.sh | bash
 ```
 
 ### What the Installer Does
 
-1. **Download** -- Downloads the AgentX repo archive to a temp directory
+1. **Download** -- Downloads the Frontier repo archive to a temp directory
 2. **Extract** -- Unpacks the archive and identifies essential directories
 3. **Copy** -- Merges files into your project (skips existing files unless `-Force`)
 4. **Configure** -- Generates `agent-status.json`, `config.json`, output directories
 5. **Setup** -- Interactive: git init, hooks install, username config (skip with `-NoSetup`)
-6. **Companion Extensions** -- Installs Azure companion capabilities when AgentX detects an Azure-oriented workspace (or when you force it with `-Azure` / `--azure`)
+6. **Companion Extensions** -- Installs Azure companion capabilities when Frontier detects an Azure-oriented workspace (or when you force it with `-Azure` / `--azure`)
 
 ---
 
-## Using AgentX with GitHub Copilot CLI and the Agents Window
+## Using Frontier with GitHub Copilot CLI and the Agents Window
 
-AgentX supports three host surfaces. Pick the one that matches how you work.
+Frontier supports three host surfaces. Pick the one that matches how you work.
 
 ### 1. VS Code extension (default)
 
-Install the AgentX extension. It contributes all 26 agents, 134 skills and the
+Install the Frontier extension. It contributes all 26 agents, 134 skills and the
 instruction files directly to the host -- nothing is copied into your
 workspace. This is the zero-copy path.
 
-To use AgentX in the **Agents window** (VS Code's dedicated agent surface),
+To use Frontier in the **Agents window** (VS Code's dedicated agent surface),
 opt the extension in:
 
 ```jsonc
@@ -223,13 +241,13 @@ opt the extension in:
 ```
 
 > **Agent Host limitation**: prompt files (`.prompt.md`) do **not** execute in
-> Agents-window Agent Host sessions. AgentX ships prompts for the editor chat
+> Agents-window Agent Host sessions. Frontier ships prompts for the editor chat
 > view; use **agents** or **skills** when you need behaviour that runs in the
 > Agents window.
 
 ### 2. GitHub Copilot CLI -- native plugin
 
-The repository root ships a `plugin.json`, so Copilot CLI can register AgentX's
+The repository root ships a `plugin.json`, so Copilot CLI can register Frontier's
 agents, skills and lifecycle hooks without copying anything:
 
 ```bash
@@ -240,14 +258,14 @@ copilot --agent engineer -p "Implement the health endpoint"
 
 ### 3. GitHub Copilot CLI -- workspace seeding
 
-Use `AgentX: Initialize CLI` from the Command Palette when you want AgentX
+Use `Frontier: Initialize CLI` from the Command Palette when you want Frontier
 assets present in the workspace itself (for teammates without the extension, or
 for CI). It seeds `.github/agents`, `.github/skills`, `.github/instructions`,
 `.github/prompts`, `.github/templates`, `.github/schemas`, `.github/registries`
 and `.github/hooks`, plus the workflow docs, rubrics and gate scripts the agents
 reference.
 
-Two modes are available via the `agentx.cliAssetMode` setting:
+Two modes are available via the `frontier.cliAssetMode` setting:
 
 | Mode | Behaviour | Use when |
 |------|-----------|----------|
@@ -270,16 +288,16 @@ registrations so each agent appears once in the picker:
 ### Standalone install (no VS Code extension)
 
 ```powershell
-pwsh packs/agentx-copilot-cli/install.ps1 -Target /path/to/project -IncludeCli
+pwsh packs/frontier-copilot-cli/install.ps1 -Target /path/to/project -IncludeCli
 ```
 
-See [packs/agentx-copilot-cli/README.md](../packs/agentx-copilot-cli/README.md).
+See [packs/frontier-copilot-cli/README.md](../packs/frontier-copilot-cli/README.md).
 
 ---
 
 ## Companion Extensions
 
-AgentX works with companion extensions that provide complementary capabilities. The installer auto-installs these when the `code` CLI is available.
+Frontier works with companion extensions that provide complementary capabilities. The installer auto-installs these when the `code` CLI is available.
 
 | Extension | ID | Purpose | Auto-Installed |
 |-----------|-----|---------|----------------|
@@ -289,14 +307,14 @@ AgentX works with companion extensions that provide complementary capabilities. 
 
 ### Why Azure MCP Extension and Azure Skills?
 
-When a project targets Azure, AgentX can install the Azure MCP Extension. That extension also brings in the Azure Skills companion from `microsoft/azure-skills`, wiring the guidance layer and MCP execution layer together for Azure work.
+When a project targets Azure, Frontier can install the Azure MCP Extension. That extension also brings in the Azure Skills companion from `microsoft/azure-skills`, wiring the guidance layer and MCP execution layer together for Azure work.
 
 | Layer | Provider | Covers |
 |-------|----------|--------|
-| **Design and Architecture** | AgentX `azure-foundry` | Model selection, eval strategy, guardrails, deployment patterns |
+| **Design and Architecture** | Frontier `azure-foundry` | Model selection, eval strategy, guardrails, deployment patterns |
 | **Operational Execution** | Azure Skills plugin + Azure MCP | Prepare, validate, deploy, diagnose, cost review, RBAC, Foundry workflows |
 
-AgentX triggers this install when it detects Azure files such as `azure.yaml`, `.azure/`, Azure Functions config, or Bicep files. You can also force it during install with `-Azure` on PowerShell or `--azure` on Bash.
+Frontier triggers this install when it detects Azure files such as `azure.yaml`, `.azure/`, Azure Functions config, or Bicep files. You can also force it during install with `-Azure` on PowerShell or `--azure` on Bash.
 
 ### Manual Install
 
@@ -308,11 +326,11 @@ code --install-extension ms-azuretools.vscode-azure-mcp-server
 
 ### Workspace Recommendations
 
-AgentX includes a `.vscode/extensions.json` that recommends companion extensions. VS Code will prompt users to install them when opening the workspace.
+Frontier includes a `.vscode/extensions.json` that recommends companion extensions. VS Code will prompt users to install them when opening the workspace.
 
 ### Provider Configuration
 
-AgentX now resolves runtime behavior from `.agentx/config.json` in this order:
+Frontier now resolves runtime behavior from `.frontier/config.json` in this order:
 
 1. `provider` (canonical)
 2. `integration` (migration compatibility)
@@ -320,7 +338,7 @@ AgentX now resolves runtime behavior from `.agentx/config.json` in this order:
 
 Use `provider` for new workspaces. Older fields are still read so existing repos continue to work.
 
-When the `claude-code` provider is used through `.agentx/agentic-runner.ps1`, the bridge runs in text-only mode with `--permission-mode dontAsk` and no Claude-native tools. Native Read/Write/Edit/Grep/Glob/Bash execute inside the Claude process and cannot pass through AgentX workspace-path, boundary, or command guards, so they remain disabled until a guarded MCP adapter is available. Use the Copilot or direct API adapters when an AgentX run requires tool execution.
+When the `claude-code` provider is used through `.agentx/agentic-runner.ps1`, the bridge runs in text-only mode with `--permission-mode dontAsk` and no Claude-native tools. Native Read/Write/Edit/Grep/Glob/Bash execute inside the Claude process and cannot pass through Frontier workspace-path, boundary, or command guards, so they remain disabled until a guarded MCP adapter is available. Use the Copilot or direct API adapters when an Frontier run requires tool execution.
 
 ---
 
@@ -330,7 +348,7 @@ When the `claude-code` provider is used through `.agentx/agentic-runner.ps1`, th
 
 ```bash
 # Via GitHub CLI
-gh project create --owner <OWNER> --title "AgentX Development"
+gh project create --owner <OWNER> --title "Frontier Development"
 
 # Or via web: https://github.com/users/<YOUR_USERNAME>/projects
 ```
@@ -355,9 +373,9 @@ In your project settings, create a **Status** field (Single Select) with these v
 2. Add repository: `<OWNER>/<REPO>`
 3. Issues automatically sync to project board
 
-### 4. Configure AgentX CLI Status Sync
+### 4. Configure Frontier CLI Status Sync
 
-To let `agentx issue update -s ...` keep GitHub Project V2 status in sync, set these values in `.agentx/config.json`:
+To let `frontier issue update -s ...` keep GitHub Project V2 status in sync, set these values in `.frontier/config.json`:
 
 ```json
 {
@@ -371,9 +389,9 @@ Optional:
 - `projectOwner`: override the project owner if it differs from the repo owner
 - `githubProjectStatusMap`: override status-name mapping if your project uses custom option names
 
-Default AgentX -> GitHub Project status mapping:
+Default Frontier -> GitHub Project status mapping:
 
-| AgentX Status | GitHub Project Status |
+| Frontier Status | GitHub Project Status |
 |---------------|-----------------------|
 | Backlog | Backlog |
 | Ready | Ready |
@@ -385,18 +403,18 @@ Default AgentX -> GitHub Project status mapping:
 When a GitHub project number is configured, the CLI will:
 - add newly created GitHub issues to that project
 - set new issues to `Backlog`
-- update Project V2 status when `agentx issue update -s ...` is used
-- set Project V2 status to `Done` before `agentx issue close`
+- update Project V2 status when `frontier issue update -s ...` is used
+- set Project V2 status to `Done` before `frontier issue close`
 
-GitHub does not emit a normal workflow event when a Project V2 Status field changes. After moving an issue between Status values, rerun Agent X routing by adding an issue comment with exactly:
+GitHub does not emit a normal workflow event when a Project V2 Status field changes. After moving an issue between Status values, rerun Frontier routing by adding an issue comment with exactly:
 
 ```text
-/agentx route
+/frontier route
 ```
 
 The same router workflow also remains available through manual `workflow_dispatch` when needed.
 
-When `.agentx/config.json` includes a GitHub project number, AgentX also ships a scheduled reroute poller workflow that scans recent Project V2 item changes and redispatches `agent-x.yml` automatically. Use `/agentx route` when you need an immediate reroute instead of waiting for the next scheduled scan.
+When `.frontier/config.json` includes a GitHub project number, Frontier also ships a scheduled reroute poller workflow that scans recent Project V2 item changes and redispatches `frontier.yml` automatically. Use `/frontier route` when you need an immediate reroute instead of waiting for the next scheduled scan.
 
 ### Status Transitions
 
@@ -434,7 +452,7 @@ gh issue list --label "type:story"
 gh issue list --label "needs:ux"
 
 # Via MCP
-{ "tool": "list_issues", "args": { "owner": "<OWNER>", "repo": "AgentX", "labels": ["type:story"], "state": "open" } }
+{ "tool": "list_issues", "args": { "owner": "<OWNER>", "repo": "Frontier", "labels": ["type:story"], "state": "open" } }
 ```
 
 ### Ideal Issue-First Workflow (GitHub Mode)
@@ -454,13 +472,13 @@ gh issue create --title "[Story] Add /health endpoint" \
 None"
 
 # Step 2: Check the ready queue for prioritized work
-.\.agentx\agentx.ps1 ready
+.\.agentx\frontier.ps1 ready
 
 # Step 3: Update status as work progresses
-# If .agentx/config.json includes a GitHub project number, the CLI also syncs
+# If .frontier/config.json includes a GitHub project number, the CLI also syncs
 # the Project V2 Status field for these transitions.
-.\.agentx\agentx.ps1 issue update -n 42 -s "In Progress"
-.\.agentx\agentx.ps1 issue update -n 42 -s "In Review"
+.\.agentx\frontier.ps1 issue update -n 42 -s "In Progress"
+.\.agentx\frontier.ps1 issue update -n 42 -s "In Review"
 
 # Step 4: Commit with issue reference
 git commit -m "feat: add health endpoint (refs #42)"
@@ -478,7 +496,7 @@ Important: `(#42)` is a link, not a close action. Use `fixes #42`, `closes #42`,
 - **Engineer**: Acceptance criteria, dependencies, priority
 - **Reviewer**: Validation checklist, scope of changes
 - **PM/Architect**: Context for PRD/ADR creation on complex issues
-- **Agent X**: Classification data for routing decisions
+- **Frontier**: Classification data for routing decisions
 
 **Emergency bypass**: Add `[skip-issue]` to the commit message for hotfixes. Create a retroactive issue afterward:
 ```bash
@@ -496,19 +514,19 @@ gh issue close <ID> --reason completed
 
 - **Status not visible**: Ensure issue is added to project and Status field exists
 - **Agent coordination issues**: Verify Status field value in Projects board
-- **Status changed but routing did not re-run**: Add the issue comment `/agentx route` to trigger an explicit status-based reroute
-- **Automatic reroute still not happening**: Verify `.agentx/config.json` includes the GitHub project number and that the `Agent X Project Reroute Poller` workflow is enabled
+- **Status changed but routing did not re-run**: Add the issue comment `/frontier route` to trigger an explicit status-based reroute
+- **Automatic reroute still not happening**: Verify `.frontier/config.json` includes the GitHub project number and that the `Frontier Project Reroute Poller` workflow is enabled
 - **Manual add**: `gh project item-add <PROJECT_ID> --owner <OWNER> --url <ISSUE_URL>`
 
 ---
 
 ## Local Mode (No GitHub)
 
-Use AgentX without GitHub -- filesystem-based issue tracking and agent coordination.
+Use Frontier without GitHub -- filesystem-based issue tracking and agent coordination.
 
 ### When to Use
 
-Recommended: Personal projects, learning AgentX, offline development, prototyping
+Recommended: Personal projects, learning Frontier, offline development, prototyping
 Not recommended: Team collaboration, CI/CD, code reviews, production workflows
 
 ### Installation
@@ -529,7 +547,7 @@ Not recommended: Team collaboration, CI/CD, code reviews, production workflows
 
 **Enable later (if already installed in GitHub mode):**
 ```powershell
-New-Item -ItemType Directory -Path ".agentx/issues" -Force
+New-Item -ItemType Directory -Path ".frontier/issues" -Force
 
 @{
   provider = "local"
@@ -538,17 +556,17 @@ New-Item -ItemType Directory -Path ".agentx/issues" -Force
     enforceIssues = $false
     nextIssueNumber = 1
     created = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-} | ConvertTo-Json | Set-Content ".agentx/config.json"
+} | ConvertTo-Json | Set-Content ".frontier/config.json"
 ```
 
 **Configure issue enforcement:**
 ```powershell
 # Local mode: issues are optional by default
 # Enable if you want commit-msg hook to require issue references:
-.\.agentx\agentx.ps1 config set enforceIssues true
+.\.agentx\frontier.ps1 config set enforceIssues true
 
 # Disable again:
-.\.agentx\agentx.ps1 config set enforceIssues false
+.\.agentx\frontier.ps1 config set enforceIssues false
 ```
 
 ### Issue Management
@@ -613,31 +631,31 @@ function issue { .\.agentx\local-issue-manager.ps1 @args }
   local-issue-manager.sh         # Bash issue manager
 ```
 
-### AgentX CLI Commands
+### Frontier CLI Commands
 
-The CLI works across Local, GitHub, and ADO providers. It resolves the active platform from `.agentx/config.json`, preferring `provider` and falling back to legacy `integration` and `mode` fields.
+The CLI works across Local, GitHub, and ADO providers. It resolves the active platform from `.frontier/config.json`, preferring `provider` and falling back to legacy `integration` and `mode` fields.
 
 ```powershell
 # PowerShell
-.\.agentx\agentx.ps1 ready                          # Show priority-sorted work queue
-.\.agentx\agentx.ps1 state                          # Show all agent states
-.\.agentx\agentx.ps1 state -a engineer -s working -i 42
-.\.agentx\agentx.ps1 deps 42                        # Check issue dependencies
-.\.agentx\agentx.ps1 digest                         # Generate weekly digest
-.\.agentx\agentx.ps1 workflow engineer              # Show workflow steps
-.\.agentx\agentx.ps1 hook -Phase start -Agent engineer -Issue 42
-.\.agentx\agentx.ps1 run engineer "Fix the tests"   # Run agentic loop (LLM + tools)
-.\.agentx\agentx.ps1 config show                    # View current configuration
-.\.agentx\agentx.ps1 backlog-sync github --force    # Force re-sync local backlog to GitHub
+.\.agentx\frontier.ps1 ready                          # Show priority-sorted work queue
+.\.agentx\frontier.ps1 state                          # Show all agent states
+.\.agentx\frontier.ps1 state -a engineer -s working -i 42
+.\.agentx\frontier.ps1 deps 42                        # Check issue dependencies
+.\.agentx\frontier.ps1 digest                         # Generate weekly digest
+.\.agentx\frontier.ps1 workflow engineer              # Show workflow steps
+.\.agentx\frontier.ps1 hook -Phase start -Agent engineer -Issue 42
+.\.agentx\frontier.ps1 run engineer "Fix the tests"   # Run agentic loop (LLM + tools)
+.\.agentx\frontier.ps1 config show                    # View current configuration
+.\.agentx\frontier.ps1 backlog-sync github --force    # Force re-sync local backlog to GitHub
 ```
 
 ```bash
 # Bash
-./.agentx/agentx.sh ready
-./.agentx/agentx.sh state engineer working 42
-./.agentx/agentx.sh deps 42
-./.agentx/agentx.sh hook start engineer 42
-./.agentx/agentx.sh run engineer "Fix the tests"
+./.agentx/frontier.sh ready
+./.agentx/frontier.sh state engineer working 42
+./.agentx/frontier.sh deps 42
+./.agentx/frontier.sh hook start engineer 42
+./.agentx/frontier.sh run engineer "Fix the tests"
 ```
 
 ### Forced GitHub Backlog Re-Sync
@@ -645,7 +663,7 @@ The CLI works across Local, GitHub, and ADO providers. It resolves the active pl
 If you want to re-apply the current local backlog state to GitHub after the initial migration, run:
 
 ```powershell
-.\.agentx\agentx.ps1 backlog-sync github --force
+.\.agentx\frontier.ps1 backlog-sync github --force
 ```
 
 This reuses the stored local-to-remote issue mapping when available, updates remote issue title/body/labels, replays any new local comments that have not been migrated yet, and reapplies the latest local open/closed status plus GitHub Project V2 status.
@@ -676,7 +694,7 @@ git commit -m "feat: add user login"
 git commit -m "fix: resolve timeout"
 
 # Enable issue enforcement if you want it:
-.\.agentx\agentx.ps1 config set enforceIssues true
+.\.agentx\frontier.ps1 config set enforceIssues true
 
 # Full issue workflow (optional but recommended for complex work):
 # Step 1: Create issue BEFORE starting work
@@ -690,10 +708,10 @@ Login times out after 30s on slow connections.
 - Add retry logic with exponential backoff
 - Unit tests for retry behavior" `
     -Labels "type:bug"
-# -> Creates .agentx/issues/1.json
+# -> Creates .frontier/issues/1.json
 
 # Step 2: Check the ready queue for prioritized work
-.\.agentx\agentx.ps1 ready
+.\.agentx\frontier.ps1 ready
 
 # Step 3: Update status as you work
 .\.agentx\local-issue-manager.ps1 -Action update -IssueNumber 1 -Status "In Progress"
@@ -713,7 +731,7 @@ git commit -m "fix: resolve login timeout with retry logic (#1)"
 ```bash
 # Bash equivalent
 ./.agentx/local-issue-manager.sh create "[Bug] Fix login timeout" "Fix timeout issue" "type:bug"
-./.agentx/agentx.sh ready
+./.agentx/frontier.sh ready
 git commit -m "fix: resolve login timeout (#1)"
 ./.agentx/local-issue-manager.sh close 1
 ```
@@ -769,24 +787,24 @@ gh label create "type:bug" --color "D73A4A"
 gh label create "type:spike" --color "FBCA04"
 gh label create "type:docs" --color "0075CA"
 
-# 3. Trigger AgentX once after GitHub is available
-# AgentX auto-detects the GitHub repo, switches provider, and syncs the full
+# 3. Trigger Frontier once after GitHub is available
+# Frontier auto-detects the GitHub repo, switches provider, and syncs the full
 # local backlog to GitHub with the latest local status.
-.\.agentx\agentx.ps1 config show
+.\.agentx\frontier.ps1 config show
 
 # 4. Push and verify config
 git push -u origin master
-Get-Content .agentx/config.json -Raw
+Get-Content .frontier/config.json -Raw
 ```
 
 What gets synced automatically:
-- All local backlog items under `.agentx/issues`, not only open issues.
+- All local backlog items under `.frontier/issues`, not only open issues.
 - Title, body, and labels for each local issue.
 - Latest local workflow status into GitHub Project V2 when `project` is configured.
 - Closed local items are closed remotely after migration.
 - Local comments are copied into the GitHub issue as migrated comments.
 
-If you prefer to switch explicitly before the first auto-detected command, set `repo` or `provider` in `.agentx/config.json` and the same full backlog sync will run on the next AgentX command.
+If you prefer to switch explicitly before the first auto-detected command, set `repo` or `provider` in `.frontier/config.json` and the same full backlog sync will run on the next Frontier command.
 
 ### Azure DevOps Provider
 
@@ -986,10 +1004,10 @@ go install github.com/github/github-mcp-server@latest
 
 | What | Command |
 |------|---------|
-| **See pending work** | `.\.agentx\agentx.ps1 ready` |
-| **Check agent states** | `.\.agentx\agentx.ps1 state` |
-| **View workflow steps** | `.\.agentx\agentx.ps1 workflow engineer` |
-| **Check dependencies** | `.\.agentx\agentx.ps1 deps 1` |
+| **See pending work** | `.\.agentx\frontier.ps1 ready` |
+| **Check agent states** | `.\.agentx\frontier.ps1 state` |
+| **View workflow steps** | `.\.agentx\frontier.ps1 workflow engineer` |
+| **Check dependencies** | `.\.agentx\frontier.ps1 deps 1` |
 | **Scaffold an AI agent** | `python .github/skills/ai-systems/ai-agent-development/scripts/scaffold-agent.py --name my-agent` |
 | **Scaffold RAG/Memory** | `python .github/skills/ai-systems/cognitive-architecture/scripts/scaffold-cognitive.py --name my-agent` |
 | **Run security scan** | `.github/skills/architecture/security/scripts/scan-secrets.ps1` |
@@ -999,14 +1017,14 @@ go install github.com/github/github-mcp-server@latest
 
 | What | Surface |
 |------|---------|
-| **Brainstorm with prior learnings** | Command Palette: `AgentX: Show Brainstorm Guide` or chat: `@agentx brainstorm auth rollout constraints` |
-| **Review ranked planning learnings** | Command Palette: `AgentX: Show Planning Learnings` or chat: `@agentx learnings planning` |
-| **Review ranked review learnings** | Command Palette: `AgentX: Show Review Learnings` or chat: `@agentx learnings review auth workflow` |
-| **Inspect the compound loop** | Command Palette: `AgentX: Show Compound Loop` or chat: `@agentx compound` |
-| **Open capture guidance** | Command Palette: `AgentX: Show Knowledge Capture Guidance` or chat: `@agentx capture guidance` |
-| **Scaffold a learning artifact** | Command Palette: `AgentX: Create Learning Capture` or chat: `@agentx create learning capture` |
-| **Inspect durable review findings** | Command Palette: `AgentX: Show Review Findings` or chat: `@agentx review findings` |
-| **Run advisory parity review** | Command Palette: `AgentX: Show Agent-Native Review` or chat: `@agentx agent-native review` |
+| **Brainstorm with prior learnings** | Command Palette: `Frontier: Show Brainstorm Guide` or chat: `@frontier brainstorm auth rollout constraints` |
+| **Review ranked planning learnings** | Command Palette: `Frontier: Show Planning Learnings` or chat: `@frontier learnings planning` |
+| **Review ranked review learnings** | Command Palette: `Frontier: Show Review Learnings` or chat: `@frontier learnings review auth workflow` |
+| **Inspect the compound loop** | Command Palette: `Frontier: Show Compound Loop` or chat: `@frontier compound` |
+| **Open capture guidance** | Command Palette: `Frontier: Show Knowledge Capture Guidance` or chat: `@frontier capture guidance` |
+| **Scaffold a learning artifact** | Command Palette: `Frontier: Create Learning Capture` or chat: `@frontier create learning capture` |
+| **Inspect durable review findings** | Command Palette: `Frontier: Show Review Findings` or chat: `@frontier review findings` |
+| **Run advisory parity review** | Command Palette: `Frontier: Show Agent-Native Review` or chat: `@frontier agent-native review` |
 
 ---
 
@@ -1025,7 +1043,7 @@ go install github.com/github/github-mcp-server@latest
 | Problem | Solution |
 |---------|----------|
 | "Issue reference required" error | In local mode: this is now off by default. In GitHub mode: include issue number `git commit -m "feat: add login (#123)"` or bypass with `[skip-issue]` |
-| Issue enforcement in local mode | Toggle with `.agentx/agentx.ps1 config set enforceIssues true` (or `false`) |
+| Issue enforcement in local mode | Toggle with `.agentx/frontier.ps1 config set enforceIssues true` (or `false`) |
 | Status not updating | Verify GitHub Projects V2 (not V1), check Status field has correct values |
 | Agent not triggering | Check Actions is enabled, verify workflow syntax, check Actions tab for failures |
 
@@ -1041,8 +1059,8 @@ go install github.com/github/github-mcp-server@latest
 
 | Problem | Solution |
 |---------|----------|
-| Local issues not creating | Run: `mkdir .agentx/issues -Force` then init config |
-| Switching Local to GitHub | Add remote: `git remote add origin <url>`, then run an AgentX command to auto-switch provider and sync the full local backlog |
+| Local issues not creating | Run: `mkdir .frontier/issues -Force` then init config |
+| Switching Local to GitHub | Add remote: `git remote add origin <url>`, then run an Frontier command to auto-switch provider and sync the full local backlog |
 
 ### Common Error Messages
 
@@ -1075,4 +1093,4 @@ DEBUG=1 ./validate-handoff.sh 123 engineer  # Debug mode
 |----------|-------------|
 | [AGENTS.md](../AGENTS.md) | Agent roles, workflow, classification rules |
 | [Skills.md](../Skills.md) | 62 production skills index + workflow scenarios |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | How to contribute to AgentX |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | How to contribute to Frontier |

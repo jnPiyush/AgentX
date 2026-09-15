@@ -1,5 +1,34 @@
 # Changelog
 
+## 9.3.0
+
+### Changed
+
+- Rebrand active product surfaces as Frontier Corp and the 26 specialist agents
+  as the Frontier FDE Fleet, practicing Hypervelocity Engineering.
+- Introduce Frontier command, chat, state and environment namespaces while
+  preserving the published `jnPiyush.agentx` Marketplace identity and documented
+  AgentX compatibility paths. Keep historical release records unchanged.
+- Migrate legacy mutable state to Frontier and protect canonical gate state and
+  launchers across CLI, runner and Git hook boundaries.
+
+### Added
+
+- Add the separately operated Teams and GitHub App collaboration companion for
+  authenticated progress updates and confirmed agent instructions. Include
+  durable jobs, replay protection, sender/conversation isolation, scoped
+  permissions, bounded provider calls and shutdown-safe execution.
+- Provide a Teams app-package generator, GitHub App manifest and operator setup
+  guide. Follow-up instructions run as subsequent agent turns.
+
+### Publishing Notes
+
+- The extension remains `jnPiyush.agentx` so existing users can update in place.
+- Teams and GitHub App services are opt-in companion processes, not a service
+  automatically started by installing the VSIX. Live app registration, secrets,
+  HTTPS ingress and provider-delivery checks remain operator responsibilities.
+- Marketplace publishing remains a manual operation after release validation.
+
 ## 9.2.0
 
 ### Changed

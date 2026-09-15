@@ -131,7 +131,7 @@ describe('WorkflowGuidanceEngine', () => {
         currentCheckpoint: 'Brainstorm',
       }));
       assert.ok(result.action.toLowerCase().includes('brainstorm'));
-      assert.equal(result.command, 'agentx.showBrainstormGuide');
+      assert.equal(result.command, 'frontier.showBrainstormGuide');
     });
 
     it('should recommend deepening plan for Plan checkpoint', () => {
@@ -139,7 +139,7 @@ describe('WorkflowGuidanceEngine', () => {
         currentCheckpoint: 'Plan',
       }));
       assert.ok(result.action.toLowerCase().includes('plan'));
-      assert.equal(result.command, 'agentx.deepenPlan');
+      assert.equal(result.command, 'frontier.deepenPlan');
     });
 
     it('should recommend review kickoff when Work checkpoint and loop complete', () => {
@@ -150,7 +150,7 @@ describe('WorkflowGuidanceEngine', () => {
         reviewKickoffAllowed: true,
       }));
       assert.ok(result.action.toLowerCase().includes('review'));
-      assert.equal(result.command, 'agentx.kickoffReview');
+      assert.equal(result.command, 'frontier.kickoffReview');
     });
 
     it('should recommend continuing implementation when Work and loop not complete', () => {
@@ -166,7 +166,7 @@ describe('WorkflowGuidanceEngine', () => {
       const result = resolveWorkflowRecommendation(makeRecommendationContext({
         currentCheckpoint: 'Compound Capture',
       }));
-      assert.equal(result.command, 'agentx.createLearningCapture');
+      assert.equal(result.command, 'frontier.createLearningCapture');
     });
 
     it('should recommend rollout scorecard for Done checkpoint', () => {

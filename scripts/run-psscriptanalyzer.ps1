@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  PowerShell static analysis gate for AgentX.
+  PowerShell static analysis gate for Frontier.
 
 .DESCRIPTION
   Runs PSScriptAnalyzer with the curated rule set in

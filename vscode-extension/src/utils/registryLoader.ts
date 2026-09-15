@@ -11,7 +11,7 @@ import * as path from 'path';
  *
  * Resolution order:
  *   1. Workspace: `<workspaceRoot>/.github/registries/<name>.json`
- *   2. Extension bundle: `<extensionPath>/.github/agentx/registries/<name>.json`
+ *   2. Extension bundle: `<extensionPath>/.github/frontier/registries/<name>.json`
  *
  * The loader returns `null` on any miss or parse error so callers can fall
  * back to the existing filesystem scan paths without breaking.
@@ -65,7 +65,7 @@ function candidatePaths(
     paths.push(path.join(workspaceRoot, '.github', 'registries', fileName));
   }
   if (extensionPath) {
-    paths.push(path.join(extensionPath, '.github', 'agentx', 'registries', fileName));
+    paths.push(path.join(extensionPath, '.github', 'frontier', 'registries', fileName));
   }
   return paths;
 }
@@ -138,7 +138,7 @@ export function loadTemplatesRegistry(
  * Resolve a workspace-relative registry path (e.g.
  * `.github/skills/development/testing/SKILL.md`) to an absolute path that
  * exists on disk. Checks the workspace root first, then the bundled
- * extension copy under `.github/agentx/`. Returns `null` when neither
+ * extension copy under `.github/frontier/`. Returns `null` when neither
  * exists.
  */
 export function resolveRegistryAssetPath(
@@ -156,7 +156,7 @@ export function resolveRegistryAssetPath(
   }
 
   if (extensionPath && normalized.startsWith('.github/')) {
-    const bundled = `.github/agentx/${normalized.substring('.github/'.length)}`;
+    const bundled = `.github/frontier/${normalized.substring('.github/'.length)}`;
     const bundledCandidate = path.join(extensionPath, ...bundled.split('/'));
     if (fs.existsSync(bundledCandidate)) {
       return bundledCandidate;

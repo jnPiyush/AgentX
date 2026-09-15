@@ -6,11 +6,11 @@ This directory holds lightweight, repo-local evaluation artifacts for AI work.
 
 - Keep evaluation evidence versioned and reviewable.
 - Separate prompt assets, datasets, rubrics, baselines, and reports.
-- Support AgentX workflows without copying an external product's configuration surface.
+- Support Frontier workflows without copying an external product's configuration surface.
 
 ## Files
 
-- `agentx.eval.yaml`: compact evaluation contract for the current project.
+- `frontier.eval.yaml`: compact evaluation contract for the current project.
 - `baseline.json`: accepted reference scores for regression comparison.
 - `datasets/`: benchmark, regression, and adversarial inputs.
 - `rubrics/`: judge criteria and scoring guidance.
@@ -35,6 +35,6 @@ changes skip this gate.
 The default manifest is wired to `scripts/run-ai-eval-sample.ps1`.
 
 - It is intentionally lightweight.
-- It evaluates one concrete AgentX example: classifying work into the right `type:*` label.
+- It evaluates one concrete Frontier example: classifying work into the right `type:*` label.
 - It uses a deterministic local heuristic as a baseline runner, which keeps the example runnable without external model dependencies.
 - It should be replaced or extended when a project has a real model-backed evaluation path.

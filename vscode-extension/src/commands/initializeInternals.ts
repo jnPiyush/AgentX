@@ -31,7 +31,7 @@ export const ESSENTIAL_DIRS: string[] = [];
 
 export const RUNTIME_ASSET_DIRS: Array<{ source: string; destination: string }> = [
   {
-    source: path.join('.github', 'agentx', '.agentx', 'templates', 'memories'),
+    source: path.join('.github', 'frontier', '.agentx', 'templates', 'memories'),
     destination: 'memories',
   },
 ];
@@ -39,17 +39,17 @@ export const RUNTIME_ASSET_DIRS: Array<{ source: string; destination: string }> 
 /**
  * Root of the pristine seed tree inside the extension bundle.
  */
-const SEED_ROOT = path.join('.github', 'agentx', 'seed');
+const SEED_ROOT = path.join('.github', 'frontier', 'seed');
 
 /**
  * Asset trees linked or copied from the extension bundle into the user
  * workspace so external tools (notably GitHub Copilot CLI) that only read the
- * workspace can discover AgentX agents, skills, instructions, and prompts.
+ * workspace can discover Frontier FDEs, skills, instructions, and prompts.
  *
  * All sources live under the bundle's `seed/` tree, which `copy-assets.js`
  * builds as a pristine, unrewritten mirror of the canonical repository layout
  * rooted at the workspace root. The mapping is therefore trivial:
- *   `<ext>/.github/agentx/seed/<path>` -> `<workspace>/<path>`
+ *   `<ext>/.github/frontier/seed/<path>` -> `<workspace>/<path>`
  * Because the canonical layout is the layout the agents were authored against,
  * every relative reference resolves after seeding.
  *
@@ -113,18 +113,22 @@ export const COPILOT_CLI_ASSET_FILES: Array<{ source: string; destination: strin
 ];
 
 const WORKSPACE_WRAPPER_FILES = [
+  { relativePath: path.join('.agentx', 'frontier.ps1'), entryFile: 'frontier.ps1', shell: 'pwsh' as const },
+  { relativePath: path.join('.agentx', 'frontier.sh'), entryFile: 'frontier.sh', shell: 'bash' as const },
+  { relativePath: path.join('.frontier', 'frontier.ps1'), entryFile: 'frontier.ps1', shell: 'pwsh' as const },
+  { relativePath: path.join('.frontier', 'local-issue-manager.ps1'), entryFile: 'local-issue-manager.ps1', shell: 'pwsh' as const },
+  { relativePath: path.join('.frontier', 'frontier.sh'), entryFile: 'frontier.sh', shell: 'bash' as const },
+  { relativePath: path.join('.frontier', 'local-issue-manager.sh'), entryFile: 'local-issue-manager.sh', shell: 'bash' as const },
   { relativePath: path.join('.agentx', 'agentx.ps1'), entryFile: 'agentx.ps1', shell: 'pwsh' as const },
-  { relativePath: path.join('.agentx', 'local-issue-manager.ps1'), entryFile: 'local-issue-manager.ps1', shell: 'pwsh' as const },
   { relativePath: path.join('.agentx', 'agentx.sh'), entryFile: 'agentx.sh', shell: 'bash' as const },
-  { relativePath: path.join('.agentx', 'local-issue-manager.sh'), entryFile: 'local-issue-manager.sh', shell: 'bash' as const },
 ];
 
 export const ESSENTIAL_FILES: string[] = [];
 
 export const RUNTIME_DIRS = [
-  '.agentx/state',
-  '.agentx/digests',
-  '.agentx/sessions',
+  '.frontier/state',
+  '.frontier/digests',
+  '.frontier/sessions',
   'docs/artifacts/prd',
   'docs/artifacts/adr',
   'docs/artifacts/specs',
@@ -141,7 +145,7 @@ export const RUNTIME_DIRS = [
 export async function promptWorkspaceRoot(title: string): Promise<string | undefined> {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) {
-    vscode.window.showErrorMessage('AgentX: Open a workspace folder first.');
+    vscode.window.showErrorMessage('Frontier: Open a workspace folder first.');
     return undefined;
   }
 
@@ -309,7 +313,7 @@ export interface CliAssetState {
   updatedAt: string;
 }
 
-export const CLI_ASSET_STATE_FILE = path.join('.agentx', 'cli-asset-state.json');
+export const CLI_ASSET_STATE_FILE = path.join('.frontier', 'cli-asset-state.json');
 
 export function readCliAssetState(workspaceRoot: string): CliAssetState | undefined {
   const statePath = path.join(workspaceRoot, CLI_ASSET_STATE_FILE);
@@ -470,12 +474,12 @@ export function refreshCopilotCliSymlinks(
 }
 
 /**
- * Append AgentX CLI symlink destinations to `.gitignore` under a dedicated
+ * Append Frontier CLI symlink destinations to `.gitignore` under a dedicated
  * marker block so the symlinks themselves are not committed.
  */
 export function appendCliSymlinksToGitignore(workspaceRoot: string): void {
-  const markerStart = '# --- AgentX CLI symlinks (auto-generated, do not edit this block) ---';
-  const markerEnd = '# --- /AgentX CLI symlinks ---';
+  const markerStart = '# --- Frontier CLI symlinks (auto-generated, do not edit this block) ---';
+  const markerEnd = '# --- /Frontier CLI symlinks ---';
   const entries = COPILOT_CLI_ASSET_DIRS.map(
     (a) => '/' + toPosixPath(a.destination),
   );
@@ -517,7 +521,7 @@ function quoteShellLiteral(value: string): string {
 }
 
 function renderPowerShellWrapper(entryFile: string, extensionRoot: string): string {
-  const runtimeRelativePath = quotePowerShellLiteral(path.join('.github', 'agentx', '.agentx', entryFile));
+  const runtimeRelativePath = quotePowerShellLiteral(path.join('.github', 'frontier', '.agentx', entryFile));
   const preferredExtensionRoot = quotePowerShellLiteral(extensionRoot);
 
   return [
@@ -525,11 +529,12 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
     "$ErrorActionPreference = 'Stop'",
     "$workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path",
     '',
-    'function Resolve-AgentXExtensionRoot {',
-    '  if ($env:AGENTX_EXTENSION_ROOT) {',
-    `    $runtimeEntry = Join-Path $env:AGENTX_EXTENSION_ROOT '${runtimeRelativePath}'`,
+    'function Resolve-FrontierExtensionRoot {',
+    '  $extensionRootOverride = if ($env:FRONTIER_EXTENSION_ROOT) { $env:FRONTIER_EXTENSION_ROOT } elseif ($env:HVE_EXTENSION_ROOT) { $env:HVE_EXTENSION_ROOT } else { $env:AGENTX_EXTENSION_ROOT }',
+    '  if ($extensionRootOverride) {',
+    `    $runtimeEntry = Join-Path $extensionRootOverride '${runtimeRelativePath}'`,
     '    if (Test-Path -LiteralPath $runtimeEntry -PathType Leaf) {',
-    '      return (Resolve-Path $env:AGENTX_EXTENSION_ROOT).Path',
+    '      return (Resolve-Path $extensionRootOverride).Path',
     '    }',
     '  }',
     '',
@@ -565,10 +570,11 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
     '    return (Resolve-Path $preferredExtensionRoot).Path',
     '  }',
     '',
-    "  throw 'AgentX extension runtime not found. Reinstall the AgentX extension or set AGENTX_EXTENSION_ROOT.'",
+    "  throw 'Frontier extension runtime not found. Reinstall the Frontier extension or set FRONTIER_EXTENSION_ROOT.'",
     '}',
     '',
-    '$extensionRoot = Resolve-AgentXExtensionRoot',
+    '$extensionRoot = Resolve-FrontierExtensionRoot',
+    '$env:FRONTIER_WORKSPACE_ROOT = $workspaceRoot',
     '$env:AGENTX_WORKSPACE_ROOT = $workspaceRoot',
     `& (Join-Path $extensionRoot '${runtimeRelativePath}') @args`,
     '$succeeded = $?',
@@ -584,7 +590,7 @@ function renderPowerShellWrapper(entryFile: string, extensionRoot: string): stri
 }
 
 function renderBashWrapper(entryFile: string, extensionRoot: string): string {
-  const runtimeRelativePath = quoteShellLiteral(toPosixPath(path.join('.github', 'agentx', '.agentx', entryFile)));
+  const runtimeRelativePath = quoteShellLiteral(toPosixPath(path.join('.github', 'frontier', '.agentx', entryFile)));
   const preferredExtensionRoot = quoteShellLiteral(toPosixPath(extensionRoot));
 
   return [
@@ -594,11 +600,12 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
     'workspace_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"',
     `runtime_relative='${runtimeRelativePath}'`,
     '',
-    'resolve_agentx_extension_root() {',
+    'resolve_frontier_extension_root() {',
     '  local candidate=""',
+    '  local extension_root_override="${FRONTIER_EXTENSION_ROOT:-${HVE_EXTENSION_ROOT:-${AGENTX_EXTENSION_ROOT:-}}}"',
     '',
-    '  if [[ -n "${AGENTX_EXTENSION_ROOT:-}" && -f "${AGENTX_EXTENSION_ROOT}/${runtime_relative}" ]]; then',
-    "    printf '%s\\n' \"$AGENTX_EXTENSION_ROOT\"",
+    '  if [[ -n "$extension_root_override" && -f "${extension_root_override}/${runtime_relative}" ]]; then',
+    "    printf '%s\n' \"$extension_root_override\"",
     '    return 0',
     '  fi',
     '',
@@ -631,11 +638,12 @@ function renderBashWrapper(entryFile: string, extensionRoot: string): string {
     '    return 0',
     '  fi',
     '',
-    "  echo 'AgentX extension runtime not found. Reinstall the AgentX extension or set AGENTX_EXTENSION_ROOT.' >&2",
+    "  echo 'Frontier extension runtime not found. Reinstall the Frontier extension or set FRONTIER_EXTENSION_ROOT.' >&2",
     '  return 1',
     '}',
     '',
-    'extension_root="$(resolve_agentx_extension_root)"',
+    'extension_root="$(resolve_frontier_extension_root)"',
+    'export FRONTIER_WORKSPACE_ROOT="$workspace_root"',
     'export AGENTX_WORKSPACE_ROOT="$workspace_root"',
     'exec "${extension_root}/${runtime_relative}" "$@"',
     '',
@@ -744,10 +752,14 @@ export async function downloadFile(url: string, dest: string, timeoutMs = 60_000
 }
 
 export function mergeGitignore(root: string): void {
-  const markerStart = '# --- AgentX (auto-generated, do not edit this block) ---';
-  const markerEnd = '# --- /AgentX ---';
+  const markerStart = '# --- Frontier (auto-generated, do not edit this block) ---';
+  const markerEnd = '# --- /Frontier ---';
   const agentxEntries = [
-    '# AgentX runtime state',
+    '# Frontier runtime state',
+    '.frontier/',
+    '.frontier.migrating-*/',
+    '.frontier-migration.lock/',
+    '.hve/',
     '.agentx/',
   ];
 

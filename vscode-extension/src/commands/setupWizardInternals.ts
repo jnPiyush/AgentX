@@ -6,7 +6,7 @@ import {
   EnvironmentReport,
   IntegrationProvider,
 } from '../utils/dependencyChecker';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { PreCheckResult } from './setupWizardTypes';
 
 const ICON_PASS = '$(check)';
@@ -17,11 +17,11 @@ const ICON_INFO = '$(info)';
 const POLL_INTERVAL_MS = 5_000;
 const POLL_MAX_WAIT_MS = 180_000;
 
-export async function runSetupWizardFlow(agentx: AgentXContext): Promise<void> {
+export async function runSetupWizardFlow(agentx: FrontierContext): Promise<void> {
   const report = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'AgentX: Checking environment...',
+      title: 'Frontier: Checking environment...',
       cancellable: false,
     },
     async () => checkAllDependencies(agentx),
@@ -29,7 +29,7 @@ export async function runSetupWizardFlow(agentx: AgentXContext): Promise<void> {
 
   if (report.healthy && report.warningCount === 0) {
     vscode.window.showInformationMessage(
-      'AgentX: Environment is healthy - all dependencies found.',
+      'Frontier: Environment is healthy - all dependencies found.',
     );
     return;
   }
@@ -37,7 +37,7 @@ export async function runSetupWizardFlow(agentx: AgentXContext): Promise<void> {
   await showEnvironmentReport(report, agentx);
 }
 
-export async function runStartupCheckFlow(agentx: AgentXContext): Promise<void> {
+export async function runStartupCheckFlow(agentx: FrontierContext): Promise<void> {
   const report = await checkAllDependencies(agentx);
 
   if (report.healthy) {
@@ -54,7 +54,7 @@ export async function runStartupCheckFlow(agentx: AgentXContext): Promise<void> 
 
   const missingNames = missingRequired.map((result) => result.name).join(', ');
   const action = await vscode.window.showWarningMessage(
-    `AgentX: Missing required dependencies: ${missingNames}`,
+    `Frontier: Missing required dependencies: ${missingNames}`,
     'Check Environment',
     'Dismiss',
   );
@@ -64,14 +64,14 @@ export async function runStartupCheckFlow(agentx: AgentXContext): Promise<void> 
     return;
   }
 
-  console.warn(`AgentX: Startup dependency check dismissed. Missing: ${missingNames}`);
+  console.warn(`Frontier: Startup dependency check dismissed. Missing: ${missingNames}`);
 }
 
-export async function runSilentInstallFlow(agentx: AgentXContext): Promise<PreCheckResult> {
+export async function runSilentInstallFlow(agentx: FrontierContext): Promise<PreCheckResult> {
   const report = await checkAllDependencies(agentx);
 
   if (report.healthy) {
-    console.log('AgentX: All required dependencies found (silent check).');
+    console.log('Frontier: All required dependencies found (silent check).');
     return { passed: true, report };
   }
 
@@ -82,7 +82,7 @@ export async function runSilentInstallFlow(agentx: AgentXContext): Promise<PreCh
 
   if (toolsWithFix.length === 0) {
     console.warn(
-      'AgentX: Missing dependencies with no auto-fix:',
+      'Frontier: Missing dependencies with no auto-fix:',
       missing.map((result) => result.name).join(', '),
     );
     return { passed: false, report };
@@ -93,12 +93,12 @@ export async function runSilentInstallFlow(agentx: AgentXContext): Promise<PreCh
   return vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `AgentX: Installing ${terminalNames}...`,
+      title: `Frontier: Installing ${terminalNames}...`,
       cancellable: false,
     },
     async (progress) => {
       const terminal = vscode.window.createTerminal({
-        name: 'AgentX: Silent Install',
+        name: 'Frontier: Silent Install',
         shellPath: process.platform === 'win32' ? 'powershell.exe' : undefined,
         hideFromUser: true,
       });
@@ -124,7 +124,7 @@ export async function runSilentInstallFlow(agentx: AgentXContext): Promise<PreCh
         const freshReport = await checkAllDependencies(agentx);
         if (freshReport.healthy) {
           terminal.dispose();
-          console.log('AgentX: All dependencies installed silently.');
+          console.log('Frontier: All dependencies installed silently.');
           return { passed: true, report: freshReport };
         }
       }
@@ -135,9 +135,9 @@ export async function runSilentInstallFlow(agentx: AgentXContext): Promise<PreCh
         .filter((result) => result.severity === 'required' && !result.found)
         .map((result) => result.name)
         .join(', ');
-      console.warn(`AgentX: Silent install timed out. Still missing: ${stillMissing}`);
+      console.warn(`Frontier: Silent install timed out. Still missing: ${stillMissing}`);
       vscode.window.showWarningMessage(
-        `AgentX: Could not install: ${stillMissing}. Run "AgentX: Check Environment" to retry.`,
+        `Frontier: Could not install: ${stillMissing}. Run "Frontier: Check Environment" to retry.`,
       );
       return { passed: false, report: finalReport };
     },
@@ -145,20 +145,20 @@ export async function runSilentInstallFlow(agentx: AgentXContext): Promise<PreCh
 }
 
 export async function runCriticalPreCheckFlow(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   blocking = true,
 ): Promise<PreCheckResult> {
   const report = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'AgentX: Checking dependencies...',
+      title: 'Frontier: Checking dependencies...',
       cancellable: false,
     },
     async () => checkAllDependencies(agentx),
   );
 
   if (report.healthy) {
-    console.log('AgentX: All required dependencies found.');
+    console.log('Frontier: All required dependencies found.');
     return { passed: true, report };
   }
 
@@ -168,7 +168,7 @@ export async function runCriticalPreCheckFlow(
   const missingNames = missing.map((result) => result.name).join(', ');
 
   const promptMsg =
-    `AgentX is missing ${missing.length} required dependencies: ${missingNames}.\n`
+    `Frontier is missing ${missing.length} required dependencies: ${missingNames}.\n`
     + `Install ${missing.length} CLI tool(s) now?`;
 
   const action = blocking
@@ -179,7 +179,7 @@ export async function runCriticalPreCheckFlow(
         'Open Setup Docs',
       )
     : await vscode.window.showWarningMessage(
-        `AgentX: Missing required dependencies: ${missingNames}`,
+        `Frontier: Missing required dependencies: ${missingNames}`,
         'Install All',
         'Open Setup Docs',
         'Dismiss',
@@ -190,7 +190,7 @@ export async function runCriticalPreCheckFlow(
 
     if (toolsWithFix.length > 0) {
       const terminal = vscode.window.createTerminal({
-        name: 'AgentX: Install Dependencies',
+        name: 'Frontier: Install Dependencies',
         shellPath: process.platform === 'win32' ? 'powershell.exe' : undefined,
       });
       terminal.show();
@@ -213,14 +213,14 @@ export async function runCriticalPreCheckFlow(
         const freshReport = await checkAllDependencies(agentx);
         if (freshReport.healthy) {
           vscode.window.showInformationMessage(
-            'AgentX: All required dependencies are now installed.',
+            'Frontier: All required dependencies are now installed.',
           );
           return { passed: true, report: freshReport };
         }
       } else {
         vscode.window.showWarningMessage(
-          'AgentX: Could not verify tool installation. '
-          + 'Please check the terminal for errors, then re-run "AgentX: Check Environment".',
+          'Frontier: Could not verify tool installation. '
+          + 'Please check the terminal for errors, then re-run "Frontier: Check Environment".',
         );
         return { passed: false, report };
       }
@@ -235,7 +235,7 @@ export async function runCriticalPreCheckFlow(
       const freshReport = await checkAllDependencies(agentx);
       if (freshReport.healthy) {
         vscode.window.showInformationMessage(
-          'AgentX: All required dependencies are now present.',
+          'Frontier: All required dependencies are now present.',
         );
         return { passed: true, report: freshReport };
       }
@@ -244,7 +244,7 @@ export async function runCriticalPreCheckFlow(
         .map((result) => result.name)
         .join(', ');
       vscode.window.showWarningMessage(
-        `AgentX: Still missing: ${stillMissing}. Open Setup Docs for manual instructions.`,
+        `Frontier: Still missing: ${stillMissing}. Open Setup Docs for manual instructions.`,
       );
       return { passed: false, report: freshReport };
     }
@@ -272,13 +272,13 @@ export async function runCriticalPreCheckFlow(
 }
 
 export async function pollForExternalTools(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   toolNames: string[],
 ): Promise<boolean> {
   return vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'AgentX: Waiting for dependency installation to complete...',
+      title: 'Frontier: Waiting for dependency installation to complete...',
       cancellable: true,
     },
     async (progress, token) => {
@@ -361,7 +361,7 @@ export async function showEnvironmentReport(report: EnvironmentReport, integrati
   });
 
   const pick = await vscode.window.showQuickPick(items, {
-    title: 'AgentX - Environment Health Check',
+    title: 'Frontier - Environment Health Check',
     placeHolder: 'Select a dependency to fix or an action to run',
     matchOnDescription: true,
     matchOnDetail: true,
@@ -385,7 +385,7 @@ export async function showEnvironmentReport(report: EnvironmentReport, integrati
     const recheckReport = await checkAllDependencies(integration);
     if (recheckReport.healthy && recheckReport.warningCount === 0) {
       vscode.window.showInformationMessage(
-        'AgentX: Environment is healthy - all dependencies found.',
+        'Frontier: Environment is healthy - all dependencies found.',
       );
       return;
     }
@@ -449,7 +449,7 @@ async function fixSingleDependency(dep: DependencyResult): Promise<void> {
 
   if (choice === 'Install via Terminal' && dep.fixCommand) {
     const terminal = vscode.window.createTerminal({
-      name: `AgentX: Install ${dep.name}`,
+      name: `Frontier: Install ${dep.name}`,
       shellPath: process.platform === 'win32' ? 'powershell.exe' : undefined,
     });
     terminal.show();
@@ -471,12 +471,12 @@ async function fixAllMissing(report: EnvironmentReport): Promise<void> {
   );
 
   if (missing.length === 0) {
-    vscode.window.showInformationMessage('AgentX: No missing dependencies to fix.');
+    vscode.window.showInformationMessage('Frontier: No missing dependencies to fix.');
     return;
   }
 
   const confirm = await vscode.window.showWarningMessage(
-    `AgentX will attempt to install ${missing.length} missing dependencies: ${missing.map((result) => result.name).join(', ')}. Continue?`,
+    `Frontier will attempt to install ${missing.length} missing dependencies: ${missing.map((result) => result.name).join(', ')}. Continue?`,
     'Install All',
     'Cancel',
   );
@@ -491,7 +491,7 @@ async function fixAllMissing(report: EnvironmentReport): Promise<void> {
   }
 
   const terminal = vscode.window.createTerminal({
-    name: 'AgentX: Install Dependencies',
+    name: 'Frontier: Install Dependencies',
     shellPath: process.platform === 'win32' ? 'powershell.exe' : undefined,
   });
   terminal.show();
@@ -505,7 +505,7 @@ async function fixAllMissing(report: EnvironmentReport): Promise<void> {
     terminal.sendText(command);
   }
 
-  terminal.sendText('echo "--- All installations complete. Please restart your terminal and re-run AgentX environment check. ---"');
+  terminal.sendText('echo "--- All installations complete. Please restart your terminal and re-run Frontier environment check. ---"');
   vscode.window.showInformationMessage(
     'Installing dependencies in the terminal. Re-run the environment check after installations complete.',
   );

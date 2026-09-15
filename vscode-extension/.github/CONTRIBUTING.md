@@ -1,4 +1,4 @@
-# Contributing to AgentX
+# Contributing to Frontier
 
 Thank you for contributing! This guide ensures all contributors follow the same workflow, **with or without GitHub Copilot**.
 
@@ -26,12 +26,12 @@ Thank you for contributing! This guide ensures all contributors follow the same 
 
 ### Script-Based Repo Setup
 
-Use the script-based flow when you are setting up a local clone of the AgentX repository for contribution work.
+Use the script-based flow when you are setting up a local clone of the Frontier repository for contribution work.
 
 ```powershell
 # Clone the repository
 git clone https://github.com/jnPiyush/AgentX.git
-cd AgentX
+cd Frontier
 
 # Run setup script
 .\install.ps1
@@ -40,7 +40,7 @@ cd AgentX
 ```bash
 # Clone the repository
 git clone https://github.com/jnPiyush/AgentX.git
-cd AgentX
+cd Frontier
 
 # Run setup script
 ./install.sh
@@ -48,7 +48,7 @@ cd AgentX
 
 Default install mode is local. GitHub and Azure DevOps modes are available for remote workflow integration.
 
-If AgentX detects Azure-oriented files such as `azure.yaml`, `.azure/`, Azure Functions config, or Bicep, it can also recommend or install the Azure MCP Extension so the Azure Skills plugin is available when the app targets Azure.
+If Frontier detects Azure-oriented files such as `azure.yaml`, `.azure/`, Azure Functions config, or Bicep, it can also recommend or install the Azure MCP Extension so the Azure Skills plugin is available when the app targets Azure.
 
 ### First Time Setup
 
@@ -203,10 +203,10 @@ npm audit                      # Node.js
 3. Relevant skill docs in `.github/skills/` folder
 
 ### Key Standards
-- **Security**: [.github/skills/architecture/security/SKILL.md](agentx/skills/architecture/security/SKILL.md)
-- **Testing**: [.github/skills/development/testing/SKILL.md](agentx/skills/development/testing/SKILL.md)
-- **API Design**: [.github/skills/architecture/api-design/SKILL.md](agentx/skills/architecture/api-design/SKILL.md)
-- **Documentation**: [.github/skills/development/documentation/SKILL.md](agentx/skills/development/documentation/SKILL.md)
+- **Security**: [.github/skills/architecture/security/SKILL.md](frontier/skills/architecture/security/SKILL.md)
+- **Testing**: [.github/skills/development/testing/SKILL.md](frontier/skills/development/testing/SKILL.md)
+- **API Design**: [.github/skills/architecture/api-design/SKILL.md](frontier/skills/architecture/api-design/SKILL.md)
+- **Documentation**: [.github/skills/development/documentation/SKILL.md](frontier/skills/development/documentation/SKILL.md)
 
 ### Documentation
 - XML docs for all public APIs (C#)
@@ -277,7 +277,7 @@ npm audit                      # Node.js
 ## Getting Help
 
 - **Questions**: Open a [Discussion](https://github.com/jnPiyush/AgentX/discussions)
-- **Bugs**: Use the [Bug Report template](agentx/ISSUE_TEMPLATE/bug.yml)
+- **Bugs**: Use the [Bug Report template](frontier/ISSUE_TEMPLATE/bug.yml)
 - **Documentation**: Check [docs/](docs/) folder
 - **Skills/Standards**: See [Skills.md](Skills.md)
 
@@ -303,7 +303,7 @@ If you have **GitHub Copilot**, it will automatically:
 - [AGENTS.md](AGENTS.md) - Agent behavior and workflows
 - [Skills.md](Skills.md) - Technical standards index + workflow scenarios
 - [docs/GUIDE.md](docs/GUIDE.md) - Quickstart, project setup, local mode, MCP integration, troubleshooting
-- [.github/copilot-instructions.md](agentx/copilot-instructions.md) - Copilot guidelines
+- [.github/copilot-instructions.md](frontier/copilot-instructions.md) - Copilot guidelines
 
 ---
 

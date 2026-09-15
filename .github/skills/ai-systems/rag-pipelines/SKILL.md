@@ -2,7 +2,7 @@
 name: "rag-pipelines"
 description: 'Design and build production RAG (Retrieval-Augmented Generation) pipelines. Use when implementing document ingestion, chunking strategies, embedding selection, vector search, hybrid retrieval, reranking, or generation with grounding.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2025-06-15"
   updated: "2025-06-15"

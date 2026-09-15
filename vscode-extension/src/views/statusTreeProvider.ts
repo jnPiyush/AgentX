@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AgentXContext } from '../agentxContext';
-import { getConfiguredLlmProviderRecord } from '../agentxContextInternals';
+import { FrontierContext } from '../frontierContext';
+import { resolveFrontierStatePath } from '../utils/frontierPaths';
+import { getConfiguredLlmProviderRecord } from '../frontierContextInternals';
 import { getAzureCompanionState } from '../utils/companionExtensions';
 import { SidebarTreeItem } from './sidebarTreeItem';
 
@@ -52,7 +53,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<SidebarTreeIt
  private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<SidebarTreeItem | undefined | void>();
  readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
- constructor(private readonly agentx: AgentXContext) {}
+ constructor(private readonly agentx: FrontierContext) {}
 
  refresh(): void {
   this.onDidChangeTreeDataEmitter.fire();
@@ -71,10 +72,10 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<SidebarTreeIt
 
   // Overview is always shown — workspace + integration state
   const versionInfo = root
-   ? readJsonFile<VersionStamp>(path.join(root, '.agentx', 'version.json'))
+    ? readJsonFile<VersionStamp>(resolveFrontierStatePath(root, 'version.json'))
    : undefined;
   const configInfo = root
-   ? readJsonFile<VersionStamp>(path.join(root, '.agentx', 'config.json'))
+    ? readJsonFile<VersionStamp>(resolveFrontierStatePath(root, 'config.json'))
    : undefined;
   const azureCompanionState = getAzureCompanionState(root);
   const azureCompanionDescription =

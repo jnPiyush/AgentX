@@ -2,7 +2,7 @@
 name: "model-driven-app"
 description: 'Author Microsoft Power Apps model-driven app source (AppModule, SiteMap, FormXml, SavedQuery views) inside an unpacked Power Platform solution so an agent can generate the navigation, forms, and views that pac solution pack will accept and Dataverse will render. Covers the component-driven UI metadata model that sits on top of Dataverse tables.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

@@ -9,7 +9,7 @@ const { ConfirmationStore, classifyCommand } = require('../src/commandPolicy');
 const { createMessageHandler, shouldProcessMessage } = require('../src/messageHandler');
 const { createBot } = require('../src/bot');
 const { loadConfig } = require('../src/config');
-const { childEnvironment, createAgentXRunner, runAgentXProcess } = require('../src/agentxRunner');
+const { childEnvironment, createFrontierRunner, runFrontierProcess } = require('../src/frontierRunner');
 const { startLoopWatcher } = require('../src/loopWatcher');
 const { transcribeVoiceNote } = require('../src/transcribe');
 
@@ -223,10 +223,10 @@ test('runner treats CLI FAIL output as failure and enforces output cap', async (
   try {
     fs.writeFileSync(cli, "Write-Output '[FAIL] rejected'", 'utf8');
     const config = baseConfig({ repoPath: root, cliRelativePath: 'fake.ps1', maxOutputChars: 1000 });
-    const failed = await runAgentXProcess([], config);
+    const failed = await runFrontierProcess([], config);
     assert.equal(failed.ok, false);
     fs.writeFileSync(cli, "Write-Output ('x' * 2000)", 'utf8');
-    const capped = await runAgentXProcess([], { ...config, maxOutputChars: 100 });
+    const capped = await runFrontierProcess([], { ...config, maxOutputChars: 100 });
     assert.equal(capped.ok, false);
     assert.match(capped.text, /Output exceeded/);
   } finally {
@@ -243,7 +243,7 @@ test('runner serializes commands and rejects queue overflow', async () => {
   fake.stderr = new EventEmitter();
   fake.pid = 999999;
   fake.killed = false;
-  const runner = createAgentXRunner(config, { spawn: () => fake });
+  const runner = createFrontierRunner(config, { spawn: () => fake });
   const first = runner.run(['ready']);
   const second = await runner.run(['state']);
   assert.equal(second.ok, false);
@@ -267,7 +267,7 @@ test('runner shutdown cancels queued jobs and timeout settles without close', as
     return child;
   };
   const config = baseConfig({ repoPath: root, cliRelativePath: 'fake.ps1', maxQueueDepth: 3, commandTimeoutMs: 20 });
-  const runner = createAgentXRunner(config, { spawn, terminate: () => {} });
+  const runner = createFrontierRunner(config, { spawn, terminate: () => {} });
   const first = runner.run(['ready']);
   const queued = runner.run(['state']);
   await new Promise((resolve) => setTimeout(resolve, 5));

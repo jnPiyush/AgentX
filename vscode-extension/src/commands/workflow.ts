@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { shouldAutoStartLoop, getLoopStatusDisplay } from '../utils/loopStateChecker';
 
 export interface WorkflowOption {
@@ -19,17 +19,17 @@ export const WORKFLOW_OPTIONS: ReadonlyArray<WorkflowOption> = [
 ];
 
 /**
- * Register the AgentX workflow-steps command.
+ * Register the Frontier workflow-steps command.
  * Lets the user inspect workflow steps for a selected type.
  * Auto-starts an iterative loop when the rendered workflow includes iterate=true.
  */
 export function registerWorkflowCommand(
  context: vscode.ExtensionContext,
- agentx: AgentXContext
+ agentx: FrontierContext
 ) {
  const showWorkflowSteps = async (workflowLabel?: string) => {
  if (!await agentx.checkInitialized()) {
- vscode.window.showWarningMessage('AgentX is not initialized.');
+ vscode.window.showWarningMessage('Frontier is not initialized.');
  return;
  }
 
@@ -37,15 +37,15 @@ export function registerWorkflowCommand(
   ? WORKFLOW_OPTIONS.find((option) => option.label === workflowLabel)
   : await vscode.window.showQuickPick(
    WORKFLOW_OPTIONS,
-   { placeHolder: 'Select workflow type', title: 'AgentX Workflow Steps' },
+   { placeHolder: 'Select workflow type', title: 'Frontier Workflow Steps' },
   );
  if (!workflowType) { return; }
 
  try {
      const output = await agentx.runCli('workflow', [workflowType.label]);
-   const channel = vscode.window.createOutputChannel('AgentX Workflow Steps');
+   const channel = vscode.window.createOutputChannel('Frontier Workflow Steps');
  channel.clear();
-   channel.appendLine(`=== AgentX Workflow Steps: ${workflowType.label} ===\n`);
+   channel.appendLine(`=== Frontier Workflow Steps: ${workflowType.label} ===\n`);
  channel.appendLine(output);
  channel.show();
 
@@ -60,7 +60,7 @@ export function registerWorkflowCommand(
      'Start Loop', 'Skip'
    );
    if (autoStart === 'Start Loop') {
-     await vscode.commands.executeCommand('agentx.loopStart');
+     await vscode.commands.executeCommand('frontier.loopStart');
    }
  } else if (hasIterateStep && root) {
    vscode.window.showInformationMessage(
@@ -73,11 +73,11 @@ export function registerWorkflowCommand(
  }
  };
 
- const cmd = vscode.commands.registerCommand('agentx.runWorkflow', async () => {
+ const cmd = vscode.commands.registerCommand('frontier.runWorkflow', async () => {
   await showWorkflowSteps();
  });
 
- const directCmd = vscode.commands.registerCommand('agentx.runWorkflowType', async (workflowLabel: string) => {
+ const directCmd = vscode.commands.registerCommand('frontier.runWorkflowType', async (workflowLabel: string) => {
   await showWorkflowSteps(workflowLabel);
  });
 

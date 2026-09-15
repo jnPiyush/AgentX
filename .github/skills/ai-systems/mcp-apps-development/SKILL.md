@@ -2,7 +2,7 @@
 name: "mcp-apps-development"
 description: 'Build MCP Apps (ext-apps) that render interactive UI inside conversational AI clients. Use when creating visual tool outputs, interactive dashboards, form-based tools, or rich media experiences in MCP-compatible hosts like Claude Desktop, VS Code Copilot Chat, or other MCP clients that support the Apps specification.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2025-07-15"
   updated: "2025-07-15"

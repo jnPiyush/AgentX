@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { AgentXContext } from '../agentxContext';
-import { resolveAgentDefinitionPath } from '../agentxContextInternals';
+import { FrontierContext } from '../frontierContext';
+import { resolveAgentDefinitionPath } from '../frontierContextInternals';
 import { rewriteAssetReferences } from '../utils/runtimeAssets';
 
 /**
@@ -16,7 +16,7 @@ const instructionCache = new Map<string, string>();
  * if the file does not exist.
  */
 export async function loadAgentInstructions(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   agentFileName: string
 ): Promise<string | undefined> {
   if (instructionCache.has(agentFileName)) {
@@ -55,7 +55,7 @@ export async function loadAgentInstructions(
  * Load all agent summaries (name + description + fileName).
  */
 export async function loadAllAgentSummaries(
-  agentx: AgentXContext
+  agentx: FrontierContext
 ): Promise<Array<{ name: string; description: string; fileName: string }>> {
   const agents = await agentx.listVisibleAgents();
   return agents.map(a => ({

@@ -121,7 +121,7 @@ function loadConfig({ env = process.env, configPath } = {}) {
   }
   const cliPath = path.resolve(repoPath, cliRelativePath);
   if (!cliPath.startsWith(`${repoPath}${path.sep}`) || !fs.existsSync(cliPath)) {
-    throw new Error(`AgentX CLI not found inside repoPath: ${cliPath}`);
+    throw new Error(`Frontier CLI not found inside repoPath: ${cliPath}`);
   }
 
   const notificationTargets = unique((notificationsConfig.targets || allowedNumbers)

@@ -8,7 +8,7 @@
 - 2026-03-13: For small shared utilities, extract only private comparison, path-resolution, and buffering helpers; keep the tested public functions in the original module.
 - 2026-03-08: GitHub Project status sync expects `.agentx/config.json` to contain `provider: github`, `repo`, and numeric `project`; derive `projectOwner` from the repo owner unless explicitly overridden.
 - 2026-03-08: For PowerShell behavior tests, launch `.agentx/agentx.ps1` with `System.Diagnostics.ProcessStartInfo.ArgumentList` to preserve argument boundaries and capture exit codes reliably.
-- 2026-03-08: Keep Agent X wording aligned across `.github/agents/agent-x.agent.md`, `.claude/commands/agent-x.md`, `AGENTS.md`, `docs/WORKFLOW.md`, and onboarding docs; stale delegation-only language in any one of these files causes behavior drift.
+- 2026-03-08: Keep Agent X wording aligned across `.github/agents/hve.agent.md`, `.claude/commands/agent-x.md`, `AGENTS.md`, `docs/WORKFLOW.md`, and onboarding docs; stale delegation-only language in any one of these files causes behavior drift.
 - 2026-03-08: When self-tests assert repo contracts, prefer durable section or phrase checks (for example `## PRD Intent Validation` or `For GenAI features`) over obsolete internal helper names like `classifyDomain`.
 - 2026-03-09: When a historical architecture or migration document is kept for traceability, add an explicit archival warning at the top rather than trying to keep all old internal file references current.
 - 2026-03-09: For agent frontmatter parsing in the extension, keep regression tests for multiline YAML list fields (`tools`, `constraints`, `agents`) because they are easy to break with string-built regexes.

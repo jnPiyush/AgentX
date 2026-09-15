@@ -2,7 +2,7 @@
 name: "feedback-loops"
 description: 'Design and implement feedback loops for continuous AI/ML improvement. Use when building RLHF/RLAIF pipelines, user feedback collection systems, reward modeling, iterative model refinement workflows, or online learning strategies.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2025-06-15"
   updated: "2025-06-15"

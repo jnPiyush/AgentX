@@ -11,7 +11,7 @@ import {
 import type { AIEvaluationRunnerAdapter } from '../../eval/aiEvaluationRunnerTypes';
 
 function createWorkspace(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ai-runner-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ai-runner-'));
   fs.mkdirSync(path.join(root, 'evaluation', 'datasets'), { recursive: true });
   fs.mkdirSync(path.join(root, 'evaluation', 'rubrics'), { recursive: true });
   fs.mkdirSync(path.join(root, '.copilot-tracking', 'eval-reports'), { recursive: true });
@@ -64,7 +64,7 @@ function writeContractArtifacts(root: string, options?: { retainRawOutputs?: boo
     `  retainRawOutputs: ${options?.retainRawOutputs ? 'true' : 'false'}`,
     '',
   ].join('\n');
-  fs.writeFileSync(path.join(root, 'evaluation', 'agentx.eval.yaml'), manifest, 'utf-8');
+  fs.writeFileSync(path.join(root, 'evaluation', 'frontier.eval.yaml'), manifest, 'utf-8');
 
   fs.writeFileSync(path.join(root, 'evaluation', 'baseline.json'), JSON.stringify({
     version: 1,
@@ -98,7 +98,7 @@ describe('aiEvaluationRunner internals', () => {
     assert.deepEqual(planning.plan?.metrics, ['correctness', 'groundedness']);
   });
 
-  it('normalizes raw output into an AgentX report shape', () => {
+  it('normalizes raw output into an Frontier report shape', () => {
     const root = createWorkspace();
     writeContractArtifacts(root);
 

@@ -2,7 +2,7 @@
 name: "terraform"
 description: 'Provision cloud infrastructure safely and consistently using Terraform and Infrastructure as Code patterns. Use when writing .tf or .tfvars files, creating reusable modules, managing remote state, securing infrastructure, or running Terratest integration tests.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-02-26"
   updated: "2026-02-26"

@@ -8,7 +8,7 @@
 
 ## Purpose
 
-AgentX's harness layer (quality loops, self-review evaluator, bounded contracts, stall
+Frontier's harness layer (quality loops, self-review evaluator, bounded contracts, stall
 detection, minimum iteration gates) adds reliability but also adds token cost, latency,
 and complexity. As foundation models improve, some harness components become unnecessary
 overhead. This rubric defines when and how to prune them.
@@ -55,7 +55,7 @@ Before removing any harness component:
 
 ## Configuration Surface
 
-Harness components should be configurable in `.agentx/config.json` so pruning does not require
+Harness components should be configurable in `.frontier/config.json` so pruning does not require
 code changes:
 
 ```json
@@ -120,7 +120,7 @@ Suggested operator routine on a model upgrade:
 3. Compare against the prior baseline if one exists (see [evaluation/baseline.json](../../evaluation/baseline.json)). If a component now appears to add cost without adding lift on this model, propose it for pruning following the criteria above.
 4. Treat additions and removals symmetrically: a better model also unlocks harness *capabilities* that were previously infeasible (e.g., dropping context-reset overhead, lowering the stall threshold, or removing per-sprint decomposition). Capture these as candidate additions, not just removals.
 
-This is a process expectation, not a runtime gate. AgentX does not automatically suspend the harness on a model change.
+This is a process expectation, not a runtime gate. Frontier does not automatically suspend the harness on a model change.
 
 ---
 

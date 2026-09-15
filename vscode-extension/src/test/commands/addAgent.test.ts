@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import { registerAddAgentCommand } from '../../commands/addAgent';
 import { resolveAgentOutputDir } from '../../commands/addAgentInternals';
 import { buildAgentContentFallback } from '../../commands/scaffoldGeneration';
@@ -36,12 +36,12 @@ describe('resolveAgentOutputDir', () => {
 describe('registerAddAgentCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: AgentXContext;
+  let fakeAgentx: FrontierContext;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     fakeContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
-    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as AgentXContext;
+    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as FrontierContext;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, _cb: (...args: unknown[]) => unknown) => ({ dispose: () => { /* noop */ } }),
@@ -52,21 +52,21 @@ describe('registerAddAgentCommand', () => {
 
   it('registers the agentx.addAgent command', () => {
     registerAddAgentCommand(fakeContext, fakeAgentx);
-    assert.ok((vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.addAgent'));
+    assert.ok((vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.addAgent'));
   });
 });
 
 describe('addAgent command - execution', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: AgentXContext;
+  let fakeAgentx: FrontierContext;
   let commandCallback: () => Promise<void>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     fakeContext = { subscriptions: [], extensionUri: { fsPath: '/ext' } } as unknown as vscode.ExtensionContext;
-    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as AgentXContext;
+    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as FrontierContext;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, cb: (...args: unknown[]) => unknown) => {

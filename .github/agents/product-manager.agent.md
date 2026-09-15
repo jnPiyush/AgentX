@@ -1,5 +1,5 @@
 ---
-name: AgentX Product Manager
+name: Frontier Product FDE
 description: 'Define product vision, create PRD, break Epics into Features and Stories with acceptance criteria.'
 model: Claude Opus 5 (copilot)
 user-invocable: true
@@ -7,17 +7,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   mode: adaptive
@@ -62,21 +62,21 @@ tools:
   - think
   - agent
 agents:
-  - AgentX Architect
-  - AgentX GitHub Ops
-  - AgentX ADO Ops
-  - AgentX Diagram Specialist
+  - Frontier Architecture FDE
+  - Frontier GitHub Ops FDE
+  - Frontier ADO Ops FDE
+  - Frontier Diagram FDE
 handoffs:
   - label: Continue to Architecture
-    agent: AgentX Architect
+    agent: Frontier Architecture FDE
     prompt: Review the completed PRD and produce the required architecture artifacts for this issue.
     send: false
   - label: Continue to UX
-    agent: AgentX UX Designer
+    agent: Frontier Experience FDE
     prompt: Review the completed PRD and produce the required UX specification and prototype for this issue.
     send: false
   - label: Continue to AI Design
-    agent: AgentX Data Scientist
+    agent: Frontier AI Systems FDE
     prompt: Review the completed PRD and define the AI implementation and evaluation contracts for this issue.
     send: false
 ---
@@ -177,7 +177,7 @@ Before drafting the PRD, convene a Model Council to stress-test scope, priority,
 **How to convene**:
 
 ```pwsh
-pwsh .agentx/agentx.ps1 council `
+pwsh .agentx/frontier.ps1 council `
     -Topic "prd-{epic-id}-{short-slug}" `
     -Question "Given the Phase 1-5 research, what should be in scope, what should be cut, what is the right success metric, and what is the strongest case AGAINST shipping this?" `
     -Context "<paste the key tensions, contested scope items, and assumptions from the research log>" `
@@ -188,7 +188,7 @@ pwsh .agentx/agentx.ps1 council `
 **Multiple topics in one council** (use when an Epic raises several contested decisions):
 
 ```pwsh
-pwsh .agentx/agentx.ps1 council `
+pwsh .agentx/frontier.ps1 council `
     -Topic "prd-{epic-id}-{short-slug}" `
     -Questions "What MUST be in scope for the MVP and what should be explicit non-goals?","What is the single success metric and how is it instrumented?","What is the right build sequencing (now / fast-follow / deferred)?" `
     -Context "<paste the key tensions, contested scope items, and assumptions from the research log>" `
@@ -348,9 +348,9 @@ Use the shared guide for the artifact-first clarification flow, agent-switch wor
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
+**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/frontier.ps1 loop complete` succeeded in this session.
 
 Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 
@@ -360,7 +360,7 @@ PRD includes required sections, concrete goals/non-goals, acceptance criteria, l
 
 ## Delivery Report (MANDATORY)
 
-Before handoff, report: PRD section completeness; child issues created; acceptance criteria coverage; contradictory constraints; output scorer tier when run; and AgentX quality-loop state.
+Before handoff, report: PRD section completeness; child issues created; acceptance criteria coverage; contradictory constraints; output scorer tier when run; and Frontier quality-loop state.
 
 ## Plugins (Optional Capabilities)
 

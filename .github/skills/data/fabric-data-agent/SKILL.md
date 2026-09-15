@@ -2,7 +2,7 @@
 name: "fabric-data-agent"
 description: 'Build, configure, and validate conversational data agents on Microsoft Fabric Lakehouses using the Data Agent SDK. Use when creating Fabric data agents, configuring few-shot examples, managing Livy sessions, or validating agent responses against Lakehouse data.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-07-13"
  updated: "2025-07-13"

@@ -49,7 +49,7 @@ export const PMDemo: React.FC = () => {
         startFrame={fps * 5}
         durationFrames={fps * 3}
         accent={accent}
-        label="AgentX is drafting the PRD"
+        label="Frontier is drafting the PRD"
         elapsedSeconds={8}
       />
       <ArtifactReveal

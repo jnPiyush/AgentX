@@ -250,7 +250,7 @@ export function renderCaptureGuidanceMarkdown(root?: string): string {
   `- Store curated capture artifacts under \`${learningsPath}\` and link them back to the issue, ADR/spec, review, and other source artifacts.`,
   '',
   'Autonomous execution path:',
-  '- AgentX should resolve the same capture decision after review and include the resulting learning artifact or skip rationale in its close-out summary.',
+  '- Frontier should resolve the same capture decision after review and include the resulting learning artifact or skip rationale in its close-out summary.',
   '- Keep the flow advisory-first until stronger automation is proven.',
  ];
 
@@ -316,7 +316,7 @@ export function renderBrainstormGuidanceMarkdown(
 
  lines.push(
   'Next actions:',
-  '- Run `agentx.runWorkflow` once the approach is narrowed enough to execute.',
+  '- Run `frontier.runWorkflow` once the approach is narrowed enough to execute.',
   '- Re-check `Planning learnings` after the problem statement changes.',
  );
 

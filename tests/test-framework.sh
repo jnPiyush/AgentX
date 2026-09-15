@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AgentX Framework Self-Tests (Bash)
+# Frontier Framework Self-Tests (Bash)
 # Parity with tests/test-framework.ps1 for Linux/macOS validation.
 #
 # Usage:
@@ -57,7 +57,7 @@ assert_file_contains() {
 }
 
 echo ""
-echo -e "  \033[0;36mAgentX Framework Self-Tests (Bash)\033[0m"
+echo -e "  \033[0;36mFrontier Framework Self-Tests (Bash)\033[0m"
 echo -e "  \033[0;90m================================================\033[0m"
 echo ""
 
@@ -152,9 +152,9 @@ assert_file_exists ".github/schemas/skill-frontmatter.schema.json"       "Skill 
 echo ""
 echo -e "  \033[1;37m7. AI-First Intent Preservation\033[0m"
 
-assert_file_contains ".github/agents/agent-x.agent.md"         "classifyDomain"         "Agent X has domain classification"
-assert_file_contains ".github/agents/agent-x.agent.md"         "needs:ai"               "Agent X detects AI domain"
-assert_file_contains ".github/agents/agent-x.agent.md"         "validatePRDIntent"      "Agent X validates PRD intent"
+assert_file_contains ".github/agents/frontier.agent.md"         "classifyDomain"         "Frontier has domain classification"
+assert_file_contains ".github/agents/frontier.agent.md"         "needs:ai"               "Frontier detects AI domain"
+assert_file_contains ".github/agents/frontier.agent.md"         "validatePRDIntent"      "Frontier validates PRD intent"
 assert_file_contains ".github/agents/product-manager.agent.md" "Domain Classification"  "PM has domain classification step"
 assert_file_contains ".github/agents/product-manager.agent.md" "ai-agent-development/SKILL.md" "PM references AI skill"
 assert_file_contains ".github/agents/architect.agent.md"        "AI-Aware Research"     "Architect has AI-aware research step"
@@ -165,7 +165,7 @@ assert_file_contains ".github/agents/reviewer.agent.md"         "Intent Preserva
 echo ""
 echo -e "  \033[1;37m8. GitHub Actions\033[0m"
 
-assert_file_exists ".github/workflows/agent-x.yml"       "agent-x.yml workflow"
+assert_file_exists ".github/workflows/frontier.yml"       "frontier.yml workflow"
 assert_file_exists ".github/workflows/quality-gates.yml"  "quality-gates.yml workflow"
 
 # --- 9. Hooks & Scripts ------------------------------------------------------
@@ -221,7 +221,7 @@ echo -e "  \033[1;37m12. VS Code Extension\033[0m"
 assert_file_exists "vscode-extension/package.json"    "Extension package.json"
 assert_file_exists "vscode-extension/tsconfig.json"   "Extension tsconfig.json"
 assert_file_exists "vscode-extension/src/extension.ts" "Extension entry point"
-assert_file_exists "vscode-extension/src/agentxContext.ts" "AgentXContext module"
+assert_file_exists "vscode-extension/src/agentxContext.ts" "FrontierContext module"
 assert_file_exists "vscode-extension/src/chat/chatParticipant.ts" "Chat participant"
 assert_file_exists "vscode-extension/src/chat/agentRouter.ts"     "Agent router"
 assert_file_exists "vscode-extension/src/chat/commandHandlers.ts" "Command handlers"

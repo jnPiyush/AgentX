@@ -1,17 +1,17 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 
 /**
- * Register the AgentX: Check Dependencies command.
+ * Register the Frontier: Check Dependencies command.
  * Validates issue dependencies before routing work.
  */
 export function registerDepsCommand(
  context: vscode.ExtensionContext,
- agentx: AgentXContext
+ agentx: FrontierContext
 ) {
- const cmd = vscode.commands.registerCommand('agentx.checkDeps', async (providedIssueNumber?: string) => {
+ const cmd = vscode.commands.registerCommand('frontier.checkDeps', async (providedIssueNumber?: string) => {
  if (!await agentx.checkInitialized()) {
- vscode.window.showWarningMessage('AgentX is not initialized.');
+ vscode.window.showWarningMessage('Frontier is not initialized.');
  return;
  }
 
@@ -24,9 +24,9 @@ export function registerDepsCommand(
 
  try {
     const output = await agentx.runCli('deps', [issueNumber]);
- const channel = vscode.window.createOutputChannel('AgentX Dependencies');
+ const channel = vscode.window.createOutputChannel('Frontier Dependencies');
  channel.clear();
- channel.appendLine(`=== AgentX Dependencies: Issue #${issueNumber} ===\n`);
+ channel.appendLine(`=== Frontier Dependencies: Issue #${issueNumber} ===\n`);
  channel.appendLine(output);
  channel.show();
  } catch (err: unknown) {

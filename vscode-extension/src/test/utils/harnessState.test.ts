@@ -24,7 +24,7 @@ import {
 } from '../../utils/harnessState';
 
 function makeWorkspace(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-harness-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-harness-'));
   fs.mkdirSync(path.join(root, '.agentx', 'state'), { recursive: true });
   return root;
 }

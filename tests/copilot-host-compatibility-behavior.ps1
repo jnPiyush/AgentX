@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  Verifies AgentX stays compatible with GitHub Copilot CLI and the VS Code Agents window.
+  Verifies Frontier stays compatible with GitHub Copilot CLI and the VS Code Agents window.
 
 .DESCRIPTION
   Guards the host contracts fixed after REVIEW-copilot-host-compatibility-20260904:
@@ -38,7 +38,7 @@ function New-TempDir {
     return $path
 }
 
-Write-Host 'AgentX Copilot Host Compatibility Tests'
+Write-Host 'Frontier Copilot Host Compatibility Tests'
 
 # --- 1. Copilot CLI hook registration ---------------------------------------
 
@@ -184,7 +184,7 @@ $canonicalInstructions = @($instructionFiles |
     ForEach-Object { $_.FullName.Substring($repoRoot.Length + 1).Replace('\', '/') } |
     Sort-Object)
 $contributedInstructions = @($package.contributes.chatInstructions.path |
-    ForEach-Object { ($_ -replace '^\./\.github/agentx/', '.github/') } |
+    ForEach-Object { ($_ -replace '^\./\.github/frontier/', '.github/') } |
     Where-Object { $_ -like '.github/instructions/*' } |
     Sort-Object)
 Assert-True (@(Compare-Object $canonicalInstructions $contributedInstructions).Count -eq 0) `
@@ -192,7 +192,7 @@ Assert-True (@(Compare-Object $canonicalInstructions $contributedInstructions).C
 
 # --- 5. Bundle completeness ---------------------------------------------------
 
-$bundleRoot = Join-Path $repoRoot 'vscode-extension/.github/agentx'
+$bundleRoot = Join-Path $repoRoot 'vscode-extension/.github/frontier'
 if (Test-Path $bundleRoot) {
     Assert-True (Test-Path (Join-Path $bundleRoot 'registries')) 'extension bundle includes the registries fallback'
     Assert-True (Test-Path (Join-Path $bundleRoot 'scripts/validate-handoff.ps1')) 'extension bundle includes the handoff gate script'
@@ -206,7 +206,7 @@ else {
 
 # --- 6. Standalone Copilot CLI pack ------------------------------------------
 
-$packDir = Join-Path $repoRoot 'packs/agentx-copilot-cli'
+$packDir = Join-Path $repoRoot 'packs/frontier-copilot-cli'
 $packManifest = Get-Content (Join-Path $packDir 'manifest.json') -Raw | ConvertFrom-Json
 
 Assert-True (Test-Path (Join-Path $repoRoot 'plugin.json')) 'repository ships a native Copilot CLI plugin manifest'
@@ -259,175 +259,17 @@ Assert-True ($installSh -notmatch 'AGENTX_DIRS=\("\.agentx" "\.github"') `
 foreach ($shared in @('.github', 'scripts', 'packs')) {
     $psPattern = '(?m)^\s*"' + [regex]::Escape($shared) + '",?\s*$'
     $inOwnedList = [regex]::Matches($installPs1, $psPattern).Count -gt 0
-    Assert-True (-not $inOwnedList) "PowerShell installer does not list '$shared' as a removable AgentX-owned root"
+    Assert-True (-not $inOwnedList) "PowerShell installer does not list '$shared' as a removable Frontier-owned root"
 
     $shPattern = '(?m)^\s*"' + [regex]::Escape($shared) + '"\s*$'
     $inShList = [regex]::Matches($installSh, $shPattern).Count -gt 0
-    Assert-True (-not $inShList) "Bash installer does not list '$shared' as a removable AgentX-owned root"
+    Assert-True (-not $inShList) "Bash installer does not list '$shared' as a removable Frontier-owned root"
 }
 
-Assert-True ($installPs1 -match 'install-manifest\.json') `
-    'PowerShell installer consults the install manifest for shared-directory cleanup'
-Assert-True ($installSh -match 'install-manifest\.json') `
-    'Bash installer consults the install manifest for shared-directory cleanup'
-
-# Behavioural proof: execute the installer's ACTUAL removal block (extracted
-# between its region markers) against a workspace that mixes AgentX assets with
-# user-owned files in the same shared directories. Re-implementing the logic here
-# would pass even if the installer block were deleted, so the block is run as-is.
-$upgradeRoot = New-TempDir
-try {
-    $userOwned = @(
-        '.github/workflows/ci.yml',
-        '.github/CODEOWNERS',
-        '.github/dependabot.yml',
-        '.github/ISSUE_TEMPLATE/custom.yml',
-        '.github/instructions/my-team.instructions.md',
-        '.github/skills/my-team-skill/SKILL.md',
-        '.github/prompts/my-team.prompt.md',
-        '.github/agents/my-team.agent.md',
-        '.claude/commands/deploy.md',
-        '.claude/settings.json',
-        'scripts/build-my-app.ps1',
-        'packs/my-team-pack/manifest.json'
-    )
-    $agentxOwned = @(
-        '.github/agents/engineer.agent.md',
-        '.github/skills/development/testing/SKILL.md',
-        '.github/instructions/python.instructions.md',
-        '.github/AGENT-PROTOCOL.md',
-        '.agentx/agentx.ps1',
-        'scripts/scrub.ps1',
-        '.claude/commands/engineer.md'
-    )
-    foreach ($rel in ($userOwned + $agentxOwned)) {
-        $full = Join-Path $upgradeRoot ($rel -replace '/', [IO.Path]::DirectorySeparatorChar)
-        New-Item -ItemType Directory -Path (Split-Path $full -Parent) -Force | Out-Null
-        Set-Content -LiteralPath $full -Value 'x' -Encoding utf8
-    }
-
-    # Traversal entry proves untrusted manifest paths cannot escape the workspace.
-    $outsideVictim = Join-Path ([IO.Path]::GetTempPath()) ("agentx-victim-$([guid]::NewGuid().ToString('N')).txt")
-    Set-Content -LiteralPath $outsideVictim -Value 'must survive' -Encoding utf8
-    $traversalEntry = 'scripts/../../' + (Split-Path $outsideVictim -Leaf)
-
-    $manifest = @{
-        version = '8.4.45'
-        files   = @(
-            @{ path = 'scripts/scrub.ps1'; sha256 = 'x'; category = 'script' },
-            @{ path = '.github/agents/engineer.agent.md'; sha256 = 'x'; category = 'agent' },
-            @{ path = '.github/skills/development/testing/SKILL.md'; sha256 = 'x'; category = 'skill' },
-            @{ path = '.github/instructions/python.instructions.md'; sha256 = 'x'; category = 'instruction' },
-            @{ path = '.claude/commands/engineer.md'; sha256 = 'x'; category = 'doc' },
-            @{ path = $traversalEntry; sha256 = 'x'; category = 'script' },
-            @{ path = 'C:/Windows/System32/drivers/etc/hosts'; sha256 = 'x'; category = 'script' }
-        )
-    }
-    $manifestFile = Join-Path $upgradeRoot '.agentx/install-manifest.json'
-    New-Item -ItemType Directory -Path (Split-Path $manifestFile -Parent) -Force | Out-Null
-    $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestFile -Encoding utf8
-
-    $regionMatch = [regex]::Match(
-        $installPs1,
-        '#\s*region agentx-upgrade-removal(?<body>.*?)#\s*endregion agentx-upgrade-removal',
-        'Singleline')
-    Assert-True $regionMatch.Success 'PowerShell installer exposes its upgrade removal block for execution'
-
-    if ($regionMatch.Success) {
-        Push-Location $upgradeRoot
-        try {
-            $trackedPaths = @((Get-Content '.agentx/install-manifest.json' -Raw | ConvertFrom-Json).files.path)
-            # Executes the installer's own code, so deleting it fails this test.
-            Invoke-Expression $regionMatch.Groups['body'].Value
-        }
-        finally {
-            Pop-Location
-        }
-
-        $survivors = @($userOwned | Where-Object {
-            Test-Path (Join-Path $upgradeRoot ($_ -replace '/', [IO.Path]::DirectorySeparatorChar))
-        })
-        Assert-True ($survivors.Count -eq $userOwned.Count) `
-            "upgrade preserves every user-owned file (kept $($survivors.Count) of $($userOwned.Count))"
-
-        $removedAgentx = @($agentxOwned | Where-Object {
-            -not (Test-Path (Join-Path $upgradeRoot ($_ -replace '/', [IO.Path]::DirectorySeparatorChar)))
-        })
-        Assert-True ($removedAgentx.Count -eq $agentxOwned.Count) `
-            "upgrade removes every AgentX-owned file (removed $($removedAgentx.Count) of $($agentxOwned.Count))"
-
-        Assert-True (Test-Path -LiteralPath $outsideVictim) `
-            'upgrade rejects traversal paths in an untrusted install manifest'
-        Assert-True (-not (Test-Path (Join-Path $upgradeRoot '.agentx'))) `
-            'upgrade removes the AgentX runtime directory'
-    }
-
-    Remove-Item -LiteralPath $outsideVictim -Force -ErrorAction SilentlyContinue
-}
-finally {
-    Remove-Item -LiteralPath $upgradeRoot -Recurse -Force -ErrorAction SilentlyContinue
-}
-
-# The Bash installer must enforce the same contract. Execute its removal block
-# when bash is available so the two installers cannot silently diverge.
-$bashCmd = Get-Command bash -ErrorAction SilentlyContinue
-if ($bashCmd) {
-    $shRoot = New-TempDir
-    try {
-        foreach ($rel in @('.github/workflows/ci.yml', '.github/instructions/my-team.instructions.md', '.claude/commands/deploy.md', 'scripts/build-my-app.ps1')) {
-            $full = Join-Path $shRoot ($rel -replace '/', [IO.Path]::DirectorySeparatorChar)
-            New-Item -ItemType Directory -Path (Split-Path $full -Parent) -Force | Out-Null
-            Set-Content -LiteralPath $full -Value 'x' -Encoding utf8
-        }
-        foreach ($rel in @('.agentx/agentx.ps1', 'scripts/scrub.ps1', '.github/AGENT-PROTOCOL.md')) {
-            $full = Join-Path $shRoot ($rel -replace '/', [IO.Path]::DirectorySeparatorChar)
-            New-Item -ItemType Directory -Path (Split-Path $full -Parent) -Force | Out-Null
-            Set-Content -LiteralPath $full -Value 'x' -Encoding utf8
-        }
-
-        $shRegion = [regex]::Match(
-            $installSh,
-            '#\s*region agentx-upgrade-removal(?<body>.*?)#\s*endregion agentx-upgrade-removal',
-            'Singleline')
-        Assert-True $shRegion.Success 'Bash installer exposes its upgrade removal block for execution'
-
-        if ($shRegion.Success) {
-            $shVictim = Join-Path ([IO.Path]::GetTempPath()) ("agentx-sh-victim-$([guid]::NewGuid().ToString('N')).txt")
-            Set-Content -LiteralPath $shVictim -Value 'must survive' -Encoding utf8
-            $shTraversal = 'scripts/../../' + (Split-Path $shVictim -Leaf)
-            $trackedForBash = @('scripts/scrub.ps1', $shTraversal, '/etc/passwd') -join "`n"
-
-            $script = @(
-                'set -e',
-                'ok() { :; }',
-                'PREVIOUS_VERSION=8.4.45',
-                "TRACKED_PATHS='$trackedForBash'",
-                $shRegion.Groups['body'].Value
-            ) -join "`n"
-            $scriptFile = Join-Path $shRoot 'upgrade-block.sh'
-            Set-Content -LiteralPath $scriptFile -Value ($script -replace "`r`n", "`n") -NoNewline -Encoding utf8
-
-            Push-Location $shRoot
-            try { & bash ./upgrade-block.sh 2>&1 | Out-Null } finally { Pop-Location }
-
-            $shSurvivors = @('.github/workflows/ci.yml', '.github/instructions/my-team.instructions.md', '.claude/commands/deploy.md', 'scripts/build-my-app.ps1') |
-                Where-Object { Test-Path (Join-Path $shRoot ($_ -replace '/', [IO.Path]::DirectorySeparatorChar)) }
-            Assert-True (@($shSurvivors).Count -eq 4) `
-                "Bash upgrade preserves every user-owned file (kept $(@($shSurvivors).Count) of 4)"
-            Assert-True (-not (Test-Path (Join-Path $shRoot '.agentx'))) 'Bash upgrade removes the AgentX runtime directory'
-            Assert-True (-not (Test-Path (Join-Path $shRoot 'scripts/scrub.ps1'))) 'Bash upgrade removes manifest-tracked AgentX files'
-            Assert-True (Test-Path -LiteralPath $shVictim) `
-                'Bash upgrade rejects traversal paths in an untrusted install manifest'
-            Remove-Item -LiteralPath $shVictim -Force -ErrorAction SilentlyContinue
-        }
-    }
-    finally {
-        Remove-Item -LiteralPath $shRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
-else {
-    Write-Host '[SKIP] bash unavailable; Bash installer removal block not executed'
-}
+Assert-True ($installPs1 -notmatch 'frontierOwnedPaths|trackedPaths|agentx-upgrade-removal') `
+    'PowerShell upgrades do not delete runtime roots or manifest-listed workspace files'
+Assert-True ($installSh -notmatch 'FRONTIER_OWNED_PATHS|TRACKED_PATHS|agentx-upgrade-removal') `
+    'Bash upgrades do not delete runtime roots or manifest-listed workspace files'
 
 # --- 8. Install manifest integrity -------------------------------------------
 
@@ -464,13 +306,13 @@ Assert-True ($manifestScript -match '\[switch\]\$Strict') `
 # --- 9. Seeded workspace reference integrity ---------------------------------
 #
 # The source repository is reference-clean, so source-only validation cannot
-# detect a broken seed layout. Reproduce the layout `AgentX: Initialize CLI`
+# detect a broken seed layout. Reproduce the layout `Frontier: Initialize CLI`
 # creates and validate it directly.
 
-$seedTree = Join-Path $repoRoot 'vscode-extension/.github/agentx/seed'
+$seedTree = Join-Path $repoRoot 'vscode-extension/.github/frontier/seed'
 if (Test-Path $seedTree) {
     $initSource = Get-Content (Join-Path $repoRoot 'vscode-extension/src/commands/initializeInternals.ts') -Raw
-    Assert-True ($initSource -match "SEED_ROOT\s*=\s*path\.join\('\.github',\s*'agentx',\s*'seed'\)") `
+    Assert-True ($initSource -match "SEED_ROOT\s*=\s*path\.join\('\.github',\s*'frontier',\s*'seed'\)") `
         'initializer seeds from the pristine bundle seed tree'
 
     foreach ($required in @('.github/agents', '.github/skills', '.github/AGENT-PROTOCOL.md', 'AGENTS.md', 'scripts', 'docs', 'evaluation')) {

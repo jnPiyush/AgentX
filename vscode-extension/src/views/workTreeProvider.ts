@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { SidebarTreeItem } from './sidebarTreeItem';
 import {
  buildIssueChildren,
@@ -12,7 +12,7 @@ export class WorkTreeProvider implements vscode.TreeDataProvider<SidebarTreeItem
  private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<SidebarTreeItem | undefined | void>();
  readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
- constructor(private readonly agentx: AgentXContext) {}
+ constructor(private readonly agentx: FrontierContext) {}
 
  refresh(): void {
   this.onDidChangeTreeDataEmitter.fire();

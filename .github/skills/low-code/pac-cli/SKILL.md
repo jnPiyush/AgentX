@@ -2,7 +2,7 @@
 name: "pac-cli"
 description: 'Operate the Microsoft Power Platform CLI (pac) for solution pack/unpack, environment auth, and import. Use after an agent emits an unpacked solution tree to validate it, pack it into a zip, and import it into a Dataverse environment.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

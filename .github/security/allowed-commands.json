@@ -1,6 +1,6 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "title": "AgentX Allowed Commands Configuration",
+ "title": "Frontier Allowed Commands Configuration",
  "description": "Defense-in-depth security: Allowlist for terminal commands that agents can execute",
  "version": "1.0.0",
  "allowlist": {

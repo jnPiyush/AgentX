@@ -212,50 +212,50 @@ function syncBundledAssets(version) {
 
   const requiredFiles = [
     {
-      relativePath: 'vscode-extension/.github/agentx/.agentx/agentic-runner.ps1',
+      relativePath: 'vscode-extension/.github/frontier/.agentx/agentic-runner.ps1',
       label: 'bundled agentic runner',
     },
     {
-      relativePath: 'vscode-extension/.github/agentx/docs/QUALITY_SCORE.md',
+      relativePath: 'vscode-extension/.github/frontier/docs/QUALITY_SCORE.md',
       label: 'bundled quality score doc',
     },
     {
-      relativePath: 'vscode-extension/.github/agentx/docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md',
+      relativePath: 'vscode-extension/.github/frontier/docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md',
       label: 'bundled knowledge review workflow guide',
     },
     {
-      relativePath: 'vscode-extension/.github/agentx/packs/agentx-copilot-cli/install.ps1',
+      relativePath: 'vscode-extension/.github/frontier/packs/frontier-copilot-cli/install.ps1',
       label: 'bundled Copilot CLI installer',
     },
     {
-      relativePath: 'vscode-extension/.github/agentx/packs/agentx-copilot-cli/install.sh',
+      relativePath: 'vscode-extension/.github/frontier/packs/frontier-copilot-cli/install.sh',
       label: 'bundled Copilot CLI bash installer',
     },
-    // The seed tree is what `AgentX: Initialize CLI` copies into user
+    // The seed tree is what `Frontier: Initialize CLI` copies into user
     // workspaces. A silently empty or partial seed would still package, so
     // assert its load-bearing entry points here.
     {
-      relativePath: 'vscode-extension/.github/agentx/seed/.github/AGENT-PROTOCOL.md',
+      relativePath: 'vscode-extension/.github/frontier/seed/.github/AGENT-PROTOCOL.md',
       label: 'seeded cross-cutting protocol',
     },
     {
-      relativePath: 'vscode-extension/.github/agentx/seed/.github/agents/engineer.agent.md',
+      relativePath: 'vscode-extension/.github/frontier/seed/.github/agents/engineer.agent.md',
       label: 'seeded agent definition',
     },
     {
-      relativePath: 'vscode-extension/.github/agentx/seed/.github/hooks/copilot-hooks.json',
+      relativePath: 'vscode-extension/.github/frontier/seed/.github/hooks/copilot-hooks.json',
       label: 'seeded Copilot CLI hook configuration',
     },
     {
-      relativePath: 'vscode-extension/.github/agentx/seed/scripts/validate-handoff.ps1',
+      relativePath: 'vscode-extension/.github/frontier/seed/scripts/validate-handoff.ps1',
       label: 'seeded handoff gate script',
     },
     {
-      relativePath: 'vscode-extension/.github/agentx/seed/scripts/score-output.ps1',
+      relativePath: 'vscode-extension/.github/frontier/seed/scripts/score-output.ps1',
       label: 'seeded output scoring gate script',
     },
     {
-      relativePath: 'vscode-extension/.github/agentx/seed/AGENTS.md',
+      relativePath: 'vscode-extension/.github/frontier/seed/AGENTS.md',
       label: 'seeded workspace entry point',
     },
   ];
@@ -265,12 +265,12 @@ function syncBundledAssets(version) {
   }
 
   assertBundledJsonVersion(
-    'vscode-extension/.github/agentx/packs/agentx-core/manifest.json',
+    'vscode-extension/.github/frontier/packs/frontier-core/manifest.json',
     version,
     'bundled core pack manifest',
   );
   assertBundledJsonVersion(
-    'vscode-extension/.github/agentx/packs/agentx-copilot-cli/manifest.json',
+    'vscode-extension/.github/frontier/packs/frontier-copilot-cli/manifest.json',
     version,
     'bundled Copilot CLI pack manifest',
   );
@@ -382,7 +382,15 @@ function main() {
 
   updatePackageLock(targetVersion);
 
-  updateTextFile('packs/agentx-core/manifest.json', [
+  updateTextFile('plugin.json', [
+    {
+      pattern: /("version": ")\d+\.\d+\.\d+("[,]?)/,
+      replacement: `$1${targetVersion}$2`,
+      label: 'root plugin version',
+    },
+  ]);
+
+  updateTextFile('packs/frontier-core/manifest.json', [
     {
       pattern: /("version": ")\d+\.\d+\.\d+(",)/,
       replacement: `$1${targetVersion}$2`,
@@ -390,7 +398,7 @@ function main() {
     },
   ]);
 
-  updateTextFile('packs/agentx-copilot-cli/manifest.json', [
+  updateTextFile('packs/frontier-copilot-cli/manifest.json', [
     {
       pattern: /("version": ")\d+\.\d+\.\d+(",)/,
       replacement: `$1${targetVersion}$2`,
@@ -423,8 +431,8 @@ function main() {
 
   updateTextFile('docs/ux/prototypes/landing/index.html', [
     {
-      pattern: /AgentX \d+\.\d+\.\d+/g,
-      replacement: `AgentX ${targetVersion}`,
+      pattern: /Frontier \d+\.\d+\.\d+/g,
+      replacement: `Frontier ${targetVersion}`,
       label: 'landing page release version',
     },
   ]);
@@ -453,18 +461,26 @@ function main() {
 
   updateTextFile('install.ps1', [
     {
+      pattern: /\$installedVersion -ne '\d+\.\d+\.\d+'/, replacement: `$installedVersion -ne '${targetVersion}'`,
+      label: 'PowerShell explicit-force version',
+    },
+    {
+      pattern: /replace managed files with v\d+\.\d+\.\d+/, replacement: `replace managed files with v${targetVersion}`,
+      label: 'PowerShell explicit-force message',
+    },
+    {
       pattern: /\$BRANCH = "v\d+\.\d+\.\d+"/,
       replacement: `$BRANCH = "v${targetVersion}"`,
       label: 'installer branch constant',
     },
     {
-      pattern: /Install AgentX v\d+\.\d+\.\d+ - Download, copy, configure\./,
-      replacement: `Install AgentX v${targetVersion} - Download, copy, configure.`,
+      pattern: /Install Frontier v\d+\.\d+\.\d+ - Download, copy, configure\./,
+      replacement: `Install Frontier v${targetVersion} - Download, copy, configure.`,
       label: 'installer synopsis',
     },
     {
-      pattern: /\| AgentX v\d+\.\d+\.\d+ - AI Agent Orchestration \|/,
-      replacement: `| AgentX v${targetVersion} - AI Agent Orchestration |`,
+      pattern: /\| Frontier v\d+\.\d+\.\d+ - AI Agent Orchestration \|/,
+      replacement: `| Frontier v${targetVersion} - AI Agent Orchestration |`,
       label: 'installer banner',
     },
     {
@@ -488,8 +504,8 @@ function main() {
       label: 'installer recorded message',
     },
     {
-      pattern: /AgentX v\d+\.\d+\.\d+ installed!/,
-      replacement: `AgentX v${targetVersion} installed!`,
+      pattern: /Frontier v\d+\.\d+\.\d+ installed!/,
+      replacement: `Frontier v${targetVersion} installed!`,
       label: 'installer completion banner',
     },
   ]);
@@ -498,18 +514,26 @@ function main() {
 
   updateTextFile('install.sh', [
     {
+      pattern: /"\$INSTALLED_VERSION" != '\d+\.\d+\.\d+'/, replacement: `"$INSTALLED_VERSION" != '${targetVersion}'`,
+      label: 'Bash explicit-force version',
+    },
+    {
+      pattern: /replace managed files with v\d+\.\d+\.\d+/, replacement: `replace managed files with v${targetVersion}`,
+      label: 'Bash explicit-force message',
+    },
+    {
       pattern: /BRANCH="v\d+\.\d+\.\d+"/,
       replacement: `BRANCH="v${targetVersion}"`,
       label: 'bash installer branch constant',
     },
     {
-      pattern: /AgentX v\d+\.\d+\.\d+ Installer - Download, copy, configure\./,
-      replacement: `AgentX v${targetVersion} Installer - Download, copy, configure.`,
+      pattern: /Frontier v\d+\.\d+\.\d+ Installer - Download, copy, configure\./,
+      replacement: `Frontier v${targetVersion} Installer - Download, copy, configure.`,
       label: 'bash installer synopsis',
     },
     {
-      pattern: /\| AgentX v\d+\.\d+\.\d+ - AI Agent Orchestration \|/,
-      replacement: `| AgentX v${targetVersion} - AI Agent Orchestration |`,
+      pattern: /\| Frontier v\d+\.\d+\.\d+ - AI Agent Orchestration \|/,
+      replacement: `| Frontier v${targetVersion} - AI Agent Orchestration |`,
       label: 'bash installer banner',
     },
     {
@@ -533,21 +557,21 @@ function main() {
       label: 'bash installer recorded message',
     },
     {
-      pattern: /AgentX v\d+\.\d+\.\d+ installed!/,
-      replacement: `AgentX v${targetVersion} installed!`,
+      pattern: /Frontier v\d+\.\d+\.\d+ installed!/,
+      replacement: `Frontier v${targetVersion} installed!`,
       label: 'bash installer completion banner',
     },
   ]);
 
-  updateTextFile('packs/agentx-copilot-cli/install.ps1', [
+  updateTextFile('packs/frontier-copilot-cli/install.ps1', [
     {
-      pattern: /Install AgentX Copilot CLI Plugin v\d+\.\d+\.\d+ into a workspace\./,
-      replacement: `Install AgentX Copilot CLI Plugin v${targetVersion} into a workspace.`,
+      pattern: /Install Frontier Copilot CLI Plugin v\d+\.\d+\.\d+ into a workspace\./,
+      replacement: `Install Frontier Copilot CLI Plugin v${targetVersion} into a workspace.`,
       label: 'CLI plugin installer synopsis',
     },
     {
-      pattern: /\| AgentX Copilot CLI Plugin v\d+\.\d+\.\d+\s+\|/,
-      replacement: `| AgentX Copilot CLI Plugin v${targetVersion}        |`,
+      pattern: /\| Frontier Copilot CLI Plugin v\d+\.\d+\.\d+\s+\|/,
+      replacement: `| Frontier Copilot CLI Plugin v${targetVersion}        |`,
       label: 'CLI plugin installer banner',
     },
     {
@@ -561,16 +585,16 @@ function main() {
       label: 'CLI plugin single-quoted version payload',
     },
     {
-      pattern: /AgentX Copilot CLI Plugin v\d+\.\d+\.\d+ installed/,
-      replacement: `AgentX Copilot CLI Plugin v${targetVersion} installed`,
+      pattern: /Frontier Copilot CLI Plugin v\d+\.\d+\.\d+ installed/,
+      replacement: `Frontier Copilot CLI Plugin v${targetVersion} installed`,
       label: 'CLI plugin completion banner',
     },
   ]);
 
-  updateTextFile('packs/agentx-copilot-cli/install.sh', [
+  updateTextFile('packs/frontier-copilot-cli/install.sh', [
     {
-      pattern: /AgentX Copilot CLI Plugin v\d+\.\d+\.\d+ - Installer \(Bash\)/,
-      replacement: `AgentX Copilot CLI Plugin v${targetVersion} - Installer (Bash)`,
+      pattern: /Frontier Copilot CLI Plugin v\d+\.\d+\.\d+ - Installer \(Bash\)/,
+      replacement: `Frontier Copilot CLI Plugin v${targetVersion} - Installer (Bash)`,
       label: 'CLI plugin bash synopsis',
     },
     {
@@ -580,7 +604,7 @@ function main() {
     },
   ]);
 
-  updateTextFile('packs/agentx-copilot-cli/install-user.ps1', [
+  updateTextFile('packs/frontier-copilot-cli/install-user.ps1', [
     {
       pattern: /version\s+= '\d+\.\d+\.\d+'$/m,
       replacement: `version     = '${targetVersion}'`,
@@ -588,7 +612,7 @@ function main() {
     },
   ]);
 
-  updateTextFile('packs/agentx-copilot-cli/install-user.sh', [
+  updateTextFile('packs/frontier-copilot-cli/install-user.sh', [
     {
       pattern: /"version": "\d+\.\d+\.\d+"/,
       replacement: `"version": "${targetVersion}"`,
@@ -596,7 +620,7 @@ function main() {
     },
   ]);
 
-  updateTextFile('packs/agentx-copilot-cli/README.md', [
+  updateTextFile('packs/frontier-copilot-cli/README.md', [
     {
       pattern: /- Version: `\d+\.\d+\.\d+`/,
       replacement: `- Version: \`${targetVersion}\``,

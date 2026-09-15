@@ -1,6 +1,6 @@
-# PSScriptAnalyzer configuration for AgentX.
+# PSScriptAnalyzer configuration for Frontier.
 #
-# Rule selection rationale -- AgentX is a CLI tool, not a module library, so
+# Rule selection rationale -- Frontier is a CLI tool, not a module library, so
 # several default rules produce noise rather than signal:
 #
 #   PSAvoidUsingWriteHost      652 hits. Console output IS the product for a

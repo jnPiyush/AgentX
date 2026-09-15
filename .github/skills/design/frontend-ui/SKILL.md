@@ -2,7 +2,7 @@
 name: "frontend-ui"
 description: 'Build frontend UIs with HTML5, CSS3, and Tailwind CSS following accessibility and performance best practices. Use when creating responsive layouts, styling with Tailwind CSS, implementing accessible forms, optimizing frontend performance, or building common UI patterns.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

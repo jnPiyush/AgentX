@@ -1,6 +1,6 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "title": "AgentX Agent File Frontmatter",
+ "title": "Frontier Agent File Frontmatter",
  "description": "Schema for .agent.md frontmatter validation",
  "type": "object",
  "required": ["description"],
@@ -17,7 +17,7 @@
   },
     "name": {
      "type": "string",
-     "description": "Visible AgentX agent display name"
+     "description": "Visible Frontier FDE display name"
     },
     "user-invocable": {
      "type": "boolean",

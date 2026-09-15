@@ -1,6 +1,6 @@
 # read-slides
 
-AgentX plugin that converts PowerPoint decks (`.pptx`) to Markdown using [python-pptx](https://python-pptx.readthedocs.io/).
+Frontier plugin that converts PowerPoint decks (`.pptx`) to Markdown using [python-pptx](https://python-pptx.readthedocs.io/).
 
 ## Requirements
 

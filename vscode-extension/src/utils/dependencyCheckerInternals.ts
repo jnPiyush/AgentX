@@ -129,11 +129,11 @@ export async function checkPowerShell(options: PowerShellCheckOptions = {}): Pro
   if (meetsMinimum) {
     message = `PowerShell ${pwshVersion} detected.`;
   } else if (hasPwsh) {
-    message = `PowerShell ${pwshVersion} found, but AgentX requires PowerShell ${MIN_POWERSHELL_VERSION}+ (pwsh).`;
+    message = `PowerShell ${pwshVersion} found, but Frontier requires PowerShell ${MIN_POWERSHELL_VERSION}+ (pwsh).`;
   } else if (legacyVersion) {
-    message = `Windows PowerShell ${legacyVersion} found, but AgentX requires PowerShell ${MIN_POWERSHELL_VERSION}+ (pwsh).`;
+    message = `Windows PowerShell ${legacyVersion} found, but Frontier requires PowerShell ${MIN_POWERSHELL_VERSION}+ (pwsh).`;
   } else {
-    message = `PowerShell ${MIN_POWERSHELL_VERSION}+ (pwsh) is required for AgentX PowerShell workflows.`;
+    message = `PowerShell ${MIN_POWERSHELL_VERSION}+ (pwsh) is required for Frontier PowerShell workflows.`;
   }
 
   return {

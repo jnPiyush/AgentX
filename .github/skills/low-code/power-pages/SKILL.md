@@ -2,7 +2,7 @@
 name: "power-pages"
 description: 'Author Microsoft Power Pages site source (web pages, templates, content snippets, web roles, table permissions, Liquid templating, basic forms and lists) so an agent can generate an external-facing Dataverse-backed website that pac pages download/upload round-trips. Covers the website-as-data model where pages and styling are Dataverse rows.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

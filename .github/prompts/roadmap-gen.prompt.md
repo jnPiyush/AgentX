@@ -1,6 +1,6 @@
 ---
 name: "Roadmap Generation"
-agent: "AgentX Product Manager"
+agent: "Frontier Product FDE"
 description: Generate a portfolio roadmap and release plan from epic, PRD, and workstream context
 inputs:
  issue_number:

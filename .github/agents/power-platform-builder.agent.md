@@ -1,5 +1,5 @@
 ---
-name: AgentX Power Platform Builder
+name: Frontier Power Platform FDE
 description: 'Build unpacked Microsoft Power Platform solution source for Dataverse, Power Apps, Power Automate, Power Pages, PCF, plugins, security, environment variables, and Copilot Studio. Use for type:lowcode work and Power Platform solution delivery. Generates and validates local source but never authenticates to, imports into, publishes to, exports from, or deletes from a tenant.'
 model: Claude Opus 5 (copilot)
 user-invocable: true
@@ -7,7 +7,7 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
     - type: command
       command: >-
@@ -16,12 +16,12 @@ hooks:
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   mode: adaptive
@@ -36,7 +36,7 @@ constraints:
   - "MUST mirror a verified live export for preview or export-shaped schemas instead of inventing file names or metadata"
   - "MUST NOT call pac auth, pac solution import, pac solution export, pac solution publish, pac solution delete, or any command that reads or mutates a tenant"
   - "MUST NOT commit packed zip files or generated build output"
-  - "MUST hand ALM and environment deployment automation to AgentX DevOps Engineer"
+  - "MUST hand ALM and environment deployment automation to Frontier DevOps FDE"
   - "MUST create files locally and MUST NOT push files directly through remote repository tools"
   - "MUST iterate until all done criteria pass and meet the risk-based minimum from AGENT-PROTOCOL.md; loop complete must succeed before handoff"
   - "MUST resolve Compound Capture before declaring Done"
@@ -65,11 +65,11 @@ tools:
   - think
   - agent
 agents:
-  - AgentX Product Manager
-  - AgentX Architect
-  - AgentX DevOps Engineer
-  - AgentX Reviewer
-  - AgentX GitHub Ops
+  - Frontier Product FDE
+  - Frontier Architecture FDE
+  - Frontier DevOps FDE
+  - Frontier Review FDE
+  - Frontier GitHub Ops FDE
 ---
 
 # Power Platform Builder Agent
@@ -78,7 +78,7 @@ agents:
 
 Use the Power Platform solution as the unit of ownership. Dataverse, apps, flows, pages, controls, plugins, security roles, environment variables, connection references, and Copilot Studio assets stay under one publisher, manifest, and package-validation lifecycle.
 
-The AgentX CLI runner enforces the `pac` allowlist directly. VS Code and Agents Window enforce the same boundary through the agent-scoped `PreToolUse` hook when the preview setting `chat.useCustomAgentHooks` is enabled; keep terminal tool approval enabled as defense in depth.
+The Frontier CLI runner enforces the `pac` allowlist directly. VS Code and Agents Window enforce the same boundary through the agent-scoped `PreToolUse` hook when the preview setting `chat.useCustomAgentHooks` is enabled; keep terminal tool approval enabled as defense in depth.
 
 ## Trigger and Status
 
@@ -139,7 +139,7 @@ Write the unpacked unmanaged tree under `solutions/<solution-name>/` using each 
 - `connectionreferences.json` whenever flows or connectors are present
 - Environment variables for values that differ across dev, test, and production
 
-Use [the pack example](../../packs/agentx-power-platform-builder/examples/lowcode-issue-tracker/) only as a structural reference; the current PRD and skills remain authoritative.
+Use [the pack example](../../packs/frontier-power-platform-builder/examples/lowcode-issue-tracker/) only as a structural reference; the current PRD and skills remain authoritative.
 
 ### 5. Validate Package
 
@@ -207,9 +207,9 @@ Power Platform product surfaces remain skills inside this workflow. Do not split
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as the absolute first tool call before editing. Reading the active task and required artifacts is allowed; mutating files before loop start succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as the absolute first tool call before editing. Reading the active task and required artifacts is allowed; mutating files before loop start succeeds is a contract violation.
 
-**Honesty rule**: Before answering whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state. Never claim completion unless `.agentx/agentx.ps1 loop complete` succeeded in the current session.
+**Honesty rule**: Before answering whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state. Never claim completion unless `.agentx/frontier.ps1 loop complete` succeeded in the current session.
 
 Cross-cutting rules are defined in [../AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md). Do not duplicate them here.
 

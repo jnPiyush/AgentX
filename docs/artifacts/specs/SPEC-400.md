@@ -276,7 +276,7 @@ sequenceDiagram
 flowchart TD
   ROOT["AgentX repo root"]
   ROOT --> A[".github/agents/"]
-  A --> A1["agent-x.agent.md"]
+  A --> A1["frontier.agent.md"]
   A --> A2["product-manager.agent.md"]
   A --> A3["architect.agent.md"]
   A --> AETC["...12 more user-invocable"]

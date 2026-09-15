@@ -2,7 +2,7 @@
 name: "performance-testing"
 description: 'Design and execute performance tests including load testing, stress testing, latency benchmarking, and capacity planning. Use when validating system throughput, response times, resource utilization, and scalability under load.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-03-01"
   updated: "2026-03-01"

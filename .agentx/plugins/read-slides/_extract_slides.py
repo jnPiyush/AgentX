@@ -1,4 +1,4 @@
-"""AgentX read-slides extractor: pptx -> markdown."""
+"""Frontier read-slides extractor: pptx -> markdown."""
 
 import sys, json, pathlib
 from pptx import Presentation

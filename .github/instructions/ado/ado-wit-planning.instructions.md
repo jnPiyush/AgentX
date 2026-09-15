@@ -1,6 +1,6 @@
 ---
 name: 'ADO Work Item Planning'
-description: 'Reference specification for Azure DevOps work item planning files, templates, field definitions, and search protocols -- adapted for AgentX.'
+description: 'Reference specification for Azure DevOps work item planning files, templates, field definitions, and search protocols -- adapted for Frontier.'
 applyTo: '**/.copilot-tracking/workitems/**'
 ---
 
@@ -22,9 +22,9 @@ this workflow.
 
 ## Current ADO Execution Path
 
-The AgentX ADO work-item provider uses Microsoft's Azure DevOps MCP Server only.
+The Frontier ADO work-item provider uses Microsoft's Azure DevOps MCP Server only.
 
-Required config in `.agentx/config.json`:
+Required config in `.frontier/config.json`:
 
 - `organization`: plain org name, `https://dev.azure.com/<org>`, or `https://<org>.visualstudio.com`
 - `project`: Azure DevOps project name

@@ -2,7 +2,7 @@
 name: "cost-analysis"
 description: 'Estimate and attribute cloud running cost for a proposed architecture before it is built. Use when writing an ADR options table, sizing a prototype, comparing managed versus self-hosted services, or answering "what will this cost to leave running". Produces a load-enveloped estimate with an idle-versus-active split and per-option attribution.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-08-06"
   updated: "2026-08-06"

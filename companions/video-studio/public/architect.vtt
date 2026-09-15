@@ -4,7 +4,7 @@ WEBVTT
 Architect prompt: Design the architecture for the feedback widget.
 
 00:00:05.000 --> 00:00:08.500
-AgentX evaluates three architecture options.
+Frontier evaluates three architecture options.
 
 00:00:09.000 --> 00:00:30.000
 Option A: REST API with Postgres. Option B: Serverless with DynamoDB streams. Option C: Edge functions with key value store.

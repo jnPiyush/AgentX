@@ -3,7 +3,7 @@ name: "prd"
 description: "Produce production-grade Product Requirements Documents (PRDs) that bridge business vision and technical execution. Use when writing, reading, reviewing, or extending a PRD -- by Product Manager agents authoring one, or by Architect/UX/Engineer/Agent-X agents that need to consume or fact-check PRD conventions without loading the full PM agent contract."
 user-invocable: false
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-21"
   updated: "2026-04-21"
@@ -11,7 +11,7 @@ metadata:
 
 # Product Requirements Document (PRD)
 
-> **Purpose**: Shared PRD conventions loadable by any AgentX role.
+> **Purpose**: Shared PRD conventions loadable by any Frontier role.
 > **Goal**: Concrete, measurable, non-contradictory requirements that survive handoff to Architect, UX, Data Scientist, and Engineer.
 > **Scope**: This skill is the conventions layer. The PM agent contract (`.github/agents/product-manager.agent.md`) owns the full authoring workflow. The template (`.github/templates/PRD-TEMPLATE.md`) owns the section structure.
 
@@ -24,7 +24,7 @@ metadata:
 - Reading a PRD to design UX (UX Designer)
 - Reading a PRD to plan ML/AI work (Data Scientist)
 - Reading a PRD to implement a story (Engineer)
-- Reviewing a PRD for quality (Reviewer, Agent X)
+- Reviewing a PRD for quality (Reviewer, Frontier)
 - Refining or amending an existing PRD
 
 Non-PM agents load this skill to understand **what a "good" PRD looks like** without pulling the full PM agent payload.

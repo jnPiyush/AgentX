@@ -110,7 +110,7 @@ Runner execution groundwork is now available through injected adapters and shell
 
 ### What I Accomplished
 - Added `scripts/run-ai-eval-sample.ps1` as a tiny local sample runner for the starter pack
-- Wired `evaluation/agentx.eval.yaml` to execute that script through the existing shell-backed execution contract
+- Wired `evaluation/frontier.eval.yaml` to execute that script through the existing shell-backed execution contract
 - Updated the starter baseline to match the sample runner's current placeholder-detection behavior
 - Documented that the starter runner is intentionally lightweight and should be replaced by project-specific evaluation logic
 
@@ -170,7 +170,7 @@ The repo now has a minimal, valid starter pack for `prompts/` and `evaluation/`.
 ### Key Achievements
 - Scoped the first implementation slice to contract validation and runner groundwork
 - Anchored the work with a repo-local execution plan and progress log
-- Added the extension module that reads `evaluation/agentx.eval.yaml`, `evaluation/baseline.json`, and normalized report artifacts
+- Added the extension module that reads `evaluation/frontier.eval.yaml`, `evaluation/baseline.json`, and normalized report artifacts
 - Added a sibling runner module that plans execution, normalizes runner output, and persists AgentX report files
 - Added a lightweight starter pack for prompt files, datasets, rubrics, and baselines that keeps the repo contract usable without copying promptfoo
 - Added a runnable starter sample path that fails until placeholder prompt and dataset content are replaced

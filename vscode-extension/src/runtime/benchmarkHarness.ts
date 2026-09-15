@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- Shared Runtime: Benchmark Eval Harness (batch mode)
+// Frontier -- Shared Runtime: Benchmark Eval Harness (batch mode)
 // ---------------------------------------------------------------------------
 //
 // Framework-free core of the built-in benchmark harness (harness feature 4).

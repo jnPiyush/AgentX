@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- Shared Runtime: Loop State Store (filesystem boundary)
+// Frontier -- Shared Runtime: Loop State Store (filesystem boundary)
 // ---------------------------------------------------------------------------
 //
 // The ONLY filesystem boundary for the shared loop runtime. Reads and parses
@@ -9,8 +9,8 @@
 // ---------------------------------------------------------------------------
 
 import * as fs from 'fs';
-import * as path from 'path';
-import { LoopState, LOOP_STATE_REL } from './loopState';
+import { LoopState } from './loopState';
+import { resolveFrontierStatePath } from '../utils/frontierPaths';
 
 /**
  * Parse raw JSON text into a LoopState. Returns null on invalid JSON.
@@ -28,7 +28,7 @@ export function parseLoopState(raw: string): LoopState | null {
  * Returns null if the file doesn't exist or is unreadable.
  */
 export function readLoopStateFromFile(workspaceRoot: string): LoopState | null {
-  const filePath = path.join(workspaceRoot, LOOP_STATE_REL);
+  const filePath = resolveFrontierStatePath(workspaceRoot, 'state', 'loop-state.json');
   try {
     if (!fs.existsSync(filePath)) {
       return null;

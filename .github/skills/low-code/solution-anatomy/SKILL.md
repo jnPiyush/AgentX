@@ -2,7 +2,7 @@
 name: "solution-anatomy"
 description: 'Author and structure unpacked Microsoft Power Platform solutions on disk so an agent can generate source that pac solution pack will accept and Power Apps will import. Covers Solution.xml, publisher, prefixes, versioning, dependencies, component folders, managed vs unmanaged, and the round-trip with pac solution unpack/pack.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

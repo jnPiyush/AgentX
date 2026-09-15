@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX Signal Capture -- Copilot Hook Handler
+// Frontier Signal Capture -- Copilot Hook Handler
 // ---------------------------------------------------------------------------
 // Captures tool usage, session markers, and error signals to
 // .agentx/signals/sessions.jsonl for downstream pattern discovery.
@@ -101,7 +101,7 @@ function pick(payload, keys, envValue) {
 }
 
 // Copilot CLI emits `sessionStart`; VS Code emits `SessionStart`; the retired
-// AgentX config used `copilot-agent:sessionStart`. Several payloads (notably
+// Frontier config used `copilot-agent:sessionStart`. Several payloads (notably
 // postToolUse) carry no event field at all, so the hook configuration passes the
 // event name as the first argument. Precedence: argument, payload, environment.
 function normalizeEventName(payload) {

@@ -18,20 +18,20 @@ function summarize(state) {
 
 function diffEvents(previous, current) {
   const events = [];
-  if (!previous && current) return [{ kind: 'init', text: `[AgentX] Loop state initialized\n${summarize(current)}` }];
+  if (!previous && current) return [{ kind: 'init', text: `[Frontier] Loop state initialized\n${summarize(current)}` }];
   if (!current) return events;
   if (previous.status !== current.status) {
-    events.push({ kind: 'status', text: `[AgentX] Loop status: ${previous.status} -> ${current.status}\n${summarize(current)}\nPrompt: ${current.prompt || '(none)'}` });
+    events.push({ kind: 'status', text: `[Frontier] Loop status: ${previous.status} -> ${current.status}\n${summarize(current)}\nPrompt: ${current.prompt || '(none)'}` });
   }
   if (previous.active !== current.active && current.active === true) {
-    events.push({ kind: 'started', text: `[AgentX] Loop STARTED\n${summarize(current)}\nPrompt: ${current.prompt || '(none)'}` });
+    events.push({ kind: 'started', text: `[Frontier] Loop STARTED\n${summarize(current)}\nPrompt: ${current.prompt || '(none)'}` });
   }
   if (previous.iteration !== current.iteration && current.iteration > previous.iteration) {
     const last = current.history && current.history.length ? current.history[current.history.length - 1] : null;
-    events.push({ kind: 'iteration', text: `[AgentX] Iteration ${current.iteration}\n${last && last.summary ? last.summary.slice(0, 400) : ''}` });
+    events.push({ kind: 'iteration', text: `[Frontier] Iteration ${current.iteration}\n${last && last.summary ? last.summary.slice(0, 400) : ''}` });
   }
   if (current.status === 'complete' && previous.status !== 'complete') {
-    events.push({ kind: 'complete', text: `[AgentX] LOOP COMPLETE\n${summarize(current)}` });
+    events.push({ kind: 'complete', text: `[Frontier] LOOP COMPLETE\n${summarize(current)}` });
   }
   return events;
 }
@@ -62,7 +62,7 @@ function startLoopWatcher({ config, client, fsImpl = fs }) {
       if (!include.has(event.kind) || lastEventKeys.has(key)) continue;
       for (const number of targets) {
         try { await client.sendMessage(`${number}@c.us`, event.text); } catch (error) {
-          console.warn(`[AgentX WhatsApp] Push failed: ${error.message}`);
+          console.warn(`[Frontier WhatsApp] Push failed: ${error.message}`);
         }
       }
     }
@@ -78,7 +78,7 @@ function startLoopWatcher({ config, client, fsImpl = fs }) {
       return;
     }
     emissionQueue = emissionQueue.then(() => sendEvents(current)).catch((error) => {
-      console.warn(`[AgentX WhatsApp] Loop event processing failed: ${error.message}`);
+      console.warn(`[Frontier WhatsApp] Loop event processing failed: ${error.message}`);
     });
   };
 
@@ -96,13 +96,13 @@ function startLoopWatcher({ config, client, fsImpl = fs }) {
       if (!filename || filename === 'loop-state.json') schedule();
     });
     watcher.on && watcher.on('error', (error) => {
-      console.warn(`[AgentX WhatsApp] Loop watcher error; switching to polling: ${error.message}`);
+      console.warn(`[Frontier WhatsApp] Loop watcher error; switching to polling: ${error.message}`);
       watcher.close();
       watcher = null;
       startPolling();
     });
   } catch (error) {
-    console.warn(`[AgentX WhatsApp] fs.watch unavailable; polling: ${error.message}`);
+    console.warn(`[Frontier WhatsApp] fs.watch unavailable; polling: ${error.message}`);
     startPolling();
   }
 

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { WorkTreeProvider } from './workTreeProvider';
 import { StatusTreeProvider } from './statusTreeProvider';
 import { TemplateTreeProvider } from './templateTreeProvider';
@@ -18,7 +18,7 @@ export interface SidebarProviders {
  readonly skillProvider: SkillTreeProvider;
 }
 
-export function createSidebarProviders(agentx: AgentXContext): SidebarProviders {
+export function createSidebarProviders(agentx: FrontierContext): SidebarProviders {
  return {
   workTreeProvider: new WorkTreeProvider(agentx),
   statusTreeProvider: new StatusTreeProvider(agentx),
@@ -29,10 +29,10 @@ export function createSidebarProviders(agentx: AgentXContext): SidebarProviders 
 
 export function registerSidebarProviders(providers: SidebarProviders): void {
  const registrations = [
-  ['agentx-work', providers.workTreeProvider],
-  ['agentx-status', providers.statusTreeProvider],
-  ['agentx-templates', providers.templateProvider],
-  ['agentx-skills', providers.skillProvider],
+  ['frontier-work', providers.workTreeProvider],
+  ['frontier-status', providers.statusTreeProvider],
+  ['frontier-templates', providers.templateProvider],
+  ['frontier-skills', providers.skillProvider],
  ] as const;
  for (const [viewId, provider] of registrations) {
   vscode.window.registerTreeDataProvider(viewId, provider);

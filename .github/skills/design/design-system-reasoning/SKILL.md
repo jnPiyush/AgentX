@@ -2,7 +2,7 @@
 name: "design-system-reasoning"
 description: 'Synthesize product context into a coherent UI direction with page archetypes, visual language, token guidance, anti-pattern filters, and stack-aware translation. Use when choosing a design style, defining a design brief, aligning UI choices to industry expectations, or reviewing whether a UI direction fits the product before implementation.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.1.0"
  created: "2026-03-12"
  updated: "2026-03-12"

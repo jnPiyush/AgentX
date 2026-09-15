@@ -2,7 +2,7 @@
 name: "test-automation"
 description: 'Build and maintain automated test infrastructure for continuous testing. Use when setting up test frameworks, configuring CI test pipelines, implementing parallel test execution, test data management, reporting dashboards, or test environment provisioning.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-03-01"
   updated: "2026-03-01"

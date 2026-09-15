@@ -13,9 +13,9 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
 const githubDir = path.resolve(repoRoot, '.github');
 
-// All paths use ./.github/agentx/ prefix because copy-assets.js
+// All paths use ./.github/frontier/ prefix because copy-assets.js
 // copies .github/ content there for VSIX bundling.
-const PREFIX = './.github/agentx';
+const PREFIX = './.github/frontier';
 
 // --- Discover chatAgents (visibility is controlled by agent frontmatter) ---
 function discoverAgents() {

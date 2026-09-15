@@ -1,9 +1,12 @@
 import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { registerAgentXCommands } from '../../commands/registry';
+import {
+  registerFrontierCommands,
+  registerLegacyCommandAliases,
+} from '../../commands/registry';
 
-describe('registerAgentXCommands', () => {
+describe('registerFrontierCommands', () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
@@ -18,23 +21,44 @@ describe('registerAgentXCommands', () => {
   it('registers the command surface through the shared facade', () => {
     const context = { subscriptions: [] } as unknown as vscode.ExtensionContext;
 
-    registerAgentXCommands(context, {} as any);
+    registerFrontierCommands(context, {} as any);
 
     const registerCommand = vscode.commands.registerCommand as sinon.SinonStub;
-    assert.ok(registerCommand.calledWith('agentx.initializeLocalRuntime'));
-    assert.ok(registerCommand.calledWith('agentx.addRemoteAdapter'));
-    assert.ok(registerCommand.calledWith('agentx.addPlugin'));
-    assert.ok(registerCommand.calledWith('agentx.showStatus'));
-    assert.ok(registerCommand.calledWith('agentx.runWorkflow'));
-    assert.ok(registerCommand.calledWith('agentx.checkDeps'));
-    assert.ok(registerCommand.calledWith('agentx.generateDigest'));
-    assert.ok(registerCommand.calledWith('agentx.loop'));
-    assert.ok(registerCommand.calledWith('agentx.showAgentNativeReview'));
-    assert.ok(registerCommand.calledWith('agentx.showAIEvaluationStatus'));
-    assert.ok(registerCommand.calledWith('agentx.scaffoldAIEvaluationContract'));
-    assert.ok(registerCommand.calledWith('agentx.runAIEvaluation'));
-    assert.ok(registerCommand.calledWith('agentx.showTaskBundles'));
-    assert.ok(registerCommand.calledWith('agentx.showIssue'));
-    assert.ok(registerCommand.calledWith('agentx.showPendingClarification'));
+    assert.ok(registerCommand.calledWith('frontier.initializeLocalRuntime'));
+    assert.ok(registerCommand.calledWith('frontier.addRemoteAdapter'));
+    assert.ok(registerCommand.calledWith('frontier.addPlugin'));
+    assert.ok(registerCommand.calledWith('frontier.showStatus'));
+    assert.ok(registerCommand.calledWith('frontier.runWorkflow'));
+    assert.ok(registerCommand.calledWith('frontier.checkDeps'));
+    assert.ok(registerCommand.calledWith('frontier.generateDigest'));
+    assert.ok(registerCommand.calledWith('frontier.loop'));
+    assert.ok(registerCommand.calledWith('frontier.showAgentNativeReview'));
+    assert.ok(registerCommand.calledWith('frontier.showAIEvaluationStatus'));
+    assert.ok(registerCommand.calledWith('frontier.scaffoldAIEvaluationContract'));
+    assert.ok(registerCommand.calledWith('frontier.runAIEvaluation'));
+    assert.ok(registerCommand.calledWith('frontier.showTaskBundles'));
+    assert.ok(registerCommand.calledWith('frontier.showIssue'));
+    assert.ok(registerCommand.calledWith('frontier.showPendingClarification'));
+  });
+
+  it('registers hidden legacy aliases that forward to Frontier commands', async () => {
+    const context = {
+      subscriptions: [],
+      extension: {
+        packageJSON: {
+          contributes: { commands: [{ command: 'frontier.showStatus' }] },
+        },
+      },
+    } as unknown as vscode.ExtensionContext;
+    const executeCommand = sandbox.stub(vscode.commands, 'executeCommand').resolves();
+
+    registerLegacyCommandAliases(context);
+
+    const registration = (vscode.commands.registerCommand as sinon.SinonStub)
+      .getCalls()
+      .find((call) => call.args[0] === 'agentx.showStatus');
+    assert.ok(registration, 'legacy alias should be registered without a manifest contribution');
+    await registration.args[1]('argument');
+    assert.ok(executeCommand.calledWith('frontier.showStatus', 'argument'));
   });
 });

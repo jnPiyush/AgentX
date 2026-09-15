@@ -2,7 +2,7 @@
 name: "foundry-sdk"
 description: 'Implement agentic applications with the Microsoft Foundry SDKs. Use when coding against Microsoft Foundry project clients, agent operations, evaluations, datasets, indexes, tracing, or SDK-driven tool wiring rather than only high-level architecture guidance.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2026-04-04"
  updated: "2026-04-04"

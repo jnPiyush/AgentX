@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { registerInitializeLocalRuntimeCommand } from './initialize';
 import { registerInitializeCliCommand } from './initializeCli';
 import { registerAddRemoteAdapterCommand } from './adapters';
@@ -23,9 +23,9 @@ import { registerAddSkillCommand } from './addSkill';
 import { registerRunCouncilCommand } from './runCouncil';
 import { registerDashboardCommand } from './dashboard';
 
-export function registerAgentXCommands(
+export function registerFrontierCommands(
  context: vscode.ExtensionContext,
- agentx: AgentXContext,
+ agentx: FrontierContext,
 ): void {
  registerInitializeLocalRuntimeCommand(context, agentx);
  registerInitializeCliCommand(context, agentx);
@@ -49,4 +49,30 @@ export function registerAgentXCommands(
  registerAddSkillCommand(context, agentx);
  registerRunCouncilCommand(context, agentx);
  registerDashboardCommand(context, agentx);
+}
+
+interface CommandContribution {
+ readonly command?: unknown;
+}
+
+interface PackageWithCommands {
+ readonly contributes?: {
+  readonly commands?: readonly CommandContribution[];
+ };
+}
+
+export function registerLegacyCommandAliases(context: vscode.ExtensionContext): void {
+ const packageMetadata = context.extension.packageJSON as PackageWithCommands;
+ const commandIds = packageMetadata.contributes?.commands
+  ?.map((entry) => entry.command)
+  .filter((command): command is string => typeof command === 'string' && command.startsWith('frontier.'))
+  ?? [];
+
+ for (const commandId of commandIds) {
+  const legacyCommandId = `agentx.${commandId.substring('frontier.'.length)}`;
+  context.subscriptions.push(vscode.commands.registerCommand(
+   legacyCommandId,
+   (...args: unknown[]) => vscode.commands.executeCommand(commandId, ...args),
+  ));
+ }
 }

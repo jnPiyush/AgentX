@@ -12,7 +12,7 @@ variables:
 
 stages:
 - stage: validate
-  displayName: Validate AgentX
+  displayName: Validate Frontier
   jobs:
   - job: quality_gates
     displayName: Run shared validation gates

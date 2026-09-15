@@ -1,5 +1,5 @@
 ---
-name: AgentX ADO Ops
+name: Frontier ADO Ops FDE
 description: 'ADO Backlog Manager -- orchestrates Azure DevOps backlog management workflows including triage, discovery, sprint planning, execution, PRD planning, and pull requests.'
 visibility: internal
 model: Claude Sonnet 5 (copilot)
@@ -9,17 +9,17 @@ hooks:
   PreToolUse:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { [Console]::Error.WriteLine('AgentX local runtime not initialized; policy hook degraded.'); exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { [Console]::Error.WriteLine('Frontier local runtime not initialized; policy hook degraded.'); exit 0 }"
       timeout: 10
   SessionStart:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
   Stop:
     - type: command
       command: >-
-        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/agentx.ps1') { & '.agentx/agentx.ps1' policy-hook } else { exit 0 }"
+        pwsh -NoProfile -Command "if (Test-Path -LiteralPath '.agentx/frontier.ps1') { & '.agentx/frontier.ps1' policy-hook } else { exit 0 }"
       timeout: 10
 reasoning:
   mode: adaptive
@@ -63,8 +63,8 @@ tools:
   - web
   - agent
 agents:
-  - AgentX Auto
-  - AgentX ADO PRD to Work Items
+  - Frontier Orchestration FDE
+  - Frontier ADO Planning FDE
 ---
 
 # ADO Backlog Manager
@@ -85,11 +85,11 @@ Use interaction templates from
 [ado-interaction-templates.instructions.md](../../instructions/ado/ado-interaction-templates.instructions.md)
 when composing work item descriptions and comments for ADO API calls.
 
-AgentX runtime note:
+Frontier runtime note:
 
-- The built-in AgentX ADO work-item provider now uses Microsoft's Azure DevOps MCP Server (`@azure-devops/mcp`) only.
-- Configure `.agentx/config.json` with `organization`, `project`, and optionally `adapters.ado.mcpCommand` or `adapters.ado.mcpTools` when you need a custom server launch command or non-default tool names.
-- AgentX derives the MCP organization name from a plain org name, a `https://dev.azure.com/<org>` URL, or a `https://<org>.visualstudio.com` URL.
+- The built-in Frontier ADO work-item provider now uses Microsoft's Azure DevOps MCP Server (`@azure-devops/mcp`) only.
+- Configure `.frontier/config.json` with `organization`, `project`, and optionally `adapters.ado.mcpCommand` or `adapters.ado.mcpTools` when you need a custom server launch command or non-default tool names.
+- Frontier derives the MCP organization name from a plain org name, a `https://dev.azure.com/<org>` URL, or a `https://<org>.visualstudio.com` URL.
 - MCP tool names default to `wit_get_work_item`, `wit_create_work_item`, `wit_update_work_item`, `wit_add_work_item_comment`, `wit_query_by_wiql`, and may be overridden via `adapters.ado.mcpTools`.
 
 ## Core Directives
@@ -169,13 +169,13 @@ Summary contents:
 
 ## Current ADO Command Reference
 
-The AgentX ADO provider routes work-item operations through MCP only. PR and pipeline operations remain on `az` CLI today.
+The Frontier ADO provider routes work-item operations through MCP only. PR and pipeline operations remain on `az` CLI today.
 
 ### MCP transport
 
-When `node` and `npx` are on PATH, AgentX spawns Microsoft's Azure DevOps MCP Server and dispatches JSON-RPC `tools/call` requests:
+When `node` and `npx` are on PATH, Frontier spawns Microsoft's Azure DevOps MCP Server and dispatches JSON-RPC `tools/call` requests:
 
-| Category  | MCP Tool (default) | AgentX operation |
+| Category  | MCP Tool (default) | Frontier operation |
 |-----------|--------------------|------------------|
 | Search    | `wit_query_by_wiql` | `Get-ProviderIssues` (WIQL) |
 | Retrieval | `wit_get_work_item` | `Get-AdoIssue` |
@@ -260,9 +260,9 @@ When creating Epic, Feature, User Story, Requirement, Issue, or Scrum Product Ba
 
 ## Iterative Quality Loop (MANDATORY)
 
-**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/agentx.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
+**Pre-edit gate (NON-SKIPPABLE)**: Run `.agentx/frontier.ps1 loop start -p "<task>" -i <issue>` as your ABSOLUTE FIRST tool call, BEFORE editing any file. Reading the active task description and the artifacts this agent is required to read is allowed; editing, creating, or deleting files before `loop start` succeeds is a contract violation.
 
-**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/agentx.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/agentx.ps1 loop complete` succeeded in this session.
+**Honesty rule**: If anyone asks whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the actual state verbatim. Never claim the loop completed unless `.agentx/frontier.ps1 loop complete` succeeded in this session.
 
 Cross-cutting rules (loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research, and shared plugin rules) are defined once in [../../AGENT-PROTOCOL.md](../../AGENT-PROTOCOL.md). This agent MUST NOT restate the full cross-cutting prose.
 
@@ -272,7 +272,7 @@ Requested ADO work items are created or updated; workflow state is persisted; pr
 
 ## Delivery Report (MANDATORY)
 
-Before handoff, report: work items created; work items updated; sanitization status; handoff path; HIGH/MEDIUM findings; and AgentX quality-loop state.
+Before handoff, report: work items created; work items updated; sanitization status; handoff path; HIGH/MEDIUM findings; and Frontier quality-loop state.
 
 ## Plugins (Optional Capabilities)
 

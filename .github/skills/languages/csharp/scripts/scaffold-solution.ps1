@@ -39,7 +39,6 @@ New-Item -ItemType Directory -Path $root -Force | Out-Null
 
 Push-Location $root
 try {
- # Create solution
  dotnet new sln --name $Name --force | Out-Null
  Write-Host " Created: $Name.sln" -ForegroundColor Green
 
@@ -135,7 +134,6 @@ coverage/
 "@
  $gitignore | Set-Content ".gitignore" -Encoding UTF8
 
- # Create README
  $readme = @"
 # $Name
 

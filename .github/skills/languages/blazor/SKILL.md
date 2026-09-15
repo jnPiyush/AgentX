@@ -2,7 +2,7 @@
 name: "blazor"
 description: 'Build Blazor applications with Razor components, lifecycle management, and C# web patterns. Use when creating Blazor Server or WebAssembly apps, building Razor components, implementing state management, adding JavaScript interop, or optimizing Blazor performance.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

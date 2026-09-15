@@ -1,22 +1,22 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 
 let clarificationChannel: vscode.OutputChannel | undefined;
 
 export function registerPendingClarificationCommand(
  context: vscode.ExtensionContext,
- agentxContext: AgentXContext,
+ frontierContext: FrontierContext,
 ): void {
  context.subscriptions.push(
-  vscode.commands.registerCommand('agentx.showPendingClarification', async () => {
-   const pending = await agentxContext.getPendingClarification();
+  vscode.commands.registerCommand('frontier.showPendingClarification', async () => {
+   const pending = await frontierContext.getPendingClarification();
    if (!pending) {
     vscode.window.showInformationMessage('There is no pending clarification right now.');
     return;
    }
 
    if (!clarificationChannel) {
-    clarificationChannel = vscode.window.createOutputChannel('AgentX Clarification');
+    clarificationChannel = vscode.window.createOutputChannel('Frontier Clarification');
    }
 
    clarificationChannel.clear();
@@ -30,7 +30,7 @@ export function registerPendingClarificationCommand(
    }
    clarificationChannel.appendLine('');
    clarificationChannel.appendLine('Continue in Copilot Chat with:');
-   clarificationChannel.appendLine(`@agentx continue "your guidance here"`);
+   clarificationChannel.appendLine(`@frontier continue "your guidance here"`);
    clarificationChannel.show(true);
   }),
  );

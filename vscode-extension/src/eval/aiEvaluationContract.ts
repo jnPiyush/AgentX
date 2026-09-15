@@ -1,4 +1,4 @@
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   evaluateAIEvaluationContractFromRoot,
   renderAIEvaluationContractSummary,
@@ -32,7 +32,7 @@ export type {
   AIEvaluationWorkspaceState,
 } from './aiEvaluationContractTypes';
 
-export function evaluateAIEvaluationContract(agentx: AgentXContext): AIEvaluationWorkspaceState | undefined {
+export function evaluateAIEvaluationContract(agentx: FrontierContext): AIEvaluationWorkspaceState | undefined {
   const root = agentx.workspaceRoot;
   if (!root) {
     return undefined;
@@ -41,7 +41,7 @@ export function evaluateAIEvaluationContract(agentx: AgentXContext): AIEvaluatio
   return evaluateAIEvaluationContractFromRoot(root);
 }
 
-export function getAIEvaluationContractSummary(agentx: AgentXContext): string {
+export function getAIEvaluationContractSummary(agentx: FrontierContext): string {
   const state = evaluateAIEvaluationContract(agentx);
   if (!state) {
     return 'No AI evaluation';
@@ -50,7 +50,7 @@ export function getAIEvaluationContractSummary(agentx: AgentXContext): string {
   return renderAIEvaluationContractSummary(state);
 }
 
-export function getAIEvaluationContractTooltip(agentx: AgentXContext): string {
+export function getAIEvaluationContractTooltip(agentx: FrontierContext): string {
   const state = evaluateAIEvaluationContract(agentx);
   if (!state) {
     return 'No workspace open for AI evaluation.';

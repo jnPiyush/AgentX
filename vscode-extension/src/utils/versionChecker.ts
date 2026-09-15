@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs';
+import { resolveFrontierStateDirectory, resolveFrontierStatePath } from './frontierPaths';
 
 // -----------------------------------------------------------------------
 // Types
@@ -63,7 +63,7 @@ export function compareSemver(a: string, b: string): -1 | 0 | 1 {
 export function readInstalledVersion(
   workspaceRoot: string,
 ): InstalledVersionInfo | undefined {
-  const versionFile = path.join(workspaceRoot, '.agentx', 'version.json');
+  const versionFile = resolveFrontierStatePath(workspaceRoot, 'version.json');
   if (!fs.existsSync(versionFile)) { return undefined; }
   try {
     const raw = fs.readFileSync(versionFile, 'utf-8');
@@ -128,10 +128,10 @@ export async function silentVersionSync(
   if (!result.updateAvailable) { return; }
 
   // Update version.json silently
-  const versionFile = path.join(workspaceRoot, '.agentx', 'version.json');
-  const versionDir = path.join(workspaceRoot, '.agentx');
+  const versionFile = resolveFrontierStatePath(workspaceRoot, 'version.json');
+  const versionDir = resolveFrontierStateDirectory(workspaceRoot);
 
-  if (!fs.existsSync(versionDir)) { return; } // No .agentx/ dir = not initialized
+  if (!fs.existsSync(versionDir)) { return; }
 
   try {
     let existing: Record<string, unknown> = {};
@@ -141,7 +141,7 @@ export async function silentVersionSync(
     existing.version = extensionVersion;
     existing.updatedAt = new Date().toISOString();
     fs.writeFileSync(versionFile, JSON.stringify(existing, null, 2));
-    console.log(`AgentX: Synced workspace version to ${extensionVersion}`);
+    console.log(`Frontier: Synced workspace version to ${extensionVersion}`);
   } catch {
     // Best-effort -- don't block activation
   }

@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveFrontierStateDirectory } from './frontierPaths';
 
 const WORKSPACE_PREFIXES = [
   '.github/agents/',
@@ -17,22 +18,22 @@ function normalizeRelativePath(relativePath: string): string {
 function mapToRuntimeRelativePath(relativePath: string): string | undefined {
   const normalized = normalizeRelativePath(relativePath);
   if (normalized.startsWith('.github/agents/')) {
-    return `.agentx/runtime/agents/${normalized.substring('.github/agents/'.length)}`;
+    return `runtime/agents/${normalized.substring('.github/agents/'.length)}`;
   }
   if (normalized.startsWith('.github/skills/')) {
-    return `.agentx/runtime/skills/${normalized.substring('.github/skills/'.length)}`;
+    return `runtime/skills/${normalized.substring('.github/skills/'.length)}`;
   }
   if (normalized.startsWith('.github/instructions/')) {
-    return `.agentx/runtime/instructions/${normalized.substring('.github/instructions/'.length)}`;
+    return `runtime/instructions/${normalized.substring('.github/instructions/'.length)}`;
   }
   if (normalized.startsWith('.github/prompts/')) {
-    return `.agentx/runtime/prompts/${normalized.substring('.github/prompts/'.length)}`;
+    return `runtime/prompts/${normalized.substring('.github/prompts/'.length)}`;
   }
   if (normalized.startsWith('.github/templates/')) {
-    return `.agentx/runtime/templates/${normalized.substring('.github/templates/'.length)}`;
+    return `runtime/templates/${normalized.substring('.github/templates/'.length)}`;
   }
   if (normalized.startsWith('docs/guides/')) {
-    return `.agentx/runtime/docs/guides/${normalized.substring('docs/guides/'.length)}`;
+    return `runtime/docs/guides/${normalized.substring('docs/guides/'.length)}`;
   }
   return undefined;
 }
@@ -40,10 +41,10 @@ function mapToRuntimeRelativePath(relativePath: string): string | undefined {
 function mapToBundledRelativePath(relativePath: string): string | undefined {
   const normalized = normalizeRelativePath(relativePath);
   if (normalized.startsWith('.github/')) {
-    return `.github/agentx/${normalized.substring('.github/'.length)}`;
+    return `.github/frontier/${normalized.substring('.github/'.length)}`;
   }
   if (normalized.startsWith('docs/')) {
-    return `.github/agentx/docs/${normalized.substring('docs/'.length)}`;
+    return `.github/frontier/docs/${normalized.substring('docs/'.length)}`;
   }
   return undefined;
 }
@@ -81,7 +82,7 @@ export function getRuntimeAssetPath(root: string | undefined, relativePath: stri
     return undefined;
   }
 
-  const absolutePath = toAbsolutePath(root, runtimeRelativePath);
+  const absolutePath = toAbsolutePath(resolveFrontierStateDirectory(root), runtimeRelativePath);
   return fs.existsSync(absolutePath) ? absolutePath : undefined;
 }
 
@@ -152,7 +153,7 @@ export function collectAssetFiles(
     collectDirEntries(toAbsolutePath(extensionPath, bundledRelativeDir), predicate, files);
   }
   if (workspaceRoot && runtimeRelativeDir) {
-    collectDirEntries(toAbsolutePath(workspaceRoot, runtimeRelativeDir), predicate, files);
+    collectDirEntries(toAbsolutePath(resolveFrontierStateDirectory(workspaceRoot), runtimeRelativeDir), predicate, files);
   }
   if (workspaceRoot) {
     collectDirEntries(toAbsolutePath(workspaceRoot, normalizedDir), predicate, files);
@@ -162,7 +163,7 @@ export function collectAssetFiles(
 }
 
 /**
- * Pattern that matches canonical AgentX asset paths inside agent instructions
+ * Pattern that matches canonical Frontier asset paths inside agent instructions
  * or other markdown content. Matches:
  *   .github/agents/<file>.agent.md
  *   .github/agents/internal/<file>.agent.md
@@ -186,7 +187,7 @@ const ASSET_REFERENCE_PATTERN = /(?:\.github\/agents(?:\/internal)?\/[A-Za-z0-9.
  *   1. Workspace override at the canonical path -> leave unchanged.
  *   2. Workspace runtime mirror under .agentx/runtime/... -> rewrite to that
  *      workspace-relative path.
- *   3. Bundled extension copy under <ext>/.github/agentx/... -> rewrite to the
+ *   3. Bundled extension copy under <ext>/.github/frontier/... -> rewrite to the
  *      absolute extension path.
  *   4. Otherwise leave unchanged.
  */
@@ -200,8 +201,14 @@ export function rewriteAssetReferences(
       return match;
     }
 
-    const runtimeRelative = workspaceRoot && getRuntimeAssetPath(workspaceRoot, match)
+    const runtimeRelativePath = workspaceRoot && getRuntimeAssetPath(workspaceRoot, match)
       ? mapToRuntimeRelativePath(match)
+      : undefined;
+    const runtimeRelative = workspaceRoot && runtimeRelativePath
+      ? path.relative(
+        workspaceRoot,
+        toAbsolutePath(resolveFrontierStateDirectory(workspaceRoot), runtimeRelativePath),
+      ).replace(/\\/g, '/')
       : undefined;
     if (runtimeRelative) {
       return runtimeRelative;

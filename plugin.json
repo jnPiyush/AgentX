@@ -1,7 +1,7 @@
 {
   "name": "agentx",
-  "version": "9.2.0",
-  "description": "AgentX -- 26 SDLC agents and 134 production skills for GitHub Copilot CLI, with quality-loop gates, handoff contracts, and lifecycle hooks.",
+  "version": "9.3.0",
+  "description": "Frontier Corp -- 26 specialized Forward Deployed Engineers and 134 production skills for governed Hypervelocity Engineering in GitHub Copilot CLI.",
   "author": "jnPiyush",
   "homepage": "https://github.com/jnPiyush/AgentX",
   "license": "Apache-2.0",

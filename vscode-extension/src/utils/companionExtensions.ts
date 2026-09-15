@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { workspaceUsesAzure } from './azureWorkspaceDetector';
 
 /**
- * Companion extensions that AgentX recommends.
+ * Companion extensions that Frontier recommends.
  * Checked on every activation; user is prompted to install if missing.
  */
 const AZURE_PRIMARY_EXTENSION_ID = 'ms-azuretools.vscode-azure-mcp-server';
@@ -47,8 +47,8 @@ export async function checkCompanionExtensions(workspaceRoot?: string): Promise<
   const later = 'Later';
   const never = "Don't Ask Again";
   const message = state === 'legacy'
-    ? 'AgentX detected the legacy GitHub Copilot for Azure companion. Install the Azure MCP Extension to enable the Azure Skills plugin, Azure MCP Server, and Foundry MCP in the current Azure workspace.'
-    : 'AgentX detected Azure usage in this workspace. Install the Azure MCP Extension to enable the Azure Skills plugin, Azure MCP Server, and Foundry MCP for Azure design, deployment, diagnostics, and operations.';
+    ? 'Frontier detected the legacy GitHub Copilot for Azure companion. Install the Azure MCP Extension to enable the Azure Skills plugin, Azure MCP Server, and Foundry MCP in the current Azure workspace.'
+    : 'Frontier detected Azure usage in this workspace. Install the Azure MCP Extension to enable the Azure Skills plugin, Azure MCP Server, and Foundry MCP for Azure design, deployment, diagnostics, and operations.';
 
   const choice = await vscode.window.showInformationMessage(
     message,

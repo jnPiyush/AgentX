@@ -1,6 +1,6 @@
 # Skill Evaluation Framework
 
-Deterministic evaluation harness for AgentX skills, inspired by
+Deterministic evaluation harness for Frontier skills, inspired by
 [Phil Schmid's Practical Guide to Evaluating and Testing Agent Skills](https://www.philschmid.de/testing-skills).
 
 ## Quick Start
@@ -40,7 +40,7 @@ Deterministic evaluation harness for AgentX skills, inspired by
 | `instruction_has_code_examples` | LOW | >= 1 code block present |
 | `instruction_has_anti_patterns` | LOW | Has anti-pattern or error guidance |
 
-### 3. Convention Compliance (AgentX-specific)
+### 3. Convention Compliance (Frontier-specific)
 
 | Check | Severity | What It Tests |
 |-------|----------|---------------|

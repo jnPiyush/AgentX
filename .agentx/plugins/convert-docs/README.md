@@ -1,11 +1,11 @@
 # convert-docs
 
-AgentX plugin that converts Markdown documents to Microsoft Word (DOCX) using [Pandoc](https://pandoc.org), with automatic Mermaid diagram rendering.
+Frontier plugin that converts Markdown documents to Microsoft Word (DOCX) using [Pandoc](https://pandoc.org), with automatic Mermaid diagram rendering.
 
 ## What''s new in 1.1.0
 
 - Fenced ```` ```mermaid ```` blocks are pre-rendered to PNGs and embedded inline when [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) is on `PATH`.
-- AgentX templates that already use Mermaid (ADR, Spec, Roadmap, Arch-Review) now produce Word docs with real diagrams instead of code blocks.
+- Frontier templates that already use Mermaid (ADR, Spec, Roadmap, Arch-Review) now produce Word docs with real diagrams instead of code blocks.
 - Graceful degradation: without `mmdc` the plugin behaves exactly as 1.0.0.
 
 ## Requirements

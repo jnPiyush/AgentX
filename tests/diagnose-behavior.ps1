@@ -91,7 +91,7 @@ try {
     foreach ($helpFlag in @('-Help', '--help', '-h')) {
         $helpOutput = & pwsh -NoProfile -File $cli $helpFlag 2>&1
         Assert-True ($LASTEXITCODE -eq 0) "$helpFlag exits successfully"
-        Assert-True (($helpOutput | Out-String) -match 'AgentX CLI') "$helpFlag renders CLI help"
+        Assert-True (($helpOutput | Out-String) -match 'Frontier CLI') "$helpFlag renders CLI help"
     }
 } finally {
     if ($null -eq $previousWorkspaceRoot) {
@@ -114,7 +114,7 @@ try {
     New-Item -ItemType Directory -Path $isolatedExtension -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $root 'vscode-extension/.github') `
         -Destination (Join-Path $isolatedExtension '.github') -Recurse
-    $bundledValidator = Join-Path $isolatedExtension '.github/agentx/scripts/validate-references.ps1'
+    $bundledValidator = Join-Path $isolatedExtension '.github/frontier/scripts/validate-references.ps1'
     $bundleOutput = & pwsh -NoProfile -File $bundledValidator -Quiet 2>&1
     Assert-True ($LASTEXITCODE -eq 0) 'generated extension bundle has no broken references'
     if ($LASTEXITCODE -ne 0) {

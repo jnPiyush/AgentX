@@ -6,7 +6,7 @@ import { SkillTreeProvider } from '../../views/skillTreeProvider';
 import { SkillTreeItem } from '../../views/skillTreeProviderInternals';
 
 function createWorkspaceRoot(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-skill-tree-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-skill-tree-'));
   const skillDir = path.join(root, '.github', 'skills', 'development', 'testing');
   fs.mkdirSync(skillDir, { recursive: true });
   fs.writeFileSync(
@@ -53,7 +53,7 @@ describe('SkillTreeProvider', () => {
   });
 
   it('returns info node when no skills are found', async () => {
-    const emptyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-empty-'));
+    const emptyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-empty-'));
     const provider = new SkillTreeProvider(makeContext(emptyRoot, emptyRoot));
     const items = await provider.getChildren();
     assert.ok(items.length >= 1);

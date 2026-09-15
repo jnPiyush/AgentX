@@ -93,7 +93,6 @@ if ($uncategorized -gt 0) {
  Write-Host " (uncategorized -> unit: $uncategorized)" -ForegroundColor Gray
 }
 
-# Check ratios
 $exitCode = 0
 $targets = @(
  @{ Name = "Unit"; Actual = $unitPct; Target = 70 },

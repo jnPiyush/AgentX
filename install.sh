@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentX v9.2.0 Installer - Download, copy, configure.
+# Frontier v9.3.0 Installer - Download, copy, configure.
 #
 # Modes: local (default), github
 #
@@ -11,7 +11,7 @@
 # ./install.sh --azure # Force Azure Skills companion install
 #
 # # One-liner install (local mode, no prompts, pinned to a release tag)
-# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.2.0/install.sh | bash
+# curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.0/install.sh | bash
 #
 # # One-liner for GitHub mode
 # MODE=github curl -fsSL ... | bash
@@ -32,7 +32,7 @@ FORCE="${FORCE:-false}"
 NO_SETUP="${NO_SETUP:-false}"
 INSTALL_PATH="${AGENTX_PATH:-}"
 AZURE="${AGENTX_AZURE:-false}"
-BRANCH="v9.2.0"
+BRANCH="v9.3.0"
 TMP=".agentx-install-tmp"
 TMPARCHIVE="$TMP.tar.gz"
 ARCHIVE_URL="https://github.com/jnPiyush/AgentX/archive/refs/tags/$BRANCH.tar.gz"
@@ -82,7 +82,7 @@ download_archive() {
  exit 1
 }
 
-PREFIX="AgentX-$BRANCH"
+PREFIX="Frontier-$BRANCH"
 # Legacy: support LOCAL=true -> MODE=local
 [ -z "$MODE" ] && [ "${LOCAL:-false}" = "true" ] && MODE="local"
 
@@ -126,6 +126,18 @@ if [ -n "$INSTALL_PATH" ]; then
  mkdir -p "$INSTALL_PATH"
  cd "$INSTALL_PATH"
  echo -e "${D} Target: $INSTALL_PATH${N}"
+fi
+
+INSTALLED_VERSION=""
+for state_directory in .frontier .hve .agentx; do
+ if [ -f "$state_directory/version.json" ]; then
+  INSTALLED_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$state_directory/version.json" | head -1)
+  [ -n "$INSTALLED_VERSION" ] && break
+ fi
+done
+if [ -n "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != '9.3.0' ] && [ "$FORCE" != true ]; then
+ echo "Frontier v$INSTALLED_VERSION is already installed. Re-run with --force to replace managed files with v9.3.0; no files were changed."
+ exit 1
 fi
 
 # Auto-detect piped execution (curl | bash) - used to skip interactive prompts
@@ -195,7 +207,7 @@ ensure_dependency() {
 # -- Banner ----------------------------------------------
 echo ""
 echo -e "${C}+===================================================+${N}"
-echo -e "${C}| AgentX v9.2.0 - AI Agent Orchestration |${N}"
+echo -e "${C}| Frontier v9.3.0 - AI Agent Orchestration |${N}"
 echo -e "${C}+===================================================+${N}"
 echo ""
 
@@ -210,19 +222,6 @@ echo ""
 echo -e "${G} Mode: $DISPLAY_MODE${N}"
 echo ""
 
-PREVIOUS_VERSION=""
-if [ -f ".agentx/version.json" ]; then
- PREVIOUS_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' .agentx/version.json 2>/dev/null | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)"/\1/')
-fi
-if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.2.0" ] && [ "$FORCE" != "true" ]; then
- PREVIOUS_MAJOR_VERSION=$(echo "$PREVIOUS_VERSION" | cut -d. -f1)
- if [ "$PREVIOUS_MAJOR_VERSION" -ge 9 ] 2>/dev/null; then
-  trap - EXIT ERR
-  echo "AgentX v$PREVIOUS_VERSION is already installed. Re-run with --force to replace managed files with v9.2.0; no files were changed." >&2
-  exit 1
- fi
-fi
-
 # -- Prerequisites ---------------------------------------
 # curl/wget + tar for download; install Git and PowerShell up front when missing
 if command -v curl &>/dev/null; then
@@ -233,119 +232,25 @@ else
  echo "curl or wget is required. Install one and retry."; exit 1
 fi
 command -v tar &>/dev/null || { echo "tar is required for extraction."; exit 1; }
-ensure_dependency git git Git || { echo "Git is required for AgentX install."; exit 1; }
-ensure_dependency pwsh powershell "PowerShell 7.4+ (pwsh)" || { echo "PowerShell 7.4+ (pwsh) is required for AgentX install."; exit 1; }
+ensure_dependency git git Git || { echo "Git is required for Frontier install."; exit 1; }
+ensure_dependency pwsh powershell "PowerShell 7.4+ (pwsh)" || { echo "PowerShell 7.4+ (pwsh) is required for Frontier install."; exit 1; }
 
-# -- Upgrade detection: uninstall old version, preserve user data --
-if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.2.0" ]; then
- MAJOR_VERSION=$(echo "$PREVIOUS_VERSION" | cut -d. -f1)
+# -- Upgrade detection --
+PREVIOUS_VERSION="$INSTALLED_VERSION"
 
- if [ "$MAJOR_VERSION" -lt 9 ] 2>/dev/null; then
-  echo -e "${Y}[!] Detected AgentX v$PREVIOUS_VERSION - upgrading to v9.2.0...${N}"
-  echo -e "${D}  Uninstalling v$PREVIOUS_VERSION and performing clean install.${N}"
-
-  # Back up user data that must survive the upgrade
-  BACKUP_DIR=".agentx-upgrade-backup"
-  rm -rf "$BACKUP_DIR"
-  mkdir -p "$BACKUP_DIR"
-
-  USER_PATHS=(
-   ".agentx/config.json"
-   ".agentx/issues"
-   ".agentx/state"
-   "memories"
-  )
-  for up in "${USER_PATHS[@]}"; do
-   if [ -e "$up" ]; then
-    dest="$BACKUP_DIR/$up"
-    mkdir -p "$(dirname "$dest")"
-    cp -r "$up" "$dest"
-   fi
-  done
-  ok "User data backed up"
-
-  # Read the previous install manifest BEFORE removing .agentx/ so files AgentX
-  # installed into shared directories can be removed individually.
-  TRACKED_PATHS=""
-  if [ -f ".agentx/install-manifest.json" ]; then
-   TRACKED_PATHS=$(grep -o '"path"[[:space:]]*:[[:space:]]*"[^"]*"' .agentx/install-manifest.json 2>/dev/null \
-    | sed 's/.*"\([^"]*\)"$/\1/' || true)
-  fi
-
-  # region agentx-upgrade-removal
-  # Remove AgentX-owned paths only.
-  #
-  # SAFETY: ".agentx/" is the only directory AgentX owns outright (user data in it
-  # was backed up above). Every other location is a host-standard shared namespace
-  # where users legitimately keep their own files -- ".github/instructions",
-  # ".github/skills", ".github/prompts", ".claude/commands", "scripts/", "packs/".
-  # Those are cleaned per-file from the previous install manifest so that any
-  # untracked, user-authored file always survives the upgrade.
-  AGENTX_OWNED_PATHS=(
-   ".agentx"
-   ".github/AGENT-PROTOCOL.md"
-   ".github/agent-delegation.md"
-   ".github/agentx-security.yml"
-   ".github/copilot-instructions.md"
-   ".cursor/mcp.json"
-  )
-  for d in "${AGENTX_OWNED_PATHS[@]}"; do
-   [ -e "$d" ] && rm -rf "$d"
-  done
-
-  # Remove manifest-tracked files, leaving every untracked (user-authored) file
-  # intact. Manifest paths come from the target workspace and are therefore
-  # untrusted: reject absolute paths and any traversal segment before deleting.
-  if [ -n "$TRACKED_PATHS" ]; then
-   while IFS= read -r tracked; do
-    [ -z "$tracked" ] && continue
-    case "$tracked" in
-     /*|\\*|*:*) continue ;;
-     ..|../*|*/../*|*/..) continue ;;
-    esac
-    [ -f "$tracked" ] && rm -f "$tracked"
-   done <<< "$TRACKED_PATHS"
-  fi
-
-  # Prune AgentX customization directories that the per-file cleanup emptied.
-  PRUNABLE_DIRS=(
-   ".github/agents" ".github/instructions" ".github/prompts" ".github/skills"
-   ".github/templates" ".github/schemas" ".github/registries" ".github/hooks"
-   ".github/scripts" ".claude/agents" ".claude/commands" ".claude/skills"
-   ".cursor/commands" ".cursor/rules"
-  )
-  for d in "${PRUNABLE_DIRS[@]}"; do
-   [ -d "$d" ] || continue
-   if [ -z "$(find "$d" -type f -print -quit 2>/dev/null)" ]; then
-    rm -rf "$d"
-   fi
-  done
-  # endregion agentx-upgrade-removal
-
-  ok "AgentX v$PREVIOUS_VERSION files removed (user-owned files preserved)"
-
-  # Restore user data after removal
-  for up in "${USER_PATHS[@]}"; do
-   src="$BACKUP_DIR/$up"
-   if [ -e "$src" ]; then
-    mkdir -p "$(dirname "$up")"
-    cp -r "$src" "$up"
-   fi
-  done
-  rm -rf "$BACKUP_DIR"
-  ok "User data restored"
-
-  # Force overwrite for fresh install
-  FORCE=true
- fi
+if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "9.3.0" ]; then
+ echo -e "${Y}[!] Detected Frontier v$PREVIOUS_VERSION - upgrading to v9.3.0...${N}"
+ echo -e "${D}  Existing runtime data and files absent from the release are retained.${N}"
 fi
 
 # -- Step 1: Download ------------------------------------
-echo -e "${C}[1] Downloading AgentX...${N}"
+echo -e "${C}[1] Downloading Frontier...${N}"
 rm -rf "$TMP"
 mkdir -p "$TMP"
 download_archive "$ARCHIVE_SOURCE" "$TMPARCHIVE"
 [ -s "$TMPARCHIVE" ] || { echo "Download failed. Check network."; exit 1; }
+PREFIX=$(tar tzf "$TMPARCHIVE" | awk -F/ 'NR == 1 { prefix = $1 } END { print prefix }')
+[ -n "$PREFIX" ] || { echo "Release archive is empty."; exit 1; }
 
 # Extract only essential paths (skip vscode-extension, tests, and large historical docs content)
 tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
@@ -361,6 +266,7 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/Skills.md" \
  "$PREFIX/LICENSE" \
  "$PREFIX/NOTICE" \
+ "$PREFIX/docs/BRAND.md" \
  "$PREFIX/docs/WORKFLOW.md" \
  "$PREFIX/docs/GUIDE.md" \
  "$PREFIX/docs/GOLDEN_PRINCIPLES.md" \
@@ -368,7 +274,7 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/docs/tech-debt-tracker.md" 2>/dev/null || true
 
 [ -d "$TMP/.agentx" ] || { echo "Download failed. Check network."; exit 1; }
-ok "AgentX downloaded (essential files only)"
+ok "Frontier downloaded (essential files only)"
 
 # -- Step 2: Copy files ----------------------------------
 echo -e "${C}[2] Installing files...${N}"
@@ -416,7 +322,8 @@ fi
 
 # -- Step 3: Generate runtime files ----------------------
 echo -e "${C}[3] Configuring runtime...${N}"
-mkdir -p .agentx/state .agentx/digests docs/artifacts/{prd,adr,specs,reviews} docs/execution/{plans,progress} docs/{ux,architecture} memories/session
+pwsh -NoProfile -File .agentx/agentx-cli.ps1 version
+mkdir -p .frontier/state .frontier/digests docs/artifacts/{prd,adr,specs,reviews} docs/execution/{plans,progress} docs/{ux,architecture} memories/session
 
 memory_template_source=".agentx/templates/memories"
 if [ -d "$memory_template_source" ]; then
@@ -430,15 +337,19 @@ if [ -d "$memory_template_source" ]; then
 fi
 
 # Version tracking
-VERSION_FILE=".agentx/version.json"
-echo "{ \"version\": \"9.2.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
-ok "Version 9.2.0 recorded"
+VERSION_FILE=".frontier/version.json"
+echo "{ \"version\": \"9.3.0\", \"mode\": \"$MODE\", \"installedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"updatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$VERSION_FILE"
+ok "Version 9.3.0 recorded"
 
-# Merge AgentX entries into user's .gitignore
-MARKER_START="# --- AgentX (auto-generated, do not edit this block) ---"
-MARKER_END="# --- /AgentX ---"
+# Merge Frontier entries into user's .gitignore
+MARKER_START="# --- Frontier (auto-generated, do not edit this block) ---"
+MARKER_END="# --- /Frontier ---"
 AGENTX_BLOCK="$MARKER_START
-# AgentX framework
+# Frontier framework
+.frontier/
+.frontier-migration.lock/
+.frontier.migrating-*/
+.hve/
 .agentx/
 .github/agents/
 .github/instructions/
@@ -499,11 +410,11 @@ $(echo "$AGENTX_BLOCK" | sed 's/$/\\/' | sed '$ s/\\$//')" "$GI_PATH" 2>/dev/nul
 else
  printf '%s\n' "$AGENTX_BLOCK" > "$GI_PATH"
 fi
-ok "AgentX entries merged into .gitignore"
+ok "Frontier entries merged into .gitignore"
 
 # Agent status
-STATUS=".agentx/state/agent-status.json"
-if [ ! -f "$STATUS" ] || [ "$FORCE" = "true" ]; then
+STATUS=".frontier/state/agent-status.json"
+if [ ! -f "$STATUS" ]; then
  cat > "$STATUS" <<EOF
 {
  "product-manager": { "status": "idle", "issue": null, "lastActivity": null },
@@ -525,10 +436,10 @@ EOF
 fi
 
 # Mode config
-CONFIG=".agentx/config.json"
-if [ ! -f "$CONFIG" ] || [ "$FORCE" = "true" ]; then
+CONFIG=".frontier/config.json"
+if [ ! -f "$CONFIG" ]; then
  if [ "$LOCAL" = "true" ]; then
- mkdir -p .agentx/issues
+ mkdir -p .frontier/issues
  echo "{ \"mode\": \"local\", \"nextIssueNumber\": 1, \"created\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }" > "$CONFIG"
  ok "Local Mode configured"
  else
@@ -682,7 +593,7 @@ fi
 # -- Done ------------------------------------------------
 echo ""
 echo -e "${G}===================================================${N}"
-echo -e "${G} AgentX v9.2.0 installed! [$DISPLAY_MODE]${N}"
+echo -e "${G} Frontier v9.3.0 installed! [$DISPLAY_MODE]${N}"
 echo -e "${G}===================================================${N}"
 echo ""
 echo " CLI: ./.agentx/agentx.sh help"

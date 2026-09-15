@@ -6,6 +6,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveFrontierStatePath } from './frontierPaths';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,7 +76,7 @@ function sanitizeAgentName(name: string): string {
 }
 
 function ledgerDir(workspaceRoot: string): string {
-  return path.join(workspaceRoot, '.agentx', 'state', 'clarifications');
+  return resolveFrontierStatePath(workspaceRoot, 'state', 'clarifications');
 }
 
 function ledgerPath(workspaceRoot: string, issueNumber: number): string {

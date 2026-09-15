@@ -6,7 +6,7 @@
   "displayName": "Read Docs",
   "version": "1.0.0",
   "description": "Convert Microsoft Word, OpenDocument, RTF, HTML, and EPUB documents to Markdown using Pandoc.",
-  "author": "AgentX",
+  "author": "Frontier",
   "license": "Apache-2.0",
   "homepage": "https://github.com/jnPiyush/AgentX/tree/master/.agentx/plugins/read-docs",
   "bugs": "https://github.com/jnPiyush/AgentX/issues",

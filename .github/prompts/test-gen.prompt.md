@@ -1,6 +1,6 @@
 ---
 name: "Test Generation"
-agent: "AgentX Engineer"
+agent: "Frontier Engineering FDE"
 description: Test generation prompt for creating comprehensive test suites
 inputs:
  issue_number:

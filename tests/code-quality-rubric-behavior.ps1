@@ -54,7 +54,7 @@ function Invoke-Agentx([string]$WorkspaceRoot, [string[]]$Arguments) {
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $WorkspaceRoot
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $WorkspaceRoot
     $startInfo.ArgumentList.Add('-NoProfile')
     $startInfo.ArgumentList.Add('-File')
     $startInfo.ArgumentList.Add($cliPath)
@@ -108,16 +108,16 @@ function Write-Report([string]$Path, $Scope, [hashtable]$Scores = @{}) {
             findings = @()
         }
     }
-    Save-JsonFile $Path ([ordered]@{
+    [ordered]@{
         rubricVersion = '2.0.0'
         reviewer = 'code-quality-test-reviewer'
         reviewedAt = [datetimeoffset]::UtcNow.ToString('o')
         files = @($Scope.files)
         dimensions = @($dimensions)
-    })
+    } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $Path -Encoding utf8
 }
 
-Write-Host 'AgentX Code Quality Rubric Tests'
+Write-Host 'Frontier Code Quality Rubric Tests'
 Assert-True (Test-Path -LiteralPath $rubricPath -PathType Leaf) 'Code-quality rubric exists under evaluation/rubrics'
 Assert-True (Test-Path -LiteralPath $evaluatorPath -PathType Leaf) 'Code-quality evaluator exists'
 $rubricContent = Get-Content -LiteralPath $rubricPath -Raw -Encoding utf8
@@ -131,7 +131,7 @@ New-Item -ItemType Directory -Path (Join-Path $workspace 'src') -Force | Out-Nul
 try {
     & git -C $workspace init --quiet
     & git -C $workspace config user.email 'agentx-tests@example.invalid'
-    & git -C $workspace config user.name 'AgentX Tests'
+    & git -C $workspace config user.name 'Frontier Tests'
     Set-Content -LiteralPath (Join-Path $workspace 'src/app.ts') -Value 'export const value = 1;' -Encoding utf8
     Set-Content -LiteralPath (Join-Path $workspace 'README.md') -Value '# Fixture' -Encoding utf8
     & git -C $workspace add .
@@ -315,7 +315,7 @@ New-Item -ItemType Directory -Path (Join-Path $dotPathWorkspace '.agentx') -Forc
 try {
     & git -C $dotPathWorkspace init --quiet
     & git -C $dotPathWorkspace config user.email 'agentx-tests@example.invalid'
-    & git -C $dotPathWorkspace config user.name 'AgentX Tests'
+    & git -C $dotPathWorkspace config user.name 'Frontier Tests'
     Set-Content -LiteralPath (Join-Path $dotPathWorkspace '.agentx/runtime.ps1') -Value 'Write-Output baseline' -Encoding utf8
     & git -C $dotPathWorkspace add .
     & git -C $dotPathWorkspace commit --quiet -m 'test: establish dot-path fixture'
@@ -356,7 +356,7 @@ if (-not $SkipLoopIntegration) {
         New-Item -ItemType Directory -Path (Join-Path $zeroCopyWorkspace 'scripts') -Force | Out-Null
         Set-Content -LiteralPath (Join-Path $zeroCopyWorkspace 'scripts/score-code-quality.ps1') -Value 'param(); exit 0' -Encoding utf8
         $zeroCopyStart = Invoke-Agentx $zeroCopyWorkspace @('loop', 'start', '-p', 'Review zero-copy implementation', '-i', '420')
-        Assert-True ($zeroCopyStart.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $zeroCopyWorkspace '.agentx/state/code-quality-baseline.json'))) 'Zero-copy loop start ignores a workspace-shadow scorer and resolves the installed evaluator'
+        Assert-True ($zeroCopyStart.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $zeroCopyWorkspace '.frontier/state/code-quality-baseline.json'))) 'Zero-copy loop start ignores a workspace-shadow scorer and resolves the installed evaluator'
     } finally {
         Remove-Item -LiteralPath $zeroCopyWorkspace -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -368,20 +368,20 @@ if (-not $SkipLoopIntegration) {
         Copy-Item -LiteralPath $evaluatorPath -Destination (Join-Path $loopWorkspace 'scripts/score-code-quality.ps1')
         & git -C $loopWorkspace init --quiet
         & git -C $loopWorkspace config user.email 'agentx-tests@example.invalid'
-        & git -C $loopWorkspace config user.name 'AgentX Tests'
+        & git -C $loopWorkspace config user.name 'Frontier Tests'
         Set-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const value = 1;' -Encoding utf8
         & git -C $loopWorkspace add .
         & git -C $loopWorkspace commit --quiet -m 'test: establish loop fixture'
 
         $start = Invoke-Agentx $loopWorkspace @('loop', 'start', '-p', 'Correct utility defect', '-i', '420')
-        Assert-True ($start.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $loopWorkspace '.agentx/state/code-quality-baseline.json'))) 'Loop start captures the code-quality baseline automatically'
+        Assert-True ($start.ExitCode -eq 0 -and (Test-Path -LiteralPath (Join-Path $loopWorkspace '.frontier/state/code-quality-baseline.json'))) 'Loop start captures the code-quality baseline automatically'
 
         $preReviewEvidence = Join-Path $loopWorkspace 'focused.txt'
         Set-Content -LiteralPath $preReviewEvidence -Value 'focused checks passed' -Encoding utf8
         $preReview = Invoke-Agentx $loopWorkspace @('loop', 'iterate', '-s', 'Focused checks', '-e', $preReviewEvidence)
         Assert-True ($preReview.ExitCode -eq 0) 'Loop records pre-review evidence with its own digest'
         Add-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const corrected = true;' -Encoding utf8
-        $loopScopeResult = Invoke-Evaluator $loopWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $loopWorkspace, '-BaselinePath', (Join-Path $loopWorkspace '.agentx/state/code-quality-baseline.json'), '-Json')
+        $loopScopeResult = Invoke-Evaluator $loopWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $loopWorkspace, '-BaselinePath', (Join-Path $loopWorkspace '.frontier/state/code-quality-baseline.json'), '-Json')
         $loopScope = $loopScopeResult.Output | ConvertFrom-Json
         $reviewPath = Join-Path $loopWorkspace 'code-quality-review.json'
         Write-Report $reviewPath $loopScope
@@ -391,7 +391,7 @@ if (-not $SkipLoopIntegration) {
         )
         Assert-True ($iterate.ExitCode -eq 0) 'Final review iteration accepts the rubric report as evidence'
 
-        $reviewedState = Get-Content -LiteralPath (Join-Path $loopWorkspace '.agentx/state/loop-state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
+        $reviewedState = Get-Content -LiteralPath (Join-Path $loopWorkspace '.frontier/state/loop-state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
         $earlyArchive = [string]$reviewedState.history[1].evidence
         Add-Content -LiteralPath $earlyArchive -Value 'rewritten after approval' -Encoding utf8
         $earlyTamperEvidence = Join-Path $loopWorkspace 'early-tamper-final.txt'
@@ -401,10 +401,10 @@ if (-not $SkipLoopIntegration) {
         Copy-Item -LiteralPath $preReviewEvidence -Destination $earlyArchive -Force
 
         Add-Content -LiteralPath (Join-Path $loopWorkspace 'src/app.ts') -Value 'export const afterApproval = true;' -Encoding utf8
-        $tamperedScopeResult = Invoke-Evaluator $loopWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $loopWorkspace, '-BaselinePath', (Join-Path $loopWorkspace '.agentx/state/code-quality-baseline.json'), '-Json')
+        $tamperedScopeResult = Invoke-Evaluator $loopWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $loopWorkspace, '-BaselinePath', (Join-Path $loopWorkspace '.frontier/state/code-quality-baseline.json'), '-Json')
         $tamperedScope = $tamperedScopeResult.Output | ConvertFrom-Json
         Write-Report $reviewPath $tamperedScope
-        $approvedState = Get-Content -LiteralPath (Join-Path $loopWorkspace '.agentx/state/loop-state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
+        $approvedState = Get-Content -LiteralPath (Join-Path $loopWorkspace '.frontier/state/loop-state.json') -Raw -Encoding utf8 | ConvertFrom-Json -Depth 30
         $archivedReviewPath = [string]$approvedState.history[-1].evidence
         $trustedReviewBytes = Get-Content -LiteralPath $archivedReviewPath -Raw -Encoding utf8
         Copy-Item -LiteralPath $reviewPath -Destination $archivedReviewPath -Force
@@ -431,13 +431,13 @@ if (-not $SkipLoopIntegration) {
     try {
         & git -C $resumeWorkspace init --quiet
         & git -C $resumeWorkspace config user.email 'agentx-tests@example.invalid'
-        & git -C $resumeWorkspace config user.name 'AgentX Tests'
+        & git -C $resumeWorkspace config user.name 'Frontier Tests'
         Set-Content -LiteralPath (Join-Path $resumeWorkspace 'src/app.ts') -Value 'export const initial = true;' -Encoding utf8
         & git -C $resumeWorkspace add .
         & git -C $resumeWorkspace commit --quiet -m 'test: establish resume fixture'
         Add-Content -LiteralPath (Join-Path $resumeWorkspace 'src/app.ts') -Value 'export const existingTaskChange = true;' -Encoding utf8
         $resumeStart = Invoke-Agentx $resumeWorkspace @('loop', 'start', '-p', 'Resume implementation review', '--include-existing-changes')
-        $resumeScope = Invoke-Evaluator $resumeWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $resumeWorkspace, '-BaselinePath', (Join-Path $resumeWorkspace '.agentx/state/code-quality-baseline.json'), '-Json')
+        $resumeScope = Invoke-Evaluator $resumeWorkspace @('-Mode', 'Scope', '-WorkspaceRoot', $resumeWorkspace, '-BaselinePath', (Join-Path $resumeWorkspace '.frontier/state/code-quality-baseline.json'), '-Json')
         $resumeResult = if ($resumeScope.ExitCode -eq 0) { $resumeScope.Output | ConvertFrom-Json } else { $null }
         Assert-True ($resumeStart.ExitCode -eq 0 -and @($resumeResult.files).Count -eq 1) 'Explicit resumed loop includes existing dirty implementation in review scope'
     } finally {

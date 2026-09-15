@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# AgentX pre-commit gate behavior tests
+# Frontier pre-commit gate behavior tests
 # The bash hook is the third implementation of the structured review gate. It is
 # the one the docs call the mandatory hard gate, so it needs its own regression
 # coverage rather than inheriting confidence from the CLI and runtime suites.
@@ -12,6 +12,7 @@ $script:repoRoot = Split-Path $PSScriptRoot -Parent
 $script:hookPath = Join-Path $script:repoRoot '.github\hooks\pre-commit'
 $script:postCommitHookPath = Join-Path $script:repoRoot '.github\hooks\post-commit'
 $script:agentxLauncherPath = Join-Path $script:repoRoot '.agentx\agentx.ps1'
+$script:frontierLauncherPath = Join-Path $script:repoRoot '.agentx\frontier.ps1'
 $script:agentxCliPath = Join-Path $script:repoRoot '.agentx\agentx-cli.ps1'
 $script:scrubPath = Join-Path $script:repoRoot 'scripts\scrub.ps1'
 
@@ -28,7 +29,8 @@ $script:scrubPath = Join-Path $script:repoRoot 'scripts\scrub.ps1'
 #>
 function New-CliProducedLoopState {
     $workspace = Join-Path ([IO.Path]::GetTempPath()) ("agentx-hook-cli-{0}" -f [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path (Join-Path $workspace '.agentx\state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $workspace '.agentx') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $workspace '.frontier\state') -Force | Out-Null
     try {
         $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
         $invoke = {
@@ -40,7 +42,7 @@ function New-CliProducedLoopState {
             $psi.RedirectStandardOutput = $true
             $psi.RedirectStandardError = $true
             $psi.UseShellExecute = $false
-            $psi.Environment['AGENTX_WORKSPACE_ROOT'] = $workspace
+            $psi.Environment['FRONTIER_WORKSPACE_ROOT'] = $workspace
             $psi.ArgumentList.Add('-NoProfile')
             $psi.ArgumentList.Add('-File')
             $psi.ArgumentList.Add($script:agentxCliPath)
@@ -65,7 +67,7 @@ function New-CliProducedLoopState {
         & $invoke @('loop', 'iterate', '-s', 'Subagent Review: approved', '-e', (& $newEvidence 'review.txt'), '--passing', '10', '--verdict', 'approved', '--reviewer', 'hook-suite', '--high', '0', '--medium', '0', '--low', '1')
         & $invoke @('loop', 'complete', '-s', 'All gates passed', '-e', (& $newEvidence 'final.txt'), '--passing', '10')
 
-        $statePath = Join-Path $workspace '.agentx\state\loop-state.json'
+        $statePath = Join-Path $workspace '.frontier\state\loop-state.json'
         if (-not (Test-Path -LiteralPath $statePath)) { return $null }
         return (Get-Content -LiteralPath $statePath -Raw)
     } finally {
@@ -113,12 +115,14 @@ function Invoke-HookGate {
         [switch]$StageTrackedRename,
         [switch]$StageGateHookDelete,
         [switch]$StageUnstagedValidatorDrift,
+        [string]$ValidatorPath = '.agentx/agentx-cli.ps1',
         [switch]$RunPostCommit
     )
 
     $repo = Join-Path ([IO.Path]::GetTempPath()) ("agentx-hook-gate-{0}" -f [guid]::NewGuid().ToString('N'))
     try {
-        New-Item -ItemType Directory -Path (Join-Path $repo '.agentx\state') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $repo '.agentx') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $repo '.frontier\state') -Force | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $repo 'scripts') -Force | Out-Null
         Push-Location $repo
         try {
@@ -126,12 +130,13 @@ function Invoke-HookGate {
             git config user.email 'hook-test@example.com' 2>&1 | Out-Null
             git config user.name 'Hook Test' 2>&1 | Out-Null
             Copy-Item -LiteralPath $script:agentxLauncherPath -Destination (Join-Path $repo '.agentx\agentx.ps1') -Force
+            Copy-Item -LiteralPath $script:frontierLauncherPath -Destination (Join-Path $repo '.agentx\frontier.ps1') -Force
             Copy-Item -LiteralPath $script:agentxCliPath -Destination (Join-Path $repo '.agentx\agentx-cli.ps1') -Force
             Copy-Item -LiteralPath $script:scrubPath -Destination (Join-Path $repo 'scripts\scrub.ps1') -Force
             if ($StageUnstagedValidatorDrift) {
-                git add .agentx/agentx.ps1 .agentx/agentx-cli.ps1 scripts/scrub.ps1 2>&1 | Out-Null
+                git add .agentx/agentx.ps1 .agentx/frontier.ps1 .agentx/agentx-cli.ps1 scripts/scrub.ps1 2>&1 | Out-Null
                 git commit --quiet -m 'test: add validator baseline'
-                Add-Content -LiteralPath (Join-Path $repo '.agentx\agentx-cli.ps1') -Value '# unstaged permissive validator drift'
+                Add-Content -LiteralPath (Join-Path $repo $ValidatorPath) -Value '# unstaged permissive validator drift'
             }
             if ($StageTrackedDelete -or $StageTrackedRename -or $StageGateHookDelete) {
                 Set-Content -LiteralPath (Join-Path $repo 'tracked.ps1') -Value 'Write-Output "tracked code"' -Encoding utf8
@@ -179,7 +184,7 @@ function Invoke-HookGate {
                 Remove-Item -LiteralPath (Join-Path $repo 'deleted.ps1') -Force
             }
             $stateJson = if ($RawState) { $RawState } else { $LoopState | ConvertTo-Json -Depth 10 }
-            $stateJson | Set-Content -LiteralPath (Join-Path $repo '.agentx\state\loop-state.json') -Encoding utf8
+            $stateJson | Set-Content -LiteralPath (Join-Path $repo '.frontier\state\loop-state.json') -Encoding utf8
             Copy-Item -LiteralPath $script:hookPath -Destination (Join-Path $repo 'pre-commit') -Force
             Copy-Item -LiteralPath $script:postCommitHookPath -Destination (Join-Path $repo 'post-commit') -Force
             # The hook delegates through the launcher so the same path works in
@@ -204,7 +209,7 @@ function Invoke-HookGate {
                 $postCommitExit = $LASTEXITCODE
             }
             $output = if (Test-Path -LiteralPath $outFile) { (Get-Content -LiteralPath $outFile -Raw) } else { '' }
-            $writtenState = Get-Content -LiteralPath (Join-Path $repo '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json
+            $writtenState = Get-Content -LiteralPath (Join-Path $repo '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json
             return [PSCustomObject]@{
                 Output = [string]$output
                 ExitCode = $exitCode
@@ -305,6 +310,13 @@ if (-not $bashPath) {
     ))
     Assert-True ($validatorDrift.ExitCode -ne 0) 'unstaged quality-gate validator changes block staged code'
     Assert-True ($validatorDrift.Output -match 'validators have unstaged changes') 'validator drift rejection is actionable'
+
+    $launcherDrift = Invoke-HookGate -BashPath $bashPath -StageUnstagedValidatorDrift -ValidatorPath '.agentx/frontier.ps1' -LoopState (New-HookLoopState -History @(
+        (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),
+        $completionEntry
+    ))
+    Assert-True ($launcherDrift.ExitCode -ne 0) 'unstaged Frontier launcher changes block staged code'
+    Assert-True ($launcherDrift.Output -match 'validators have unstaged changes') 'Frontier launcher drift rejection is actionable'
 
     $committed = Invoke-HookGate -BashPath $bashPath -RunPostCommit -LoopState (New-HookLoopState -History @(
         (New-HookHistoryEntry -Iteration 5 -Summary 'Subagent Review: approved' -Review $approved),

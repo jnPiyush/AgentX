@@ -2,7 +2,7 @@
 name: "cpp"
 description: 'Write modern, maintainable C++ using C++23-era practices. Use when building native libraries, performance-sensitive services, desktop applications, game/engine components, or systems software that benefits from RAII, strong types, templates, and zero-cost abstractions.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2026-04-04"
  updated: "2026-04-04"

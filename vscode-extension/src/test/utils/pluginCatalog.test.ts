@@ -5,7 +5,7 @@ import * as path from 'path';
 
 import {
   getLatestCompatibleRelease,
-  isAgentXVersionSupported,
+  isFrontierVersionSupported,
   parsePluginManifest,
   parsePluginRegistryIndex,
   readPluginManifestFromDir,
@@ -40,7 +40,7 @@ describe('pluginCatalog - parsePluginManifest', () => {
       schemaVersion: 2,
       name: 'convert-docs',
       id: 'convert-docs',
-      publisher: 'agentx-labs',
+      publisher: 'frontier-labs',
       displayName: 'Convert Docs',
       version: '2.1.0',
       description: 'Convert Markdown to docx',
@@ -66,7 +66,7 @@ describe('pluginCatalog - parsePluginManifest', () => {
     });
 
     assert.ok(manifest);
-    assert.equal(manifest.publisher, 'agentx-labs');
+    assert.equal(manifest.publisher, 'frontier-labs');
     assert.equal(manifest.displayName, 'Convert Docs');
     assert.equal(manifest.engines?.agentx, '>=8.4.0 <9.0.0');
     assert.equal(manifest.permissions?.filesystem, 'read-write');
@@ -75,7 +75,7 @@ describe('pluginCatalog - parsePluginManifest', () => {
 
     const summary = summarizePluginManifest(manifest, 'fallback-name');
     assert.equal(summary.pluginId, 'convert-docs');
-    assert.equal(summary.qualifiedId, 'agentx-labs.convert-docs');
+    assert.equal(summary.qualifiedId, 'frontier-labs.convert-docs');
     assert.equal(summary.label, 'Convert Docs');
     assert.equal(summary.agentxRange, '>=8.4.0 <9.0.0');
   });
@@ -90,7 +90,7 @@ describe('pluginCatalog - readPluginManifestFromDir', () => {
   let tempRoot: string;
 
   beforeEach(() => {
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-plugin-catalog-'));
+    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-plugin-catalog-'));
   });
 
   afterEach(() => {
@@ -112,25 +112,25 @@ describe('pluginCatalog - readPluginManifestFromDir', () => {
   });
 });
 
-describe('pluginCatalog - isAgentXVersionSupported', () => {
+describe('pluginCatalog - isFrontierVersionSupported', () => {
   it('should accept empty or wildcard ranges', () => {
-    assert.equal(isAgentXVersionSupported(undefined, '8.4.5'), true);
-    assert.equal(isAgentXVersionSupported('*', '8.4.5'), true);
+    assert.equal(isFrontierVersionSupported(undefined, '8.4.5'), true);
+    assert.equal(isFrontierVersionSupported('*', '8.4.5'), true);
   });
 
   it('should support exact versions and comparator ranges', () => {
-    assert.equal(isAgentXVersionSupported('8.4.5', '8.4.5'), true);
-    assert.equal(isAgentXVersionSupported('>=8.4.0 <9.0.0', '8.4.5'), true);
-    assert.equal(isAgentXVersionSupported('>=8.5.0 <9.0.0', '8.4.5'), false);
+    assert.equal(isFrontierVersionSupported('8.4.5', '8.4.5'), true);
+    assert.equal(isFrontierVersionSupported('>=8.4.0 <9.0.0', '8.4.5'), true);
+    assert.equal(isFrontierVersionSupported('>=8.5.0 <9.0.0', '8.4.5'), false);
   });
 
   it('should support wildcard, caret, tilde, and alternates', () => {
-    assert.equal(isAgentXVersionSupported('8.4.x', '8.4.5'), true);
-    assert.equal(isAgentXVersionSupported('8.x', '8.4.5'), true);
-    assert.equal(isAgentXVersionSupported('^8.4.0', '8.4.5'), true);
-    assert.equal(isAgentXVersionSupported('~8.4.0', '8.4.5'), true);
-    assert.equal(isAgentXVersionSupported('^8.5.0 || ^9.0.0', '8.4.5'), false);
-    assert.equal(isAgentXVersionSupported('^8.4.0 || ^9.0.0', '8.4.5'), true);
+    assert.equal(isFrontierVersionSupported('8.4.x', '8.4.5'), true);
+    assert.equal(isFrontierVersionSupported('8.x', '8.4.5'), true);
+    assert.equal(isFrontierVersionSupported('^8.4.0', '8.4.5'), true);
+    assert.equal(isFrontierVersionSupported('~8.4.0', '8.4.5'), true);
+    assert.equal(isFrontierVersionSupported('^8.5.0 || ^9.0.0', '8.4.5'), false);
+    assert.equal(isFrontierVersionSupported('^8.4.0 || ^9.0.0', '8.4.5'), true);
   });
 });
 
@@ -141,7 +141,7 @@ describe('pluginCatalog - parsePluginRegistryIndex', () => {
       generatedAt: '2026-03-18T00:00:00Z',
       plugins: [
         {
-          publisher: 'agentx-labs',
+          publisher: 'frontier-labs',
           pluginId: 'convert-docs',
           displayName: 'Convert Docs',
           description: 'Convert Markdown to docx',
@@ -165,7 +165,7 @@ describe('pluginCatalog - parsePluginRegistryIndex', () => {
 
     assert.ok(registry);
     assert.equal(registry.plugins.length, 1);
-    assert.equal(registry.plugins[0].qualifiedId, 'agentx-labs.convert-docs');
+    assert.equal(registry.plugins[0].qualifiedId, 'frontier-labs.convert-docs');
 
     const release = getLatestCompatibleRelease(registry.plugins[0], '8.4.5');
     assert.ok(release);

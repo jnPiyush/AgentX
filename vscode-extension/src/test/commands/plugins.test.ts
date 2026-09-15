@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import { registerAddPluginCommand } from '../../commands/plugins';
 import {
   getPublishedPluginSummaryOrThrow,
@@ -26,7 +26,7 @@ import {
 describe('registerAddPluginCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
   let originalWorkspaceFolders: typeof vscode.workspace.workspaceFolders;
 
   beforeEach(() => {
@@ -35,7 +35,7 @@ describe('registerAddPluginCommand', () => {
       subscriptions: [],
       extensionUri: vscode.Uri.file('/test/extension'),
     } as unknown as vscode.ExtensionContext;
-    fakeAgentx = {} as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    fakeAgentx = {} as unknown as sinon.SinonStubbedInstance<FrontierContext>;
     originalWorkspaceFolders = vscode.workspace.workspaceFolders;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
@@ -49,20 +49,20 @@ describe('registerAddPluginCommand', () => {
   });
 
   it('should register agentx.addPlugin command', () => {
-    registerAddPluginCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    registerAddPluginCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
 
     assert.ok(
-      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.addPlugin'),
+      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.addPlugin'),
     );
   });
 });
 
 describe('resolvePluginTarget', () => {
-  const root = path.resolve(os.tmpdir(), 'agentx-plugin-target-root');
+  const root = path.resolve(os.tmpdir(), 'frontier-plugin-target-root');
 
-  it('resolves a normal plugin id inside .agentx/plugins', () => {
+  it('resolves a normal plugin id inside .frontier/plugins', () => {
     const result = resolvePluginTarget(root, 'review-tools');
-    assert.equal(result, path.join(root, '.agentx', 'plugins', 'review-tools'));
+    assert.equal(result, path.join(root, '.frontier', 'plugins', 'review-tools'));
   });
 
   for (const pluginId of ['../escape', '..\\escape', 'nested/plugin', 'nested\\plugin', '.env', 'my-secret']) {
@@ -72,11 +72,11 @@ describe('resolvePluginTarget', () => {
   }
 
   it('rejects a plugin root junction or symlink that resolves outside the workspace', () => {
-    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-plugin-link-root-'));
-    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-plugin-link-outside-'));
-    const agentxDir = path.join(workspace, '.agentx');
-    const pluginsDir = path.join(agentxDir, 'plugins');
-    fs.mkdirSync(agentxDir, { recursive: true });
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-plugin-link-root-'));
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-plugin-link-outside-'));
+    const frontierDir = path.join(workspace, '.frontier');
+    const pluginsDir = path.join(frontierDir, 'plugins');
+    fs.mkdirSync(frontierDir, { recursive: true });
 
     try {
       fs.symlinkSync(outside, pluginsDir, process.platform === 'win32' ? 'junction' : 'dir');
@@ -111,7 +111,7 @@ describe('runAddPluginCommand', () => {
     (vscode.workspace as any).workspaceFolders = undefined;
     const errorStub = sandbox.stub(vscode.window, 'showErrorMessage');
 
-    await runAddPluginCommand(fakeContext, {} as AgentXContext);
+    await runAddPluginCommand(fakeContext, {} as FrontierContext);
 
     sinon.assert.calledOnce(errorStub);
     assert.ok(String(errorStub.firstCall.args[0]).includes('Open a workspace folder first'));
@@ -124,7 +124,7 @@ describe('pluginsCommandInternals helpers', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-plugins-'));
+    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-plugins-'));
   });
 
   afterEach(() => {
@@ -278,7 +278,7 @@ describe('pluginsCommandInternals helpers', () => {
     }, {
       sourceKind: 'registry',
       pluginId: 'convert-docs',
-      qualifiedId: 'agentx.convert-docs',
+      qualifiedId: 'frontier.convert-docs',
       publisher: 'agentx',
       version: '1.0.0',
       label: 'Convert Docs',
@@ -289,7 +289,7 @@ describe('pluginsCommandInternals helpers', () => {
   });
 
   it('resolves a plugin directory from an extracted artifact path hint', () => {
-    const archiveRoot = path.join(tempRoot, 'AgentX-master');
+    const archiveRoot = path.join(tempRoot, 'Frontier-master');
     const pluginDir = path.join(archiveRoot, '.agentx', 'plugins', 'convert-docs');
     fs.mkdirSync(pluginDir, { recursive: true });
     fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify({

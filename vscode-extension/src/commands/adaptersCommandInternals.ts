@@ -1,9 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { promptWorkspaceRoot, readJsonWithComments } from './initializeInternals';
 import { runCriticalPreCheck } from './setupWizard';
+import { resolveFrontierStatePath } from '../utils/frontierPaths';
 
 export type AdapterMode = 'github' | 'ado' | 'local';
 
@@ -11,7 +12,7 @@ interface AdapterPick extends vscode.QuickPickItem {
   readonly value: AdapterMode;
 }
 
-interface AgentXConfig {
+interface FrontierConfig {
   readonly created?: string;
   readonly adapters?: Record<string, unknown>;
   readonly project?: number | string | null;
@@ -151,8 +152,8 @@ function upsertMcpServer(root: string, mode: AdapterMode): boolean {
 }
 
 function upsertGitHubAdapterConfig(root: string, settings: GitHubAdapterSettings): boolean {
-  const configFile = path.join(root, '.agentx', 'config.json');
-  const existingConfig = readJsonWithComments<AgentXConfig>(configFile) ?? {};
+  const configFile = resolveFrontierStatePath(root, 'config.json');
+  const existingConfig = readJsonWithComments<FrontierConfig>(configFile) ?? {};
   const existingAdapters = { ...(existingConfig.adapters as Record<string, unknown> | undefined) };
   const currentGithubAdapter = (existingAdapters.github ?? {}) as Record<string, unknown>;
   const projectNum = settings.projectNum ?? normalizeProjectNumber(currentGithubAdapter.project ?? existingConfig.project);
@@ -178,8 +179,8 @@ function upsertGitHubAdapterConfig(root: string, settings: GitHubAdapterSettings
 }
 
 function upsertAdoAdapterConfig(root: string, settings: AdoAdapterSettings): boolean {
-  const configFile = path.join(root, '.agentx', 'config.json');
-  const existingConfig = readJsonWithComments<AgentXConfig>(configFile) ?? {};
+  const configFile = resolveFrontierStatePath(root, 'config.json');
+  const existingConfig = readJsonWithComments<FrontierConfig>(configFile) ?? {};
   const existingAdapters = { ...(existingConfig.adapters as Record<string, unknown> | undefined) };
 
   existingAdapters.ado = {
@@ -203,8 +204,8 @@ function upsertAdoAdapterConfig(root: string, settings: AdoAdapterSettings): boo
 }
 
 function switchToLocalAdapterConfig(root: string): boolean {
-  const configFile = path.join(root, '.agentx', 'config.json');
-  const existingConfig = readJsonWithComments<AgentXConfig>(configFile) ?? {};
+  const configFile = resolveFrontierStatePath(root, 'config.json');
+  const existingConfig = readJsonWithComments<FrontierConfig>(configFile) ?? {};
 
   const nextConfig: Record<string, unknown> = {
     ...existingConfig,
@@ -219,7 +220,7 @@ function switchToLocalAdapterConfig(root: string): boolean {
 }
 
 export async function applyRemoteAdapterConfiguration(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   root: string,
   mode: AdapterMode,
   settings?: GitHubAdapterSettings | AdoAdapterSettings,
@@ -230,9 +231,9 @@ export async function applyRemoteAdapterConfiguration(
     : await upsertRemoteAdapter(root, mode, settings as GitHubAdapterSettings | AdoAdapterSettings);
 
   agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
+  await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
 
   let preCheckPassed = true;
   if ((options?.runPreCheck ?? true) && mode !== 'local') {
@@ -261,7 +262,7 @@ async function upsertRemoteAdapter(
 }
 
 export async function syncDetectedGitHubAdapter(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   options?: { readonly notify?: boolean },
 ): Promise<boolean> {
   const root = agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
@@ -269,7 +270,7 @@ export async function syncDetectedGitHubAdapter(
     return false;
   }
 
-  const configFile = path.join(root, '.agentx', 'config.json');
+  const configFile = resolveFrontierStatePath(root, 'config.json');
   if (!fs.existsSync(configFile)) {
     return false;
   }
@@ -285,19 +286,19 @@ export async function syncDetectedGitHubAdapter(
   }
 
   agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
+  await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
 
   if (options?.notify) {
-    vscode.window.showInformationMessage(`AgentX: GitHub remote detected. Active mode switched to GitHub (${repoSlug}).`);
+    vscode.window.showInformationMessage(`Frontier: GitHub remote detected. Active mode switched to GitHub (${repoSlug}).`);
   }
 
   return true;
 }
 
 export async function syncDetectedAdoAdapter(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   options?: { readonly notify?: boolean },
 ): Promise<boolean> {
   const root = agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
@@ -305,7 +306,7 @@ export async function syncDetectedAdoAdapter(
     return false;
   }
 
-  const configFile = path.join(root, '.agentx', 'config.json');
+  const configFile = resolveFrontierStatePath(root, 'config.json');
   if (!fs.existsSync(configFile)) {
     return false;
   }
@@ -321,13 +322,13 @@ export async function syncDetectedAdoAdapter(
   }
 
   agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
+  await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
 
   if (options?.notify) {
     vscode.window.showInformationMessage(
-      `AgentX: Azure DevOps remote detected. Active mode switched to Azure DevOps (${adoSettings.organization}/${adoSettings.project}).`,
+      `Frontier: Azure DevOps remote detected. Active mode switched to Azure DevOps (${adoSettings.organization}/${adoSettings.project}).`,
     );
   }
 
@@ -344,7 +345,7 @@ async function promptGitHubSettings(root: string): Promise<{ repoSlug?: string; 
         { label: detectedRepo, description: 'Detected from git remote' },
         { label: 'Enter manually...', description: 'Type a different owner/repo' },
       ],
-      { placeHolder: 'GitHub repository (owner/repo)', title: 'AgentX - GitHub Adapter' },
+      { placeHolder: 'GitHub repository (owner/repo)', title: 'Frontier - GitHub Adapter' },
     );
     if (!useDetected) {
       return undefined;
@@ -400,7 +401,7 @@ async function promptAdoSettings(root: string): Promise<{ organization?: string;
         },
         { label: 'Enter manually...', description: 'Type a different organization/project' },
       ],
-      { placeHolder: 'Azure DevOps organization/project', title: 'AgentX - Azure DevOps Adapter' },
+      { placeHolder: 'Azure DevOps organization/project', title: 'Frontier - Azure DevOps Adapter' },
     );
     if (!useDetected) {
       return undefined;
@@ -442,25 +443,25 @@ async function promptAdapterMode(preferredMode?: AdapterMode): Promise<AdapterMo
 
   const picked = await vscode.window.showQuickPick(ADAPTER_MODE_ITEMS, {
     placeHolder: 'Select remote adapter to add or switch',
-    title: 'AgentX - Add Remote Adapter',
+    title: 'Frontier - Add Remote Adapter',
   });
 
   return picked?.value;
 }
 
 export async function runAddRemoteAdapterCommand(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   preferredMode?: AdapterMode,
 ): Promise<void> {
-  const root = await promptWorkspaceRoot('AgentX - Add Remote Adapter');
+  const root = await promptWorkspaceRoot('Frontier - Add Remote Adapter');
   if (!root) {
     return;
   }
 
-  const configFile = path.join(root, '.agentx', 'config.json');
+  const configFile = resolveFrontierStatePath(root, 'config.json');
   if (!fs.existsSync(configFile)) {
     vscode.window.showWarningMessage(
-      'AgentX remote adapters require workspace initialization. Run "AgentX: Initialize Local Runtime" first.',
+      'Frontier remote adapters require workspace initialization. Run "Frontier: Initialize Local Runtime" first.',
     );
     return;
   }
@@ -474,8 +475,8 @@ export async function runAddRemoteAdapterCommand(
     const result = await applyRemoteAdapterConfiguration(agentx, root, 'local', undefined, { runPreCheck: false });
 
     const suffix = result.changed ? 'Active mode switched to local.' : 'Local mode is already active for this workspace.';
-    vscode.window.showInformationMessage(`AgentX: ${suffix}`);
-    vscode.commands.executeCommand('agentx.refresh');
+    vscode.window.showInformationMessage(`Frontier: ${suffix}`);
+    vscode.commands.executeCommand('frontier.refresh');
     return;
   }
 
@@ -507,13 +508,13 @@ export async function runAddRemoteAdapterCommand(
 
   if (!result.preCheckPassed) {
     vscode.window.showWarningMessage(
-      `AgentX: ${mode === 'github' ? 'GitHub' : 'Azure DevOps'} adapter added and active mode switched, but some required dependencies still need attention.`,
+      `Frontier: ${mode === 'github' ? 'GitHub' : 'Azure DevOps'} adapter added and active mode switched, but some required dependencies still need attention.`,
     );
     return;
   }
 
   vscode.window.showInformationMessage(
-    `AgentX: ${mode === 'github' ? 'GitHub' : 'Azure DevOps'} adapter added. Active mode switched to ${mode === 'github' ? 'GitHub' : 'Azure DevOps'}.`,
+    `Frontier: ${mode === 'github' ? 'GitHub' : 'Azure DevOps'} adapter added. Active mode switched to ${mode === 'github' ? 'GitHub' : 'Azure DevOps'}.`,
   );
-  vscode.commands.executeCommand('agentx.refresh');
+  vscode.commands.executeCommand('frontier.refresh');
 }

@@ -1,17 +1,20 @@
-# AgentX for VS Code
+# Frontier for VS Code
 
-**The IDE Orchestrator for Multi-Agent Software Delivery**
+**Frontier Corp's FDE fleet for Hypervelocity Engineering in VS Code**
 
-[![Version](https://img.shields.io/badge/Version-9.2.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
+[![Version](https://img.shields.io/badge/Version-9.3.0-0EA5E9?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx)
 [![License](https://img.shields.io/badge/License-Apache_2.0-22C55E?style=for-the-badge)](LICENSE)
 
-*Bring structured multi-agent workflows directly into your editor with chat execution, live workspace state, and seamless repo integration.*
+Frontier deploys specialized Forward Deployed Engineers (FDEs) into your
+workspace with governed workflows, live state, and repo-local evidence.
 
 ---
 
 ## Why Use the Extension?
 
-Running autonomous agents from the CLI lacks visibility. The AgentX VS Code extension bridges the gap, allowing you to trigger complex delivery pipelines while retaining absolute visibility and control over what the agents are thinking, validating, and writing.
+Running autonomous engineering from the CLI can hide important context. The
+Frontier extension exposes what each FDE is planning, validating, and changing
+while preserving the repository as the system of record.
 
 > **"Full autonomous orchestration, deeply integrated with your local workspace."**
 
@@ -21,9 +24,9 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 
 | Feature | Description |
 |:--------|:------------|
-| **26 Declarative Chat Agents** | 15 visible lifecycle agents, including AgentX Auto for end-to-end orchestration, plus 11 hidden specialists that remain parent-invocable. |
+| **26 Forward Deployed Engineers** | 15 visible lifecycle FDEs, including Frontier Orchestration FDE for end-to-end delivery, plus 11 hidden specialists that remain parent-invocable. |
 | **Model Council (core)** | Multi-model deliberation on high-stakes decisions -- **Analyst + Strategist + Skeptic** debate PRD scope, ADR options, AI design, code reviews, and deep research before they ship. Agent-internal by default; optional `gh models` multi-vendor auto-invoke. Mandatory gate for PM, Architect, Reviewer, Data Scientist, and Consulting Research on high-stakes work. |
-| **Copilot Chat Participant** | Native `@agentx` chat participant for triggering routines, brainstorm, learnings, and compound-loop inspection. |
+| **Copilot Chat Participant** | Native `@frontier` chat participant for triggering routines, brainstorm, learnings, and compound-loop inspection. |
 | **Karpathy Guidelines (built-in)** | The `karpathy-guidelines` skill is auto-loaded for Engineer, Architect, Reviewer, Auto-Fix Reviewer, DevOps, Tester, and Data Scientist -- enforcing *think before coding*, surgical diffs, assumption audits, and goal-driven execution to block common LLM coding pitfalls at authoring and review time. |
 | **Workspace Setup Wizard** | Local-runtime-first setup with optional remote adapters for GitHub or Azure DevOps and configurable LLM adapters. |
 | **4 Sidebar Views** | **Work** (queues, workflow next step, brainstorm, learnings), **Status** (agent states, loop, dependencies, evaluation), **Templates** (output templates), **Skills** (134 production skills). |
@@ -39,7 +42,7 @@ Running autonomous agents from the CLI lacks visibility. The AgentX VS Code exte
 
 ```mermaid
 flowchart LR
-    Chat["Copilot Chat"] --> Context["AgentX Context"] --> Engine["Execution Engine"]
+    Chat["Copilot Chat"] --> Context["Frontier Context"] --> Engine["Execution Engine"]
 
     Engine --> View["Sidebar and Live State"]
     Engine --> File["Repo-Defined Assets"]
@@ -56,9 +59,9 @@ flowchart LR
 
 ## Requirements
 
-To run AgentX successfully within VS Code:
+To run Frontier successfully within VS Code:
 
-- **VS Code:** 1.85.0 or newer
+- **VS Code:** 1.134.0 or newer
 - **System:** Git configured on your PATH
 - **Runtime:** PowerShell 7.4+ (`pwsh`) on Windows, or Bash on Linux/macOS
 - **Integrations:** gh (GitHub CLI) optional for extended GitHub mode operations
@@ -69,49 +72,49 @@ To run AgentX successfully within VS Code:
 
 1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx).
 2. **Open** your target project workspace in VS Code.
-3. **Initialize** the workspace by running `AgentX: Initialize Local Runtime` from the Command Palette, or start the same flow in chat with `@agentx initialize local runtime`.
-4. **Optionally add a remote adapter** with `AgentX: Add Remote Adapter` or start it in chat with `@agentx connect github`, `@agentx connect ado`, `@agentx use local`, or `@agentx add remote adapter`.
-5. **Optionally switch the workspace LLM adapter** with `AgentX: Add LLM Adapter` or start it in chat with `@agentx switch llm`, `@agentx connect claude`, `@agentx connect claude local`, `@agentx connect openai`, or `@agentx use copilot`.
-6. **Select a role in Copilot Chat** and run the next step for that role, or select **AgentX Auto** to orchestrate the full flow in one session.
-7. **Capture reusable outcomes** with `AgentX: Create Learning Capture` once review confirms the result should compound future work.
+3. **Initialize** the workspace by running `Frontier: Initialize Local Runtime` from the Command Palette, or start the same flow in chat with `@frontier initialize local runtime`.
+4. **Optionally add a remote adapter** with `Frontier: Add Remote Adapter` or start it in chat with `@frontier connect github`, `@frontier connect ado`, `@frontier use local`, or `@frontier add remote adapter`.
+5. **Optionally switch the workspace LLM adapter** with `Frontier: Add LLM Adapter` or start it in chat with `@frontier switch llm`, `@frontier connect claude`, `@frontier connect claude local`, `@frontier connect openai`, or `@frontier use copilot`.
+6. **Select a role in Copilot Chat** and run the next step for that role, or select **Frontier Orchestration FDE** to orchestrate the full flow in one session.
+7. **Capture reusable outcomes** with `Frontier: Create Learning Capture` once review confirms the result should compound future work.
 
 ### Workspace Initialization
 
-AgentX initialization is workspace-scoped. After opening a repository or project folder in VS Code, run:
+Frontier initialization is workspace-scoped. After opening a repository or project folder in VS Code, run:
 
 ```text
-AgentX: Initialize Local Runtime
+Frontier: Initialize Local Runtime
 ```
 
 You can also start the same flow in chat with:
 
 ```text
-@agentx initialize local runtime
+@frontier initialize local runtime
 ```
 
-This prepares the local AgentX runtime for the current workspace by:
+This prepares the local Frontier runtime for the current workspace by:
 
 - creating local runtime folders and state files
 - preparing repo-local execution artifacts such as plans, progress, reviews, and learnings
 - writing stable `.agentx/*` workspace entrypoints that delegate into the bundled runtime
 - keeping the executable runtime bundled while workspace state stays local to the repo
 
-Repeat this step for each workspace where you want AgentX to run.
+Repeat this step for each workspace where you want Frontier to run.
 
 ### Optional Remote Integration
 
 If you want GitHub or Azure DevOps issue and workflow operations, run:
 
 ```text
-AgentX: Add Remote Adapter
+Frontier: Add Remote Adapter
 ```
 
 You can also start repo-adapter setup in chat with:
 
-- `@agentx add remote adapter`
-- `@agentx connect github`
-- `@agentx connect ado`
-- `@agentx use local`
+- `@frontier add remote adapter`
+- `@frontier connect github`
+- `@frontier connect ado`
+- `@frontier use local`
 
 The extension now keeps repo-adapter setup conversational. Non-secret values are collected in chat, pending setup survives between turns, and the chat UI offers follow-up actions to continue or cancel the flow.
 
@@ -122,29 +125,29 @@ Stay on local runtime only when you want repo-local planning, implementation, an
 If you want to switch the workspace away from the default Copilot-backed path, run:
 
 ```text
-AgentX: Add LLM Adapter
+Frontier: Add LLM Adapter
 ```
 
 You can also start LLM setup in chat with:
 
-- `@agentx switch llm`
-- `@agentx connect claude`
-- `@agentx connect claude local`
-- `@agentx connect openai`
-- `@agentx use copilot`
+- `@frontier switch llm`
+- `@frontier connect claude`
+- `@frontier connect claude local`
+- `@frontier connect openai`
+- `@frontier use copilot`
 
 The extension now keeps LLM setup conversational. Non-secret values are collected in chat, pending setup survives between turns, and secret-bearing steps use VS Code's secure password prompt instead of asking you to paste keys into the chat transcript.
 
 Available workspace LLM adapters include GitHub Copilot, Claude Subscription, Claude Code + LiteLLM + Ollama, Claude API, and OpenAI API. The local Claude option keeps `claude-code` as the execution transport while injecting Anthropic-compatible LiteLLM gateway settings and pinning the runner to the configured local coding model.
 
-### Use AgentX in the Agents Window
+### Use Frontier in the Agents Window
 
-VS Code's [Agents Window](https://code.visualstudio.com/docs/copilot/agents/agents-window) (Preview) lets supported chat participants run as first-class agents. AgentX opts in **per user**, not per workspace, because the underlying VS Code setting (`extensions.supportAgentsWindow`) lives in your user `settings.json`.
+VS Code's [Agents Window](https://code.visualstudio.com/docs/copilot/agents/agents-window) (Preview) lets supported chat participants run as first-class agents. Frontier opts in **per user**, not per workspace, because the underlying VS Code setting (`extensions.supportAgentsWindow`) lives in your user `settings.json`.
 
 You have three ways to enable it:
 
-1. **Automatic prompt (recommended).** The first time you install AgentX -- and again after each major-version upgrade -- the extension shows a one-time information message offering to enable AgentX in the Agents Window. Choose **Enable in Agents Window**, then reload the window when prompted. Choose **Don't ask again** to silence the prompt permanently.
-2. **Manual command.** Run **AgentX: Enable in Agents Window** from the Command Palette at any time. The command is idempotent and preserves any other entries already in `extensions.supportAgentsWindow`.
+1. **Automatic prompt (recommended).** The first time you install Frontier -- and again after each major-version upgrade -- the extension shows a one-time information message offering to enable Frontier in the Agents Window. Choose **Enable in Agents Window**, then reload the window when prompted. Choose **Don't ask again** to silence the prompt permanently.
+2. **Manual command.** Run **Frontier: Enable in Agents Window** from the Command Palette at any time. The command is idempotent and preserves any other entries already in `extensions.supportAgentsWindow`.
 3. **Power users.** Add the following to your user `settings.json` directly:
 
    ```jsonc
@@ -153,17 +156,17 @@ You have three ways to enable it:
    }
    ```
 
-After enabling, reload the VS Code window. AgentX will appear in the Agents Window agent picker alongside other opted-in extensions. To opt back out, remove the `jnPiyush.agentx` entry (or set it to `false`) in user `settings.json` and reload.
+After enabling, reload the VS Code window. Frontier will appear in the Agents Window agent picker alongside other opted-in extensions. To opt back out, remove the `jnPiyush.agentx` entry (or set it to `false`) in user `settings.json` and reload.
 
-## Build Software With AgentX
+## Build Software With Frontier
 
-Once a workspace is initialized, you can use AgentX inside VS Code to move an app from planning through review.
+Once a workspace is initialized, you can use Frontier inside VS Code to move an app from planning through review.
 
 ```mermaid
 flowchart LR
     I[Install Extension] --> W[Open Workspace]
     W --> R[Initialize Local Runtime]
-    R --> B[Select Role Or AgentX Auto]
+    R --> B[Select Role Or Frontier Orchestration FDE]
     B --> E[Create Or Execute Work]
     E --> V[Review And Validate]
     V --> C[Capture Learnings]
@@ -180,9 +183,9 @@ In VS Code, select the role in chat first, then send a prompt for that role. For
 | **3. Design the architecture** | **Architect** | Define the technical approach and key tradeoffs | `Create an ADR and tech spec for the task-tracker app using a web frontend, backend API, persistence, and role-based access.` |
 | **4. Implement the app** | **Engineer** | Build the code and tests from the approved artifacts | `Implement the task-tracker app from the PRD and spec, including authentication, task CRUD APIs, dashboard data, and automated tests.` |
 | **5. Review the result** | **Reviewer** | Check correctness, risk, and missing coverage before sign-off | `Review the task-tracker implementation for correctness, security, regressions, and missing tests.` |
-| **6. Preserve the learning** | **AgentX Auto** | Capture reusable guidance from the work you just completed | `Create a learning capture for the task-tracker delivery workflow and major implementation lessons.` |
+| **6. Preserve the learning** | **Frontier Orchestration FDE** | Capture reusable guidance from the work you just completed | `Create a learning capture for the task-tracker delivery workflow and major implementation lessons.` |
 
-If you want one orchestrated session instead of switching roles manually, select **AgentX Auto** and use one prompt such as:
+If you want one orchestrated session instead of switching roles manually, select **Frontier Orchestration FDE** and use one prompt such as:
 
 ```text
 Build a task-tracker app for small teams. Start by creating the PRD, then produce UX and architecture guidance, implement the app, review it, and capture reusable learnings.
@@ -196,32 +199,32 @@ Build a task-tracker app for small teams. Start by creating the PRD, then produc
 [Architect selected] Create an ADR and implementation spec for the task-tracker app
 [Engineer selected] Implement the task-tracker app and its tests from the approved artifacts
 [Reviewer selected] Review the task-tracker app implementation before sign-off
-[AgentX Auto selected] Create a learning capture
+[Frontier Orchestration FDE selected] Create a learning capture
 ```
 
 ### When To Use Which Mode
 
-- Use **AgentX Auto** when you want end-to-end orchestration in one session.
+- Use **Frontier Orchestration FDE** when you want end-to-end orchestration in one session.
 - Use a specialist role such as **Product Manager**, **Architect**, **Engineer**, or **Reviewer** when you want tighter control over one phase.
 - Use the Command Palette and sidebars when you want a more guided workflow inside VS Code.
 
 ## Compound Loop In The IDE
 
-AgentX exposes the compound-engineering loop directly in VS Code instead of leaving it implicit in docs alone.
+Frontier exposes the compound-engineering loop directly in VS Code instead of leaving it implicit in docs alone.
 
 ### Chat Entry Points
 
-- `@agentx brainstorm <topic>` to start planning from ranked prior learnings
-- `@agentx learnings planning` and `@agentx learnings review <topic>` to inspect curated guidance
-- `@agentx compound` to view the current compound loop state
-- `@agentx create learning capture` to scaffold a durable learning artifact for the active issue context
-- `@agentx review findings` and `@agentx agent-native review` to inspect review-time follow-up surfaces
+- `@frontier brainstorm <topic>` to start planning from ranked prior learnings
+- `@frontier learnings planning` and `@frontier learnings review <topic>` to inspect curated guidance
+- `@frontier compound` to view the current compound loop state
+- `@frontier create learning capture` to scaffold a durable learning artifact for the active issue context
+- `@frontier review findings` and `@frontier agent-native review` to inspect review-time follow-up surfaces
 
 ### Sidebar And Command Palette
 
 - Work sidebar: `Brainstorm`, `Planning learnings`, `Review learnings`, `Compound loop`, `Create learning capture`
 - Status sidebar: `Compound loop`, `Create learning capture`, `Agent-native review`, `Review findings`, `AI Evaluation Status`
-- Command palette equivalents exist for each of the same surfaces under the `AgentX:` prefix
+- Command palette equivalents exist for each of the same surfaces under the `Frontier:` prefix
 
 ---
 
@@ -243,7 +246,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | Command | Description |
 |:--------|:------------|
 | Initialize Local Runtime | Prepare local runtime for the current workspace |
-| Enable in Agents Window | Opt AgentX into the VS Code Agents Window (Preview) for the current user |
+| Enable in Agents Window | Opt Frontier into the VS Code Agents Window (Preview) for the current user |
 | Add Remote Adapter | Connect GitHub or Azure DevOps for backlog integration |
 | Add LLM Adapter | Switch the workspace LLM adapter (Copilot, Claude, OpenAI) |
 | Add Plugin | Extend the workspace with additional capabilities |
@@ -284,7 +287,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | Create Learning Capture | Scaffold a durable learning artifact |
 | Show Agent-Native Review | Run advisory agent-native review parity checks |
 | Show Review Findings | Inspect durable review findings |
-| Promote Review Finding | Promote a finding into a standard AgentX issue |
+| Promote Review Finding | Promote a finding into a standard Frontier issue |
 
 ### AI Evaluation
 
@@ -316,7 +319,7 @@ AgentX exposes the compound-engineering loop directly in VS Code instead of leav
 | Generate Weekly Digest | Generate a weekly status digest |
 | Show Issue Detail | View detailed issue information |
 | Show Pending Clarification | Check for pending clarification requests |
-| Check Environment | Validate the AgentX runtime environment |
+| Check Environment | Validate the Frontier runtime environment |
 | Refresh | Refresh all sidebar views |
 
 ---
@@ -328,7 +331,7 @@ listed below and 11 hidden specialists that remain parent-invocable.
 
 | Agent | Role | Use For |
 |:------|:-----|:--------|
-| **AgentX Auto** | Autonomous orchestrator | End-to-end delivery in one session |
+| **Frontier Orchestration FDE** | Autonomous orchestrator | End-to-end delivery in one session |
 | **Product Manager** | PRD and backlog | Product scope, goals, stories |
 | **UX Designer** | UX and prototypes | User flows, wireframes, HTML/CSS prototypes |
 | **Architect** | Architecture | ADR, tech spec, tradeoff analysis |
@@ -369,7 +372,7 @@ listed below and 11 hidden specialists that remain parent-invocable.
 
 - Migrated agent defaults and provider routing to Claude Opus 5 and Sonnet 5.
 - Added cost optimization and infrastructure governance skills with supply-chain, SSRF, and evaluation hardening.
-- Added Fabric Engineer and promoted Power Platform Builder into core AgentX, bringing the inventory to 26 agents (15 visible, 11 internal).
+- Added Fabric Engineer and promoted Power Platform Builder into core Frontier, bringing the inventory to 26 agents (15 visible, 11 internal).
 - Added fail-closed Power Platform terminal enforcement, domain routing, canonical handoffs, installer parity, and adversarial regression coverage.
 - Hardened the local WhatsApp companion with read-only defaults, confirmation-gated mutation, replay and voice safeguards, bounded CLI execution, sandboxed Chromium, and zero production audit findings.
 - Added a deterministic 100-point skill-quality rubric with strict YAML, stable JSON evidence, blocking floors, trusted-base changed-skill enforcement, and Windows/POSIX installer parity.
@@ -377,22 +380,22 @@ listed below and 11 hidden specialists that remain parent-invocable.
 
 ### 8.4.68
 
-- Claude-backed AgentX defaults now use Claude Opus 4.8 across runtime model maps, VS Code adapter setup, agent creation pickers, and bundled agent definitions.
+- Claude-backed Frontier defaults now use Claude Opus 4.8 across runtime model maps, VS Code adapter setup, agent creation pickers, and bundled agent definitions.
 - Workspace-local launchers now keep loop state in their own workspace even when `AGENTX_WORKSPACE_ROOT` leaks from another process, while extension-bundled runtimes still support explicit workspace roots.
-- Bundled AgentX assets were regenerated for 8.4.68, including pack manifests, installers, docs, skills, and runtime scripts.
+- Bundled Frontier assets were regenerated for 8.4.68, including pack manifests, installers, docs, skills, and runtime scripts.
 - Release validation passed: extension tests 913 passing, provider behavior 97/97, framework self-tests 134/134, and runner behavior 163/163.
 
 ### 8.4.63
 
 - Model Council deepened into persona+purpose-specific deliberation (PRD scope, ADR options, AI design, code review, research) with multi-topic support in a single run
 - Council persona model defaults refreshed to the current frontier tier (Opus 4.7 -> 4.8, GPT 5.4 -> 5.5); model names remain advisory diversity slots
-- Extension opts into the VS Code Agents Window on activation as a user-side setting (SPEC-400) so AgentX surfaces in the agent-first window without leaving the editor experience
+- Extension opts into the VS Code Agents Window on activation as a user-side setting (SPEC-400) so Frontier surfaces in the agent-first window without leaving the editor experience
 - Runtime hardening: resolved review-400 findings, restored quality-loop parity, and fixed a shell test flake
 
 ### 8.4.52
 
 - New `convert-slides` plugin renders Markdown storyboards into Microsoft PowerPoint (`.pptx`) via Pandoc, alongside the existing `convert-docs` (MD->DOCX) plugin
-- AgentX Auto agent documents both plugins with trigger conditions and invocation rules (PATH precheck, no shell concatenation, regenerate-from-Markdown discipline)
+- Frontier Orchestration FDE agent documents both plugins with trigger conditions and invocation rules (PATH precheck, no shell concatenation, regenerate-from-Markdown discipline)
 - Consulting Research agent adopts a Markdown-first plugin-bridge workflow: storyboard Markdown is the source of truth and is rendered to `.pptx` only on explicit request
 - Zero-copy asset rewrite regression fix: agent context loader, runtime asset utilities, and agent-native review surface correctly resolve canonical template references through the bundled extension path (16/16 tests green)
 
@@ -421,7 +424,7 @@ listed below and 11 hidden specialists that remain parent-invocable.
 
 ### 8.4.30
 
-- Updated agent model assignments across core roles (AgentX Auto, PM, Architect, Engineer, Reviewer, Auto-Fix Reviewer)
+- Updated agent model assignments across core roles (Frontier Orchestration FDE, PM, Architect, Engineer, Reviewer, Auto-Fix Reviewer)
 
 ### 8.4.29
 
@@ -452,7 +455,7 @@ listed below and 11 hidden specialists that remain parent-invocable.
 
 ## Learn More
 
-- [AgentX Core Repository](https://github.com/jnPiyush/AgentX)
+- [Frontier Core Repository](https://github.com/jnPiyush/AgentX)
 - [AGENTS.md & Routing Setup](https://github.com/jnPiyush/AgentX/blob/master/AGENTS.md)
 - [Detailed Workflow Guide](https://github.com/jnPiyush/AgentX/blob/master/docs/WORKFLOW.md)
 - [Full Setup Instructions](https://github.com/jnPiyush/AgentX/blob/master/docs/GUIDE.md)

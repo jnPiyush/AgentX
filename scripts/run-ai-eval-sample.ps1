@@ -1,7 +1,7 @@
 param(
     [string]$DatasetPath = "evaluation/datasets/regression.jsonl",
     [string]$ClassifierPath = "scripts/classify-issue.js",
-    [string]$ManifestPath = "evaluation/agentx.eval.yaml"
+    [string]$ManifestPath = "evaluation/frontier.eval.yaml"
 )
 
 Set-StrictMode -Version Latest

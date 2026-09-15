@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveFrontierStatePath } from './frontierPaths';
 import {
  createDefaultState,
  findMarkdownFiles,
@@ -47,7 +48,7 @@ const DEFAULT_STOP_GATE_CLASSES: readonly HarnessEvidenceClass[] = [
 ];
 
 export function readHarnessState(workspaceRoot: string): HarnessState {
- const filePath = path.join(workspaceRoot, '.agentx', 'state', 'harness-state.json');
+ const filePath = resolveFrontierStatePath(workspaceRoot, 'state', 'harness-state.json');
  try {
   if (!fs.existsSync(filePath)) {
    return createDefaultState();
@@ -96,7 +97,7 @@ function estimateTokens(text: string): number {
 }
 
 function readLoopComplete(workspaceRoot: string): boolean {
- const loopStatePath = path.join(workspaceRoot, '.agentx', 'state', 'loop-state.json');
+ const loopStatePath = resolveFrontierStatePath(workspaceRoot, 'state', 'loop-state.json');
  try {
   if (!fs.existsSync(loopStatePath)) {
   return false;

@@ -1,18 +1,18 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { runInitializeLocalRuntimeCommand } from './initializeCommandInternals';
 
 /**
- * Register the AgentX: Initialize Local Runtime command.
- * Installs the repo-local AgentX runtime substrate used by run, loop,
+ * Register the Frontier: Initialize Local Runtime command.
+ * Installs the repo-local Frontier runtime substrate used by run, loop,
  * workflow, memory, and handoff features.
  * Remote providers are configured separately through adapter commands.
  */
 export function registerInitializeLocalRuntimeCommand(
  context: vscode.ExtensionContext,
- agentx: AgentXContext
+ agentx: FrontierContext
 ) {
- const cmd = vscode.commands.registerCommand('agentx.initializeLocalRuntime', async () => {
+ const cmd = vscode.commands.registerCommand('frontier.initializeLocalRuntime', async () => {
     await runInitializeLocalRuntimeCommand(context, agentx);
  });
 

@@ -31,13 +31,13 @@ test('public whatsapp-web.js runtime loads without RemoteAuth optional dependenc
   assert.equal(typeof LocalAuth, 'function');
 });
 
-test('routeCommand routes common WhatsApp commands to the AgentX CLI', async () => {
-  const runnerPath = path.resolve(__dirname, '..', 'src', 'agentxRunner.js');
+test('routeCommand routes common WhatsApp commands to the Frontier CLI', async () => {
+  const runnerPath = path.resolve(__dirname, '..', 'src', 'frontierRunner.js');
   const routerPath = path.resolve(__dirname, '..', 'src', 'commandRouter.js');
 
   const runner = freshRequire(runnerPath);
   const calls = [];
-  runner.runAgentX = async (args, config) => {
+  runner.runFrontier = async (args, config) => {
     calls.push({ args, config });
     return { ok: true, text: 'ok' };
   };
@@ -62,12 +62,12 @@ test('routeCommand routes common WhatsApp commands to the AgentX CLI', async () 
 });
 
 test('routeCommand returns usage guidance for unsupported or incomplete commands', async () => {
-  const runnerPath = path.resolve(__dirname, '..', 'src', 'agentxRunner.js');
+  const runnerPath = path.resolve(__dirname, '..', 'src', 'frontierRunner.js');
   const routerPath = path.resolve(__dirname, '..', 'src', 'commandRouter.js');
 
   const runner = freshRequire(runnerPath);
-  runner.runAgentX = async () => {
-    throw new Error('runAgentX should not be called for invalid commands');
+  runner.runFrontier = async () => {
+    throw new Error('runFrontier should not be called for invalid commands');
   };
 
   const { routeCommand, helpText } = freshRequire(routerPath);
@@ -125,12 +125,12 @@ test('loadConfig prefers environment overrides for allowlist and repo path', () 
   }
 });
 
-test('runAgentX fails cleanly when the local CLI path is missing', async () => {
-  const { runAgentX } = freshRequire(path.resolve(__dirname, '..', 'src', 'agentxRunner.js'));
+test('runFrontier fails cleanly when the local CLI path is missing', async () => {
+  const { runFrontier } = freshRequire(path.resolve(__dirname, '..', 'src', 'frontierRunner.js'));
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-runner-'));
 
   try {
-    const result = await runAgentX(['ready'], {
+    const result = await runFrontier(['ready'], {
       repoPath: tempRoot,
       cliRelativePath: '.agentx/agentx.ps1',
       commandTimeoutMs: 1000,

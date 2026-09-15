@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   getPendingSetup,
   tryHandleAdapterSetupRequest,
@@ -36,8 +36,8 @@ import {
   tryHandleWorkflowRolloutRequest,
 } from './requestRouterInternals';
 
-export async function getAgentXChatFollowups(
-  agentx: AgentXContext,
+export async function getFrontierChatFollowups(
+  agentx: FrontierContext,
 ): Promise<vscode.ChatFollowup[]> {
   const pendingSetup = await getPendingSetup(agentx);
   if (pendingSetup) {
@@ -75,10 +75,10 @@ export function resetChatRouterStateForTests(): void {
   resetIntentRouterStateForTests();
 }
 
-export async function routeAgentXChatRequest(
+export async function routeFrontierChatRequest(
   userText: string,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<vscode.ChatResult> {
   const adapterSetupResult = await tryHandleAdapterSetupRequest(userText, response, agentx);
   if (adapterSetupResult) {

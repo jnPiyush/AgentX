@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
  LearningsIntent,
  getLearningCaptureTarget,
@@ -25,19 +25,19 @@ let learningsChannel: vscode.OutputChannel | undefined;
 
 export function getLearningsChannel(): vscode.OutputChannel {
  if (!learningsChannel) {
-  learningsChannel = vscode.window.createOutputChannel('AgentX Learnings');
+  learningsChannel = vscode.window.createOutputChannel('Frontier Learnings');
  }
  return learningsChannel;
 }
 
 export async function showRankedLearnings(
- agentx: AgentXContext,
+ agentx: FrontierContext,
  intent: LearningsIntent,
  query?: string,
 ): Promise<void> {
  const root = agentx.workspaceRoot;
  if (!root) {
-  vscode.window.showWarningMessage('AgentX needs an open workspace to show learnings.');
+  vscode.window.showWarningMessage('Frontier needs an open workspace to show learnings.');
   return;
  }
 
@@ -49,17 +49,17 @@ export async function showRankedLearnings(
  channel.show(true);
 }
 
-export async function showCaptureGuidance(agentx: AgentXContext): Promise<void> {
+export async function showCaptureGuidance(agentx: FrontierContext): Promise<void> {
  const channel = getLearningsChannel();
  channel.clear();
  channel.appendLine(renderCaptureGuidanceMarkdown(agentx.workspaceRoot));
  channel.show(true);
 }
 
-export async function showBrainstorm(agentx: AgentXContext, query?: string): Promise<void> {
+export async function showBrainstorm(agentx: FrontierContext, query?: string): Promise<void> {
  const root = agentx.workspaceRoot;
  if (!root) {
-  vscode.window.showWarningMessage('AgentX needs an open workspace to brainstorm.');
+  vscode.window.showWarningMessage('Frontier needs an open workspace to brainstorm.');
   return;
  }
 
@@ -71,10 +71,10 @@ export async function showBrainstorm(agentx: AgentXContext, query?: string): Pro
  channel.show(true);
 }
 
-export async function showCompoundLoop(agentx: AgentXContext): Promise<void> {
+export async function showCompoundLoop(agentx: FrontierContext): Promise<void> {
  const root = agentx.workspaceRoot;
  if (!root) {
-  vscode.window.showWarningMessage('AgentX needs an open workspace to show the compound loop.');
+  vscode.window.showWarningMessage('Frontier needs an open workspace to show the compound loop.');
   return;
  }
 
@@ -84,10 +84,10 @@ export async function showCompoundLoop(agentx: AgentXContext): Promise<void> {
  channel.show(true);
 }
 
-export async function showWorkflowNextStep(agentx: AgentXContext): Promise<void> {
+export async function showWorkflowNextStep(agentx: FrontierContext): Promise<void> {
  const root = agentx.workspaceRoot;
  if (!root) {
-  vscode.window.showWarningMessage('AgentX needs an open workspace to resolve the next workflow step.');
+  vscode.window.showWarningMessage('Frontier needs an open workspace to resolve the next workflow step.');
   return;
  }
 
@@ -99,10 +99,10 @@ export async function showWorkflowNextStep(agentx: AgentXContext): Promise<void>
  channel.show(true);
 }
 
-export async function showWorkflowRolloutScorecard(agentx: AgentXContext): Promise<void> {
+export async function showWorkflowRolloutScorecard(agentx: FrontierContext): Promise<void> {
  const root = agentx.workspaceRoot;
  if (!root) {
-  vscode.window.showWarningMessage('AgentX needs an open workspace to show the workflow rollout scorecard.');
+  vscode.window.showWarningMessage('Frontier needs an open workspace to show the workflow rollout scorecard.');
   return;
  }
 
@@ -114,10 +114,10 @@ export async function showWorkflowRolloutScorecard(agentx: AgentXContext): Promi
  channel.show(true);
 }
 
-export async function showOperatorEnablementChecklist(agentx: AgentXContext): Promise<void> {
+export async function showOperatorEnablementChecklist(agentx: FrontierContext): Promise<void> {
  const root = agentx.workspaceRoot;
  if (!root) {
-  vscode.window.showWarningMessage('AgentX needs an open workspace to show the operator enablement checklist.');
+  vscode.window.showWarningMessage('Frontier needs an open workspace to show the operator enablement checklist.');
   return;
  }
 
@@ -129,10 +129,10 @@ export async function showOperatorEnablementChecklist(agentx: AgentXContext): Pr
  channel.show(true);
 }
 
-export async function launchPlanDeepening(agentx: AgentXContext): Promise<void> {
+export async function launchPlanDeepening(agentx: FrontierContext): Promise<void> {
  const root = agentx.workspaceRoot;
  if (!root) {
-  vscode.window.showWarningMessage('AgentX needs an open workspace to prepare plan deepening.');
+  vscode.window.showWarningMessage('Frontier needs an open workspace to prepare plan deepening.');
   return;
  }
 
@@ -144,10 +144,10 @@ export async function launchPlanDeepening(agentx: AgentXContext): Promise<void> 
  channel.show(true);
 }
 
-export async function launchReviewKickoff(agentx: AgentXContext): Promise<void> {
+export async function launchReviewKickoff(agentx: FrontierContext): Promise<void> {
  const root = agentx.workspaceRoot;
  if (!root) {
-  vscode.window.showWarningMessage('AgentX needs an open workspace to prepare review kickoff.');
+  vscode.window.showWarningMessage('Frontier needs an open workspace to prepare review kickoff.');
   return;
  }
 
@@ -217,17 +217,17 @@ export function buildLearningTemplate(
  ].join('\n');
 }
 
-export async function createLearningCapture(agentx: AgentXContext): Promise<void> {
+export async function createLearningCapture(agentx: FrontierContext): Promise<void> {
  const root = agentx.workspaceRoot;
  if (!root) {
-  vscode.window.showWarningMessage('AgentX needs an open workspace to create a learning capture.');
+  vscode.window.showWarningMessage('Frontier needs an open workspace to create a learning capture.');
   return;
  }
 
  const target = getLearningCaptureTarget(root);
  const defaultIssue = target?.issueNumber ? String(target.issueNumber) : '';
  const issueInput = defaultIssue || await vscode.window.showInputBox({
-  title: 'AgentX - Learning Capture',
+  title: 'Frontier - Learning Capture',
   prompt: 'Issue number for the learning capture',
   placeHolder: '163',
   validateInput: (value) => /^\d+$/.test(value.trim()) ? undefined : 'Enter a numeric issue number.',
@@ -239,7 +239,7 @@ export async function createLearningCapture(agentx: AgentXContext): Promise<void
  const issueNumber = Number(issueInput.trim());
  const defaultTitle = target?.title ?? `Capture solved problem from issue #${issueNumber}`;
  const title = await vscode.window.showInputBox({
-  title: 'AgentX - Learning Capture',
+  title: 'Frontier - Learning Capture',
   prompt: 'Learning title',
   value: defaultTitle,
   validateInput: (value) => value.trim().length > 0 ? undefined : 'Title is required.',
@@ -262,7 +262,7 @@ export async function createLearningCapture(agentx: AgentXContext): Promise<void
  await vscode.window.showTextDocument(document, { preview: false });
  vscode.window.showInformationMessage(
   created
-   ? `AgentX: created ${relativePath}.`
-   : `AgentX: opened existing ${relativePath}.`,
+   ? `Frontier: created ${relativePath}.`
+   : `Frontier: opened existing ${relativePath}.`,
  );
 }

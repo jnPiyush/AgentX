@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------
-# AgentX Agent Delegation Protocol
+# Frontier Agent Delegation Protocol
 # ------------------------------------------------------------------
 # Defines the standard pattern for agents to delegate tool-heavy or
 # specialized work to subagents via the runSubagent tool.

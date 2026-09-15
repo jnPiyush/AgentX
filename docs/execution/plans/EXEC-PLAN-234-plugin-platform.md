@@ -53,7 +53,7 @@ This repo already contains the current plugin primitives. The most relevant file
 - `.github/schemas/plugin-manifest.schema.json` for the current plugin contract
 - `vscode-extension/src/commands/pluginsCommandInternals.ts` for the current Add Plugin workflow
 - `.agentx/plugins/convert-docs/plugin.json` as the current first-party plugin package
-- `packs/agentx-core/manifest.json` and `packs/agentx-copilot-cli/manifest.json` as existing distribution abstractions
+- `packs/frontier-core/manifest.json` and `packs/frontier-copilot-cli/manifest.json` as existing distribution abstractions
 
 The architect boundary applies here: write only architecture artifacts and do not modify runtime source or tests.
 

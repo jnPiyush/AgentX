@@ -1,4 +1,4 @@
-# AgentX Video Studio
+# Frontier Video Studio
 
 Programmatic persona demo videos rendered with [Remotion](https://www.remotion.dev/).
 
@@ -48,7 +48,7 @@ npm run render:ux
 
 ## Honesty disclaimer
 
-These are scripted explainer videos, not raw recordings of live AgentX runs. Every artifact shown (PRD body, ADR options, prototype HTML) mirrors what AgentX actually produces, but the timings on screen are designed for clarity, not benchmarking.
+These are scripted explainer videos, not raw recordings of live Frontier runs. Every artifact shown (PRD body, ADR options, prototype HTML) mirrors what Frontier actually produces, but the timings on screen are designed for clarity, not benchmarking.
 
 ## Brand tokens
 

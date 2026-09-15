@@ -17,7 +17,7 @@ import { getLoopHealth, hasSubagentReviewIteration } from '../../runtime';
 // ---------------------------------------------------------------------------
 
 function makeTmpWorkspace(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-loop-test-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-loop-test-'));
   fs.mkdirSync(path.join(dir, '.agentx', 'state'), { recursive: true });
   return dir;
 }

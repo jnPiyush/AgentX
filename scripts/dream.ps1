@@ -64,7 +64,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Off
 
 # ---------------------------------------------------------------------------
-# Resolve workspace root (same logic as other AgentX scripts)
+# Resolve workspace root (same logic as other Frontier scripts)
 # ---------------------------------------------------------------------------
 $script:ROOT = if ($env:AGENTX_WORKSPACE_ROOT) {
     $env:AGENTX_WORKSPACE_ROOT

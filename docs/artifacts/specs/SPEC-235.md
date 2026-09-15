@@ -184,7 +184,7 @@ This design is artifact-first rather than service-first. Phase 1 requires standa
 
 | Artifact | Proposed Location | Purpose | Primary Owner |
 |----------|-------------------|---------|---------------|
-| Evaluation manifest | `evaluation/agentx.eval.yaml` | Declares runners, datasets, rubrics, thresholds, and model matrix | Data Scientist |
+| Evaluation manifest | `evaluation/frontier.eval.yaml` | Declares runners, datasets, rubrics, thresholds, and model matrix | Data Scientist |
 | Baseline summary | `evaluation/baseline.json` | Declares accepted baseline scores and comparison target | Data Scientist |
 | Dataset references | `evaluation/datasets/` | Canonical evaluation and red-team inputs | Data Scientist |
 | Rubric definitions | `evaluation/rubrics/` | Judge criteria and scoring guidance | Data Scientist / Prompt Engineer |

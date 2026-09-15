@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { AgentTreeItem, createAgentTreeItem } from './agentTreeProviderInternals';
 
 /**
@@ -10,7 +10,7 @@ export class AgentTreeProvider implements vscode.TreeDataProvider<AgentTreeItem>
  private _onDidChangeTreeData = new vscode.EventEmitter<AgentTreeItem | undefined | void>();
  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
- constructor(private agentx: AgentXContext) {}
+ constructor(private agentx: FrontierContext) {}
 
  refresh(): void {
  this._onDidChangeTreeData.fire();

@@ -13,7 +13,7 @@ AgentX already had enough plugin primitives to support a real platform, but the 
 
 The best near-term shape is:
 
-- Keep `agentx-core` as the host/runtime contract
+- Keep `frontier-core` as the host/runtime contract
 - Publish plugins as independent versioned packages
 - Use a registry index plus release artifacts for discovery and download
 - Preserve final installation in workspace `.agentx/plugins`

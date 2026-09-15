@@ -1,11 +1,11 @@
 # convert-slides
 
-AgentX plugin that converts Markdown documents to Microsoft PowerPoint (PPTX) using [Pandoc](https://pandoc.org), with automatic Mermaid diagram rendering.
+Frontier plugin that converts Markdown documents to Microsoft PowerPoint (PPTX) using [Pandoc](https://pandoc.org), with automatic Mermaid diagram rendering.
 
 ## What's new in 1.1.0
 
 - Fenced ```` ```mermaid ```` blocks are pre-rendered to high-resolution PNGs and embedded in slides when [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) is on `PATH`.
-- AgentX templates that already use Mermaid (ADR, Spec, Roadmap, Arch-Review) now produce decks with real diagrams instead of code blocks.
+- Frontier templates that already use Mermaid (ADR, Spec, Roadmap, Arch-Review) now produce decks with real diagrams instead of code blocks.
 - Graceful degradation: without `mmdc` the plugin behaves exactly as 1.0.0 (diagrams render as code).
 
 ## Requirements
@@ -16,7 +16,7 @@ AgentX plugin that converts Markdown documents to Microsoft PowerPoint (PPTX) us
 
 ## Usage
 
-Run via the AgentX CLI from the workspace root:
+Run via the Frontier CLI from the workspace root:
 
 ```powershell
 # Convert default doc folders (docs/prd, docs/adr, docs/specs, docs/ux, docs/reviews)

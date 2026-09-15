@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   createTaskBundle,
   listTaskBundles,
@@ -15,7 +15,7 @@ let taskBundleChannel: vscode.OutputChannel | undefined;
 
 function getTaskBundleChannel(): vscode.OutputChannel {
   if (!taskBundleChannel) {
-    taskBundleChannel = vscode.window.createOutputChannel('AgentX Task Bundles');
+    taskBundleChannel = vscode.window.createOutputChannel('Frontier Task Bundles');
   }
   return taskBundleChannel;
 }
@@ -37,7 +37,7 @@ async function promptScope(forListing = false): Promise<{ readonly issue?: numbe
     ],
     {
       title: forListing ? 'Task Bundle Scope' : 'Task Bundle Parent Scope',
-      placeHolder: 'Choose how AgentX should resolve task bundle context',
+      placeHolder: 'Choose how Frontier should resolve task bundle context',
     },
   );
 
@@ -73,7 +73,7 @@ async function promptScope(forListing = false): Promise<{ readonly issue?: numbe
   return { plan };
 }
 
-async function selectBundle(agentx: AgentXContext, title: string): Promise<TaskBundleRecord | undefined> {
+async function selectBundle(agentx: FrontierContext, title: string): Promise<TaskBundleRecord | undefined> {
   const bundles = await listTaskBundles(agentx, { all: true });
   if (bundles.length === 0) {
     return undefined;
@@ -97,13 +97,13 @@ async function selectBundle(agentx: AgentXContext, title: string): Promise<TaskB
 
 export function registerTaskBundleCommands(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('agentx.showTaskBundles', async () => {
+    vscode.commands.registerCommand('frontier.showTaskBundles', async () => {
       const root = agentx.workspaceRoot;
       if (!root) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to show task bundles.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to show task bundles.');
         return;
       }
 
@@ -115,13 +115,13 @@ export function registerTaskBundleCommands(
         showBundles(await listTaskBundles(agentx, scope));
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`AgentX failed to list task bundles: ${message}`);
+        vscode.window.showErrorMessage(`Frontier failed to list task bundles: ${message}`);
       }
     }),
-    vscode.commands.registerCommand('agentx.createTaskBundle', async () => {
+    vscode.commands.registerCommand('frontier.createTaskBundle', async () => {
       const root = agentx.workspaceRoot;
       if (!root) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to create task bundles.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to create task bundles.');
         return;
       }
 
@@ -171,16 +171,16 @@ export function registerTaskBundleCommands(
           plan: scope.plan,
         });
         showBundles([bundle]);
-        vscode.window.showInformationMessage(`AgentX created task bundle ${bundle.bundleId}.`);
+        vscode.window.showInformationMessage(`Frontier created task bundle ${bundle.bundleId}.`);
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`AgentX failed to create the task bundle: ${message}`);
+        vscode.window.showErrorMessage(`Frontier failed to create the task bundle: ${message}`);
       }
     }),
-    vscode.commands.registerCommand('agentx.resolveTaskBundle', async () => {
+    vscode.commands.registerCommand('frontier.resolveTaskBundle', async () => {
       const root = agentx.workspaceRoot;
       if (!root) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to resolve task bundles.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to resolve task bundles.');
         return;
       }
 
@@ -214,16 +214,16 @@ export function registerTaskBundleCommands(
           archiveReason,
         });
         showBundles([updated]);
-        vscode.window.showInformationMessage(`AgentX resolved task bundle ${updated.bundleId} as ${updated.state}.`);
+        vscode.window.showInformationMessage(`Frontier resolved task bundle ${updated.bundleId} as ${updated.state}.`);
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`AgentX failed to resolve the task bundle: ${message}`);
+        vscode.window.showErrorMessage(`Frontier failed to resolve the task bundle: ${message}`);
       }
     }),
-    vscode.commands.registerCommand('agentx.promoteTaskBundle', async () => {
+    vscode.commands.registerCommand('frontier.promoteTaskBundle', async () => {
       const root = agentx.workspaceRoot;
       if (!root) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to promote task bundles.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to promote task bundles.');
         return;
       }
 
@@ -250,11 +250,11 @@ export function registerTaskBundleCommands(
         });
         showBundles([result.bundle]);
         vscode.window.showInformationMessage(
-          `AgentX promoted ${result.bundle.bundleId} to ${result.targetReference} (${result.duplicateCheckResult}).`,
+          `Frontier promoted ${result.bundle.bundleId} to ${result.targetReference} (${result.duplicateCheckResult}).`,
         );
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`AgentX failed to promote the task bundle: ${message}`);
+        vscode.window.showErrorMessage(`Frontier failed to promote the task bundle: ${message}`);
       }
     }),
   );

@@ -1,1 +1,1 @@
-"""AgentX SkillOpt pilot adapters."""
+"""Frontier SkillOpt pilot adapters."""

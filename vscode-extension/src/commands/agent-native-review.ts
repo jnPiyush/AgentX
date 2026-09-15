@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   evaluateAgentNativeReview,
   renderAgentNativeReviewText,
@@ -9,20 +9,20 @@ let reviewChannel: vscode.OutputChannel | undefined;
 
 function getReviewChannel(): vscode.OutputChannel {
   if (!reviewChannel) {
-    reviewChannel = vscode.window.createOutputChannel('AgentX Review');
+    reviewChannel = vscode.window.createOutputChannel('Frontier Review');
   }
   return reviewChannel;
 }
 
 export function registerAgentNativeReviewCommand(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('agentx.showAgentNativeReview', async () => {
+    vscode.commands.registerCommand('frontier.showAgentNativeReview', async () => {
       const report = evaluateAgentNativeReview(agentx);
       if (!report) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to review parity surfaces.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to review parity surfaces.');
         return;
       }
 

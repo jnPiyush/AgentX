@@ -2,7 +2,7 @@
 name: "error-handling"
 description: 'Implement robust error handling with exceptions, retry logic, circuit breakers, and graceful degradation. Use when designing error handling strategies, implementing retry policies, adding circuit breakers, configuring timeouts, or building health check endpoints.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

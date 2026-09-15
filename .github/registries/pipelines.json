@@ -6,7 +6,7 @@
   "pipelines": [
     {
       "role": "agent-x",
-      "displayName": "Agent X (Hub)",
+      "displayName": "Frontier (Hub)",
       "phases": ["Classify", "Route", "Execute specialist phases", "Validate handoffs"],
       "deliveryGate": "All specialist phase gates pass before advancing"
     },

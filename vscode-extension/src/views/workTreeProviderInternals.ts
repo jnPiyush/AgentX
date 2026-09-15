@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveFrontierStatePath } from '../utils/frontierPaths';
 import * as vscode from 'vscode';
 import { WorkflowGuidanceSnapshot } from '../utils/workflowGuidance';
 import { SidebarTreeItem } from './sidebarTreeItem';
@@ -59,7 +60,7 @@ export function formatTimestamp(value: string | null | undefined): string | unde
 }
 
 export function getLocalIssues(root: string): LocalIssue[] {
- const issuesDir = path.join(root, '.agentx', 'issues');
+ const issuesDir = resolveFrontierStatePath(root, 'issues');
  if (!fs.existsSync(issuesDir)) {
   return [];
  }
@@ -81,7 +82,7 @@ export function buildOverviewChildren(
    ? SidebarTreeItem.action(
     'Pending clarification',
     'comment-discussion',
-    'agentx.showPendingClarification',
+    'frontier.showPendingClarification',
     'Show Pending Clarification',
     [],
     pendingClarification.agentName,
@@ -132,7 +133,7 @@ export function buildActiveThreadChildren(
     SidebarTreeItem.action(
      'Open linked issue',
      'issue-opened',
-     'agentx.showIssue',
+     'frontier.showIssue',
      'Show Issue',
      [String(activeThread.issueNumber)],
      `#${activeThread.issueNumber}`,
@@ -140,13 +141,13 @@ export function buildActiveThreadChildren(
     SidebarTreeItem.action(
      'Check linked issue dependencies',
      'git-merge',
-     'agentx.checkDeps',
+     'frontier.checkDeps',
      'Check Dependencies',
      [String(activeThread.issueNumber)],
     ),
    ]
    : []),
-  SidebarTreeItem.action('Loop status', 'history', 'agentx.loopStatus', 'Loop Status'),
+  SidebarTreeItem.action('Loop status', 'history', 'frontier.loopStatus', 'Loop Status'),
  ];
 }
 
@@ -157,7 +158,7 @@ export function buildActiveAgentChildren(
   ? activeAgents.map(([agentName, status]) => SidebarTreeItem.action(
    agentName,
    'person',
-   status.issue ? 'agentx.showIssue' : 'agentx.showStatus',
+   status.issue ? 'frontier.showIssue' : 'frontier.showStatus',
    status.issue ? 'Show Issue' : 'Show Agent Status',
    status.issue ? [String(status.issue)] : [],
    `${status.status}${status.issue ? ` | issue #${status.issue}` : ''}`,
@@ -170,7 +171,7 @@ export function buildIssueChildren(openIssues: ReadonlyArray<LocalIssue>): Sideb
   ? openIssues.slice(0, 5).map((issue) => SidebarTreeItem.action(
    `#${issue.number ?? '?'} ${issue.title ?? 'Untitled issue'}`,
    'issue-opened',
-   'agentx.showIssue',
+   'frontier.showIssue',
    'Show Issue',
    [String(issue.number ?? '')],
    issue.status ?? issue.state ?? 'open',
@@ -180,21 +181,21 @@ export function buildIssueChildren(openIssues: ReadonlyArray<LocalIssue>): Sideb
 
 export function buildActionChildren(): SidebarTreeItem[] {
  return [
-  SidebarTreeItem.action('Show workflow steps', 'play', 'agentx.runWorkflow', 'Show Workflow Steps'),
-  SidebarTreeItem.action('Workflow next step', 'debug-step-over', 'agentx.showWorkflowNextStep', 'Show Workflow Next Step'),
-  SidebarTreeItem.action('Brainstorm', 'lightbulb', 'agentx.showBrainstormGuide', 'Brainstorm'),
-  SidebarTreeItem.action('Planning learnings', 'book', 'agentx.showPlanningLearnings', 'Planning Learnings'),
-  SidebarTreeItem.action('Review learnings', 'checklist', 'agentx.showReviewLearnings', 'Review Learnings'),
-  SidebarTreeItem.action('Compound loop', 'layers', 'agentx.showCompoundLoop', 'Compound Loop'),
-  SidebarTreeItem.action('Create learning capture', 'new-file', 'agentx.createLearningCapture', 'Create Learning Capture'),
-  SidebarTreeItem.action('Rollout scorecard', 'graph', 'agentx.showWorkflowRolloutScorecard', 'Show Workflow Rollout Scorecard'),
-  SidebarTreeItem.action('Operator checklist', 'checklist', 'agentx.showOperatorEnablementChecklist', 'Show Operator Enablement Checklist'),
-  SidebarTreeItem.action('Capture guidance', 'archive', 'agentx.showKnowledgeCaptureGuidance', 'Knowledge Capture Guidance'),
-  SidebarTreeItem.action('Review findings', 'comment-discussion', 'agentx.showReviewFindings', 'Review Findings'),
-  SidebarTreeItem.action('Promote review finding', 'repo-push', 'agentx.promoteReviewFinding', 'Promote Review Finding'),
-  SidebarTreeItem.action('Show agent status', 'organization', 'agentx.showStatus', 'Show Agent Status'),
-  SidebarTreeItem.action('Check environment', 'beaker', 'agentx.checkEnvironment', 'Check Environment'),
-  SidebarTreeItem.action('Generate digest', 'notebook', 'agentx.generateDigest', 'Generate Digest'),
+  SidebarTreeItem.action('Show workflow steps', 'play', 'frontier.runWorkflow', 'Show Workflow Steps'),
+  SidebarTreeItem.action('Workflow next step', 'debug-step-over', 'frontier.showWorkflowNextStep', 'Show Workflow Next Step'),
+  SidebarTreeItem.action('Brainstorm', 'lightbulb', 'frontier.showBrainstormGuide', 'Brainstorm'),
+  SidebarTreeItem.action('Planning learnings', 'book', 'frontier.showPlanningLearnings', 'Planning Learnings'),
+  SidebarTreeItem.action('Review learnings', 'checklist', 'frontier.showReviewLearnings', 'Review Learnings'),
+  SidebarTreeItem.action('Compound loop', 'layers', 'frontier.showCompoundLoop', 'Compound Loop'),
+  SidebarTreeItem.action('Create learning capture', 'new-file', 'frontier.createLearningCapture', 'Create Learning Capture'),
+  SidebarTreeItem.action('Rollout scorecard', 'graph', 'frontier.showWorkflowRolloutScorecard', 'Show Workflow Rollout Scorecard'),
+  SidebarTreeItem.action('Operator checklist', 'checklist', 'frontier.showOperatorEnablementChecklist', 'Show Operator Enablement Checklist'),
+  SidebarTreeItem.action('Capture guidance', 'archive', 'frontier.showKnowledgeCaptureGuidance', 'Knowledge Capture Guidance'),
+  SidebarTreeItem.action('Review findings', 'comment-discussion', 'frontier.showReviewFindings', 'Review Findings'),
+  SidebarTreeItem.action('Promote review finding', 'repo-push', 'frontier.promoteReviewFinding', 'Promote Review Finding'),
+  SidebarTreeItem.action('Show agent status', 'organization', 'frontier.showStatus', 'Show Agent Status'),
+  SidebarTreeItem.action('Check environment', 'beaker', 'frontier.checkEnvironment', 'Check Environment'),
+  SidebarTreeItem.action('Generate digest', 'notebook', 'frontier.generateDigest', 'Generate Digest'),
  ];
 }
 
@@ -222,10 +223,10 @@ export function buildWorkflowGuidanceChildren(snapshot: WorkflowGuidanceSnapshot
  }
 
  if (snapshot.planDeepening.allowed) {
-  children.push(SidebarTreeItem.action('Deepen plan', 'notebook', 'agentx.deepenPlan', 'Deepen Plan'));
+  children.push(SidebarTreeItem.action('Deepen plan', 'notebook', 'frontier.deepenPlan', 'Deepen Plan'));
  }
  if (snapshot.reviewKickoff.allowed) {
-  children.push(SidebarTreeItem.action('Kick off review', 'comment-discussion', 'agentx.kickoffReview', 'Kick Off Review'));
+  children.push(SidebarTreeItem.action('Kick off review', 'comment-discussion', 'frontier.kickoffReview', 'Kick Off Review'));
  }
 
   if (snapshot.activeContractPath) {
@@ -252,8 +253,8 @@ export function buildWorkflowGuidanceChildren(snapshot: WorkflowGuidanceSnapshot
  }
 
  children.push(
-  SidebarTreeItem.action('Show rollout scorecard', 'graph', 'agentx.showWorkflowRolloutScorecard', 'Show Workflow Rollout Scorecard'),
-  SidebarTreeItem.action('Show operator checklist', 'checklist', 'agentx.showOperatorEnablementChecklist', 'Show Operator Enablement Checklist'),
+  SidebarTreeItem.action('Show rollout scorecard', 'graph', 'frontier.showWorkflowRolloutScorecard', 'Show Workflow Rollout Scorecard'),
+  SidebarTreeItem.action('Show operator checklist', 'checklist', 'frontier.showOperatorEnablementChecklist', 'Show Operator Enablement Checklist'),
  );
 
  return children;

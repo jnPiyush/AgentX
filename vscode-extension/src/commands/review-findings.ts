@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   ReviewFindingRecord,
   getPromotableReviewFindings,
@@ -12,7 +12,7 @@ let findingsChannel: vscode.OutputChannel | undefined;
 
 function getFindingsChannel(): vscode.OutputChannel {
   if (!findingsChannel) {
-    findingsChannel = vscode.window.createOutputChannel('AgentX Review Findings');
+    findingsChannel = vscode.window.createOutputChannel('Frontier Review Findings');
   }
   return findingsChannel;
 }
@@ -38,7 +38,7 @@ async function selectFinding(root: string): Promise<ReviewFindingRecord | undefi
       findingId: record.id,
     })),
     {
-      title: 'AgentX - Promote Review Finding',
+      title: 'Frontier - Promote Review Finding',
       placeHolder: 'Select a durable review finding to promote into backlog work',
     },
   );
@@ -52,22 +52,22 @@ async function selectFinding(root: string): Promise<ReviewFindingRecord | undefi
 
 export function registerReviewFindingCommands(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('agentx.showReviewFindings', async () => {
+    vscode.commands.registerCommand('frontier.showReviewFindings', async () => {
       const root = agentx.workspaceRoot;
       if (!root) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to show review findings.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to show review findings.');
         return;
       }
 
       showFindings(loadReviewFindingRecords(root));
     }),
-    vscode.commands.registerCommand('agentx.promoteReviewFinding', async (findingId?: string) => {
+    vscode.commands.registerCommand('frontier.promoteReviewFinding', async (findingId?: string) => {
       const root = agentx.workspaceRoot;
       if (!root) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to promote review findings.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to promote review findings.');
         return;
       }
 
@@ -85,10 +85,10 @@ export function registerReviewFindingCommands(
         const detail = result.alreadyPromoted
           ? `already linked to issue #${result.issueNumber}`
           : `promoted as issue #${result.issueNumber}`;
-        vscode.window.showInformationMessage(`AgentX: ${result.finding.id} ${detail}.`);
+        vscode.window.showInformationMessage(`Frontier: ${result.finding.id} ${detail}.`);
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`AgentX failed to promote the finding: ${message}`);
+        vscode.window.showErrorMessage(`Frontier failed to promote the finding: ${message}`);
       }
     }),
   );

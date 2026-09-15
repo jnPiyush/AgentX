@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 
 /**
- * Register the AgentX: Generate Weekly Digest command.
+ * Register the Frontier: Generate Weekly Digest command.
  */
 export function registerDigestCommand(
  context: vscode.ExtensionContext,
- agentx: AgentXContext
+ agentx: FrontierContext
 ) {
- const cmd = vscode.commands.registerCommand('agentx.generateDigest', async () => {
+ const cmd = vscode.commands.registerCommand('frontier.generateDigest', async () => {
  if (!await agentx.checkInitialized()) {
- vscode.window.showWarningMessage('AgentX is not initialized.');
+ vscode.window.showWarningMessage('Frontier is not initialized.');
  return;
  }
 
@@ -18,19 +18,19 @@ export function registerDigestCommand(
  await vscode.window.withProgress(
  {
  location: vscode.ProgressLocation.Notification,
- title: 'AgentX: Generating weekly digest...',
+ title: 'Frontier: Generating weekly digest...',
  cancellable: false,
  },
  async () => {
  const output = await agentx.runCli('digest');
- const channel = vscode.window.createOutputChannel('AgentX Digest');
+ const channel = vscode.window.createOutputChannel('Frontier Digest');
  channel.clear();
- channel.appendLine('=== AgentX Weekly Digest ===\n');
+ channel.appendLine('=== Frontier Weekly Digest ===\n');
  channel.appendLine(output);
  channel.show();
  }
  );
- vscode.window.showInformationMessage('AgentX digest generated. Check .agentx/digests/');
+ vscode.window.showInformationMessage('Frontier digest generated. Check .agentx/digests/');
  } catch (err: unknown) {
  const message = err instanceof Error ? err.message : String(err);
  vscode.window.showErrorMessage(`Digest generation failed: ${message}`);

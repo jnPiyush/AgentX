@@ -1,0 +1,16 @@
+{
+  "name": "Frontier Collaboration",
+  "url": "https://github.com/jnPiyush/AgentX",
+  "description": "Track Frontier agent progress and submit confirmed instructions from issue and pull request comments.",
+  "hook_attributes": {
+    "url": "https://YOUR-PUBLIC-HOST/api/github/webhooks",
+    "active": true
+  },
+  "public": false,
+  "default_permissions": {
+    "metadata": "read",
+    "issues": "write",
+    "pull_requests": "write"
+  },
+  "default_events": ["issue_comment"]
+}

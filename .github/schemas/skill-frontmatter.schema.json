@@ -1,6 +1,6 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "title": "AgentX Skill File Frontmatter",
+ "title": "Frontier Skill File Frontmatter",
  "description": "Schema for SKILL.md frontmatter validation",
  "type": "object",
  "required": ["name", "description"],

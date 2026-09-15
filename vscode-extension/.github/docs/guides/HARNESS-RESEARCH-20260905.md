@@ -4,7 +4,7 @@
 
 ## Findings and adoption
 
-| Primary source | Supported practice | AgentX decision |
+| Primary source | Supported practice | Frontier decision |
 |---------------|--------------------|-----------------|
 | [Anthropic context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) | Just-in-time retrieval, compact system instructions, retained decisions after compaction | Keep paths/evidence in handoffs; load active skills, not entire catalogs |
 | [Long-running agent harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) | Explicit feature state, incremental work, regression checks; premature completion is a known failure | Requirements remain incomplete until execution evidence exists |
@@ -18,7 +18,7 @@
 The research agent could verify metadata but not the rendered body of
 [OpenAI harness engineering](https://openai.com/index/harness-engineering/).
 It is background reading, not the basis for a quoted implementation requirement.
-Vendor reported improvements are not AgentX performance benchmarks.
+Vendor reported improvements are not Frontier performance benchmarks.
 
 ## Three-perspective Model Council
 

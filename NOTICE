@@ -1,7 +1,7 @@
-AgentX
-Copyright 2025-2026 AgentX Contributors
+Frontier Corp
+Copyright 2025-2026 Frontier Corp Contributors
 
-This product includes software developed at AgentX (https://github.com/jnPiyush/AgentX).
+This product includes software developed at Frontier Corp (https://github.com/jnPiyush/AgentX).
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@ You may obtain a copy of the License at
 Third-Party Attributions
 ------------------------------------------------------------------------
 
-Portions of the AgentX design skill set are derived from or inspired by:
+Portions of the Frontier design skill set are derived from or inspired by:
 
 1. nexu-io/open-design (Apache-2.0)
    https://github.com/nexu-io/open-design
@@ -24,7 +24,7 @@ Portions of the AgentX design skill set are derived from or inspired by:
    - Question-form-first turn-1 contract for ambiguous design briefs
 
    open-design itself credits the following upstream sources for the
-   above ideas; the same credit chain applies to AgentX:
+    above ideas; the same credit chain applies to Frontier:
 
    1a. alchaincyf/huashu-design
        https://github.com/alchaincyf/huashu-design
@@ -50,9 +50,9 @@ Portions of the AgentX design skill set are derived from or inspired by:
      deterministic detector rule catalogue referenced by
     .github/skills/design/impeccable-integration/SKILL.md
 
-   AgentX orchestrates Impeccable as an external, project-local tool
+    Frontier orchestrates Impeccable as an external, project-local tool
    installed into a target app. No Impeccable code is vendored, forked,
-   or redistributed in this repository or in the AgentX extension
+    or redistributed in this repository or in the Frontier extension
    bundle. The reference above is descriptive interoperability
    material, not a derivative work of the upstream source.
 
@@ -64,9 +64,9 @@ Portions of the AgentX design skill set are derived from or inspired by:
      - Reviewed source commit:
          d30eddb9e04562234f2070b5ee63ca4649d9a05e
 
-     AgentX modifies the upstream material for ASCII-only repository rules,
-     progressive disclosure, AgentX routing boundaries, error handling, and the
-     AgentX skill-quality rubric. The upstream MIT notice follows:
+    Frontier modifies the upstream material for ASCII-only repository rules,
+    progressive disclosure, Frontier routing boundaries, error handling, and the
+    Frontier skill-quality rubric. The upstream MIT notice follows:
 
      MIT License
 
@@ -93,9 +93,9 @@ Portions of the AgentX design skill set are derived from or inspired by:
 Files in this repository that adapt material from the sources above
 carry a "Source:" header citing the upstream repository. Per
 Apache-2.0 Section 4, no modification has been made to the licensed
-material's NOTICE; this file is the cumulative notice for AgentX.
+material's NOTICE; this file is the cumulative notice for Frontier.
 
-AgentX has NOT vendored any code from open-design's bundled
+Frontier has NOT vendored any code from open-design's bundled
 sub-projects (skills/guizang-ppt, skills/html-ppt), which carry
 separate MIT licenses with their own attribution requirements. If
 those sub-projects are ever vendored, their LICENSE files must be

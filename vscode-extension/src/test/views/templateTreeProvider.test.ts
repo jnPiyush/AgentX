@@ -5,7 +5,7 @@ import * as os from 'os';
 import { TemplateTreeProvider, TemplateTreeItem } from '../../views/templateTreeProvider';
 import { clearRegistryCache } from '../../utils/registryLoader';
 
-// Minimal AgentXContext stub
+// Minimal FrontierContext stub
 function createStubContext(workspaceRoot: string | undefined) {
  return {
   workspaceRoot,
@@ -17,7 +17,7 @@ function createStubContext(workspaceRoot: string | undefined) {
  * Create a temp directory with template files for testing.
  */
 function createTemplatesDir(templates: Record<string, string>): string {
- const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-tmpl-'));
+ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-tmpl-'));
  const dir = path.join(root, '.github', 'templates');
  fs.mkdirSync(dir, { recursive: true });
  for (const [name, content] of Object.entries(templates)) {
@@ -27,7 +27,7 @@ function createTemplatesDir(templates: Record<string, string>): string {
 }
 
 function createRuntimeTemplatesDir(templates: Record<string, string>): string {
- const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-runtime-tmpl-'));
+ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-runtime-tmpl-'));
  const dir = path.join(root, '.agentx', 'runtime', 'templates');
  fs.mkdirSync(dir, { recursive: true });
  for (const [name, content] of Object.entries(templates)) {
@@ -44,7 +44,7 @@ describe('TemplateTreeProvider', () => {
  });
 
  it('should show info when templates dir does not exist', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-tmpl-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-tmpl-'));
   const provider = new TemplateTreeProvider(createStubContext(root));
   const items = await provider.getChildren();
   assert.equal(items.length, 1);
@@ -77,7 +77,7 @@ describe('TemplateTreeProvider', () => {
  });
 
  it('should show info when templates dir is empty', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-tmpl-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-tmpl-'));
   const dir = path.join(root, '.github', 'templates');
   fs.mkdirSync(dir, { recursive: true });
   const provider = new TemplateTreeProvider(createStubContext(root));
@@ -206,7 +206,7 @@ describe('TemplateTreeProvider', () => {
 
   it('should prefer templates.json registry over filesystem scan when registry is present', async () => {
    // Create the actual template file so resolveRegistryAssetPath can find it
-   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-tmpl-reg-'));
+   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-tmpl-reg-'));
    const templateDir = path.join(root, '.github', 'templates');
    fs.mkdirSync(templateDir, { recursive: true });
    fs.writeFileSync(

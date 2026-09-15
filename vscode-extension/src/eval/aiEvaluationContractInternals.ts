@@ -19,7 +19,7 @@ import type {
   AIEvaluationWorkspaceState,
 } from './aiEvaluationContractTypes';
 
-const MANIFEST_PATH = path.join('evaluation', 'agentx.eval.yaml');
+const MANIFEST_PATH = path.join('evaluation', 'frontier.eval.yaml');
 const BASELINE_PATH = path.join('evaluation', 'baseline.json');
 const DEFAULT_REPORT_DIR = path.join('.copilot-tracking', 'eval-reports');
 
@@ -955,7 +955,7 @@ export function renderAIEvaluationContractSummary(state: AIEvaluationWorkspaceSt
 
 export function renderAIEvaluationContractTooltip(state: AIEvaluationWorkspaceState): string {
   if (!state.contractPresent) {
-    return 'No evaluation/agentx.eval.yaml manifest found in the current workspace.';
+    return 'No evaluation/frontier.eval.yaml manifest found in the current workspace.';
   }
 
   const lines: string[] = [];

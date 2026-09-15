@@ -2,7 +2,7 @@
 name: "rust"
 description: 'Build safe, concurrent, and performant systems with Rust. Use when writing Rust applications, implementing ownership and borrowing patterns, building concurrent code with threads/async, designing trait-based abstractions, or optimizing Rust performance.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

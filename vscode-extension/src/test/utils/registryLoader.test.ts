@@ -23,8 +23,8 @@ describe('registryLoader', () => {
   let extRoot: string;
 
   beforeEach(() => {
-    wsRoot = makeTempDir('agentx-rl-ws-');
-    extRoot = makeTempDir('agentx-rl-ext-');
+    wsRoot = makeTempDir('frontier-rl-ws-');
+    extRoot = makeTempDir('frontier-rl-ext-');
     clearRegistryCache();
   });
 
@@ -64,7 +64,7 @@ describe('registryLoader', () => {
     });
 
     it('falls back to the extension bundle when workspace registry is missing', () => {
-      const skillsPath = path.join(extRoot, '.github', 'agentx', 'registries', 'skills.json');
+      const skillsPath = path.join(extRoot, '.github', 'frontier', 'registries', 'skills.json');
       writeJson(skillsPath, {
         $schemaVersion: 1,
         totalCount: 1,
@@ -129,7 +129,7 @@ describe('registryLoader', () => {
 
     it('returns extension-bundle path when only the bundle has the file', () => {
       const rel = '.github/templates/PRD-TEMPLATE.md';
-      const extFile = path.join(extRoot, '.github', 'agentx', 'templates', 'PRD-TEMPLATE.md');
+      const extFile = path.join(extRoot, '.github', 'frontier', 'templates', 'PRD-TEMPLATE.md');
       fs.mkdirSync(path.dirname(extFile), { recursive: true });
       fs.writeFileSync(extFile, '# PRD', 'utf8');
 

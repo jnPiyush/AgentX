@@ -1,6 +1,6 @@
 # Contract Harness Pilot And Pruning Guide
 
-This guide defines how AgentX should pilot the contract-driven harness flow and decide what to keep, simplify, or remove after real usage evidence is collected.
+This guide defines how Frontier should pilot the contract-driven harness flow and decide what to keep, simplify, or remove after real usage evidence is collected.
 
 ## Recommended Pilot Path
 

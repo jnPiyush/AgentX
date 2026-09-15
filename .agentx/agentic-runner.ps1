@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # ---------------------------------------------------------------------------
-# AgentX CLI -- Agentic Loop Runner
+# Frontier CLI -- Agentic Loop Runner
 # ---------------------------------------------------------------------------
 #
 # Provides an LLM-powered agentic loop for the CLI, equivalent to the VS Code
@@ -72,6 +72,87 @@ function Write-RunnerConsole([string]$Message) {
     Write-Information $Message -InformationAction Continue
 }
 
+function Get-FrontierEnvironmentValue([string]$Name) {
+    $value = [string][Environment]::GetEnvironmentVariable("FRONTIER_$Name")
+    if ($value) { return $value }
+    $value = [string][Environment]::GetEnvironmentVariable("HVE_$Name")
+    if ($value) { return $value }
+    return [string][Environment]::GetEnvironmentVariable("AGENTX_$Name")
+}
+
+function Get-FrontierStateDirectory([string]$WorkspaceRoot) {
+    $frontierDirectory = Join-Path $WorkspaceRoot '.frontier'
+    $transitionalDirectory = Join-Path $WorkspaceRoot '.hve'
+    $legacyDirectory = Join-Path $WorkspaceRoot '.agentx'
+    $marker = Join-Path $frontierDirectory 'state/frontier-migration-v1.json'
+    foreach ($candidate in @($frontierDirectory, (Split-Path $marker -Parent), $marker)) {
+        if ((Test-Path -LiteralPath $candidate) -and
+            ((Get-Item -LiteralPath $candidate -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw 'State migration does not follow symbolic links.'
+        }
+    }
+    if (Test-Path -LiteralPath $marker -PathType Leaf) {
+        return $frontierDirectory
+    }
+
+    $sourceDirectories = @($transitionalDirectory, $legacyDirectory | Where-Object { Test-Path -LiteralPath $_ -PathType Container })
+    if (-not $sourceDirectories.Count) { return $frontierDirectory }
+
+    $runtimeEntries = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($entryName in @(
+        'agentic-runner.ps1', 'agentx-cli.ps1', 'agentx.ps1', 'agentx.sh',
+        'frontier.ps1', 'frontier.sh', 'local-issue-manager.ps1',
+        'local-issue-manager.sh', 'install-manifest.json', 'hooks', 'mcp-server',
+        'plugins', 'templates'
+    )) {
+        [void]$runtimeEntries.Add($entryName)
+    }
+
+    function Copy-MissingState([string]$Source, [string]$Destination, [bool]$TopLevel) {
+        foreach ($directory in @($Source, $Destination)) {
+            if ((Test-Path -LiteralPath $directory) -and
+                ((Get-Item -LiteralPath $directory -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                throw 'State migration does not follow symbolic links.'
+            }
+        }
+        [IO.Directory]::CreateDirectory($Destination) | Out-Null
+        foreach ($entry in @(Get-ChildItem -LiteralPath $Source -Force)) {
+            if (($TopLevel -and $runtimeEntries.Contains($entry.Name)) -or
+                $entry.Name -eq 'frontier-migration-v1.json' -or $entry.Name.EndsWith('.lock')) { continue }
+            if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'State migration does not follow symbolic links.' }
+            $target = Join-Path $Destination $entry.Name
+            if (Test-Path -LiteralPath $target) {
+                if ((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'State migration does not follow symbolic links.' }
+                if (-not $entry.PSIsContainer -or -not (Test-Path -LiteralPath $target -PathType Container)) { continue }
+            }
+            if ($entry.PSIsContainer) { Copy-MissingState $entry.FullName $target $false }
+            else {
+                $temporary = "$target.migrating-$PID-$([guid]::NewGuid().ToString('N'))"
+                try {
+                    [IO.File]::Copy($entry.FullName, $temporary, $false)
+                    [IO.File]::Move($temporary, $target, $false)
+                } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }
+            }
+        }
+    }
+    $migrationLock = Join-Path $WorkspaceRoot '.frontier-migration.lock'
+    try { New-Item -ItemType Directory -Path $migrationLock -ErrorAction Stop | Out-Null }
+    catch { throw 'State migration is busy. Retry after it finishes; recover a stale .frontier-migration.lock only after checking no migration is running.' }
+    try {
+        if (Test-Path -LiteralPath $marker) { return $frontierDirectory }
+        foreach ($source in $sourceDirectories) { Copy-MissingState $source $frontierDirectory $true }
+        [IO.Directory]::CreateDirectory((Split-Path $marker -Parent)) | Out-Null
+        $temporary = "$marker.migrating-$PID-$([guid]::NewGuid().ToString('N'))"
+        $markerStream = [IO.File]::Open($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        try {
+            try { $markerStream.Write([Text.Encoding]::UTF8.GetBytes('{"version":1}')) }
+            finally { $markerStream.Dispose() }
+            [IO.File]::Move($temporary, $marker, $false)
+        } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }
+    } finally { Remove-Item -LiteralPath $migrationLock -Force }
+    return $frontierDirectory
+}
+
 $Script:MODEL_CAPABILITIES = @{
     'claude-opus-5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-sonnet-5' = @{ contextWindow = 1000000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
@@ -93,7 +174,7 @@ $Script:MODEL_CAPABILITIES = @{
 function Get-RunnerConfig([string]$WorkspaceRoot) {
     if (-not $WorkspaceRoot) { return @{} }
 
-    $configPath = Join-Path $WorkspaceRoot '.agentx' 'config.json'
+    $configPath = Join-Path (Get-FrontierStateDirectory $WorkspaceRoot) 'config.json'
     if (-not (Test-Path $configPath)) { return @{} }
 
     try {
@@ -192,7 +273,7 @@ function Invoke-RunnerCommandWithInput {
 }
 
 function Get-RunnerProviderPreference($Config) {
-    $envValue = [string]$env:AGENTX_LLM_PROVIDER
+    $envValue = Get-FrontierEnvironmentValue 'LLM_PROVIDER'
     if (-not [string]::IsNullOrWhiteSpace($envValue)) {
         return [PSCustomObject]@{
             providerId = ConvertTo-RunnerProviderId -Value $envValue
@@ -218,7 +299,7 @@ function Get-RunnerProviderPreference($Config) {
 }
 
 function Get-RunnerReadinessMode($Config, [string]$PreferredProviderId = 'auto') {
-    $envValue = [string]$env:AGENTX_LLM_READINESS_MODE
+    $envValue = Get-FrontierEnvironmentValue 'LLM_READINESS_MODE'
     $configValue = [string](Get-RunnerConfigValue $Config 'llmReadinessMode' '')
     $rawValue = if (-not [string]::IsNullOrWhiteSpace($envValue)) { $envValue } elseif (-not [string]::IsNullOrWhiteSpace($configValue)) { $configValue } elseif ($PreferredProviderId -and $PreferredProviderId -ne 'auto') { 'strict' } else { 'advisory' }
 
@@ -273,9 +354,9 @@ function Get-RunnerProviderTransport([string]$ProviderId) {
 function Get-RunnerDefaultModel([string]$ProviderId) {
     $configuredModel = ''
     switch ($ProviderId) {
-        'claude-code' { $configuredModel = [string][Environment]::GetEnvironmentVariable('AGENTX_CLAUDE_CODE_MODEL') }
-        'anthropic-api' { $configuredModel = [string][Environment]::GetEnvironmentVariable('AGENTX_ANTHROPIC_MODEL') }
-        'openai-api' { $configuredModel = [string][Environment]::GetEnvironmentVariable('AGENTX_OPENAI_MODEL') }
+        'claude-code' { $configuredModel = Get-FrontierEnvironmentValue 'CLAUDE_CODE_MODEL' }
+        'anthropic-api' { $configuredModel = Get-FrontierEnvironmentValue 'ANTHROPIC_MODEL' }
+        'openai-api' { $configuredModel = Get-FrontierEnvironmentValue 'OPENAI_MODEL' }
     }
 
     if ([string]::IsNullOrWhiteSpace($configuredModel) -and $Script:RunnerConfig) {
@@ -298,7 +379,7 @@ function Get-RunnerDefaultModel([string]$ProviderId) {
 
 function Get-RunnerProviderModelRouting([string]$ProviderId) {
     if ($ProviderId -eq 'claude-code') {
-        $routing = [string][Environment]::GetEnvironmentVariable('AGENTX_CLAUDE_CODE_MODEL_ROUTING')
+        $routing = Get-FrontierEnvironmentValue 'CLAUDE_CODE_MODEL_ROUTING'
         if (-not [string]::IsNullOrWhiteSpace($routing)) {
             return $routing.Trim().ToLowerInvariant()
         }
@@ -817,7 +898,7 @@ function Read-LoopState {
 
     if (-not $WorkspaceRoot) { return $null }
 
-    $statePath = Join-Path $WorkspaceRoot '.agentx' 'state' 'loop-state.json'
+    $statePath = Join-Path (Get-FrontierStateDirectory $WorkspaceRoot) 'state' 'loop-state.json'
     try {
         if (-not (Test-Path $statePath)) { return $null }
         return Get-Content $statePath -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
@@ -835,7 +916,7 @@ function Write-LoopState {
 
     if (-not $WorkspaceRoot -or -not $State) { return }
 
-    $stateDir = Join-Path $WorkspaceRoot '.agentx' 'state'
+    $stateDir = Join-Path (Get-FrontierStateDirectory $WorkspaceRoot) 'state'
     $statePath = Join-Path $stateDir 'loop-state.json'
     if (-not (Test-Path $stateDir)) {
         New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
@@ -1614,7 +1695,7 @@ function Invoke-CompactionSummary {
         @{
             role = 'system'
             content = @"
-You are compacting prior AgentX conversation history.
+You are compacting prior Frontier conversation history.
 Return ASCII only.
 Summarize the supplied transcript into these exact sections:
 - Decisions
@@ -1766,7 +1847,7 @@ function Test-AgentTerminalCommandAllowed {
 
     return [PSCustomObject]@{
         allowed = $false
-        reason = 'Autonomous terminal execution is disabled. Shell commands cannot be confined by the AgentX file-path sandbox and can rewrite loop state, git metadata, or gate implementations. Use an externally sandboxed operator/DevOps surface instead.'
+        reason = 'Autonomous terminal execution is disabled. Shell commands cannot be confined by the Frontier file-path sandbox and can rewrite loop state, git metadata, or gate implementations. Use an externally sandboxed operator/DevOps surface instead.'
     }
 }
 
@@ -1798,10 +1879,15 @@ $Script:SANDBOX_BLOCKED_DIR_SEGMENTS = @('.ssh', '.aws', '.gnupg', '.azure', '.k
 # state file.
 $Script:SANDBOX_BLOCKED_RELATIVE_PATHS = @(
     '.config/gh',
+    '.frontier/state',
+    '.hve/state',
     '.agentx/state',
     '.agentx/agentx-cli.ps1',
     '.agentx/agentic-runner.ps1',
+    '.agentx/frontier.ps1',
+    '.agentx/frontier.sh',
     '.agentx/agentx.ps1',
+    '.agentx/agentx.sh',
     '.github/hooks'
 )
 
@@ -2129,7 +2215,7 @@ function Resolve-ProviderApiUrl([string]$ProviderId) {
         'anthropic-api' {
             $configured = Get-RunnerProviderConfigString -Config $Script:RunnerConfig -ProviderId 'anthropic-api' -SettingName 'baseUrl' -DefaultValue ''
             if ([string]::IsNullOrWhiteSpace($configured)) {
-                $configured = [string]$env:AGENTX_ANTHROPIC_BASE_URL
+                $configured = Get-FrontierEnvironmentValue 'ANTHROPIC_BASE_URL'
             }
 
             if ([string]::IsNullOrWhiteSpace($configured)) {
@@ -2141,7 +2227,7 @@ function Resolve-ProviderApiUrl([string]$ProviderId) {
         'openai-api' {
             $configured = Get-RunnerProviderConfigString -Config $Script:RunnerConfig -ProviderId 'openai-api' -SettingName 'baseUrl' -DefaultValue ''
             if ([string]::IsNullOrWhiteSpace($configured)) {
-                $configured = [string]$env:AGENTX_OPENAI_BASE_URL
+                $configured = Get-FrontierEnvironmentValue 'OPENAI_BASE_URL'
             }
 
             if ([string]::IsNullOrWhiteSpace($configured)) {
@@ -2348,13 +2434,13 @@ function ConvertTo-ClaudeCodeSystemPrompt([array]$Messages) {
 
     if ($systemParts.Count -eq 0) {
         return @"
-You are continuing an AgentX session inside the current workspace.
-This bridge is text-only. Do not claim to inspect, edit, or run commands; Claude Code's native tools are disabled because they cannot pass through AgentX workspace and command guards.
+You are continuing an Frontier session inside the current workspace.
+This bridge is text-only. Do not claim to inspect, edit, or run commands; Claude Code's native tools are disabled because they cannot pass through Frontier workspace and command guards.
 Return only the next assistant response for the conversation.
 "@
     }
 
-    $systemParts.Add("This Claude Code bridge is text-only. Do not claim to inspect, edit, or run commands; native tools are disabled because they cannot pass through AgentX guards.`n`nReturn only the next assistant response for the conversation. Do not wrap your answer in JSON unless explicitly asked by the user.")
+    $systemParts.Add("This Claude Code bridge is text-only. Do not claim to inspect, edit, or run commands; native tools are disabled because they cannot pass through Frontier guards.`n`nReturn only the next assistant response for the conversation. Do not wrap your answer in JSON unless explicitly asked by the user.")
     return ($systemParts -join "`n`n")
 }
 
@@ -2405,7 +2491,7 @@ function ConvertTo-ClaudeCodePrompt([array]$Messages) {
 
     $parts.Add(@"
 [INSTRUCTION]
-Continue this AgentX conversation from the transcript above.
+Continue this Frontier conversation from the transcript above.
 This bridge is text-only: do not inspect, edit, run commands, or claim that you did. Return the next assistant response using only the transcript content above.
 "@)
 
@@ -2583,7 +2669,7 @@ function Invoke-LlmChat(
         $json = $body | ConvertTo-Json -Depth 30 -Compress
         $headers = @{
             'x-api-key' = $token
-            'anthropic-version' = if ($env:AGENTX_ANTHROPIC_VERSION) { [string]$env:AGENTX_ANTHROPIC_VERSION } else { $Script:ANTHROPIC_API_VERSION }
+            'anthropic-version' = if (Get-FrontierEnvironmentValue 'ANTHROPIC_VERSION') { Get-FrontierEnvironmentValue 'ANTHROPIC_VERSION' } else { $Script:ANTHROPIC_API_VERSION }
             'Content-Type' = 'application/json'
         }
         $url = Resolve-ProviderApiUrl -ProviderId 'anthropic-api'
@@ -2682,7 +2768,8 @@ function Get-AgentDefDirectorySet([string]$root) {
 }
 
 function Resolve-AgentDefPath([string]$agentName, [string]$root) {
-    $fileName = if ($agentName -like '*.agent.md') { $agentName } else { "$agentName.agent.md" }
+    $resolvedAgentName = if ($agentName -in @('agent-x', 'agentx', 'hve')) { 'frontier' } else { $agentName }
+    $fileName = if ($resolvedAgentName -like '*.agent.md') { $resolvedAgentName } else { "$resolvedAgentName.agent.md" }
     foreach ($agentsDir in (Get-AgentDefDirectorySet -root $root)) {
         foreach ($candidate in @(
             (Join-Path $agentsDir $fileName),
@@ -2797,11 +2884,37 @@ function Resolve-AgentReference([string]$value) {
     $normalized = $value.Trim().ToLower()
     if (-not $normalized) { return '' }
 
-    $normalized = $normalized -replace '^agentx\s+', ''
-    $normalized = $normalized -replace '^agent\s*x\s+', ''
+    $normalized = $normalized -replace '^(frontier|agentx|agent\s*x)\s+', ''
+    $normalized = $normalized -replace '\s+fde$', ''
     $normalized = $normalized -replace '\s+', '-'
 
     switch -Regex ($normalized) {
+        '^orchestration$' { return 'frontier' }
+        '^product$' { return 'product-manager' }
+        '^experience$' { return 'ux-designer' }
+        '^architecture$' { return 'architect' }
+        '^engineering$' { return 'engineer' }
+        '^review$' { return 'reviewer' }
+        '^auto-fix$' { return 'reviewer-auto' }
+        '^devops$' { return 'devops' }
+        '^ai-systems$' { return 'data-scientist' }
+        '^test$' { return 'tester' }
+        '^fabric$' { return 'fabric-engineer' }
+        '^power-platform$' { return 'power-platform-builder' }
+        '^power-bi$' { return 'powerbi-analyst' }
+        '^research$' { return 'consulting-research' }
+        '^agile$' { return 'agile-coach' }
+        '^github-ops$' { return 'github-ops' }
+        '^ado-ops$' { return 'ado-ops' }
+        '^ado-planning$' { return 'ado-prd-to-wit' }
+        '^functional-review$' { return 'functional-reviewer' }
+        '^architecture-review$' { return 'architecture-reviewer' }
+        '^prompt$' { return 'prompt-engineer' }
+        '^evaluation$' { return 'eval-specialist' }
+        '^observability$' { return 'ops-monitor' }
+        '^rag$' { return 'rag-specialist' }
+        '^diagram$' { return 'diagram-specialist' }
+        '^prototype-audit$' { return 'prototype-auditor' }
         '^product-manager$' { return 'product-manager' }
         '^architect$' { return 'architect' }
         '^ux-designer$' { return 'ux-designer' }
@@ -2900,8 +3013,8 @@ function Get-MarkdownSection([string]$text, [string]$sectionName) {
 
 function Build-SystemPrompt([hashtable]$agentDef, [string]$agentName) {
     $parts = @()
-    $parts += "You are the $($agentDef.name ?? $agentName) agent in the AgentX framework."
-    $parts += "You are working inside a developer workspace via the AgentX CLI."
+    $parts += "You are the $($agentDef.name ?? $agentName) agent in the Frontier engineering system."
+    $parts += "You are working inside a developer workspace via the Frontier CLI."
     $parts += ""
 
     if ($agentDef.description) {
@@ -3032,7 +3145,7 @@ function Test-LoopDetection([hashtable]$detector) {
 # ---------------------------------------------------------------------------
 
 function Save-Session([string]$sessionId, [array]$messages, [hashtable]$meta, [string]$root) {
-    $dir = Join-Path $root '.agentx' 'sessions'
+    $dir = Join-Path (Get-FrontierStateDirectory $root) 'sessions'
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     $file = Join-Path $dir "$sessionId.json"
     $data = @{ meta = $meta; messages = $messages }
@@ -3041,7 +3154,7 @@ function Save-Session([string]$sessionId, [array]$messages, [hashtable]$meta, [s
 
 function Read-Session([string]$sessionId, [string]$root) {
     if (-not $sessionId -or -not $root) { return $null }
-    $file = Join-Path (Join-Path $root '.agentx' 'sessions') "$sessionId.json"
+    $file = Join-Path (Join-Path (Get-FrontierStateDirectory $root) 'sessions') "$sessionId.json"
     if (-not (Test-Path $file)) { return $null }
     try {
         return Get-Content $file -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
@@ -3294,7 +3407,7 @@ function Save-ClarificationRecord {
         $IssueNumber = 0
     }
 
-    $dir = Join-Path $WorkspaceRoot '.agentx' 'state' 'clarifications'
+    $dir = Join-Path (Get-FrontierStateDirectory $WorkspaceRoot) 'state' 'clarifications'
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     $file = Join-Path $dir "issue-$IssueNumber.json"
 
@@ -4576,7 +4689,7 @@ function Invoke-AgenticLoop {
                     -ModelId $modelId `
                     -WorkspaceRoot $WorkspaceRoot `
                     -IssueNumber $IssueNumber `
-                    -NonInteractiveHumanEscalation:($env:AGENTX_NONINTERACTIVE_HUMAN -eq '1')
+                    -NonInteractiveHumanEscalation:((Get-FrontierEnvironmentValue 'NONINTERACTIVE_HUMAN') -eq '1')
 
                 if ($clarifyResult.awaitingHuman) {
                     $pendingHumanClarification = $clarifyResult.pendingClarification

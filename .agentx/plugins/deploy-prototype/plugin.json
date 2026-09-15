@@ -6,7 +6,7 @@
   "displayName": "Deploy Prototype",
   "version": "1.0.0",
   "description": "Publish a UX prototype build (static HTML or SPA dist) to a chosen hosting target. Supports Vercel, Netlify, Cloudflare Pages, GitHub Pages, and Surge via the target CLI -- the plugin never embeds credentials.",
-  "author": "AgentX",
+  "author": "Frontier",
   "license": "Apache-2.0",
   "homepage": "https://github.com/jnPiyush/AgentX",
   "bugs": "https://github.com/jnPiyush/AgentX/issues",

@@ -25,7 +25,7 @@ Skip when:
 ## Prerequisites
 
 - Branch contains a coherent change set with a clear claim of completion
-- Quality loop status known (`.agentx/agentx.ps1 loop status`)
+- Quality loop status known (`.agentx/frontier.ps1 loop status`)
 - Test results for the current HEAD are known and recorded
 - Knowledge of whether the work has an issue and what its current status is
 
@@ -47,7 +47,7 @@ Run these checks on the branch HEAD. Any FAIL blocks disposition.
 
 ```pwsh
 # 1. Quality loop must be complete (NOT active, NOT cancelled)
-.\.agentx\agentx.ps1 loop status
+.\.agentx\frontier.ps1 loop status
 
 # 2. Tests must pass on the current commit, not a cached run
 npm test   # or dotnet test / pytest / etc
@@ -59,7 +59,7 @@ git status --porcelain
 git log --oneline origin/master..HEAD
 
 # 5. If an issue exists, its status must match the intended disposition
-.\.agentx\agentx.ps1 issue read -n <issue>
+.\.agentx\frontier.ps1 issue read -n <issue>
 ```
 
 Compound Capture check: if a review artifact is staged or committed on this branch, confirm either a `docs/artifacts/learnings/LEARNING-<issue>.md` is staged too, or the commit message carries `[skip-capture]` with rationale. The pre-commit hook will reject the push otherwise.
@@ -82,7 +82,7 @@ Is the work tied to an issue?
 
 Allowed only when:
 
-- Local Mode is active (`provider = local` in `.agentx/config.json`)
+- Local Mode is active (`provider = local` in `.frontier/config.json`)
 - Change is trivial: docs, comment, config tweak, or a one-line bug fix with a test
 - Quality loop is complete and tests pass
 - No external collaborators need to see the change
@@ -121,8 +121,8 @@ Use when acceptance criteria are not yet met and a clean stopping point has been
 
 ```pwsh
 git push -u origin feature/<name>      # back up the work
-.\.agentx\agentx.ps1 issue update -n <issue> -s "In Progress"
-.\.agentx\agentx.ps1 loop status       # confirm loop is still active OR start a fresh loop next session
+.\.agentx\frontier.ps1 issue update -n <issue> -s "In Progress"
+.\.agentx\frontier.ps1 loop status       # confirm loop is still active OR start a fresh loop next session
 ```
 
 Update the execution plan Progress section with what was completed and what is next. Do NOT mark the loop complete -- it is not.

@@ -2,7 +2,7 @@
 name: "c"
 description: 'Write safe, portable, and efficient C code using modern C23-era practices. Use when building systems software, embedded components, native libraries, POSIX tooling, or FFI boundaries where precise control over memory, layout, and runtime cost matters.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2026-04-04"
  updated: "2026-04-04"

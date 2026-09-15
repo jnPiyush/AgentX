@@ -1,11 +1,11 @@
 #!/usr/bin/env pwsh
-# Skill Eval Harness - Evaluate AgentX skill quality based on Phil Schmid's framework
+# Skill Eval Harness - Evaluate Frontier skill quality based on Phil Schmid's framework
 # Reference: https://www.philschmid.de/testing-skills
 #
 # Three evaluation levels:
 #   1. Trigger Quality - Is the description specific enough to trigger correctly?
 #   2. Instruction Quality - Are instructions directive, not informational?
-#   3. Convention Compliance - Does the skill follow AgentX patterns?
+#   3. Convention Compliance - Does the skill follow Frontier patterns?
 #
 # Usage:
 #   .\tests\skill-eval\eval-harness.ps1                         # Evaluate all skills
@@ -211,7 +211,7 @@ function Test-HasWhenToUseSection([string]$content) {
     $has = $content -match '(?m)(##\s+(When to Use|WHEN)|>\s*\*?\*?WHEN\*?\*?:)'
     New-CheckResult 'convention_when_section' $has 'MEDIUM' $(
         if ($has) { 'Has "When to Use" section' }
-        else { 'Missing "When to Use" section - required by AgentX spec' }
+        else { 'Missing "When to Use" section - required by Frontier spec' }
     )
 }
 
@@ -220,7 +220,7 @@ function Test-AsciiOnly([string]$content) {
     $passed = $nonAscii.Count -eq 0
     New-CheckResult 'convention_ascii_only' $passed 'MEDIUM' $(
         if ($passed) { 'Content is ASCII-only' }
-        else { "Found $($nonAscii.Count) non-ASCII characters (violates AgentX ASCII rule)" }
+        else { "Found $($nonAscii.Count) non-ASCII characters (violates Frontier ASCII rule)" }
     )
 }
 

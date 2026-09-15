@@ -55,7 +55,7 @@ async function transcribeVoiceNote(media, config, dependencies = {}) {
       signal: controller.signal,
     });
     if (!response.ok) {
-      console.warn(`[AgentX WhatsApp] Transcription provider returned HTTP ${response.status}.`);
+      console.warn(`[Frontier WhatsApp] Transcription provider returned HTTP ${response.status}.`);
       return { ok: false, text: `Transcription provider returned HTTP ${response.status}.` };
     }
     const json = await response.json();
@@ -63,7 +63,7 @@ async function transcribeVoiceNote(media, config, dependencies = {}) {
     return text ? { ok: true, text } : { ok: false, text: 'Empty transcription.' };
   } catch (error) {
     if (error.name === 'AbortError') return { ok: false, text: 'Transcription timed out.' };
-    console.warn(`[AgentX WhatsApp] Transcription failed: ${error.message}`);
+    console.warn(`[Frontier WhatsApp] Transcription failed: ${error.message}`);
     return { ok: false, text: 'Transcription failed.' };
   } finally {
     clearTimeout(timer);

@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# AgentX Loop Parity Behavior Tests
+# Frontier Loop Parity Behavior Tests
 # Phase 0 for SPEC-401: locks the current PowerShell writer behavior behind
 # normalized golden fixtures before the TypeScript writer is introduced.
 # Usage: pwsh tests/loop-parity-behavior.ps1
@@ -30,7 +30,7 @@ function Assert-Match($text, [string]$pattern, [string]$message) {
 
 function New-IsolatedWorkspace {
     $workspaceRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-loop-parity-{0}" -f [guid]::NewGuid())
-    New-Item -ItemType Directory -Path (Join-Path $workspaceRoot '.agentx\state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $workspaceRoot '.frontier\state') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $workspaceRoot 'docs\execution') -Force | Out-Null
     return $workspaceRoot
 }
@@ -48,7 +48,7 @@ function Invoke-IsolatedAgentx {
     $processStartInfo.RedirectStandardOutput = $true
     $processStartInfo.RedirectStandardError = $true
     $processStartInfo.UseShellExecute = $false
-    $processStartInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $WorkspaceRoot
+    $processStartInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $WorkspaceRoot
     $processStartInfo.ArgumentList.Add('-NoProfile')
     $processStartInfo.ArgumentList.Add('-File')
     $processStartInfo.ArgumentList.Add($script:agentxCliPath)
@@ -76,7 +76,7 @@ function New-EvidenceFile {
         [string]$Content = 'evidence'
     )
 
-    $evidenceDir = Join-Path $WorkspaceRoot '.agentx\state\parity-evidence'
+    $evidenceDir = Join-Path $WorkspaceRoot '.frontier\state\parity-evidence'
     New-Item -ItemType Directory -Path $evidenceDir -Force | Out-Null
     $evidencePath = Join-Path $evidenceDir $Name
     Set-Content -Path $evidencePath -Value $Content -Encoding utf8
@@ -86,7 +86,7 @@ function New-EvidenceFile {
 function Read-LoopState {
     param([string]$WorkspaceRoot)
 
-    $statePath = Join-Path $WorkspaceRoot '.agentx\state\loop-state.json'
+    $statePath = Join-Path $WorkspaceRoot '.frontier\state\loop-state.json'
     return Get-Content -Path $statePath -Raw -Encoding utf8 | ConvertFrom-Json
 }
 
@@ -157,7 +157,7 @@ function Start-ParityLoop {
 }
 
 Write-Host ''
-Write-Host ' AgentX Loop Parity Behavior Tests' -ForegroundColor Cyan
+Write-Host ' Frontier Loop Parity Behavior Tests' -ForegroundColor Cyan
 Write-Host ' ================================================' -ForegroundColor DarkGray
 Write-Host ''
 
@@ -272,7 +272,7 @@ $healthWorkspace = New-IsolatedWorkspace
 try {
     Write-Host ''
     Write-Host ' 4. Stale and stuck health fixture' -ForegroundColor White
-    $statePath = Join-Path $healthWorkspace '.agentx\state\loop-state.json'
+    $statePath = Join-Path $healthWorkspace '.frontier\state\loop-state.json'
     $oldState = [PSCustomObject]@{
         active=$true; status='active'
         prompt='health parity fixture'; role='engineer'; taskClass='complex-delivery'
@@ -424,7 +424,7 @@ try {
     # The free-text contract is gone: stripping the marker AND every review record
     # leaves nothing to downgrade to. This is the exact shape that defeated the
     # earlier marker-based design.
-    $legacyStatePath = Join-Path $weakPhraseWorkspace '.agentx\state\loop-state.json'
+    $legacyStatePath = Join-Path $weakPhraseWorkspace '.frontier\state\loop-state.json'
     $legacyState = Get-Content -LiteralPath $legacyStatePath -Raw | ConvertFrom-Json
     $legacyState.PSObject.Properties.Remove('reviewGate')
     $legacyState.history = @($legacyState.history) + @([PSCustomObject]@{
@@ -503,7 +503,7 @@ try {
     ))
     # Stripping the gate marker must not downgrade a loop that already carries a
     # structured record: the state file is workspace-writable.
-    $tamperPath = Join-Path $structuredGateWorkspace '.agentx\state\loop-state.json'
+    $tamperPath = Join-Path $structuredGateWorkspace '.frontier\state\loop-state.json'
     $tamperState = Get-Content -LiteralPath $tamperPath -Raw | ConvertFrom-Json
     $tamperState.PSObject.Properties.Remove('reviewGate')
     $tamperState.history = @($tamperState.history) + @([PSCustomObject]@{
@@ -533,7 +533,7 @@ try {
     )
     Assert-Equal $lowMaxStart.ExitCode 0 'standard work accepts a one-iteration maximum'
     Assert-Equal ([int](Read-LoopState $lowMaxWorkspace).minIterations) 1 'standard work stores a one-iteration minimum'
-    Remove-Item -LiteralPath (Join-Path $lowMaxWorkspace '.agentx\state\loop-state.json') -Force
+    Remove-Item -LiteralPath (Join-Path $lowMaxWorkspace '.frontier\state\loop-state.json') -Force
 
     foreach ($highRiskPrompt in @(
         'Deploy a production authentication migration',
@@ -552,7 +552,7 @@ try {
         )
         Assert-True ($highRiskStart.ExitCode -ne 0) "high-risk work rejects a maximum below five: $highRiskPrompt"
         Assert-Match $highRiskStart.Output "--max must be at least 5 for task class 'high-risk'" "high-risk rejection explains the floor: $highRiskPrompt"
-        Assert-True (-not (Test-Path -LiteralPath (Join-Path $lowMaxWorkspace '.agentx\state\loop-state.json'))) "rejected high-risk loop writes no state: $highRiskPrompt"
+        Assert-True (-not (Test-Path -LiteralPath (Join-Path $lowMaxWorkspace '.frontier\state\loop-state.json'))) "rejected high-risk loop writes no state: $highRiskPrompt"
     }
 
     $engineerRoleStart = Invoke-IsolatedAgentx -WorkspaceRoot $lowMaxWorkspace -Arguments @(
@@ -581,7 +581,7 @@ try {
     Write-Host ''
     Write-Host ' 8b. Status reports the recomputed effective minimum' -ForegroundColor White
     Start-ParityLoop -WorkspaceRoot $statusMinimumWorkspace -Prompt 'Implement a standard utility'
-    $statePath = Join-Path $statusMinimumWorkspace '.agentx\state\loop-state.json'
+    $statePath = Join-Path $statusMinimumWorkspace '.frontier\state\loop-state.json'
     $downgradedState = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
     $downgradedState.prompt = 'Rotate API keys'
     $downgradedState.taskClass = 'standard'
@@ -639,7 +639,7 @@ try {
 
     # The CLI writer cannot emit a counts-present/reviewer-absent record, so the
     # completion-side guard is reachable only from externally written state.
-    $anonPath = Join-Path $rollbackBypassWorkspace '.agentx\state\loop-state.json'
+    $anonPath = Join-Path $rollbackBypassWorkspace '.frontier\state\loop-state.json'
     $anonState = Get-Content -LiteralPath $anonPath -Raw | ConvertFrom-Json
     $anonState.history = @([PSCustomObject]@{
         iteration = 5

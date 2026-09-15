@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- Shared Runtime: Loop State Model + Gate Logic
+// Frontier -- Shared Runtime: Loop State Model + Gate Logic
 // ---------------------------------------------------------------------------
 //
 // Framework-free core of the iterative-loop quality gate. This module has NO

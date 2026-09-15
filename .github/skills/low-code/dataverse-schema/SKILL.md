@@ -2,7 +2,7 @@
 name: "dataverse-schema"
 description: 'Author Dataverse table schema (Entity.xml) for unpacked Power Platform solutions. Covers tables, columns, choices, relationships, primary name attribute, ownership, and Solution.xml RootComponent registration.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

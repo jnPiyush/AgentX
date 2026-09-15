@@ -37,7 +37,7 @@ body:
  description: Why is this needed? Who benefits and how?
  placeholder: |
  As a developer without a GitHub repository, I want to track issue
- status locally so that I can use AgentX workflows offline.
+ status locally so that I can use Frontier workflows offline.
  validations:
  required: true
 

@@ -2,7 +2,7 @@
 name: "docx"
 description: 'Read, write, and transform Microsoft Word .docx files. Use when extracting text or tables from Word documents, generating reports from templates, applying styles, inserting images, building tables, or converting Markdown/HTML to Word.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-31"
   updated: "2026-05-31"

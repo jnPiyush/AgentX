@@ -5,7 +5,7 @@ import * as path from 'path';
 import { AgentTreeProvider } from '../../views/agentTreeProvider';
 
 function createWorkspaceRoot(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-agent-tree-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-agent-tree-'));
   fs.mkdirSync(path.join(root, '.github', 'skills', 'development', 'testing'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.github', 'skills', 'development', 'testing', 'SKILL.md'),

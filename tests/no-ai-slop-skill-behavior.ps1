@@ -53,27 +53,27 @@ $registrySkill = @($registry.skills | Where-Object path -eq $skillPath)
 Assert-True ($registrySkill.Count -eq 1 -and $registrySkill[0].description -match "writer's voice" -and $registrySkill[0].description -notmatch "writer''s voice") 'generated registry decodes the description apostrophe'
 
 $extensionPackage = Read-Text 'vscode-extension/package.json' | ConvertFrom-Json
-$contributedPath = './.github/agentx/skills/development/no-ai-slop/SKILL.md'
+$contributedPath = './.github/frontier/skills/development/no-ai-slop/SKILL.md'
 Assert-True (@($extensionPackage.contributes.chatSkills.path) -contains $contributedPath) 'VS Code contributes the public writing skill'
-Assert-True (Test-Path -LiteralPath (Join-Path $root 'vscode-extension/.github/agentx/skills/development/no-ai-slop/references/LICENSE.txt')) 'VSIX bundle carries the upstream MIT license with the skill'
-Assert-True (Test-Path -LiteralPath (Join-Path $root 'vscode-extension/.github/agentx/NOTICE')) 'VSIX bundle carries the repository NOTICE'
+Assert-True (Test-Path -LiteralPath (Join-Path $root 'vscode-extension/.github/frontier/skills/development/no-ai-slop/references/LICENSE.txt')) 'VSIX bundle carries the upstream MIT license with the skill'
+Assert-True (Test-Path -LiteralPath (Join-Path $root 'vscode-extension/.github/frontier/NOTICE')) 'VSIX bundle carries the repository NOTICE'
 
-$pack = Read-Text 'packs/agentx-copilot-cli/manifest.json' | ConvertFrom-Json
+$pack = Read-Text 'packs/frontier-copilot-cli/manifest.json' | ConvertFrom-Json
 Assert-True (@($pack.artifacts.featuredSkills) -contains $skillPath) 'Copilot CLI pack features no-ai-slop'
 Assert-True ($pack.license -eq 'Apache-2.0') 'Copilot CLI pack manifest declares Apache-2.0'
-Assert-True (@($pack.artifacts.supporting) -contains 'LICENSE') 'Copilot CLI pack declares the AgentX license'
+Assert-True (@($pack.artifacts.supporting) -contains 'LICENSE') 'Copilot CLI pack declares the Frontier license'
 Assert-True (@($pack.artifacts.supporting) -contains 'NOTICE') 'Copilot CLI pack declares NOTICE as supporting material'
-Assert-True ((Read-Text 'packs/agentx-copilot-cli/README.md') -match 'License: Apache-2\.0') 'Copilot CLI pack declares the AgentX Apache-2.0 license'
+Assert-True ((Read-Text 'packs/frontier-copilot-cli/README.md') -match 'License: Apache-2\.0') 'Copilot CLI pack declares the Frontier Apache-2.0 license'
 
 $installTarget = Join-Path ([IO.Path]::GetTempPath()) ('agentx-no-ai-slop-' + [guid]::NewGuid().ToString('N'))
 try {
     New-Item -ItemType Directory -Path $installTarget -Force | Out-Null
-    & pwsh -NoProfile -File (Join-Path $root 'packs/agentx-copilot-cli/install.ps1') -Target $installTarget -Source $root -Force *> $null
+    & pwsh -NoProfile -File (Join-Path $root 'packs/frontier-copilot-cli/install.ps1') -Target $installTarget -Source $root -Force *> $null
     Assert-True ($LASTEXITCODE -eq 0) 'Copilot CLI pack installation succeeds'
     Assert-True (Test-Path -LiteralPath (Join-Path $installTarget $skillPath)) 'installed pack contains no-ai-slop'
     Assert-True (Test-Path -LiteralPath (Join-Path $installTarget $licensePath)) 'installed pack contains the upstream MIT license'
-    Assert-True ((Get-Content -LiteralPath (Join-Path $installTarget 'LICENSE') -Raw) -match 'Apache License') 'PowerShell-installed pack contains the AgentX Apache license'
-    Assert-True (Test-Path -LiteralPath (Join-Path $installTarget 'NOTICE')) 'installed pack contains repository NOTICE'
+    Assert-True ((Get-Content -LiteralPath (Join-Path $installTarget '.agentx/legal/LICENSE') -Raw) -match 'Apache License') 'PowerShell-installed pack contains the Frontier Apache license'
+    Assert-True (Test-Path -LiteralPath (Join-Path $installTarget '.agentx/legal/NOTICE')) 'installed pack contains repository NOTICE'
 } finally {
     Remove-Item -LiteralPath $installTarget -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -85,7 +85,7 @@ if ($bash) {
     $bashInstallerCopy = Join-Path ([IO.Path]::GetTempPath()) ('agentx-no-ai-slop-install-' + [guid]::NewGuid().ToString('N') + '.sh')
     try {
         New-Item -ItemType Directory -Path $bashInstallTarget -Force | Out-Null
-        $installerContent = (Read-Text 'packs/agentx-copilot-cli/install.sh') -replace "`r`n", "`n"
+        $installerContent = (Read-Text 'packs/frontier-copilot-cli/install.sh') -replace "`r`n", "`n"
         [IO.File]::WriteAllText($bashInstallerCopy, $installerContent, [Text.UTF8Encoding]::new($false))
         if ($IsWindows) {
             if ($bash.Source -match '[\\/]WindowsApps[\\/]bash\.exe$') {
@@ -108,11 +108,11 @@ if ($bash) {
         if ($bashInstallSucceeded) {
             Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget $skillPath)) 'Bash-installed pack contains no-ai-slop'
             Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget $licensePath)) 'Bash-installed pack contains the upstream MIT license'
-            Assert-True ((Get-Content -LiteralPath (Join-Path $bashInstallTarget 'LICENSE') -Raw) -match 'Apache License') 'Bash-installed pack contains the AgentX Apache license'
-            Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget 'NOTICE')) 'Bash-installed pack contains repository NOTICE'
+            Assert-True ((Get-Content -LiteralPath (Join-Path $bashInstallTarget '.agentx/legal/LICENSE') -Raw) -match 'Apache License') 'Bash-installed pack contains the Frontier Apache license'
+            Assert-True (Test-Path -LiteralPath (Join-Path $bashInstallTarget '.agentx/legal/NOTICE')) 'Bash-installed pack contains repository NOTICE'
         }
         Assert-True ($bashOutput -match 'Skills\s+: 134 across 14 categories') 'Bash installer reports the current skill inventory'
-        Assert-True ($bashOutput -match 'Prompts\s+: 23 reusable templates') 'Bash installer reports the current prompt inventory'
+        Assert-True ($bashOutput -match 'Prompts\s+: 23 reference templates') 'Bash installer reports the current prompt inventory'
     } finally {
         Remove-Item -LiteralPath $bashInstallerCopy -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath $bashInstallTarget -Recurse -Force -ErrorAction SilentlyContinue

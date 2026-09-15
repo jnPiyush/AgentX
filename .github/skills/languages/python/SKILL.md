@@ -2,7 +2,7 @@
 name: "python"
 description: 'Write production-ready Python code following modern best practices. Use when building Python applications, adding type hints, writing async code, implementing error handling, testing with pytest, or structuring Python project layouts.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

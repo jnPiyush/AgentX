@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerDigestCommand } from '../../commands/digest';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -11,7 +11,7 @@ import { AgentXContext } from '../../agentxContext';
 describe('registerDigestCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
   let registeredCallback: (...args: unknown[]) => unknown;
 
   beforeEach(() => {
@@ -24,7 +24,7 @@ describe('registerDigestCommand', () => {
     fakeAgentx = {
       checkInitialized: sandbox.stub(),
       runCli: sandbox.stub(),
-    } as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    } as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, cb: (...args: unknown[]) => unknown) => {
@@ -33,7 +33,7 @@ describe('registerDigestCommand', () => {
       },
     );
 
-    registerDigestCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    registerDigestCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
   });
 
   afterEach(() => {
@@ -42,7 +42,7 @@ describe('registerDigestCommand', () => {
 
   it('should register agentx.generateDigest command', () => {
     assert.ok(
-      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.generateDigest'),
+      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.generateDigest'),
     );
   });
 

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   type LlmAdapterMode,
   runAddLlmAdapterCommand,
@@ -7,10 +7,10 @@ import {
 
 export function registerAddLlmAdapterCommand(
  context: vscode.ExtensionContext,
- agentx: AgentXContext,
+ agentx: FrontierContext,
 ): void {
  const cmd = vscode.commands.registerCommand(
-  'agentx.addLlmAdapter',
+  'frontier.addLlmAdapter',
   async (preferredProviderId?: LlmAdapterMode) => {
    await runAddLlmAdapterCommand(agentx, preferredProviderId);
   },

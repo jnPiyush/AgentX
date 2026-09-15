@@ -3,12 +3,15 @@ description: 'AI Agent Guidelines - map of all resources, quick-reference rules,
 applyTo: '**'
 ---
 
-# AI Agent Guidelines
+# Frontier FDE Guidelines
 
 > **Single source of truth for repository workflow guidance.**
 
-> **Map to all AgentX resources.** For workflow details, see [docs/WORKFLOW.md](docs/WORKFLOW.md).
-> For agent role definitions, see individual files in `.github/agents/`.
+Frontier Corp practices Hypervelocity Engineering through a fleet of specialized
+Forward Deployed Engineers (FDEs). This file maps the operating rules shared by
+that fleet. For brand terminology, see [docs/BRAND.md](docs/BRAND.md). For
+workflow details, see [docs/WORKFLOW.md](docs/WORKFLOW.md). For FDE role
+definitions, see individual files in `.github/agents/`.
 
 ---
 
@@ -36,7 +39,7 @@ git commit -m "feat: add health endpoint (#42)"
 git commit -m "feat: add user login"
 ```
 
-Toggle enforcement: `.agentx/agentx.ps1 config set enforceIssues true`
+Toggle enforcement: `.agentx/frontier.ps1 config set enforceIssues true`
 
 ### Classification
 
@@ -79,7 +82,7 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 ### Quality Loop Hard Rule
 
-> HARD RULE: Every agent MUST run `.agentx/agentx.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. The CLI enforces risk-based minimums (standard `1`, auto-fix `2`, complex/AgentX `3`, high-risk `5`); the loop is NOT done until `.agentx/agentx.ps1 loop complete -s "<summary>"` succeeds, and the final iteration MUST carry a structured subagent review verdict (`--verdict approved --reviewer <id> --high 0 --medium 0`). The pre-commit hook blocks review artifacts when no completed loop exists.
+> HARD RULE: Every agent MUST run `.agentx/frontier.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. The CLI enforces risk-based minimums (standard `1`, auto-fix `2`, complex/Frontier `3`, high-risk `5`); the loop is NOT done until `.agentx/frontier.ps1 loop complete -s "<summary>"` succeeds, and the final iteration MUST carry a structured subagent review verdict (`--verdict approved --reviewer <id> --high 0 --medium 0`). The pre-commit hook blocks review artifacts when no completed loop exists.
 
 > Cross-cutting concerns shared by all agents (quality loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are defined ONCE in [.github/AGENT-PROTOCOL.md](.github/AGENT-PROTOCOL.md). Agent definition files keep only the front-loaded Pre-edit gate + Honesty rule stubs and point there; they MUST NOT restate the full prose.
 
@@ -96,45 +99,45 @@ All agents MUST create deliverable files locally using `editFiles` -- MUST NOT u
 
 > HARD RULE: Every agent MUST follow their prescribed pipeline phases IN SEQUENCE. No phase may be skipped. Each phase has a completion gate -- the gate MUST pass before advancing to the next phase. Agents MUST NOT write deliverables before completing research phases, MUST NOT implement before planning, MUST NOT approve before verifying all checks.
 >
-> See the Role Pipeline Reference table (below the Agents table) for each role's phases and key delivery gate. The pre-commit hook validates deliverable structure for key artifacts (PRD, ADR, UX). Use `.agentx/agentx.ps1 workflow <agent>` to print the phase list for any role.
+> See the Role Pipeline Reference table (below the Agents table) for each role's phases and key delivery gate. The pre-commit hook validates deliverable structure for key artifacts (PRD, ADR, UX). Use `.agentx/frontier.ps1 workflow <agent>` to print the phase list for any role.
 
 ### CLI Quick Reference
 
 ```powershell
-.\.agentx\agentx.ps1 loop start -p "Task description"  # FIRST command - start before any work
-.\.agentx\agentx.ps1 loop iterate -s "Progress summary"  # After each verification pass
-.\.agentx\agentx.ps1 loop complete -s "All gates passed"  # LAST command - required before handoff
-.\.agentx\agentx.ps1 ready                    # Show unblocked work
-.\.agentx\agentx.ps1 state -a engineer -s working -i 42
-.\.agentx\agentx.ps1 deps 42                  # Check blockers
-.\.agentx\agentx.ps1 workflow engineer        # Show workflow steps
-.\.agentx\agentx.ps1 loop status                # Check quality loop status
-.\.agentx\agentx.ps1 config show               # View configuration
+.\.agentx\frontier.ps1 loop start -p "Task description"  # FIRST command - start before any work
+.\.agentx\frontier.ps1 loop iterate -s "Progress summary"  # After each verification pass
+.\.agentx\frontier.ps1 loop complete -s "All gates passed"  # LAST command - required before handoff
+.\.agentx\frontier.ps1 ready                    # Show unblocked work
+.\.agentx\frontier.ps1 state -a engineer -s working -i 42
+.\.agentx\frontier.ps1 deps 42                  # Check blockers
+.\.agentx\frontier.ps1 workflow engineer        # Show workflow steps
+.\.agentx\frontier.ps1 loop status                # Check quality loop status
+.\.agentx\frontier.ps1 config show               # View configuration
 ```
 
 ---
 
-## Agents (26 total)
+## Frontier FDE Fleet (26 total)
 
 Agent definitions live in `.github/agents/*.agent.md` (15 visible) and `.github/agents/internal/*.agent.md` (11 internal sub-agents). Each file contains the role's constraints, boundaries, deliverables, and self-review checklist.
 
-| Agent | File | Deliverable |
+| FDE | File | Deliverable |
 |-------|------|-------------|
-| Agent X (Hub) | `agent-x.agent.md` | Autonomous orchestration and direct execution across the full workflow |
-| Product Manager | `product-manager.agent.md` | PRD at `docs/artifacts/prd/` |
-| UX Designer | `ux-designer.agent.md` | Wireframes + HTML prototypes at `docs/ux/` |
-| Architect | `architect.agent.md` | ADR + Tech Specs at `docs/artifacts/adr/`, `docs/artifacts/specs/` |
-| Engineer | `engineer.agent.md` | Code + Tests (80% coverage) |
-| Reviewer | `reviewer.agent.md` | Review at `docs/artifacts/reviews/` (code reviews + standalone architecture doc reviews) |
-| Auto-Fix Reviewer | `reviewer-auto.agent.md` | Review + safe auto-fixes |
-| DevOps Engineer | `devops.agent.md` | Pipelines at `.github/workflows/` |
-| Data Scientist | `data-scientist.agent.md` | ML pipelines + evals at `docs/data-science/` |
-| Tester | `tester.agent.md` | Test suites + certification at `docs/testing/` |
-| Fabric Engineer | `fabric-engineer.agent.md` | Fabric data products at `fabric/`, `docs/fabric/`, `tests/fabric/` |
-| Power Platform Builder | `power-platform-builder.agent.md` | Unpacked solutions at `solutions/`, `docs/power-platform/` |
-| Power BI Analyst | `powerbi-analyst.agent.md` | Reports at `reports/`, `datasets/` |
-| Consulting Research | `consulting-research.agent.md` | Research briefs at `docs/coaching/` |
-| Agile Coach | `agile-coach.agent.md` | Stories at `docs/coaching/` |
+| Frontier Orchestration FDE | `frontier.agent.md` | Autonomous orchestration and direct execution across the full workflow |
+| Frontier Product FDE | `product-manager.agent.md` | PRD at `docs/artifacts/prd/` |
+| Frontier Experience FDE | `ux-designer.agent.md` | Wireframes + HTML prototypes at `docs/ux/` |
+| Frontier Architecture FDE | `architect.agent.md` | ADR + Tech Specs at `docs/artifacts/adr/`, `docs/artifacts/specs/` |
+| Frontier Engineering FDE | `engineer.agent.md` | Code + Tests (80% coverage) |
+| Frontier Review FDE | `reviewer.agent.md` | Review at `docs/artifacts/reviews/` |
+| Frontier Auto-Fix FDE | `reviewer-auto.agent.md` | Review + safe auto-fixes |
+| Frontier DevOps FDE | `devops.agent.md` | Pipelines at `.github/workflows/` |
+| Frontier AI Systems FDE | `data-scientist.agent.md` | AI pipelines + evals at `docs/data-science/` |
+| Frontier Test FDE | `tester.agent.md` | Test suites + certification at `docs/testing/` |
+| Frontier Fabric FDE | `fabric-engineer.agent.md` | Fabric data products at `fabric/`, `docs/fabric/`, `tests/fabric/` |
+| Frontier Power Platform FDE | `power-platform-builder.agent.md` | Unpacked solutions at `solutions/`, `docs/power-platform/` |
+| Frontier Power BI FDE | `powerbi-analyst.agent.md` | Reports at `reports/`, `datasets/` |
+| Frontier Research FDE | `consulting-research.agent.md` | Research briefs at `docs/coaching/` |
+| Frontier Agile FDE | `agile-coach.agent.md` | Stories at `docs/coaching/` |
 
 **Internal sub-agents** (spawned by parent agents, not user-invokable):
 GitHub Ops, ADO Ops, AzDO PRD to WIT, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist, Diagram Specialist, Prototype Auditor.
@@ -147,7 +150,7 @@ Each role follows a prescribed phase pipeline. All phases are mandatory. No phas
 
 | Role | Pipeline Phases (in order) | Key Delivery Gate |
 |------|---------------------------|-------------------|
-| **Agent X (Hub)** | Classify -> Route -> Execute specialist phases -> Validate handoffs | All specialist phase gates pass before advancing |
+| **Frontier (Hub)** | Classify -> Route -> Execute specialist phases -> Validate handoffs | All specialist phase gates pass before advancing |
 | **Product Manager** | Research (5 phases) -> Classify Intent -> Model Council (prd-scope) -> PRD -> Backlog (Epic, Feature, User Stories) -> Self-Review -> Commit | PRD has all required sections; Backlog items (Epic, Features, User Stories) linked to PRD; Model Council convened or skip rationale recorded |
 | **UX Designer** | Read PRD -> Design Research -> UX Spec -> HTML/CSS Prototypes -> Self-Review -> Commit | WCAG 2.1 AA prototypes exist at `docs/ux/prototypes/` |
 | **Architect** | Research (6 phases) -> ADR (3+ options) -> Model Council (adr-options) -> Tech Spec -> AI Spec Alignment (if `needs:ai`) -> PM Fit Validation -> GenAI Assessment -> Self-Review -> Commit | ADR + Spec exist; ADR Decision matches a council-consensus option (or override rationale documented); AI-bearing specs include Data Scientist implementation-depth alignment; PM requirement-fit validation complete; zero code examples in Spec |

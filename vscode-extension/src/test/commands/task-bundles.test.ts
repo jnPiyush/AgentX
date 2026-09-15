@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerTaskBundleCommands } from '../../commands/task-bundles';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import * as bundleFacade from '../../taskBundles/task-bundles';
 
 describe('registerTaskBundleCommands', () => {
@@ -26,7 +26,7 @@ describe('registerTaskBundleCommands', () => {
       replace: sandbox.stub(),
       onDidChangeLogLevel: sandbox.stub(),
       logLevel: 1,
-      name: 'AgentX Task Bundles',
+      name: 'Frontier Task Bundles',
     } as unknown as vscode.LogOutputChannel;
   }
 
@@ -47,33 +47,33 @@ describe('registerTaskBundleCommands', () => {
   });
 
   it('registers the task bundle commands', () => {
-    const agentx = { workspaceRoot: 'c:/repo' } as AgentXContext;
+    const agentx = { workspaceRoot: 'c:/repo' } as FrontierContext;
 
     registerTaskBundleCommands(fakeContext, agentx);
 
     const registerCommand = vscode.commands.registerCommand as sinon.SinonStub;
-    assert.ok(registerCommand.calledWith('agentx.showTaskBundles'));
-    assert.ok(registerCommand.calledWith('agentx.createTaskBundle'));
-    assert.ok(registerCommand.calledWith('agentx.resolveTaskBundle'));
-    assert.ok(registerCommand.calledWith('agentx.promoteTaskBundle'));
+    assert.ok(registerCommand.calledWith('frontier.showTaskBundles'));
+    assert.ok(registerCommand.calledWith('frontier.createTaskBundle'));
+    assert.ok(registerCommand.calledWith('frontier.resolveTaskBundle'));
+    assert.ok(registerCommand.calledWith('frontier.promoteTaskBundle'));
   });
 
   it('shows a warning when task bundles are requested without a workspace', async () => {
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: undefined } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: undefined } as FrontierContext);
     const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
 
-    await registeredCallbacks['agentx.showTaskBundles']!();
+    await registeredCallbacks['frontier.showTaskBundles']!();
 
     assert.ok(warnSpy.calledOnce);
   });
 
   it('shows warnings for create, resolve, and promote without a workspace', async () => {
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: undefined } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: undefined } as FrontierContext);
     const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
 
-    await registeredCallbacks['agentx.createTaskBundle']!();
-    await registeredCallbacks['agentx.resolveTaskBundle']!();
-    await registeredCallbacks['agentx.promoteTaskBundle']!();
+    await registeredCallbacks['frontier.createTaskBundle']!();
+    await registeredCallbacks['frontier.resolveTaskBundle']!();
+    await registeredCallbacks['frontier.promoteTaskBundle']!();
 
     assert.equal(warnSpy.callCount, 3);
   });
@@ -84,9 +84,9 @@ describe('registerTaskBundleCommands', () => {
     const channel = createOutputChannelStub();
     sandbox.stub(vscode.window, 'createOutputChannel').returns(channel);
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.showTaskBundles']!();
+    await registeredCallbacks['frontier.showTaskBundles']!();
 
     assert.ok((bundleFacade.listTaskBundles as sinon.SinonStub).calledWithMatch(sinon.match.any, { all: true }));
     assert.ok((channel.appendLine as sinon.SinonStub).calledOnce);
@@ -97,11 +97,11 @@ describe('registerTaskBundleCommands', () => {
     sandbox.stub(bundleFacade, 'listTaskBundles').rejects(new Error('list failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.showTaskBundles']!();
+    await registeredCallbacks['frontier.showTaskBundles']!();
 
-    assert.ok(errorSpy.calledOnceWith('AgentX failed to list task bundles: list failed'));
+    assert.ok(errorSpy.calledOnceWith('Frontier failed to list task bundles: list failed'));
   });
 
   it('creates a task bundle from prompted inputs', async () => {
@@ -114,9 +114,9 @@ describe('registerTaskBundleCommands', () => {
       .onThirdCall().resolves({ label: 'Use active context', value: 'active' } as any);
     sandbox.stub(bundleFacade, 'createTaskBundle').resolves({ bundleId: 'BND-1' } as any);
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.createTaskBundle']!();
+    await registeredCallbacks['frontier.createTaskBundle']!();
 
     assert.ok((bundleFacade.createTaskBundle as sinon.SinonStub).calledOnce);
     assert.deepEqual((bundleFacade.createTaskBundle as sinon.SinonStub).firstCall.args[1], {
@@ -142,9 +142,9 @@ describe('registerTaskBundleCommands', () => {
     sandbox.stub(bundleFacade, 'createTaskBundle').resolves({ bundleId: 'BND-42' } as any);
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.createTaskBundle']!();
+    await registeredCallbacks['frontier.createTaskBundle']!();
 
     assert.deepEqual((bundleFacade.createTaskBundle as sinon.SinonStub).firstCall.args[1], {
       title: 'Bundle title',
@@ -168,11 +168,11 @@ describe('registerTaskBundleCommands', () => {
     sandbox.stub(bundleFacade, 'createTaskBundle').rejects(new Error('create failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.createTaskBundle']!();
+    await registeredCallbacks['frontier.createTaskBundle']!();
 
-    assert.ok(errorSpy.calledOnceWith('AgentX failed to create the task bundle: create failed'));
+    assert.ok(errorSpy.calledOnceWith('Frontier failed to create the task bundle: create failed'));
   });
 
   it('resolves the selected task bundle', async () => {
@@ -183,9 +183,9 @@ describe('registerTaskBundleCommands', () => {
     sandbox.stub(bundleFacade, 'resolveTaskBundle').resolves({ bundleId: 'BND-1', state: 'Done' } as any);
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.resolveTaskBundle']!();
+    await registeredCallbacks['frontier.resolveTaskBundle']!();
 
     assert.ok((bundleFacade.resolveTaskBundle as sinon.SinonStub).calledWithMatch(sinon.match.any, {
       bundleId: 'BND-1',
@@ -198,9 +198,9 @@ describe('registerTaskBundleCommands', () => {
     sandbox.stub(bundleFacade, 'listTaskBundles').resolves([]);
     const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.resolveTaskBundle']!();
+    await registeredCallbacks['frontier.resolveTaskBundle']!();
 
     assert.ok(warnSpy.calledOnceWith('No task bundle was selected.'));
   });
@@ -214,9 +214,9 @@ describe('registerTaskBundleCommands', () => {
     sandbox.stub(bundleFacade, 'resolveTaskBundle').resolves({ bundleId: 'BND-1', state: 'Archived' } as any);
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.resolveTaskBundle']!();
+    await registeredCallbacks['frontier.resolveTaskBundle']!();
 
     assert.ok((bundleFacade.resolveTaskBundle as sinon.SinonStub).calledWithMatch(sinon.match.any, {
       bundleId: 'BND-1',
@@ -233,9 +233,9 @@ describe('registerTaskBundleCommands', () => {
     const resolveStub = sandbox.stub(bundleFacade, 'resolveTaskBundle');
     sandbox.stub(bundleFacade, 'listTaskBundles').resolves([{ bundleId: 'BND-1', title: 'Bundle', priority: 'p1', state: 'Backlog', parentContext: {}, promotionMode: 'none' } as any]);
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.resolveTaskBundle']!();
+    await registeredCallbacks['frontier.resolveTaskBundle']!();
 
     assert.ok(resolveStub.notCalled);
   });
@@ -248,11 +248,11 @@ describe('registerTaskBundleCommands', () => {
     sandbox.stub(bundleFacade, 'resolveTaskBundle').rejects(new Error('resolve failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.resolveTaskBundle']!();
+    await registeredCallbacks['frontier.resolveTaskBundle']!();
 
-    assert.ok(errorSpy.calledOnceWith('AgentX failed to resolve the task bundle: resolve failed'));
+    assert.ok(errorSpy.calledOnceWith('Frontier failed to resolve the task bundle: resolve failed'));
   });
 
   it('promotes the selected task bundle', async () => {
@@ -267,9 +267,9 @@ describe('registerTaskBundleCommands', () => {
     } as any);
     sandbox.stub(vscode.window, 'createOutputChannel').returns(createOutputChannelStub());
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.promoteTaskBundle']!();
+    await registeredCallbacks['frontier.promoteTaskBundle']!();
 
     assert.ok((bundleFacade.promoteTaskBundle as sinon.SinonStub).calledWithMatch(sinon.match.any, {
       bundleId: 'BND-1',
@@ -281,9 +281,9 @@ describe('registerTaskBundleCommands', () => {
     sandbox.stub(bundleFacade, 'listTaskBundles').resolves([]);
     const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.promoteTaskBundle']!();
+    await registeredCallbacks['frontier.promoteTaskBundle']!();
 
     assert.ok(warnSpy.calledOnceWith('No task bundle was selected.'));
   });
@@ -296,10 +296,10 @@ describe('registerTaskBundleCommands', () => {
     sandbox.stub(bundleFacade, 'promoteTaskBundle').rejects(new Error('promote failed'));
     const errorSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as AgentXContext);
+    registerTaskBundleCommands(fakeContext, { workspaceRoot: 'c:/repo' } as FrontierContext);
 
-    await registeredCallbacks['agentx.promoteTaskBundle']!();
+    await registeredCallbacks['frontier.promoteTaskBundle']!();
 
-    assert.ok(errorSpy.calledOnceWith('AgentX failed to promote the task bundle: promote failed'));
+    assert.ok(errorSpy.calledOnceWith('Frontier failed to promote the task bundle: promote failed'));
   });
 });

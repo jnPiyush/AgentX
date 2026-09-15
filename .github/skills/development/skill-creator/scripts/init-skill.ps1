@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Scaffolds a new skill directory following the AgentX skill specification.
+ Scaffolds a new skill directory following the Frontier skill specification.
 .DESCRIPTION
  Creates a SKILL.md with proper frontmatter, references/, scripts/, and assets/ directories,
  and optional starter files. Validates name against the agentskills.io spec.
@@ -75,7 +75,7 @@ $skillContent = @"
 name: "$Slug"
 description: "$Description"
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "$today"
  updated: "$today"

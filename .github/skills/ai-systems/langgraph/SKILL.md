@@ -2,7 +2,7 @@
 name: "langgraph"
 description: 'Build stateful, durable agent workflows with LangGraph. Use when implementing graph-based orchestration, long-running agent state, human-in-the-loop checkpoints, subgraphs, memory, or LangSmith-observed agent execution.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2026-04-04"
  updated: "2026-04-04"

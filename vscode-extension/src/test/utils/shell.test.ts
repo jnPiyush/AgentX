@@ -164,7 +164,7 @@ describe('shell - blocked command enforcement', () => {
         () => execShell(cmd, process.cwd()),
         (err: Error) => {
           assert.ok(
-            err.message.includes('blocked by AgentX security policy'),
+            err.message.includes('blocked by Frontier security policy'),
             `expected policy rejection, got: ${err.message}`,
           );
           return true;
@@ -177,7 +177,7 @@ describe('shell - blocked command enforcement', () => {
     await assert.rejects(
       () => execShellStreaming('rm -fr /', process.cwd()),
       (err: Error) => {
-        assert.ok(err.message.includes('blocked by AgentX security policy'));
+        assert.ok(err.message.includes('blocked by Frontier security policy'));
         return true;
       },
     );

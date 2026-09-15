@@ -10,7 +10,7 @@
     * Open PRs touching this repo (gh CLI if available)
     * Current branch and uncommitted changes
     * Recent failed CI runs (last 5)
-    * AgentX ready queue (top 5 items)
+    * Frontier ready queue (top 5 items)
     * Active quality loop status
     * Recent signal activity (.agentx/signals/sessions.jsonl mtime)
     * Suggested next action

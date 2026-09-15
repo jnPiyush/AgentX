@@ -48,7 +48,7 @@ export const ArchitectDemo: React.FC = () => {
         startFrame={fps * 5}
         durationFrames={fps * 3}
         accent={accent}
-        label="AgentX is evaluating options"
+        label="Frontier is evaluating options"
         elapsedSeconds={11}
       />
       <ArtifactReveal

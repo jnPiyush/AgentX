@@ -2,7 +2,7 @@
 name: "logging-monitoring"
 description: 'Implement observability patterns including structured logging, log levels, correlation IDs, metrics, and distributed tracing. Use when adding structured logging, implementing correlation IDs for request tracing, configuring metrics collection, setting up distributed tracing, or designing alerting rules.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

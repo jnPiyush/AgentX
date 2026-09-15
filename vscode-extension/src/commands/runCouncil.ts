@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   buildRolePrompt,
   CouncilRoleResult,
@@ -14,7 +14,7 @@ import {
   summarizeVendorDiversity,
 } from './runCouncilInternals';
 
-const COMMAND_ID = 'agentx.runCouncil';
+const COMMAND_ID = 'frontier.runCouncil';
 
 interface LmModelLike {
   name?: string;
@@ -246,13 +246,13 @@ async function refreshOpenEditor(target: vscode.Uri): Promise<void> {
 
 export function registerRunCouncilCommand(
   context: vscode.ExtensionContext,
-  _agentx: AgentXContext,
+  _agentx: FrontierContext,
 ): void {
   const cmd = vscode.commands.registerCommand(COMMAND_ID, async () => {
     const api = getLmHostApi();
     if (!api) {
       vscode.window.showErrorMessage(
-        'AgentX: VS Code Language Model API is not available. The Run Council command requires GitHub Copilot Chat or another VS Code 1.95+ host that exposes vscode.lm.',
+        'Frontier: VS Code Language Model API is not available. The Run Council command requires GitHub Copilot Chat or another VS Code 1.95+ host that exposes vscode.lm.',
       );
       return;
     }
@@ -264,14 +264,14 @@ export function registerRunCouncilCommand(
     try {
       original = fs.readFileSync(target.fsPath, 'utf8');
     } catch (err) {
-      vscode.window.showErrorMessage(`AgentX: Failed to read council brief: ${err instanceof Error ? err.message : String(err)}`);
+      vscode.window.showErrorMessage(`Frontier: Failed to read council brief: ${err instanceof Error ? err.message : String(err)}`);
       return;
     }
 
     const brief = parseCouncilBrief(original);
     if (!brief.question || brief.roster.length === 0) {
       vscode.window.showErrorMessage(
-        'AgentX: Council brief is missing a Question or Council Roster section. Generate it via scripts/model-council.ps1 first.',
+        'Frontier: Council brief is missing a Question or Council Roster section. Generate it via scripts/model-council.ps1 first.',
       );
       return;
     }
@@ -292,7 +292,7 @@ export function registerRunCouncilCommand(
     );
     if (openedBefore?.isDirty) {
       const choice = await vscode.window.showWarningMessage(
-        'AgentX Council: this brief has unsaved edits in the editor. Running the council will overwrite those edits with model responses.',
+        'Frontier Council: this brief has unsaved edits in the editor. Running the council will overwrite those edits with model responses.',
         { modal: true },
         'Discard edits and run',
       );
@@ -302,7 +302,7 @@ export function registerRunCouncilCommand(
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: 'AgentX Council: consulting council members in parallel...',
+        title: 'Frontier Council: consulting council members in parallel...',
         cancellable: true,
       },
       async (progress, token) => {
@@ -384,7 +384,7 @@ export function registerRunCouncilCommand(
         try {
           fs.writeFileSync(target.fsPath, updated, 'utf8');
         } catch (err) {
-          vscode.window.showErrorMessage(`AgentX: Failed to write council brief: ${err instanceof Error ? err.message : String(err)}`);
+          vscode.window.showErrorMessage(`Frontier: Failed to write council brief: ${err instanceof Error ? err.message : String(err)}`);
           return;
         }
 
@@ -404,12 +404,12 @@ export function registerRunCouncilCommand(
 
         if (failures.length === 0 && diversity.tier === 'vendor') {
           vscode.window.showInformationMessage(
-            `AgentX Council: ${okCount}/${results.length} members responded across ${diversity.vendors.size} vendor(s) [${vendorList}] in vendor-diverse mode. Synthesis is the calling agent's responsibility.`,
+            `Frontier Council: ${okCount}/${results.length} members responded across ${diversity.vendors.size} vendor(s) [${vendorList}] in vendor-diverse mode. Synthesis is the calling agent's responsibility.`,
           );
         } else if (diversity.tier === 'role') {
           // Tier 3: even model identity reused. Strongest warning.
           vscode.window.showWarningMessage(
-            `AgentX Council: ${okCount}/${results.length} members responded but ran in role-diverse-only mode (vendor [${vendorList}], same model reused across roles). Treat agreement between roles as weak signal -- only the role instruction differentiates the responses. Install additional Copilot Chat model providers to recover diversity.`,
+            `Frontier Council: ${okCount}/${results.length} members responded but ran in role-diverse-only mode (vendor [${vendorList}], same model reused across roles). Treat agreement between roles as weak signal -- only the role instruction differentiates the responses. Install additional Copilot Chat model providers to recover diversity.`,
           );
         } else if (diversity.tier === 'model') {
           // Tier 2: vendor collapsed but at least the model identity varied.
@@ -417,18 +417,18 @@ export function registerRunCouncilCommand(
           // ... was NOT met" wording so existing operator runbooks and
           // regression tests still match.
           vscode.window.showWarningMessage(
-            `AgentX Council: ${okCount}/${results.length} members responded in model-diverse mode -- vendor diversity collapsed (only [${vendorList}] available). The "multi-vendor" guarantee was NOT met; responses share one provider's biases. Install additional Copilot Chat model providers to recover.`,
+            `Frontier Council: ${okCount}/${results.length} members responded in model-diverse mode -- vendor diversity collapsed (only [${vendorList}] available). The "multi-vendor" guarantee was NOT met; responses share one provider's biases. Install additional Copilot Chat model providers to recover.`,
           );
         } else if (failures.length === 0 && diversity.collapsed) {
           // Defensive: no tier resolved (shouldn't happen on a successful
           // run) but the vendor set still collapsed -- preserve legacy
           // wording for operator regression tests.
           vscode.window.showWarningMessage(
-            `AgentX Council: ${okCount}/${results.length} members responded but vendor diversity collapsed (only [${vendorList}] available). The "multi-vendor" guarantee was NOT met -- responses share one provider's biases. Consider installing additional Copilot Chat model providers.`,
+            `Frontier Council: ${okCount}/${results.length} members responded but vendor diversity collapsed (only [${vendorList}] available). The "multi-vendor" guarantee was NOT met -- responses share one provider's biases. Consider installing additional Copilot Chat model providers.`,
           );
         } else {
           vscode.window.showWarningMessage(
-            `AgentX Council: ${okCount}/${results.length} members responded across ${diversity.vendors.size} vendor(s) [${vendorList}]. ${failures.length} failed (see brief for details).`,
+            `Frontier Council: ${okCount}/${results.length} members responded across ${diversity.vendors.size} vendor(s) [${vendorList}]. ${failures.length} failed (see brief for details).`,
           );
         }
       },

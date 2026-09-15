@@ -27,7 +27,7 @@ function Test-BudgetCommand([string]$Entry, [string]$Workspace) {
 }
 try {
     New-Item -ItemType Directory -Path $temp -Force | Out-Null
-    $bundle = Join-Path $root 'vscode-extension/.github/agentx'
+    $bundle = Join-Path $root 'vscode-extension/.github/frontier'
     Assert-True (Test-Path (Join-Path $bundle 'scripts/budget.ps1')) 'Built extension contains budget command'
     Assert-True (Test-Path (Join-Path $bundle 'seed/scripts/budget.ps1')) 'Canonical workspace seed contains budget command'
     Assert-True (Test-Path (Join-Path $bundle 'seed/.token-limits.json')) 'Seed contains explicit file-budget policy'
@@ -36,7 +36,7 @@ try {
 
     $install = Join-Path $temp 'installed'
     New-Item -ItemType Directory -Path $install | Out-Null
-    & pwsh -NoProfile -File (Join-Path $root 'packs/agentx-copilot-cli/install.ps1') -Target $install -Source $root -IncludeCli *> $null
+    & pwsh -NoProfile -File (Join-Path $root 'packs/frontier-copilot-cli/install.ps1') -Target $install -Source $root -IncludeCli *> $null
     Assert-True ($LASTEXITCODE -eq 0) 'Standalone pack installs successfully'
     Test-BudgetCommand (Join-Path $install '.agentx/agentx.ps1') $install
     Assert-True (Test-Path (Join-Path $install '.github/skills/development/token-optimizer/references/tokenomics.md')) 'Standalone pack ships tokenomics contract'

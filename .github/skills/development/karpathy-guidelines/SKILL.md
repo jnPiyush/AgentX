@@ -11,8 +11,8 @@ Behavioral guidelines to reduce common LLM coding mistakes. Adapted from
 on LLM coding pitfalls and the upstream MIT-licensed
 [karpathy-guidelines skill](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/skills/karpathy-guidelines/SKILL.md).
 
-> **MANDATORY in AgentX**: These four guidelines are NON-optional for every
-> AgentX execution (coding, refactor, review, pipeline). Complete the
+> **MANDATORY in Frontier**: These four guidelines are NON-optional for every
+> Frontier execution (coding, refactor, review, pipeline). Complete the
 > "Self-Check Before Handoff" checklist before any handoff. See the always-on
 > rule in `.github/instructions/project-conventions.instructions.md`.
 
@@ -59,7 +59,7 @@ Before implementing:
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what''s confusing. Ask.
 
-**AgentX wiring:** This is the entry gate of every role''s pipeline. The
+**Frontier wiring:** This is the entry gate of every role''s pipeline. The
 clarification loop (`docs/WORKFLOW.md#agent-communication-protocol`) exists
 precisely so an agent can stop and ask rather than silently guess.
 
@@ -76,7 +76,7 @@ precisely so an agent can stop and ask rather than silently guess.
 Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes,
 simplify.
 
-**AgentX wiring:** This rule reinforces the existing Implementation
+**Frontier wiring:** This rule reinforces the existing Implementation
 Discipline section in `AGENTS.md`. The
 [code-hygiene](../code-hygiene/SKILL.md) skill is the mechanical sweep that
 detects violations after the fact - this skill prevents them up front.
@@ -100,7 +100,7 @@ When your changes create orphans:
 **The test:** Every changed line should trace directly to the user''s request
 or the active issue''s acceptance criteria.
 
-**AgentX wiring:** This is what `validate-handoff` is checking when it asks
+**Frontier wiring:** This is what `validate-handoff` is checking when it asks
 "do the changed files match the spec scope?" Out-of-scope edits should be
 filed as a separate issue, not bundled into the current PR.
 
@@ -127,10 +127,10 @@ For multi-step tasks, state a brief plan:
 Strong success criteria let the agent loop independently. Weak criteria
 ("make it work") require constant clarification and produce drift.
 
-**AgentX wiring:** This is the contract the
+**Frontier wiring:** This is the contract the
 [iterative-loop](../iterative-loop/SKILL.md) skill enforces. Every loop
 iteration is a verify pass against a stated success criterion. The CLI
-hard-gate (`agentx loop complete`) refuses to close the loop until the
+hard-gate (`frontier loop complete`) refuses to close the loop until the
 criteria pass.
 
 ## Self-Check Before Handoff
@@ -177,5 +177,5 @@ which itself derives from
 [Andrej Karpathy''s public observations](https://x.com/karpathy/status/2015883857489522876).
 The four core principles (Think Before Coding, Simplicity First, Surgical
 Changes, Goal-Driven Execution) are reproduced verbatim where the wording
-was already minimal; AgentX-specific wiring, role mapping, and the
+was already minimal; Frontier-specific wiring, role mapping, and the
 anti-pattern table are additions.

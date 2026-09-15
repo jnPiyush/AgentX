@@ -1,6 +1,6 @@
-# Quality Score - AgentX Component Assessment
+# Quality Score - Frontier Component Assessment
 
-> Graded quality assessment of every AgentX component.
+> Graded quality assessment of every Frontier component.
 > Updated per release. Grades reflect completeness, test coverage, documentation, and reliability.
 
 ---
@@ -17,13 +17,13 @@
 
 ---
 
-## Component Scores (v9.2.0)
+## Component Scores (v9.3.0)
 
 ### Agent Definitions (.github/agents/)
 
 | Component | Grade | Notes |
 |-----------|-------|-------|
-| Agent X (Hub) | A | Full routing logic, adaptive mode, self-review |
+| Frontier (Hub) | A | Full routing logic, adaptive mode, self-review |
 | Product Manager | A | PRD workflow, child issue creation |
 | UX Designer | A | Wireframes + mandatory HTML/CSS prototypes |
 | Architect | A | ADR + Tech Spec, NO CODE EXAMPLES rule |
@@ -42,7 +42,7 @@
 | ADO Ops | B | Preview maturity -- process template adaptation works, ADO API coverage partial |
 | AzDO PRD to WIT | B | Preview maturity -- 5-phase PRD analysis solid, field-testing not yet done |
 | Functional Reviewer | B | Preview maturity -- false-positive mitigation effective, scope filtering could improve |
-| Architecture Reviewer | B | Preview maturity -- 12-dimension review checklist aligned with Azure/AWS WAF, ATAM, STRIDE; supports both AgentX issue-driven and standalone (human-written doc) modes including .docx/.pptx/.pdf/diagram inputs; needs field testing on real corpus |
+| Architecture Reviewer | B | Preview maturity -- 12-dimension review checklist aligned with Azure/AWS WAF, ATAM, STRIDE; supports both Frontier issue-driven and standalone (human-written doc) modes including .docx/.pptx/.pdf/diagram inputs; needs field testing on real corpus |
 | Prompt Engineer | B | Preview maturity -- lifecycle management solid, multi-model testing needs automation |
 | Eval Specialist | B | Preview maturity -- RAGAS integration works, judge validation threshold tuning needed |
 | Ops Monitor | B | Preview maturity -- OpenTelemetry setup solid, drift baseline automation incomplete |
@@ -115,7 +115,7 @@
 
 | Document | Grade | Notes |
 |----------|-------|-------|
-| AGENTS.md | A | Slim TOC/map (v9.2.0) |
+| AGENTS.md | A | Slim TOC/map (v9.3.0) |
 | WORKFLOW.md | A- | Complete workflow reference with harness-oriented policy additions; enforcement is still partial |
 | Skills.md | A | Compressed index, Quick Reference table |
 | GUIDE.md | B | Quickstart solid, troubleshooting section could expand |
@@ -174,4 +174,4 @@
 
 ---
 
-**Last updated**: v9.2.0
+**Last updated**: v9.3.0

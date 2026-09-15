@@ -1,8 +1,7 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
-import type { PendingSetupState } from '../agentxContextTypes';
+import { FrontierContext } from '../frontierContext';
+import type { PendingSetupState } from '../frontierContextTypes';
+import { hasFrontierState } from '../utils/frontierPaths';
 import {
   type AdapterMode,
   applyRemoteAdapterConfiguration,
@@ -21,37 +20,37 @@ const DEFAULT_CLAUDE_LOCAL_BASE_URL = 'http://127.0.0.1:4000';
 const DEFAULT_OPENAI_MODEL = 'gpt-5.5';
 const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4.8';
 
-export type PendingSetup = NonNullable<Awaited<ReturnType<AgentXContext['getPendingSetup']>>>;
+export type PendingSetup = NonNullable<Awaited<ReturnType<FrontierContext['getPendingSetup']>>>;
 
-function getWorkspaceRoot(agentx: AgentXContext): string | undefined {
+function getWorkspaceRoot(agentx: FrontierContext): string | undefined {
   return agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
 }
 
 function hasWorkspaceRuntimeConfig(root: string | undefined): boolean {
-  return !!root && fs.existsSync(path.join(root, '.agentx', 'config.json'));
+  return !!root && hasFrontierState(root);
 }
 
 function renderMissingInitializationMessage(subject: string): string {
   return [
-    `**AgentX ${subject} setup needs workspace initialization first.**`,
+    `**Frontier ${subject} setup needs workspace initialization first.**`,
     '',
-    'Run **AgentX: Initialize Local Runtime** and then retry this setup request in chat.',
+    'Run **Frontier: Initialize Local Runtime** and then retry this setup request in chat.',
   ].join('\n');
 }
 
-async function updatePendingSetup(agentx: AgentXContext, pending: PendingSetupState): Promise<void> {
+async function updatePendingSetup(agentx: FrontierContext, pending: PendingSetupState): Promise<void> {
   if (typeof agentx.setPendingSetup === 'function') {
     await agentx.setPendingSetup(pending);
   }
 }
 
-async function clearPendingSetup(agentx: AgentXContext): Promise<void> {
+async function clearPendingSetup(agentx: FrontierContext): Promise<void> {
   if (typeof agentx.clearPendingSetup === 'function') {
     await agentx.clearPendingSetup();
   }
 }
 
-export async function getPendingSetup(agentx: AgentXContext): Promise<PendingSetup | undefined> {
+export async function getPendingSetup(agentx: FrontierContext): Promise<PendingSetup | undefined> {
   return typeof agentx.getPendingSetup === 'function'
     ? await agentx.getPendingSetup()
     : undefined;
@@ -153,7 +152,7 @@ function parseAdoReply(userText: string, detectedValue?: string): { organization
 
 async function completeLlmProviderSetup(
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   root: string,
   providerId: LlmAdapterSetupMode,
 ): Promise<vscode.ChatResult> {
@@ -176,7 +175,7 @@ async function completeLlmProviderSetup(
       response.markdown([
         `Configured **Claude Subscription** with default model \`${DEFAULT_CLAUDE_MODEL}\`.`,
         '',
-        'If Claude Code is not installed or logged in yet, run `claude auth login` and retry your next AgentX task.',
+        'If Claude Code is not installed or logged in yet, run `claude auth login` and retry your next Frontier task.',
       ].join('\n'));
       return {};
     }
@@ -206,8 +205,8 @@ async function completeLlmProviderSetup(
       response.markdown([
         `Configured **Claude Code + LiteLLM + Ollama** with default model \`${DEFAULT_CLAUDE_LOCAL_MODEL}\`.`,
         '',
-        `Claude Code will now target LiteLLM at \`${DEFAULT_CLAUDE_LOCAL_BASE_URL}\` and route AgentX model selection to the configured local coding model.`,
-        'Keep LiteLLM, Ollama, and the selected model running before starting AgentX tasks.',
+        `Claude Code will now target LiteLLM at \`${DEFAULT_CLAUDE_LOCAL_BASE_URL}\` and route Frontier model selection to the configured local coding model.`,
+        'Keep LiteLLM, Ollama, and the selected model running before starting Frontier tasks.',
       ].join('\n'));
       return {};
     }
@@ -272,7 +271,7 @@ async function completeLlmProviderSetup(
 
 async function beginLlmSetup(
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   providerId?: LlmAdapterSetupMode,
   prompt = '',
 ): Promise<vscode.ChatResult> {
@@ -298,7 +297,7 @@ async function beginLlmSetup(
 
 async function beginRemoteSetup(
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   adapterMode?: AdapterMode,
   prompt = '',
 ): Promise<vscode.ChatResult> {
@@ -356,7 +355,7 @@ async function beginRemoteSetup(
 export async function tryHandleAdapterSetupRequest(
   userText: string,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<vscode.ChatResult | undefined> {
   if (/^(?:agentx:\s*)?(?:add llm adapter|switch llm|switch model provider|connect claude|connect claude local|connect claude api|connect openai|setup claude|setup claude local|setup claude api|setup openai|use claude|use claude local|use claude api|use openai|use copilot)$/i.test(userText)) {
     const normalized = userText.toLowerCase();
@@ -392,7 +391,7 @@ export async function tryHandleAdapterSetupRequest(
 export async function tryHandlePendingSetupRequest(
   userText: string,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   pending: PendingSetup | undefined,
 ): Promise<vscode.ChatResult | undefined> {
   if (!pending) {

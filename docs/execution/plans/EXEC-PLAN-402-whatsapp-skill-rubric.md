@@ -63,7 +63,7 @@ This execution plan is a living document. Keep `Progress`, `Surprises & Discover
 
 ## Context and Orientation
 
-WhatsApp code lives under `companions/whatsapp/`. The current bot directly initializes `whatsapp-web.js`, routes commands through `commandRouter.js`, and invokes `.agentx/agentx.ps1` via `agentxRunner.js`. Skill scoring lives in `scripts/score-skill.ps1`; validation delegates to it through `scripts/validate-skill.ps1`. Skill conventions are defined by `.github/skills/development/skill-creator/SKILL.md` and the agentskills.io frontmatter contract.
+WhatsApp code lives under `companions/whatsapp/`. The current bot directly initializes `whatsapp-web.js`, routes commands through `commandRouter.js`, and invokes `.agentx/agentx.ps1` via `frontierRunner.js`. Skill scoring lives in `scripts/score-skill.ps1`; validation delegates to it through `scripts/validate-skill.ps1`. Skill conventions are defined by `.github/skills/development/skill-creator/SKILL.md` and the agentskills.io frontmatter contract.
 
 ## Pre-Conditions
 

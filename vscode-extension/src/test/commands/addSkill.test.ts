@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import { registerAddSkillCommand } from '../../commands/addSkill';
 import { resolveSkillOutputDir } from '../../commands/addSkillInternals';
 import { buildSkillContentFallback } from '../../commands/scaffoldGeneration';
@@ -34,13 +34,13 @@ describe('resolveSkillOutputDir', () => {
 describe('registerAddSkillCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: AgentXContext;
+  let fakeAgentx: FrontierContext;
   let commandCallback: () => Promise<void>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     fakeContext = { subscriptions: [], extensionUri: { fsPath: '/ext' } } as unknown as vscode.ExtensionContext;
-    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as AgentXContext;
+    fakeAgentx = { workspaceRoot: '/tmp/workspace' } as unknown as FrontierContext;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, cb: (...args: unknown[]) => unknown) => {
@@ -55,7 +55,7 @@ describe('registerAddSkillCommand', () => {
   afterEach(() => { sandbox.restore(); });
 
   it('registers the agentx.addSkill command', () => {
-    assert.ok((vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.addSkill'));
+    assert.ok((vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.addSkill'));
   });
 
   it('returns silently when user dismisses the picker', async () => {
@@ -73,7 +73,7 @@ describe('registerAddSkillCommand', () => {
 
     await commandCallback();
 
-    assert.ok(execStub.calledWith('agentx.addPlugin'));
+    assert.ok(execStub.calledWith('frontier.addPlugin'));
   });
 
   it('shows warning when scaffold is selected but no workspace is open', async () => {

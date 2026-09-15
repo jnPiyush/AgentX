@@ -1,5 +1,5 @@
 {
-  "description": "Token budget limits for AgentX skill and documentation files. ~4 chars = 1 token.",
+  "description": "Token budget limits for Frontier skill and documentation files. ~4 chars = 1 token.",
   "defaults": {
     ".github/copilot-instructions.md": 2000,
     ".github/skills/**/SKILL.md": 1500,
@@ -11,10 +11,10 @@
     "docs/**/*.md": 8000
   },
   "overrides": {
-    "docs/artifacts/adr/ADR-AgentX.md": 20000,
+    "docs/artifacts/adr/ADR-Frontier.md": 20000,
     "docs/architecture/MIGRATION-PLAN.md": 25000,
-    "docs/artifacts/prd/PRD-AgentX.md": 50000,
-    "docs/artifacts/specs/SPEC-AgentX.md": 45000,
+    "docs/artifacts/prd/PRD-Frontier.md": 50000,
+    "docs/artifacts/specs/SPEC-Frontier.md": 45000,
     ".github/agents/engineer.agent.md": 7000,
     ".github/templates/SPEC-TEMPLATE.md": 12000,
     "docs/WORKFLOW.md": 11000,

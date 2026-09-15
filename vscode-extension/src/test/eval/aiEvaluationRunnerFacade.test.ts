@@ -8,13 +8,13 @@ import {
 } from '../../eval/aiEvaluationRunner';
 
 function createWorkspace(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ai-runner-facade-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ai-runner-facade-'));
   fs.mkdirSync(path.join(root, 'evaluation', 'datasets'), { recursive: true });
   fs.mkdirSync(path.join(root, 'evaluation', 'rubrics'), { recursive: true });
   fs.mkdirSync(path.join(root, '.copilot-tracking', 'eval-reports'), { recursive: true });
   fs.writeFileSync(path.join(root, 'evaluation', 'datasets', 'regression.jsonl'), '{"id":1}\n', 'utf-8');
   fs.writeFileSync(path.join(root, 'evaluation', 'rubrics', 'correctness.md'), '# Correctness\n', 'utf-8');
-  fs.writeFileSync(path.join(root, 'evaluation', 'agentx.eval.yaml'), [
+  fs.writeFileSync(path.join(root, 'evaluation', 'frontier.eval.yaml'), [
     'version: 1',
     'intent:',
     '  workflow: prompt',

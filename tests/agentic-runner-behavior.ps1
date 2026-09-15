@@ -294,7 +294,7 @@ $claudeToolList = Get-ClaudeCodeAllowedTool @(
     @{ function = @{ name = 'terminal_exec' } },
     @{ function = @{ name = 'list_dir' } }
 )
-Assert-Equal $claudeToolList '""' 'Claude Code native tools stay disabled until they route through AgentX guards'
+Assert-Equal $claudeToolList '""' 'Claude Code native tools stay disabled until they route through Frontier guards'
 
 $providerTools = Get-AgentProviderToolSchema -AgentName 'engineer' -Tools @(
     @{ function = @{ name = 'file_read' } },
@@ -604,7 +604,7 @@ Assert-True ($consultingResearchDef.canModify -contains 'docs/coaching/**') 'Rea
 Assert-True ($consultingResearchDef.cannotModify -contains 'src/**') 'Read-AgentDef parses nested cannot_modify boundaries'
 
 $architectDef = Read-AgentDef -agentName 'architect' -root $script:repoRoot
-Assert-True ($architectDef.agents -contains 'AgentX Product Manager') 'Read-AgentDef parses multiline collaborator agents from frontmatter'
+Assert-True ($architectDef.agents -contains 'Frontier Product FDE') 'Read-AgentDef parses multiline collaborator agents from frontmatter'
 $architectClarifyTargets = @(Resolve-ClarificationTargetList -agentDef $architectDef)
 Assert-True ($architectClarifyTargets -contains 'product-manager') 'Resolve-ClarificationTargetList maps Architect collaborators to runtime agent IDs'
 
@@ -614,7 +614,7 @@ Assert-Equal $engineerDef.tools.Count 10 'Read-AgentDef stops tools at the next 
 Assert-Equal $engineerDef.agents.Count 9 'Read-AgentDef parses only collaborator entries as agents'
 Assert-Equal $engineerDef.canModify.Count 5 'Read-AgentDef parses only can_modify boundary entries'
 Assert-Equal $engineerDef.cannotModify.Count 4 'Read-AgentDef parses only cannot_modify boundary entries'
-Assert-True (-not ($engineerDef.constraints -contains 'AgentX Architect')) 'Read-AgentDef does not inject collaborators as constraints'
+Assert-True (-not ($engineerDef.constraints -contains 'Frontier Architecture FDE')) 'Read-AgentDef does not inject collaborators as constraints'
 $engineerClarifyTargets = @(Resolve-ClarificationTargetList -agentDef $engineerDef)
 Assert-True ($engineerClarifyTargets -contains 'architect') 'Resolve-ClarificationTargetList keeps direct runtime agent IDs available for Engineer'
 Assert-True ($engineerClarifyTargets -contains 'data-scientist') 'Resolve-ClarificationTargetList includes Data Scientist for Engineer alignment checkpoints'
@@ -683,7 +683,7 @@ try {
         -RecordType 'clarification'
     Assert-Equal $ledgerId 'CLR-42-001' 'Save-ClarificationRecord generates sequential CLR ID'
 
-    $ledgerFile = Join-Path $ledgerRoot '.agentx' 'state' 'clarifications' 'issue-42.json'
+    $ledgerFile = Join-Path $ledgerRoot '.frontier' 'state' 'clarifications' 'issue-42.json'
     Assert-True (Test-Path $ledgerFile) 'Save-ClarificationRecord creates the ledger file on disk'
 
     $ledgerContent = Get-Content $ledgerFile -Raw -Encoding utf8 | ConvertFrom-Json -Depth 20
@@ -763,7 +763,7 @@ try {
         ) `
         -Resolved $true `
         -EscalatedToHuman $false
-    $generalFile = Join-Path $ledgerRoot '.agentx' 'state' 'clarifications' 'issue-0.json'
+    $generalFile = Join-Path $ledgerRoot '.frontier' 'state' 'clarifications' 'issue-0.json'
     Assert-True (Test-Path $generalFile) 'Save-ClarificationRecord creates a general ledger for issue 0'
     Assert-Equal $generalId 'CLR-0-001' 'General ledger record gets CLR-0 prefix'
 } finally {
@@ -773,7 +773,7 @@ try {
 $runnerTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-runner-loop-" + [System.IO.Path]::GetRandomFileName())
 New-Item -ItemType Directory -Path $runnerTestRoot -Force | Out-Null
 try {
-    $loopStateDir = Join-Path $runnerTestRoot '.agentx\state'
+    $loopStateDir = Join-Path $runnerTestRoot '.frontier\state'
     New-Item -ItemType Directory -Path $loopStateDir -Force | Out-Null
     $loopStatePath = Join-Path $loopStateDir 'loop-state.json'
     $currentLoopTimestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
@@ -936,7 +936,7 @@ try {
     Assert-True $unsyncedLoopState.active 'Invoke-AgenticLoop preserves the active loop flag when SkipLoopStateSync is used'
     Assert-Equal ([int]$unsyncedLoopState.iteration) 1 'Invoke-AgenticLoop does not mutate loop iterations when SkipLoopStateSync is used'
 
-    '{"harness":{"selfReview":{"minIterations":2,"maxIterations":4,"stallThreshold":2,"enableCategoryVerdicts":false,"enableCalibrationExamples":false,"enableStallDetection":false}}}' | Set-Content -Path (Join-Path $runnerTestRoot '.agentx\config.json') -Encoding UTF8
+    '{"harness":{"selfReview":{"minIterations":2,"maxIterations":4,"stallThreshold":2,"enableCategoryVerdicts":false,"enableCalibrationExamples":false,"enableStallDetection":false}}}' | Set-Content -Path (Join-Path $runnerTestRoot '.frontier\config.json') -Encoding UTF8
     Remove-Item $loopStatePath -ErrorAction SilentlyContinue
     $script:runnerMessages.Clear()
     $script:selfReviewCalls = 0
@@ -945,7 +945,7 @@ try {
     Assert-Equal $configuredResult.exitReason 'text_response' 'Invoke-AgenticLoop still completes successfully with self-review config overrides'
     Assert-Equal $script:selfReviewCalls 2 'Invoke-AgenticLoop honors an explicit higher internal-review minimum'
     Assert-Equal $configuredResult.iterations 2 'Invoke-AgenticLoop stops after the configured internal-review minimum'
-    Remove-Item -LiteralPath (Join-Path $runnerTestRoot '.agentx\config.json') -Force
+    Remove-Item -LiteralPath (Join-Path $runnerTestRoot '.frontier\config.json') -Force
 
     @{
         active = $true
@@ -1054,6 +1054,11 @@ try {
     Assert-True (-not (Test-SandboxPath -Path '.git/hooks/pre-commit' -WorkspaceRoot $sandboxRoot).allowed) 'git hooks directory is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.git/config' -WorkspaceRoot $sandboxRoot).allowed) 'git config is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.agentx/state/loop-state.json' -WorkspaceRoot $sandboxRoot).allowed) 'gate-bearing loop state is blocked'
+    foreach ($protectedPath in @('.frontier/state/loop-state.json', '.hve/state/loop-state.json', '.agentx/frontier.ps1', '.agentx/frontier.sh', '.agentx/agentx.sh')) {
+        Assert-True (-not (Test-SandboxPath -Path $protectedPath -WorkspaceRoot $sandboxRoot).allowed) "$protectedPath is protected across brand aliases"
+        $protectedWrite = Invoke-Tool 'file_write' @{ filePath = $protectedPath; content = 'tampered' } $sandboxRoot
+        Assert-True $protectedWrite.error "file_write rejects $protectedPath"
+    }
     # The gate implementations are protected by the same rationale as the state.
     Assert-True (-not (Test-SandboxPath -Path '.agentx/agentx-cli.ps1' -WorkspaceRoot $sandboxRoot).allowed) 'the CLI that implements the gate is blocked'
     Assert-True (-not (Test-SandboxPath -Path '.github/hooks/pre-commit' -WorkspaceRoot $sandboxRoot).allowed) 'the installed hook source is blocked'
@@ -1172,7 +1177,7 @@ Write-Host ''
 Write-Host ' Runner self-review record' -ForegroundColor White
 $selfReviewRoot = Join-Path ([IO.Path]::GetTempPath()) ("agentx-runner-selfreview-{0}" -f [guid]::NewGuid().ToString('N'))
 try {
-    New-Item -ItemType Directory -Path (Join-Path $selfReviewRoot '.agentx\state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $selfReviewRoot '.frontier\state') -Force | Out-Null
     $nowStamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
     ([ordered]@{
         active          = $true
@@ -1185,12 +1190,12 @@ try {
         lastIterationAt = $nowStamp
         history         = @()
     } | ConvertTo-Json -Depth 10) |
-        Set-Content -LiteralPath (Join-Path $selfReviewRoot '.agentx\state\loop-state.json') -Encoding utf8
+        Set-Content -LiteralPath (Join-Path $selfReviewRoot '.frontier\state\loop-state.json') -Encoding utf8
 
     Sync-AgenticLoopState -WorkspaceRoot $selfReviewRoot -IssueNumber 0 -Iterations 5 -ExitReason 'text_response' `
         -FinalText 'Autonomous run finished' -SelfReview ([PSCustomObject]@{ approved = $true; high = 0; medium = 0; low = 0 })
 
-    $syncedState = Get-Content -LiteralPath (Join-Path $selfReviewRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json
+    $syncedState = Get-Content -LiteralPath (Join-Path $selfReviewRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json
     $lastEntry = @($syncedState.history)[-1]
     Assert-True ($null -ne $lastEntry) 'runner appends a history entry when its work completes'
     Assert-True ([bool]$syncedState.active) 'runner keeps the loop active for independent review'
@@ -1212,7 +1217,7 @@ try {
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $selfReviewRoot
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $selfReviewRoot
     foreach ($argument in @('-NoProfile', '-File', (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1'), 'loop', 'iterate', '-s', 'Independent review approved', '-e', $evidencePath, '--verdict', 'approved', '--reviewer', 'runner-test-reviewer', '--high', '0', '--medium', '0', '--low', '0')) {
         $startInfo.ArgumentList.Add($argument)
     }
@@ -1221,7 +1226,7 @@ try {
     [void]$process.StandardError.ReadToEnd()
     $process.WaitForExit()
     Assert-Equal $process.ExitCode 0 'independent verdict can be appended after autonomous work completes'
-    $reviewedState = Get-Content -LiteralPath (Join-Path $selfReviewRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json
+    $reviewedState = Get-Content -LiteralPath (Join-Path $selfReviewRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json
     $reviewEntry = @($reviewedState.history)[-1]
     Assert-Equal ([string]$reviewEntry.review.verdict) 'approved' 'appended verdict is stored as the final structured review'
 } finally {
@@ -1249,16 +1254,16 @@ foreach ($highRiskPrompt in @('Implement password reset', 'Validate JWT claims',
 
 $minimumSyncRoot = Join-Path ([IO.Path]::GetTempPath()) ("agentx-runner-minimum-{0}" -f [guid]::NewGuid().ToString('N'))
 try {
-    New-Item -ItemType Directory -Path (Join-Path $minimumSyncRoot '.agentx\state') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $minimumSyncRoot '.frontier\state') -Force | Out-Null
     $minimumReviewState | Add-Member -NotePropertyName startedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
     $minimumReviewState | Add-Member -NotePropertyName lastIterationAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
     $minimumReviewState | Add-Member -NotePropertyName history -NotePropertyValue @() -Force
-    $minimumReviewState | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $minimumSyncRoot '.agentx\state\loop-state.json') -Encoding utf8
+    $minimumReviewState | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $minimumSyncRoot '.frontier\state\loop-state.json') -Encoding utf8
 
     Sync-AgenticLoopState -WorkspaceRoot $minimumSyncRoot -IssueNumber 0 -Iterations 1 -ExitReason 'text_response' `
         -FinalText 'Premature final response' -SelfReview ([PSCustomObject]@{ approved = $true; high = 0; medium = 0; low = 0 })
 
-    $minimumSynced = Get-Content -LiteralPath (Join-Path $minimumSyncRoot '.agentx\state\loop-state.json') -Raw | ConvertFrom-Json
+    $minimumSynced = Get-Content -LiteralPath (Join-Path $minimumSyncRoot '.frontier\state\loop-state.json') -Raw | ConvertFrom-Json
     Assert-Equal ([int]$minimumSynced.iteration) 1 'state synchronization preserves the actual quality-iteration count'
     Assert-True ([bool]$minimumSynced.active) 'state remains active when actual passes are below the minimum'
     Assert-Equal ([string]$minimumSynced.status) 'active' 'premature runner response does not mark the loop complete'

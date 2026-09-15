@@ -2,7 +2,7 @@
 name: "power-automate-flow-json"
 description: 'Author Power Automate cloud flow source (Workflows/<name>-FLOW.json) for unpacked Power Platform solutions. Covers triggers, actions, connection references, expressions, runAfter error handling, and the flow GUID convention.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-30"
 compatibility:

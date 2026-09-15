@@ -2,7 +2,7 @@
   "name": "agentx-video-studio",
   "version": "0.1.0",
   "private": true,
-  "description": "Programmatic persona demo videos for the AgentX landing page (Remotion).",
+  "description": "Programmatic persona demo videos for the Frontier landing page (Remotion).",
   "scripts": {
     "studio": "remotion studio",
     "render:pm": "remotion render PMDemo out/pm.mp4",

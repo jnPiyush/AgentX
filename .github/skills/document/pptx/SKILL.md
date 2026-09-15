@@ -2,7 +2,7 @@
 name: "pptx"
 description: 'Read, write, and transform Microsoft PowerPoint .pptx files. Use when generating decks from data, extracting slide text or speaker notes, building tables and charts on slides, applying templates, or converting Markdown to PowerPoint.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-31"
   updated: "2026-05-31"

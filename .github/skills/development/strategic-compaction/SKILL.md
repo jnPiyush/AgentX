@@ -2,7 +2,7 @@
 name: "strategic-compaction"
 description: "Decide when to compact, reset, or continue a long-running agent session. Use when context pressure rises, when a checkpoint boundary is reached, or when a clean handoff to a different agent is needed. Encodes the rule that compaction is safe between phases but dangerous mid-implementation, and that reset beats compaction once durable artifacts diverge from the chat transcript."
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-17"
   updated: "2026-05-17"
@@ -56,7 +56,7 @@ If you cannot reconstruct the active slice, blocker, and next action from durabl
 
 Do not compact unless ALL of these are true:
 
-- [ ] Active issue number is recorded in `.agentx/state/loop-state.json` or equivalent.
+- [ ] Active issue number is recorded in `.frontier/state/loop-state.json` or equivalent.
 - [ ] Active execution plan exists under `docs/execution/plans/` and reflects the current state.
 - [ ] Active bounded contract (if any) is in `Active` or `Complete` status, not `Proposed`.
 - [ ] Recent verification evidence is linked from the plan or progress log.
@@ -118,7 +118,7 @@ Do not hardcode behavior for one model family. Reason from available context bud
 | Use compaction as a substitute for an execution plan | The summary is volatile; the plan is durable. Compaction is not memory. |
 | Compact every N turns on a fixed schedule | Schedule-driven compaction interrupts active slices and loses work. |
 
-## Integration With AgentX
+## Integration With Frontier
 
 - The Reset-vs-Compaction policy in [docs/WORKFLOW.md](../../../../docs/WORKFLOW.md#reset-vs-compaction-policy) is the source of truth; this skill is the day-to-day operational distillation.
 - Pair with the `context-management` skill for token-budget arithmetic.

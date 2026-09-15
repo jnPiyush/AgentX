@@ -90,7 +90,7 @@ Goal: Land the fix and prevent the recurrence.
 - If Phase 2 found a recurring pattern, file a follow-up issue for the refactor; do not expand the current change
 - Record the root cause in the issue and (if reusable) in a learning capture
 
-## AgentX Wiring
+## Frontier Wiring
 
 This skill is referenced from:
 

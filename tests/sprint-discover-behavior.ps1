@@ -19,10 +19,11 @@ function New-TestWorkspace([string]$name) {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("agentx-sprint-discover-test-{0}-{1}" -f $name, [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $root '.agentx') -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $root '.agentx\issues') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $root '.frontier\issues') -Force | Out-Null
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx.ps1') (Join-Path $root '.agentx\agentx.ps1') -Force
+    Copy-Item (Join-Path $script:repoRoot '.agentx\frontier.ps1') (Join-Path $root '.agentx\frontier.ps1') -Force
     Copy-Item (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1') (Join-Path $root '.agentx\agentx-cli.ps1') -Force
-    '{"provider":"local","integration":"local","mode":"local","nextIssueNumber":1}' | Set-Content (Join-Path $root '.agentx\config.json') -Encoding utf8
+    '{"provider":"local","integration":"local","mode":"local","nextIssueNumber":1}' | Set-Content (Join-Path $root '.frontier\config.json') -Encoding utf8
     return $root
 }
 
@@ -32,7 +33,7 @@ function Remove-TestWorkspace([string]$root) {
     }
 }
 
-function Invoke-AgentX([string]$root, [string[]]$arguments) {
+function Invoke-Frontier([string]$root, [string[]]$arguments) {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'pwsh'
     $startInfo.WorkingDirectory = $root
@@ -45,7 +46,7 @@ function Invoke-AgentX([string]$root, [string[]]$arguments) {
     foreach ($argument in $arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
-    $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $root
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $root
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
     $stdout = $process.StandardOutput.ReadToEnd()
@@ -104,7 +105,7 @@ function Invoke-AgenticLoop {
 function Test-SprintDryRunIssueOnly {
     $root = New-TestWorkspace 'sprint-dryrun'
     try {
-        $result = Invoke-AgentX $root @('sprint', '-i', '42', '--dry-run')
+        $result = Invoke-Frontier $root @('sprint', '-i', '42', '--dry-run')
         Assert-True ($result.ExitCode -eq 0) 'sprint dry-run with issue only exits successfully'
         Assert-True ($result.Output -match 'Sprint -- Full Pipeline') 'sprint dry-run renders the pipeline header'
         Assert-True ($result.Output -match 'Issue: #42') 'sprint dry-run preserves issue context in summary output'
@@ -129,9 +130,9 @@ function Test-SprintPassesIssueContextToBuildAndReview {
   "comments": []
 }
 '@
-        $issueJson | Set-Content (Join-Path $root '.agentx\issues\1.json') -Encoding utf8
+        $issueJson | Set-Content (Join-Path $root '.frontier\issues\1.json') -Encoding utf8
 
-        $result = Invoke-AgentX $root @('sprint', '-i', '1')
+        $result = Invoke-Frontier $root @('sprint', '-i', '1')
         $records = if (Test-Path $recordPath) { @(Get-Content $recordPath -Encoding utf8) } else { @() }
         if (($records | Where-Object { $_ -match '^engineer\|Implement issue #1\|1$' }).Count -ne 1 -or
             ($records | Where-Object { $_ -match '^reviewer\|Review changes for issue #1\|1$' }).Count -ne 1) {
@@ -153,7 +154,7 @@ function Test-SprintStopsOnFailedSelfReview {
     $root = New-TestWorkspace 'sprint-review-failure'
     try {
         Initialize-FailedRunner $root
-        $result = Invoke-AgentX $root @('sprint', 'Exercise failed runner result')
+        $result = Invoke-Frontier $root @('sprint', 'Exercise failed runner result')
         Assert-True ($result.ExitCode -ne 0) 'sprint exits nonzero when build self-review fails'
         Assert-True ($result.Output -match '\[FAIL\].*Build did not complete \(self_review_failed\)') 'sprint reports failed self-review as a failed build'
         Assert-True ($result.Output -notmatch '\[PASS\].*Build completed') 'sprint never labels failed self-review as completed'
@@ -176,10 +177,10 @@ function Test-WatchDoesNotCountFailedSelfReview {
             state = 'open'
             created = '2026-04-15T00:00:00Z'
             comments = @()
-        } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root '.agentx\issues\1.json') -Encoding utf8
+        } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root '.frontier\issues\1.json') -Encoding utf8
 
-        $result = Invoke-AgentX $root @('watch', '--execute', '--once')
-        $watchState = Get-Content (Join-Path $root '.agentx\state\watch-state.json') -Raw | ConvertFrom-Json
+        $result = Invoke-Frontier $root @('watch', '--execute', '--once')
+        $watchState = Get-Content (Join-Path $root '.frontier\state\watch-state.json') -Raw | ConvertFrom-Json
         if ($result.Output -notmatch '\[FAIL\].*#1 did not complete \(self_review_failed\)') {
             Write-Host '--- watch output ---' -ForegroundColor DarkGray
             Write-Host $result.Output
@@ -195,17 +196,17 @@ function Test-WatchDoesNotCountFailedSelfReview {
 function Test-DiscoverEscapesQuotedSignals {
     $root = New-TestWorkspace 'discover'
     try {
-        New-Item -ItemType Directory -Path (Join-Path $root '.agentx\signals') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $root '.frontier\signals') -Force | Out-Null
         $signals = @(
             [PSCustomObject]@{ timestamp = '2026-04-15T00:00:00Z'; event = 'copilot-agent:postToolUse'; tool = 'functions.read_file' },
             [PSCustomObject]@{ timestamp = '2026-04-15T00:00:01Z'; event = 'copilot-agent:postToolUse'; tool = 'functions.read_file' },
             [PSCustomObject]@{ timestamp = '2026-04-15T00:00:02Z'; event = 'copilot-agent:errorOccurred'; error = 'unexpected "quoted" failure' },
             [PSCustomObject]@{ timestamp = '2026-04-15T00:00:03Z'; event = 'copilot-agent:errorOccurred'; error = 'unexpected "quoted" failure' }
         )
-        $signals | ForEach-Object { $_ | ConvertTo-Json -Compress } | Set-Content (Join-Path $root '.agentx\signals\sessions.jsonl') -Encoding utf8
+        $signals | ForEach-Object { $_ | ConvertTo-Json -Compress } | Set-Content (Join-Path $root '.frontier\signals\sessions.jsonl') -Encoding utf8
 
-        $result = Invoke-AgentX $root @('discover', 'run')
-        $patternsFile = Join-Path $root '.agentx\patterns\discovered.yaml'
+        $result = Invoke-Frontier $root @('discover', 'run')
+        $patternsFile = Join-Path $root '.frontier\patterns\discovered.yaml'
         $patterns = Get-Content $patternsFile -Raw -Encoding utf8
         if ($result.Output -notmatch 'Error signals:\s+2' -or $patterns -notmatch 'unexpected \\"quoted\\" failure') {
             Write-Host '--- discover output ---' -ForegroundColor DarkGray
@@ -226,9 +227,9 @@ function Test-DiscoverEscapesQuotedSignals {
 function Test-GraduateWritesSkillsUnderDevelopmentCategory {
     $root = New-TestWorkspace 'graduate'
     try {
-        New-Item -ItemType Directory -Path (Join-Path $root '.agentx\patterns') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $root '.frontier\patterns') -Force | Out-Null
         @'
-# AgentX Discovered Patterns
+# Frontier Discovered Patterns
 patterns:
   - id: tool-preference-functions-read-file
     trigger: "when working with functions.read_file"
@@ -236,11 +237,11 @@ patterns:
     confidence: 0.85
     domain: tooling
     observations: 5
-'@ | Set-Content (Join-Path $root '.agentx\patterns\discovered.yaml') -Encoding utf8
+'@ | Set-Content (Join-Path $root '.frontier\patterns\discovered.yaml') -Encoding utf8
 
-        $result = Invoke-AgentX $root @('graduate', 'run')
+        $result = Invoke-Frontier $root @('graduate', 'run')
         $skillFile = Join-Path $root '.github\skills\development\graduated-tooling\SKILL.md'
-        $archiveFiles = @(Get-ChildItem (Join-Path $root '.agentx\patterns\archive') -Filter 'graduated-*.yaml' -ErrorAction SilentlyContinue)
+        $archiveFiles = @(Get-ChildItem (Join-Path $root '.frontier\patterns\archive') -Filter 'graduated-*.yaml' -ErrorAction SilentlyContinue)
         $archiveContent = if ($archiveFiles.Count -gt 0) { Get-Content $archiveFiles[0].FullName -Raw -Encoding utf8 } else { '' }
         if ($result.ExitCode -ne 0 -or $archiveContent -notmatch '\.github/skills/development/graduated-tooling/SKILL\.md') {
             Write-Host '--- graduate output ---' -ForegroundColor DarkGray
@@ -260,20 +261,20 @@ patterns:
 function Test-DiscoverRunIsIdempotent {
     $root = New-TestWorkspace 'discover-repeat'
     try {
-        New-Item -ItemType Directory -Path (Join-Path $root '.agentx\signals') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $root '.frontier\signals') -Force | Out-Null
         $signals = @(
             [PSCustomObject]@{ timestamp = '2026-04-16T00:00:00Z'; event = 'copilot-agent:postToolUse'; tool = 'functions.read_file' },
             [PSCustomObject]@{ timestamp = '2026-04-16T00:00:01Z'; event = 'copilot-agent:postToolUse'; tool = 'functions.read_file' },
             [PSCustomObject]@{ timestamp = '2026-04-16T00:00:02Z'; event = 'copilot-agent:errorOccurred'; error = 'repeated error' },
             [PSCustomObject]@{ timestamp = '2026-04-16T00:00:03Z'; event = 'copilot-agent:errorOccurred'; error = 'repeated error' }
         )
-        $signals | ForEach-Object { $_ | ConvertTo-Json -Compress } | Set-Content (Join-Path $root '.agentx\signals\sessions.jsonl') -Encoding utf8
+        $signals | ForEach-Object { $_ | ConvertTo-Json -Compress } | Set-Content (Join-Path $root '.frontier\signals\sessions.jsonl') -Encoding utf8
 
-        $first = Invoke-AgentX $root @('discover', 'run')
-        $patternsFile = Join-Path $root '.agentx\patterns\discovered.yaml'
+        $first = Invoke-Frontier $root @('discover', 'run')
+        $patternsFile = Join-Path $root '.frontier\patterns\discovered.yaml'
         $yaml1 = Get-Content $patternsFile -Raw -Encoding utf8
 
-        $second = Invoke-AgentX $root @('discover', 'run')
+        $second = Invoke-Frontier $root @('discover', 'run')
 
         if ($second.ExitCode -ne 0) {
             Write-Host '--- second discover output ---' -ForegroundColor DarkGray

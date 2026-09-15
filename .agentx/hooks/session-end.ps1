@@ -1,14 +1,14 @@
 #!/usr/bin/env pwsh
 [CmdletBinding()]
 param(
-    [string]$Summary = $env:AGENTX_FINAL_SUMMARY,
-    [string]$Evidence = $env:AGENTX_EVIDENCE,
-    [string]$Passing = $env:AGENTX_PASSING_TESTS
+    [string]$Summary = $(if ($env:FRONTIER_FINAL_SUMMARY) { $env:FRONTIER_FINAL_SUMMARY } elseif ($env:HVE_FINAL_SUMMARY) { $env:HVE_FINAL_SUMMARY } else { $env:AGENTX_FINAL_SUMMARY }),
+    [string]$Evidence = $(if ($env:FRONTIER_EVIDENCE) { $env:FRONTIER_EVIDENCE } elseif ($env:HVE_EVIDENCE) { $env:HVE_EVIDENCE } else { $env:AGENTX_EVIDENCE }),
+    [string]$Passing = $(if ($env:FRONTIER_PASSING_TESTS) { $env:FRONTIER_PASSING_TESTS } elseif ($env:HVE_PASSING_TESTS) { $env:HVE_PASSING_TESTS } else { $env:AGENTX_PASSING_TESTS })
 )
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..' '..')).Path
-$traceDir = Join-Path $root '.agentx/state'
+$traceDir = Join-Path $root '.frontier/state'
 $traceFile = Join-Path $traceDir 'hook-trace.jsonl'
 
 function Write-HookTrace {
@@ -27,9 +27,9 @@ if ([string]::IsNullOrWhiteSpace($Summary) -or [string]::IsNullOrWhiteSpace($Evi
     exit 0
 }
 
-$cli = Join-Path $root '.agentx/agentx.ps1'
+$cli = Join-Path $root '.agentx/frontier.ps1'
 if (-not (Test-Path $cli)) {
-    Write-HookTrace -Status 'skipped' -Detail 'AgentX CLI wrapper not found.'
+    Write-HookTrace -Status 'skipped' -Detail 'Frontier CLI wrapper not found.'
     exit 0
 }
 

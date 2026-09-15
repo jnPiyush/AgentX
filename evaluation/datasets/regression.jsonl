@@ -7,7 +7,7 @@
 {"id":"feature-1","input":"Add a new sidebar panel that displays real-time agent workflow status and checkpoint progress.","expected":"type:feature","tags":["happy","feature"]}
 {"id":"bug-2","input":"The SSRF validator incorrectly allows IPv4-mapped IPv6 addresses like ::ffff:127.0.0.1 to bypass private IP checks.","expected":"type:bug","tags":["edge","security","bug"]}
 {"id":"story-2","input":"Update the ASCII-only validation script to scan CONTRIBUTING.md and agent definition files.","expected":"type:story","tags":["happy","story"]}
-{"id":"testing-1","input":"Write end-to-end Playwright tests for the AgentX sidebar tree views and command palette interactions.","expected":"type:testing","tags":["edge","testing"]}
+{"id":"testing-1","input":"Write end-to-end Playwright tests for the Frontier sidebar tree views and command palette interactions.","expected":"type:testing","tags":["edge","testing"]}
 {"id":"fabric-1","input":"Build a Microsoft Fabric Lakehouse medallion pipeline with parameterized notebooks and data quality checks.","expected":"type:fabric","tags":["edge","fabric"]}
 {"id":"fabric-2","input":"Create a new capability for a Microsoft Fabric Lakehouse pipeline.","expected":"type:fabric","tags":["edge","fabric","precedence"]}
 {"id":"fabric-4","input":"[Feature] Build a Microsoft Fabric Lakehouse pipeline.","expected":"type:fabric","tags":["edge","fabric","feature-prefix"]}

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   assessBoundedParallelDelivery,
   listBoundedParallelRuns,
@@ -12,7 +12,7 @@ let parallelChannel: vscode.OutputChannel | undefined;
 
 function getParallelChannel(): vscode.OutputChannel {
   if (!parallelChannel) {
-    parallelChannel = vscode.window.createOutputChannel('AgentX Bounded Parallel');
+    parallelChannel = vscode.window.createOutputChannel('Frontier Bounded Parallel');
   }
   return parallelChannel;
 }
@@ -52,24 +52,24 @@ async function promptIssueOrPlan(): Promise<{ readonly issue?: number; readonly 
 
 export function registerParallelDeliveryCommands(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('agentx.showBoundedParallelRuns', async () => {
+    vscode.commands.registerCommand('frontier.showBoundedParallelRuns', async () => {
       if (!agentx.workspaceRoot) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to show bounded parallel runs.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to show bounded parallel runs.');
         return;
       }
       try {
         showRuns(renderBoundedParallelRunsText(await listBoundedParallelRuns(agentx)));
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`AgentX failed to list bounded parallel runs: ${message}`);
+        vscode.window.showErrorMessage(`Frontier failed to list bounded parallel runs: ${message}`);
       }
     }),
-    vscode.commands.registerCommand('agentx.assessBoundedParallelDelivery', async () => {
+    vscode.commands.registerCommand('frontier.assessBoundedParallelDelivery', async () => {
       if (!agentx.workspaceRoot) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to assess bounded parallel delivery.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to assess bounded parallel delivery.');
         return;
       }
       const scope = await promptIssueOrPlan();
@@ -129,12 +129,12 @@ export function registerParallelDeliveryCommands(
         showRuns(renderBoundedParallelRunsText([run]));
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`AgentX failed to assess bounded parallel delivery: ${message}`);
+        vscode.window.showErrorMessage(`Frontier failed to assess bounded parallel delivery: ${message}`);
       }
     }),
-    vscode.commands.registerCommand('agentx.startBoundedParallelDelivery', async () => {
+    vscode.commands.registerCommand('frontier.startBoundedParallelDelivery', async () => {
       if (!agentx.workspaceRoot) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to start bounded parallel delivery.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to start bounded parallel delivery.');
         return;
       }
       const runs = await listBoundedParallelRuns(agentx);
@@ -172,12 +172,12 @@ export function registerParallelDeliveryCommands(
         showRuns(renderBoundedParallelRunsText([run]));
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`AgentX failed to start bounded parallel delivery: ${message}`);
+        vscode.window.showErrorMessage(`Frontier failed to start bounded parallel delivery: ${message}`);
       }
     }),
-    vscode.commands.registerCommand('agentx.reconcileBoundedParallelRun', async () => {
+    vscode.commands.registerCommand('frontier.reconcileBoundedParallelRun', async () => {
       if (!agentx.workspaceRoot) {
-        vscode.window.showWarningMessage('AgentX needs an open workspace to reconcile bounded parallel output.');
+        vscode.window.showWarningMessage('Frontier needs an open workspace to reconcile bounded parallel output.');
         return;
       }
       const runs = await listBoundedParallelRuns(agentx);
@@ -227,7 +227,7 @@ export function registerParallelDeliveryCommands(
         showRuns(renderBoundedParallelRunsText([run]));
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`AgentX failed to reconcile bounded parallel output: ${message}`);
+        vscode.window.showErrorMessage(`Frontier failed to reconcile bounded parallel output: ${message}`);
       }
     }),
   );

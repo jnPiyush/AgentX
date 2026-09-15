@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerWorkflowCommand } from '../../commands/workflow';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -11,7 +11,7 @@ import { AgentXContext } from '../../agentxContext';
 describe('registerWorkflowCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
   let registeredCallbacks: Record<string, (...args: unknown[]) => unknown>;
 
   beforeEach(() => {
@@ -26,7 +26,7 @@ describe('registerWorkflowCommand', () => {
       checkInitialized: sandbox.stub(),
       runCli: sandbox.stub(),
       workspaceRoot: undefined,
-    } as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    } as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (cmd: string, cb: (...args: unknown[]) => unknown) => {
@@ -35,7 +35,7 @@ describe('registerWorkflowCommand', () => {
       },
     );
 
-    registerWorkflowCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    registerWorkflowCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
   });
 
   afterEach(() => {
@@ -44,10 +44,10 @@ describe('registerWorkflowCommand', () => {
 
   it('should register the agentx.runWorkflow command', () => {
     assert.ok(
-      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.runWorkflow'),
+      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.runWorkflow'),
     );
     assert.ok(
-      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.runWorkflowType'),
+      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.runWorkflowType'),
     );
   });
 
@@ -55,7 +55,7 @@ describe('registerWorkflowCommand', () => {
     fakeAgentx.checkInitialized.resolves(false);
     const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
 
-    await registeredCallbacks['agentx.runWorkflow']!();
+    await registeredCallbacks['frontier.runWorkflow']!();
     assert.ok(warnSpy.calledOnce);
   });
 
@@ -63,7 +63,7 @@ describe('registerWorkflowCommand', () => {
     fakeAgentx.checkInitialized.resolves(true);
     sandbox.stub(vscode.window, 'showQuickPick').resolves(undefined);
 
-    await registeredCallbacks['agentx.runWorkflow']!();
+    await registeredCallbacks['frontier.runWorkflow']!();
     assert.ok(fakeAgentx.runCli.notCalled);
   });
 
@@ -72,7 +72,7 @@ describe('registerWorkflowCommand', () => {
     sandbox.stub(vscode.window, 'showQuickPick').resolves({ label: 'story', description: '' } as any);
     fakeAgentx.runCli.resolves('Step 1: Engineer\nStep 2: Reviewer');
 
-    await registeredCallbacks['agentx.runWorkflow']!();
+    await registeredCallbacks['frontier.runWorkflow']!();
     assert.ok(fakeAgentx.runCli.calledWith('workflow', ['story']));
   });
 
@@ -80,7 +80,7 @@ describe('registerWorkflowCommand', () => {
     fakeAgentx.checkInitialized.resolves(true);
     fakeAgentx.runCli.resolves('Step 1: Engineer\nStep 2: Reviewer');
 
-    await registeredCallbacks['agentx.runWorkflowType']!('bug');
+    await registeredCallbacks['frontier.runWorkflowType']!('bug');
     assert.ok(fakeAgentx.runCli.calledWith('workflow', ['bug']));
   });
 
@@ -90,7 +90,7 @@ describe('registerWorkflowCommand', () => {
     fakeAgentx.runCli.rejects(new Error('workflow error'));
     const errSpy = sandbox.spy(vscode.window, 'showErrorMessage');
 
-    await registeredCallbacks['agentx.runWorkflow']!();
+    await registeredCallbacks['frontier.runWorkflow']!();
     assert.ok(errSpy.calledOnce);
     assert.ok(String(errSpy.firstCall.args[0]).includes('workflow error'));
   });

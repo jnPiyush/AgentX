@@ -2,7 +2,7 @@
 name: "powerbi"
 description: 'Build Power BI reports, semantic models, DAX measures, and data visualizations. Use when designing star schemas, authoring DAX calculations, creating Power Query (M) transformations, optimizing report performance, or deploying Power BI content.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-03-04"
   updated: "2026-03-04"

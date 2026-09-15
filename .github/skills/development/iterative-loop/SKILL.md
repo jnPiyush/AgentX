@@ -3,7 +3,7 @@ name: "iterative-loop"
 description: 'Implement Ralph Loop iterative refinement for AI agent tasks. Use when a task needs multiple passes to reach quality: TDD red-green-refactor cycles, incremental feature building, self-correcting code generation, or any work with verifiable completion criteria. Covers loop setup, completion promises, progress tracking, and escape hatches.'
 user-invocable: false
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-02-24"
   updated: "2026-02-24"
@@ -35,7 +35,7 @@ compatibility:
 
 ## Prerequisites
 
-- AgentX CLI installed (`.agentx/agentx.ps1` or `.agentx/agentx.sh`)
+- Frontier CLI installed (`.agentx/frontier.ps1` or `.agentx/frontier.sh`)
 - Clear completion criteria defined before starting
 - Test framework configured (for TDD loops)
 
@@ -89,12 +89,12 @@ Need iterative refinement?
 
 The Engineer's quality loop is gated by the CLI, not by judgment:
 
-1. `loop start` initializes `.agentx/state/tests-baseline.json` as a placeholder and cleans the prior loop's archived evidence workspace. Record the actual baseline with `loop baseline -c <passing-test-count>` before iterating.
+1. `loop start` initializes `.frontier/state/tests-baseline.json` as a placeholder and cleans the prior loop's archived evidence workspace. Record the actual baseline with `loop baseline -c <passing-test-count>` before iterating.
 2. `loop iterate -e <path>` REQUIRES an existing evidence file (test report, coverage xml, scan json, mutation report). On accept, the CLI:
-  - **copies the original file** into an archive at `.agentx/state/loop-evidence/iter-<N>/<timestamp>-<filename>` while preserving the source,
+  - **copies the original file** into an archive at `.frontier/state/loop-evidence/iter-<N>/<timestamp>-<filename>` while preserving the source,
   - records `{ evidence, evidenceOriginal }` in loop history.
 3. If a tests baseline has been recorded, both `loop iterate` and `loop complete` REQUIRE `--passing <count>` and reject any count below baseline.
-4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact (for example, `final-gate.json` or a full-suite report) AND every iteration after #1 must already carry a still-existing archived evidence file. The final artifact is copied to `.agentx/state/loop-evidence/complete/`.
+4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact (for example, `final-gate.json` or a full-suite report) AND every iteration after #1 must already carry a still-existing archived evidence file. The final artifact is copied to `.frontier/state/loop-evidence/complete/`.
 5. The commit-msg hook rejects `fix:` commits that change production code under `.agentx/`, `scripts/`, `vscode-extension/src/`, or the standard app roots without adding a regression test in the same diff.
 
 Practical consequence: **generate a fresh file per iteration**. The source remains available, but freshness and SHA-256 reuse guards reject an old or identical artifact on the next iteration.
@@ -134,7 +134,7 @@ Rules:
 
 ### State Tracking
 
-Loop state is tracked in `.agentx/state/loop-state.json`:
+Loop state is tracked in `.frontier/state/loop-state.json`:
 
 ```json
 {
@@ -163,7 +163,7 @@ Best for implementing features with test coverage.
 
 **Setup:**
 ```powershell
-.\.agentx\agentx.ps1 loop start `
+.\.agentx\frontier.ps1 loop start `
   -Prompt "Implement user authentication with JWT. Write tests first (TDD)." `
   -MaxIterations 20 `
   -CompletionCriteria "ALL_TESTS_PASSING" `
@@ -201,7 +201,7 @@ Best for achieving zero lint errors, clean builds, or code quality targets.
 
 **Setup:**
 ```powershell
-.\.agentx\agentx.ps1 loop start `
+.\.agentx\frontier.ps1 loop start `
   -Prompt "Fix all TypeScript strict mode errors in src/" `
   -MaxIterations 15 `
   -CompletionCriteria "ZERO_ERRORS"
@@ -274,7 +274,7 @@ Best for large features that can be broken into sequential phases.
 
 **Setup:**
 ```powershell
-.\.agentx\agentx.ps1 loop start `
+.\.agentx\frontier.ps1 loop start `
   -Prompt "Build e-commerce cart: Phase 1: Data model, Phase 2: API, Phase 3: Tests" `
   -MaxIterations 50 `
   -CompletionCriteria "ALL_PHASES_COMPLETE"
@@ -303,7 +303,7 @@ Best for iterative self-review and quality improvement.
 
 **Setup:**
 ```powershell
-.\.agentx\agentx.ps1 loop start `
+.\.agentx\frontier.ps1 loop start `
   -Prompt "Review and improve error handling in src/services/" `
   -MaxIterations 5 `
   -CompletionCriteria "NO_ISSUES_FOUND"
@@ -329,14 +329,14 @@ When review finds zero issues, output: <promise>NO_ISSUES_FOUND</promise>
 
 ```powershell
 # PowerShell
-.\.agentx\agentx.ps1 loop start `
+.\.agentx\frontier.ps1 loop start `
   -Prompt "Your task description" `
   -MaxIterations 20 `
   -CompletionCriteria "DONE" `
   -IssueNumber 42
 
 # Bash
-./.agentx/agentx.sh loop start \
+./.agentx/frontier.sh loop start \
   "Your task description" \
   --max-iterations 20 \
   --completion-criteria "DONE" \
@@ -346,28 +346,28 @@ When review finds zero issues, output: <promise>NO_ISSUES_FOUND</promise>
 ### Check Loop Status
 
 ```powershell
-.\.agentx\agentx.ps1 loop status
+.\.agentx\frontier.ps1 loop status
 # Output: Iteration 3/20 | Started: 10:00 | Last: 10:05 | Promise: DONE
 ```
 
 ### Record Iteration Progress
 
 ```powershell
-.\.agentx\agentx.ps1 loop iterate -Summary "Fixed 3 tests, 2 remaining"
+.\.agentx\frontier.ps1 loop iterate -Summary "Fixed 3 tests, 2 remaining"
 # Increments iteration counter and logs summary
 ```
 
 ### Complete a Loop
 
 ```powershell
-.\.agentx\agentx.ps1 loop complete -Summary "All tests passing, coverage at 85%"
+.\.agentx\frontier.ps1 loop complete -Summary "All tests passing, coverage at 85%"
 # Marks loop as complete, records final summary
 ```
 
 ### Cancel a Loop
 
 ```powershell
-.\.agentx\agentx.ps1 loop cancel
+.\.agentx\frontier.ps1 loop cancel
 # Removes active loop state, logs cancellation reason
 ```
 
@@ -434,7 +434,7 @@ ALWAYS set `--max-iterations` as a safety net:
 
 ```powershell
 # Recommended: Set reasonable limits based on task complexity
-.\.agentx\agentx.ps1 loop start -Prompt "..." -MaxIterations 20
+.\.agentx\frontier.ps1 loop start -Prompt "..." -MaxIterations 20
 ```
 
 | Task Complexity | Recommended Max |
@@ -455,12 +455,12 @@ If an agent makes no progress for 3+ iterations, it SHOULD:
 ### Emergency Cancel
 
 ```powershell
-.\.agentx\agentx.ps1 loop cancel
+.\.agentx\frontier.ps1 loop cancel
 ```
 
 ---
 
-## Integration with AgentX Workflows
+## Integration with Frontier Workflows
 
 ### In Workflow TOML Files
 

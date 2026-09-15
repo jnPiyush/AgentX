@@ -77,7 +77,7 @@ async function main() {
     fs.writeFileSync(
       evidencePath,
       [
-        'AgentX VS Code Extension Host E2E',
+        'Frontier VS Code Extension Host E2E',
         `Status: PASS (${result.tests} test(s))`,
         'Assertions: extension activation, command registration, four sidebar contributions, loop-status execution',
         `VS Code executable: ${vscodeExecutablePath}`,

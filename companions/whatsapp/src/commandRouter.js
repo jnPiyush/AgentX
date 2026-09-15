@@ -1,10 +1,10 @@
-const { runAgentX } = require('./agentxRunner');
+const { runFrontier } = require('./frontierRunner');
 const { classifyCommand } = require('./commandPolicy');
 
 function helpText(config = {}) {
     const capabilities = config.capabilities || {};
     return [
-        'AgentX WhatsApp commands:',
+        'Frontier WhatsApp commands:',
         '',
         'Read-only (enabled by default):',
         '  ready                 - show priority work queue',
@@ -44,7 +44,7 @@ function planCommand(body, config) {
     return plan;
 }
 
-async function executePlan(plan, config, runner = runAgentX) {
+async function executePlan(plan, config, runner = runFrontier) {
     if (!plan || !plan.ok) return plan || { ok: false, text: 'Invalid command plan.' };
     if (config.runner && typeof config.runner.run === 'function') {
         return config.runner.run(plan.args);
@@ -52,7 +52,7 @@ async function executePlan(plan, config, runner = runAgentX) {
     return runner(plan.args, config);
 }
 
-async function routeCommand(body, config, runner = runAgentX) {
+async function routeCommand(body, config, runner = runFrontier) {
     return executePlan(planCommand(body, config), config, runner);
 }
 

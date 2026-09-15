@@ -34,7 +34,7 @@ describe('collectSkillEntries', () => {
   let skillsBase: string;
 
   beforeEach(() => {
-    tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-skills-test-'));
+    tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-skills-test-'));
     skillsBase = path.join(tmpRoot, '.github', 'skills');
     fs.mkdirSync(skillsBase, { recursive: true });
   });

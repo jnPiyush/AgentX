@@ -2,7 +2,7 @@
 name: "pdf"
 description: 'Read, write, and transform PDF files. Use when extracting text or tables from PDFs, merging or splitting documents, rotating pages, adding watermarks, generating new PDFs programmatically, filling AcroForm fields, encrypting/decrypting files, or running OCR on scanned pages.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-31"
   updated: "2026-05-31"

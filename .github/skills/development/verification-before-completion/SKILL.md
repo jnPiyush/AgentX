@@ -6,13 +6,13 @@ user-invocable: false
 
 # Verification Before Completion
 
-> WHEN: Any time the active agent is about to claim work is finished -- "done", "complete", "fixed", "tests pass", "loop complete", "ready for review", "deployed", "issue closed". The single most common AgentX failure mode is reporting completion that fresh verification would have caught.
+> WHEN: Any time the active agent is about to claim work is finished -- "done", "complete", "fixed", "tests pass", "loop complete", "ready for review", "deployed", "issue closed". The single most common Frontier failure mode is reporting completion that fresh verification would have caught.
 
 ## When to Use This Skill
 
 Load this skill when:
 
-- An Engineer agent is about to close an issue or run `agentx loop complete`
+- An Engineer agent is about to close an issue or run `frontier loop complete`
 - A Reviewer agent is about to set `APPROVED`
 - A Tester agent is about to mark a test plan green
 - A DevOps agent is about to claim a deployment succeeded
@@ -67,7 +67,7 @@ Execute the exact command that proves the claim, against the current commit. Exa
 | Build is clean | `dotnet build -warnaserror` / `tsc --noEmit` / `cargo build --release` |
 | Endpoint works | `curl -sfS http://localhost:PORT/health` |
 | Linter clean | `eslint . --max-warnings 0` / `ruff check .` |
-| Loop complete | `.agentx/agentx.ps1 loop status` |
+| Loop complete | `.agentx/frontier.ps1 loop status` |
 
 Do not skip to Step 5 from memory. Run it now.
 
@@ -101,7 +101,7 @@ Report completion with:
 
 If Steps 1-4 did not produce a clean result, the report is "NOT COMPLETE" plus the failure. Do not soften.
 
-## AgentX Wiring
+## Frontier Wiring
 
 This skill is referenced from:
 
@@ -109,7 +109,7 @@ This skill is referenced from:
 - **Reviewer agent** -- before setting `APPROVED` on Pass A or Pass B
 - **Tester agent** -- before marking a certification report green
 - **DevOps agent** -- before claiming deployment success
-- **`.agentx/agentx.ps1 loop complete`** -- the CLI gate that blocks handoff when the loop is not actually complete
+- **`.agentx/frontier.ps1 loop complete`** -- the CLI gate that blocks handoff when the loop is not actually complete
 
 When this skill fires, the agent MUST cite the command and the output excerpt in the loop's `iterate` or `complete` summary.
 

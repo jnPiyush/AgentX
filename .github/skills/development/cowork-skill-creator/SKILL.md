@@ -2,7 +2,7 @@
 name: "cowork-skill-creator"
 description: 'Create upload-ready Microsoft 365 Copilot Cowork skills as zip packages containing SKILL.md plus populated assets, references, and scripts folders. Use for Cowork, co-work, or coworker skill authoring and packaging requests.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-08-16"
   updated: "2026-08-16"

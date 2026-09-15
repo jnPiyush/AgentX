@@ -2,20 +2,20 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerShowIssueCommand } from '../../commands/showIssue';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 
 describe('registerShowIssueCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let callback: ((issueNumber?: string) => Promise<void>) | undefined;
   let fakeContext: vscode.ExtensionContext;
-  let agentx: AgentXContext;
+  let agentx: FrontierContext;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     fakeContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
     agentx = {
       runCli: sandbox.stub(),
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_command: string, registered: (issueNumber?: string) => Promise<void>) => {
         callback = registered;
@@ -63,7 +63,7 @@ describe('registerShowIssueCommand', () => {
       replace: sandbox.stub(),
       onDidChangeLogLevel: sandbox.stub(),
       logLevel: 1,
-      name: 'AgentX Issue Detail',
+      name: 'Frontier Issue Detail',
     } as unknown as vscode.LogOutputChannel);
 
     registerShowIssueCommand(fakeContext, agentx);
@@ -94,7 +94,7 @@ describe('registerShowIssueCommand', () => {
       replace: sandbox.stub(),
       onDidChangeLogLevel: sandbox.stub(),
       logLevel: 1,
-      name: 'AgentX Issue Detail',
+      name: 'Frontier Issue Detail',
     } as unknown as vscode.LogOutputChannel);
 
     registerShowIssueCommand(fakeContext, agentx);

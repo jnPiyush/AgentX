@@ -1,6 +1,6 @@
 # read-pdf
 
-AgentX plugin that converts PDFs to Markdown with per-page anchors. Prefers `pdftotext` (poppler) when available; falls back to [pypdf](https://pypdf.readthedocs.io/).
+Frontier plugin that converts PDFs to Markdown with per-page anchors. Prefers `pdftotext` (poppler) when available; falls back to [pypdf](https://pypdf.readthedocs.io/).
 
 ## Requirements
 

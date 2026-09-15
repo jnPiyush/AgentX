@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
   getLearningCaptureTarget,
   getDefaultLearningsQuery,
@@ -39,7 +39,7 @@ import {
 } from '../parallel/parallel-delivery';
 import { stripAnsi } from '../utils/stripAnsi';
 
-const CHAT_OUTPUT_CHANNEL_NAME = 'AgentX Chat';
+const CHAT_OUTPUT_CHANNEL_NAME = 'Frontier Chat';
 const CHAT_OUTPUT_INLINE_LIMIT = 4000;
 const CHAT_OUTPUT_PREVIEW_LINES = 8;
 const LIVE_STATUS_PATTERN = /\[(?:COMPACTION|CLARIFY(?: RESPONSE| DETAIL| \d+\/\d+)?|SELF-REVIEW(?: SUMMARY)?|EXECUTION SUMMARY|MODEL FALLBACK|LOOP WARNING|CIRCUIT BREAKER|TOOL ERROR|BOUNDARY BLOCKED|FAIL|WARN|PASS|HUMAN ESCALATION|HUMAN REQUIRED|HUMAN RESPONSE|HUMAN REQUIRED SESSION)\]|^\s*Iteration \d+\/\d+|^\s*Tool:/i;
@@ -49,23 +49,23 @@ const EXECUTION_SUMMARY_PATTERN = /^\[EXECUTION SUMMARY\].*$/gim;
 const SELF_REVIEW_SUMMARY_PATTERN = /^\[SELF-REVIEW SUMMARY\].*$/gim;
 
 export type PendingClarification = NonNullable<
-  Awaited<ReturnType<AgentXContext['getPendingClarification']>>
+  Awaited<ReturnType<FrontierContext['getPendingClarification']>>
 >;
 
 let chatOutputChannel: vscode.OutputChannel | undefined;
 
-function hasWorkspaceCliRuntime(agentx: AgentXContext): boolean {
-  return typeof (agentx as AgentXContext & { hasCliRuntime?: () => boolean }).hasCliRuntime !== 'function'
-    || (agentx as AgentXContext & { hasCliRuntime: () => boolean }).hasCliRuntime();
+function hasWorkspaceCliRuntime(agentx: FrontierContext): boolean {
+  return typeof (agentx as FrontierContext & { hasCliRuntime?: () => boolean }).hasCliRuntime !== 'function'
+    || (agentx as FrontierContext & { hasCliRuntime: () => boolean }).hasCliRuntime();
 }
 
 function renderMissingRuntimeMessage(): string {
   return [
-    '**AgentX workspace initialization is not available in this workspace.**',
+    '**Frontier workspace initialization is not available in this workspace.**',
     '',
     'This workspace has an open folder, but it has not been initialized with the `.agentx` state and artifact folders needed for `run`, loop execution, or clarification resume.',
     '',
-    'To enable formal AgentX execution in this repo, run **AgentX: Initialize Local Runtime** first.',
+    'To enable formal Frontier execution in this repo, run **Frontier: Initialize Local Runtime** first.',
   ].join('\n');
 }
 
@@ -91,7 +91,7 @@ export function resetChatRouterInternalStateForTests(): void {
 
 export async function runAgentCommand(
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   agentName: string,
   task: string,
 ): Promise<vscode.ChatResult> {
@@ -123,7 +123,7 @@ export async function runAgentCommand(
       { AGENTX_NONINTERACTIVE_HUMAN: '1' },
     );
 
-    writeOutputToChannel(`AgentX Chat Run: ${agentName}`, output);
+    writeOutputToChannel(`Frontier Chat Run: ${agentName}`, output);
 
     if (pendingSessionId) {
       await updatePendingClarification(agentx, {
@@ -140,7 +140,7 @@ export async function runAgentCommand(
     response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    response.markdown(`**AgentX error:** ${msg}`);
+    response.markdown(`**Frontier error:** ${msg}`);
   }
 
   return {};
@@ -148,7 +148,7 @@ export async function runAgentCommand(
 
 export async function resumePendingClarification(
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   pending: PendingClarification,
   guidance: string,
 ): Promise<vscode.ChatResult> {
@@ -183,7 +183,7 @@ export async function resumePendingClarification(
       { AGENTX_NONINTERACTIVE_HUMAN: '1' },
     );
 
-    writeOutputToChannel(`AgentX Chat Resume: ${pending.agentName}`, output);
+    writeOutputToChannel(`Frontier Chat Resume: ${pending.agentName}`, output);
 
     if (nextPendingSessionId) {
       await updatePendingClarification(agentx, {
@@ -200,14 +200,14 @@ export async function resumePendingClarification(
     response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    response.markdown(`**AgentX error:** ${msg}`);
+    response.markdown(`**Frontier error:** ${msg}`);
   }
 
   return {};
 }
 
 export async function getPendingClarification(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<PendingClarification | undefined> {
   return typeof agentx.getPendingClarification === 'function'
     ? await agentx.getPendingClarification()
@@ -258,7 +258,7 @@ export function buildPendingClarificationMessage(
   lines.push(
     `Original task: ${pending.prompt}`,
     '',
-    'Reply in plain language with the guidance you want AgentX to use. You can also still use `@agentx continue "..."` explicitly.',
+    'Reply in plain language with the guidance you want Frontier to use. You can also still use `@frontier continue "..."` explicitly.',
   );
 
   return lines.join('\n');
@@ -266,46 +266,46 @@ export function buildPendingClarificationMessage(
 
 export function renderUsageGuidance(): string {
   return (
-    '**AgentX** - Digital Force for Software Delivery\n\n'
+    '**Frontier** - Digital Force for Software Delivery\n\n'
     + 'Usage:\n'
-    + '- `@agentx initialize local runtime`\n'
-    + '- `@agentx add remote adapter`\n'
-    + '- `@agentx add llm adapter`\n'
-    + '- `@agentx add plugin`\n'
-    + '- `@agentx run engineer "implement the health endpoint for issue #42"`\n'
-    + '- `@agentx continue "use the existing auth flow and keep refresh tokens"`\n'
-    + '- `@agentx brainstorm auth rollout constraints`\n'
-    + '- `@agentx workflow next step`\n'
-    + '- `@agentx deepen plan`\n'
-    + '- `@agentx kick off review`\n'
-    + '- `@agentx rollout scorecard`\n'
-    + '- `@agentx enablement checklist`\n'
-    + '- `@agentx learnings planning`\n'
-    + '- `@agentx learnings review auth workflow`\n'
-    + '- `@agentx compound`\n'
-    + '- `@agentx create learning capture`\n'
-    + '- `@agentx capture guidance`\n'
-    + '- `@agentx agent-native review`\n'
-    + '- `@agentx review findings`\n'
-    + '- `@agentx promote finding FINDING-164-001`\n'
-    + '- `@agentx task bundles`\n'
-    + '- `@agentx bounded parallel`\n'
-    + '- `@agentx run architect "design the auth system"`\n'
-    + '- `@agentx run reviewer "review the changes in issue #42"`\n\n'
+    + '- `@frontier initialize local runtime`\n'
+    + '- `@frontier add remote adapter`\n'
+    + '- `@frontier add llm adapter`\n'
+    + '- `@frontier add plugin`\n'
+    + '- `@frontier run engineer "implement the health endpoint for issue #42"`\n'
+    + '- `@frontier continue "use the existing auth flow and keep refresh tokens"`\n'
+    + '- `@frontier brainstorm auth rollout constraints`\n'
+    + '- `@frontier workflow next step`\n'
+    + '- `@frontier deepen plan`\n'
+    + '- `@frontier kick off review`\n'
+    + '- `@frontier rollout scorecard`\n'
+    + '- `@frontier enablement checklist`\n'
+    + '- `@frontier learnings planning`\n'
+    + '- `@frontier learnings review auth workflow`\n'
+    + '- `@frontier compound`\n'
+    + '- `@frontier create learning capture`\n'
+    + '- `@frontier capture guidance`\n'
+    + '- `@frontier agent-native review`\n'
+    + '- `@frontier review findings`\n'
+    + '- `@frontier promote finding FINDING-164-001`\n'
+    + '- `@frontier task bundles`\n'
+    + '- `@frontier bounded parallel`\n'
+    + '- `@frontier run architect "design the auth system"`\n'
+    + '- `@frontier run reviewer "review the changes in issue #42"`\n\n'
     + 'During execution, live status updates for compaction, clarification, loop progress, tool activity, and self-review are streamed into chat.'
   );
 }
 
 /**
- * Match natural-language intents to initialize the AgentX local runtime in the
- * current workspace. Tolerates common phrasings such as "initialize agentx",
- * "init agent x", "setup agentx", "agentx initialize", and the typo "initalize".
+ * Match natural-language intents to initialize the Frontier local runtime in the
+ * current workspace. Tolerates Frontier and legacy AgentX phrasings plus the
+ * common typo "initalize".
  */
 export function matchesInitializeIntent(userText: string): boolean {
   const normalized = userText
     .toLowerCase()
     .replace(/^(?:please|can you|could you)\s+/i, '')
-    .replace(/^agentx[:,\s]+/i, '')
+    .replace(/^(?:frontier|agentx)[:,\s]+/i, '')
     .replace(/\bagent\s*x\b/gi, 'agentx')
     .replace(/[?!.]+$/g, '')
     .trim();
@@ -315,14 +315,14 @@ export function matchesInitializeIntent(userText: string): boolean {
   }
 
   const initVerb = '(?:initialize|initialise|initalize|init|setup|set\\s*up|configure|bootstrap)';
-  const target = '(?:local\\s*runtime|workspace|project|repo|repository|agentx)';
+  const target = '(?:local\\s*runtime|workspace|project|repo|repository|frontier|agentx)';
 
   const patterns: RegExp[] = [
     new RegExp(`^${initVerb}$`),
     new RegExp(`^${initVerb}\\s+(?:the\\s+)?${target}(?:\\s+(?:in|for)\\s+(?:this|the)\\s+(?:workspace|repo|repository|project))?$`),
-    new RegExp(`^agentx\\s+${initVerb}(?:\\s+${target})?$`),
+    new RegExp(`^(?:frontier|agentx)\\s+${initVerb}(?:\\s+${target})?$`),
     new RegExp(`^${target}\\s+${initVerb}$`),
-    new RegExp(`^run\\s+(?:the\\s+)?agentx\\s+${initVerb}(?:\\s+command)?$`),
+    new RegExp(`^run\\s+(?:the\\s+)?(?:frontier|agentx)\\s+${initVerb}(?:\\s+command)?$`),
   ];
 
   return patterns.some((pattern) => pattern.test(normalized));
@@ -334,22 +334,22 @@ export async function tryHandleWorkspaceSetupRequest(
 ): Promise<vscode.ChatResult | undefined> {
   if (matchesInitializeIntent(userText)) {
     try {
-      await vscode.commands.executeCommand('agentx.initializeLocalRuntime');
-      response.markdown('Opened **AgentX: Initialize Local Runtime** for this workspace.');
+      await vscode.commands.executeCommand('frontier.initializeLocalRuntime');
+      response.markdown('Opened **Frontier: Initialize Local Runtime** for this workspace.');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      response.markdown(`**AgentX error:** ${message}`);
+      response.markdown(`**Frontier error:** ${message}`);
     }
     return {};
   }
 
   if (/^(?:agentx:\s*)?(?:add plugin|install plugin)$/i.test(userText)) {
     try {
-      await vscode.commands.executeCommand('agentx.addPlugin');
-      response.markdown('Opened **AgentX: Add Plugin** for this workspace.');
+      await vscode.commands.executeCommand('frontier.addPlugin');
+      response.markdown('Opened **Frontier: Add Plugin** for this workspace.');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      response.markdown(`**AgentX error:** ${message}`);
+      response.markdown(`**Frontier error:** ${message}`);
     }
     return {};
   }
@@ -445,7 +445,7 @@ export async function tryHandleEnablementChecklistRequest(
 }
 
 export function buildContinueGuidance(agentName: string): string {
-  return `Clarification is waiting for your input for the ${agentName} agent. Continue with:\n\n- \`@agentx continue "your guidance here"\``;
+  return `Clarification is waiting for your input for the ${agentName} agent. Continue with:\n\n- \`@frontier continue "your guidance here"\``;
 }
 
 function parsePendingClarificationDetails(humanPrompt?: string): {
@@ -516,7 +516,7 @@ export async function tryHandleClarificationStatusRequest(
 export async function tryHandleContinueRequest(
   userText: string,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   pending: PendingClarification | undefined,
 ): Promise<vscode.ChatResult | undefined> {
   const continueMatch = userText.match(/^continue(?:\s+(.+))?$/is);
@@ -568,7 +568,7 @@ export async function tryHandleBrainstormRequest(
   }
 
   if (!workspaceRoot) {
-    response.markdown('No workspace is open, so AgentX cannot brainstorm against repo context.');
+    response.markdown('No workspace is open, so Frontier cannot brainstorm against repo context.');
     return {};
   }
 
@@ -614,21 +614,21 @@ export async function tryHandleCompoundRequest(
 
   response.markdown(workspaceRoot
     ? renderCompoundLoopMarkdown(workspaceRoot)
-    : 'No workspace is open, so AgentX cannot evaluate the compound loop.');
+    : 'No workspace is open, so Frontier cannot evaluate the compound loop.');
   return {};
 }
 
 export async function tryHandleTaskBundleRequest(
   userText: string,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<vscode.ChatResult | undefined> {
   if (!/^(?:show|list)?\s*task bundles?$/i.test(userText.trim())) {
     return undefined;
   }
 
   if (!agentx.workspaceRoot) {
-    response.markdown('No workspace is open, so AgentX cannot inspect task bundles.');
+    response.markdown('No workspace is open, so Frontier cannot inspect task bundles.');
     return {};
   }
 
@@ -643,9 +643,9 @@ export async function tryHandleTaskBundleRequest(
     renderTaskBundlesText(bundles),
     [
       'Interactive creation, resolution, and promotion stay in command surfaces:',
-      '- `AgentX: Create Task Bundle`',
-      '- `AgentX: Resolve Task Bundle`',
-      '- `AgentX: Promote Task Bundle`',
+      '- `Frontier: Create Task Bundle`',
+      '- `Frontier: Resolve Task Bundle`',
+      '- `Frontier: Promote Task Bundle`',
     ],
   ));
   return {};
@@ -654,14 +654,14 @@ export async function tryHandleTaskBundleRequest(
 export async function tryHandleBoundedParallelRequest(
   userText: string,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<vscode.ChatResult | undefined> {
   if (!/^(?:show|list)?\s*(?:bounded\s+)?parallel(?:\s+runs?)?$/i.test(userText.trim())) {
     return undefined;
   }
 
   if (!agentx.workspaceRoot) {
-    response.markdown('No workspace is open, so AgentX cannot inspect bounded parallel runs.');
+    response.markdown('No workspace is open, so Frontier cannot inspect bounded parallel runs.');
     return {};
   }
 
@@ -676,9 +676,9 @@ export async function tryHandleBoundedParallelRequest(
     renderBoundedParallelRunsText(runs),
     [
       'Interactive assessment, start, and reconciliation stay in command surfaces:',
-      '- `AgentX: Assess Bounded Parallel Delivery`',
-      '- `AgentX: Start Bounded Parallel Delivery`',
-      '- `AgentX: Reconcile Bounded Parallel Run`',
+      '- `Frontier: Assess Bounded Parallel Delivery`',
+      '- `Frontier: Start Bounded Parallel Delivery`',
+      '- `Frontier: Reconcile Bounded Parallel Run`',
     ],
   ));
   return {};
@@ -694,11 +694,11 @@ export async function tryHandleCreateLearningCaptureRequest(
   }
 
   if (!workspaceRoot) {
-    response.markdown('No workspace is open, so AgentX cannot create a learning capture file.');
+    response.markdown('No workspace is open, so Frontier cannot create a learning capture file.');
     return {};
   }
 
-  await vscode.commands.executeCommand('agentx.createLearningCapture');
+  await vscode.commands.executeCommand('frontier.createLearningCapture');
   const target = getLearningCaptureTarget(workspaceRoot);
   response.markdown(
     `Opened a learning capture artifact for ${target?.issueNumber ? `issue #${target.issueNumber}` : 'the current context'}.`,
@@ -709,7 +709,7 @@ export async function tryHandleCreateLearningCaptureRequest(
 export async function tryHandleAgentNativeReviewRequest(
   userText: string,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<vscode.ChatResult | undefined> {
   if (!/^(agent-native review|parity review|agent parity)$/i.test(userText)) {
     return undefined;
@@ -718,7 +718,7 @@ export async function tryHandleAgentNativeReviewRequest(
   const report = evaluateAgentNativeReview(agentx);
   response.markdown(report
     ? renderAgentNativeReviewMarkdown(report)
-    : 'No workspace is open, so AgentX cannot evaluate agent-native review parity.');
+    : 'No workspace is open, so Frontier cannot evaluate agent-native review parity.');
   return {};
 }
 
@@ -739,7 +739,7 @@ export async function tryHandleReviewFindingsRequest(
 export async function tryHandlePromoteFindingRequest(
   userText: string,
   response: vscode.ChatResponseStream,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): Promise<vscode.ChatResult | undefined> {
   const promoteFindingMatch = userText.match(/^promote finding\s+([A-Za-z0-9-]+)$/i);
   if (!promoteFindingMatch) {
@@ -751,7 +751,7 @@ export async function tryHandlePromoteFindingRequest(
     response.markdown(`Promoted ${result.finding.id} as issue #${result.issueNumber}.`);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    response.markdown(`**AgentX error:** ${message}`);
+    response.markdown(`**Frontier error:** ${message}`);
   }
 
   return {};
@@ -917,7 +917,7 @@ function writeOutputToChannel(title: string, output: string): void {
 }
 
 async function updatePendingClarification(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   pending: { sessionId: string; agentName: string; prompt: string; humanPrompt?: string },
 ): Promise<void> {
   if (typeof agentx.setPendingClarification === 'function') {
@@ -928,7 +928,7 @@ async function updatePendingClarification(
   }
 }
 
-async function clearPendingClarification(agentx: AgentXContext): Promise<void> {
+async function clearPendingClarification(agentx: FrontierContext): Promise<void> {
   if (typeof agentx.clearPendingClarification === 'function') {
     await agentx.clearPendingClarification();
   }

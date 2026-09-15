@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import { registerAIEvaluationCommands } from '../../commands/ai-evaluation';
 import * as aiEvaluationInternals from '../../commands/aiEvaluationCommandInternals';
 
@@ -28,24 +28,24 @@ describe('registerAIEvaluationCommands', () => {
   });
 
   it('registers the AI evaluation commands', () => {
-    registerAIEvaluationCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, {} as AgentXContext);
+    registerAIEvaluationCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, {} as FrontierContext);
 
-    assert.ok(Object.keys(callbacks).includes('agentx.showAIEvaluationStatus'));
-    assert.ok(Object.keys(callbacks).includes('agentx.scaffoldAIEvaluationContract'));
-    assert.ok(Object.keys(callbacks).includes('agentx.runAIEvaluation'));
+    assert.ok(Object.keys(callbacks).includes('frontier.showAIEvaluationStatus'));
+    assert.ok(Object.keys(callbacks).includes('frontier.scaffoldAIEvaluationContract'));
+    assert.ok(Object.keys(callbacks).includes('frontier.runAIEvaluation'));
   });
 
   it('delegates command callbacks to the AI evaluation internals', async () => {
-    const agentx = {} as AgentXContext;
+    const agentx = {} as FrontierContext;
     const showStatus = sandbox.stub(aiEvaluationInternals, 'showAIEvaluationStatus').resolves();
     const scaffold = sandbox.stub(aiEvaluationInternals, 'scaffoldAIEvaluationContract').resolves();
     const run = sandbox.stub(aiEvaluationInternals, 'runAIEvaluation').resolves();
 
     registerAIEvaluationCommands({ subscriptions: [] } as unknown as vscode.ExtensionContext, agentx);
 
-    await callbacks['agentx.showAIEvaluationStatus']!();
-    await callbacks['agentx.scaffoldAIEvaluationContract']!();
-    await callbacks['agentx.runAIEvaluation']!();
+    await callbacks['frontier.showAIEvaluationStatus']!();
+    await callbacks['frontier.scaffoldAIEvaluationContract']!();
+    await callbacks['frontier.runAIEvaluation']!();
 
     assert.ok(showStatus.calledWith(agentx));
     assert.ok(scaffold.calledWith(agentx));
@@ -59,7 +59,7 @@ describe('aiEvaluationCommandInternals', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ai-evaluation-command-'));
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ai-evaluation-command-'));
   });
 
   afterEach(() => {
@@ -74,9 +74,9 @@ describe('aiEvaluationCommandInternals', () => {
     sandbox.stub(vscode.window, 'showTextDocument').resolves({} as vscode.TextEditor);
     const infoSpy = sandbox.stub(vscode.window, 'showInformationMessage').resolves(undefined);
 
-    await aiEvaluationInternals.scaffoldAIEvaluationContract({ workspaceRoot: root } as AgentXContext);
+    await aiEvaluationInternals.scaffoldAIEvaluationContract({ workspaceRoot: root } as FrontierContext);
 
-    const manifest = fs.readFileSync(path.join(root, 'evaluation', 'agentx.eval.yaml'), 'utf-8');
+    const manifest = fs.readFileSync(path.join(root, 'evaluation', 'frontier.eval.yaml'), 'utf-8');
     const baseline = fs.readFileSync(path.join(root, 'evaluation', 'baseline.json'), 'utf-8');
     const dataset = fs.readFileSync(path.join(root, 'evaluation', 'datasets', 'regression.jsonl'), 'utf-8');
     const rubric = fs.readFileSync(path.join(root, 'evaluation', 'rubrics', 'correctness.md'), 'utf-8');
@@ -103,7 +103,7 @@ describe('aiEvaluationCommandInternals', () => {
           message: 'Baseline file is missing.',
         },
       ],
-      manifestPath: 'evaluation/agentx.eval.yaml',
+      manifestPath: 'evaluation/frontier.eval.yaml',
       baselinePath: undefined,
       latestReportPath: '.copilot-tracking/eval-reports/report.json',
       runnerSelection: {

@@ -2,7 +2,7 @@
 name: "synthetic-data-generation"
 description: 'Generate synthetic data for fine-tuning, eval-set bootstrapping, RAG corpus augmentation, and rare-case coverage. Covers Self-Instruct, Evol-Instruct, persona-based generation, distillation from larger models, dataset curation (filtering, dedup, decontamination), and provenance / dataset cards.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

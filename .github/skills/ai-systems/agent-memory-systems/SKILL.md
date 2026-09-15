@@ -2,7 +2,7 @@
 name: "agent-memory-systems"
 description: 'Design agent memory beyond a single context window: short-term (working / scratchpad), long-term (episodic, semantic, procedural), and shared / cross-session memory. Covers mem0, Zep, Letta / MemGPT, LangMem, OpenAI Memory, retrieval and consolidation policies, PII handling, and eviction.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

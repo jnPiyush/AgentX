@@ -1,6 +1,6 @@
 # AI Agent Workflow Reference
 
-> **Complete workflow, routing, handoff, and status management for AgentX agents.**
+> **Complete workflow, routing, handoff, and status management for Frontier FDEs.**
 > This file is the deep reference for how work flows through the system.
 > For a quick map of all resources, see [AGENTS.md](../AGENTS.md).
 > For model-adaptive context, tokenomics and evidence gates, load
@@ -29,12 +29,12 @@ Every piece of work -- bug fix, feature, docs update -- **SHOULD** start with an
 **Issue enforcement by mode:**
 - **GitHub Mode**: Issue references in commits are **required** by default (teams need traceability)
 - **Local Mode**: Issue references are **optional** by default (solo developers can commit freely)
-- To toggle enforcement: `.agentx/agentx.ps1 config set enforceIssues true` (or `false`)
+- To toggle enforcement: `.agentx/frontier.ps1 config set enforceIssues true` (or `false`)
 
 **GitHub Mode:**
 ```bash
 gh issue create --title "[Story] Add /health endpoint" --label "type:story"  # Creates #42
-.\.agentx\agentx.ps1 ready                        # Pick from ready queue
+.\.agentx\frontier.ps1 ready                        # Pick from ready queue
 # Work... then commit:
 git commit -m "feat: add health endpoint (refs #42)"
 # Final delivery should use a closing keyword in the PR body or merge commit:
@@ -57,7 +57,7 @@ git commit -m "fix: resolve login timeout (#1)"
 .\.agentx\local-issue-manager.ps1 -Action close -IssueNumber 1
 
 # Enable issue enforcement in local mode:
-.\.agentx\agentx.ps1 config set enforceIssues true
+.\.agentx\frontier.ps1 config set enforceIssues true
 ```
 
 **Emergency bypass (GitHub mode)**: Add `[skip-issue]` to the commit message for hotfixes. Create a retroactive issue afterward.
@@ -65,9 +65,9 @@ git commit -m "fix: resolve login timeout (#1)"
 > **Status Tracking**: Use GitHub Projects V2 **Status** field (GitHub mode) or local JSON status (Local mode).
 > See [GUIDE.md](GUIDE.md#local-mode-no-github) for local mode details.
 
-> **GitHub reroute trigger**: GitHub does not emit a normal workflow event when a Project V2 Status field changes. After moving an issue to a new Status value in GitHub mode, add the issue comment `/agentx route` to rerun the router against the latest board state.
+> **GitHub reroute trigger**: GitHub does not emit a normal workflow event when a Project V2 Status field changes. After moving an issue to a new Status value in GitHub mode, add the issue comment `/frontier route` to rerun the router against the latest board state.
 
-> **Automatic GitHub reroute**: When `.agentx/config.json` includes a GitHub project number, the scheduled `Agent X Project Reroute Poller` workflow scans recent Project V2 item changes and redispatches `agent-x.yml`. The comment trigger remains the immediate fallback between scheduled scans.
+> **Automatic GitHub reroute**: When `.frontier/config.json` includes a GitHub project number, the scheduled `Frontier Project Reroute Poller` workflow scans recent Project V2 item changes and redispatches `frontier.yml`. The comment trigger remains the immediate fallback between scheduled scans.
 
 ### Execution Plans For Complex Work
 
@@ -81,7 +81,7 @@ For simple work, the standard issue-first flow is sufficient. For complex work, 
 - Expected duration beyond a short interactive session
 - Work that must be resumable by a different agent or after context loss
 
-When a task is complex, agents **MUST** create and maintain an execution plan using [.github/templates/EXEC-PLAN-TEMPLATE.md](../agentx/templates/EXEC-PLAN-TEMPLATE.md) before starting implementation.
+When a task is complex, agents **MUST** create and maintain an execution plan using [.github/templates/EXEC-PLAN-TEMPLATE.md](../frontier/templates/EXEC-PLAN-TEMPLATE.md) before starting implementation.
 
 Canonical locations:
 - Execution plans live under `docs/execution/plans/`
@@ -101,7 +101,7 @@ Canonical locations:
 
 ### Workflow Checkpoint Contract
 
-AgentX also uses a deterministic checkpoint overlay so docs, chat, commands, sidebars, and CLI surfaces can describe the same operating loop without introducing a second workflow state machine.
+Frontier also uses a deterministic checkpoint overlay so docs, chat, commands, sidebars, and CLI surfaces can describe the same operating loop without introducing a second workflow state machine.
 
 Checkpoint names are canonical and MUST be reused verbatim:
 
@@ -118,7 +118,7 @@ These checkpoints layer on top of the existing issue statuses (`Backlog`, `Ready
 
 The current checkpoint is resolved from durable evidence, not chat history or model judgment.
 
-| Checkpoint | When AgentX Resolves It | Required Evidence | Closeout Expectation | Typical Next Move |
+| Checkpoint | When Frontier Resolves It | Required Evidence | Closeout Expectation | Typical Next Move |
 |------------|-------------------------|-------------------|----------------------|-------------------|
 | `Brainstorm` | No active issue or harness thread is linked yet | Open workspace plus missing scoped issue context | Frame the work before durable planning starts | Use brainstorm guidance to tighten scope |
 | `Plan` | Scope exists, but no durable execution plan is linked yet | Active issue or harness thread, but no execution plan/progress pair | Attach or refine the plan before implementation spreads across surfaces | Use `Deepen Plan` |
@@ -199,7 +199,7 @@ Bounded work contracts are nested under `Work` with these expectations:
 - contracts define the current bounded slice
 - evaluator findings and evidence summaries can refer back to the active contract
 
-Contract status is local to the artifact and MUST NOT be treated as a new checkpoint. Typical statuses such as `Proposed`, `Active`, `Blocked`, `Complete`, or `Superseded` help describe the slice, but the issue lifecycle still resolves through the canonical checkpoints and normal AgentX status values.
+Contract status is local to the artifact and MUST NOT be treated as a new checkpoint. Typical statuses such as `Proposed`, `Active`, `Blocked`, `Complete`, or `Superseded` help describe the slice, but the issue lifecycle still resolves through the canonical checkpoints and normal Frontier status values.
 
 #### Pre-Implementation Contract Handshake (Recommended For Complex Slices)
 
@@ -225,10 +225,10 @@ Triggers (any one of these makes the review UI-bearing):
 
 Required evidence for UI-bearing reviews:
 
-- at least one screenshot per primary route or component state, captured via the [`browser-automation`](../agentx/skills/development/browser-automation/SKILL.md) skill against the running build
+- at least one screenshot per primary route or component state, captured via the [`browser-automation`](../frontier/skills/development/browser-automation/SKILL.md) skill against the running build
 - an axe-core or equivalent automated accessibility scan with results recorded in the review doc
 - at least one scripted interaction (click / type / keyboard navigation) per primary user task in the contract
-- the Originality row in the [REVIEW-TEMPLATE weighted scoring](../agentx/templates/REVIEW-TEMPLATE.md#14-decision) is graded, not skipped
+- the Originality row in the [REVIEW-TEMPLATE weighted scoring](../frontier/templates/REVIEW-TEMPLATE.md#14-decision) is graded, not skipped
 
 This gate exists because, per the Anthropic article, agents reliably overrate their own UI work when reviewing only the diff or a single static screenshot. Driving the live app catches broken wiring, dead interactions, and library-default tells that a diff review will miss.
 
@@ -309,10 +309,10 @@ The current extension resolver in `vscode-extension/src/utils/workflowGuidance.t
 
 ### Hub-and-Spoke Pattern
 
-AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
+Frontier uses a **Hub-and-Spoke architecture** for agent coordination:
 
 ```
-                        Agent X (Hub)
+                        Frontier (Hub)
                              |
               +--------------+--------------+
               |              |              |
@@ -350,8 +350,8 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
 **Invisible Sub-Agents** (spawned by parent agents):
 
 ```
-  Agent X -------> GitHub Ops (GitHub backlog management)
-  Agent X -------> ADO Ops (ADO backlog management)
+  Frontier -------> GitHub Ops (GitHub backlog management)
+  Frontier -------> ADO Ops (ADO backlog management)
   PM -------------> GitHub Ops (child issue creation)
   PM -------------> ADO Ops (work item creation)
   Reviewer ------> GitHub Ops (issue status/labels)
@@ -373,8 +373,8 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
 
 **Key Principles:**
 
-1. **Centralized Coordination** - Agent X is the top-level autonomous executor. It SHOULD complete work in one session whenever feasible and use specialist stages as internal workflow phases. Manual agent switching is a fallback for isolation or platform limitations.
-2. **Role-Contract Preservation** - When Agent X executes a specialist phase internally, it MUST follow that specialist agent's constraints, boundaries, required templates, required skills, entry gates, exit gates, and deliverable rules. Internal execution is not permission to weaken the role contract.
+1. **Centralized Coordination** - Frontier is the top-level autonomous executor. It SHOULD complete work in one session whenever feasible and use specialist stages as internal workflow phases. Manual agent switching is a fallback for isolation or platform limitations.
+2. **Role-Contract Preservation** - When Frontier executes a specialist phase internally, it MUST follow that specialist agent's constraints, boundaries, required templates, required skills, entry gates, exit gates, and deliverable rules. Internal execution is not permission to weaken the role contract.
 3. **Strict Role Separation** - Each agent produces one deliverable type (PRD, ADR, Code, Review)
 4. **Least-Privilege Tool Access** - Each agent receives only the tools needed for its role; parent agents own remote mutations and durable lifecycle closeout unless explicitly delegated
 5. **Status-Driven** - GitHub Projects V2 Status field is the source of truth
@@ -385,7 +385,7 @@ AgentX uses a **Hub-and-Spoke architecture** for agent coordination:
 
 ### Routing Logic
 
-Agent X routes issues based on:
+Frontier routes issues based on:
 - **Issue type** (Epic, Feature, Story, Bug, Spike)
 - **Status** (Backlog, In Progress, In Review, Ready, Done)
 - **Labels** (needs:ux, needs:changes, etc.)
@@ -413,9 +413,9 @@ type:powerbi + Backlog -> Power BI Analyst (skip PM/Architect for report/dashboa
 In Review + needs:testing -> Tester (pre-release certification)
 ```
 
-**Autonomous Mode**: For simple tasks (bugs, docs, stories <=3 files), Agent X can automatically route to Engineer, skipping manual coordination. When Agent X acts as Engineer internally, it is still required to follow the Engineer agent's own contract and gates. See [Agent X](../agentx/agents/agent-x.agent.md) (mode: adaptive).
+**Autonomous Mode**: For simple tasks (bugs, docs, stories <=3 files), Frontier can automatically route to Engineer, skipping manual coordination. When Frontier acts as Engineer internally, it is still required to follow the Engineer agent's own contract and gates. See [Frontier](../frontier/agents/frontier.agent.md) (mode: adaptive).
 
-**Universal Iterative Refinement**: ALL workflows include `iterate = true` on the Engineer's implementation step by default. The Reviewer ALWAYS verifies loop completion before approval. The `needs:iteration` label is reserved for **extended** iteration (max 20 iterations). See [Iterative Loop Skill](../agentx/skills/development/iterative-loop/SKILL.md).
+**Universal Iterative Refinement**: ALL workflows include `iterate = true` on the Engineer's implementation step by default. The Reviewer ALWAYS verifies loop completion before approval. The `needs:iteration` label is reserved for **extended** iteration (max 20 iterations). See [Iterative Loop Skill](../frontier/skills/development/iterative-loop/SKILL.md).
 
 ### Validation
 
@@ -457,13 +457,13 @@ These checks are the target validation model. Where automation is not yet presen
 
 | Mode | How It Works | Platform |
 |------|-------------|----------|
-| **Mode 1: Agent X Autonomous** | Agent X classifies work and executes it end to end in one session, applying PM -> [Architect, UX, Data Scientist] -> Engineer -> Reviewer -> [DevOps, Tester] as internal phases when needed while preserving each specialist agent's own rules and gates | VS Code, Claude Code |
+| **Mode 1: Frontier Orchestration FDEnomous** | Frontier classifies work and executes it end to end in one session, applying PM -> [Architect, UX, Data Scientist] -> Engineer -> Reviewer -> [DevOps, Tester] as internal phases when needed while preserving each specialist agent's own rules and gates | VS Code, Claude Code |
 | **Mode 2: Human-Orchestrated** | User picks the next agent from the Copilot agent picker and hands off manually between specialist roles | VS Code |
 | **CLI Standalone** | `agentx.ps1 run <agent> <task>` runs agent via GitHub Models API; no sub-agent chaining | CLI |
 
 ### Agent-to-Agent Communication
 
-Agent X SHOULD keep work in one session by applying specialist constraints internally.
+Frontier SHOULD keep work in one session by applying specialist constraints internally.
 When it does so, it MUST read and honor the active specialist agent definition instead of treating the phase as a lightweight approximation.
 When strict role isolation or platform behavior requires it, agents MAY still communicate
 through the user and ask for a manual switch to the relevant specialist.
@@ -493,14 +493,14 @@ Discover/Plan -> [Architect, Data Scientist, UX] -> [Fabric Engineer / Power Pla
 
 ### Standalone Architecture Document Review
 
-The Reviewer agent supports a **standalone mode** for reviewing human-written architecture documents that are not part of the AgentX issue lifecycle. Use this when an architect, designer, or external party hands over a doc and asks for a structured review.
+The Reviewer agent supports a **standalone mode** for reviewing human-written architecture documents that are not part of the Frontier issue lifecycle. Use this when an architect, designer, or external party hands over a doc and asks for a structured review.
 
 **When the Reviewer enters standalone mode** (any of):
 
 - User supplies a document path with no associated issue
 - User pastes architecture content inline and asks for a review
 - User asks for a "design review" or "architecture audit" without an issue reference
-- The document is outside the canonical AgentX paths (`docs/artifacts/adr/`, `docs/artifacts/specs/`, `docs/artifacts/prd/`)
+- The document is outside the canonical Frontier paths (`docs/artifacts/adr/`, `docs/artifacts/specs/`, `docs/artifacts/prd/`)
 
 **Behavior**:
 
@@ -540,7 +540,7 @@ Multiple files (e.g. a docx narrative plus several diagram images) are reviewed 
 
 For issue-driven architecture reviews (Architect or Reviewer auto-spawning the Architecture Reviewer for an ADR/Spec under an `In Review` issue), use the standard `agentx` mode -- nothing changes there.
 
-For Agent X autonomous execution, each phase above inherits the same non-skippable contract as the corresponding specialist agent. PM phase still requires PRD rules and PM boundaries, Architect phase still requires ADR/Spec and zero-code policy, UX phase still requires prototypes and accessibility rules, Engineer phase still requires the quality loop, and Reviewer phase still requires review artifacts and approval gates.
+For Frontier autonomous execution, each phase above inherits the same non-skippable contract as the corresponding specialist agent. PM phase still requires PRD rules and PM boundaries, Architect phase still requires ADR/Spec and zero-code policy, UX phase still requires prototypes and accessibility rules, Engineer phase still requires the quality loop, and Reviewer phase still requires review artifacts and approval gates.
 
 > **Note**: Consulting Research, Power BI Analyst, and Agile Coach operate **standalone** (not part of the core SDLC pipeline). GitHub Ops, ADO Ops, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, and RAG Specialist are invisible sub-agents spawned by their parent agents.
 
@@ -582,7 +582,7 @@ Clear context before implementation phase to prevent design assumptions from lea
 
 These checkpoints are intentionally lightweight. They exist to catch scope drift and boundary mistakes without turning every handoff into a full secondary approval loop.
 
-In live AgentX execution, run these checkpoints through the existing clarification loop when specialist input is needed so the discussion stays visible to the user in chat and CLI output.
+In live Frontier execution, run these checkpoints through the existing clarification loop when specialist input is needed so the discussion stays visible to the user in chat and CLI output.
 
 | Checkpoint | Trigger | Participants | Purpose | Output |
 |------------|---------|--------------|---------|--------|
@@ -633,7 +633,7 @@ In live AgentX execution, run these checkpoints through the existing clarificati
 
 # Agent Communication Protocol
 
-> Shared clarification, escalation, and handoff guidance for AgentX roles.
+> Shared clarification, escalation, and handoff guidance for Frontier roles.
 
 ## Shared Rules
 
@@ -670,13 +670,10 @@ Suggested phrasing:
 
 `I need input from <AgentName> on <specific question>. Please switch to the <AgentName> agent and ask: <question with context>.`
 
-## AgentX Auto Mode
+## Frontier Orchestration FDE Mode
 
-Use this mode only for AgentX Auto.
-
-1. Read the artifacts first.
-2. Continue in the same session using the relevant specialist lens and constraints.
-3. Ask the user to switch agents only when the platform cannot preserve the required context or the user explicitly wants manual role isolation.
+Use this mode only for Frontier Orchestration FDE.
+s only when the platform cannot preserve the required context or the user explicitly wants manual role isolation.
 4. If the user response is incomplete, continue the clarification loop in the same session.
 5. After 3 unresolved internal attempts, escalate the unresolved question directly to the user.
 

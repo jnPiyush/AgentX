@@ -2,7 +2,7 @@
 name: "low-code-vs-pro-code"
 description: 'Evaluate and review whether a solution should be built with low-code/no-code platforms (Power Platform, Copilot Studio, Power Apps, Power Automate, Logic Apps, AppSheet, OutSystems, Mendix) or pro-code (custom code on Foundry, Agent Framework, .NET, Python, React, Azure Functions, AKS, etc.). Use when reviewing an ADR/Tech Spec that proposes one approach, when an issue could plausibly go either way, or when an existing low-code solution is hitting its ceiling and pro-code is being considered.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-05-11"
 compatibility:

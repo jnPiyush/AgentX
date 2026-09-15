@@ -4,14 +4,14 @@ import * as os from 'os';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import { registerAddLlmAdapterCommand } from '../../commands/llmAdapters';
 import { runAddLlmAdapterCommand } from '../../commands/llmAdaptersCommandInternals';
 
 describe('registerAddLlmAdapterCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -19,7 +19,7 @@ describe('registerAddLlmAdapterCommand', () => {
       subscriptions: [],
       extensionUri: vscode.Uri.file('/test/extension'),
     } as unknown as vscode.ExtensionContext;
-    fakeAgentx = {} as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    fakeAgentx = {} as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, _cb: (...args: unknown[]) => unknown) => ({ dispose: () => { /* noop */ } }),
@@ -31,10 +31,10 @@ describe('registerAddLlmAdapterCommand', () => {
   });
 
   it('should register agentx.addLlmAdapter command', () => {
-    registerAddLlmAdapterCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    registerAddLlmAdapterCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
 
     assert.ok(
-      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.addLlmAdapter'),
+      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.addLlmAdapter'),
     );
   });
 });
@@ -45,7 +45,7 @@ describe('runAddLlmAdapterCommand', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-llm-adapter-'));
+    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-llm-adapter-'));
     fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
     fs.writeFileSync(
       path.join(tempRoot, '.agentx', 'config.json'),
@@ -89,7 +89,7 @@ describe('runAddLlmAdapterCommand', () => {
         storedSecrets.set('openai-api', secret);
       },
       deleteWorkspaceLlmSecret: async () => {},
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
 
     await runAddLlmAdapterCommand(fakeAgentx, 'openai-api');
 
@@ -119,7 +119,7 @@ describe('runAddLlmAdapterCommand', () => {
       adoConnected: false,
       storeWorkspaceLlmSecret: async () => {},
       deleteWorkspaceLlmSecret: async () => {},
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
 
     await runAddLlmAdapterCommand(fakeAgentx, 'claude-code');
 
@@ -156,7 +156,7 @@ describe('runAddLlmAdapterCommand', () => {
         storedSecrets.set(providerId, secret);
       },
       deleteWorkspaceLlmSecret: async () => {},
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
 
     await runAddLlmAdapterCommand(fakeAgentx, 'claude-code-local');
 

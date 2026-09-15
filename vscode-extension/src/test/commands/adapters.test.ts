@@ -4,14 +4,14 @@ import * as os from 'os';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import { registerAddRemoteAdapterCommand } from '../../commands/adapters';
 import { syncDetectedAdoAdapter, syncDetectedGitHubAdapter } from '../../commands/adaptersCommandInternals';
 
 describe('registerAddRemoteAdapterCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let fakeContext: vscode.ExtensionContext;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -19,7 +19,7 @@ describe('registerAddRemoteAdapterCommand', () => {
       subscriptions: [],
       extensionUri: vscode.Uri.file('/test/extension'),
     } as unknown as vscode.ExtensionContext;
-    fakeAgentx = {} as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    fakeAgentx = {} as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     sandbox.stub(vscode.commands, 'registerCommand').callsFake(
       (_cmd: string, _cb: (...args: unknown[]) => unknown) => ({ dispose: () => { /* noop */ } }),
@@ -31,10 +31,10 @@ describe('registerAddRemoteAdapterCommand', () => {
   });
 
   it('should register agentx.addRemoteAdapter command', () => {
-    registerAddRemoteAdapterCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    registerAddRemoteAdapterCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
 
     assert.ok(
-      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('agentx.addRemoteAdapter'),
+      (vscode.commands.registerCommand as sinon.SinonStub).calledWith('frontier.addRemoteAdapter'),
     );
   });
 });
@@ -45,7 +45,7 @@ describe('syncDetectedGitHubAdapter', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-adapter-sync-'));
+    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-adapter-sync-'));
     fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
     fs.writeFileSync(
       path.join(tempRoot, '.agentx', 'config.json'),
@@ -71,7 +71,7 @@ describe('syncDetectedGitHubAdapter', () => {
       invalidateCache: sandbox.stub(),
       githubConnected: true,
       adoConnected: false,
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
 
     const changed = await syncDetectedGitHubAdapter(fakeAgentx);
 
@@ -101,7 +101,7 @@ describe('syncDetectedGitHubAdapter', () => {
       invalidateCache: sandbox.stub(),
       githubConnected: false,
       adoConnected: false,
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
 
     const changed = await syncDetectedGitHubAdapter(fakeAgentx);
 
@@ -116,7 +116,7 @@ describe('syncDetectedAdoAdapter', () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-ado-sync-'));
+    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-ado-sync-'));
     fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
     fs.writeFileSync(
       path.join(tempRoot, '.agentx', 'config.json'),
@@ -142,7 +142,7 @@ describe('syncDetectedAdoAdapter', () => {
       invalidateCache: sandbox.stub(),
       githubConnected: false,
       adoConnected: true,
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
 
     const changed = await syncDetectedAdoAdapter(fakeAgentx);
 
@@ -169,7 +169,7 @@ describe('syncDetectedAdoAdapter', () => {
       invalidateCache: sandbox.stub(),
       githubConnected: false,
       adoConnected: true,
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
 
     const changed = await syncDetectedAdoAdapter(fakeAgentx);
 
@@ -190,7 +190,7 @@ describe('syncDetectedAdoAdapter', () => {
       invalidateCache: sandbox.stub(),
       githubConnected: false,
       adoConnected: false,
-    } as unknown as AgentXContext;
+    } as unknown as FrontierContext;
 
     const changed = await syncDetectedAdoAdapter(fakeAgentx);
 

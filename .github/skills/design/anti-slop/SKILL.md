@@ -2,7 +2,7 @@
 name: "anti-slop"
 description: 'Identify and prevent AI design slop in generated UI -- forbidden visual tells (purple/teal gradients, generic system emoji, soft pastel everything, fake metrics, hand-drawn cartoon humans, rounded-2xl-everywhere) and enforce honest placeholders. Use after generating any HTML/CSS prototype, marketing surface, or product screen, and as a hard gate inside the prototype-audit Pass 9 (self-critique).'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-02-04"
   updated: "2026-08-27"
@@ -42,7 +42,7 @@ waiver is recorded with rationale.
 
 Five tells now have a deterministic rule in the Impeccable detector, which runs
 as Pass 0 of `prototype-audit` before any LLM judgement. T6 is delegated to
-Impeccable's judgement-based critique. Four tells stay AgentX-owned because
+Impeccable's judgement-based critique. Four tells stay Frontier-owned because
 they concern fabrication and emoji rather than visual style.
 
 | Tell | Owner | Deterministic rule |
@@ -53,10 +53,10 @@ they concern fabrication and emoji rather than visual style.
 | T6 glassmorphism on text | delegated judgement | Glassmorphism everywhere |
 | T7 aurora background blobs | delegated | Radial halo, Decorative spotlight glow |
 | T9 AI-voiced microcopy | delegated | Buzzword, Aphoristic cadence, Em-dash overuse, Theater framing |
-| **T2 generic system emoji** | **AgentX** | none upstream |
-| **T3 fake metrics and testimonials** | **AgentX** | none upstream |
-| **T8 unearned trust badges** | **AgentX** | none upstream |
-| **T10 emoji-prefixed headings** | **AgentX** | none upstream |
+| **T2 generic system emoji** | **Frontier** | none upstream |
+| **T3 fake metrics and testimonials** | **Frontier** | none upstream |
+| **T8 unearned trust badges** | **Frontier** | none upstream |
+| **T10 emoji-prefixed headings** | **Frontier** | none upstream |
 
 The delegated descriptions below are retained deliberately. When Pass 0 is
 `DEGRADED` the detector did not run, and the full T1-T10 list is the fallback
@@ -193,7 +193,7 @@ the next step (find the real number) instead of skipping it.
 For each emitted UI surface, scan in this order:
 
 1. Open the page. Take a screenshot.
-2. Check Pass 0 status. If it passed, run only the AgentX-retained tells
+2. Check Pass 0 status. If it passed, run only the Frontier-retained tells
    (T2, T3, T8, T10). If it was `DEGRADED`, run the full T1-T10 list --
    nothing deterministic covered them. Each hit is one finding.
 3. Run the honest-placeholders check: list every number, name, logo,
@@ -225,13 +225,13 @@ Without those three conditions, the finding stands.
 `docs/artifacts/reviews/PROTOTYPE-AUDIT-<issue>.md`, not in the target app's
 root `DESIGN.md`. Impeccable regenerates that file from code on
 `/impeccable document`, so hand-written waivers placed there are silently
-lost. The AgentX design-system document from
+lost. The Frontier design-system document from
 `.github/templates/DESIGN-SYSTEM-TEMPLATE.md` Section 9 remains the right home
 for durable project-level anti-pattern decisions; the two files are distinct
 despite the similar name.
 
-An Impeccable ignore may mirror an existing AgentX waiver so repeat scans stay
-quiet. When it does, cite the AgentX waiver in its `--reason` string. A rule
+An Impeccable ignore may mirror an existing Frontier waiver so repeat scans stay
+quiet. When it does, cite the Frontier waiver in its `--reason` string. A rule
 that is always waived is a `DESIGN.md` bug -- fix the design language rather
 than accumulating ignores.
 
@@ -240,11 +240,11 @@ than accumulating ignores.
 Before declaring an anti-slop pass complete:
 
 - [ ] Pass 0 status was checked before deciding which tells to run.
-- [ ] The AgentX-retained tells (T2, T3, T8, T10) were checked explicitly.
+- [ ] The Frontier-retained tells (T2, T3, T8, T10) were checked explicitly.
 - [ ] Every number, name, and logo on the page was classified.
 - [ ] Findings are recorded with the visible symptom and the replacement.
 - [ ] Waivers live in the audit report and cite what authorizes them.
-- [ ] No Impeccable ignore exists without a matching AgentX waiver.
+- [ ] No Impeccable ignore exists without a matching Frontier waiver.
 
 ## References
 

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { AgentXContext, AgentDefinition } from '../agentxContext';
+import { FrontierContext, AgentDefinition } from '../frontierContext';
 
 interface SkillLink {
  readonly label: string;
@@ -9,7 +9,7 @@ interface SkillLink {
 }
 
 const AGENT_SKILL_MAP: Record<string, SkillLink[]> = {
- 'agent-x.agent.md': [
+ 'frontier.agent.md': [
   { label: 'Code Review', relativePath: '.github/skills/development/code-review/SKILL.md' },
   { label: 'Iterative Loop', relativePath: '.github/skills/development/iterative-loop/SKILL.md' },
   { label: 'Error Handling', relativePath: '.github/skills/development/error-handling/SKILL.md' },
@@ -106,10 +106,10 @@ export class AgentTreeItem extends vscode.TreeItem {
  }
 }
 
-function resolveSkillPath(agentx: AgentXContext, relativePath: string): string | undefined {
+function resolveSkillPath(agentx: FrontierContext, relativePath: string): string | undefined {
  const root = agentx.workspaceRoot;
  const workspacePath = root ? path.join(root, relativePath) : '';
- const bundledRelative = relativePath.replace('.github/', '.github/agentx/');
+ const bundledRelative = relativePath.replace('.github/', '.github/frontier/');
  const bundledPath = path.join(agentx.extensionContext.extensionPath, bundledRelative);
  if (workspacePath && fs.existsSync(workspacePath)) {
   return workspacePath;
@@ -120,12 +120,12 @@ function resolveSkillPath(agentx: AgentXContext, relativePath: string): string |
  return undefined;
 }
 
-function resolveAgentFilePath(agentx: AgentXContext, fileName: string): string {
+function resolveAgentFilePath(agentx: FrontierContext, fileName: string): string {
  const root = agentx.workspaceRoot;
  const workspacePath = root ? path.join(root, '.github', 'agents', fileName) : '';
  const workspaceInternalPath = root ? path.join(root, '.github', 'agents', 'internal', fileName) : '';
- const bundledPath = path.join(agentx.extensionContext.extensionPath, '.github', 'agentx', 'agents', fileName);
- const bundledInternalPath = path.join(agentx.extensionContext.extensionPath, '.github', 'agentx', 'agents', 'internal', fileName);
+ const bundledPath = path.join(agentx.extensionContext.extensionPath, '.github', 'frontier', 'agents', fileName);
+ const bundledInternalPath = path.join(agentx.extensionContext.extensionPath, '.github', 'frontier', 'agents', 'internal', fileName);
 
  if (workspacePath && fs.existsSync(workspacePath)) {
   return workspacePath;
@@ -183,7 +183,7 @@ function createBoundaryGroup(agent: AgentDefinition): AgentTreeItem | undefined 
  return createGroup('Boundaries', 'lock', children);
 }
 
-function createSkillGroup(agent: AgentDefinition, agentx: AgentXContext): AgentTreeItem | undefined {
+function createSkillGroup(agent: AgentDefinition, agentx: FrontierContext): AgentTreeItem | undefined {
  const recommendedSkills = AGENT_SKILL_MAP[agent.fileName] ?? [];
  const children = recommendedSkills
   .map((skill) => {
@@ -207,7 +207,7 @@ function createSkillGroup(agent: AgentDefinition, agentx: AgentXContext): AgentT
  return createGroup(`Suggested skills (${children.length})`, 'library', children);
 }
 
-function createAgentChildren(agent: AgentDefinition, agentx: AgentXContext): AgentTreeItem[] {
+function createAgentChildren(agent: AgentDefinition, agentx: FrontierContext): AgentTreeItem[] {
  const children: AgentTreeItem[] = [];
  const constraints = agent.constraints ?? [];
  const delegates = agent.agents ?? [];
@@ -261,7 +261,7 @@ function createAgentChildren(agent: AgentDefinition, agentx: AgentXContext): Age
  return children;
 }
 
-export function createAgentTreeItem(agent: AgentDefinition, agentx: AgentXContext): AgentTreeItem {
+export function createAgentTreeItem(agent: AgentDefinition, agentx: FrontierContext): AgentTreeItem {
  const label = agent.name || agent.fileName.replace('.agent.md', '');
  const item = new AgentTreeItem(label, vscode.TreeItemCollapsibleState.Collapsed, agent);
 

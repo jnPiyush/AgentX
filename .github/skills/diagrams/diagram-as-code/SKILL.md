@@ -2,7 +2,7 @@
 name: "diagram-as-code"
 description: "Author, review, and maintain diagrams as code across Mermaid, PlantUML, Structurizr DSL, Graphviz DOT, and draw.io XML. Covers swimlane/cross-functional workflows, C4 architecture, sequence, state, ER, dependency, and network diagrams. Use when any agent needs to create or update a diagram in a PRD, ADR, spec, UX flow, or architecture doc."
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-21"
   updated: "2026-04-21"
@@ -10,7 +10,7 @@ metadata:
 
 # Diagrams as Code
 
-> **Purpose**: One conventions layer for all diagrams produced across AgentX roles.
+> **Purpose**: One conventions layer for all diagrams produced across Frontier roles.
 > **Principle**: Text-first, diffable, reviewable, rendered at read-time. Binary formats (PNG, JPG, VSDX) are an export, never the source of truth.
 > **Scope**: This skill is the convention layer. The `diagram-specialist` sub-agent (`.github/agents/internal/diagram-specialist.agent.md`) owns spawn-and-execute behavior. Each reference file covers one format or quality concern.
 
@@ -33,7 +33,7 @@ Load this skill any time an agent needs to:
 
 ## Default Format Policy (Mermaid-First)
 
-**Mermaid is the default for all AgentX templates and artifacts.** It renders natively in GitHub, VS Code preview, most markdown tooling, and is the lowest-friction option for reviewers.
+**Mermaid is the default for all Frontier templates and artifacts.** It renders natively in GitHub, VS Code preview, most markdown tooling, and is the lowest-friction option for reviewers.
 
 Use another format ONLY when one of these is true:
 
@@ -93,8 +93,8 @@ Rule: Mermaid first. If the intent fits the matrix fallback column, justify it i
 
 - **Filename**: `<artifact>-<issue>-<short-name>.<ext>` (e.g. `ADR-42-context.mmd`, `PRD-17-contract-workflow.drawio`)
 - **Location**: under a `diagrams/` subfolder inside the parent artifact's directory
-- **Header comment**: title, owner artifact, date, AgentX issue number
-- **ASCII only** -- no emoji, no Unicode symbols (per AgentX golden principle). Use `->`, not arrow glyphs
+- **Header comment**: title, owner artifact, date, Frontier issue number
+- **ASCII only** -- no emoji, no Unicode symbols (per Frontier golden principle). Use `->`, not arrow glyphs
 - **Contrast** -- avoid pastel-on-pastel; favor default theme colors over custom palettes unless the target surface requires branding
 
 ## Consumer Checklist (any reviewer)

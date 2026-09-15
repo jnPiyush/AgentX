@@ -21,7 +21,7 @@ Make AgentX visible inside the VS Code Agents Window with the smallest reversibl
 - Persist user choices in `context.globalState`: track `lastPromptedMajor` (so we re-prompt only on a major-version bump) and `permanentlyDeclined` (so we never re-prompt after `Don't ask again`).
 - Add `.vscode/settings.json` at the repo root with `"extensions.supportAgentsWindow": { "jnPiyush.agentx": true }` as a courtesy for anyone who clones the AgentX repo and opens it in VS Code.
 - Update `vscode-extension/README.md` with a `Use AgentX in the Agents Window` section explaining the auto-prompt, the manual command, and the one-line global-settings override for power users.
-- Verify the `agent-x.agent.md` Coordinator pattern is consumable by the Agents Window: front-load `description`, `model`, `tools: ['agent']`, `agents:` allowlist; confirm no body-prose regression (AC #2, verify-don't-edit).
+- Verify the `frontier.agent.md` Coordinator pattern is consumable by the Agents Window: front-load `description`, `model`, `tools: ['agent']`, `agents:` allowlist; confirm no body-prose regression (AC #2, verify-don't-edit).
 - Add a focused regression test under `vscode-extension/src/test/utils/` covering: fresh install + Enable; fresh install + Not now; fresh install + Don't ask again; re-activation same major version; major-version bump after Not now; already opted in; merge preserves other extensions' entries.
 - Run the existing extension test suite (mocha) and the loop-parity, harness-compliance, frontmatter, and scrub scripts.
 
@@ -40,7 +40,7 @@ Make AgentX visible inside the VS Code Agents Window with the smallest reversibl
 2. A new command `agentx.enableInAgentsWindow` is contributed by `vscode-extension/package.json` and is wired to a handler that performs the same idempotent merge unconditionally.
 3. `.vscode/settings.json` exists at the repo root with `"extensions.supportAgentsWindow": { "jnPiyush.agentx": true }` (verbatim).
 4. `vscode-extension/README.md` documents the auto-prompt, manual command, and global-settings one-liner under a `Use AgentX in the Agents Window` section.
-5. `.github/agents/agent-x.agent.md` frontmatter satisfies SPEC-400 Coordinator contract (`user-invocable: true`, `tools` includes `'agent'`, `agents:` allowlist present and non-empty); body prose is unchanged (verified, not edited).
+5. `.github/agents/frontier.agent.md` frontmatter satisfies SPEC-400 Coordinator contract (`user-invocable: true`, `tools` includes `'agent'`, `agents:` allowlist present and non-empty); body prose is unchanged (verified, not edited).
 6. New regression test in `vscode-extension/src/test/utils/agentsWindowOptIn.test.ts` covers all seven scenarios listed in Scope; mocha suite remains green (>= 904 passing).
 7. `pwsh scripts/validate-frontmatter.ps1` reports `0 errors`; `pwsh scripts/check-harness-compliance.ps1` passes; `pwsh tests/loop-parity-behavior.ps1` and `pwsh tests/test-framework.ps1` remain green.
 8. `pwsh scripts/scrub.ps1` against the touched files reports 0 HIGH findings; AgentX quality loop reaches >= 5 iterations with a subagent-review iteration and `loop complete` succeeds.
@@ -54,7 +54,7 @@ Make AgentX visible inside the VS Code Agents Window with the smallest reversibl
 
 ## Runtime Evidence Expectations
 
-- `implementation evidence`: package.json diff + agent-x.agent.md diff (if any) attached to the next loop iteration as a JSON evidence artifact.
+- `implementation evidence`: package.json diff + frontier.agent.md diff (if any) attached to the next loop iteration as a JSON evidence artifact.
 - `verification evidence`: mocha test report (junit xml from c8), frontmatter validator stdout last 8 lines, harness compliance exit code 0.
 - `runtime evidence`: user-recorded screenshot or text confirmation that the agent picker in the Agents Window shows the expected entries. Captured in EVIDENCE-400-agents-window-slice2.md after the user smoke-tests.
 
@@ -66,7 +66,7 @@ Make AgentX visible inside the VS Code Agents Window with the smallest reversibl
 
 ## Recovery Path
 
-- If any AC fails: revert `vscode-extension/package.json` and `agent-x.agent.md` changes with `git checkout --`, leave the contract in place, mark status `Blocked` with the failure reason in the Decision Log.
+- If any AC fails: revert `vscode-extension/package.json` and `frontier.agent.md` changes with `git checkout --`, leave the contract in place, mark status `Blocked` with the failure reason in the Decision Log.
 - If the live VS Code Agents Window docs reveal a different opt-in mechanism: pause work, update this contract's Scope and AC to match, and request user re-confirmation before editing code.
 
 ## Decision Log

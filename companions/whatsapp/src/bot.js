@@ -2,7 +2,7 @@ const path = require('path');
 const qrcode = require('qrcode-terminal');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 
-const { createAgentXRunner } = require('./agentxRunner');
+const { createFrontierRunner } = require('./frontierRunner');
 const { loadConfig } = require('./config');
 const { startLoopWatcher } = require('./loopWatcher');
 const { createMessageHandler } = require('./messageHandler');
@@ -11,7 +11,7 @@ function createBot({
   config = loadConfig(),
   ClientClass = Client,
   AuthClass = LocalAuth,
-  runnerFactory = createAgentXRunner,
+  runnerFactory = createFrontierRunner,
   watcherFactory = startLoopWatcher,
   handlerFactory = createMessageHandler,
 } = {}) {
@@ -30,27 +30,27 @@ function createBot({
   let shutdownPromise = null;
 
   client.on('qr', (qr) => {
-    console.log('\n[AgentX WhatsApp] Scan this QR with WhatsApp -> Linked Devices:');
+    console.log('\n[Frontier WhatsApp] Scan this QR with WhatsApp -> Linked Devices:');
     qrcode.generate(qr, { small: true });
   });
-  client.on('authenticated', () => console.log('[AgentX WhatsApp] Authenticated.'));
+  client.on('authenticated', () => console.log('[Frontier WhatsApp] Authenticated.'));
   client.on('auth_failure', (message) => {
-    console.error('[AgentX WhatsApp] Auth failure:', message);
+    console.error('[Frontier WhatsApp] Auth failure:', message);
     void shutdown();
   });
   client.on('ready', () => {
-    console.log(`[AgentX WhatsApp] Ready. Allowed operators: ${config.allowedNumbers.length}`);
+    console.log(`[Frontier WhatsApp] Ready. Allowed operators: ${config.allowedNumbers.length}`);
     watcher && watcher.stop();
     try { require('fs').chmodSync(sessionRoot, 0o700); } catch (error) {
-      console.warn(`[AgentX WhatsApp] Could not restrict session permissions: ${error.message}`);
+      console.warn(`[Frontier WhatsApp] Could not restrict session permissions: ${error.message}`);
     }
     watcher = watcherFactory({ config, client });
   });
   client.on('message_create', (message) => {
-    void handler(message).catch((error) => console.error('[AgentX WhatsApp] Handler error:', error.message));
+    void handler(message).catch((error) => console.error('[Frontier WhatsApp] Handler error:', error.message));
   });
   client.on('disconnected', (reason) => {
-    console.warn('[AgentX WhatsApp] Disconnected:', reason);
+    console.warn('[Frontier WhatsApp] Disconnected:', reason);
     watcher && watcher.stop();
     watcher = null;
   });
@@ -72,18 +72,18 @@ if (require.main === module) {
   let bot;
   try {
     bot = createBot();
-    console.log('[AgentX WhatsApp] Starting...');
+    console.log('[Frontier WhatsApp] Starting...');
     bot.start().catch((error) => {
-      console.error('[AgentX WhatsApp] Failed to initialize:', error.message);
+      console.error('[Frontier WhatsApp] Failed to initialize:', error.message);
       process.exitCode = 1;
     });
   } catch (error) {
-    console.error('[AgentX WhatsApp] Configuration error:', error.message);
+    console.error('[Frontier WhatsApp] Configuration error:', error.message);
     process.exitCode = 1;
   }
 
   const stop = async () => {
-    if (bot) await bot.shutdown().catch((error) => console.error('[AgentX WhatsApp] Shutdown error:', error.message));
+    if (bot) await bot.shutdown().catch((error) => console.error('[Frontier WhatsApp] Shutdown error:', error.message));
   };
   process.once('SIGINT', () => { void stop().finally(() => process.exit()); });
   process.once('SIGTERM', () => { void stop().finally(() => process.exit()); });

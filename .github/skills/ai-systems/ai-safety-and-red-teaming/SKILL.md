@@ -2,7 +2,7 @@
 name: "ai-safety-and-red-teaming"
 description: 'Defend LLM systems against prompt injection, jailbreaks, data exfiltration, and unsafe output. Covers input/output guardrails (NeMo Guardrails, LlamaGuard 3, ShieldGemma, Azure AI Content Safety, Bedrock Guardrails), red-team frameworks (Microsoft PyRIT, Garak, promptfoo redteam), and Responsible AI controls (groundedness, PII, toxicity, indirect prompt injection).'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import {
  createLearningCapture,
  launchPlanDeepening,
@@ -15,40 +15,40 @@ import {
 
 export function registerLearningsCommands(
   context: vscode.ExtensionContext,
-  agentx: AgentXContext,
+  agentx: FrontierContext,
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('agentx.showBrainstormGuide', async (query?: string) => {
+    vscode.commands.registerCommand('frontier.showBrainstormGuide', async (query?: string) => {
       await showBrainstorm(agentx, query);
     }),
-    vscode.commands.registerCommand('agentx.showPlanningLearnings', async (query?: string) => {
+    vscode.commands.registerCommand('frontier.showPlanningLearnings', async (query?: string) => {
       await showRankedLearnings(agentx, 'planning', query);
     }),
-    vscode.commands.registerCommand('agentx.showReviewLearnings', async (query?: string) => {
+    vscode.commands.registerCommand('frontier.showReviewLearnings', async (query?: string) => {
       await showRankedLearnings(agentx, 'review', query);
     }),
-    vscode.commands.registerCommand('agentx.showKnowledgeCaptureGuidance', async () => {
+    vscode.commands.registerCommand('frontier.showKnowledgeCaptureGuidance', async () => {
       await showCaptureGuidance(agentx);
     }),
-    vscode.commands.registerCommand('agentx.showCompoundLoop', async () => {
+    vscode.commands.registerCommand('frontier.showCompoundLoop', async () => {
       await showCompoundLoop(agentx);
     }),
-    vscode.commands.registerCommand('agentx.showWorkflowNextStep', async () => {
+    vscode.commands.registerCommand('frontier.showWorkflowNextStep', async () => {
       await showWorkflowNextStep(agentx);
     }),
-    vscode.commands.registerCommand('agentx.deepenPlan', async () => {
+    vscode.commands.registerCommand('frontier.deepenPlan', async () => {
       await launchPlanDeepening(agentx);
     }),
-    vscode.commands.registerCommand('agentx.kickoffReview', async () => {
+    vscode.commands.registerCommand('frontier.kickoffReview', async () => {
       await launchReviewKickoff(agentx);
     }),
-    vscode.commands.registerCommand('agentx.showWorkflowRolloutScorecard', async () => {
+    vscode.commands.registerCommand('frontier.showWorkflowRolloutScorecard', async () => {
       await showWorkflowRolloutScorecard(agentx);
     }),
-    vscode.commands.registerCommand('agentx.showOperatorEnablementChecklist', async () => {
+    vscode.commands.registerCommand('frontier.showOperatorEnablementChecklist', async () => {
       await showOperatorEnablementChecklist(agentx);
     }),
-    vscode.commands.registerCommand('agentx.createLearningCapture', async () => {
+    vscode.commands.registerCommand('frontier.createLearningCapture', async () => {
       await createLearningCapture(agentx);
     }),
   );

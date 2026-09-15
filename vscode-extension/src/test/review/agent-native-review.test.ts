@@ -18,7 +18,7 @@ describe('agent-native review', () => {
   const workflowGuidePath = 'docs/guides/KNOWLEDGE-REVIEW-WORKFLOWS.md';
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-agent-review-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-agent-review-'));
     writeFile(tmpDir, workflowGuidePath, '# Knowledge And Review Workflows\n');
     writeFile(tmpDir, 'docs/guides/WORKFLOW-PILOT-ORDER.md', '# Pilot Order\n');
     writeFile(tmpDir, '.github/templates/REVIEW-TEMPLATE.md', '# Review\n');
@@ -28,14 +28,14 @@ describe('agent-native review', () => {
     writeFile(tmpDir, 'vscode-extension/package.json', JSON.stringify({
       contributes: {
         commands: [
-          { command: 'agentx.showBrainstormGuide' },
-          { command: 'agentx.runWorkflow' },
-          { command: 'agentx.showReviewLearnings' },
-          { command: 'agentx.showCompoundLoop' },
-          { command: 'agentx.showKnowledgeCaptureGuidance' },
-          { command: 'agentx.showAgentNativeReview' },
-          { command: 'agentx.showTaskBundles' },
-          { command: 'agentx.showBoundedParallelRuns' },
+          { command: 'frontier.showBrainstormGuide' },
+          { command: 'frontier.runWorkflow' },
+          { command: 'frontier.showReviewLearnings' },
+          { command: 'frontier.showCompoundLoop' },
+          { command: 'frontier.showKnowledgeCaptureGuidance' },
+          { command: 'frontier.showAgentNativeReview' },
+          { command: 'frontier.showTaskBundles' },
+          { command: 'frontier.showBoundedParallelRuns' },
         ],
       },
     }));
@@ -61,18 +61,18 @@ describe('agent-native review', () => {
     ].join('\n'));
     writeFile(tmpDir, 'vscode-extension/src/views/workTreeProvider.ts', [
       'Brainstorm',
-      'agentx.showBrainstormGuide',
+      'frontier.showBrainstormGuide',
       'Show workflow steps',
-      'agentx.runWorkflow',
+      'frontier.runWorkflow',
       'Review learnings',
-      'agentx.showReviewLearnings',
+      'frontier.showReviewLearnings',
       'Compound loop',
-      'agentx.showCompoundLoop',
+      'frontier.showCompoundLoop',
       'Capture guidance',
-      'agentx.showKnowledgeCaptureGuidance',
+      'frontier.showKnowledgeCaptureGuidance',
     ].join('\n'));
-    writeFile(tmpDir, 'vscode-extension/src/views/statusTreeProvider.ts', 'agentx.showAgentNativeReview\n');
-    writeFile(tmpDir, 'vscode-extension/src/agentxContext.ts', [
+    writeFile(tmpDir, 'vscode-extension/src/views/statusTreeProvider.ts', 'frontier.showAgentNativeReview\n');
+    writeFile(tmpDir, 'vscode-extension/src/frontierContext.ts', [
       'workspaceRoot',
       'getPendingClarification',
       'listExecutionPlanFiles',
@@ -115,10 +115,10 @@ describe('agent-native review', () => {
   });
 
   it('accepts bundled review assets when visible defaults are absent', () => {
-    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-review-ext-'));
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-review-ext-'));
     fs.rmSync(path.join(tmpDir, 'docs', 'guides'), { recursive: true, force: true });
     fs.rmSync(path.join(tmpDir, '.github', 'templates'), { recursive: true, force: true });
-    const bundledRoot = path.join(extensionPath, '.github', 'agentx');
+    const bundledRoot = path.join(extensionPath, '.github', 'frontier');
     fs.mkdirSync(path.join(bundledRoot, 'docs', 'guides'), { recursive: true });
     fs.mkdirSync(path.join(bundledRoot, 'templates'), { recursive: true });
     fs.writeFileSync(path.join(bundledRoot, 'docs', 'guides', 'KNOWLEDGE-REVIEW-WORKFLOWS.md'), '# Bundled Guide\n');

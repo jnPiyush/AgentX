@@ -2,7 +2,7 @@
 name: "dependency-management"
 description: 'Manage dependencies with version pinning, lock files, vulnerability scanning, and update strategies. Use when adding new packages, pinning dependency versions, scanning for vulnerabilities, updating outdated dependencies, or managing monorepo dependency graphs.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

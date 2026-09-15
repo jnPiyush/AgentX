@@ -2,7 +2,7 @@
 name: "brand-spec-extraction"
 description: 'Extract and codify a brand specification from user-provided sources (URL, screenshot, PDF, existing app) into a deterministic brand-spec.md artifact. Captures palette, typography, voice, motion, and prohibited patterns so downstream design decisions can be defended against the real brand instead of invented from scratch.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-02-04"
   updated: "2026-02-04"

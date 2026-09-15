@@ -11,7 +11,7 @@ applyTo: '**/*agent*, **/*llm*, **/*model*, **/*workflow*, **/agents/**, **/*ai*
 
 ## Pre-edit gate
 
-Start `.agentx/agentx.ps1 loop start -p "<task>"` before mutation. Follow
+Start `.agentx/frontier.ps1 loop start -p "<task>"` before mutation. Follow
 [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md) for the loop, council, plan, capture
 and final independent-review gates; inspect real state before claiming completion.
 

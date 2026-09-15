@@ -7,6 +7,7 @@ out/e2e/**
 coverage/**
 .nyc_output/**
 coverage-output.txt
+tsc-out.txt
 .mocharc.yml
 .eslintrc.cjs
 tsconfig.json

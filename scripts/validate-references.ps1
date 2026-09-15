@@ -70,7 +70,7 @@ $mdFiles = @(Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAc
 )
 
 # Scope to git-tracked files when available so generated/untracked mirrors
-# (e.g. vscode-extension/.github/agentx) do not produce false positives.
+# (e.g. vscode-extension/.github/frontier) do not produce false positives.
 $trackedSet = $null
 try {
     Push-Location $ROOT

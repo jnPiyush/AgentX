@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AgentX -- Shared Runtime: Live Verification Loop
+// Frontier -- Shared Runtime: Live Verification Loop
 // ---------------------------------------------------------------------------
 //
 // Framework-free core of the "verify after every edit, feed errors back" loop

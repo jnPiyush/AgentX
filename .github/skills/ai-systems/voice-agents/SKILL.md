@@ -2,7 +2,7 @@
 name: "voice-agents"
 description: 'Build low-latency voice agents using speech-to-speech (S2S) realtime APIs and cascaded STT->LLM->TTS pipelines. Covers OpenAI Realtime / GPT Realtime, Azure Voice Live, Gemini Live, Deepgram Voice Agent, ElevenLabs Conversational AI; turn-taking, barge-in, latency budgets, tool use during speech, and telephony (Twilio, LiveKit, Pipecat).'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2026-04-30"
   updated: "2026-04-30"

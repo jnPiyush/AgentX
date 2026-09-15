@@ -1,6 +1,6 @@
 ---
 name: "Code Review"
-agent: "AgentX Reviewer"
+agent: "Frontier Review FDE"
 description: Structured code review prompt for thorough PR reviews
 inputs:
  issue_number:

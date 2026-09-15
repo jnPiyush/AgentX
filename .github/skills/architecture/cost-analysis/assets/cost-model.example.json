@@ -1,5 +1,5 @@
 {
-  "$comment": "AgentX cost model. Copy to docs/artifacts/costs/cost-model.json and edit. Rates are illustrative placeholders - replace with rates you sourced yourself and record the source below.",
+  "$comment": "Frontier cost model. Copy to docs/artifacts/costs/cost-model.json and edit. Rates are illustrative placeholders - replace with rates you sourced yourself and record the source below.",
   "currency": "USD",
   "region": "REPLACE-ME",
   "ratesSourcedOn": "YYYY-MM-DD",

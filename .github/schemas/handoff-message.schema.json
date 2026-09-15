@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "AgentX Handoff Message",
+  "title": "Frontier Handoff Message",
   "description": "Schema for structured agent-to-agent communication during handoffs.",
   "type": "object",
   "required": ["version", "handoff"],

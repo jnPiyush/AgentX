@@ -81,7 +81,7 @@ if ($Json) {
 }
 else {
   Write-Host ""
-  Write-Host "AgentX skill stocktake" -ForegroundColor Cyan
+  Write-Host "Frontier skill stocktake" -ForegroundColor Cyan
   Write-Host ("Scanned: {0}   Average: {1}/100   Threshold: {2}   Flagged: {3}" -f $total, $avg, $Threshold, $flagged.Count)
   Write-Host ""
   if ($flagged.Count -gt 0) {

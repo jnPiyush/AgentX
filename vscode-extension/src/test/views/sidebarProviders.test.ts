@@ -10,7 +10,7 @@ import { WorkTreeProvider } from '../../views/workTreeProvider';
 import { StatusTreeProvider } from '../../views/statusTreeProvider';
 
 function createWorkspaceRoot(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-sidebar-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-sidebar-'));
     fs.mkdirSync(path.join(root, 'docs', 'execution', 'plans'), { recursive: true });
     fs.mkdirSync(path.join(root, 'docs', 'execution', 'progress'), { recursive: true });
     fs.mkdirSync(path.join(root, 'docs', 'guides'), { recursive: true });

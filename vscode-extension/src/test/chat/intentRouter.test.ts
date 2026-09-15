@@ -12,13 +12,13 @@ interface CliCall {
   args: string[];
 }
 
-interface FakeAgentX {
+interface FakeFrontier {
   workspaceRoot: string | undefined;
   runCli: (subcommand: string, args?: string[]) => Promise<string>;
   cliCalls: CliCall[];
 }
 
-function makeAgentX(stdout: string = '(stub)', workspaceRoot: string | undefined = '/tmp/intent-router-test'): FakeAgentX {
+function makeFrontier(stdout: string = '(stub)', workspaceRoot: string | undefined = '/tmp/intent-router-test'): FakeFrontier {
   const cliCalls: CliCall[] = [];
   return {
     workspaceRoot,
@@ -108,7 +108,7 @@ describe('intentRouter', () => {
     for (const c of cases) {
       it(`runs read-only verb for "${c.phrase}"`, async () => {
         const response = createMockResponseStream();
-        const agentx = makeAgentX('done');
+        const agentx = makeFrontier('done');
         const result = await tryHandleNaturalLanguageIntent(c.phrase, response as any, agentx as any);
         assert.ok(result, `expected match for "${c.phrase}"`);
         assert.equal(agentx.cliCalls.length, 1, `expected exactly one CLI call for "${c.phrase}"`);
@@ -121,7 +121,7 @@ describe('intentRouter', () => {
   describe('destructive verbs', () => {
     it('proposes provider switch and waits for confirmation', async () => {
       const response = createMockResponseStream();
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const result = await tryHandleNaturalLanguageIntent(
         'change adapter to ado',
         response as any,
@@ -135,7 +135,7 @@ describe('intentRouter', () => {
 
     it('executes after explicit confirmation', async () => {
       const response1 = createMockResponseStream();
-      const agentx = makeAgentX('switched');
+      const agentx = makeFrontier('switched');
       await tryHandleNaturalLanguageIntent('switch to github', response1 as any, agentx as any);
       assert.equal(agentx.cliCalls.length, 0);
 
@@ -149,7 +149,7 @@ describe('intentRouter', () => {
 
     it('cancels pending intent on "no"', async () => {
       const r1 = createMockResponseStream();
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       await tryHandleNaturalLanguageIntent('switch to local', r1 as any, agentx as any);
 
       const r2 = createMockResponseStream();
@@ -169,7 +169,7 @@ describe('intentRouter', () => {
       for (const p of phrasings) {
         resetIntentRouterStateForTests();
         const r1 = createMockResponseStream();
-        const agentx = makeAgentX();
+        const agentx = makeFrontier();
         const proposed = await tryHandleNaturalLanguageIntent(p.text, r1 as any, agentx as any);
         assert.ok(proposed, `should propose for "${p.text}"`);
 
@@ -241,7 +241,7 @@ describe('intentRouter', () => {
       it(`proposes (no auto-execute) for "${c.phrase}"`, async () => {
         resetIntentRouterStateForTests();
         const r1 = createMockResponseStream();
-        const agentx = makeAgentX();
+        const agentx = makeFrontier();
         const proposed = await tryHandleNaturalLanguageIntent(c.phrase, r1 as any, agentx as any);
         assert.ok(proposed, `expected proposal for "${c.phrase}"`);
         assert.equal(agentx.cliCalls.length, 0, 'must not run before confirmation');
@@ -259,7 +259,7 @@ describe('intentRouter', () => {
   describe('non-matching input', () => {
     it('returns undefined for unrelated free-text', async () => {
       const response = createMockResponseStream();
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const result = await tryHandleNaturalLanguageIntent(
         'tell me a joke about ducks',
         response as any,
@@ -271,14 +271,14 @@ describe('intentRouter', () => {
 
     it('returns undefined for empty input', async () => {
       const response = createMockResponseStream();
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const result = await tryHandleNaturalLanguageIntent('   ', response as any, agentx as any);
       assert.equal(result, undefined);
     });
 
     it('rejects unknown provider value', async () => {
       const response = createMockResponseStream();
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const result = await tryHandleNaturalLanguageIntent(
         'switch to bitbucket',
         response as any,
@@ -299,7 +299,7 @@ describe('intentRouter', () => {
     for (const phrase of noMatchPhrases) {
       it(`rejects ambiguous/unsupported backlog-sync phrase: "${phrase}"`, async () => {
         const response = createMockResponseStream();
-        const agentx = makeAgentX();
+        const agentx = makeFrontier();
         const result = await tryHandleNaturalLanguageIntent(phrase, response as any, agentx as any);
         assert.equal(result, undefined, `"${phrase}" must not match any rule`);
         assert.equal(agentx.cliCalls.length, 0);
@@ -312,7 +312,7 @@ describe('intentRouter', () => {
       const BASE_TIME = 1_000_000;
       setNowFnForTests(() => BASE_TIME);
       const r1 = createMockResponseStream();
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       await tryHandleNaturalLanguageIntent('sync backlog to github', r1 as any, agentx as any);
       assert.ok(r1.getMarkdown().includes('Proposed:'));
       assert.equal(agentx.cliCalls.length, 0);
@@ -330,7 +330,7 @@ describe('intentRouter', () => {
     });
 
     it('backlog-sync without explicit target returns no match (no provider assumption)', async () => {
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const r = createMockResponseStream();
       const result = await tryHandleNaturalLanguageIntent('sync backlog', r as any, agentx as any);
       assert.equal(result, undefined, '"sync backlog" without target should not match');
@@ -338,7 +338,7 @@ describe('intentRouter', () => {
     });
 
     it('force-sync backlog without explicit target returns no match', async () => {
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const r = createMockResponseStream();
       const result = await tryHandleNaturalLanguageIntent('force-sync backlog', r as any, agentx as any);
       assert.equal(result, undefined, '"force-sync backlog" without target should not match');
@@ -346,7 +346,7 @@ describe('intentRouter', () => {
     });
 
     it('destructive intent with no workspace open — shows error, no pending stored', async () => {
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       agentx.workspaceRoot = undefined; // explicitly unset after construction to bypass default
       const r = createMockResponseStream();
       const result = await tryHandleNaturalLanguageIntent(
@@ -383,7 +383,7 @@ describe('intentRouter', () => {
 
     it('routes paraphrase outside regex catalog to ready-queue via LM (high confidence)', async () => {
       __setMockModels([makeMockModel('{"id":"ready-queue","args":[],"confidence":"high","reason":"user wants today work"}')]);
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const r = createMockResponseStream();
       const result = await tryHandleNaturalLanguageIntent('what work am I supposed to do today', r as any, agentx as any);
       assert.deepEqual(result, {});
@@ -394,7 +394,7 @@ describe('intentRouter', () => {
 
     it('low-confidence LM result requires confirmation even for read-only intents', async () => {
       __setMockModels([makeMockModel('{"id":"ready-queue","args":[],"confidence":"low","reason":"ambiguous"}')]);
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const r = createMockResponseStream();
       const result = await tryHandleNaturalLanguageIntent('what now', r as any, agentx as any);
       assert.deepEqual(result, {});
@@ -409,7 +409,7 @@ describe('intentRouter', () => {
 
     it('LM returning id not in allowlist falls back to regex', async () => {
       __setMockModels([makeMockModel('{"id":"NOT_A_REAL_INTENT","args":[],"confidence":"high","reason":"hallucinated"}')]);
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const r = createMockResponseStream();
       // Use a regex-matchable phrase so we can prove fallback fired.
       const result = await tryHandleNaturalLanguageIntent('show ready', r as any, agentx as any);
@@ -420,7 +420,7 @@ describe('intentRouter', () => {
 
     it('LM returning invalid JSON falls back to regex', async () => {
       __setMockModels([makeMockModel('this is not json at all')]);
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const r = createMockResponseStream();
       const result = await tryHandleNaturalLanguageIntent('show config', r as any, agentx as any);
       assert.deepEqual(result, {});
@@ -431,7 +431,7 @@ describe('intentRouter', () => {
 
     it('no models available -> falls back to regex (existing behavior)', async () => {
       __clearMockModels();
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const r = createMockResponseStream();
       const result = await tryHandleNaturalLanguageIntent('show ready', r as any, agentx as any);
       assert.deepEqual(result, {});
@@ -441,7 +441,7 @@ describe('intentRouter', () => {
 
     it('LM proposing destructive intent still requires confirmation', async () => {
       __setMockModels([makeMockModel('{"id":"issue-close","args":["42"],"confidence":"high","reason":"user wants to close 42"}')]);
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const r = createMockResponseStream();
       const result = await tryHandleNaturalLanguageIntent('please wrap up issue forty-two', r as any, agentx as any);
       assert.deepEqual(result, {});
@@ -457,7 +457,7 @@ describe('intentRouter', () => {
     it('LM args failing allowlist validation falls back to regex', async () => {
       // LM proposes a non-numeric issue number.
       __setMockModels([makeMockModel('{"id":"issue-get","args":["abc"],"confidence":"high","reason":"bad"}')]);
-      const agentx = makeAgentX();
+      const agentx = makeFrontier();
       const r = createMockResponseStream();
       // Phrase has no regex match, so we expect undefined (no fallthrough run).
       const result = await tryHandleNaturalLanguageIntent('???', r as any, agentx as any);

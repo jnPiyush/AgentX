@@ -2,7 +2,7 @@
 name: "model-fine-tuning"
 description: 'Fine-tune foundation models for domain-specific tasks. Use when adapting LLMs with LoRA/QLoRA/PEFT, full fine-tuning, knowledge distillation, or designing training data pipelines for model customization.'
 metadata:
-  author: "AgentX"
+  author: "Frontier"
   version: "1.0.0"
   created: "2025-06-15"
   updated: "2025-06-15"

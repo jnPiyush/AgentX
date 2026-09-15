@@ -86,9 +86,9 @@ export function resolveWorkflowRecommendation(
   if (context.pendingClarification) {
     return {
       action: 'Resolve the pending clarification before advancing the workflow',
-      command: 'agentx.showPendingClarification',
+      command: 'frontier.showPendingClarification',
       commandTitle: 'Show Pending Clarification',
-      rationale: 'The current session is waiting on human guidance, so AgentX should fail closed instead of guessing the next transition.',
+      rationale: 'The current session is waiting on human guidance, so Frontier should fail closed instead of guessing the next transition.',
       blockers: ['A pending clarification must be resolved before the next checkpoint is reliable.'],
     };
   }
@@ -97,7 +97,7 @@ export function resolveWorkflowRecommendation(
   case 'Brainstorm':
     return {
       action: 'Frame the work with the brainstorm guide',
-      command: 'agentx.showBrainstormGuide',
+      command: 'frontier.showBrainstormGuide',
       commandTitle: 'Show Brainstorm Guide',
       rationale: 'No active issue or durable plan evidence is linked yet, so the safest next move is to tighten scope before planning.',
       blockers: context.issueNumber ? [] : ['No active issue or harness thread is linked to the workflow.'],
@@ -105,7 +105,7 @@ export function resolveWorkflowRecommendation(
   case 'Plan':
     return {
       action: 'Deepen the plan before implementation continues',
-      command: 'agentx.deepenPlan',
+      command: 'frontier.deepenPlan',
       commandTitle: 'Deepen Plan',
       rationale: 'The workflow has scope context but is missing a durable plan or progress pair, so planning should be made explicit first.',
       blockers: context.planDeepeningBlockers,
@@ -114,7 +114,7 @@ export function resolveWorkflowRecommendation(
     if (context.loopComplete && context.reviewKickoffAllowed) {
       return {
         action: 'Kick off review with the current issue and plan context',
-        command: 'agentx.kickoffReview',
+        command: 'frontier.kickoffReview',
         commandTitle: 'Kick Off Review',
         rationale: 'The quality loop is complete and the plan is linked, so review is the next bounded checkpoint.',
         blockers: context.reviewKickoffBlockers,
@@ -132,7 +132,7 @@ export function resolveWorkflowRecommendation(
       action: context.hasCompoundEvidence
         ? 'Resolve any remaining review follow-up before marking the work done'
         : 'Capture reusable learning or record the explicit skip rationale',
-      command: context.hasCompoundEvidence ? undefined : 'agentx.createLearningCapture',
+      command: context.hasCompoundEvidence ? undefined : 'frontier.createLearningCapture',
       commandTitle: context.hasCompoundEvidence ? undefined : 'Create Learning Capture',
       rationale: context.hasReviewEvidence
         ? 'Review evidence exists, so the workflow should preserve what was learned before closure drifts.'
@@ -142,7 +142,7 @@ export function resolveWorkflowRecommendation(
   case 'Compound Capture':
     return {
       action: 'Record the curated learning capture before final closeout',
-      command: 'agentx.createLearningCapture',
+      command: 'frontier.createLearningCapture',
       commandTitle: 'Create Learning Capture',
       rationale: 'The issue is effectively closed, but the compound-capture step remains unresolved.',
       blockers: context.hasCompoundEvidence ? [] : ['A curated learning capture is still missing.'],
@@ -150,7 +150,7 @@ export function resolveWorkflowRecommendation(
   case 'Done':
     return {
       action: 'Review the rollout scorecard before promoting the next slice',
-      command: 'agentx.showWorkflowRolloutScorecard',
+      command: 'frontier.showWorkflowRolloutScorecard',
       commandTitle: 'Show Workflow Rollout Scorecard',
       rationale: 'The active issue is complete, so the next decision is a governance decision rather than another workflow transition.',
       blockers: [],

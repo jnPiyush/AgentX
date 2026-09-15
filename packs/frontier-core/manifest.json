@@ -1,0 +1,71 @@
+{
+  "name": "frontier-core",
+  "version": "9.3.0",
+  "description": "Core Frontier pack -- full SDLC agents, workflow engine, and essential instructions for multi-agent orchestration.",
+  "maturity": "stable",
+  "tags": [
+    "sdlc",
+    "orchestration",
+    "multi-agent",
+    "copilot",
+    "workflow"
+  ],
+  "artifacts": {
+    "agents": [
+      ".github/agents/frontier.agent.md",
+      ".github/agents/product-manager.agent.md",
+      ".github/agents/ux-designer.agent.md",
+      ".github/agents/architect.agent.md",
+      ".github/agents/engineer.agent.md",
+      ".github/agents/reviewer.agent.md",
+      ".github/agents/reviewer-auto.agent.md",
+      ".github/agents/devops.agent.md",
+      ".github/agents/data-scientist.agent.md",
+      ".github/agents/tester.agent.md",
+      ".github/agents/fabric-engineer.agent.md",
+      ".github/agents/power-platform-builder.agent.md",
+      ".github/agents/consulting-research.agent.md",
+      ".github/agents/powerbi-analyst.agent.md",
+      ".github/agents/agile-coach.agent.md"
+    ],
+    "instructions": [
+      ".github/instructions/ai.instructions.md",
+      ".github/instructions/csharp.instructions.md",
+      ".github/instructions/python.instructions.md",
+      ".github/instructions/typescript.instructions.md",
+      ".github/instructions/react.instructions.md",
+      ".github/instructions/memory.instructions.md",
+      ".github/instructions/project-conventions.instructions.md"
+    ],
+    "templates": [
+      ".github/templates/PRD-TEMPLATE.md",
+      ".github/templates/ADR-TEMPLATE.md",
+      ".github/templates/SPEC-TEMPLATE.md",
+      ".github/templates/UX-TEMPLATE.md",
+      ".github/templates/REVIEW-TEMPLATE.md",
+      ".github/templates/ARCH-REVIEW-TEMPLATE.md",
+      ".github/templates/SECURITY-PLAN-TEMPLATE.md",
+      ".github/templates/ROADMAP-TEMPLATE.md",
+      ".github/templates/PROGRESS-TEMPLATE.md",
+      ".github/templates/EXEC-PLAN-TEMPLATE.md",
+      ".github/templates/CONTRACT-TEMPLATE.md",
+      ".github/templates/EVIDENCE-SUMMARY-TEMPLATE.md",
+      ".github/templates/BACKLOG-TEMPLATE.md"
+    ],
+    "workflows": [],
+    "scripts": [
+      ".agentx/agentx.ps1",
+      ".agentx/agentx.sh",
+      ".agentx/local-issue-manager.ps1",
+      ".agentx/local-issue-manager.sh",
+      "scripts/score-output.ps1",
+      "scripts/score-code-quality.ps1",
+      "evaluation/rubrics/code-quality.md",
+      "scripts/validate-handoff.ps1",
+      "scripts/validate-frontmatter.ps1",
+      "scripts/modules/CIHelpers.psm1",
+      "scripts/modules/SecurityHelpers.psm1"
+    ]
+  },
+  "dependencies": []
+}

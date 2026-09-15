@@ -1,15 +1,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { promptWorkspaceRoot, readJsonWithComments } from './initializeInternals';
 import { runCriticalPreCheck } from './setupWizard';
+import { resolveFrontierStatePath } from '../utils/frontierPaths';
 
 export type LlmAdapterMode = 'copilot' | 'claude-code' | 'anthropic-api' | 'openai-api';
 export type LlmAdapterSetupMode = LlmAdapterMode | 'claude-code-local';
 export type ClaudeCodeProfile = 'subscription' | 'local-gateway';
 
-interface AgentXConfig {
+interface FrontierConfig {
   readonly created?: string;
   readonly updatedAt?: string;
   readonly llmProvider?: string;
@@ -172,8 +173,8 @@ function upsertLlmAdapterConfig(
   providerId: LlmAdapterMode,
   settings: ProviderPromptResult,
 ): boolean {
-  const configFile = path.join(root, '.agentx', 'config.json');
-  const existingConfig = readJsonWithComments<AgentXConfig>(configFile) ?? {};
+  const configFile = resolveFrontierStatePath(root, 'config.json');
+  const existingConfig = readJsonWithComments<FrontierConfig>(configFile) ?? {};
   const existingProviders = { ...(existingConfig.llmProviders ?? {}) };
 
   existingProviders[providerId] = sanitizeProviderRecord(providerId, settings);
@@ -208,7 +209,7 @@ async function promptProviderPick(
 
   const picked = await vscode.window.showQuickPick(LLM_PROVIDER_ITEMS, {
     placeHolder: 'Select the LLM adapter to activate for this workspace',
-    title: 'AgentX - Add LLM Adapter',
+    title: 'Frontier - Add LLM Adapter',
   });
 
   return picked?.value;
@@ -217,7 +218,7 @@ async function promptProviderPick(
 async function promptClaudeCodeSettings(): Promise<ProviderPromptResult | undefined> {
   const model = await vscode.window.showQuickPick(CLAUDE_MODEL_ITEMS, {
     placeHolder: 'Default Claude model for subscription mode',
-    title: 'AgentX - Claude Subscription',
+    title: 'Frontier - Claude Subscription',
   });
 
   if (!model) {
@@ -234,7 +235,7 @@ async function promptClaudeCodeSettings(): Promise<ProviderPromptResult | undefi
 async function promptClaudeLocalGatewaySettings(): Promise<ProviderPromptResult | undefined> {
   const model = await vscode.window.showQuickPick(CLAUDE_LOCAL_MODEL_ITEMS, {
     placeHolder: 'Select the Ollama coding model exposed through LiteLLM',
-    title: 'AgentX - Claude Code + LiteLLM + Ollama',
+    title: 'Frontier - Claude Code + LiteLLM + Ollama',
   });
   if (!model) {
     return undefined;
@@ -302,7 +303,7 @@ async function promptClaudeLocalGatewaySettings(): Promise<ProviderPromptResult 
 async function promptAnthropicSettings(): Promise<ProviderPromptResult | undefined> {
   const model = await vscode.window.showQuickPick(CLAUDE_MODEL_ITEMS, {
     placeHolder: 'Default Claude model for API mode',
-    title: 'AgentX - Claude API',
+    title: 'Frontier - Claude API',
   });
   if (!model) {
     return undefined;
@@ -334,7 +335,7 @@ async function promptAnthropicSettings(): Promise<ProviderPromptResult | undefin
 async function promptOpenAiSettings(): Promise<ProviderPromptResult | undefined> {
   const model = await vscode.window.showQuickPick(OPENAI_MODEL_ITEMS, {
     placeHolder: 'Default OpenAI model for API mode',
-    title: 'AgentX - OpenAI API',
+    title: 'Frontier - OpenAI API',
   });
   if (!model) {
     return undefined;
@@ -395,7 +396,7 @@ function getProviderLabel(providerId: LlmAdapterMode, profile?: ClaudeCodeProfil
 }
 
 export async function applyLlmAdapterConfiguration(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   root: string,
   providerId: LlmAdapterMode,
   settings: ProviderPromptResult,
@@ -436,9 +437,9 @@ export async function applyLlmAdapterConfiguration(
   }
 
   agentx.invalidateCache();
-  await vscode.commands.executeCommand('setContext', 'agentx.initialized', true);
-  await vscode.commands.executeCommand('setContext', 'agentx.githubConnected', agentx.githubConnected);
-  await vscode.commands.executeCommand('setContext', 'agentx.adoConnected', agentx.adoConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.initialized', true);
+  await vscode.commands.executeCommand('setContext', 'frontier.githubConnected', agentx.githubConnected);
+  await vscode.commands.executeCommand('setContext', 'frontier.adoConnected', agentx.adoConnected);
 
   let preCheckPassed = true;
   if (options?.runPreCheck ?? true) {
@@ -454,18 +455,18 @@ export async function applyLlmAdapterConfiguration(
 }
 
 export async function runAddLlmAdapterCommand(
-  agentx: AgentXContext,
+  agentx: FrontierContext,
   preferredProviderId?: LlmAdapterSetupMode,
 ): Promise<void> {
-  const root = await promptWorkspaceRoot('AgentX - Add LLM Adapter');
+  const root = await promptWorkspaceRoot('Frontier - Add LLM Adapter');
   if (!root) {
     return;
   }
 
-  const configFile = path.join(root, '.agentx', 'config.json');
+  const configFile = resolveFrontierStatePath(root, 'config.json');
   if (!fs.existsSync(configFile)) {
     vscode.window.showWarningMessage(
-      'AgentX LLM adapters require workspace initialization. Run "AgentX: Initialize Local Runtime" first.',
+      'Frontier LLM adapters require workspace initialization. Run "Frontier: Initialize Local Runtime" first.',
     );
     return;
   }
@@ -486,14 +487,14 @@ export async function runAddLlmAdapterCommand(
   if (!result.preCheckPassed && providerId === 'claude-code') {
     vscode.window.showWarningMessage(
       settings.profile === 'local-gateway'
-        ? 'AgentX: Claude Code local gateway mode was saved, but Claude Code CLI still needs installation or login.'
-        : 'AgentX: Claude subscription mode was saved, but Claude Code CLI still needs installation or login.',
+        ? 'Frontier: Claude Code local gateway mode was saved, but Claude Code CLI still needs installation or login.'
+        : 'Frontier: Claude subscription mode was saved, but Claude Code CLI still needs installation or login.',
     );
     return;
   }
 
   const suffix = result.changed ? 'saved for this workspace' : 'already configured for this workspace';
   vscode.window.showInformationMessage(
-    `AgentX: ${getProviderLabel(providerId, settings.profile)} is now the active LLM adapter and has been ${suffix}.`,
+    `Frontier: ${getProviderLabel(providerId, settings.profile)} is now the active LLM adapter and has been ${suffix}.`,
   );
 }

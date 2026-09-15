@@ -131,7 +131,7 @@ grep_search: "```typescript|```python" in SPEC-42.md -> 0 matches
 
 **Evaluator verification**:
 ```
-grep_search: "loop status" or ".agentx/agentx.ps1 loop" in docs/artifacts/reviews/REVIEW-42.md -> 0 matches
+grep_search: "loop status" or ".agentx/frontier.ps1 loop" in docs/artifacts/reviews/REVIEW-42.md -> 0 matches
 ```
 
 **Correct verdict**:
@@ -243,4 +243,4 @@ When adding new calibration examples:
 
 ---
 
-**See Also**: [WORKFLOW.md](../WORKFLOW.md) | [engineer.agent.md](../../agentx/agents/engineer.agent.md) | [reviewer.agent.md](../../agentx/agents/reviewer.agent.md)
+**See Also**: [WORKFLOW.md](../WORKFLOW.md) | [engineer.agent.md](../../frontier/agents/engineer.agent.md) | [reviewer.agent.md](../../frontier/agents/reviewer.agent.md)

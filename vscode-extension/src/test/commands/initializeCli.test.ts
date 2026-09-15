@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import { runInitializeCliCommand } from '../../commands/initializeCli';
 import {
   appendCliSymlinksToGitignore,
@@ -22,8 +22,8 @@ describe('Initialize CLI symlink helpers', () => {
   let workspaceRoot: string;
 
   beforeEach(() => {
-    extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-cli-ext-'));
-    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-cli-work-'));
+    extensionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-cli-ext-'));
+    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-cli-work-'));
   });
 
   afterEach(() => {
@@ -54,8 +54,8 @@ describe('Initialize CLI symlink helpers', () => {
 
   it('refreshes stale symlinks after the extension bundle moves', () => {
     const asset = COPILOT_CLI_ASSET_DIRS[0];
-    const originalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-cli-old-'));
-    const replacementRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-cli-new-'));
+    const originalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-cli-old-'));
+    const replacementRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-cli-new-'));
 
     try {
       fs.mkdirSync(path.join(originalRoot, asset.source), { recursive: true });
@@ -84,7 +84,7 @@ describe('Initialize CLI symlink helpers', () => {
     // standalone files land in shared namespaces (docs/, scripts/, evaluation/,
     // AGENTS.md, Skills.md) that users also author in, so a refresh must add
     // missing files and never clobber existing content.
-    const bundleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-cli-bundle-'));
+    const bundleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-cli-bundle-'));
 
     try {
       const supportDir = COPILOT_CLI_SUPPORT_DIRS[0];
@@ -123,14 +123,14 @@ describe('Initialize CLI symlink helpers', () => {
     const gitignorePath = path.join(workspaceRoot, '.gitignore');
     fs.writeFileSync(
       gitignorePath,
-      '# existing\n\n# --- AgentX CLI symlinks (auto-generated, do not edit this block) ---\n/old\n# --- /AgentX CLI symlinks ---\n',
+      '# existing\n\n# --- Frontier CLI symlinks (auto-generated, do not edit this block) ---\n/old\n# --- /Frontier CLI symlinks ---\n',
       'utf8',
     );
 
     appendCliSymlinksToGitignore(workspaceRoot);
 
     const gitignore = fs.readFileSync(gitignorePath, 'utf8');
-    const marker = '# --- AgentX CLI symlinks (auto-generated, do not edit this block) ---';
+    const marker = '# --- Frontier CLI symlinks (auto-generated, do not edit this block) ---';
     assert.equal((gitignore.match(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length, 1);
     assert.ok(gitignore.includes('/.github/agents'));
     assert.ok(gitignore.includes('/.github/templates'));
@@ -140,18 +140,18 @@ describe('Initialize CLI symlink helpers', () => {
 describe('runInitializeCliCommand', () => {
   let sandbox: sinon.SinonSandbox;
   let tempRoot: string;
-  let fakeAgentx: sinon.SinonStubbedInstance<AgentXContext>;
+  let fakeAgentx: sinon.SinonStubbedInstance<FrontierContext>;
   let fakeContext: vscode.ExtensionContext;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-init-cli-'));
+    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-init-cli-'));
     fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
     fs.writeFileSync(path.join(tempRoot, '.agentx', 'config.json'), '{}', 'utf8');
 
     fakeAgentx = {
       invalidateCache: sandbox.stub(),
-    } as unknown as sinon.SinonStubbedInstance<AgentXContext>;
+    } as unknown as sinon.SinonStubbedInstance<FrontierContext>;
 
     fakeContext = {
       extensionUri: vscode.Uri.file('/test/extension'),
@@ -188,7 +188,7 @@ describe('runInitializeCliCommand', () => {
       value: 'symlink',
     } as never);
 
-    await runInitializeCliCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    await runInitializeCliCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
 
     sinon.assert.calledOnce(gitignoreStub);
     sinon.assert.calledOnce(fakeAgentx.invalidateCache as sinon.SinonStub);
@@ -217,7 +217,7 @@ describe('runInitializeCliCommand', () => {
       value: 'copy',
     } as never);
 
-    await runInitializeCliCommand(fakeContext, fakeAgentx as unknown as AgentXContext);
+    await runInitializeCliCommand(fakeContext, fakeAgentx as unknown as FrontierContext);
 
     sinon.assert.calledOnce(copyStub);
     sinon.assert.calledOnce(fakeAgentx.invalidateCache as sinon.SinonStub);

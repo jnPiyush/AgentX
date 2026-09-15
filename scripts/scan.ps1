@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  AgentX self-scan: aggregate validation, harness compliance, and security
+  Frontier self-scan: aggregate validation, harness compliance, and security
   hygiene checks into a single graded report.
 
 .DESCRIPTION
@@ -39,7 +39,12 @@
 
 [CmdletBinding()]
 param(
-  [string]$Path = $(if ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) { $env:AGENTX_WORKSPACE_ROOT } else { Split-Path $PSScriptRoot -Parent }),
+  [string]$Path = $(
+    $workspaceRoot = @($env:FRONTIER_WORKSPACE_ROOT, $env:HVE_WORKSPACE_ROOT, $env:AGENTX_WORKSPACE_ROOT) |
+      Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Container) } |
+      Select-Object -First 1
+    if ($workspaceRoot) { $workspaceRoot } else { Split-Path $PSScriptRoot -Parent }
+  ),
   [switch]$Json,
   [string]$OutFile = '',
   [switch]$Strict
@@ -131,6 +136,11 @@ $secretPatterns = @(
 
 $excludeDirs = @('.git','node_modules','out','dist','coverage','build','.vscode-test')
 $extensions  = @('.ts','.tsx','.js','.jsx','.ps1','.psm1','.sh','.py','.cs','.json','.yml','.yaml','.md','.env','.cfg','.config','.ini','.toml')
+$runtimeStateRoots = @(foreach ($stateNamespace in @('.frontier', '.hve', '.agentx')) {
+  foreach ($dataDirectory in @('state', 'issues', 'digests', 'sessions', 'memory', 'handoffs', 'signals', 'patterns', 'dreams')) {
+    Join-Path $ROOT $stateNamespace $dataDirectory
+  }
+})
 
 # Files that legitimately contain secret-shaped patterns (scanner regexes,
 # redactor implementation and its tests). Matched against the workspace-
@@ -144,11 +154,16 @@ $secretAllowlistPatterns = @(
 
 $files = Get-ChildItem -Path $ROOT -Recurse -File -ErrorAction SilentlyContinue |
   Where-Object {
+    $candidateFile = $_
+    $isRuntimeState = @($runtimeStateRoots | Where-Object {
+      $stateRoot = $_
+      $stateRoot -and ($candidateFile.FullName -eq $stateRoot -or $candidateFile.FullName.StartsWith($stateRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase))
+    }).Count -gt 0
     $excludeDirs -notcontains $_.Directory.Name -and
     -not ($_.FullName -match '[\\/](\.git|node_modules|out|dist|coverage|build|\.vscode-test)[\\/]') -and
     # Runtime state is gitignored and may contain captured test/lint output with
     # intentional secret-shaped fixtures. Published source never includes it.
-    -not $_.FullName.StartsWith((Join-Path $ROOT '.agentx\state') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -and
+    -not $isRuntimeState -and
     $extensions -contains $_.Extension.ToLowerInvariant() -and
     $_.Length -lt 1MB
   }
@@ -227,7 +242,7 @@ if ($Json) {
 } else {
   $colorMap = @{ CRITICAL = 'Red'; HIGH = 'Yellow'; MEDIUM = 'Yellow'; LOW = 'Gray'; INFO = 'Gray' }
   Write-Host ""
-  Write-Host "AgentX self-scan" -ForegroundColor Cyan
+  Write-Host "Frontier self-scan" -ForegroundColor Cyan
   Write-Host ("Grade: {0}    CRIT: {1}  HIGH: {2}  MED: {3}  LOW: {4}" -f $grade, $counts.CRITICAL, $counts.HIGH, $counts.MEDIUM, $counts.LOW)
   Write-Host ""
   if ($findings.Count -eq 0) {

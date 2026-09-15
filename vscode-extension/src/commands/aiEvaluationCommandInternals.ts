@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AgentXContext } from '../agentxContext';
+import { FrontierContext } from '../frontierContext';
 import { evaluateAIEvaluationContract } from '../eval/aiEvaluationContract';
 import type {
   AIEvaluationExecutionShell,
@@ -15,10 +15,10 @@ import {
 } from '../eval/aiEvaluationRunner';
 import type { AIEvaluationExecutionResult } from '../eval/aiEvaluationRunner';
 
-const AI_EVALUATION_CHANNEL_NAME = 'AgentX AI Evaluation';
+const AI_EVALUATION_CHANNEL_NAME = 'Frontier AI Evaluation';
 const DEFAULT_DATASET_PATH = 'evaluation/datasets/regression.jsonl';
 const DEFAULT_RUBRIC_PATH = 'evaluation/rubrics/correctness.md';
-const DEFAULT_MANIFEST_PATH = 'evaluation/agentx.eval.yaml';
+const DEFAULT_MANIFEST_PATH = 'evaluation/frontier.eval.yaml';
 const DEFAULT_BASELINE_PATH = 'evaluation/baseline.json';
 const DEFAULT_REPORT_DIR = '.copilot-tracking/eval-reports';
 const MAX_DISPLAYED_FAILURE_SLICES = 5;
@@ -58,7 +58,7 @@ function buildManifestContent(
     'version: 1',
     'intent:',
     '  workflow: prompt',
-    '  description: Starter AI evaluation contract created by AgentX.',
+    '  description: Starter AI evaluation contract created by Frontier.',
     'runner:',
     `  preferred: ${runner}`,
     '  mode: local',
@@ -175,7 +175,7 @@ function renderFailureLines(state: AIEvaluationWorkspaceState): ReadonlyArray<st
 
 export function renderAIEvaluationStatusText(state: AIEvaluationWorkspaceState): string {
   const lines = [
-    'AgentX AI Evaluation',
+    'Frontier AI Evaluation',
     '',
     `Summary: ${state.contractReady ? 'ready to run' : state.contractPresent ? 'contract present but incomplete' : 'no contract configured'}`,
     `Contract present: ${state.contractPresent ? 'yes' : 'no'}`,
@@ -267,11 +267,11 @@ async function promptForRunner(): Promise<AIEvaluationRunnerKind | undefined> {
     },
     {
       label: 'Custom shell runner',
-      description: 'Any command that prints AgentX raw evaluation JSON',
+      description: 'Any command that prints Frontier raw evaluation JSON',
       runner: 'custom',
     },
   ], {
-    title: 'AgentX - Scaffold AI Evaluation Contract',
+    title: 'Frontier - Scaffold AI Evaluation Contract',
     placeHolder: 'Choose the starter runner declaration',
   });
 
@@ -280,8 +280,8 @@ async function promptForRunner(): Promise<AIEvaluationRunnerKind | undefined> {
 
 async function promptForExecutionCommand(): Promise<string | undefined> {
   const value = await vscode.window.showInputBox({
-    title: 'AgentX - AI Evaluation Execution Command',
-    prompt: 'Optional shell command that prints AgentX raw evaluation JSON to stdout',
+    title: 'Frontier - AI Evaluation Execution Command',
+    prompt: 'Optional shell command that prints Frontier raw evaluation JSON to stdout',
     placeHolder: 'Leave blank to scaffold the contract without a runnable command',
     ignoreFocusOut: true,
   });
@@ -294,10 +294,10 @@ function getExecutionShell(): AIEvaluationExecutionShell {
   return process.platform === 'win32' ? 'pwsh' : 'bash';
 }
 
-export async function showAIEvaluationStatus(agentx: AgentXContext): Promise<void> {
+export async function showAIEvaluationStatus(agentx: FrontierContext): Promise<void> {
   const state = evaluateAIEvaluationContract(agentx);
   if (!state) {
-    vscode.window.showWarningMessage('AgentX needs an open workspace to show AI evaluation status.');
+    vscode.window.showWarningMessage('Frontier needs an open workspace to show AI evaluation status.');
     return;
   }
 
@@ -307,17 +307,17 @@ export async function showAIEvaluationStatus(agentx: AgentXContext): Promise<voi
   channel.show(true);
 }
 
-export async function scaffoldAIEvaluationContract(agentx: AgentXContext): Promise<void> {
+export async function scaffoldAIEvaluationContract(agentx: FrontierContext): Promise<void> {
   const root = agentx.workspaceRoot;
   if (!root) {
-    vscode.window.showWarningMessage('AgentX needs an open workspace to scaffold AI evaluation files.');
+    vscode.window.showWarningMessage('Frontier needs an open workspace to scaffold AI evaluation files.');
     return;
   }
 
   const manifestPath = toAbsolutePath(root, DEFAULT_MANIFEST_PATH);
   if (fs.existsSync(manifestPath)) {
     await openWorkspaceFile(root, DEFAULT_MANIFEST_PATH);
-    vscode.window.showInformationMessage('AgentX: opened the existing AI evaluation manifest.');
+    vscode.window.showInformationMessage('Frontier: opened the existing AI evaluation manifest.');
     return;
   }
 
@@ -335,7 +335,7 @@ export async function scaffoldAIEvaluationContract(agentx: AgentXContext): Promi
   writeFileIfMissing(root, DEFAULT_RUBRIC_PATH, buildRubricContent());
 
   await openWorkspaceFile(root, DEFAULT_MANIFEST_PATH);
-  vscode.window.showInformationMessage('AgentX: scaffolded AI evaluation contract files.');
+  vscode.window.showInformationMessage('Frontier: scaffolded AI evaluation contract files.');
 }
 
 function formatRunnerMessageSource(fromManifest: boolean): string {
@@ -349,16 +349,16 @@ function getBlockingMessage(state: AIEvaluationWorkspaceState): string {
   return blockingIssues.join('\n');
 }
 
-export async function runAIEvaluation(agentx: AgentXContext): Promise<void> {
+export async function runAIEvaluation(agentx: FrontierContext): Promise<void> {
   const root = agentx.workspaceRoot;
   if (!root) {
-    vscode.window.showWarningMessage('AgentX needs an open workspace to run AI evaluation.');
+    vscode.window.showWarningMessage('Frontier needs an open workspace to run AI evaluation.');
     return;
   }
 
   const planning = planAIEvaluationRun(agentx);
   if (!planning) {
-    vscode.window.showWarningMessage('AgentX needs an open workspace to plan AI evaluation.');
+    vscode.window.showWarningMessage('Frontier needs an open workspace to plan AI evaluation.');
     return;
   }
 
@@ -367,8 +367,8 @@ export async function runAIEvaluation(agentx: AgentXContext): Promise<void> {
     const detail = getBlockingMessage(planning.contract);
     vscode.window.showErrorMessage(
       detail.length > 0
-        ? `AgentX cannot run AI evaluation until the contract is ready.\n${detail}`
-        : 'AgentX cannot run AI evaluation until the contract is ready.',
+        ? `Frontier cannot run AI evaluation until the contract is ready.\n${detail}`
+        : 'Frontier cannot run AI evaluation until the contract is ready.',
     );
     return;
   }
@@ -402,7 +402,7 @@ export async function runAIEvaluation(agentx: AgentXContext): Promise<void> {
     });
 
     if (!result) {
-      vscode.window.showWarningMessage('AgentX could not resolve an AI evaluation workspace to run.');
+      vscode.window.showWarningMessage('Frontier could not resolve an AI evaluation workspace to run.');
       return;
     }
 
@@ -411,7 +411,7 @@ export async function runAIEvaluation(agentx: AgentXContext): Promise<void> {
 
     const openReport = 'Open Report';
     const selection = await vscode.window.showInformationMessage(
-      `AgentX: AI evaluation completed with status ${result.report.status}.`,
+      `Frontier: AI evaluation completed with status ${result.report.status}.`,
       openReport,
     );
     if (selection === openReport) {
@@ -421,6 +421,6 @@ export async function runAIEvaluation(agentx: AgentXContext): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
     channel.appendLine('');
     channel.appendLine(`Execution failed: ${message}`);
-    vscode.window.showErrorMessage(`AgentX failed to run AI evaluation: ${message}`);
+    vscode.window.showErrorMessage(`Frontier failed to run AI evaluation: ${message}`);
   }
 }

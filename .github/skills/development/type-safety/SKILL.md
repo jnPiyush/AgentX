@@ -2,7 +2,7 @@
 name: "type-safety"
 description: 'Apply type safety patterns including nullable types, validation, static analysis, and strong typing. Use when adding type annotations, implementing nullable reference types, validating inputs with value objects, configuring static analysis tools, or designing type-safe APIs.'
 metadata:
- author: "AgentX"
+ author: "Frontier"
  version: "1.0.0"
  created: "2025-01-15"
  updated: "2025-01-15"

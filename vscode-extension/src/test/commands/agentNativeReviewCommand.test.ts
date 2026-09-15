@@ -5,7 +5,7 @@ import * as path from 'path';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerAgentNativeReviewCommand } from '../../commands/agent-native-review';
-import { AgentXContext } from '../../agentxContext';
+import { FrontierContext } from '../../frontierContext';
 import * as reviewFacade from '../../review/agent-native-review';
 
 describe('registerAgentNativeReviewCommand', () => {
@@ -30,15 +30,15 @@ describe('registerAgentNativeReviewCommand', () => {
     sandbox.stub(reviewFacade, 'evaluateAgentNativeReview').returns(undefined);
     const warnSpy = sandbox.spy(vscode.window, 'showWarningMessage');
 
-    registerAgentNativeReviewCommand({ subscriptions: [] } as unknown as vscode.ExtensionContext, {} as AgentXContext);
+    registerAgentNativeReviewCommand({ subscriptions: [] } as unknown as vscode.ExtensionContext, {} as FrontierContext);
 
     await callback?.();
 
-    assert.ok(warnSpy.calledWith('AgentX needs an open workspace to review parity surfaces.'));
+    assert.ok(warnSpy.calledWith('Frontier needs an open workspace to review parity surfaces.'));
   });
 
   it('renders the review report when available', async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-command-review-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-command-review-'));
     fs.mkdirSync(path.join(root, 'docs', 'guides'), { recursive: true });
     fs.mkdirSync(path.join(root, '.github', 'templates'), { recursive: true });
     fs.mkdirSync(path.join(root, 'docs', 'artifacts', 'learnings'), { recursive: true });
@@ -51,10 +51,10 @@ describe('registerAgentNativeReviewCommand', () => {
     fs.writeFileSync(path.join(root, 'vscode-extension', 'package.json'), JSON.stringify({
       contributes: {
         commands: [
-          { command: 'agentx.runWorkflow' },
-          { command: 'agentx.showReviewLearnings' },
-          { command: 'agentx.showKnowledgeCaptureGuidance' },
-          { command: 'agentx.showAgentNativeReview' },
+          { command: 'frontier.runWorkflow' },
+          { command: 'frontier.showReviewLearnings' },
+          { command: 'frontier.showKnowledgeCaptureGuidance' },
+          { command: 'frontier.showAgentNativeReview' },
         ],
       },
     }), 'utf-8');
@@ -64,12 +64,12 @@ describe('registerAgentNativeReviewCommand', () => {
       'capture guidance',
     ].join('\n'), 'utf-8');
     fs.writeFileSync(path.join(root, 'vscode-extension', 'src', 'views', 'workTreeProvider.ts'), [
-      'agentx.runWorkflow',
-      'agentx.showReviewLearnings',
-      'agentx.showKnowledgeCaptureGuidance',
+      'frontier.runWorkflow',
+      'frontier.showReviewLearnings',
+      'frontier.showKnowledgeCaptureGuidance',
     ].join('\n'), 'utf-8');
-    fs.writeFileSync(path.join(root, 'vscode-extension', 'src', 'views', 'statusTreeProvider.ts'), 'agentx.showAgentNativeReview\n', 'utf-8');
-    fs.writeFileSync(path.join(root, 'vscode-extension', 'src', 'agentxContext.ts'), [
+    fs.writeFileSync(path.join(root, 'vscode-extension', 'src', 'views', 'statusTreeProvider.ts'), 'frontier.showAgentNativeReview\n', 'utf-8');
+    fs.writeFileSync(path.join(root, 'vscode-extension', 'src', 'frontierContext.ts'), [
       'workspaceRoot',
       'getPendingClarification',
       'listExecutionPlanFiles',
@@ -94,12 +94,12 @@ describe('registerAgentNativeReviewCommand', () => {
       replace: sandbox.stub(),
       onDidChangeLogLevel: sandbox.stub(),
       logLevel: 1,
-      name: 'AgentX Review',
+      name: 'Frontier Review',
     } as unknown as vscode.LogOutputChannel);
 
     registerAgentNativeReviewCommand(
       { subscriptions: [] } as unknown as vscode.ExtensionContext,
-      { workspaceRoot: root } as AgentXContext,
+      { workspaceRoot: root } as FrontierContext,
     );
 
     await callback?.();

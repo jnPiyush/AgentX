@@ -53,7 +53,7 @@ interface ReviewSignals {
  readonly requestRouterInternals: string;
  readonly workTreeProvider: string;
  readonly statusTreeProvider: string;
- readonly agentxContext: string;
+ readonly frontierContext: string;
 }
 
 interface CapabilityDefinition {
@@ -69,7 +69,7 @@ const CAPABILITIES: ReadonlyArray<CapabilityDefinition> = [
  {
   id: 'brainstorm-guidance',
   label: 'Brainstorm guidance',
-  userSignals: ['agentx.showBrainstormGuide', 'Brainstorm'],
+  userSignals: ['frontier.showBrainstormGuide', 'Brainstorm'],
   agentSignals: ['brainstorm', 'tryHandleBrainstormRequest'],
   sharedSignals: ['docs/artifacts/learnings', 'workspaceRoot'],
   summary: 'Brainstorm guidance should be available through both command surfaces and chat against the same learning corpus.',
@@ -77,7 +77,7 @@ const CAPABILITIES: ReadonlyArray<CapabilityDefinition> = [
  {
   id: 'workflow-execution',
   label: 'Workflow execution',
-  userSignals: ['agentx.runWorkflow', 'Show workflow steps'],
+  userSignals: ['frontier.runWorkflow', 'Show workflow steps'],
   agentSignals: ['run engineer', 'run reviewer', 'run architect'],
   sharedSignals: ['workspaceRoot', 'listExecutionPlanFiles'],
   summary: 'Workflow execution should exist for both operator-triggered commands and agent-triggered review flows.',
@@ -85,7 +85,7 @@ const CAPABILITIES: ReadonlyArray<CapabilityDefinition> = [
  {
   id: 'review-learnings',
   label: 'Review learnings retrieval',
-  userSignals: ['agentx.showReviewLearnings', 'Review learnings'],
+  userSignals: ['frontier.showReviewLearnings', 'Review learnings'],
   agentSignals: ['learnings review', 'showReviewLearnings'],
   sharedSignals: ['docs/artifacts/learnings', 'workspaceRoot'],
   summary: 'Review surfaces should expose the same ranked learnings guidance to users and agents.',
@@ -93,7 +93,7 @@ const CAPABILITIES: ReadonlyArray<CapabilityDefinition> = [
  {
   id: 'compound-loop',
   label: 'Compound loop visibility',
-  userSignals: ['agentx.showCompoundLoop', 'Compound loop'],
+  userSignals: ['frontier.showCompoundLoop', 'Compound loop'],
   agentSignals: ['compound', 'tryHandleCompoundRequest'],
   sharedSignals: [WORKFLOW_GUIDE_PATH, 'docs/artifacts/reviews/findings', 'workspaceRoot'],
   summary: 'Compound loop status should be reachable in both the sidebar/command surface and chat with the same supporting artifacts.',
@@ -101,7 +101,7 @@ const CAPABILITIES: ReadonlyArray<CapabilityDefinition> = [
  {
   id: 'knowledge-capture',
   label: 'Knowledge capture guidance',
-  userSignals: ['agentx.showKnowledgeCaptureGuidance', 'Capture guidance'],
+  userSignals: ['frontier.showKnowledgeCaptureGuidance', 'Capture guidance'],
   agentSignals: ['capture guidance', 'showKnowledgeCaptureGuidance'],
   sharedSignals: [WORKFLOW_GUIDE_PATH],
   summary: 'Both surfaces should be able to resolve the same post-review capture guidance and artifact rules.',
@@ -109,7 +109,7 @@ const CAPABILITIES: ReadonlyArray<CapabilityDefinition> = [
  {
   id: 'task-bundles',
   label: 'Task bundle visibility',
-  userSignals: ['agentx.showTaskBundles'],
+  userSignals: ['frontier.showTaskBundles'],
   agentSignals: ['task bundles', 'tryHandleTaskBundleRequest'],
   sharedSignals: ['docs/guides/WORKFLOW-PILOT-ORDER.md', 'workspaceRoot'],
   summary: 'Task bundle review surfaces should be visible in command mode and queryable in chat against the same workspace state.',
@@ -117,7 +117,7 @@ const CAPABILITIES: ReadonlyArray<CapabilityDefinition> = [
  {
   id: 'bounded-parallel',
   label: 'Bounded parallel visibility',
-  userSignals: ['agentx.showBoundedParallelRuns'],
+  userSignals: ['frontier.showBoundedParallelRuns'],
   agentSignals: ['bounded parallel', 'tryHandleBoundedParallelRequest'],
   sharedSignals: ['docs/guides/WORKFLOW-PILOT-ORDER.md', 'workspaceRoot'],
   summary: 'Bounded parallel delivery status should be inspectable from both command surfaces and chat via the same workspace-backed records.',
@@ -141,7 +141,7 @@ function readSignals(root: string): ReviewSignals {
   requestRouterInternals: readText(path.join(root, 'vscode-extension', 'src', 'chat', 'requestRouterInternals.ts')),
   workTreeProvider: readText(path.join(root, 'vscode-extension', 'src', 'views', 'workTreeProvider.ts')),
   statusTreeProvider: readText(path.join(root, 'vscode-extension', 'src', 'views', 'statusTreeProvider.ts')),
-  agentxContext: readText(path.join(root, 'vscode-extension', 'src', 'agentxContext.ts')),
+  frontierContext: readText(path.join(root, 'vscode-extension', 'src', 'frontierContext.ts')),
  };
 }
 
@@ -175,7 +175,7 @@ function buildCapabilityMap(signals: ReviewSignals): CapabilityMapEntry[] {
    if (signal.startsWith('docs/')) {
     return fileExists(signals.root, undefined, signal);
    }
-   return signals.agentxContext.includes(signal);
+   return signals.frontierContext.includes(signal);
   });
   const severity = getSeverity(userSurface, agentSurface, sharedArtifacts);
   const summary = userSurface && agentSurface && sharedArtifacts
@@ -203,7 +203,7 @@ function buildChecks(
  extensionPath: string | undefined,
  capabilityMap: ReadonlyArray<CapabilityMapEntry>,
 ): ParityCheckResult[] {
- const contextSignals = readText(path.join(root, 'vscode-extension', 'src', 'agentxContext.ts'));
+ const contextSignals = readText(path.join(root, 'vscode-extension', 'src', 'frontierContext.ts'));
  const workspaceGuideExists = fileExists(root, extensionPath, WORKFLOW_GUIDE_PATH);
  const reviewTemplateExists = fileExists(root, extensionPath, '.github/templates/REVIEW-TEMPLATE.md');
  const archReviewTemplateExists = fileExists(root, extensionPath, '.github/templates/ARCH-REVIEW-TEMPLATE.md');
