@@ -59,7 +59,7 @@ jobs:
 
       - name: Upload vulnerability report
         if: steps.check.outputs.HAS_VULNERABILITIES == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: dotnet-vulnerabilities
           path: vulnerabilities.txt
@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload vulnerability report
         if: steps.scan.outputs.HAS_VULNERABILITIES == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: python-vulnerabilities
           path: python-vulnerabilities.json
@@ -196,7 +196,7 @@ jobs:
 
       - name: Upload vulnerability report
         if: always() && steps.audit.outputs.HAS_VULNERABILITIES == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: npm-vulnerabilities
           path: audit-reports/
