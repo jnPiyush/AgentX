@@ -227,6 +227,23 @@ Assert-Equal $openAiModelCandidates[0] 'gpt-5.5' 'Get-ModelCandidateList resolve
 Assert-Equal $openAiModelCandidates[-1] 'gpt-4o' 'Get-ModelCandidateList preserves configured fallback for openai-api provider'
 $Script:ActiveProvider = $null
 
+foreach ($providerId in @('copilot', 'openai-api')) {
+    $Script:ActiveProvider = [PSCustomObject]@{ id = $providerId }
+    foreach ($label in @('GPT-5.6 Sol (copilot)', 'gpt-5.6-sol')) {
+        Assert-Equal (Resolve-ModelId $label) 'gpt-5.6-sol' "$providerId preserves the requested Sol model"
+    }
+    Assert-Equal (Resolve-ModelId 'GPT-5.3-Codex (copilot)') 'gpt-5.3-codex' "$providerId preserves the requested Codex version"
+    $unknownRejected = $false
+    try { $null = Resolve-ModelId 'GPT-5.999 unknown' }
+    catch { $unknownRejected = $_.Exception.Message -match 'Unrecognized model' }
+    Assert-True $unknownRejected "$providerId rejects unknown labels instead of selecting a broad alias"
+}
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
+Assert-Equal (Resolve-ModelId 'claude-opus-5') 'claude-opus-5' 'Canonical Claude IDs retain model identity'
+$validCandidates = @(Get-ModelCandidateList 'GPT-5.6 Sol (copilot)' 'unknown-fallback')
+Assert-Equal $validCandidates[0] 'gpt-5.6-sol' 'An invalid fallback does not discard a valid primary model'
+$Script:ActiveProvider = $null
+
 # Opus 5 is the declared frontmatter label for 9 agents. Without an explicit alias
 # key it would fall through to the provider default, so pin the resolution per
 # provider and assert the older Opus aliases still win their own longest match.
@@ -1247,6 +1264,9 @@ $minimumReviewState = [PSCustomObject]@{
 }
 Assert-Equal (Get-RunnerSelfReviewMinIteration -AgentName 'engineer' -Prompt 'test' -LoopState $minimumReviewState -MaxReviewerIterations 1) 1 'internal self-review stays independent from the external loop minimum'
 Assert-Equal (Get-LoopTaskClassFromState ([PSCustomObject]@{ role = 'engineer'; prompt = 'Fix bug in rendering'; completionCriteria = 'TASK_COMPLETE' })) 'complex-delivery' 'runner role-only legacy classification matches CLI and TypeScript'
+foreach ($role in @('frontier', 'frontier-auto', 'Frontier Orchestration FDE')) {
+    Assert-Equal (Get-LoopTaskClassFromState ([PSCustomObject]@{ role=$role; prompt='Fix a typo'; completionCriteria='TASK_COMPLETE' })) 'agent-x' "runner recognizes $role"
+}
 Assert-Equal (Get-LoopTaskClassFromState ([PSCustomObject]@{ prompt = 'Refine the agent prompt handling'; completionCriteria = 'TASK_COMPLETE' })) 'complex-delivery' 'runner agent vocabulary matches CLI and TypeScript'
 foreach ($highRiskPrompt in @('Implement password reset', 'Validate JWT claims', 'Add OAuth login', 'Rotate API keys', 'Encrypt customer records', 'Update session handling')) {
     Assert-Equal (Get-LoopTaskClassFromState ([PSCustomObject]@{ taskClass = 'standard'; prompt = $highRiskPrompt; completionCriteria = 'TASK_COMPLETE' })) 'high-risk' "runner recognizes high-risk prompt variant: $highRiskPrompt"
@@ -1272,6 +1292,64 @@ try {
 }
 
 Write-Host ''
+Write-Host ' Responses API transport'
+. (Join-Path $script:repoRoot '.agentx/agentic-runner.ps1')
+$Script:ActiveProvider = [PSCustomObject]@{ id = 'copilot' }
+$responseFixture = [PSCustomObject]@{
+    status='completed'; model='gpt-5.6-sol'; error=$null
+    output=@(
+        [PSCustomObject]@{ type='reasoning'; id='rs_fixture'; summary=@(); encrypted_content='opaque-fixture' },
+        [PSCustomObject]@{ type='message'; id='msg_fixture'; role='assistant'; phase='commentary'; content=@([PSCustomObject]@{type='output_text';text='Inspecting files'}) },
+        [PSCustomObject]@{ type='function_call'; call_id='call_fixture'; name='list_dir'; arguments='{"dirPath":"."}' }
+    )
+    usage=[PSCustomObject]@{input_tokens=10;output_tokens=20;total_tokens=30}
+}
+$translated = ConvertFrom-ResponsesResponse -Response $responseFixture -ModelId 'gpt-5.6-sol'
+Assert-Equal $translated.choices[0].message.tool_calls[0].id 'call_fixture' 'Responses call IDs map to runner tool calls'
+Assert-Equal $translated.choices[0].message.content 'Inspecting files' 'Responses text is normalized'
+Assert-Equal $translated.usage.prompt_tokens 10 'Responses token accounting is preserved'
+$conversation = @(
+    @{role='system';content='Follow the role contract'},
+    @{role='user';content='List the files'},
+    $translated.choices[0].message,
+    @{role='tool';tool_call_id='call_fixture';content='fixture.txt'}
+)
+$responseBody = ConvertTo-ResponsesBody -Messages $conversation -ModelId 'gpt-5.6-sol' -Tools @(@{type='function';function=@{name='list_dir';description='List files';parameters=@{type='object';properties=@{}}}}) -RequestOptions @{reasoning=@{effort='high'}} -MaxTokens 4000
+Assert-Equal $responseBody.input.Count 6 'Responses history includes all replay items and the tool result'
+Assert-Equal $responseBody.input[2].encrypted_content 'opaque-fixture' 'Opaque reasoning is replayed without interpretation'
+Assert-Equal $responseBody.input[3].phase 'commentary' 'Assistant phase survives replay'
+Assert-Equal $responseBody.input[-1].type 'function_call_output' 'Tool results use Responses format'
+Assert-Equal $responseBody.tools[0].name 'list_dir' 'Responses function schema is flattened'
+Assert-Equal $responseBody.reasoning.effort 'high' 'Role-specific reasoning effort is preserved'
+Assert-Equal $responseBody.store $false 'Responses storage is disabled'
+foreach ($status in @('failed','incomplete','cancelled','queued')) {
+    $responseFixture.status = $status
+    $rejected = $false
+    try { $null = ConvertFrom-ResponsesResponse -Response $responseFixture -ModelId 'gpt-5.6-sol' }
+    catch { $rejected = $true }
+    Assert-True $rejected "Responses $status result cannot become a successful answer"
+}
+$responseFixture.status = 'completed'
+function Invoke-RestMethod {
+    param($Uri, $Method, $Headers, $Body, $TimeoutSec, $ErrorAction)
+    $script:capturedResponseUri = [string]$Uri
+    $script:capturedResponseBody = $Body | ConvertFrom-Json
+    return $responseFixture
+}
+try {
+    $wireResult = Invoke-LlmChat -token 'fixture-token' -modelId 'gpt-5.6-sol' -messages $conversation -tools @() -RequestOptions @{}
+    Assert-True ($script:capturedResponseUri.EndsWith('/responses')) 'Sol is sent to the Responses endpoint'
+    Assert-Equal $script:capturedResponseBody.model 'gpt-5.6-sol' 'Wire request preserves exact model selection'
+    Assert-Equal $wireResult.choices[0].message.content 'Inspecting files' 'Responses transport returns the runner contract'
+    $null = Invoke-LlmChat -token 'fixture-token' -modelId 'gpt-4o' -messages $conversation -tools @() -RequestOptions @{}
+    Assert-True ($script:capturedResponseUri.EndsWith('/chat/completions')) 'A fallback model uses chat completions'
+    Assert-True (($script:capturedResponseBody | ConvertTo-Json -Depth 20) -notmatch 'response_items|opaque-fixture') 'Chat fallback excludes Responses replay payloads'
+    Assert-Equal $script:capturedResponseBody.messages[2].tool_calls[0].id 'call_fixture' 'Chat fallback preserves tool correlation'
+    Assert-Equal $conversation[2].response_items[0].encrypted_content 'opaque-fixture' 'Transport conversion does not mutate durable history'
+} finally {
+    Remove-Item Function:Invoke-RestMethod
+    $Script:ActiveProvider = $null
+}
 Write-Host ' ================================================' -ForegroundColor DarkGray
 $total = $script:pass + $script:fail
 Write-Host " Results: $($script:pass)/$total passed" -ForegroundColor $(if ($script:fail -eq 0) { 'Green' } else { 'Yellow' })

@@ -223,9 +223,9 @@ After the research log is complete and before audience calibration, convene a **
 
 | Role | Model | Lens |
 |------|-------|------|
-| Analyst | `openai/gpt-5.5` | Decompose the question, demand evidence, flag weak claims |
+| Analyst | `openai/gpt-5.6-sol` | Decompose the question, demand evidence, flag weak claims |
 | Strategist | `anthropic/claude-opus-5` | Step back, frame the strategic recommendation |
-| Skeptic | `google/gemini-3.1-pro` | Argue the contrarian position, surface failure modes |
+| Skeptic | `google/gemini-3.8-flash` | Argue the contrarian position, surface failure modes |
 
 Substitute models when the default is unavailable, but preserve the three-role structure (Analyst, Strategist, Skeptic) and use at least two distinct vendors.
 
@@ -247,7 +247,12 @@ pwsh .agentx/frontier.ps1 council `
   -Context "{key claims to stress-test, drawn from the research log}"
 ```
 
-**This is an internal agent mechanism. After running the script, YOU (the Consulting Research agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final research deliverable, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
+The script creates an unexecuted brief. Follow the independent invocation and
+execution-evidence contract in [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md).
+Verify model availability on the active host and use `-Members` for substitutions;
+the roster is advisory, not proof of execution. Complete synthesis only after
+three distinct models respond. Missing models or failed calls remain incomplete.
+Never simulate multiple model identities or ask the user to copy/paste prompts.
 
 **Synthesis requirements** (the agent fills in the Synthesis section):
 
@@ -316,7 +321,7 @@ Validate the analysis before handoff.
 ### Example: Model Council Deliberation
 
 - User: "Build me a brief on whether mid-market FS clients should adopt sovereign AI in EMEA."
-- Agent: "I will run the seven research phases first. Before drafting, I will convene a Model Council with three members -- Analyst (`openai/gpt-5.5`), Strategist (`anthropic/claude-opus-5`), and Skeptic (`google/gemini-3.1-pro`) -- and ask them to independently respond to: 'What is the strongest case for and against EMEA mid-market FS adoption of sovereign AI in the next 18 months?' I will record their responses in `docs/coaching/COUNCIL-sovereign-ai-emea-fs.md`, synthesize consensus and divergences, then write the brief reflecting that synthesis. Contrarian arguments raised by the Skeptic that the research log missed will become explicit risk callouts in the executive summary."
+- Agent: "I will run the seven research phases, verify available models, and independently invoke the Analyst, Strategist and Skeptic roles. I will record actual responses and selected identities, report unavailable calls, and synthesize successful council evidence before drafting the brief."
 
 ## Skills to Load
 

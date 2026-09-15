@@ -151,6 +151,27 @@ Architect (adr-options), and any complex task; also Data Scientist (ai-design),
 Reviewer (code-review), and Consulting Research. Findings/decision MUST reflect the
 council Synthesis (or document an override rationale).
 
+Council execution MUST use three independently invoked, distinct model selections.
+`frontier council` generates a brief only. Use `Frontier: Run Council`, authorized
+host-agent calls, or explicitly configured `-AutoInvoke` tooling to run it.
+Check the active provider's catalog before choosing capable models for the task;
+model names and host vendor labels do not prove availability or training diversity.
+Prefer different model families and providers, and record substitutions. Newer
+names alone do not establish better task quality. API model labels resolve exactly;
+unknown labels fail instead of silently matching an older version.
+
+Preserve the generated `## Execution Evidence` JSON: `schemaVersion: 1`,
+`status`, `recordedAt`, and three `members`, each with `role`, `requestedModel`,
+`selectedModel`, `source`, and `status`. Sources are `vscode.lm`, `gh models`, or
+`host-agent`; record only actual calls and host-confirmed selections. A selected
+alias is not proof of its underlying snapshot. Mark execution `complete` only
+when all three calls succeed with distinct selections, then replace
+`[SYNTHESIS-TODO]` with the evidence-based synthesis. The ADR harness gate rejects
+missing evidence, placeholders, failures, duplicate selections and unfinished
+synthesis. These records are auditable provenance, not cryptographic attestations.
+Missing models, failed calls and role-only fallback remain incomplete. One model
+MUST NOT impersonate several council members or invent independent consensus.
+
 ---
 
 ## 4. Scrub / Deslop (MANDATORY, NO SKIP)

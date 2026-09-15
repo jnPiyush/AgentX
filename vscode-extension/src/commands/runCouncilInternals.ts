@@ -50,6 +50,7 @@ export interface CouncilRoleResult {
   readonly resolvedVendor?: string;
   /** Family of the model that actually responded (when status is 'ok'). */
   readonly resolvedFamily?: string;
+  readonly selectedModel?: string;
   /** Diversity tier achieved when this role's model was picked. */
   readonly diversityTier?: DiversityTier;
 }
@@ -60,7 +61,8 @@ export interface CouncilRoleResult {
  * `gpt-5.1` and `gpt-5.5` count as different even though they share a vendor
  * and family family.
  */
-export function modelKey(m: { vendor?: string; family?: string; name?: string }): string {
+export function modelKey(m: { id?: string; vendor?: string; family?: string; name?: string }): string {
+  if (m.id?.trim()) { return m.id.trim().toLowerCase(); }
   const v = (m.vendor ?? '').trim().toLowerCase();
   const f = (m.family ?? '').trim().toLowerCase();
   const n = (m.name ?? '').trim().toLowerCase();
@@ -72,6 +74,7 @@ const CONTEXT_HEADER = '## Supporting Context';
 const ROSTER_HEADER = '## Council Roster';
 const RESPONSES_HEADER = '## Member Responses';
 const SYNTHESIS_HEADER = '## Synthesis';
+const EXECUTION_HEADER = '## Execution Evidence';
 const PURPOSE_PACK_PATTERN = /^\*\*Purpose pack:\*\*\s*(.+)$/m;
 
 function extractSection(content: string, startHeader: string, ...stopHeaders: string[]): string {
@@ -99,6 +102,7 @@ export function parseCouncilBrief(content: string): ParsedCouncilBrief {
     CONTEXT_HEADER,
     ROSTER_HEADER,
     RESPONSES_HEADER,
+    EXECUTION_HEADER,
     SYNTHESIS_HEADER,
   );
 
@@ -107,6 +111,7 @@ export function parseCouncilBrief(content: string): ParsedCouncilBrief {
     CONTEXT_HEADER,
     ROSTER_HEADER,
     RESPONSES_HEADER,
+    EXECUTION_HEADER,
     SYNTHESIS_HEADER,
   );
 
@@ -120,6 +125,7 @@ export function parseCouncilBrief(content: string): ParsedCouncilBrief {
   const responsesBlock = extractSection(
     content,
     RESPONSES_HEADER,
+    EXECUTION_HEADER,
     SYNTHESIS_HEADER,
   );
 
@@ -380,8 +386,7 @@ export function replaceRoleBlock(
   const afterHeading = content.indexOf('\n', headingStart);
   if (afterHeading < 0) { return content; }
 
-  // The next "### " or "## " marks the boundary of this role's block.
-  const nextHeading = content.slice(afterHeading).search(/\n(?:### |## )/);
+  const nextHeading = content.slice(afterHeading).search(/\n(?:### (?:Analyst|Strategist|Skeptic)\s+--|## (?:Execution Evidence|Synthesis)\s*(?:\r?\n|$))/);
   const blockEnd = nextHeading >= 0 ? afterHeading + nextHeading : content.length;
 
   const before = content.slice(0, afterHeading + 1);
@@ -393,6 +398,35 @@ export function replaceRoleBlock(
   // Single blank line, optional preserved-instruction marker, the response,
   // then a single trailing blank line.
   return `${before}\n${marker}${response.trim()}\n${after}`;
+}
+
+export function writeCouncilExecution(content: string, results: readonly CouncilRoleResult[]): string {
+  const members = results.map((result) => ({
+    role: result.role,
+    requestedModel: result.model,
+    selectedModel: result.selectedModel?.trim() ?? '',
+    source: 'vscode.lm',
+    status: result.status,
+  }));
+  const complete = members.length === 3 &&
+    members.every((member) => member.status === 'ok' && member.selectedModel) &&
+    new Set(members.map((member) => member.role.toLowerCase())).size === 3 &&
+    new Set(members.map((member) => member.selectedModel.toLowerCase())).size === 3 &&
+    results.every((result) => result.diversityTier !== 'role');
+  const evidence = {
+    schemaVersion: 1,
+    status: complete ? 'complete' : 'incomplete',
+    recordedAt: new Date().toISOString(),
+    members,
+  };
+  const section = `${EXECUTION_HEADER}\n\n\`\`\`json\n${JSON.stringify(evidence, null, 2)}\n\`\`\`\n\n`;
+  const previous = /^## Execution Evidence\r?\n[\s\S]*?(?=^## Synthesis\s*$)/m;
+  const updated = previous.test(content)
+    ? content.replace(previous, () => section)
+    : content.replace(/^## Synthesis\s*$/m, () => `${section}${SYNTHESIS_HEADER}`);
+  const withPendingSynthesis = updated.includes('[SYNTHESIS-TODO]') ? updated :
+    updated.replace(/^## Synthesis[ \t]*$/m, '## Synthesis\n\n[SYNTHESIS-TODO] Reconcile synthesis with this execution before approval.');
+  return withPendingSynthesis.replace(/^\*\*Mode:\*\*.*$/m, '**Mode:** execution attempted (vscode.lm)');
 }
 
 function escapeRegex(value: string): string {

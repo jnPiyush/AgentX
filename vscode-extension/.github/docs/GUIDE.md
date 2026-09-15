@@ -293,6 +293,92 @@ pwsh packs/frontier-copilot-cli/install.ps1 -Target /path/to/project -IncludeCli
 
 See [packs/frontier-copilot-cli/README.md](../packs/frontier-copilot-cli/README.md).
 
+### Model Selection and Council Execution
+
+Runner model labels use normalized exact matching. GPT-5.6 Sol and GPT-5.3-Codex
+retain their requested IDs and use the Responses API on Copilot and OpenAI
+providers, with stateless tool-result replay. Unknown labels fail visibly instead
+of matching an older version. Existing provider-specific compatibility mappings
+remain explicit; verify the selected provider and model before a run. Provider
+catalog availability does not establish model quality or account billing limits.
+
+`frontier council` generates an unexecuted brief with role-specific instructions.
+Run it through `Frontier: Run Council`, authorized independent host-agent calls,
+or `-AutoInvoke` with an installed `gh models` extension and a supported roster.
+Use `-Members` to select provider-supported alternatives. Missing CLI tooling,
+failed calls and empty responses do not count as successful execution.
+
+Council artifacts record requested and selected models in `Execution Evidence`.
+Three successful distinct selections and completed synthesis are required by the
+new-ADR council gate. A single model playing three roles is incomplete, even if
+all roles respond. VS Code host vendor names do not prove training diversity.
+Historical councils are not rewritten by these checks.
+
+### HydraFusion Research Preview
+
+Use GitHub's native HydraFusion workflow when available; do not emulate it by
+adding a guessed model ID to Frontier's API model map. Frontier's `copilot`
+provider uses model APIs (chat completions or Responses), whereas HydraFusion orchestrates a complete
+native Copilot CLI task. Model Council and Frontier's independent review gates
+are separate capabilities and remain required.
+
+The native-first evaluation on 2026-09-15 confirmed Copilot CLI `1.0.84-2` can
+start an experimental ACP session. Its account-specific session catalog returned
+23 model choices, including Auto, but no HydraFusion entry. This blocks a
+verified automated integration on that tested surface. It does not establish
+that HydraFusion is unavailable in the interactive picker or on other accounts.
+No HydraFusion solver run, custom-agent compatibility, usage aggregation or
+cancellation/patch behavior has been verified in Frontier yet.
+
+#### Interactive Opt-In
+
+Use a disposable test checkout with Frontier's native plugin or seeded agents
+already configured. Do not run a second editing agent against an active checkout.
+Start the native CLI, keeping normal permission prompts:
+
+```powershell
+copilot --experimental
+```
+
+In that interactive session:
+
+1. Check `/version`. Update through `/update` if needed, then restart. Multiple
+  installations and cached updates can resolve to different CLI versions.
+2. Select the intended Frontier agent through `/agent` and verify `/env` lists
+  the expected instructions and hooks. Do not disable them for a coding task.
+3. Open `/model` and select `HydraFusion (Research Preview)` if offered. Verify
+  the active model after agent selection; do not change global defaults.
+4. Review `/limits` and billing terms before sending one bounded task. The tested
+  CLI accepts a minimum of 30 AI credits for `--max-ai-credits`; this is a soft
+  limit, not an estimated charge or a hard spending guarantee.
+5. Inspect the resulting diff, run the task's tests and complete Frontier's
+  independent review. HydraFusion's internal critique is not proof that the
+  repository's review gate passed.
+
+If the picker does not offer HydraFusion, stop and check CLI updates and account
+or organization availability. Do not substitute Auto or another model while
+reporting the result as HydraFusion. Do not add `--allow-all` or `--yolo` to make
+an unattended probe work.
+
+#### Evaluation Findings And Next Gate
+
+The account catalog was read using ACP `initialize` and `session/new`, with no
+`session/prompt` call. An earlier `-p "/model"` probe instead invoked Sonnet once;
+it is not model-discovery or HydraFusion evidence. The same build treated an
+empty `--available-tools=` as default tools, not a tool-less configuration.
+Do not rely on either behavior for automation. No repository files were exposed
+to those probes; they used separate temporary workspaces and settings.
+
+Before adding an automated Frontier entry point, verify a supported native
+selector, explicit opt-in, model-selection fidelity, custom-agent/tool boundaries,
+timeout/cancellation behavior, one final validated patch, and complete usage
+reporting. Preserve unsupported, denied and failed states without silent model
+fallback. Keep the existing provider path unchanged until these checks pass.
+
+References: [HydraFusion announcement](https://github.blog/ai-and-ml/github-copilot/project-hydrafusion-frontier-quality-via-multi-model-orchestration/),
+[Copilot CLI command reference](https://docs.github.com/en/copilot/reference/cli-command-reference),
+and [ACP reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/acp-server).
+
 ---
 
 ## Companion Extensions

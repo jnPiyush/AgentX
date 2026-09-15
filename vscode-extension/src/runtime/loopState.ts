@@ -129,7 +129,7 @@ export function inferLoopTaskClass(state: Pick<LoopState, 'prompt' | 'completion
 
   const role = (state.role ?? '').trim().toLowerCase();
   if (/^(auto-fix-reviewer|auto-fix|reviewer-auto)$/.test(role)) { return 'auto-fix-review'; }
-  if (/^(agent-x|agent x|agentx|agentx-auto|autonomous)$/.test(role)) { return 'agent-x'; }
+  if (/^(agent-x|agent x|agentx|agentx-auto|autonomous|frontier|frontier-auto|frontier orchestration fde)$/.test(role)) { return 'agent-x'; }
   if (/^(engineer|implementation)$/.test(role)) { return 'complex-delivery'; }
 
   // Auto-fix and agent-x checks before the generic 'review' keyword so a prompt

@@ -12,11 +12,13 @@ import {
   parseCouncilBrief,
   replaceRoleBlock,
   summarizeVendorDiversity,
+  writeCouncilExecution,
 } from './runCouncilInternals';
 
 const COMMAND_ID = 'frontier.runCouncil';
 
 interface LmModelLike {
+  id?: string;
   name?: string;
   family?: string;
   vendor?: string;
@@ -75,10 +77,12 @@ async function pickModel(
   for (const selector of strictCandidates) {
     try {
       const models = await api.lm!.selectChatModels!(selector);
-      const filtered = (models ?? []).filter(
-        (m) => !blockedVendors.has((m.vendor ?? '').trim().toLowerCase()),
-      );
-      if (filtered.length > 0) { return { model: filtered[0], tier: 'vendor' }; }
+      const filtered = (models ?? []).filter((model) => !blockedModelKeys.has(modelKey(model)));
+      if (filtered.length > 0) {
+        const model = filtered[0];
+        const tier = blockedVendors.has((model.vendor ?? '').trim().toLowerCase()) ? 'model' : 'vendor';
+        return { model, tier };
+      }
     } catch {
       // try next selector
     }
@@ -191,6 +195,7 @@ async function runOneRole(
       response: `${tag}\n\n${response}`,
       resolvedVendor: model.vendor,
       resolvedFamily: model.family,
+      selectedModel: model.id ?? modelKey(model),
       diversityTier: tier,
     };
   } catch (err) {
@@ -269,9 +274,12 @@ export function registerRunCouncilCommand(
     }
 
     const brief = parseCouncilBrief(original);
-    if (!brief.question || brief.roster.length === 0) {
+    if (!brief.question || brief.roster.length !== 3 ||
+      new Set(brief.roster.map((entry) => entry.role)).size !== 3 ||
+      brief.roster.some((entry) => !['Analyst', 'Strategist', 'Skeptic'].includes(entry.role)) ||
+      !/^## Synthesis\s*$/m.test(original)) {
       vscode.window.showErrorMessage(
-        'Frontier: Council brief is missing a Question or Council Roster section. Generate it via scripts/model-council.ps1 first.',
+        'Frontier: Council brief requires a Question, three distinct Analyst/Strategist/Skeptic roles and a Synthesis section. Generate it via scripts/model-council.ps1 first.',
       );
       return;
     }
@@ -375,12 +383,13 @@ export function registerRunCouncilCommand(
               `_Source: vscode.lm._`,
               '',
               `> [FAIL] Council member ${result.role} (${result.model}) did not respond: ${result.error ?? 'unknown error'}`,
-              '> The calling agent should fall back to agent-internal completion for this role.',
+              '> Execution is incomplete. Retry with an available model; do not simulate the missing response.',
             ].join('\n');
             updated = replaceRoleBlock(updated, result.role, placeholder, instruction);
           }
         }
 
+        updated = writeCouncilExecution(updated, results);
         try {
           fs.writeFileSync(target.fsPath, updated, 'utf8');
         } catch (err) {

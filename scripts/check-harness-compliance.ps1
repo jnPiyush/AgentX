@@ -5,7 +5,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$workspaceRoot = if ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) {
+$workspaceRoot = if ($env:FRONTIER_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:FRONTIER_WORKSPACE_ROOT -PathType Container)) {
+    (Resolve-Path $env:FRONTIER_WORKSPACE_ROOT).Path
+}
+elseif ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path -LiteralPath $env:AGENTX_WORKSPACE_ROOT -PathType Container)) {
     (Resolve-Path $env:AGENTX_WORKSPACE_ROOT).Path
 }
 else {
@@ -201,16 +204,50 @@ try {
 # --- Model Council: a NEW ADR requires a matching COUNCIL file (no skip token)
 $adrFiles = @($addedFiles | Where-Object { $_ -match '^docs/artifacts/adr/ADR-.+\.md$' })
 foreach ($adr in $adrFiles) {
-    if (-not (Test-Path -LiteralPath $adr)) { continue }
+    if (-not (Test-Path -LiteralPath (Join-Path $workspaceRoot $adr))) { continue }
     $slug = [System.IO.Path]::GetFileNameWithoutExtension($adr) -replace '^ADR-', ''
-    $councilPath = "docs/artifacts/adr/COUNCIL-$slug.md"
+    $councilPath = Join-Path $workspaceRoot "docs/artifacts/adr/COUNCIL-$slug.md"
     if (-not (Test-Path -LiteralPath $councilPath)) {
         $failures += "Model Council gate: new ADR '$adr' has no matching '$councilPath'. This gate has no skip token."
         continue
     }
     $councilContent = Get-Content -LiteralPath $councilPath -Raw
     if (-not (Test-RequiredSection -Content $councilContent -Section '## Synthesis')) {
-        $failures += "Model Council file '$councilPath' is missing the required '## Synthesis' section."
+        $failures += "Model Council gate: '$councilPath' is missing the required '## Synthesis' section."
+    }
+    $validExecution = $false
+    try {
+        $receipts = [regex]::Matches($councilContent, '(?ms)^## Execution Evidence[ \t]*\r?\n\s*```json\r?\n(?<json>.*?)\r?\n```')
+        if ($receipts.Count -eq 1) {
+            $receipt = $receipts[0].Groups['json'].Value | ConvertFrom-Json -ErrorAction Stop
+            $members = @($receipt.members)
+            $recordedAt = [datetimeoffset]::MinValue
+            $validTimestamp = if ($receipt.recordedAt -is [datetime]) {
+                $recordedAt = [datetimeoffset]$receipt.recordedAt
+                $true
+            } else {
+                [datetimeoffset]::TryParse([string]$receipt.recordedAt, [ref]$recordedAt)
+            }
+            $validTimestamp = $validTimestamp -and $recordedAt -le [datetimeoffset]::UtcNow.AddMinutes(5)
+            $validMembers = @($members | Where-Object {
+                $_.status -ceq 'ok' -and $_.role -cin @('Analyst','Strategist','Skeptic') -and
+                $_.source -cin @('vscode.lm','gh models','host-agent') -and
+                $_.requestedModel -is [string] -and -not [string]::IsNullOrWhiteSpace($_.requestedModel) -and
+                $_.selectedModel -is [string] -and -not [string]::IsNullOrWhiteSpace($_.selectedModel)
+            })
+            $validExecution = $validTimestamp -and $receipt.schemaVersion -eq 1 -and $receipt.status -ceq 'complete' -and
+                $members.Count -eq 3 -and $validMembers.Count -eq 3 -and
+                @($members.role | Sort-Object -Unique).Count -eq 3 -and
+                @($members.selectedModel | ForEach-Object { $_.Trim().ToLowerInvariant() } | Sort-Object -Unique).Count -eq 3
+        }
+    } catch {
+        $validExecution = $false
+    }
+    $synthesis = [regex]::Match($councilContent, '(?ms)^## Synthesis[ \t]*\r?\n(?<body>.+)\z')
+    if (-not $validExecution -or -not $synthesis.Success -or
+        [string]::IsNullOrWhiteSpace($synthesis.Groups['body'].Value) -or
+        $councilContent -match '\[(AGENT-TODO|SYNTHESIS-TODO|FAIL)\]') {
+        $failures += "Model Council gate: '$councilPath' requires three successful distinct model selections with execution evidence and completed synthesis; placeholders, failures and role-only simulations are incomplete."
     }
 }
 

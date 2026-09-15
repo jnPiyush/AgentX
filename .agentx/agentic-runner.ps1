@@ -159,6 +159,8 @@ $Script:MODEL_CAPABILITIES = @{
     'claude-opus-4.8' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-sonnet-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-haiku-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
+    'gpt-5.6-sol' = @{ contextWindow = 922000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort'; transport = 'responses' }
+    'gpt-5.3-codex' = @{ contextWindow = 272000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort'; transport = 'responses' }
     'gpt-5.5' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
     'gpt-5.2-codex' = @{ contextWindow = 272000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
     'gpt-5.1' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
@@ -1040,7 +1042,7 @@ function Get-LoopTaskClassFromState {
     $role = if ($State.PSObject.Properties.Name -contains 'role') { ([string]$State.role).Trim().ToLowerInvariant() } else { '' }
     switch -Regex ($role) {
         '^(auto-fix-reviewer|auto-fix|reviewer-auto)$' { return 'auto-fix-review' }
-        '^(agent-x|agent x|agentx|agentx-auto|autonomous)$' { return 'agent-x' }
+        '^(agent-x|agent x|agentx|agentx-auto|autonomous|frontier|frontier-auto|frontier orchestration fde)$' { return 'agent-x' }
         '^(engineer|implementation)$' { return 'complex-delivery' }
     }
 
@@ -1244,8 +1246,9 @@ $Script:MODEL_MAP_COPILOT = @{
     'claude opus 4.8'   = 'claude-opus-4.8'
     'claude opus 4'     = 'claude-opus-4.8'
     'claude haiku'      = 'claude-haiku-4.5'
+    'gpt-5.6-sol'      = 'gpt-5.6-sol'
     'gpt-5.5'          = 'gpt-5.5'
-    'gpt-5.3-codex'    = 'gpt-5.2-codex'
+    'gpt-5.3-codex'    = 'gpt-5.3-codex'
     'gpt-5.2-codex'    = 'gpt-5.2-codex'
     'gpt-5.1'          = 'gpt-5.1'
     'gpt-5'            = 'gpt-5.5'
@@ -1273,6 +1276,7 @@ $Script:MODEL_MAP_GHMODELS = @{
     'claude opus 4'     = 'gpt-4.1'
     'claude opus 4.8'   = 'gpt-4.1'
     'claude haiku'      = 'gpt-4.1-mini'
+    'gpt-5.6-sol'      = 'gpt-4.1'
     'gpt-5.5'          = 'gpt-4.1'
     'gpt-5.3-codex'    = 'gpt-4.1'
     'gpt-5'            = 'gpt-4.1'
@@ -1322,8 +1326,9 @@ $Script:MODEL_MAP_ANTHROPIC_API = @{
 }
 
 $Script:MODEL_MAP_OPENAI_API = @{
+    'gpt-5.6-sol'   = 'gpt-5.6-sol'
     'gpt-5.5'       = 'gpt-5.5'
-    'gpt-5.3-codex' = 'gpt-5.2-codex'
+    'gpt-5.3-codex' = 'gpt-5.3-codex'
     'gpt-5.2-codex' = 'gpt-5.2-codex'
     'gpt-5.1'       = 'gpt-5.1'
     'gpt-5'         = 'gpt-5.5'
@@ -1375,10 +1380,16 @@ function Resolve-ModelId([string]$agentModel) {
         return Get-RunnerDefaultModel -ProviderId $providerId
     }
     $lower = $agentModel.ToLower() -replace '\(copilot\)', '' -replace '\s+', ' ' | ForEach-Object { $_.Trim() }
+    $normalized = $lower -replace '[-\s]+', ' '
     $map = Get-RunnerModelMap -ProviderId $providerId
     foreach ($key in @($map.Keys | Sort-Object Length -Descending)) {
-        if ($lower -like "*$key*") {
+        if ($normalized -eq ($key -replace '[-\s]+', ' ')) {
             return $map[$key]
+        }
+    }
+    foreach ($modelId in $map.Values) {
+        if ($normalized -eq ($modelId -replace '[-\s]+', ' ')) {
+            return $modelId
         }
     }
 
@@ -1386,7 +1397,7 @@ function Resolve-ModelId([string]$agentModel) {
         return $lower
     }
 
-    return Get-RunnerDefaultModel -ProviderId $providerId
+    throw "Unrecognized model '$agentModel' for provider '$providerId'. Select an explicit supported model label or ID."
 }
 
 function ConvertFrom-ModelFallbackList([string]$modelFallback) {
@@ -1416,7 +1427,12 @@ function Get-ModelCandidateList([string]$preferredModel, [string]$modelFallback)
 
     $candidates = New-Object System.Collections.Generic.List[string]
     foreach ($label in $labels) {
-        $resolved = Resolve-ModelId $label
+        try { $resolved = Resolve-ModelId $label }
+        catch {
+            if ($label -eq $preferredModel) { throw }
+            Write-RunnerConsole "[WARN] Ignoring unrecognized fallback model '$label'."
+            continue
+        }
         if (-not [string]::IsNullOrWhiteSpace($resolved) -and -not $candidates.Contains($resolved)) {
             $candidates.Add($resolved)
         }
@@ -1550,6 +1566,7 @@ function Get-ApproxMessageTokenCount([object]$Message) {
     }
 
     $tokens += Get-ApproxTokenCount (Get-MessageFieldValue -Message $Message -Name 'tool_calls')
+    $tokens += Get-ApproxTokenCount (Get-MessageFieldValue -Message $Message -Name 'response_items')
     return $tokens
 }
 
@@ -2637,6 +2654,76 @@ function Invoke-ClaudeCodePrintMode(
     }
 }
 
+function ConvertTo-ResponsesBody {
+    param([array]$Messages, [string]$ModelId, [array]$Tools, [hashtable]$RequestOptions, [int]$MaxTokens)
+    $inputItems = @()
+    foreach ($message in $Messages) {
+        $role = Get-MessageFieldValue $message 'role'
+        $content = Get-MessageFieldValue $message 'content'
+        $replay = Get-MessageFieldValue $message 'response_items'
+        if ($role -eq 'assistant' -and $replay) {
+            $inputItems += @($replay)
+        } elseif ($role -eq 'tool') {
+            $inputItems += @{ type='function_call_output'; call_id=(Get-MessageFieldValue $message 'tool_call_id'); output=[string]$content }
+        } else {
+            if ($content) { $inputItems += @{ role=$role; content=$content } }
+            foreach ($call in @(Get-MessageFieldValue $message 'tool_calls')) {
+                if ($null -ne $call) {
+                    $inputItems += @{ type='function_call'; call_id=$call.id; name=$call.function.name; arguments=$call.function.arguments }
+                }
+            }
+        }
+    }
+    $body = @{ model=$ModelId; input=@($inputItems); store=$false; stream=$false; max_output_tokens=$MaxTokens; include=@('reasoning.encrypted_content') }
+    if ($Tools.Count) {
+        $body.tools = @($Tools | ForEach-Object {
+            @{ type='function'; name=$_.function.name; description=$_.function.description; parameters=$_.function.parameters; strict=$false }
+        })
+    }
+    if ($RequestOptions.ContainsKey('reasoning')) { $body.reasoning = $RequestOptions.reasoning }
+    return $body
+}
+
+function ConvertFrom-ResponsesResponse {
+    param($Response, [string]$ModelId)
+    if ((Get-MessageFieldValue $Response 'status') -cne 'completed' -or (Get-MessageFieldValue $Response 'error')) {
+        throw 'Responses API did not return a completed response.'
+    }
+    $output = @(Get-MessageFieldValue $Response 'output')
+    $text = @()
+    $calls = @()
+    foreach ($item in $output) {
+        switch (Get-MessageFieldValue $item 'type') {
+            'message' {
+                foreach ($part in $item.content) {
+                    if ($part.type -eq 'output_text') { $text += $part.text }
+                    elseif ($part.type -eq 'refusal') { $text += $part.refusal }
+                    else { throw 'Unsupported Responses message content.' }
+                }
+            }
+            'function_call' {
+                if (-not $item.call_id -or -not $item.name -or $item.arguments -isnot [string]) {
+                    throw 'Malformed Responses function call.'
+                }
+                $calls += [PSCustomObject]@{ id=$item.call_id; type='function'; function=[PSCustomObject]@{ name=$item.name; arguments=$item.arguments } }
+            }
+            'reasoning' { }
+            default { throw 'Unsupported Responses output item.' }
+        }
+    }
+    if (-not $calls.Count -and [string]::IsNullOrWhiteSpace(($text -join "`n"))) { throw 'Empty Responses output.' }
+    $usage = Get-MessageFieldValue $Response 'usage'
+    return [PSCustomObject]@{
+        model=$ModelId
+        choices=@([PSCustomObject]@{ message=[PSCustomObject]@{ role='assistant'; content=($text -join "`n"); tool_calls=@($calls); response_items=@($output) } })
+        usage=[PSCustomObject]@{
+            prompt_tokens=(Get-MessageFieldValue $usage 'input_tokens')
+            completion_tokens=(Get-MessageFieldValue $usage 'output_tokens')
+            total_tokens=(Get-MessageFieldValue $usage 'total_tokens')
+        }
+    }
+}
+
 function Invoke-LlmChat(
     [string]$token,
     [string]$modelId,
@@ -2687,7 +2774,14 @@ function Invoke-LlmChat(
 
     $body = @{
         model = $modelId
-        messages = $messages
+        messages = @($messages | ForEach-Object {
+            $wireMessage = @{}
+            foreach ($field in @('role','content','name','tool_calls','tool_call_id')) {
+                $value = Get-MessageFieldValue $_ $field
+                if ($null -ne $value) { $wireMessage[$field] = $value }
+            }
+            $wireMessage
+        })
         max_tokens = $maxTokens
         temperature = 0.1
     }
@@ -2726,15 +2820,24 @@ function Invoke-LlmChat(
         $url = $Script:GITHUB_MODELS_URL
     }
 
+    $capability = Get-RunnerModelCapability $modelId
+    $useResponses = $activeProviderId -in @('copilot','openai-api') -and $capability -and $capability['transport'] -eq 'responses'
+    if ($useResponses) {
+        $uri = [UriBuilder]::new($url)
+        $uri.Path = $uri.Path -replace '/chat/completions/?$', '/responses'
+        if ($uri.Path -notmatch '/responses/?$') { throw 'Responses models require a chat/completions or responses endpoint.' }
+        $url = $uri.Uri.AbsoluteUri
+        $body = ConvertTo-ResponsesBody -Messages $messages -ModelId $modelId -Tools $tools -RequestOptions $RequestOptions -MaxTokens $maxTokens
+        $json = $body | ConvertTo-Json -Depth 30 -Compress
+    }
     try {
-        $resp = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $json -ErrorAction Stop
-        return $resp
+        $resp = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $json -TimeoutSec 120 -ErrorAction Stop
     } catch {
         $statusCode = $_.Exception.Response.StatusCode.value__
         $errBody = ''
         try { $errBody = $_.ErrorDetails.Message } catch { $errBody = '' }
 
-        if ($activeProviderId -eq 'copilot' -and $statusCode -in @(401, 403)) {
+        if (-not $useResponses -and $activeProviderId -eq 'copilot' -and $statusCode -in @(401, 403)) {
             Write-RunnerConsole "`e[33m  [API FALLBACK] Copilot API returned HTTP $statusCode. Retrying with GitHub Models.`e[0m"
             if ($Script:ProviderRegistry.ContainsKey('github-models')) {
                 $fallback = $Script:ProviderRegistry['github-models']
@@ -2752,6 +2855,8 @@ function Invoke-LlmChat(
         }
         throw "$apiName API error (HTTP $statusCode): $errBody"
     }
+    if ($useResponses) { return ConvertFrom-ResponsesResponse -Response $resp -ModelId $modelId }
+    return $resp
 }
 
 # ---------------------------------------------------------------------------
@@ -3818,6 +3923,8 @@ Produce a structured review with per-category verdicts, APPROVED status, and FIN
 
         # Record and execute tool calls
         $assistantMsg = @{ role = 'assistant'; content = $(if ($msg.content) { $msg.content } else { '' }); tool_calls = @($msg.tool_calls) }
+        $replay = Get-MessageFieldValue $msg 'response_items'
+        if ($replay) { $assistantMsg.response_items = @($replay) }
         $reviewMessages += $assistantMsg
 
         foreach ($tc in $msg.tool_calls) {
@@ -4408,7 +4515,12 @@ function Invoke-AgenticLoop {
     } else {
         $agentDef.model
     }
-    $modelCandidates = @(Get-ModelCandidateList -preferredModel $preferredModel -modelFallback $agentDef.modelFallback)
+    try {
+        $modelCandidates = @(Get-ModelCandidateList -preferredModel $preferredModel -modelFallback $agentDef.modelFallback)
+    } catch {
+        Write-RunnerConsole "[FAIL] $($_.Exception.Message)"
+        return @{ sessionId=''; iterations=0; toolCalls=0; finalText=$_.Exception.Message; exitReason='error' }
+    }
     $modelId = $modelCandidates[0]
     Write-RunnerConsole "`e[36m  Agent: $($agentDef.name ?? $Agent) | Model: $modelId`e[0m"
     Write-RunnerProviderDiagnostic -Provider $Script:ActiveProvider -ModelCandidates $modelCandidates
@@ -4672,7 +4784,10 @@ function Invoke-AgenticLoop {
             $finalText = if ($hasContent) { $msg.content } else { '' }
 
             # Add to conversation
-            $messages += @{ role = 'assistant'; content = $finalText }
+            $assistantMessage = @{ role = 'assistant'; content = $finalText }
+            $replay = Get-MessageFieldValue $msg 'response_items'
+            if ($replay) { $assistantMessage.response_items = @($replay) }
+            $messages += $assistantMessage
 
             # --- Step 1: Check for clarification request ---
             $clarifyReq = Find-ClarificationRequest -text $finalText -canClarify $canClarify
@@ -4829,6 +4944,8 @@ State your PIVOT or REFINE decision and rationale before making changes.
         $assistantMsg = @{ role = 'assistant' }
         $assistantMsg['content'] = if ($hasContent) { $msg.content } else { '' }
         $assistantMsg['tool_calls'] = @($msg.tool_calls)
+        $replay = Get-MessageFieldValue $msg 'response_items'
+        if ($replay) { $assistantMsg.response_items = @($replay) }
         $messages += $assistantMsg
 
         # Execute each tool call

@@ -170,9 +170,9 @@ Before drafting the PRD, convene a Model Council to stress-test scope, priority,
 
 | Role | Model | Lens |
 |------|-------|------|
-| Analyst | `openai/gpt-5.5` | Grill the PRD contents: state exactly what MUST appear -- in-scope requirement list, explicit non-goals, smallest MVP slice vs. defer, single measurable success metric (target + how instrumented), edge/data states for acceptance criteria; reject vague, unmeasurable, or scope-creeping claims and name what to cut |
+| Analyst | `openai/gpt-5.6-sol` | Grill the PRD contents: state exactly what MUST appear -- in-scope requirement list, explicit non-goals, smallest MVP slice vs. defer, single measurable success metric (target + how instrumented), edge/data states for acceptance criteria; reject vague, unmeasurable, or scope-creeping claims and name what to cut |
 | Strategist | `anthropic/claude-opus-5` | Frame the build approach and sequencing: the real user job-to-be-done, the recommended build approach, release sequencing (now / fast-follow / deferred), dependency ordering, and why each item is included now vs. later |
-| Skeptic | `google/gemini-3.1-pro` | Argue against shipping as framed: attack the riskiest assumption and any gameable or vanity metric; surface adoption, support, privacy, security, and compliance blockers; name the single change that most de-risks the PRD |
+| Skeptic | `google/gemini-3.8-flash` | Argue against shipping as framed: attack the riskiest assumption and any gameable or vanity metric; surface adoption, support, privacy, security, and compliance blockers; name the single change that most de-risks the PRD |
 
 **How to convene**:
 
@@ -196,7 +196,12 @@ pwsh .agentx/frontier.ps1 council `
     -Purpose prd-scope
 ```
 
-**This is an internal agent mechanism. After running the script, YOU (the PM agent) immediately adopt each role in turn, generate the three responses, write them into the Council file in place of each `[AGENT-TODO]` block, then complete the Synthesis section -- all in the same workflow phase. DO NOT ask the user to copy/paste prompts or run anything. The user only sees the final PRD, with the council file available as supporting evidence. For optional `gh models` automation, install `gh extension install github/gh-models` and add `-AutoInvoke`.**
+The script creates an unexecuted brief. Follow the independent invocation and
+execution-evidence contract in [AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md).
+Verify model availability on the active host and use `-Members` for substitutions;
+the roster is advisory, not proof of execution. Complete synthesis only after
+three distinct models respond. Missing models or failed calls remain incomplete.
+Never simulate multiple model identities or ask the user to copy/paste prompts.
 
 **Synthesis (MUST complete before drafting PRD)**:
 - **Consensus on Scope and Priority** -- requirements at least two members agree on; promote into PRD requirements at the agreed priority

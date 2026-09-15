@@ -664,6 +664,20 @@ describe('getLoopStatusDisplay', () => {
     assert.ok(getLoopStatusDisplay(wsRoot).includes('2/3'));
   });
 
+  for (const role of ['frontier', 'frontier-auto', 'Frontier Orchestration FDE']) {
+    it(`preserves the orchestrator floor for ${role}`, () => {
+      writeLoopState(wsRoot, makeActiveState({
+        role,
+        taskClass: undefined,
+        minIterations: undefined,
+        prompt: 'Fix a typo',
+        completionCriteria: 'TASK_COMPLETE',
+        iteration: 2,
+      }));
+      assert.ok(getLoopStatusDisplay(wsRoot).includes('2/3'));
+    });
+  }
+
   it('classifies agent-related work as complex delivery for CLI parity', () => {
     writeLoopState(wsRoot, {
       active: true,

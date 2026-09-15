@@ -10,9 +10,12 @@
   the calling agent synthesizes consensus, contradictions, and blind spots.
 
   Default council (mix of vendors and reasoning styles for diversity):
-    - Analyst   : openai/gpt-5.5    (structured, critical, decomposition)
-    - Strategist: anthropic/claude-opus-4.8 (broad context, balanced synthesis)
-    - Skeptic   : google/gemini-3.1-pro   (contrarian, adversarial critique)
+        - Analyst   : openai/gpt-5.6-sol (structured, critical, decomposition)
+        - Strategist: anthropic/claude-opus-5 (broad context, balanced synthesis)
+        - Skeptic   : google/gemini-3.8-flash (contrarian, adversarial critique)
+
+    These are selection preferences, not availability promises. Check the active
+    host catalog; pass -Members for provider-supported alternatives.
 
   Purpose packs tune the per-member instructions and synthesis sections for
   the artifact being produced:
@@ -29,10 +32,10 @@
 
   INTERNAL AGENT MECHANISM. The Model Council is run BY the calling agent,
   not by the user. The script generates a Council Brief containing the
-  role-specific prompts; the calling agent (Copilot, Claude Code, Cursor,
-  local model) then internally adopts each role in turn, generates the three
-  responses, writes them into the Member Responses section of the brief, and
-  completes the Synthesis. The user is NEVER asked to copy/paste prompts.
+    role-specific prompts. The caller invokes three distinct models through
+    an authorized host, records actual execution evidence, then synthesizes their
+    responses. One model simulating three roles is not an independent council.
+    The user is never asked to copy/paste prompts.
 
   OPTIONAL AUTOMATION. Pass -AutoInvoke to drive the council via the GitHub
   Models CLI extension (`gh extension install github/gh-models`). This is one
@@ -56,7 +59,7 @@
 
 .PARAMETER Members
   Optional override of council membership. Each entry is "Role:model-id".
-  Default: Analyst:openai/gpt-5.5,Strategist:anthropic/claude-opus-4.8,Skeptic:google/gemini-3.1-pro
+    Default: Analyst:openai/gpt-5.6-sol,Strategist:anthropic/claude-opus-5,Skeptic:google/gemini-3.8-flash
 
 .PARAMETER OutputDir
   Where to write the council file. Default: docs/coaching
@@ -66,9 +69,8 @@
 
 .PARAMETER AutoInvoke
   Optional. When set, attempts to drive the council automatically via the
-  GitHub Models CLI (`gh models run`). Falls back to brief mode with a warning
-  if the extension is not installed. Without this flag the calling agent runs
-  the council internally by adopting each role -- the user is not involved.
+    GitHub Models CLI (`gh models run`). Missing tooling or failed member calls
+    fail execution. Without this flag, only an unexecuted brief is generated.
 
 .EXAMPLE
   pwsh scripts/model-council.ps1 -Topic sovereign-ai `
@@ -89,7 +91,7 @@ param(
     [string] $Question = "",
     [string[]] $Questions = @(),
     [string] $Context = "",
-    [string] $Members = "Analyst:openai/gpt-5.5,Strategist:anthropic/claude-opus-4.8,Skeptic:google/gemini-3.1-pro",
+    [string] $Members = "Analyst:openai/gpt-5.6-sol,Strategist:anthropic/claude-opus-5,Skeptic:google/gemini-3.8-flash",
     [string] $OutputDir = "docs/coaching",
     [ValidateSet('research','prd-scope','adr-options','ai-design','code-review')]
     [string] $Purpose = 'research',
@@ -113,11 +115,18 @@ function Get-CouncilRoster {
     $roster = @()
     foreach ($entry in ($Spec -split ',')) {
         $parts = $entry.Trim() -split ':', 2
-        if ($parts.Count -ne 2) { continue }
+        if ($parts.Count -ne 2 -or $parts[0].Trim() -cnotin @('Analyst','Strategist','Skeptic') -or
+            $parts[1].Trim() -notmatch '^[a-zA-Z0-9.-]+/[a-zA-Z0-9._-]+$') {
+            throw 'Council members must be Analyst, Strategist and Skeptic with provider/model identifiers.'
+        }
         $roster += [pscustomobject]@{
             Role  = $parts[0].Trim()
             Model = $parts[1].Trim()
         }
+    }
+    if ($roster.Count -ne 3 -or @($roster.Role | Sort-Object -Unique).Count -ne 3 -or
+        @($roster.Model | ForEach-Object { $_.ToLowerInvariant() } | Sort-Object -Unique).Count -ne 3) {
+        throw 'Council requires three distinct roles and three distinct model identifiers.'
     }
     return $roster
 }
@@ -248,7 +257,9 @@ $Prompt
 # Honor the workspace root the agentx CLI exports so council files land in the
 # user's workspace, not the bundled extension dir, after a zero-copy
 # "Initialize Local Runtime". Fall back to the repo layout when run directly.
-if ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path $env:AGENTX_WORKSPACE_ROOT)) {
+if ($env:FRONTIER_WORKSPACE_ROOT -and (Test-Path $env:FRONTIER_WORKSPACE_ROOT)) {
+    $repoRoot = (Resolve-Path $env:FRONTIER_WORKSPACE_ROOT).Path
+} elseif ($env:AGENTX_WORKSPACE_ROOT -and (Test-Path $env:AGENTX_WORKSPACE_ROOT)) {
     $repoRoot = (Resolve-Path $env:AGENTX_WORKSPACE_ROOT).Path
 } else {
     $repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
@@ -304,16 +315,17 @@ if ($AutoInvoke) {
     if (Test-GhModelsAvailable) {
         $useGh = $true
     } else {
-        Write-Warning "-AutoInvoke requested but 'gh models' extension is not installed. Falling back to brief mode. Install with: gh extension install github/gh-models"
+        throw "-AutoInvoke requires 'gh models'. Install github/gh-models explicitly or generate a brief and use Frontier: Run Council. No model calls were made."
     }
 }
-$timestamp   = Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'
+$timestamp   = [datetime]::UtcNow.ToString('o')
+$memberEvidence = @()
 
 $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine("# Model Council: $Topic")
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("**Convened:** $timestamp")
-[void]$sb.AppendLine("**Mode:** $(if ($useGh) { 'automated (gh models)' } else { 'agent-internal (calling agent adopts each role and writes responses below)' })")
+[void]$sb.AppendLine("**Mode:** $(if ($useGh) { 'automated (gh models)' } else { 'brief (not executed)' })")
 [void]$sb.AppendLine("**Purpose pack:** $Purpose")
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("## Question")
@@ -343,9 +355,18 @@ foreach ($m in $roster) {
     if ($useGh) {
         Write-Host "Consulting $($m.Role) ($($m.Model))..."
         $resp = Invoke-CouncilMember -Model $m.Model -Role $m.Role -Prompt $prompt -Pack $pack -ResponseFormat $responseFormat
+        $succeeded = -not [string]::IsNullOrWhiteSpace($resp) -and $resp -notmatch '^\[FAIL\]'
+        $memberEvidence += [ordered]@{
+            role=$m.Role; requestedModel=$m.Model; selectedModel=$m.Model
+            source='gh models'; status=if ($succeeded) { 'ok' } else { 'failed' }
+        }
+        if (-not $succeeded -and [string]::IsNullOrWhiteSpace($resp)) { $resp = '[FAIL] Empty model response.' }
+        $instruction = if ($pack.ContainsKey($m.Role)) { $pack[$m.Role] } else { 'Speak from your assigned role.' }
+        $encodedInstruction = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($instruction))
+        [void]$sb.AppendLine("<!-- agentx:role-instruction:base64 $encodedInstruction -->")
         [void]$sb.AppendLine($resp)
     } else {
-        [void]$sb.AppendLine("[AGENT-TODO] Calling agent: adopt the role below, generate the response in this file (replacing this block), then move to the next role. Do NOT ask the user to do this -- run it yourself as part of the active workflow phase.")
+        [void]$sb.AppendLine("[AGENT-TODO] Invoke this role independently through an authorized host. Record the selected model and source with the actual response. Never simulate multiple model identities. Unavailable calls remain incomplete.")
         [void]$sb.AppendLine("")
         [void]$sb.AppendLine('```')
         [void]$sb.AppendLine("Role: $($m.Role)")
@@ -359,9 +380,16 @@ foreach ($m in $roster) {
     [void]$sb.AppendLine("")
 }
 
+$executionStatus = if (-not $useGh) { 'not-executed' } elseif (@($memberEvidence | Where-Object { $_.status -ne 'ok' }).Count) { 'incomplete' } else { 'complete' }
+[void]$sb.AppendLine('## Execution Evidence')
+[void]$sb.AppendLine('')
+[void]$sb.AppendLine('```json')
+[void]$sb.AppendLine(([ordered]@{ schemaVersion=1; status=$executionStatus; recordedAt=$timestamp; members=@($memberEvidence) } | ConvertTo-Json -Depth 5))
+[void]$sb.AppendLine('```')
+[void]$sb.AppendLine('')
 [void]$sb.AppendLine("## Synthesis")
 [void]$sb.AppendLine("")
-[void]$sb.AppendLine("**To be completed by the calling agent after writing all three Member Responses above. The user is not in the loop.**")
+[void]$sb.AppendLine("[SYNTHESIS-TODO] Complete only after three independent model calls succeed. Preserve the execution evidence; selected IDs are not proof of a provider's underlying snapshot. State disagreements and limitations.")
 [void]$sb.AppendLine("")
 if ($multiTopic) {
     [void]$sb.AppendLine("This council covered $($topicList.Count) topics. In each section below, attribute findings to the relevant Topic <n> so the deliverable can trace each decision back to its topic.")
@@ -373,8 +401,9 @@ foreach ($section in $pack.Sections) {
     [void]$sb.AppendLine("")
 }
 
-Set-Content -Path $outPath -Value $sb.ToString() -Encoding UTF8
+Set-Content -LiteralPath $outPath -Value $sb.ToString() -Encoding UTF8
 Write-Host "[OK] Council file written: $outPath"
 if (-not $useGh) {
-    Write-Host "[INFO] Agent-internal mode (default). The CALLING AGENT now adopts each role in turn, writes the response into the file in place of each [AGENT-TODO] block, then completes the Synthesis section. Do not surface this prompt-running step to the user. Optional gh-models automation: gh extension install github/gh-models  &&  re-run with -AutoInvoke"
+    Write-Host '[INFO] Brief only; not executed. Use Frontier: Run Council or independently invoke available models through an authorized host. Complete synthesis only after successful calls; do not impersonate council members.'
 }
+if ($useGh -and $executionStatus -ne 'complete') { exit 1 }

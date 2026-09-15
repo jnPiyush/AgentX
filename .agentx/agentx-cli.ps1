@@ -4225,7 +4225,7 @@ function Get-LoopTaskClass {
     if ($State.PSObject.Properties.Name -contains 'role' -and $State.role) {
         switch -Regex (([string]$State.role).Trim().ToLowerInvariant()) {
             '^(auto-fix-reviewer|auto-fix|reviewer-auto)$' { return 'auto-fix-review' }
-            '^(agent-x|agent x|agentx|agentx-auto|autonomous)$' { return 'agent-x' }
+            '^(agent-x|agent x|agentx|agentx-auto|autonomous|frontier|frontier-auto|frontier orchestration fde)$' { return 'agent-x' }
             '^(engineer|implementation)$'                  { return 'complex-delivery' }
         }
     }
@@ -5217,25 +5217,25 @@ function Invoke-LoopIterate {
 
 function Invoke-LoopRollback {
     $state = Read-JsonFile $Script:LOOP_STATE_FILE
-    if (-not $state) { Write-CliOutput 'No loop state found.'; return }
-    if (-not $state.active) { Write-CliOutput "$($C.r)  No active loop to roll back.$($C.n)"; return }
+    if (-not $state) { Write-CliOutput 'No loop state found.'; exit 1 }
+    if (-not $state.active) { Write-CliOutput "$($C.r)  No active loop to roll back.$($C.n)"; exit 1 }
 
     $targetRaw = Get-Flag @('-n', '--to') ''
     $reason    = Get-Flag @('-r', '--reason') ''
 
-    if (-not $targetRaw -or $targetRaw -notmatch '^^\d+$') {
+    $target = 0
+    if ($targetRaw -notmatch '^\d+$' -or -not [int]::TryParse($targetRaw, [ref]$target)) {
         Write-CliOutput "$($C.r)  [FAIL] loop rollback requires --to <iteration-number>.$($C.n)"
         Write-CliOutput "$($C.d)    Example: agentx loop rollback -n 3 -r 'Security bug found in subagent review'$($C.n)"
         Write-CliOutput "$($C.d)    Rollback resets the counter so the next 'loop iterate' lands on the target iteration.$($C.n)"
-        return
+        exit 1
     }
 
-    $target  = [int]$targetRaw
     $current = [int]$state.iteration
 
     if ($target -lt 1 -or $target -gt $current) {
         Write-CliOutput "$($C.r)  [FAIL] Target must be 1..$current (current iteration). Got: $target$($C.n)"
-        return
+        exit 1
     }
     if ($target -eq $current) {
         Write-CliOutput "$($C.y)  [WARN] Already at iteration $current. Rollback to the same iteration is a no-op.$($C.n)"

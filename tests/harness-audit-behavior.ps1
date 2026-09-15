@@ -67,10 +67,10 @@ function Invoke-FrontierLauncher([string]$Root, [string]$LauncherPath, [string[]
     }
 }
 
-function Invoke-HarnessCompliance([string]$root) {
+function Invoke-HarnessCompliance([string]$root, [string]$CallerDirectory = '') {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'pwsh'
-    $startInfo.WorkingDirectory = $root
+    $startInfo.WorkingDirectory = if ($CallerDirectory) { $CallerDirectory } else { $root }
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
@@ -376,6 +376,35 @@ Evidence: current-worktree-first fixture.
     }
     $stagedAdrText = Invoke-HarnessCompliance $dirtyWorkspace
     Assert-True ($stagedAdrText -match 'Model Council gate') 'Staged ADR addition requires a matching Council artifact'
+    $externalCallerText = Invoke-HarnessCompliance $dirtyWorkspace $script:repoRoot
+    Assert-True ($externalCallerText -match 'Model Council gate') 'Council gate reads the target workspace when invoked from another directory'
+
+    $councilPath = Join-Path $dirtyWorkspace 'docs/artifacts/adr/COUNCIL-999.md'
+    Set-Content $councilPath "# Model Council`n## Synthesis`n[AGENT-TODO]"
+    Assert-True ((Invoke-HarnessCompliance $dirtyWorkspace) -match 'Model Council gate') 'A heading-only council cannot satisfy execution'
+    $members = @(
+        @{ role='Analyst'; requestedModel='openai/gpt-5.6-sol'; selectedModel='openai/gpt-5.6-sol'; source='gh models'; status='ok' },
+        @{ role='Strategist'; requestedModel='anthropic/claude-opus-5'; selectedModel='anthropic/claude-opus-5'; source='gh models'; status='ok' },
+        @{ role='Skeptic'; requestedModel='google/gemini-3.8-flash'; selectedModel='google/gemini-3.8-flash'; source='gh models'; status='ok' }
+    )
+    foreach ($scenario in @('complete','not-executed','failed','duplicate','unfinished','future','invalid-date')) {
+        $receipt = @{ schemaVersion=1; status='complete'; recordedAt=[datetime]::UtcNow.ToString('o'); members=$members } | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+        $synthesis = 'The independent responses agree on the bounded option; remaining uncertainty is recorded.'
+        if ($scenario -eq 'not-executed') { $receipt.status = 'not-executed' }
+        if ($scenario -eq 'failed') { $receipt.members[1].status = 'failed' }
+        if ($scenario -eq 'duplicate') { $receipt.members[1].selectedModel = $receipt.members[0].selectedModel }
+        if ($scenario -eq 'unfinished') { $synthesis = '[SYNTHESIS-TODO]' }
+        if ($scenario -eq 'future') { $receipt.recordedAt = [datetime]::UtcNow.AddDays(1).ToString('o') }
+        if ($scenario -eq 'invalid-date') { $receipt.recordedAt = 'not-a-date' }
+        $content = @('# Model Council', '## Execution Evidence', '```json', ($receipt | ConvertTo-Json -Depth 5), '```', '## Synthesis', $synthesis) -join "`n"
+        Set-Content $councilPath $content
+        $gateOutput = Invoke-HarnessCompliance $dirtyWorkspace
+        if ($scenario -eq 'complete') {
+            Assert-True ($gateOutput -notmatch 'Model Council gate') 'A complete independent execution receipt and synthesis satisfy the council check'
+        } else {
+            Assert-True ($gateOutput -match 'Model Council gate') "$scenario council evidence is rejected"
+        }
+    }
 
     $untrackedWorkspace = New-TestWorkspace 'untracked-directory'
     try {

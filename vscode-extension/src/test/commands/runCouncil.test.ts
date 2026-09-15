@@ -19,6 +19,7 @@ import {
   parseCouncilBrief,
   replaceRoleBlock,
   summarizeVendorDiversity,
+  writeCouncilExecution,
 } from '../../commands/runCouncilInternals';
 
 const SAMPLE_BRIEF = [
@@ -157,6 +158,25 @@ describe('parseCouncilBrief', () => {
     for (const entry of brief.roster) {
       assert.notEqual(entry.role.toLowerCase(), 'role');
     }
+  });
+});
+
+describe('council execution evidence', () => {
+  it('rejects empty and role-only runs, and records distinct successful selections', () => {
+    const results = ['Analyst', 'Strategist', 'Skeptic'].map((role, index) => ({
+      role, model: `requested/model-${index}`, selectedModel: `selected/model-${index}`,
+      status: 'ok' as const, diversityTier: 'model' as const,
+    }));
+    assert.match(writeCouncilExecution(SAMPLE_BRIEF, []), /"status": "incomplete"/);
+    const complete = writeCouncilExecution(SAMPLE_BRIEF, results);
+    assert.match(complete, /"status": "complete"/);
+    assert.match(complete, /"selectedModel": "selected\/model-2"/);
+    assert.match(complete, /\[SYNTHESIS-TODO\]/);
+    const repeated = writeCouncilExecution(complete, results);
+    assert.equal(repeated.match(/^## Execution Evidence$/gm)?.length, 1);
+    assert.match(writeCouncilExecution(SAMPLE_BRIEF, results.map((result) => ({
+      ...result, selectedModel: 'same/model', diversityTier: 'role',
+    }))), /"status": "incomplete"/);
   });
 });
 
@@ -327,6 +347,9 @@ describe('summarizeVendorDiversity', () => {
 });
 
 describe('modelKey', () => {
+  it('uses host identity before display labels', () => {
+    assert.equal(modelKey({ id: ' HOST-ID ', family: 'first' }), modelKey({ id: 'host-id', family: 'second' }));
+  });
   it('joins vendor|family|name lowercased', () => {
     assert.equal(
       modelKey({ vendor: 'OpenAI', family: 'GPT-5.5', name: 'GPT-5.5' }),
@@ -347,6 +370,13 @@ describe('modelKey', () => {
 });
 
 describe('replaceRoleBlock', () => {
+  it('removes the entire previous response including its Markdown sections', () => {
+    const first = replaceRoleBlock(SAMPLE_BRIEF, 'Analyst', '## Position\nOLD BODY\n## Key Reasoning\nOLD DETAIL', 'Keep instruction');
+    const second = replaceRoleBlock(first, 'Analyst', 'NEW BODY', 'Keep instruction');
+    assert.doesNotMatch(second, /OLD BODY|OLD DETAIL/);
+    assert.match(second, /NEW BODY/);
+    assert.match(second, /### Strategist --/);
+  });
   it('replaces the AGENT-TODO block for a role with the response', () => {
     const updated = replaceRoleBlock(SAMPLE_BRIEF, 'Strategist', 'STRATEGIST RESPONSE BODY');
     assert.ok(updated.includes('STRATEGIST RESPONSE BODY'));
@@ -606,6 +636,36 @@ describe('registerRunCouncilCommand - orchestration', () => {
     assert.match(updated, /Skeptic answer body\./);
     // No AGENT-TODO placeholders remain.
     assert.equal(/\[AGENT-TODO\]/.test(updated), false);
+    assert.match(updated, /"status": "complete"/);
+  });
+
+  it('honors requested families when they share the copilot host vendor', async () => {
+    const captured: CapturedRequest[] = [];
+    __setMockModels([
+      makeMockModel('copilot', 'gpt-5.5', captured, 'analyst'),
+      makeMockModel('copilot', 'gpt-4', captured, 'not requested'),
+      makeMockModel('copilot', 'claude-opus-4.8', captured, 'strategist'),
+      makeMockModel('copilot', 'gemini-3.1-pro', captured, 'skeptic'),
+    ]);
+    await commandCallback();
+    const updated = fs.readFileSync(tmpFile, 'utf8');
+    assert.match(updated, /\nstrategist\n/);
+    assert.match(updated, /\nskeptic\n/);
+    assert.doesNotMatch(updated, /not requested/);
+    assert.match(updated, /"status": "complete"/);
+  });
+
+  it('records incomplete evidence for an empty member instead of offering simulation', async () => {
+    const captured: CapturedRequest[] = [];
+    __setMockModels([
+      makeMockModel('openai', 'gpt-5.5', captured, ''),
+      makeMockModel('anthropic', 'claude-opus-4.8', captured, 'strategist'),
+      makeMockModel('google', 'gemini-3.1-pro', captured, 'skeptic'),
+    ]);
+    await commandCallback();
+    const updated = fs.readFileSync(tmpFile, 'utf8');
+    assert.match(updated, /"status": "incomplete"/);
+    assert.doesNotMatch(updated, /fall back to agent-internal completion/);
   });
 
   it('warns about collapsed vendor diversity when only one vendor is available', async () => {
@@ -883,7 +943,7 @@ describe('registerRunCouncilCommand - orchestration', () => {
     await commandCallback();
 
     assert.ok(errStub.calledOnce);
-    assert.match(String(errStub.firstCall.args[0]), /missing a Question or Council Roster/);
+    assert.match(String(errStub.firstCall.args[0]), /requires a Question, three distinct/);
   });
 
   // BUG #2 regression at orchestration level: rerunning a brief that has

@@ -27,7 +27,17 @@ function Assert-Match($text, $pattern, $message) {
     Assert-True ($text -match $pattern) "$message (pattern: '$pattern' not found in output)"
 }
 
-. (Join-Path $script:repoRoot '.agentx\agentx-cli.ps1')
+$cliPath = Join-Path $script:repoRoot '.agentx/agentx-cli.ps1'
+$parseTokens = $null
+$parseErrors = $null
+$ast = [System.Management.Automation.Language.Parser]::ParseFile($cliPath, [ref]$parseTokens, [ref]$parseErrors)
+foreach ($definition in $ast.FindAll({
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+        $node.Name -in @('Get-LoopTaskClass', 'Get-LoopIterationGuidance')
+}, $false)) {
+    . ([scriptblock]::Create($definition.Extent.Text))
+}
 
 Write-Host ''
 Write-Host ' Loop Rollback Behavior Tests' -ForegroundColor Cyan
@@ -50,6 +60,11 @@ Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role='agent-x'; prompt=''; t
 
 Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role='agentx'; prompt=''; taskClass='' })) `
     'agent-x' 'role=agentx resolves to agent-x'
+
+foreach ($role in @('frontier', 'frontier-auto', 'Frontier Orchestration FDE')) {
+    Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role=$role; prompt='Fix a typo' })) `
+        'agent-x' "$role preserves the orchestrator classification"
+}
 
 Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role='engineer'; prompt=''; taskClass='' })) `
     'complex-delivery' 'role=engineer resolves to complex-delivery'
@@ -90,23 +105,12 @@ Assert-Equal (Get-LoopTaskClass ([PSCustomObject]@{ role=''; taskClass=''; promp
 Write-Host ''
 Write-Host ' 4. Get-LoopIterationGuidance -- table shape' -ForegroundColor White
 
-$g = Get-LoopIterationGuidance 'complex-delivery'
-Assert-Equal $g.Count 5 'complex-delivery guidance has 5 entries'
-Assert-Equal $g[0].n 1 'complex-delivery iter 1 has n=1'
-Assert-Equal $g[4].n 5 'complex-delivery iter 5 has n=5'
-Assert-Match $g[4].gate 'rollback' 'complex-delivery iter 5 gate references rollback'
-
-$ga = Get-LoopIterationGuidance 'auto-fix-review'
-Assert-Equal $ga.Count 5 'auto-fix-review guidance has 5 entries'
-Assert-Match $ga[4].gate 'rollback' 'auto-fix-review iter 5 gate references rollback'
-
-$gx = Get-LoopIterationGuidance 'agent-x'
-Assert-Equal $gx.Count 5 'agent-x guidance has 5 entries'
-Assert-Match $gx[4].gate 'rollback' 'agent-x iter 5 gate references rollback'
-
-$gs = @(Get-LoopIterationGuidance 'standard')
-Assert-Equal $gs.Count 5 'standard guidance has 5 entries'
-Assert-Match $gs[4].focus 'Subagent Review' 'standard iter 5 focus references subagent review'
+foreach ($entry in @{ standard=1; 'auto-fix-review'=2; 'complex-delivery'=3; 'agent-x'=3; 'high-risk'=5 }.GetEnumerator()) {
+    $guidance = @(Get-LoopIterationGuidance $entry.Key)
+    Assert-Equal $guidance.Count $entry.Value "$($entry.Key) guidance matches its risk minimum"
+    Assert-Equal $guidance[0].n 1 "$($entry.Key) starts at iteration one"
+    Assert-Match $guidance[-1].focus 'Review|Decision' "$($entry.Key) ends with independent review"
+}
 
 # ---------------------------------------------------------------------------
 # 5. loop rollback - happy path via CLI (requires a live active loop state)
@@ -114,30 +118,46 @@ Assert-Match $gs[4].focus 'Subagent Review' 'standard iter 5 focus references su
 Write-Host ''
 Write-Host ' 5. loop rollback -- happy path' -ForegroundColor White
 
-$loopStateFile = Join-Path $script:repoRoot '.agentx\state\loop-state.json'
-$backup = Get-Content $loopStateFile -Raw -ErrorAction SilentlyContinue
+$workspaceRoot = Join-Path ([IO.Path]::GetTempPath()) "frontier-rollback-$([guid]::NewGuid())"
+[IO.Directory]::CreateDirectory($workspaceRoot) | Out-Null
+$loopStateFile = Join-Path $workspaceRoot '.frontier/state/loop-state.json'
+
+function Invoke-TestCli([string[]]$CliArguments) {
+    $startInfo = [Diagnostics.ProcessStartInfo]::new((Get-Command pwsh).Source)
+    $startInfo.WorkingDirectory = $workspaceRoot
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.Environment['FRONTIER_WORKSPACE_ROOT'] = $workspaceRoot
+    foreach ($argument in @('-NoProfile', '-File', $cliPath) + $CliArguments) {
+        $startInfo.ArgumentList.Add($argument)
+    }
+    $process = [Diagnostics.Process]::Start($startInfo)
+    try {
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        $process.WaitForExit()
+        return [PSCustomObject]@{ ExitCode=$process.ExitCode; Output=$stdout.Result + $stderr.Result }
+    } finally { $process.Dispose() }
+}
 
 try {
 
-$testState = [PSCustomObject]@{
-    active=$true; status='active'
-    prompt='Regression test loop'; role='engineer'; taskClass='complex-delivery'
-    iteration=5; minIterations=5; maxIterations=20
-    completionCriteria='ALL_TESTS_PASSING'
-    issueNumber=$null; budgetMinutes=$null
-    startedAt='2026-01-01T00:00:00Z'; lastIterationAt='2026-01-01T00:01:00Z'
-    history=@(
-        [PSCustomObject]@{iteration=1;timestamp='2026-01-01T00:00:00Z';summary='i1';status='in-progress';outcome='partial'}
-        [PSCustomObject]@{iteration=2;timestamp='2026-01-01T00:00:10Z';summary='i2';status='in-progress';outcome='partial';passingTests=10}
-        [PSCustomObject]@{iteration=3;timestamp='2026-01-01T00:00:20Z';summary='i3';status='in-progress';outcome='partial';passingTests=10}
-        [PSCustomObject]@{iteration=4;timestamp='2026-01-01T00:00:30Z';summary='i4';status='in-progress';outcome='partial';passingTests=10}
-        [PSCustomObject]@{iteration=5;timestamp='2026-01-01T00:00:40Z';summary='i5';status='in-progress';outcome='partial';passingTests=10}
-    )
+Assert-Equal (Invoke-TestCli @('loop','start','-p','Fix a typo','-r','frontier')).ExitCode 0 'isolated loop starts'
+$startedState = Get-Content $loopStateFile -Raw | ConvertFrom-Json
+Assert-Equal $startedState.minIterations 3 'Frontier CLI start enforces three iterations'
+foreach ($iteration in 1..5) {
+    $evidencePath = Join-Path $workspaceRoot "evidence-$iteration.txt"
+    Set-Content $evidencePath "Fresh fixture evidence $iteration"
+    $result = Invoke-TestCli @('loop','iterate','-s',"Pass $iteration",'-e',$evidencePath)
+    Assert-Equal $result.ExitCode 0 "isolated iteration $iteration succeeds"
 }
-$testState | ConvertTo-Json -Depth 10 | Set-Content $loopStateFile -Encoding utf8
+$testState = Get-Content $loopStateFile -Raw
 
 # Run rollback
-$rollbackOut = & (Join-Path $script:repoRoot '.agentx\agentx.ps1') loop rollback -n 3 -r 'regression-test' *>&1 | Out-String
+$rollback = Invoke-TestCli @('loop','rollback','-n','3','-r','regression-test')
+Assert-Equal $rollback.ExitCode 0 'rollback exits successfully'
+$rollbackOut = $rollback.Output
 Assert-Match $rollbackOut 'Loop rolled back' 'rollback output confirms roll-back occurred'
 Assert-Match $rollbackOut 'iteration 5 -> 3' 'rollback output shows correct from/to transition'
 Assert-Match $rollbackOut 'Resume focus \(iteration 3\)' 'rollback output shows target iteration focus'
@@ -155,9 +175,9 @@ Assert-Equal ([int]$lastHistory.iteration) 3 'last history entry records target 
 Write-Host ''
 Write-Host ' 6. loop status after rollback -- shows target iteration focus (regression)' -ForegroundColor White
 
-$statusOut = & (Join-Path $script:repoRoot '.agentx\agentx.ps1') loop status *>&1 | Out-String
+$statusOut = (Invoke-TestCli @('loop','status')).Output
 Assert-Match $statusOut 'Current focus \(iteration 3\)' 'loop status shows iteration 3 focus (not 2) after rollback to 3'
-Assert-Match $statusOut 'Make it Secure' 'loop status focus text is Make it Secure for complex-delivery iter 3'
+Assert-Match $statusOut 'Independent Review' 'loop status resumes the orchestrator review focus'
 
 # ---------------------------------------------------------------------------
 # 7. loop rollback - guard-rails
@@ -168,26 +188,21 @@ Write-Host ' 7. loop rollback -- guard-rails' -ForegroundColor White
 # Out-of-range: target > current (current is now iter 2 on the counter,
 # but the loop is active and last entry is iter 3 rollback).
 # Reset to iter 5 first so we have room to test guard-rails.
-$testState | ConvertTo-Json -Depth 10 | Set-Content $loopStateFile -Encoding utf8
+$testState | Set-Content $loopStateFile -Encoding utf8
 
-$outHigh = & (Join-Path $script:repoRoot '.agentx\agentx.ps1') loop rollback -n 99 *>&1 | Out-String
-Assert-Match $outHigh '\[FAIL\]' 'rollback -n 99 fails with [FAIL] message'
+$outHigh = Invoke-TestCli @('loop','rollback','-n','99')
+Assert-Equal $outHigh.ExitCode 1 'out-of-range rollback fails'
+Assert-Match $outHigh.Output '\[FAIL\]' 'rollback -n 99 fails with [FAIL] message'
 
-$outSame = & (Join-Path $script:repoRoot '.agentx\agentx.ps1') loop rollback -n 5 *>&1 | Out-String
-Assert-Match $outSame '\[WARN\]' 'rollback to same iteration produces [WARN]'
+$outSame = Invoke-TestCli @('loop','rollback','-n','5')
+Assert-Match $outSame.Output '\[WARN\]' 'rollback to same iteration produces [WARN]'
 
-$outNoN = & (Join-Path $script:repoRoot '.agentx\agentx.ps1') loop rollback *>&1 | Out-String
-Assert-Match $outNoN '\[FAIL\]' 'rollback with no -n flag produces [FAIL] usage error'
+$outNoN = Invoke-TestCli @('loop','rollback')
+Assert-Equal $outNoN.ExitCode 1 'rollback without a target fails'
+Assert-Match $outNoN.Output '\[FAIL\]' 'rollback with no -n flag produces [FAIL] usage error'
 
 } finally {
-    # ---------------------------------------------------------------------------
-    # Restore production loop state (always runs, even if a test assertion throws)
-    # ---------------------------------------------------------------------------
-    if ($backup) {
-        $backup | Set-Content $loopStateFile -Encoding utf8
-    } else {
-        Remove-Item $loopStateFile -ErrorAction SilentlyContinue
-    }
+    Remove-Item -LiteralPath $workspaceRoot -Recurse -Force
 }
 
 # ---------------------------------------------------------------------------
