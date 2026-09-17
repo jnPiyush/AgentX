@@ -159,6 +159,7 @@ $Script:MODEL_CAPABILITIES = @{
     'claude-opus-4.8' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-sonnet-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'claude-thinking' }
     'claude-haiku-4.5' = @{ contextWindow = 200000; providers = @('copilot', 'claude-code', 'anthropic-api'); reasoningMode = 'none' }
+    'gpt-6-astra' = @{ contextWindow = 1050000; providers = @('copilot'); reasoningMode = 'openai-effort'; transport = 'responses' }
     'gpt-5.6-sol' = @{ contextWindow = 922000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort'; transport = 'responses' }
     'gpt-5.3-codex' = @{ contextWindow = 272000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort'; transport = 'responses' }
     'gpt-5.5' = @{ contextWindow = 200000; providers = @('copilot', 'openai-api'); reasoningMode = 'openai-effort' }
@@ -1235,6 +1236,7 @@ function Test-ResearchFirstToolUse {
 # All models mapped: agent frontmatter name -> Copilot API model ID
 # Copilot API has the full catalog; GitHub Models has limited GPT-only.
 $Script:MODEL_MAP_COPILOT = @{
+    'gpt-6-astra'       = 'gpt-6-astra'
     'claude opus 5'     = 'claude-opus-5'
     'opus 5'            = 'claude-opus-5'
     'claude sonnet 5'   = 'claude-sonnet-5'
@@ -1971,7 +1973,7 @@ function Test-SandboxPath {
     $linkCheck = Test-SandboxLinkChain -Resolved $resolved -RootFull $rootFull
     if (-not $linkCheck.allowed) { return $linkCheck }
 
-    return @{ allowed = $true; resolvedPath = $resolved; reason = '' }
+    return @{ allowed = $true; resolvedPath = $resolved; actualPath = $linkCheck.resolvedPath; reason = '' }
 }
 
 <#
@@ -2051,7 +2053,7 @@ function Test-SandboxLinkChain {
         }
     }
 
-    return @{ allowed = $true; resolvedPath = $Resolved; reason = '' }
+    return @{ allowed = $true; resolvedPath = $current; reason = '' }
 }
 
 <#
@@ -2090,7 +2092,26 @@ function Test-SandboxContainment {
     return @{ allowed = $true; resolvedPath = $Resolved; reason = '' }
 }
 
-function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, [string]$agentName = '') {
+function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, [string]$agentName = '', [hashtable]$agentDef = $null) {
+    $isWrite = $name -in @('file_write', 'file_edit')
+    if ($isWrite) {
+        $writeGuard = Test-SandboxPath -Path ([string]$params.filePath) -WorkspaceRoot $workspaceRoot
+        if (-not $writeGuard.allowed) { return @{ error = $true; text = "[PATH BLOCKED] $($writeGuard.reason): $($params.filePath)" } }
+    }
+    if ($name -ne 'terminal_exec' -and ($agentName -or $agentDef -or $isWrite)) {
+        if (-not $agentDef -and $agentName) { $agentDef = Read-AgentDef -agentName $agentName -root $workspaceRoot }
+        if (-not (Test-AgentToolAllowed -ToolName $name -AgentDef $agentDef)) {
+            return @{ error = $true; text = "[AGENT POLICY BLOCKED] Tool '$name' is not permitted by the role definition." }
+        }
+        if ($isWrite) {
+            $rules = Read-BoundaryRuleSet $agentDef
+            foreach ($candidatePath in @($writeGuard.resolvedPath, $writeGuard.actualPath)) {
+                if (-not (Test-BoundaryAllowed -FilePath $candidatePath -Rules $rules -WorkspaceRoot $workspaceRoot)) {
+                    return @{ error = $true; text = "[BOUNDARY BLOCKED] Agent '$agentName' is not allowed to modify '$($params.filePath)'." }
+                }
+            }
+        }
+    }
     switch ($name) {
         'file_read' {
             $guard = Test-SandboxPath -Path ([string]$params.filePath) -WorkspaceRoot $workspaceRoot
@@ -2120,7 +2141,7 @@ function Invoke-Tool([string]$name, [hashtable]$params, [string]$workspaceRoot, 
             $fp = $guard.resolvedPath
             try {
                 $dir = Split-Path $fp -Parent
-                if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -LiteralPath $dir -Force | Out-Null }
+                [IO.Directory]::CreateDirectory($dir) | Out-Null
                 Set-Content -LiteralPath $fp -Value $params.content -Encoding utf8 -NoNewline
                 return @{ error = $false; text = "File written: $($params.filePath) ($($params.content.Length) chars)" }
             } catch {
@@ -2335,7 +2356,7 @@ function ConvertTo-AnthropicMessage([array]$Messages) {
 
             $converted.Add(@{
                 role = 'assistant'
-                content = @($blocks)
+                content = $blocks.ToArray()
             })
             continue
         }
@@ -2348,7 +2369,7 @@ function ConvertTo-AnthropicMessage([array]$Messages) {
 
     return [PSCustomObject]@{
         system = ($systemParts -join "`n`n")
-        messages = @($converted)
+        messages = $converted.ToArray()
     }
 }
 
@@ -2363,10 +2384,10 @@ function ConvertFrom-AnthropicResponse($Response) {
         }
 
         if ($block.type -eq 'tool_use') {
-            $toolCalls.Add(@{
+            $toolCalls.Add([PSCustomObject]@{
                 id = [string]$block.id
                 type = 'function'
-                function = @{
+                function = [PSCustomObject]@{
                     name = [string]$block.name
                     arguments = ($block.input | ConvertTo-Json -Depth 20 -Compress)
                 }
@@ -2374,16 +2395,17 @@ function ConvertFrom-AnthropicResponse($Response) {
         }
     }
 
-    $message = @{
+    $message = [PSCustomObject]@{
+        role = 'assistant'
         content = ($textParts -join "`n`n")
         tool_calls = @($toolCalls.ToArray())
     }
-    $choice = @{
+    $choice = [PSCustomObject]@{
         message = $message
         finish_reason = [string]$Response.stop_reason
     }
 
-    return @{
+    return [PSCustomObject]@{
         choices = @($choice)
     }
 }
@@ -2409,28 +2431,37 @@ function Get-ClaudeCodeAllowedTool([array]$Tools) {
     return '""'
 }
 
+function Test-AgentToolAllowed {
+    param([string]$ToolName, [hashtable]$AgentDef)
+
+    $capabilities = @{
+        file_read = @('file_read', 'codebase', 'search', 'read', 'read/readFile', 'search/codebase')
+        grep_search = @('grep_search', 'codebase', 'search', 'search/textSearch', 'search/codebase')
+        list_dir = @('list_dir', 'codebase', 'search', 'read', 'read/listDirectory', 'search/codebase')
+        file_write = @('file_write', 'editFiles', 'edit', 'edit/editFiles', 'edit/createFile')
+        file_edit = @('file_edit', 'editFiles', 'edit', 'edit/editFiles')
+    }
+    if (-not $AgentDef -or -not $capabilities.ContainsKey($ToolName)) { return $false }
+    $declaredTools = @(Get-MessageFieldValue $AgentDef 'tools')
+    if (-not @($declaredTools | Where-Object { $_ -in $capabilities[$ToolName] }).Count) { return $false }
+    if ($ToolName -in @('file_write', 'file_edit')) {
+        $rules = Read-BoundaryRuleSet $AgentDef
+        if ($rules.canModifySpecified -and $rules.canModify.Count -eq 0) { return $false }
+    }
+    return $true
+}
+
 function Get-AgentProviderToolSchema {
     param(
         [string]$AgentName,
-        [array]$Tools
+        [array]$Tools,
+        [hashtable]$AgentDef = $null
     )
 
+    if (-not $AgentDef -and $AgentName) { $AgentDef = Read-AgentDef -agentName $AgentName -root (Split-Path $PSScriptRoot -Parent) }
     return @($Tools | Where-Object {
-        $toolName = ''
-        if ($_ -is [System.Collections.IDictionary]) {
-            $functionNode = $_['function']
-            if ($functionNode -is [System.Collections.IDictionary]) {
-                $toolName = [string]$functionNode['name']
-            } elseif ($functionNode -and $functionNode.PSObject.Properties['name']) {
-                $toolName = [string]$functionNode.name
-            }
-        } elseif ($_ -and $_.PSObject.Properties['function']) {
-            $functionNode = $_.function
-            if ($functionNode -and $functionNode.PSObject.Properties['name']) {
-                $toolName = [string]$functionNode.name
-            }
-        }
-        $toolName -ne 'terminal_exec'
+        $functionNode = Get-MessageFieldValue $_ 'function'
+        Test-AgentToolAllowed -ToolName ([string](Get-MessageFieldValue $functionNode 'name')) -AgentDef $AgentDef
     })
 }
 
@@ -2563,10 +2594,11 @@ function ConvertFrom-ClaudeCodeResponse([string]$OutputText) {
     }
 
     if ($null -eq $parsed) {
-        return @{
+        return [PSCustomObject]@{
             choices = @(
-                @{
-                    message = @{
+                [PSCustomObject]@{
+                    message = [PSCustomObject]@{
+                        role = 'assistant'
                         content = $trimmed
                         tool_calls = @()
                     }
@@ -2593,10 +2625,11 @@ function ConvertFrom-ClaudeCodeResponse([string]$OutputText) {
         $content = $trimmed
     }
 
-    return @{
+    return [PSCustomObject]@{
         choices = @(
-            @{
-                message = @{
+            [PSCustomObject]@{
+                message = [PSCustomObject]@{
+                    role = 'assistant'
                     content = $content
                     tool_calls = @()
                 }
@@ -2891,7 +2924,7 @@ function Resolve-AgentDefPath([string]$agentName, [string]$root) {
 
 function Read-AgentDef([string]$agentName, [string]$root) {
     $file = Resolve-AgentDefPath -agentName $agentName -root $root
-    if (-not (Test-Path $file)) { return $null }
+    if (-not $file -or -not (Test-Path -LiteralPath $file)) { return $null }
 
     $content = Get-Content $file -Raw -Encoding utf8
     $fmMatch = [regex]::Match($content, '(?s)^---\r?\n(.*?)\r?\n---')
@@ -3379,6 +3412,8 @@ function Invoke-ContextCompaction {
 function Read-BoundaryRuleSet([hashtable]$AgentDef) {
     $canModify = @()
     $cannotModify = @()
+    $canModifySpecified = $AgentDef.ContainsKey('canModify')
+    $cannotModifySpecified = $AgentDef.ContainsKey('cannotModify')
 
     if ($AgentDef.canModify) {
         $canModify += @($AgentDef.canModify)
@@ -3390,39 +3425,42 @@ function Read-BoundaryRuleSet([hashtable]$AgentDef) {
     if ($AgentDef.body) {
         # Parse canModify from frontmatter or body
         $cmMatch = [regex]::Match($AgentDef.body, '(?s)can_modify\s*[:=]\s*\[([^\]]*)\]')
-        if ($cmMatch.Success) {
+        if ($cmMatch.Success -and -not $canModifySpecified) {
+            $canModifySpecified = $true
             $canModify = @($cmMatch.Groups[1].Value -replace "['""]", '' -split ',' |
                 ForEach-Object { $_.Trim() } | Where-Object { $_ })
         }
         # Parse cannotModify from frontmatter or body
         $cnmMatch = [regex]::Match($AgentDef.body, '(?s)cannot_modify\s*[:=]\s*\[([^\]]*)\]')
-        if ($cnmMatch.Success) {
+        if ($cnmMatch.Success -and -not $cannotModifySpecified) {
             $cannotModify = @($cnmMatch.Groups[1].Value -replace "['""]", '' -split ',' |
                 ForEach-Object { $_.Trim() } | Where-Object { $_ })
         }
 
         # Also parse from Boundaries section (markdown table or list format)
         $boundaryMatch = [regex]::Match($AgentDef.body, '(?s)## Boundaries[^\n]*\n(.*?)(?=\n## |\n---|\z)')
-        if ($boundaryMatch.Success -and $canModify.Count -eq 0) {
+        if ($boundaryMatch.Success -and -not $canModifySpecified) {
             $section = $boundaryMatch.Groups[1].Value
             # Can modify patterns
             $cmLines = [regex]::Matches($section, '(?i)can modify[:\s]*([\w\s,/*.*]+)')
             foreach ($m in $cmLines) {
                 $patterns = $m.Groups[1].Value -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
                 $canModify += $patterns
+                $canModifySpecified = $true
             }
             # Cannot modify patterns
             $cnmLines = [regex]::Matches($section, '(?i)cannot modify[:\s]*([\w\s,/*.*]+)')
             foreach ($m in $cnmLines) {
                 $patterns = $m.Groups[1].Value -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-                $cannotModify += $patterns
+                if (-not $cannotModifySpecified) { $cannotModify += $patterns }
             }
         }
     }
 
     return @{
-        canModify = $canModify
-        cannotModify = $cannotModify
+        canModify = @($canModify | ForEach-Object { ($_ -replace '\s+\([^()]*\)\s*$', '').Trim() })
+        cannotModify = @($cannotModify | ForEach-Object { ($_ -replace '\s+\([^()]*\)\s*$', '').Trim() })
+        canModifySpecified = $canModifySpecified
     }
 }
 
@@ -3469,7 +3507,7 @@ function Test-BoundaryAllowed {
         return $false  # canModify specified but no pattern matched
     }
 
-    return $true  # No restrictions defined
+    return -not ($Rules.ContainsKey('canModifySpecified') -and $Rules.canModifySpecified)
 }
 
 # ---------------------------------------------------------------------------
@@ -4562,7 +4600,7 @@ function Invoke-AgenticLoop {
     $canClarify = @(Resolve-ClarificationTargetList -agentDef $agentDef)
 
     $sessionId = if ($isResume) { $ResumeSessionId } else { "$Agent-$(Get-Date -Format 'yyyyMMddHHmmss')-$([System.IO.Path]::GetRandomFileName().Substring(0,4))" }
-    $tools = Get-AgentProviderToolSchema -AgentName $Agent -Tools (Get-ToolSchemaList)
+    $tools = @(Get-AgentProviderToolSchema -AgentName $Agent -Tools (Get-ToolSchemaList) -AgentDef $agentDef)
     $loopDetector = Get-LoopDetector
     Push-ExecutionSummaryScope
     if ($researchFirstMode -ne 'off') {
@@ -4977,7 +5015,7 @@ State your PIVOT or REFINE decision and rationale before making changes.
             }
 
             if (-not $boundaryBlocked -and -not $researchBlocked) {
-                $result = Invoke-Tool -name $toolName -params $toolArgs -workspaceRoot $WorkspaceRoot -agentName $Agent
+                $result = Invoke-Tool -name $toolName -params $toolArgs -workspaceRoot $WorkspaceRoot -agentName $Agent -agentDef $agentDef
                 if (-not $result.error -and $researchCheck.explorationDelta -gt 0) {
                     $researchExplorationCount += $researchCheck.explorationDelta
                     Add-ExecutionSummaryEvent -Type 'RESEARCH' -Message "Completed $researchExplorationCount read-only exploration step(s)." -ReplaceExisting

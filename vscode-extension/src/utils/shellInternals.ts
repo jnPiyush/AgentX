@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 export const MIN_POWERSHELL_VERSION = '7.4.0';
 
@@ -34,7 +34,7 @@ export function getMissingPwshError(): Error {
 }
 
 export function detectPwshVersion(): string {
- return execSync('pwsh -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"', {
+ return execFileSync('pwsh', ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()'], {
   stdio: ['ignore', 'pipe', 'ignore'],
   timeout: 5_000,
  }).toString().trim();

@@ -57,15 +57,22 @@ function Invoke-IsolatedAgentx {
     }
 
     $process = [System.Diagnostics.Process]::Start($processStartInfo)
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
-    $process.WaitForExit()
-
-    return [PSCustomObject]@{
-        ExitCode = $process.ExitCode
-        Stdout   = $stdout
-        Stderr   = $stderr
-        Output   = ($stdout + $stderr)
+    try {
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(60000)) {
+            $process.Kill($true)
+            if (-not $process.WaitForExit(10000)) { throw 'Isolated CLI process tree did not terminate.' }
+            throw "Isolated CLI timed out: $($Arguments -join ' ')"
+        }
+        return [PSCustomObject]@{
+            ExitCode = $process.ExitCode
+            Stdout   = $stdout.GetAwaiter().GetResult()
+            Stderr   = $stderr.GetAwaiter().GetResult()
+            Output   = ($stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult())
+        }
+    } finally {
+        $process.Dispose()
     }
 }
 
@@ -238,6 +245,17 @@ try {
     $state = Read-LoopState $minimumWorkspace
     Assert-Equal ([string]$state.status) 'active' 'too-early complete keeps loop active'
     Assert-Equal ([int]$state.iteration) 0 'too-early complete keeps iteration counter unchanged'
+
+    $countEvidence = New-EvidenceFile -WorkspaceRoot $minimumWorkspace -Name 'counts.txt' -Content 'baseline count checks'
+    $missingCount = Invoke-IsolatedAgentx -WorkspaceRoot $minimumWorkspace -Arguments @(
+        'loop', 'iterate', '-s', 'Missing passing count', '-e', $countEvidence
+    )
+    Assert-True ($missingCount.ExitCode -ne 0) 'recorded baseline requires an explicit passing count'
+    $regressedCount = Invoke-IsolatedAgentx -WorkspaceRoot $minimumWorkspace -Arguments @(
+        'loop', 'iterate', '-s', 'Passing count regressed', '-e', $countEvidence, '--passing', '9'
+    )
+    Assert-True ($regressedCount.ExitCode -ne 0) 'recorded baseline rejects a lower passing count'
+    Assert-Equal ([int](Read-LoopState $minimumWorkspace).iteration) 0 'rejected passing counts do not advance loop state'
 } finally {
     Remove-Item -LiteralPath $minimumWorkspace -Recurse -Force -ErrorAction SilentlyContinue
 }

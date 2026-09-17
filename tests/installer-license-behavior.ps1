@@ -1,6 +1,8 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.4
 
+param([switch]$McpOnly)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -41,6 +43,52 @@ function Invoke-Installer(
 	$output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd()
 	$process.WaitForExit()
 	return [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $output }
+}
+
+if ($McpOnly) {
+	$fixture = Join-Path ([IO.Path]::GetTempPath()) "frontier-mcp-preservation-$([guid]::NewGuid())"
+	[IO.Directory]::CreateDirectory((Join-Path $fixture '.vscode')) | Out-Null
+	$configPath = Join-Path $fixture '.vscode/mcp.json'
+	$existing = '{"servers":{"user-owned":{"command":"example"}},"inputs":[{"id":"user-input"}]}'
+	try {
+		foreach ($shell in @('powershell','bash')) {
+			$extension = if ($shell -eq 'powershell') { 'ps1' } else { 'sh' }
+			$source = Get-Content (Join-Path $repoRoot "install.$extension") -Raw
+			$block = [regex]::Match($source, '(?s)# -- ADO remote detection:.*?(?=# -- Step 3:)').Value
+			if (-not $block) { throw 'Installer MCP setup block not found' }
+			foreach ($remote in @('https://dev.azure.com/owner/project/_git/repo','https://github.com/owner/repo')) {
+				Set-Content -LiteralPath $configPath -Value $existing -NoNewline
+				$startInfo = [Diagnostics.ProcessStartInfo]::new()
+				$startInfo.WorkingDirectory = $fixture
+				$startInfo.UseShellExecute = $false
+				$startInfo.RedirectStandardInput = $true
+				$startInfo.RedirectStandardOutput = $true
+				$startInfo.RedirectStandardError = $true
+				$startInfo.Environment['FIXTURE_REMOTE'] = $remote
+				if ($shell -eq 'powershell') {
+					$startInfo.FileName = (Get-Command pwsh).Source
+					foreach ($argument in @('-NoProfile','-Command','-')) { $startInfo.ArgumentList.Add($argument) }
+					$prefix = 'function git { $env:FIXTURE_REMOTE }; function Write-OK($message) {}; $Force=$true;'
+				} else {
+					$startInfo.FileName = if ($IsWindows) { 'C:/Program Files/Git/bin/bash.exe' } else { (Get-Command bash).Source }
+					$startInfo.ArgumentList.Add('-s')
+					$prefix = 'git() { printf "%s\n" "$FIXTURE_REMOTE"; }; ok() { :; }; FORCE=true;'
+				}
+				$process = [Diagnostics.Process]::Start($startInfo)
+				try {
+					$stdout = $process.StandardOutput.ReadToEndAsync()
+					$stderr = $process.StandardError.ReadToEndAsync()
+					$process.StandardInput.WriteLine($prefix + "`n" + $block.Replace("`r`n", "`n"))
+					$process.StandardInput.Close()
+					if (-not $process.WaitForExit(20000)) { $process.Kill($true); throw 'Installer MCP fixture timed out' }
+					Assert-True ($process.ExitCode -eq 0) "$shell setup succeeds for $remote"
+					Assert-True ((Get-Content -LiteralPath $configPath -Raw) -ceq $existing) "$shell forced setup preserves user MCP bytes for $remote"
+				} finally { $process.Dispose() }
+			}
+		}
+	} finally { Remove-Item -LiteralPath $fixture -Recurse -Force }
+	Write-Host "Results: $passed passed, $failed failed"
+	exit $(if ($failed) { 1 } else { 0 })
 }
 
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('frontier-installer-license-' + [guid]::NewGuid().ToString('N'))

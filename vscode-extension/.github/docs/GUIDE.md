@@ -163,6 +163,62 @@ curl -fsSL https://raw.githubusercontent.com/jnPiyush/AgentX/v9.3.1/install.sh |
 PowerShell install path note:
 `install.ps1` requires PowerShell 7.4+ (`pwsh`). If you are on older Windows PowerShell, install PowerShell 7 and rerun with `pwsh -File .\install.ps1`.
 
+PowerShell 7.4+ is also required on Linux/macOS: the Bash CLI launcher delegates
+to `pwsh`. Installers preserve an existing `.vscode/mcp.json`, including during
+forced setup; merge any new server configuration explicitly.
+
+On macOS, use PowerShell 7.4+, Git, Node.js, and VS Code 1.134+ for the extension.
+The canonical CLI entry point is `bash .agentx/frontier.sh`; the legacy
+`bash .agentx/agentx.sh` wrapper remains supported. Both tracked launchers are
+executable, and the installer enables their executable permissions. Extension
+commands preserve literal argument strings in both Bash and PowerShell, and
+PowerShell version detection does not invoke an intermediate shell.
+
+The `Quality Loop` jobs in `.github/workflows/quality-gates.yml` run launcher,
+shell-argument, review-state, parity, rollback and code-quality tests on native
+Ubuntu and macOS runners. A configured job is not a passing result: inspect its
+run for the current commit before claiming native platform verification.
+
+Each new loop begins without a test-count baseline. After running the relevant
+suite, record its actual passing count with `loop baseline -c <count>` and pass
+`--passing <count>` to subsequent `loop iterate` and `loop complete` commands.
+Counts below the recorded baseline, or missing counts, fail. The CLI warns when
+the baseline is unset; recording a count does not execute tests or prove review
+independence. Evidence and an attributed final review are separate requirements.
+
+For small changes, select checks covering the affected behavior and direct callers;
+record the commands and omitted surfaces with rationale. Expand for shared
+contracts, broad changes or required CI/release gates, not for iteration count.
+Use the same selected surface for baseline comparisons. The VS Code iteration and
+completion dialogs accept the actual passing count, including zero.
+
+### Recovering evidence verification
+
+Loop audit subprocesses drain stdout and stderr concurrently and have a 30-second
+deadline. The code-quality evaluator has a 90-second deadline, leaving teardown
+headroom within the extension's two-minute command limit. A timeout or
+nonzero checker exit is a failure, never evidence approval. Completion checks
+passing counts and final artifact presence/freshness before the expensive evaluator.
+
+- Checker timeout/startup failure: inspect the reported checker and its dependencies,
+  then retry; do not regenerate unrelated test suites or disable verification.
+- Missing or regressed passing count: provide the actual result for the recorded
+  test surface. Do not lower the baseline or substitute a larger unrelated suite.
+- Stale final evidence: run a fresh, scoped final check after the review iteration
+  and submit its real output. Never touch timestamps or copy old evidence to pass.
+- Changed hashes or review findings: rerun affected tests and obtain a new review.
+- Complete the loop before committing; an active loop is rejected by the commit hook.
+
+Architect and UX Designer request `GPT-6 Astra (copilot)`. Copilot API catalog
+metadata verified `gpt-6-astra` with Responses transport; other providers are not
+silently substituted. Catalog availability is not a measured architecture or UX
+quality comparison, and each end user's account must expose the selected model.
+
+The lifecycle signal hook records event, session and tool metadata only. It does
+not persist prompts, tool arguments, tool results or error payloads. This change
+does not sanitize historical signal logs; review their retention and access
+separately before sharing a workspace or its logs.
+
 ### Upgrading Existing Workspaces
 
 Changing an installed version requires explicit `-Force` (PowerShell) or

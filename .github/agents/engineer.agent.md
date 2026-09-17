@@ -1,7 +1,7 @@
 ---
 name: Frontier Engineering FDE
 description: 'Implement features, fix bugs, and write tests through Compound Engineering -- a structured pipeline of Research -> Brainstorm -> Plan -> Design -> Implement -> Scrub -> Test -> Review, with gate-checked phase transitions, full artifact chain consumption, mandatory Karpathy guidelines, and a risk-based quality loop.'
-model: Claude Sonnet 5 (copilot)
+model: GPT-6 Astra (copilot)
 user-invocable: true
 hooks:
   PreToolUse:
@@ -35,7 +35,7 @@ constraints:
   - "MUST run adversarial checks only for applicable high-risk surfaces: property tests for changed pure logic, mutation tests for security/correctness-critical branches, fuzzing for changed parsers/deserializers, and negative tests for changed public endpoints"
   - "MUST run an independent reviewer on the final iteration with only the diff + Spec + tests (no implementation rationale); HIGH/MEDIUM findings reset the loop"
   - "MUST evaluate every implementation change with evaluation/rubrics/code-quality.md; the final review evidence must pass scripts/score-code-quality.ps1 at 80 or higher before loop completion"
-  - "MUST run focused changed-surface checks during implementation and run the full required suite once after the final code change, before independent review"
+  - "MUST select tests by changed behavior, callers and risk; use focused final checks for bounded changes, expanding for shared contracts, cross-module impact or required CI/release gates; MUST NOT rerun the entire suite solely to satisfy an iteration count"
   - "MUST verify quality loop reached 'complete' status before moving to In Review"
   - "MUST write a failing regression test BEFORE fixing any bug (reproduce first, then fix); the commit-msg hook rejects fix: commits without test changes"
   - "MUST store all AI/LLM prompts as separate files in prompts/; MUST NOT embed multi-line prompts as inline strings in code"
@@ -299,10 +299,20 @@ remain behavior-neutral.
 Load `testing` and, for `needs:ai`, `ai-evaluation`. Scale unit, integration, and
 E2E coverage to risk; target at least 80% coverage where the repository enforces it.
 Map every in-scope PRD acceptance criterion to a passing test from the Phase 3 plan.
-Run the narrowest changed-surface tests while implementing. After the final code
-change, run the full suite required by the repository once and use that fresh result
-as completion evidence. If the active runtime cannot execute commands, require the
-host or operator to supply that evidence; never claim a suite ran when it did not.
+Select the narrowest executable checks covering the changed behavior and its
+direct callers. Record selected commands, covered acceptance criteria and omitted
+surfaces with rationale in the existing evidence. For a bounded bug or docs/config
+change, those focused checks can be final evidence. Expand to integration or full
+suites when shared contracts, broad callers, package/runtime changes or required
+CI/release gates justify it. Do not run the entire suite on every small edit or
+merely to fill loop iterations. Reuse unchanged evidence as context, not as a newly
+executed result; rerun invalidated checks after relevant edits.
+
+Record a baseline for the same selected test surface and compare like-for-like
+counts. Do not compare a targeted test count with a prior whole-repository count,
+lower a baseline to hide regression, or regenerate timestamps to appease freshness.
+If the runtime cannot execute commands, report the missing prerequisite and require
+real host/operator evidence rather than claiming a test run.
 
 ### 6.4 Regression Test First (Bugs Only)
 
@@ -390,9 +400,12 @@ All verdict flags shown above are required. HIGH/MEDIUM findings require
 ### 7.6 Complete the Loop and Hand Off
 
 ```bash
-git add -A && git commit -m "feat: complete <description> (#<issue>)"
-.agentx/frontier.ps1 loop complete -s "All quality gates passed" -e .frontier/state/final-gate.json --passing <full-suite-pass-count>
+.agentx/frontier.ps1 loop complete -s "Selected verification gates passed" -e .frontier/state/final-gate.json --passing <selected-suite-pass-count>
 ```
+
+Complete the loop before an authorized commit: the commit hook rejects active
+loops. Commit only when the user or delivery workflow authorizes it, and stage only
+the intended reviewed files. Do not commit first and then attempt loop completion.
 
 Update GitHub Projects Status to `In Review`.
 

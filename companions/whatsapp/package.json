@@ -13,7 +13,7 @@
     "audit:runtime": "npm audit --omit=dev --omit=optional --audit-level=high"
   },
   "engines": {
-    "node": ">=18.17.0"
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "qrcode-terminal": "0.12.0",
@@ -23,6 +23,9 @@
     "cross-env": "7.0.3"
   },
   "overrides": {
+    "puppeteer": "25.10.0",
+    "brace-expansion@1": "1.1.18",
+    "brace-expansion@2": "2.1.4",
     "ip-address": "10.4.0",
     "js-yaml": "5.2.2"
   }

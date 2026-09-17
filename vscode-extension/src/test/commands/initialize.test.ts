@@ -148,6 +148,54 @@ describe('runInitializeLocalRuntimeCommand', () => {
     assert.ok(String(errorStub.firstCall.args[0]).includes('Open a workspace folder first'));
   });
 
+  for (const enforceIssues of [true, false]) {
+    it(`preserves existing configuration on reinstall with enforceIssues=${enforceIssues}`, async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-reinstall-'));
+      const internals = await import('../../commands/initializeInternals');
+      const adapters = await import('../../commands/adaptersCommandInternals');
+      const dependencies = await import('../../utils/dependencyChecker');
+      const existing = {
+        ...(enforceIssues ? { provider: 'github' } : {}),
+        integration: 'ado', mode: 'ado', enforceIssues,
+        llmProvider: 'openai-api',
+        llmProviders: { 'openai-api': { defaultModel: 'custom-model', baseUrl: 'http://localhost:8080' } },
+        custom: { enabled: false, values: [1, 2] },
+        nextIssueNumber: 42, created: '2020-01-01T00:00:00Z', updatedAt: 'old',
+      };
+      try {
+        fs.mkdirSync(path.join(root, '.frontier'));
+        const configFile = path.join(root, '.frontier', 'config.json');
+        fs.writeFileSync(configFile, JSON.stringify(existing));
+        sandbox.stub(internals, 'promptWorkspaceRoot').resolves(root);
+        sandbox.stub(internals, 'copyBundledRuntimeAssets');
+        sandbox.stub(internals, 'copyCopilotCliAssets');
+        sandbox.stub(internals, 'writeWorkspaceRuntimeWrappers');
+        sandbox.stub(internals, 'mergeGitignore');
+        const githubSync = sandbox.stub(adapters, 'syncDetectedGitHubAdapter').rejects(new Error('Must preserve selected provider'));
+        const adoSync = sandbox.stub(adapters, 'syncDetectedAdoAdapter').rejects(new Error('Must preserve selected provider'));
+        sandbox.stub(dependencies, 'checkAllDependencies').resolves({ results: [] } as never);
+        sandbox.stub(vscode.window, 'showWarningMessage').resolves('Reinstall' as never);
+        const errors = sandbox.stub(vscode.window, 'showErrorMessage');
+        const context = { invalidateCache: sandbox.stub(), githubConnected: false, adoConnected: false } as unknown as FrontierContext;
+
+        await runInitializeLocalRuntimeCommand(fakeContext, context);
+
+        sinon.assert.notCalled(errors);
+        sinon.assert.notCalled(githubSync);
+        sinon.assert.notCalled(adoSync);
+        const actual = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+        assert.deepEqual(actual, {
+          provider: enforceIssues ? 'github' : 'ado',
+          ...existing,
+          updatedAt: actual.updatedAt,
+        });
+        assert.notEqual(actual.updatedAt, 'old');
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    });
+  }
+
   it('should keep Initialize scoped to minimal runtime assets', () => {
     assert.deepEqual(ESSENTIAL_DIRS, []);
     assert.deepEqual(ESSENTIAL_FILES, []);

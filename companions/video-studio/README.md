@@ -12,7 +12,8 @@ Three compositions, each 60 seconds at 1920x1080 / 30 fps, scripted to match the
 | `ArchitectDemo` | Architect | "Design the architecture for the feedback widget" | `out/architect.mp4` |
 | `UXDemo` | UX Designer | "Design the UX for the feedback widget" | `out/ux.mp4` |
 
-Captions ship as WebVTT in `public/*.vtt` and are mirrored by the landing page tabs for accessibility.
+Captions are maintained WebVTT assets in `public/*.vtt`; there is no automatic
+caption-generation command. The current static landing page does not load them.
 
 ## Setup
 
@@ -48,7 +49,11 @@ npm run render:ux
 
 ## Honesty disclaimer
 
-These are scripted explainer videos, not raw recordings of live Frontier runs. Every artifact shown (PRD body, ADR options, prototype HTML) mirrors what Frontier actually produces, but the timings on screen are designed for clarity, not benchmarking.
+These are scripted illustrations, not recordings of live Frontier runs or proof
+of generated artifacts, timings, accessibility compliance, or audit results.
+The UX composition displays that disclosure throughout. Changes to source and
+captions do not update previously rendered binaries: rerender and inspect the
+actual video before publishing it. Source tests are not playback or pixel checks.
 
 ## Brand tokens
 

@@ -1,7 +1,10 @@
 # Quality Score - Frontier Component Assessment
 
-> Graded quality assessment of every Frontier component.
-> Updated per release. Grades reflect completeness, test coverage, documentation, and reliability.
+> Component inventory with retained qualitative assessments, not a current
+> production certification. Grades below are historical judgments, not evidence
+> that each component was freshly tested. Use the
+> [implementation rubric](../evaluation/rubrics/code-quality.md) and scope-bound
+> verification results for delivery decisions.
 
 ---
 

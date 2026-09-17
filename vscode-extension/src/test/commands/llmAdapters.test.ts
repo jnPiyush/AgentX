@@ -6,7 +6,7 @@ import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { FrontierContext } from '../../frontierContext';
 import { registerAddLlmAdapterCommand } from '../../commands/llmAdapters';
-import { runAddLlmAdapterCommand } from '../../commands/llmAdaptersCommandInternals';
+import { applyLlmAdapterConfiguration, runAddLlmAdapterCommand } from '../../commands/llmAdaptersCommandInternals';
 
 describe('registerAddLlmAdapterCommand', () => {
   let sandbox: sinon.SinonSandbox;
@@ -60,6 +60,43 @@ describe('runAddLlmAdapterCommand', () => {
   afterEach(() => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
     sandbox.restore();
+  });
+
+  it('keeps credentials and readiness scoped to selected root B while context uses A', async () => {
+    const rootB = path.join(tempRoot, 'workspace-b');
+    fs.mkdirSync(path.join(rootB, '.agentx'), { recursive: true });
+    fs.writeFileSync(path.join(rootB, '.agentx', 'config.json'), '{}');
+    const key = (root: string, provider: string) =>
+      `frontier.llm.${provider}:${provider}::${root.toLowerCase()}`;
+    const secrets = new Map([
+      [key(tempRoot, 'openai-api'), 'root-a-openai'],
+      [key(tempRoot, 'anthropic-api'), 'root-a-anthropic'],
+      [key(tempRoot, 'claude-code'), 'root-a-claude'],
+      [key(rootB, 'anthropic-api'), 'root-b-old'],
+    ]);
+    const context = new FrontierContext({
+      secrets: {
+        get: async (name: string) => secrets.get(name),
+        store: async (name: string, value: string) => { secrets.set(name, value); },
+        delete: async (name: string) => { secrets.delete(name); },
+      },
+    } as unknown as vscode.ExtensionContext);
+    sandbox.stub(context, 'workspaceRoot').get(() => tempRoot);
+    sandbox.stub(context, 'firstWorkspaceFolder').get(() => tempRoot);
+    const setupWizard = await import('../../commands/setupWizard');
+    const precheck = sandbox.stub(setupWizard, 'runCriticalPreCheck')
+      .resolves({ passed: true, report: { healthy: true } as never });
+    const originalConfig = fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf8');
+
+    await applyLlmAdapterConfiguration(context, rootB, 'openai-api', { apiKey: 'root-b-new' });
+
+    assert.equal(secrets.get(key(tempRoot, 'openai-api')), 'root-a-openai');
+    assert.equal(secrets.get(key(tempRoot, 'anthropic-api')), 'root-a-anthropic');
+    assert.equal(secrets.get(key(tempRoot, 'claude-code')), 'root-a-claude');
+    assert.equal(secrets.get(key(rootB, 'openai-api')), 'root-b-new');
+    assert.equal(secrets.has(key(rootB, 'anthropic-api')), false);
+    assert.equal(fs.readFileSync(path.join(tempRoot, '.agentx', 'config.json'), 'utf8'), originalConfig);
+    assert.equal(precheck.firstCall.args[2], rootB);
   });
 
   it('stores OpenAI API settings in workspace config and secret storage', async () => {

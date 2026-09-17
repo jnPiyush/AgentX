@@ -2,10 +2,16 @@ import runner from '../../whatsapp/src/frontierRunner.js';
 
 export function createRuntime(config, implementation = runner) {
     const children = new Set();
+    const pending = new Set();
+    const shutdown = new AbortController();
+    let blocked = false;
     return {
         async run(job, progress) {
+            if (blocked || shutdown.signal.aborted) return { ok: false, text: 'Runtime is blocked or shutting down.' };
             let buffer = '';
-            return implementation.runFrontierProcess(['run', job.agent, job.instruction], config, {
+            const task = Promise.resolve().then(() => implementation.runFrontierProcess(['run', job.agent, job.instruction], config, {
+                signal: shutdown.signal,
+                onTerminationFailure() { blocked = true; },
                 onChild(child) {
                     children.add(child);
                     child.stdout.on('data', chunk => {
@@ -21,8 +27,14 @@ export function createRuntime(config, implementation = runner) {
                     });
                 },
                 onChildDone(child) { children.delete(child); },
-            });
+            }));
+            pending.add(task);
+            try { return await task; } finally { pending.delete(task); }
         },
-        stop() { for (const child of children) implementation.terminateProcessTree(child); },
+        async stop() {
+            shutdown.abort();
+            await Promise.allSettled([...pending]);
+            if (children.size) throw new Error('Child termination was not confirmed; runtime remains blocked.');
+        },
     };
 }

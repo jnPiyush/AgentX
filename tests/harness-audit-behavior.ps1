@@ -1,5 +1,7 @@
 #!/usr/bin/env pwsh
 
+param([switch]$SubprocessOnly)
+
 $ErrorActionPreference = 'Stop'
 $script:pass = 0
 $script:fail = 0
@@ -155,6 +157,101 @@ function Set-WorkspaceHarnessState([string]$root) {
 Write-Host ''
 Write-Host ' Harness Audit Behavior Tests' -ForegroundColor Cyan
 Write-Host ' ================================================' -ForegroundColor DarkGray
+
+if ($SubprocessOnly) {
+    $workspace = New-TestWorkspace 'subprocess'
+    try {
+        $tokens = $null
+        $errors = $null
+        $source = [Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $script:repoRoot '.agentx/agentx-cli.ps1'), [ref]$tokens, [ref]$errors)
+        $definitions = @($source.FindAll({
+            param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -in @('Invoke-LoopCheckProcess', 'Get-HarnessLoopAuditResult', 'Invoke-HarnessComplianceReport')
+        }, $false) | ForEach-Object { $_.Extent.Text }) -join "`n"
+        $completion = $source.Find({
+            param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-LoopComplete'
+        }, $false).Extent.Text
+        $guidance = $source.Find({
+            param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Get-LoopIterationGuidance'
+        }, $false).Extent.Text
+        Assert-True ($guidance -match 'risk-scoped final evidence' -and $guidance -notmatch 'full-suite') 'Loop guidance selects final checks by risk, not a blanket full suite'
+        $evaluator = $source.Find({
+            param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-CodeQualityEvaluator'
+        }, $false).Extent.Text
+        Assert-True ($evaluator -match '-TimeoutMilliseconds 90000') 'Evaluator timeout reserves cleanup headroom under the extension deadline'
+        $evaluatorOffset = $completion.IndexOf('$codeQualityGate = Invoke-CodeQualityEvaluator')
+        Assert-True ($completion.IndexOf("Get-LoopPassingCount 'loop complete'") -lt $evaluatorOffset) 'Completion checks passing count before expensive evaluator'
+        Assert-True ($completion.IndexOf('Evidence file not found:') -lt $evaluatorOffset) 'Completion rejects missing evidence before expensive evaluator'
+        Assert-True ($completion.IndexOf("-ContextLabel 'loop complete'") -lt $evaluatorOffset) 'Completion checks final evidence freshness before expensive evaluator'
+        foreach ($definition in $source.FindAll({
+            param($node)
+            $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -in @('ConvertTo-LoopUtcOffset', 'Test-LoopEvidenceFreshness', 'Test-LoopPassingBaseline')
+        }, $false)) { . ([scriptblock]::Create($definition.Extent.Text)) }
+        function Write-CliOutput([string]$Text) { }
+        $C = @{ r = ''; d = ''; y = ''; n = '' }
+        $artifact = Join-Path $workspace 'fresh-check.txt'
+        Set-Content -LiteralPath $artifact -Value 'Synthetic evidence boundary fixture'
+        $writtenAt = [datetimeoffset]::new((Get-Item -LiteralPath $artifact).LastWriteTimeUtc)
+        Assert-True (Test-LoopEvidenceFreshness $artifact ([PSCustomObject]@{ lastIterationAt = $writtenAt.AddSeconds(-1).ToString('o') })) 'Fresh evidence is accepted'
+        Assert-True (-not (Test-LoopEvidenceFreshness $artifact ([PSCustomObject]@{ lastIterationAt = $writtenAt.AddSeconds(1).ToString('o') }))) 'Stale evidence is rejected without retimestamping'
+        $offset = $writtenAt.AddSeconds(-1).ToOffset([timespan]::FromHours(5.5)).ToString('o')
+        Assert-True (Test-LoopEvidenceFreshness $artifact ([PSCustomObject]@{ lastIterationAt = $offset })) 'Equivalent offset timestamp does not reject fresh evidence'
+        $baseline = [PSCustomObject]@{ passing = 10 }
+        Assert-True (-not (Test-LoopPassingBaseline $baseline $null 'fixture')) 'Missing passing count is rejected'
+        Assert-True (-not (Test-LoopPassingBaseline $baseline 9 'fixture')) 'Lower passing count is rejected'
+        Assert-True (Test-LoopPassingBaseline $baseline 10 'fixture') 'Matching selected-surface count is accepted'
+        foreach ($scenario in @('noisy', 'exit-error', 'timeout', 'missing')) {
+            $probe = Join-Path $workspace 'probe.ps1'
+            if ($scenario -eq 'noisy') {
+                Set-Content -LiteralPath (Join-Path $workspace '.agentx/agentx-cli.ps1') -Value '[Console]::Error.Write(("x" * 131072)); [Console]::Out.Write("ok"); exit 0'
+                $call = 'Get-HarnessLoopAuditResult $Script:ROOT | ConvertTo-Json -Compress'
+            } elseif ($scenario -eq 'exit-error') {
+                Set-Content -LiteralPath (Join-Path $workspace 'scripts/check-harness-compliance.ps1') -Value 'param([switch]$ReportOnly); [Console]::Error.Write("checker crashed"); exit 7'
+                $call = 'Invoke-HarnessComplianceReport | ConvertTo-Json -Compress'
+            } else {
+                $fileName = if ($scenario -eq 'missing') { 'frontier-checker-does-not-exist' } else { 'pwsh' }
+                $call = '$info = [Diagnostics.ProcessStartInfo]::new(''' + $fileName + '''); ' +
+                    '$info.ArgumentList.Add(''-NoProfile''); $info.ArgumentList.Add(''-Command''); ' +
+                    '$info.ArgumentList.Add(''while ($true) { }''); ' +
+                    'Invoke-LoopCheckProcess -StartInfo $info -TimeoutMilliseconds 250 | ConvertTo-Json -Compress'
+            }
+            $preamble = '$Script:ROOT = $PSScriptRoot; $Script:INSTALL_RUNTIME_DIR = Join-Path $PSScriptRoot ''.agentx'''
+            Set-Content -LiteralPath $probe -Value ($preamble + "`n" + $definitions + "`n" + $call)
+            $info = [Diagnostics.ProcessStartInfo]::new((Get-Command pwsh).Source)
+            $info.UseShellExecute = $false
+            $info.RedirectStandardOutput = $true
+            $info.RedirectStandardError = $true
+            foreach ($argument in @('-NoProfile', '-File', $probe)) { $info.ArgumentList.Add($argument) }
+            $process = [Diagnostics.Process]::Start($info)
+            try {
+                $stdout = $process.StandardOutput.ReadToEndAsync()
+                $stderr = $process.StandardError.ReadToEndAsync()
+                $finished = $process.WaitForExit(10000)
+                if (-not $finished) { $process.Kill($true); $process.WaitForExit(5000) | Out-Null }
+                Assert-True $finished "$scenario checker completes without blocking output pipes"
+                if ($finished) {
+                    $result = $stdout.GetAwaiter().GetResult() | ConvertFrom-Json
+                    if ($scenario -in @('timeout', 'missing')) {
+                        Assert-True ($result.exitCode -ne 0) "$scenario checker fails explicitly"
+                        $expected = if ($scenario -eq 'timeout') { 'timed out' } else { 'execution failed' }
+                        Assert-True ($result.output -match $expected) "$scenario checker explains recovery"
+                    } else {
+                        Assert-True ($result.passed -eq ($scenario -eq 'noisy')) "$scenario checker respects process exit status"
+                    }
+                }
+            } finally { $process.Dispose() }
+        }
+    } finally { Remove-TestWorkspace $workspace }
+    Write-Host "Results: $script:pass passed, $script:fail failed"
+    if ($script:fail) { exit 1 }
+    exit 0
+}
 
 $workspace = New-TestWorkspace 'profiles'
 try {

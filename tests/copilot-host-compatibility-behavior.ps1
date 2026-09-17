@@ -17,7 +17,8 @@ param(
     # Bundle-derived assertions validate generated output that is gitignored.
     # They skip locally when the bundle has not been built, but must never skip
     # in CI -- that would turn the strongest checks into silent no-ops.
-    [switch]$RequireBundle = [bool]$env:CI
+    [switch]$RequireBundle = [bool]$env:CI,
+    [switch]$SignalOnly
 )
 
 Set-StrictMode -Version Latest
@@ -134,6 +135,49 @@ Assert-True ($null -ne $startEntry -and $startEntry.marker -eq 'start') 'session
 
 $emptyEntry = Invoke-SignalCapture ''
 Assert-True ($null -ne $emptyEntry -and $emptyEntry.event -eq 'unknown') 'empty payload never crashes the hook'
+
+foreach ($eventName in @('preToolUse', 'PostToolUse', 'UserPromptSubmit', 'userPromptSubmitted', 'errorOccurred')) {
+    $privatePayload = @{
+        sessionId = 'privacy-fixture'
+        toolName = 'file_write'
+        toolInput = @{ authorization = 'Bearer synthetic-credential-marker'; content = 'confidential-user-content' }
+        toolArgs = '{"password":"synthetic-credential-marker"}'
+        toolResponse = @{ text = 'confidential-user-content'; token = 'synthetic-credential-marker' }
+        toolResult = 'confidential-user-content'
+        prompt = 'confidential-user-content synthetic-credential-marker'
+        message = 'request failed: synthetic-credential-marker confidential-user-content'
+    } | ConvertTo-Json -Depth 5 -Compress
+    $privateEntry = Invoke-SignalCapture $privatePayload $eventName
+    Assert-True ($null -ne $privateEntry) "$eventName still records lifecycle metadata"
+    $stored = $privateEntry | ConvertTo-Json -Depth 10 -Compress
+    Assert-True ($stored -notmatch 'synthetic-credential-marker|confidential-user-content') "$eventName never persists credential or confidential payloads"
+    $unexpectedFields = @($privateEntry.PSObject.Properties.Name | Where-Object { $_ -notin @('timestamp', 'event', 'sessionId', 'tool', 'marker') })
+    Assert-True ($unexpectedFields.Count -eq 0) "$eventName persists only approved metadata fields"
+}
+
+$savedHookEnvironment = @{}
+foreach ($variable in @('TOOL_ARGS', 'TOOL_RESULT', 'PROMPT', 'ERROR_MESSAGE')) {
+    $name = "COPILOT_HOOK_$variable"
+    $savedHookEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
+    [Environment]::SetEnvironmentVariable($name, 'synthetic-credential-marker confidential-user-content')
+}
+try {
+    foreach ($eventName in @('postToolUse', 'userPromptSubmitted', 'errorOccurred')) {
+        $legacyEntry = Invoke-SignalCapture '{}' $eventName
+        Assert-True ($null -ne $legacyEntry) "$eventName legacy environment capture still emits metadata"
+        Assert-True (($legacyEntry | ConvertTo-Json -Depth 10 -Compress) -notmatch 'synthetic-credential-marker|confidential-user-content') "$eventName legacy environment payloads are never persisted"
+    }
+} finally {
+    foreach ($name in $savedHookEnvironment.Keys) {
+        [Environment]::SetEnvironmentVariable($name, $savedHookEnvironment[$name])
+    }
+}
+
+if ($SignalOnly) {
+    Write-Host "Signal capture tests: $passed passed, $failed failed"
+    if ($failed -gt 0) { exit 1 }
+    exit 0
+}
 
 # --- 3. Instruction globs apply to nested sources ----------------------------
 

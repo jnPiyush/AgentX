@@ -94,7 +94,9 @@ export async function runAgentCommand(
   agentx: FrontierContext,
   agentName: string,
   task: string,
+  signal?: AbortSignal,
 ): Promise<vscode.ChatResult> {
+  if (signal?.aborted) { return {}; }
   if (!hasWorkspaceCliRuntime(agentx)) {
     response.markdown(renderMissingRuntimeMessage());
     return {};
@@ -121,6 +123,8 @@ export async function runAgentCommand(
         }
       },
       { AGENTX_NONINTERACTIVE_HUMAN: '1' },
+      agentx.workspaceRoot,
+      { signal },
     );
 
     writeOutputToChannel(`Frontier Chat Run: ${agentName}`, output);
@@ -139,6 +143,7 @@ export async function runAgentCommand(
     await clearPendingClarification(agentx);
     response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
   } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') { return {}; }
     const msg = err instanceof Error ? err.message : String(err);
     response.markdown(`**Frontier error:** ${msg}`);
   }
@@ -151,7 +156,9 @@ export async function resumePendingClarification(
   agentx: FrontierContext,
   pending: PendingClarification,
   guidance: string,
+  signal?: AbortSignal,
 ): Promise<vscode.ChatResult> {
+  if (signal?.aborted) { return {}; }
   if (!hasWorkspaceCliRuntime(agentx)) {
     response.markdown(renderMissingRuntimeMessage());
     return {};
@@ -181,6 +188,8 @@ export async function resumePendingClarification(
         }
       },
       { AGENTX_NONINTERACTIVE_HUMAN: '1' },
+      agentx.workspaceRoot,
+      { signal },
     );
 
     writeOutputToChannel(`Frontier Chat Resume: ${pending.agentName}`, output);
@@ -199,6 +208,7 @@ export async function resumePendingClarification(
     await clearPendingClarification(agentx);
     response.markdown(formatChatVisibleOutput(output, visibleDiscussionLines));
   } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') { return {}; }
     const msg = err instanceof Error ? err.message : String(err);
     response.markdown(`**Frontier error:** ${msg}`);
   }
@@ -518,6 +528,7 @@ export async function tryHandleContinueRequest(
   response: vscode.ChatResponseStream,
   agentx: FrontierContext,
   pending: PendingClarification | undefined,
+  signal?: AbortSignal,
 ): Promise<vscode.ChatResult | undefined> {
   const continueMatch = userText.match(/^continue(?:\s+(.+))?$/is);
   if (!continueMatch) {
@@ -535,7 +546,7 @@ export async function tryHandleContinueRequest(
     return {};
   }
 
-  return resumePendingClarification(response, agentx, pending, guidance);
+  return resumePendingClarification(response, agentx, pending, guidance, signal);
 }
 
 export async function tryHandleLearningsRequest(

@@ -63,7 +63,7 @@ To run Frontier successfully within VS Code:
 
 - **VS Code:** 1.134.0 or newer
 - **System:** Git configured on your PATH
-- **Runtime:** PowerShell 7.4+ (`pwsh`) on Windows, or Bash on Linux/macOS
+- **Runtime:** PowerShell 7.4+ (`pwsh`) on every OS; the Bash launcher delegates to PowerShell
 - **Integrations:** gh (GitHub CLI) optional for extended GitHub mode operations
 
 ---
@@ -85,6 +85,16 @@ Frontier initialization is workspace-scoped. After opening a repository or proje
 ```text
 Frontier: Initialize Local Runtime
 ```
+
+Reinstall preserves existing provider settings and issue enforcement. Adapter
+setup stores and removes credentials for the selected workspace folder, even
+when another folder is the active Frontier root.
+
+For `@frontier run` and clarification resumes, Chat Stop requests process-tree
+termination and waits for the shell and termination helper to close. Agent runs
+have a 30-minute deadline; other shell commands default to two minutes. Buffered
+output is limited to 8 MiB. A failed or unconfirmed termination is reported as an
+error, not a successful cancellation; check for remaining processes before retrying.
 
 You can also start the same flow in chat with:
 

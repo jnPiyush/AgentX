@@ -113,7 +113,8 @@ describe('registerLoopCommand', () => {
       fakeAgentx.checkInitialized.resolves(true);
       sandbox.stub(vscode.window, 'showInputBox')
         .onFirstCall().resolves('Verified the gate')
-        .onSecondCall().resolves('.agentx/state/gate.log');
+        .onSecondCall().resolves('.agentx/state/gate.log')
+        .onThirdCall().resolves('');
       sandbox.stub(vscode.window, 'showQuickPick').resolves('No' as never);
       fakeAgentx.runCli.resolves('Iteration recorded');
 
@@ -121,6 +122,48 @@ describe('registerLoopCommand', () => {
       assert.ok(fakeAgentx.runCli.calledWith('loop', sinon.match.array.deepEquals([
         'iterate', '-s', 'Verified the gate', '-e', '.agentx/state/gate.log',
       ])));
+    });
+
+    for (const action of ['iterate', 'complete']) {
+      for (const count of ['0', '12']) {
+        it(`forwards explicit passing count ${count} for ${action}`, async () => {
+          fakeAgentx.checkInitialized.resolves(true);
+          sandbox.stub(vscode.window, 'showInputBox')
+            .onFirstCall().resolves('Verified selected checks')
+            .onSecondCall().resolves('fresh-evidence.json')
+            .onThirdCall().resolves(count);
+          sandbox.stub(vscode.window, 'showQuickPick').resolves('No' as never);
+          fakeAgentx.runCli.resolves('Accepted');
+          await registeredCallbacks[`frontier.loop${action === 'iterate' ? 'Iterate' : 'Complete'}`]!();
+          const args = fakeAgentx.runCli.firstCall.args[1] as string[];
+          assert.equal(args[args.indexOf('--passing') + 1], count);
+          assert.equal(args[args.indexOf('-e') + 1], 'fresh-evidence.json');
+        });
+      }
+
+      it(`does not submit ${action} when passing-count entry is cancelled`, async () => {
+        fakeAgentx.checkInitialized.resolves(true);
+        sandbox.stub(vscode.window, 'showInputBox')
+          .onFirstCall().resolves('Verified selected checks')
+          .onSecondCall().resolves('fresh-evidence.json')
+          .onThirdCall().resolves(undefined);
+        sandbox.stub(vscode.window, 'showQuickPick').resolves('No' as never);
+        await registeredCallbacks[`frontier.loop${action === 'iterate' ? 'Iterate' : 'Complete'}`]!();
+        sinon.assert.notCalled(fakeAgentx.runCli);
+      });
+    }
+
+    it('does not complete a loop after cancelling the summary or evidence prompt', async () => {
+      fakeAgentx.checkInitialized.resolves(true);
+      const input = sandbox.stub(vscode.window, 'showInputBox').resolves(undefined);
+      await registeredCallbacks['frontier.loopComplete']!();
+      sinon.assert.calledOnce(input);
+      sinon.assert.notCalled(fakeAgentx.runCli);
+      input.resetHistory();
+      input.onFirstCall().resolves('Complete');
+      input.onSecondCall().resolves('');
+      await registeredCallbacks['frontier.loopComplete']!();
+      sinon.assert.notCalled(fakeAgentx.runCli);
     });
   });
 

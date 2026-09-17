@@ -64,6 +64,7 @@ export async function runSilentInstall(agentx: FrontierContext): Promise<PreChec
 export async function runCriticalPreCheck(
   agentx: FrontierContext,
   blocking = true,
+  root?: string,
 ): Promise<PreCheckResult> {
-  return runCriticalPreCheckFlow(agentx, blocking);
+  return runCriticalPreCheckFlow(agentx, blocking, root);
 }

@@ -7,6 +7,7 @@ import {
   IntegrationProvider,
 } from '../utils/dependencyChecker';
 import { FrontierContext } from '../frontierContext';
+import { getConfiguredLlmProvider, hasConfiguredAdoAdapter, hasConfiguredIntegration } from '../frontierContextInternals';
 import { PreCheckResult } from './setupWizardTypes';
 
 const ICON_PASS = '$(check)';
@@ -147,14 +148,20 @@ export async function runSilentInstallFlow(agentx: FrontierContext): Promise<Pre
 export async function runCriticalPreCheckFlow(
   agentx: FrontierContext,
   blocking = true,
+  root?: string,
 ): Promise<PreCheckResult> {
+  const integrations = root ? {
+    githubConnected: hasConfiguredIntegration(root, 'github'),
+    adoConnected: hasConfiguredAdoAdapter(root),
+    llmProvider: getConfiguredLlmProvider(root),
+  } : agentx;
   const report = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: 'Frontier: Checking dependencies...',
       cancellable: false,
     },
-    async () => checkAllDependencies(agentx),
+    async () => checkAllDependencies(integrations),
   );
 
   if (report.healthy) {
@@ -207,10 +214,10 @@ export async function runCriticalPreCheckFlow(
       );
 
       const toolNames = toolsWithFix.map((tool) => tool.name);
-      const toolsReady = await pollForExternalTools(agentx, toolNames);
+      const toolsReady = await pollForExternalTools(integrations, toolNames);
 
       if (toolsReady) {
-        const freshReport = await checkAllDependencies(agentx);
+        const freshReport = await checkAllDependencies(integrations);
         if (freshReport.healthy) {
           vscode.window.showInformationMessage(
             'Frontier: All required dependencies are now installed.',
@@ -232,7 +239,7 @@ export async function runCriticalPreCheckFlow(
       'Skip',
     );
     if (recheck === 'Re-check Now') {
-      const freshReport = await checkAllDependencies(agentx);
+      const freshReport = await checkAllDependencies(integrations);
       if (freshReport.healthy) {
         vscode.window.showInformationMessage(
           'Frontier: All required dependencies are now present.',
@@ -272,7 +279,7 @@ export async function runCriticalPreCheckFlow(
 }
 
 export async function pollForExternalTools(
-  agentx: FrontierContext,
+  agentx: IntegrationProvider,
   toolNames: string[],
 ): Promise<boolean> {
   return vscode.window.withProgress(

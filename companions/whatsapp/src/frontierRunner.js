@@ -23,29 +23,62 @@ function childEnvironment() {
   return env;
 }
 
-function terminateProcessTree(child) {
-  if (!child || child.killed) return;
-  if (process.platform === 'win32') {
-    spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, timeout: 5000 });
-    return;
-  }
-  try { process.kill(-child.pid, 'SIGTERM'); } catch (_) {
-    try { child.kill('SIGTERM'); } catch (error) {
-      console.warn(`[Frontier WhatsApp] Could not terminate child ${child.pid}: ${error.message}`);
-    }
-  }
-  const killer = setTimeout(() => {
-    try { process.kill(-child.pid, 'SIGKILL'); } catch (_) {
-      try { child.kill('SIGKILL'); } catch (error) {
-        console.warn(`[Frontier WhatsApp] Could not force-kill child ${child.pid}: ${error.message}`);
+function terminateProcessTree(child, hooks = {}) {
+  if (!child) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let escalation;
+    let settled = false;
+    let childClosed = false;
+    let treeTerminated = false;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      clearTimeout(escalation);
+      child.removeListener('close', closed);
+      if (error) reject(error); else resolve();
+    };
+    const finishStopped = () => { if (childClosed && treeTerminated) finish(); };
+    const closed = () => { childClosed = true; finishStopped(); };
+    const deadline = setTimeout(() => finish(new Error(`Child ${child.pid} did not close after termination.`)), hooks.killTimeoutMs || 7000);
+    child.once('close', closed);
+    const signal = (name) => {
+      try {
+        (hooks.kill || process.kill)(-child.pid, name);
+      } catch (groupError) {
+        if (groupError.code !== 'ESRCH') throw new Error(`Process group ${child.pid} rejected ${name}: ${groupError.message}`);
       }
+    };
+    try {
+      if ((hooks.platform || process.platform) === 'win32') {
+        if (!Number.isInteger(child.pid) || child.pid <= 0) throw new Error('Cannot taskkill a child without a valid PID.');
+        const result = (hooks.spawnSync || spawnSync)('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+          windowsHide: true, timeout: 5000, maxBuffer: 16384, encoding: 'utf8',
+        });
+        if (result.error || result.status !== 0) {
+          throw new Error(`taskkill failed for child ${child.pid}: ${result.error?.message || result.stderr || `exit ${result.status}`}`);
+        }
+        treeTerminated = true;
+        finishStopped();
+      } else {
+        signal('SIGTERM');
+        escalation = setTimeout(() => {
+          try {
+            signal('SIGKILL');
+            treeTerminated = true;
+            finishStopped();
+          } catch (error) { finish(error); }
+        }, hooks.killGraceMs || 2000);
+      }
+    } catch (error) {
+      finish(error);
     }
-  }, 2000);
-  killer.unref();
+  });
 }
 
 function runFrontierProcess(args, config, hooks = {}) {
   return new Promise((resolve) => {
+    if (hooks.signal?.aborted) return resolve({ ok: false, text: 'Runner is shutting down.' });
     const cli = path.resolve(config.repoPath, config.cliRelativePath);
     if (!cli.startsWith(`${path.resolve(config.repoPath)}${path.sep}`) || !fs.existsSync(cli)) {
       return resolve({ ok: false, text: `CLI not found inside repoPath: ${cli}` });
@@ -60,47 +93,77 @@ function runFrontierProcess(args, config, hooks = {}) {
     hooks.onChild && hooks.onChild(child);
 
     let output = '';
-    let timedOut = false;
-    let outputExceeded = false;
+    let failure = '';
+    let terminationError = '';
     let settled = false;
+    let childClosed = false;
+    let treeTerminated = false;
     let timer;
+    let teardownTimer;
     const finish = (result) => {
       if (settled) return;
       settled = true;
-      if (timer) clearTimeout(timer);
-      hooks.onChildDone && hooks.onChildDone(child);
+      clearTimeout(timer);
+      clearTimeout(teardownTimer);
+      hooks.signal?.removeEventListener('abort', cancel);
       resolve(result);
     };
+    const failureResult = () => ({ ok: false, text: `${failure}\n${terminationError}\n${output.trim()}`.trim() });
+    const finishStopped = () => {
+      if (childClosed && treeTerminated) {
+        hooks.onChildDone?.(child);
+        finish(failureResult());
+      }
+    };
+    const terminate = (reason) => {
+      if (failure || settled) return;
+      failure = reason;
+      clearTimeout(timer);
+      teardownTimer = setTimeout(() => {
+        hooks.onTerminationFailure?.(child);
+        finish({ ...failureResult(), text: `${failureResult().text}\n[FAIL] Child termination was not confirmed; runner blocked.`, terminationConfirmed: false });
+      }, hooks.terminationTimeoutMs || 8000);
+      try {
+        Promise.resolve((hooks.terminate || terminateProcessTree)(child)).then(() => {
+          treeTerminated = true;
+          finishStopped();
+        }).catch(error => {
+          terminationError = `[FAIL] Termination error: ${error.message}`;
+        });
+      } catch (error) {
+        terminationError = `[FAIL] Termination error: ${error.message}`;
+      }
+    };
+    const cancel = () => terminate('Runner is shutting down.');
     const capture = (chunk, prefix = '') => {
-      if (outputExceeded) return;
+      if (failure || settled) return;
       const next = `${prefix}${chunk.toString()}`;
       const remaining = config.maxOutputChars - output.length;
       if (next.length > remaining) {
         output += next.slice(0, Math.max(0, remaining));
-        outputExceeded = true;
-        (hooks.terminate || terminateProcessTree)(child);
-        finish({ ok: false, text: `${output.trim()}\n[FAIL] Output exceeded ${config.maxOutputChars} characters.`.trim() });
+        terminate(`[FAIL] Output exceeded ${config.maxOutputChars} characters.`);
       } else {
         output += next;
       }
     };
 
     timer = setTimeout(() => {
-      timedOut = true;
-      (hooks.terminate || terminateProcessTree)(child);
-      finish({ ok: false, text: `Timed out after ${config.commandTimeoutMs / 1000}s.\n${output.trim()}`.trim() });
+      terminate(`Timed out after ${config.commandTimeoutMs / 1000}s.`);
     }, config.commandTimeoutMs);
 
     child.stdout.on('data', (chunk) => capture(chunk));
     child.stderr.on('data', (chunk) => capture(chunk, output ? '\n[stderr]\n' : '[stderr]\n'));
     child.on('close', (code) => {
+      childClosed = true;
+      if (failure) { finishStopped(); return; }
+      hooks.onChildDone?.(child);
       const text = output.trim();
-      if (timedOut) return finish({ ok: false, text: `Timed out after ${config.commandTimeoutMs / 1000}s.\n${text}`.trim() });
-      if (outputExceeded) return finish({ ok: false, text: `${text}\n[FAIL] Output exceeded ${config.maxOutputChars} characters.`.trim() });
       const semanticFailure = FAILURE_PATTERN.test(`\n${text}`);
       finish({ ok: code === 0 && !semanticFailure, text: text || `(exit ${code})`, exitCode: code });
     });
-    child.on('error', (error) => finish({ ok: false, text: `Spawn error: ${error.message}` }));
+    child.on('error', (error) => terminate(`Spawn error: ${error.message}`));
+    hooks.signal?.addEventListener('abort', cancel, { once: true });
+    if (hooks.signal?.aborted) cancel();
   });
 }
 
@@ -108,18 +171,24 @@ function createFrontierRunner(config, hooks = {}) {
   let queue = Promise.resolve();
   let queued = 0;
   const children = new Set();
+  const shutdown = new AbortController();
   let stopped = false;
+  let blocked = false;
 
   const run = (args) => {
+    if (blocked) return Promise.resolve({ ok: false, text: 'Runner blocked: child termination was not confirmed.' });
     if (stopped) return Promise.resolve({ ok: false, text: 'Runner is shutting down.' });
     if (queued >= config.maxQueueDepth) return Promise.resolve({ ok: false, text: 'Command queue is full. Try again later.' });
     queued += 1;
     const task = queue.then(() => {
+      if (blocked) return { ok: false, text: 'Runner blocked: child termination was not confirmed.' };
       if (stopped) return { ok: false, text: 'Runner is shutting down.' };
       return runFrontierProcess(args, config, {
         ...hooks,
+        signal: shutdown.signal,
         onChild: (child) => children.add(child),
         onChildDone: (child) => children.delete(child),
+        onTerminationFailure: () => { blocked = true; },
       });
     });
     queue = task.catch(() => {}).finally(() => { queued -= 1; });
@@ -128,8 +197,9 @@ function createFrontierRunner(config, hooks = {}) {
 
   const stop = async () => {
     stopped = true;
-    for (const child of children) (hooks.terminate || terminateProcessTree)(child);
+    shutdown.abort();
     await queue.catch(() => {});
+    if (children.size) throw new Error('Child termination was not confirmed; runner remains blocked.');
   };
 
   return { run, stop, get queued() { return queued; } };

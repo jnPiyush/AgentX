@@ -115,7 +115,13 @@ try {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('Frontmatter must be a YAML mapping.');
   }
-  process.stdout.write(JSON.stringify(parsed));
+  if (process.argv[2] === '--promote') {
+    if (!yaml) throw new Error('Promotion requires the bundled yaml serializer.');
+    parsed.status = 'promoted';
+    process.stdout.write(yaml.stringify(parsed));
+  } else {
+    process.stdout.write(JSON.stringify(parsed));
+  }
 } catch (error) {
   console.error(`[FAIL] Invalid YAML: ${error.message}`);
   process.exit(1);

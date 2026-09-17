@@ -45,6 +45,12 @@ flowchart LR
 
 Frontier Orchestration FDE can run that path in one session. For tighter control, select a specialist role for only the phase you need.
 
+Execution depends on the host, configured provider, permissions, and available
+tools. The GitHub workflow routes work and creates handoff scaffolds; it does not
+itself prove delivery. Skill instructions and scripted demos are guidance, not
+evidence that each advertised workflow passed a live end-to-end test. The current
+AI evaluation gate tests issue classification, not the quality of all 26 roles.
+
 ---
 
 ## Why Frontier
@@ -205,8 +211,8 @@ Replaces the legacy structural score with a 100-point rubric, strict YAML parsin
 
 Frontier places controls outside the model prompt:
 
-- blocked destructive command patterns and confirmation for unfamiliar commands
-- workspace path sandboxing and secret redaction
+- destructive-command deny rules and surface-specific confirmation controls
+- workspace path checks and secret redaction; shell commands are not OS-sandboxed
 - SSRF validation with private-address and metadata-endpoint blocking
 - role-specific tool boundaries, including fail-closed Power Platform terminal policy
 - pinned GitHub Actions, dependency audits, secret scanning, and SAST
@@ -230,9 +236,9 @@ Or install [Frontier from the Visual Studio Marketplace](https://marketplace.vis
 
 Requirements:
 
-- VS Code 1.85+
+- VS Code 1.134.0+
 - Git
-- PowerShell 7.4+ on Windows, or Bash on Linux/macOS
+- PowerShell 7.4+ (`pwsh`) on every OS; the Bash launcher also delegates to PowerShell
 - GitHub Copilot and GitHub Copilot Chat
 
 ### 2. Initialize the workspace

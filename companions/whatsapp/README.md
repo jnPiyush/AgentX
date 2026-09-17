@@ -20,8 +20,8 @@ Use a dedicated OS account and, ideally, a dedicated WhatsApp account. Protect `
 
 ## Prerequisites
 
-- Node.js 18.17+
-- PowerShell 7 (`pwsh`) on PATH
+- Node.js 22.12+ (required by the pinned Puppeteer version)
+- PowerShell 7.4+ (`pwsh`) on PATH
 - Frontier checkout with `.agentx/frontier.ps1`
 - A supported local Chrome/Chromium installed by Puppeteer or selected via `browser.executablePath`
 
@@ -96,18 +96,23 @@ Supported MIME types: OGG/Opus, MPEG, MP4/M4A, and WebM. Audio is size-limited a
 
 The companion watches `.frontier/state/loop-state.json` and can notify allowlisted targets for `started`, `iteration`, `complete`, `status`, and `init`. Targets must be a subset of `allowedNumbers`. Partial JSON writes are retried without discarding the previous valid state; watcher failures fall back to polling.
 
+State-file precedence is `.frontier`, then `.hve`, then `.agentx`. Polling detects
+a newly created canonical state file. Malformed canonical JSON does not fall
+back to an older namespace and report stale progress.
+
 ## Operations
 
 - Run as a foreground service, scheduled task, or process manager under a dedicated account.
 - `SIGINT` and `SIGTERM` stop the watcher, cancel owned Frontier children, and destroy the WhatsApp client once.
 - Commands are serialized. Queue overflow, timeout, output overflow, spawn errors, nonzero exits, and CLI `[FAIL]` output are reported as failures.
+- The queue waits for child closure and process-tree termination after cancellation. If termination cannot be confirmed within eight seconds, it reports failure and blocks subsequent writers. Confirm the process tree has stopped before restarting the service; shell exit alone is insufficient.
 - Keep `config.json`, `.wwebjs_auth/`, `.wwebjs_cache/`, and `node_modules/` untracked.
 
 ## Troubleshooting
 
 - **Configuration error:** start from `config.example.json`; paths must exist and `cliRelativePath` cannot escape `repoPath`.
 - **QR does not appear:** use a terminal that supports QR block rendering.
-- **`pwsh` missing:** install PowerShell 7 or set `AGENTX_PWSH` to a compatible executable.
+- **`pwsh` missing:** install PowerShell 7.4+ or set `AGENTX_PWSH` to a compatible executable.
 - **Session logged out:** stop the service, remove `.wwebjs_auth/`, and relink.
 - **Mutation disabled:** enable only the named capability, restart, then use the nonce flow.
 - **Loop iterate/complete rejected:** generate and submit evidence from the desktop Frontier session.

@@ -1,6 +1,14 @@
+---
+description: 'Conditional motion recipes with reduced-motion handling for HTML/CSS and React prototypes.'
+---
+
 # Animation Recipes
 
-> Companion reference to `prototype-craft/SKILL.md`. A short library of motion patterns for HTML/CSS or React + Framer Motion prototypes. Every recipe ends with a reduced-motion guard so honoring `prefers-reduced-motion: reduce` is the default, not an afterthought.
+MUST read before adding motion. Target `DESIGN.md`, product posture,
+[accessibility](../../accessibility/SKILL.md) and
+[anti-slop](../../anti-slop/SKILL.md) override these examples.
+
+> Companion to [Prototype Craft](../SKILL.md). A short library of motion patterns for HTML/CSS or React + Framer Motion prototypes. Every recipe requires a reduced-motion guard so honoring `prefers-reduced-motion: reduce` is the default, not an afterthought.
 
 ## Why these recipes exist
 
@@ -10,7 +18,7 @@ All recipes follow three rules:
 
 1. Default duration is 200-280 ms. Anything longer needs a reason.
 2. Easing is `cubic-bezier(0.2, 0, 0, 1)` (emphasised) or `cubic-bezier(0.4, 0, 0.2, 1)` (standard). Never linear for UI motion.
-3. Every recipe MUST honor `prefers-reduced-motion: reduce` -- either via the global CSS guard from `theme-presets.md` or via a runtime check.
+3. Every recipe MUST honor `prefers-reduced-motion: reduce` -- either via the global CSS guard from [theme presets](../../design-system-reasoning/references/theme-presets.md) or via a runtime check.
 
 ## Recipe 1: Page transition (Framer Motion)
 
@@ -123,7 +131,7 @@ Matching CSS:
 }
 ```
 
-The global reduced-motion guard from `theme-presets.md` collapses `animation-duration` to 0.01 ms, so the shimmer stops automatically under reduced motion.
+The global reduced-motion guard from [theme presets](../../design-system-reasoning/references/theme-presets.md) collapses `animation-duration` to 0.01 ms, so the shimmer stops automatically under reduced motion.
 
 ## Recipe 6: Modal entrance and exit
 
@@ -137,7 +145,7 @@ const reduce = useReducedMotion();
 />
 ```
 
-Pair with `AnimatePresence` and a focus trap. The focus trap is non-negotiable; see the accessibility skill.
+Pair with `AnimatePresence` and a focus trap. The focus trap is non-negotiable; see [accessibility](../../accessibility/SKILL.md).
 
 ## Recipe 7: Number count-up
 
@@ -202,4 +210,4 @@ Reduced-motion guard collapses the pulse to a static dot.
 
 - Pair recipes 1 + 2 for a feed or dashboard page.
 - Pair recipe 4 with a long marketing page; do not use it on dashboards where the data must appear instantly.
-- Recipes 5 and 8 must respect the reduced-motion guard from `theme-presets.md`.
+- Recipes 5 and 8 must respect the reduced-motion guard from [theme presets](../../design-system-reasoning/references/theme-presets.md).

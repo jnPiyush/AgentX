@@ -39,7 +39,7 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         with:
           script: |
-            const rerouteCommand = '/agentx route';
+            const rerouteCommands = ['/frontier route', '/agentx route'];
             const isIssueComment = context.eventName === 'issue_comment';
 
             if (isIssueComment && context.payload.issue?.pull_request) {
@@ -51,14 +51,14 @@ jobs:
 
             if (isIssueComment) {
               const commentBody = (context.payload.comment?.body || '').trim();
-              if (commentBody !== rerouteCommand) {
-                console.log(`[SKIP] Comment did not request reroute: expected "${rerouteCommand}"`);
+              if (!rerouteCommands.includes(commentBody)) {
+                console.log(`[SKIP] Comment did not request reroute: expected ${rerouteCommands.join(' or ')}`);
                 core.setOutput('agent', '');
                 core.setOutput('issue_number', '');
                 return;
               }
 
-              console.log(`[INFO] Explicit reroute requested via issue comment command ${rerouteCommand}`);
+              console.log(`[INFO] Explicit reroute requested via issue comment command ${commentBody}`);
             }
 
             // Get issue number
@@ -230,6 +230,8 @@ jobs:
                 agent = 'fabric-engineer';
               } else if (labels.includes('type:lowcode')) {
                 agent = 'power-platform-builder';
+              } else if (labels.includes('type:powerbi')) {
+                agent = 'powerbi-analyst';
               } else if (hasArchitecture) {
                 agent = 'engineer';
               } else if (labels.includes('type:feature') || labels.includes('type:spike') || labels.includes('type:story')) {
@@ -246,6 +248,8 @@ jobs:
                 agent = 'fabric-engineer';
               } else if (labels.includes('type:lowcode')) {
                 agent = 'power-platform-builder';
+              } else if (labels.includes('type:powerbi')) {
+                agent = 'powerbi-analyst';
               } else {
                 agent = 'engineer';
               }
@@ -273,6 +277,8 @@ jobs:
               agent = 'fabric-engineer';
             } else if (!agent && labels.includes('type:lowcode')) {
               agent = 'power-platform-builder';
+            } else if (!agent && labels.includes('type:powerbi')) {
+              agent = 'powerbi-analyst';
             } else if (!agent && (labels.includes('type:feature') || labels.includes('type:spike'))) {
               agent = 'architect';
             } else if (!agent && (labels.includes('type:story') || labels.includes('type:docs'))) {
@@ -422,7 +428,7 @@ jobs:
           if [ ! -f "docs/artifacts/reviews/REVIEW-${ISSUE}.md" ]; then
             cp .github/templates/REVIEW-TEMPLATE.md "docs/artifacts/reviews/REVIEW-${ISSUE}.md"
             sed -i "s/{issue-id}/${ISSUE}/g" "docs/artifacts/reviews/REVIEW-${ISSUE}.md"
-            echo "[PASS] Created Review scaffold"
+            echo "[INFO] Created unassessed review scaffold; no approval or certification has occurred"
           else
             echo "[SKIP] Review document already exists"
           fi
@@ -437,7 +443,7 @@ jobs:
           git add docs/artifacts/reviews/
           git diff --cached --quiet || git commit -m "docs: scaffold review for #${ISSUE}"
           git push || true
-          gh issue comment ${ISSUE} --body "**Reviewer Agent**: Review scaffold created at docs/artifacts/reviews/REVIEW-${ISSUE}.md - Complete review and move status to Done when approved."
+          gh issue comment ${ISSUE} --body "**Reviewer Agent**: Review scaffold available at docs/artifacts/reviews/REVIEW-${ISSUE}.md. Status: NOT ASSESSED. This job does not review, approve, or certify code, roles, skills, or deployment readiness. Complete an evidence-backed review, then move to Validating; Done requires the remaining delivery gates."
 
   devops:
     name: DevOps Engineer
@@ -571,3 +577,17 @@ jobs:
         run: |
           ISSUE="${{ needs.route.outputs.issue_number }}"
           gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "**Power Platform Builder Agent**: Ready to generate unpacked solution source. Tenant authentication, import, publish, export, and delete operations remain maker or deployment-pipeline responsibilities."
+
+  powerbi-analyst:
+    name: Power BI Analyst
+    needs: route
+    if: needs.route.outputs.agent == 'powerbi-analyst'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Acknowledge Assignment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE="${{ needs.route.outputs.issue_number }}"
+          gh issue comment ${ISSUE} --repo ${{ github.repository }} --body "**Power BI Analyst Agent**: Assignment acknowledged for report and semantic-model work. No implementation, validation, approval, or certification has been performed by this routing job."

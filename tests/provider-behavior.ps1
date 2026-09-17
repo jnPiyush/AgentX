@@ -1,6 +1,8 @@
 #!/usr/bin/env pwsh
 # Provider behavior tests for local and GitHub CLI paths
 
+param([switch]$ProjectIdentityOnly, [switch]$PromotionOnly)
+
 $ErrorActionPreference = 'Stop'
 $script:pass = 0
 $script:fail = 0
@@ -14,6 +16,171 @@ function Assert-True($condition, $message) {
         Write-Host " [FAIL] $message" -ForegroundColor Red
         $script:fail++
     }
+}
+
+function Test-ProjectIssueIdentity {
+    Set-StrictMode -Version Latest
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+        (Join-Path $script:repoRoot '.agentx/agentx-cli.ps1'), [ref]$tokens, [ref]$parseErrors)
+    if ($parseErrors.Count) { throw ($parseErrors -join "`n") }
+    foreach ($name in @('Test-GitHubProjectIssueIdentity', 'Get-GitHubProjectIssueItem', 'Get-GitHubProjectIssueStatusMap')) {
+        $definition = $ast.Find({ param($node)
+            $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
+        }, $true)
+        if ($definition) { . ([scriptblock]::Create($definition.Extent.Text)) }
+    }
+    function Assert-GitHubCliAvailable {}
+    function Get-GitHubProjectNumber { return 4 }
+    function Get-GitHubProjectOwner { return 'test-owner' }
+    function Get-GitHubRepoSlug { return $testRepo }
+    function gh { return ($testItems | ConvertTo-Json -Depth 10 -Compress) }
+
+    $testRepo = 'test-owner/test-repo'
+    $validItem = [pscustomobject]@{
+        id = 'TARGET'; status = 'Ready'
+        content = [pscustomobject]@{ number = 42; type = 'Issue'; repository = $testRepo; url = "https://github.com/$testRepo/issues/42" }
+    }
+    $invalidCases = @(
+        @{ name = 'other repository'; repo = 'other-owner/other-repo'; url = 'https://github.com/other-owner/other-repo/issues/42' },
+        @{ name = 'conflicting URL'; repo = $testRepo; url = 'https://github.com/other-owner/other-repo/issues/42' },
+        @{ name = 'untrusted host'; repo = $testRepo; url = "https://example.com/$testRepo/issues/42" },
+        @{ name = 'host suffix'; repo = $testRepo; url = "https://github.com.example.com/$testRepo/issues/42" },
+        @{ name = 'insecure URL'; repo = $testRepo; url = "http://github.com/$testRepo/issues/42" },
+        @{ name = 'pull request'; repo = $testRepo; url = "https://github.com/$testRepo/pull/42" },
+        @{ name = 'wrong URL number'; repo = $testRepo; url = "https://github.com/$testRepo/issues/420" },
+        @{ name = 'query suffix'; repo = $testRepo; url = "https://github.com/$testRepo/issues/42?x=1" },
+        @{ name = 'fragment suffix'; repo = $testRepo; url = "https://github.com/$testRepo/issues/42#note" },
+        @{ name = 'missing URL'; repo = $testRepo; url = '' }
+    )
+    foreach ($case in $invalidCases) {
+        $foreignItem = [pscustomobject]@{
+            id = 'FOREIGN'; status = 'Done'
+            content = [pscustomobject]@{ number = 42; type = 'Issue'; repository = $case.repo; url = $case.url }
+        }
+        $testItems = @{ items = @($foreignItem, $validItem) }
+        $selected = Get-GitHubProjectIssueItem 42
+        Assert-True ($selected.id -eq 'TARGET') "project item rejects $($case.name) before target"
+        $testItems = @{ items = @($validItem, $foreignItem) }
+        $statusMap = Get-GitHubProjectIssueStatusMap
+        Assert-True ($statusMap[42] -eq 'Ready') "project status rejects $($case.name) after target"
+    }
+    $testItems = @{ items = @($validItem) }
+    $validItem.content.PSObject.Properties.Remove('repository')
+    Assert-True ((Get-GitHubProjectIssueItem 42).id -eq 'TARGET') 'canonical issue URL works without repository metadata'
+    $validItem.content.url = 'https://github.com/TEST-OWNER/TEST-REPO/issues/42'
+    Assert-True ((Get-GitHubProjectIssueItem 42).id -eq 'TARGET') 'GitHub repository identity is case insensitive'
+    foreach ($invalidRepo in @('', 'test-owner', '../test-repo', 'test-owner/*', 'test-owner/test-repo/issues/42')) {
+        $testRepo = $invalidRepo
+        Assert-True ($null -eq (Get-GitHubProjectIssueItem 42)) "item fails closed for invalid repo '$invalidRepo'"
+        Assert-True ((Get-GitHubProjectIssueStatusMap).Count -eq 0) "status map fails closed for invalid repo '$invalidRepo'"
+    }
+    $testRepo = 'test-owner/test-repo'
+    foreach ($invalidNumber in @('not-a-number', '42.1', '042', '2147483648', '-1', '0')) {
+        $validItem.content.number = $invalidNumber
+        Assert-True ($null -eq (Get-GitHubProjectIssueItem 42)) "item rejects invalid content number '$invalidNumber'"
+        Assert-True ((Get-GitHubProjectIssueStatusMap).Count -eq 0) "status map rejects invalid content number '$invalidNumber'"
+    }
+    $validItem.content.number = 42
+    $validItem.content.type = 'PullRequest'
+    Assert-True ($null -eq (Get-GitHubProjectIssueItem 42)) 'non-issue content cannot supply a project item'
+    Assert-True ((Get-GitHubProjectIssueStatusMap).Count -eq 0) 'non-issue content cannot supply issue status'
+}
+
+function Test-LearningPromotion {
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+        (Join-Path $script:repoRoot '.agentx/agentx-cli.ps1'), [ref]$tokens, [ref]$parseErrors)
+    $definition = $ast.Find({ param($node)
+        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-LessonsPromote'
+    }, $true)
+    . ([scriptblock]::Create($definition.Extent.Text))
+    function Get-Flag { return '' }
+    function Test-Flag([string[]]$names) { return '--dry-run' -in $names }
+    function Write-CliOutput([string]$message) { Write-Output $message }
+    function Resolve-FrontierRuntimeScript([string]$relativePath) { return (Join-Path $script:repoRoot $relativePath) }
+    $script:SubArgs = @('--dry-run')
+    Set-Variable -Name C -Value @{ c = ''; y = ''; n = ''; d = ''; r = ''; g = '' }
+    $tempRoot = Join-Path ([IO.Path]::GetTempPath()) "frontier-promotion-test-$([guid]::NewGuid().ToString('N'))"
+    $learningDir = Join-Path $tempRoot 'docs/artifacts/learnings'
+    New-Item -ItemType Directory -Path $learningDir -Force | Out-Null
+    $fixtures = @{
+        eligible = "confidence: 0.95`nobservations: 7`nstatus: reviewed"
+        quoted = "confidence: '0.85' # calibrated`r`nobservations: 4 # repeated`r`nstatus: 'reviewed'"
+        promoted = "confidence: 0.95`nobservations: 7`nstatus: promoted"
+        archived = "confidence: 0.95`nobservations: 7`nstatus: 'archived' # retained"
+        low = "confidence: 0.4`nobservations: 12`nstatus: draft"
+        few = "confidence: 0.97`nobservations: 2`nstatus: reviewed"
+    }
+    try {
+        foreach ($fixture in $fixtures.GetEnumerator()) {
+            [IO.File]::WriteAllText((Join-Path $learningDir "LEARNING-$($fixture.Key).md"), "---`n$($fixture.Value)`n---`n# Learning $($fixture.Key)`n")
+        }
+        $before = @(Get-ChildItem $learningDir | Get-FileHash | Select-Object -ExpandProperty Hash)
+        Push-Location $tempRoot
+        try { $output = (Invoke-LessonsPromote) -join "`n" }
+        finally { Pop-Location }
+        Assert-True ($output -match 'would promote LEARNING-eligible.md') 'multiline frontmatter meets automatic promotion thresholds'
+        Assert-True ($output -match 'would promote LEARNING-quoted.md') 'YAML quoted values, comments and CRLF retain promotion eligibility'
+        Assert-True ($output -match 'conf=0.95, obs=7') 'promotion reports actual confidence and observations'
+        foreach ($name in @('promoted', 'archived', 'low', 'few')) {
+            Assert-True ($output -notmatch "would promote LEARNING-$name.md") "automatic promotion excludes $name learning"
+        }
+        Assert-True ($output -match 'promoted=2 skipped=4') 'dry-run reports exact eligible and skipped counts'
+        Assert-True ($output -match 'LEARNING-archived.md \(conf=0.95, obs=7, status=archived\)') 'skipped learning retains real metadata'
+        Assert-True (-not (Test-Path (Join-Path $tempRoot 'memories'))) 'dry-run does not write conventions'
+        $after = @(Get-ChildItem $learningDir | Get-FileHash | Select-Object -ExpandProperty Hash)
+        Assert-True (-not (Compare-Object $before $after)) 'dry-run leaves source learning bytes unchanged'
+        function Test-Flag { param($Names) return $false }
+        $body = @('# Body fixture', '', 'status: draft', '', '```yaml', 'status: example', '```', '') -join "`n"
+        foreach ($header in @("status: >-`n  reviewed", '"status": "reviewed"', '')) {
+            Get-ChildItem -LiteralPath $learningDir | Remove-Item
+            $learningPath = Join-Path $learningDir 'LEARNING-write.md'
+            [IO.File]::WriteAllText($learningPath, "---`nconfidence: 0.95`nobservations: 7`n$header`n---`n$body")
+            Push-Location $tempRoot
+            try {
+                $null = Invoke-LessonsPromote
+                $promotedContent = [IO.File]::ReadAllText($learningPath)
+                $headerMatch = [regex]::Match($promotedContent, '(?s)\A---\n(?<yaml>.*?)\n---\n')
+                $parsedHeader = $headerMatch.Groups['yaml'].Value | & node (Join-Path $script:repoRoot 'scripts/parse-yaml.js') | ConvertFrom-Json
+                Assert-True ($parsedHeader.status -ceq 'promoted') 'actual promotion serializes YAML status'
+                Assert-True ($promotedContent.Substring($headerMatch.Length) -ceq $body) 'actual promotion preserves body bytes and example status fields'
+                $conventionsPath = Join-Path $tempRoot 'memories/conventions.md'
+                $beforeRepeat = [IO.File]::ReadAllText($conventionsPath)
+                $null = Invoke-LessonsPromote
+                Assert-True ([IO.File]::ReadAllText($conventionsPath) -ceq $beforeRepeat) 'repeated promotion does not append another convention'
+            } finally { Pop-Location }
+        }
+        Get-ChildItem -LiteralPath $learningDir | Remove-Item
+        foreach ($invalid in @(
+            'confidence: [', "confidence: 0.95`nconfidence: 0.99", 'confidence: true',
+            'confidence: 1.2', 'confidence: .nan', "confidence: 0.95`nobservations: 3.5",
+            "confidence: 0.95`nobservations: 7`nstatus: [archived, reviewed]"
+        )) {
+            [IO.File]::WriteAllText((Join-Path $learningDir 'LEARNING-invalid.md'), "---`n$invalid`n---`n# Invalid learning`n")
+            $rejected = $false
+            Push-Location $tempRoot
+            try { $null = Invoke-LessonsPromote }
+            catch { $rejected = $true }
+            finally { Pop-Location }
+            Assert-True $rejected "invalid promotion metadata fails closed: $($invalid -replace '\r?\n', '; ')"
+        }
+    } finally {
+        Remove-Item -LiteralPath $tempRoot -Recurse -Force
+    }
+}
+
+if (-not $PromotionOnly) { Test-ProjectIssueIdentity }
+if ($ProjectIdentityOnly) {
+    Write-Host "Results: $($script:pass)/$($script:pass + $script:fail) passed"
+    exit $script:fail
+}
+Test-LearningPromotion
+if ($PromotionOnly) {
+    Write-Host "Results: $($script:pass)/$($script:pass + $script:fail) passed"
+    exit $script:fail
 }
 
 function New-TestWorkspace([string]$name) {

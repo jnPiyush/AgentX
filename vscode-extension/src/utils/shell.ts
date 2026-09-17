@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import {
  buildShellArgs,
  compareSemver,
@@ -125,11 +125,17 @@ export function execShellStreaming(
  shell: 'pwsh' | 'bash' = 'pwsh',
  onLine?: (line: string, source: 'stdout' | 'stderr') => void,
  envOverrides?: NodeJS.ProcessEnv,
+ execution: ShellExecutionOptions = {},
 ): Promise<string> {
- return runShell(command, cwd, shell, { onLine, envOverrides });
+ return runShell(command, cwd, shell, { onLine, envOverrides, ...execution });
 }
 
-interface RunShellOptions {
+export interface ShellExecutionOptions {
+ readonly signal?: AbortSignal;
+ readonly timeoutMs?: number;
+}
+
+interface RunShellOptions extends ShellExecutionOptions {
  readonly onLine?: (line: string, source: 'stdout' | 'stderr') => void;
  readonly envOverrides?: NodeJS.ProcessEnv;
 }
@@ -150,9 +156,15 @@ function runShell(
  shell: 'pwsh' | 'bash',
  options: RunShellOptions,
 ): Promise<string> {
- const { onLine, envOverrides } = options;
+ const { onLine, envOverrides, signal, timeoutMs = DEFAULT_EXEC_TIMEOUT_MS } = options;
 
  return new Promise((resolve, reject) => {
+  const abortError = () => Object.assign(new Error('Command cancelled.'), { name: 'AbortError' });
+  if (signal?.aborted) { reject(abortError()); return; }
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+   reject(new Error('Command timeout must be positive.'));
+   return;
+  }
   let shellPath: string;
 
   try {
@@ -168,23 +180,89 @@ function runShell(
    cwd,
     env: { ...process.env, ...envOverrides, NO_COLOR: '1' },
    stdio: ['ignore', 'pipe', 'pipe'],
+  detached: process.platform !== 'win32',
   });
 
   let settled = false;
-  const timer = setTimeout(() => {
-   if (settled) { return; }
-   settled = true;
-   child.kill();
-   reject(new Error(`Command failed: timed out after ${DEFAULT_EXEC_TIMEOUT_MS}ms`));
-  }, DEFAULT_EXEC_TIMEOUT_MS);
+  let closed = false;
+  let terminationComplete = false;
+  let stoppingError: Error | undefined;
+  let teardownTimer: NodeJS.Timeout | undefined;
+  let escalationTimer: NodeJS.Timeout | undefined;
+  let terminator: ChildProcess | undefined;
+  const finish = (error?: Error, output = '') => {
+  if (settled) { return; }
+  settled = true;
+  clearTimeout(timer);
+  clearTimeout(teardownTimer);
+  clearTimeout(escalationTimer);
+  signal?.removeEventListener('abort', onAbort);
+  if (error) { reject(error); } else { resolve(output); }
+  };
+  const finishStopped = () => {
+  if (closed && terminationComplete) { finish(stoppingError); }
+  };
+  const stop = (error: Error) => {
+  if (settled || stoppingError) { return; }
+  stoppingError = error;
+  clearTimeout(timer);
+  teardownTimer = setTimeout(() => {
+    if (terminator?.exitCode === null) { terminator.kill(); }
+   finish(new Error(`${error.message} Process-tree termination could not be confirmed.`));
+  }, 8000);
+  if (!child.pid) { terminationComplete = true; finishStopped(); return; }
+  if (process.platform === 'win32') {
+   const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true });
+  terminator = killer;
+   killer.on('error', () => finish(new Error(`${error.message} Unable to start process-tree termination.`)));
+   killer.on('close', (code) => {
+    if (code !== 0) { finish(new Error(`${error.message} Process-tree termination failed (exit ${code}).`)); return; }
+    terminationComplete = true;
+    finishStopped();
+   });
+  } else {
+   try { process.kill(-child.pid, 'SIGTERM'); }
+   catch (killError) {
+    if ((killError as NodeJS.ErrnoException).code !== 'ESRCH') {
+    finish(new Error(`${error.message} Unable to terminate process group.`));
+    return;
+    }
+   }
+   escalationTimer = setTimeout(() => {
+    try { process.kill(-child.pid!, 'SIGKILL'); }
+    catch (killError) {
+    if ((killError as NodeJS.ErrnoException).code !== 'ESRCH') {
+     finish(new Error(`${error.message} Unable to terminate process group.`));
+     return;
+    }
+    }
+    terminationComplete = true;
+    finishStopped();
+   }, 2000);
+  }
+  };
+  const onAbort = () => stop(abortError());
+  const timer = setTimeout(() => stop(new Error(`Command failed: timed out after ${timeoutMs}ms`)), timeoutMs);
+  signal?.addEventListener('abort', onAbort, { once: true });
 
   const stdoutChunks: string[] = [];
   const stderrChunks: string[] = [];
   let stdoutBuffer = '';
   let stderrBuffer = '';
+  let outputBytes = 0;
+  const acceptChunk = (text: string): boolean => {
+   if (settled || stoppingError) { return false; }
+   outputBytes += Buffer.byteLength(text);
+   if (outputBytes > 8 * 1024 * 1024) {
+    stop(new Error('Command output exceeded 8 MiB.'));
+    return false;
+   }
+   return true;
+  };
 
   child.stdout.on('data', (chunk: Buffer | string) => {
    const text = chunk.toString();
+   if (!acceptChunk(text)) { return; }
    stdoutChunks.push(text);
    stdoutBuffer += text;
    stdoutBuffer = flushBuffer(stdoutBuffer, 'stdout', onLine);
@@ -192,22 +270,20 @@ function runShell(
 
   child.stderr.on('data', (chunk: Buffer | string) => {
    const text = chunk.toString();
+    if (!acceptChunk(text)) { return; }
    stderrChunks.push(text);
    stderrBuffer += text;
    stderrBuffer = flushBuffer(stderrBuffer, 'stderr', onLine);
   });
 
   child.on('error', (error) => {
-   if (settled) { return; }
-   settled = true;
-   clearTimeout(timer);
-   reject(new Error(redactSecrets(`Command failed: ${error.message}`)));
+    finish(new Error(redactSecrets(`Command failed: ${error.message}`)));
   });
 
   child.on('close', (code) => {
+    closed = true;
    if (settled) { return; }
-   settled = true;
-   clearTimeout(timer);
+    if (stoppingError) { finishStopped(); return; }
 
    if (stdoutBuffer.trim().length > 0) {
     onLine?.(stdoutBuffer.trim(), 'stdout');
@@ -218,11 +294,12 @@ function runShell(
 
   const stdout = stdoutChunks.join('').replace(/\r/g, '');
   const stderr = stderrChunks.join('').replace(/\r/g, '');
-   if (code && code !== 0) {
-    reject(new Error(redactSecrets(`Command failed: exit code ${code}\n${stderr}`)));
+  if (code !== 0) {
+   finish(new Error(redactSecrets(`Command failed: exit code ${code}\n${stderr}`)));
     return;
    }
-   resolve(stdout.trim());
+  finish(undefined, stdout.trim());
   });
+  if (signal?.aborted) { onAbort(); }
  });
 }

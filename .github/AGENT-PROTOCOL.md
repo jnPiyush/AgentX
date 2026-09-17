@@ -32,6 +32,11 @@ tool call BEFORE editing, creating, or deleting any file. Reading the task and t
 artifacts the active role is required to read is allowed; mutating the workspace
 before `loop start` succeeds is a contract violation.
 
+For a delegated task under an existing parent loop, reuse that loop instead of
+starting another. Only the parent records iterations and completes or resets it.
+Delegates return findings and fresh scoped evidence; they MUST NOT overwrite the
+parent's baseline or approval history. Standalone work starts its own loop.
+
 ### 1.2 Honesty Rule
 
 If asked whether the loop ran, run `.agentx/frontier.ps1 loop status` and report the
@@ -74,7 +79,11 @@ simply records one reviewer verdict before completing.
 
 ### 1.4 Loop Steps
 
-1. **Run verification** -- execute the checks relevant to this role.
+1. **Run verification** -- select checks by changed behavior, direct callers and
+  risk. Focused final checks suffice for bounded changes; expand for shared
+  contracts, broad impact and required CI/release gates. Record scope and omitted
+  checks with rationale. Never rerun the entire suite just to fill an iteration.
+  Compare passing counts only for the same selected test surface.
 2. **Evaluate** -- on any failure, find the root cause.
 3. **Fix** -- address the failure.
 4. **Re-verify** -- confirm the fix.

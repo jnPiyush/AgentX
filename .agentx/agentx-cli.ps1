@@ -3524,6 +3524,15 @@ function Get-GitHubProjectStatusField {
     return ($fields | Where-Object { $_.name -eq 'Status' } | Select-Object -First 1)
 }
 
+function Test-GitHubProjectIssueIdentity($content, [string]$repo, [int]$issueNumber) {
+    if ($issueNumber -le 0 -or $repo -notmatch '\A[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/[a-z0-9_.-]+\z' -or
+        ($repo.Split('/')[-1] -in @('.', '..'))) { return $false }
+    if (-not $content -or -not $content.PSObject.Properties['number'] -or
+        -not $content.PSObject.Properties['url'] -or -not $content.PSObject.Properties['type']) { return $false }
+    return $content.type -eq 'Issue' -and [string]$content.number -ceq [string]$issueNumber -and
+        [string]$content.url -ieq "https://github.com/$repo/issues/$issueNumber"
+}
+
 function Get-GitHubProjectIssueItem([int]$issueNumber) {
     Assert-GitHubCliAvailable
     $projectNumber = Get-GitHubProjectNumber
@@ -3537,12 +3546,7 @@ function Get-GitHubProjectIssueItem([int]$issueNumber) {
     $items = if ($result.PSObject.Properties['items']) { @($result.items) } else { @($result) }
 
     return ($items | Where-Object {
-        $content = $_.content
-        if (-not $content) { return $false }
-        $matchesNumber = ($content.PSObject.Properties['number'] -and [int]$content.number -eq $issueNumber)
-        if (-not $matchesNumber) { return $false }
-        if ([string]::IsNullOrWhiteSpace($repo)) { return $true }
-        return ($content.repository -eq $repo) -or ($content.url -like "*/issues/$issueNumber")
+        Test-GitHubProjectIssueIdentity $_.content $repo $issueNumber
     } | Select-Object -First 1)
 }
 
@@ -3562,12 +3566,9 @@ function Get-GitHubProjectIssueStatusMap {
         $content = $item.content
         if (-not $content) { continue }
         if (-not $content.PSObject.Properties['number']) { continue }
-        $issueNumber = [int]$content.number
-        if ($issueNumber -le 0) { continue }
-        if (-not [string]::IsNullOrWhiteSpace($repo)) {
-            $matchesRepo = ($content.repository -eq $repo) -or ($content.url -like "*/issues/$issueNumber")
-            if (-not $matchesRepo) { continue }
-        }
+        $issueNumber = 0
+        if (-not [int]::TryParse([string]$content.number, [ref]$issueNumber)) { continue }
+        if (-not (Test-GitHubProjectIssueIdentity $content $repo $issueNumber)) { continue }
         $map[$issueNumber] = if ($item.PSObject.Properties['status']) { [string]$item.status } else { '' }
     }
 
@@ -4375,20 +4376,20 @@ function Get-LoopIterationGuidance {
                 [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface coverage';             gate='Changed-surface checks and coverage pass' }
                 [PSCustomObject]@{ n=3; focus='Make it Secure: SAST + secrets + dependencies + applicable threat checks'; gate='Zero high/critical findings' }
                 [PSCustomObject]@{ n=4; focus='Adversarial: applicable mutation/property/fuzz/negative checks';          gate='Risk-specific adversarial checks pass' }
-                [PSCustomObject]@{ n=5; focus='Independent Review + final full-suite evidence';                          gate='Zero HIGH/MEDIUM; final suite passes' }
+                [PSCustomObject]@{ n=5; focus='Independent Review + risk-scoped final evidence';                          gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
             )
         }
         'complex-delivery' {
             return @(
                 [PSCustomObject]@{ n=1; focus='Make it Work: core functionality + focused failing tests turn green'; gate='Focused tests passing; feature functional' }
                 [PSCustomObject]@{ n=2; focus='Make it Right: edge cases + lint + changed-surface security checks';   gate='Changed-surface checks pass' }
-                [PSCustomObject]@{ n=3; focus='Independent Review + final full-suite evidence';                      gate='Zero HIGH/MEDIUM; final suite passes' }
+                [PSCustomObject]@{ n=3; focus='Independent Review + risk-scoped final evidence';                      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
             )
         }
         'auto-fix-review' {
             return @(
                 [PSCustomObject]@{ n=1; focus='Review findings + apply safe fixes + run focused checks'; gate='Safe fixes pass changed-surface checks' }
-                [PSCustomObject]@{ n=2; focus='Independent decision + final full-suite evidence';      gate='Zero HIGH/MEDIUM; final suite passes' }
+                [PSCustomObject]@{ n=2; focus='Independent decision + risk-scoped final evidence';      gate='Zero HIGH/MEDIUM; selected checks and required CI gates pass' }
             )
         }
         'agent-x' {
@@ -4468,6 +4469,44 @@ function Get-CodeQualityBaselineFilePath {
     return (Join-Path (Get-LoopStateDirectory) 'code-quality-baseline.json')
 }
 
+function Invoke-LoopCheckProcess {
+    param(
+        [Parameter(Mandatory)][Diagnostics.ProcessStartInfo]$StartInfo,
+        [ValidateRange(1, 300000)][int]$TimeoutMilliseconds = 30000
+    )
+
+    $StartInfo.UseShellExecute = $false
+    $StartInfo.RedirectStandardInput = $true
+    $StartInfo.RedirectStandardOutput = $true
+    $StartInfo.RedirectStandardError = $true
+    $process = $null
+    try {
+        $process = [Diagnostics.Process]::Start($StartInfo)
+        $process.StandardInput.Close()
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        $timedOut = -not $process.WaitForExit($TimeoutMilliseconds)
+        if ($timedOut) {
+            $process.Kill($true)
+            if (-not $process.WaitForExit(10000)) {
+                return [PSCustomObject]@{ exitCode = 1; output = 'Checker timed out; process-tree termination unconfirmed.' }
+            }
+        }
+        if (-not [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($stdout, $stderr), 5000)) {
+            return [PSCustomObject]@{ exitCode = 1; output = 'Checker output streams did not close; inspect remaining child processes.' }
+        }
+        $output = ($stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()).Trim()
+        if ($timedOut) {
+            return [PSCustomObject]@{ exitCode = 1; output = "Checker timed out after ${TimeoutMilliseconds}ms. Inspect the named checker and rerun it; evidence was not approved." }
+        }
+        return [PSCustomObject]@{ exitCode = $process.ExitCode; output = $output }
+    } catch {
+        return [PSCustomObject]@{ exitCode = 1; output = "Checker execution failed: $($_.Exception.Message)" }
+    } finally {
+        if ($process) { $process.Dispose() }
+    }
+}
+
 function Invoke-CodeQualityEvaluator {
     param(
         [ValidateSet('Snapshot', 'Validate')][string]$Mode,
@@ -4491,7 +4530,7 @@ function Invoke-CodeQualityEvaluator {
     }
 
     $arguments = @(
-        '-NoProfile', '-File', $scriptPath,
+        '-NoProfile', '-NonInteractive', '-File', $scriptPath,
         '-Mode', $Mode,
         '-WorkspaceRoot', $Script:ROOT,
         '-BaselinePath', (Get-CodeQualityBaselineFilePath),
@@ -4500,8 +4539,12 @@ function Invoke-CodeQualityEvaluator {
     if ($ReportPath) { $arguments += @('-ReportPath', $ReportPath) }
     if ($BaselineSha256) { $arguments += @('-BaselineSha256', $BaselineSha256) }
     if ($IncludeExistingChanges) { $arguments += '--IncludeExistingChanges' }
-    $output = @(& pwsh @arguments 2>&1)
-    $exitCode = $LASTEXITCODE
+    $startInfo = [Diagnostics.ProcessStartInfo]::new('pwsh')
+    $startInfo.WorkingDirectory = $Script:ROOT
+    foreach ($argument in $arguments) { $startInfo.ArgumentList.Add([string]$argument) }
+    $execution = Invoke-LoopCheckProcess -StartInfo $startInfo -TimeoutMilliseconds 90000
+    $output = @($execution.output -split "`r?`n")
+    $exitCode = $execution.exitCode
     $result = $null
     foreach ($line in @($output)) {
         try {
@@ -5402,12 +5445,6 @@ function Invoke-LoopComplete {
         Write-CliOutput "$($C.r)  [FAIL] Archived review evidence SHA-256 does not match the digest recorded at approval. Re-run independent review.$($C.n)"
         exit 1
     }
-    $codeQualityGate = Invoke-CodeQualityEvaluator -Mode Validate -ReportPath $reviewEvidencePath -BaselineSha256 $baselineDigest
-    $codeQualityGate.output | ForEach-Object { Write-CliOutput ([string]$_) }
-    if (-not $codeQualityGate.available -or $codeQualityGate.exitCode -ne 0) {
-        Write-CliOutput "$($C.r)  [FAIL] Code-quality rubric gate failed. Re-run the final independent review with evaluation/rubrics/code-quality.md.$($C.n)"
-        exit 1
-    }
     $currentPassing = Get-LoopPassingCount 'loop complete'
     if ($currentPassing -eq '__INVALID__') { exit 1 }
     if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop complete')) { exit 1 }
@@ -5454,6 +5491,15 @@ function Invoke-LoopComplete {
         exit 1
     }
 
+    if ($finalEvidenceAbs -and -not (Test-LoopEvidenceFreshness -EvidencePath $finalEvidenceAbs -State $state -ContextLabel 'loop complete')) { exit 1 }
+    if (-not $Script:JsonOutput) { Write-CliOutput '  Checking code-quality evidence (90s limit)...' }
+    $codeQualityGate = Invoke-CodeQualityEvaluator -Mode Validate -ReportPath $reviewEvidencePath -BaselineSha256 $baselineDigest
+    $codeQualityGate.output | ForEach-Object { Write-CliOutput ([string]$_) }
+    if (-not $codeQualityGate.available -or $codeQualityGate.exitCode -ne 0) {
+        Write-CliOutput "$($C.r)  [FAIL] Code-quality verification failed. For a checker timeout/startup error, inspect the checker and retry unchanged inputs. For stale hashes or review findings, rerun the affected checks and independent review.$($C.n)"
+        exit 1
+    }
+
     # Archive the final evidence. Copied, never moved -- the caller's artifact must
     # survive loop completion. The same SHA-256 reuse guard as 'loop iterate'
     # applies here: 'loop complete' is the gate the pre-commit hook keys on, so
@@ -5463,8 +5509,6 @@ function Invoke-LoopComplete {
         # Same freshness bar as 'loop iterate'. Without it, a final gate log
         # generated at session start could be held back and submitted here --
         # the identity guard would pass because it was never submitted before.
-        if (-not (Test-LoopEvidenceFreshness -EvidencePath $finalEvidenceAbs -State $state -ContextLabel 'loop complete')) { exit 1 }
-
         $finalHash = $null
         try { $finalHash = (Get-FileHash -LiteralPath $finalEvidenceAbs -Algorithm SHA256).Hash } catch { $finalHash = $null }
         if (-not $finalHash) {
@@ -5911,6 +5955,7 @@ function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-NonInteractive')
     $startInfo.ArgumentList.Add('-File')
     $startInfo.ArgumentList.Add((Join-Path $Script:INSTALL_RUNTIME_DIR 'agentx-cli.ps1'))
     $startInfo.ArgumentList.Add('loop')
@@ -5919,14 +5964,10 @@ function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
     $startInfo.Environment['HVE_WORKSPACE_ROOT'] = $workspaceRoot
     $startInfo.Environment['AGENTX_WORKSPACE_ROOT'] = $workspaceRoot
 
-    $process = [System.Diagnostics.Process]::Start($startInfo)
-    $process.StandardInput.Close()
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
-    $process.WaitForExit()
-    $output = ($stdout + $stderr).Trim()
+    $execution = Invoke-LoopCheckProcess -StartInfo $startInfo
+    $output = $execution.output
 
-    if ($process.ExitCode -eq 0) {
+    if ($execution.exitCode -eq 0) {
         return [PSCustomObject]@{
             passed = $true
             attribution = 'clear'
@@ -5934,7 +5975,7 @@ function Get-HarnessLoopAuditResult([string]$workspaceRoot) {
         }
     }
 
-    $summary = if ($output -match 'BLOCK:\s*(.+)') { $Matches[1].Trim() } else { 'Quality loop gate rejected the current state.' }
+    $summary = if ($output -match 'BLOCK:\s*(.+)') { $Matches[1].Trim() } else { "Quality loop checker failed (exit $($execution.exitCode)): $output" }
     return [PSCustomObject]@{
         passed = $false
         attribution = 'policy'
@@ -5963,6 +6004,7 @@ function Invoke-HarnessComplianceReport([string]$baseRef = '') {
     $startInfo.RedirectStandardError = $true
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add('-NoProfile')
+    $startInfo.ArgumentList.Add('-NonInteractive')
     $startInfo.ArgumentList.Add('-File')
     $startInfo.ArgumentList.Add($scriptPath)
     if (-not [string]::IsNullOrWhiteSpace($baseRef)) {
@@ -5971,16 +6013,13 @@ function Invoke-HarnessComplianceReport([string]$baseRef = '') {
     }
     $startInfo.ArgumentList.Add('-ReportOnly')
 
-    $process = [System.Diagnostics.Process]::Start($startInfo)
-    $process.StandardInput.Close()
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
-    $process.WaitForExit()
-
-    $lines = @((($stdout + $stderr) -split "`r?`n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $execution = Invoke-LoopCheckProcess -StartInfo $startInfo
+    $lines = @(($execution.output -split "`r?`n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $failures = @($lines | Where-Object { $_ -match '^\[FAIL\]' })
     $requiresPlan = @($lines | Where-Object { $_ -match 'Requires execution plan:\s+True' }).Count -gt 0
-    $summary = if ($failures.Count -gt 0) {
+    $summary = if ($execution.exitCode -ne 0) {
+        "Harness compliance checker failed (exit $($execution.exitCode)): $($execution.output)"
+    } elseif ($failures.Count -gt 0) {
         ($failures[0] -replace '^\[FAIL\]\s*', '').Trim()
     } elseif ($lines.Count -gt 0) {
         $lastLine = ($lines | Select-Object -Last 1)
@@ -5991,7 +6030,7 @@ function Invoke-HarnessComplianceReport([string]$baseRef = '') {
 
     return [PSCustomObject]@{
         available = $true
-        passed = ($failures.Count -eq 0)
+        passed = ($execution.exitCode -eq 0 -and $failures.Count -eq 0)
         requiresPlan = $requiresPlan
         failureCount = $failures.Count
         lines = $lines
@@ -7113,19 +7152,37 @@ function Invoke-LessonsPromote {
         if (-not $raw) { continue }
         # Parse frontmatter
         $fm = @{}
-        if ($raw -match '^---\s*\r?\n(.*?)\r?\n---' ) {
-            $block = $Matches[1]
-            foreach ($line in ($block -split "`n")) {
-                if ($line -match '^\s*([A-Za-z_]+)\s*:\s*(.+?)\s*$') {
-                    $fm[$Matches[1]] = $Matches[2].Trim().Trim("'").Trim('"')
-                }
+        $frontmatterMatch = [regex]::Match($raw, '(?s)\A---[ \t]*\r?\n(?<yaml>.*?)\r?\n---[ \t]*(?:\r?\n|\z)')
+        if ($frontmatterMatch.Success) {
+            $block = $frontmatterMatch.Groups['yaml'].Value
+            $parser = Resolve-FrontierRuntimeScript 'scripts/parse-yaml.js'
+            if (-not $parser) { throw 'Learning promotion requires scripts/parse-yaml.js from the Frontier runtime.' }
+            $json = $block | & node $parser 2>&1 | Out-String
+            if ($LASTEXITCODE -ne 0) {
+                throw "Invalid learning frontmatter in $($f.Name): $json"
             }
+            $fm = $json | ConvertFrom-Json -AsHashtable
         }
-        $confidence  = if ($fm.ContainsKey('confidence'))  { [double]$fm['confidence']  } else { 0.0 }
-        $observations= if ($fm.ContainsKey('observations')){ [int]$fm['observations']    } else { 1   }
+        $confidence = 0.0
+        $observations = 1
+        if ($fm.ContainsKey('confidence') -and
+            (-not [double]::TryParse([string]$fm['confidence'], [Globalization.NumberStyles]::Float,
+                [Globalization.CultureInfo]::InvariantCulture, [ref]$confidence) -or
+                -not [double]::IsFinite($confidence) -or $confidence -lt 0 -or $confidence -gt 1)) {
+            throw "Invalid learning confidence in $($f.Name). Expected a number between 0 and 1."
+        }
+        if ($fm.ContainsKey('observations') -and
+            (-not [int]::TryParse([string]$fm['observations'], [ref]$observations) -or $observations -lt 0)) {
+            throw "Invalid learning observations in $($f.Name). Expected a nonnegative integer."
+        }
         $status      = if ($fm.ContainsKey('status'))      { $fm['status']               } else { 'draft' }
+        if ($status -isnot [string] -or [string]::IsNullOrWhiteSpace($status)) {
+            throw "Invalid learning status in $($f.Name). Expected a nonempty string."
+        }
 
-        $eligible = $singleId -or ( $confidence -ge $thresh -and $observations -ge $minObs -and $status -ne 'promoted' -and $status -ne 'archived' )
+        $status = $status.Trim()
+        $eligible = $frontmatterMatch.Success -and $status -notin @('promoted', 'archived') -and
+            ($singleId -or ($confidence -ge $thresh -and $observations -ge $minObs))
         if (-not $eligible) {
             $skipped.Add([PSCustomObject]@{ file=$f.Name; confidence=$confidence; observations=$observations; status=$status }) | Out-Null
             continue
@@ -7142,6 +7199,10 @@ function Invoke-LessonsPromote {
             continue
         }
 
+        $serialized = $block | & node $parser --promote 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) { throw "Cannot update learning frontmatter in $($f.Name): $serialized" }
+        $updated = "---`n$($serialized.TrimEnd())`n---`n" + $raw.Substring($frontmatterMatch.Length)
+
         # Append to conventions.md (creating section if needed)
         $convDir = Split-Path $conventionsFile -Parent
         if (-not (Test-Path $convDir)) { New-Item -ItemType Directory -Path $convDir -Force | Out-Null }
@@ -7150,13 +7211,7 @@ function Invoke-LessonsPromote {
         }
         Add-Content -Path $conventionsFile -Value $bullet -Encoding utf8
 
-        # Update frontmatter status -> promoted
-        $updated = $raw -replace '(status\s*:\s*)\S+', '${1}promoted'
-        if ($updated -eq $raw) {
-            # Frontmatter had no status field; inject it
-            $updated = $raw -replace '(^---\s*\r?\n)', "`$1status: promoted`n"
-        }
-        Set-Content -Path $f.FullName -Value $updated -Encoding utf8
+        Set-Content -LiteralPath $f.FullName -Value $updated -Encoding utf8 -NoNewline
 
         Write-CliOutput "$($C.g)[promoted]$($C.n) $($f.Name) (conf=$confidence, obs=$observations) -> memories/conventions.md"
         $promoted.Add([PSCustomObject]@{ file=$f.Name; confidence=$confidence; observations=$observations }) | Out-Null

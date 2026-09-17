@@ -168,6 +168,10 @@ export async function loopIterate(agentx: FrontierContext): Promise<void> {
     args.push('--verdict', verdict, '--reviewer', reviewer.trim(), ...countArgs);
   }
 
+  const passingArgs = await promptPassingCount();
+  if (!passingArgs) { return; }
+  args.push(...passingArgs);
+
   try {
     const output = await agentx.runCli('loop', args);
     syncHarnessIteration(agentx, summary);
@@ -183,6 +187,7 @@ export async function loopComplete(agentx: FrontierContext): Promise<void> {
     prompt: 'Completion summary',
     placeHolder: 'e.g., All tests passing, coverage at 85%',
   });
+  if (summary === undefined) { return; }
 
   // The CLI quality gate requires a fresh final-gate evidence artifact
   // (e.g., quality-gate.log, full-suite-report.xml). Prompt for it so the
@@ -192,9 +197,12 @@ export async function loopComplete(agentx: FrontierContext): Promise<void> {
     placeHolder: 'e.g., .agentx/state/final-gate.log',
     ignoreFocusOut: true,
   });
+  if (!evidence?.trim()) { return; }
+  const passingArgs = await promptPassingCount();
+  if (!passingArgs) { return; }
 
   try {
-    const args = ['complete'];
+    const args = ['complete', ...passingArgs];
     if (summary) {
       args.push('-s', summary);
     }
@@ -210,6 +218,21 @@ export async function loopComplete(agentx: FrontierContext): Promise<void> {
     const message = err instanceof Error ? err.message : String(err);
     vscode.window.showErrorMessage(`Loop complete failed: ${message}`);
   }
+}
+
+async function promptPassingCount(): Promise<string[] | undefined> {
+  const value = await vscode.window.showInputBox({
+    prompt: 'Passing tests for the selected surface (required with a recorded baseline)',
+    placeHolder: 'Actual passing count; leave blank only when no baseline is recorded',
+    ignoreFocusOut: true,
+    validateInput: (input) => {
+      const count = input.trim();
+      return !count || (/^\d+$/.test(count) && Number.isSafeInteger(Number(count))
+        && Number(count) <= 2147483647) ? null : 'Enter a non-negative integer';
+    },
+  });
+  if (value === undefined) { return undefined; }
+  return value.trim() ? ['--passing', value.trim()] : [];
 }
 
 export async function loopCancel(agentx: FrontierContext): Promise<void> {

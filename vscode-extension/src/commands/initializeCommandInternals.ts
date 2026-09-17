@@ -26,6 +26,7 @@ interface ExistingVersionStamp {
 interface ExistingConfig {
   readonly created?: string;
   readonly nextIssueNumber?: number;
+  readonly [key: string]: unknown;
 }
 
 export async function runInitializeLocalRuntimeCommand(
@@ -113,22 +114,26 @@ export async function runInitializeLocalRuntimeCommand(
     }
 
     const configFile = resolveFrontierStatePath(root, 'config.json');
-    const existingConfig = isUpgrade ? readJsonWithComments<ExistingConfig>(configFile) : undefined;
+    const existingConfig = readJsonWithComments<ExistingConfig>(configFile);
+    const provider = existingConfig?.provider ?? existingConfig?.integration ?? existingConfig?.mode ?? 'local';
     fs.writeFileSync(configFile, JSON.stringify({
-     provider: 'local',
-     integration: 'local',
-     mode: 'local',
+     provider,
+     integration: provider,
+     mode: provider,
      enforceIssues: false,
-     nextIssueNumber: existingConfig?.nextIssueNumber ?? 1,
-     created: existingConfig?.created ?? new Date().toISOString(),
+     nextIssueNumber: 1,
+     created: new Date().toISOString(),
+     ...existingConfig,
      updatedAt: new Date().toISOString(),
     }, null, 2));
 
     progress.report({ message: 'Finalizing runtime...', increment: 30 });
     mergeGitignore(root);
 
-    await syncDetectedGitHubAdapter(agentx);
-    await syncDetectedAdoAdapter(agentx);
+    if (!existingConfig) {
+      await syncDetectedGitHubAdapter(agentx, { root });
+      await syncDetectedAdoAdapter(agentx, { root });
+    }
 
     progress.report({ message: 'Finalizing...', increment: 10 });
     agentx.invalidateCache();

@@ -19,19 +19,29 @@ export async function handleFrontierChatRequest(
   request: vscode.ChatRequest,
   response: vscode.ChatResponseStream,
   agentx: FrontierContext,
+  token?: vscode.CancellationToken,
 ): Promise<vscode.ChatResult> {
-  const initialized = await agentx.checkInitialized();
-  if (!initialized) {
-    return handleNotInitialized(response);
-  }
+  const controller = new AbortController();
+  const subscription = token?.onCancellationRequested(() => controller.abort());
+  if (token?.isCancellationRequested) { controller.abort(); }
+  try {
+    if (controller.signal.aborted) { return {}; }
+    const initialized = await agentx.checkInitialized();
+    if (controller.signal.aborted) { return {}; }
+    if (!initialized) {
+      return handleNotInitialized(response);
+    }
 
-  const userText = request.prompt.trim();
-  if (!userText) {
-    response.markdown('Please describe what you need Frontier to do.');
-    return {};
-  }
+    const userText = request.prompt.trim();
+    if (!userText) {
+      response.markdown('Please describe what you need Frontier to do.');
+      return {};
+    }
 
-  return routeFrontierChatRequest(userText, response, agentx);
+    return await routeFrontierChatRequest(userText, response, agentx, controller.signal);
+  } finally {
+    subscription?.dispose();
+  }
 }
 
 /**
@@ -45,9 +55,9 @@ export function registerChatParticipant(
     request: vscode.ChatRequest,
     _chatContext: vscode.ChatContext,
     response: vscode.ChatResponseStream,
-    _token: vscode.CancellationToken
+    token: vscode.CancellationToken
   ): Promise<vscode.ChatResult> => {
-    return handleFrontierChatRequest(request, response, agentx);
+    return handleFrontierChatRequest(request, response, agentx, token);
   };
 
   const participant = vscode.chat.createChatParticipant(PARTICIPANT_ID, handler);

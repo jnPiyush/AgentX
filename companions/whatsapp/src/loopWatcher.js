@@ -41,9 +41,10 @@ function startLoopWatcher({ config, client, fsImpl = fs }) {
   const targets = config.notifications.targets || [];
   if (!targets.length) return null;
 
-  const file = path.resolve(config.repoPath, '.agentx', 'state', 'loop-state.json');
+  const stateFiles = ['.frontier', '.hve', '.agentx'].map(directory => path.resolve(config.repoPath, directory, 'state', 'loop-state.json'));
+  const stateFile = () => stateFiles.find(file => fs.existsSync(file)) || stateFiles[stateFiles.length - 1];
   const include = new Set(config.notifications.events);
-  let last = readJsonSafe(file);
+  let last = readJsonSafe(stateFile());
   let stopped = false;
   let watcher = null;
   let poll = null;
@@ -71,7 +72,7 @@ function startLoopWatcher({ config, client, fsImpl = fs }) {
 
   const readAndEmit = () => {
     if (stopped) return;
-    const current = readJsonSafe(file);
+    const current = readJsonSafe(stateFile());
     if (!current) {
       clearTimeout(retry);
       retry = setTimeout(readAndEmit, 200);
@@ -92,7 +93,7 @@ function startLoopWatcher({ config, client, fsImpl = fs }) {
   };
 
   try {
-    watcher = fsImpl.watch(path.dirname(file), { persistent: false }, (_event, filename) => {
+    watcher = fsImpl.watch(path.dirname(stateFile()), { persistent: false }, (_event, filename) => {
       if (!filename || filename === 'loop-state.json') schedule();
     });
     watcher.on && watcher.on('error', (error) => {
@@ -105,6 +106,7 @@ function startLoopWatcher({ config, client, fsImpl = fs }) {
     console.warn(`[Frontier WhatsApp] fs.watch unavailable; polling: ${error.message}`);
     startPolling();
   }
+  startPolling();
 
   return {
     stop() {

@@ -337,21 +337,9 @@ export function buildCliCommand(extensionPath: string, shell: string): string {
 }
 
 function safeQuoteArg(arg: string, isPwsh: boolean): string {
-  if (isPwsh) {
-    // PowerShell: quote if the arg contains whitespace, quotes, or $ (variable expansion).
-    // Escape inner double-quotes as "" (the canonical PowerShell convention).
-    if (/[\s"$`]/.test(arg)) {
-      return `"${arg.replace(/"/g, '""')}"`;
-    }
-    return arg;
-  } else {
-    // bash: quote if the arg contains whitespace or shell-special characters.
-    // Escape backslashes first, then inner double-quotes as \".
-    if (/[\s"$`\\]/.test(arg)) {
-      return `"${arg.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-    }
-    return arg;
-  }
+  return isPwsh
+    ? `'${arg.replace(/['\u2018\u2019\u201a\u201b]/g, quote => quote + quote)}'`
+    : `'${arg.replace(/'/g, "'\"'\"'")}'`;
 }
 
 export function buildCliInvocation(
@@ -365,8 +353,8 @@ export function buildCliInvocation(
 
   return {
     command: isPwsh
-      ? `& "${cliPath}" ${subcommand}${argStr}`
-      : `bash "${cliPath}" ${subcommand}${argStr}`,
+      ? `& ${safeQuoteArg(cliPath, true)} ${safeQuoteArg(subcommand, true)}${argStr}`
+      : `bash ${safeQuoteArg(cliPath, false)} ${safeQuoteArg(subcommand, false)}${argStr}`,
     shellKind: isPwsh ? 'pwsh' : 'bash',
   };
 }

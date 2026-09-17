@@ -301,20 +301,20 @@ while IFS= read -r src; do
 done < <(find "$TMP" -type f)
 ok "$copied files installed ($skipped existing skipped)"
 
-# -- ADO remote detection: overwrite mcp.json for ADO workspaces --------
+# -- ADO remote detection: initialize only missing MCP configuration --------
 ado_remote_url=""
 if command -v git &>/dev/null; then
  ado_remote_url=$(git remote get-url origin 2>/dev/null || true)
 fi
 mkdir -p .vscode
-if echo "$ado_remote_url" | grep -qE 'visualstudio\.com|dev\.azure\.com'; then
- # ADO workspaces: write empty mcp.json so Copilot does not auto-insert a github MCP server.
- # The workspace uses ADO REST APIs directly -- no MCP server is needed or wanted.
+if [ -e '.vscode/mcp.json' ]; then
+ ok 'Existing MCP configuration preserved'
+elif echo "$ado_remote_url" | grep -qE 'visualstudio\.com|dev\.azure\.com'; then
  printf '{\n  "$schema": "https://json.schemastore.org/mcp.json",\n  "servers": {}\n}\n' > .vscode/mcp.json
- ok "ADO workspace detected -- .vscode/mcp.json set to empty (no MCP servers; workspace uses ADO REST APIs)"
+ ok 'ADO workspace detected -- empty MCP configuration initialized; configure the ADO MCP adapter separately'
 else
  # GitHub / no-remote workspaces: write standard github MCP server entry.
- if [ "$FORCE" = "true" ] || [ ! -f ".vscode/mcp.json" ]; then
+ if [ ! -e ".vscode/mcp.json" ]; then
   printf '{\n  "$schema": "https://json.schemastore.org/mcp.json",\n  "servers": {\n    "github": {\n      "type": "http",\n      "url": "https://api.githubcopilot.com/mcp/"\n    }\n  },\n  "inputs": [\n    {\n      "type": "promptString",\n      "id": "github_token",\n      "description": "GitHub Personal Access Token (only needed if using PAT auth)",\n      "password": true\n    }\n  ]\n}\n' > .vscode/mcp.json
   ok "GitHub workspace -- .vscode/mcp.json configured with GitHub MCP server"
  fi
@@ -448,7 +448,7 @@ if [ ! -f "$CONFIG" ]; then
  fi
 fi
 
-chmod +x .agentx/agentx.sh .agentx/local-issue-manager.sh 2>/dev/null || true
+chmod +x .agentx/frontier.sh .agentx/agentx.sh .agentx/local-issue-manager.sh
 
 # -- Step 4: Interactive setup -------------------------
 if [ "$NO_SETUP" != "true" ]; then

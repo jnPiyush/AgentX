@@ -29,6 +29,10 @@ test('public whatsapp-web.js runtime loads without RemoteAuth optional dependenc
 
   assert.equal(typeof Client, 'function');
   assert.equal(typeof LocalAuth, 'function');
+  const puppeteer = require('puppeteer');
+  assert.equal(typeof puppeteer.launch, 'function');
+  assert.equal(typeof puppeteer.connect, 'function');
+  assert.ok(new Client({ authStrategy: new LocalAuth({ dataPath: path.join(os.tmpdir(), 'frontier-unstarted-auth') }) }));
 });
 
 test('routeCommand routes common WhatsApp commands to the Frontier CLI', async () => {
@@ -83,44 +87,21 @@ test('routeCommand returns usage guidance for unsupported or incomplete commands
 });
 
 test('loadConfig prefers environment overrides for allowlist and repo path', () => {
-  const configPath = path.resolve(__dirname, '..', 'config.json');
-  const hadConfig = fs.existsSync(configPath);
-  const originalConfig = hadConfig ? fs.readFileSync(configPath, 'utf8') : undefined;
-  const originalAllowed = process.env.AGENTX_WA_ALLOWED;
-  const originalRepo = process.env.AGENTX_REPO;
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-config-'));
+  const configPath = path.join(tempRoot, 'config.json');
   fs.mkdirSync(path.join(tempRoot, '.agentx'), { recursive: true });
   fs.writeFileSync(path.join(tempRoot, '.agentx', 'agentx.ps1'), '', 'utf8');
+  fs.writeFileSync(configPath, JSON.stringify({ allowedNumbers: ['14155550999'] }));
 
   try {
-    if (hadConfig) {
-      fs.rmSync(configPath, { force: true });
-    }
-    process.env.AGENTX_WA_ALLOWED = '14155550100, 14155550101';
-    process.env.AGENTX_REPO = tempRoot;
-
     const { loadConfig } = freshRequire(path.resolve(__dirname, '..', 'src', 'config.js'));
-    const config = loadConfig();
+    const config = loadConfig({ configPath, env: {
+      AGENTX_WA_ALLOWED: '14155550100, 14155550101', AGENTX_REPO: tempRoot,
+    } });
 
     assert.deepEqual(config.allowedNumbers, ['14155550100', '14155550101']);
     assert.equal(config.repoPath, path.resolve(tempRoot));
   } finally {
-    if (originalAllowed === undefined) {
-      delete process.env.AGENTX_WA_ALLOWED;
-    } else {
-      process.env.AGENTX_WA_ALLOWED = originalAllowed;
-    }
-    if (originalRepo === undefined) {
-      delete process.env.AGENTX_REPO;
-    } else {
-      process.env.AGENTX_REPO = originalRepo;
-    }
-
-    if (hadConfig && originalConfig !== undefined) {
-      fs.writeFileSync(configPath, originalConfig, 'utf8');
-    } else {
-      fs.rmSync(configPath, { force: true });
-    }
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });

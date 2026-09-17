@@ -65,8 +65,9 @@ fallback below; `DEGRADED` is not equivalent to `PASS`.
 ```text
 Design language check: DEGRADED (Frontier-only)
 Reason: <no network | binary unresolved | node <22.18 | other>
-Ran: T1-T10 + Honest Placeholders + axe + Pass 9 critique
-Not run: 59 deterministic rules, 4 design-system conformance rules
+Required fallback: T1-T10 + Honest Placeholders + axe + Pass 9 critique
+Actually ran: <checks with evidence links, or none>
+Not run: <missing checks and reasons, including native detector coverage>
 ```
 
 ---

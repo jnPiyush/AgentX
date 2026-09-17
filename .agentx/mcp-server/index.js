@@ -20,7 +20,7 @@
  *   (pwsh must be on PATH; PowerShell 7.4+ is required by Frontier.)
  */
 
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -33,15 +33,18 @@ const {
 
 // ---------- repo discovery ----------
 
-function discoverRepoRoot() {
-  const configuredRoot = process.env.FRONTIER_REPO_ROOT
-    || process.env.HVE_REPO_ROOT
-    || process.env.AGENTX_REPO_ROOT;
-  if (configuredRoot) {
-    const p = path.resolve(configuredRoot);
-    if (fs.existsSync(path.join(p, '.agentx', 'agentx-cli.ps1'))) return p;
+function discoverRepoRoot(env = process.env, start = __dirname) {
+  const key = ['FRONTIER_REPO_ROOT', 'HVE_REPO_ROOT', 'AGENTX_REPO_ROOT'].find(name => env[name] !== undefined);
+  if (key) {
+    const configuredRoot = env[key];
+    if (typeof configuredRoot !== 'string' || !path.isAbsolute(configuredRoot)) {
+      throw new Error(`${key} must be an absolute repository path.`);
+    }
+    const root = path.resolve(configuredRoot);
+    if (fs.statSync(path.join(root, '.agentx', 'agentx-cli.ps1'), { throwIfNoEntry: false })?.isFile()) return root;
+    throw new Error(`${key} does not contain .agentx/agentx-cli.ps1: ${root}`);
   }
-  let cur = __dirname;
+  let cur = start;
   for (let i = 0; i < 6; i++) {
     if (fs.existsSync(path.join(cur, '.agentx', 'agentx-cli.ps1'))) return cur;
     const parent = path.dirname(cur);
@@ -51,27 +54,116 @@ function discoverRepoRoot() {
   throw new Error('Cannot locate Frontier repo root. Set FRONTIER_REPO_ROOT to the repo path.');
 }
 
-const REPO_ROOT = discoverRepoRoot();
-const CLI_SCRIPT = path.join(REPO_ROOT, '.agentx', 'agentx-cli.ps1');
-
 // ---------- CLI invocation ----------
 
-function runFrontier(args, env = {}) {
-  return new Promise((resolve) => {
-    const child = spawn(
-      'pwsh',
-      ['-NoProfile', '-File', CLI_SCRIPT, ...args],
-      { cwd: REPO_ROOT, env: { ...process.env, ...env } }
-    );
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (b) => (stdout += b.toString()));
-    child.stderr.on('data', (b) => (stderr += b.toString()));
-    child.on('error', (err) => {
-      resolve({ exitCode: -1, stdout, stderr: stderr + '\n[spawn-error] ' + err.message });
+function createCliRunner(repoRoot, hooks = {}) {
+  const active = new Map();
+  let stopped = false;
+  const failureResult = (message) => ({ exitCode: -1, stdout: '', stderr: message });
+  const run = (args, signal) => {
+    if (stopped || signal?.aborted) return Promise.resolve(failureResult('Request cancelled or server shutting down.'));
+    if (active.size) return Promise.resolve(failureResult('CLI busy or previous child termination unconfirmed.'));
+    let child;
+    try {
+      child = (hooks.spawn || spawn)('pwsh', ['-NoProfile', '-NonInteractive', '-File', path.join(repoRoot, '.agentx', 'agentx-cli.ps1'), ...args], {
+        cwd: repoRoot, env: { ...process.env, AGENTX_NONINTERACTIVE: '1' },
+        windowsHide: true, detached: (hooks.platform || process.platform) !== 'win32',
+      });
+    } catch (error) { return Promise.resolve(failureResult(`[spawn-error] ${error.message}`)); }
+    const entry = {};
+    active.set(child, entry);
+    entry.promise = new Promise(resolve => {
+      let stdout = '';
+      let stderr = '';
+      let bytes = 0;
+      let failure = '';
+      let settled = false;
+      let childClosed = false;
+      let treeTerminated = false;
+      let escalation;
+      let teardown;
+      const maxBytes = hooks.maxOutputBytes || 1048576;
+      const finish = (code, confirmed = true) => {
+        if (confirmed) active.delete(child);
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        clearTimeout(escalation);
+        clearTimeout(teardown);
+        signal?.removeEventListener('abort', cancel);
+        resolve({ exitCode: failure ? -1 : code ?? -1, stdout, stderr: `${stderr}${failure ? `\n${failure}` : ''}`, terminationConfirmed: confirmed });
+      };
+      const finishStopped = () => { if (childClosed && treeTerminated) finish(-1); };
+      const kill = (name) => {
+        try { (hooks.kill || process.kill)(-child.pid, name); }
+        catch (groupError) {
+          if (groupError.code !== 'ESRCH') throw new Error(`Process group rejected ${name}: ${groupError.message}`);
+        }
+      };
+      const terminate = (reason) => {
+        if (failure || settled) return;
+        failure = reason;
+        clearTimeout(timeout);
+        teardown = setTimeout(() => {
+          failure += '\n[termination-error] Child close not confirmed; further calls blocked.';
+          child.stdout.destroy?.();
+          child.stderr.destroy?.();
+          child.unref?.();
+          finish(-1, false);
+        }, hooks.teardownMs || 8000);
+        if (!Number.isInteger(child.pid) || child.pid <= 0) return;
+        try {
+          if ((hooks.platform || process.platform) === 'win32') {
+            const result = (hooks.spawnSync || spawnSync)('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+              windowsHide: true, timeout: 5000, maxBuffer: 16384, encoding: 'utf8',
+            });
+            if (result.error || result.status !== 0) throw new Error(`taskkill failed: ${result.error?.message || result.stderr || `exit ${result.status}`}`);
+            treeTerminated = true;
+            finishStopped();
+          } else {
+            kill('SIGTERM');
+            escalation = setTimeout(() => {
+              try {
+                kill('SIGKILL');
+                treeTerminated = true;
+                finishStopped();
+              } catch (error) { failure += `\n[termination-error] ${error.message}`; }
+            }, hooks.killGraceMs || 2000);
+          }
+        } catch (error) { failure += `\n[termination-error] ${String(error.message).slice(0, 2000)}`; }
+      };
+      const cancel = () => terminate('[cancelled] Request cancelled or server shutting down.');
+      entry.cancel = cancel;
+      const capture = (chunk, stream) => {
+        if (settled || failure) return;
+        const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        const available = maxBytes - bytes;
+        const text = data.subarray(0, available).toString();
+        if (stream === 'stdout') stdout += text; else stderr += text;
+        bytes += Math.min(available, data.length);
+        if (data.length > available) terminate(`[output-limit] Output exceeded ${maxBytes} bytes.`);
+      };
+      const timeout = setTimeout(() => terminate('[timeout] CLI execution timed out.'), hooks.timeoutMs || 600000);
+      child.stdout.on('data', chunk => capture(chunk, 'stdout'));
+      child.stderr.on('data', chunk => capture(chunk, 'stderr'));
+      child.on('error', error => terminate(`[spawn-error] ${error.message}`));
+      child.once('close', code => {
+        childClosed = true;
+        if (failure) finishStopped(); else finish(code);
+      });
+      signal?.addEventListener('abort', cancel, { once: true });
+      if (signal?.aborted) cancel();
     });
-    child.on('close', (code) => resolve({ exitCode: code ?? -1, stdout, stderr }));
-  });
+    return entry.promise;
+  };
+  const stop = async () => {
+    stopped = true;
+    const entries = [...active.values()];
+    for (const entry of entries) entry.cancel();
+    await Promise.all(entries.map(entry => entry.promise));
+    if (active.size) throw new Error('Child termination unconfirmed during MCP shutdown.');
+  };
+  return { run, stop };
 }
 
 function toolResult({ exitCode, stdout, stderr }) {
@@ -361,6 +453,7 @@ const LEGACY_TOOL_BY_NAME = Object.fromEntries(
 
 // ---------- MCP wiring ----------
 
+function createServer(runner) {
 const server = new Server(
   { name: 'frontier', version: '9.3.1' },
   { capabilities: { tools: {} } }
@@ -370,7 +463,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })),
 }));
 
-server.setRequestHandler(CallToolRequestSchema, async (req) => {
+server.setRequestHandler(CallToolRequestSchema, async (req, extra) => {
   const tool = TOOL_BY_NAME[req.params.name] || LEGACY_TOOL_BY_NAME[req.params.name];
   if (!tool) {
     return {
@@ -387,18 +480,44 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       isError: true,
     };
   }
-  const result = await runFrontier(argv);
+  const result = await runner.run(argv, extra.signal);
   return toolResult(result);
 });
-
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  // Stderr only; stdout is reserved for the MCP protocol.
-  process.stderr.write(`[frontier-mcp] ready (repo=${REPO_ROOT}, tools=${TOOLS.length})\n`);
+server.onclose = () => {
+  void runner.stop().catch(error => {
+    process.stderr.write(`[frontier-mcp] shutdown failed: ${error.message}\n`);
+    process.exitCode = 1;
+  });
+};
+return server;
 }
 
-main().catch((err) => {
+async function main() {
+  const repoRoot = discoverRepoRoot();
+  const runner = createCliRunner(repoRoot);
+  const server = createServer(runner);
+  const transport = new StdioServerTransport();
+  let shutdown;
+  const stop = () => {
+    shutdown ||= Promise.resolve().then(async () => {
+      try { await runner.stop(); } finally { await server.close(); }
+    }).catch(error => {
+      process.stderr.write(`[frontier-mcp] shutdown failed: ${error.message}\n`);
+      process.exitCode = 1;
+    });
+    return shutdown;
+  };
+  process.once('SIGINT', stop);
+  process.once('SIGTERM', stop);
+  process.stdin.once('end', stop);
+  await server.connect(transport);
+  // Stderr only; stdout is reserved for the MCP protocol.
+  process.stderr.write(`[frontier-mcp] ready (repo=${repoRoot}, tools=${TOOLS.length})\n`);
+}
+
+if (require.main === module) main().catch((err) => {
   process.stderr.write(`[frontier-mcp] fatal: ${err.stack || err.message}\n`);
   process.exit(1);
 });
+
+module.exports = { createCliRunner, createServer, discoverRepoRoot };

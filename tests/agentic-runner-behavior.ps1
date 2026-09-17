@@ -1,5 +1,7 @@
 #!/usr/bin/env pwsh
 
+param([switch]$AstraOnly)
+
 $ErrorActionPreference = 'Stop'
 $script:pass = 0
 $script:fail = 0
@@ -20,6 +22,24 @@ function Assert-Equal($actual, $expected, $message) {
 }
 
 . (Join-Path $script:repoRoot '.agentx\agentic-runner.ps1')
+
+if ($AstraOnly) {
+    $Script:ApiMode = 'copilot'
+    $Script:ActiveProviderId = 'copilot'
+    foreach ($label in @('GPT-6 Astra (copilot)', 'gpt-6-astra', 'GPT 6 Astra')) {
+        Assert-Equal (Resolve-ModelId $label) 'gpt-6-astra' "Astra resolves exactly: $label"
+    }
+    $capability = Get-RunnerModelCapability 'gpt-6-astra'
+    Assert-Equal $capability.transport 'responses' 'Astra uses catalog-supported Responses transport'
+    Assert-Equal $capability.contextWindow 1050000 'Astra uses catalog prompt limit, not combined context limit'
+    Assert-True (Test-RunnerModelSupportedByProvider 'copilot' 'gpt-6-astra') 'Copilot supports the observed Astra catalog entry'
+    Assert-True (-not (Test-RunnerModelSupportedByProvider 'anthropic-api' 'gpt-6-astra')) 'Astra is not substituted into Anthropic'
+    $reasoning = Get-ReasoningRequestConfig @{ reasoningLevel = 'high' } 'gpt-6-astra'
+    Assert-Equal $reasoning.reasoning.effort 'high' 'Astra preserves architecture/UX reasoning preference'
+    Write-Host "Results: $script:pass passed, $script:fail failed"
+    if ($script:fail) { exit 1 }
+    exit 0
+}
 
 Write-Host ''
 Write-Host ' Agentic Runner Behavior Tests' -ForegroundColor Cyan
@@ -1349,6 +1369,157 @@ try {
 } finally {
     Remove-Item Function:Invoke-RestMethod
     $Script:ActiveProvider = $null
+}
+
+Write-Host ' Product repair: role permissions and adapter loops'
+$repairRoot = Join-Path ([IO.Path]::GetTempPath()) ('product-repair-core-' + [guid]::NewGuid().ToString('N'))
+$savedRepairFunctions = @{}
+foreach ($functionName in @('Get-GitHubToken', 'Initialize-ApiMode', 'Get-ProviderExecutionToken', 'Get-RunnerConfig', 'Get-RunnerRelevantLearnings', 'Invoke-RunnerCommandWithInput', 'Sync-AgenticLoopState')) {
+    $savedRepairFunctions[$functionName] = (Get-Item "Function:$functionName").ScriptBlock
+}
+try {
+    [IO.Directory]::CreateDirectory((Join-Path $repairRoot '.github/agents/internal')) | Out-Null
+    [IO.Directory]::CreateDirectory((Join-Path $repairRoot 'src')) | Out-Null
+    foreach ($definition in @('engineer.agent.md', 'internal/functional-reviewer.agent.md')) {
+        Copy-Item -LiteralPath (Join-Path $script:repoRoot ".github/agents/$definition") -Destination (Join-Path $repairRoot ".github/agents/$definition")
+    }
+    $functionalDef = Read-AgentDef 'functional-reviewer' $repairRoot
+    $functionalRules = Read-BoundaryRuleSet $functionalDef
+    Assert-True (-not (Test-BoundaryAllowed 'unlisted.txt' $functionalRules $repairRoot)) 'report-only empty can_modify denies every write'
+    $annotatedDef = $functionalDef.Clone()
+    $annotatedDef.canModify = @('**')
+    $annotatedRules = Read-BoundaryRuleSet $annotatedDef
+    foreach ($deniedPath in @('src/app.ts', 'tests/test.ps1', 'docs/guide.md', '.github/workflows/check.yml')) {
+        Assert-True (-not (Test-BoundaryAllowed $deniedPath $annotatedRules $repairRoot)) "annotated boundary denies $deniedPath"
+    }
+    $functionalDef.body = "can_modify: ['**']"
+    Assert-True (-not (Test-BoundaryAllowed 'unlisted.txt' (Read-BoundaryRuleSet $functionalDef) $repairRoot)) 'body examples cannot override explicit empty frontmatter boundaries'
+
+    $allTools = @(Get-ToolSchemaList)
+    $functionalTools = @(Get-AgentProviderToolSchema -AgentName 'functional-reviewer' -Tools $allTools)
+    Assert-Equal (($functionalTools.function.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir' 'report-only schema advertises only declared read capabilities'
+    $engineerTools = @(Get-AgentProviderToolSchema -AgentName 'engineer' -Tools $allTools)
+    Assert-Equal (($engineerTools.function.name | Sort-Object) -join ',') 'file_edit,file_read,file_write,grep_search,list_dir' 'engineer schema retains guarded editing capabilities'
+    Assert-Equal @(Get-AgentProviderToolSchema -AgentName 'missing-role-fixture' -Tools $allTools).Count 0 'unknown roles receive no advertised capabilities'
+
+    $fixturePath = Join-Path $repairRoot 'src/fixture.txt'
+    Set-Content -LiteralPath $fixturePath -Value 'original fixture' -NoNewline
+    foreach ($toolName in @('file_write', 'file_edit')) {
+        $arguments = @{ filePath = 'src/fixture.txt'; content = 'forbidden'; oldString = 'original'; newString = 'forbidden' }
+        $blocked = Invoke-Tool $toolName $arguments $repairRoot 'functional-reviewer'
+        Assert-True $blocked.error "dispatch denies unsolicited report-only $toolName"
+        Assert-Equal (Get-Content -LiteralPath $fixturePath -Raw) 'original fixture' "report-only $toolName leaves bytes unchanged"
+        Set-Content -LiteralPath $fixturePath -Value 'original fixture' -NoNewline
+    }
+    $unscoped = Invoke-Tool 'file_write' @{ filePath = 'src/unscoped.txt'; content = 'forbidden' } $repairRoot
+    Assert-True $unscoped.error 'dispatch denies writes without a role definition'
+    $forbiddenDoc = Invoke-Tool 'file_write' @{ filePath = 'docs/artifacts/adr/forbidden.txt'; content = 'forbidden' } $repairRoot 'engineer'
+    Assert-True $forbiddenDoc.error 'direct engineer dispatch still enforces path boundaries'
+    $forbiddenDirectory = Join-Path $repairRoot 'docs/artifacts/adr'
+    [IO.Directory]::CreateDirectory($forbiddenDirectory) | Out-Null
+    $forbiddenTarget = Join-Path $forbiddenDirectory 'untouched.txt'
+    [IO.File]::WriteAllText($forbiddenTarget, 'original')
+    $roleLink = Join-Path $repairRoot 'src/role-link'
+    $linkKind = if ($IsWindows) { 'Junction' } else { 'SymbolicLink' }
+    New-Item -ItemType $linkKind -Path $roleLink -Target $forbiddenDirectory -ErrorAction Stop | Out-Null
+    try {
+        foreach ($toolName in @('file_write', 'file_edit')) {
+            $result = Invoke-Tool $toolName @{ filePath = 'src/role-link/untouched.txt'; content = 'forbidden'; oldString = 'original'; newString = 'forbidden' } $repairRoot 'engineer'
+            Assert-True $result.error "role boundary rejects $toolName through an in-workspace link"
+            Assert-Equal ([IO.File]::ReadAllText($forbiddenTarget)) 'original' "$toolName preserves the forbidden linked target"
+        }
+    } finally { Remove-Item -LiteralPath $roleLink -Force }
+    $nestedWrite = Invoke-Tool 'file_write' @{ filePath = 'src/new folder/deep/output.txt'; content = 'nested fixture' } $repairRoot 'engineer'
+    Assert-True (-not $nestedWrite.error) 'file_write creates nested directories with spaces'
+    $nestedPath = Join-Path $repairRoot 'src/new folder/deep/output.txt'
+    Assert-True (Test-Path -LiteralPath $nestedPath) 'nested file exists after a successful write'
+    if (Test-Path -LiteralPath $nestedPath) {
+        Assert-Equal (Get-Content -LiteralPath $nestedPath -Raw) 'nested fixture' 'nested file_write preserves exact content'
+    }
+
+    function Get-GitHubToken { return 'synthetic-token' }
+    function Get-ProviderExecutionToken { param($ProviderId, $GitHubToken) return 'synthetic-token' }
+    function Initialize-ApiMode {
+        param($ghToken)
+        $Script:ApiMode = $script:repairProvider
+        $Script:ActiveProvider = [PSCustomObject]@{ id = $script:repairProvider; displayName = 'Offline fixture'; transport = $script:repairProvider; authSource = 'mock'; reason = 'mock'; selectionSource = 'test'; ready = $true }
+    }
+    function Get-RunnerConfig { param($WorkspaceRoot) return @{ researchFirstMode = 'off' } }
+    function Get-RunnerRelevantLearnings { param($WorkspaceRoot, $Query, $Limit) return @() }
+    function Sync-AgenticLoopState {
+        param($WorkspaceRoot, $IssueNumber, $Iterations, $ExitReason, $FinalText, $SelfReview, [switch]$SkipLoopStateSync)
+        if (-not $SkipLoopStateSync) { throw 'Repair fixture must never synchronize parent loop state.' }
+    }
+    $script:repairVerdict = "``````review`nAPPROVED: true`nFINDINGS:`n``````"
+    function Invoke-RestMethod {
+        param($Uri, $Method, $Headers, $Body, $ErrorAction)
+        $request = $Body | ConvertFrom-Json
+        $script:repairRequests.Add($request)
+        $isReview = $request.system -like '*SKEPTICAL EVALUATOR*'
+        $requestCount = @($script:repairRequests | Where-Object { ($_.system -like '*SKEPTICAL EVALUATOR*') -eq $isReview }).Count
+        if ($requestCount -eq 1) {
+            return [PSCustomObject]@{
+                stop_reason = 'tool_use'
+                content = @(
+                    [PSCustomObject]@{ type = 'tool_use'; id = 'read-fixture'; name = 'file_read'; input = @{ filePath = 'src/fixture.txt' } },
+                    [PSCustomObject]@{ type = 'tool_use'; id = 'write-fixture'; name = 'file_write'; input = @{ filePath = $(if ($isReview) { 'src/review-forbidden.txt' } else { 'src/adapter/nested.txt' }); content = 'adapter fixture' } },
+                    [PSCustomObject]@{ type = 'tool_use'; id = 'edit-fixture'; name = 'file_edit'; input = @{ filePath = 'src/fixture.txt'; oldString = 'original'; newString = $(if ($isReview) { 'review-forbidden' } else { 'edited' }) } }
+                )
+            }
+        }
+        return [PSCustomObject]@{ stop_reason = 'end_turn'; content = @([PSCustomObject]@{ type = 'text'; text = $(if ($isReview) { $script:repairVerdict } else { 'Offline adapter answer' }) }) }
+    }
+    $script:repairProvider = 'anthropic-api'
+    foreach ($roleName in @('engineer', 'functional-reviewer')) {
+        Set-Content -LiteralPath $fixturePath -Value 'original fixture' -NoNewline
+        $adapterPath = Join-Path $repairRoot 'src/adapter/nested.txt'
+        if (Test-Path -LiteralPath $adapterPath) { Remove-Item -LiteralPath $adapterPath -Force }
+        $script:repairRequests = [Collections.Generic.List[object]]::new()
+        $adapterResult = Invoke-AgenticLoop -Agent $roleName -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 3 -SkipLoopStateSync
+        Assert-Equal $adapterResult.exitReason 'text_response' "Anthropic $roleName completes the real mocked loop"
+        Assert-Equal $adapterResult.toolCalls 3 "Anthropic $roleName processes normalized tool calls"
+        Assert-Equal $script:repairRequests.Count 4 "Anthropic $roleName executes main and read-only self-review tool turns"
+        Assert-True ($adapterResult.finalText -match 'Offline adapter answer') "Anthropic $roleName retains final content"
+        Assert-Equal (Test-Path -LiteralPath $adapterPath) ($roleName -eq 'engineer') "Anthropic $roleName enforces write permissions in loop dispatch"
+        Assert-Equal (Get-Content -LiteralPath $fixturePath -Raw) $(if ($roleName -eq 'engineer') { 'edited fixture' } else { 'original fixture' }) "Anthropic $roleName enforces edit permissions in loop dispatch"
+        Assert-True (-not (Test-Path -LiteralPath (Join-Path $repairRoot 'src/review-forbidden.txt'))) 'internal self-review cannot create files'
+        if ($script:repairRequests.Count -eq 4) {
+            $mainReply = $script:repairRequests[1].messages.content | Where-Object { (Get-MessageFieldValue $_ 'type') -eq 'tool_result' }
+            Assert-Equal (($mainReply.tool_use_id | Sort-Object) -join ',') 'edit-fixture,read-fixture,write-fixture' 'Anthropic replay preserves every tool-result ID'
+            $reviewReply = $script:repairRequests[3].messages.content | Where-Object { (Get-MessageFieldValue $_ 'type') -eq 'tool_result' }
+            Assert-Equal @($reviewReply | Where-Object { $_.content -match 'not available in review mode' }).Count 2 'internal self-review rejects both write and edit attempts'
+            Assert-Equal (($script:repairRequests[2].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir' 'self-review wire schema remains read-only'
+            if ($roleName -eq 'functional-reviewer') {
+                Assert-Equal (($script:repairRequests[0].tools.name | Sort-Object) -join ',') 'file_read,grep_search,list_dir' 'report-only Anthropic wire schema remains read-only'
+                Assert-Equal @($mainReply | Where-Object { $_.content -match 'BLOCKED' }).Count 2 'unsolicited report-only writes return tool errors'
+            }
+        }
+    }
+    Remove-Item Function:Invoke-RestMethod
+    $script:repairProvider = 'claude-code'
+    function Invoke-RunnerCommandWithInput {
+        param($FileName, $Arguments, $InputText)
+        $script:repairClaudeCalls++
+        $toolIndex = [Array]::IndexOf($Arguments, '--tools')
+        Assert-Equal $Arguments[$toolIndex + 1] '""' 'mocked Claude loop never enables native tools'
+        $answer = if ($script:repairClaudeCalls -eq 1) { 'Offline adapter answer' } else { $script:repairVerdict }
+        return [PSCustomObject]@{ output = $(if ($script:repairClaudeRaw) { $answer } else { @{ result = $answer } | ConvertTo-Json -Compress }); exitCode = 0 }
+    }
+    foreach ($rawResponse in @($false, $true)) {
+        $script:repairClaudeCalls = 0
+        $script:repairClaudeRaw = $rawResponse
+        $claudeLoop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $repairRoot -MaxIterations 2 -SkipLoopStateSync
+        Assert-Equal $claudeLoop.exitReason 'text_response' "Claude raw=$rawResponse completes the real mocked loop"
+        Assert-Equal $script:repairClaudeCalls 2 "Claude raw=$rawResponse reaches internal self-review"
+        Assert-True ($claudeLoop.finalText -match 'Offline adapter answer') "Claude raw=$rawResponse preserves final content"
+    }
+} finally {
+    Remove-Item Function:Invoke-RestMethod -ErrorAction SilentlyContinue
+    foreach ($functionName in $savedRepairFunctions.Keys) {
+        Set-Item -Path "Function:$functionName" -Value $savedRepairFunctions[$functionName]
+    }
+    $Script:ActiveProvider = $null
+    Remove-Item -LiteralPath $repairRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 Write-Host ' ================================================' -ForegroundColor DarkGray
 $total = $script:pass + $script:fail

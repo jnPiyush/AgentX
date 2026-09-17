@@ -18,108 +18,206 @@ jobs:
   dotnet-scan:
     name: Scan .NET Dependencies
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      status: ${{ steps.scan.outputs.status }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
-      - name: Check for .NET projects
-        id: detect
-        run: |
-          if find . -name '*.csproj' -o -name '*.sln' | grep -q .; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-            echo "No .NET projects found - skipping scan"
-          fi
-
       - name: Setup .NET
-        if: steps.detect.outputs.found == 'true'
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore dependencies
-        if: steps.detect.outputs.found == 'true'
-        run: dotnet restore
-
-      - name: Check for vulnerable packages
-        if: steps.detect.outputs.found == 'true'
-        id: check
+      - name: Scan every .NET project
+        id: scan
+        shell: python {0}
         run: |
-          echo "Scanning for vulnerable .NET packages..."
-          dotnet list package --vulnerable --include-transitive > vulnerabilities.txt 2>&1 || true
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
 
-          if grep -q "has the following vulnerable packages" vulnerabilities.txt; then
-            echo "HAS_VULNERABILITIES=true" >> $GITHUB_OUTPUT
-            echo "::warning::Vulnerable .NET packages found"
-            cat vulnerabilities.txt
-          else
-            echo "HAS_VULNERABILITIES=false" >> $GITHUB_OUTPUT
-            echo "[PASS] No vulnerable packages found"
-          fi
+          projects = []
+          solutions = []
+          for directory, children, files in os.walk('.'):
+              children[:] = sorted(child for child in children if child not in {'.git', 'node_modules', '.venv', 'venv', 'bin', 'obj'})
+              for name in sorted(files):
+                  path = Path(directory, name)
+                  if path.suffix in {'.csproj', '.fsproj', '.vbproj'}:
+                      projects.append(path)
+                  elif path.suffix in {'.sln', '.slnx'}:
+                      solutions.append(path)
+          reports = Path('dotnet-audit-reports')
+          reports.mkdir(exist_ok=True)
+          results = []
+          for index, project in enumerate(projects):
+              result = {'manifest': str(project), 'status': 'scanner-error', 'findings': 0}
+              try:
+                  restore = subprocess.run(['dotnet', 'restore', str(project)], capture_output=True, text=True, timeout=180)
+                  (reports / f'{index}-restore.txt').write_text(restore.stdout + restore.stderr)
+                  if restore.returncode != 0:
+                      raise ValueError(f'restore failed with exit {restore.returncode}')
+                  scan = subprocess.run(['dotnet', 'list', str(project), 'package', '--vulnerable', '--include-transitive', '--format', 'json', '--output-version', '1'], capture_output=True, text=True, timeout=180)
+                  (reports / f'{index}.json').write_text(scan.stdout)
+                  (reports / f'{index}-stderr.txt').write_text(scan.stderr)
+                  if scan.returncode != 0:
+                      raise ValueError(f'scanner failed with exit {scan.returncode}')
+                  data = json.loads(scan.stdout)
+                  if not isinstance(data, dict) or data.get('version') != 1 or data.get('problems') or not isinstance(data.get('projects'), list) or not data['projects']:
+                      raise ValueError('invalid or incomplete dotnet report')
+                  for entry in data['projects']:
+                      if entry.get('problems') or not isinstance(entry.get('frameworks'), list) or not entry['frameworks']:
+                          raise ValueError('no framework scan results')
+                      for framework in entry['frameworks']:
+                          if not isinstance(framework.get('framework'), str) or not framework['framework'] or framework.get('problems'):
+                              raise ValueError('invalid or incomplete framework scan')
+                          for key in ('topLevelPackages', 'transitivePackages'):
+                              packages = framework.get(key, [])
+                              if not isinstance(packages, list):
+                                  raise ValueError('invalid package results')
+                              for package in packages:
+                                  vulnerabilities = package.get('vulnerabilities', [])
+                                  if not isinstance(vulnerabilities, list):
+                                      raise ValueError('invalid vulnerability results')
+                                  result['findings'] += len(vulnerabilities)
+                  result['status'] = 'vulnerabilities' if result['findings'] else 'clean'
+              except (OSError, subprocess.SubprocessError, ValueError, TypeError, AttributeError) as error:
+                  result['detail'] = str(error)
+              results.append(result)
+          if not projects and solutions:
+              results = [{'manifest': str(path), 'status': 'not-scanned', 'detail': 'Solution found without a supported project manifest.'} for path in solutions]
+          status = next((state for state in ('scanner-error', 'vulnerabilities', 'not-scanned') if any(result['status'] == state for result in results)), 'clean' if results else 'not-applicable')
+          (reports / 'summary.json').write_text(json.dumps({'status': status, 'results': results}, indent=2))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'status={status}\n')
+          print(json.dumps({'status': status, 'results': results}, indent=2))
+          raise SystemExit(0 if status in {'clean', 'not-applicable'} else 1)
 
       - name: Upload vulnerability report
-        if: steps.check.outputs.HAS_VULNERABILITIES == 'true'
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: dotnet-vulnerabilities
-          path: vulnerabilities.txt
+          path: dotnet-audit-reports/
 
   python-scan:
     name: Scan Python Dependencies
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      status: ${{ steps.scan.outputs.status }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
-      - name: Check for Python projects
-        id: detect
-        run: |
-          if find . -name 'requirements.txt' -o -name 'Pipfile' -o -name 'pyproject.toml' | grep -q .; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-            echo "No Python dependency files found - skipping scan"
-          fi
-
       - name: Setup Python
-        if: steps.detect.outputs.found == 'true'
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
 
       - name: Install pip-audit
-        if: steps.detect.outputs.found == 'true'
         run: pip install pip-audit
 
       - name: Scan Python dependencies
-        if: steps.detect.outputs.found == 'true'
         id: scan
+        shell: python {0}
         run: |
-          echo "Scanning for vulnerable Python packages..."
-          if [ -f requirements.txt ]; then
-            pip-audit -r requirements.txt --format json > python-vulnerabilities.json || true
-          elif [ -f Pipfile ]; then
-            pip-audit --requirement <(pipenv requirements) --format json > python-vulnerabilities.json || true
-          fi
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import tempfile
+          import tomllib
 
-          if [ -s python-vulnerabilities.json ]; then
-            echo "HAS_VULNERABILITIES=true" >> $GITHUB_OUTPUT
-            echo "::warning::Vulnerable Python packages found"
-            cat python-vulnerabilities.json
-          else
-            echo "HAS_VULNERABILITIES=false" >> $GITHUB_OUTPUT
-            echo "[PASS] No vulnerable packages found"
-          fi
+          manifests = []
+          for directory, children, files in os.walk('.'):
+            children[:] = sorted(child for child in children if child not in {'.git', 'node_modules', '.venv', 'venv', '__pycache__'})
+            for name in sorted(files):
+              if (name.startswith('requirements') and name.endswith('.txt')) or name in {'pyproject.toml', 'Pipfile', 'Pipfile.lock', 'poetry.lock', 'uv.lock', 'setup.py', 'setup.cfg'}:
+                manifests.append(Path(directory, name))
+          reports = Path('python-audit-reports')
+          reports.mkdir(exist_ok=True)
+          results = []
+          for index, manifest in enumerate(manifests):
+            result = {'manifest': str(manifest), 'status': 'scanner-error', 'findings': 0}
+            temporary = None
+            try:
+              requirement = manifest.resolve()
+              if manifest.name == 'pyproject.toml':
+                data = tomllib.loads(manifest.read_text())
+                project = data.get('project', {})
+                if not isinstance(project, dict):
+                  raise ValueError('invalid project table')
+                if 'dependencies' not in project or set(project.get('dynamic', [])) & {'dependencies', 'optional-dependencies'} or 'poetry' in data.get('tool', {}) or 'dependency-groups' in data:
+                  result.update(status='not-scanned', detail='Only static PEP 621 dependencies and optional-dependencies are supported; dynamic, Poetry and dependency-group declarations require a reviewed requirements export.')
+                  results.append(result)
+                  continue
+                dependencies = project['dependencies']
+                extras = project.get('optional-dependencies', {})
+                if not isinstance(dependencies, list) or not isinstance(extras, dict) or any(not isinstance(group, list) for group in extras.values()):
+                  raise ValueError('invalid PEP 621 dependencies')
+                dependencies = dependencies + [item for group in extras.values() for item in group]
+                if any(not isinstance(item, str) or not item.strip() or '\n' in item or '\r' in item or item.lstrip().startswith('-') for item in dependencies):
+                  raise ValueError('invalid PEP 621 requirement string')
+                if not dependencies:
+                  result.update(status='not-applicable', detail='No declared runtime or optional dependencies.')
+                  results.append(result)
+                  continue
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', dir=manifest.parent, delete=False) as export:
+                  temporary = Path(export.name)
+                  export.write('\n'.join(dependencies) + '\n')
+                requirement = temporary.resolve()
+              elif not (manifest.name.startswith('requirements') and manifest.suffix == '.txt'):
+                result.update(status='not-scanned', detail='Unsupported manifest; a reviewed requirements export is needed. This file was not audited.')
+                results.append(result)
+                continue
+              scan = subprocess.run(['pip-audit', '-r', str(requirement), '--format', 'json'], cwd=manifest.parent, capture_output=True, text=True, timeout=180)
+              (reports / f'{index}.json').write_text(scan.stdout)
+              (reports / f'{index}-stderr.txt').write_text(scan.stderr)
+              data = json.loads(scan.stdout)
+              if not isinstance(data, dict) or not isinstance(data.get('dependencies'), list):
+                raise ValueError('invalid pip-audit dependency report')
+              skipped = False
+              for dependency in data['dependencies']:
+                if not isinstance(dependency, dict):
+                  raise ValueError('invalid dependency entry')
+                if dependency.get('skip_reason'):
+                  skipped = True
+                  continue
+                if not isinstance(dependency.get('vulns'), list):
+                  raise ValueError('missing vulnerability results')
+                result['findings'] += len(dependency['vulns'])
+              if scan.returncode not in {0, 1} or (scan.returncode == 1 and not result['findings']):
+                raise ValueError(f'scanner failed with exit {scan.returncode}')
+              result['status'] = 'vulnerabilities' if result['findings'] else 'not-scanned' if skipped else 'clean'
+              if skipped:
+                result['detail'] = 'One or more dependencies were skipped by pip-audit.'
+            except (OSError, subprocess.SubprocessError, ValueError, TypeError, AttributeError) as error:
+              result['detail'] = str(error)
+            finally:
+              if temporary is not None:
+                temporary.unlink(missing_ok=True)
+            results.append(result)
+          status = next((state for state in ('scanner-error', 'vulnerabilities', 'not-scanned') if any(result['status'] == state for result in results)), 'clean' if any(result['status'] == 'clean' for result in results) else 'not-applicable')
+          (reports / 'summary.json').write_text(json.dumps({'status': status, 'results': results}, indent=2))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+            output.write(f'status={status}\n')
+          print(json.dumps({'status': status, 'results': results}, indent=2))
+          raise SystemExit(0 if status in {'clean', 'not-applicable'} else 1)
 
       - name: Upload vulnerability report
-        if: steps.scan.outputs.HAS_VULNERABILITIES == 'true'
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: python-vulnerabilities
-          path: python-vulnerabilities.json
+          path: python-audit-reports/
 
   node-scan:
     name: Scan Node.js Dependencies
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      status: ${{ steps.audit.outputs.status || steps.detect.outputs.status }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
@@ -135,6 +233,7 @@ jobs:
             cat pkg-dirs.txt
           else
             echo "found=false" >> $GITHUB_OUTPUT
+            echo "status=not-applicable" >> $GITHUB_OUTPUT
             echo "No Node.js projects found - skipping scan"
           fi
 
@@ -148,6 +247,7 @@ jobs:
         if: steps.detect.outputs.found == 'true'
         id: audit
         run: |
+          echo "status=scanner-error" >> "$GITHUB_OUTPUT"
           mkdir -p audit-reports
           TOTAL_HIGH=0
           TOTAL_CRITICAL=0
@@ -168,14 +268,33 @@ jobs:
 
             AUDIT_EXIT=0
             (cd "$dir" && npm audit --omit=dev --omit=optional --json) > "audit-reports/$SLUG.json" 2>/dev/null || AUDIT_EXIT=$?
-            if ! jq -e '.metadata.vulnerabilities | type == "object"' "audit-reports/$SLUG.json" >/dev/null 2>&1; then
+            if ! COUNTS=$(node - "audit-reports/$SLUG.json" "$AUDIT_EXIT" <<'NODE'
+          const fs = require('node:fs');
+          try {
+            const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+            const exit = Number(process.argv[3]);
+            const counts = report.metadata?.vulnerabilities;
+            const severities = ['info', 'low', 'moderate', 'high', 'critical'];
+            if (report.auditReportVersion !== 2 || report.error || !counts ||
+                ![...severities, 'total'].every(key => Number.isSafeInteger(counts[key]) && counts[key] >= 0) ||
+                severities.reduce((sum, key) => sum + counts[key], 0) !== counts.total ||
+                ![0, 1].includes(exit) || (exit === 1 && counts.total === 0)) {
+              throw new Error('Invalid npm audit metadata or inconsistent scanner exit.');
+            }
+            process.stdout.write(JSON.stringify(counts));
+          } catch (error) {
+            console.error(error.message);
+            process.exit(1);
+          }
+          NODE
+            ); then
               echo "::error::npm audit did not produce valid vulnerability metadata for $dir (exit $AUDIT_EXIT)"
               cat "audit-reports/$SLUG.json"
               exit 1
             fi
 
-            HIGH=$(jq '.metadata.vulnerabilities.high // 0' "audit-reports/$SLUG.json")
-            CRIT=$(jq '.metadata.vulnerabilities.critical // 0' "audit-reports/$SLUG.json")
+            HIGH=$(printf '%s' "$COUNTS" | jq '.high')
+            CRIT=$(printf '%s' "$COUNTS" | jq '.critical')
             echo "$dir -> high: $HIGH, critical: $CRIT"
 
             TOTAL_HIGH=$((TOTAL_HIGH + HIGH))
@@ -187,15 +306,17 @@ jobs:
 
           if [ "$TOTAL_HIGH" -gt 0 ] || [ "$TOTAL_CRITICAL" -gt 0 ]; then
             echo "HAS_VULNERABILITIES=true" >> $GITHUB_OUTPUT
+            echo "status=vulnerabilities" >> "$GITHUB_OUTPUT"
             echo "::error::Found $TOTAL_HIGH high and $TOTAL_CRITICAL critical vulnerabilities across Node.js projects"
             exit 1
           else
             echo "HAS_VULNERABILITIES=false" >> $GITHUB_OUTPUT
+            echo "status=clean" >> "$GITHUB_OUTPUT"
             echo "[PASS] No high/critical vulnerabilities found"
           fi
 
       - name: Upload vulnerability report
-        if: always() && steps.audit.outputs.HAS_VULNERABILITIES == 'true'
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: npm-vulnerabilities
@@ -206,82 +327,36 @@ jobs:
     runs-on: ubuntu-latest
     needs: [dotnet-scan, python-scan, node-scan]
     if: always()
+    timeout-minutes: 5
     steps:
       - name: Generate Summary
-        run: |
-          echo "# Dependency Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          DOTNET_STATUS="${{ needs.dotnet-scan.result }}"
-          PYTHON_STATUS="${{ needs.python-scan.result }}"
-          NODE_STATUS="${{ needs.node-scan.result }}"
-
-          echo "| Ecosystem | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
-
-          if [ "$DOTNET_STATUS" == "success" ]; then
-            echo "| .NET | [PASS] No vulnerabilities |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$DOTNET_STATUS" == "failure" ]; then
-            echo "| .NET | [FAIL] Vulnerabilities found |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$DOTNET_STATUS" == "skipped" ]; then
-            echo "| .NET | [SKIP] Skipped (no .NET files) |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [ "$PYTHON_STATUS" == "success" ]; then
-            echo "| Python | [PASS] No vulnerabilities |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$PYTHON_STATUS" == "failure" ]; then
-            echo "| Python | [FAIL] Vulnerabilities found |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$PYTHON_STATUS" == "skipped" ]; then
-            echo "| Python | [SKIP] Skipped (no Python files) |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [ "$NODE_STATUS" == "success" ]; then
-            echo "| Node.js | [PASS] No vulnerabilities |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$NODE_STATUS" == "failure" ]; then
-            echo "| Node.js | [FAIL] Vulnerabilities found |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$NODE_STATUS" == "skipped" ]; then
-            echo "| Node.js | [SKIP] Skipped (no Node.js files) |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "*Scanned on: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*" >> $GITHUB_STEP_SUMMARY
-
-      - name: Comment on PR
-        if: github.event_name == 'pull_request'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          SCAN_RESULTS: ${{ toJSON(needs) }}
         with:
           script: |
-            const dotnetStatus = '${{ needs.dotnet-scan.result }}';
-            const pythonStatus = '${{ needs.python-scan.result }}';
-            const nodeStatus = '${{ needs.node-scan.result }}';
-
-            let status = '[PASS] All dependency scans passed';
-            let hasFailures = false;
-
-            if (dotnetStatus === 'failure' || pythonStatus === 'failure' || nodeStatus === 'failure') {
-              status = '[FAIL] Vulnerabilities detected';
-              hasFailures = true;
-            }
-
-            const body = `## Dependency Scan Results
-
-            ${status}
-
-            | Ecosystem | Status |
-            |-----------|--------|
-            | .NET | ${dotnetStatus === 'success' ? '[PASS]' : dotnetStatus === 'failure' ? '[FAIL]' : '[SKIP]'} ${dotnetStatus === 'skipped' ? 'Skipped' : dotnetStatus === 'success' ? 'No vulnerabilities' : 'Vulnerabilities found'} |
-            | Python | ${pythonStatus === 'success' ? '[PASS]' : pythonStatus === 'failure' ? '[FAIL]' : '[SKIP]'} ${pythonStatus === 'skipped' ? 'Skipped' : pythonStatus === 'success' ? 'No vulnerabilities' : 'Vulnerabilities found'} |
-            | Node.js | ${nodeStatus === 'success' ? '[PASS]' : nodeStatus === 'failure' ? '[FAIL]' : '[SKIP]'} ${nodeStatus === 'skipped' ? 'Skipped' : nodeStatus === 'success' ? 'No vulnerabilities' : 'Vulnerabilities found'} |
-
-            ${hasFailures ? '[WARN] **Action Required**: Review vulnerability reports in workflow artifacts.' : ''}
-
-            ---
-            *Dependency scanning by Frontier*`;
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: body
+            const results = JSON.parse(process.env.SCAN_RESULTS);
+            const descriptions = {
+              clean: 'Scan completed: no findings at the configured gate',
+              vulnerabilities: 'Vulnerabilities found; gate failed (see reports)',
+              'scanner-error': 'Scanner/setup error; coverage incomplete (see reports)',
+              'not-scanned': 'Unsupported or skipped dependencies; coverage incomplete',
+              'not-applicable': 'No applicable dependencies discovered',
+              cancelled: 'Cancelled; coverage incomplete',
+              skipped: 'Job skipped; coverage unknown'
+            };
+            let incomplete = false;
+            const rows = [['.NET', 'dotnet-scan'], ['Python', 'python-scan'], ['Node.js (high/critical, runtime only)', 'node-scan']].map(([name, job]) => {
+              const result = results[job];
+              let status = result.outputs?.status;
+              if (result.result === 'cancelled' || result.result === 'skipped') status = result.result;
+              else if (!descriptions[status] || (result.result !== 'success' && ['clean', 'not-applicable'].includes(status))) status = 'scanner-error';
+              if (!['clean', 'not-applicable'].includes(status)) incomplete = true;
+              return `| ${name} | ${status}: ${descriptions[status]} |`;
             });
+            const body = ['## Dependency Scan Results', '', '| Ecosystem | Actual scan status |', '|---|---|', ...rows, '', 'Reports describe only discovered manifests and configured scan scope, not product security certification.'].join('\n');
+            await core.summary.addRaw(body).write();
+            if (incomplete) core.setFailed('Dependency gate failed or coverage is incomplete; inspect per-manifest reports.');
+            if (context.eventName === 'pull_request' && context.payload.pull_request?.head.repo.full_name === context.repo.owner + '/' + context.repo.repo) {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }

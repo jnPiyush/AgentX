@@ -4,6 +4,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as sinon from 'sinon';
+import { FrontierContext } from '../../frontierContext';
+import { ShellExecutionOptions } from '../../utils/shell';
 import { createMockResponseStream } from '../mocks/vscode';
 import {
   getFrontierChatFollowups,
@@ -13,6 +15,45 @@ import {
 
 describe('chatParticipant', () => {
   let tmpDir: string;
+
+  for (const prompt of ['run engineer test cancellation', 'continue use the existing API', 'use the existing API']) {
+    it(`propagates Stop and disposes its subscription for ${prompt}`, async () => {
+      const response = createMockResponseStream();
+      const dispose = sinon.spy();
+      let cancel: (() => void) | undefined;
+      const token = {
+        isCancellationRequested: false,
+        onCancellationRequested: (listener: (event: unknown) => void) => {
+          cancel = () => listener(undefined);
+          return { dispose };
+        },
+      } as vscode.CancellationToken;
+      let capturedSignal: AbortSignal | undefined;
+      const agentx = {
+        workspaceRoot: tmpDir,
+        checkInitialized: async () => true,
+        runCli: async () => '[]',
+        getPendingClarification: async () => ({ sessionId: 'test', agentName: 'engineer', prompt: 'test' }),
+        runCliStreaming: async (
+          _sub: string, _args: string[], _onLine: unknown, _env: unknown, root: string,
+          options: ShellExecutionOptions,
+        ) => {
+          assert.equal(root, tmpDir);
+          capturedSignal = options.signal;
+          assert.equal(capturedSignal?.aborted, false);
+          cancel!();
+          assert.equal(capturedSignal?.aborted, true);
+          throw Object.assign(new Error('Command cancelled.'), { name: 'AbortError' });
+        },
+      } as unknown as FrontierContext;
+      await handleFrontierChatRequest(
+        { prompt } as vscode.ChatRequest,
+        response as unknown as vscode.ChatResponseStream, agentx, token,
+      );
+      assert.ok(capturedSignal);
+      sinon.assert.calledOnce(dispose);
+    });
+  }
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-chat-learnings-'));

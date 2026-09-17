@@ -1,10 +1,19 @@
-name: AI Evaluation Gate
+name: Issue Classification Regression Gate
 
 on:
   pull_request:
     branches: [master, main]
     paths:
       - 'evaluation/**'
+      - '.github/agents/**'
+      - '.github/prompts/**'
+      - '.github/instructions/**'
+      - '.github/copilot-instructions.md'
+      - '.github/skills/**'
+      - 'prompts/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'vscode-extension/package*.json'
       - 'scripts/classify-issue.js'
       - 'scripts/run-ai-eval-sample.ps1'
       - 'tests/ai-eval-gate-behavior.ps1'
@@ -13,6 +22,15 @@ on:
     branches: [master, main]
     paths:
       - 'evaluation/**'
+      - '.github/agents/**'
+      - '.github/prompts/**'
+      - '.github/instructions/**'
+      - '.github/copilot-instructions.md'
+      - '.github/skills/**'
+      - 'prompts/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'vscode-extension/package*.json'
       - 'scripts/classify-issue.js'
       - 'scripts/run-ai-eval-sample.ps1'
       - 'tests/ai-eval-gate-behavior.ps1'
@@ -34,6 +52,13 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Install locked YAML parser dependencies
+        run: npm ci --prefix vscode-extension --ignore-scripts
+
       - name: Verify threshold gate behavior
         shell: pwsh
         run: ./tests/ai-eval-gate-behavior.ps1
@@ -44,4 +69,11 @@ jobs:
           ./scripts/run-ai-eval-sample.ps1 `
             -DatasetPath 'evaluation/datasets/regression.jsonl' `
             -ClassifierPath 'scripts/classify-issue.js' `
-            -ManifestPath 'evaluation/frontier.eval.yaml'
+            -ManifestPath 'evaluation/frontier.eval.yaml' `
+            -BaselinePath 'evaluation/baseline.json'
+
+      - name: Record evaluation scope
+        if: always()
+        run: |
+          echo 'This gate measures deterministic issue classification accuracy and accepted-baseline regression only.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Agent, prompt, instruction, role and skill quality, safety and task completion are not evaluated or certified. Changes to those assets require separate behavioral evaluation.' >> "$GITHUB_STEP_SUMMARY"

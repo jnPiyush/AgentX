@@ -16,6 +16,54 @@ permissions:
   pull-requests: write
 
 jobs:
+  portable-loop:
+    name: Quality Loop (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify native runtimes and launcher permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          uname -sm
+          node --version
+          git --version
+          command -v pwsh
+          pwsh -NoProfile -Command 'if ($PSVersionTable.PSVersion -lt [version]"7.4") { throw "PowerShell 7.4+ required" }; $PSVersionTable.PSVersion.ToString()'
+          test -x .agentx/frontier.sh
+          test -x .agentx/agentx.sh
+          fixture="$(mktemp -d)"
+          trap 'rm -r -- "$fixture"' EXIT
+          FRONTIER_WORKSPACE_ROOT="$fixture" ./.agentx/frontier.sh version
+          FRONTIER_WORKSPACE_ROOT="$fixture" ./.agentx/agentx.sh version
+      - name: Install test dependencies
+        run: npm ci --ignore-scripts --prefix vscode-extension
+      - name: Compile and test shell and review wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          node vscode-extension/node_modules/typescript/bin/tsc -p vscode-extension/tsconfig.json
+          node vscode-extension/node_modules/mocha/bin/mocha.js --no-config --require ./vscode-extension/out/test/register.js --timeout 60000 vscode-extension/out/test/utils/shell.test.js vscode-extension/out/test/utils/loopStateChecker.test.js vscode-extension/out/test/commands/loopCommand.test.js vscode-extension/out/test/runtime/verificationLoop.test.js
+      - name: Native quality and review lifecycle
+        shell: pwsh
+        run: |
+          foreach ($suite in @('tests/loop-parity-behavior.ps1', 'tests/loop-rollback-behavior.ps1', 'tests/code-quality-rubric-behavior.ps1')) {
+            & pwsh -NoProfile -File $suite
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
   quality-checks:
     name: Enforce Quality Gates
     runs-on: ubuntu-latest

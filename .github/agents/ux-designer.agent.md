@@ -1,7 +1,7 @@
 ---
 name: Frontier Experience FDE
 description: 'Create user research, wireframes, interactive HTML/CSS prototypes, and design specifications following WCAG 2.1 AA standards.'
-model: Claude Opus 5 (copilot)
+model: GPT-6 Astra (copilot)
 user-invocable: true
 hooks:
   PreToolUse:
@@ -74,6 +74,7 @@ agents:
   - Frontier Product FDE
   - Frontier Diagram FDE
   - Frontier GitHub Ops FDE
+  - Frontier Prototype Audit FDE
 handoffs:
   - label: Continue to Implementation
     agent: Frontier Engineering FDE
@@ -136,7 +137,11 @@ or accepted a recommended direction.
 **Both branches converge on the same durable artifacts.** Whichever branch
 ran, codify the result into the target app's `PRODUCT.md` (audience, mode,
 voice, anti-references) and `DESIGN.md` (palette, type ramp, radii,
-components) via `/impeccable init`, then cite both from the UX Spec. Without
+components). `/impeccable init` creates product context; establish `DESIGN.md`
+separately through the design-language workflow or `/impeccable document` for
+existing UI. If those commands are unavailable, author the artifacts directly
+from confirmed requirements and record detector coverage as `DEGRADED`. Cite
+both from the UX Spec. Without
 this step a chosen direction exists only in chat and cannot be conformed to
 or checked later. See [Impeccable Integration](../skills/design/impeccable-integration/SKILL.md) for
 install scope, the three-state detector gate, and the waiver rule.

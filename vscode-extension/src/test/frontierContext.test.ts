@@ -2,6 +2,8 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import * as sinon from 'sinon';
+import * as shell from '../utils/shell';
 import {
   __setWorkspaceFolders,
   __setConfig,
@@ -17,14 +19,6 @@ function createFrontierRoot(dir: string): void {
   const agentxDir = path.join(dir, '.agentx');
   fs.mkdirSync(agentxDir, { recursive: true });
   fs.writeFileSync(path.join(agentxDir, 'config.json'), '{}');
-}
-
-/**
- * Create a temporary directory that does NOT look like an Frontier root.
- */
-function createPlainDir(dir: string): void {
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'README.md'), '# Hello\n');
 }
 
 /**
@@ -50,9 +44,46 @@ describe('FrontierContext', () => {
   });
 
   afterEach(() => {
+    sinon.restore();
     fs.rmSync(tmpBase, { recursive: true, force: true });
     __clearConfig();
     __setWorkspaceFolders(undefined);
+  });
+
+  it('isolates selected-root secrets and forwards agent execution lifecycle options', async () => {
+    const rootA = path.join(tmpBase, 'a');
+    const rootB = path.join(tmpBase, 'b');
+    createFrontierRoot(rootA);
+    createFrontierRoot(rootB);
+    __setWorkspaceFolders([{ path: rootA }, { path: rootB }]);
+    const secrets = new Map<string, string>();
+    const extension = fakeExtensionContext();
+    extension.secrets = {
+      get: async (key: string) => secrets.get(key),
+      store: async (key: string, value: string) => { secrets.set(key, value); },
+      delete: async (key: string) => { secrets.delete(key); },
+    };
+    const context = new FrontierContext(extension);
+    await context.storeWorkspaceLlmSecret('openai-api', 'synthetic-a', rootA);
+    await context.storeWorkspaceLlmSecret('openai-api', 'synthetic-b', rootB);
+    const execute = sinon.stub(shell, 'execShell').resolves('checked');
+    const stream = sinon.stub(shell, 'execShellStreaming').resolves('finished');
+    await context.runCli('precheck', [], rootB);
+    assert.equal(execute.firstCall.args[1], rootB);
+    assert.equal(execute.firstCall.args[3]?.OPENAI_API_KEY, 'synthetic-b');
+    const controller = new AbortController();
+    await context.runCliStreaming('run', ['engineer', 'test'], undefined, undefined, rootB,
+      { signal: controller.signal });
+    assert.equal(stream.firstCall.args[1], rootB);
+    assert.equal(stream.firstCall.args[4]?.OPENAI_API_KEY, 'synthetic-b');
+    assert.equal(stream.firstCall.args[5]?.signal, controller.signal);
+    assert.equal(stream.firstCall.args[5]?.timeoutMs, 30 * 60_000);
+    await context.deleteWorkspaceLlmSecret('openai-api', rootB);
+    assert.equal(await context.hasWorkspaceLlmSecret('openai-api', rootB), false);
+    assert.equal(await context.hasWorkspaceLlmSecret('openai-api', rootA), true);
+    await context.runCliStreaming('status', [], undefined, undefined, rootA);
+    assert.equal(stream.secondCall.args[4]?.OPENAI_API_KEY, 'synthetic-a');
+    assert.equal(stream.secondCall.args[5]?.timeoutMs, undefined);
   });
 
   // --- workspaceRoot detection ------------------------------------------

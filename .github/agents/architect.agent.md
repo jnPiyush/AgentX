@@ -1,7 +1,7 @@
 ---
 name: Frontier Architecture FDE
 description: 'AI-first system architecture -- evaluate GenAI/Agentic AI solutions as the default lens, create ADRs with 3+ evaluated options, and technical specifications with diagrams -- NO CODE EXAMPLES.'
-model: Claude Opus 5 (copilot)
+model: GPT-6 Astra (copilot)
 user-invocable: true
 hooks:
   PreToolUse:

@@ -10,7 +10,7 @@
     "render:ux": "remotion render UXDemo out/ux.mp4",
     "render:all": "npm run render:pm && npm run render:architect && npm run render:ux",
     "render:posters": "remotion still PMDemo out/pm-poster.png --frame=30 && remotion still ArchitectDemo out/architect-poster.png --frame=30 && remotion still UXDemo out/ux-poster.png --frame=30",
-    "captions": "node scripts/emit-captions.mjs"
+    "test": "node --test test/*.test.cjs"
   },
   "devDependencies": {
     "@remotion/cli": "4.0.503",

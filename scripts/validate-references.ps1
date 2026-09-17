@@ -59,7 +59,12 @@ function Test-IsInsideFencedCode {
     return $false
 }
 
-$mdFiles = @(Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue |
+$candidates = if (Test-Path -LiteralPath $ScanDir -PathType Leaf) {
+    Get-Item -LiteralPath $ScanDir
+} else {
+    Get-ChildItem -Path $ScanDir -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue
+}
+$mdFiles = @($candidates |
     Where-Object {
         $_.FullName -notmatch 'node_modules|\.git[/\\]|vendor|[/\\]archive[/\\]|vscode-extension[/\\]\.github[/\\]' -and
         # SkillOpt run snapshots preserve generated candidate text for evaluation;
@@ -88,7 +93,7 @@ try {
 }
 
 if ($trackedSet -and $trackedSet.Count -gt 0) {
-    $mdFiles = $mdFiles | Where-Object { $trackedSet.Contains($_.FullName) }
+    $mdFiles = @($mdFiles | Where-Object { $trackedSet.Contains($_.FullName) })
 }
 
 foreach ($file in $mdFiles) {

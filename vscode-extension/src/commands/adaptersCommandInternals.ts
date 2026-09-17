@@ -263,9 +263,9 @@ async function upsertRemoteAdapter(
 
 export async function syncDetectedGitHubAdapter(
   agentx: FrontierContext,
-  options?: { readonly notify?: boolean },
+  options?: { readonly notify?: boolean; readonly root?: string },
 ): Promise<boolean> {
-  const root = agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
+  const root = options?.root ?? agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
   if (!root) {
     return false;
   }
@@ -299,9 +299,9 @@ export async function syncDetectedGitHubAdapter(
 
 export async function syncDetectedAdoAdapter(
   agentx: FrontierContext,
-  options?: { readonly notify?: boolean },
+  options?: { readonly notify?: boolean; readonly root?: string },
 ): Promise<boolean> {
-  const root = agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
+  const root = options?.root ?? agentx.workspaceRoot ?? agentx.firstWorkspaceFolder;
   if (!root) {
     return false;
   }

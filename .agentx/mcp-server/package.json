@@ -13,14 +13,16 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4"
+    "@modelcontextprotocol/sdk": "1.29.0"
   },
   "overrides": {
+    "hono": "4.13.7",
+    "qs": "6.16.0",
     "fast-uri": "https://codeload.github.com/fastify/fast-uri/tar.gz/412e40abd4eb8beabfb952d80abf949a2baf27a3"
   },
   "scripts": {
     "start": "node index.js",
-    "test": "node smoke-test.js",
+    "test": "node --test lifecycle.test.js && node smoke-test.js",
     "audit:runtime": "npm audit --omit=dev --audit-level=high"
   },
   "keywords": [

@@ -117,34 +117,6 @@ function normalizeEventName(payload) {
   return name.replace(/^copilot-agent:/, "");
 }
 
-function stringify(value) {
-  if (value === undefined || value === null) return null;
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value);
-  } catch (_) {
-    return String(value);
-  }
-}
-
-function coerceObject(value) {
-  if (value === undefined || value === null) return null;
-  if (typeof value === "object") return value;
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value);
-    } catch (_) {
-      return value;
-    }
-  }
-  return value;
-}
-
-function truncate(str, max) {
-  if (!str) return null;
-  return str.length > max ? str.slice(0, max) + "..." : str;
-}
-
 function buildEntry(payload) {
   const event = normalizeEventName(payload);
   const kind = event.toLowerCase();
@@ -157,43 +129,6 @@ function buildEntry(payload) {
 
   if (kind === "pretooluse" || kind === "posttooluse") {
     entry.tool = pick(payload, ["toolName", "tool_name"], process.env.COPILOT_HOOK_TOOL_NAME);
-    entry.toolArgs = coerceObject(
-      pick(
-        payload,
-        ["toolInput", "tool_input", "toolArgs", "tool_args"],
-        process.env.COPILOT_HOOK_TOOL_ARGS,
-      ),
-    );
-    entry.toolResult = truncate(
-      stringify(
-        pick(
-          payload,
-          ["toolResponse", "tool_response", "toolResult", "tool_result"],
-          process.env.COPILOT_HOOK_TOOL_RESULT,
-        ),
-      ),
-      500,
-    );
-  }
-
-  if (kind === "userpromptsubmitted" || kind === "userpromptsubmit") {
-    entry.prompt = truncate(
-      stringify(pick(payload, ["prompt", "userPrompt", "user_prompt"], process.env.COPILOT_HOOK_PROMPT)),
-      500,
-    );
-  }
-
-  if (kind === "erroroccurred") {
-    entry.error = truncate(
-      stringify(
-        pick(
-          payload,
-          ["message", "error", "errorMessage", "error_message"],
-          process.env.COPILOT_HOOK_ERROR_MESSAGE,
-        ),
-      ),
-      500,
-    );
   }
 
   if (kind === "sessionstart") entry.marker = "start";

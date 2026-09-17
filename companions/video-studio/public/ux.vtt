@@ -1,19 +1,19 @@
 WEBVTT
 
-00:00:01.000 --> 00:00:04.500
-UX Designer prompt: Design the UX for the feedback widget.
+00:00:00.000 --> 00:00:04.500
+Scripted illustration, not a recorded run. Example prompt: Design the UX for the feedback widget.
 
 00:00:05.000 --> 00:00:08.500
-Frontier sketches a low fidelity wireframe.
+This scripted scene illustrates low fidelity wireframe generation.
 
 00:00:09.000 --> 00:00:27.000
-The wireframe shows a dismissible widget with three sentiment options, optional comment, and a screenshot toggle.
+The illustrative wireframe shows three sentiment options, an optional comment, and a screenshot toggle.
 
 00:00:28.000 --> 00:00:48.000
-The wireframe transitions into a live H T M L prototype, validated by axe-core. Zero accessibility violations. W C A G 2.1 A A pass.
+The scripted prototype includes an illustrative accessibility checklist. No audit was run; keyboard navigation, contrast, and W C A G conformance still require testing.
 
 00:00:48.000 --> 00:00:53.500
-Wireframe to prototype in fifty eight seconds. Mobile and desktop variants. Audit report committed.
+Illustrative workflow only. No measured completion time, audit results, or committed report are demonstrated.
 
 00:00:54.000 --> 00:01:00.000
-From prompt to accessible prototype. Powered by ux-designer dot agent dot m d.
+A scripted illustration of the UX Designer workflow, not evidence of verified accessibility or a recorded agent run.

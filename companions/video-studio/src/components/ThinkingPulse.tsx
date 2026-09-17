@@ -6,7 +6,7 @@ interface Props {
   durationFrames: number;
   accent: string;
   label: string;
-  elapsedSeconds: number;
+  elapsedSeconds?: number;
 }
 
 export const ThinkingPulse: React.FC<Props> = ({ startFrame, durationFrames, accent, label, elapsedSeconds }) => {
@@ -51,9 +51,9 @@ export const ThinkingPulse: React.FC<Props> = ({ startFrame, durationFrames, acc
         }}
       />
       <span>{label}</span>
-      <span style={{ color: brand.textDim, fontFamily: brand.fontMono, fontSize: 18 }}>
+      {elapsedSeconds !== undefined && <span style={{ color: brand.textDim, fontFamily: brand.fontMono, fontSize: 18 }}>
         {elapsedSeconds}s elapsed
-      </span>
+      </span>}
     </div>
   );
 };

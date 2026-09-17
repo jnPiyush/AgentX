@@ -7,6 +7,7 @@ import { EventEmitter } from 'node:events';
 import { generateKeyPairSync } from 'node:crypto';
 import { loadConfig } from '../src/config.js';
 import { createRuntime } from '../src/runtime.js';
+import runner from '../../whatsapp/src/frontierRunner.js';
 
 test('configuration fails closed and keeps credentials separate from runner configuration', () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-config-'));
@@ -40,13 +41,13 @@ test('runtime uses argument arrays and publishes only recognized progress metada
     const runtime = createRuntime({ repoPath: '/workspace' }, {
         async runFrontierProcess(args, config, hooks) {
             assert.deepEqual(args, ['run', 'engineer', 'Fix; shell syntax stays text']);
+            hooks.signal.addEventListener('abort', () => { terminated = true; }, { once: true });
             hooks.onChild(child);
             child.stdout.emit('data', Buffer.from('private credential\n Iteration 1/3...\n[SELF-REVIEW] Iteration 1\n[COMPACTION] private content\n'));
             runtime.stop();
             hooks.onChildDone(child);
             return { ok: true };
         },
-        terminateProcessTree(value) { assert.equal(value, child); terminated = true; },
     });
     await runtime.run({ agent: 'engineer', instruction: 'Fix; shell syntax stays text' }, phase => phases.push(phase));
     assert.equal(terminated, true);
@@ -76,16 +77,45 @@ test('GitHub configuration validates installation, repository, numeric users and
     } finally { fs.rmSync(directory, { recursive: true }); }
 });
 
-test('real PowerShell child reports progress and returns a nonzero exit as failure', async () => {
+test('mocked PowerShell child reports progress and returns a nonzero exit as failure', async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-runtime-'));
     fs.mkdirSync(path.join(directory, '.agentx'));
-    fs.writeFileSync(path.join(directory, '.agentx', 'frontier.ps1'), 'Write-Output "Iteration 1/2..."\nWrite-Output "private-output"\nexit 2\n');
+    fs.writeFileSync(path.join(directory, '.agentx', 'frontier.ps1'), '');
     const phases = [];
-    const runtime = createRuntime({ repoPath: directory, cliRelativePath: '.agentx/frontier.ps1', maxOutputChars: 4000, commandTimeoutMs: 10000 });
+    const runtime = createRuntime({ repoPath: directory, cliRelativePath: '.agentx/frontier.ps1', maxOutputChars: 4000, commandTimeoutMs: 10000 }, {
+        runFrontierProcess(args, config, hooks) {
+            return runner.runFrontierProcess(args, config, { ...hooks, spawn: () => {
+                const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() });
+                setImmediate(() => { child.stdout.emit('data', 'Iteration 1/2...\nprivate-output\n'); child.emit('close', 2); });
+                return child;
+            } });
+        },
+    });
     try {
         const result = await runtime.run({ agent: 'engineer', instruction: 'Fixture only' }, phase => phases.push(phase));
         assert.equal(result.ok, false);
         assert.equal(result.exitCode, 2);
         assert.deepEqual(phases, ['Agent iteration 1 of 2.']);
-    } finally { runtime.stop(); fs.rmSync(directory, { recursive: true }); }
+    } finally { await runtime.stop(); fs.rmSync(directory, { recursive: true }); }
+});
+
+test('runtime rejects later jobs and shutdown when a child cannot be reaped', async () => {
+    let calls = 0;
+    let release;
+    const child = { stdout: new EventEmitter() };
+    const runtime = createRuntime({}, {
+        async runFrontierProcess(_args, _config, hooks) {
+            calls += 1;
+            hooks.onChild(child);
+            release = () => hooks.onChildDone(child);
+            hooks.onTerminationFailure(child);
+            return { ok: false, terminationConfirmed: false };
+        },
+    });
+    assert.equal((await runtime.run({ agent: 'engineer', instruction: 'fixture' }, () => {})).ok, false);
+    assert.equal((await runtime.run({ agent: 'engineer', instruction: 'next' }, () => {})).ok, false);
+    assert.equal(calls, 1);
+    await assert.rejects(runtime.stop(), /termination was not confirmed/);
+    release();
+    await runtime.stop();
 });

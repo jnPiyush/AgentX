@@ -9,7 +9,7 @@ const { ConfirmationStore, classifyCommand } = require('../src/commandPolicy');
 const { createMessageHandler, shouldProcessMessage } = require('../src/messageHandler');
 const { createBot } = require('../src/bot');
 const { loadConfig } = require('../src/config');
-const { childEnvironment, createFrontierRunner, runFrontierProcess } = require('../src/frontierRunner');
+const { childEnvironment, createFrontierRunner, runFrontierProcess, terminateProcessTree } = require('../src/frontierRunner');
 const { startLoopWatcher } = require('../src/loopWatcher');
 const { transcribeVoiceNote } = require('../src/transcribe');
 
@@ -221,18 +221,71 @@ test('runner treats CLI FAIL output as failure and enforces output cap', async (
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-runner-'));
   const cli = path.join(root, 'fake.ps1');
   try {
-    fs.writeFileSync(cli, "Write-Output '[FAIL] rejected'", 'utf8');
+    fs.writeFileSync(cli, '', 'utf8');
     const config = baseConfig({ repoPath: root, cliRelativePath: 'fake.ps1', maxOutputChars: 1000 });
-    const failed = await runFrontierProcess([], config);
+    const spawnOutput = (text) => () => {
+      const child = new EventEmitter();
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      setImmediate(() => { child.stdout.emit('data', text); child.emit('close', 0); });
+      return child;
+    };
+    const failed = await runFrontierProcess([], config, { spawn: spawnOutput('[FAIL] rejected') });
     assert.equal(failed.ok, false);
-    fs.writeFileSync(cli, "Write-Output ('x' * 2000)", 'utf8');
-    const capped = await runFrontierProcess([], { ...config, maxOutputChars: 100 });
+    const capped = await runFrontierProcess([], { ...config, maxOutputChars: 100 }, {
+      spawn: spawnOutput('x'.repeat(2000)), terminate: () => {},
+    });
     assert.equal(capped.ok, false);
     assert.match(capped.text, /Output exceeded/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+for (const reason of ['timeout', 'overflow']) {
+  test(`runner waits for close after ${reason} before starting a queued writer`, async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-runner-close-'));
+    fs.writeFileSync(path.join(root, 'fake.ps1'), '');
+    const children = [];
+    let terminationRequested;
+    const terminating = new Promise(resolve => { terminationRequested = resolve; });
+    const runner = createFrontierRunner(baseConfig({
+      repoPath: root, cliRelativePath: 'fake.ps1', commandTimeoutMs: 50,
+    }), {
+      spawn: () => {
+        const child = new EventEmitter();
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        children.push(child);
+        return child;
+      },
+      terminate: () => { terminationRequested(); },
+    });
+    let settled = false;
+    const first = runner.run(['first']).then(result => { settled = true; return result; });
+    const second = runner.run(['second']);
+    try {
+      await new Promise(resolve => setImmediate(resolve));
+      if (reason === 'overflow') children[0].stdout.emit('data', 'x'.repeat(1001));
+      await terminating;
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(settled, false, 'termination request is not confirmation of close');
+      assert.equal(children.length, 1, 'queued writer must not launch before close');
+      children[0].emit('close', null);
+      assert.equal((await first).ok, false);
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(children.length, 2);
+      children[1].emit('close', 0);
+      assert.equal((await second).ok, true);
+    } finally {
+      const stopping = runner.stop();
+      await new Promise(resolve => setImmediate(resolve));
+      for (const child of children) child.emit('close', null);
+      await stopping;
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
 
 test('runner serializes commands and rejects queue overflow', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-queue-'));
@@ -253,7 +306,7 @@ test('runner serializes commands and rejects queue overflow', async () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-test('runner shutdown cancels queued jobs and timeout settles without close', async () => {
+test('runner shutdown cancels queued jobs and waits for child close', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentx-wa-stop-'));
   fs.writeFileSync(path.join(root, 'fake.ps1'), '', 'utf8');
   const children = [];
@@ -272,6 +325,7 @@ test('runner shutdown cancels queued jobs and timeout settles without close', as
   const queued = runner.run(['state']);
   await new Promise((resolve) => setTimeout(resolve, 5));
   const stopping = runner.stop();
+  children[0].emit('close', null);
   const firstResult = await first;
   const queuedResult = await queued;
   await stopping;
@@ -279,6 +333,96 @@ test('runner shutdown cancels queued jobs and timeout settles without close', as
   assert.match(queuedResult.text, /shutting down/);
   assert.equal(children.length, 1);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('runner blocks subsequent writers and retains a child when termination cannot be confirmed', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-runner-blocked-'));
+  fs.writeFileSync(path.join(root, 'fake.ps1'), '');
+  const child = new EventEmitter();
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  let launches = 0;
+  const runner = createFrontierRunner(baseConfig({ repoPath: root, cliRelativePath: 'fake.ps1', commandTimeoutMs: 10 }), {
+    spawn: () => { launches += 1; return child; },
+    terminate: async () => { throw new Error('taskkill failed: access denied'); },
+    terminationTimeoutMs: 20,
+  });
+  try {
+    const first = runner.run(['first']);
+    const queued = runner.run(['queued']);
+    const result = await first;
+    assert.equal(result.terminationConfirmed, false);
+    assert.match(result.text, /taskkill failed: access denied/);
+    assert.match((await queued).text, /blocked/);
+    assert.match((await runner.run(['later'])).text, /blocked/);
+    await assert.rejects(runner.stop(), /termination was not confirmed/);
+    assert.equal(launches, 1);
+    child.emit('close', null);
+    await assert.rejects(runner.stop(), /termination was not confirmed/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('runner Windows termination reports taskkill errors and never trusts child.killed', async () => {
+  for (const result of [{ status: 1, stderr: 'Access denied' }, { error: new Error('ETIMEDOUT') }]) {
+    const child = Object.assign(new EventEmitter(), { pid: 123, killed: true });
+    await assert.rejects(terminateProcessTree(child, {
+      platform: 'win32', spawnSync: () => result,
+    }), /taskkill failed/);
+    assert.equal(child.listenerCount('close'), 0);
+  }
+  const child = Object.assign(new EventEmitter(), { pid: 123, killed: true });
+  let settled = false;
+  const stopping = terminateProcessTree(child, {
+    platform: 'win32', spawnSync: () => ({ status: 0 }),
+  }).then(() => { settled = true; });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(settled, false);
+  child.emit('close', null);
+  await stopping;
+});
+
+test('runner POSIX teardown does not cancel group escalation when the shell closes early', async () => {
+  const child = Object.assign(new EventEmitter(), { pid: 123 });
+  const signals = [];
+  const stopping = terminateProcessTree(child, {
+    platform: 'linux', killGraceMs: 5, killTimeoutMs: 50,
+    kill: (_pid, signal) => signals.push(signal),
+  });
+  child.emit('close', null);
+  await stopping;
+  assert.deepEqual(signals, ['SIGTERM', 'SIGKILL']);
+});
+
+test('runner waits for the termination helper after child close', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-tree-confirm-'));
+  fs.writeFileSync(path.join(root, 'fake.ps1'), '');
+  const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() });
+  let confirm;
+  const confirmation = new Promise(resolve => { confirm = resolve; });
+  let settled = false;
+  try {
+    const result = runFrontierProcess([], baseConfig({ repoPath: root, cliRelativePath: 'fake.ps1' }), {
+      spawn: () => child, terminate: () => confirmation,
+    }).then(value => { settled = true; return value; });
+    child.stdout.emit('data', 'x'.repeat(1001));
+    child.emit('close', null);
+    await new Promise(resolve => setImmediate(resolve));
+    const wasSettled = settled;
+    confirm();
+    await result;
+    assert.equal(wasSettled, false, 'child close alone does not confirm process-tree termination');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('runner POSIX teardown escalates to SIGKILL and bounds a missing close', async () => {
+  const child = Object.assign(new EventEmitter(), { pid: 123, killed: true });
+  const signals = [];
+  await assert.rejects(terminateProcessTree(child, {
+    platform: 'linux', killGraceMs: 5, killTimeoutMs: 30,
+    kill: (pid, signal) => { assert.equal(pid, -123); signals.push(signal); },
+  }), /did not close/);
+  assert.deepEqual(signals, ['SIGTERM', 'SIGKILL']);
+  assert.equal(child.listenerCount('close'), 0);
 });
 
 test('transcription validates MIME, size, timeout, and success', async () => {
@@ -345,7 +489,51 @@ test('loop watcher preserves valid state across malformed writes', async () => {
   assert.ok(messages.some((text) => text.includes('Iteration 1')));
 });
 
-test('bot uses message_create, keeps Chromium sandbox enabled, and shuts down once', async () => {
+test('loop watcher switches to canonical state and never falls through malformed canonical content', async (context) => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-wa-precedence-'));
+  const legacy = path.join(repo, '.agentx', 'state', 'loop-state.json');
+  const canonical = path.join(repo, '.frontier', 'state', 'loop-state.json');
+  const transitional = path.join(repo, '.hve', 'state', 'loop-state.json');
+  const write = (file, iteration) => {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({ status: 'active', active: true, iteration, history: [] }));
+  };
+  write(legacy, 0);
+  context.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
+  const messages = [];
+  const watcher = startLoopWatcher({
+    config: baseConfig({ repoPath: repo, notifications: { enabled: true, targets: ['14155550123'], events: ['iteration'], pollMs: 20 } }),
+    client: { sendMessage: async (_jid, text) => messages.push(text) },
+    fsImpl: { watch: () => Object.assign(new EventEmitter(), { close() {} }) },
+  });
+  const poll = async () => { context.mock.timers.tick(20); await new Promise(resolve => setImmediate(resolve)); };
+  try {
+    write(legacy, 1);
+    await poll();
+    write(canonical, 2);
+    write(legacy, 8);
+    await poll();
+    fs.writeFileSync(canonical, '{');
+    write(legacy, 9);
+    await poll();
+    assert.equal(messages.length, 2);
+    assert.match(messages[0], /Iteration 1/);
+    assert.match(messages[1], /Iteration 2/);
+    write(canonical, 3);
+    await poll();
+    assert.match(messages[2], /Iteration 3/);
+    write(transitional, 4);
+    fs.unlinkSync(canonical);
+    await poll();
+    assert.match(messages[3], /Iteration 4/);
+    fs.unlinkSync(transitional);
+    await poll();
+    assert.match(messages[4], /Iteration 9/);
+  } finally { await watcher.stop(); fs.rmSync(repo, { recursive: true, force: true }); }
+});
+
+test('bot uses message_create, keeps Chromium sandbox enabled, and shuts down once', async (context) => {
+  const permissions = context.mock.method(fs, 'chmodSync', () => {});
   class FakeClient extends EventEmitter {
     constructor(options) { super(); this.options = options; this.destroyCount = 0; }
     async initialize() {}
@@ -370,4 +558,19 @@ test('bot uses message_create, keeps Chromium sandbox enabled, and shuts down on
   assert.equal(runnerStops, 1);
   assert.equal(watcherStops, 1);
   assert.equal(bot.client.destroyCount, 1);
+  assert.equal(permissions.mock.callCount(), 1);
+});
+
+test('bot destroys its client even when runner teardown fails', async () => {
+  let destroyed = false;
+  class FakeClient extends EventEmitter {
+    async destroy() { destroyed = true; }
+  }
+  const bot = createBot({
+    config: baseConfig(), ClientClass: FakeClient, AuthClass: class {},
+    runnerFactory: () => ({ stop: async () => { throw new Error('termination unconfirmed'); } }),
+    handlerFactory: () => async () => {},
+  });
+  await assert.rejects(bot.shutdown(), /termination unconfirmed/);
+  assert.equal(destroyed, true);
 });

@@ -163,3 +163,41 @@ and scrub gates. Extension coverage is 82.65 percent for statements and lines,
 token and ESLint baselines still contain unrelated pre-existing debt; focused
 checks for the changed surfaces pass. Independent review and compound capture
 remain before final closeout.
+
+## Follow-up Repair Delivery - 2026-09-17
+
+The user authorized committing and pushing the accumulated repairs after local
+review. This follow-up does not change the historical results above, bump the
+version, publish a package, or certify production behavior.
+
+The delivery includes runtime permission and credential boundaries, process
+cancellation, installer/configuration retention, dependency and workflow
+corrections, Mac launcher/argument handling, evidence-checker recovery, and
+GPT-6 Astra preferences for Architect and UX Designer. It also includes the
+associated regression tests and corrected UX guidance. The two unrelated drafts
+under `docs/artifacts/reviews/agentx-issues.md` and
+`prompts/ai-coding-harness-development.md` remain outside this commit.
+
+Local evidence remains in `build/`: `product-repair-independent-final.json`
+approved its scope at 90/100; `mac-loop-independent-review.json` and
+`evidence-independent-review.json` each passed the native rubric at 94/100.
+The latest evidence repair completed five iterations with zero HIGH/MEDIUM
+review findings. Its two LOW follow-ups are descendant-cleanup test coverage
+and redundant process configuration. Current reviewed hashes were checked
+before delivery; older test results are not represented as fresh reruns.
+
+Commit verification uses the staged diff, repository hooks, current review
+hashes, and the focused workflow contracts. No full-suite rerun is required
+solely for committing unchanged reviewed code. The delivery sequence is to
+validate this plan update, finish its documentation-only review loop, stage the
+intended files, commit, push `master` without force, and verify the remote SHA.
+A hook failure or non-fast-forward push stops delivery without disabling gates
+or rewriting history.
+
+Reusable recovery and test-selection guidance stays in [the guide](../../GUIDE.md)
+and [the shared protocol](../../../.github/AGENT-PROTOCOL.md); no duplicate
+Markdown change report is added. Native macOS execution, live Astra output
+quality, hosted integrations, and UX certification remain outside this local
+evidence. The UX assessment found missing native-detector/axe/mobile evidence
+and did not establish an improvement attributable to Impeccable. Publication
+and the broader instruction-token backlog remain separate work.

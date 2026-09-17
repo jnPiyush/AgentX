@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { execShell, execShellStreaming } from './utils/shell';
+import { execShell, execShellStreaming, type ShellExecutionOptions } from './utils/shell';
 import { resolveFrontierStatePath } from './utils/frontierPaths';
 import {
   buildCliCommand,
@@ -169,8 +169,8 @@ export class FrontierContext {
  private async getWorkspaceSecret(
   storageKey: string,
   providerId: string,
+  root = this.workspaceRoot ?? this.firstWorkspaceFolder,
  ): Promise<string | undefined> {
-  const root = this.workspaceRoot ?? this.firstWorkspaceFolder;
   if (!root || !this.extensionContext.secrets?.get) {
     return undefined;
   }
@@ -186,8 +186,7 @@ export class FrontierContext {
   return undefined;
  }
 
- async storeWorkspaceLlmSecret(providerId: 'openai-api' | 'anthropic-api' | 'claude-code', secret: string): Promise<void> {
-  const root = this.workspaceRoot ?? this.firstWorkspaceFolder;
+ async storeWorkspaceLlmSecret(providerId: 'openai-api' | 'anthropic-api' | 'claude-code', secret: string, root = this.workspaceRoot ?? this.firstWorkspaceFolder): Promise<void> {
   if (!root || !this.extensionContext.secrets?.store) {
     return;
   }
@@ -203,8 +202,7 @@ export class FrontierContext {
   );
  }
 
- async deleteWorkspaceLlmSecret(providerId: 'openai-api' | 'anthropic-api' | 'claude-code'): Promise<void> {
-  const root = this.workspaceRoot ?? this.firstWorkspaceFolder;
+ async deleteWorkspaceLlmSecret(providerId: 'openai-api' | 'anthropic-api' | 'claude-code', root = this.workspaceRoot ?? this.firstWorkspaceFolder): Promise<void> {
   if (!root || !this.extensionContext.secrets?.delete) {
     return;
   }
@@ -221,17 +219,16 @@ export class FrontierContext {
   }
  }
 
- async hasWorkspaceLlmSecret(providerId: 'openai-api' | 'anthropic-api' | 'claude-code'): Promise<boolean> {
+ async hasWorkspaceLlmSecret(providerId: 'openai-api' | 'anthropic-api' | 'claude-code', root = this.workspaceRoot ?? this.firstWorkspaceFolder): Promise<boolean> {
   const storageKey = providerId === 'openai-api'
     ? OPENAI_SECRET_STORAGE_KEY
     : providerId === 'claude-code'
       ? CLAUDE_CODE_SECRET_STORAGE_KEY
     : ANTHROPIC_SECRET_STORAGE_KEY;
-  return !!(await this.getWorkspaceSecret(storageKey, providerId));
+  return !!(await this.getWorkspaceSecret(storageKey, providerId, root));
  }
 
- private async getWorkspaceLlmEnvOverrides(): Promise<NodeJS.ProcessEnv> {
-  const root = this.workspaceRoot ?? this.firstWorkspaceFolder;
+ private async getWorkspaceLlmEnvOverrides(root = this.workspaceRoot ?? this.firstWorkspaceFolder): Promise<NodeJS.ProcessEnv> {
   if (!root) {
     return {};
   }
@@ -319,17 +316,17 @@ export class FrontierContext {
     }
   }
 
-  const openAiSecret = await this.getWorkspaceSecret(OPENAI_SECRET_STORAGE_KEY, 'openai-api');
+  const openAiSecret = await this.getWorkspaceSecret(OPENAI_SECRET_STORAGE_KEY, 'openai-api', root);
   if (openAiSecret) {
     env.OPENAI_API_KEY = openAiSecret;
   }
 
-  const anthropicSecret = await this.getWorkspaceSecret(ANTHROPIC_SECRET_STORAGE_KEY, 'anthropic-api');
+  const anthropicSecret = await this.getWorkspaceSecret(ANTHROPIC_SECRET_STORAGE_KEY, 'anthropic-api', root);
   if (anthropicSecret) {
     env.ANTHROPIC_API_KEY = anthropicSecret;
   }
 
-  const claudeCodeSecret = await this.getWorkspaceSecret(CLAUDE_CODE_SECRET_STORAGE_KEY, 'claude-code');
+  const claudeCodeSecret = await this.getWorkspaceSecret(CLAUDE_CODE_SECRET_STORAGE_KEY, 'claude-code', root);
   if (claudeCodeSecret) {
     env.ANTHROPIC_AUTH_TOKEN = claudeCodeSecret;
   }
@@ -340,14 +337,13 @@ export class FrontierContext {
  /**
   * Execute an Frontier CLI subcommand and return stdout.
   */
- async runCli(subcommand: string, cliArgs: string[] = []): Promise<string> {
-  const root = this.workspaceRoot;
+ async runCli(subcommand: string, cliArgs: string[] = [], root = this.workspaceRoot): Promise<string> {
   if (!root) { throw new Error('No workspace open.'); }
 
   const cliPath = this.getCliCommand();
   const shell = this.getShell();
   const invocation = buildCliInvocation(cliPath, shell, subcommand, cliArgs);
-  const llmEnv = await this.getWorkspaceLlmEnvOverrides();
+  const llmEnv = await this.getWorkspaceLlmEnvOverrides(root);
 
   return execShell(invocation.command, root, invocation.shellKind, {
    ...llmEnv,
@@ -364,21 +360,22 @@ export class FrontierContext {
   cliArgs: string[] = [],
   onLine?: (line: string, source: 'stdout' | 'stderr') => void,
   envOverrides?: NodeJS.ProcessEnv,
+  root = this.workspaceRoot,
+  execution: ShellExecutionOptions = {},
  ): Promise<string> {
-  const root = this.workspaceRoot;
   if (!root) { throw new Error('No workspace open.'); }
 
   const cliPath = this.getCliCommand();
   const shell = this.getShell();
   const invocation = buildCliInvocation(cliPath, shell, subcommand, cliArgs);
-    const llmEnv = await this.getWorkspaceLlmEnvOverrides();
+    const llmEnv = await this.getWorkspaceLlmEnvOverrides(root);
 
   return execShellStreaming(invocation.command, root, invocation.shellKind, onLine, {
      ...llmEnv,
    ...envOverrides,
    [FRONTIER_WORKSPACE_ROOT_ENV]: root,
    AGENTX_WORKSPACE_ROOT: root,
-  });
+  }, { timeoutMs: subcommand === 'run' ? 30 * 60_000 : undefined, ...execution });
  }
 
  async getPendingClarification(): Promise<PendingClarificationState | undefined> {

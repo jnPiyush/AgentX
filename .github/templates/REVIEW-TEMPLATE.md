@@ -30,6 +30,13 @@ inputs:
 **Review Date**: ${date} 
 **Review Duration**: {time spent}
 
+**Assessment State**: NOT ASSESSED. A scaffold is not a review or approval.
+Leave checks unchecked until current, scope-specific evidence supports them.
+Replace NOT ASSESSED with PASS, FAIL, or N/A only after assessment; justify N/A.
+Examples and diagrams are illustrative, not observed findings or measurements.
+Structural checks do not certify roles, skills, security, task completion, or
+production readiness. Record untested scope and remaining gates explicitly.
+
 ---
 
 ## Table of Contents
@@ -71,7 +78,7 @@ inputs:
 - **Test Files**: {count}
 
 ### Verdict
-**Status**: `[PASS]` APPROVED | `[WARN]` CHANGES REQUESTED | `[FAIL]` REJECTED
+**Status**: NOT ASSESSED
 
 **Confidence Level**: High | Medium | Low 
 **Recommendation**: {Merge | Request Changes | Reject}
@@ -88,16 +95,17 @@ Complete this pass first. If any row is `[FAIL]`, stop the review, return `CHANG
 
 | Check | Status | Evidence |
 |-------|--------|----------|
-| PRD acceptance criteria all addressed (see Section 8) | `[PASS]` / `[FAIL]` / `[N/A]` | {link or note} |
-| ADR decision honored (no silent deviation) | `[PASS]` / `[FAIL]` / `[N/A]` | {ADR-### link} |
-| Tech Spec contract honored (interfaces, schemas, error model) | `[PASS]` / `[FAIL]` / `[N/A]` | {SPEC-### link} |
-| UX prototype intent honored for UI-bearing change | `[PASS]` / `[FAIL]` / `[N/A]` | {UX-### link} |
-| Scope matches issue (no scope creep, no scope cut) | `[PASS]` / `[FAIL]` | {issue link} |
-| Non-goals from PRD respected | `[PASS]` / `[FAIL]` / `[N/A]` | {note} |
-| Quality loop completed (`loop status` = complete) | `[PASS]` / `[FAIL]` | {iteration count} |
-| Fresh verification evidence present (tests run on current commit) | `[PASS]` / `[FAIL]` | {commit SHA + run log} |
+| PRD acceptance criteria all addressed (see Section 8) | NOT ASSESSED | {link or note} |
+| ADR decision honored (no silent deviation) | NOT ASSESSED | {ADR-### link} |
+| Tech Spec contract honored (interfaces, schemas, error model) | NOT ASSESSED | {SPEC-### link} |
+| UX prototype intent honored for UI-bearing change | NOT ASSESSED | {UX-### link} |
+| Scope matches issue (no scope creep, no scope cut) | NOT ASSESSED | {issue link} |
+| Non-goals from PRD respected | NOT ASSESSED | {note} |
+| Quality loop completed (`loop status` = complete) | NOT ASSESSED | {iteration count} |
+| Fresh verification evidence present (tests run on current commit) | NOT ASSESSED | {commit SHA + run log} |
 
-**Pass A verdict**: `[PASS]` proceed to Pass B | `[FAIL]` return CHANGES REQUESTED with the failing rows above as required fixes.
+**Pass A verdict**: NOT ASSESSED. Proceed to Pass B only after evidence supports
+PASS; otherwise record CHANGES REQUESTED or BLOCKED with the failing or unassessed rows.
 
 ### Pass B: Code Quality & Craft
 
@@ -107,7 +115,7 @@ Only run when Pass A is `[PASS]`. Covers sections 2-7 and 9-12 below. Pass B can
 
 ## 2. Code Quality
 
-### `[PASS]` Strengths
+### Strengths
 1. **{Strength 1}**: {Description with file reference}
  - Example: Well-structured service layer with clear separation of concerns ([ServiceName.cs](path/to/ServiceName.cs#L20-L45))
 
@@ -117,7 +125,7 @@ Only run when Pass A is `[PASS]`. Covers sections 2-7 and 9-12 below. Pass B can
 3. **{Strength 3}**: {Description}
  - Example: Excellent use of async/await patterns
 
-### `[WARN]` Issues Found
+### Issues Found
 
 | Severity | Issue | File:Line | Recommendation |
 |----------|-------|-----------|----------------|
@@ -171,23 +179,23 @@ public async Task<User> GetUserAsync(string userId)
 ## 3. Architecture & Design
 
 ### Design Patterns Used
-- [x] Repository Pattern ([IEntityRepository.cs](path))
-- [x] Dependency Injection
-- [x] Factory Pattern ([EntityFactory.cs](path))
-- [ ] Observer Pattern (not needed)
+- [ ] Repository Pattern - NOT ASSESSED; {evidence or N/A rationale}
+- [ ] Dependency Injection - NOT ASSESSED; {evidence or N/A rationale}
+- [ ] Factory Pattern - NOT ASSESSED; {evidence or N/A rationale}
+- [ ] Observer Pattern - NOT ASSESSED; {evidence or N/A rationale}
 
 ### SOLID Principles
-- **Single Responsibility**: `[PASS]` Pass - Each class has one clear purpose
-- **Open/Closed**: `[PASS]` Pass - Extensions possible without modification
-- **Liskov Substitution**: `[PASS]` Pass - Interfaces properly implemented
-- **Interface Segregation**: `[WARN]` Warning - `IEntityService` has too many methods (consider splitting)
-- **Dependency Inversion**: `[PASS]` Pass - Depends on abstractions, not concretions
+- **Single Responsibility**: NOT ASSESSED; {evidence}
+- **Open/Closed**: NOT ASSESSED; {evidence}
+- **Liskov Substitution**: NOT ASSESSED; {evidence}
+- **Interface Segregation**: NOT ASSESSED; {evidence}
+- **Dependency Inversion**: NOT ASSESSED; {evidence}
 
 ### Code Organization
-- **Folder Structure**: `[PASS]` Follows standard conventions
-- **Naming**: `[PASS]` Clear, descriptive names
-- **File Size**: `[WARN]` `EntityService.cs` is 450 lines (consider splitting)
-- **Complexity**: `[PASS]` Methods are small and focused (avg 15 lines)
+- **Folder Structure**: NOT ASSESSED; {evidence}
+- **Naming**: NOT ASSESSED; {evidence}
+- **File Size**: NOT ASSESSED; {measurement}
+- **Complexity**: NOT ASSESSED; {measurement}
 
 ---
 
@@ -209,19 +217,14 @@ public async Task<User> GetUserAsync(string userId)
 
 ### Test Quality Assessment
 
-#### `[PASS]` Well-Tested
-- `EntityService.CreateAsync()` - Comprehensive unit tests with edge cases
-- `EntityController.Post()` - Integration tests cover happy + error paths
-- Authorization logic - All permission scenarios tested
+#### Well-Tested
+NOT ASSESSED. {List behaviors verified by current tests and link the results.}
 
-#### `[WARN]` Needs More Tests
-- `EntityService.UpdateAsync()` - Missing null input test
-- `EntityValidator.Validate()` - Missing edge case tests
-- Error handling - Need tests for network failures
+#### Needs More Tests
+NOT ASSESSED. {List uncovered cases and their risks.}
 
-#### `[FAIL]` Not Tested
-- `EntityMapper.ToDto()` - No tests found
-- Retry logic in `EntityRepository` - Not covered
+#### Not Tested
+NOT ASSESSED. {List untested behaviors and unavailable prerequisites.}
 
 ### Test Code Review
 
@@ -246,7 +249,7 @@ public async Task CreateAsync_ValidDto_ReturnsEntity()
  mockRepo.Verify(r => r.AddAsync(It.IsAny<Entity>()), Times.Once);
 }
 ```
-`[PASS]` **Good**: AAA pattern, clear naming, verifies behavior, uses FluentAssertions
+**Illustrative strengths**: AAA pattern, clear naming, verifies behavior, uses FluentAssertions
 
 **Example Test Needing Improvement**:
 ```csharp
@@ -257,24 +260,24 @@ public async Task Test1()
  Assert.NotNull(result);
 }
 ```
-`[FAIL]` **Issues**: Vague name, unclear intent, doesn't test meaningful scenario
+**Illustrative issues**: Vague name, unclear intent, doesn't test meaningful scenario
 
 ---
 
 ## 5. Security Review
 
 ### Security Checklist
-- [x] **No Hardcoded Secrets**: Checked all files, secrets in Key Vault `[PASS]`
-- [x] **SQL Parameterization**: All queries use parameters `[PASS]`
-- [x] **Input Validation**: FluentValidation applied to all DTOs `[PASS]`
-- [x] **Authentication**: JWT tokens validated correctly `[PASS]`
-- [x] **Authorization**: Role checks present on sensitive endpoints `[PASS]`
-- [ ] **HTTPS Only**: `[WARN]` Missing HTTPS redirect middleware
-- [x] **CORS Configuration**: Properly restricted origins `[PASS]`
-- [x] **Dependency Scan**: No known vulnerabilities `[PASS]`
+- [ ] **No Hardcoded Secrets**: NOT ASSESSED; {scan scope and results}
+- [ ] **SQL Parameterization**: NOT ASSESSED; {query review evidence}
+- [ ] **Input Validation**: NOT ASSESSED; {boundary tests}
+- [ ] **Authentication**: NOT ASSESSED; {positive and negative tests}
+- [ ] **Authorization**: NOT ASSESSED; {permission tests}
+- [ ] **HTTPS Only**: NOT ASSESSED; {transport evidence}
+- [ ] **CORS Configuration**: NOT ASSESSED; {origin policy evidence}
+- [ ] **Dependency Scan**: NOT ASSESSED; {manifests, findings, errors and unscanned scope}
 
 ### Vulnerabilities Found
-**None** | **{count} found**
+NOT ASSESSED. {Record confirmed findings, or a scoped no-findings result with evidence.}
 
 #### Vulnerability 1: {Title}
 **Severity**: Critical | High | Medium | Low 
@@ -314,16 +317,16 @@ app.Use(async (context, next) =>
 ## 6. Performance Review
 
 ### Performance Checklist
-- [x] **Async/Await**: Used correctly for all I/O operations `[PASS]`
-- [ ] **N+1 Queries**: `[WARN]` Found in `GetEntitiesWithRelated()` method
-- [x] **Database Indexes**: Added indexes on frequently queried fields `[PASS]`
-- [x] **Caching**: Redis caching implemented for read-heavy operations `[PASS]`
-- [x] **Pagination**: Implemented on list endpoints `[PASS]`
-- [ ] **Connection Pooling**: `[WARN]` Not configured in `DbContext`
+- [ ] **Async/Await**: NOT ASSESSED; {I/O review evidence}
+- [ ] **N+1 Queries**: NOT ASSESSED; {query measurements}
+- [ ] **Database Indexes**: NOT ASSESSED; {query plan evidence}
+- [ ] **Caching**: NOT ASSESSED; {invalidation and performance tests}
+- [ ] **Pagination**: NOT ASSESSED; {boundary tests}
+- [ ] **Connection Pooling**: NOT ASSESSED; {configuration and load evidence}
 
 ### Performance Issues
 
-#### `[WARN]` N+1 Query Problem
+#### N+1 Query Problem (Illustrative Example)
 **Location**: [EntityService.cs](path/to/EntityService.cs#L120)
 
 **Problem**:
@@ -362,11 +365,11 @@ public async Task<IEnumerable<EntityDto>> GetAllWithRelatedAsync()
 ## 7. Documentation Review
 
 ### Documentation Checklist
-- [x] **XML Documentation**: All public APIs documented `[PASS]`
-- [x] **Inline Comments**: Complex logic explained `[PASS]`
-- [ ] **README Updated**: `[WARN]` New feature not mentioned in README
-- [x] **API Documentation**: OpenAPI/Swagger updated `[PASS]`
-- [ ] **Migration Guide**: `[WARN]` Breaking changes need migration guide
+- [ ] **XML Documentation**: NOT ASSESSED; {reviewed API scope}
+- [ ] **Inline Comments**: NOT ASSESSED; {reviewed logic}
+- [ ] **README Updated**: NOT ASSESSED; {behavior comparison}
+- [ ] **API Documentation**: NOT ASSESSED; {contract comparison}
+- [ ] **Migration Guide**: NOT ASSESSED; {compatibility impact}
 
 ### Documentation Quality
 
@@ -380,14 +383,14 @@ public async Task<IEnumerable<EntityDto>> GetAllWithRelatedAsync()
 /// <exception cref="ValidationException">Thrown when dto validation fails.</exception>
 public async Task<Entity> CreateAsync(CreateEntityDto dto)
 ```
-`[PASS]` **Good**: Describes parameters, return value, and exceptions
+**Illustrative strengths**: Describes parameters, return value, and exceptions
 
 **Needs Improvement**:
 ```csharp
 // Process the entity
 public async Task<Entity> ProcessAsync(Entity entity)
 ```
-`[FAIL]` **Issues**: Vague XML doc, unclear what "process" means
+**Illustrative issues**: Vague XML doc, unclear what "process" means
 
 ---
 
@@ -396,22 +399,22 @@ public async Task<Entity> ProcessAsync(Entity entity)
 ### Story Acceptance Criteria
 From Issue #{story-id}:
 
-- [x] **AC1**: User can create entity via API `[PASS]`
- - **Verified**: POST /api/v1/entities returns 201 with entity
+- [ ] **AC1**: {Acceptance criterion} - NOT ASSESSED
+ - **Evidence**: {command, result and current source revision}
 
-- [x] **AC2**: Validation prevents invalid data `[PASS]`
- - **Verified**: Returns 400 with error details for invalid input
+- [ ] **AC2**: {Acceptance criterion} - NOT ASSESSED
+ - **Evidence**: {command, result and current source revision}
 
-- [ ] **AC3**: Email notification sent on creation `[WARN]`
- - **Issue**: Email service integration missing
+- [ ] **AC3**: {Acceptance criterion} - NOT ASSESSED
+ - **Evidence**: {command, result and current source revision}
 
-- [x] **AC4**: All operations logged `[PASS]`
- - **Verified**: Structured logging with correlation IDs
+- [ ] **AC4**: {Acceptance criterion} - NOT ASSESSED
+ - **Evidence**: {command, result and current source revision}
 
 ### Regression Testing
-- [x] Existing features still work `[PASS]`
-- [x] No breaking changes to public APIs `[PASS]`
-- [x] Backward compatibility maintained `[PASS]`
+- [ ] Existing features still work - NOT ASSESSED; {regression evidence}
+- [ ] No breaking changes to public APIs - NOT ASSESSED; {contract evidence}
+- [ ] Backward compatibility maintained - NOT ASSESSED; {compatibility evidence}
 
 ---
 
@@ -462,22 +465,22 @@ graph TD
 
 | Category | Check | Status | Notes |
 |----------|-------|--------|-------|
-| **Prompt Engineering** | System prompt externalized (not inline strings) | `[PASS]` / `[FAIL]` | |
-| **Prompt Engineering** | Prompt injection defenses present | `[PASS]` / `[FAIL]` | |
-| **Prompt Engineering** | Structured output schema enforced | `[PASS]` / `[FAIL]` | |
-| **Model Governance** | Model version pinned with date suffix | `[PASS]` / `[FAIL]` | |
-| **Model Governance** | Fallback model from different provider configured | `[PASS]` / `[FAIL]` | |
-| **Model Governance** | Token budget enforced per request | `[PASS]` / `[FAIL]` | |
-| **Evaluation** | Evaluation dataset exists with {N}+ test cases | `[PASS]` / `[FAIL]` | |
-| **Evaluation** | Quality thresholds defined (coherence, relevance, etc.) | `[PASS]` / `[FAIL]` | |
-| **Evaluation** | LLM-as-judge uses different model than agent | `[PASS]` / `[FAIL]` | |
-| **Safety** | Input/output guardrails configured | `[PASS]` / `[FAIL]` | |
-| **Safety** | PII detection on model outputs | `[PASS]` / `[FAIL]` | |
-| **Safety** | Human-in-the-loop for high-risk actions | `[PASS]` / `[FAIL]` | |
-| **Observability** | All LLM calls traced (OpenTelemetry / equivalent) | `[PASS]` / `[FAIL]` | |
-| **Observability** | Token usage and cost tracked per request | `[PASS]` / `[FAIL]` | |
-| **Error Handling** | Graceful fallback when model unavailable | `[PASS]` / `[FAIL]` | |
-| **Error Handling** | Timeout configured with fallback response | `[PASS]` / `[FAIL]` | |
+| **Prompt Engineering** | System prompt externalized (not inline strings) | NOT ASSESSED | {evidence} |
+| **Prompt Engineering** | Prompt injection defenses present | NOT ASSESSED | {evidence} |
+| **Prompt Engineering** | Structured output schema enforced | NOT ASSESSED | {evidence} |
+| **Model Governance** | Model version pinned with date suffix | NOT ASSESSED | {evidence} |
+| **Model Governance** | Fallback model from different provider configured | NOT ASSESSED | {evidence} |
+| **Model Governance** | Token budget enforced per request | NOT ASSESSED | {evidence} |
+| **Evaluation** | Evaluation dataset exists with {N}+ test cases | NOT ASSESSED | {evidence} |
+| **Evaluation** | Quality thresholds defined (coherence, relevance, etc.) | NOT ASSESSED | {evidence} |
+| **Evaluation** | LLM-as-judge uses different model than agent | NOT ASSESSED | {evidence} |
+| **Safety** | Input/output guardrails configured | NOT ASSESSED | {evidence} |
+| **Safety** | PII detection on model outputs | NOT ASSESSED | {evidence} |
+| **Safety** | Human-in-the-loop for high-risk actions | NOT ASSESSED | {evidence} |
+| **Observability** | All LLM calls traced (OpenTelemetry / equivalent) | NOT ASSESSED | {evidence} |
+| **Observability** | Token usage and cost tracked per request | NOT ASSESSED | {evidence} |
+| **Error Handling** | Graceful fallback when model unavailable | NOT ASSESSED | {evidence} |
+| **Error Handling** | Timeout configured with fallback response | NOT ASSESSED | {evidence} |
 
 ### GenAI Issues Found
 
@@ -496,27 +499,27 @@ graph TD
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Tool input parameters validated with JSON Schema | `[PASS]` / `[FAIL]` | |
-| One action per tool (no multi-mode mega-tools) | `[PASS]` / `[FAIL]` | |
-| Tool names use `verb_noun` convention | `[PASS]` / `[FAIL]` | |
-| Resource URIs follow consistent naming scheme | `[PASS]` / `[FAIL]` | |
-| Path traversal prevention on file-access tools | `[PASS]` / `[FAIL]` | |
-| SSRF prevention on URL-accepting tools | `[PASS]` / `[FAIL]` | |
-| Error responses are structured MCP errors (not raw exceptions) | `[PASS]` / `[FAIL]` | |
-| Destructive tools require confirmation | `[PASS]` / `[FAIL]` | |
-| Transport security (TLS for SSE/HTTP) | `[PASS]` / `[FAIL]` | |
-| All tool calls logged with context | `[PASS]` / `[FAIL]` | |
+| Tool input parameters validated with JSON Schema | NOT ASSESSED | {evidence} |
+| One action per tool (no multi-mode mega-tools) | NOT ASSESSED | {evidence} |
+| Tool names use `verb_noun` convention | NOT ASSESSED | {evidence} |
+| Resource URIs follow consistent naming scheme | NOT ASSESSED | {evidence} |
+| Path traversal prevention on file-access tools | NOT ASSESSED | {evidence} |
+| SSRF prevention on URL-accepting tools | NOT ASSESSED | {evidence} |
+| Error responses are structured MCP errors (not raw exceptions) | NOT ASSESSED | {evidence} |
+| Destructive tools require confirmation | NOT ASSESSED | {evidence} |
+| Transport security (TLS for SSE/HTTP) | NOT ASSESSED | {evidence} |
+| All tool calls logged with context | NOT ASSESSED | {evidence} |
 
 ### MCP App Checklist (if applicable)
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| registerAppTool() calls have clear descriptions | `[PASS]` / `[FAIL]` | |
-| Views render correctly in target host widths | `[PASS]` / `[FAIL]` | |
-| WCAG 2.1 AA accessibility in iframe content | `[PASS]` / `[FAIL]` | |
-| Dark/light theme support | `[PASS]` / `[FAIL]` | |
-| State management handles host disconnection gracefully | `[PASS]` / `[FAIL]` | |
-| Event cleanup on view unmount | `[PASS]` / `[FAIL]` | |
+| registerAppTool() calls have clear descriptions | NOT ASSESSED | {evidence} |
+| Views render correctly in target host widths | NOT ASSESSED | {evidence} |
+| WCAG 2.1 AA accessibility in iframe content | NOT ASSESSED | {evidence} |
+| Dark/light theme support | NOT ASSESSED | {evidence} |
+| State management handles host disconnection gracefully | NOT ASSESSED | {evidence} |
+| Event cleanup on view unmount | NOT ASSESSED | {evidence} |
 
 ### MCP Issues Found
 
@@ -547,18 +550,18 @@ graph TD
 ## 12. Compliance & Standards
 
 ### Coding Standards
-- [x] Follows C# naming conventions `[PASS]`
-- [x] Follows project code style (EditorConfig) `[PASS]`
-- [x] No compiler warnings `[PASS]`
-- [x] No linter errors `[PASS]`
-- [x] Follows Skills.md guidelines `[PASS]`
+- [ ] Follows applicable naming conventions - NOT ASSESSED; {evidence}
+- [ ] Follows project code style (EditorConfig) - NOT ASSESSED; {evidence}
+- [ ] No compiler warnings - NOT ASSESSED; {build output}
+- [ ] No linter errors - NOT ASSESSED; {lint output}
+- [ ] Follows applicable Skills.md guidelines - NOT ASSESSED; {scope and evidence}
 
 ### Production Requirements (Skills.md)
-- [x] 80% test coverage `[PASS]`
-- [x] Security checklist completed `[PASS]`
-- [x] Performance considerations addressed `[PASS]`
-- [x] Documentation complete `[PASS]`
-- [x] Error handling implemented `[PASS]`
+- [ ] 80% test coverage - NOT ASSESSED; {coverage report and scope}
+- [ ] Security checklist completed - NOT ASSESSED; {review evidence}
+- [ ] Performance considerations addressed - NOT ASSESSED; {measurements}
+- [ ] Documentation complete - NOT ASSESSED; {reviewed documents}
+- [ ] Error handling implemented - NOT ASSESSED; {failure-path tests}
 
 ---
 
@@ -586,7 +589,7 @@ graph TD
 ## 14. Decision
 
 ### Verdict
-**Status**: `[PASS]` APPROVED | `[WARN]` CHANGES REQUESTED | `[FAIL]` REJECTED
+**Status**: NOT ASSESSED
 
 ### Weighted Score (optional for non-UI reviews; MANDATORY for UI-bearing reviews)
 
@@ -619,10 +622,10 @@ Gate rules:
 {Explain the decision. If a weighted score was computed, cite the floors that drove the verdict, not the total alone.}
 
 **If APPROVED**:
-- Code meets all acceptance criteria
-- Quality standards satisfied
-- Security/performance concerns addressed
-- Ready for production deployment
+- {Evidence that scoped acceptance criteria are met}
+- {Evidence that applicable quality gates are satisfied}
+- {Security and performance evidence with remaining limitations}
+- {Remaining validation and deployment gates; review approval alone is not production certification}
 
 **If CHANGES REQUESTED**:
 - {count} critical issues must be fixed
@@ -647,10 +650,10 @@ Gate rules:
 6. Comment on issue when ready for re-review
 
 ### For Reviewer (if approved)
-1. Merge PR to main branch
-2. Close Story issue (move to Done in Projects)
-3. Notify team in Slack/Teams
-4. Monitor deployment to production
+1. Record the evidence-backed decision and remaining gates
+2. Move to Validating for required post-review checks
+3. Obtain authorized merge and deployment decisions separately
+4. Close the issue only after delivery and compound capture are complete
 
 ### For PM/Architect (if applicable)
 {Any follow-up items for other roles}
@@ -673,7 +676,7 @@ Gate rules:
 
 ### Review Process
 - **Review Method**: Line-by-line | High-level | Pair review
-- **Tools Used**: VS Code, GitHub, SonarQube, CodeQL
+- **Tools Used**: NOT ASSESSED; {tools actually executed}
 - **Time Spent**: {duration}
 
 ### Follow-Up
@@ -686,27 +689,17 @@ Gate rules:
 ## Appendix
 
 ### Files Reviewed
-```
-src/
- Controllers/EntityController.cs (150 lines, 85% coverage)
- Services/EntityService.cs (450 lines, 92% coverage)
- Models/Entity.cs (80 lines, 100% coverage)
- Validators/EntityValidator.cs (60 lines, 95% coverage)
-tests/
- EntityServiceTests.cs (350 lines)
- EntityControllerTests.cs (280 lines)
- EntityApiTests.cs (200 lines)
-```
+NOT ASSESSED. {List actual reviewed paths, revisions and scope-specific coverage.}
 
 ### Test Coverage Report
 [Link to coverage report](path/to/coverage.html)
 
 ### CI/CD Pipeline Results
-- `[PASS]` Build: Passed
-- `[PASS]` Unit Tests: Passed (all 45 tests)
-- `[PASS]` Integration Tests: Passed (all 12 tests)
-- `[PASS]` Security Scan: No vulnerabilities
-- `[PASS]` Linting: No errors
+- [ ] Build: NOT ASSESSED; {command and result}
+- [ ] Unit Tests: NOT ASSESSED; {command, count and result}
+- [ ] Integration Tests: NOT ASSESSED; {command, count and result}
+- [ ] Security Scan: NOT ASSESSED; {scope, findings, scanner errors and skipped checks}
+- [ ] Linting: NOT ASSESSED; {command and result}
 
 ---
 
@@ -719,7 +712,7 @@ tests/
 **Signature**: 
 Reviewed by: {Reviewer Name/Agent} 
 Date: {YYYY-MM-DD} 
-Status: {APPROVED | CHANGES REQUESTED | REJECTED}
+Status: NOT ASSESSED
 
 ---
 

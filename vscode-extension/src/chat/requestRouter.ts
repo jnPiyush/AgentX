@@ -79,6 +79,7 @@ export async function routeFrontierChatRequest(
   userText: string,
   response: vscode.ChatResponseStream,
   agentx: FrontierContext,
+  signal?: AbortSignal,
 ): Promise<vscode.ChatResult> {
   const adapterSetupResult = await tryHandleAdapterSetupRequest(userText, response, agentx);
   if (adapterSetupResult) {
@@ -92,7 +93,7 @@ export async function routeFrontierChatRequest(
 
   const runMatch = userText.match(/^run\s+(\S+)\s+(.+)$/is);
   if (runMatch) {
-    return runAgentCommand(response, agentx, runMatch[1].toLowerCase(), runMatch[2].trim());
+    return runAgentCommand(response, agentx, runMatch[1].toLowerCase(), runMatch[2].trim(), signal);
   }
 
   const pendingSetup = await getPendingSetup(agentx);
@@ -108,7 +109,7 @@ export async function routeFrontierChatRequest(
     return clarificationStatusResult;
   }
 
-  const continueResult = await tryHandleContinueRequest(userText, response, agentx, pending);
+  const continueResult = await tryHandleContinueRequest(userText, response, agentx, pending, signal);
   if (continueResult) {
     return continueResult;
   }
@@ -194,7 +195,7 @@ export async function routeFrontierChatRequest(
   }
 
   if (pending) {
-    return resumePendingClarification(response, agentx, pending, userText);
+    return resumePendingClarification(response, agentx, pending, userText, signal);
   }
 
   const intentResult = await tryHandleNaturalLanguageIntent(userText, response, agentx);

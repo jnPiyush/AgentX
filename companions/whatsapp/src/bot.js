@@ -59,8 +59,7 @@ function createBot({
     if (shutdownPromise) return shutdownPromise;
     shutdownPromise = (async () => {
       watcher && watcher.stop();
-      await runner.stop();
-      await client.destroy();
+      try { await runner.stop(); } finally { await client.destroy(); }
     })();
     return shutdownPromise;
   };

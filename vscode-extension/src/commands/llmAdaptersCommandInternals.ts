@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { FrontierContext } from '../frontierContext';
 import { promptWorkspaceRoot, readJsonWithComments } from './initializeInternals';
@@ -406,34 +405,34 @@ export async function applyLlmAdapterConfiguration(
 
   if (providerId === 'openai-api') {
     if (settings.apiKey) {
-      await agentx.storeWorkspaceLlmSecret('openai-api', settings.apiKey);
+      await agentx.storeWorkspaceLlmSecret('openai-api', settings.apiKey, root);
     }
-    await agentx.deleteWorkspaceLlmSecret('anthropic-api');
-    await agentx.deleteWorkspaceLlmSecret('claude-code');
+    await agentx.deleteWorkspaceLlmSecret('anthropic-api', root);
+    await agentx.deleteWorkspaceLlmSecret('claude-code', root);
   }
 
   if (providerId === 'anthropic-api') {
     if (settings.apiKey) {
-      await agentx.storeWorkspaceLlmSecret('anthropic-api', settings.apiKey);
+      await agentx.storeWorkspaceLlmSecret('anthropic-api', settings.apiKey, root);
     }
-    await agentx.deleteWorkspaceLlmSecret('openai-api');
-    await agentx.deleteWorkspaceLlmSecret('claude-code');
+    await agentx.deleteWorkspaceLlmSecret('openai-api', root);
+    await agentx.deleteWorkspaceLlmSecret('claude-code', root);
   }
 
   if (providerId === 'claude-code') {
     if (settings.apiKey) {
-      await agentx.storeWorkspaceLlmSecret('claude-code', settings.apiKey);
+      await agentx.storeWorkspaceLlmSecret('claude-code', settings.apiKey, root);
     } else {
-      await agentx.deleteWorkspaceLlmSecret('claude-code');
+      await agentx.deleteWorkspaceLlmSecret('claude-code', root);
     }
-    await agentx.deleteWorkspaceLlmSecret('openai-api');
-    await agentx.deleteWorkspaceLlmSecret('anthropic-api');
+    await agentx.deleteWorkspaceLlmSecret('openai-api', root);
+    await agentx.deleteWorkspaceLlmSecret('anthropic-api', root);
   }
 
   if (providerId === 'copilot') {
-    await agentx.deleteWorkspaceLlmSecret('openai-api');
-    await agentx.deleteWorkspaceLlmSecret('anthropic-api');
-    await agentx.deleteWorkspaceLlmSecret('claude-code');
+    await agentx.deleteWorkspaceLlmSecret('openai-api', root);
+    await agentx.deleteWorkspaceLlmSecret('anthropic-api', root);
+    await agentx.deleteWorkspaceLlmSecret('claude-code', root);
   }
 
   agentx.invalidateCache();
@@ -443,7 +442,7 @@ export async function applyLlmAdapterConfiguration(
 
   let preCheckPassed = true;
   if (options?.runPreCheck ?? true) {
-    const preCheck = await runCriticalPreCheck(agentx, true);
+    const preCheck = await runCriticalPreCheck(agentx, true, root);
     preCheckPassed = preCheck.passed;
   }
 

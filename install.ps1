@@ -447,16 +447,16 @@ Get-ChildItem $TMP -Recurse -File -Force | ForEach-Object {
 }
 Write-OK "$copied files installed ($skipped existing skipped)"
 
-# -- ADO remote detection: overwrite mcp.json for ADO workspaces --------
+# -- ADO remote detection: initialize only missing MCP configuration --------
 $adoRemoteUrl = $null
 if (Get-Command git -ErrorAction SilentlyContinue) {
  try { $adoRemoteUrl = git remote get-url origin 2>$null } catch { Write-Verbose "Git remote detect failed: $($_.Exception.Message)" }
 }
 $isAdoWorkspace = $adoRemoteUrl -and ($adoRemoteUrl -match 'visualstudio\.com|dev\.azure\.com')
 New-Item -ItemType Directory -Path '.vscode' -Force | Out-Null
-if ($isAdoWorkspace) {
- # ADO workspaces: write empty mcp.json so Copilot does not auto-insert a github MCP server.
- # The workspace uses ADO REST APIs directly -- no MCP server is needed or wanted.
+if (Test-Path -LiteralPath '.vscode/mcp.json') {
+ Write-OK 'Existing MCP configuration preserved'
+} elseif ($isAdoWorkspace) {
  $emptyMcpJson = @'
 {
   "$schema": "https://json.schemastore.org/mcp.json",
@@ -464,7 +464,7 @@ if ($isAdoWorkspace) {
 }
 '@
  Set-Content -Path '.vscode/mcp.json' -Value $emptyMcpJson -Encoding utf8
- Write-OK "ADO workspace detected -- .vscode/mcp.json set to empty (no MCP servers; workspace uses ADO REST APIs)"
+ Write-OK 'ADO workspace detected -- empty MCP configuration initialized; configure the ADO MCP adapter separately'
 } else {
  # GitHub / no-remote workspaces: write standard github MCP server entry.
  $githubMcpJson = @'
@@ -486,7 +486,7 @@ if ($isAdoWorkspace) {
   ]
 }
 '@
- if (-not (Test-Path '.vscode/mcp.json') -or $Force) {
+ if (-not (Test-Path -LiteralPath '.vscode/mcp.json')) {
   Set-Content -Path '.vscode/mcp.json' -Value $githubMcpJson -Encoding utf8
   Write-OK "GitHub workspace -- .vscode/mcp.json configured with GitHub MCP server"
  }

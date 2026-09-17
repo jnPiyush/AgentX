@@ -23,261 +23,101 @@ Source: Impeccable design language and detector by Paul Bakaus,
 > WHEN: Defining the design language for a target app, or checking any UI
 > surface against it. Impeccable owns visual design language and slop
 > detection. Frontier owns process, compliance evidence, and lifecycle
-> integration. Read the division table before assuming which side owns a
-> check.
+> integration, not duplicate detector rules.
 
 ## When to Use This Skill
 
-- Establishing the design language for a target app (the UX Designer's first phase)
-- Running design-language conformance on a prototype (Pass 0 of `prototype-audit`)
-- Choosing an intervention command when a surface is wrong but the fix is unclear
-- Deciding whether a finding belongs to Impeccable or to an Frontier skill
+Establish target language (UX's first phase), run prototype Pass 0 conformance,
+choose an intervention when the fix is unclear, or assign finding ownership.
 
 ## Prerequisites
 
 - Node 22.18 or newer in the environment that runs the detector.
 - A target app repository. Impeccable is installed there, never into Frontier.
-- `impeccable` pinned as a devDependency so the gate is reproducible offline.
+- A supported trusted installed Frontier design-language bridge and a target-relative
+  native engine pinned by version and SHA-256 in `.impeccable/agentx.json`.
+- Verify the installed bridge supports native engine contract `0.1.3`.
+  This source checkout has no local bridge. A package lock alone does not pin
+  a downloading shim's native engine.
 - Write access to the target app's `PRODUCT.md` and `DESIGN.md`.
 
-When any of these is missing the detector cannot run and the gate reports
-`DEGRADED`. That is a supported path, not a failure -- see Troubleshooting.
-
-## Install: target app only
-
-Impeccable installs by copying a skill tree into the project. Frontier is
-zero-copy, so it is **never** installed into the Frontier repository or its
-bundled distribution. It is installed into the **target app** being designed.
-
-```bash
-# In the target app repo, not in Frontier
-npm install --save-dev impeccable   # pin the resolved version in the lockfile
-npm exec --offline -- impeccable install --scope=project
-```
-
-Then, inside the AI harness, run `/impeccable init` once. It asks whether the
-surface is brand or product and writes `PRODUCT.md` plus `DESIGN.md`.
-
-**Pin the version.** Bare `npx impeccable` resolves the latest release. For a
-blocking gate that is disqualifying: an upstream rule addition can fail a build
-that passed yesterday with no local change, and it executes unpinned
-third-party code at gate time. Install as a devDependency and invoke the local
-binary so the gate is reproducible and runs offline after `npm ci`.
-
-Teams that prefer vendoring may use the upstream submodule flow
-(`git submodule add` + `impeccable link`). This is a valid alternative; the
-zero-copy rule still forbids copying it into Frontier's own asset tree.
-
-## Quick Start
-
-1. Confirm prerequisites. If the detector cannot run, record `DEGRADED` and
-   continue on Frontier-only checks rather than stopping the design work.
-2. Install into the target app and pin the version in the lockfile.
-3. Run `/impeccable init` once. Answer brand or product. This writes
-   `PRODUCT.md` and `DESIGN.md`.
-4. Cite both artifacts from the UX Spec so downstream agents inherit the
-   design language instead of re-deriving it.
-5. Build the surface against `DESIGN.md`.
-6. Run the detector as Pass 0 of `prototype-audit` before any LLM critique.
-7. Fix findings, or waive them through the Frontier protocol with rationale.
-8. Re-run until exit `0`, then continue to Pass 1.
-
-## Decision Tree
-
-Route on two questions: does a design language exist yet, and can the detector
-run here. If no design language exists, authoring it comes first and the branch
-depends only on whether the user supplied a reference. If one exists, the
-question becomes whether the problem is measurable drift, which the detector
-owns, or a judgement call about hierarchy and resonance, which `critique` owns.
-Never route a judgement question to the detector; it has no opinion on whether
-a layout communicates.
-
-```
-Design language undefined for this target app?
-|
-+-- Yes, and the user supplied a reference (URL, screenshot, deck)?
-|   -> Run brand-spec-extraction first, then codify into PRODUCT.md + DESIGN.md
-|
-+-- Yes, and no reference exists?
-|   -> Run the 6-axis clarification form, pick a direction, THEN codify
-|
-+-- No, DESIGN.md already exists but the surface drifted?
-|   -> Run the detector; design-system rules catch font/color/radius/size drift
-|
-+-- No, and the surface is wrong but you cannot name why?
-|   -> /impeccable critique for judgement, not the detector
-|
-- Detector unavailable in this environment?
-    -> Record DEGRADED with a reason, fall back to Frontier-only checks
-```
-
-When both a drift finding and a judgement concern are open, fix the drift
-first. Conforming the surface to its own tokens often resolves the judgement
-complaint, and it costs no LLM tokens to verify.
+Missing prerequisites -> DEGRADED; continue Frontier-only checks and design work.
 
 ## Core Rules
 
-1. **Design language before pixels** - `PRODUCT.md` and `DESIGN.md` exist and
-   are cited before any wireframe, prototype, or HTML is emitted. A direction
-   that lives only in chat cannot be conformed to or verified later.
-2. **Deterministic before judgement** - the detector runs as Pass 0, ahead of
-   any LLM critique, so reviewers spend judgement on what machines cannot see.
-3. **Never install into Frontier** - the tool is installed into the target app.
-   Copying it into Frontier's asset tree violates the zero-copy rule.
-4. **Pin the version** - bare `npx` resolves the latest release, which makes a
-   blocking gate non-reproducible and executes unpinned third-party code.
-5. **DEGRADED is not PASS** - when the detector cannot run, say so in writing
-   with the reason and the list of checks that did not execute.
-6. **One waiver system** - the Frontier waiver protocol is authoritative;
-   upstream ignores may only mirror an existing Frontier waiver.
-7. **Do not assume coverage** - Frontier retains fabrication, emoji, WCAG,
-   heuristics, and visual regression. Check the division table before
-   deleting or skipping an Frontier check.
+1. Before wireframes/prototypes/HTML, `PRODUCT.md` and `DESIGN.md` MUST exist and
+  be cited by the UX Spec. Chat-only direction is insufficient.
+2. Detector Pass 0 precedes LLM judgement; it cannot judge communication quality.
+3. Install only in the target app with explicit approval, never Frontier or its
+  bundle. No unpinned `npx` or validation shim: `npm exec --offline` still allows
+  native downloads.
+4. Verify native SHA-256/handshake; use bounded direct execution through the
+  installed bridge and retain incomplete-coverage diagnostics.
+5. Preserve raw status; waivers are separate. Upstream ignores only mirror an
+  existing Frontier waiver via [anti-slop](../anti-slop/SKILL.md).
+6. Check fabrication, emoji, WCAG, heuristics and visual regression separately
+  through [prototype audit](../prototype-audit/SKILL.md); do not assume coverage.
+7. Delegates MUST NOT start, reset, iterate or complete the parent-owned loop or
+  change its baseline/approval history; return scoped evidence to its owner.
 
-## Artifacts
+## Decision Tree
 
-| Artifact | Contains | Tracked |
-|----------|----------|---------|
-| `PRODUCT.md` | Audience, mode, brand voice, anti-references | yes |
-| `DESIGN.md` | Visual system in Google Stitch format -- palette, type ramp, radii, components | yes |
-| `.impeccable/design.json` | Token sidecar the detector reads | yes |
-| `.impeccable/critique/*.md` | Review reports | yes |
-| `.impeccable/*.png`, `live/`, `config.local.json` | Screenshots, session state, per-dev config | no -- gitignore |
+Undefined language -> extract supplied brand or clarify six axes before codifying.
+Drift -> detector; judgement -> `critique`. Fix drift first. Missing tool -> DEGRADED.
 
-`DESIGN.md` is plain Markdown. This matters: when the detector is unavailable,
-the design language still exists and is still readable by Frontier skills. Only
-automated conformance verification degrades.
+MUST read [setup and routing](references/setup-and-routing.md) before setup,
+authoring product/design artifacts, choosing a route or recovering tool failures.
+MUST read [responsibility and commands](references/responsibility-and-commands.md)
+before assigning checks, choosing interventions or accepting/mirroring waivers.
 
-## Division of responsibility
+## Quick Start
 
-Do not delete or duplicate an Frontier check because Impeccable has a
-similar-sounding command.
-
-| Concern | Owner | Why |
-|---------|-------|-----|
-| Visual slop tells, typography drift, layout rhythm, motion discipline | Impeccable | 59 deterministic rules |
-| Design-system conformance (font / color / radius / size outside `DESIGN.md`) | Impeccable | No Frontier equivalent exists |
-| Fabricated metrics, testimonials, trust badges | **Frontier** | Impeccable has no fabrication rules |
-| Emoji as iconography, emoji-prefixed headings | **Frontier** | No Impeccable equivalent; Frontier is ASCII-only |
-| WCAG 2.1 AA conformance -- keyboard, focus, ARIA, traps, gestures | **Frontier** | Impeccable covers contrast and heading order only |
-| Nielsen H1-H10 severity scoring | **Frontier** | `/impeccable critique` is a review, not a scored gate |
-| Visual-regression baselines | **Frontier** | Impeccable has live mode, not snapshot diffing |
-| Waivers and rationale capture | **Frontier** | One waiver system, see below |
+1. Verify prerequisites. `init` writes `PRODUCT.md`; establish `DESIGN.md`
+  separately via workflow/`document`, or confirmed requirements without commands.
+  Authoring is not detector execution.
+2. Cite actual artifacts in the UX Spec; build against `DESIGN.md`.
+3. Run Pass 0, fix findings or record reasoned waivers; rerun affected checks
+  after fixes. Preserve raw status and continue to Pass 1.
 
 ## The detector as a three-state gate
 
-```bash
-npm exec --offline -- impeccable detect --json src/          # whole tree
-npm exec --offline -- impeccable detect --scope type src/    # narrow: type | layout
-npm exec --offline -- impeccable detect --json dist/index.html
-```
+Use `frontier design-language check -Path <target> -Json` only when the active
+installed runtime exposes it; never substitute an unpinned download.
 
 Exit codes: `0` no findings, `2` findings, `1` command failed.
 
 | State | Condition | Effect |
 |-------|-----------|--------|
-| `PASS` | Exit `0`, or every finding carries an Frontier waiver | Gate satisfied |
-| `BLOCKED` | Exit `2` with unwaived findings | Prototype is not review-ready |
+| `PASS` | Complete execution, valid output and no primary findings; advisories retained | Deterministic gate satisfied only |
+| `BLOCKED` | Primary findings from a complete scan | Requires fixes or separate waiver review |
 | `DEGRADED` | Detector could not run | Falls back to Frontier-only checks, **recorded** |
 
-`DEGRADED` is never silently equivalent to `PASS`. When the detector cannot
-run -- no Node 22.18+, no resolved binary, no network on first use -- record
-this block verbatim in the audit report and the UX Spec:
+Missing prerequisites, timeouts, invalid output and incomplete coverage cannot be waived to PASS.
+Record actual execution in the audit report and UX Spec, never prefilled success:
 
 ```
 Design language check: DEGRADED (Frontier-only)
 Reason: <no network | binary unresolved | node <22.18 | other>
-Ran: T1-T10 + Honest Placeholders + axe + Pass 9 critique
-Not run: 59 deterministic rules, 4 design-system conformance rules
+Required fallback: T1-T10 + Honest Placeholders + axe + Pass 9 critique
+Actually ran: <checks with evidence links, or none>
+Not run: <missing checks and reasons, including native detector coverage>
 ```
-
-Without that record, a prototype checked at the low bar is indistinguishable
-from one checked at the high bar. If `DEGRADED` appears on most runs, the
-dependency is not pinned correctly and the integration has become decorative.
-
-## Waivers: Frontier protocol is authoritative
-
-Impeccable ships its own ignore mechanisms (`impeccable ignores add-value`,
-`add-file`, and inline `impeccable-disable` comments). **Do not use them as the
-primary waiver path.** Two parallel waiver systems is how gates rot -- a
-finding silenced upstream never reaches the Frontier audit report or review.
-
-- Record every accepted finding through the `anti-slop` Waiver Protocol with
-  rationale, in the audit report.
-- Use an Impeccable ignore **only** to suppress a rule already waived in
-  Frontier, and cite the Frontier waiver in the `--reason` string so the two stay
-  traceable.
-- A rule that fires often and is always waived is a `DESIGN.md` bug. Fix the
-  design language instead of accumulating ignores.
-
-## Command vocabulary
-
-All 23 commands run through `/impeccable <command> [target]`.
-
-| Group | Commands |
-|-------|----------|
-| Setup | `init`, `document`, `extract` |
-| Plan | `shape`, `craft` (deprecated alias) |
-| Review | `critique`, `audit`, `polish` |
-| Intensity | `bolder`, `quieter`, `distill`, `overdrive`, `delight` |
-| Craft | `typeset`, `layout`, `colorize`, `animate` |
-| Robustness | `harden`, `onboard`, `clarify`, `adapt`, `optimize` |
-| Iterate | `live` |
-
-Choosing one:
-
-- Surface is wrong but you cannot name why -> `critique`
-- Surface is boring -> `bolder`; shouting -> `quieter`
-- Too many ideas competing -> `distill`
-- Type, spacing, or color specifically -> `typeset`, `layout`, `colorize`
-- Missing empty, error, or overflow states -> `harden`, `onboard`
-- Final pass before review -> `polish`
-
-`/impeccable audit` is the right call for native iOS or Android targets; the
-deterministic detector is web-only and reads HTML and CSS.
-
-## Anti-Patterns
-
-- **Silent fallback.** Running Frontier-only checks without recording `DEGRADED`
-  makes a low-bar prototype indistinguishable from a high-bar one.
-- **Ignore accumulation.** Silencing a rule upstream so it never reaches the
-  audit report. If a rule always fires, fix `DESIGN.md` instead.
-- **Assumed a11y coverage.** Treating the detector as an accessibility audit.
-  It checks contrast, heading order, and text sizing -- not keyboard, focus,
-  ARIA, or traps.
-- **Waivers in `DESIGN.md`.** `/impeccable document` regenerates that file
-  from code, so hand-written waivers there are destroyed on the next run.
-- **Bare `npx` in a gate.** Non-reproducible and a supply-chain risk.
-- **Duplicating rules.** Re-listing deterministic tells in Frontier prose
-  creates two catalogues that drift apart.
 
 ## Troubleshooting
 
-| Symptom | Cause | Recovery |
-|---------|-------|----------|
-| `command not found` | Not installed in this project | Install as devDependency, or record `DEGRADED` |
-| Hangs on first run | `npx` fetching over a blocked network | Use the local binary after `npm ci` |
-| Exit `1` | Detector itself failed, not a finding | Treat as `DEGRADED`, not `PASS`; capture stderr |
-| Findings appear after an upstream bump | Unpinned version | Pin the version; review the new rules deliberately |
-| Design-system rules never fire | No `DESIGN.md`, or stale | Run `/impeccable document` to regenerate |
-| Every scan is `DEGRADED` | Dependency not pinned locally | Fix the install; the integration is otherwise decorative |
-| Native iOS or Android target | Detector is web-only | Use `/impeccable audit` for the native pass |
+Capture stderr on exit 1; record missing tools, timeout, invalid output and
+unexecuted checks as DEGRADED. Use the setup reference's recovery table, never
+a silent fallback. Repeated degradation requires fixing setup, not claiming PASS.
+
+## Anti-Patterns
+
+Never accumulate ignores, store waivers in regenerable `DESIGN.md`, assume WCAG
+coverage or duplicate the detector's catalogue. Follow the responsibility
+reference before replacing any Frontier check.
 
 ## Verification Checklist
 
-Before declaring a design-language pass complete:
-
-- [ ] `PRODUCT.md` and `DESIGN.md` exist and are current for this surface
-- [ ] Detector ran, or `DEGRADED` is recorded with a reason
-- [ ] Every finding is fixed or waived through the Frontier protocol
-- [ ] No Impeccable ignore exists without a matching Frontier waiver
-- [ ] Frontier-owned concerns were checked separately, not assumed covered
-- [ ] The UX Spec cites both artifacts so downstream agents inherit them
-
-## References
-
-- `.github/skills/design/anti-slop/SKILL.md` -- retained tells and the waiver protocol
-- `.github/skills/design/prototype-audit/SKILL.md` -- Pass 0 wiring
-- `.github/skills/design/accessibility/SKILL.md` -- WCAG AA, which this does not replace
-- `.github/skills/design/design-system-reasoning/SKILL.md` -- posture and archetype selection
-- Upstream: https://impeccable.style/docs and https://impeccable.style/slop
+- [ ] Current product/design artifacts cited by the UX Spec
+- [ ] Detector execution or reasoned DEGRADED recorded
+- [ ] Findings fixed or Frontier-waived; every upstream ignore matches a waiver
+- [ ] Frontier-owned checks separately evidenced
