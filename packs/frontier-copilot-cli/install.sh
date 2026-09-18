@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Frontier Copilot CLI Plugin v9.3.1 - Installer (Bash)
+# Frontier Copilot CLI Plugin v9.4.0 - Installer (Bash)
 # Standalone plugin for GitHub Copilot CLI.
 # Does NOT require the Frontier VS Code extension or the core install.
 #
@@ -15,7 +15,7 @@
 #   -h, --help             Show this help
 set -euo pipefail
 
-VERSION="9.3.1"
+VERSION="9.4.0"
 TARGET="$(pwd)"
 SOURCE=""
 INCLUDE_CLI=false

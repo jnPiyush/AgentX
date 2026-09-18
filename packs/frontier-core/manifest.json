@@ -1,6 +1,6 @@
 {
   "name": "frontier-core",
-  "version": "9.3.1",
+  "version": "9.4.0",
   "description": "Core Frontier pack -- full SDLC agents, workflow engine, and essential instructions for multi-agent orchestration.",
   "maturity": "stable",
   "tags": [

@@ -194,7 +194,7 @@ if ($SubprocessOnly) {
             $node.Name -in @('ConvertTo-LoopUtcOffset', 'Test-LoopEvidenceFreshness', 'Test-LoopPassingBaseline')
         }, $false)) { . ([scriptblock]::Create($definition.Extent.Text)) }
         function Write-CliOutput([string]$Text) { }
-        $C = @{ r = ''; d = ''; y = ''; n = '' }
+        $script:C = @{ r = ''; d = ''; y = ''; n = '' }
         $artifact = Join-Path $workspace 'fresh-check.txt'
         Set-Content -LiteralPath $artifact -Value 'Synthetic evidence boundary fixture'
         $writtenAt = [datetimeoffset]::new((Get-Item -LiteralPath $artifact).LastWriteTimeUtc)

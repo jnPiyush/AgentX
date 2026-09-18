@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
- Install Frontier Copilot CLI Plugin v9.3.1 into a workspace.
+ Install Frontier Copilot CLI Plugin v9.4.0 into a workspace.
 
 .DESCRIPTION
  Copies Frontier FDEs, skills, instructions, and prompts into a target workspace
@@ -414,7 +414,7 @@ function Initialize-WorkspaceCliState {
  }
 
  $version = [ordered]@{
-  version = '9.3.1'
+  version = '9.4.0'
   provider = 'local'
   mode = 'local'
   integration = 'local'
@@ -489,7 +489,7 @@ $Target = [System.IO.Path]::GetFullPath($Target)
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "| Frontier Copilot CLI Plugin v9.3.1        |" -ForegroundColor Cyan
+Write-Host "| Frontier Copilot CLI Plugin v9.4.0        |" -ForegroundColor Cyan
 Write-Host "| Standalone plugin for GitHub Copilot CLI |" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
@@ -562,7 +562,7 @@ if (-not (Test-Path $versionDir)) {
 if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
  @{
   plugin = "frontier-copilot-cli"
-    version = "9.3.1"
+    version = "9.4.0"
   installedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
   source = $Source
   includeCli = [bool]$IncludeCli
@@ -574,7 +574,7 @@ if ($PSCmdlet.ShouldProcess($versionFile, "Write version stamp")) {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
-Write-Host " Frontier Copilot CLI Plugin v9.3.1 installed" -ForegroundColor Green
+Write-Host " Frontier Copilot CLI Plugin v9.4.0 installed" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host " Files copied  : $totalCopied" -ForegroundColor White

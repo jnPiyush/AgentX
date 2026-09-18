@@ -203,3 +203,79 @@ Evidence: clean `npm ci --ignore-scripts` installs all 622 extension packages,
 and the resulting clean-build coverage run passes 1,063 tests. Full dependency
 audit includes five HIGH development-dependency advisories; runtime-only audit
 results and separate WhatsApp advisory limitations are stated above.
+
+## 9.4.0 Publication - 2026-09-17
+
+The user now requests publication of version 9.4, interpreted as SemVer 9.4.0.
+This authorization applies to the new release only; historical candidates and
+tags above remain unchanged. Source starts at commit
+`081ab7f9aa95e31ba2cbea99c30384a1342ad536`. The published identity remains
+`jnPiyush.agentx`, with Frontier Corp display branding.
+
+### Alternatives and Decision
+
+Publish the GitHub-attested VSIX through the existing Marketplace workflow.
+Do not rebuild different bytes for Marketplace or overwrite 9.3.1. A local
+candidate can validate packaging but is not the publication artifact. Reuse
+the existing stamp script, canonical release checks, and this plan instead
+of adding a duplicate release-report document.
+
+### Steps and Acceptance
+
+1. Stamp 9.4.0, update release notes, and verify version-only changes and
+  installer URLs without altering dependency integrity fields.
+2. Run required extension coverage and MCP tests/audits once for the release,
+  plus focused stamp/installer checks. Inspect current SAST/Scorecard failures
+  and hold publication for unresolved applicable blockers.
+3. Inspect VSIX identity, contributions, bundled role preferences and exclusion
+  of local state/drafts. Independently review exact final source hashes and
+  complete the five-pass release loop before committing.
+4. Commit and push through normal hooks, allowing the existing release workflow
+  to build and attest the new immutable artifact. Verify its tag, source SHA,
+  package identity and provenance.
+5. Dispatch the existing Marketplace workflow for v9.4.0 and verify that the
+  public listing exposes 9.4.0. A configured secret is not proof of valid
+  authentication; credentials must never appear in chat or logs.
+
+### Recovery and Limits
+
+Stop on failed release gates, a conflicting tag, or non-fast-forward push.
+Do not force-push, disable checks or move published tags. If publication fails,
+retain the attested VSIX for a credential-authorized retry. Users can install
+the previous known version from VS Code's version selector; a corrective
+publication requires a new version rather than replacing released bytes.
+
+Native macOS execution, live Astra output quality, hosted Teams/GitHub delivery,
+and UX certification are not implied by publishing this extension. Preserve
+the two unrelated user drafts. Evidence and package hashes belong in ignored
+`build/` output and GitHub release artifacts. Status: local validation complete;
+independent review, source commit and attested publication remain pending.
+
+### Local 9.4.0 Evidence
+
+- Extension clean install and 1,097 tests pass; coverage is 83.77% lines,
+  75.79% branches and 82.18% functions, meeting configured release thresholds.
+- MCP clean install, 10 lifecycle tests and the 19-tool in-memory smoke pass.
+  Extension and MCP runtime audits each report zero vulnerabilities.
+- Installer checks pass 63/63, including actual PowerShell and Git Bash pack
+  installation and documented launcher execution. The miniature fixture now
+  includes shipped launchers. Concurrent output draining avoids test deadlocks;
+  full-tree cases have a bounded ten-minute allowance. Earlier host fork and
+  short-deadline failures remain in the local logs, not counted as passes.
+- Evidence recovery checks pass 21/21. PSScriptAnalyzer passes with no production
+  security-rule findings and 75 total findings against the unchanged baseline80.
+  The new fixture color table has explicit script scope; no rule was disabled.
+- Stamp tests preserve opaque checksum fixtures and all current lock entries.
+  The former test incorrectly fixed old dependency versions and paths.
+- Candidate inspection verifies 1,652 entries, 26 agents, all 200 registered
+  contributions, both Astra preferences and exact loop/agent runtime bytes.
+  Wrong identity/version mutations are rejected and local drafts/state excluded.
+  Candidate SHA-256: `6D3187574BA52D1121E9F9D585B0DE240E46BAF0C403F56538A3ADE8711CFF5E`.
+- Source scrub has zero HIGH findings. Scorecard remains unavailable because its
+  upstream container registry requires billing; this is not a clean scan.
+
+The candidate is only local packaging evidence. Publish the separately verified
+CI-attested release asset, recording its own hash and actual workflow outcome.
+Do not repeat full suites merely to fill loop iterations. The current plan and
+changelog retain the scope, recovery decisions and limitations; no additional
+Markdown report is needed for compound capture.

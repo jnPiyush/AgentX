@@ -19,6 +19,26 @@ function Assert-True([bool]$Condition, [string]$Message) {
 	}
 }
 
+function Invoke-CapturedInstaller(
+	[Diagnostics.ProcessStartInfo]$StartInfo,
+	[ValidateRange(1, 600000)][int]$TimeoutMilliseconds = 120000
+) {
+	$process = [Diagnostics.Process]::Start($StartInfo)
+	try {
+		$stdout = $process.StandardOutput.ReadToEndAsync()
+		$stderr = $process.StandardError.ReadToEndAsync()
+		if (-not $process.WaitForExit($TimeoutMilliseconds)) {
+			$process.Kill($true)
+			$null = $process.WaitForExit(10000)
+			throw "Installer fixture exceeded $TimeoutMilliseconds ms: $($StartInfo.FileName)"
+		}
+		if (-not [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($stdout, $stderr), 5000)) {
+			throw "Installer fixture output did not close: $($StartInfo.FileName)"
+		}
+		return [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $stdout.Result + $stderr.Result }
+	} finally { $process.Dispose() }
+}
+
 function Invoke-Installer(
 	[string]$InstallerPath,
 	[string]$ArchivePath,
@@ -33,16 +53,13 @@ function Invoke-Installer(
 	$startInfo.UseShellExecute = $false
 	$startInfo.Environment['AGENTX_INSTALL_ARCHIVE'] = $ArchivePath
 	foreach ($argument in @(
-		'-NoProfile', '-File', $InstallerPath,
+		'-NoProfile', '-NonInteractive', '-File', $InstallerPath,
 		'-Local', '-Path', $TargetPath, '-NoSetup'
 	)) {
 		$startInfo.ArgumentList.Add($argument)
 	}
 	if (-not $WithoutForce) { $startInfo.ArgumentList.Add('-Force') }
-	$process = [Diagnostics.Process]::Start($startInfo)
-	$output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd()
-	$process.WaitForExit()
-	return [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $output }
+	return Invoke-CapturedInstaller $startInfo
 }
 
 if ($McpOnly) {
@@ -102,6 +119,9 @@ try {
 	}
 	New-Item -ItemType Directory -Path (Join-Path $fixtureRoot '.github/agents') -Force | Out-Null
 	Set-Content -LiteralPath (Join-Path $fixtureRoot '.agentx/agentx-cli.ps1') -Value '# fixture' -Encoding ascii
+	foreach ($launcher in @('frontier.sh', 'agentx.sh', 'local-issue-manager.sh')) {
+		Copy-Item -LiteralPath (Join-Path $repoRoot '.agentx' $launcher) -Destination (Join-Path $fixtureRoot '.agentx' $launcher)
+	}
 	Set-Content -LiteralPath (Join-Path $fixtureRoot '.github/agents/frontier.agent.md') -Value 'fixture' -Encoding ascii
 	Set-Content -LiteralPath (Join-Path $fixtureRoot '.vscode/settings.json') -Value '{ "chat.agentFilesLocations": { ".github/agents": false } }' -Encoding ascii
 	foreach ($file in @('.gitignore', 'AGENTS.md', 'Skills.md')) {
@@ -175,10 +195,8 @@ try {
 		$startInfo.ArgumentList.Add($bashCopy.Replace('\', '/'))
 		$startInfo.ArgumentList.Add('--no-setup')
 		$startInfo.Environment['FORCE'] = 'false'
-		$process = [Diagnostics.Process]::Start($startInfo)
-		$output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd()
-		$process.WaitForExit()
-		Assert-True ($process.ExitCode -ne 0 -and $output -match 'Re-run with --force') "Bash refuses $stateDirectory $oldVersion upgrades without force"
+		$result = Invoke-CapturedInstaller $startInfo
+		Assert-True ($result.ExitCode -ne 0 -and $result.Output -match 'Re-run with --force') "Bash refuses $stateDirectory $oldVersion upgrades without force"
 		$after = @($versionPath, $managedPath, $configPath | Get-FileHash | ForEach-Object Hash)
 		Assert-True (($before -join ',') -ceq ($after -join ',')) 'Bash refusal preserves existing bytes'
 		$preservedPaths = @('sessions/history.json', 'memory/notes.json', 'digests/weekly.md') | ForEach-Object {
@@ -194,12 +212,10 @@ try {
 		Assert-True ($upgrade.ExitCode -eq 0 -and ($dataBefore -join ',') -ceq ($dataAfter -join ',')) "Forced upgrade preserves all $stateDirectory $oldVersion runtime data"
 		$startInfo.ArgumentList.Add('--force')
 		$startInfo.Environment['AGENTX_INSTALL_ARCHIVE'] = $tarArchive.Replace('\', '/')
-		$process = [Diagnostics.Process]::Start($startInfo)
-		$output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd()
-		$process.WaitForExit()
+		$result = Invoke-CapturedInstaller $startInfo
 		$dataAfter = @($preservedPaths | Get-FileHash | ForEach-Object Hash)
-		Assert-True ($process.ExitCode -eq 0 -and ($dataBefore -join ',') -ceq ($dataAfter -join ',')) "Forced Bash refresh preserves all $stateDirectory $oldVersion runtime data"
-		if ($process.ExitCode -ne 0) { Write-Host $output }
+		Assert-True ($result.ExitCode -eq 0 -and ($dataBefore -join ',') -ceq ($dataAfter -join ',')) "Forced Bash refresh preserves all $stateDirectory $oldVersion runtime data"
+		if ($result.ExitCode -ne 0) { Write-Host $result.Output }
 	 }
 	}
 
@@ -237,7 +253,7 @@ try {
 		$startInfo.RedirectStandardError = $true
 		if ($shell -eq 'PowerShell') {
 			$startInfo.FileName = (Get-Process -Id $PID).Path
-			$arguments = @('-NoProfile', '-File', (Join-Path $repoRoot 'packs/frontier-copilot-cli/install.ps1'), '-Source', $repoRoot, '-Target', $targetRoot, '-IncludeCli', '-Force')
+			$arguments = @('-NoProfile', '-NonInteractive', '-File', (Join-Path $repoRoot 'packs/frontier-copilot-cli/install.ps1'), '-Source', $repoRoot, '-Target', $targetRoot, '-IncludeCli', '-Force')
 		} else {
 			$startInfo.FileName = $bashCommand
 			$packBashCopy = Join-Path $tempRoot 'pack-install.sh'
@@ -245,11 +261,9 @@ try {
 			$arguments = @($packBashCopy.Replace('\', '/'), '--source', $repoRoot.Replace('\', '/'), '--target', $targetRoot.Replace('\', '/'), '--include-cli', '--force')
 		}
 		foreach ($argument in $arguments) { $startInfo.ArgumentList.Add($argument) }
-		$process = [Diagnostics.Process]::Start($startInfo)
-		$output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd()
-		$process.WaitForExit()
-		Assert-True ($process.ExitCode -eq 0) "$shell real pack installs the runtime"
-		if ($process.ExitCode -ne 0) { Write-Host $output; continue }
+		$result = Invoke-CapturedInstaller $startInfo -TimeoutMilliseconds 600000
+		Assert-True ($result.ExitCode -eq 0) "$shell real pack installs the runtime"
+		if ($result.ExitCode -ne 0) { Write-Host $result.Output; continue }
 		Assert-True ((Get-Content "$targetRoot/.frontier/config.json" -Raw).Trim() -ceq $legacyConfig) "$shell pack preserves HVE config before defaults"
 		Assert-True ((Get-Content "$targetRoot/.frontier/state/agent-status.json" -Raw).Trim() -ceq $legacyStatus) "$shell pack preserves HVE active status"
 		$output = & pwsh -NoProfile -File "$targetRoot/.agentx/frontier.ps1" loop start -p 'Installed launcher fixture' 2>&1 | Out-String

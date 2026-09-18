@@ -3,7 +3,7 @@
   <h1>Frontier Corp</h1>
   <p><strong>A fleet of Forward Deployed Engineers for Hypervelocity Engineering.</strong></p>
   <p>
-    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.3.1"><img src="https://img.shields.io/badge/Version-9.3.1-b11f4b?style=for-the-badge" alt="Version 9.3.1"></a>
+    <a href="https://github.com/jnPiyush/AgentX/releases/tag/v9.4.0"><img src="https://img.shields.io/badge/Version-9.4.0-b11f4b?style=for-the-badge" alt="Version 9.4.0"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=jnPiyush.agentx"><img src="https://img.shields.io/badge/VS_Code-Marketplace-0078d4?style=for-the-badge" alt="Visual Studio Marketplace"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-16a34a?style=for-the-badge" alt="Apache 2.0 License"></a>
     <a href="https://securityscorecards.dev/viewer/?uri=github.com/jnPiyush/AgentX"><img src="https://img.shields.io/ossf-scorecard/github.com/jnPiyush/AgentX?style=for-the-badge&amp;label=OpenSSF" alt="OpenSSF Scorecard"></a>
@@ -304,15 +304,16 @@ Evaluate three deployment options for this service and create an ADR with the tr
 
 ---
 
-## New In 9.3.1
+## New In 9.4.0
 
-This major release makes Frontier completion and autonomous execution fail closed:
+This release improves runtime boundaries and quality-loop completion:
 
-- quality-loop approval now requires an attributable structured reviewer verdict with zero HIGH/MEDIUM findings on the final work iteration
-- commit-time gates enforce risk-based iteration minimums, staged/worktree agreement, and post-commit loop consumption
-- autonomous workspace tools reject traversal, alternate streams, credentials, protected gate paths, links, aliases, and hardlinks
-- autonomous shell execution and Claude-native tools remain disabled until an externally sandboxed adapter is available
-- regression suites cover review exhaustion, hook lifecycle, path controls, staged and untracked harness enforcement, and VS Code evidence forwarding
+- evidence checkers drain output concurrently, enforce deadlines and reject failed checks
+- VS Code loop dialogs forward passing-test counts and preserve cancellation
+- Architect and UX Designer prefer GPT-6 Astra when the account supports it
+- final tests are selected by changed behavior and risk, with release gates retained
+- Mac launchers, selected-workspace credentials, reinstall retention and cancellation receive regression coverage
+- UX guidance distinguishes actual Impeccable and browser evidence from unavailable checks
 
 Read [CHANGELOG.md](CHANGELOG.md) for validation evidence, limitations, and prior releases.
 

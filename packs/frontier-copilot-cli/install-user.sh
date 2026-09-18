@@ -211,7 +211,7 @@ if [ $DRY_RUN -ne 1 ]; then
   cat > "$COPILOT_DIR/.frontier-version.json" <<JSON
 {
   "plugin": "frontier-copilot-cli-user",
-  "version": "9.3.1",
+  "version": "9.4.0",
   "installedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "source": "$SOURCE",
   "mcpRegistered": $([ $REGISTER_MCP -eq 1 ] && echo true || echo false)

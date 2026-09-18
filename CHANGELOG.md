@@ -1,5 +1,38 @@
 # Changelog
 
+## 9.4.0
+
+### Changed
+
+- Prefer GPT-6 Astra for Architect and UX Designer, with exact Copilot model
+  mapping and Responses transport support. Availability depends on the account.
+- Select final verification by changed behavior, direct callers and risk while
+  retaining required release gates. Delegated auditors reuse the parent loop.
+- Clarify Impeccable's pinned-engine checks and the in-house UX audit's ten
+  passes. Missing checks remain explicit rather than prefilled as successful.
+
+### Fixed
+
+- Prevent evidence-checker pipe deadlocks, bound checker execution, and reject
+  nonzero checker exits. Check missing or stale evidence before costly validation.
+- Forward passing-test counts from VS Code loop dialogs and preserve cancellation.
+- Correct Mac launcher permissions and literal command argument handling.
+- Enforce role write boundaries for resolved paths and selected-workspace
+  credential handling. Preserve existing configuration during reinstall.
+- Improve cancellation and shutdown handling in extension, MCP and companions;
+  bound output and prevent subsequent writes after unconfirmed termination.
+- Preserve learning-document bodies during promotion, remove content payloads
+  from new lifecycle signals, and distinguish scanner failures from clean scans.
+- Update dependency locks, regression coverage and operator guidance.
+
+### Publishing Notes
+
+- Existing users continue updating through `jnPiyush.agentx`.
+- Live model quality, native macOS behavior, companion delivery and complete UX
+  accessibility certification are not established by the local checks alone.
+- Impeccable supplements the in-house design skills; no controlled evidence of
+  improved generated UX is claimed.
+
 ## 9.3.1
 
 This release packages the Frontier changes below under a new immutable version.

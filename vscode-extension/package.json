@@ -2,7 +2,7 @@
   "name": "agentx",
   "displayName": "Frontier - Hypervelocity Engineering",
   "description": "Frontier Corp deploys a fleet of specialized AI Forward Deployed Engineers that plan, build, review, test, and operate software through governed, evidence-backed workflows.",
-  "version": "9.3.1",
+  "version": "9.4.0",
   "publisher": "jnPiyush",
   "extensionKind": [
     "workspace",

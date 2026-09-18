@@ -209,7 +209,7 @@ rm -rf memories  # if starter memories were installed with CLI utilities
 ## Version
 
 - Plugin: `frontier-copilot-cli`
-- Version: `9.3.1`
+- Version: `9.4.0`
 - Publisher: jnPiyush
 - License: Apache-2.0
 - Third-party notices: See `NOTICE`, including the MIT-licensed
