@@ -1,5 +1,13 @@
 # Changelog
 
+## [9.3.2](https://github.com/jnPiyush/AgentX/compare/v9.3.1...v9.3.2) (2026-09-18)
+
+
+### Bug Fixes
+
+* harden Frontier runtime and evidence loops (refs [#428](https://github.com/jnPiyush/AgentX/issues/428)) ([081ab7f](https://github.com/jnPiyush/AgentX/commit/081ab7f9aa95e31ba2cbea99c30384a1342ad536))
+* preserve model fidelity and enforce council evidence (refs [#428](https://github.com/jnPiyush/AgentX/issues/428)) ([3c394e2](https://github.com/jnPiyush/AgentX/commit/3c394e2cd2da75bdb6a9502edf0f5efc2ada8e86))
+
 ## 9.4.0
 
 ### Changed
