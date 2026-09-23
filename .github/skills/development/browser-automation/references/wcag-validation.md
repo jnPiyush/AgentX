@@ -24,7 +24,7 @@ If the network is restricted (controlled or restricted profile), inject from a l
 
 ### Path 2: axe via `@axe-core/playwright` runner (fallback)
 
-If `browser_evaluate` is not available, run a small one-shot Node script that uses `@axe-core/playwright`. The script is invoked through the daemon ([SPEC-341](../../../../../docs/artifacts/specs/SPEC-341.md)) when available, or `run_in_terminal` otherwise. The script outputs JSON in the same shape as Path 1 so the severity mapping below stays unchanged.
+If `browser_evaluate` is not available, run a small one-shot Node script that uses `@axe-core/playwright`. The script is invoked through the daemon (SPEC-341, `jnPiyush/AgentX@ff2190a0`) when available, or `run_in_terminal` otherwise. The script outputs JSON in the same shape as Path 1 so the severity mapping below stays unchanged.
 
 ## Severity mapping
 
@@ -82,5 +82,5 @@ axe-core finds roughly 40-50% of WCAG issues automatically. The following still 
 ## References
 
 - Skill: [browser-automation/SKILL.md](../SKILL.md)
-- ADR: [docs/artifacts/adr/ADR-342.md](../../../../../docs/artifacts/adr/ADR-342.md)
+- ADR-342: removed from the tree; in git history at `jnPiyush/AgentX@ff2190a0`
 - UX Designer agent: [.github/agents/ux-designer.agent.md](../../../../agents/ux-designer.agent.md)

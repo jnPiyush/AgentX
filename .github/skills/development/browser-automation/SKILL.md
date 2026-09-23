@@ -131,7 +131,6 @@ The profile gate lives in the MCP load layer, not in this skill. The skill does 
 
 ## References
 
-- ADR-342: [docs/artifacts/adr/ADR-342.md](../../../../docs/artifacts/adr/ADR-342.md)
-- Execution plan: [docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md](../../../../docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md)
+- ADR-342 and EXEC-PLAN-342: removed from the tree; in git history at `jnPiyush/AgentX@ff2190a0`
 - WCAG validation pattern: [references/wcag-validation.md](references/wcag-validation.md)
 - Upstream Playwright MCP server: `npx @playwright/mcp@latest` (see Microsoft Playwright MCP documentation)

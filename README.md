@@ -297,7 +297,7 @@ Evaluate three deployment options for this service and create an ADR with the tr
 | [.github/skills/](.github/skills/) | Canonical production skills |
 | [.agentx/](.agentx/) | CLI, plugins, hooks, and workspace runtime state |
 | [docs/artifacts/](docs/artifacts/) | PRDs, ADRs, specs, reviews, learnings |
-| [docs/execution/](docs/execution/) | Living plans, progress, contracts, evidence |
+| `docs/execution/` | Living plans, progress, contracts, evidence (created on use) |
 | [vscode-extension/](vscode-extension/) | Extension source, tests, package, bundled runtime |
 | [packs/](packs/) | Optional distribution packs |
 | [evaluation/](evaluation/) | Datasets, rubrics, baselines, SkillOpt artifacts |
