@@ -1,15 +1,15 @@
 {
-  "version": "9.3.1",
-  "createdAt": "2026-09-15T01:05:17Z",
+  "version": "9.4.0",
+  "createdAt": "2026-09-23T20:07:13Z",
   "files": [
     {
       "path": ".agentx/agentic-runner.ps1",
-      "sha256": "18eece8201febfc59b7e32ba667de3143d4a482460dc496860681186d585f36e",
+      "sha256": "1228744fdd05f58bdbb4b36dec05a92c2e78a00f5337c7eba518d6a0c51a6ede",
       "category": "cli"
     },
     {
       "path": ".agentx/agentx-cli.ps1",
-      "sha256": "9880cc2c41504874659239b6d07ec2e5f6e49fcf5a975a39ad5ea18c7edd65ca",
+      "sha256": "4c482db1971d283cbcca0f2c7767c8d97ca7a64b0d6561c5eea2ab7f303e021a",
       "category": "cli"
     },
     {
@@ -19,37 +19,37 @@
     },
     {
       "path": ".agentx/agentx.sh",
-      "sha256": "6c42c837e0a9cef55d49d3d04fcfcbc8de3d6c5d3d0b5e02dd74560fb6eb1908",
+      "sha256": "aad2e8ccb8fa556ac965e5095b9634399d161ae7404903fecec748a10812cae5",
       "category": "cli"
     },
     {
       "path": ".github/agents/agile-coach.agent.md",
-      "sha256": "21c2a9fbfabb4bf5c84a420292f7318e1c7208372c22d22c2da74c753fa691de",
+      "sha256": "d82ca5eb1394326ba35109429ccbd24889cf0a4cc19170af5660f39910f9644b",
       "category": "agent"
     },
     {
       "path": ".github/agents/architect.agent.md",
-      "sha256": "a16ec63097ac8b140af91f9e1dd092ffae03b8f374aa3c55d867f1e79118ccf9",
+      "sha256": "30713dcd42252f4b71c3f7fbb0181648af75ad7bd7691e427592707d5a215f0a",
       "category": "agent"
     },
     {
       "path": ".github/agents/consulting-research.agent.md",
-      "sha256": "f1e7e49db80a909bcf66fe55d1b11aab225e3dcc42106432bd2f4a1d56ee98af",
+      "sha256": "ce205492b3afad39f1ff22cada3eef57ca9c531043712d51a40802fe894bd480",
       "category": "agent"
     },
     {
       "path": ".github/agents/data-scientist.agent.md",
-      "sha256": "bacbc6741d662489858cee0eacd8176dd1c80f044c82e87de3d59eb3879ee188",
+      "sha256": "40fd1408d7ab7b2c5ec07b9f414b987bb7bc16a38679ce6b8d6afcf2ea71fc79",
       "category": "agent"
     },
     {
       "path": ".github/agents/devops.agent.md",
-      "sha256": "a38eac659c8d8653affed9d632275fa702845ecae7bef46490a8942117889d8d",
+      "sha256": "ece07077814a1e3b7536d085ae0ecd0afd94115d17659844ed52fa3b6cc47422",
       "category": "agent"
     },
     {
       "path": ".github/agents/engineer.agent.md",
-      "sha256": "30421910b67ab375a4c2d4277aca3cd16511a2942f19f6bf4011503a1501264b",
+      "sha256": "73a358c2080a30ecc213eb73b8da7648a4f58de1935483641e7c07844cdf52ed",
       "category": "agent"
     },
     {
@@ -59,7 +59,7 @@
     },
     {
       "path": ".github/agents/frontier.agent.md",
-      "sha256": "a847f97d1c9b8f702702b4908aa01302f47c36566253e9daea93401fced93dd4",
+      "sha256": "80108d10e342329c71c3806f2681b7cfa7f32d5ce196fcb88c8103a667b009ba",
       "category": "agent"
     },
     {
@@ -109,7 +109,7 @@
     },
     {
       "path": ".github/agents/internal/prototype-auditor.agent.md",
-      "sha256": "ba7bd94d602375a4deca434eb4bb4510a6b9b2e78abb651dc433e43d37e9c0ad",
+      "sha256": "a2828020c9b12bdf601f1712abcb3759221ad40f886e6026659edb963707284d",
       "category": "agent"
     },
     {
@@ -124,32 +124,32 @@
     },
     {
       "path": ".github/agents/powerbi-analyst.agent.md",
-      "sha256": "5c2188c1b4a487f0decd827e95b0edbbee6c05ca77a1a7a43fe63750885f0c3e",
+      "sha256": "4ae0143dcf31be1ad633321e4ff925c30ec1f23b72c500cc53b8c8f42c55cfab",
       "category": "agent"
     },
     {
       "path": ".github/agents/product-manager.agent.md",
-      "sha256": "8002816bd7be76bd8e8132548b053ac81006567a4c750f148122ed1f5415caee",
+      "sha256": "3d75c7954903ff431cbf3ef7387deffd5a6587051c1e1ed4064263bc90374401",
       "category": "agent"
     },
     {
       "path": ".github/agents/reviewer-auto.agent.md",
-      "sha256": "67c786e8df88be2295c943db6add521b5d3778172403b172d591069e76d7f383",
+      "sha256": "173a93bce6a5ed0b314f60cd7121015ac2f5561d372919e40181797f07b83829",
       "category": "agent"
     },
     {
       "path": ".github/agents/reviewer.agent.md",
-      "sha256": "cf20f670eb61f39a843354568d4c618940abb058b588b2df45908c052156a537",
+      "sha256": "97210c907dd403a7e1acd9194b6600af177f0bdb8a8c5b649bc2a5933cb273d6",
       "category": "agent"
     },
     {
       "path": ".github/agents/tester.agent.md",
-      "sha256": "d03f6867a4471a962e3634c41f08d95c3e48d852968f4bc4057ffd67c4b5f3fa",
+      "sha256": "6fa769226dd5208f60319d7dd43d69b86af789307a00d0c3a06912e06571d587",
       "category": "agent"
     },
     {
       "path": ".github/agents/ux-designer.agent.md",
-      "sha256": "a2961b92f2a29ec4acb064da3cba4b2402360aa16acbb0a3aae2c304da70ba5c",
+      "sha256": "5304c6529bf7a7ae22a42616ec7a853ad00f7b3636a43adb0ea36533aaec2c3a",
       "category": "agent"
     },
     {
@@ -159,8 +159,8 @@
     },
     {
       "path": ".github/hooks/scripts/signal-capture.js",
-      "sha256": "77f4771f286ad86656df5a1e447471c451f736ea70f5635c321c496c3b3afa80",
-      "category": "hook"
+      "sha256": "e86dfee9060bfbd671cc49d3ec9d15dc789fd6eed5069ecf240305949f1ec936",
+      "category": "script"
     },
     {
       "path": ".github/instructions/ado/ado-backlog-sprint.instructions.md",
@@ -219,7 +219,7 @@
     },
     {
       "path": ".github/instructions/project-conventions.instructions.md",
-      "sha256": "682da99b4d8400ad6e6793f8a687f2639b743182e4b0eb9fa0b4bc311003ca2b",
+      "sha256": "b32bc666f529f97fc1ca62219a6d94345bec39af63d2eebe6fbc0a5fe91962f8",
       "category": "instruction"
     },
     {
@@ -714,17 +714,17 @@
     },
     {
       "path": ".github/skills/design/impeccable-integration/SKILL.md",
-      "sha256": "956fde496ae33fdbeb849eb8630c97fe1efde3b70f28387239e2757e13bbf6a4",
+      "sha256": "be362ac598c19225631db367b3f030a7e93aab0b990e0a38521a0bc9da4eb639",
       "category": "skill"
     },
     {
       "path": ".github/skills/design/prototype-audit/SKILL.md",
-      "sha256": "368e3572d950303bec5f1bd01c43bb7260a398d81a5483c7c65d8331052e2810",
+      "sha256": "5acf569e712773b956c7ce48a5612fd80aca2cee1e0a487dd3f4ec3ed248494c",
       "category": "skill"
     },
     {
       "path": ".github/skills/design/prototype-craft/SKILL.md",
-      "sha256": "7f15448ae17087e20e55691a741edf09b4880b8d82256c47e449abeb35ee569e",
+      "sha256": "82a814e4ec0de0859a34ff7d21ef48f105185f923651a1ca05421b756bb8ab70",
       "category": "skill"
     },
     {
@@ -839,7 +839,7 @@
     },
     {
       "path": ".github/skills/development/iterative-loop/SKILL.md",
-      "sha256": "396ff6d3b2b54df9f992fcb41a0b40136ca4fc1819a778948e39211af860288c",
+      "sha256": "6f2d7b6ead493808be7a178272730dd0207ca9d158f881b10f71eae943f642c0",
       "category": "skill"
     },
     {
@@ -869,7 +869,7 @@
     },
     {
       "path": ".github/skills/development/skill-creator/SKILL.md",
-      "sha256": "fe292b9e7cbce859bd919f18ff69be8e4c6a3035c21f8847a275f4b9c17fb2f8",
+      "sha256": "f0e47dde73d140098c756bed82189d65561cf2f0e6521dd45f15c118e47b635a",
       "category": "skill"
     },
     {
@@ -1199,7 +1199,7 @@
     },
     {
       "path": ".github/templates/ADR-TEMPLATE.md",
-      "sha256": "dc338e62e335c747a1a128476158820caa1ae3b9dbbc29bd3699243dab0c6a3c",
+      "sha256": "c670c7763a958f9cae74fb92f47507d928ae528736e763f1d844c69c46d9e257",
       "category": "template"
     },
     {
@@ -1249,7 +1249,7 @@
     },
     {
       "path": ".github/templates/REVIEW-TEMPLATE.md",
-      "sha256": "4407139939c1114a23ebc8bafbecaf6d68c45b93df813ca89e66423406aa4821",
+      "sha256": "916f39693e8a1fd39c9c81322e6d151d801bfac025cf8483fa12194bc102b9cc",
       "category": "template"
     },
     {
@@ -1264,1492 +1264,22 @@
     },
     {
       "path": ".github/templates/SPEC-TEMPLATE.md",
-      "sha256": "eec4c6a27d8b50876fc35918bb5933150b3cf9e94675c573dba58b8678316443",
+      "sha256": "f64654f9613af406de65dc01140e294d6ad078f51f69fe1ceffa071de5ab7aa4",
       "category": "template"
     },
     {
       "path": ".github/templates/UX-TEMPLATE.md",
-      "sha256": "5e50967e7b60bb8100d148a89c8acb14442b7df8961adf05730ec454a7d8d42c",
+      "sha256": "878ff63e1b84bf2a396e2b53b2f5db133c8d0422e62a9c78a3d69d2da13df523",
       "category": "template"
     },
     {
       "path": "AGENTS.md",
-      "sha256": "a977422b784daf2cbefafaf4f2b8b3471f655ae9ea0474097e8e39c04f6e6ccc",
+      "sha256": "615e394042ba75e788d25377d7083f8eaa27fd1dab35126d4996437f46b07ad2",
       "category": "doc"
     },
     {
-      "path": "build/review-cowork-416/.github/agents/agent-x.agent.md",
-      "sha256": "65c7dda8d7ce90a6d3df49e55205c376263273bd68e1fa1fca516d20a11c0a0b",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/agile-coach.agent.md",
-      "sha256": "9a0b89ec6d25b42d3133868aa99b0b906b1c9d5f4e37a87ab86de1e5f20f9264",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/architect.agent.md",
-      "sha256": "c0d68e83e8eb4b1992336eafd1fdce6bf9208f0477dbc469626e3a73538e6485",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/consulting-research.agent.md",
-      "sha256": "f52c8f2fb7c1c47b5b2d0f1ccf62b81931121a03726c49ca7af414d187e70393",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/data-scientist.agent.md",
-      "sha256": "f184beda85e4f9f0c2cc8ec8f522f0f23214065d6c30eb698234a8251829ef7e",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/devops.agent.md",
-      "sha256": "bfecb0a40a33bd33d70d6bd8cbac21c3044a84578a0095d867fe07d3c41cbe0d",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/engineer.agent.md",
-      "sha256": "10a6631c4ee6fead64cac5fc5f96d2e26600d05fdf436757d9d2197ebb051d15",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/fabric-engineer.agent.md",
-      "sha256": "104aa981b3583644223747809470bb7a38071f4d9074cdf4659f05bec9d4d503",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/ado-ops.agent.md",
-      "sha256": "a8dceb3490f6a7e1ca86ce9e355e7f28d15f1d20802768684906e81727c511a2",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/ado-prd-to-wit.agent.md",
-      "sha256": "5bfaf94fae3706fbe2f101141b399e55dbc9d34e688511c5b7525cbe09434965",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/architecture-reviewer.agent.md",
-      "sha256": "ba197dcc5235504c794803c19955bb161ad984c11fae5975f4801b22fd382dd9",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/diagram-specialist.agent.md",
-      "sha256": "17d1a85ef4e78f16b7026465ec05aec711daa1fac2b6e1288feeabaf0d5ae903",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/eval-specialist.agent.md",
-      "sha256": "7477d37afd2bc3f059f39da6d7e744c8e82c8faa972de676c572f1ab49910a1a",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/functional-reviewer.agent.md",
-      "sha256": "bcee9505ed7c6d0c3a227a56caff9f0e3969394c819f10a22506b845b6deaafe",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/github-ops.agent.md",
-      "sha256": "f2ff23abd95f0039277833ec9c7cb5aa962cc64541ff07c379aaf4f891845e2c",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/ops-monitor.agent.md",
-      "sha256": "b570d9d6cae5fde14b7088b4e7c29959b3b1e336612b539e9526ee8bf36a0798",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/prompt-engineer.agent.md",
-      "sha256": "801ecc54c968e41cd8469b5f1dfc4bf6106164e147eab91530c78511e710b439",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/prototype-auditor.agent.md",
-      "sha256": "395757d0c8349463ed6e3747c23cad423251810f296cb5bb9e79435a1245456b",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/internal/rag-specialist.agent.md",
-      "sha256": "b64ee8a76f69a32f46cd0162af144c70137ee89710668fcea0512d43968d3519",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/power-platform-builder.agent.md",
-      "sha256": "f47b18f18958e489582f1ab7bbcee85713e27ff4264a54fc0604c0c50e01ed47",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/powerbi-analyst.agent.md",
-      "sha256": "2ca9f6c21f363ff8e7755aff9ee93173a581982382930bfa503ebcee8cdf0cb9",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/product-manager.agent.md",
-      "sha256": "e8028b89dd37eaaa4bfcb0039c573fd78c6b80dde1709d899bbb2f6137a5a5b9",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/reviewer-auto.agent.md",
-      "sha256": "4924723531091d74baa43bc83b422c0fcf5253ba4d6f2adaac0cb8a1c0fe796e",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/reviewer.agent.md",
-      "sha256": "aa02f031ec6f295d69c6bc5dc42f97260891edbf1c30acb8d7f7eb923563ea22",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/tester.agent.md",
-      "sha256": "418b859f67e22f361d8f5a351abfc8f9f5c1d02d15f4a6a7bf74b39c5a9f8520",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/agents/ux-designer.agent.md",
-      "sha256": "92916656bef7b2c0d552517c32e238f884c469f4b9329c6cd250df42254c738d",
-      "category": "agent"
-    },
-    {
-      "path": "build/review-cowork-416/.github/hooks/copilot-hooks.json",
-      "sha256": "3ba47374f29adc26fc0e65199fcc2eb5e0834547f3deb76372a03f65578e7fb5",
-      "category": "hook"
-    },
-    {
-      "path": "build/review-cowork-416/.github/hooks/scripts/signal-capture.js",
-      "sha256": "683fd03db026ed8feb485c6b3800fd69b202473ad79c39e1a2ef5b85b5b3ed9d",
-      "category": "hook"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/ado/ado-backlog-sprint.instructions.md",
-      "sha256": "3949b0c12e95f14d8b070e7cc649ca1ee4edb1f984265ed37e01dd8a2543c2c3",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/ado/ado-backlog-triage.instructions.md",
-      "sha256": "405554d57945bbd5d83b06cceabe3a9b9dacb23157d3942bf2e230c7881563cf",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/ado/ado-create-pull-request.instructions.md",
-      "sha256": "46994277066716bbcd96f4e2824bdd58da7ccbb529326919a7c79b4046f3deea",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/ado/ado-get-build-info.instructions.md",
-      "sha256": "eba424d589c0c96e0eaddf1cb828063ae3e696ba47dc9e9b136766b5c30cff06",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/ado/ado-interaction-templates.instructions.md",
-      "sha256": "71fbf7dd5d18e32eebbd8f274feb3340fa32d9492e3566a45768b3c06e3880eb",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/ado/ado-update-wit-items.instructions.md",
-      "sha256": "c85ac114e7137229816c329919e9dad5a3da256a38ff618696b88a26ad4f1479",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/ado/ado-wit-discovery.instructions.md",
-      "sha256": "311e856c72864eb34f243fd8e0f811ef32082d4b3cab7c5d0553165739299c4e",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/ado/ado-wit-planning.instructions.md",
-      "sha256": "6976c1b0703d8a9bf33be9429e38b86253e56924e0c3f82d208c857610c91ee3",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/ai.instructions.md",
-      "sha256": "07414a8e57e93540247dcf3eb12d18e0c396447351a32b32711337cc1232825a",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/csharp.instructions.md",
-      "sha256": "9c68481cc4adda8509b939ca9c32d8339b71f21264d42ac277ce5a3489a19dfa",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/memory.instructions.md",
-      "sha256": "af1f0e454f29a0c80a1c643813e82543b64c7e9c8fc5f1dcff780a3338c7fbb4",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/project-conventions.instructions.md",
-      "sha256": "1ef3ddc807400bdfbab586becbc8e5729fdd9c7b5906e514f9f1907ce87566bf",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/python.instructions.md",
-      "sha256": "39c8d02b9c2366bfe21e60837be9677dcd994261a2f413b6be6af5f1b8c96f18",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/react.instructions.md",
-      "sha256": "84e058eb27f53c3304abf86a1b9d6b41bffc748d171265ab7b7091b87a8e47fc",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/instructions/typescript.instructions.md",
-      "sha256": "92aca6376ea768fe97c9df9e01dc6e604fa829bb7e89d522bac44c53e510c68d",
-      "category": "instruction"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ado-add-work-item.prompt.md",
-      "sha256": "35a56b17209f682658edf117dfa4b8d76dbcad391f4e23de3880524b106f3dec",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ado-create-pull-request.prompt.md",
-      "sha256": "72eda71fcc93dbc79e6c17ba41fd18703f8277a1f0e91914b4204d8c5c13f285",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ado-discover-work-items.prompt.md",
-      "sha256": "5a9c2b54a8c37d50677a0ac106e20653a5a913d65bdf817e119c535aa755b2d2",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ado-get-build-info.prompt.md",
-      "sha256": "acbb012403a772387b8e03a3b6e91689905380c38495eb3aea084bf810cbc0e7",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ado-process-my-work-items-for-task-planning.prompt.md",
-      "sha256": "fe425e91169a8d8e718e32a49092a888bd705e9c31163cbc3d68f01a178d7747",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ado-sprint-plan.prompt.md",
-      "sha256": "666664747febd719c667990272b5cbbb14de476764fe7d74215d7582523f389e",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ado-triage-work-items.prompt.md",
-      "sha256": "4fbaa2e1d91283660809fabdafb5e9510850a0c333f9c06e8e75e7e31a2f031e",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ado-update-wit-items.prompt.md",
-      "sha256": "d81ca9ce69c01f998d97eadd2566268afefa9ecc1d9589aa7463bede4f734504",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ai-agent.prompt.md",
-      "sha256": "baa242ca11f4921f2891b66d6fdb0a558422674eb4318473e1d7df955315f55d",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/architecture.prompt.md",
-      "sha256": "c8eb78833440e4273d32d37e2bdbf9d2db09f1182f2e1da4311e578086d46fec",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/bug-triage.prompt.md",
-      "sha256": "deccc6d65d6db554e9108712507ed2f664d246193f5f350b16508934de3746ce",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/code-review.prompt.md",
-      "sha256": "74621361e32a9c927e45cbddad9ba263986890ed3c5b6a9208521e4dc58c6ff9",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/cowork-plugin-create.prompt.md",
-      "sha256": "f1caa76eeea578c72b86a75cffc1d077a312fd4770bf5acc96f507b28856d915",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/cowork-skill-create.prompt.md",
-      "sha256": "d91b30fdeac463b2f874a267f4eb70bd685a52f8c498fc8cf7fa82e2c9ee0008",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/devops.prompt.md",
-      "sha256": "a637a714f0c5890bd231ee1c80e8ab6f74b853229385c03c3fa10228ec52f50e",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/doc-gardener.prompt.md",
-      "sha256": "ef03667560826bebab5b862632a7e6e93f1474782225ebbc80a4e306c3fefb6c",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/evaluation.prompt.md",
-      "sha256": "4e72c0d7c3ebdfc7809f43133f953076db4a01fb23112fd53629434459ff323d",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/prd-gen.prompt.md",
-      "sha256": "a014fadeefb3c9d9423924c23ca07343820388d839a5480abf0a0fa51406b9d4",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/refactor.prompt.md",
-      "sha256": "f66adaf0368293f4efbf201d80d59fcf1e419ac6111a05154a397e041f671cb0",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/roadmap-gen.prompt.md",
-      "sha256": "6389b559b65a81609144555ca1de8e28cd1886a4c200ebac00700ae1713d4071",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/security-review.prompt.md",
-      "sha256": "54e960a9c237fff8d3ec09bd0daf530aca10519205acf87f20b757581e3e5fb8",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/test-gen.prompt.md",
-      "sha256": "90c9de4126adb0514519794977d2a76dd8383f784e154fa72f63a80d00d36fcd",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/prompts/ux-design.prompt.md",
-      "sha256": "5bc7cfe858ee150ec90bf5ec3a0354601d022fec6e36196d81298a2aa652c308",
-      "category": "prompt"
-    },
-    {
-      "path": "build/review-cowork-416/.github/registries/pipelines.json",
-      "sha256": "0d35b54958b14d66f189bd0fc58b21536c68a8a0f9485045b4d04434d6d8c4b4",
-      "category": "registry"
-    },
-    {
-      "path": "build/review-cowork-416/.github/registries/routing.json",
-      "sha256": "6e3874ea3c00997478681caee569a8375e4ae2f5fcca0b22cb455b47cefee606",
-      "category": "registry"
-    },
-    {
-      "path": "build/review-cowork-416/.github/registries/skills.json",
-      "sha256": "f169ed9d461531882099bd2054907295b74abb3bea2356e2b27f9af5cd6ce783",
-      "category": "registry"
-    },
-    {
-      "path": "build/review-cowork-416/.github/registries/templates.json",
-      "sha256": "9a5ce8c3fb586c5c026674b2b7951bc08582cc94913cf1490d133f0b1cb75e50",
-      "category": "registry"
-    },
-    {
-      "path": "build/review-cowork-416/.github/schemas/agent-frontmatter.schema.json",
-      "sha256": "431da374e5d5e0c4effae8e700a2df243e035356731a59b89a4f329cae0a1f37",
-      "category": "schema"
-    },
-    {
-      "path": "build/review-cowork-416/.github/schemas/clarification-ledger.schema.json",
-      "sha256": "b896b647f80fcef2d7a48ec10f48bcc2f10a79597aada93f46b15b68eea32987",
-      "category": "schema"
-    },
-    {
-      "path": "build/review-cowork-416/.github/schemas/handoff-message.schema.json",
-      "sha256": "1a3eec90f2dc7b1523cd9dfc62e5aa79d68c6ff2c549a49d3029e63224df86c1",
-      "category": "schema"
-    },
-    {
-      "path": "build/review-cowork-416/.github/schemas/instruction-frontmatter.schema.json",
-      "sha256": "f682cbae455106a4bbd2bab0a63ead1d068fb831fff7a763fdd44ca4e026b28c",
-      "category": "schema"
-    },
-    {
-      "path": "build/review-cowork-416/.github/schemas/pack-manifest.schema.json",
-      "sha256": "f5f9d62dce352430fb6f38f7d59bfa290cd13e4c1c0073646c820cd953748bdb",
-      "category": "schema"
-    },
-    {
-      "path": "build/review-cowork-416/.github/schemas/plugin-manifest.schema.json",
-      "sha256": "cc9ff5278a38783b00f3d8b403b590d31d6dcf3dee2f67d84336fc8c7682ec1f",
-      "category": "schema"
-    },
-    {
-      "path": "build/review-cowork-416/.github/schemas/skill-frontmatter.schema.json",
-      "sha256": "e06ec5323aaea28173daf468dcc05c515009a4f71b9d1c6648a530fe04eb6790",
-      "category": "schema"
-    },
-    {
-      "path": "build/review-cowork-416/.github/security/allowed-commands.json",
-      "sha256": "386fb72cbb4c545a0cb176b0bb23f34f7265d52af539383075a200eff60fcf5d",
-      "category": "config"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/agent-memory-systems/SKILL.md",
-      "sha256": "ba118e6f1e0223ae1063f079a84c85567e77e75d4f9081367ec2f0b5caaafc4b",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/agent-observability/SKILL.md",
-      "sha256": "850c6cce081f213a344c96cd28434962f77bd9cdb0b384c553fdbaa12b8820da",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/ai-agent-development/scripts/check-model-drift.ps1",
-      "sha256": "e17238af8500b96d7d32196e327e9531efd446029d4684604bd7082e87e67187",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/ai-agent-development/scripts/validate-agent-checklist.ps1",
-      "sha256": "978f24876e8e5c9ca204e2d031ec89a237f0f4e177ba1d1f0e930eea744656ff",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/ai-agent-development/SKILL.md",
-      "sha256": "7de55a5f2bb629fc5a89594d5bffd5bc5254952abd3f14698d67bc1878d2d4ff",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/ai-evaluation/SKILL.md",
-      "sha256": "1d41ad428d57d7e9766d9e71d8269dbe07e94cee1e4dd69f7fc4f76e284b82bf",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/ai-safety-and-red-teaming/SKILL.md",
-      "sha256": "f00bea4599d5e97e8ed6973f5aa9c0c092dd8d4f1ffddf565ce5d6775b6a42ec",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/anthropic-claude/SKILL.md",
-      "sha256": "5b0723c6adf072cd9e515050ff3c28de1ee835052ad630825419f2031c26926f",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/azure-foundry/SKILL.md",
-      "sha256": "1ff704b359d30cb7c8094bd0b21251d45354a24671f3ae4150787f824f598f8d",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/cognitive-architecture/SKILL.md",
-      "sha256": "1d10dab069845bcf82446099e17ed4d49a77c960e22c9326b72e86f98de9e80e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/computer-use-and-browser-agents/SKILL.md",
-      "sha256": "0b8b3602ad6d82d53e359db0dc4fbf4831904fce41ecd6d8fad0d9c03a7a8a40",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/context-management/SKILL.md",
-      "sha256": "e4229831288e4a1de814df5b961a1b09fb3af9721bb7269f17becb6bdaefe07c",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/data-drift-strategy/SKILL.md",
-      "sha256": "6de039529a067ff3db11225d6039add958390a08ea4be2959bd741af9cf33444",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/feedback-loops/SKILL.md",
-      "sha256": "4e68cb11210f6327587dfca7595c9693fc39f4822b2d0571979acae4758b3283",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/foundry-sdk/SKILL.md",
-      "sha256": "871acb4b4939f69e7444160936f5e46f21bf62a8536ed489992235504636e665",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/genaiops/SKILL.md",
-      "sha256": "bf995ebe6e944b1539e8580f55d1e1cb3f87edf4429e3095cb387ef02af089b2",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/iterative-retrieval/SKILL.md",
-      "sha256": "46d3f32e322120f7c23599fc2ed39c99dbe58e2d6f92bc033af8a5a2c7206fc8",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/langgraph/SKILL.md",
-      "sha256": "10c2dd343fe47204d921892b10c8086c504ad7d4025b43b4f6674be93e182f1c",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/llm-gateway-and-routing/SKILL.md",
-      "sha256": "90c923952a1d6ccb5c72868953f758a5e171ea944cd05533b1d53b5cc57924d2",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/mcp-apps-development/SKILL.md",
-      "sha256": "5639f6a799880f986452e2e8b3048c91e8f216420241c6890c2491aa3324ea21",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/mcp-server-development/SKILL.md",
-      "sha256": "cdd67bb557dc268448b749b6aa4a045e3e204456ea48a847b5a32b38c97a56f7",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/model-drift-management/SKILL.md",
-      "sha256": "80f3ccb6a33da2d365f4c9d38ffd1500a8a946df292f98d69397906d30d38d81",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/model-fine-tuning/SKILL.md",
-      "sha256": "7175d1ccc2e21c11776b7e98c75f50bbd725159d57fc10399a48b2a0daba78d2",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/multi-agent-orchestration/SKILL.md",
-      "sha256": "ef7aabe2d19cea5fe58bbee4aff2e70161a8ace07f1847062ff6c3318bf5856d",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/prompt-engineering/SKILL.md",
-      "sha256": "5a79c6856cc363d6b5214259c6b8ccb733a306936ad538d09affd3593921124e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/prompt-versioning/SKILL.md",
-      "sha256": "c052dc3ddc07a256178a227f44f52d8bcb3eb84770f3f7a386b58dcd08320e52",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/rag-pipelines/SKILL.md",
-      "sha256": "fca7e9b6e153084262e87c9e51f38d5a7d5d674bcbd8145147adcf31a6561fa7",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/reasoning-models/SKILL.md",
-      "sha256": "db4a0a94648a56aab9224edaef07e335f51d73fe0066c4bad570e9604dd52d9f",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/synthetic-data-generation/SKILL.md",
-      "sha256": "da79d85bd0f85ba8411e87976c8c07e377eae7085f4376a9c0960bf63eccec22",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/tool-use-and-function-calling/SKILL.md",
-      "sha256": "9101d2e07bb0258e38c6f2cf356da7a8457ed3a6ffc52d5df0530de070d9d6dd",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/vector-databases/SKILL.md",
-      "sha256": "90677e2dc0ef28ae371939f0a7f9b9e74f6be1ba84314d0b145e368d098fa1d2",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/ai-systems/voice-agents/SKILL.md",
-      "sha256": "0a8ee5421c4b13aea0569268bcf4fe04568fb8d4cd6fa5ebd9acce3f1b838da2",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/api-design/SKILL.md",
-      "sha256": "7673f1caa1389694713d94c5a170e85bca9bfe3847b4aa9954d635270d4ceeb0",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/core-principles/SKILL.md",
-      "sha256": "e473f488eced9f0e7c8f7f4fb60b3071d0fc92fbbe5ed6fc73ac294f2eafecd3",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/cost-analysis/scripts/estimate-cost.ps1",
-      "sha256": "18f41df544eb56ce3ae0c9375d60f69520d5a5aead0b1ea3d04ed4c83dbfec2d",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/cost-analysis/SKILL.md",
-      "sha256": "2ac5438e2f738d2996b0153aedb2e73d7028ff63726f87d0567fa17bfa618d0e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/database/SKILL.md",
-      "sha256": "ae7f88dbe97fce29544f909e4b06d35c1474d71a556693f79708759427c50f07",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/infra-governance/scripts/check-infra-governance.ps1",
-      "sha256": "38a2592e66f3bf2e2472920c39860bfd93c39f97528de3778171fd8f965a4bee",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/infra-governance/scripts/resolve-resource-name.ps1",
-      "sha256": "ca62f257f471805456eacedb4eddbbed15071d91597ccab8b5aa8cb8b2fb0dc6",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/infra-governance/SKILL.md",
-      "sha256": "ee37d434c5be7e8d6d83adf466ae401326d13fe3a47409528abd6f7afb1bb3de",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/low-code-vs-pro-code/SKILL.md",
-      "sha256": "8614b5b983833251fd81397b1a94db61495b20f072af61edd4630a0b7891ac37",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/performance/scripts/run-benchmark.ps1",
-      "sha256": "ac2f3b4f7e8fe0bce6fcc23847f09e3ce829e841ab915d9ff2a6d03e478f4ed9",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/performance/SKILL.md",
-      "sha256": "f6fa4d515761135d774529464da95c7d29177e2f565bad11e7f803f1b8b7898a",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/security/scripts/scan-secrets.ps1",
-      "sha256": "3da07c2942dd8856f4f210263843b5de6cfe2b7db8c0362f40f514eb8e7dcdce",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/security/scripts/scan-security.ps1",
-      "sha256": "dacc4c4d7fb0ddcd299afb3204604215f8ca32a2c672887f94dd170bb8dd4ee2",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/architecture/security/SKILL.md",
-      "sha256": "7673d6c180e4d8a8d96558d13d3e770be093fa0b12ab8067d3b2d9b8a1345595",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/data/cosmos-db/SKILL.md",
-      "sha256": "fea55bc9d3eb4e2cc619d1fbc8b63765a5872976513675be62a3c22d44757989",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/data/data-analysis/SKILL.md",
-      "sha256": "22efe185581bde22ae31ffe03fbd566d1ca49c50007f6b0f15b8260ddfcfc4ad",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/data/databricks/SKILL.md",
-      "sha256": "1ef79fb486c403ec43a99243c3b0c06afea4c7776df4ef4b59f92fae6ea35d6c",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/data/fabric-analytics/SKILL.md",
-      "sha256": "2e10238bb37e63aedd21c9f27f791166dfa3fe3a79c29377910704950a177a46",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/data/fabric-data-agent/SKILL.md",
-      "sha256": "f00b0790e1fed71ea98b207b3186b6063236438efd526b10bef819c6f5625ba3",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/data/fabric-forecasting/SKILL.md",
-      "sha256": "0fd6d42094c59918c25169b7ddc7daa1d1c9be7b627e6c2263999a42742dfec8",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/data/powerbi/SKILL.md",
-      "sha256": "d84dc865c51ae6c143a948c04e8ae9215037870632988de3aeef75e61bc67b92",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/accessibility/SKILL.md",
-      "sha256": "b226362a7d2e660a535606446bc497fa50a62456dba4ef57f26fc9179c434c87",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/anti-slop/SKILL.md",
-      "sha256": "b209c12c77f35a8be24b54ccd86d9fcd9edb2499d78765890ad031cb981ae1f2",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/brand-spec-extraction/SKILL.md",
-      "sha256": "79f1c09b826ec09c99141c61191fe5caac9a1baf45d7e02f22f86c430c30d5fc",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/content-design/SKILL.md",
-      "sha256": "986970bf5edc3774a079244a252b49a74936246b86311a074b2b6a7c9d338ef9",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/design-system-reasoning/scripts/scaffold-theme.ps1",
-      "sha256": "36f0b80c0161a17fec7349cdb49cbf3578fe639005be16ddc94d74c7ebd16d33",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/design-system-reasoning/SKILL.md",
-      "sha256": "b710dbde102898584bb4fc497fc5d84fb4c307e7a59acdbd0f5eb757527f7fbd",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/frontend-ui/SKILL.md",
-      "sha256": "a8e2405bcc702ac57bd24ddccf03d97b2c60d5d5d5f18630de3466e4e4bec5f6",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/prototype-audit/SKILL.md",
-      "sha256": "0760e9336b4fa06ff68635e401ca7f3fc13a05c2c80a7d2611320724255136e8",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/prototype-craft/SKILL.md",
-      "sha256": "7f15448ae17087e20e55691a741edf09b4880b8d82256c47e449abeb35ee569e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/usability-heuristics/SKILL.md",
-      "sha256": "36d922909ed8e53de9c388f1ca8f3223af423b7b25160528ff53e2fd6cee8a19",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/ux-ui-design/SKILL.md",
-      "sha256": "4a122ca248a33c6d3537acd5819ca6ac05cb30de25ff2a1631d2d659b6434101",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/visual-regression/SKILL.md",
-      "sha256": "64d754076abab29d25981794b21dea715b976641dd64100f3dc75bf5b6f24c6f",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/design/working-prototype-app/SKILL.md",
-      "sha256": "7913ef1f96db7d5141dffbcf110b6091b1b99f44d130f2b5fccd893b5c4059ba",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/browser-automation/SKILL.md",
-      "sha256": "6c522b216bcdbe9f6f366fe35187b09e6b725e60aae00bd38a81197ac6f0f4c8",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/code-hygiene/SKILL.md",
-      "sha256": "b06cda3412071b60917f7a0adb052ca73516e0755c107d85e1c71f883e89e709",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/code-optimization/SKILL.md",
-      "sha256": "fa4c99e2dce5597db109cfd9af06754438511c9260c5f73de9c63cae0e366ba1",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/code-review/scripts/run-checklist.ps1",
-      "sha256": "d591d9b9af5c8a742dfe8b38bf506babed904321fec66568e232e533db13967a",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/code-review/SKILL.md",
-      "sha256": "e460899088e61688346ebe87a1266f35ebe59c61297c8dc7201c033c649cb542",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/configuration/SKILL.md",
-      "sha256": "30b963ea2d235c32bfe12e6ef3272e1dfa30fd66f6248074ab7b67933f045580",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/cowork-plugin-creator/scripts/New-CoworkPluginPackage.ps1",
-      "sha256": "76a566965a9a105a3fb9a55664c9f3bd264fe5658a5c75d15229735dea96b1f1",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/cowork-plugin-creator/SKILL.md",
-      "sha256": "dd310560e47d260f406526a965c8db6d7b59d5fa738d539addbbeeb30abe96bc",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/cowork-skill-creator/scripts/New-CoworkSkillPackage.ps1",
-      "sha256": "4dd76dcc8b66aa0b7a1a340b1da69309f3909fd8b316a4a7870a9ed4cd044853",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/cowork-skill-creator/SKILL.md",
-      "sha256": "b55d64d9f092d02eee97bbd69a7dfa9532c42bceae090cd5adaa0bb1f5372609",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/dependency-management/scripts/audit-deps.ps1",
-      "sha256": "fd5b55dd87692f70b905fb768f37e8ea2c00e93ba27d275a4f991d6edf757a15",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/dependency-management/SKILL.md",
-      "sha256": "96f69591254e052a2d90889c2a9a15577c5442075adba0d51ea69e36ab453c3e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/dispatching-parallel-agents/SKILL.md",
-      "sha256": "f5916b967282e0f23b6b41772306336f6a6906e90e1ee0d6337a1d365ff66da9",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/documentation/SKILL.md",
-      "sha256": "2c8419bd0137b42a77787f2511c0481c9b34e2d4ba2cdb61c9f69efea8e6b6c8",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/error-handling/SKILL.md",
-      "sha256": "ca7d2f5060ec764860ad5f041994abb6027f04434f8a9afc9e7b78a4d7fe6d5e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/experimentation-loop/SKILL.md",
-      "sha256": "cfd564245653283db1f207a7b05b87badba8f5d3216b77605721394f5e6570c6",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/finishing-a-development-branch/SKILL.md",
-      "sha256": "bf4313f360817787672b893ed51f94c4b40e7df542351fbd0ec20e119cc2f848",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/git-worktrees/SKILL.md",
-      "sha256": "b7ea5d7f92e1331e7e8217685ea810887aad63bb50d9cc1297f7daa32b6a58d7",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/iterative-loop/SKILL.md",
-      "sha256": "ea795dd5069cdbc9db524b906b30b7510b2511513467c3181a2642862506eb60",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/karpathy-guidelines/SKILL.md",
-      "sha256": "9acff46453ef608f66b9e0cec42e58f2e81a8f6aee4ed1e9c35f5d6773e53180",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/logging-monitoring/SKILL.md",
-      "sha256": "b2c82bfaf9e8cbd6194f8997cd0602c14b1442d791beeabc176e71de6eb31656",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/scrub/SKILL.md",
-      "sha256": "f214f8c3d652382598ad77577f9dca13839b7cd765af54346fa2cdaf5cdddce7",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/skill-creator/scripts/init-skill.ps1",
-      "sha256": "a588c045e7b127a4f02b6dc896fc503144a99379619500f6f5b81eb7d16ad8ba",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/skill-creator/SKILL.md",
-      "sha256": "d7ee9063acdb509c6e22cdcd60e7d3a108ab3c01bb854f35b0df28e017db955c",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/strategic-compaction/SKILL.md",
-      "sha256": "7859067cb4cfb55bc8b5425b02a0815920393c5bf095e33f7d3b007292184b8b",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/systematic-debugging/SKILL.md",
-      "sha256": "372df8db6440ff76f33e6d1c32bb1942a21f5b98a8a8926aacdf3dbfb27f16b8",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/testing/scripts/check-coverage.ps1",
-      "sha256": "917d930d1744218631ff81bceda0a01010dbe13938866d5764c59a4ad1ee2376",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/testing/scripts/check-test-pyramid.ps1",
-      "sha256": "127ce9b21dfa3abbadb695fabecf3bf32c289f0933e65898032b0e8e09b459cf",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/testing/SKILL.md",
-      "sha256": "1a1d4066882b31fc146a390a0b3019ba77ee23fd39ef9ec09ea15b00b60c92f8",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/token-optimizer/SKILL.md",
-      "sha256": "37b5cccf859e1fb7430efe14a93078382147fa7b99b7888a06997029c43bb7bc",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/type-safety/SKILL.md",
-      "sha256": "a0f093888447decc810b0c804d3cbc5d734c77dec7b7964d799d4a2b45de8e07",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/development/verification-before-completion/SKILL.md",
-      "sha256": "820ef837ddf56dd7c4d51a30c9aead4784de36a22d4af9ab3c9381043db99a89",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/diagrams/diagram-as-code/SKILL.md",
-      "sha256": "13e1150abca82207b9a0ec03830b63260ee788f39d8de44bfe879cea38e1c244",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/document/docx/SKILL.md",
-      "sha256": "19214c4ca18a32d145e747c01ce8d81157e249c77312854783eb418417901ec2",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/document/pdf/SKILL.md",
-      "sha256": "dd60fc134736e67f939ad223bea501a3dad2326755f0e23c2f8be291ac192538",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/document/pptx/SKILL.md",
-      "sha256": "8e203488f291ad37f63a48f8c3102b08a30c9a30d53516d8ebea636dcf327c1e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/domain/audit-assurance/SKILL.md",
-      "sha256": "58d629b83168fabd3ee9c4d60e27ecafe46a7919d4ab712c6dbe4edb556eab95",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/domain/clm/SKILL.md",
-      "sha256": "c2d91160db07da91fd08919f2b349dac2c24a3a82dff7770971448b0ef4436ad",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/domain/corporate-governance/SKILL.md",
-      "sha256": "916f996741d85a423c16996702b30406c5bd66da97de840be460ca93a084e92c",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/domain/financial-services/SKILL.md",
-      "sha256": "4d4cad97aed8344caad99d77c2526ced47b7c4c978e150603ef1814bf5237f32",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/domain/legal/SKILL.md",
-      "sha256": "a925b5f1ac461f172a89783b0dde1d873a3b56f670f33166cb4497f892fee48e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/domain/oil-and-gas/SKILL.md",
-      "sha256": "a00a22e92cf599f4eee500b307f8b24fc325a8701e76ce8c1ba650e782fe6095",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/domain/tax/SKILL.md",
-      "sha256": "fdeffebdc70c81188d0eb67cad9b3a00273dff59db5018c3722dc9a9ba12ffa9",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/infrastructure/azure/SKILL.md",
-      "sha256": "2c788cba334ae57aeea2d08a4827497479bbd3c9ca1992d91f7de3875688c99e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/infrastructure/bicep/SKILL.md",
-      "sha256": "cd0192b5b4e17fe9f812aaecf1c47c8abd4cdf98160ea13368c6d87ad2a76f56",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/infrastructure/containerization/scripts/generate-compose.ps1",
-      "sha256": "0a7e5ca1cdbc06e2d7bf808031baeabfd069916772a6f8696b0266b0e6862db7",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/infrastructure/containerization/scripts/generate-dockerfile.ps1",
-      "sha256": "cab6b924e10b41ff79f9020555b5fe0d844dd895923cbccbd56537c0d633afba",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/infrastructure/containerization/SKILL.md",
-      "sha256": "aec7e26db8ff43b4a1ddf44eb86f4ea10b1ad90ac02f76c82074fe81092586e3",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/infrastructure/terraform/SKILL.md",
-      "sha256": "4fcfb11b434c749c01bc12f78e96f69488da03851ccbbc30bf215e336866b655",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/blazor/SKILL.md",
-      "sha256": "06d12b9317a893209d29b71dd19866f22f271337cc7c365279dab6c37373c859",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/c/SKILL.md",
-      "sha256": "e11e1c3565663261b50ce672c370fd924aa91da6359f3ad6ed52bfc0ce780800",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/cpp/SKILL.md",
-      "sha256": "37be1508bd34923d5e588c8f454d992cfdd32073e71d0765c2fd2109a8c84f98",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/csharp/scripts/scaffold-solution.ps1",
-      "sha256": "dea353d90a34037563fff4e00da0f221dec1671767a98e02283cabf132c4f855",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/csharp/SKILL.md",
-      "sha256": "858485678c378697839593513629ddb0cf9edea16d4f4ff4077aefa66789836b",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/go/SKILL.md",
-      "sha256": "616b18c51cfc491755206f5464958784a96b7c3d7e26c7edb3342880806584ad",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/postgresql/SKILL.md",
-      "sha256": "7e103d7781cab009c190e40fc1faf89440add5a5d866bd55fbbed6f61d0c41f8",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/python/SKILL.md",
-      "sha256": "021fb3b2ec3bcf92586d0fc44ab7002f622dc0d1c5d4f497757984ead0c165ec",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/react/SKILL.md",
-      "sha256": "35429c3e06db20345dc8565c35b7e629e09f7275a31e945b77bad93f2e716edf",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/rust/SKILL.md",
-      "sha256": "50f65dc78ea0ee0a2177f75285f31facd390be261802d3db911f709bd1f2d554",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/languages/sql-server/SKILL.md",
-      "sha256": "fb0f49e5b4c491be26c3a6cfc521e3796fd60875e8a8e29b65aea7f77fe96903",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/canvas-app-yaml/SKILL.md",
-      "sha256": "a4b4c3c5a52b602f03268eafc95ed332a75084fc6860a7be10342b7618f8ad58",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/copilot-studio-agents/SKILL.md",
-      "sha256": "a71aa2be65cdddaf37d8caf2e782d5befeb57aa6725733a054b930e18a6d9ad1",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/dataverse-plugins/SKILL.md",
-      "sha256": "a2452be9f66ce2c18e416fac34eb4af1e748927586c996c007e5745ff707bd5e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/dataverse-schema/SKILL.md",
-      "sha256": "6d84843b67ea9de7bc6f4c0d50bd4975e2b1e3e3407b6e92e3a89fcd0d9d6c9b",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/environment-variables/SKILL.md",
-      "sha256": "b22cac50f942ca0528419922738f4c8bf180cff76bc7a8a0306482a033a012c6",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/model-driven-app/SKILL.md",
-      "sha256": "f68767538b5099f808a53152aaebfbf0b315bf82dc2336c17be674327b2887d5",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/pac-cli/SKILL.md",
-      "sha256": "c9e6a662e02f147b3337c02aa7df1276fc23b0f0a8ce5ec8b418427b60c85ab9",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/pcf-controls/SKILL.md",
-      "sha256": "64e816ad90a7e27b426f3dc4e0aae91899544b00622155028e5ac6ad72ad7f87",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/power-automate-desktop/SKILL.md",
-      "sha256": "7cb091c463af40f0d9cd311fcbe915200bb9ab32926181cced1b09d528306651",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/power-automate-flow-json/SKILL.md",
-      "sha256": "d04364f60df945cf13487ac43a2d59151bb2f80370eace17ed0dab0bee4ce302",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/power-pages/SKILL.md",
-      "sha256": "3a7bc5a18dfa80f9b6b27ef091aace54dc04976fcafcd8ab3cc6d089a09726bc",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/security-roles/SKILL.md",
-      "sha256": "efe2103ea86b324d2b02f9ebaf298eb08df747694ed32ef019d2d0b803b3e9c1",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/low-code/solution-anatomy/SKILL.md",
-      "sha256": "b6b8b5123d3cc357d7de0b9156e7a19f8783df08d620b03a84dad6262c5ea649",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/operations/github-actions-workflows/scripts/validate-workflows.ps1",
-      "sha256": "a5cd0624f60d56e99c0bbc8194d45b2427a142eb9ae4e17d24f7d7ae76e67d0d",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/operations/github-actions-workflows/SKILL.md",
-      "sha256": "8dc213b6e172049912486c8bada46e4897dc72587686bb101a298b5b34b5f1bc",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/operations/release-management/scripts/generate-changelog.ps1",
-      "sha256": "568f72221db2f6d478dd72241c6f13158c058eed7d9d81cf432789e5f73e41a3",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/operations/release-management/scripts/version-bump.ps1",
-      "sha256": "0337f3cc08b094dee11c872f1e051f4bb8fef077dfd024750e9f0800b1fee295",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/operations/release-management/SKILL.md",
-      "sha256": "c96ecc1f9685821de6630dbb728784ae29a0f9063237cbb7b71900d5bb3e4a44",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/operations/remote-git-operations/SKILL.md",
-      "sha256": "4576e903c344d3d0bfecb26a2fb53b330f54f303b7dafaa7b4180f233928dd12",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/operations/version-control/scripts/setup-hooks.ps1",
-      "sha256": "acb3c9de96daf1a66f8bc5d653a338d6986b249cbcaf52a12bc8b1ff3164cc26",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/operations/version-control/SKILL.md",
-      "sha256": "28d13d123a352f81d89009ca475a10b4161715077eee1da3838409400958ece2",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/operations/yaml-pipelines/SKILL.md",
-      "sha256": "d4a96cfebb0dd7fa895fee74e02fa6be0faa662908b40433aef4f933a14e77c9",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/product/prd/SKILL.md",
-      "sha256": "7dd7537c3278726db4842fd5c74d661d6e4b6522d13c54b5e812c28c12e32542",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/testing/e2e-testing/SKILL.md",
-      "sha256": "0fe8c3ccf8a115f818c3f680d80594bb545876f12a56a47dd29616178a729546",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/testing/integration-testing/SKILL.md",
-      "sha256": "5e0d4d71983bb2d5bd12b78e275c603dedd423a6df2faae35910629cb5ccd057",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/testing/performance-testing/SKILL.md",
-      "sha256": "962049090c05032a6a9f86710340ce3f122d38664a098d76711680b99caf613e",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/testing/production-readiness/SKILL.md",
-      "sha256": "afa6abfff6bebd92068a535228df567ff9e94e89b8480eeb6df5da1163fa2102",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/testing/security-testing/SKILL.md",
-      "sha256": "daa2f619b9cdd0c8245d8e3345e1e6fdcb5d0bc434cdeeafeda6cb5bc460e5e6",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/skills/testing/test-automation/SKILL.md",
-      "sha256": "ab2c0db744f4264770493769b36f560ba24c540694b89b4208d0cd9ec8bfdaf9",
-      "category": "skill"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/ADR-TEMPLATE.md",
-      "sha256": "fddce8b6dec5a37fea8eb126f9c0270f61343bc6c0b5dccf396b1214c571f834",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/ARCH-REVIEW-TEMPLATE.md",
-      "sha256": "34f742c78a2705b997d1cf9d6e95a062a45e7caee52ea2e5291ed22a1797069d",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/BACKLOG-TEMPLATE.md",
-      "sha256": "9b16ad5204c5d8d8f6f39581076bb81cc6d7925460d754cb3e6a050f14233a86",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/CONTRACT-TEMPLATE.md",
-      "sha256": "743b842b731244b2c0bd40168aa6085909e790018aae1855e486746733af5891",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/DESIGN-SYSTEM-TEMPLATE.md",
-      "sha256": "ae38968e57a5f6587eddd848194c99e29b47971e4f760abe80736b7c0be99606",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/EVIDENCE-SUMMARY-TEMPLATE.md",
-      "sha256": "b817275a88c984993b4f094051eccb7e234979b4f1abb71f9254ecd059fe95e9",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/EXEC-PLAN-TEMPLATE.md",
-      "sha256": "79408f203169d2a0669b3f13e31a8d431f9cee56e5db9afb10a89c9695ff759e",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/LEARNING-TEMPLATE.md",
-      "sha256": "715a9783f6b72e17e98e637718a7206a68a1e536a720e09853ca3091ab7b07e7",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/PRD-TEMPLATE.md",
-      "sha256": "b91f3d01e87ae4cf5640fabe54b0bf14f8b8150d14508ac59ca26ec5a2365908",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/PROGRESS-TEMPLATE.md",
-      "sha256": "83cbd103989765dee27bd4a9a9e39f7514bc58309b2b5fca55485ea818041fde",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/REVIEW-TEMPLATE.md",
-      "sha256": "447abc4216d72a298bccdc8f82883f961757353319c81ca4467e9a6f3cd9ac26",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/ROADMAP-TEMPLATE.md",
-      "sha256": "24fb1a155af4fd00e6e74d8b69355dcfbb9bef8bbc2de46317da8ae4b9982062",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/SECURITY-PLAN-TEMPLATE.md",
-      "sha256": "1506683c22dbb3ec2d2bacc7f7b60b411b30e143b13fc5a64e88e42ec3c1f903",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/SPEC-TEMPLATE.md",
-      "sha256": "72f77de87c800defb5f1aaec25fd1a63e13fed7ecc7cce1852861e5e428b1ffa",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/.github/templates/UX-TEMPLATE.md",
-      "sha256": "aee377c8328519a995fca812cfa4bda6d69b5d476f8ed0589b89cde10b39b5a7",
-      "category": "template"
-    },
-    {
-      "path": "build/review-cowork-416/companions/whatsapp/scripts/check-coverage.js",
-      "sha256": "54f07cf8257d5d3ee805a4a30f02a08cce3c7bd06dc9f43d78e169bb3a11a2f8",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-copilot-cli/install-user.ps1",
-      "sha256": "f4f36ceffee56cd235f8df31816aa8964857e1b87fc1837425045f932ccec76c",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-copilot-cli/install.ps1",
-      "sha256": "e447092ac727ab5c187e8a0f6327477f6107dc34c21877c016118da0090d00e1",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-copilot-cli/install.sh",
-      "sha256": "63878e659ed193ce2fd58a576b5017d1654e8261486b1057a06cdf666ceaebd3",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-copilot-cli/manifest.json",
-      "sha256": "d11b9efa1ab5fb0db50f812c9f6895038b2adf3493a9c08a1c8c9767d79e38d0",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-copilot-cli/README.md",
-      "sha256": "01ceb3335888208bff4c9dc7452f3e4db5facb86e2b80542ef01ad7ee2b0ed41",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-core/manifest.json",
-      "sha256": "e4c75865df074b72d8ca3f3f28b1f22217270f02bb63055368ace88dd95e340d",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-power-platform-builder/agents/low-code-builder.agent.md",
-      "sha256": "5ab4bff0156c6b727dfd37bc63c0f7156b74371a9cfe5fc9364ef0e9e32595ba",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-power-platform-builder/examples/lowcode-issue-tracker/README.md",
-      "sha256": "5eb80893bc217c1234df434064c4006b96aead20303f13b13527f1f888e3f6b2",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-power-platform-builder/README.md",
-      "sha256": "e379e1045f3f76133bacc774a8e56446f21600a10cb9a6f32cf3d8a1925f066b",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-power-platform-builder/templates/PRD-LOWCODE-TEMPLATE.md",
-      "sha256": "b17ff6ff42393d4ef0387d75bd0d22e1cac0930bf09d3bec906f664eab30254a",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/packs/agentx-power-platform-builder/templates/SOLUTION-MANIFEST-TEMPLATE.md",
-      "sha256": "e4b1ba324389de4b441abba9f10acc1ad688c7f7acc8acb4fdcf648af16ed031",
-      "category": "pack"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/audit-vscode-mock.ps1",
-      "sha256": "6fd3b08494c2d85f4067a9f0d9f234c9b764b04f7e0faf9e6c93cdeb1e13f7e2",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/build-landing.js",
-      "sha256": "a1f993a7db73f72af6be6231318f3f4055766b1b108833ad1299eb530db2885b",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/check-coverage.ps1",
-      "sha256": "8c35f66955c8327a80cdad7e73d9f4dab7dfc67fcac0ac8c78cb7067a2006a16",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/check-harness-compliance.ps1",
-      "sha256": "9f802636aa21c0bbd05e91bec50612ea2ba35950cfea3bf25bd61502931e7188",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/classify-issue.js",
-      "sha256": "e6feb74cb174067dc9ee2975f4d201731aa857cb32771ae0e3a3aab7739a3735",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/dream.ps1",
-      "sha256": "5385c45cf8309be6f89ffd712dc4368e55644b8e60b5fbc6e388770201b3fa7a",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/export-portable-skill.ps1",
-      "sha256": "fa40540c93608c5b4db5bddf54604f62154c9102ffdb24c6d3a2837ebdd23dc7",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/generate-registries.ps1",
-      "sha256": "e1ba921400ce7df9d1b9082fa016ffbbc26791d5852824d3a3c2febc9047e5a1",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/ghcp-review-resolve.ps1",
-      "sha256": "750693256041615cd2839b43b13ba8b7833418af5fe5af0d58a4dc79cd4844e9",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/install-manifest.ps1",
-      "sha256": "30c87bdde182e96ac2308733614046fb1211e50bd5b1c5e5fbec98cc5f94589a",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/land.ps1",
-      "sha256": "abbdd9ecf1aeac86f4f8064c4209bf0704343f9c49fe4bf8d655809685bf4cf0",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/model-council.ps1",
-      "sha256": "79b12ed60f98b27c2c88150bb361efa469e8d8f0addad34dd5ba271db098e798",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/model-route.ps1",
-      "sha256": "4ac6c821fb60b7121b8990bd1734991739bb95196454526d0d9ca70ddd1a249e",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/modules/CIHelpers.psm1",
-      "sha256": "216d6193ba98124f02c4a0f9ef9813c83ed8c8d5cdafe9ea110b0c78048edffe",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/modules/SecurityHelpers.psm1",
-      "sha256": "6637712ab7f61fc2fade4f1d58ed93af2ca2ce28a24079191e97386293e6cbae",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/parse-yaml.js",
-      "sha256": "812ccd33ed366d7b4bf980c09f2b7a128820e0b5dd9e0b14ac0b18b0b3e759e7",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/research.ps1",
-      "sha256": "bd79513160211f3aedd883cfe45bcd05e63d865771e3dc352b2dd83421295879",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/run-ai-eval-sample.ps1",
-      "sha256": "b3a3d5b9f6046e85b8e5dabff0ea43ba76f8a8889ac260ab7b4b005c1682a008",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/run-psscriptanalyzer.ps1",
-      "sha256": "b5d704c0d3842c54b9b77258d104852300276fe7873115629a25e83e9bc3f553",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/scan.ps1",
-      "sha256": "eeea30c450dc3fee3fc369d9169006df9f32b57d2d365b9fc5ee3d52e2c521a0",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/score-output.ps1",
-      "sha256": "8e0ce52a42bebc6b669a7a831fa9478d0c6a69915e73c127929b3f9377601d05",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/score-skill.ps1",
-      "sha256": "acd6f5367ce83ae169df0b96d544a3b3057caf38b44819ddb7df6ac657fdf2aa",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/scrub.ps1",
-      "sha256": "4a4ef3f9da5778f29e43ee38e6f89c3eee4905cd464d88e6c0e2614cf4274c0c",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/ship.ps1",
-      "sha256": "7327aa9020e616513569c49f910dac72c5b9d96b1322d9ce797dbd587538f637",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/stamp-package-version.js",
-      "sha256": "bafab384083d645553691329086da27d901b85341869bd2a5a5a26505660b7c9",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/stamp-version.js",
-      "sha256": "19820cdd3960422e32604b614db008fc002ef88ab9463500069a3c83b965aef6",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/stocktake.ps1",
-      "sha256": "298bddcb6d8c4e3d0790e94526a8a5233ba257e3ea7b2af8ad411e9488dade02",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/takeoff.ps1",
-      "sha256": "4ff1d8fd358293f18cb1f0ba47cde7e90ea05f54bd3c2a9219a22259c7b68626",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/token-counter.ps1",
-      "sha256": "fac624d6d9e3a29bac7d67d2eea9f50a35c62bfdfb3cd4b028fa111c3699a9e5",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/validate-changed-skills.ps1",
-      "sha256": "5df289de7a9011b66070c26b03bb18e6b94a37e7c54cd6eef62bc0bcedc87663",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/validate-frontmatter.ps1",
-      "sha256": "1c396bfad46bda24562357dd749d723b7f6db0222293bc26e24db678437796e8",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/validate-handoff.ps1",
-      "sha256": "b3e4aed81bf77297cfea2654e49d578a6a514d41c9e0a5cedd64601efa000fcd",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/validate-references.ps1",
-      "sha256": "d7bb4b08ef2e7b9a00ecc25e8e1f2d9e18c8a788888d37007590121d30424029",
-      "category": "script"
-    },
-    {
-      "path": "build/review-cowork-416/scripts/validate-skill.ps1",
-      "sha256": "6dd725a5d46806bcafe02b5a306b189909bfdfe8cc84ca56fb0744f4d1932614",
-      "category": "script"
-    },
-    {
       "path": "CLAUDE.md",
-      "sha256": "06913c4a86f2087f3ac31934446acc9172514770cfeab9a7d3d183e4e4f5d7bf",
+      "sha256": "0201f002ca0b31123a40d740b04135f844e77033a1e23a17e33e710314a828fe",
       "category": "doc"
     },
     {
@@ -2764,32 +1294,32 @@
     },
     {
       "path": "packs/frontier-copilot-cli/install-user.ps1",
-      "sha256": "5dea56720bbc085eba94329a1feb2c008fe1fa729ebe1fc78724fa0cb0f84079",
+      "sha256": "c16ecfc4975f7604edd5b26fd471e997b065ac2c9daa4f0a562ed99532a34ad6",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.ps1",
-      "sha256": "4420dadff09219be9a94a045d8ef49608c1d16511eebf0c48feffcbb1ce337ae",
+      "sha256": "37563d25cb8c5d35f182c7c15f4892c03200ffa50fb57aa497724a2081af2a13",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/install.sh",
-      "sha256": "0d84c25481d136dd50149e1bc85673ddb7caa0253f8fa8abd80a454203e0ffa8",
+      "sha256": "f8833b9e0e46018505c27f74d1cbf0da58b614813d8d0c0d2b9fd184091e1665",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/manifest.json",
-      "sha256": "fc29dda6cd36b5d4673e97d4b2318465e2a8afee40d6de0c4abe0e5dd2c3b6bf",
+      "sha256": "860ebf1653ae52e35e01605803f4e705eeeef9babfe54f03c2089378232cedda",
       "category": "pack"
     },
     {
       "path": "packs/frontier-copilot-cli/README.md",
-      "sha256": "db1727bf1a446c63a3b663d240c1c6f5906a387fb7ac3654bc57fee0299b106f",
+      "sha256": "c6a61e57c69745b88a820d552202319cf7d5d00bebcb6d5b3ab051fa8f694621",
       "category": "pack"
     },
     {
       "path": "packs/frontier-core/manifest.json",
-      "sha256": "046b5fc49539b1f34e829a7904989aaa71db7675beca7b12e60d067e1973361b",
+      "sha256": "f5c1eb7df85919c8f9f5622ecbc3a766cb24be0eb7f3b57e191f8213c866bf11",
       "category": "pack"
     },
     {
@@ -2839,7 +1369,7 @@
     },
     {
       "path": "scripts/check-harness-compliance.ps1",
-      "sha256": "903b10800287b4a32e84a7d819d4a3f95d68670981da17879e8e9b96a1a74d31",
+      "sha256": "70abac512fd631a77b7ef542cbac6279e5ab694e7ae59aeec399ef7643774e56",
       "category": "script"
     },
     {
@@ -2849,7 +1379,7 @@
     },
     {
       "path": "scripts/dream.ps1",
-      "sha256": "29f43636972e551a094163b5d027acb32016d1ff8b5628c2234e7280f2b4a96c",
+      "sha256": "64826bd9f2a98d06b7fd7572fd8bb2baa917f51b326d6951a1b677e5c9b2c2e2",
       "category": "script"
     },
     {
@@ -2869,7 +1399,7 @@
     },
     {
       "path": "scripts/install-manifest.ps1",
-      "sha256": "533d835883ccf99ec45ea58e5efa774cf3aaadd49381763ddd1fd09ccdfa0342",
+      "sha256": "abfc510ab9ed66e181c63fb0f84264f41eae997933d02fc42dfea58d1e3adeb8",
       "category": "script"
     },
     {
@@ -2879,7 +1409,7 @@
     },
     {
       "path": "scripts/model-council.ps1",
-      "sha256": "79b12ed60f98b27c2c88150bb361efa469e8d8f0addad34dd5ba271db098e798",
+      "sha256": "63747fe2dc10c085cfae30b4d86eb8934d8103f80872cd2adc160964dbbb2365",
       "category": "script"
     },
     {
@@ -2899,17 +1429,17 @@
     },
     {
       "path": "scripts/parse-yaml.js",
-      "sha256": "025bcc06fc0d7193c68eae508f94446c631f7c4410872ad282b62be30f7293ef",
+      "sha256": "629f39318447999c6c4402ec64dee5ad0c13b31bda80dabf4d2465ee9befe928",
       "category": "script"
     },
     {
       "path": "scripts/research.ps1",
-      "sha256": "bacd7ca50cbf5e675f14079972be70fa5cfbb0b4451212be25c7a006084bc0d3",
+      "sha256": "a6393f4b8bb12f89ade946ca435f07c181dd73b74dd6dd07e4eea75bb1e3f217",
       "category": "script"
     },
     {
       "path": "scripts/run-ai-eval-sample.ps1",
-      "sha256": "26f88dd4238dcd12da4d8eca6d7fb0806bf8448a6ee1c6289296a47a5f4b291b",
+      "sha256": "6cca93968dd595de3d39bc2c534422b2335d1f27bdfb21560b14f7de32d44058",
       "category": "script"
     },
     {
@@ -2924,12 +1454,12 @@
     },
     {
       "path": "scripts/score-code-quality.ps1",
-      "sha256": "b8eff3f6a1737622c0c3bda632c2bdb13ad1d391cb1024ea88388ee3f79b9b12",
+      "sha256": "6499c85b0f23329b18827e10e053e5faf03e852159d0d26304d4ed8fe65d1410",
       "category": "script"
     },
     {
       "path": "scripts/score-output.ps1",
-      "sha256": "69ab868965bc4cc1a49d093d7cd0081d682f395b18478c8bd4a61e6a76fab1cf",
+      "sha256": "505a901f5ce14f26b473e74b33925b64a6d7c6370d0998b531644a91c384025f",
       "category": "script"
     },
     {
@@ -2938,8 +1468,13 @@
       "category": "script"
     },
     {
+      "path": "scripts/score-stage-gate.ps1",
+      "sha256": "11e4cd02e53fdc4e0d5747e529be571a89754bc73c95a5b07f3f00b5b688b24e",
+      "category": "script"
+    },
+    {
       "path": "scripts/scrub.ps1",
-      "sha256": "c4206b70b1cd4ae1fa3c16e06d557f3944d3aea206df566ca3e726aced43f5bd",
+      "sha256": "b1a2067d0d6d469f086176252d41d9383a6e5963adc99723a12b616e968a6fcf",
       "category": "script"
     },
     {
@@ -2959,17 +1494,17 @@
     },
     {
       "path": "scripts/stocktake.ps1",
-      "sha256": "4cbfe2ffb5dc4bad2d75f8e1369d501d6ac0accae78a2dd5a81ebd60fe534582",
+      "sha256": "46574f024933d28cd5acd4cb8b61d2df5e921a26e74dc479df8d26e8657c410d",
       "category": "script"
     },
     {
       "path": "scripts/takeoff.ps1",
-      "sha256": "59c059c94270ca71b6f82b1c7bf1a22be5f67727664a495227226563de323b79",
+      "sha256": "3a02547328967f3ceeb3c2e51a21309140de859a559c581621c9acb8399de289",
       "category": "script"
     },
     {
       "path": "scripts/token-counter.ps1",
-      "sha256": "19ff2060dc556478ade1bd83554e6c1bbf35117a1925f86865c0ee82ed2fde46",
+      "sha256": "60556fa0dbee99ae34db5a52ca4dc28e7692c960da0ff63130772368c81fed06",
       "category": "script"
     },
     {
@@ -2984,12 +1519,12 @@
     },
     {
       "path": "scripts/validate-handoff.ps1",
-      "sha256": "b3e4aed81bf77297cfea2654e49d578a6a514d41c9e0a5cedd64601efa000fcd",
+      "sha256": "ad5724aed197ad5b55b3ca890e9914f7c6972fe443cbfa751d92467a1ab5dbbd",
       "category": "script"
     },
     {
       "path": "scripts/validate-references.ps1",
-      "sha256": "d72a9ef45ced4435bf9b4521caf31a4d1e6b4ebf7b5937adbf0bcc599df9444b",
+      "sha256": "6e2236112c60213b7e35ccc1c5a9722a23fb0214798bd905a1569413e1509c07",
       "category": "script"
     },
     {

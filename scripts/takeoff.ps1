@@ -12,7 +12,7 @@
     * Recent failed CI runs (last 5)
     * Frontier ready queue (top 5 items)
     * Active quality loop status
-    * Recent signal activity (.agentx/signals/sessions.jsonl mtime)
+    * Recent signal activity (.frontier/signals/sessions.jsonl mtime)
     * Suggested next action
 
   Read-only. Never mutates state.
@@ -62,18 +62,24 @@ if ($ghPath) {
     } catch {}
 }
 
-# Ready queue (best-effort: scan .agentx/issues/*.json)
-$issuesDir = Join-Path $root '.agentx/issues'
-if (Test-Path $issuesDir) {
+# Ready queue (best-effort: the first existing issue store, .frontier being canonical)
+$issuesDir = @('.frontier', '.hve', '.agentx') |
+    ForEach-Object { Join-Path $root "$_/issues" } |
+    Where-Object { Test-Path -LiteralPath $_ -PathType Container } |
+    Select-Object -First 1
+if ($issuesDir) {
     $open = Get-ChildItem -Path $issuesDir -Filter '*.json' -ErrorAction SilentlyContinue | ForEach-Object {
         try { Get-Content $_.FullName -Raw | ConvertFrom-Json } catch { $null }
     } | Where-Object { $_ -and $_.state -eq 'open' }
     $report.readyQueue = $open | Sort-Object { $_.number } -Descending | Select-Object -First 5 number,title,status,labels
 }
 
-# Loop state
-$loopFile = Join-Path $root '.agentx/state/loop-state.json'
-if (Test-Path $loopFile) {
+# Loop state (.frontier is canonical; legacy directories are read only before migration)
+$loopFile = @('.frontier', '.hve', '.agentx') |
+    ForEach-Object { Join-Path $root "$_/state/loop-state.json" } |
+    Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
+    Select-Object -First 1
+if ($loopFile) {
     try {
         $loop = Get-Content $loopFile -Raw | ConvertFrom-Json
         $report.loop = [ordered]@{
@@ -86,9 +92,13 @@ if (Test-Path $loopFile) {
     } catch {}
 }
 
-# Signal activity
-$signalFile = Join-Path $root '.agentx/signals/sessions.jsonl'
-if (Test-Path $signalFile) {
+# Signal activity: the newest signal log, including one written before the state migration
+$signalFile = @('.frontier', '.agentx') |
+    ForEach-Object { Join-Path $root "$_/signals/sessions.jsonl" } |
+    Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
+    Sort-Object { (Get-Item -LiteralPath $_).LastWriteTime } -Descending |
+    Select-Object -First 1
+if ($signalFile) {
     $age = (Get-Date) - (Get-Item $signalFile).LastWriteTime
     $report.signalAgeHours = [math]::Round($age.TotalHours, 1)
 }

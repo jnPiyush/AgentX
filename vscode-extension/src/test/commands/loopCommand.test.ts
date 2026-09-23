@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { registerLoopCommand } from '../../commands/loopCommand';
+import { isPassingCountInput } from '../../commands/loopCommandInternals';
 import { FrontierContext } from '../../frontierContext';
 
 // ---------------------------------------------------------------------------
@@ -125,7 +126,7 @@ describe('registerLoopCommand', () => {
     });
 
     for (const action of ['iterate', 'complete']) {
-      for (const count of ['0', '12']) {
+      for (const count of ['0', '12', 'stage-gate=12,runner=40']) {
         it(`forwards explicit passing count ${count} for ${action}`, async () => {
           fakeAgentx.checkInitialized.resolves(true);
           sandbox.stub(vscode.window, 'showInputBox')
@@ -152,6 +153,15 @@ describe('registerLoopCommand', () => {
         sinon.assert.notCalled(fakeAgentx.runCli);
       });
     }
+
+    it('accepts the integer and per-suite passing-count forms the CLI accepts', () => {
+      for (const input of ['', '0', '12', 'stage-gate=12', 'stage-gate=12, runner=40', 'tests/unit.ps1=3']) {
+        assert.ok(isPassingCountInput(input), input);
+      }
+      for (const input of ['-1', 'abc', 'stage-gate', 'stage-gate=', '=5', 'a=1,A=2', 'a=1,,b=2', '2147483648', 'a\u00A0=1', 'a=\u{3000}1']) {
+        assert.ok(!isPassingCountInput(input), input);
+      }
+    });
 
     it('does not complete a loop after cancelling the summary or evidence prompt', async () => {
       fakeAgentx.checkInitialized.resolves(true);

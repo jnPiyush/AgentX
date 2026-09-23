@@ -76,6 +76,9 @@ function Get-ManifestEntries {
                 } else {
                     $rel = $abs.Replace('\','/')
                 }
+                # Gitignored scratch output (release candidates, review copies) is not
+                # installed content; matching it doubled the manifest with missing files.
+                if ($rel -like 'build/*' -or $rel -like 'tests/.scratch/*') { continue }
                 $hash = (Get-FileHash -LiteralPath $abs -Algorithm SHA256).Hash.ToLowerInvariant()
                 $entries.Add([pscustomobject]@{ path = $rel; sha256 = $hash; category = $Category }) | Out-Null
             } catch { }

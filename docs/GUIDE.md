@@ -179,31 +179,32 @@ shell-argument, review-state, parity, rollback and code-quality tests on native
 Ubuntu and macOS runners. A configured job is not a passing result: inspect its
 run for the current commit before claiming native platform verification.
 
-Each new loop begins without a test-count baseline. After running the relevant
-suite, record its actual passing count with `loop baseline -c <count>` and pass
-`--passing <count>` to subsequent `loop iterate` and `loop complete` commands.
-Counts below the recorded baseline, or missing counts, fail. The CLI warns when
-the baseline is unset; recording a count does not execute tests or prove review
-independence. Evidence and an attributed final review are separate requirements.
+Pass test counts per suite to `loop iterate` and `loop complete`:
+`--passing unit=12,api=40`. Each suite is compared only with its own last count,
+so a step reruns only the suites its change affects; `frontier loop affected`
+lists tests naming code changed since loop start. `loop baseline -c <suite>=<count>`
+records an intentional drop. An integer baseline (`loop baseline -c <count>`) keeps
+the older rule: each later iterate and complete needs an integer count no lower.
+A count proves neither a test run nor review independence; evidence and an
+attributed final review are still required.
 
-For small changes, select checks covering the affected behavior and direct callers;
-record the commands and omitted surfaces with rationale. Expand for shared
+For small changes, run checks covering the affected behavior and direct callers,
+recording commands and omitted surfaces with rationale; expand for shared
 contracts, broad changes or required CI/release gates, not for iteration count.
-Use the same selected surface for baseline comparisons. The VS Code iteration and
-completion dialogs accept the actual passing count, including zero.
+The VS Code dialogs accept either count form, including zero.
 
 ### Recovering evidence verification
 
-Loop audit subprocesses drain stdout and stderr concurrently and have a 30-second
-deadline. The code-quality evaluator has a 90-second deadline, leaving teardown
-headroom within the extension's two-minute command limit. A timeout or
-nonzero checker exit is a failure, never evidence approval. Completion checks
-passing counts and final artifact presence/freshness before the expensive evaluator.
+Loop audit subprocesses drain stdout and stderr concurrently under a 30-second
+deadline; the code-quality evaluator has 90 seconds, leaving headroom within the
+extension's two-minute command limit. A timeout or nonzero checker exit is a
+failure, never evidence approval. Completion checks passing counts and final
+artifact freshness before the expensive evaluator.
 
 - Checker timeout/startup failure: inspect the reported checker and its dependencies,
   then retry; do not regenerate unrelated test suites or disable verification.
-- Missing or regressed passing count: provide the actual result for the recorded
-  test surface. Do not lower the baseline or substitute a larger unrelated suite.
+- Missing or regressed passing count: rerun that suite and report its real result;
+  lower a suite's count only for an intentional change, never with another suite.
 - Stale final evidence: run a fresh, scoped final check after the review iteration
   and submit its real output. Never touch timestamps or copy old evidence to pass.
 - Changed hashes or review findings: rerun affected tests and obtain a new review.

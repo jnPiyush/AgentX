@@ -2146,6 +2146,14 @@ function Get-Flag([string[]]$flags, [string]$default = '') {
     return $default
 }
 
+function Get-JoinedFlagValue([string[]]$flags) {
+    # Every occurrence counts, and an unquoted PowerShell list such as a=1,b=2 arrives as an array.
+    $values = for ($i = 0; $i -lt $Script:SubArgs.Count - 1; $i++) {
+        if ($flags -contains $Script:SubArgs[$i]) { @($Script:SubArgs[$i + 1]) -join ',' }
+    }
+    return @($values) -join ','
+}
+
 function Get-DecodedFlag([string[]]$plainFlags, [string[]]$encodedFlags, [string]$default = '') {
     $encoded = Get-Flag $encodedFlags
     if (-not [string]::IsNullOrWhiteSpace($encoded)) {
@@ -4117,6 +4125,7 @@ function Invoke-LoopCmd {
         'start'    { Invoke-LoopStart }
         'baseline' { Invoke-LoopBaseline }
         'status'   { Invoke-LoopStatus }
+        'affected' { Invoke-LoopAffected }
         'iterate'  { Invoke-LoopIterate }
         'complete'  { Invoke-LoopComplete }
         'cancel'    { Invoke-LoopCancel }
@@ -4509,7 +4518,7 @@ function Invoke-LoopCheckProcess {
 
 function Invoke-CodeQualityEvaluator {
     param(
-        [ValidateSet('Snapshot', 'Validate')][string]$Mode,
+        [ValidateSet('Snapshot', 'Scope', 'Validate')][string]$Mode,
         [string]$ReportPath = '',
         [string]$BaselineSha256 = '',
         [switch]$IncludeExistingChanges
@@ -4525,6 +4534,7 @@ function Invoke-CodeQualityEvaluator {
         return [PSCustomObject]@{
             available = $false
             exitCode = 1
+            result = $null
             output = @('Code-quality evaluator is missing from both workspace and installed runtime.')
         }
     }
@@ -4552,7 +4562,7 @@ function Invoke-CodeQualityEvaluator {
             if ($candidateResult.PSObject.Properties.Name -contains 'status') { $result = $candidateResult }
         } catch { continue }
     }
-    $expectedStatuses = if ($Mode -eq 'Snapshot') { @('snapshotted') } else { @('passed', 'skipped') }
+    $expectedStatuses = switch ($Mode) { 'Snapshot' { @('snapshotted') } 'Scope' { @('scoped') } default { @('passed', 'skipped') } }
     if ($exitCode -eq 0 -and (-not $result -or [string]$result.status -notin $expectedStatuses)) {
         $exitCode = 1
         $output += 'Code-quality evaluator returned no valid structured result.'
@@ -4711,46 +4721,83 @@ function Remove-StaleStateDirectories {
     }
 }
 
+function ConvertFrom-LoopPassingValue([string]$Raw) {
+    # An integer is the legacy single baseline; 'suite=count[,suite=count]' reports only the suites that ran.
+    $value = $Raw.Trim()
+    $parsed = 0
+    if ($value -match '^[0-9]+$' -and [int]::TryParse($value, [ref]$parsed)) { return $parsed }
+
+    $suites = [ordered]@{}
+    foreach ($part in ($value -split ',')) {
+        $pair = [regex]::Match($part.Trim(), '^([A-Za-z0-9][A-Za-z0-9._/-]*)[ \t]*=[ \t]*([0-9]+)$')
+        if (-not $pair.Success -or -not [int]::TryParse($pair.Groups[2].Value, [ref]$parsed)) { return '__INVALID__' }
+        $suite = $pair.Groups[1].Value.ToLowerInvariant()
+        if ($suites.Contains($suite)) { return '__INVALID__' }
+        $suites[$suite] = $parsed
+    }
+    return $suites
+}
+
 function Get-LoopPassingCount([string]$contextLabel) {
-    $raw = Get-Flag @('--passing') ''
+    $raw = Get-JoinedFlagValue @('--passing')
     if (-not $raw) { return $null }
 
-    $parsed = 0
-    if (-not [int]::TryParse($raw, [ref]$parsed) -or $parsed -lt 0) {
-        Write-CliOutput "$($C.r)  [FAIL] $contextLabel requires --passing <non-negative-integer> when provided.$($C.n)"
-        return '__INVALID__'
+    $parsed = ConvertFrom-LoopPassingValue $raw
+    if ($parsed -is [string]) {
+        Write-CliOutput "$($C.r)  [FAIL] $contextLabel requires --passing <non-negative-integer> or <suite>=<count>[,<suite>=<count>].$($C.n)"
     }
-
     return $parsed
+}
+
+function Test-LoopIntegerBaseline($Baseline) {
+    return [bool]($Baseline -and ($Baseline.PSObject.Properties.Name -contains 'passing') -and $null -ne $Baseline.passing -and "$($Baseline.passing)" -ne '')
 }
 
 function Test-LoopPassingBaseline {
     param(
         $Baseline,
-        [Nullable[int]]$CurrentPassing,
+        $CurrentPassing,
         [string]$ContextLabel
     )
 
-    if (-not $Baseline) { return $true }
-
-    $baselineHasPassing = ($Baseline.PSObject.Properties.Name -contains 'passing') -and $null -ne $Baseline.passing -and "$($Baseline.passing)" -ne ''
-    if (-not $baselineHasPassing) {
-        Write-CliOutput "$($C.y)  [WARN] ${ContextLabel}: tests-baseline.json is a placeholder (passing count not recorded). Pass-count regression checks are DISABLED. Record the baseline with: agentx loop baseline -c <passing-tests>$($C.n)"
-        return $true
-    }
-
-    if ($null -eq $CurrentPassing) {
+    $hasCount = Test-LoopIntegerBaseline $Baseline
+    if ($hasCount -and $CurrentPassing -isnot [int]) {
         Write-CliOutput "$($C.r)  [FAIL] $ContextLabel requires --passing <count> because tests-baseline.json is set to $($Baseline.passing).$($C.n)"
-        Write-CliOutput "$($C.d)    Record the baseline once with: agentx loop baseline -c <passing-tests>$($C.n)"
+        Write-CliOutput "$($C.d)    An integer baseline needs an integer count; per-suite counts apply only without one.$($C.n)"
         return $false
     }
-
-    if ([int]$CurrentPassing -lt [int]$Baseline.passing) {
+    if ($hasCount -and $CurrentPassing -lt [int]$Baseline.passing) {
         Write-CliOutput "$($C.r)  [FAIL] $ContextLabel would regress passing tests: current=$CurrentPassing baseline=$($Baseline.passing).$($C.n)"
         return $false
     }
 
+    if ($CurrentPassing -is [System.Collections.IDictionary]) {
+        # Each suite is compared only with its own last count, so unaffected suites need no rerun.
+        $recordedSuites = if ($Baseline -and ($Baseline.PSObject.Properties.Name -contains 'suites')) { $Baseline.suites } else { $null }
+        foreach ($suite in @($CurrentPassing.Keys)) {
+            $last = if ($recordedSuites) { $recordedSuites.PSObject.Properties[$suite] } else { $null }
+            if ($last -and [int]$CurrentPassing[$suite] -lt [int]$last.Value) {
+                Write-CliOutput "$($C.r)  [FAIL] $ContextLabel would regress passing tests for ${suite}: current=$($CurrentPassing[$suite]) last=$($last.Value).$($C.n)"
+                return $false
+            }
+        }
+    } elseif (-not $hasCount) {
+        $note = if ($null -eq $CurrentPassing) { 'No test counts recorded.' } else { 'An integer count is compared only with an integer baseline (loop baseline -c <count>).' }
+        Write-CliOutput "$($C.d)  $note Add --passing <suite>=<count> for the suites this step ran.$($C.n)"
+    }
+
     return $true
+}
+
+function Save-LoopSuiteCounts($Baseline, [System.Collections.IDictionary]$Counts) {
+    $suites = [ordered]@{}
+    if ($Baseline -and ($Baseline.PSObject.Properties.Name -contains 'suites') -and $Baseline.suites) {
+        foreach ($property in $Baseline.suites.PSObject.Properties) { $suites[$property.Name] = [int]$property.Value }
+    }
+    foreach ($suite in $Counts.Keys) { $suites[$suite] = [int]$Counts[$suite] }
+    $record = if ($Baseline) { $Baseline } else { [PSCustomObject]@{ capturedAt = Get-Timestamp; passing = $null } }
+    $record | Add-Member -NotePropertyName suites -NotePropertyValue ([PSCustomObject]$suites) -Force
+    Write-JsonFile (Get-LoopBaselineFilePath) $record
 }
 
 function Invoke-LoopBaseline {
@@ -4760,20 +4807,33 @@ function Invoke-LoopBaseline {
         return
     }
 
-    $countRaw = Get-Flag @('-c', '--count') ''
+    $countRaw = Get-JoinedFlagValue @('-c', '--count')
     if (-not $countRaw) {
         $baseline = Read-LoopBaseline
-        if ($baseline) {
-            Write-CliOutput "$($C.c)  Loop baseline passing tests: $($baseline.passing)$($C.n)"
-        } else {
-            Write-CliOutput 'No tests baseline recorded.'
-        }
+        $hasCount = Test-LoopIntegerBaseline $baseline
+        $pairs = @(if ($baseline -and ($baseline.PSObject.Properties.Name -contains 'suites') -and $baseline.suites) {
+                $baseline.suites.PSObject.Properties | ForEach-Object { "$($_.Name)=$($_.Value)" }
+            })
+        if ($hasCount) { Write-CliOutput "$($C.c)  Loop baseline passing tests: $($baseline.passing)$($C.n)" }
+        if ($pairs.Count -gt 0) { Write-CliOutput "$($C.c)  Suite counts: $($pairs -join ', ')$($C.n)" }
+        if (-not $hasCount -and $pairs.Count -eq 0) { Write-CliOutput 'No tests baseline recorded.' }
         return
     }
 
-    $count = 0
-    if (-not [int]::TryParse($countRaw, [ref]$count) -or $count -lt 0) {
-        Write-CliOutput "$($C.r)  [FAIL] loop baseline requires --count <non-negative-integer>.$($C.n)"
+    $count = ConvertFrom-LoopPassingValue $countRaw
+    if ($count -is [string]) {
+        Write-CliOutput "$($C.r)  [FAIL] loop baseline requires --count <non-negative-integer> or <suite>=<count>[,<suite>=<count>].$($C.n)"
+        exit 1
+    }
+    if ($count -is [System.Collections.IDictionary]) {
+        $current = Read-LoopBaseline
+        if (Test-LoopIntegerBaseline $current) {
+            Write-CliOutput "$($C.r)  [FAIL] This loop has an integer baseline ($($current.passing)); per-suite baselines apply only without one. Start a new loop to switch.$($C.n)"
+            exit 1
+        }
+        # Explicit, so it may lower a suite's count after an intentional change such as removed tests.
+        Save-LoopSuiteCounts $current $count
+        Write-CliOutput "$($C.g)  [PASS] Suite baselines set: $(@($count.Keys | ForEach-Object { "$_=$($count[$_])" }) -join ', ').$($C.n)"
         return
     }
 
@@ -4786,6 +4846,88 @@ function Invoke-LoopBaseline {
     }
     Write-JsonFile $baselineFile $baseline
     Write-CliOutput "$($C.g)  [PASS] Loop baseline set to $count passing tests.$($C.n)"
+}
+
+function Format-LoopPreview([string]$Text, [int]$Max = 160) {
+    $line = ($Text -replace '\s+', ' ').Trim()
+    if ($line.Length -le $Max) { return $line }
+    return $line.Substring(0, $Max - 3) + '...'
+}
+
+<#
+.SYNOPSIS
+  List the test files that reference implementation files changed since loop start.
+
+.DESCRIPTION
+  A test is affected when its text names a changed file by file name, path without
+  extension, or a distinctive stem (compound, camelCase or 8+ characters, so words
+  such as 'config' or 'API' do not match everything). The list is where an iteration's
+  checks start, not proof of coverage; changed files no test names are reported.
+#>
+function Invoke-LoopAffected {
+    $scope = Invoke-CodeQualityEvaluator -Mode Scope
+    if (-not $scope.available -or $scope.exitCode -ne 0) {
+        $scope.output | Select-Object -Last 5 | ForEach-Object { Write-CliOutput ([string]$_) }
+        Write-CliOutput "$($C.r)  [FAIL] Could not list the implementation files changed since loop start.$($C.n)"
+        exit 1
+    }
+    $changed = @($scope.result.files | ForEach-Object { [string]$_.path } | Where-Object { $_ })
+    $gitAvailable = [bool](Get-Command git -ErrorAction SilentlyContinue)
+    $listed = @(if ($gitAvailable) { & git -C $Script:ROOT ls-files --cached --others --exclude-standard 2>$null })
+    if (-not $gitAvailable -or $LASTEXITCODE -ne 0) {
+        Write-CliOutput "$($C.r)  [FAIL] loop affected needs a git workspace to find test files.$($C.n)"
+        exit 1
+    }
+    $testPattern = '(^|/)(__tests__|[Tt]ests?|specs?)/|[._-](test|spec)s?\.[A-Za-z0-9]+$|[a-z0-9]Tests?\.[A-Za-z0-9]+$|(^|/)test_[^/]+\.py$'
+    $codePattern = '\.(ps1|psm1|sh|bash|js|cjs|mjs|ts|tsx|jsx|py|cs|fs|go|rs|java|kt|rb|php|swift|c|cc|cpp)$'
+    # The index still lists tracked files deleted from the working tree.
+    $testFiles = @($listed | ForEach-Object { ([string]$_).Replace('\', '/') } |
+        Where-Object { $_ -cmatch $testPattern -and $_ -match $codePattern -and (Test-Path -LiteralPath (Join-Path $Script:ROOT $_) -PathType Leaf) } |
+        Sort-Object -Unique)
+
+    $matchers = @(foreach ($path in $changed) {
+        $tokens = @([IO.Path]::GetFileName($path))
+        $withoutExtension = $path -replace '\.[^./]+$', ''
+        if ($path.Contains('/')) { $tokens += $withoutExtension }
+        if ($path.EndsWith('.py') -and $path.Contains('/')) { $tokens += $withoutExtension.Replace('/', '.') }
+        $stem = [IO.Path]::GetFileNameWithoutExtension($path)
+        if ($stem.Length -ge 8 -or $stem -match '[-_]' -or $stem -cmatch '[a-z][A-Z]') { $tokens += $stem }
+        $alternation = @($tokens | Select-Object -Unique | Sort-Object Length -Descending | ForEach-Object { [regex]::Escape($_) }) -join '|'
+        [PSCustomObject]@{ path = $path; regex = [regex]::new("(?<![A-Za-z0-9_-])(?:$alternation)(?![A-Za-z0-9_-])", 'IgnoreCase') }
+    })
+    $affected = [System.Collections.Generic.List[object]]::new()
+    $skipped = 0
+    foreach ($testFile in $testFiles) {
+        $fullPath = Join-Path $Script:ROOT $testFile
+        $content = try {
+            if ((Get-Item -LiteralPath $fullPath -ErrorAction Stop).Length -le 2MB) { [IO.File]::ReadAllText($fullPath) }
+        } catch { $null }
+        if ($null -eq $content) { $skipped++; continue }
+        $covers = @($matchers | Where-Object { $_.regex.IsMatch($content) } | ForEach-Object { $_.path })
+        if ($covers.Count -gt 0) { $affected.Add([PSCustomObject]@{ path = $testFile; covers = $covers }) }
+    }
+
+    if ($Script:JsonOutput) {
+        [PSCustomObject]@{ changed = $changed; testFiles = $testFiles.Count; skipped = $skipped; affected = @($affected) } | ConvertTo-Json -Depth 5 -Compress
+        return
+    }
+    if ($changed.Count -eq 0) {
+        Write-CliOutput "$($C.d)  No implementation files changed since loop start; run only the tests you edited.$($C.n)"
+        return
+    }
+    Write-CliOutput "$($C.c)  Affected tests: $($affected.Count) of $($testFiles.Count) test files cover $($changed.Count) changed file(s).$($C.n)"
+    foreach ($entry in @($affected | Select-Object -First 25)) {
+        $more = if ($entry.covers.Count -gt 3) { ', ...' } else { '' }
+        Write-CliOutput "    $($entry.path)  <- $(@($entry.covers | Select-Object -First 3) -join ', ')$more"
+    }
+    if ($affected.Count -gt 25) { Write-CliOutput "    ... and $($affected.Count - 25) more" }
+    $untested = @($changed | Where-Object { $changedPath = $_; @($affected | Where-Object { $_.covers -contains $changedPath }).Count -eq 0 })
+    if ($untested.Count -gt 0) {
+        $more = if ($untested.Count -gt 5) { ', ...' } else { '' }
+        Write-CliOutput "$($C.y)  Not named by any test: $(@($untested | Select-Object -First 5) -join ', ')$more$($C.n)"
+    }
+    if ($skipped -gt 0) { Write-CliOutput "$($C.y)  Skipped $skipped test file(s) that are over 2 MB or unreadable.$($C.n)" }
+    Write-CliOutput "$($C.d)  Record each suite you run: --passing <suite>=<count>[,<suite>=<count>]$($C.n)"
 }
 
 function Invoke-LoopStart {
@@ -4890,7 +5032,7 @@ function Invoke-LoopStart {
         capturedAt = Get-Timestamp
         issue      = $issue
         passing    = $null
-        note       = 'Set via: agentx loop baseline -c <passing-count>. iterate/complete reject counts below baseline.'
+        note       = 'Set via: agentx loop baseline -c <count> or <suite>=<count>. iterate/complete reject counts below the baseline; suite counts are kept per suite.'
     }
     try { Write-JsonFile $baselineFile $baseline } catch { Write-Verbose "Baseline write failed: $_" }
 
@@ -4899,7 +5041,7 @@ function Invoke-LoopStart {
     if ($role)   { Write-CliOutput "$($C.d)  Role: $role  (task class: $taskClass)$($C.n)" }
     if ($budget) { Write-CliOutput "$($C.d)  Budget: $budget minutes$($C.n)" }
     if ($issue)  { Write-CliOutput "$($C.d)  Issue: #$issue$($C.n)" }
-    Write-CliOutput "`n$($C.w)  Prompt:$($C.n) $prompt`n"
+    Write-CliOutput "`n$($C.w)  Prompt:$($C.n) $(Format-LoopPreview $prompt 200)`n"
     $guidance = @(Get-LoopIterationGuidance $taskClass)
     if ($guidance.Count -gt 0) {
         Write-CliOutput "$($C.w)  Iteration Focuses:$($C.n)"
@@ -5008,7 +5150,7 @@ function Invoke-LoopStatus {
             $markStatus = if ($h.PSObject.Properties.Name -contains 'status') { $h.status } else { '' }
             $mark = if ($markStatus -eq 'rollback') { '[BACK]' } elseif ($outcomeVal -eq 'pass') { '[PASS]' } elseif ($outcomeVal -eq 'fail') { '[FAIL]' } elseif ($markStatus -eq 'complete') { '[PASS]' } else { '[...]' }
             $scorePart = if ($h.PSObject.Properties.Name -contains 'harnessScore' -and $null -ne $h.harnessScore) { " (score: $($h.harnessScore))" } else { '' }
-            Write-CliOutput "$($C.d)    $mark Iteration $($h.iteration): $($h.summary)$scorePart$($C.n)"
+            Write-CliOutput "$($C.d)    $mark Iteration $($h.iteration): $(Format-LoopPreview ([string]$h.summary))$scorePart$($C.n)"
         }
     }
     Write-CliOutput ''
@@ -5126,7 +5268,7 @@ function Invoke-LoopIterate {
     # a rejected reviewer pass as recorded and discover the loss at loop complete.
     if ($reviewRecord -is [string] -and $reviewRecord -eq '__INVALID__') { exit 1 }
     $currentPassing = Get-LoopPassingCount 'loop iterate'
-    if ($currentPassing -eq '__INVALID__') { exit 1 }
+    if ($currentPassing -is [string]) { exit 1 }
     if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop iterate')) { exit 1 }
 
     # Evidence requirement: every iterate call must point to a real artifact
@@ -5202,28 +5344,20 @@ function Invoke-LoopIterate {
         }
     }
 
-    # Collect harness audit score when available
-    $harnessScore = $null
-    try {
-        $checks = @(Get-HarnessAuditChecks $Script:ROOT)
-        if ($checks.Count -gt 0) {
-            $harnessScore = ($checks | Measure-Object -Property score -Sum).Sum
-        }
-    } catch { Write-Verbose "Harness score calculation failed: $_" }
-
     $state.iteration = $next
     $state.lastIterationAt = Get-Timestamp
     $entry = [PSCustomObject]@{ iteration = $next; timestamp = Get-Timestamp; summary = $summary; status = 'in-progress'; outcome = $outcome }
-    if ($null -ne $harnessScore) { $entry | Add-Member -NotePropertyName harnessScore -NotePropertyValue $harnessScore }
     if ($reviewRecord) { $entry | Add-Member -NotePropertyName review -NotePropertyValue $reviewRecord }
     if ($archivedPath) {
         $entry | Add-Member -NotePropertyName evidence -NotePropertyValue $archivedPath
         $entry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $evidenceAbs
         $entry | Add-Member -NotePropertyName evidenceSha256 -NotePropertyValue $evidenceHash
     }
-    if ($null -ne $currentPassing) { $entry | Add-Member -NotePropertyName passingTests -NotePropertyValue ([int]$currentPassing) }
+    if ($currentPassing -is [int]) { $entry | Add-Member -NotePropertyName passingTests -NotePropertyValue $currentPassing }
+    elseif ($currentPassing -is [System.Collections.IDictionary]) { $entry | Add-Member -NotePropertyName passingSuites -NotePropertyValue ([PSCustomObject]$currentPassing) }
     $state.history = @($state.history) + @($entry)
     Write-JsonFile $Script:LOOP_STATE_FILE $state
+    if ($currentPassing -is [System.Collections.IDictionary]) { Save-LoopSuiteCounts $baseline $currentPassing }
 
     # Budget warning
     $hasBudget = ($state.PSObject.Properties.Name -contains 'budgetMinutes') -and $state.budgetMinutes
@@ -5238,12 +5372,11 @@ function Invoke-LoopIterate {
     }
 
     Write-CliOutput "`n$($C.c)  Iteration $next/$($state.maxIterations)$($C.n)"
-    Write-CliOutput "$($C.d)  Summary: $summary  |  Outcome: $outcome$($C.n)"
+    Write-CliOutput "$($C.d)  Summary: $(Format-LoopPreview $summary)  |  Outcome: $outcome$($C.n)"
     if ($reviewRecord) {
         Write-CliOutput "$($C.d)  Review: verdict=$($reviewRecord.verdict) reviewer=$($reviewRecord.reviewer) high=$($reviewRecord.high) medium=$($reviewRecord.medium) low=$($reviewRecord.low)$($C.n)"
     }
     if ($archivedPath) { Write-CliOutput "$($C.d)  Evidence archived to: $archivedPath$($C.n)" }
-    if ($null -ne $harnessScore) { Write-CliOutput "$($C.d)  Harness score: $harnessScore$($C.n)" }
 
     # Rollback suggestion when outcome=fail at or past the final guidance iteration
     if ($outcome -eq 'fail') {
@@ -5446,7 +5579,7 @@ function Invoke-LoopComplete {
         exit 1
     }
     $currentPassing = Get-LoopPassingCount 'loop complete'
-    if ($currentPassing -eq '__INVALID__') { exit 1 }
+    if ($currentPassing -is [string]) { exit 1 }
     if (-not (Test-LoopPassingBaseline -Baseline $baseline -CurrentPassing $currentPassing -ContextLabel 'loop complete')) { exit 1 }
 
     # Gate: every iteration entry after #1 must carry an evidence file path that still exists.
@@ -5481,11 +5614,11 @@ function Invoke-LoopComplete {
     if (-not $finalEvidenceAbs -and (Get-FrontierEnvironmentValue 'SKIP_EVIDENCE_GATE') -ne '1') {
         if ($finalEvidence) {
             Write-CliOutput "$($C.r)  [FAIL] Evidence file not found: $finalEvidence$($C.n)"
-            Write-CliOutput "$($C.d)  Provide a fresh final gate artifact (e.g., test suite output, coverage report, quality-gate.log):$($C.n)"
-            Write-CliOutput "$($C.d)    e.g. (Node): npx mocha --reporter tap > .agentx/state/final-gate.log$($C.n)"
-            Write-CliOutput "$($C.d)         then:   agentx loop complete -s '<summary>' -e .agentx/state/final-gate.log --passing <N>$($C.n)"
+            Write-CliOutput "$($C.d)  Provide a fresh log of the final checks for the changed code (see: agentx loop affected):$($C.n)"
+            Write-CliOutput "$($C.d)    e.g.: pwsh tests/<affected-suite>.ps1 > .frontier/state/final-gate.log$($C.n)"
+            Write-CliOutput "$($C.d)    then: agentx loop complete -s '<summary>' -e .frontier/state/final-gate.log --passing <suite>=<count>$($C.n)"
         } else {
-            Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., quality-gate.log, full-suite-report.xml).$($C.n)"
+            Write-CliOutput "$($C.r)  [FAIL] loop complete requires --evidence <final-gate-log> (e.g., the log of the focused checks you ran last).$($C.n)"
         }
         Write-CliOutput "$($C.d)    Bypass: `$env:AGENTX_SKIP_EVIDENCE_GATE = '1' (legacy flows only).$($C.n)"
         exit 1
@@ -5494,7 +5627,21 @@ function Invoke-LoopComplete {
     if ($finalEvidenceAbs -and -not (Test-LoopEvidenceFreshness -EvidencePath $finalEvidenceAbs -State $state -ContextLabel 'loop complete')) { exit 1 }
     if (-not $Script:JsonOutput) { Write-CliOutput '  Checking code-quality evidence (90s limit)...' }
     $codeQualityGate = Invoke-CodeQualityEvaluator -Mode Validate -ReportPath $reviewEvidencePath -BaselineSha256 $baselineDigest
-    $codeQualityGate.output | ForEach-Object { Write-CliOutput ([string]$_) }
+    $gateResult = $codeQualityGate.result
+    if ($gateResult -and ($gateResult.PSObject.Properties.Name -contains 'message')) {
+        # The full report repeats every dimension's evidence, and a failure message joins every failure;
+        # print the outcome and each blocking failure once.
+        $failures = @(if ($gateResult.PSObject.Properties.Name -contains 'failures') { $gateResult.failures })
+        if ($failures.Count -gt 0) {
+            Write-CliOutput "  Code-quality: $($gateResult.status) ($($failures.Count) issue(s))."
+            $failures | Select-Object -First 10 | ForEach-Object { Write-CliOutput "    - $_" }
+            if ($failures.Count -gt 10) { Write-CliOutput "    ... and $($failures.Count - 10) more" }
+        } else {
+            Write-CliOutput "  Code-quality: $($gateResult.status). $($gateResult.message)"
+        }
+    } else {
+        $codeQualityGate.output | Select-Object -Last 20 | ForEach-Object { Write-CliOutput ([string]$_) }
+    }
     if (-not $codeQualityGate.available -or $codeQualityGate.exitCode -ne 0) {
         Write-CliOutput "$($C.r)  [FAIL] Code-quality verification failed. For a checker timeout/startup error, inspect the checker and retry unchanged inputs. For stale hashes or review findings, rerun the affected checks and independent review.$($C.n)"
         exit 1
@@ -5560,7 +5707,8 @@ function Invoke-LoopComplete {
         $completionEntry | Add-Member -NotePropertyName evidence -NotePropertyValue $finalArchivedPath
         $completionEntry | Add-Member -NotePropertyName evidenceOriginal -NotePropertyValue $finalEvidenceAbs
     }
-    if ($null -ne $currentPassing) { $completionEntry | Add-Member -NotePropertyName passingTests -NotePropertyValue ([int]$currentPassing) }
+    if ($currentPassing -is [int]) { $completionEntry | Add-Member -NotePropertyName passingTests -NotePropertyValue $currentPassing }
+    elseif ($currentPassing -is [System.Collections.IDictionary]) { $completionEntry | Add-Member -NotePropertyName passingSuites -NotePropertyValue ([PSCustomObject]$currentPassing) }
     $state.history = @($state.history) + @($completionEntry)
     Write-JsonFile $Script:LOOP_STATE_FILE $state
     Write-CliOutput "`n$($C.g)  [PASS] Loop Complete! Iterations: $($state.iteration)/$($state.maxIterations) (minimum $($state.minIterations))$($C.n)"
@@ -5686,6 +5834,63 @@ function Invoke-LoopCancel {
 # VALIDATE: Pre-handoff validation
 # ---------------------------------------------------------------------------
 
+function Get-StageGateEvaluatorPath {
+    # Handoff gates run the installed evaluator and catalog so a workspace copy cannot
+    # shadow them (same trust rule as the code-quality gate).
+    $candidateRoots = if ($Script:ROOT -ne $Script:INSTALL_ROOT) { @($Script:INSTALL_ROOT) } else { @($Script:ROOT) }
+    foreach ($basePath in $candidateRoots) {
+        $candidate = Join-Path $basePath 'scripts/score-stage-gate.ps1'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    return $null
+}
+
+function Get-StageGateMode {
+    $value = Get-ConfigValue (Get-FrontierConfig) 'stageGates' 'advisory'
+    if ($value -is [bool]) { return $(if ($value) { 'required' } else { 'off' }) }
+    $normalized = ([string]$value).Trim().ToLowerInvariant()
+    if ($normalized -in @('off', 'advisory', 'required')) { return $normalized }
+    # Fail closed: a typo must not silently weaken the gate.
+    Write-CliOutput "  $($C.y)[WARN]$($C.n) Unknown stageGates value '$value'; enforcing required (valid: advisory, required, off)."
+    return 'required'
+}
+
+function Invoke-StageGateEvaluator([string]$Mode, [string]$Stage, [string[]]$Paths, [string]$ReportPath = '') {
+    $scriptPath = Get-StageGateEvaluatorPath
+    if (-not $scriptPath) {
+        return [PSCustomObject]@{ available = $false; exitCode = 2; result = $null; output = 'scripts/score-stage-gate.ps1 is missing from the Frontier runtime.' }
+    }
+    $arguments = @('-NoProfile', '-NonInteractive', '-File', $scriptPath, $Mode, '-Stage', $Stage,
+        '-Path', ($Paths -join ','), '-WorkspaceRoot', $Script:ROOT, '-Json')
+    if ($ReportPath) { $arguments += @('-ReportPath', $ReportPath) }
+    $startInfo = [Diagnostics.ProcessStartInfo]::new('pwsh')
+    $startInfo.WorkingDirectory = $Script:ROOT
+    foreach ($argument in $arguments) { $startInfo.ArgumentList.Add([string]$argument) }
+    $execution = Invoke-LoopCheckProcess -StartInfo $startInfo -TimeoutMilliseconds 60000
+    $result = $null
+    foreach ($line in @($execution.output -split "`r?`n")) {
+        if (-not ([string]$line).TrimStart().StartsWith('{')) { continue }
+        try {
+            $candidate = ([string]$line) | ConvertFrom-Json -Depth 20 -ErrorAction Stop
+            if ($candidate.PSObject.Properties.Name -contains 'status') { $result = $candidate }
+        } catch { continue }
+    }
+    $exitCode = if ($execution.exitCode -eq 0 -and -not $result) { 1 } else { $execution.exitCode }
+    return [PSCustomObject]@{ available = $true; exitCode = $exitCode; result = $result; output = $execution.output }
+}
+
+function Invoke-StageGateCmd {
+    $scriptPath = Get-StageGateEvaluatorPath
+    if (-not $scriptPath) {
+        Write-CliOutput "$($C.r)  Error: scripts/score-stage-gate.ps1 not found in the Frontier runtime.$($C.n)"
+        exit 2
+    }
+    $arguments = @($Script:SubArgs | ForEach-Object { if ($_ -in @('--json', '-j')) { '-Json' } else { $_ } })
+    if ($arguments -notcontains '-WorkspaceRoot') { $arguments += @('-WorkspaceRoot', $Script:ROOT) }
+    & pwsh -NoProfile -File $scriptPath @arguments
+    exit $LASTEXITCODE
+}
+
 function Invoke-ValidateCmd {
     $rawNum = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '0' }
     $num = [int]$rawNum
@@ -5702,16 +5907,55 @@ function Invoke-ValidateCmd {
         if (-not $ok) { $script:validationPass = $false }
     }
 
+    # Stage gate: deterministic checks warn (advisory) or block (required); an existing
+    # reviewer report must always pass. See evaluation/rubrics/stage-gates.md.
+    function Test-StageGate([string]$Stage, [string[]]$Paths) {
+        $mode = Get-StageGateMode
+        if ($mode -eq 'off') { return }
+        if (@($Paths | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Script:ROOT $_) -PathType Leaf) }).Count -gt 0) { return }
+        $plan = Invoke-StageGateEvaluator 'Plan' $Stage $Paths
+        if (-not $plan.available -or -not $plan.result -or $plan.exitCode -gt 1) {
+            $detail = if ($plan.result) { $plan.result.message } else { ([string]$plan.output).Trim() }
+            if ($mode -eq 'required') { Test-Check $false "Stage gate '$Stage' evaluator ran ($detail)" }
+            else { Write-CliOutput "  $($C.y)[WARN]$($C.n) Stage gate '$Stage' unavailable: $detail" }
+            return
+        }
+        $failedChecks = @($plan.result.checks | Where-Object { -not $_.passed })
+        foreach ($check in $failedChecks) {
+            if ($mode -eq 'required') { Test-Check $false "Stage gate: $($check.file): $($check.message)" }
+            else { Write-CliOutput "  $($C.y)[WARN]$($C.n) Stage gate: $($check.file): $($check.message)" }
+        }
+        if ($failedChecks.Count -eq 0) { Test-Check $true "Stage gate '$Stage' deterministic checks" }
+
+        $reportPath = "docs/artifacts/reviews/gates/GATE-$Stage-$num.json"
+        if (Test-Path -LiteralPath (Join-Path $Script:ROOT $reportPath) -PathType Leaf) {
+            $validation = Invoke-StageGateEvaluator 'Validate' $Stage $Paths $reportPath
+            $passed = $validation.exitCode -eq 0 -and $validation.result -and $validation.result.status -eq 'passed'
+            $score = if ($validation.result -and $validation.result.PSObject.Properties['score']) { " $($validation.result.score)/100" } else { '' }
+            Test-Check $passed "Stage gate '$Stage' review report$score ($reportPath)"
+            if (-not $passed -and $validation.result -and $validation.result.PSObject.Properties['failures']) {
+                foreach ($failure in @($validation.result.failures | Select-Object -First 8)) { Write-CliOutput "      - $failure" }
+            }
+        } elseif ($mode -eq 'required') {
+            Test-Check $false "Stage gate '$Stage' review report exists ($reportPath)"
+        } else {
+            Write-CliOutput "  $($C.d)[INFO] No stage-gate review at $reportPath; run 'frontier stage-gate plan -Stage $Stage -Path $($Paths -join ',')'.$($C.n)"
+        }
+    }
+
     switch ($role) {
         'pm' {
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/prd/PRD-$num.md")) "PRD-$num.md exists"
+            Test-StageGate 'requirements' @("docs/artifacts/prd/PRD-$num.md")
         }
         'ux' {
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/ux/UX-$num.md")) "UX-$num.md exists"
+            Test-StageGate 'ux' @("docs/ux/UX-$num.md")
         }
         'architect' {
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/adr/ADR-$num.md")) "ADR-$num.md exists"
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/specs/SPEC-$num.md")) "SPEC-$num.md exists"
+            Test-StageGate 'architecture' @("docs/artifacts/adr/ADR-$num.md", "docs/artifacts/specs/SPEC-$num.md")
         }
         'engineer' {
             $gitLog = & git log --oneline --grep="#$num" -1 2>$null
@@ -5728,6 +5972,7 @@ function Invoke-ValidateCmd {
         }
         'reviewer' {
             Test-Check (Test-Path (Join-Path $Script:ROOT "docs/artifacts/reviews/REVIEW-$num.md")) "REVIEW-$num.md exists"
+            Test-StageGate 'review' @("docs/artifacts/reviews/REVIEW-$num.md")
         }
         'devops' {
             Test-Check (Test-Path (Join-Path $Script:ROOT '.github/workflows')) 'Workflows directory exists'
@@ -5744,7 +5989,11 @@ function Invoke-ValidateCmd {
         }
         'tester' {
             Test-Check (Test-Path (Join-Path $Script:ROOT 'tests')) 'Tests directory exists'
-            Test-Check (Test-Path (Join-Path $Script:ROOT "docs/testing/TEST-$num.md")) "TEST-$num.md exists"
+            # The Tester agent writes CERT-<issue>.md; TEST-<issue>.md is the legacy name.
+            $certification = @("docs/testing/CERT-$num.md", "docs/testing/TEST-$num.md") |
+                Where-Object { Test-Path -LiteralPath (Join-Path $Script:ROOT $_) -PathType Leaf } | Select-Object -First 1
+            Test-Check ([bool]$certification) "Certification report exists (docs/testing/CERT-$num.md)"
+            if ($certification) { Test-StageGate 'certification' @($certification) }
         }
         'consulting-research' {
             Test-Check (Test-Path (Join-Path $Script:ROOT 'docs/coaching')) 'Coaching docs directory exists'
@@ -7333,7 +7582,8 @@ function Invoke-TokensCmd {
         Write-CliOutput "$($C.r)  Error: scripts/token-counter.ps1 not found in the workspace or Frontier runtime.$($C.n)"
         exit 1
     }
-    $extra = if ($Script:SubArgs.Count -gt 1) { @($Script:SubArgs[1..($Script:SubArgs.Count - 1)]) } else { @() }
+    # Keep a lone extra flag an array: splatting a string passes one character per argument.
+    $extra = @($Script:SubArgs | Select-Object -Skip 1)
     & pwsh -NoProfile -File $scriptPath -Action $action @extra
     exit $LASTEXITCODE
 }
@@ -7346,14 +7596,15 @@ function Invoke-ScoreCmd {
     $role = if ($Script:SubArgs.Count -gt 0) { $Script:SubArgs[0] } else { '' }
     if (-not $role) { Write-CliOutput 'Usage: agentx score <engineer|architect|pm> [issue-number]'; exit 1 }
     $issue = if ($Script:SubArgs.Count -gt 1) { [int]$Script:SubArgs[1] } else { 0 }
-    $scriptPath = Join-Path $Script:ROOT 'scripts/score-output.ps1'
-    if (-not (Test-Path $scriptPath)) {
-        Write-CliOutput "$($C.r)  Error: scripts/score-output.ps1 not found.$($C.n)"
+    $scriptPath = Resolve-FrontierRuntimeScript 'scripts/score-output.ps1'
+    if (-not $scriptPath) {
+        Write-CliOutput "$($C.r)  Error: scripts/score-output.ps1 not found in the workspace or Frontier runtime.$($C.n)"
         exit 1
     }
-    $params = @{ Role = $role }
-    if ($issue -gt 0) { $params.IssueNumber = $issue }
-    & $scriptPath @params
+    $arguments = @('-NoProfile', '-File', $scriptPath, '-Role', $role)
+    if ($issue -gt 0) { $arguments += @('-IssueNumber', $issue) }
+    & pwsh @arguments
+    exit $LASTEXITCODE
 }
 
 # ---------------------------------------------------------------------------
@@ -7470,6 +7721,23 @@ function Invoke-DiagnoseCmd {
             -Summary 'scripts/token-counter.ps1 missing from workspace and Frontier runtime' `
             -Hint 'Reinstall the Frontier extension'
     }
+    if ($tokScript) {
+        $contextJson = & pwsh -NoProfile -File $tokScript -Action context -Json 2>$null | Out-String
+        $contextExit = $LASTEXITCODE
+        $context = try { $contextJson | ConvertFrom-Json -ErrorAction Stop } catch { $null }
+        $contextStatus = if ($context -and $context.PSObject.Properties['status']) { [string]$context.status } else { '' }
+        # Without any token policy the figure is informational. A policy that omits the
+        # alwaysOn budget, or an exceeded budget, fails.
+        $hasTokenPolicy = Test-Path -LiteralPath (Join-Path $Script:ROOT '.token-limits.json') -PathType Leaf
+        $contextPassed = $contextExit -eq 0 -and ($contextStatus -eq 'within' -or ($contextStatus -eq 'unconfigured' -and -not $hasTokenPolicy))
+        $contextSummary = if ($contextStatus) {
+            $note = if ($contextStatus -eq 'unconfigured' -and -not $hasTokenPolicy) { ' (no token policy; not a verified budget)' } else { '' }
+            "always-on ~$($context.alwaysOnTokens) tokens (limit: $($context.limits.maxTokens)); status: $contextStatus$note"
+        } else { 'context analysis returned no result' }
+        Add-DiagnoseCheck -List $checks -Id 'context-budget' -Label 'Always-on context budget (paid every request)' `
+            -Passed $contextPassed -Summary $contextSummary `
+            -Hint 'Run: agentx tokens context  (set alwaysOn in .token-limits.json; replace links in always-on files with plain paths)'
+    }
 
     # 6. Loop state schema sanity
     $loopOk = $true
@@ -7487,12 +7755,12 @@ function Invoke-DiagnoseCmd {
     }
     Add-DiagnoseCheck -List $checks -Id 'loop-state' -Label 'Loop state file readable' -Passed $loopOk -Summary $loopSummary -Hint 'Run: agentx loop status'
 
-    # 7. Bundle sync (vscode-extension/.github/agentx) -- advisory only when present
+    # 7. Bundle sync (vscode-extension/.github/frontier) -- advisory only when present
     # copy-assets.js intentionally rewrites internal markdown links in bundled
     # files, so hash comparison would produce constant false positives. Drift
     # in practice means files added/removed/renamed without re-running the
     # bundle sync, so check by relative path existence instead.
-    $bundleDir = Join-Path $Script:ROOT 'vscode-extension/.github/agentx'
+    $bundleDir = Join-Path $Script:ROOT 'vscode-extension/.github/frontier'
     if (Test-Path $bundleDir) {
         $srcSkillRoot = Join-Path $Script:ROOT '.github/skills'
         $bndSkillRoot = Join-Path $bundleDir 'skills'
@@ -7655,7 +7923,7 @@ $($C.w)  Commands:$($C.n)
     audit harness                    Run deterministic harness audit checks
   digest                           Generate weekly digest
     workflow [agent-name]            List/show workflow steps for an agent
-  loop <start|status|iterate|complete|cancel|rollback>  Iterative refinement
+  loop <start|status|affected|iterate|complete|cancel|rollback>  Iterative refinement; affected = tests naming changed code
   run <agent> <prompt>             Run agentic loop (LLM + tools via GitHub Models API)
   hire <name>                      Scaffold a new custom agent definition
     watch [--execute] [--once]       Poll backlog; --once runs one deterministic cycle
@@ -7668,9 +7936,10 @@ $($C.w)  Commands:$($C.n)
     parallel <assess|start|list|get|reconcile>  Bounded parallel delivery
     backlog-sync [github] [--force]  Force sync local backlog to GitHub on demand
   lessons [list|query|show|stats|promote|archive|clean]  Learning pipeline management
-  tokens [count|check|report]      Token budget management
+  tokens [count|check|report|context]  Token budgets; context = always-on cost paid every request
   budget -File <request.json>     Offline context and token-cost preflight (no provider calls)
   score <engineer|architect|pm> [issue]  Score agent output quality
+  stage-gate <plan|validate> -Stage <id> -Path <artifact> [-ReportPath <json>]  Stage-gate rubric evaluation
   discover [run|status|reset]      Analyze signals + git history for patterns
   graduate [run|list|preview]      Promote high-confidence patterns to skills
   sprint "<task>" [-i issue]       Full pipeline: plan -> build -> review -> hygiene -> discover
@@ -8946,6 +9215,7 @@ switch ($Script:Command) {
     'hire'     { Invoke-HireCmd }
     'watch'    { Invoke-WatchCmd }
     'tokens'   { Invoke-TokensCmd }
+    'stage-gate' { Invoke-StageGateCmd }
     'budget'   { Invoke-BudgetCmd }
     'score'    { Invoke-ScoreCmd }
     'discover' { Invoke-DiscoverCmd }

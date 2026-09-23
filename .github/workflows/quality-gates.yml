@@ -59,7 +59,7 @@ jobs:
       - name: Native quality and review lifecycle
         shell: pwsh
         run: |
-          foreach ($suite in @('tests/loop-parity-behavior.ps1', 'tests/loop-rollback-behavior.ps1', 'tests/code-quality-rubric-behavior.ps1')) {
+          foreach ($suite in @('tests/loop-parity-behavior.ps1', 'tests/loop-rollback-behavior.ps1', 'tests/loop-scope-behavior.ps1', 'tests/code-quality-rubric-behavior.ps1')) {
             & pwsh -NoProfile -File $suite
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
@@ -244,6 +244,13 @@ jobs:
           & pwsh -NoProfile -NonInteractive -File ./scripts/token-counter.ps1 @checkArgs
           exit $LASTEXITCODE
 
+      - name: Always-on Context Budget
+        shell: pwsh
+        run: |
+          # Paid on every chat request; a router that links a large doc attaches it each turn.
+          & pwsh -NoProfile -NonInteractive -File ./scripts/token-counter.ps1 -Action context
+          exit $LASTEXITCODE
+
       - name: Skill Validation Pipeline
         shell: pwsh
         run: |
@@ -265,7 +272,8 @@ jobs:
             'tests/model-route-behavior.ps1',
             'tests/budget-behavior.ps1',
             'tests/scrub-behavior.ps1',
-            'tests/code-quality-rubric-behavior.ps1'
+            'tests/code-quality-rubric-behavior.ps1',
+            'tests/stage-gate-behavior.ps1'
           )
           foreach ($suite in $regressionSuites) {
             if (-not (Test-Path -LiteralPath $suite)) {

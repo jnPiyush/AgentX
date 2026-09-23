@@ -395,82 +395,51 @@ graph TD
 
 ### 3.2 Request/Response Contracts
 
-#### POST /api/v1/{resource}
+#### POST `/api/v1/{resource}`
+
+Describe contracts with tables and put literal braces in inline code; the zero-code
+policy and the architecture stage gate reject JSON, YAML and HTTP code blocks.
 
 **Request Headers:**
-```
-Content-Type: application/json
-Authorization: Bearer {jwt-token}
-X-Request-ID: {uuid}
-```
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Content-Type | application/json | Yes |
+| Authorization | `Bearer {jwt-token}` | Yes |
+| X-Request-ID | `{uuid}` | Recommended |
 
 **Request Body:**
-```json
-{
- "name": "string (required, max 255)",
- "description": "string (optional)",
- "status": "DRAFT | ACTIVE | INACTIVE",
- "metadata": {
- "key": "value"
- }
-}
-```
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| name | string | Yes | Max 255 characters |
+| description | string | No | |
+| status | enum | Yes | DRAFT, ACTIVE, INACTIVE |
+| metadata | object | No | String key-value pairs |
 
 **Response (201 Created):**
-```json
-{
- "id": "uuid",
- "name": "string",
- "description": "string",
- "status": "DRAFT",
- "createdAt": "2026-01-27T12:00:00Z",
- "updatedAt": "2026-01-27T12:00:00Z"
-}
-```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | uuid | Server-generated |
+| name | string | |
+| description | string | |
+| status | enum | DRAFT on creation |
+| createdAt | ISO 8601 timestamp | UTC |
+| updatedAt | ISO 8601 timestamp | UTC |
 
 ### 3.3 Error Responses
 
-```
-+-----------------------------------------------------------------------------+
-| ERROR RESPONSE FORMAT |
-+-----------------------------------------------------------------------------+
-| |
-| 400 Bad Request | 401 Unauthorized |
-| +-------------------------+ | +-------------------------+ |
-| | { | | | { | |
-| | "error": "Validation",| | | "error": "Unauthorized| |
-| | "message": "...", | | | "message": "Invalid | |
-| | "details": { | | | token", | |
-| | "field": "name", | | | "requestId": "uuid" | |
-| | "reason": "required"| | | } | |
-| | }, | | +-------------------------+ |
-| | "requestId": "uuid" | | |
-| | } | | 403 Forbidden |
-| +-------------------------+ | +-------------------------+ |
-| | | { | |
-| 404 Not Found | | "error": "Forbidden", | |
-| +-------------------------+ | | "message": "Access | |
-| | { | | | denied", | |
-| | "error": "NotFound", | | | "requestId": "uuid" | |
-| | "message": "Resource | | | } | |
-| | not found", | | +-------------------------+ |
-| | "requestId": "uuid" | | |
-| | } | | 500 Internal Server Error |
-| +-------------------------+ | +-------------------------+ |
-| | | { | |
-| 429 Too Many Requests | | "error": "Internal", | |
-| +-------------------------+ | | "message": "An error | |
-| | { | | | occurred", | |
-| | "error": "RateLimit", | | | "requestId": "uuid" | |
-| | "message": "Too many | | | } | |
-| | requests", | | +-------------------------+ |
-| | "retryAfter": 60, | | |
-| | "requestId": "uuid" | | |
-| | } | | |
-| +-------------------------+ | |
-| |
-+------------------------------------------------------------------------------+
-```
+Every error body carries `error`, `message` and `requestId`.
+
+| Status | `error` value | Additional fields |
+|--------|---------------|-------------------|
+| 400 Bad Request | Validation | `details.field`, `details.reason` |
+| 401 Unauthorized | Unauthorized | |
+| 403 Forbidden | Forbidden | |
+| 404 Not Found | NotFound | |
+| 429 Too Many Requests | RateLimit | `retryAfter` (seconds) |
+| 500 Internal Server Error | Internal | |
 
 ---
 
@@ -713,7 +682,7 @@ graph TD
 
 ### 9.1 Directory Structure (Language Agnostic)
 
-```
+```text
 src/
  controllers/ # HTTP request handlers
  entity_controller # API endpoints
@@ -1190,7 +1159,7 @@ graph TD
 
 ### 15.4 App Tool Registrations
 
-```
+```text
 Tool: {tool_name}
 Description: {what it does - shown to LLM}
 Parameters:

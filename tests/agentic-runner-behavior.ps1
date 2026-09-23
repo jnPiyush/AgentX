@@ -646,7 +646,7 @@ $architectClarifyTargets = @(Resolve-ClarificationTargetList -agentDef $architec
 Assert-True ($architectClarifyTargets -contains 'product-manager') 'Resolve-ClarificationTargetList maps Architect collaborators to runtime agent IDs'
 
 $engineerDef = Read-AgentDef -agentName 'engineer' -root $script:repoRoot
-Assert-Equal $engineerDef.constraints.Count 23 'Read-AgentDef stops constraints at the next top-level key'
+Assert-Equal $engineerDef.constraints.Count 22 'Read-AgentDef stops constraints at the next top-level key'
 Assert-Equal $engineerDef.tools.Count 10 'Read-AgentDef stops tools at the next top-level key'
 Assert-Equal $engineerDef.agents.Count 9 'Read-AgentDef parses only collaborator entries as agents'
 Assert-Equal $engineerDef.canModify.Count 5 'Read-AgentDef parses only can_modify boundary entries'
@@ -1520,6 +1520,221 @@ try {
     }
     $Script:ActiveProvider = $null
     Remove-Item -LiteralPath $repairRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host ''
+Write-Host ' Usage ledger and token budget'
+. (Join-Path $script:repoRoot '.agentx/agentic-runner.ps1')
+$anthropicUsage = ConvertFrom-AnthropicUsage ([PSCustomObject]@{ input_tokens = 100; cache_read_input_tokens = 40; cache_creation_input_tokens = 10; output_tokens = 20 })
+Assert-Equal $anthropicUsage.prompt_tokens 150 'Anthropic prompt tokens include cache reads and writes'
+Assert-Equal $anthropicUsage.prompt_tokens_details.cached_tokens 40 'Anthropic cache reads map to cached prompt tokens'
+Assert-Equal $anthropicUsage.cache_write_tokens 10 'Anthropic cache writes are preserved'
+Assert-True ($null -eq (ConvertFrom-AnthropicUsage ([PSCustomObject]@{ input_tokens = 5 }))) 'Anthropic usage without output tokens stays unknown'
+$uncachedAnthropic = ConvertFrom-AnthropicUsage ([PSCustomObject]@{ input_tokens = 70; output_tokens = 9 })
+Assert-True ($uncachedAnthropic.prompt_tokens -eq 70 -and $uncachedAnthropic.prompt_tokens_details.cached_tokens -eq 0 -and $uncachedAnthropic.cache_write_tokens -eq 0) 'Absent Anthropic cache counters count as zero'
+Assert-True ($null -eq (ConvertFrom-AnthropicUsage ([PSCustomObject]@{ input_tokens = 5; output_tokens = 1; cache_read_input_tokens = 'x' }))) 'A malformed Anthropic cache counter leaves usage unknown'
+$anthropicHistory = ConvertTo-AnthropicMessage -Messages @(
+    @{ role = 'system'; content = 'rules' },
+    @{ role = 'user'; content = 'task' },
+    @{ role = 'assistant'; content = 'text-only answer' },
+    @{ role = 'user'; content = 'review feedback' }
+)
+Assert-True ($anthropicHistory.messages.Count -eq 3 -and @($anthropicHistory.messages[1].content).Count -eq 1 -and $anthropicHistory.messages[1].content[0].type -eq 'text') 'A text-only assistant turn converts to one Anthropic text block'
+$claudeCodePrompt = ConvertTo-ClaudeCodePrompt -Messages @(
+    @{ role = 'user'; content = 'task' },
+    @{ role = 'assistant'; content = 'text-only answer' },
+    @{ role = 'assistant'; content = ''; tool_calls = @(@{ id = 'call-1'; type = 'function'; function = @{ name = 'file_read'; arguments = '{"path":"a.md"}' } }) },
+    @{ role = 'user'; content = 'review feedback' }
+)
+Assert-True ($claudeCodePrompt -match '\[ASSISTANT\]\s+text-only answer' -and @([regex]::Matches($claudeCodePrompt, '\[ASSISTANT TOOL REQUEST\]')).Count -eq 1 -and $claudeCodePrompt -match 'file_read \{"path":"a.md"\}') 'Claude Code prompts keep text-only turns and list each tool request once'
+
+Register-LlmUsage -Response ([PSCustomObject]@{ usage = [PSCustomObject]@{ prompt_tokens = 1; completion_tokens = 1 } }) -ModelId 'gpt-4o' -Purpose 'agent'
+Assert-True ($null -eq $Script:CurrentUsageLedger) 'Usage outside a run is ignored'
+$parentLedger = Start-UsageLedger
+Register-LlmUsage -Response ([PSCustomObject]@{ usage = [PSCustomObject]@{ prompt_tokens = 100; completion_tokens = 20; prompt_tokens_details = [PSCustomObject]@{ cached_tokens = 30 } } }) -ModelId 'gpt-4o' -Purpose 'agent'
+Register-LlmUsage -Response ([PSCustomObject]@{ choices = @() }) -ModelId 'gpt-4o' -Purpose 'self-review'
+$childLedger = Start-UsageLedger
+Register-LlmUsage -Response ([PSCustomObject]@{ usage = $anthropicUsage }) -ModelId 'claude-opus-4.8' -Purpose 'agent'
+Register-LlmUsage -Response ([PSCustomObject]@{ usage = [PSCustomObject]@{ prompt_tokens = 10; completion_tokens = 5; prompt_tokens_details = [PSCustomObject]@{ cached_tokens = 99 } } }) -ModelId 'gpt-4o' -Purpose 'compaction'
+$childSummary = Stop-UsageLedger $childLedger
+Assert-Equal $childSummary.calls 2 'A delegated run reports its own calls'
+Assert-True ($null -eq (Get-MessageFieldValue $childSummary.records[1] 'cacheReadTokens')) 'Inconsistent cache counts are dropped instead of exported'
+$usageSummary = Stop-UsageLedger $parentLedger
+Assert-Equal (Get-MessageFieldValue $usageSummary.records[0] 'cacheWriteTokens') 0 'OpenAI-compatible usage records zero cache writes'
+Assert-True ($null -eq $Script:CurrentUsageLedger) 'Closing the outermost ledger clears the active ledger'
+Assert-Equal $usageSummary.calls 4 'The parent ledger includes delegated calls'
+Assert-Equal $usageSummary.reportedCalls 3 'Calls without provider usage are counted as unreported'
+Assert-True (-not $usageSummary.complete) 'A ledger with unreported calls is incomplete'
+Assert-Equal $usageSummary.inputTokens 260 'Input tokens sum only provider-reported values'
+Assert-Equal $usageSummary.outputTokens 45 'Output tokens sum only provider-reported values'
+Assert-Equal $usageSummary.cacheReadTokens 70 'Cached tokens sum only consistent reported values'
+Assert-Equal $usageSummary.byPurpose.agent.calls 2 'Usage is grouped by call purpose'
+Assert-True ((Format-UsageSummary $usageSummary) -match 'lower bound') 'The console summary flags incomplete usage'
+Assert-Equal (Get-RunnerTokenBudget @{ harness = @{ tokenBudget = 500 } }) 500 'harness.tokenBudget is read from config'
+foreach ($invalidBudget in @('abc', 0, -5, $true)) {
+    Assert-True ($null -eq (Get-RunnerTokenBudget @{ harness = @{ tokenBudget = $invalidBudget } })) "invalid token budget '$invalidBudget' is ignored"
+}
+Assert-True ($null -eq (Get-RunnerTokenBudget @{})) 'No token budget is enforced by default'
+
+$ledgerRoot = Join-Path ([IO.Path]::GetTempPath()) ('usage-ledger-' + [guid]::NewGuid().ToString('N'))
+$savedLedgerFunctions = @{}
+foreach ($functionName in @('Get-GitHubToken', 'Initialize-ApiMode', 'Get-ProviderExecutionToken', 'Get-RunnerConfig', 'Get-RunnerRelevantLearnings')) {
+    $savedLedgerFunctions[$functionName] = (Get-Item "Function:$functionName").ScriptBlock
+}
+try {
+    [IO.Directory]::CreateDirectory((Join-Path $ledgerRoot '.github/agents')) | Out-Null
+    [IO.Directory]::CreateDirectory((Join-Path $ledgerRoot 'src')) | Out-Null
+    Copy-Item -LiteralPath (Join-Path $script:repoRoot '.github/agents/engineer.agent.md') -Destination (Join-Path $ledgerRoot '.github/agents/engineer.agent.md')
+    Set-Content -LiteralPath (Join-Path $ledgerRoot 'src/fixture.txt') -Value 'fixture' -NoNewline
+    $exportPath = Save-UsageLedger -SessionId 'ledger-fixture' -Summary $usageSummary -Root $ledgerRoot
+    $budgetRun = & (Get-Process -Id $PID).Path -NoProfile -File (Join-Path $script:repoRoot 'scripts/budget.ps1') -File $exportPath -Json | ConvertFrom-Json
+    Assert-Equal $budgetRun.status 'ok' 'scripts/budget.ps1 accepts the exported usage ledger'
+    Assert-Equal $budgetRun.totals.inputTokensKnownSubtotal 260 'Budget totals match the ledger input tokens'
+    $priced = Get-Content -LiteralPath $exportPath -Raw | ConvertFrom-Json
+    $priced | Add-Member -NotePropertyName rates -NotePropertyValue @(
+        [PSCustomObject]@{ id = 'openai-fixture'; model = 'gpt-4o'; currency = 'USD'; source = 'test fixture'; asOf = '2026-01-01'; perMillion = [PSCustomObject]@{ input = 2; cacheRead = 1; cacheWrite = 0; output = 8 } },
+        [PSCustomObject]@{ id = 'anthropic-fixture'; model = 'claude-opus-4.8'; currency = 'USD'; source = 'test fixture'; asOf = '2026-01-01'; perMillion = [PSCustomObject]@{ input = 15; cacheRead = 1.5; cacheWrite = 18.75; output = 75 } }
+    )
+    foreach ($call in $priced.calls) {
+        $call | Add-Member -NotePropertyName rateId -NotePropertyValue $(if ($call.model -eq 'gpt-4o') { 'openai-fixture' } else { 'anthropic-fixture' })
+    }
+    $pricedPath = Join-Path $ledgerRoot 'priced-usage.json'
+    $priced | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $pricedPath -Encoding utf8
+    $pricedRun = & (Get-Process -Id $PID).Path -NoProfile -File (Join-Path $script:repoRoot 'scripts/budget.ps1') -File $pricedPath -Json | ConvertFrom-Json
+    $pricedCalls = @($pricedRun.calls | Where-Object { $_.pricing.known })
+    Assert-Equal $pricedCalls.Count 2 'Reported OpenAI-compatible and Anthropic calls are priceable after adding rates'
+    $openAiCost = [double](@($pricedCalls | Where-Object model -eq 'gpt-4o')[0].pricing.costUSD)
+    Assert-True ([math]::Abs($openAiCost - 0.00033) -lt 1e-12) 'OpenAI-compatible pricing uses uncached, cached and output tokens'
+
+    function Get-GitHubToken { return 'synthetic-token' }
+    function Get-ProviderExecutionToken { param($ProviderId, $GitHubToken) return 'synthetic-token' }
+    function Initialize-ApiMode {
+        param($ghToken)
+        $Script:ApiMode = 'anthropic-api'
+        $Script:ActiveProvider = [PSCustomObject]@{ id = 'anthropic-api'; displayName = 'Offline fixture'; transport = 'anthropic-api'; authSource = 'mock'; reason = 'mock'; selectionSource = 'test'; ready = $true }
+    }
+    function Get-RunnerConfig { param($WorkspaceRoot) return $script:ledgerConfig }
+    function Get-RunnerRelevantLearnings { param($WorkspaceRoot, $Query, $Limit) return @() }
+    function Invoke-RestMethod {
+        param($Uri, $Method, $Headers, $Body, $ErrorAction)
+        $request = $Body | ConvertFrom-Json
+        $isReview = $request.system -like '*SKEPTICAL EVALUATOR*'
+        $isResponder = -not $isReview -and $Body.Contains('You are being asked a clarification question')
+        $usage = [PSCustomObject]@{ input_tokens = 90; cache_read_input_tokens = 10; cache_creation_input_tokens = 0; output_tokens = 20 }
+        $useTool = if ($isReview) { $script:ledgerReviewUsesTool } elseif ($isResponder) { $script:ledgerResponderUsesTool } else { $script:ledgerUseTool }
+        if ($useTool) {
+            return [PSCustomObject]@{ stop_reason = 'tool_use'; usage = $usage; content = @([PSCustomObject]@{ type = 'tool_use'; id = "read-$([guid]::NewGuid().ToString('N'))"; name = 'file_read'; input = @{ filePath = 'src/fixture.txt' } }) }
+        }
+        $text = if ($isReview) {
+            "``````review`nAPPROVED: true`nFINDINGS:`n``````"
+        } elseif ($isResponder) {
+            "Status: resolved`n## Direct Answer`nRetry three times with exponential backoff.`n## Evidence And Constraints`nFixture policy.`n## Remaining Uncertainty`nNone."
+        } elseif ($script:ledgerClarify -and -not $Body.Contains('[Clarification from')) {
+            'I need clarification from architect about retry policy'
+        } else { 'Ledger fixture answer' }
+        return [PSCustomObject]@{ stop_reason = 'end_turn'; usage = $usage; content = @([PSCustomObject]@{ type = 'text'; text = $text }) }
+    }
+
+    $script:ledgerConfig = @{ researchFirstMode = 'off' }
+    $script:ledgerUseTool = $false
+    $script:ledgerReviewUsesTool = $false
+    $script:ledgerResponderUsesTool = $false
+    $script:ledgerClarify = $false
+    # A ledger left open by an earlier run that threw must not become this run's parent.
+    $Script:CurrentUsageLedger = [PSCustomObject]@{ parent = $null; tokenBudget = 1; calls = [System.Collections.Generic.List[object]]::new() }
+    $ledgerRun = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 3 -SkipLoopStateSync
+    Assert-Equal $ledgerRun.exitReason 'text_response' 'Metered run completes normally'
+    Assert-True ($null -eq $Script:CurrentUsageLedger) 'A top-level run replaces a stale ledger and closes its own'
+    Assert-Equal $ledgerRun.usage.calls 2 'Metered run records the main and self-review calls'
+    Assert-True $ledgerRun.usage.complete 'Metered run usage is complete when the provider reports it'
+    Assert-Equal $ledgerRun.usage.totalTokens 240 'Metered run totals are measured, not estimated'
+    Assert-Equal $ledgerRun.usage.byPurpose.'self-review'.calls 1 'Self-review spend is attributed separately'
+    $usageFile = Join-Path $ledgerRoot ".frontier/sessions/$($ledgerRun.sessionId).usage.json"
+    Assert-True (Test-Path -LiteralPath $usageFile) 'Metered run writes a budget-compatible usage file'
+
+    $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 50 } }
+    $script:ledgerUseTool = $true
+    $budgetStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+    Assert-Equal $budgetStop.exitReason 'token_budget' 'A tool-call run stops at the next iteration once the token budget is spent'
+    Assert-Equal $budgetStop.iterations 1 'Token budget stop does not count an unexecuted iteration'
+    Assert-True ($budgetStop.finalText -match '120 of 50') 'Token budget stop reports spend against the budget'
+
+    $script:ledgerUseTool = $false
+    $textStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+    Assert-Equal $textStop.exitReason 'token_budget' 'A text response over budget ends the run before self-review'
+    Assert-Equal $textStop.usage.calls 1 'No self-review call is made once the budget is spent'
+    Assert-True ($textStop.finalText -match 'Ledger fixture answer' -and $textStop.finalText -match 'before review or clarification') 'The unreviewed response is returned with the budget note'
+
+    $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 200 } }
+    $script:ledgerReviewUsesTool = $true
+    $reviewStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+    Assert-Equal $reviewStop.exitReason 'token_budget' 'Self-review stops before its next call once the budget is spent'
+    Assert-Equal $reviewStop.usage.byPurpose.'self-review'.calls 1 'The reviewer makes no call after the budget is spent'
+    Assert-Equal $reviewStop.usage.calls 2 'A budget stop inside self-review makes no further calls'
+    $reviewStopLast = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 1 -SkipLoopStateSync
+    Assert-Equal $reviewStopLast.exitReason 'token_budget' 'A reviewer budget stop on the last iteration reports token_budget'
+    Assert-True ($reviewStopLast.finalText -match 'Ledger fixture answer' -and $reviewStopLast.finalText -match 'during self-review') 'The unreviewed response is returned when self-review runs out of budget'
+    $script:ledgerReviewUsesTool = $false
+
+    $savedNonInteractive = $env:FRONTIER_NONINTERACTIVE_HUMAN
+    $env:FRONTIER_NONINTERACTIVE_HUMAN = '1'
+    try {
+        $script:ledgerClarify = $true
+        $script:ledgerConfig = @{ researchFirstMode = 'off' }
+        $usageDir = Join-Path $ledgerRoot '.frontier/sessions'
+        $usageFilesBefore = @(Get-ChildItem -LiteralPath $usageDir -Filter '*.usage.json' -ErrorAction SilentlyContinue).Count
+        $clarified = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+        Assert-Equal $clarified.exitReason 'text_response' 'A delegated clarification completes end to end'
+        Assert-Equal $clarified.usage.byPurpose.agent.calls 3 'Clarification responder calls merge into the requesting run ledger'
+        $usageFilesAfter = @(Get-ChildItem -LiteralPath $usageDir -Filter '*.usage.json' -ErrorAction SilentlyContinue).Count
+        $clarifiedExport = Get-Content -LiteralPath (Join-Path $usageDir "$($clarified.sessionId).usage.json") -Raw | ConvertFrom-Json
+        Assert-Equal ($usageFilesAfter - $usageFilesBefore) 1 'Only the requesting run writes a usage export'
+        Assert-Equal @($clarifiedExport.calls | Where-Object { $_.id -like 'agent-*' }).Count 3 'The requesting run export includes its responder calls'
+        Assert-Equal @($clarifiedExport.calls).Count $clarified.usage.calls 'The usage export lists every call of the run'
+        $clarificationLedger = Get-Content -LiteralPath (Join-Path $ledgerRoot '.frontier/state/clarifications/issue-0.json') -Raw | ConvertFrom-Json
+        Assert-Equal @($clarificationLedger.clarifications)[-1].status 'resolved' 'A resolved clarification is recorded in the ledger'
+
+        $script:ledgerConfig = @{ researchFirstMode = 'off'; harness = @{ tokenBudget = 150 } }
+        $script:ledgerResponderUsesTool = $true
+        $clarifyStop = Invoke-AgenticLoop -Agent 'engineer' -Prompt 'Inspect fixture' -Model 'claude-opus-4.8' -WorkspaceRoot $ledgerRoot -MaxIterations 5 -SkipLoopStateSync
+        Assert-Equal $clarifyStop.exitReason 'token_budget' 'A budget stop inside a delegated clarification ends the requesting run'
+        Assert-Equal $clarifyStop.usage.calls 2 'No further clarification rounds run after the budget is spent'
+        Assert-True ($clarifyStop.finalText -match 'during clarification: 240 of 150') 'The budget stop names the clarification stage'
+    } finally {
+        $env:FRONTIER_NONINTERACTIVE_HUMAN = $savedNonInteractive
+        $script:ledgerClarify = $false
+        $script:ledgerResponderUsesTool = $false
+    }
+
+    $savedLlmChat = (Get-Item Function:Invoke-LlmChat).ScriptBlock
+    $script:compactionModelCalls = 0
+    try {
+        function Invoke-LlmChat { $script:compactionModelCalls++; return [PSCustomObject]@{ choices = @([PSCustomObject]@{ message = [PSCustomObject]@{ content = 'model summary' } }) } }
+        $outerLedger = Start-UsageLedger -TokenBudget 10
+        Register-LlmUsage -Response ([PSCustomObject]@{ usage = [PSCustomObject]@{ prompt_tokens = 40; completion_tokens = 5 } }) -ModelId 'gpt-4o' -Purpose 'agent'
+        $compacted = Invoke-CompactionSummary -Token 'synthetic-token' -ModelId 'gpt-4o' -Messages @(@{ role = 'user'; content = 'Keep docs/a.md in scope.' })
+        Assert-Equal $script:compactionModelCalls 0 'Compaction makes no model call once the budget is spent'
+        Assert-True ($compacted -like '*Deterministic facts:*') 'Compaction falls back to the deterministic summary over budget'
+        $delegatedLedger = Start-UsageLedger -TokenBudget 999
+        Assert-Equal $delegatedLedger.tokenBudget 10 'A delegated run inherits the outermost token budget'
+        Register-LlmUsage -Response ([PSCustomObject]@{ usage = [PSCustomObject]@{ prompt_tokens = 4; completion_tokens = 1 } }) -ModelId 'gpt-4o' -Purpose 'agent'
+        Assert-Equal (Get-TokenBudgetStatus).spent 50 'Budget spend includes delegated calls before they merge'
+        [void](Stop-UsageLedger $delegatedLedger)
+        Assert-Equal (Get-TokenBudgetStatus).spent 50 'Merged delegated calls are counted once'
+        [void](Stop-UsageLedger $outerLedger)
+        Assert-True (-not (Get-TokenBudgetStatus).reached) 'No budget applies outside a run'
+    } finally {
+        Set-Item -Path Function:Invoke-LlmChat -Value $savedLlmChat
+        $Script:CurrentUsageLedger = $null
+    }
+} finally {
+    Remove-Item Function:Invoke-RestMethod -ErrorAction SilentlyContinue
+    foreach ($functionName in $savedLedgerFunctions.Keys) {
+        Set-Item -Path "Function:$functionName" -Value $savedLedgerFunctions[$functionName]
+    }
+    $Script:ActiveProvider = $null
+    $Script:CurrentUsageLedger = $null
+    Remove-Item -LiteralPath $ledgerRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 Write-Host ' ================================================' -ForegroundColor DarkGray
 $total = $script:pass + $script:fail

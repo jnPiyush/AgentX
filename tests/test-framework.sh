@@ -49,7 +49,11 @@ assert_file_contains() {
   local label="$3"
   local fullpath="$ROOT/$relpath"
   if [[ -f "$fullpath" ]]; then
-    assert_true "grep -qE '$pattern' '$fullpath'" "$label"
+    # grep runs here, not inside assert_true's eval, which would strip the quotes
+    # from patterns such as "'ready'". Patterns are fixed strings.
+    local found=false
+    grep -qF -- "$pattern" "$fullpath" && found=true
+    assert_true "$found" "$label"
   else
     echo -e "  \033[0;31m[FAIL]\033[0m $label (file not found: $relpath)"
     ((FAIL++))
@@ -80,7 +84,7 @@ assert_file_exists ".agentx/templates/memories/decisions.md" "Starter memory: de
 echo ""
 echo -e "  \033[1;37m2. Agent Definitions\033[0m"
 
-for agent in agent-x product-manager architect engineer reviewer ux-designer devops reviewer-auto data-scientist tester fabric-engineer power-platform-builder consulting-research powerbi-analyst; do
+for agent in frontier product-manager architect engineer reviewer ux-designer devops reviewer-auto data-scientist tester fabric-engineer power-platform-builder consulting-research powerbi-analyst; do
   assert_file_exists ".github/agents/$agent.agent.md" "Agent: $agent"
 done
 
@@ -100,7 +104,7 @@ assert_file_contains ".github/templates/SPEC-TEMPLATE.md" "AI/ML Specification" 
 echo ""
 echo -e "  \033[1;37m4. Agent Definitions\033[0m"
 
-for ag in agent-x product-manager architect engineer reviewer reviewer-auto ux-designer devops data-scientist tester fabric-engineer power-platform-builder powerbi-analyst consulting-research; do
+for ag in frontier product-manager architect engineer reviewer reviewer-auto ux-designer devops data-scientist tester fabric-engineer power-platform-builder powerbi-analyst consulting-research; do
   assert_file_exists ".github/agents/$ag.agent.md" "Agent: $ag"
 done
 
@@ -117,9 +121,19 @@ assert_file_exists ".agentx/agentx-cli.ps1" "CLI implementation exists"
 assert_file_exists ".agentx/agentic-runner.ps1" "CLI agentic loop runner exists"
 
 # Test CLI commands exist in the implementation
-for cmd in ready state deps digest workflow hook version run clarify loop validate config issue bundle parallel; do
+for cmd in ready state deps digest workflow hook policy-hook version run loop validate config issue bundle parallel backlog-sync hire watch; do
   assert_file_contains ".agentx/agentx-cli.ps1" "'$cmd'" "CLI supports: $cmd"
 done
+
+# Self-check: a bare word must not satisfy its quoted form.
+PROBE_DIR="$(mktemp -d)"
+printf 'ready\n' > "$PROBE_DIR/probe.txt"
+PROBE_OUTPUT=$(ROOT="$PROBE_DIR"; assert_file_contains "probe.txt" "'ready'" "probe")
+# The pre-commit blocked-command scan rejects recursive force deletes.
+rm -f "$PROBE_DIR/probe.txt" && rmdir "$PROBE_DIR"
+PROBE_LITERAL=false
+[[ "$PROBE_OUTPUT" == *"[FAIL]"* ]] && PROBE_LITERAL=true
+assert_true "$PROBE_LITERAL" "assert_file_contains matches quoted patterns literally"
 
 # Agentic runner checks
 assert_file_contains ".agentx/agentic-runner.ps1" "Invoke-AgenticLoop" "Agentic runner has main loop function"
@@ -152,13 +166,13 @@ assert_file_exists ".github/schemas/skill-frontmatter.schema.json"       "Skill 
 echo ""
 echo -e "  \033[1;37m7. AI-First Intent Preservation\033[0m"
 
-assert_file_contains ".github/agents/frontier.agent.md"         "classifyDomain"         "Frontier has domain classification"
+assert_file_contains ".github/agents/frontier.agent.md"         "## Domain Detection"    "Frontier has domain classification"
 assert_file_contains ".github/agents/frontier.agent.md"         "needs:ai"               "Frontier detects AI domain"
-assert_file_contains ".github/agents/frontier.agent.md"         "validatePRDIntent"      "Frontier validates PRD intent"
-assert_file_contains ".github/agents/product-manager.agent.md" "Domain Classification"  "PM has domain classification step"
+assert_file_contains ".github/agents/frontier.agent.md"         "## PRD Intent Validation" "Frontier validates PRD intent"
+assert_file_contains ".github/agents/product-manager.agent.md" "Classify Domain Intent" "PM has domain classification step"
 assert_file_contains ".github/agents/product-manager.agent.md" "ai-agent-development/SKILL.md" "PM references AI skill"
-assert_file_contains ".github/agents/architect.agent.md"        "AI-Aware Research"     "Architect has AI-aware research step"
-assert_file_contains ".github/agents/engineer.agent.md"         "AI Implementation Setup" "Engineer has AI implementation step"
+assert_file_contains ".github/agents/architect.agent.md"        "AI-first assessment"   "Architect has AI-aware research step"
+assert_file_contains ".github/agents/engineer.agent.md"         "For GenAI features"    "Engineer has AI implementation step"
 assert_file_contains ".github/agents/reviewer.agent.md"         "Intent Preservation"   "Reviewer has intent preservation check"
 
 # --- 8. GitHub Actions -------------------------------------------------------
@@ -189,30 +203,29 @@ assert_file_contains "README.md"                     "OpenSSF"                 "
 echo ""
 echo -e "  \033[1;37m11. Bash CLI Functional Tests\033[0m"
 
-# Test help command
+# "$?" is unescaped, so it expands to each command's status before assert_true
+# runs. The help text is matched here because assert_true evals its condition
+# and the text contains quotes.
 HELP_OUTPUT=$(bash "$ROOT/.agentx/agentx.sh" help 2>&1)
-assert_true "[[ \$? -eq 0 ]]" "agentx.sh help exits cleanly"
-assert_true "[[ '$HELP_OUTPUT' == *'Commands'* ]]" "agentx.sh help shows Commands section"
+assert_true "[[ $? -eq 0 ]]" "agentx.sh help exits cleanly"
+HELP_HAS_COMMANDS=false
+[[ "$HELP_OUTPUT" == *"Commands"* ]] && HELP_HAS_COMMANDS=true
+assert_true "$HELP_HAS_COMMANDS" "agentx.sh help shows Commands section"
 
-# Test version command
-VERSION_OUTPUT=$(bash "$ROOT/.agentx/agentx.sh" version 2>&1)
-assert_true "[[ \$? -eq 0 ]]" "agentx.sh version exits cleanly"
+bash "$ROOT/.agentx/agentx.sh" version >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "agentx.sh version exits cleanly"
 
-# Test workflow list (no arguments)
-WORKFLOW_OUTPUT=$(bash "$ROOT/.agentx/agentx.sh" workflow 2>&1)
-assert_true "[[ \$? -eq 0 ]]" "agentx.sh workflow (list) exits cleanly"
+bash "$ROOT/.agentx/agentx.sh" workflow >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "agentx.sh workflow (list) exits cleanly"
 
-# Test workflow with type
-WORKFLOW_FEATURE=$(bash "$ROOT/.agentx/agentx.sh" workflow feature 2>&1)
-assert_true "[[ \$? -eq 0 ]]" "agentx.sh workflow feature exits cleanly"
+bash "$ROOT/.agentx/agentx.sh" workflow feature >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "agentx.sh workflow feature exits cleanly"
 
-# Test state (no args = show all)
-STATE_OUTPUT=$(bash "$ROOT/.agentx/agentx.sh" state 2>&1)
-assert_true "[[ \$? -eq 0 ]]" "agentx.sh state exits cleanly"
+bash "$ROOT/.agentx/agentx.sh" state >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "agentx.sh state exits cleanly"
 
-# Test ready queue
-READY_OUTPUT=$(bash "$ROOT/.agentx/agentx.sh" ready 2>&1)
-assert_true "[[ \$? -eq 0 ]]" "agentx.sh ready exits cleanly"
+bash "$ROOT/.agentx/agentx.sh" ready >/dev/null 2>&1
+assert_true "[[ $? -eq 0 ]]" "agentx.sh ready exits cleanly"
 
 # --- 12. VS Code Extension --------------------------------------------------
 echo ""
@@ -221,11 +234,9 @@ echo -e "  \033[1;37m12. VS Code Extension\033[0m"
 assert_file_exists "vscode-extension/package.json"    "Extension package.json"
 assert_file_exists "vscode-extension/tsconfig.json"   "Extension tsconfig.json"
 assert_file_exists "vscode-extension/src/extension.ts" "Extension entry point"
-assert_file_exists "vscode-extension/src/agentxContext.ts" "FrontierContext module"
+assert_file_exists "vscode-extension/src/frontierContext.ts" "FrontierContext module"
 assert_file_exists "vscode-extension/src/chat/chatParticipant.ts" "Chat participant"
-assert_file_exists "vscode-extension/src/chat/agentRouter.ts"     "Agent router"
-assert_file_exists "vscode-extension/src/chat/commandHandlers.ts" "Command handlers"
-assert_file_exists "vscode-extension/src/chat/followupProvider.ts" "Followup provider"
+assert_file_exists "vscode-extension/src/chat/requestRouter.ts"   "Request router"
 assert_file_exists "vscode-extension/src/chat/agentContextLoader.ts" "Agent context loader"
 
 assert_file_contains "vscode-extension/package.json" '"test"' "Extension has test script"

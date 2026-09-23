@@ -57,8 +57,14 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $RootDir   = (Resolve-Path .).Path
-$StateDir  = Join-Path $RootDir '.agentx/state/research'
+$StateDir  = Join-Path $RootDir '.frontier/state/research'
 $StateFile = Join-Path $StateDir 'session.json'
+# Carry forward an experiment that an earlier version recorded under .agentx/.
+$LegacyStateDir = Join-Path $RootDir '.agentx/state/research'
+if (-not (Test-Path -LiteralPath $StateFile) -and (Test-Path -LiteralPath (Join-Path $LegacyStateDir 'session.json'))) {
+    New-Item -ItemType Directory -Path $StateDir -Force | Out-Null
+    Get-ChildItem -LiteralPath $LegacyStateDir -File | Copy-Item -Destination $StateDir
+}
 
 function Get-Timestamp { (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') }
 

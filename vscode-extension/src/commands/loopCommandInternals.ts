@@ -190,11 +190,11 @@ export async function loopComplete(agentx: FrontierContext): Promise<void> {
   if (summary === undefined) { return; }
 
   // The CLI quality gate requires a fresh final-gate evidence artifact
-  // (e.g., quality-gate.log, full-suite-report.xml). Prompt for it so the
+  // (the log of the focused checks run last). Prompt for it so the
   // command can complete instead of bouncing on the CLI's evidence check.
   const evidence = await vscode.window.showInputBox({
     prompt: 'Final-gate evidence file (required by quality gate)',
-    placeHolder: 'e.g., .agentx/state/final-gate.log',
+    placeHolder: 'e.g., .frontier/state/final-gate.log',
     ignoreFocusOut: true,
   });
   if (!evidence?.trim()) { return; }
@@ -220,16 +220,29 @@ export async function loopComplete(agentx: FrontierContext): Promise<void> {
   }
 }
 
+const MAX_PASSING_COUNT = 2147483647;
+
+/** Accepts blank, an integer, or unique `suite=count` pairs, matching the CLI's --passing forms. */
+export function isPassingCountInput(input: string): boolean {
+  const value = input.trim();
+  const isCount = (count: string): boolean => /^\d+$/.test(count) && Number(count) <= MAX_PASSING_COUNT;
+  if (!value || isCount(value)) { return true; }
+  const suites = new Set<string>();
+  return value.split(',').every((part) => {
+    const pair = /^([A-Za-z0-9][A-Za-z0-9._/-]*)[ \t]*=[ \t]*(\d+)$/.exec(part.trim());
+    const suite = pair?.[1].toLowerCase();
+    if (!pair || !suite || !isCount(pair[2]) || suites.has(suite)) { return false; }
+    suites.add(suite);
+    return true;
+  });
+}
+
 async function promptPassingCount(): Promise<string[] | undefined> {
   const value = await vscode.window.showInputBox({
-    prompt: 'Passing tests for the selected surface (required with a recorded baseline)',
-    placeHolder: 'Actual passing count; leave blank only when no baseline is recorded',
+    prompt: 'Passing tests for the suites this step ran (required with an integer baseline)',
+    placeHolder: 'For example stage-gate=12 or runner=40,unit=7; an integer uses the legacy baseline',
     ignoreFocusOut: true,
-    validateInput: (input) => {
-      const count = input.trim();
-      return !count || (/^\d+$/.test(count) && Number.isSafeInteger(Number(count))
-        && Number(count) <= 2147483647) ? null : 'Enter a non-negative integer';
-    },
+    validateInput: (input) => (isPassingCountInput(input) ? null : 'Enter a non-negative integer or suite=count pairs'),
   });
   if (value === undefined) { return undefined; }
   return value.trim() ? ['--passing', value.trim()] : [];

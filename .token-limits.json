@@ -24,5 +24,10 @@
     ".github/agents/engineer.agent.md": "Core implementation orchestrator retains phase-specific artifact, test, and handoff contracts; shared mechanics are already delegated to AGENT-PROTOCOL.md and skills.",
     ".github/templates/SPEC-TEMPLATE.md": "Complete architecture-spec schema and validation checklist; loaded only when authoring a spec.",
     "docs/WORKFLOW.md": "Canonical workflow reference; agent definitions link to it instead of duplicating its content."
+  },
+  "alwaysOn": {
+    "maxTokens": 4000,
+    "metadataMaxTokens": 13000,
+    "rationale": "Paid on every request: router files, applyTo '**' instructions and the files hosts attach from their links (maxTokens), plus the skill/agent/instruction names and descriptions hosts list (metadataMaxTokens). Reference docs belong behind plain-text paths, not links."
   }
 }

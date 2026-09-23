@@ -350,7 +350,9 @@ function Install-CliRuntimeBundle {
  }
  $trustedFiles = @(
   @{ Source = 'scripts/score-code-quality.ps1'; Destination = '.github/frontier/scripts/score-code-quality.ps1' },
-  @{ Source = 'evaluation/rubrics/code-quality.md'; Destination = '.github/frontier/evaluation/rubrics/code-quality.md' }
+  @{ Source = 'evaluation/rubrics/code-quality.md'; Destination = '.github/frontier/evaluation/rubrics/code-quality.md' },
+  @{ Source = 'scripts/score-stage-gate.ps1'; Destination = '.github/frontier/scripts/score-stage-gate.ps1' },
+  @{ Source = 'evaluation/rubrics/stage-gates.json'; Destination = '.github/frontier/evaluation/rubrics/stage-gates.json' }
  )
  foreach ($trustedFile in $trustedFiles) {
   $result = Copy-FileIfNeeded -SrcPath (Join-Path $SourceRoot $trustedFile.Source) -DestPath (Join-Path $TargetRoot $trustedFile.Destination) -Overwrite:$Force

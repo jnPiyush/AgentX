@@ -2,7 +2,7 @@
 // Frontier Signal Capture -- Copilot Hook Handler
 // ---------------------------------------------------------------------------
 // Captures tool usage, session markers, and error signals to
-// .agentx/signals/sessions.jsonl for downstream pattern discovery.
+// .frontier/signals/sessions.jsonl, where `frontier discover` reads them.
 //
 // Invoked by the lifecycle hooks declared in copilot-hooks.json.
 //
@@ -20,7 +20,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const SIGNALS_DIR = path.join(process.cwd(), ".agentx", "signals");
+const SIGNALS_DIR = path.join(process.cwd(), ".frontier", "signals");
 const SIGNALS_FILE = path.join(SIGNALS_DIR, "sessions.jsonl");
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB rotation threshold
 const MAX_STDIN_BYTES = 1024 * 1024; // Stop reading pathological payloads

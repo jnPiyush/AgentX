@@ -89,12 +89,10 @@ Need iterative refinement?
 
 The Engineer's quality loop is gated by the CLI, not by judgment:
 
-1. `loop start` initializes `.frontier/state/tests-baseline.json` as a placeholder and cleans the prior loop's archived evidence workspace. Record the actual baseline with `loop baseline -c <passing-test-count>` before iterating.
-2. `loop iterate -e <path>` REQUIRES an existing evidence file (test report, coverage xml, scan json, mutation report). On accept, the CLI:
-  - **copies the original file** into an archive at `.frontier/state/loop-evidence/iter-<N>/<timestamp>-<filename>` while preserving the source,
-  - records `{ evidence, evidenceOriginal }` in loop history.
-3. If a tests baseline has been recorded, both `loop iterate` and `loop complete` REQUIRE `--passing <count>` and reject any count below baseline.
-4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact (for example, `final-gate.json` or a full-suite report) AND every iteration after #1 must already carry a still-existing archived evidence file. The final artifact is copied to `.frontier/state/loop-evidence/complete/`.
+1. `loop start` resets `.frontier/state/tests-baseline.json` and cleans the prior loop's evidence archive; `loop affected` lists tests naming code changed since then.
+2. `loop iterate -e <path>` REQUIRES an existing evidence file (test report, coverage xml, scan json, mutation report). The CLI copies it to `.frontier/state/loop-evidence/iter-<N>/<timestamp>-<filename>`, keeps the source, and records `{ evidence, evidenceOriginal }` in loop history.
+3. Report the suites a step ran as `--passing <suite>=<count>[,<suite>=<count>]`. A suite may not drop below its own last count; unrun suites need no count; `loop baseline -c <suite>=<count>` records an intentional drop. A legacy integer baseline (`loop baseline -c <count>`) requires an integer `--passing` on every iterate and complete.
+4. `loop complete -e <path>` REQUIRES a fresh final evidence artifact, and every iteration after #1 must still have its archived evidence file. The final artifact is copied to `.frontier/state/loop-evidence/complete/`.
 5. The commit-msg hook rejects `fix:` commits that change production code under `.agentx/`, `scripts/`, `vscode-extension/src/`, or the standard app roots without adding a regression test in the same diff.
 
 Practical consequence: **generate a fresh file per iteration**. The source remains available, but freshness and SHA-256 reuse guards reject an old or identical artifact on the next iteration.

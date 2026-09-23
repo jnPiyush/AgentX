@@ -52,6 +52,8 @@ $Script:ApiMode = $null  # 'copilot', 'models', or provider-specific transport i
 $Script:ActiveProvider = $null
 $Script:ProviderRegistry = @{}
 $Script:RunnerConfig = @{}
+$Script:CurrentUsageLedger = $null  # provider-reported usage for the active run; see Register-LlmUsage
+$Script:UsageCallSequence = 0
 $Script:DEFAULT_SESSION_SUMMARY_MAX_CHARS = 1600
 $Script:RESEARCH_FIRST_MIN_STEPS = 2
 $Script:DEFAULT_STANDARD_LOOP_MIN_ITERATIONS = 1
@@ -1595,6 +1597,184 @@ function Get-ConversationTokenUsage {
     }
 }
 
+# ---------------------------------------------------------------------------
+# Usage ledger: provider-reported tokens for every model call in a run
+# ---------------------------------------------------------------------------
+# Totals count only what providers report. A call without usage stays unknown, so a
+# summary with unreported calls is a lower bound, never an estimate shown as measured.
+# Records use the call shape accepted by scripts/budget.ps1 for cost estimates.
+
+function ConvertTo-UsageTokenCount($Value) {
+    if ($null -eq $Value -or $Value -is [bool] -or $Value -is [string]) { return $null }
+    $parsed = [long]0
+    if (-not [long]::TryParse([string]$Value, [ref]$parsed) -or $parsed -lt 0) { return $null }
+    return $parsed
+}
+
+function ConvertFrom-AnthropicUsage($Usage) {
+    # Anthropic input_tokens excludes cache reads and writes; prompt_tokens covers all input.
+    # A missing cache counter means no cache activity was billed; a malformed one is unknown.
+    $inputCount = ConvertTo-UsageTokenCount (Get-MessageFieldValue $Usage 'input_tokens')
+    $outputCount = ConvertTo-UsageTokenCount (Get-MessageFieldValue $Usage 'output_tokens')
+    if ($null -eq $inputCount -or $null -eq $outputCount) { return $null }
+    $rawCacheRead = Get-MessageFieldValue $Usage 'cache_read_input_tokens'
+    $rawCacheWrite = Get-MessageFieldValue $Usage 'cache_creation_input_tokens'
+    $cacheRead = if ($null -eq $rawCacheRead) { [long]0 } else { ConvertTo-UsageTokenCount $rawCacheRead }
+    $cacheWrite = if ($null -eq $rawCacheWrite) { [long]0 } else { ConvertTo-UsageTokenCount $rawCacheWrite }
+    if ($null -eq $cacheRead -or $null -eq $cacheWrite) { return $null }
+    $prompt = $inputCount + $cacheRead + $cacheWrite
+    return [PSCustomObject]@{
+        prompt_tokens = $prompt
+        completion_tokens = $outputCount
+        total_tokens = $prompt + $outputCount
+        prompt_tokens_details = [PSCustomObject]@{ cached_tokens = $cacheRead }
+        cache_write_tokens = $cacheWrite
+    }
+}
+
+function Start-UsageLedger($TokenBudget = $null) {
+    $parent = $Script:CurrentUsageLedger
+    $Script:CurrentUsageLedger = [PSCustomObject]@{
+        parent = $parent
+        # Delegated runs draw on the outermost run's budget instead of a fresh one.
+        tokenBudget = if ($null -ne $parent) { $parent.tokenBudget } else { $TokenBudget }
+        calls = [System.Collections.Generic.List[object]]::new()
+    }
+    return $Script:CurrentUsageLedger
+}
+
+function Get-TokenBudgetStatus {
+    # Spend covers the whole active ledger chain: a delegated run's calls merge into its
+    # parent only when it stops, so each ledger in the chain holds distinct calls.
+    $ledger = $Script:CurrentUsageLedger
+    if ($null -eq $ledger -or $null -eq $ledger.tokenBudget) {
+        return [PSCustomObject]@{ budget = $null; spent = $null; unreported = 0; reached = $false }
+    }
+    $spent = [long]0
+    $unreported = 0
+    for ($node = $ledger; $null -ne $node; $node = $node.parent) {
+        $summary = Get-UsageLedgerSummary $node
+        $spent += $summary.totalTokens
+        $unreported += $summary.calls - $summary.reportedCalls
+    }
+    return [PSCustomObject]@{ budget = [long]$ledger.tokenBudget; spent = $spent; unreported = $unreported; reached = $spent -ge $ledger.tokenBudget }
+}
+
+function Invoke-TokenBudgetCheck([string]$Stage = '') {
+    # Reports and returns the stop message once reported spend reaches the budget.
+    $status = Get-TokenBudgetStatus
+    if (-not $status.reached) { return $null }
+    $where = if ($Stage) { " $Stage" } else { '' }
+    $message = "Token budget reached$($where): $($status.spent) of $($status.budget) provider-reported tokens used."
+    Write-RunnerConsole "`e[33m  [TOKEN BUDGET] $message`e[0m"
+    Add-ExecutionSummaryEvent -Type 'TOKEN BUDGET' -Message $message -ReplaceExisting
+    return $message
+}
+
+function Register-LlmUsage($Response, [string]$ModelId, [string]$Purpose) {
+    $ledger = $Script:CurrentUsageLedger
+    if ($null -eq $ledger) { return }
+    $usage = Get-MessageFieldValue $Response 'usage'
+    $inputTokens = ConvertTo-UsageTokenCount (Get-MessageFieldValue $usage 'prompt_tokens')
+    $outputTokens = ConvertTo-UsageTokenCount (Get-MessageFieldValue $usage 'completion_tokens')
+    $cacheRead = ConvertTo-UsageTokenCount (Get-MessageFieldValue (Get-MessageFieldValue $usage 'prompt_tokens_details') 'cached_tokens')
+    # OpenAI-compatible usage has no cache-write category; Anthropic conversions report one.
+    $rawCacheWrite = Get-MessageFieldValue $usage 'cache_write_tokens'
+    $cacheWrite = if ($null -eq $rawCacheWrite) { [long]0 } else { ConvertTo-UsageTokenCount $rawCacheWrite }
+    $Script:UsageCallSequence++
+    $record = [ordered]@{ id = "$Purpose-$($Script:UsageCallSequence)"; model = $ModelId }
+    if ($null -ne $inputTokens) {
+        $record.inputTokens = $inputTokens
+        # Cache subsets are kept only when both are known and fit inside the input total.
+        if ($null -ne $cacheRead -and $null -ne $cacheWrite -and ($cacheRead + $cacheWrite) -le $inputTokens) {
+            $record.cacheReadTokens = $cacheRead
+            $record.cacheWriteTokens = $cacheWrite
+        }
+    }
+    if ($null -ne $outputTokens) { $record.outputTokens = $outputTokens }
+    $ledger.calls.Add([PSCustomObject]@{
+        purpose = $Purpose
+        reported = ($null -ne $inputTokens -and $null -ne $outputTokens)
+        record = [PSCustomObject]$record
+    })
+}
+
+function Get-UsageLedgerSummary($Ledger) {
+    $calls = @($Ledger.calls)
+    $reported = @($calls | Where-Object { $_.reported })
+    $sumField = {
+        param($Items, [string]$Field)
+        $total = [long]0
+        foreach ($item in $Items) {
+            $value = Get-MessageFieldValue $item.record $Field
+            if ($null -ne $value) { $total += [long]$value }
+        }
+        $total
+    }
+    $byPurpose = [ordered]@{}
+    foreach ($group in @($calls | Group-Object purpose)) {
+        $groupReported = @($group.Group | Where-Object { $_.reported })
+        $byPurpose[$group.Name] = [PSCustomObject]@{
+            calls = $group.Count
+            reportedCalls = $groupReported.Count
+            totalTokens = (& $sumField $groupReported 'inputTokens') + (& $sumField $groupReported 'outputTokens')
+        }
+    }
+    $inputTokens = & $sumField $reported 'inputTokens'
+    $outputTokens = & $sumField $reported 'outputTokens'
+    return [PSCustomObject]@{
+        calls = $calls.Count
+        reportedCalls = $reported.Count
+        complete = ($calls.Count -eq $reported.Count)
+        inputTokens = $inputTokens
+        cacheReadTokens = & $sumField $reported 'cacheReadTokens'
+        outputTokens = $outputTokens
+        totalTokens = $inputTokens + $outputTokens
+        byPurpose = [PSCustomObject]$byPurpose
+        records = @($calls | ForEach-Object { $_.record })
+    }
+}
+
+function Stop-UsageLedger($Ledger) {
+    # Delegated runs (clarification responders) are paid for by the parent run.
+    $Script:CurrentUsageLedger = $Ledger.parent
+    if ($null -ne $Ledger.parent) {
+        foreach ($call in $Ledger.calls) { $Ledger.parent.calls.Add($call) }
+    }
+    return Get-UsageLedgerSummary $Ledger
+}
+
+function Format-UsageSummary($Summary) {
+    if ($Summary.calls -eq 0) { return 'no model calls' }
+    if ($Summary.reportedCalls -eq 0) { return "provider reported no usage for $($Summary.calls) call(s)" }
+    $cachedKnown = @($Summary.records | Where-Object { $null -ne (Get-MessageFieldValue $_ 'cacheReadTokens') }).Count -gt 0
+    $cached = if ($cachedKnown) { " (cached $($Summary.cacheReadTokens))" } else { '' }
+    $text = "in=$($Summary.inputTokens)$cached out=$($Summary.outputTokens) total=$($Summary.totalTokens) over $($Summary.calls) call(s)"
+    if (-not $Summary.complete) {
+        $text += "; $($Summary.calls - $Summary.reportedCalls) call(s) unreported, so totals are a lower bound"
+    }
+    return $text
+}
+
+function Get-RunnerTokenBudget($Config) {
+    $raw = Get-RunnerNestedConfigValue $Config 'harness' 'tokenBudget'
+    if ($null -eq $raw) { return $null }
+    $parsed = [long]0
+    if ($raw -isnot [bool] -and [long]::TryParse([string]$raw, [ref]$parsed) -and $parsed -gt 0) { return $parsed }
+    Write-RunnerConsole "`e[33m  [WARN] Ignoring harness.tokenBudget '$raw'; expected a positive integer.`e[0m"
+    return $null
+}
+
+function Save-UsageLedger([string]$SessionId, $Summary, [string]$Root) {
+    # Budget-compatible export: frontier budget -File <this file> after adding rates.
+    if ($Summary.calls -eq 0) { return $null }
+    $dir = Join-Path (Get-FrontierStateDirectory $Root) 'sessions'
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $file = Join-Path $dir "$SessionId.usage.json"
+    [PSCustomObject]@{ version = 1; calls = @($Summary.records) } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $file -Encoding utf8
+    return $file
+}
+
 function Test-IsCompactionSummaryMessage([object]$Message) {
     if ($null -eq $Message) { return $false }
     $content = Get-MessageFieldValue -Message $Message -Name 'content'
@@ -1701,7 +1881,8 @@ function Invoke-CompactionSummary {
         return $ExistingSummary
     }
 
-    if (-not $Token) {
+    # A spent token budget allows no further model calls, summaries included.
+    if (-not $Token -or (Get-TokenBudgetStatus).reached) {
         return Get-DeterministicCompactionSummary -ExistingSummary $ExistingSummary -Messages $Messages -MaxChars $MaxSummaryChars
     }
 
@@ -1739,6 +1920,7 @@ Rules:
 
     try {
         $response = Invoke-LlmChat -token $Token -modelId $ModelId -messages $summaryMessages -tools @() -maxTokens 700
+        Register-LlmUsage -Response $response -ModelId $ModelId -Purpose 'compaction'
         $summaryText = [string]($response.choices[0].message.content)
         if (-not $summaryText) { return '' }
         $summaryText = (($summaryText -replace "\r", '') -replace "\n{3,}", "`n`n").Trim()
@@ -2337,8 +2519,9 @@ function ConvertTo-AnthropicMessage([array]$Messages) {
                 })
             }
 
-            $toolCalls = @(Get-MessageFieldValue -Message $message -Name 'tool_calls')
-            foreach ($toolCall in $toolCalls) {
+            # A text-only message has no tool_calls; @($null) would still iterate once.
+            foreach ($toolCall in @(Get-MessageFieldValue -Message $message -Name 'tool_calls')) {
+                if ($null -eq $toolCall) { continue }
                 $toolArgs = @{}
                 try {
                     $toolArgs = $toolCall.function.arguments | ConvertFrom-Json -AsHashtable
@@ -2407,6 +2590,7 @@ function ConvertFrom-AnthropicResponse($Response) {
 
     return [PSCustomObject]@{
         choices = @($choice)
+        usage = ConvertFrom-AnthropicUsage (Get-MessageFieldValue $Response 'usage')
     }
 }
 
@@ -2510,17 +2694,16 @@ function ConvertTo-ClaudeCodePrompt([array]$Messages) {
             }
             'assistant' {
                 $parts.Add("[ASSISTANT]`n$contentText")
-                $toolCalls = @(Get-MessageFieldValue -Message $message -Name 'tool_calls')
-                if ($toolCalls.Count -gt 0) {
-                    foreach ($toolCall in $toolCalls) {
-                        $argsText = ''
-                        try {
-                            $argsText = ($toolCall.function.arguments | ConvertFrom-Json -AsHashtable | ConvertTo-Json -Depth 10 -Compress)
-                        } catch {
-                            $argsText = [string]$toolCall.function.arguments
-                        }
-                        $parts.Add("[ASSISTANT TOOL REQUEST] $([string]$toolCall.function.name) $argsText")
+                # A text-only message has no tool_calls; @($null) would still iterate once.
+                foreach ($toolCall in @(Get-MessageFieldValue -Message $message -Name 'tool_calls')) {
+                    if ($null -eq $toolCall) { continue }
+                    $argsText = ''
+                    try {
+                        $argsText = ($toolCall.function.arguments | ConvertFrom-Json -AsHashtable | ConvertTo-Json -Depth 10 -Compress)
+                    } catch {
+                        $argsText = [string]$toolCall.function.arguments
                     }
+                    $parts.Add("[ASSISTANT TOOL REQUEST] $([string]$toolCall.function.name) $argsText")
                 }
             }
             'tool' {
@@ -2636,6 +2819,7 @@ function ConvertFrom-ClaudeCodeResponse([string]$OutputText) {
                 finish_reason = 'stop'
             }
         )
+        usage = ConvertFrom-AnthropicUsage (Get-MessageFieldValue $parsed 'usage')
     }
 }
 
@@ -2753,6 +2937,7 @@ function ConvertFrom-ResponsesResponse {
             prompt_tokens=(Get-MessageFieldValue $usage 'input_tokens')
             completion_tokens=(Get-MessageFieldValue $usage 'output_tokens')
             total_tokens=(Get-MessageFieldValue $usage 'total_tokens')
+            prompt_tokens_details=[PSCustomObject]@{ cached_tokens=(Get-MessageFieldValue (Get-MessageFieldValue $usage 'input_tokens_details') 'cached_tokens') }
         }
     }
 }
@@ -3651,7 +3836,7 @@ function Save-ClarificationRecord {
 function Format-ClarificationHistory {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][array]$Exchanges,
+        [Parameter(Mandatory)][AllowEmptyCollection()][array]$Exchanges,
         [int]$MaxItems = 3
     )
 
@@ -3941,10 +4126,14 @@ Produce a structured review with per-category verdicts, APPROVED status, and FIN
     $reviewerDetector = Get-LoopDetector
 
     while ($reviewerIterations -lt $MaxReviewerIterations) {
+        if ((Get-TokenBudgetStatus).reached) {
+            return @{ approved = $false; budgetStopped = $true; findings = @(); feedback = '(Token budget reached; self-review stopped before a verdict.)' }
+        }
         $reviewerIterations++
         try {
             $reviewRequestOptions = Get-ReasoningRequestConfig -agentDef $agentDef -modelId $ModelId
             $response = Invoke-LlmChat -token $Token -modelId $ModelId -messages $reviewMessages -tools $readOnlyTools -RequestOptions $reviewRequestOptions -maxTokens 4096
+            Register-LlmUsage -Response $response -ModelId $ModelId -Purpose 'self-review'
         } catch {
             Write-RunnerConsole "`e[31m  [SELF-REVIEW] Reviewer LLM error: $_`e[0m"
             return @{ approved = $false; findings = @(); feedback = "(Reviewer error: $($_.Exception.Message)). Quality gate not satisfied." }
@@ -4218,7 +4407,8 @@ function Format-ExecutionSummary {
   Max clarification rounds (default: 6).
 
 .OUTPUTS
-  Hashtable with: resolved (bool), answer (string), iterations (int), escalatedToHuman (bool)
+  Hashtable with: resolved (bool), answer (string), iterations (int), escalatedToHuman (bool);
+  budgetExhausted (bool) when the token budget stopped the responder.
 #>
 function Invoke-ClarificationLoop {
     [CmdletBinding()]
@@ -4268,8 +4458,14 @@ function Invoke-ClarificationLoop {
             -MaxIterations $Script:CLARIFICATION_RESPONDER_MAX_ITERATIONS `
             -WorkspaceRoot $WorkspaceRoot `
             -Model $ModelId `
-                -SkipLoopStateSync `
-            -SuppressUserSummary
+            -SkipLoopStateSync `
+            -SuppressUserSummary `
+            -DelegatedRun
+
+        # A spent budget ends the clarification instead of treating the stop as an answer.
+        if ((Get-MessageFieldValue $subResult 'exitReason') -eq 'token_budget') {
+            return @{ resolved = $false; budgetExhausted = $true; answer = $subResult.finalText; iterations = $i; escalatedToHuman = $false; exchanges = $exchanges }
+        }
 
         $answer = if ($subResult.finalText) { $subResult.finalText } else { '(No response from sub-agent)' }
         $answerContract = Read-ClarificationResponseContract -Text $answer
@@ -4295,7 +4491,7 @@ function Invoke-ClarificationLoop {
 
         if ($answerContract.resolved) {
             # Answer seems substantive -- resolved
-            Save-ClarificationRecord -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -FromAgent $FromAgent -TargetAgent $TargetAgent -Topic $Topic -Exchanges $exchanges -Resolved $true -EscalatedToHuman $false -RecordType 'clarification'
+            [void](Save-ClarificationRecord -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -FromAgent $FromAgent -TargetAgent $TargetAgent -Topic $Topic -Exchanges $exchanges -Resolved $true -EscalatedToHuman $false -RecordType 'clarification')
             return @{
                 resolved = $true
                 answer = $answer
@@ -4366,7 +4562,7 @@ function Invoke-ClarificationLoop {
     }
 
     $humanResolved = ($humanAnswer -and $humanAnswer -ne '(Human escalation -- awaiting response)')
-    Save-ClarificationRecord -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -FromAgent $FromAgent -TargetAgent $TargetAgent -Topic $Topic -Exchanges $exchanges -Resolved $humanResolved -EscalatedToHuman $true -RecordType 'clarification'
+    [void](Save-ClarificationRecord -WorkspaceRoot $WorkspaceRoot -IssueNumber $IssueNumber -FromAgent $FromAgent -TargetAgent $TargetAgent -Topic $Topic -Exchanges $exchanges -Resolved $humanResolved -EscalatedToHuman $true -RecordType 'clarification')
 
     return @{
         resolved = $humanResolved
@@ -4504,7 +4700,9 @@ function Invoke-AgenticLoop {
         [string]$ResumeSessionId = '',
         [string]$HumanClarificationResponse = '',
         [switch]$SkipLoopStateSync,
-        [switch]$SuppressUserSummary
+        [switch]$SuppressUserSummary,
+        # Internal: a clarification responder that shares its parent's usage ledger and budget.
+        [switch]$DelegatedRun
     )
 
     $startTime = Get-Date
@@ -4766,8 +4964,20 @@ function Invoke-AgenticLoop {
 
     Write-RunnerConsole "`e[90m  -----------------------------------------------`e[0m"
 
+    # A delegated run inherits its parent's ledger and budget. Any other run starts a fresh
+    # ledger, even if an earlier run in this process threw before closing its own.
+    if (-not $DelegatedRun) { $Script:CurrentUsageLedger = $null }
+    $usageLedger = Start-UsageLedger -TokenBudget $(if (-not $DelegatedRun) { Get-RunnerTokenBudget $runtimeConfig })
+    $tokenBudgetWarned = $false
+
     # --- Main loop ---
     while ($iterations -lt $MaxIterations) {
+        $budgetStop = Invoke-TokenBudgetCheck
+        if ($budgetStop) { $finalText = $budgetStop; $exitReason = 'token_budget'; break }
+        if ((Get-TokenBudgetStatus).unreported -gt 0 -and -not $tokenBudgetWarned) {
+            $tokenBudgetWarned = $true
+            Add-ExecutionSummaryEvent -Type 'TOKEN BUDGET' -Message 'The provider did not report usage for every call; the token budget counts reported usage only.' -ReplaceExisting
+        }
         $iterations++
         Write-RunnerConsole "`e[90m  Iteration $iterations/$MaxIterations...`e[0m"
 
@@ -4777,6 +4987,10 @@ function Invoke-AgenticLoop {
         $compactionWatch.Stop()
         $stageTimings.compactionMs += $compactionWatch.Elapsed.TotalMilliseconds
 
+        # A compaction summary call can spend the rest of the budget.
+        $budgetStop = Invoke-TokenBudgetCheck
+        if ($budgetStop) { $finalText = $budgetStop; $exitReason = 'token_budget'; break }
+
         # Call LLM
         $modelWatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
@@ -4784,6 +4998,7 @@ function Invoke-AgenticLoop {
             $response = Invoke-LlmChat -token $token -modelId $modelId -messages $messages -tools $tools -RequestOptions $requestOptions
             $modelWatch.Stop()
             $stageTimings.modelMs += $modelWatch.Elapsed.TotalMilliseconds
+            Register-LlmUsage -Response $response -ModelId $modelId -Purpose 'agent'
         } catch {
             $modelWatch.Stop()
             $stageTimings.modelMs += $modelWatch.Elapsed.TotalMilliseconds
@@ -4827,6 +5042,10 @@ function Invoke-AgenticLoop {
             if ($replay) { $assistantMessage.response_items = @($replay) }
             $messages += $assistantMessage
 
+            # A spent budget returns the unreviewed response instead of making review or
+            # clarification calls; exitReason token_budget marks it as not self-reviewed.
+            if (Invoke-TokenBudgetCheck 'before review or clarification') { $exitReason = 'token_budget'; break }
+
             # --- Step 1: Check for clarification request ---
             $clarifyReq = Find-ClarificationRequest -text $finalText -canClarify $canClarify
             if ($clarifyReq) {
@@ -4844,7 +5063,14 @@ function Invoke-AgenticLoop {
                     -IssueNumber $IssueNumber `
                     -NonInteractiveHumanEscalation:((Get-FrontierEnvironmentValue 'NONINTERACTIVE_HUMAN') -eq '1')
 
-                if ($clarifyResult.awaitingHuman) {
+                if (Get-MessageFieldValue $clarifyResult 'budgetExhausted') {
+                    [void](Invoke-TokenBudgetCheck 'during clarification')
+                    $exitReason = 'token_budget'
+                    break
+                }
+
+                # Only the escalation result carries awaitingHuman; strict mode rejects a missing key.
+                if (Get-MessageFieldValue $clarifyResult 'awaitingHuman') {
                     $pendingHumanClarification = $clarifyResult.pendingClarification
                     $finalText = $clarifyResult.humanPrompt
                     $exitReason = 'human_required'
@@ -4879,6 +5105,13 @@ function Invoke-AgenticLoop {
                     -EnableCalibrationExamples $selfReviewConfig.enableCalibrationExamples
                 $reviewWatch.Stop()
                 $stageTimings.selfReviewMs += $reviewWatch.Elapsed.TotalMilliseconds
+
+                # A reviewer stopped by the budget returned no verdict; keep the work unreviewed.
+                if (Get-MessageFieldValue $reviewResult 'budgetStopped') {
+                    [void](Invoke-TokenBudgetCheck 'during self-review')
+                    $exitReason = 'token_budget'
+                    break
+                }
 
                 $reviewFindings = if ($reviewResult.findings) { @($reviewResult.findings) } else { @() }
                 $reviewActionable = @($reviewFindings | Where-Object { $_.impact -ne 'low' })
@@ -5058,6 +5291,7 @@ State your PIVOT or REFINE decision and rationale before making changes.
     if ($iterations -ge $MaxIterations -and -not $finalText) {
         $exitReason = 'max_iterations'
     }
+    $usageSummary = Stop-UsageLedger $usageLedger
 
     $executionSummaryEvents = @(Pop-ExecutionSummaryScope)
     if (-not $SuppressUserSummary) {
@@ -5101,12 +5335,17 @@ State your PIVOT or REFINE decision and rationale before making changes.
         sessionSummaryMaxChars = $sessionSummaryMaxChars
         sessionSummaryUpdatedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
         stageTimings = $stageTimings
+        usage = $usageSummary
     }
     Save-Session -sessionId $sessionId -messages $messages -meta $meta -root $WorkspaceRoot
+    # A delegated run's calls merge into the requesting run's ledger and export; a
+    # second file would count them twice.
+    $usageFile = if (-not $DelegatedRun) { Save-UsageLedger -SessionId $sessionId -Summary $usageSummary -Root $WorkspaceRoot }
 
     Write-RunnerConsole "`e[90m  -----------------------------------------------`e[0m"
     Write-RunnerConsole "`e[36m  Loop: $iterations iterations, $totalToolCalls tool calls, exit: $exitReason ($([int]$duration)ms)`e[0m"
     Write-RunnerConsole ("`e[90m  Timing: model={0:N1}ms self-review={1:N1}ms compaction={2:N1}ms`e[0m" -f $stageTimings.modelMs, $stageTimings.selfReviewMs, $stageTimings.compactionMs)
+    Write-RunnerConsole "`e[90m  Tokens: $(Format-UsageSummary $usageSummary)$(if ($usageFile) { " -> $usageFile" })`e[0m"
 
     if ($finalText) {
         Write-RunnerConsole "`n$finalText`n"
@@ -5120,6 +5359,7 @@ State your PIVOT or REFINE decision and rationale before making changes.
         exitReason = $exitReason
         durationMs = [int]$duration
         stageTimings = [PSCustomObject]$stageTimings
+        usage = $usageSummary
         pendingHumanClarification = ($null -ne $pendingHumanClarification)
     }
 }

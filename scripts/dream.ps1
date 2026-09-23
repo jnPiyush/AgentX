@@ -141,10 +141,13 @@ function Resolve-Sessions {
         }
     }
 
-    # Also harvest observer signals (.agentx/signals/sessions.jsonl)
-    # See .github/hooks/scripts/signal-capture.js for writer
-    $signalFile = Join-Path $script:ROOT '.agentx/signals/sessions.jsonl'
-    if (Test-Path $signalFile) {
+    # Also harvest observer signals (.frontier/signals/sessions.jsonl; a pre-migration
+    # workspace may only have .agentx). See .github/hooks/scripts/signal-capture.js for the writer.
+    $signalFile = @('.frontier', '.agentx') |
+        ForEach-Object { Join-Path $script:ROOT "$_/signals/sessions.jsonl" } |
+        Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
+        Select-Object -First 1
+    if ($signalFile) {
         try {
             $lines = Get-Content $signalFile -Tail ([Math]::Max(50, $Max * 10)) -ErrorAction SilentlyContinue
             $bullets = New-Object 'System.Collections.Generic.List[string]'

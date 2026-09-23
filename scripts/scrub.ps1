@@ -70,7 +70,7 @@ $CodeExtensions  = @('.ps1','.psm1','.cs','.ts','.tsx','.js','.jsx','.go','.rs',
 $DocExtensions   = @('.md','.mdx','.txt','.rst')
 $StyleExtensions = @('.css','.scss','.sass','.less','.html','.tsx','.jsx')
 
-$SkipDirs = @('node_modules','.git','dist','build','out','.next','coverage','__pycache__','.venv','venv','target','bin','obj','.agentx/state','.agentx/digests','.agentx/sessions','.agentx/handoffs','.agentx/issues','vscode-extension/coverage','vscode-extension/out')
+$SkipDirs = @('node_modules','.git','dist','build','out','.next','coverage','__pycache__','.venv','venv','target','bin','obj','.agentx/state','.agentx/digests','.agentx/sessions','.agentx/handoffs','.agentx/issues','.frontier/state','.frontier/digests','.frontier/sessions','.frontier/handoffs','.frontier/issues','vscode-extension/coverage','vscode-extension/out')
 
 # Cross-file duplicate-logic matching only ever compares windows within the
 # same language group. Extensions absent from this map fall back to their own

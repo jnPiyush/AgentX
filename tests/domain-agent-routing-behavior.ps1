@@ -238,21 +238,21 @@ try {
     try {
         & pwsh -NoProfile -File 'scripts/validate-handoff.ps1' -IssueNumber 401 -FromAgent fabric-engineer -ToAgent powerbi -Summary 'Fabric Gold contract ready for Power BI.' | Out-Null
         Assert-Equal $LASTEXITCODE 0 'Fabric handoff generation succeeds with canonical ID'
-        $fabricHandoff = Get-Content -LiteralPath '.agentx/handoffs/handoff-401-fabric-engineer-to-powerbi.json' -Raw | ConvertFrom-Json
+        $fabricHandoff = Get-Content -LiteralPath '.frontier/handoffs/handoff-401-fabric-engineer-to-powerbi.json' -Raw | ConvertFrom-Json
         Assert-Equal @($fabricHandoff.handoff.context.artifacts).Count 1 'Fabric handoff captures concrete deliverable'
         Assert-True $fabricHandoff.handoff.validation.deliverablesCommitted 'Fabric handoff marks deliverable committed'
         Assert-True $fabricHandoff.handoff.validation.loopCompleted 'Fabric handoff reads shared completed loop state'
 
         & pwsh -NoProfile -File 'scripts/validate-handoff.ps1' -IssueNumber 401 -FromAgent power-platform-builder -ToAgent reviewer -Summary 'Power Platform source ready for review.' | Out-Null
         Assert-Equal $LASTEXITCODE 0 'Power Platform handoff generation succeeds with canonical ID'
-        $powerPlatformHandoff = Get-Content -LiteralPath '.agentx/handoffs/handoff-401-power-platform-builder-to-reviewer.json' -Raw | ConvertFrom-Json
+        $powerPlatformHandoff = Get-Content -LiteralPath '.frontier/handoffs/handoff-401-power-platform-builder-to-reviewer.json' -Raw | ConvertFrom-Json
         Assert-Equal @($powerPlatformHandoff.handoff.context.artifacts).Count 1 'Power Platform handoff captures concrete deliverable'
         Assert-True $powerPlatformHandoff.handoff.validation.deliverablesCommitted 'Power Platform handoff marks deliverable committed'
         Assert-True $powerPlatformHandoff.handoff.validation.loopCompleted 'Power Platform handoff reads shared completed loop state'
 
         @{ status = 'complete'; issueNumber = 0 } | ConvertTo-Json | Set-Content -LiteralPath '.agentx/state/loop-state.json' -Encoding utf8
         & pwsh -NoProfile -File 'scripts/validate-handoff.ps1' -IssueNumber 401 -FromAgent fabric-engineer -ToAgent powerbi -Summary 'Issue mismatch loop evidence.' | Out-Null
-        $mismatchedLoopHandoff = Get-Content -LiteralPath '.agentx/handoffs/handoff-401-fabric-engineer-to-powerbi.json' -Raw | ConvertFrom-Json
+        $mismatchedLoopHandoff = Get-Content -LiteralPath '.frontier/handoffs/handoff-401-fabric-engineer-to-powerbi.json' -Raw | ConvertFrom-Json
         Assert-True (-not $mismatchedLoopHandoff.handoff.validation.loopCompleted) 'Handoff rejects loop evidence without exact issue match'
     } finally {
         Pop-Location

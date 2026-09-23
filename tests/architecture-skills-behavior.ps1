@@ -42,7 +42,7 @@ function Get-GovernanceResult([string]$Path) {
 }
 
 try {
-    Write-Host 'Frontier Architecture FDEure Skills Behavior Tests'
+    Write-Host 'Frontier Architecture Skills Behavior Tests'
 
     # Cost estimator: baseline, locale invariance, JSON purity, and schema failures.
     $baseline = Invoke-Script $costScript @('-ModelPath', $costModel, '-Format', 'json')

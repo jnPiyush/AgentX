@@ -1,0 +1,213 @@
+{
+  "version": "1.0.0",
+  "minScore": 80,
+  "contract": "evaluation/rubrics/stage-gates.md",
+  "placeholderPatterns": [
+    "\\{[A-Za-z_][A-Za-z0-9_ .-]{0,40}\\}",
+    "\\[AUTHOR:",
+    "\\bNOT ASSESSED\\b"
+  ],
+  "diagramLanguages": ["mermaid", "plantuml", "puml", "dot", "graphviz", "structurizr", "text", "txt", "ascii"],
+  "stages": {
+    "requirements": {
+      "title": "Product requirements (PRD)",
+      "owner": "product-manager",
+      "artifacts": [
+        {
+          "id": "prd",
+          "match": "PRD-*.md",
+          "required": true,
+          "sections": [
+            ["Problem Statement", "Problem"],
+            ["Target Users", "Users", "Personas"],
+            ["Goals", "Success Metrics"],
+            ["Requirements"],
+            ["User Stories", "Stories"],
+            ["Out of Scope", "Non-Goals", "Non Goals"]
+          ],
+          "patterns": [
+            {
+              "id": "acceptance-criteria",
+              "regex": "(?i)acceptance criteria|\\bgiven\\b[^\\n]*\\bwhen\\b[^\\n]*\\bthen\\b",
+              "min": 1,
+              "message": "No acceptance criteria found; add observable criteria (Given/When/Then or an Acceptance Criteria list)."
+            }
+          ]
+        }
+      ],
+      "dimensions": [
+        { "id": "intent-and-value", "weight": 15, "blocking": true, "floor": 3, "question": "Is the problem specific, evidenced, and tied to named users and a business outcome?" },
+        { "id": "testable-requirements", "weight": 20, "blocking": true, "floor": 3, "question": "Does every Must requirement have observable acceptance criteria, including failure and edge paths?" },
+        { "id": "scope-boundaries", "weight": 15, "blocking": true, "floor": 3, "question": "Are non-goals, constraints, and dependencies explicit enough to reject out-of-scope work?" },
+        { "id": "measurable-outcomes", "weight": 15, "blocking": true, "floor": 3, "question": "Do success metrics state a baseline, a target, and how they are measured?" },
+        { "id": "honesty-specificity", "weight": 15, "blocking": true, "floor": 3, "question": "Are claims sourced, unknowns listed as owned open questions, and no research or metrics invented?" },
+        { "id": "traceability", "weight": 10, "blocking": false, "floor": 2, "question": "Do stories map to stable requirement IDs that later stages can cite?" },
+        { "id": "risk-assumptions", "weight": 10, "blocking": false, "floor": 2, "question": "Are material risks and assumptions stated with mitigations or validation steps?" }
+      ]
+    },
+    "ux": {
+      "title": "Experience design (UX spec and prototype)",
+      "owner": "ux-designer",
+      "artifacts": [
+        {
+          "id": "ux",
+          "match": "UX-*.md",
+          "required": true,
+          "sections": [
+            ["User Flows", "Flows", "User Journeys", "Journeys", "User Jobs", "Task Flows"],
+            ["Accessibility"],
+            ["Responsive"]
+          ],
+          "linkedFiles": {
+            "id": "prototype",
+            "regex": "[A-Za-z0-9._/-]*prototypes/[A-Za-z0-9._/-]+\\.html",
+            "min": 1,
+            "message": "No existing HTML prototype is referenced; link the prototype under docs/ux/prototypes/."
+          }
+        }
+      ],
+      "dimensions": [
+        { "id": "flow-completeness", "weight": 20, "blocking": true, "floor": 3, "question": "Do flows cover the primary task plus empty, loading, error, and recovery states?" },
+        { "id": "accessibility", "weight": 20, "blocking": true, "floor": 3, "question": "Is WCAG 2.1 AA backed by rendered evidence (keyboard path, contrast, semantics, reduced motion), not only claims?" },
+        { "id": "requirements-traceability", "weight": 15, "blocking": true, "floor": 3, "question": "Does every screen and flow trace to PRD stories, with no unrequested features?" },
+        { "id": "design-language-fit", "weight": 15, "blocking": true, "floor": 3, "question": "Does the design reuse the accepted design language and components and avoid generic AI-slop tells?" },
+        { "id": "evidence-honesty", "weight": 10, "blocking": true, "floor": 3, "question": "Are screenshots, audit results, and prototype behavior real and current?" },
+        { "id": "content-clarity", "weight": 10, "blocking": false, "floor": 2, "question": "Are labels, errors, and empty states specific and actionable?" },
+        { "id": "responsive-states", "weight": 10, "blocking": false, "floor": 2, "question": "Are breakpoints and layout adaptations specified and demonstrated?" }
+      ]
+    },
+    "architecture": {
+      "title": "Architecture decision and technical specification (ADR + SPEC)",
+      "owner": "architect",
+      "artifacts": [
+        {
+          "id": "adr",
+          "match": "ADR-*.md",
+          "required": true,
+          "diagramFencesOnly": true,
+          "sections": [
+            ["Context"],
+            ["Decision"],
+            ["Options Considered", "Considered Options", "Options"],
+            ["Rationale", "Evaluation", "Justification", "Why"],
+            ["Consequences"]
+          ],
+          "patterns": [
+            {
+              "id": "three-options",
+              "regex": "(?im)^#{3,4}[ \\t]+Option\\b",
+              "min": 3,
+              "message": "Fewer than three '### Option' subsections; document at least three genuine options."
+            }
+          ]
+        },
+        {
+          "id": "spec",
+          "match": "SPEC-*.md",
+          "required": true,
+          "diagramFencesOnly": true,
+          "sections": [
+            ["Overview"],
+            ["Architecture"],
+            ["Security"],
+            ["Testing", "Test"],
+            ["Rollout", "Migration", "Deployment"],
+            ["Risks"],
+            ["Monitoring", "Observability"]
+          ]
+        }
+      ],
+      "dimensions": [
+        { "id": "requirement-fit", "weight": 15, "blocking": true, "floor": 3, "question": "Does the decision satisfy the PRD Must requirements and NFRs, citing their IDs?" },
+        { "id": "option-analysis", "weight": 15, "blocking": true, "floor": 3, "question": "Are three or more genuine options compared on the same criteria, with specific reasons for rejection?" },
+        { "id": "boundaries-contracts", "weight": 15, "blocking": true, "floor": 3, "question": "Are component boundaries, interfaces, data ownership, and integration contracts explicit?" },
+        { "id": "security-data", "weight": 15, "blocking": true, "floor": 3, "question": "Are threats, identity, authorization, data classification, and secret handling addressed?" },
+        { "id": "reliability-operations", "weight": 10, "blocking": true, "floor": 3, "question": "Are failure modes, observability, rollout, and rollback specified?" },
+        { "id": "consequences-honesty", "weight": 10, "blocking": true, "floor": 3, "question": "Are negative consequences, trade-offs, and unknowns stated rather than hidden?" },
+        { "id": "cost-scale", "weight": 10, "blocking": false, "floor": 2, "question": "Is there a load envelope and a cost estimate with its basis?" },
+        { "id": "feasibility-evidence", "weight": 10, "blocking": false, "floor": 2, "question": "Are key technical claims backed by citations, spikes, or prior art?" }
+      ]
+    },
+    "plan": {
+      "title": "Execution plan",
+      "owner": "engineer",
+      "artifacts": [
+        {
+          "id": "plan",
+          "match": "EXEC-PLAN-*.md",
+          "required": true,
+          "sections": [
+            ["Purpose"],
+            ["Progress"],
+            ["Decision Log"],
+            ["Validation"],
+            ["Idempotence", "Recovery", "Rollback"]
+          ]
+        }
+      ],
+      "dimensions": [
+        { "id": "goal-acceptance", "weight": 20, "blocking": true, "floor": 3, "question": "Are success criteria observable outcomes rather than activity?" },
+        { "id": "verification-plan", "weight": 20, "blocking": true, "floor": 3, "question": "Does each step name the concrete command or check that proves it?" },
+        { "id": "sequencing", "weight": 15, "blocking": true, "floor": 3, "question": "Are steps ordered, with explicit dependencies and bounded slices?" },
+        { "id": "decision-record", "weight": 15, "blocking": true, "floor": 3, "question": "Are alternatives and the rationale for the chosen approach recorded?" },
+        { "id": "recovery", "weight": 15, "blocking": true, "floor": 3, "question": "Can a failed step be retried safely, and is rollback described?" },
+        { "id": "currency", "weight": 15, "blocking": false, "floor": 2, "question": "Does Progress reflect the actual repository state for a resuming agent?" }
+      ]
+    },
+    "review": {
+      "title": "Review report",
+      "owner": "reviewer",
+      "artifacts": [
+        {
+          "id": "review",
+          "match": ["REVIEW-*.md", "*-REVIEW-*.md"],
+          "required": true,
+          "decision": {
+            "labels": ["Status", "Decision", "Verdict"],
+            "values": ["APPROVED", "CHANGES REQUESTED", "REJECTED", "BLOCKED"],
+            "approving": ["APPROVED"],
+            "message": "No explicit verdict line; state exactly one verdict, for example 'Decision: CHANGES REQUESTED'."
+          }
+        }
+      ],
+      "dimensions": [
+        { "id": "scope-coverage", "weight": 20, "blocking": true, "floor": 3, "question": "Did the review cover the exact final change set and every acceptance criterion, naming anything not reviewed?" },
+        { "id": "finding-quality", "weight": 20, "blocking": true, "floor": 3, "question": "Is each finding located, reproducible, severity-justified, and paired with a fix?" },
+        { "id": "verification-evidence", "weight": 20, "blocking": true, "floor": 3, "question": "Were tests and checks actually executed and cited with their results?" },
+        { "id": "decision-consistency", "weight": 20, "blocking": true, "floor": 3, "question": "Does the verdict follow from the findings, with no approval over open HIGH or MEDIUM findings?" },
+        { "id": "independence", "weight": 10, "blocking": true, "floor": 3, "question": "Was the review done by someone other than the author, from the artifacts rather than the author's rationale?" },
+        { "id": "actionability", "weight": 10, "blocking": false, "floor": 2, "question": "Are next steps specific, prioritized, and owned?" }
+      ]
+    },
+    "certification": {
+      "title": "Test certification",
+      "owner": "tester",
+      "artifacts": [
+        {
+          "id": "certification",
+          "match": ["CERT-*.md", "TEST-*.md"],
+          "required": true,
+          "sections": [
+            ["Test Results", "Results"],
+            ["Defects"]
+          ],
+          "decision": {
+            "labels": ["Certification Decision", "Decision", "Go / No-Go", "Go/No-Go", "Verdict", "Status"],
+            "values": ["CONDITIONAL PASS", "PASS", "FAIL", "GO", "NO-GO", "NO GO", "CONDITIONAL", "APPROVED", "REJECTED"],
+            "approving": ["CONDITIONAL PASS", "PASS", "GO", "CONDITIONAL", "APPROVED"],
+            "conditional": ["CONDITIONAL PASS", "CONDITIONAL"],
+            "message": "No explicit go/no-go line; state exactly one verdict, for example 'Certification Decision: PASS'."
+          }
+        }
+      ],
+      "dimensions": [
+        { "id": "risk-coverage", "weight": 20, "blocking": true, "floor": 3, "question": "Do tests cover the highest-risk requirements and paths, including negative cases?" },
+        { "id": "executed-evidence", "weight": 25, "blocking": true, "floor": 3, "question": "Are results from actual runs cited with counts, environments, and artifacts?" },
+        { "id": "defect-handling", "weight": 15, "blocking": true, "floor": 3, "question": "Are defects recorded with severity, reproduction steps, and disposition?" },
+        { "id": "decision-consistency", "weight": 15, "blocking": true, "floor": 3, "question": "Does the go/no-go decision follow from the results and open defects?" },
+        { "id": "nfr-validation", "weight": 15, "blocking": false, "floor": 2, "question": "Are performance, security, and accessibility targets measured against stated thresholds?" },
+        { "id": "reproducibility", "weight": 10, "blocking": false, "floor": 2, "question": "Can another engineer rerun the certification from the documented commands?" }
+      ]
+    }
+  }
+}

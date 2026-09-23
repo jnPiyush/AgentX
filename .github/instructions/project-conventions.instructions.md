@@ -5,44 +5,23 @@ applyTo: '**'
 
 # Project Conventions (Learned)
 
-This always-on file is a router. Detailed cross-cutting rules live in
-[AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md); agent definitions MUST link to that file
-instead of repeating it.
+Always-on. The quality loop and workflow gates live in `AGENTS.md`; shared
+mechanics in `.github/AGENT-PROTOCOL.md`. This file keeps only learned
+conventions that are not stated there.
 
-## Required Rules
-
-- Before any code/docs mutation, start the quality loop as the first tool call.
-	Meet the CLI's risk-based minimum and end with a structured subagent review
-	verdict (`loop iterate ... --verdict approved --reviewer <id> --high 0
-	--medium 0`), then `loop complete`. Check `loop status` before reporting gate
-	state.
-- Load and follow the Karpathy guidelines for implementation/review. Run
-	`.agentx/frontier.ps1 scrub -Path <changed-area>` before review or handoff.
-- Engineer work follows `Research -> Brainstorm -> Plan -> Design -> Implement ->
-	Scrub -> Test -> Review`. Record alternatives before Plan.
-- New ADRs require a matching Model Council artifact. Approved reviews require
-	matching learning capture or the documented skip rationale. Changes to eight or
-	more code files require an execution plan or documented skip token.
-- UI work defaults to browser validation: primary routes, axe scan, and one primary
-	interaction. Report unavailable browser prerequisites instead of silently skipping.
-- Agent `model:` fields and named council models are advisory. Preserve role behavior
-	across capable models and preserve each agent's tool/permission boundaries.
-- Frontier is zero-copy. Initialize through `agentx.initializeLocalRuntime`; never copy
-	bundled agent, skill, instruction, template, guide, or prompt trees into a workspace.
-
-## Working Conventions
-
-- Prefer small `apply_patch` edits with enough context to identify the target.
+- Apply the Karpathy guidelines to implementation and review; run
+  `.agentx/frontier.ps1 scrub -Path <changed-area>` before review or handoff.
+- UI work defaults to browser validation: primary routes, an axe scan and one
+  primary interaction. Report unavailable browser prerequisites instead of
+  silently skipping them.
+- Agent `model:` fields and named council models are advisory. Preserve role
+  behavior across capable models and each agent's tool and write boundaries.
+- Frontier is zero-copy: initialize with `agentx.initializeLocalRuntime`; do not
+  copy bundled agent, skill, instruction, template, guide or prompt trees into a
+  workspace.
 - After structural edits, search for removed identifiers and run the narrowest
-	executable check before widening validation.
-- PowerShell `ConvertTo-Json` can flatten single-element arrays; wrap with `@(...)`.
-- Passing unit tests does not replace validation of UI, wiring, or release boundaries.
-- Keep durable decisions and pitfalls concise in `/memories/`; keep this router short.
-
-## References
-
-- [.github/AGENT-PROTOCOL.md](../AGENT-PROTOCOL.md)
-- [docs/WORKFLOW.md](../../docs/WORKFLOW.md)
-- [AGENTS.md](../../AGENTS.md)
-- `/memories/conventions.md`, `/memories/decisions.md`, `/memories/pitfalls.md`
+  executable check before widening validation.
+- PowerShell `ConvertTo-Json` flattens single-element arrays; wrap with `@(...)`.
+- Passing unit tests do not replace validation of UI, wiring or release boundaries.
+- Keep durable decisions and pitfalls concise in `/memories/`.
 

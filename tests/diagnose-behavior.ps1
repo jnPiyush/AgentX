@@ -83,6 +83,13 @@ try {
         Assert-True ($null -ne $check -and $check.passed) "zero-copy diagnose passes '$id'"
     }
     Assert-True ($zeroCopyExit -eq 0) 'zero-copy diagnose exits successfully'
+    $contextCheck = $zeroCopy.checks | Where-Object { $_.id -eq 'context-budget' } | Select-Object -First 1
+    Assert-True ($null -ne $contextCheck -and $contextCheck.passed -and $contextCheck.summary -match 'not a verified budget') 'Without a token policy the context figure is informational, not a verified pass'
+    Set-Content -Path (Join-Path $zeroCopyRoot '.token-limits.json') -Value '{"defaults":{"**/*.md":100000},"overrides":{}}' -Encoding utf8
+    $policyRun = ((& pwsh -NoProfile -File $cli diagnose --json 2>&1) | Out-String).Trim() | ConvertFrom-Json
+    $policyCheck = $policyRun.checks | Where-Object { $_.id -eq 'context-budget' } | Select-Object -First 1
+    Assert-True ($null -ne $policyCheck -and -not $policyCheck.passed) 'A token policy without an alwaysOn budget fails the context check'
+    Remove-Item -LiteralPath (Join-Path $zeroCopyRoot '.token-limits.json')
 
     $tokenOutput = & pwsh -NoProfile -File $cli tokens check 2>&1
     Assert-True ($LASTEXITCODE -eq 0) 'tokens check resolves its bundled runtime dependency'
@@ -93,6 +100,33 @@ try {
         Assert-True ($LASTEXITCODE -eq 0) "$helpFlag exits successfully"
         Assert-True (($helpOutput | Out-String) -match 'Frontier CLI') "$helpFlag renders CLI help"
     }
+
+    $missingPrd = & pwsh -NoProfile -File $cli score pm 7 2>&1
+    Assert-True ($LASTEXITCODE -eq 1) 'zero-copy score propagates a failing score as exit 1'
+    Assert-True (($missingPrd | Out-String) -match 'No PRD found') 'zero-copy score inspects the workspace, not the runtime install'
+
+    $prdDir = Join-Path $zeroCopyRoot 'docs/artifacts/prd'
+    New-Item -ItemType Directory -Path $prdDir -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $prdDir 'PRD-7.md') -Encoding utf8 -Value (@(
+        '## Problem Statement', '## Target Users', '## Goals', '## Requirements', '## User Stories',
+        '## User Flows', '## Dependencies', '## Risks', '## Timeline', '## Out of Scope',
+        '## Open Questions', '## Appendix', '## Research Summary',
+        'https://a.example https://b.example https://c.example', '#1 #2 #3',
+        'As a user I want x So that y', 'As a user I want y So that z', 'As a user I want z So that w',
+        'Given a When b Then c', 'Given d When e Then f', 'Given g When h Then i'
+    ) -join "`n")
+    $workspacePrd = & pwsh -NoProfile -File $cli score pm 7 2>&1
+    Assert-True ($LASTEXITCODE -eq 0) 'zero-copy score passes a complete workspace PRD'
+    Assert-True (($workspacePrd | Out-String) -match 'PRD exists') 'zero-copy score reads the workspace PRD'
+
+    $legacyState = Join-Path $zeroCopyRoot '.agentx/state'
+    $canonicalState = Join-Path $zeroCopyRoot '.frontier/state'
+    New-Item -ItemType Directory -Path $legacyState, $canonicalState -Force | Out-Null
+    @{ status = 'active'; issueNumber = 7 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $legacyState 'loop-state.json') -Encoding utf8
+    @{ status = 'complete'; issueNumber = 7 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $canonicalState 'loop-state.json') -Encoding utf8
+    $handoffJson = & pwsh -NoProfile -File (Join-Path $root 'scripts/validate-handoff.ps1') -IssueNumber 7 -FromAgent pm -ToAgent architect -Json 2>&1
+    $handoffText = ($handoffJson | Out-String)
+    Assert-True ($handoffText -match '"loopCompleted":\s*true') 'handoff reads canonical .frontier loop state before stale legacy state'
 } finally {
     if ($null -eq $previousWorkspaceRoot) {
         Remove-Item Env:AGENTX_WORKSPACE_ROOT -ErrorAction SilentlyContinue

@@ -24,7 +24,12 @@ $root = if ($WorkspaceRoot) {
     (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
 if (-not $BaselinePath) {
-    $BaselinePath = Join-Path $root '.agentx/state/code-quality-baseline.json'
+    # Match the loop's canonical .frontier baseline; a stale legacy file would skew the scope.
+    $BaselinePath = @('.frontier', '.hve', '.agentx') |
+        ForEach-Object { Join-Path $root "$_/state/code-quality-baseline.json" } |
+        Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
+        Select-Object -First 1
+    if (-not $BaselinePath) { $BaselinePath = Join-Path $root '.frontier/state/code-quality-baseline.json' }
 }
 
 $rubricVersion = '2.0.0'

@@ -457,7 +457,7 @@ These checks are the target validation model. Where automation is not yet presen
 
 | Mode | How It Works | Platform |
 |------|-------------|----------|
-| **Mode 1: Frontier Orchestration FDEnomous** | Frontier classifies work and executes it end to end in one session, applying PM -> [Architect, UX, Data Scientist] -> Engineer -> Reviewer -> [DevOps, Tester] as internal phases when needed while preserving each specialist agent's own rules and gates | VS Code, Claude Code |
+| **Mode 1: Frontier Autonomous** | Frontier classifies work and executes it end to end in one session, applying PM -> [Architect, UX, Data Scientist] -> Engineer -> Reviewer -> [DevOps, Tester] as internal phases when needed while preserving each specialist agent's own rules and gates | VS Code, Claude Code |
 | **Mode 2: Human-Orchestrated** | User picks the next agent from the Copilot agent picker and hands off manually between specialist roles | VS Code |
 | **CLI Standalone** | `agentx.ps1 run <agent> <task>` runs agent via GitHub Models API; no sub-agent chaining | CLI |
 
@@ -673,7 +673,10 @@ Suggested phrasing:
 ## Frontier Orchestration FDE Mode
 
 Use this mode only for Frontier Orchestration FDE.
-s only when the platform cannot preserve the required context or the user explicitly wants manual role isolation.
+
+1. Read the artifacts first.
+2. Continue in the same session using the relevant specialist lens and constraints.
+3. Ask the user to switch agents only when the platform cannot preserve the required context or the user explicitly wants manual role isolation.
 4. If the user response is incomplete, continue the clarification loop in the same session.
 5. After 3 unresolved internal attempts, escalate the unresolved question directly to the user.
 

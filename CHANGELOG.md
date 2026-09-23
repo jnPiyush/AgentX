@@ -1,5 +1,82 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Stage gates for PRD, UX, ADR/Spec, execution plan, review and certification
+  deliverables: `evaluation/rubrics/stage-gates.json`, `scripts/score-stage-gate.ps1`
+  and `frontier stage-gate`. `frontier validate` runs them in advisory mode by
+  default; set `stageGates` to `required` or `off` in `.frontier/config.json`
+  (an unknown value enforces `required`). Reports bind to LF-normalized artifact
+  hashes, so Windows and Linux checkouts validate the same committed report.
+- `frontier tokens context` measures the always-on instruction closure, including
+  auto-attached inline, titled and reference-style links, against the `alwaysOn`
+  budget in `.token-limits.json`. CI and `diagnose` enforce it.
+- The agentic runner records provider-reported usage per model call, writes
+  `.frontier/sessions/<id>.usage.json` for `frontier budget`, and stops before
+  the next model call (self-review, compaction and delegated runs included) at
+  an optional `harness.tokenBudget`.
+
+### Changed
+
+- Always-on routers (`AGENTS.md`, `CLAUDE.md`, Copilot instructions) name deeper
+  documents as plain paths, so hosts no longer attach about 75,000 tokens of
+  reference docs to every request. Agent openings drop all-caps banners, and the
+  Engineer agent sheds duplicated guidance.
+- The ADR and SPEC templates describe contracts with tables instead of YAML and
+  JSON blocks, matching the Architect's zero-code rule.
+- The quality loop records test counts per suite (`--passing <suite>=<count>`,
+  several as `unit=12,api=40`) and compares each suite only with its own last
+  count, so a step reruns only the suites its change affects instead of the
+  surface a single baseline fixed. `frontier loop affected` lists the test files
+  that name code changed since loop start. An integer `loop baseline` keeps the
+  previous rule.
+- `loop iterate` no longer runs the harness audit for an informational score. Its
+  compliance check scrubbed every changed file and could take minutes, so each
+  iteration waited for the 30-second deadline. `frontier audit harness` still runs
+  it on demand.
+- Loop output is shorter: `loop complete` prints the code-quality result and any
+  failures instead of the full report (about 24 KB here), and prompts and
+  summaries are echoed in one line.
+
+### Fixed
+
+- `validate <n> tester` accepts the `CERT-<n>.md` report the Tester writes.
+- `score`, bundled `score-output`, `stocktake`, `validate-handoff` and `takeoff`
+  resolve the user's workspace from the extension runtime; `diagnose` checks the
+  renamed bundle.
+- `frontier tokens <action>` forwards a single extra flag intact.
+- The install manifest excludes `build/` scratch copies and carries the current
+  version; root installers ship `docs/guides` and `evaluation/rubrics`.
+- `research` keeps experiment state under `.frontier/`; restore corrupted
+  `docs/WORKFLOW.md` steps, clone instructions and council links.
+- The signal hook writes `.frontier/signals`, where `frontier discover` reads;
+  handoff messages go to `.frontier/handoffs`; `takeoff` and `dream` read the
+  canonical state first.
+- Usage exports of OpenAI-compatible calls record zero cache writes, so
+  `frontier budget` can price them once rates are added.
+- Direct Anthropic API runs no longer fail on the model call after a text-only
+  answer (self-review feedback, clarification or a resumed session). The same
+  fix applies to `claude-code` runs.
+- Inter-agent clarification runs end to end instead of failing on its first
+  exchange. A token budget spent during clarification or a final self-review
+  exits `token_budget` rather than `human_required` or `max_iterations`.
+  Delegated clarification runs no longer write their own usage file, which
+  counted their calls twice.
+- Stage-gate verdicts accept only `[x]`, `[PASS]`, `[FAIL]` or `[WARN]` markers
+  (`[PASS]` and `[FAIL]` must agree with the verdict). Uncertain (`?`, probably,
+  draft, TBD), negated (`NOT APPROVED`, `**NOT** APPROVED`, `NOT YET APPROVED`)
+  and conditional approvals (`APPROVED if ...`, `provided`, `with conditions`;
+  use `CONDITIONAL PASS`) fail the check even beside a clean verdict, with the
+  line and reason in the message. Headings such as `## Decision Log` no longer
+  count, prose such as `Pass rate: 91%` or `- PASS: 120 tests` under a decision
+  heading is not a verdict, and all verdict lines in an artifact must agree on
+  approval. Long runs of emphasis characters no longer slow the check.
+- The Bash Copilot CLI pack installer no longer starts `dirname` and `mkdir`
+  for every copied file. A Git Bash install on Windows took 199 s instead of
+  609 s in a local measurement, back within the installer test's time limit.
+
 ## 9.4.0
 
 ### Changed

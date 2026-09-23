@@ -261,6 +261,8 @@ tar xzf "$TMPARCHIVE" --strip-components=1 -C "$TMP" \
  "$PREFIX/.vscode" \
  "$PREFIX/scripts" \
  "$PREFIX/packs" \
+ "$PREFIX/docs/guides" \
+ "$PREFIX/evaluation/rubrics" \
  "$PREFIX/.gitignore" \
  "$PREFIX/AGENTS.md" \
  "$PREFIX/Skills.md" \

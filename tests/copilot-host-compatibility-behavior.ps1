@@ -97,7 +97,8 @@ function Invoke-SignalCapture([string]$Payload, [string]$EventArg) {
         finally {
             Pop-Location
         }
-        $file = Join-Path $dir '.agentx/signals/sessions.jsonl'
+        # Signals land in the canonical state directory that `frontier discover` reads.
+        $file = Join-Path $dir '.frontier/signals/sessions.jsonl'
         if (-not (Test-Path $file)) { return $null }
         return (Get-Content $file -Raw).Trim() | ConvertFrom-Json
     }

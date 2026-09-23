@@ -31,7 +31,7 @@ Use the script-based flow when you are setting up a local clone of the Frontier 
 ```powershell
 # Clone the repository
 git clone https://github.com/jnPiyush/AgentX.git
-cd Frontier
+cd AgentX
 
 # Run setup script
 .\install.ps1
@@ -40,7 +40,7 @@ cd Frontier
 ```bash
 # Clone the repository
 git clone https://github.com/jnPiyush/AgentX.git
-cd Frontier
+cd AgentX
 
 # Run setup script
 ./install.sh

@@ -4,6 +4,7 @@
 
 - [Skill Quality](skill-quality.md) - deterministic 100-point Frontier skill rubric with blocking floors and CI semantics
 - [Implementation Code Quality](code-quality.md) - 100-point independent-review rubric enforced for code-bearing quality loops
+- [Stage Gates](stage-gates.md) - per-stage deliverable gates (PRD, UX, ADR and spec, plan, review, certification) with deterministic checks and a hash-bound reviewer report; catalog in [stage-gates.json](stage-gates.json)
 
 Keep one rubric file per judged metric.
 

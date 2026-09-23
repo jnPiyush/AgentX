@@ -80,10 +80,12 @@ simply records one reviewer verdict before completing.
 ### 1.4 Loop Steps
 
 1. **Run verification** -- select checks by changed behavior, direct callers and
-  risk. Focused final checks suffice for bounded changes; expand for shared
-  contracts, broad impact and required CI/release gates. Record scope and omitted
-  checks with rationale. Never rerun the entire suite just to fill an iteration.
-  Compare passing counts only for the same selected test surface.
+  risk; `frontier loop affected` lists the test files that name code changed
+  since loop start. Focused final checks suffice for bounded changes; expand for
+  shared contracts, broad impact and required CI/release gates. Record scope and
+  omitted checks with rationale. Never rerun the entire suite just to fill an
+  iteration. Report `--passing <suite>=<count>` for each suite run; a suite is
+  compared only with its own last count, so unaffected suites are not rerun.
 2. **Evaluate** -- on any failure, find the root cause.
 3. **Fix** -- address the failure.
 4. **Re-verify** -- confirm the fix.

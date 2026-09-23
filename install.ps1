@@ -372,7 +372,7 @@ $root = (Get-ChildItem $TMPRAW -Directory | Select-Object -First 1).FullName
 
 # Copy only essential paths (skip vscode-extension, tests, and large docs content)
 New-Item -ItemType Directory -Path $TMP -Force | Out-Null
-$neededDirs = @(".agentx", ".github", ".claude", ".cursor", ".vscode", "scripts", "packs")
+$neededDirs = @(".agentx", ".github", ".claude", ".cursor", ".vscode", "scripts", "packs", "docs/guides", "evaluation/rubrics")
 $neededFiles = @(
  ".gitignore",
  "AGENTS.md",
@@ -388,7 +388,12 @@ $neededFiles = @(
 )
 foreach ($d in $neededDirs) {
  $src = Join-Path $root $d
- if (Test-Path $src) { Copy-Item $src (Join-Path $TMP $d) -Recurse -Force }
+ if (Test-Path $src) {
+  $dest = Join-Path $TMP $d
+  $parent = Split-Path $dest -Parent
+  if ($parent -and -not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+  Copy-Item $src $dest -Recurse -Force
+ }
 }
 foreach ($f in $neededFiles) {
  $src = Join-Path $root $f

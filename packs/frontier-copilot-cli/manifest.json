@@ -121,12 +121,15 @@
       "scripts/generate-registries.ps1",
       "scripts/token-counter.ps1",
       "scripts/score-code-quality.ps1",
+      "scripts/score-stage-gate.ps1",
       "scripts/score-skill.ps1",
       "scripts/validate-skill.ps1",
       "scripts/validate-changed-skills.ps1",
       "scripts/parse-yaml.js",
       "evaluation/rubrics/skill-quality.md",
-      "evaluation/rubrics/code-quality.md"
+      "evaluation/rubrics/code-quality.md",
+      "evaluation/rubrics/stage-gates.json",
+      "evaluation/rubrics/stage-gates.md"
     ],
     "templates": [
       ".github/templates/ADR-TEMPLATE.md",

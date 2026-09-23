@@ -49,6 +49,7 @@ const runtimeScriptFiles = [
     'generate-registries.ps1',
     'token-counter.ps1',
     'score-code-quality.ps1',
+    'score-stage-gate.ps1',
     'score-skill.ps1',
     'validate-skill.ps1',
     'validate-changed-skills.ps1',
@@ -80,48 +81,26 @@ const rootRuntimeFiles = [
 const docFiles = ['BRAND.md', 'WORKFLOW.md', 'GUIDE.md', 'GOLDEN_PRINCIPLES.md', 'QUALITY_SCORE.md', 'tech-debt-tracker.md'];
 const docGuideDir = path.join(repoRoot, 'docs', 'guides');
 
+// Repository documents bundled at the same relative path (rubrics, baselines and
+// the decision records that bundled agents cite).
 const artifactDocFiles = [
-    {
-        src: path.join(repoRoot, 'evaluation', 'rubrics', 'code-quality.md'),
-        dest: path.join('evaluation', 'rubrics', 'code-quality.md'),
-    },
-    {
-        src: path.join(repoRoot, 'evaluation', 'rubrics', 'skill-quality.md'),
-        dest: path.join('evaluation', 'rubrics', 'skill-quality.md'),
-    },
-    {
-        src: path.join(repoRoot, 'evaluation', 'baseline.json'),
-        dest: path.join('evaluation', 'baseline.json'),
-    },
-    {
-        src: path.join(repoRoot, 'docs', 'artifacts', 'adr', 'ADR-342.md'),
-        dest: path.join('docs', 'artifacts', 'adr', 'ADR-342.md'),
-    },
-    {
-        src: path.join(repoRoot, 'docs', 'artifacts', 'adr', 'ADR-341.md'),
-        dest: path.join('docs', 'artifacts', 'adr', 'ADR-341.md'),
-    },
-    {
-        src: path.join(repoRoot, 'docs', 'artifacts', 'specs', 'SPEC-341.md'),
-        dest: path.join('docs', 'artifacts', 'specs', 'SPEC-341.md'),
-    },
-    {
-        src: path.join(repoRoot, 'docs', 'execution', 'plans', 'EXEC-PLAN-341-self-hosted-runtime.md'),
-        dest: path.join('docs', 'execution', 'plans', 'EXEC-PLAN-341-self-hosted-runtime.md'),
-    },
-    {
-        src: path.join(repoRoot, 'docs', 'execution', 'plans', 'EXEC-PLAN-342-browser-automation-skill.md'),
-        dest: path.join('docs', 'execution', 'plans', 'EXEC-PLAN-342-browser-automation-skill.md'),
-    },
-    {
-        src: path.join(repoRoot, 'docs', 'artifacts', 'adr', 'ADR-Harness-Engineering.md'),
-        dest: path.join('docs', 'artifacts', 'adr', 'ADR-Harness-Engineering.md'),
-    },
-    {
-        src: path.join(repoRoot, 'docs', 'artifacts', 'specs', 'SPEC-Harness-Engineering.md'),
-        dest: path.join('docs', 'artifacts', 'specs', 'SPEC-Harness-Engineering.md'),
-    },
-];
+    'evaluation/rubrics/code-quality.md',
+    'evaluation/rubrics/skill-quality.md',
+    'evaluation/rubrics/stage-gates.json',
+    'evaluation/rubrics/stage-gates.md',
+    'evaluation/rubrics/README.md',
+    'evaluation/baseline.json',
+    'docs/artifacts/adr/ADR-342.md',
+    'docs/artifacts/adr/ADR-341.md',
+    'docs/artifacts/specs/SPEC-341.md',
+    'docs/execution/plans/EXEC-PLAN-341-self-hosted-runtime.md',
+    'docs/execution/plans/EXEC-PLAN-342-browser-automation-skill.md',
+    'docs/artifacts/adr/ADR-Harness-Engineering.md',
+    'docs/artifacts/specs/SPEC-Harness-Engineering.md',
+].map((relativePath) => ({
+    src: path.join(repoRoot, ...relativePath.split('/')),
+    dest: path.join(...relativePath.split('/')),
+}));
 
 const bundledMarkdownRewrites = [
     {

@@ -7,41 +7,51 @@ applyTo: '**'
 
 > **Single source of truth for repository workflow guidance.**
 
-Frontier Corp practices Hypervelocity Engineering through a fleet of specialized
-Forward Deployed Engineers (FDEs). This file maps the operating rules shared by
-that fleet. For brand terminology, see [docs/BRAND.md](docs/BRAND.md). For
-workflow details, see [docs/WORKFLOW.md](docs/WORKFLOW.md). For FDE role
-definitions, see individual files in `.github/agents/`.
+Frontier Corp practices Hypervelocity Engineering through specialized Forward
+Deployed Engineers (FDEs). This file loads on every request, so it holds only the
+shared contract. Paths are plain text on purpose: read a file when the task needs
+it rather than loading every reference up front. Paths resolve relative to this
+file (in extension-only workspaces, inside the installed Frontier extension).
 
----
+## Working Contract
 
-## Retrieval-Led Reasoning
+- Read the relevant spec, skill or instruction before writing code; repository
+  conventions override general knowledge.
+- Quality loop: before the first file mutation, run
+  `.agentx/frontier.ps1 loop start -p "<task>"`. Record each fix/verify cycle with
+  `loop iterate -s "<summary>" -e <evidence>`. The final iteration carries an
+  independent reviewer verdict (`--verdict approved --reviewer <id> --high 0
+  --medium 0`); edits after it need a fresh review. Finish with
+  `loop complete -s "<summary>" -e <fresh-evidence>`. Minimum iterations:
+  standard 1, auto-fix 2, complex/orchestrated 3, high-risk 5.
+- Honesty rule: report loop and gate state from `loop status` and the actual
+  artifacts; never claim a check ran, passed or was reviewed without evidence.
+- Shared mechanics (review, scrub, Karpathy, Model Council, plans, research) are
+  defined once in `.github/AGENT-PROTOCOL.md`; agent files keep role rules only.
 
-**IMPORTANT**: Prefer retrieval-led reasoning over pre-training-led reasoning for ALL implementation tasks.
-Always `read_file` the relevant SKILL.md, instruction file, or spec before generating code.
-Do NOT rely on training data for project-specific patterns, conventions, or APIs.
-If a skill, spec, or doc exists in the workspace, read it first; generate second.
+### Compound Engineering Hard Rule
 
----
+Work is done only after Compound Capture is resolved: create
+`docs/artifacts/learnings/LEARNING-<issue>.md` for reusable guidance, or record a
+skip rationale in the issue close comment for trivial or duplicated work.
 
-## Quick Reference
+### Pipeline Phase Compliance Hard Rule
 
-### Issue-First Rule
+Follow your agent file's phases in order; each phase gate passes before the next.
+Research precedes deliverables, planning precedes implementation, and approval
+follows verification. Stage deliverables pass `frontier validate <issue> <role>`
+(which runs the stage gate) before handoff. Cross-role summary:
+`docs/guides/ROLE-PIPELINES.md`.
 
-Every piece of work SHOULD start with an issue. See [docs/WORKFLOW.md](docs/WORKFLOW.md) for full flow.
+### Other Gates
 
-```bash
-# GitHub Mode
-gh issue create --title "[Story] Add /health" --label "type:story"  # Creates #42
-git commit -m "feat: add health endpoint (#42)"
+- A new ADR needs a matching `COUNCIL-*.md` with three independently executed
+  models and a Synthesis; there is no skip token.
+- Changing 8+ code files needs a maintained `docs/execution/plans/EXEC-PLAN-*.md`
+  or the `[skip-plan]` commit tag.
+- Engineer work records alternatives before the Plan phase (Brainstorm).
 
-# Local Mode (issues optional by default)
-git commit -m "feat: add user login"
-```
-
-Toggle enforcement: `.agentx/frontier.ps1 config set enforceIssues true`
-
-### Classification
+## Classification
 
 | Type | Label | Route To |
 |------|-------|----------|
@@ -58,156 +68,33 @@ Toggle enforcement: `.agentx/frontier.ps1 config set enforceIssues true`
 | Single capability? | `type:feature` | Architect |
 | Otherwise | `type:story` | Engineer |
 
-### Commit Format
+## Commits And Delivery
 
-```
-type: description (#issue-number)
-```
+- Commit format: `type: description (#issue)` with `feat`, `fix`, `docs`, `test`,
+  `refactor`, `perf` or `chore`. `(#123)` only links; use `fixes #123` in the
+  final PR or delivery commit to close the issue. GitHub mode requires the issue
+  reference; local mode makes it optional (`frontier config set enforceIssues`).
+- Create deliverables as local files so the user can review them; do not push
+  files through remote GitHub write APIs.
+- Security: no hardcoded secrets, parameterized SQL, validated inputs at system
+  boundaries, scanned dependencies. Never run `rm -rf /`, `git reset --hard`,
+  force pushes or `DROP DATABASE` as shortcuts.
+- ASCII only in source, scripts, config and docs (`[PASS]`, `->`, `-`).
+- Directive language follows RFC 2119: MUST/MUST NOT are absolute, SHOULD needs a
+  justified exception, MAY is optional.
 
-Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
+## Read On Demand
 
-For final delivery in GitHub mode, plain `(#123)` is traceability only. Use `fixes #123`, `closes #123`, or `resolves #123` in the final PR body or delivery commit so GitHub closes the issue automatically.
+| Need | Path (relative to this file) |
+|------|------------------------------|
+| Workflow, routing, handoffs, statuses | `docs/WORKFLOW.md` |
+| Cross-cutting agent protocol | `.github/AGENT-PROTOCOL.md` |
+| Skill index (load only matching skills) | `Skills.md` |
+| Setup, local mode, troubleshooting (GUIDE) | `docs/GUIDE.md` |
+| Stage-gate and code-quality rubrics | `evaluation/rubrics/` |
+| Context budgets and tokenomics | `docs/guides/CODING-HARNESS.md` |
+| Role pipelines | `docs/guides/ROLE-PIPELINES.md` |
+| Agents, templates, prompts | `.github/agents/`, `.github/templates/`, `.github/prompts/` |
 
-### Security Checklist
-
-- [PASS] No hardcoded secrets
-- [PASS] SQL parameterization (NEVER concatenate)
-- [PASS] Input validation on all endpoints
-- [PASS] Dependencies scanned
-- Blocked commands: `rm -rf /`, `git reset --hard`, `drop database`
-
-### Local Files First Rule
-
-All agents MUST create deliverable files locally using `editFiles` -- MUST NOT use `mcp_github_create_or_update_file` or `mcp_github_push_files` to push files directly to GitHub. Users must be able to review files locally before committing.
-
-### Quality Loop Hard Rule
-
-> HARD RULE: Every agent MUST run `.agentx/frontier.ps1 loop start -p "<task description>"` as the ABSOLUTE FIRST action before any file edit or tool call. The CLI enforces risk-based minimums (standard `1`, auto-fix `2`, complex/Frontier `3`, high-risk `5`); the loop is NOT done until `.agentx/frontier.ps1 loop complete -s "<summary>"` succeeds, and the final iteration MUST carry a structured subagent review verdict (`--verdict approved --reviewer <id> --high 0 --medium 0`). The pre-commit hook blocks review artifacts when no completed loop exists.
-
-> Cross-cutting concerns shared by all agents (quality loop minimums, subagent review, per-iteration reporting, Karpathy, Model Council, Scrub, Brainstorm, Plan, Research) are defined ONCE in [.github/AGENT-PROTOCOL.md](.github/AGENT-PROTOCOL.md). Agent definition files keep only the front-loaded Pre-edit gate + Honesty rule stubs and point there; they MUST NOT restate the full prose.
-
-### Compound Engineering Hard Rule
-
-> HARD RULE: Every agent MUST resolve Compound Capture before declaring work Done. After delivery and review are complete, classify the capture decision:
-> - **Mandatory**: Work produces reusable workflow, architecture, review, or operator guidance -> create `docs/artifacts/learnings/LEARNING-<issue>.md`
-> - **Optional**: Narrow or low-leverage work -> capture is helpful but not required
-> - **Skip**: Trivial, transient, or duplicated -> record skip rationale in the issue close comment
->
-> Work is NOT Done until Compound Capture is resolved. The pre-commit hook validates LEARNING file structure when staged. See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the full Compound Capture contract.
-
-### Pipeline Phase Compliance Hard Rule
-
-> HARD RULE: Every agent MUST follow their prescribed pipeline phases IN SEQUENCE. No phase may be skipped. Each phase has a completion gate -- the gate MUST pass before advancing to the next phase. Agents MUST NOT write deliverables before completing research phases, MUST NOT implement before planning, MUST NOT approve before verifying all checks.
->
-> See the Role Pipeline Reference table (below the Agents table) for each role's phases and key delivery gate. The pre-commit hook validates deliverable structure for key artifacts (PRD, ADR, UX). Use `.agentx/frontier.ps1 workflow <agent>` to print the phase list for any role.
-
-### CLI Quick Reference
-
-```powershell
-.\.agentx\frontier.ps1 loop start -p "Task description"  # FIRST command - start before any work
-.\.agentx\frontier.ps1 loop iterate -s "Progress summary"  # After each verification pass
-.\.agentx\frontier.ps1 loop complete -s "All gates passed"  # LAST command - required before handoff
-.\.agentx\frontier.ps1 ready                    # Show unblocked work
-.\.agentx\frontier.ps1 state -a engineer -s working -i 42
-.\.agentx\frontier.ps1 deps 42                  # Check blockers
-.\.agentx\frontier.ps1 workflow engineer        # Show workflow steps
-.\.agentx\frontier.ps1 loop status                # Check quality loop status
-.\.agentx\frontier.ps1 config show               # View configuration
-```
-
----
-
-## Frontier FDE Fleet (26 total)
-
-Agent definitions live in `.github/agents/*.agent.md` (15 visible) and `.github/agents/internal/*.agent.md` (11 internal sub-agents). Each file contains the role's constraints, boundaries, deliverables, and self-review checklist.
-
-| FDE | File | Deliverable |
-|-------|------|-------------|
-| Frontier Orchestration FDE | `frontier.agent.md` | Autonomous orchestration and direct execution across the full workflow |
-| Frontier Product FDE | `product-manager.agent.md` | PRD at `docs/artifacts/prd/` |
-| Frontier Experience FDE | `ux-designer.agent.md` | Wireframes + HTML prototypes at `docs/ux/` |
-| Frontier Architecture FDE | `architect.agent.md` | ADR + Tech Specs at `docs/artifacts/adr/`, `docs/artifacts/specs/` |
-| Frontier Engineering FDE | `engineer.agent.md` | Code + Tests (80% coverage) |
-| Frontier Review FDE | `reviewer.agent.md` | Review at `docs/artifacts/reviews/` |
-| Frontier Auto-Fix FDE | `reviewer-auto.agent.md` | Review + safe auto-fixes |
-| Frontier DevOps FDE | `devops.agent.md` | Pipelines at `.github/workflows/` |
-| Frontier AI Systems FDE | `data-scientist.agent.md` | AI pipelines + evals at `docs/data-science/` |
-| Frontier Test FDE | `tester.agent.md` | Test suites + certification at `docs/testing/` |
-| Frontier Fabric FDE | `fabric-engineer.agent.md` | Fabric data products at `fabric/`, `docs/fabric/`, `tests/fabric/` |
-| Frontier Power Platform FDE | `power-platform-builder.agent.md` | Unpacked solutions at `solutions/`, `docs/power-platform/` |
-| Frontier Power BI FDE | `powerbi-analyst.agent.md` | Reports at `reports/`, `datasets/` |
-| Frontier Research FDE | `consulting-research.agent.md` | Research briefs at `docs/coaching/` |
-| Frontier Agile FDE | `agile-coach.agent.md` | Stories at `docs/coaching/` |
-
-**Internal sub-agents** (spawned by parent agents, not user-invokable):
-GitHub Ops, ADO Ops, AzDO PRD to WIT, Functional Reviewer, Architecture Reviewer, Prompt Engineer, Eval Specialist, Ops Monitor, RAG Specialist, Diagram Specialist, Prototype Auditor.
-
----
-
-## Role Pipeline Reference
-
-Each role follows a prescribed phase pipeline. All phases are mandatory. No phase may be skipped without an explicit documented reason. The pre-commit hook validates artifact structure for PRD, ADR, and UX deliverables as a mechanical enforcement layer.
-
-| Role | Pipeline Phases (in order) | Key Delivery Gate |
-|------|---------------------------|-------------------|
-| **Frontier (Hub)** | Classify -> Route -> Execute specialist phases -> Validate handoffs | All specialist phase gates pass before advancing |
-| **Product Manager** | Research (5 phases) -> Classify Intent -> Model Council (prd-scope) -> PRD -> Backlog (Epic, Feature, User Stories) -> Self-Review -> Commit | PRD has all required sections; Backlog items (Epic, Features, User Stories) linked to PRD; Model Council convened or skip rationale recorded |
-| **UX Designer** | Read PRD -> Design Research -> UX Spec -> HTML/CSS Prototypes -> Self-Review -> Commit | WCAG 2.1 AA prototypes exist at `docs/ux/prototypes/` |
-| **Architect** | Research (6 phases) -> ADR (3+ options) -> Model Council (adr-options) -> Tech Spec -> AI Spec Alignment (if `needs:ai`) -> PM Fit Validation -> GenAI Assessment -> Self-Review -> Commit | ADR + Spec exist; ADR Decision matches a council-consensus option (or override rationale documented); AI-bearing specs include Data Scientist implementation-depth alignment; PM requirement-fit validation complete; zero code examples in Spec |
-| **Engineer** | Research -> Brainstorm -> Plan -> Design -> Conditional Design Alignment -> Implement -> Test -> Review | Loop complete + coverage >=80% + output score >=70% + code-quality rubric >=80% + required Architect/Data Scientist alignment captured |
-| **Reviewer** | Read Context -> Verify Loop -> Functional Review -> Code Review -> Run Tests -> Model Council (code-review) -> Write Review -> Decision | Review doc complete; approval/rejection explicitly stated; Model Council convened or skip rationale recorded; Findings/Severity/Decision reflect council Synthesis (or override rationale documented) |
-| **Auto-Fix Reviewer** | Read Context -> Verify Loop -> Review Code -> Apply Safe Fixes -> Document -> Self-Review -> Decision | All auto-fixes pass full test suite; review doc complete |
-| **DevOps Engineer** | Read Context -> Design Pipeline -> Implement Workflows -> Validate -> Self-Review -> Commit | Pipelines pass lint + execution; deployment docs updated |
-| **Data Scientist** | Research (6 phases) -> Model Council (ai-design) -> Pipeline Design -> Eval Plan -> Implementation -> Drift Monitoring -> Self-Review -> Commit | Eval baseline + model card exist; Model Council convened or skip rationale recorded |
-| **Tester** | Read Context -> Write Tests -> Execute Suite -> Report Defects -> Certification Report -> Commit | Test pyramid complete; certification report signed off |
-| **Fabric Engineer** | Read Context -> Discover Sources -> Design Data Product -> Implement -> Validate Data Quality -> Document -> Self-Review | Fabric artifacts are parameterized and idempotent; quality, reconciliation, lineage, recovery, and runtime-evidence gates pass |
-| **Power Platform Builder** | Read Context -> Select Components -> Scaffold Solution -> Generate Components -> Validate Package -> Document -> Self-Review | Unpacked unmanaged source is portable; package validation passes when available; no tenant-mutating command ran |
-| **Power BI Analyst** | Read Context -> Semantic Model -> DAX Measures -> Power Query -> Report Layout -> Optimize -> Docs -> Self-Review -> Commit | Semantic model validated; DAX measures tested |
-| **Consulting Research** | Understand Request -> Research (7 phases) -> Model Council (research) -> Calibrate Audience -> Create Deliverable | All key claims sourced + triangulated; deliverable complete; Model Council convened or skip rationale recorded |
-| **Agile Coach** | Mode Selection -> Create/Refine/Decompose Story -> Confirm -> Output | INVEST criteria met; ACs in Given/When/Then format |
-
----
-
-## Deep References
-
-| Document | Purpose |
-|----------|---------|
-| [docs/WORKFLOW.md](docs/WORKFLOW.md) | Workflow, routing, handoff, status transitions, architecture |
-| [Skills.md](Skills.md) | 134 production code skills index (load only relevant skills per task) |
-| [docs/GUIDE.md](docs/GUIDE.md) | Quickstart, setup, troubleshooting, local mode |
-| [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md) | Graded quality assessment of every component |
-| [docs/GOLDEN_PRINCIPLES.md](docs/GOLDEN_PRINCIPLES.md) | Mechanical rules enforced by linters and agents |
-| [docs/tech-debt-tracker.md](docs/tech-debt-tracker.md) | Known gaps and deferred work |
-| `.github/agents/` | 26 agent definition files |
-| `.github/skills/` | 134 skill files across 14 categories |
-| `.github/instructions/` | 7 instruction files (auto-loaded by file pattern) |
-| `.github/schemas/` | Handoff message JSON Schema + communication protocol |
-| `.github/templates/` | 15 templates (PRD, ADR, Spec, UX, Review, Arch Review, Security Plan, Progress, Roadmap, Exec Plan, Contract, Evidence Summary, Backlog, Design System, Learning) |
-| `.github/prompts/` | 23 reusable prompt templates |
-| `.agentx/` | CLI utilities (agentx.ps1, agentx.sh, agentic-runner.ps1) |
-| `scripts/modules/` | Shared PowerShell modules |
-| `packs/` | Agent pack bundles |
-
-### Instruction Files (Auto-Loaded)
-
-| Instruction | Triggers on |
-|-------------|-------------|
-| `ai.instructions.md` | `*agent*`, `*llm*`, `*model*`, `*workflow*`, `agents/` |
-| `python.instructions.md` | `*.py`, `*.pyx` |
-| `csharp.instructions.md` | `*.cs`, `*.csx` |
-| `typescript.instructions.md` | `*.ts` (backend/server TypeScript) |
-| `react.instructions.md` | `*.tsx`, `*.jsx`, `components/`, `hooks/` |
-| `memory.instructions.md` | `**` (all files) |
-| `project-conventions.instructions.md` | `**` (all files) |
-
----
-
-## ASCII-Only Rule
-
-All source code, scripts, configuration files, and documentation MUST use ASCII characters only (U+0000-U+007F). Use `[PASS]` not checkmarks, `[FAIL]` not cross marks, `->` not arrows, `-` not em-dashes.
-
-## Directive Language (RFC 2119)
-
-- **MUST** / **MUST NOT** - Absolute requirement or prohibition
-- **SHOULD** / **SHOULD NOT** - Strong recommendation (exceptions need justification)
-- **MAY** - Truly optional
+Deliverables live in `docs/artifacts/{prd,adr,specs,reviews,learnings}/`,
+`docs/ux/` and `docs/execution/plans/`. CLI: `.agentx/frontier.ps1 help`.

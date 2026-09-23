@@ -370,16 +370,13 @@ graph LR
 
 Add these fields to the YAML frontmatter at the top of a new ADR (all optional but encouraged):
 
-```yaml
-status: "proposed | accepted | rejected | deprecated | superseded by ADR-NNNN"
-date: YYYY-MM-DD
-decision-makers:
-  - "{role or name}"
-consulted:
-  - "{subject-matter expert (two-way)}"
-informed:
-  - "{stakeholder kept up-to-date (one-way)}"
-```
+| Field | Value |
+|-------|-------|
+| `status` | proposed, accepted, rejected, deprecated, or superseded by ADR-NNNN |
+| `date` | YYYY-MM-DD |
+| `decision-makers` | {role or name} |
+| `consulted` | {subject-matter expert (two-way)} |
+| `informed` | {stakeholder kept up-to-date (one-way)} |
 
 ### A.2 Decision Drivers (MADR canonical section)
 

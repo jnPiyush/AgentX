@@ -118,6 +118,13 @@ TARGET="$(cd "$TARGET" && pwd)"
 TOTAL_COPIED=0
 TOTAL_SKIPPED=0
 
+# Parameter expansion and the existence check avoid a dirname and a mkdir process
+# per file; under Git Bash on Windows those launches dominated install time.
+ensure_parent_dir() {
+  local dir="${1%/*}"
+  [ -d "$dir" ] || mkdir -p "$dir"
+}
+
 copy_tree() {
   local src_dir="$1"
   local dest_dir="$2"
@@ -132,8 +139,6 @@ copy_tree() {
   while IFS= read -r -d '' file; do
     local rel="${file#$src_dir/}"
     local dest="$dest_dir/$rel"
-    local dest_parent
-    dest_parent="$(dirname "$dest")"
 
     if [ -f "$dest" ] && [ "$FORCE" = false ]; then
       skipped=$((skipped + 1))
@@ -146,7 +151,7 @@ copy_tree() {
       continue
     fi
 
-    mkdir -p "$dest_parent"
+    ensure_parent_dir "$dest"
     cp "$file" "$dest"
     copied=$((copied + 1))
   done < <(find "$src_dir" -type f -print0)
@@ -173,7 +178,7 @@ copy_file() {
     return
   fi
 
-  mkdir -p "$(dirname "$dest")"
+  ensure_parent_dir "$dest"
   cp "$src" "$dest"
   TOTAL_COPIED=$((TOTAL_COPIED + 1))
 }
@@ -193,7 +198,7 @@ write_file_if_needed() {
     return
   fi
 
-  mkdir -p "$(dirname "$dest")"
+  ensure_parent_dir "$dest"
   printf '%s' "$content" > "$dest"
   TOTAL_COPIED=$((TOTAL_COPIED + 1))
 }
@@ -207,6 +212,8 @@ install_cli_runtime_bundle() {
   done
   copy_file "scripts/score-code-quality.ps1" ".github/frontier/scripts/score-code-quality.ps1"
   copy_file "evaluation/rubrics/code-quality.md" ".github/frontier/evaluation/rubrics/code-quality.md"
+  copy_file "scripts/score-stage-gate.ps1" ".github/frontier/scripts/score-stage-gate.ps1"
+  copy_file "evaluation/rubrics/stage-gates.json" ".github/frontier/evaluation/rubrics/stage-gates.json"
 
   ok "CLI runtime: $((TOTAL_COPIED - copied_before)) copied, $((TOTAL_SKIPPED - skipped_before)) skipped"
 }
@@ -441,6 +448,7 @@ info "Installing scripts..."
 copy_file "scripts/budget.ps1" "scripts/budget.ps1"
 copy_file "scripts/score-output.ps1" "scripts/score-output.ps1"
 copy_file "scripts/score-code-quality.ps1" "scripts/score-code-quality.ps1"
+copy_file "scripts/score-stage-gate.ps1" "scripts/score-stage-gate.ps1"
 copy_file "scripts/validate-handoff.ps1" "scripts/validate-handoff.ps1"
 copy_file "scripts/score-skill.ps1" "scripts/score-skill.ps1"
 copy_file "scripts/validate-skill.ps1" "scripts/validate-skill.ps1"
@@ -457,6 +465,8 @@ for dispatched in scrub dream research ship takeoff land ghcp-review-resolve \
 done
 copy_file "evaluation/rubrics/skill-quality.md" "evaluation/rubrics/skill-quality.md"
 copy_file "evaluation/rubrics/code-quality.md" "evaluation/rubrics/code-quality.md"
+copy_file "evaluation/rubrics/stage-gates.json" "evaluation/rubrics/stage-gates.json"
+copy_file "evaluation/rubrics/stage-gates.md" "evaluation/rubrics/stage-gates.md"
 copy_file "evaluation/baseline.json" "evaluation/baseline.json"
 ok "Scripts: copied scoring, validation and workflow runtime files"
 

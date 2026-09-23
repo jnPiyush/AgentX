@@ -11,8 +11,8 @@ ms.topic: reference
 **Mode:** Three independent read-only subagents
 **Purpose:** ADR options
 
-The council reviewed [the brand contract](../../../BRAND.md) and
-[the execution plan](../../../execution/plans/EXEC-PLAN-428-frontier-corp-rebrand.md).
+The council reviewed [the brand contract](../../BRAND.md) and
+[the execution plan](../../execution/plans/EXEC-PLAN-428-frontier-corp-rebrand.md).
 
 ## Questions
 

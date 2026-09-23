@@ -17,7 +17,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$ROOT = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+# Same order as the CLI; bundled copies would otherwise read the extension folder.
+$workspaceOverride = @($env:FRONTIER_WORKSPACE_ROOT, $env:HVE_WORKSPACE_ROOT, $env:AGENTX_WORKSPACE_ROOT) | Where-Object { $_ } | Select-Object -First 1
+$ROOT = (Resolve-Path -LiteralPath $(if ($workspaceOverride) { $workspaceOverride } else { Join-Path $PSScriptRoot '..' })).Path
 
 $VALID_AGENTS = @('agent-x','pm','ux','architect','data-scientist','engineer','reviewer','reviewer-auto','devops','tester','fabric-engineer','power-platform-builder','powerbi','consulting-research','agile-coach','github-ops','ado-ops')
 $VALID_STATUSES = @('Backlog','Ready','In Progress','In Review','Validating','Done')
@@ -117,8 +119,12 @@ function New-HandoffMessage {
 
     # Check loop state
     $loopCompleted = $false
-    $loopFile = Join-Path $ROOT '.agentx/state/loop-state.json'
-    if (Test-Path -LiteralPath $loopFile -PathType Leaf) {
+    # .frontier is canonical; legacy state directories are read only before migration.
+    $loopFile = @('.frontier', '.hve', '.agentx') |
+        ForEach-Object { Join-Path $ROOT "$_/state/loop-state.json" } |
+        Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
+        Select-Object -First 1
+    if ($loopFile) {
         $loopState = Get-Content $loopFile -Raw | ConvertFrom-Json
         $stateIssue = if ($loopState.PSObject.Properties.Name -contains 'issueNumber') { [int]$loopState.issueNumber } else { 0 }
         $loopCompleted = ($loopState.status -eq 'complete') -and ($stateIssue -eq $IssueNumber)
@@ -187,7 +193,7 @@ if ($IssueNumber -gt 0 -and $FromAgent -and $ToAgent) {
     }
 
     # Write handoff file
-    $outDir = Join-Path $ROOT ".agentx/handoffs"
+    $outDir = Join-Path $ROOT ".frontier/handoffs"
     New-Item -ItemType Directory -Path $outDir -Force | Out-Null
     $outFile = Join-Path $outDir "handoff-$IssueNumber-$FromAgent-to-$ToAgent.json"
     $msg | ConvertTo-Json -Depth 10 | Set-Content -Path $outFile -Encoding utf8

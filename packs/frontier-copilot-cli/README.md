@@ -44,44 +44,44 @@ workspace.
 
 ```powershell
 # Clone Frontier repo
-git clone https://github.com/jnpiyush/Frontier.git
+git clone https://github.com/jnPiyush/AgentX.git
 
 # Install into your workspace (current directory)
-pwsh Frontier/packs/frontier-copilot-cli/install.ps1
+pwsh AgentX/packs/frontier-copilot-cli/install.ps1
 
 # Install into a specific workspace
-pwsh Frontier/packs/frontier-copilot-cli/install.ps1 -Target /path/to/my-project
+pwsh AgentX/packs/frontier-copilot-cli/install.ps1 -Target /path/to/my-project
 
 # Include CLI utilities (workspace wrappers + bundled runtime)
-pwsh Frontier/packs/frontier-copilot-cli/install.ps1 -IncludeCli
+pwsh AgentX/packs/frontier-copilot-cli/install.ps1 -IncludeCli
 
 # Preview without copying
-pwsh Frontier/packs/frontier-copilot-cli/install.ps1 -WhatIf
+pwsh AgentX/packs/frontier-copilot-cli/install.ps1 -WhatIf
 
 # Force overwrite existing files
-pwsh Frontier/packs/frontier-copilot-cli/install.ps1 -Force
+pwsh AgentX/packs/frontier-copilot-cli/install.ps1 -Force
 ```
 
 ### Bash (macOS / Linux)
 
 ```bash
 # Clone Frontier repo
-git clone https://github.com/jnpiyush/Frontier.git
+git clone https://github.com/jnPiyush/AgentX.git
 
 # Install into your workspace (current directory)
-bash Frontier/packs/frontier-copilot-cli/install.sh
+bash AgentX/packs/frontier-copilot-cli/install.sh
 
 # Install into a specific workspace
-bash Frontier/packs/frontier-copilot-cli/install.sh -t /path/to/my-project
+bash AgentX/packs/frontier-copilot-cli/install.sh -t /path/to/my-project
 
 # Include CLI utilities (workspace wrappers + bundled runtime)
-bash Frontier/packs/frontier-copilot-cli/install.sh -c
+bash AgentX/packs/frontier-copilot-cli/install.sh -c
 
 # Preview without copying
-bash Frontier/packs/frontier-copilot-cli/install.sh -n
+bash AgentX/packs/frontier-copilot-cli/install.sh -n
 
 # Force overwrite
-bash Frontier/packs/frontier-copilot-cli/install.sh -f
+bash AgentX/packs/frontier-copilot-cli/install.sh -f
 ```
 
 ## What Gets Installed
@@ -187,10 +187,10 @@ To update to a newer version:
 
 ```powershell
 # PowerShell -- force overwrites existing files
-pwsh Frontier/packs/frontier-copilot-cli/install.ps1 -Force
+pwsh AgentX/packs/frontier-copilot-cli/install.ps1 -Force
 
 # Bash
-bash Frontier/packs/frontier-copilot-cli/install.sh -f
+bash AgentX/packs/frontier-copilot-cli/install.sh -f
 ```
 
 ## Uninstalling

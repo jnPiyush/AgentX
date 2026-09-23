@@ -17,7 +17,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$ROOT = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+# Same order as the CLI; bundled copies would otherwise score the extension folder.
+$workspaceOverride = @($env:FRONTIER_WORKSPACE_ROOT, $env:HVE_WORKSPACE_ROOT, $env:AGENTX_WORKSPACE_ROOT) | Where-Object { $_ } | Select-Object -First 1
+$ROOT = (Resolve-Path -LiteralPath $(if ($workspaceOverride) { $workspaceOverride } else { Join-Path $PSScriptRoot '..' })).Path
 
 function Get-ItemCount($value) {
     if ($null -eq $value) { return 0 }

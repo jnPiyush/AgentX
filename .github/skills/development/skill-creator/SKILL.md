@@ -112,25 +112,7 @@ This creates:
 | `disable-model-invocation` | Disable automatic activation | `true` for manual-only workflows |
 | `context` | Inline or forked execution | `fork` for read-heavy focused reports |
 
-### Frontmatter Template
-
-```yaml
----
-name: "skill-name"
-description: 'Create, validate, and maintain Frontier skills following the agentskills.io specification. Use when scaffolding a new skill, auditing skill compliance, restructuring for progressive disclosure, or adding scripts/references/assets to an existing skill.'
-metadata:
- author: "Frontier"
- version: "1.0.0"
- created: "YYYY-MM-DD"
- updated: "YYYY-MM-DD"
-compatibility:
- languages: ["lang1", "lang2"]
- frameworks: ["framework1"]
- platforms: ["windows", "linux", "macos"]
-prerequisites: ["tool or runtime required"]
-allowed-tools: "tool1 tool2 tool3"
----
-```
+`scripts/init-skill.ps1` writes a frontmatter block with these fields.
 
 ## Progressive Disclosure Pattern
 
@@ -148,6 +130,17 @@ Skills load in 3 tiers to manage context window tokens:
 2. **references/**: Detailed examples, extended documentation, edge cases
 3. **scripts/**: Executable automation (scanners, scaffolders, validators)
 4. **assets/**: Reusable templates, starter code, sample data, report templates
+
+### Write for Capable Models
+
+- Keep `description` to what the skill does and when to use it; every skill and
+  agent description is loaded for discovery on every request.
+- Put in the body only what a current model cannot infer: project paths, commands,
+  decisions, gotchas, and the verification that proves the work.
+- Give the reason behind each hard rule once instead of repeating it in capitals;
+  strong emphasis makes capable models overtrigger.
+- Cut general tutorials and restated best practice. Measure the result with
+  `frontier tokens context` and `frontier tokens check -Path <skill>`.
 
 ### Assets Directory Convention
 
@@ -167,14 +160,7 @@ eight weighted dimensions, blocking findings, a 0-100 score, a tier, and JSON
 evidence. Use `-Enforce` for new or changed skills; all-inventory mode reports
 existing score debt while always failing universal blockers.
 
-- [ ] Frontmatter has `name` and `description` (required)
-- [ ] Frontmatter has `metadata.version` (recommended)
-- [ ] SKILL.md is under 500 lines
-- [ ] Has a decision tree section
-- [ ] Has "When to Use" section with WHEN: trigger phrase
-- [ ] Has "Core Rules" section
-- [ ] Has "Error Handling" section
-- [ ] Has "Anti-Patterns" section
+- [ ] Every section in the Required Sections Standard below is present
 - [ ] Large examples are in references/ (not inline)
 - [ ] Executable tools are in scripts/ (not just documented)
 - [ ] Reusable templates/starter code in assets/ (not inline)
